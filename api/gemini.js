@@ -100,9 +100,21 @@ export default async function handler(req, res) {
           inventar_hinzugefuegt: { type: 'array', items: { type: 'string' } },
           inventar_entfernt: { type: 'array', items: { type: 'string' } },
           // Cast-Tracking: NPCs die in dieser Szene zu Karl kommen oder gehen.
-          // "hinzugefuegt": neue Person betritt die Szene (z.B. "Helga Schmidt (Klientin)")
-          // "entfernt": Person verlaesst die Szene (geht raus, stirbt, wird zurueckgelassen, etc.)
-          cast_hinzugefuegt: { type: 'array', items: { type: 'string' } },
+          // Strukturierte Objekte: name (z.B. "Frieda Behrend"), rolle (z.B. "Klientin"),
+          // beziehung (z.B. "Schwester von Hans Behrend"). Beziehung ist sehr wichtig
+          // damit Rollen nicht verwechselt werden (Schwester != Ehefrau).
+          cast_hinzugefuegt: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                name: { type: 'string' },
+                rolle: { type: 'string' },
+                beziehung: { type: 'string' },
+              },
+              required: ['name'],
+            },
+          },
           cast_entfernt: { type: 'array', items: { type: 'string' } },
         },
         required: ['szene', 'ort', 'optionen', 'spannung', 'zusammenfassung'],
