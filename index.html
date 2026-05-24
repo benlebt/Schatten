@@ -99,10 +99,18 @@
     background: rgba(200,191,168,0.1);
     transition: background 0.5s;
   }
+  .tension-level {
+    font-size: 9px;
+    margin-top: 4px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-weight: bold;
+    transition: color 0.5s;
+  }
   .tension-loc {
     font-size: 10px;
     color: #555;
-    margin-top: 4px;
+    margin-top: 2px;
     letter-spacing: 2px;
   }
   /* Start screen */
@@ -554,9 +562,10 @@
       <div class="eyebrow">Kriminalbüro Mauer</div>
       <h1>BERLIN, 1953</h1>
     </div>
-    <div class="tension" id="tension-block">
+    <div class="tension" id="tension-block" title="Spannungslevel der aktuellen Szene (1=ruhig, 5=Lebensgefahr)">
       <div class="tension-label">Spannung</div>
       <div class="tension-bars" id="tension-bars"></div>
+      <div class="tension-level" id="tension-level"></div>
       <div class="tension-loc" id="tension-loc"></div>
     </div>
   </header>
@@ -571,7 +580,7 @@
       Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
     </p>
     <button class="btn-primary" onclick="startGame()">Ermittlung beginnen</button>
-    <div class="start-version">Schatten v2.7 · Idiom-Fix</div>
+    <div class="start-version">Schatten v2.9 · Retry-Strategie</div>
   </div>
 
   <!-- Game Log -->
@@ -618,7 +627,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v2.7 · Idiom-Fix</span>
+    <span>Schatten v2.9 · Retry-Strategie</span>
   </div>
 
 </div>
@@ -984,11 +993,13 @@ function hideAll() {
     document.getElementById(id).classList.add('hidden');
   });
 }
-function showLoading() {
+function showLoading(customText) {
   document.getElementById('loading').classList.remove('hidden');
   document.getElementById('options').classList.add('hidden');
   document.getElementById('error').classList.add('hidden');
   document.getElementById('wait-box').classList.add('hidden');
+  const textEl = document.querySelector('#loading .loading-text');
+  if (textEl) textEl.textContent = customText || 'Karl denkt nach';
 }
 function hideLoading() {
   document.getElementById('loading').classList.add('hidden');
@@ -1050,6 +1061,10 @@ function showHeader(scene) {
     if (i <= scene.spannung) b.style.background = color;
     bars.appendChild(b);
   }
+  const TENSION_LABELS = ['', 'Ruhig', 'Wachsam', 'Angespannt', 'Brenzlig', 'Lebensgefahr'];
+  const levelEl = document.getElementById('tension-level');
+  levelEl.textContent = TENSION_LABELS[scene.spannung] || '';
+  levelEl.style.color = color;
   document.getElementById('tension-loc').textContent = (scene.ort || '').toUpperCase();
 }
 function renderLog() {
@@ -1098,36 +1113,46 @@ function escapeHtml(s) {
 }
 
 // --- API Call ---
-async function callGroq(userMessage, conversationHistory) {
+async function callGroq(userMessage, conversationHistory, compactMode) {
   // Groq uses OpenAI-compatible chat format with system/user/assistant roles
+  // compactMode = 0 (normal), 1 (less history), 2 (minimal — just last scene)
+  compactMode = compactMode || 0;
+
   const messages = [
     { role: 'system', content: SYSTEM_PROMPT }
   ];
 
   // Compact history: instead of sending all old scene texts,
   // send a compressed "story so far" based on past summaries + last scene text.
+  // On retry, we send less context to bypass token-pressure issues that may have caused the failure.
   if (storySummaries.length > 0 || lastFullScene) {
     let recap = '';
-    if (storySummaries.length > 0) {
+    if (storySummaries.length > 0 && compactMode < 2) {
+      const summaryCount = compactMode === 1 ? 2 : storySummaries.length;
+      const summaries = storySummaries.slice(-summaryCount);
       recap += 'BISHERIGE EREIGNISSE (kompakt):\n' +
-        storySummaries.map((s, i) => `${i + 1}. ${s}`).join('\n');
+        summaries.map((s, i) => `${i + 1}. ${s}`).join('\n');
     }
     if (lastFullScene) {
+      // On compact retries, send only the first 300 chars of the last scene
+      const sceneText = compactMode > 0 ? lastFullScene.slice(0, 300) : lastFullScene;
       if (recap) recap += '\n\n';
-      recap += 'LETZTE SZENE (du befindest dich genau hier, knüpfe direkt daran an):\n' + lastFullScene;
+      recap += 'LETZTE SZENE (du befindest dich genau hier, knüpfe direkt daran an):\n' + sceneText;
     }
     messages.push({ role: 'user', content: recap });
     messages.push({ role: 'assistant', content: 'Verstanden. Ich knüpfe nahtlos und räumlich konsistent an die letzte Szene an, bleibe im Präsens und in der Du-Perspektive.' });
   }
 
-  // Inject overused-words warning if applicable
-  const overused = getOverusedWords();
-  if (overused.length > 0) {
-    messages.push({
-      role: 'user',
-      content: `STILWARNUNG: Folgende Wörter/Phrasen wurden in den letzten Szenen zu oft verwendet und müssen für diese Szene VERMIEDEN werden: ${overused.join(', ')}. Finde frische Bilder, andere Sinneseindrücke (Geräusche der Stadt, Gerüche, Texturen, Temperatur, Licht aus anderen Quellen wie Lampen, Kerzen, Mond, Fackeln). Nicht jede Szene braucht Regen oder Neonlicht.`
-    });
-    messages.push({ role: 'assistant', content: 'Verstanden. Ich vermeide diese überstrapazierten Begriffe und nutze frische Sinneseindrücke.' });
+  // Inject overused-words warning only in normal mode (not on retry, to keep prompt lean)
+  if (compactMode === 0) {
+    const overused = getOverusedWords();
+    if (overused.length > 0) {
+      messages.push({
+        role: 'user',
+        content: `STILWARNUNG: Folgende Wörter/Phrasen wurden in den letzten Szenen zu oft verwendet und müssen für diese Szene VERMIEDEN werden: ${overused.join(', ')}. Finde frische Bilder, andere Sinneseindrücke (Geräusche der Stadt, Gerüche, Texturen, Temperatur, Licht aus anderen Quellen wie Lampen, Kerzen, Mond, Fackeln). Nicht jede Szene braucht Regen oder Neonlicht.`
+      });
+      messages.push({ role: 'assistant', content: 'Verstanden. Ich vermeide diese überstrapazierten Begriffe und nutze frische Sinneseindrücke.' });
+    }
   }
 
   // New user message
@@ -1421,19 +1446,22 @@ async function chooseOption(option) {
 async function performApiCall(userMsg, isStart, optionForRollback, retryCount) {
   retryCount = retryCount || 0;
   const MAX_AUTO_RETRIES = 3;
+
+  // Compaction level grows with retry count to bypass token-pressure issues
+  // 0 = full prompt, 1 = reduced history, 2 = minimal context
+  const compactMode = Math.min(retryCount, 2);
+
   try {
-    const { scene, rawAssistantText } = await callGroq(userMsg, history);
+    const { scene, rawAssistantText } = await callGroq(userMsg, history, compactMode);
     currentScene = scene;
 
     // Compress: store the summary instead of full scene
     if (scene.zusammenfassung) {
       storySummaries.push(scene.zusammenfassung);
     }
-    // Keep only last 4 summaries to stay within 12k TPM on llama-3.3-70b
     if (storySummaries.length > 4) {
       storySummaries = storySummaries.slice(-4);
     }
-    // Store only the szene text (not the full JSON with options/wartetext) for stylistic continuity
     lastFullScene = scene.szene;
 
     // Track recent scene texts for vocabulary monitoring
@@ -1451,33 +1479,51 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount) {
     lastErrorDebug = null;
   } catch (e) {
     if (e.isRateLimit) {
-      // Rate limit: wait the prescribed time, then auto-retry
+      // Rate limit: respect Groq's exact wait time, no clamping.
       hideLoading();
-      const seconds = Math.max(5, Math.min(e.retryAfter || 15, 30));
+      // Use the precise wait time from Groq. Add 1s buffer for safety.
+      const seconds = Math.max(2, Math.ceil(e.retryAfter || 15) + 1);
       pendingRetry = () => {
         if (optionForRollback) {
-          performApiCall(userMsg, isStart, optionForRollback);
+          performApiCall(userMsg, isStart, optionForRollback, retryCount);
         } else {
-          performApiCall(userMsg, isStart);
+          performApiCall(userMsg, isStart, undefined, retryCount);
         }
       };
-      showNarrativeWait(seconds, 'Kurze Pause', 'Die Antwort kommt gleich. Bitte warten.');
+      showNarrativeWait(
+        seconds,
+        'Token-Limit erreicht',
+        `Groq hat ein Anfragelimit für die nächste Minute. Wir warten genau ${seconds} Sekunden, dann geht es automatisch weiter.`
+      );
+      lastErrorDebug = buildDebugDump(e, userMsg, retryCount);
     } else if (e.isRetryable && retryCount < MAX_AUTO_RETRIES) {
-      // Transient error (JSON parse, 400, 5xx): show short hourglass and auto-retry
+      // JSON / format error: immediate retry on first try, brief pause on later tries.
       hideLoading();
-      const waitSec = Math.min(3 + retryCount * 2, 10); // 3s, 5s, 7s
-      const label = `Erneuter Versuch (${retryCount + 1}/${MAX_AUTO_RETRIES})`;
-      const msg = 'Die KI lieferte eine fehlerhafte Antwort. Wir versuchen es gleich erneut.';
-      pendingRetry = () => {
+      lastErrorDebug = buildDebugDump(e, userMsg, retryCount);
+
+      const doRetry = () => {
         if (optionForRollback) {
           performApiCall(userMsg, isStart, optionForRollback, retryCount + 1);
         } else {
           performApiCall(userMsg, isStart, undefined, retryCount + 1);
         }
       };
-      // Store debug for potential final failure
-      lastErrorDebug = buildDebugDump(e, userMsg, retryCount);
-      showNarrativeWait(waitSec, label, msg);
+
+      if (retryCount === 0) {
+        // First failure: retry immediately, just show a quick "Neuversuch" hint
+        showLoading('Antwort fehlerhaft, Neuversuch ...');
+        // Fire immediately, no wait
+        doRetry();
+      } else {
+        // Second/third failure: short pause, with explanation
+        const waitSec = retryCount === 1 ? 2 : 4;
+        pendingRetry = doRetry;
+        showNarrativeWait(
+          waitSec,
+          `Neuversuch ${retryCount + 1}/${MAX_AUTO_RETRIES}`,
+          `Die KI lieferte erneut eine fehlerhafte Antwort. Mit weniger Kontext nochmal versuchen.`
+        );
+      }
     } else {
       // Final failure after retries (or non-retryable)
       hideLoading();
