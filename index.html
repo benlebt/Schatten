@@ -644,7 +644,8 @@
     padding-top: 12px;
     border-top: 1px solid rgba(200,191,168,0.06);
     display: flex;
-    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px 14px;
     font-size: 10px;
     color: #444;
     letter-spacing: 2px;
@@ -820,7 +821,7 @@
       Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
     </p>
     <button class="btn-primary" onclick="startGame()">Ermittlung beginnen</button>
-    <div class="start-version">Schatten v6.2 · 11-Modell-Kette</div>
+    <div class="start-version">Schatten v6.3 · Konflikt-Schutz</div>
   </div>
 
   <!-- Game Log -->
@@ -881,7 +882,8 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v6.2 · 11-Modell-Kette</span>
+    <span>Schatten v6.3 · Konflikt-Schutz</span>
+    <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
 </div>
@@ -923,6 +925,18 @@ DIALOGE:
 
 RÄUMLICHE KONSISTENZ:
 Knüpfe nahtlos an die letzte Szene an. Wenn jemand vor der Tür war, ist er auch in der nächsten Szene noch dort (oder du beschreibst den Wechsel). Der ort-Eintrag muss zum tatsächlichen Aufenthaltsort passen.
+
+PHYSISCHE AKTION (kritisch wichtig, niemals brechen):
+Wenn die Spielerwahl eine direkte physische Aktion ist (schlagen, schießen, packen, treten, würgen, fliehen, verfolgen, Waffe ziehen, Tür aufreißen, jemanden hochzerren, küssen, springen, umstoßen etc.), MUSS die nächste Szene die UNMITTELBARE Konsequenz in derselben Situation darstellen.
+
+ABSOLUT VERBOTEN nach physischer Aktion:
+- Zeitsprünge ("später", "am nächsten Morgen", "nach einer Stunde", "die Nacht zog sich hin")
+- Ortswechsel (plötzlich im Büro, im Auto, in der Wohnung)
+- Auslassung der Reaktion
+
+PFLICHT: Die nächste Szene MUSS zeigen: Reaktion der getroffenen/angegriffenen Person (Schmerz, Schock, Gegenwehr), Reaktion der Umgebung (Wirt, andere Gäste, Zeugen), unmittelbare Folge (Sturz, Schuss, Verfolgung beginnt). Erst NACHDEM die Konsequenz erzählt wurde, dürfen die nächsten Optionen einen Ortswechsel oder Zeitfortschritt erlauben.
+
+Beispiel: Spieler wählt "Schlage ihm ins Gesicht". FALSCH: "Nach einer unruhigen Nacht wachst du im Büro auf...". RICHTIG: "Dein Faustschlag trifft seinen Kiefer, sein Kopf schnellt zur Seite, das Bierglas zerschellt am Boden. Der Wirt zieht scharf die Luft ein, jemand am Tresen springt auf. Aus seiner aufgeplatzten Lippe rinnt Blut auf den Lodenkragen..."
 
 STIL - WAS VERBOTEN IST:
 Klischee-Floskeln meiden:
@@ -1178,6 +1192,16 @@ function updateProviderInfo() {
     ? ''
     : '<br><span style="font-size:9px;color:#666">Auf Backup-Modell ausgewichen. Morgen wieder volle Qualitaet.</span>';
   el.innerHTML = 'Modell: <span class="' + cssClass + '">' + m.label + '</span>' + subtitle;
+}
+
+// Footer aktualisieren: zeigt das aktuelle Modell + Hinweis ob Backup
+function updateFooterModel() {
+  const el = document.getElementById('footer-model');
+  if (!el) return;
+  const m = getActiveModel();
+  const isStandard = getActiveModelIndex() === 0;
+  const suffix = isStandard ? '' : ' · Backup';
+  el.textContent = m.label.toUpperCase() + suffix;
 }
 
 function toggleSettings(event) {
@@ -2250,6 +2274,34 @@ async function startGame() {
   await performApiCall(intro.prompt, /*isStart*/true);
 }
 
+// Erkennt direkte physische Konfliktaktionen, die NICHT mit einem Time-Skip
+// uebersprungen werden duerfen. Wenn der Spieler so etwas waehlt, muss die
+// naechste Szene UNMITTELBAR die Konsequenz erzaehlen.
+function isPhysicalConflictAction(text) {
+  if (!text) return false;
+  // Umlaute normalisieren, damit Patterns sowohl ue/oe/ae als auch ü/ö/ä matchen
+  const lower = text.toLowerCase()
+    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+  // Wir wollen sehr spezifische Verben und Wortkombinationen, die direkte Konfrontation/Aktion bedeuten.
+  // Wortgrenzen pruefen mit \b, damit z.B. 'pack' nicht auf 'package' matcht.
+  const patterns = [
+    /\bschlag/, /\bhaue?\b/, /\bhaust\b/, /\bverpasse?\b/, /\bverpasst\b/,
+    /\bschiess/, /\bfeuere?\b/, /\bfeuerst\b/, /\bdrueck(e)? ab\b/,
+    /\bpack(e|st|en|t)?\b/, /\bgreif(e|st|en|t)?\b/, /\bklammer/,
+    /\bstoss(e|t|en)?\b/, /\breiss(e|t|en)?\b/,
+    /\btret(e|en|tst)?\b/, /\btritt\b/,
+    /\bwuerg/, /\berdrueck/,
+    /\bzieh(e)? die (waffe|pistole|knarre|messer)/,
+    /\bzueck/, /\bspring(e|st|en|t)?\b/, /\bsturm/, /\bstuerm/,
+    /\bflieh/, /\brenn(e|st|en|t)?\b/, /\bverfolg/, /\bjag(e|st|en|t)?\b/,
+    /\bkaempf/, /\bangreif/, /\battackier/,
+    /\bumarm/, /\bkuess/, /\bberuehr/,
+    /\bwirf\b/, /\bwerfe\b/, /\bwirfst\b/,
+    /\bsturz/,
+  ];
+  return patterns.some(p => p.test(lower));
+}
+
 async function chooseOption(option) {
   showLoading();
   logEntries.push({ type: 'choice', text: option.text });
@@ -2258,9 +2310,26 @@ async function chooseOption(option) {
   // Tageszeit/Tag voranschreiten lassen BEVOR wir die naechste Szene anfordern,
   // damit der pendingDayTransition-Flag schon gesetzt ist und die KI den
   // Tageswechsel direkt in die Szene einbauen kann.
-  advanceGameTime();
+  //
+  // AUSNAHME: Wenn die Spieleraktion eine direkte physische Konfliktaktion ist
+  // (schlagen, schiessen, packen, fliehen), darf KEIN Tageswechsel ausgeloest
+  // werden. Die naechste Szene muss die UNMITTELBARE Konsequenz erzaehlen.
+  // Wir merken uns die Token-Position und schreiten erst danach voran.
+  const isPhysical = isPhysicalConflictAction(option.text);
+  if (isPhysical) {
+    // Tokens schon mal ansammeln, aber keinen Roll-over zulassen.
+    // Wir blockieren den Tageswechsel diesmal, indem wir kuenstlich nicht
+    // ueber 1.0 rollen lassen. Beim naechsten Klick (nach der Konsequenz)
+    // wird dann normal weiter vorgeschritten.
+    timeAdvanceTokens += 0.15; // minimaler Schritt, kein roll-over moeglich
+    console.log('[Schatten] Physical action detected, deferring time advance:', option.text);
+  } else {
+    advanceGameTime();
+  }
 
-  const userMsg = `Der Spieler wählt Option ${option.id}: "${option.text}". Führe die Konsequenzen aus und liefere die nächste Szene als JSON.`;
+  const userMsg = isPhysical
+    ? `Der Spieler wählt Option ${option.id}: "${option.text}". WICHTIG: Dies ist eine direkte physische Aktion. Die nächste Szene MUSS die UNMITTELBARE Konsequenz in derselben Situation erzählen (Reaktion der Gegenüber, körperlicher Schmerz, Eskalation oder Folgen). KEIN Zeitsprung, KEIN Ortswechsel, KEINE Übergangsformulierung wie "später" oder "am nächsten Morgen". Liefere die nächste Szene als JSON.`
+    : `Der Spieler wählt Option ${option.id}: "${option.text}". Führe die Konsequenzen aus und liefere die nächste Szene als JSON.`;
   lastUserMessage = userMsg;
 
   await performApiCall(userMsg, /*isStart*/false, option);
@@ -2314,6 +2383,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     showHeader(scene);
     renderLog();
     renderOptions(scene);
+    updateFooterModel();
     pendingRetry = null;
     lastErrorDebug = null;
   } catch (e) {
@@ -2452,7 +2522,7 @@ function buildDebugDump(err, userMsg, retryCount) {
   return [
     '=== SCHATTEN DEBUG DUMP ===',
     'Zeitpunkt: ' + new Date().toISOString(),
-    'Version: v6.2',
+    'Version: v6.3',
     'Retries: ' + (retryCount || 0),
     '',
     'FEHLER:',
