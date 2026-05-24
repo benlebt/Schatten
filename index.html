@@ -820,7 +820,7 @@
       Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
     </p>
     <button class="btn-primary" onclick="startGame()">Ermittlung beginnen</button>
-    <div class="start-version">Schatten v5.1 · Hybrid</div>
+    <div class="start-version">Schatten v5.2 · Groq-Throttle</div>
   </div>
 
   <!-- Game Log -->
@@ -881,7 +881,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v5.1 · Hybrid</span>
+    <span>Schatten v5.2 · Groq-Throttle</span>
   </div>
 
 </div>
@@ -1489,16 +1489,19 @@ function getProviderEndpoint(provider) {
 }
 
 // Client-seitiges Throttling: gleitendes 60-Sekunden-Fenster.
-// Gemini Flash-Lite erlaubt 15 RPM. Wir nehmen 13 als Limit (2 Puffer fuer Retries).
-// Zwischen jeder Anfrage mindestens MIN_GAP ms, plus harter Stopp wenn 13 in der letzten Minute.
-// Bucket wird in localStorage gespeichert, damit Reload das Tracking nicht zurueck setzt.
-const RPM_BUDGET = 13;
+// Provider-spezifische Limits:
+// - Gemini Flash-Lite: 15 RPM, 1M TPM (RPM-gebunden, kleine Pause reicht)
+// - Groq gpt-oss-120b: 30 RPM, 8K TPM (TPM-gebunden, viel groesserer Abstand noetig)
+//   Bei ~3000 Tokens pro Anfrage: max 2-3 Anfragen/Minute, also 25s+ Abstand.
+// Buckets separat in localStorage (sonst rechnet ein Provider-Switch falsch).
+const RPM_BUDGET = { gemini: 13, groq: 2 };
 const RPM_WINDOW_MS = 60000;
-const MIN_GAP_MS = 3000;
+const MIN_GAP_MS = { gemini: 3000, groq: 22000 }; // Groq: 22s zwischen Anfragen bei 8K TPM
 
-function loadRequestTimes() {
+function loadRequestTimes(provider) {
   try {
-    const raw = localStorage.getItem('schatten-rpm-bucket');
+    const key = 'schatten-rpm-' + provider;
+    const raw = localStorage.getItem(key);
     if (!raw) return [];
     const arr = JSON.parse(raw);
     if (!Array.isArray(arr)) return [];
@@ -1507,38 +1510,68 @@ function loadRequestTimes() {
   } catch { return []; }
 }
 
-function saveRequestTimes(arr) {
-  try { localStorage.setItem('schatten-rpm-bucket', JSON.stringify(arr.slice(-20))); } catch {}
+function saveRequestTimes(provider, arr) {
+  try {
+    const key = 'schatten-rpm-' + provider;
+    localStorage.setItem(key, JSON.stringify(arr.slice(-20)));
+  } catch {}
 }
 
-async function throttleRequest() {
-  let times = loadRequestTimes();
+async function throttleRequest(provider) {
+  const minGap = MIN_GAP_MS[provider] || 3000;
+  const budget = RPM_BUDGET[provider] || 13;
+  let times = loadRequestTimes(provider);
   const now = Date.now();
 
-  // 1. Mindest-Lücke seit letztem Call
+  // 1. Mindest-Lücke seit letztem Call (provider-spezifisch)
   if (times.length > 0) {
     const lastCall = times[times.length - 1];
     const elapsed = now - lastCall;
-    if (elapsed < MIN_GAP_MS) {
-      await new Promise(r => setTimeout(r, MIN_GAP_MS - elapsed));
+    if (elapsed < minGap) {
+      const waitMs = minGap - elapsed;
+      // Optionale Anzeige: bei langen Pausen (>5s) zeigen wir kurz Bescheid
+      if (waitMs > 5000) {
+        showThrottleWait(Math.ceil(waitMs / 1000));
+      }
+      await new Promise(r => setTimeout(r, waitMs));
+      hideThrottleWait();
     }
   }
 
   // 2. Wenn Budget voll: warte bis aeltester Eintrag aus dem Fenster faellt
-  times = loadRequestTimes();
-  if (times.length >= RPM_BUDGET) {
+  times = loadRequestTimes(provider);
+  if (times.length >= budget) {
     const oldest = times[0];
-    const waitUntil = oldest + RPM_WINDOW_MS + 500; // 500ms Sicherheitsmarge
+    const waitUntil = oldest + RPM_WINDOW_MS + 500;
     const waitMs = waitUntil - Date.now();
     if (waitMs > 0) {
+      if (waitMs > 5000) showThrottleWait(Math.ceil(waitMs / 1000));
       await new Promise(r => setTimeout(r, waitMs));
+      hideThrottleWait();
     }
   }
 
   // 3. Eintragen
-  times = loadRequestTimes();
+  times = loadRequestTimes(provider);
   times.push(Date.now());
-  saveRequestTimes(times);
+  saveRequestTimes(provider, times);
+}
+
+// Sanfte Anzeige waehrend des Throttle-Wartens: nutzt die existierende Loading-Anzeige
+// und passt nur den Text an. So vermeiden wir UI-Konflikte mit anderen Wartezustaenden.
+function showThrottleWait(seconds) {
+  const textEl = document.querySelector('#loading .loading-text');
+  if (textEl) textEl.textContent = `Karl sortiert seine Gedanken (${seconds}s)`;
+  // Loading anzeigen falls noch nicht
+  const loadingEl = document.getElementById('loading');
+  if (loadingEl && loadingEl.classList.contains('hidden')) {
+    loadingEl.classList.remove('hidden');
+  }
+}
+function hideThrottleWait() {
+  // Loading nicht selbst verstecken; das macht der nachfolgende API-Aufruf-Flow
+  const textEl = document.querySelector('#loading .loading-text');
+  if (textEl) textEl.textContent = 'Karl denkt nach';
 }
 
 async function callGroq(userMessage, conversationHistory, compactMode) {
@@ -1546,8 +1579,12 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
   // compactMode = 0 (normal), 1 (less history), 2 (minimal — just last scene)
   compactMode = compactMode || 0;
 
-  // Throttle vor dem Call, damit wir das RPM-Limit nicht ueberschreiten.
-  await throttleRequest();
+  // Aktiven Provider waehlen (Gemini default, Groq als Fallback)
+  const provider = getActiveProvider();
+
+  // Throttle vor dem Call, damit wir das jeweilige RPM/TPM-Limit nicht ueberschreiten.
+  // Groq braucht groessere Pausen wegen 8K TPM-Limit.
+  await throttleRequest(provider);
 
   const messages = [
     { role: 'system', content: SYSTEM_PROMPT }
@@ -1607,8 +1644,7 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
   // New user message
   messages.push({ role: 'user', content: userMessage });
 
-  // Aktiven Provider waehlen (Gemini default, Groq als Fallback)
-  const provider = getActiveProvider();
+  // Endpoint based on active provider (provider was determined at top of function)
   const endpoint = getProviderEndpoint(provider);
 
   // Call our Vercel proxy (which holds the API key server-side)
@@ -2222,7 +2258,7 @@ function buildDebugDump(err, userMsg, retryCount) {
   return [
     '=== SCHATTEN DEBUG DUMP ===',
     'Zeitpunkt: ' + new Date().toISOString(),
-    'Version: v5.1',
+    'Version: v5.2',
     'Retries: ' + (retryCount || 0),
     '',
     'FEHLER:',
