@@ -414,6 +414,100 @@
     margin-left: auto;
     margin-right: auto;
   }
+  /* Case solved (Win) */
+  .case-solved {
+    margin-top: 40px;
+    padding: 32px 16px;
+    text-align: center;
+    border-top: 1px solid rgba(140,180,140,0.25);
+    border-bottom: 1px solid rgba(140,180,140,0.25);
+    animation: fadeIn 1.2s ease-in;
+  }
+  .solved-title {
+    font-size: 20px;
+    letter-spacing: 6px;
+    color: rgba(170,210,170,1);
+    margin-bottom: 18px;
+  }
+  .solved-text {
+    font-size: 14px;
+    color: var(--fg);
+    line-height: 1.8;
+    margin-bottom: 20px;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .solved-text-small {
+    font-size: 12px;
+    color: var(--fg-dim);
+    line-height: 1.7;
+    margin-bottom: 30px;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .solved-button {
+    background: transparent;
+    border: 1px solid rgba(140,180,140,0.5);
+    color: rgba(170,210,170,0.95);
+    padding: 12px 28px;
+    font-family: inherit;
+    font-size: 12px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .solved-button:hover {
+    background: rgba(140,180,140,0.08);
+  }
+  /* Case failed (gefeuert) */
+  .case-failed {
+    margin-top: 40px;
+    padding: 32px 16px;
+    text-align: center;
+    border-top: 1px solid rgba(200,160,80,0.25);
+    border-bottom: 1px solid rgba(200,160,80,0.25);
+    animation: fadeIn 1.2s ease-in;
+  }
+  .failed-title {
+    font-size: 20px;
+    letter-spacing: 6px;
+    color: rgba(220,170,90,1);
+    margin-bottom: 18px;
+  }
+  .failed-text {
+    font-size: 14px;
+    color: var(--fg);
+    line-height: 1.8;
+    margin-bottom: 20px;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .failed-text-small {
+    font-size: 12px;
+    color: var(--fg-dim);
+    line-height: 1.7;
+    margin-bottom: 30px;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .failed-button {
+    background: transparent;
+    border: 1px solid rgba(200,160,80,0.5);
+    color: rgba(220,170,90,0.95);
+    padding: 12px 28px;
+    font-family: inherit;
+    font-size: 12px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .failed-button:hover {
+    background: rgba(200,160,80,0.08);
+  }
   /* API Key Setup */
   .setup {
     border: 1px solid rgba(200,191,168,0.2);
@@ -802,7 +896,7 @@
     background: rgba(10,10,15,0.95);
     border: 1px solid rgba(200,191,168,0.2);
     padding: 8px;
-    min-width: 200px;
+    min-width: 230px;
     backdrop-filter: blur(8px);
     display: flex;
     flex-direction: column;
@@ -859,6 +953,8 @@
 <button class="settings-btn" onclick="toggleSettings(event)" title="Menü">⚙</button>
 <div id="settings-menu" class="settings-menu hidden" onclick="event.stopPropagation()">
   <div class="settings-info" id="settings-provider-info">Provider: lade...</div>
+  <button onclick="exportTranscript(event)">📋 Verlauf kopieren</button>
+  <button onclick="shareTranscript(event)">📤 Verlauf teilen</button>
   <button onclick="resetGame()">↻ Spiel neu starten</button>
 </div>
 
@@ -923,7 +1019,11 @@
         <span class="status-popup-label">Im Raum</span>
         <span class="status-popup-value" id="popup-cast">—</span>
       </div>
-      <button class="status-popup-export" onclick="exportTranscript()">Verlauf kopieren</button>
+      <div class="status-popup-row status-popup-row-block" id="popup-case-row" style="display:none;">
+        <span class="status-popup-label">Fall</span>
+        <span class="status-popup-value" id="popup-case">—</span>
+      </div>
+      <button class="status-popup-export" onclick="exportTranscript(event)">Verlauf kopieren</button>
       <button class="status-popup-close" onclick="hideStatusDetails()">Schließen</button>
     </div>
   </div>
@@ -938,7 +1038,7 @@
       Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
     </p>
     <button class="btn-primary" onclick="startGame()">Ermittlung beginnen</button>
-    <div class="start-version">Schatten v6.12 · Cooldown &amp; Rollen</div>
+    <div class="start-version">Schatten v6.14 · Spielziel &amp; Geduld</div>
   </div>
 
   <!-- Game Log -->
@@ -1006,7 +1106,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v6.12 · Cooldown &amp; Rollen</span>
+    <span>Schatten v6.14 · Spielziel &amp; Geduld</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -1064,7 +1164,18 @@ ERZÄHLPERSPEKTIVE & TEMPUS (zwingend):
 - Kasus: "Befiehl dem Mann" (Dativ), "Schieß auf den Mann" (mit Präposition).
 
 SZENENVIELFALT (wichtig, gegen Eintönigkeit):
-Wechsle Szenentypen: Verhöre, Observationen, Action (Verfolgung/Schießerei), spontane Ereignisse (Anrufe, Zettel, Schatten), Durchsuchungen, Lagedenken im Büro, beiläufige Krimiszenen. Mische Tempo: ruhig → Action → Recherche → Überraschung. Lass nicht ständig nur reden.
+Wechsle Szenentypen aktiv. Karl hat einen abwechslungsreichen Detektiv-Alltag - bring all das ins Spiel:
+- Karls Büro am Hackeschen Markt (Lagedenken, Klienten empfangen, Telefonate)
+- Berliner Strassen, S-Bahn-Stationen, Hinterhöfe (Beschattung, Verfolgung, beiläufige Begegnungen)
+- Volkspolizei-Reviere (Karl hat einen befreundeten Kommissar Wilhelm Roth, der ihm gelegentlich Informationen gegen Gefallen gibt)
+- Pathologie der Charité oder Volkspolizei-Leichenhaus (für Tatort-Befragungen)
+- Eckkneipen, Currywurst-Buden, kleine Cafés (Treffpunkte mit Informanten, gelegentliche beiläufige Schlägereien wenn man abends einen trinken geht)
+- Reichsbahn-Hallen, Werkstätten, Lagerhäuser (Spuren-Verfolgung in der Berliner Industrie)
+- Privatwohnungen von Zeugen, Verdächtigen, Familienangehörigen
+- Friedhöfe, Spree-Ufer, Trümmergrundstücke (1953-Berlin hat noch viele Kriegsruinen)
+- Hotels, Pensionen (für Mittelsmann-Treffs und gelegentliche Frauenbekanntschaften)
+
+Mische Tempo: ruhig → Action → Recherche → Überraschung. Lass nicht ständig nur reden, aber auch nicht ständig nur schießen. Über einen Spieltag verteilt sollten 4-6 VERSCHIEDENE Szenen-Settings vorkommen. Ein Detektiv klebt nicht stundenlang in seinem Büro fest.
 
 ERÖFFNUNGSSZENE - Kontext einflechten:
 Wenn der Intro-Prompt Namen, Auftraggeber, Hintergrund nennt, MUSST du diese erzählerisch verankern. Nicht "Du verfolgst einen Mann" sondern "Du verfolgst Robert Kessler nun die dritte Stunde, Edith hatte dich beauftragt...". Etablierte Fakten in Folgeszenen konsistent halten.
@@ -1075,6 +1186,25 @@ VORANSCHREITEN (gegen Trägheit):
 - KEINE Frage-Ausweich-Schleifen. Nach max. 2 Ausweich-Antworten kommt entweder konkrete Info (Name/Ort/Datum) oder Unterbrechung von außen.
 - Klienten/Besucher: nach 2 Szenen treten sie ein, gehen, oder etwas anderes passiert. Nicht ewig in der Tür.
 - Hinweise (Akten, Fotos, Namen) tauchen nicht zufällig auf — sie folgen kausal aus der vorigen Szene.
+
+FALL-FORTSCHRITT (sehr wichtig — Karl muss den Fall LÖSEN können):
+Das Spiel hat ein klares Ziel: den Fall lösen. Das passiert in drei Stufen, die du im JSON markierst:
+
+Stufe 1 - INDIZIEN SAMMELN (Tag 1-3 typisch):
+Sobald Karl in einer Szene ein konkretes Indiz, Beweisstück oder eine wichtige Zeugenaussage erhält, trag es in "indiz_neu" ein. Beispiele: "Brief von Hans an Onkel Erwin gefunden", "Aussage Frau Vogel: Hans war Dienstag in Charlottenburg", "Foto vom Tatort: Schlüsselbund mit Anhänger XY", "Zeuge Becker hat das Auto identifiziert".
+Indizien sind kurze, präzise Strings (max 80 Zeichen). Pro Szene 0-2 Indizien, NUR wenn wirklich neue Info kam.
+Karl braucht mindestens 3 unabhängige Indizien, bevor er einen Verdächtigen ernsthaft benennen kann.
+
+Stufe 2 - TATVERDÄCHTIGEN IDENTIFIZIEREN (Tag 2-4 typisch):
+Wenn Karl genug Indizien hat, um eine konkrete Person zu beschuldigen, trag den Namen in "tatverdaechtiger_identifiziert" ein. Diese Person muss vorher im Cast oder in den Indizien aufgetaucht sein. Sie MUSS ein Motiv und Tatgelegenheit gehabt haben, das in den Indizien belegt ist.
+
+Stufe 3 - ÜBERFÜHREN (Tag 3-5 typisch):
+Wenn der Tatverdächtige nicht mehr leugnen kann (Karl konfrontiert ihn mit Beweisen und er gesteht / Karl übergibt Beweise an die Volkspolizei mit eindeutigem Ergebnis / Karl verhaftet ihn selbst mit Hilfe Kommissar Roth), setze "tatverdaechtiger_ueberfuehrt": true.
+
+WIN-BEDINGUNG - KLIENT BERICHTEN:
+NACHDEM der Verdächtige überführt wurde, MUSS Karl dem Klienten/der Klientin Bericht erstatten (zurück ins Büro, Anruf, persönliches Treffen). In dieser Szene setze "klient_berichtet": true. DANN gilt der Fall als gelöst.
+
+NICHT vorzeitig setzen: Setze "tatverdaechtiger_identifiziert" NICHT in den ersten 2 Tagen, NICHT bei Spekulationen. Setze "tatverdaechtiger_ueberfuehrt" NICHT bevor er wirklich keine Ausreden mehr hat. Setze "klient_berichtet" NICHT bevor überführt wurde.
 
 TAGESZEIT-KONTEXT:
 Du bekommst pro Anfrage Tag und Tageszeit. Lass es in die Atmosphäre einfließen ("Morgensonne kriecht über die Dächer", "Mittagshitze"). Bei Tageswechsel (höherer Tag als zuvor): expliziter Übergang ("Am nächsten Morgen wachst du...", "Du hast die Nacht im Büro verbracht..."). Romantische, kollegiale oder einsame Schlafplätze sind erlaubt (Zeugin, Lindner im Revier, Bürosofa) - gehört zum Detektiv-Alltag.
@@ -1180,11 +1310,31 @@ Wenn nichts physisch Konkretes passiert, ist delta = 0. Lieber zu wenig als zu v
 
 TOD (delta -4, sehr selten, nur bei wirklich tödlichen Treffern):
 Setze delta -4 (Game Over) NUR bei konkret tödlichen Ereignissen, die im ERZÄHLTEXT EXPLIZIT beschrieben sind:
+
+A) Schuss-/Stichverletzungen:
 - Bauchschuss, Brustschuss in Herznähe ("Die Kugel schlägt in deinen Bauch ein")
 - Stich mit langer Klinge in lebenswichtige Region ("Das Messer fährt in deinen Hals")
-- Sturz aus großer Höhe, mehrere Stockwerke ("Du stürzt vom Dach in die Tiefe")
 - Schädelbruch durch schweren Schlag ("Der Hammer trifft deine Schläfe mit voller Wucht")
 - Verbluten an unversorgter Wunde ("Das Blut sprudelt aus der Bauchwunde, du wirst schwach")
+
+B) Verkehrsunfall:
+- Karl wird von einem Wagen angefahren oder überfahren ("Der schwarze Mercedes rast direkt in dich, dein Brustkorb wird zerschmettert")
+- Karl wird in einer Verfolgungsjagd von der Straße gedrängt ("Dein Opel überschlägt sich am Hang, das Lenkrad bohrt sich in deine Brust")
+
+C) Vergiftung:
+- Karl trinkt einen vergifteten Bourbon/Kaffee ("Brennend läuft das Cyanid durch deine Kehle")
+- Karl wird mit Cyanid, Strychnin, Arsen vergiftet ("Deine Muskeln versagen, Atemnot setzt ein, du sinkst zu Boden")
+
+D) Sturz aus großer Höhe:
+- Sturz aus dem 2./3./4. Stock ("Du stürzt vom Dach in die Tiefe, prallst auf das Kopfsteinpflaster")
+- Trümmer-Mauerwerk stürzt auf Karl ("Die Mauer der Ruine stürzt über dir zusammen und begräbt dich unter sich")
+
+E) Erfrieren / Ertrinken in der Spree:
+- Karl bricht durchs Eis ("Das Eis bricht unter dir, das eisige Spreewasser füllt deine Lunge")
+- Karl friert nach langer Flucht in der Winternacht ("Du erfrierst in der eisigen Trümmernacht")
+
+F) Stasi-Festnahme (politisches Game-Over, sehr selten, nur wenn Karl tief in MfS-Sachen verstrickt ist):
+- Karl wird vom MfS verhaftet und nach Hohenschönhausen gebracht ("Die Stasi nimmt dich fest, du verschwindest spurlos in Hohenschönhausen")
 
 VERBOTEN für delta -4:
 - Erschöpfung allein (ohne tödliche Wunde)
@@ -1202,7 +1352,7 @@ Beispiel aus einem schlechten Spielverlauf (NIEMALS so machen): Karl springt aus
 
 +1 oder +2: wenn Karl sich verarzten lässt, schläft, sich ausruht (auch das nur, wenn der Erzähltext es zeigt).
 
-"verletzungsbeschreibung" bei -1 oder schlechter setzen: kurz, konkret ("Streifschuss am linken Oberarm", "Prellung am Kinn", "geprellte Rippen", "blutige Hände vom Sturz").
+"verletzungsbeschreibung" bei -1 oder schlechter setzen: kurz, konkret ("Streifschuss am linken Oberarm", "Prellung am Kinn", "geprellte Rippen", "blutige Hände vom Sturz", "Prellung von Autounfall", "Erfrierungen an Fingern").
 
 INVENTAR (sehr wichtig fuer Konsistenz):
 Karl hat zu Beginn dabei: Walther PPK (seine eigene Pistole), Brieftasche mit Detektiv-Lizenz, Notizbuch und Bleistift. Du bekommst pro Anfrage sein aktuelles Inventar mitgeteilt.
@@ -1223,8 +1373,8 @@ Du bekommst pro Anfrage eine Liste der NPCs die PHYSISCH bei Karl sind. Diese Pe
 - Neue NPCs die zur Szene dazukommen: in "cast_hinzugefuegt" als STRUKTURIERTES OBJEKT eintragen mit Feldern:
   - name: Voller Name, z.B. "Helga Schmidt"
   - rolle: Was die Person FUER KARL ist, z.B. "Klientin", "Verfolger", "Kommissar", "Informant", "Zeugin", "Verdaechtiger"
-  - beziehung: Wie die Person zu wichtigen Story-Figuren steht, z.B. "Mutter von Rudi Schmidt", "Schwester von Hans Behrend", "Witwe von Friedrich Wegener". Wenn keine Beziehung zu einer anderen Story-Figur: leer lassen.
-- ROLLEN- UND BEZIEHUNGS-KONSISTENZ IST PFLICHT: Wenn eine Person als "Schwester von Hans" eingetragen ist, MUSS sie in allen folgenden Szenen die Schwester bleiben, NIE die Ehefrau, Mutter oder Tochter. Verwechsle Familienbeziehungen unter keinen Umstaenden. Wenn du eine Person mehrfach erwaehnst, ueberpruefe immer die Beziehung im aktuellen Cast.
+  - beziehung: Wie die Person zu wichtigen Story-Figuren steht, z.B. "Mutter des Vermissten", "Kollege des Opfers", "Witwe von Person X". Wenn die KI noch nicht weiss wer die Person ist: "unbekannt" eintragen. Wenn keine Beziehung zu einer anderen Story-Figur: leer lassen.
+- ROLLEN- UND BEZIEHUNGS-KONSISTENZ IST PFLICHT: Wenn eine Person mit einer Beziehung eingetragen wurde (z.B. "Schwester des Vermissten"), MUSS sie in allen folgenden Szenen diese Beziehung behalten. Verwechsle Familienbeziehungen unter keinen Umstaenden. Wenn du eine Person mehrfach erwaehnst, ueberpruefe immer die Beziehung im aktuellen Cast. Eine Schwester wird NIE zur Ehefrau, ein Vater NIE zum Bruder, eine Witwe NIE zur Verlobten.
 - NIEMALS NPCs einfach vergessen - das war der Hauptkritikpunkt frueherer Spielverlaeufe.
 
 JSON-Output ist Pflicht (kein Markdown, kein Text drumherum):
@@ -1237,8 +1387,12 @@ JSON-Output ist Pflicht (kein Markdown, kein Text drumherum):
   "verletzungsbeschreibung": "",
   "inventar_hinzugefuegt": [],
   "inventar_entfernt": [],
-  "cast_hinzugefuegt": [{"name":"Helga Schmidt","rolle":"Klientin","beziehung":"Mutter von Rudi Schmidt"}],
+  "cast_hinzugefuegt": [],
   "cast_entfernt": [],
+  "indiz_neu": [],
+  "tatverdaechtiger_identifiziert": "",
+  "tatverdaechtiger_ueberfuehrt": false,
+  "klient_berichtet": false,
   "zusammenfassung": "1 Satz für dein Gedächtnis: Ort, was getan wurde, wichtige Personen/Fakten."
 }
 
@@ -1309,7 +1463,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v6.12';
+window.SCHATTEN_VERSION = 'v6.14';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -1351,9 +1505,37 @@ let inventory = ['Walther PPK (eigene Pistole)', 'Brieftasche mit Detektiv-Lizen
 // damit sie nicht aus der Story verschwinden (wie es bei Frau Schmidt passierte).
 // Strukturierte Objekte mit name, rolle, beziehung - damit die KI die Beziehung
 // nicht durcheinander bringt (Frieda war Schwester, nicht Ehefrau).
-// Beispiel: { name: "Frieda Behrend", rolle: "Klientin", beziehung: "Schwester von Hans Behrend" }
+// Beispiel: { name: "Person A", rolle: "Klientin", beziehung: "Mutter des Vermissten" }
 // Strings sind auch erlaubt (Fallback fuer alte Daten und einfache Faelle).
 let cast = [];
+// Story-Faktenblatt: unveraenderliche Fakten ueber Personen.
+// Sobald eine Person in den Cast aufgenommen wird mit einer Beziehung, frieren wir
+// die Beziehung hier ein. Wenn die KI spaeter eine andere Beziehung setzt, ignorieren
+// wir das und schicken die urspruengliche zurueck. So vermeiden wir Drift wie
+// "Frieda Ehefrau -> Schwester".
+// Struktur: { "name": { rolle, beziehung, firstSeen: szenenIndex } }
+let storyFacts = {};
+// Fall-Fortschritt: mehrstufiges Spielziel
+// stage 0: Aufbau (Auftrag, erste Spuren)
+// stage 1: Indizien gesammelt (mind. 3 Beweisstuecke / Zeugen identifiziert)
+// stage 2: Tatverdaechtiger identifiziert (Name + Motiv)
+// stage 3: Tatverdaechtiger ueberfuehrt (Festnahme / Gestaendnis / Beweise vorgelegt) - WIN
+let caseProgress = {
+  stage: 0,
+  indizien: [],            // gesammelte Beweisstuecke / Zeugen
+  tatverdaechtiger: null,   // Name des Hauptverdaechtigen
+  ueberfuehrt: false,       // wurde der Verdaechtige festgenagelt?
+  istGelöst: false,         // Win-Flag
+  klientGesprochen: false,  // hat Karl dem Klient das Ergebnis berichtet?
+};
+// Klient-Profil aus dem Intro: Name, Geduld (Tag bis Mahnung/Feuern)
+let clientProfile = {
+  name: '',
+  geduldsstufe1: 4,  // Tag fuer erste Mahnung
+  geduldsstufe2: 6,  // Tag fuer Warnung
+  geduldsstufe3: 8,  // Tag fuer Auftragsentzug (= Game Over Variante)
+  charakter: 'normal',  // ungeduldig / normal / gelassen
+};
 
 // Story-appropriate wait texts, chosen by current tension level.
 // Each pool has 6+ entries to avoid repetition.
@@ -1554,6 +1736,58 @@ function showGameOver() {
   document.getElementById('options').classList.add('hidden');
   document.getElementById('game-over').classList.remove('hidden');
 }
+
+// Win-Screen: Fall geloest
+function showCaseSolved() {
+  document.getElementById('options').classList.add('hidden');
+  document.getElementById('error').classList.add('hidden');
+  document.getElementById('wait-box').classList.add('hidden');
+  document.getElementById('loading').classList.add('hidden');
+  let solvedEl = document.getElementById('case-solved');
+  if (!solvedEl) {
+    solvedEl = document.createElement('div');
+    solvedEl.id = 'case-solved';
+    solvedEl.className = 'case-solved';
+    const numIndizien = caseProgress.indizien.length;
+    const verdName = caseProgress.tatverdaechtiger || 'der Schuldige';
+    solvedEl.innerHTML = `
+      <div class="solved-title">— FALL ABGESCHLOSSEN —</div>
+      <div class="solved-text">Karl Mauer hat den Fall gelöst.<br>
+      ${numIndizien} Indiz${numIndizien === 1 ? '' : 'ien'} gesammelt, ${verdName} überführt.<br>
+      Die Klienten sind informiert, das Honorar ist fällig.</div>
+      <div class="solved-text-small">Tag ${gameDay}, Tageszeit: ${TIMES_OF_DAY[gameTimeIdx]}<br>
+      Karl gönnt sich endlich einen ehrlichen Schluck Bourbon.</div>
+      <button class="solved-button" onclick="resetGame()">Neue Ermittlung</button>
+    `;
+    document.querySelector('.container').appendChild(solvedEl);
+  }
+  solvedEl.classList.remove('hidden');
+}
+
+// Lose-Screen: gefeuert (Vertrauensverlust)
+function showCaseFailed(reason) {
+  document.getElementById('options').classList.add('hidden');
+  document.getElementById('error').classList.add('hidden');
+  document.getElementById('wait-box').classList.add('hidden');
+  document.getElementById('loading').classList.add('hidden');
+  let failEl = document.getElementById('case-failed');
+  if (!failEl) {
+    failEl = document.createElement('div');
+    failEl.id = 'case-failed';
+    failEl.className = 'case-failed';
+    const reasonText = reason || 'Der Klient hat das Vertrauen verloren.';
+    failEl.innerHTML = `
+      <div class="failed-title">— AUFTRAG ENTZOGEN —</div>
+      <div class="failed-text">${reasonText}<br>
+      Karl Mauer steht ohne Klient da. Wieder mal.</div>
+      <div class="failed-text-small">Tag ${gameDay}<br>
+      Es bleibt die alte Frage: Wie zahle ich die Miete diesen Monat?</div>
+      <button class="failed-button" onclick="resetGame()">Neue Ermittlung</button>
+    `;
+    document.querySelector('.container').appendChild(failEl);
+  }
+  failEl.classList.remove('hidden');
+}
 function showLoading(customText) {
   document.getElementById('loading').classList.remove('hidden');
   document.getElementById('options').classList.add('hidden');
@@ -1678,12 +1912,8 @@ function copyDebug(event) {
 
 // Exportiert den gesamten Spielverlauf als Plaintext, damit Benjamin ihn fuer
 // Lektor-Analyse rauskopieren kann.
-function exportTranscript() {
-  if (!logEntries || logEntries.length === 0) {
-    alert('Noch kein Spielverlauf zum Exportieren.');
-    return;
-  }
-
+// Baut den kompletten Verlauf-Text fuer Export oder Teilen
+function buildTranscriptText() {
   // Header
   let out = 'KRIMINALBUERO MAUER\n';
   out += 'BERLIN, 1953\n';
@@ -1743,51 +1973,125 @@ function exportTranscript() {
     }
   }
   out += 'Szenen total: ' + logEntries.filter(e => e.type === 'scene').length + '\n';
+  return out;
+}
 
-  // Versuche Clipboard, sonst Overlay
-  const showSuccess = () => {
-    const btn = document.querySelector('.status-popup-export');
-    if (btn) {
-      const orig = btn.textContent;
-      btn.textContent = '✓ Kopiert!';
-      btn.style.borderColor = 'rgba(140,180,140,0.9)';
-      setTimeout(() => {
-        btn.textContent = orig;
-        btn.style.borderColor = '';
-      }, 2000);
-    }
-  };
-  const showManual = () => {
-    const existing = document.getElementById('manual-copy-overlay');
-    if (existing) existing.remove();
-    const overlay = document.createElement('div');
-    overlay.id = 'manual-copy-overlay';
-    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:1000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);';
-    const title = document.createElement('div');
-    title.textContent = 'Verlauf manuell kopieren';
-    title.style.cssText = 'color:#c8bfa8;font-family:Courier,monospace;font-size:14px;letter-spacing:3px;text-transform:uppercase;margin-bottom:12px;';
-    const hint = document.createElement('div');
-    hint.textContent = 'Lange drücken oder mit Strg+A, Strg+C kopieren';
-    hint.style.cssText = 'color:#8a8070;font-family:Courier,monospace;font-size:11px;margin-bottom:16px;';
-    const ta = document.createElement('textarea');
-    ta.value = out;
-    ta.readOnly = true;
-    ta.style.cssText = 'width:100%;max-width:700px;height:65vh;background:#0a0a0f;color:#c8bfa8;border:1px solid rgba(200,191,168,0.3);padding:12px;font-family:Courier,monospace;font-size:11px;line-height:1.5;resize:none;';
-    const closeBtn = document.createElement('button');
-    closeBtn.textContent = 'Schliessen';
-    closeBtn.style.cssText = 'margin-top:16px;background:transparent;border:1px solid rgba(200,191,168,0.4);color:#e8dfc8;padding:10px 24px;font-family:Courier,monospace;font-size:12px;letter-spacing:3px;text-transform:uppercase;cursor:pointer;';
-    closeBtn.onclick = () => overlay.remove();
-    overlay.appendChild(title);
-    overlay.appendChild(hint);
-    overlay.appendChild(ta);
-    overlay.appendChild(closeBtn);
-    document.body.appendChild(overlay);
-    setTimeout(() => { ta.focus(); ta.select(); }, 50);
-  };
+// Visuelles Feedback: ein Button wird kurz gruen mit Haken
+function flashButtonSuccess(button, successText) {
+  if (!button) return;
+  const orig = button.textContent;
+  const origBorder = button.style.borderColor;
+  const origColor = button.style.color;
+  button.textContent = successText || '✓ Erledigt';
+  button.style.borderColor = 'rgba(140,180,140,0.9)';
+  button.style.color = 'rgba(170,200,170,1)';
+  setTimeout(() => {
+    button.textContent = orig;
+    button.style.borderColor = origBorder;
+    button.style.color = origColor;
+  }, 2000);
+}
+
+// Manueller Copy-Overlay fuer Browser ohne Clipboard-API
+function showManualCopyOverlay(text, title) {
+  const existing = document.getElementById('manual-copy-overlay');
+  if (existing) existing.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'manual-copy-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:1000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);';
+  const titleEl = document.createElement('div');
+  titleEl.textContent = title || 'Verlauf manuell kopieren';
+  titleEl.style.cssText = 'color:#c8bfa8;font-family:Courier,monospace;font-size:14px;letter-spacing:3px;text-transform:uppercase;margin-bottom:12px;';
+  const hint = document.createElement('div');
+  hint.textContent = 'Lange drücken oder mit Strg+A, Strg+C kopieren';
+  hint.style.cssText = 'color:#8a8070;font-family:Courier,monospace;font-size:11px;margin-bottom:16px;';
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.readOnly = true;
+  ta.style.cssText = 'width:100%;max-width:700px;height:65vh;background:#0a0a0f;color:#c8bfa8;border:1px solid rgba(200,191,168,0.3);padding:12px;font-family:Courier,monospace;font-size:11px;line-height:1.5;resize:none;';
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = 'Schliessen';
+  closeBtn.style.cssText = 'margin-top:16px;background:transparent;border:1px solid rgba(200,191,168,0.4);color:#e8dfc8;padding:10px 24px;font-family:Courier,monospace;font-size:12px;letter-spacing:3px;text-transform:uppercase;cursor:pointer;';
+  closeBtn.onclick = () => overlay.remove();
+  overlay.appendChild(titleEl);
+  overlay.appendChild(hint);
+  overlay.appendChild(ta);
+  overlay.appendChild(closeBtn);
+  document.body.appendChild(overlay);
+  setTimeout(() => { ta.focus(); ta.select(); }, 50);
+}
+
+// Exportiert den gesamten Spielverlauf in die Zwischenablage, damit Benjamin ihn
+// fuer Lektor-Analyse rauskopieren kann.
+function exportTranscript(event) {
+  if (!logEntries || logEntries.length === 0) {
+    alert('Noch kein Spielverlauf zum Exportieren.');
+    return;
+  }
+  // Settings-Menue schliessen falls von dort aus aufgerufen
+  const menu = document.getElementById('settings-menu');
+  if (menu && !menu.classList.contains('hidden')) {
+    menu.classList.add('hidden');
+  }
+  const out = buildTranscriptText();
+  // Such den Button der diese Funktion getriggert hat (fuer Feedback-Animation)
+  const sourceBtn = (event && event.currentTarget) || null;
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(out).then(showSuccess).catch(showManual);
+    navigator.clipboard.writeText(out)
+      .then(() => flashButtonSuccess(sourceBtn, '✓ Kopiert!'))
+      .catch(() => showManualCopyOverlay(out, 'Verlauf manuell kopieren'));
   } else {
-    showManual();
+    showManualCopyOverlay(out, 'Verlauf manuell kopieren');
+  }
+}
+
+// Oeffnet das System-Share-Sheet (iOS Share, Android Share). Nutzt navigator.share
+// wenn verfuegbar (iOS Safari, Brave iOS, Chrome Mobile), sonst Fallback auf Clipboard.
+function shareTranscript(event) {
+  if (!logEntries || logEntries.length === 0) {
+    alert('Noch kein Spielverlauf zum Teilen.');
+    return;
+  }
+  // Settings-Menue schliessen
+  const menu = document.getElementById('settings-menu');
+  if (menu && !menu.classList.contains('hidden')) {
+    menu.classList.add('hidden');
+  }
+  const out = buildTranscriptText();
+  const sourceBtn = (event && event.currentTarget) || null;
+
+  // navigator.share ist die Web Share API - oeffnet das iOS-Share-Sheet
+  if (navigator.share) {
+    const dataDate = new Date().toISOString().slice(0, 10);
+    navigator.share({
+      title: 'Schatten - Spielverlauf ' + dataDate,
+      text: out,
+    })
+    .then(() => flashButtonSuccess(sourceBtn, '✓ Geteilt!'))
+    .catch((err) => {
+      // User hat abgebrochen oder Fehler - keine Aktion noetig bei AbortError
+      if (err && err.name !== 'AbortError') {
+        console.warn('[Schatten] Share fehlgeschlagen, Fallback zu Clipboard:', err);
+        // Fallback: in die Zwischenablage kopieren
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(out)
+            .then(() => flashButtonSuccess(sourceBtn, '✓ Kopiert!'))
+            .catch(() => showManualCopyOverlay(out, 'Verlauf manuell kopieren'));
+        } else {
+          showManualCopyOverlay(out, 'Verlauf manuell kopieren');
+        }
+      }
+    });
+  } else {
+    // Kein navigator.share verfuegbar (Desktop Brave/Firefox/etc) - kopieren als Fallback
+    console.log('[Schatten] navigator.share nicht verfuegbar, kopiere stattdessen.');
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(out)
+        .then(() => flashButtonSuccess(sourceBtn, '✓ Kopiert!'))
+        .catch(() => showManualCopyOverlay(out, 'Verlauf zum Teilen kopieren'));
+    } else {
+      showManualCopyOverlay(out, 'Verlauf zum Teilen kopieren');
+    }
   }
 }
 // Cache for the status popup details
@@ -1891,6 +2195,39 @@ function showStatusDetails() {
     castRow.style.display = '';
   } else {
     castRow.style.display = 'none';
+  }
+  // Fall-Fortschritt
+  const caseRow = document.getElementById('popup-case-row');
+  const caseEl = document.getElementById('popup-case');
+  const stageLabels = ['Aufbau', 'Indizien gesammelt', 'Verdaechtiger identifiziert', 'Fall geloest'];
+  const hasProgress = caseProgress.indizien.length > 0 || caseProgress.tatverdaechtiger || clientProfile.name;
+  if (hasProgress) {
+    let lines = [];
+    lines.push('Stufe: ' + stageLabels[caseProgress.stage]);
+    if (caseProgress.indizien.length > 0) {
+      lines.push('Indizien: ' + caseProgress.indizien.length);
+      for (const ind of caseProgress.indizien.slice(-5)) {
+        lines.push('  · ' + ind);
+      }
+      if (caseProgress.indizien.length > 5) {
+        lines.push('  · ... (' + (caseProgress.indizien.length - 5) + ' weitere)');
+      }
+    }
+    if (caseProgress.tatverdaechtiger) {
+      lines.push('Verdaechtiger: ' + caseProgress.tatverdaechtiger + (caseProgress.ueberfuehrt ? ' (ueberfuehrt!)' : ''));
+    }
+    if (clientProfile.name) {
+      lines.push('Klient: ' + clientProfile.name + ' (' + clientProfile.charakter + ')');
+      if (gameDay >= clientProfile.geduldsstufe2 && !caseProgress.istGelöst) {
+        lines.push('  Warnung: Auftrag wird bald entzogen!');
+      } else if (gameDay >= clientProfile.geduldsstufe1 && !caseProgress.istGelöst) {
+        lines.push('  Ungeduldig.');
+      }
+    }
+    caseEl.textContent = lines.join('\n');
+    caseRow.style.display = '';
+  } else {
+    caseRow.style.display = 'none';
   }
   document.getElementById('status-popup').classList.remove('hidden');
 }
@@ -2344,7 +2681,55 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
         return line;
       }).join('\n');
       recap += `\nDiese Personen sind PHYSISCH ANWESEND. Wenn sie in der naechsten Szene weiterhin im Raum sind, MUSST du sie erwaehnen (was tun sie, wo stehen/sitzen sie, wie reagieren sie). Sie duerfen nicht einfach verschwinden.`;
-      recap += `\n\nBEZIEHUNGEN MUESSEN STABIL BLEIBEN: Die oben angegebene Rolle und Beziehung ist FAKT und darf nicht aendern. Wenn Frieda als "Schwester von Hans Behrend" steht, ist Hans IMMER ihr Bruder, NIE ihr Ehemann oder Vater oder Sohn. Verwechsle Beziehungen nicht. Wenn jemand die Szene verlaesst (geht raus, wird weggebracht, fluechtet, stirbt), beschreibe das EXPLIZIT und setze ihn in "cast_entfernt".`;
+      recap += `\n\nBEZIEHUNGEN MUESSEN STABIL BLEIBEN: Die oben angegebene Rolle und Beziehung ist FAKT und darf nicht aendern. Wenn jemand als "Schwester des Vermissten" steht, bleibt er/sie das durchgaengig - NIE wird daraus Ehefrau oder Mutter. Verwechsle Beziehungen nicht. Wenn jemand die Szene verlaesst (geht raus, wird weggebracht, fluechtet, stirbt), beschreibe das EXPLIZIT und setze ihn in "cast_entfernt".`;
+    }
+    // Story-Faktenblatt mitschicken: alle bisher etablierten Personen mit ihren festgeschriebenen
+    // Beziehungen. Verhindert, dass die KI nachtraeglich Beziehungen umschreibt (Frieda-Drift).
+    const factKeys = Object.keys(storyFacts);
+    if (factKeys.length > 0) {
+      recap += `\n\nSTORY-FAKTEN (unveraenderlich, aus frueheren Szenen festgehalten):`;
+      for (const k of factKeys) {
+        const f = storyFacts[k];
+        const meta = [];
+        if (f.rolle) meta.push(f.rolle);
+        if (f.beziehung) meta.push(f.beziehung);
+        recap += `\n- ${f.name}${meta.length > 0 ? ' (' + meta.join(', ') + ')' : ''}`;
+      }
+      recap += `\nDiese Fakten gelten DAUERHAFT. Auch wenn eine Person nicht im aktuellen Raum ist, MUSS ihre Beziehung gleich bleiben (z.B. wenn vorher Person X als "Bruder des Klienten" eingetragen wurde, bleibt X der Bruder, nie der Ehemann oder Cousin).`;
+    }
+    // Fall-Fortschritt mitschicken
+    const stageNames = ['Aufbau / Erste Spuren', 'Indizien gesammelt', 'Verdaechtiger identifiziert', 'Verdaechtiger ueberfuehrt'];
+    recap += `\n\nFALL-FORTSCHRITT: Stufe ${caseProgress.stage} (${stageNames[caseProgress.stage] || '?'}).`;
+    if (caseProgress.indizien.length > 0) {
+      recap += `\nGesammelte Indizien (${caseProgress.indizien.length}):`;
+      for (const ind of caseProgress.indizien) {
+        recap += `\n- ${ind}`;
+      }
+    } else {
+      recap += `\nNoch keine Indizien gesammelt. Karl muss Beweise/Zeugen finden.`;
+    }
+    if (caseProgress.tatverdaechtiger) {
+      recap += `\nHauptverdaechtiger: ${caseProgress.tatverdaechtiger}${caseProgress.ueberfuehrt ? ' (UEBERFUEHRT)' : ' (noch nicht ueberfuehrt)'}.`;
+    }
+    // Hinweis fuer die KI ueber den naechsten Schritt
+    if (caseProgress.stage === 0) {
+      recap += `\nNAECHSTER SCHRITT: Karl muss konkrete Indizien sammeln (Beweisstuecke, Zeugenaussagen, Foto, Dokument). Wenn in dieser Szene ein neues Indiz vorkommt, MUSS es in "indiz_neu" eingetragen werden.`;
+    } else if (caseProgress.stage === 1) {
+      recap += `\nNAECHSTER SCHRITT: Karl hat genug Indizien. Er kann jetzt einen Verdaechtigen identifizieren (mit Motiv + Gelegenheit aus den Indizien belegt). Wenn er das in dieser Szene tut, setze "tatverdaechtiger_identifiziert".`;
+    } else if (caseProgress.stage === 2) {
+      recap += `\nNAECHSTER SCHRITT: Karl muss ${caseProgress.tatverdaechtiger} ueberfuehren - Konfrontation mit Beweisen, Festnahme, Gestaendnis. Wenn das in dieser Szene gelingt, setze "tatverdaechtiger_ueberfuehrt": true.`;
+    } else if (caseProgress.stage === 3 && !caseProgress.klientGesprochen) {
+      recap += `\nNAECHSTER SCHRITT: ${caseProgress.tatverdaechtiger} ist ueberfuehrt. Karl MUSS dem Klient/der Klientin das Ergebnis berichten (zurueck ins Buero, Anruf, Treffen). Dann ist der Fall offiziell geloest. Wenn das in dieser Szene passiert, setze "klient_berichtet": true.`;
+    }
+    // Klient-Geduld: wenn Karl zu lange braucht, droht der Klient mit Auftragsentzug
+    if (clientProfile.name && !caseProgress.istGelöst && !caseProgress.ueberfuehrt) {
+      if (gameDay >= clientProfile.geduldsstufe3) {
+        recap += `\n\nKLIENT-GEDULD ABGELAUFEN: Tag ${gameDay}. ${clientProfile.name} (${clientProfile.charakter}) hat das Vertrauen verloren. In dieser Szene MUSS ${clientProfile.name} entweder persoenlich erscheinen, anrufen oder Karl eine Nachricht zukommen lassen, in der der Auftrag offiziell ENTZOGEN wird. Das wird das Ende des Falls sein. Erzaehle es klar und mit dramatischem Gewicht (Enttaeuschung, Wut, Resignation).`;
+      } else if (gameDay >= clientProfile.geduldsstufe2) {
+        recap += `\n\nKLIENT-WARNUNG: Tag ${gameDay}. ${clientProfile.name} ist sehr ungeduldig. In dieser Szene oder spaetestens der naechsten MUSS ${clientProfile.name} (oder ein Bote) Karl deutlich warnen: ohne konkretes Ergebnis bis morgen wird der Auftrag entzogen.`;
+      } else if (gameDay >= clientProfile.geduldsstufe1) {
+        recap += `\n\nKLIENT-MAHNUNG: Tag ${gameDay}. ${clientProfile.name} mahnt zu schnellerem Fortschritt. Eine der naechsten 1-2 Szenen sollte einen Anruf, Brief oder persoenlichen Besuch von ${clientProfile.name} bringen, mit der Frage "Wo bleiben Ihre Ergebnisse, Mauer?".`;
+      }
     }
     // Walther-Inflation eindaemmen: wenn die Pistole in den letzten Szenen zu oft "gezogen"
     // wurde, weise die KI an, sie weg zu lassen. Marlowe nutzt seine Waffe selten.
@@ -2435,6 +2820,33 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
       timeContext += `\n\nESKALATIONS-BREMSE (sehr wichtig): Die letzten ${actionStreak} Szenen waren Action (Spannung 4-5). Das ist ZU VIEL fuer einen Noir-Krimi. Marlowe macht Schiessereien selten und mit Gewicht. Diese Szene MUSS die Spannung runterbringen (spannung <= 3). Die Angreifer fliehen, Sirenen vertreiben sie, Karl entkommt in eine ruhige Strasse, etwas unterbricht den Kampf. Mindestens 2 der 4 Optionen muessen RECHERCHE-ORIENTIERT sein (zum Buero zurueck, Telefonat fuehren, Akten studieren, Klient befragen, Bibliothek/Archiv, Zeugen aufsuchen). KEINE neue Schiesserei, KEINE neue Verfolgungsjagd. Karl braucht jetzt einen Atemzug und einen Hinweis zum Nachdenken.`;
     } else if (actionStreak === 2) {
       timeContext += `\n\nESKALATIONS-WARNUNG: Die letzten 2 Szenen waren Action. Sehr bald MUSS Beruhigung folgen. Diese Szene darf noch Action sein, aber lass die Spannung dann sinken. Die naechsten Optionen sollten Wege aus dem Konflikt anbieten.`;
+    }
+    // SZENEN-DIVERSITAET: wenn die letzten Szenen alle vom gleichen Typ waren,
+    // schlage einen anderen Typ vor. Detektiv-Stories brauchen Routine-Vielfalt:
+    // Buero, Strasse, Polizei, Pathologie, Kneipe, Recherche-Aussen, Zeugen-Besuch.
+    if (recentSceneTypes.length >= 4) {
+      const last4 = recentSceneTypes.slice(-4);
+      const dominantType = last4[0];
+      const sameTypeCount = last4.filter(t => t === dominantType).length;
+      if (sameTypeCount >= 3) {
+        // Alternative Szenentypen vorschlagen
+        const ALTERNATIVES = {
+          buero: ['ein Ortswechsel zu einem Zeugen', 'Besuch bei der Volkspolizei (befreundeter Kommissar)', 'eine Pathologie-Begehung', 'eine Currywurst-Bude oder Eckkneipe', 'die Reichsbahn-Halle', 'einen Friedhof', 'einen Hinterhof mit Informant'],
+          action: ['ein ruhiges Gespraech in einer Kneipe', 'Lagedenken im Buero', 'eine zaehe Recherche in einem Archiv', 'einen Pathologen-Besuch'],
+          strasse: ['ein geschlossener Raum (Wohnung, Kneipe, Buero)', 'ein Verhoer in einer Wache', 'eine Pathologie'],
+          polizei: ['Karls Buero', 'die Strasse oder eine S-Bahn', 'eine Kneipe mit Informanten'],
+          recherche: ['ein direkter Verhoer-Besuch bei einem Zeugen', 'eine Beschattung auf der Strasse', 'eine Begegnung in einer Kneipe'],
+          besuch: ['Karls Buero zum Nachdenken', 'eine Wache der Volkspolizei', 'ein Telefonat'],
+          kneipe: ['Karls Buero', 'eine Recherche im Archiv', 'eine Beschattung'],
+          pathologie: ['ein Verhoer beim Klient', 'Karls Buero', 'eine Kneipe zum Verdauen'],
+          observation: ['eine Konfrontation mit dem Beobachteten', 'eine Recherche in Akten', 'eine Pause in einer Kneipe'],
+          ruhe: ['eine aktive Begegnung (Klient, Zeuge, Informant)', 'Recherche', 'eine Begegnung mit der Volkspolizei'],
+          gespraech: ['ein Ortswechsel', 'eine Recherche', 'eine kurze Action-Episode (Beschattung, beilaeufige Schlaegerei in einer Kneipe)'],
+        };
+        const altList = ALTERNATIVES[dominantType] || ['ein Ortswechsel', 'eine andere Art von Begegnung'];
+        const altText = altList.join(' / ');
+        timeContext += `\n\nROUTINE-VARIANTE: Die letzten Szenen waren alle vom Typ "${dominantType}". Karl ist ein Detektiv mit einem abwechslungsreichen Alltag - Buero, Strasse, Polizei, Pathologie, Verhoere, Informanten in Kneipen, beilaeufige Begegnungen, gelegentliche Frauenbekanntschaften. Bring jetzt einen Wechsel rein. Mindestens eine der vier Optionen sollte zu einem dieser Szenarien fuehren: ${altText}.`;
+      }
     }
     messages.push({ role: 'user', content: timeContext });
     messages.push({ role: 'assistant', content: 'Verstanden. Ich integriere Tageszeit und Tag in die Atmosphäre und sorge für Bewegung in der Story.' });
@@ -2878,6 +3290,27 @@ async function startGame() {
   inventory = ['Walther PPK (eigene Pistole)', 'Brieftasche mit Detektiv-Lizenz', 'Notizbuch und Bleistift'];
   // Reset Cast (NPCs im Raum)
   cast = [];
+  // Reset Story-Fakten
+  storyFacts = {};
+  // Reset Fall-Fortschritt
+  caseProgress = {
+    stage: 0,
+    indizien: [],
+    tatverdaechtiger: null,
+    ueberfuehrt: false,
+    istGelöst: false,
+    klientGesprochen: false,
+  };
+  // Reset Klient-Profil (wird beim ersten Cast-Add gesetzt)
+  clientProfile = {
+    name: '',
+    geduldsstufe1: 4,
+    geduldsstufe2: 6,
+    geduldsstufe3: 8,
+    charakter: 'normal',
+  };
+  // Reset Szenen-Typen-Tracking
+  recentSceneTypes = [];
   // Pick a random intro and use its predefined start time
   const intro = pickIntro();
   gameTimeIdx = intro.timeIdx;
@@ -3009,6 +3442,60 @@ function detectIntruder(sceneText) {
   return patterns.some(p => p.test(lower));
 }
 
+// Klassifiziert eine Szene grob in einen Typ, damit wir Szenen-Diversitaet tracken
+// koennen. Eine Detektiv-Story soll nicht 10x am gleichen Ort spielen sondern
+// abwechslungsreich: Verhoere, Recherche, Begegnungen, Action, Routine, etc.
+function classifyScene(sceneText, ort) {
+  if (!sceneText) return 'unbekannt';
+  const lower = (sceneText + ' ' + (ort || '')).toLowerCase()
+    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+  // Action / Lebensgefahr
+  if (/\b(schuss|schiess|kugel|verfolg|flieh|jag|kampf|schlag|brueller|brennt|schreit auf|stirbt|trifft|bauchschuss|kopfschuss|feuer(st|n|t)?\b|drueckst? ab|muendung|holster|walther ppk)\b/.test(lower)) {
+    return 'action';
+  }
+  // Verhoer / Gespraech in Karls Buero
+  if (/\b(buero|schreibtisch|klientenstuhl|aschenbecher|aktenschrank|underwood|schreibmaschine)\b/.test(lower)) {
+    return 'buero';
+  }
+  // Polizei-Gebaeude / Volkspolizei-Revier
+  if (/\b(revier|polizeipraesidium|volkspolizei-revier|wachstube|abschnittsbevollmaechtig|kommissar|leitstelle|verhoerzimmer)\b/.test(lower)) {
+    return 'polizei';
+  }
+  // Pathologie / Leichenhalle / Krankenhaus
+  if (/\b(pathologe|leichenhaus|leichenhalle|charite|krankenhaus|sezier|obduk|leichnam|autopsie)\b/.test(lower)) {
+    return 'pathologie';
+  }
+  // Bar / Kneipe / Lokal
+  if (/\b(kneipe|bar\b|bierhaus|gaststaette|wirtshaus|wirt zapft|theke|barkeeper|tresen|schnaps|bourbon im glas|skat)\b/.test(lower)) {
+    return 'kneipe';
+  }
+  // Strasse / Aussenwelt / Beobachtung
+  if (/\b(kopfsteinpflaster|gasse|hinterhof|spree|fluss|trottoir|gehweg|s-bahn|strassenbahn|bushaltestelle)\b/.test(lower)) {
+    return 'strasse';
+  }
+  // Wohnung Tatort / Besuch bei Zeuge
+  if (/\b(klingelt an der wohnungstuer|aufgeschlossen|treppenhaus|hinterhaus|mietshaus|hausflur|treppenabsatz)\b/.test(lower)) {
+    return 'besuch';
+  }
+  // Recherche / Akten / Telefon
+  if (/\b(akte|aktenmappe|notizbuch|adressbuch|archiv|bibliothek|grundbuch|protokoll|telefoniert?|hoerer)\b/.test(lower)) {
+    return 'recherche';
+  }
+  // Verfolgung / Beschattung
+  if (/\b(beschattet|beobachtest|schatten lange|verfolgst|spaehst|wartest geduldig|observation|tarnung)\b/.test(lower)) {
+    return 'observation';
+  }
+  // Nacht / Schlaf / Einsamkeit
+  if (/\b(schlaf|bett|kissen|decke|schweiss|wach|albtrau|morgensonne)\b/.test(lower)) {
+    return 'ruhe';
+  }
+  return 'gespraech';
+}
+
+// Liste der letzten Szenen-Typen (max 10). Wird verwendet, um zu erkennen, wenn
+// Karl zu lange im selben Modus haengt (z.B. nur im Buero).
+let recentSceneTypes = [];
+
 async function chooseOption(option) {
   showLoading();
   logEntries.push({ type: 'choice', text: option.text });
@@ -3096,6 +3583,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       const combined = sceneText + ' ' + injuryText;
       // Schluesselwoerter, die eine schwere/toedliche Verletzung erzaehlerisch begruenden
       const fatalTriggers = [
+        // Schuss-Verletzungen
         /\bbauchschuss\b/, /\bbrustschuss\b/, /\bkopfschuss\b/, /\bherzschuss\b/,
         /\bschuss\s+in\s+(den\s+)?(bauch|brust|kopf|hals|herz|magen|leib)/,
         /\bkugel\s+(trifft|durchschl[aä]gt|bohrt\s+sich)\s+.*(bauch|brust|kopf|hals|herz|magen|lunge|leber)/,
@@ -3107,6 +3595,32 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         /\b(messer|klinge|dolch)\s+(in|durch)\s+(den\s+)?(bauch|brust|hals|herz|kehle)/,
         /\bgenickbruch\b/, /\bgenick\s+bricht\b/,
         /\bbrustkorb\s+(zerschmettert|durchbohrt|getroffen)/,
+        // Neu in v6.14: Autounfall / Verkehrsunfall
+        /\b(angefahren|ueberfahren|gerammt)\s+(vom|durch|von)\s+(wagen|auto|lkw|laster|opel|mercedes|bmw)/,
+        /\bwagen\s+rast\s+.*\s+(in dich|gegen dich|frontal)/,
+        /\b(autounfall|verkehrsunfall|frontalzusammenstoss)/,
+        /\bvon der strasse gedraengt/, /\bvon der strasse abgedraengt/,
+        /\b(rippen|wirbel|becken)\s+(zerschmettert|gebrochen|durchstossen)/,
+        /\blenkrad\s+(durchbohrt|gepresst|brust)/,
+        // Neu in v6.14: Vergiftung
+        /\b(zyankali|cyanid|gift|strychnin|arsen)\s+(im|in|wirkt|laeuft)/,
+        /\b(getraenk|kaffee|whisky|bourbon|bier|wasser|tee)\s+.*\s+(vergiftet|getraenkt|versetzt)/,
+        /\bvergift(et|ung).*kreislauf/, /\b(brennt|toedlich)\s+in\s+(deinem|im)\s+(magen|kehle)/,
+        /\bmuskeln versagen.*atemnot/,
+        // Neu in v6.14: Erfrieren / Wasser
+        /\beis (bricht|knackt|gibt nach).*spree/, /\bunter dem eis/,
+        /\b(eiswasser|spreewasser)\s+(stuerzt|laeuft|fuellt)\s+.*(lunge|atem)/,
+        /\berfrierst\b/, /\berfrieren\b/, /\bunterkuehl(t|ung)/,
+        /\bertrinken|ertrunk(en)?/,
+        // Neu in v6.14: Stasi / politische Festnahme
+        /\b(stasi|mfs)\s+(verhaftet|nimmt|fuehrt)\s+(dich|karl)/,
+        /\bhohenschoenhausen/,
+        /\b(politische|geheime)\s+festnahme/,
+        /\b(in\s+haft\s+gestorben|verschwindet\s+spurlos\s+in)/,
+        // Neu in v6.14: Trümmer / Bombenkrater
+        /\b(truemmerfeld|bombenkrater|ruine)\s+(stuerzt|bricht|gibt nach)/,
+        /\beingestuerzt(es|er)?\s+(mauerwerk|haus|gebaeude).*(begraben|begraebt)/,
+        /\b(mauer|wand|decke)\s+stuerzt\s+(auf dich|ueber dir)/,
       ];
       const hasFatalTrigger = fatalTriggers.some(p => p.test(combined));
       if (!hasFatalTrigger) {
@@ -3165,6 +3679,12 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       intruderCooldown--;
     }
 
+    // Szenen-Typ klassifizieren und tracken (max 10 letzte Typen)
+    const sceneType = classifyScene(scene.szene || '', scene.ort || '');
+    recentSceneTypes.push(sceneType);
+    if (recentSceneTypes.length > 10) recentSceneTypes.shift();
+    console.log('[Schatten] Szenen-Typ:', sceneType, '(letzte:', recentSceneTypes.join(','), ')');
+
     // Inventar-Aenderungen verarbeiten
     if (Array.isArray(scene.inventar_hinzugefuegt) && scene.inventar_hinzugefuegt.length > 0) {
       for (const item of scene.inventar_hinzugefuegt) {
@@ -3190,6 +3710,8 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
 
     // Cast-Aenderungen verarbeiten (NPCs die hinzukommen/gehen).
     // Neu in v6.12: strukturierte Objekte mit name/rolle/beziehung. Strings als Fallback.
+    // Neu in v6.13: storyFacts friert die Beziehung bei der ersten Erwaehnung ein.
+    // Neu in v6.14: Klient-Erkennung -> Geduldsstufen aus Charakter.
     if (Array.isArray(scene.cast_hinzugefuegt) && scene.cast_hinzugefuegt.length > 0) {
       for (const npc of scene.cast_hinzugefuegt) {
         let entry;
@@ -3203,6 +3725,53 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           };
         } else {
           continue;
+        }
+        const factKey = entry.name.toLowerCase();
+        // Wenn die Person schon in storyFacts ist, ist die fruehere Beziehung
+        // FAKT - wir ueberschreiben sie nicht, sondern erzwingen sie auf dem Eintrag.
+        if (storyFacts[factKey]) {
+          const fact = storyFacts[factKey];
+          // Wenn die KI versucht eine andere Beziehung zu setzen: Warnung + Korrektur
+          if (entry.beziehung && fact.beziehung && entry.beziehung.toLowerCase() !== fact.beziehung.toLowerCase()) {
+            console.warn('[Schatten] Story-Fakt-Konflikt! KI sagte:', entry.beziehung, 'aber Fakt ist:', fact.beziehung);
+          }
+          entry.beziehung = fact.beziehung || entry.beziehung;
+          entry.rolle = fact.rolle || entry.rolle;
+        } else if (entry.name && (entry.rolle || entry.beziehung)) {
+          // Neuer Story-Fakt: bei erster Erwaehnung einfrieren
+          storyFacts[factKey] = {
+            name: entry.name,
+            rolle: entry.rolle,
+            beziehung: entry.beziehung,
+            firstSeenScene: sceneCounter,
+          };
+          console.log('[Schatten] Story-Fakt eingefroren:', entry.name, '->', entry.rolle, '/', entry.beziehung);
+        }
+        // Klient-Erkennung: wenn noch kein Klient gesetzt und die Rolle passt
+        if (!clientProfile.name && entry.rolle && /klient|auftraggeb/i.test(entry.rolle)) {
+          clientProfile.name = entry.name;
+          // Charakter wird zufaellig aus dem Namen + Rolle abgeleitet, mit leichter Variation
+          // ungeduldig: Tag 3 Mahnung, 4 Warnung, 5 Feuern
+          // normal: Tag 4/6/8
+          // gelassen: Tag 5/8/11
+          const r = Math.random();
+          if (r < 0.3) {
+            clientProfile.charakter = 'ungeduldig';
+            clientProfile.geduldsstufe1 = 3;
+            clientProfile.geduldsstufe2 = 4;
+            clientProfile.geduldsstufe3 = 5;
+          } else if (r < 0.75) {
+            clientProfile.charakter = 'normal';
+            clientProfile.geduldsstufe1 = 4;
+            clientProfile.geduldsstufe2 = 6;
+            clientProfile.geduldsstufe3 = 8;
+          } else {
+            clientProfile.charakter = 'gelassen';
+            clientProfile.geduldsstufe1 = 5;
+            clientProfile.geduldsstufe2 = 8;
+            clientProfile.geduldsstufe3 = 11;
+          }
+          console.log('[Schatten] Klient identifiziert:', clientProfile.name, '(' + clientProfile.charakter + ', Mahnung Tag ' + clientProfile.geduldsstufe1 + ', Feuern Tag ' + clientProfile.geduldsstufe3 + ')');
         }
         // Dedup nach Name
         if (!cast.some(c => c.name && c.name.toLowerCase() === entry.name.toLowerCase())) {
@@ -3226,6 +3795,72 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       cast = cast.slice(-8);
     }
 
+    // Fall-Fortschritt verarbeiten
+    // 1) Neue Indizien sammeln
+    if (Array.isArray(scene.indiz_neu) && scene.indiz_neu.length > 0) {
+      for (const ind of scene.indiz_neu) {
+        if (typeof ind === 'string' && ind.trim() && !caseProgress.indizien.some(i => i.toLowerCase() === ind.trim().toLowerCase())) {
+          caseProgress.indizien.push(ind.trim());
+          console.log('[Schatten] Neues Indiz:', ind.trim());
+        }
+      }
+      // Stage-Aufstieg: ab 3 Indizien -> Stage 1
+      if (caseProgress.stage === 0 && caseProgress.indizien.length >= 3) {
+        caseProgress.stage = 1;
+        console.log('[Schatten] Fall-Fortschritt: Stage 1 (Indizien beisammen)');
+      }
+    }
+    // 2) Tatverdaechtiger identifiziert
+    if (typeof scene.tatverdaechtiger_identifiziert === 'string' && scene.tatverdaechtiger_identifiziert.trim()) {
+      if (!caseProgress.tatverdaechtiger) {
+        caseProgress.tatverdaechtiger = scene.tatverdaechtiger_identifiziert.trim();
+        // Stage 2 erst wenn vorher Stage 1 (Indizien beisammen)
+        if (caseProgress.stage >= 1) {
+          caseProgress.stage = 2;
+          console.log('[Schatten] Fall-Fortschritt: Stage 2 (Verdaechtiger ' + caseProgress.tatverdaechtiger + ')');
+        } else {
+          console.log('[Schatten] Tatverdaechtiger genannt, aber zu frueh fuer Stage 2 (erst Indizien sammeln).');
+        }
+      }
+    }
+    // 3) Tatverdaechtiger ueberfuehrt - Voraussetzung Stage 2
+    if (scene.tatverdaechtiger_ueberfuehrt === true && caseProgress.stage >= 2) {
+      caseProgress.ueberfuehrt = true;
+      console.log('[Schatten] Fall-Fortschritt: Verdaechtiger ueberfuehrt!');
+    }
+    // 4) Klient berichtet - finale Win-Bedingung
+    if (scene.klient_berichtet === true && caseProgress.ueberfuehrt) {
+      caseProgress.klientGesprochen = true;
+      caseProgress.istGelöst = true;
+      caseProgress.stage = 3;
+      console.log('[Schatten] FALL GELÖST! Win-Screen wird ausgeloest.');
+    }
+
+    // Klient-Auftrag-Entzug: wenn der Erzaehltext klare Entzug-Phrasen enthaelt
+    // UND wir im Geduldsstufe-3-Bereich sind, triggern wir die Fail-Bedingung.
+    let clientFired = false;
+    if (clientProfile.name && gameDay >= clientProfile.geduldsstufe3 && !caseProgress.istGelöst && !caseProgress.ueberfuehrt) {
+      const lower = (scene.szene || '').toLowerCase();
+      const firePatterns = [
+        /\bauftrag (entzogen|zurueckziehen|zurueckgezogen|beendet|aufkuendig|annullier)/,
+        /\bauftrag .* zurueck/,
+        /\bziehe? (den|meinen) auftrag zurueck/,
+        /\b(ich )?ziehe? mich (von|vom) (dem|diesem) (fall|auftrag) zurueck/,
+        /\bsie sind gefeuert\b/,
+        /\bich beende (unser|den) (zusammen|vertrag|auftrag)/,
+        /\bich beauftrage (jetzt|sofort) jemand anderen/,
+        /\bsie sind hier nicht mehr/,
+        /\bvergessen sie es,? mauer\b/,
+        /\bsie sind raus aus dem fall/,
+        /\bich will sie nicht mehr (sehen|haben)/,
+        /\bnicht mehr meinen detektiv/,
+      ];
+      if (firePatterns.some(p => p.test(lower))) {
+        console.log('[Schatten] Klient hat Karl gefeuert!');
+        clientFired = true;
+      }
+    }
+
     logEntries.push({
       type: 'scene',
       text: scene.szene,
@@ -3244,6 +3879,12 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     // Game Over wenn Verfassung auf 0
     if (isGameOver) {
       showGameOver();
+    } else if (caseProgress.istGelöst) {
+      // WIN: Fall geloest
+      showCaseSolved();
+    } else if (clientFired) {
+      // LOSE: Vom Klient gefeuert
+      showCaseFailed(`Tag ${gameDay}: ${clientProfile.name} hat Karl den Auftrag entzogen. Zu lange ohne Ergebnis.`);
     } else {
       renderOptions(scene);
     }
@@ -3512,6 +4153,11 @@ function resetGame() {
   document.getElementById('header').classList.add('hidden');
   document.getElementById('status-bar').classList.add('hidden');
   document.getElementById('footer').classList.add('hidden');
+  // Win-/Fail-Overlays ausblenden falls vorhanden
+  const solvedEl = document.getElementById('case-solved');
+  if (solvedEl) solvedEl.classList.add('hidden');
+  const failedEl = document.getElementById('case-failed');
+  if (failedEl) failedEl.classList.add('hidden');
   hideAll();
   showStart();
 }
