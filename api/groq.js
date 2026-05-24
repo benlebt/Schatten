@@ -67,10 +67,25 @@ export default async function handler(req, res) {
     });
   }
 
-  const { messages } = req.body || {};
+  const { messages, model: requestedModel } = req.body || {};
   if (!Array.isArray(messages) || messages.length === 0) {
     return res.status(400).json({ error: { message: 'messages-Array fehlt im Request-Body.' } });
   }
+
+  // Frontend darf das Modell explizit waehlen (fuer Failover bei TPD-Limits).
+  // Whitelist erlaubter Modelle, damit kein beliebiges Modell ueber unseren Key laeuft.
+  const ALLOWED_MODELS = {
+    'llama-3.3-70b-versatile': true,
+    'moonshotai/kimi-k2-instruct-0905': true,
+    'qwen/qwen3-32b': true,
+    'openai/gpt-oss-120b': true,
+    'meta-llama/llama-4-scout-17b-16e-instruct': true,
+    'openai/gpt-oss-20b': true,
+    'llama-3.1-8b-instant': true,
+  };
+  const model = ALLOWED_MODELS[requestedModel]
+    ? requestedModel
+    : 'llama-3.3-70b-versatile';
 
   // Intelligente Kontext-Reduktion fuer Groq:
   // Das Frontend schickt typischerweise:
@@ -110,10 +125,7 @@ export default async function handler(req, res) {
         'Authorization': 'Bearer ' + apiKey,
       },
       body: JSON.stringify({
-        // Llama 3.3 70B Versatile: 70B Parameter (stark), 12K TPM, 1K RPD, 100K TPD
-        // Mehr Sprach-Konsistenz und Story-Logik als Llama 4 Scout (17B aktiv)
-        // Bei ~3000 Tokens/Anfrage realistisch 4 Anfragen/Minute, 33 Anfragen/Tag
-        model: 'llama-3.3-70b-versatile',
+        model,
         messages: slimMessages,
         temperature: 0.85,
         // 1000 Tokens fuer Szene + Optionen + Summary
