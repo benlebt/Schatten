@@ -1,231 +1,3523 @@
-// Vercel Serverless Function: Proxy fuer Groq API
-// Haelt den API-Key serverseitig geheim, damit er nie im Browser landet.
-//
-// Aufruf vom Frontend: POST /api/groq mit { messages: [...] }
-// Antwort: Im OpenAI-Format durchgereicht (kompatibel zu /api/gemini).
-//
-// WICHTIG: Wegen Groqs strikten TPM-Limits (8K Tokens/Minute) ersetzen wir
-// den ueppigen Frontend-System-Prompt durch eine drastisch geschrumpfte Version.
-// Damit braucht jede Anfrage nur noch ~1500 Tokens statt 3000+.
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Schatten · Ein Krimi-Adventure</title>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --fg: #c8bfa8;
+    --fg-bright: #e8dfc8;
+    --fg-dim: #6a6050;
+    --fg-faint: #444;
+    --accent: #c8a060;
+    --tension-1: #4a9eff;
+    --tension-3: #f0c040;
+    --tension-5: #ff3030;
+    --error: #ff6060;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'Courier New', Courier, monospace;
+    position: relative;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+    background-size: 128px;
+    opacity: 0.03;
+    pointer-events: none;
+    z-index: 0;
+  }
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.7) 100%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .container {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 20px;
+    position: relative;
+    z-index: 1;
+  }
+  header {
+    border-bottom: 1px solid rgba(200,191,168,0.1);
+    padding-bottom: 16px;
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .title-block {
+    flex: 1;
+  }
+  .eyebrow {
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: #666;
+    text-transform: uppercase;
+  }
+  h1 {
+    font-size: 22px;
+    color: var(--fg-bright);
+    letter-spacing: 1px;
+    margin: 2px 0 0;
+  }
+  .tension {
+    text-align: right;
+    min-width: 110px;
+  }
+  .tension-label {
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: #555;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .tension-bars {
+    display: flex;
+    gap: 4px;
+    justify-content: flex-end;
+  }
+  .tension-bar {
+    width: 18px;
+    height: 6px;
+    border-radius: 2px;
+    background: rgba(200,191,168,0.1);
+    transition: background 0.5s;
+  }
+  .tension-level {
+    font-size: 9px;
+    margin-top: 4px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-weight: bold;
+    transition: color 0.5s;
+  }
+  .tension-loc {
+    font-size: 10px;
+    color: #555;
+    margin-top: 2px;
+    letter-spacing: 2px;
+  }
+  /* Sticky status bar (visible during play, persists across scroll, tappable) */
+  .status-bar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(10, 10, 15, 0.92);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(200,191,168,0.12);
+    padding: 10px 16px;
+    margin: 0 -20px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #aaa;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.2s;
+  }
+  .status-bar:hover, .status-bar:active {
+    background: rgba(20, 18, 25, 0.96);
+  }
+  .status-tag {
+    color: var(--fg-bright);
+    font-weight: bold;
+    flex-shrink: 0;
+  }
+  .status-time {
+    color: #aaa;
+    flex-shrink: 0;
+  }
+  .status-dot {
+    color: #444;
+    flex-shrink: 0;
+  }
+  .status-loc {
+    color: #aaa;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .status-spacer { flex-shrink: 0; width: 4px; }
+  .status-bars {
+    display: flex;
+    gap: 2px;
+    flex-shrink: 0;
+  }
+  .status-bar-segment {
+    width: 8px;
+    height: 4px;
+    border-radius: 1px;
+    background: rgba(200,191,168,0.1);
+    transition: background 0.5s;
+  }
+  /* Verfassungs-Punkte: zeigen Karls koerperlichen Zustand */
+  .verfassung-dots {
+    display: flex;
+    gap: 3px;
+    flex-shrink: 0;
+    margin-right: 6px;
+  }
+  .verfassung-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(200,191,168,0.15);
+    transition: background 0.5s, transform 0.3s;
+  }
+  .verfassung-dot.full {
+    background: #c8bfa8; /* fg-dim */
+  }
+  .verfassung-dot.injured {
+    background: #ff6644;
+  }
+  .verfassung-dot.critical {
+    background: #ff2020;
+    animation: pulse-critical 1.2s infinite ease-in-out;
+  }
+  @keyframes pulse-critical {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.3); opacity: 0.6; }
+  }
+  /* Reserve space for settings cog (top-right) so text doesn't underrun it */
+  .status-bar { padding-right: 56px; }
 
-const SLIM_SYSTEM_PROMPT = `Spielleiter, Noir-Krimi-Adventure, Berlin 1953.
+  /* Status popup (shown on tap) */
+  .status-popup {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: fadeIn 0.2s ease;
+  }
+  .status-popup-inner {
+    background: #14131a;
+    border: 1px solid rgba(200,191,168,0.25);
+    padding: 24px;
+    max-width: 360px;
+    width: 100%;
+    border-radius: 4px;
+  }
+  .status-popup-title {
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    font-weight: bold;
+  }
+  .status-popup-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(200,191,168,0.08);
+    font-size: 13px;
+  }
+  .status-popup-row.status-popup-row-block {
+    display: block;
+  }
+  .status-popup-row.status-popup-row-block .status-popup-label {
+    display: block;
+    margin-bottom: 8px;
+  }
+  .status-popup-row.status-popup-row-block .status-popup-value {
+    text-align: left;
+    margin-left: 0;
+    line-height: 1.7;
+    white-space: pre-line;
+    font-size: 12px;
+  }
+  .status-popup-row:last-of-type {
+    border-bottom: none;
+    margin-bottom: 12px;
+  }
+  .status-popup-label {
+    color: #888;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-size: 10px;
+  }
+  .status-popup-value {
+    color: var(--fg-bright);
+    text-align: right;
+    flex: 1;
+    margin-left: 16px;
+    word-break: break-word;
+  }
+  .status-popup-close {
+    background: transparent;
+    border: 1px solid rgba(200,191,168,0.4);
+    color: var(--fg-bright);
+    padding: 10px 24px;
+    font-family: inherit;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 8px;
+  }
+  .status-popup-close:hover {
+    background: rgba(200,191,168,0.08);
+  }
+  .status-popup-export {
+    background: transparent;
+    border: 1px solid rgba(140,180,140,0.4);
+    color: rgba(170,200,170,0.95);
+    padding: 10px 24px;
+    font-family: inherit;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 12px;
+  }
+  .status-popup-export:hover {
+    background: rgba(140,180,140,0.08);
+  }
+  /* Hide old tension block (now part of status bar) */
+  .tension { display: none; }
+  /* Day separator (when in-game day changes) */
+  .day-separator {
+    text-align: center;
+    margin: 32px 0 20px;
+    color: var(--accent);
+    font-size: 11px;
+    letter-spacing: 6px;
+    font-weight: bold;
+    text-transform: uppercase;
+    position: relative;
+  }
+  .day-separator span {
+    background: var(--bg);
+    padding: 0 16px;
+    position: relative;
+    z-index: 1;
+  }
+  .day-separator::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: rgba(200,160,96,0.25);
+  }
+  /* Start screen */
+  .start-screen {
+    text-align: center;
+    padding: 40px 20px;
+  }
+  .emoji-large {
+    font-size: 64px;
+    filter: grayscale(0.3) sepia(0.3);
+  }
+  .start-title {
+    font-size: 42px;
+    font-weight: bold;
+    color: var(--fg-bright);
+    letter-spacing: 3px;
+    margin: 8px 0;
+    line-height: 1;
+  }
+  .start-subtitle {
+    font-size: 14px;
+    color: #666;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+  .start-text {
+    max-width: 440px;
+    margin: 0 auto 32px;
+    line-height: 1.8;
+    color: #8a8070;
+    font-size: 14px;
+  }
+  .start-version {
+    margin-top: 28px;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: #444;
+    text-transform: uppercase;
+  }
+  /* Buttons */
+  button {
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-primary {
+    background: transparent;
+    border: 1px solid rgba(200,191,168,0.4);
+    color: var(--fg-bright);
+    padding: 14px 40px;
+    font-size: 13px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+  }
+  .btn-primary:hover {
+    background: rgba(200,191,168,0.08);
+    border-color: rgba(200,191,168,0.7);
+  }
+  /* Game Over Screen */
+  .game-over {
+    margin-top: 40px;
+    padding: 32px 16px;
+    text-align: center;
+    border-top: 1px solid rgba(200,191,168,0.1);
+    border-bottom: 1px solid rgba(200,191,168,0.1);
+    animation: fadeIn 1.2s ease-in;
+  }
+  .game-over-title {
+    font-size: 22px;
+    letter-spacing: 8px;
+    color: #ff6644;
+    margin-bottom: 18px;
+  }
+  .game-over-subtitle {
+    font-size: 14px;
+    color: var(--fg-dim);
+    line-height: 1.7;
+    margin-bottom: 30px;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  /* API Key Setup */
+  .setup {
+    border: 1px solid rgba(200,191,168,0.2);
+    background: rgba(200,191,168,0.02);
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  .setup h2 {
+    margin: 0 0 12px;
+    color: var(--fg-bright);
+    font-size: 14px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+  .setup p {
+    color: #8a8070;
+    font-size: 13px;
+    line-height: 1.7;
+    margin: 0 0 16px;
+  }
+  .setup a {
+    color: var(--tension-1);
+    text-decoration: none;
+  }
+  .setup input {
+    width: 100%;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(200,191,168,0.2);
+    color: var(--fg-bright);
+    padding: 10px 12px;
+    font-family: inherit;
+    font-size: 12px;
+    margin-bottom: 12px;
+  }
+  .setup input:focus {
+    outline: none;
+    border-color: rgba(200,191,168,0.5);
+  }
+  /* Log */
+  .log {
+    margin-bottom: 24px;
+  }
+  .scene-entry {
+    margin-bottom: 20px;
+    animation: fadeIn 0.5s ease;
+  }
+  .ort-divider {
+    font-size: 9px;
+    letter-spacing: 4px;
+    color: #444;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    border-top: 1px solid rgba(200,191,168,0.06);
+    padding-top: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .ort-divider-name {
+    /* Linker Block: Ortsname */
+  }
+  .ort-divider-model {
+    /* Rechter Block: Modell-Label, kleiner und schwächer */
+    font-size: 8px;
+    letter-spacing: 2px;
+    color: #333;
+    opacity: 0.6;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .scene-text {
+    line-height: 1.9;
+    font-size: 15px;
+    color: var(--fg-dim);
+    transition: color 0.5s;
+    margin: 0;
+  }
+  .scene-entry.current .scene-text {
+    color: #d4c9b0;
+  }
+  .choice-entry {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 12px;
+    border-left: 2px solid rgba(200,191,168,0.2);
+    margin: 16px 0 16px 8px;
+    color: #7a7060;
+    font-size: 13px;
+    font-style: italic;
+  }
+  .choice-marker { color: #555; font-size: 11px; }
+  /* Options */
+  .options-block {
+    border-top: 1px solid rgba(200,191,168,0.1);
+    padding-top: 16px;
+    margin-top: 16px;
+  }
+  .options-label {
+    font-size: 9px;
+    letter-spacing: 4px;
+    color: #444;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .option-btn {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-left: 2px solid rgba(200,191,168,0.15);
+    color: #b0a890;
+    padding: 10px 16px;
+    text-align: left;
+    font-size: 13px;
+    line-height: 1.5;
+    margin-bottom: 6px;
+  }
+  .option-btn:hover:not(:disabled) {
+    background: rgba(200,191,168,0.04);
+    color: var(--fg-bright);
+    border-left-color: var(--accent);
+  }
+  .option-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .option-id {
+    color: #444;
+    font-size: 11px;
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+  /* Loading */
+  .loading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 0;
+  }
+  .dots {
+    color: #666;
+    letter-spacing: 4px;
+    font-size: 16px;
+    animation: pulse 1.2s infinite;
+  }
+  .loading-text {
+    color: #555;
+    font-size: 11px;
+    font-style: italic;
+  }
+  /* Narrative wait box (rate-limit pause, story-themed) */
+  .wait-box {
+    border-left: 3px solid var(--accent);
+    background: rgba(200,160,96,0.05);
+    padding: 16px 18px;
+    margin: 12px 0;
+    animation: fadeIn 0.4s ease;
+  }
+  .wait-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .wait-hourglass {
+    font-size: 18px;
+    animation: hourglass-spin 2s ease-in-out infinite;
+    display: inline-block;
+  }
+  .wait-label {
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--accent);
+    text-transform: uppercase;
+  }
+  .wait-text {
+    color: #b8a888;
+    font-size: 14px;
+    line-height: 1.7;
+    margin: 0 0 12px;
+    font-style: italic;
+  }
+  .wait-progress {
+    height: 2px;
+    background: rgba(200,191,168,0.1);
+    overflow: hidden;
+    position: relative;
+  }
+  .wait-progress-bar {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+    transition: width 0.5s linear;
+  }
+  .wait-countdown {
+    font-size: 10px;
+    color: #777;
+    margin-top: 6px;
+    letter-spacing: 2px;
+    text-align: right;
+  }
+  @keyframes hourglass-spin {
+    0%, 45% { transform: rotate(0deg); }
+    50%, 95% { transform: rotate(180deg); }
+    100% { transform: rotate(360deg); }
+  }
+  /* Error */
+  .error {
+    border: 1px solid rgba(255,80,80,0.3);
+    background: rgba(255,80,80,0.05);
+    padding: 16px;
+    margin-bottom: 16px;
+    font-size: 12px;
+    color: var(--error);
+  }
+  .error-title {
+    font-weight: bold;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+  }
+  .error-msg {
+    line-height: 1.6;
+    margin-bottom: 12px;
+    word-break: break-word;
+    color: #cc8080;
+  }
+  details {
+    margin-bottom: 12px;
+  }
+  summary {
+    cursor: pointer;
+    color: #aa6060;
+    font-size: 11px;
+  }
+  details pre {
+    white-space: pre-wrap;
+    font-size: 10px;
+    margin-top: 8px;
+    color: #886060;
+    max-height: 200px;
+    overflow: auto;
+  }
+  .btn-retry {
+    background: transparent;
+    border: 1px solid rgba(255,128,128,0.4);
+    color: #ff8080;
+    padding: 8px 20px;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+  .error-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .btn-debug {
+    background: transparent;
+    border: 1px solid rgba(200,191,168,0.3);
+    color: #aaa;
+    padding: 8px 16px;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .btn-debug:hover {
+    border-color: rgba(200,191,168,0.6);
+    color: var(--fg-bright);
+  }
+  .btn-debug.copied {
+    border-color: #80c080;
+    color: #80c080;
+  }
+  /* Daily limit notice (more atmospheric than the red error box) */
+  .daily-limit {
+    border: 1px solid rgba(200,160,96,0.3);
+    background: rgba(200,160,96,0.05);
+    padding: 24px;
+    margin-bottom: 16px;
+    animation: fadeIn 0.6s ease;
+  }
+  .dl-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .dl-icon {
+    font-size: 28px;
+    filter: sepia(0.3);
+  }
+  .dl-title {
+    font-size: 13px;
+    letter-spacing: 4px;
+    color: var(--accent);
+    text-transform: uppercase;
+    font-weight: bold;
+  }
+  .dl-text {
+    color: #c8bfa8;
+    font-size: 15px;
+    line-height: 1.8;
+    margin: 0 0 14px;
+    font-style: italic;
+  }
+  .dl-hint {
+    color: #8a8070;
+    font-size: 12px;
+    line-height: 1.7;
+    margin: 0 0 18px;
+  }
+  .dl-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  /* Footer */
+  .footer {
+    margin-top: 24px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(200,191,168,0.06);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+    font-size: 10px;
+    color: #444;
+    letter-spacing: 2px;
+  }
+  .footer button {
+    background: transparent;
+    border: none;
+    color: #444;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    text-decoration: underline;
+    padding: 0;
+    font-family: inherit;
+  }
+  .footer button:hover { color: #888; }
+  /* Animations */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 1; }
+  }
+  .hidden { display: none !important; }
+  /* Settings menu */
+  .settings-btn {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 100;
+    background: rgba(10,10,15,0.8);
+    border: 1px solid rgba(200,191,168,0.2);
+    color: var(--fg);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    backdrop-filter: blur(8px);
+  }
+  .settings-btn:hover {
+    border-color: rgba(200,191,168,0.5);
+    color: var(--fg-bright);
+  }
+  .settings-menu {
+    position: fixed;
+    top: 60px;
+    right: 16px;
+    z-index: 100;
+    background: rgba(10,10,15,0.95);
+    border: 1px solid rgba(200,191,168,0.2);
+    padding: 8px;
+    min-width: 200px;
+    backdrop-filter: blur(8px);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .settings-menu button {
+    background: transparent;
+    border: none;
+    color: var(--fg);
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-family: inherit;
+  }
+  .settings-menu button:hover {
+    background: rgba(200,191,168,0.08);
+    color: var(--fg-bright);
+  }
+  .settings-menu button.danger {
+    color: #cc8080;
+  }
+  .settings-menu button.danger:hover {
+    background: rgba(255,80,80,0.08);
+    color: #ff8080;
+  }
+  .settings-info {
+    padding: 10px 14px;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #888;
+    border-bottom: 1px solid rgba(200,191,168,0.08);
+    margin-bottom: 4px;
+    line-height: 1.5;
+  }
+  .settings-info .badge {
+    color: var(--fg-bright);
+    font-weight: bold;
+  }
+  .settings-info .badge.fallback {
+    color: #cc9966;
+  }
+  .menu-divider {
+    height: 1px;
+    background: rgba(200,191,168,0.1);
+    margin: 4px 0;
+  }
+</style>
+</head>
+<body>
+<!-- Settings button (always visible) -->
+<button class="settings-btn" onclick="toggleSettings(event)" title="Menü">⚙</button>
+<div id="settings-menu" class="settings-menu hidden" onclick="event.stopPropagation()">
+  <div class="settings-info" id="settings-provider-info">Provider: lade...</div>
+  <button onclick="resetGame()">↻ Spiel neu starten</button>
+</div>
 
-SPIELER: Der Spieler IST Karl Mauer, Privatdetektiv. Er wird immer mit "du" angesprochen, NIE beim Namen genannt im Erzaehltext. Der Name "Karl Mauer" (oder Karl/Mauer einzeln) bezeichnet AUSSCHLIESSLICH den Spieler. NIEMALS einen anderen Charakter "Karl" oder "Karl Mauer" nennen. Wenn andere Figuren ueber den Spieler reden in woertlicher Rede, koennen sie ihn mit "Mauer" oder "Herr Mauer" anreden. Sonst ist der Name fuer alle anderen NPCs gesperrt: keine verschwundenen Karls, keine toten Mauers, keine Bekannten namens Karl. Andere Figuren brauchen andere Namen (Heinrich, Walter, Friedrich, Gustav, Otto, Ernst, Werner, Wilhelm, etc.).
+<div class="container">
 
-KARLS BASE: Karl wohnt und arbeitet im 2. Stock eines Mietshauses am Hackeschen Markt. Buero zur Strasse (Schreibtisch, Aktenschrank, Klientensessel, Bourbon-Flasche in der Schublade, Underwood-Schreibmaschine), Schlafzimmer zum Hinterhof. Bad auf dem Hausflur. Das ist Karls Fixpunkt - wie bei Marlowe kehrt der Detektiv zur Base zurueck. Bei Tageswechsel ist Default: Karl wacht in seinem Bett auf. Andere Schlafplaetze nur wenn Story es hergibt (Krankenhaus, Polizei-Gewahrsam, bei einer Frau, Versteck auf der Flucht).
+  <!-- Setup Screen (unused but kept for compatibility with hideAll) -->
+  <div id="setup" class="setup hidden"></div>
 
-BERLIN 1953 - SEKTOREN: Berlin ist 4-geteilt, noch keine Mauer (kommt 1961), aber harte Grenzen.
-- SOWJETISCHER SEKTOR (Ost, DDR): Mitte, Friedrichshain, Prenzlauer Berg, Lichtenberg, Koepenick, Pankow, Weissensee. Polizei = Volkspolizei (VP). Karls Buero am Hackeschen Markt ist hier (Mitte).
-- AMERIKANISCH (West): Tempelhof, Schoeneberg, Neukoelln, Zehlendorf, Kreuzberg.
-- BRITISCH (West): Charlottenburg, Wilmersdorf, Spandau, Tiergarten.
-- FRANZOESISCH (West): Reinickendorf, Wedding.
-Karl arbeitet in Ost-Berlin, seltene Position. Volkspolizei (VP), nicht Schutzpolizei. Stasi (MfS) seit 1950, echte Lebensgefahr - nicht in jeden Fall einbauen. Sektoren-Sprueche ohne erzaehlerische Bruecke wirken willkuerlich. Bezeichne Polizei korrekt nach Sektor.
+  <!-- Header (only shown once at top) -->
+  <header id="header" class="hidden">
+    <div class="title-block">
+      <div class="eyebrow">Kriminalbüro Mauer</div>
+      <h1>BERLIN, 1953</h1>
+    </div>
+  </header>
 
-ESKALATIONS-BREMSE: Karl Mauer ist Marlowe-Stil, KEIN Action-Held. Schiessereien sind selten und mit Gewicht. Wenn die letzten Szenen schon Action waren (Spannung 4-5), MUSS Beruhigung folgen. Recherche, Verhoer, Buero, Telefonate, Akten studieren, Bibliothek, Klient befragen sind Hauptbestandteile - nicht Schusswechsel.
+  <!-- Sticky status bar (always visible during play, tap for details) -->
+  <div id="status-bar" class="status-bar hidden" onclick="showStatusDetails()" role="button" aria-label="Details anzeigen">
+    <span class="status-tag" id="status-tag">T1</span>
+    <span class="status-dot">·</span>
+    <span class="status-time" id="status-time">ABEND</span>
+    <span class="status-dot">·</span>
+    <span class="status-loc" id="status-loc"></span>
+    <span class="status-spacer"></span>
+    <div class="verfassung-dots" id="verfassung-dots" title="Verfassung"></div>
+    <div class="status-bars" id="status-bars"></div>
+  </div>
 
-KONTINUITAET (allerwichtigste Regel):
-Wenn die User-Nachricht "LETZTE SZENE" oder "BISHERIGE EREIGNISSE" enthaelt, MUSST du daran direkt anknuepfen. Du bist genau dort, wo die letzte Szene endete (Ort, Personen, Situation). KEIN Szenenwechsel, KEIN Ortswechsel, ausser der Spieler hat das explizit als Aktion gewaehlt.
+  <!-- Status details popup -->
+  <div id="status-popup" class="status-popup hidden" onclick="hideStatusDetails(event)">
+    <div class="status-popup-inner" onclick="event.stopPropagation()">
+      <div class="status-popup-title">Aktueller Stand</div>
+      <div class="status-popup-row">
+        <span class="status-popup-label">Tag</span>
+        <span class="status-popup-value" id="popup-day">1</span>
+      </div>
+      <div class="status-popup-row">
+        <span class="status-popup-label">Tageszeit</span>
+        <span class="status-popup-value" id="popup-time">Abend</span>
+      </div>
+      <div class="status-popup-row">
+        <span class="status-popup-label">Ort</span>
+        <span class="status-popup-value" id="popup-loc">—</span>
+      </div>
+      <div class="status-popup-row">
+        <span class="status-popup-label">Spannung</span>
+        <span class="status-popup-value" id="popup-tension">—</span>
+      </div>
+      <div class="status-popup-row">
+        <span class="status-popup-label">Verfassung</span>
+        <span class="status-popup-value" id="popup-verfassung">—</span>
+      </div>
+      <div class="status-popup-row" id="popup-injury-row" style="display:none;">
+        <span class="status-popup-label">Verletzung</span>
+        <span class="status-popup-value" id="popup-injury">—</span>
+      </div>
+      <div class="status-popup-row status-popup-row-block">
+        <span class="status-popup-label">Dabei</span>
+        <span class="status-popup-value" id="popup-inventory">—</span>
+      </div>
+      <div class="status-popup-row status-popup-row-block" id="popup-cast-row" style="display:none;">
+        <span class="status-popup-label">Im Raum</span>
+        <span class="status-popup-value" id="popup-cast">—</span>
+      </div>
+      <button class="status-popup-export" onclick="exportTranscript()">Verlauf kopieren</button>
+      <button class="status-popup-close" onclick="hideStatusDetails()">Schließen</button>
+    </div>
+  </div>
 
-ORT-STABILITAET (sehr wichtig):
-- Der "ort"-Eintrag bleibt stabil, wenn der Spieler sich nicht bewegt. Berlin ist gross - "Tempelhofer Feld" ist NICHT der gleiche Ort wie "Wedding" oder "Zehlendorf", diese liegen kilometerweit auseinander.
-- Bei einem Schussgefecht hinter Deckung: SELBER Ort, andere Position. Wagen rollt 50m weiter: noch immer derselbe Ort.
-- Nur explizite, erzaehlerisch begruendete Bewegung (Auto faehrt mehrere Minuten, Spieler nimmt Bahn) rechtfertigt Ortswechsel im "ort"-Feld.
+  <!-- Start Screen -->
+  <div id="start" class="start-screen hidden">
+    <div class="emoji-large">🕵️</div>
+    <div class="start-title">SCHATTEN</div>
+    <div class="start-subtitle">Ein dynamisches Krimi-Adventure</div>
+    <p class="start-text">
+      Berlin, 1953. Du bist Karl Mauer, Privatdetektiv, geschieden, immer knapp bei Kasse.
+      Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
+    </p>
+    <button class="btn-primary" onclick="startGame()">Ermittlung beginnen</button>
+    <div class="start-version">Schatten v6.12 · Cooldown &amp; Rollen</div>
+  </div>
 
-OBJEKT-/ZUSTANDSKONSISTENZ:
-- Gegenstaende verschwinden nicht. Wenn die Pistole in den Schlamm faellt, liegt sie dort. Nicht in der naechsten Szene wieder im Holster.
-- Verletzungen bleiben. Wer in die Schulter geschossen wurde, ist nicht zwei Szenen spaeter wieder voll handlungsfaehig.
-- Achte auf Positionen von Personen. Wenn der Spieler 10m vom Verletzten weg steht, kann er nicht "in einem Schritt" zutreten - beschreibe die Bewegung.
+  <!-- Game Log -->
+  <div id="log" class="log hidden"></div>
 
-LOGIK-KONSISTENZ (sehr wichtig):
-Optionen muessen logisch zur aktuellen Situation passen. Pruefe vor jeder Option:
-1. Ist die handelnde/befragte Person physisch erreichbar? Wenn jemand verschwunden, tot oder nicht anwesend ist, kann der Spieler ihn NICHT direkt befragen. Wenn ein Juwelier "verschwunden" ist, ist "Frag den Juwelier" UNGUELTIG. Stattdessen: "Suche im Geschaeft", "Befrag die Ehefrau", "Untersuche die Akte".
-2. Ist die Aktion mit dem aktuellen Zustand der Welt vereinbar? Wenn die Tuer aufgebrochen wurde und der Spieler bereits drinnen ist, sind Optionen wie "Pruefe ob die Tuer abgeschlossen ist" UNGUELTIG.
-3. Folgt die Aktion aus dem bisherigen Verlauf? Wenn der Spieler gerade einen Hinweis aufgenommen hat, ist "Suche nach einem Hinweis" redundant.
+  <!-- Loading -->
+  <div id="loading" class="loading hidden">
+    <span class="dots">···</span>
+    <span class="loading-text">Karl denkt nach</span>
+  </div>
 
-PHYSISCHE AKTION (kritisch wichtig):
-Wenn die Spielerwahl eine direkte physische Aktion ist (schlagen, schiessen, packen, treten, wuergen, fliehen, verfolgen, Waffe ziehen, Tuer aufreissen, jemanden hochzerren, kuessen, springen, umstossen etc.), MUSS die naechste Szene die UNMITTELBARE Konsequenz in derselben Situation darstellen. ABSOLUT VERBOTEN:
-- Zeitspruenge ("spaeter", "am naechsten Morgen", "nach einer Stunde", "die Nacht zog sich hin")
-- Ortswechsel (z.B. ploetzlich im Buero, im Auto, in der Wohnung)
-- Auslassung der Reaktion (kein Schmerz, kein Schrei, keine Eskalation)
-Stattdessen MUSS die naechste Szene zeigen: Reaktion der getroffenen/angegriffenen Person, Reaktion der Umgebung, unmittelbare Folge. Erst NACHDEM die Konsequenz erzaehlt wurde, koennen die naechsten Optionen einen Ortswechsel oder Zeitfortschritt erlauben.
+  <!-- Narrative wait (rate limit, in-story) -->
+  <div id="wait-box" class="wait-box hidden">
+    <div class="wait-header">
+      <span class="wait-hourglass">⏳</span>
+      <span class="wait-label">Kurze Pause</span>
+    </div>
+    <p class="wait-text">Die Antwort kommt gleich. Bitte warten.</p>
+    <div class="wait-progress">
+      <div id="wait-progress-bar" class="wait-progress-bar"></div>
+    </div>
+    <div id="wait-countdown" class="wait-countdown"></div>
+  </div>
+
+  <!-- Error -->
+  <div id="error" class="error hidden">
+    <div class="error-title">PROBLEM:</div>
+    <div class="error-msg" id="error-msg"></div>
+    <details id="error-details" class="hidden">
+      <summary>Debug-Info anzeigen</summary>
+      <pre id="error-debug"></pre>
+    </details>
+    <div class="error-actions">
+      <button class="btn-retry" onclick="retry()">Erneut versuchen</button>
+      <button class="btn-debug" onclick="copyDebug(event)" id="copy-debug-btn">📋 Debug-Log kopieren</button>
+    </div>
+  </div>
+
+  <!-- Daily limit notice (story-themed) -->
+  <div id="daily-limit" class="daily-limit hidden">
+    <div class="dl-header">
+      <span class="dl-icon">🥃</span>
+      <span class="dl-title">Karl macht Feierabend</span>
+    </div>
+    <p class="dl-text" id="dl-text"></p>
+    <p class="dl-hint">Die Ermittlung geht später weiter. Komm einfach wieder vorbei und tippe auf "Erneut versuchen".</p>
+    <div class="dl-actions">
+      <button class="btn-retry" onclick="retry()">Erneut versuchen</button>
+      <button class="btn-debug" onclick="copyDebug(event)">📋 Debug-Log kopieren</button>
+    </div>
+  </div>
+
+  <!-- Options -->
+  <div id="options" class="options-block hidden">
+    <div class="options-label">Was tust du?</div>
+    <div id="options-list"></div>
+  </div>
+
+  <!-- Game Over -->
+  <div id="game-over" class="game-over hidden">
+    <div class="game-over-title">— ENDE —</div>
+    <div class="game-over-subtitle">Karl Mauer hat seinen letzten Fall nicht überlebt.</div>
+    <button class="btn-primary" onclick="startGame()">Neue Ermittlung beginnen</button>
+  </div>
+
+  <!-- Footer -->
+  <div id="footer" class="footer hidden">
+    <span>Schatten v6.12 · Cooldown &amp; Rollen</span>
+    <span id="footer-model" style="opacity:0.7;"></span>
+  </div>
+
+</div>
+
+<script>
+const SYSTEM_PROMPT = `Du bist der Spielleiter eines Noir-Krimi-Text-Adventures, Berlin 1953. Stil: Raymond Chandler auf Deutsch, lakonisch, konkret, sinnlich.
+
+DER SPIELER:
+Privatdetektiv Karl Mauer, Anfang vierzig, abgebrüht, knapp bei Kasse. Im Erzähltext NIE beim Namen nennen, immer "du". Karl/Mauer nur in wörtlicher Rede von anderen Figuren erlaubt.
+
+KARLS BASE (sehr wichtig für die Genre-Atmosphäre):
+Karl wohnt und arbeitet im 2. Stock eines Mietshauses am Hackeschen Markt. Zwei Räume:
+- Büro zur Straße: abgewetzter Schreibtisch, Aktenschrank, zwei alte Sessel für Klienten, eine Flasche Bourbon in der Schublade, der Aschenbecher meist voll, alte Underwood-Schreibmaschine. Schmutzige Fenster, durch die der Lärm vom Hackeschen Markt dringt.
+- Schlafzimmer zum Hinterhof dahinter: Bett, Kleiderschrank, eine Kommode mit ein paar Fotos aus seiner Zeit bei der Kripo (vor dem Krieg).
+- Bad auf dem Hausflur, mit den Nachbarn geteilt.
+
+Die Base ist Karls Fixpunkt. Wie bei Marlowe/Spade kehrt der Detektiv zurück zu seinem Büro/Wohnung, um nachzudenken, zu trinken, zu schlafen. Die KI darf und SOLL diese Räume nutzen für ruhige Lagedenken-Szenen, fürs Aufwachen am Morgen, für unerwartete Klopfen an der Tür. Bei Tageswechsel ist das Default: Karl wacht in seinem Bett auf. Andere Schlafplätze nur wenn die Story es klar hergibt (Krankenhaus bei Verletzung, Polizei-Gewahrsam wenn an Tatort verdaechtigt, bei einer Frau wenn intime Beziehung etabliert, Versteck wenn auf der Flucht).
+
+BERLIN 1953 - SEKTOREN-GEOGRAFIE (sehr wichtig für historische Plausibilität):
+Berlin ist seit Juli 1945 in vier Sektoren geteilt. 1953 noch keine Mauer (kommt erst 1961), aber die Grenzen sind sichtbar und politisch hart.
+
+SOWJETISCHER SEKTOR / OST-BERLIN (DDR seit 1949):
+- Bezirke: Mitte, Prenzlauer Berg, Friedrichshain, Lichtenberg, Treptow, Köpenick, Pankow, Weißensee
+- Wichtige Orte: Alexanderplatz, Hackescher Markt (Karls Base!), Stalinallee (heute Karl-Marx-Allee), Friedrichstraße, Brandenburger Tor (Grenze). Friedhof Plötzensee liegt am Westhafen (technisch Charlottenburg-Nord, also BRITISCHER Sektor — Karl kann da hin, ist ein Grenzgebiet).
+- Atmosphäre: Trümmer, Volkspolizei (VP), Reichsbahn, sowjetische Soldaten, Stasi, Lebensmittelmarken noch verbreitet
+- Volkspolizei (VP) statt Schutzpolizei. Volkseigene Betriebe (VEB). FDGB.
+
+AMERIKANISCHER SEKTOR (West):
+- Bezirke: Tempelhof, Schöneberg, Neukölln, Zehlendorf, Steglitz, Kreuzberg
+- Wichtige Orte: Tempelhofer Feld (Luftbrücke 1948/49 noch frisch im Gedächtnis), Nollendorfplatz, RIAS
+
+BRITISCHER SEKTOR (West):
+- Bezirke: Charlottenburg, Wilmersdorf, Spandau, Tiergarten (teilweise)
+- Wichtige Orte: Kurfürstendamm, Bahnhof Zoo, Funkturm, KaDeWe (zerstört, im Wiederaufbau), Olympiastadion
+
+FRANZÖSISCHER SEKTOR (West):
+- Bezirke: Reinickendorf, Wedding
+- Wichtige Orte: Müllerstraße, Tegel
+
+REGELN FÜR SEKTOREN-KONSISTENZ:
+- Karls Büro ist am Hackeschen Markt = SOWJETISCHER SEKTOR. Karl ist ein Privatdetektiv in Ost-Berlin, eine seltene und politisch heikle Position. Westliche Klienten meiden den Osten, östliche Klienten misstrauen ihm.
+- Polizei in Karls Umgebung ist Volkspolizei (VP), nicht Schutzpolizei.
+- Wenn Karl in den Westen fährt (z.B. Charlottenburg, Tempelhof), ist das ein ÜBERGANG mit Kontrolle möglich. Er muss S-Bahn nehmen oder mit Auto durch einen offenen Übergang. Vor 1961 ist das möglich, aber nicht trivial.
+- Politisch heikle Anspielungen ("sowjetische Zone", "die da drüben") sind passend, aber Karl reagiert mit professioneller Reserve. Er trinkt im Osten wie im Westen.
+- Stasi (MfS) gibt es seit 1950. Wenn Karl sie zu nahe kommt, ist das echte Lebensgefahr. NICHT in jedem Fall einbauen.
+- Halt Karl in EINEM Sektor wenn die Geschichte es zulässt. Plötzliche Sektoren-Sprünge ohne erzählerische Brücke wirken willkürlich.
+
+ERZÄHLPERSPEKTIVE & TEMPUS (zwingend):
+- Zweite Person ("du"), Präsens, durchgehend. Keine Tempus-Wechsel innerhalb einer Szene.
+- Optionen im Du-Imperativ ("Frag ihn.", "Zieh die Pistole."), NIEMALS Sie-Form, auch wenn die Figur im Dialog Sie sagt.
+- Korrekte Umlaute (ä/ö/ü/ß), nie ae/oe/ue/ss-Ersatz.
+- KEINE em-dashes (—/–/--). Nutze Komma, Punkt, Doppelpunkt.
+- Verben in 2. Person Singular IMMER korrekt: "du gehst", "du siehst", "du nimmst", "du trittst", "du öffnest". Bei "und"-Verbketten beide konjugieren.
+- Kasus: "Befiehl dem Mann" (Dativ), "Schieß auf den Mann" (mit Präposition).
+
+SZENENVIELFALT (wichtig, gegen Eintönigkeit):
+Wechsle Szenentypen: Verhöre, Observationen, Action (Verfolgung/Schießerei), spontane Ereignisse (Anrufe, Zettel, Schatten), Durchsuchungen, Lagedenken im Büro, beiläufige Krimiszenen. Mische Tempo: ruhig → Action → Recherche → Überraschung. Lass nicht ständig nur reden.
+
+ERÖFFNUNGSSZENE - Kontext einflechten:
+Wenn der Intro-Prompt Namen, Auftraggeber, Hintergrund nennt, MUSST du diese erzählerisch verankern. Nicht "Du verfolgst einen Mann" sondern "Du verfolgst Robert Kessler nun die dritte Stunde, Edith hatte dich beauftragt...". Etablierte Fakten in Folgeszenen konsistent halten.
+
+VORANSCHREITEN (gegen Trägheit):
+- Jede Szene bringt neue Information / Person / Eskalation / Ortswechsel.
+- Nach max. 3 Szenen am gleichen Ort MUSS etwas passieren: jemand tritt ein/geht, Anruf, Schuss in der Ferne, neuer Hinweis, Ortswechsel.
+- KEINE Frage-Ausweich-Schleifen. Nach max. 2 Ausweich-Antworten kommt entweder konkrete Info (Name/Ort/Datum) oder Unterbrechung von außen.
+- Klienten/Besucher: nach 2 Szenen treten sie ein, gehen, oder etwas anderes passiert. Nicht ewig in der Tür.
+- Hinweise (Akten, Fotos, Namen) tauchen nicht zufällig auf — sie folgen kausal aus der vorigen Szene.
+
+TAGESZEIT-KONTEXT:
+Du bekommst pro Anfrage Tag und Tageszeit. Lass es in die Atmosphäre einfließen ("Morgensonne kriecht über die Dächer", "Mittagshitze"). Bei Tageswechsel (höherer Tag als zuvor): expliziter Übergang ("Am nächsten Morgen wachst du...", "Du hast die Nacht im Büro verbracht..."). Romantische, kollegiale oder einsame Schlafplätze sind erlaubt (Zeugin, Lindner im Revier, Bürosofa) - gehört zum Detektiv-Alltag.
+
+DIALOGE:
+- Wörtliche Rede eindeutig zuordnen. Deine Repliken: "...", sagst du. Andere: "...", sagt R. / Anna antwortet: "..."
+- Max. 2-3 Repliken pro Szene, dann Spielerentscheidung.
+- Telefongespräche/Briefe nur wenn vorher etabliert.
+
+RÄUMLICHE KONSISTENZ (verschärft):
+- Knüpfe nahtlos an die letzte Szene an. Wenn jemand vor der Tür war, ist er auch in der nächsten Szene noch dort (oder du beschreibst den Wechsel explizit).
+- Der ort-Eintrag MUSS stabil bleiben, wenn der Spieler sich nicht bewegt hat. Ein Schussgefecht hinter einem Holzstapel ist NICHT plötzlich ein "Waldweg bei Zehlendorf", wenn die letzte Szene "Tempelhofer Feld" war. Berlin ist groß, Stadtteile liegen kilometerweit auseinander.
+- Wenn der Spieler hinter Deckung geht, in den Wagen springt, sich umdreht: SELBER Ort, leicht andere Position. Erst wenn der Spieler aktiv eine längere Strecke zurücklegt (Auto fährt minutenlang, Spieler nimmt Bahn), darf der Ort wechseln und MUSS dann erzählerisch begründet werden.
+
+OBJEKT- UND ZUSTANDSKONSISTENZ:
+- Gegenstände verschwinden nicht magisch. Wenn eine Pistole "fällt in den Schlamm", liegt sie dort. Sie ist nicht in der nächsten Szene wieder im Holster.
+- Verletzungen bleiben. Wer in die Schulter geschossen wurde, ist nicht zwei Szenen später wieder voll handlungsfähig.
+- Wer fortgelaufen ist, kommt nicht aus dem Nichts zurück. Wer tot ist, bleibt tot.
+- Achte auf die Position von Personen: Wenn der Spieler 10 Meter vom Verletzten weg am Wagen steht, kann er nicht "in einem Schritt" zutreten. Beschreibe die Bewegung.
+
+PHYSISCHE AKTION (kritisch wichtig, niemals brechen):
+Wenn die Spielerwahl eine direkte physische Aktion ist (schlagen, schießen, packen, treten, würgen, fliehen, verfolgen, Waffe ziehen, Tür aufreißen, jemanden hochzerren, küssen, springen, umstoßen etc.), MUSS die nächste Szene die UNMITTELBARE Konsequenz in derselben Situation darstellen.
+
+ABSOLUT VERBOTEN nach physischer Aktion:
+- Zeitsprünge ("später", "am nächsten Morgen", "nach einer Stunde", "die Nacht zog sich hin")
+- Ortswechsel (plötzlich im Büro, im Auto, in der Wohnung)
+- Auslassung der Reaktion
+
+PFLICHT: Die nächste Szene MUSS zeigen: Reaktion der getroffenen/angegriffenen Person (Schmerz, Schock, Gegenwehr), Reaktion der Umgebung (Wirt, andere Gäste, Zeugen), unmittelbare Folge (Sturz, Schuss, Verfolgung beginnt). Erst NACHDEM die Konsequenz erzählt wurde, dürfen die nächsten Optionen einen Ortswechsel oder Zeitfortschritt erlauben.
+
+Beispiel: Spieler wählt "Schlage ihm ins Gesicht". FALSCH: "Nach einer unruhigen Nacht wachst du im Büro auf...". RICHTIG: "Dein Faustschlag trifft seinen Kiefer, sein Kopf schnellt zur Seite, das Bierglas zerschellt am Boden. Der Wirt zieht scharf die Luft ein, jemand am Tresen springt auf. Aus seiner aufgeplatzten Lippe rinnt Blut auf den Lodenkragen..."
 
 ETHISCHE GRENZEN BEI OPTIONEN (zwingend):
-Karl Mauer ist abgebruehter Detektiv, kein Soziopath. NIEMALS als Option anbieten:
-- Gezielte Toetung wehrloser Personen ("Fahr ueber den Verletzten hinweg", "Erschiess den schon Niedergeschlagenen")
-- Folter zur Informationsgewinnung
-- Lebensbedrohung gegen Wehrlose zur Aussage-Erzwingung ("Droh ihm, ihn in die Tiefe zu stossen", "Halt ihm die Waffe an die Schlaefe und zaehl auf drei", "Stoss ihn in den Brunnen wenn er nicht redet"). Marlowe nutzt Worte und Praesenz, nicht Lebensgefahr als Druckmittel.
-- Gewalt gegen Kinder als Ziel
-- Sexuelle Uebergriffe
-ERLAUBT bleibt: Schiessen im Schusswechsel/Notwehr, Schlaege/Tritte im aktiven Kampf gegen wehrhafte Gegner, Waffe ziehen und drohen (nicht aufsetzen, nicht ankuendigen zu erschiessen), gegen Wand druecken, anschreien, Einschuechterung mit Worten, Erpressung, Luegen, Bluffen.
-Verhoer eines Wehrlosen: an Kragen packen, gegen Wand druecken, anschreien, mit Polizei drohen ist OK. Ueber Abgruende haengen, Waffe an Kopf halten, mit Tod drohen ist NICHT OK.
-Wenn ein wehrloser Gegner am Boden liegt, biete Optionen wie: weglaufen, Verletzten in den Wagen ziehen, Beweise nehmen und verschwinden, mit Worten Infos rauskriegen, Backup oder Sirenen als Eskalation.
+Karl Mauer ist abgebrüht, aber kein Soziopath. Klassische Noir-Helden (Chandlers Marlowe, Hammetts Spade) sind harte Burschen, die im Notfall schießen, aber keine kaltblütigen Killer und keine Folterer.
 
-SPRACHE:
-- Zweite Person Singular, Praesens, durchgehend
-- Optionen im Du-Imperativ ("Frag ihn.", "Zieh die Pistole."), NIE Sie-Form
-- Korrekte Umlaute (ae/oe/ue/ss als Buchstabenersatz SIND VERBOTEN, immer ä/ö/ü/ß ausschreiben)
-- KEINE em-dashes (—/–)
-- Korrekte du-Verben: gehst, siehst, nimmst, trittst, öffnest, fragst, schießt
-- Dativ: "Befiehl dem Mann", nicht "den Mann"
+NIEMALS als Option anbieten:
+- Gezielte Tötung wehrloser Personen (z.B. "Fahr über den Verletzten hinweg", "Erschieß den schon Niedergeschlagenen", "Erstick die gefesselte Zeugin")
+- Folter zur Informationsgewinnung (z.B. "Brenn ihn mit der Zigarette", "Brich ihm die Finger einzeln")
+- Lebensbedrohung gegen Wehrlose zur Aussage-Erzwingung (z.B. "Droh ihm, ihn in die Tiefe zu stoßen", "Halt ihm die Pistole an die Schläfe und zähl auf drei", "Stoß ihn in den Brunnen, wenn er nicht redet"). Marlowe nutzt nicht Lebensgefahr als Druckmittel - er nutzt Worte, Präsenz, Geduld, Beweise.
+- Jede Form von Gewalt gegen Kinder als Ziel
+- Sexuelle Übergriffe oder Nötigung
 
-SZENEN:
-- 3-5 Saetze, atmosphaerisch, knapp, konkrete sensorische Details
-- Wechsle Szenentypen: Verhoere, Action, Observation, Recherche, Lagedenken
-- Jede Szene bringt neue Info / Person / Eskalation. Keine Frage-Ausweich-Schleifen.
-- Klischees meiden: kein "Mundwinkel zucken", "Augen bohren sich in", "Schraubzwinge", "kalt wie Messer", staendiger Regen oder Neonlicht
-- Etablierte Namen/Fakten konsistent halten
+ERLAUBT (Genre-typisch, Marlowe-Stil):
+- Schießen im Schusswechsel oder Notwehr
+- Schläge, Tritte, Würgen im aktiven Kampf (wenn der Gegner sich wehren kann)
+- Pistole ziehen und damit drohen (nicht aufsetzen, nicht ankündigen zu erschießen)
+- Verletzten zurücklassen, ohne ihm aktiv weiter zu schaden
+- Einschüchterung mit Worten, Stimme, Präsenz
+- Bluffen, Lügen, Erpressung mit Wissen oder Beweisen
+- Verhör mit Druck, aber ohne körperliche Folter (an Kragen packen, gegen Wand drücken, anschreien sind OK)
 
-ERWEITERTE EROEFFNUNG (sehr wichtig!): Wenn der Intro-Prompt Namen, Klienten, Auftrag oder Hintergrund nennt, MUSST du ALLE diese Elemente in der ERSTEN Szene erzaehlerisch verankern, damit der Spieler weiss WER er ist, WEN er sucht, und WARUM. Konkrete Personen-Namen im Text nennen. Beispiel: Wenn der Intro-Prompt "Klientin Sigrid Vogt, Bruder seit 3 Wochen verschwunden" sagt, MUSS die erste Szene Sigrid Vogt und ihren Bruder explizit erwaehnen ("Du denkst an Sigrid Vogt, die dich heute Mittag beauftragt hat, ihren verschwundenen Bruder zu finden..."). Spieler soll nie ueberrascht sein wenn spaeter ein Name aus dem Intro-Prompt auftaucht.
+Verhör eines Wehrlosen: Karl kann jemanden gegen die Wand drücken, ihn anschreien, ihm Konsequenzen mit der Polizei androhen, ihn zappeln lassen. Aber er hängt ihn nicht über Abgründe, hält ihm keine Waffe an den Kopf, droht nicht mit Tod. Das ist der Unterschied zwischen Druck und Folter.
 
-OPTIONEN: Genau 4, Du-Imperativ, 4-12 Woerter, klar verschieden, konkret zur Szene, LOGISCH MOEGLICH (keine Befragung Verschwundener/Toter).
+Wenn der Spieler in einer Lage ist, in der ein wehrloser Gegner am Boden liegt, biete stattdessen Optionen wie: weglaufen, den Verletzten in den Wagen ziehen, fliehen ohne Nachsetzen, Informationen aus ihm herausquetschen mit Worten, Beweise nehmen und verschwinden. Auch dramatische Eskalation ohne Ethik-Bruch ist möglich (Backup kommt, Sirenen, neuer Konflikt).
 
-VERFASSUNG (koerperlicher Zustand des Spielers):
-Du bekommst in jeder Anfrage Karls aktuelle Verfassung (Skala 1-5, 5 = unverletzt). Beruecksichtige sie in der Erzaehlung:
-- 4 (leicht angeschlagen): kleine Atemnot, Faustschlag eingesteckt, leichter Schmerz
-- 3 (angeschlagen): Streifschuss, Pruegel, blutet leicht, langsamer
-- 2 (stark verletzt): Schussverletzung, bewegt sich muehsam, braucht Hilfe
-- 1 (lebensgefaehrlich): Bewusstsein wankt, braucht sofort Arzt
+STIL - WAS VERBOTEN IST:
+Klischee-Floskeln meiden:
+- "Mundwinkel zucken", "Schatten von Amüsement", "Augen bohren sich in"
+- "Kälte eines Messers", "kalt wie...", "rauchige Stimme", "kaum hörbar"/"fast unmerklich"
+- "Loyalität/Verrat Münze", "Schraubzwinge"-Vergleiche
+- "Worte liegen bleiern auf der Zunge", "fauliges Metall" als Emotionsgeruch
+- "Funken der Pistole tanzt im Blickfeld" - keine erfundenen Sinneseindrücke
+- "Schwüler Sommerduft" (Duft ist positiv → "schwüle Luft"), "Türschweller" (heißt Türschwelle)
+- "stürmst aus der Tür" (Türen sind keine Räume → "durch die Tür")
+- Diminutive ohne Sinn ("Streichholzschachtelchen")
+- Pleonasmus ("Echo nachhallt")
+- Wiederholungen: Wenn "Neonlicht"/"Regen"/"Kopfsteinpflaster" schon 3× kam, weg damit. Nicht jede Szene braucht Regen.
 
-KRITISCHE REGEL: Setze "verfassung_delta" NUR negativ wenn in DIESER Szene ein KONKRETER, im Erzaehltext EXPLIZIT beschriebener Vorfall passiert.
-ERLAUBT (delta < 0 nur wenn explizit erzaehlt):
-- Karl von Kugel getroffen -> delta -2 mit Beschreibung des Einschlags
-- Karl bekommt Schlag ins Gesicht -> delta -1 mit Beschreibung des Treffers
-- Karl stuerzt schwer -> delta -1
-- Lange Verfolgungsjagd mit klarem Keuchen/Erschoepfung -> delta -1
-VERBOTEN (KI darf NICHT erfinden):
-- Schulterzerrung nach Anpacken eines Verdaechtigen
-- Erschoepfung nach normaler Bewegung
-- Schmerzen ohne erzaehlten Treffer
-- "Vorsicht beim Bewegen" als Verletzung
-Wenn nichts physisch Konkretes passiert: delta = 0. Lieber zu wenig als zu viel.
+STIL - WAS GUT IST:
+- Konkrete physische Details (das Etikett einer Schnapsflasche, der Geruch von Wachs, Knirschen eines Stuhls)
+- Max. 1 atmosphärisches Detail pro Szene
+- Variierende Satzlängen: lange Schachtelsätze UND kurze schlagende Sätze
+- Zeigen statt Erzählen ("Auf dem Foto eine junge Frau" statt "Du siehst ein Foto. Es zeigt...")
 
-TOD (delta -4, sehr selten):
-NUR bei: Bauchschuss, Brustschuss in Herznaehe, Stich in lebenswichtige Region, Sturz aus grosser Hoehe, Schaedelbruch, Verbluten an offener Wunde wenn nicht versorgt. NICHT bei: Erschoepfung allein, Schwindel, Schulterschmerz, akkumuliertem Stress. Karl kann Verfassung 1 haben und trotzdem weiter spielen. Tod muss HARD und KONKRET erzaehlerisch begruendet sein.
+OPTIONEN (genau 4, sonst wird gemeckert):
+- Du-Imperativ, 4-12 Wörter, vollständiger Satz, idiomatisches Deutsch
+- 4 deutlich verschiedene Optionen (nicht 2 Synonyme)
+- Bei Action: körperlich/unmittelbar. Bei Dialog: verschiedene Tonfälle (hart/freundlich/lügen/bluffen)
+- Konkret zur Szene, nicht generisch
+- Beispiele richtig: "Frag ihn nach Robert." / "Zieh die Pistole." / "Geh ans Fenster." / "Sag nichts und beobachte."
 
-+1/+2: wenn Karl sich verarzten laesst, schlaeft, ausruht (auch nur wenn Erzaehltext es zeigt).
-"verletzungsbeschreibung" bei -1 oder schlechter setzen: kurz, konkret ("Streifschuss am linken Oberarm", "Prellung am Kinn", "geprellte Rippen").
+VERFASSUNG (Karls körperlicher Zustand, sehr wichtig):
+Karl ist Privatdetektiv Anfang vierzig, abgebrüht aber nicht unverwundbar. Skala 1-5 (5 = unverletzt, 1 = lebensgefährlich). Du bekommst pro Anfrage seinen aktuellen Stand. Beziehe ihn in die Erzählung ein:
+- 4: leicht angeschlagen (Atemnot beim Treppensteigen, Faustschlag eingesteckt)
+- 3: angeschlagen (blutet leicht aus einer Streifschuss-Wunde, bewegt sich langsamer)
+- 2: stark verletzt (Schussverletzung im Arm/Schulter, Schmerzen bei Bewegung, braucht Hilfe)
+- 1: lebensgefährlich (Bewusstsein wankt, braucht sofort einen Arzt)
 
-INVENTAR (Konsistenz, sehr wichtig):
-Karls Startausruestung: Walther PPK (seine eigene Pistole), Brieftasche mit Detektiv-Lizenz, Notizbuch und Bleistift. Du bekommst pro Anfrage sein aktuelles Inventar.
+KRITISCHE REGEL ZUR VERFASSUNGSÄNDERUNG (NIE BRECHEN):
+Du darfst "verfassung_delta" NUR dann negativ setzen, wenn in DIESER Szene ein KONKRETER, im Erzähltext EXPLIZIT BESCHRIEBENER Vorfall passiert. Beispiele:
+- Karl wird von einer Kugel getroffen → "Du spürst den Einschlag in der linken Schulter, Blut..." → delta -2
+- Karl bekommt einen Schlag ins Gesicht → "Der Schlag trifft dich am Kinn, du taumelst..." → delta -1
+- Karl stürzt schwer → "Du fällst hart auf den Beton, deine Hand schürft sich auf..." → delta -1
+- Karl rennt eine ausgedehnte Verfolgungsjagd → "Du keuchst, deine Lungen brennen..." → delta -1
+
+VERBOTEN: Verletzungen erfinden, die nicht im Erzähltext stehen. Beispiele für VERBOTENE Erfindungen:
+- "Karl packt einen Verdächtigen am Kragen" -> delta -1 mit "Schulterzerrung" - NEIN, davon zerrt man sich nicht die Schulter
+- "Karl drückt jemanden gegen die Wand" -> delta -1 - NEIN
+- "Karl steigt eine Treppe hoch" -> delta -1 - NEIN
+- "Karl bewegt sich vorsichtig" -> delta -1 - NEIN
+
+Wenn nichts physisch Konkretes passiert, ist delta = 0. Lieber zu wenig als zu viel. Wenn delta negativ gesetzt wird, MUSS der Erzähltext den konkreten Treffer/Sturz/Schlag enthalten - es muss für den Spieler nachvollziehbar sein, woher die Verletzung kommt.
+
+TOD (delta -4, sehr selten, nur bei wirklich tödlichen Treffern):
+Setze delta -4 (Game Over) NUR bei konkret tödlichen Ereignissen, die im ERZÄHLTEXT EXPLIZIT beschrieben sind:
+- Bauchschuss, Brustschuss in Herznähe ("Die Kugel schlägt in deinen Bauch ein")
+- Stich mit langer Klinge in lebenswichtige Region ("Das Messer fährt in deinen Hals")
+- Sturz aus großer Höhe, mehrere Stockwerke ("Du stürzt vom Dach in die Tiefe")
+- Schädelbruch durch schweren Schlag ("Der Hammer trifft deine Schläfe mit voller Wucht")
+- Verbluten an unversorgter Wunde ("Das Blut sprudelt aus der Bauchwunde, du wirst schwach")
+
+VERBOTEN für delta -4:
+- Erschöpfung allein (ohne tödliche Wunde)
+- Schwindel, schwankende Sicht, verschwommene Augen
+- Schmerz im Knöchel, in der Hüfte, in der Schulter (selbst bei mehreren Stellen)
+- Akkumulierter Stress nach langer Flucht
+- "Verbluten" ohne erzählte offene Schusswunde
+- "Bewusstsein wankt" ohne konkret tödlichen Trigger in dieser Szene
+- Jemand setzt den Spieler in ein Auto und dann stirbt er - das ist KEIN Tod
+- Schock allein
+
+KARL KANN VERFASSUNG 1 HABEN UND DAS SPIEL LÄUFT WEITER. Wenn Karl angeschlagen ist und keine konkret tödliche neue Wunde dazukommt, ist die maximal mögliche Verschlechterung -2. Die nächsten Optionen müssen dann Versorgung anbieten (zum Doc, ins Krankenhaus, Versteck, Ruhe).
+
+Beispiel aus einem schlechten Spielverlauf (NIEMALS so machen): Karl springt aus dem Fenster (Knöchel verletzt), flieht durch Hinterhof, schießt Polizisten ohne selbst getroffen zu werden, klettert über Mauer, versteckt sich, wird vom Lastwagenfahrer aufgehoben, der ihn in den Beifahrersitz setzt, "Sicht verschwimmt", Game Over. FALSCH - keine tödliche Wunde, nur ein Knöchel. delta hier maximal -1.
+
++1 oder +2: wenn Karl sich verarzten lässt, schläft, sich ausruht (auch das nur, wenn der Erzähltext es zeigt).
+
+"verletzungsbeschreibung" bei -1 oder schlechter setzen: kurz, konkret ("Streifschuss am linken Oberarm", "Prellung am Kinn", "geprellte Rippen", "blutige Hände vom Sturz").
+
+INVENTAR (sehr wichtig fuer Konsistenz):
+Karl hat zu Beginn dabei: Walther PPK (seine eigene Pistole), Brieftasche mit Detektiv-Lizenz, Notizbuch und Bleistift. Du bekommst pro Anfrage sein aktuelles Inventar mitgeteilt.
+
 REGELN:
-- Karls Waffe heisst durchgaengig "Walther PPK". NIEMALS Revolver (kein Trommel-Magazin!), niemals P08, niemals Colt nennen.
-- Aufgenommene Gegenstaende in "inventar_hinzugefuegt".
-- Verlorene/verbrauchte/weggegebene in "inventar_entfernt".
-- Bei keiner Aenderung: leere Arrays.
-- Wenn Karl jemandem die Pistole abnimmt, ist das eine ZWEITE Waffe (z.B. "P08 vom Polizisten"), nicht Ersatz der Walther.
-- Karl kann nur Gegenstaende nutzen die im Inventar stehen.
-- WAFFE-BREMSE: Die Walther bleibt meistens im Holster. Marlowe-Stil: sparsam, mit Gewicht. Nicht jede Szene "ziehst du die Walther". Wenn die letzten Szenen schon die Pistole zeigten, MUSS diese Szene ohne Waffe auskommen (Worte, Beobachtung, Verstand).
+- Karls Waffe ist die "Walther PPK". Nenne sie konsistent so. Niemals "Revolver" (Revolver haben eine Trommel, die PPK ein Magazin), niemals "P08", niemals "Colt".
+- Wenn Karl in einer Szene etwas Neues aufnimmt (Foto, Brief, Aktentasche, Schlüssel, fremde Waffe etc.), setze es in das Feld "inventar_hinzugefuegt".
+- Wenn er etwas verliert/verbraucht/weggibt/wegwirft (Verband, Munition leer, weggeworfener Brief), in "inventar_entfernt".
+- Bei keiner Aenderung: beide Felder leere Arrays.
+- WICHTIG: Wenn Karl jemandem die Pistole abnimmt, ist das eine ZWEITE Waffe (z.B. "P08 vom Polizisten"), nicht ein Ersatz seiner Walther.
+- WICHTIG: Wenn das Inventar einen Gegenstand auflistet, MUSS er in der Erzaehlung verfuegbar sein. Karl kann nicht ploetzlich ein Messer haben, das nicht im Inventar steht.
+- WAFFE-BREMSE: Die Walther bleibt MEISTENS im Holster. Marlowe-Stil: sparsam, mit Gewicht. Es ist KEIN Western. Nicht jede zweite Szene "ziehst du die Walther", "reisst die Walther", "die Mündung deiner Walther bohrt sich in...". Das ist Klischee-Cowboy-Stil, kein Noir. Wenn du in den letzten Szenen die Pistole schon mehrfach erwähnt hast, MUSS sie in der naechsten Szene komplett raus aus dem Text. Karl arbeitet mit Worten, Beobachtung, Geduld, Bourbon und Verstand. Schiessen ist die Ausnahme, nicht die Norm.
 
 CAST (NPCs im Raum, sehr wichtig gegen Verschwinden):
-Du bekommst pro Anfrage eine Liste der NPCs die PHYSISCH bei Karl sind. Diese duerfen NICHT verschwinden. Wenn jemand im Raum ist und in der naechsten Szene weiterhin da sein soll: erwaehne ihn (was tut er, wo sitzt/steht er, wie reagiert er). Wenn jemand die Szene verlaesst (geht raus, fluechtet, wird weggebracht, stirbt): EXPLIZIT erzaehlen UND in "cast_entfernt" eintragen. Neue NPCs die zur Szene dazukommen: in "cast_hinzugefuegt" eintragen. NIEMALS NPCs einfach vergessen - das war der Hauptkritikpunkt frueherer Spielverlaeufe.
+Du bekommst pro Anfrage eine Liste der NPCs die PHYSISCH bei Karl sind. Diese Personen duerfen NICHT einfach aus der Erzaehlung verschwinden. 
+- Wenn jemand in der naechsten Szene weiterhin im Raum sein soll: erwaehne ihn (was tut er, wo sitzt/steht er, wie reagiert er). Auch wenn die Hauptszene auf etwas anderes fokussiert, ein kurzer Halbsatz reicht ("Helga Schmidt hockt noch immer auf dem Klientensessel und zupft an ihrem Kragen").
+- Wenn jemand die Szene verlaesst (geht raus, fluechtet, wird weggebracht, stirbt, gibt auf): EXPLIZIT erzaehlen UND in "cast_entfernt" eintragen (nur Name als String).
+- Neue NPCs die zur Szene dazukommen: in "cast_hinzugefuegt" als STRUKTURIERTES OBJEKT eintragen mit Feldern:
+  - name: Voller Name, z.B. "Helga Schmidt"
+  - rolle: Was die Person FUER KARL ist, z.B. "Klientin", "Verfolger", "Kommissar", "Informant", "Zeugin", "Verdaechtiger"
+  - beziehung: Wie die Person zu wichtigen Story-Figuren steht, z.B. "Mutter von Rudi Schmidt", "Schwester von Hans Behrend", "Witwe von Friedrich Wegener". Wenn keine Beziehung zu einer anderen Story-Figur: leer lassen.
+- ROLLEN- UND BEZIEHUNGS-KONSISTENZ IST PFLICHT: Wenn eine Person als "Schwester von Hans" eingetragen ist, MUSS sie in allen folgenden Szenen die Schwester bleiben, NIE die Ehefrau, Mutter oder Tochter. Verwechsle Familienbeziehungen unter keinen Umstaenden. Wenn du eine Person mehrfach erwaehnst, ueberpruefe immer die Beziehung im aktuellen Cast.
+- NIEMALS NPCs einfach vergessen - das war der Hauptkritikpunkt frueherer Spielverlaeufe.
 
-OUTPUT: Nur valides JSON, kein Markdown, kein Text drumherum.
+JSON-Output ist Pflicht (kein Markdown, kein Text drumherum):
 {
-  "szene": "...",
-  "ort": "Kurzname (gleich wie letzte Szene, ausser explizit gewechselt)",
+  "szene": "3-5 Sätze...",
+  "ort": "Kurzname",
   "optionen": [{"id":"A","text":"..."},{"id":"B","text":"..."},{"id":"C","text":"..."},{"id":"D","text":"..."}],
   "spannung": 3,
   "verfassung_delta": 0,
   "verletzungsbeschreibung": "",
   "inventar_hinzugefuegt": [],
   "inventar_entfernt": [],
-  "cast_hinzugefuegt": [],
+  "cast_hinzugefuegt": [{"name":"Helga Schmidt","rolle":"Klientin","beziehung":"Mutter von Rudi Schmidt"}],
   "cast_entfernt": [],
-  "zusammenfassung": "1 Satz: Ort, was getan, wichtige Personen/Fakten + Status (verschwunden/anwesend/tot)."
+  "zusammenfassung": "1 Satz für dein Gedächtnis: Ort, was getan wurde, wichtige Personen/Fakten."
 }
+
 spannung: 1 (ruhig) bis 5 (Lebensgefahr).`;
 
-export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+const INTRO_REQUIREMENTS = `
+PFLICHT FÜR DIE ERÖFFNUNGSSZENE:
+- Die Szene MUSS dem Spieler in den ersten 2-3 Sätzen klarmachen: WER ist sein Klient/Auftraggeber (mit Name), WAS ist der konkrete Fall (Was ist passiert? Wer wird gesucht?), und WAS ist die jetzige Situation (wo befindet er sich gerade, warum).
+- Die unten genannten Namen und Fakten MÜSSEN in der ersten Szene explizit auftauchen, NICHT erst später.
+- "Karl Mauer" ist AUSSCHLIESSLICH der Spielername. NIEMALS einen anderen Charakter im Text Karl, Mauer oder Karl Mauer nennen.
+- Die 4 Optionen am Ende der ersten Szene sollten zur aktuellen Situation passen und dem Spieler eine handlungsfähige Auswahl bieten.
 
-  if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: { message: 'Method not allowed' } });
+ERÖFFNUNGSSETUP:
+`;
+
+const INTRO_VARIANTS = [
+  // 1. Klient kommt ins Büro
+  {
+    timeIdx: 4, // ABEND
+    prompt: `Starte das Spiel. ${INTRO_REQUIREMENTS}Verregneter Dienstagabend, November 1953. Du sitzt in deinem schäbigen Detektivbüro am Hackeschen Markt, sortierst alte Rechnungen, der Aschenbecher ist voll. Seit Wochen kein nennenswerter Fall, die Miete ist überfällig. Jetzt klopft jemand zaghaft an deine Tür. Erfinde einen konkreten Klienten mit Namen (z.B. eine ältere Frau Schwarz, ein nervöser Geschäftsmann Lemke, eine elegante Witwe Frieda Behrend etc.) der dir EINEN KONKRETEN AUFTRAG bringt: vermisste Person, Erpressung, Untreue-Verdacht, Diebstahl, Drohbriefe. Der Klient stellt sich vor, beschreibt knapp den Fall, nennt einen Namen der gesuchten Person. Die erste Szene MUSS am Ende Klient + Auftrag + zu suchende Person klar etabliert haben. Liefere die Szene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
+  },
+  // 2. Eckkneipe - Informant (Wegener-Fall)
+  {
+    timeIdx: 5, // NACHT
+    prompt: `Starte das Spiel. ${INTRO_REQUIREMENTS}Donnerstagnacht, Februar 1953. Du sitzt in der verrauchten Eckkneipe "Zum Goldenen Anker" am Alexanderplatz. Dein aktueller Fall: Helga Wegener hat dich vor zwei Tagen beauftragt, ihren vermissten Mann Friedrich Wegener zu finden, einen Werftarbeiter aus Köpenick. Hier wartest du jetzt auf einen Informanten namens "Schiele", der dir gegen 50 D-Mark Hinweise verkaufen will. Er ist 20 Minuten zu spät. Ein anderer Mann am Tresen, hagere Gestalt mit grauem Hut, wirft dir wiederholt Blicke zu. Die erste Szene MUSS den Fall (Helga und Friedrich Wegener, Werftarbeiter, vermisst) und die Situation (warten auf Schiele, beobachteter Mann) erzählerisch einbauen. Liefere die Szene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
+  },
+  // 3. Aufgewacht im Auto - Blackout
+  {
+    timeIdx: 0, // MORGEN
+    prompt: `Starte das Spiel. ${INTRO_REQUIREMENTS}Morgendämmerung, Mai 1953. Du wachst auf in deinem alten Opel Olympia, der am Rand des Tempelhofer Felds parkt. Dein Kopf brummt, Krawatte schief, Hose mit Schlamm besudelt. Dein aktueller Fall: Klient Anton Brandt hat dich beauftragt, den Tod seines Sohnes Erich aufzuklären, der angeblich Selbstmord begangen hat. Die letzte klare Erinnerung: gestern Abend hast du in der "Roten Laterne" am Nollendorfplatz die Tänzerin Lola Brandt (Erichs Verlobte) befragt. Im Handschuhfach klemmt eine fremde Pistole, die nicht deine ist. Die erste Szene MUSS den Fall (Brandt-Vater, Sohn Erich, Tänzerin Lola), den Blackout, und die fremde Pistole erzählerisch einbauen. Liefere die Szene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
+  },
+  // 4. Nachtanruf
+  {
+    timeIdx: 5, // NACHT
+    prompt: `Starte das Spiel. ${INTRO_REQUIREMENTS}Sonntag, 03:14 Uhr, März 1953. Du sitzt müde an deinem Schreibtisch im Büro am Hackeschen Markt, dein aktueller Fall liegt vor dir: Margarete Stein, Sekretärin der Reichsbahndirektion, hat dir letzte Woche heimlich Akten zugespielt, die eine Schmuggelroute durch Westberlin aufdecken. Du untersuchst, wer dahintersteckt. Jetzt klingelt das Telefon. Du hebst ab, am anderen Ende erst Atmen, dann Margaretes Stimme, panisch: "Mauer, sie wissen, dass ich Ihnen die Akten gegeben habe. Sie kommen jetzt." Klick. Im Hintergrund hast du eine Straßenbahn gehört. Die erste Szene MUSS den Fall (Stein, Reichsbahn-Akten, Schmuggel), den Anruf und Margaretes Notlage einbauen. Liefere die Szene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
+  },
+  // 5. Polizeirevier - Kommissar mit Angebot
+  {
+    timeIdx: 0, // MORGEN
+    prompt: `Starte das Spiel. ${INTRO_REQUIREMENTS}Frühlingsmorgen, April 1953. Du sitzt im Wartesaal des Polizeireviers Hardenbergstraße in Charlottenburg. Kommissar Heinrich Lindner, ein alter Bekannter aus deiner kurzen Zeit bei der Kripo vor dem Krieg, hat dich rufen lassen. Lindner braucht einen externen Ermittler für den Fall des verschwundenen Bankiers Friedrich Hollenbeck (60), der vor zwei Wochen aus seiner Villa am Wannsee verschwand. Spuren von Gewalt, aber keine Leiche. Intern darf Lindner sich nicht mehr darum kümmern, weil Einfluss von oben kommt. Er bietet dir 2000 D-Mark plus Spesen. Die erste Szene MUSS Lindner, den Fall Hollenbeck und das Honorar einbauen. Liefere die Szene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
+  },
+  // 6. Verfolgung Charlottenburg
+  {
+    timeIdx: 3, // NACHMITTAG
+    prompt: `Starte das Spiel. ${INTRO_REQUIREMENTS}Später Nachmittag, Oktober 1953. Dein aktueller Fall: Edith Kessler hat dich beauftragt herauszufinden, was ihr Mann Robert Kessler (Buchhalter bei einer Spedition in Moabit) jeden Mittwochnachmittag treibt, wenn er angeblich "Überstunden" macht. Edith vermutet eine Affäre, aber ist sich nicht sicher. Du verfolgst Robert nun seit drei Stunden zu Fuß durch Charlottenburg. Blätter rascheln auf nassen Bürgersteigen, du hältst Abstand. Plötzlich biegt Robert in einen dunklen Hinterhof in der Sybelstraße, eine schwere Holztür schlägt hinter ihm ins Schloss. Die erste Szene MUSS den Fall (Edith Kessler, Robert, mittwochs verschwindet, Buchhalter Moabit) und die jetzige Verfolgungssituation einbauen. Liefere die Szene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
+  },
+  // 7. Beerdigung - Vergangenheit
+  {
+    timeIdx: 2, // MITTAG
+    prompt: `Starte das Spiel. ${INTRO_REQUIREMENTS}Sommermittag 1953, schwüle Luft auf dem Friedhof Plötzensee. Du stehst an einem offenen Grab. Beerdigt wird Erwin Strauss (54), ein alter Klient von dir, dessen Fall (Verdacht auf erpresserische Geschäftspartner) du vor zwei Jahren nicht abschließen konntest, weil Strauss plötzlich den Auftrag zurückzog. Offiziell hat Strauss sich gestern erhängt, du glaubst das nicht. Eine Frau in schwarzem Kostüm und Schleier, die du noch nie gesehen hast, fixiert dich vom anderen Ende des Grabs. Pastor Reinhardt spricht über Vergänglichkeit, niemand hört ihm zu. Die erste Szene MUSS den damaligen Fall (Strauss, Erpressung, abgebrochen), dein Misstrauen am Selbstmord und die unbekannte Frau einbauen. Liefere die Szene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
+  },
+  // 8. Einbruch ins Büro
+  {
+    timeIdx: 4, // ABEND
+    prompt: `Starte das Spiel. ${INTRO_REQUIREMENTS}Dämmriger Abend, Spätsommer 1953. Dein aktueller Fall: Sigrid Vogt hat dich vor einer Woche beauftragt, ihren Bruder Manfred Vogt zu suchen, einen Journalisten, der seit drei Wochen spurlos verschwunden ist. Du hattest auf dem Schreibtisch in deinem Büro am Hackeschen Markt alle Notizen liegen lassen: Adressen, Verdachtsmomente, Kontakte zu Manfreds Redaktion. Du kommst gerade von einem Termin mit Sigrid zurück und findest die Bürotür einen Spalt offen, das Schloss aufgebrochen. Drinnen brennt kein Licht. Es riecht nach kaltem Schweiß, jemand war hier oder ist noch hier. Die erste Szene MUSS den Fall (Sigrid Vogt, Bruder Manfred Vogt Journalist seit 3 Wochen verschwunden) und den Einbruch einbauen. Liefere die Szene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
+  },
+];
+
+function pickIntro() {
+  const variant = INTRO_VARIANTS[Math.floor(Math.random() * INTRO_VARIANTS.length)];
+  return variant; // returns { timeIdx, prompt }
+}
+
+const TENSION_COLORS = ['#4a9eff','#4a9eff','#f0c040','#f07040','#ff3030','#ff0000'];
+
+// Time-of-day progression (each new scene advances time by 1, day advances every ~5-7 scenes)
+const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'NACHT'];
+
+let history = [];
+// Globale Version, von exportTranscript() und Debug-Dumps verwendet
+window.SCHATTEN_VERSION = 'v6.12';
+let currentScene = null;
+let apiKey = null; // unused, kept for compatibility
+let storySummaries = [];   // compressed history
+let lastFullScene = null;  // last raw scene JSON for style continuity
+let pendingRetry = null;   // function to retry on rate limit
+let recentTexts = [];      // last few scene texts for vocabulary tracking
+let lastErrorDebug = null; // last error debug dump (for copy button)
+let gameDay = 1;           // current day (1-based)
+let gameTimeIdx = 4;       // index into TIMES_OF_DAY (starts at "ABEND" since intro is evening)
+let scenesAtSameLocation = 0; // counter for location stagnation
+let lastLocation = '';     // for stagnation check
+
+// VERFASSUNG: Karls koerperlicher Zustand. Skala 1-5.
+// 5 = unverletzt, ausgeruht
+// 4 = leichte Blessuren (Faustschlag eingesteckt, leichte Erschoepfung)
+// 3 = angeschlagen (Streifschuss, Pruegel, mehrere Treppen mit Wunden gegangen)
+// 2 = stark verletzt (Schussverletzung, gebrochene Rippe, Bewusstsein nahe)
+// 1 = lebensgefaehrlich (kritisch, braucht sofortige Versorgung)
+// 0 = tot / Game Over
+let verfassung = 5;
+let isGameOver = false;
+// Letzte Verletzung als Kontext fuer Folgeszenen (z.B. "Schulterschuss")
+let lastInjury = '';
+// Letzte Spannung (1-5), damit advanceGameTime in Action-Sequenzen pausieren kann
+let lastSpannung = 1;
+// Wie viele Szenen am Stueck Spannung >= 4 hatten (Action-Streak)
+let actionStreak = 0;
+// Wie viele Szenen am Stueck ruhige Recherche-Spannung 1-2 hatten
+let calmStreak = 0;
+// Cooldown-Counter: nach jedem Eindringling in Karls Buero/Wohnung blockieren wir
+// neue Eindringlinge fuer ein paar Szenen. So vermeiden wir Marx-Brothers-Stil
+// mit 4 verschiedenen Maennern die nacheinander reinstuermen.
+let intruderCooldown = 0;
+// Inventar: alles was Karl gerade dabei hat. Strings, kurz formuliert.
+// Wird der KI als Kontext mitgeschickt, damit sie konsistent bleibt
+// (z.B. nicht mal Walther und mal Revolver).
+let inventory = ['Walther PPK (eigene Pistole)', 'Brieftasche mit Detektiv-Lizenz', 'Notizbuch und Bleistift'];
+// Cast: NPCs die gerade physisch im Raum bei Karl sind. Werden mitgefuehrt
+// damit sie nicht aus der Story verschwinden (wie es bei Frau Schmidt passierte).
+// Strukturierte Objekte mit name, rolle, beziehung - damit die KI die Beziehung
+// nicht durcheinander bringt (Frieda war Schwester, nicht Ehefrau).
+// Beispiel: { name: "Frieda Behrend", rolle: "Klientin", beziehung: "Schwester von Hans Behrend" }
+// Strings sind auch erlaubt (Fallback fuer alte Daten und einfache Faelle).
+let cast = [];
+
+// Story-appropriate wait texts, chosen by current tension level.
+// Each pool has 6+ entries to avoid repetition.
+const WAIT_TEXTS = {
+  // Spannung 1-2: Ruhig, alltäglich
+  calm: [
+    { label: 'Ein Moment der Ruhe', text: 'Du nimmst einen Schluck kalten Kaffee, lässt deinen Blick durch den Raum schweifen.' },
+    { label: 'Du sammelst dich', text: 'Du lehnst dich zurück, sortierst kurz deine Gedanken.' },
+    { label: 'Stille', text: 'Du hörst nur das Ticken der alten Wanduhr. Die Welt hält den Atem an.' },
+    { label: 'Du atmest durch', text: 'Du ziehst an deiner Zigarette, lässt den Rauch langsam entweichen.' },
+    { label: 'Kurze Pause', text: 'Du blickst aus dem Fenster. Berlin schläft nicht, auch heute nicht.' },
+    { label: 'Du wartest', text: 'Du tippst mit dem Bleistift auf den Schreibtisch. Manche Dinge brauchen Zeit.' },
+    { label: 'Ein Moment', text: 'Du schließt kurz die Augen, hörst dem Regen auf dem Dach zu.' },
+  ],
+  // Spannung 3: Angespannt, im Gespräch
+  tense: [
+    { label: 'Du überlegst', text: 'Du wägst deine nächsten Worte ab. Ein falscher Satz kann viel zerstören.' },
+    { label: 'Eine Sekunde Pause', text: 'Du beobachtest dein Gegenüber genau, suchst nach einem Hinweis im Gesicht.' },
+    { label: 'Anspannung', text: 'Das Schweigen wird schwer. Niemand will als Erster sprechen.' },
+    { label: 'Du wartest auf Reaktion', text: 'Du fixierst dein Gegenüber. Der nächste Moment entscheidet vieles.' },
+    { label: 'Du denkst nach', text: 'Du rollst die Information im Kopf hin und her, suchst den Haken.' },
+    { label: 'Kurzer Augenblick', text: 'Ein Wimpernschlag kann hier viel bedeuten. Du bleibst aufmerksam.' },
+  ],
+  // Spannung 4: Brenzlig
+  edgy: [
+    { label: 'Dein Puls steigt', text: 'Du spürst dein Herz schneller schlagen, der Schweiß steht dir auf der Stirn.' },
+    { label: 'Die Sekunden ziehen sich', text: 'Du wagst kaum zu atmen, wartest auf das nächste Geräusch.' },
+    { label: 'Du bist angespannt', text: 'Jeder Muskel in dir ist bereit, jede Bewegung könnte die letzte sein.' },
+    { label: 'Brenzlig', text: 'Du lauschst angestrengt, versuchst jedes Geräusch einzuordnen.' },
+    { label: 'Du wartest ab', text: 'Du presst dich an die Wand, hörst dein eigenes Blut in den Ohren.' },
+    { label: 'Der Moment dehnt sich', text: 'Du zählst die Sekunden, hältst deine Hand fest am Griff der Waffe.' },
+  ],
+  // Spannung 5: Lebensgefahr, Action
+  danger: [
+    { label: 'Alles in Zeitlupe', text: 'Die Welt scheint einen Schlag langsamer zu laufen, Adrenalin pumpt durch deine Adern.' },
+    { label: 'Du reagierst', text: 'Dein Körper weiß, was zu tun ist, bevor dein Kopf es begreift.' },
+    { label: 'Höchste Anspannung', text: 'Du blendest alles aus, was nicht überlebenswichtig ist.' },
+    { label: 'Zeitlupe', text: 'Sekunden werden zu Ewigkeiten, jede Bewegung zählt.' },
+    { label: 'Adrenalin', text: 'Dein Herz hämmert in den Ohren, die Welt schrumpft auf das Wesentliche.' },
+    { label: 'Du atmest schnell', text: 'Der Schmerz wartet, jetzt zählt nur die nächste Bewegung.' },
+  ],
+};
+
+function pickWaitText(spannung) {
+  let pool;
+  if (spannung >= 5) pool = WAIT_TEXTS.danger;
+  else if (spannung === 4) pool = WAIT_TEXTS.edgy;
+  else if (spannung === 3) pool = WAIT_TEXTS.tense;
+  else pool = WAIT_TEXTS.calm;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+// Words/phrases that get tiresome if repeated. We track usage and tell the model what to avoid.
+// Single words match anywhere; multi-word phrases match as-is.
+const ATMOSPHERE_WATCHLIST = [
+  'neonlicht', 'neon', 'flackert', 'flackernd', 'flackern',
+  'regen trommelt', 'regen prasselt', 'trommelt', 'prasselt',
+  'kopfsteinpflaster', 'asphalt',
+  'zigarettenrauch', 'tabakgeruch',
+  'quietschen', 'knarrt', 'knistert',
+  'laub', 'wirbelt', 'raschelt',
+  'sirene', 'blaulicht', 'sirenen',
+  'nebel', 'dunst',
+  'diesel',
+  'huscht',
+  // Gemini-specific cliché phrases observed in playthrough:
+  'mundwinkel', 'zucken', 'bohrt sich', 'bohren sich',
+  'kälte eines messers', 'kalt wie',
+  'parfüm', 'parfümduft',
+  'rauchige stimme', 'eisig', 'eisiger',
+  'kaum hörbar', 'fast unmerklich',
+  'amüsement', 'huscht', 'schraubzwinge',
+  'münze', 'loyalität',
+  'fauliges metall',
+  // v6.10: New repetition offenders from playthroughs
+  'straßenlaterne', 'strassenlaterne', 'laterne erwacht', 'laterne flackernd',
+  'mündungsfeuer', 'mündungsblitz', 'mündungsfeuer zuckt',
+  'lichtkegel', 'taschenlampe', 'lichtstrahl peitscht',
+  'trenchcoat', 'grauer mantel', 'grauer regenmantel',
+  'pocht im rhythmus', 'pocht bei jedem', 'puls hämmert',
+  'reißt die walther', 'reißt die pistole', 'reißt die waffe',
+  'schwerer schatten', 'dunkle gestalt löst sich',
+];
+
+// Generic content words that, if repeated across recent scenes, signal overuse.
+// We extract all such words from recent texts and add ones that recur often.
+function getDynamicallyOverused() {
+  if (recentTexts.length < 2) return [];
+  const stopwords = new Set([
+    'und','der','die','das','ein','eine','einen','einem','einer','eines','dem','den','des',
+    'du','dein','deine','deinen','deinem','deiner','dir','dich',
+    'er','sie','es','ihm','ihn','ihr','ihre','ihren','ihrer','ihrem',
+    'auf','in','an','über','unter','durch','gegen','zwischen','bei','neben','hinter','vor','um','aus','nach','zu','mit','von','zum','zur','vom','beim','am','im',
+    'ist','war','wird','sind','sein','wirst','bist','hat','hatte','haben','wurde','werden',
+    'nicht','noch','schon','auch','aber','oder','doch','denn','weil','wenn','als','dann','jetzt','hier','dort','so','nur','immer','sehr','mehr','weniger',
+    'was','wer','wie','warum','wann','wo','wohin','woher',
+    'sich','mich','dich','uns','euch','ihnen',
+    'kann','könnte','muss','musste','soll','sollte','will','wollte','darf','durfte','mag','mochte',
+    'wie','wieder','etwa','etwas','schon','noch','immer','dabei','dafür','damit','während','dabei',
+    'nach','zwischen','während','obwohl','sobald','damit','dass','ob','wo','wer','was',
+    'eines','einen','wegen','trotz','statt',
+    'leise','laut','kurz','lang','klein','groß','alt','jung','rot','blau','grün','schwarz','weiß','grau',
+  ]);
+  // Count word occurrences across last 3 scenes
+  const counts = {};
+  const combined = recentTexts.slice(-3).join(' ').toLowerCase();
+  const words = combined.match(/[a-zäöüß]+/g) || [];
+  for (const w of words) {
+    if (w.length < 5) continue;
+    if (stopwords.has(w)) continue;
+    counts[w] = (counts[w] || 0) + 1;
   }
+  // Return words used 3+ times across recent scenes (truly overused, not just legitimate story repetition)
+  return Object.entries(counts)
+    .filter(([w, c]) => c >= 3)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([w, c]) => `${w} (${c}x)`);
+}
 
-  const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey) {
-    return res.status(500).json({
-      error: { message: 'GROQ_API_KEY nicht konfiguriert. Bitte in Vercel Environment Variables eintragen.' }
-    });
+function getOverusedWords() {
+  // Look at the last 3 scene texts; count occurrences of each watchlist phrase.
+  // Return phrases used 2+ times across recent scenes.
+  if (recentTexts.length === 0) return [];
+  const combined = recentTexts.slice(-3).join(' ').toLowerCase();
+  const overused = [];
+  for (const phrase of ATMOSPHERE_WATCHLIST) {
+    const regex = new RegExp('\\b' + phrase.replace(/\s+/g, '\\s+') + '\\b', 'g');
+    const matches = combined.match(regex);
+    if (matches && matches.length >= 2) {
+      overused.push(phrase);
+    }
   }
+  // Also add dynamically discovered overused content words
+  const dynamic = getDynamicallyOverused();
+  return overused.concat(dynamic);
+}
 
-  const { messages, model: requestedModel } = req.body || {};
-  if (!Array.isArray(messages) || messages.length === 0) {
-    return res.status(400).json({ error: { message: 'messages-Array fehlt im Request-Body.' } });
+// --- Settings menu ---
+function updateProviderInfo() {
+  const m = getActiveModel();
+  const el = document.getElementById('settings-provider-info');
+  if (!el) return;
+  // Premium = erstes Modell (= Standard), sonst Backup
+  const isStandard = getActiveModelIndex() === 0;
+  const cssClass = isStandard ? 'badge' : 'badge fallback';
+  const subtitle = isStandard
+    ? ''
+    : '<br><span style="font-size:9px;color:#666">Auf Backup-Modell ausgewichen. Morgen wieder volle Qualitaet.</span>';
+  el.innerHTML = 'Modell: <span class="' + cssClass + '">' + m.label + '</span>' + subtitle;
+}
+
+// Footer aktualisieren: zeigt das aktuelle Modell + Hinweis ob Backup
+function updateFooterModel() {
+  const el = document.getElementById('footer-model');
+  if (!el) return;
+  const m = getActiveModel();
+  const isStandard = getActiveModelIndex() === 0;
+  const suffix = isStandard ? '' : ' · Backup';
+  el.textContent = m.label.toUpperCase() + suffix;
+}
+
+function toggleSettings(event) {
+  if (event) event.stopPropagation();
+  const menu = document.getElementById('settings-menu');
+  // Wenn wir gerade aufmachen: Provider-Info aktualisieren
+  if (menu.classList.contains('hidden')) {
+    updateProviderInfo();
   }
+  menu.classList.toggle('hidden');
+}
+function closeSettings() {
+  document.getElementById('settings-menu').classList.add('hidden');
+}
+// Close menu when clicking outside (but not on menu buttons themselves)
+document.addEventListener('click', (e) => {
+  const menu = document.getElementById('settings-menu');
+  const btn = document.querySelector('.settings-btn');
+  if (menu.classList.contains('hidden')) return;
+  if (btn && (btn === e.target || btn.contains(e.target))) return;
+  if (menu.contains(e.target)) return;
+  closeSettings();
+});
 
-  // Frontend darf das Modell explizit waehlen (fuer Failover bei TPD-Limits).
-  // Whitelist erlaubter Modelle, damit kein beliebiges Modell ueber unseren Key laeuft.
-  const ALLOWED_MODELS = {
-    'llama-3.3-70b-versatile': true,
-    'moonshotai/kimi-k2-instruct-0905': true,
-    'qwen/qwen3-32b': true,
-    'openai/gpt-oss-120b': true,
-    'meta-llama/llama-4-scout-17b-16e-instruct': true,
-    'openai/gpt-oss-20b': true,
-    'llama-3.1-8b-instant': true,
+// --- UI ---
+function showStart() {
+  document.getElementById('start').classList.remove('hidden');
+}
+function showSetup() {
+  document.getElementById('setup').classList.remove('hidden');
+}
+function hideAll() {
+  ['setup','start','loading','error','options','wait-box','daily-limit','status-popup','game-over'].forEach(id => {
+    document.getElementById(id).classList.add('hidden');
+  });
+}
+function showGameOver() {
+  document.getElementById('options').classList.add('hidden');
+  document.getElementById('game-over').classList.remove('hidden');
+}
+function showLoading(customText) {
+  document.getElementById('loading').classList.remove('hidden');
+  document.getElementById('options').classList.add('hidden');
+  document.getElementById('error').classList.add('hidden');
+  document.getElementById('wait-box').classList.add('hidden');
+  document.getElementById('daily-limit').classList.add('hidden');
+  const textEl = document.querySelector('#loading .loading-text');
+  if (textEl) textEl.textContent = customText || 'Karl denkt nach';
+}
+function hideLoading() {
+  document.getElementById('loading').classList.add('hidden');
+}
+function showError(msg, debug) {
+  document.getElementById('error').classList.remove('hidden');
+  document.getElementById('error-msg').textContent = msg;
+  if (debug) {
+    document.getElementById('error-details').classList.remove('hidden');
+    document.getElementById('error-debug').textContent = debug;
+  } else {
+    document.getElementById('error-details').classList.add('hidden');
+  }
+}
+
+// Story-themed daily limit messages, randomly chosen
+const DAILY_LIMIT_TEXTS = [
+  (when) => `Karl lehnt sich zurück und reibt sich die Augen. "Für heute reicht's", murmelt er, "ich brauch eine Pause." Komm ${when} wieder.`,
+  (when) => `Karl steckt sich eine Zigarette an und blickt aus dem Fenster. Die Ermittlung muss warten. Versuch es ${when} noch einmal.`,
+  (when) => `Karl klappt seinen Notizblock zu und gießt sich einen Whisky ein. "Morgen ist auch noch ein Tag." Schau ${when} wieder vorbei.`,
+  (when) => `Karl massiert seine Schläfen. Zu viele Spuren, zu wenig Schlaf. Er braucht eine Pause. Komm ${when} wieder.`,
+  (when) => `Karl schließt die Akte und löscht das Schreibtischlicht. "Genug für heute." Die Ermittlung geht ${when} weiter.`,
+  (when) => `Karl legt den Hörer auf und atmet schwer aus. Sein Kopf brummt, er braucht Abstand vom Fall. Versuch's ${when} erneut.`,
+];
+
+function showDailyLimitNotice(whenText, debug) {
+  // Hide other UI elements
+  document.getElementById('options').classList.add('hidden');
+  document.getElementById('error').classList.add('hidden');
+  document.getElementById('wait-box').classList.add('hidden');
+  document.getElementById('loading').classList.add('hidden');
+
+  // Pick random story-themed text
+  const fn = DAILY_LIMIT_TEXTS[Math.floor(Math.random() * DAILY_LIMIT_TEXTS.length)];
+  const text = fn(whenText);
+
+  document.getElementById('dl-text').textContent = text;
+  document.getElementById('daily-limit').classList.remove('hidden');
+  // Stash debug for the copy button
+  lastErrorDebug = debug || lastErrorDebug;
+}
+
+function hideDailyLimit() {
+  document.getElementById('daily-limit').classList.add('hidden');
+}
+
+function copyDebug(event) {
+  const text = lastErrorDebug || 'Kein Debug-Log verfügbar.';
+  // Find the actual button that was clicked (works for any button calling this function)
+  const btn = (event && event.currentTarget) || document.getElementById('copy-debug-btn');
+
+  const showSuccess = () => {
+    if (btn) {
+      const original = btn.textContent;
+      btn.textContent = '✓ Kopiert!';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = original;
+        btn.classList.remove('copied');
+      }, 2000);
+    }
   };
-  const model = ALLOWED_MODELS[requestedModel]
-    ? requestedModel
-    : 'llama-3.3-70b-versatile';
 
-  // Intelligente Kontext-Reduktion fuer Groq:
-  // Das Frontend schickt typischerweise:
-  // [system, recap, "verstanden", stilwarnung, "verstanden", zeit-context, "verstanden", user-wahl]
-  // Wir behalten nur was wichtig ist:
-  // - Den schlanken System-Prompt
-  // - Die LETZTE Recap-Nachricht (enthaelt "BISHERIGE EREIGNISSE" + "LETZTE SZENE")
-  // - Die letzte User-Message (= die Spielerwahl)
-  // Alle Filler-Pairs (stilwarnung, zeit-context und ihre "verstanden"-Antworten) fliegen raus.
+  // Always show the debug text in a copyable textarea as fallback
+  const showManualCopy = () => {
+    // Remove any existing manual-copy overlay first
+    const existing = document.getElementById('manual-copy-overlay');
+    if (existing) existing.remove();
 
-  const nonSystem = messages.filter(m => m.role !== 'system');
-  const lastUserMsg = nonSystem[nonSystem.length - 1];
+    const overlay = document.createElement('div');
+    overlay.id = 'manual-copy-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:1000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);';
 
-  // Finde die Recap-Nachricht: enthaelt "BISHERIGE EREIGNISSE" oder "LETZTE SZENE"
-  let recapMsg = null;
-  for (let i = nonSystem.length - 2; i >= 0; i--) {
-    const m = nonSystem[i];
-    if (m.role === 'user' && /BISHERIGE EREIGNISSE|LETZTE SZENE/.test(m.content || '')) {
-      recapMsg = m;
-      break;
+    const title = document.createElement('div');
+    title.textContent = 'Debug-Log manuell kopieren';
+    title.style.cssText = 'color:#c8bfa8;font-family:Courier,monospace;font-size:14px;letter-spacing:3px;text-transform:uppercase;margin-bottom:12px;';
+
+    const hint = document.createElement('div');
+    hint.textContent = 'Lange drücken oder mit Strg+A, Strg+C kopieren';
+    hint.style.cssText = 'color:#8a8070;font-family:Courier,monospace;font-size:11px;margin-bottom:16px;';
+
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.readOnly = true;
+    ta.style.cssText = 'width:100%;max-width:700px;height:60vh;background:#0a0a0f;color:#c8bfa8;border:1px solid rgba(200,191,168,0.3);padding:12px;font-family:Courier,monospace;font-size:11px;line-height:1.5;resize:none;';
+
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = 'Schliessen';
+    closeBtn.style.cssText = 'margin-top:16px;background:transparent;border:1px solid rgba(200,191,168,0.4);color:#e8dfc8;padding:10px 24px;font-family:Courier,monospace;font-size:12px;letter-spacing:3px;text-transform:uppercase;cursor:pointer;';
+    closeBtn.onclick = () => overlay.remove();
+
+    overlay.appendChild(title);
+    overlay.appendChild(hint);
+    overlay.appendChild(ta);
+    overlay.appendChild(closeBtn);
+    document.body.appendChild(overlay);
+
+    // Auto-select the text so a long-press / Strg+A is easier
+    setTimeout(() => {
+      ta.focus();
+      ta.select();
+    }, 50);
+  };
+
+  // Try clipboard API first, then fall back to manual copy overlay
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text)
+      .then(showSuccess)
+      .catch(() => showManualCopy());
+  } else {
+    showManualCopy();
+  }
+}
+
+// Exportiert den gesamten Spielverlauf als Plaintext, damit Benjamin ihn fuer
+// Lektor-Analyse rauskopieren kann.
+function exportTranscript() {
+  if (!logEntries || logEntries.length === 0) {
+    alert('Noch kein Spielverlauf zum Exportieren.');
+    return;
+  }
+
+  // Header
+  let out = 'KRIMINALBUERO MAUER\n';
+  out += 'BERLIN, 1953\n';
+  out += 'Version: ' + (window.SCHATTEN_VERSION || 'unbekannt') + '\n';
+  out += 'Exportiert: ' + new Date().toLocaleString('de-DE') + '\n';
+  out += '\n' + '='.repeat(60) + '\n\n';
+
+  let lastDay = null;
+  for (let i = 0; i < logEntries.length; i++) {
+    const e = logEntries[i];
+    if (e.type === 'scene') {
+      // Day separator
+      if (e.day && lastDay !== null && e.day !== lastDay) {
+        out += '\n--- TAG ' + e.day + ' ---\n\n';
+      }
+      if (e.day) lastDay = e.day;
+
+      // Ort + Tageszeit + Modell
+      const meta = [];
+      if (e.day) meta.push('T' + e.day);
+      if (e.time) meta.push(e.time);
+      if (e.ort) meta.push(e.ort.toUpperCase());
+      if (e.modelLabel) meta.push('[' + e.modelLabel + ']');
+      out += meta.join(' | ') + '\n';
+      out += (e.text || '').trim() + '\n\n';
+    } else if (e.type === 'choice') {
+      out += '>>> ' + (e.text || '').trim() + '\n\n';
+    } else if (e.type === 'gameover') {
+      out += '\n*** GAME OVER ***\n\n';
     }
   }
 
-  const slimMessages = [{ role: 'system', content: SLIM_SYSTEM_PROMPT }];
-  if (recapMsg) {
-    slimMessages.push(recapMsg);
-    // Kurze Bestaetigung damit das Assistant-User-Pattern erhalten bleibt
-    slimMessages.push({ role: 'assistant', content: 'Verstanden. Ich knuepfe nahtlos an, bleibe im Praesens und in der Du-Perspektive.' });
+  // Aktueller Zustand am Ende
+  out += '\n' + '='.repeat(60) + '\n';
+  out += 'ZUSTAND BEI EXPORT\n';
+  out += '='.repeat(60) + '\n';
+  out += 'Tag: ' + gameDay + ', Tageszeit: ' + (TIMES_OF_DAY[gameTimeIdx] || '?') + '\n';
+  out += 'Verfassung: ' + verfassung + '/5\n';
+  if (lastInjury) out += 'Verletzung: ' + lastInjury + '\n';
+  if (inventory && inventory.length > 0) {
+    out += 'Inventar:\n';
+    for (const item of inventory) out += '  - ' + item + '\n';
   }
-  slimMessages.push(lastUserMsg);
+  if (cast && cast.length > 0) {
+    out += 'Personen im Raum:\n';
+    for (const npc of cast) {
+      if (typeof npc === 'string') {
+        out += '  - ' + npc + '\n';
+      } else {
+        let line = '  - ' + npc.name;
+        const meta = [];
+        if (npc.rolle) meta.push(npc.rolle);
+        if (npc.beziehung) meta.push(npc.beziehung);
+        if (meta.length > 0) line += ' (' + meta.join(', ') + ')';
+        out += line + '\n';
+      }
+    }
+  }
+  out += 'Szenen total: ' + logEntries.filter(e => e.type === 'scene').length + '\n';
 
-  try {
-    const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + apiKey,
-      },
-      body: JSON.stringify({
-        model,
-        messages: slimMessages,
-        temperature: 0.85,
-        // 1000 Tokens fuer Szene + Optionen + Summary
-        max_tokens: 1000,
-        response_format: { type: 'json_object' },
-      }),
-    });
-
-    const text = await groqRes.text();
-    res.status(groqRes.status);
-    res.setHeader('Content-Type', 'application/json');
-    return res.send(text);
-  } catch (err) {
-    return res.status(502).json({
-      error: { message: 'Verbindung zu Groq fehlgeschlagen: ' + (err.message || String(err)) }
-    });
+  // Versuche Clipboard, sonst Overlay
+  const showSuccess = () => {
+    const btn = document.querySelector('.status-popup-export');
+    if (btn) {
+      const orig = btn.textContent;
+      btn.textContent = '✓ Kopiert!';
+      btn.style.borderColor = 'rgba(140,180,140,0.9)';
+      setTimeout(() => {
+        btn.textContent = orig;
+        btn.style.borderColor = '';
+      }, 2000);
+    }
+  };
+  const showManual = () => {
+    const existing = document.getElementById('manual-copy-overlay');
+    if (existing) existing.remove();
+    const overlay = document.createElement('div');
+    overlay.id = 'manual-copy-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:1000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);';
+    const title = document.createElement('div');
+    title.textContent = 'Verlauf manuell kopieren';
+    title.style.cssText = 'color:#c8bfa8;font-family:Courier,monospace;font-size:14px;letter-spacing:3px;text-transform:uppercase;margin-bottom:12px;';
+    const hint = document.createElement('div');
+    hint.textContent = 'Lange drücken oder mit Strg+A, Strg+C kopieren';
+    hint.style.cssText = 'color:#8a8070;font-family:Courier,monospace;font-size:11px;margin-bottom:16px;';
+    const ta = document.createElement('textarea');
+    ta.value = out;
+    ta.readOnly = true;
+    ta.style.cssText = 'width:100%;max-width:700px;height:65vh;background:#0a0a0f;color:#c8bfa8;border:1px solid rgba(200,191,168,0.3);padding:12px;font-family:Courier,monospace;font-size:11px;line-height:1.5;resize:none;';
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = 'Schliessen';
+    closeBtn.style.cssText = 'margin-top:16px;background:transparent;border:1px solid rgba(200,191,168,0.4);color:#e8dfc8;padding:10px 24px;font-family:Courier,monospace;font-size:12px;letter-spacing:3px;text-transform:uppercase;cursor:pointer;';
+    closeBtn.onclick = () => overlay.remove();
+    overlay.appendChild(title);
+    overlay.appendChild(hint);
+    overlay.appendChild(ta);
+    overlay.appendChild(closeBtn);
+    document.body.appendChild(overlay);
+    setTimeout(() => { ta.focus(); ta.select(); }, 50);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(out).then(showSuccess).catch(showManual);
+  } else {
+    showManual();
   }
 }
+// Cache for the status popup details
+let currentStatusInfo = { day: 1, time: 'ABEND', loc: '—', tension: 1, tensionLabel: 'Ruhig', tensionColor: '#4a9eff' };
+
+function showHeader(scene) {
+  // Show the big title block (only at top of page) and the sticky status bar
+  document.getElementById('header').classList.remove('hidden');
+  document.getElementById('status-bar').classList.remove('hidden');
+  document.getElementById('footer').classList.remove('hidden');
+
+  // Update tension bars
+  const bars = document.getElementById('status-bars');
+  bars.innerHTML = '';
+  const color = TENSION_COLORS[scene.spannung] || TENSION_COLORS[1];
+  for (let i = 1; i <= 5; i++) {
+    const b = document.createElement('div');
+    b.className = 'status-bar-segment';
+    if (i <= scene.spannung) b.style.background = color;
+    bars.appendChild(b);
+  }
+  const TENSION_LABELS = ['', 'Ruhig', 'Wachsam', 'Angespannt', 'Brenzlig', 'Lebensgefahr'];
+  const tensionLabel = TENSION_LABELS[scene.spannung] || '';
+
+  // Verfassungs-Punkte (5 Punkte; rot bei verletzt, pulsierend bei kritisch)
+  const verfDots = document.getElementById('verfassung-dots');
+  verfDots.innerHTML = '';
+  for (let i = 1; i <= 5; i++) {
+    const d = document.createElement('div');
+    d.className = 'verfassung-dot';
+    if (i <= verfassung) {
+      if (verfassung <= 1) d.classList.add('critical');
+      else if (verfassung <= 2) d.classList.add('injured');
+      else d.classList.add('full');
+    }
+    verfDots.appendChild(d);
+  }
+
+  // Compact bar: "T1 · NACHT · TEMPELHOFER FELD"
+  document.getElementById('status-tag').textContent = 'T' + gameDay;
+  document.getElementById('status-time').textContent = TIMES_OF_DAY[gameTimeIdx] || '';
+  document.getElementById('status-loc').textContent = (scene.ort || '').toUpperCase();
+
+  // Stash full info for the popup
+  const VERFASSUNG_LABELS = ['Tot', 'Lebensgefährlich', 'Stark verletzt', 'Angeschlagen', 'Leicht angeschlagen', 'Unverletzt'];
+  currentStatusInfo = {
+    day: gameDay,
+    time: (TIMES_OF_DAY[gameTimeIdx] || '').charAt(0) + (TIMES_OF_DAY[gameTimeIdx] || '').slice(1).toLowerCase(),
+    loc: scene.ort || '—',
+    tension: scene.spannung || 1,
+    tensionLabel,
+    tensionColor: color,
+    verfassung: verfassung,
+    verfassungLabel: VERFASSUNG_LABELS[verfassung] || 'Unbekannt',
+    injury: lastInjury,
+  };
+}
+
+function showStatusDetails() {
+  const info = currentStatusInfo;
+  document.getElementById('popup-day').textContent = info.day;
+  document.getElementById('popup-time').textContent = info.time;
+  document.getElementById('popup-loc').textContent = info.loc;
+  const tEl = document.getElementById('popup-tension');
+  tEl.textContent = info.tensionLabel + ' (' + info.tension + '/5)';
+  tEl.style.color = info.tensionColor;
+  // Verfassung
+  const vEl = document.getElementById('popup-verfassung');
+  vEl.textContent = info.verfassungLabel + ' (' + info.verfassung + '/5)';
+  if (info.verfassung <= 2) vEl.style.color = '#ff6644';
+  else if (info.verfassung <= 3) vEl.style.color = '#f0c040';
+  else vEl.style.color = '';
+  // Verletzung (nur anzeigen wenn vorhanden)
+  const injuryRow = document.getElementById('popup-injury-row');
+  if (info.injury) {
+    document.getElementById('popup-injury').textContent = info.injury;
+    injuryRow.style.display = '';
+  } else {
+    injuryRow.style.display = 'none';
+  }
+  // Inventar
+  const invEl = document.getElementById('popup-inventory');
+  if (inventory.length > 0) {
+    invEl.textContent = inventory.map(it => '· ' + it).join('\n');
+  } else {
+    invEl.textContent = 'Nichts dabei.';
+  }
+  // Cast (NPCs im Raum)
+  const castRow = document.getElementById('popup-cast-row');
+  const castEl = document.getElementById('popup-cast');
+  if (cast.length > 0) {
+    castEl.textContent = cast.map(c => {
+      if (typeof c === 'string') return '· ' + c;
+      let line = '· ' + c.name;
+      const meta = [];
+      if (c.rolle) meta.push(c.rolle);
+      if (c.beziehung) meta.push(c.beziehung);
+      if (meta.length > 0) line += ' (' + meta.join(', ') + ')';
+      return line;
+    }).join('\n');
+    castRow.style.display = '';
+  } else {
+    castRow.style.display = 'none';
+  }
+  document.getElementById('status-popup').classList.remove('hidden');
+}
+
+function hideStatusDetails(event) {
+  // If called from the overlay click, event is the click event;
+  // if called from the button, no event arg. Just close in both cases.
+  document.getElementById('status-popup').classList.add('hidden');
+}
+
+// Advance in-game time. Called once per new scene (not on retries).
+// Time-of-day advances roughly every 1-2 scenes (slight randomness).
+// A full day (Morgen -> Nacht) is roughly 9-12 scenes long.
+let sceneCounter = 0;
+let timeAdvanceTokens = 0; // accumulator for fractional time progression
+function advanceGameTime() {
+  // ACTION-PAUSE: Wenn die vorige Szene Spannung 4 oder 5 hatte (Brenzlig/Lebensgefahr),
+  // pausiert die Tageszeit komplett. So bleibt in einer Verfolgungsjagd oder Schiesserei
+  // der Tag stabil, statt in 10 Szenen durch Morgen->Mittag->Abend->Nacht zu sausen.
+  if (lastSpannung >= 4) {
+    console.log('[Schatten] Action-Sequenz (Spannung', lastSpannung + '), Tageszeit pausiert.');
+    return;
+  }
+
+  // sceneCounter wird in performApiCall hochgezaehlt (nach erfolgreichem Receive),
+  // damit Retries nicht doppelt zaehlen. Hier nur Tageszeit/Tag voranschreiten.
+  // NACHT (Index 5) ist die laengste Phase im Krimi: Verhoere ziehen sich, Aktion in der Dunkelheit
+  // dauert. Daher kleinere Token-Schritte fuer NACHT (0.2-0.35) als fuer andere Phasen (0.3-0.5).
+  const isNacht = gameTimeIdx === 5;
+  if (isNacht) {
+    timeAdvanceTokens += 0.2 + Math.random() * 0.15;
+  } else {
+    timeAdvanceTokens += 0.3 + Math.random() * 0.2;
+  }
+  if (timeAdvanceTokens >= 1) {
+    timeAdvanceTokens -= 1;
+    gameTimeIdx++;
+    if (gameTimeIdx >= TIMES_OF_DAY.length) {
+      gameTimeIdx = 0; // back to MORGEN
+      gameDay++;       // new day
+      // Flag, damit die naechste Szene einen expliziten Tageswechsel-Story-Beat bekommt
+      pendingDayTransition = true;
+    }
+  }
+}
+
+// Wird true gesetzt wenn gerade ein Tageswechsel passiert ist.
+// Die naechste Szene-Anfrage instruiert die KI dann, eine kurze Story-Brücke zu erzählen.
+let pendingDayTransition = false;
+function renderLog() {
+  const logEl = document.getElementById('log');
+  logEl.classList.remove('hidden');
+  logEl.innerHTML = '';
+  let lastRenderedDay = null;
+  logEntries.forEach((entry, i) => {
+    if (entry.type === 'scene') {
+      const isLast = i === logEntries.length - 1;
+
+      // Day separator: if this scene's day differs from previous scene's day
+      if (entry.day && lastRenderedDay !== null && entry.day !== lastRenderedDay) {
+        const sep = document.createElement('div');
+        sep.className = 'day-separator';
+        sep.innerHTML = '<span>— TAG ' + entry.day + ' —</span>';
+        logEl.appendChild(sep);
+      }
+      if (entry.day) lastRenderedDay = entry.day;
+
+      const div = document.createElement('div');
+      div.className = 'scene-entry' + (isLast ? ' current' : '');
+      if (entry.ort && i > 0) {
+        const ort = document.createElement('div');
+        ort.className = 'ort-divider';
+        const ortText = document.createElement('span');
+        ortText.className = 'ort-divider-name';
+        ortText.textContent = '· ' + entry.ort + ' ·';
+        ort.appendChild(ortText);
+        if (entry.modelLabel) {
+          const modelText = document.createElement('span');
+          modelText.className = 'ort-divider-model';
+          modelText.textContent = entry.modelLabel;
+          ort.appendChild(modelText);
+        }
+        div.appendChild(ort);
+      }
+      const p = document.createElement('p');
+      p.className = 'scene-text';
+      p.textContent = entry.text;
+      div.appendChild(p);
+      logEl.appendChild(div);
+    } else if (entry.type === 'choice') {
+      const div = document.createElement('div');
+      div.className = 'choice-entry';
+      div.innerHTML = '<span class="choice-marker">▶</span><span>' + escapeHtml(entry.text) + '</span>';
+      logEl.appendChild(div);
+    }
+  });
+  // Statt ans absolute Seitenende: zur LETZTEN Szene scrollen (Anfang davon).
+  // So sieht der Spieler den Beginn der neuen Szene und kann sich orientieren.
+  // Wenn keine Szene da ist, normales Ende-Scrollen.
+  const sceneEntries = logEl.querySelectorAll('.scene-entry');
+  if (sceneEntries.length > 0) {
+    const lastScene = sceneEntries[sceneEntries.length - 1];
+    // Smooth scroll, ein bisschen Platz oben fuer den Tag-Separator falls vorhanden
+    const rect = lastScene.getBoundingClientRect();
+    const absoluteTop = rect.top + window.scrollY - 80;
+    window.scrollTo({ top: absoluteTop, behavior: 'smooth' });
+  } else {
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+  }
+}
+function renderOptions(scene) {
+  const list = document.getElementById('options-list');
+  list.innerHTML = '';
+  scene.optionen.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.innerHTML = '<span class="option-id">' + opt.id + '</span><span>' + escapeHtml(opt.text) + '</span>';
+    // Tap-Detector: erlaubt Scrolling auch wenn der Finger auf einem Button startet.
+    // Click wird nur ausgeloest wenn:
+    // - Finger sich um weniger als TAP_MAX_MOVE Pixel bewegt hat
+    // - Touch nicht laenger als TAP_MAX_DURATION ms dauert
+    let touchStartX = 0, touchStartY = 0, touchStartTime = 0;
+    let touchCancelled = false;
+    let touchHandled = false; // true wenn touchend bereits chooseOption ausgeloest hat
+    const TAP_MAX_MOVE = 12; // Pixel
+    const TAP_MAX_DURATION = 800; // ms
+
+    btn.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1) { touchCancelled = true; return; }
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+      touchStartTime = Date.now();
+      touchCancelled = false;
+      touchHandled = false;
+    }, { passive: true });
+
+    btn.addEventListener('touchmove', (e) => {
+      if (touchCancelled) return;
+      if (e.touches.length !== 1) { touchCancelled = true; return; }
+      const dx = Math.abs(e.touches[0].clientX - touchStartX);
+      const dy = Math.abs(e.touches[0].clientY - touchStartY);
+      if (dx > TAP_MAX_MOVE || dy > TAP_MAX_MOVE) {
+        touchCancelled = true;
+      }
+    }, { passive: true });
+
+    btn.addEventListener('touchend', (e) => {
+      if (touchCancelled) {
+        // Scroll: synthetic click verhindern
+        e.preventDefault();
+        return;
+      }
+      const elapsed = Date.now() - touchStartTime;
+      if (elapsed > TAP_MAX_DURATION) {
+        e.preventDefault();
+        return;
+      }
+      // Echter Tap
+      e.preventDefault();
+      touchHandled = true;
+      chooseOption(opt);
+    });
+
+    // Fuer Maus/Trackpad/Desktop (kein touch-Event vorhanden)
+    btn.addEventListener('click', (e) => {
+      if (touchHandled) {
+        // Synthetic click nach touchend - ignorieren, wir haben schon gehandelt
+        touchHandled = false;
+        return;
+      }
+      chooseOption(opt);
+    });
+
+    list.appendChild(btn);
+  });
+  document.getElementById('options').classList.remove('hidden');
+}
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// --- API Call ---
+// Hybrid-Provider: Default Gemini Flash-Lite (Premium-Qualitaet, 20 RPD)
+// Bei Daily-Limit automatischer Fallback auf Groq (gpt-oss-120b, 14400 RPD)
+// Sticky pro UTC-Tag: einmal auf Groq gewechselt = bis Tagesende dort bleiben
+// Naechster Tag = wieder Gemini probieren
+
+function getCurrentUtcDay() {
+  return new Date().toISOString().slice(0, 10); // "2026-05-24"
+}
+
+// Einheitliche Modell-Failover-Kette: vom besten Deutsch zum schwaecheren Backup.
+// Wenn ein Modell heute am Daily/TPD-Limit ist, wechseln wir zum naechsten und
+// merken uns die Position fuer den Rest des UTC-Tags. Bei Tageswechsel zurueck zu 0.
+//
+// Ueberlegung: Gemini-Modelle teilen sich teils Token-Budgets (TPM ist projektweit),
+// aber das RPD-Limit ist PRO MODELL. Heisst: Wenn Flash-Lite durch ist, kann Flash
+// trotzdem noch ~20 Anfragen liefern (eigener RPD-Topf).
+const MODEL_CHAIN = [
+  // Gemini-Modelle (beste Sprachqualitaet, knappe RPD)
+  { provider: 'gemini', model: 'gemini-2.5-flash',       label: 'Gemini 2.5 Flash' },
+  { provider: 'gemini', model: 'gemini-2.5-flash-lite',  label: 'Gemini 2.5 Flash-Lite' },
+  // Gemini 2.5 Pro: bestes Deutsch, aber sehr knappe Limits (~5-10 RPD).
+  // Setzen wir hier mittendrin als Premium-Backup nach den Flash-Modellen.
+  { provider: 'gemini', model: 'gemini-2.5-pro',         label: 'Gemini 2.5 Pro' },
+  { provider: 'gemini', model: 'gemini-3.1-flash-lite',  label: 'Gemini 3.1 Flash-Lite' },
+  { provider: 'gemini', model: 'gemini-3-flash-preview', label: 'Gemini 3 Flash Preview' },
+  // Groq-Modelle (sortiert nach Deutsch-Qualitaet)
+  { provider: 'groq',   model: 'llama-3.3-70b-versatile',                  label: 'Llama 3.3 70B' },
+  { provider: 'groq',   model: 'moonshotai/kimi-k2-instruct-0905',         label: 'Kimi K2' },
+  { provider: 'groq',   model: 'qwen/qwen3-32b',                           label: 'Qwen3 32B' },
+  { provider: 'groq',   model: 'openai/gpt-oss-120b',                      label: 'GPT-OSS 120B' },
+  { provider: 'groq',   model: 'meta-llama/llama-4-scout-17b-16e-instruct', label: 'Llama 4 Scout' },
+  { provider: 'groq',   model: 'openai/gpt-oss-20b',                       label: 'GPT-OSS 20B' },
+];
+
+// Aktuelle Position in der Kette aus localStorage (mit Tagesreset).
+function getActiveModelIndex() {
+  try {
+    const raw = localStorage.getItem('schatten-model-idx');
+    if (!raw) return 0;
+    const { idx, day } = JSON.parse(raw);
+    if (day !== getCurrentUtcDay()) return 0;
+    if (typeof idx !== 'number' || idx < 0 || idx >= MODEL_CHAIN.length) return 0;
+    return idx;
+  } catch { return 0; }
+}
+
+function setActiveModelIndex(idx) {
+  try {
+    localStorage.setItem('schatten-model-idx', JSON.stringify({
+      idx, day: getCurrentUtcDay()
+    }));
+  } catch {}
+}
+
+function getActiveModel() {
+  return MODEL_CHAIN[getActiveModelIndex()];
+}
+
+// Wechsle zum naechsten Modell in der Kette. Gibt das neue Modell-Objekt zurueck,
+// oder null wenn alle durch sind.
+function advanceModel() {
+  const idx = getActiveModelIndex();
+  if (idx >= MODEL_CHAIN.length - 1) return null;
+  const nextIdx = idx + 1;
+  setActiveModelIndex(nextIdx);
+  return MODEL_CHAIN[nextIdx];
+}
+
+function getProviderEndpoint(provider) {
+  return provider === 'groq' ? '/api/groq' : '/api/gemini';
+}
+
+// Legacy-Funktionen, damit alter Code an anderen Stellen nicht bricht
+function getActiveProvider() { return getActiveModel().provider; }
+function setActiveProvider() { /* no-op: provider folgt aus dem Modell */ }
+
+// Client-seitiges Throttling: gleitendes 60-Sekunden-Fenster.
+// Provider-spezifische Limits:
+// - Gemini Flash-Lite: 10 RPM, 250K TPM (RPM-gebunden, kleine Pause reicht)
+// - Groq Llama 3.3 70B: 30 RPM, 12K TPM, 1K RPD, 100K TPD
+//   Bei ~3000 Tokens/Anfrage: rechnerisch 4 Anfragen/Minute, also ~15s Abstand
+// Buckets separat in localStorage (sonst rechnet ein Provider-Switch falsch).
+const RPM_BUDGET = { gemini: 8, groq: 4 };
+const RPM_WINDOW_MS = 60000;
+const MIN_GAP_MS = { gemini: 3000, groq: 15000 }; // Groq: 15s Abstand bei 12K TPM
+
+function loadRequestTimes(provider) {
+  try {
+    const key = 'schatten-rpm-' + provider;
+    const raw = localStorage.getItem(key);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return [];
+    const cutoff = Date.now() - RPM_WINDOW_MS;
+    return arr.filter(t => typeof t === 'number' && t > cutoff);
+  } catch { return []; }
+}
+
+function saveRequestTimes(provider, arr) {
+  try {
+    const key = 'schatten-rpm-' + provider;
+    localStorage.setItem(key, JSON.stringify(arr.slice(-20)));
+  } catch {}
+}
+
+// Provider-spezifisches Throttling
+// Wenn dieser Flag true ist, wird das naechste throttleRequest() uebersprungen.
+// Wird gesetzt, nachdem wir manuell auf ein Rate-Limit gewartet haben - sonst
+// wuerden wir doppelt warten.
+let skipNextThrottle = false;
+
+async function throttleRequest(provider) {
+  if (skipNextThrottle) {
+    skipNextThrottle = false;
+    // Trotzdem Bucket-Eintrag setzen
+    const times = loadRequestTimes(provider);
+    times.push(Date.now());
+    saveRequestTimes(provider, times);
+    return;
+  }
+  const minGap = MIN_GAP_MS[provider] || 3000;
+  const budget = RPM_BUDGET[provider] || 13;
+  let times = loadRequestTimes(provider);
+  const now = Date.now();
+
+  // Beide Wartezeiten zusammen berechnen, damit wir EINEN Countdown haben
+  // und keine zwei kurz hintereinander.
+  let totalWaitMs = 0;
+
+  // 1. Mindest-Luecke seit letztem Call (provider-spezifisch)
+  if (times.length > 0) {
+    const lastCall = times[times.length - 1];
+    const elapsed = now - lastCall;
+    if (elapsed < minGap) {
+      totalWaitMs = minGap - elapsed;
+    }
+  }
+
+  // 2. Wenn Budget voll: warte bis aeltester Eintrag aus dem Fenster faellt
+  // Diese Wartezeit ist meist groesser als die Mindest-Luecke, also nimm das Maximum
+  if (times.length >= budget) {
+    const oldest = times[0];
+    const waitUntil = oldest + RPM_WINDOW_MS + 500;
+    const budgetWaitMs = waitUntil - now;
+    if (budgetWaitMs > totalWaitMs) totalWaitMs = budgetWaitMs;
+  }
+
+  // Wenn es etwas zu warten gibt: EINEN Countdown anzeigen und warten
+  if (totalWaitMs > 0) {
+    // Nur sichtbarer Countdown bei > 3 Sekunden (sonst ist's einfach Loading)
+    if (totalWaitMs > 3000) {
+      await runCountdown(totalWaitMs);
+    } else {
+      await new Promise(r => setTimeout(r, totalWaitMs));
+    }
+  }
+
+  // 3. Eintragen
+  times = loadRequestTimes(provider);
+  times.push(Date.now());
+  saveRequestTimes(provider, times);
+}
+
+// Live-Countdown mit Sekunden-genauer Anzeige
+let throttleInterval = null;
+async function runCountdown(totalMs) {
+  const endTime = Date.now() + totalMs;
+  // Sofort einmal anzeigen
+  updateCountdownText(totalMs);
+  // Loading anzeigen falls noch nicht
+  const loadingEl = document.getElementById('loading');
+  if (loadingEl && loadingEl.classList.contains('hidden')) {
+    loadingEl.classList.remove('hidden');
+  }
+  // Sekuendlich aktualisieren
+  throttleInterval = setInterval(() => {
+    const remaining = endTime - Date.now();
+    if (remaining <= 0) {
+      clearInterval(throttleInterval);
+      throttleInterval = null;
+      return;
+    }
+    updateCountdownText(remaining);
+  }, 1000);
+  // Warten
+  await new Promise(r => setTimeout(r, totalMs));
+  // Aufraeumen
+  if (throttleInterval) {
+    clearInterval(throttleInterval);
+    throttleInterval = null;
+  }
+  // Text zurueck auf Standard, Loading bleibt sichtbar fuer den eigentlichen API-Call
+  const textEl = document.querySelector('#loading .loading-text');
+  if (textEl) textEl.textContent = 'Karl denkt nach';
+}
+
+function updateCountdownText(remainingMs) {
+  const seconds = Math.ceil(remainingMs / 1000);
+  const textEl = document.querySelector('#loading .loading-text');
+  if (textEl) textEl.textContent = `Karl sortiert seine Gedanken (${seconds}s)`;
+}
+
+// Alte Funktionen leer lassen damit nichts bricht falls woanders aufgerufen
+function showThrottleWait() {}
+function hideThrottleWait() {}
+
+async function callGroq(userMessage, conversationHistory, compactMode) {
+  // Groq uses OpenAI-compatible chat format with system/user/assistant roles
+  // compactMode = 0 (normal), 1 (less history), 2 (minimal — just last scene)
+  compactMode = compactMode || 0;
+
+  // Aktiven Provider waehlen (Gemini default, Groq als Fallback)
+  const provider = getActiveProvider();
+
+  // Throttle vor dem Call, damit wir das jeweilige RPM/TPM-Limit nicht ueberschreiten.
+  // Groq braucht groessere Pausen wegen 8K TPM-Limit.
+  await throttleRequest(provider);
+
+  const messages = [
+    { role: 'system', content: SYSTEM_PROMPT }
+  ];
+
+  // Compact history: instead of sending all old scene texts,
+  // send a compressed "story so far" based on past summaries + last scene text.
+  // On retry, we send less context to bypass token-pressure issues that may have caused the failure.
+  if (storySummaries.length > 0 || lastFullScene) {
+    let recap = '';
+    if (storySummaries.length > 0 && compactMode < 2) {
+      const summaryCount = compactMode === 1 ? 2 : storySummaries.length;
+      const summaries = storySummaries.slice(-summaryCount);
+      recap += 'BISHERIGE EREIGNISSE (kompakt):\n' +
+        summaries.map((s, i) => `${i + 1}. ${s}`).join('\n');
+    }
+    if (lastFullScene) {
+      // On compact retries, send only the first 300 chars of the last scene
+      const sceneText = compactMode > 0 ? lastFullScene.slice(0, 300) : lastFullScene;
+      if (recap) recap += '\n\n';
+      recap += 'LETZTE SZENE (du befindest dich genau hier, knüpfe direkt daran an):\n' + sceneText;
+    }
+    // Letzten Ort explizit nochmal anhaengen, damit die KI ihn nicht verfaelscht.
+    // Das ist die haerteste Form gegen "Tempelhof -> ploetzlich Zehlendorf"-Drift.
+    if (lastLocation) {
+      recap += `\n\nORT-PFLICHT: Der "ort"-Eintrag der naechsten Szene MUSS "${lastLocation}" sein oder eine direkte, raeumlich plausible Fortsetzung davon (z.B. "${lastLocation}, hinter dem Holzstapel"). KEINE Brotkrumen-Akkumulation: Der ort darf maximal aus 2-3 kurzen Komponenten bestehen, nicht "Tempelhof, Graben, hinter dem Wrack, Richtung Lagerhalle". Berlin-Stadtteile (Wedding, Zehlendorf, Charlottenburg etc.) liegen kilometerweit auseinander. Wechsle den ort-Eintrag NUR, wenn der Spieler in dieser Szene aktiv und erkennbar zu einem neuen Ort gefahren oder gegangen ist.`;
+    }
+    // Verfassungs-Kontext + ggf. Verletzungsbeschreibung
+    const verfassungLabel = ['tot', 'lebensgefährlich verletzt', 'stark verletzt', 'angeschlagen', 'leicht angeschlagen', 'unverletzt'][verfassung] || 'unverletzt';
+    recap += `\n\nKARLS VERFASSUNG: ${verfassung}/5 (${verfassungLabel}).`;
+    if (lastInjury) {
+      recap += ` Aktuelle Verletzung: ${lastInjury}. Karl spuert das in jeder Bewegung.`;
+    }
+    if (verfassung <= 2) {
+      recap += ` WICHTIG: Karl ist deutlich angeschlagen. Die naechste Szene MUSS das zeigen (Bewegungseinschraenkung, Schmerz, Schwindel, Atemnot). Mindestens eine der vier Optionen muss in Richtung Versorgung/Ausruhen/Versteck gehen.`;
+    }
+    // Inventar mitschicken, damit die KI keine inkonsistenten Gegenstaende erfindet.
+    if (inventory.length > 0) {
+      recap += `\n\nKARLS INVENTAR (was er JETZT dabei hat):\n` + inventory.map((it, i) => `- ${it}`).join('\n');
+      recap += `\nNutze NUR diese Gegenstaende. Karls Hauptwaffe ist die Walther PPK, NIEMALS als Revolver bezeichnen.`;
+    }
+    // Cast mitschicken (NPCs die gerade physisch bei Karl sind)
+    if (cast.length > 0) {
+      recap += `\n\nPERSONEN AKTUELL BEI KARL IM RAUM:\n` + cast.map(c => {
+        if (typeof c === 'string') return `- ${c}`;
+        // Strukturiert: Name + Rolle + Beziehung
+        let line = `- ${c.name}`;
+        const meta = [];
+        if (c.rolle) meta.push(c.rolle);
+        if (c.beziehung) meta.push(c.beziehung);
+        if (meta.length > 0) line += ` (${meta.join(', ')})`;
+        return line;
+      }).join('\n');
+      recap += `\nDiese Personen sind PHYSISCH ANWESEND. Wenn sie in der naechsten Szene weiterhin im Raum sind, MUSST du sie erwaehnen (was tun sie, wo stehen/sitzen sie, wie reagieren sie). Sie duerfen nicht einfach verschwinden.`;
+      recap += `\n\nBEZIEHUNGEN MUESSEN STABIL BLEIBEN: Die oben angegebene Rolle und Beziehung ist FAKT und darf nicht aendern. Wenn Frieda als "Schwester von Hans Behrend" steht, ist Hans IMMER ihr Bruder, NIE ihr Ehemann oder Vater oder Sohn. Verwechsle Beziehungen nicht. Wenn jemand die Szene verlaesst (geht raus, wird weggebracht, fluechtet, stirbt), beschreibe das EXPLIZIT und setze ihn in "cast_entfernt".`;
+    }
+    // Walther-Inflation eindaemmen: wenn die Pistole in den letzten Szenen zu oft "gezogen"
+    // wurde, weise die KI an, sie weg zu lassen. Marlowe nutzt seine Waffe selten.
+    const waffeCount = countWaffeUsage();
+    if (waffeCount >= 3) {
+      recap += `\n\nWAFFE-BREMSE: Die Walther PPK wurde in den letzten Szenen bereits ${waffeCount}-mal gezogen/erwaehnt. Das ist ZU OFT fuer Noir-Stil. Marlowe nutzt seine Pistole sparsam und mit Gewicht. In dieser Szene MUSS die Pistole im Holster bleiben. Keine Erwaehnung von "Walther", "Pistole", "Holster", "ziehen", "Muendung". Karl arbeitet mit Worten, Beobachtung und Verstand. Wenn die letzte Szene endete mit gezogener Waffe, steckt Karl sie weg (kurze Erwaehnung), dann fokussierst du auf Dialog, Recherche oder Beobachtung.`;
+    } else if (waffeCount === 2) {
+      recap += `\n\nWAFFE-WARNUNG: Die Walther wurde schon 2x in den letzten Szenen erwaehnt. Diese Szene besser ohne Waffe, ausser es ist erzaehlerisch zwingend.`;
+    }
+    // Eindringlings-Cooldown: nach jedem Eindringling muss Karl Ruhe haben
+    if (intruderCooldown > 0) {
+      recap += `\n\nEINDRINGLINGS-COOLDOWN: Vor ${4 - intruderCooldown} Szene${intruderCooldown === 3 ? '' : 'n'} ist bereits jemand unangekuendigt in Karls Buero/Wohnung eingedrungen. KEINE neue Person darf jetzt ans Buero klopfen, die Tuer aufbrechen oder hereinstuermen. Marlowe-Stil ist ruhig, nicht Marx-Brothers-Slapstick. Die naechste${intruderCooldown >= 2 ? 'n ' + intruderCooldown : ''} Szene${intruderCooldown === 1 ? '' : 'n'} sollten ruhig sein (Verhoer, Nachdenken, Telefonat, Recherche, Ortswechsel zu einem anderen Schauplatz). KEIN neues Klopfen, KEIN neuer Eindringling, KEINE neue Drohung an der Tuer.`;
+    }
+    messages.push({ role: 'user', content: recap });
+    messages.push({ role: 'assistant', content: 'Verstanden. Ich knüpfe nahtlos und räumlich konsistent an die letzte Szene an, bleibe im Präsens und in der Du-Perspektive.' });
+  }
+
+  // Inject overused-words warning only in normal mode (not on retry, to keep prompt lean)
+  if (compactMode === 0) {
+    const overused = getOverusedWords();
+    if (overused.length > 0) {
+      messages.push({
+        role: 'user',
+        content: `STILWARNUNG: Folgende Wörter/Phrasen wurden in den letzten Szenen zu oft verwendet und müssen für diese Szene VERMIEDEN werden: ${overused.join(', ')}. Finde frische Bilder, andere Sinneseindrücke (Geräusche der Stadt, Gerüche, Texturen, Temperatur, Licht aus anderen Quellen wie Lampen, Kerzen, Mond, Fackeln). Nicht jede Szene braucht Regen oder Neonlicht.`
+      });
+      messages.push({ role: 'assistant', content: 'Verstanden. Ich vermeide diese überstrapazierten Begriffe und nutze frische Sinneseindrücke.' });
+    }
+  }
+
+  // Inject in-game time/day context and stagnation warnings
+  if (compactMode === 0 && sceneCounter > 0) {
+    const currentTime = TIMES_OF_DAY[gameTimeIdx] || 'ABEND';
+    // Lichtbeschreibung pro Tageszeit, damit die KI nicht zwischen "Morgensonne" und "Mondlicht"
+    // in zwei aufeinanderfolgenden Szenen wechselt
+    const LICHT_HINWEIS = {
+      'MORGEN': 'fahles erstes Tageslicht, schraege Morgensonne, kuehle Luft',
+      'VORMITTAG': 'klares helles Tageslicht, lange Schatten, Sonne steigt',
+      'MITTAG': 'hartes Mittagslicht, kurze Schatten, helles Tageslicht',
+      'NACHMITTAG': 'warmes Sonnenlicht, beginnende Verschattung, Nachmittagslicht',
+      'ABEND': 'Daemmerung, lange Schatten, blasses Restlicht, Strassenlaternen gehen an',
+      'NACHT': 'Dunkelheit, kuenstliches Licht von Lampen/Scheinwerfern, Mondlicht falls klar',
+    };
+    let timeContext = `KONTEXT: Aktueller Spieltag ist TAG ${gameDay}, Tageszeit: ${currentTime}. Lichtstimmung: ${LICHT_HINWEIS[currentTime]}. WICHTIG: Die Lichtbeschreibung MUSS zur Tageszeit passen. KEINE Tageszeit-Drift innerhalb einer Aktionssequenz - wenn die letzte Szene "Morgensonne" hatte und nur Minuten vergangen sind, darf die naechste Szene nicht "Mondlicht" oder "Nachmittagshitze" haben.`;
+    // Expliziter Tageswechsel-Flag (gesetzt von advanceGameTime nach einem Roll-Over)
+    if (pendingDayTransition) {
+      // Schlafplatz bestimmen: je nach Spielzustand andere Wahrscheinlichkeit.
+      // Default ist Karls eigene Wohnung am Hackeschen Markt (Genre-Konstante:
+      // der Detektiv kehrt zur Base zurueck wie bei Marlowe, Spade, Bogart-Filmen).
+      let sleepPlace;
+      if (verfassung <= 2) {
+        // Stark verletzt: Krankenhaus oder Doc Wagner in Schoeneberg
+        sleepPlace = Math.random() < 0.5
+          ? `Karl ist die ganze Nacht von Doc Wagner in Schoeneberg verarztet worden (Schaeferstrasse, kleine Praxis). Er erwacht auf der Liege, der Doc reicht ihm Kaffee.`
+          : `Karl wurde in die Charite Krankenhaus eingeliefert. Er liegt in einem schmalen Bett auf der Station. Eine Schwester wechselt gerade den Verband.`;
+      } else if (verfassung === 3 && lastSpannung >= 4) {
+        // Angeschlagen + war in Action: Notunterkunft / Hotel / Versteck
+        const opts = [
+          `Karl hat die Nacht in einer schmuddeligen Pension am Bahnhof Zoo verbracht (Pension Wernicke), gegen Bargeld vom Wirt ohne Fragen aufgenommen.`,
+          `Karl hat sich in einer alten Lagerhalle nahe der S-Bahn versteckt. Er erwacht steif und froestelnd auf einem Stapel Pappkartons.`,
+          `Karl hat bei seinem alten Bekannten Heinz uebernachtet, einem ehemaligen Polizisten der jetzt taxifaehrt. Heinz weckt ihn mit dem Geruch nach starkem Kaffee.`,
+        ];
+        sleepPlace = opts[Math.floor(Math.random() * opts.length)];
+      } else {
+        // Default: 75% zu Hause, 15% bei einer Frau (wenn Story es hergibt),
+        // 10% irgendwo anders (Polizei, Wagen, Buero-Schreibtisch).
+        const r = Math.random();
+        if (r < 0.75) {
+          sleepPlace = `Karl ist zu seiner Wohnung am Hackeschen Markt zurueckgekehrt. Er wohnt im 2. Stock im selben Haus wie sein Buero (Buero zur Strasse, Schlafzimmer dahinter zum Hinterhof). Er erwacht im eigenen Bett, durch das Fenster der Laerm der Strassenbahn.`;
+        } else if (r < 0.90) {
+          sleepPlace = `Karl hat die Nacht NICHT bei sich verbracht - waehle hier erzaehlerisch passend zur bisherigen Story: bei einer Frau die er gestern getroffen hat (Klientin, Zeugin), in der Wache (Polizei hat ihn ueber Nacht festgehalten weil er an einem Tatort war), oder ausnahmsweise in seinem Opel am Strassenrand. Erzaehle den Aufwachmoment klar (Bett einer Fremden, kalte Zelle, eingeklemmt im Wagen).`;
+        } else {
+          sleepPlace = `Karl ist nicht nach Hause gekommen, sondern auf seinem eigenen Buerosofa eingeschlafen, vollstaendig bekleidet, Aschenbecher voll, leere Flasche auf dem Schreibtisch. Er wacht steif und mit Kopfschmerzen auf, die Vormittagssonne durch die Jalousien.`;
+        }
+      }
+      timeContext += `\n\nTAGESWECHSEL: Ein neuer Tag hat begonnen. ${sleepPlace}\n\nDie naechste Szene MUSS folgende drei Dinge ENTHALTEN, in dieser Reihenfolge:\n1. WAS HAT KARL IN DER NACHT GEMACHT (1-2 Saetze, konkret): Wo hat er geschlafen oder gewacht, wie lange, was hat er getraeumt oder gedacht. Wenn jemand mit dabei war: was hat diese Person gemacht (geschlafen, geredet, geweint, geweckt). Nicht ueberspringen!\n2. AUFWACH-MOMENT: konkretes Aufwachgeraeusch oder Bild (Strassenbahn, Klopfen, Lichtstrahl, Geruch, Schmerz von alter Verletzung).\n3. BRUECKE ZUM FALL: was bleibt im Kopf, was ist der naechste logische Schritt heute.\n\nVERBOTEN: einfach mit "schraegem Morgenlicht" anfangen ohne zu erklaeren wo Karl war und was er tat. Verbote weiterhin: pluetzliche Zeitspruenge ohne Brueke, einfach von Action am Vorabend direkt zu Karl-knetet-auf-dem-Boden ohne Erklaerung was passiert ist. Realismus ist Pflicht: wenn Karl gestern an einem dunklen Ort observiert hat, kann er nicht ploetzlich am Morgen am gleichen Ort sein OHNE Erklaerung (hat er die ganze Nacht da gewartet? Ist er zurueckgekommen? Wenn ja warum?).`;
+      // Wenn NPCs gerade bei Karl waren, mussen sie auch beim Tageswechsel erklaert werden
+      if (cast.length > 0) {
+        const names = cast.map(c => typeof c === 'string' ? c : c.name).join(', ');
+        timeContext += `\n\nWICHTIG: Folgende Person${cast.length === 1 ? '' : 'en'} war${cast.length === 1 ? '' : 'en'} gestern Abend noch bei Karl: ${names}. Du MUSST erzaehlen, was mit ${cast.length === 1 ? 'dieser Person' : 'diesen Personen'} ueber Nacht passiert ist: ist sie bei Karl geblieben (im selben Schlafzimmer? auf der Couch? im Hotel?), ist sie weggegangen (wohin? wann?), wurde sie weggebracht (von wem?)? KEIN stillschweigendes Verschwinden! Wenn sie noch bei Karl ist, beschreib auch ihre Verfassung am Morgen.`;
+      }
+      pendingDayTransition = false; // Flag zurücksetzen, damit es nur einmal wirkt
+    }
+    if (scenesAtSameLocation >= 3) {
+      timeContext += ` ACHTUNG: Der Spieler ist seit ${scenesAtSameLocation} Szenen am selben Ort. Diese Szene MUSS einen Wechsel oder eine Unterbrechung bringen (Person tritt ein, Person geht, Anruf, Ortswechsel, neuer konkreter Hinweis).`;
+    }
+    // ESKALATIONS-BREMSE: wenn zu viel Action am Stueck, zwinge zu Beruhigung
+    if (actionStreak >= 3) {
+      timeContext += `\n\nESKALATIONS-BREMSE (sehr wichtig): Die letzten ${actionStreak} Szenen waren Action (Spannung 4-5). Das ist ZU VIEL fuer einen Noir-Krimi. Marlowe macht Schiessereien selten und mit Gewicht. Diese Szene MUSS die Spannung runterbringen (spannung <= 3). Die Angreifer fliehen, Sirenen vertreiben sie, Karl entkommt in eine ruhige Strasse, etwas unterbricht den Kampf. Mindestens 2 der 4 Optionen muessen RECHERCHE-ORIENTIERT sein (zum Buero zurueck, Telefonat fuehren, Akten studieren, Klient befragen, Bibliothek/Archiv, Zeugen aufsuchen). KEINE neue Schiesserei, KEINE neue Verfolgungsjagd. Karl braucht jetzt einen Atemzug und einen Hinweis zum Nachdenken.`;
+    } else if (actionStreak === 2) {
+      timeContext += `\n\nESKALATIONS-WARNUNG: Die letzten 2 Szenen waren Action. Sehr bald MUSS Beruhigung folgen. Diese Szene darf noch Action sein, aber lass die Spannung dann sinken. Die naechsten Optionen sollten Wege aus dem Konflikt anbieten.`;
+    }
+    messages.push({ role: 'user', content: timeContext });
+    messages.push({ role: 'assistant', content: 'Verstanden. Ich integriere Tageszeit und Tag in die Atmosphäre und sorge für Bewegung in der Story.' });
+  }
+
+  // New user message
+  messages.push({ role: 'user', content: userMessage });
+
+  // Aktives Modell aus der Failover-Kette holen
+  const activeModel = getActiveModel();
+  const endpoint = getProviderEndpoint(activeModel.provider);
+
+  // Body: messages plus explizites Modell (beide Proxies akzeptieren das jetzt)
+  const requestBody = { messages, model: activeModel.model };
+
+  // Call our Vercel proxy (which holds the API key server-side)
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestBody)
+  });
+
+  const rawText = await response.text();
+  let data;
+  try { data = JSON.parse(rawText); } catch {
+    const err = new Error('Antwort nicht lesbar: ' + rawText.slice(0, 200));
+    err.isRetryable = true;
+    err.debugInfo = { stage: 'response_parse', rawText: rawText.slice(0, 1000) };
+    throw err;
+  }
+
+  if (!response.ok) {
+    const errMsg = data?.error?.message || rawText;
+    // Detect rate limit errors specifically
+    if (response.status === 429) {
+      const err = new Error(errMsg);
+      err.isRateLimit = true;
+
+      // Parse retry time. Groq returns formats like:
+      //   "try again in 12.5s"
+      //   "try again in 34m8.543999999s"
+      //   "try again in 2h15m"
+      let totalSeconds = 15; // fallback
+      const timeMatch = errMsg.match(/try again in ([\dhms.]+)/i);
+      if (timeMatch) {
+        const timeStr = timeMatch[1];
+        let s = 0;
+        const hMatch = timeStr.match(/(\d+)h/);
+        const mMatch = timeStr.match(/(\d+)m(?!s)/);
+        const sMatch = timeStr.match(/([\d.]+)s/);
+        if (hMatch) s += parseInt(hMatch[1]) * 3600;
+        if (mMatch) s += parseInt(mMatch[1]) * 60;
+        if (sMatch) s += parseFloat(sMatch[1]);
+        if (s > 0) totalSeconds = Math.ceil(s);
+      }
+      err.retryAfter = totalSeconds;
+
+      // Detect daily token limit STRICTLY: only when message explicitly says so.
+      // Gemini's per-minute limits often return long retryDelay values (45-60s)
+      // but a manual retry after 1-2s usually works. Don't treat those as "daily".
+      // "tokens per minute" / "per minute" / "TPM" / "RPM" sind NIE daily.
+      const isPerMinute = /per minute|TPM|RPM|requests per minute/i.test(errMsg);
+      // Gemini meldet das Daily-Limit ueber das Quota-Metric "generate_content_free_tier_requests"
+      // mit konkretem Limit (20). Diese Phrase ist eindeutig taeglich.
+      const isGeminiFreeTier = /generate_content_free_tier_requests/i.test(errMsg);
+      err.isDailyLimit = isGeminiFreeTier || (!isPerMinute && /tokens per day|per day|TPD|daily quota|daily limit|RPD/i.test(errMsg));
+
+      // For non-daily rate limits: cap the displayed wait based on provider.
+      // Gemini erholt sich schneller als die API sagt (Cap 10s).
+      // Groq Llama-4-Scout: 30K TPM, ~3000 Tokens/Anfrage, Erholung nach 10-15s
+      const isGroqEndpoint = /\/api\/groq/.test(endpoint);
+      const waitCap = isGroqEndpoint ? 15 : 10;
+      if (!err.isDailyLimit && totalSeconds > waitCap) {
+        err.retryAfter = waitCap;
+      }
+
+      err.debugInfo = { stage: 'rate_limit', retryAfter: err.retryAfter, originalRetryAfter: totalSeconds, isDailyLimit: err.isDailyLimit, rawMessage: errMsg.slice(0, 500) };
+      throw err;
+    }
+    // 400 = often JSON validation from Groq's structured output → retryable
+    // 500/502/503 = server errors → retryable
+    const err = new Error('API-Fehler ' + response.status + ': ' + errMsg);
+    if (response.status === 400 || response.status >= 500) {
+      err.isRetryable = true;
+    }
+    err.debugInfo = { stage: 'api_error', status: response.status, body: JSON.stringify(data).slice(0, 1000) };
+    throw err;
+  }
+
+  const text = data?.choices?.[0]?.message?.content;
+  if (!text) {
+    const err = new Error('Keine Textantwort von der KI.');
+    err.isRetryable = true;
+    err.debugInfo = { stage: 'no_text', response: JSON.stringify(data).slice(0, 1000) };
+    throw err;
+  }
+
+  // Parse JSON from text
+  let cleaned = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+  const first = cleaned.indexOf('{');
+  const last = cleaned.lastIndexOf('}');
+  if (first === -1) {
+    const err = new Error('Kein JSON gefunden.');
+    err.isRetryable = true;
+    err.debugInfo = { stage: 'no_json_braces', text: cleaned.slice(0, 1000) };
+    throw err;
+  }
+  // Wenn Schluss-} fehlt (z.B. weil maxTokens erreicht), spaeter mit Repair versuchen
+  cleaned = last === -1 ? cleaned.substring(first) : cleaned.substring(first, last + 1);
+
+  // Versuche JSON zu reparieren bevor wir aufgeben.
+  // Haeufige Probleme: trailing comma, fehlende Klammer am Ende, abgeschnittenes Objekt.
+  function tryRepairJson(s) {
+    let r = s.trim();
+    // Wenn String mittendrin abgeschnitten ist (offenes "), schliessen
+    const quotes = (r.match(/(?<!\\)"/g) || []).length;
+    if (quotes % 2 === 1) r += '"';
+    // Klammern auffuellen
+    const oc = (r.match(/\{/g) || []).length;
+    const cc = (r.match(/\}/g) || []).length;
+    const ob = (r.match(/\[/g) || []).length;
+    const cb = (r.match(/\]/g) || []).length;
+    if (cb < ob) r += ']'.repeat(ob - cb);
+    if (cc < oc) r += '}'.repeat(oc - cc);
+    // Mehrfach trailing commas entfernen (mehrere Durchlaeufe da neue beim Auffuellen entstehen)
+    for (let i = 0; i < 5; i++) {
+      const before = r;
+      r = r.replace(/,(\s*[}\]])/g, '$1');
+      if (r === before) break;
+    }
+    return r;
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch (e1) {
+    // Repair-Versuch
+    try {
+      parsed = JSON.parse(tryRepairJson(cleaned));
+    } catch (e2) {
+      const err = new Error('JSON ungültig: ' + e1.message);
+      err.isRetryable = true;
+      err.debugInfo = { stage: 'json_parse', text: cleaned.slice(0, 1000), parseError: e1.message, repairFailed: e2.message };
+      throw err;
+    }
+  }
+
+  if (!parsed.szene) {
+    const err = new Error('JSON ohne Szene-Text');
+    err.isRetryable = true;
+    err.debugInfo = { stage: 'incomplete_json', parsed: JSON.stringify(parsed).slice(0, 1000) };
+    throw err;
+  }
+  // Wenn optionen fehlen oder leer sind, generische 4 einsetzen statt Retry.
+  // Szene-Text ist viel wichtiger, der ist da.
+  if (!Array.isArray(parsed.optionen) || parsed.optionen.length === 0) {
+    parsed.optionen = [
+      { id: 'A', text: 'Geh näher heran und schau dir das genauer an.' },
+      { id: 'B', text: 'Warte ab und beobachte die Situation.' },
+      { id: 'C', text: 'Sprich jemanden an und stell konkrete Fragen.' },
+      { id: 'D', text: 'Zieh dich zurück und überdenke das Ganze.' },
+    ];
+  }
+
+  // Enforce 4 options. If model returned fewer, try to be tolerant:
+  // - 3 options: add a generic "Sieh dich erstmal um." as 4th to avoid retry-loops
+  // - 2 or fewer: this is broken, retry needed
+  if (parsed.optionen.length < 2) {
+    const err = new Error('Nur ' + parsed.optionen.length + ' Optionen statt 4 geliefert.');
+    err.isRetryable = true;
+    err.debugInfo = { stage: 'too_few_options', count: parsed.optionen.length, parsed: JSON.stringify(parsed).slice(0, 1000) };
+    throw err;
+  }
+  if (parsed.optionen.length === 2) {
+    parsed.optionen.push({ id: 'C', text: 'Warte ab und beobachte die Situation.' });
+    parsed.optionen.push({ id: 'D', text: 'Zieh dich zurück und überdenke die Lage.' });
+  } else if (parsed.optionen.length === 3) {
+    parsed.optionen.push({ id: 'D', text: 'Warte ab und beobachte erstmal weiter.' });
+  }
+  // If more than 4, trim to first 4
+  if (parsed.optionen.length > 4) {
+    parsed.optionen = parsed.optionen.slice(0, 4);
+  }
+  // Ensure each option has id and text
+  const validIds = ['A','B','C','D'];
+  parsed.optionen = parsed.optionen.map((o, i) => ({
+    id: o.id || validIds[i],
+    text: o.text || ''
+  }));
+
+  // Defensive cleanup: strip em/en dashes. Name removal is left to the prompt;
+  // doing it client-side either mangles conjugations or breaks dialog quotes,
+  // both worse than the rare slip-through.
+  // Also fix the most common du-conjugation mistakes the model produces.
+  const verbFixes = {
+    // 3rd-person → 2nd-person after "du" or "und"
+    'geht': 'gehst', 'kommt': 'kommst', 'sieht': 'siehst', 'nimmt': 'nimmst',
+    'tritt': 'trittst', 'öffnet': 'öffnest', 'schließt': 'schließt',
+    'fragt': 'fragst', 'sagt': 'sagst', 'hört': 'hörst', 'fühlt': 'fühlst',
+    'läuft': 'läufst', 'rennt': 'rennst', 'zieht': 'ziehst', 'legt': 'legst',
+    'gibt': 'gibst', 'liest': 'liest', 'schreibt': 'schreibst',
+    'setzt': 'setzt', 'wirft': 'wirfst', 'hebt': 'hebst', 'dreht': 'drehst',
+    'blickt': 'blickst', 'schaut': 'schaust', 'starrt': 'starrst',
+    'lächelt': 'lächelst', 'nickt': 'nickst', 'schüttelt': 'schüttelst',
+    'atmet': 'atmest', 'denkt': 'denkst', 'glaubt': 'glaubst', 'weiß': 'weißt',
+    'spürt': 'spürst', 'antwortet': 'antwortest', 'erkennt': 'erkennst',
+    'betritt': 'betrittst', 'verlässt': 'verlässt', 'findet': 'findest',
+    'sucht': 'suchst', 'wartet': 'wartest', 'lauscht': 'lauschst',
+    'fasst': 'fasst', 'greift': 'greifst', 'reißt': 'reißt',
+    'ruft': 'rufst', 'flüstert': 'flüsterst', 'schreit': 'schreist',
+    'lacht': 'lachst', 'weint': 'weinst', 'raucht': 'rauchst',
+    'trinkt': 'trinkst', 'isst': 'isst',
+  };
+  function fixOption(s) {
+    if (typeof s !== 'string') return s;
+    let out = s.trim();
+    // Old spelling fixes (regex \b doesn't reliably handle ß boundaries)
+    out = out.replace(/(^|[^a-zA-ZäöüÄÖÜß])daß([^a-zA-ZäöüÄÖÜß]|$)/g, '$1dass$2');
+    out = out.replace(/(^|[^a-zA-ZäöüÄÖÜß])laß([^a-zA-ZäöüÄÖÜß]|$)/g, '$1lass$2');
+    out = out.replace(/(^|[^a-zA-ZäöüÄÖÜß])muß([^a-zA-ZäöüÄÖÜß]|$)/g, '$1muss$2');
+
+    // Sie-Anrede -> Du in Optionen (KI wechselt manchmal in Höflichkeitsform)
+    // 1. Imperativ-Konstruktionen: "Fragen Sie X" -> "Frag X"
+    // Verb-Mapping fuer Sie-Imperative -> Du-Imperative
+    const sieImperativeFix = {
+      'Fragen': 'Frag', 'Geben': 'Gib', 'Sagen': 'Sag', 'Nehmen': 'Nimm',
+      'Gehen': 'Geh', 'Kommen': 'Komm', 'Sehen': 'Sieh', 'Lesen': 'Lies',
+      'Schließen': 'Schließ', 'Öffnen': 'Öffne', 'Schauen': 'Schau',
+      'Hören': 'Hör', 'Bleiben': 'Bleib', 'Warten': 'Warte', 'Versuchen': 'Versuch',
+      'Folgen': 'Folg', 'Antworten': 'Antworte', 'Anrufen': 'Ruf an',
+      'Ziehen': 'Zieh', 'Werfen': 'Wirf', 'Setzen': 'Setz', 'Stellen': 'Stell',
+      'Heben': 'Heb', 'Drehen': 'Dreh', 'Suchen': 'Such', 'Verlassen': 'Verlass',
+      'Befragen': 'Befrag', 'Beobachten': 'Beobachte', 'Untersuchen': 'Untersuch',
+      'Greifen': 'Greif', 'Fassen': 'Fass', 'Treten': 'Tritt', 'Springen': 'Spring',
+      'Schießen': 'Schieß', 'Schlagen': 'Schlag', 'Rennen': 'Renn', 'Laufen': 'Lauf',
+      'Halten': 'Halt', 'Lassen': 'Lass', 'Zeigen': 'Zeig', 'Erzählen': 'Erzähl',
+      'Drücken': 'Drück', 'Trinken': 'Trink', 'Essen': 'Iss', 'Rauchen': 'Rauch',
+      'Bezahlen': 'Bezahl', 'Bestellen': 'Bestell', 'Schweigen': 'Schweig',
+      'Akzeptieren': 'Akzeptier', 'Ablehnen': 'Lehn ab', 'Konfrontieren': 'Konfrontier',
+      'Lügen': 'Lüg', 'Bluffen': 'Bluff', 'Verhandeln': 'Verhandle', 'Bieten': 'Biet',
+    };
+    out = out.replace(/^([A-ZÄÖÜ][a-zäöüß]+)\s+Sie\b/, (m, verb) => {
+      if (sieImperativeFix[verb]) return sieImperativeFix[verb];
+      // Generic fallback: strip 'en' ending from verb stem
+      if (verb.endsWith('en')) return verb.slice(0, -2) + (verb.length > 3 ? '' : 'e');
+      return verb;
+    });
+    // After Sie-removal, the reflexive "sich" remains but should become "dir" in du-form
+    // E.g. "Sieh sich die Akten an" -> "Sieh dir die Akten an"
+    // Heuristic: 'sich' im ersten Drittel der Option und kein anderes Subjekt davor
+    out = out.replace(/^((?:[A-ZÄÖÜ][a-zäöü]*)\s+)sich\b/, '$1dir');
+    // 2. "Sie" als Subjekt im Inneren der Option: "..., wenn Sie..." -> "..., wenn du..."
+    // Heuristik: 'Sie' nach Konjunktionen/Komma in einer Option ist Anrede
+    out = out.replace(/(,\s+(?:wenn|ob|dass|während|bevor|nachdem|weil|damit|als)\s+)Sie\b/g, '$1du');
+    out = out.replace(/(,\s+(?:wenn|ob|dass|während|bevor|nachdem|weil|damit|als)\s+)ihr\b/g, '$1dein');
+    // 3. "Ihnen" / "Ihrem" am Wortanfang in Optionen -> "dir" / "deinem"
+    out = out.replace(/\bIhnen\b/g, 'dir');
+    out = out.replace(/\bIhrem\b/g, 'deinem');
+    out = out.replace(/\bIhrer\b/g, 'deiner');
+    out = out.replace(/\bIhre\b/g, 'deine');
+    out = out.replace(/\bIhren\b/g, 'deinen');
+
+    // Common casus errors in imperatives
+    out = out.replace(/\bBefiehl den Mann\b/g, 'Befiehl dem Mann');
+    out = out.replace(/\bbefiehl den Mann\b/g, 'befiehl dem Mann');
+    out = out.replace(/\bBefiehl den ([A-ZÄÖÜ][a-zäöüß]+),/g, 'Befiehl dem $1,');
+    // "Schieß den X" -> "Schieß auf den X" (unless already "auf")
+    out = out.replace(/\b(Schieß|schieß)\s+(den|die|das)\s+/g, '$1 auf $2 ');
+    // "Schieß auf auf" cleanup if double-applied
+    out = out.replace(/\b(Schieß|schieß)\s+auf\s+auf\s+/g, '$1 auf ');
+    // Semicolons mid-sentence: split into two sentences, capitalize the next word
+    out = out.replace(/\s*;\s*([a-zäöü])/g, (m, c) => '. ' + c.toUpperCase());
+    out = out.replace(/\s*;\s*/g, '. ');
+    // Trailing junk: comma, colon at end → period
+    out = out.replace(/[,;:]+\s*$/, '.');
+    // Ensure ends with proper punctuation
+    if (!/[.!?]$/.test(out)) out += '.';
+    // Collapse double dots
+    out = out.replace(/\.\.+/g, '.');
+    return out;
+  }
+
+  function fixConjugation(s) {
+    if (typeof s !== 'string') return s;
+    // Direct: "du/Du <wrong_verb>" -> "du/Du <right_verb>"
+    let out = s.replace(/\b(du|Du)\s+(\w+)/g, (m, du, verb) => {
+      const lower = verb.toLowerCase();
+      if (verbFixes[lower]) {
+        const fixed = verbFixes[lower];
+        const finalVerb = verb[0] === verb[0].toUpperCase()
+          ? fixed[0].toUpperCase() + fixed.slice(1)
+          : fixed;
+        return du + ' ' + finalVerb;
+      }
+      return m;
+    });
+    // "du Verb1 ... und Verb2" - fix Verb2 too (verb pairs)
+    out = out.replace(/\b(du|Du)\s+\S+\s+(?:[^.!?]*?\s+)?(und|oder)\s+(\w+)/gi, (m, du, conj, verb) => {
+      const lower = verb.toLowerCase();
+      if (verbFixes[lower]) {
+        const fixed = verbFixes[lower];
+        const finalVerb = verb[0] === verb[0].toUpperCase()
+          ? fixed[0].toUpperCase() + fixed.slice(1)
+          : fixed;
+        return m.slice(0, m.length - verb.length) + finalVerb;
+      }
+      return m;
+    });
+    // Fix participle-without-verb pattern: "Die Regentropfen perlenden auf..."
+    // -> "Die Regentropfen perlen auf..."
+    // Match a word ending in "enden" followed by a preposition. If it's in our
+    // known list, replace with the present-tense form.
+    const participleFixes = {
+      'perlenden': 'perlen', 'tropfenden': 'tropfen', 'rinnenden': 'rinnen',
+      'fließenden': 'fließen', 'fallenden': 'fallen', 'prasselnden': 'prasseln',
+      'trommelnden': 'trommeln', 'rauschenden': 'rauschen', 'klopfenden': 'klopfen',
+      'schlagenden': 'schlagen', 'wehenden': 'wehen', 'zitternden': 'zittern',
+      'glühenden': 'glühen', 'flackernden': 'flackern', 'leuchtenden': 'leuchten',
+      'glimmenden': 'glimmen', 'brennenden': 'brennen', 'rauchenden': 'rauchen',
+      'duftenden': 'duften', 'riechenden': 'riechen', 'knarrenden': 'knarren',
+      'quietschenden': 'quietschen', 'flüsternden': 'flüstern',
+      'wirbelnden': 'wirbeln', 'tanzenden': 'tanzen', 'flatternden': 'flattern',
+      'schimmernden': 'schimmern', 'glitzernden': 'glitzern',
+    };
+    out = out.replace(/([a-zA-ZäöüÄÖÜß]+enden)\s+(auf|in|an|über|unter|durch|gegen|zwischen|bei|neben|hinter|vor|um|aus|nach|zu)\b/g, (m, word, prep) => {
+      const lower = word.toLowerCase();
+      if (participleFixes[lower]) {
+        const fixed = participleFixes[lower];
+        const finalWord = word[0] === word[0].toUpperCase()
+          ? fixed[0].toUpperCase() + fixed.slice(1)
+          : fixed;
+        return finalWord + ' ' + prep;
+      }
+      return m;
+    });
+    return out;
+  }
+  function clean(s) {
+    if (typeof s !== 'string') return s;
+    let out = s
+      .replace(/\s*—\s*/g, ', ')
+      .replace(/\s*–\s*/g, ', ')
+      .replace(/\s*--\s*/g, ', ');
+    // Strip stray backslashes before quotes (\" or \\\")
+    out = out.replace(/\\+"/g, '"');
+    out = out.replace(/\\+'/g, "'");
+    // Old spelling fixes everywhere
+    out = out.replace(/(^|[^a-zA-ZäöüÄÖÜß])daß([^a-zA-ZäöüÄÖÜß]|$)/g, '$1dass$2');
+    out = out.replace(/(^|[^a-zA-ZäöüÄÖÜß])laß([^a-zA-ZäöüÄÖÜß]|$)/g, '$1lass$2');
+    out = out.replace(/(^|[^a-zA-ZäöüÄÖÜß])muß([^a-zA-ZäöüÄÖÜß]|$)/g, '$1muss$2');
+
+    // Idiom and collocation fixes (observed slip-throughs):
+
+    // "Streichholzschachtelchen" -> "Streichholzschachtel" (with article gender fix)
+    out = out.replace(/\b(das|Das|dem|Dem)\s+Streichholzschachtelchen\b/g, (m, art) => {
+      const map = {'das':'die','Das':'Die','dem':'der','Dem':'Der'};
+      return map[art] + ' Streichholzschachtel';
+    });
+    out = out.replace(/Streichholzschachtelchen/g, 'Streichholzschachtel');
+
+    // "schwüler Sommerduft" -> "schwüle Sommerluft" (with article fix)
+    out = out.replace(/\b(der|Der|den)\s+schwüle[rn]?\s+Sommerduft/g, (m, art) => {
+      const map = {'der':'die','Der':'Die','den':'die'};
+      return map[art] + ' schwüle Sommerluft';
+    });
+
+    // "fordern dich/mich/etc" (without "auf") -> "fordern dich auf"
+    out = out.replace(/\b(fordert?|forderst|fordere|forderten|fordere?n)\s+(dich|mich|ihn|sie|uns|euch)\b(?!\s+auf)/g, '$1 $2 auf');
+
+    // "Echo ... nachhallt" -> "Echo ... hallt" (pleonasm)
+    out = out.replace(/\b(Echo|echo)([^.!?]{0,60})nachhallt/g, '$1$2hallt');
+
+    // "die fallende Pistole/Waffe" (mid-sentence as object) -> just the noun
+    out = out.replace(/\bdie\s+fallende\s+(Pistole|Waffe)\b/g, 'die $1');
+    out = out.replace(/\bdie\s+fallenden\s+(Pistolen|Waffen)\b/g, 'die $1');
+
+    // "Türschweller" -> "Türschwelle" (Schwelle is feminine; Schweller is not the word)
+    out = out.replace(/\b(den|dem|der|das|am|im|auf den|auf dem)\s+Türschweller\b/g, (m, art) => {
+      const map = {'den':'die','dem':'der','der':'die','das':'die','am':'auf der','im':'auf der','auf den':'auf die','auf dem':'auf der'};
+      return (map[art] || 'die') + ' Türschwelle';
+    });
+    out = out.replace(/Türschweller/g, 'Türschwelle');
+
+    // "stürmst/läufst/rennst AUS der Tür" -> "DURCH die Tür" (you don't storm out of a door, you go through it)
+    // Also adjusts adjective ending: 'der schweren Bürotür' (Dativ) -> 'die schwere Bürotür' (Akk.)
+    out = out.replace(/\b(stürmst|stürmt|läufst|läuft|rennst|rennt|gehst|geht|trittst|tritt|springst|springt|kletterst|klettert)\s+aus\s+der(\s+[\wäöüß]+en)?\s+([\wäöüß]*[Tt]ür)\b/g, (m, verb, adj, noun) => {
+      let result = verb + ' durch die';
+      if (adj) {
+        // 'schweren' -> 'schwere' (Akkusativ Singular nach 'die')
+        const fixedAdj = adj.replace(/en(\s*)$/, 'e$1');
+        result += fixedAdj;
+      }
+      result += ' ' + noun;
+      return result;
+    });
+
+    out = fixConjugation(out);
+    return out;
+  }
+  parsed.szene = clean(parsed.szene);
+  parsed.ort = clean(parsed.ort);
+  parsed.zusammenfassung = clean(parsed.zusammenfassung);
+  if (Array.isArray(parsed.optionen)) {
+    parsed.optionen = parsed.optionen.map(o => ({ ...o, text: fixOption(clean(o.text)) }));
+  }
+
+  return { scene: parsed, rawAssistantText: text };
+}
+
+// --- Game Logic ---
+let logEntries = [];
+let lastUserMessage = null;
+
+async function startGame() {
+  hideAll();
+  showLoading();
+  history = [];
+  logEntries = [];
+  storySummaries = [];
+  recentTexts = [];
+  lastFullScene = null;
+  // Reset day/time/location tracking
+  gameDay = 1;
+  sceneCounter = 0;
+  timeAdvanceTokens = 0;
+  pendingDayTransition = false;
+  scenesAtSameLocation = 0;
+  lastLocation = '';
+  // Reset Verfassung
+  verfassung = 5;
+  isGameOver = false;
+  lastInjury = '';
+  lastSpannung = 1;
+  actionStreak = 0;
+  calmStreak = 0;
+  intruderCooldown = 0;
+  // Reset Inventar auf Startausstattung
+  inventory = ['Walther PPK (eigene Pistole)', 'Brieftasche mit Detektiv-Lizenz', 'Notizbuch und Bleistift'];
+  // Reset Cast (NPCs im Raum)
+  cast = [];
+  // Pick a random intro and use its predefined start time
+  const intro = pickIntro();
+  gameTimeIdx = intro.timeIdx;
+  lastUserMessage = intro.prompt;
+
+  await performApiCall(intro.prompt, /*isStart*/true);
+}
+
+// Erkennt direkte physische Konfliktaktionen, die NICHT mit einem Time-Skip
+// uebersprungen werden duerfen. Wenn der Spieler so etwas waehlt, muss die
+// naechste Szene UNMITTELBAR die Konsequenz erzaehlen.
+function isPhysicalConflictAction(text) {
+  if (!text) return false;
+  // Umlaute normalisieren, damit Patterns sowohl ue/oe/ae als auch ü/ö/ä matchen
+  const lower = text.toLowerCase()
+    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+  // Wir wollen sehr spezifische Verben und Wortkombinationen, die direkte Konfrontation/Aktion bedeuten.
+  // Wortgrenzen pruefen mit \b, damit z.B. 'pack' nicht auf 'package' matcht.
+  const patterns = [
+    /\bschlag/, /\bhaue?\b/, /\bhaust\b/, /\bverpasse?\b/, /\bverpasst\b/,
+    /\bschiess/, /\bfeuere?\b/, /\bfeuerst\b/, /\bdrueck(e)? ab\b/,
+    /\bpack(e|st|en|t)?\b/, /\bgreif(e|st|en|t)?\b/, /\bklammer/,
+    /\bstoss(e|t|en)?\b/, /\breiss(e|t|en)?\b/,
+    /\btret(e|en|tst)?\b/, /\btritt\b/,
+    /\bwuerg/, /\berdrueck/,
+    /\bzieh(e)? die (waffe|pistole|knarre|messer)/,
+    /\bzueck/, /\bspring(e|st|en|t)?\b/, /\bsturm/, /\bstuerm/,
+    /\bflieh/, /\brenn(e|st|en|t)?\b/, /\bverfolg/, /\bjag(e|st|en|t)?\b/,
+    /\bkaempf/, /\bangreif/, /\battackier/,
+    /\bumarm/, /\bkuess/, /\bberuehr/,
+    /\bwirf\b/, /\bwerfe\b/, /\bwirfst\b/,
+    /\bsturz/,
+  ];
+  return patterns.some(p => p.test(lower));
+}
+
+// Zaehlt wie oft die Walther/Pistole/Waffe in den letzten Szenen "gezogen/gerissen/gehoben" wurde.
+// Wenn das zu oft passiert, signalisiert es uebermaessige Action - dann gibt's eine Warnung an die KI.
+function countWaffeUsage() {
+  if (recentTexts.length === 0) return 0;
+  const combined = recentTexts.slice(-5).join(' ').toLowerCase();
+  // Patterns die "Karl zieht/holt seine Waffe" markieren
+  const patterns = [
+    /\b(reisst|reisse|ziehst|ziehe|zieht|holst|holt|holst hervor)\b.*?\b(walther|pistole|waffe|holster|halfter)\b/g,
+    /\b(walther|pistole|waffe)\b.*?\b(in deiner hand|in deinem griff|liegt fest|liegt vertraut)\b/g,
+    /\b(muendung|lauf).*?(pistole|walther|waffe)\b/g,
+    /\b(walther ppk)\b/g,
+  ];
+  let count = 0;
+  for (const p of patterns) {
+    const m = combined.match(p);
+    if (m) count += m.length;
+  }
+  return count;
+}
+
+// Schaetzt die "echte" Spannung einer Szene anhand von Action-Woertern im Text.
+// Wird verwendet, um KI-untertriebene Spannungswerte (z.B. 3 wenn eigentlich 4-5) zu korrigieren.
+// Returns 1-5.
+function computeActionLevel(sceneText) {
+  if (!sceneText) return 1;
+  const lower = sceneText.toLowerCase()
+    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+
+  // Spannung 5: konkrete Gewalt, Schuesse, Treffer
+  const lvl5 = [
+    /\bschuss(es|e|en)?\b/, /\bschiess/, /\bfeuere?(st|n|t)?\b/,
+    /\bmuendungsfeuer\b/, /\bmuendungsblitz\b/,
+    /\bkugel/, /\bgeschoss/, /\bsalve/,
+    /\bblut(et|en)?\b/, /\bverwundet/, /\btreffer/,
+    /\bschrei(t|en)?\b/, /\bschreit auf\b/,
+    /\bstirbt\b/, /\btot\b/, /\bgetoetet/,
+    /\bgranate\b/, /\bexplos/,
+    /\btrifft (deine|seine|ihre)? ?(schulter|brust|bauch|kopf|wange)/,
+  ];
+  if (lvl5.some(p => p.test(lower))) return 5;
+
+  // Spannung 4: drohende Gewalt, Pistole im Spiel, Verfolgung
+  const lvl4 = [
+    /\bpistole\b/, /\brevolver\b/, /\bwalther\b/, /\bwaffe\b/, /\bholster\b/,
+    /\bzielt? (auf|mit)/, /\bzielen\b/,
+    /\bverfolg/, /\bjagt\b/, /\bjagen\b/, /\bfliehst\b/, /\bfluchet/,
+    /\brennst\b/, /\bsprint/,
+    /\bschritte (kommen|naehern|polter|hallen)/,
+    /\bstiefel(schritt)?(en|e)?/,
+    /\bsirene/, /\bvolkspolizei\b/, /\bpolizeiwagen\b/, /\bstreifenwagen\b/,
+    /\bduckst dich\b/, /\bin deckung\b/, /\bhinter (dem|der|den) /,
+    /\bpackt dich\b/, /\bgreift nach (dir|deinem)/,
+    /\bhammern (an|gegen)/, /\bgehaemmer/,
+    /\bgewalt\b/, /\bkampf\b/, /\bfaust\b/, /\bfaeust/, /\bschlag\b/, /\bschlagt/,
+    /\bdroht\b/, /\bdrohung\b/, /\bdrohend/,
+    /\bschmerz/, /\bpocht\b/, /\bschwellung/,
+  ];
+  const lvl4Hits = lvl4.filter(p => p.test(lower)).length;
+  if (lvl4Hits >= 1) return 4;
+
+  // Spannung 3: angespanntes Gespraech, Verhoer, mysterioese Andeutung
+  const lvl3 = [
+    /\bschweigt\b/, /\bzittert\b/, /\bnervoes\b/, /\bunruhig\b/,
+    /\bfluestert\b/, /\bgefluester\b/,
+    /\bblickt (dich )?(eindringlich|fixiert|misstrauisch|kalt)/,
+    /\bweicht.*aus\b/, /\bschuldig/, /\blueg/, /\bversteckt/,
+    /\bdunkel/, /\bschatten/, /\bgeheimn/,
+  ];
+  if (lvl3.some(p => p.test(lower))) return 3;
+
+  // Default: Spannung 2 (alltaeglich angespannt - was Detektive eben so machen)
+  return 2;
+}
+
+// Erkennt, ob in einer Szene ein neuer Eindringling in Karls Buero/Wohnung kommt.
+// Wir nutzen das, um nach jedem Eindringling einen Cooldown zu setzen, der weitere
+// Eindringlinge fuer mehrere Szenen blockiert.
+function detectIntruder(sceneText) {
+  if (!sceneText) return false;
+  const lower = sceneText.toLowerCase()
+    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+  // Charakteristische Phrasen fuer "jemand kommt unangekuendigt rein"
+  const patterns = [
+    /\bklopft? .* (an der|gegen die) (tuer|bueroture|wohnungstuer)/,
+    /\bhaemmer.* (an|gegen) .*tuer/,
+    /\b(reisst|stuermt|tritt) .* (in den raum|herein|ins buero|ins zimmer)/,
+    /\btuer (fliegt|knall|reisst) auf/,
+    /\b(eindringling|fremde[r]?|besucher) (steht|tritt|stuermt|stolpert)/,
+    /\bein mann (im|mit) .* (steht|tritt|stuermt) (in|im)/,
+    /\bschluessel .* drehst? sich .* schloss/,
+    /\bschloss .* (knackt|gibt nach|bricht)/,
+  ];
+  return patterns.some(p => p.test(lower));
+}
+
+async function chooseOption(option) {
+  showLoading();
+  logEntries.push({ type: 'choice', text: option.text });
+  renderLog();
+
+  // Tageszeit/Tag voranschreiten lassen BEVOR wir die naechste Szene anfordern,
+  // damit der pendingDayTransition-Flag schon gesetzt ist und die KI den
+  // Tageswechsel direkt in die Szene einbauen kann.
+  //
+  // AUSNAHME: Wenn die Spieleraktion eine direkte physische Konfliktaktion ist
+  // (schlagen, schiessen, packen, fliehen), darf KEIN Tageswechsel ausgeloest
+  // werden. Die naechste Szene muss die UNMITTELBARE Konsequenz erzaehlen.
+  // Wir merken uns die Token-Position und schreiten erst danach voran.
+  const isPhysical = isPhysicalConflictAction(option.text);
+  if (isPhysical) {
+    // Tokens schon mal ansammeln, aber keinen Roll-over zulassen.
+    // Wir blockieren den Tageswechsel diesmal, indem wir kuenstlich nicht
+    // ueber 1.0 rollen lassen. Beim naechsten Klick (nach der Konsequenz)
+    // wird dann normal weiter vorgeschritten.
+    timeAdvanceTokens += 0.15; // minimaler Schritt, kein roll-over moeglich
+    console.log('[Schatten] Physical action detected, deferring time advance:', option.text);
+  } else {
+    advanceGameTime();
+  }
+
+  const userMsg = isPhysical
+    ? `Der Spieler wählt Option ${option.id}: "${option.text}". WICHTIG: Dies ist eine direkte physische Aktion. Die nächste Szene MUSS die UNMITTELBARE Konsequenz in derselben Situation erzählen (Reaktion der Gegenüber, körperlicher Schmerz, Eskalation oder Folgen). KEIN Zeitsprung, KEIN Ortswechsel, KEINE Übergangsformulierung wie "später" oder "am nächsten Morgen". Liefere die nächste Szene als JSON.`
+    : `Der Spieler wählt Option ${option.id}: "${option.text}". Führe die Konsequenzen aus und liefere die nächste Szene als JSON.`;
+  lastUserMessage = userMsg;
+
+  await performApiCall(userMsg, /*isStart*/false, option);
+}
+
+async function performApiCall(userMsg, isStart, optionForRollback, retryCount, rateLimitCount) {
+  retryCount = retryCount || 0;
+  rateLimitCount = rateLimitCount || 0;
+  const MAX_AUTO_RETRIES = 3;
+  const MAX_RATE_LIMIT_RETRIES = 2;
+  const MAX_RATE_LIMIT_WAIT = 35; // seconds; if Groq asks for more, abort
+
+  // Compaction level grows with retry count to bypass token-pressure issues
+  // 0 = full prompt, 1 = reduced history, 2 = minimal context
+  const compactMode = Math.min(retryCount, 2);
+
+  try {
+    const { scene, rawAssistantText } = await callGroq(userMsg, history, compactMode);
+    currentScene = scene;
+
+    // Compress: store the summary instead of full scene
+    if (scene.zusammenfassung) {
+      storySummaries.push(scene.zusammenfassung);
+    }
+    if (storySummaries.length > 4) {
+      storySummaries = storySummaries.slice(-4);
+    }
+    lastFullScene = scene.szene;
+
+    // Track recent scene texts for vocabulary monitoring
+    recentTexts.push(scene.szene);
+    if (recentTexts.length > 5) recentTexts = recentTexts.slice(-5);
+
+    // Track location stagnation
+    const curOrt = (scene.ort || '').toLowerCase().trim();
+    if (curOrt && curOrt === lastLocation) {
+      scenesAtSameLocation++;
+    } else {
+      scenesAtSameLocation = 1;
+      lastLocation = curOrt;
+    }
+
+    // Hinweis: advanceGameTime() wurde bereits in chooseOption() vor dem API-Call
+    // aufgerufen. Hier nicht nochmal, sonst springen Tageszeit/Tag doppelt.
+    sceneCounter++;
+
+    // Verfassung anpassen basierend auf KI-Antwort
+    let delta = typeof scene.verfassung_delta === 'number' ? scene.verfassung_delta : 0;
+
+    // CLIENT-SIDE VALIDIERUNG: Tod (-4) und schwere Verletzung (-3) brauchen einen
+    // expliziten Trigger im Erzaehltext. Wenn der nicht da ist, capen wir das Delta
+    // auf -1 (leichte Folge). So verhindern wir "Tod durch Akkumulation" oder
+    // willkuerliche schwere Verletzungen ohne klaren Grund.
+    if (delta <= -3) {
+      const sceneText = (scene.szene || '').toLowerCase();
+      const injuryText = (scene.verletzungsbeschreibung || '').toLowerCase();
+      const combined = sceneText + ' ' + injuryText;
+      // Schluesselwoerter, die eine schwere/toedliche Verletzung erzaehlerisch begruenden
+      const fatalTriggers = [
+        /\bbauchschuss\b/, /\bbrustschuss\b/, /\bkopfschuss\b/, /\bherzschuss\b/,
+        /\bschuss\s+in\s+(den\s+)?(bauch|brust|kopf|hals|herz|magen|leib)/,
+        /\bkugel\s+(trifft|durchschl[aä]gt|bohrt\s+sich)\s+.*(bauch|brust|kopf|hals|herz|magen|lunge|leber)/,
+        /\bstich\s+(in|durch)\s+(den\s+)?(bauch|brust|herz|hals|niere)/,
+        /\bsch[aä]delbruch\b/, /\bsch[aä]delfraktur\b/, /\bbruch\s+der\s+sch[aä]delbasis/,
+        /\bsturz\s+aus\s+(gro(ss|ß)er\s+h[oö]he|dem\s+(zweiten|dritten|vierten|f[uü]nften)\s+stock)/,
+        /\bverblutet/, /\bverblutest/, /\bblutet\s+(stark|aus|stossweise)/,
+        /\bdurchschossen/, /\bdurchbohrt\s+(von|durch)/,
+        /\b(messer|klinge|dolch)\s+(in|durch)\s+(den\s+)?(bauch|brust|hals|herz|kehle)/,
+        /\bgenickbruch\b/, /\bgenick\s+bricht\b/,
+        /\bbrustkorb\s+(zerschmettert|durchbohrt|getroffen)/,
+      ];
+      const hasFatalTrigger = fatalTriggers.some(p => p.test(combined));
+      if (!hasFatalTrigger) {
+        console.warn('[Schatten] Delta', delta, 'ohne erkennbaren Trigger im Text. Cap auf -1.');
+        delta = -1;
+      } else {
+        console.log('[Schatten] Schwere Verletzung mit erkanntem Trigger akzeptiert. Delta:', delta);
+      }
+    }
+
+    if (delta !== 0) {
+      verfassung = Math.max(0, Math.min(5, verfassung + delta));
+      // Bei -1 oder schlechter: Verletzungsbeschreibung als laufenden Kontext merken
+      if (delta < 0 && scene.verletzungsbeschreibung) {
+        lastInjury = scene.verletzungsbeschreibung;
+      } else if (delta > 0) {
+        // Bei Erholung: Verletzung verblasst (aber nicht ganz weg, bis verfassung = 5)
+        if (verfassung >= 5) lastInjury = '';
+      }
+    }
+    // Game Over wenn Verfassung auf 0
+    if (verfassung === 0) {
+      isGameOver = true;
+    }
+
+    // Spannung merken fuer den naechsten advanceGameTime (Action-Pause)
+    // CLIENT-SIDE NEUBERECHNUNG: Die KI unterschaetzt oft die Spannung in
+    // Action-Szenen. Wir scannen den Szenentext nach Action-Indikatoren und
+    // erhoehen die Spannung wenn noetig (nie senken - KI weiss besser was ruhig ist).
+    let newSpannung = typeof scene.spannung === 'number' ? scene.spannung : 1;
+    const detectedAction = computeActionLevel(scene.szene || '');
+    if (detectedAction > newSpannung) {
+      console.log('[Schatten] Spannung korrigiert:', newSpannung, '->', detectedAction, '(Action-Woerter im Text)');
+      newSpannung = detectedAction;
+    }
+    // Streak-Tracking fuer Eskalations-Bremse
+    if (newSpannung >= 4) {
+      actionStreak++;
+      calmStreak = 0;
+    } else if (newSpannung <= 2) {
+      calmStreak++;
+      actionStreak = 0;
+    } else {
+      // Spannung 3: weder Action noch Ruhe, beide Streaks behutsam zuruecksetzen
+      if (actionStreak > 0) actionStreak = Math.max(0, actionStreak - 1);
+      if (calmStreak > 0) calmStreak = Math.max(0, calmStreak - 1);
+    }
+    lastSpannung = newSpannung;
+
+    // Eindringlings-Cooldown: wenn ein Eindringling in dieser Szene aufgetaucht ist,
+    // setze den Counter auf 3. Sonst zaehle ihn runter.
+    if (detectIntruder(scene.szene || '')) {
+      intruderCooldown = 3;
+      console.log('[Schatten] Eindringling erkannt, Cooldown auf 3 gesetzt.');
+    } else if (intruderCooldown > 0) {
+      intruderCooldown--;
+    }
+
+    // Inventar-Aenderungen verarbeiten
+    if (Array.isArray(scene.inventar_hinzugefuegt) && scene.inventar_hinzugefuegt.length > 0) {
+      for (const item of scene.inventar_hinzugefuegt) {
+        if (typeof item === 'string' && item.trim() && !inventory.includes(item.trim())) {
+          inventory.push(item.trim());
+        }
+      }
+    }
+    if (Array.isArray(scene.inventar_entfernt) && scene.inventar_entfernt.length > 0) {
+      for (const item of scene.inventar_entfernt) {
+        if (typeof item !== 'string') continue;
+        const needle = item.trim().toLowerCase();
+        // Tolerant matchen: wenn der Eintrag das Stichwort enthaelt, entfernen
+        const idx = inventory.findIndex(it => it.toLowerCase().includes(needle) || needle.includes(it.toLowerCase()));
+        if (idx >= 0) inventory.splice(idx, 1);
+      }
+    }
+    // Max 12 Eintraege im Inventar, sonst aelteste raus (Brieftasche/Notizbuch zuerst gefaehrdet,
+    // aber das ist seltenes Szenario - Karl hat meistens nicht so viel dabei)
+    if (inventory.length > 12) {
+      inventory = inventory.slice(-12);
+    }
+
+    // Cast-Aenderungen verarbeiten (NPCs die hinzukommen/gehen).
+    // Neu in v6.12: strukturierte Objekte mit name/rolle/beziehung. Strings als Fallback.
+    if (Array.isArray(scene.cast_hinzugefuegt) && scene.cast_hinzugefuegt.length > 0) {
+      for (const npc of scene.cast_hinzugefuegt) {
+        let entry;
+        if (typeof npc === 'string' && npc.trim()) {
+          entry = { name: npc.trim(), rolle: '', beziehung: '' };
+        } else if (npc && typeof npc === 'object' && npc.name) {
+          entry = {
+            name: String(npc.name).trim(),
+            rolle: String(npc.rolle || '').trim(),
+            beziehung: String(npc.beziehung || '').trim(),
+          };
+        } else {
+          continue;
+        }
+        // Dedup nach Name
+        if (!cast.some(c => c.name && c.name.toLowerCase() === entry.name.toLowerCase())) {
+          cast.push(entry);
+        }
+      }
+    }
+    if (Array.isArray(scene.cast_entfernt) && scene.cast_entfernt.length > 0) {
+      for (const npc of scene.cast_entfernt) {
+        if (typeof npc !== 'string') continue;
+        const needle = npc.trim().toLowerCase();
+        const idx = cast.findIndex(c => {
+          const n = (c.name || c).toString().toLowerCase();
+          return n.includes(needle) || needle.includes(n);
+        });
+        if (idx >= 0) cast.splice(idx, 1);
+      }
+    }
+    // Max 8 NPCs im aktiven Cast
+    if (cast.length > 8) {
+      cast = cast.slice(-8);
+    }
+
+    logEntries.push({
+      type: 'scene',
+      text: scene.szene,
+      ort: scene.ort,
+      day: gameDay,
+      time: TIMES_OF_DAY[gameTimeIdx],
+      modelLabel: getActiveModel().label,
+      verfassung: verfassung,
+      injury: lastInjury,
+    });
+    hideLoading();
+    hideWait();
+    document.getElementById('error').classList.add('hidden');
+    showHeader(scene);
+    renderLog();
+    // Game Over wenn Verfassung auf 0
+    if (isGameOver) {
+      showGameOver();
+    } else {
+      renderOptions(scene);
+    }
+    updateFooterModel();
+    pendingRetry = null;
+    lastErrorDebug = null;
+  } catch (e) {
+    if (e.isRateLimit) {
+      // Rate limit handling with loop protection
+      hideLoading();
+      const requestedWait = Math.ceil(e.retryAfter || 15);
+
+      // Bei Daily/TPD-Limit: zum naechsten Modell in der Kette wechseln und sofort retryen.
+      // Das durchlaeuft die komplette Kette (Gemini-Modelle -> Groq-Modelle), bevor wir
+      // wirklich kapitulieren und das Tageslimit-Bild zeigen.
+      if (e.isDailyLimit) {
+        const previousModel = getActiveModel();
+        const nextModel = advanceModel();
+        if (nextModel) {
+          console.log('[Schatten] Daily/TPD limit on', previousModel.label, '-> switching to', nextModel.label);
+          skipNextThrottle = true; // neues Modell hat eigenen Budget, kein Throttle noetig
+          if (optionForRollback) {
+            performApiCall(userMsg, isStart, optionForRollback, retryCount, rateLimitCount);
+          } else {
+            performApiCall(userMsg, isStart, undefined, retryCount, rateLimitCount);
+          }
+          return;
+        }
+        // Wenn alle Modelle durch sind: faellt durch zur Daily-Limit-Anzeige unten
+        console.log('[Schatten] All models exhausted for the day.');
+      }
+
+      // Daily limit: show story-themed message with concrete return time
+      // (Wir kommen hier nur an, wenn schon Groq aktiv ist UND auch Groq am Daily-Limit ist)
+      if (e.isDailyLimit) {
+        if (optionForRollback) {
+          logEntries.pop();
+          renderLog();
+        }
+        lastErrorDebug = buildDebugDump(e, userMsg, retryCount);
+
+        const minutes = Math.ceil(requestedWait / 60);
+        const returnTime = new Date(Date.now() + requestedWait * 1000);
+        const hh = returnTime.getHours().toString().padStart(2, '0');
+        const mm = returnTime.getMinutes().toString().padStart(2, '0');
+
+        let timeText;
+        if (minutes < 60) {
+          timeText = `in etwa ${minutes} Minuten (gegen ${hh}:${mm} Uhr)`;
+        } else {
+          const hours = Math.floor(minutes / 60);
+          const remMin = minutes % 60;
+          timeText = `in etwa ${hours} Stunde${hours > 1 ? 'n' : ''}${remMin > 0 ? ' und ' + remMin + ' Minuten' : ''} (gegen ${hh}:${mm} Uhr)`;
+        }
+
+        showDailyLimitNotice(timeText, lastErrorDebug);
+        return;
+      }
+
+      // Hard cap: if wait would be too long (but not daily), still abort gracefully
+      if (requestedWait > MAX_RATE_LIMIT_WAIT) {
+        if (optionForRollback) {
+          logEntries.pop();
+          renderLog();
+        }
+        lastErrorDebug = buildDebugDump(e, userMsg, retryCount);
+        showError(
+          'Karl muss kurz verschnaufen. Tipp gleich auf "Erneut versuchen", meist geht es direkt weiter.',
+          lastErrorDebug
+        );
+        return;
+      }
+
+      // Loop protection: only auto-retry rate limits a few times
+      if (rateLimitCount >= MAX_RATE_LIMIT_RETRIES) {
+        if (optionForRollback) {
+          logEntries.pop();
+          renderLog();
+        }
+        lastErrorDebug = buildDebugDump(e, userMsg, retryCount);
+        showError(
+          'Karl braucht eine längere Pause. Warte 1-2 Minuten und tippe dann auf "Erneut versuchen".',
+          lastErrorDebug
+        );
+        return;
+      }
+
+      // Bei Rate-Limit: einheitlicher Countdown (gleich wie Throttle), kein extra Popup.
+      lastErrorDebug = buildDebugDump(e, userMsg, retryCount);
+      const waitMs = Math.max(2000, (requestedWait + 1) * 1000);
+      await runCountdown(waitMs);
+      // Wir haben jetzt manuell gewartet - der naechste throttleRequest soll nicht doppelt warten
+      skipNextThrottle = true;
+      // Loading zeigen waehrend der naechste Call laueft
+      showLoading();
+      if (optionForRollback) {
+        performApiCall(userMsg, isStart, optionForRollback, retryCount, rateLimitCount + 1);
+      } else {
+        performApiCall(userMsg, isStart, undefined, retryCount, rateLimitCount + 1);
+      }
+      return;
+    } else if (e.isRetryable && retryCount < MAX_AUTO_RETRIES) {
+      // JSON / format error: immediate retry on first try, brief pause on later tries.
+      hideLoading();
+      lastErrorDebug = buildDebugDump(e, userMsg, retryCount);
+
+      const doRetry = () => {
+        if (optionForRollback) {
+          performApiCall(userMsg, isStart, optionForRollback, retryCount + 1, rateLimitCount);
+        } else {
+          performApiCall(userMsg, isStart, undefined, retryCount + 1, rateLimitCount);
+        }
+      };
+
+      if (retryCount === 0) {
+        // First failure: retry immediately, just show a quick "Neuversuch" hint
+        showLoading('Du sammelst dich kurz neu...');
+        // Fire immediately, no wait
+        doRetry();
+      } else {
+        // Second/third failure: short pause with story-appropriate text
+        const waitSec = retryCount === 1 ? 2 : 4;
+        pendingRetry = doRetry;
+        showNarrativeWait(waitSec);
+      }
+    } else {
+      // Final failure after retries (or non-retryable)
+      hideLoading();
+      if (optionForRollback) {
+        logEntries.pop();
+        renderLog();
+      }
+      lastErrorDebug = buildDebugDump(e, userMsg, retryCount);
+      showError(e.message, lastErrorDebug);
+    }
+  }
+}
+
+function buildDebugDump(err, userMsg, retryCount) {
+  return [
+    '=== SCHATTEN DEBUG DUMP ===',
+    'Zeitpunkt: ' + new Date().toISOString(),
+    'Version: ' + (window.SCHATTEN_VERSION || 'unbekannt'),
+    'Retries: ' + (retryCount || 0),
+    '',
+    'FEHLER:',
+    err.message,
+    '',
+    'STAGE: ' + (err.debugInfo?.stage || 'unknown'),
+    '',
+    'DEBUG INFO:',
+    JSON.stringify(err.debugInfo || {}, null, 2),
+    '',
+    'LETZTE USER-NACHRICHT (gekürzt):',
+    (userMsg || '').slice(0, 500),
+    '',
+    'STORY-SUMMARIES:',
+    JSON.stringify(storySummaries, null, 2),
+    '',
+    'LETZTE SZENE:',
+    (lastFullScene || '').slice(0, 500),
+    '',
+    'RECENT TEXTS (' + recentTexts.length + '):',
+    recentTexts.map((t, i) => `${i + 1}. ${t.slice(0, 200)}`).join('\n'),
+  ].join('\n');
+}
+
+async function retry() {
+  if (pendingRetry) {
+    const fn = pendingRetry;
+    pendingRetry = null;
+    document.getElementById('error').classList.add('hidden');
+    hideDailyLimit();
+    hideWait();
+    fn();
+    return;
+  }
+  if (!lastUserMessage) return;
+  showLoading();
+  document.getElementById('error').classList.add('hidden');
+  hideDailyLimit();
+  // Manual retry resets both counters (user has presumably waited)
+  await performApiCall(lastUserMessage, false, undefined, 0, 0);
+}
+
+// --- Narrative Wait (rate-limit pause as story moment) ---
+let waitTimer = null;
+let waitInterval = null;
+
+function showNarrativeWait(seconds, label, message) {
+  const box = document.getElementById('wait-box');
+  document.getElementById('options').classList.add('hidden');
+
+  // If no explicit label/message, pick a story-appropriate one based on current tension
+  if (!label || !message) {
+    const spannung = currentScene?.spannung || 2;
+    const picked = pickWaitText(spannung);
+    label = label || picked.label;
+    message = message || picked.text;
+  }
+
+  const labelEl = box.querySelector('.wait-label');
+  const textEl = box.querySelector('.wait-text');
+  if (labelEl) labelEl.textContent = label;
+  if (textEl) textEl.textContent = message;
+  box.classList.remove('hidden');
+
+  const bar = document.getElementById('wait-progress-bar');
+  const counter = document.getElementById('wait-countdown');
+  const total = seconds;
+  let elapsed = 0;
+
+  bar.style.transition = 'none';
+  bar.style.width = '0%';
+  // Force reflow
+  void bar.offsetWidth;
+  bar.style.transition = 'width 1s linear';
+
+  counter.textContent = total + 's';
+
+  if (waitInterval) clearInterval(waitInterval);
+  waitInterval = setInterval(() => {
+    elapsed++;
+    const pct = Math.min(100, (elapsed / total) * 100);
+    bar.style.width = pct + '%';
+    const left = Math.max(0, total - elapsed);
+    counter.textContent = left + 's';
+  }, 1000);
+
+  if (waitTimer) clearTimeout(waitTimer);
+  waitTimer = setTimeout(() => {
+    hideWait();
+    if (pendingRetry) {
+      const fn = pendingRetry;
+      pendingRetry = null;
+      showLoading();
+      fn();
+    }
+  }, total * 1000);
+}
+
+function hideWait() {
+  document.getElementById('wait-box').classList.add('hidden');
+  if (waitTimer) { clearTimeout(waitTimer); waitTimer = null; }
+  if (waitInterval) { clearInterval(waitInterval); waitInterval = null; }
+}
+
+function resetGame() {
+  if (!confirm('Spiel wirklich neu starten? Aktueller Fortschritt geht verloren.')) return;
+  history = [];
+  logEntries = [];
+  storySummaries = [];
+  recentTexts = [];
+  lastFullScene = null;
+  currentScene = null;
+  pendingRetry = null;
+  gameDay = 1;
+  gameTimeIdx = 4;
+  sceneCounter = 0;
+  timeAdvanceTokens = 0;
+  pendingDayTransition = false;
+  scenesAtSameLocation = 0;
+  lastLocation = '';
+  hideWait();
+  document.getElementById('log').innerHTML = '';
+  document.getElementById('header').classList.add('hidden');
+  document.getElementById('status-bar').classList.add('hidden');
+  document.getElementById('footer').classList.add('hidden');
+  hideAll();
+  showStart();
+}
+
+// --- Init ---
+showStart();
+</script>
+</body>
+</html>
