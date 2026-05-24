@@ -820,7 +820,7 @@
       Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
     </p>
     <button class="btn-primary" onclick="startGame()">Ermittlung beginnen</button>
-    <div class="start-version">Schatten v5.2 · Groq-Throttle</div>
+    <div class="start-version">Schatten v5.4 · Llama-4-Scout</div>
   </div>
 
   <!-- Game Log -->
@@ -881,7 +881,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v5.2 · Groq-Throttle</span>
+    <span>Schatten v5.4 · Llama-4-Scout</span>
   </div>
 
 </div>
@@ -1490,13 +1490,13 @@ function getProviderEndpoint(provider) {
 
 // Client-seitiges Throttling: gleitendes 60-Sekunden-Fenster.
 // Provider-spezifische Limits:
-// - Gemini Flash-Lite: 15 RPM, 1M TPM (RPM-gebunden, kleine Pause reicht)
-// - Groq gpt-oss-120b: 30 RPM, 8K TPM (TPM-gebunden, viel groesserer Abstand noetig)
-//   Bei ~3000 Tokens pro Anfrage: max 2-3 Anfragen/Minute, also 25s+ Abstand.
+// - Gemini Flash-Lite: 10 RPM, 250K TPM (RPM-gebunden, kleine Pause reicht)
+// - Groq Llama 4 Scout: 30 RPM, 30K TPM, 1K RPD (komfortabel, ~3000 Tokens/Anfrage)
+//   Bei 30K TPM rechnerisch 10 Anfragen/Minute, RPM-Cap erlaubt 30. Wir nehmen 8 als Budget.
 // Buckets separat in localStorage (sonst rechnet ein Provider-Switch falsch).
-const RPM_BUDGET = { gemini: 13, groq: 2 };
+const RPM_BUDGET = { gemini: 8, groq: 8 };
 const RPM_WINDOW_MS = 60000;
-const MIN_GAP_MS = { gemini: 3000, groq: 22000 }; // Groq: 22s zwischen Anfragen bei 8K TPM
+const MIN_GAP_MS = { gemini: 3000, groq: 6000 }; // Groq: 6s zwischen Anfragen reicht bei 30K TPM
 
 function loadRequestTimes(provider) {
   try {
@@ -1517,37 +1517,55 @@ function saveRequestTimes(provider, arr) {
   } catch {}
 }
 
+// Provider-spezifisches Throttling
+// Wenn dieser Flag true ist, wird das naechste throttleRequest() uebersprungen.
+// Wird gesetzt, nachdem wir manuell auf ein Rate-Limit gewartet haben - sonst
+// wuerden wir doppelt warten.
+let skipNextThrottle = false;
+
 async function throttleRequest(provider) {
+  if (skipNextThrottle) {
+    skipNextThrottle = false;
+    // Trotzdem Bucket-Eintrag setzen
+    const times = loadRequestTimes(provider);
+    times.push(Date.now());
+    saveRequestTimes(provider, times);
+    return;
+  }
   const minGap = MIN_GAP_MS[provider] || 3000;
   const budget = RPM_BUDGET[provider] || 13;
   let times = loadRequestTimes(provider);
   const now = Date.now();
 
-  // 1. Mindest-Lücke seit letztem Call (provider-spezifisch)
+  // Beide Wartezeiten zusammen berechnen, damit wir EINEN Countdown haben
+  // und keine zwei kurz hintereinander.
+  let totalWaitMs = 0;
+
+  // 1. Mindest-Luecke seit letztem Call (provider-spezifisch)
   if (times.length > 0) {
     const lastCall = times[times.length - 1];
     const elapsed = now - lastCall;
     if (elapsed < minGap) {
-      const waitMs = minGap - elapsed;
-      // Optionale Anzeige: bei langen Pausen (>5s) zeigen wir kurz Bescheid
-      if (waitMs > 5000) {
-        showThrottleWait(Math.ceil(waitMs / 1000));
-      }
-      await new Promise(r => setTimeout(r, waitMs));
-      hideThrottleWait();
+      totalWaitMs = minGap - elapsed;
     }
   }
 
   // 2. Wenn Budget voll: warte bis aeltester Eintrag aus dem Fenster faellt
-  times = loadRequestTimes(provider);
+  // Diese Wartezeit ist meist groesser als die Mindest-Luecke, also nimm das Maximum
   if (times.length >= budget) {
     const oldest = times[0];
     const waitUntil = oldest + RPM_WINDOW_MS + 500;
-    const waitMs = waitUntil - Date.now();
-    if (waitMs > 0) {
-      if (waitMs > 5000) showThrottleWait(Math.ceil(waitMs / 1000));
-      await new Promise(r => setTimeout(r, waitMs));
-      hideThrottleWait();
+    const budgetWaitMs = waitUntil - now;
+    if (budgetWaitMs > totalWaitMs) totalWaitMs = budgetWaitMs;
+  }
+
+  // Wenn es etwas zu warten gibt: EINEN Countdown anzeigen und warten
+  if (totalWaitMs > 0) {
+    // Nur sichtbarer Countdown bei > 3 Sekunden (sonst ist's einfach Loading)
+    if (totalWaitMs > 3000) {
+      await runCountdown(totalWaitMs);
+    } else {
+      await new Promise(r => setTimeout(r, totalWaitMs));
     }
   }
 
@@ -1557,22 +1575,48 @@ async function throttleRequest(provider) {
   saveRequestTimes(provider, times);
 }
 
-// Sanfte Anzeige waehrend des Throttle-Wartens: nutzt die existierende Loading-Anzeige
-// und passt nur den Text an. So vermeiden wir UI-Konflikte mit anderen Wartezustaenden.
-function showThrottleWait(seconds) {
-  const textEl = document.querySelector('#loading .loading-text');
-  if (textEl) textEl.textContent = `Karl sortiert seine Gedanken (${seconds}s)`;
+// Live-Countdown mit Sekunden-genauer Anzeige
+let throttleInterval = null;
+async function runCountdown(totalMs) {
+  const endTime = Date.now() + totalMs;
+  // Sofort einmal anzeigen
+  updateCountdownText(totalMs);
   // Loading anzeigen falls noch nicht
   const loadingEl = document.getElementById('loading');
   if (loadingEl && loadingEl.classList.contains('hidden')) {
     loadingEl.classList.remove('hidden');
   }
-}
-function hideThrottleWait() {
-  // Loading nicht selbst verstecken; das macht der nachfolgende API-Aufruf-Flow
+  // Sekuendlich aktualisieren
+  throttleInterval = setInterval(() => {
+    const remaining = endTime - Date.now();
+    if (remaining <= 0) {
+      clearInterval(throttleInterval);
+      throttleInterval = null;
+      return;
+    }
+    updateCountdownText(remaining);
+  }, 1000);
+  // Warten
+  await new Promise(r => setTimeout(r, totalMs));
+  // Aufraeumen
+  if (throttleInterval) {
+    clearInterval(throttleInterval);
+    throttleInterval = null;
+  }
+  // Text zurueck auf Standard, Loading bleibt sichtbar fuer den eigentlichen API-Call
   const textEl = document.querySelector('#loading .loading-text');
   if (textEl) textEl.textContent = 'Karl denkt nach';
 }
+
+function updateCountdownText(remainingMs) {
+  const seconds = Math.ceil(remainingMs / 1000);
+  const textEl = document.querySelector('#loading .loading-text');
+  if (textEl) textEl.textContent = `Karl sortiert seine Gedanken (${seconds}s)`;
+}
+
+// Alte Funktionen leer lassen damit nichts bricht falls woanders aufgerufen
+function showThrottleWait() {}
+function hideThrottleWait() {}
 
 async function callGroq(userMessage, conversationHistory, compactMode) {
   // Groq uses OpenAI-compatible chat format with system/user/assistant roles
@@ -1701,10 +1745,13 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
       const isGeminiFreeTier = /generate_content_free_tier_requests/i.test(errMsg);
       err.isDailyLimit = isGeminiFreeTier || (!isPerMinute && /tokens per day|per day|TPD|daily quota|daily limit|RPD/i.test(errMsg));
 
-      // For non-daily rate limits: cap the displayed wait at 10 seconds.
-      // Real recovery is usually much faster than the API's conservative estimate.
-      if (!err.isDailyLimit && totalSeconds > 10) {
-        err.retryAfter = 10;
+      // For non-daily rate limits: cap the displayed wait based on provider.
+      // Gemini erholt sich schneller als die API sagt (Cap 10s).
+      // Groq Llama-4-Scout: 30K TPM, ~3000 Tokens/Anfrage, Erholung nach 10-15s
+      const isGroqEndpoint = /\/api\/groq/.test(endpoint);
+      const waitCap = isGroqEndpoint ? 15 : 10;
+      if (!err.isDailyLimit && totalSeconds > waitCap) {
+        err.retryAfter = waitCap;
       }
 
       err.debugInfo = { stage: 'rate_limit', retryAfter: err.retryAfter, originalRetryAfter: totalSeconds, isDailyLimit: err.isDailyLimit, rawMessage: errMsg.slice(0, 500) };
@@ -2207,16 +2254,20 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         return;
       }
 
-      const seconds = Math.max(2, requestedWait + 1);
-      pendingRetry = () => {
-        if (optionForRollback) {
-          performApiCall(userMsg, isStart, optionForRollback, retryCount, rateLimitCount + 1);
-        } else {
-          performApiCall(userMsg, isStart, undefined, retryCount, rateLimitCount + 1);
-        }
-      };
-      showNarrativeWait(seconds);
+      // Bei Rate-Limit: einheitlicher Countdown (gleich wie Throttle), kein extra Popup.
       lastErrorDebug = buildDebugDump(e, userMsg, retryCount);
+      const waitMs = Math.max(2000, (requestedWait + 1) * 1000);
+      await runCountdown(waitMs);
+      // Wir haben jetzt manuell gewartet - der naechste throttleRequest soll nicht doppelt warten
+      skipNextThrottle = true;
+      // Loading zeigen waehrend der naechste Call laueft
+      showLoading();
+      if (optionForRollback) {
+        performApiCall(userMsg, isStart, optionForRollback, retryCount, rateLimitCount + 1);
+      } else {
+        performApiCall(userMsg, isStart, undefined, retryCount, rateLimitCount + 1);
+      }
+      return;
     } else if (e.isRetryable && retryCount < MAX_AUTO_RETRIES) {
       // JSON / format error: immediate retry on first try, brief pause on later tries.
       hideLoading();
@@ -2258,7 +2309,7 @@ function buildDebugDump(err, userMsg, retryCount) {
   return [
     '=== SCHATTEN DEBUG DUMP ===',
     'Zeitpunkt: ' + new Date().toISOString(),
-    'Version: v5.2',
+    'Version: v5.4',
     'Retries: ' + (retryCount || 0),
     '',
     'FEHLER:',
