@@ -1420,6 +1420,12 @@ OBJEKT- UND ZUSTANDSKONSISTENZ:
 - Wer fortgelaufen ist, kommt nicht aus dem Nichts zurück. Wer tot ist, bleibt tot.
 - Achte auf die Position von Personen: Wenn der Spieler 10 Meter vom Verletzten weg am Wagen steht, kann er nicht "in einem Schritt" zutreten. Beschreibe die Bewegung.
 
+KEINE ERFUNDENEN RUECKBEZUEGE (sehr wichtig):
+NIEMALS auf etwas zurückverweisen, das in den vorigen Szenen NICHT explizit beschrieben wurde. Falsch: "der silbergraue Hut, der dir gestern Abend bereits verdächtig vorkam" - obwohl gestern kein silbergrauer Hut erwähnt wurde. Das ist erfundene Erinnerung und stört die Kontinuität. Richtig: nur Dinge erwähnen die nachweislich in den vorigen Szenen (BISHERIGE EREIGNISSE / LETZTE SZENE) standen. Wenn du eine neue Beobachtung einführen willst: sag explizit "ein silbergrauer Hut, fremd, ein neues Detail" - nicht so tun als wäre er vorher schon da gewesen.
+
+STORY-ANKER (der ursprüngliche Auftrag):
+Karl bekam einen konkreten Auftrag im Intro (Person finden, Mord aufklären, Schmuggel verfolgen, etc.). Dieser Auftrag MUSS in jeder Szene latent präsent sein - nicht als Erwähnung in jeder Szene, sondern als treibendes Motiv. Wenn Karl in einer akuten Bedrohung steckt (Schläger vor der Tür, Verfolgung), darf er Bedrohung priorisieren. ABER: sobald die akute Bedrohung weg ist (Spannung sinkt unter 3), MUSS Karl in den nächsten 1-2 Szenen zum Hauptauftrag zurück. Nicht im Büro Bourbon trinken und die Sache vergessen. Erinnere den Spieler aktiv: "Du denkst an Margarete Stein, die du noch immer nicht erreichen konntest" - so dass das Hauptziel präsent bleibt.
+
 PHYSISCHE AKTION (kritisch wichtig, niemals brechen):
 Wenn die Spielerwahl eine direkte physische Aktion ist (schlagen, schießen, packen, treten, würgen, fliehen, verfolgen, Waffe ziehen, Tür aufreißen, jemanden hochzerren, küssen, springen, umstoßen etc.), MUSS die nächste Szene die UNMITTELBARE Konsequenz in derselben Situation darstellen.
 
@@ -1860,6 +1866,17 @@ const ATMOSPHERE_WATCHLIST = [
   'pocht im rhythmus', 'pocht bei jedem', 'puls hämmert',
   'reißt die walther', 'reißt die pistole', 'reißt die waffe',
   'schwerer schatten', 'dunkle gestalt löst sich',
+  // v6.15: Lektor-Befunde aus Reichsbahn-Schmuggel-Verlauf
+  'echo hallt', 'hallt durch',  // Redundanz - Echo hallt schon per Definition
+  'gezackte schatten', 'gezackten schatten',  // Schatten sind nicht "gezackt"
+  'bei klarem kopf', 'bei klarem verstand',  // generische Floskel
+  'gehweg blockiert', 'blockiert den gehweg',  // Limousine "blockiert" Gehweg ist falsch
+  'roter faden', 'wie ein roter faden',  // Klischee-Floskel
+  'kalter beton', 'abgestandener tabak',  // klischeehaft
+  'bauschen sich', 'mantel bauscht',  // bei jeder Wind-Szene
+  'mustert dich', 'mustert mich', 'zusammengekniffene augen',  // generisch
+  'schneller das genick bricht',  // generische Drohung
+  'eisige morgenluft', 'kühle morgenluft beißt',  // Wetter-Klischee
 ];
 
 // Generic content words that, if repeated across recent scenes, signal overuse.
@@ -4068,15 +4085,37 @@ function detectFoodAction(text) {
   if (!text) return false;
   const lower = text.toLowerCase()
     .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
-  const patterns = [
-    /\b(currywurst|bockwurst|bratwurst|schrippe|frikadelle|bulette|broetchen)\b/,
-    /\b(imbiss|imbissbude|wurstbude|bratwurstbude)\b/,
-    /\bcafe\b.*\b(kaffee|essen|kuchen|fruehstueck)/,
-    /\b(fruehstueck(en|s)?|mittagessen|abendessen)\b/,
-    /\b(zur|in eine?|am|an der)\s+(eckkneipe|wurstbude|imbissbude|baeckerei|baecker)/,
-    /\b(etwas\s+(zu\s+)?essen|hunger\s+stillen|magen\s+fuellen)\b/,
-    /\b(beisst|isst|verzehrst)\b/,
+
+  // Negationen: wenn diese Phrasen drin sind, ist es KEINE Essens-Aktion
+  // (Karl wirft die Schrippe weg, ignoriert das Essen, etc.)
+  const negationPatterns = [
+    /\b(wirf|wirft|wegwerfen|weggeworfen)\b.*\b(schrippe|bockwurst|currywurst|bratwurst|broetchen|frikadelle|bulette|wurst|kaffee|teller)\b/,
+    /\b(ignorierst|ignoriert)\b.*\b(schrippe|essen|imbiss|cafe|hunger)\b/,
+    /\b(laesst|laeufst|gehst)\s+(die\s+)?(schrippe|wurst|broetchen|kaffee|teller|imbiss)\s+(stehen|liegen|zurueck)\b/,
+    /\bkein(en?)?\s+(appetit|hunger|interesse\s+an)\b/,
+    /\bvorbei\s+(an\s+der|am)\s+(imbiss|wurstbude|baecker|cafe)/,
   ];
+  if (negationPatterns.some(p => p.test(lower))) return false;
+
+  // Positive Patterns: braucht Aktiv-Verb + Essens-Begriff oder klaren Ort-Besuch
+  const patterns = [
+    // Essen aktiv konsumieren (kaufen + essen) - Verb in der Naehe vom Essen
+    /\b(kauf(st|t|e|en)?|holst|holt|hol\s+dir|bestellst|bestellt|nimmst|nimmt|essen)\b/,
+    // Beissen / essen / verzehren - immer FOOD
+    /\b(beiss(st|t)?|isst|verzehrst|verzehrt|kau(st|t)?)\b/,
+    /\bden\s+ersten\s+(bissen|schluck)\b/,
+    // Direkter Besuch von Imbiss/Cafe (verschiedene Praepositionen)
+    /\b(zur|zum|in eine?|in ein|am|an der|ins?|vom)\s+(eckkneipe|wurstbude|imbissbude|imbiss|baeckerei|baecker|eckcafe|cafe|currywurst-?bude|bratwurst-?bude)\b/,
+    /\b(baecker|imbiss|cafe|wurstbude)\b.*\b(holen|kaufen|besuchen|bestellen)/,
+    /\b(haltst|haelst|haelt)\s+(am|an einer|bei einer|vor einer)\s+(wurstbude|imbiss|baecker|cafe)/,
+    // Eindeutige Mahlzeiten-Aktionen
+    /\b(fruehstuecks|fruehstueckst|fruehstueckt|fruehstuecken)\b/,
+    /\b(etwas\s+zu\s+essen)\b/,
+    /\b(hunger\s+stillen|magen\s+fuellen)\b/,
+  ];
+  // Aber nur wenn auch ein Essens-Begriff im Text ist (Anti-False-Positive)
+  const hasFoodWord = /\b(currywurst|bockwurst|bratwurst|schrippe|frikadelle|bulette|broetchen|kaffee|tee|imbiss|baecker|cafe|fruehstueck|kuchen|wurst|brot|suppe|essen|magen|hunger)\b/.test(lower);
+  if (!hasFoodWord) return false;
   return patterns.some(p => p.test(lower));
 }
 
