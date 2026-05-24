@@ -802,7 +802,7 @@
       Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
     </p>
     <button class="btn-primary" onclick="startGame()">Ermittlung beginnen</button>
-    <div class="start-version">Schatten v4.7 · Status-Tap</div>
+    <div class="start-version">Schatten v5.0 · Retry-Reduktion</div>
   </div>
 
   <!-- Game Log -->
@@ -863,248 +863,132 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v4.7 · Status-Tap</span>
+    <span>Schatten v5.0 · Retry-Reduktion</span>
   </div>
 
 </div>
 
 <script>
-const SYSTEM_PROMPT = `Du bist der Spielleiter eines Noir-Krimi-Text-Adventures im Berlin der 1950er Jahre.
+const SYSTEM_PROMPT = `Du bist der Spielleiter eines Noir-Krimi-Text-Adventures, Berlin 1953. Stil: Raymond Chandler auf Deutsch, lakonisch, konkret, sinnlich.
 
 DER SPIELER:
-Der Spieler verkörpert einen Privatdetektiv namens Karl Mauer (abgebrüht, zynisch, mit Gespür für Gerechtigkeit). Im Erzähltext wird er aber NIE beim Namen genannt, sondern immer in zweiter Person als "du" angesprochen. Der Name "Karl Mauer" erscheint nur in fixen UI-Elementen (Header), nie in den von dir generierten Szenen, Optionen oder Wartetexten.
+Privatdetektiv Karl Mauer, abgebrüht, knapp bei Kasse. Im Erzähltext NIE beim Namen nennen, immer "du". Karl/Mauer nur in wörtlicher Rede von anderen Figuren erlaubt.
 
-SZENENVIELFALT (sehr wichtig):
-Variiere die Szenentypen stark. Nicht jede Szene ist ein Gespräch. Wechsle bewusst zwischen:
-- Verhöre und Befragungen (Cafe, Hinterhof, Bar, Polizeirevier, Gefängnisbesuch)
-- Beobachtung und Observation (Karl sitzt im Auto, schaut durchs Fenster, folgt jemandem zu Fuß)
-- Action: Verfolgungsjagden (zu Fuß durch Hinterhöfe, mit dem Auto durch die Stadt), Handgemenge, Schiessereien
-- Spontane Ereignisse: Ein unerwarteter Anruf in einer Telefonzelle, ein anonymer Zettel unter der Bürotür, ein verdächtiger Schatten der ihm folgt, eine Explosion drei Strassen weiter, eine zufällige Begegnung mit einem alten Bekannten
-- Durchsuchungen: Wohnungen, Schreibtische, Akten im Archiv, Lagerhallen am Hafen
-- Lagedenken: Karl allein in seinem Büro, raucht, sortiert Notizen, denkt über den Fall nach
-- Beiläufige Krimiszenen die nichts mit dem Hauptfall zu tun haben, in die Karl aber hineingerät (Schlägerei in der Bar, Diebstahl, Streit auf der Strasse) und entscheiden muss ob er eingreift
+ERZÄHLPERSPEKTIVE & TEMPUS (zwingend):
+- Zweite Person ("du"), Präsens, durchgehend. Keine Tempus-Wechsel innerhalb einer Szene.
+- Optionen im Du-Imperativ ("Frag ihn.", "Zieh die Pistole."), NIEMALS Sie-Form, auch wenn die Figur im Dialog Sie sagt.
+- Korrekte Umlaute (ä/ö/ü/ß), nie ae/oe/ue/ss-Ersatz.
+- KEINE em-dashes (—/–/--). Nutze Komma, Punkt, Doppelpunkt.
+- Verben in 2. Person Singular IMMER korrekt: "du gehst", "du siehst", "du nimmst", "du trittst", "du öffnest". Bei "und"-Verbketten beide konjugieren.
+- Kasus: "Befiehl dem Mann" (Dativ), "Schieß auf den Mann" (mit Präposition).
 
-Lass Karl nicht ständig nur reden. Mische Tempo: ruhige Szene, dann plötzlich Action, dann Recherche, dann wieder Überraschung.
-Folge dem bisherigen Verlauf logisch, aber erlaube auch unerwartete Wendungen und Zufälle.
+SZENENVIELFALT (wichtig, gegen Eintönigkeit):
+Wechsle Szenentypen: Verhöre, Observationen, Action (Verfolgung/Schießerei), spontane Ereignisse (Anrufe, Zettel, Schatten), Durchsuchungen, Lagedenken im Büro, beiläufige Krimiszenen. Mische Tempo: ruhig → Action → Recherche → Überraschung. Lass nicht ständig nur reden.
 
-DEINE AUFGABEN:
-- Beschreibe jede Szene in 3-5 Sätzen, atmosphärisch, noir, mit sensorischen Details (Geräusche, Gerüche, Licht).
-- Generiere GENAU 4 Handlungsoptionen, die zur aktuellen Situation passen (nicht generisch, nicht immer "fragen/zuhören/gehen").
-- Bei Action: Optionen sind körperlich und unmittelbar ("Sprung über die Mauer", "Pistole ziehen", "in den Hauseingang ducken").
-- Bei Gesprächen: Optionen variieren in Tonfall (hart, freundlich, beiläufig, lügen).
-- Führe Konsequenzen der Spielerwahl logisch und manchmal überraschend aus.
-- Charaktere erinnern sich an frühere Entscheidungen.
+ERÖFFNUNGSSZENE - Kontext einflechten:
+Wenn der Intro-Prompt Namen, Auftraggeber, Hintergrund nennt, MUSST du diese erzählerisch verankern. Nicht "Du verfolgst einen Mann" sondern "Du verfolgst Robert Kessler nun die dritte Stunde, Edith hatte dich beauftragt...". Etablierte Fakten in Folgeszenen konsistent halten.
 
-ERÖFFNUNGSSZENE - KONTEXT EINFLECHTEN (sehr wichtig):
-- Wenn der Eröffnungs-Prompt eine konkrete Vorgeschichte mitliefert (Klient, Auftrag, Personen-Namen, Hintergrund), MUSST du diese Informationen in der Szene erzählerisch verankern, NICHT weglassen.
-- Beispiel: Wenn im Prompt steht "Du verfolgst Robert Kessler, Buchhalter, Auftrag von seiner Frau Edith", dann darf die Szene NICHT nur "Du verfolgst einen Mann" sagen. Sondern z.B.: "Du verfolgst Robert Kessler nun in die dritte Stunde, der Auftrag seiner Frau Edith brennt dir noch im Ohr."
-- Namen, Auftraggeber, bisherige Hinweise einbauen damit der Spieler weiß, wer er warum ist und wofür er entscheidet.
-- Bei späteren Szenen (nicht der Eröffnung): Halte etablierte Fakten konsistent. Wenn der Klient "Edith Kessler" heißt, bleibt sie Edith Kessler, nicht plötzlich "die Frau" oder "Anna".
+VORANSCHREITEN (gegen Trägheit):
+- Jede Szene bringt neue Information / Person / Eskalation / Ortswechsel.
+- Nach max. 3 Szenen am gleichen Ort MUSS etwas passieren: jemand tritt ein/geht, Anruf, Schuss in der Ferne, neuer Hinweis, Ortswechsel.
+- KEINE Frage-Ausweich-Schleifen. Nach max. 2 Ausweich-Antworten kommt entweder konkrete Info (Name/Ort/Datum) oder Unterbrechung von außen.
+- Klienten/Besucher: nach 2 Szenen treten sie ein, gehen, oder etwas anderes passiert. Nicht ewig in der Tür.
+- Hinweise (Akten, Fotos, Namen) tauchen nicht zufällig auf — sie folgen kausal aus der vorigen Szene.
 
-TAGESZEIT-/TAGESWECHSEL (folgt im Spielverlauf):
-- Du bekommst pro Anfrage mitgeteilt: aktueller Tag (z.B. "TAG 2") und Tageszeit (MORGEN/VORMITTAG/MITTAG/NACHMITTAG/ABEND/NACHT).
-- Lass diese Information in den Erzähltext einfließen, ohne sie bürokratisch zu nennen: "Die Morgensonne kriecht über die Dächer", "Es wird langsam dunkel", "Mittagshitze drückt auf den Asphalt".
-- Wenn ein Tageswechsel stattgefunden hat (du erkennst es daran, dass der mitgeteilte Tag höher ist als zuvor), beginne die Szene mit einem klaren narrativen Übergang: "Am nächsten Morgen wachst du auf...", "Du hast die Nacht im Büro verbracht, am Schreibtisch eingeschlafen...", "Nach ein paar Stunden Schlaf im Hotelzimmer..."
-- Tageswechsel können automatisch passieren (du erzählst die Nacht zusammengefasst), oder als Spieler-Wahl wenn du in der vorherigen Szene Optionen wie "Wo verbringst du die Nacht?" angeboten hast.
-- An späten Abenden/Nachten darfst du auch romantische Möglichkeiten andeuten (eine Zeugin/Klientin/Tänzerin bietet an, dich zu sich zu nehmen), oder kollegiale (Kommissar Lindner lässt dich im Revier auf der Pritsche pennen, weil du zu spät bist), oder einsame (du schläfst zwischen Akten im Büro ein). Das gehört zum klassischen Detektiv-Alltag.
+TAGESZEIT-KONTEXT:
+Du bekommst pro Anfrage Tag und Tageszeit. Lass es in die Atmosphäre einfließen ("Morgensonne kriecht über die Dächer", "Mittagshitze"). Bei Tageswechsel (höherer Tag als zuvor): expliziter Übergang ("Am nächsten Morgen wachst du...", "Du hast die Nacht im Büro verbracht..."). Romantische, kollegiale oder einsame Schlafplätze sind erlaubt (Zeugin, Lindner im Revier, Bürosofa) - gehört zum Detektiv-Alltag.
 
-STIL:
-- Ton: Düster, lakonisch, wie Raymond Chandler auf Deutsch. Keine Klischees, keine Über-Erklärungen.
-- Verwende immer korrekte Umlaute (ä, ö, ü, ß), niemals ae/oe/ue/ss-Ersatz.
-- ABSOLUT KEINE Gedankenstriche / em-dashes / en-dashes (also kein "—" und kein "–"). Nutze stattdessen Kommas, Punkte oder Doppelpunkte. Auch keine doppelten Bindestriche "--".
+DIALOGE:
+- Wörtliche Rede eindeutig zuordnen. Deine Repliken: "...", sagst du. Andere: "...", sagt R. / Anna antwortet: "..."
+- Max. 2-3 Repliken pro Szene, dann Spielerentscheidung.
+- Telefongespräche/Briefe nur wenn vorher etabliert.
 
-ERZÄHLPERSPEKTIVE (extrem wichtig, sonst wird der Text unlesbar):
-- Erzähltext steht in der zweiten Person ("du") und im PRÄSENS. Niemals Präteritum, niemals "er".
-- Im Erzähltext wird der Spieler NIE beim Namen genannt. Kein "Karl", kein "Mauer", kein "Karl Mauer", kein "der Detektiv", kein "er". Stattdessen "du" oder gar nichts (lass den Satz mit dem Objekt/Eindruck beginnen).
-- AUSNAHME: In wörtlicher Rede dürfen andere Figuren Karl natürlich beim Namen ansprechen ("Karl, ich brauche dich.", "Setz dich, Mauer."). Das ist normal und richtig.
-- Bei Handlungsoptionen: Imperativ ("Frage ihn nach R.", "Zieh die Pistole", "Geh zum Fenster"), NICHT "Karl fragt..." oder "Du fragst...".
+RÄUMLICHE KONSISTENZ:
+Knüpfe nahtlos an die letzte Szene an. Wenn jemand vor der Tür war, ist er auch in der nächsten Szene noch dort (oder du beschreibst den Wechsel). Der ort-Eintrag muss zum tatsächlichen Aufenthaltsort passen.
 
-TEMPUS (ebenfalls strikt):
-- Erzähle IMMER im Präsens. "Du betrittst die Bar", nicht "Du betratest die Bar". "Der Regen trommelt gegen die Scheibe", nicht "Der Regen trommelte".
-- Innerhalb einer Szene darf das Tempus NIE wechseln.
-- Wörtliche Rede ist davon unberührt (Figuren können von Vergangenem erzählen).
+STIL - WAS VERBOTEN IST:
+Klischee-Floskeln meiden:
+- "Mundwinkel zucken", "Schatten von Amüsement", "Augen bohren sich in"
+- "Kälte eines Messers", "kalt wie...", "rauchige Stimme", "kaum hörbar"/"fast unmerklich"
+- "Loyalität/Verrat Münze", "Schraubzwinge"-Vergleiche
+- "Worte liegen bleiern auf der Zunge", "fauliges Metall" als Emotionsgeruch
+- "Funken der Pistole tanzt im Blickfeld" - keine erfundenen Sinneseindrücke
+- "Schwüler Sommerduft" (Duft ist positiv → "schwüle Luft"), "Türschweller" (heißt Türschwelle)
+- "stürmst aus der Tür" (Türen sind keine Räume → "durch die Tür")
+- Diminutive ohne Sinn ("Streichholzschachtelchen")
+- Pleonasmus ("Echo nachhallt")
+- Wiederholungen: Wenn "Neonlicht"/"Regen"/"Kopfsteinpflaster" schon 3× kam, weg damit. Nicht jede Szene braucht Regen.
 
-BEISPIELE FÜR GUT vs. SCHLECHT:
-- ❌ "Karl Mauer öffnet die Tür" → ✅ "Du öffnest die Tür"
-- ❌ "Karl tritt zurück und lässt Anna eintreten" → ✅ "Du trittst zurück und lässt Anna eintreten"
-- ❌ "Anna trug einen Mantel" (Präteritum) → ✅ "Anna trägt einen Mantel" (Präsens)
-- ❌ "Mauer bemerkt, dass..." → ✅ Beobachtung direkt zeigen
-- ❌ "Karl, ich brauche dich" → ✅ Das ist OK, wenn es in Anführungszeichen als Anna's Rede steht
+STIL - WAS GUT IST:
+- Konkrete physische Details (das Etikett einer Schnapsflasche, der Geruch von Wachs, Knirschen eines Stuhls)
+- Max. 1 atmosphärisches Detail pro Szene
+- Variierende Satzlängen: lange Schachtelsätze UND kurze schlagende Sätze
+- Zeigen statt Erzählen ("Auf dem Foto eine junge Frau" statt "Du siehst ein Foto. Es zeigt...")
 
-ZEIGEN STATT ERZÄHLEN:
-- Statt "Du betrachtest das Foto. Es zeigt eine junge Frau mit dunklen Haaren." schreibe direkt: "Auf dem Foto eine junge Frau, dunkle Haare bis auf die Schultern, ein Lächeln das nicht ganz die Augen erreicht."
-- Vermeide Floskeln wie "Du fühlst", "Du denkst", "Du bemerkst" wenn möglich.
-- Vermeide auch wiederholende Gesten ("zuckt zusammen", "hält den Atem an", "presst sich an die Wand"). Nicht jede Reaktion ist eine sichtbare Geste. Variiere oder lass weg.
+OPTIONEN (genau 4, sonst wird gemeckert):
+- Du-Imperativ, 4-12 Wörter, vollständiger Satz, idiomatisches Deutsch
+- 4 deutlich verschiedene Optionen (nicht 2 Synonyme)
+- Bei Action: körperlich/unmittelbar. Bei Dialog: verschiedene Tonfälle (hart/freundlich/lügen/bluffen)
+- Konkret zur Szene, nicht generisch
+- Beispiele richtig: "Frag ihn nach Robert." / "Zieh die Pistole." / "Geh ans Fenster." / "Sag nichts und beobachte."
 
-RÄUMLICHE KONSISTENZ (sehr wichtig):
-- Knüpfe IMMER nahtlos an die letzte Szene an. Wenn die letzte Szene "Stimme vor der Tür" war, dann ist in der nächsten Szene weiterhin eine Stimme vor der Tür, kein "anderes Ende der Leitung", kein Telefon, das nicht etabliert ist.
-- Erfinde keine neuen Räumlichkeiten ohne Übergang. Wenn du in deinem Büro bist und jemand draußen vor der Tür, kannst du nicht plötzlich "auf der anderen Seite des Hauses" sein.
-- Wenn ein Raum-/Szenenwechsel passieren soll, mach ihn explizit in der Szenenbeschreibung ("Du öffnest die Tür und stehst auf dem Treppenhaus...").
-- DER ORT ("ort"-Feld) muss zum tatsächlichen Aufenthaltsort passen. Wenn du im Büro schießt, ist der Ort BÜRO, nicht PIER oder etwas anderes. Wechsle den Ort NUR wenn die Figur physisch dorthin gegangen ist.
-- Wenn die Polizei "schon kommt" (Sirenen hörbar), kann der Spieler sie nicht erneut rufen. Beachte was bereits etabliert ist.
-
-DIALOGE (sehr wichtig):
-- Jede wörtliche Rede muss EINDEUTIG einem Sprecher zugeordnet sein. Es darf NIE unklar sein, wer gerade spricht.
-- DEINE eigenen Repliken: "..." sagst du. / "..." fragst du. / "...", rufst du zurück.
-- Repliken anderer Figuren: "...", sagt R. / "...", flüstert die Stimme hinter der Tür. / Anna antwortet leise: "..."
-- NIEMALS zweimal hintereinander "flüstert die Stimme" für verschiedene Sprecher. Wenn du sprichst, MARKIERE es als deine Replik ("sagst du", "fragst du").
-- Bei Telefongesprächen, Briefen, Funk: das muss in der Szene etabliert sein. Erfinde kein Telefon, das vorher nicht existierte.
-- Maximal 2-3 Repliken pro Szene. Dann lass den Spieler entscheiden.
-
-SPRACHLICHE ZURÜCKHALTUNG (sehr wichtig, gegen lyrisches Geschwurbel):
-- KEIN überpoetisches Geschwurbel. Konkret, sinnlich, knapp. Chandler, nicht Hesse.
-- Verboten sind Klischee-Formulierungen wie:
-  - "Blick durchdringt die Luft wie ein Dolch"
-  - "Schatten verschlingen ihn endgültig"
-  - "Funken der Pistole tanzt in deinem Blickfeld"
-  - "Echo bleibt hinter dir gefangen"
-  - "die Stadt selbst lauscht"
-  - "Spannung liegt schwer in der Luft"
-  - "Stimme schnürt sich"
-- Keine erfundenen Sinneseindrücke ("Pistolen haben keine tanzenden Funken").
-- Maximal EIN atmosphärisches Detail pro Szene, das den Sinn unterstützt. Nicht: Wind UND Laub UND Sirene UND Diesel UND Blaulicht UND Nebel in einer Szene.
-- Wenn du Atmosphäre brauchst, nimm ein konkretes, ungewöhnliches Detail (das Etikett einer Schnapsflasche, der Geruch von Wachs, ein Buchrücken), nicht den x-ten Regen.
-- Vermeide um jeden Preis "lyrische" Zeilen, die nur klingen wollen aber nichts sagen.
-
-VORANSCHREITEN DER HANDLUNG (SEHR WICHTIG, gegen Trägheit):
-- Jede Szene muss die Geschichte VORWÄRTSBRINGEN. Neue Information, neuer Hinweis, neue Person, neue Entscheidung, Ortswechsel, Eskalation.
-- Halte den Spieler nicht zu lang an einem Ort fest. Spätestens nach 3 Szenen am selben Ort MUSS etwas Substantielles passieren: eine Person tritt ein oder geht, ein Anruf, ein Schuss in der Ferne, ein neuer Hinweis wird sichtbar, oder der Ort wechselt.
-- KEINE FRAGE-AUSWEICHEN-FRAGE-AUSWEICHEN-LOOPS. Wenn der Spieler in einer Szene jemanden fragt und die Person ausweicht, MUSS in spätestens der übernächsten Szene etwas Konkretes passieren: entweder die Person liefert echte Information (Name, Ort, Tatsache, Datum), oder etwas Externes unterbricht das Gespräch (Anruf, Schritte vor der Tür, ein zweiter Gast tritt ein, Schuss). Drei Szenen lang nur "ich kann es nicht sagen" oder "du wirst schon sehen" ist VERBOTEN.
-- Wenn eine Figur (z.B. ein Kunde) den Spieler engagieren oder treffen will, lass sie nicht ewig in der Tür stehen. Spätestens nach 2 Szenen tritt sie entweder ein, geht weg, oder es passiert etwas anderes.
-- Hinweise (Akteneintrag, Foto, Name, Adresse) dürfen NICHT zufällig auftauchen ohne kausalen Bezug. Wenn der Spieler eine Akte öffnet, muss er sie aus einem Grund öffnen, der in der Szene davor etabliert wurde (z.B. "Die Frau erwähnte einen Namen, du erinnerst dich an deine Akten zu diesem Namen"). Sonst wirkt es wie ein Deus-Ex-Machina.
-- Adventure-Tempo: alle 2-4 Szenen sollte sich etwas Substantielles ändern (Ortswechsel, neue Figur, neue Tatsache, Eskalation).
-
-KLISCHEE-VERBOTSLISTE (häufige KI-Floskeln, die du vermeiden musst):
-- "Mundwinkel zucken" / "ein Zucken um die Mundwinkel" - alternativ: zeig die Reaktion anders oder lass weg
-- "Augen bohren sich in" - alternativ: "blickt dich an", "fixiert dich"
-- "Stimme trägt die Kälte eines Messers" / "kalt wie..." - alternativ: konkretes Detail (sie zischt, ihre Stimme wird flach)
-- "Augen verlieren jeden Rest von Wärme"
-- "Loyalität und Verrat sind dieselbe Münze" - keine sentenzhaften Klischees
-- "wie eine Schraubzwinge"
-- "fauliges Metall" als Geruchsvergleich für Emotionen
-- "Worte liegen bleiern auf der Zunge"
-- "Schatten von Amüsement"
-- "rauchige Stimme"
-- "kaum hörbar", "fast unmerklich" wenn überhaupt etwas zu hören/sehen ist, ist es entweder hörbar/sichtbar oder nicht
-- Generell: Wenn du dich für ein "literarisches" Bild entscheidest, prüfe ob es nicht eine abgenutzte Floskel ist. Im Zweifel: konkretes physisches Detail beschreiben.
-
-OPTIONEN: IMMER GENAU 4
-- Liefere IMMER GENAU 4 Optionen. Nie 1, nie 2, nie 3, nie 5.
-- Auch in Action-Szenen, auch wenn es eng wird: 4 Optionen.
-- Wenn nur eine Aktion sinnvoll erscheint: erfinde 3 sinnvolle Alternativen (warten, weglaufen, verhandeln, bluffen, eine andere Waffe ziehen, schreien, sich tot stellen, etwas werfen, einen Verbündeten rufen).
-
-NAMEN:
-- "Karl" und "Mauer" sind nur in WÖRTLICHER REDE erlaubt, wenn eine andere Figur dich anspricht. Im Erzähltext und in Optionen niemals.
-- Wenn jemand sagt "Wer bist du?" und du dich vorstellst, dann sagst du selbst deinen Namen ("Mauer, Karl Mauer", sagst du) - das ist als Dialog OK.
-
-DIE 4 HANDLUNGSOPTIONEN (sehr wichtig, sonst klingt es nach schlechter Übersetzung):
-- Jede Option ist EIN vollständiger, idiomatischer deutscher Satz im Imperativ ("Frag sie, was sie will." / "Zieh die Pistole." / "Geh ans Fenster.").
-- Keine abgeschnittenen Sätze, keine Optionen die mit Komma enden, keine Halbsätze.
-- Keine Strichpunkte/Semikolons mittendrin. Wenn zwei Gedanken zusammen müssen, nutze ein "und" oder zwei Sätze.
-- KEINE wörtlichen Übersetzungen aus dem Englischen. Falsch: "Beantworte nicht" (das ist Englisch "don't answer", auf Deutsch heißt es "Antworte nicht" oder "Sag nichts").
-- Kein "laß", sondern "lass" (neue Rechtschreibung).
-- Optionen sind kurz: 4 bis 12 Wörter. Konkret, eindeutig, kein Geschwurbel.
-- Optionen unterscheiden sich klar voneinander, keine zwei Optionen sind quasi-Synonyme.
-- Optionen passen genau zur aktuellen Szene und Situation, nicht generisch.
-
-BEISPIELE FÜR GUT vs SCHLECHT IN OPTIONEN:
-- ❌ "Lass sie eintreten und frag sie dann," → ✅ "Lass sie eintreten und frag sie, was los ist."
-- ❌ "Beantworte nicht; geh zurück in dein Büro." → ✅ "Geh zurück ins Büro, ohne zu antworten."
-- ❌ "Schließe die Tür und laß sie stehen." → ✅ "Schließ die Tür und lass sie draußen stehen."
-- ❌ "Befiehl den Mann, die Waffe fallen zu lassen." → ✅ "Befiehl dem Mann, die Waffe fallen zu lassen." (Dativ!)
-- ❌ "Schieß den Mann." → ✅ "Schieß auf den Mann." oder "Erschieß den Mann."
-- ❌ "Frage sie, was sie will." → ✅ "Frag sie, was sie will." (Imperativ ohne -e im Alltagsdeutsch klingt natürlicher)
-
-DEUTSCHE GRAMMATIK (Selbstkontrolle vor Ausgabe):
-- Konjugiere Verben in der zweiten Person Singular IMMER korrekt:
-  - "du gehst" (nicht "du geht"), "du siehst" (nicht "du sieht"), "du nimmst" (nicht "du nimmt"), "du trittst" (nicht "du tritt")
-  - "du öffnest" (nicht "du öffnet"), "du fragst", "du sagst", "du hörst", "du fühlst", "du läufst", "du rennst", "du ziehst", "du legst"
-- Bei Verbketten mit "und": beide Verben konjugieren! "Du öffnest die Tür und siehst..." (nicht "...und sieht").
-- KASUS: "befiehl DEM Mann" (Dativ), nicht "den Mann". "Schieß AUF den Mann" oder "Erschieß den Mann" (nicht "Schieß den Mann"). "Hinter IHREM Wagen" (Dat. Sg.), nicht "hinter ihren Wagen".
-- Vollständige Sätze: Vermeide UNBEDINGT Partizip-Konstruktionen ohne Hauptverb. JEDE Hauptaussage braucht ein konjugiertes Verb.
-  - ❌ "Die Regentropfen perlenden auf seinem Hut." (kein Hauptverb, "perlenden" ist nur Adjektiv-Partizip)
-  - ✅ "Die Regentropfen perlen auf seinem Hut." (Präsens-Verb)
-  - Partizipien wie "perlend", "fallend", "rauschend" sind nur OK als Attribut VOR einem Substantiv ("die fallenden Tropfen"), nicht als Prädikat.
-- Vor der finalen Ausgabe: Lies deinen Text einmal durch. Stolpert ein deutscher Muttersprachler über ein Verb oder einen Kasus? Dann korrigiere es.
-
-KOLLOKATIONEN UND WORTWAHL (vermeide übersetzte oder erfundene Sprache):
-- Sprich keine Warnung "knirschend" aus, keine Stimme "schnürt sich". Adjektive müssen zu Nomen passen. "Knirschend" passt zu Schritten auf Kies, nicht zu Worten.
-- Verwende keine erfundenen Wörter wie "Pistolenhalter" (richtig: "Holster" oder "Pistolentasche"), "Verregnung" (richtig: "der Regen"), oder ungewöhnliche Komposita.
-- Achte auf logische Bezüge: "das Blut AM Messer", nicht "das Blut DES Messers". "Sein Holster" wenn er es trägt, nicht "deins".
-- Verwende "Kaliber" nur als Maßangabe, nie als Gegenstand. Für Waffen-Teile nutze: Lauf, Trommel, Griff, Hahn, Magazin.
-- Adjektive wie "leblos" für leblose Gegenstände sind redundant. "Die Pistole fällt in den Matsch" reicht.
-
-KONKRETE SPRACHLICHE STOLPERER (Liste fortlaufend):
-- "Duft" ist positiv. Nicht "schwüler Sommerduft" (Duft impliziert angenehm). Richtig: "schwüle Sommerluft", "schwüle Hitze", "drückende Sommerluft".
-- Diminutive sparsam und korrekt: keine "Streichholzschachtelchen" (eine Streichholzschachtel ist bereits klein). Auch keine "Pistolchen", "Häuschen-im-Wald"-Sprache.
-- Verbrektion beachten: "auffordern" verlangt "auf" ("Sie fordern dich AUF, die Hände zu zeigen"), nicht "fordern dich, die Hände zu zeigen".
-- "Echo nachhallt" ist Pleonasmus. "Das Echo des Schusses hallt" oder "der Schuss hallt nach", nicht beides.
-- Wenn etwas gefallen ist, fällt es nicht mehr: "die Pistole am Boden", "die gefallene Pistole", nicht "die fallende Pistole, die im Regen glänzt".
-- "Blaulicht wirft keine Muster", es zuckt, blitzt, oder taucht eine Fläche in Blau.
-- Bei Festnahmen: "Du nennst deinen Namen", nicht "Du gibst deine Identität preis" (zu formell).
-- "Geruch" nicht zweimal direkt hintereinander. "Leichengeruch mischt sich mit feuchtem Gras", nicht "Leichengeruch mischt sich mit dem Geruch von Gras".
-- KEINE überpoetischen Phrasen wie "Funken der Pistole tanzt in deinem Blickfeld" oder "das Echo bleibt hinter dir gefangen". Pistolen haben keine tanzenden Funken im Blickfeld. Schreib stattdessen konkret: "der Mündungsblitz erhellt kurz dein Gesicht" oder lass das ganz weg.
-- "Knackt im Griff" für Metall ist schief. Metall klickt, klackt, klirrt. Pistolen "liegen kalt in der Hand".
-
-EINGEFÜHRTE GEGENSTÄNDE/FIGUREN:
-- Wenn du in einer späteren Szene auf einen Gegenstand verweist (Handschuh, Brief, Foto), muss dieser Gegenstand vorher in einer früheren Szene konkret etabliert worden sein.
-- Erfinde nicht plötzlich, dass eine Figur Handschuhe trägt, wenn das nie erwähnt wurde. Bleib bei dem, was in den letzten Szenen tatsächlich beschrieben war.
-
-INHALTLICHE KONSISTENZ:
-- Wenn du eine Waffe einführst (Revolver, Pistole, Messer), bleibe bei diesem Begriff. Wechsle nicht plötzlich auf "Gewehr".
-- Behalte im Blick, wem was gehört. Wenn DU eine Pistole ziehst und ER ein Messer hat, dann ist "die Pistole" deine, "das Messer" seins. Nicht plötzlich "dein zweites Gewehr".
-
-WORTSCHATZ-VARIATION (wichtig gegen Ermüdung):
-- Wiederhole keine Schlüsselwörter zu oft. Wenn "Neonlicht" oder "Regen" schon dreimal in den letzten Szenen vorkam, finde Alternativen oder lass das Detail weg.
-- Standard-Noir-Klischees ("nasses Kopfsteinpflaster", "flackernde Schatten", "trommelnder Regen") sollten sich abwechseln. Nicht JEDE Szene braucht Regen-Atmosphäre.
-- Variiere die Sätze in Länge und Bau. Nicht nur lange Schachtelsätze, auch kurze, schlagende.
-
-KRITISCH: Antworte AUSSCHLIESSLICH mit gültigem JSON. KEIN Markdown, KEIN Code-Block, KEIN Text drumherum. Nur das pure JSON-Objekt.
-
-JSON FORMAT:
+JSON-Output ist Pflicht (kein Markdown, kein Text drumherum):
 {
-  "szene": "Beschreibungstext der aktuellen Szene (3-5 Sätze)...",
-  "ort": "Kurzname des Ortes",
-  "optionen": [
-    {"id": "A", "text": "..."},
-    {"id": "B", "text": "..."},
-    {"id": "C", "text": "..."},
-    {"id": "D", "text": "..."}
-  ],
+  "szene": "3-5 Sätze...",
+  "ort": "Kurzname",
+  "optionen": [{"id":"A","text":"..."},{"id":"B","text":"..."},{"id":"C","text":"..."},{"id":"D","text":"..."}],
   "spannung": 3,
-  "zusammenfassung": "Knappe Notiz für dein Spielleiter-Gedächtnis (1 Satz): Wo bist du, was hast du gerade getan, wichtige Fakten/Personen/Hinweise."
+  "zusammenfassung": "1 Satz für dein Gedächtnis: Ort, was getan wurde, wichtige Personen/Fakten."
 }
 
 spannung: 1 (ruhig) bis 5 (Lebensgefahr).`;
 
 const INTRO_VARIANTS = [
   // 1. Klient kommt ins Büro
-  `Starte das Spiel. Eröffnungsszene: Verregneter Dienstagabend, November 1953. Du sitzt in deinem schäbigen Büro am Hackeschen Markt, sortierst alte Rechnungen, der Aschenbecher ist voll. Seit Wochen kein nennenswerter Fall, die Miete ist überfällig. Jetzt klopft jemand an deine Tür, du weißt noch nicht wer es ist. Der Klient wird sich gleich vorstellen und einen konkreten Auftrag bringen. Liefere die Eröffnungsszene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
-
+  {
+    timeIdx: 4, // ABEND
+    prompt: `Starte das Spiel. Eröffnungsszene: Verregneter Dienstagabend, November 1953. Du sitzt in deinem schäbigen Büro am Hackeschen Markt, sortierst alte Rechnungen, der Aschenbecher ist voll. Seit Wochen kein nennenswerter Fall, die Miete ist überfällig. Jetzt klopft jemand an deine Tür, du weißt noch nicht wer es ist. Der Klient wird sich gleich vorstellen und einen konkreten Auftrag bringen. Liefere die Eröffnungsszene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
+  },
   // 2. Eckkneipe - Informant
-  `Starte das Spiel. Eröffnungsszene: Donnerstagabend, Februar 1953, du sitzt in der Eckkneipe "Zum Goldenen Anker" am Alexanderplatz. Du hast dich hier mit einem Informanten verabredet, der dir Hinweise zum Fall Wegener verkaufen will, einem vermissten Werftarbeiter aus Köpenick. Du hast Wegeners Frau Helga vor zwei Tagen zugesagt, ihren Mann zu finden. Der Informant ist noch nicht da, aber ein anderer Mann am Tresen wirft dir wiederholt Blicke zu. Liefere die Eröffnungsszene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
-
-  // 3. Aufgewacht im Auto - Blackout
-  `Starte das Spiel. Eröffnungsszene: Morgendämmerung, Mai 1953. Du wachst auf in deinem alten Opel, der irgendwo am Rand des Tempelhofer Felds parkt. Dein Kopf brummt, deine Krawatte hängt schief, deine Hose ist mit Schlamm besudelt. Die letzte klare Erinnerung: du saßt gestern Abend in der "Roten Laterne" und befragtest die Tänzerin Lola Brandt über den Tod ihres Verlobten. Etwas im Handschuhfach klemmt nicht richtig, du siehst, dass dort eine Pistole liegt, die nicht deine ist. Liefere die Eröffnungsszene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
-
+  {
+    timeIdx: 5, // NACHT (später Donnerstagabend)
+    prompt: `Starte das Spiel. Eröffnungsszene: Donnerstagabend, Februar 1953, du sitzt in der Eckkneipe "Zum Goldenen Anker" am Alexanderplatz. Du hast dich hier mit einem Informanten verabredet, der dir Hinweise zum Fall Wegener verkaufen will, einem vermissten Werftarbeiter aus Köpenick. Du hast Wegeners Frau Helga vor zwei Tagen zugesagt, ihren Mann zu finden. Der Informant ist noch nicht da, aber ein anderer Mann am Tresen wirft dir wiederholt Blicke zu. Liefere die Eröffnungsszene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
+  },
+  // 3. Aufgewacht im Auto - Blackout (Morgendämmerung)
+  {
+    timeIdx: 0, // MORGEN
+    prompt: `Starte das Spiel. Eröffnungsszene: Morgendämmerung, Mai 1953. Du wachst auf in deinem alten Opel, der irgendwo am Rand des Tempelhofer Felds parkt. Dein Kopf brummt, deine Krawatte hängt schief, deine Hose ist mit Schlamm besudelt. Die letzte klare Erinnerung: du saßt gestern Abend in der "Roten Laterne" und befragtest die Tänzerin Lola Brandt über den Tod ihres Verlobten. Etwas im Handschuhfach klemmt nicht richtig, du siehst, dass dort eine Pistole liegt, die nicht deine ist. Liefere die Eröffnungsszene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
+  },
   // 4. Nachtanruf
-  `Starte das Spiel. Eröffnungsszene: Sonntag, 03:14 Uhr, März 1953. Das Telefon in deinem Büro klingelt. Du hebst ab, am anderen Ende nur Atmen, dann eine Frauenstimme: "Mauer, sie wissen, dass ich Ihnen die Akten gegeben habe. Sie kommen jetzt." Klick. Du erkennst die Stimme: Margarete Stein, eine Sekretärin aus der Reichsbahndirektion, die dir letzte Woche Hinweise zu einer Schmuggelroute gesteckt hat. Im Hintergrund hast du eine Straßenbahn gehört. Liefere die Eröffnungsszene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
-
-  // 5. Polizeirevier - Kommissar mit Angebot
-  `Starte das Spiel. Eröffnungsszene: Frühlingsmorgen, April 1953. Du sitzt im Wartesaal des Polizeireviers Hardenbergstraße. Kommissar Lindner, ein alter Bekannter aus deiner kurzen Zeit bei der Kripo, hat dich rufen lassen. Auf seinem Schreibtisch liegt eine dicke Akte, "FALL HOLLENBECK" steht in roter Schrift drauf. Lindner braucht offenbar einen externen Ermittler, denn intern darf er sich nicht mehr darum kümmern. Liefere die Eröffnungsszene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
-
-  // 6. Verfolgung Charlottenburg
-  `Starte das Spiel. Eröffnungsszene: Später Nachmittag, Oktober 1953. Du verfolgst seit drei Stunden einen Mann durch Charlottenburg. Er heißt Robert Kessler, ist Buchhalter bei einer Spedition in Moabit und du hast den Auftrag von seiner Ehefrau Edith, herauszufinden warum er jeden Mittwoch verschwindet. Die Blätter rascheln auf den nassen Bürgersteigen, du hältst Abstand. Plötzlich biegt Kessler in einen dunklen Hinterhof, eine schwere Holztür schlägt hinter ihm ins Schloss. Liefere die Eröffnungsszene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
-
-  // 7. Beerdigung - Vergangenheit holt dich ein
-  `Starte das Spiel. Eröffnungsszene: Sommer 1953, schwüle Luft auf dem Friedhof Plötzensee. Du stehst an einem offenen Grab. Beerdigt wird Erwin Strauss, ein alter Klient von dir, dessen Fall du vor zwei Jahren nie abschließen konntest. Er hat sich angeblich erhängt, du glaubst das nicht. Eine Frau in schwarzem Kostüm und Schleier, die du noch nie gesehen hast, fixiert dich vom anderen Ende des Grabs. Pastor Reinhardt spricht, aber niemand hört ihm zu. Liefere die Eröffnungsszene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
-
-  // 8. Einbruch ins Büro
-  `Starte das Spiel. Eröffnungsszene: Dämmriger Abend, Spätsommer 1953. Du kommst von einem Termin mit deiner Klientin Sigrid Vogt zurück und findest die Tür deines Büros einen Spalt offen, das Schloss aufgebrochen. Drinnen brennt kein Licht. Du arbeitest gerade am Fall ihres Bruders, der seit drei Wochen verschwunden ist, und hattest auf dem Schreibtisch alle Notizen liegen lassen. Es riecht nach kaltem Schweiß, jemand war hier oder ist noch hier. Liefere die Eröffnungsszene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
+  {
+    timeIdx: 5, // NACHT (03:14 Uhr)
+    prompt: `Starte das Spiel. Eröffnungsszene: Sonntag, 03:14 Uhr, März 1953. Das Telefon in deinem Büro klingelt. Du hebst ab, am anderen Ende nur Atmen, dann eine Frauenstimme: "Mauer, sie wissen, dass ich Ihnen die Akten gegeben habe. Sie kommen jetzt." Klick. Du erkennst die Stimme: Margarete Stein, eine Sekretärin aus der Reichsbahndirektion, die dir letzte Woche Hinweise zu einer Schmuggelroute gesteckt hat. Im Hintergrund hast du eine Straßenbahn gehört. Liefere die Eröffnungsszene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
+  },
+  // 5. Polizeirevier - Kommissar mit Angebot (Frühlingsmorgen)
+  {
+    timeIdx: 0, // MORGEN
+    prompt: `Starte das Spiel. Eröffnungsszene: Frühlingsmorgen, April 1953. Du sitzt im Wartesaal des Polizeireviers Hardenbergstraße. Kommissar Lindner, ein alter Bekannter aus deiner kurzen Zeit bei der Kripo, hat dich rufen lassen. Auf seinem Schreibtisch liegt eine dicke Akte, "FALL HOLLENBECK" steht in roter Schrift drauf. Lindner braucht offenbar einen externen Ermittler, denn intern darf er sich nicht mehr darum kümmern. Liefere die Eröffnungsszene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
+  },
+  // 6. Verfolgung Charlottenburg (später Nachmittag)
+  {
+    timeIdx: 3, // NACHMITTAG
+    prompt: `Starte das Spiel. Eröffnungsszene: Später Nachmittag, Oktober 1953. Du verfolgst seit drei Stunden einen Mann durch Charlottenburg. Er heißt Robert Kessler, ist Buchhalter bei einer Spedition in Moabit und du hast den Auftrag von seiner Ehefrau Edith, herauszufinden warum er jeden Mittwoch verschwindet. Die Blätter rascheln auf den nassen Bürgersteigen, du hältst Abstand. Plötzlich biegt Kessler in einen dunklen Hinterhof, eine schwere Holztür schlägt hinter ihm ins Schloss. Liefere die Eröffnungsszene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
+  },
+  // 7. Beerdigung - Vergangenheit (schwüle Sommerluft, also Mittag/Nachmittag)
+  {
+    timeIdx: 2, // MITTAG
+    prompt: `Starte das Spiel. Eröffnungsszene: Sommer 1953, schwüle Luft auf dem Friedhof Plötzensee. Du stehst an einem offenen Grab. Beerdigt wird Erwin Strauss, ein alter Klient von dir, dessen Fall du vor zwei Jahren nie abschließen konntest. Er hat sich angeblich erhängt, du glaubst das nicht. Eine Frau in schwarzem Kostüm und Schleier, die du noch nie gesehen hast, fixiert dich vom anderen Ende des Grabs. Pastor Reinhardt spricht, aber niemand hört ihm zu. Liefere die Eröffnungsszene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
+  },
+  // 8. Einbruch ins Büro (dämmriger Abend)
+  {
+    timeIdx: 4, // ABEND
+    prompt: `Starte das Spiel. Eröffnungsszene: Dämmriger Abend, Spätsommer 1953. Du kommst von einem Termin mit deiner Klientin Sigrid Vogt zurück und findest die Tür deines Büros einen Spalt offen, das Schloss aufgebrochen. Drinnen brennt kein Licht. Du arbeitest gerade am Fall ihres Bruders, der seit drei Wochen verschwunden ist, und hattest auf dem Schreibtisch alle Notizen liegen lassen. Es riecht nach kaltem Schweiß, jemand war hier oder ist noch hier. Liefere die Eröffnungsszene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
+  },
 ];
 
 function pickIntro() {
-  return INTRO_VARIANTS[Math.floor(Math.random() * INTRO_VARIANTS.length)];
+  const variant = INTRO_VARIANTS[Math.floor(Math.random() * INTRO_VARIANTS.length)];
+  return variant; // returns { timeIdx, prompt }
 }
 
 const TENSION_COLORS = ['#4a9eff','#4a9eff','#f0c040','#f07040','#ff3030','#ff0000'];
@@ -1536,10 +1420,66 @@ function escapeHtml(s) {
 }
 
 // --- API Call ---
+// Client-seitiges Throttling: gleitendes 60-Sekunden-Fenster.
+// Gemini Flash-Lite erlaubt 15 RPM. Wir nehmen 13 als Limit (2 Puffer fuer Retries).
+// Zwischen jeder Anfrage mindestens MIN_GAP ms, plus harter Stopp wenn 13 in der letzten Minute.
+// Bucket wird in localStorage gespeichert, damit Reload das Tracking nicht zurueck setzt.
+const RPM_BUDGET = 13;
+const RPM_WINDOW_MS = 60000;
+const MIN_GAP_MS = 3000;
+
+function loadRequestTimes() {
+  try {
+    const raw = localStorage.getItem('schatten-rpm-bucket');
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return [];
+    const cutoff = Date.now() - RPM_WINDOW_MS;
+    return arr.filter(t => typeof t === 'number' && t > cutoff);
+  } catch { return []; }
+}
+
+function saveRequestTimes(arr) {
+  try { localStorage.setItem('schatten-rpm-bucket', JSON.stringify(arr.slice(-20))); } catch {}
+}
+
+async function throttleRequest() {
+  let times = loadRequestTimes();
+  const now = Date.now();
+
+  // 1. Mindest-Lücke seit letztem Call
+  if (times.length > 0) {
+    const lastCall = times[times.length - 1];
+    const elapsed = now - lastCall;
+    if (elapsed < MIN_GAP_MS) {
+      await new Promise(r => setTimeout(r, MIN_GAP_MS - elapsed));
+    }
+  }
+
+  // 2. Wenn Budget voll: warte bis aeltester Eintrag aus dem Fenster faellt
+  times = loadRequestTimes();
+  if (times.length >= RPM_BUDGET) {
+    const oldest = times[0];
+    const waitUntil = oldest + RPM_WINDOW_MS + 500; // 500ms Sicherheitsmarge
+    const waitMs = waitUntil - Date.now();
+    if (waitMs > 0) {
+      await new Promise(r => setTimeout(r, waitMs));
+    }
+  }
+
+  // 3. Eintragen
+  times = loadRequestTimes();
+  times.push(Date.now());
+  saveRequestTimes(times);
+}
+
 async function callGroq(userMessage, conversationHistory, compactMode) {
   // Groq uses OpenAI-compatible chat format with system/user/assistant roles
   // compactMode = 0 (normal), 1 (less history), 2 (minimal — just last scene)
   compactMode = compactMode || 0;
+
+  // Throttle vor dem Call, damit wir das RPM-Limit nicht ueberschreiten.
+  await throttleRequest();
 
   const messages = [
     { role: 'system', content: SYSTEM_PROMPT }
@@ -1646,7 +1586,9 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
       // Detect daily token limit STRICTLY: only when message explicitly says so.
       // Gemini's per-minute limits often return long retryDelay values (45-60s)
       // but a manual retry after 1-2s usually works. Don't treat those as "daily".
-      err.isDailyLimit = /tokens per day|per day|TPD|daily quota|daily limit/i.test(errMsg);
+      // "tokens per minute" / "per minute" / "TPM" / "RPM" sind NIE daily.
+      const isPerMinute = /per minute|TPM|RPM|requests per minute/i.test(errMsg);
+      err.isDailyLimit = !isPerMinute && /tokens per day|per day|TPD|daily quota|daily limit|RPD/i.test(errMsg);
 
       // For non-daily rate limits: cap the displayed wait at 10 seconds.
       // Real recovery is usually much faster than the API's conservative estimate.
@@ -1679,36 +1621,84 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
   let cleaned = text.replace(/```json/gi, '').replace(/```/g, '').trim();
   const first = cleaned.indexOf('{');
   const last = cleaned.lastIndexOf('}');
-  if (first === -1 || last === -1) {
+  if (first === -1) {
     const err = new Error('Kein JSON gefunden.');
     err.isRetryable = true;
     err.debugInfo = { stage: 'no_json_braces', text: cleaned.slice(0, 1000) };
     throw err;
   }
-  cleaned = cleaned.substring(first, last + 1);
+  // Wenn Schluss-} fehlt (z.B. weil maxTokens erreicht), spaeter mit Repair versuchen
+  cleaned = last === -1 ? cleaned.substring(first) : cleaned.substring(first, last + 1);
 
-  let parsed;
-  try { parsed = JSON.parse(cleaned); }
-  catch (e) {
-    const err = new Error('JSON ungültig: ' + e.message);
-    err.isRetryable = true;
-    err.debugInfo = { stage: 'json_parse', text: cleaned.slice(0, 1000), parseError: e.message };
-    throw err;
+  // Versuche JSON zu reparieren bevor wir aufgeben.
+  // Haeufige Probleme: trailing comma, fehlende Klammer am Ende, abgeschnittenes Objekt.
+  function tryRepairJson(s) {
+    let r = s.trim();
+    // Wenn String mittendrin abgeschnitten ist (offenes "), schliessen
+    const quotes = (r.match(/(?<!\\)"/g) || []).length;
+    if (quotes % 2 === 1) r += '"';
+    // Klammern auffuellen
+    const oc = (r.match(/\{/g) || []).length;
+    const cc = (r.match(/\}/g) || []).length;
+    const ob = (r.match(/\[/g) || []).length;
+    const cb = (r.match(/\]/g) || []).length;
+    if (cb < ob) r += ']'.repeat(ob - cb);
+    if (cc < oc) r += '}'.repeat(oc - cc);
+    // Mehrfach trailing commas entfernen (mehrere Durchlaeufe da neue beim Auffuellen entstehen)
+    for (let i = 0; i < 5; i++) {
+      const before = r;
+      r = r.replace(/,(\s*[}\]])/g, '$1');
+      if (r === before) break;
+    }
+    return r;
   }
 
-  if (!parsed.szene || !Array.isArray(parsed.optionen)) {
-    const err = new Error('JSON unvollständig (szene/optionen fehlen)');
+  let parsed;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch (e1) {
+    // Repair-Versuch
+    try {
+      parsed = JSON.parse(tryRepairJson(cleaned));
+    } catch (e2) {
+      const err = new Error('JSON ungültig: ' + e1.message);
+      err.isRetryable = true;
+      err.debugInfo = { stage: 'json_parse', text: cleaned.slice(0, 1000), parseError: e1.message, repairFailed: e2.message };
+      throw err;
+    }
+  }
+
+  if (!parsed.szene) {
+    const err = new Error('JSON ohne Szene-Text');
     err.isRetryable = true;
     err.debugInfo = { stage: 'incomplete_json', parsed: JSON.stringify(parsed).slice(0, 1000) };
     throw err;
   }
+  // Wenn optionen fehlen oder leer sind, generische 4 einsetzen statt Retry.
+  // Szene-Text ist viel wichtiger, der ist da.
+  if (!Array.isArray(parsed.optionen) || parsed.optionen.length === 0) {
+    parsed.optionen = [
+      { id: 'A', text: 'Geh näher heran und schau dir das genauer an.' },
+      { id: 'B', text: 'Warte ab und beobachte die Situation.' },
+      { id: 'C', text: 'Sprich jemanden an und stell konkrete Fragen.' },
+      { id: 'D', text: 'Zieh dich zurück und überdenke das Ganze.' },
+    ];
+  }
 
-  // Enforce exactly 4 options. If model returned fewer, treat as failure -> retry.
-  if (parsed.optionen.length < 4) {
+  // Enforce 4 options. If model returned fewer, try to be tolerant:
+  // - 3 options: add a generic "Sieh dich erstmal um." as 4th to avoid retry-loops
+  // - 2 or fewer: this is broken, retry needed
+  if (parsed.optionen.length < 2) {
     const err = new Error('Nur ' + parsed.optionen.length + ' Optionen statt 4 geliefert.');
     err.isRetryable = true;
     err.debugInfo = { stage: 'too_few_options', count: parsed.optionen.length, parsed: JSON.stringify(parsed).slice(0, 1000) };
     throw err;
+  }
+  if (parsed.optionen.length === 2) {
+    parsed.optionen.push({ id: 'C', text: 'Warte ab und beobachte die Situation.' });
+    parsed.optionen.push({ id: 'D', text: 'Zieh dich zurück und überdenke die Lage.' });
+  } else if (parsed.optionen.length === 3) {
+    parsed.optionen.push({ id: 'D', text: 'Warte ab und beobachte erstmal weiter.' });
   }
   // If more than 4, trim to first 4
   if (parsed.optionen.length > 4) {
@@ -1751,6 +1741,48 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
     out = out.replace(/(^|[^a-zA-ZäöüÄÖÜß])daß([^a-zA-ZäöüÄÖÜß]|$)/g, '$1dass$2');
     out = out.replace(/(^|[^a-zA-ZäöüÄÖÜß])laß([^a-zA-ZäöüÄÖÜß]|$)/g, '$1lass$2');
     out = out.replace(/(^|[^a-zA-ZäöüÄÖÜß])muß([^a-zA-ZäöüÄÖÜß]|$)/g, '$1muss$2');
+
+    // Sie-Anrede -> Du in Optionen (KI wechselt manchmal in Höflichkeitsform)
+    // 1. Imperativ-Konstruktionen: "Fragen Sie X" -> "Frag X"
+    // Verb-Mapping fuer Sie-Imperative -> Du-Imperative
+    const sieImperativeFix = {
+      'Fragen': 'Frag', 'Geben': 'Gib', 'Sagen': 'Sag', 'Nehmen': 'Nimm',
+      'Gehen': 'Geh', 'Kommen': 'Komm', 'Sehen': 'Sieh', 'Lesen': 'Lies',
+      'Schließen': 'Schließ', 'Öffnen': 'Öffne', 'Schauen': 'Schau',
+      'Hören': 'Hör', 'Bleiben': 'Bleib', 'Warten': 'Warte', 'Versuchen': 'Versuch',
+      'Folgen': 'Folg', 'Antworten': 'Antworte', 'Anrufen': 'Ruf an',
+      'Ziehen': 'Zieh', 'Werfen': 'Wirf', 'Setzen': 'Setz', 'Stellen': 'Stell',
+      'Heben': 'Heb', 'Drehen': 'Dreh', 'Suchen': 'Such', 'Verlassen': 'Verlass',
+      'Befragen': 'Befrag', 'Beobachten': 'Beobachte', 'Untersuchen': 'Untersuch',
+      'Greifen': 'Greif', 'Fassen': 'Fass', 'Treten': 'Tritt', 'Springen': 'Spring',
+      'Schießen': 'Schieß', 'Schlagen': 'Schlag', 'Rennen': 'Renn', 'Laufen': 'Lauf',
+      'Halten': 'Halt', 'Lassen': 'Lass', 'Zeigen': 'Zeig', 'Erzählen': 'Erzähl',
+      'Drücken': 'Drück', 'Trinken': 'Trink', 'Essen': 'Iss', 'Rauchen': 'Rauch',
+      'Bezahlen': 'Bezahl', 'Bestellen': 'Bestell', 'Schweigen': 'Schweig',
+      'Akzeptieren': 'Akzeptier', 'Ablehnen': 'Lehn ab', 'Konfrontieren': 'Konfrontier',
+      'Lügen': 'Lüg', 'Bluffen': 'Bluff', 'Verhandeln': 'Verhandle', 'Bieten': 'Biet',
+    };
+    out = out.replace(/^([A-ZÄÖÜ][a-zäöüß]+)\s+Sie\b/, (m, verb) => {
+      if (sieImperativeFix[verb]) return sieImperativeFix[verb];
+      // Generic fallback: strip 'en' ending from verb stem
+      if (verb.endsWith('en')) return verb.slice(0, -2) + (verb.length > 3 ? '' : 'e');
+      return verb;
+    });
+    // After Sie-removal, the reflexive "sich" remains but should become "dir" in du-form
+    // E.g. "Sieh sich die Akten an" -> "Sieh dir die Akten an"
+    // Heuristic: 'sich' im ersten Drittel der Option und kein anderes Subjekt davor
+    out = out.replace(/^((?:[A-ZÄÖÜ][a-zäöü]*)\s+)sich\b/, '$1dir');
+    // 2. "Sie" als Subjekt im Inneren der Option: "..., wenn Sie..." -> "..., wenn du..."
+    // Heuristik: 'Sie' nach Konjunktionen/Komma in einer Option ist Anrede
+    out = out.replace(/(,\s+(?:wenn|ob|dass|während|bevor|nachdem|weil|damit|als)\s+)Sie\b/g, '$1du');
+    out = out.replace(/(,\s+(?:wenn|ob|dass|während|bevor|nachdem|weil|damit|als)\s+)ihr\b/g, '$1dein');
+    // 3. "Ihnen" / "Ihrem" am Wortanfang in Optionen -> "dir" / "deinem"
+    out = out.replace(/\bIhnen\b/g, 'dir');
+    out = out.replace(/\bIhrem\b/g, 'deinem');
+    out = out.replace(/\bIhrer\b/g, 'deiner');
+    out = out.replace(/\bIhre\b/g, 'deine');
+    out = out.replace(/\bIhren\b/g, 'deinen');
+
     // Common casus errors in imperatives
     out = out.replace(/\bBefiehl den Mann\b/g, 'Befiehl dem Mann');
     out = out.replace(/\bbefiehl den Mann\b/g, 'befiehl dem Mann');
@@ -1912,15 +1944,16 @@ async function startGame() {
   lastFullScene = null;
   // Reset day/time/location tracking
   gameDay = 1;
-  gameTimeIdx = 4; // ABEND (intros are mostly evening/night)
   sceneCounter = 0;
   timeAdvanceTokens = 0;
   scenesAtSameLocation = 0;
   lastLocation = '';
+  // Pick a random intro and use its predefined start time
   const intro = pickIntro();
-  lastUserMessage = intro;
+  gameTimeIdx = intro.timeIdx;
+  lastUserMessage = intro.prompt;
 
-  await performApiCall(intro, /*isStart*/true);
+  await performApiCall(intro.prompt, /*isStart*/true);
 }
 
 async function chooseOption(option) {
@@ -2094,7 +2127,7 @@ function buildDebugDump(err, userMsg, retryCount) {
   return [
     '=== SCHATTEN DEBUG DUMP ===',
     'Zeitpunkt: ' + new Date().toISOString(),
-    'Version: v4.7',
+    'Version: v5.0',
     'Retries: ' + (retryCount || 0),
     '',
     'FEHLER:',
