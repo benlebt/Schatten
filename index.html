@@ -1399,6 +1399,16 @@ DIALOGE:
 - Max. 2-3 Repliken pro Szene, dann Spielerentscheidung.
 - Telefongespräche/Briefe nur wenn vorher etabliert.
 
+SPRACHQUALITAET (sehr wichtig):
+Schreibe natürliches, idiomatisches Deutsch. Vermeide:
+- Künstlich aufgebrochene trennbare Verben mit doppelter Präposition. Falsch: "fordere sie auf laut zum Stehenbleiben auf". Richtig: "fordere sie lautstark zum Stehenbleiben auf" oder "rufe ihnen zu, stehenzubleiben".
+- Gestelzte Konstruktionen wie "Du tust X tuend" oder mehrfach verschachtelte Nebensätze.
+- Falsche Verbpositionen am Satzende (typischer deutscher LLM-Fehler).
+- Anglizismen ("checken", "fixen", "Drinks") - stattdessen "prüfen", "lösen", "einen Whisky".
+- Übertriebene Adjektiv-Häufung ("die kalte, eisige, schneidende Berliner Morgenluft"). Ein gutes Adjektiv reicht.
+
+Schreibe wie Hammett auf Deutsch: kurze, präzise Hauptsätze. Konkrete Bilder. Keine Schachtelsätze über 3 Zeilen.
+
 RÄUMLICHE KONSISTENZ (verschärft):
 - Knüpfe nahtlos an die letzte Szene an. Wenn jemand vor der Tür war, ist er auch in der nächsten Szene noch dort (oder du beschreibst den Wechsel explizit).
 - Der ort-Eintrag MUSS stabil bleiben, wenn der Spieler sich nicht bewegt hat. Ein Schussgefecht hinter einem Holzstapel ist NICHT plötzlich ein "Waldweg bei Zehlendorf", wenn die letzte Szene "Tempelhofer Feld" war. Berlin ist groß, Stadtteile liegen kilometerweit auseinander.
@@ -2874,20 +2884,22 @@ function getCurrentUtcDay() {
 // aber das RPD-Limit ist PRO MODELL. Heisst: Wenn Flash-Lite durch ist, kann Flash
 // trotzdem noch ~20 Anfragen liefern (eigener RPD-Topf).
 const MODEL_CHAIN = [
-  // Gemini-Modelle (beste Sprachqualitaet, knappe RPD)
+  // Strategische Reihenfolge nach Deutsch-Qualitaet:
+  // Die staerksten zuerst, schwaechere als Backup. Lite-Modelle ans Ende,
+  // sie haben oefter Grammatik-Patzer ("fordere sie auf laut zum...").
+  //
+  // 1. Tier: Solide deutsche Story-Modelle
   { provider: 'gemini', model: 'gemini-2.5-flash',       label: 'Gemini 2.5 Flash' },
-  { provider: 'gemini', model: 'gemini-2.5-flash-lite',  label: 'Gemini 2.5 Flash-Lite' },
-  // Gemini 2.5 Pro: bestes Deutsch, aber sehr knappe Limits (~5-10 RPD).
-  // Setzen wir hier mittendrin als Premium-Backup nach den Flash-Modellen.
-  { provider: 'gemini', model: 'gemini-2.5-pro',         label: 'Gemini 2.5 Pro' },
-  { provider: 'gemini', model: 'gemini-3.1-flash-lite',  label: 'Gemini 3.1 Flash-Lite' },
-  { provider: 'gemini', model: 'gemini-3-flash-preview', label: 'Gemini 3 Flash Preview' },
-  // Mistral-Modelle (europaeisches Unternehmen, gutes Deutsch, sehr grosszuegiger Free Tier:
-  // 1 RPS, 500k TPM, 1 Milliarde Tokens/Monat). Eingebaut nach Gemini wegen Sprachqualitaet.
   { provider: 'mistral', model: 'mistral-medium-latest', label: 'Mistral Medium 3' },
+  // 2. Tier: Premium (knapp im Daily-Limit ~5-10 RPD)
+  { provider: 'gemini', model: 'gemini-2.5-pro',         label: 'Gemini 2.5 Pro' },
   { provider: 'mistral', model: 'mistral-large-latest',  label: 'Mistral Large 3' },
+  { provider: 'gemini', model: 'gemini-3-flash-preview', label: 'Gemini 3 Flash Preview' },
+  // 3. Tier: Schnelle Lite-Modelle, ausreichend aber mit Grammatik-Schwaechen
   { provider: 'mistral', model: 'mistral-small-latest',  label: 'Mistral Small 3.1' },
-  // Groq-Modelle (sortiert nach Deutsch-Qualitaet)
+  { provider: 'gemini', model: 'gemini-2.5-flash-lite',  label: 'Gemini 2.5 Flash-Lite' },
+  { provider: 'gemini', model: 'gemini-3.1-flash-lite',  label: 'Gemini 3.1 Flash-Lite' },
+  // 4. Tier: Groq-Modelle (TPM-eng, deutscher Stil meist schlechter als Gemini/Mistral)
   { provider: 'groq',   model: 'llama-3.3-70b-versatile',                  label: 'Llama 3.3 70B' },
   { provider: 'groq',   model: 'moonshotai/kimi-k2-instruct-0905',         label: 'Kimi K2' },
   { provider: 'groq',   model: 'qwen/qwen3-32b',                           label: 'Qwen3 32B' },
@@ -2896,12 +2908,18 @@ const MODEL_CHAIN = [
   { provider: 'groq',   model: 'openai/gpt-oss-20b',                       label: 'GPT-OSS 20B' },
 ];
 
-// Aktuelle Position in der Kette aus localStorage (mit Tagesreset).
+// Chain-Version: hochzaehlen wenn MODEL_CHAIN umsortiert wird, damit alte
+// localStorage-Indizes nicht in der neuen Reihenfolge auf falsche Modelle zeigen.
+const MODEL_CHAIN_VERSION = 2;
+
+// Aktuelle Position in der Kette aus localStorage (mit Tagesreset + Chain-Version-Check).
 function getActiveModelIndex() {
   try {
     const raw = localStorage.getItem('schatten-model-idx');
     if (!raw) return 0;
-    const { idx, day } = JSON.parse(raw);
+    const { idx, day, chainVersion } = JSON.parse(raw);
+    // Wenn die Chain-Version sich geaendert hat (z.B. nach Umsortierung), reset auf 0
+    if (chainVersion !== MODEL_CHAIN_VERSION) return 0;
     if (day !== getCurrentUtcDay()) return 0;
     if (typeof idx !== 'number' || idx < 0 || idx >= MODEL_CHAIN.length) return 0;
     return idx;
@@ -2911,7 +2929,7 @@ function getActiveModelIndex() {
 function setActiveModelIndex(idx) {
   try {
     localStorage.setItem('schatten-model-idx', JSON.stringify({
-      idx, day: getCurrentUtcDay()
+      idx, day: getCurrentUtcDay(), chainVersion: MODEL_CHAIN_VERSION
     }));
   } catch {}
 }
