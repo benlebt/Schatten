@@ -92,12 +92,14 @@ export default async function handler(req, res) {
         'Authorization': 'Bearer ' + apiKey,
       },
       body: JSON.stringify({
-        model: 'openai/gpt-oss-120b',
+        // Llama 4 Scout: 30K TPM (3.75x mehr als gpt-oss-120b's 8K)
+        // Offiziell mit Deutsch trainiert, multilingual benchmarks-stark
+        // 1K RPD wie alle Groq-Free-Modelle, aber das ist nicht der Flaschenhals
+        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
         messages: slimMessages,
         temperature: 0.85,
-        // 1000 Tokens reicht fuer Szene + 4 Optionen + Zusammenfassung in JSON.
-        // Weniger ist mehr: bei 8K TPM koennen wir so 2-3 Anfragen/Minute machen
-        // ohne Limit zu treffen.
+        // 1000 Tokens fuer Szene + Optionen + Summary. Mit 30K TPM heisst das
+        // bis zu 30 Anfragen pro Minute moeglich (RPM-Limit bei 30 ist eh die Grenze).
         max_tokens: 1000,
         response_format: { type: 'json_object' },
       }),
