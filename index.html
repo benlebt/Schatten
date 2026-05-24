@@ -547,7 +547,7 @@
       Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
     </p>
     <button class="btn-primary" onclick="startGame()">Ermittlung beginnen</button>
-    <div class="start-version">Schatten v2.2 · Kasus &amp; Stil</div>
+    <div class="start-version">Schatten v2.3 · Varianten</div>
   </div>
 
   <!-- Game Log -->
@@ -591,7 +591,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v2.2 · Kasus &amp; Stil</span>
+    <span>Schatten v2.3 · Varianten</span>
   </div>
 
 </div>
@@ -732,7 +732,27 @@ JSON FORMAT:
 
 spannung: 1 (ruhig) bis 5 (Lebensgefahr).`;
 
-const INTRO = `Starte das Spiel. Der Spieler trifft gerade in seinem schäbigen Büro am Hackeschen Markt ein. Verregneter Dienstagabend, November 1953. Jemand wartet bereits vor der Tür. Liefere die Eröffnungsszene als JSON, IN DU-PERSPEKTIVE, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`;
+const INTRO_VARIANTS = [
+  `Starte das Spiel. Eröffnungsszene: Du sitzt in deinem schäbigen Büro am Hackeschen Markt. Verregneter Dienstagabend, November 1953. Jemand wartet vor der Tür, du weißt noch nicht, wer oder was es will. Liefere die Eröffnungsszene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
+
+  `Starte das Spiel. Eröffnungsszene: Du sitzt in einer Eckkneipe am Alexanderplatz, das Bier ist schal, der Aschenbecher voll. Spät an einem Donnerstagabend, Februar 1953. Ein Mann am Tresen wirft dir wiederholt Blicke zu. Liefere die Eröffnungsszene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
+
+  `Starte das Spiel. Eröffnungsszene: Du wachst auf in deinem Auto, einem alten Opel, irgendwo in der Nähe vom Tempelhofer Feld. Morgendämmerung. Dein Kopf brummt, deine Krawatte hängt schief, du erinnerst dich nicht, wie du hierher gekommen bist. Etwas im Handschuhfach klemmt nicht richtig. Liefere die Eröffnungsszene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
+
+  `Starte das Spiel. Eröffnungsszene: Das Telefon in deinem Büro klingelt mitten in der Nacht. Sonntag, 03:14 Uhr, März 1953. Du hebst ab, am anderen Ende nur Atmen, dann eine Stimme die deinen Namen flüstert und auflegt. Im Hintergrund hast du eine Strassenbahn gehört. Liefere die Eröffnungsszene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
+
+  `Starte das Spiel. Eröffnungsszene: Du sitzt im Wartesaal des Polizeireviers Hardenbergstrasse. Ein alter Bekannter, Kommissar Lindner, hat dich rufen lassen. Frühlingsmorgen, April 1953. Auf seinem Schreibtisch liegt eine Akte, die er dir noch nicht gezeigt hat. Liefere die Eröffnungsszene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
+
+  `Starte das Spiel. Eröffnungsszene: Du verfolgst seit drei Stunden einen Mann durch Charlottenburg, hältst Abstand. Es ist Oktober 1953, später Nachmittag, die Blätter rascheln auf den nassen Bürgersteigen. Plötzlich biegt er in einen Hinterhof, du musst entscheiden ob du folgst. Liefere die Eröffnungsszene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
+
+  `Starte das Spiel. Eröffnungsszene: Du stehst auf einer Beerdigung am Friedhof Plötzensee. Der Tote ist ein alter Klient, dessen Fall du nie abgeschlossen hast. Sommer 1953, schwüle Luft. Eine Frau in schwarzem Kostüm, die du noch nie gesehen hast, fixiert dich vom anderen Ende des offenen Grabs. Liefere die Eröffnungsszene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
+
+  `Starte das Spiel. Eröffnungsszene: Du kommst in dein Büro zurück und findest die Tür einen Spalt offen, das Schloss aufgebrochen. Drinnen brennt kein Licht. Spätsommer 1953, dämmriger Abend. Es riecht nach kaltem Schweiss, jemand war hier oder ist noch hier. Liefere die Eröffnungsszene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
+];
+
+function pickIntro() {
+  return INTRO_VARIANTS[Math.floor(Math.random() * INTRO_VARIANTS.length)];
+}
 
 const TENSION_COLORS = ['#4a9eff','#4a9eff','#f0c040','#f07040','#ff3030','#ff0000'];
 
@@ -1089,6 +1109,9 @@ async function callGroq(userMessage, conversationHistory) {
       .replace(/\s*—\s*/g, ', ')
       .replace(/\s*–\s*/g, ', ')
       .replace(/\s*--\s*/g, ', ');
+    // Strip stray backslashes before quotes (\" or \\\")
+    out = out.replace(/\\+"/g, '"');
+    out = out.replace(/\\+'/g, "'");
     // Old spelling fixes everywhere
     out = out.replace(/(^|[^a-zA-ZäöüÄÖÜß])daß([^a-zA-ZäöüÄÖÜß]|$)/g, '$1dass$2');
     out = out.replace(/(^|[^a-zA-ZäöüÄÖÜß])laß([^a-zA-ZäöüÄÖÜß]|$)/g, '$1lass$2');
@@ -1117,9 +1140,10 @@ async function startGame() {
   logEntries = [];
   storySummaries = [];
   lastFullScene = null;
-  lastUserMessage = INTRO;
+  const intro = pickIntro();
+  lastUserMessage = intro;
 
-  await performApiCall(INTRO, /*isStart*/true);
+  await performApiCall(intro, /*isStart*/true);
 }
 
 async function chooseOption(option) {
