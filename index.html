@@ -173,6 +173,34 @@
     background: rgba(200,191,168,0.1);
     transition: background 0.5s;
   }
+  /* Verfassungs-Punkte: zeigen Karls koerperlichen Zustand */
+  .verfassung-dots {
+    display: flex;
+    gap: 3px;
+    flex-shrink: 0;
+    margin-right: 6px;
+  }
+  .verfassung-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(200,191,168,0.15);
+    transition: background 0.5s, transform 0.3s;
+  }
+  .verfassung-dot.full {
+    background: #c8bfa8; /* fg-dim */
+  }
+  .verfassung-dot.injured {
+    background: #ff6644;
+  }
+  .verfassung-dot.critical {
+    background: #ff2020;
+    animation: pulse-critical 1.2s infinite ease-in-out;
+  }
+  @keyframes pulse-critical {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.3); opacity: 0.6; }
+  }
   /* Reserve space for settings cog (top-right) so text doesn't underrun it */
   .status-bar { padding-right: 56px; }
 
@@ -332,6 +360,30 @@
     background: rgba(200,191,168,0.08);
     border-color: rgba(200,191,168,0.7);
   }
+  /* Game Over Screen */
+  .game-over {
+    margin-top: 40px;
+    padding: 32px 16px;
+    text-align: center;
+    border-top: 1px solid rgba(200,191,168,0.1);
+    border-bottom: 1px solid rgba(200,191,168,0.1);
+    animation: fadeIn 1.2s ease-in;
+  }
+  .game-over-title {
+    font-size: 22px;
+    letter-spacing: 8px;
+    color: #ff6644;
+    margin-bottom: 18px;
+  }
+  .game-over-subtitle {
+    font-size: 14px;
+    color: var(--fg-dim);
+    line-height: 1.7;
+    margin-bottom: 30px;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+  }
   /* API Key Setup */
   .setup {
     border: 1px solid rgba(200,191,168,0.2);
@@ -386,6 +438,23 @@
     margin-bottom: 8px;
     border-top: 1px solid rgba(200,191,168,0.06);
     padding-top: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .ort-divider-name {
+    /* Linker Block: Ortsname */
+  }
+  .ort-divider-model {
+    /* Rechter Block: Modell-Label, kleiner und schwächer */
+    font-size: 8px;
+    letter-spacing: 2px;
+    color: #333;
+    opacity: 0.6;
+    text-transform: uppercase;
+    white-space: nowrap;
   }
   .scene-text {
     line-height: 1.9;
@@ -784,6 +853,7 @@
     <span class="status-dot">·</span>
     <span class="status-loc" id="status-loc"></span>
     <span class="status-spacer"></span>
+    <div class="verfassung-dots" id="verfassung-dots" title="Verfassung"></div>
     <div class="status-bars" id="status-bars"></div>
   </div>
 
@@ -807,6 +877,14 @@
         <span class="status-popup-label">Spannung</span>
         <span class="status-popup-value" id="popup-tension">—</span>
       </div>
+      <div class="status-popup-row">
+        <span class="status-popup-label">Verfassung</span>
+        <span class="status-popup-value" id="popup-verfassung">—</span>
+      </div>
+      <div class="status-popup-row" id="popup-injury-row" style="display:none;">
+        <span class="status-popup-label">Verletzung</span>
+        <span class="status-popup-value" id="popup-injury">—</span>
+      </div>
       <button class="status-popup-close" onclick="hideStatusDetails()">Schließen</button>
     </div>
   </div>
@@ -821,7 +899,7 @@
       Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
     </p>
     <button class="btn-primary" onclick="startGame()">Ermittlung beginnen</button>
-    <div class="start-version">Schatten v6.4 · Konsistenz & Ethik</div>
+    <div class="start-version">Schatten v6.6 · Verfassung</div>
   </div>
 
   <!-- Game Log -->
@@ -880,9 +958,16 @@
     <div id="options-list"></div>
   </div>
 
+  <!-- Game Over -->
+  <div id="game-over" class="game-over hidden">
+    <div class="game-over-title">— ENDE —</div>
+    <div class="game-over-subtitle">Karl Mauer hat seinen letzten Fall nicht überlebt.</div>
+    <button class="btn-primary" onclick="startGame()">Neue Ermittlung beginnen</button>
+  </div>
+
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v6.4 · Konsistenz & Ethik</span>
+    <span>Schatten v6.6 · Verfassung</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -991,12 +1076,33 @@ OPTIONEN (genau 4, sonst wird gemeckert):
 - Konkret zur Szene, nicht generisch
 - Beispiele richtig: "Frag ihn nach Robert." / "Zieh die Pistole." / "Geh ans Fenster." / "Sag nichts und beobachte."
 
+VERFASSUNG (Karls körperlicher Zustand, sehr wichtig):
+Karl ist KEIN Action-Held. Er ist ein angeschlagener Privatdetektiv Anfang vierzig. Skala 1-5 (5 = unverletzt, 1 = lebensgefährlich). Du bekommst pro Anfrage seinen aktuellen Stand. Beziehe ihn in die Erzählung ein:
+- 4: leicht angeschlagen (Atemnot beim Treppensteigen, Faustschlag eingesteckt)
+- 3: angeschlagen (blutet leicht aus einer Streifschuss-Wunde, bewegt sich langsamer)
+- 2: stark verletzt (Schussverletzung im Arm/Schulter, Schmerzen bei Bewegung, braucht Hilfe)
+- 1: lebensgefährlich (Bewusstsein wankt, braucht sofort einen Arzt)
+
+Setze "verfassung_delta" in jeder Szene:
+- 0 = nichts passiert (Recherche, Gespräch, ruhige Beobachtung)
+- -1 = leichte Folge (Sprint, Sturz, Faustschlag eingesteckt, längere Verfolgung)
+- -2 = Treffer (Schlag mit Waffe, Streifschuss, harter Aufprall, geprellte Rippen)
+- -3 = schwere Verletzung (Schussverletzung im Rumpf, brutaler Prügel, Bewusstlosigkeit)
+- -4 = lebensgefährlich (Bauchschuss, Kopfverletzung)
+- +1 oder +2 = Karl ruht sich aus, wird verarztet, schläft
+
+ZWINGEND: Bei mehreren Schießereien in Folge MUSS Karl bluten. Jeder Schusswechsel kostet etwas (mindestens -1 für Stress, Sprint, Streifer). Karl ist nicht Rambo. Wenn Karl auf 1 oder 2 fällt: die nächsten Optionen MÜSSEN Wege zur Versorgung anbieten (zum Doc, ins Versteck, betten lassen).
+
+"verletzungsbeschreibung" bei -1 oder schlechter setzen: kurz, konkret ("Streifschuss am linken Oberarm", "Prellung am Kinn", "geprellte Rippen", "blutige Hände vom Sturz").
+
 JSON-Output ist Pflicht (kein Markdown, kein Text drumherum):
 {
   "szene": "3-5 Sätze...",
   "ort": "Kurzname",
   "optionen": [{"id":"A","text":"..."},{"id":"B","text":"..."},{"id":"C","text":"..."},{"id":"D","text":"..."}],
   "spannung": 3,
+  "verfassung_delta": 0,
+  "verletzungsbeschreibung": "",
   "zusammenfassung": "1 Satz für dein Gedächtnis: Ort, was getan wurde, wichtige Personen/Fakten."
 }
 
@@ -1077,6 +1183,18 @@ let gameDay = 1;           // current day (1-based)
 let gameTimeIdx = 4;       // index into TIMES_OF_DAY (starts at "ABEND" since intro is evening)
 let scenesAtSameLocation = 0; // counter for location stagnation
 let lastLocation = '';     // for stagnation check
+
+// VERFASSUNG: Karls koerperlicher Zustand. Skala 1-5.
+// 5 = unverletzt, ausgeruht
+// 4 = leichte Blessuren (Faustschlag eingesteckt, leichte Erschoepfung)
+// 3 = angeschlagen (Streifschuss, Pruegel, mehrere Treppen mit Wunden gegangen)
+// 2 = stark verletzt (Schussverletzung, gebrochene Rippe, Bewusstsein nahe)
+// 1 = lebensgefaehrlich (kritisch, braucht sofortige Versorgung)
+// 0 = tot / Game Over
+let verfassung = 5;
+let isGameOver = false;
+// Letzte Verletzung als Kontext fuer Folgeszenen (z.B. "Schulterschuss")
+let lastInjury = '';
 
 // Story-appropriate wait texts, chosen by current tension level.
 // Each pool has 6+ entries to avoid repetition.
@@ -1261,9 +1379,13 @@ function showSetup() {
   document.getElementById('setup').classList.remove('hidden');
 }
 function hideAll() {
-  ['setup','start','loading','error','options','wait-box','daily-limit','status-popup'].forEach(id => {
+  ['setup','start','loading','error','options','wait-box','daily-limit','status-popup','game-over'].forEach(id => {
     document.getElementById(id).classList.add('hidden');
   });
+}
+function showGameOver() {
+  document.getElementById('options').classList.add('hidden');
+  document.getElementById('game-over').classList.remove('hidden');
 }
 function showLoading(customText) {
   document.getElementById('loading').classList.remove('hidden');
@@ -1408,12 +1530,27 @@ function showHeader(scene) {
   const TENSION_LABELS = ['', 'Ruhig', 'Wachsam', 'Angespannt', 'Brenzlig', 'Lebensgefahr'];
   const tensionLabel = TENSION_LABELS[scene.spannung] || '';
 
+  // Verfassungs-Punkte (5 Punkte; rot bei verletzt, pulsierend bei kritisch)
+  const verfDots = document.getElementById('verfassung-dots');
+  verfDots.innerHTML = '';
+  for (let i = 1; i <= 5; i++) {
+    const d = document.createElement('div');
+    d.className = 'verfassung-dot';
+    if (i <= verfassung) {
+      if (verfassung <= 1) d.classList.add('critical');
+      else if (verfassung <= 2) d.classList.add('injured');
+      else d.classList.add('full');
+    }
+    verfDots.appendChild(d);
+  }
+
   // Compact bar: "T1 · NACHT · TEMPELHOFER FELD"
   document.getElementById('status-tag').textContent = 'T' + gameDay;
   document.getElementById('status-time').textContent = TIMES_OF_DAY[gameTimeIdx] || '';
   document.getElementById('status-loc').textContent = (scene.ort || '').toUpperCase();
 
   // Stash full info for the popup
+  const VERFASSUNG_LABELS = ['Tot', 'Lebensgefährlich', 'Stark verletzt', 'Angeschlagen', 'Leicht angeschlagen', 'Unverletzt'];
   currentStatusInfo = {
     day: gameDay,
     time: (TIMES_OF_DAY[gameTimeIdx] || '').charAt(0) + (TIMES_OF_DAY[gameTimeIdx] || '').slice(1).toLowerCase(),
@@ -1421,6 +1558,9 @@ function showHeader(scene) {
     tension: scene.spannung || 1,
     tensionLabel,
     tensionColor: color,
+    verfassung: verfassung,
+    verfassungLabel: VERFASSUNG_LABELS[verfassung] || 'Unbekannt',
+    injury: lastInjury,
   };
 }
 
@@ -1432,6 +1572,20 @@ function showStatusDetails() {
   const tEl = document.getElementById('popup-tension');
   tEl.textContent = info.tensionLabel + ' (' + info.tension + '/5)';
   tEl.style.color = info.tensionColor;
+  // Verfassung
+  const vEl = document.getElementById('popup-verfassung');
+  vEl.textContent = info.verfassungLabel + ' (' + info.verfassung + '/5)';
+  if (info.verfassung <= 2) vEl.style.color = '#ff6644';
+  else if (info.verfassung <= 3) vEl.style.color = '#f0c040';
+  else vEl.style.color = '';
+  // Verletzung (nur anzeigen wenn vorhanden)
+  const injuryRow = document.getElementById('popup-injury-row');
+  if (info.injury) {
+    document.getElementById('popup-injury').textContent = info.injury;
+    injuryRow.style.display = '';
+  } else {
+    injuryRow.style.display = 'none';
+  }
   document.getElementById('status-popup').classList.remove('hidden');
 }
 
@@ -1495,7 +1649,16 @@ function renderLog() {
       if (entry.ort && i > 0) {
         const ort = document.createElement('div');
         ort.className = 'ort-divider';
-        ort.textContent = '· ' + entry.ort + ' ·';
+        const ortText = document.createElement('span');
+        ortText.className = 'ort-divider-name';
+        ortText.textContent = '· ' + entry.ort + ' ·';
+        ort.appendChild(ortText);
+        if (entry.modelLabel) {
+          const modelText = document.createElement('span');
+          modelText.className = 'ort-divider-model';
+          modelText.textContent = entry.modelLabel;
+          ort.appendChild(modelText);
+        }
         div.appendChild(ort);
       }
       const p = document.createElement('p');
@@ -1838,7 +2001,16 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
     // Letzten Ort explizit nochmal anhaengen, damit die KI ihn nicht verfaelscht.
     // Das ist die haerteste Form gegen "Tempelhof -> ploetzlich Zehlendorf"-Drift.
     if (lastLocation) {
-      recap += `\n\nORT-PFLICHT: Der "ort"-Eintrag der naechsten Szene MUSS "${lastLocation}" sein oder eine direkte, raeumlich plausible Fortsetzung davon (z.B. "${lastLocation}, hinter dem Holzstapel"). Berlin-Stadtteile (Wedding, Zehlendorf, Charlottenburg etc.) liegen kilometerweit auseinander. Wechsle den ort-Eintrag NUR, wenn der Spieler in dieser Szene aktiv und erkennbar zu einem neuen Ort gefahren oder gegangen ist.`;
+      recap += `\n\nORT-PFLICHT: Der "ort"-Eintrag der naechsten Szene MUSS "${lastLocation}" sein oder eine direkte, raeumlich plausible Fortsetzung davon (z.B. "${lastLocation}, hinter dem Holzstapel"). KEINE Brotkrumen-Akkumulation: Der ort darf maximal aus 2-3 kurzen Komponenten bestehen, nicht "Tempelhof, Graben, hinter dem Wrack, Richtung Lagerhalle". Berlin-Stadtteile (Wedding, Zehlendorf, Charlottenburg etc.) liegen kilometerweit auseinander. Wechsle den ort-Eintrag NUR, wenn der Spieler in dieser Szene aktiv und erkennbar zu einem neuen Ort gefahren oder gegangen ist.`;
+    }
+    // Verfassungs-Kontext + ggf. Verletzungsbeschreibung
+    const verfassungLabel = ['tot', 'lebensgefährlich verletzt', 'stark verletzt', 'angeschlagen', 'leicht angeschlagen', 'unverletzt'][verfassung] || 'unverletzt';
+    recap += `\n\nKARLS VERFASSUNG: ${verfassung}/5 (${verfassungLabel}).`;
+    if (lastInjury) {
+      recap += ` Aktuelle Verletzung: ${lastInjury}. Karl spuert das in jeder Bewegung.`;
+    }
+    if (verfassung <= 2) {
+      recap += ` WICHTIG: Karl ist deutlich angeschlagen. Die naechste Szene MUSS das zeigen (Bewegungseinschraenkung, Schmerz, Schwindel, Atemnot). Mindestens eine der vier Optionen muss in Richtung Versorgung/Ausruhen/Versteck gehen.`;
     }
     messages.push({ role: 'user', content: recap });
     messages.push({ role: 'assistant', content: 'Verstanden. Ich knüpfe nahtlos und räumlich konsistent an die letzte Szene an, bleibe im Präsens und in der Du-Perspektive.' });
@@ -1859,7 +2031,17 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
   // Inject in-game time/day context and stagnation warnings
   if (compactMode === 0 && sceneCounter > 0) {
     const currentTime = TIMES_OF_DAY[gameTimeIdx] || 'ABEND';
-    let timeContext = `KONTEXT: Aktueller Spieltag ist TAG ${gameDay}, Tageszeit: ${currentTime}.`;
+    // Lichtbeschreibung pro Tageszeit, damit die KI nicht zwischen "Morgensonne" und "Mondlicht"
+    // in zwei aufeinanderfolgenden Szenen wechselt
+    const LICHT_HINWEIS = {
+      'MORGEN': 'fahles erstes Tageslicht, schraege Morgensonne, kuehle Luft',
+      'VORMITTAG': 'klares helles Tageslicht, lange Schatten, Sonne steigt',
+      'MITTAG': 'hartes Mittagslicht, kurze Schatten, helles Tageslicht',
+      'NACHMITTAG': 'warmes Sonnenlicht, beginnende Verschattung, Nachmittagslicht',
+      'ABEND': 'Daemmerung, lange Schatten, blasses Restlicht, Strassenlaternen gehen an',
+      'NACHT': 'Dunkelheit, kuenstliches Licht von Lampen/Scheinwerfern, Mondlicht falls klar',
+    };
+    let timeContext = `KONTEXT: Aktueller Spieltag ist TAG ${gameDay}, Tageszeit: ${currentTime}. Lichtstimmung: ${LICHT_HINWEIS[currentTime]}. WICHTIG: Die Lichtbeschreibung MUSS zur Tageszeit passen. KEINE Tageszeit-Drift innerhalb einer Aktionssequenz - wenn die letzte Szene "Morgensonne" hatte und nur Minuten vergangen sind, darf die naechste Szene nicht "Mondlicht" oder "Nachmittagshitze" haben.`;
     // Expliziter Tageswechsel-Flag (gesetzt von advanceGameTime nach einem Roll-Over)
     if (pendingDayTransition) {
       timeContext += ` WICHTIG: Ein neuer Tag hat begonnen. Erzähle in der nächsten Szene einen klaren narrativen Übergang vom Vortag (z.B. "Du hast die Nacht im Büro verbracht und wachst von einem Geräusch auf...", "Am nächsten Morgen kehrst du zurück...", "Nach einer kurzen Nacht voller Grübeleien fährst du in die Stadt..."). Der Spieler muss verstehen, dass Zeit vergangen ist.`;
@@ -2298,6 +2480,10 @@ async function startGame() {
   pendingDayTransition = false;
   scenesAtSameLocation = 0;
   lastLocation = '';
+  // Reset Verfassung
+  verfassung = 5;
+  isGameOver = false;
+  lastInjury = '';
   // Pick a random intro and use its predefined start time
   const intro = pickIntro();
   gameTimeIdx = intro.timeIdx;
@@ -2408,13 +2594,44 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     // aufgerufen. Hier nicht nochmal, sonst springen Tageszeit/Tag doppelt.
     sceneCounter++;
 
-    logEntries.push({ type: 'scene', text: scene.szene, ort: scene.ort, day: gameDay, time: TIMES_OF_DAY[gameTimeIdx] });
+    // Verfassung anpassen basierend auf KI-Antwort
+    const delta = typeof scene.verfassung_delta === 'number' ? scene.verfassung_delta : 0;
+    if (delta !== 0) {
+      verfassung = Math.max(0, Math.min(5, verfassung + delta));
+      // Bei -1 oder schlechter: Verletzungsbeschreibung als laufenden Kontext merken
+      if (delta < 0 && scene.verletzungsbeschreibung) {
+        lastInjury = scene.verletzungsbeschreibung;
+      } else if (delta > 0) {
+        // Bei Erholung: Verletzung verblasst (aber nicht ganz weg, bis verfassung = 5)
+        if (verfassung >= 5) lastInjury = '';
+      }
+    }
+    // Game Over wenn Verfassung auf 0
+    if (verfassung === 0) {
+      isGameOver = true;
+    }
+
+    logEntries.push({
+      type: 'scene',
+      text: scene.szene,
+      ort: scene.ort,
+      day: gameDay,
+      time: TIMES_OF_DAY[gameTimeIdx],
+      modelLabel: getActiveModel().label,
+      verfassung: verfassung,
+      injury: lastInjury,
+    });
     hideLoading();
     hideWait();
     document.getElementById('error').classList.add('hidden');
     showHeader(scene);
     renderLog();
-    renderOptions(scene);
+    // Game Over wenn Verfassung auf 0
+    if (isGameOver) {
+      showGameOver();
+    } else {
+      renderOptions(scene);
+    }
     updateFooterModel();
     pendingRetry = null;
     lastErrorDebug = null;
@@ -2554,7 +2771,7 @@ function buildDebugDump(err, userMsg, retryCount) {
   return [
     '=== SCHATTEN DEBUG DUMP ===',
     'Zeitpunkt: ' + new Date().toISOString(),
-    'Version: v6.4',
+    'Version: v6.6',
     'Retries: ' + (retryCount || 0),
     '',
     'FEHLER:',
