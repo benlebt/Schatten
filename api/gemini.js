@@ -94,6 +94,16 @@ export default async function handler(req, res) {
           // ausruht oder verarztet wird. NICHT in jeder Szene aendern, nur bei klarer Veranlassung.
           verfassung_delta: { type: 'integer' },
           verletzungsbeschreibung: { type: 'string' },
+          // Inventar-Aenderungen in dieser Szene. Wenn Karl etwas aufnimmt, schreib es in
+          // "hinzugefuegt". Wenn er etwas verliert/verbraucht/weggibt, in "entfernt".
+          // Bei keinen Aenderungen beide Arrays leer lassen.
+          inventar_hinzugefuegt: { type: 'array', items: { type: 'string' } },
+          inventar_entfernt: { type: 'array', items: { type: 'string' } },
+          // Cast-Tracking: NPCs die in dieser Szene zu Karl kommen oder gehen.
+          // "hinzugefuegt": neue Person betritt die Szene (z.B. "Helga Schmidt (Klientin)")
+          // "entfernt": Person verlaesst die Szene (geht raus, stirbt, wird zurueckgelassen, etc.)
+          cast_hinzugefuegt: { type: 'array', items: { type: 'string' } },
+          cast_entfernt: { type: 'array', items: { type: 'string' } },
         },
         required: ['szene', 'ort', 'optionen', 'spannung', 'zusammenfassung'],
       },
