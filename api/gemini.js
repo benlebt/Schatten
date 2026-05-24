@@ -54,8 +54,33 @@ export default async function handler(req, res) {
       // Gemini zaehlt Tokens anders als OpenAI/Groq. Deutsche Texte mit
       // Umlauten brauchen mehr Tokens pro Zeichen. 2500 reicht fuer eine
       // ausfuehrliche Szene + 4 Optionen + Zusammenfassung in JSON.
-      maxOutputTokens: 2500,
+      maxOutputTokens: 3000,
       responseMimeType: 'application/json',
+      // Erzwingt gueltige JSON-Struktur. Damit kann das Modell nicht
+      // mittendrin abbrechen oder unvollstaendiges JSON liefern.
+      responseSchema: {
+        type: 'object',
+        properties: {
+          szene: { type: 'string' },
+          ort: { type: 'string' },
+          optionen: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                id: { type: 'string' },
+                text: { type: 'string' },
+              },
+              required: ['id', 'text'],
+            },
+            minItems: 4,
+            maxItems: 4,
+          },
+          spannung: { type: 'integer' },
+          zusammenfassung: { type: 'string' },
+        },
+        required: ['szene', 'ort', 'optionen', 'spannung', 'zusammenfassung'],
+      },
     },
   };
   if (systemInstruction) {
@@ -117,11 +142,35 @@ export default async function handler(req, res) {
     const text = candidate?.content?.parts?.[0]?.text || '';
     const finishReason = candidate?.finishReason || '';
 
-    // Wenn Gemini wegen Token-Limit abgeschnitten hat, ist die JSON-Antwort
-    // unvollstaendig (kein schliessendes "}"). Dem Frontend signalisieren,
-    // dass es einen Retry probieren soll (mit kompaktem Kontext, der weniger
-    // Output braucht).
+    // SAFETY oder RECITATION: Gemini hat die Antwort blockiert.
+    // Das ist nicht durch Retry behebbar (gleicher Prompt -> gleiche Blockierung),
+    // wir signalisieren dem Frontend einen anderen Fehler, damit es den Kontext
+    // staerker kompaktiert (das nimmt manchmal die problematische Phrase raus).
+    if (finishReason === 'SAFETY' || finishReason === 'RECITATION' || finishReason === 'BLOCKLIST') {
+      return res.status(502).json({
+        error: {
+          message: `Gemini hat die Antwort blockiert (${finishReason}). Retry mit kompaktem Kontext.`,
+          type: 'blocked',
+        }
+      });
+    }
+
+    // MAX_TOKENS: Antwort wurde mittendrin abgeschnitten. Frueher haben wir hier
+    // 502 zurueck gegeben, was einen Retry ausloeste. Aber: das Frontend kann
+    // unvollstaendiges JSON mittlerweile reparieren (Klammern auffuellen). Wenn
+    // wir den Text haben und er sieht nach JSON aus, lieber durchreichen statt
+    // einen extra Roundtrip ausloesen.
     if (finishReason === 'MAX_TOKENS') {
+      if (text && text.trim().startsWith('{')) {
+        return res.status(200).json({
+          choices: [{
+            message: { role: 'assistant', content: text },
+            finish_reason: 'length',
+          }],
+          model,
+          _truncated: true,
+        });
+      }
       return res.status(502).json({
         error: {
           message: 'Antwort wurde wegen Token-Limit abgeschnitten. Retry empfohlen.',
