@@ -32,6 +32,12 @@ KEINE ERFUNDENEN RUECKBEZUEGE: NIE auf Details verweisen, die nicht in den vorig
 
 STORY-ANKER: Der Auftrag aus dem Intro bleibt der rote Faden. Wenn akute Bedrohung weg ist (Spannung sinkt unter 3), MUSS Karl in 1-2 Szenen zum Auftrag zurueck. Nicht im Buero Bourbon trinken und das Hauptziel vergessen.
 
+AUFTRAG-FAKTEN (UNVERAENDERLICH): Du bekommst pro Anfrage eine AUFTRAG-FAKTEN-Sektion mit Klient, Opfer/Gesuchter, Tat, Ort. Diese Fakten sind FEST. NIE neue Hauptfiguren mit aehnlichen Namen erfinden (wenn Opfer "Erwin Strauss" heisst, gibt es KEINEN "Hans Strauss" oder "Walter Strauss"). NIE einen zweiten Toten erfinden. NIE Verwandte des Opfers/Klienten einfuehren, die nicht im Setup stehen.
+
+TOTE GEHOEREN NICHT IN DEN CAST: cast_hinzugefuegt ist nur fuer LEBENDE anwesende Personen. Verstorbene, im Sarg liegende, beerdigte Personen NIEMALS in cast_hinzugefuegt - auch nicht wenn Karl an ihrem Grab steht. Vermisste/Verschwundene auch nicht.
+
+ZEITLICH-BEGRENZTE ANLAESSE (Beerdigung, Hochzeit, Pressekonferenz, Gericht): dauern in der Realitaet 1-2 Stunden. Eine Beerdigung dauert NICHT 18 Stunden, Trauergaeste uebernachten NICHT in der Sakristei. Wenn Karl an so einem Anlass teilnimmt: maximal 3-4 Szenen, dann MUSS das Ereignis enden (Trauergaeste zerstreuen sich, Karl geht weiter). KEINE "Beisetzung in einer Stunde" wenn am Grab schon getrauert wurde.
+
 BERLIN 1953 - SEKTOREN: Berlin ist 4-geteilt, noch keine Mauer (kommt 1961), aber harte Grenzen.
 - SOWJETISCHER SEKTOR (Ost, DDR): Mitte, Friedrichshain, Prenzlauer Berg, Lichtenberg, Koepenick, Pankow, Weissensee. Polizei = Volkspolizei (VP). Karls Buero am Hackeschen Markt ist hier (Mitte).
 - AMERIKANISCH (West): Tempelhof, Schoeneberg, Neukoelln, Zehlendorf, Kreuzberg.
