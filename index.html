@@ -547,7 +547,7 @@
       Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
     </p>
     <button class="btn-primary" onclick="startGame()">Ermittlung beginnen</button>
-    <div class="start-version">Schatten v2.3 · Varianten</div>
+    <div class="start-version">Schatten v2.4 · Stilwächter</div>
   </div>
 
   <!-- Game Log -->
@@ -591,7 +591,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v2.3 · Varianten</span>
+    <span>Schatten v2.4 · Stilwächter</span>
   </div>
 
 </div>
@@ -762,6 +762,34 @@ let apiKey = null;
 let storySummaries = [];   // compressed history
 let lastFullScene = null;  // last raw scene JSON for style continuity
 let pendingRetry = null;   // function to retry on rate limit
+let recentTexts = [];      // last few scene texts for vocabulary tracking
+
+// Words/phrases that get tiresome if repeated. We track usage and tell the model what to avoid.
+const ATMOSPHERE_WATCHLIST = [
+  'neonlicht', 'neon', 'flackert', 'flackernd', 'flackern',
+  'regen trommelt', 'regen prasselt', 'regen', 'trommelt',
+  'scharfe schatten', 'lange schatten', 'flackernde schatten',
+  'nasses kopfsteinpflaster', 'nasser asphalt',
+  'zigarettenrauch', 'tabakgeruch', 'tabak',
+  'kalte luft', 'feuchte luft', 'stickige luft',
+  'quietschen', 'knarrt', 'knistert'
+];
+
+function getOverusedWords() {
+  // Look at the last 3 scene texts; count occurrences of each watchlist phrase.
+  // Return phrases used 3+ times across recent scenes (i.e. truly overused).
+  if (recentTexts.length === 0) return [];
+  const combined = recentTexts.slice(-3).join(' ').toLowerCase();
+  const overused = [];
+  for (const phrase of ATMOSPHERE_WATCHLIST) {
+    const regex = new RegExp('\\b' + phrase.replace(/\s+/g, '\\s+') + '\\b', 'g');
+    const matches = combined.match(regex);
+    if (matches && matches.length >= 2) {
+      overused.push(phrase);
+    }
+  }
+  return overused;
+}
 
 // --- Persistence ---
 function loadApiKey() {
@@ -942,6 +970,16 @@ async function callGroq(userMessage, conversationHistory) {
     }
     messages.push({ role: 'user', content: recap });
     messages.push({ role: 'assistant', content: 'Verstanden. Ich knüpfe nahtlos und räumlich konsistent an die letzte Szene an, bleibe im Präsens und in der Du-Perspektive.' });
+  }
+
+  // Inject overused-words warning if applicable
+  const overused = getOverusedWords();
+  if (overused.length > 0) {
+    messages.push({
+      role: 'user',
+      content: `STILWARNUNG: Folgende Wörter/Phrasen wurden in den letzten Szenen zu oft verwendet und müssen für diese Szene VERMIEDEN werden: ${overused.join(', ')}. Finde frische Bilder, andere Sinneseindrücke (Geräusche der Stadt, Gerüche, Texturen, Temperatur, Licht aus anderen Quellen wie Lampen, Kerzen, Mond, Fackeln). Nicht jede Szene braucht Regen oder Neonlicht.`
+    });
+    messages.push({ role: 'assistant', content: 'Verstanden. Ich vermeide diese überstrapazierten Begriffe und nutze frische Sinneseindrücke.' });
   }
 
   // New user message
@@ -1139,6 +1177,7 @@ async function startGame() {
   history = [];
   logEntries = [];
   storySummaries = [];
+  recentTexts = [];
   lastFullScene = null;
   const intro = pickIntro();
   lastUserMessage = intro;
@@ -1172,6 +1211,10 @@ async function performApiCall(userMsg, isStart, optionForRollback) {
     }
     // Store only the szene text (not the full JSON with options/wartetext) for stylistic continuity
     lastFullScene = scene.szene;
+
+    // Track recent scene texts for vocabulary monitoring
+    recentTexts.push(scene.szene);
+    if (recentTexts.length > 5) recentTexts = recentTexts.slice(-5);
 
     logEntries.push({ type: 'scene', text: scene.szene, ort: scene.ort });
     hideLoading();
@@ -1276,6 +1319,7 @@ function resetGame() {
   history = [];
   logEntries = [];
   storySummaries = [];
+  recentTexts = [];
   lastFullScene = null;
   currentScene = null;
   pendingRetry = null;
