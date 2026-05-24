@@ -917,7 +917,7 @@
       Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
     </p>
     <button class="btn-primary" onclick="startGame()">Ermittlung beginnen</button>
-    <div class="start-version">Schatten v6.9 · Karls Base</div>
+    <div class="start-version">Schatten v6.10 · Berlin & Bremse</div>
   </div>
 
   <!-- Game Log -->
@@ -985,7 +985,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v6.9 · Karls Base</span>
+    <span>Schatten v6.10 · Berlin & Bremse</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -1004,6 +1004,35 @@ Karl wohnt und arbeitet im 2. Stock eines Mietshauses am Hackeschen Markt. Zwei 
 - Bad auf dem Hausflur, mit den Nachbarn geteilt.
 
 Die Base ist Karls Fixpunkt. Wie bei Marlowe/Spade kehrt der Detektiv zurück zu seinem Büro/Wohnung, um nachzudenken, zu trinken, zu schlafen. Die KI darf und SOLL diese Räume nutzen für ruhige Lagedenken-Szenen, fürs Aufwachen am Morgen, für unerwartete Klopfen an der Tür. Bei Tageswechsel ist das Default: Karl wacht in seinem Bett auf. Andere Schlafplätze nur wenn die Story es klar hergibt (Krankenhaus bei Verletzung, Polizei-Gewahrsam wenn an Tatort verdaechtigt, bei einer Frau wenn intime Beziehung etabliert, Versteck wenn auf der Flucht).
+
+BERLIN 1953 - SEKTOREN-GEOGRAFIE (sehr wichtig für historische Plausibilität):
+Berlin ist seit Juli 1945 in vier Sektoren geteilt. 1953 noch keine Mauer (kommt erst 1961), aber die Grenzen sind sichtbar und politisch hart.
+
+SOWJETISCHER SEKTOR / OST-BERLIN (DDR seit 1949):
+- Bezirke: Mitte, Prenzlauer Berg, Friedrichshain, Lichtenberg, Treptow, Köpenick, Pankow, Weißensee
+- Wichtige Orte: Alexanderplatz, Hackescher Markt (Karls Base!), Stalinallee (heute Karl-Marx-Allee), Friedrichstraße, Brandenburger Tor (Grenze). Friedhof Plötzensee liegt am Westhafen (technisch Charlottenburg-Nord, also BRITISCHER Sektor — Karl kann da hin, ist ein Grenzgebiet).
+- Atmosphäre: Trümmer, Volkspolizei (VP), Reichsbahn, sowjetische Soldaten, Stasi, Lebensmittelmarken noch verbreitet
+- Volkspolizei (VP) statt Schutzpolizei. Volkseigene Betriebe (VEB). FDGB.
+
+AMERIKANISCHER SEKTOR (West):
+- Bezirke: Tempelhof, Schöneberg, Neukölln, Zehlendorf, Steglitz, Kreuzberg
+- Wichtige Orte: Tempelhofer Feld (Luftbrücke 1948/49 noch frisch im Gedächtnis), Nollendorfplatz, RIAS
+
+BRITISCHER SEKTOR (West):
+- Bezirke: Charlottenburg, Wilmersdorf, Spandau, Tiergarten (teilweise)
+- Wichtige Orte: Kurfürstendamm, Bahnhof Zoo, Funkturm, KaDeWe (zerstört, im Wiederaufbau), Olympiastadion
+
+FRANZÖSISCHER SEKTOR (West):
+- Bezirke: Reinickendorf, Wedding
+- Wichtige Orte: Müllerstraße, Tegel
+
+REGELN FÜR SEKTOREN-KONSISTENZ:
+- Karls Büro ist am Hackeschen Markt = SOWJETISCHER SEKTOR. Karl ist ein Privatdetektiv in Ost-Berlin, eine seltene und politisch heikle Position. Westliche Klienten meiden den Osten, östliche Klienten misstrauen ihm.
+- Polizei in Karls Umgebung ist Volkspolizei (VP), nicht Schutzpolizei.
+- Wenn Karl in den Westen fährt (z.B. Charlottenburg, Tempelhof), ist das ein ÜBERGANG mit Kontrolle möglich. Er muss S-Bahn nehmen oder mit Auto durch einen offenen Übergang. Vor 1961 ist das möglich, aber nicht trivial.
+- Politisch heikle Anspielungen ("sowjetische Zone", "die da drüben") sind passend, aber Karl reagiert mit professioneller Reserve. Er trinkt im Osten wie im Westen.
+- Stasi (MfS) gibt es seit 1950. Wenn Karl sie zu nahe kommt, ist das echte Lebensgefahr. NICHT in jedem Fall einbauen.
+- Halt Karl in EINEM Sektor wenn die Geschichte es zulässt. Plötzliche Sektoren-Sprünge ohne erzählerische Brücke wirken willkürlich.
 
 ERZÄHLPERSPEKTIVE & TEMPUS (zwingend):
 - Zweite Person ("du"), Präsens, durchgehend. Keine Tempus-Wechsel innerhalb einer Szene.
@@ -1269,6 +1298,10 @@ let isGameOver = false;
 let lastInjury = '';
 // Letzte Spannung (1-5), damit advanceGameTime in Action-Sequenzen pausieren kann
 let lastSpannung = 1;
+// Wie viele Szenen am Stueck Spannung >= 4 hatten (Action-Streak)
+let actionStreak = 0;
+// Wie viele Szenen am Stueck ruhige Recherche-Spannung 1-2 hatten
+let calmStreak = 0;
 // Inventar: alles was Karl gerade dabei hat. Strings, kurz formuliert.
 // Wird der KI als Kontext mitgeschickt, damit sie konsistent bleibt
 // (z.B. nicht mal Walther und mal Revolver).
@@ -1347,6 +1380,14 @@ const ATMOSPHERE_WATCHLIST = [
   'amüsement', 'huscht', 'schraubzwinge',
   'münze', 'loyalität',
   'fauliges metall',
+  // v6.10: New repetition offenders from playthroughs
+  'straßenlaterne', 'strassenlaterne', 'laterne erwacht', 'laterne flackernd',
+  'mündungsfeuer', 'mündungsblitz', 'mündungsfeuer zuckt',
+  'lichtkegel', 'taschenlampe', 'lichtstrahl peitscht',
+  'trenchcoat', 'grauer mantel', 'grauer regenmantel',
+  'pocht im rhythmus', 'pocht bei jedem', 'puls hämmert',
+  'reißt die walther', 'reißt die pistole', 'reißt die waffe',
+  'schwerer schatten', 'dunkle gestalt löst sich',
 ];
 
 // Generic content words that, if repeated across recent scenes, signal overuse.
@@ -2177,6 +2218,12 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
     if (scenesAtSameLocation >= 3) {
       timeContext += ` ACHTUNG: Der Spieler ist seit ${scenesAtSameLocation} Szenen am selben Ort. Diese Szene MUSS einen Wechsel oder eine Unterbrechung bringen (Person tritt ein, Person geht, Anruf, Ortswechsel, neuer konkreter Hinweis).`;
     }
+    // ESKALATIONS-BREMSE: wenn zu viel Action am Stueck, zwinge zu Beruhigung
+    if (actionStreak >= 3) {
+      timeContext += `\n\nESKALATIONS-BREMSE (sehr wichtig): Die letzten ${actionStreak} Szenen waren Action (Spannung 4-5). Das ist ZU VIEL fuer einen Noir-Krimi. Marlowe macht Schiessereien selten und mit Gewicht. Diese Szene MUSS die Spannung runterbringen (spannung <= 3). Die Angreifer fliehen, Sirenen vertreiben sie, Karl entkommt in eine ruhige Strasse, etwas unterbricht den Kampf. Mindestens 2 der 4 Optionen muessen RECHERCHE-ORIENTIERT sein (zum Buero zurueck, Telefonat fuehren, Akten studieren, Klient befragen, Bibliothek/Archiv, Zeugen aufsuchen). KEINE neue Schiesserei, KEINE neue Verfolgungsjagd. Karl braucht jetzt einen Atemzug und einen Hinweis zum Nachdenken.`;
+    } else if (actionStreak === 2) {
+      timeContext += `\n\nESKALATIONS-WARNUNG: Die letzten 2 Szenen waren Action. Sehr bald MUSS Beruhigung folgen. Diese Szene darf noch Action sein, aber lass die Spannung dann sinken. Die naechsten Optionen sollten Wege aus dem Konflikt anbieten.`;
+    }
     messages.push({ role: 'user', content: timeContext });
     messages.push({ role: 'assistant', content: 'Verstanden. Ich integriere Tageszeit und Tag in die Atmosphäre und sorge für Bewegung in der Story.' });
   }
@@ -2612,6 +2659,8 @@ async function startGame() {
   isGameOver = false;
   lastInjury = '';
   lastSpannung = 1;
+  actionStreak = 0;
+  calmStreak = 0;
   // Reset Inventar auf Startausstattung
   inventory = ['Walther PPK (eigene Pistole)', 'Brieftasche mit Detektiv-Lizenz', 'Notizbuch und Bleistift'];
   // Pick a random intro and use its predefined start time
@@ -2774,7 +2823,20 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     }
 
     // Spannung merken fuer den naechsten advanceGameTime (Action-Pause)
-    lastSpannung = typeof scene.spannung === 'number' ? scene.spannung : 1;
+    const newSpannung = typeof scene.spannung === 'number' ? scene.spannung : 1;
+    // Streak-Tracking fuer Eskalations-Bremse
+    if (newSpannung >= 4) {
+      actionStreak++;
+      calmStreak = 0;
+    } else if (newSpannung <= 2) {
+      calmStreak++;
+      actionStreak = 0;
+    } else {
+      // Spannung 3: weder Action noch Ruhe, beide Streaks behutsam zuruecksetzen
+      if (actionStreak > 0) actionStreak = Math.max(0, actionStreak - 1);
+      if (calmStreak > 0) calmStreak = Math.max(0, calmStreak - 1);
+    }
+    lastSpannung = newSpannung;
 
     // Inventar-Aenderungen verarbeiten
     if (Array.isArray(scene.inventar_hinzugefuegt) && scene.inventar_hinzugefuegt.length > 0) {
@@ -2959,7 +3021,7 @@ function buildDebugDump(err, userMsg, retryCount) {
   return [
     '=== SCHATTEN DEBUG DUMP ===',
     'Zeitpunkt: ' + new Date().toISOString(),
-    'Version: v6.9',
+    'Version: v6.10',
     'Retries: ' + (retryCount || 0),
     '',
     'FEHLER:',
