@@ -113,6 +113,104 @@
     margin-top: 2px;
     letter-spacing: 2px;
   }
+  /* Sticky status bar (visible during play, persists across scroll) */
+  .status-bar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(10, 10, 15, 0.92);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(200,191,168,0.12);
+    padding: 8px 16px;
+    margin: 0 -20px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #888;
+  }
+  .status-left, .status-center, .status-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .status-center {
+    flex: 1;
+    justify-content: center;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .status-tag-label {
+    color: #555;
+    font-size: 9px;
+  }
+  .status-tag {
+    color: var(--fg-bright);
+    font-weight: bold;
+    font-size: 12px;
+  }
+  .status-time {
+    color: #888;
+    font-size: 9px;
+  }
+  .status-loc {
+    color: #888;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-align: center;
+  }
+  .status-bars {
+    display: flex;
+    gap: 2px;
+  }
+  .status-bar-segment {
+    width: 8px;
+    height: 4px;
+    border-radius: 1px;
+    background: rgba(200,191,168,0.1);
+    transition: background 0.5s;
+  }
+  .status-level {
+    font-size: 9px;
+    font-weight: bold;
+    letter-spacing: 1.5px;
+    min-width: 56px;
+    text-align: right;
+    transition: color 0.5s;
+  }
+  /* Hide old tension block (now part of status bar) */
+  .tension { display: none; }
+  /* Day separator (when in-game day changes) */
+  .day-separator {
+    text-align: center;
+    margin: 32px 0 20px;
+    color: var(--accent);
+    font-size: 11px;
+    letter-spacing: 6px;
+    font-weight: bold;
+    text-transform: uppercase;
+    position: relative;
+  }
+  .day-separator span {
+    background: var(--bg);
+    padding: 0 16px;
+    position: relative;
+    z-index: 1;
+  }
+  .day-separator::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: rgba(200,160,96,0.25);
+  }
   /* Start screen */
   .start-screen {
     text-align: center;
@@ -587,19 +685,29 @@
   <!-- Setup Screen (unused but kept for compatibility with hideAll) -->
   <div id="setup" class="setup hidden"></div>
 
-  <!-- Header -->
+  <!-- Header (only shown once at top) -->
   <header id="header" class="hidden">
     <div class="title-block">
       <div class="eyebrow">Kriminalbüro Mauer</div>
       <h1>BERLIN, 1953</h1>
     </div>
-    <div class="tension" id="tension-block" title="Spannungslevel der aktuellen Szene (1=ruhig, 5=Lebensgefahr)">
-      <div class="tension-label">Spannung</div>
-      <div class="tension-bars" id="tension-bars"></div>
-      <div class="tension-level" id="tension-level"></div>
-      <div class="tension-loc" id="tension-loc"></div>
-    </div>
   </header>
+
+  <!-- Sticky status bar (always visible during play) -->
+  <div id="status-bar" class="status-bar hidden">
+    <div class="status-left">
+      <span class="status-tag-label">TAG</span>
+      <span class="status-tag" id="status-tag">1</span>
+      <span class="status-time" id="status-time">ABEND</span>
+    </div>
+    <div class="status-center">
+      <span class="status-loc" id="status-loc"></span>
+    </div>
+    <div class="status-right" title="Spannungslevel der aktuellen Szene (1=ruhig, 5=Lebensgefahr)">
+      <div class="status-bars" id="status-bars"></div>
+      <span class="status-level" id="status-level"></span>
+    </div>
+  </div>
 
   <!-- Start Screen -->
   <div id="start" class="start-screen hidden">
@@ -611,7 +719,7 @@
       Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
     </p>
     <button class="btn-primary" onclick="startGame()">Ermittlung beginnen</button>
-    <div class="start-version">Schatten v4.2 · Gemini Token-Fix</div>
+    <div class="start-version">Schatten v4.5 · Bessere Intros & Tageswechsel</div>
   </div>
 
   <!-- Game Log -->
@@ -672,7 +780,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v4.2 · Gemini Token-Fix</span>
+    <span>Schatten v4.5 · Bessere Intros & Tageswechsel</span>
   </div>
 
 </div>
@@ -703,6 +811,19 @@ DEINE AUFGABEN:
 - Bei Gesprächen: Optionen variieren in Tonfall (hart, freundlich, beiläufig, lügen).
 - Führe Konsequenzen der Spielerwahl logisch und manchmal überraschend aus.
 - Charaktere erinnern sich an frühere Entscheidungen.
+
+ERÖFFNUNGSSZENE - KONTEXT EINFLECHTEN (sehr wichtig):
+- Wenn der Eröffnungs-Prompt eine konkrete Vorgeschichte mitliefert (Klient, Auftrag, Personen-Namen, Hintergrund), MUSST du diese Informationen in der Szene erzählerisch verankern, NICHT weglassen.
+- Beispiel: Wenn im Prompt steht "Du verfolgst Robert Kessler, Buchhalter, Auftrag von seiner Frau Edith", dann darf die Szene NICHT nur "Du verfolgst einen Mann" sagen. Sondern z.B.: "Du verfolgst Robert Kessler nun in die dritte Stunde, der Auftrag seiner Frau Edith brennt dir noch im Ohr."
+- Namen, Auftraggeber, bisherige Hinweise einbauen damit der Spieler weiß, wer er warum ist und wofür er entscheidet.
+- Bei späteren Szenen (nicht der Eröffnung): Halte etablierte Fakten konsistent. Wenn der Klient "Edith Kessler" heißt, bleibt sie Edith Kessler, nicht plötzlich "die Frau" oder "Anna".
+
+TAGESZEIT-/TAGESWECHSEL (folgt im Spielverlauf):
+- Du bekommst pro Anfrage mitgeteilt: aktueller Tag (z.B. "TAG 2") und Tageszeit (MORGEN/VORMITTAG/MITTAG/NACHMITTAG/ABEND/NACHT).
+- Lass diese Information in den Erzähltext einfließen, ohne sie bürokratisch zu nennen: "Die Morgensonne kriecht über die Dächer", "Es wird langsam dunkel", "Mittagshitze drückt auf den Asphalt".
+- Wenn ein Tageswechsel stattgefunden hat (du erkennst es daran, dass der mitgeteilte Tag höher ist als zuvor), beginne die Szene mit einem klaren narrativen Übergang: "Am nächsten Morgen wachst du auf...", "Du hast die Nacht im Büro verbracht, am Schreibtisch eingeschlafen...", "Nach ein paar Stunden Schlaf im Hotelzimmer..."
+- Tageswechsel können automatisch passieren (du erzählst die Nacht zusammengefasst), oder als Spieler-Wahl wenn du in der vorherigen Szene Optionen wie "Wo verbringst du die Nacht?" angeboten hast.
+- An späten Abenden/Nachten darfst du auch romantische Möglichkeiten andeuten (eine Zeugin/Klientin/Tänzerin bietet an, dich zu sich zu nehmen), oder kollegiale (Kommissar Lindner lässt dich im Revier auf der Pritsche pennen, weil du zu spät bist), oder einsame (du schläfst zwischen Akten im Büro ein). Das gehört zum klassischen Detektiv-Alltag.
 
 STIL:
 - Ton: Düster, lakonisch, wie Raymond Chandler auf Deutsch. Keine Klischees, keine Über-Erklärungen.
@@ -762,10 +883,27 @@ SPRACHLICHE ZURÜCKHALTUNG (sehr wichtig, gegen lyrisches Geschwurbel):
 - Wenn du Atmosphäre brauchst, nimm ein konkretes, ungewöhnliches Detail (das Etikett einer Schnapsflasche, der Geruch von Wachs, ein Buchrücken), nicht den x-ten Regen.
 - Vermeide um jeden Preis "lyrische" Zeilen, die nur klingen wollen aber nichts sagen.
 
-VORANSCHREITEN DER HANDLUNG:
+VORANSCHREITEN DER HANDLUNG (SEHR WICHTIG, gegen Trägheit):
 - Jede Szene muss die Geschichte VORWÄRTSBRINGEN. Neue Information, neuer Hinweis, neue Person, neue Entscheidung, Ortswechsel, Eskalation.
-- Wenn drei Szenen in Folge am selben Ort spielen ohne dass die Spannung steigt: ändere das Tempo. Lass etwas passieren. Eine Person tritt ein. Ein Anruf. Ein Schuss in der Ferne. Ein neuer Hinweis im Raum.
-- Halte den Spieler nicht zu lang an einem Ort fest. Adventure-Tempo: alle 2-4 Szenen sollte sich etwas Substantielles ändern.
+- Halte den Spieler nicht zu lang an einem Ort fest. Spätestens nach 3 Szenen am selben Ort MUSS etwas Substantielles passieren: eine Person tritt ein oder geht, ein Anruf, ein Schuss in der Ferne, ein neuer Hinweis wird sichtbar, oder der Ort wechselt.
+- KEINE FRAGE-AUSWEICHEN-FRAGE-AUSWEICHEN-LOOPS. Wenn der Spieler in einer Szene jemanden fragt und die Person ausweicht, MUSS in spätestens der übernächsten Szene etwas Konkretes passieren: entweder die Person liefert echte Information (Name, Ort, Tatsache, Datum), oder etwas Externes unterbricht das Gespräch (Anruf, Schritte vor der Tür, ein zweiter Gast tritt ein, Schuss). Drei Szenen lang nur "ich kann es nicht sagen" oder "du wirst schon sehen" ist VERBOTEN.
+- Wenn eine Figur (z.B. ein Kunde) den Spieler engagieren oder treffen will, lass sie nicht ewig in der Tür stehen. Spätestens nach 2 Szenen tritt sie entweder ein, geht weg, oder es passiert etwas anderes.
+- Hinweise (Akteneintrag, Foto, Name, Adresse) dürfen NICHT zufällig auftauchen ohne kausalen Bezug. Wenn der Spieler eine Akte öffnet, muss er sie aus einem Grund öffnen, der in der Szene davor etabliert wurde (z.B. "Die Frau erwähnte einen Namen, du erinnerst dich an deine Akten zu diesem Namen"). Sonst wirkt es wie ein Deus-Ex-Machina.
+- Adventure-Tempo: alle 2-4 Szenen sollte sich etwas Substantielles ändern (Ortswechsel, neue Figur, neue Tatsache, Eskalation).
+
+KLISCHEE-VERBOTSLISTE (häufige KI-Floskeln, die du vermeiden musst):
+- "Mundwinkel zucken" / "ein Zucken um die Mundwinkel" - alternativ: zeig die Reaktion anders oder lass weg
+- "Augen bohren sich in" - alternativ: "blickt dich an", "fixiert dich"
+- "Stimme trägt die Kälte eines Messers" / "kalt wie..." - alternativ: konkretes Detail (sie zischt, ihre Stimme wird flach)
+- "Augen verlieren jeden Rest von Wärme"
+- "Loyalität und Verrat sind dieselbe Münze" - keine sentenzhaften Klischees
+- "wie eine Schraubzwinge"
+- "fauliges Metall" als Geruchsvergleich für Emotionen
+- "Worte liegen bleiern auf der Zunge"
+- "Schatten von Amüsement"
+- "rauchige Stimme"
+- "kaum hörbar", "fast unmerklich" wenn überhaupt etwas zu hören/sehen ist, ist es entweder hörbar/sichtbar oder nicht
+- Generell: Wenn du dich für ein "literarisches" Bild entscheidest, prüfe ob es nicht eine abgenutzte Floskel ist. Im Zweifel: konkretes physisches Detail beschreiben.
 
 OPTIONEN: IMMER GENAU 4
 - Liefere IMMER GENAU 4 Optionen. Nie 1, nie 2, nie 3, nie 5.
@@ -857,21 +995,29 @@ JSON FORMAT:
 spannung: 1 (ruhig) bis 5 (Lebensgefahr).`;
 
 const INTRO_VARIANTS = [
-  `Starte das Spiel. Eröffnungsszene: Du sitzt in deinem schäbigen Büro am Hackeschen Markt. Verregneter Dienstagabend, November 1953. Jemand wartet vor der Tür, du weißt noch nicht, wer oder was es will. Liefere die Eröffnungsszene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
+  // 1. Klient kommt ins Büro
+  `Starte das Spiel. Eröffnungsszene: Verregneter Dienstagabend, November 1953. Du sitzt in deinem schäbigen Büro am Hackeschen Markt, sortierst alte Rechnungen, der Aschenbecher ist voll. Seit Wochen kein nennenswerter Fall, die Miete ist überfällig. Jetzt klopft jemand an deine Tür, du weißt noch nicht wer es ist. Der Klient wird sich gleich vorstellen und einen konkreten Auftrag bringen. Liefere die Eröffnungsszene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
 
-  `Starte das Spiel. Eröffnungsszene: Du sitzt in einer Eckkneipe am Alexanderplatz, das Bier ist schal, der Aschenbecher voll. Spät an einem Donnerstagabend, Februar 1953. Ein Mann am Tresen wirft dir wiederholt Blicke zu. Liefere die Eröffnungsszene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
+  // 2. Eckkneipe - Informant
+  `Starte das Spiel. Eröffnungsszene: Donnerstagabend, Februar 1953, du sitzt in der Eckkneipe "Zum Goldenen Anker" am Alexanderplatz. Du hast dich hier mit einem Informanten verabredet, der dir Hinweise zum Fall Wegener verkaufen will, einem vermissten Werftarbeiter aus Köpenick. Du hast Wegeners Frau Helga vor zwei Tagen zugesagt, ihren Mann zu finden. Der Informant ist noch nicht da, aber ein anderer Mann am Tresen wirft dir wiederholt Blicke zu. Liefere die Eröffnungsszene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
 
-  `Starte das Spiel. Eröffnungsszene: Du wachst auf in deinem Auto, einem alten Opel, irgendwo in der Nähe vom Tempelhofer Feld. Morgendämmerung. Dein Kopf brummt, deine Krawatte hängt schief, du erinnerst dich nicht, wie du hierher gekommen bist. Etwas im Handschuhfach klemmt nicht richtig. Liefere die Eröffnungsszene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
+  // 3. Aufgewacht im Auto - Blackout
+  `Starte das Spiel. Eröffnungsszene: Morgendämmerung, Mai 1953. Du wachst auf in deinem alten Opel, der irgendwo am Rand des Tempelhofer Felds parkt. Dein Kopf brummt, deine Krawatte hängt schief, deine Hose ist mit Schlamm besudelt. Die letzte klare Erinnerung: du saßt gestern Abend in der "Roten Laterne" und befragtest die Tänzerin Lola Brandt über den Tod ihres Verlobten. Etwas im Handschuhfach klemmt nicht richtig, du siehst, dass dort eine Pistole liegt, die nicht deine ist. Liefere die Eröffnungsszene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
 
-  `Starte das Spiel. Eröffnungsszene: Das Telefon in deinem Büro klingelt mitten in der Nacht. Sonntag, 03:14 Uhr, März 1953. Du hebst ab, am anderen Ende nur Atmen, dann eine Stimme die deinen Namen flüstert und auflegt. Im Hintergrund hast du eine Strassenbahn gehört. Liefere die Eröffnungsszene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
+  // 4. Nachtanruf
+  `Starte das Spiel. Eröffnungsszene: Sonntag, 03:14 Uhr, März 1953. Das Telefon in deinem Büro klingelt. Du hebst ab, am anderen Ende nur Atmen, dann eine Frauenstimme: "Mauer, sie wissen, dass ich Ihnen die Akten gegeben habe. Sie kommen jetzt." Klick. Du erkennst die Stimme: Margarete Stein, eine Sekretärin aus der Reichsbahndirektion, die dir letzte Woche Hinweise zu einer Schmuggelroute gesteckt hat. Im Hintergrund hast du eine Straßenbahn gehört. Liefere die Eröffnungsszene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
 
-  `Starte das Spiel. Eröffnungsszene: Du sitzt im Wartesaal des Polizeireviers Hardenbergstrasse. Ein alter Bekannter, Kommissar Lindner, hat dich rufen lassen. Frühlingsmorgen, April 1953. Auf seinem Schreibtisch liegt eine Akte, die er dir noch nicht gezeigt hat. Liefere die Eröffnungsszene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
+  // 5. Polizeirevier - Kommissar mit Angebot
+  `Starte das Spiel. Eröffnungsszene: Frühlingsmorgen, April 1953. Du sitzt im Wartesaal des Polizeireviers Hardenbergstraße. Kommissar Lindner, ein alter Bekannter aus deiner kurzen Zeit bei der Kripo, hat dich rufen lassen. Auf seinem Schreibtisch liegt eine dicke Akte, "FALL HOLLENBECK" steht in roter Schrift drauf. Lindner braucht offenbar einen externen Ermittler, denn intern darf er sich nicht mehr darum kümmern. Liefere die Eröffnungsszene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
 
-  `Starte das Spiel. Eröffnungsszene: Du verfolgst seit drei Stunden einen Mann durch Charlottenburg, hältst Abstand. Es ist Oktober 1953, später Nachmittag, die Blätter rascheln auf den nassen Bürgersteigen. Plötzlich biegt er in einen Hinterhof, du musst entscheiden ob du folgst. Liefere die Eröffnungsszene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
+  // 6. Verfolgung Charlottenburg
+  `Starte das Spiel. Eröffnungsszene: Später Nachmittag, Oktober 1953. Du verfolgst seit drei Stunden einen Mann durch Charlottenburg. Er heißt Robert Kessler, ist Buchhalter bei einer Spedition in Moabit und du hast den Auftrag von seiner Ehefrau Edith, herauszufinden warum er jeden Mittwoch verschwindet. Die Blätter rascheln auf den nassen Bürgersteigen, du hältst Abstand. Plötzlich biegt Kessler in einen dunklen Hinterhof, eine schwere Holztür schlägt hinter ihm ins Schloss. Liefere die Eröffnungsszene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
 
-  `Starte das Spiel. Eröffnungsszene: Du stehst auf einer Beerdigung am Friedhof Plötzensee. Der Tote ist ein alter Klient, dessen Fall du nie abgeschlossen hast. Sommer 1953, schwüle Luft. Eine Frau in schwarzem Kostüm, die du noch nie gesehen hast, fixiert dich vom anderen Ende des offenen Grabs. Liefere die Eröffnungsszene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
+  // 7. Beerdigung - Vergangenheit holt dich ein
+  `Starte das Spiel. Eröffnungsszene: Sommer 1953, schwüle Luft auf dem Friedhof Plötzensee. Du stehst an einem offenen Grab. Beerdigt wird Erwin Strauss, ein alter Klient von dir, dessen Fall du vor zwei Jahren nie abschließen konntest. Er hat sich angeblich erhängt, du glaubst das nicht. Eine Frau in schwarzem Kostüm und Schleier, die du noch nie gesehen hast, fixiert dich vom anderen Ende des Grabs. Pastor Reinhardt spricht, aber niemand hört ihm zu. Liefere die Eröffnungsszene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
 
-  `Starte das Spiel. Eröffnungsszene: Du kommst in dein Büro zurück und findest die Tür einen Spalt offen, das Schloss aufgebrochen. Drinnen brennt kein Licht. Spätsommer 1953, dämmriger Abend. Es riecht nach kaltem Schweiss, jemand war hier oder ist noch hier. Liefere die Eröffnungsszene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
+  // 8. Einbruch ins Büro
+  `Starte das Spiel. Eröffnungsszene: Dämmriger Abend, Spätsommer 1953. Du kommst von einem Termin mit deiner Klientin Sigrid Vogt zurück und findest die Tür deines Büros einen Spalt offen, das Schloss aufgebrochen. Drinnen brennt kein Licht. Du arbeitest gerade am Fall ihres Bruders, der seit drei Wochen verschwunden ist, und hattest auf dem Schreibtisch alle Notizen liegen lassen. Es riecht nach kaltem Schweiß, jemand war hier oder ist noch hier. Liefere die Eröffnungsszene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
 ];
 
 function pickIntro() {
@@ -879,6 +1025,9 @@ function pickIntro() {
 }
 
 const TENSION_COLORS = ['#4a9eff','#4a9eff','#f0c040','#f07040','#ff3030','#ff0000'];
+
+// Time-of-day progression (each new scene advances time by 1, day advances every ~5-7 scenes)
+const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'NACHT'];
 
 let history = [];
 let currentScene = null;
@@ -888,6 +1037,10 @@ let lastFullScene = null;  // last raw scene JSON for style continuity
 let pendingRetry = null;   // function to retry on rate limit
 let recentTexts = [];      // last few scene texts for vocabulary tracking
 let lastErrorDebug = null; // last error debug dump (for copy button)
+let gameDay = 1;           // current day (1-based)
+let gameTimeIdx = 4;       // index into TIMES_OF_DAY (starts at "ABEND" since intro is evening)
+let scenesAtSameLocation = 0; // counter for location stagnation
+let lastLocation = '';     // for stagnation check
 
 // Story-appropriate wait texts, chosen by current tension level.
 // Each pool has 6+ entries to avoid repetition.
@@ -953,6 +1106,15 @@ const ATMOSPHERE_WATCHLIST = [
   'nebel', 'dunst',
   'diesel',
   'huscht',
+  // Gemini-specific cliché phrases observed in playthrough:
+  'mundwinkel', 'zucken', 'bohrt sich', 'bohren sich',
+  'kälte eines messers', 'kalt wie',
+  'parfüm', 'parfümduft',
+  'rauchige stimme', 'eisig', 'eisiger',
+  'kaum hörbar', 'fast unmerklich',
+  'amüsement', 'huscht', 'schraubzwinge',
+  'münze', 'loyalität',
+  'fauliges metall',
 ];
 
 // Generic content words that, if repeated across recent scenes, signal overuse.
@@ -1161,30 +1323,72 @@ function copyDebug(event) {
   }
 }
 function showHeader(scene) {
+  // Show the big title block (only at top of page) and the sticky status bar
   document.getElementById('header').classList.remove('hidden');
+  document.getElementById('status-bar').classList.remove('hidden');
   document.getElementById('footer').classList.remove('hidden');
-  const bars = document.getElementById('tension-bars');
+
+  // Update tension bars in the sticky status bar
+  const bars = document.getElementById('status-bars');
   bars.innerHTML = '';
   const color = TENSION_COLORS[scene.spannung] || TENSION_COLORS[1];
   for (let i = 1; i <= 5; i++) {
     const b = document.createElement('div');
-    b.className = 'tension-bar';
+    b.className = 'status-bar-segment';
     if (i <= scene.spannung) b.style.background = color;
     bars.appendChild(b);
   }
   const TENSION_LABELS = ['', 'Ruhig', 'Wachsam', 'Angespannt', 'Brenzlig', 'Lebensgefahr'];
-  const levelEl = document.getElementById('tension-level');
+  const levelEl = document.getElementById('status-level');
   levelEl.textContent = TENSION_LABELS[scene.spannung] || '';
   levelEl.style.color = color;
-  document.getElementById('tension-loc').textContent = (scene.ort || '').toUpperCase();
+
+  // Location
+  document.getElementById('status-loc').textContent = (scene.ort || '').toUpperCase();
+
+  // Day & time of day
+  document.getElementById('status-tag').textContent = gameDay;
+  document.getElementById('status-time').textContent = TIMES_OF_DAY[gameTimeIdx] || '';
+}
+
+// Advance in-game time. Called once per new scene (not on retries).
+// Time-of-day advances roughly every 1-2 scenes (slight randomness).
+// A full day (Morgen -> Nacht) is roughly 9-12 scenes long.
+let sceneCounter = 0;
+  timeAdvanceTokens = 0;
+let timeAdvanceTokens = 0; // accumulator for fractional time progression
+function advanceGameTime() {
+  sceneCounter++;
+  // Each scene contributes 0.5-0.7 to the time-of-day counter.
+  // When token >= 1, advance time-of-day by 1 step.
+  timeAdvanceTokens += 0.5 + Math.random() * 0.2;
+  if (timeAdvanceTokens >= 1) {
+    timeAdvanceTokens -= 1;
+    gameTimeIdx++;
+    if (gameTimeIdx >= TIMES_OF_DAY.length) {
+      gameTimeIdx = 0; // back to MORGEN
+      gameDay++;       // new day
+    }
+  }
 }
 function renderLog() {
   const logEl = document.getElementById('log');
   logEl.classList.remove('hidden');
   logEl.innerHTML = '';
+  let lastRenderedDay = null;
   logEntries.forEach((entry, i) => {
     if (entry.type === 'scene') {
       const isLast = i === logEntries.length - 1;
+
+      // Day separator: if this scene's day differs from previous scene's day
+      if (entry.day && lastRenderedDay !== null && entry.day !== lastRenderedDay) {
+        const sep = document.createElement('div');
+        sep.className = 'day-separator';
+        sep.innerHTML = '<span>— TAG ' + entry.day + ' —</span>';
+        logEl.appendChild(sep);
+      }
+      if (entry.day) lastRenderedDay = entry.day;
+
       const div = document.createElement('div');
       div.className = 'scene-entry' + (isLast ? ' current' : '');
       if (entry.ort && i > 0) {
@@ -1266,6 +1470,24 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
     }
   }
 
+  // Inject in-game time/day context and stagnation warnings
+  if (compactMode === 0 && sceneCounter > 0) {
+    const currentTime = TIMES_OF_DAY[gameTimeIdx] || 'ABEND';
+    // Detect if a day-change is happening (we just rolled over to a new day; the *next* scene
+    // should be the first of a new day, so we need a transition narrative)
+    const dayJustChanged = (sceneCounter % 12 === 0 && sceneCounter > 0) ||
+                           (gameTimeIdx === 0 && (sceneCounter - 1) > 0 && (sceneCounter % 2 === 1));
+    let timeContext = `KONTEXT: Aktueller Spieltag ist TAG ${gameDay}, Tageszeit: ${currentTime}.`;
+    if (dayJustChanged) {
+      timeContext += ` Ein neuer Tag hat begonnen, der Spieler braucht einen narrativen Übergang ("Am nächsten Morgen...", "Du hast die Nacht im Büro verbracht..." o.ä.).`;
+    }
+    if (scenesAtSameLocation >= 3) {
+      timeContext += ` ACHTUNG: Der Spieler ist seit ${scenesAtSameLocation} Szenen am selben Ort. Diese Szene MUSS einen Wechsel oder eine Unterbrechung bringen (Person tritt ein, Person geht, Anruf, Ortswechsel, neuer konkreter Hinweis).`;
+    }
+    messages.push({ role: 'user', content: timeContext });
+    messages.push({ role: 'assistant', content: 'Verstanden. Ich integriere Tageszeit und Tag in die Atmosphäre und sorge für Bewegung in der Story.' });
+  }
+
   // New user message
   messages.push({ role: 'user', content: userMessage });
 
@@ -1313,11 +1535,18 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
       }
       err.retryAfter = totalSeconds;
 
-      // Detect daily token limit: any wait > 5 minutes is effectively a daily limit
-      // Also: explicit "tokens per day" or "TPD" in the message
-      err.isDailyLimit = totalSeconds > 300 || /tokens per day|TPD/i.test(errMsg);
+      // Detect daily token limit STRICTLY: only when message explicitly says so.
+      // Gemini's per-minute limits often return long retryDelay values (45-60s)
+      // but a manual retry after 1-2s usually works. Don't treat those as "daily".
+      err.isDailyLimit = /tokens per day|per day|TPD|daily quota|daily limit/i.test(errMsg);
 
-      err.debugInfo = { stage: 'rate_limit', retryAfter: totalSeconds, isDailyLimit: err.isDailyLimit, rawMessage: errMsg.slice(0, 500) };
+      // For non-daily rate limits: cap the displayed wait at 10 seconds.
+      // Real recovery is usually much faster than the API's conservative estimate.
+      if (!err.isDailyLimit && totalSeconds > 10) {
+        err.retryAfter = 10;
+      }
+
+      err.debugInfo = { stage: 'rate_limit', retryAfter: err.retryAfter, originalRetryAfter: totalSeconds, isDailyLimit: err.isDailyLimit, rawMessage: errMsg.slice(0, 500) };
       throw err;
     }
     // 400 = often JSON validation from Groq's structured output → retryable
@@ -1528,6 +1757,26 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
     out = out.replace(/\bdie\s+fallende\s+(Pistole|Waffe)\b/g, 'die $1');
     out = out.replace(/\bdie\s+fallenden\s+(Pistolen|Waffen)\b/g, 'die $1');
 
+    // "Türschweller" -> "Türschwelle" (Schwelle is feminine; Schweller is not the word)
+    out = out.replace(/\b(den|dem|der|das|am|im|auf den|auf dem)\s+Türschweller\b/g, (m, art) => {
+      const map = {'den':'die','dem':'der','der':'die','das':'die','am':'auf der','im':'auf der','auf den':'auf die','auf dem':'auf der'};
+      return (map[art] || 'die') + ' Türschwelle';
+    });
+    out = out.replace(/Türschweller/g, 'Türschwelle');
+
+    // "stürmst/läufst/rennst AUS der Tür" -> "DURCH die Tür" (you don't storm out of a door, you go through it)
+    // Also adjusts adjective ending: 'der schweren Bürotür' (Dativ) -> 'die schwere Bürotür' (Akk.)
+    out = out.replace(/\b(stürmst|stürmt|läufst|läuft|rennst|rennt|gehst|geht|trittst|tritt|springst|springt|kletterst|klettert)\s+aus\s+der(\s+[\wäöüß]+en)?\s+([\wäöüß]*[Tt]ür)\b/g, (m, verb, adj, noun) => {
+      let result = verb + ' durch die';
+      if (adj) {
+        // 'schweren' -> 'schwere' (Akkusativ Singular nach 'die')
+        const fixedAdj = adj.replace(/en(\s*)$/, 'e$1');
+        result += fixedAdj;
+      }
+      result += ' ' + noun;
+      return result;
+    });
+
     out = fixConjugation(out);
     return out;
   }
@@ -1553,6 +1802,13 @@ async function startGame() {
   storySummaries = [];
   recentTexts = [];
   lastFullScene = null;
+  // Reset day/time/location tracking
+  gameDay = 1;
+  gameTimeIdx = 4; // ABEND (intros are mostly evening/night)
+  sceneCounter = 0;
+  timeAdvanceTokens = 0;
+  scenesAtSameLocation = 0;
+  lastLocation = '';
   const intro = pickIntro();
   lastUserMessage = intro;
 
@@ -1598,7 +1854,19 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     recentTexts.push(scene.szene);
     if (recentTexts.length > 5) recentTexts = recentTexts.slice(-5);
 
-    logEntries.push({ type: 'scene', text: scene.szene, ort: scene.ort });
+    // Track location stagnation
+    const curOrt = (scene.ort || '').toLowerCase().trim();
+    if (curOrt && curOrt === lastLocation) {
+      scenesAtSameLocation++;
+    } else {
+      scenesAtSameLocation = 1;
+      lastLocation = curOrt;
+    }
+
+    // Advance in-game day/time (only on successful new scene, not retries)
+    advanceGameTime();
+
+    logEntries.push({ type: 'scene', text: scene.szene, ort: scene.ort, day: gameDay, time: TIMES_OF_DAY[gameTimeIdx] });
     hideLoading();
     hideWait();
     document.getElementById('error').classList.add('hidden');
@@ -1647,7 +1915,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         }
         lastErrorDebug = buildDebugDump(e, userMsg, retryCount);
         showError(
-          `Karl muss kurz verschnaufen. Versuch es in ungefähr ${requestedWait} Sekunden noch einmal und tippe auf "Erneut versuchen".`,
+          'Karl muss kurz verschnaufen. Tipp gleich auf "Erneut versuchen", meist geht es direkt weiter.',
           lastErrorDebug
         );
         return;
@@ -1718,7 +1986,7 @@ function buildDebugDump(err, userMsg, retryCount) {
   return [
     '=== SCHATTEN DEBUG DUMP ===',
     'Zeitpunkt: ' + new Date().toISOString(),
-    'Version: v4.2',
+    'Version: v4.5',
     'Retries: ' + (retryCount || 0),
     '',
     'FEHLER:',
@@ -1832,9 +2100,16 @@ function resetGame() {
   lastFullScene = null;
   currentScene = null;
   pendingRetry = null;
+  gameDay = 1;
+  gameTimeIdx = 4;
+  sceneCounter = 0;
+  timeAdvanceTokens = 0;
+  scenesAtSameLocation = 0;
+  lastLocation = '';
   hideWait();
   document.getElementById('log').innerHTML = '';
   document.getElementById('header').classList.add('hidden');
+  document.getElementById('status-bar').classList.add('hidden');
   document.getElementById('footer').classList.add('hidden');
   hideAll();
   showStart();
