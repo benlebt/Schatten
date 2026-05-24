@@ -26,6 +26,8 @@ ROMANTIK (stilvoll, Marlowe): Bei Romantik-Tension 3+ UND Frau im Cast UND Abend
 
 STASI-VERHOER: Wenn Karl in Stasi-Gewahrsam ist (vorige Szene erwaehnte Zelle/Verhoer/Sokolow/Krylow): Optionen muessen Verhoer-typisch sein - schweigen, kooperieren, bestechen, Roth-Kontakt. Bei langem Verhoer und Abend/Nacht: Option "Vor Erschoepfung einnicken" (Tageswechsel im Gewahrsam, Karl ueberlebt).
 
+SPRACHQUALITAET: Natuerliches idiomatisches Deutsch. Trennbare Verben nicht kuenstlich aufbrechen ("fordere sie auf laut zum Stehenbleiben auf" ist FALSCH, richtig: "fordere sie lautstark zum Stehenbleiben auf"). Keine Anglizismen (kein "checken", "fixen", "Drinks" - stattdessen "pruefen", "loesen", "einen Whisky"). Kurze, praezise Hauptsaetze wie Hammett. Keine Adjektiv-Haeufung.
+
 BERLIN 1953 - SEKTOREN: Berlin ist 4-geteilt, noch keine Mauer (kommt 1961), aber harte Grenzen.
 - SOWJETISCHER SEKTOR (Ost, DDR): Mitte, Friedrichshain, Prenzlauer Berg, Lichtenberg, Koepenick, Pankow, Weissensee. Polizei = Volkspolizei (VP). Karls Buero am Hackeschen Markt ist hier (Mitte).
 - AMERIKANISCH (West): Tempelhof, Schoeneberg, Neukoelln, Zehlendorf, Kreuzberg.
