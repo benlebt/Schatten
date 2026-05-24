@@ -580,7 +580,7 @@
       Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
     </p>
     <button class="btn-primary" onclick="startGame()">Ermittlung beginnen</button>
-    <div class="start-version">Schatten v2.9 · Retry-Strategie</div>
+    <div class="start-version">Schatten v3.0 · Story-Pausen</div>
   </div>
 
   <!-- Game Log -->
@@ -627,7 +627,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v2.9 · Retry-Strategie</span>
+    <span>Schatten v3.0 · Story-Pausen</span>
   </div>
 
 </div>
@@ -843,6 +843,57 @@ let lastFullScene = null;  // last raw scene JSON for style continuity
 let pendingRetry = null;   // function to retry on rate limit
 let recentTexts = [];      // last few scene texts for vocabulary tracking
 let lastErrorDebug = null; // last error debug dump (for copy button)
+
+// Story-appropriate wait texts, chosen by current tension level.
+// Each pool has 6+ entries to avoid repetition.
+const WAIT_TEXTS = {
+  // Spannung 1-2: Ruhig, alltäglich
+  calm: [
+    { label: 'Ein Moment der Ruhe', text: 'Du nimmst einen Schluck kalten Kaffee, lässt deinen Blick durch den Raum schweifen.' },
+    { label: 'Du sammelst dich', text: 'Du lehnst dich zurück, sortierst kurz deine Gedanken.' },
+    { label: 'Stille', text: 'Du hörst nur das Ticken der alten Wanduhr. Die Welt hält den Atem an.' },
+    { label: 'Du atmest durch', text: 'Du ziehst an deiner Zigarette, lässt den Rauch langsam entweichen.' },
+    { label: 'Kurze Pause', text: 'Du blickst aus dem Fenster. Berlin schläft nicht, auch heute nicht.' },
+    { label: 'Du wartest', text: 'Du tippst mit dem Bleistift auf den Schreibtisch. Manche Dinge brauchen Zeit.' },
+    { label: 'Ein Moment', text: 'Du schließt kurz die Augen, hörst dem Regen auf dem Dach zu.' },
+  ],
+  // Spannung 3: Angespannt, im Gespräch
+  tense: [
+    { label: 'Du überlegst', text: 'Du wägst deine nächsten Worte ab. Ein falscher Satz kann viel zerstören.' },
+    { label: 'Eine Sekunde Pause', text: 'Du beobachtest dein Gegenüber genau, suchst nach einem Hinweis im Gesicht.' },
+    { label: 'Anspannung', text: 'Das Schweigen wird schwer. Niemand will als Erster sprechen.' },
+    { label: 'Du wartest auf Reaktion', text: 'Du fixierst dein Gegenüber. Der nächste Moment entscheidet vieles.' },
+    { label: 'Du denkst nach', text: 'Du rollst die Information im Kopf hin und her, suchst den Haken.' },
+    { label: 'Kurzer Augenblick', text: 'Ein Wimpernschlag kann hier viel bedeuten. Du bleibst aufmerksam.' },
+  ],
+  // Spannung 4: Brenzlig
+  edgy: [
+    { label: 'Dein Puls steigt', text: 'Du spürst dein Herz schneller schlagen, der Schweiß steht dir auf der Stirn.' },
+    { label: 'Die Sekunden ziehen sich', text: 'Du wagst kaum zu atmen, wartest auf das nächste Geräusch.' },
+    { label: 'Du bist angespannt', text: 'Jeder Muskel in dir ist bereit, jede Bewegung könnte die letzte sein.' },
+    { label: 'Brenzlig', text: 'Du lauschst angestrengt, versuchst jedes Geräusch einzuordnen.' },
+    { label: 'Du wartest ab', text: 'Du presst dich an die Wand, hörst dein eigenes Blut in den Ohren.' },
+    { label: 'Der Moment dehnt sich', text: 'Du zählst die Sekunden, hältst deine Hand fest am Griff der Waffe.' },
+  ],
+  // Spannung 5: Lebensgefahr, Action
+  danger: [
+    { label: 'Alles in Zeitlupe', text: 'Die Welt scheint einen Schlag langsamer zu laufen, Adrenalin pumpt durch deine Adern.' },
+    { label: 'Du reagierst', text: 'Dein Körper weiß, was zu tun ist, bevor dein Kopf es begreift.' },
+    { label: 'Höchste Anspannung', text: 'Du blendest alles aus, was nicht überlebenswichtig ist.' },
+    { label: 'Zeitlupe', text: 'Sekunden werden zu Ewigkeiten, jede Bewegung zählt.' },
+    { label: 'Adrenalin', text: 'Dein Herz hämmert in den Ohren, die Welt schrumpft auf das Wesentliche.' },
+    { label: 'Du atmest schnell', text: 'Der Schmerz wartet, jetzt zählt nur die nächste Bewegung.' },
+  ],
+};
+
+function pickWaitText(spannung) {
+  let pool;
+  if (spannung >= 5) pool = WAIT_TEXTS.danger;
+  else if (spannung === 4) pool = WAIT_TEXTS.edgy;
+  else if (spannung === 3) pool = WAIT_TEXTS.tense;
+  else pool = WAIT_TEXTS.calm;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
 
 // Words/phrases that get tiresome if repeated. We track usage and tell the model what to avoid.
 // Single words match anywhere; multi-word phrases match as-is.
@@ -1490,11 +1541,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount) {
           performApiCall(userMsg, isStart, undefined, retryCount);
         }
       };
-      showNarrativeWait(
-        seconds,
-        'Token-Limit erreicht',
-        `Groq hat ein Anfragelimit für die nächste Minute. Wir warten genau ${seconds} Sekunden, dann geht es automatisch weiter.`
-      );
+      showNarrativeWait(seconds);
       lastErrorDebug = buildDebugDump(e, userMsg, retryCount);
     } else if (e.isRetryable && retryCount < MAX_AUTO_RETRIES) {
       // JSON / format error: immediate retry on first try, brief pause on later tries.
@@ -1511,18 +1558,14 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount) {
 
       if (retryCount === 0) {
         // First failure: retry immediately, just show a quick "Neuversuch" hint
-        showLoading('Antwort fehlerhaft, Neuversuch ...');
+        showLoading('Du sammelst dich kurz neu...');
         // Fire immediately, no wait
         doRetry();
       } else {
-        // Second/third failure: short pause, with explanation
+        // Second/third failure: short pause with story-appropriate text
         const waitSec = retryCount === 1 ? 2 : 4;
         pendingRetry = doRetry;
-        showNarrativeWait(
-          waitSec,
-          `Neuversuch ${retryCount + 1}/${MAX_AUTO_RETRIES}`,
-          `Die KI lieferte erneut eine fehlerhafte Antwort. Mit weniger Kontext nochmal versuchen.`
-        );
+        showNarrativeWait(waitSec);
       }
     } else {
       // Final failure after retries (or non-retryable)
@@ -1589,11 +1632,19 @@ let waitInterval = null;
 function showNarrativeWait(seconds, label, message) {
   const box = document.getElementById('wait-box');
   document.getElementById('options').classList.add('hidden');
-  // Update label and message if provided
+
+  // If no explicit label/message, pick a story-appropriate one based on current tension
+  if (!label || !message) {
+    const spannung = currentScene?.spannung || 2;
+    const picked = pickWaitText(spannung);
+    label = label || picked.label;
+    message = message || picked.text;
+  }
+
   const labelEl = box.querySelector('.wait-label');
   const textEl = box.querySelector('.wait-text');
-  if (labelEl && label) labelEl.textContent = label;
-  if (textEl && message) textEl.textContent = message;
+  if (labelEl) labelEl.textContent = label;
+  if (textEl) textEl.textContent = message;
   box.classList.remove('hidden');
 
   const bar = document.getElementById('wait-progress-bar');
