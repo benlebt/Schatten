@@ -2496,6 +2496,32 @@ function exportTranscript(event) {
   const out = buildTranscriptText();
   // Such den Button der diese Funktion getriggert hat (fuer Feedback-Animation)
   const sourceBtn = (event && event.currentTarget) || null;
+
+  // iOS Safari/Brave hat ein Clipboard-Limit (~64KB) bei dem lange Texte STUMM
+  // abgeschnitten werden. Bei grossen Verlaeufen direkt das Share-Sheet nehmen,
+  // das kein Limit hat. Sonst geht der Verlauf unbemerkt verloren.
+  if (out.length > 50000 && navigator.share) {
+    const dataDate = new Date().toISOString().slice(0, 10);
+    navigator.share({
+      title: 'Schatten - Spielverlauf ' + dataDate,
+      text: out,
+    })
+    .then(() => flashButtonSuccess(sourceBtn, '✓ Geteilt!'))
+    .catch((err) => {
+      if (err && err.name !== 'AbortError') {
+        // Fallback: trotz Risiko clipboard versuchen
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(out)
+            .then(() => flashButtonSuccess(sourceBtn, '✓ Kopiert (eventuell gekuerzt)'))
+            .catch(() => showManualCopyOverlay(out, 'Verlauf manuell kopieren'));
+        } else {
+          showManualCopyOverlay(out, 'Verlauf manuell kopieren');
+        }
+      }
+    });
+    return;
+  }
+
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(out)
       .then(() => flashButtonSuccess(sourceBtn, '✓ Kopiert!'))
@@ -3631,7 +3657,15 @@ VERBOTEN: einfach mit "schraegem Morgenlicht" anfangen ohne zu erklaeren wo Karl
   try { data = JSON.parse(rawText); } catch {
     const err = new Error('Antwort nicht lesbar: ' + rawText.slice(0, 200));
     err.isRetryable = true;
-    err.debugInfo = { stage: 'response_parse', rawText: rawText.slice(0, 1000) };
+    err.debugInfo = {
+      stage: 'response_parse',
+      provider: activeModel.provider,
+      model: activeModel.model,
+      label: activeModel.label,
+      endpoint: endpoint,
+      httpStatus: response.status,
+      rawText: rawText.slice(0, 1000)
+    };
     throw err;
   }
 
