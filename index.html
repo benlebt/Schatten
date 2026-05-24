@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Schatten — Ein Krimi-Adventure</title>
+<title>Schatten · Ein Krimi-Adventure</title>
 <style>
   :root {
     --bg: #0a0a0f;
@@ -293,6 +293,62 @@
     font-size: 11px;
     font-style: italic;
   }
+  /* Narrative wait box (rate-limit pause, story-themed) */
+  .wait-box {
+    border-left: 3px solid var(--accent);
+    background: rgba(200,160,96,0.05);
+    padding: 16px 18px;
+    margin: 12px 0;
+    animation: fadeIn 0.4s ease;
+  }
+  .wait-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .wait-hourglass {
+    font-size: 18px;
+    animation: hourglass-spin 2s ease-in-out infinite;
+    display: inline-block;
+  }
+  .wait-label {
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--accent);
+    text-transform: uppercase;
+  }
+  .wait-text {
+    color: #b8a888;
+    font-size: 14px;
+    line-height: 1.7;
+    margin: 0 0 12px;
+    font-style: italic;
+  }
+  .wait-progress {
+    height: 2px;
+    background: rgba(200,191,168,0.1);
+    overflow: hidden;
+    position: relative;
+  }
+  .wait-progress-bar {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+    transition: width 0.5s linear;
+  }
+  .wait-countdown {
+    font-size: 10px;
+    color: #777;
+    margin-top: 6px;
+    letter-spacing: 2px;
+    text-align: right;
+  }
+  @keyframes hourglass-spin {
+    0%, 45% { transform: rotate(0deg); }
+    50%, 95% { transform: rotate(180deg); }
+    100% { transform: rotate(360deg); }
+  }
   /* Error */
   .error {
     border: 1px solid rgba(255,80,80,0.3);
@@ -480,7 +536,7 @@
     <div class="start-title">SCHATTEN</div>
     <div class="start-subtitle">Ein dynamisches Krimi-Adventure</div>
     <p class="start-text">
-      Berlin, 1953. Du bist Karl Mauer — Privatdetektiv, geschieden, immer knapp bei Kasse.
+      Berlin, 1953. Du bist Karl Mauer, Privatdetektiv, geschieden, immer knapp bei Kasse.
       Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
     </p>
     <button class="btn-primary" onclick="startGame()">Ermittlung beginnen</button>
@@ -493,6 +549,19 @@
   <div id="loading" class="loading hidden">
     <span class="dots">···</span>
     <span class="loading-text">Karl denkt nach</span>
+  </div>
+
+  <!-- Narrative wait (rate limit, in-story) -->
+  <div id="wait-box" class="wait-box hidden">
+    <div class="wait-header">
+      <span class="wait-hourglass">⏳</span>
+      <span class="wait-label">Einen Moment</span>
+    </div>
+    <p id="wait-text" class="wait-text"></p>
+    <div class="wait-progress">
+      <div id="wait-progress-bar" class="wait-progress-bar"></div>
+    </div>
+    <div id="wait-countdown" class="wait-countdown"></div>
   </div>
 
   <!-- Error -->
@@ -514,7 +583,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v1.2 · Groq</span>
+    <span>Schatten v1.4 · Action &amp; Variation</span>
   </div>
 
 </div>
@@ -523,20 +592,37 @@
 const SYSTEM_PROMPT = `Du bist der Spielleiter eines Noir-Krimi-Text-Adventures im Berlin der 1950er Jahre.
 Der Spieler ist Privatdetektiv Karl Mauer, abgebrüht, zynisch, aber mit Gespür für Gerechtigkeit.
 
+SZENENVIELFALT (sehr wichtig):
+Variiere die Szenentypen stark. Nicht jede Szene ist ein Gespräch. Wechsle bewusst zwischen:
+- Verhöre und Befragungen (Cafe, Hinterhof, Bar, Polizeirevier, Gefängnisbesuch)
+- Beobachtung und Observation (Karl sitzt im Auto, schaut durchs Fenster, folgt jemandem zu Fuß)
+- Action: Verfolgungsjagden (zu Fuß durch Hinterhöfe, mit dem Auto durch die Stadt), Handgemenge, Schiessereien
+- Spontane Ereignisse: Ein unerwarteter Anruf in einer Telefonzelle, ein anonymer Zettel unter der Bürotür, ein verdächtiger Schatten der ihm folgt, eine Explosion drei Strassen weiter, eine zufällige Begegnung mit einem alten Bekannten
+- Durchsuchungen: Wohnungen, Schreibtische, Akten im Archiv, Lagerhallen am Hafen
+- Lagedenken: Karl allein in seinem Büro, raucht, sortiert Notizen, denkt über den Fall nach
+- Beiläufige Krimiszenen die nichts mit dem Hauptfall zu tun haben, in die Karl aber hineingerät (Schlägerei in der Bar, Diebstahl, Streit auf der Strasse) und entscheiden muss ob er eingreift
+
+Lass Karl nicht ständig nur reden. Mische Tempo: ruhige Szene, dann plötzlich Action, dann Recherche, dann wieder Überraschung.
+Folge dem bisherigen Verlauf logisch, aber erlaube auch unerwartete Wendungen und Zufälle.
+
 DEINE AUFGABEN:
-- Beschreibe jede Szene in 3-5 Sätzen, atmosphärisch, noir, mit sensorischen Details.
-- Generiere GENAU 4 Handlungsoptionen, die zur aktuellen Situation passen (nicht generisch).
+- Beschreibe jede Szene in 3-5 Sätzen, atmosphärisch, noir, mit sensorischen Details (Geräusche, Gerüche, Licht).
+- Generiere GENAU 4 Handlungsoptionen, die zur aktuellen Situation passen (nicht generisch, nicht immer "fragen/zuhören/gehen").
+- Bei Action: Optionen sind körperlich und unmittelbar ("Sprung über die Mauer", "Pistole ziehen", "in den Hauseingang ducken").
+- Bei Gesprächen: Optionen variieren in Tonfall (hart, freundlich, beiläufig, lügen).
 - Führe Konsequenzen der Spielerwahl logisch und manchmal überraschend aus.
 - Charaktere erinnern sich an frühere Entscheidungen.
+
+STIL:
 - Ton: Düster, lakonisch, wie Raymond Chandler auf Deutsch. Keine Klischees, keine Über-Erklärungen.
 - Verwende immer korrekte Umlaute (ä, ö, ü, ß), niemals ae/oe/ue/ss-Ersatz.
-- Keine Gedankenstriche (em-dashes), nutze Kommas oder Punkte.
+- ABSOLUT KEINE Gedankenstriche / em-dashes / en-dashes (also kein "—" und kein "–"). Nutze stattdessen Kommas, Punkte oder Doppelpunkte. Auch keine doppelten Bindestriche "--".
 
 KRITISCH: Antworte AUSSCHLIESSLICH mit gültigem JSON. KEIN Markdown, KEIN Code-Block, KEIN Text drumherum. Nur das pure JSON-Objekt.
 
 JSON FORMAT:
 {
-  "szene": "Beschreibungstext...",
+  "szene": "Beschreibungstext der aktuellen Szene (3-5 Sätze)...",
   "ort": "Kurzname des Ortes",
   "optionen": [
     {"id": "A", "text": "..."},
@@ -544,7 +630,9 @@ JSON FORMAT:
     {"id": "C", "text": "..."},
     {"id": "D", "text": "..."}
   ],
-  "spannung": 3
+  "spannung": 3,
+  "zusammenfassung": "Knappe Notiz für dein Spielleiter-Gedächtnis (1 Satz): Wo ist Karl, was hat er gerade getan, wichtige Fakten/Personen/Hinweise.",
+  "wartetext": "Ein zur AKTUELLEN Szene passender narrativer Text (1-2 Sätze), der eine kurze Pause von 15 Sekunden in der Erzählung rechtfertigt. Beispiele: Beim Autofahren: 'Karl konzentriert sich auf den nassen Asphalt vor sich, die Scheibenwischer schlagen im Takt.' Bei einem Gespräch: 'Karl zieht an seiner Zigarette, lässt den Rauch entweichen und überlegt seinen nächsten Satz.' Bei einer Verfolgung: 'Karl presst sich an die Hauswand, hält den Atem an und lauscht auf Schritte.' IMMER zur aktuellen Szene passend, nie generisch."
 }
 
 spannung: 1 (ruhig) bis 5 (Lebensgefahr).`;
@@ -556,6 +644,9 @@ const TENSION_COLORS = ['#4a9eff','#4a9eff','#f0c040','#f07040','#ff3030','#ff00
 let history = [];
 let currentScene = null;
 let apiKey = null;
+let storySummaries = [];   // compressed history
+let lastFullScene = null;  // last raw scene JSON for style continuity
+let pendingRetry = null;   // function to retry on rate limit
 
 // --- Persistence ---
 function loadApiKey() {
@@ -633,7 +724,7 @@ function showSetup() {
   document.getElementById('setup').classList.remove('hidden');
 }
 function hideAll() {
-  ['setup','start','loading','error','options'].forEach(id => {
+  ['setup','start','loading','error','options','wait-box'].forEach(id => {
     document.getElementById(id).classList.add('hidden');
   });
 }
@@ -641,6 +732,7 @@ function showLoading() {
   document.getElementById('loading').classList.remove('hidden');
   document.getElementById('options').classList.add('hidden');
   document.getElementById('error').classList.add('hidden');
+  document.getElementById('wait-box').classList.add('hidden');
 }
 function hideLoading() {
   document.getElementById('loading').classList.add('hidden');
@@ -681,7 +773,7 @@ function renderLog() {
       if (entry.ort && i > 0) {
         const ort = document.createElement('div');
         ort.className = 'ort-divider';
-        ort.textContent = '— ' + entry.ort + ' —';
+        ort.textContent = '· ' + entry.ort + ' ·';
         div.appendChild(ort);
       }
       const p = document.createElement('p');
@@ -721,13 +813,19 @@ async function callGroq(userMessage, conversationHistory) {
     { role: 'system', content: SYSTEM_PROMPT }
   ];
 
-  // Conversation history
-  conversationHistory.forEach(m => {
-    messages.push({
-      role: m.role === 'assistant' ? 'assistant' : 'user',
-      content: m.content
-    });
-  });
+  // Compact history: instead of sending all old scene texts,
+  // send a compressed "story so far" based on past summaries + recent choices.
+  if (storySummaries.length > 0) {
+    const recap = 'BISHERIGE EREIGNISSE (kompakt):\n' +
+      storySummaries.map((s, i) => `${i + 1}. ${s}`).join('\n');
+    messages.push({ role: 'user', content: recap });
+    messages.push({ role: 'assistant', content: 'Verstanden. Ich kenne den bisherigen Verlauf und führe die Geschichte konsistent weiter.' });
+  }
+
+  // Only send the most recent full scene (if any) for stylistic continuity
+  if (lastFullScene) {
+    messages.push({ role: 'assistant', content: lastFullScene });
+  }
 
   // New user message
   messages.push({ role: 'user', content: userMessage });
@@ -739,10 +837,10 @@ async function callGroq(userMessage, conversationHistory) {
       'Authorization': 'Bearer ' + apiKey
     },
     body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
+      model: 'llama-3.1-8b-instant',
       messages: messages,
       temperature: 0.9,
-      max_tokens: 1500,
+      max_tokens: 1200,
       response_format: { type: 'json_object' }
     })
   });
@@ -753,6 +851,15 @@ async function callGroq(userMessage, conversationHistory) {
 
   if (!response.ok) {
     const errMsg = data?.error?.message || rawText;
+    // Detect rate limit errors specifically
+    if (response.status === 429) {
+      const err = new Error(errMsg);
+      err.isRateLimit = true;
+      // Try to extract retry time
+      const match = errMsg.match(/try again in ([\d.]+)s/i);
+      err.retryAfter = match ? Math.ceil(parseFloat(match[1])) : 15;
+      throw err;
+    }
     throw new Error('API-Fehler ' + response.status + ': ' + errMsg);
   }
 
@@ -774,6 +881,23 @@ async function callGroq(userMessage, conversationHistory) {
     throw new Error('JSON unvollständig (szene/optionen fehlen)');
   }
 
+  // Defensive cleanup: strip em/en dashes from all visible text
+  // in case the model ignored the instruction
+  function clean(s) {
+    if (typeof s !== 'string') return s;
+    return s
+      .replace(/\s*—\s*/g, ', ')
+      .replace(/\s*–\s*/g, ', ')
+      .replace(/\s*--\s*/g, ', ');
+  }
+  parsed.szene = clean(parsed.szene);
+  parsed.ort = clean(parsed.ort);
+  parsed.zusammenfassung = clean(parsed.zusammenfassung);
+  parsed.wartetext = clean(parsed.wartetext);
+  if (Array.isArray(parsed.optionen)) {
+    parsed.optionen = parsed.optionen.map(o => ({ ...o, text: clean(o.text) }));
+  }
+
   return { scene: parsed, rawAssistantText: text };
 }
 
@@ -786,24 +910,11 @@ async function startGame() {
   showLoading();
   history = [];
   logEntries = [];
+  storySummaries = [];
+  lastFullScene = null;
   lastUserMessage = INTRO;
 
-  try {
-    const { scene, rawAssistantText } = await callGroq(INTRO, history);
-    currentScene = scene;
-    history = [
-      { role: 'user', content: INTRO },
-      { role: 'assistant', content: rawAssistantText }
-    ];
-    logEntries = [{ type: 'scene', text: scene.szene, ort: scene.ort }];
-    hideLoading();
-    showHeader(scene);
-    renderLog();
-    renderOptions(scene);
-  } catch (e) {
-    hideLoading();
-    showError(e.message);
-  }
+  await performApiCall(INTRO, /*isStart*/true);
 }
 
 async function chooseOption(option) {
@@ -814,50 +925,136 @@ async function chooseOption(option) {
   const userMsg = `Der Spieler wählt Option ${option.id}: "${option.text}". Führe die Konsequenzen aus und liefere die nächste Szene als JSON.`;
   lastUserMessage = userMsg;
 
+  await performApiCall(userMsg, /*isStart*/false, option);
+}
+
+async function performApiCall(userMsg, isStart, optionForRollback) {
   try {
     const { scene, rawAssistantText } = await callGroq(userMsg, history);
     currentScene = scene;
-    history.push({ role: 'user', content: userMsg });
-    history.push({ role: 'assistant', content: rawAssistantText });
+
+    // Compress: store the summary instead of full scene
+    if (scene.zusammenfassung) {
+      storySummaries.push(scene.zusammenfassung);
+    }
+    // Keep only last 8 summaries to bound memory
+    if (storySummaries.length > 8) {
+      storySummaries = storySummaries.slice(-8);
+    }
+    lastFullScene = rawAssistantText;
+
     logEntries.push({ type: 'scene', text: scene.szene, ort: scene.ort });
     hideLoading();
+    hideWait();
+    document.getElementById('error').classList.add('hidden');
     showHeader(scene);
     renderLog();
     renderOptions(scene);
+    pendingRetry = null;
   } catch (e) {
-    // Roll back the choice from log
-    logEntries.pop();
-    renderLog();
-    hideLoading();
-    showError(e.message);
+    if (e.isRateLimit) {
+      // Rollback the choice from log if applicable
+      if (optionForRollback) {
+        logEntries.pop();
+        renderLog();
+      }
+      hideLoading();
+      // Show narrative wait with text from CURRENT scene (the one we're trying to leave)
+      const waitText = currentScene?.wartetext || 'Karl hält kurz inne, lässt den Moment auf sich wirken.';
+      const seconds = Math.max(5, Math.min(e.retryAfter || 15, 30));
+      pendingRetry = () => {
+        if (optionForRollback) {
+          chooseOption(optionForRollback);
+        } else {
+          performApiCall(userMsg, isStart);
+        }
+      };
+      showNarrativeWait(waitText, seconds);
+    } else {
+      hideLoading();
+      if (optionForRollback) {
+        logEntries.pop();
+        renderLog();
+      }
+      showError(e.message);
+    }
   }
 }
 
 async function retry() {
+  if (pendingRetry) {
+    const fn = pendingRetry;
+    pendingRetry = null;
+    document.getElementById('error').classList.add('hidden');
+    hideWait();
+    fn();
+    return;
+  }
   if (!lastUserMessage) return;
   showLoading();
   document.getElementById('error').classList.add('hidden');
-  try {
-    const { scene, rawAssistantText } = await callGroq(lastUserMessage, history);
-    currentScene = scene;
-    history.push({ role: 'user', content: lastUserMessage });
-    history.push({ role: 'assistant', content: rawAssistantText });
-    logEntries.push({ type: 'scene', text: scene.szene, ort: scene.ort });
-    hideLoading();
-    showHeader(scene);
-    renderLog();
-    renderOptions(scene);
-  } catch (e) {
-    hideLoading();
-    showError(e.message);
-  }
+  await performApiCall(lastUserMessage, false);
+}
+
+// --- Narrative Wait (rate-limit pause as story moment) ---
+let waitTimer = null;
+let waitInterval = null;
+
+function showNarrativeWait(text, seconds) {
+  const box = document.getElementById('wait-box');
+  document.getElementById('wait-text').textContent = text;
+  document.getElementById('options').classList.add('hidden');
+  box.classList.remove('hidden');
+
+  const bar = document.getElementById('wait-progress-bar');
+  const counter = document.getElementById('wait-countdown');
+  const total = seconds;
+  let elapsed = 0;
+
+  bar.style.transition = 'none';
+  bar.style.width = '0%';
+  // Force reflow
+  void bar.offsetWidth;
+  bar.style.transition = 'width 1s linear';
+
+  counter.textContent = total + 's';
+
+  if (waitInterval) clearInterval(waitInterval);
+  waitInterval = setInterval(() => {
+    elapsed++;
+    const pct = Math.min(100, (elapsed / total) * 100);
+    bar.style.width = pct + '%';
+    const left = Math.max(0, total - elapsed);
+    counter.textContent = left + 's';
+  }, 1000);
+
+  if (waitTimer) clearTimeout(waitTimer);
+  waitTimer = setTimeout(() => {
+    hideWait();
+    if (pendingRetry) {
+      const fn = pendingRetry;
+      pendingRetry = null;
+      showLoading();
+      fn();
+    }
+  }, total * 1000);
+}
+
+function hideWait() {
+  document.getElementById('wait-box').classList.add('hidden');
+  if (waitTimer) { clearTimeout(waitTimer); waitTimer = null; }
+  if (waitInterval) { clearInterval(waitInterval); waitInterval = null; }
 }
 
 function resetGame() {
   if (!confirm('Spiel wirklich neu starten? Aktueller Fortschritt geht verloren.')) return;
   history = [];
   logEntries = [];
+  storySummaries = [];
+  lastFullScene = null;
   currentScene = null;
+  pendingRetry = null;
+  hideWait();
   document.getElementById('log').innerHTML = '';
   document.getElementById('header').classList.add('hidden');
   document.getElementById('footer').classList.add('hidden');
