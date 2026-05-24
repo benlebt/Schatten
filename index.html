@@ -609,6 +609,17 @@
     text-transform: uppercase;
     white-space: nowrap;
   }
+  /* Status-Snapshot pro Szene: kleine Zeile mit allen Werten zum Zeitpunkt der Szene.
+     Hilft beim Debugging und Story-Konsistenz-Check. */
+  .scene-status {
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    color: #3a3a3a;
+    margin-bottom: 6px;
+    opacity: 0.7;
+    font-family: monospace;
+    text-transform: uppercase;
+  }
   .scene-text {
     line-height: 1.9;
     font-size: 15px;
@@ -1070,6 +1081,22 @@
       <div class="status-popup-row">
         <span class="status-popup-label">Verfassung</span>
         <span class="status-popup-value" id="popup-verfassung">—</span>
+      </div>
+      <div class="status-popup-row">
+        <span class="status-popup-label">Energie</span>
+        <span class="status-popup-value" id="popup-energie">—</span>
+      </div>
+      <div class="status-popup-row" id="popup-hunger-row" style="display:none;">
+        <span class="status-popup-label">Hunger</span>
+        <span class="status-popup-value" id="popup-hunger">—</span>
+      </div>
+      <div class="status-popup-row" id="popup-romance-row" style="display:none;">
+        <span class="status-popup-label">Stimmung</span>
+        <span class="status-popup-value" id="popup-romance">—</span>
+      </div>
+      <div class="status-popup-row" id="popup-stasi-row" style="display:none;">
+        <span class="status-popup-label">Stasi</span>
+        <span class="status-popup-value" id="popup-stasi">—</span>
       </div>
       <div class="status-popup-row" id="popup-injury-row" style="display:none;">
         <span class="status-popup-label">Verletzung</span>
@@ -1732,9 +1759,10 @@ function getEnergieStufe(e) {
 }
 
 // === HUNGER-SYSTEM ===
-// Hunger 0-10. Steigt langsam (~1 pro Szene), Imbiss/Cafe resettet auf 0.
-// Ab 4+ bekommt die KI den Hinweis, eine Essens-Option einzubauen.
+// Hunger 0-10. Steigt langsam (~0.4 pro Szene -> ca. 2-3 Szenen pro Punkt).
+// Ab 5+ bekommt die KI den Hinweis, eine Essens-Option einzubauen.
 let karlHunger = 0;
+let hungerAccumulator = 0;  // sammelt Bruchteile bis ein voller Punkt erreicht ist
 
 // Romantik-Tension: 0-5. Steigt wenn Karl mit einer Frau in ruhigen Szenen interagiert,
 // erotische Bemerkungen, vertraute Gesten, langer Blickkontakt. Sinkt wenn keine Frau anwesend
@@ -2142,6 +2170,21 @@ function buildTranscriptText() {
       if (e.ort) meta.push(e.ort.toUpperCase());
       if (e.modelLabel) meta.push('[' + e.modelLabel + ']');
       out += meta.join(' | ') + '\n';
+      // Debug-Status pro Szene: Spannung, Verfassung, Energie, Hunger, etc.
+      const statusParts = [];
+      if (typeof e.spannung === 'number') statusParts.push('Sp ' + e.spannung);
+      if (typeof e.verfassung === 'number') statusParts.push('Vf ' + e.verfassung);
+      if (typeof e.energie === 'number') statusParts.push('En ' + e.energie);
+      if (typeof e.hunger === 'number' && e.hunger > 0) statusParts.push('Hu ' + e.hunger);
+      if (typeof e.romantik === 'number' && e.romantik > 0) statusParts.push('Rm ' + e.romantik);
+      if (typeof e.stasiT === 'number' && e.stasiT > 0) statusParts.push('St ' + e.stasiT);
+      if (e.gewahrsam) statusParts.push('GEWAHRSAM ' + (e.folterCnt || 0));
+      if (e.politisch) statusParts.push('pol');
+      if (typeof e.caseStufe === 'number' && e.caseStufe > 0) statusParts.push('Fs ' + e.caseStufe);
+      if (typeof e.indizienCnt === 'number' && e.indizienCnt > 0) statusParts.push('Ind ' + e.indizienCnt);
+      if (statusParts.length > 0) {
+        out += '[' + statusParts.join(' · ') + ']\n';
+      }
       out += (e.text || '').trim() + '\n\n';
     } else if (e.type === 'choice') {
       out += '>>> ' + (e.text || '').trim() + '\n\n';
@@ -2443,6 +2486,57 @@ function showStatusDetails() {
   if (info.verfassung <= 2) vEl.style.color = '#ff6644';
   else if (info.verfassung <= 3) vEl.style.color = '#f0c040';
   else vEl.style.color = '';
+
+  // Energie (eigene Zeile, immer sichtbar, mit Farbe nach Stufe)
+  const eEl = document.getElementById('popup-energie');
+  const eStufe = getEnergieStufe(karlEnergie);
+  eEl.textContent = eStufe.label + ' (' + karlEnergie + '/100)';
+  eEl.style.color = eStufe.color;
+
+  // Hunger (nur wenn >= 4, also wenn spuerbar)
+  const hungerRow = document.getElementById('popup-hunger-row');
+  const hungerEl = document.getElementById('popup-hunger');
+  if (karlHunger >= 4) {
+    let label = karlHunger >= 8 ? 'Sehr hungrig' : karlHunger >= 6 ? 'Hungrig' : 'Leichter Hunger';
+    hungerEl.textContent = label + ' (' + karlHunger + '/10)';
+    if (karlHunger >= 8) hungerEl.style.color = '#f0a050';
+    else if (karlHunger >= 6) hungerEl.style.color = '#d4b270';
+    else hungerEl.style.color = '';
+    hungerRow.style.display = '';
+  } else {
+    hungerRow.style.display = 'none';
+  }
+
+  // Stimmung / Romantik (nur wenn 2+)
+  const romanceRow = document.getElementById('popup-romance-row');
+  const romanceEl = document.getElementById('popup-romance');
+  if (romanticTension >= 2) {
+    let label = romanticTension >= 4 ? 'Verfuehrerisch' : romanticTension >= 3 ? 'Vertraut' : 'Angedeutet';
+    romanceEl.textContent = label + ' (' + romanticTension + '/5)';
+    romanceEl.style.color = 'rgba(210,140,170,0.95)';
+    romanceRow.style.display = '';
+  } else {
+    romanceRow.style.display = 'none';
+  }
+
+  // Stasi-Status (nur wenn politisch oder im Gewahrsam)
+  const stasiRow = document.getElementById('popup-stasi-row');
+  const stasiEl = document.getElementById('popup-stasi');
+  if (karlInStasiCustody) {
+    stasiEl.textContent = 'In Gewahrsam (Verhoer-Szene ' + folterSceneCount + ')';
+    stasiEl.style.color = '#ff6644';
+    stasiRow.style.display = '';
+  } else if (caseIsPolitical && stasiTension >= 1) {
+    const tLabel = stasiTension >= 3 ? 'Hoch - Festnahme moeglich'
+                 : stasiTension >= 2 ? 'Mittel - Beobachtung'
+                 : 'Niedrig - politischer Fall';
+    stasiEl.textContent = tLabel + ' (' + stasiTension + '/5)';
+    stasiEl.style.color = stasiTension >= 3 ? '#f0a050' : '';
+    stasiRow.style.display = '';
+  } else {
+    stasiRow.style.display = 'none';
+  }
+
   // Verletzung (nur anzeigen wenn vorhanden)
   const injuryRow = document.getElementById('popup-injury-row');
   if (info.injury) {
@@ -2479,7 +2573,7 @@ function showStatusDetails() {
   const caseRow = document.getElementById('popup-case-row');
   const caseEl = document.getElementById('popup-case');
   const stageLabels = ['Aufbau', 'Indizien gesammelt', 'Verdaechtiger identifiziert', 'Fall geloest'];
-  const hasProgress = caseProgress.indizien.length > 0 || caseProgress.tatverdaechtiger || clientProfile.name || karlEnergie < 80 || karlHunger >= 4 || karlInStasiCustody;
+  const hasProgress = caseProgress.indizien.length > 0 || caseProgress.tatverdaechtiger || clientProfile.name;
   if (hasProgress) {
     let lines = [];
     lines.push('Stufe: ' + stageLabels[caseProgress.stage]);
@@ -2501,28 +2595,8 @@ function showStatusDetails() {
         lines.push('  Ungeduldig.');
       }
     }
-    if (caseIsPolitical) {
-      lines.push('Politischer Fall: ja');
-      if (stasiTension >= 3) {
-        lines.push('  MfS-Tension: hoch (Festnahme moeglich)');
-      } else if (stasiTension >= 1) {
-        lines.push('  MfS-Tension: ' + stasiTension + '/5');
-      }
-    }
-    if (karlInStasiCustody) {
-      lines.push('Karl in Stasi-Gewahrsam');
-      lines.push('  Verhoer-Szenen: ' + folterSceneCount);
-    }
-    // Energie + Hunger im Popup
-    const eStufe = getEnergieStufe(karlEnergie);
-    lines.push('Energie: ' + eStufe.label + ' (' + karlEnergie + '/100)');
-    if (karlHunger >= 4) {
-      const hungerLabel = karlHunger >= 7 ? 'starker Hunger' : 'leichter Hunger';
-      lines.push('Hunger: ' + hungerLabel + ' (' + karlHunger + '/10)');
-    }
-    if (romanticTension >= 3) {
-      lines.push('Romantik-Tension: ' + romanticTension + '/5');
-    }
+    // Hinweis: Energie/Hunger/Romantik/Stasi werden jetzt in eigenen Popup-Zeilen
+    // angezeigt (oben unter Verfassung), nicht mehr im Fall-Block.
     caseEl.textContent = lines.join('\n');
     caseRow.style.display = '';
   } else {
@@ -2637,9 +2711,12 @@ function renderLog() {
         ort.className = 'ort-divider';
         const ortText = document.createElement('span');
         ortText.className = 'ort-divider-name';
-        // Tageszeit + Ort zusammen, damit man tracken kann ob Tageszeit zur Szene passt
-        const timePrefix = entry.time ? entry.time + ' · ' : '';
-        ortText.textContent = '· ' + timePrefix + entry.ort + ' ·';
+        // Tag + Tageszeit + Ort kombinieren, damit man tracken kann ob Tageszeit zur Szene passt
+        let prefixParts = [];
+        if (entry.day) prefixParts.push('T' + entry.day);
+        if (entry.time) prefixParts.push(entry.time);
+        const prefix = prefixParts.length > 0 ? prefixParts.join(' · ') + ' · ' : '';
+        ortText.textContent = '· ' + prefix + entry.ort + ' ·';
         ort.appendChild(ortText);
         if (entry.modelLabel) {
           const modelText = document.createElement('span');
@@ -2648,6 +2725,25 @@ function renderLog() {
           ort.appendChild(modelText);
         }
         div.appendChild(ort);
+      }
+      // Status-Snapshot pro Szene: zeigt alle relevanten Werte zum Zeitpunkt der Szene
+      // damit man Verschiebungen tracken kann (Debug + Story-Konsistenz-Check).
+      if (typeof entry.energie === 'number' || typeof entry.spannung === 'number') {
+        const statusLine = document.createElement('div');
+        statusLine.className = 'scene-status';
+        const parts = [];
+        if (typeof entry.spannung === 'number') parts.push('Sp ' + entry.spannung);
+        if (typeof entry.verfassung === 'number') parts.push('Vf ' + entry.verfassung);
+        if (typeof entry.energie === 'number') parts.push('En ' + entry.energie);
+        if (typeof entry.hunger === 'number' && entry.hunger > 0) parts.push('Hu ' + entry.hunger);
+        if (typeof entry.romantik === 'number' && entry.romantik > 0) parts.push('Rm ' + entry.romantik);
+        if (typeof entry.stasiT === 'number' && entry.stasiT > 0) parts.push('St ' + entry.stasiT);
+        if (entry.gewahrsam) parts.push('GEWAHRSAM ' + (entry.folterCnt || 0));
+        if (entry.politisch) parts.push('pol');
+        if (typeof entry.caseStufe === 'number' && entry.caseStufe > 0) parts.push('Fs ' + entry.caseStufe);
+        if (typeof entry.indizienCnt === 'number' && entry.indizienCnt > 0) parts.push('Ind ' + entry.indizienCnt);
+        statusLine.textContent = parts.join(' · ');
+        div.appendChild(statusLine);
       }
       const p = document.createElement('p');
       p.className = 'scene-text';
@@ -3138,11 +3234,11 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
       recap += `\n\nNACHT-OPTION (Energie ${karlEnergie}/100): Es ist Nacht. EINE der 4 Optionen darf ein Tageswechsel sein, mit Wort "schlafen" oder "die Nacht verbringen". Aber Karl ist noch nicht erschoepft, du kannst es ihm anbieten oder auch nicht.`;
     }
 
-    // HUNGER-Hinweis: ab 4+ soll Imbiss/Cafe-Option oder Essens-Erwaehnung kommen
-    if (karlHunger >= 7 && isLowTension) {
+    // HUNGER-Hinweis: ab 5+ leichter Hint, ab 8+ MUSS Essens-Option dabei sein
+    if (karlHunger >= 8 && isLowTension) {
       recap += `\n\nKARL HAT GROSSEN HUNGER (Hunger ${karlHunger}/10): Karl hat seit Stunden nichts gegessen, der Magen knurrt deutlich. EINE der Optionen MUSS eine Essens-Option sein: "An der Currywurst-Bude am Hackeschen Markt Halt machen", "Bei [Person] eine Schrippe holen", "Ins Eckcafe und eine Bockwurst", etc. Wenn Karl in einer Kneipe/Cafe ist: erwaehne das Essen im Erzaehltext direkt. ALLE Essens-Optionen MUESSEN explizit Essens-Begriffe enthalten (Imbiss, Currywurst, Bockwurst, Schrippe, Cafe, fruehstuecken, etc.).`;
-    } else if (karlHunger >= 4 && isLowTension) {
-      recap += `\n\nKARL WIRD HUNGRIG (Hunger ${karlHunger}/10): Karl koennte langsam was essen. Wenn die Situation es hergibt, biete EINE Option an die zur naechsten Currywurst-Bude oder zum Eckcafe fuehrt. Auch im Erzaehltext kann ein Imbiss-Geruch, eine Schrippe in der Auslage oder Karl der an seinen leeren Magen denkt vorkommen.`;
+    } else if (karlHunger >= 5 && isLowTension) {
+      recap += `\n\nKARL WIRD HUNGRIG (Hunger ${karlHunger}/10): Karl koennte langsam was essen. Wenn die Situation es passend hergibt, biete EINE Option an die zur naechsten Currywurst-Bude oder zum Eckcafe fuehrt. KEIN Zwang - nur wenn es zur Story passt. Auch im Erzaehltext kann ein Imbiss-Geruch oder ein knurrender Magen beilaeufig erwaehnt werden.`;
     }
 
     // ROMANTIK-Hinweis: wenn Frau im Raum + Spannung niedrig + Abend/Nacht + Tension hoch
@@ -3729,6 +3825,7 @@ async function startGame() {
   // Reset Energie/Hunger/Romantik
   karlEnergie = 100;
   karlHunger = 0;
+  hungerAccumulator = 0;
   romanticTension = 0;
   // Reset Szenen-Typen-Tracking
   recentSceneTypes = [];
@@ -4017,6 +4114,7 @@ function updateEnergyAndHunger(scene) {
   // Essen erkannt: Hunger reset, kleiner Energie-Boost
   if (detectFoodAction(scene.szene || '')) {
     karlHunger = 0;
+    hungerAccumulator = 0;
     karlEnergie = Math.min(100, karlEnergie + 8);
     console.log('[Schatten] Essen erkannt -> Hunger 0, Energie +8 =', karlEnergie);
     return;
@@ -4050,8 +4148,16 @@ function updateEnergyAndHunger(scene) {
 
   karlEnergie = Math.max(0, karlEnergie - drain);
 
-  // Hunger: 1 pro Szene, ausser bei Action/Stasi/Schlaf (oben schon return)
-  karlHunger = Math.min(10, karlHunger + 1);
+  // Hunger: steigt LANGSAM (0.4 pro Szene = ~2-3 Szenen pro Hunger-Punkt).
+  // Eine Mahlzeit haelt so spuerbar laenger, vermeidet "alle 4 Szenen Imbiss".
+  // Bei Stasi: Hunger steigt etwas schneller (Stress).
+  const hungerInc = karlInStasiCustody ? 0.6 : 0.4;
+  hungerAccumulator = (hungerAccumulator || 0) + hungerInc;
+  if (hungerAccumulator >= 1) {
+    const inc = Math.floor(hungerAccumulator);
+    karlHunger = Math.min(10, karlHunger + inc);
+    hungerAccumulator -= inc;
+  }
 
   console.log('[Schatten] Energie:', karlEnergie, '(-' + drain + '), Hunger:', karlHunger);
 }
@@ -4613,6 +4719,17 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       modelLabel: getActiveModel().label,
       verfassung: verfassung,
       injury: lastInjury,
+      // Debug-Snapshot: alle relevanten Stats zum Zeitpunkt der Szene
+      spannung: scene.spannung,
+      energie: karlEnergie,
+      hunger: karlHunger,
+      romantik: romanticTension,
+      stasiT: stasiTension,
+      politisch: caseIsPolitical,
+      gewahrsam: karlInStasiCustody,
+      folterCnt: folterSceneCount,
+      caseStufe: caseProgress.stage,
+      indizienCnt: caseProgress.indizien.length,
     });
     hideLoading();
     hideWait();
