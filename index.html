@@ -113,7 +113,7 @@
     margin-top: 2px;
     letter-spacing: 2px;
   }
-  /* Sticky status bar (visible during play, persists across scroll) */
+  /* Sticky status bar (visible during play, persists across scroll, tappable) */
   .status-bar {
     position: sticky;
     top: 0;
@@ -122,51 +122,49 @@
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     border-bottom: 1px solid rgba(200,191,168,0.12);
-    padding: 8px 16px;
+    padding: 10px 16px;
     margin: 0 -20px 16px;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 12px;
+    gap: 8px;
     font-size: 10px;
-    letter-spacing: 2px;
+    letter-spacing: 1.5px;
     text-transform: uppercase;
-    color: #888;
+    color: #aaa;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.2s;
   }
-  .status-left, .status-center, .status-right {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .status-center {
-    flex: 1;
-    justify-content: center;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-  }
-  .status-tag-label {
-    color: #555;
-    font-size: 9px;
+  .status-bar:hover, .status-bar:active {
+    background: rgba(20, 18, 25, 0.96);
   }
   .status-tag {
     color: var(--fg-bright);
     font-weight: bold;
-    font-size: 12px;
+    flex-shrink: 0;
   }
   .status-time {
-    color: #888;
-    font-size: 9px;
+    color: #aaa;
+    flex-shrink: 0;
+  }
+  .status-dot {
+    color: #444;
+    flex-shrink: 0;
   }
   .status-loc {
-    color: #888;
-    font-size: 10px;
-    letter-spacing: 2px;
-    text-align: center;
+    color: #aaa;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
+  .status-spacer { flex-shrink: 0; width: 4px; }
   .status-bars {
     display: flex;
     gap: 2px;
+    flex-shrink: 0;
   }
   .status-bar-segment {
     width: 8px;
@@ -175,13 +173,79 @@
     background: rgba(200,191,168,0.1);
     transition: background 0.5s;
   }
-  .status-level {
-    font-size: 9px;
+  /* Reserve space for settings cog (top-right) so text doesn't underrun it */
+  .status-bar { padding-right: 56px; }
+
+  /* Status popup (shown on tap) */
+  .status-popup {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: fadeIn 0.2s ease;
+  }
+  .status-popup-inner {
+    background: #14131a;
+    border: 1px solid rgba(200,191,168,0.25);
+    padding: 24px;
+    max-width: 360px;
+    width: 100%;
+    border-radius: 4px;
+  }
+  .status-popup-title {
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 16px;
     font-weight: bold;
-    letter-spacing: 1.5px;
-    min-width: 56px;
+  }
+  .status-popup-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(200,191,168,0.08);
+    font-size: 13px;
+  }
+  .status-popup-row:last-of-type {
+    border-bottom: none;
+    margin-bottom: 12px;
+  }
+  .status-popup-label {
+    color: #888;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-size: 10px;
+  }
+  .status-popup-value {
+    color: var(--fg-bright);
     text-align: right;
-    transition: color 0.5s;
+    flex: 1;
+    margin-left: 16px;
+    word-break: break-word;
+  }
+  .status-popup-close {
+    background: transparent;
+    border: 1px solid rgba(200,191,168,0.4);
+    color: var(--fg-bright);
+    padding: 10px 24px;
+    font-family: inherit;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 8px;
+  }
+  .status-popup-close:hover {
+    background: rgba(200,191,168,0.08);
   }
   /* Hide old tension block (now part of status bar) */
   .tension { display: none; }
@@ -693,19 +757,38 @@
     </div>
   </header>
 
-  <!-- Sticky status bar (always visible during play) -->
-  <div id="status-bar" class="status-bar hidden">
-    <div class="status-left">
-      <span class="status-tag-label">TAG</span>
-      <span class="status-tag" id="status-tag">1</span>
-      <span class="status-time" id="status-time">ABEND</span>
-    </div>
-    <div class="status-center">
-      <span class="status-loc" id="status-loc"></span>
-    </div>
-    <div class="status-right" title="Spannungslevel der aktuellen Szene (1=ruhig, 5=Lebensgefahr)">
-      <div class="status-bars" id="status-bars"></div>
-      <span class="status-level" id="status-level"></span>
+  <!-- Sticky status bar (always visible during play, tap for details) -->
+  <div id="status-bar" class="status-bar hidden" onclick="showStatusDetails()" role="button" aria-label="Details anzeigen">
+    <span class="status-tag" id="status-tag">T1</span>
+    <span class="status-dot">·</span>
+    <span class="status-time" id="status-time">ABEND</span>
+    <span class="status-dot">·</span>
+    <span class="status-loc" id="status-loc"></span>
+    <span class="status-spacer"></span>
+    <div class="status-bars" id="status-bars"></div>
+  </div>
+
+  <!-- Status details popup -->
+  <div id="status-popup" class="status-popup hidden" onclick="hideStatusDetails(event)">
+    <div class="status-popup-inner" onclick="event.stopPropagation()">
+      <div class="status-popup-title">Aktueller Stand</div>
+      <div class="status-popup-row">
+        <span class="status-popup-label">Tag</span>
+        <span class="status-popup-value" id="popup-day">1</span>
+      </div>
+      <div class="status-popup-row">
+        <span class="status-popup-label">Tageszeit</span>
+        <span class="status-popup-value" id="popup-time">Abend</span>
+      </div>
+      <div class="status-popup-row">
+        <span class="status-popup-label">Ort</span>
+        <span class="status-popup-value" id="popup-loc">—</span>
+      </div>
+      <div class="status-popup-row">
+        <span class="status-popup-label">Spannung</span>
+        <span class="status-popup-value" id="popup-tension">—</span>
+      </div>
+      <button class="status-popup-close" onclick="hideStatusDetails()">Schließen</button>
     </div>
   </div>
 
@@ -719,7 +802,7 @@
       Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
     </p>
     <button class="btn-primary" onclick="startGame()">Ermittlung beginnen</button>
-    <div class="start-version">Schatten v4.6 · Flash-Lite</div>
+    <div class="start-version">Schatten v4.7 · Status-Tap</div>
   </div>
 
   <!-- Game Log -->
@@ -780,7 +863,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v4.6 · Flash-Lite</span>
+    <span>Schatten v4.7 · Status-Tap</span>
   </div>
 
 </div>
@@ -1197,7 +1280,7 @@ function showSetup() {
   document.getElementById('setup').classList.remove('hidden');
 }
 function hideAll() {
-  ['setup','start','loading','error','options','wait-box','daily-limit'].forEach(id => {
+  ['setup','start','loading','error','options','wait-box','daily-limit','status-popup'].forEach(id => {
     document.getElementById(id).classList.add('hidden');
   });
 }
@@ -1322,13 +1405,16 @@ function copyDebug(event) {
     showManualCopy();
   }
 }
+// Cache for the status popup details
+let currentStatusInfo = { day: 1, time: 'ABEND', loc: '—', tension: 1, tensionLabel: 'Ruhig', tensionColor: '#4a9eff' };
+
 function showHeader(scene) {
   // Show the big title block (only at top of page) and the sticky status bar
   document.getElementById('header').classList.remove('hidden');
   document.getElementById('status-bar').classList.remove('hidden');
   document.getElementById('footer').classList.remove('hidden');
 
-  // Update tension bars in the sticky status bar
+  // Update tension bars
   const bars = document.getElementById('status-bars');
   bars.innerHTML = '';
   const color = TENSION_COLORS[scene.spannung] || TENSION_COLORS[1];
@@ -1339,16 +1425,39 @@ function showHeader(scene) {
     bars.appendChild(b);
   }
   const TENSION_LABELS = ['', 'Ruhig', 'Wachsam', 'Angespannt', 'Brenzlig', 'Lebensgefahr'];
-  const levelEl = document.getElementById('status-level');
-  levelEl.textContent = TENSION_LABELS[scene.spannung] || '';
-  levelEl.style.color = color;
+  const tensionLabel = TENSION_LABELS[scene.spannung] || '';
 
-  // Location
+  // Compact bar: "T1 · NACHT · TEMPELHOFER FELD"
+  document.getElementById('status-tag').textContent = 'T' + gameDay;
+  document.getElementById('status-time').textContent = TIMES_OF_DAY[gameTimeIdx] || '';
   document.getElementById('status-loc').textContent = (scene.ort || '').toUpperCase();
 
-  // Day & time of day
-  document.getElementById('status-tag').textContent = gameDay;
-  document.getElementById('status-time').textContent = TIMES_OF_DAY[gameTimeIdx] || '';
+  // Stash full info for the popup
+  currentStatusInfo = {
+    day: gameDay,
+    time: (TIMES_OF_DAY[gameTimeIdx] || '').charAt(0) + (TIMES_OF_DAY[gameTimeIdx] || '').slice(1).toLowerCase(),
+    loc: scene.ort || '—',
+    tension: scene.spannung || 1,
+    tensionLabel,
+    tensionColor: color,
+  };
+}
+
+function showStatusDetails() {
+  const info = currentStatusInfo;
+  document.getElementById('popup-day').textContent = info.day;
+  document.getElementById('popup-time').textContent = info.time;
+  document.getElementById('popup-loc').textContent = info.loc;
+  const tEl = document.getElementById('popup-tension');
+  tEl.textContent = info.tensionLabel + ' (' + info.tension + '/5)';
+  tEl.style.color = info.tensionColor;
+  document.getElementById('status-popup').classList.remove('hidden');
+}
+
+function hideStatusDetails(event) {
+  // If called from the overlay click, event is the click event;
+  // if called from the button, no event arg. Just close in both cases.
+  document.getElementById('status-popup').classList.add('hidden');
 }
 
 // Advance in-game time. Called once per new scene (not on retries).
@@ -1985,7 +2094,7 @@ function buildDebugDump(err, userMsg, retryCount) {
   return [
     '=== SCHATTEN DEBUG DUMP ===',
     'Zeitpunkt: ' + new Date().toISOString(),
-    'Version: v4.6',
+    'Version: v4.7',
     'Retries: ' + (retryCount || 0),
     '',
     'FEHLER:',
