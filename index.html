@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Schatten — Ein Krimi-Adventure</title>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --fg: #c8bfa8;
+    --fg-bright: #e8dfc8;
+    --fg-dim: #6a6050;
+    --fg-faint: #444;
+    --accent: #c8a060;
+    --tension-1: #4a9eff;
+    --tension-3: #f0c040;
+    --tension-5: #ff3030;
+    --error: #ff6060;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'Courier New', Courier, monospace;
+    position: relative;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+    background-size: 128px;
+    opacity: 0.03;
+    pointer-events: none;
+    z-index: 0;
+  }
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.7) 100%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .container {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 20px;
+    position: relative;
+    z-index: 1;
+  }
+  header {
+    border-bottom: 1px solid rgba(200,191,168,0.1);
+    padding-bottom: 16px;
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .title-block {
+    flex: 1;
+  }
+  .eyebrow {
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: #666;
+    text-transform: uppercase;
+  }
+  h1 {
+    font-size: 22px;
+    color: var(--fg-bright);
+    letter-spacing: 1px;
+    margin: 2px 0 0;
+  }
+  .tension {
+    text-align: right;
+    min-width: 110px;
+  }
+  .tension-label {
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: #555;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .tension-bars {
+    display: flex;
+    gap: 4px;
+    justify-content: flex-end;
+  }
+  .tension-bar {
+    width: 18px;
+    height: 6px;
+    border-radius: 2px;
+    background: rgba(200,191,168,0.1);
+    transition: background 0.5s;
+  }
+  .tension-loc {
+    font-size: 10px;
+    color: #555;
+    margin-top: 4px;
+    letter-spacing: 2px;
+  }
+  /* Start screen */
+  .start-screen {
+    text-align: center;
+    padding: 40px 20px;
+  }
+  .emoji-large {
+    font-size: 64px;
+    filter: grayscale(0.3) sepia(0.3);
+  }
+  .start-title {
+    font-size: 42px;
+    font-weight: bold;
+    color: var(--fg-bright);
+    letter-spacing: 3px;
+    margin: 8px 0;
+    line-height: 1;
+  }
+  .start-subtitle {
+    font-size: 14px;
+    color: #666;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+  .start-text {
+    max-width: 440px;
+    margin: 0 auto 32px;
+    line-height: 1.8;
+    color: #8a8070;
+    font-size: 14px;
+  }
+  /* Buttons */
+  button {
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-primary {
+    background: transparent;
+    border: 1px solid rgba(200,191,168,0.4);
+    color: var(--fg-bright);
+    padding: 14px 40px;
+    font-size: 13px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+  }
+  .btn-primary:hover {
+    background: rgba(200,191,168,0.08);
+    border-color: rgba(200,191,168,0.7);
+  }
+  /* API Key Setup */
+  .setup {
+    border: 1px solid rgba(200,191,168,0.2);
+    background: rgba(200,191,168,0.02);
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  .setup h2 {
+    margin: 0 0 12px;
+    color: var(--fg-bright);
+    font-size: 14px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+  .setup p {
+    color: #8a8070;
+    font-size: 13px;
+    line-height: 1.7;
+    margin: 0 0 16px;
+  }
+  .setup a {
+    color: var(--tension-1);
+    text-decoration: none;
+  }
+  .setup input {
+    width: 100%;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(200,191,168,0.2);
+    color: var(--fg-bright);
+    padding: 10px 12px;
+    font-family: inherit;
+    font-size: 12px;
+    margin-bottom: 12px;
+  }
+  .setup input:focus {
+    outline: none;
+    border-color: rgba(200,191,168,0.5);
+  }
+  /* Log */
+  .log {
+    margin-bottom: 24px;
+  }
+  .scene-entry {
+    margin-bottom: 20px;
+    animation: fadeIn 0.5s ease;
+  }
+  .ort-divider {
+    font-size: 9px;
+    letter-spacing: 4px;
+    color: #444;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    border-top: 1px solid rgba(200,191,168,0.06);
+    padding-top: 16px;
+  }
+  .scene-text {
+    line-height: 1.9;
+    font-size: 15px;
+    color: var(--fg-dim);
+    transition: color 0.5s;
+    margin: 0;
+  }
+  .scene-entry.current .scene-text {
+    color: #d4c9b0;
+  }
+  .choice-entry {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 12px;
+    border-left: 2px solid rgba(200,191,168,0.2);
+    margin: 16px 0 16px 8px;
+    color: #7a7060;
+    font-size: 13px;
+    font-style: italic;
+  }
+  .choice-marker { color: #555; font-size: 11px; }
+  /* Options */
+  .options-block {
+    border-top: 1px solid rgba(200,191,168,0.1);
+    padding-top: 16px;
+    margin-top: 16px;
+  }
+  .options-label {
+    font-size: 9px;
+    letter-spacing: 4px;
+    color: #444;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .option-btn {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-left: 2px solid rgba(200,191,168,0.15);
+    color: #b0a890;
+    padding: 10px 16px;
+    text-align: left;
+    font-size: 13px;
+    line-height: 1.5;
+    margin-bottom: 6px;
+  }
+  .option-btn:hover:not(:disabled) {
+    background: rgba(200,191,168,0.04);
+    color: var(--fg-bright);
+    border-left-color: var(--accent);
+  }
+  .option-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .option-id {
+    color: #444;
+    font-size: 11px;
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+  /* Loading */
+  .loading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 0;
+  }
+  .dots {
+    color: #666;
+    letter-spacing: 4px;
+    font-size: 16px;
+    animation: pulse 1.2s infinite;
+  }
+  .loading-text {
+    color: #555;
+    font-size: 11px;
+    font-style: italic;
+  }
+  /* Error */
+  .error {
+    border: 1px solid rgba(255,80,80,0.3);
+    background: rgba(255,80,80,0.05);
+    padding: 16px;
+    margin-bottom: 16px;
+    font-size: 12px;
+    color: var(--error);
+  }
+  .error-title {
+    font-weight: bold;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+  }
+  .error-msg {
+    line-height: 1.6;
+    margin-bottom: 12px;
+    word-break: break-word;
+    color: #cc8080;
+  }
+  details {
+    margin-bottom: 12px;
+  }
+  summary {
+    cursor: pointer;
+    color: #aa6060;
+    font-size: 11px;
+  }
+  details pre {
+    white-space: pre-wrap;
+    font-size: 10px;
+    margin-top: 8px;
+    color: #886060;
+    max-height: 200px;
+    overflow: auto;
+  }
+  .btn-retry {
+    background: transparent;
+    border: 1px solid rgba(255,128,128,0.4);
+    color: #ff8080;
+    padding: 8px 20px;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+  /* Footer */
+  .footer {
+    margin-top: 24px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(200,191,168,0.06);
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: #444;
+    letter-spacing: 2px;
+  }
+  .footer button {
+    background: transparent;
+    border: none;
+    color: #444;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    text-decoration: underline;
+    padding: 0;
+    font-family: inherit;
+  }
+  .footer button:hover { color: #888; }
+  /* Animations */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 1; }
+  }
+  .hidden { display: none !important; }
+  /* Settings menu */
+  .settings-btn {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 100;
+    background: rgba(10,10,15,0.8);
+    border: 1px solid rgba(200,191,168,0.2);
+    color: var(--fg);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    backdrop-filter: blur(8px);
+  }
+  .settings-btn:hover {
+    border-color: rgba(200,191,168,0.5);
+    color: var(--fg-bright);
+  }
+  .settings-menu {
+    position: fixed;
+    top: 60px;
+    right: 16px;
+    z-index: 100;
+    background: rgba(10,10,15,0.95);
+    border: 1px solid rgba(200,191,168,0.2);
+    padding: 8px;
+    min-width: 200px;
+    backdrop-filter: blur(8px);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .settings-menu button {
+    background: transparent;
+    border: none;
+    color: var(--fg);
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-family: inherit;
+  }
+  .settings-menu button:hover {
+    background: rgba(200,191,168,0.08);
+    color: var(--fg-bright);
+  }
+  .settings-menu button.danger {
+    color: #cc8080;
+  }
+  .settings-menu button.danger:hover {
+    background: rgba(255,80,80,0.08);
+    color: #ff8080;
+  }
+  .menu-divider {
+    height: 1px;
+    background: rgba(200,191,168,0.1);
+    margin: 4px 0;
+  }
+</style>
+</head>
+<body>
+<!-- Settings button (always visible) -->
+<button class="settings-btn" onclick="toggleSettings(event)" title="Menü">⚙</button>
+<div id="settings-menu" class="settings-menu hidden" onclick="event.stopPropagation()">
+  <button onclick="resetGame()">↻ Spiel neu starten</button>
+  <div class="menu-divider"></div>
+  <button onclick="changeApiKey()">🔑 API-Schlüssel ändern</button>
+  <button class="danger" onclick="clearApiKey()">✕ Schlüssel löschen</button>
+</div>
+
+<div class="container">
+
+  <!-- Setup Screen -->
+  <div id="setup" class="setup hidden">
+    <h2>API-Schlüssel benötigt</h2>
+    <p>
+      Trag deinen Google Gemini API-Schlüssel ein. Den bekommst du kostenlos auf
+      <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a>.
+      Der Schlüssel wird nur in deinem Browser gespeichert, niemand sonst sieht ihn.
+    </p>
+    <input type="password" id="api-key-input" placeholder="AIza..." autocomplete="off">
+    <button class="btn-primary" onclick="saveApiKey()">Schlüssel speichern</button>
+  </div>
+
+  <!-- Header -->
+  <header id="header" class="hidden">
+    <div class="title-block">
+      <div class="eyebrow">Kriminalbüro Mauer</div>
+      <h1>BERLIN, 1953</h1>
+    </div>
+    <div class="tension" id="tension-block">
+      <div class="tension-label">Spannung</div>
+      <div class="tension-bars" id="tension-bars"></div>
+      <div class="tension-loc" id="tension-loc"></div>
+    </div>
+  </header>
+
+  <!-- Start Screen -->
+  <div id="start" class="start-screen hidden">
+    <div class="emoji-large">🕵️</div>
+    <div class="start-title">SCHATTEN</div>
+    <div class="start-subtitle">Ein dynamisches Krimi-Adventure</div>
+    <p class="start-text">
+      Berlin, 1953. Du bist Karl Mauer — Privatdetektiv, geschieden, immer knapp bei Kasse.
+      Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
+    </p>
+    <button class="btn-primary" onclick="startGame()">Ermittlung beginnen</button>
+  </div>
+
+  <!-- Game Log -->
+  <div id="log" class="log hidden"></div>
+
+  <!-- Loading -->
+  <div id="loading" class="loading hidden">
+    <span class="dots">···</span>
+    <span class="loading-text">Karl denkt nach</span>
+  </div>
+
+  <!-- Error -->
+  <div id="error" class="error hidden">
+    <div class="error-title">PROBLEM:</div>
+    <div class="error-msg" id="error-msg"></div>
+    <details id="error-details" class="hidden">
+      <summary>Debug-Info</summary>
+      <pre id="error-debug"></pre>
+    </details>
+    <button class="btn-retry" onclick="retry()">Erneut versuchen</button>
+  </div>
+
+  <!-- Options -->
+  <div id="options" class="options-block hidden">
+    <div class="options-label">Was tust du?</div>
+    <div id="options-list"></div>
+  </div>
+
+  <!-- Footer -->
+  <div id="footer" class="footer hidden">
+    <span>Schatten v1.1</span>
+  </div>
+
+</div>
+
+<script>
+const SYSTEM_PROMPT = `Du bist der Spielleiter eines Noir-Krimi-Text-Adventures im Berlin der 1950er Jahre.
+Der Spieler ist Privatdetektiv Karl Mauer, abgebrüht, zynisch, aber mit Gespür für Gerechtigkeit.
+
+DEINE AUFGABEN:
+- Beschreibe jede Szene in 3-5 Sätzen, atmosphärisch, noir, mit sensorischen Details.
+- Generiere GENAU 4 Handlungsoptionen, die zur aktuellen Situation passen (nicht generisch).
+- Führe Konsequenzen der Spielerwahl logisch und manchmal überraschend aus.
+- Charaktere erinnern sich an frühere Entscheidungen.
+- Ton: Düster, lakonisch, wie Raymond Chandler auf Deutsch. Keine Klischees, keine Über-Erklärungen.
+- Verwende immer korrekte Umlaute (ä, ö, ü, ß), niemals ae/oe/ue/ss-Ersatz.
+- Keine Gedankenstriche (em-dashes), nutze Kommas oder Punkte.
+
+KRITISCH: Antworte AUSSCHLIESSLICH mit gültigem JSON. KEIN Markdown, KEIN Code-Block, KEIN Text drumherum. Nur das pure JSON-Objekt.
+
+JSON FORMAT:
+{
+  "szene": "Beschreibungstext...",
+  "ort": "Kurzname des Ortes",
+  "optionen": [
+    {"id": "A", "text": "..."},
+    {"id": "B", "text": "..."},
+    {"id": "C", "text": "..."},
+    {"id": "D", "text": "..."}
+  ],
+  "spannung": 3
+}
+
+spannung: 1 (ruhig) bis 5 (Lebensgefahr).`;
+
+const INTRO = `Starte das Spiel. Karl Mauer trifft gerade in seinem schäbigen Büro am Hackeschen Markt ein. Verregneter Dienstagabend, November 1953. Jemand wartet bereits vor seiner Tür. Liefere die Eröffnungsszene als JSON.`;
+
+const TENSION_COLORS = ['#4a9eff','#4a9eff','#f0c040','#f07040','#ff3030','#ff0000'];
+
+let history = [];
+let currentScene = null;
+let apiKey = null;
+
+// --- Persistence ---
+function loadApiKey() {
+  apiKey = localStorage.getItem('gemini-key');
+  return apiKey;
+}
+function saveApiKey() {
+  const input = document.getElementById('api-key-input');
+  const val = input.value.trim();
+  if (!val) return;
+  apiKey = val;
+  localStorage.setItem('gemini-key', val);
+  document.getElementById('setup').classList.add('hidden');
+  input.value = '';
+  // If a game was already running, just continue; otherwise show start screen
+  if (currentScene) {
+    document.getElementById('header').classList.remove('hidden');
+    document.getElementById('log').classList.remove('hidden');
+    document.getElementById('options').classList.remove('hidden');
+    document.getElementById('footer').classList.remove('hidden');
+  } else {
+    showStart();
+  }
+}
+function changeApiKey() {
+  closeSettings();
+  // Hide all other screens
+  document.getElementById('start').classList.add('hidden');
+  document.getElementById('log').classList.add('hidden');
+  document.getElementById('options').classList.add('hidden');
+  document.getElementById('error').classList.add('hidden');
+  document.getElementById('loading').classList.add('hidden');
+  // Pre-fill with current key (masked) and show setup
+  const input = document.getElementById('api-key-input');
+  input.value = '';
+  input.placeholder = apiKey ? 'Aktuell: ' + apiKey.slice(0, 8) + '...' : 'AIza...';
+  showSetup();
+}
+function clearApiKey() {
+  if (!confirm('Schlüssel wirklich löschen? Du musst danach einen neuen eintragen.')) return;
+  localStorage.removeItem('gemini-key');
+  apiKey = null;
+  location.reload();
+}
+
+// --- Settings menu ---
+function toggleSettings(event) {
+  if (event) event.stopPropagation();
+  document.getElementById('settings-menu').classList.toggle('hidden');
+}
+function closeSettings() {
+  document.getElementById('settings-menu').classList.add('hidden');
+}
+// Close menu when clicking outside (but not on menu buttons themselves)
+document.addEventListener('click', (e) => {
+  const menu = document.getElementById('settings-menu');
+  const btn = document.querySelector('.settings-btn');
+  if (menu.classList.contains('hidden')) return;
+  if (btn && (btn === e.target || btn.contains(e.target))) return;
+  if (menu.contains(e.target)) return;
+  closeSettings();
+});
+
+// --- UI ---
+function showStart() {
+  document.getElementById('start').classList.remove('hidden');
+}
+function showSetup() {
+  document.getElementById('setup').classList.remove('hidden');
+}
+function hideAll() {
+  ['setup','start','loading','error','options'].forEach(id => {
+    document.getElementById(id).classList.add('hidden');
+  });
+}
+function showLoading() {
+  document.getElementById('loading').classList.remove('hidden');
+  document.getElementById('options').classList.add('hidden');
+  document.getElementById('error').classList.add('hidden');
+}
+function hideLoading() {
+  document.getElementById('loading').classList.add('hidden');
+}
+function showError(msg, debug) {
+  document.getElementById('error').classList.remove('hidden');
+  document.getElementById('error-msg').textContent = msg;
+  if (debug) {
+    document.getElementById('error-details').classList.remove('hidden');
+    document.getElementById('error-debug').textContent = debug;
+  } else {
+    document.getElementById('error-details').classList.add('hidden');
+  }
+}
+function showHeader(scene) {
+  document.getElementById('header').classList.remove('hidden');
+  document.getElementById('footer').classList.remove('hidden');
+  const bars = document.getElementById('tension-bars');
+  bars.innerHTML = '';
+  const color = TENSION_COLORS[scene.spannung] || TENSION_COLORS[1];
+  for (let i = 1; i <= 5; i++) {
+    const b = document.createElement('div');
+    b.className = 'tension-bar';
+    if (i <= scene.spannung) b.style.background = color;
+    bars.appendChild(b);
+  }
+  document.getElementById('tension-loc').textContent = (scene.ort || '').toUpperCase();
+}
+function renderLog() {
+  const logEl = document.getElementById('log');
+  logEl.classList.remove('hidden');
+  logEl.innerHTML = '';
+  logEntries.forEach((entry, i) => {
+    if (entry.type === 'scene') {
+      const isLast = i === logEntries.length - 1;
+      const div = document.createElement('div');
+      div.className = 'scene-entry' + (isLast ? ' current' : '');
+      if (entry.ort && i > 0) {
+        const ort = document.createElement('div');
+        ort.className = 'ort-divider';
+        ort.textContent = '— ' + entry.ort + ' —';
+        div.appendChild(ort);
+      }
+      const p = document.createElement('p');
+      p.className = 'scene-text';
+      p.textContent = entry.text;
+      div.appendChild(p);
+      logEl.appendChild(div);
+    } else if (entry.type === 'choice') {
+      const div = document.createElement('div');
+      div.className = 'choice-entry';
+      div.innerHTML = '<span class="choice-marker">▶</span><span>' + escapeHtml(entry.text) + '</span>';
+      logEl.appendChild(div);
+    }
+  });
+  window.scrollTo(0, document.body.scrollHeight);
+}
+function renderOptions(scene) {
+  const list = document.getElementById('options-list');
+  list.innerHTML = '';
+  scene.optionen.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.innerHTML = '<span class="option-id">' + opt.id + '</span><span>' + escapeHtml(opt.text) + '</span>';
+    btn.onclick = () => chooseOption(opt);
+    list.appendChild(btn);
+  });
+  document.getElementById('options').classList.remove('hidden');
+}
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// --- API Call ---
+async function callGemini(userMessage, conversationHistory) {
+  const contents = [];
+
+  // System prompt as first user message + ack (Gemini doesn't have a separate system role like Anthropic)
+  contents.push({ role: 'user', parts: [{ text: SYSTEM_PROMPT }] });
+  contents.push({ role: 'model', parts: [{ text: 'Verstanden. Ich antworte ausschließlich mit gültigem JSON im angegebenen Format.' }] });
+
+  // Conversation history
+  conversationHistory.forEach(m => {
+    contents.push({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }]
+    });
+  });
+
+  // New user message
+  contents.push({ role: 'user', parts: [{ text: userMessage }] });
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents,
+      generationConfig: {
+        temperature: 0.9,
+        maxOutputTokens: 1500,
+        responseMimeType: 'application/json'
+      }
+    })
+  });
+
+  const rawText = await response.text();
+  let data;
+  try { data = JSON.parse(rawText); } catch { throw new Error('Antwort nicht lesbar: ' + rawText.slice(0, 200)); }
+
+  if (!response.ok) {
+    const errMsg = data?.error?.message || rawText;
+    throw new Error('API-Fehler ' + response.status + ': ' + errMsg);
+  }
+
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) throw new Error('Keine Textantwort. Debug: ' + JSON.stringify(data).slice(0, 300));
+
+  // Parse JSON from text
+  let cleaned = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+  const first = cleaned.indexOf('{');
+  const last = cleaned.lastIndexOf('}');
+  if (first === -1 || last === -1) throw new Error('Kein JSON gefunden in: ' + cleaned.slice(0, 200));
+  cleaned = cleaned.substring(first, last + 1);
+
+  let parsed;
+  try { parsed = JSON.parse(cleaned); }
+  catch (e) { throw new Error('JSON ungültig: ' + e.message + '\n\nText: ' + cleaned.slice(0, 300)); }
+
+  if (!parsed.szene || !Array.isArray(parsed.optionen)) {
+    throw new Error('JSON unvollständig (szene/optionen fehlen)');
+  }
+
+  return { scene: parsed, rawAssistantText: text };
+}
+
+// --- Game Logic ---
+let logEntries = [];
+let lastUserMessage = null;
+
+async function startGame() {
+  hideAll();
+  showLoading();
+  history = [];
+  logEntries = [];
+  lastUserMessage = INTRO;
+
+  try {
+    const { scene, rawAssistantText } = await callGemini(INTRO, history);
+    currentScene = scene;
+    history = [
+      { role: 'user', content: INTRO },
+      { role: 'assistant', content: rawAssistantText }
+    ];
+    logEntries = [{ type: 'scene', text: scene.szene, ort: scene.ort }];
+    hideLoading();
+    showHeader(scene);
+    renderLog();
+    renderOptions(scene);
+  } catch (e) {
+    hideLoading();
+    showError(e.message);
+  }
+}
+
+async function chooseOption(option) {
+  showLoading();
+  logEntries.push({ type: 'choice', text: option.text });
+  renderLog();
+
+  const userMsg = `Der Spieler wählt Option ${option.id}: "${option.text}". Führe die Konsequenzen aus und liefere die nächste Szene als JSON.`;
+  lastUserMessage = userMsg;
+
+  try {
+    const { scene, rawAssistantText } = await callGemini(userMsg, history);
+    currentScene = scene;
+    history.push({ role: 'user', content: userMsg });
+    history.push({ role: 'assistant', content: rawAssistantText });
+    logEntries.push({ type: 'scene', text: scene.szene, ort: scene.ort });
+    hideLoading();
+    showHeader(scene);
+    renderLog();
+    renderOptions(scene);
+  } catch (e) {
+    // Roll back the choice from log
+    logEntries.pop();
+    renderLog();
+    hideLoading();
+    showError(e.message);
+  }
+}
+
+async function retry() {
+  if (!lastUserMessage) return;
+  showLoading();
+  document.getElementById('error').classList.add('hidden');
+  try {
+    const { scene, rawAssistantText } = await callGemini(lastUserMessage, history);
+    currentScene = scene;
+    history.push({ role: 'user', content: lastUserMessage });
+    history.push({ role: 'assistant', content: rawAssistantText });
+    logEntries.push({ type: 'scene', text: scene.szene, ort: scene.ort });
+    hideLoading();
+    showHeader(scene);
+    renderLog();
+    renderOptions(scene);
+  } catch (e) {
+    hideLoading();
+    showError(e.message);
+  }
+}
+
+function resetGame() {
+  if (!confirm('Spiel wirklich neu starten? Aktueller Fortschritt geht verloren.')) return;
+  history = [];
+  logEntries = [];
+  currentScene = null;
+  document.getElementById('log').innerHTML = '';
+  document.getElementById('header').classList.add('hidden');
+  document.getElementById('footer').classList.add('hidden');
+  hideAll();
+  showStart();
+}
+
+// --- Init ---
+if (loadApiKey()) {
+  showStart();
+} else {
+  showSetup();
+}
+</script>
+</body>
+</html>
