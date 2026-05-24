@@ -114,6 +114,10 @@ REGELN:
 - Bei keiner Aenderung: leere Arrays.
 - Wenn Karl jemandem die Pistole abnimmt, ist das eine ZWEITE Waffe (z.B. "P08 vom Polizisten"), nicht Ersatz der Walther.
 - Karl kann nur Gegenstaende nutzen die im Inventar stehen.
+- WAFFE-BREMSE: Die Walther bleibt meistens im Holster. Marlowe-Stil: sparsam, mit Gewicht. Nicht jede Szene "ziehst du die Walther". Wenn die letzten Szenen schon die Pistole zeigten, MUSS diese Szene ohne Waffe auskommen (Worte, Beobachtung, Verstand).
+
+CAST (NPCs im Raum, sehr wichtig gegen Verschwinden):
+Du bekommst pro Anfrage eine Liste der NPCs die PHYSISCH bei Karl sind. Diese duerfen NICHT verschwinden. Wenn jemand im Raum ist und in der naechsten Szene weiterhin da sein soll: erwaehne ihn (was tut er, wo sitzt/steht er, wie reagiert er). Wenn jemand die Szene verlaesst (geht raus, fluechtet, wird weggebracht, stirbt): EXPLIZIT erzaehlen UND in "cast_entfernt" eintragen. Neue NPCs die zur Szene dazukommen: in "cast_hinzugefuegt" eintragen. NIEMALS NPCs einfach vergessen - das war der Hauptkritikpunkt frueherer Spielverlaeufe.
 
 OUTPUT: Nur valides JSON, kein Markdown, kein Text drumherum.
 {
@@ -125,6 +129,8 @@ OUTPUT: Nur valides JSON, kein Markdown, kein Text drumherum.
   "verletzungsbeschreibung": "",
   "inventar_hinzugefuegt": [],
   "inventar_entfernt": [],
+  "cast_hinzugefuegt": [],
+  "cast_entfernt": [],
   "zusammenfassung": "1 Satz: Ort, was getan, wichtige Personen/Fakten + Status (verschwunden/anwesend/tot)."
 }
 spannung: 1 (ruhig) bis 5 (Lebensgefahr).`;
