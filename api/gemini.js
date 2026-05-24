@@ -51,7 +51,10 @@ export default async function handler(req, res) {
     contents,
     generationConfig: {
       temperature: 0.9,
-      maxOutputTokens: 1200,
+      // Gemini zaehlt Tokens anders als OpenAI/Groq. Deutsche Texte mit
+      // Umlauten brauchen mehr Tokens pro Zeichen. 2500 reicht fuer eine
+      // ausfuehrliche Szene + 4 Optionen + Zusammenfassung in JSON.
+      maxOutputTokens: 2500,
       responseMimeType: 'application/json',
     },
   };
@@ -109,7 +112,23 @@ export default async function handler(req, res) {
     }
 
     // Erfolg: Gemini-Response in OpenAI-Format wrappen
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const candidate = data?.candidates?.[0];
+    const text = candidate?.content?.parts?.[0]?.text || '';
+    const finishReason = candidate?.finishReason || '';
+
+    // Wenn Gemini wegen Token-Limit abgeschnitten hat, ist die JSON-Antwort
+    // unvollstaendig (kein schliessendes "}"). Dem Frontend signalisieren,
+    // dass es einen Retry probieren soll (mit kompaktem Kontext, der weniger
+    // Output braucht).
+    if (finishReason === 'MAX_TOKENS') {
+      return res.status(502).json({
+        error: {
+          message: 'Antwort wurde wegen Token-Limit abgeschnitten. Retry empfohlen.',
+          type: 'truncated',
+        }
+      });
+    }
+
     if (!text) {
       return res.status(502).json({ error: { message: 'Gemini lieferte keine Textantwort.', raw: JSON.stringify(data).slice(0, 500) } });
     }
