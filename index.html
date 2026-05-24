@@ -820,7 +820,7 @@
       Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
     </p>
     <button class="btn-primary" onclick="startGame()">Ermittlung beginnen</button>
-    <div class="start-version">Schatten v6.0 · Intros Schatten v5.9 · Tageswechsel-Sync Karl-Schutz</div>
+    <div class="start-version">Schatten v6.2 · 11-Modell-Kette</div>
   </div>
 
   <!-- Game Log -->
@@ -881,7 +881,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v6.0 · Intros Schatten v5.9 · Tageswechsel-Sync Karl-Schutz</span>
+    <span>Schatten v6.2 · 11-Modell-Kette</span>
   </div>
 
 </div>
@@ -1168,14 +1168,16 @@ function getOverusedWords() {
 
 // --- Settings menu ---
 function updateProviderInfo() {
-  const provider = getActiveProvider();
+  const m = getActiveModel();
   const el = document.getElementById('settings-provider-info');
   if (!el) return;
-  if (provider === 'groq') {
-    el.innerHTML = 'KI: <span class="badge fallback">BACKUP-ARCHIV</span><br><span style="font-size:9px;color:#666">Premium-Datenbank ist heute aufgebraucht. Morgen wieder verfuegbar.</span>';
-  } else {
-    el.innerHTML = 'KI: <span class="badge">PREMIUM</span>';
-  }
+  // Premium = erstes Modell (= Standard), sonst Backup
+  const isStandard = getActiveModelIndex() === 0;
+  const cssClass = isStandard ? 'badge' : 'badge fallback';
+  const subtitle = isStandard
+    ? ''
+    : '<br><span style="font-size:9px;color:#666">Auf Backup-Modell ausgewichen. Morgen wieder volle Qualitaet.</span>';
+  el.innerHTML = 'Modell: <span class="' + cssClass + '">' + m.label + '</span>' + subtitle;
 }
 
 function toggleSettings(event) {
@@ -1552,30 +1554,72 @@ function getCurrentUtcDay() {
   return new Date().toISOString().slice(0, 10); // "2026-05-24"
 }
 
-function getActiveProvider() {
+// Einheitliche Modell-Failover-Kette: vom besten Deutsch zum schwaecheren Backup.
+// Wenn ein Modell heute am Daily/TPD-Limit ist, wechseln wir zum naechsten und
+// merken uns die Position fuer den Rest des UTC-Tags. Bei Tageswechsel zurueck zu 0.
+//
+// Ueberlegung: Gemini-Modelle teilen sich teils Token-Budgets (TPM ist projektweit),
+// aber das RPD-Limit ist PRO MODELL. Heisst: Wenn Flash-Lite durch ist, kann Flash
+// trotzdem noch ~20 Anfragen liefern (eigener RPD-Topf).
+const MODEL_CHAIN = [
+  // Gemini-Modelle (beste Sprachqualitaet, knappe RPD)
+  { provider: 'gemini', model: 'gemini-2.5-flash',       label: 'Gemini 2.5 Flash' },
+  { provider: 'gemini', model: 'gemini-2.5-flash-lite',  label: 'Gemini 2.5 Flash-Lite' },
+  // Gemini 2.5 Pro: bestes Deutsch, aber sehr knappe Limits (~5-10 RPD).
+  // Setzen wir hier mittendrin als Premium-Backup nach den Flash-Modellen.
+  { provider: 'gemini', model: 'gemini-2.5-pro',         label: 'Gemini 2.5 Pro' },
+  { provider: 'gemini', model: 'gemini-3.1-flash-lite',  label: 'Gemini 3.1 Flash-Lite' },
+  { provider: 'gemini', model: 'gemini-3-flash-preview', label: 'Gemini 3 Flash Preview' },
+  // Groq-Modelle (sortiert nach Deutsch-Qualitaet)
+  { provider: 'groq',   model: 'llama-3.3-70b-versatile',                  label: 'Llama 3.3 70B' },
+  { provider: 'groq',   model: 'moonshotai/kimi-k2-instruct-0905',         label: 'Kimi K2' },
+  { provider: 'groq',   model: 'qwen/qwen3-32b',                           label: 'Qwen3 32B' },
+  { provider: 'groq',   model: 'openai/gpt-oss-120b',                      label: 'GPT-OSS 120B' },
+  { provider: 'groq',   model: 'meta-llama/llama-4-scout-17b-16e-instruct', label: 'Llama 4 Scout' },
+  { provider: 'groq',   model: 'openai/gpt-oss-20b',                       label: 'GPT-OSS 20B' },
+];
+
+// Aktuelle Position in der Kette aus localStorage (mit Tagesreset).
+function getActiveModelIndex() {
   try {
-    const raw = localStorage.getItem('schatten-provider');
-    if (!raw) return 'gemini';
-    const { provider, day } = JSON.parse(raw);
-    // Wenn Tageswechsel: zurueck zu Gemini
-    if (day !== getCurrentUtcDay()) return 'gemini';
-    return provider === 'groq' ? 'groq' : 'gemini';
-  } catch {
-    return 'gemini';
-  }
+    const raw = localStorage.getItem('schatten-model-idx');
+    if (!raw) return 0;
+    const { idx, day } = JSON.parse(raw);
+    if (day !== getCurrentUtcDay()) return 0;
+    if (typeof idx !== 'number' || idx < 0 || idx >= MODEL_CHAIN.length) return 0;
+    return idx;
+  } catch { return 0; }
 }
 
-function setActiveProvider(provider) {
+function setActiveModelIndex(idx) {
   try {
-    localStorage.setItem('schatten-provider', JSON.stringify({
-      provider, day: getCurrentUtcDay()
+    localStorage.setItem('schatten-model-idx', JSON.stringify({
+      idx, day: getCurrentUtcDay()
     }));
   } catch {}
+}
+
+function getActiveModel() {
+  return MODEL_CHAIN[getActiveModelIndex()];
+}
+
+// Wechsle zum naechsten Modell in der Kette. Gibt das neue Modell-Objekt zurueck,
+// oder null wenn alle durch sind.
+function advanceModel() {
+  const idx = getActiveModelIndex();
+  if (idx >= MODEL_CHAIN.length - 1) return null;
+  const nextIdx = idx + 1;
+  setActiveModelIndex(nextIdx);
+  return MODEL_CHAIN[nextIdx];
 }
 
 function getProviderEndpoint(provider) {
   return provider === 'groq' ? '/api/groq' : '/api/gemini';
 }
+
+// Legacy-Funktionen, damit alter Code an anderen Stellen nicht bricht
+function getActiveProvider() { return getActiveModel().provider; }
+function setActiveProvider() { /* no-op: provider folgt aus dem Modell */ }
 
 // Client-seitiges Throttling: gleitendes 60-Sekunden-Fenster.
 // Provider-spezifische Limits:
@@ -1775,8 +1819,12 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
   // New user message
   messages.push({ role: 'user', content: userMessage });
 
-  // Endpoint based on active provider (provider was determined at top of function)
-  const endpoint = getProviderEndpoint(provider);
+  // Aktives Modell aus der Failover-Kette holen
+  const activeModel = getActiveModel();
+  const endpoint = getProviderEndpoint(activeModel.provider);
+
+  // Body: messages plus explizites Modell (beide Proxies akzeptieren das jetzt)
+  const requestBody = { messages, model: activeModel.model };
 
   // Call our Vercel proxy (which holds the API key server-side)
   const response = await fetch(endpoint, {
@@ -1784,7 +1832,7 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ messages })
+    body: JSON.stringify(requestBody)
   });
 
   const rawText = await response.text();
@@ -2274,24 +2322,25 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       hideLoading();
       const requestedWait = Math.ceil(e.retryAfter || 15);
 
-      // Hybrid-Fallback: Bei Daily-Limit von Gemini direkt auf Groq umschalten
-      // und sofort retry. Erst wenn auch Groq durch ist, zeigen wir das Limit-Bild.
-      const activeProvider = getActiveProvider();
-      if (e.isDailyLimit && activeProvider === 'gemini') {
-        setActiveProvider('groq');
-        console.log('[Schatten] Gemini daily limit reached. Switching to Groq fallback.');
-        if (optionForRollback) {
-          performApiCall(userMsg, isStart, optionForRollback, retryCount, rateLimitCount);
-        } else {
-          performApiCall(userMsg, isStart, undefined, retryCount, rateLimitCount);
+      // Bei Daily/TPD-Limit: zum naechsten Modell in der Kette wechseln und sofort retryen.
+      // Das durchlaeuft die komplette Kette (Gemini-Modelle -> Groq-Modelle), bevor wir
+      // wirklich kapitulieren und das Tageslimit-Bild zeigen.
+      if (e.isDailyLimit) {
+        const previousModel = getActiveModel();
+        const nextModel = advanceModel();
+        if (nextModel) {
+          console.log('[Schatten] Daily/TPD limit on', previousModel.label, '-> switching to', nextModel.label);
+          skipNextThrottle = true; // neues Modell hat eigenen Budget, kein Throttle noetig
+          if (optionForRollback) {
+            performApiCall(userMsg, isStart, optionForRollback, retryCount, rateLimitCount);
+          } else {
+            performApiCall(userMsg, isStart, undefined, retryCount, rateLimitCount);
+          }
+          return;
         }
-        return;
+        // Wenn alle Modelle durch sind: faellt durch zur Daily-Limit-Anzeige unten
+        console.log('[Schatten] All models exhausted for the day.');
       }
-
-      // Wenn Groq am Daily-Limit ist UND wir waren schon auf Groq: echtes Tageslimit
-      // Wenn Gemini am Daily-Limit ist UND wir waren schon auf Groq (durch Reload o.ae.):
-      // wir sollten dann zurueck zu Gemini? Nein - wenn Gemini meldet "daily limit"
-      // ist es definitiv tot fuer heute. Wir sind im richtigen Zustand.
 
       // Daily limit: show story-themed message with concrete return time
       // (Wir kommen hier nur an, wenn schon Groq aktiv ist UND auch Groq am Daily-Limit ist)
@@ -2403,7 +2452,7 @@ function buildDebugDump(err, userMsg, retryCount) {
   return [
     '=== SCHATTEN DEBUG DUMP ===',
     'Zeitpunkt: ' + new Date().toISOString(),
-    'Version: v6.0',
+    'Version: v6.2',
     'Retries: ' + (retryCount || 0),
     '',
     'FEHLER:',
