@@ -62,8 +62,9 @@ export default async function handler(req, res) {
     body.systemInstruction = { parts: [{ text: systemInstruction }] };
   }
 
-  // Modell: gemini-2.5-flash (kostenlos, sehr gutes Deutsch, schnell)
-  const model = 'gemini-2.5-flash';
+  // Modell: gemini-2.5-flash-lite (kostenlos, 1000-1500 Anfragen/Tag im Free-Tier,
+  // etwas geringere Qualität als Flash aber viel großzügigere Limits)
+  const model = 'gemini-2.5-flash-lite';
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
   try {
