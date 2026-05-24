@@ -903,6 +903,10 @@
         <span class="status-popup-label">Dabei</span>
         <span class="status-popup-value" id="popup-inventory">—</span>
       </div>
+      <div class="status-popup-row status-popup-row-block" id="popup-cast-row" style="display:none;">
+        <span class="status-popup-label">Im Raum</span>
+        <span class="status-popup-value" id="popup-cast">—</span>
+      </div>
       <button class="status-popup-close" onclick="hideStatusDetails()">Schließen</button>
     </div>
   </div>
@@ -917,7 +921,7 @@
       Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
     </p>
     <button class="btn-primary" onclick="startGame()">Ermittlung beginnen</button>
-    <div class="start-version">Schatten v6.10 · Berlin & Bremse</div>
+    <div class="start-version">Schatten v6.11 · Cast & Action-Detection</div>
   </div>
 
   <!-- Game Log -->
@@ -985,7 +989,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v6.10 · Berlin & Bremse</span>
+    <span>Schatten v6.11 · Cast & Action-Detection</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -1193,6 +1197,14 @@ REGELN:
 - Bei keiner Aenderung: beide Felder leere Arrays.
 - WICHTIG: Wenn Karl jemandem die Pistole abnimmt, ist das eine ZWEITE Waffe (z.B. "P08 vom Polizisten"), nicht ein Ersatz seiner Walther.
 - WICHTIG: Wenn das Inventar einen Gegenstand auflistet, MUSS er in der Erzaehlung verfuegbar sein. Karl kann nicht ploetzlich ein Messer haben, das nicht im Inventar steht.
+- WAFFE-BREMSE: Die Walther bleibt MEISTENS im Holster. Marlowe-Stil: sparsam, mit Gewicht. Es ist KEIN Western. Nicht jede zweite Szene "ziehst du die Walther", "reisst die Walther", "die Mündung deiner Walther bohrt sich in...". Das ist Klischee-Cowboy-Stil, kein Noir. Wenn du in den letzten Szenen die Pistole schon mehrfach erwähnt hast, MUSS sie in der naechsten Szene komplett raus aus dem Text. Karl arbeitet mit Worten, Beobachtung, Geduld, Bourbon und Verstand. Schiessen ist die Ausnahme, nicht die Norm.
+
+CAST (NPCs im Raum, sehr wichtig gegen Verschwinden):
+Du bekommst pro Anfrage eine Liste der NPCs die PHYSISCH bei Karl sind. Diese Personen duerfen NICHT einfach aus der Erzaehlung verschwinden. 
+- Wenn jemand in der naechsten Szene weiterhin im Raum sein soll: erwaehne ihn (was tut er, wo sitzt/steht er, wie reagiert er). Auch wenn die Hauptszene auf etwas anderes fokussiert, ein kurzer Halbsatz reicht ("Helga Schmidt hockt noch immer auf dem Klientensessel und zupft an ihrem Kragen").
+- Wenn jemand die Szene verlaesst (geht raus, fluechtet, wird weggebracht, stirbt, gibt auf): EXPLIZIT erzaehlen UND in "cast_entfernt" eintragen.
+- Neue NPCs die zur Szene dazukommen: in "cast_hinzugefuegt" eintragen (mit kurzer Rollen-Info, z.B. "Helga Schmidt (Klientin, Mutter von Rudi)", "vernarbter Mann (Verfolger)").
+- NIEMALS NPCs einfach vergessen - das war der Hauptkritikpunkt frueherer Spielverlaeufe.
 
 JSON-Output ist Pflicht (kein Markdown, kein Text drumherum):
 {
@@ -1204,6 +1216,8 @@ JSON-Output ist Pflicht (kein Markdown, kein Text drumherum):
   "verletzungsbeschreibung": "",
   "inventar_hinzugefuegt": [],
   "inventar_entfernt": [],
+  "cast_hinzugefuegt": [],
+  "cast_entfernt": [],
   "zusammenfassung": "1 Satz für dein Gedächtnis: Ort, was getan wurde, wichtige Personen/Fakten."
 }
 
@@ -1306,6 +1320,10 @@ let calmStreak = 0;
 // Wird der KI als Kontext mitgeschickt, damit sie konsistent bleibt
 // (z.B. nicht mal Walther und mal Revolver).
 let inventory = ['Walther PPK (eigene Pistole)', 'Brieftasche mit Detektiv-Lizenz', 'Notizbuch und Bleistift'];
+// Cast: NPCs die gerade physisch im Raum bei Karl sind. Werden mitgefuehrt
+// damit sie nicht aus der Story verschwinden (wie es bei Frau Schmidt passierte).
+// Strings: "Helga Schmidt (Klientin, Mutter von Rudi)", "vernarbter Mann (Verfolger)".
+let cast = [];
 
 // Story-appropriate wait texts, chosen by current tension level.
 // Each pool has 6+ entries to avoid repetition.
@@ -1711,6 +1729,15 @@ function showStatusDetails() {
     invEl.textContent = inventory.map(it => '· ' + it).join('\n');
   } else {
     invEl.textContent = 'Nichts dabei.';
+  }
+  // Cast (NPCs im Raum)
+  const castRow = document.getElementById('popup-cast-row');
+  const castEl = document.getElementById('popup-cast');
+  if (cast.length > 0) {
+    castEl.textContent = cast.map(c => '· ' + c).join('\n');
+    castRow.style.display = '';
+  } else {
+    castRow.style.display = 'none';
   }
   document.getElementById('status-popup').classList.remove('hidden');
 }
@@ -2150,6 +2177,19 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
     if (inventory.length > 0) {
       recap += `\n\nKARLS INVENTAR (was er JETZT dabei hat):\n` + inventory.map((it, i) => `- ${it}`).join('\n');
       recap += `\nNutze NUR diese Gegenstaende. Karls Hauptwaffe ist die Walther PPK, NIEMALS als Revolver bezeichnen.`;
+    }
+    // Cast mitschicken (NPCs die gerade physisch bei Karl sind)
+    if (cast.length > 0) {
+      recap += `\n\nPERSONEN AKTUELL BEI KARL IM RAUM:\n` + cast.map(c => `- ${c}`).join('\n');
+      recap += `\nDiese Personen sind PHYSISCH ANWESEND. Wenn sie in der naechsten Szene weiterhin im Raum sind, MUSST du sie erwaehnen (was tun sie, wo stehen/sitzen sie, wie reagieren sie). Sie duerfen nicht einfach verschwinden. Wenn jemand die Szene verlaesst (geht raus, wird weggebracht, fluechtet, stirbt), beschreibe das EXPLIZIT und setze ihn in "cast_entfernt".`;
+    }
+    // Walther-Inflation eindaemmen: wenn die Pistole in den letzten Szenen zu oft "gezogen"
+    // wurde, weise die KI an, sie weg zu lassen. Marlowe nutzt seine Waffe selten.
+    const waffeCount = countWaffeUsage();
+    if (waffeCount >= 3) {
+      recap += `\n\nWAFFE-BREMSE: Die Walther PPK wurde in den letzten Szenen bereits ${waffeCount}-mal gezogen/erwaehnt. Das ist ZU OFT fuer Noir-Stil. Marlowe nutzt seine Pistole sparsam und mit Gewicht. In dieser Szene MUSS die Pistole im Holster bleiben. Keine Erwaehnung von "Walther", "Pistole", "Holster", "ziehen", "Muendung". Karl arbeitet mit Worten, Beobachtung und Verstand. Wenn die letzte Szene endete mit gezogener Waffe, steckt Karl sie weg (kurze Erwaehnung), dann fokussierst du auf Dialog, Recherche oder Beobachtung.`;
+    } else if (waffeCount === 2) {
+      recap += `\n\nWAFFE-WARNUNG: Die Walther wurde schon 2x in den letzten Szenen erwaehnt. Diese Szene besser ohne Waffe, ausser es ist erzaehlerisch zwingend.`;
     }
     messages.push({ role: 'user', content: recap });
     messages.push({ role: 'assistant', content: 'Verstanden. Ich knüpfe nahtlos und räumlich konsistent an die letzte Szene an, bleibe im Präsens und in der Du-Perspektive.' });
@@ -2663,6 +2703,8 @@ async function startGame() {
   calmStreak = 0;
   // Reset Inventar auf Startausstattung
   inventory = ['Walther PPK (eigene Pistole)', 'Brieftasche mit Detektiv-Lizenz', 'Notizbuch und Bleistift'];
+  // Reset Cast (NPCs im Raum)
+  cast = [];
   // Pick a random intro and use its predefined start time
   const intro = pickIntro();
   gameTimeIdx = intro.timeIdx;
@@ -2697,6 +2739,80 @@ function isPhysicalConflictAction(text) {
     /\bsturz/,
   ];
   return patterns.some(p => p.test(lower));
+}
+
+// Zaehlt wie oft die Walther/Pistole/Waffe in den letzten Szenen "gezogen/gerissen/gehoben" wurde.
+// Wenn das zu oft passiert, signalisiert es uebermaessige Action - dann gibt's eine Warnung an die KI.
+function countWaffeUsage() {
+  if (recentTexts.length === 0) return 0;
+  const combined = recentTexts.slice(-5).join(' ').toLowerCase();
+  // Patterns die "Karl zieht/holt seine Waffe" markieren
+  const patterns = [
+    /\b(reisst|reisse|ziehst|ziehe|zieht|holst|holt|holst hervor)\b.*?\b(walther|pistole|waffe|holster|halfter)\b/g,
+    /\b(walther|pistole|waffe)\b.*?\b(in deiner hand|in deinem griff|liegt fest|liegt vertraut)\b/g,
+    /\b(muendung|lauf).*?(pistole|walther|waffe)\b/g,
+    /\b(walther ppk)\b/g,
+  ];
+  let count = 0;
+  for (const p of patterns) {
+    const m = combined.match(p);
+    if (m) count += m.length;
+  }
+  return count;
+}
+
+// Schaetzt die "echte" Spannung einer Szene anhand von Action-Woertern im Text.
+// Wird verwendet, um KI-untertriebene Spannungswerte (z.B. 3 wenn eigentlich 4-5) zu korrigieren.
+// Returns 1-5.
+function computeActionLevel(sceneText) {
+  if (!sceneText) return 1;
+  const lower = sceneText.toLowerCase()
+    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+
+  // Spannung 5: konkrete Gewalt, Schuesse, Treffer
+  const lvl5 = [
+    /\bschuss(es|e|en)?\b/, /\bschiess/, /\bfeuere?(st|n|t)?\b/,
+    /\bmuendungsfeuer\b/, /\bmuendungsblitz\b/,
+    /\bkugel/, /\bgeschoss/, /\bsalve/,
+    /\bblut(et|en)?\b/, /\bverwundet/, /\btreffer/,
+    /\bschrei(t|en)?\b/, /\bschreit auf\b/,
+    /\bstirbt\b/, /\btot\b/, /\bgetoetet/,
+    /\bgranate\b/, /\bexplos/,
+    /\btrifft (deine|seine|ihre)? ?(schulter|brust|bauch|kopf|wange)/,
+  ];
+  if (lvl5.some(p => p.test(lower))) return 5;
+
+  // Spannung 4: drohende Gewalt, Pistole im Spiel, Verfolgung
+  const lvl4 = [
+    /\bpistole\b/, /\brevolver\b/, /\bwalther\b/, /\bwaffe\b/, /\bholster\b/,
+    /\bzielt? (auf|mit)/, /\bzielen\b/,
+    /\bverfolg/, /\bjagt\b/, /\bjagen\b/, /\bfliehst\b/, /\bfluchet/,
+    /\brennst\b/, /\bsprint/,
+    /\bschritte (kommen|naehern|polter|hallen)/,
+    /\bstiefel(schritt)?(en|e)?/,
+    /\bsirene/, /\bvolkspolizei\b/, /\bpolizeiwagen\b/, /\bstreifenwagen\b/,
+    /\bduckst dich\b/, /\bin deckung\b/, /\bhinter (dem|der|den) /,
+    /\bpackt dich\b/, /\bgreift nach (dir|deinem)/,
+    /\bhammern (an|gegen)/, /\bgehaemmer/,
+    /\bgewalt\b/, /\bkampf\b/, /\bfaust\b/, /\bfaeust/, /\bschlag\b/, /\bschlagt/,
+    /\bdroht\b/, /\bdrohung\b/, /\bdrohend/,
+    /\bschmerz/, /\bpocht\b/, /\bschwellung/,
+  ];
+  const lvl4Hits = lvl4.filter(p => p.test(lower)).length;
+  if (lvl4Hits >= 1) return 4;
+
+  // Spannung 3: angespanntes Gespraech, Verhoer, mysterioese Andeutung
+  const lvl3 = [
+    /\bschweigt\b/, /\bzittert\b/, /\bnervoes\b/, /\bunruhig\b/,
+    /\bfluestert\b/, /\bgefluester\b/,
+    /\bblickt (dich )?(eindringlich|fixiert|misstrauisch|kalt)/,
+    /\bweicht.*aus\b/, /\bschuldig/, /\blueg/, /\bversteckt/,
+    /\bdunkel/, /\bschatten/, /\bgeheimn/,
+  ];
+  if (lvl3.some(p => p.test(lower))) return 3;
+
+  // Default: Spannung 2 (alltaeglich angespannt - was Detektive eben so machen)
+  return 2;
 }
 
 async function chooseOption(option) {
@@ -2823,7 +2939,15 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     }
 
     // Spannung merken fuer den naechsten advanceGameTime (Action-Pause)
-    const newSpannung = typeof scene.spannung === 'number' ? scene.spannung : 1;
+    // CLIENT-SIDE NEUBERECHNUNG: Die KI unterschaetzt oft die Spannung in
+    // Action-Szenen. Wir scannen den Szenentext nach Action-Indikatoren und
+    // erhoehen die Spannung wenn noetig (nie senken - KI weiss besser was ruhig ist).
+    let newSpannung = typeof scene.spannung === 'number' ? scene.spannung : 1;
+    const detectedAction = computeActionLevel(scene.szene || '');
+    if (detectedAction > newSpannung) {
+      console.log('[Schatten] Spannung korrigiert:', newSpannung, '->', detectedAction, '(Action-Woerter im Text)');
+      newSpannung = detectedAction;
+    }
     // Streak-Tracking fuer Eskalations-Bremse
     if (newSpannung >= 4) {
       actionStreak++;
@@ -2859,6 +2983,27 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     // aber das ist seltenes Szenario - Karl hat meistens nicht so viel dabei)
     if (inventory.length > 12) {
       inventory = inventory.slice(-12);
+    }
+
+    // Cast-Aenderungen verarbeiten (NPCs die hinzukommen/gehen)
+    if (Array.isArray(scene.cast_hinzugefuegt) && scene.cast_hinzugefuegt.length > 0) {
+      for (const npc of scene.cast_hinzugefuegt) {
+        if (typeof npc === 'string' && npc.trim() && !cast.includes(npc.trim())) {
+          cast.push(npc.trim());
+        }
+      }
+    }
+    if (Array.isArray(scene.cast_entfernt) && scene.cast_entfernt.length > 0) {
+      for (const npc of scene.cast_entfernt) {
+        if (typeof npc !== 'string') continue;
+        const needle = npc.trim().toLowerCase();
+        const idx = cast.findIndex(c => c.toLowerCase().includes(needle) || needle.includes(c.toLowerCase()));
+        if (idx >= 0) cast.splice(idx, 1);
+      }
+    }
+    // Max 8 NPCs im aktiven Cast
+    if (cast.length > 8) {
+      cast = cast.slice(-8);
     }
 
     logEntries.push({
@@ -3021,7 +3166,7 @@ function buildDebugDump(err, userMsg, retryCount) {
   return [
     '=== SCHATTEN DEBUG DUMP ===',
     'Zeitpunkt: ' + new Date().toISOString(),
-    'Version: v6.10',
+    'Version: v6.11',
     'Retries: ' + (retryCount || 0),
     '',
     'FEHLER:',
