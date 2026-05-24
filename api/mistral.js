@@ -66,6 +66,20 @@ export default async function handler(req, res) {
     });
 
     const text = await mistralRes.text();
+    // Validiere dass Mistral mit JSON geantwortet hat - sonst (z.B. nginx-HTML-Fehler
+    // bei Routing-Problemen) wird der Fehler ans Frontend transparent durchgereicht,
+    // was zu unleserlichen "Antwort nicht lesbar"-Meldungen fuehrt.
+    try {
+      JSON.parse(text);
+    } catch {
+      return res.status(502).json({
+        error: {
+          message: 'Mistral antwortete nicht mit JSON (Status ' + mistralRes.status + '): ' + text.slice(0, 300),
+          upstream_status: mistralRes.status,
+          model: model,
+        }
+      });
+    }
     res.status(mistralRes.status);
     res.setHeader('Content-Type', 'application/json');
     return res.send(text);
