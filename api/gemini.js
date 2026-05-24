@@ -25,10 +25,20 @@ export default async function handler(req, res) {
     });
   }
 
-  const { messages } = req.body || {};
+  const { messages, model: requestedModel } = req.body || {};
   if (!Array.isArray(messages) || messages.length === 0) {
     return res.status(400).json({ error: { message: 'messages-Array fehlt im Request-Body.' } });
   }
+
+  // Whitelist erlaubter Gemini-Modelle (aktuelle Free-Tier-faehige)
+  const ALLOWED_MODELS = {
+    'gemini-2.5-flash': true,
+    'gemini-2.5-flash-lite': true,
+    'gemini-2.5-pro': true,
+    'gemini-3-flash-preview': true,
+    'gemini-3.1-flash-lite': true,
+  };
+  const model = ALLOWED_MODELS[requestedModel] ? requestedModel : 'gemini-2.5-flash-lite';
 
   // OpenAI -> Gemini Format konvertieren
   // Gemini erwartet: { systemInstruction: { parts: [{text}] }, contents: [{role, parts:[{text}]}] }
@@ -87,9 +97,7 @@ export default async function handler(req, res) {
     body.systemInstruction = { parts: [{ text: systemInstruction }] };
   }
 
-  // Modell: gemini-2.5-flash-lite (kostenlos, 1000-1500 Anfragen/Tag im Free-Tier,
-  // etwas geringere Qualität als Flash aber viel großzügigere Limits)
-  const model = 'gemini-2.5-flash-lite';
+  // Modell wurde aus dem Request gewaehlt (siehe oben) oder Default gesetzt
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
   try {
