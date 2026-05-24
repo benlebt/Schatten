@@ -40,7 +40,10 @@ export default async function handler(req, res) {
         model: 'openai/gpt-oss-120b',
         messages,
         temperature: 0.9,
-        max_tokens: 1200,
+        // 1800 Tokens: gibt genug Spielraum fuer Szene + 4 Optionen + Zusammenfassung
+        // mit Umlauten (die mehr Tokens kosten). Knapp genug, dass Groq's 6K TPM nicht
+        // sofort spuerbar wird, aber gross genug fuer komplette Antworten.
+        max_tokens: 1800,
         response_format: { type: 'json_object' },
       }),
     });
