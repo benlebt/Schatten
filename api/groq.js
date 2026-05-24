@@ -1,18 +1,52 @@
-// Vercel Serverless Function: Proxy für Groq API
-// Hält den API-Key serverseitig geheim, damit er nie im Browser landet.
+// Vercel Serverless Function: Proxy fuer Groq API
+// Haelt den API-Key serverseitig geheim, damit er nie im Browser landet.
 //
 // Aufruf vom Frontend: POST /api/groq mit { messages: [...] }
-// Antwort: Das Groq-Response-JSON, durchgereicht.
+// Antwort: Im OpenAI-Format durchgereicht (kompatibel zu /api/gemini).
+//
+// WICHTIG: Wegen Groqs strikten TPM-Limits (8K Tokens/Minute) ersetzen wir
+// den ueppigen Frontend-System-Prompt durch eine drastisch geschrumpfte Version.
+// Damit braucht jede Anfrage nur noch ~1500 Tokens statt 3000+.
+
+const SLIM_SYSTEM_PROMPT = `Spielleiter, Noir-Krimi-Adventure, Berlin 1953.
+
+SPIELER: Privatdetektiv Karl Mauer. Im Erzaehltext NIE beim Namen nennen, immer "du". Name "Karl/Mauer" nur in woertlicher Rede anderer Figuren erlaubt.
+
+SPRACHE:
+- Zweite Person Singular, Praesens, durchgehend
+- Optionen im Du-Imperativ ("Frag ihn.", "Zieh die Pistole."), NIE Sie-Form
+- Korrekte Umlaute (ae/oe/ue/ss SIND VERBOTEN, immer aeoeueß ausschreiben)
+- KEINE em-dashes (—/–)
+- Korrekte du-Verben: gehst, siehst, nimmst, trittst, oeffnest, fragst, schiesst
+- Dativ: "Befiehl dem Mann", nicht "den Mann"
+
+SZENEN:
+- 3-5 Saetze, atmosphaerisch, knapp, konkrete sensorische Details
+- Wechsle Szenentypen: Verhoere, Action, Observation, Recherche, Lagedenken
+- Jede Szene bringt neue Info / Person / Eskalation. Keine Frage-Ausweich-Schleifen.
+- Klischees meiden: kein "Mundwinkel zucken", "Augen bohren sich in", "Schraubzwinge", "kalt wie Messer", staendiger Regen oder Neonlicht
+- Etablierte Namen/Fakten konsistent halten
+
+ERWEITERTE EROEFFNUNG: Wenn Intro-Prompt Namen/Auftrag/Hintergrund nennt, MUSST du sie in der ersten Szene erzaehlerisch verankern.
+
+OPTIONEN: Genau 4, Du-Imperativ, 4-12 Woerter, klar verschieden, konkret zur Szene.
+
+OUTPUT: Nur valides JSON, kein Markdown, kein Text drumherum.
+{
+  "szene": "...",
+  "ort": "Kurzname",
+  "optionen": [{"id":"A","text":"..."},{"id":"B","text":"..."},{"id":"C","text":"..."},{"id":"D","text":"..."}],
+  "spannung": 3,
+  "zusammenfassung": "1 Satz: Ort, was getan, wichtige Personen/Fakten."
+}
+spannung: 1 (ruhig) bis 5 (Lebensgefahr).`;
 
 export default async function handler(req, res) {
-  // CORS für lokale Tests (production läuft eh same-origin)
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') {
     return res.status(405).json({ error: { message: 'Method not allowed' } });
   }
@@ -29,6 +63,27 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: { message: 'messages-Array fehlt im Request-Body.' } });
   }
 
+  // System-Prompt ersetzen: erstes message ist System-Prompt vom Frontend (lang),
+  // wir tauschen ihn gegen unsere schlanke Version aus. So sparen wir ca. 1500 Tokens
+  // pro Anfrage gegenueber Gemini, was bei Groqs TPM-Limit entscheidend ist.
+  const slimMessages = [
+    { role: 'system', content: SLIM_SYSTEM_PROMPT },
+    ...messages.filter(m => m.role !== 'system'),
+  ];
+
+  // Conversation-History weiter ausduennen: nur die letzten 3 Eintraege (vor dem aktuellen User-Message)
+  // behalten. Das genuegt fuer Kontext und spart weitere Tokens.
+  const userIndex = slimMessages.length - 1;
+  if (userIndex > 4) {
+    // [system, ...history..., last_user] -> [system, last 3 of history, last_user]
+    const lastUser = slimMessages[userIndex];
+    const historyTail = slimMessages.slice(1, userIndex).slice(-3);
+    slimMessages.length = 0;
+    slimMessages.push({ role: 'system', content: SLIM_SYSTEM_PROMPT });
+    slimMessages.push(...historyTail);
+    slimMessages.push(lastUser);
+  }
+
   try {
     const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -38,18 +93,17 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'openai/gpt-oss-120b',
-        messages,
-        temperature: 0.9,
-        // 1800 Tokens: gibt genug Spielraum fuer Szene + 4 Optionen + Zusammenfassung
-        // mit Umlauten (die mehr Tokens kosten). Knapp genug, dass Groq's 6K TPM nicht
-        // sofort spuerbar wird, aber gross genug fuer komplette Antworten.
-        max_tokens: 1800,
+        messages: slimMessages,
+        temperature: 0.85,
+        // 1000 Tokens reicht fuer Szene + 4 Optionen + Zusammenfassung in JSON.
+        // Weniger ist mehr: bei 8K TPM koennen wir so 2-3 Anfragen/Minute machen
+        // ohne Limit zu treffen.
+        max_tokens: 1000,
         response_format: { type: 'json_object' },
       }),
     });
 
     const text = await groqRes.text();
-    // Pass through Groq's response (including error responses with rate-limit info)
     res.status(groqRes.status);
     res.setHeader('Content-Type', 'application/json');
     return res.send(text);
