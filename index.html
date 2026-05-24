@@ -820,7 +820,7 @@
       Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
     </p>
     <button class="btn-primary" onclick="startGame()">Ermittlung beginnen</button>
-    <div class="start-version">Schatten v5.6 · Llama-3.3-70B</div>
+    <div class="start-version">Schatten v5.8 · Tap-Fix</div>
   </div>
 
   <!-- Game Log -->
@@ -881,7 +881,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v5.6 · Llama-3.3-70B</span>
+    <span>Schatten v5.8 · Tap-Fix</span>
   </div>
 
 </div>
@@ -1385,18 +1385,25 @@ let sceneCounter = 0;
 let timeAdvanceTokens = 0; // accumulator for fractional time progression
 function advanceGameTime() {
   sceneCounter++;
-  // Each scene contributes 0.5-0.7 to the time-of-day counter.
-  // When token >= 1, advance time-of-day by 1 step.
-  timeAdvanceTokens += 0.5 + Math.random() * 0.2;
+  // Jede Szene treibt die Tageszeit um 0.3-0.5 voran.
+  // Bei 6 Tageszeiten dauert ein voller Tag also etwa 15 Szenen.
+  // Vorher war es 0.5-0.7 = ~10 Szenen, das war zu schnell.
+  timeAdvanceTokens += 0.3 + Math.random() * 0.2;
   if (timeAdvanceTokens >= 1) {
     timeAdvanceTokens -= 1;
     gameTimeIdx++;
     if (gameTimeIdx >= TIMES_OF_DAY.length) {
       gameTimeIdx = 0; // back to MORGEN
       gameDay++;       // new day
+      // Flag, damit die naechste Szene einen expliziten Tageswechsel-Story-Beat bekommt
+      pendingDayTransition = true;
     }
   }
 }
+
+// Wird true gesetzt wenn gerade ein Tageswechsel passiert ist.
+// Die naechste Szene-Anfrage instruiert die KI dann, eine kurze Story-Brücke zu erzählen.
+let pendingDayTransition = false;
 function renderLog() {
   const logEl = document.getElementById('log');
   logEl.classList.remove('hidden');
@@ -1435,7 +1442,19 @@ function renderLog() {
       logEl.appendChild(div);
     }
   });
-  window.scrollTo(0, document.body.scrollHeight);
+  // Statt ans absolute Seitenende: zur LETZTEN Szene scrollen (Anfang davon).
+  // So sieht der Spieler den Beginn der neuen Szene und kann sich orientieren.
+  // Wenn keine Szene da ist, normales Ende-Scrollen.
+  const sceneEntries = logEl.querySelectorAll('.scene-entry');
+  if (sceneEntries.length > 0) {
+    const lastScene = sceneEntries[sceneEntries.length - 1];
+    // Smooth scroll, ein bisschen Platz oben fuer den Tag-Separator falls vorhanden
+    const rect = lastScene.getBoundingClientRect();
+    const absoluteTop = rect.top + window.scrollY - 80;
+    window.scrollTo({ top: absoluteTop, behavior: 'smooth' });
+  } else {
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+  }
 }
 function renderOptions(scene) {
   const list = document.getElementById('options-list');
@@ -1444,7 +1463,62 @@ function renderOptions(scene) {
     const btn = document.createElement('button');
     btn.className = 'option-btn';
     btn.innerHTML = '<span class="option-id">' + opt.id + '</span><span>' + escapeHtml(opt.text) + '</span>';
-    btn.onclick = () => chooseOption(opt);
+    // Tap-Detector: erlaubt Scrolling auch wenn der Finger auf einem Button startet.
+    // Click wird nur ausgeloest wenn:
+    // - Finger sich um weniger als TAP_MAX_MOVE Pixel bewegt hat
+    // - Touch nicht laenger als TAP_MAX_DURATION ms dauert
+    let touchStartX = 0, touchStartY = 0, touchStartTime = 0;
+    let touchCancelled = false;
+    let touchHandled = false; // true wenn touchend bereits chooseOption ausgeloest hat
+    const TAP_MAX_MOVE = 12; // Pixel
+    const TAP_MAX_DURATION = 800; // ms
+
+    btn.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1) { touchCancelled = true; return; }
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+      touchStartTime = Date.now();
+      touchCancelled = false;
+      touchHandled = false;
+    }, { passive: true });
+
+    btn.addEventListener('touchmove', (e) => {
+      if (touchCancelled) return;
+      if (e.touches.length !== 1) { touchCancelled = true; return; }
+      const dx = Math.abs(e.touches[0].clientX - touchStartX);
+      const dy = Math.abs(e.touches[0].clientY - touchStartY);
+      if (dx > TAP_MAX_MOVE || dy > TAP_MAX_MOVE) {
+        touchCancelled = true;
+      }
+    }, { passive: true });
+
+    btn.addEventListener('touchend', (e) => {
+      if (touchCancelled) {
+        // Scroll: synthetic click verhindern
+        e.preventDefault();
+        return;
+      }
+      const elapsed = Date.now() - touchStartTime;
+      if (elapsed > TAP_MAX_DURATION) {
+        e.preventDefault();
+        return;
+      }
+      // Echter Tap
+      e.preventDefault();
+      touchHandled = true;
+      chooseOption(opt);
+    });
+
+    // Fuer Maus/Trackpad/Desktop (kein touch-Event vorhanden)
+    btn.addEventListener('click', (e) => {
+      if (touchHandled) {
+        // Synthetic click nach touchend - ignorieren, wir haben schon gehandelt
+        touchHandled = false;
+        return;
+      }
+      chooseOption(opt);
+    });
+
     list.appendChild(btn);
   });
   document.getElementById('options').classList.remove('hidden');
@@ -1670,13 +1744,11 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
   // Inject in-game time/day context and stagnation warnings
   if (compactMode === 0 && sceneCounter > 0) {
     const currentTime = TIMES_OF_DAY[gameTimeIdx] || 'ABEND';
-    // Detect if a day-change is happening (we just rolled over to a new day; the *next* scene
-    // should be the first of a new day, so we need a transition narrative)
-    const dayJustChanged = (sceneCounter % 12 === 0 && sceneCounter > 0) ||
-                           (gameTimeIdx === 0 && (sceneCounter - 1) > 0 && (sceneCounter % 2 === 1));
     let timeContext = `KONTEXT: Aktueller Spieltag ist TAG ${gameDay}, Tageszeit: ${currentTime}.`;
-    if (dayJustChanged) {
-      timeContext += ` Ein neuer Tag hat begonnen, der Spieler braucht einen narrativen Übergang ("Am nächsten Morgen...", "Du hast die Nacht im Büro verbracht..." o.ä.).`;
+    // Expliziter Tageswechsel-Flag (gesetzt von advanceGameTime nach einem Roll-Over)
+    if (pendingDayTransition) {
+      timeContext += ` WICHTIG: Ein neuer Tag hat begonnen. Erzähle in der nächsten Szene einen klaren narrativen Übergang vom Vortag (z.B. "Du hast die Nacht im Büro verbracht und wachst von einem Geräusch auf...", "Am nächsten Morgen kehrst du zurück...", "Nach einer kurzen Nacht voller Grübeleien fährst du in die Stadt..."). Der Spieler muss verstehen, dass Zeit vergangen ist.`;
+      pendingDayTransition = false; // Flag zurücksetzen, damit es nur einmal wirkt
     }
     if (scenesAtSameLocation >= 3) {
       timeContext += ` ACHTUNG: Der Spieler ist seit ${scenesAtSameLocation} Szenen am selben Ort. Diese Szene MUSS einen Wechsel oder eine Unterbrechung bringen (Person tritt ein, Person geht, Anruf, Ortswechsel, neuer konkreter Hinweis).`;
@@ -2104,6 +2176,7 @@ async function startGame() {
   gameDay = 1;
   sceneCounter = 0;
   timeAdvanceTokens = 0;
+  pendingDayTransition = false;
   scenesAtSameLocation = 0;
   lastLocation = '';
   // Pick a random intro and use its predefined start time
@@ -2309,7 +2382,7 @@ function buildDebugDump(err, userMsg, retryCount) {
   return [
     '=== SCHATTEN DEBUG DUMP ===',
     'Zeitpunkt: ' + new Date().toISOString(),
-    'Version: v5.6',
+    'Version: v5.8',
     'Retries: ' + (retryCount || 0),
     '',
     'FEHLER:',
@@ -2427,6 +2500,7 @@ function resetGame() {
   gameTimeIdx = 4;
   sceneCounter = 0;
   timeAdvanceTokens = 0;
+  pendingDayTransition = false;
   scenesAtSameLocation = 0;
   lastLocation = '';
   hideWait();
