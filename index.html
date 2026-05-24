@@ -453,11 +453,11 @@
   <div id="setup" class="setup hidden">
     <h2>API-Schlüssel benötigt</h2>
     <p>
-      Trag deinen Google Gemini API-Schlüssel ein. Den bekommst du kostenlos auf
-      <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a>.
+      Trag deinen Groq API-Schlüssel ein. Den bekommst du kostenlos auf
+      <a href="https://console.groq.com/keys" target="_blank">console.groq.com/keys</a>.
       Der Schlüssel wird nur in deinem Browser gespeichert, niemand sonst sieht ihn.
     </p>
-    <input type="password" id="api-key-input" placeholder="AIza..." autocomplete="off">
+    <input type="password" id="api-key-input" placeholder="gsk_..." autocomplete="off">
     <button class="btn-primary" onclick="saveApiKey()">Schlüssel speichern</button>
   </div>
 
@@ -514,7 +514,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v1.1</span>
+    <span>Schatten v1.2 · Groq</span>
   </div>
 
 </div>
@@ -559,7 +559,12 @@ let apiKey = null;
 
 // --- Persistence ---
 function loadApiKey() {
-  apiKey = localStorage.getItem('gemini-key');
+  apiKey = localStorage.getItem('groq-key') || localStorage.getItem('gemini-key');
+  // Migrate old key name if found
+  if (apiKey && localStorage.getItem('gemini-key') && !localStorage.getItem('groq-key')) {
+    localStorage.setItem('groq-key', apiKey);
+    localStorage.removeItem('gemini-key');
+  }
   return apiKey;
 }
 function saveApiKey() {
@@ -567,7 +572,7 @@ function saveApiKey() {
   const val = input.value.trim();
   if (!val) return;
   apiKey = val;
-  localStorage.setItem('gemini-key', val);
+  localStorage.setItem('groq-key', val);
   document.getElementById('setup').classList.add('hidden');
   input.value = '';
   // If a game was already running, just continue; otherwise show start screen
@@ -591,11 +596,12 @@ function changeApiKey() {
   // Pre-fill with current key (masked) and show setup
   const input = document.getElementById('api-key-input');
   input.value = '';
-  input.placeholder = apiKey ? 'Aktuell: ' + apiKey.slice(0, 8) + '...' : 'AIza...';
+  input.placeholder = apiKey ? 'Aktuell: ' + apiKey.slice(0, 8) + '...' : 'gsk_...';
   showSetup();
 }
 function clearApiKey() {
   if (!confirm('Schlüssel wirklich löschen? Du musst danach einen neuen eintragen.')) return;
+  localStorage.removeItem('groq-key');
   localStorage.removeItem('gemini-key');
   apiKey = null;
   location.reload();
@@ -709,36 +715,35 @@ function escapeHtml(s) {
 }
 
 // --- API Call ---
-async function callGemini(userMessage, conversationHistory) {
-  const contents = [];
-
-  // System prompt as first user message + ack (Gemini doesn't have a separate system role like Anthropic)
-  contents.push({ role: 'user', parts: [{ text: SYSTEM_PROMPT }] });
-  contents.push({ role: 'model', parts: [{ text: 'Verstanden. Ich antworte ausschließlich mit gültigem JSON im angegebenen Format.' }] });
+async function callGroq(userMessage, conversationHistory) {
+  // Groq uses OpenAI-compatible chat format with system/user/assistant roles
+  const messages = [
+    { role: 'system', content: SYSTEM_PROMPT }
+  ];
 
   // Conversation history
   conversationHistory.forEach(m => {
-    contents.push({
-      role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: m.content }]
+    messages.push({
+      role: m.role === 'assistant' ? 'assistant' : 'user',
+      content: m.content
     });
   });
 
   // New user message
-  contents.push({ role: 'user', parts: [{ text: userMessage }] });
+  messages.push({ role: 'user', content: userMessage });
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-
-  const response = await fetch(url, {
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + apiKey
+    },
     body: JSON.stringify({
-      contents,
-      generationConfig: {
-        temperature: 0.9,
-        maxOutputTokens: 1500,
-        responseMimeType: 'application/json'
-      }
+      model: 'llama-3.3-70b-versatile',
+      messages: messages,
+      temperature: 0.9,
+      max_tokens: 1500,
+      response_format: { type: 'json_object' }
     })
   });
 
@@ -751,7 +756,7 @@ async function callGemini(userMessage, conversationHistory) {
     throw new Error('API-Fehler ' + response.status + ': ' + errMsg);
   }
 
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  const text = data?.choices?.[0]?.message?.content;
   if (!text) throw new Error('Keine Textantwort. Debug: ' + JSON.stringify(data).slice(0, 300));
 
   // Parse JSON from text
@@ -784,7 +789,7 @@ async function startGame() {
   lastUserMessage = INTRO;
 
   try {
-    const { scene, rawAssistantText } = await callGemini(INTRO, history);
+    const { scene, rawAssistantText } = await callGroq(INTRO, history);
     currentScene = scene;
     history = [
       { role: 'user', content: INTRO },
@@ -810,7 +815,7 @@ async function chooseOption(option) {
   lastUserMessage = userMsg;
 
   try {
-    const { scene, rawAssistantText } = await callGemini(userMsg, history);
+    const { scene, rawAssistantText } = await callGroq(userMsg, history);
     currentScene = scene;
     history.push({ role: 'user', content: userMsg });
     history.push({ role: 'assistant', content: rawAssistantText });
@@ -833,7 +838,7 @@ async function retry() {
   showLoading();
   document.getElementById('error').classList.add('hidden');
   try {
-    const { scene, rawAssistantText } = await callGemini(lastUserMessage, history);
+    const { scene, rawAssistantText } = await callGroq(lastUserMessage, history);
     currentScene = scene;
     history.push({ role: 'user', content: lastUserMessage });
     history.push({ role: 'assistant', content: rawAssistantText });
