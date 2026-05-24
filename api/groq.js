@@ -12,12 +12,18 @@ const SLIM_SYSTEM_PROMPT = `Spielleiter, Noir-Krimi-Adventure, Berlin 1953.
 
 SPIELER: Privatdetektiv Karl Mauer. Im Erzaehltext NIE beim Namen nennen, immer "du". Name "Karl/Mauer" nur in woertlicher Rede anderer Figuren erlaubt.
 
+KONTINUITAET (allerwichtigste Regel):
+Wenn die User-Nachricht "LETZTE SZENE" oder "BISHERIGE EREIGNISSE" enthaelt, MUSST du daran direkt anknuepfen. Du bist genau dort, wo die letzte Szene endete (Ort, Personen, Situation). KEIN Szenenwechsel, KEIN Ortswechsel, ausser der Spieler hat das explizit als Aktion gewaehlt. Wenn die letzte Szene "Wartesaal Polizeirevier" sagt, bist du noch dort, nicht ploetzlich im Buero.
+
+LOGIK-KONSISTENZ (sehr wichtig):
+Optionen muessen logisch zur Story passen. Wenn jemand verschwunden, tot oder nicht anwesend ist, kann der Spieler ihn NICHT direkt befragen. Beispiel: Wenn ein Juwelier "verschwunden" ist, ist "Frag den Juwelier" UNGUELTIG. Stattdessen: "Suche im Geschaeft des Juweliers", "Befrag die Ehefrau des Juweliers", "Untersuche die Akte des Juweliers". Pruefe vor dem Erstellen jeder Option: Ist die handelnde/befragte Person physisch erreichbar?
+
 SPRACHE:
 - Zweite Person Singular, Praesens, durchgehend
 - Optionen im Du-Imperativ ("Frag ihn.", "Zieh die Pistole."), NIE Sie-Form
-- Korrekte Umlaute (ae/oe/ue/ss SIND VERBOTEN, immer aeoeueß ausschreiben)
+- Korrekte Umlaute (ae/oe/ue/ss als Buchstabenersatz SIND VERBOTEN, immer ä/ö/ü/ß ausschreiben)
 - KEINE em-dashes (—/–)
-- Korrekte du-Verben: gehst, siehst, nimmst, trittst, oeffnest, fragst, schiesst
+- Korrekte du-Verben: gehst, siehst, nimmst, trittst, öffnest, fragst, schießt
 - Dativ: "Befiehl dem Mann", nicht "den Mann"
 
 SZENEN:
@@ -29,15 +35,15 @@ SZENEN:
 
 ERWEITERTE EROEFFNUNG: Wenn Intro-Prompt Namen/Auftrag/Hintergrund nennt, MUSST du sie in der ersten Szene erzaehlerisch verankern.
 
-OPTIONEN: Genau 4, Du-Imperativ, 4-12 Woerter, klar verschieden, konkret zur Szene.
+OPTIONEN: Genau 4, Du-Imperativ, 4-12 Woerter, klar verschieden, konkret zur Szene, LOGISCH MOEGLICH (keine Befragung Verschwundener/Toter).
 
 OUTPUT: Nur valides JSON, kein Markdown, kein Text drumherum.
 {
   "szene": "...",
-  "ort": "Kurzname",
+  "ort": "Kurzname (gleich wie letzte Szene, ausser explizit gewechselt)",
   "optionen": [{"id":"A","text":"..."},{"id":"B","text":"..."},{"id":"C","text":"..."},{"id":"D","text":"..."}],
   "spannung": 3,
-  "zusammenfassung": "1 Satz: Ort, was getan, wichtige Personen/Fakten."
+  "zusammenfassung": "1 Satz: Ort, was getan, wichtige Personen/Fakten + Status (verschwunden/anwesend/tot)."
 }
 spannung: 1 (ruhig) bis 5 (Lebensgefahr).`;
 
@@ -63,26 +69,35 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: { message: 'messages-Array fehlt im Request-Body.' } });
   }
 
-  // System-Prompt ersetzen: erstes message ist System-Prompt vom Frontend (lang),
-  // wir tauschen ihn gegen unsere schlanke Version aus. So sparen wir ca. 1500 Tokens
-  // pro Anfrage gegenueber Gemini, was bei Groqs TPM-Limit entscheidend ist.
-  const slimMessages = [
-    { role: 'system', content: SLIM_SYSTEM_PROMPT },
-    ...messages.filter(m => m.role !== 'system'),
-  ];
+  // Intelligente Kontext-Reduktion fuer Groq:
+  // Das Frontend schickt typischerweise:
+  // [system, recap, "verstanden", stilwarnung, "verstanden", zeit-context, "verstanden", user-wahl]
+  // Wir behalten nur was wichtig ist:
+  // - Den schlanken System-Prompt
+  // - Die LETZTE Recap-Nachricht (enthaelt "BISHERIGE EREIGNISSE" + "LETZTE SZENE")
+  // - Die letzte User-Message (= die Spielerwahl)
+  // Alle Filler-Pairs (stilwarnung, zeit-context und ihre "verstanden"-Antworten) fliegen raus.
 
-  // Conversation-History weiter ausduennen: nur die letzten 3 Eintraege (vor dem aktuellen User-Message)
-  // behalten. Das genuegt fuer Kontext und spart weitere Tokens.
-  const userIndex = slimMessages.length - 1;
-  if (userIndex > 4) {
-    // [system, ...history..., last_user] -> [system, last 3 of history, last_user]
-    const lastUser = slimMessages[userIndex];
-    const historyTail = slimMessages.slice(1, userIndex).slice(-3);
-    slimMessages.length = 0;
-    slimMessages.push({ role: 'system', content: SLIM_SYSTEM_PROMPT });
-    slimMessages.push(...historyTail);
-    slimMessages.push(lastUser);
+  const nonSystem = messages.filter(m => m.role !== 'system');
+  const lastUserMsg = nonSystem[nonSystem.length - 1];
+
+  // Finde die Recap-Nachricht: enthaelt "BISHERIGE EREIGNISSE" oder "LETZTE SZENE"
+  let recapMsg = null;
+  for (let i = nonSystem.length - 2; i >= 0; i--) {
+    const m = nonSystem[i];
+    if (m.role === 'user' && /BISHERIGE EREIGNISSE|LETZTE SZENE/.test(m.content || '')) {
+      recapMsg = m;
+      break;
+    }
   }
+
+  const slimMessages = [{ role: 'system', content: SLIM_SYSTEM_PROMPT }];
+  if (recapMsg) {
+    slimMessages.push(recapMsg);
+    // Kurze Bestaetigung damit das Assistant-User-Pattern erhalten bleibt
+    slimMessages.push({ role: 'assistant', content: 'Verstanden. Ich knuepfe nahtlos an, bleibe im Praesens und in der Du-Perspektive.' });
+  }
+  slimMessages.push(lastUserMsg);
 
   try {
     const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -92,14 +107,13 @@ export default async function handler(req, res) {
         'Authorization': 'Bearer ' + apiKey,
       },
       body: JSON.stringify({
-        // Llama 4 Scout: 30K TPM (3.75x mehr als gpt-oss-120b's 8K)
-        // Offiziell mit Deutsch trainiert, multilingual benchmarks-stark
-        // 1K RPD wie alle Groq-Free-Modelle, aber das ist nicht der Flaschenhals
-        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+        // Llama 3.3 70B Versatile: 70B Parameter (stark), 12K TPM, 1K RPD, 100K TPD
+        // Mehr Sprach-Konsistenz und Story-Logik als Llama 4 Scout (17B aktiv)
+        // Bei ~3000 Tokens/Anfrage realistisch 4 Anfragen/Minute, 33 Anfragen/Tag
+        model: 'llama-3.3-70b-versatile',
         messages: slimMessages,
         temperature: 0.85,
-        // 1000 Tokens fuer Szene + Optionen + Summary. Mit 30K TPM heisst das
-        // bis zu 30 Anfragen pro Minute moeglich (RPM-Limit bei 30 ist eh die Grenze).
+        // 1000 Tokens fuer Szene + Optionen + Summary
         max_tokens: 1000,
         response_format: { type: 'json_object' },
       }),
