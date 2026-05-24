@@ -38,6 +38,14 @@ TOTE GEHOEREN NICHT IN DEN CAST: cast_hinzugefuegt ist nur fuer LEBENDE anwesend
 
 ZEITLICH-BEGRENZTE ANLAESSE (Beerdigung, Hochzeit, Pressekonferenz, Gericht): dauern in der Realitaet 1-2 Stunden. Eine Beerdigung dauert NICHT 18 Stunden, Trauergaeste uebernachten NICHT in der Sakristei. Wenn Karl an so einem Anlass teilnimmt: maximal 3-4 Szenen, dann MUSS das Ereignis enden (Trauergaeste zerstreuen sich, Karl geht weiter). KEINE "Beisetzung in einer Stunde" wenn am Grab schon getrauert wurde.
 
+ROLLEN-KONSISTENZ: Wer als "Informant" / "Motorradfahrer" / "Klient" eingefuehrt wurde, ist NIE in einer spaeteren Szene "Polizist mit Ausweis" oder "Geheimagent". Rollen sind fest. Wenn eine wahre Identitaet enthuellt wird: explizit als Wendung im Erzaehltext schreiben ("er zieht einen Ausweis - der angebliche Informant ist Volkspolizist"), nicht ein stilles Umetikettieren.
+
+FAHRZEUG-KONSISTENZ: Karl hat seinen Opel Olympia. Niemand sonst hat den Schluessel. NPCs die mit eigenem Fahrzeug ankommen (BMW, Motorrad, anderes Auto) benutzen NUR ihr eigenes Fahrzeug zur Flucht. Niemand klaut Karls Opel beilaeufig. Wer mit Motorrad kam, faehrt mit Motorrad weg - nicht mit Karls Auto. Wenn Karl KEIN AUTO MEHR HAT (steht im Kontext): bietest du NIE Optionen wie "Steig in den Opel" an - Karl muss zu Fuss, S-Bahn, Strassenbahn oder Taxi.
+
+BESUCHTE ORTE: Du bekommst im Kontext eine Liste der bereits besuchten Orte. Biete KEINE Optionen wie "Fahr zur Adresse X" an, wenn der Ort bereits besucht wurde. Falls Karl zurueckkehren soll, MUSS die Option das explizit als "zurueck zu X" oder "noch einmal hin" formulieren.
+
+ABKUERZUNGEN: Erste Erwaehnung MUSS ausgeschrieben sein (VP = Volkspolizei, MfS = Ministerium fuer Staatssicherheit). Falsch: '"VP", sagt er und zeigt seinen Ausweis'. Richtig: '"Volkspolizei", sagt er und zeigt seinen Ausweis'.
+
 BERLIN 1953 - SEKTOREN: Berlin ist 4-geteilt, noch keine Mauer (kommt 1961), aber harte Grenzen.
 - SOWJETISCHER SEKTOR (Ost, DDR): Mitte, Friedrichshain, Prenzlauer Berg, Lichtenberg, Koepenick, Pankow, Weissensee. Polizei = Volkspolizei (VP). Karls Buero am Hackeschen Markt ist hier (Mitte).
 - AMERIKANISCH (West): Tempelhof, Schoeneberg, Neukoelln, Zehlendorf, Kreuzberg.
