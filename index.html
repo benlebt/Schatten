@@ -289,6 +289,22 @@
   .status-popup-close:hover {
     background: rgba(200,191,168,0.08);
   }
+  .status-popup-export {
+    background: transparent;
+    border: 1px solid rgba(140,180,140,0.4);
+    color: rgba(170,200,170,0.95);
+    padding: 10px 24px;
+    font-family: inherit;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 12px;
+  }
+  .status-popup-export:hover {
+    background: rgba(140,180,140,0.08);
+  }
   /* Hide old tension block (now part of status bar) */
   .tension { display: none; }
   /* Day separator (when in-game day changes) */
@@ -907,6 +923,7 @@
         <span class="status-popup-label">Im Raum</span>
         <span class="status-popup-value" id="popup-cast">—</span>
       </div>
+      <button class="status-popup-export" onclick="exportTranscript()">Verlauf kopieren</button>
       <button class="status-popup-close" onclick="hideStatusDetails()">Schließen</button>
     </div>
   </div>
@@ -921,7 +938,7 @@
       Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
     </p>
     <button class="btn-primary" onclick="startGame()">Ermittlung beginnen</button>
-    <div class="start-version">Schatten v6.11 · Cast & Action-Detection</div>
+    <div class="start-version">Schatten v6.12 · Cooldown &amp; Rollen</div>
   </div>
 
   <!-- Game Log -->
@@ -989,7 +1006,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v6.11 · Cast & Action-Detection</span>
+    <span>Schatten v6.12 · Cooldown &amp; Rollen</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -1202,8 +1219,12 @@ REGELN:
 CAST (NPCs im Raum, sehr wichtig gegen Verschwinden):
 Du bekommst pro Anfrage eine Liste der NPCs die PHYSISCH bei Karl sind. Diese Personen duerfen NICHT einfach aus der Erzaehlung verschwinden. 
 - Wenn jemand in der naechsten Szene weiterhin im Raum sein soll: erwaehne ihn (was tut er, wo sitzt/steht er, wie reagiert er). Auch wenn die Hauptszene auf etwas anderes fokussiert, ein kurzer Halbsatz reicht ("Helga Schmidt hockt noch immer auf dem Klientensessel und zupft an ihrem Kragen").
-- Wenn jemand die Szene verlaesst (geht raus, fluechtet, wird weggebracht, stirbt, gibt auf): EXPLIZIT erzaehlen UND in "cast_entfernt" eintragen.
-- Neue NPCs die zur Szene dazukommen: in "cast_hinzugefuegt" eintragen (mit kurzer Rollen-Info, z.B. "Helga Schmidt (Klientin, Mutter von Rudi)", "vernarbter Mann (Verfolger)").
+- Wenn jemand die Szene verlaesst (geht raus, fluechtet, wird weggebracht, stirbt, gibt auf): EXPLIZIT erzaehlen UND in "cast_entfernt" eintragen (nur Name als String).
+- Neue NPCs die zur Szene dazukommen: in "cast_hinzugefuegt" als STRUKTURIERTES OBJEKT eintragen mit Feldern:
+  - name: Voller Name, z.B. "Helga Schmidt"
+  - rolle: Was die Person FUER KARL ist, z.B. "Klientin", "Verfolger", "Kommissar", "Informant", "Zeugin", "Verdaechtiger"
+  - beziehung: Wie die Person zu wichtigen Story-Figuren steht, z.B. "Mutter von Rudi Schmidt", "Schwester von Hans Behrend", "Witwe von Friedrich Wegener". Wenn keine Beziehung zu einer anderen Story-Figur: leer lassen.
+- ROLLEN- UND BEZIEHUNGS-KONSISTENZ IST PFLICHT: Wenn eine Person als "Schwester von Hans" eingetragen ist, MUSS sie in allen folgenden Szenen die Schwester bleiben, NIE die Ehefrau, Mutter oder Tochter. Verwechsle Familienbeziehungen unter keinen Umstaenden. Wenn du eine Person mehrfach erwaehnst, ueberpruefe immer die Beziehung im aktuellen Cast.
 - NIEMALS NPCs einfach vergessen - das war der Hauptkritikpunkt frueherer Spielverlaeufe.
 
 JSON-Output ist Pflicht (kein Markdown, kein Text drumherum):
@@ -1216,7 +1237,7 @@ JSON-Output ist Pflicht (kein Markdown, kein Text drumherum):
   "verletzungsbeschreibung": "",
   "inventar_hinzugefuegt": [],
   "inventar_entfernt": [],
-  "cast_hinzugefuegt": [],
+  "cast_hinzugefuegt": [{"name":"Helga Schmidt","rolle":"Klientin","beziehung":"Mutter von Rudi Schmidt"}],
   "cast_entfernt": [],
   "zusammenfassung": "1 Satz für dein Gedächtnis: Ort, was getan wurde, wichtige Personen/Fakten."
 }
@@ -1287,6 +1308,8 @@ const TENSION_COLORS = ['#4a9eff','#4a9eff','#f0c040','#f07040','#ff3030','#ff00
 const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'NACHT'];
 
 let history = [];
+// Globale Version, von exportTranscript() und Debug-Dumps verwendet
+window.SCHATTEN_VERSION = 'v6.12';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -1316,13 +1339,20 @@ let lastSpannung = 1;
 let actionStreak = 0;
 // Wie viele Szenen am Stueck ruhige Recherche-Spannung 1-2 hatten
 let calmStreak = 0;
+// Cooldown-Counter: nach jedem Eindringling in Karls Buero/Wohnung blockieren wir
+// neue Eindringlinge fuer ein paar Szenen. So vermeiden wir Marx-Brothers-Stil
+// mit 4 verschiedenen Maennern die nacheinander reinstuermen.
+let intruderCooldown = 0;
 // Inventar: alles was Karl gerade dabei hat. Strings, kurz formuliert.
 // Wird der KI als Kontext mitgeschickt, damit sie konsistent bleibt
 // (z.B. nicht mal Walther und mal Revolver).
 let inventory = ['Walther PPK (eigene Pistole)', 'Brieftasche mit Detektiv-Lizenz', 'Notizbuch und Bleistift'];
 // Cast: NPCs die gerade physisch im Raum bei Karl sind. Werden mitgefuehrt
 // damit sie nicht aus der Story verschwinden (wie es bei Frau Schmidt passierte).
-// Strings: "Helga Schmidt (Klientin, Mutter von Rudi)", "vernarbter Mann (Verfolger)".
+// Strukturierte Objekte mit name, rolle, beziehung - damit die KI die Beziehung
+// nicht durcheinander bringt (Frieda war Schwester, nicht Ehefrau).
+// Beispiel: { name: "Frieda Behrend", rolle: "Klientin", beziehung: "Schwester von Hans Behrend" }
+// Strings sind auch erlaubt (Fallback fuer alte Daten und einfache Faelle).
 let cast = [];
 
 // Story-appropriate wait texts, chosen by current tension level.
@@ -1645,6 +1675,121 @@ function copyDebug(event) {
     showManualCopy();
   }
 }
+
+// Exportiert den gesamten Spielverlauf als Plaintext, damit Benjamin ihn fuer
+// Lektor-Analyse rauskopieren kann.
+function exportTranscript() {
+  if (!logEntries || logEntries.length === 0) {
+    alert('Noch kein Spielverlauf zum Exportieren.');
+    return;
+  }
+
+  // Header
+  let out = 'KRIMINALBUERO MAUER\n';
+  out += 'BERLIN, 1953\n';
+  out += 'Version: ' + (window.SCHATTEN_VERSION || 'unbekannt') + '\n';
+  out += 'Exportiert: ' + new Date().toLocaleString('de-DE') + '\n';
+  out += '\n' + '='.repeat(60) + '\n\n';
+
+  let lastDay = null;
+  for (let i = 0; i < logEntries.length; i++) {
+    const e = logEntries[i];
+    if (e.type === 'scene') {
+      // Day separator
+      if (e.day && lastDay !== null && e.day !== lastDay) {
+        out += '\n--- TAG ' + e.day + ' ---\n\n';
+      }
+      if (e.day) lastDay = e.day;
+
+      // Ort + Tageszeit + Modell
+      const meta = [];
+      if (e.day) meta.push('T' + e.day);
+      if (e.time) meta.push(e.time);
+      if (e.ort) meta.push(e.ort.toUpperCase());
+      if (e.modelLabel) meta.push('[' + e.modelLabel + ']');
+      out += meta.join(' | ') + '\n';
+      out += (e.text || '').trim() + '\n\n';
+    } else if (e.type === 'choice') {
+      out += '>>> ' + (e.text || '').trim() + '\n\n';
+    } else if (e.type === 'gameover') {
+      out += '\n*** GAME OVER ***\n\n';
+    }
+  }
+
+  // Aktueller Zustand am Ende
+  out += '\n' + '='.repeat(60) + '\n';
+  out += 'ZUSTAND BEI EXPORT\n';
+  out += '='.repeat(60) + '\n';
+  out += 'Tag: ' + gameDay + ', Tageszeit: ' + (TIMES_OF_DAY[gameTimeIdx] || '?') + '\n';
+  out += 'Verfassung: ' + verfassung + '/5\n';
+  if (lastInjury) out += 'Verletzung: ' + lastInjury + '\n';
+  if (inventory && inventory.length > 0) {
+    out += 'Inventar:\n';
+    for (const item of inventory) out += '  - ' + item + '\n';
+  }
+  if (cast && cast.length > 0) {
+    out += 'Personen im Raum:\n';
+    for (const npc of cast) {
+      if (typeof npc === 'string') {
+        out += '  - ' + npc + '\n';
+      } else {
+        let line = '  - ' + npc.name;
+        const meta = [];
+        if (npc.rolle) meta.push(npc.rolle);
+        if (npc.beziehung) meta.push(npc.beziehung);
+        if (meta.length > 0) line += ' (' + meta.join(', ') + ')';
+        out += line + '\n';
+      }
+    }
+  }
+  out += 'Szenen total: ' + logEntries.filter(e => e.type === 'scene').length + '\n';
+
+  // Versuche Clipboard, sonst Overlay
+  const showSuccess = () => {
+    const btn = document.querySelector('.status-popup-export');
+    if (btn) {
+      const orig = btn.textContent;
+      btn.textContent = '✓ Kopiert!';
+      btn.style.borderColor = 'rgba(140,180,140,0.9)';
+      setTimeout(() => {
+        btn.textContent = orig;
+        btn.style.borderColor = '';
+      }, 2000);
+    }
+  };
+  const showManual = () => {
+    const existing = document.getElementById('manual-copy-overlay');
+    if (existing) existing.remove();
+    const overlay = document.createElement('div');
+    overlay.id = 'manual-copy-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:1000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);';
+    const title = document.createElement('div');
+    title.textContent = 'Verlauf manuell kopieren';
+    title.style.cssText = 'color:#c8bfa8;font-family:Courier,monospace;font-size:14px;letter-spacing:3px;text-transform:uppercase;margin-bottom:12px;';
+    const hint = document.createElement('div');
+    hint.textContent = 'Lange drücken oder mit Strg+A, Strg+C kopieren';
+    hint.style.cssText = 'color:#8a8070;font-family:Courier,monospace;font-size:11px;margin-bottom:16px;';
+    const ta = document.createElement('textarea');
+    ta.value = out;
+    ta.readOnly = true;
+    ta.style.cssText = 'width:100%;max-width:700px;height:65vh;background:#0a0a0f;color:#c8bfa8;border:1px solid rgba(200,191,168,0.3);padding:12px;font-family:Courier,monospace;font-size:11px;line-height:1.5;resize:none;';
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = 'Schliessen';
+    closeBtn.style.cssText = 'margin-top:16px;background:transparent;border:1px solid rgba(200,191,168,0.4);color:#e8dfc8;padding:10px 24px;font-family:Courier,monospace;font-size:12px;letter-spacing:3px;text-transform:uppercase;cursor:pointer;';
+    closeBtn.onclick = () => overlay.remove();
+    overlay.appendChild(title);
+    overlay.appendChild(hint);
+    overlay.appendChild(ta);
+    overlay.appendChild(closeBtn);
+    document.body.appendChild(overlay);
+    setTimeout(() => { ta.focus(); ta.select(); }, 50);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(out).then(showSuccess).catch(showManual);
+  } else {
+    showManual();
+  }
+}
 // Cache for the status popup details
 let currentStatusInfo = { day: 1, time: 'ABEND', loc: '—', tension: 1, tensionLabel: 'Ruhig', tensionColor: '#4a9eff' };
 
@@ -1734,7 +1879,15 @@ function showStatusDetails() {
   const castRow = document.getElementById('popup-cast-row');
   const castEl = document.getElementById('popup-cast');
   if (cast.length > 0) {
-    castEl.textContent = cast.map(c => '· ' + c).join('\n');
+    castEl.textContent = cast.map(c => {
+      if (typeof c === 'string') return '· ' + c;
+      let line = '· ' + c.name;
+      const meta = [];
+      if (c.rolle) meta.push(c.rolle);
+      if (c.beziehung) meta.push(c.beziehung);
+      if (meta.length > 0) line += ' (' + meta.join(', ') + ')';
+      return line;
+    }).join('\n');
     castRow.style.display = '';
   } else {
     castRow.style.display = 'none';
@@ -2180,8 +2333,18 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
     }
     // Cast mitschicken (NPCs die gerade physisch bei Karl sind)
     if (cast.length > 0) {
-      recap += `\n\nPERSONEN AKTUELL BEI KARL IM RAUM:\n` + cast.map(c => `- ${c}`).join('\n');
-      recap += `\nDiese Personen sind PHYSISCH ANWESEND. Wenn sie in der naechsten Szene weiterhin im Raum sind, MUSST du sie erwaehnen (was tun sie, wo stehen/sitzen sie, wie reagieren sie). Sie duerfen nicht einfach verschwinden. Wenn jemand die Szene verlaesst (geht raus, wird weggebracht, fluechtet, stirbt), beschreibe das EXPLIZIT und setze ihn in "cast_entfernt".`;
+      recap += `\n\nPERSONEN AKTUELL BEI KARL IM RAUM:\n` + cast.map(c => {
+        if (typeof c === 'string') return `- ${c}`;
+        // Strukturiert: Name + Rolle + Beziehung
+        let line = `- ${c.name}`;
+        const meta = [];
+        if (c.rolle) meta.push(c.rolle);
+        if (c.beziehung) meta.push(c.beziehung);
+        if (meta.length > 0) line += ` (${meta.join(', ')})`;
+        return line;
+      }).join('\n');
+      recap += `\nDiese Personen sind PHYSISCH ANWESEND. Wenn sie in der naechsten Szene weiterhin im Raum sind, MUSST du sie erwaehnen (was tun sie, wo stehen/sitzen sie, wie reagieren sie). Sie duerfen nicht einfach verschwinden.`;
+      recap += `\n\nBEZIEHUNGEN MUESSEN STABIL BLEIBEN: Die oben angegebene Rolle und Beziehung ist FAKT und darf nicht aendern. Wenn Frieda als "Schwester von Hans Behrend" steht, ist Hans IMMER ihr Bruder, NIE ihr Ehemann oder Vater oder Sohn. Verwechsle Beziehungen nicht. Wenn jemand die Szene verlaesst (geht raus, wird weggebracht, fluechtet, stirbt), beschreibe das EXPLIZIT und setze ihn in "cast_entfernt".`;
     }
     // Walther-Inflation eindaemmen: wenn die Pistole in den letzten Szenen zu oft "gezogen"
     // wurde, weise die KI an, sie weg zu lassen. Marlowe nutzt seine Waffe selten.
@@ -2190,6 +2353,10 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
       recap += `\n\nWAFFE-BREMSE: Die Walther PPK wurde in den letzten Szenen bereits ${waffeCount}-mal gezogen/erwaehnt. Das ist ZU OFT fuer Noir-Stil. Marlowe nutzt seine Pistole sparsam und mit Gewicht. In dieser Szene MUSS die Pistole im Holster bleiben. Keine Erwaehnung von "Walther", "Pistole", "Holster", "ziehen", "Muendung". Karl arbeitet mit Worten, Beobachtung und Verstand. Wenn die letzte Szene endete mit gezogener Waffe, steckt Karl sie weg (kurze Erwaehnung), dann fokussierst du auf Dialog, Recherche oder Beobachtung.`;
     } else if (waffeCount === 2) {
       recap += `\n\nWAFFE-WARNUNG: Die Walther wurde schon 2x in den letzten Szenen erwaehnt. Diese Szene besser ohne Waffe, ausser es ist erzaehlerisch zwingend.`;
+    }
+    // Eindringlings-Cooldown: nach jedem Eindringling muss Karl Ruhe haben
+    if (intruderCooldown > 0) {
+      recap += `\n\nEINDRINGLINGS-COOLDOWN: Vor ${4 - intruderCooldown} Szene${intruderCooldown === 3 ? '' : 'n'} ist bereits jemand unangekuendigt in Karls Buero/Wohnung eingedrungen. KEINE neue Person darf jetzt ans Buero klopfen, die Tuer aufbrechen oder hereinstuermen. Marlowe-Stil ist ruhig, nicht Marx-Brothers-Slapstick. Die naechste${intruderCooldown >= 2 ? 'n ' + intruderCooldown : ''} Szene${intruderCooldown === 1 ? '' : 'n'} sollten ruhig sein (Verhoer, Nachdenken, Telefonat, Recherche, Ortswechsel zu einem anderen Schauplatz). KEIN neues Klopfen, KEIN neuer Eindringling, KEINE neue Drohung an der Tuer.`;
     }
     messages.push({ role: 'user', content: recap });
     messages.push({ role: 'assistant', content: 'Verstanden. Ich knüpfe nahtlos und räumlich konsistent an die letzte Szene an, bleibe im Präsens und in der Du-Perspektive.' });
@@ -2252,7 +2419,12 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
           sleepPlace = `Karl ist nicht nach Hause gekommen, sondern auf seinem eigenen Buerosofa eingeschlafen, vollstaendig bekleidet, Aschenbecher voll, leere Flasche auf dem Schreibtisch. Er wacht steif und mit Kopfschmerzen auf, die Vormittagssonne durch die Jalousien.`;
         }
       }
-      timeContext += `\n\nTAGESWECHSEL: Ein neuer Tag hat begonnen. ${sleepPlace} Die naechste Szene MUSS hier starten, mit klarem Aufwach-Moment und einer Brueke zum gestrigen Tag (was bleibt im Kopf, was muss heute getan werden im Fall). Dann steht ein neuer Tag voller Ermittlung bevor.`;
+      timeContext += `\n\nTAGESWECHSEL: Ein neuer Tag hat begonnen. ${sleepPlace}\n\nDie naechste Szene MUSS folgende drei Dinge ENTHALTEN, in dieser Reihenfolge:\n1. WAS HAT KARL IN DER NACHT GEMACHT (1-2 Saetze, konkret): Wo hat er geschlafen oder gewacht, wie lange, was hat er getraeumt oder gedacht. Wenn jemand mit dabei war: was hat diese Person gemacht (geschlafen, geredet, geweint, geweckt). Nicht ueberspringen!\n2. AUFWACH-MOMENT: konkretes Aufwachgeraeusch oder Bild (Strassenbahn, Klopfen, Lichtstrahl, Geruch, Schmerz von alter Verletzung).\n3. BRUECKE ZUM FALL: was bleibt im Kopf, was ist der naechste logische Schritt heute.\n\nVERBOTEN: einfach mit "schraegem Morgenlicht" anfangen ohne zu erklaeren wo Karl war und was er tat. Verbote weiterhin: pluetzliche Zeitspruenge ohne Brueke, einfach von Action am Vorabend direkt zu Karl-knetet-auf-dem-Boden ohne Erklaerung was passiert ist. Realismus ist Pflicht: wenn Karl gestern an einem dunklen Ort observiert hat, kann er nicht ploetzlich am Morgen am gleichen Ort sein OHNE Erklaerung (hat er die ganze Nacht da gewartet? Ist er zurueckgekommen? Wenn ja warum?).`;
+      // Wenn NPCs gerade bei Karl waren, mussen sie auch beim Tageswechsel erklaert werden
+      if (cast.length > 0) {
+        const names = cast.map(c => typeof c === 'string' ? c : c.name).join(', ');
+        timeContext += `\n\nWICHTIG: Folgende Person${cast.length === 1 ? '' : 'en'} war${cast.length === 1 ? '' : 'en'} gestern Abend noch bei Karl: ${names}. Du MUSST erzaehlen, was mit ${cast.length === 1 ? 'dieser Person' : 'diesen Personen'} ueber Nacht passiert ist: ist sie bei Karl geblieben (im selben Schlafzimmer? auf der Couch? im Hotel?), ist sie weggegangen (wohin? wann?), wurde sie weggebracht (von wem?)? KEIN stillschweigendes Verschwinden! Wenn sie noch bei Karl ist, beschreib auch ihre Verfassung am Morgen.`;
+      }
       pendingDayTransition = false; // Flag zurücksetzen, damit es nur einmal wirkt
     }
     if (scenesAtSameLocation >= 3) {
@@ -2701,6 +2873,7 @@ async function startGame() {
   lastSpannung = 1;
   actionStreak = 0;
   calmStreak = 0;
+  intruderCooldown = 0;
   // Reset Inventar auf Startausstattung
   inventory = ['Walther PPK (eigene Pistole)', 'Brieftasche mit Detektiv-Lizenz', 'Notizbuch und Bleistift'];
   // Reset Cast (NPCs im Raum)
@@ -2813,6 +2986,27 @@ function computeActionLevel(sceneText) {
 
   // Default: Spannung 2 (alltaeglich angespannt - was Detektive eben so machen)
   return 2;
+}
+
+// Erkennt, ob in einer Szene ein neuer Eindringling in Karls Buero/Wohnung kommt.
+// Wir nutzen das, um nach jedem Eindringling einen Cooldown zu setzen, der weitere
+// Eindringlinge fuer mehrere Szenen blockiert.
+function detectIntruder(sceneText) {
+  if (!sceneText) return false;
+  const lower = sceneText.toLowerCase()
+    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+  // Charakteristische Phrasen fuer "jemand kommt unangekuendigt rein"
+  const patterns = [
+    /\bklopft? .* (an der|gegen die) (tuer|bueroture|wohnungstuer)/,
+    /\bhaemmer.* (an|gegen) .*tuer/,
+    /\b(reisst|stuermt|tritt) .* (in den raum|herein|ins buero|ins zimmer)/,
+    /\btuer (fliegt|knall|reisst) auf/,
+    /\b(eindringling|fremde[r]?|besucher) (steht|tritt|stuermt|stolpert)/,
+    /\bein mann (im|mit) .* (steht|tritt|stuermt) (in|im)/,
+    /\bschluessel .* drehst? sich .* schloss/,
+    /\bschloss .* (knackt|gibt nach|bricht)/,
+  ];
+  return patterns.some(p => p.test(lower));
 }
 
 async function chooseOption(option) {
@@ -2962,6 +3156,15 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     }
     lastSpannung = newSpannung;
 
+    // Eindringlings-Cooldown: wenn ein Eindringling in dieser Szene aufgetaucht ist,
+    // setze den Counter auf 3. Sonst zaehle ihn runter.
+    if (detectIntruder(scene.szene || '')) {
+      intruderCooldown = 3;
+      console.log('[Schatten] Eindringling erkannt, Cooldown auf 3 gesetzt.');
+    } else if (intruderCooldown > 0) {
+      intruderCooldown--;
+    }
+
     // Inventar-Aenderungen verarbeiten
     if (Array.isArray(scene.inventar_hinzugefuegt) && scene.inventar_hinzugefuegt.length > 0) {
       for (const item of scene.inventar_hinzugefuegt) {
@@ -2985,11 +3188,25 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       inventory = inventory.slice(-12);
     }
 
-    // Cast-Aenderungen verarbeiten (NPCs die hinzukommen/gehen)
+    // Cast-Aenderungen verarbeiten (NPCs die hinzukommen/gehen).
+    // Neu in v6.12: strukturierte Objekte mit name/rolle/beziehung. Strings als Fallback.
     if (Array.isArray(scene.cast_hinzugefuegt) && scene.cast_hinzugefuegt.length > 0) {
       for (const npc of scene.cast_hinzugefuegt) {
-        if (typeof npc === 'string' && npc.trim() && !cast.includes(npc.trim())) {
-          cast.push(npc.trim());
+        let entry;
+        if (typeof npc === 'string' && npc.trim()) {
+          entry = { name: npc.trim(), rolle: '', beziehung: '' };
+        } else if (npc && typeof npc === 'object' && npc.name) {
+          entry = {
+            name: String(npc.name).trim(),
+            rolle: String(npc.rolle || '').trim(),
+            beziehung: String(npc.beziehung || '').trim(),
+          };
+        } else {
+          continue;
+        }
+        // Dedup nach Name
+        if (!cast.some(c => c.name && c.name.toLowerCase() === entry.name.toLowerCase())) {
+          cast.push(entry);
         }
       }
     }
@@ -2997,7 +3214,10 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       for (const npc of scene.cast_entfernt) {
         if (typeof npc !== 'string') continue;
         const needle = npc.trim().toLowerCase();
-        const idx = cast.findIndex(c => c.toLowerCase().includes(needle) || needle.includes(c.toLowerCase()));
+        const idx = cast.findIndex(c => {
+          const n = (c.name || c).toString().toLowerCase();
+          return n.includes(needle) || needle.includes(n);
+        });
         if (idx >= 0) cast.splice(idx, 1);
       }
     }
@@ -3166,7 +3386,7 @@ function buildDebugDump(err, userMsg, retryCount) {
   return [
     '=== SCHATTEN DEBUG DUMP ===',
     'Zeitpunkt: ' + new Date().toISOString(),
-    'Version: v6.11',
+    'Version: ' + (window.SCHATTEN_VERSION || 'unbekannt'),
     'Retries: ' + (retryCount || 0),
     '',
     'FEHLER:',
