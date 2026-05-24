@@ -66,12 +66,30 @@ ERWEITERTE EROEFFNUNG (sehr wichtig!): Wenn der Intro-Prompt Namen, Klienten, Au
 
 OPTIONEN: Genau 4, Du-Imperativ, 4-12 Woerter, klar verschieden, konkret zur Szene, LOGISCH MOEGLICH (keine Befragung Verschwundener/Toter).
 
+VERFASSUNG (koerperlicher Zustand des Spielers):
+Du bekommst in jeder Anfrage Karls aktuelle Verfassung (Skala 1-5, 5 = unverletzt). Beruecksichtige sie in der Erzaehlung:
+- 4 (leicht angeschlagen): kleine Atemnot, Faustschlag eingesteckt, leichter Schmerz
+- 3 (angeschlagen): Streifschuss, Pruegel, blutet leicht, langsamer
+- 2 (stark verletzt): Schussverletzung, bewegt sich muehsam, braucht Hilfe
+- 1 (lebensgefaehrlich): Bewusstsein wankt, braucht sofort Arzt
+Jede Schiesserei, Pruegelei, schwerer Sturz MUSS Karl etwas kosten. Setze "verfassung_delta" entsprechend:
+- 0 = nichts passiert (Recherche, Gespraech)
+- -1 = leichte Folge (Sprint, Faustschlag eingesteckt, Sturz)
+- -2 = Treffer (Schlag mit Waffe, Streifschuss, harter Aufprall)
+- -3 = schwere Verletzung (Schussverletzung im Rumpf, brutaler Pruegel)
+- -4 = lebensgefaehrlich
+- +1 oder +2 = wenn Karl sich verarzten laesst, schlaeft, sich ausruht
+WICHTIG: Karl ist nicht Rambo. Mehrere Schiessereien in Folge ohne Treffer sind UNGLAUBWUERDIG. Er muss bluten, sich verstecken, sich versorgen lassen.
+Auch "verletzungsbeschreibung" setzen wenn -1 oder schlechter: kurz, konkret (z.B. "Streifschuss am linken Oberarm", "Prellung am Kinn", "geprellte Rippen").
+
 OUTPUT: Nur valides JSON, kein Markdown, kein Text drumherum.
 {
   "szene": "...",
   "ort": "Kurzname (gleich wie letzte Szene, ausser explizit gewechselt)",
   "optionen": [{"id":"A","text":"..."},{"id":"B","text":"..."},{"id":"C","text":"..."},{"id":"D","text":"..."}],
   "spannung": 3,
+  "verfassung_delta": 0,
+  "verletzungsbeschreibung": "",
   "zusammenfassung": "1 Satz: Ort, was getan, wichtige Personen/Fakten + Status (verschwunden/anwesend/tot)."
 }
 spannung: 1 (ruhig) bis 5 (Lebensgefahr).`;
