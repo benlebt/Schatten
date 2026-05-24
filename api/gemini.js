@@ -100,9 +100,10 @@ export default async function handler(req, res) {
           inventar_hinzugefuegt: { type: 'array', items: { type: 'string' } },
           inventar_entfernt: { type: 'array', items: { type: 'string' } },
           // Cast-Tracking: NPCs die in dieser Szene zu Karl kommen oder gehen.
-          // Strukturierte Objekte: name (z.B. "Frieda Behrend"), rolle (z.B. "Klientin"),
-          // beziehung (z.B. "Schwester von Hans Behrend"). Beziehung ist sehr wichtig
-          // damit Rollen nicht verwechselt werden (Schwester != Ehefrau).
+          // Strukturierte Objekte: name (z.B. "Voller Name"), rolle (z.B. "Klientin"),
+          // beziehung (z.B. "Mutter des Vermissten", "Kollege des Opfers" oder "unbekannt").
+          // Beziehung ist sehr wichtig damit Rollen nicht verwechselt werden
+          // (Schwester != Ehefrau).
           cast_hinzugefuegt: {
             type: 'array',
             items: {
@@ -116,6 +117,20 @@ export default async function handler(req, res) {
             },
           },
           cast_entfernt: { type: 'array', items: { type: 'string' } },
+          // Fall-Fortschritt: Indizien die Karl in dieser Szene neu gefunden hat
+          // (Beweisstuecke, Zeugenaussagen, Fotos, Dokumente). Kurze Strings, z.B.
+          // "Brief von Hans an Onkel Erwin", "Aussage Frau Vogel: Hans war Dienstag abend in Charlottenburg".
+          indiz_neu: { type: 'array', items: { type: 'string' } },
+          // Wenn Karl in dieser Szene den/die Tatverdaechtigen identifiziert: Name eintragen.
+          // Nur setzen wenn klar etabliert ist (mehrere Indizien, Karl ist sich relativ sicher).
+          // Sonst leer lassen oder weglassen.
+          tatverdaechtiger_identifiziert: { type: 'string' },
+          // Wenn der Tatverdaechtige in dieser Szene ueberfuehrt wird (Festnahme,
+          // Gestaendnis, Beweis vor Zeugen): true setzen. Andernfalls false oder weglassen.
+          tatverdaechtiger_ueberfuehrt: { type: 'boolean' },
+          // Wenn Karl in dieser Szene dem Klient/der Klientin das Ergebnis berichtet hat
+          // (NACH Ueberfuehrung): true setzen. Damit wird der Fall als geloest markiert.
+          klient_berichtet: { type: 'boolean' },
         },
         required: ['szene', 'ort', 'optionen', 'spannung', 'zusammenfassung'],
       },
