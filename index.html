@@ -583,7 +583,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v1.7 · Llama 70b · Konsistenz</span>
+    <span>Schatten v1.9 · Optionen-Fix</span>
   </div>
 
 </div>
@@ -659,6 +659,30 @@ DIALOGE (sehr wichtig):
 NAMEN:
 - "Karl" und "Mauer" sind nur in WÖRTLICHER REDE erlaubt, wenn eine andere Figur dich anspricht. Im Erzähltext und in Optionen niemals.
 - Wenn jemand sagt "Wer bist du?" und du dich vorstellst, dann sagst du selbst deinen Namen ("Mauer, Karl Mauer", sagst du) - das ist als Dialog OK.
+
+DIE 4 HANDLUNGSOPTIONEN (sehr wichtig, sonst klingt es nach schlechter Übersetzung):
+- Jede Option ist EIN vollständiger, idiomatischer deutscher Satz im Imperativ ("Frag sie, was sie will." / "Zieh die Pistole." / "Geh ans Fenster.").
+- Keine abgeschnittenen Sätze, keine Optionen die mit Komma enden, keine Halbsätze.
+- Keine Strichpunkte/Semikolons mittendrin. Wenn zwei Gedanken zusammen müssen, nutze ein "und" oder zwei Sätze.
+- KEINE wörtlichen Übersetzungen aus dem Englischen. Falsch: "Beantworte nicht" (das ist Englisch "don't answer", auf Deutsch heißt es "Antworte nicht" oder "Sag nichts").
+- Kein "laß", sondern "lass" (neue Rechtschreibung).
+- Optionen sind kurz: 4 bis 12 Wörter. Konkret, eindeutig, kein Geschwurbel.
+- Optionen unterscheiden sich klar voneinander, keine zwei Optionen sind quasi-Synonyme.
+- Optionen passen genau zur aktuellen Szene und Situation, nicht generisch.
+
+BEISPIELE FÜR GUT vs SCHLECHT IN OPTIONEN:
+- ❌ "Lass sie eintreten und frag sie dann," → ✅ "Lass sie eintreten und frag sie, was los ist."
+- ❌ "Beantworte nicht; geh zurück in dein Büro." → ✅ "Geh zurück ins Büro, ohne zu antworten."
+- ❌ "Schließe die Tür und laß sie stehen." → ✅ "Schließ die Tür und lass sie draußen stehen."
+- ❌ "Frage sie, was sie will." → ✅ "Frag sie, was sie will." (Imperativ ohne -e im Alltagsdeutsch klingt natürlicher)
+
+DEUTSCHE GRAMMATIK (Selbstkontrolle vor Ausgabe):
+- Konjugiere Verben in der zweiten Person Singular IMMER korrekt:
+  - "du gehst" (nicht "du geht"), "du siehst" (nicht "du sieht"), "du nimmst" (nicht "du nimmt"), "du trittst" (nicht "du tritt")
+  - "du öffnest" (nicht "du öffnet"), "du fragst", "du sagst", "du hörst", "du fühlst", "du läufst", "du rennst", "du ziehst", "du legst"
+- Bei Verbketten mit "und": beide Verben konjugieren! "Du öffnest die Tür und siehst..." (nicht "...und sieht").
+- Vollständige Sätze: Vermeide Partizip-Konstruktionen ohne Hauptverb. "Regentropfen perlen auf das Metall" (richtig), nicht "Regentropfen perlend auf das Metall".
+- Vor der finalen Ausgabe: Lies deinen Text einmal durch. Stolpert ein deutscher Muttersprachler über ein Verb? Dann korrigiere es.
 
 KRITISCH: Antworte AUSSCHLIESSLICH mit gültigem JSON. KEIN Markdown, KEIN Code-Block, KEIN Text drumherum. Nur das pure JSON-Objekt.
 
@@ -927,18 +951,91 @@ async function callGroq(userMessage, conversationHistory) {
   // Defensive cleanup: strip em/en dashes. Name removal is left to the prompt;
   // doing it client-side either mangles conjugations or breaks dialog quotes,
   // both worse than the rare slip-through.
+  // Also fix the most common du-conjugation mistakes the model produces.
+  const verbFixes = {
+    // 3rd-person → 2nd-person after "du" or "und"
+    'geht': 'gehst', 'kommt': 'kommst', 'sieht': 'siehst', 'nimmt': 'nimmst',
+    'tritt': 'trittst', 'öffnet': 'öffnest', 'schließt': 'schließt',
+    'fragt': 'fragst', 'sagt': 'sagst', 'hört': 'hörst', 'fühlt': 'fühlst',
+    'läuft': 'läufst', 'rennt': 'rennst', 'zieht': 'ziehst', 'legt': 'legst',
+    'gibt': 'gibst', 'liest': 'liest', 'schreibt': 'schreibst',
+    'setzt': 'setzt', 'wirft': 'wirfst', 'hebt': 'hebst', 'dreht': 'drehst',
+    'blickt': 'blickst', 'schaut': 'schaust', 'starrt': 'starrst',
+    'lächelt': 'lächelst', 'nickt': 'nickst', 'schüttelt': 'schüttelst',
+    'atmet': 'atmest', 'denkt': 'denkst', 'glaubt': 'glaubst', 'weiß': 'weißt',
+    'spürt': 'spürst', 'antwortet': 'antwortest', 'erkennt': 'erkennst',
+    'betritt': 'betrittst', 'verlässt': 'verlässt', 'findet': 'findest',
+    'sucht': 'suchst', 'wartet': 'wartest', 'lauscht': 'lauschst',
+    'fasst': 'fasst', 'greift': 'greifst', 'reißt': 'reißt',
+    'ruft': 'rufst', 'flüstert': 'flüsterst', 'schreit': 'schreist',
+    'lacht': 'lachst', 'weint': 'weinst', 'raucht': 'rauchst',
+    'trinkt': 'trinkst', 'isst': 'isst',
+  };
+  function fixOption(s) {
+    if (typeof s !== 'string') return s;
+    let out = s.trim();
+    // Old spelling fixes (regex \b doesn't reliably handle ß boundaries)
+    out = out.replace(/(^|[^a-zA-ZäöüÄÖÜß])daß([^a-zA-ZäöüÄÖÜß]|$)/g, '$1dass$2');
+    out = out.replace(/(^|[^a-zA-ZäöüÄÖÜß])laß([^a-zA-ZäöüÄÖÜß]|$)/g, '$1lass$2');
+    out = out.replace(/(^|[^a-zA-ZäöüÄÖÜß])muß([^a-zA-ZäöüÄÖÜß]|$)/g, '$1muss$2');
+    // Semicolons mid-sentence: split into two sentences, capitalize the next word
+    out = out.replace(/\s*;\s*([a-zäöü])/g, (m, c) => '. ' + c.toUpperCase());
+    out = out.replace(/\s*;\s*/g, '. ');
+    // Trailing junk: comma, colon at end → period
+    out = out.replace(/[,;:]+\s*$/, '.');
+    // Ensure ends with proper punctuation
+    if (!/[.!?]$/.test(out)) out += '.';
+    // Collapse double dots
+    out = out.replace(/\.\.+/g, '.');
+    return out;
+  }
+
+  function fixConjugation(s) {
+    if (typeof s !== 'string') return s;
+    // Direct: "du/Du <wrong_verb>" -> "du/Du <right_verb>"
+    let out = s.replace(/\b(du|Du)\s+(\w+)/g, (m, du, verb) => {
+      const lower = verb.toLowerCase();
+      if (verbFixes[lower]) {
+        const fixed = verbFixes[lower];
+        const finalVerb = verb[0] === verb[0].toUpperCase()
+          ? fixed[0].toUpperCase() + fixed.slice(1)
+          : fixed;
+        return du + ' ' + finalVerb;
+      }
+      return m;
+    });
+    // "du Verb1 ... und Verb2" - fix Verb2 too (verb pairs)
+    out = out.replace(/\b(du|Du)\s+\S+\s+(?:[^.!?]*?\s+)?(und|oder)\s+(\w+)/gi, (m, du, conj, verb) => {
+      const lower = verb.toLowerCase();
+      if (verbFixes[lower]) {
+        const fixed = verbFixes[lower];
+        const finalVerb = verb[0] === verb[0].toUpperCase()
+          ? fixed[0].toUpperCase() + fixed.slice(1)
+          : fixed;
+        return m.slice(0, m.length - verb.length) + finalVerb;
+      }
+      return m;
+    });
+    return out;
+  }
   function clean(s) {
     if (typeof s !== 'string') return s;
-    return s
+    let out = s
       .replace(/\s*—\s*/g, ', ')
       .replace(/\s*–\s*/g, ', ')
       .replace(/\s*--\s*/g, ', ');
+    // Old spelling fixes everywhere
+    out = out.replace(/(^|[^a-zA-ZäöüÄÖÜß])daß([^a-zA-ZäöüÄÖÜß]|$)/g, '$1dass$2');
+    out = out.replace(/(^|[^a-zA-ZäöüÄÖÜß])laß([^a-zA-ZäöüÄÖÜß]|$)/g, '$1lass$2');
+    out = out.replace(/(^|[^a-zA-ZäöüÄÖÜß])muß([^a-zA-ZäöüÄÖÜß]|$)/g, '$1muss$2');
+    out = fixConjugation(out);
+    return out;
   }
   parsed.szene = clean(parsed.szene);
   parsed.ort = clean(parsed.ort);
   parsed.zusammenfassung = clean(parsed.zusammenfassung);
   if (Array.isArray(parsed.optionen)) {
-    parsed.optionen = parsed.optionen.map(o => ({ ...o, text: clean(o.text) }));
+    parsed.optionen = parsed.optionen.map(o => ({ ...o, text: fixOption(clean(o.text)) }));
   }
 
   return { scene: parsed, rawAssistantText: text };
