@@ -583,7 +583,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v1.6 · Präsens &amp; Du</span>
+    <span>Schatten v1.7 · Llama 70b · Konsistenz</span>
   </div>
 
 </div>
@@ -642,6 +642,23 @@ ZEIGEN STATT ERZÄHLEN:
 - Statt "Du betrachtest das Foto. Es zeigt eine junge Frau mit dunklen Haaren." schreibe direkt: "Auf dem Foto eine junge Frau, dunkle Haare bis auf die Schultern, ein Lächeln das nicht ganz die Augen erreicht."
 - Vermeide Floskeln wie "Du fühlst", "Du denkst", "Du bemerkst" wenn möglich.
 - Vermeide auch wiederholende Gesten ("zuckt zusammen", "hält den Atem an", "presst sich an die Wand"). Nicht jede Reaktion ist eine sichtbare Geste. Variiere oder lass weg.
+
+RÄUMLICHE KONSISTENZ (sehr wichtig):
+- Knüpfe IMMER nahtlos an die letzte Szene an. Wenn die letzte Szene "Stimme vor der Tür" war, dann ist in der nächsten Szene weiterhin eine Stimme vor der Tür, kein "anderes Ende der Leitung", kein Telefon, das nicht etabliert ist.
+- Erfinde keine neuen Räumlichkeiten ohne Übergang. Wenn du in deinem Büro bist und jemand draußen vor der Tür, kannst du nicht plötzlich "auf der anderen Seite des Hauses" sein.
+- Wenn ein Raum-/Szenenwechsel passieren soll, mach ihn explizit in der Szenenbeschreibung ("Du öffnest die Tür und stehst auf dem Treppenhaus...").
+
+DIALOGE (sehr wichtig):
+- Jede wörtliche Rede muss EINDEUTIG einem Sprecher zugeordnet sein. Es darf NIE unklar sein, wer gerade spricht.
+- DEINE eigenen Repliken: "..." sagst du. / "..." fragst du. / "...", rufst du zurück.
+- Repliken anderer Figuren: "...", sagt R. / "...", flüstert die Stimme hinter der Tür. / Anna antwortet leise: "..."
+- NIEMALS zweimal hintereinander "flüstert die Stimme" für verschiedene Sprecher. Wenn du sprichst, MARKIERE es als deine Replik ("sagst du", "fragst du").
+- Bei Telefongesprächen, Briefen, Funk: das muss in der Szene etabliert sein. Erfinde kein Telefon, das vorher nicht existierte.
+- Maximal 2-3 Repliken pro Szene. Dann lass den Spieler entscheiden.
+
+NAMEN:
+- "Karl" und "Mauer" sind nur in WÖRTLICHER REDE erlaubt, wenn eine andere Figur dich anspricht. Im Erzähltext und in Optionen niemals.
+- Wenn jemand sagt "Wer bist du?" und du dich vorstellst, dann sagst du selbst deinen Namen ("Mauer, Karl Mauer", sagst du) - das ist als Dialog OK.
 
 KRITISCH: Antworte AUSSCHLIESSLICH mit gültigem JSON. KEIN Markdown, KEIN Code-Block, KEIN Text drumherum. Nur das pure JSON-Objekt.
 
@@ -838,17 +855,19 @@ async function callGroq(userMessage, conversationHistory) {
   ];
 
   // Compact history: instead of sending all old scene texts,
-  // send a compressed "story so far" based on past summaries + recent choices.
-  if (storySummaries.length > 0) {
-    const recap = 'BISHERIGE EREIGNISSE (kompakt):\n' +
-      storySummaries.map((s, i) => `${i + 1}. ${s}`).join('\n');
+  // send a compressed "story so far" based on past summaries + last scene text.
+  if (storySummaries.length > 0 || lastFullScene) {
+    let recap = '';
+    if (storySummaries.length > 0) {
+      recap += 'BISHERIGE EREIGNISSE (kompakt):\n' +
+        storySummaries.map((s, i) => `${i + 1}. ${s}`).join('\n');
+    }
+    if (lastFullScene) {
+      if (recap) recap += '\n\n';
+      recap += 'LETZTE SZENE (du befindest dich genau hier, knüpfe direkt daran an):\n' + lastFullScene;
+    }
     messages.push({ role: 'user', content: recap });
-    messages.push({ role: 'assistant', content: 'Verstanden. Ich kenne den bisherigen Verlauf und führe die Geschichte konsistent weiter.' });
-  }
-
-  // Only send the most recent full scene (if any) for stylistic continuity
-  if (lastFullScene) {
-    messages.push({ role: 'assistant', content: lastFullScene });
+    messages.push({ role: 'assistant', content: 'Verstanden. Ich knüpfe nahtlos und räumlich konsistent an die letzte Szene an, bleibe im Präsens und in der Du-Perspektive.' });
   }
 
   // New user message
@@ -861,7 +880,7 @@ async function callGroq(userMessage, conversationHistory) {
       'Authorization': 'Bearer ' + apiKey
     },
     body: JSON.stringify({
-      model: 'llama-3.1-8b-instant',
+      model: 'llama-3.3-70b-versatile',
       messages: messages,
       temperature: 0.9,
       max_tokens: 1200,
@@ -961,11 +980,12 @@ async function performApiCall(userMsg, isStart, optionForRollback) {
     if (scene.zusammenfassung) {
       storySummaries.push(scene.zusammenfassung);
     }
-    // Keep only last 8 summaries to bound memory
-    if (storySummaries.length > 8) {
-      storySummaries = storySummaries.slice(-8);
+    // Keep only last 4 summaries to stay within 12k TPM on llama-3.3-70b
+    if (storySummaries.length > 4) {
+      storySummaries = storySummaries.slice(-4);
     }
-    lastFullScene = rawAssistantText;
+    // Store only the szene text (not the full JSON with options/wartetext) for stylistic continuity
+    lastFullScene = scene.szene;
 
     logEntries.push({ type: 'scene', text: scene.szene, ort: scene.ort });
     hideLoading();
