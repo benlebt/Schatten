@@ -730,6 +730,23 @@
     background: rgba(255,80,80,0.08);
     color: #ff8080;
   }
+  .settings-info {
+    padding: 10px 14px;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #888;
+    border-bottom: 1px solid rgba(200,191,168,0.08);
+    margin-bottom: 4px;
+    line-height: 1.5;
+  }
+  .settings-info .badge {
+    color: var(--fg-bright);
+    font-weight: bold;
+  }
+  .settings-info .badge.fallback {
+    color: #cc9966;
+  }
   .menu-divider {
     height: 1px;
     background: rgba(200,191,168,0.1);
@@ -741,6 +758,7 @@
 <!-- Settings button (always visible) -->
 <button class="settings-btn" onclick="toggleSettings(event)" title="Menü">⚙</button>
 <div id="settings-menu" class="settings-menu hidden" onclick="event.stopPropagation()">
+  <div class="settings-info" id="settings-provider-info">Provider: lade...</div>
   <button onclick="resetGame()">↻ Spiel neu starten</button>
 </div>
 
@@ -802,7 +820,7 @@
       Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
     </p>
     <button class="btn-primary" onclick="startGame()">Ermittlung beginnen</button>
-    <div class="start-version">Schatten v5.0 · Retry-Reduktion</div>
+    <div class="start-version">Schatten v5.1 · Hybrid</div>
   </div>
 
   <!-- Game Log -->
@@ -863,7 +881,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v5.0 · Retry-Reduktion</span>
+    <span>Schatten v5.1 · Hybrid</span>
   </div>
 
 </div>
@@ -1139,9 +1157,25 @@ function getOverusedWords() {
 }
 
 // --- Settings menu ---
+function updateProviderInfo() {
+  const provider = getActiveProvider();
+  const el = document.getElementById('settings-provider-info');
+  if (!el) return;
+  if (provider === 'groq') {
+    el.innerHTML = 'KI: <span class="badge fallback">BACKUP-ARCHIV</span><br><span style="font-size:9px;color:#666">Premium-Datenbank ist heute aufgebraucht. Morgen wieder verfuegbar.</span>';
+  } else {
+    el.innerHTML = 'KI: <span class="badge">PREMIUM</span>';
+  }
+}
+
 function toggleSettings(event) {
   if (event) event.stopPropagation();
-  document.getElementById('settings-menu').classList.toggle('hidden');
+  const menu = document.getElementById('settings-menu');
+  // Wenn wir gerade aufmachen: Provider-Info aktualisieren
+  if (menu.classList.contains('hidden')) {
+    updateProviderInfo();
+  }
+  menu.classList.toggle('hidden');
 }
 function closeSettings() {
   document.getElementById('settings-menu').classList.add('hidden');
@@ -1420,6 +1454,40 @@ function escapeHtml(s) {
 }
 
 // --- API Call ---
+// Hybrid-Provider: Default Gemini Flash-Lite (Premium-Qualitaet, 20 RPD)
+// Bei Daily-Limit automatischer Fallback auf Groq (gpt-oss-120b, 14400 RPD)
+// Sticky pro UTC-Tag: einmal auf Groq gewechselt = bis Tagesende dort bleiben
+// Naechster Tag = wieder Gemini probieren
+
+function getCurrentUtcDay() {
+  return new Date().toISOString().slice(0, 10); // "2026-05-24"
+}
+
+function getActiveProvider() {
+  try {
+    const raw = localStorage.getItem('schatten-provider');
+    if (!raw) return 'gemini';
+    const { provider, day } = JSON.parse(raw);
+    // Wenn Tageswechsel: zurueck zu Gemini
+    if (day !== getCurrentUtcDay()) return 'gemini';
+    return provider === 'groq' ? 'groq' : 'gemini';
+  } catch {
+    return 'gemini';
+  }
+}
+
+function setActiveProvider(provider) {
+  try {
+    localStorage.setItem('schatten-provider', JSON.stringify({
+      provider, day: getCurrentUtcDay()
+    }));
+  } catch {}
+}
+
+function getProviderEndpoint(provider) {
+  return provider === 'groq' ? '/api/groq' : '/api/gemini';
+}
+
 // Client-seitiges Throttling: gleitendes 60-Sekunden-Fenster.
 // Gemini Flash-Lite erlaubt 15 RPM. Wir nehmen 13 als Limit (2 Puffer fuer Retries).
 // Zwischen jeder Anfrage mindestens MIN_GAP ms, plus harter Stopp wenn 13 in der letzten Minute.
@@ -1539,8 +1607,12 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
   // New user message
   messages.push({ role: 'user', content: userMessage });
 
-  // Call our Vercel proxy (which holds the Gemini key server-side)
-  const response = await fetch('/api/gemini', {
+  // Aktiven Provider waehlen (Gemini default, Groq als Fallback)
+  const provider = getActiveProvider();
+  const endpoint = getProviderEndpoint(provider);
+
+  // Call our Vercel proxy (which holds the API key server-side)
+  const response = await fetch(endpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -1588,7 +1660,10 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
       // but a manual retry after 1-2s usually works. Don't treat those as "daily".
       // "tokens per minute" / "per minute" / "TPM" / "RPM" sind NIE daily.
       const isPerMinute = /per minute|TPM|RPM|requests per minute/i.test(errMsg);
-      err.isDailyLimit = !isPerMinute && /tokens per day|per day|TPD|daily quota|daily limit|RPD/i.test(errMsg);
+      // Gemini meldet das Daily-Limit ueber das Quota-Metric "generate_content_free_tier_requests"
+      // mit konkretem Limit (20). Diese Phrase ist eindeutig taeglich.
+      const isGeminiFreeTier = /generate_content_free_tier_requests/i.test(errMsg);
+      err.isDailyLimit = isGeminiFreeTier || (!isPerMinute && /tokens per day|per day|TPD|daily quota|daily limit|RPD/i.test(errMsg));
 
       // For non-daily rate limits: cap the displayed wait at 10 seconds.
       // Real recovery is usually much faster than the API's conservative estimate.
@@ -2022,7 +2097,27 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       hideLoading();
       const requestedWait = Math.ceil(e.retryAfter || 15);
 
+      // Hybrid-Fallback: Bei Daily-Limit von Gemini direkt auf Groq umschalten
+      // und sofort retry. Erst wenn auch Groq durch ist, zeigen wir das Limit-Bild.
+      const activeProvider = getActiveProvider();
+      if (e.isDailyLimit && activeProvider === 'gemini') {
+        setActiveProvider('groq');
+        console.log('[Schatten] Gemini daily limit reached. Switching to Groq fallback.');
+        if (optionForRollback) {
+          performApiCall(userMsg, isStart, optionForRollback, retryCount, rateLimitCount);
+        } else {
+          performApiCall(userMsg, isStart, undefined, retryCount, rateLimitCount);
+        }
+        return;
+      }
+
+      // Wenn Groq am Daily-Limit ist UND wir waren schon auf Groq: echtes Tageslimit
+      // Wenn Gemini am Daily-Limit ist UND wir waren schon auf Groq (durch Reload o.ae.):
+      // wir sollten dann zurueck zu Gemini? Nein - wenn Gemini meldet "daily limit"
+      // ist es definitiv tot fuer heute. Wir sind im richtigen Zustand.
+
       // Daily limit: show story-themed message with concrete return time
+      // (Wir kommen hier nur an, wenn schon Groq aktiv ist UND auch Groq am Daily-Limit ist)
       if (e.isDailyLimit) {
         if (optionForRollback) {
           logEntries.pop();
@@ -2127,7 +2222,7 @@ function buildDebugDump(err, userMsg, retryCount) {
   return [
     '=== SCHATTEN DEBUG DUMP ===',
     'Zeitpunkt: ' + new Date().toISOString(),
-    'Version: v5.0',
+    'Version: v5.1',
     'Retries: ' + (retryCount || 0),
     '',
     'FEHLER:',
