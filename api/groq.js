@@ -28,6 +28,10 @@ STASI-VERHOER: Wenn Karl in Stasi-Gewahrsam ist (vorige Szene erwaehnte Zelle/Ve
 
 SPRACHQUALITAET: Natuerliches idiomatisches Deutsch. Trennbare Verben nicht kuenstlich aufbrechen ("fordere sie auf laut zum Stehenbleiben auf" ist FALSCH, richtig: "fordere sie lautstark zum Stehenbleiben auf"). Keine Anglizismen (kein "checken", "fixen", "Drinks" - stattdessen "pruefen", "loesen", "einen Whisky"). Kurze, praezise Hauptsaetze wie Hammett. Keine Adjektiv-Haeufung.
 
+KEINE ERFUNDENEN RUECKBEZUEGE: NIE auf Details verweisen, die nicht in den vorigen Szenen explizit beschrieben wurden. Falsch: "der silbergraue Hut, der dir gestern Abend bereits verdaechtig vorkam" - wenn gestern kein silbergrauer Hut da war. Neue Details als neu einfuehren ("ein Mann mit silbergrauem Hut, ein neues Gesicht"), nicht als angebliche Erinnerung.
+
+STORY-ANKER: Der Auftrag aus dem Intro bleibt der rote Faden. Wenn akute Bedrohung weg ist (Spannung sinkt unter 3), MUSS Karl in 1-2 Szenen zum Auftrag zurueck. Nicht im Buero Bourbon trinken und das Hauptziel vergessen.
+
 BERLIN 1953 - SEKTOREN: Berlin ist 4-geteilt, noch keine Mauer (kommt 1961), aber harte Grenzen.
 - SOWJETISCHER SEKTOR (Ost, DDR): Mitte, Friedrichshain, Prenzlauer Berg, Lichtenberg, Koepenick, Pankow, Weissensee. Polizei = Volkspolizei (VP). Karls Buero am Hackeschen Markt ist hier (Mitte).
 - AMERIKANISCH (West): Tempelhof, Schoeneberg, Neukoelln, Zehlendorf, Kreuzberg.
