@@ -88,6 +88,12 @@ export default async function handler(req, res) {
           },
           spannung: { type: 'integer' },
           zusammenfassung: { type: 'string' },
+          // Verfassungs-Delta: wieviel Karl in dieser Szene verloren hat.
+          // 0 = nichts passiert. -1 = leichte Blessur, Erschoepfung. -2 = Treffer, Sturz, schwerer Schlag.
+          // -3 = schwere Verletzung. -4 = lebensgefahrlich. Auch positiv moeglich: +1 wenn er sich
+          // ausruht oder verarztet wird. NICHT in jeder Szene aendern, nur bei klarer Veranlassung.
+          verfassung_delta: { type: 'integer' },
+          verletzungsbeschreibung: { type: 'string' },
         },
         required: ['szene', 'ort', 'optionen', 'spannung', 'zusammenfassung'],
       },
