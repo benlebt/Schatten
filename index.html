@@ -242,6 +242,20 @@
     border-bottom: 1px solid rgba(200,191,168,0.08);
     font-size: 13px;
   }
+  .status-popup-row.status-popup-row-block {
+    display: block;
+  }
+  .status-popup-row.status-popup-row-block .status-popup-label {
+    display: block;
+    margin-bottom: 8px;
+  }
+  .status-popup-row.status-popup-row-block .status-popup-value {
+    text-align: left;
+    margin-left: 0;
+    line-height: 1.7;
+    white-space: pre-line;
+    font-size: 12px;
+  }
   .status-popup-row:last-of-type {
     border-bottom: none;
     margin-bottom: 12px;
@@ -885,6 +899,10 @@
         <span class="status-popup-label">Verletzung</span>
         <span class="status-popup-value" id="popup-injury">—</span>
       </div>
+      <div class="status-popup-row status-popup-row-block">
+        <span class="status-popup-label">Dabei</span>
+        <span class="status-popup-value" id="popup-inventory">—</span>
+      </div>
       <button class="status-popup-close" onclick="hideStatusDetails()">Schließen</button>
     </div>
   </div>
@@ -899,7 +917,7 @@
       Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
     </p>
     <button class="btn-primary" onclick="startGame()">Ermittlung beginnen</button>
-    <div class="start-version">Schatten v6.7 · Marlowe-Regeln</div>
+    <div class="start-version">Schatten v6.9 · Karls Base</div>
   </div>
 
   <!-- Game Log -->
@@ -967,7 +985,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v6.7 · Marlowe-Regeln</span>
+    <span>Schatten v6.9 · Karls Base</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -977,7 +995,15 @@
 const SYSTEM_PROMPT = `Du bist der Spielleiter eines Noir-Krimi-Text-Adventures, Berlin 1953. Stil: Raymond Chandler auf Deutsch, lakonisch, konkret, sinnlich.
 
 DER SPIELER:
-Privatdetektiv Karl Mauer, abgebrüht, knapp bei Kasse. Im Erzähltext NIE beim Namen nennen, immer "du". Karl/Mauer nur in wörtlicher Rede von anderen Figuren erlaubt.
+Privatdetektiv Karl Mauer, Anfang vierzig, abgebrüht, knapp bei Kasse. Im Erzähltext NIE beim Namen nennen, immer "du". Karl/Mauer nur in wörtlicher Rede von anderen Figuren erlaubt.
+
+KARLS BASE (sehr wichtig für die Genre-Atmosphäre):
+Karl wohnt und arbeitet im 2. Stock eines Mietshauses am Hackeschen Markt. Zwei Räume:
+- Büro zur Straße: abgewetzter Schreibtisch, Aktenschrank, zwei alte Sessel für Klienten, eine Flasche Bourbon in der Schublade, der Aschenbecher meist voll, alte Underwood-Schreibmaschine. Schmutzige Fenster, durch die der Lärm vom Hackeschen Markt dringt.
+- Schlafzimmer zum Hinterhof dahinter: Bett, Kleiderschrank, eine Kommode mit ein paar Fotos aus seiner Zeit bei der Kripo (vor dem Krieg).
+- Bad auf dem Hausflur, mit den Nachbarn geteilt.
+
+Die Base ist Karls Fixpunkt. Wie bei Marlowe/Spade kehrt der Detektiv zurück zu seinem Büro/Wohnung, um nachzudenken, zu trinken, zu schlafen. Die KI darf und SOLL diese Räume nutzen für ruhige Lagedenken-Szenen, fürs Aufwachen am Morgen, für unerwartete Klopfen an der Tür. Bei Tageswechsel ist das Default: Karl wacht in seinem Bett auf. Andere Schlafplätze nur wenn die Story es klar hergibt (Krankenhaus bei Verletzung, Polizei-Gewahrsam wenn an Tatort verdaechtigt, bei einer Frau wenn intime Beziehung etabliert, Versteck wenn auf der Flucht).
 
 ERZÄHLPERSPEKTIVE & TEMPUS (zwingend):
 - Zweite Person ("du"), Präsens, durchgehend. Keine Tempus-Wechsel innerhalb einer Szene.
@@ -1103,17 +1129,41 @@ VERBOTEN: Verletzungen erfinden, die nicht im Erzähltext stehen. Beispiele für
 Wenn nichts physisch Konkretes passiert, ist delta = 0. Lieber zu wenig als zu viel. Wenn delta negativ gesetzt wird, MUSS der Erzähltext den konkreten Treffer/Sturz/Schlag enthalten - es muss für den Spieler nachvollziehbar sein, woher die Verletzung kommt.
 
 TOD (delta -4, sehr selten, nur bei wirklich tödlichen Treffern):
-Setze delta -4 (Game Over) NUR bei konkret tödlichen Ereignissen:
-- Bauchschuss, Brustschuss in Herznähe
-- Stich mit langer Klinge in lebenswichtige Region
-- Sturz aus großer Höhe (mehrere Stockwerke)
-- Schädelbruch durch schweren Schlag
-- Verbluten an einer schon offenen Wunde, wenn Karl sich nicht versorgt hat
-NICHT bei: Erschöpfung allein, Schwindel, Schulterschmerz, akkumuliertem Stress. Karl kann angeschlagen sein (Verfassung 1) und trotzdem weiter spielen - die nächsten Optionen müssen dann Versorgung anbieten. Der Tod muss erzählerisch HARD und KONKRET begründet sein, kein langsames Absinken.
+Setze delta -4 (Game Over) NUR bei konkret tödlichen Ereignissen, die im ERZÄHLTEXT EXPLIZIT beschrieben sind:
+- Bauchschuss, Brustschuss in Herznähe ("Die Kugel schlägt in deinen Bauch ein")
+- Stich mit langer Klinge in lebenswichtige Region ("Das Messer fährt in deinen Hals")
+- Sturz aus großer Höhe, mehrere Stockwerke ("Du stürzt vom Dach in die Tiefe")
+- Schädelbruch durch schweren Schlag ("Der Hammer trifft deine Schläfe mit voller Wucht")
+- Verbluten an unversorgter Wunde ("Das Blut sprudelt aus der Bauchwunde, du wirst schwach")
+
+VERBOTEN für delta -4:
+- Erschöpfung allein (ohne tödliche Wunde)
+- Schwindel, schwankende Sicht, verschwommene Augen
+- Schmerz im Knöchel, in der Hüfte, in der Schulter (selbst bei mehreren Stellen)
+- Akkumulierter Stress nach langer Flucht
+- "Verbluten" ohne erzählte offene Schusswunde
+- "Bewusstsein wankt" ohne konkret tödlichen Trigger in dieser Szene
+- Jemand setzt den Spieler in ein Auto und dann stirbt er - das ist KEIN Tod
+- Schock allein
+
+KARL KANN VERFASSUNG 1 HABEN UND DAS SPIEL LÄUFT WEITER. Wenn Karl angeschlagen ist und keine konkret tödliche neue Wunde dazukommt, ist die maximal mögliche Verschlechterung -2. Die nächsten Optionen müssen dann Versorgung anbieten (zum Doc, ins Krankenhaus, Versteck, Ruhe).
+
+Beispiel aus einem schlechten Spielverlauf (NIEMALS so machen): Karl springt aus dem Fenster (Knöchel verletzt), flieht durch Hinterhof, schießt Polizisten ohne selbst getroffen zu werden, klettert über Mauer, versteckt sich, wird vom Lastwagenfahrer aufgehoben, der ihn in den Beifahrersitz setzt, "Sicht verschwimmt", Game Over. FALSCH - keine tödliche Wunde, nur ein Knöchel. delta hier maximal -1.
 
 +1 oder +2: wenn Karl sich verarzten lässt, schläft, sich ausruht (auch das nur, wenn der Erzähltext es zeigt).
 
 "verletzungsbeschreibung" bei -1 oder schlechter setzen: kurz, konkret ("Streifschuss am linken Oberarm", "Prellung am Kinn", "geprellte Rippen", "blutige Hände vom Sturz").
+
+INVENTAR (sehr wichtig fuer Konsistenz):
+Karl hat zu Beginn dabei: Walther PPK (seine eigene Pistole), Brieftasche mit Detektiv-Lizenz, Notizbuch und Bleistift. Du bekommst pro Anfrage sein aktuelles Inventar mitgeteilt.
+
+REGELN:
+- Karls Waffe ist die "Walther PPK". Nenne sie konsistent so. Niemals "Revolver" (Revolver haben eine Trommel, die PPK ein Magazin), niemals "P08", niemals "Colt".
+- Wenn Karl in einer Szene etwas Neues aufnimmt (Foto, Brief, Aktentasche, Schlüssel, fremde Waffe etc.), setze es in das Feld "inventar_hinzugefuegt".
+- Wenn er etwas verliert/verbraucht/weggibt/wegwirft (Verband, Munition leer, weggeworfener Brief), in "inventar_entfernt".
+- Bei keiner Aenderung: beide Felder leere Arrays.
+- WICHTIG: Wenn Karl jemandem die Pistole abnimmt, ist das eine ZWEITE Waffe (z.B. "P08 vom Polizisten"), nicht ein Ersatz seiner Walther.
+- WICHTIG: Wenn das Inventar einen Gegenstand auflistet, MUSS er in der Erzaehlung verfuegbar sein. Karl kann nicht ploetzlich ein Messer haben, das nicht im Inventar steht.
 
 JSON-Output ist Pflicht (kein Markdown, kein Text drumherum):
 {
@@ -1123,6 +1173,8 @@ JSON-Output ist Pflicht (kein Markdown, kein Text drumherum):
   "spannung": 3,
   "verfassung_delta": 0,
   "verletzungsbeschreibung": "",
+  "inventar_hinzugefuegt": [],
+  "inventar_entfernt": [],
   "zusammenfassung": "1 Satz für dein Gedächtnis: Ort, was getan wurde, wichtige Personen/Fakten."
 }
 
@@ -1215,6 +1267,12 @@ let verfassung = 5;
 let isGameOver = false;
 // Letzte Verletzung als Kontext fuer Folgeszenen (z.B. "Schulterschuss")
 let lastInjury = '';
+// Letzte Spannung (1-5), damit advanceGameTime in Action-Sequenzen pausieren kann
+let lastSpannung = 1;
+// Inventar: alles was Karl gerade dabei hat. Strings, kurz formuliert.
+// Wird der KI als Kontext mitgeschickt, damit sie konsistent bleibt
+// (z.B. nicht mal Walther und mal Revolver).
+let inventory = ['Walther PPK (eigene Pistole)', 'Brieftasche mit Detektiv-Lizenz', 'Notizbuch und Bleistift'];
 
 // Story-appropriate wait texts, chosen by current tension level.
 // Each pool has 6+ entries to avoid repetition.
@@ -1606,6 +1664,13 @@ function showStatusDetails() {
   } else {
     injuryRow.style.display = 'none';
   }
+  // Inventar
+  const invEl = document.getElementById('popup-inventory');
+  if (inventory.length > 0) {
+    invEl.textContent = inventory.map(it => '· ' + it).join('\n');
+  } else {
+    invEl.textContent = 'Nichts dabei.';
+  }
   document.getElementById('status-popup').classList.remove('hidden');
 }
 
@@ -1621,6 +1686,14 @@ function hideStatusDetails(event) {
 let sceneCounter = 0;
 let timeAdvanceTokens = 0; // accumulator for fractional time progression
 function advanceGameTime() {
+  // ACTION-PAUSE: Wenn die vorige Szene Spannung 4 oder 5 hatte (Brenzlig/Lebensgefahr),
+  // pausiert die Tageszeit komplett. So bleibt in einer Verfolgungsjagd oder Schiesserei
+  // der Tag stabil, statt in 10 Szenen durch Morgen->Mittag->Abend->Nacht zu sausen.
+  if (lastSpannung >= 4) {
+    console.log('[Schatten] Action-Sequenz (Spannung', lastSpannung + '), Tageszeit pausiert.');
+    return;
+  }
+
   // sceneCounter wird in performApiCall hochgezaehlt (nach erfolgreichem Receive),
   // damit Retries nicht doppelt zaehlen. Hier nur Tageszeit/Tag voranschreiten.
   // NACHT (Index 5) ist die laengste Phase im Krimi: Verhoere ziehen sich, Aktion in der Dunkelheit
@@ -2032,6 +2105,11 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
     if (verfassung <= 2) {
       recap += ` WICHTIG: Karl ist deutlich angeschlagen. Die naechste Szene MUSS das zeigen (Bewegungseinschraenkung, Schmerz, Schwindel, Atemnot). Mindestens eine der vier Optionen muss in Richtung Versorgung/Ausruhen/Versteck gehen.`;
     }
+    // Inventar mitschicken, damit die KI keine inkonsistenten Gegenstaende erfindet.
+    if (inventory.length > 0) {
+      recap += `\n\nKARLS INVENTAR (was er JETZT dabei hat):\n` + inventory.map((it, i) => `- ${it}`).join('\n');
+      recap += `\nNutze NUR diese Gegenstaende. Karls Hauptwaffe ist die Walther PPK, NIEMALS als Revolver bezeichnen.`;
+    }
     messages.push({ role: 'user', content: recap });
     messages.push({ role: 'assistant', content: 'Verstanden. Ich knüpfe nahtlos und räumlich konsistent an die letzte Szene an, bleibe im Präsens und in der Du-Perspektive.' });
   }
@@ -2064,7 +2142,36 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
     let timeContext = `KONTEXT: Aktueller Spieltag ist TAG ${gameDay}, Tageszeit: ${currentTime}. Lichtstimmung: ${LICHT_HINWEIS[currentTime]}. WICHTIG: Die Lichtbeschreibung MUSS zur Tageszeit passen. KEINE Tageszeit-Drift innerhalb einer Aktionssequenz - wenn die letzte Szene "Morgensonne" hatte und nur Minuten vergangen sind, darf die naechste Szene nicht "Mondlicht" oder "Nachmittagshitze" haben.`;
     // Expliziter Tageswechsel-Flag (gesetzt von advanceGameTime nach einem Roll-Over)
     if (pendingDayTransition) {
-      timeContext += ` WICHTIG: Ein neuer Tag hat begonnen. Erzähle in der nächsten Szene einen klaren narrativen Übergang vom Vortag (z.B. "Du hast die Nacht im Büro verbracht und wachst von einem Geräusch auf...", "Am nächsten Morgen kehrst du zurück...", "Nach einer kurzen Nacht voller Grübeleien fährst du in die Stadt..."). Der Spieler muss verstehen, dass Zeit vergangen ist.`;
+      // Schlafplatz bestimmen: je nach Spielzustand andere Wahrscheinlichkeit.
+      // Default ist Karls eigene Wohnung am Hackeschen Markt (Genre-Konstante:
+      // der Detektiv kehrt zur Base zurueck wie bei Marlowe, Spade, Bogart-Filmen).
+      let sleepPlace;
+      if (verfassung <= 2) {
+        // Stark verletzt: Krankenhaus oder Doc Wagner in Schoeneberg
+        sleepPlace = Math.random() < 0.5
+          ? `Karl ist die ganze Nacht von Doc Wagner in Schoeneberg verarztet worden (Schaeferstrasse, kleine Praxis). Er erwacht auf der Liege, der Doc reicht ihm Kaffee.`
+          : `Karl wurde in die Charite Krankenhaus eingeliefert. Er liegt in einem schmalen Bett auf der Station. Eine Schwester wechselt gerade den Verband.`;
+      } else if (verfassung === 3 && lastSpannung >= 4) {
+        // Angeschlagen + war in Action: Notunterkunft / Hotel / Versteck
+        const opts = [
+          `Karl hat die Nacht in einer schmuddeligen Pension am Bahnhof Zoo verbracht (Pension Wernicke), gegen Bargeld vom Wirt ohne Fragen aufgenommen.`,
+          `Karl hat sich in einer alten Lagerhalle nahe der S-Bahn versteckt. Er erwacht steif und froestelnd auf einem Stapel Pappkartons.`,
+          `Karl hat bei seinem alten Bekannten Heinz uebernachtet, einem ehemaligen Polizisten der jetzt taxifaehrt. Heinz weckt ihn mit dem Geruch nach starkem Kaffee.`,
+        ];
+        sleepPlace = opts[Math.floor(Math.random() * opts.length)];
+      } else {
+        // Default: 75% zu Hause, 15% bei einer Frau (wenn Story es hergibt),
+        // 10% irgendwo anders (Polizei, Wagen, Buero-Schreibtisch).
+        const r = Math.random();
+        if (r < 0.75) {
+          sleepPlace = `Karl ist zu seiner Wohnung am Hackeschen Markt zurueckgekehrt. Er wohnt im 2. Stock im selben Haus wie sein Buero (Buero zur Strasse, Schlafzimmer dahinter zum Hinterhof). Er erwacht im eigenen Bett, durch das Fenster der Laerm der Strassenbahn.`;
+        } else if (r < 0.90) {
+          sleepPlace = `Karl hat die Nacht NICHT bei sich verbracht - waehle hier erzaehlerisch passend zur bisherigen Story: bei einer Frau die er gestern getroffen hat (Klientin, Zeugin), in der Wache (Polizei hat ihn ueber Nacht festgehalten weil er an einem Tatort war), oder ausnahmsweise in seinem Opel am Strassenrand. Erzaehle den Aufwachmoment klar (Bett einer Fremden, kalte Zelle, eingeklemmt im Wagen).`;
+        } else {
+          sleepPlace = `Karl ist nicht nach Hause gekommen, sondern auf seinem eigenen Buerosofa eingeschlafen, vollstaendig bekleidet, Aschenbecher voll, leere Flasche auf dem Schreibtisch. Er wacht steif und mit Kopfschmerzen auf, die Vormittagssonne durch die Jalousien.`;
+        }
+      }
+      timeContext += `\n\nTAGESWECHSEL: Ein neuer Tag hat begonnen. ${sleepPlace} Die naechste Szene MUSS hier starten, mit klarem Aufwach-Moment und einer Brueke zum gestrigen Tag (was bleibt im Kopf, was muss heute getan werden im Fall). Dann steht ein neuer Tag voller Ermittlung bevor.`;
       pendingDayTransition = false; // Flag zurücksetzen, damit es nur einmal wirkt
     }
     if (scenesAtSameLocation >= 3) {
@@ -2504,6 +2611,9 @@ async function startGame() {
   verfassung = 5;
   isGameOver = false;
   lastInjury = '';
+  lastSpannung = 1;
+  // Reset Inventar auf Startausstattung
+  inventory = ['Walther PPK (eigene Pistole)', 'Brieftasche mit Detektiv-Lizenz', 'Notizbuch und Bleistift'];
   // Pick a random intro and use its predefined start time
   const intro = pickIntro();
   gameTimeIdx = intro.timeIdx;
@@ -2615,7 +2725,39 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     sceneCounter++;
 
     // Verfassung anpassen basierend auf KI-Antwort
-    const delta = typeof scene.verfassung_delta === 'number' ? scene.verfassung_delta : 0;
+    let delta = typeof scene.verfassung_delta === 'number' ? scene.verfassung_delta : 0;
+
+    // CLIENT-SIDE VALIDIERUNG: Tod (-4) und schwere Verletzung (-3) brauchen einen
+    // expliziten Trigger im Erzaehltext. Wenn der nicht da ist, capen wir das Delta
+    // auf -1 (leichte Folge). So verhindern wir "Tod durch Akkumulation" oder
+    // willkuerliche schwere Verletzungen ohne klaren Grund.
+    if (delta <= -3) {
+      const sceneText = (scene.szene || '').toLowerCase();
+      const injuryText = (scene.verletzungsbeschreibung || '').toLowerCase();
+      const combined = sceneText + ' ' + injuryText;
+      // Schluesselwoerter, die eine schwere/toedliche Verletzung erzaehlerisch begruenden
+      const fatalTriggers = [
+        /\bbauchschuss\b/, /\bbrustschuss\b/, /\bkopfschuss\b/, /\bherzschuss\b/,
+        /\bschuss\s+in\s+(den\s+)?(bauch|brust|kopf|hals|herz|magen|leib)/,
+        /\bkugel\s+(trifft|durchschl[aä]gt|bohrt\s+sich)\s+.*(bauch|brust|kopf|hals|herz|magen|lunge|leber)/,
+        /\bstich\s+(in|durch)\s+(den\s+)?(bauch|brust|herz|hals|niere)/,
+        /\bsch[aä]delbruch\b/, /\bsch[aä]delfraktur\b/, /\bbruch\s+der\s+sch[aä]delbasis/,
+        /\bsturz\s+aus\s+(gro(ss|ß)er\s+h[oö]he|dem\s+(zweiten|dritten|vierten|f[uü]nften)\s+stock)/,
+        /\bverblutet/, /\bverblutest/, /\bblutet\s+(stark|aus|stossweise)/,
+        /\bdurchschossen/, /\bdurchbohrt\s+(von|durch)/,
+        /\b(messer|klinge|dolch)\s+(in|durch)\s+(den\s+)?(bauch|brust|hals|herz|kehle)/,
+        /\bgenickbruch\b/, /\bgenick\s+bricht\b/,
+        /\bbrustkorb\s+(zerschmettert|durchbohrt|getroffen)/,
+      ];
+      const hasFatalTrigger = fatalTriggers.some(p => p.test(combined));
+      if (!hasFatalTrigger) {
+        console.warn('[Schatten] Delta', delta, 'ohne erkennbaren Trigger im Text. Cap auf -1.');
+        delta = -1;
+      } else {
+        console.log('[Schatten] Schwere Verletzung mit erkanntem Trigger akzeptiert. Delta:', delta);
+      }
+    }
+
     if (delta !== 0) {
       verfassung = Math.max(0, Math.min(5, verfassung + delta));
       // Bei -1 oder schlechter: Verletzungsbeschreibung als laufenden Kontext merken
@@ -2629,6 +2771,32 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     // Game Over wenn Verfassung auf 0
     if (verfassung === 0) {
       isGameOver = true;
+    }
+
+    // Spannung merken fuer den naechsten advanceGameTime (Action-Pause)
+    lastSpannung = typeof scene.spannung === 'number' ? scene.spannung : 1;
+
+    // Inventar-Aenderungen verarbeiten
+    if (Array.isArray(scene.inventar_hinzugefuegt) && scene.inventar_hinzugefuegt.length > 0) {
+      for (const item of scene.inventar_hinzugefuegt) {
+        if (typeof item === 'string' && item.trim() && !inventory.includes(item.trim())) {
+          inventory.push(item.trim());
+        }
+      }
+    }
+    if (Array.isArray(scene.inventar_entfernt) && scene.inventar_entfernt.length > 0) {
+      for (const item of scene.inventar_entfernt) {
+        if (typeof item !== 'string') continue;
+        const needle = item.trim().toLowerCase();
+        // Tolerant matchen: wenn der Eintrag das Stichwort enthaelt, entfernen
+        const idx = inventory.findIndex(it => it.toLowerCase().includes(needle) || needle.includes(it.toLowerCase()));
+        if (idx >= 0) inventory.splice(idx, 1);
+      }
+    }
+    // Max 12 Eintraege im Inventar, sonst aelteste raus (Brieftasche/Notizbuch zuerst gefaehrdet,
+    // aber das ist seltenes Szenario - Karl hat meistens nicht so viel dabei)
+    if (inventory.length > 12) {
+      inventory = inventory.slice(-12);
     }
 
     logEntries.push({
@@ -2791,7 +2959,7 @@ function buildDebugDump(err, userMsg, retryCount) {
   return [
     '=== SCHATTEN DEBUG DUMP ===',
     'Zeitpunkt: ' + new Date().toISOString(),
-    'Version: v6.7',
+    'Version: v6.9',
     'Retries: ' + (retryCount || 0),
     '',
     'FEHLER:',
