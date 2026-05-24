@@ -433,6 +433,49 @@
     border-color: #80c080;
     color: #80c080;
   }
+  /* Daily limit notice (more atmospheric than the red error box) */
+  .daily-limit {
+    border: 1px solid rgba(200,160,96,0.3);
+    background: rgba(200,160,96,0.05);
+    padding: 24px;
+    margin-bottom: 16px;
+    animation: fadeIn 0.6s ease;
+  }
+  .dl-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .dl-icon {
+    font-size: 28px;
+    filter: sepia(0.3);
+  }
+  .dl-title {
+    font-size: 13px;
+    letter-spacing: 4px;
+    color: var(--accent);
+    text-transform: uppercase;
+    font-weight: bold;
+  }
+  .dl-text {
+    color: #c8bfa8;
+    font-size: 15px;
+    line-height: 1.8;
+    margin: 0 0 14px;
+    font-style: italic;
+  }
+  .dl-hint {
+    color: #8a8070;
+    font-size: 12px;
+    line-height: 1.7;
+    margin: 0 0 18px;
+  }
+  .dl-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
   /* Footer */
   .footer {
     margin-top: 24px;
@@ -580,7 +623,7 @@
       Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
     </p>
     <button class="btn-primary" onclick="startGame()">Ermittlung beginnen</button>
-    <div class="start-version">Schatten v3.1 · Loop-Stop</div>
+    <div class="start-version">Schatten v3.2 · Karl macht Feierabend</div>
   </div>
 
   <!-- Game Log -->
@@ -619,6 +662,20 @@
     </div>
   </div>
 
+  <!-- Daily limit notice (story-themed) -->
+  <div id="daily-limit" class="daily-limit hidden">
+    <div class="dl-header">
+      <span class="dl-icon">🥃</span>
+      <span class="dl-title">Karl macht Feierabend</span>
+    </div>
+    <p class="dl-text" id="dl-text"></p>
+    <p class="dl-hint">Die Ermittlung geht später weiter. Komm einfach wieder vorbei und tippe auf "Erneut versuchen".</p>
+    <div class="dl-actions">
+      <button class="btn-retry" onclick="retry()">Erneut versuchen</button>
+      <button class="btn-debug" onclick="copyDebug()">📋 Debug-Log kopieren</button>
+    </div>
+  </div>
+
   <!-- Options -->
   <div id="options" class="options-block hidden">
     <div class="options-label">Was tust du?</div>
@@ -627,7 +684,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v3.1 · Loop-Stop</span>
+    <span>Schatten v3.2 · Karl macht Feierabend</span>
   </div>
 
 </div>
@@ -1040,7 +1097,7 @@ function showSetup() {
   document.getElementById('setup').classList.remove('hidden');
 }
 function hideAll() {
-  ['setup','start','loading','error','options','wait-box'].forEach(id => {
+  ['setup','start','loading','error','options','wait-box','daily-limit'].forEach(id => {
     document.getElementById(id).classList.add('hidden');
   });
 }
@@ -1049,6 +1106,7 @@ function showLoading(customText) {
   document.getElementById('options').classList.add('hidden');
   document.getElementById('error').classList.add('hidden');
   document.getElementById('wait-box').classList.add('hidden');
+  document.getElementById('daily-limit').classList.add('hidden');
   const textEl = document.querySelector('#loading .loading-text');
   if (textEl) textEl.textContent = customText || 'Karl denkt nach';
 }
@@ -1064,6 +1122,37 @@ function showError(msg, debug) {
   } else {
     document.getElementById('error-details').classList.add('hidden');
   }
+}
+
+// Story-themed daily limit messages, randomly chosen
+const DAILY_LIMIT_TEXTS = [
+  (when) => `Karl lehnt sich zurück und reibt sich die Augen. "Für heute reicht's", murmelt er, "ich brauch eine Pause." Komm ${when} wieder.`,
+  (when) => `Karl steckt sich eine Zigarette an und blickt aus dem Fenster. Die Ermittlung muss warten. Versuch es ${when} noch einmal.`,
+  (when) => `Karl klappt seinen Notizblock zu und gießt sich einen Whisky ein. "Morgen ist auch noch ein Tag." Schau ${when} wieder vorbei.`,
+  (when) => `Karl massiert seine Schläfen. Zu viele Spuren, zu wenig Schlaf. Er braucht eine Pause. Komm ${when} wieder.`,
+  (when) => `Karl schließt die Akte und löscht das Schreibtischlicht. "Genug für heute." Die Ermittlung geht ${when} weiter.`,
+  (when) => `Karl legt den Hörer auf und atmet schwer aus. Sein Kopf brummt, er braucht Abstand vom Fall. Versuch's ${when} erneut.`,
+];
+
+function showDailyLimitNotice(whenText, debug) {
+  // Hide other UI elements
+  document.getElementById('options').classList.add('hidden');
+  document.getElementById('error').classList.add('hidden');
+  document.getElementById('wait-box').classList.add('hidden');
+  document.getElementById('loading').classList.add('hidden');
+
+  // Pick random story-themed text
+  const fn = DAILY_LIMIT_TEXTS[Math.floor(Math.random() * DAILY_LIMIT_TEXTS.length)];
+  const text = fn(whenText);
+
+  document.getElementById('dl-text').textContent = text;
+  document.getElementById('daily-limit').classList.remove('hidden');
+  // Stash debug for the copy button
+  lastErrorDebug = debug || lastErrorDebug;
+}
+
+function hideDailyLimit() {
+  document.getElementById('daily-limit').classList.add('hidden');
 }
 
 function copyDebug() {
@@ -1239,9 +1328,31 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
     if (response.status === 429) {
       const err = new Error(errMsg);
       err.isRateLimit = true;
-      // Try to extract retry time
-      const match = errMsg.match(/try again in ([\d.]+)s/i);
-      err.retryAfter = match ? Math.ceil(parseFloat(match[1])) : 15;
+
+      // Parse retry time. Groq returns formats like:
+      //   "try again in 12.5s"
+      //   "try again in 34m8.543999999s"
+      //   "try again in 2h15m"
+      let totalSeconds = 15; // fallback
+      const timeMatch = errMsg.match(/try again in ([\dhms.]+)/i);
+      if (timeMatch) {
+        const timeStr = timeMatch[1];
+        let s = 0;
+        const hMatch = timeStr.match(/(\d+)h/);
+        const mMatch = timeStr.match(/(\d+)m(?!s)/);
+        const sMatch = timeStr.match(/([\d.]+)s/);
+        if (hMatch) s += parseInt(hMatch[1]) * 3600;
+        if (mMatch) s += parseInt(mMatch[1]) * 60;
+        if (sMatch) s += parseFloat(sMatch[1]);
+        if (s > 0) totalSeconds = Math.ceil(s);
+      }
+      err.retryAfter = totalSeconds;
+
+      // Detect daily token limit: any wait > 5 minutes is effectively a daily limit
+      // Also: explicit "tokens per day" or "TPD" in the message
+      err.isDailyLimit = totalSeconds > 300 || /tokens per day|TPD/i.test(errMsg);
+
+      err.debugInfo = { stage: 'rate_limit', retryAfter: totalSeconds, isDailyLimit: err.isDailyLimit, rawMessage: errMsg.slice(0, 500) };
       throw err;
     }
     // 400 = often JSON validation from Groq's structured output → retryable
@@ -1537,7 +1648,33 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       hideLoading();
       const requestedWait = Math.ceil(e.retryAfter || 15);
 
-      // Hard cap: if wait would be too long, abort and show clear message
+      // Daily limit: show story-themed message with concrete return time
+      if (e.isDailyLimit) {
+        if (optionForRollback) {
+          logEntries.pop();
+          renderLog();
+        }
+        lastErrorDebug = buildDebugDump(e, userMsg, retryCount);
+
+        const minutes = Math.ceil(requestedWait / 60);
+        const returnTime = new Date(Date.now() + requestedWait * 1000);
+        const hh = returnTime.getHours().toString().padStart(2, '0');
+        const mm = returnTime.getMinutes().toString().padStart(2, '0');
+
+        let timeText;
+        if (minutes < 60) {
+          timeText = `in etwa ${minutes} Minuten (gegen ${hh}:${mm} Uhr)`;
+        } else {
+          const hours = Math.floor(minutes / 60);
+          const remMin = minutes % 60;
+          timeText = `in etwa ${hours} Stunde${hours > 1 ? 'n' : ''}${remMin > 0 ? ' und ' + remMin + ' Minuten' : ''} (gegen ${hh}:${mm} Uhr)`;
+        }
+
+        showDailyLimitNotice(timeText, lastErrorDebug);
+        return;
+      }
+
+      // Hard cap: if wait would be too long (but not daily), still abort gracefully
       if (requestedWait > MAX_RATE_LIMIT_WAIT) {
         if (optionForRollback) {
           logEntries.pop();
@@ -1545,7 +1682,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         }
         lastErrorDebug = buildDebugDump(e, userMsg, retryCount);
         showError(
-          `Das Anfragelimit für die nächste Minute ist erreicht. Bitte warte ungefähr ${requestedWait} Sekunden und tippe dann auf "Erneut versuchen".`,
+          `Karl muss kurz verschnaufen. Versuch es in ungefähr ${requestedWait} Sekunden noch einmal und tippe auf "Erneut versuchen".`,
           lastErrorDebug
         );
         return;
@@ -1559,7 +1696,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         }
         lastErrorDebug = buildDebugDump(e, userMsg, retryCount);
         showError(
-          'Das Anfragelimit wurde mehrfach erreicht. Bitte warte 1-2 Minuten und tippe dann auf "Erneut versuchen".',
+          'Karl braucht eine längere Pause. Warte 1-2 Minuten und tippe dann auf "Erneut versuchen".',
           lastErrorDebug
         );
         return;
@@ -1616,7 +1753,7 @@ function buildDebugDump(err, userMsg, retryCount) {
   return [
     '=== SCHATTEN DEBUG DUMP ===',
     'Zeitpunkt: ' + new Date().toISOString(),
-    'Version: v2.5',
+    'Version: v3.2',
     'Retries: ' + (retryCount || 0),
     '',
     'FEHLER:',
@@ -1646,6 +1783,7 @@ async function retry() {
     const fn = pendingRetry;
     pendingRetry = null;
     document.getElementById('error').classList.add('hidden');
+    hideDailyLimit();
     hideWait();
     fn();
     return;
@@ -1653,6 +1791,7 @@ async function retry() {
   if (!lastUserMessage) return;
   showLoading();
   document.getElementById('error').classList.add('hidden');
+  hideDailyLimit();
   // Manual retry resets both counters (user has presumably waited)
   await performApiCall(lastUserMessage, false, undefined, 0, 0);
 }
