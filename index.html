@@ -1145,7 +1145,7 @@
       Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
     </p>
     <button class="btn-primary" onclick="startGame()">Ermittlung beginnen</button>
-    <div class="start-version">Schatten v6.20 · Story-Anker</div>
+    <div class="start-version">Schatten v6.22 · Konsistenz-Pass</div>
   </div>
 
   <!-- Game Log -->
@@ -1213,7 +1213,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v6.20 · Story-Anker</span>
+    <span>Schatten v6.22 · Konsistenz-Pass</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -1241,6 +1241,7 @@ SOWJETISCHER SEKTOR / OST-BERLIN (DDR seit 1949):
 - Wichtige Orte: Alexanderplatz, Hackescher Markt (Karls Base!), Stalinallee (heute Karl-Marx-Allee), Friedrichstraße, Brandenburger Tor (Grenze). Friedhof Plötzensee liegt am Westhafen (technisch Charlottenburg-Nord, also BRITISCHER Sektor — Karl kann da hin, ist ein Grenzgebiet).
 - Atmosphäre: Trümmer, Volkspolizei (VP), Reichsbahn, sowjetische Soldaten, Stasi, Lebensmittelmarken noch verbreitet
 - Volkspolizei (VP) statt Schutzpolizei. Volkseigene Betriebe (VEB). FDGB.
+- ABKUERZUNGEN AUSSCHREIBEN: Wenn eine Abkuerzung das erste Mal vorkommt (VP, MfS, VEB, RIAS, KaDeWe), MUSS sie sofort ausgeschrieben sein, damit der Spieler sie versteht. Falsch: "VP, sagt er und zeigt seinen Ausweis". Richtig: "Volkspolizei, sagt er und zeigt seinen Ausweis." oder "VP - Volkspolizei - sagt er...". Spaetere Erwaehnungen duerfen die Abkuerzung verwenden, aber nie ohne vorherige Ausschreibung.
 
 AMERIKANISCHER SEKTOR (West):
 - Bezirke: Tempelhof, Schöneberg, Neukölln, Zehlendorf, Steglitz, Kreuzberg
@@ -1599,7 +1600,9 @@ Du bekommst pro Anfrage eine Liste der NPCs die PHYSISCH bei Karl sind. Diese Pe
   - name: Voller Name, z.B. "Helga Schmidt"
   - rolle: Was die Person FUER KARL ist, z.B. "Klientin", "Verfolger", "Kommissar", "Informant", "Zeugin", "Verdaechtiger"
   - beziehung: Wie die Person zu wichtigen Story-Figuren steht, z.B. "Mutter des Vermissten", "Kollege des Opfers", "Witwe von Person X". Wenn die KI noch nicht weiss wer die Person ist: "unbekannt" eintragen. Wenn keine Beziehung zu einer anderen Story-Figur: leer lassen.
-- ROLLEN- UND BEZIEHUNGS-KONSISTENZ IST PFLICHT: Wenn eine Person mit einer Beziehung eingetragen wurde (z.B. "Schwester des Vermissten"), MUSS sie in allen folgenden Szenen diese Beziehung behalten. Verwechsle Familienbeziehungen unter keinen Umstaenden. Wenn du eine Person mehrfach erwaehnst, ueberpruefe immer die Beziehung im aktuellen Cast. Eine Schwester wird NIE zur Ehefrau, ein Vater NIE zum Bruder, eine Witwe NIE zur Verlobten.
+  - fahrzeug (OPTIONAL): Wenn die Person mit eigenem Fahrzeug ankommt, hier eintragen: "BMW R51 mit Beiwagen", "schwarzer Opel Kapitaen", "Fahrrad" etc. Wenn ohne Fahrzeug: leer lassen.
+- ROLLEN- UND BEZIEHUNGS-KONSISTENZ IST PFLICHT: Wenn eine Person mit einer Rolle/Beziehung eingetragen wurde (z.B. "Informant" oder "Schwester des Vermissten"), MUSS sie in allen folgenden Szenen dieselbe Rolle und Beziehung behalten. Konkret: Wer als "Motorradfahrer" / "Informant" eingefuehrt wurde, ist NIE in der naechsten Szene "Volkspolizist mit Ausweis". Wer als "Schwester" eingefuehrt wurde, ist NIE Ehefrau. Wenn eine Person ihre wahre Identitaet enthuellt: das ist eine EXPLIZITE Story-Wendung im Erzaehltext ("er zieht einen VP-Ausweis - der angebliche Informant war die ganze Zeit Polizist"), nicht ein stilles Umschreiben des Rollen-Feldes.
+- FAHRZEUG-KONSISTENZ: Wer mit eigenem Fahrzeug ankommt, fluechtet/geht NUR mit diesem eigenen Fahrzeug. Ein NPC der mit Motorrad kommt, springt nicht in Karls Auto. Niemand klaut Karls Opel - er gehoert Karl und nur Karl hat den Schluessel. Wenn ein NPC zurueckkommt: mit demselben Fahrzeug wie zuvor.
 - TOTE GEHOEREN NICHT IN DEN CAST: cast_hinzugefuegt ist NUR fuer Personen, die mit Karl in der Szene aktiv interagieren koennen (sprechen, sich bewegen, sich beruehren). Verstorbene, im Sarg liegende, beerdigte, ermordete, erhaengte Personen NIEMALS in cast_hinzugefuegt eintragen, auch nicht wenn ihr Grab betreten wird oder ihr Name am Grabstein steht. Dasselbe fuer Vermisste/Verschwundene - sie sind nicht anwesend. Wenn Karl an einem Grab steht: das Grab wird im Erzaehltext beschrieben, der Tote NICHT als cast eingetragen.
 - NIEMALS NPCs einfach vergessen - das war der Hauptkritikpunkt frueherer Spielverlaeufe.
 
@@ -1752,7 +1755,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v6.20';
+window.SCHATTEN_VERSION = 'v6.22';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -1764,6 +1767,10 @@ let gameDay = 1;           // current day (1-based)
 let gameTimeIdx = 4;       // index into TIMES_OF_DAY (starts at "ABEND" since intro is evening)
 let scenesAtSameLocation = 0; // counter for location stagnation
 let lastLocation = '';     // for stagnation check
+// Besuchte Orte: alle einzigartigen Orte die Karl bisher betreten hat.
+// Wird im Kontext mitgeschickt damit die KI nicht "fahr zu Ort X" anbietet
+// nachdem Karl da schon war. Format: Array von Strings, max 12 Eintraege.
+let visitedLocations = [];
 
 // VERFASSUNG: Karls koerperlicher Zustand. Skala 1-5.
 // 5 = unverletzt, ausgeruht
@@ -1797,6 +1804,10 @@ let inventory = ['Walther PPK (eigene Pistole)', 'Brieftasche mit Detektiv-Lizen
 // Beispiel: { name: "Person A", rolle: "Klientin", beziehung: "Mutter des Vermissten" }
 // Strings sind auch erlaubt (Fallback fuer alte Daten und einfache Faelle).
 let cast = [];
+// Karls Fahrzeug: Standard ist sein Opel Olympia. Wird im Kontext mitgeschickt damit
+// die KI nicht NPCs in Karls Auto springen laesst oder ihn ploetzlich ohne Auto da steht.
+// Kann sich aendern wenn das Auto in der Story zerstoert wird oder Karl verliert es.
+let karlVehicle = 'Opel Olympia';
 // Zeitlich-begrenzte Ereignisse: Beerdigung, Hochzeit, Pressekonferenz, Vorstellung,
 // Gerichtsverhandlung. Diese Ereignisse haben einen klaren Anfang und ein klares Ende
 // (1-2h Realzeit). Nach 4 Szenen am gleichen Ereignis MUSS die KI das Ereignis aufloesen
@@ -2316,7 +2327,16 @@ function buildTranscriptText() {
       if (statusParts.length > 0) {
         out += '[' + statusParts.join(' · ') + ']\n';
       }
-      out += (e.text || '').trim() + '\n\n';
+      out += (e.text || '').trim() + '\n';
+      // Angebotene Optionen mit ausgeben (Debug/Lektorat - hilft Inkonsistenzen
+      // wie "steig in den Opel" obwohl der Wagen weg ist zu erkennen)
+      if (Array.isArray(e.optionen) && e.optionen.length > 0) {
+        out += '\nAngebotene Optionen:\n';
+        for (const opt of e.optionen) {
+          out += '  ' + (opt.id || '?') + ') ' + (opt.text || '') + '\n';
+        }
+      }
+      out += '\n';
     } else if (e.type === 'choice') {
       out += '>>> ' + (e.text || '').trim() + '\n\n';
     } else if (e.type === 'gameover') {
@@ -2331,6 +2351,7 @@ function buildTranscriptText() {
   out += 'Tag: ' + gameDay + ', Tageszeit: ' + (TIMES_OF_DAY[gameTimeIdx] || '?') + '\n';
   out += 'Verfassung: ' + verfassung + '/5\n';
   if (lastInjury) out += 'Verletzung: ' + lastInjury + '\n';
+  out += 'Fahrzeug: ' + (karlVehicle || 'keines (verloren/gestohlen/zerstoert)') + '\n';
   if (inventory && inventory.length > 0) {
     out += 'Inventar:\n';
     for (const item of inventory) out += '  - ' + item + '\n';
@@ -2345,10 +2366,14 @@ function buildTranscriptText() {
         const meta = [];
         if (npc.rolle) meta.push(npc.rolle);
         if (npc.beziehung) meta.push(npc.beziehung);
+        if (npc.fahrzeug) meta.push('mit ' + npc.fahrzeug);
         if (meta.length > 0) line += ' (' + meta.join(', ') + ')';
         out += line + '\n';
       }
     }
+  }
+  if (visitedLocations && visitedLocations.length > 0) {
+    out += 'Besuchte Orte: ' + visitedLocations.join(' | ') + '\n';
   }
   // Fall-Fortschritt: kompletter Stand inkl. ALLER Indizien (kein Cut-Off)
   const stageLabels = ['Aufbau', 'Indizien gesammelt', 'Verdaechtiger identifiziert', 'Fall geloest'];
@@ -2777,6 +2802,12 @@ function advanceGameTime() {
       gameDay++;       // new day
       // Flag, damit die naechste Szene einen expliziten Tageswechsel-Story-Beat bekommt
       pendingDayTransition = true;
+      // ENERGIE/HUNGER REGENERATION: Tageswechsel = Karl hat (wo auch immer) geschlafen.
+      // Ohne diesen Reset waere Karl jeden Morgen weiterhin erschoepft, was unsinnig ist.
+      karlEnergie = 100;
+      karlHunger = Math.max(2, karlHunger - 4);  // morgens leichter Hunger ist normal
+      hungerAccumulator = 0;
+      console.log('[Schatten] Tageswechsel (graduell) -> Energie 100, Hunger', karlHunger);
     }
   }
 }
@@ -3283,11 +3314,12 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
     if (cast.length > 0) {
       recap += `\n\nPERSONEN AKTUELL BEI KARL IM RAUM:\n` + cast.map(c => {
         if (typeof c === 'string') return `- ${c}`;
-        // Strukturiert: Name + Rolle + Beziehung
+        // Strukturiert: Name + Rolle + Beziehung + Fahrzeug
         let line = `- ${c.name}`;
         const meta = [];
         if (c.rolle) meta.push(c.rolle);
         if (c.beziehung) meta.push(c.beziehung);
+        if (c.fahrzeug) meta.push('mit ' + c.fahrzeug);
         if (meta.length > 0) line += ` (${meta.join(', ')})`;
         return line;
       }).join('\n');
@@ -3304,9 +3336,23 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
         const meta = [];
         if (f.rolle) meta.push(f.rolle);
         if (f.beziehung) meta.push(f.beziehung);
+        if (f.fahrzeug) meta.push('mit ' + f.fahrzeug);
         recap += `\n- ${f.name}${meta.length > 0 ? ' (' + meta.join(', ') + ')' : ''}`;
       }
-      recap += `\nDiese Fakten gelten DAUERHAFT. Auch wenn eine Person nicht im aktuellen Raum ist, MUSS ihre Beziehung gleich bleiben (z.B. wenn vorher Person X als "Bruder des Klienten" eingetragen wurde, bleibt X der Bruder, nie der Ehemann oder Cousin).`;
+      recap += `\nDiese Fakten gelten DAUERHAFT. Auch wenn eine Person nicht im aktuellen Raum ist, MUSS ihre Rolle und Beziehung gleich bleiben (z.B. wenn vorher Person X als "Bruder des Klienten" eingetragen wurde, bleibt X der Bruder, nie der Ehemann oder Cousin). Wer als Informant eingefuehrt wurde, ist nicht ploetzlich Polizist. Wer mit eigenem Fahrzeug ankam, fluechtet auch nur mit diesem.`;
+    }
+    // Karls Fahrzeug mitschicken: verhindert dass NPCs Karls Auto klauen koennen
+    // und dass Karls Auto ohne Erklaerung verschwindet.
+    if (karlVehicle) {
+      recap += `\n\nKARLS FAHRZEUG: Karl besitzt einen ${karlVehicle}. Nur Karl hat den Schluessel. NIEMAND sonst kann oder darf Karls Auto fahren, hinein springen, oder damit fluechten. Wenn ein NPC fluechten muss: er benutzt SEIN eigenes Fahrzeug (siehe Story-Fakten), nicht Karls. Wenn Karls Auto verloren geht, MUSS das eine bewusste Story-Wendung sein (gestohlen mit Brecheisen, durch Bombe zerstoert, beschlagnahmt), nicht ein beilaeufiger NPC-Diebstahl.`;
+    } else {
+      recap += `\n\nKARL HAT KEIN AUTO MEHR: Sein Opel Olympia ist verloren gegangen (gestohlen oder zerstoert). Karl kann NICHT in den Opel steigen, NICHT damit fahren. Er muss zu Fuss gehen, S-Bahn/Strassenbahn/Taxi nehmen, oder von jemandem mitgenommen werden. Biete KEINE Optionen wie "Steig in den Opel" oder "Fahr mit deinem Wagen" an. Wenn der Spieler ein Auto braucht: Taxi rufen, Heinz (Ex-Polizist Taxifahrer) anrufen, oder zu Fuss / mit Bahn.`;
+    }
+    // Besuchte Orte: verhindert dass Optionen wie "Fahr zur Adresse X" wiederholt
+    // werden nachdem Karl da schon war.
+    if (visitedLocations.length > 0) {
+      recap += `\n\nBEREITS BESUCHTE ORTE: ` + visitedLocations.join('; ') + `.
+Karl war an diesen Orten bereits. Biete KEINE Optionen an wie "Fahr zur Adresse X" oder "Geh zu Y" wenn der Ort bereits besucht wurde, es sei denn es gibt einen neuen Grund (Verfolger gemeldet, Zeuge wartet dort, neue Info zwingt zur Rueckkehr). Wenn der Spieler an einen besuchten Ort zurueckkehren soll, MUSS die Option das explizit als "noch einmal hin" oder "zurueck zu X" formulieren - nicht so tun, als waere es ein neuer Anhaltspunkt.`;
     }
     // Tote/Vermisste mitschicken: KI darf sie NIE als anwesend behandeln oder
     // ihnen Soehne/Brueder/Verwandte erfinden, die nicht im Setup standen.
@@ -3501,7 +3547,16 @@ Es ist NICHT realistisch, dass eine Trauergesellschaft 18 Stunden an einem Grab 
           sleepPlace = `Karl ist nicht nach Hause gekommen, sondern auf seinem eigenen Buerosofa eingeschlafen, vollstaendig bekleidet, Aschenbecher voll, leere Flasche auf dem Schreibtisch. Er wacht steif und mit Kopfschmerzen auf, die Vormittagssonne durch die Jalousien.`;
         }
       }
-      timeContext += `\n\nTAGESWECHSEL: Ein neuer Tag hat begonnen. ${sleepPlace}\n\nDie naechste Szene MUSS folgende drei Dinge ENTHALTEN, in dieser Reihenfolge:\n1. WAS HAT KARL IN DER NACHT GEMACHT (1-2 Saetze, konkret): Wo hat er geschlafen oder gewacht, wie lange, was hat er getraeumt oder gedacht. Wenn jemand mit dabei war: was hat diese Person gemacht (geschlafen, geredet, geweint, geweckt). Nicht ueberspringen!\n2. AUFWACH-MOMENT: konkretes Aufwachgeraeusch oder Bild (Strassenbahn, Klopfen, Lichtstrahl, Geruch, Schmerz von alter Verletzung).\n3. BRUECKE ZUM FALL: was bleibt im Kopf, was ist der naechste logische Schritt heute.\n\nVERBOTEN: einfach mit "schraegem Morgenlicht" anfangen ohne zu erklaeren wo Karl war und was er tat. Verbote weiterhin: pluetzliche Zeitspruenge ohne Brueke, einfach von Action am Vorabend direkt zu Karl-knetet-auf-dem-Boden ohne Erklaerung was passiert ist. Realismus ist Pflicht: wenn Karl gestern an einem dunklen Ort observiert hat, kann er nicht ploetzlich am Morgen am gleichen Ort sein OHNE Erklaerung (hat er die ganze Nacht da gewartet? Ist er zurueckgekommen? Wenn ja warum?).`;
+      timeContext += `\n\nTAGESWECHSEL (PFLICHT, NICHT IGNORIEREN): Ein neuer Tag hat begonnen. ${sleepPlace}
+
+Die naechste Szene MUSS folgende drei Dinge ENTHALTEN, in dieser Reihenfolge:
+1. WAS HAT KARL IN DER NACHT GEMACHT (1-2 Saetze, konkret): Wo hat er geschlafen oder gewacht, wie lange, was hat er getraeumt oder gedacht.
+2. AUFWACH-MOMENT: konkretes Aufwachgeraeusch oder Bild (Strassenbahn, Klopfen, Lichtstrahl, Geruch, Schmerz von alter Verletzung).
+3. BRUECKE ZUM FALL: was bleibt im Kopf, was ist der naechste logische Schritt heute.
+
+KRITISCH WICHTIG: Die VOR-Tageswechsel-Aktion ist VORBEI. Wenn die letzte Spieleraktion war "bestelle eine Currywurst" oder "ruhe dich aus" oder "warte auf X" - das ist ueber die Nacht passiert. Erzaehle NICHT "Du beisst in die Currywurst" wenn dazwischen ein Tageswechsel war. Wenn Karl gestern Abend eine Wurst bestellt hat: er hat sie gestern Abend gegessen, ist eingeschlafen, und ist jetzt am NEUEN Morgen. Schreib nicht so weiter, als waere die letzte Aktion gerade jetzt im Gange.
+
+VERBOTEN: einfach mit "schraegem Morgenlicht" anfangen ohne zu erklaeren wo Karl war und was er tat. Verboten weiterhin: ploetzliche Zeitspruenge ohne Bruecke, einfach von Action am Vorabend direkt zu "Karl-knetet-auf-dem-Boden" ohne Erklaerung. Verboten: laufende Aktionen aus der letzten Szene fortzufuehren (Karl trinkt sein Bier, Karl isst seine Wurst, Karl spricht weiter mit X) - das war alles GESTERN.`;
       // Wenn NPCs gerade bei Karl waren, mussen sie auch beim Tageswechsel erklaert werden
       if (cast.length > 0) {
         const names = cast.map(c => typeof c === 'string' ? c : c.name).join(', ');
@@ -3987,6 +4042,8 @@ async function startGame() {
   inventory = ['Walther PPK (eigene Pistole)', 'Brieftasche mit Detektiv-Lizenz', 'Notizbuch und Bleistift'];
   // Reset Cast (NPCs im Raum)
   cast = [];
+  // Reset Karls Fahrzeug
+  karlVehicle = 'Opel Olympia';
   // Reset Tote/Vermisste-Liste
   mentionedDeadOrAbsent = {};
   // Reset Story-Fakten
@@ -4319,6 +4376,33 @@ function updateTimedEvent(scene) {
   }
 }
 
+// Erkennt ob Karls Auto in dieser Szene verloren geht (gestohlen, zerstoert,
+// beschlagnahmt, weggefahren von jemand anderem). Wenn ja, wird karlVehicle = null.
+function detectVehicleLoss(text) {
+  if (!text) return null;
+  const lower = text.toLowerCase()
+    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+  // Patterns die Auto-Verlust signalisieren
+  const lossPatterns = [
+    // Jemand anderes faehrt Karls Auto weg
+    /\b(motor\s+des\s+opels?\s+(heult|brummt|springt))/,
+    /\b(reisst|riss|reisst)\s+(die\s+)?(wagent[üu]r|t[üu]r\s+des\s+opels?|fahrert[üu]r)\b/,
+    /\b(springt|sprang)\s+(in|hinein|rein|in den opel)\b.*\b(opel|wagen)\b/,
+    /\b(opel|wagen)\b.*\b(davon|davonrast|davonfaehrt|raste\s+davon|fuhr\s+davon)\b/,
+    // Auto wird zerstoert
+    /\b(opel|wagen|auto)\b.{0,40}\b(brennt|explodiert|in\s+flammen|zerstoert|aufgeprallt|gegen\s+(die|den)\s+(wand|baum|mauer))/,
+    /\b(crash|aufprall|explosion)\b.{0,30}\b(opel|wagen)/,
+    // Auto wird beschlagnahmt
+    /\b(opel|wagen|auto)\b.*\b(beschlagnahmt|konfisziert|abgeschleppt)/,
+    // Karl steigt aus und laesst Auto da (ist kein Verlust per se, aber Tracking-relevant)
+  ];
+  // Wer NICHT Karl ist, faehrt Karls Auto weg?
+  for (const p of lossPatterns) {
+    if (p.test(lower)) return 'verloren';
+  }
+  return null;
+}
+
 // Erkennt ob eine Cast-Rolle/Beziehung einen toten/vermissten/abwesenden NPC beschreibt.
 // Wenn ja, gehoert die Person NICHT in den anwesenden Cast, sondern in mentionedDeadOrAbsent.
 function detectDeadOrAbsent(rolle, beziehung) {
@@ -4645,6 +4729,18 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       scenesAtSameLocation = 1;
       lastLocation = curOrt;
     }
+    // Track visited locations (alle einzigartigen Orte fuer Wiederholungs-Schutz)
+    if (scene.ort && scene.ort.trim()) {
+      const ortKey = scene.ort.trim();
+      // Nur hinzufuegen wenn der Ort nicht schon (case-insensitive) drin ist
+      const exists = visitedLocations.some(o => o.toLowerCase() === ortKey.toLowerCase());
+      if (!exists) {
+        visitedLocations.push(ortKey);
+        if (visitedLocations.length > 12) {
+          visitedLocations = visitedLocations.slice(-12);
+        }
+      }
+    }
 
     // Hinweis: advanceGameTime() wurde bereits in chooseOption() vor dem API-Call
     // aufgerufen. Hier nicht nochmal, sonst springen Tageszeit/Tag doppelt.
@@ -4820,12 +4916,13 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       for (const npc of scene.cast_hinzugefuegt) {
         let entry;
         if (typeof npc === 'string' && npc.trim()) {
-          entry = { name: npc.trim(), rolle: '', beziehung: '' };
+          entry = { name: npc.trim(), rolle: '', beziehung: '', fahrzeug: '' };
         } else if (npc && typeof npc === 'object' && npc.name) {
           entry = {
             name: String(npc.name).trim(),
             rolle: String(npc.rolle || '').trim(),
             beziehung: String(npc.beziehung || '').trim(),
+            fahrzeug: String(npc.fahrzeug || '').trim(),
           };
         } else {
           continue;
@@ -4851,25 +4948,37 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           continue;
         }
         const factKey = entry.name.toLowerCase();
-        // Wenn die Person schon in storyFacts ist, ist die fruehere Beziehung
+        // Wenn die Person schon in storyFacts ist, ist die fruehere Rolle/Beziehung/Fahrzeug
         // FAKT - wir ueberschreiben sie nicht, sondern erzwingen sie auf dem Eintrag.
+        // ANTI-ROLLEN-DRIFT: Wenn die KI versucht Leonhards Rolle von "Motorradfahrer"
+        // auf "Volkspolizist" zu aendern, ignorieren wir das.
         if (storyFacts[factKey]) {
           const fact = storyFacts[factKey];
-          // Wenn die KI versucht eine andere Beziehung zu setzen: Warnung + Korrektur
-          if (entry.beziehung && fact.beziehung && entry.beziehung.toLowerCase() !== fact.beziehung.toLowerCase()) {
-            console.warn('[Schatten] Story-Fakt-Konflikt! KI sagte:', entry.beziehung, 'aber Fakt ist:', fact.beziehung);
+          // Konflikt-Warnung wenn Rolle oder Beziehung anders ist
+          if (entry.rolle && fact.rolle && entry.rolle.toLowerCase() !== fact.rolle.toLowerCase()) {
+            console.warn('[Schatten] Rollen-Drift abgefangen!', entry.name, 'war', fact.rolle, ', KI sagt jetzt:', entry.rolle);
           }
+          if (entry.beziehung && fact.beziehung && entry.beziehung.toLowerCase() !== fact.beziehung.toLowerCase()) {
+            console.warn('[Schatten] Beziehungs-Drift abgefangen!', entry.name, 'war', fact.beziehung, ', KI sagt jetzt:', entry.beziehung);
+          }
+          // Fakt gewinnt: alte Werte ueberschreiben Neue
           entry.beziehung = fact.beziehung || entry.beziehung;
           entry.rolle = fact.rolle || entry.rolle;
-        } else if (entry.name && (entry.rolle || entry.beziehung)) {
+          // Fahrzeug bleibt auch persistent - wenn Leonhard mit BMW kam, hat er
+          // weiterhin die BMW (nicht ploetzlich ein Fahrrad oder Karls Opel)
+          if (fact.fahrzeug && !entry.fahrzeug) {
+            entry.fahrzeug = fact.fahrzeug;
+          }
+        } else if (entry.name && (entry.rolle || entry.beziehung || entry.fahrzeug)) {
           // Neuer Story-Fakt: bei erster Erwaehnung einfrieren
           storyFacts[factKey] = {
             name: entry.name,
             rolle: entry.rolle,
             beziehung: entry.beziehung,
+            fahrzeug: entry.fahrzeug,
             firstSeenScene: sceneCounter,
           };
-          console.log('[Schatten] Story-Fakt eingefroren:', entry.name, '->', entry.rolle, '/', entry.beziehung);
+          console.log('[Schatten] Story-Fakt eingefroren:', entry.name, '->', entry.rolle, '/', entry.beziehung, entry.fahrzeug ? ('| Fahrzeug: ' + entry.fahrzeug) : '');
         }
         // Klient-Erkennung: wenn noch kein Klient gesetzt und die Rolle passt
         if (!clientProfile.name && entry.rolle && /klient|auftraggeb/i.test(entry.rolle)) {
@@ -5017,8 +5126,13 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       gameTimeIdx = 0;
       gameDay++;
       timeAdvanceTokens = 0;
+      // Auch Energie regenerieren: KI hat den Schlaf erzaehlt, also hat Karl geschlafen
+      karlEnergie = 100;
+      karlHunger = Math.max(2, karlHunger - 4);
+      hungerAccumulator = 0;
       console.log('[Schatten] KI hat Morgensequenz erzaehlt, ziehe Zeit nach:',
-                  'T' + oldDay + ' ' + oldTime, '->', 'T' + gameDay + ' MORGEN');
+                  'T' + oldDay + ' ' + oldTime, '->', 'T' + gameDay + ' MORGEN',
+                  '| Energie -> 100, Hunger', karlHunger);
     }
 
     // ENERGIE + HUNGER + ROMANTIK aktualisieren basierend auf dieser Szene
@@ -5026,6 +5140,11 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     updateRomanticTension(scene);
     // Zeitlich-begrenzten Anlass tracken (Beerdigung, Hochzeit, etc.)
     updateTimedEvent(scene);
+    // Auto-Verlust pruefen: wenn Karls Opel weggefahren/zerstoert wird, Tracking anpassen
+    if (karlVehicle && detectVehicleLoss(scene.szene || '')) {
+      console.warn('[Schatten] Karls Auto verloren erkannt -> karlVehicle = null:', karlVehicle);
+      karlVehicle = null;
+    }
 
     // ZWANGS-EINNICKEN: wenn Karl bei Energie 0 ist UND Spannung niedrig UND
     // nicht in Gewahrsam UND Abend/Nacht UND die KI hat das nicht selbst erzaehlt.
@@ -5062,6 +5181,13 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       folterCnt: folterSceneCount,
       caseStufe: caseProgress.stage,
       indizienCnt: caseProgress.indizien.length,
+      // Angebotene Optionen mit speichern fuer Debug/Lektorat - oft sind Optionen
+      // selbst die Stelle wo Konsistenzbrueche sichtbar werden ("steig in den Opel"
+      // obwohl Opel weg). Beim Export werden sie unter der Szene aufgelistet.
+      optionen: Array.isArray(scene.optionen) ? scene.optionen.map(o => ({
+        id: o.id || '?',
+        text: o.text || '',
+      })) : [],
     });
     hideLoading();
     hideWait();
@@ -5340,6 +5466,7 @@ function resetGame() {
   pendingDayTransition = false;
   scenesAtSameLocation = 0;
   lastLocation = '';
+  visitedLocations = [];
   hideWait();
   document.getElementById('log').innerHTML = '';
   document.getElementById('header').classList.add('hidden');
