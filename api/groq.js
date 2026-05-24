@@ -265,6 +265,19 @@ export default async function handler(req, res) {
     });
 
     const text = await groqRes.text();
+    // Validiere dass Groq mit JSON geantwortet hat - sonst wird nginx-HTML
+    // transparent durchgereicht ("Antwort nicht lesbar" im Frontend).
+    try {
+      JSON.parse(text);
+    } catch {
+      return res.status(502).json({
+        error: {
+          message: 'Groq antwortete nicht mit JSON (Status ' + groqRes.status + '): ' + text.slice(0, 300),
+          upstream_status: groqRes.status,
+          model: model,
+        }
+      });
+    }
     res.status(groqRes.status);
     res.setHeader('Content-Type', 'application/json');
     return res.send(text);
