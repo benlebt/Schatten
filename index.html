@@ -580,7 +580,7 @@
       Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
     </p>
     <button class="btn-primary" onclick="startGame()">Ermittlung beginnen</button>
-    <div class="start-version">Schatten v3.0 · Story-Pausen</div>
+    <div class="start-version">Schatten v3.1 · Loop-Stop</div>
   </div>
 
   <!-- Game Log -->
@@ -627,7 +627,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v3.0 · Story-Pausen</span>
+    <span>Schatten v3.1 · Loop-Stop</span>
   </div>
 
 </div>
@@ -1494,9 +1494,12 @@ async function chooseOption(option) {
   await performApiCall(userMsg, /*isStart*/false, option);
 }
 
-async function performApiCall(userMsg, isStart, optionForRollback, retryCount) {
+async function performApiCall(userMsg, isStart, optionForRollback, retryCount, rateLimitCount) {
   retryCount = retryCount || 0;
+  rateLimitCount = rateLimitCount || 0;
   const MAX_AUTO_RETRIES = 3;
+  const MAX_RATE_LIMIT_RETRIES = 2;
+  const MAX_RATE_LIMIT_WAIT = 35; // seconds; if Groq asks for more, abort
 
   // Compaction level grows with retry count to bypass token-pressure issues
   // 0 = full prompt, 1 = reduced history, 2 = minimal context
@@ -1530,15 +1533,44 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount) {
     lastErrorDebug = null;
   } catch (e) {
     if (e.isRateLimit) {
-      // Rate limit: respect Groq's exact wait time, no clamping.
+      // Rate limit handling with loop protection
       hideLoading();
-      // Use the precise wait time from Groq. Add 1s buffer for safety.
-      const seconds = Math.max(2, Math.ceil(e.retryAfter || 15) + 1);
+      const requestedWait = Math.ceil(e.retryAfter || 15);
+
+      // Hard cap: if wait would be too long, abort and show clear message
+      if (requestedWait > MAX_RATE_LIMIT_WAIT) {
+        if (optionForRollback) {
+          logEntries.pop();
+          renderLog();
+        }
+        lastErrorDebug = buildDebugDump(e, userMsg, retryCount);
+        showError(
+          `Das Anfragelimit für die nächste Minute ist erreicht. Bitte warte ungefähr ${requestedWait} Sekunden und tippe dann auf "Erneut versuchen".`,
+          lastErrorDebug
+        );
+        return;
+      }
+
+      // Loop protection: only auto-retry rate limits a few times
+      if (rateLimitCount >= MAX_RATE_LIMIT_RETRIES) {
+        if (optionForRollback) {
+          logEntries.pop();
+          renderLog();
+        }
+        lastErrorDebug = buildDebugDump(e, userMsg, retryCount);
+        showError(
+          'Das Anfragelimit wurde mehrfach erreicht. Bitte warte 1-2 Minuten und tippe dann auf "Erneut versuchen".',
+          lastErrorDebug
+        );
+        return;
+      }
+
+      const seconds = Math.max(2, requestedWait + 1);
       pendingRetry = () => {
         if (optionForRollback) {
-          performApiCall(userMsg, isStart, optionForRollback, retryCount);
+          performApiCall(userMsg, isStart, optionForRollback, retryCount, rateLimitCount + 1);
         } else {
-          performApiCall(userMsg, isStart, undefined, retryCount);
+          performApiCall(userMsg, isStart, undefined, retryCount, rateLimitCount + 1);
         }
       };
       showNarrativeWait(seconds);
@@ -1550,9 +1582,9 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount) {
 
       const doRetry = () => {
         if (optionForRollback) {
-          performApiCall(userMsg, isStart, optionForRollback, retryCount + 1);
+          performApiCall(userMsg, isStart, optionForRollback, retryCount + 1, rateLimitCount);
         } else {
-          performApiCall(userMsg, isStart, undefined, retryCount + 1);
+          performApiCall(userMsg, isStart, undefined, retryCount + 1, rateLimitCount);
         }
       };
 
@@ -1621,8 +1653,8 @@ async function retry() {
   if (!lastUserMessage) return;
   showLoading();
   document.getElementById('error').classList.add('hidden');
-  // Manual retry resets the counter
-  await performApiCall(lastUserMessage, false, undefined, 0);
+  // Manual retry resets both counters (user has presumably waited)
+  await performApiCall(lastUserMessage, false, undefined, 0, 0);
 }
 
 // --- Narrative Wait (rate-limit pause as story moment) ---
