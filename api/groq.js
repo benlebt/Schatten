@@ -21,6 +21,13 @@ Optionen muessen logisch zur aktuellen Situation passen. Pruefe vor jeder Option
 2. Ist die Aktion mit dem aktuellen Zustand der Welt vereinbar? Wenn die Tuer aufgebrochen wurde und der Spieler bereits drinnen ist, sind Optionen wie "Pruefe ob die Tuer abgeschlossen ist" UNGUELTIG. Wenn der Spieler bereits am Schreibtisch sitzt, ist "Geh zum Schreibtisch" redundant.
 3. Folgt die Aktion aus dem bisherigen Verlauf? Wenn der Spieler gerade einen Hinweis aufgenommen hat, ist "Suche nach einem Hinweis" redundant.
 
+PHYSISCHE AKTION (kritisch wichtig):
+Wenn die Spielerwahl eine direkte physische Aktion ist (schlagen, schiessen, packen, treten, wuergen, fliehen, verfolgen, Waffe ziehen, Tuer aufreissen, jemanden hochzerren, kuessen, springen, umstossen etc.), MUSS die naechste Szene die UNMITTELBARE Konsequenz in derselben Situation darstellen. ABSOLUT VERBOTEN:
+- Zeitspruenge ("spaeter", "am naechsten Morgen", "nach einer Stunde", "die Nacht zog sich hin")
+- Ortswechsel (z.B. ploetzlich im Buero, im Auto, in der Wohnung)
+- Auslassung der Reaktion (kein Schmerz, kein Schrei, keine Eskalation)
+Stattdessen MUSS die naechste Szene zeigen: Reaktion der getroffenen/angegriffenen Person (Schmerz, Schock, Gegenwehr), Reaktion der Umgebung (Wirt, andere Gaeste, Zeugen), unmittelbare Folge (Sturz, Schuss, Verfolgung beginnt). Erst NACHDEM die Konsequenz erzaehlt wurde, koennen die naechsten Optionen einen Ortswechsel oder Zeitfortschritt erlauben.
+
 SPRACHE:
 - Zweite Person Singular, Praesens, durchgehend
 - Optionen im Du-Imperativ ("Frag ihn.", "Zieh die Pistole."), NIE Sie-Form
