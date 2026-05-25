@@ -1249,7 +1249,7 @@
       Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
     </p>
     <button class="btn-primary" onclick="startGame()">Ermittlung beginnen</button>
-    <div class="start-version">Schatten v6.37 · Game-Over-Erkennung · Folter-False-Positive · Verfassungs-Cap</div>
+    <div class="start-version">Schatten v6.38 · Diagnose-Tracking · Debug-Panel pro Szene</div>
   </div>
 
   <!-- Game Log -->
@@ -1317,7 +1317,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v6.37 · Game-Over-Erkennung · Folter-False-Positive · Verfassungs-Cap</span>
+    <span>Schatten v6.38 · Diagnose-Tracking · Debug-Panel pro Szene</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -1894,7 +1894,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v6.37';
+window.SCHATTEN_VERSION = 'v6.38';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -1920,6 +1920,52 @@ let visitedLocations = [];
 // 0 = tot / Game Over
 let verfassung = 5;
 let isGameOver = false;
+
+// --- DIAGNOSE-TRACKING (nur fuer Debug-Modus relevant) ---
+// Pro Szene sammeln wir alle interessanten Events: was wurde gefiltert, was
+// hat ein Pattern gematcht, was wurde gecapt, etc. Beim "Verlauf kopieren"
+// werden diese Daten unter jeder Szene aufgelistet wenn Debug-Modus an ist.
+// Auch die rohen JSONs (Request an KI + Response von KI) werden hier
+// gespeichert, aber nur im Browser-RAM, kein extra Traffic.
+let currentSceneDiagnostics = null;  // wird vor jedem API-Call resettet
+let sceneDiagnosticsBuffer = [];     // letzte ~50 Szenen, gekoppelt an logEntries
+
+// Setzt einen neuen Diagnose-Frame fuer die naechste Szene
+function diagBegin(stage) {
+  currentSceneDiagnostics = {
+    stage: stage || 'scene',   // 'scene' | 'intro' | 'retry'
+    timestamp: Date.now(),
+    events: [],                // {type, msg, detail}
+    requestJson: null,
+    responseJson: null,
+    rawResponseText: null,
+    modelUsed: null,
+    deltas: {},                // state-Veraenderungen
+  };
+}
+
+// Logged ein Diagnose-Event in den aktuellen Frame.
+// type: 'detect' | 'filter' | 'dedup' | 'drift' | 'cap' | 'roll' | 'state' | 'info'
+function diag(type, msg, detail) {
+  if (!currentSceneDiagnostics) return;
+  currentSceneDiagnostics.events.push({
+    type: type,
+    msg: msg,
+    detail: detail !== undefined ? detail : null,
+  });
+}
+
+// Speichert den aktuellen Frame im Buffer (max ~50 zurueck)
+function diagCommit() {
+  if (!currentSceneDiagnostics) return;
+  sceneDiagnosticsBuffer.push(currentSceneDiagnostics);
+  if (sceneDiagnosticsBuffer.length > 80) {
+    sceneDiagnosticsBuffer.shift();
+  }
+  currentSceneDiagnostics = null;
+}
+// --- ENDE DIAGNOSE-TRACKING ---
+
 // Letzte Verletzung als Kontext fuer Folgeszenen (z.B. "Schulterschuss")
 let lastInjury = '';
 // Letzte Spannung (1-5), damit advanceGameTime in Action-Sequenzen pausieren kann
@@ -2485,6 +2531,47 @@ function buildTranscriptText() {
           out += '  ' + (opt.id || '?') + ') ' + (opt.text || '') + '\n';
         }
       }
+      // DEBUG-DIAGNOSE: nur im Admin/Debug-Modus sichtbar.
+      // Listet alle Pipeline-Events der Szene auf (Filter, Caps, Drift, Detection).
+      // Hilft beim Lektorat zu sehen WARUM eine Szene so geworden ist wie sie ist.
+      if (typeof isAdminUnlocked === 'function' && isAdminUnlocked() &&
+          typeof e.diagId === 'number' && e.diagId >= 0 &&
+          sceneDiagnosticsBuffer[e.diagId]) {
+        const diag = sceneDiagnosticsBuffer[e.diagId];
+        const lines = [];
+        lines.push('--- DEBUG-DIAGNOSE ---');
+        if (diag.modelUsed) lines.push('Modell: ' + diag.modelUsed);
+        if (diag.requestJson) {
+          lines.push('Request: ' + diag.requestJson.model + ' (' + diag.requestJson.provider + '), ' +
+            diag.requestJson.messageCount + ' messages, system-prompt ' +
+            Math.round(diag.requestJson.systemPromptSize / 1000) + 'KB');
+        }
+        if (Array.isArray(diag.events) && diag.events.length > 0) {
+          lines.push('Pipeline-Events:');
+          for (const ev of diag.events) {
+            let line = '  [' + ev.type + '] ' + ev.msg;
+            if (ev.detail) {
+              if (typeof ev.detail === 'string') {
+                line += ' (' + ev.detail + ')';
+              } else {
+                try {
+                  line += ' ' + JSON.stringify(ev.detail);
+                } catch {}
+              }
+            }
+            lines.push(line);
+          }
+        } else {
+          lines.push('Pipeline-Events: (keine)');
+        }
+        if (diag.endState) {
+          lines.push('Endstand: Vf ' + diag.endState.verfassung + ' · En ' + diag.endState.energie +
+            ' · Hu ' + diag.endState.hunger + ' · Sp ' + diag.endState.spannung +
+            ' · Inv ' + diag.endState.inventoryCount + ' · Cast ' + diag.endState.castCount +
+            ' · Facts ' + diag.endState.storyFactsCount + ' · Ind ' + diag.endState.indizienCount);
+        }
+        out += '\n' + lines.join('\n') + '\n';
+      }
       out += '\n';
     } else if (e.type === 'choice') {
       out += '>>> ' + (e.text || '').trim() + '\n\n';
@@ -3008,6 +3095,7 @@ function advanceGameTime() {
   // der Tag stabil, statt in 10 Szenen durch Morgen->Mittag->Abend->Nacht zu sausen.
   if (lastSpannung >= 4) {
     console.log('[Schatten] Action-Sequenz (Spannung', lastSpannung + '), Tageszeit pausiert.');
+    diag('detect', 'Action-Pause: Spannung ' + lastSpannung + ', Tageszeit haelt an');
     return;
   }
 
@@ -3041,6 +3129,9 @@ function advanceGameTime() {
       // Wir setzen ein Force-Flag, das in addTimeContextToRequest in den Header geht.
       pendingForcedSleepNarrative = (karlEnergie === 100 ? 'unbequem' : 'normal');
       console.log('[Schatten] Tageswechsel (graduell) -> Energie 100, Hunger', karlHunger, '| Forced sleep narrative');
+      diag('state', 'Tageswechsel (graduell) -> Tag ' + gameDay + ' MORGEN, Energie 100, Hunger ' + karlHunger);
+    } else {
+      diag('state', 'Tageszeit -> ' + (typeof TIMES_OF_DAY !== 'undefined' ? TIMES_OF_DAY[gameTimeIdx] : gameTimeIdx));
     }
   }
 }
@@ -3183,7 +3274,7 @@ function renderLog() {
         const prefix = prefixParts.length > 0 ? prefixParts.join(' · ') + ' · ' : '';
         ortText.textContent = '· ' + prefix + entry.ort + ' ·';
         ort.appendChild(ortText);
-        if (entry.modelLabel) {
+        if (entry.modelLabel && typeof isAdminUnlocked === 'function' && isAdminUnlocked()) {
           const modelText = document.createElement('span');
           modelText.className = 'ort-divider-model';
           modelText.textContent = entry.modelLabel;
@@ -3193,7 +3284,10 @@ function renderLog() {
       }
       // Status-Snapshot pro Szene: zeigt alle relevanten Werte zum Zeitpunkt der Szene
       // damit man Verschiebungen tracken kann (Debug + Story-Konsistenz-Check).
-      if (typeof entry.energie === 'number' || typeof entry.spannung === 'number') {
+      // NUR im Debug-Modus sichtbar - normale Spieler brauchen diese technischen
+      // Details nicht (Sp 3 · Vf 5 · En 95 · Hu 1 ...).
+      const debugVisible = typeof isAdminUnlocked === 'function' && isAdminUnlocked();
+      if (debugVisible && (typeof entry.energie === 'number' || typeof entry.spannung === 'number')) {
         const statusLine = document.createElement('div');
         statusLine.className = 'scene-status';
         const parts = [];
@@ -3209,6 +3303,49 @@ function renderLog() {
         if (typeof entry.indizienCnt === 'number' && entry.indizienCnt > 0) parts.push('Ind ' + entry.indizienCnt);
         statusLine.textContent = parts.join(' · ');
         div.appendChild(statusLine);
+      }
+      // DEBUG-DIAGNOSE-Panel pro Szene: aufklappbar, sichtbar nur im Debug-Modus.
+      // Zeigt alle Pipeline-Events (Filter, Caps, Drift) sowie Modell und Request-Info.
+      if (debugVisible && typeof entry.diagId === 'number' && entry.diagId >= 0 &&
+          sceneDiagnosticsBuffer[entry.diagId]) {
+        const dg = sceneDiagnosticsBuffer[entry.diagId];
+        const eventCount = Array.isArray(dg.events) ? dg.events.length : 0;
+        const dgDetails = document.createElement('details');
+        dgDetails.className = 'debug-diagnose';
+        dgDetails.style.cssText = 'margin: 6px 0; padding: 6px 10px; background: rgba(80,40,30,0.18); border-left: 3px solid #b04020; font-size: 0.78rem; color: #d8b8a8;';
+        const summary = document.createElement('summary');
+        summary.style.cssText = 'cursor: pointer; user-select: none; opacity: 0.85;';
+        summary.textContent = '⚙ Diagnose (' + eventCount + ' Events' +
+          (dg.modelUsed ? ', ' + dg.modelUsed : '') + ')';
+        dgDetails.appendChild(summary);
+        const content = document.createElement('div');
+        content.style.cssText = 'margin-top: 4px; font-family: monospace; line-height: 1.4; white-space: pre-wrap; word-break: break-word;';
+        const lines = [];
+        if (dg.requestJson) {
+          lines.push('Request: ' + dg.requestJson.model + ' (' + dg.requestJson.provider + ')');
+          lines.push('  System-Prompt-Size: ' + Math.round(dg.requestJson.systemPromptSize / 1000) + 'KB, Messages: ' + dg.requestJson.messageCount);
+        }
+        for (const ev of (dg.events || [])) {
+          let line = '[' + ev.type + '] ' + ev.msg;
+          if (ev.detail) {
+            if (typeof ev.detail === 'string') {
+              line += ' (' + ev.detail + ')';
+            } else {
+              try { line += ' ' + JSON.stringify(ev.detail); } catch {}
+            }
+          }
+          lines.push(line);
+        }
+        if (dg.endState) {
+          lines.push('--- Endstand ---');
+          lines.push('Vf ' + dg.endState.verfassung + ' · En ' + dg.endState.energie +
+            ' · Hu ' + dg.endState.hunger + ' · Sp ' + dg.endState.spannung +
+            ' · Inv ' + dg.endState.inventoryCount + ' · Cast ' + dg.endState.castCount +
+            ' · Facts ' + dg.endState.storyFactsCount + ' · Ind ' + dg.endState.indizienCount);
+        }
+        content.textContent = lines.join('\n');
+        dgDetails.appendChild(content);
+        div.appendChild(dgDetails);
       }
       const p = document.createElement('p');
       p.className = 'scene-text';
@@ -3948,6 +4085,23 @@ VERBOTEN: einfach mit "schraegem Morgenlicht" anfangen ohne zu erklaeren wo Karl
   // Body: messages plus explizites Modell (beide Proxies akzeptieren das jetzt)
   const requestBody = { messages, model: activeModel.model };
 
+  // Diagnose: Request fuer spaetere Auswertung im Browser-RAM ablegen.
+  // Nur model-Name und letzte 2 Nachrichten (system+user) - der Rest ist
+  // redundant und blaeht den Speicher unnoetig auf.
+  if (typeof currentSceneDiagnostics !== 'undefined' && currentSceneDiagnostics) {
+    currentSceneDiagnostics.requestJson = {
+      model: activeModel.model,
+      modelLabel: activeModel.label,
+      provider: activeModel.provider,
+      messageCount: messages.length,
+      // Letzte 2 Messages voll (system-prompt + user-input)
+      // Die System-Message ist enorm gross, wir kuerzen sie auf 2000 chars
+      lastUserMessage: messages[messages.length - 1]?.content?.slice(0, 4000) || '',
+      systemPromptPreview: messages[0]?.content?.slice(0, 600) || '',
+      systemPromptSize: messages[0]?.content?.length || 0,
+    };
+  }
+
   // Call our Vercel proxy (which holds the API key server-side)
   // Wrap fetch in try/catch um Netzwerkfehler (z.B. "Load failed" auf iOS
   // bei Hintergrund-Switch oder Verbindungsabbruch) sauber mit debugInfo
@@ -4387,6 +4541,9 @@ async function startGame() {
   recentTexts = [];
   lastFullScene = null;
   expandedAbbreviations = new Set();
+  // Diagnose-Buffer leeren bei neuem Spiel
+  sceneDiagnosticsBuffer = [];
+  currentSceneDiagnostics = null;
   // Reset day/time/location tracking
   gameDay = 1;
   sceneCounter = 0;
@@ -4464,6 +4621,7 @@ async function startGame() {
       // Skip Platzhalter
       if (/^(unbekannt|klient|kein)\b/i.test(klientName)) {
         console.log('[Schatten] Klient-Name ist Platzhalter, kein storyFacts-Eintrag:', klientName);
+        diag('filter', 'Klient-Setup ist Platzhalter, nicht eingefroren', { name: klientName });
       } else {
         const klientKey = normalizeNpcName(klientName);
         storyFacts[klientKey || klientName.toLowerCase()] = {
@@ -4474,6 +4632,7 @@ async function startGame() {
           frozen: true,
         };
         console.log('[Schatten] Klient aus Setup in storyFacts eingefroren:', klientName);
+        diag('state', 'Klient eingefroren', { name: klientName, key: klientKey || klientName.toLowerCase() });
       }
     }
   }
@@ -4495,6 +4654,7 @@ async function startGame() {
       // Sonst landet "Unbekannt" als feste Person in storyFacts.
       if (/^(unbekannt|klient|opfer|gesuchter|vermisster|verschwundener|wird|noch)\b/i.test(opferName)) {
         console.log('[Schatten] Opfer-Name ist Platzhalter, kein storyFacts-Eintrag:', opferName);
+        diag('filter', 'Opfer-Setup ist Platzhalter, nicht eingefroren', { name: opferName });
       } else {
         const opferKey = normalizeNpcName(opferName) || opferName.toLowerCase();
         mentionedDeadOrAbsent[opferKey] = {
@@ -4513,6 +4673,7 @@ async function startGame() {
           frozen: true,
         };
         console.log('[Schatten] Opfer/Gesuchter aus Setup vorgemerkt:', opferName, '->', reason);
+        diag('state', 'Opfer/Gesuchter eingefroren', { name: opferName, reason: reason });
       }
     }
   }
@@ -4687,11 +4848,15 @@ function updateStasiTension(sceneText) {
   ];
   const hits = stasiMentions.filter(p => p.test(lower)).length;
   if (hits > 0) {
+    const prev = stasiTension;
     stasiTension = Math.min(5, stasiTension + hits);
     console.log('[Schatten] Stasi-Tension steigt um', hits, 'auf', stasiTension);
+    if (stasiTension !== prev) diag('state', 'Stasi-Tension ' + prev + ' -> ' + stasiTension + ' (+' + hits + ' Hits)');
   } else {
     // Ruhige Szene: leichte Abkuehlung
+    const prev = stasiTension;
     stasiTension = Math.max(0, stasiTension - 1);
+    if (stasiTension !== prev) diag('state', 'Stasi-Tension ' + prev + ' -> ' + stasiTension + ' (Abkuehlung)');
   }
 }
 
@@ -5091,6 +5256,7 @@ function updateEnergyAndHunger(scene) {
   // Action friert alles ein: bei Spannung 4-5 keine Energie-Abnahme, kein Hunger
   if (spannung >= 4) {
     console.log('[Schatten] Action (Spannung', spannung + '), Energie/Hunger eingefroren.');
+    diag('detect', 'Action-Spannung ' + spannung + ' -> Energie/Hunger eingefroren');
     return;
   }
 
@@ -5099,6 +5265,7 @@ function updateEnergyAndHunger(scene) {
     karlEnergie = 100;
     karlHunger = 0;  // Morgens neu, normalerweise auch Fruehstueck
     console.log('[Schatten] Schlaf erkannt -> Energie 100, Hunger 0.');
+    diag('detect', 'Schlaf erkannt -> Energie 100, Hunger 0');
     return;
   }
 
@@ -5108,6 +5275,7 @@ function updateEnergyAndHunger(scene) {
     karlHunger = Math.max(0, karlHunger - 2);
     romanticTension = 0;  // entspannt nach der Nacht
     console.log('[Schatten] Romantische Aktion erkannt -> Energie 100.');
+    diag('detect', 'Romantische Aktion -> Energie 100, Romantik-Tension reset');
     return;
   }
 
@@ -5117,6 +5285,7 @@ function updateEnergyAndHunger(scene) {
     hungerAccumulator = 0;
     karlEnergie = Math.min(100, karlEnergie + 8);
     console.log('[Schatten] Essen erkannt -> Hunger 0, Energie +8 =', karlEnergie);
+    diag('detect', 'Essen erkannt -> Hunger 0, Energie +8 = ' + karlEnergie);
     return;
   }
 
@@ -5310,9 +5479,23 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
   // 0 = full prompt, 1 = reduced history, 2 = minimal context
   const compactMode = Math.min(retryCount, 2);
 
+  // Diagnose-Frame fuer diese Szene oeffnen (nur erster Versuch, nicht Retries)
+  if (retryCount === 0 && rateLimitCount === 0) {
+    diagBegin(isStart ? 'intro' : 'scene');
+    diag('info', 'Spieler-Aktion', { text: userMsg.slice(0, 200), compactMode: compactMode });
+  } else {
+    diag('info', 'Retry-Versuch ' + retryCount + '/' + MAX_AUTO_RETRIES);
+  }
+
   try {
     const { scene, rawAssistantText } = await callGroq(userMsg, history, compactMode);
     currentScene = scene;
+    // Rohe JSONs ablegen (Browser-RAM, kein extra Traffic)
+    if (currentSceneDiagnostics) {
+      currentSceneDiagnostics.responseJson = scene;
+      currentSceneDiagnostics.rawResponseText = rawAssistantText ? rawAssistantText.slice(0, 8000) : null;
+      currentSceneDiagnostics.modelUsed = getActiveModel ? (getActiveModel() && getActiveModel().label) : null;
+    }
 
     // Abkuerzungen aufloesen (VP, MfS, RIAS, KaDeWe, etc.) - falls die KI
     // die Ausschreib-Regel ignoriert hat, machen wir es client-side.
@@ -5410,10 +5593,12 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       const chance = fatalChances[Math.min(folterSceneCount - 1, fatalChances.length - 1)] || 0.30;
       if (folterSceneCount >= 2 && Math.random() < chance) {
         console.log('[Schatten] Folter-Tod gewuerfelt (chance', chance + ').');
+        diag('roll', 'Folter-Tod gewuerfelt (Szene ' + folterSceneCount + ', Chance ' + (chance * 100).toFixed(0) + '%)');
         scene.verfassung_delta = -4;
         pendingFolterDeath = true;
       } else {
         console.log('[Schatten] Folter-Szene', folterSceneCount + ', Karl ueberlebt (chance war', chance + ').');
+        diag('roll', 'Folter-Szene ' + folterSceneCount + ', Karl ueberlebt (' + (chance * 100).toFixed(0) + '% Tod-Chance)');
       }
     }
 
@@ -5450,7 +5635,10 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       const hasLightTrigger = lightTriggers.some(p => p.test(combined));
       if (!hasLightTrigger) {
         console.warn('[Schatten] Delta', delta, 'ohne erkennbaren Trigger im Szenentext. Cap auf 0.');
+        diag('cap', 'Verfassung-Delta ' + delta + ' ohne Trigger im Text -> auf 0 gecapt');
         delta = 0;
+      } else {
+        diag('detect', 'Leichter Verfassungs-Drop ' + delta + ' mit Trigger akzeptiert');
       }
     }
 
@@ -5506,14 +5694,18 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       const hasFatalTrigger = fatalTriggers.some(p => p.test(combined));
       if (!hasFatalTrigger) {
         console.warn('[Schatten] Delta', delta, 'ohne erkennbaren Trigger im Text. Cap auf -1.');
+        diag('cap', 'Schwerer Verfassung-Drop ' + delta + ' ohne fatalen Trigger -> Cap auf -1');
         delta = -1;
       } else {
         console.log('[Schatten] Schwere Verletzung mit erkanntem Trigger akzeptiert. Delta:', delta);
+        diag('detect', 'Schwerer Verfassungs-Drop ' + delta + ' mit fatalem Trigger akzeptiert');
       }
     }
 
     if (delta !== 0) {
+      const prevVerf = verfassung;
       verfassung = Math.max(0, Math.min(5, verfassung + delta));
+      diag('state', 'Verfassung ' + prevVerf + ' -> ' + verfassung + ' (Delta ' + delta + ')');
       // Bei -1 oder schlechter: Verletzungsbeschreibung als laufenden Kontext merken
       if (delta < 0 && scene.verletzungsbeschreibung) {
         lastInjury = scene.verletzungsbeschreibung;
@@ -5620,6 +5812,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         const isInfo = infoPatterns.some(p => p.test(newLowerRaw));
         if (isInfo) {
           console.log('[Schatten] Inventar-Filter: "' + newItem + '" ist Information, nicht Gegenstand. Ignoriert.');
+          diag('filter', 'Inventar-Eintrag ist Info, nicht Gegenstand: "' + newItem + '"');
           continue;
         }
 
@@ -5656,8 +5849,10 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
 
         if (!isDuplicate) {
           inventory.push(newItem);
+          diag('state', 'Inventar +: ' + newItem);
         } else {
           console.log('[Schatten] Inventar-Dedup: "' + newItem + '" zu aehnlich zu bestehendem Eintrag, ignoriert.');
+          diag('dedup', 'Inventar-Duplikat verworfen: "' + newItem + '"');
         }
       }
     }
@@ -5678,6 +5873,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         });
         if (idx >= 0) {
           console.log('[Schatten] Inventar entfernt:', inventory[idx], '(durch:', needle + ')');
+          diag('state', 'Inventar entfernt: "' + inventory[idx] + '" (durch: ' + needle + ')');
           inventory.splice(idx, 1);
         }
       }
@@ -5733,12 +5929,14 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             beziehung: entry.beziehung,
           };
           console.log('[Schatten] Toter/Vermisster NPC abgefangen (nicht im Cast):', entry.name, '->', entry.rolle, '/', entry.beziehung);
+          diag('filter', 'Toter/Vermisster NPC abgefangen', { name: entry.name, rolle: entry.rolle, beziehung: entry.beziehung });
           continue; // NICHT in cast.push aufnehmen
         }
         // Auch abfangen wenn der Name bereits in mentionedDeadOrAbsent ist
         // (KI versucht spaeter einen toten NPC als anwesend einzutragen)
         if (mentionedDeadOrAbsent[entry.name.toLowerCase()]) {
           console.log('[Schatten] NPC ist bekannt tot/vermisst, ignoriere Cast-Add:', entry.name);
+          diag('filter', 'NPC bekannt tot/vermisst, ignoriere Cast-Add: ' + entry.name);
           continue;
         }
         // factKey normalisieren damit "Kommissar Heinrich Lindner" und
@@ -5747,6 +5945,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         // gespeichert - die sind keine individuell trackbaren Personen.
         if (isGenericPersonName(entry.name)) {
           console.log('[Schatten] Generischer Person-Eintrag, nicht in storyFacts:', entry.name);
+          diag('filter', 'Generischer Person-Eintrag, nicht in storyFacts: ' + entry.name);
           continue;
         }
         const factKey = normalizeNpcName(entry.name);
@@ -5760,9 +5959,11 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           // Konflikt-Warnung wenn Rolle oder Beziehung anders ist
           if (entry.rolle && fact.rolle && entry.rolle.toLowerCase() !== fact.rolle.toLowerCase()) {
             console.warn('[Schatten] Rollen-Drift abgefangen!', entry.name, 'war', fact.rolle, ', KI sagt jetzt:', entry.rolle);
+            diag('drift', 'Rollen-Drift abgefangen: ' + entry.name + ' war "' + fact.rolle + '", KI sagt jetzt "' + entry.rolle + '"');
           }
           if (entry.beziehung && fact.beziehung && entry.beziehung.toLowerCase() !== fact.beziehung.toLowerCase()) {
             console.warn('[Schatten] Beziehungs-Drift abgefangen!', entry.name, 'war', fact.beziehung, ', KI sagt jetzt:', entry.beziehung);
+            diag('drift', 'Beziehungs-Drift abgefangen: ' + entry.name + ' war "' + fact.beziehung + '", KI sagt jetzt "' + entry.beziehung + '"');
           }
           // Fakt gewinnt: alte Werte ueberschreiben Neue
           entry.beziehung = fact.beziehung || entry.beziehung;
@@ -5782,6 +5983,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             firstSeenScene: sceneCounter,
           };
           console.log('[Schatten] Story-Fakt eingefroren:', entry.name, '->', entry.rolle, '/', entry.beziehung, entry.fahrzeug ? ('| Fahrzeug: ' + entry.fahrzeug) : '');
+          diag('state', 'Story-Fakt eingefroren', { name: entry.name, rolle: entry.rolle, beziehung: entry.beziehung, fahrzeug: entry.fahrzeug || null });
         }
         // Klient-Erkennung: wenn noch kein Klient gesetzt und die Rolle passt
         if (!clientProfile.name && entry.rolle && /klient|auftraggeb/i.test(entry.rolle)) {
@@ -5898,14 +6100,17 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (!isDuplicate) {
           caseProgress.indizien.push(newInd);
           console.log('[Schatten] Neues Indiz:', newInd);
+          diag('state', 'Neues Indiz: ' + newInd);
         } else {
           console.log('[Schatten] Indiz-Dedup: "' + newInd + '" zu aehnlich zu bestehendem Eintrag, ignoriert.');
+          diag('dedup', 'Indiz-Duplikat verworfen: ' + newInd);
         }
       }
       // Stage-Aufstieg: ab 3 Indizien -> Stage 1
       if (caseProgress.stage === 0 && caseProgress.indizien.length >= 3) {
         caseProgress.stage = 1;
         console.log('[Schatten] Fall-Fortschritt: Stage 1 (Indizien beisammen)');
+        diag('state', 'Fall-Stage 1 erreicht (Indizien beisammen)');
       }
     }
     // 2) Tatverdaechtiger identifiziert
@@ -5916,8 +6121,10 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (caseProgress.stage >= 1) {
           caseProgress.stage = 2;
           console.log('[Schatten] Fall-Fortschritt: Stage 2 (Verdaechtiger ' + caseProgress.tatverdaechtiger + ')');
+          diag('state', 'Fall-Stage 2 erreicht (Verdaechtiger: ' + caseProgress.tatverdaechtiger + ')');
         } else {
           console.log('[Schatten] Tatverdaechtiger genannt, aber zu frueh fuer Stage 2 (erst Indizien sammeln).');
+          diag('filter', 'Tatverdaechtiger zu frueh genannt, Stage-Aufstieg blockiert');
         }
       }
     }
@@ -5925,6 +6132,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     if (scene.tatverdaechtiger_ueberfuehrt === true && caseProgress.stage >= 2) {
       caseProgress.ueberfuehrt = true;
       console.log('[Schatten] Fall-Fortschritt: Verdaechtiger ueberfuehrt!');
+      diag('state', 'Verdaechtiger ueberfuehrt (Stage 2 -> ueberfuehrt)');
     }
     // 4) Klient berichtet - finale Win-Bedingung
     if (scene.klient_berichtet === true && caseProgress.ueberfuehrt) {
@@ -5932,6 +6140,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       caseProgress.istGelöst = true;
       caseProgress.stage = 3;
       console.log('[Schatten] FALL GELÖST! Win-Screen wird ausgeloest.');
+      diag('state', 'FALL GELÖST (Stage 3)');
     }
 
     // Politik-Detection: ist der Fall MfS-relevant?
@@ -5939,6 +6148,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     if (!caseIsPolitical && detectPolitical(scene.szene || '')) {
       caseIsPolitical = true;
       console.log('[Schatten] Fall als politisch markiert. Stasi-Festnahme jetzt moeglich.');
+      diag('detect', 'Fall als politisch markiert');
     }
     // Stasi-Tension fortlaufend verfolgen
     updateStasiTension(scene.szene || '');
@@ -5948,11 +6158,13 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       karlInStasiCustody = true;
       folterSceneCount = 0;
       console.log('[Schatten] Karl in Stasi-Gewahrsam. Folter-Wuerfel ab Szene 2 aktiv.');
+      diag('detect', 'Karl in Stasi-Gewahrsam - Folter-Wuerfel aktiv ab Szene 2');
     } else if (karlInStasiCustody && detectStasiRelease(scene.szene || '')) {
       karlInStasiCustody = false;
       const survivedFolter = folterSceneCount;
       folterSceneCount = 0;
       console.log('[Schatten] Karl ist frei. Hat', survivedFolter, 'Folter-Szenen ueberlebt.');
+      diag('detect', 'Karl aus Gewahrsam frei (nach ' + survivedFolter + ' Folter-Szenen)');
     }
 
     // Klient-Auftrag-Entzug: wenn der Erzaehltext klare Entzug-Phrasen enthaelt
@@ -5976,6 +6188,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       ];
       if (firePatterns.some(p => p.test(lower))) {
         console.log('[Schatten] Klient hat Karl gefeuert!');
+        diag('state', 'Klient hat Karl gefeuert!');
         clientFired = true;
       }
     }
@@ -6030,6 +6243,31 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       lastInjury = 'Steifer Nacken vom unbequemen Schlaf';
     }
 
+    // Diagnose-Frame finalisieren und an die Log-Entry haengen.
+    // diagId = Index im sceneDiagnosticsBuffer (-1 wenn kein Frame offen war).
+    let diagId = -1;
+    if (currentSceneDiagnostics) {
+      // State-Snapshot vom Ende der Szene fuer Vergleich
+      currentSceneDiagnostics.endState = {
+        verfassung: verfassung,
+        energie: karlEnergie,
+        hunger: karlHunger,
+        spannung: scene.spannung,
+        stasiTension: stasiTension,
+        gewahrsam: karlInStasiCustody,
+        folterCnt: folterSceneCount,
+        gameDay: gameDay,
+        gameTimeIdx: gameTimeIdx,
+        inventoryCount: inventory.length,
+        castCount: cast.length,
+        storyFactsCount: Object.keys(storyFacts).length,
+        indizienCount: caseProgress.indizien.length,
+        stage: caseProgress.stage,
+      };
+      diagCommit();
+      diagId = sceneDiagnosticsBuffer.length - 1;
+    }
+
     logEntries.push({
       type: 'scene',
       text: scene.szene,
@@ -6050,6 +6288,8 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       folterCnt: folterSceneCount,
       caseStufe: caseProgress.stage,
       indizienCnt: caseProgress.indizien.length,
+      // Diagnose-Index im sceneDiagnosticsBuffer (fuer Debug-Modus-Export)
+      diagId: diagId,
       // Angebotene Optionen mit speichern fuer Debug/Lektorat - oft sind Optionen
       // selbst die Stelle wo Konsistenzbrueche sichtbar werden ("steig in den Opel"
       // obwohl Opel weg). Beim Export werden sie unter der Szene aufgelistet.
@@ -6375,6 +6615,9 @@ function resetGame() {
   lastFullScene = null;
   currentScene = null;
   pendingRetry = null;
+  // Diagnose-Buffer leeren
+  sceneDiagnosticsBuffer = [];
+  currentSceneDiagnostics = null;
   gameDay = 1;
   gameTimeIdx = 4;
   sceneCounter = 0;
@@ -6863,11 +7106,16 @@ function showAdminToast(message) {
 // Sektion im Settings-Menue je nach Admin-Status sichtbar machen
 function applyAdminVisibility() {
   const section = document.getElementById('admin-autoplay-section');
-  if (!section) return;
-  if (isAdminUnlocked()) {
-    section.classList.remove('hidden');
-  } else {
-    section.classList.add('hidden');
+  if (section) {
+    if (isAdminUnlocked()) {
+      section.classList.remove('hidden');
+    } else {
+      section.classList.add('hidden');
+    }
+  }
+  // Live-Log neu rendern, damit die Diagnose-Panels sichtbar bzw. unsichtbar werden
+  if (typeof renderLog === 'function' && Array.isArray(logEntries) && logEntries.length > 0) {
+    try { renderLog(); } catch {}
   }
 }
 
