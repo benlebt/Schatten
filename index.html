@@ -1249,7 +1249,7 @@
       Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
     </p>
     <button class="btn-primary" onclick="startGame()">Ermittlung beginnen</button>
-    <div class="start-version">Schatten v6.38 · Diagnose-Tracking · Debug-Panel pro Szene</div>
+    <div class="start-version">Schatten v6.39 · Tag-Sprung-Fix · Platzhalter-Filter · Sammelbegriffe</div>
   </div>
 
   <!-- Game Log -->
@@ -1317,7 +1317,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v6.38 · Diagnose-Tracking · Debug-Panel pro Szene</span>
+    <span>Schatten v6.39 · Tag-Sprung-Fix · Platzhalter-Filter · Sammelbegriffe</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -1894,7 +1894,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v6.38';
+window.SCHATTEN_VERSION = 'v6.39';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5028,6 +5028,15 @@ function isGenericPersonName(name) {
   if (/^(aelterer?|aeltere|aelteres|alter|alte|altes|junger|junge|junges|kleiner|kleine|kleines|grosser?|grosse|grosses|breitschultriger?|breitschultrige|hagerer?|hagere|schlaksiger?|schlaksige|untersetzter?|untersetzte|dicker?|dicke|duenner?|duenne|hagerer?|hagere|bullige?r?|kleiner?|magerer?|magere|robuste?r?)\s+(herr|dame|mann|frau|bursche|maedchen|kerl|typ|gestalt|kerl|figur|polizist|polizistin|volkspolizist|beamter|kellner|kellnerin|wirt|wirtin|kunde|kundin|gast|nachbar|nachbarin|ober|postbote|bote|bedienung|verkaeufer|verkaeuferin|fahrer|schaffner|empfangsdame|sekretaerin)\b/.test(n)) {
     return true;
   }
+  // Match 5: Sammelbegriffe und Plurale ("zwei Frauen", "Aelteres Paar",
+  // "die Gaeste", "die Maenner", "drei Volkspolizisten"). Das sind keine
+  // Personen sondern Gruppenbeschreibungen und gehoeren nicht in storyFacts.
+  if (/^(zwei|drei|vier|fuenf|sechs|sieben|acht|neun|zehn|mehrere|einige|ein\s+paar|die|ein|eine|ein\s+altes|ein\s+junges|aelteres|juenger?es)\s+(frauen|maenner|leute|gaeste|kunden|kundinnen|passanten|passantinnen|nachbarn|kinder|paerchen|paare|jungs|burschen|kerle|polizisten|volkspolizisten|beamte|kellner|kellnerinnen|raucher|trinker|arbeiter|herren|damen)\b/.test(n)) {
+    return true;
+  }
+  if (/^(aelteres|junges|verlobtes|verheiratetes|altes|junges)\s+paar$/.test(n)) {
+    return true;
+  }
   return false;
 }
 
@@ -5437,6 +5446,12 @@ async function chooseOption(option) {
   // werden. Die naechste Szene muss die UNMITTELBARE Konsequenz erzaehlen.
   // Wir merken uns die Token-Position und schreiten erst danach voran.
   const isPhysical = isPhysicalConflictAction(option.text);
+  // gameDay/gameTimeIdx VOR advanceGameTime merken, damit wir bei explizitem Schlaf
+  // nicht versehentlich doppelt inkrementieren falls der graduelle Wechsel
+  // schon getriggert hat (Token-Roll-Over).
+  const preAdvanceDay = gameDay;
+  const preAdvanceTimeIdx = gameTimeIdx;
+
   if (isPhysical) {
     // Tokens schon mal ansammeln, aber keinen Roll-over zulassen.
     // Wir blockieren den Tageswechsel diesmal, indem wir kuenstlich nicht
@@ -5451,13 +5466,20 @@ async function chooseOption(option) {
   // Explizite Schlaf-/Tagesende-Aktion: SOFORTIGER Tageswechsel zum naechsten Morgen.
   // Loest das Problem dass "Trinke Bourbon und schlafe" oder "Lege mich hin"
   // sonst nur graduell weiterruckt und dann am Abend ein Anruf moeglich waere.
+  // ABER: wenn advanceGameTime schon den Tag gewechselt hat, NICHT nochmal!
+  // Sonst springen wir von "T3 Nacht" zu "T5 Morgen" statt zu "T4 Morgen".
   if (!isPhysical && detectExplicitSleep(option.text)) {
     console.log('[Schatten] Explicit sleep detected:', option.text);
-    // Springe direkt zum naechsten Morgen
-    gameTimeIdx = 0; // MORGEN
-    gameDay++;
-    timeAdvanceTokens = 0;
-    pendingDayTransition = true;
+    const alreadyAdvancedToMorning = (gameDay > preAdvanceDay && gameTimeIdx === 0);
+    if (alreadyAdvancedToMorning) {
+      console.log('[Schatten] Tageswechsel schon durch advanceGameTime erfolgt - kein Doppel-Inkrement');
+    } else {
+      // Springe direkt zum naechsten Morgen
+      gameTimeIdx = 0; // MORGEN
+      gameDay++;
+      timeAdvanceTokens = 0;
+      pendingDayTransition = true;
+    }
   }
 
   const userMsg = isPhysical
@@ -5974,6 +5996,17 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             entry.fahrzeug = fact.fahrzeug;
           }
         } else if (entry.name && (entry.rolle || entry.beziehung || entry.fahrzeug)) {
+          // Platzhalter-Filter: Wenn Rolle UND Beziehung "unbekannt/unklar" sind,
+          // ist das ein Platzhalter-Eintrag von Mistral, kein echter Fakt.
+          // Wuerde sonst storyFacts mit "Anna Berg (Unbekannte, unbekannt)" verschmutzen.
+          // Erst einfrieren wenn die KI sich auf eine konkrete Rolle festgelegt hat.
+          const rolleIsPlaceholder = !entry.rolle || /^(unbekannt|unklar|unbestimmt|fremd[a-z]*)$/i.test(entry.rolle.trim());
+          const beziehungIsPlaceholder = !entry.beziehung || /^(unbekannt|unklar|unbestimmt|keiner?|kein bezug)$/i.test(entry.beziehung.trim());
+          if (rolleIsPlaceholder && beziehungIsPlaceholder && !entry.fahrzeug) {
+            console.log('[Schatten] Platzhalter-Person, nicht eingefroren:', entry.name, '(', entry.rolle, '/', entry.beziehung, ')');
+            diag('filter', 'Platzhalter-Person (Unbekannt/unbekannt), nicht eingefroren: ' + entry.name);
+            continue;
+          }
           // Neuer Story-Fakt: bei erster Erwaehnung einfrieren
           storyFacts[factKey] = {
             name: entry.name,
