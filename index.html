@@ -1648,7 +1648,7 @@
     <button class="btn-primary" onclick="startRandomGame()">Zufällige Ermittlung</button>
     <br>
     <button class="btn-secondary" onclick="showSetupSelector()">Fall auswählen</button>
-    <div class="start-version">Schatten v7.1 · Stage3-Toast nach Falltyp + Doc-Wagner-Heilung + Datei-Download</div>
+    <div class="start-version">Schatten v7.2 · Custody-State-Konsistenz (keine Stasi-Toasts mehr während Gewahrsam)</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -1725,7 +1725,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.1</span>
+    <span>Schatten v7.2</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -3390,7 +3390,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.1';
+window.SCHATTEN_VERSION = 'v7.2';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -7259,7 +7259,11 @@ Es ist NICHT realistisch, dass eine Trauergesellschaft 18 Stunden an einem Grab 
     // v6.74: Trigger-Schwellen verschaerft, Festnahme bei Tension>=4 PFLICHT (nicht mehr optional),
     // und atmosphaerische Beobachtungs-Pflicht-Erinnerung bei caseIsPolitical wenn 5+ Szenen
     // ohne Stasi-Bezug vergangen sind (verhindert dass politische Faelle "vergessen" werden).
-    if (caseIsPolitical) {
+    // v7.2: Wenn Karl bereits in Stasi-Custody ist, sind alle Stasi-Eskalations-Pushes
+    // (Festnahme-Pflicht, Stasi-Druck hoch/mittel/niedrig) inhaltlich falsch - Karl ist
+    // ja schon erwischt. Diese Pushes greifen NUR wenn !karlInStasiCustody. In Custody
+    // gilt die separate Folter-Mechanik (KARL IM STASI-GEWAHRSAM Push).
+    if (caseIsPolitical && !karlInStasiCustody) {
       // v6.80: Forced Custody hat absolute Prioritaet - wenn das Flag gesetzt
       // ist, MUSS in der naechsten Szene die Festnahme passieren. Kein Spielraum
       // fuer "vielleicht entkommt Karl noch".
@@ -9916,7 +9920,9 @@ function checkStatusToasts(spannung) {
     showProgressToast('Lebensgefahr', 'Karl ist in akuter Lebensgefahr. Schnell handeln oder weg!', 'danger', 'spannung-5');
   }
   // DANGER: Stasi-Tension hoch (>= 3 = Festnahme moeglich)
-  if (caseIsPolitical && stasiTension >= 3) {
+  // v7.2: Nur wenn Karl noch NICHT in Custody ist - sonst inhaltlich falsch
+  // ("Stasi auf den Fersen" wenn Karl in der Zelle sitzt).
+  if (caseIsPolitical && stasiTension >= 3 && !karlInStasiCustody) {
     showProgressToast('Stasi auf den Fersen', 'Die Volkspolizei beobachtet Karl gezielt. Eine falsche Bewegung und sie schlagen zu.', 'danger', 'stasi-hoch');
   }
   // DANGER: Verfassung kritisch (2 oder weniger - schwer verletzt)
@@ -9936,7 +9942,8 @@ function checkStatusToasts(spannung) {
     showProgressToast('Karl wird muede', 'Der Tag war lang. Bald sollte Karl ans Schlafen denken.', 'caution', 'energie-muede');
   }
   // CAUTION: Stasi-Tension mittel (>= 2)
-  if (caseIsPolitical && stasiTension >= 2 && stasiTension < 3) {
+  // v7.2: Nur wenn Karl noch NICHT in Custody ist
+  if (caseIsPolitical && stasiTension >= 2 && stasiTension < 3 && !karlInStasiCustody) {
     showProgressToast('Beobachtet', 'Karl spuert dass jemand ihn beschattet. Vorsicht beim naechsten Schritt.', 'caution', 'stasi-mittel');
   }
   // CAUTION: Hunger 7-8 (deutlich)
@@ -10850,7 +10857,12 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       // Bei 3+ Szenen ohne Kontext: Custody wieder freigeben.
       const sceneLower = (scene.szene || '').toLowerCase()
         .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
-      const stasiContext = /\b(zelle|verhoer|stasi|mfs|fesseln|handschellen|kellerverhoer|verhoertisch|gepruegelt|gefoltert|geschlagen|gestoss|gestossen|hohenschoenhausen|untersuchungshaftanstalt|haftanstalt|wachtmeister|stundenlang|verhoer(raum|zimmer)|nackte\s+gluehbirne|eisernen?\s+stuhl)\b/.test(sceneLower);
+      const stasiContext = /\b(zelle|zellentuer|verhoer|stasi|mfs|fesseln|handschellen|kellerverhoer|verhoertisch|gepruegelt|gefoltert|geschlagen|gestoss|gestossen|hohenschoenhausen|untersuchungshaftanstalt|haftanstalt|wachtmeister|waerter|gefaengnis|gefangener|stundenlang|verhoer(raum|zimmer)|nackte\s+gluehbirne|eisernen?\s+stuhl|pritsche|vergittert|gitterfenster|haeftling|knast|gitter\s+am\s+fenster)\b/.test(sceneLower)
+        || /\b(will|verlange?|verlangst?|moechte|fordere)\s+einen?\s+anwalt\b/.test(sceneLower)
+        || /\bhier\s+gibt\s+es\s+keine?\s+anwaelte/.test(sceneLower)
+        || /\b(stuhllehne\s+knarrt|stuhl\s+knarrt|akte\s+auf\s+dem\s+tisch|akte\s+auf\s+den\s+tisch)/.test(sceneLower)
+        || /\bman?n\s+(mit|in)\s+(der\s+)?(lederjacke|narbe|trenchcoat|lodenmantel)\s+(lacht|fragt|fixiert|legt|sagt|knurrt)/.test(sceneLower)
+        || /\b(mfs-mann|mfs-maenner|stasi-mann|stasi-maenner)\s+(betritt|tritt|steht|fragt|kommt)/.test(sceneLower);
       if (!stasiContext) {
         console.warn('[Schatten] karlInStasiCustody=true aber Szene zeigt keinen Stasi-Kontext - Folter-Wuerfel uebersprungen.');
         diag('roll', 'Folter-Wuerfel uebersprungen - kein Stasi-Kontext in Szene (vermutlich False-Positive)');
