@@ -1413,6 +1413,9 @@
     <div class="settings-divider"></div>
     <div class="settings-info">Deploy</div>
     <button onclick="openDeployModal(event)">🚀 Datei deployen (GitHub-Push)</button>
+
+    <div class="settings-divider"></div>
+    <button onclick="deactivateDebugMode(event)" style="background: rgba(120, 60, 60, 0.4); border-color: rgba(180, 90, 90, 0.5);">🔒 Debug-Modus deaktivieren</button>
   </div>
 </div>
 
@@ -1575,7 +1578,7 @@
     <button class="btn-primary" onclick="startRandomGame()">Zufällige Ermittlung</button>
     <br>
     <button class="btn-secondary" onclick="showSetupSelector()">Fall auswählen</button>
-    <div class="start-version">Schatten v6.81</div>
+    <div class="start-version">Schatten v6.83</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -1652,7 +1655,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v6.81</span>
+    <span>Schatten v6.83</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -3298,7 +3301,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v6.81';
+window.SCHATTEN_VERSION = 'v6.83';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5184,6 +5187,23 @@ function advanceGameTime() {
       karlEnergie = 100;
       karlHunger = Math.max(2, karlHunger - 4);  // morgens leichter Hunger ist normal
       hungerAccumulator = 0;
+      // v6.83: VERFASSUNG-HEILUNG bei Tageswechsel.
+      // Karl ist nicht unverwundbar, aber er heilt im Schlaf etwas. Bei Tageswechsel
+      // mit ruhiger letzter Szene (Spannung <=2) heilt Karl 1 Punkt Verfassung.
+      // Bei sehr ruhiger letzter Szene (Bett, Schlafzimmer, Buero) +1 extra.
+      // Max-Cap: bei Verfassung 2/5 max +1 (nicht direkt zurueck auf 5).
+      // Bei Verfassung 1 (lebensgefaehrlich) keine spontane Heilung - braucht Arzt.
+      if (typeof verfassung === 'number' && verfassung > 0 && verfassung < 5) {
+        const wasInRestfulPlace = lastFullScene && lastFullScene.szene && /bett|schlafzimmer|hotel|wohnung|buero|doc wagner|charite/i.test(lastFullScene.szene);
+        const wasCalm = (typeof lastSpannung === 'number' && lastSpannung <= 2);
+        if (verfassung >= 2 && wasCalm && wasInRestfulPlace) {
+          const before = verfassung;
+          verfassung = Math.min(5, verfassung + 1);
+          console.log('[Schatten] Tagesheilung: Verfassung', before, '->', verfassung, '(ruhiger Schlafplatz)');
+          diag('state', 'Tagesheilung Verfassung ' + before + ' -> ' + verfassung + ' (ruhig + Schlafplatz)');
+        }
+        // bei Verfassung 1 KEINE Heilung - braucht echten Arzt
+      }
       // FORCE-SLEEP-NARRATIVE: Wenn der gradullen Tageswechsel bei niedriger Energie
       // greift, ist Karl im Verlauf sehr muede geworden. Die KI muss in der naechsten
       // Szene erzaehlen WIE Karl geschlafen hat - sonst wirkt der Sprung "Bulette
@@ -6495,6 +6515,16 @@ Es ist NICHT realistisch, dass eine Trauergesellschaft 18 Stunden an einem Grab 
     } else if (gameTimeIdx === 5 && isLowTension) {
       // NACHT, aber Karl noch fit: trotzdem 1 Schlaf-Option zur Wahl
       recap += `\n\nNACHT-OPTION (Energie ${karlEnergie}/100): Es ist Nacht. EINE der 4 Optionen darf ein Tageswechsel sein, mit Wort "schlafen" oder "die Nacht verbringen". Aber Karl ist noch nicht erschoepft, du kannst es ihm anbieten oder auch nicht.`;
+    }
+
+    // v6.83: KEINE-SCHLAF-OPTIONEN-PFLICHT wenn Karl frisch ausgeschlafen ist.
+    // Anlass: nach Tageswechsel war Energie=100 und es war MORGEN, aber Mistral
+    // bot trotzdem "Versuch, noch ein paar Stunden zu schlafen" an - mechanisch
+    // Unsinn, denn Karl ist frisch wach. Wenn er das wahlt, springt das Spiel
+    // weitere 24h vor (gameDay++) ohne dass es erzaehlerisch passt.
+    // Bei Energie >=80 + Morgen/Vormittag/Mittag: explizit KEINE Schlaf-Optionen.
+    if (karlEnergie >= 80 && gameTimeIdx <= 2) {
+      recap += `\n\nKARL IST FRISCH WACH (Energie ${karlEnergie}/100, ${currentTime}): Karl ist gerade ausgeschlafen oder hat morgens Kaffee getrunken. KEINE Option darf "schlafen", "noch ein paar Stunden", "wieder ins Bett", "auf die Couch", "Bett", "Sofa" oder "bis morgen" enthalten. Niemand legt sich morgens nach dem Aufwachen wieder hin. Karl arbeitet jetzt. Alle 4 Optionen sind aktive Ermittlungsschritte (Telefonate, Recherche, Befragungen, Ortsbesuche).`;
     }
 
     // HUNGER-Hinweis: ab 7+ MUSS Essens-Option dabei sein, ab 4+ leichter Hint.
@@ -9617,6 +9647,31 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       const injuryText = (scene.verletzungsbeschreibung || '').toLowerCase()
         .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
       const combined = sceneText + ' ' + injuryText;
+      const newSpannung = typeof scene.spannung === 'number' ? scene.spannung : (lastSpannung || 1);
+      // v6.83: SCHUTZ VOR ALTE-WUNDEN-AKKUMULATION.
+      // Wenn die Szene NICHT actionreich ist (Spannung <=2) und nur SCHMERZ-WORTE
+      // erwaehnt werden (keine NEUE Gewalt), ist das nur Beschreibung der bestehenden
+      // Verletzung - kein neuer Verfassungs-Drop. Vorher: Karl wurde an Tag 1 verletzt,
+      // ging schlafen, Tag 3 morgens kam "stechender Protest der Rippen" und das
+      // triggerte erneut -1, akkumuliert bis zum Tod ohne neue Action.
+      const newViolenceTriggers = [
+        /\b(triff(s|t)t?|schlaegt|stoesst|tritt|prallt|knallt)\s+(dich|gegen)/,
+        /\bkugel\s+(trifft|durchschlaegt|streift|bohrt)/,
+        /\bschuss\s+(faellt|trifft|reisst|durchschlaegt)/,
+        /\bmesser\s+(faehrt|trifft|sticht|bohrt)/,
+        /\bfaust\s+(trifft|landet|kracht)/,
+        /\bdu\s+(stuerzt|faellst|kippst|gehst zu boden|sinkst)/,
+        /\b(prallst|schlaegst|stoesst)\s+(gegen|auf|an)/,
+        /\bzerrt|gepackt|gestochen|getreten|geschlagen\s+wurdest?/,
+        /\bzwangs?-?(einnick|einschlafen|kollabier)/,
+        /\berschoepft|am ende|kann nicht mehr/,
+      ];
+      const hasNewViolence = newViolenceTriggers.some(p => p.test(combined));
+      if (newSpannung <= 2 && !hasNewViolence) {
+        console.warn('[Schatten] Delta', delta, 'in ruhiger Szene (Sp=' + newSpannung + ') ohne neue Gewalt - vermutlich alte Wunden-Beschreibung. Cap auf 0.');
+        diag('cap', 'Verfassung-Delta ' + delta + ' in ruhiger Szene ohne neue Gewalt -> auf 0 gecapt (alte Wunden zaehlen nicht)');
+        delta = 0;
+      }
       // Leichte Trigger fuer -1/-2: irgendeine koerperliche Einwirkung
       const lightTriggers = [
         /\b(treffer|schlag|stoss|tritt|hieb|faust|peitschen)\b/,
@@ -9633,13 +9688,17 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         /\bunbequem(en|er)?\s+(schlaf|position|sofa|nacht)/,  // Schlafplatz
         /\bsteif(er|en|es)?\s+(nacken|ruecken|glieder)/,  // Schlafverletzung
       ];
-      const hasLightTrigger = lightTriggers.some(p => p.test(combined));
-      if (!hasLightTrigger) {
-        console.warn('[Schatten] Delta', delta, 'ohne erkennbaren Trigger im Szenentext. Cap auf 0.');
-        diag('cap', 'Verfassung-Delta ' + delta + ' ohne Trigger im Text -> auf 0 gecapt');
-        delta = 0;
-      } else {
-        diag('detect', 'Leichter Verfassungs-Drop ' + delta + ' mit Trigger akzeptiert');
+      // Nur prüfen wenn delta noch negativ ist (Akkumulations-Filter könnte schon
+      // auf 0 gecapt haben).
+      if (delta < 0) {
+        const hasLightTrigger = lightTriggers.some(p => p.test(combined));
+        if (!hasLightTrigger) {
+          console.warn('[Schatten] Delta', delta, 'ohne erkennbaren Trigger im Szenentext. Cap auf 0.');
+          diag('cap', 'Verfassung-Delta ' + delta + ' ohne Trigger im Text -> auf 0 gecapt');
+          delta = 0;
+        } else {
+          diag('detect', 'Leichter Verfassungs-Drop ' + delta + ' mit Trigger akzeptiert');
+        }
       }
     }
 
@@ -10293,7 +10352,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         // damit sie im Export-Lektorat sofort auffallen
         diag('progress', '✦ STAGE 1 erreicht (Indizien beisammen, ' + caseProgress.indizien.length + ' Indizien)');
         // v6.68: Sichtbarer Fortschritts-Toast fuer den Spieler
-        showProgressToast('GENUG SPUREN BEISAMMEN', 'Du hast den ersten festen Punkt. Ein Verdaechtiger sollte sich bald herausschaelen.');
+        showProgressToast('ERSTE SPUREN BEISAMMEN', 'Drei Indizien notiert. Karl sollte jetzt das Muster suchen - wer hat Motiv und Gelegenheit?');
       }
       // v6.69: AUTO-FORCING bei extremer Stagnation
       // Wenn Karl 12+ Indizien hat ODER Tag 6+ erreicht UND immer noch in Stage 1
@@ -11812,6 +11871,25 @@ function applyAdminVisibility() {
   if (typeof renderLog === 'function' && Array.isArray(logEntries) && logEntries.length > 0) {
     try { renderLog(); } catch {}
   }
+}
+
+// v6.82: Debug-Modus manuell deaktivieren (Button im Settings-Menue).
+// Vorher gab es nur ?debug=off als Weg - das ist auf mobilen Geraeten
+// unintuitiv. Jetzt einfacher Button mit Bestaetigungs-Dialog.
+function deactivateDebugMode(event) {
+  if (event) event.stopPropagation();
+  const confirmed = confirm(
+    'Debug-Modus wirklich deaktivieren?\n\n' +
+    'Autoplay-Bot und Deploy-Modal werden ausgeblendet.\n' +
+    'Reaktivieren via URL-Parameter ?debug=PASSWORT moeglich.'
+  );
+  if (!confirmed) return;
+  setAdminUnlocked(false);
+  applyAdminVisibility();
+  // Settings-Menue schliessen, damit der User merkt dass es weg ist
+  const menu = document.getElementById('settings-menu');
+  if (menu) menu.classList.add('hidden');
+  showAdminToast('Debug-Modus deaktiviert. Settings-Menue ist jetzt im Standard-Modus.');
 }
 
 // URL-Param-Variante des Bots (parallel, fuer Skript-Steuerung).
