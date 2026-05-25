@@ -1484,7 +1484,7 @@
       Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
     </p>
     <button class="btn-primary" onclick="startGame()">Ermittlung beginnen</button>
-    <div class="start-version">Schatten v6.70</div>
+    <div class="start-version">Schatten v6.71</div>
   </div>
 
   <!-- Game Log -->
@@ -1552,7 +1552,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v6.70</span>
+    <span>Schatten v6.71</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -2545,7 +2545,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v6.70';
+window.SCHATTEN_VERSION = 'v6.71';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -6872,7 +6872,14 @@ function detectVehicleLoss(text) {
 // Erkennt ob eine Cast-Rolle/Beziehung einen toten/vermissten/abwesenden NPC beschreibt.
 // Wenn ja, gehoert die Person NICHT in den anwesenden Cast, sondern in mentionedDeadOrAbsent.
 function detectDeadOrAbsent(rolle, beziehung) {
-  const txt = ((rolle || '') + ' ' + (beziehung || '')).toLowerCase()
+  // v6.71: Die Rolle ist die Kern-Identitaet (z.B. "Klientin", "Hausmeisterin",
+  // "Opfer"). Die Beziehung kann erwaehnen dass jemand ANDERES tot/vermisst ist
+  // (z.B. "Ehefrau des Vermissten"). Wir pruefen primaer die Rolle.
+  // Die Beziehung pruefen wir nur wenn sie nicht offenkundig auf jemand
+  // anderes referenziert ("Ehefrau des...", "Mutter des...", "Sohn des...").
+  const rolleTxt = (rolle || '').toLowerCase()
+    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+  const beziehungTxt = (beziehung || '').toLowerCase()
     .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
   const patterns = [
     /\b(verstorbene[rn]?|tote[rn]?|toter|leiche|verblichene[rn]?)\b/,
@@ -6881,7 +6888,17 @@ function detectDeadOrAbsent(rolle, beziehung) {
     /\b(vermisst|vermisste[rn]?|verschwunden|entfuehrt|gefluechtet|fluechtet|abgetaucht|gesuchter|gesuchte[rn])\b/,
     /\b(im\s+grab|im\s+sarg|unter\s+der\s+erde|begraben|beerdigt)\b/,
   ];
-  return patterns.some(p => p.test(txt));
+  // Rolle prueft direkt
+  if (patterns.some(p => p.test(rolleTxt))) return true;
+  // Beziehung: nur pruefen wenn sie nicht auf jemand anderen verweist.
+  // "Ehefrau des Vermissten" / "Mutter des Toten" / "Bruder des Opfers" = Subjekt lebt.
+  const referenziertAnderePerson = /\b(ehefrau|ehemann|mutter|vater|sohn|tochter|bruder|schwester|onkel|tante|cousin|cousine|neffe|nichte|freund|freundin|kollege|kollegin|chef|chefin|nachbar|nachbarin|witwe|witwer)\s+(des|der|von|vom)\b/.test(beziehungTxt);
+  if (referenziertAnderePerson) {
+    // Subjekt lebt - nicht abfangen
+    return false;
+  }
+  // Beziehung erwaehnt Tot/Vermisst-Begriff ohne Anderen-Referenz: Subjekt selbst betroffen
+  return patterns.some(p => p.test(beziehungTxt));
 }
 
 // Lost Track der Abkuerzungen, die bereits einmal in einer Story ausgeschrieben
@@ -7679,6 +7696,18 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       ];
       const sceneLower = scene.szene.toLowerCase()
         .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+      // v6.71: Erzeugt aus einem ASCII-Pattern (strassenbahn) ein umlaut-tolerantes
+      // Pattern (str(a|ä)(ss|ß)enbahn), das gegen den ORIGINAL-Text mit Umlauten
+      // matched. Vorher: Pumphrase-Hardcap erkannt im ASCII-sceneLower aber konnte
+      // den Satz nicht aus dem Original entfernen, weil "Strassenbahn" nicht ==
+      // "Straßenbahn". Mit dieser Hilfsfunktion klappt die Entfernung jetzt.
+      const makeUmlautTolerant = (src) => {
+        return src
+          .replace(/ae/g, '(ae|ä)')
+          .replace(/oe/g, '(oe|ö)')
+          .replace(/ue/g, '(ue|ü)')
+          .replace(/ss/g, '(ss|ß)');
+      };
       for (let pi = 0; pi < pumphrases.length; pi++) {
         const phrase = pumphrases[pi];
         const phraseOrig = pumphrasesOriginal[pi];
@@ -7691,10 +7720,11 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           const runCount = pumphraseRunCounts[pi];
           if (runCount >= 2) {
             // HARDCAP: Satz mit der Pumphrase aus dem Text loeschen.
-            // Wir suchen den umgebenden Satz (von vorangehendem . ! ? \n bis
-            // zum naechsten . ! ? \n) und schneiden ihn raus.
+            // v6.71: Pattern wird umlaut-tolerant gemacht, damit es auch das
+            // Original mit ä/ö/ü/ß matched.
+            const tolerantSrc = makeUmlautTolerant(phraseOrig.source);
             const sentenceRegex = new RegExp(
-              '(?:^|(?<=[.!?]\\s)|(?<=\\n))[^.!?\\n]*' + phraseOrig.source + '[^.!?\\n]*[.!?]?(\\s|$)',
+              '(?:^|(?<=[.!?]\\s)|(?<=\\n))[^.!?\\n]*' + tolerantSrc + '[^.!?\\n]*[.!?]?(\\s|$)',
               'i'
             );
             const before = scene.szene;
@@ -8664,18 +8694,39 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       }
     }
     // v6.68: INDIZ-VERKNUEPFUNG (Eureka-Moment)
+    // v6.71: Dedup gegen identische oder fast identische Wiederholungen.
+    // Mistral wiederholt manchmal denselben Verknuepfungstext woertlich.
     if (typeof scene.indiz_verbindung === 'string' && scene.indiz_verbindung.trim()) {
       const verb = scene.indiz_verbindung.trim();
-      caseProgress.verknuepfungen.push({
-        sceneNr: sceneCounter,
-        tag: gameDay,
-        beschreibung: verb,
+      // Dedup: gegen alle frueheren Verknuepfungen pruefen (fuzzy)
+      const verbNorm = verb.toLowerCase().replace(/[.,;!?:]/g, '').replace(/\s+/g, ' ').trim();
+      const istDuplikat = caseProgress.verknuepfungen.some(v => {
+        const otherNorm = (v.beschreibung || '').toLowerCase().replace(/[.,;!?:]/g, '').replace(/\s+/g, ' ').trim();
+        if (verbNorm === otherNorm) return true;
+        // Fuzzy: ueber 80% gleiche Woerter
+        const wordsA = new Set(verbNorm.split(' ').filter(w => w.length >= 4));
+        const wordsB = new Set(otherNorm.split(' ').filter(w => w.length >= 4));
+        if (wordsA.size === 0 || wordsB.size === 0) return false;
+        let common = 0;
+        for (const w of wordsA) if (wordsB.has(w)) common++;
+        const overlap = common / Math.min(wordsA.size, wordsB.size);
+        return overlap >= 0.8;
       });
-      caseProgress.lastEurekaScene = sceneCounter;
-      console.log('[Schatten] Eureka-Verknuepfung:', verb);
-      diag('progress', '✦ EUREKA: ' + verb);
-      // Bei wirklich verbundenen Indizien gibt's auch einen kleinen Toast
-      showProgressToast('VERBINDUNG ENTDECKT', verb);
+      if (istDuplikat) {
+        console.log('[Schatten] Eureka-Wiederholung ignoriert:', verb);
+        diag('dedup', 'Eureka-Wiederholung verworfen: ' + verb);
+      } else {
+        caseProgress.verknuepfungen.push({
+          sceneNr: sceneCounter,
+          tag: gameDay,
+          beschreibung: verb,
+        });
+        caseProgress.lastEurekaScene = sceneCounter;
+        console.log('[Schatten] Eureka-Verknuepfung:', verb);
+        diag('progress', '✦ EUREKA: ' + verb);
+        // Bei wirklich verbundenen Indizien gibt's auch einen kleinen Toast
+        showProgressToast('VERBINDUNG ENTDECKT', verb);
+      }
     }
     // v6.68: NPC-KERNHINWEIS (was wer wann gesagt hat)
     if (Array.isArray(scene.npc_kernhinweis) && scene.npc_kernhinweis.length > 0) {
