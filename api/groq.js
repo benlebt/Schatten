@@ -34,6 +34,14 @@ KEINE OPTIONEN MIT NICHT-ETABLIERTEN DINGEN: Optionen am Ende DUERFEN keine Akte
 
 WELT-REIBUNG: Wenn Karl mit gezogener Waffe, mit einem Gefangenen, schreiend, blutend oder auffaellig einen oeffentlichen Raum betritt (Kneipe, Geschaeft, Strasse, Bahnhof), MUESSEN die NPCs reagieren - nicht stillschweigend weitermachen. Gaeste erstarren, der Wirt fragt nach, jemand flieht oder ruft die VP. Nahtlose Stille bei einer Waffe in einer Kneipe ist UNGLAUBWUERDIG. Wenn Karl jemanden gefangen haelt und sich anders beschaeftigt (telefoniert, fragt), MUSS klar sein wer den Gefangenen bewacht oder ob er fluechtet.
 
+WAFFE VOR POLIZEI: Wenn Karl in Anwesenheit von Polizisten (VP, MfS, Schutzpolizei) seine Walther zieht, ist das eine SCHARFE ESKALATION. Der Polizist greift sofort zum Dienstrevolver, schreit "Waffe fallen lassen!", oder schiesst. NIE darf ein Polizist gemuetlich reagieren wenn Karl in seiner Anwesenheit Waffe zueckt. Auch bei Bekannten wie Roth: der zieht selbst die Waffe oder geht in Deckung.
+
+KOHAERENZ: Die naechste Szene MUSS in der gleichen Realitaet weiterspielen wie die LETZTE SZENE. Die soeben gewaehlte Aktion ist die UNMITTELBARE Fortsetzung - keine isolierte Handlung in einer anderen Welt. Anwesende Personen bleiben anwesend, gezogene Waffen bleiben gezogen, getroffene Gegner bleiben da. Wenn der Spieler eine Option waehlt die der vorigen Aktion zu widersprechen scheint, integriere sie in die Fortsetzung ("du senkst die Walther wieder und gehst stattdessen zum Wirt") - aber spring NICHT in eine alternative Vergangenheit zurueck.
+
+NPC-SPAWN: Ein NPC darf NICHT einfach in der Szene auftauchen ohne dass im Erzaehltext etabliert wird WIE er da hin kam. Falsch: "Heinz steht ploetzlich hinter dir" - der Leser weiss nicht woher er kommt. Richtig: "Die Tuer geht auf, Heinz tritt ein" oder "Schritte auf der Treppe, dann steht er im Tuerrahmen". Wer in der Szene neu auftaucht, MUSS ein etabliertes Ankommen haben.
+
+NAMENS-EINDEUTIGKEIT: Ein Name in der Story bezeichnet EINE Person, nicht mehrere. Wenn "Heinz" bereits als Name auf einem Foto, in einer Akte, oder als Bekannter erwaehnt wurde, darf "Heinz" nicht ploetzlich auch der Name eines neuen NPCs sein - es sei denn explizit als dieselbe Person aufgeloest.
+
 STORY-ANKER: Der Auftrag aus dem Intro bleibt der rote Faden. Wenn akute Bedrohung weg ist (Spannung sinkt unter 3), MUSS Karl in 1-2 Szenen zum Auftrag zurueck. Nicht im Buero Bourbon trinken und das Hauptziel vergessen.
 
 AUFTRAG-FAKTEN (UNVERAENDERLICH): Du bekommst pro Anfrage eine AUFTRAG-FAKTEN-Sektion mit Klient, Opfer/Gesuchter, Tat, Ort. Diese Fakten sind FEST. NIE neue Hauptfiguren mit aehnlichen Namen erfinden (wenn Opfer "Erwin Strauss" heisst, gibt es KEINEN "Hans Strauss" oder "Walter Strauss"). NIE einen zweiten Toten erfinden. NIE Verwandte des Opfers/Klienten einfuehren, die nicht im Setup stehen.
