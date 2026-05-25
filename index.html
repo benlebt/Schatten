@@ -1647,7 +1647,7 @@
     <button class="btn-primary" onclick="startRandomGame()">Zufällige Ermittlung</button>
     <br>
     <button class="btn-secondary" onclick="showSetupSelector()">Fall auswählen</button>
-    <div class="start-version">Schatten v6.98 · 6 Fixes (Status-Bar pro Szene · Beschattungs-Push · Vehicle-FP · Wiederholungs-Dedup · Verdaechtigen-Reminder · Scroll-Schutz)</div>
+    <div class="start-version">Schatten v6.99 · HARD-FORCE Stasi-Festnahme + 6 Fixes aus v6.98</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -1724,7 +1724,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v6.98</span>
+    <span>Schatten v6.99</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -3389,7 +3389,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v6.98';
+window.SCHATTEN_VERSION = 'v6.99';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5687,6 +5687,17 @@ let pendingRepetitionWarning = null;
 // Verdaechtigen zu fuehren.
 let pendingSuspectReminder = null;
 
+// v6.99: Wird gesetzt wenn die Stasi-Eskalation lange genug hochgehalten wurde,
+// aber Mistral keine echte Festnahme/Verhoer-Szene erzaehlt. Statt wieder still
+// Custody zurueckzusetzen (False-Positive-Recovery), wird die NAECHSTE Szene
+// ein HARD-FORCED Custody-Eingang: Karl wacht in Hohenschoenhausen-Zelle auf,
+// Handschellen, kalte Gluehbirne. Anlass: Vogt-Run v6.97 hatte 42 Stasi-
+// Warnungen und 20 AutoCustody-Forces aber NULL Verhör-Szenen im Erzähltext.
+let pendingForcedCustodyArrest = null;
+// v6.99: Verhindert dass die HARD-FORCE-Festnahme mehrfach pro Run greift.
+// Bei pol-Faellen passiert Custody normalerweise hoechstens 1x.
+let hardForcedArrestUsed = false;
+
 // Wird true gesetzt wenn gerade ein Tageswechsel passiert ist.
 // Die naechste Szene-Anfrage instruiert die KI dann, eine kurze Story-Brücke zu erzählen.
 let pendingDayTransition = false;
@@ -7560,6 +7571,22 @@ VERBOTEN: einfach mit "schraegem Morgenlicht" anfangen ohne zu erklaeren wo Karl
       }
       pendingSuspectReminder = null;
     }
+    // v6.99: HARD-FORCE FESTNAHME-SZENE wenn das System zu lange Stasi-Tension
+    // hochgehalten hat ohne dass Mistral eine echte Konsequenz erzaehlt hat.
+    // Anlass: Vogt-Run v6.97 hatte 42 Stasi-Warnungen und 20 AutoCustody-Forces
+    // aber NULL Verhör-Szenen. Der Toast "STASI-FESTNAHME UNAUSWEICHLICH" wurde
+    // zur leeren Floskel. Jetzt: einmal pro Run wird die naechste Szene SO ein
+    // Festnahme-Eingang, egal was die Spieler-Aktion war. Karl wird auf der
+    // Strasse abgepasst und in einen EMW gedrueckt, oder wacht in Hohenschoen-
+    // hausen auf - der Push gibt mehrere Eingangs-Varianten vor.
+    if (pendingForcedCustodyArrest) {
+      const fc = pendingForcedCustodyArrest;
+      timeContext += `\n\n============================================================\nHARD-FORCE FESTNAHME (KRITISCH, NICHT VERHANDELBAR)\n============================================================\n\nDie Stasi-Tension ist seit ${fc.ignoredScenes} Szenen auf ${fc.tension}/5 und das System hat mehrfach FESTNAHME-Warnungen gepusht, die du ignoriert hast. JETZT muss die Konsequenz erzaehlt werden. Die naechste Szene MUSS Karls Festnahme oder den Verhoer-Eingang in Hohenschoenhausen erzaehlen, egal was die Spieler-Aktion war.\n\nWAEHLE EINE der folgenden Eingangs-Varianten (oder eine narrativ aequivalente):\n\n1) STRASSEN-FESTNAHME: Karl tritt aus dem Hauseingang/Buero/Cafe heraus. Ein schwarzer EMW 340 bremst neben ihm. Zwei MfS-Maenner in dunklen Mänteln steigen aus, einer faltet eine Akte zusammen ("Genosse Mauer, Sie kommen mit"), packen Karl unter den Achseln, druecken ihn in den Wagen. Im Fond wird ihm die Pistole abgenommen. Im Wagen Schweigen. Fahrt durch Friedrichshain Richtung Lichtenberg.\n\n2) BUERO-VERHAFTUNG: Karl sitzt am Schreibtisch oder spricht mit jemandem. Es klopft, dann ohne Antwort abzuwarten geht die Tuer auf. Zwei Maenner in grauen Anzuegen, einer hat einen Funktionärs-Ausweis. "Genosse Mauer, Sie sind verhaftet. Stehen Sie auf, langsam. Keine Bewegung zur Schublade." Karl wird durchsucht, abgefuehrt, Tueren werden hinter ihm zugeschlagen.\n\n3) AUFWACHEN IN ZELLE: Karl wacht in einer kalten Untersuchungszelle in Hohenschoenhausen auf. Holzpritsche, Decke aus rauher Wolle, eine nackte Gluehbirne an der Decke. Keine Erinnerung an die Festnahme - sie muss zwischen den Szenen passiert sein. Geräusche: Schritte im Gang, Schluesselbund, eine Tuer faellt zu. Schmerz in den Handgelenken (Handschellen waehrend Transport).\n\n4) AUF DER TREPPE GESTOPPT: Karl geht eine Treppe runter (Haus, S-Bahn, Polizei). Auf dem Treppenabsatz stehen 3 Maenner, einer mit MGB-Ausweis (Major Sokolow), einer mit Handschellen bereit. "Genosse Mauer, kommen Sie mit uns. Keine Szene bitte." Karl wird die Treppe runtergefuehrt, in den wartenden EMW.\n\nOPTIONEN FUER DIESE SZENE: Maximal Reaktiv-Optionen - schweigen, kooperieren, Roth-Kontakt erwaehnen, nach einem Anwalt verlangen. KEINE "Greif zur Walther" oder "Renne weg" - die Mfs-Maenner sind in der Ueberzahl und bewaffnet, Karl hat KEINE Fluchtchance in diesem Moment.\n\nverfassung_delta darf -1 sein (Stoss in den Wagen, harte Faust ins Kreuz, Handschellen schneiden ein). Spannung in dieser Szene 4 oder 5.\n\nWICHTIG: NICHT die naechste Spieler-Option auswerten als waere alles normal. Diese Festnahme ist die UNMITTELBARE Konsequenz aus den letzten Szenen Stasi-Beobachtung. NICHT ignorieren.`;
+      if (typeof diag === 'function') {
+        diag('drift', 'HARD-FORCE Festnahme-Push gesendet (Tension ' + fc.tension + ', ' + fc.ignoredScenes + ' Szenen ohne Konsequenz)');
+      }
+      pendingForcedCustodyArrest = null;
+    }
     if (scenesAtSameLocation >= 3) {
       if (scenesAtSameLocation >= 8) {
         // ESKALATION 3: Nach 8+ Szenen am selben Ort PFLICHT-Ortswechsel.
@@ -8266,6 +8293,8 @@ async function startGame() {
   lastSceneTriggeredDayAdvance = false; // v6.96
   pendingRepetitionWarning = null;  // v6.98
   pendingSuspectReminder = null;  // v6.98
+  pendingForcedCustodyArrest = null;  // v6.99
+  hardForcedArrestUsed = false;  // v6.99
   scenesAtSameLocation = 0;
   lastLocation = '';
   lastMainLocation = ''; // v6.58
@@ -10619,10 +10648,30 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         // Auto-Release: wenn 3 Szenen lang kein Stasi-Kontext, Custody-Flag loeschen
         folterSceneCount++;
         if (folterSceneCount >= 3) {
-          console.warn('[Schatten] 3+ Szenen ohne Stasi-Kontext - Custody-Flag automatisch geloescht.');
-          diag('state', 'Stasi-Custody automatisch beendet - 3+ Szenen ohne Kontext (vermutlich False-Positive-Recovery)');
-          karlInStasiCustody = false;
-          folterSceneCount = 0;
+          // v6.99: Statt silently die Custody-Eskalation zurueckzunehmen, EINMAL
+          // pro Run einen HARD-FORCED Festnahme-Eingang erzwingen. Anlass:
+          // Vogt-Run v6.97 hatte 42 Stasi-Warnungen + 20 AutoCustody-Forces aber
+          // NULL Verhoer-Szenen. Das System darf nicht ewig warnen ohne Konsequenz.
+          if (!hardForcedArrestUsed) {
+            console.warn('[Schatten] Custody-FP-Recovery -> HARD-FORCE Festnahme-Szene als Konsequenz fuer ' + stasiTension + '/5 Tension.');
+            diag('progress', '✦ HARD-FORCE FESTNAHME (' + stasiTension + '/5 Tension hat ' + folterSceneCount + ' Szenen ohne Konsequenz gepusht)');
+            pendingForcedCustodyArrest = {
+              tension: stasiTension,
+              ignoredScenes: folterSceneCount,
+            };
+            hardForcedArrestUsed = true;
+            // karlInStasiCustody bleibt true, folterSceneCount auf 0 fuer naechste Szene-Erzaehlung
+            folterSceneCount = 0;
+            // Toast fuer Spieler
+            if (typeof showProgressToast === 'function') {
+              showProgressToast('FESTNAHME', 'Karl wird festgenommen. MfS hat ihn auf der Strasse erwischt.');
+            }
+          } else {
+            console.warn('[Schatten] 3+ Szenen ohne Stasi-Kontext - Custody-Flag automatisch geloescht.');
+            diag('state', 'Stasi-Custody automatisch beendet - 3+ Szenen ohne Kontext (vermutlich False-Positive-Recovery)');
+            karlInStasiCustody = false;
+            folterSceneCount = 0;
+          }
         }
       } else {
         folterSceneCount++;
@@ -12547,6 +12596,8 @@ function resetGame() {
   lastSceneTriggeredDayAdvance = false; // v6.96
   pendingRepetitionWarning = null;  // v6.98
   pendingSuspectReminder = null;  // v6.98
+  pendingForcedCustodyArrest = null;  // v6.99
+  hardForcedArrestUsed = false;  // v6.99
   scenesAtSameLocation = 0;
   lastLocation = '';
   lastMainLocation = ''; // v6.58
