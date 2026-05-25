@@ -880,7 +880,51 @@
     color: #444;
     text-transform: uppercase;
     margin-bottom: 12px;
+    /* v7.3: aria-label fuer Screenreader / iOS Sprechen-Funktion - ohne
+       letter-spacing-Buchstabieren. Der visuelle Text ist trotzdem gespreizt. */
   }
+  .options-label[aria-label] {
+    /* speech-Hinweis fuer Browser die das unterstuetzen */
+    speak: literal-punctuation;
+  }
+  /* v7.3: Vorlesen-Button (Floating Action Button am rechten Rand).
+     Nur sichtbar waehrend Szenen angezeigt werden. Liest aktuelle Szene + Optionen vor. */
+  .speak-fab {
+    position: fixed;
+    right: 12px;
+    bottom: 70px;  /* ueber Bildschirmunterkante, weg von iOS Safari Address Bar */
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(40, 35, 28, 0.92);
+    border: 1px solid rgba(200, 191, 168, 0.35);
+    color: #b0a890;
+    font-size: 22px;
+    cursor: pointer;
+    z-index: 90;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    transition: background 0.15s, color 0.15s, transform 0.15s;
+    /* Touch-Target gross genug fuer iOS Accessibility-Empfehlung (44x44 minimum) */
+    -webkit-tap-highlight-color: transparent;
+  }
+  .speak-fab:hover, .speak-fab:active {
+    background: rgba(60, 55, 45, 0.95);
+    color: #d4c8a8;
+  }
+  .speak-fab.speaking {
+    background: rgba(85, 65, 35, 0.95);
+    color: #f0d090;
+    border-color: rgba(240, 208, 144, 0.5);
+    animation: speak-pulse 1.4s infinite ease-in-out;
+  }
+  @keyframes speak-pulse {
+    0%, 100% { box-shadow: 0 4px 12px rgba(0,0,0,0.4), 0 0 0 0 rgba(240, 208, 144, 0.4); }
+    50% { box-shadow: 0 4px 12px rgba(0,0,0,0.4), 0 0 0 8px rgba(240, 208, 144, 0); }
+  }
+  .speak-fab.hidden { display: none; }
   .option-btn {
     display: flex;
     align-items: flex-start;
@@ -1444,12 +1488,18 @@
 <body>
 <!-- Settings button (always visible) -->
 <button class="settings-btn" onclick="toggleSettings(event)" title="Menü">⚙</button>
+
+<!-- v7.3: Vorlesen-Button (Floating Action Button) - liest aktuelle Szene + Optionen
+     vor. Sichtbar nur waehrend Szenen aktiv sind. -->
+<button class="speak-fab hidden" id="speak-fab" onclick="toggleSpeakCurrent(event)"
+        title="Aktuelle Szene und Optionen vorlesen" aria-label="Vorlesen">🔊</button>
 <div id="settings-menu" class="settings-menu hidden" onclick="event.stopPropagation()">
   <div class="settings-info" id="settings-provider-info">Provider: lade...</div>
   <div class="settings-info settings-version" id="settings-version-info">Schatten —</div>
   <button onclick="exportTranscript(event)">📋 Verlauf kopieren</button>
   <button onclick="shareTranscript(event)">📤 Verlauf teilen</button>
   <button onclick="downloadTranscript(event)">💾 Verlauf als Datei</button>
+  <button onclick="selectCurrentSceneAndOptions(event)">✍ Szene+Optionen markieren</button>
   <button onclick="resetGame()">↻ Spiel neu starten</button>
 
   <!-- v6.60: Audio-Loop fuer Atmosphaere-Musik (instrumentaler Detektiv-Loop) -->
@@ -1648,7 +1698,7 @@
     <button class="btn-primary" onclick="startRandomGame()">Zufällige Ermittlung</button>
     <br>
     <button class="btn-secondary" onclick="showSetupSelector()">Fall auswählen</button>
-    <div class="start-version">Schatten v7.2 · Custody-State-Konsistenz (keine Stasi-Toasts mehr während Gewahrsam)</div>
+    <div class="start-version">Schatten v7.3 · Vorlesen-Button + Markieren-Fallback + iOS-Buchstabier-Fix</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -1712,7 +1762,7 @@
 
   <!-- Options -->
   <div id="options" class="options-block hidden">
-    <div class="options-label">Was tust du?</div>
+    <div class="options-label" aria-label="Was tust du?">Was tust du?</div>
     <div id="options-list"></div>
   </div>
 
@@ -1725,7 +1775,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.2</span>
+    <span>Schatten v7.3</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -3390,7 +3440,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.2';
+window.SCHATTEN_VERSION = 'v7.3';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -3943,6 +3993,190 @@ function toggleMusic(event) {
     btn.textContent = '🎵 Musik einschalten';
     localStorage.removeItem('schatten-music-on');
     diag('state', 'Musik ausgeschaltet');
+  }
+}
+
+// v7.3: VORLESEN-FUNKTION. Liest die aktuelle Szene + Optionen mit
+// SpeechSynthesis vor. Alternative zur iOS-Selection-Sprechen-Funktion,
+// die der User vorher manuell triggern musste (markieren -> Popup -> Sprechen).
+// Funktioniert in Safari iOS, Chrome (alle Plattformen), Firefox, Brave.
+
+let speakCurrentUtterances = [];
+let speakCurrentActive = false;
+
+// Holt den lesbaren Text der aktuellen Szene und Optionen.
+// Liefert ein Array von Bloecken die einzeln vorgelesen werden, damit
+// iOS Speech nicht bei langen Texten abbricht.
+function buildSpeakText() {
+  const blocks = [];
+  // Aktuelle Szene: das letzte .scene-entry.current
+  const currentScene = document.querySelector('.scene-entry.current');
+  if (currentScene) {
+    // Ort-Divider (kurz)
+    const ort = currentScene.querySelector('.ort-divider-name');
+    if (ort && ort.textContent) {
+      const ortClean = ort.textContent.replace(/^·\s*|\s*·$/g, '').trim();
+      if (ortClean) blocks.push(ortClean + '.');
+    }
+    // Szenen-Text: alle .scene-text Elemente in der aktuellen Szene
+    const sceneTexts = currentScene.querySelectorAll('.scene-text');
+    sceneTexts.forEach(p => {
+      const t = (p.textContent || '').trim();
+      if (t) blocks.push(t);
+    });
+  }
+  // Optionen
+  const optionsBlock = document.getElementById('options');
+  if (optionsBlock && !optionsBlock.classList.contains('hidden')) {
+    blocks.push('Was tust du?');
+    const optionBtns = document.querySelectorAll('#options-list .option-btn');
+    optionBtns.forEach((btn, idx) => {
+      // Buchstabe A/B/C/D + Text. Wir lesen "Option A:" + Text.
+      const letter = String.fromCharCode(65 + idx);
+      const text = (btn.textContent || '').trim()
+        .replace(/^[A-D]\)\s*/, '');  // falls Marker schon im Text steht
+      if (text) blocks.push('Option ' + letter + '. ' + text);
+    });
+  }
+  return blocks;
+}
+
+// Erzeugt eine SpeechSynthesisUtterance mit deutschen Stimme-Einstellungen.
+function makeUtterance(text) {
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'de-DE';
+  u.rate = 1.0;
+  u.pitch = 1.0;
+  u.volume = 1.0;
+  // Versuche eine deutsche Stimme zu finden (sonst nimmt der Browser default)
+  const voices = window.speechSynthesis.getVoices();
+  if (voices && voices.length > 0) {
+    const deVoice = voices.find(v => v.lang && v.lang.startsWith('de'));
+    if (deVoice) u.voice = deVoice;
+  }
+  return u;
+}
+
+// Haupt-Funktion: Toggle Play/Stop
+function toggleSpeakCurrent(event) {
+  if (event) event.stopPropagation();
+  if (!('speechSynthesis' in window)) {
+    alert('Vorlesen ist in diesem Browser nicht unterstuetzt. Du kannst stattdessen "Alles markieren" verwenden.');
+    return;
+  }
+  // Wenn gerade spricht -> stoppen
+  if (speakCurrentActive || window.speechSynthesis.speaking) {
+    stopSpeakCurrent();
+    return;
+  }
+  // Sonst starten
+  startSpeakCurrent();
+}
+
+function startSpeakCurrent() {
+  const blocks = buildSpeakText();
+  if (blocks.length === 0) {
+    console.warn('[Schatten] Vorlesen: kein Text in aktueller Szene gefunden');
+    return;
+  }
+  // Vorherige Utterances stoppen
+  window.speechSynthesis.cancel();
+  speakCurrentUtterances = [];
+  speakCurrentActive = true;
+  const fab = document.getElementById('speak-fab');
+  if (fab) {
+    fab.classList.add('speaking');
+    fab.textContent = '⏹';
+    fab.title = 'Vorlesen stoppen';
+  }
+  // Utterances bauen und queuen
+  blocks.forEach((text, idx) => {
+    const u = makeUtterance(text);
+    if (idx === blocks.length - 1) {
+      // Letzter Block: nach Ende den FAB zuruecksetzen
+      u.onend = () => {
+        speakCurrentActive = false;
+        if (fab) {
+          fab.classList.remove('speaking');
+          fab.textContent = '🔊';
+          fab.title = 'Aktuelle Szene und Optionen vorlesen';
+        }
+      };
+      u.onerror = u.onend;
+    }
+    speakCurrentUtterances.push(u);
+    window.speechSynthesis.speak(u);
+  });
+  if (typeof diag === 'function') {
+    diag('state', 'Vorlesen gestartet (' + blocks.length + ' Bloecke)');
+  }
+}
+
+function stopSpeakCurrent() {
+  window.speechSynthesis.cancel();
+  speakCurrentUtterances = [];
+  speakCurrentActive = false;
+  const fab = document.getElementById('speak-fab');
+  if (fab) {
+    fab.classList.remove('speaking');
+    fab.textContent = '🔊';
+    fab.title = 'Aktuelle Szene und Optionen vorlesen';
+  }
+  if (typeof diag === 'function') {
+    diag('state', 'Vorlesen gestoppt');
+  }
+}
+
+// FAB sichtbar machen wenn eine Szene angezeigt wird.
+// Wird von renderLog() am Ende aufgerufen.
+function updateSpeakFabVisibility() {
+  const fab = document.getElementById('speak-fab');
+  if (!fab) return;
+  const hasScene = !!document.querySelector('.scene-entry.current .scene-text');
+  if (hasScene) {
+    fab.classList.remove('hidden');
+  } else {
+    fab.classList.add('hidden');
+  }
+}
+
+// v7.3: ALLES MARKIEREN - Fallback fuer den Fall dass SpeechSynthesis
+// nicht funktioniert oder der User die iOS Selection-Sprechen-Funktion
+// bevorzugt. Markiert aktuelle Szene + Optionen, damit man im iOS-Popup
+// direkt auf "Sprechen" tippen kann.
+function selectCurrentSceneAndOptions(event) {
+  if (event) event.stopPropagation();
+  // Settings-Menue schliessen
+  const menu = document.getElementById('settings-menu');
+  if (menu && !menu.classList.contains('hidden')) {
+    menu.classList.add('hidden');
+  }
+  const currentScene = document.querySelector('.scene-entry.current');
+  const optionsBlock = document.getElementById('options');
+  if (!currentScene && !optionsBlock) {
+    alert('Keine Szene zum Markieren vorhanden.');
+    return;
+  }
+  try {
+    const range = document.createRange();
+    if (currentScene && optionsBlock && !optionsBlock.classList.contains('hidden')) {
+      range.setStartBefore(currentScene);
+      range.setEndAfter(optionsBlock);
+    } else if (currentScene) {
+      range.selectNode(currentScene);
+    } else {
+      range.selectNode(optionsBlock);
+    }
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    // iOS: Selektion ist jetzt aktiv, User kann das Popup mit Sprechen-Option aufrufen
+    if (typeof diag === 'function') {
+      diag('state', 'Szene+Optionen markiert (fuer iOS Sprechen-Funktion)');
+    }
+  } catch (err) {
+    console.warn('[Schatten] Markieren fehlgeschlagen:', err);
+    alert('Markieren fehlgeschlagen. Du kannst den Vorlesen-Button (Lautsprecher-Symbol unten rechts) versuchen.');
   }
 }
 
@@ -6066,6 +6300,8 @@ function renderLog() {
   } else {
     window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
   }
+  // v7.3: Vorlesen-Button (FAB) sichtbar machen wenn Szenen da sind
+  if (typeof updateSpeakFabVisibility === 'function') updateSpeakFabVisibility();
 }
 function renderOptions(scene) {
   const list = document.getElementById('options-list');
@@ -10118,6 +10354,10 @@ function classifyScene(sceneText, ort) {
 let recentSceneTypes = [];
 
 async function chooseOption(option) {
+  // v7.3: Laufendes Vorlesen stoppen wenn User Option waehlt
+  if (typeof stopSpeakCurrent === 'function' && speakCurrentActive) {
+    stopSpeakCurrent();
+  }
   showLoading();
   logEntries.push({ type: 'choice', text: option.text });
   renderLog();
