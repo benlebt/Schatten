@@ -1577,7 +1577,7 @@
     <button class="btn-primary" onclick="startRandomGame()">Zufällige Ermittlung</button>
     <br>
     <button class="btn-secondary" onclick="showSetupSelector()">Fall auswählen</button>
-    <div class="start-version">Schatten v6.95</div>
+    <div class="start-version">Schatten v6.96</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -3319,7 +3319,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v6.95';
+window.SCHATTEN_VERSION = 'v6.96';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5291,6 +5291,17 @@ let pendingForcedSleepNarrative = null;
 // Die naechste Szene-Anfrage instruiert die KI dann, eine kurze Story-Brücke zu erzählen.
 let pendingDayTransition = false;
 
+// v6.96: Wird true gesetzt wenn die VORANGEGANGENE Szene-Verarbeitung schon einen
+// Tag-Wechsel ausgeloest hat (entweder durch KI-Schlaf-Detection in scene.szene oder
+// durch ZWANGS-EINNICKEN). Verhindert dass die NACHFOLGENDE Spieleraktion
+// "Geh schlafen" nochmal Tag++ macht. Beispiel-Bug (Vogt-Run v6.94):
+//   Sz15: KI erzaehlt "du bist muede" -> Schlaf erkannt -> Tag 1->2
+//   Sz16: Spieler waehlt "Schlaf im Bett" -> chooseOption Tag 2->3
+//   Resultat: Tag 2 hatte nur 1 Szene Spielzeit, Klient-Geduldsstufen verschoben.
+// Wird in chooseOption() VOR der Schlaf-Pruefung gelesen und am Ende von chooseOption
+// wieder zurueckgesetzt. Lebt also genau einen Spieler-Klick lang.
+let lastSceneTriggeredDayAdvance = false;
+
 // Erkennt explizite Schlaf-/Tagesende-Aktionen im Spielertext oder im Erzaehltext.
 // Bei einem Treffer wird sofort zum naechsten Morgen gesprungen, statt graduell.
 // Loest das Problem: "Trinke Bourbon und schlafe" muss SOFORT den Tag wechseln,
@@ -6537,6 +6548,33 @@ Es ist NICHT realistisch, dass eine Trauergesellschaft 18 Stunden an einem Grab 
         if (client) {
           recap += `KLIENT-KONTINUITAETS-SPERRE: ${client.name} ist seit Sz1 bei Karl im Buero/am Ort und spricht/handelt jetzt mit ihm. Sz${nextScene} darf NICHT noch einmal mit "es klopft an der Tuer", "${client.name} betritt das Buero", "ein Mann/eine Frau steht im Eingang" o.ae. beginnen - das waere eine Wiederholung der Eroeffnung. Der Klient ist BEREITS DA. Sz${nextScene} setzt das laufende Gespraech / die Untersuchung direkt fort.\n`;
         }
+        // v6.96: NEGATIVE-DRIFT-SPERRE - explizit Namen verbieten die Mistral
+        // gerne als "Standard-Hintergrund" eingeflickt hat in Runs der v6.94er Serie.
+        // Anlass: Vogt-Run Sz2 sprang komplett ins Goerke-Setup (Baumgarten, U-Haft
+        // Lichtenberg, Mathilde Treppensturz), Goerke-Run Sz2 sprang in den
+        // Margarete-Stein-Plot (Reichsbahn-Schmuggel, Nachtanruf). Mistral hat
+        // bestimmte Setup-Openings so internalisiert dass sie als Fueller fuer
+        // jeden Plot-Drift dienen. Wir listen die Top-Drift-Setups explizit auf.
+        // Ausnahme: wenn das aktuelle Setup tatsaechlich eines dieser Setups IST,
+        // wird der entsprechende Name NICHT gesperrt (denn dann ist er korrekt).
+        const setupNameLower = (caseSetup.name || '').toLowerCase();
+        const setupOpeningLower = (caseSetup.eroeffnung || caseSetup.opening || '').toLowerCase();
+        const isGoerkeSetup = /goerke|albrecht|mathilde|lichtenberg|baumgarten|kreisgericht/.test(setupNameLower + ' ' + setupOpeningLower);
+        const isSteinSetup = /margarete\s+stein|reichsbahn|schmuggel.*akten/.test(setupNameLower + ' ' + setupOpeningLower);
+        const isWesselSetup = /wessel|17\.?\s*juni|brunnenstr/.test(setupNameLower + ' ' + setupOpeningLower);
+        const driftBlocks = [];
+        if (!isGoerkeSetup) {
+          driftBlocks.push('Albrecht Goerke, Mathilde Goerke, Dr. Baumgarten, U-Haft Lichtenberg, Kreisgericht Mitte als Plot-Element');
+        }
+        if (!isSteinSetup) {
+          driftBlocks.push('Margarete Stein, Reichsbahndirektion-Schmuggel, "Sie wissen dass ich Ihnen die Akten gegeben habe"');
+        }
+        if (!isWesselSetup) {
+          driftBlocks.push('Bruno Wessel, 17. Juni-Aufstand-Plot als laufenden Fall');
+        }
+        if (driftBlocks.length > 0) {
+          recap += `NEGATIVE-DRIFT-SPERRE: Sz${nextScene} darf KEINE der folgenden fallfremden Plot-Elemente einfuehren (auch nicht als Nebenhandlung, Telefonanruf, Rueckblende oder Aktenfund): ${driftBlocks.join('; ')}. Das sind Plots aus anderen Setups, nicht aus diesem. Bleib STRIKT bei: ${client ? client.name : 'Klient'}${tnName ? ' und ' + tnName : ''}, Auftrag "${ct}".\n`;
+        }
       }
 
 
@@ -7739,6 +7777,7 @@ async function startGame() {
   sceneCounter = 0;
   timeAdvanceTokens = 0;
   pendingDayTransition = false;
+  lastSceneTriggeredDayAdvance = false; // v6.96
   scenesAtSameLocation = 0;
   lastLocation = '';
   lastMainLocation = ''; // v6.58
@@ -7890,13 +7929,39 @@ async function startGame() {
     if (clientFromCast) {
       const isEigenAuftrag = /^karl\s+mauer$/i.test(clientFromCast.name.trim());
       clientProfile.name = clientFromCast.name;
-      const r = Math.random();
-      if (r < 0.3) {
+      // v6.96: KLIENT-CHARAKTER-DETECTION aus Setup-Opening + Klient-Beziehung.
+      // Anlass: Schiffer-Run v6.94. Renate Schiffer kam nachts ins Buero mit
+      // verlaufenem Mascara, brueechiger Stimme, zitternden Haenden, Bruder seit
+      // 3 Tagen verschwunden - wurde als "gelassen" klassifiziert (Mahnung Tag 5).
+      // Eine verzweifelte Schwester ist nicht gelassen. Wir scannen Opening
+      // und Beziehungs-Beschreibung nach Indikatoren, BEVOR wir Random rollen.
+      const openingLower = (caseSetup.eroeffnung || caseSetup.opening || '').toLowerCase();
+      const beziehungLower = (clientFromCast.beziehung || '').toLowerCase();
+      const probeText = openingLower + ' ' + beziehungLower;
+      // Verzweiflungs-/Druck-Indikatoren -> ungeduldig
+      const isVerzweifelt = /verzweifelt|verzweiflung|bruechige?\s+stimme|bruechig|zitternde?\s+haenden?|haende\s+zittern|mascara\s+(verlaufen|verschmiert)|weint|weinen|panisch|panik|atemlos|aufgeloest|aufgewuehlt|fassungslos|aengstlich|todesangst|am\s+rande|am\s+ende\s+(ihrer|seiner)\s+kraefte|in\s+grosser\s+sorge|krank\s+vor\s+sorge|kein\s+auge\s+zugemacht|seit\s+tagen\s+nicht\s+geschlafen|fleht|barmt|stoesst\s+hervor|stiess\s+hervor|stockend|stockt|tastend|tropfen\s+(ihr|ihm)\s+ueber\s+die\s+wangen|ringen?\s+mit\s+(den|ihren|seinen)\s+haenden|kann\s+(nicht\s+mehr|nicht\s+laenger)|wenn\s+sie\s+nicht\s+bald|wenn\s+er\s+nicht\s+bald|jede\s+stunde\s+zaehlt|jede\s+minute\s+zaehlt|spurlos\s+verschwunden|seit\s+drei\s+tagen|seit\s+vier\s+tagen|seit\s+drei\s+wochen|seit\s+zwei\s+wochen/.test(probeText);
+      // Gelassenheits-/Reichtums-Indikatoren -> gelassen
+      const isGelassen = /unbeteiligt|ruhig\s+und\s+sachlich|kuehl|distanziert|reich|wohlhabend|villa|fabrikant|geheimrat|geschaeftsmann\s+mit\s+(internationaler|internationale)|spricht\s+ohne\s+eile|nimmt\s+sich\s+zeit|gelassen|gemessen|kein\s+grund\s+zur\s+eile|hat\s+geduld|nimmt\s+platz\s+wie\s+jemand\s+der|raucht\s+seine\s+zigarre|streicht\s+sich\s+das\s+revers/.test(probeText);
+      let chosenCharakter;
+      if (isVerzweifelt && !isGelassen) {
+        chosenCharakter = 'ungeduldig';
+        console.log('[Schatten] Klient-Charakter aus Setup detektiert: ungeduldig (Verzweiflungs-Indikatoren)');
+      } else if (isGelassen && !isVerzweifelt) {
+        chosenCharakter = 'gelassen';
+        console.log('[Schatten] Klient-Charakter aus Setup detektiert: gelassen (Reichtum/Distanz-Indikatoren)');
+      } else {
+        // Keine eindeutigen Indikatoren -> Random
+        const r = Math.random();
+        if (r < 0.3) chosenCharakter = 'ungeduldig';
+        else if (r < 0.75) chosenCharakter = 'normal';
+        else chosenCharakter = 'gelassen';
+      }
+      if (chosenCharakter === 'ungeduldig') {
         clientProfile.charakter = 'ungeduldig';
         clientProfile.geduldsstufe1 = 3;
         clientProfile.geduldsstufe2 = 4;
         clientProfile.geduldsstufe3 = 5;
-      } else if (r < 0.75) {
+      } else if (chosenCharakter === 'normal') {
         clientProfile.charakter = 'normal';
         clientProfile.geduldsstufe1 = 4;
         clientProfile.geduldsstufe2 = 6;
@@ -8513,6 +8578,16 @@ function isGenericPersonName(name) {
   }
   // Match 3: nummerierte generische ("Volkspolizist 1", "Mann 2", "Polizist 3", "Krankenschwester 1")
   if (/^(mann|frau|polizist|polizistin|volkspolizist|beamter|wachmann|wachtposten|gast|passant|nachtschwaermer|krankenschwester|kollege|kollegin|arbeiter|reisende|reisender|bauarbeiter|trinker)\s+\d+$/.test(n)) {
+    return true;
+  }
+  // v6.96: MfS-Statisten (MfS-Mann 1, MfS-Agent 2, MfS-Beamter 3, MfS-Schlaeger 1).
+  // Anlass: Vogt-Run v6.94 hatte 5 namenlose MfS-Statisten als storyFacts ("MfS-Mann 1",
+  // "MfS-Mann 2", "MfS-Mann 3", "MfS-Agent 1", "MfS-Agent 2"). Diese Cast-Pollution
+  // verschmutzt den Story-Facts-Pool und nimmt anderen NPCs den Platz weg. Mistral
+  // soll sie als anonyme Statisten in der Erzaehlung lassen, nicht als getrackte NPCs.
+  // Pattern: MfS-Mann|Agent|Beamter|Schlaeger gefolgt von optionalem Bindestrich/Leerzeichen und einer Nummer.
+  // Auch mit/ohne Bindestrich: "mfs-mann 1", "mfsmann 2", "mfs mann 3".
+  if (/^mfs[\s-]?(mann|agent|beamter|schlaeger|vernehmer|wachmann)\s*\d+$/.test(n)) {
     return true;
   }
   // Match 4: beschreibende ohne echten Namen ("Aelterer Herr mit Melone",
@@ -9337,8 +9412,18 @@ async function chooseOption(option) {
   if (!isPhysical && detectExplicitSleep(option.text)) {
     console.log('[Schatten] Explicit sleep detected:', option.text);
     const alreadyAdvancedToMorning = (gameDay > preAdvanceDay && gameTimeIdx === 0);
+    // v6.96: Zusaetzliche Sperre: wenn die VORANGEGANGENE Szene-Verarbeitung
+    // (KI-Schlaf-Detection ODER ZWANGS-EINNICKEN) schon Tag++ ausgeloest hat,
+    // darf der Spieler-Klick NICHT nochmal Tag++ machen. Behebt Vogt-Run-Bug
+    // (Tag 2 hatte nur 1 Szene). preAdvanceDay-Check allein reicht nicht, weil
+    // der vorherige Tag-Wechsel schon Stunden frueher passiert ist und gameDay
+    // damals == preAdvanceDay war.
+    const previousSceneAlreadyAdvanced = lastSceneTriggeredDayAdvance;
     if (alreadyAdvancedToMorning) {
       console.log('[Schatten] Tageswechsel schon durch advanceGameTime erfolgt - kein Doppel-Inkrement');
+    } else if (previousSceneAlreadyAdvanced) {
+      console.log('[Schatten] Tageswechsel schon durch vorige Szene (KI-Schlaf/ZWANGS-EINNICKEN) - kein Doppel-Inkrement');
+      diag('detect', 'Schlaf-Option uebersprungen: vorige Szene hat schon Tag gewechselt');
     } else {
       // Springe direkt zum naechsten Morgen
       gameTimeIdx = 0; // MORGEN
@@ -9348,6 +9433,10 @@ async function chooseOption(option) {
       pendingDayTransition = true;
     }
   }
+
+  // v6.96: Flag JETZT zuruecksetzen, nachdem die Schlaf-Sperre es gelesen hat.
+  // So lebt es genau einen chooseOption-Klick lang.
+  lastSceneTriggeredDayAdvance = false;
 
   const userMsg = isPhysical
     ? `Der Spieler wählt Option ${option.id}: "${option.text}". WICHTIG: Dies ist eine direkte physische Aktion. Die nächste Szene MUSS die UNMITTELBARE Konsequenz in derselben Situation erzählen (Reaktion der Gegenüber, körperlicher Schmerz, Eskalation oder Folgen). KEIN Zeitsprung, KEIN Ortswechsel, KEINE Übergangsformulierung wie "später" oder "am nächsten Morgen". Liefere die nächste Szene als JSON.`
@@ -10328,8 +10417,25 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         });
 
         if (!isDuplicate) {
-          inventory.push(newItem);
-          diag('state', 'Inventar +: ' + newItem);
+          // v6.96: WALTHER-STRING-KONSTANZ. Wenn Mistral die Walther wieder
+          // einfuegt nach einem Verlust, kommt sie als "Walther PPK" ohne
+          // "(eigene Pistole)"-Anhang. Wir normalisieren auf den kanonischen
+          // Standard-Inventar-String "Walther PPK (eigene Pistole)", damit der
+          // Brand-String konstant bleibt und nicht zwei verschiedene Eintraege
+          // entstehen (Schiffer-Run v6.94 Sz12->Sz13 zeigt das Problem).
+          let canonicalItem = newItem;
+          if (/^walther(\s+ppk)?$/i.test(newItem.trim())) {
+            canonicalItem = 'Walther PPK (eigene Pistole)';
+            console.log('[Schatten] Walther-String normalisiert: "' + newItem + '" -> "' + canonicalItem + '"');
+          } else if (/^brieftasche$/i.test(newItem.trim())) {
+            canonicalItem = 'Brieftasche mit Detektiv-Lizenz';
+            console.log('[Schatten] Brieftasche-String normalisiert: "' + newItem + '" -> "' + canonicalItem + '"');
+          } else if (/^notizbuch$/i.test(newItem.trim())) {
+            canonicalItem = 'Notizbuch und Bleistift';
+            console.log('[Schatten] Notizbuch-String normalisiert: "' + newItem + '" -> "' + canonicalItem + '"');
+          }
+          inventory.push(canonicalItem);
+          diag('state', 'Inventar +: ' + canonicalItem);
         } else {
           console.log('[Schatten] Inventar-Dedup: "' + newItem + '" zu aehnlich zu bestehendem Eintrag, ignoriert.');
           diag('dedup', 'Inventar-Duplikat verworfen: "' + newItem + '"');
@@ -10352,6 +10458,22 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           return itLower.includes(needle) || needle.includes(itLower);
         });
         if (idx >= 0) {
+          // v6.96: IDENTITAETS-SCHUTZ. Brieftasche mit Detektivlizenz und
+          // Notizbuch+Bleistift sind keine Spielgegenstaende, sondern Teil von
+          // Karls Identitaet. Ein Detektiv ohne Lizenz oder Notizbuch ist absurd.
+          // Anlass: Vogt-Run v6.94, Sz12 MfS-Festnahme -> Inv 0 inklusive
+          // Brieftasche+Notizbuch. Karl konnte nicht mal zur Klientin zurueck.
+          // Selbst wenn MfS alles "beschlagnahmt", bekommt Karl diese Items
+          // bei der Freilassung zurueck. Wir lassen sie also gar nicht weg.
+          const itemLower = inventory[idx].toLowerCase();
+          const isIdentityItem =
+            (itemLower.includes('brieftasche') && (itemLower.includes('lizenz') || itemLower.includes('detektiv'))) ||
+            (itemLower.includes('notizbuch') && itemLower.includes('bleistift'));
+          if (isIdentityItem) {
+            console.log('[Schatten] Identitaets-Item geschuetzt, nicht entfernt:', inventory[idx]);
+            diag('state', 'Identitaets-Item geschuetzt: "' + inventory[idx] + '" bleibt im Inventar');
+            continue;
+          }
           console.log('[Schatten] Inventar entfernt:', inventory[idx], '(durch:', needle + ')');
           diag('state', 'Inventar entfernt: "' + inventory[idx] + '" (durch: ' + needle + ')');
           inventory.splice(idx, 1);
@@ -11334,9 +11456,14 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       // damit die NACHFOLGENDE Szene den Morgen sauber erzaehlt (nicht die KI
       // selbst die naechste Szene als "Du sitzt noch im Sessel" beschreibt).
       pendingDayTransition = true;
+      // v6.96: Markiere dass diese Szene-Verarbeitung schon Tag++ gemacht hat.
+      // Der naechste chooseOption-Klick darf NICHT nochmal Tag++ ausloesen, selbst
+      // wenn der Spieler dann "Geh schlafen" waehlt. Fix fuer Vogt-Run-Bug
+      // (Tag 2 hatte nur 1 Szene Spielzeit).
+      lastSceneTriggeredDayAdvance = true;
       console.log('[Schatten] KI hat Morgensequenz erzaehlt, ziehe Zeit nach:',
                   'T' + oldDay + ' ' + oldTime, '->', 'T' + gameDay + ' MORGEN',
-                  '| Energie -> 100, Hunger', karlHunger, '| pendingDayTransition gesetzt');
+                  '| Energie -> 100, Hunger', karlHunger, '| lastSceneTriggeredDayAdvance gesetzt');
     }
 
     // ENERGIE + HUNGER + ROMANTIK aktualisieren basierend auf dieser Szene
@@ -11365,6 +11492,10 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       verfassung = Math.max(1, verfassung - 1);
       scene.szene = (scene.szene || '') + '\n\nDeine Augen werden bleiern. Du kaempfst dagegen, aber die Erschoepfung ist staerker. Du sinkst dort ein, wo du gerade bist, der Kopf faellt vornueber. Am naechsten Morgen weckt dich das Quietschen einer Strassenbahn. Der Nacken ist verspannt, der Ruecken steif, aber du hast die Nacht ueberstanden.';
       lastInjury = 'Steifer Nacken vom unbequemen Schlaf';
+      // v6.96: Sperre fuer chooseOption (gleicher Bug wie KI-Schlaf-Detection oben):
+      // Falls der naechste Spieler-Klick eine Schlaf-Option ist, soll nicht
+      // nochmal Tag++ passieren.
+      lastSceneTriggeredDayAdvance = true;
     }
 
     // Diagnose-Frame finalisieren und an die Log-Entry haengen.
@@ -11792,6 +11923,7 @@ function resetGame() {
   sceneCounter = 0;
   timeAdvanceTokens = 0;
   pendingDayTransition = false;
+  lastSceneTriggeredDayAdvance = false; // v6.96
   scenesAtSameLocation = 0;
   lastLocation = '';
   lastMainLocation = ''; // v6.58
