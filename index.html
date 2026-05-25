@@ -1256,7 +1256,7 @@
       Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
     </p>
     <button class="btn-primary" onclick="startGame()">Ermittlung beginnen</button>
-    <div class="start-version">Schatten v6.55 · Hilde-Run-Lektorat · 7 Fixes (Romantik/NPC-Filter/Inventar/Tageszeit/Action-Push/Teleport/Grammar)</div>
+    <div class="start-version">Schatten v6.56 · Wegener-Run-Lektorat · 5 Fixes (Revolver→Walther / Cast-Dedup / Pumphrase-Hardcap / Historische Anker / Romantik-Reaktivierung)</div>
   </div>
 
   <!-- Game Log -->
@@ -1324,7 +1324,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v6.55 · Hilde-Run-Lektorat · 7 Fixes (Romantik/NPC-Filter/Inventar/Tageszeit/Action-Push/Teleport/Grammar)</span>
+    <span>Schatten v6.56 · Wegener-Run-Lektorat · 5 Fixes (Revolver→Walther / Cast-Dedup / Pumphrase-Hardcap / Historische Anker / Romantik-Reaktivierung)</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -2285,13 +2285,19 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v6.55';
+window.SCHATTEN_VERSION = 'v6.56';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
 let lastFullScene = null;  // last raw scene JSON for style continuity
 let pendingRetry = null;   // function to retry on rate limit
 let recentTexts = [];      // last few scene texts for vocabulary tracking
+// HISTORISCHE ANKER (v6.56): zaehlt pro Run, wie viele konkrete historische
+// Bezuege die KI eingebaut hat. Anker = echter Personenname, echtes Ereignis,
+// konkrete echte Lokalitaet mit Detail, echte Marke (Juwel/Karo/Juno), echtes
+// Datum-Bezug (Stalin-Tod, 17. Juni, Reuters Tod). Ziel: >= 3 pro Run.
+let historicalAnchorCount = 0;
+let historicalAnchorsUsed = []; // welche Anker konkret schon vorkamen (zur Deduplizierung)
 let lastErrorDebug = null; // last error debug dump (for copy button)
 let gameDay = 1;           // current day (1-based)
 let gameTimeIdx = 4;       // index into TIMES_OF_DAY (starts at "ABEND" since intro is evening)
@@ -4625,8 +4631,99 @@ Es ist NICHT realistisch, dass eine Trauergesellschaft 18 Stunden an einem Grab 
     }
 
     // ROMANTIK-Hinweis: wenn Frau im Raum + Spannung niedrig + Abend/Nacht + Tension hoch
-    if (romanticTension >= 3 && isAbendOderNacht && isLowTension) {
+    // v6.56: Schwelle von 3 auf 2 gesenkt. Hilde- und Wegener-Run zeigten Tension 0/5
+    // ueber ganze Runs - das System triggerte nie.
+    if (romanticTension >= 2 && isAbendOderNacht && isLowTension) {
       recap += `\n\nROMANTISCHE GELEGENHEIT (Tension ${romanticTension}/5): Karl und eine Frau aus dem Cast hatten in den letzten Szenen vertraute Momente. Es ist Abend/Nacht, die Spannung ist niedrig. EINE Option DARF (muss nicht) eine romantische Variante sein: "Bei ihr uebernachten" (zaehlt als Tageswechsel), oder wenn im Buero und sie geblieben ist: "Die Buerotuer abschliessen" (Quickie, dann kurze Pause, dann Story weiter). MARLOWE-STIL: stilvoll, elliptisch, NICHT explizit beschrieben. Die Tuer schliesst sich, ein Schnitt, am naechsten Morgen Kaffee zu zweit oder ein zerknuelltes Hemd auf dem Stuhl. KEINE detaillierten sexuellen Beschreibungen. Wenn du diese Option anbietest, MUSS sie das Wort "uebernachten" oder "bei ihr" oder "die Buerotuer abschliessen" enthalten.`;
+    }
+
+    // HISTORISCHE-ANKER-PFLICHT (v6.56): nach 5 Szenen Run-Zeit ohne ausreichend
+    // Anker (>=3 verschiedene historische Bezuege gesetzt) wird Druck aufgebaut.
+    // Wir senden einen kuratierten Vorschlag von 3 Ankern, die zum aktuellen
+    // Spieldatum passen, und fordern die KI auf, mindestens EINEN in dieser Szene
+    // organisch einzubauen (nicht aufgesetzt, nicht als Wikipedia-Eintrag).
+    if (sceneCounter >= 5 && historicalAnchorCount < 3 && lastSpannung <= 3) {
+      // Datumsbezogene Anker-Vorschlaege bauen
+      recalcGameCurrentDate();
+      const d = new Date(gameCurrentDate + 'T12:00:00');
+      const month = d.getMonth() + 1; // 1-12
+      const day = d.getDate();
+      let ankerHints = [];
+      // Vor Stalin-Tod (vor 5. Maerz)
+      if (month < 3 || (month === 3 && day < 5)) {
+        ankerHints = [
+          'die Rekord-Massenflucht im Januar (38.000 in einem Monat in die Notaufnahme West)',
+          'die neue Lebensmittelgrundkarte vom 1. Februar (Fett, Fleisch, Zucker rationiert)',
+          'eine RIAS-Sendung aus Schoeneberg (Egon Bahr als junge Stimme)',
+          'die Geruechte aus Moskau ueber Stalins schlechte Gesundheit',
+        ];
+      } else if (month === 3 && day >= 5 && day <= 31) {
+        // Direkt nach Stalin-Tod
+        ankerHints = [
+          'Stalins Tod am 5. Maerz (Trauerflor an Behoerden, kollektive Schweigeminute)',
+          'die Stalin-Trauerfeier am 9. Maerz (uebertragen im Radio)',
+          'unsicheres SED-Politbuero (Ulbricht, Grotewohl, Zaisser bangen)',
+          'eine RIAS-Sendung mit Reuter-Kommentar',
+        ];
+      } else if (month >= 4 && month <= 5) {
+        ankerHints = [
+          'den "Neuen Kurs" der SED (leise Liberalisierung im April)',
+          'die Stalinallee-Baustelle und die Truemmerfrauen',
+          'das Cafe Warschau (eroeffnet 1. Mai 1953, Stalinallee, Warschauer Torte)',
+          'die geheime ZK-Sitzung vom 14. Mai (Normenerhoehung beschlossen)',
+        ];
+      } else if (month === 6 && day < 17) {
+        ankerHints = [
+          'die Spannung in den Stalinallee-Baracken (Normenerhoehung trifft die Arbeiter)',
+          'das SED-Politbuero ruft am 9. Juni den "Neuen Kurs" aus (zu spaet)',
+          'Geruechte ueber einen Streik der Bauarbeiter',
+          'eine RIAS-Sendung mit kritischen Berichten',
+        ];
+      } else if (month === 6 && day === 17) {
+        ankerHints = [
+          'DER 17. JUNI selbst (Massenstreik, Sowjet-Panzer rollen in Mitte, Ausnahmezustand)',
+          'Karl sieht Sowjet-T-34 am Brandenburger Tor',
+          'RIAS sendet stuendlich aus Schoeneberg',
+        ];
+      } else if (month >= 6 && month <= 8) {
+        ankerHints = [
+          'die Nachwirkungen des 17. Juni (Standrecht, Verhaftungs-Wellen, Sowjet-Panzer-Posten)',
+          'Wilhelm Zaissers Ruecktritt als MfS-Chef (23. Juli), Wollweber uebernimmt',
+          'die Welle von Republikfluchten im Sommer',
+          'eine Tarantel-Ausgabe (illegal aus dem Westen eingeschleust, Verbreitung strafbar)',
+        ];
+      } else if (month === 9 && day >= 29) {
+        ankerHints = [
+          'Ernst Reuters Tod am 29. September (Herzinfarkt, RIAS-Sondersendungen)',
+          'Trauerflor an West-Berliner Buerogebaeuden, eine Million Trauernde',
+          'Walther Schreiber wird Buergermeister West-Berlin (30.9.)',
+        ];
+      } else if (month === 10) {
+        ankerHints = [
+          'Brecht zieht in die Chausseestrasse 125 (kann ihn von weitem sehen)',
+          'Grotewohls Regierungserklaerung zum Neuen Kurs (8. Oktober)',
+          'die anhaltende Trauer um Reuter, Schreiber als neuer Buergermeister',
+        ];
+      } else { // November, Dezember
+        ankerHints = [
+          'SED-Plenum bestaetigt Ulbricht-Kurs (9. November)',
+          'Vorbereitungen auf den Sechsjahresplan',
+          'RIAS-Berichte aus Schoeneberg (Egon Bahr-Stimme)',
+          'die Lebensmittelmarken-Engpaesse im Winter',
+        ];
+      }
+      // Allgemein-Anker, die immer passen (sektorengrenze, Zigaretten, Trabant-Vorlaeufer)
+      const generalAnchors = [
+        'eine konkrete Zigaretten-Marke (Juwel/Karo im Osten, Juno im Westen)',
+        'einen schwarzen Horch (Sowjet-Dienstwagen) oder EMW 340',
+        'eine Truemmerfrau die Ziegel klopft',
+        'die Sektorengrenze und 25 D-Mark Zwangsumtausch',
+        'die HO-Gaststaette (staatlich, mit Lebensmittelmarken) vs. private Kneipe',
+        'einen Volksempfaenger oder Sachsenwerk-Radio',
+      ];
+      const pickedDateAnker = ankerHints.slice(0, 2).join('; ');
+      const pickedGeneral = generalAnchors[Math.floor(Math.random() * generalAnchors.length)];
+      recap += `\n\nHISTORISCHE ANREICHERUNG (PFLICHT): Dieser Run hat bisher nur ${historicalAnchorCount} konkrete historische Bezuege - zu wenig. Ein Schatten-Run soll dokumentarischen Wert haben (Geschichtsabitur-Niveau). In DIESER Szene MUSST du EINEN konkreten historischen Bezug einbauen, nicht aufgesetzt sondern organisch in Beobachtung, Beilaeufigem, Hintergrund. Vorschlaege passend zum aktuellen Spieldatum (${formatGameDate(gameCurrentDate)}): ${pickedDateAnker}. Oder ein Alltags-Anker: ${pickedGeneral}. Beispiele wie das aussieht: "Aus dem Volksempfaenger im Hinterzimmer dringt eine RIAS-Stimme: Reuter-Trauerfeier morgen am Schoeneberger Rathaus." ODER "Die Frau am Tresen drueckt eine Juwel aus, schiebt ihre Lebensmittelkarte ueber den Tresen." ODER "Draussen rollt ein schwarzer Horch P240 vorbei, KVP-Beifahrer mit Maschinenpistole auf dem Schoss." Nutze EINEN Bezug, nicht alle drei - sonst wird es Wikipedia. KEIN expliziter Geschichts-Vortrag, NUR beilaeufige Beobachtung.`;
     }
 
     // Stasi-Gewahrsam: spezielle Optionen-Anweisung
@@ -5327,6 +5424,9 @@ async function startGame() {
   karlHunger = 0;
   hungerAccumulator = 0;
   romanticTension = 0;
+  // Reset Historische Anker (v6.56)
+  historicalAnchorCount = 0;
+  historicalAnchorsUsed = [];
   // Reset Szenen-Typen-Tracking
   recentSceneTypes = [];
   // Pick a random intro and use its predefined start time
@@ -6079,6 +6179,31 @@ function fixCommonGrammarErrors(text) {
     };
     return 'und ' + (conjugation[verb] || verb);
   });
+  // WAFFEN-FIX (v6.56): Karls Waffe ist die Walther PPK, NIEMALS Revolver/Colt/P08.
+  // Im Wegener-Run T3 kam "Revolver an deiner Hueefte" durch. Wir ersetzen die
+  // KI-Fehlbezeichnungen wenn der Kontext Karl betrifft (an deiner/an deinem/in deinem/
+  // dein/deine Hueefte/Hand/Holster/Mantel). Fremde Waffen (z.B. "der Revolver des
+  // Polizisten") bleiben unangetastet - die duerfen Revolver sein.
+  // Wichtig: nur Karls Hand-/Holster-/Hueefte-Kontext, sonst nicht.
+  const karlWaffenContext = /(an\s+deiner|in\s+deiner|aus\s+deinem|in\s+deinem|deine|deinen)\s+(huefte|hueefte|huft|hand|jackentasche|manteltasche|tasche|holster|halfter)/i;
+  // 1) "Revolver an deiner Huefte" / "den Revolver in deiner Hand"
+  result = result.replace(/\b([Dd]er|[Dd]en|[Dd]ein|[Dd]eine|[Dd]einen|[Dd]as)\s+(Revolver|REVOLVER|revolver)\b/g, function(match, art, _) {
+    // Pruefen ob nachfolgender Kontext Karls Waffe ist (in den naechsten ~60 Zeichen)
+    const idx = result.indexOf(match);
+    const tail = result.slice(idx, idx + 120);
+    if (karlWaffenContext.test(tail)) {
+      // Karls Waffe: Revolver -> Walther
+      return art + ' Walther';
+    }
+    return match; // Fremde Waffe bleibt Revolver
+  });
+  // 2) "deinen Colt" / "deine P08" - immer ersetzen (Karl hat nie Colt/P08 als Eigenwaffe)
+  result = result.replace(/\b([Dd]ein|[Dd]eine|[Dd]einen|[Dd]eines|[Dd]einem)\s+(Colt|COLT|colt|P08|P\.\s*08|P-08|p08)\b/g, '$1 Walther');
+  // 3) Direktes "ziehst/reisst/zueckst den Revolver" mit Karl-Subjekt (Du-Erzaehlton)
+  result = result.replace(/\b([Dd]u\s+(?:ziehst|reisst|zueckst|holst|hebst|richtest|haeltst|haelst))\s+(?:den|deinen)\s+(Revolver|Colt|P08|P\.\s*08)\b/g, '$1 die Walther');
+  // 4) "Karl zieht den Revolver" (3.-Pers.-Erzaehlton, kommt selten vor aber Sicherheit)
+  result = result.replace(/\b(Karl\s+(?:zieht|reisst|zueckt|haelt|hebt|richtet))\s+(?:den|seinen)\s+(Revolver|Colt|P08|P\.\s*08)\b/g, '$1 die Walther');
+
   // Anglizismen die Mistral manchmal einbaut - passen nicht ins 1953-Berlin-Setting
   result = result.replace(/\bmostly\b/g, 'meistens');
   result = result.replace(/\bokay\b/gi, 'in Ordnung');
@@ -6333,6 +6458,10 @@ function updateEnergyAndHunger(scene) {
 }
 
 // Romantik-Tension Update: prueft Cast (sind Frauen im Raum?) und Erzaehltext.
+// v6.56: zusaetzlich Vornamen-Erkennung im Szenentext - auch Frauen die NICHT
+// formal im Cast gespeichert sind koennen Tension aufbauen wenn sie aktiv in der
+// Szene vorkommen (Klientin im Verhoer, Witwe am Friedhof, etc).
+// Praefix-Schutz: bei akuter Action sinkt Tension stark.
 function updateRomanticTension(scene) {
   const spannung = typeof scene.spannung === 'number' ? scene.spannung : (lastSpannung || 2);
   // Bei hoher Spannung sinkt Romantik-Tension stark
@@ -6348,24 +6477,49 @@ function updateRomanticTension(scene) {
     if (typeof c !== 'object' || !c) return false;
     const rolle = (c.rolle || '').toLowerCase();
     const beziehung = (c.beziehung || '').toLowerCase();
-    return /\b(klientin|witwe|zeugin|frau|tochter|sekretaerin|kellnerin|baronin|saengerin|tanzpartnerin)\b/.test(rolle + ' ' + beziehung);
+    return /\b(klientin|witwe|zeugin|frau|tochter|sekretaerin|kellnerin|baronin|saengerin|tanzpartnerin|barfrau|kassiererin|krankenschwester|aerztin|verkaeuferin|wirtin|sekretarin|bardame|tanzpartnerin|gespielin|geliebte|bekanntschaft)\b/.test(rolle + ' ' + beziehung);
   });
 
   const sceneText = (scene.szene || '').toLowerCase()
     .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
 
+  // ZWEITE TRIGGER-SCHIENE (v6.56): Frauen-Vornamen im Erzaehltext.
+  // Wenn ein typischer 1953er Frauenvorname mit weiblichen Pronomina im
+  // Szenenkern vorkommt (mehrfache "sie/ihr"-Bezuege) - das deutet auf eine
+  // aktive Gespraechspartnerin hin, auch wenn Cast keine offizielle Klientin
+  // listet (z.B. Wegener-Run wo Helga offstage blieb aber Trude und "Frau im
+  // blauen Mantel" als Szenen-Akteurinnen kamen).
+  const femalePraenomen = /\b(hilde|helga|lotte|trude|edith|renate|margot|elfriede|marlene|lola|hertha|elsbeth|gertrud|gerda|ursel|ursula|ingrid|christel|liesel|magda|martha|hilde|anneliese|herta|brigitte|inge|ilse|grete|gretel|annemarie|annerose|charlotte|christa|cordula|dora|eleonore|erika|frieda|gisela|hannelore|herta|hilde|hildegard|ilse|inge|irma|klara|kaethe|kaethe|kaethe|magda|magdalena|marga|margarete|margot|martha|monika|rita|rosemarie|ruth|sigrid|sieglinde|sophie|theresa|traudl|ulrike|vera|waltraud)\b/;
+  const sieIhrCount = (sceneText.match(/\b(sie|ihr|ihre|ihren|ihrem)\b/g) || []).length;
+  const hasNamedWomanInScene = femalePraenomen.test(sceneText) && sieIhrCount >= 3;
+
   // Erotische / vertraute Phrasen im Text erhoehen romanticTension
   const romanticHints = [
-    /\b(ihr blick|sie laechelt|seine fingerspitzen|ihre fingerspitzen|ihre hand auf)\b/,
-    /\b(parfum|haar|lippen|silhouette|kurven|seidenstrumpf|seidenbluse|naehe)\b/,
-    /\b(legt eine hand auf|streicht ueber|beruehrt deine|nahe an dir)\b/,
-    /\b(zigarette anzuenden|zuendet dir eine an|teilt sich eine flasche)\b/,
+    /\b(ihr blick|sie laechelt|seine fingerspitzen|ihre fingerspitzen|ihre hand auf|sie schaut dich an|ihr blick haengt|haengt an dir|sucht deinen blick)\b/,
+    /\b(parfum|haar|lippen|silhouette|kurven|seidenstrumpf|seidenbluse|naehe|duft|warm|halsausschnitt|dekolle|kleid streift)\b/,
+    /\b(legt eine hand auf|streicht ueber|beruehrt deine|nahe an dir|kommt naeher|setzt sich neben|lehnt sich an dich)\b/,
+    /\b(zigarette anzuenden|zuendet dir eine an|teilt sich eine flasche|du gibst ihr feuer|gibst ihr feuer|teilt sich mit dir)\b/,
   ];
   const hits = romanticHints.filter(p => p.test(sceneText)).length;
-  if (hits > 0 && hasFemaleNPC) {
+
+  // Trigger-Logik (v6.56):
+  // - Cast-Frau ODER namentliche Frau im Szenenkern: Hints zaehlen voll
+  // - Nur Hints ohne Frauenkontext: Hints zaehlen halb (NICHT 0, damit Tension
+  //   wenigstens kriechen kann wenn die KI Frauen nicht in den Cast schreibt)
+  // - Keine Frau, keine Hints: -1 (Tension verfaellt)
+  if (hits > 0 && (hasFemaleNPC || hasNamedWomanInScene)) {
     romanticTension = Math.min(5, romanticTension + hits);
-    console.log('[Schatten] Romantik-Tension +' + hits + ' =', romanticTension);
-  } else if (!hasFemaleNPC) {
+    console.log('[Schatten] Romantik-Tension +' + hits + ' =', romanticTension, hasNamedWomanInScene ? '(named woman)' : '(cast)');
+    diag('detect', 'Romantik-Tension +' + hits + ' = ' + romanticTension + (hasNamedWomanInScene ? ' (Frau im Szenenkern)' : ' (Cast-Frau)'));
+  } else if (hits > 0 && !hasFemaleNPC && !hasNamedWomanInScene) {
+    // Halb-Punkt: KI hat romantische Hints geschrieben aber keinen klaren
+    // Frauenkontext - wahrscheinlich Pulp-Klischee ("Parfum in der Luft"), nicht
+    // eine echte Beziehung. Trotzdem kleiner Anstieg, aber nicht voll.
+    if (hits >= 2) {
+      romanticTension = Math.min(5, romanticTension + 1);
+      console.log('[Schatten] Romantik-Tension +1 (Hints ohne Frauenkontext) =', romanticTension);
+    }
+  } else if (!hasFemaleNPC && !hasNamedWomanInScene) {
     romanticTension = Math.max(0, romanticTension - 1);
   }
 }
@@ -6529,9 +6683,12 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       if (sinnesEinheiten >= 4) {
         diag('drift', 'Sinneskaskade: ' + sinnesEinheiten + ' Sinnesreize in einer Szene (zu dicht)');
       }
-      // PUMPHRASEN-DETECTOR (v6.55): warne wenn die KI sich in 5 aufeinanderfolgenden
-      // Szenen mit denselben Filler-Phrasen wiederholt. "Draußen hupen Autos" kam im
-      // Hilde-Run 8x vor - das ist Klischee-Lethargie.
+      // PUMPHRASEN-DETECTOR + HARDCAP (v6.55 -> v6.56): warne wenn die KI sich
+      // in 5 aufeinanderfolgenden Szenen mit denselben Filler-Phrasen wiederholt.
+      // "Draussen hupen Autos" kam im Hilde-Run 8x vor - das ist Klischee-Lethargie.
+      // v6.56: Bei recentCount >= 2 entfernen wir den Satz JETZT aus dem Text
+      // (statt nur zu warnen). Dabei loeschen wir den Satz, in dem die Phrase
+      // steht (von Satzanfang bis naechstem . ! ? oder \n).
       const pumphrases = [
         /draussen\s+hupen\s+autos/i,
         /das\s+leben\s+geht\s+weiter/i,
@@ -6542,9 +6699,22 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         /abblaetternde\s+farbe/i,
         /die\s+laternen\s+werfen\s+lange\s+schatten/i,
       ];
+      // Original-Text-Versionen (mit Umlauten) fuer Satz-Entfernung
+      const pumphrasesOriginal = [
+        /Drau(ß|ss)en\s+hupen\s+Autos/i,
+        /Das\s+Leben\s+geht\s+weiter/i,
+        /Das\s+(typische|übliche|uebliche)\s+Treiben/i,
+        /wischt\s+sich\s+die\s+H(ä|ae)nde\s+an\s+(der|ihrer)\s+Sch(ü|ue)rze/i,
+        /(zündet|zuendet|zündest|zuendest)\s+(dir|sich)\s+eine\s+Zigarette\s+an/i,
+        /Die\s+Sonne\s+brennt\s+auf\s+das\s+(Asphalt|Kopfsteinpflaster|Pflaster)/i,
+        /abbl(ä|ae)tternde\s+Farbe/i,
+        /Die\s+Laternen\s+werfen\s+lange\s+Schatten/i,
+      ];
       const sceneLower = scene.szene.toLowerCase()
         .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
-      for (const phrase of pumphrases) {
+      for (let pi = 0; pi < pumphrases.length; pi++) {
+        const phrase = pumphrases[pi];
+        const phraseOrig = pumphrasesOriginal[pi];
         if (phrase.test(sceneLower)) {
           // Zaehle wie oft diese Phrase in den letzten 5 Szenen vorkam
           let recentCount = 0;
@@ -6553,9 +6723,85 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             if (phrase.test(rtLower)) recentCount++;
           }
           if (recentCount >= 2) {
-            diag('drift', 'Pumphrase-Wiederholung: "' + phrase.source.replace(/\\\\s\+/g, ' ').replace(/[\\^$.*+?()|[\\]{}]/g, '') + '" zum ' + (recentCount + 1) + '. Mal in 5 Szenen');
+            // HARDCAP: Satz mit der Pumphrase aus dem Text loeschen.
+            // Wir suchen den umgebenden Satz (von vorangehendem . ! ? \n bis
+            // zum naechsten . ! ? \n) und schneiden ihn raus.
+            const sentenceRegex = new RegExp(
+              '(?:^|(?<=[.!?]\\s)|(?<=\\n))[^.!?\\n]*' + phraseOrig.source + '[^.!?\\n]*[.!?]?(\\s|$)',
+              'i'
+            );
+            const before = scene.szene;
+            scene.szene = scene.szene.replace(sentenceRegex, '').replace(/\s{2,}/g, ' ').replace(/\s+([,.!?])/g, '$1').trim();
+            if (scene.szene !== before) {
+              diag('drift', 'Pumphrase-HARDCAP: Satz mit "' + phraseOrig.source.replace(/[\\^$.*+?()|[\]{}]/g, '').replace(/\s+/g, ' ') + '" entfernt (' + (recentCount + 1) + '. Vorkommen in 5 Szenen)');
+            } else {
+              diag('drift', 'Pumphrase-Wiederholung: "' + phrase.source.replace(/\\\\s\+/g, ' ').replace(/[\\^$.*+?()|[\\]{}]/g, '') + '" zum ' + (recentCount + 1) + '. Mal in 5 Szenen (Satz-Entfernung fehlgeschlagen)');
+            }
           }
         }
+      }
+
+      // HISTORISCHE-ANKER-DETEKTOR (v6.56): zaehlt konkrete Bezuege zur echten
+      // Berlin-1953-Wirklichkeit. Wenn ein Anker NEU ist (noch nicht in
+      // historicalAnchorsUsed), inkrementieren wir den Counter. Ziel pro Run: >= 3.
+      // Anker-Kategorien (Auswahl, nicht erschoepfend):
+      const historicalAnchors = [
+        // Personen (Politik/Kultur)
+        { id: 'stalin', re: /\b(stalin|josef\s+stalin)\b/i },
+        { id: 'ulbricht', re: /\b(ulbricht|walter\s+ulbricht)\b/i },
+        { id: 'reuter', re: /\b(reuter|ernst\s+reuter|walther\s+schreiber)\b/i },
+        { id: 'brecht', re: /\b(brecht|bertolt\s+brecht|berliner\s+ensemble)\b/i },
+        { id: 'weigel', re: /\b(helene\s+weigel|weigel)\b/i },
+        { id: 'eisler', re: /\b(hanns?\s+eisler)\b/i },
+        { id: 'bahr', re: /\b(egon\s+bahr)\b/i },
+        { id: 'adenauer', re: /\b(adenauer|konrad\s+adenauer)\b/i },
+        { id: 'grotewohl', re: /\b(grotewohl|otto\s+grotewohl)\b/i },
+        { id: 'zaisser', re: /\b(zaisser|wollweber)\b/i },
+        { id: 'beria', re: /\b(beria|berija|lawrenti)\b/i },
+        // Ereignisse / Politische Marker
+        { id: 'stalin-tod', re: /\b(stalins?\s+tod|5\.\s*m(ä|ae)rz|trauerflor|stalin\s+ist\s+tot|trauer.{0,15}stalin)/i },
+        { id: '17-juni', re: /\b(17\.\s*juni|volksaufstand|aufstand\s+der\s+arbeiter|sowjet.?panzer|normenerh(ö|oe)hung|standrecht)/i },
+        { id: 'reuters-tod', re: /\b(reuters?\s+tod|29\.\s*september|trauerfeier\s+reuter|sch(ö|oe)neberger\s+rathaus)/i },
+        { id: 'massenflucht', re: /\b(massenflucht|republikflucht|notaufnahme|notunterkunft|fluechtling|sectorenfluechtling|sektorenfluechtling|tausende\s+gehen\s+r(ü|ue)ber|gehen\s+(in\s+den\s+)?westen)/i },
+        { id: 'lebensmittelmarken', re: /\b(lebensmittelmarke|lebensmittelkarte|fettmarke|fleischmarke|punkte.?karte|ho-laden|konsum-genossenschaft)/i },
+        { id: 'neuer-kurs', re: /\b(neuer\s+kurs|liberalisierung\s+1953|sed-politb(ü|ue)ro)/i },
+        // Radio / Medien
+        { id: 'rias', re: /\b(rias|rundfunk\s+im\s+amerikanischen\s+sektor)\b/i },
+        { id: 'volksempfaenger', re: /\b(volksempf(ä|ae)nger|sachsenwerk|berliner\s+rundfunk)\b/i },
+        { id: 'tarantel', re: /\b(tarantel)\b/i },
+        // Lokalitaeten mit historischem Gewicht
+        { id: 'stalinallee', re: /\b(stalinallee|stalinallee.?baustelle|caf(é|e)\s+warschau|warschauer\s+torte|block\s+d-nord)\b/i },
+        { id: 'charite', re: /\b(charit(é|e))\b/i },
+        { id: 'hohenschoenhausen', re: /\b(hohensch(ö|oe)nhausen)\b/i },
+        { id: 'keibelstrasse', re: /\b(keibelstra(ß|ss)e|vpi\s+keibel)\b/i },
+        { id: 'karlshorst', re: /\b(karlshorst|sowjetisches\s+hauptquartier)\b/i },
+        { id: 'kufsteiner', re: /\b(kufsteiner|rias.?funkhaus|sch(ö|oe)neberg\s+rias)\b/i },
+        { id: 'chausseestrasse', re: /\b(chausseestra(ß|ss)e\s*125|brecht.?haus)\b/i },
+        { id: 'deutsches-theater', re: /\b(deutsches\s+theater|schumannstra(ß|ss)e)\b/i },
+        { id: 'marx-engels', re: /\b(marx-engels-platz|s-bahnhof\s+marx-engels)/i },
+        { id: 'plotzensee', re: /\b(pl(ö|oe)tzensee|westhafen)\b/i },
+        // Echte Marken / Alltag
+        { id: 'zigaretten', re: /\b(juwel|karo\s+(filter|filterlos|ohne)|reval|juno|adler.?zigarette|lucky\s+strike|camel)\b/i },
+        { id: 'horch', re: /\b(horch\s+(p240|240|sieben|7)|schwarzer\s+horch|emw\s+340|bmw\s+340)\b/i },
+        { id: 'trabant-vorlaeufer', re: /\b(ifa\s+f8|p70|sachsenring)\b/i },
+        { id: 'truemmerfrau', re: /\b(tr(ü|ue)mmerfrau|tr(ü|ue)mmerfrauen|ziegel\s+klopf)/i },
+        { id: 'kvp', re: /\b(kvp|kasernierte\s+volkspolizei|adlershof.?kaserne)\b/i },
+        { id: 'sektorengrenze', re: /\b(sektorgrenze|sektorengrenze|sektorenwechsler|25\s*d-mark.?zwangsumtausch|zwangsumtausch)/i },
+        { id: 'd-mark-m-mark', re: /\b(d-mark.?west|m-mark.?ost|ost-?mark|west-?mark|schwarzmarkt-?kurs)/i },
+      ];
+      let newAnchorsThisScene = 0;
+      const sceneTextForAnchors = scene.szene || '';
+      for (const anchor of historicalAnchors) {
+        if (anchor.re.test(sceneTextForAnchors)) {
+          if (!historicalAnchorsUsed.includes(anchor.id)) {
+            historicalAnchorsUsed.push(anchor.id);
+            historicalAnchorCount++;
+            newAnchorsThisScene++;
+          }
+        }
+      }
+      if (newAnchorsThisScene > 0) {
+        diag('detect', 'Historischer Anker(+' + newAnchorsThisScene + '), gesamt Run: ' + historicalAnchorCount + '/3 (' + historicalAnchorsUsed.slice(-5).join(', ') + ')');
       }
     }
     // Auch in den Optionen aufloesen (z.B. "Ruf die VP" -> "Ruf die Volkspolizei")
@@ -7223,8 +7469,49 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           }
           console.log('[Schatten] Klient identifiziert:', clientProfile.name, '(' + clientProfile.charakter + ', Mahnung Tag ' + clientProfile.geduldsstufe1 + ', Feuern Tag ' + clientProfile.geduldsstufe3 + ')');
         }
-        // Dedup nach Name
-        if (!cast.some(c => c.name && c.name.toLowerCase() === entry.name.toLowerCase())) {
+        // Dedup nach Name - mit Fuzzy-Match (v6.56)
+        // Im Wegener-Run kam "Wilhelm Roth" + "Kommissar Wilhelm Roth" doppelt
+        // vor weil der exakte String-Vergleich nicht greift. Wir checken jetzt:
+        // - exakte Namens-Gleichheit (alt)
+        // - Substring-Beziehung: ein Name ist Teil des anderen (Titel-Praefix)
+        //   "Wilhelm Roth" ist in "Kommissar Wilhelm Roth" enthalten -> Duplikat
+        //   "Anna" ist in "Anna Berg" enthalten -> Duplikat (Vorname-only)
+        // Wenn Duplikat erkannt: bestehenden Eintrag mit dem voellstaendigeren
+        // (laengeren) Namen anreichern, neuen verwerfen.
+        const newName = entry.name.toLowerCase().trim();
+        const newNameClean = newName
+          .replace(/^(kommissar|hauptkommissar|oberkommissar|wachtmeister|leutnant|major|oberst|hauptmann|herr|frau|fraeulein|doktor|dr\.|prof\.|professor|genosse|genossin)\s+/i, '')
+          .trim();
+        const dupIdx = cast.findIndex(c => {
+          if (!c.name) return false;
+          const exName = c.name.toLowerCase().trim();
+          const exNameClean = exName
+            .replace(/^(kommissar|hauptkommissar|oberkommissar|wachtmeister|leutnant|major|oberst|hauptmann|herr|frau|fraeulein|doktor|dr\.|prof\.|professor|genosse|genossin)\s+/i, '')
+            .trim();
+          // 1) Exakter Match
+          if (exName === newName) return true;
+          // 2) Titel-bereinigter Match (Kommissar Wilhelm Roth == Wilhelm Roth)
+          if (exNameClean === newNameClean && exNameClean.length >= 4) return true;
+          // 3) Voller Substring (nur wenn der kuerzere mindestens 2 Worte hat ODER
+          //    eindeutig ein Vor+Nachname-Praefix ist). Verhindert dass "Anna" mit
+          //    jeder beliebigen Anna-X-Person verschmilzt.
+          // Wenn ein Name aus 2+ Worten in dem anderen vorkommt -> Duplikat.
+          if (newNameClean.split(/\s+/).length >= 2 && exNameClean.includes(newNameClean)) return true;
+          if (exNameClean.split(/\s+/).length >= 2 && newNameClean.includes(exNameClean)) return true;
+          return false;
+        });
+        if (dupIdx >= 0) {
+          // Duplikat: nimm den laengeren Namen (vollere Form), behalte Cast-Eintrag
+          const existing = cast[dupIdx];
+          if (entry.name.length > existing.name.length) {
+            existing.name = entry.name;
+          }
+          // Felder anreichern wenn neuer Eintrag mehr Info hat
+          if (entry.rolle && !existing.rolle) existing.rolle = entry.rolle;
+          if (entry.beziehung && !existing.beziehung) existing.beziehung = entry.beziehung;
+          if (entry.fahrzeug && !existing.fahrzeug) existing.fahrzeug = entry.fahrzeug;
+          diag('dedup', 'Cast-Duplikat verschmolzen: "' + entry.name + '" mit existierendem "' + existing.name + '"');
+        } else {
           cast.push(entry);
         }
       }
