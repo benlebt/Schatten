@@ -1162,6 +1162,124 @@
     background: rgba(200,191,168,0.1);
     margin: 4px 0;
   }
+  /* v6.62: Deploy-Modal fuer GitHub-Push */
+  .deploy-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    backdrop-filter: blur(4px);
+  }
+  .deploy-modal {
+    background: #1a1a1a;
+    border: 1px solid rgba(200,191,168,0.3);
+    border-radius: 6px;
+    max-width: 640px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 20px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.8);
+  }
+  .deploy-modal h2 {
+    font: 14px monospace;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #c8bfa8;
+    margin: 0 0 16px 0;
+    border-bottom: 1px solid rgba(200,191,168,0.2);
+    padding-bottom: 8px;
+  }
+  .deploy-modal label {
+    display: block;
+    font: 11px monospace;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #aaa;
+    margin-top: 12px;
+    margin-bottom: 4px;
+  }
+  .deploy-modal select,
+  .deploy-modal input[type="text"],
+  .deploy-modal input[type="password"],
+  .deploy-modal textarea {
+    width: 100%;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(200,191,168,0.2);
+    color: var(--fg);
+    padding: 8px;
+    font: 12px monospace;
+    border-radius: 3px;
+    box-sizing: border-box;
+  }
+  .deploy-modal textarea {
+    height: 200px;
+    resize: vertical;
+    font: 11px monospace;
+    line-height: 1.4;
+  }
+  .deploy-modal .btn-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+  }
+  .deploy-modal .btn-row button {
+    flex: 1;
+    padding: 10px;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(200,191,168,0.3);
+    color: var(--fg);
+    font: 12px monospace;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 3px;
+  }
+  .deploy-modal .btn-row button.primary {
+    background: rgba(80,140,80,0.3);
+    border-color: rgba(150,255,150,0.4);
+    color: #cfc;
+  }
+  .deploy-modal .btn-row button.primary:hover {
+    background: rgba(80,140,80,0.5);
+  }
+  .deploy-modal .btn-row button:hover {
+    background: rgba(255,255,255,0.05);
+  }
+  .deploy-status {
+    margin-top: 12px;
+    padding: 10px;
+    font: 11px monospace;
+    line-height: 1.5;
+    border-radius: 3px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .deploy-status.error {
+    background: rgba(180,40,40,0.2);
+    border: 1px solid rgba(255,100,100,0.4);
+    color: #f99;
+  }
+  .deploy-status.success {
+    background: rgba(80,140,80,0.2);
+    border: 1px solid rgba(150,255,150,0.4);
+    color: #cfc;
+  }
+  .deploy-status.info {
+    background: rgba(80,100,140,0.2);
+    border: 1px solid rgba(150,180,255,0.3);
+    color: #ccf;
+  }
+  .deploy-stats {
+    font: 10px monospace;
+    color: #888;
+    margin-top: 4px;
+    text-align: right;
+  }
 </style>
 </head>
 <body>
@@ -1202,6 +1320,42 @@
       </select>
     </div>
     <button id="autoplay-start-btn" onclick="startAutoplayFromSettings()">▶ Autoplay starten</button>
+
+    <div class="settings-divider"></div>
+    <div class="settings-info">Deploy</div>
+    <button onclick="openDeployModal(event)">🚀 Datei deployen (GitHub-Push)</button>
+  </div>
+</div>
+
+<!-- v6.62: Deploy-Modal fuer GitHub-Push. Admin-only. -->
+<div id="deploy-overlay" class="deploy-overlay hidden" onclick="closeDeployModalOnBackdrop(event)">
+  <div class="deploy-modal" onclick="event.stopPropagation()">
+    <h2>🚀 Datei deployen</h2>
+
+    <label for="deploy-file-select">Zieldatei</label>
+    <select id="deploy-file-select" onchange="onDeployFileChange()">
+      <option value="index.html">index.html</option>
+      <option value="api/groq.js">api/groq.js</option>
+      <option value="api/gemini.js">api/gemini.js</option>
+      <option value="api/mistral.js">api/mistral.js</option>
+    </select>
+
+    <label for="deploy-content">Datei-Inhalt (kompletter Datei-Code aus Chat einfügen)</label>
+    <textarea id="deploy-content" placeholder="Code hier komplett einfügen..." spellcheck="false"></textarea>
+    <div class="deploy-stats" id="deploy-stats">0 Bytes</div>
+
+    <label for="deploy-commit-msg">Commit-Message</label>
+    <input type="text" id="deploy-commit-msg" placeholder="v6.62: ..." maxlength="500">
+
+    <label for="deploy-password">Deploy-Passwort</label>
+    <input type="password" id="deploy-password" placeholder="Push-Passwort eingeben" autocomplete="current-password">
+
+    <div class="btn-row">
+      <button onclick="closeDeployModal()">Abbrechen</button>
+      <button class="primary" id="deploy-submit-btn" onclick="submitDeploy()">Deployen</button>
+    </div>
+
+    <div id="deploy-status" class="hidden"></div>
   </div>
 </div>
 
@@ -1330,7 +1484,7 @@
       Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
     </p>
     <button class="btn-primary" onclick="startGame()">Ermittlung beginnen</button>
-    <div class="start-version">Schatten v6.61 · Sprach-Feinschliff · 2 Fixes (Semikolons-im-Erzaehltext ersetzt automatisch durch Punkt+Grossbuchstabe / Stil-Regel KEINE Semikolons im Frontend-Prompt UND Slim-Prompt)</div>
+    <div class="start-version">Schatten v6.62 · M2 GitHub-Auto-Push · Deploy-Modal im Admin-Menue, schreibt ueber /api/deploy mit Passwort-Schutz direkt ins Repo (nur 4 erlaubte Pfade, SHA256-Hash-Vergleich, Whitelist)</div>
   </div>
 
   <!-- Game Log -->
@@ -1398,7 +1552,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v6.61 · Sprach-Feinschliff · 2 Fixes (Semikolons-im-Erzaehltext ersetzt automatisch durch Punkt+Grossbuchstabe / Stil-Regel KEINE Semikolons im Frontend-Prompt UND Slim-Prompt)</span>
+    <span>Schatten v6.62 · M2 GitHub-Auto-Push · Deploy-Modal im Admin-Menue, schreibt ueber /api/deploy mit Passwort-Schutz direkt ins Repo (nur 4 erlaubte Pfade, SHA256-Hash-Vergleich, Whitelist)</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -1861,7 +2015,7 @@ Schreibe natürliches, idiomatisches Deutsch. Vermeide:
 - Falsche Verbpositionen am Satzende (typischer deutscher LLM-Fehler).
 - Anglizismen ("checken", "fixen", "Drinks") - stattdessen "prüfen", "lösen", "einen Whisky".
 - Übertriebene Adjektiv-Häufung ("die kalte, eisige, schneidende Berliner Morgenluft"). Ein gutes Adjektiv reicht.
-- SEMIKOLONS im Erzähltext (v6.61). Hammett und Chandler schreiben kurze Hauptsätze mit Punkt. Falsch: "Sie starrt dich an; ihre Hand zittert." Richtig: "Sie starrt dich an. Ihre Hand zittert." Strichpunkte wirken biedermeierlich und passen nicht zum Noir-Stil.
+- SEMIKOLONS im Erzähltext (v6.62). Hammett und Chandler schreiben kurze Hauptsätze mit Punkt. Falsch: "Sie starrt dich an; ihre Hand zittert." Richtig: "Sie starrt dich an. Ihre Hand zittert." Strichpunkte wirken biedermeierlich und passen nicht zum Noir-Stil.
 
 METAPHERN-BREMSE (sehr wichtig):
 Hammett und Chandler sind sparsam mit Bildern. Ein gutes Bild pro Szene reicht. Vermeide unbedingt:
@@ -2385,7 +2539,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v6.61';
+window.SCHATTEN_VERSION = 'v6.62';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -2848,6 +3002,133 @@ window.addEventListener('DOMContentLoaded', () => {
     if (btn) btn.title = 'Musik war zuletzt an - druecken zum Aktivieren';
   }
 });
+
+// v6.62: DEPLOY-MODAL FUER GITHUB-PUSH
+// Oeffnet ein Modal in dem Admin eine Datei + Inhalt eingibt, der dann ueber
+// /api/deploy direkt ins GitHub-Repo gepusht wird (mit Passwort-Schutz).
+// Setup-Voraussetzung: GITHUB_TOKEN und DEPLOY_PASSWORD_HASH in Vercel-Env-Vars.
+
+function openDeployModal(event) {
+  if (event) event.stopPropagation();
+  closeSettings();
+  const overlay = document.getElementById('deploy-overlay');
+  if (!overlay) return;
+  // Modal-Felder zuruecksetzen
+  document.getElementById('deploy-content').value = '';
+  document.getElementById('deploy-stats').textContent = '0 Bytes';
+  document.getElementById('deploy-password').value = '';
+  // Commit-Message mit aktueller Version vorausfuellen
+  const version = window.SCHATTEN_VERSION || 'v6.62';
+  document.getElementById('deploy-commit-msg').value = version + ': ';
+  const statusEl = document.getElementById('deploy-status');
+  statusEl.classList.add('hidden');
+  statusEl.textContent = '';
+  overlay.classList.remove('hidden');
+  // Auto-Focus aufs Content-Feld (Mobile-freundlich, da nicht aufs Passwort)
+  setTimeout(() => document.getElementById('deploy-content').focus(), 50);
+  // Char-Counter live updaten
+  document.getElementById('deploy-content').oninput = () => {
+    const len = document.getElementById('deploy-content').value.length;
+    document.getElementById('deploy-stats').textContent =
+      len.toLocaleString() + ' Bytes' + (len > 0 ? ' (~' + Math.round(len / 1024) + ' KB)' : '');
+  };
+}
+
+function closeDeployModal() {
+  const overlay = document.getElementById('deploy-overlay');
+  if (overlay) overlay.classList.add('hidden');
+}
+
+function closeDeployModalOnBackdrop(event) {
+  if (event.target.id === 'deploy-overlay') closeDeployModal();
+}
+
+function onDeployFileChange() {
+  // Bei Datei-Wechsel den Content NICHT loeschen (Spieler koennte versehentlich
+  // umschalten), aber Commit-Message anpassen
+  const file = document.getElementById('deploy-file-select').value;
+  const msg = document.getElementById('deploy-commit-msg');
+  const version = window.SCHATTEN_VERSION || 'v6.62';
+  if (msg.value === version + ': ' || msg.value === '') {
+    msg.value = version + ': ' + file + ' update';
+  }
+}
+
+async function submitDeploy() {
+  const file = document.getElementById('deploy-file-select').value;
+  const content = document.getElementById('deploy-content').value;
+  const commitMessage = document.getElementById('deploy-commit-msg').value.trim();
+  const password = document.getElementById('deploy-password').value;
+  const submitBtn = document.getElementById('deploy-submit-btn');
+  const statusEl = document.getElementById('deploy-status');
+
+  // Validierung
+  if (!content || content.length < 10) {
+    return showDeployStatus('Inhalt fehlt oder zu kurz.', 'error');
+  }
+  if (!commitMessage) {
+    return showDeployStatus('Commit-Message fehlt.', 'error');
+  }
+  if (!password) {
+    return showDeployStatus('Passwort fehlt.', 'error');
+  }
+  // Confirm-Dialog vor dem echten Push
+  const confirmed = confirm(
+    'Datei "' + file + '" mit ' + content.length.toLocaleString() + ' Bytes ' +
+    'wirklich nach GitHub pushen?\n\nVercel wird automatisch redeployen.'
+  );
+  if (!confirmed) return;
+
+  showDeployStatus('Sende an Server...', 'info');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Deploye...';
+
+  try {
+    const res = await fetch('/api/deploy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        password: password,
+        path: file,
+        content: content,
+        commitMessage: commitMessage,
+      }),
+    });
+    const data = await res.json();
+    if (res.ok && data.ok) {
+      const shortSha = data.commitSha ? data.commitSha.slice(0, 7) : '?';
+      showDeployStatus(
+        '✓ Erfolgreich gepusht!\n' +
+        'Commit: ' + shortSha + '\n' +
+        'Bytes: ' + (data.bytesWritten || content.length).toLocaleString() + '\n' +
+        (data.commitUrl ? 'URL: ' + data.commitUrl + '\n' : '') +
+        'Vercel-Deploy laeuft jetzt automatisch im Hintergrund.',
+        'success'
+      );
+      // Passwort vergessen damit es nicht im Browser bleibt
+      document.getElementById('deploy-password').value = '';
+    } else {
+      showDeployStatus(
+        'Fehler: ' + (data.error || 'Unbekannter Fehler') + '\n' +
+        'HTTP-Status: ' + res.status,
+        'error'
+      );
+    }
+  } catch (e) {
+    showDeployStatus('Netzwerk-Fehler: ' + e.message, 'error');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Deployen';
+  }
+}
+
+function showDeployStatus(message, type) {
+  const el = document.getElementById('deploy-status');
+  el.className = 'deploy-status ' + (type || 'info');
+  el.textContent = message;
+  el.classList.remove('hidden');
+}
+
 // Close menu when clicking outside (but not on menu buttons themselves)
 document.addEventListener('click', (e) => {
   const menu = document.getElementById('settings-menu');
@@ -6568,7 +6849,7 @@ function fixCommonGrammarErrors(text) {
   // "die Roter Laterne" (Akkusativ falsch) -> "die Rote Laterne"
   result = result.replace(/\bdie\s+Roter\s+Laterne\b/g, 'die Rote Laterne');
 
-  // v6.61: SEMIKOLON -> PUNKT
+  // v6.62: SEMIKOLON -> PUNKT
   // Hammett/Chandler/Schimanski schreiben kurze Hauptsaetze mit Punkt.
   // Semikolons wirken biedermeierlich-literarisch und passen nicht zum Stil.
   // Wir ersetzen "; " mit ". " und sorgen dass das nachfolgende Wort gross
