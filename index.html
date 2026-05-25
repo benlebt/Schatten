@@ -1249,7 +1249,7 @@
       Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
     </p>
     <button class="btn-primary" onclick="startGame()">Ermittlung beginnen</button>
-    <div class="start-version">Schatten v6.41 · 413-Failover · Token-Skip-Liste · GPT-OSS-Exclude</div>
+    <div class="start-version">Schatten v6.42 · Per-Modell-Cooldown · Auto-Recovery zur Top-Chain</div>
   </div>
 
   <!-- Game Log -->
@@ -1317,7 +1317,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v6.41 · 413-Failover · Token-Skip-Liste · GPT-OSS-Exclude</span>
+    <span>Schatten v6.42 · Per-Modell-Cooldown · Auto-Recovery zur Top-Chain</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -1894,7 +1894,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v6.41';
+window.SCHATTEN_VERSION = 'v6.42';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -3517,64 +3517,152 @@ let sessionSkippedModels = new Set([
   'openai/gpt-oss-20b',  // 8K TPM, gleiches Problem
 ]);
 
-function getActiveModelIndex() {
+// Per-Modell-Cooldown: Map von model-string -> {until: timestamp_ms, reason: string}
+// Statt einem globalen "aktiven Index" zu fuehren, tracken wir pro Modell
+// wann es wieder probiert werden darf. So kehrt das Spiel automatisch zum
+// staerksten verfuegbaren Modell zurueck sobald dessen Block ablaeuft -
+// kein Klemmenbleiben am Lite-Modell bis Tagesende.
+//
+// Persistiert im localStorage damit Per-Day-Blocks Reloads ueberleben,
+// aber Per-Minute-Blocks (kurzlebig) sind auch ohne Reload-Persistenz OK.
+let modelCooldowns = {};
+
+// Beim Laden des Scripts die persistierten Cooldowns lesen.
+// Wird gleich nach der Deklaration aufgerufen, damit jeder Zugriff
+// die richtigen Werte hat.
+(function initCooldowns() {
+  modelCooldowns = loadModelCooldowns();
+  // Legacy-Aufraeumung: der alte Single-Index-Mechanismus liegt evtl. noch
+  // in localStorage. Wir nutzen ihn nicht mehr, also weg damit.
+  try { localStorage.removeItem('schatten-model-idx'); } catch {}
+  if (Object.keys(modelCooldowns).length > 0) {
+    console.log('[Schatten] Persistierte Modell-Cooldowns:',
+      Object.keys(modelCooldowns).map(k => k + ' (bis ' +
+        new Date(modelCooldowns[k].until).toLocaleTimeString() + ')').join(', '));
+  }
+})();
+
+function loadModelCooldowns() {
   try {
-    const raw = localStorage.getItem('schatten-model-idx');
-    if (!raw) return 0;
-    const { idx, day, chainVersion } = JSON.parse(raw);
-    // Wenn die Chain-Version sich geaendert hat (z.B. nach Umsortierung), reset auf 0
-    if (chainVersion !== MODEL_CHAIN_VERSION) return 0;
-    if (day !== getCurrentUtcDay()) return 0;
-    if (typeof idx !== 'number' || idx < 0 || idx >= MODEL_CHAIN.length) return 0;
-    return idx;
-  } catch { return 0; }
+    const raw = localStorage.getItem('schatten-model-cooldowns');
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    // Chain-Version-Check: wenn die Chain umsortiert/erweitert wurde, alle
+    // Cooldowns wegwerfen - die Modell-Strings koennten andere Bedeutung haben.
+    if (parsed.__chainVersion !== MODEL_CHAIN_VERSION) {
+      return {};
+    }
+    // Abgelaufene Cooldowns sofort wegwerfen
+    const now = Date.now();
+    const cleaned = {};
+    for (const k of Object.keys(parsed)) {
+      if (k.startsWith('__')) continue; // Meta-Keys ueberspringen
+      if (parsed[k] && parsed[k].until > now) {
+        cleaned[k] = parsed[k];
+      }
+    }
+    return cleaned;
+  } catch { return {}; }
 }
 
-function setActiveModelIndex(idx) {
+function saveModelCooldowns() {
   try {
-    localStorage.setItem('schatten-model-idx', JSON.stringify({
-      idx, day: getCurrentUtcDay(), chainVersion: MODEL_CHAIN_VERSION
-    }));
+    const toSave = Object.assign({}, modelCooldowns, {
+      __chainVersion: MODEL_CHAIN_VERSION
+    });
+    localStorage.setItem('schatten-model-cooldowns', JSON.stringify(toSave));
   } catch {}
 }
 
-function getActiveModel() {
-  // Wenn das gespeicherte aktive Modell in der Skip-Liste ist (z.B. Reload nach
-  // einem Token-Crash), automatisch zum naechsten passenden weiter.
-  let idx = getActiveModelIndex();
-  while (idx < MODEL_CHAIN.length && sessionSkippedModels.has(MODEL_CHAIN[idx].model)) {
-    idx++;
+function blockModel(modelString, durationMs, reason) {
+  const until = Date.now() + durationMs;
+  modelCooldowns[modelString] = { until, reason };
+  saveModelCooldowns();
+  console.log('[Schatten] Modell blockiert:', modelString, '|', reason, '| bis',
+              new Date(until).toLocaleTimeString());
+}
+
+function isModelBlocked(modelString) {
+  const cd = modelCooldowns[modelString];
+  if (!cd) return false;
+  if (cd.until <= Date.now()) {
+    // Abgelaufen - aufraeumen
+    delete modelCooldowns[modelString];
+    saveModelCooldowns();
+    return false;
   }
-  if (idx >= MODEL_CHAIN.length) {
-    // Alle weg - fallback auf den letzten nicht-geskippten, oder eben Index 0
-    for (let i = MODEL_CHAIN.length - 1; i >= 0; i--) {
-      if (!sessionSkippedModels.has(MODEL_CHAIN[i].model)) {
-        setActiveModelIndex(i);
-        return MODEL_CHAIN[i];
-      }
+  return true;
+}
+
+function getMillisUntilNextUtcMidnight() {
+  const now = new Date();
+  const tomorrow = new Date(Date.UTC(
+    now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0
+  ));
+  return tomorrow.getTime() - now.getTime();
+}
+
+// Spielstart-Reset: Per-Minute-Blocks loeschen, Day-Blocks behalten.
+// Daily-Limits regenerieren erst um Mitternacht UTC. Per-Minute-Blocks
+// koennten sich aber bei einem neuen Spielstart 30+ Min spaeter laengst
+// erledigt haben - wir wollen mit dem staerksten Modell beginnen.
+function clearShortModelBlocks() {
+  const now = Date.now();
+  const oneHour = 60 * 60 * 1000;
+  for (const k of Object.keys(modelCooldowns)) {
+    const cd = modelCooldowns[k];
+    // Blocks kuerzer als 1 Stunde wegwerfen (das sind Per-Minute-Blocks).
+    // Daily-Limits laufen bis Mitternacht UTC und ueberleben.
+    if (cd && (cd.until - now) < oneHour) {
+      delete modelCooldowns[k];
     }
-    return MODEL_CHAIN[0]; // hard fallback
   }
-  if (idx !== getActiveModelIndex()) {
-    setActiveModelIndex(idx);
+  saveModelCooldowns();
+}
+
+function getActiveModelIndex() {
+  // Legacy-API: gibt den Index des aktiven Modells zurueck.
+  // Da wir jetzt per-Modell-Cooldowns nutzen, ist das das ERSTE nicht-blockierte
+  // Modell in der Chain (von oben), das auch nicht in der Session-Skip-Liste ist.
+  for (let i = 0; i < MODEL_CHAIN.length; i++) {
+    const m = MODEL_CHAIN[i];
+    if (sessionSkippedModels.has(m.model)) continue;
+    if (isModelBlocked(m.model)) continue;
+    return i;
   }
+  // Alles blockiert? Letzten Index zurueckgeben (das ist die Daily-Limit-Anzeige)
+  return MODEL_CHAIN.length - 1;
+}
+
+function setActiveModelIndex(idx) {
+  // Legacy-API: wir setzen den Index nicht mehr direkt. Stattdessen
+  // blockieren wir alle Modelle VOR idx, damit getActiveModelIndex() den
+  // gewuenschten Index zurueckgibt. Wird nur noch in wenigen Stellen
+  // verwendet - die richtige API ist blockModel().
+  // No-op: das Cooldown-System fuehrt die Auswahl von selbst.
+}
+
+function getActiveModel() {
+  const idx = getActiveModelIndex();
   return MODEL_CHAIN[idx];
 }
 
-// Wechsle zum naechsten Modell in der Kette. Gibt das neue Modell-Objekt zurueck,
-// oder null wenn alle durch sind. Ueberspringt Modelle die in der
-// sessionSkippedModels-Liste stehen (TPM-zu-klein fuer unseren Prompt).
+// Wechsle zum naechsten verfuegbaren Modell. Markiert das aktuelle als blockiert
+// (Default 60s, oder ueber blockModel mit konkreter Dauer aufgerufen vorher).
+// Gibt das neue Modell-Objekt zurueck, oder null wenn alle durch sind.
 function advanceModel() {
-  let idx = getActiveModelIndex();
-  let nextIdx = idx + 1;
-  while (nextIdx < MODEL_CHAIN.length) {
-    const candidate = MODEL_CHAIN[nextIdx];
-    if (!sessionSkippedModels.has(candidate.model)) {
-      setActiveModelIndex(nextIdx);
-      return candidate;
-    }
-    console.log('[Schatten] Skip Modell (Session-skipped):', candidate.label);
-    nextIdx++;
+  // Aktuelles Modell muss blockiert sein, sonst gibt getActiveModel() es wieder
+  // zurueck. Falls noch nicht durch blockModel() blockiert: 60s Default-Block.
+  const current = getActiveModel();
+  if (!isModelBlocked(current.model)) {
+    blockModel(current.model, 60 * 1000, 'auto-advance');
+  }
+  // Das naechste verfuegbare Modell suchen
+  for (let i = 0; i < MODEL_CHAIN.length; i++) {
+    const m = MODEL_CHAIN[i];
+    if (sessionSkippedModels.has(m.model)) continue;
+    if (isModelBlocked(m.model)) continue;
+    return m;
   }
   return null;
 }
@@ -4624,6 +4712,10 @@ async function startGame() {
   // Diagnose-Buffer leeren bei neuem Spiel
   sceneDiagnosticsBuffer = [];
   currentSceneDiagnostics = null;
+  // Per-Minute-Blocks loeschen: nach evtl. langer Pause sind sie wahrscheinlich
+  // laengst abgelaufen. So beginnt jeder neue Run mit dem staerksten Modell.
+  // Daily-Blocks bleiben (laufen erst um Mitternacht UTC aus).
+  clearShortModelBlocks();
   // Reset day/time/location tracking
   gameDay = 1;
   sceneCounter = 0;
@@ -6469,7 +6561,8 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       hideLoading();
       const requestedWait = Math.ceil(e.retryAfter || 15);
 
-      // Bei Daily/TPD-Limit: zum naechsten Modell in der Kette wechseln und sofort retryen.
+      // Bei Daily/TPD-Limit: aktuelles Modell bis Tagesende blockieren und zum
+      // naechsten verfuegbaren Modell wechseln.
       // Das durchlaeuft die komplette Kette (Gemini-Modelle -> Groq-Modelle), bevor wir
       // wirklich kapitulieren und das Tageslimit-Bild zeigen.
       if (e.isDailyLimit) {
@@ -6480,6 +6573,10 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (e.tokenTooLarge) {
           sessionSkippedModels.add(previousModel.model);
           console.warn('[Schatten] Modell permanent aus Session-Rotation:', previousModel.label, '(TPM zu klein fuer unsere Prompts)');
+        } else {
+          // Echtes Daily-Limit: bis Mitternacht UTC blockieren.
+          // So kommt das Modell erst morgen wieder in die Rotation.
+          blockModel(previousModel.model, getMillisUntilNextUtcMidnight(), 'daily-limit');
         }
         const nextModel = advanceModel();
         if (nextModel) {
@@ -6500,8 +6597,13 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       // Modell wechseln statt am gleichen kleben zu bleiben. Das nutzt die
       // Modell-Chain als sofortigen Failover aus - Mistral Large 3 limited?
       // -> versuchen wir Gemini Pro oder Groq. Wartezeit gespart, Story laeuft weiter.
+      // Das Modell wird fuer 90s blockiert (Per-Minute-Buckets brauchen ~60s
+      // zum auffuellen + Puffer). Sobald der Block ablaeuft, ist es wieder oben in der Chain.
       if (!e.isDailyLimit && rateLimitCount >= 1) {
         const previousModel = getActiveModel();
+        // Konkrete Wartezeit aus der API-Antwort beachten, mindestens aber 90s
+        const blockDuration = Math.max(90 * 1000, (e.retryAfter || 60) * 1000);
+        blockModel(previousModel.model, blockDuration, 'per-minute-limit');
         const nextModel = advanceModel();
         if (nextModel && nextModel.label !== previousModel.label) {
           console.log('[Schatten] Per-minute limit on', previousModel.label, '(2nd hit) -> switching to', nextModel.label);
@@ -6770,6 +6872,9 @@ function resetGame() {
   // Diagnose-Buffer leeren
   sceneDiagnosticsBuffer = [];
   currentSceneDiagnostics = null;
+  // Per-Minute-Blocks loeschen, damit der naechste Run wieder oben in der
+  // Modell-Chain anfaengt.
+  clearShortModelBlocks();
   gameDay = 1;
   gameTimeIdx = 4;
   sceneCounter = 0;
