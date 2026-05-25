@@ -1249,7 +1249,7 @@
       Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
     </p>
     <button class="btn-primary" onclick="startGame()">Ermittlung beginnen</button>
-    <div class="start-version">Schatten v6.34 · Walther-Schutz · Inv-Synonyme · NPC-Filter</div>
+    <div class="start-version">Schatten v6.35 · Hunger ab 7 · Re-Visit · Anglizismen</div>
   </div>
 
   <!-- Game Log -->
@@ -1317,7 +1317,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v6.34 · Walther-Schutz · Inv-Synonyme · NPC-Filter</span>
+    <span>Schatten v6.35 · Hunger ab 7 · Re-Visit · Anglizismen</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -1893,7 +1893,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v6.34';
+window.SCHATTEN_VERSION = 'v6.35';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -3589,6 +3589,14 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
     if (lastLocation) {
       recap += `\n\nORT-PFLICHT: Der "ort"-Eintrag der naechsten Szene MUSS "${lastLocation}" sein oder eine direkte, raeumlich plausible Fortsetzung davon (z.B. "${lastLocation}, hinter dem Holzstapel"). KEINE Brotkrumen-Akkumulation: Der ort darf maximal aus 2-3 kurzen Komponenten bestehen, nicht "Tempelhof, Graben, hinter dem Wrack, Richtung Lagerhalle". Berlin-Stadtteile (Wedding, Zehlendorf, Charlottenburg etc.) liegen kilometerweit auseinander. Wechsle den ort-Eintrag NUR, wenn der Spieler in dieser Szene aktiv und erkennbar zu einem neuen Ort gefahren oder gegangen ist.`;
     }
+    // Wiederbesuch-Hint: Wenn Karl an einen schon besuchten Ort zurueckkehrt,
+    // muss das auch als "Rueckkehr" erzaehlt werden (mit Wiedererkennung).
+    // Sonst beschreibt Mistral oft den Ort wie beim ersten Mal: Empfangsdame
+    // fragt "Kann ich Ihnen helfen?", obwohl Karl schon vor 5 Szenen mit ihr
+    // gesprochen hat.
+    if (visitedLocations.length > 1) {
+      recap += `\n\nWIEDERERKENNUNG: Karl hat bereits diese Orte besucht: ${visitedLocations.slice(0, 8).join(' | ')}. Wenn Karl zu einem dieser Orte zurueckkehrt, MUSST du das als RUECKKEHR erzaehlen - die anwesenden Personen erkennen ihn wieder ("Sie schon wieder?", "Mauer, was wollen Sie noch?"), die Beschreibung des Ortes ist knapp (nicht wieder von vorne), und Karl weiss schon was ihn erwartet. KEINE Wieder-Einfuehrung als waere es das erste Mal.`;
+    }
     // Verfassungs-Kontext + ggf. Verletzungsbeschreibung
     const verfassungLabel = ['tot', 'lebensgefährlich verletzt', 'stark verletzt', 'angeschlagen', 'leicht angeschlagen', 'unverletzt'][verfassung] || 'unverletzt';
     recap += `\n\nKARLS VERFASSUNG: ${verfassung}/5 (${verfassungLabel}).`;
@@ -3762,11 +3770,12 @@ Es ist NICHT realistisch, dass eine Trauergesellschaft 18 Stunden an einem Grab 
       recap += `\n\nNACHT-OPTION (Energie ${karlEnergie}/100): Es ist Nacht. EINE der 4 Optionen darf ein Tageswechsel sein, mit Wort "schlafen" oder "die Nacht verbringen". Aber Karl ist noch nicht erschoepft, du kannst es ihm anbieten oder auch nicht.`;
     }
 
-    // HUNGER-Hinweis: ab 5+ leichter Hint, ab 8+ MUSS Essens-Option dabei sein
-    if (karlHunger >= 8 && isLowTension) {
-      recap += `\n\nKARL HAT GROSSEN HUNGER (Hunger ${karlHunger}/10): Karl hat seit Stunden nichts gegessen, der Magen knurrt deutlich. EINE der Optionen MUSS eine Essens-Option sein. WICHTIG: VARIIERE - keine Currywurst-Monokultur! Wenn Karl im OSTEN ist (Mitte, Friedrichshain, Prenzlauer Berg, Hackescher Markt, Alexanderplatz): Bockwurst-Stand, Soljanka in der HO-Gaststaette, Bouletten mit Kartoffelsalat, Erbsensuppe vom Suppenwagen, Eisbein mit Sauerkraut, Strammer Max in der Mitropa, Kartoffelpuffer vom Strassenstand, Heringsschmaus, Stulle mit Schmalz, Schrippe vom HO-Baecker. Wenn Karl im WESTEN ist (Charlottenburg, Schoeneberg, Tempelhof): Currywurst-Bude, Buletten-Imbiss, Wiener Wuerstchen. In Cafes/Kneipen beider Sektoren: Malzkaffee mit Schrippe, Streuselkuchen, Schmalzbrot. Beispiel-Optionen: "Bei der HO-Gaststaette an der Ecke eine Soljanka loeffeln", "Am Bockwurst-Stand vor dem Alexanderplatz Halt machen", "Eine Bulette beim Imbiss am Bahnhof mitnehmen", "Im Konsum-Cafe einen Malzkaffee und Streuselkuchen". Wenn Karl in einer Kneipe/Cafe ist: erwaehne das Essen im Erzaehltext direkt. ALLE Essens-Optionen MUESSEN explizit den konkreten Essens-Begriff enthalten.`;
-    } else if (karlHunger >= 5 && isLowTension) {
-      recap += `\n\nKARL WIRD HUNGRIG (Hunger ${karlHunger}/10): Karl koennte langsam was essen. Wenn die Situation es passend hergibt, biete EINE Option an. VARIIERE: nicht immer Currywurst! Je nach Sektor: OST (Karls Heimatgegend) Bockwurst-Stand, Soljanka in HO-Gaststaette, Bouletten, Erbsensuppe, Kartoffelpuffer, Schrippe vom HO-Baecker, Stulle mit Schmalz. WEST nur wenn Karl drueben ist: Currywurst-Bude. KEIN Zwang - nur wenn es zur Story passt. Auch im Erzaehltext kann ein Imbiss-Geruch oder ein knurrender Magen beilaeufig erwaehnt werden.`;
+    // HUNGER-Hinweis: ab 7+ MUSS Essens-Option dabei sein, ab 4+ leichter Hint.
+    // Karl ist ein arbeitender Detektiv, kein Asket - er muss essen wie jeder andere.
+    if (karlHunger >= 7 && isLowTension) {
+      recap += `\n\nKARL HAT GROSSEN HUNGER (Hunger ${karlHunger}/10): Karl hat seit Stunden nichts gegessen, der Magen knurrt deutlich. EINE der Optionen MUSS eine konkrete Essens-Option sein - nicht nur Kaffee trinken, sondern wirklich etwas essen (Bockwurst, Bulette, Schrippe, Suppe, Currywurst, Streuselkuchen mit Sahne, Stulle, Eisbein etc). Wenn Karl bereits in einer Kneipe/Café sitzt: EINE Option MUSS "etwas essen" sein (z.B. "Eine Bulette zum Bier bestellen", "Vom Wirt eine Bockwurst holen lassen"). WICHTIG: VARIIERE - keine Currywurst-Monokultur! Wenn Karl im OSTEN ist (Mitte, Friedrichshain, Prenzlauer Berg, Hackescher Markt, Alexanderplatz): Bockwurst-Stand, Soljanka in der HO-Gaststaette, Bouletten mit Kartoffelsalat, Erbsensuppe vom Suppenwagen, Eisbein mit Sauerkraut, Strammer Max in der Mitropa, Kartoffelpuffer vom Strassenstand, Heringsschmaus, Stulle mit Schmalz, Schrippe vom HO-Baecker. Wenn Karl im WESTEN ist (Charlottenburg, Schoeneberg, Tempelhof): Currywurst-Bude, Buletten-Imbiss, Wiener Wuerstchen. In Cafes/Kneipen beider Sektoren: Malzkaffee mit Schrippe, Streuselkuchen, Schmalzbrot. ALLE Essens-Optionen MUESSEN explizit den konkreten Essens-Begriff enthalten. Im Erzaehltext erwaehne den knurrenden Magen oder den Imbissgeruch direkt.`;
+    } else if (karlHunger >= 4 && isLowTension) {
+      recap += `\n\nKARL WIRD HUNGRIG (Hunger ${karlHunger}/10): Karl koennte langsam was essen, der Magen meldet sich. Wenn die Situation es passend hergibt, biete EINE Option an. VARIIERE: nicht immer Currywurst! Je nach Sektor: OST (Karls Heimatgegend) Bockwurst-Stand, Soljanka in HO-Gaststaette, Bouletten, Erbsensuppe, Kartoffelpuffer, Schrippe vom HO-Baecker, Stulle mit Schmalz. WEST nur wenn Karl drueben ist: Currywurst-Bude. KEIN Zwang - nur wenn es zur Story passt. Auch im Erzaehltext kann ein Imbiss-Geruch oder ein knurrender Magen beilaeufig erwaehnt werden.`;
     }
 
     // ROMANTIK-Hinweis: wenn Frau im Raum + Spannung niedrig + Abend/Nacht + Tension hoch
@@ -4753,18 +4762,31 @@ function updateTimedEvent(scene) {
 // "Kommissar Heinrich Lindner", "Heinrich Lindner" und "Lindner" -> "lindner".
 // Anreden/Titel werden entfernt, generische Adjektive ebenfalls.
 // Bei Namen mit mehreren Komponenten: nur der Nachname zaehlt.
+// AUSNAHME: bei einsilbigen Nachnamen mit Geschlechts-spezifischer Anrede
+// (Frau/Fraeulein vs Herr) bleibt das Praefix erhalten, weil "Frau Schneider"
+// und "Herr Schneider" zwei verschiedene Personen sein koennen.
 function normalizeNpcName(name) {
   if (!name || typeof name !== 'string') return '';
   let n = name.toLowerCase()
     .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
-  // Titel/Anreden am Anfang entfernen
+  // Pruefen ob Geschlechts-Anrede vorhanden ist
+  const genderPrefixMatch = n.match(/^(herr|frau|fraeulein)\s+/);
+  const genderPrefix = genderPrefixMatch ? genderPrefixMatch[1] : '';
+  // Titel/Anreden am Anfang entfernen (inkl Geschlechts-Anrede)
   n = n.replace(/^(kommissar|kommissarin|herr|frau|fraeulein|major|leutnant|oberleutnant|doktor|dr\.|hauptmann|oberst|general|genosse|genossin|tovarisch|towarisch|pastor|professor|prof\.|inspektor|wachtmeister)\s+/i, '');
   // Generische Floskeln am Ende entfernen
   n = n.replace(/\s+(unbekannt|unbekannter|unbekannte)$/i, '');
   // Bei mehreren Woertern: nur den letzten (Nachname) nehmen
   const parts = n.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return '';
-  return parts[parts.length - 1];
+  const lastName = parts[parts.length - 1];
+  // Wenn Geschlechts-Anrede vorhanden UND nur EIN Wort uebrig blieb (also
+  // nur "Frau Schneider", nicht "Frau Edith Schneider"): praefix behalten.
+  // Damit werden "Frau Schneider" und "Herr Schneider" unterschieden.
+  if (genderPrefix && parts.length === 1) {
+    return genderPrefix + ':' + lastName;
+  }
+  return lastName;
 }
 
 // Erkennt ob ein "Name" gar kein echter Name ist sondern eine generische
@@ -4888,6 +4910,11 @@ function fixCommonGrammarErrors(text) {
   result = result.replace(/\b(D|d)u nahmst\b/g, '$1u nimmst');
   result = result.replace(/\b(D|d)u sahst\b/g, '$1u siehst');
   result = result.replace(/\b(D|d)u tratest\b/g, '$1u trittst');
+  // Anglizismen die Mistral manchmal einbaut - passen nicht ins 1953-Berlin-Setting
+  result = result.replace(/\bmostly\b/g, 'meistens');
+  result = result.replace(/\bokay\b/gi, 'in Ordnung');
+  result = result.replace(/\bok\b/gi, 'in Ordnung');
+  result = result.replace(/\bcool\b/g, 'kühl');
   return result;
 }
 
