@@ -1249,7 +1249,7 @@
       Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
     </p>
     <button class="btn-primary" onclick="startGame()">Ermittlung beginnen</button>
-    <div class="start-version">Schatten v6.47 · Schatten-Universum-Anker · 11 Setups · GTA-Style-Welt</div>
+    <div class="start-version">Schatten v6.48 · Anker-NPC-Lock · Lindner-Kombi-Rolle · Ort-Stabilitaet</div>
   </div>
 
   <!-- Game Log -->
@@ -1317,7 +1317,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v6.47 · Schatten-Universum-Anker · 11 Setups · GTA-Style-Welt</span>
+    <span>Schatten v6.48 · Anker-NPC-Lock · Lindner-Kombi-Rolle · Ort-Stabilitaet</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -1929,6 +1929,8 @@ const INTRO_VARIANTS = [
     timeIdx: 0, // MORGEN
     setup: {
       klient: 'Kommissar Heinrich Lindner (alter Bekannter aus Karls Kripo-Zeit)',
+      klientRolle: 'Kommissar / Klient (Auftraggeber)', // kombinierte Rolle - Lindner ist beides
+      klientBeziehung: 'Schutzpolizei-Kommissar West-Berlin, hat Karl mit dem Hollenbeck-Fall beauftragt',
       opfer: 'Friedrich Hollenbeck (60, Bankier am Wannsee, verschwunden)',
       tat: 'Verschwinden des Bankiers Hollenbeck aufklaeren - Spuren von Gewalt, keine Leiche',
       ortHaupt: 'Polizeirevier Hardenbergstrasse Charlottenburg, dann Wannsee-Villa',
@@ -2036,7 +2038,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v6.47';
+window.SCHATTEN_VERSION = 'v6.48';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -4077,7 +4079,7 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
     // Letzten Ort explizit nochmal anhaengen, damit die KI ihn nicht verfaelscht.
     // Das ist die haerteste Form gegen "Tempelhof -> ploetzlich Zehlendorf"-Drift.
     if (lastLocation) {
-      recap += `\n\nORT-PFLICHT: Der "ort"-Eintrag der naechsten Szene MUSS "${lastLocation}" sein oder eine direkte, raeumlich plausible Fortsetzung davon (z.B. "${lastLocation}, hinter dem Holzstapel"). KEINE Brotkrumen-Akkumulation: Der ort darf maximal aus 2-3 kurzen Komponenten bestehen, nicht "Tempelhof, Graben, hinter dem Wrack, Richtung Lagerhalle". Berlin-Stadtteile (Wedding, Zehlendorf, Charlottenburg etc.) liegen kilometerweit auseinander. Wechsle den ort-Eintrag NUR, wenn der Spieler in dieser Szene aktiv und erkennbar zu einem neuen Ort gefahren oder gegangen ist.`;
+      recap += `\n\nORT-PFLICHT: Der "ort"-Eintrag der naechsten Szene MUSS "${lastLocation}" sein oder eine direkte, raeumlich plausible Fortsetzung davon (z.B. "${lastLocation}, hinter dem Holzstapel"). KEINE Brotkrumen-Akkumulation: Der ort darf maximal aus 2-3 kurzen Komponenten bestehen, nicht "Tempelhof, Graben, hinter dem Wrack, Richtung Lagerhalle". Berlin-Stadtteile (Wedding, Zehlendorf, Charlottenburg etc.) liegen kilometerweit auseinander. Wechsle den ort-Eintrag NUR, wenn der Spieler in dieser Szene aktiv und erkennbar zu einem neuen Ort gefahren oder gegangen ist. WICHTIG bei Beschattung/Observation: "Gehweg vor X", "Torweg gegenueber X", "vor Haus X", "Hausflur X" sind ALLE derselbe Ort wenn Karl in der unmittelbaren Umgebung von Haus X bleibt. NICHT bei jedem Mini-Move (von Torweg zu Gehweg zu Hausflur) den ort-Eintrag aendern. Setze den ort-Eintrag konsequent auf den HAUPTORT (z.B. "Klosterstrasse 34, Prenzlauer Berg") und beschreibe die Sub-Position nur im Erzaehltext.`;
     }
     // Wiederbesuch-Hint: Wenn Karl an einen schon besuchten Ort zurueckkehrt,
     // muss das auch als "Rueckkehr" erzaehlt werden (mit Wiedererkennung).
@@ -5001,15 +5003,19 @@ async function startGame() {
         diag('filter', 'Klient-Setup ist Platzhalter, nicht eingefroren', { name: klientName });
       } else {
         const klientKey = normalizeNpcName(klientName);
+        // Wenn das Setup eine kombinierte Rolle definiert (z.B. "Kommissar / Klient" bei Setup #5),
+        // verwende sie statt der Default-Rolle. Sonst Default.
+        const customRolle = intro.setup.klientRolle;
+        const customBeziehung = intro.setup.klientBeziehung;
         storyFacts[klientKey || klientName.toLowerCase()] = {
           name: klientName,
-          rolle: 'Klient/Auftraggeber',
-          beziehung: 'hat Karl mit dem aktuellen Fall beauftragt',
+          rolle: customRolle || 'Klient/Auftraggeber',
+          beziehung: customBeziehung || 'hat Karl mit dem aktuellen Fall beauftragt',
           fahrzeug: null,
           frozen: true,
         };
-        console.log('[Schatten] Klient aus Setup in storyFacts eingefroren:', klientName);
-        diag('state', 'Klient eingefroren', { name: klientName, key: klientKey || klientName.toLowerCase() });
+        console.log('[Schatten] Klient aus Setup in storyFacts eingefroren:', klientName, customRolle ? '(custom rolle)' : '');
+        diag('state', 'Klient eingefroren', { name: klientName, key: klientKey || klientName.toLowerCase(), rolle: customRolle || 'Klient/Auftraggeber' });
       }
     }
   }
@@ -5370,6 +5376,68 @@ function updateTimedEvent(scene) {
 // AUSNAHME: bei einsilbigen Nachnamen mit Geschlechts-spezifischer Anrede
 // (Frau/Fraeulein vs Herr) bleibt das Praefix erhalten, weil "Frau Schneider"
 // und "Herr Schneider" zwei verschiedene Personen sein koennen.
+// === ANKER-NPC-REGISTRY ===
+// Wiederkehrende NPCs des Schatten-Universums. Wenn sie erstmals in einer Story auftauchen,
+// werden ihre kanonischen Rollen und Beziehungen eingefroren - die KI darf nichts anderes
+// daraus machen (z.B. Mistral macht aus Major Sokolow einen Volkspolizei-Leutnant - das ist
+// ein Anker-Bruch, der verhindert werden muss).
+// Key-Format wie normalizeNpcName: vorname_nachname (oder einfach vorname).
+const ANCHOR_NPCS = {
+  // Karls Netzwerk
+  'wilhelm_roth': {
+    canonicalName: 'Kommissar Wilhelm Roth',
+    rolle: 'Kommissar der Volkspolizei (Ost-Berlin, Hackescher Markt)',
+    beziehung: 'Karls alter Freund aus Kripo-Zeit, hilft mit Informationen',
+  },
+  'heinrich_lindner': {
+    canonicalName: 'Kommissar Heinrich Lindner',
+    rolle: 'Schutzpolizei-Kommissar (West-Berlin, Hardenbergstrasse Charlottenburg)',
+    beziehung: 'alter Bekannter aus Karls kurzer Kripo-Zeit vor dem Krieg',
+  },
+  'doc_wagner': {
+    canonicalName: 'Doc Wagner',
+    rolle: 'privater Arzt (Schaeferstrasse Schoeneberg)',
+    beziehung: 'Karls Diskret-Doc, verarztet ohne Aktennotiz',
+  },
+  'marlene_wagner': {
+    canonicalName: 'Marlene Wagner',
+    rolle: 'Krankenschwester (Tochter von Doc Wagner)',
+    beziehung: 'kennt Karl fluechtig durch ihren Vater',
+  },
+  'heinz_wernicke': {
+    canonicalName: 'Heinz Wernicke (Taxi-Heinz)',
+    rolle: 'Taxifahrer (Ex-Schutzpolizist, Hof in der Linienstrasse)',
+    beziehung: 'Karls zuverlaessiger Fahrer, schweigsam',
+  },
+  // Widersacher
+  'wassilij_sokolow': {
+    canonicalName: 'Major Wassilij Antonowitsch Sokolow',
+    rolle: 'sowjetischer Verbindungsoffizier zum MfS (Stalingrad-Narbe)',
+    beziehung: 'kalt-professioneller Gegenspieler, spricht Deutsch mit Akzent',
+  },
+  'alexej_krylow': {
+    canonicalName: 'Oberst Alexej Petrowitsch Krylow',
+    rolle: 'ehemaliger NKWD-Offizier (jetzt MfS-Verbindung)',
+    beziehung: 'listiger Vernehmer alter Schule, Pince-nez',
+  },
+};
+
+// Pruefe ob ein NPC ein Anker ist und gib kanonische Daten zurueck (oder null).
+function getAnchorNpc(name) {
+  if (!name) return null;
+  const key = normalizeNpcName(name);
+  if (!key) return null;
+  // Direct match
+  if (ANCHOR_NPCS[key]) return ANCHOR_NPCS[key];
+  // Substring match (z.B. "Sokolow" matched "wassilij_sokolow")
+  for (const anchorKey of Object.keys(ANCHOR_NPCS)) {
+    if (anchorKey.includes(key) || key.includes(anchorKey.split('_')[1])) {
+      return ANCHOR_NPCS[anchorKey];
+    }
+  }
+  return null;
+}
+
 function normalizeNpcName(name) {
   if (!name || typeof name !== 'string') return '';
   let n = name.toLowerCase()
@@ -6499,14 +6567,43 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         }
         const factKey = normalizeNpcName(entry.name);
         if (!factKey) continue;
+        // ANKER-NPC-CHECK: Wenn die KI einen wiederkehrenden Anker-NPC neu einfuehrt
+        // (z.B. Sokolow, Roth, Lindner, Doc Wagner), aber mit FALSCHER Rolle
+        // (z.B. Sokolow als "Volkspolizei-Leutnant" statt sowjetischer Major),
+        // erzwingen wir die kanonische Rolle und Beziehung. Mistral hat in einem Run
+        // tatsaechlich aus Sokolow einen Volkspolizei-Leutnant gemacht - das brechen wir hier ab.
+        const anchorData = getAnchorNpc(entry.name);
+        if (anchorData && !storyFacts[factKey]) {
+          // Pruefe ob die KI eine deutlich abweichende Rolle vergibt
+          const aiRolle = (entry.rolle || '').toLowerCase();
+          const canonicalRolle = anchorData.rolle.toLowerCase();
+          // Substring-Check: wenn die KI-Rolle nichts mit der kanonischen zu tun hat -> Override
+          const isCompatible = !aiRolle || aiRolle === canonicalRolle ||
+            canonicalRolle.split(/[\s,\(]/).some(word => word.length > 3 && aiRolle.includes(word)) ||
+            aiRolle.split(/[\s,\(]/).some(word => word.length > 3 && canonicalRolle.includes(word));
+          if (!isCompatible) {
+            console.warn('[Schatten] ANKER-NPC-Drift abgefangen!', entry.name, 'KI sagt:', entry.rolle, 'Anker-Rolle:', anchorData.rolle);
+            diag('drift', 'Anker-NPC-Drift abgefangen: ' + entry.name + ' war Anker mit Rolle "' + anchorData.rolle + '", KI sagt "' + entry.rolle + '"');
+            entry.rolle = anchorData.rolle;
+            entry.beziehung = anchorData.beziehung;
+            entry.name = anchorData.canonicalName;
+          }
+        }
         // Wenn die Person schon in storyFacts ist, ist die fruehere Rolle/Beziehung/Fahrzeug
         // FAKT - wir ueberschreiben sie nicht, sondern erzwingen sie auf dem Eintrag.
         // ANTI-ROLLEN-DRIFT: Wenn die KI versucht Leonhards Rolle von "Motorradfahrer"
         // auf "Volkspolizist" zu aendern, ignorieren wir das.
         if (storyFacts[factKey]) {
           const fact = storyFacts[factKey];
-          // Konflikt-Warnung wenn Rolle oder Beziehung anders ist
-          if (entry.rolle && fact.rolle && entry.rolle.toLowerCase() !== fact.rolle.toLowerCase()) {
+          // KOMBINIERTE-ROLLE-TOLERANZ: Wenn fact.rolle einen Slash enthaelt (z.B. "Kommissar / Klient"),
+          // ist das eine kombinierte Rolle. Wenn die KI nur einen Teil davon sagt ("Kommissar"),
+          // ist das KEIN Drift. Pruefe ob entry.rolle in fact.rolle vorkommt (substring match).
+          const isCombinedRole = fact.rolle && fact.rolle.includes('/');
+          const isPartOfCombined = isCombinedRole && entry.rolle &&
+            fact.rolle.toLowerCase().split('/').some(part => part.trim().includes(entry.rolle.toLowerCase().trim()) || entry.rolle.toLowerCase().trim().includes(part.trim()));
+
+          // Konflikt-Warnung wenn Rolle oder Beziehung anders ist (aber NICHT bei kombinierten Rollen)
+          if (entry.rolle && fact.rolle && entry.rolle.toLowerCase() !== fact.rolle.toLowerCase() && !isPartOfCombined) {
             console.warn('[Schatten] Rollen-Drift abgefangen!', entry.name, 'war', fact.rolle, ', KI sagt jetzt:', entry.rolle);
             diag('drift', 'Rollen-Drift abgefangen: ' + entry.name + ' war "' + fact.rolle + '", KI sagt jetzt "' + entry.rolle + '"');
           }
