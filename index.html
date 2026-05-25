@@ -1647,7 +1647,7 @@
     <button class="btn-primary" onclick="startRandomGame()">Zufällige Ermittlung</button>
     <br>
     <button class="btn-secondary" onclick="showSetupSelector()">Fall auswählen</button>
-    <div class="start-version">Schatten v6.99 · HARD-FORCE Stasi-Festnahme + 6 Fixes aus v6.98</div>
+    <div class="start-version">Schatten v7.0 · VP-Fahndung + Ort-Hard-Force + Overlap 0.7</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -1724,7 +1724,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v6.99</span>
+    <span>Schatten v7.0</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -3389,7 +3389,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v6.99';
+window.SCHATTEN_VERSION = 'v7.0';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -3860,7 +3860,7 @@ function computeSceneSentenceOverlap(newText, prevText) {
       for (const t of tokensA) if (tokensB.has(t)) intersection++;
       const union = tokensA.size + tokensB.size - intersection;
       const jaccard = union === 0 ? 0 : intersection / union;
-      if (jaccard >= 0.8) {
+      if (jaccard >= 0.7) {  // v7.0: 0.8 -> 0.7 nach run20/21/22 (nur 1 Detection in 77 Szenen mit 0.8)
         matched++;
         if (!sampleSentence) sampleSentence = sNew;
         break;  // dieser neue Satz hat einen Match - weiter zum naechsten neuen Satz
@@ -5697,6 +5697,22 @@ let pendingForcedCustodyArrest = null;
 // v6.99: Verhindert dass die HARD-FORCE-Festnahme mehrfach pro Run greift.
 // Bei pol-Faellen passiert Custody normalerweise hoechstens 1x.
 let hardForcedArrestUsed = false;
+
+// v7.0: Wird gesetzt wenn Karl ein Verbrechen GEGEN den Staatsapparat begeht
+// (auf VP schiessen, VP toeten). Anlass: Wegener-Run v6.98 hatte Karl 2 VP-
+// Beamte anschiessen, danach lief Mistral seelenruhig weiter ("Sirenen
+// entfernen sich langsam", S-Bahn nach Hause, am naechsten Tag entspannt im
+// Buero). In der DDR 1953 ist das absurd - es muesste sofort Grossalarm geben.
+// Werte: { severity: 'wound'|'kill', sceneIdx: <Szenennummer> }
+let pendingForcedFahndung = null;
+// v7.0: Verhindert dass die Fahndung-Eskalation mehrfach pro Run greift.
+let fahndungUsed = false;
+// v7.0: Counter fuer Hauptort-Wechsel-Toasts die Mistral ignoriert hat.
+// Anlass: Wagner-Run v6.98 ignorierte 7 Pflichtwechsel-Toasts in Folge.
+// Bei 3+ ignorierten Toasts wird der naechste Recap einen HARD-FORCE
+// Ortswechsel erzwingen.
+let ortPflichtIgnoredCount = 0;
+let pendingForcedLocationChange = null;
 
 // Wird true gesetzt wenn gerade ein Tageswechsel passiert ist.
 // Die naechste Szene-Anfrage instruiert die KI dann, eine kurze Story-Brücke zu erzählen.
@@ -7587,6 +7603,23 @@ VERBOTEN: einfach mit "schraegem Morgenlicht" anfangen ohne zu erklaeren wo Karl
       }
       pendingForcedCustodyArrest = null;
     }
+    // v7.0: GROSSALARM-PUSH wenn Karl auf VP-Beamten geschossen hat. Anders als
+    // pendingForcedCustodyArrest, der erst nach 3 ignorierten Custody-Forces
+    // greift, ist das hier eine SOFORTIGE Reaktion auf eine konkrete Tat im
+    // Erzähltext: VP wurde verletzt oder getoetet. Die naechste Szene MUSS
+    // die Fahndungs-Konsequenz erzaehlen - Karl wird gehetzt, sein Foto haengt
+    // ueberall, er kann nicht mehr ins Buero, kann nicht mehr offen herumlaufen.
+    if (pendingForcedFahndung) {
+      const ff = pendingForcedFahndung;
+      const severityText = ff.severity === 'kill'
+        ? `Karl hat einen VP-Beamten GETOETET. Das ist Mord an einem Vertreter des Staatsapparats - in der DDR 1953 ein Kapitalverbrechen. Die Strafe ist die Todesstrafe oder mindestens lebenslange Haft. Karl MUSS sofort untertauchen.`
+        : `Karl hat einen oder mehrere VP-Beamte ANGESCHOSSEN (verletzt). Das ist schwerer bewaffneter Widerstand gegen die Staatsgewalt. Mindestens 15 Jahre Zuchthaus. Karl MUSS sofort untertauchen.`;
+      timeContext += `\n\n============================================================\nGROSSALARM (KRITISCH, NICHT VERHANDELBAR)\n============================================================\n\n${severityText}\n\nDie naechste Szene MUSS die Konsequenz erzaehlen. Es ist KEINE Option, dass Karl gemuetlich in die S-Bahn steigt, in sein Buero zurueckgeht und am naechsten Morgen entspannt Akten durchsucht. So funktioniert das nicht.\n\nWAEHLE EINE der folgenden narrativen Eingaenge (oder eine aequivalente):\n\n1) FLUCHT-CHAOS: Sirenen heulen NAEHER, NICHT weiter weg. Karl rennt durch enge Gassen, hoert Schritte und Rufe ("Stehenbleiben!"). Er sucht panisch ein Versteck - eine offene Hintertuer, eine Mauer zum Hinterhof, ein Keller. Spannung 5/5. Verfassungs-Delta -1 oder -2 (Sturz, Treffer im Vorbeirennen, Erschoepfung).\n\n2) AM NAECHSTEN ORT WIRD ER ERKANNT: Karl kommt irgendwo an (Trude, Tante Elsa, eine Bar). Der Wirt/die Tante sieht ihn und reagiert geschockt: "Karl, du? Das ganze Viertel sucht dich. Die VP war heute frueh da, dein Foto haengt am Bahnhof." Karl ist gezwungen, sich zu verstecken oder weiter zu fluechten. Spannung 4. Option "ins Buero gehen" ist nicht moeglich (Buero wird ueberwacht).\n\n3) FESTNAHME-VERSUCH: Innerhalb der naechsten 2-3 Szenen werden VP-Maenner oder MfS Karl direkt zu greifen versuchen. Karl muss entweder kaempfen (was es schlimmer macht), fluechten (kann gelingen oder nicht), oder sich stellen.\n\n4) NAECHSTER TAG, ZEITUNG MIT KARLS FOTO: Falls die Szene am naechsten Morgen spielt, beginnt sie mit Karl der eine BZ am Kiosk sieht - sein Foto auf der ersten Seite mit Schlagzeile "Detektiv schiesst auf Volkspolizei - gesucht wegen versuchten/vollendeten Mordes an Vertretern des Staates". Belohnung 5000 Mark. Karl kann nicht mehr nach Hause, nicht mehr ins Buero, nicht mehr zu bekannten Treffpunkten.\n\nOPTIONEN FUER DIESE SZENE: Reaktiv und engmaschig - "Renne weiter, links abbiegen", "Versteck dich im naechsten Hauseingang", "Wirf die Walther weg, hebe die Haende", "Such Hilfe bei Trude/Tante Elsa", "Versuch ueber den Sektor in den Westen zu kommen". KEINE "Geh ins Buero" / "Schlaf bei dir zu Hause" / "Geh zu Roth ins Praesidium" - das alles ist toedlich.\n\nDer Fall ist ab JETZT politisch. Karl wird nicht entkommen ohne grosse Verluste - entweder Festnahme, oder Untertauchen, oder Tod beim Versuch. NICHT die Szene runterspielen.`;
+      if (typeof diag === 'function') {
+        diag('drift', 'GROSSALARM-Push gesendet (' + ff.severity + ', Sz ' + ff.sceneIdx + ')');
+      }
+      pendingForcedFahndung = null;
+    }
     if (scenesAtSameLocation >= 3) {
       if (scenesAtSameLocation >= 8) {
         // ESKALATION 3: Nach 8+ Szenen am selben Ort PFLICHT-Ortswechsel.
@@ -7594,6 +7627,19 @@ VERBOTEN: einfach mit "schraegem Morgenlicht" anfangen ohne zu erklaeren wo Karl
         // (siehe Setup-7-Run v6.75: 14 Szenen Ploetzensee).
         timeContext += `\n\nORT-PFLICHTWECHSEL (sehr wichtig): Der Spieler ist seit ${scenesAtSameLocation} Szenen am SELBEN Ort - das ist dramaturgisch absurd. Eine Beerdigung dauert max 2-3 Szenen, ein Gerichtstermin 2-3 Szenen, eine Beschattung 3-4. ALLE 4 OPTIONEN dieser Szene MUESSEN einen Ortswechsel anbieten: zurueck zum Buero, zu einem Anker-Lokal (Imbiss/Cafe), zur Polizei, zu einer Klienten-Wohnung, zu Doc Wagner, in eine andere relevante Location aus der Setup-Liste. KEINE Option "bleibe weiter hier" oder "warte ab". Karl MUSS sich bewegen.`;
         diag('progress', '✦ ORT-PFLICHTWECHSEL forciert nach ' + scenesAtSameLocation + ' Szenen');
+        // v7.0: tracking dass Pflichtwechsel-Toast gefeuert wurde - falls Mistral ignoriert,
+        // greift bei 3+ ignorierten Toasts hartes Force.
+        ortPflichtIgnoredCount = (ortPflichtIgnoredCount || 0) + 1;
+        if (ortPflichtIgnoredCount >= 3 && !pendingForcedLocationChange) {
+          pendingForcedLocationChange = {
+            ignoredCount: ortPflichtIgnoredCount,
+            stuckScenes: scenesAtSameLocation,
+          };
+          diag('progress', '✦ HARD-FORCE ORTSWECHSEL (' + ortPflichtIgnoredCount + ' Pflichtwechsel-Toasts ignoriert)');
+          if (typeof showProgressToast === 'function') {
+            showProgressToast('ORTSWECHSEL', 'Mistral hat ' + ortPflichtIgnoredCount + ' Pflichtwechsel-Toasts ignoriert. Naechste Szene wird hart forciert.');
+          }
+        }
       } else if (scenesAtSameLocation >= 5) {
         // ESKALATION 2: 5-7 Szenen am Ort SOLL-Wechsel
         timeContext += `\n\nORT-WECHSEL DRINGEND (Soll): Karl ist jetzt ${scenesAtSameLocation} Szenen am selben Ort. Mindestens 2 der 4 Optionen MUESSEN konkret zu einem ANDEREN Ort fuehren (zur Wohnung X, zur Kneipe Y, zum Buero, zur Polizei). Das Setup hat eine Liste passender Orte - verwende sie. KEINE weiteren Sub-Lokationen am gleichen Ort.`;
@@ -7601,6 +7647,23 @@ VERBOTEN: einfach mit "schraegem Morgenlicht" anfangen ohne zu erklaeren wo Karl
         // ESKALATION 1 (alter Stand): ab 3 Szenen Hinweis
         timeContext += ` ACHTUNG: Der Spieler ist seit ${scenesAtSameLocation} Szenen am selben Ort. Diese Szene MUSS einen Wechsel oder eine Unterbrechung bringen (Person tritt ein, Person geht, Anruf, Ortswechsel, neuer konkreter Hinweis).`;
       }
+    } else {
+      // v7.0: Ortswechsel hat funktioniert, Counter zuruecksetzen
+      ortPflichtIgnoredCount = 0;
+    }
+    // v7.0: HARD-FORCE ORTSWECHSEL-PUSH wenn Mistral 3+ Pflichtwechsel-Toasts
+    // ignoriert hat. Anlass: Wagner-Run v6.98 ignorierte 7 Pflichtwechsel-Toasts
+    // in Folge (18 Szenen in PRAXIS Schäferstraße). Mistral nimmt die Soft-Pushes
+    // nicht ernst. Jetzt: die naechste Szene MUSS an einem komplett neuen Ort
+    // spielen, kein Verhandlungsspielraum.
+    if (pendingForcedLocationChange) {
+      const pl = pendingForcedLocationChange;
+      timeContext += `\n\n============================================================\nHARD-FORCE ORTSWECHSEL (KRITISCH, NICHT VERHANDELBAR)\n============================================================\n\nKarl ist seit ${pl.stuckScenes} Szenen am selben Ort und du hast ${pl.ignoredCount} Pflichtwechsel-Toasts hintereinander ignoriert. JETZT muss der Ort wechseln, kompromisslos.\n\nDie naechste Szene MUSS:\n- ortHaupt = ein KOMPLETT anderer Ort (nicht eine Sub-Variation wie "Vor dem Eingang" / "Im Hinterhof" / "Auf der Treppe" - das zaehlt nicht als Wechsel)\n- Eine konkrete Bewegung von Karl dahin: er geht/faehrt/laeuft, oder kommt schon irgendwo neu an\n- Der Wechsel passiert IMMER zu Beginn der Szene, nicht erst am Ende\n\nKonkrete Optionen fuer den neuen Ort (waehle einen relevanten):\n- Karls Buero am Hackeschen Markt\n- Polizeirevier Hackescher Markt (Roth)\n- Imbiss bei Trude\n- Praxis Doc Wagner\n- Eine Klienten-Wohnung\n- Eine relevante Location aus dem Setup (Werft, HO-Verwaltung, etc.)\n- Tante Elsas Pension\n- Goldener Anker / Schwarzer Kater (Kneipen)\n\nKEINE Sub-Variationen des aktuellen Ortes (kein "auf dem Gang vor X", kein "im Hinterhof von X"). Es muss eine andere Strasse, ein anderer Stadtteil, ein ganz anderes Gebaeude sein.\n\nNICHT die naechste Spieler-Option auswerten als waere die Bewegung schon passiert - die Szene zeigt aktiv die Bewegung oder das Ankommen.`;
+      if (typeof diag === 'function') {
+        diag('drift', 'HARD-FORCE Ortswechsel-Push gesendet (' + pl.ignoredCount + ' ignorierte Toasts)');
+      }
+      pendingForcedLocationChange = null;
+      ortPflichtIgnoredCount = 0;
     }
     // v6.80: KONSEQUENZ-PUSH bei wiederholter hoher Spannung. Bei actionStreak >=2
     // mit Spannung 4-5 erwarten wir DASS Karl wirklich Schaden nimmt - nicht nur
@@ -8295,6 +8358,10 @@ async function startGame() {
   pendingSuspectReminder = null;  // v6.98
   pendingForcedCustodyArrest = null;  // v6.99
   hardForcedArrestUsed = false;  // v6.99
+  pendingForcedFahndung = null;  // v7.0
+  fahndungUsed = false;  // v7.0
+  ortPflichtIgnoredCount = 0;  // v7.0
+  pendingForcedLocationChange = null;  // v7.0
   scenesAtSameLocation = 0;
   lastLocation = '';
   lastMainLocation = ''; // v6.58
@@ -8737,6 +8804,54 @@ function detectPolitical(sceneText) {
     /\b(volksaufstand|17\.?\s*juni|streik\s+(im|in)\s+(VEB|werk|kombinat))\b/,
   ];
   return politicalPatterns.some(p => p.test(lower));
+}
+
+// v7.0: Erkennt ob Karl ein Verbrechen GEGEN den Staatsapparat begangen hat,
+// das eine sofortige Fahndung ausloesen muesste. Anlass: Wegener-Run v6.98 hatte
+// Karl 2 VP-Beamte anschiessen, danach lief Mistral seelenruhig weiter ("Sirenen
+// entfernen sich langsam", S-Bahn nach Hause, am naechsten Tag entspannt im Buero).
+// In der DDR 1953 ist das absurd - VP-Beamte anschiessen waere sofortiger
+// Grossalarm, Fahndung mit Foto, Wohnung wird umstellt.
+//
+// Returns 'shoot' | 'kill' | 'wound' | null je nach Schwere.
+function detectVPCrime(sceneText) {
+  if (!sceneText) return null;
+  const lower = sceneText.toLowerCase()
+    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+
+  // VP-Beamter in der Naehe (notwendige Bedingung)
+  // Wir wollen kein "vp" matchen das z.B. in "improvisierter" steckt -
+  // also Wortgrenze davor, aber NICHT dahinter (deutsche Deklination: beamten/beamte/mann/maennern).
+  const vpPresent = /\bvp-?(beamt|mann|streife|polizist)/.test(lower)
+    || /\bvolkspolizist/.test(lower)
+    || /\bvolkspolizei[\s-]?(beamt|mann)/.test(lower)
+    || /\bvolkspolizei\b/.test(lower);
+  if (!vpPresent) return null;
+
+  // Karl schiesst aktiv (entweder Karls Walther/Pistole oder du-Form)
+  // Akzeptanzbereich max 80 Zeichen zwischen Verb und VP-Erwaehnung
+  const shootingPatterns = [
+    // "Karl/du schiesst auf ... VP"
+    /\b(du\s+(zielst|schiesst|feuerst|drueckst\s+ab)|karl\s+(zielt|schiesst|feuert|drueckt\s+ab))[^.!?]{0,80}\b(vp|volkspolizei|volkspolizist)/,
+    // "VP wird/ist getroffen/erschossen/verwundet/angeschossen"
+    /\bvp-?(beamt|mann|streife|polizist)[^.!?]{0,80}\b(taumelt|stuerzt|sackt|stoehnt|bricht\s+zusammen|liegt|wird\s+getroffen|ist\s+getroffen|wird\s+(erschossen|verwundet|angeschossen)|ist\s+(tot|verletzt|verwundet))/,
+    /\bvolkspolizist[^.!?]{0,80}\b(taumelt|stuerzt|sackt|stoehnt|bricht\s+zusammen|liegt|wird\s+getroffen|ist\s+getroffen|wird\s+(erschossen|verwundet|angeschossen)|ist\s+(tot|verletzt|verwundet))/,
+    // Karls Schuss + VP zusammen in Satz
+    /\b(dein|karls)\s+schuss[^.!?]{0,60}\b(vp|volkspolizist|volkspolizei)/,
+    // Blut + VP
+    /\b(blut\s+(sickert|rinnt|laeuft))[^.!?]{0,60}\b(vp|volkspolizist|volkspolizei)/,
+  ];
+
+  // Kill-Patterns (stark): "tot", "stirbt", "Kopfschuss", "leblos"
+  const killPatterns = [
+    /\bvp-?(beamt|mann|streife|polizist)[^.!?]{0,60}\b(ist\s+tot|stirbt|leblos|kopfschuss|tot\s+um|tot\s+vor\s+dir)/,
+    /\bvolkspolizist[^.!?]{0,60}\b(ist\s+tot|stirbt|leblos|kopfschuss|tot\s+um|tot\s+vor\s+dir)/,
+    /\b(erschiesst|toetest|toetet)[^.!?]{0,60}\b(vp|volkspolizist|volkspolizei)/,
+  ];
+
+  if (killPatterns.some(p => p.test(lower))) return 'kill';
+  if (shootingPatterns.some(p => p.test(lower))) return 'wound';
+  return null;
 }
 
 // Erfasst, wie viel Stasi-Praesenz in den letzten Szenen war. Steigt bei jeder
@@ -11930,6 +12045,37 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       console.log('[Schatten] Fall als politisch markiert. Stasi-Festnahme jetzt moeglich.');
       diag('detect', 'Fall als politisch markiert');
     }
+    // v7.0: VP-Verbrechen-Detection: Karl schiesst auf VP-Beamte. Sofortige
+    // Politisierung des Falles UND Fahndung-Force fuer naechste Szene.
+    if (!fahndungUsed) {
+      const vpCrime = detectVPCrime(scene.szene || '');
+      if (vpCrime) {
+        if (!caseIsPolitical) {
+          caseIsPolitical = true;
+          diag('detect', 'Fall als politisch markiert (VP-Verbrechen: ' + vpCrime + ')');
+        }
+        // Stasi-Tension sofort auf 4 (kill) oder 3 (wound), nicht ueberschreiben wenn schon hoeher
+        const targetTension = vpCrime === 'kill' ? 5 : 4;
+        if (stasiTension < targetTension) {
+          const prev = stasiTension;
+          stasiTension = targetTension;
+          diag('state', 'Stasi-Tension durch VP-Verbrechen: ' + prev + ' -> ' + stasiTension);
+        }
+        pendingForcedFahndung = {
+          severity: vpCrime,
+          sceneIdx: scenesPlayed || 0,
+        };
+        fahndungUsed = true;
+        console.warn('[Schatten] VP-Verbrechen erkannt (' + vpCrime + ') -> Fahndung-Force fuer naechste Szene.');
+        diag('progress', '✦ VP-VERBRECHEN ERKANNT (' + vpCrime + ') -> Grossalarm + Fahndung erzwungen');
+        if (typeof showProgressToast === 'function') {
+          const msg = vpCrime === 'kill'
+            ? 'Karl hat einen VP-Beamten getoetet. Grossalarm.'
+            : 'Karl hat einen VP-Beamten angeschossen. Fahndung laeuft.';
+          showProgressToast('GROSSALARM', msg);
+        }
+      }
+    }
     // Stasi-Tension fortlaufend verfolgen
     updateStasiTension(scene.szene || '');
     // v6.74: Spieler-Aktionen koennen Stasi-Tension verstaerken (bei politischen Faellen).
@@ -12598,6 +12744,10 @@ function resetGame() {
   pendingSuspectReminder = null;  // v6.98
   pendingForcedCustodyArrest = null;  // v6.99
   hardForcedArrestUsed = false;  // v6.99
+  pendingForcedFahndung = null;  // v7.0
+  fahndungUsed = false;  // v7.0
+  ortPflichtIgnoredCount = 0;  // v7.0
+  pendingForcedLocationChange = null;  // v7.0
   scenesAtSameLocation = 0;
   lastLocation = '';
   lastMainLocation = ''; // v6.58
