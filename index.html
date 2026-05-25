@@ -1249,7 +1249,7 @@
       Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
     </p>
     <button class="btn-primary" onclick="startGame()">Ermittlung beginnen</button>
-    <div class="start-version">Schatten v6.43 · Spitznamen-Filter · Strategie-Schärfung · Rote-Laterne-Fix</div>
+    <div class="start-version">Schatten v6.44 · Folter-False-Positive-Fix · Foto-Dedup · Bot-Reset</div>
   </div>
 
   <!-- Game Log -->
@@ -1317,7 +1317,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v6.43 · Spitznamen-Filter · Strategie-Schärfung · Rote-Laterne-Fix</span>
+    <span>Schatten v6.44 · Folter-False-Positive-Fix · Foto-Dedup · Bot-Reset</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -1894,7 +1894,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v6.43';
+window.SCHATTEN_VERSION = 'v6.44';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5067,7 +5067,14 @@ function detectStasiCustody(sceneText) {
     // Umgebung in der gleichen Szene.
     /\b(eisernen?\s+st(u|ue)hl)\b.*\b(stasi|mfs|verhoer|kgb|sokolow)/,
     /\b(verhoertisch)\b/,
-    /\b(gepruegelt|gefoltert)\b/,
+    // "Gepruegelt/gefoltert" darf NUR triggern wenn Karl der Empfaenger ist,
+    // nicht wenn ein NPC eine vergangene Pruegelei erzaehlt. Sonst False-Positive
+    // bei "Heinz hat sich mit einem Kollegen gepruegelt" -> Karl angeblich in Folter.
+    /\b(du\s+wirst|du\s+bist|dich\s+haben\s+sie|man\s+pruegelt\s+dich|man\s+foltert\s+dich)\b.*\b(gepruegelt|gefoltert)\b/,
+    /\b(gepruegelt|gefoltert)\b.*\b(stasi|mfs|verhoerzimmer|kellerverhoer|sokolow)/,
+    // "Stasi/MfS/Beamte pruegeln Karl/ihn/dich" - klar Karl als Opfer
+    /\b(stasi|mfs|beamte|wachen|maenner)\b.*\b(pruegeln|pruegelt|foltern|foltert)\b.*\b(karl|ihn|dich)\b/,
+    /\b(pruegeln|pruegelt|foltern|foltert)\b.*\b(karl|ihn|dich)\b.*\b(stasi|mfs|stunden|stundenlang)\b/,
     /\b(nackte\s+gluehbirne)\b.*\b(zelle|verhoer|stasi|mfs|fesseln|handschellen|kelleranlage|kellerverhoer)/,
     /\b(zelle|verhoer|stasi|mfs|fesseln|handschellen|kellerverhoer)\b.*\b(nackte\s+gluehbirne)/,
   ];
@@ -5830,17 +5837,37 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     // gecapt hat.
     let pendingFolterDeath = false;
     if (karlInStasiCustody) {
-      folterSceneCount++;
-      const fatalChances = [0, 0.05, 0.12, 0.20, 0.30];
-      const chance = fatalChances[Math.min(folterSceneCount - 1, fatalChances.length - 1)] || 0.30;
-      if (folterSceneCount >= 2 && Math.random() < chance) {
-        console.log('[Schatten] Folter-Tod gewuerfelt (chance', chance + ').');
-        diag('roll', 'Folter-Tod gewuerfelt (Szene ' + folterSceneCount + ', Chance ' + (chance * 100).toFixed(0) + '%)');
-        scene.verfassung_delta = -4;
-        pendingFolterDeath = true;
+      // Sanity-Check: die aktuelle Szene MUSS Folter-/Verhoer-Kontext zeigen.
+      // Wenn karlInStasiCustody durch False-Positive gesetzt wurde aber die Szene
+      // in einem normalen Buero/Cafe spielt, ist der Folter-Wuerfel unangebracht.
+      // Bei 3+ Szenen ohne Kontext: Custody wieder freigeben.
+      const sceneLower = (scene.szene || '').toLowerCase()
+        .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+      const stasiContext = /\b(zelle|verhoer|stasi|mfs|fesseln|handschellen|kellerverhoer|verhoertisch|gepruegelt|gefoltert|geschlagen|gestoss|gestossen|hohenschoenhausen|untersuchungshaftanstalt|haftanstalt|wachtmeister|stundenlang|verhoer(raum|zimmer)|nackte\s+gluehbirne|eisernen?\s+stuhl)\b/.test(sceneLower);
+      if (!stasiContext) {
+        console.warn('[Schatten] karlInStasiCustody=true aber Szene zeigt keinen Stasi-Kontext - Folter-Wuerfel uebersprungen.');
+        diag('roll', 'Folter-Wuerfel uebersprungen - kein Stasi-Kontext in Szene (vermutlich False-Positive)');
+        // Auto-Release: wenn 3 Szenen lang kein Stasi-Kontext, Custody-Flag loeschen
+        folterSceneCount++;
+        if (folterSceneCount >= 3) {
+          console.warn('[Schatten] 3+ Szenen ohne Stasi-Kontext - Custody-Flag automatisch geloescht.');
+          diag('state', 'Stasi-Custody automatisch beendet - 3+ Szenen ohne Kontext (vermutlich False-Positive-Recovery)');
+          karlInStasiCustody = false;
+          folterSceneCount = 0;
+        }
       } else {
-        console.log('[Schatten] Folter-Szene', folterSceneCount + ', Karl ueberlebt (chance war', chance + ').');
-        diag('roll', 'Folter-Szene ' + folterSceneCount + ', Karl ueberlebt (' + (chance * 100).toFixed(0) + '% Tod-Chance)');
+        folterSceneCount++;
+        const fatalChances = [0, 0.05, 0.12, 0.20, 0.30];
+        const chance = fatalChances[Math.min(folterSceneCount - 1, fatalChances.length - 1)] || 0.30;
+        if (folterSceneCount >= 2 && Math.random() < chance) {
+          console.log('[Schatten] Folter-Tod gewuerfelt (chance', chance + ').');
+          diag('roll', 'Folter-Tod gewuerfelt (Szene ' + folterSceneCount + ', Chance ' + (chance * 100).toFixed(0) + '%)');
+          scene.verfassung_delta = -4;
+          pendingFolterDeath = true;
+        } else {
+          console.log('[Schatten] Folter-Szene', folterSceneCount + ', Karl ueberlebt (chance war', chance + ').');
+          diag('roll', 'Folter-Szene ' + folterSceneCount + ', Karl ueberlebt (' + (chance * 100).toFixed(0) + '% Tod-Chance)');
+        }
       }
     }
 
@@ -6080,11 +6107,35 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           const uniqueOverlap = new Set(newWords.filter(w => existWords.includes(w)));
           if (uniqueOverlap.size >= 2) return true;
           // Spezialfall: beide enthalten dasselbe normalisierte Schluessel-Substantiv
-          // (pistole, auto, foto, koffer, schluessel, feuerzeug)
-          const strongObjects = ['pistole', 'auto', 'foto', 'koffer', 'schluessel', 'feuerzeug', 'akte', 'visitenkarte'];
+          // (pistole, auto, koffer, schluessel, feuerzeug). NICHT 'foto' - zwei
+          // Fotos koennen verschiedene Personen zeigen ("Foto von Klaus" vs
+          // "Foto von Heinz" sind nicht dasselbe).
+          const strongObjects = ['pistole', 'auto', 'koffer', 'schluessel', 'feuerzeug', 'visitenkarte'];
           const newKey = newWords.find(w => strongObjects.includes(w));
           if (newKey && existWords.includes(newKey)) {
             return true;
+          }
+          // Foto-Spezialbehandlung: wenn beide Fotos sind, vergleichen wir die Namen
+          // dahinter ("Foto von X" - sind X1 und X2 identisch?).
+          const newIsFoto = newWords.includes('foto');
+          const existIsFoto = existWords.includes('foto');
+          if (newIsFoto && existIsFoto) {
+            const newNames = newWords.filter(w => w.length >= 4 && w !== 'foto' && w !== 'von');
+            const existNames = existWords.filter(w => w.length >= 4 && w !== 'foto' && w !== 'von');
+            const sharedNames = newNames.filter(n => existNames.includes(n));
+            // Nur Duplikat wenn mind. ein gemeinsamer Personenname
+            if (sharedNames.length >= 1) return true;
+            return false;
+          }
+          // Aktendeckel/Akte-Spezialbehandlung: gleiche Logik wie Fotos
+          const newIsAkte = newWords.some(w => w === 'akte' || w === 'aktendeckel');
+          const existIsAkte = existWords.some(w => w === 'akte' || w === 'aktendeckel');
+          if (newIsAkte && existIsAkte) {
+            const newNames = newWords.filter(w => w.length >= 4 && w !== 'akte' && w !== 'aktendeckel' && w !== 'von');
+            const existNames = existWords.filter(w => w.length >= 4 && w !== 'akte' && w !== 'aktendeckel' && w !== 'von');
+            const sharedNames = newNames.filter(n => existNames.includes(n));
+            if (sharedNames.length >= 1) return true;
+            return false;
           }
           return false;
         });
@@ -6515,12 +6566,15 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     // diagId = Index im sceneDiagnosticsBuffer (-1 wenn kein Frame offen war).
     let diagId = -1;
     if (currentSceneDiagnostics) {
+      // Fallback: wenn Gemini/Mistral das Feld vergisst, nehmen wir lastSpannung
+      // damit "Sp undefined" im Diagnose-Block nicht auftaucht.
+      const effectiveSpannung = typeof scene.spannung === 'number' ? scene.spannung : (lastSpannung || 1);
       // State-Snapshot vom Ende der Szene fuer Vergleich
       currentSceneDiagnostics.endState = {
         verfassung: verfassung,
         energie: karlEnergie,
         hunger: karlHunger,
-        spannung: scene.spannung,
+        spannung: effectiveSpannung,
         stasiTension: stasiTension,
         gewahrsam: karlInStasiCustody,
         folterCnt: folterSceneCount,
@@ -6545,8 +6599,9 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       modelLabel: getActiveModel().label,
       verfassung: verfassung,
       injury: lastInjury,
-      // Debug-Snapshot: alle relevanten Stats zum Zeitpunkt der Szene
-      spannung: scene.spannung,
+      // Debug-Snapshot: alle relevanten Stats zum Zeitpunkt der Szene.
+      // Bei spannung Fallback auf lastSpannung (Gemini liefert das Feld manchmal nicht).
+      spannung: typeof scene.spannung === 'number' ? scene.spannung : (lastSpannung || 1),
       energie: karlEnergie,
       hunger: karlHunger,
       romantik: romanticTension,
@@ -7163,6 +7218,12 @@ async function botRunMainLoop() {
       timedEventState = null;
       verfassung = 5;
       lastInjury = '';
+      // Spannung-Tracking auch zuruecksetzen - sonst kann lastSpannung=4 vom
+      // letzten Run durch Action-Spannung 4 im neuen Run False-Positives liefern.
+      lastSpannung = 1;
+      actionStreak = 0;
+      calmStreak = 0;
+      intruderCooldown = 0;
       logEntries = [];
       storySummaries = [];
       history = [];
