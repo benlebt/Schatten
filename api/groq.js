@@ -24,8 +24,21 @@ SCHATTEN-UNIVERSUM (wiederkehrende Orte und NPCs - nutze diese statt frei zu erf
 - STASI: Untersuchungshaftanstalt Hohenschoenhausen (Ost).
 - ARZT/MEDIZIN: Charite (offiziell). Doc Wagner in der Schaeferstrasse Schoeneberg (privat, diskret).
 - HALBWELT: Spielklub "Roter Stern" Hinterhof Auguststrasse Mitte (Wirt Lange, IM-verdaechtig). Hehlerei "Bei Tante Frieda" Stallschreiberstrasse Kreuzberg. Pension Hellmann Linienstrasse (Stundenhotel).
-- NPCs: Wilhelm Roth (Kommissar, Ost), Heinrich Lindner (Kommissar, West), Doc Wagner, Taxi-Heinz Wernicke, Trude, Otto Kummer, Der Froschkoenig (Halbwelt-Informant), Sokolow oder Krylow (sowjetisch, MfS-Verbindung).
+- GERICHT/BEHOERDEN: Kreisgericht Mitte am Littenplatz (Ost). Landgericht Moabit (West). Meldeamt der Volkspolizei.
+- NPCs HAUPT: Wilhelm Roth (Kommissar Ost), Heinrich Lindner (Kommissar West), Doc Wagner, Taxi-Heinz Wernicke, Trude, Otto Kummer, Der Froschkoenig (Halbwelt-Informant), Sokolow oder Krylow (sowjetisch, MfS).
+- NPCs NEBENROLLEN: Hausmeister Gregor Halbe (Karls Haus, gegen Bier auskunftsfreudig), ABV-Meister Ernst Kuehn (Volkspolizist Wohngebiet, Meldewesen), Journalist Gustav Rehwald (Berliner Zeitung), Anwalt Dr. Baumgarten (Auguststrasse), Konkurrent Walter Bergmann (Detektei Friedrichstrasse), Fraeulein Elfriede (Telefonistin Fernamt Mitte).
+- KARLS FAMILIE: Schwester Hilde Brauer in Koepenick (verheiratet mit Erwin, Reichsbahn-Schaffner). Bruder Paul gefallen Stalingrad 1945.
 Diese Anker sind FEST. Wenn Karl jemand kennen muss: nutze diese Namen statt neue zu erfinden. Wenn er einen Ort braucht: nutze diese statt frei zu erfinden. Neue Personen/Orte nur wenn fall-spezifisch.
+
+1953 BERLIN ATMOSPHAERE (sparsam einsetzen, gibt Authentizitaet):
+- LEBENSMITTELMARKEN OST bis 1958 fuer Fett/Fleisch/Zucker. HO-Geschaefte (frei aber teuer), Konsum-Genossenschaft (mit Marken), Schwarzmarkt (mit Westgeld).
+- KOHLEOEFEN: Wohnungen geheizt mit Briketts, Kohlenmann liefert in Saecken.
+- TELEFON: privat selten, Telefonzellen mit Muenzschlitz, Vermittlung ueber Fernamt ("Fraeulein, geben Sie mir Koepenick 4471").
+- ZIGARETTEN: Ost "Juwel"/"Karo"/"Adler", West "Juno"/"Reval", US-Schwarzmarkt "Lucky Strike".
+- WAEHRUNGEN: D-Mark West, M-Mark Ost, offiziell 1:1, real 4:1 schlimmer.
+- STREICHHOELZER Standard, Feuerzeug Luxus.
+- 17. JUNI 1953 Volksaufstand der Stalinallee-Bauarbeiter, Sowjet-Panzer in Berlin Mitte.
+- Massenflucht in den Westen 1953 ist akut, Klienten "gehen rueber" und verschwinden.
 
 TAGESZEIT-REALISMUS: Beruecksichtige immer die aktuelle Tageszeit. Abend/Nacht: Wilhelm Roth ist NICHT im Volkspolizei-Revier, nur Nachtdienst-Beamte. Behoerden/VEB/Archive geschlossen. Pathologie hat Nachtdienst. Kneipen offen. Wenn der Spieler abends Roth anrufen will: Nachtdienst-Beamter nimmt ab, sagt Roth ist morgen wieder da. NIEMALS erfinden dass Roth abends erreichbar ist. Wenn Spieler explizit schlaeft/"bis morgen wartet": SOFORT Tageswechsel erzaehlen, keine weitere Abend-Szene mehr.
 
