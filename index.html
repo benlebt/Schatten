@@ -1399,7 +1399,6 @@
     <div class="autoplay-row">
       <label class="autoplay-label">Stil:</label>
       <select id="autoplay-strategy" class="autoplay-input">
-        <option value="mixed">Stil pro Run würfeln</option>
         <option value="random">Pro Zug Option würfeln</option>
         <option value="aggressive">Aggressiv (immer Option A)</option>
         <option value="cautious">Vorsichtig (immer Option D)</option>
@@ -1578,7 +1577,7 @@
     <button class="btn-primary" onclick="startRandomGame()">Zufällige Ermittlung</button>
     <br>
     <button class="btn-secondary" onclick="showSetupSelector()">Fall auswählen</button>
-    <div class="start-version">Schatten v6.83</div>
+    <div class="start-version">Schatten v6.85</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -1655,7 +1654,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v6.83</span>
+    <span>Schatten v6.85</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -3301,7 +3300,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v6.83';
+window.SCHATTEN_VERSION = 'v6.85';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -6341,6 +6340,83 @@ Es ist NICHT realistisch, dass eine Trauergesellschaft 18 Stunden an einem Grab 
         recap += `\nFALL-TYP: MORD-FALL. Klassischer Krimi-Pfad. Stages: (1) Indizien sammeln, (2) Verdaechtigen identifizieren (Motiv+Gelegenheit), (3) Verdaechtigen ueberfuehren (Gestaendnis/handfester Beweis), (4) Klient berichten.\n`;
       } else if (ct === 'politisch') {
         recap += `\nFALL-TYP: POLITISCHER FALL. Hohe Stasi-Gefahr. Karl ermittelt im Graubereich. Stages: (1) Beweise sammeln, (2) Bedrohung/Akteur konkret machen, (3) Klient (Whistleblower/Opfer) in Sicherheit bringen, (4) Geheimnisse verbergen oder publik machen. Tatverdaechtiger ist hier oft eine INSTITUTION (MfS/Volkspolizei), nicht eine einzelne Person.\n`;
+      }
+    }
+
+    // v6.84: AUTOMATISCHER FALL-ZIEL + DRIFT-SPERRE BLOCK
+    // Aus caseType + setupCast wird ein expliziter Block generiert der die KI
+    // bei jeder Szene daran erinnert WER welche Rolle hat. Verhindert dass die
+    // KI Klient/Zielperson/Verdaechtigen verwechselt oder vertauscht.
+    // Anlass: User-Feedback dass NPCs ihre Rollen wechseln waehrend des Spiels.
+    if (caseSetup && caseSetup.caseType && Array.isArray(caseSetup.setupCast)) {
+      const ct = caseSetup.caseType;
+      const cast = caseSetup.setupCast;
+      // CLIENT-Slot kann auch durch FAMILY belegt sein (Setup 12 Hilde: Karls
+      // Schwester ist FAMILY+Klientin in Personalunion).
+      const client = cast.find(c => c.tag === 'CLIENT') || cast.find(c => c.tag === 'FAMILY');
+      const target = cast.find(c => c.tag === 'TARGET');
+      const suspects = cast.filter(c => c.tag === 'SUSPECT');
+      const antagonists = cast.filter(c => c.tag === 'ANTAGONIST');
+      const informants = cast.filter(c => c.tag === 'INFORMANT');
+
+      // FALL-ZIEL: aus caseType + Target generieren
+      let fallziel = '';
+      const tn = target ? target.name : '';
+      if (ct === 'vermisst' && tn) {
+        fallziel = `${tn} FINDEN (lebend, tot, im Gewahrsam) und dem Klienten berichten`;
+      } else if (ct === 'beschatten' && tn) {
+        fallziel = `${tn} unauffaellig beschatten, harte Beweise (Foto/Brief/Zeugnis) beschaffen`;
+      } else if (ct === 'wahrheit' && tn) {
+        fallziel = `Die wahre Geschichte um ${tn} aufklaeren (gegen die offizielle Version) und den echten Verantwortlichen identifizieren`;
+      } else if (ct === 'diebstahl' && tn) {
+        fallziel = `${tn} zurueckholen oder die Diebe identifizieren`;
+      } else if (ct === 'mord' && tn) {
+        fallziel = `Den Moerder von ${tn} identifizieren und ueberfuehren`;
+      } else if (ct === 'politisch') {
+        fallziel = client ? `${client.name} in Sicherheit bringen und/oder die politische Bedrohung konkret machen` : `Die politische Bedrohung konkret machen`;
+      }
+      if (fallziel) {
+        recap += `\nFALL-ZIEL (Endpunkt dieses Falls): ${fallziel}.\n`;
+      }
+
+      // DRIFT-SPERREN: explizit fuer Klient, Zielperson, Verdaechtige
+      const sperren = [];
+      // Personalunion: bei Setup 3 (Stein politisch) ist CLIENT == TARGET.
+      // Dann nur einmal listen mit kombiniertem Hinweis.
+      const clientIsTarget = client && target && client.name === target.name;
+      if (client && clientIsTarget) {
+        sperren.push(`${client.name} ist KLIENT UND ZIELPERSON in Personalunion - hat Karl beauftragt um sich selbst zu schuetzen. KEIN Taeter.`);
+      } else if (client) {
+        sperren.push(`${client.name} ist KLIENT - hat Karl beauftragt, ist KEIN Taeter und KEIN Vermisster, sondern Auftraggeber`);
+      }
+      if (target && !clientIsTarget) {
+        if (ct === 'vermisst') {
+          sperren.push(`${target.name} ist die VERMISSTE ZIELPERSON - Karl SUCHT diese Person, sie ist KEIN Taeter und KEIN Verdaechtiger`);
+        } else if (ct === 'beschatten') {
+          sperren.push(`${target.name} ist BESCHATTUNGS-ZIEL - Karl beobachtet diese Person heimlich, sie ist KEIN Taeter und KEIN Verdaechtiger im klassischen Sinn`);
+        } else if (ct === 'wahrheit') {
+          sperren.push(`${target.name} ist das OPFER um das es im Fall geht - meist bereits tot/verstorben, KEIN Taeter, KEIN Klient`);
+        } else if (ct === 'mord') {
+          sperren.push(`${target.name} ist das MORDOPFER - bereits tot, KEIN aktiver Charakter mehr`);
+        } else if (ct === 'diebstahl') {
+          sperren.push(`${target.name} ist das DIEBESGUT - ein Objekt/Gegenstand, KEINE Person`);
+        }
+      }
+      for (const s of suspects) {
+        sperren.push(`${s.name} ist VERDAECHTIGER (${s.rolle || 'Verdaechtiger'}) - moeglicher Taeter, KEIN Klient, KEINE Zielperson`);
+      }
+      for (const a of antagonists) {
+        sperren.push(`${a.name} ist GEGNER (${a.rolle || 'Gegenspieler'}) - blockiert Karl aktiv, KEIN Helfer`);
+      }
+      for (const inf of informants) {
+        sperren.push(`${inf.name} ist INFORMANT (${inf.rolle || 'Informant'}) - liefert Hinweise gegen Bezahlung, KEIN Taeter und KEIN Verdaechtiger`);
+      }
+      if (sperren.length > 0) {
+        recap += `\nROLLEN-SPERREN (ABSOLUT FEST, gilt fuer ALLE Szenen):\n`;
+        for (const s of sperren) {
+          recap += `  - ${s}\n`;
+        }
+        recap += `WICHTIG: Diese Rollen sind unveraenderlich. KEIN Rollentausch (Klient wird nicht ploetzlich Taeter, Zielperson wird nicht ploetzlich Klient, Informant wird nicht ploetzlich Verdaechtiger). Wenn die Geschichte eine Wendung braucht, fuehre eine NEUE Person ein - aendere NICHT die Rolle einer bereits etablierten Person.\n`;
       }
     }
 
@@ -11212,7 +11288,8 @@ let botStartTimestamp = 0;
 // "rotating" Strategie wechselt alle N Zuege durch die Stile
 let botRotatingSubStrategies = ['aggressive', 'cautious', 'explorer', 'varied', 'random'];
 let botRotatingTurnsPerStyle = 5;
-// "mixed" merkt sich die gewuerfelte konkrete Strategie fuers Label
+// v6.85: 'mixed' (Stil pro Run wuerfeln) entfernt - User konfiguriert Stil bewusst pro Run.
+// "Pro Zug Option wuerfeln" (random) deckt zufaelliges Verhalten vollstaendig ab.
 let botMixedOriginalChoice = null;
 
 const STRATEGY_LABELS = {
@@ -11603,14 +11680,12 @@ function startAutoplayBot(options) {
     return;
   }
   const turns = Math.max(5, Math.min(200, options.turns || 40));
-  const rawStrategy = options.strategy || 'mixed';
+  const rawStrategy = options.strategy || 'random';
   const seed = options.seed || Math.floor(Math.random() * 1000000);
 
   const STRATEGIES = ['random', 'aggressive', 'cautious', 'varied', 'explorer'];
   let strategy;
-  if (rawStrategy === 'mixed') {
-    strategy = STRATEGIES[Math.floor(Math.random() * STRATEGIES.length)];
-  } else if (rawStrategy === 'rotating') {
+  if (rawStrategy === 'rotating') {
     strategy = 'rotating';
   } else {
     strategy = rawStrategy;
@@ -11622,14 +11697,14 @@ function startAutoplayBot(options) {
   botCurrentTurn = 0;
   botPlannedTurns = turns;
   botStrategy = strategy;
-  botMixedOriginalChoice = rawStrategy === 'mixed' ? strategy : null;
+  botMixedOriginalChoice = null;
   botSeed = seed;
   botRngState = seed;
   botVariedIndex = 0;
   botStartTimestamp = Date.now();
   botUpdateInfo();
 
-  console.log('[Bot] Start: turns=' + turns + ', strategy=' + strategy + (rawStrategy === 'mixed' ? ' (aus Mix gewuerfelt)' : '') + (rawStrategy === 'rotating' ? ' (wechselt alle ' + botRotatingTurnsPerStyle + ' Zuege)' : '') + ', seed=' + seed);
+  console.log('[Bot] Start: turns=' + turns + ', strategy=' + strategy + (rawStrategy === 'rotating' ? ' (wechselt alle ' + botRotatingTurnsPerStyle + ' Zuege)' : '') + ', seed=' + seed);
   // Initial-Label fuer Statusbar
   const initialLabel = botGetActiveStrategyLabel();
   botUpdateStatusBar('Bot: ' + initialLabel + ' · ' + turns + ' Züge · Seed ' + seed);
@@ -11662,7 +11737,7 @@ function startAutoplayFromSettings() {
   const turnsEl = document.getElementById('autoplay-turns');
   const strategyEl = document.getElementById('autoplay-strategy');
   const turns = parseInt(turnsEl?.value || '40', 10);
-  const strategy = strategyEl?.value || 'mixed';
+  const strategy = strategyEl?.value || 'random';
   startAutoplayBot({ turns, strategy });
 }
 
@@ -11906,7 +11981,7 @@ function deactivateDebugMode(event) {
       return;
     }
     const turns = parseInt(params.get('turns') || '40', 10);
-    const strategy = params.get('strategy') || 'mixed';
+    const strategy = params.get('strategy') || 'random';
     const seed = params.get('seed') ? parseInt(params.get('seed'), 10) : null;
     startAutoplayBot({ turns, strategy, seed: seed || undefined });
   }, 1500);
