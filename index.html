@@ -1544,6 +1544,9 @@ OBJEKT- UND ZUSTANDSKONSISTENZ:
 KEINE ERFUNDENEN RUECKBEZUEGE (sehr wichtig):
 NIEMALS auf etwas zurückverweisen, das in den vorigen Szenen NICHT explizit beschrieben wurde. Falsch: "der silbergraue Hut, der dir gestern Abend bereits verdächtig vorkam" - obwohl gestern kein silbergrauer Hut erwähnt wurde. Das ist erfundene Erinnerung und stört die Kontinuität. Richtig: nur Dinge erwähnen die nachweislich in den vorigen Szenen (BISHERIGE EREIGNISSE / LETZTE SZENE) standen. Wenn du eine neue Beobachtung einführen willst: sag explizit "ein silbergrauer Hut, fremd, ein neues Detail" - nicht so tun als wäre er vorher schon da gewesen.
 
+KEINE ERFUNDENE GEMEINSAME VERGANGENHEIT MIT NPCs (sehr wichtig):
+Wenn Karl gerade erst von einem Klient den Auftrag bekommen hat (z.B. "Edith Kessler hat dich VORHIN beauftragt, ihren Sohn Robert zu finden"), dann hat Karl den Gesuchten NIEMALS PERSOENLICH getroffen vor dem Auftrag. Konkret: KEINE Fotos von Karl mit dem Gesuchten zusammen ("Foto von dir und Robert vor dem Cafe"), KEINE Erinnerungen an gemeinsame Gespraeche ("du erinnerst dich an euer Gespraech"), KEINE Cafe-Besuche zusammen, KEIN gemeinsames Bier mit dem Vermissten. Die einzige Verbindung, die Karl zum Gesuchten hat, sind Indizien und Beschreibungen vom Klienten. Wenn die Story-Logik suggeriert, dass Karl IRGENDWIE in den Fall verstrickt ist (Foto bei VP, jemand zeigt Hinweise auf Karls Beteiligung): das ist eine FREMDE INTRIGE (jemand FAELSCHT die Verbindung, um Karl zu belasten), KEINE echte Vergangenheit von Karl. Macht das im Erzaehltext klar: "Das Foto wirkt manipuliert" oder "Du bist da nicht drauf - bzw nicht zu der Zeit". Karl darf NIEMALS in der Erinnerung an eine Tat sein, die im aktuellen Fall noch nicht von ihm erlebt wurde.
+
 KEINE OPTIONEN MIT NICHT-ETABLIERTEN OBJEKTEN/PERSONEN/AKTEN:
 Dies gilt auch und besonders für die 4 angebotenen Optionen am Ende. Eine Option darf NIEMALS auf etwas verweisen das nicht in den bisherigen Szenen, den AUFTRAG-FAKTEN, dem PERSONEN-KENNTNISSTAND oder den GEFUNDENEN INDIZIEN steht. Falsch: "Frag ihn nach den Akten zum Vogt-Fall" wenn keine Akten erwähnt wurden. Falsch: "Such nach dem Schlüssel den die Frau erwähnt hat" wenn keine Frau einen Schlüssel erwähnt hat. Falsch: "Geh zu Müllers Wohnung" wenn die Adresse oder die Person Müller noch nicht etabliert ist. Wenn du eine neue Information einführen willst, MUSS sie im Erzähltext der aktuellen Szene zuerst auftauchen, bevor sie in einer Option referenziert werden darf.
 
@@ -1749,6 +1752,13 @@ PFLICHT FÜR DIE ERÖFFNUNGSSZENE:
 - Die unten genannten Namen und Fakten MÜSSEN in der ersten Szene explizit auftauchen, NICHT erst später.
 - "Karl Mauer" ist AUSSCHLIESSLICH der Spielername. NIEMALS einen anderen Charakter im Text Karl, Mauer oder Karl Mauer nennen.
 - Die 4 Optionen am Ende der ersten Szene sollten zur aktuellen Situation passen und dem Spieler eine handlungsfähige Auswahl bieten.
+
+VERBINDLICHKEIT: Der unten angegebene Setup ist FEST und darf NICHT umgeschrieben werden. 
+- KEIN Klientenwechsel (wenn der Klient "Edith Kessler, Ehefrau" ist, ist sie keine Mutter und niemand anders ist Klient).
+- KEINE Variation der Beziehung (Ehefrau bleibt Ehefrau, NICHT Mutter oder Schwester).
+- KEINE Variation des Auftragstyps (wenn "Affaere-Verdacht aufklaeren" steht, ist es kein Vermisstenfall).
+- KEINE Variation des Settings (wenn "Verfolgung in Charlottenburg" steht, beginnt die Szene NICHT in Karls Buero).
+Selbst wenn das Setting ungewoehnlich oder dramaturgisch schwierig wirkt: spiele es so wie es vorgegeben ist. Eine Verfolgungsjagd zu Fuss ist ein gueltiger Anfang. Edith Kessler kann sehr wohl die Ehefrau eines Buchhalters mit Affaeren-Verdacht sein (das ist klassischer Noir-Stoff), KEIN Vermisstenfall.
 
 ERÖFFNUNGSSETUP:
 `;
@@ -2677,14 +2687,20 @@ function exportTranscript(event) {
     })
     .then(() => flashButtonSuccess(sourceBtn, '✓ Geteilt!'))
     .catch((err) => {
-      if (err && err.name !== 'AbortError') {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(out)
-            .then(() => flashButtonSuccess(sourceBtn, '✓ Kopiert (eventuell gekuerzt)'))
-            .catch(() => showManualCopyOverlay(out, 'Verlauf manuell kopieren'));
-        } else {
-          showManualCopyOverlay(out, 'Verlauf manuell kopieren');
-        }
+      // Auch bei AbortError versuchen wir wenigstens Clipboard, damit der User
+      // nicht mit leeren Haenden dasteht wenn er den Dialog absichtlich oder
+      // versehentlich abbricht.
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(out)
+          .then(() => {
+            const msg = (err && err.name === 'AbortError')
+              ? '✓ Kopiert (Teilen abgebrochen)'
+              : '✓ Kopiert (eventuell gekuerzt)';
+            flashButtonSuccess(sourceBtn, msg);
+          })
+          .catch(() => showManualCopyOverlay(out, 'Verlauf manuell kopieren'));
+      } else {
+        showManualCopyOverlay(out, 'Verlauf manuell kopieren');
       }
     });
     return;
@@ -3030,15 +3046,38 @@ function detectExplicitSleep(text) {
   if (!text) return false;
   const lower = text.toLowerCase()
     .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+
+  // FALSE-POSITIVE-FILTER: bestimmte Phrasen sehen nach Schlaf/Ruhe aus, sind
+  // aber Hoeflichkeitsfloskeln oder Wuensche. Wenn diese erkannt werden,
+  // SOFORT abbrechen - kein Schlaf.
+  const falsePositives = [
+    /\b(lass|lassen|laesst)\s+(sie|mich|uns|ihn|sie)\s+(doch\s+)?in\s+ruhe\b/,
+    /\bin\s+ruhe\s+(arbeiten|lassen|reden|sprechen|essen|trinken|nachdenken|sterben)/,
+    /\bnicht\s+in\s+ruhe\s+(lassen|gelassen)/,
+    /\bzur\s+ruhe\s+kommen\b/,  // metaphorisch, kein echter Schlaf
+    /\bewige\s+ruhe\b/,  // poetisch, oft im Kontext Tod
+    /\bin\s+ruhe\s+und\s+frieden\b/,
+    // "wach werden" als Metapher (z.B. "wach werden gegen die Bedrohung")
+    /\bwach\s+werden\s+gegen\b/,
+    // Ausruhen als Imperativ an einen anderen ("Sie sollten sich ausruhen")
+    /\b(sollten|muessen|koennten)\s+sich\s+ausruhen/,
+  ];
+  if (falsePositives.some(p => p.test(lower))) {
+    return false;
+  }
+
   const patterns = [
     // Direkte Schlaf-Begriffe (sehr liberal - kommt fast immer aus Schlaf-Option)
-    /\bschlafe?n?\b/,             // schlafe, schlafen, schlafst
+    /\bschlaf(e|en|st|t|s)?\b/,             // schlaf, schlafe, schlafen, schlafst
+    /\bschl(ae|ä)f(st|t|s)?\b/,             // schlaefst, schlaeft, schläfst, schläft
+    /\beingeschlafen\b/,
     /\beinschlafen\b/,
     /\beinnick(en|st|t)?\b/,
     /\bnaechtig(en|st|t)?\b/,
     // Bett / Couch / Sofa (Schlafplaetze)
     /\b(ins|im|aufs|aufm|zum|zu)\s*(bett|sofa|couch|bank|sessel|hinterzimmer)\b/,
     /\b(bett|sofa|couch|bank|sessel|hinterzimmer)\s*(zum schlafen|schlafen)\b/,
+    /\bauf\s+(der|dem)\s+(couch|sofa|bank|matratze)\b/,
     // Tagesende-Phrasen
     /\bbis\s+(morgen|tagesanbruch|sonnenaufgang|zum\s+morgen)\b/,
     /\bdie\s+nacht\s+(im|bei|auf|verbringen|durchschlafen|im\s+gewahrsam)/,
@@ -3047,9 +3086,18 @@ function detectExplicitSleep(text) {
     /\b(morgen|naechster\s+morgen)\s+(frueh|frisch|weiter)\b/,
     /\bum\s+morgen\b/,
     /\bbei\s+klarem\s+kopf\s+(zu\s+)?handeln/,
-    /\b(ruhe|ausruhen|erholen|hinlegen)\b/,
+    // KRITISCH: "ruhe"/"ausruhen" sind sehr false-positive-anfaellig.
+    // Wir akzeptieren sie nur in eindeutigen Schlaf-Kontexten:
+    // "Karl ruht sich aus", "leg dich hin", "ausruhen vor dem Termin", aber NICHT
+    // "lass mich in Ruhe" (Floskel) - das wurde oben gefiltert.
+    /\b(du|karl|er)\s+(ruhst|ruht)\s+(dich|sich)\s+aus\b/,
+    /\bsich\s+ausruhen\s+(im|in|auf|bei)\b/,
+    /\bleg(st|t|s)?\s+(dich|sich)\s+hin\b/,
+    /\b(legt|legte|legst)\s+(sich|dich)\s+(auf|hin|ins|aufs)\b/,
+    /\bsich\s+hinlegen\b/,
     /\bweckt\s+dich/,
-    /\bwach\s+(auf|werden)/,
+    /\bwach(st|t|s)?\s+(auf|am|vom|durch|im|in|aus)\b/,
+    /\b(du|karl|er)\s+wacht?\s+auf\b/,
     /\b(in|im)\s+der\s+zelle\s+(einschlafen|einnicken|ausruhen)/,
     /\b(vor|aus)\s+erschoepfung\s+(einnicken|einschlafen|sinkst|kollabieren)/,
     /\bfeierabend\s+machen\b/,
