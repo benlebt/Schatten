@@ -1249,7 +1249,7 @@
       Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
     </p>
     <button class="btn-primary" onclick="startGame()">Ermittlung beginnen</button>
-    <div class="start-version">Schatten v6.36 · Sleep-Fix · Bot-Auto-Retry · Modell-Failover</div>
+    <div class="start-version">Schatten v6.37 · Game-Over-Erkennung · Folter-False-Positive · Verfassungs-Cap</div>
   </div>
 
   <!-- Game Log -->
@@ -1317,7 +1317,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v6.36 · Sleep-Fix · Bot-Auto-Retry · Modell-Failover</span>
+    <span>Schatten v6.37 · Game-Over-Erkennung · Folter-False-Positive · Verfassungs-Cap</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -1722,6 +1722,7 @@ Du bekommst pro Anfrage eine Liste der NPCs die PHYSISCH bei Karl sind. Diese Pe
   - rolle: Was die Person FUER KARL ist, z.B. "Klientin", "Verfolger", "Kommissar", "Informant", "Zeugin", "Verdaechtiger"
   - beziehung: Wie die Person zu wichtigen Story-Figuren steht, z.B. "Mutter des Vermissten", "Kollege des Opfers", "Witwe von Person X". Wenn die KI noch nicht weiss wer die Person ist: "unbekannt" eintragen. Wenn keine Beziehung zu einer anderen Story-Figur: leer lassen.
   - fahrzeug (OPTIONAL): Wenn die Person mit eigenem Fahrzeug ankommt, hier eintragen: "BMW R51 mit Beiwagen", "schwarzer Opel Kapitaen", "Fahrrad" etc. Wenn ohne Fahrzeug: leer lassen.
+- KLIENT-ETABLIERUNG: Wenn in der ersten Szene ein Klient sich vorstellt (Name + Auftrag), MUSST du diese Person in cast_hinzugefuegt eintragen mit ihrem konkreten Namen. Wenn der Klient eine Person sucht (vermisst), MUSST du die GESUCHTE Person mit konkretem Namen in der storyFacts erwaehnen (aber NICHT in cast_hinzugefuegt - die ist vermisst und nicht anwesend). Vermeide Eintraege wie "Unbekannt" oder "Klient" als Name - der Klient hat sich in der Szene vorgestellt, also nutze seinen wirklichen Namen.
 - ROLLEN- UND BEZIEHUNGS-KONSISTENZ IST PFLICHT: Wenn eine Person mit einer Rolle/Beziehung eingetragen wurde (z.B. "Informant" oder "Schwester des Vermissten"), MUSS sie in allen folgenden Szenen dieselbe Rolle und Beziehung behalten. Konkret: Wer als "Motorradfahrer" / "Informant" eingefuehrt wurde, ist NIE in der naechsten Szene "Volkspolizist mit Ausweis". Wer als "Schwester" eingefuehrt wurde, ist NIE Ehefrau. Wenn eine Person ihre wahre Identitaet enthuellt: das ist eine EXPLIZITE Story-Wendung im Erzaehltext ("er zieht einen VP-Ausweis - der angebliche Informant war die ganze Zeit Polizist"), nicht ein stilles Umschreiben des Rollen-Feldes.
 - FAHRZEUG-KONSISTENZ: Wer mit eigenem Fahrzeug ankommt, fluechtet/geht NUR mit diesem eigenen Fahrzeug. Ein NPC der mit Motorrad kommt, springt nicht in Karls Auto. Niemand klaut Karls Opel - er gehoert Karl und nur Karl hat den Schluessel. Wenn ein NPC zurueckkommt: mit demselben Fahrzeug wie zuvor.
 - TOTE GEHOEREN NICHT IN DEN CAST: cast_hinzugefuegt ist NUR fuer Personen, die mit Karl in der Szene aktiv interagieren koennen (sprechen, sich bewegen, sich beruehren). Verstorbene, im Sarg liegende, beerdigte, ermordete, erhaengte Personen NIEMALS in cast_hinzugefuegt eintragen, auch nicht wenn ihr Grab betreten wird oder ihr Name am Grabstein steht. Dasselbe fuer Vermisste/Verschwundene - sie sind nicht anwesend. Wenn Karl an einem Grab steht: das Grab wird im Erzaehltext beschrieben, der Tote NICHT als cast eingetragen.
@@ -1779,7 +1780,7 @@ const INTRO_VARIANTS = [
       anlass: 'Klient kommt mit Auftrag ins Buero',
       sektor: 'Ost (Sowjetisch) - Mitte',
     },
-    prompt: `Starte das Spiel. ${INTRO_REQUIREMENTS}Verregneter Dienstagabend, November 1953. Du sitzt in deinem schäbigen Detektivbüro am Hackeschen Markt, sortierst alte Rechnungen, der Aschenbecher ist voll. Seit Wochen kein nennenswerter Fall, die Miete ist überfällig. Jetzt klopft jemand zaghaft an deine Tür. Erfinde einen konkreten Klienten mit Namen (z.B. eine ältere Frau Schwarz, ein nervöser Geschäftsmann Lemke, eine elegante Witwe Frieda Behrend etc.) der dir EINEN KONKRETEN AUFTRAG bringt: vermisste Person, Erpressung, Untreue-Verdacht, Diebstahl, Drohbriefe. Der Klient stellt sich vor, beschreibt knapp den Fall, nennt einen Namen der gesuchten Person. Die erste Szene MUSS am Ende Klient + Auftrag + zu suchende Person klar etabliert haben. Liefere die Szene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
+    prompt: `Starte das Spiel. ${INTRO_REQUIREMENTS}Verregneter Dienstagabend, November 1953. Du sitzt in deinem schäbigen Detektivbüro am Hackeschen Markt, sortierst alte Rechnungen, der Aschenbecher ist voll. Seit Wochen kein nennenswerter Fall, die Miete ist überfällig. Jetzt klopft jemand zaghaft an deine Tür. Erfinde einen konkreten Klienten mit Namen (z.B. eine ältere Frau Schwarz, ein nervöser Geschäftsmann Lemke, eine elegante Witwe Frieda Behrend etc.) der dir EINEN KONKRETEN AUFTRAG bringt: vermisste Person, Erpressung, Untreue-Verdacht, Diebstahl, Drohbriefe. Der Klient stellt sich vor, beschreibt knapp den Fall, nennt einen Namen der gesuchten Person UND DIE GENAUE BEZIEHUNG (Ehemann, Sohn, Bruder, Geschaeftspartner, Mieter etc.). Diese Beziehung MUSS in allen folgenden Szenen konsistent bleiben (eine Ehefrau wird nicht zur Mutter, ein Geschaeftspartner nicht zum Bruder). Die erste Szene MUSS am Ende klar etabliert haben: Klient (Name, Beziehung zur gesuchten Person) + Auftrag + Name der gesuchten Person. Beispiel: "Mein Mann Robert ist verschwunden" -> Klient ist die Ehefrau Robert ist der Ehemann. Liefere die Szene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
   },
   // 2. Eckkneipe - Informant (Wegener-Fall)
   {
@@ -1893,7 +1894,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v6.36';
+window.SCHATTEN_VERSION = 'v6.37';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -4460,15 +4461,20 @@ async function startGame() {
     const klientNameMatch = klientText.match(/^([A-ZÄÖÜ][a-zäöüß]+(?:\s+[A-ZÄÖÜ][a-zäöüß]+)*)/);
     if (klientNameMatch) {
       const klientName = klientNameMatch[1].trim();
-      const klientKey = normalizeNpcName(klientName);
-      storyFacts[klientKey || klientName.toLowerCase()] = {
-        name: klientName,
-        rolle: 'Klient/Auftraggeber',
-        beziehung: 'hat Karl mit dem aktuellen Fall beauftragt',
-        fahrzeug: null,
-        frozen: true,
-      };
-      console.log('[Schatten] Klient aus Setup in storyFacts eingefroren:', klientName);
+      // Skip Platzhalter
+      if (/^(unbekannt|klient|kein)\b/i.test(klientName)) {
+        console.log('[Schatten] Klient-Name ist Platzhalter, kein storyFacts-Eintrag:', klientName);
+      } else {
+        const klientKey = normalizeNpcName(klientName);
+        storyFacts[klientKey || klientName.toLowerCase()] = {
+          name: klientName,
+          rolle: 'Klient/Auftraggeber',
+          beziehung: 'hat Karl mit dem aktuellen Fall beauftragt',
+          fahrzeug: null,
+          frozen: true,
+        };
+        console.log('[Schatten] Klient aus Setup in storyFacts eingefroren:', klientName);
+      }
     }
   }
   // Opfer/Gesuchten direkt als tot/vermisst markieren - so kann die KI sie nie als anwesend eintragen.
@@ -4484,23 +4490,30 @@ async function startGame() {
     const nameMatch = opferText.match(/^([A-ZÄÖÜ][a-zäöüß]+(?:\s+[A-ZÄÖÜ][a-zäöüß]+)*)/);
     if (nameMatch) {
       const opferName = nameMatch[1].trim();
-      const opferKey = normalizeNpcName(opferName) || opferName.toLowerCase();
-      mentionedDeadOrAbsent[opferKey] = {
-        name: opferName,
-        reason: reason,
-        rolle: reason === 'verstorben' ? 'Opfer (verstorben)' : 'Gesuchter (vermisst)',
-        beziehung: 'aus Setup',
-      };
-      // Auch in storyFacts einfrieren, damit die KI die Beziehung nicht aendert
-      // (z.B. "der Gesuchte ist eigentlich der Taeter"). Frozen heisst: Rolle bleibt.
-      storyFacts[opferKey] = {
-        name: opferName,
-        rolle: reason === 'verstorben' ? 'Opfer (verstorben)' : 'Gesuchter (vermisst)',
-        beziehung: 'aus Setup, Mittelpunkt des Falls',
-        fahrzeug: null,
-        frozen: true,
-      };
-      console.log('[Schatten] Opfer/Gesuchter aus Setup vorgemerkt:', opferName, '->', reason);
+      // Skip Platzhalter wie "Unbekannt", "Klient", "Opfer" - die werden vom
+      // Klient in Szene 1 eingefuehrt und Mistral nennt dann den richtigen Namen.
+      // Sonst landet "Unbekannt" als feste Person in storyFacts.
+      if (/^(unbekannt|klient|opfer|gesuchter|vermisster|verschwundener|wird|noch)\b/i.test(opferName)) {
+        console.log('[Schatten] Opfer-Name ist Platzhalter, kein storyFacts-Eintrag:', opferName);
+      } else {
+        const opferKey = normalizeNpcName(opferName) || opferName.toLowerCase();
+        mentionedDeadOrAbsent[opferKey] = {
+          name: opferName,
+          reason: reason,
+          rolle: reason === 'verstorben' ? 'Opfer (verstorben)' : 'Gesuchter (vermisst)',
+          beziehung: 'aus Setup',
+        };
+        // Auch in storyFacts einfrieren, damit die KI die Beziehung nicht aendert
+        // (z.B. "der Gesuchte ist eigentlich der Taeter"). Frozen heisst: Rolle bleibt.
+        storyFacts[opferKey] = {
+          name: opferName,
+          rolle: reason === 'verstorben' ? 'Opfer (verstorben)' : 'Gesuchter (vermisst)',
+          beziehung: 'aus Setup, Mittelpunkt des Falls',
+          fahrzeug: null,
+          frozen: true,
+        };
+        console.log('[Schatten] Opfer/Gesuchter aus Setup vorgemerkt:', opferName, '->', reason);
+      }
     }
   }
   lastUserMessage = intro.prompt;
@@ -4705,9 +4718,18 @@ function detectStasiCustody(sceneText) {
     /\b(du\s+(landest|bist|sitzt|liegst|wachst)).*\b(in\s+(der|einer)\s+zelle|im\s+verhoerraum)/,
     // Festnahme durch MfS mit klarem Zugriff
     /\b(festgenommen|verhaftet)\b.*\b(von|durch)\s+(der\s+)?(stasi|mfs|geheimpolizei)/,
+    /\b(stasi|mfs|geheimpolizei)\b.*\b(festgenommen|verhaftet|abgefuehrt)/,
+    /\bdu\s+wirst\s+(festgenommen|verhaftet|mitgenommen)\b/,
     /\b(stasi|mfs)\b.*\b(nimmt|nehmen)\s+dich\s+(mit|fest|in\s+gewahrsam)/,
-    // Karl ist offensichtlich gefangen (Hand- oder Fussfesseln + Verhoer)
-    /\b(eisernen?\s+st(u|ue)hl|verhoertisch|nackte\s+gluehbirne|gepruegelt|gefoltert)\b/,
+    // Karl ist offensichtlich gefangen (Hand- oder Fussfesseln + Verhoer).
+    // WICHTIG: "nackte Gluehbirne" allein ist NICHT genug - die haengt in vielen
+    // billigen Buero- und Hinterzimmern. Wir verlangen explizite Stasi/Verhoer-
+    // Umgebung in der gleichen Szene.
+    /\b(eisernen?\s+st(u|ue)hl)\b.*\b(stasi|mfs|verhoer|kgb|sokolow)/,
+    /\b(verhoertisch)\b/,
+    /\b(gepruegelt|gefoltert)\b/,
+    /\b(nackte\s+gluehbirne)\b.*\b(zelle|verhoer|stasi|mfs|fesseln|handschellen|kelleranlage|kellerverhoer)/,
+    /\b(zelle|verhoer|stasi|mfs|fesseln|handschellen|kellerverhoer)\b.*\b(nackte\s+gluehbirne)/,
   ];
   return custodyPatterns.some(p => p.test(lower));
 }
@@ -4828,7 +4850,7 @@ function isGenericPersonName(name) {
     return true;
   }
   // Match 2: generische Einzelwoerter
-  if (/^(mann|frau|gestalt|person|fremder|fremde|jemand|niemand|nachtschwaermer|passant|passantin|spaziergaenger|polizist|polizistin|wachtmeister|volkspolizist|beamter|beamtin|kellner|kellnerin|wirt|wirtin|kunde|kundin|gast|naechbarin|nachbar|nachbarin)$/.test(n)) {
+  if (/^(mann|frau|gestalt|person|fremder|fremde|jemand|niemand|nachtschwaermer|passant|passantin|spaziergaenger|polizist|polizistin|wachtmeister|volkspolizist|beamter|beamtin|kellner|kellnerin|wirt|wirtin|kunde|kundin|gast|nachbar|nachbarin|ober|postbote|briefbote|bote|bedienung|verkaeufer|verkaeuferin|kassierer|kassiererin|fahrer|fahrerin|taxifahrer|taxifahrerin|kontrolleur|schaffner|portier|hotelier|stammgast|empfangsdame|sekretaerin)$/.test(n)) {
     return true;
   }
   // Match 3: nummerierte generische ("Volkspolizist 1", "Mann 2", "Polizist 3")
@@ -4836,8 +4858,9 @@ function isGenericPersonName(name) {
     return true;
   }
   // Match 4: beschreibende ohne echten Namen ("Aelterer Herr mit Melone",
-  // "Junger Mann im Trenchcoat", "Alte Frau mit Pudel", "Schlaksiger Mann")
-  if (/^(aelterer?|aeltere|aelteres|alter|alte|altes|junger|junge|junges|kleiner|kleine|kleines|grosser?|grosse|grosses|breitschultriger?|breitschultrige|hagerer?|hagere|schlaksiger?|schlaksige|untersetzter?|untersetzte|dicker?|dicke|duenner?|duenne|hagerer?|hagere|bullige?r?|kleiner?|magerer?|magere|robuste?r?)\s+(herr|dame|mann|frau|bursche|maedchen|kerl|typ|gestalt|kerl|figur)\b/.test(n)) {
+  // "Junger Mann im Trenchcoat", "Alte Frau mit Pudel", "Schlaksiger Mann",
+  // "Junger Polizist", "Alte Wirtin")
+  if (/^(aelterer?|aeltere|aelteres|alter|alte|altes|junger|junge|junges|kleiner|kleine|kleines|grosser?|grosse|grosses|breitschultriger?|breitschultrige|hagerer?|hagere|schlaksiger?|schlaksige|untersetzter?|untersetzte|dicker?|dicke|duenner?|duenne|hagerer?|hagere|bullige?r?|kleiner?|magerer?|magere|robuste?r?)\s+(herr|dame|mann|frau|bursche|maedchen|kerl|typ|gestalt|kerl|figur|polizist|polizistin|volkspolizist|beamter|kellner|kellnerin|wirt|wirtin|kunde|kundin|gast|nachbar|nachbarin|ober|postbote|bote|bedienung|verkaeufer|verkaeuferin|fahrer|schaffner|empfangsdame|sekretaerin)\b/.test(n)) {
     return true;
   }
   return false;
@@ -5396,6 +5419,40 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
 
     // Verfassung anpassen basierend auf KI-Antwort
     let delta = typeof scene.verfassung_delta === 'number' ? scene.verfassung_delta : 0;
+
+    // CLIENT-SIDE VALIDIERUNG fuer JEDEN Verfassungs-Drop:
+    // Auch -1 muss einen erkennbaren Trigger im Erzaehltext haben. Mistral neigt
+    // dazu in Action-Szenen Verfassung "schleichend" zu senken (-1, -1, -1) ohne
+    // konkreten Vorfall, was zu unmotivierten Tod-Spiralen fuehrt.
+    // Bei -1/-2 reicht ein LEICHTER Trigger (Treffer, Stoss, Schlag, Sturz, Schmerz).
+    if (delta < 0 && delta >= -2) {
+      const sceneText = (scene.szene || '').toLowerCase()
+        .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+      const injuryText = (scene.verletzungsbeschreibung || '').toLowerCase()
+        .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+      const combined = sceneText + ' ' + injuryText;
+      // Leichte Trigger fuer -1/-2: irgendeine koerperliche Einwirkung
+      const lightTriggers = [
+        /\b(treffer|schlag|stoss|tritt|hieb|faust|peitschen)\b/,
+        /\b(triff(s|t)t?|schlaegt|stoesst|tritt|prallt|knallt)\s+(dich|gegen)/,
+        /\b(schmerz|brennt|sticht|sengt|pocht)\b/,
+        /\b(stuerz|stolper|fallst|fielst|kippst)\b/,
+        /\b(blut|wunde|kratze?r|schnitt|prellung|beule|verband|streifschuss)\b/,
+        /\b(schwindel|uebelkeit|kreislauf|atemnot|ohnmacht)\b/,
+        /\b(kugel|streift|durchschlaegt|streifschuss)\b/,
+        /\b(faellst|geh(s|t) zu boden|sinkst zu boden)\b/,
+        /\b(geschlagen|getroffen|getreten|gestochen|gezerrt|gepackt)\b/,
+        /\b(erschoepft|am ende|kann nicht mehr)\b/,  // Erschoepfung-Ende
+        /\bzwangs?-?(einnick|einschlafen|kollabier)/,  // Zwangs-Einnicken
+        /\bunbequem(en|er)?\s+(schlaf|position|sofa|nacht)/,  // Schlafplatz
+        /\bsteif(er|en|es)?\s+(nacken|ruecken|glieder)/,  // Schlafverletzung
+      ];
+      const hasLightTrigger = lightTriggers.some(p => p.test(combined));
+      if (!hasLightTrigger) {
+        console.warn('[Schatten] Delta', delta, 'ohne erkennbaren Trigger im Szenentext. Cap auf 0.');
+        delta = 0;
+      }
+    }
 
     // CLIENT-SIDE VALIDIERUNG: Tod (-4) und schwere Verletzung (-3) brauchen einen
     // expliziten Trigger im Erzaehltext. Wenn der nicht da ist, capen wir das Delta
@@ -6447,6 +6504,10 @@ function botWaitForOptionsReady(maxMs) {
       const solved = document.getElementById('case-solved');
       if (solved && !solved.classList.contains('hidden')) {
         return reject(new Error('Fall geloest - Spielende'));
+      }
+      const gameOver = document.getElementById('game-over');
+      if (gameOver && !gameOver.classList.contains('hidden')) {
+        return reject(new Error('Karl ist gestorben - Spielende'));
       }
 
       // 3. Fehler-Anzeige sichtbar? -> versuche "Erneut versuchen" zu klicken,
