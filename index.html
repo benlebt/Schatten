@@ -1449,6 +1449,7 @@
   <div class="settings-info settings-version" id="settings-version-info">Schatten —</div>
   <button onclick="exportTranscript(event)">📋 Verlauf kopieren</button>
   <button onclick="shareTranscript(event)">📤 Verlauf teilen</button>
+  <button onclick="downloadTranscript(event)">💾 Verlauf als Datei</button>
   <button onclick="resetGame()">↻ Spiel neu starten</button>
 
   <!-- v6.60: Audio-Loop fuer Atmosphaere-Musik (instrumentaler Detektiv-Loop) -->
@@ -1647,7 +1648,7 @@
     <button class="btn-primary" onclick="startRandomGame()">Zufällige Ermittlung</button>
     <br>
     <button class="btn-secondary" onclick="showSetupSelector()">Fall auswählen</button>
-    <div class="start-version">Schatten v7.0 · VP-Fahndung + Ort-Hard-Force + Overlap 0.7</div>
+    <div class="start-version">Schatten v7.1 · Stage3-Toast nach Falltyp + Doc-Wagner-Heilung + Datei-Download</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -1724,7 +1725,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.0</span>
+    <span>Schatten v7.1</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -3389,7 +3390,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.0';
+window.SCHATTEN_VERSION = 'v7.1';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -3517,6 +3518,10 @@ function diagCommit() {
 // Letzte Verletzung als Kontext fuer Folgeszenen (z.B. "Schulterschuss")
 let lastInjury = '';
 let lastInjuryScene = 0; // v6.92: Szene in der die aktuelle Verletzung gesetzt wurde
+// v7.1: An welchem Spieltag hat Doc Wagner Karl zuletzt verarztet?
+// Verhindert dass Karl 5 Szenen lang in Doc Wagners Praxis sitzt und jede
+// Szene +1 Heilung sammelt. Eine Behandlung pro Tag.
+let lastDocHealingDay = 0;
 // Letzte Spannung (1-5), damit advanceGameTime in Action-Sequenzen pausieren kann
 let lastSpannung = 1;
 // Wie viele Szenen am Stueck Spannung >= 4 hatten (Action-Streak)
@@ -5034,6 +5039,79 @@ function shareTranscript(event) {
     }
   }
 }
+
+// v7.1: Verlauf als .txt-Datei direkt herunterladen.
+// Filename: Mauer_<Klientname>_YYYY-MM-DD_HHMM.txt - so sortieren mehrere
+// Runs zeitlich. Klientname wird auf [A-Za-z0-9] reduziert; falls kein Klient
+// bekannt ist (z.B. vor dem ersten Setup-Pick) wird "kein-fall" verwendet.
+function downloadTranscript(event) {
+  if (!logEntries || logEntries.length === 0) {
+    alert('Noch kein Spielverlauf zum Herunterladen.');
+    return;
+  }
+  // Settings-Menue schliessen
+  const menu = document.getElementById('settings-menu');
+  if (menu && !menu.classList.contains('hidden')) {
+    menu.classList.add('hidden');
+  }
+  const out = buildTranscriptText();
+  const sourceBtn = (event && event.currentTarget) || null;
+
+  // Klientname extrahieren - caseSetup.klient ist meist "Renate Schiffer (Saengerin)"
+  // - wir wollen nur den Namen davor, ohne Sonderzeichen.
+  let klientNameRaw = '';
+  try {
+    if (typeof caseSetup !== 'undefined' && caseSetup && caseSetup.klient) {
+      // Erstes Wort-Paar vor Klammer/Komma extrahieren
+      const m = String(caseSetup.klient).match(/^([A-Za-zÄÖÜäöüß]+(?:[\s-][A-Za-zÄÖÜäöüß]+)?)/);
+      if (m) klientNameRaw = m[1];
+    }
+  } catch (e) { /* ignore */ }
+  // Filename-sicher machen
+  const klientName = (klientNameRaw || 'kein-fall')
+    .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
+    .replace(/Ä/g, 'Ae').replace(/Ö/g, 'Oe').replace(/Ü/g, 'Ue')
+    .replace(/\s+/g, '_').replace(/[^A-Za-z0-9_-]/g, '');
+
+  // Timestamp: YYYY-MM-DD_HHMM (lokale Zeit, Windows-freundlich, kein Doppelpunkt)
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  const ts = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate())
+           + '_' + pad(now.getHours()) + pad(now.getMinutes());
+
+  const filename = 'Mauer_' + klientName + '_' + ts + '.txt';
+
+  // Blob mit UTF-8-BOM, damit Windows Notepad/Editor die Umlaute korrekt zeigt.
+  // Ohne BOM zeigt der alte Notepad oft "MÃ¼ller" statt "Müller".
+  const blob = new Blob(['\uFEFF' + out], { type: 'text/plain;charset=utf-8' });
+
+  try {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.rel = 'noopener';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    // kleines Cleanup-Timeout: manche Browser brauchen den href bis nach Click
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 100);
+    flashButtonSuccess(sourceBtn, '✓ ' + filename);
+  } catch (err) {
+    console.warn('[Schatten] Download fehlgeschlagen, Fallback zu Clipboard:', err);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(out)
+        .then(() => flashButtonSuccess(sourceBtn, '✓ Kopiert (Download fehlgeschlagen)'))
+        .catch(() => showManualCopyOverlay(out, 'Verlauf manuell kopieren'));
+    } else {
+      showManualCopyOverlay(out, 'Verlauf manuell kopieren');
+    }
+  }
+}
+
 // Cache for the status popup details
 let currentStatusInfo = { day: 1, time: 'ABEND', loc: '—', tension: 1, tensionLabel: 'Ruhig', tensionColor: '#4a9eff' };
 
@@ -7620,6 +7698,21 @@ VERBOTEN: einfach mit "schraegem Morgenlicht" anfangen ohne zu erklaeren wo Karl
       }
       pendingForcedFahndung = null;
     }
+    // v7.1: DOC-WAGNER-BEHANDLUNGS-PUSH. Wenn Karl gerade in der Praxis angekommen
+    // ist und Verfassung niedrig (<=3) UND heute noch nicht behandelt wurde, MUSS
+    // die naechste Szene eine echte medizinische Behandlung erzaehlen - sonst war
+    // der Besuch sinnlos. Anlass: Run31 Sz12: Karl mit Vf 1 in Doc Wagners Praxis,
+    // Marlene sieht die Schulterwunde, aber 0 Behandlung im Erzaehltext, Vf bleibt 1.
+    {
+      const mainLocLower = (lastMainLocation || '').toLowerCase();
+      const inDocPraxis = /\b(doc wagner|wagners?\s+praxis|schaeferstrasse|praxis schoeneberg)\b/.test(mainLocLower);
+      if (inDocPraxis && typeof verfassung === 'number' && verfassung > 0 && verfassung <= 3 && lastDocHealingDay < gameDay) {
+        timeContext += `\n\nDOC-WAGNER-BEHANDLUNGS-PFLICHT: Karl ist in Doc Wagners Praxis und seine Verfassung ist ${verfassung}/5 - er braucht Behandlung, nicht nur Smalltalk. In dieser ODER der naechsten Szene MUSS Doc Wagner (oder seine Tochter Marlene als Krankenschwester) Karl wirklich verarzten - das bedeutet konkret im Erzaehltext: Wunde reinigen mit Jodtinktur, naehen, Verband anlegen, Schmerzmittel-Spritze setzen, oder Salbe drauf. NICHT nur "Doc untersucht Karl kurz" - das zaehlt nicht. Konkrete Behandlungs-Aktionen muessen vorkommen. Mindestens eine der 4 Optionen darf "Lass dich verarzten / Halte still / Frag nach Schmerzmittel" sein. verfassung_delta darf in dieser Szene NICHT negativ werden (Karl ist beim Arzt, nicht in Gefahr). Das System heilt automatisch +1 oder +2, sobald die Behandlungs-Aktion im Text erscheint.`;
+        if (typeof diag === 'function') {
+          diag('drift', 'Doc-Wagner-Behandlungs-Push gesendet (Vf=' + verfassung + ', Tag ' + gameDay + ')');
+        }
+      }
+    }
     if (scenesAtSameLocation >= 3) {
       if (scenesAtSameLocation >= 8) {
         // ESKALATION 3: Nach 8+ Szenen am selben Ort PFLICHT-Ortswechsel.
@@ -8370,6 +8463,7 @@ async function startGame() {
   isGameOver = false;
   lastInjury = '';
   lastInjuryScene = 0;
+  lastDocHealingDay = 0;  // v7.1
   lastSpannung = 1;
   actionStreak = 0;
   calmStreak = 0;
@@ -10804,6 +10898,48 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       }
     }
 
+    // v7.1: DOC-WAGNER-HEILUNG. Wenn Karl in Doc Wagners Praxis ist und tatsaechlich
+    // behandelt/verarztet wird, sollte Verfassung steigen. Anlass: Run30 zeigte einen
+    // Toast "Doc Wagner aufsuchen oder Pause machen", Karl ging hin, redete mit Doc -
+    // aber Verfassung stieg nicht. Es war narrativ also unsinnig.
+    //
+    // Triggert nur 1x pro Spieltag (verhindert dass Karl 5 Szenen in der Praxis sitzt
+    // und jede Szene +1 sammelt). Heilung: +1 bei Verfassung 3-4, +2 bei Verfassung 1-2.
+    // Bedingung: Szene MUSS Doc Wagner / Praxis erwaehnen UND eine echte Behandlung
+    // erzaehlen (verbinden, naehen, spritze, salbe, untersuchen).
+    if (typeof verfassung === 'number' && verfassung > 0 && verfassung < 5 && lastDocHealingDay < gameDay) {
+      const sceneLower = (scene.szene || '').toLowerCase()
+        .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+      const inDocPraxis = /\b(doc wagner|wagners?\s+praxis|schaeferstrasse|in der praxis)\b/.test(sceneLower);
+      const treatmentTriggers = [
+        /\b(verarzt|verbind|verband|naeh(en|t|st)|salbe|spritze|tablette|morphium|jodtinktur)/,
+        /\bdoc\s+\w+\s+(untersuch|reinig|desinfizier|behand|naeh|verbind)/,
+        /\b(wagner|doc)\s+(faehrt|fuehrt|streift|legt|drueckt)[^.!?]{0,40}\b(verband|kompresse|salbe|jodtinktur|naht)/,
+        /\b(reinig|saeuber|desinfizier)t?\s+(die\s+)?(wunde|schramme|schnitt|kratze)/,
+        /\b(schmerzmittel|morphium|kodein|baldrian)\s+(bekommst|kriegst|reicht|gibt)/,
+        /\b(setzt|legt|gibt)\s+dir\s+(eine\s+)?(spritze|infusion|injektion|naht)/,
+      ];
+      const isTreated = treatmentTriggers.some(p => p.test(sceneLower));
+      if (inDocPraxis && isTreated) {
+        const heal = (verfassung <= 2) ? 2 : 1;
+        const before = verfassung;
+        verfassung = Math.min(5, verfassung + heal);
+        lastDocHealingDay = gameDay;
+        if (verfassung >= 5) { lastInjury = ''; lastInjuryScene = 0; }
+        console.log('[Schatten] Doc-Wagner-Heilung: Verfassung', before, '->', verfassung, '(+' + heal + ')');
+        diag('state', 'Doc-Wagner-Heilung Verfassung ' + before + ' -> ' + verfassung + ' (+' + heal + ', max 1x pro Tag)');
+        if (typeof showProgressToast === 'function') {
+          showProgressToast('VERARZTET', 'Doc Wagner hat Karl verarztet. Verfassung +' + heal + '.');
+        }
+      } else if (inDocPraxis && !isTreated) {
+        // Diagnostisches Event: Karl ist in der Praxis, aber wird nicht behandelt
+        // (nur Smalltalk). Soll Mistral selbst aufdecken.
+        if (typeof diag === 'function') {
+          diag('drift', 'Karl bei Doc Wagner, aber keine Behandlung erkannt (kein Verband/Spritze/Salbe im Text)');
+        }
+      }
+    }
+
     // Verfassung anpassen basierend auf KI-Antwort
     let delta = typeof scene.verfassung_delta === 'number' ? scene.verfassung_delta : 0;
 
@@ -11844,7 +11980,26 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           caseProgress.stage3StartScene = sceneCounter;
           console.log('[Schatten] AUTO-FORCING Stage 3: ' + caseProgress.tatverdaechtiger + ' (' + stage2Scenes + ' Szenen in Stage 2' + (verdMentioned ? '' : ', extreme Stagnation') + ')');
           diag('progress', '✦ AUTO-STAGE 3 erzwungen (' + caseProgress.tatverdaechtiger + ' nach ' + stage2Scenes + ' Szenen Stagnation)');
-          showProgressToast('VERDAECHTIGER UEBERFUEHRT', caseProgress.tatverdaechtiger + ' kann nicht mehr leugnen. Karl muss jetzt zum Klienten.');
+          // v7.1: Toast-Text nach Falltyp differenziert. Bei vermisst-Fall ist der
+          // "Tatverdaechtige" eigentlich die vermisste Person - die muss nicht
+          // "ueberfuehrt" werden, sondern wurde lokalisiert. Anlass: Run30 Sz19
+          // zeigte "Bruno Schiffer lokalisiert" gefolgt vom Toast "kann nicht
+          // mehr leugnen" - grammatikalisch + inhaltlich unsauber.
+          {
+            const ct = (caseSetup && caseSetup.caseType) || '';
+            let toastTitle, toastText;
+            if (ct === 'vermisst') {
+              toastTitle = 'VERMISSTE PERSON GEFUNDEN';
+              toastText = caseProgress.tatverdaechtiger + ' ist lokalisiert. Karl muss jetzt zum Klienten.';
+            } else if (ct === 'beschatten') {
+              toastTitle = 'OBSERVATION ABGESCHLOSSEN';
+              toastText = 'Beweise gegen ' + caseProgress.tatverdaechtiger + ' liegen vor. Karl muss jetzt zum Klienten.';
+            } else {
+              toastTitle = 'VERDAECHTIGER UEBERFUEHRT';
+              toastText = caseProgress.tatverdaechtiger + ' kann nicht mehr leugnen. Karl muss jetzt zum Klienten.';
+            }
+            showProgressToast(toastTitle, toastText);
+          }
         } else {
           // Verdaechtiger taucht nicht auf - statt forcen lieber Push an KI
           // v6.98: Push-Flag setzen statt nur diagnostizieren
@@ -12025,8 +12180,22 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       caseProgress.stage3StartScene = sceneCounter; // v6.81: Stage 3 tracken
       console.log('[Schatten] Fall-Fortschritt: Verdaechtiger ueberfuehrt (Stage 3)');
       diag('progress', '✦ STAGE 3 erreicht (Verdaechtiger ueberfuehrt: ' + caseProgress.tatverdaechtiger + ')');
-      // v6.68: Toast bei Ueberfuehrung
-      showProgressToast('VERDAECHTIGER UEBERFUEHRT', caseProgress.tatverdaechtiger + ' kann nicht mehr leugnen. Jetzt zum Klienten.');
+      // v7.1: Toast-Text nach Falltyp (siehe v7.1 oben)
+      {
+        const ct = (caseSetup && caseSetup.caseType) || '';
+        let toastTitle, toastText;
+        if (ct === 'vermisst') {
+          toastTitle = 'VERMISSTE PERSON GEFUNDEN';
+          toastText = caseProgress.tatverdaechtiger + ' ist lokalisiert. Jetzt zum Klienten.';
+        } else if (ct === 'beschatten') {
+          toastTitle = 'OBSERVATION ABGESCHLOSSEN';
+          toastText = 'Beweise gegen ' + caseProgress.tatverdaechtiger + ' liegen vor. Jetzt zum Klienten.';
+        } else {
+          toastTitle = 'VERDAECHTIGER UEBERFUEHRT';
+          toastText = caseProgress.tatverdaechtiger + ' kann nicht mehr leugnen. Jetzt zum Klienten.';
+        }
+        showProgressToast(toastTitle, toastText);
+      }
     }
     // 4) Klient berichtet - finale Win-Bedingung
     if (scene.klient_berichtet === true && caseProgress.ueberfuehrt) {
@@ -13129,6 +13298,7 @@ async function botRunMainLoop() {
       verfassung = 5;
       lastInjury = '';
       lastInjuryScene = 0;
+      lastDocHealingDay = 0;  // v7.1
       // Spannung-Tracking auch zuruecksetzen - sonst kann lastSpannung=4 vom
       // letzten Run durch Action-Spannung 4 im neuen Run False-Positives liefern.
       lastSpannung = 1;
