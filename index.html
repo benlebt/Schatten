@@ -1249,7 +1249,7 @@
       Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
     </p>
     <button class="btn-primary" onclick="startGame()">Ermittlung beginnen</button>
-    <div class="start-version">Schatten v6.33 · Bug-Fixes Stasi+Auto+Tod</div>
+    <div class="start-version">Schatten v6.34 · Bett vs Sofa · Indiz-Dedup · NPC-Norm</div>
   </div>
 
   <!-- Game Log -->
@@ -1317,7 +1317,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v6.33 · Bug-Fixes Stasi+Auto+Tod</span>
+    <span>Schatten v6.34 · Bett vs Sofa · Indiz-Dedup · NPC-Norm</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -1893,7 +1893,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v6.33';
+window.SCHATTEN_VERSION = 'v6.34';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -3033,10 +3033,20 @@ function advanceGameTime() {
       karlEnergie = 100;
       karlHunger = Math.max(2, karlHunger - 4);  // morgens leichter Hunger ist normal
       hungerAccumulator = 0;
-      console.log('[Schatten] Tageswechsel (graduell) -> Energie 100, Hunger', karlHunger);
+      // FORCE-SLEEP-NARRATIVE: Wenn der gradullen Tageswechsel bei niedriger Energie
+      // greift, ist Karl im Verlauf sehr muede geworden. Die KI muss in der naechsten
+      // Szene erzaehlen WIE Karl geschlafen hat - sonst wirkt der Sprung "Bulette
+      // bestellen -> naechster Morgen" wie ein Logikbruch (8h Sprung ohne Schlaf-Beat).
+      // Wir setzen ein Force-Flag, das in addTimeContextToRequest in den Header geht.
+      pendingForcedSleepNarrative = (karlEnergie === 100 ? 'unbequem' : 'normal');
+      console.log('[Schatten] Tageswechsel (graduell) -> Energie 100, Hunger', karlHunger, '| Forced sleep narrative');
     }
   }
 }
+
+// Wird gesetzt wenn ein gradueller Tageswechsel passiert ist und die naechste
+// Szene unbedingt eine kurze Schlaf-Bridge erzaehlen muss.
+let pendingForcedSleepNarrative = null;
 
 // Wird true gesetzt wenn gerade ein Tageswechsel passiert ist.
 // Die naechste Szene-Anfrage instruiert die KI dann, eine kurze Story-Brücke zu erzählen.
@@ -4855,6 +4865,13 @@ function fixCommonGrammarErrors(text) {
     };
     return (map[v] || v) + ' du';
   });
+  // Praeteritum-statt-Praesens-Fehler im Du-Erzaehlton
+  // ("Du reichtest" statt "Du reichst", "Du gabst" statt "Du gibst")
+  result = result.replace(/\b(D|d)u reichtest\b/g, '$1u reichst');
+  result = result.replace(/\b(D|d)u gabst\b/g, '$1u gibst');
+  result = result.replace(/\b(D|d)u nahmst\b/g, '$1u nimmst');
+  result = result.replace(/\b(D|d)u sahst\b/g, '$1u siehst');
+  result = result.replace(/\b(D|d)u tratest\b/g, '$1u trittst');
   return result;
 }
 
@@ -5634,19 +5651,29 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     // Fall-Fortschritt verarbeiten
     // 1) Neue Indizien sammeln
     if (Array.isArray(scene.indiz_neu) && scene.indiz_neu.length > 0) {
+      // Synonym-Map: gleiche Konzepte mit verschiedenen Begriffen werden gleichbehandelt
+      // damit Mistral nicht "Feuerzeug" und "Zigarettenanzuender" als zwei Indizien fuer
+      // denselben Gegenstand speichern kann.
+      const normalizeIndizSynonyms = (text) => {
+        return text
+          .replace(/zigarettenanzuender|zigarettenanzünder/g, 'feuerzeug')
+          .replace(/anzuender|anzünder/g, 'feuerzeug')
+          .replace(/automobil|wagen|fahrzeug|pkw/g, 'auto')
+          .replace(/polizeibeamter|polizist|wachtmeister/g, 'polizist')
+          .replace(/sowjet(isch)?|russisch/g, 'russisch')
+          .replace(/leiche|toter|toten|verstorbene/g, 'leiche')
+          .replace(/aussage|zeugenaussage|bericht/g, 'aussage');
+      };
       for (const ind of scene.indiz_neu) {
         if (typeof ind !== 'string' || !ind.trim()) continue;
         const newInd = ind.trim();
-        const newLower = newInd.toLowerCase()
-          .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+        const newLower = normalizeIndizSynonyms(newInd.toLowerCase()
+          .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss'));
         // Fuzzy-Dedup: pruefe ob ein sehr aehnliches Indiz schon drin ist.
-        // Beispiel: "Frau Vogel kommt manchmal in die Kneipe" vs "Frau Vogel kommt
-        // oft nachmittags in die Kneipe" vs "Frau Vogel kommt nachmittags in die
-        // Kneipe" - das sind alles Varianten derselben Info, sollte nur EIN Eintrag sein.
         const newWords = newLower.split(/[\s,\-]+/).filter(w => w.length >= 4);
         const isDuplicate = caseProgress.indizien.some(existing => {
-          const existLower = existing.toLowerCase()
-            .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+          const existLower = normalizeIndizSynonyms(existing.toLowerCase()
+            .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss'));
           if (existLower === newLower) return true;
           if (existLower.includes(newLower) || newLower.includes(existLower)) return true;
           // Hoher Wort-Overlap (>=3 gemeinsame Hauptwoerter bei kurzen Indizien)?
@@ -5656,6 +5683,17 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           // kuerzeren Eintrags ueberlappt: Duplikat
           const shorterLen = Math.min(newWords.length, existWords.length);
           if (overlap.length >= 3 && shorterLen > 0 && (overlap.length / shorterLen) >= 0.6) {
+            return true;
+          }
+          // Spezialfall fuer kurze Indizien (3-4 Hauptwoerter): wenn ein
+          // starkes Schluesselwort ueberlappt (Feuerzeug, Akte, Foto, Auto,
+          // Brief, Quittung, Schluessel, Pistole, Messer, Anzuender) plus
+          // mindestens ein weiterer Charakter-Bezug (Hollenbeck, Meissner, etc),
+          // ist das wahrscheinlich derselbe Gegenstand.
+          const strongObjectWords = ['feuerzeug', 'akte', 'foto', 'brief', 'quittung', 'schluessel', 'pistole', 'messer', 'pass', 'urkunde', 'manuskript', 'tagebuch', 'notizbuch', 'visitenkarte'];
+          const newStrongObj = newWords.find(w => strongObjectWords.includes(w));
+          if (newStrongObj && existWords.includes(newStrongObj)) {
+            // Beide Indizien erwaehnen denselben spezifischen Gegenstand
             return true;
           }
           return false;
