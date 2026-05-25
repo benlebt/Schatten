@@ -1012,6 +1012,81 @@
     background: rgba(255,80,80,0.08);
     color: #ff8080;
   }
+  .settings-divider {
+    height: 1px;
+    background: rgba(200,191,168,0.15);
+    margin: 8px 4px;
+  }
+  .autoplay-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 14px;
+  }
+  .autoplay-label {
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #aaa;
+    min-width: 50px;
+  }
+  .autoplay-input {
+    flex: 1;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(200,191,168,0.2);
+    color: var(--fg);
+    padding: 6px 8px;
+    font-family: inherit;
+    font-size: 12px;
+  }
+  .autoplay-input:focus {
+    outline: none;
+    border-color: rgba(200,191,168,0.5);
+  }
+  #autoplay-start-btn {
+    background: rgba(80, 130, 80, 0.2) !important;
+    border: 1px solid rgba(80, 200, 80, 0.4) !important;
+    color: #afa !important;
+    margin-top: 4px;
+  }
+  #autoplay-start-btn:hover {
+    background: rgba(80, 130, 80, 0.4) !important;
+    color: #cfc !important;
+  }
+  .bot-status-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 200;
+    background: rgba(120, 30, 30, 0.95);
+    color: #fff;
+    padding: 8px 16px;
+    font-family: monospace;
+    font-size: 12px;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+  }
+  .bot-status-bar.hidden {
+    display: none;
+  }
+  #bot-stop-btn {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.4);
+    color: #fff;
+    padding: 4px 10px;
+    font-family: inherit;
+    font-size: 11px;
+    cursor: pointer;
+    letter-spacing: 1px;
+  }
+  #bot-stop-btn:hover {
+    background: rgba(255,255,255,0.25);
+  }
   .settings-info {
     padding: 10px 14px;
     font-size: 10px;
@@ -1045,6 +1120,35 @@
   <button onclick="exportTranscript(event)">📋 Verlauf kopieren</button>
   <button onclick="shareTranscript(event)">📤 Verlauf teilen</button>
   <button onclick="resetGame()">↻ Spiel neu starten</button>
+
+  <!-- Admin-only Autoplay section. Hidden by default, only revealed when
+       localStorage.schatten-admin === 'true'. Set via ?admin=PASSWORT URL. -->
+  <div id="admin-autoplay-section" class="hidden">
+    <div class="settings-divider"></div>
+    <div class="settings-info">Test-Modus</div>
+    <div class="autoplay-row">
+      <label class="autoplay-label">Züge:</label>
+      <input type="number" id="autoplay-turns" class="autoplay-input" value="40" min="5" max="200" step="5">
+    </div>
+    <div class="autoplay-row">
+      <label class="autoplay-label">Stil:</label>
+      <select id="autoplay-strategy" class="autoplay-input">
+        <option value="mixed">Zufällig gemischt</option>
+        <option value="random">Zufällig</option>
+        <option value="aggressive">Aggressiv</option>
+        <option value="cautious">Vorsichtig</option>
+        <option value="varied">Variiert (A→B→C→D)</option>
+        <option value="explorer">Erkunder</option>
+      </select>
+    </div>
+    <button id="autoplay-start-btn" onclick="startAutoplayFromSettings()">▶ Autoplay starten</button>
+  </div>
+</div>
+
+<!-- Bot-Status-Bar (nur sichtbar wenn Bot laeuft) -->
+<div id="bot-status-bar" class="bot-status-bar hidden">
+  <span id="bot-status-text">Bot bereit</span>
+  <button id="bot-stop-btn" onclick="stopAutoplayBot()">⏹ Stopp</button>
 </div>
 
 <div class="container">
@@ -1145,7 +1249,7 @@
       Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
     </p>
     <button class="btn-primary" onclick="startGame()">Ermittlung beginnen</button>
-    <div class="start-version">Schatten v6.26 · Essen und Diagnose</div>
+    <div class="start-version">Schatten v6.30 · Debug-Lock</div>
   </div>
 
   <!-- Game Log -->
@@ -1213,7 +1317,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v6.26 · Essen und Diagnose</span>
+    <span>Schatten v6.30 · Debug-Lock</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -1763,7 +1867,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v6.26';
+window.SCHATTEN_VERSION = 'v6.30';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -2083,9 +2187,10 @@ function updateFooterModel() {
 function toggleSettings(event) {
   if (event) event.stopPropagation();
   const menu = document.getElementById('settings-menu');
-  // Wenn wir gerade aufmachen: Provider-Info aktualisieren
+  // Wenn wir gerade aufmachen: Provider-Info aktualisieren + Admin-Sektion checken
   if (menu.classList.contains('hidden')) {
     updateProviderInfo();
+    if (typeof applyAdminVisibility === 'function') applyAdminVisibility();
   }
   menu.classList.toggle('hidden');
 }
@@ -2431,23 +2536,29 @@ function buildTranscriptText() {
       out += line + '\n';
     }
   }
-  // Politik / Stasi / Energie / Hunger / Romantik
-  if (caseIsPolitical || karlInStasiCustody || karlEnergie < 80 || karlHunger >= 4 || romanticTension >= 3) {
-    out += '\nWeitere Status:\n';
-    if (caseIsPolitical) {
-      out += '  - Politischer Fall (MfS-relevant), Stasi-Tension: ' + stasiTension + '/5\n';
-    }
-    if (karlInStasiCustody) {
-      out += '  - Karl in Stasi-Gewahrsam, Verhoer-Szenen: ' + folterSceneCount + '\n';
-    }
-    const eStufe = getEnergieStufe(karlEnergie);
-    out += '  - Energie: ' + eStufe.label + ' (' + karlEnergie + '/100)\n';
-    if (karlHunger >= 4) {
-      out += '  - Hunger: ' + karlHunger + '/10\n';
-    }
-    if (romanticTension >= 3) {
-      out += '  - Romantik-Tension: ' + romanticTension + '/5\n';
-    }
+  // Vollstaendiger Status - immer alle Werte ausgeben (auch wenn Default).
+  // Wichtig fuer Lektor-Analyse, damit man komplette Stand-Daten hat.
+  out += '\nVollstaendiger Status:\n';
+  const eStufe = getEnergieStufe(karlEnergie);
+  out += '  - Energie: ' + eStufe.label + ' (' + karlEnergie + '/100)\n';
+  out += '  - Hunger: ' + karlHunger + '/10\n';
+  out += '  - Romantik-Tension: ' + romanticTension + '/5\n';
+  if (caseIsPolitical) {
+    out += '  - Politischer Fall (MfS-relevant), Stasi-Tension: ' + stasiTension + '/5\n';
+  }
+  if (karlInStasiCustody) {
+    out += '  - Karl in Stasi-Gewahrsam, Verhoer-Szenen: ' + folterSceneCount + '\n';
+  }
+  // Autoplay-Info wenn aktiv
+  if (window.__schattenBotInfo) {
+    const b = window.__schattenBotInfo;
+    out += '\nAutoplay-Bot-Info:\n';
+    out += '  - Strategie: ' + b.strategy + '\n';
+    out += '  - Geplante Zuege: ' + b.plannedTurns + '\n';
+    out += '  - Tatsaechliche Zuege: ' + b.actualTurns + '\n';
+    if (b.seed) out += '  - Seed: ' + b.seed + '\n';
+    if (b.status) out += '  - Status: ' + b.status + '\n';
+    if (b.duration) out += '  - Dauer: ' + b.duration + 's\n';
   }
   out += '\nSzenen total: ' + logEntries.filter(e => e.type === 'scene').length + '\n';
   return out;
@@ -5583,6 +5694,12 @@ function hideWait() {
 
 function resetGame() {
   if (!confirm('Spiel wirklich neu starten? Aktueller Fortschritt geht verloren.')) return;
+  // Falls Bot laeuft: stoppen
+  if (botActive) {
+    botShouldStop = true;
+  }
+  botHideStatusBar();
+  window.__schattenBotInfo = null;
   history = [];
   logEntries = [];
   storySummaries = [];
@@ -5612,7 +5729,391 @@ function resetGame() {
   showStart();
 }
 
+// --- AUTOPLAY BOT (v6.28) ---
+// Aktivierung wahlweise per Settings-Menue (Button) ODER per URL-Param
+// (?autoplay=1&turns=40&strategy=mixed&seed=12345&visible=0).
+//
+// Strategien:
+//   random:     uniform zufaellige Option (A/B/C/D)
+//   aggressive: bevorzugt Konflikt-Verben (zieh/schiess/schlag/pack/konfrontier)
+//   cautious:   bevorzugt Beobacht-/Frag-Verben (beobacht/frag/horch/warte)
+//   varied:     deterministisch A->B->C->D->A
+//   explorer:   bevorzugt Bewegung (geh/fahr/such/folge/besuche)
+//   mixed:      pro Run zufaellige Strategie
+
+// Globaler Bot-State
+let botActive = false;
+let botShouldStop = false;
+let botCurrentTurn = 0;
+let botPlannedTurns = 0;
+let botStrategy = 'random';
+let botSeed = 0;
+let botRngState = 0;
+let botVariedIndex = 0;
+let botStartTimestamp = 0;
+
+function botRng() {
+  botRngState = (botRngState * 1664525 + 1013904223) | 0;
+  return ((botRngState >>> 0) % 10000) / 10000;
+}
+
+function botRngChoice(arr) {
+  return arr[Math.floor(botRng() * arr.length)];
+}
+
+function botChooseByStrategy(options) {
+  if (!options || options.length === 0) return null;
+
+  if (botStrategy === 'random') {
+    return botRngChoice(options);
+  }
+  if (botStrategy === 'varied') {
+    const chosen = options[botVariedIndex % options.length];
+    botVariedIndex++;
+    return chosen;
+  }
+
+  const PATTERNS = {
+    aggressive: /\b(zieh|schiess|schlag|pack|konfrontier|stoss|tritt|wuerg|wuerge|verfolg|brech|reiss|hau|droh|bedroh|gewalt|niederschlag|festhalt|festnahme)/i,
+    cautious:   /\b(beobacht|frag|horch|warte|hoer|denk|nachdenken|ueberleg|notier|pruef|untersuch|durchsuch|lese|schweig|still|verstecke|leise|vorsichtig|zieh\s+dich\s+zurueck)/i,
+    explorer:   /\b(geh|fahr|such|folge|besuch|verlass|steig|tritt\s+ein|betritt|kehr\s+zurueck|hin\s+zu|zur\b|zum\b|nach|weiter|erkund)/i,
+  };
+  const pattern = PATTERNS[botStrategy];
+  if (!pattern) return botRngChoice(options);
+
+  const matches = options.filter(opt => pattern.test(opt.text));
+  if (matches.length > 0) return botRngChoice(matches);
+  return botRngChoice(options); // fallback
+}
+
+function botUpdateStatusBar(text) {
+  const bar = document.getElementById('bot-status-bar');
+  const textEl = document.getElementById('bot-status-text');
+  if (bar && textEl) {
+    bar.classList.remove('hidden');
+    textEl.textContent = text;
+  }
+}
+
+function botHideStatusBar() {
+  const bar = document.getElementById('bot-status-bar');
+  if (bar) bar.classList.add('hidden');
+}
+
+function botWaitForOptionsReady(maxMs) {
+  const deadline = Date.now() + (maxMs || 90000);
+  return new Promise((resolve, reject) => {
+    function check() {
+      if (botShouldStop) return reject(new Error('Vom Benutzer gestoppt'));
+
+      const loading = document.getElementById('loading');
+      const loadingActive = loading && !loading.classList.contains('hidden');
+
+      // Endbildschirme erkennen
+      const dailyLimit = document.getElementById('case-failed');
+      if (dailyLimit && !dailyLimit.classList.contains('hidden')) {
+        return reject(new Error('Spielende oder Daily-Limit erreicht'));
+      }
+      const solved = document.getElementById('case-solved');
+      if (solved && !solved.classList.contains('hidden')) {
+        return reject(new Error('Fall geloest - Spielende'));
+      }
+
+      // Fehler-Anzeige sichtbar? (z.B. "Erneut versuchen"-Box) -> Abbruch
+      const errBox = document.querySelector('.error-box:not(.hidden), #error-display:not(.hidden)');
+      if (errBox) {
+        return reject(new Error('Fehler im Spiel - Bot bricht ab (kein Auto-Retry)'));
+      }
+
+      const optList = document.getElementById('options-list');
+      const buttons = optList ? optList.querySelectorAll('.option-btn:not(:disabled)') : [];
+      if (!loadingActive && buttons.length >= 2) {
+        return resolve(buttons);
+      }
+      if (Date.now() > deadline) {
+        return reject(new Error('Timeout beim Warten auf Optionen (90s)'));
+      }
+      setTimeout(check, 400);
+    }
+    check();
+  });
+}
+
+function botGetCurrentOptions() {
+  const optList = document.getElementById('options-list');
+  if (!optList) return [];
+  const buttons = optList.querySelectorAll('.option-btn');
+  return Array.from(buttons).map(btn => {
+    const idEl = btn.querySelector('.option-id');
+    const textEl = btn.querySelector('.option-text-wrap > span');
+    return {
+      id: (idEl?.textContent || '').trim(),
+      text: (textEl?.textContent || btn.textContent || '').trim(),
+      element: btn,
+    };
+  });
+}
+
+function botGetCurrentModelLabel() {
+  try {
+    const active = getActiveModel();
+    return active ? active.label : 'unbekannt';
+  } catch { return 'unbekannt'; }
+}
+
+// Persistente Bot-Info in window.__schattenBotInfo - wird vom Verlauf-Export gelesen
+function botUpdateInfo(extra) {
+  window.__schattenBotInfo = Object.assign({
+    strategy: botStrategy,
+    plannedTurns: botPlannedTurns,
+    actualTurns: botCurrentTurn,
+    seed: botSeed,
+    status: botActive ? 'laeuft' : 'beendet',
+    duration: botStartTimestamp ? Math.round((Date.now() - botStartTimestamp) / 1000) : 0,
+  }, extra || {});
+}
+
+// Haupt-Loop
+async function botRunMainLoop() {
+  try {
+    // Pruefen ob Spielstart-Button da ist
+    const startBtn = document.querySelector('button[onclick="startGame()"]');
+    if (startBtn && !startBtn.closest('.hidden')) {
+      console.log('[Bot] Starte Spiel via startGame()');
+      startGame();
+      await new Promise(r => setTimeout(r, 1000));
+    }
+
+    while (botCurrentTurn < botPlannedTurns && !botShouldStop) {
+      botUpdateStatusBar('Bot wartet auf Szene... Zug ' + (botCurrentTurn + 1) + '/' + botPlannedTurns + ' · ' + botStrategy);
+
+      await botWaitForOptionsReady();
+      if (botShouldStop) break;
+
+      const options = botGetCurrentOptions();
+      if (options.length === 0) {
+        throw new Error('Keine Optionen gefunden');
+      }
+
+      const chosen = botChooseByStrategy(options);
+      if (!chosen || !chosen.element) {
+        throw new Error('Bot konnte keine Option auswaehlen');
+      }
+
+      const model = botGetCurrentModelLabel();
+      botCurrentTurn++;
+      botUpdateInfo();
+      console.log('[Bot] Zug ' + botCurrentTurn + '/' + botPlannedTurns +
+                  ' [' + model + '] ' + chosen.id + ': ' + chosen.text.slice(0, 60));
+      botUpdateStatusBar('Bot Zug ' + botCurrentTurn + '/' + botPlannedTurns +
+                         ' · ' + botStrategy + ' · ' + chosen.id + ' [' + model + ']');
+
+      // Visuelles Feedback: kurz das gewaehlte Button-Element hervorheben
+      chosen.element.style.background = 'rgba(80, 200, 80, 0.3)';
+
+      // Kurze Pause damit du als Mensch zusehen kannst
+      await new Promise(r => setTimeout(r, 600));
+
+      chosen.element.click();
+      await new Promise(r => setTimeout(r, 400));
+    }
+
+    if (botShouldStop) {
+      console.log('[Bot] Vom Benutzer gestoppt nach ' + botCurrentTurn + ' Zuegen.');
+      botUpdateStatusBar('⏹ Bot gestoppt nach ' + botCurrentTurn + ' Zuegen. Verlauf via Settings kopieren.');
+      botUpdateInfo({ status: 'manuell gestoppt' });
+    } else {
+      console.log('[Bot] Fertig nach ' + botCurrentTurn + ' Zuegen.');
+      botUpdateStatusBar('✓ Bot fertig nach ' + botCurrentTurn + ' Zuegen. Verlauf via Settings kopieren.');
+      botUpdateInfo({ status: 'abgeschlossen' });
+    }
+  } catch (err) {
+    console.error('[Bot] Abbruch:', err);
+    botUpdateStatusBar('✗ Bot-Abbruch: ' + err.message + ' (' + botCurrentTurn + ' Zuege). Verlauf via Settings kopieren.');
+    botUpdateInfo({ status: 'Abbruch: ' + err.message });
+  } finally {
+    botActive = false;
+    // Bot-Status-Bar bleibt sichtbar damit du den finalen Status siehst
+    // (verschwindet erst beim naechsten resetGame() oder Bot-Start)
+  }
+}
+
+function startAutoplayBot(options) {
+  if (botActive) {
+    alert('Bot laeuft schon. Bitte zuerst stoppen.');
+    return;
+  }
+  const turns = Math.max(5, Math.min(200, options.turns || 40));
+  const rawStrategy = options.strategy || 'mixed';
+  const seed = options.seed || Math.floor(Math.random() * 1000000);
+
+  const STRATEGIES = ['random', 'aggressive', 'cautious', 'varied', 'explorer'];
+  const strategy = rawStrategy === 'mixed' ? STRATEGIES[Math.floor(Math.random() * STRATEGIES.length)] : rawStrategy;
+
+  // State initialisieren
+  botActive = true;
+  botShouldStop = false;
+  botCurrentTurn = 0;
+  botPlannedTurns = turns;
+  botStrategy = strategy;
+  botSeed = seed;
+  botRngState = seed;
+  botVariedIndex = 0;
+  botStartTimestamp = Date.now();
+  botUpdateInfo();
+
+  console.log('[Bot] Start: turns=' + turns + ', strategy=' + strategy + ', seed=' + seed);
+  botUpdateStatusBar('Bot startet: ' + strategy + ' · ' + turns + ' Zuege · Seed ' + seed);
+
+  // Settings-Menue schliessen
+  const menu = document.getElementById('settings-menu');
+  if (menu) menu.classList.add('hidden');
+
+  botRunMainLoop();
+}
+
+function stopAutoplayBot() {
+  if (!botActive) {
+    // Bot nicht aktiv -> einfach Statusbar ausblenden
+    botHideStatusBar();
+    return;
+  }
+  console.log('[Bot] Stopp-Signal vom Benutzer empfangen');
+  botShouldStop = true;
+}
+
+// Wird vom Settings-Button aufgerufen
+function startAutoplayFromSettings() {
+  // Doppelte Absicherung: auch wenn jemand das DOM manuell unhidden hat,
+  // pruefen wir hier nochmal den Admin-Flag.
+  if (!isAdminUnlocked()) {
+    alert('Autoplay-Modus ist nicht freigeschaltet.');
+    return;
+  }
+  const turnsEl = document.getElementById('autoplay-turns');
+  const strategyEl = document.getElementById('autoplay-strategy');
+  const turns = parseInt(turnsEl?.value || '40', 10);
+  const strategy = strategyEl?.value || 'mixed';
+  startAutoplayBot({ turns, strategy });
+}
+
+// --- Debug-Mode-Lock ---
+// Autoplay ist nur fuer den Entwickler gedacht (verbraucht API-Tokens).
+// Aktivierung pro Browser/Geraet via URL: ?debug=GEHEIM
+// Deaktivierung: ?debug=off
+// Der Flag wird in localStorage gespeichert und bleibt bis ihn jemand entfernt.
+//
+// Sicherheits-Hinweis: Das Passwort wird ausschliesslich als SHA-256-Hash gespeichert.
+// Das Klartext-Passwort steht NIRGENDS im Code. Beim Source-View sieht man nur den
+// Hash, was den Casual-Schutz erheblich besser macht (kein Hinweis wie das Passwort
+// lauten koennte, kein offensichtlicher String wie "admin" oder "secret").
+
+// SHA-256-Hash des Passworts. Das Klartext-Passwort liegt nicht im Code.
+const DEBUG_PASSWORD_HASH = '36ac681477522e5a5d3d3d84688f28ab8353def4c9540ca05ea95a0c6b404c39';
+const DEBUG_STORAGE_KEY = 'schatten-dbg';
+
+async function sha256Hex(text) {
+  const buf = new TextEncoder().encode(text);
+  const hashBuf = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(hashBuf))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+function isAdminUnlocked() {
+  try {
+    return localStorage.getItem(DEBUG_STORAGE_KEY) === 'on';
+  } catch { return false; }
+}
+
+function setAdminUnlocked(state) {
+  try {
+    if (state) {
+      localStorage.setItem(DEBUG_STORAGE_KEY, 'on');
+    } else {
+      localStorage.removeItem(DEBUG_STORAGE_KEY);
+    }
+  } catch {}
+}
+
+// Beim Seitenstart pruefen: URL-Param ?debug=... behandeln
+async function processAdminUrlParam() {
+  const params = new URLSearchParams(window.location.search);
+  const dbgParam = params.get('debug');
+  if (dbgParam === null) return; // kein Param, nichts tun
+
+  if (dbgParam === 'off') {
+    setAdminUnlocked(false);
+    showAdminToast('Debug-Modus deaktiviert für diesen Browser.');
+    return;
+  }
+
+  // Hash vergleichen statt Klartext
+  try {
+    const inputHash = await sha256Hex(dbgParam);
+    if (inputHash === DEBUG_PASSWORD_HASH) {
+      setAdminUnlocked(true);
+      showAdminToast('✓ Debug-Modus aktiviert für diesen Browser.');
+      applyAdminVisibility();
+      return;
+    }
+  } catch (e) {
+    console.warn('[Debug] Hash-Berechnung fehlgeschlagen:', e);
+  }
+
+  // Falsches Passwort - keine sichtbare Reaktion (Tester sollen nichts merken)
+  console.warn('[Debug] Ungueltiger debug-Parameter ignoriert.');
+}
+
+function showAdminToast(message) {
+  const toast = document.createElement('div');
+  toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);' +
+                       'z-index:999;background:rgba(40,80,40,0.95);color:#cfc;' +
+                       'padding:14px 24px;border:1px solid rgba(150,255,150,0.4);' +
+                       'font:13px monospace;letter-spacing:1px;border-radius:4px;' +
+                       'backdrop-filter:blur(8px);max-width:90vw;text-align:center;';
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 4000);
+}
+
+// Sektion im Settings-Menue je nach Admin-Status sichtbar machen
+function applyAdminVisibility() {
+  const section = document.getElementById('admin-autoplay-section');
+  if (!section) return;
+  if (isAdminUnlocked()) {
+    section.classList.remove('hidden');
+  } else {
+    section.classList.add('hidden');
+  }
+}
+
+// URL-Param-Variante des Bots (parallel, fuer Skript-Steuerung).
+// Auch nur fuer Admins zugaenglich - sonst koennten Tester ?autoplay=1 missbrauchen.
+(function checkUrlAutoplay() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('autoplay') !== '1') return;
+
+  // Wir warten laenger als processAdminUrlParam, damit der async Hash-Check
+  // sicher durch ist bevor wir die Admin-Pruefung machen.
+  setTimeout(() => {
+    if (!isAdminUnlocked()) {
+      console.warn('[Bot] Autoplay via URL blockiert - kein Debug-Modus aktiv.');
+      return;
+    }
+    const turns = parseInt(params.get('turns') || '40', 10);
+    const strategy = params.get('strategy') || 'mixed';
+    const seed = params.get('seed') ? parseInt(params.get('seed'), 10) : null;
+    startAutoplayBot({ turns, strategy, seed: seed || undefined });
+  }, 1500);
+})();
+
 // --- Init ---
+// Admin-Param verarbeiten BEVOR wir die Visibility setzen oder den URL-Bot starten.
+// processAdminUrlParam ist async wegen Hash-Berechnung, deshalb chain'en wir
+// applyAdminVisibility per .then().
+processAdminUrlParam().then(() => applyAdminVisibility());
+applyAdminVisibility(); // sofort initial (falls schon localStorage gesetzt)
 showStart();
 </script>
 </body>
