@@ -1174,6 +1174,12 @@
   <button onclick="shareTranscript(event)">📤 Verlauf teilen</button>
   <button onclick="resetGame()">↻ Spiel neu starten</button>
 
+  <!-- v6.60: Audio-Loop fuer Atmosphaere-Musik (instrumentaler Detektiv-Loop) -->
+  <button id="music-toggle-btn" onclick="toggleMusic(event)">🎵 Musik einschalten</button>
+  <audio id="bg-music" loop preload="none">
+    <source src="music.mp3" type="audio/mpeg">
+  </audio>
+
   <!-- Admin-only Autoplay section. Hidden by default, only revealed when
        localStorage.schatten-admin === 'true'. Set via ?admin=PASSWORT URL. -->
   <div id="admin-autoplay-section" class="hidden">
@@ -1324,7 +1330,7 @@
       Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
     </p>
     <button class="btn-primary" onclick="startGame()">Ermittlung beginnen</button>
-    <div class="start-version">Schatten v6.58 · Wegener-Run-Lektorat · 1 Fix (Ort-Hauptkomponenten-Match: Sub-Variationen wie "Alexanderplatz, vor X" -> "Alexanderplatz, am Y" zaehlen jetzt als selber Ort fuer Stagnation-Detect)</div>
+    <div class="start-version">Schatten v6.60 · Kessler-Run-Lektorat · 4 Fixes (Romance-False-Positive raus "Haar" allein triggert nicht mehr / Konfrontations-Schutz Tuer-Blockade etc. / Audio-Loop-Button im Menue / NPC-Spawn-Schaerfung)</div>
   </div>
 
   <!-- Game Log -->
@@ -1392,7 +1398,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v6.58 · Wegener-Run-Lektorat · 1 Fix (Ort-Hauptkomponenten-Match: Sub-Variationen wie "Alexanderplatz, vor X" -> "Alexanderplatz, am Y" zaehlen jetzt als selber Ort fuer Stagnation-Detect)</span>
+    <span>Schatten v6.60 · Kessler-Run-Lektorat · 4 Fixes (Romance-False-Positive raus "Haar" allein triggert nicht mehr / Konfrontations-Schutz Tuer-Blockade etc. / Audio-Loop-Button im Menue / NPC-Spawn-Schaerfung)</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -2110,11 +2116,19 @@ spannung: 1 (ruhig) bis 5 (Lebensgefahr).`;
 
 const INTRO_REQUIREMENTS = `
 PFLICHT FÜR DIE ERÖFFNUNGSSZENE:
-- Die Szene MUSS dem Spieler in den ersten 2-3 Sätzen klarmachen: WER ist sein Klient/Auftraggeber (mit Name), WAS ist der konkrete Fall (Was ist passiert? Wer wird gesucht?), und WAS ist die jetzige Situation (wo befindet er sich gerade, warum).
-- Die unten genannten Namen und Fakten MÜSSEN in der ersten Szene explizit auftauchen, NICHT erst später.
-- DRINGLICHKEIT (v6.57): Die Eröffnungsszene MUSS dem Spieler auch klarmachen, WARUM Karl JETZT handelt - der innere oder aeussere Druck. Beispiele: "der Klient zahlt nur fuer schnelle Loesung", "die Spur kuehlt mit jedem Tag ab", "der Sohn ist seit Stunden weg, vermutlich noch lebend wenn jetzt", "Karl braucht das Geld dringend (Miete ueberfaellig)", "die Beerdigung ist genau jetzt", "die Stasi hat den Verschwundenen schon im Visier". Wenn das Setup einen Familien-/Freundschafts-Klienten hat (Hilde, Doc Wagner, Roth), ist die persoenliche Verpflichtung der Druck. Wenn ein zahlender Klient: Geld + Frist. KEIN langsam-anlaufender Routine-Auftrag, KEIN "Karl hat Zeit zu nachzudenken" - der erste Zug muss sich nach Bewegung anfuehlen.
+- Die Szene MUSS dem Spieler in den ersten 2-3 Sätzen klarmachen: WER ist sein Klient/Auftraggeber (mit Name), WAS ist der konkrete Fall (Was ist passiert? Wer wird gesucht? Welcher Verdacht?), und WAS ist die jetzige Situation (wo befindet er sich gerade, warum).
+- Die unten genannten Namen und Fakten MÜSSEN in der ersten Szene EXPLIZIT mit eigenen Worten auftauchen, NICHT erst später.
+- KEINE ANSPIELUNGEN, KEINE ABKÜRZUNGEN, KEINE PRONOMEN STATT NAMEN (v6.59): Falsch ist z.B. "Ediths Verdacht treibt dich an" - der Spieler weiss nicht WAS für ein Verdacht. Richtig: "Edith Kessler hat dich beauftragt herauszufinden ob ihr Mann Robert eine Affaere hat - er behauptet jeden Mittwoch Ueberstunden zu machen". Falsch: "der Klient hat dich beauftragt". Richtig: "Helga Wegener hat dich beauftragt ihren vermissten Mann Friedrich zu finden". Wenn das Setup einen Verdacht/Vorwurf nennt (Affaere, Diebstahl, Erpressung, Schmuggel etc.), MUSS dieser konkrete Verdacht WOERTLICH oder fast-woertlich in der Eroeffnung stehen.
+- DRINGLICHKEIT: Die Eröffnungsszene MUSS dem Spieler auch klarmachen, WARUM Karl JETZT handelt - der innere oder aeussere Druck. Beispiele: "der Klient zahlt nur fuer schnelle Loesung", "die Spur kuehlt mit jedem Tag ab", "der Sohn ist seit Stunden weg, vermutlich noch lebend wenn jetzt", "Karl braucht das Geld dringend (Miete ueberfaellig)", "die Beerdigung ist genau jetzt", "die Stasi hat den Verschwundenen schon im Visier". Wenn das Setup einen Familien-/Freundschafts-Klienten hat (Hilde, Doc Wagner, Roth), ist die persoenliche Verpflichtung der Druck. Wenn ein zahlender Klient: Geld + Frist. KEIN langsam-anlaufender Routine-Auftrag, KEIN "Karl hat Zeit zu nachzudenken" - der erste Zug muss sich nach Bewegung anfuehlen.
 - "Karl Mauer" ist AUSSCHLIESSLICH der Spielername. NIEMALS einen anderen Charakter im Text Karl, Mauer oder Karl Mauer nennen.
 - Die 4 Optionen am Ende der ersten Szene sollten zur aktuellen Situation passen und dem Spieler eine handlungsfähige Auswahl bieten - mindestens 2 davon sollen aktive Schritte sein (NICHT nur "abwarten und beobachten").
+
+SELBSTPRUEFUNG VOR ABGABE: Stelle dir vor, ein Spieler liest deine Eroeffnung KALT, ohne den Setup-Prompt zu kennen. Versteht er nach 30 Sekunden Lesen:
+  (1) Wer ist sein Klient (Name)?
+  (2) Wer wird gesucht/observiert/aufgeklaert (Name)?
+  (3) WORUM geht es konkret (welcher Vorwurf, welche Tat, welcher Verdacht)?
+  (4) Warum ist Karl JETZT an diesem Ort/in dieser Situation?
+Wenn EINE dieser Fragen nicht beantwortet ist, schreibe die Szene neu, bevor du sie abgibst.
 
 VERBINDLICHKEIT: Der unten angegebene Setup ist FEST und darf NICHT umgeschrieben werden. 
 - KEIN Klientenwechsel (wenn der Klient "Edith Kessler, Ehefrau" ist, ist sie keine Mutter und niemand anders ist Klient).
@@ -2370,7 +2384,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v6.58';
+window.SCHATTEN_VERSION = 'v6.60';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -2794,6 +2808,45 @@ function toggleSettings(event) {
 function closeSettings() {
   document.getElementById('settings-menu').classList.add('hidden');
 }
+
+// v6.60: Atmosphaere-Musik-Loop-Button.
+// Spielt music.mp3 (im Repo-Root, neben index.html) im Loop ab.
+// Toggle-State in localStorage, damit es bei naechstem Besuch erhalten bleibt.
+// User-initiated wegen Autoplay-Block der Browser (Brave/Safari/Chrome).
+function toggleMusic(event) {
+  if (event) event.stopPropagation();
+  const audio = document.getElementById('bg-music');
+  const btn = document.getElementById('music-toggle-btn');
+  if (!audio || !btn) return;
+  if (audio.paused) {
+    // Lautstaerke moderat halten, damit nichts uebersteuert
+    audio.volume = 0.4;
+    audio.play().then(() => {
+      btn.textContent = '🔇 Musik ausschalten';
+      localStorage.setItem('schatten-music-on', '1');
+      diag('state', 'Musik eingeschaltet');
+    }).catch(err => {
+      console.warn('[Schatten] Musik-Start fehlgeschlagen:', err);
+      btn.textContent = '🎵 Musik nicht ladbar (music.mp3?)';
+      setTimeout(() => { btn.textContent = '🎵 Musik einschalten'; }, 3000);
+    });
+  } else {
+    audio.pause();
+    btn.textContent = '🎵 Musik einschalten';
+    localStorage.removeItem('schatten-music-on');
+    diag('state', 'Musik ausgeschaltet');
+  }
+}
+
+// Beim Laden der Seite: wenn User vorher Musik an hatte, Button korrekt
+// labeln. NICHT automatisch starten (Autoplay-Policy verbietet das ohne
+// user gesture). User muss Button erneut druecken.
+window.addEventListener('DOMContentLoaded', () => {
+  if (localStorage.getItem('schatten-music-on') === '1') {
+    const btn = document.getElementById('music-toggle-btn');
+    if (btn) btn.title = 'Musik war zuletzt an - druecken zum Aktivieren';
+  }
+});
 // Close menu when clicking outside (but not on menu buttons themselves)
 document.addEventListener('click', (e) => {
   const menu = document.getElementById('settings-menu');
@@ -5539,6 +5592,88 @@ VERBOTEN: einfach mit "schraegem Morgenlicht" anfangen ohne zu erklaeren wo Karl
 let logEntries = [];
 let lastUserMessage = null;
 
+// v6.59: OPENING-VALIDIERUNG
+// Extrahiert aus einem Intro-Setup die Pflicht-Schluesselwoerter die in der
+// Eroeffnungsszene auftauchen MUESSEN. Wenn die KI sie weglaesst (z.B.
+// "Ediths Verdacht treibt dich an" statt "Edith Kessler hat dich beauftragt
+// herauszufinden ob ihr Mann Robert eine Affaere hat"), wird ein Retry mit
+// explizitem Hinweis ausgeloest.
+function getOpeningRequiredKeywords(setup) {
+  if (!setup) return [];
+  const required = [];
+
+  // 1. KLIENT-Name (Vorname oder Nachname muss vorkommen)
+  if (setup.klient) {
+    const klientText = setup.klient;
+    // "Anton Brandt (Vater)" -> "Anton Brandt"
+    // "KEIN aktiver Klient" -> skip
+    if (!/^(kein|keinen?)\b/i.test(klientText)) {
+      const m = klientText.match(/^([A-ZÄÖÜ][a-zäöüß]+(?:\s+[A-ZÄÖÜ][a-zäöüß]+)*)/);
+      if (m) {
+        // Beide Bestandteile als alternative Treffer: "Edith" ODER "Kessler" reicht
+        const parts = m[1].split(/\s+/);
+        required.push({ type: 'klient', alternatives: parts, label: 'Klient ' + m[1] });
+      }
+    }
+  }
+
+  // 2. OPFER/GESUCHTER/ZIELOBJEKT-Name
+  if (setup.opfer) {
+    const opferText = setup.opfer;
+    if (!/^(unbekannt|wertvolle|wertvolles)/i.test(opferText)) {
+      const m = opferText.match(/^([A-ZÄÖÜ][a-zäöüß]+(?:\s+[A-ZÄÖÜ][a-zäöüß]+)*)/);
+      if (m) {
+        const parts = m[1].split(/\s+/);
+        required.push({ type: 'opfer', alternatives: parts, label: 'Gesuchter/Zielobjekt ' + m[1] });
+      }
+    }
+  }
+
+  // 3. TAT/AUFTRAG-Kern (Verdacht/Vorwurf in den Erzaehltext)
+  // Heuristik: aus tat-Feld typische Schluesselworter extrahieren
+  if (setup.tat) {
+    const tatLow = setup.tat.toLowerCase();
+    const tatKeywords = [];
+    if (/(affaere|untreue|fremdgeh)/.test(tatLow)) tatKeywords.push('affaere', 'untreue', 'fremdgeh');
+    if (/(schmuggel|schmuggelroute)/.test(tatLow)) tatKeywords.push('schmuggel');
+    if (/(diebstahl|gestohlen|raub|bestohlen|ausgeraubt)/.test(tatLow)) tatKeywords.push('diebstahl', 'gestohlen', 'ausgeraubt');
+    if (/(verschwund|vermisst|verschollen)/.test(tatLow)) tatKeywords.push('verschwund', 'vermisst');
+    if (/(selbstmord|erhaeng|tod)/.test(tatLow)) tatKeywords.push('selbstmord', 'tod', 'erhaeng');
+    if (/(erpress|drohbrief)/.test(tatLow)) tatKeywords.push('erpress');
+    if (/(beerdigung|begraebnis)/.test(tatLow)) tatKeywords.push('beerdigung', 'begraebnis');
+    if (/(prozess|verhandlung|aussage)/.test(tatLow)) tatKeywords.push('prozess', 'aussage');
+    if (/(aufstand|17\.\s*juni|volksaufstand)/.test(tatLow)) tatKeywords.push('aufstand', '17. juni');
+    if (/(stalin)/.test(tatLow)) tatKeywords.push('stalin');
+    if (/(einbruch)/.test(tatLow)) tatKeywords.push('einbruch');
+    if (/(blackout)/.test(tatLow)) tatKeywords.push('blackout', 'erinnerung');
+    if (/(entfuehr|verschleppt)/.test(tatLow)) tatKeywords.push('entfuehr', 'verschleppt');
+    if (tatKeywords.length > 0) {
+      required.push({ type: 'tat-kern', alternatives: tatKeywords, label: 'Auftrag/Verdacht (' + tatKeywords.slice(0, 3).join('/') + '...)' });
+    }
+  }
+
+  return required;
+}
+
+// Pruefen ob alle Pflichtwoerter im Eroeffnungstext vorkommen.
+// Returns { ok: bool, missing: [{label, alternatives}] }
+function validateOpening(text, required) {
+  if (!text || required.length === 0) return { ok: true, missing: [] };
+  // Normalisieren: lowercase, Umlaute aufloesen fuer Match
+  const norm = text.toLowerCase()
+    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+  const missing = [];
+  for (const req of required) {
+    const found = req.alternatives.some(alt => {
+      const altNorm = alt.toLowerCase()
+        .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+      return norm.includes(altNorm);
+    });
+    if (!found) missing.push(req);
+  }
+  return { ok: missing.length === 0, missing: missing };
+}
+
 async function startGame() {
   hideAll();
   showLoading();
@@ -6701,19 +6836,23 @@ function updateRomanticTension(scene) {
   const hasNamedWomanInScene = femalePraenomen.test(sceneText) && sieIhrCount >= 3;
 
   // Erotische / vertraute Phrasen im Text erhoehen romanticTension
+  // v6.60: einzelne Allerweltsworte wie "Haar" alleine genuegen NICHT mehr
+  // (Mann mit blondem Haar in Tuer-Konfrontation triggerte False-Positive).
+  // Verlangt jetzt qualifizierende Kombinationen.
   const romanticHints = [
-    /\b(ihr blick|sie laechelt|seine fingerspitzen|ihre fingerspitzen|ihre hand auf|sie schaut dich an|ihr blick haengt|haengt an dir|sucht deinen blick)\b/,
-    /\b(parfum|haar|lippen|silhouette|kurven|seidenstrumpf|seidenbluse|naehe|duft|warm|halsausschnitt|dekolle|kleid streift)\b/,
-    /\b(legt eine hand auf|streicht ueber|beruehrt deine|nahe an dir|kommt naeher|setzt sich neben|lehnt sich an dich)\b/,
-    /\b(zigarette anzuenden|zuendet dir eine an|teilt sich eine flasche|du gibst ihr feuer|gibst ihr feuer|teilt sich mit dir)\b/,
+    /\b(ihr (zaertlicher |interessierter |verfuehrerischer |suchender )?blick haengt|sie laechelt dich an|ihre fingerspitzen (streichen|liegen|beruehren)|ihre hand auf (deinem|deinem arm|deinem schenkel|deiner schulter)|sucht deinen blick|haelt deinen blick|laechelt dir zu)\b/,
+    /\b(ihr parfum|ihr haar (faellt|streift|duftet|riecht|leuchtet)|ihre lippen|ihre silhouette|ihre kurven|seidenstrumpf|seidenbluse|halsausschnitt|dekolle|kleid streift)\b/,
+    /\b(legt eine hand auf|streicht ueber (deine|dein)|beruehrt deine|kommt dir naeher|setzt sich neben dich|lehnt sich an dich|ihre warme naehe|spuerst ihren atem)\b/,
+    /\b(zuendet dir eine an|du gibst ihr feuer|gibst ihr feuer|teilt sich eine flasche mit dir|sie giesst dir ein)\b/,
   ];
   const hits = romanticHints.filter(p => p.test(sceneText)).length;
 
-  // VERHOER-FALSE-POSITIVE-SCHUTZ (v6.57): Wenn der Szenenkontext beruflich-
-  // konfrontativ ist (Verhoer, Befragung, Konfrontation, Verdacht), sollen
-  // selbst echte Frauenkontakt-Hints KEINE romantische Tension aufbauen. Eine
-  // "Hand auf den Akten" ist im Verhoer Beruf, nicht Flirt.
-  const verhoerContext = /\b(verhoer|verhoert|befragung|befragt|verdaecht|alibi|aussage|protokoll|aufnahme|akte\s+(zwischen|auf|liegt)|notiz(buch|en)?\s+offen|kommissar|abv|wachtmeister|festgenommen|fest\s+nehmen|drueck\s+in\s+die\s+ecke|in\s+die\s+enge|konfrontation|konfrontier)/i;
+  // VERHOER-FALSE-POSITIVE-SCHUTZ (v6.57, erweitert v6.60): Wenn der Szenenkontext
+  // beruflich-konfrontativ ist (Verhoer, Befragung, Konfrontation, Verdacht, Tuer-
+  // Konflikt), sollen selbst echte Frauenkontakt-Hints KEINE romantische Tension
+  // aufbauen. Eine "Hand auf den Akten" ist im Verhoer Beruf, nicht Flirt. Eine
+  // Tuer-Blockade ist Karls Druck, nicht ihr Werben (v6.60 nach Kessler-Run).
+  const verhoerContext = /\b(verhoer|verhoert|befragung|befragt|verdaecht|alibi|aussage|protokoll|aufnahme|akte\s+(zwischen|auf|liegt)|notiz(buch|en)?\s+offen|kommissar|abv|wachtmeister|festgenommen|fest\s+nehmen|drueck\s+in\s+die\s+ecke|in\s+die\s+enge|konfrontation|konfrontier|fuss\s+in\s+die\s+tuer|tuer\s+blockier|tuer\s+(zu)?druecken|tuer\s+zu(zu)?machen|abweisen|abgewiesen|will\s+(dich\s+)?los(zu)?werden|schiebt\s+dich\s+(weg|raus)|blickt\s+feindselig|misstrauisch|argwoehnisch|hier\s+wohnt\s+kein|bettler|verschwinden\s+sie|hauen\s+sie\s+ab|raus\s+hier)/i;
   const verhoerActive = verhoerContext.test(sceneText);
 
   // Trigger-Logik (v6.56 -> v6.57):
@@ -6862,10 +7001,12 @@ async function chooseOption(option) {
   await performApiCall(userMsg, /*isStart*/false, option);
 }
 
-async function performApiCall(userMsg, isStart, optionForRollback, retryCount, rateLimitCount) {
+async function performApiCall(userMsg, isStart, optionForRollback, retryCount, rateLimitCount, openingRetryCount) {
   retryCount = retryCount || 0;
   rateLimitCount = rateLimitCount || 0;
+  openingRetryCount = openingRetryCount || 0;
   const MAX_AUTO_RETRIES = 3;
+  const MAX_OPENING_RETRIES = 1; // v6.59: nur 1 Retry fuer Opening-Pflichtfakten
   const MAX_RATE_LIMIT_RETRIES = 2;
   const MAX_RATE_LIMIT_WAIT = 35; // seconds; if Groq asks for more, abort
 
@@ -6897,6 +7038,38 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     if (scene && typeof scene.szene === 'string') {
       scene.szene = fixCommonGrammarErrors(scene.szene);
       scene.szene = expandAbbreviations(scene.szene);
+
+      // v6.59: OPENING-VALIDIERUNG mit max 1 Retry
+      // Wenn die KI in der Eroeffnungsszene die Pflicht-Fakten (Klient,
+      // Gesuchter, Verdacht/Auftragstyp) weglaesst oder zu Anspielungen
+      // verkuerzt ("Ediths Verdacht treibt dich an" statt explizit), wird
+      // ein einmaliger Retry mit konkreten Hinweisen ausgeloest.
+      if (isStart && openingRetryCount < MAX_OPENING_RETRIES && caseSetup) {
+        const required = getOpeningRequiredKeywords(caseSetup);
+        const check = validateOpening(scene.szene, required);
+        if (!check.ok) {
+          const missingLabels = check.missing.map(m => m.label).join('; ');
+          diag('detect', 'Opening-Validierung fehlgeschlagen, Retry: fehlend = ' + missingLabels);
+          console.log('[Schatten] Opening unvollstaendig, Retry. Fehlt:', missingLabels);
+          // Praeziser Retry-Prompt: nenne genau was fehlte und fordere
+          // eine NEUE Eroeffnung mit allen Fakten explizit.
+          const missingHint = check.missing.map(m =>
+            '- ' + m.label + ' (mindestens eines dieser Worte muss vorkommen: ' + m.alternatives.join(', ') + ')'
+          ).join('\n');
+          const retryPrompt = userMsg +
+            '\n\nNACHBESSERUNG (DEINE LETZTE ANTWORT WAR UNVOLLSTAENDIG): ' +
+            'Deine Eroeffnungsszene hat folgende Pflichtelemente NICHT ausreichend genannt:\n' +
+            missingHint + '\n' +
+            'Schreibe die Eroeffnungsszene KOMPLETT NEU. Nenne diese Elemente in den ersten 2-3 Saetzen EXPLIZIT und WOERTLICH. ' +
+            'KEINE Anspielungen wie "ihr Verdacht treibt dich" - sage WAS fuer ein Verdacht, WORUM es geht, WEN du suchst. ' +
+            'Liefere die Szene erneut als JSON.';
+          // Diagnose-Frame fortsetzen, nicht neu oeffnen
+          return await performApiCall(retryPrompt, isStart, optionForRollback, retryCount, rateLimitCount, openingRetryCount + 1);
+        } else if (required.length > 0) {
+          diag('detect', 'Opening-Validierung OK (' + required.length + ' Pflichtelemente erkannt)');
+        }
+      }
+
       // Metaphern-Zaehler: warne wenn >=2 "wie ein/wie eine"-Vergleiche in einer
       // Szene auftauchen (Mistral Small 3.1 neigt zur Pulp-Klischee-Ueberladung).
       const metaphorMatches = scene.szene.match(/\bwie\s+(ein|eine|einer|einem|einen)\b/gi);
@@ -8146,9 +8319,9 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           console.log('[Schatten] Daily/TPD limit on', previousModel.label, '-> switching to', nextModel.label);
           skipNextThrottle = true; // neues Modell hat eigenen Budget, kein Throttle noetig
           if (optionForRollback) {
-            performApiCall(userMsg, isStart, optionForRollback, retryCount, rateLimitCount);
+            performApiCall(userMsg, isStart, optionForRollback, retryCount, rateLimitCount, openingRetryCount);
           } else {
-            performApiCall(userMsg, isStart, undefined, retryCount, rateLimitCount);
+            performApiCall(userMsg, isStart, undefined, retryCount, rateLimitCount, openingRetryCount);
           }
           return;
         }
@@ -8172,9 +8345,9 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           console.log('[Schatten] Per-minute limit on', previousModel.label, '(2nd hit) -> switching to', nextModel.label);
           skipNextThrottle = true;
           if (optionForRollback) {
-            performApiCall(userMsg, isStart, optionForRollback, retryCount, rateLimitCount);
+            performApiCall(userMsg, isStart, optionForRollback, retryCount, rateLimitCount, openingRetryCount);
           } else {
-            performApiCall(userMsg, isStart, undefined, retryCount, rateLimitCount);
+            performApiCall(userMsg, isStart, undefined, retryCount, rateLimitCount, openingRetryCount);
           }
           return;
         }
@@ -8244,9 +8417,9 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       // Loading zeigen waehrend der naechste Call laueft
       showLoading();
       if (optionForRollback) {
-        performApiCall(userMsg, isStart, optionForRollback, retryCount, rateLimitCount + 1);
+        performApiCall(userMsg, isStart, optionForRollback, retryCount, rateLimitCount + 1, openingRetryCount);
       } else {
-        performApiCall(userMsg, isStart, undefined, retryCount, rateLimitCount + 1);
+        performApiCall(userMsg, isStart, undefined, retryCount, rateLimitCount + 1, openingRetryCount);
       }
       return;
     } else if (e.isRetryable && retryCount < MAX_AUTO_RETRIES) {
@@ -8266,9 +8439,9 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         skipNextThrottle = true;
         const doRetry = () => {
           if (optionForRollback) {
-            performApiCall(userMsg, isStart, optionForRollback, retryCount, rateLimitCount);
+            performApiCall(userMsg, isStart, optionForRollback, retryCount, rateLimitCount, openingRetryCount);
           } else {
-            performApiCall(userMsg, isStart, undefined, retryCount, rateLimitCount);
+            performApiCall(userMsg, isStart, undefined, retryCount, rateLimitCount, openingRetryCount);
           }
         };
         // Kurze visuelle Pause damit der User sieht dass etwas passiert,
@@ -8282,9 +8455,9 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       console.log('[Schatten] Alle Modelle durchprobiert, klassischer Retry.');
       const doRetry = () => {
         if (optionForRollback) {
-          performApiCall(userMsg, isStart, optionForRollback, retryCount + 1, rateLimitCount);
+          performApiCall(userMsg, isStart, optionForRollback, retryCount + 1, rateLimitCount, openingRetryCount);
         } else {
-          performApiCall(userMsg, isStart, undefined, retryCount + 1, rateLimitCount);
+          performApiCall(userMsg, isStart, undefined, retryCount + 1, rateLimitCount, openingRetryCount);
         }
       };
       if (retryCount === 0) {
