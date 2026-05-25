@@ -1484,7 +1484,7 @@
       Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
     </p>
     <button class="btn-primary" onclick="startGame()">Ermittlung beginnen</button>
-    <div class="start-version">Schatten v6.66</div>
+    <div class="start-version">Schatten v6.67</div>
   </div>
 
   <!-- Game Log -->
@@ -1552,7 +1552,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v6.66</span>
+    <span>Schatten v6.67</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -2471,7 +2471,7 @@ const INTRO_VARIANTS = [
       opfer: 'Mathilde Goerke (35, Friseurin Prenzlauer Berg, verstorbenes vor 4 Monaten ungeklaert)',
       tat: 'Mathildes alter Fall war Karls Aufklaerungsversuch von Untreue ihres Mannes, kurz danach kam sie ums Leben. Jetzt steht ihr Mann Albrecht Goerke vor Gericht wegen Verdachts auf Mord. Karls Notizen sind wichtig.',
       ortHaupt: 'Kreisgericht Mitte am Littenplatz - Karl wartet vor Saal 4 auf seine Zeugenaussage',
-      anlass: 'Vorladung zur Zeugenaussage - Karl ist nervoes, sein einziger guter Anzug zwickt, Anwalt Baumgarten erwartet ihn',
+      anlass: 'Vorladung zur Zeugenaussage - Karl ist nervoes, sein einziger guter Anzug zwickt, Anwalt Baumgarten erwartet ihn. WICHTIG: Die Verhandlung dauert maximal 1-3 Stunden Realzeit, dann wird sie vertagt oder beendet. Karl bleibt nicht den ganzen Tag im Gericht. Nach 2-3 Szenen im Saal MUSS er entlassen werden oder die Sitzung vertagt sein, dann verlaesst Karl das Gebaeude.',
       nebenfiguren: 'Anwalt Dr. Heinrich Baumgarten (etablierter Anker, Karls Anwalt), Staatsanwalt Eberhard Mertens, Richterin Anna Schoening',
       sektor: 'Kreisgericht Mitte = Ost (Sowjetisch). Karl ist auf Heimatterrain aber unwohl - Gerichte sind anders als Strassen.',
     },
@@ -2539,7 +2539,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v6.66';
+window.SCHATTEN_VERSION = 'v6.67';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5054,15 +5054,37 @@ Die Spannung der Szene MUSS auf 3 oder 4 steigen. Diese Eskalation ist Pflicht, 
       };
       const eventLabel = eventLabels[timedEventState.type] || timedEventState.type;
       const c = timedEventState.sceneCount;
-      if (c >= 4) {
-        recap += `\n\nZEITLICH-BEGRENZTER ANLASS LAEUFT AB (${eventLabel}, Szene ${c}):
+      // v6.67: Gerichtsverhandlung soll deutlich kuerzer dauern als andere
+      // Anlaesse - 1-3 Stunden Realzeit, max 3-4 Szenen. Wenn Tageswechsel
+      // ueberschritten wird waehrend Karl im Gerichtsgebaeude ist, ist das
+      // ein Bug-Signal.
+      const isGericht = timedEventState.type === 'gericht';
+      const hardCap = isGericht ? 3 : 4;
+      const warnCap = isGericht ? 2 : 2;
+      if (c >= hardCap) {
+        if (isGericht) {
+          recap += `\n\nGERICHTSVERHANDLUNG MUSS JETZT ENDEN (${eventLabel}, Szene ${c}):
+Eine Gerichtsverhandlung dauert in Wirklichkeit 1-3 STUNDEN, dann wird die Sitzung vertagt oder beendet. Du bist jetzt schon ${c} Szenen lang im Gerichtsgebaeude. SPAETESTENS in der NAECHSTEN Szene MUSS:
+- Die Richterin die Sitzung schliessen ("Die Verhandlung ist vertagt auf...", "Damit ist die heutige Sitzung beendet")
+- ODER ein Eklat/Tumult die Sitzung unterbrechen
+- ODER Karl wird entlassen ("Sie koennen gehen") und VERLAESST das Gebaeude
+- Karl darf NICHT mehr im Saal/Flur/Treppenhaus sitzen wenn Tag wechselt
+- Eine Gerichtsverhandlung darf NIEMALS ueber zwei Tage durchgehend laufen
+- Falls die Story einen zweiten Verhandlungstag braucht: erzaehle EXPLIZIT den Nachhauseweg, die Nacht, das Aufwachen am naechsten Morgen, den Weg zum Gericht. Cut von "T1 Nachmittag im Saal" zu "T2 Morgen im Saal" ist VERBOTEN.`;
+        } else {
+          recap += `\n\nZEITLICH-BEGRENZTER ANLASS LAEUFT AB (${eventLabel}, Szene ${c}):
 Dieser Anlass hat in Wirklichkeit eine begrenzte Dauer (eine Beerdigung dauert 1-2 Stunden, dann gehen alle nach Hause). Du bist jetzt schon ${c} Szenen lang an diesem Anlass. SPAETESTENS in der NAECHSTEN Szene MUSS das Ereignis enden:
 - Trauergaeste zerstreuen sich, gehen weg, die Beerdigung ist vorbei
 - ODER: Karl verlaesst aktiv den Ort (in den Wagen, zurueck ins Buero, in die Stadt)
 - Erfinde keine "Beisetzung in einer Stunde" wenn am Grab schon getrauert wurde - das Ereignis war schon
 Es ist NICHT realistisch, dass eine Trauergesellschaft 18 Stunden an einem Grab steht oder in einer Sakristei uebernachtet. Beende den Anlass jetzt erzaehlerisch.`;
-      } else if (c >= 2) {
-        recap += `\n\nZEITLICH-BEGRENZTER ANLASS LAEUFT (${eventLabel}, Szene ${c} von max 4): Beachte dass dieser Anlass eine begrenzte Dauer hat. Spaetestens nach 4 Szenen muss er enden (Trauergaeste zerstreuen sich, Karl geht weiter).`;
+        }
+      } else if (c >= warnCap) {
+        if (isGericht) {
+          recap += `\n\nGERICHTSVERHANDLUNG LAEUFT (${eventLabel}, Szene ${c} von max ${hardCap}): Eine Verhandlung dauert maximal 1-3 Stunden. Nach Szene ${hardCap} MUSS sie enden (Richterin schliesst Sitzung, Karl wird entlassen, Eklat unterbricht). Karl darf NICHT im Gerichtsgebaeude den Tag wechseln.`;
+        } else {
+          recap += `\n\nZEITLICH-BEGRENZTER ANLASS LAEUFT (${eventLabel}, Szene ${c} von max ${hardCap}): Beachte dass dieser Anlass eine begrenzte Dauer hat. Spaetestens nach ${hardCap} Szenen muss er enden (Trauergaeste zerstreuen sich, Karl geht weiter).`;
+        }
       }
     }
     // Fall-Fortschritt mitschicken
@@ -6423,8 +6445,11 @@ function detectTimedEvent(scene) {
   if (/\b(pressekonferenz|vorstellung|theater|opernhaus|pressetermin|empfang)\b/.test(combined)) {
     return 'pressekonferenz';
   }
-  // Gerichtsverhandlung / Anhoerung
-  if (/\b(gerichtsverhandlung|anhoerung|gerichtssaal|prozess\s+gegen|verhandlungssaal)\b/.test(combined)) {
+  // Gerichtsverhandlung / Anhoerung (v6.67: deutlich mehr Trigger, weil
+  // Goerke-Run hatte Saal 4 + Richterin + Anklagebank aber keinen "gerichtssaal".
+  // Eine Verhandlung dauert in Wirklichkeit max 3-4 Stunden, dann wird vertagt.
+  // Wir muessen den Anlass deutlich frueher erkennen.)
+  if (/\b(gerichtsverhandlung|anhoerung|gerichtssaal|prozess\s+gegen|verhandlungssaal|kreisgericht|landgericht|amtsgericht|saal\s+4|saal\s+\d+|richterin|richter\s+|anklagebank|anklage\s|zeugenbank|zeugenstand|staatsanwalt|verteidigung|verhandlung)\b/.test(combined)) {
     return 'gericht';
   }
   return null;
@@ -6930,6 +6955,17 @@ function fixCommonGrammarErrors(text) {
   result = result.replace(
     /(„[^"]{1,80}),\s+Karl\b(?!\s+Mauer)(["," ])/g,
     '$1, Mauer$2'
+  );
+
+  // v6.67: BAUMGARTEN-ROLLENKONFLIKT-FIX
+  // Baumgarten ist KARLS Anwalt (storyFacts). Mistral schreibt manchmal
+  // "Goerke ... sein Anwalt Baumgarten" - das vertauscht die Rollen.
+  // Wir ersetzen "sein Anwalt Baumgarten" (im Kontext eines anderen NPC) durch
+  // "sein Verteidiger" (neutraler, koennte ein anderer Anwalt sein).
+  // Faengt typische Konstellationen wie "Goerke ... sein Anwalt Baumgarten" ab.
+  result = result.replace(
+    /\b(Goerke|der\s+Angeklagte|der\s+Verdaechtige)\b([^.!?]{0,80}?)\bsein\s+Anwalt\s+Baumgarten\b/gi,
+    '$1$2sein Verteidiger'
   );
 
   return result;
@@ -7467,7 +7503,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         /der\s+laerm\s+der\s+stadt/i,
         /(rattern|klappern|knattern|rumpeln|rattert|klappert|rumpelt)\b(?:[^.!?]{0,80})\b(strassenbahn|lastwagen|s-bahn|zuege|zuge?s?|bahn|zug|wagen|gefaehrt)/i,
         /(s-bahn|strassenbahn|lastwagen|bahn|zug|zuege|wagen)\s+(?:[^.!?]{0,30})\b(rattert|klappert|rumpelt|rattern|klappern|rumpeln|knattert|knattern)/i,
-        /geruch\s+von\s+(altem|nassem)\s+(holz|stein)\s+und\s+(staub|altem\s+stein)/i,
+        /geruch\s+von\s+(altem|nassem|alter|nasser)\s+(holz|stein|papier|stoff|leder|wollstoff)(\s+und\s+(staub|altem\s+stein|bohnerwachs|wachs|farbe|papier|tabak|rauch))?/i,
         /(sein|ihr)\s+mantel\s+weht\s+im\s+wind/i,
         /die\s+akustik\s+des\s+(leeren\s+)?flurs/i,
         /der\s+wind\s+traegt\s+den\s+geruch/i,
@@ -7488,7 +7524,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         /Der\s+L(ä|ae)rm\s+der\s+Stadt/i,
         /(Rattern|Klappern|Knattern|Rumpeln|rattert|klappert|rumpelt)\b(?:[^.!?]{0,80})\b(Stra(ß|ss)enbahn|Lastwagen|S-Bahn|Zuge?s?|Bahn|Zug|Wagen|Gef(ä|ae)hrt)/i,
         /(S-Bahn|Stra(ß|ss)enbahn|Lastwagen|Bahn|Zug|Wagen)\s+(?:[^.!?]{0,30})\b(rattert|klappert|rumpelt|rattern|klappern|rumpeln|knattert|knattern)/i,
-        /Geruch\s+von\s+(altem|nassem)\s+(Holz|Stein)\s+und\s+(Staub|altem\s+Stein)/i,
+        /Geruch\s+von\s+(altem|nassem|alter|nasser)\s+(Holz|Stein|Papier|Stoff|Leder|Wollstoff)(\s+und\s+(Staub|altem\s+Stein|Bohnerwachs|Wachs|Farbe|Papier|Tabak|Rauch))?/i,
         /(sein|ihr)\s+Mantel\s+weht\s+im\s+Wind/i,
         /Die\s+Akustik\s+des\s+(leeren\s+)?Flurs/i,
         /Der\s+Wind\s+tr(ä|ae)gt\s+den\s+Geruch/i,
