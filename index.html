@@ -1104,6 +1104,20 @@
     color: rgba(210,140,170,0.95);
     background: rgba(180,110,140,0.05);
   }
+  /* v7.7: AUFLOESUNGS-Marker - Option fuehrt zur Fall-Aufloesung
+     (Klient besuchen, Verdaechtigen uebergeben, Vermisste Person zurueckbringen) */
+  .option-marker-resolve {
+    border-color: rgba(220,180,80,0.65);
+    color: rgba(240,210,120,1);
+    background: rgba(220,180,80,0.1);
+    font-weight: 600;
+  }
+  /* v7.7: HEILUNGS-Marker - Doc Wagner aufsuchen bei niedriger Verfassung */
+  .option-marker-heal {
+    border-color: rgba(110,180,120,0.55);
+    color: rgba(150,220,160,0.95);
+    background: rgba(110,180,120,0.06);
+  }
   /* Loading */
   .loading {
     display: flex;
@@ -1815,7 +1829,7 @@
     <button class="btn-primary" onclick="startRandomGame()">Zufällige Ermittlung</button>
     <br>
     <button class="btn-secondary" onclick="showSetupSelector()">Fall auswählen</button>
-    <div class="start-version">Schatten v7.6 · Musik-Lautstärke + iOS-Ducking-Kompensation</div>
+    <div class="start-version">Schatten v7.7 · Auflösungs-Marker + Phantom-Verletzungs-Schutz + Vermisste-Person-gefunden</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -1892,7 +1906,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.6</span>
+    <span>Schatten v7.7</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -3557,7 +3571,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.6';
+window.SCHATTEN_VERSION = 'v7.7';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -6757,16 +6771,58 @@ function renderLog() {
 function renderOptions(scene) {
   const list = document.getElementById('options-list');
   list.innerHTML = '';
+  // v7.7: Context fuer Resolve/Heal-Detektion vorab bauen
+  // (gleicher Kontext fuer alle Optionen dieser Szene)
+  let resolveContext = null;
+  try {
+    const targetFact = (caseSetup && caseSetup.setupCast)
+      ? caseSetup.setupCast.find(c => c && c.tag === 'TARGET') : null;
+    const targetName = targetFact ? targetFact.name : '';
+    // TARGET-Person in personenImRaum (cast)?
+    let targetPresent = false;
+    if (targetName && Array.isArray(cast)) {
+      const targetFirstWord = targetName.split(/\s+/)[0].toLowerCase();
+      for (const npc of cast) {
+        const npcName = (typeof npc === 'string' ? npc : (npc && npc.name) || '').toLowerCase();
+        if (npcName && npcName.includes(targetFirstWord)) {
+          targetPresent = true;
+          break;
+        }
+      }
+    }
+    resolveContext = {
+      stage: (caseProgress && caseProgress.stage) || 0,
+      ueberfuehrt: !!(caseProgress && caseProgress.ueberfuehrt),
+      caseType: (caseSetup && caseSetup.caseType) || '',
+      targetName: targetName,
+      targetPresent: targetPresent,
+      clientName: (clientProfile && clientProfile.name) || '',
+      verfassung: verfassung,
+    };
+  } catch (err) {
+    console.warn('[Schatten] renderOptions context bauen fehlgeschlagen:', err);
+    resolveContext = {};
+  }
   scene.optionen.forEach(opt => {
     const btn = document.createElement('button');
     btn.className = 'option-btn';
-    // Marker: wenn diese Option Tageswechsel/Essen/Romantik triggert, visuell anzeigen.
-    // Detektion vor dem Klick, damit der Spieler informiert entscheiden kann.
+    // Marker: wenn diese Option Tageswechsel/Essen/Romantik/Aufloesung/Heilung triggert,
+    // visuell anzeigen. Detektion vor dem Klick, damit der Spieler informiert entscheiden kann.
+    // v7.7: Reihenfolge nach Prioritaet - Aufloesung hat hoechste Prioritaet (golden,
+    // signalisiert dem User dass der Fall hier endet)
+    const isResolveOption = detectResolveAction(opt.text, resolveContext);
+    const isHealOption = detectHealAction(opt.text, resolveContext);
     const isSleepOption = detectExplicitSleep(opt.text);
     const isRomanticOption = detectRomanticAction(opt.text);
     const isFoodOption = detectFoodAction(opt.text);
     let markerHtml = '';
-    if (isRomanticOption) {
+    if (isResolveOption) {
+      // v7.7: HOECHSTE Prioritaet - signalisiert Fall-Aufloesung
+      markerHtml = '<span class="option-marker option-marker-resolve">⚡ AUFLOESUNG</span>';
+    } else if (isHealOption) {
+      // v7.7: Heilung bei niedriger Verfassung
+      markerHtml = '<span class="option-marker option-marker-heal">+ BEHANDLUNG</span>';
+    } else if (isRomanticOption) {
       // Romantik impliziert auch Tageswechsel wenn Uebernachten dabei ist
       markerHtml = '<span class="option-marker option-marker-romance">♥ NACHTLICH</span>';
     } else if (isSleepOption) {
@@ -7428,6 +7484,14 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
       } else {
         recap += ` Karl hat noch ${lastInjury}, aber das ist schon ${scenesSinceInjury} Szenen her. NICHT mehr in der Erzaehlung erwaehnen ausser es passiert etwas das die Wunde wieder reizt (neuer Schlag, schnelle Bewegung, jemand fasst die Stelle an). Konstante Erinnerungen an alte Verletzungen werden zur Pumphrase.`;
       }
+    } else if (verfassung >= 4) {
+      // v7.7: Anti-Phantom-Verletzungs-Push - wenn Karl KEINE getrackte Verletzung
+      // hat und gut bei Verfassung ist, explizit der KI sagen: keine Verletzung
+      // erfinden. Anlass: Renate-Run v7.6 - Mistral erfand spontan "Schulter
+      // schmerzt von dem Sturz vorhin, ein Bluterguss bildet sich" in Sz 8,
+      // ohne dass Karl je gestuerzt war. Die Verletzung verfestigte sich dann
+      // ueber 7 Szenen und wurde sogar im Status-Export gespeichert.
+      recap += ` Karl hat KEINE relevante Verletzung. Erfinde NICHT spontan Stuerze, Prellungen, Blutergusse oder Schmerzen aus dem Nichts (kein "die Schulter schmerzt von dem Sturz vorhin" wenn Karl gar nicht gestuerzt ist). Wenn neue Verletzungen auftreten, dann nur als direkte Folge einer KONKRETEN Handlung in dieser Szene (z.B. ein Schlag von einem NPC, ein echter Sturz den du erzaehlst).`;
     }
     if (verfassung <= 2) {
       recap += ` WICHTIG: Karl ist deutlich angeschlagen. Die naechste Szene MUSS das zeigen (Bewegungseinschraenkung, Schmerz, Schwindel, Atemnot). Mindestens eine der vier Optionen muss in Richtung Versorgung/Ausruhen/Versteck gehen.`;
@@ -10432,6 +10496,93 @@ function expandAbbreviations(text) {
   return result;
 }
 
+// v7.7: Erkennt ob diese Option zur Fall-Aufloesung fuehrt:
+// - Bei Vermisst-Fall: Karl hat TARGET-Person bei sich + Option fuehrt zu Klienten
+// - Bei allen Faellen: Karl ist in Stage 3 (Verdaechtiger ueberfuehrt) + Option fuehrt zu Klienten
+// Anlass: Renate-Run v7.6 - User wusste nicht dass "Bruno zu Renate bringen" den
+// Fall loest, weil Bruno-Auffinden nicht im System getrackt war. Markierung als
+// goldenes ⚡ AUFLOESUNG hilft dem Spieler zu erkennen wann der Fall geloest werden kann.
+function detectResolveAction(text, context) {
+  if (!text) return false;
+  const lower = text.toLowerCase()
+    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+  const ctx = context || {};
+  // v7.7: Negation - wenn die Option zu Doc Wagner / Praxis / Arzt fuehrt, ist es
+  // KEINE Aufloesung sondern eine Heilung. Auch wenn dabei TARGET-Person mitgenommen wird.
+  if (/\b(doc\s+wagner|wagner|praxis|schaeferstrasse|krankenhaus|arzt|verarzt)\b/.test(lower)) {
+    return false;
+  }
+  // Schritt 1: prinzipiell erlaubt? Nur wenn entweder Stage >= 3 ODER (Vermisst + Person bei Karl)
+  const stage = ctx.stage || 0;
+  const ueberfuehrt = !!ctx.ueberfuehrt;
+  const caseType = ctx.caseType || '';
+  const targetPresent = !!ctx.targetPresent;  // TARGET-Person ist in personenImRaum
+  const klientName = (ctx.clientName || '').toLowerCase()
+    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+  // v7.7: Auch bei Stage 2+TARGET-Present qualifiziert als Aufloesung
+  // (Mistral setzt bei Vermisst manchmal nie tatverdaechtiger_ueberfuehrt)
+  const eligibleForResolve = ueberfuehrt
+    || (caseType === 'vermisst' && targetPresent)
+    || (caseType === 'beschatten' && stage >= 2);
+  if (!eligibleForResolve) return false;
+  // Schritt 2: Option fuehrt erkennbar zum Klienten / Auftraggeber
+  // 2a) Klient namentlich genannt + Verb (bringen/zu/zurueck/abliefern)
+  if (klientName) {
+    const klientFirstName = klientName.split(/\s+/)[0];
+    if (klientFirstName.length >= 3 && lower.includes(klientFirstName)) {
+      // Klient-Name vorhanden + Bewegungs- oder Berichts-Verb
+      if (/\b(bring|fahr|fahre|gehe?|geh\s|zurueck|melde|berichte|liefer|treff|ueberbring|uebergib)\w*/.test(lower)) {
+        return true;
+      }
+    }
+  }
+  // 2b) "zum Klienten / zur Klientin / zur Auftraggeberin" etc.
+  if (/\b(zum?\s+klient\w*|zur\s+klient\w*|zur?\s+auftraggeb\w*|nach\s+hause\s+(zu|bringen)|heimbringen|heimfahren)\b/.test(lower)) {
+    return true;
+  }
+  // 2c) Roth/Lindner uebergeben (Polizei) - klassische Ueberfuehrung
+  if (ueberfuehrt && /\b(roth|lindner|kommissar|volkspolizei)\b/.test(lower)
+      && /\b(uebergib|uebergeb|melde|bring|liefer|alarmier|hol|berichten?|festnehmen|verhaft)\w*/.test(lower)) {
+    return true;
+  }
+  // 2d) Bei Vermisst + TARGET present: "<Name> nach Hause bringen" / "<Name> abliefern"
+  if (caseType === 'vermisst' && targetPresent) {
+    const targetName = (ctx.targetName || '').toLowerCase()
+      .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+    const targetFirst = targetName.split(/\s+/)[0];
+    if (targetFirst.length >= 3 && lower.includes(targetFirst)) {
+      // Verb der TARGET wegbringt / abliefert
+      if (/\b(bring|fahr|fahre|abliefer|heimfahr|heimbring|nach\s+hause|zu\s+(seiner?|ihre?[mr]?))\w*/.test(lower)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+// v7.7: Erkennt ob diese Option zur Verarztung bei Doc Wagner fuehrt.
+// Wird nur als Marker angezeigt wenn Karls Verfassung niedrig ist (<=3).
+function detectHealAction(text, context) {
+  if (!text) return false;
+  const lower = text.toLowerCase()
+    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+  const ctx = context || {};
+  const verfassung = typeof ctx.verfassung === 'number' ? ctx.verfassung : 5;
+  // Nur relevant wenn Verfassung niedrig
+  if (verfassung > 3) return false;
+  // Doc-Wagner-spezifisch oder allgemeine medizinische Aktion
+  if (/\b(doc\s+wagner|wagner|schaeferstrasse|praxis)\b/.test(lower)
+      && /\b(zu|zur|in\s+die|aufsuch|besuch|fahr|fahre|gehe?|geh\s|bring)\w*/.test(lower)) {
+    return true;
+  }
+  // Allgemein: Arzt/Krankenhaus aufsuchen, verarzten lassen
+  if (/\b(verarzt|verbinden\s+lassen|behandel|krankenhaus|arzt)\b/.test(lower)
+      && /\b(zu|zur|aufsuch|besuch|lass|fahr|fahre|gehe?|bring)\w*/.test(lower)) {
+    return true;
+  }
+  return false;
+}
+
 function detectFoodAction(text) {
   if (!text) return false;
   const lower = text.toLowerCase()
@@ -12546,7 +12697,30 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       // obwohl die Erzaehlung 14 Szenen lang gar nicht mehr bei Hollenbeck war.
       if (caseProgress.stage === 2 && !caseProgress.ueberfuehrt) {
         const stage2Scenes = sceneCounter - (caseProgress.stage2StartScene || sceneCounter);
-        if (stage2Scenes >= 10) {
+        // v7.7: SCHNELL-Stage-3 fuer vermisst-Faelle: wenn die TARGET-Person
+        // physisch bei Karl ist (in personenImRaum/cast), ist sie "gefunden".
+        // Anlass: Renate-Run v7.6 - Bruno wurde befreit, fuhr 5 Szenen mit Karl
+        // im Opel, aber Stage blieb "undefined" weil das System die direkte
+        // Praesenz der TARGET-Person nicht als Auffinden erkannte.
+        let targetPhysicallyPresent = false;
+        if (targetName && Array.isArray(cast) && cast.length > 0) {
+          const tFirst = targetName.split(/\s+/)[0].toLowerCase();
+          for (const npc of cast) {
+            const npcName = (typeof npc === 'string' ? npc : (npc && npc.name) || '').toLowerCase();
+            if (npcName && tFirst.length >= 3 && npcName.includes(tFirst)) {
+              targetPhysicallyPresent = true;
+              break;
+            }
+          }
+        }
+        if (ct === 'vermisst' && targetPhysicallyPresent && stage2Scenes >= 1) {
+          caseProgress.ueberfuehrt = true;
+          caseProgress.stage = 3;
+          caseProgress.stage3StartScene = sceneCounter;
+          console.log('[Schatten] AUTO-FORCING Stage 3 (vermisst): TARGET ' + targetName + ' physisch bei Karl');
+          diag('progress', '✦ AUTO-STAGE 3 (vermisst) erzwungen: ' + targetName + ' bei Karl (gefunden)');
+          showProgressToast('VERMISSTE PERSON GEFUNDEN', targetName + ' ist bei Karl. Jetzt zur Klientin bringen, dann ist der Fall geloest.');
+        } else if (stage2Scenes >= 10) {
           // Inhalts-Check
           const recentScenes = logEntries.filter(e => e && e.type === 'scene').slice(-5);
           const recentText = recentScenes.map(e => (e.text || '').toLowerCase()).join(' ');
