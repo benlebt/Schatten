@@ -1815,7 +1815,7 @@
     <button class="btn-primary" onclick="startRandomGame()">Zufällige Ermittlung</button>
     <br>
     <button class="btn-secondary" onclick="showSetupSelector()">Fall auswählen</button>
-    <div class="start-version">Schatten v7.5 · Vorlese-Stimm-Auswahl + Geschwindigkeit</div>
+    <div class="start-version">Schatten v7.6 · Musik-Lautstärke + iOS-Ducking-Kompensation</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -1892,7 +1892,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.5</span>
+    <span>Schatten v7.6</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -3557,7 +3557,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.5';
+window.SCHATTEN_VERSION = 'v7.6';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -4088,14 +4088,28 @@ function closeSettings() {
 // Spielt music.mp3 (im Repo-Root, neben index.html) im Loop ab.
 // Toggle-State in localStorage, damit es bei naechstem Besuch erhalten bleibt.
 // User-initiated wegen Autoplay-Block der Browser (Brave/Safari/Chrome).
+// v7.6: Lautstaerke ist jetzt user-konfigurierbar in localStorage.
+function getMusicVolumeNormal() {
+  const v = parseFloat(localStorage.getItem('schatten-music-volume'));
+  return (isFinite(v) && v >= 0 && v <= 1) ? v : 0.4;
+}
+function getMusicVolumeWhileSpeaking() {
+  const v = parseFloat(localStorage.getItem('schatten-music-volume-speaking'));
+  // Default 1.0 (Max) - iOS dimmt durch audio ducking ohnehin runter,
+  // wir muessen also den vollen Pegel anlegen damit ueberhaupt etwas durchkommt
+  return (isFinite(v) && v >= 0 && v <= 1) ? v : 1.0;
+}
+
 function toggleMusic(event) {
   if (event) event.stopPropagation();
   const audio = document.getElementById('bg-music');
   const btn = document.getElementById('music-toggle-btn');
   if (!audio || !btn) return;
   if (audio.paused) {
-    // Lautstaerke moderat halten, damit nichts uebersteuert
-    audio.volume = 0.4;
+    // v7.6: Lautstaerke aus localStorage statt hartem Default
+    audio.volume = (typeof speakCurrentActive !== 'undefined' && speakCurrentActive)
+      ? getMusicVolumeWhileSpeaking()
+      : getMusicVolumeNormal();
     audio.play().then(() => {
       btn.textContent = '🔇 Musik ausschalten';
       localStorage.setItem('schatten-music-on', '1');
@@ -4111,6 +4125,32 @@ function toggleMusic(event) {
     localStorage.removeItem('schatten-music-on');
     diag('state', 'Musik ausgeschaltet');
   }
+}
+
+// v7.6: Musik-Lautstaerke beim Vorlesen anpassen.
+// iOS macht "audio ducking" - dimmt automatisch alle anderen Audio-Quellen wenn
+// SpeechSynthesis laeuft. Wir koennen das nicht direkt steuern, aber wenn wir
+// den Pegel der Musik vor dem Vorlesen hochziehen, bleibt nach dem Ducking
+// genug uebrig. Beim Stop fahren wir die Lautstaerke wieder runter.
+function fadeMusicForSpeech(speaking) {
+  const audio = document.getElementById('bg-music');
+  if (!audio || audio.paused) return;
+  const targetVolume = speaking ? getMusicVolumeWhileSpeaking() : getMusicVolumeNormal();
+  // Sanftes Fade (200ms) um knacken zu vermeiden
+  const startVolume = audio.volume;
+  const steps = 8;
+  const stepDuration = 25; // ms
+  const delta = (targetVolume - startVolume) / steps;
+  let stepCount = 0;
+  const fadeInterval = setInterval(() => {
+    stepCount++;
+    if (stepCount >= steps) {
+      audio.volume = targetVolume;
+      clearInterval(fadeInterval);
+    } else {
+      audio.volume = Math.max(0, Math.min(1, startVolume + delta * stepCount));
+    }
+  }, stepDuration);
 }
 
 // v7.3: VORLESEN-FUNKTION. Liest die aktuelle Szene + Optionen mit
@@ -4336,6 +4376,74 @@ function showVoicePicker(event) {
   rateBlock.appendChild(slider);
   inner.appendChild(rateBlock);
 
+  // v7.6: Musik-Lautstaerke (normal)
+  const musicVol = getMusicVolumeNormal();
+  const musicBlock = document.createElement('div');
+  musicBlock.className = 'voice-picker-rate';
+  const musicLabel = document.createElement('label');
+  musicLabel.textContent = 'Musik-Lautstaerke: ';
+  const musicValue = document.createElement('span');
+  musicValue.className = 'voice-picker-rate-value';
+  musicValue.textContent = Math.round(musicVol * 100) + '%';
+  musicLabel.appendChild(musicValue);
+  musicBlock.appendChild(musicLabel);
+  const musicSlider = document.createElement('input');
+  musicSlider.type = 'range';
+  musicSlider.min = '0';
+  musicSlider.max = '1';
+  musicSlider.step = '0.05';
+  musicSlider.value = String(musicVol);
+  musicSlider.className = 'voice-picker-slider';
+  musicSlider.oninput = () => {
+    const v = parseFloat(musicSlider.value);
+    musicValue.textContent = Math.round(v * 100) + '%';
+    localStorage.setItem('schatten-music-volume', String(v));
+    // Live anwenden wenn Musik laeuft und nicht gerade gesprochen wird
+    const audio = document.getElementById('bg-music');
+    if (audio && !audio.paused && !(typeof speakCurrentActive !== 'undefined' && speakCurrentActive)) {
+      audio.volume = v;
+    }
+  };
+  musicBlock.appendChild(musicSlider);
+  inner.appendChild(musicBlock);
+
+  // v7.6: Musik-Lautstaerke beim Vorlesen (iOS-Ducking-Kompensation)
+  const musicSpeakVol = getMusicVolumeWhileSpeaking();
+  const musicSpeakBlock = document.createElement('div');
+  musicSpeakBlock.className = 'voice-picker-rate';
+  const musicSpeakLabel = document.createElement('label');
+  musicSpeakLabel.textContent = 'Musik beim Vorlesen: ';
+  const musicSpeakValue = document.createElement('span');
+  musicSpeakValue.className = 'voice-picker-rate-value';
+  musicSpeakValue.textContent = Math.round(musicSpeakVol * 100) + '%';
+  musicSpeakLabel.appendChild(musicSpeakValue);
+  musicSpeakBlock.appendChild(musicSpeakLabel);
+  const musicSpeakSlider = document.createElement('input');
+  musicSpeakSlider.type = 'range';
+  musicSpeakSlider.min = '0';
+  musicSpeakSlider.max = '1';
+  musicSpeakSlider.step = '0.05';
+  musicSpeakSlider.value = String(musicSpeakVol);
+  musicSpeakSlider.className = 'voice-picker-slider';
+  musicSpeakSlider.oninput = () => {
+    const v = parseFloat(musicSpeakSlider.value);
+    musicSpeakValue.textContent = Math.round(v * 100) + '%';
+    localStorage.setItem('schatten-music-volume-speaking', String(v));
+    // Live anwenden wenn gerade vorgelesen wird
+    const audio = document.getElementById('bg-music');
+    if (audio && !audio.paused && (typeof speakCurrentActive !== 'undefined' && speakCurrentActive)) {
+      audio.volume = v;
+    }
+  };
+  musicSpeakBlock.appendChild(musicSpeakSlider);
+  const speakHint = document.createElement('div');
+  speakHint.className = 'voice-picker-hint';
+  speakHint.style.marginTop = '4px';
+  speakHint.style.fontSize = '11px';
+  speakHint.textContent = 'Tipp: hoch einstellen, da iOS die Musik beim Sprechen automatisch leiser zieht.';
+  musicSpeakBlock.appendChild(speakHint);
+  inner.appendChild(musicSpeakBlock);
+
   // Schliessen-Button
   const closeBtn = document.createElement('button');
   closeBtn.className = 'voice-picker-close';
@@ -4385,6 +4493,8 @@ function startSpeakCurrent() {
   window.speechSynthesis.cancel();
   speakCurrentUtterances = [];
   speakCurrentActive = true;
+  // v7.6: Musik hochfahren um iOS audio ducking zu kompensieren
+  fadeMusicForSpeech(true);
   const fab = document.getElementById('speak-fab');
   if (fab) {
     fab.classList.add('speaking');
@@ -4398,6 +4508,8 @@ function startSpeakCurrent() {
       // Letzter Block: nach Ende den FAB zuruecksetzen
       u.onend = () => {
         speakCurrentActive = false;
+        // v7.6: Musik wieder runter auf normal
+        fadeMusicForSpeech(false);
         if (fab) {
           fab.classList.remove('speaking');
           fab.textContent = '🔊';
@@ -4418,6 +4530,8 @@ function stopSpeakCurrent() {
   window.speechSynthesis.cancel();
   speakCurrentUtterances = [];
   speakCurrentActive = false;
+  // v7.6: Musik wieder runter auf normal
+  fadeMusicForSpeech(false);
   const fab = document.getElementById('speak-fab');
   if (fab) {
     fab.classList.remove('speaking');
