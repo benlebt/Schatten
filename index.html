@@ -1249,7 +1249,7 @@
       Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
     </p>
     <button class="btn-primary" onclick="startGame()">Ermittlung beginnen</button>
-    <div class="start-version">Schatten v6.40 · Setup-Drift-Schutz · Hunger-Force · Abkürzungs-Dedup</div>
+    <div class="start-version">Schatten v6.41 · 413-Failover · Token-Skip-Liste · GPT-OSS-Exclude</div>
   </div>
 
   <!-- Game Log -->
@@ -1317,7 +1317,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v6.40 · Setup-Drift-Schutz · Hunger-Force · Abkürzungs-Dedup</span>
+    <span>Schatten v6.41 · 413-Failover · Token-Skip-Liste · GPT-OSS-Exclude</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -1894,7 +1894,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v6.40';
+window.SCHATTEN_VERSION = 'v6.41';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -3505,6 +3505,18 @@ const MODEL_CHAIN = [
 const MODEL_CHAIN_VERSION = 4;
 
 // Aktuelle Position in der Kette aus localStorage (mit Tagesreset + Chain-Version-Check).
+// Session-Skip-Liste: Modelle die strukturell zu wenig TPM fuer unseren
+// 48KB-System-Prompt haben (z.B. GPT-OSS-120B mit 8K TPM). Diese werden
+// fuer die laufende Session permanent uebersprungen - kein Re-Versuch
+// nach Wartezyklus, weil das Limit ein API-Setting ist, kein Throttle.
+// In-Memory only - bei Page-Reload wird neu probiert.
+// PRE-POPULIERT mit bekannten 8K-TPM-Modellen die unseren 10K-Prompt nicht stemmen,
+// damit gar nicht erst ein fehlgeschlagener Cycle stattfindet.
+let sessionSkippedModels = new Set([
+  'openai/gpt-oss-120b', // 8K TPM bei Groq Free Tier - zu klein fuer unseren ~10K-Prompt
+  'openai/gpt-oss-20b',  // 8K TPM, gleiches Problem
+]);
+
 function getActiveModelIndex() {
   try {
     const raw = localStorage.getItem('schatten-model-idx');
@@ -3527,17 +3539,44 @@ function setActiveModelIndex(idx) {
 }
 
 function getActiveModel() {
-  return MODEL_CHAIN[getActiveModelIndex()];
+  // Wenn das gespeicherte aktive Modell in der Skip-Liste ist (z.B. Reload nach
+  // einem Token-Crash), automatisch zum naechsten passenden weiter.
+  let idx = getActiveModelIndex();
+  while (idx < MODEL_CHAIN.length && sessionSkippedModels.has(MODEL_CHAIN[idx].model)) {
+    idx++;
+  }
+  if (idx >= MODEL_CHAIN.length) {
+    // Alle weg - fallback auf den letzten nicht-geskippten, oder eben Index 0
+    for (let i = MODEL_CHAIN.length - 1; i >= 0; i--) {
+      if (!sessionSkippedModels.has(MODEL_CHAIN[i].model)) {
+        setActiveModelIndex(i);
+        return MODEL_CHAIN[i];
+      }
+    }
+    return MODEL_CHAIN[0]; // hard fallback
+  }
+  if (idx !== getActiveModelIndex()) {
+    setActiveModelIndex(idx);
+  }
+  return MODEL_CHAIN[idx];
 }
 
 // Wechsle zum naechsten Modell in der Kette. Gibt das neue Modell-Objekt zurueck,
-// oder null wenn alle durch sind.
+// oder null wenn alle durch sind. Ueberspringt Modelle die in der
+// sessionSkippedModels-Liste stehen (TPM-zu-klein fuer unseren Prompt).
 function advanceModel() {
-  const idx = getActiveModelIndex();
-  if (idx >= MODEL_CHAIN.length - 1) return null;
-  const nextIdx = idx + 1;
-  setActiveModelIndex(nextIdx);
-  return MODEL_CHAIN[nextIdx];
+  let idx = getActiveModelIndex();
+  let nextIdx = idx + 1;
+  while (nextIdx < MODEL_CHAIN.length) {
+    const candidate = MODEL_CHAIN[nextIdx];
+    if (!sessionSkippedModels.has(candidate.model)) {
+      setActiveModelIndex(nextIdx);
+      return candidate;
+    }
+    console.log('[Schatten] Skip Modell (Session-skipped):', candidate.label);
+    nextIdx++;
+  }
+  return null;
 }
 
 function getProviderEndpoint(provider) {
@@ -4186,6 +4225,24 @@ VERBOTEN: einfach mit "schraegem Morgenlicht" anfangen ohne zu erklaeren wo Karl
       // Gemini meldet das Daily-Limit ueber das Quota-Metric "generate_content_free_tier_requests"
       // mit konkretem Limit (20). Diese Phrase ist eindeutig taeglich.
       const isGeminiFreeTier = /generate_content_free_tier_requests/i.test(errMsg);
+      // STRUKTURELLES TPM-Limit erkennen: "Request too large" (Groq sendet das
+      // manchmal als 429 statt 413). Bedeutet: das Modell hat zu wenig TPM
+      // fuer unseren System-Prompt (z.B. GPT-OSS-120B mit 8K TPM, wir brauchen 10K).
+      // Auch nach 15s Wartezeit passt die Request da nicht rein - sofort wechseln.
+      const isTokenTooLarge = /request too large|exceeds.*token|max_tokens.*exceeded/i.test(errMsg);
+      if (isTokenTooLarge) {
+        err.isDailyLimit = true;
+        err.tokenTooLarge = true;
+        err.retryAfter = 1;
+        err.debugInfo = {
+          stage: 'token_too_large_429',
+          status: 429,
+          model: activeModel.label,
+          rawMessage: errMsg.slice(0, 500)
+        };
+        console.warn('[Schatten] Token-Size-Limit auf', activeModel.label, '(via 429) - Modell-Failover ohne Wait.');
+        throw err;
+      }
       err.isDailyLimit = isGeminiFreeTier || (!isPerMinute && /tokens per day|per day|TPD|daily quota|daily limit|RPD/i.test(errMsg));
 
       // For non-daily rate limits: cap the displayed wait based on provider.
@@ -4198,6 +4255,26 @@ VERBOTEN: einfach mit "schraegem Morgenlicht" anfangen ohne zu erklaeren wo Karl
       }
 
       err.debugInfo = { stage: 'rate_limit', retryAfter: err.retryAfter, originalRetryAfter: totalSeconds, isDailyLimit: err.isDailyLimit, rawMessage: errMsg.slice(0, 500) };
+      throw err;
+    }
+    // 413 = Request too large for this model's TPM limit. Das Modell hat
+    // schlicht zu wenig Tokens pro Minute fuer unsere ~10K Token Anfragen
+    // (z.B. GPT-OSS-120B mit 8K TPM, Llama-4-Scout teilweise auch). Kein
+    // Wartezyklus, sondern sofort zum naechsten Modell springen - bei
+    // einem groesseren Modell hat das Limit eine andere Hoehe.
+    if (response.status === 413) {
+      const err = new Error(errMsg);
+      err.isRateLimit = true;
+      err.isDailyLimit = true; // Behandlung als "Modell erschoepft" - sofort wechseln
+      err.retryAfter = 1;
+      err.tokenTooLarge = true;
+      err.debugInfo = {
+        stage: 'token_too_large',
+        status: 413,
+        model: activeModel.label,
+        rawMessage: errMsg.slice(0, 500)
+      };
+      console.warn('[Schatten] Token-Size-Limit auf', activeModel.label, '- Modell-Failover ohne Wait.');
       throw err;
     }
     // 400 = often JSON validation from Groq's structured output → retryable
@@ -6397,6 +6474,13 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       // wirklich kapitulieren und das Tageslimit-Bild zeigen.
       if (e.isDailyLimit) {
         const previousModel = getActiveModel();
+        // Token-too-large: das Modell hat strukturell zu wenig TPM fuer
+        // unseren System-Prompt. Permanent fuer diese Session ueberspringen,
+        // damit es bei kuenftigen Cycles nicht wieder probiert wird.
+        if (e.tokenTooLarge) {
+          sessionSkippedModels.add(previousModel.model);
+          console.warn('[Schatten] Modell permanent aus Session-Rotation:', previousModel.label, '(TPM zu klein fuer unsere Prompts)');
+        }
         const nextModel = advanceModel();
         if (nextModel) {
           console.log('[Schatten] Daily/TPD limit on', previousModel.label, '-> switching to', nextModel.label);
