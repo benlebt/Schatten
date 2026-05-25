@@ -1575,7 +1575,7 @@
     <button class="btn-primary" onclick="startRandomGame()">Zufällige Ermittlung</button>
     <br>
     <button class="btn-secondary" onclick="showSetupSelector()">Fall auswählen</button>
-    <div class="start-version">Schatten v6.78</div>
+    <div class="start-version">Schatten v6.79</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -1652,7 +1652,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v6.78</span>
+    <span>Schatten v6.79</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -3274,7 +3274,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v6.78';
+window.SCHATTEN_VERSION = 'v6.79';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -6381,12 +6381,28 @@ Es ist NICHT realistisch, dass eine Trauergesellschaft 18 Stunden an einem Grab 
 
     // Schlaf-Optionen-Logik nach Energie-Stufe (NICHT nach Szenen-Counter,
     // damit Mittag-Verhoere endlos laufen koennen ohne Schlaf-Pression).
-    if (karlEnergie <= 20 && isLowTension) {
-      // Am Ende: zwangsweise Einnicken-Szene
-      recap += `\n\nKARL AM ENDE (Energie: ${karlEnergie}/100 = ${eStufe.label}, Tageszeit: ${currentTime}): Karl kann nicht mehr. Die Augen fallen ihm zu, er torkelt. In dieser Szene MUSST du eine erzwungene Einnick-Sequenz erzaehlen: Karl kaempft gegen die Muedigkeit, sinkt aber dann doch erschoept ein (auf dem Buero-Stuhl, an einer Theke, auf einer Bank im Wachraum, in einem Hauseingang). verfassung_delta: -1 (schlechter Schlafplatz). Erzaehle den Tageswechsel direkt: "Du wachst auf, als die ersten Strassenbahnen quietschen". Optionen sind dann normale Morgen-Optionen.`;
+    // v6.79: VERSCHAERFT - bei Energie <=20 oder spaeter Nacht + muede gibt es
+    // KEINE inhaltlichen Optionen mehr, nur noch Schlaf-Varianten. Verhindert
+    // dass die KI "Verhandlung Tag 2" konstruiert weil Karl noch eine Frage
+    // stellen koennte.
+    // v6.79: Wenn Karl in einer formellen stationaeren Situation ist
+    // (Gericht, Verhoer, Beerdigung), MUSS die Situation erst beendet werden
+    // bevor er schlafen kann - wir signalisieren das im Push.
+    const currentOrt = (lastMainLocation || '').toLowerCase();
+    const recentSceneText = (lastFullScene && lastFullScene.szene ? lastFullScene.szene : '').toLowerCase();
+    const isFormalSetting = /gericht|verhandl|saal\s*\d|kreisgericht|kanzlei|beerdigung|trauerfeier|verhoer|haftanstalt|u-haft|untersuchungshaft|polizeirevier.*befragung/.test(currentOrt + ' ' + recentSceneText);
+    const formalHint = isFormalSetting ?
+      ' WICHTIG: Karl ist in einer formellen Situation (Gericht/Verhandlung/Verhoer/Beerdigung). Die Situation MUSS zuerst beendet sein (Vertagung, Schluss der Trauerfeier, Karl wird entlassen, Verhandlung wird abgebrochen) bevor er schlafen kann. Erzaehle in dieser Szene das Ende der formellen Situation - dann erst die Schlaf-Optionen.' : '';
+
+    if (karlEnergie <= 15 && isLowTension) {
+      // KOMPLETT AM ENDE: erzwungener Einnick, KEINE Wahl mehr
+      recap += `\n\nKARL VOELLIG AM ENDE (Energie ${karlEnergie}/100, ${currentTime}): Karl kann buchstaeblich nicht mehr stehen. Die Augen fallen ihm zu, er torkelt, die Welt verschwimmt. In dieser Szene MUSST du eine erzwungene Einnick-Sequenz erzaehlen - keine Wahl mehr, Karl SINKT EIN.${formalHint} Beschreibe wie er ploetzlich einnickt (auf dem Buero-Stuhl, an einer Theke, auf der Bank im Wachraum, im Auto am Steuer, in einem Hauseingang, je nachdem wo er gerade ist). verfassung_delta: -1 (schlechter Schlafplatz). Erzaehle den Tageswechsel direkt im Text der NACHFOLGENDEN Szene: "Du wachst auf, als..." Die 4 Optionen sind dann normale MORGEN-Optionen (Kaffee, Hilde anrufen, zum naechsten Ermittlungsschritt). KEINE Optionen vom Vortag wieder anbieten.`;
+    } else if (karlEnergie <= 25 && isAbendOderNacht && isLowTension) {
+      // SEHR ERSCHOEPFT + Abend/Nacht + ruhig: ALLE 4 OPTIONEN MUESSEN Schlaf/Heimweg sein
+      recap += `\n\nKARL MUSS SCHLAFEN JETZT (Energie ${karlEnergie}/100, ${currentTime}): Karl ist am Limit. ALLE 4 OPTIONEN MUESSEN Schlaf- oder Heimweg-Optionen sein - KEINE inhaltliche Ermittlungs-Option mehr erlaubt.${formalHint} Beispiele was sich anbietet (waehle 4 die zur Situation passen): "Zurueck ins Buero und sofort ins Bett", "Mit dem Opel nach Hause fahren und schlafen", "[Person im Raum] fragen ob du auf der Couch schlafen darfst", "Im Buero am Schreibtisch einnicken", "In den Wartesaal vom Bahnhof und auf der Bank schlafen", "Doc Wagner fragen ob er dich uebernachten laesst", "Marlene anrufen und fragen", "Im Auto auf dem Ruecksitz", "Bei Trude im Hinterzimmer auf dem Sofa". Im Erzaehltext: Karl gaehnt, reibt sich die Augen, die Schultern haengen, alles zieht ihn zum Schlaf. NPCs reagieren ("Mauer, Sie sehen fertig aus, gehen Sie nach Hause"). KEINE Option wie "noch eine Frage stellen", "noch zum naechsten Ort", "noch akten lesen" - das ist physisch unmoeglich.`;
     } else if (karlEnergie <= 40 && isAbendOderNacht && isLowTension) {
       // Erschoepft + Abend/Nacht + ruhig: 2-3 Schlaf-Optionen
-      recap += `\n\nKARL ERSCHOEPFT (Energie: ${karlEnergie}/100 = ${eStufe.label}, ${currentTime}): In den 4 Optionen MUESSEN 2-3 davon Tageswechsel-Optionen sein, kreativ je nach Situation: "Zurueck ins Buero und schlafen", "Bei [Person im Raum] auf der Couch schlafen", "Doc Wagner ueberreden dass du bei ihm uebernachten kannst", "In einer Trummerruine bis Tagesanbruch verkriechen", etc. ALLE Tageswechsel-Optionen MUESSEN das Wort "schlafen" oder "Couch" oder "Bett" oder "die Nacht verbringen" oder "bis morgen" enthalten, damit das System sie erkennt.`;
+      recap += `\n\nKARL ERSCHOEPFT (Energie: ${karlEnergie}/100 = ${eStufe.label}, ${currentTime}): In den 4 Optionen MUESSEN 2-3 davon Tageswechsel-Optionen sein, kreativ je nach Situation: "Zurueck ins Buero und schlafen", "Bei [Person im Raum] auf der Couch schlafen", "Doc Wagner ueberreden dass du bei ihm uebernachten kannst", etc. ALLE Tageswechsel-Optionen MUESSEN das Wort "schlafen" oder "Couch" oder "Bett" oder "die Nacht verbringen" oder "bis morgen" enthalten, damit das System sie erkennt. MAX 1 inhaltliche Option, sonst nur noch Schlaf.`;
     } else if (karlEnergie <= 60 && isAbendOderNacht) {
       // Muede + Abend/Nacht: 1 Schlaf-Option
       recap += `\n\nKARL WIRD MUEDE (Energie: ${karlEnergie}/100 = ${eStufe.label}, ${currentTime}): EINE der 4 Optionen sollte ein Tageswechsel sein (zurueck ins Buero und schlafen, oder ein anderer plausibler Schlafplatz wenn jemand in der Naehe ist). Diese Option MUSS "schlafen" oder "Bett" oder "Couch" oder "bis morgen" enthalten.`;
@@ -6399,8 +6415,12 @@ Es ist NICHT realistisch, dass eine Trauergesellschaft 18 Stunden an einem Grab 
     // Karl ist ein arbeitender Detektiv, kein Asket - er muss essen wie jeder andere.
     // Bei Hu>=8 wird der Hint auch bei moderater Spannung (Sp 3-4) gesetzt, nur Sp 5
     // (Lebensgefahr) blockt - sonst verhungert Karl waehrend er einen Tatort beobachtet.
+    // v6.79: Bei Hunger 9-10 + niedrige Spannung -> 2+ Essens-Optionen erzwingen.
     const hungerCriticalForceEat = karlHunger >= 8 && lastSpannung < 5;
-    if (karlHunger >= 7 && (isLowTension || hungerCriticalForceEat)) {
+    if (karlHunger >= 9 && isLowTension) {
+      // SEHR HUNGRIG + ruhig: 2+ Essens-Optionen, Karl muss handeln
+      recap += `\n\nKARL HAT EXTREMEN HUNGER (Hunger ${karlHunger}/10, ${currentTime}): Karl kann kaum mehr klar denken vor Hunger, ihm wird schwindlig, der Magen krampft. MINDESTENS 2 der 4 Optionen MUESSEN Essens-Optionen sein - die anderen 2 koennen normale Ermittlung sein. Beispiele je nach Sektor: OST (Mitte/Friedrichshain/Prenzlauer Berg): Bockwurst-Stand am Alex, Soljanka in HO-Gaststaette Frankfurter Allee, Bouletten mit Kartoffelsalat bei Trude, Erbsensuppe vom Suppenwagen, Eisbein in der Mitropa-Gaststaette, Kartoffelpuffer vom Strassenstand, Stulle mit Schmalz. WEST (Charlottenburg/Schoeneberg/Tempelhof): Currywurst-Bude, Buletten-Imbiss, Wiener Wuerstchen am Kurfuerstendamm. KEINE 3 Ermittlungs-Optionen mehr - Karl MUSS jetzt essen oder er bricht zusammen. Im Erzaehltext: der Magen knurrt laut, Schwindel, Karl muss sich an etwas festhalten.`;
+    } else if (karlHunger >= 7 && (isLowTension || hungerCriticalForceEat)) {
       recap += `\n\nKARL HAT GROSSEN HUNGER (Hunger ${karlHunger}/10): Karl hat seit Stunden nichts gegessen, der Magen knurrt deutlich. EINE der Optionen MUSS eine konkrete Essens-Option sein - nicht nur Kaffee trinken, sondern wirklich etwas essen (Bockwurst, Bulette, Schrippe, Suppe, Currywurst, Streuselkuchen mit Sahne, Stulle, Eisbein etc). Wenn Karl bereits in einer Kneipe/Café sitzt: EINE Option MUSS "etwas essen" sein (z.B. "Eine Bulette zum Bier bestellen", "Vom Wirt eine Bockwurst holen lassen"). WICHTIG: VARIIERE - keine Currywurst-Monokultur! Wenn Karl im OSTEN ist (Mitte, Friedrichshain, Prenzlauer Berg, Hackescher Markt, Alexanderplatz): Bockwurst-Stand, Soljanka in der HO-Gaststaette, Bouletten mit Kartoffelsalat, Erbsensuppe vom Suppenwagen, Eisbein mit Sauerkraut, Strammer Max in der Mitropa, Kartoffelpuffer vom Strassenstand, Heringsschmaus, Stulle mit Schmalz, Schrippe vom HO-Baecker. Wenn Karl im WESTEN ist (Charlottenburg, Schoeneberg, Tempelhof): Currywurst-Bude, Buletten-Imbiss, Wiener Wuerstchen. In Cafes/Kneipen beider Sektoren: Malzkaffee mit Schrippe, Streuselkuchen, Schmalzbrot. ALLE Essens-Optionen MUESSEN explizit den konkreten Essens-Begriff enthalten. Im Erzaehltext erwaehne den knurrenden Magen oder den Imbissgeruch direkt.`;
     } else if (karlHunger >= 4 && isLowTension) {
       recap += `\n\nKARL WIRD HUNGRIG (Hunger ${karlHunger}/10): Karl koennte langsam was essen, der Magen meldet sich. Wenn die Situation es passend hergibt, biete EINE Option an. VARIIERE: nicht immer Currywurst! Je nach Sektor: OST (Karls Heimatgegend) Bockwurst-Stand, Soljanka in HO-Gaststaette, Bouletten, Erbsensuppe, Kartoffelpuffer, Schrippe vom HO-Baecker, Stulle mit Schmalz. WEST nur wenn Karl drueben ist: Currywurst-Bude. KEIN Zwang - nur wenn es zur Story passt. Auch im Erzaehltext kann ein Imbiss-Geruch oder ein knurrender Magen beilaeufig erwaehnt werden.`;
@@ -11000,6 +11020,43 @@ function botRngChoice(arr) {
 
 function botChooseByStrategy(options) {
   if (!options || options.length === 0) return null;
+
+  // v6.79: SURVIVAL-OVERRIDE - bevor die normale Strategie greift, prueft der
+  // Bot ob Karl in kritischem Zustand ist (sehr muede, sehr hungrig, schwer
+  // verletzt). Wenn ja, sucht er gezielt nach Schlaf/Ess-Optionen statt seine
+  // normale Strategie zu nutzen. Verhindert dass der Bot ewig "weiter ermitteln"
+  // waehlt und Karl zusammenklappt.
+  // Spannung muss niedrig sein - in Action-Szenen kein Survival-Override.
+  const inAction = (typeof lastSpannung === 'number' && lastSpannung >= 4);
+  if (!inAction) {
+    // PRIO 1: Karl muss dringend schlafen (Energie <=25 + Abend/Nacht)
+    if (karlEnergie <= 25 && gameTimeIdx >= 3) {
+      const sleepPattern = /\b(schlaf|ins\s+bett|aufs\s+sofa|auf\s+der\s+couch|uebernacht|hinleg|nacht\s+verbring|bis\s+morgen|bett|einnick|leg\s+dich|nach\s+hause\s+(fahr|geh))/i;
+      const sleepOptions = options.filter(opt => sleepPattern.test(opt.text));
+      if (sleepOptions.length > 0) {
+        console.log('[Bot] Survival-Override: Karl muss schlafen (En=' + karlEnergie + '), waehle Schlaf-Option');
+        return botRngChoice(sleepOptions);
+      }
+    }
+    // PRIO 2: Karl muss dringend essen (Hunger >=9)
+    if (karlHunger >= 9) {
+      const eatPattern = /\b(currywurst|bockwurst|bulett|schrippe|stulle|eisbein|schmalz|streuselkuchen|sahne|kartoffel|suppe|soljanka|essen|imbiss|wuerstchen|bratkartoffel|frikadell|wurst\s+essen|brot\s+essen|mittag\s+essen|abend\s+essen|fruehstueck|fruestueck|mahlzeit)/i;
+      const eatOptions = options.filter(opt => eatPattern.test(opt.text));
+      if (eatOptions.length > 0) {
+        console.log('[Bot] Survival-Override: Karl muss essen (Hu=' + karlHunger + '), waehle Ess-Option');
+        return botRngChoice(eatOptions);
+      }
+    }
+    // PRIO 3: Karl ist schwer verletzt (Verfassung <=2) - Doc Wagner / Hilfe suchen
+    if (verfassung <= 2) {
+      const helpPattern = /\b(doc\s+wagner|arzt|krankenhaus|charite|wagner.*praxis|verbind\s+die|notarzt|medizin|sanitaeter|hilfe\s+(holen|suchen|rufen)|behandl|wunde\s+versorg)/i;
+      const helpOptions = options.filter(opt => helpPattern.test(opt.text));
+      if (helpOptions.length > 0) {
+        console.log('[Bot] Survival-Override: Karl ist schwer verletzt (Vf=' + verfassung + '), suche Hilfe');
+        return botRngChoice(helpOptions);
+      }
+    }
+  }
 
   // Rotierend: bestimme aktuelle Sub-Strategie basierend auf aktuellem Zug
   let effectiveStrategy = botStrategy;
