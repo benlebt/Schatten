@@ -1249,7 +1249,7 @@
       Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
     </p>
     <button class="btn-primary" onclick="startGame()">Ermittlung beginnen</button>
-    <div class="start-version">Schatten v6.34 · Bett vs Sofa · Indiz-Dedup · NPC-Norm</div>
+    <div class="start-version">Schatten v6.34 · Walther-Schutz · Inv-Synonyme · NPC-Filter</div>
   </div>
 
   <!-- Game Log -->
@@ -1317,7 +1317,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v6.34 · Bett vs Sofa · Indiz-Dedup · NPC-Norm</span>
+    <span>Schatten v6.34 · Walther-Schutz · Inv-Synonyme · NPC-Filter</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4775,8 +4775,24 @@ function isGenericPersonName(name) {
   if (!name) return true;
   const n = name.toLowerCase().trim()
     .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
-  return /^(unbekannter?|unbekannte|ein\s+mann|eine\s+frau|der\s+mann|die\s+frau|mann\s+im|frau\s+im|uniformierter?|fremder?|fremde)\b/.test(n)
-    || /^(mann|frau|gestalt|person|fremder|fremde|jemand|niemand)$/.test(n);
+  // Match 1: typische "Mann/Frau im/mit/in/aus" Konstruktionen
+  if (/^(unbekannter?|unbekannte|ein\s+mann|eine\s+frau|der\s+mann|die\s+frau|mann\s+(im|mit|in|aus)|frau\s+(im|mit|in|aus)|uniformierter?|fremder?|fremde)\b/.test(n)) {
+    return true;
+  }
+  // Match 2: generische Einzelwoerter
+  if (/^(mann|frau|gestalt|person|fremder|fremde|jemand|niemand|nachtschwaermer|passant|passantin|spaziergaenger|polizist|polizistin|wachtmeister|volkspolizist|beamter|beamtin|kellner|kellnerin|wirt|wirtin|kunde|kundin|gast|naechbarin|nachbar|nachbarin)$/.test(n)) {
+    return true;
+  }
+  // Match 3: nummerierte generische ("Volkspolizist 1", "Mann 2", "Polizist 3")
+  if (/^(mann|frau|polizist|polizistin|volkspolizist|beamter|wachmann|wachtposten|gast|passant|nachtschwaermer)\s+\d+$/.test(n)) {
+    return true;
+  }
+  // Match 4: beschreibende ohne echten Namen ("Aelterer Herr mit Melone",
+  // "Junger Mann im Trenchcoat", "Alte Frau mit Pudel")
+  if (/^(aelterer?|aeltere|aelteres|alter|alte|altes|junger|junge|junges|kleiner|kleine|kleines|grosser?|grosse|grosses|breitschultriger?|breitschultrige|hagerer?|hagere)\s+(herr|dame|mann|frau|bursche|maedchen|kerl)\b/.test(n)) {
+    return true;
+  }
+  return false;
 }
 
 function detectVehicleLoss(text) {
@@ -5457,11 +5473,24 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     // "Foto aus Prenzlauer Berg" UND "Foto vom Cafe in Prenzlauer Berg"
     // separat eingetragen werden (wenn es dasselbe Foto ist).
     if (Array.isArray(scene.inventar_hinzugefuegt) && scene.inventar_hinzugefuegt.length > 0) {
+      // Synonym-Map fuer Inventar-Items: Mistral verwendet manchmal verschiedene
+      // Begriffe fuer denselben Gegenstand. "Fremde Pistole" und "Mauser HSc"
+      // sollten dasselbe Item sein, nicht zwei separate.
+      const normalizeInventorySynonyms = (text) => {
+        return text
+          .replace(/zigarettenanzuender|zigarettenanzünder|feuerzeug|anzuender|anzünder/g, 'feuerzeug')
+          .replace(/pistole|mauser|walther|revolver|p38|p\.\s*38|hsc|ppk/g, 'pistole')
+          .replace(/automobil|wagen|auto|fahrzeug|pkw/g, 'auto')
+          .replace(/aktenkoffer|aktentasche|koffer|tasche/g, 'koffer')
+          .replace(/foto|fotografie|bild|aufnahme/g, 'foto')
+          .replace(/schluesselbund|schluessel/g, 'schluessel');
+      };
       for (const item of scene.inventar_hinzugefuegt) {
         if (typeof item !== 'string' || !item.trim()) continue;
         const newItem = item.trim();
-        const newLower = newItem.toLowerCase()
+        const newLowerRaw = newItem.toLowerCase()
           .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+        const newLower = normalizeInventorySynonyms(newLowerRaw);
 
         // FILTER 1: Informations-Einträge sind KEINE Gegenstaende.
         // "Adresse der Villa: Am Großen Windkanal 15" gehoert in Indizien,
@@ -5473,27 +5502,40 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           /\b(gehoert|gehoeren)\s+zu\b/,
           /^[a-zäöü]+\s*:\s*\w/i,  // "Adresse: ...", "Hinweis: ..." (alphabetisch + Doppelpunkt + Wert)
         ];
-        const isInfo = infoPatterns.some(p => p.test(newLower));
+        const isInfo = infoPatterns.some(p => p.test(newLowerRaw));
         if (isInfo) {
           console.log('[Schatten] Inventar-Filter: "' + newItem + '" ist Information, nicht Gegenstand. Ignoriert.');
           continue;
         }
 
-        // Stichworte aus dem neuen Item extrahieren (Substantive)
+        // Stichworte aus dem neuen Item extrahieren (Substantive) - nach Synonym-Norm
         const newWords = newLower.split(/[\s,\-]+/).filter(w => w.length >= 4);
 
         // Pruefe ob ein bestehender Eintrag stark ueberlappt
+        const newHasWalther = newLowerRaw.includes('walther');
         const isDuplicate = inventory.some(existing => {
-          const existLower = existing.toLowerCase()
+          const existLowerRaw = existing.toLowerCase()
             .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+          const existLower = normalizeInventorySynonyms(existLowerRaw);
+          const existHasWalther = existLowerRaw.includes('walther');
+          // SCHUTZ: Karls Walther und eine fremde Pistole sind NIEMALS dasselbe.
+          // Wenn eines "walther" enthaelt und das andere nicht, niemals Duplikat.
+          if (newHasWalther !== existHasWalther) return false;
           // Identisch?
           if (existLower === newLower) return true;
           // Einer ist Substring des anderen?
           if (existLower.includes(newLower) || newLower.includes(existLower)) return true;
-          // Hoher Wort-Overlap (>=2 gemeinsame Hauptwoerter)?
+          // Hoher Wort-Overlap (>=2 gemeinsame Hauptwoerter, einzigartig)?
           const existWords = existLower.split(/[\s,\-]+/).filter(w => w.length >= 4);
-          const overlap = newWords.filter(w => existWords.includes(w));
-          if (overlap.length >= 2) return true;
+          const uniqueOverlap = new Set(newWords.filter(w => existWords.includes(w)));
+          if (uniqueOverlap.size >= 2) return true;
+          // Spezialfall: beide enthalten dasselbe normalisierte Schluessel-Substantiv
+          // (pistole, auto, foto, koffer, schluessel, feuerzeug)
+          const strongObjects = ['pistole', 'auto', 'foto', 'koffer', 'schluessel', 'feuerzeug', 'akte', 'visitenkarte'];
+          const newKey = newWords.find(w => strongObjects.includes(w));
+          if (newKey && existWords.includes(newKey)) {
+            return true;
+          }
           return false;
         });
 
@@ -5508,15 +5550,41 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       for (const item of scene.inventar_entfernt) {
         if (typeof item !== 'string') continue;
         const needle = item.trim().toLowerCase();
-        // Tolerant matchen: wenn der Eintrag das Stichwort enthaelt, entfernen
-        const idx = inventory.findIndex(it => it.toLowerCase().includes(needle) || needle.includes(it.toLowerCase()));
-        if (idx >= 0) inventory.splice(idx, 1);
+        // Karls Walther PPK darf nur entfernt werden wenn explizit "Walther"
+        // in der Entfern-Anfrage steht (nicht durch tolerantes "Pistole"-Match,
+        // sonst nimmt die KI versehentlich die Walther weg wenn die Polizei
+        // die Mauser HSc beschlagnahmt).
+        const isWaltherRemoval = needle.includes('walther') || needle.includes('eigene pistole');
+        const idx = inventory.findIndex(it => {
+          const itLower = it.toLowerCase();
+          // Schutz fuer Karls Walther: nur entfernen wenn explizit Walther genannt
+          if (itLower.includes('walther') && !isWaltherRemoval) return false;
+          return itLower.includes(needle) || needle.includes(itLower);
+        });
+        if (idx >= 0) {
+          console.log('[Schatten] Inventar entfernt:', inventory[idx], '(durch:', needle + ')');
+          inventory.splice(idx, 1);
+        }
       }
     }
-    // Max 12 Eintraege im Inventar, sonst aelteste raus (Brieftasche/Notizbuch zuerst gefaehrdet,
-    // aber das ist seltenes Szenario - Karl hat meistens nicht so viel dabei)
+    // Max 12 Eintraege im Inventar, sonst aelteste raus.
+    // ABER: Karls Standardausruestung (Walther PPK, Brieftasche, Notizbuch+Bleistift)
+    // muss IMMER drinbleiben - das ist Karls Identitaet als Detektiv. Wenn die
+    // KI die Walther explizit entfernt (durch inventar_entfernt mit "Walther"),
+    // dann ist sie auch wirklich weg. Aber durch automatisches Slicen darf sie nie
+    // verschwinden.
     if (inventory.length > 12) {
-      inventory = inventory.slice(-12);
+      const essentials = inventory.filter(it => {
+        const lower = it.toLowerCase();
+        return lower.includes('walther') ||
+               (lower.includes('brieftasche') && lower.includes('lizenz')) ||
+               (lower.includes('notizbuch') && lower.includes('bleistift'));
+      });
+      const nonEssentials = inventory.filter(it => !essentials.includes(it));
+      // Behalte alle Essentials + die neuesten Non-Essentials
+      const keepCount = 12 - essentials.length;
+      const keptNonEss = nonEssentials.slice(-Math.max(0, keepCount));
+      inventory = essentials.concat(keptNonEss);
     }
 
     // Cast-Aenderungen verarbeiten (NPCs die hinzukommen/gehen).
