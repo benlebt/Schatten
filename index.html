@@ -1575,7 +1575,7 @@
     <button class="btn-primary" onclick="startRandomGame()">Zufällige Ermittlung</button>
     <br>
     <button class="btn-secondary" onclick="showSetupSelector()">Fall auswählen</button>
-    <div class="start-version">Schatten v6.77</div>
+    <div class="start-version">Schatten v6.78</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -1652,7 +1652,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v6.77</span>
+    <span>Schatten v6.78</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -3035,6 +3035,8 @@ const INTRO_VARIANTS = [
       nebenfiguren: 'Anwalt Dr. Heinrich Baumgarten (etablierter Anker, Karls Anwalt und Vermittler des Auftrags), Staatsanwalt Eberhard Mertens, Richterin Anna Schoening',
       sektor: 'Kreisgericht Mitte = Ost (Sowjetisch). Karl ist auf Heimatterrain aber unwohl - Gerichte sind anders als Strassen.',
       // v6.77: STRUKTURIERTER SETUP-CAST mit Albrecht als CLIENT
+      // v6.78: moralConflict explizit dokumentiert fuer KI-Verstaendnis.
+      moralConflict: 'Karl ermittelt OFFIZIELL fuer Albrecht (Klient, will Unschuld beweisen), aber sein WAHRES ZIEL ist Wahrheit ueber Mathildes Tod. Wenn die Wahrheit Albrecht belastet, muss Karl das aushalten - er ist KEIN Verteidiger, sondern Ermittler. Die KI soll Karl als jemanden zeigen der ehrlich sucht, nicht als jemanden der nur die "Unschuld beweist".',
       setupCast: [
         { name: 'Albrecht Goerke', tag: 'CLIENT', alter: 40, rolle: 'Klient / Angeklagter (in U-Haft)',
           beziehung: 'beauftragt Karl via Anwalt Baumgarten, beteuert seine Unschuld',
@@ -3272,7 +3274,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v6.77';
+window.SCHATTEN_VERSION = 'v6.78';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -4000,6 +4002,18 @@ function asciiToUmlaut(s) {
     [/Behoerde/g, 'Behörde'],
     [/Zerstoerung/g, 'Zerstörung'],
     [/Boese/g, 'Böse'], [/boese/g, 'böse'],
+    // v6.78: Worte fuer Status-Popups
+    [/Verdaechtige/g, 'Verdächtige'], [/Verdaechtiger/g, 'Verdächtiger'],
+    [/VERDAECHTIGER/g, 'VERDÄCHTIGER'], [/VERDAECHTIGE/g, 'VERDÄCHTIGE'],
+    [/herausschaelen/g, 'herausschälen'],
+    [/ueberfuehrt/g, 'überführt'], [/ueberfuehren/g, 'überführen'],
+    [/UEBERFUEHRT/g, 'ÜBERFÜHRT'], [/UEBERFUEHREN/g, 'ÜBERFÜHREN'],
+    [/voellig/g, 'völlig'], [/voll(?=stae)/g, 'voll'],
+    [/erschoepft/g, 'erschöpft'],
+    [/muede/g, 'müde'], [/Muede/g, 'Müde'],
+    [/spuert/g, 'spürt'], [/spueren/g, 'spüren'],
+    [/Voelkische/g, 'Völkische'],
+    [/zerstoer/g, 'zerstör'],
   ];
   let out = s;
   for (const [pat, rep] of replacements) {
@@ -5988,6 +6002,11 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
       } else if (clientProfile.eigenAuftrag) {
         recap += 'EIGEN-AUFTRAG (PFLICHT): Karl Mauer ist sein EIGENER Klient in diesem Fall - er ermittelt aus eigenem Antrieb (moralische Pflicht, alte Schuld). Es darf in KEINER Szene eine andere Person als "Klientin/Klient" eingefuehrt werden, die Karl einen NEUEN Auftrag gibt. Wenn jemand Karl spricht und hilft, ist es ein Zeuge, Informant, Bekannter - aber KEIN neuer Klient. Karls Motivation ist intern, nicht extern.\n';
       }
+      // v6.78: Setup-spezifischer moralischer Konflikt (z.B. Goerke: Karl ermittelt
+      // fuer den Angeklagten, will aber Wahrheit auch wenn Klient schuldig).
+      if (caseSetup && caseSetup.moralConflict) {
+        recap += 'MORALISCHER KONFLIKT (FEST): ' + caseSetup.moralConflict + '\n';
+      }
       // Klient-Trennung: Bei Beschattungs- und Verfolgungs-Faellen ist der Klient
       // ZU HAUSE und nicht physisch bei Karl. Sonst entsteht der Bug, dass Mistral
       // Edith Kessler ploetzlich neben Karl im Hinterhof stehen laesst, wo sie
@@ -7331,6 +7350,8 @@ async function startGame() {
   pumphraseRunCounts = {};
   // Reset Szenen-Typen-Tracking
   recentSceneTypes = [];
+  // v6.78: Toast-History fuer Anti-Spam zuruecksetzen
+  resetToastHistory();
   // Pick a random intro and use its predefined start time
   // v6.77: selectedSetupIdx wird vom Setup-Auswahl-Screen gesetzt (oder undefined fuer random)
   const intro = pickIntro(selectedSetupIdx);
@@ -8597,6 +8618,55 @@ function updateEnergyAndHunger(scene) {
   }
 
   console.log('[Schatten] Energie:', karlEnergie, '(-' + drain + '), Hunger:', karlHunger);
+
+  // v6.78: Status-Toast-Trigger nach State-Update.
+  // Toast nur ausloesen bei kritischen Wendepunkten - nicht jeden Szene.
+  // Anti-Spam erledigt canShowToast() automatisch.
+  checkStatusToasts(spannung);
+}
+
+// v6.78: Zentrale Pruefung welche Status-Toasts der Spieler sehen soll.
+// Wird einmal pro Szene aufgerufen nach State-Update. Anti-Spam ist
+// eingebaut (canShowToast) - max 1x pro Tag pro Trigger, min 3 Szenen
+// zwischen gleichen Variant-Triggers.
+function checkStatusToasts(spannung) {
+  // DANGER: Lebensgefahr (Spannung 5)
+  if (typeof spannung === 'number' && spannung >= 5) {
+    showProgressToast('Lebensgefahr', 'Karl ist in akuter Lebensgefahr. Schnell handeln oder weg!', 'danger', 'spannung-5');
+  }
+  // DANGER: Stasi-Tension hoch (>= 3 = Festnahme moeglich)
+  if (caseIsPolitical && stasiTension >= 3) {
+    showProgressToast('Stasi auf den Fersen', 'Die Volkspolizei beobachtet Karl gezielt. Eine falsche Bewegung und sie schlagen zu.', 'danger', 'stasi-hoch');
+  }
+  // DANGER: Verfassung kritisch (2 oder weniger - schwer verletzt)
+  if (verfassung <= 2) {
+    showProgressToast('Schwer verletzt', 'Karls Verfassung ist kritisch. Doc Wagner aufsuchen oder Pause machen, sonst ist es vorbei.', 'danger', 'verfassung-tief');
+  }
+  // DANGER: Energie unter 15 (am Ende)
+  if (karlEnergie <= 15) {
+    showProgressToast('Am Ende der Kraft', 'Karl ist voellig erschoepft. Ohne Schlaf bricht er bald zusammen.', 'danger', 'energie-kritisch');
+  }
+  // DANGER: Hunger 9-10 (extrem)
+  if (karlHunger >= 9) {
+    showProgressToast('Schwacher Hunger-Schwindel', 'Karl hat seit zu langem nichts gegessen. Ihm wird schwindlig - dringend essen.', 'danger', 'hunger-kritisch');
+  }
+  // CAUTION: Muedigkeit (Energie 20-40, abends/nachts)
+  if (karlEnergie <= 35 && karlEnergie > 15 && gameTimeIdx >= 4) {
+    showProgressToast('Karl wird muede', 'Der Tag war lang. Bald sollte Karl ans Schlafen denken.', 'caution', 'energie-muede');
+  }
+  // CAUTION: Stasi-Tension mittel (>= 2)
+  if (caseIsPolitical && stasiTension >= 2 && stasiTension < 3) {
+    showProgressToast('Beobachtet', 'Karl spuert dass jemand ihn beschattet. Vorsicht beim naechsten Schritt.', 'caution', 'stasi-mittel');
+  }
+  // CAUTION: Hunger 7-8 (deutlich)
+  if (karlHunger >= 7 && karlHunger < 9) {
+    showProgressToast('Hunger meldet sich', 'Karls Magen knurrt deutlich. Bald sollte er etwas essen.', 'caution', 'hunger-deutlich');
+  }
+  // CAUTION: Lange wach (2+ Tage ohne Schlaf)
+  // Hier wird ein "Tag" als ein vollstaendiger Zyklus gerechnet.
+  if (gameDay >= 2 && gameTimeIdx >= 5 && karlEnergie < 50) {
+    showProgressToast('Seit Tagen wach', 'Karl ist seit zwei Tagen kaum zum Schlafen gekommen. Das fordert Tribut.', 'caution', 'lange-wach');
+  }
 }
 
 // Romantik-Tension Update: prueft Cast (sind Frauen im Raum?) und Erzaehltext.
@@ -11391,31 +11461,112 @@ function showAdminToast(message) {
 // v6.68: Fortschritts-Toast - groesser und mit Goldakzent fuer Stage-Aufstiege
 // und Eureka-Verknuepfungen. Bleibt 6 Sekunden sichtbar, ist deutlich als
 // "Erfolg" markiert. Hilft Spielern die sonst nur Statusbar-Zahlen sehen.
-function showProgressToast(title, subtitle) {
+// v6.78: Anti-Spam-Tracking fuer Status-Popups. Pro Variant max 1x pro Tag,
+// und Cooldown von mindestens 3 Szenen zwischen gleichen Variant-Triggers.
+let toastHistory = {
+  shownThisDay: {}, // key: 'danger:stasi' -> dayNum bei letztem Trigger
+  lastSceneByVariant: {}, // key: 'danger' -> letzte Szenennummer
+};
+
+function resetToastHistory() {
+  toastHistory = { shownThisDay: {}, lastSceneByVariant: {} };
+}
+
+// Pruefe ob ein Toast getriggert werden darf (Anti-Spam).
+// variant: 'success'|'danger'|'caution'|'info'
+// triggerKey: spezifischer Trigger ('stasi-hoch', 'energie-tief', etc.)
+// returns true wenn erlaubt
+function canShowToast(variant, triggerKey) {
+  const dayKey = variant + ':' + triggerKey;
+  // Pro spezifischem Trigger: max 1x pro Tag
+  if (toastHistory.shownThisDay[dayKey] === gameDay) {
+    return false;
+  }
+  // Pro Variant: max 1x in 3 Szenen
+  const lastScene = toastHistory.lastSceneByVariant[variant];
+  if (typeof lastScene === 'number' && (sceneCounter - lastScene) < 3) {
+    return false;
+  }
+  return true;
+}
+
+function markToastShown(variant, triggerKey) {
+  const dayKey = variant + ':' + triggerKey;
+  toastHistory.shownThisDay[dayKey] = gameDay;
+  toastHistory.lastSceneByVariant[variant] = sceneCounter;
+}
+
+// Farb-Schemata fuer die vier Varianten.
+const TOAST_VARIANTS = {
+  success: {
+    bg: 'linear-gradient(180deg,rgba(60,50,20,0.97),rgba(40,30,10,0.97))',
+    border: 'rgba(220,180,90,0.6)',
+    shadow: 'rgba(220,180,90,0.3)',
+    titleColor: '#fda',
+    bodyColor: '#c98',
+    icon: '✦',
+  },
+  danger: {
+    bg: 'linear-gradient(180deg,rgba(80,15,15,0.97),rgba(50,8,8,0.97))',
+    border: 'rgba(220,70,60,0.7)',
+    shadow: 'rgba(220,70,60,0.35)',
+    titleColor: '#fcc',
+    bodyColor: '#daa',
+    icon: '⚠',
+  },
+  caution: {
+    bg: 'linear-gradient(180deg,rgba(20,35,55,0.97),rgba(10,20,40,0.97))',
+    border: 'rgba(100,150,220,0.6)',
+    shadow: 'rgba(100,150,220,0.3)',
+    titleColor: '#bcf',
+    bodyColor: '#aad',
+    icon: '◌',
+  },
+  info: {
+    bg: 'linear-gradient(180deg,rgba(40,40,40,0.97),rgba(25,25,25,0.97))',
+    border: 'rgba(180,180,180,0.5)',
+    shadow: 'rgba(180,180,180,0.2)',
+    titleColor: '#dde',
+    bodyColor: '#aac',
+    icon: '·',
+  },
+};
+
+// v6.78: Erweiterte Signatur. variant ist optional fuer Rueckwaertskompatibilitaet
+// (default success), triggerKey optional fuer Anti-Spam.
+function showProgressToast(title, subtitle, variant, triggerKey) {
+  variant = variant || 'success';
+  const v = TOAST_VARIANTS[variant] || TOAST_VARIANTS.success;
+  // Anti-Spam wenn triggerKey gesetzt
+  if (triggerKey && !canShowToast(variant, triggerKey)) {
+    return;
+  }
   const toast = document.createElement('div');
   toast.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);' +
-                       'z-index:1000;background:linear-gradient(180deg,rgba(60,50,20,0.97),rgba(40,30,10,0.97));' +
-                       'color:#fc8;padding:18px 28px;border:2px solid rgba(220,180,90,0.6);' +
+                       'z-index:1000;background:' + v.bg + ';' +
+                       'color:' + v.bodyColor + ';padding:18px 28px;border:2px solid ' + v.border + ';' +
                        'font:13px monospace;letter-spacing:1.5px;border-radius:6px;' +
                        'backdrop-filter:blur(10px);max-width:90vw;text-align:center;' +
-                       'box-shadow:0 0 30px rgba(220,180,90,0.3);';
+                       'box-shadow:0 0 30px ' + v.shadow + ';';
   const titleDiv = document.createElement('div');
-  titleDiv.style.cssText = 'font-weight:bold;font-size:14px;color:#fda;margin-bottom:6px;text-transform:uppercase;';
-  titleDiv.textContent = '✦ ' + title + ' ✦';
+  titleDiv.style.cssText = 'font-weight:bold;font-size:14px;color:' + v.titleColor + ';margin-bottom:6px;text-transform:uppercase;';
+  titleDiv.textContent = v.icon + ' ' + asciiToUmlaut(title) + ' ' + v.icon;
   toast.appendChild(titleDiv);
   if (subtitle) {
     const subDiv = document.createElement('div');
-    subDiv.style.cssText = 'font-size:12px;color:#c98;line-height:1.5;letter-spacing:0.5px;';
-    subDiv.textContent = subtitle;
+    subDiv.style.cssText = 'font-size:12px;color:' + v.bodyColor + ';line-height:1.5;letter-spacing:0.5px;';
+    subDiv.textContent = asciiToUmlaut(subtitle);
     toast.appendChild(subDiv);
   }
   document.body.appendChild(toast);
-  // Fade-Out + Remove
+  if (triggerKey) markToastShown(variant, triggerKey);
+  // Fade-Out + Remove (danger laenger sichtbar)
+  const showDuration = variant === 'danger' ? 7000 : 5500;
   setTimeout(() => {
     toast.style.transition = 'opacity 0.5s';
     toast.style.opacity = '0';
-  }, 5500);
-  setTimeout(() => toast.remove(), 6000);
+  }, showDuration);
+  setTimeout(() => toast.remove(), showDuration + 500);
 }
 
 // Sektion im Settings-Menue je nach Admin-Status sichtbar machen
