@@ -1484,7 +1484,7 @@
       Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
     </p>
     <button class="btn-primary" onclick="startGame()">Ermittlung beginnen</button>
-    <div class="start-version">Schatten v6.68</div>
+    <div class="start-version">Schatten v6.69</div>
   </div>
 
   <!-- Game Log -->
@@ -1552,7 +1552,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v6.68</span>
+    <span>Schatten v6.69</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -2545,7 +2545,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v6.68';
+window.SCHATTEN_VERSION = 'v6.69';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -2736,6 +2736,8 @@ let caseProgress = {
   // v6.68: NPC-Memory - was wer Karl wann mit welchem Kerninhalt gesagt hat.
   // npcMemory[npcName] = [{ sceneNr, tag, tageszeit, kernhinweis: "..." }, ...]
   npcMemory: {},
+  // v6.69: Tag an dem Stage 2 erreicht wurde - fuer Eskalations-Logik
+  stage2StartDay: null,
 };
 // Auftrags-Setup aus dem Intro: feste Story-Anker die Karl NIE vergessen darf.
 // Wird beim Spielstart aus dem gewaehlten Intro befuellt und bei JEDER KI-Anfrage
@@ -5188,23 +5190,48 @@ Es ist NICHT realistisch, dass eine Trauergesellschaft 18 Stunden an einem Grab 
       recap += `\n\nVERKNUEPFUNGS-PFLICHT: Karl hat ${indCount} Indizien, aber seit ${scenesSinceEureka} Szenen keine Verbindung zwischen ihnen entdeckt. In dieser ODER der naechsten Szene MUSS Karl einen "Eureka-Moment" haben - eine konkrete Verbindung zwischen zwei seiner Indizien (gleicher Name, gleiches Datum, gleiches Detail, widersprueche). Schreib es klar: "Du erinnerst dich an X. Das verbindet sich mit Y." Setze dann "indiz_verbindung" auf einen 1-Satz-String. WICHTIG: Wenn dadurch der dritte oder vierte Indiz auch erkennbar wird, KEIN extra Indiz - die Verbindung selbst zaehlt als Fortschritt.`;
     }
     // Hinweis fuer die KI ueber den naechsten Schritt
+    // v6.69: Eskalations-Logik - bei zu vielen Indizien ohne Stage-Promotion wird
+    // der Push immer schaerfer. Mistral ist zu zaghaft mit "tatverdaechtiger_identifiziert".
     if (caseProgress.stage === 0) {
-      recap += `\nNAECHSTER SCHRITT: Karl muss konkrete Indizien sammeln (Beweisstuecke, Zeugenaussagen, Foto, Dokument). Wenn in dieser Szene ein neues Indiz vorkommt, MUSS es in "indiz_neu" eingetragen werden.`;
+      const indCount = caseProgress.indizien.length;
+      if (indCount >= 4) {
+        recap += `\nNAECHSTER SCHRITT (DRINGEND): Karl hat schon ${indCount} Indizien gesammelt - mehr als genug fuer Stage 1. Diese Szene MUSS irgendetwas Konkretes liefern (entweder neuer Hinweis ODER eine Verbindung zwischen bestehenden Indizien). Reines Herumlaufen reicht nicht mehr.`;
+      } else {
+        recap += `\nNAECHSTER SCHRITT: Karl muss konkrete Indizien sammeln (Beweisstuecke, Zeugenaussagen, Foto, Dokument). Wenn in dieser Szene ein neues Indiz vorkommt, MUSS es in "indiz_neu" eingetragen werden.`;
+      }
     } else if (caseProgress.stage === 1) {
-      recap += `\nNAECHSTER SCHRITT: Karl hat genug Indizien. Er kann jetzt einen Verdaechtigen identifizieren (mit Motiv + Gelegenheit aus den Indizien belegt). Wenn er das in dieser Szene tut, setze "tatverdaechtiger_identifiziert".`;
+      const indCount = caseProgress.indizien.length;
+      // Eskalation nach Indizien-Anzahl + Spieltagen
+      if (indCount >= 10 || gameDay >= 5) {
+        recap += `\nFALL-ZWANG (KRITISCH): Karl hat ${indCount} Indizien und ist an Tag ${gameDay}. Das ist genug. Du DARFST in dieser Szene NICHT mehr nur neue Indizien anhaengen - das ist Stagnation. In dieser ODER spaetestens der naechsten Szene MUSS Karl einen konkreten Tatverdaechtigen mit Namen nennen (entweder durch eine Konfrontation, eine Schlussfolgerung im Kopf, oder ein Zufallsfund der die Sache klaert). Setze "tatverdaechtiger_identifiziert" auf den Namen. Auch wenn die Beweislage nicht 100% ist - Karl muss eine Theorie formen und sie aussprechen. Falls die Story noch keinen klaren Verdaechtigen hat: schau dir die Indizien-Liste an und schliesse auf die Person, die am haeufigsten genannt wird oder das groesste Motiv haette.`;
+      } else if (indCount >= 7) {
+        recap += `\nNAECHSTER SCHRITT (DRINGEND): Karl hat ${indCount} Indizien - das ist genug fuer einen konkreten Verdacht. In dieser oder der naechsten Szene MUSS Karl einen Verdaechtigen mit Namen nennen (durch Schlussfolgerung oder Konfrontation). Setze dann "tatverdaechtiger_identifiziert" auf den Namen. Reines weiter-Indizien-Sammeln wirkt nicht mehr wie Fortschritt.`;
+      } else if (indCount >= 5) {
+        recap += `\nNAECHSTER SCHRITT: Karl hat schon ${indCount} Indizien. Wenn die Beweislage einen konkreten Verdacht ergibt (eine Person taucht mehrfach auf, ein Motiv ist klar), nennt Karl jetzt den Verdaechtigen mit Namen. Setze "tatverdaechtiger_identifiziert".`;
+      } else {
+        recap += `\nNAECHSTER SCHRITT: Karl hat genug Indizien fuer Stage 1. Er kann jetzt einen Verdaechtigen identifizieren (mit Motiv + Gelegenheit aus den Indizien belegt). Wenn er das in dieser Szene tut, setze "tatverdaechtiger_identifiziert".`;
+      }
     } else if (caseProgress.stage === 2) {
-      recap += `\nNAECHSTER SCHRITT: Karl muss ${caseProgress.tatverdaechtiger} ueberfuehren - Konfrontation mit Beweisen, Festnahme, Gestaendnis. Wenn das in dieser Szene gelingt, setze "tatverdaechtiger_ueberfuehrt": true.`;
+      // Wann wurde Stage 2 erreicht? Wenn das schon laenger her ist, escalieren.
+      const stage2DurationDays = gameDay - (caseProgress.stage2StartDay || gameDay);
+      if (stage2DurationDays >= 2) {
+        recap += `\nNAECHSTER SCHRITT (KRITISCH): Karl hat seit ${stage2DurationDays} Tagen den Verdaechtigen ${caseProgress.tatverdaechtiger} identifiziert, aber noch nicht ueberfuehrt. Das ist zu lang. In dieser ODER der naechsten Szene MUSS eine Konfrontation stattfinden: Karl stellt ${caseProgress.tatverdaechtiger} mit den Beweisen, oder ${caseProgress.tatverdaechtiger} gesteht unter Druck, oder Karl uebergibt die Beweise an Roth/Lindner mit eindeutigem Ergebnis. Setze "tatverdaechtiger_ueberfuehrt": true.`;
+      } else {
+        recap += `\nNAECHSTER SCHRITT: Karl muss ${caseProgress.tatverdaechtiger} ueberfuehren - Konfrontation mit Beweisen, Festnahme, Gestaendnis. Wenn das in dieser Szene gelingt, setze "tatverdaechtiger_ueberfuehrt": true.`;
+      }
     } else if (caseProgress.stage === 3 && !caseProgress.klientGesprochen) {
       recap += `\nNAECHSTER SCHRITT: ${caseProgress.tatverdaechtiger} ist ueberfuehrt. Karl MUSS dem Klient/der Klientin das Ergebnis berichten (zurueck ins Buero, Anruf, Treffen). Dann ist der Fall offiziell geloest. Wenn das in dieser Szene passiert, setze "klient_berichtet": true.`;
     }
     // Klient-Geduld: wenn Karl zu lange braucht, droht der Klient mit Auftragsentzug
+    // v6.69: Push wird viel direkter formuliert - Mistral hat in v6.66 die Warnung
+    // einfach ignoriert. Jetzt mit Wort "PFLICHT" und konkretem Skript.
     if (clientProfile.name && !caseProgress.istGelöst && !caseProgress.ueberfuehrt) {
       if (gameDay >= clientProfile.geduldsstufe3) {
-        recap += `\n\nKLIENT-GEDULD ABGELAUFEN: Tag ${gameDay}. ${clientProfile.name} (${clientProfile.charakter}) hat das Vertrauen verloren. In dieser Szene MUSS ${clientProfile.name} entweder persoenlich erscheinen, anrufen oder Karl eine Nachricht zukommen lassen, in der der Auftrag offiziell ENTZOGEN wird. Das wird das Ende des Falls sein. Erzaehle es klar und mit dramatischem Gewicht (Enttaeuschung, Wut, Resignation).`;
+        recap += `\n\nKLIENT-GEDULD ABGELAUFEN (PFLICHT, NICHT IGNORIEREN): Tag ${gameDay}. ${clientProfile.name} (${clientProfile.charakter}) hat das Vertrauen verloren. Diese Szene MUSS ${clientProfile.name} bringen - persoenlich, am Telefon, oder per Bote. Beispiel-Skript: ${clientProfile.name} sagt: "Mauer, ich hab Sie gewarnt. Ich brauch ein Ergebnis, JETZT. Wer war's? Sagen Sie es mir, oder ich nehme den Auftrag zurueck." Karl muss eine Antwort geben - entweder einen konkreten Verdaechtigen NENNEN (auch wenn nicht 100% sicher), oder den Auftrag verlieren. Wenn Karl einen Namen nennt: setze "tatverdaechtiger_identifiziert" auf diesen Namen.`;
       } else if (gameDay >= clientProfile.geduldsstufe2) {
-        recap += `\n\nKLIENT-WARNUNG: Tag ${gameDay}. ${clientProfile.name} ist sehr ungeduldig. In dieser Szene oder spaetestens der naechsten MUSS ${clientProfile.name} (oder ein Bote) Karl deutlich warnen: ohne konkretes Ergebnis bis morgen wird der Auftrag entzogen.`;
+        recap += `\n\nKLIENT-WARNUNG (PFLICHT): Tag ${gameDay}. ${clientProfile.name} ist sehr ungeduldig. Diese Szene ODER spaetestens die naechste MUSS ${clientProfile.name} bringen - Anruf, Besuch, Bote. ${clientProfile.name} sagt deutlich: "Mauer, wir hatten Tag X verabredet. Was haben Sie? Ich brauch ein Ergebnis bis morgen, sonst nehme ich den Auftrag zurueck." Karl muss reagieren.`;
       } else if (gameDay >= clientProfile.geduldsstufe1) {
-        recap += `\n\nKLIENT-MAHNUNG: Tag ${gameDay}. ${clientProfile.name} mahnt zu schnellerem Fortschritt. Eine der naechsten 1-2 Szenen sollte einen Anruf, Brief oder persoenlichen Besuch von ${clientProfile.name} bringen, mit der Frage "Wo bleiben Ihre Ergebnisse, Mauer?".`;
+        recap += `\n\nKLIENT-MAHNUNG (PFLICHT): Tag ${gameDay}. ${clientProfile.name} mahnt zu schnellerem Fortschritt. Eine der naechsten 1-2 Szenen MUSS einen Anruf, Brief oder persoenlichen Besuch von ${clientProfile.name} bringen, mit der Frage "Wo bleiben Ihre Ergebnisse, Mauer?". Karl muss dann konkret antworten was er bisher hat.`;
       }
     }
     // Stasi-Mechanik: nur wenn der Fall politisch markiert ist
@@ -6146,6 +6173,7 @@ async function startGame() {
     verknuepfungen: [],
     lastEurekaScene: 0,
     npcMemory: {},
+    stage2StartDay: null,
   };
   // Reset Klient-Profil (wird beim ersten Cast-Add gesetzt)
   clientProfile = {
@@ -8553,6 +8581,54 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         // v6.68: Sichtbarer Fortschritts-Toast fuer den Spieler
         showProgressToast('GENUG SPUREN BEISAMMEN', 'Du hast den ersten festen Punkt. Ein Verdaechtiger sollte sich bald herausschaelen.');
       }
+      // v6.69: AUTO-FORCING bei extremer Stagnation
+      // Wenn Karl 12+ Indizien hat ODER Tag 6+ erreicht UND immer noch in Stage 1
+      // (kein Verdaechtiger genannt), waehlt das Frontend selbst den
+      // wahrscheinlichsten Kandidaten aus dem Cast/Indizien. Mistral ist sonst
+      // zu zaghaft und bleibt ewig in Stage 1.
+      if (caseProgress.stage === 1 && !caseProgress.tatverdaechtiger) {
+        const ind = caseProgress.indizien.length;
+        const tag = gameDay;
+        const shouldForce = (ind >= 12) || (tag >= 6 && ind >= 6);
+        if (shouldForce) {
+          // Finde den am haeufigsten in Indizien genannten NPC-Namen (Cast-Mitglied)
+          const namenAusFacts = Object.values(storyFacts || {})
+            .filter(f => f && f.name)
+            .map(f => f.name)
+            .filter(n => {
+              // Klient / Opfer / Tote ausschliessen
+              const fk = storyFacts && Object.values(storyFacts).find(f => f.name === n);
+              if (!fk) return false;
+              const r = (fk.rolle || '').toLowerCase();
+              return !r.includes('klient') && !r.includes('auftraggeber') && !r.includes('opfer') && !r.includes('verstorben');
+            });
+          // Zaehle Vorkommen in Indizien-Liste
+          let bestNpc = null;
+          let bestCount = 0;
+          const indizienText = caseProgress.indizien.join(' ').toLowerCase();
+          for (const name of namenAusFacts) {
+            const nameWords = name.toLowerCase().split(/\s+/).filter(w => w.length >= 4);
+            for (const w of nameWords) {
+              const matches = (indizienText.match(new RegExp('\\b' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'g')) || []).length;
+              if (matches > bestCount) {
+                bestCount = matches;
+                bestNpc = name;
+              }
+            }
+          }
+          if (bestNpc && bestCount >= 2) {
+            // Auto-Stage-Aufstieg
+            caseProgress.tatverdaechtiger = bestNpc;
+            caseProgress.stage = 2;
+            caseProgress.stage2StartDay = gameDay;
+            console.log('[Schatten] AUTO-FORCING Stage 2: ' + bestNpc + ' (Cnt:' + bestCount + ', Ind:' + ind + ', Tag:' + tag + ')');
+            diag('state', 'Auto-Stage 2 erzwungen (Verdaechtiger: ' + bestNpc + ', ' + bestCount + 'x in Indizien)');
+            showProgressToast('VERDACHT FORMT SICH', bestNpc + ' - die Spuren deuten klar in diese Richtung.');
+          } else {
+            diag('drift', 'Auto-Forcing blockiert: kein klarer Kandidat in Indizien (Ind:' + ind + ', Tag:' + tag + ')');
+          }
+        }
+      }
     }
     // v6.68: INDIZ-VERKNUEPFUNG (Eureka-Moment)
     if (typeof scene.indiz_verbindung === 'string' && scene.indiz_verbindung.trim()) {
@@ -8599,6 +8675,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         // Stage 2 erst wenn vorher Stage 1 (Indizien beisammen)
         if (caseProgress.stage >= 1) {
           caseProgress.stage = 2;
+          caseProgress.stage2StartDay = gameDay; // v6.69: fuer Eskalations-Timing
           console.log('[Schatten] Fall-Fortschritt: Stage 2 (Verdaechtiger ' + caseProgress.tatverdaechtiger + ')');
           diag('state', 'Fall-Stage 2 erreicht (Verdaechtiger: ' + caseProgress.tatverdaechtiger + ')');
           // v6.68: Toast bei Verdaechtigen-Identifikation
