@@ -3017,6 +3017,7 @@ function buildTranscriptText() {
           if (es.karlVehicle) xtra.push('Vehicle:' + es.karlVehicle);
           else xtra.push('Vehicle:VERLOREN');
           if (typeof es.romanticTension === 'number') xtra.push('Rm ' + es.romanticTension);
+          if (typeof es.historicalAnchorCount === 'number' && es.historicalAnchorCount > 0) xtra.push('Anker ' + es.historicalAnchorCount);
           if (es.timedEvent) xtra.push('TimedEvent:' + es.timedEvent);
           if (xtra.length > 0) {
             lines.push('Tracking: ' + xtra.join(' · '));
@@ -3134,6 +3135,23 @@ function buildTranscriptText() {
   }
   if (karlInStasiCustody) {
     out += '  - Karl in Stasi-Gewahrsam, Verhoer-Szenen: ' + folterSceneCount + '\n';
+  }
+  // HISTORISCHE-ANKER-LEKTORAT (v6.56): nur im Debug-Modus sichtbar.
+  // Zeigt wie viele konkrete historische Bezuege im Run vorkamen und welche.
+  // Ziel: >= 3 pro Run fuer dokumentarischen Wert (Geschichtsabitur-Niveau).
+  const debugAnchorBlock = typeof isAdminUnlocked === 'function' && isAdminUnlocked();
+  if (debugAnchorBlock) {
+    out += '\nHistorische Anker (Lektorat):\n';
+    out += '  - Gesamt-Count: ' + historicalAnchorCount + ' (Ziel: >= 3)\n';
+    if (historicalAnchorsUsed.length > 0) {
+      out += '  - Verwendete Anker: ' + historicalAnchorsUsed.join(', ') + '\n';
+    } else {
+      out += '  - Verwendete Anker: (keine erkannt)\n';
+    }
+    const bewertung = historicalAnchorCount >= 5 ? 'reich' :
+                      historicalAnchorCount >= 3 ? 'ausreichend' :
+                      historicalAnchorCount >= 1 ? 'duenn' : 'leer';
+    out += '  - Bewertung: ' + bewertung + '\n';
   }
   // Autoplay-Info wenn aktiv
   if (window.__schattenBotInfo) {
@@ -3840,6 +3858,7 @@ function renderLog() {
           if (typeof es.scenesAtSameLocation === 'number' && es.scenesAtSameLocation > 0) xtra.push('OrtCnt ' + es.scenesAtSameLocation);
           xtra.push(es.karlVehicle ? 'Vehicle:' + es.karlVehicle : 'Vehicle:VERLOREN');
           if (typeof es.romanticTension === 'number') xtra.push('Rm ' + es.romanticTension);
+          if (typeof es.historicalAnchorCount === 'number' && es.historicalAnchorCount > 0) xtra.push('Anker ' + es.historicalAnchorCount);
           if (es.timedEvent) xtra.push('TimedEvent:' + es.timedEvent);
           if (xtra.length > 0) lines.push('Tracking: ' + xtra.join(' · '));
           if (es.clientName) lines.push('Klient: ' + es.clientName + ' (' + (es.clientCharakter || 'normal') + ')');
@@ -7775,6 +7794,9 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         scenesAtSameLocation: scenesAtSameLocation,
         karlVehicle: karlVehicle,
         romanticTension: romanticTension,
+        // v6.56: Historische Anker zaehlen
+        historicalAnchorCount: historicalAnchorCount,
+        historicalAnchorsUsed: historicalAnchorsUsed.slice(),
         timedEvent: timedEventState ? (timedEventState.kind + ' (Szene ' + timedEventState.scenesActive + ')') : null,
         clientName: clientProfile.name || null,
         clientCharakter: clientProfile.charakter || null,
