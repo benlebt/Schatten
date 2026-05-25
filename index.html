@@ -1575,7 +1575,7 @@
     <button class="btn-primary" onclick="startRandomGame()">Zufällige Ermittlung</button>
     <br>
     <button class="btn-secondary" onclick="showSetupSelector()">Fall auswählen</button>
-    <div class="start-version">Schatten v6.80</div>
+    <div class="start-version">Schatten v6.81</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -1652,7 +1652,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v6.80</span>
+    <span>Schatten v6.81</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -2333,6 +2333,16 @@ VERBOTEN: Verletzungen erfinden, die nicht im Erzähltext stehen. Beispiele für
 - "Karl bewegt sich vorsichtig" -> delta -1 - NEIN
 
 Wenn nichts physisch Konkretes passiert, ist delta = 0. Lieber zu wenig als zu viel. Wenn delta negativ gesetzt wird, MUSS der Erzähltext den konkreten Treffer/Sturz/Schlag enthalten - es muss für den Spieler nachvollziehbar sein, woher die Verletzung kommt.
+
+GENAUSO WICHTIG (UMGEKEHRTE REGEL): Wenn in der Szene konkret Gewalt passiert, MUSST du auch delta entsprechend setzen. Karl ist nicht unverwundbar - Noir lebt von Konsequenzen. Beispiele wo delta PFLICHT negativ ist:
+- Karl ist in einer Schiesserei mit Spannung 5: Karl wird mindestens gestreift, gestoßen, getroffen - delta -1 oder -2. KEIN "Karl entkommt knapp ohne jeden Treffer" als Default.
+- Karl wird verhaftet/gefoltert: delta -1 oder -2 (Schlaege, Schubsen, Schmerzen).
+- Karl rennt eine längere Verfolgungsjagd: delta -1 (Erschöpfung, Atemnot, Stolpern).
+- Karl wird durch eine Tür stoßen/eingeschlagen: delta -1 (Splitter, Stoß, Prellung).
+- Karl klettert/springt von einem Dach/Mauer: delta -1 (Aufprall, Schürfwunden).
+- Karl unter Zeitdruck im Schlaegerei-Tumult: delta -1.
+
+NORM-Erwartung in 1953 Berlin: ein normaler Detektiv-Fall sieht Karl mindestens 1-3 Mal verletzt enden. Wenn ein Fall durchgespielt wird ohne dass Karls Verfassung jemals unter 4 fällt, ist das ein Symptom dass die KI zu defensiv schreibt - das ist genauso falsch wie zu schnelle Tode. Schreibe konkrete Verletzungs-Beschreibungen wenn Gewalt passiert (Splitter im Auge, Prellung am Schienbein, Bluterguss am Brustkorb, Schürfwunde an der Hand) und setze delta entsprechend.
 
 TOD (delta -4, sehr selten, nur bei wirklich tödlichen Treffern):
 Setze delta -4 (Game Over) NUR bei konkret tödlichen Ereignissen, die im ERZÄHLTEXT EXPLIZIT beschrieben sind:
@@ -3288,7 +3298,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v6.80';
+window.SCHATTEN_VERSION = 'v6.81';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -6348,13 +6358,25 @@ Es ist NICHT realistisch, dass eine Trauergesellschaft 18 Stunden an einem Grab 
     } else if (caseProgress.stage === 2) {
       // Wann wurde Stage 2 erreicht? Wenn das schon laenger her ist, escalieren.
       const stage2DurationDays = gameDay - (caseProgress.stage2StartDay || gameDay);
-      if (stage2DurationDays >= 2) {
-        recap += `\nNAECHSTER SCHRITT (KRITISCH): Karl hat seit ${stage2DurationDays} Tagen den Verdaechtigen ${caseProgress.tatverdaechtiger} identifiziert, aber noch nicht ueberfuehrt. Das ist zu lang. In dieser ODER der naechsten Szene MUSS eine Konfrontation stattfinden: Karl stellt ${caseProgress.tatverdaechtiger} mit den Beweisen, oder ${caseProgress.tatverdaechtiger} gesteht unter Druck, oder Karl uebergibt die Beweise an Roth/Lindner mit eindeutigem Ergebnis. Setze "tatverdaechtiger_ueberfuehrt": true.`;
+      const stage2DurationScenes = sceneCounter - (caseProgress.stage2StartScene || sceneCounter);
+      // v6.81: Schwellen senken - 2 Tage waren zu lang. Nach 8 Szenen Stage 2 muss
+      // Ueberfuehrung folgen, sonst stagniert der Fall (keiner der 7 Runs hat Stage 3
+      // erreicht). Bei 12+ Szenen ist es ein Bug.
+      if (stage2DurationScenes >= 12 || stage2DurationDays >= 2) {
+        recap += `\nFALL-ZWANG STAGE 3 (KRITISCH): Karl hat seit ${stage2DurationScenes} Szenen / ${stage2DurationDays} Tagen den Verdaechtigen ${caseProgress.tatverdaechtiger} identifiziert, aber NICHT ueberfuehrt. Das ist Stagnation, nicht Noir. In dieser ODER spaetestens der NAECHSTEN Szene MUSS eine harte Konfrontation passieren: Karl stellt ${caseProgress.tatverdaechtiger} direkt mit den Beweisen, ${caseProgress.tatverdaechtiger} gesteht unter Druck oder flieht (was ein Schuldgestaendnis ist), oder Karl uebergibt die Beweise an Roth/Lindner. Setze "tatverdaechtiger_ueberfuehrt": true. Auch wenn die Beweislage nicht perfekt ist - Karl forciert die Sache jetzt.`;
+      } else if (stage2DurationScenes >= 6) {
+        recap += `\nNAECHSTER SCHRITT (DRINGEND): Karl hat seit ${stage2DurationScenes} Szenen den Verdaechtigen ${caseProgress.tatverdaechtiger}. In dieser oder der naechsten Szene MUSS eine Konfrontation kommen - Karl stellt ${caseProgress.tatverdaechtiger} mit Beweisen, oder uebergibt das Material an Roth/Lindner. Setze "tatverdaechtiger_ueberfuehrt": true wenn gelungen.`;
       } else {
         recap += `\nNAECHSTER SCHRITT: Karl muss ${caseProgress.tatverdaechtiger} ueberfuehren - Konfrontation mit Beweisen, Festnahme, Gestaendnis. Wenn das in dieser Szene gelingt, setze "tatverdaechtiger_ueberfuehrt": true.`;
       }
     } else if (caseProgress.stage === 3 && !caseProgress.klientGesprochen) {
-      recap += `\nNAECHSTER SCHRITT: ${caseProgress.tatverdaechtiger} ist ueberfuehrt. Karl MUSS dem Klient/der Klientin das Ergebnis berichten (zurueck ins Buero, Anruf, Treffen). Dann ist der Fall offiziell geloest. Wenn das in dieser Szene passiert, setze "klient_berichtet": true.`;
+      // v6.81: Stage 4 (Klient berichten) wurde in 0/7 Runs erreicht. Pflicht-Push.
+      const stage3Scenes = sceneCounter - (caseProgress.stage3StartScene || sceneCounter);
+      if (stage3Scenes >= 3) {
+        recap += `\nFALL-ENDE PFLICHT: ${caseProgress.tatverdaechtiger} ist ueberfuehrt seit ${stage3Scenes} Szenen, aber Karl hat noch nicht dem Klient berichtet. Diese Szene MUSS damit enden: Karl ruft den Klient an / faehrt zu ihm / der Klient kommt ins Buero. Karl berichtet das Ergebnis konkret. Klient reagiert (Dank, Bezahlung, oder Schock). Setze "klient_berichtet": true. Dann ist der Fall offiziell geloest und der Spieler sieht eine Game-Over-mit-Erfolg Screen.`;
+      } else {
+        recap += `\nNAECHSTER SCHRITT: ${caseProgress.tatverdaechtiger} ist ueberfuehrt. Karl MUSS dem Klient/der Klientin das Ergebnis berichten (zurueck ins Buero, Anruf, Treffen). Dann ist der Fall offiziell geloest. Wenn das in dieser Szene passiert, setze "klient_berichtet": true.`;
+      }
     }
     // Klient-Geduld: wenn Karl zu lange braucht, droht der Klient mit Auftragsentzug
     // v6.69: Push wird viel direkter formuliert - Mistral hat in v6.66 die Warnung
@@ -6518,9 +6540,16 @@ Es ist NICHT realistisch, dass eine Trauergesellschaft 18 Stunden an einem Grab 
       } else if (hasFrauImCast && sceneCounter >= 4 && gameDay >= 1) {
         // v6.74: ATMOSPHAERE-PUSH - wenn Frau im Cast und Abend/Nacht und niedrige Spannung,
         // soll Mistral subtile Naehe-Hints einbauen, damit Tension organisch entstehen kann.
-        // Nicht jede Szene, nur sporadisch. Verhindert dass die Mechanik nie zuendet.
-        if (sceneCounter % 4 === 0) {
-          recap += `\n\nINTIMITAETS-MOMENT (POTENZIAL): Karl ist mit einer Frau aus dem Cast unterwegs/zusammen, es ist Abend/Nacht, die Spannung ist niedrig. Wenn es szenisch passt, baue einen subtilen Naehe-Hint ein: ihre Hand bleibt einen Moment laenger auf seinem Arm, ihr Blick verweilt, sie zuendet sich eine an und gibt Karl mit (er muss sich vorlehnen), sie laechelt ueber etwas was er sagt. KEIN Flirt, KEINE explizite Romantik - nur ein Atmosphaere-Detail das zeigt dass diese Frau Karl wahrnimmt. Optional, nicht zwingend.`;
+        // v6.81: Trigger frequenter (alle 3 Szenen statt 4), Tonalitaet "soll" statt "darf".
+        // 7 Runs in Folge mit Romantik-Tension 0/5 zeigen dass "optional" nicht reicht.
+        if (sceneCounter % 3 === 0) {
+          recap += `\n\nINTIMITAETS-MOMENT (SOLL eingebaut werden): Karl ist mit ${femaleCastCount > 1 ? 'mehreren Frauen' : 'einer Frau'} aus dem Cast unterwegs/zusammen, Abend/Nacht, niedrige Spannung. Baue in dieser Szene EINEN Naehe-Hint ein - das ist Pflicht-Atmosphaere fuer Noir: ihre Hand bleibt einen Moment laenger auf seinem Arm, ihr Blick verweilt zu lang, sie zuendet sich eine an und reicht Karl Feuer (er muss sich vorlehnen), sie laechelt warm/muede/schief ueber etwas was er sagt, sie sitzt naeher als noetig, ihre Stimme wird leiser. EIN konkreter Hint, nicht mehr. Ohne ihn wirkt Karl wie ein asexueller Roboter, das ist falsch fuer Marlowe-Stil.`;
+        }
+      } else if (sceneCounter >= 6 && gameDay >= 1 && femaleCastCount === 0) {
+        // v6.81 NEU: KEINE Frau im Cast nach 6 Szenen - das ist auch ein Problem.
+        // Mistral introduziert oft nur Maenner. Wir pushen sporadisch eine Frau.
+        if (sceneCounter % 8 === 0) {
+          recap += `\n\nFRAUEN-FIGUR FEHLT: Karl hat seit ${sceneCounter} Szenen keine Frau im Cast. Das ist unrealistisch fuer Berlin 1953 und schlecht fuer Noir-Atmosphaere. Wenn es szenisch passt, fuege in dieser oder einer der naechsten Szenen eine Frau ein: eine Kellnerin in der Kneipe die Karl wiedererkennt, eine Zeugin/Verkaeuferin mit Information, die Sekretaerin im Buero die Karl reinlaesst, die Klientin (falls weiblich) erscheint persoenlich. Sie muss nicht romantisch sein - aber Frauen existieren in der Stadt.`;
         }
       }
     }
@@ -7827,6 +7856,13 @@ function updateStasiTension(sceneText) {
     /\b(akten\s+gestohlen|akten\s+verschwunden|spuren\s+verwischt)\b/,
     /\b(ho-?funktionaer|sed-?funktionaer|partei-?bonze)\b/,
     /\b(observation|fahnd|haftbefehl)\b/,
+    // v6.81: Sokolow/Krylow/Antonowitsch (Anker-NPCs) - direkte Praesenz
+    /\b(sokolow|krylow|antonowitsch)\b/,
+    /\bmajor\s+\w+(witsch|owitsch)\b/,
+    /\b(volkspolizei|vp-?(streife|beamt|mann)|kvp|kasernierte?\s+volks)/,
+    /\b(absatz|absaetze)\s+(auf|hallen|klappern).*(flur|treppe|gang)/,
+    /\b(narb(e|en|ig)?|stalingrad-narbe|stirnnarbe|wangennarbe)\b/,
+    /\b(verhaftung|verhaftet|abgefuehrt|fest\s?genommen)\b/,
   ];
   const hits = stasiMentions.filter(p => p.test(lower)).length;
   if (hits > 0) {
@@ -8804,11 +8840,21 @@ function updateRomanticTension(scene) {
   // v6.60: einzelne Allerweltsworte wie "Haar" alleine genuegen NICHT mehr
   // (Mann mit blondem Haar in Tuer-Konfrontation triggerte False-Positive).
   // Verlangt jetzt qualifizierende Kombinationen.
+  // v6.81: Patterns gelockert nachdem 7 Runs in Folge Romantik-Tension=0/5 zeigten.
+  // Mistral schreibt "sie laechelt" nicht "sie laechelt dich an". Wir akzeptieren
+  // jetzt auch lockerere Beruehrungs- und Naehe-Beschreibungen.
   const romanticHints = [
+    // Stufe 1: explizite Naehe-Hints (wie vorher)
     /\b(ihr (zaertlicher |interessierter |verfuehrerischer |suchender )?blick haengt|sie laechelt dich an|ihre fingerspitzen (streichen|liegen|beruehren)|ihre hand auf (deinem|deinem arm|deinem schenkel|deiner schulter)|sucht deinen blick|haelt deinen blick|laechelt dir zu)\b/,
     /\b(ihr parfum|ihr haar (faellt|streift|duftet|riecht|leuchtet)|ihre lippen|ihre silhouette|ihre kurven|seidenstrumpf|seidenbluse|halsausschnitt|dekolle|kleid streift)\b/,
     /\b(legt eine hand auf|streicht ueber (deine|dein)|beruehrt deine|kommt dir naeher|setzt sich neben dich|lehnt sich an dich|ihre warme naehe|spuerst ihren atem)\b/,
     /\b(zuendet dir eine an|du gibst ihr feuer|gibst ihr feuer|teilt sich eine flasche mit dir|sie giesst dir ein)\b/,
+    // v6.81 LOCKERER: vertraute Gesten / Blicke ohne explizite Beruehrung
+    /\b(sie laechelt(\s|,|\.)|laechelt warm|laechelt muede|laechelt schief|laechelt traurig|laechelt zaghaft|laechelt gequaelt|ihr laecheln (ist|wird|bleibt|haengt))\b/,
+    /\b(sieht dich (an|lange|fragend|mude|prufend|kurz)|schaut dich (an|lange|prufend)|blickt dich (an|lange))\b/,
+    /\b(reicht dir (eine tasse|den kaffee|die hand|ein glas|eine zigarette|das feuer)|giesst dir (kaffee|tee|einen|nach))\b/,
+    /\b(ihre stimme (wird leiser|wird weicher|wird waermer|zittert|bricht|wird brueschig)|sie senkt die stimme)\b/,
+    /\b(sitzt (dir gegenueber|neben dir|zu nah)|steht (dir gegenueber|zu nah)|naeher als noetig|naeher als sonst)\b/,
   ];
   const hits = romanticHints.filter(p => p.test(sceneText)).length;
 
@@ -10313,6 +10359,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             caseProgress.tatverdaechtiger = bestNpc;
             caseProgress.stage = 2;
             caseProgress.stage2StartDay = gameDay;
+            caseProgress.stage2StartScene = sceneCounter; // v6.81: Szenen-Counter
             console.log('[Schatten] AUTO-FORCING Stage 2: ' + bestNpc + ' (Cnt:' + bestCount + ', Ind:' + ind + ', Tag:' + tag + ')');
             diag('progress', '✦ AUTO-STAGE 2 erzwungen (Verdaechtiger: ' + bestNpc + ', ' + bestCount + 'x in Indizien, Tag ' + tag + ', ' + ind + ' Indizien)');
             showProgressToast('VERDACHT FORMT SICH', bestNpc + ' - die Spuren deuten klar in diese Richtung.');
@@ -10420,6 +10467,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (caseProgress.stage >= 1) {
           caseProgress.stage = 2;
           caseProgress.stage2StartDay = gameDay; // v6.69: fuer Eskalations-Timing
+          caseProgress.stage2StartScene = sceneCounter; // v6.81
           console.log('[Schatten] Fall-Fortschritt: Stage 2 (Verdaechtiger ' + caseProgress.tatverdaechtiger + ')');
           diag('progress', '✦ STAGE 2 erreicht (Verdaechtiger: ' + caseProgress.tatverdaechtiger + ')');
           // v6.68: Toast bei Verdaechtigen-Identifikation
@@ -10431,10 +10479,12 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       }
     }
     // 3) Tatverdaechtiger ueberfuehrt - Voraussetzung Stage 2
-    if (scene.tatverdaechtiger_ueberfuehrt === true && caseProgress.stage >= 2) {
+    if (scene.tatverdaechtiger_ueberfuehrt === true && caseProgress.stage >= 2 && !caseProgress.ueberfuehrt) {
       caseProgress.ueberfuehrt = true;
-      console.log('[Schatten] Fall-Fortschritt: Verdaechtiger ueberfuehrt!');
-      diag('progress', '✦ VERDAECHTIGER UEBERFUEHRT: ' + caseProgress.tatverdaechtiger);
+      caseProgress.stage = 3; // v6.81: Eigener Stage 3 fuer "ueberfuehrt aber noch nicht berichtet"
+      caseProgress.stage3StartScene = sceneCounter; // v6.81: Stage 3 tracken
+      console.log('[Schatten] Fall-Fortschritt: Verdaechtiger ueberfuehrt (Stage 3)');
+      diag('progress', '✦ STAGE 3 erreicht (Verdaechtiger ueberfuehrt: ' + caseProgress.tatverdaechtiger + ')');
       // v6.68: Toast bei Ueberfuehrung
       showProgressToast('VERDAECHTIGER UEBERFUEHRT', caseProgress.tatverdaechtiger + ' kann nicht mehr leugnen. Jetzt zum Klienten.');
     }
@@ -10442,9 +10492,10 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     if (scene.klient_berichtet === true && caseProgress.ueberfuehrt) {
       caseProgress.klientGesprochen = true;
       caseProgress.istGelöst = true;
-      caseProgress.stage = 3;
+      caseProgress.stage = 4; // v6.81: Stage 4 = geloest (vorher Stage 3 doppelt belegt)
       console.log('[Schatten] FALL GELÖST! Win-Screen wird ausgeloest.');
-      diag('progress', '✦ FALL GELOEST (Stage 3) - Klient berichtet');
+      diag('progress', '✦ FALL GELOEST (Stage 4) - Klient berichtet');
+      showProgressToast('FALL GELOEST', 'Klient ist informiert. Karl hat es geschafft.');
     }
 
     // Politik-Detection: ist der Fall MfS-relevant?
