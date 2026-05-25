@@ -1577,7 +1577,7 @@
     <button class="btn-primary" onclick="startRandomGame()">Zufällige Ermittlung</button>
     <br>
     <button class="btn-secondary" onclick="showSetupSelector()">Fall auswählen</button>
-    <div class="start-version">Schatten v6.96</div>
+    <div class="start-version">Schatten v6.97</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -3319,7 +3319,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v6.96';
+window.SCHATTEN_VERSION = 'v6.97';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -6866,12 +6866,20 @@ Es ist NICHT realistisch, dass eine Trauergesellschaft 18 Stunden an einem Grab 
     // Bei Hu>=8 wird der Hint auch bei moderater Spannung (Sp 3-4) gesetzt, nur Sp 5
     // (Lebensgefahr) blockt - sonst verhungert Karl waehrend er einen Tatort beobachtet.
     // v6.79: Bei Hunger 9-10 + niedrige Spannung -> 2+ Essens-Optionen erzwingen.
+    // v6.97: Hu>=6 + ANY Spannung (ausser Sp 5 Lebensgefahr) loest jetzt EINEN
+    // moderaten Push aus. Anlass: Doc-Wagner-Hardenberg-Run zeigte Karl mit
+    // Hunger 7-10 ueber viele Szenen ohne dass eine Ess-Option in den A/B/C/D
+    // kam, weil Spannung 3-4 war (Verfolgung, MfS).
     const hungerCriticalForceEat = karlHunger >= 8 && lastSpannung < 5;
+    const hungerStrongForceEat = karlHunger >= 6 && lastSpannung < 5; // v6.97 neu
     if (karlHunger >= 9 && isLowTension) {
       // SEHR HUNGRIG + ruhig: 2+ Essens-Optionen, Karl muss handeln
       recap += `\n\nKARL HAT EXTREMEN HUNGER (Hunger ${karlHunger}/10, ${currentTime}): Karl kann kaum mehr klar denken vor Hunger, ihm wird schwindlig, der Magen krampft. MINDESTENS 2 der 4 Optionen MUESSEN Essens-Optionen sein - die anderen 2 koennen normale Ermittlung sein. Beispiele je nach Sektor: OST (Mitte/Friedrichshain/Prenzlauer Berg): Bockwurst-Stand am Alex, Soljanka in HO-Gaststaette Frankfurter Allee, Bouletten mit Kartoffelsalat bei Trude, Erbsensuppe vom Suppenwagen, Eisbein in der Mitropa-Gaststaette, Kartoffelpuffer vom Strassenstand, Stulle mit Schmalz. WEST (Charlottenburg/Schoeneberg/Tempelhof): Currywurst-Bude, Buletten-Imbiss, Wiener Wuerstchen am Kurfuerstendamm. KEINE 3 Ermittlungs-Optionen mehr - Karl MUSS jetzt essen oder er bricht zusammen. Im Erzaehltext: der Magen knurrt laut, Schwindel, Karl muss sich an etwas festhalten.`;
     } else if (karlHunger >= 7 && (isLowTension || hungerCriticalForceEat)) {
       recap += `\n\nKARL HAT GROSSEN HUNGER (Hunger ${karlHunger}/10): Karl hat seit Stunden nichts gegessen, der Magen knurrt deutlich. EINE der Optionen MUSS eine konkrete Essens-Option sein - nicht nur Kaffee trinken, sondern wirklich etwas essen (Bockwurst, Bulette, Schrippe, Suppe, Currywurst, Streuselkuchen mit Sahne, Stulle, Eisbein etc). Wenn Karl bereits in einer Kneipe/Café sitzt: EINE Option MUSS "etwas essen" sein (z.B. "Eine Bulette zum Bier bestellen", "Vom Wirt eine Bockwurst holen lassen"). WICHTIG: VARIIERE - keine Currywurst-Monokultur! Wenn Karl im OSTEN ist (Mitte, Friedrichshain, Prenzlauer Berg, Hackescher Markt, Alexanderplatz): Bockwurst-Stand, Soljanka in der HO-Gaststaette, Bouletten mit Kartoffelsalat, Erbsensuppe vom Suppenwagen, Eisbein mit Sauerkraut, Strammer Max in der Mitropa, Kartoffelpuffer vom Strassenstand, Heringsschmaus, Stulle mit Schmalz, Schrippe vom HO-Baecker. Wenn Karl im WESTEN ist (Charlottenburg, Schoeneberg, Tempelhof): Currywurst-Bude, Buletten-Imbiss, Wiener Wuerstchen. In Cafes/Kneipen beider Sektoren: Malzkaffee mit Schrippe, Streuselkuchen, Schmalzbrot. ALLE Essens-Optionen MUESSEN explizit den konkreten Essens-Begriff enthalten. Im Erzaehltext erwaehne den knurrenden Magen oder den Imbissgeruch direkt.`;
+    } else if (karlHunger >= 6 && hungerStrongForceEat) {
+      // v6.97: Mittlere Hunger-Schwelle 6+ auch bei Action-Spannung 3-4.
+      recap += `\n\nKARL HAT SOLIDE HUNGER (Hunger ${karlHunger}/10): Der Magen meldet sich deutlich, Karl bemerkt es selbst. EINE der A/B/C/D-Optionen sollte eine konkrete Essens-Moeglichkeit anbieten - auch wenn die Lage angespannt ist, gibt es zwischendurch immer Gelegenheiten (Imbiss-Geruch im Vorbeigehen, ein Wurststand an der Ecke, ein Cafe). Wenn Karl gerade jemanden verfolgt oder in einer Konfrontation steht, kann die Ess-Option "Zwischenstopp am Imbiss" oder "Geh in das naechste Cafe" sein. VARIIERE je nach Sektor: OST = Bockwurst, Bulette, Soljanka, Schrippe; WEST = Currywurst, Wiener.`;
     } else if (karlHunger >= 4 && isLowTension) {
       recap += `\n\nKARL WIRD HUNGRIG (Hunger ${karlHunger}/10): Karl koennte langsam was essen, der Magen meldet sich. Wenn die Situation es passend hergibt, biete EINE Option an. VARIIERE: nicht immer Currywurst! Je nach Sektor: OST (Karls Heimatgegend) Bockwurst-Stand, Soljanka in HO-Gaststaette, Bouletten, Erbsensuppe, Kartoffelpuffer, Schrippe vom HO-Baecker, Stulle mit Schmalz. WEST nur wenn Karl drueben ist: Currywurst-Bude. KEIN Zwang - nur wenn es zur Story passt. Auch im Erzaehltext kann ein Imbiss-Geruch oder ein knurrender Magen beilaeufig erwaehnt werden.`;
     }
@@ -10386,9 +10394,38 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           // (pistole, auto, koffer, schluessel, feuerzeug). NICHT 'foto' - zwei
           // Fotos koennen verschiedene Personen zeigen ("Foto von Klaus" vs
           // "Foto von Heinz" sind nicht dasselbe).
+          // v6.97: Substring-Match statt Equality. Damit "Sturmfeuerzeug (H.K.)"
+          // und "Sturmfeuerzeug mit Initialen H.K." als beide-haben-"feuerzeug"
+          // erkannt werden. Anlass: Doc-Wagner-Hardenberg-Run hatte beide
+          // Eintraege als separate Inventar-Items, weil die Strong-Objects-
+          // Liste auf wortgenaue Gleichheit prueft, "sturmfeuerzeug" aber nicht
+          // gleich "feuerzeug" ist. Plus: Initialen-Pattern als zusaetzlicher
+          // Indikator. Wenn beide Items die gleichen Initialen (H.K. / H. K.)
+          // enthalten, sind sie hoechstwahrscheinlich dasselbe Objekt.
           const strongObjects = ['pistole', 'auto', 'koffer', 'schluessel', 'feuerzeug', 'visitenkarte'];
-          const newKey = newWords.find(w => strongObjects.includes(w));
-          if (newKey && existWords.includes(newKey)) {
+          const newHasStrong = strongObjects.find(s => newWords.some(w => w.includes(s)));
+          const existHasStrong = newHasStrong ? existWords.some(w => w.includes(newHasStrong)) : false;
+          if (newHasStrong && existHasStrong) {
+            // Beide Items teilen ein starkes Schluessel-Substantiv.
+            // v6.97: Initialen-/Klammer-Annotation pruefen. Wenn BEIDE Items
+            // unterschiedliche Initialen tragen ("Feuerzeug J.M." vs "Feuerzeug H.K."),
+            // sind sie verschiedene Objekte und NICHT Duplikate. Wenn beide die
+            // gleichen Initialen tragen oder eines keine hat, ist es ein Duplikat.
+            const initialsPattern = /\b([a-z])\.?\s*([a-z])\.?(?![a-z])/gi;
+            const newInitialsMatches = newLowerRaw.match(initialsPattern) || [];
+            const existInitialsMatches = existLowerRaw.match(initialsPattern) || [];
+            const newInitials = newInitialsMatches.map(s => s.replace(/[\s.]/g, '').toLowerCase()).filter(s => s.length === 2);
+            const existInitials = existInitialsMatches.map(s => s.replace(/[\s.]/g, '').toLowerCase()).filter(s => s.length === 2);
+            if (newInitials.length > 0 && existInitials.length > 0) {
+              const sharedInitials = newInitials.filter(i => existInitials.includes(i));
+              if (sharedInitials.length === 0) {
+                // Beide haben Initialen, aber keine gemeinsamen -> distinkte Objekte
+                console.log('[Schatten] Inventar: gleiches Schluessel-Substantiv "' + newHasStrong + '" aber unterschiedliche Initialen (' + newInitials.join(',') + ' vs ' + existInitials.join(',') + ') -> NICHT Duplikat');
+                return false;
+              }
+              // Mind. eine gemeinsame Initiale -> Duplikat
+            }
+            // Default bei Strong-Match: Duplikat (Walther vs Walther, Sturmfeuerzeug-Varianten).
             return true;
           }
           // Foto-Spezialbehandlung: wenn beide Fotos sind, vergleichen wir die Namen
@@ -11044,14 +11081,34 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             }
           }
           if (bestNpc && bestCount >= 2) {
-            // Auto-Stage-Aufstieg
-            caseProgress.tatverdaechtiger = bestNpc;
-            caseProgress.stage = 2;
-            caseProgress.stage2StartDay = gameDay;
-            caseProgress.stage2StartScene = sceneCounter; // v6.81: Szenen-Counter
-            console.log('[Schatten] AUTO-FORCING Stage 2: ' + bestNpc + ' (Cnt:' + bestCount + ', Ind:' + ind + ', Tag:' + tag + ')');
-            diag('progress', '✦ AUTO-STAGE 2 erzwungen (Verdaechtiger: ' + bestNpc + ', ' + bestCount + 'x in Indizien, Tag ' + tag + ', ' + ind + ' Indizien)');
-            showProgressToast('VERDACHT FORMT SICH', bestNpc + ' - die Spuren deuten klar in diese Richtung.');
+            // v6.97: Inhalts-Check analog v6.95 Stage-3. Wenn der gewaehlte
+            // Verdaechtige in den letzten 5 Szenen-Texten gar nicht vorkommt,
+            // ist er kein guter Stage-2-Kandidat. Anlass: Doc-Wagner-Schaefer-
+            // strasse-Run v6.95 erkor "Horst" zum Verdaechtigen, aber Horst war
+            // nur in Sz4 erwaehnt (Mistral hatte den Namen mal genannt, dann
+            // ist er aus dem Plot verschwunden). Karl hatte ab Sz12 nichts mehr
+            // mit Horst zu tun.
+            const bestNpcLastName = bestNpc.split(/\s+/).pop().toLowerCase();
+            const last5SceneTexts = logEntries
+              .filter(e => e.type === 'scene')
+              .slice(-5)
+              .map(e => (e.text || '').toLowerCase())
+              .join(' ');
+            const npcInRecentScenes = bestNpcLastName.length >= 4 && last5SceneTexts.includes(bestNpcLastName);
+            // Hard-Force ab Indizien >= 12 oder Tag >= 3 (Karl muss Fortschritt zeigen).
+            const hardForceStage2 = (ind >= 12 || tag >= 3);
+            if (!npcInRecentScenes && !hardForceStage2) {
+              diag('drift', 'Stage-2-Force blockiert: ' + bestNpc + ' nicht in letzten 5 Szenen (Ind:' + ind + ', Tag:' + tag + ')');
+            } else {
+              // Auto-Stage-Aufstieg
+              caseProgress.tatverdaechtiger = bestNpc;
+              caseProgress.stage = 2;
+              caseProgress.stage2StartDay = gameDay;
+              caseProgress.stage2StartScene = sceneCounter;
+              console.log('[Schatten] AUTO-FORCING Stage 2: ' + bestNpc + ' (Cnt:' + bestCount + ', Ind:' + ind + ', Tag:' + tag + ')');
+              diag('progress', '✦ AUTO-STAGE 2 erzwungen (Verdaechtiger: ' + bestNpc + ', ' + bestCount + 'x in Indizien, Tag ' + tag + ', ' + ind + ' Indizien)');
+              showProgressToast('VERDACHT FORMT SICH', bestNpc + ' - die Spuren deuten klar in diese Richtung.');
+            }
           } else {
             diag('drift', 'Auto-Forcing blockiert: kein klarer Kandidat in Indizien (Ind:' + ind + ', Tag:' + tag + ')');
           }
@@ -11349,24 +11406,42 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       // v6.95: Kontext-Filter bevor wir Custody setzen.
       // Wenn die Szene an einem befreundeten Polizei-Ort spielt (VP-Revier mit
       // Roth/Lindner) und KEIN MfS/Stasi-Akteur namentlich anwesend ist, ist
-      // das ein False-Positive (z.B. Roth erwaehnt Hohenschoenhausen).
-      // Bedingung: friendly police context AND no MfS actor in scene -> skip.
+      // das ein False-Positive.
+      // v6.97: Erweitert um Klient-Privat-Raeume. Anlass: Doc-Wagner-Schaefer-
+      // strasse-Run hatte 5x "STASI-FESTNAHME UNAUSWEICHLICH" in Doc Wagners
+      // eigener Praxis (Sz9-15) mit nur Marlene+Wagner+Karl im Cast. Reine
+      // Anspannung wegen dem Toten triggerte den Tension-Anstieg, obwohl kein
+      // MfS-Akteur da war. Klient-Privat-Raeume sind ebenfalls "friendly".
       const ortLower = (scene.ort || '').toLowerCase();
       const txtLower = (scene.szene || '').toLowerCase()
         .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
-      const isFriendlyPoliceLoc = /\b(volkspolizei[\s\-]?(revier|inspektion|praesidium)|revier\s+hardenberg|polizeirevier\s+hardenberg|keibelstrasse|hardenbergstrasse)\b/.test(ortLower.replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss'));
+      const ortLowerNorm = ortLower.replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+      const isFriendlyPoliceLoc = /\b(volkspolizei[\s\-]?(revier|inspektion|praesidium)|revier\s+hardenberg|polizeirevier\s+hardenberg|keibelstrasse|hardenbergstrasse)\b/.test(ortLowerNorm);
+      // v6.97: Klient-Privat-Raum-Detection. Wenn der Ort Praxis-/Wohnung-/
+      // Kanzlei-Stichworte enthaelt UND der Klient-Nachname im Ort oder im
+      // Szenentext vorkommt, ist Karl im Privatraum des Klienten - nicht in
+      // MfS-Gewahrsam.
+      const clientNameLower = clientProfile && clientProfile.name ? clientProfile.name.toLowerCase()
+        .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss') : '';
+      const clientLastName = clientNameLower ? clientNameLower.split(/\s+/).pop() : '';
+      const hasPrivateRoomKeyword = /\b(praxis|sprechzimmer|behandlungsraum|wartezimmer|hintertreppe|hausflur|wohnung|kanzlei|salon|werkstatt|laden|fabrikbuero|atelier)\b/.test(ortLowerNorm);
+      const clientPresent = clientLastName && clientLastName.length >= 4 && txtLower.includes(clientLastName);
+      const isClientPrivateLoc = clientLastName && clientLastName.length >= 4 &&
+        (ortLowerNorm.includes(clientLastName) || (hasPrivateRoomKeyword && clientPresent));
       const friendlyNpcPresent = /\b(roth|lindner|wilhelm\s+roth|heinrich\s+lindner|kommissar\s+(roth|lindner))\b/.test(txtLower);
       const mfsActorPresent = /\b(sokolow|iwanow|smirnow|major\s+\w+|leutnant\s+\w+|mfs-?(beamte|vernehmer|schlaeger)|stasi-?(beamte|leute|maenner))\b/.test(txtLower);
       // Karl-spezifischer Custody-Marker (echte Festnahme)
       const karlActuallyHeld = /\b(du\s+(sitzt|bist|liegst|landest|wachst|wirst)|man\s+(fuehrt|bringt|schleppt)\s+dich|(fesseln|handschellen|verhoertisch|zelle)\b.{0,40}\b(du|dich|karl))\b/.test(txtLower);
 
       if (isFriendlyPoliceLoc && friendlyNpcPresent && !mfsActorPresent && !karlActuallyHeld) {
-        // False-Positive: Karl spricht im VP-Revier mit Freund, nicht in Gewahrsam.
         diag('detect', 'Custody-Trigger im befreundeten VP-Revier unterdrueckt (kein MfS-Akteur, kein Karl-Festnahme-Marker)');
+      } else if (isClientPrivateLoc && clientPresent && !mfsActorPresent && !karlActuallyHeld) {
+        // v6.97: Karl in Klient-Privatraum ohne MfS-Akteur und ohne echten Festnahme-Marker.
+        diag('detect', 'Custody-Trigger im Klient-Privatraum unterdrueckt (' + (clientProfile.name || 'Klient') + ' anwesend, kein MfS-Akteur)');
       } else {
         karlInStasiCustody = true;
         folterSceneCount = 0;
-        stasiHighTensionStreak = 0; // Reset wenn Karl jetzt drin ist
+        stasiHighTensionStreak = 0;
         console.log('[Schatten] Karl in Stasi-Gewahrsam. Folter-Wuerfel ab Szene 2 aktiv.');
         diag('detect', 'Karl in Stasi-Gewahrsam - Folter-Wuerfel aktiv ab Szene 2');
       }
@@ -12013,23 +12088,56 @@ function botChooseByStrategy(options) {
   // normale Strategie zu nutzen. Verhindert dass der Bot ewig "weiter ermitteln"
   // waehlt und Karl zusammenklappt.
   // Spannung muss niedrig sein - in Action-Szenen kein Survival-Override.
+  // v6.97: Schwellen frueher (Hunger ab 7 statt 9, Energie unter 30 statt 25),
+  // weil v6.95-Run Doc-Wagner-Hardenberg zeigte: Karl mit Hunger 10 am Ende
+  // Tag 1 ABEND - der Bot hat NIE eine Ess-Option gewaehlt obwohl Mistral
+  // dreimal eine in Option D anbot. Bei aggressive-Strategie sogar noch frueher:
+  // aggressive Spieler wuerden gar nicht warten bis Hu 9.
+  // v6.97: Plus ROMANTIK-PURSUIT als neue Prio 0. Damit Bot ueberhaupt
+  // Romantik-Optionen waehlt wenn die Spannung da ist.
   const inAction = (typeof lastSpannung === 'number' && lastSpannung >= 4);
+  const effectiveStratForOverride = (botStrategy === 'rotating' && botRotatingSubStrategies)
+    ? botRotatingSubStrategies[Math.floor(botCurrentTurn / botRotatingTurnsPerStyle) % botRotatingSubStrategies.length]
+    : botStrategy;
+  const isAggressive = (effectiveStratForOverride === 'aggressive');
   if (!inAction) {
-    // PRIO 1: Karl muss dringend schlafen (Energie <=25 + Abend/Nacht)
-    if (karlEnergie <= 25 && gameTimeIdx >= 3) {
-      const sleepPattern = /\b(schlaf|ins\s+bett|aufs\s+sofa|auf\s+der\s+couch|uebernacht|hinleg|nacht\s+verbring|bis\s+morgen|bett|einnick|leg\s+dich|nach\s+hause\s+(fahr|geh))/i;
+    // PRIO 0 (v6.97 neu): ROMANTIK-PURSUIT. Wenn romanticTension hoch ist
+    // und es Abend/Nacht ist, nutzt der Bot Romantik-Optionen statt stur
+    // weiter zu ermitteln. Macht die Romantik-Storyline ueberhaupt erlebbar
+    // im Autoplay. Anlass: in 14 v6.x-Runs war romanticTension immer 0/5 am
+    // Ende, weil der Bot Romantik-Optionen ignorierte und Mistral sie dann
+    // nicht weiter anbot.
+    if (typeof romanticTension === 'number' && romanticTension >= 3 && gameTimeIdx >= 3) {
+      const romancePattern = /\b(kuess|kuss|umarm|lehn\s+dich\s+(zu|an|vor)|leg\s+(eine\s+hand|deine\s+hand|den\s+arm)|nimm\s+(ihre|ihre\s+hand)|streich|haelt\s+(ihre|seine)\s+hand|nah\s+heran|naeher\s+heran|verfuehr|begehr|liebkos|zieh\s+sie\s+naeher)/i;
+      const romanceOptions = options.filter(opt => romancePattern.test(opt.text));
+      if (romanceOptions.length > 0) {
+        console.log('[Bot] Survival-Override: Romantik-Pursuit (Rm=' + romanticTension + ')');
+        return botRngChoice(romanceOptions);
+      }
+    }
+    // PRIO 1: Karl muss dringend schlafen (Energie <=30 + Abend/Nacht).
+    // v6.97: Schwelle von 25 auf 30 angehoben. Energie 30 ist bereits "Muede",
+    // selbst aggressive Spieler muessen dann ans Schlafen denken.
+    if (karlEnergie <= 30 && gameTimeIdx >= 3) {
+      const sleepPattern = /\b(schlaf|ins\s+bett|aufs\s+sofa|auf\s+der\s+couch|uebernacht|hinleg|nacht\s+verbring|bis\s+morgen|bett|einnick|leg\s+dich|nach\s+hause\s+(fahr|geh)|geh\s+nach\s+hause)/i;
       const sleepOptions = options.filter(opt => sleepPattern.test(opt.text));
       if (sleepOptions.length > 0) {
         console.log('[Bot] Survival-Override: Karl muss schlafen (En=' + karlEnergie + '), waehle Schlaf-Option');
         return botRngChoice(sleepOptions);
       }
     }
-    // PRIO 2: Karl muss dringend essen (Hunger >=9)
-    if (karlHunger >= 9) {
-      const eatPattern = /\b(currywurst|bockwurst|bulett|schrippe|stulle|eisbein|schmalz|streuselkuchen|sahne|kartoffel|suppe|soljanka|essen|imbiss|wuerstchen|bratkartoffel|frikadell|wurst\s+essen|brot\s+essen|mittag\s+essen|abend\s+essen|fruehstueck|fruestueck|mahlzeit)/i;
+    // PRIO 2: Karl muss essen.
+    // v6.97: Schwelle gesenkt von 9 auf 7. Plus: aggressive Strategie greift
+    // schon bei 6, weil aggressive Spieler "schnell zugreifen" auch beim Essen.
+    // Anlass: Doc-Wagner-Hardenberg-Run hatte Hu 7-10 ueber 10 Szenen am
+    // Tag 1 ABEND, Bot waehlte trotzdem A-Optionen (aggressive). Toast
+    // "Hunger meldet sich" kam mehrfach ohne Effekt.
+    const hungerThreshold = isAggressive ? 6 : 7;
+    if (karlHunger >= hungerThreshold) {
+      const eatPattern = /\b(currywurst|bockwurst|bulett|schrippe|stulle|eisbein|schmalz|streuselkuchen|sahne|kartoffel|suppe|soljanka|essen|imbiss|wuerstchen|bratkartoffel|frikadell|wurst\s+essen|brot\s+essen|mittag\s+essen|abend\s+essen|fruehstueck|fruestueck|mahlzeit|cafe|kaffee\s+(trink|bestell)|bei\s+trude|trude|moehring|kranzler|kneipe|bestell\s+(dir|eine|ein)|geh\s+in\s+das\s+naechste\s+(cafe|wirtshaus|gasthaus))/i;
       const eatOptions = options.filter(opt => eatPattern.test(opt.text));
       if (eatOptions.length > 0) {
-        console.log('[Bot] Survival-Override: Karl muss essen (Hu=' + karlHunger + '), waehle Ess-Option');
+        console.log('[Bot] Survival-Override: Karl muss essen (Hu=' + karlHunger + ', threshold=' + hungerThreshold + '), waehle Ess-Option');
         return botRngChoice(eatOptions);
       }
     }
@@ -12603,13 +12711,29 @@ function showProgressToast(title, subtitle, variant, triggerKey) {
   if (triggerKey && !canShowToast(variant, triggerKey)) {
     return;
   }
+  // v6.97: Toast-Stack-Layout. Wenn schon Toasts auf dem Bildschirm sind,
+  // wird der neue UNTER den bestehenden positioniert statt ueberlagert.
+  // Anlass: User-Screenshot Doc-Wagner-Hardenberg-Run Zug 24. Hunger-Toast und
+  // ein zweiter Toast (vermutlich Eureka) erschienen pixel-genau auf dem
+  // gleichen top:60px und ueberlappten sich, sodass beide unlesbar wurden.
+  // Loesung: Stapel-Position dynamisch berechnen ueber alle sichtbaren Toasts.
+  const existingToasts = document.querySelectorAll('.schatten-toast');
+  let stackOffset = 60;
+  existingToasts.forEach(t => {
+    const rect = t.getBoundingClientRect();
+    if (rect.height > 0) {
+      stackOffset = Math.max(stackOffset, rect.bottom + 12);
+    }
+  });
   const toast = document.createElement('div');
-  toast.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);' +
+  toast.className = 'schatten-toast';
+  toast.style.cssText = 'position:fixed;top:' + stackOffset + 'px;left:50%;transform:translateX(-50%);' +
                        'z-index:1000;background:' + v.bg + ';' +
                        'color:' + v.bodyColor + ';padding:18px 28px;border:2px solid ' + v.border + ';' +
                        'font:13px monospace;letter-spacing:1.5px;border-radius:6px;' +
                        'backdrop-filter:blur(10px);max-width:90vw;text-align:center;' +
-                       'box-shadow:0 0 30px ' + v.shadow + ';';
+                       'box-shadow:0 0 30px ' + v.shadow + ';' +
+                       'transition:top 0.3s ease-out, opacity 0.5s ease-out;';
   const titleDiv = document.createElement('div');
   titleDiv.style.cssText = 'font-weight:bold;font-size:14px;color:' + v.titleColor + ';margin-bottom:6px;text-transform:uppercase;';
   titleDiv.textContent = v.icon + ' ' + asciiToUmlaut(title) + ' ' + v.icon;
@@ -12625,10 +12749,29 @@ function showProgressToast(title, subtitle, variant, triggerKey) {
   // Fade-Out + Remove (danger laenger sichtbar)
   const showDuration = variant === 'danger' ? 7000 : 5500;
   setTimeout(() => {
-    toast.style.transition = 'opacity 0.5s';
     toast.style.opacity = '0';
   }, showDuration);
-  setTimeout(() => toast.remove(), showDuration + 500);
+  setTimeout(() => {
+    toast.remove();
+    // v6.97: Stack neu anordnen damit verbleibende Toasts nach oben rutschen.
+    repositionToastStack();
+  }, showDuration + 500);
+}
+
+// v6.97: Re-Positioning aller sichtbaren Toasts. Wird beim Entfernen aufgerufen,
+// damit der Stack lueckenlos bleibt und der naechste Toast nicht in der Luft haengt.
+function repositionToastStack() {
+  const toasts = document.querySelectorAll('.schatten-toast');
+  let pos = 60;
+  toasts.forEach(t => {
+    t.style.top = pos + 'px';
+    const rect = t.getBoundingClientRect();
+    if (rect.height > 0) {
+      pos = rect.bottom + 12;
+    } else {
+      pos += 100;
+    }
+  });
 }
 
 // Sektion im Settings-Menue je nach Admin-Status sichtbar machen
