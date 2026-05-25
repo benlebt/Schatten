@@ -925,6 +925,121 @@
     50% { box-shadow: 0 4px 12px rgba(0,0,0,0.4), 0 0 0 8px rgba(240, 208, 144, 0); }
   }
   .speak-fab.hidden { display: none; }
+  /* v7.5: Voice-Picker-Overlay */
+  .voice-picker-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .voice-picker-inner {
+    background: rgba(28, 24, 18, 0.98);
+    border: 1px solid rgba(200, 191, 168, 0.35);
+    border-radius: 8px;
+    padding: 20px;
+    max-width: 440px;
+    width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+    color: #c5b894;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+  }
+  .voice-picker-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: #d4c8a8;
+  }
+  .voice-picker-hint {
+    font-size: 12px;
+    color: #8a8268;
+    margin-bottom: 14px;
+    line-height: 1.4;
+  }
+  .voice-picker-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 14px;
+  }
+  .voice-picker-row {
+    background: rgba(50, 44, 35, 0.5);
+    border: 1px solid rgba(200, 191, 168, 0.15);
+    color: #c5b894;
+    padding: 10px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    text-align: left;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+    transition: background 0.12s, border-color 0.12s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .voice-picker-row:hover, .voice-picker-row:active {
+    background: rgba(70, 60, 45, 0.7);
+    border-color: rgba(200, 191, 168, 0.35);
+  }
+  .voice-picker-row.selected {
+    background: rgba(85, 65, 35, 0.7);
+    border-color: rgba(240, 208, 144, 0.55);
+    color: #f0d090;
+  }
+  .voice-picker-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .voice-picker-meta {
+    font-size: 11px;
+    opacity: 0.6;
+    flex-shrink: 0;
+  }
+  .voice-picker-rate {
+    margin: 12px 0;
+    font-size: 13px;
+  }
+  .voice-picker-rate label {
+    display: block;
+    margin-bottom: 8px;
+  }
+  .voice-picker-rate-value {
+    color: #d4c8a8;
+    font-weight: 600;
+    margin-left: 6px;
+  }
+  .voice-picker-slider {
+    width: 100%;
+    cursor: pointer;
+  }
+  .voice-picker-close, .voice-picker-reset {
+    width: 100%;
+    background: rgba(60, 55, 45, 0.8);
+    border: 1px solid rgba(200, 191, 168, 0.35);
+    color: #c5b894;
+    padding: 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    margin-top: 8px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .voice-picker-close:hover { background: rgba(85, 75, 60, 0.9); }
+  .voice-picker-reset {
+    background: transparent;
+    border-color: rgba(200, 191, 168, 0.2);
+    font-size: 12px;
+    color: #8a8268;
+  }
+  .voice-picker-reset:hover { color: #c5b894; }
   .option-btn {
     display: flex;
     align-items: flex-start;
@@ -1490,9 +1605,10 @@
 <button class="settings-btn" onclick="toggleSettings(event)" title="Menü">⚙</button>
 
 <!-- v7.3: Vorlesen-Button (Floating Action Button) - liest aktuelle Szene + Optionen
-     vor. Sichtbar nur waehrend Szenen aktiv sind. -->
+     vor. Sichtbar nur waehrend Szenen aktiv sind.
+     v7.5: Long-Press (>500ms) oeffnet Stimm-Auswahl. -->
 <button class="speak-fab hidden" id="speak-fab" onclick="toggleSpeakCurrent(event)"
-        title="Aktuelle Szene und Optionen vorlesen" aria-label="Vorlesen">🔊</button>
+        title="Tippen: Vorlesen. Lang druecken: Stimm-Auswahl" aria-label="Vorlesen">🔊</button>
 <div id="settings-menu" class="settings-menu hidden" onclick="event.stopPropagation()">
   <div class="settings-info" id="settings-provider-info">Provider: lade...</div>
   <div class="settings-info settings-version" id="settings-version-info">Schatten —</div>
@@ -1500,6 +1616,7 @@
   <button onclick="shareTranscript(event)">📤 Verlauf teilen</button>
   <button onclick="downloadTranscript(event)">💾 Verlauf als Datei</button>
   <button onclick="selectCurrentSceneAndOptions(event)">✍ Szene+Optionen markieren</button>
+  <button onclick="showVoicePicker(event)">🎤 Vorlese-Stimme waehlen</button>
   <button onclick="resetGame()">↻ Spiel neu starten</button>
 
   <!-- v6.60: Audio-Loop fuer Atmosphaere-Musik (instrumentaler Detektiv-Loop) -->
@@ -1698,7 +1815,7 @@
     <button class="btn-primary" onclick="startRandomGame()">Zufällige Ermittlung</button>
     <br>
     <button class="btn-secondary" onclick="showSetupSelector()">Fall auswählen</button>
-    <div class="start-version">Schatten v7.4 · Pingpong-Schutz + erweiterte Custody-Pattern + Beschattungs-Toast</div>
+    <div class="start-version">Schatten v7.5 · Vorlese-Stimm-Auswahl + Geschwindigkeit</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -1775,7 +1892,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.4</span>
+    <span>Schatten v7.5</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -3440,7 +3557,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.4';
+window.SCHATTEN_VERSION = 'v7.5';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -4045,16 +4162,201 @@ function buildSpeakText() {
 function makeUtterance(text) {
   const u = new SpeechSynthesisUtterance(text);
   u.lang = 'de-DE';
-  u.rate = 1.0;
+  // v7.5: Geschwindigkeit aus localStorage (Default 1.0)
+  const savedRate = parseFloat(localStorage.getItem('schatten-speech-rate'));
+  u.rate = (isFinite(savedRate) && savedRate >= 0.5 && savedRate <= 2.0) ? savedRate : 1.0;
   u.pitch = 1.0;
   u.volume = 1.0;
-  // Versuche eine deutsche Stimme zu finden (sonst nimmt der Browser default)
+  // v7.5: Stimm-Auswahl aus localStorage. Wenn der User eine Stimme gewaehlt
+  // hat, wird die genommen. Sonst Fallback auf erste de-Stimme.
   const voices = window.speechSynthesis.getVoices();
   if (voices && voices.length > 0) {
-    const deVoice = voices.find(v => v.lang && v.lang.startsWith('de'));
-    if (deVoice) u.voice = deVoice;
+    const savedVoiceName = localStorage.getItem('schatten-speech-voice');
+    let chosenVoice = null;
+    if (savedVoiceName) {
+      chosenVoice = voices.find(v => v.name === savedVoiceName);
+    }
+    if (!chosenVoice) {
+      chosenVoice = voices.find(v => v.lang && v.lang.startsWith('de'));
+    }
+    if (chosenVoice) u.voice = chosenVoice;
   }
   return u;
+}
+
+// v7.5: Stimm-Auswahl-Popup. Listet alle verfuegbaren de-Stimmen und Rate-Slider.
+// Anlass: User-Feedback - der Vorlesen-Button nimmt eine andere Stimme als die
+// iOS-Selection-Sprechen-Funktion. iOS hat oft Siri/Premium-Stimmen die nicht
+// die System-Default sind. Mit diesem Picker kann der User die gewuenschte
+// Stimme explizit waehlen.
+function showVoicePicker(event) {
+  if (event) event.stopPropagation();
+  // Settings-Menue schliessen
+  const menu = document.getElementById('settings-menu');
+  if (menu && !menu.classList.contains('hidden')) {
+    menu.classList.add('hidden');
+  }
+  if (!('speechSynthesis' in window)) {
+    alert('Vorlesen ist in diesem Browser nicht unterstuetzt.');
+    return;
+  }
+
+  // Voices muessen evt. erst geladen werden (Chrome/Safari asynchron)
+  let voices = window.speechSynthesis.getVoices();
+  if (!voices || voices.length === 0) {
+    // Warte auf voiceschanged-Event
+    const waiter = () => {
+      window.speechSynthesis.removeEventListener('voiceschanged', waiter);
+      showVoicePicker();
+    };
+    window.speechSynthesis.addEventListener('voiceschanged', waiter);
+    setTimeout(() => {
+      voices = window.speechSynthesis.getVoices();
+      if (voices && voices.length > 0) {
+        window.speechSynthesis.removeEventListener('voiceschanged', waiter);
+        showVoicePicker();
+      }
+    }, 800);
+    return;
+  }
+
+  // Nur deutsche Stimmen anzeigen (de, de-DE, de-AT, de-CH)
+  const deVoices = voices.filter(v => v.lang && v.lang.toLowerCase().startsWith('de'));
+  if (deVoices.length === 0) {
+    alert('Keine deutsche Stimme installiert. Auf iOS: Einstellungen → Bedienungshilfen → Gesprochene Inhalte → Stimmen → Deutsch. Eine Stimme laden, dann hier wiederkommen.');
+    return;
+  }
+
+  // Sortieren: Premium/Enhanced/Siri zuerst (oft am Namen erkennbar)
+  deVoices.sort((a, b) => {
+    const scoreA = /enhanced|premium|siri|neural/i.test(a.name) ? 0 : 1;
+    const scoreB = /enhanced|premium|siri|neural/i.test(b.name) ? 0 : 1;
+    if (scoreA !== scoreB) return scoreA - scoreB;
+    return (a.name || '').localeCompare(b.name || '');
+  });
+
+  const savedVoiceName = localStorage.getItem('schatten-speech-voice') || '';
+  const savedRate = parseFloat(localStorage.getItem('schatten-speech-rate'));
+  const currentRate = (isFinite(savedRate) && savedRate >= 0.5 && savedRate <= 2.0) ? savedRate : 1.0;
+
+  // Overlay bauen
+  let overlay = document.getElementById('voice-picker-overlay');
+  if (overlay) overlay.remove();
+  overlay = document.createElement('div');
+  overlay.id = 'voice-picker-overlay';
+  overlay.className = 'voice-picker-overlay';
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+  const inner = document.createElement('div');
+  inner.className = 'voice-picker-inner';
+  inner.onclick = (e) => e.stopPropagation();
+
+  const title = document.createElement('div');
+  title.className = 'voice-picker-title';
+  title.textContent = 'Vorlese-Stimme';
+  inner.appendChild(title);
+
+  const hint = document.createElement('div');
+  hint.className = 'voice-picker-hint';
+  hint.textContent = 'Auf einen Namen tippen, um die Stimme anzuhoeren. Erneut tippen zum Auswaehlen.';
+  inner.appendChild(hint);
+
+  // Liste
+  const list = document.createElement('div');
+  list.className = 'voice-picker-list';
+  let lastTappedName = null;
+  deVoices.forEach(v => {
+    const row = document.createElement('button');
+    row.className = 'voice-picker-row' + (v.name === savedVoiceName ? ' selected' : '');
+    const label = document.createElement('span');
+    label.className = 'voice-picker-name';
+    label.textContent = v.name;
+    const meta = document.createElement('span');
+    meta.className = 'voice-picker-meta';
+    const langTag = v.lang || '';
+    const premium = /enhanced|premium|siri|neural/i.test(v.name) ? ' · ★' : '';
+    meta.textContent = langTag + premium;
+    row.appendChild(label);
+    row.appendChild(meta);
+    row.onclick = (e) => {
+      e.stopPropagation();
+      if (lastTappedName === v.name) {
+        // 2. Tap = Auswaehlen
+        localStorage.setItem('schatten-speech-voice', v.name);
+        // visuell: alle deselektieren, diesen selektieren
+        Array.from(list.children).forEach(c => c.classList.remove('selected'));
+        row.classList.add('selected');
+        // Bestaetigung
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance('Karl Mauer ermittelt.');
+        u.voice = v;
+        u.lang = 'de-DE';
+        u.rate = currentRate;
+        window.speechSynthesis.speak(u);
+        // Kurze Status-Anzeige
+        title.textContent = '✓ ' + v.name + ' ausgewaehlt';
+        setTimeout(() => { title.textContent = 'Vorlese-Stimme'; }, 1500);
+      } else {
+        // 1. Tap = Preview
+        lastTappedName = v.name;
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance('Karl Mauer ermittelt. Berlin, neunzehnhundertdreiundfuenfzig.');
+        u.voice = v;
+        u.lang = 'de-DE';
+        u.rate = currentRate;
+        window.speechSynthesis.speak(u);
+      }
+    };
+    list.appendChild(row);
+  });
+  inner.appendChild(list);
+
+  // Geschwindigkeit-Slider
+  const rateBlock = document.createElement('div');
+  rateBlock.className = 'voice-picker-rate';
+  const rateLabel = document.createElement('label');
+  rateLabel.textContent = 'Geschwindigkeit: ';
+  const rateValue = document.createElement('span');
+  rateValue.className = 'voice-picker-rate-value';
+  rateValue.textContent = currentRate.toFixed(1) + 'x';
+  rateLabel.appendChild(rateValue);
+  rateBlock.appendChild(rateLabel);
+  const slider = document.createElement('input');
+  slider.type = 'range';
+  slider.min = '0.7';
+  slider.max = '1.6';
+  slider.step = '0.1';
+  slider.value = String(currentRate);
+  slider.className = 'voice-picker-slider';
+  slider.oninput = () => {
+    const r = parseFloat(slider.value);
+    rateValue.textContent = r.toFixed(1) + 'x';
+    localStorage.setItem('schatten-speech-rate', String(r));
+  };
+  rateBlock.appendChild(slider);
+  inner.appendChild(rateBlock);
+
+  // Schliessen-Button
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'voice-picker-close';
+  closeBtn.textContent = 'Fertig';
+  closeBtn.onclick = () => overlay.remove();
+  inner.appendChild(closeBtn);
+
+  // System-Default-Button (Auswahl loeschen, dann nimmt Browser default)
+  const resetBtn = document.createElement('button');
+  resetBtn.className = 'voice-picker-reset';
+  resetBtn.textContent = 'Browser-Default verwenden';
+  resetBtn.onclick = () => {
+    localStorage.removeItem('schatten-speech-voice');
+    Array.from(list.children).forEach(c => c.classList.remove('selected'));
+    title.textContent = '✓ Browser-Default aktiv';
+    setTimeout(() => { title.textContent = 'Vorlese-Stimme'; }, 1500);
+  };
+  inner.appendChild(resetBtn);
+
+  overlay.appendChild(inner);
+  document.body.appendChild(overlay);
 }
 
 // Haupt-Funktion: Toggle Play/Stop
@@ -4224,6 +4526,41 @@ window.addEventListener('DOMContentLoaded', () => {
         showStatusDetails();
       }
     });
+  }
+  // v7.5: Long-Press auf den Vorlesen-FAB oeffnet die Stimm-Auswahl.
+  // Kurzes Tippen feuert den normalen onclick (toggleSpeakCurrent).
+  const fab = document.getElementById('speak-fab');
+  if (fab) {
+    let longPressTimer = null;
+    let longPressFired = false;
+    fab.addEventListener('pointerdown', (e) => {
+      longPressFired = false;
+      longPressTimer = setTimeout(() => {
+        longPressFired = true;
+        // Wenn gerade vorgelesen wird, erst stoppen
+        if (typeof speakCurrentActive !== 'undefined' && speakCurrentActive) {
+          stopSpeakCurrent();
+        }
+        showVoicePicker();
+      }, 600);
+    });
+    const cancelLongPress = () => {
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+      }
+    };
+    fab.addEventListener('pointerup', cancelLongPress);
+    fab.addEventListener('pointerleave', cancelLongPress);
+    fab.addEventListener('pointercancel', cancelLongPress);
+    // Click-Handler wird durch Long-Press unterdrueckt
+    fab.addEventListener('click', (e) => {
+      if (longPressFired) {
+        e.preventDefault();
+        e.stopPropagation();
+        longPressFired = false;
+      }
+    }, true);  // capture-phase damit der onclick=toggleSpeakCurrent danach nicht feuert
   }
 });
 
