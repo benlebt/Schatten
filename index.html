@@ -776,6 +776,76 @@
     font-family: monospace;
     text-transform: uppercase;
   }
+  /* v6.98: Status-Bar pro Szene (im Kopfbereich jeder Szene, NICHT nur Debug).
+     Zeigt fuer jede Szene die Verfassungs-/Energie-Dots + Spannungsbalken zum
+     Zeitpunkt der Szene - so muss man nicht hochscrollen wenn man im Verlauf
+     den Zustand bei einer bestimmten Szene sehen will. Optisch ruhiger als die
+     obere Sticky-Bar damit sie nicht aufdringt. Klickbar - oeffnet ein kleines
+     Popup mit den Werten der HISTORISCHEN Szene (nicht des aktuellen Stands). */
+  .scene-status-strip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 4px 0 10px;
+    padding: 4px 6px;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    /* Hover-Bereich vergroessern fuer einfacheres Tappen */
+    border-radius: 4px;
+  }
+  .scene-entry.current .scene-status-strip {
+    opacity: 0.85;  /* aktuelle Szene heller */
+  }
+  .scene-status-strip:hover {
+    opacity: 1;
+    background: rgba(200,191,168,0.04);
+  }
+  .scene-status-strip:active {
+    background: rgba(200,191,168,0.08);
+  }
+  .scene-status-strip .verfassung-dot {
+    width: 5px;
+    height: 5px;
+  }
+  .scene-status-strip .energie-dash {
+    width: 3px;
+    height: 7px;
+  }
+  .scene-status-strip .status-bar-segment {
+    width: 7px;
+    height: 3px;
+  }
+  .scene-status-strip .strip-divider {
+    color: #2a2a2a;
+    font-size: 9px;
+    margin: 0 2px;
+  }
+  .scene-status-strip .strip-flag {
+    font-size: 8px;
+    letter-spacing: 1.5px;
+    color: #555;
+    font-family: monospace;
+    text-transform: uppercase;
+    padding: 1px 5px;
+    border-radius: 2px;
+    background: rgba(80,40,30,0.25);
+  }
+  .scene-status-strip .strip-flag.gewahrsam {
+    background: rgba(180,40,40,0.35);
+    color: #ff9988;
+    animation: pulse-critical 1.5s infinite ease-in-out;
+  }
+  .scene-status-strip .strip-flag.pol {
+    background: rgba(140,80,40,0.3);
+    color: #d8a070;
+  }
+  .scene-status-strip .strip-flag.romance {
+    background: rgba(160,60,100,0.25);
+    color: #d090b0;
+  }
   .scene-text {
     line-height: 1.9;
     font-size: 15px;
@@ -1470,7 +1540,7 @@
   </header>
 
   <!-- Sticky status bar (always visible during play, tap for details) -->
-  <div id="status-bar" class="status-bar hidden" onclick="showStatusDetails()" role="button" aria-label="Details anzeigen">
+  <div id="status-bar" class="status-bar hidden" role="button" aria-label="Details anzeigen" tabindex="0">
     <span class="status-tag" id="status-tag">T1</span>
     <span class="status-dot">·</span>
     <span class="status-time" id="status-time">ABEND</span>
@@ -1577,7 +1647,7 @@
     <button class="btn-primary" onclick="startRandomGame()">Zufällige Ermittlung</button>
     <br>
     <button class="btn-secondary" onclick="showSetupSelector()">Fall auswählen</button>
-    <div class="start-version">Schatten v6.97</div>
+    <div class="start-version">Schatten v6.98 · 6 Fixes (Status-Bar pro Szene · Beschattungs-Push · Vehicle-FP · Wiederholungs-Dedup · Verdaechtigen-Reminder · Scroll-Schutz)</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -1654,7 +1724,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v6.94</span>
+    <span>Schatten v6.98</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -3319,7 +3389,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v6.97';
+window.SCHATTEN_VERSION = 'v6.98';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -3751,6 +3821,56 @@ function getOverusedWords() {
   return overused.concat(dynamic);
 }
 
+// v6.98: Vergleicht zwei Szenen-Texte und gibt einen Sentence-Overlap-Score zurueck.
+// Anlass: Goerke-Run v6.96 Sz 7+8 - Mistral hat 90% identischen Text geliefert,
+// nur die woertliche Rede war unterschiedlich. Der Detector ignoriert woertliche
+// Rede (in << >> bzw. « »), normalisiert (lowercase, Satzzeichen weg) und prueft
+// pro Satz den Token-Jaccard. Wenn >= 50% der Saetze quasi-identisch (Jaccard >= 0.8)
+// gilt das als Szene-Wiederholung.
+// Rueckgabe: { ratio: 0..1, matchedSentences: int, sampleSentence: string }
+function computeSceneSentenceOverlap(newText, prevText) {
+  if (!newText || !prevText) return { ratio: 0, matchedSentences: 0, sampleSentence: '' };
+  // Woertliche Rede entfernen - die unterscheidet sich oft, der Rest aber nicht.
+  const stripDialog = (t) => t.replace(/«[^»]*»/g, '').replace(/»[^«]*«/g, '')
+                              .replace(/„[^"]*"/g, '').replace(/"[^"]*"/g, '');
+  // In Saetze splitten (an .!?) und normalisieren
+  const splitSentences = (t) => stripDialog(t)
+    .split(/[.!?]+/)
+    .map(s => s.toLowerCase()
+                .replace(/[,;:()«»„""\-–—]/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim())
+    .filter(s => s.split(' ').length >= 4);  // nur Saetze >= 4 Worte zaehlen
+  const sentencesNew = splitSentences(newText);
+  const sentencesPrev = splitSentences(prevText);
+  if (sentencesNew.length === 0 || sentencesPrev.length === 0) {
+    return { ratio: 0, matchedSentences: 0, sampleSentence: '' };
+  }
+  // Pro Satz aus newText: pruefen ob ein Satz aus prevText >= 0.8 Jaccard-Overlap hat
+  const tokensOf = (s) => new Set(s.split(' ').filter(w => w.length >= 3));
+  let matched = 0;
+  let sampleSentence = '';
+  const prevSentenceTokens = sentencesPrev.map(s => tokensOf(s));
+  for (const sNew of sentencesNew) {
+    const tokensA = tokensOf(sNew);
+    if (tokensA.size === 0) continue;
+    for (const tokensB of prevSentenceTokens) {
+      if (tokensB.size === 0) continue;
+      let intersection = 0;
+      for (const t of tokensA) if (tokensB.has(t)) intersection++;
+      const union = tokensA.size + tokensB.size - intersection;
+      const jaccard = union === 0 ? 0 : intersection / union;
+      if (jaccard >= 0.8) {
+        matched++;
+        if (!sampleSentence) sampleSentence = sNew;
+        break;  // dieser neue Satz hat einen Match - weiter zum naechsten neuen Satz
+      }
+    }
+  }
+  const ratio = matched / sentencesNew.length;
+  return { ratio, matchedSentences: matched, sampleSentence };
+}
+
 // --- Settings menu ---
 function updateProviderInfo() {
   const m = getActiveModel();
@@ -3828,6 +3948,43 @@ window.addEventListener('DOMContentLoaded', () => {
   if (localStorage.getItem('schatten-music-on') === '1') {
     const btn = document.getElementById('music-toggle-btn');
     if (btn) btn.title = 'Musik war zuletzt an - druecken zum Aktivieren';
+  }
+  // v6.98: Top-Status-Bar mit Scroll-Schutz statt nacktem onclick.
+  // Anlass: User-Feedback - bei Mobile passierte oft dass das Popup beim
+  // Scroll-Start ueber der sticky Bar versehentlich aufging. Lösung wie bei
+  // Optionen und der neuen Pro-Szene-Status-Bar: pointerdown merkt Position,
+  // pointermove >10px canceled, nur kurze Taps oeffnen das Popup.
+  const sb = document.getElementById('status-bar');
+  if (sb) {
+    let pdStart = null;
+    let pdMoved = false;
+    sb.addEventListener('pointerdown', (e) => {
+      pdStart = { x: e.clientX, y: e.clientY, t: Date.now() };
+      pdMoved = false;
+    });
+    sb.addEventListener('pointermove', (e) => {
+      if (!pdStart) return;
+      const dx = Math.abs(e.clientX - pdStart.x);
+      const dy = Math.abs(e.clientY - pdStart.y);
+      if (dx > 10 || dy > 10) pdMoved = true;
+    });
+    sb.addEventListener('pointerup', (e) => {
+      if (!pdStart) return;
+      const dt = Date.now() - pdStart.t;
+      const wasTap = !pdMoved && dt < 400;
+      pdStart = null;
+      if (wasTap) {
+        e.preventDefault();
+        showStatusDetails();
+      }
+    });
+    sb.addEventListener('pointercancel', () => { pdStart = null; });
+    sb.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        showStatusDetails();
+      }
+    });
   }
 });
 
@@ -5193,8 +5350,236 @@ function showStatusDetails() {
 function hideStatusDetails(event) {
   // If called from the overlay click, event is the click event;
   // if called from the button, no event arg. Just close in both cases.
+  // v6.98: Wenn vorher ein historischer Stand angezeigt wurde, den
+  // Original-Titel "Aktueller Stand" wiederherstellen.
+  const titleEl = document.querySelector('#status-popup .status-popup-title');
+  if (titleEl && titleEl.dataset.wasHistorical === '1') {
+    titleEl.textContent = titleEl.dataset.origTitle || 'Aktueller Stand';
+    delete titleEl.dataset.wasHistorical;
+    delete titleEl.dataset.origTitle;
+  }
   document.getElementById('status-popup').classList.add('hidden');
 }
+
+// v6.98: Pro-Szene-Status-Strip - kompakte Wiederholung der Top-Status-Bar
+// im Kopf jeder Szene. Zeigt die Werte zum Zeitpunkt der Szene (NICHT live)
+// damit der Spieler beim Scrollen durch den Verlauf seinen damaligen Status
+// sieht, ohne ganz nach oben zurueck zu muessen. Klickbar mit Scroll-Schutz.
+function renderSceneStatusStrip(entry, sceneIdx) {
+  const strip = document.createElement('div');
+  strip.className = 'scene-status-strip';
+  strip.setAttribute('role', 'button');
+  strip.setAttribute('aria-label', 'Status bei dieser Szene anzeigen');
+  strip.setAttribute('tabindex', '0');
+
+  // 1. Verfassungs-Dots (5 Punkte, rot/orange bei wenig)
+  const verfDots = document.createElement('div');
+  verfDots.className = 'verfassung-dots';
+  verfDots.title = 'Verfassung';
+  const verf = typeof entry.verfassung === 'number' ? entry.verfassung : 5;
+  for (let i = 1; i <= 5; i++) {
+    const d = document.createElement('div');
+    d.className = 'verfassung-dot';
+    if (i <= verf) {
+      if (verf <= 1) d.classList.add('critical');
+      else if (verf <= 2) d.classList.add('injured');
+      else d.classList.add('full');
+    }
+    verfDots.appendChild(d);
+  }
+  strip.appendChild(verfDots);
+
+  // 2. Energie-Striche (5 Striche, je nach Stufe gefaerbt)
+  if (typeof entry.energie === 'number' && typeof getEnergieStufe === 'function') {
+    const energieDots = document.createElement('div');
+    energieDots.className = 'energie-dots';
+    energieDots.title = 'Energie';
+    const eStufe = getEnergieStufe(entry.energie);
+    for (let i = 1; i <= 5; i++) {
+      const d = document.createElement('div');
+      d.className = 'energie-dash';
+      if (i <= eStufe.stufe) {
+        if (eStufe.stufe === 1) d.classList.add('critical');
+        else if (eStufe.stufe === 2) d.classList.add('low');
+        else if (eStufe.stufe === 3) d.classList.add('medium');
+        else d.classList.add('full');
+      }
+      energieDots.appendChild(d);
+    }
+    strip.appendChild(energieDots);
+  }
+
+  // 3. Spannungs-Bars (5 Segmente, gefaerbt nach Spannungs-Stufe)
+  if (typeof entry.spannung === 'number') {
+    const bars = document.createElement('div');
+    bars.className = 'status-bars';
+    bars.title = 'Spannung';
+    const color = (typeof TENSION_COLORS !== 'undefined' && TENSION_COLORS[entry.spannung])
+                  ? TENSION_COLORS[entry.spannung] : '#4a9eff';
+    for (let i = 1; i <= 5; i++) {
+      const b = document.createElement('div');
+      b.className = 'status-bar-segment';
+      if (i <= entry.spannung) b.style.background = color;
+      bars.appendChild(b);
+    }
+    strip.appendChild(bars);
+  }
+
+  // 4. Status-Flags (nur wenn relevant): GEWAHRSAM, pol, Romantik
+  if (entry.gewahrsam) {
+    const flag = document.createElement('span');
+    flag.className = 'strip-flag gewahrsam';
+    flag.textContent = 'GEWAHRSAM';
+    flag.title = 'Karl ist im Stasi-Gewahrsam';
+    strip.appendChild(flag);
+  }
+  if (entry.politisch && !entry.gewahrsam) {
+    const flag = document.createElement('span');
+    flag.className = 'strip-flag pol';
+    flag.textContent = 'POL';
+    flag.title = 'Politischer Fall (MfS-relevant)';
+    strip.appendChild(flag);
+  }
+  if (typeof entry.romantik === 'number' && entry.romantik >= 2) {
+    const flag = document.createElement('span');
+    flag.className = 'strip-flag romance';
+    flag.textContent = 'RM ' + entry.romantik;
+    flag.title = 'Romantik-Tension';
+    strip.appendChild(flag);
+  }
+
+  // Klick mit Scroll-Schutz (wie bei Optionen):
+  // pointerdown merkt sich Startposition + Zeit. pointermove mit >10px Verschiebung
+  // canceled den geplanten Klick - damit ein Scroll-Wisch der zufaellig auf dem
+  // Strip startet kein Popup oeffnet. pointerup laesst den Klick durch nur wenn
+  // beide Bedingungen (kurze Zeit, kleine Bewegung) erfuellt sind.
+  let pdStart = null;
+  let pdMoved = false;
+  strip.addEventListener('pointerdown', (e) => {
+    pdStart = { x: e.clientX, y: e.clientY, t: Date.now() };
+    pdMoved = false;
+  });
+  strip.addEventListener('pointermove', (e) => {
+    if (!pdStart) return;
+    const dx = Math.abs(e.clientX - pdStart.x);
+    const dy = Math.abs(e.clientY - pdStart.y);
+    if (dx > 10 || dy > 10) pdMoved = true;
+  });
+  strip.addEventListener('pointerup', (e) => {
+    if (!pdStart) return;
+    const dt = Date.now() - pdStart.t;
+    const wasTap = !pdMoved && dt < 400;
+    pdStart = null;
+    if (wasTap) {
+      e.preventDefault();
+      showSceneStatusPopup(entry, sceneIdx);
+    }
+  });
+  strip.addEventListener('pointercancel', () => { pdStart = null; });
+  // Keyboard accessibility: Enter/Space oeffnet das Popup
+  strip.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      showSceneStatusPopup(entry, sceneIdx);
+    }
+  });
+
+  return strip;
+}
+
+// v6.98: Popup mit historischem Status der angeklickten Szene.
+// Unterscheidet sich vom Live-Popup (showStatusDetails) dadurch, dass es
+// den Stand DAMALS zeigt, mit Szenen-Nummer im Titel. Wiederverwendet das
+// gleiche Status-Popup-DOM um Doppelung zu vermeiden.
+function showSceneStatusPopup(entry, sceneIdx) {
+  // Wir bauen ein temporaeres Info-Objekt und befuellen das gleiche Popup
+  const TENSION_LABELS = ['', 'Ruhig', 'Wachsam', 'Angespannt', 'Brenzlig', 'Lebensgefahr'];
+  const VERFASSUNG_LABELS = ['Tot', 'Lebensgefährlich', 'Stark verletzt', 'Angeschlagen', 'Leicht angeschlagen', 'Unverletzt'];
+  const tension = typeof entry.spannung === 'number' ? entry.spannung : 1;
+  const verf = typeof entry.verfassung === 'number' ? entry.verfassung : 5;
+  const color = (typeof TENSION_COLORS !== 'undefined' && TENSION_COLORS[tension])
+                ? TENSION_COLORS[tension] : '#4a9eff';
+
+  // Header anpassen: "Stand bei Szene N (T1 NACHMITTAG)" statt "Aktueller Stand"
+  const titleEl = document.querySelector('#status-popup .status-popup-title');
+  const origTitle = titleEl ? titleEl.textContent : 'Aktueller Stand';
+  if (titleEl) {
+    let label = 'Stand bei Szene ' + (sceneIdx + 1);
+    if (entry.day && entry.time) {
+      label += ' · T' + entry.day + ' ' + entry.time;
+    }
+    titleEl.textContent = label;
+    titleEl.dataset.wasHistorical = '1';
+    titleEl.dataset.origTitle = origTitle;
+  }
+
+  document.getElementById('popup-day').textContent = entry.day || '—';
+  const dateEl = document.getElementById('popup-date');
+  if (dateEl) dateEl.textContent = '—';  // historisches Datum nicht gespeichert pro Szene
+  const timeEl = document.getElementById('popup-time');
+  if (timeEl) {
+    const tStr = entry.time || '—';
+    timeEl.textContent = tStr.charAt(0) + tStr.slice(1).toLowerCase();
+  }
+  document.getElementById('popup-loc').textContent = entry.ort || '—';
+
+  const verEl = document.getElementById('popup-version');
+  if (verEl) verEl.textContent = 'Stand: Szene ' + (sceneIdx + 1) + ' von ' + logEntries.filter(e => e.type === 'scene').length;
+
+  const tEl = document.getElementById('popup-tension');
+  if (tEl) {
+    tEl.textContent = (TENSION_LABELS[tension] || 'Ruhig') + ' (' + tension + '/5)';
+    tEl.style.color = color;
+  }
+  const vEl = document.getElementById('popup-verfassung');
+  if (vEl) {
+    vEl.textContent = (VERFASSUNG_LABELS[verf] || 'Unbekannt') + ' (' + verf + '/5)';
+    if (verf <= 2) vEl.style.color = '#ff6644';
+    else if (verf <= 3) vEl.style.color = '#f0c040';
+    else vEl.style.color = '';
+  }
+  // Energie
+  const eEl = document.getElementById('popup-energie');
+  if (eEl && typeof entry.energie === 'number' && typeof getEnergieStufe === 'function') {
+    const eStufe = getEnergieStufe(entry.energie);
+    eEl.textContent = eStufe.label + ' (' + entry.energie + '/100)';
+    if (eStufe.stufe <= 1) eEl.style.color = '#ff6644';
+    else if (eStufe.stufe === 2) eEl.style.color = '#f0a060';
+    else if (eStufe.stufe === 3) eEl.style.color = '#d2b46e';
+    else eEl.style.color = '';
+  }
+  // Hunger
+  const hEl = document.getElementById('popup-hunger');
+  if (hEl && typeof entry.hunger === 'number') {
+    if (entry.hunger >= 7) { hEl.textContent = 'Sehr hungrig (' + entry.hunger + '/10)'; hEl.style.color = '#ff8844'; }
+    else if (entry.hunger >= 4) { hEl.textContent = 'Hungrig (' + entry.hunger + '/10)'; hEl.style.color = '#f0c040'; }
+    else if (entry.hunger >= 1) { hEl.textContent = 'Leicht hungrig (' + entry.hunger + '/10)'; hEl.style.color = ''; }
+    else { hEl.textContent = 'Satt'; hEl.style.color = ''; }
+  }
+  // Verletzung
+  const injEl = document.getElementById('popup-injury');
+  if (injEl) {
+    injEl.textContent = entry.injury || '—';
+  }
+  // Stasi/Politisch
+  const stasiEl = document.getElementById('popup-stasi');
+  if (stasiEl) {
+    if (entry.gewahrsam) {
+      stasiEl.textContent = 'Im Gewahrsam (Verhoer ' + (entry.folterCnt || 0) + ')';
+      stasiEl.style.color = '#ff6644';
+    } else if (typeof entry.stasiT === 'number' && entry.stasiT > 0) {
+      stasiEl.textContent = 'Aufmerksam (' + entry.stasiT + '/5)';
+      stasiEl.style.color = entry.stasiT >= 3 ? '#f0c040' : '';
+    } else {
+      stasiEl.textContent = '—';
+      stasiEl.style.color = '';
+    }
+  }
+
+  document.getElementById('status-popup').classList.remove('hidden');
+}
+
+// v6.98: hideStatusDetails wurde oben um den Titel-Reset erweitert.
 
 // Advance in-game time. Called once per new scene (not on retries).
 // Time-of-day advances roughly every 1-2 scenes (slight randomness).
@@ -5286,6 +5671,21 @@ function advanceGameTime() {
 // Wird gesetzt wenn ein gradueller Tageswechsel passiert ist und die naechste
 // Szene unbedingt eine kurze Schlaf-Bridge erzaehlen muss.
 let pendingForcedSleepNarrative = null;
+
+// v6.98: Wird gesetzt wenn die letzte Szene zu stark der vorletzten geaehnelt hat
+// (Sentence-Overlap >= 50%). Anlass: Goerke-Run v6.96 Sz 7+8 - Mistral hat 90%
+// identischen Text geliefert, nur die woertliche Rede war anders ("«Zum Revier,
+// Major?»" vs "«Worueber, Genosse Major?»"). Beim naechsten Recap wird der KI
+// gesagt, dass sie KEINE Saetze und KEINE Satzstrukturen wiederholen darf.
+let pendingRepetitionWarning = null;
+
+// v6.98: Wird gesetzt wenn der Tatverdaechtige seit 10+ Szenen nicht mehr erwaehnt
+// wurde (Stage 2 stagniert). Anlass: Goerke-Run v6.97 lief 20 Szenen lang mit
+// Otto/Trude weiter, ohne den Verdaechtigen Klaus Voss zu beruehren - Stage-3-Force
+// wurde 7x blockiert ohne dass das System etwas dagegen unternahm. Jetzt: bei 10
+// Szenen Stagnation pusht der naechste Recap die KI, eine der Optionen zum
+// Verdaechtigen zu fuehren.
+let pendingSuspectReminder = null;
 
 // Wird true gesetzt wenn gerade ein Tageswechsel passiert ist.
 // Die naechste Szene-Anfrage instruiert die KI dann, eine kurze Story-Brücke zu erzählen.
@@ -5442,6 +5842,16 @@ function renderLog() {
           ort.appendChild(modelText);
         }
         div.appendChild(ort);
+      }
+      // v6.98: Pro-Szene-Status-Strip - kompakte visuelle Wiederholung der Top-Bar
+      // im Kopfbereich JEDER Szene, damit man nicht hochscrollen muss um seinen
+      // Status (Spannung, Verfassung, Energie) zu sehen. Klickbar mit Scroll-Schutz:
+      // pointerdown startet einen Klick-Timer, ein pointermove canceled, sodass
+      // ein Wisch-Scroll der zufaellig auf der Bar startet kein Popup oeffnet.
+      // Wird IMMER gerendert (nicht nur Debug-Modus) sobald die noetigen Werte da sind.
+      if (i > 0 && (typeof entry.verfassung === 'number' || typeof entry.energie === 'number')) {
+        const strip = renderSceneStatusStrip(entry, i);
+        if (strip) div.appendChild(strip);
       }
       // Status-Snapshot pro Szene: zeigt alle relevanten Werte zum Zeitpunkt der Szene
       // damit man Verschiebungen tracken kann (Debug + Story-Konsistenz-Check).
@@ -7125,6 +7535,31 @@ VERBOTEN: einfach mit "schraegem Morgenlicht" anfangen ohne zu erklaeren wo Karl
       }
       pendingDayTransition = false; // Flag zurücksetzen, damit es nur einmal wirkt
     }
+    // v6.98: WIEDERHOLUNGS-PUSH wenn die letzte Szene zu sehr der vorigen aehnelte.
+    // Anlass: Goerke-Run v6.96 Sz 7+8 - Mistral lieferte 83% identische Saetze,
+    // nur die woertliche Rede war anders. Der naechste Recap pusht die KI explizit
+    // gegen wortwoertliche Wiederholung von Saetzen und Satzstrukturen.
+    if (pendingRepetitionWarning) {
+      const w = pendingRepetitionWarning;
+      timeContext += `\n\nWIEDERHOLUNGS-WARNUNG (KRITISCH): Die letzten zwei Szenen hatten zu hohen Satz-Overlap (${Math.round(w.ratio * 100)}% identische Saetze, mindestens ${w.matched} Saetze quasi-wortgleich). Beispiel-Satz der wortwoertlich aus der vorigen Szene wiederholt wurde: "${w.sample}". DIE NAECHSTE SZENE DARF KEINEN SATZ ODER KEINE SATZSTRUKTUR der letzten Szene wiederholen. Wenn Karl noch immer am selben Ort steht und die Situation sich nicht stark geaendert hat: erzaehle was NEU passiert (Bewegung, Geraeusch, neuer Akteur, neue Information, Karl ergreift Initiative) statt die Beschreibung der Stehszene zu wiederholen. KEINE "Du bleibst stehen und hebst die leere Hand"-Wiederholungen, KEINE "Sokolow mustert dich, sein Blick wandert"-Wiederholungen. Die Antwort des NPC darf woertliche Rede sein, aber die Beschreibung MUSS frisch sein.`;
+      if (typeof diag === 'function') {
+        diag('drift', 'Wiederholungs-Push gesendet (' + Math.round(w.ratio * 100) + '% Overlap)');
+      }
+      pendingRepetitionWarning = null;  // Flag zuruecksetzen, wirkt nur einmal
+    }
+    // v6.98: VERDAECHTIGEN-REMINDER-PUSH wenn der Tatverdaechtige seit 10+ Szenen
+    // nicht erwaehnt wurde. Anlass: Goerke-Run v6.97 lief 20 Szenen Otto/Trude.
+    if (pendingSuspectReminder) {
+      const r = pendingSuspectReminder;
+      const urgency = r.urgent
+        ? `EXTREM WICHTIG: Karl ist seit ${r.stage2Scenes} Szenen in Stage 2 (Verdaechtiger identifiziert), aber ${r.name} wurde in den letzten 5 Szenen nicht ein einziges Mal genannt. Der Fall droht an Stagnation zu sterben.`
+        : `Karl ist seit ${r.stage2Scenes} Szenen in Stage 2, aber der Verdaechtige ${r.name} wurde in den letzten Szenen nicht erwaehnt.`;
+      timeContext += `\n\nVERDAECHTIGEN-REMINDER (PFLICHT): ${urgency} MINDESTENS EINE der vier Optionen MUSS Karl naeher zu ${r.name} bringen: zu seiner bekannten Adresse fahren, einen Bekannten von ihm aufsuchen, beim Stammlokal nach ihm fragen, einen Beschattungs-Posten vor seiner Wohnung einrichten, einen Anruf wegen ihm absetzen. KEINE Option darf "weiter mit dem aktuellen Zeugen ueber unrelevante Details reden" sein. Karl ist Detektiv - wenn der Hauptverdaechtige da ist, wird ihm nachgegangen.`;
+      if (typeof diag === 'function') {
+        diag('drift', 'Verdaechtigen-Reminder-Push gesendet: ' + r.name + ' (' + r.stage2Scenes + ' Szenen seit Stage-2-Start)');
+      }
+      pendingSuspectReminder = null;
+    }
     if (scenesAtSameLocation >= 3) {
       if (scenesAtSameLocation >= 8) {
         // ESKALATION 3: Nach 8+ Szenen am selben Ort PFLICHT-Ortswechsel.
@@ -7145,6 +7580,49 @@ VERBOTEN: einfach mit "schraegem Morgenlicht" anfangen ohne zu erklaeren wo Karl
     // "Karl entkommt knapp und unverletzt". Das ist das Noir-Versprechen.
     if (actionStreak >= 2 && lastSpannung >= 4 && verfassung >= 4) {
       timeContext += `\n\nKONSEQUENZ-PFLICHT (sehr wichtig): Karl ist seit ${actionStreak} Szenen in Action und noch immer praktisch unverletzt (Verfassung ${verfassung}/5). Das ist unrealistisch fuer Noir. In dieser ODER der naechsten Action-Szene MUSS Karl tatsaechlich Schaden nehmen: ein Streifschuss, ein Schlag der ihn taumeln laesst, eine Verletzung beim Sturz, eine Munitions-Wunde am Arm. verfassung_delta MUSS -1 oder -2 sein und die Wunde MUSS im Erzaehltext konkret beschrieben werden. KEIN "Karl entkommt knapp ohne Treffer" mehr - die Kugel TRIFFT, die Faust LANDET.`;
+    }
+
+    // v6.98: SOFORT-REAKTIONS-PUSH bei Beschattungs-/Türöffner-Pattern in der
+    // letzten Szene. Anlass: Run-Lektorat v6.97 (Lindenbaum-Run Sz 29) zeigte
+    // dass nach "Ein Schlüssel dreht sich im Schloss. Die Tür geht auf" Optionen
+    // wie "Frag Meier leise was er von der HO-Verwaltung weiß" angeboten wurden.
+    // Wenn gerade jemand reinkommt, ist eine ruhige Befragung unmöglich - es
+    // MUESSEN unmittelbare Reaktionen sein. Greift NUR wenn ein Beschattungs-
+    // Pattern in den letzten 1-2 Szenen erkannt wurde UND Sp >= 3 ist.
+    const lastSceneText = (recentTexts && recentTexts.length > 0)
+                          ? recentTexts[recentTexts.length - 1].toLowerCase()
+                          : '';
+    const SURVEILLANCE_PATTERNS = [
+      // Jemand naehert sich / kommt
+      /\b(jemand|er|sie|die\s+m[äa]nner|zwei\s+m[äa]nner|die\s+stiefel)\s+(kommt|kommen|n[äa]hert\s+sich|n[äa]hern\s+sich|tritt\s+ein|treten\s+ein|folgt|folgen|geht\s+auf\s+dich\s+zu)/,
+      /\bschritte\s+(hinter\s+dir|auf\s+dem\s+gehweg|im\s+treppenhaus|n[äa]hern\s+sich|hallen|kommen\s+n[äa]her|werden\s+lauter|in\s+der\s+ferne|vor\s+der\s+t[üu]r)/,
+      /\bjemand\s+(fl[üu]stert|hustet|raunt|ruft|murmelt|pfeift|st[öo]hnt)/,
+      // Tür/Schlüssel-Aktion
+      /\bdie\s+t[üu]r\s+(geht\s+auf|wird\s+aufger|klopft|vibriert|bewegt\s+sich|öffnet\s+sich|schwingt|knallt)/,
+      /\bschl[üu]ssel\s+(dreht|dreht\s+sich|klimpert|im\s+schloss)/,
+      /\bklopft\s+(es|laut|leise|an\s+der\s+t[üu]r)/,
+      /\bt[üu]rklinke\s+(bewegt|dreht|wird\s+gedr)/,
+      // Bedrohliche Anwesenheit
+      /\bbeobachtet\s+(dich|euch|karl)/,
+      /\bbeobachten\s+(dich|euch|karl)/,
+      /\b(wir|sie)\s+m[üu]ssen\s+reden\b/,
+      /\bdie\s+haben\s+(dich\s+)?(schon\s+)?erwartet\b/,
+      /\bsie\s+sind\s+(dieser\s+)?detektiv/,
+      // Konkrete Bedrohung im Raum
+      /\b(MfS|stasi|volkspolizei|VP)[-\s](mann|m[äa]nner|leute|offizier|beamte)/i,
+      /\bm[äa]nner\s+in\s+(dunklen|grauen|schwarzen)\s+m[äa]nteln/,
+      /\bzwei\s+(m[äa]nner|polizisten|uniformierte)/,
+    ];
+    let surveillanceTrigger = null;
+    for (const pat of SURVEILLANCE_PATTERNS) {
+      const m = lastSceneText.match(pat);
+      if (m) { surveillanceTrigger = m[0]; break; }
+    }
+    if (surveillanceTrigger && lastSpannung >= 3) {
+      timeContext += `\n\nSOFORT-REAKTIONS-PFLICHT (KRITISCH): In der letzten Szene wurde ein akutes Beschattungs-/Eindringlings-Pattern erkannt ("${surveillanceTrigger.slice(0, 60)}"). Spannung ist ${lastSpannung}/5. Karl ist in einer akuten Situation - jemand n[äa]hert sich, jemand betritt den Raum, jemand wartet vor der Tür. Die naechsten Optionen MUESSEN unmittelbare Reaktionen sein: schiessen, fliehen, verstecken, decken suchen, konfrontieren, Waffe ziehen, Hinterausgang suchen, Schild/Geisel nehmen. KEINE Optionen wie "frag ihn leise nach...", "erzaehle ihm in Ruhe von...", "denke ueber das Gespraech nach" - solche Optionen sind unpassend wenn gerade jemand reinkommt oder Karl umzingelt ist. Maximal 1 von 4 Optionen darf "Schweig und beobachte" sein, die anderen 3 sind aktive Reaktionen.`;
+      if (typeof diag === 'function') {
+        diag('detect', 'Beschattungs-Pattern erkannt -> Sofort-Reaktion erzwungen ("' + surveillanceTrigger.slice(0, 40) + '")');
+      }
     }
 
     // ESKALATIONS-BREMSE: wenn zu viel Action am Stueck, zwinge zu Beruhigung
@@ -7786,6 +8264,8 @@ async function startGame() {
   timeAdvanceTokens = 0;
   pendingDayTransition = false;
   lastSceneTriggeredDayAdvance = false; // v6.96
+  pendingRepetitionWarning = null;  // v6.98
+  pendingSuspectReminder = null;  // v6.98
   scenesAtSameLocation = 0;
   lastLocation = '';
   lastMainLocation = ''; // v6.58
@@ -8661,13 +9141,24 @@ function detectVehicleLoss(text) {
   }
 
   // Patterns die Auto-Verlust signalisieren
+  // v6.98: Distanz zwischen "dein Opel" und dem Verlust-Verb auf max ~50-80 Zeichen
+  // begrenzen. Anlass: Brandt-Run v6.97 Sz12 - "...wo dein Opel Olympia steht. Die
+  // Sonne BRENNT bereits auf das Kopfsteinpflaster..." triggerte den brennt-Pattern
+  // weil .*\b(brennt) zu greedy war. Karl war nicht in Gefahr, das Auto stand
+  // friedlich am Tempelhof, aber das System markierte es als "verloren".
+  // Plus: zusaetzliche Pattern fuer "springen in Opel und brausen davon",
+  // "der Wagen ist gestohlen", "dein Opel ist weg".
   const lossPatterns = [
     // Jemand anderes faehrt Karls Auto weg (mit Bezug auf Karls Wagen)
-    /\bdein(?:en|em)?\s+opel\b.*\b(geklaut|gestohlen|davonfaehrt|davonrast|davongerast)/,
-    /\bdein(?:en|em)?\s+opel\b.*\b(brennt|explodiert|in\s+flammen|zerstoert)/,
-    /\bdein(?:en|em)?\s+opel\b.*\b(beschlagnahmt|konfisziert|abgeschleppt)/,
+    /\bdein(?:en|em)?\s+opel\b[^.!?]{0,80}\b(geklaut|gestohlen|davonfaehrt|davonrast|davongerast|brausen\s+davon)/,
+    /\bdein(?:en|em)?\s+opel\b[^.!?]{0,50}\b(brennt|explodiert|in\s+flammen|zerstoert|ausgebrannt)/,
+    /\bdein(?:en|em)?\s+opel\b[^.!?]{0,50}\b(beschlagnahmt|konfisziert|abgeschleppt)/,
     // Allgemein "der Opel" - aber nur wenn nicht durch otherCarPatterns gefiltert wurde
-    /\b(reisst|riss)\s+(die\s+)?(wagent[üu]r|t[üu]r\s+deines\s+opels?|fahrert[üu]r\s+deines\s+wagens)\b.*\b(weg|davon|fluechte|fluechtet)/,
+    /\b(reisst|riss)\s+(die\s+)?(wagent[üu]r|t[üu]r\s+deines\s+opels?|fahrert[üu]r\s+deines\s+wagens)\b[^.!?]{0,30}\b(weg|davon|fluechte|fluechtet)/,
+    // v6.98: Reale Diebstahls-Varianten aus Spielszenen
+    /\bspringen\s+(zwei\s+m[äa]nner\s+)?in\s+dein(?:en|em)?\s+opel\b/,
+    /\bder\s+(wagen|opel)\s+ist\s+gestohlen\b/,
+    /\bdein\s+opel\s+ist\s+(weg|gestohlen|verschwunden)\b/,
   ];
   for (const p of lossPatterns) {
     if (p.test(lower)) return 'verloren';
@@ -9929,6 +10420,30 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     lastFullScene = scene.szene;
 
     // Track recent scene texts for vocabulary monitoring
+    // v6.98: Vor dem Push pruefen ob die neue Szene zu sehr der letzten aehnelt.
+    // Anlass: Goerke-Run v6.96 Sz 7+8 - Mistral lieferte 90% identischen Text,
+    // nur die woertliche Rede war anders. Mein Detector teilt beide Szenen in
+    // Saetze, normalisiert (woertliche Rede raus, lowercase) und prueft ob >= 50%
+    // der Saetze quasi-identisch sind (Jaccard-Token-Overlap >= 0.8 pro Satz).
+    // Wenn ja, wird pendingRepetitionWarning gesetzt - der naechste Recap pusht
+    // die KI explizit gegen Wiederholung.
+    if (recentTexts.length >= 1 && typeof scene.szene === 'string' && scene.szene.length > 50) {
+      const overlap = computeSceneSentenceOverlap(scene.szene, recentTexts[recentTexts.length - 1]);
+      if (overlap.ratio >= 0.5 && overlap.matchedSentences >= 2) {
+        pendingRepetitionWarning = {
+          ratio: overlap.ratio,
+          matched: overlap.matchedSentences,
+          sample: overlap.sampleSentence ? overlap.sampleSentence.slice(0, 80) : ''
+        };
+        if (typeof diag === 'function') {
+          diag('drift', 'Szene-Wiederholung erkannt: ' + Math.round(overlap.ratio * 100) +
+                '% Satz-Ueberlapp (' + overlap.matchedSentences + ' Saetze identisch) -> Push fuer naechste Szene');
+        }
+        console.warn('[Schatten] Szene-Wiederholung Mistral:',
+                     Math.round(overlap.ratio * 100) + '%', 'Saetze:', overlap.matchedSentences);
+      }
+    }
+
     recentTexts.push(scene.szene);
     if (recentTexts.length > 5) recentTexts = recentTexts.slice(-5);
 
@@ -11124,6 +11639,29 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     // Anlass Lindner-Run v6.94: Hollenbeck war seit Sz7 weg, Stage 3 erzwang sich Sz21.
     if (caseProgress.stage === 2 && caseProgress.tatverdaechtiger && !caseProgress.ueberfuehrt) {
       const stage2Scenes = sceneCounter - (caseProgress.stage2StartScene || sceneCounter);
+      // v6.98: FRUEHWARNUNG ab 10 Szenen - Verdaechtigen-Reminder-Push.
+      // Anlass: Goerke-Run v6.97 lief 20 Szenen lang am Verdaechtigen Klaus Voss
+      // vorbei, der Spieler verbrachte alle Zeit mit Otto + Trude statt sich Voss
+      // zu naehern. System hat 7x "Stage-3-Force blockiert" diagnostiziert aber
+      // NICHTS aktiv getan. Jetzt: ab 10 Szenen Stagnation wird die KI in den
+      // naechsten Recap explizit gepusht den Verdaechtigen wieder ins Spiel zu bringen.
+      if (stage2Scenes >= 10 && stage2Scenes < 14) {
+        const recentScenes10 = logEntries.filter(e => e && e.type === 'scene').slice(-5);
+        const recentText10 = recentScenes10.map(e => (e.text || '').toLowerCase()).join(' ');
+        const verdName10 = (caseProgress.tatverdaechtiger || '').toLowerCase();
+        const verdWords10 = verdName10.split(/\s+/).filter(w => w.length >= 4);
+        let verdMentioned10 = false;
+        for (const w of verdWords10) {
+          if (recentText10.includes(w)) { verdMentioned10 = true; break; }
+        }
+        if (!verdMentioned10 && !pendingSuspectReminder) {
+          pendingSuspectReminder = {
+            name: caseProgress.tatverdaechtiger,
+            stage2Scenes: stage2Scenes,
+          };
+          diag('drift', 'Verdaechtigen-Reminder gesetzt: ' + caseProgress.tatverdaechtiger + ' seit ' + stage2Scenes + ' Szenen nicht erwaehnt');
+        }
+      }
       if (stage2Scenes >= 14) {
         // Inhalts-Check: kommt der Verdaechtigen-Name in den letzten 5 Szenen-Texten vor?
         const recentScenes = logEntries.filter(e => e && e.type === 'scene').slice(-5);
@@ -11145,6 +11683,14 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           showProgressToast('VERDAECHTIGER UEBERFUEHRT', caseProgress.tatverdaechtiger + ' kann nicht mehr leugnen. Karl muss jetzt zum Klienten.');
         } else {
           // Verdaechtiger taucht nicht auf - statt forcen lieber Push an KI
+          // v6.98: Push-Flag setzen statt nur diagnostizieren
+          if (!pendingSuspectReminder) {
+            pendingSuspectReminder = {
+              name: caseProgress.tatverdaechtiger,
+              stage2Scenes: stage2Scenes,
+              urgent: true,
+            };
+          }
           diag('drift', 'Stage-3-Force blockiert: ' + caseProgress.tatverdaechtiger + ' nicht in letzten 5 Szenen (' + stage2Scenes + ' Szenen Stage 2)');
         }
       }
@@ -11999,6 +12545,8 @@ function resetGame() {
   timeAdvanceTokens = 0;
   pendingDayTransition = false;
   lastSceneTriggeredDayAdvance = false; // v6.96
+  pendingRepetitionWarning = null;  // v6.98
+  pendingSuspectReminder = null;  // v6.98
   scenesAtSameLocation = 0;
   lastLocation = '';
   lastMainLocation = ''; // v6.58
