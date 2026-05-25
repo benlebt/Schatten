@@ -1577,7 +1577,7 @@
     <button class="btn-primary" onclick="startRandomGame()">Zufällige Ermittlung</button>
     <br>
     <button class="btn-secondary" onclick="showSetupSelector()">Fall auswählen</button>
-    <div class="start-version">Schatten v6.94</div>
+    <div class="start-version">Schatten v6.95</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -3319,7 +3319,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v6.94';
+window.SCHATTEN_VERSION = 'v6.95';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -4208,7 +4208,34 @@ function showGameOver() {
 }
 
 // Win-Screen: Fall geloest
+// v6.95: Bei Fall-Aufloesung Karls Standardausruestung wieder herstellen.
+// Wenn Karl im Verlauf seine Walther verloren hat (durch Stasi-Beschlagnahme,
+// Hinterhof-Ueberfall, etc.) und der Fall jetzt geloest ist, wird die Walther
+// narrativ als "spaeter wiedergefunden" wieder eingefuegt - sie ist Karls
+// Identitaet als Detektiv und gehoert in jeden Run-Anfang zurueck.
+function restoreEssentialsAtSolve() {
+  try {
+    if (!Array.isArray(inventory)) return;
+    const hasWalther = inventory.some(it => /walther/i.test(it || ''));
+    const hasBrief = inventory.some(it => /brieftasche.*lizenz/i.test(it || ''));
+    const hasNotiz = inventory.some(it => /notizbuch.*bleistift/i.test(it || ''));
+    let restored = [];
+    if (!hasWalther) { inventory.unshift('Walther PPK (eigene Pistole, wieder im Holster)'); restored.push('Walther PPK'); }
+    if (!hasBrief) { inventory.push('Brieftasche mit Detektiv-Lizenz'); restored.push('Brieftasche'); }
+    if (!hasNotiz) { inventory.push('Notizbuch und Bleistift'); restored.push('Notizbuch'); }
+    if (restored.length > 0) {
+      if (typeof diag === 'function') diag('state', 'Standardausruestung bei Fall-Aufloesung wiederhergestellt: ' + restored.join(', '));
+      console.log('[Schatten] Essentials bei Stage 4 restored:', restored);
+    }
+  } catch (e) {
+    console.warn('[Schatten] restoreEssentialsAtSolve failed:', e);
+  }
+}
+
 function showCaseSolved() {
+  // v6.95: vor dem Win-Screen die Standardausruestung wiederherstellen falls
+  // verloren - sonst sieht der finale Inventory-Export entwaffnet aus.
+  restoreEssentialsAtSolve();
   document.getElementById('options').classList.add('hidden');
   document.getElementById('error').classList.add('hidden');
   document.getElementById('wait-box').classList.add('hidden');
@@ -6496,6 +6523,10 @@ Es ist NICHT realistisch, dass eine Trauergesellschaft 18 Stunden an einem Grab 
       // Mistral schlampt im ersten Drittel: nicht nur Sz2 sondern auch Sz3+Sz4
       // koennen einen neuen Plot einfuehren. Push muss auf den ersten 4 Szenen
       // gleichermassen aktiv sein.
+      // v6.95: Plus explizit verbieten dass der Klient ein zweites Mal "ankommt"
+      // oder "klopft" - das ist genau die Wiederholungs-Schleife aus Wessel-Run
+      // ("Du wolltest gerade das Buero abschliessen, als es klopft. Vor dir steht
+      // Bruno Wessel..." in Sz2 OBWOHL Bruno seit Sz1 da ist).
       if (sceneCounter >= 1 && sceneCounter <= 4) {
         const tnName = target ? target.name : null;
         const ortHaupt = caseSetup.ortHaupt || '';
@@ -6503,6 +6534,9 @@ Es ist NICHT realistisch, dass eine Trauergesellschaft 18 Stunden an einem Grab 
         const nextScene = sceneCounter + 1;
         recap += `\nPLOT-KONTINUITAET (KRITISCH FUER SZ${nextScene}): Der laufende Fall in dieser Geschichte ist FEST DEFINIERT - ${client ? client.name + ' (Klient)' : 'Klient (siehe Setup)'}${tnName ? ', ' + tnName + ' (' + (ct === 'vermisst' ? 'Vermisste(r)' : ct === 'mord' ? 'Mordopfer' : ct === 'beschatten' ? 'Beschattungsziel' : ct === 'diebstahl' ? 'Diebesgut' : 'Zielperson') + ')' : ''}, Auftrag "${ct}"${ortHaupt ? ', Tatort: ' + ortHaupt : ''}${startDate ? ', Datum: ' + startDate : ''}.\n` +
           `STRIKTE REGELN fuer Sz${nextScene}: (1) KEIN zweiter Fall, KEIN zweiter Klient, KEINE zweite Zielperson. (2) KEINE alten Auftraege oder verstorbene Klienten aus frueheren Zeiten als Plot-Anker neu einfuehren. (3) Das laufende Datum ${startDate ? '(' + startDate + ')' : ''} bleibt - keine "vor zwei Jahren"-Plots. (4) Die naechste Szene zeigt die DIREKTE KONSEQUENZ der Spieler-Aktion in DERSELBEN Story. Wenn der Spieler einen Ortswechsel impliziert hat, fuehrt der Weg zu einem fall-relevanten Ort - NICHT zu einem komplett anderen Fall.\n`;
+        if (client) {
+          recap += `KLIENT-KONTINUITAETS-SPERRE: ${client.name} ist seit Sz1 bei Karl im Buero/am Ort und spricht/handelt jetzt mit ihm. Sz${nextScene} darf NICHT noch einmal mit "es klopft an der Tuer", "${client.name} betritt das Buero", "ein Mann/eine Frau steht im Eingang" o.ae. beginnen - das waere eine Wiederholung der Eroeffnung. Der Klient ist BEREITS DA. Sz${nextScene} setzt das laufende Gespraech / die Untersuchung direkt fort.\n`;
+        }
       }
 
 
@@ -8198,7 +8232,13 @@ function detectStasiCustody(sceneText) {
   const custodyPatterns = [
     // Explizite Orte des Gewahrsams
     /\b(stasi-?zelle|verhoer-?(raum|zimmer|zelle)|stasizelle)\b/,
-    /\b(hohenschoenhausen|untersuchungshaftanstalt|haftanstalt)\b/,
+    // v6.95: Hohenschoenhausen alleine reicht NICHT - dort muss Karl SELBST sein,
+    // nicht nur ueber den Ort reden. Anlass Wessel-Run: Roth sagte "Der Junge ist
+    // in Hohenschoenhausen" -> Custody-Trigger im befreundeten Polizeirevier.
+    // Jetzt verlangen: Karl-Bezug ("du sitzt", "du bist", "Karl wird", "fuehren dich",
+    // "in Hohenschoenhausen angekommen" o.ae.) zusaetzlich zum Ortsnamen.
+    /\b(du\s+(sitzt|bist|liegst|landest|wachst)|karl\s+(sitzt|wird|ist)|man\s+(fuehrt|bringt|schleppt)\s+(dich|karl)|(fuehren|bringen|schleppen)\s+(dich|karl))\b.{0,80}\b(hohenschoenhausen|untersuchungshaftanstalt|haftanstalt)\b/,
+    /\b(hohenschoenhausen|untersuchungshaftanstalt|haftanstalt)\b.{0,80}\b(zelle|verhoer|fesseln|handschellen|du\s+sitzt|karl\s+sitzt|gefangen)/,
     // Karl wird gefesselt/abgefuehrt von Stasi/MfS
     /\bkarl\b.*\b(in\s+(handschellen|ketten|fesseln))\b.*\b(stasi|mfs)\b/,
     /\b(stasi|mfs)\b.*\bkarl\b.*\b(gefesselt|in\s+handschellen|in\s+ketten|abgefuehrt|verhaftet)\b/,
@@ -9495,7 +9535,54 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
               if (scene.szene !== before2) {
                 diag('drift', 'Pumphrase-HARDCAP (fallback): Teilphrase mit "' + phraseOrig.source.replace(/[\\^$.*+?()|[\]{}]/g, '').replace(/\s+/g, ' ').substring(0, 80) + '" entfernt (' + runCount + '. Vorkommen)');
               } else {
-                diag('drift', 'Pumphrase-Wiederholung: "' + phrase.source.replace(/\\\\s\+/g, ' ').replace(/[\\^$.*+?()|[\\]{}]/g, '') + '" zum ' + runCount + '. Mal im Run (Satz-Entfernung fehlgeschlagen)');
+                // v6.95: dritter Fallback - Stichwort-basiert.
+                // Wenn Regex-Cap zweimal scheitert, extrahiere die "lauten" Worte aus dem
+                // Pattern (kein Regex-Syntax, mind. 5 Zeichen, keine generischen Stoppwoerter)
+                // und loesche jeden Satz, der >= 2 davon enthaelt.
+                // Anlass Goerke-Run v6.94: "(s-bahn|strassenbahn|lastwagen|...)\s+...\b(rattert|klappert|...)"
+                // Pattern matched zwar im Lower-Text aber Satz-Loeschung scheiterte beidemal.
+                const STOPWORDS = new Set(['nicht','aber','oder','und','wenn','dann','noch','schon','sehr','auch','denn','wieder','gerade','immer','ueber','unter','vorne','hinten','zwischen']);
+                const keywords = (phraseOrig.source || '')
+                  .toLowerCase()
+                  .split(/[\\\/\[\]\(\)\|\?\*\+\.\{\}\^\$\s,;:!\-]+/)
+                  .filter(w => w.length >= 5)
+                  .filter(w => !/^(?:s|b|d|w|n)$/.test(w))
+                  .filter(w => !STOPWORDS.has(w))
+                  .filter(w => !/^[0-9_]/.test(w));
+                if (keywords.length >= 2) {
+                  // Splitte Szene in Saetze
+                  const sentences = scene.szene.split(/(?<=[.!?])\s+/);
+                  let removedAny = false;
+                  const kept = [];
+                  for (const sent of sentences) {
+                    const sentLower = sent.toLowerCase();
+                    let hits = 0;
+                    for (const k of keywords) {
+                      // Toleriere Umlaut-Varianten grob: ss <-> ß, ae/oe/ue <-> ä/ö/ü
+                      const variants = [k];
+                      if (k.includes('ss')) variants.push(k.replace(/ss/g, 'ß'));
+                      if (k.includes('ae')) variants.push(k.replace(/ae/g, 'ä'));
+                      if (k.includes('oe')) variants.push(k.replace(/oe/g, 'ö'));
+                      if (k.includes('ue')) variants.push(k.replace(/ue/g, 'ü'));
+                      for (const v of variants) {
+                        if (sentLower.includes(v)) { hits++; break; }
+                      }
+                    }
+                    if (hits >= 2 && sent.length < 250) {
+                      removedAny = true; // diesen Satz verwerfen
+                    } else {
+                      kept.push(sent);
+                    }
+                  }
+                  if (removedAny) {
+                    scene.szene = kept.join(' ').replace(/\s{2,}/g, ' ').replace(/\s+([,.!?])/g, '$1').trim();
+                    diag('drift', 'Pumphrase-HARDCAP (keyword-fallback): Satz via Stichwoerter entfernt (' + runCount + '. Vorkommen, Keys: ' + keywords.slice(0, 4).join(',') + ')');
+                  } else {
+                    diag('drift', 'Pumphrase-Wiederholung: "' + phrase.source.replace(/\\\\s\+/g, ' ').replace(/[\\^$.*+?()|[\\]{}]/g, '') + '" zum ' + runCount + '. Mal im Run (Satz-Entfernung fehlgeschlagen)');
+                  }
+                } else {
+                  diag('drift', 'Pumphrase-Wiederholung: "' + phrase.source.replace(/\\\\s\+/g, ' ').replace(/[\\^$.*+?()|[\\]{}]/g, '') + '" zum ' + runCount + '. Mal im Run (Satz-Entfernung fehlgeschlagen)');
+                }
               }
             }
           }
@@ -9772,8 +9859,26 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       // Hybrid-Modus: wir verbieten nicht, aber loggen wenn Mistral ausserhalb arbeitet.
       // So sehen wir bei Lektorat welche Orte die KI spontan erfindet und koennen
       // die Whitelist erweitern wenn ein Ort wiederholt sinnvoll ist.
+      // v6.95: Generische Whitelist - Orte die in JEDEM Setup legitim sein koennen.
+      // Vor v6.95 wurden Karls Buero, Hausflur, Wohnung, Cafe Moehring etc. dauernd
+      // als "ausserhalb Whitelist" geloggt obwohl sie zum 1953-Berlin-Setting gehoeren.
+      // GENERIC_LOCATIONS: regex-Schnipsel, die mit dem MainOrt matchen muessen.
+      const GENERIC_LOCATIONS = [
+        /b[uü]ro\s+am\s+hackesch/, /b[uü]ro\s+mauer/, /kanzlei\s+mauer/,
+        /hausflur/, /treppenhaus/, /flur\s+(?:der|am|im)/,
+        /hinterhof/, /hinterzimmer/, /innenhof/,
+        /karls\s+wohnung/, /mauers\s+wohnung/, /wohnung\s+am\s+hackesch/,
+        /volkspolizei[\s\-]?revier/, /volkspolizei[\s\-]?inspektion/, /vpi\b/,
+        /polizeirevier\s+hardenberg/, /revier\s+hardenberg/,
+        /caf[eé]\s+m[oö]hring/, /caf[eé]\s+wien/, /caf[eé]\s+kranzler/,
+        /kanzlei\s+(?:dr\.?\s+)?baumgarten/, /baumgartens?\s+kanzlei/,
+        /opel\s+(?:olympia|von|des)/, /im\s+opel/, /im\s+wagen/,
+        /telefonzelle/, /telefon\s+(?:in|am)/,
+        /kreisgericht\s+mitte/, /gerichtssaal/, /saal\s+\d/,
+        /s[\s\-]?bahn(?:hof)?\b/, /strassenbahn(?:haltestell)?/, /haltestelle/,
+      ];
       if (curMainOrt && caseSetup && Array.isArray(caseSetup.locations) && caseSetup.locations.length > 0) {
-        const isWhitelisted = caseSetup.locations.some(loc => {
+        const isSetupWhitelisted = caseSetup.locations.some(loc => {
           if (!loc || !loc.name) return false;
           const locLower = loc.name.toLowerCase();
           // Fuzzy: Hauptort enthaelt Whitelist-Name oder umgekehrt
@@ -9781,8 +9886,13 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
                  // erste 3 Worte ueberlappen
                  locLower.split(/[\s,]+/).slice(0, 3).join(' ') === curMainOrt.split(/[\s,]+/).slice(0, 3).join(' ');
         });
-        if (!isWhitelisted && mainLocationChanged) {
+        // v6.95: Generische Whitelist zusaetzlich pruefen
+        const isGenericAllowed = GENERIC_LOCATIONS.some(rx => rx.test(curMainOrt));
+        if (!isSetupWhitelisted && !isGenericAllowed && mainLocationChanged) {
           diag('detect', 'Location ausserhalb Setup-Whitelist: "' + curMainOrt + '" (Mistral hat spontan erfunden, evtl. Whitelist erweitern)');
+        } else if (!isSetupWhitelisted && isGenericAllowed && mainLocationChanged) {
+          // Generisch erlaubt - nur leichte Diag-Notiz, kein Fingerzeig
+          diag('detect', 'Hauptort-Wechsel: "' + curMainOrt + '" (Generic-Whitelist, OK)');
         }
       }
     }
@@ -10692,9 +10802,32 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       const ct = caseSetup.caseType;
       const ind = caseProgress.indizien.length;
       // Stage 0/1 -> Stage 2: bei vielen Indizien automatisch hochsetzen
-      if (caseProgress.stage <= 1 && (ind >= 7 || (gameDay >= 2 && ind >= 5) || gameDay >= 3)) {
-        const targetName = caseSetup.setupCast && caseSetup.setupCast.find(c => c.tag === 'TARGET');
-        const placeholder = targetName ? (targetName.name + ' lokalisiert') : 'Spur gefunden';
+      // v6.95: Schwellen verschaerft + TARGET-Name-Verifikation.
+      // Anlass Brauer-Run v6.94: Stage 2 (vermisst) wurde Sz6/Tag1 ausgeloest
+      // mit nur 5 Indizien wovon KEINS direkt zu Erwin Brauer fuehrte. Folge:
+      // Stage 4 erzwang sich am Ende ohne dass Erwin je auftauchte.
+      // Jetzt: ind >= 6 + TARGET-Name muss in mindestens 1 Indiz vorkommen.
+      const targetFact = caseSetup.setupCast && caseSetup.setupCast.find(c => c.tag === 'TARGET');
+      const targetName = targetFact ? targetFact.name : null;
+      // Pruefe ob TARGET-Name in den Indizien tatsaechlich auftaucht
+      let targetMentionedInIndizien = false;
+      if (targetName) {
+        const targetWords = targetName.toLowerCase().split(/\s+/).filter(w => w.length >= 4);
+        const indText = (caseProgress.indizien || []).join(' ').toLowerCase();
+        for (const w of targetWords) {
+          if (indText.includes(w)) { targetMentionedInIndizien = true; break; }
+        }
+      } else {
+        // Kein TARGET im Setup definiert (selten) -> Verifikation skippen
+        targetMentionedInIndizien = true;
+      }
+      const stage2Ready = caseProgress.stage <= 1 && targetMentionedInIndizien && (
+        ind >= 8 ||                       // viele Indizien -> reicht
+        (gameDay >= 2 && ind >= 6) ||     // Tag 2+: 6 statt 5
+        (gameDay >= 4 && ind >= 4)        // Tag 4+: notbremse, aber NICHT Tag 3 sofort
+      );
+      if (stage2Ready) {
+        const placeholder = targetName ? (targetName + ' lokalisiert') : 'Spur gefunden';
         caseProgress.tatverdaechtiger = placeholder;
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
@@ -10702,18 +10835,37 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         console.log('[Schatten] AUTO-FORCING Stage 2 (' + ct + '): ' + placeholder);
         diag('progress', '✦ AUTO-STAGE 2 (' + ct + ') erzwungen: ' + placeholder);
         showProgressToast(ct === 'vermisst' ? 'ZIELPERSON LOKALISIERT' : 'VERDACHT BESTAETIGT', 'Die Spuren werden konkret. Karl ist nah dran.');
+      } else if (caseProgress.stage <= 1 && (ind >= 5 || gameDay >= 3) && !targetMentionedInIndizien && targetName) {
+        // Diagnose-Hinweis: Schwelle prinzipiell erreicht, aber TARGET fehlt
+        diag('drift', 'Stage-2-Force (' + ct + ') blockiert: ' + targetName + ' nicht in Indizien (Ind:' + ind + ', Tag:' + gameDay + ')');
       }
       // Stage 2 -> Stage 3: nach 10 Szenen in Stage 2 (v6.90 von 8 erhoeht)
+      // v6.95: Plus TARGET-Name-Check in letzten 5 Szenen-Texten.
+      // Anlass Lindner-Run: Hollenbeck war seit Sz7 weg, dann erzwang sich Stage 3 Sz21
+      // obwohl die Erzaehlung 14 Szenen lang gar nicht mehr bei Hollenbeck war.
       if (caseProgress.stage === 2 && !caseProgress.ueberfuehrt) {
         const stage2Scenes = sceneCounter - (caseProgress.stage2StartScene || sceneCounter);
         if (stage2Scenes >= 10) {
-          caseProgress.ueberfuehrt = true;
-          caseProgress.stage = 3;
-          caseProgress.stage3StartScene = sceneCounter;
-          const msg = ct === 'vermisst' ? 'Zielperson gefunden' : 'Beweise gesichert';
-          console.log('[Schatten] AUTO-FORCING Stage 3 (' + ct + '): ' + msg);
-          diag('progress', '✦ AUTO-STAGE 3 (' + ct + ') erzwungen nach ' + stage2Scenes + ' Szenen');
-          showProgressToast(ct === 'vermisst' ? 'ZIELPERSON GEFUNDEN' : 'BEWEISE GESICHERT', 'Karl hat was er braucht. Jetzt zum Klienten.');
+          // Inhalts-Check
+          const recentScenes = logEntries.filter(e => e && e.type === 'scene').slice(-5);
+          const recentText = recentScenes.map(e => (e.text || '').toLowerCase()).join(' ');
+          const tName = (targetName || '').toLowerCase();
+          const tWords = tName.split(/\s+/).filter(w => w.length >= 4);
+          let tMentioned = false;
+          for (const w of tWords) {
+            if (recentText.includes(w)) { tMentioned = true; break; }
+          }
+          if (tMentioned || stage2Scenes >= 16 || !targetName) {
+            caseProgress.ueberfuehrt = true;
+            caseProgress.stage = 3;
+            caseProgress.stage3StartScene = sceneCounter;
+            const msg = ct === 'vermisst' ? 'Zielperson gefunden' : 'Beweise gesichert';
+            console.log('[Schatten] AUTO-FORCING Stage 3 (' + ct + '): ' + msg);
+            diag('progress', '✦ AUTO-STAGE 3 (' + ct + ') erzwungen nach ' + stage2Scenes + ' Szenen');
+            showProgressToast(ct === 'vermisst' ? 'ZIELPERSON GEFUNDEN' : 'BEWEISE GESICHERT', 'Karl hat was er braucht. Jetzt zum Klienten.');
+          } else {
+            diag('drift', 'Stage-3-Force (' + ct + ') blockiert: ' + targetName + ' nicht in letzten 5 Szenen (' + stage2Scenes + ' Szenen Stage 2)');
+          }
         }
       }
     }
@@ -10788,29 +10940,64 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     // Anlass User v6.90: "20 Zuege zu wenig, 40-70 Zuege ist gesunde Range".
     // Vorher v6.89: 10 Szenen Stage 2 -> Stage 3 forciert. Das ist zu hart.
     // Jetzt: 14 Szenen Stage 2 (laesst Mistral mehr Zeit zu reagieren).
+    // v6.95: PLUS Inhalts-Check - Verdaechtigen-Name muss in letzten 5 Szenen vorkommen,
+    // sonst forciert das System Stage 3 obwohl der Plot inhaltlich woanders ist.
+    // Anlass Lindner-Run v6.94: Hollenbeck war seit Sz7 weg, Stage 3 erzwang sich Sz21.
     if (caseProgress.stage === 2 && caseProgress.tatverdaechtiger && !caseProgress.ueberfuehrt) {
       const stage2Scenes = sceneCounter - (caseProgress.stage2StartScene || sceneCounter);
       if (stage2Scenes >= 14) {
-        caseProgress.ueberfuehrt = true;
-        caseProgress.stage = 3;
-        caseProgress.stage3StartScene = sceneCounter;
-        console.log('[Schatten] AUTO-FORCING Stage 3: ' + caseProgress.tatverdaechtiger + ' (' + stage2Scenes + ' Szenen in Stage 2)');
-        diag('progress', '✦ AUTO-STAGE 3 erzwungen (' + caseProgress.tatverdaechtiger + ' nach ' + stage2Scenes + ' Szenen Stagnation)');
-        showProgressToast('VERDAECHTIGER UEBERFUEHRT', caseProgress.tatverdaechtiger + ' kann nicht mehr leugnen. Karl muss jetzt zum Klienten.');
+        // Inhalts-Check: kommt der Verdaechtigen-Name in den letzten 5 Szenen-Texten vor?
+        const recentScenes = logEntries.filter(e => e && e.type === 'scene').slice(-5);
+        const recentText = recentScenes.map(e => (e.text || '').toLowerCase()).join(' ');
+        const verdName = (caseProgress.tatverdaechtiger || '').toLowerCase();
+        const verdWords = verdName.split(/\s+/).filter(w => w.length >= 4 && !/^lokalisiert$/.test(w));
+        let verdMentioned = false;
+        for (const w of verdWords) {
+          if (recentText.includes(w)) { verdMentioned = true; break; }
+        }
+        if (verdMentioned || stage2Scenes >= 20) {
+          // Force erlauben: Name kommt vor ODER Stagnation so extrem (20+ Szenen) dass
+          // Forcing trotzdem noetig ist.
+          caseProgress.ueberfuehrt = true;
+          caseProgress.stage = 3;
+          caseProgress.stage3StartScene = sceneCounter;
+          console.log('[Schatten] AUTO-FORCING Stage 3: ' + caseProgress.tatverdaechtiger + ' (' + stage2Scenes + ' Szenen in Stage 2' + (verdMentioned ? '' : ', extreme Stagnation') + ')');
+          diag('progress', '✦ AUTO-STAGE 3 erzwungen (' + caseProgress.tatverdaechtiger + ' nach ' + stage2Scenes + ' Szenen Stagnation)');
+          showProgressToast('VERDAECHTIGER UEBERFUEHRT', caseProgress.tatverdaechtiger + ' kann nicht mehr leugnen. Karl muss jetzt zum Klienten.');
+        } else {
+          // Verdaechtiger taucht nicht auf - statt forcen lieber Push an KI
+          diag('drift', 'Stage-3-Force blockiert: ' + caseProgress.tatverdaechtiger + ' nicht in letzten 5 Szenen (' + stage2Scenes + ' Szenen Stage 2)');
+        }
       }
     }
     // v6.94: AUTO-FORCING Stage 4 gestaffelt (vorher v6.90 sofort bei 7 Szenen)
     // Anlass Run14: Stage 4 wurde erzwungen obwohl Verdaechtige geflohen war.
     // Jetzt: bei 5 Szenen Push an Mistral, bei 7 Szenen Hard-Force.
+    // v6.95: Plus Handlungsfaehigkeits-Check. Stage 4 ("Klient berichtet") darf NICHT
+    // erzwungen werden wenn Karl:
+    //   - in MfS-Gewahrsam ist
+    //   - bei Verfassung <= 2 (schwer verletzt)
+    //   - gerade in einer Action-Szene am Boden liegt (Spannung >= 4)
+    // Anlass Wessel-Run v6.94: Stage 4 erzwang sich in Sz25 obwohl Karl angeschossen
+    // am Boden lag, MfS-umstellt, und Werner noch in Hohenschoenhausen.
     if (caseProgress.stage === 3 && caseProgress.ueberfuehrt && !caseProgress.klientGesprochen) {
       const stage3Scenes = sceneCounter - (caseProgress.stage3StartScene || sceneCounter);
       if (stage3Scenes >= 7) {
-        caseProgress.klientGesprochen = true;
-        caseProgress.istGelöst = true;
-        caseProgress.stage = 4;
-        console.log('[Schatten] AUTO-FORCING Stage 4: Fall geloest nach ' + stage3Scenes + ' Szenen in Stage 3');
-        diag('progress', '✦ AUTO-STAGE 4 erzwungen (Fall geloest, Klient berichtet, ' + stage3Scenes + ' Szenen Stagnation)');
-        showProgressToast('FALL GELOEST', 'Karl hat es geschafft. Klient ist informiert.');
+        // Handlungsfaehigkeits-Check
+        const karlBlocked = karlInStasiCustody || (verfassung <= 2) || (typeof lastSpannung === 'number' && lastSpannung >= 4);
+        if (!karlBlocked || stage3Scenes >= 12) {
+          // Stage 4 forcen wenn Karl frei und gesund ODER wenn Stagnation extrem (12+)
+          caseProgress.klientGesprochen = true;
+          caseProgress.istGelöst = true;
+          caseProgress.stage = 4;
+          console.log('[Schatten] AUTO-FORCING Stage 4: Fall geloest nach ' + stage3Scenes + ' Szenen in Stage 3');
+          diag('progress', '✦ AUTO-STAGE 4 erzwungen (Fall geloest, Klient berichtet, ' + stage3Scenes + ' Szenen Stagnation)');
+          showProgressToast('FALL GELOEST', 'Karl hat es geschafft. Klient ist informiert.');
+        } else {
+          // Karl handlungsunfaehig - Stage 4 verschieben, dafuer Hinweis im Diag
+          const reason = karlInStasiCustody ? 'in Gewahrsam' : (verfassung <= 2 ? 'verletzt (Vf ' + verfassung + ')' : 'Action-Szene (Sp ' + lastSpannung + ')');
+          diag('drift', 'Stage-4-Force blockiert: Karl ' + reason + ' (' + stage3Scenes + ' Szenen Stage 3)');
+        }
       }
     }
     // v6.90: HARD-CAP nach 70 Szenen Gesamtspiel - gesunde Range 40-70
@@ -11037,11 +11224,30 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
 
     // Stasi-Gewahrsam-Status: Karl gerade in Verhoer-Zelle?
     if (!karlInStasiCustody && detectStasiCustody(scene.szene || '')) {
-      karlInStasiCustody = true;
-      folterSceneCount = 0;
-      stasiHighTensionStreak = 0; // Reset wenn Karl jetzt drin ist
-      console.log('[Schatten] Karl in Stasi-Gewahrsam. Folter-Wuerfel ab Szene 2 aktiv.');
-      diag('detect', 'Karl in Stasi-Gewahrsam - Folter-Wuerfel aktiv ab Szene 2');
+      // v6.95: Kontext-Filter bevor wir Custody setzen.
+      // Wenn die Szene an einem befreundeten Polizei-Ort spielt (VP-Revier mit
+      // Roth/Lindner) und KEIN MfS/Stasi-Akteur namentlich anwesend ist, ist
+      // das ein False-Positive (z.B. Roth erwaehnt Hohenschoenhausen).
+      // Bedingung: friendly police context AND no MfS actor in scene -> skip.
+      const ortLower = (scene.ort || '').toLowerCase();
+      const txtLower = (scene.szene || '').toLowerCase()
+        .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+      const isFriendlyPoliceLoc = /\b(volkspolizei[\s\-]?(revier|inspektion|praesidium)|revier\s+hardenberg|polizeirevier\s+hardenberg|keibelstrasse|hardenbergstrasse)\b/.test(ortLower.replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss'));
+      const friendlyNpcPresent = /\b(roth|lindner|wilhelm\s+roth|heinrich\s+lindner|kommissar\s+(roth|lindner))\b/.test(txtLower);
+      const mfsActorPresent = /\b(sokolow|iwanow|smirnow|major\s+\w+|leutnant\s+\w+|mfs-?(beamte|vernehmer|schlaeger)|stasi-?(beamte|leute|maenner))\b/.test(txtLower);
+      // Karl-spezifischer Custody-Marker (echte Festnahme)
+      const karlActuallyHeld = /\b(du\s+(sitzt|bist|liegst|landest|wachst|wirst)|man\s+(fuehrt|bringt|schleppt)\s+dich|(fesseln|handschellen|verhoertisch|zelle)\b.{0,40}\b(du|dich|karl))\b/.test(txtLower);
+
+      if (isFriendlyPoliceLoc && friendlyNpcPresent && !mfsActorPresent && !karlActuallyHeld) {
+        // False-Positive: Karl spricht im VP-Revier mit Freund, nicht in Gewahrsam.
+        diag('detect', 'Custody-Trigger im befreundeten VP-Revier unterdrueckt (kein MfS-Akteur, kein Karl-Festnahme-Marker)');
+      } else {
+        karlInStasiCustody = true;
+        folterSceneCount = 0;
+        stasiHighTensionStreak = 0; // Reset wenn Karl jetzt drin ist
+        console.log('[Schatten] Karl in Stasi-Gewahrsam. Folter-Wuerfel ab Szene 2 aktiv.');
+        diag('detect', 'Karl in Stasi-Gewahrsam - Folter-Wuerfel aktiv ab Szene 2');
+      }
     } else if (karlInStasiCustody && detectStasiRelease(scene.szene || '')) {
       karlInStasiCustody = false;
       const survivedFolter = folterSceneCount;
