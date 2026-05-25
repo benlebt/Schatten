@@ -1400,10 +1400,10 @@
       <label class="autoplay-label">Stil:</label>
       <select id="autoplay-strategy" class="autoplay-input">
         <option value="random">Pro Zug Option würfeln</option>
-        <option value="aggressive">Aggressiv (immer Option A)</option>
-        <option value="cautious">Vorsichtig (immer Option D)</option>
+        <option value="aggressive">Aggressiv (bevorzugt Option A)</option>
+        <option value="cautious">Vorsichtig (bevorzugt Option B)</option>
+        <option value="explorer">Erkunder (bevorzugt Option C)</option>
         <option value="varied">Variiert (A→B→C→D)</option>
-        <option value="explorer">Erkunder (neue Orte bevorzugt)</option>
         <option value="rotating">Rotierend (Stil wechselt alle 5 Züge)</option>
       </select>
     </div>
@@ -1577,7 +1577,7 @@
     <button class="btn-primary" onclick="startRandomGame()">Zufällige Ermittlung</button>
     <br>
     <button class="btn-secondary" onclick="showSetupSelector()">Fall auswählen</button>
-    <div class="start-version">Schatten v6.85</div>
+    <div class="start-version">Schatten v6.87</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -1654,7 +1654,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v6.85</span>
+    <span>Schatten v6.87</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -2313,6 +2313,25 @@ OPTIONEN (genau 4, sonst wird gemeckert):
 - Bei Action: körperlich/unmittelbar. Bei Dialog: verschiedene Tonfälle (hart/freundlich/lügen/bluffen)
 - Konkret zur Szene, nicht generisch
 - Beispiele richtig: "Frag ihn nach Robert." / "Zieh die Pistole." / "Geh ans Fenster." / "Sag nichts und beobachte."
+
+OPTIONEN-ROLLEN (FESTE ZUORDNUNG A/B/C/D):
+Die 4 Optionen MÜSSEN diese Rollen-Reihenfolge einhalten, damit der Spieler/Bot
+sich auf die Logik verlassen kann. Jede Option soll exemplarisch für ihre Rolle stehen:
+
+- Option A = AGGRESSIV/KONFRONTATIV: harte direkte Aktion, körperlich/forsch.
+  Beispiele: "Zieh die Walther und zwing ihn zu reden." / "Pack ihn am Kragen und schüttel ihn." / "Tritt die Tür ein." / "Schrei ihn an und konfrontier ihn mit dem Foto." / "Schieß ihm vor die Füße."
+  WICHTIG: Option A ist NICHT "verlasse den Raum und fahr zu X" - das ist defensiv/explorativ. Aggressiv heißt: in der aktuellen Szene HART zugreifen.
+
+- Option B = VORSICHTIG/DIPLOMATISCH: ruhig, abwägend, vertrauensbildend.
+  Beispiele: "Frag freundlich nach ihrem Mann." / "Biete ihm eine Zigarette und hör zu." / "Geh leise zur Tür und lausche." / "Sag, du verstehst seine Sorgen." / "Schweig und beobachte ihre Reaktion."
+
+- Option C = ERKUNDEND/AKTIV-NEUTRAL: einen neuen Hinweis verfolgen, einen anderen Ort/Person ansteuern, etwas Neues prüfen.
+  Beispiele: "Geh zum Schreibtisch und durchsuch die Schubladen." / "Verlass die Villa und fahr zur Klosterstraße." / "Frag den Nachbarn ob er etwas gehört hat." / "Geh zum Fenster und schau auf den Hof." / "Untersuch das Foto unter dem Licht."
+
+- Option D = ABWARTEND/ZURÜCKHALTEND/UNAUFFÄLLIG: sich raushalten, beobachten, weggehen, Zeit gewinnen, kein Risiko eingehen.
+  Beispiele: "Steck die Walther weg und geh." / "Sag nichts und warte ab." / "Bedank dich und geh ohne weitere Fragen." / "Lass ihn schwitzen und schweige." / "Geh nach Hause und denk drüber nach."
+
+KRITISCH: Diese Reihenfolge gilt PRO SZENE konsistent. Auch bei Verfolgungsjagden, Action-Szenen und ruhigen Verhören. Falls eine Rolle nicht zur Szene passt, formuliere sie in der Szene-Logik um (z.B. in einer Action-Szene ist "abwartend" = "in Deckung gehen und nicht schießen"), aber tausch NIE die Reihenfolge.
 
 VERFASSUNG (Karls körperlicher Zustand, sehr wichtig):
 Karl ist Privatdetektiv Anfang vierzig, abgebrüht aber nicht unverwundbar. Skala 1-5 (5 = unverletzt, 1 = lebensgefährlich). Du bekommst pro Anfrage seinen aktuellen Stand. Beziehe ihn in die Erzählung ein:
@@ -3300,7 +3319,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v6.85';
+window.SCHATTEN_VERSION = 'v6.87';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -6426,6 +6445,29 @@ Es ist NICHT realistisch, dass eine Trauergesellschaft 18 Stunden an einem Grab 
     const scenesSinceEureka = sceneCounter - lastEureka;
     if (indCount >= 2 && scenesSinceEureka >= 3 && caseProgress.stage < 2) {
       recap += `\n\nVERKNUEPFUNGS-PFLICHT: Karl hat ${indCount} Indizien, aber seit ${scenesSinceEureka} Szenen keine Verbindung zwischen ihnen entdeckt. In dieser ODER der naechsten Szene MUSS Karl einen "Eureka-Moment" haben - eine konkrete Verbindung zwischen zwei seiner Indizien (gleicher Name, gleiches Datum, gleiches Detail, widersprueche). Schreib es klar: "Du erinnerst dich an X. Das verbindet sich mit Y." Setze dann "indiz_verbindung" auf einen 1-Satz-String. WICHTIG: Wenn dadurch der dritte oder vierte Indiz auch erkennbar wird, KEIN extra Indiz - die Verbindung selbst zaehlt als Fortschritt.`;
+    }
+
+    // v6.85: ZIELPERSON-SPUR-PUSH fuer Vermissten- und Wahrheits-Faelle.
+    // Anlass: im Vogt-Run wurde 34 Szenen lang um Manfred Vogt herumgespielt
+    // (Foto, Schwester, Reichsbahn, MfS, Sokolow), aber NIEMAND wusste WO Manfred
+    // ist. Die Story driftete in Politik-Verschwoerung statt der Zielperson auf
+    // die Spur zu kommen. Bei caseType=vermisst muss explizit nach SPUREN zur
+    // Zielperson selbst gesucht werden, nicht nur Kontext.
+    if (caseSetup && caseSetup.caseType && Array.isArray(caseSetup.setupCast) && caseProgress.stage < 2) {
+      const target = caseSetup.setupCast.find(c => c.tag === 'TARGET');
+      const ct = caseSetup.caseType;
+      const isVermisstOrWahrheit = (ct === 'vermisst' || ct === 'wahrheit');
+      if (target && isVermisstOrWahrheit && sceneCounter >= 10) {
+        // Pruefen ob die Zielperson in den Indizien erwaehnt wird (als Ortsangabe
+        // oder Aussage, nicht nur als Name).
+        const indizienText = caseProgress.indizien.join(' ').toLowerCase();
+        const targetFirstName = (target.name || '').split(' ')[0].toLowerCase();
+        const targetLastName = (target.name || '').split(' ').slice(-1)[0].toLowerCase();
+        const hasTargetSpur = indizienText.includes(targetFirstName) || indizienText.includes(targetLastName);
+        if (!hasTargetSpur) {
+          recap += `\n\nZIELPERSON-SPUR FEHLT (Setup: ${target.name}): Karl hat ${sceneCounter} Szenen ermittelt, aber kein einziges Indiz fuehrt direkt zu ${target.name}. Das ist im ${ct === 'vermisst' ? 'Vermissten' : 'Wahrheits'}-Fall ein Problem - die ZIELPERSON darf nicht im Hintergrund verschwinden waehrend Karl im Kontext-Sumpf versinkt. In dieser ODER der naechsten Szene MUSS ein Indiz direkt auf ${target.name} verweisen: ein Zeuge der ${target.name} zuletzt gesehen hat, eine Notiz mit ${target.name}s Handschrift, ${target.name}s Wohnung/Arbeitsplatz mit konkreten Spuren, ein Anruf von oder ueber ${target.name}, ein Foto/Brief/Tagebuch. Konkret zu ${target.name}, nicht zu Sokolow/MfS/Verschwoerung. Setze das neue Indiz auf "indiz_neu" mit ${target.name}-Bezug.`;
+        }
+      }
     }
     // Hinweis fuer die KI ueber den naechsten Schritt
     // v6.69: Eskalations-Logik - bei zu vielen Indizien ohne Stage-Promotion wird
@@ -9647,10 +9689,20 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       // Fuzzy-Dedup: falls ein sehr aehnlicher Eintrag schon drin ist
       // (z.B. "Arbeitszimmer der Villa" vs "Arbeitszimmer der Villa am Wannsee"),
       // den existierenden bevorzugen.
+      // v6.85: ZUSAETZLICH Umlaute normalisieren bevor verglichen wird.
+      // Anlass: "Reichsbahn-Ausbesserungswerk Schöneweide" (40 Zeichen, kein
+      // Trunc) und "Reichsbahn-Ausbesserungswerk Schoeneweide" (41 Zeichen,
+      // Trunc auf 40 = "Reichsbahn-Ausbesserungswerk Schoeneweid") wurden als
+      // zwei verschiedene Orte gefuehrt. Mit Umlaut-Normalisierung beide gleich.
+      const normalizeForDedup = (s) => s.toLowerCase()
+        .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
       const ortKeyLower = ortKey.toLowerCase();
+      const ortKeyNorm = normalizeForDedup(ortKey);
       const existsIdx = visitedLocations.findIndex(o => {
         const oLower = o.toLowerCase();
-        return oLower === ortKeyLower || oLower.includes(ortKeyLower) || ortKeyLower.includes(oLower);
+        const oNorm = normalizeForDedup(o);
+        return oLower === ortKeyLower || oLower.includes(ortKeyLower) || ortKeyLower.includes(oLower)
+            || oNorm === ortKeyNorm || oNorm.includes(ortKeyNorm) || ortKeyNorm.includes(oNorm);
       });
       if (existsIdx < 0) {
         visitedLocations.push(ortKey);
@@ -10313,12 +10365,44 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           // Wenn ein Name aus 2+ Worten in dem anderen vorkommt -> Duplikat.
           if (newNameClean.split(/\s+/).length >= 2 && exNameClean.includes(newNameClean)) return true;
           if (exNameClean.split(/\s+/).length >= 2 && newNameClean.includes(exNameClean)) return true;
+          // 4) v6.87: ROLLEN-BASIERTES DEDUP fuer generische Bezeichner.
+          //    Wenn beide Eintraege die gleiche Rolle UND das gleiche Fahrzeug haben
+          //    UND mindestens einer der Namen generisch ist (Beruf-only ohne Nachname),
+          //    dann sind sie wahrscheinlich dieselbe Person.
+          //    Anlass: "Junger Schutzpolizist" + "Polizist (Fahrer)" + "Schutzpolizist Schmidt"
+          //    waren alle der gleiche Fahrer im Mercedes 170 V.
+          const genericRoles = /^(haushaelterin|haushälterin|polizist|schutzpolizist|fahrer|kellner|wirt|hausmeister|hauswart|sekretaerin|sekretärin|junger\s+polizist|junger\s+schutzpolizist|polizist\s*\(fahrer\)|nachbarin|nachbar)/i;
+          const isNewGeneric = genericRoles.test(newName);
+          const isExGeneric = genericRoles.test(exName);
+          if ((isNewGeneric || isExGeneric) && entry.rolle && c.rolle) {
+            const exRolle = (c.rolle || '').toLowerCase().trim();
+            const newRolle = (entry.rolle || '').toLowerCase().trim();
+            const sameRole = exRolle === newRolle || exRolle.includes(newRolle) || newRolle.includes(exRolle);
+            const exVeh = (c.fahrzeug || '').toLowerCase();
+            const newVeh = (entry.fahrzeug || '').toLowerCase();
+            const sameVehicle = exVeh && newVeh && (exVeh === newVeh || exVeh.includes(newVeh) || newVeh.includes(exVeh));
+            // Bei gleicher Rolle: Mergen wenn entweder gleiches Fahrzeug ODER
+            // beide ohne Fahrzeug (kontextueller Match)
+            if (sameRole && (sameVehicle || (!exVeh && !newVeh))) return true;
+          }
           return false;
         });
         if (dupIdx >= 0) {
-          // Duplikat: nimm den laengeren Namen (vollere Form), behalte Cast-Eintrag
+          // Duplikat: nimm den vollstaendigeren Namen.
+          // v6.87: Konkreter Eigenname (Schmidt, Meier, Roth) hat IMMER Vorrang
+          // vor generischer Bezeichnung (Polizist, Haushaelterin, Fahrer).
           const existing = cast[dupIdx];
-          if (entry.name.length > existing.name.length) {
+          const genericRoles = /^(haushaelterin|haushälterin|polizist|schutzpolizist|fahrer|kellner|wirt|hausmeister|hauswart|sekretaerin|sekretärin|junger\s+polizist|junger\s+schutzpolizist|polizist\s*\(fahrer\)|nachbarin|nachbar)$/i;
+          const existingIsGeneric = genericRoles.test(existing.name.trim());
+          const entryIsGeneric = genericRoles.test(entry.name.trim());
+          if (existingIsGeneric && !entryIsGeneric) {
+            // Existing ist nur Rollen-Bezeichner, entry hat echten Namen -> ersetzen
+            existing.name = entry.name;
+          } else if (!existingIsGeneric && entryIsGeneric) {
+            // existing hat echten Namen, entry ist generisch -> behalten
+            // (kein Name-Update)
+          } else if (entry.name.length > existing.name.length) {
+            // Beide generisch oder beide konkret: laengerer gewinnt (alte Logik)
             existing.name = entry.name;
           }
           // Felder anreichern wenn neuer Eintrag mehr Info hat
@@ -10735,6 +10819,19 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           // Recap-Builder einen harten "JETZT FESTNAHME EINBAUEN" Push macht.
           caseProgress.forceCustodyNextScene = true;
           diag('progress', '✦ AUTO-CUSTODY forciert nach ' + stasiHighTensionStreak + ' Szenen Tension>=4');
+        }
+        // v6.85: ESKALATIONS-STUFE 2 - wenn 6+ Szenen Streak und Custody NICHT
+        // eingetreten, hat Mistral den Force-Push ignoriert. Setze Custody-Status
+        // systemseitig und reduziere Tension knapp unter Force-Schwelle, damit
+        // der Spam aufhoert. Im naechsten Recap wird ein neuer, noch direkterer
+        // Push generiert (siehe forceCustodyNextScene-Block).
+        if (stasiHighTensionStreak >= 6) {
+          console.warn('[Schatten] Mistral hat Custody-Push 6x ignoriert - setze karlInStasiCustody=true systemseitig');
+          diag('state', 'System-Force-Custody: Mistral hat ' + stasiHighTensionStreak + ' Pushes ignoriert, Custody-Status systemseitig gesetzt');
+          karlInStasiCustody = true;
+          folterSceneCount = 0;
+          stasiHighTensionStreak = 0;
+          caseProgress.forceCustodyNextScene = true; // bleibt - Recap muss Festnahme erzaehlen
         }
       } else {
         stasiHighTensionStreak = 0;
@@ -11381,20 +11478,39 @@ function botChooseByStrategy(options) {
     return chosen;
   }
 
-  const PATTERNS = {
-    // Aggressiv: Konflikt-Verben - direkte Konfrontation, Gewalt, Drohung
-    aggressive: /\b(zieh\s+die|zieh\s+deine|schiess|schlag|pack|konfrontier|stoss|tritt\s+ihm|wuerg|wuerge|brech|reiss|hau|droh|bedroh|niederschlag|festhalt|festnahme|stuerm|attacker|attackier|stoss\s+ihn|stech)/i,
-    // Vorsichtig: Beobachten, hoeren, denken - passiv und still
-    cautious:   /\b(beobacht|warte\s+ab|warte|horch|hoer\s+zu|denke|nachdenken|ueberleg|notier|schweig|still|verstecke|leise|vorsichtig|zieh\s+dich\s+zurueck|verharr|bleib|tu\s+als|im\s+schatten)/i,
-    // Erkunder: Bewegung, Wegfindung, Personen aufsuchen
-    explorer:   /\b(geh\s+zu|geh\s+zur|geh\s+zum|geh\s+nach|fahr\s+zu|fahr\s+nach|fahr\s+zur|fahr\s+zum|such|folge|verfolg|besuch|verlass|steig\s+ein|tritt\s+ein|betritt|kehr\s+zurueck|erkund|nimm\s+die|nimm\s+den|durchsuch|untersuch|pruef|durchwuhl|durchstreif)/i,
+  // v6.87: Mit der festen A/B/C/D-Rollen-Zuordnung im System-Prompt
+  // (A=aggressiv, B=vorsichtig, C=erkundend, D=abwartend) ist die richtige
+  // Wahl jetzt die Position - NICHT das Pattern. Pattern bleibt als Fallback
+  // falls die KI mal nicht sauber liefert.
+  const STRATEGY_TO_INDEX = {
+    aggressive: 0,  // Option A
+    cautious:   1,  // Option B
+    explorer:   2,  // Option C
   };
-  const pattern = PATTERNS[effectiveStrategy];
-  if (!pattern) return botRngChoice(options);
+  const targetIdx = STRATEGY_TO_INDEX[effectiveStrategy];
+  if (typeof targetIdx === 'number' && options[targetIdx]) {
+    // Pattern-Validierung als Sicherheits-Check: passt der Text zur Rolle?
+    // Wenn ja, sicher waehlen. Wenn nicht, Pattern-Match aus allen Optionen.
+    const PATTERNS = {
+      // Aggressiv: Konflikt-Verben - direkte Konfrontation, Gewalt, Drohung
+      aggressive: /\b(zieh\s+die|zieh\s+deine|schiess|schlag|pack|konfrontier|stoss|tritt\s+ihm|wuerg|wuerge|brech|reiss|hau|droh|bedroh|niederschlag|festhalt|festnahme|stuerm|attacker|attackier|stoss\s+ihn|stech|schrei|tritt\s+die\s+tuer)/i,
+      // Vorsichtig: Beobachten, hoeren, denken, freundlich fragen, vertrauensbildend
+      cautious:   /\b(beobacht|warte\s+ab|horch|hoer\s+zu|denke|nachdenken|ueberleg|notier|schweig|still|leise|vorsichtig|freundlich|biete\s+(ihm|ihr|eine)\s+(zigarette|kaffee)|tu\s+als|sag\s+(ihm|ihr)\s+du\s+verstehst)/i,
+      // Erkunder: Bewegung, Wegfindung, Personen aufsuchen, Hinweise nachgehen
+      explorer:   /\b(geh\s+zu|geh\s+zur|geh\s+zum|geh\s+nach|fahr\s+zu|fahr\s+nach|fahr\s+zur|fahr\s+zum|such|folge|verfolg|besuch|verlass|steig\s+ein|tritt\s+ein|betritt|kehr\s+zurueck|erkund|durchsuch|untersuch|pruef|durchwuhl|durchstreif)/i,
+    };
+    const targetOpt = options[targetIdx];
+    const pattern = PATTERNS[effectiveStrategy];
+    if (pattern && pattern.test(targetOpt.text)) {
+      // Position UND Pattern stimmen - perfekt
+      return targetOpt;
+    }
+    // Position-Wahl ist die primaere, auch wenn Pattern nicht matcht
+    // (mit fester A/B/C/D-Konsistenz im Prompt sollte sie meistens passen)
+    return targetOpt;
+  }
 
-  const matches = options.filter(opt => pattern.test(opt.text));
-  if (matches.length > 0) return botRngChoice(matches);
-  return botRngChoice(options); // fallback
+  return botRngChoice(options);
 }
 
 function botUpdateStatusBar(text) {
