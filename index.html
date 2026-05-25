@@ -1577,7 +1577,7 @@
     <button class="btn-primary" onclick="startRandomGame()">Zufällige Ermittlung</button>
     <br>
     <button class="btn-secondary" onclick="showSetupSelector()">Fall auswählen</button>
-    <div class="start-version">Schatten v6.91</div>
+    <div class="start-version">Schatten v6.93</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -1654,7 +1654,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v6.91</span>
+    <span>Schatten v6.93</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -3319,7 +3319,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v6.91';
+window.SCHATTEN_VERSION = 'v6.93';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -3446,6 +3446,7 @@ function diagCommit() {
 
 // Letzte Verletzung als Kontext fuer Folgeszenen (z.B. "Schulterschuss")
 let lastInjury = '';
+let lastInjuryScene = 0; // v6.92: Szene in der die aktuelle Verletzung gesetzt wurde
 // Letzte Spannung (1-5), damit advanceGameTime in Action-Sequenzen pausieren kann
 let lastSpannung = 1;
 // Wie viele Szenen am Stueck Spannung >= 4 hatten (Action-Streak)
@@ -6174,7 +6175,17 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
     const verfassungLabel = ['tot', 'lebensgefährlich verletzt', 'stark verletzt', 'angeschlagen', 'leicht angeschlagen', 'unverletzt'][verfassung] || 'unverletzt';
     recap += `\n\nKARLS VERFASSUNG: ${verfassung}/5 (${verfassungLabel}).`;
     if (lastInjury) {
-      recap += ` Aktuelle Verletzung: ${lastInjury}. Karl spuert das in jeder Bewegung.`;
+      // v6.92: Wenn die Verletzung schon mehrere Szenen alt ist, NICHT staendig wiederholen.
+      // Anlass: Run11 Wegener zeigte "die Wange pocht von dem Streifschuss" 8x in 30 Szenen.
+      // Das wird zur narrativen Kruecke.
+      const scenesSinceInjury = (lastInjuryScene > 0) ? (sceneCounter - lastInjuryScene) : 0;
+      if (scenesSinceInjury <= 2) {
+        recap += ` Aktuelle Verletzung: ${lastInjury}. Karl spuert das in jeder Bewegung.`;
+      } else if (scenesSinceInjury <= 5) {
+        recap += ` Aktuelle Verletzung: ${lastInjury}. Karl spuert das gelegentlich, aber NICHT in jedem Satz erwaehnen - hoechstens 1x pro Szene und nur wenn es Sinn macht.`;
+      } else {
+        recap += ` Karl hat noch ${lastInjury}, aber das ist schon ${scenesSinceInjury} Szenen her. NICHT mehr in der Erzaehlung erwaehnen ausser es passiert etwas das die Wunde wieder reizt (neuer Schlag, schnelle Bewegung, jemand fasst die Stelle an). Konstante Erinnerungen an alte Verletzungen werden zur Pumphrase.`;
+      }
     }
     if (verfassung <= 2) {
       recap += ` WICHTIG: Karl ist deutlich angeschlagen. Die naechste Szene MUSS das zeigen (Bewegungseinschraenkung, Schmerz, Schwindel, Atemnot). Mindestens eine der vier Optionen muss in Richtung Versorgung/Ausruhen/Versteck gehen.`;
@@ -6476,6 +6487,17 @@ Es ist NICHT realistisch, dass eine Trauergesellschaft 18 Stunden an einem Grab 
         recap += `\nFALL-ZIEL (Endpunkt dieses Falls): ${fallziel}.\n`;
       }
 
+      // v6.93: SZENE-2-PLOT-CONTINUITY-PUSH
+      // Anlass: Run12 (Setup 11 Doc Wagner Mord) zeigte in Sz2 einen
+      // komplett anderen Plot ("Mein Sohn Werner ist verschwunden, 800 Mark")
+      // - Mistral hat das Setup 13 Wessel mit dem laufenden Doc Wagner-Setup
+      // vermischt. Bei Sz2 explizit pushen dass der Plot aus Sz1 weiterläuft.
+      if (sceneCounter === 1) {
+        const tnName = target ? target.name : null;
+        const ortHaupt = caseSetup.ortHaupt || '';
+        recap += `\nPLOT-KONTINUITAET (WICHTIG FUER SZ2): Die Eroeffnungsszene (Sz1) hat den Fall etabliert: ${client ? client.name + ' als Klient' : 'der Klient'}${tnName ? ', ' + tnName + ' als ' + (ct === 'vermisst' ? 'Vermisste(r)' : ct === 'mord' ? 'Mordopfer' : 'Zielperson') : ''}, Auftrag ${ct}${ortHaupt ? ' am Ort ' + ortHaupt : ''}. In Sz2 MUSS dieser SELBE Plot weiterlaufen. KEINEN anderen Fall einbauen (kein "ich brauche Hilfe mit MEINEM Sohn" wenn schon ein anderer Klient da ist). KEIN zweiter Klient, KEINE zweite Zielperson, KEIN anderes Datum. Die Konsequenz der Sz1-Spieler-Aktion direkt erzaehlen.\n`;
+      }
+
       // DRIFT-SPERREN: explizit fuer Klient, Zielperson, Verdaechtige
       const sperren = [];
       // Personalunion: bei Setup 3 (Stein politisch) ist CLIENT == TARGET.
@@ -6716,13 +6738,17 @@ Es ist NICHT realistisch, dass eine Trauergesellschaft 18 Stunden an einem Grab 
       recap += `\n\nKARL VOELLIG AM ENDE (Energie ${karlEnergie}/100, ${currentTime}): Karl kann buchstaeblich nicht mehr stehen. Die Augen fallen ihm zu, er torkelt, die Welt verschwimmt. In dieser Szene MUSST du eine erzwungene Einnick-Sequenz erzaehlen - keine Wahl mehr, Karl SINKT EIN.${formalHint} Beschreibe wie er ploetzlich einnickt (auf dem Buero-Stuhl, an einer Theke, auf der Bank im Wachraum, im Auto am Steuer, in einem Hauseingang, je nachdem wo er gerade ist). verfassung_delta: -1 (schlechter Schlafplatz). Erzaehle den Tageswechsel direkt im Text der NACHFOLGENDEN Szene: "Du wachst auf, als..." Die 4 Optionen sind dann normale MORGEN-Optionen (Kaffee, Hilde anrufen, zum naechsten Ermittlungsschritt). KEINE Optionen vom Vortag wieder anbieten.`;
     } else if (karlEnergie <= 25 && isAbendOderNacht && isLowTension) {
       // SEHR ERSCHOEPFT + Abend/Nacht + ruhig: ALLE 4 OPTIONEN MUESSEN Schlaf/Heimweg sein
-      recap += `\n\nKARL MUSS SCHLAFEN JETZT (Energie ${karlEnergie}/100, ${currentTime}): Karl ist am Limit. ALLE 4 OPTIONEN MUESSEN Schlaf- oder Heimweg-Optionen sein - KEINE inhaltliche Ermittlungs-Option mehr erlaubt.${formalHint} Beispiele was sich anbietet (waehle 4 die zur Situation passen): "Zurueck ins Buero und sofort ins Bett", "Mit dem Opel nach Hause fahren und schlafen", "[Person im Raum] fragen ob du auf der Couch schlafen darfst", "Im Buero am Schreibtisch einnicken", "In den Wartesaal vom Bahnhof und auf der Bank schlafen", "Doc Wagner fragen ob er dich uebernachten laesst", "Marlene anrufen und fragen", "Im Auto auf dem Ruecksitz", "Bei Trude im Hinterzimmer auf dem Sofa". Im Erzaehltext: Karl gaehnt, reibt sich die Augen, die Schultern haengen, alles zieht ihn zum Schlaf. NPCs reagieren ("Mauer, Sie sehen fertig aus, gehen Sie nach Hause"). KEINE Option wie "noch eine Frage stellen", "noch zum naechsten Ort", "noch akten lesen" - das ist physisch unmoeglich.`;
+      // v6.93: Sofa-Optionen komplett aus den Beispielen entfernt. Mistral nahm
+      // die Notfall-Variante als Default - das Wort "Sofa" steht im Prompt = Mistral
+      // schreibt es in die Optionen. Lieber gar nicht erwaehnen.
+      recap += `\n\nKARL MUSS SCHLAFEN JETZT (Energie ${karlEnergie}/100, ${currentTime}): Karl ist am Limit. ALLE 4 OPTIONEN MUESSEN Schlaf- oder Heimweg-Optionen sein - KEINE inhaltliche Ermittlungs-Option mehr erlaubt.${formalHint} Karl hat eine Wohnung am Hackeschen Markt mit Schlafzimmer und richtigem BETT. Beispiele die sich anbieten: "Zurueck ins Schlafzimmer am Hackeschen Markt und ins Bett", "Mit dem Opel nach Hause und ins Bett", "Bei Doc Wagner uebernachten auf seiner Liege", "Bei [Person im Raum] uebernachten falls Karl zu weit weg von zu Hause ist", "Im Auto am Steuer einnicken (Notfall)". Verwende das Wort "Bett" oder "schlafen" oder "uebernachten" - NICHT "Sofa" oder "Couch" (Karl ist kein Penner). Im Erzaehltext: Karl gaehnt, reibt sich die Augen, die Schultern haengen, alles zieht ihn zum Schlaf. NPCs reagieren ("Mauer, Sie sehen fertig aus, gehen Sie nach Hause"). KEINE Option wie "noch eine Frage stellen", "noch zum naechsten Ort", "noch akten lesen" - das ist physisch unmoeglich.`;
     } else if (karlEnergie <= 40 && isAbendOderNacht && isLowTension) {
       // Erschoepft + Abend/Nacht + ruhig: 2-3 Schlaf-Optionen
-      recap += `\n\nKARL ERSCHOEPFT (Energie: ${karlEnergie}/100 = ${eStufe.label}, ${currentTime}): In den 4 Optionen MUESSEN 2-3 davon Tageswechsel-Optionen sein, kreativ je nach Situation: "Zurueck ins Buero und schlafen", "Bei [Person im Raum] auf der Couch schlafen", "Doc Wagner ueberreden dass du bei ihm uebernachten kannst", etc. ALLE Tageswechsel-Optionen MUESSEN das Wort "schlafen" oder "Couch" oder "Bett" oder "die Nacht verbringen" oder "bis morgen" enthalten, damit das System sie erkennt. MAX 1 inhaltliche Option, sonst nur noch Schlaf.`;
+      // v6.93: Wort "Sofa" ganz weg, nur "Bett" + "schlafen"
+      recap += `\n\nKARL ERSCHOEPFT (Energie: ${karlEnergie}/100 = ${eStufe.label}, ${currentTime}): In den 4 Optionen MUESSEN 2-3 davon Tageswechsel-Optionen sein. Karl hat ein BETT zu Hause am Hackeschen Markt: "Zurueck ins Schlafzimmer und schlafen", "Nach Hause am Hackeschen Markt und ins Bett", "Bei Doc Wagner uebernachten". KEIN "Sofa" oder "Couch" in den Optionen verwenden. ALLE Tageswechsel-Optionen MUESSEN das Wort "schlafen" oder "Bett" oder "uebernachten" enthalten, damit das System sie erkennt. MAX 1 inhaltliche Option, sonst nur noch Schlaf.`;
     } else if (karlEnergie <= 60 && isAbendOderNacht) {
       // Muede + Abend/Nacht: 1 Schlaf-Option
-      recap += `\n\nKARL WIRD MUEDE (Energie: ${karlEnergie}/100 = ${eStufe.label}, ${currentTime}): EINE der 4 Optionen sollte ein Tageswechsel sein (zurueck ins Buero und schlafen, oder ein anderer plausibler Schlafplatz wenn jemand in der Naehe ist). Diese Option MUSS "schlafen" oder "Bett" oder "Couch" oder "bis morgen" enthalten.`;
+      recap += `\n\nKARL WIRD MUEDE (Energie: ${karlEnergie}/100 = ${eStufe.label}, ${currentTime}): EINE der 4 Optionen sollte ein Tageswechsel sein (zurueck zum Hackeschen Markt und ins Bett, oder ein anderer plausibler Schlafplatz wenn jemand in der Naehe ist). Diese Option MUSS "schlafen" oder "Bett" oder "bis morgen" enthalten.`;
     } else if (gameTimeIdx === 5 && isLowTension) {
       // NACHT, aber Karl noch fit: trotzdem 1 Schlaf-Option zur Wahl
       recap += `\n\nNACHT-OPTION (Energie ${karlEnergie}/100): Es ist Nacht. EINE der 4 Optionen darf ein Tageswechsel sein, mit Wort "schlafen" oder "die Nacht verbringen". Aber Karl ist noch nicht erschoepft, du kannst es ihm anbieten oder auch nicht.`;
@@ -7661,6 +7687,7 @@ async function startGame() {
   verfassung = 5;
   isGameOver = false;
   lastInjury = '';
+  lastInjuryScene = 0;
   lastSpannung = 1;
   actionStreak = 0;
   calmStreak = 0;
@@ -9109,8 +9136,15 @@ function updateRomanticTension(scene) {
   // Konflikt), sollen selbst echte Frauenkontakt-Hints KEINE romantische Tension
   // aufbauen. Eine "Hand auf den Akten" ist im Verhoer Beruf, nicht Flirt. Eine
   // Tuer-Blockade ist Karls Druck, nicht ihr Werben (v6.60 nach Kessler-Run).
+  // v6.93: Berufskontext erweitert - Wäscherei, Imbiss, Praxis-Befragungen sind
+  // KEIN Romantik-Setting. Frau Schmidt (Wäscherin), Trude (Imbiss), Marlene
+  // (Krankenschwester) etc. sollen nicht Tension hochzählen wenn Karl beruflich
+  // in ihrem Arbeitsumfeld fragt.
+  const arbeitskontext = /\b(waescherei|imbiss|laden|tresen|theke|gaststaette|gaststätte|werkstatt|kasse|kassiererin|stand mit|verkaeuferin|verkäuferin|kellnerin|wirtin|naeherin|näherin|wäscherin|waescherin|krankenschwester|sekretaerin|sekretärin|telefonistin|aufseherin|putzfrau|haushaelterin|haushälterin|arbeitgeberin)/i;
+  const beruflicherFrau = arbeitskontext.test(sceneText);
+
   const verhoerContext = /\b(verhoer|verhoert|befragung|befragt|verdaecht|alibi|aussage|protokoll|aufnahme|akte\s+(zwischen|auf|liegt)|notiz(buch|en)?\s+offen|kommissar|abv|wachtmeister|festgenommen|fest\s+nehmen|drueck\s+in\s+die\s+ecke|in\s+die\s+enge|konfrontation|konfrontier|fuss\s+in\s+die\s+tuer|tuer\s+blockier|tuer\s+(zu)?druecken|tuer\s+zu(zu)?machen|abweisen|abgewiesen|will\s+(dich\s+)?los(zu)?werden|schiebt\s+dich\s+(weg|raus)|blickt\s+feindselig|misstrauisch|argwoehnisch|hier\s+wohnt\s+kein|bettler|verschwinden\s+sie|hauen\s+sie\s+ab|raus\s+hier)/i;
-  const verhoerActive = verhoerContext.test(sceneText);
+  const verhoerActive = verhoerContext.test(sceneText) || beruflicherFrau;
 
   // Trigger-Logik (v6.56 -> v6.57):
   // - Cast-Frau ODER namentliche Frau im Szenenkern: Hints zaehlen voll
@@ -9995,9 +10029,10 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       // Bei -1 oder schlechter: Verletzungsbeschreibung als laufenden Kontext merken
       if (delta < 0 && scene.verletzungsbeschreibung) {
         lastInjury = scene.verletzungsbeschreibung;
+        lastInjuryScene = sceneCounter; // v6.92: Szene tracken fuer Wiederholungs-Filter
       } else if (delta > 0) {
         // Bei Erholung: Verletzung verblasst (aber nicht ganz weg, bis verfassung = 5)
-        if (verfassung >= 5) lastInjury = '';
+        if (verfassung >= 5) { lastInjury = ''; lastInjuryScene = 0; }
       }
     }
     // Game Over wenn Verfassung auf 0
@@ -11872,6 +11907,7 @@ async function botRunMainLoop() {
       timedEventState = null;
       verfassung = 5;
       lastInjury = '';
+      lastInjuryScene = 0;
       // Spannung-Tracking auch zuruecksetzen - sonst kann lastSpannung=4 vom
       // letzten Run durch Action-Spannung 4 im neuen Run False-Positives liefern.
       lastSpannung = 1;
