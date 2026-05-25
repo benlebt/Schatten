@@ -50,7 +50,7 @@ ROMANTIK (stilvoll, Marlowe): Bei Romantik-Tension 3+ UND Frau im Cast UND Abend
 
 STASI-VERHOER: Wenn Karl in Stasi-Gewahrsam ist (vorige Szene erwaehnte Zelle/Verhoer/Sokolow/Krylow): Optionen muessen Verhoer-typisch sein - schweigen, kooperieren, bestechen, Roth-Kontakt. Bei langem Verhoer und Abend/Nacht: Option "Vor Erschoepfung einnicken" (Tageswechsel im Gewahrsam, Karl ueberlebt).
 
-SPRACHQUALITAET: Natuerliches idiomatisches Deutsch. Trennbare Verben nicht kuenstlich aufbrechen ("fordere sie auf laut zum Stehenbleiben auf" ist FALSCH, richtig: "fordere sie lautstark zum Stehenbleiben auf"). Keine Anglizismen (kein "checken", "fixen", "Drinks" - stattdessen "pruefen", "loesen", "einen Whisky"). Kurze, praezise Hauptsaetze wie Hammett. Keine Adjektiv-Haeufung.
+SPRACHQUALITAET: Natuerliches idiomatisches Deutsch. Trennbare Verben nicht kuenstlich aufbrechen ("fordere sie auf laut zum Stehenbleiben auf" ist FALSCH, richtig: "fordere sie lautstark zum Stehenbleiben auf"). Keine Anglizismen (kein "checken", "fixen", "Drinks" - stattdessen "pruefen", "loesen", "einen Whisky"). Kurze, praezise Hauptsaetze wie Hammett. Keine Adjektiv-Haeufung. KEINE SEMIKOLONS im Erzaehltext (v6.61) - Hammett/Chandler/Schimanski-Stil verlangt kurze Saetze mit Punkt, nicht biedermeierliche Strichpunkt-Konstruktionen.
 
 KEINE ERFUNDENEN RUECKBEZUEGE: NIE auf Details verweisen, die nicht in den vorigen Szenen explizit beschrieben wurden. Falsch: "der silbergraue Hut, der dir gestern Abend bereits verdaechtig vorkam" - wenn gestern kein silbergrauer Hut da war. Neue Details als neu einfuehren ("ein Mann mit silbergrauem Hut, ein neues Gesicht"), nicht als angebliche Erinnerung.
 
