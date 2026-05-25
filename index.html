@@ -1249,7 +1249,7 @@
       Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
     </p>
     <button class="btn-primary" onclick="startGame()">Ermittlung beginnen</button>
-    <div class="start-version">Schatten v6.42 · Per-Modell-Cooldown · Auto-Recovery zur Top-Chain</div>
+    <div class="start-version">Schatten v6.43 · Spitznamen-Filter · Strategie-Schärfung · Rote-Laterne-Fix</div>
   </div>
 
   <!-- Game Log -->
@@ -1317,7 +1317,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v6.42 · Per-Modell-Cooldown · Auto-Recovery zur Top-Chain</span>
+    <span>Schatten v6.43 · Spitznamen-Filter · Strategie-Schärfung · Rote-Laterne-Fix</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -1894,7 +1894,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v6.42';
+window.SCHATTEN_VERSION = 'v6.43';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -2523,9 +2523,12 @@ function buildTranscriptText() {
         out += '[' + statusParts.join(' · ') + ']\n';
       }
       out += (e.text || '').trim() + '\n';
-      // Angebotene Optionen mit ausgeben (Debug/Lektorat - hilft Inkonsistenzen
-      // wie "steig in den Opel" obwohl der Wagen weg ist zu erkennen)
-      if (Array.isArray(e.optionen) && e.optionen.length > 0) {
+      // Angebotene Optionen NUR im Debug-Modus mit ausgeben (Lektorat-Hilfe).
+      // Hilft Inkonsistenzen wie "steig in den Opel" obwohl der Wagen weg ist
+      // oder halluzinierte Optionen ("Telefonzelle" obwohl Karl ein Telefon vor sich hat)
+      // zu erkennen. Normale Spieler-Exports bleiben sauber ohne Optionen.
+      const debugExport = typeof isAdminUnlocked === 'function' && isAdminUnlocked();
+      if (debugExport && Array.isArray(e.optionen) && e.optionen.length > 0) {
         out += '\nAngebotene Optionen:\n';
         for (const opt of e.optionen) {
           out += '  ' + (opt.id || '?') + ') ' + (opt.text || '') + '\n';
@@ -2534,7 +2537,7 @@ function buildTranscriptText() {
       // DEBUG-DIAGNOSE: nur im Admin/Debug-Modus sichtbar.
       // Listet alle Pipeline-Events der Szene auf (Filter, Caps, Drift, Detection).
       // Hilft beim Lektorat zu sehen WARUM eine Szene so geworden ist wie sie ist.
-      if (typeof isAdminUnlocked === 'function' && isAdminUnlocked() &&
+      if (debugExport &&
           typeof e.diagId === 'number' && e.diagId >= 0 &&
           sceneDiagnosticsBuffer[e.diagId]) {
         const diag = sceneDiagnosticsBuffer[e.diagId];
@@ -5209,6 +5212,15 @@ function isGenericPersonName(name) {
   if (/^(aelteres|junges|verlobtes|verheiratetes|altes|junges)\s+paar$/.test(n)) {
     return true;
   }
+  // Match 6: Spitzname-Komposita ohne echten Namen ("Narbengesicht", "Zeitungsleser",
+  // "Schmalmund", "Tippmann", "Brillentraeger", "Trenchcoatmann"). Diese werden von
+  // Mistral oft als Notbehelf fuer anonyme Personen geliefert. Da sie keine echten
+  // Personen-Namen sind, gehoeren sie nicht in storyFacts.
+  // Liste: zusammengesetzte Substantive aus Koerperteil/Kleidung/Beruf-Aktion.
+  const descriptiveNicknames = /^(narben(gesicht|kopf|stirn)|zeitungs(leser|leserin|halter)|trenchcoat(mann|frau|traeger)|brillen(traeger|maedel|tante)|schmal(mund|gesicht|hals)|dick(mann|frau|wanst)|hut(mann|traeger|frau)|baerten?(mann|gesicht)|narbiger?|narbige|hutmann|hutfrau|kraegelmann|brillenmann|brillenfrau|tippmann|tippfrau|einkaufs(listinnen|listen|listler)|listinnen)$/;
+  if (descriptiveNicknames.test(n)) {
+    return true;
+  }
   return false;
 }
 
@@ -5315,6 +5327,16 @@ function fixCommonGrammarErrors(text) {
   result = result.replace(/\balles easy\b/g, 'ganz ruhig');
   // "easy" allein als Adjektiv -> "einfach" / "ruhig"
   result = result.replace(/\beasy\b/g, 'ruhig');
+  // Deklinations-Fehler bei eingedeutschten Etablissement-Namen:
+  // "in der Roter Laterne" -> "in der Roten Laterne" (Dativ + Adj.-Endung).
+  // Mistral macht das oft falsch weil "Rote Laterne" wie ein Eigenname behandelt wird.
+  // Wir fangen die haeufigsten Faelle ab: nach Praeposition + Artikel kommt die
+  // schwache Adjektiv-Endung.
+  result = result.replace(/\b(in|aus|von|zur|zu|bei|vor|hinter|neben|gegenueber)\s+der\s+Roter\s+Laterne\b/g, '$1 der Roten Laterne');
+  result = result.replace(/\bder\s+Roter\s+Laterne\b/g, 'der Roten Laterne');
+  result = result.replace(/\b(verlasse?n?|verlasse?n|betrete|betritt|sehe|seht|gehe|geht)\s+die\s+Roter\s+Laterne\b/gi, function(_, v) { return v + ' die Rote Laterne'; });
+  // "die Roter Laterne" (Akkusativ falsch) -> "die Rote Laterne"
+  result = result.replace(/\bdie\s+Roter\s+Laterne\b/g, 'die Rote Laterne');
   return result;
 }
 
@@ -5478,13 +5500,21 @@ function updateEnergyAndHunger(scene) {
     return;
   }
 
-  // Essen erkannt: Hunger reset, kleiner Energie-Boost
+  // Essen erkannt: Hunger reset, kleiner Energie-Boost.
+  // Wenn Karl bereits voll satt UND volle Energie hat, skippen wir den Effekt
+  // - das passiert oft in Folgeszenen am Bäcker/Cafe wo "Bäcker"/"Brot" im
+  // Settings-Text vorkommen aber Karl nicht aktiv isst.
   if (detectFoodAction(scene.szene || '')) {
-    karlHunger = 0;
-    hungerAccumulator = 0;
-    karlEnergie = Math.min(100, karlEnergie + 8);
-    console.log('[Schatten] Essen erkannt -> Hunger 0, Energie +8 =', karlEnergie);
-    diag('detect', 'Essen erkannt -> Hunger 0, Energie +8 = ' + karlEnergie);
+    const alreadyFull = karlHunger === 0 && karlEnergie >= 100;
+    if (alreadyFull) {
+      diag('detect', 'Essen-Pattern matcht, aber Karl bereits voll - kein Effekt');
+    } else {
+      karlHunger = 0;
+      hungerAccumulator = 0;
+      karlEnergie = Math.min(100, karlEnergie + 8);
+      console.log('[Schatten] Essen erkannt -> Hunger 0, Energie +8 =', karlEnergie);
+      diag('detect', 'Essen erkannt -> Hunger 0, Energie +8 = ' + karlEnergie);
+    }
     return;
   }
 
@@ -6462,6 +6492,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     // Auto-Verlust pruefen: wenn Karls Opel weggefahren/zerstoert wird, Tracking anpassen
     if (karlVehicle && detectVehicleLoss(scene.szene || '')) {
       console.warn('[Schatten] Karls Auto verloren erkannt -> karlVehicle = null:', karlVehicle);
+      diag('state', 'Karls Fahrzeug als verloren erkannt', { previousVehicle: karlVehicle });
       karlVehicle = null;
     }
 
@@ -6942,9 +6973,12 @@ function botChooseByStrategy(options) {
   }
 
   const PATTERNS = {
-    aggressive: /\b(zieh|schiess|schlag|pack|konfrontier|stoss|tritt|wuerg|wuerge|verfolg|brech|reiss|hau|droh|bedroh|gewalt|niederschlag|festhalt|festnahme)/i,
-    cautious:   /\b(beobacht|frag|horch|warte|hoer|denk|nachdenken|ueberleg|notier|pruef|untersuch|durchsuch|lese|schweig|still|verstecke|leise|vorsichtig|zieh\s+dich\s+zurueck)/i,
-    explorer:   /\b(geh|fahr|such|folge|besuch|verlass|steig|tritt\s+ein|betritt|kehr\s+zurueck|hin\s+zu|zur\b|zum\b|nach|weiter|erkund)/i,
+    // Aggressiv: Konflikt-Verben - direkte Konfrontation, Gewalt, Drohung
+    aggressive: /\b(zieh\s+die|zieh\s+deine|schiess|schlag|pack|konfrontier|stoss|tritt\s+ihm|wuerg|wuerge|brech|reiss|hau|droh|bedroh|niederschlag|festhalt|festnahme|stuerm|attacker|attackier|stoss\s+ihn|stech)/i,
+    // Vorsichtig: Beobachten, hoeren, denken - passiv und still
+    cautious:   /\b(beobacht|warte\s+ab|warte|horch|hoer\s+zu|denke|nachdenken|ueberleg|notier|schweig|still|verstecke|leise|vorsichtig|zieh\s+dich\s+zurueck|verharr|bleib|tu\s+als|im\s+schatten)/i,
+    // Erkunder: Bewegung, Wegfindung, Personen aufsuchen
+    explorer:   /\b(geh\s+zu|geh\s+zur|geh\s+zum|geh\s+nach|fahr\s+zu|fahr\s+nach|fahr\s+zur|fahr\s+zum|such|folge|verfolg|besuch|verlass|steig\s+ein|tritt\s+ein|betritt|kehr\s+zurueck|erkund|nimm\s+die|nimm\s+den|durchsuch|untersuch|pruef|durchwuhl|durchstreif)/i,
   };
   const pattern = PATTERNS[botStrategy];
   if (!pattern) return botRngChoice(options);
@@ -7246,7 +7280,18 @@ function startAutoplayBot(options) {
   botUpdateInfo();
 
   console.log('[Bot] Start: turns=' + turns + ', strategy=' + strategy + ', seed=' + seed);
-  botUpdateStatusBar('Bot startet: ' + strategy + ' · ' + turns + ' Zuege · Seed ' + seed);
+  // Deutsche Labels in der Statusbar zeigen, damit der Spieler klar sieht
+  // welche Strategie aktiv ist (auch bei "mixed" wo eine zufaellige gewaehlt wird).
+  const STRATEGY_LABELS = {
+    random: 'Zufällig',
+    aggressive: 'Aggressiv',
+    cautious: 'Vorsichtig',
+    varied: 'Variiert',
+    explorer: 'Erkunder',
+  };
+  const label = STRATEGY_LABELS[strategy] || strategy;
+  const mixedSuffix = rawStrategy === 'mixed' ? ' (aus Mix gewürfelt)' : '';
+  botUpdateStatusBar('Bot: ' + label + mixedSuffix + ' · ' + turns + ' Züge · Seed ' + seed);
 
   // Settings-Menue schliessen
   const menu = document.getElementById('settings-menu');
