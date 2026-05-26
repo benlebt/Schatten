@@ -8128,7 +8128,13 @@ function detectExplicitSleep(text) {
   }
   return true;
 }
-function renderLog() {
+function renderLog(shouldScroll) {
+  // v7.9.47: shouldScroll-Parameter (default true). Beim Klick auf eine
+  // Option ruft chooseOption mit shouldScroll=false auf, damit der Browser
+  // nicht zum Anfang der vorherigen (noch nicht ersetzten) Szene springt.
+  // Wenn die neue Szene da ist, scrollt der normale renderLog-Aufruf wieder
+  // automatisch zur Szene.
+  if (typeof shouldScroll !== 'boolean') shouldScroll = true;
   const logEl = document.getElementById('log');
   logEl.classList.remove('hidden');
   logEl.innerHTML = '';
@@ -8278,15 +8284,19 @@ function renderLog() {
   // Statt ans absolute Seitenende: zur LETZTEN Szene scrollen (Anfang davon).
   // So sieht der Spieler den Beginn der neuen Szene und kann sich orientieren.
   // Wenn keine Szene da ist, normales Ende-Scrollen.
-  const sceneEntries = logEl.querySelectorAll('.scene-entry');
-  if (sceneEntries.length > 0) {
-    const lastScene = sceneEntries[sceneEntries.length - 1];
-    // Smooth scroll, ein bisschen Platz oben fuer den Tag-Separator falls vorhanden
-    const rect = lastScene.getBoundingClientRect();
-    const absoluteTop = rect.top + window.scrollY - 80;
-    window.scrollTo({ top: absoluteTop, behavior: 'smooth' });
-  } else {
-    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+  // v7.9.47: nur wenn shouldScroll=true. Beim Option-Klick (renderLog-Aufruf
+  // in chooseOption) bleiben wir wo wir sind - User sieht seine Wahl + Loader.
+  if (shouldScroll) {
+    const sceneEntries = logEl.querySelectorAll('.scene-entry');
+    if (sceneEntries.length > 0) {
+      const lastScene = sceneEntries[sceneEntries.length - 1];
+      // Smooth scroll, ein bisschen Platz oben fuer den Tag-Separator falls vorhanden
+      const rect = lastScene.getBoundingClientRect();
+      const absoluteTop = rect.top + window.scrollY - 80;
+      window.scrollTo({ top: absoluteTop, behavior: 'smooth' });
+    } else {
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    }
   }
   // v7.3: Vorlesen-Button (FAB) sichtbar machen wenn Szenen da sind
   if (typeof updateSpeakFabVisibility === 'function') updateSpeakFabVisibility();
@@ -13285,7 +13295,7 @@ async function chooseOption(option) {
   }
   showLoading();
   logEntries.push({ type: 'choice', text: option.text });
-  renderLog();
+  renderLog(false); // v7.9.47: kein Scroll - User soll seine Wahl + Loader sehen, nicht zum Header gerissen werden
 
   // Tageszeit/Tag voranschreiten lassen BEVOR wir die naechste Szene anfordern,
   // damit der pendingDayTransition-Flag schon gesetzt ist und die KI den
@@ -17351,7 +17361,11 @@ function botGetOptionsHash() {
 }
 
 function botWaitForOptionsReady(maxMs) {
-  const deadline = Date.now() + (maxMs || 90000);
+  // v7.9.47b: Default 180s statt 90s. Beobachtung: bei Failover-Ketten
+  // (Premium-Modell down -> Standard-Modell -> Mistral Medium) braucht eine
+  // einzige Szene gelegentlich 60-90s. Plus auto-clicked Retry-Button macht
+  // jeden Zyklus etwa 15-30s laenger. Bei 90s reicht das nur fuer 1 Failover.
+  const deadline = Date.now() + (maxMs || 180000);
   return new Promise((resolve, reject) => {
     function check() {
       if (botShouldStop) return reject(new Error('Vom Benutzer gestoppt'));
@@ -17571,16 +17585,60 @@ async function botRunMainLoop() {
       } catch (e) { /* ignore */ }
       botUpdateStatusBar('Bot wartet auf Szene... Zug ' + (botCurrentTurn + 1) + '/' + botPlannedTurns + ' · ' + lbl + caseLbl);
 
-      await botWaitForOptionsReady();
+      // v7.9.47b: Soft-Recovery. Bei Timeout: nicht direkt abbrechen, sondern
+      // 1x Retry-Button suchen + klicken, dann nochmal warten. Erst beim
+      // zweiten Timeout aufgeben. So uebersteht der Bot:
+      // - Modell-Failover-Ketten (3+ Modelle hintereinander langsam)
+      // - 503 Service-Unavailable mit autom. Failover
+      // - Loading-Race-Conditions
+      let waitAttempt = 0;
+      while (true) {
+        try {
+          await botWaitForOptionsReady();
+          break; // Erfolg
+        } catch (e) {
+          if (botShouldStop) throw e;
+          if (e.message && /Spielende|gestorben|Daily-Limit|geloest/i.test(e.message)) {
+            throw e; // echte Spielende-Bedingungen sofort durchreichen
+          }
+          waitAttempt++;
+          if (waitAttempt >= 2) {
+            console.warn('[Bot] Zweiter Timeout - gebe auf:', e.message);
+            throw e;
+          }
+          console.warn('[Bot] Timeout/Fehler, versuche Recovery (' + waitAttempt + '/2):', e.message);
+          botUpdateStatusBar('Bot Recovery... ' + e.message.slice(0, 50));
+          // Versuche manuell Retry-Button zu finden + klicken
+          const errBoxRecover = document.querySelector('#error:not(.hidden)');
+          if (errBoxRecover) {
+            const retryBtn = errBoxRecover.querySelector('button[onclick*="retry"]') ||
+                            Array.from(errBoxRecover.querySelectorAll('button')).find(b => /erneut\s+versuchen|retry|nochmal/i.test(b.textContent));
+            if (retryBtn) {
+              console.log('[Bot] Recovery: klicke Retry-Button manuell');
+              retryBtn.click();
+            }
+          }
+          // Kurze Pause, dann nochmal warten
+          await new Promise(r => setTimeout(r, 2000));
+        }
+      }
       if (botShouldStop) break;
 
       // Settle-Zeit: nochmal kurz warten, damit eventuelle DOM-Aktualisierungen
       // (Loading-Animation, Render-Race) abgeschlossen sind bevor wir Optionen lesen
       await new Promise(r => setTimeout(r, 300));
 
-      const options = botGetCurrentOptions();
+      // v7.9.47b: Optionen-Fetch mit Soft-Retry. Wenn 0 Optionen, kurz warten
+      // und nochmal versuchen statt direkt zu werfen. Manchmal hat das DOM
+      // zwischen Loading-Aus und Options-Render einen Mikro-Lag.
+      let options = botGetCurrentOptions();
       if (options.length === 0) {
-        throw new Error('Keine Optionen gefunden');
+        console.warn('[Bot] Keine Optionen sichtbar, warte 1.5s und versuche nochmal...');
+        await new Promise(r => setTimeout(r, 1500));
+        options = botGetCurrentOptions();
+        if (options.length === 0) {
+          throw new Error('Keine Optionen gefunden (nach Retry)');
+        }
       }
 
       const chosen = botChooseByStrategy(options);
