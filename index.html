@@ -2043,7 +2043,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.9.42 · Modell-Chain umsortiert: Mistral Large 3 jetzt im Tier 1, Mistral Medium 3 ans Ende der Story-Modelle (vor Groq). Anlass: Mistral Medium hat in Wagner-Run v7.9.41 die Eroeffnungsszene reproduziert statt auf Spieler-Aktion zu reagieren - bei 98KB-Recap nicht stabil.</div>
+    <div class="start-version">Schatten v7.9.43 · Schwer-verletzt-Toast bei Vf=0 als "Lebensgefahr" mit Cooldown-Bypass. Anlass: Wagner-Run v7.9.38 zeigte Karl mit Vf 2->1->0 ohne dass eine finale Warnung durchkam (Cooldown sperrte alle Folge-Toasts). Jetzt: Vf=0 bekommt eigenen Trigger-Key und umgeht den Variant-Cooldown - Spieler sieht garantiert eine Game-Over-Warnung.</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2120,7 +2120,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.9.42</span>
+    <span>Schatten v7.9.43</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4355,7 +4355,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.9.42';
+window.SCHATTEN_VERSION = 'v7.9.43';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -13025,7 +13025,15 @@ function checkStatusToasts(spannung) {
   // Lieber: Zustand beschreiben, der Push-Mechanismus im naechsten Prompt
   // baut dann automatisch eine passende Behandlungs-/Schlaf-Option ein.
   // DANGER: Verfassung kritisch (2 oder weniger - schwer verletzt)
-  if (verfassung <= 2) {
+  // v7.9.43: Vf=0 bekommt eigenen Trigger-Key damit Cooldown von Vf<=2 nicht
+  // die Game-Over-Warnung unterdrueckt. Anlass: Wagner-Run v7.9.38 hatte 4
+  // unterdrueckte "Schwer verletzt"-Toasts bei Vf-Abfall 2->1->0, Karl starb
+  // ohne dass eine Vf=0-Warnung gezeigt wurde. Jetzt: Vf=0 hat eigenen Trigger
+  // (verfassung-null), so dass die finale Warnung garantiert durchkommt selbst
+  // wenn der Vf<=2-Toast schon im Cooldown ist.
+  if (verfassung === 0) {
+    showProgressToast('Lebensgefahr', 'Karl ist am Limit. EIN weiterer Treffer ist toedlich.', 'danger', 'verfassung-null');
+  } else if (verfassung <= 2) {
     showProgressToast('Schwer verletzt', 'Karls Verfassung ist kritisch.', 'danger', 'verfassung-tief');
   }
   // DANGER: Energie unter 15 (am Ende)
@@ -17683,15 +17691,25 @@ function resetToastHistory() {
 // triggerKey: spezifischer Trigger ('stasi-hoch', 'energie-tief', etc.)
 // returns true wenn erlaubt
 function canShowToast(variant, triggerKey) {
+  // v7.9.43: Lebensgefahr-Bypass. Bestimmte Trigger sind so wichtig dass
+  // der Variant-Cooldown sie nicht unterdruecken darf. Anlass: Wagner-Run
+  // v7.9.38 - Karls Vf-Abfall 2->1->0, finaler "Lebensgefahr"-Toast wurde
+  // gecooldownt weil 1 Szene vorher schon ein danger-Toast lief.
+  const lifeCriticalTriggers = ['verfassung-null'];
+  const isLifeCritical = lifeCriticalTriggers.includes(triggerKey);
   const dayKey = variant + ':' + triggerKey;
-  // Pro spezifischem Trigger: max 1x pro Tag
+  // Pro spezifischem Trigger: max 1x pro Tag (gilt auch fuer life-critical -
+  // wir muellen den Spieler nicht mit 5 Lebensgefahr-Toasts pro Tag voll,
+  // aber 1x pro Tag muss er ihn sehen)
   if (toastHistory.shownThisDay[dayKey] === gameDay) {
     return false;
   }
-  // Pro Variant: max 1x in 3 Szenen
-  const lastScene = toastHistory.lastSceneByVariant[variant];
-  if (typeof lastScene === 'number' && (sceneCounter - lastScene) < 3) {
-    return false;
+  // Pro Variant: max 1x in 3 Szenen - ABER nicht fuer life-critical Trigger
+  if (!isLifeCritical) {
+    const lastScene = toastHistory.lastSceneByVariant[variant];
+    if (typeof lastScene === 'number' && (sceneCounter - lastScene) < 3) {
+      return false;
+    }
   }
   return true;
 }
