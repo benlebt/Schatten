@@ -1793,6 +1793,25 @@
   <div class="boot-dots">···</div>
   <div class="boot-text">Schatten startet</div>
 </div>
+<!-- v7.9.38: Safety-Net fuer Boot-Indicator. Isolierter Inline-Script direkt
+     nach dem Boot-Div, der nach 3s zwangsweise display:none + removeChild macht.
+     Falls das Hauptskript je crasht bevor hideBootIndicator() am Ende laufen kann,
+     bleibt sonst das schwarze Vollbild-Overlay (z-index 9999) liegen und nichts
+     ist sichtbar. Dieser Block ist defensiv: try/catch um removeChild, kein
+     externes Dependency, laeuft auch wenn 99% des Scripts danach kaputt waere. -->
+<script>
+  setTimeout(function() {
+    try {
+      var b = document.getElementById('boot-indicator');
+      if (b) {
+        b.style.display = 'none';
+        if (b.parentNode) {
+          try { b.parentNode.removeChild(b); } catch (e) {}
+        }
+      }
+    } catch (e) {}
+  }, 3000);
+</script>
 <!-- Settings button (always visible) -->
 <button class="settings-btn" onclick="toggleSettings(event)" title="Menü">⚙</button>
 
@@ -2024,7 +2043,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.9.37 · Fix: schliessendes div fuer #start ergaenzt (Setup-Selector lag innerhalb #start, dadurch nie sichtbar nach Klick "Fall auswaehlen")</div>
+    <div class="start-version">Schatten v7.9.38 · Loading-Garantie bei API-Failover (showLoading mit Model-Label) + Boot-Indicator Auto-Removal Safety-Net (Inline-Script nach Boot-Div, 3s removeChild)</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2101,7 +2120,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.9.37</span>
+    <span>Schatten v7.9.38</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4330,7 +4349,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.9.37';
+window.SCHATTEN_VERSION = 'v7.9.38';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -13272,6 +13291,26 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
   const MAX_OPENING_RETRIES = 1; // v6.59: nur 1 Retry fuer Opening-Pflichtfakten
   const MAX_RATE_LIMIT_RETRIES = 2;
   const MAX_RATE_LIMIT_WAIT = 35; // seconds; if Groq asks for more, abort
+
+  // v7.9.38: LOADING-GARANTIE. Am Anfang jedes Aufrufs (auch Retries und Failover)
+  // showLoading() mit Model-Label sicherstellen, damit kein Frame "leer" ist.
+  // Vorher konnte es passieren, dass bei Modell-Switches die Loading-Anzeige
+  // kurz fehlte und der User dachte "App ist tot". Defensiv mit try/catch
+  // damit ein Helper-Fehler nie den API-Call blockiert.
+  try {
+    let activeLabel = '';
+    if (typeof getActiveModel === 'function') {
+      const m = getActiveModel();
+      activeLabel = (m && m.label) ? m.label : '';
+    }
+    const loadingText = retryCount > 0
+      ? 'Karl sammelt sich (Versuch ' + (retryCount + 1) + ')'
+      : (activeLabel ? 'Karl denkt nach (' + activeLabel + ')' : 'Karl denkt nach');
+    showLoading(loadingText);
+  } catch (e) {
+    // Fallback ohne Label - showLoading ohne Text nutzt Default
+    try { showLoading(); } catch (_) {}
+  }
 
   // Compaction level grows with retry count to bypass token-pressure issues
   // 0 = full prompt, 1 = reduced history, 2 = minimal context
