@@ -2174,7 +2174,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.10.13</div>
+    <div class="start-version">Schatten v7.10.14</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2251,7 +2251,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.10.13</span>
+    <span>Schatten v7.10.14</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4588,7 +4588,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.10.13';
+window.SCHATTEN_VERSION = 'v7.10.14';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -8728,7 +8728,23 @@ function classifyOption(opt, resolveContext) {
   let heuristicCat = '';
   const t = (opt.text || '').toLowerCase()
     .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
-  if (/\b(tritt|schlag|schiess|pack|stuerm|reiss|brich|drueck|zwing|fordere|forder|stell.*zur rede|konfrontier|attackier|angreif|press|kuess|verfuehr|verhaft|leg.*festnehm|droh|knall|eroeffne.*feuer|feuer.*eroeffn|zieh.*pistol|zieh.*waffe|zieh.*walther|zieh.*ppk)/.test(t)) {
+
+  // v7.10.14: KONTEXT-SENSITIVE Heuristik. Vorher: "tritt" matched immer OFFENSIV,
+  // auch wenn der Spieler "tritt einen Schritt zurueck" wählte (DEFENSIV).
+  // Anlass: 0120-Run Sz 5 - Karl klickt "Lass los und tritt einen Schritt zurueck,
+  // Hände sichtbar heben" -> Heuristik OFFENSIV -> -2 Schaden -> Vf 3->1 ohne dass
+  // Karl irgendwas angegriffen hat.
+  // Loesung: Patterns die mehrdeutig sind, brauchen einen Kontext-Check.
+
+  // DEFENSIV-Kontext zuerst pruefen (Rueckzug, Hände heben, Deeskalation)
+  if (/\b(tritt|geh|trete|gehe|gehst).{0,15}(zurueck|nach hinten|weg|in deckung)/.test(t) ||
+      /\b(haende|arme|finger).{0,15}(hoch|heben|sichtbar)/.test(t) ||
+      /\b(senke|senk).{0,15}(waffe|pistole|walther|ppk|stimme)/.test(t) ||
+      /\b(weiche|weich).{0,10}(zurueck|aus|weg)/.test(t) ||
+      /\b(deeskalier|spiele.*ruhig|ergeb.*mich)/.test(t)) {
+    heuristicCat = 'DEFENSIV';
+  }
+  else if (/\b(tritt|schlag|schiess|pack|stuerm|reiss|brich|drueck|zwing|fordere|forder|stell.*zur rede|konfrontier|attackier|angreif|press|kuess|verfuehr|verhaft|leg.*festnehm|droh|knall|eroeffne.*feuer|feuer.*eroeffn|zieh.*pistol|zieh.*waffe|zieh.*walther|zieh.*ppk)/.test(t)) {
     heuristicCat = 'OFFENSIV';
   } else if (/\b(verlass|raus aus|weg von|weg aus|fahr (zu(r|m)?|nach|in|ab|los|direkt|an die|zum)|los (zu|nach)|begib dich|steig.*aus)\b/.test(t)) {
     // v7.10.11 Fix 2: Bewegungs-Verben VOR HEILEN pruefen. Karl der die Praxis
@@ -15739,21 +15755,36 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         diag('cap', 'Verfassung-Delta ' + delta + ' in ruhiger Szene ohne neue Gewalt -> auf 0 gecapt (alte Wunden zaehlen nicht)');
         delta = 0;
       }
-      // Leichte Trigger fuer -1/-2: irgendeine koerperliche Einwirkung
+      // Leichte Trigger fuer -1/-2: irgendeine koerperliche Einwirkung AUF KARL.
+      // v7.10.14: Wörter wie "schlag", "tritt" alleine reichen nicht mehr -
+      // sie müssen Karl-Bezug haben (dich/dir/deinem/karl gegenüber etc.).
+      // Vorher: "Der Wirt schlaegt mit der Hand auf die Theke" triggerte Vf-1
+      // obwohl Karl unverletzt.
       const lightTriggers = [
-        /\b(treffer|schlag|stoss|tritt|hieb|faust|peitschen)\b/,
-        /\b(triff(s|t)t?|schlaegt|stoesst|tritt|prallt|knallt)\s+(dich|gegen)/,
-        /\b(schmerz|brennt|sticht|sengt|pocht)\b/,
-        /\b(stuerz|stolper|fallst|fielst|kippst)\b/,
-        /\b(blut|wunde|kratze?r|schnitt|prellung|beule|verband|streifschuss)\b/,
-        /\b(schwindel|uebelkeit|kreislauf|atemnot|ohnmacht)\b/,
-        /\b(kugel|streift|durchschlaegt|streifschuss)\b/,
-        /\b(faellst|geh(s|t) zu boden|sinkst zu boden)\b/,
-        /\b(geschlagen|getroffen|getreten|gestochen|gezerrt|gepackt)\b/,
-        /\b(erschoepft|am ende|kann nicht mehr)\b/,  // Erschoepfung-Ende
-        /\bzwangs?-?(einnick|einschlafen|kollabier)/,  // Zwangs-Einnicken
-        /\bunbequem(en|er)?\s+(schlaf|position|sofa|nacht)/,  // Schlafplatz
-        /\bsteif(er|en|es)?\s+(nacken|ruecken|glieder)/,  // Schlafverletzung
+        // Einwirkung MIT Karl-Bezug
+        /\b(triff(s|t)t?|schlaegt|stoesst|tritt|prallt|knallt|fliegt|krallt|reisst|wuergt)\s+(dich|dir|gegen dich|dich|karl)/,
+        /\b(treffer|schlag|stoss|hieb|faust|peitsche|knueppel|knauf).{0,30}(triff(s|t)t?|landet|trifft|prallt|knallt).{0,15}(dich|dein|dir|karl)/,
+        /\b(dich|dein|deine|deinen).{0,15}(triff(s|t)|getroffen|geschlagen|gestochen|getreten|gezerrt|gepackt|gepresst)/,
+        // Karls koerperlicher Zustand
+        /\b(dein|deine|deinen|deinem).{0,30}(schmerz|brennt|sticht|pocht|sengt|pulsiert|kracht|knackt)/,
+        /\b(dir|dich).{0,15}(brennt|sticht|pocht|sengt)/,
+        // Karl wird passiv verletzt
+        /\b(blut|wunde|kratze?r|schnitt|prellung|beule|verband|streifschuss).{0,30}(dein|deine|deinen|deinem|aus dir|dir|sickert)/,
+        /\b(dein|deine|deinen|deinem).{0,15}(blut|wunde|kratze?r|schnitt|prellung|beule|verband|streifschuss|arm|bein|gesicht|kopf|brust|schulter|rippe|finger|hand)/,
+        // Karl faellt/stuerzt
+        /\b(du|dich).{0,10}(stuerz|stolper|faellst|kippst|sinkst zu boden|gehst zu boden|sackst zusammen)/,
+        /\b(stuerzt|stolperst|faellst|kippst|sinkst|sackst)\s+(du|dich|zusammen|zu boden)/,
+        // Kreislauf-Zusammenbruch von Karl
+        /\b(dir|dich).{0,15}(schwindel|uebelkeit|kreislauf|atemnot|ohnmacht)/,
+        /\b(welt|sicht).{0,15}(verschwimmt|wird schwarz|kippt)/,
+        // Schuss-Trigger Karl-bezogen
+        /\b(kugel|projektil|geschoss)\s+(triff(s|t)|streift|durchschlaegt|bohrt).{0,15}(dich|deine|deinem|deinen)/,
+        /\bschuss\s+(faellt|trifft|reisst).{0,30}(dich|dein|deine|deinem)/,
+        // Erschoepfungs- und Ohnmachts-Trigger
+        /\b(erschoepft|am ende|kann nicht mehr|haelst kaum noch|knie geben nach|verlierst (das|den) (bewusstsein|halt))/,
+        /\bzwangs?-?(einnick|einschlafen|kollabier)/,
+        /\bunbequem(en|er)?\s+(schlaf|position|sofa|nacht)/,
+        /\bsteif(er|en|es)?\s+(nacken|ruecken|glieder)/,
       ];
       // Nur prüfen wenn delta noch negativ ist (Akkumulations-Filter könnte schon
       // auf 0 gecapt haben).
