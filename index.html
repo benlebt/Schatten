@@ -1829,7 +1829,7 @@
     <button class="btn-primary" onclick="startRandomGame()">Zufällige Ermittlung</button>
     <br>
     <button class="btn-secondary" onclick="showSetupSelector()">Fall auswählen</button>
-    <div class="start-version">Schatten v7.8 · Eureka-Plausibilität + kein Stage 1 in Eröffnungs-Szene</div>
+    <div class="start-version">Schatten v7.9.2 · Doppel-Buchstaben beim Vorlesen gefixt</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -1906,7 +1906,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.8</span>
+    <span>Schatten v7.9.2</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -3571,7 +3571,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.8';
+window.SCHATTEN_VERSION = 'v7.9.2';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -4202,11 +4202,30 @@ function buildSpeakText() {
     blocks.push('Was tust du?');
     const optionBtns = document.querySelectorAll('#options-list .option-btn');
     optionBtns.forEach((btn, idx) => {
+      // v7.9.2: Gezielt nur den reinen Option-Text auslesen, NICHT btn.textContent.
+      // textContent wuerde enthalten: (1) die .option-id "A", (2) den eigentlichen
+      // Text, (3) den Marker "⚡ AUFLOESUNG" - was zu Doppel-A's und vorgelesenen
+      // Markern fuehrt. Wir greifen direkt auf den ersten span im .option-text-wrap zu.
+      // Fallback wenn die Struktur unerwartet ist.
+      const textWrap = btn.querySelector('.option-text-wrap');
+      let cleanText = '';
+      if (textWrap) {
+        // Erstes Span = Option-Text. Marker-Spans haben andere Klassen.
+        const textSpan = textWrap.querySelector('span:not([class*="option-marker"])');
+        if (textSpan) {
+          cleanText = (textSpan.textContent || '').trim();
+        }
+      }
+      // Fallback wenn die DOM-Struktur sich geaendert hat
+      if (!cleanText) {
+        cleanText = (btn.textContent || '').trim()
+          .replace(/^[A-D]\)?\s*/, '')  // fuehrendes "A)" oder "A "
+          .replace(/[⚡♥≈→+]\s+[A-ZAEOEUE ]+$/i, '')  // trailing Marker
+          .trim();
+      }
       // Buchstabe A/B/C/D + Text. Wir lesen "Option A:" + Text.
       const letter = String.fromCharCode(65 + idx);
-      const text = (btn.textContent || '').trim()
-        .replace(/^[A-D]\)\s*/, '');  // falls Marker schon im Text steht
-      if (text) blocks.push('Option ' + letter + '. ' + text);
+      if (cleanText) blocks.push('Option ' + letter + '. ' + cleanText);
     });
   }
   return blocks;
@@ -4231,7 +4250,15 @@ function makeUtterance(text) {
       chosenVoice = voices.find(v => v.name === savedVoiceName);
     }
     if (!chosenVoice) {
-      chosenVoice = voices.find(v => v.lang && v.lang.startsWith('de'));
+      // v7.9: Robuster Fallback - de_DE (Unterstrich) + bekannte deutsche Namen
+      const KNOWN_DE_NAMES = /^(anna|markus|petra|helena|viktor|yannick|klara|martin)\b/i;
+      chosenVoice = voices.find(v => {
+        if (!v) return false;
+        const lang = (v.lang || '').toLowerCase().replace(/_/g, '-');
+        if (lang.startsWith('de')) return true;
+        if (lang === '' && v.name && KNOWN_DE_NAMES.test(v.name)) return true;
+        return false;
+      });
     }
     if (chosenVoice) u.voice = chosenVoice;
   }
@@ -4255,36 +4282,71 @@ function showVoicePicker(event) {
     return;
   }
 
+  // v7.9.1: iOS Safari hat einen bekannten Bug - getVoices() liefert beim
+  // ersten Aufruf oft eine kuerzere Liste als spaeter. Workaround: ein leeres
+  // SpeechSynthesisUtterance triggern (silent, volume 0) - das zwingt iOS
+  // die volle Voice-Liste zu laden. Plus laengeres Polling mit mehreren
+  // Versuchen falls voices noch nicht da sind.
+  try {
+    const warmup = new SpeechSynthesisUtterance(' ');
+    warmup.volume = 0;
+    warmup.rate = 10;  // schnell durch
+    window.speechSynthesis.speak(warmup);
+    window.speechSynthesis.cancel();  // sofort wieder canceln
+  } catch (err) {
+    console.warn('[Schatten] Voice-Warmup fehlgeschlagen:', err);
+  }
+
   // Voices muessen evt. erst geladen werden (Chrome/Safari asynchron)
   let voices = window.speechSynthesis.getVoices();
   if (!voices || voices.length === 0) {
-    // Warte auf voiceschanged-Event
-    const waiter = () => {
-      window.speechSynthesis.removeEventListener('voiceschanged', waiter);
-      showVoicePicker();
-    };
-    window.speechSynthesis.addEventListener('voiceschanged', waiter);
-    setTimeout(() => {
+    // Warte auf voiceschanged-Event mit Polling-Fallback
+    let attempts = 0;
+    const maxAttempts = 8;  // 8 x 250ms = 2s gesamt
+    const poll = setInterval(() => {
+      attempts++;
       voices = window.speechSynthesis.getVoices();
       if (voices && voices.length > 0) {
-        window.speechSynthesis.removeEventListener('voiceschanged', waiter);
+        clearInterval(poll);
+        window.speechSynthesis.removeEventListener('voiceschanged', voiceLoadedHandler);
         showVoicePicker();
+      } else if (attempts >= maxAttempts) {
+        clearInterval(poll);
+        window.speechSynthesis.removeEventListener('voiceschanged', voiceLoadedHandler);
+        alert('Konnte keine Stimmen laden. Bitte den Browser neu starten und nochmal versuchen.');
       }
-    }, 800);
+    }, 250);
+    const voiceLoadedHandler = () => {
+      clearInterval(poll);
+      window.speechSynthesis.removeEventListener('voiceschanged', voiceLoadedHandler);
+      showVoicePicker();
+    };
+    window.speechSynthesis.addEventListener('voiceschanged', voiceLoadedHandler);
     return;
   }
 
-  // Nur deutsche Stimmen anzeigen (de, de-DE, de-AT, de-CH)
-  const deVoices = voices.filter(v => v.lang && v.lang.toLowerCase().startsWith('de'));
+  // v7.9: Robusterer Filter - manche Browser liefern lang="de_DE" (Unterstrich),
+  // leeres lang-Feld bei bekannten deutschen Namen, oder gar nichts. Wir
+  // erweitern um Namens-Heuristik fuer typische deutsche TTS-Stimmen.
+  const KNOWN_GERMAN_NAMES = /^(anna|markus|petra|helena|viktor|yannick|klara|martin)\b/i;
+  const deVoices = voices.filter(v => {
+    if (!v) return false;
+    const lang = (v.lang || '').toLowerCase().replace(/_/g, '-');
+    if (lang.startsWith('de')) return true;
+    // Fallback: bekannte deutsche Stimme-Namen auch ohne lang-Tag akzeptieren
+    if (lang === '' && v.name && KNOWN_GERMAN_NAMES.test(v.name)) return true;
+    return false;
+  });
   if (deVoices.length === 0) {
-    alert('Keine deutsche Stimme installiert. Auf iOS: Einstellungen → Bedienungshilfen → Gesprochene Inhalte → Stimmen → Deutsch. Eine Stimme laden, dann hier wiederkommen.');
+    alert('Keine deutsche Stimme installiert.\n\nAuf iOS: Einstellungen → Bedienungshilfen → Gesprochene Inhalte → Stimmen → Deutsch. Eine Stimme laden, dann hier wiederkommen.\n\nFalls schon installiert: in Brave/Chrome iOS sind nicht alle Stimmen sichtbar. Versuch es in Safari.');
     return;
   }
 
-  // Sortieren: Premium/Enhanced/Siri zuerst (oft am Namen erkennbar)
+  // Sortieren: Premium/Enhanced/Erweitert/Siri/Neural zuerst
+  // v7.9: deutsche Begriffe "erweitert" + "premium" jetzt explizit
   deVoices.sort((a, b) => {
-    const scoreA = /enhanced|premium|siri|neural/i.test(a.name) ? 0 : 1;
-    const scoreB = /enhanced|premium|siri|neural/i.test(b.name) ? 0 : 1;
+    const scoreA = /enhanced|premium|siri|neural|erweitert/i.test(a.name) ? 0 : 1;
+    const scoreB = /enhanced|premium|siri|neural|erweitert/i.test(b.name) ? 0 : 1;
     if (scoreA !== scoreB) return scoreA - scoreB;
     return (a.name || '').localeCompare(b.name || '');
   });
@@ -4476,6 +4538,57 @@ function showVoicePicker(event) {
     setTimeout(() => { title.textContent = 'Vorlese-Stimme'; }, 1500);
   };
   inner.appendChild(resetBtn);
+
+  // v7.9: Browser-Hinweis - manche Browser (Brave/Chrome iOS) liefern nur eine
+  // einzige Stimme zurueck obwohl mehr installiert sind. Wenn das der Fall
+  // scheint, zeigen wir den Hinweis und einen Diagnose-Button.
+  // v7.9.1: Auch Safari iOS hat das Problem - die SpeechSynthesis-API liefert
+  // pro Sprache oft nur EINE Default-Stimme zurueck, auch wenn mehrere
+  // installiert sind. Das ist eine WebKit-Einschraenkung, kein App-Bug.
+  const totalVoices = voices.length;
+  if (deVoices.length <= 1 || totalVoices < 5) {
+    const browserHint = document.createElement('div');
+    browserHint.className = 'voice-picker-hint';
+    browserHint.style.marginTop = '12px';
+    browserHint.style.padding = '10px';
+    browserHint.style.border = '1px solid rgba(200,150,80,0.3)';
+    browserHint.style.borderRadius = '4px';
+    browserHint.style.background = 'rgba(80,60,30,0.2)';
+    browserHint.style.color = '#d4b894';
+    browserHint.innerHTML = '<b>Nur eine Stimme sichtbar?</b><br>'
+      + 'Das ist eine iOS/WebKit-Beschraenkung der SpeechSynthesis-API: '
+      + 'pro Sprache wird oft nur die System-Default-Stimme zurueckgegeben, '
+      + 'auch wenn mehrere installiert sind.<br><br>'
+      + '<b>Workaround:</b> in iOS-Einstellungen → Bedienungshilfen → '
+      + 'Gesprochene Inhalte → Stimmen → Deutsch die gewuenschte Stimme '
+      + 'als System-Default setzen (z.B. Markus erweitert). Dann wird sie '
+      + 'auch hier verwendet (auch wenn der Name "Anna" angezeigt wird, '
+      + 'oder als einzige Auswahl - die Stimme ist die system-default).<br><br>'
+      + 'Klick auf Diagnose unten zeigt was die API wirklich liefert.';
+    inner.appendChild(browserHint);
+  }
+
+  // v7.9: Diagnose-Button - zeigt alle Voices die die API zurueckliefert
+  // (auch nicht-deutsche). Hilft bei der Fehlersuche.
+  const diagBtn = document.createElement('button');
+  diagBtn.className = 'voice-picker-reset';
+  diagBtn.textContent = '🔍 Alle Stimmen anzeigen (Diagnose)';
+  diagBtn.onclick = () => {
+    const all = window.speechSynthesis.getVoices();
+    let report = 'API liefert ' + all.length + ' Stimme(n) insgesamt:\n\n';
+    all.forEach((v, i) => {
+      report += (i+1) + '. ' + (v.name || '?') + ' [' + (v.lang || 'kein lang') + ']'
+        + (v.default ? ' (default)' : '')
+        + (v.localService ? ' lokal' : ' remote') + '\n';
+    });
+    if (all.length <= 2) {
+      report += '\nWenn iOS mehr Stimmen installiert hat als hier sichtbar: '
+        + 'der Browser (Brave/Chrome/Firefox) hat eingeschraenkten Zugriff. '
+        + 'In Safari sollte die volle Liste erscheinen.';
+    }
+    alert(report);
+  };
+  inner.appendChild(diagBtn);
 
   overlay.appendChild(inner);
   document.body.appendChild(overlay);
