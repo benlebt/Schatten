@@ -2114,7 +2114,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.9.57</div>
+    <div class="start-version">Schatten v7.9.58</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2191,7 +2191,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.9.57</span>
+    <span>Schatten v7.9.58</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4469,7 +4469,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.9.57';
+window.SCHATTEN_VERSION = 'v7.9.58';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -8606,22 +8606,6 @@ function renderOptions(scene) {
     console.warn('[Schatten] renderOptions context bauen fehlgeschlagen:', err);
     resolveContext = {};
   }
-  // v7.9.57: Diagnose ob die KI tag-Felder geliefert hat. Erkennen wann
-  // wir im Text-Detection-Fallback laufen. Bei wiederholtem Tag-Mangel
-  // sehen wir am Pattern welche Modelle das Schema ignorieren.
-  try {
-    if (Array.isArray(scene.optionen) && scene.optionen.length > 0) {
-      const tagged = scene.optionen.filter(o => o && typeof o.tag === 'string').length;
-      const total = scene.optionen.length;
-      if (tagged === 0 && typeof diag === 'function') {
-        diag('drift', 'KI lieferte 0/' + total + ' Options-Tags - Text-Detection-Fallback aktiv');
-      } else if (tagged < total && typeof diag === 'function') {
-        diag('detect', 'KI-Tags: ' + tagged + '/' + total + ' Optionen getaggt');
-      } else if (tagged === total && typeof diag === 'function') {
-        diag('detect', 'KI-Tags: alle ' + total + ' Optionen getaggt');
-      }
-    }
-  } catch (e) { /* ignore */ }
   scene.optionen.forEach(opt => {
     const btn = document.createElement('button');
     btn.className = 'option-btn';
@@ -8732,35 +8716,36 @@ function getCurrentUtcDay() {
 // aber das RPD-Limit ist PRO MODELL. Heisst: Wenn Flash-Lite durch ist, kann Flash
 // trotzdem noch ~20 Anfragen liefern (eigener RPD-Topf).
 const MODEL_CHAIN = [
-  // v7.9.57: Umsortiert nach Performance-Tracking-Daten aus v7.9.53.
-  // Lektorat Wagner+Stein-Runs v7.9.53 zeigten:
-  // - Gemini 3.1 Flash-Lite: avg 4.1s (3 calls)
-  // - Mistral Large 3: avg 15.8-16.9s (max 24s!)
-  // - Mistral Medium 3: avg 17.7-18.2s
-  // - Mistral Small 3.1: avg 17.4s
-  // -> Alle Mistral-Modelle 4x langsamer als Gemini-Modelle.
-  // -> Mistral Large hat KEINEN Performance-Vorteil ggu Medium.
+  // v7.9.58: Massive Umsortierung nach Lektorat Goerke+Stein-Runs v7.9.57.
+  // BEFUND: Bei erschoepften Gemini-Daily-Limits zog die Chain Mistral Large
+  // (~22s avg, max 32s) statt Gemini 3.1 Flash-Lite (~4s avg) weil Mistral
+  // Large in Tier 2 stand. 22 von 23 Szenen mit Mistral Large = 8+ Minuten
+  // Wartezeit pro Run!
   //
-  // Neue Logik: schnelle Gemini-Modelle nach oben, langsame Mistrals
-  // erst wenn Gemini-Daily-Limits ausgeschoepft. Mistral Large bleibt
-  // Premium-Backup wegen Qualitaet, aber nicht mehr Standard.
+  // Neue Logik: ALLE Gemini-Modelle vor ALLEN Mistral-Modellen. Performance
+  // schlaegt nominelle "Qualitaets-Premium"-Sortierung weil:
+  // 1. Geminis liefern alle ausreichende deutsche Story-Qualitaet
+  // 2. Wenn Spieler 22s pro Szene wartet, ist Qualitaet egal
+  // 3. Mistrale haben jeweils 20 RPD eigener Topf - bleiben als Fallback
   //
-  // 1. Tier: Schnelle Gemini-Modelle (avg 3-5s, gute Qualitaet)
+  // 1. Tier: Schnelle Gemini-Modelle (Premium-Qualitaet, ~3-5s avg)
   { provider: 'gemini', model: 'gemini-2.5-flash',       label: 'Gemini 2.5 Flash' },
   { provider: 'gemini', model: 'gemini-3-flash-preview', label: 'Gemini 3 Flash Preview' },
-  // 2. Tier: Premium Gemini Pro + Mistral Large als Quality-Fallback
+  // 2. Tier: Gemini Pro (etwas langsamer aber stabil)
   { provider: 'gemini', model: 'gemini-2.5-pro',         label: 'Gemini 2.5 Pro' },
-  { provider: 'mistral', model: 'mistral-large-latest',  label: 'Mistral Large 3' },
-  // 3. Tier: Lite/Small-Modelle
+  // 3. Tier: Gemini Flash-Lites (ebenfalls schnell ~4s)
   { provider: 'gemini', model: 'gemini-2.5-flash-lite',  label: 'Gemini 2.5 Flash-Lite' },
   { provider: 'gemini', model: 'gemini-3.1-flash-lite',  label: 'Gemini 3.1 Flash-Lite' },
+  // 4. Tier: Mistrals NUR wenn alle Geminis ausgeschoepft (~17-22s avg)
+  // Large vor Medium weil Story-Qualitaet (kein Sz1->Sz2 Reset wie Medium)
+  { provider: 'mistral', model: 'mistral-large-latest',  label: 'Mistral Large 3' },
   { provider: 'mistral', model: 'mistral-small-latest',  label: 'Mistral Small 3.1' },
   // v7.9.42: Mistral Medium 3 ans Ende (vor Groq) - Story-Halluzinationen
   // bei 98KB-Recap nicht reparabel ohne Modell-spezifische Prompt-Aenderungen.
   // Bleibt drin als Notnagel weil Wagner-Run v7.9.53 zeigte: trotz Sz1->Sz2
   // Reset liefert Mistral Medium funktional verwertbare Szenen.
   { provider: 'mistral', model: 'mistral-medium-latest', label: 'Mistral Medium 3' },
-  // 4. Tier: Groq-Modelle (TPM-eng, deutscher Stil meist schlechter als Gemini/Mistral)
+  // 5. Tier: Groq-Modelle (TPM-eng, deutscher Stil meist schlechter als Gemini/Mistral)
   { provider: 'groq',   model: 'llama-3.3-70b-versatile',                  label: 'Llama 3.3 70B' },
   // v7.9.39: Kimi K2 (moonshotai/kimi-k2-instruct-0905) am 23.03.2026 von Groq
   // deprecated zugunsten von openai/gpt-oss-120b. Ist seit ~26.05.2026 tot (404).
@@ -8786,7 +8771,7 @@ const MODEL_CHAIN = [
 // die Chain (zwischen Mistral Medium und Groq, statt komplett raus).
 // v7.9.48: bump 8 -> 9 weil Llama 4 Scout aus der Chain entfernt wurde
 // (liefert leere Szenen oder ignoriert User-Aktion).
-const MODEL_CHAIN_VERSION = 10;
+const MODEL_CHAIN_VERSION = 11;
 
 // Aktuelle Position in der Kette aus localStorage (mit Tagesreset + Chain-Version-Check).
 // Session-Skip-Liste: Modelle die strukturell zu wenig TPM fuer unseren
@@ -13973,7 +13958,17 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             const before = scene.szene;
             scene.szene = scene.szene.replace(sentenceRegex, '').replace(/\s{2,}/g, ' ').replace(/\s+([,.!?])/g, '$1').trim();
             if (scene.szene !== before) {
-              diag('drift', 'Pumphrase-HARDCAP: Satz mit "' + phraseOrig.source.replace(/[\\^$.*+?()|[\]{}]/g, '').replace(/\s+/g, ' ') + '" entfernt (' + runCount + '. Vorkommen im Run)');
+              // v7.9.58: lesbares Diag-Event statt regex-source mit kaputten Alternationen
+              const phraseDescriptions = [
+                'hupen Autos', 'das Leben geht weiter', 'typisches Treiben',
+                'Schuerze-Haende', 'Zigarette anzuenden', 'Sonne brennt auf Asphalt',
+                'abblaetternde Farbe', 'Laternen-Schatten', 'Sonne wirft Schatten',
+                'Stadt erwacht', 'Laerm der Stadt', 'Rattern/Klappern Bahn',
+                'Bahn/Wagen rattert', 'Geruch von altem Holz', 'Mantel weht im Wind',
+                'Akustik des Flurs', 'Wind traegt Geruch'
+              ];
+              const phraseLabel = phraseDescriptions[pi] || ('Pattern ' + pi);
+              diag('drift', 'Pumphrase-HARDCAP: "' + phraseLabel + '" entfernt (' + runCount + '. Vorkommen im Run)');
             } else {
               // v6.75: Fallback - versuche Phrasen-Loeschung (mit Komma-Trennern als Boundary)
               const phraseSubRegex = new RegExp(
@@ -16829,6 +16824,22 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         }),
         recentLocations: visitedLocations.slice(-5),
       };
+      // v7.9.58: KI-Tag-Diagnose VOR diagCommit damit das Event im Frame landet.
+      // v7.9.57 hatte den Check in renderOptions, das laeuft aber NACH diagCommit
+      // -> Events landeten im naechsten Frame oder gingen verloren.
+      try {
+        if (Array.isArray(scene.optionen) && scene.optionen.length > 0) {
+          const tagged = scene.optionen.filter(o => o && typeof o.tag === 'string').length;
+          const total = scene.optionen.length;
+          if (tagged === 0) {
+            diag('drift', 'KI lieferte 0/' + total + ' Options-Tags - Text-Detection-Fallback aktiv');
+          } else if (tagged < total) {
+            diag('detect', 'KI-Tags: ' + tagged + '/' + total + ' Optionen getaggt');
+          } else if (tagged === total) {
+            diag('detect', 'KI-Tags: alle ' + total + ' Optionen getaggt');
+          }
+        }
+      } catch (e) { /* ignore */ }
       diagCommit();
       diagId = sceneDiagnosticsBuffer.length - 1;
     }
