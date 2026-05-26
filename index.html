@@ -2043,7 +2043,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.9.49</div>
+    <div class="start-version">Schatten v7.9.50</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2120,7 +2120,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.9.49</span>
+    <span>Schatten v7.9.50</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -2725,8 +2725,18 @@ GRAMMATIK & KONJUGATION (sehr wichtig):
 
 Schreibe wie Hammett auf Deutsch: kurze, präzise Hauptsätze. Konkrete Bilder. Keine Schachtelsätze über 3 Zeilen.
 
-SZENEN-LAENGE (sehr wichtig, v7.9.46b):
-Das szene-Feld hat ein HARTES MAXIMUM von 180 Worten (~1100 Zeichen). Ziel-Bereich: 100-150 Worte. Eine Szene ist EIN Moment, EINE Reaktion auf die Spieleraktion, NICHT ein ganzer Mini-Roman. Falsch (zu lang, 350 Worte): Die ganze Atmosphaere der Strasse, der Geruch der Baeckerei, das Geraeusch der Strassenbahn, die Geschichte der Mietskaserne, dann erst die Handlung. Richtig (140 Worte): 1 Satz Anker zur Vorszene + 3-5 Saetze konkrete Konsequenz/Begegnung + 1-2 Saetze atmosphaerischer Schluss. Wenn du dich wiederholt ueber 180 Worten findest, schneide die Atmosphaere zusammen, nicht die Handlung.
+SZENEN-LAENGE (sehr wichtig, v7.9.50):
+Das szene-Feld hat ein HARTES MAXIMUM von 180 Worten (~1100 Zeichen). Optimal: 100-150 Worte. Lange Szenen (>200 Worte) sind ein Fehler, KEIN Qualitaetsmerkmal. Eine Szene ist EIN Moment, EINE Reaktion auf die Spieleraktion - nicht ein Mini-Roman. Wenn die Spieleraktion eine direkte Handlung war (schiessen, treten, oeffnen), reichen 80-120 Worte voellig. Lange Szenen verlangsamen das Spiel und nerven den Spieler.
+
+KONKRETE KUERZUNGS-STRATEGIE wenn du dich beim Schreiben ueber 180 Worten findest:
+1. Atmosphaerische Details: max 2-3 pro Szene (Geruch ODER Geraeusch ODER Licht - nicht alle drei)
+2. Aufzaehlungen kombinieren ("Brot, Wurst, Bier" statt 3 Saetze)
+3. Adjektive streichen ("Mantel" statt "abgetragener brauner Mantel mit Flicken")
+4. Vorszenen-Reminder kuerzen (1 Halbsatz Anker, nicht ganzen Absatz)
+5. Wenn weiter zu lang: einen Nebenstrang ganz streichen
+
+Falsch (zu lang, 350 Worte): "Die ganze Atmosphaere der Strasse, der Geruch der Baeckerei, das Geraeusch der Strassenbahn, die Geschichte der Mietskaserne, dann erst die Handlung."
+Richtig (140 Worte): "1 Satz Anker zur Vorszene + 3-5 Saetze konkrete Konsequenz/Begegnung + 1-2 Saetze atmosphaerischer Schluss."
 
 DETAIL-OEKONOMIE (sehr wichtig):
 Eine Szene hat MAXIMAL 2-3 atmosphärische Details (Geruch, Geräusch, Lichtstimmung). Der Rest muss konkrete Handlung sein. Falsch: 5 Sätze Stimmung, 1 Satz Handlung. Richtig: 1 Satz Stimmung, 4 Sätze Handlung mit Detail. Die Spieler-Aktion in der Szene davor MUSS die zentrale erzählerische Bewegung sein - alles drumherum ist Beiwerk.
@@ -4358,7 +4368,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.9.49';
+window.SCHATTEN_VERSION = 'v7.9.50';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -17014,15 +17024,21 @@ function botChooseByStrategy(options) {
     ? botRotatingSubStrategies[Math.floor(botCurrentTurn / botRotatingTurnsPerStyle) % botRotatingSubStrategies.length]
     : botStrategy;
   if (effectiveStrat === 'aggressive') {
-    // v7.9.41: SELBSTSCHUTZ vor Aggression. Wenn Karls Verfassung kritisch ist
-    // (Vf <= 1), den Aggressiv-Boost SKIPPEN. Anlass: Wagner-Run v7.9.38 - Bot
+    // v7.9.41: SELBSTSCHUTZ vor Aggression. Wenn Karls Verfassung kritisch ist,
+    // den Aggressiv-Boost SKIPPEN. Anlass: Wagner-Run v7.9.38 - Bot
     // mit 'aggressive' wählte bei Vf=1 noch "Tritt die Tuer ein" -> Karl stirbt
     // beim Sturz. Heilung gehoert zur offensiven Strategie wenn alles andere
-    // zum Game-Over fuehrt. Normaler Prio-Pfad uebernimmt und waehlt
-    // BEHANDLUNG (Prio 70) falls vorhanden, sonst defensivere Option.
-    if (typeof verfassung === 'number' && verfassung <= 1) {
-      console.log('[Bot] AGGRESSIV-Selbstschutz: Vf =', verfassung, '<= 1 - Aggressiv-Boost geskipped, suche Behandlung');
-      if (typeof diag === 'function') diag('bot', 'AGGRESSIV-Selbstschutz: Vf=' + verfassung + ' kritisch - Boost geskipped');
+    // zum Game-Over fuehrt.
+    // v7.9.50: Schwelle auf Vf<=2 hoch. Anlass: Brandt-Run v7.9.48 - Bot mit
+    // Vf=2 waehlte "Schiess auf Langes Hand" statt "Deckung hinter Opel".
+    // Schutz triggerte erst bei Vf=1, dann starb Karl in der naechsten Vf=0
+    // Spirale. Plus drei-stufige Logik: Vf<=1 = Behandlung priorisiert
+    // (Karl ist sterbensnah), Vf=2 = Defensive priorisiert (raus aus Action,
+    // dann optional heilen). Sonst normaler Prio-Pfad.
+    if (typeof verfassung === 'number' && verfassung <= 2) {
+      const isCritical = verfassung <= 1;
+      console.log('[Bot] AGGRESSIV-Selbstschutz: Vf =', verfassung, isCritical ? '(kritisch)' : '(schwer verletzt)', '- Aggressiv-Boost geskipped');
+      if (typeof diag === 'function') diag('bot', 'AGGRESSIV-Selbstschutz: Vf=' + verfassung + (isCritical ? ' kritisch' : ' schwer verletzt') + ' - Boost geskipped');
       // v7.9.46: Aktiv BEHANDLUNG-Option suchen. Brandt-Run v7.9.44 zeigte:
       // 7 Sz Karl mit Vf=1, Bot waehlte trotzdem Action. Vorher griff nur das
       // Skip des Aggressiv-Boosts, der normale Prio-Pfad fand BEHANDLUNG
@@ -17060,18 +17076,38 @@ function botChooseByStrategy(options) {
       const behandlungsOpts = options.filter(opt =>
         behandlungsPatterns.some(p => p.test(opt.text))
       );
-      if (behandlungsOpts.length > 0) {
-        console.log('[Bot] AGGRESSIV-Selbstschutz: BEHANDLUNG-Option gefunden, waehle:', behandlungsOpts[0].text);
-        if (typeof diag === 'function') diag('bot', 'AGGRESSIV-Selbstschutz: BEHANDLUNG gewaehlt (Vf=' + verfassung + ')');
-        return botRngChoice(behandlungsOpts);
-      }
-      // Sonst defensivste Option: Pattern auf "Deckung", "Flucht", "Zurueck"
-      const defensivePattern = /\b(deck(e|ung)|flieh|abhau|zur(ue|ü)ck|ent(kommen|fern)|zwei\s+stra(ß|ss)en\s+weg|sicher|ruhig\s+stell|verstecken?)\b/i;
+      // Defensive-Pattern: Deckung, Flucht, Zurueckziehen, Verstecken
+      // v7.9.50: Verfeinert. "sicher" allein war zu generisch (matchte
+      // "Töte ihn jetzt sicher"). Stattdessen "in sicherheit" / "in deckung".
+      // Plus erweitert: "hau ab", "duck dich", "spring weg", "wirf dich".
+      const defensivePattern = /\b(deck(e|ung)|flieh|abhau|hau\s+ab|zur(ue|ü)ck|ent(kommen|fern)|zwei\s+stra(ß|ss)en\s+weg|in\s+sicherheit|ruhig\s+stell|versteck\w*|wirf\s+dich|spring\s+(weg|zur\s+seite)|duck\s+dich|in\s+deckung)\b/i;
       const defensiveOpts = options.filter(opt => defensivePattern.test(opt.text));
-      if (defensiveOpts.length > 0) {
-        console.log('[Bot] AGGRESSIV-Selbstschutz: Defensive Option gewaehlt (keine Behandlung verfuegbar)');
-        if (typeof diag === 'function') diag('bot', 'AGGRESSIV-Selbstschutz: Defensive Option (Vf=' + verfassung + ', keine Behandlung)');
-        return botRngChoice(defensiveOpts);
+
+      // v7.9.50: Differenzierte Priorisierung
+      if (isCritical) {
+        // Vf <= 1: Behandlung > Defensive (Karl ist sterbensnah, muss heilen)
+        if (behandlungsOpts.length > 0) {
+          console.log('[Bot] AGGRESSIV-Selbstschutz (kritisch): BEHANDLUNG gewaehlt:', behandlungsOpts[0].text);
+          if (typeof diag === 'function') diag('bot', 'AGGRESSIV-Selbstschutz (Vf=' + verfassung + ' kritisch): BEHANDLUNG');
+          return botRngChoice(behandlungsOpts);
+        }
+        if (defensiveOpts.length > 0) {
+          console.log('[Bot] AGGRESSIV-Selbstschutz (kritisch): Defensive gewaehlt (keine Behandlung verfuegbar)');
+          if (typeof diag === 'function') diag('bot', 'AGGRESSIV-Selbstschutz (Vf=' + verfassung + ' kritisch): Defensive (keine Behandlung)');
+          return botRngChoice(defensiveOpts);
+        }
+      } else {
+        // Vf = 2: Defensive > Behandlung (raus aus Action, heilen kommt spaeter)
+        if (defensiveOpts.length > 0) {
+          console.log('[Bot] AGGRESSIV-Selbstschutz (schwer verletzt): Defensive gewaehlt:', defensiveOpts[0].text);
+          if (typeof diag === 'function') diag('bot', 'AGGRESSIV-Selbstschutz (Vf=2 schwer verletzt): Defensive');
+          return botRngChoice(defensiveOpts);
+        }
+        if (behandlungsOpts.length > 0) {
+          console.log('[Bot] AGGRESSIV-Selbstschutz (schwer verletzt): BEHANDLUNG gewaehlt (keine Defensive verfuegbar)');
+          if (typeof diag === 'function') diag('bot', 'AGGRESSIV-Selbstschutz (Vf=2 schwer verletzt): BEHANDLUNG (keine Defensive)');
+          return botRngChoice(behandlungsOpts);
+        }
       }
       // KEIN return - Fluss laeuft weiter zum normalen Prio-Pfad unten
     } else {
