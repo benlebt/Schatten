@@ -1965,7 +1965,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.9.12 · Setup-Konsistenz + Historische Personen & Orte</div>
+    <div class="start-version">Schatten v7.9.12 · Setup-Konsistenz + Pool-NPCs (ROMANCE/STASI/GANGSTER)</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2898,9 +2898,34 @@ const INTRO_VARIANTS = [
       nebenfiguren: 'Informant Schiele (50 D-Mark fuer Hinweise), hagerer Mann mit grauem Hut am Tresen',
       sektor: 'Ost (Sowjetisch) - Mitte und Koepenick',
       // v6.75: STRUKTURIERTER SETUP-CAST
+      // v7.9.12: erweitertes Tag-Schema mit klaren Kategorien.
       // - tag steuert Slot-Belegung (CLIENT/TARGET sind exklusiv pro Setup)
       // - persistent: bleibt im Haupt-Cast, wird nie ausgemustert
       // - anwesend: ist diese Person physisch in der Eingangsszene?
+      // - triggerWhen: (optional, v7.9.12) Bedingung wann der NPC aktiviert
+      //   werden soll (z.B. "stasiTension>=3", "verfassung<=2", "lokationsBesuch:X")
+      //
+      // TAG-KATEGORIEN (v7.9.12 vollstaendig):
+      // PFLICHT-Slots (max 1 pro Setup):
+      //   CLIENT      - Auftraggeber/Klient (anwesend: typisch ja in Sz1)
+      //   TARGET      - Opfer/Vermisster/Zielperson (anwesend: oft nein)
+      //
+      // OPTIONAL-Slots (mehrere moeglich):
+      //   FAMILY      - Karls Familie (z.B. Schwester Hilde) - oft in Personalunion mit CLIENT
+      //   AUTHORITY   - Polizei/Beamte (Kommissar Roth, Lindner als Anker-NPC)
+      //   SUSPECT     - moeglicher Taeter (Mistral pruefen)
+      //   ANTAGONIST  - klarer Gegner (kein Verdaechtiger, sondern Feind)
+      //   WITNESS     - Zeuge mit Info
+      //   INFORMANT   - bezahlte Quelle (Schiele-Typ)
+      //   MYSTERY     - unbekannte Figur, identitaet offen
+      //
+      // NEUE-Pool-Tags (v7.9.12, aktivierbar bei bestimmten Triggern):
+      //   ROMANCE     - potenzielle Romantik-Kandidatin (oft 1-2 pro Setup)
+      //                 trigger: niedrige Spannung + Abend/Nacht + Karl alleinegehen
+      //   STASI       - Stasi-Agent/IM (1-2 pro Setup wo politisch relevant)
+      //                 trigger: stasiTension >= 2 oder politisch eskaliert
+      //   GANGSTER    - organisierte Kriminalitaet (Lange-Typ, Tante-Frieda-Typ)
+      //                 trigger: plot-spezifisch (Schmuggel/Hehlerei/Spielklub)
       setupCast: [
         { name: 'Helga Wegener', tag: 'CLIENT', alter: 38, rolle: 'Klientin',
           beziehung: 'Ehefrau des vermissten Friedrich, beauftragt Karl',
@@ -3035,6 +3060,22 @@ const INTRO_VARIANTS = [
           beziehung: 'taucht in Bahnhofsnaehe auf, beobachtet die Bahnsteige. Identitaet unklar - MfS oder organisierter Schmuggel?',
           detail: 'grauer langer Mantel, breitkrempiger Hut, fremder Akzent (vielleicht Schweizerisch?), sieht aus wie ein Geschaeftsmann aber bewegt sich wie ein Profi.',
           persistent: false, anwesend: false },
+        // v7.9.12: Pool-NPCs - werden aktiviert wenn Trigger zutrifft
+        { name: 'Oberleutnant Mertens', tag: 'STASI', alter: 36, rolle: 'MfS-Hauptmann (Auslandsspionage-Abteilung)',
+          beziehung: 'leitet die MfS-Ermittlung gegen Margarete - persoenlich involviert weil Schmuggelroute auch in seinem Zustaendigkeitsbereich',
+          detail: 'mittlere Statur, dunkles Haar zurueckgekaemmt, immer in Zivil, raucht F6, beobachtet vom EMW 340. Studierte Jura vor 1945. Spricht hochdeutsch ohne Akzent.',
+          triggerWhen: 'stasiTension >= 3 oder Karl ueberschreitet Sektorengrenze mit den Akten',
+          persistent: false, anwesend: false },
+        { name: 'IM "Anker"', tag: 'STASI', alter: 49, rolle: 'Inoffizieller Mitarbeiter (Reichsbahn-Innenbereich)',
+          beziehung: 'arbeitet in der Reichsbahndirektion neben Margarete, meldet ihre Bewegungen an MfS',
+          detail: 'unauffaelliger Beamter, schuechtern wirkend, traegt graue Jacke, war frueher in der Wehrmacht. Vor Margarete keine Nervositaet, hinter ihrem Ruecken Anrufe.',
+          triggerWhen: 'Karl recherchiert in Reichsbahndirektion oder bei Margaretes Kollegen',
+          persistent: false, anwesend: false },
+        { name: 'Schwester Helene', tag: 'ROMANCE', alter: 31, rolle: 'Krankenschwester Charite',
+          beziehung: 'Margaretes alte Schulfreundin aus Friedrichshain, jetzt Schwester an der Charite. Vertrauensperson, koennte Margarete verstecken.',
+          detail: 'kupferrotes Haar im Knoten, blaue Augen, Witwe (Mann im Krieg verloren 1944), lebt allein in Mitte Sophienstrasse. Mutig aber misstrauisch, sympathisch fuer Karl.',
+          triggerWhen: 'Karl trifft sie in der Charite oder Margaretes Wohnung, niedrige Spannung, Abend/Nacht',
+          persistent: false, anwesend: false },
       ],
       // v6.76: HISTORISCHER KONTEXT - 29. Maerz 1953 (Sonntag, vor Stalin-Tod)
       historicalContext: {
@@ -3158,6 +3199,17 @@ const INTRO_VARIANTS = [
           beziehung: 'Ediths Ehemann - Karl beschattet ihn',
           detail: 'Buchhalter bei Spedition in Moabit, mittwochs angeblich Ueberstunden. Karl folgt ihm seit 3 Stunden, hat ihn bis Sybelstrasse Hinterhof verfolgt.',
           persistent: true, anwesend: true },
+        // v7.9.12: Pool-NPCs
+        { name: 'Ilse Hauke', tag: 'ROMANCE', alter: 33, rolle: 'Aktmodell (in der Kunstschule Charlottenburg)',
+          beziehung: 'unverheiratete junge Frau, wohnt in der Sybelstrasse 24 Hinterhof. Vielleicht die "Affaere" oder vielleicht nur eine Zeugin.',
+          detail: 'kupferblondes welliges Haar, leicht aufrechte Haltung, lacht selten aber wenn dann ehrlich. Lebt von Aktmodell-Aufnahmen in der Hochschule, kein hohes Einkommen. Wohnt Hinterhof 3. Stock links.',
+          triggerWhen: 'Karl ueberprueft die Sybelstrasse Hinterhof-Wohnungen oder Karl hat niedrige Spannung Abend/Nacht in Charlottenburg',
+          persistent: false, anwesend: false },
+        { name: 'Wachtmeister Eugen Hellbach', tag: 'GANGSTER', alter: 51, rolle: 'West-Polizist mit Nebengeschaeft',
+          beziehung: 'kennt die Sybelstrasse, hat Schwarzhandel-Verbindungen, koennte involviert sein wenn Robert nicht "ehebricht" sondern in Schmuggel verwickelt ist',
+          detail: 'breite Gestalt, grauer Schnauzbart, raucht Reval. Wohnt selbst Charlottenburg, kennt jeden in der Strasse. Ehrlich-korrupt: nimmt Geld, aber liefert auch Informationen.',
+          triggerWhen: 'plot dreht sich von Affaere zu organisierter Kriminalitaet oder Karl braucht eine Adresse im Kiez',
+          persistent: false, anwesend: false },
       ],
       // v6.76: HISTORISCHER KONTEXT - 14. Oktober 1953 (Mittwoch)
       historicalContext: {
@@ -3405,6 +3457,27 @@ const INTRO_VARIANTS = [
           beziehung: 'Anker-NPC, Wirt im Spielklub Roter Stern Auguststrasse Mitte',
           detail: 'duenn, weisses Hemd mit Krawatte, moeglicherweise IM der Stasi, Renate verdaechtigt ihn der Entfuehrung Brunos',
           persistent: true, anwesend: false },
+        // v7.9.12: Pool-NPCs
+        { name: 'Kalle "der Schiefe"', tag: 'GANGSTER', alter: 38, rolle: 'Schlaeger fuer Lange',
+          beziehung: 'einer der zwei Maenner die Bruno aus seiner Wohnung abgeholt haben - Lange-Handlanger',
+          detail: 'breite Schultern, schiefe Nase (Boxen), spricht berlinerisch, raucht F6, faehrt grauen Wartburg. War vor 45 im Reichsarbeitsdienst.',
+          triggerWhen: 'Karl naehert sich dem Spielklub Roter Stern oder Brunos Wohnung in Prenzlauer Berg',
+          persistent: false, anwesend: false },
+        { name: 'Heinz Mokka', tag: 'GANGSTER', alter: 44, rolle: 'Schlaeger fuer Lange',
+          beziehung: 'zweiter Mann der Bruno geholt hat, Lange-Handlanger',
+          detail: 'kleiner, drahtig, traegt Schiebermuetze, raucht ueberhaupt nicht, hat Springmesser in der Tasche. Spielt manchmal Akkordeon im Klub.',
+          triggerWhen: 'wie Kalle, oft zusammen mit ihm',
+          persistent: false, anwesend: false },
+        { name: 'Hauptmann Holger Reuss', tag: 'STASI', alter: 41, rolle: 'MfS-Hauptmann Abteilung VII (Untersuchung)',
+          beziehung: 'wenn Karl tiefer in die Schmuggel/Spielklub-Geschichte einsteigt, taucht Reuss auf - Lange ist sein IM',
+          detail: 'gross, blond, schmale Lippen, traegt Anzug aus West-Stoff (privilegiert), faehrt EMW 340. Wohnt Karl-Marx-Allee Block A.',
+          triggerWhen: 'stasiTension >= 3 oder Lange wird offen beschuldigt',
+          persistent: false, anwesend: false },
+        { name: 'Sonja Krell', tag: 'ROMANCE', alter: 25, rolle: 'Saengerin-Kollegin in der Roten Laterne',
+          beziehung: 'arbeitet in der gleichen Bar wie Renate, kennt Bruno fluechtig, ist neu in Berlin (aus Halle gekommen), unverheiratet',
+          detail: 'dunkelbraunes Haar zu kurzem Pagenkopf, gruene Augen, etwas naiv aber lebenshungrig. Wohnt in einer Pension in Schoeneberg.',
+          triggerWhen: 'Karl besucht die Rote Laterne oder Renate fragt nach Bruno bei Kolleginnen',
+          persistent: false, anwesend: false },
       ],
       // v6.76: HISTORISCHER KONTEXT - 13. August 1953 (Donnerstagnacht, 2 Monate vor Mauerbau...8 Jahre)
       historicalContext: {
@@ -3700,6 +3773,22 @@ const INTRO_VARIANTS = [
           beziehung: 'Herthas Ehemann, gestern abend tot gefunden',
           detail: 'HO-Funktionaer in der Frankfurter Allee, gestern abend in seinem Buero gefunden - offiziell Herzinfarkt am Tag von Stalins Tod. Hatte einen Brief an Ulbricht im Entwurf (Hertha hat Durchschlag gefunden). Inhalt unbekannt.',
           persistent: true, anwesend: false },
+        // v7.9.12: Pool-NPCs - am Stalin-Tod-Tag besonders viele MfS-Praesenz
+        { name: 'Genosse Brakke', tag: 'STASI', alter: 47, rolle: 'MfS-Major (Politische Untersuchung)',
+          beziehung: 'leitet die MfS-Untersuchung in Alberts Buero. Hat Interesse dass die Sache "Herzinfarkt" bleibt.',
+          detail: 'mittelgross, breite Stirn, kahler Kopf, traegt Brille mit dickem Rand. Vor 1945 Wehrmachts-Hauptmann, seit 1949 MfS. Geht ueberall mit Aktentasche aus Leder.',
+          triggerWhen: 'Karl recherchiert in Alberts Buero oder bei HO-Kollegen, stasiTension >= 2',
+          persistent: false, anwesend: false },
+        { name: 'IM "Hermes"', tag: 'STASI', alter: 53, rolle: 'IM in der HO-Verwaltung',
+          beziehung: 'Alberts Kollege, hat ihn am Vortag beobachtet, meldet alle Bewegungen ans MfS',
+          detail: 'unauffaelliger Verwaltungsbeamter, weisses Hemd, runde Brille. Hat zwei Kinder die Studium-Stipendium brauchen - der Grund warum er Informant ist.',
+          triggerWhen: 'Karl befragt HO-Kollegen oder kommt in die Frankfurter Allee HO-Verwaltung',
+          persistent: false, anwesend: false },
+        { name: 'Eva Werder', tag: 'ROMANCE', alter: 36, rolle: 'Witwe / Bekannte der Lindenbaums',
+          beziehung: 'wohnt im selben Haus wie die Lindenbaums Frankfurter Allee, war Albert vertraut, ihren Mann hat sie 1948 im Krieg verloren (russische Gefangenschaft)',
+          detail: 'schmale Gestalt, kastanienbraunes Haar, traegt schwarz heute. Lehrerin an der Mittelschule, lebt allein mit Sohn (8). Spricht leise, klare Augen.',
+          triggerWhen: 'Karl recherchiert in der Frankfurter Allee, niedrige Spannung, Karl trifft sie im Treppenhaus oder bei Hertha',
+          persistent: false, anwesend: false },
       ],
       // v6.76: HISTORISCHER KONTEXT - 6. Maerz 1953 (Tag nach Stalin-Tod)
       historicalContext: {
@@ -7822,32 +7911,63 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
       // Personen. Mistral muss diese Cast-Liste fuer ALLE Szenen verwenden und kann
       // KEINE neuen CLIENT/TARGET-Slots erfinden. Andere Slots (INFORMANT, WITNESS)
       // duerfen ergaenzt werden wenn die Geschichte es hergibt.
+      // v7.9.12: Pool-Tags ROMANCE, STASI, GANGSTER mit triggerWhen-Bedingung
+      // werden separat aufgelistet damit Mistral weiss, dass diese NPCs zwar
+      // dem Setup bekannt sind, aber NICHT in Sz 1 auftauchen muessen - sondern
+      // wenn der Trigger erfuellt ist.
       if (Array.isArray(caseSetup.setupCast) && caseSetup.setupCast.length > 0) {
-        recap += '\nBEKANNTER CAST (FEST, gilt fuer ALLE Szenen):\n';
-        for (const ce of caseSetup.setupCast) {
-          if (!ce || !ce.name) continue;
-          const tagLabel = {
-            'CLIENT': 'KLIENT',
-            'TARGET': 'ZIELPERSON',
-            'INFORMANT': 'INFORMANT',
-            'WITNESS': 'ZEUGE',
-            'SUSPECT': 'VERDAECHTIGER',
-            'ANTAGONIST': 'GEGNER',
-            'AUTHORITY': 'AUTORITAET',
-            'FAMILY': 'FAMILIE',
-            'ROMANCE': 'BEKANNTSCHAFT',
-            'SUPPORT': 'HELFER',
-            'MYSTERY': 'UNGEKLAERT',
-          }[ce.tag] || ce.tag;
-          const parts = ['[' + tagLabel + ']', ce.name];
-          if (ce.alter && ce.alter !== 'unbekannt') parts.push('(' + ce.alter + ')');
-          if (ce.rolle) parts.push('- ' + ce.rolle);
-          if (ce.beziehung) parts.push('| ' + ce.beziehung);
-          if (ce.detail) parts.push('| Detail: ' + ce.detail);
-          if (ce.anwesend === false) parts.push('[NICHT physisch in Szene 1 anwesend]');
-          recap += '  ' + parts.join(' ') + '\n';
+        const fixCast = caseSetup.setupCast.filter(c => c && !['ROMANCE', 'STASI', 'GANGSTER'].includes((c.tag || '').toUpperCase()));
+        const poolCast = caseSetup.setupCast.filter(c => c && ['ROMANCE', 'STASI', 'GANGSTER'].includes((c.tag || '').toUpperCase()));
+
+        if (fixCast.length > 0) {
+          recap += '\nBEKANNTER CAST (FEST, gilt fuer ALLE Szenen):\n';
+          for (const ce of fixCast) {
+            if (!ce || !ce.name) continue;
+            const tagLabel = {
+              'CLIENT': 'KLIENT',
+              'TARGET': 'ZIELPERSON',
+              'INFORMANT': 'INFORMANT',
+              'WITNESS': 'ZEUGE',
+              'SUSPECT': 'VERDAECHTIGER',
+              'ANTAGONIST': 'GEGNER',
+              'AUTHORITY': 'AUTORITAET',
+              'FAMILY': 'FAMILIE',
+              'SUPPORT': 'HELFER',
+              'MYSTERY': 'UNGEKLAERT',
+            }[ce.tag] || ce.tag;
+            const parts = ['[' + tagLabel + ']', ce.name];
+            if (ce.alter && ce.alter !== 'unbekannt') parts.push('(' + ce.alter + ')');
+            if (ce.rolle) parts.push('- ' + ce.rolle);
+            if (ce.beziehung) parts.push('| ' + ce.beziehung);
+            if (ce.detail) parts.push('| Detail: ' + ce.detail);
+            if (ce.anwesend === false) parts.push('[NICHT physisch in Szene 1 anwesend]');
+            recap += '  ' + parts.join(' ') + '\n';
+          }
+          recap += 'Diese Cast-Liste ist FEST. CLIENT-Slot und ZIELPERSON-Slot sind belegt - erfinde KEINE weiteren Personen mit diesen Rollen. Du DARFST neue ZEUGEN, INFORMANTEN, GEGNER einfuehren wenn die Story sie braucht. Aber CLIENT und ZIELPERSON sind oben definiert und fix.\n';
         }
-        recap += 'Diese Cast-Liste ist FEST. CLIENT-Slot und ZIELPERSON-Slot sind belegt - erfinde KEINE weiteren Personen mit diesen Rollen. Du DARFST neue ZEUGEN, INFORMANTEN, GEGNER, BEKANNTSCHAFTEN einfuehren wenn die Story sie braucht. Aber CLIENT und ZIELPERSON sind oben definiert und fix.\n';
+
+        // v7.9.12: Pool-NPCs separat - werden bei bestimmten Triggern aktiviert.
+        // Diese NPCs sind dem Setup vorab bekannt aber nicht in der Eingangsszene -
+        // Mistral darf sie spaeter ins Spiel bringen wenn der Kontext passt.
+        if (poolCast.length > 0) {
+          recap += '\nPOOL-NPCs (vorbereitete Personen die je nach Spielverlauf aktiviert werden):\n';
+          for (const ce of poolCast) {
+            if (!ce || !ce.name) continue;
+            const tagLabel = {
+              'ROMANCE': 'ROMANTIK-MOEGLICH',
+              'STASI': 'STASI-AGENT (Antagonist)',
+              'GANGSTER': 'GANGSTER (Antagonist)',
+            }[ce.tag] || ce.tag;
+            const parts = ['[' + tagLabel + ']', ce.name];
+            if (ce.alter && ce.alter !== 'unbekannt') parts.push('(' + ce.alter + ')');
+            if (ce.rolle) parts.push('- ' + ce.rolle);
+            if (ce.beziehung) parts.push('| ' + ce.beziehung);
+            if (ce.detail) parts.push('| Detail: ' + ce.detail);
+            if (ce.triggerWhen) parts.push('| AKTIVIEREN WENN: ' + ce.triggerWhen);
+            recap += '  ' + parts.join(' ') + '\n';
+          }
+          recap += 'Diese Pool-NPCs sind dem Setup bekannt aber tauchen NICHT in Szene 1 auf. Bringe sie ins Spiel wenn der jeweilige Trigger zutrifft - ROMANCE bei niedriger Spannung am Abend/Nacht und Karl ist allein/unterwegs; STASI wenn die politische Spannung steigt oder Karl in politisches Terrain geraet; GANGSTER wenn der Plot organisierte Kriminalitaet betrifft. Bevorzuge diese vorab definierten Personen statt neue zu erfinden, wenn der Trigger zutrifft.\n';
+        }
       }
 
       // v6.76: HISTORISCHE LAGE - vorgegebene Berlin-1953-Ereignisse zum Setup-Datum.
@@ -13642,8 +13762,11 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
               const fk = storyFacts && Object.values(storyFacts).find(f => f.name === n);
               if (!fk) return false;
               // Tag-basiert filtern: TARGET, CLIENT sind nie Verdaechtige
+              // v7.9.12: ROMANCE ist auch nie der Taeter. STASI/GANGSTER sind
+              // Antagonisten und KOENNEN Verdaechtige sein - aber sie sind direkt
+              // tagged, also explizit Antagonist, nicht "vermuteter Verdaechtiger".
               const tag = (fk.tag || '').toUpperCase();
-              if (tag === 'CLIENT' || tag === 'TARGET' || tag === 'AUTHORITY') return false;
+              if (tag === 'CLIENT' || tag === 'TARGET' || tag === 'AUTHORITY' || tag === 'ROMANCE') return false;
               // Zusaetzlich Rollen-Text-Filter (Backup wenn tag fehlt)
               const r = (fk.rolle || '').toLowerCase();
               if (/klient|auftraggeber|opfer|verstorben|vermisst|tot|zielperson|zielobjekt|sohn|tochter|ehemann|ehefrau/.test(r)) return false;
