@@ -2114,7 +2114,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.9.59</div>
+    <div class="start-version">Schatten v7.9.60</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2191,7 +2191,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.9.59</span>
+    <span>Schatten v7.9.60</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4439,7 +4439,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.9.59';
+window.SCHATTEN_VERSION = 'v7.9.60';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -7977,11 +7977,14 @@ function advanceGameTime() {
   // v7.9.14: Token-Schritte erhoeht. Vorher 0.4-0.65 = ~2 Sz pro Phase = 12 Sz/Tag.
   // Beobachtet: Runs hatten 19-29 Sz pro Tag. Ziel: 10-14 Sz/Tag, Runs ueber 2-4 Tage.
   // Neu: 0.55-0.8 = ~1.5 Sz pro Phase = 9 Sz/Tag. Bei 30-Sz-Run also 3 Tage.
+  // v7.9.60: Wagner-Run v7.9.59 hatte 30 Sz an Tag 1 trotz dieser Tokens.
+  // Token-Werte WEITER erhoeht: 0.7-0.95 (avg 0.825) = ~1.2 Sz pro Phase = 5 Sz/Tag bei avg.
+  // Plus Action-Pause kommt dazu, also ~10-14 Sz/Tag realistisch.
   // (isNacht oben schon deklariert fuer actionOverrideLimit)
   if (isNacht) {
-    timeAdvanceTokens += 0.25 + Math.random() * 0.15;
+    timeAdvanceTokens += 0.35 + Math.random() * 0.20;  // war 0.25 + 0.15
   } else {
-    timeAdvanceTokens += 0.55 + Math.random() * 0.25;
+    timeAdvanceTokens += 0.70 + Math.random() * 0.25;  // war 0.55 + 0.25
   }
 
   // FORCE-PUSH (v6.55): Nach 3 Szenen in derselben Tageszeit ohne Action MUSS
@@ -13088,11 +13091,21 @@ function detectHealAction(text, context) {
   }
 
   // KLASSE B: Direkte medizinische Aktion (egal welcher Heiler)
+  // v7.9.60: Patterns erweitert nach Wagner-Run v7.9.59 Befund.
+  // Bot-Wahl "Versorg die Splitterwunde an der Hand notdürftig" und
+  // "Bitte Marlene um Hilfe bei der Wunde" wurden NICHT als Heilung
+  // erkannt obwohl klar Behandlung. Neue Patterns:
+  //   - Wunden-Typ als Praefix erlauben (Splitterwunde/Platzwunde/Schusswunde)
+  //   - "Hilfe bei der Wunde" / "Hilfe mit der Wunde"
+  //   - "schleppe/kriech/humpel zu (Doc/Marlene/Praxis/Charite)"
+  //   - "leg dich hin" + Heiler-Kontext = Heilung
   const medicalActionPatterns = [
-    /\bwunde\s+(versorg|stillen|verbind)/,
+    /\b(splitter|platz|schuss|stich|schnitt|riss|brand|prell)?\s*wunde\s+(versorg|stillen|verbind)/,
     /\bwunde\s+\w+\s+verbinden\b/,
     /\bwunde\s+verbinden\b/,
-    /\b(verbind|versorg|stille|stillen|reinige|saeuber|desinfizier)e?\s+(die|deine|seine|ihre)?\s*wunde/,
+    /\b(verbind|versorg|stille|stillen|reinige|saeuber|desinfizier)e?\s+(die|deine|seine|ihre)?\s*(splitter|platz|schuss|stich|schnitt|riss|brand|prell)?\s*wunde/,
+    // v7.9.60: "Versorg die Splitterwunde an der Hand" - Wunde-Typ direkt davor
+    /\b(versorg|verbind|stille)e?\s+(die\s+)?(splitter|platz|schuss|stich|schnitt|riss|brand|prell)wunde/,
     /\bverband\s+(anleg|umleg|machen|wickeln)/,
     /\bverarzt/,
     /\bbehandel/,
@@ -13100,10 +13113,15 @@ function detectHealAction(text, context) {
     /\bblut\s+stillen\b/,
     /\b(stillst|stoppst|stoppe|stille)\s+(das\s+)?blut/,
     /\bhol\s+hilfe\b/,
-    /\bhilfe\s+(holen|suchen|finden|rufen)\b/,
+    /\bhilfe\s+(holen|suchen|finden|rufen|bei|mit)\b/,
+    // v7.9.60: "Bitte Marlene um Hilfe bei der Wunde" - Hilfe + bei/mit + wunde
+    /\bhilfe\s+(bei|mit|fuer)\s+(der\s+)?(splitter|platz|schuss|stich|schnitt|riss|brand|prell)?\s*wunde/,
+    /\b(bitt|frag|ersuch)e?\s+\w+\s+um\s+hilfe/,
     /\b(salbe|jodtinktur|morphium|schmerzmittel)\s+(nehmen|nimmst|drauf|anwenden)/,
     /\b(setz|leg|legst|legt)\s+(dir\s+)?einen\s+verband/,
     /\b(mach|machst|bau|baust)\s+(dir\s+)?einen\s+verband/,
+    // v7.9.60: "Schleppe dich zur Praxis" / "Kriech zur Hintertür" - Selbst-Notfall
+    /\b(schlepp|kriech|humpel|tasten?)\w*\s+(dich\s+)?(zu|zur|in\s+die)\s+(praxis|hintertu|doc|wagner|marlene|charit|notaufnahme|krankenh|sanitaeter)/,
   ];
   if (medicalActionPatterns.some(p => p.test(lower))) {
     return true;
@@ -14273,7 +14291,21 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     // Wenn ja, wird pendingRepetitionWarning gesetzt - der naechste Recap pusht
     // die KI explizit gegen Wiederholung.
     if (recentTexts.length >= 1 && typeof scene.szene === 'string' && scene.szene.length > 50) {
-      const overlap = computeSceneSentenceOverlap(scene.szene, recentTexts[recentTexts.length - 1]);
+      // v7.9.60: Vergleich gegen letzte 2 Szenen statt nur 1. Anlass:
+      // Wagner-Run v7.9.58 Sz 5-7 Fahrrad-Loop: Sz 5 von Mistral, Sz 6 etwas
+      // anderes, Sz 7 von Gemini wiederholte Sz 5 wortwoertlich. Mit nur
+      // Vergleich gegen Sz 6 wurde das nicht erkannt.
+      let worstOverlap = computeSceneSentenceOverlap(scene.szene, recentTexts[recentTexts.length - 1]);
+      let worstAgainstIdx = recentTexts.length - 1;
+      if (recentTexts.length >= 2) {
+        const overlap2 = computeSceneSentenceOverlap(scene.szene, recentTexts[recentTexts.length - 2]);
+        if (overlap2.ratio > worstOverlap.ratio || overlap2.matchedSentences > worstOverlap.matchedSentences) {
+          worstOverlap = overlap2;
+          worstAgainstIdx = recentTexts.length - 2;
+        }
+      }
+      const overlap = worstOverlap;
+      const againstLabel = worstAgainstIdx === recentTexts.length - 1 ? 'letzte Sz' : 'vorletzte Sz';
       // v7.9.18: Schwelle gesenkt von 50%/2 Saetze auf 35%/2 Saetze.
       // Wessel-Run Sz 26/27 hatte 2 nahezu wortgleiche Saetze ("Krylows Augen
       // hinter dem Pince-nez verengen sich kaum merklich. Er stellt den
@@ -14287,7 +14319,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           sample: overlap.sampleSentence ? overlap.sampleSentence.slice(0, 80) : ''
         };
         if (typeof diag === 'function') {
-          diag('drift', 'Szene-Wiederholung erkannt: ' + Math.round(overlap.ratio * 100) +
+          diag('drift', 'Szene-Wiederholung erkannt (vs ' + againstLabel + '): ' + Math.round(overlap.ratio * 100) +
                 '% Satz-Ueberlapp (' + overlap.matchedSentences + ' Saetze identisch) -> Push fuer naechste Szene');
         }
         console.warn('[Schatten] Szene-Wiederholung Mistral:',
@@ -15678,10 +15710,16 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       // Stage 2 fuehren (Eroeffnungs-Phase), Tag 2+ braucht mind. 7 Indizien.
       // Plus: sceneCounter >= 6 als Hard-Floor - nicht Stage 2 in den ersten
       // 5 Szenen, das ist immer Briefing/erste Spuren.
+      // v7.9.60: ZUSATZ-PFAD bei vielen Sz an Tag 1. Anlass: Wagner-Run
+      // v7.9.59 hatte 30 Sz alle an Tag 1 (Bot-Spielfluss), Walther als
+      // Tatverdaechtiger klar identifiziert, 35 Indizien - aber Stage blieb
+      // bei 1 weil gameDay < 2. Wenn sceneCounter >= 15 UND ind >= 10:
+      // erlauben wir Stage 2 auch an Tag 1.
       const stage2Ready = caseProgress.stage <= 1 && targetMentionedInIndizien && sceneCounter >= 6 && (
         (gameDay >= 2 && ind >= 7) ||     // Tag 2+: mind 7 echte Indizien
         (gameDay >= 3 && ind >= 5) ||     // Tag 3+: 5 reichen
-        (gameDay >= 5 && ind >= 4)        // Tag 5+: Notbremse
+        (gameDay >= 5 && ind >= 4) ||     // Tag 5+: Notbremse
+        (sceneCounter >= 15 && ind >= 10) // v7.9.60: viele Sz an Tag 1 mit vielen Indizien
       );
       if (stage2Ready) {
         // v7.4: Placeholder nach Falltyp differenziert. Bei beschatten ist der
