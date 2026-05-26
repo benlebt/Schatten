@@ -1901,7 +1901,7 @@
     <button class="btn-primary" onclick="startRandomGame()">Zufällige Ermittlung</button>
     <br>
     <button class="btn-secondary" onclick="showSetupSelector()">Fall auswählen</button>
-    <div class="start-version">Schatten v7.9.9 · Fall-Loesungen plausibler + Karl-stirbt-wieder + sprachliche Fixes</div>
+    <div class="start-version">Schatten v7.9.10 · Phantom-Folter raus + Vf-1-Trap raus + Spion-FP raus + Liquidation entschaerft</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -1978,7 +1978,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.9.9</span>
+    <span>Schatten v7.9.10</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -3643,7 +3643,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.9.9';
+window.SCHATTEN_VERSION = 'v7.9.10';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -6774,6 +6774,9 @@ let pendingForcedCustodyArrest = null;
 // v6.99: Verhindert dass die HARD-FORCE-Festnahme mehrfach pro Run greift.
 // Bei pol-Faellen passiert Custody normalerweise hoechstens 1x.
 let hardForcedArrestUsed = false;
+// v7.9.10 FIX 4: Counter wie oft Custody-Auto-Release schon getriggert wurde.
+// Wird fuer Liquidations-Schwelle benoetigt (erst ab 2. Auto-Release).
+let autoReleaseUsedCount = 0;
 
 // v7.0: Wird gesetzt wenn Karl ein Verbrechen GEGEN den Staatsapparat begeht
 // (auf VP schiessen, VP toeten). Anlass: Wegener-Run v6.98 hatte Karl 2 VP-
@@ -9506,6 +9509,7 @@ async function startGame() {
   pendingSuspectReminder = null;  // v6.98
   pendingForcedCustodyArrest = null;  // v6.99
   hardForcedArrestUsed = false;  // v6.99
+  autoReleaseUsedCount = 0;  // v7.9.10
   pendingForcedFahndung = null;  // v7.0
   fahndungUsed = false;  // v7.0
   ortPflichtIgnoredCount = 0;  // v7.0
@@ -9938,12 +9942,20 @@ function detectPolitical(sceneText) {
   if (!sceneText) return false;
   const lower = sceneText.toLowerCase()
     .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+  // v7.9.10 FIX 3: "Spion" (= Tuerspion/Guckloch) NICHT als Spionage werten.
+  // Anlass: Schiffer-Run Sz 21 - "durch den Spion siehst du..." (Klassiker Tuer-
+  // Guckloch) wurde als Spionage-Pattern erkannt. Falscher Spielklub-Gangster-Fall
+  // wurde politisch markiert -> Stasi-Tension eskalierte -> MfS-Liquidation am Ende.
+  // Negativlistung von Tuer-Spion-Kontexten BEVOR die Pattern matchen.
+  const isTuerspion = /\b(durch\s+(den|deinen|seinen|den\s+kleinen|den\s+winzigen)\s+spion|tuer-?spion|spion\s+(an|in|der\s+tuer))\b/.test(lower);
   // Politik-Trigger: MfS, Stasi, SED-Funktionaere, sowjetische Offiziere, Karlshorst,
   // Spionage, Republikflucht, politische Agitation, antikommunistisch
   const politicalPatterns = [
     /\b(stasi|mfs|staatssicher|geheimdienst)\b/,
     /\b(sed|funktionaer|parteibonze|parteioberer)\b/,
-    /\b(spion(age|ier|in)?)\b/,
+    // v7.9.10: Spion-Wortgrenzen verschaerft - nur Spionage/Spionin/spionier
+    // (das Substantiv "Spion" allein matcht NICHT mehr, weil Tuerspion zu haeufig)
+    /\b(spion(age|in|ier)|spioniert|spionieren)\b/,
     /\b(republikflucht|grenzgaenger|abtruennig)\b/,
     /\b(karlshorst|sowjetische?\s+(milit|kommand|verwalt|botsch))/,
     /\b(sowjetisch(er|e|en)?\s+offizier|sowjet-offizier|russisch(er|e|en)?\s+(major|oberst|hauptmann|leutnant|agent))\b/,
@@ -9953,6 +9965,12 @@ function detectPolitical(sceneText) {
     /\b(rias|amerikan\.?\s+sender|westberliner\s+(zeitung|sender))\b.*\b(kontakt|spion|gesucht)\b/,
     /\b(volksaufstand|17\.?\s*juni|streik\s+(im|in)\s+(VEB|werk|kombinat))\b/,
   ];
+  // Wenn der einzige Spion-Hit aus einem Tuerspion-Kontext kommt: false zurueck.
+  // (Die anderen Pattern feuern dann normal weiter.)
+  const matchedSpionOnly = isTuerspion && politicalPatterns.slice(0, 2).every(p => !p.test(lower)) && politicalPatterns.slice(3).every(p => !p.test(lower));
+  if (matchedSpionOnly) {
+    return false;
+  }
   return politicalPatterns.some(p => p.test(lower));
 }
 
@@ -12055,13 +12073,49 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // mehrfach festgenommen werden sollte.
             // Jetzt: zweiter Reset = Game-Over (Karl wurde von MfS wegen wiederholter
             // Provokation eliminiert).
-            if (caseIsPolitical && stasiTension >= 4) {
+            //
+            // v7.9.10 FIX 4: Liquidation entschaerfen.
+            // Anlass: 4 Runs v7.9.9, ALLE 4 endeten mit Karls Tod. Stein-Run wurde
+            // bereits nach 16 Szenen via Liquidation beendet, Schiffer-Run via
+            // falscher pol-Klassifikation gleich mitgerissen. Outcome-Monokultur
+            // "Karl stirbt immer" statt "Fall geloest immer".
+            //
+            // Neue Bedingungen fuer Liquidation:
+            //  - mind. Tag 2 (Liquidation darf nicht am ersten Tag passieren)
+            //  - mind. 25 Szenen total (Run war lang genug fuer echtes Spiel)
+            //  - 2. Auto-Release-Trigger statt 1. (sprich: 6 ignorierte Forces, nicht 3)
+            //  - caseIsPolitical UND stasiTension >= 4 (bleibt wie war)
+            // Wenn Bedingungen NICHT alle erfuellt: ein zweiter Hard-Force-Arrest
+            // statt Game-Over. Das gibt Karl noch eine Chance, das Spiel narrativ
+            // umzubiegen (Bestechung, Flucht, etc).
+            const liquidationReady = caseIsPolitical
+              && stasiTension >= 4
+              && gameDay >= 2
+              && sceneCounter >= 25
+              && (autoReleaseUsedCount || 0) >= 1;  // schon ein 2. Recovery-Versuch
+            if (liquidationReady) {
               console.warn('[Schatten] WIEDERHOLTE Custody-Auto-Release nach hard-force - System gibt auf, Game-Over.');
               diag('progress', '⚠ GAME-OVER: Karl wurde mehrfach festgenommen aber Mistral hat ignoriert. Karl wird liquidiert.');
               karlInStasiCustody = true;  // bleibt drin
               folterSceneCount = 99;
               isGameOver = true;
               pendingMfsLiquidation = true;
+            } else if (caseIsPolitical && stasiTension >= 4) {
+              // v7.9.10: 2. Hard-Force-Arrest statt sofortiger Liquidation.
+              // Karl wird nochmal aktiv festgenommen, kriegt aber kein Game-Over.
+              console.warn('[Schatten] Custody-FP-Recovery #2 -> NOCHMAL Hard-Force statt Liquidation (Bedingungen nicht erfuellt).');
+              diag('progress', '✦ HARD-FORCE FESTNAHME #2 (' + stasiTension + '/5 Tension - nochmal mit Nachdruck, noch nicht liquidiert)');
+              pendingForcedCustodyArrest = {
+                tension: stasiTension,
+                ignoredScenes: folterSceneCount,
+                secondAttempt: true,
+              };
+              autoReleaseUsedCount = (autoReleaseUsedCount || 0) + 1;
+              karlInStasiCustody = true;
+              folterSceneCount = 0;
+              if (typeof showProgressToast === 'function') {
+                showProgressToast('FESTNAHME', 'MfS schnappt Karl - diesmal mit Nachdruck.');
+              }
             } else {
               console.warn('[Schatten] 3+ Szenen ohne Stasi-Kontext - Custody-Flag automatisch geloescht.');
               diag('state', 'Stasi-Custody automatisch beendet - 3+ Szenen ohne Kontext (vermutlich False-Positive-Recovery)');
@@ -12071,17 +12125,39 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           }
         }
       } else {
+        // v7.9.10 FIX 1: Phantom-Folter-Eintrittsszene blockieren.
+        // Anlass: Goerke-Run Sz 42 - MfS klopft an Tuer, Karl wird gerade verhaftet,
+        // Folter-Szene 1 wird gefeuert obwohl noch keine Verhoer-Szene stattfand.
+        // Dazu hatte der "Leichter Vf-Drop"-Detektor parallel -1 angewendet weil
+        // die KI Action-Pattern erkannte. Karl ging von Vf 1 -> 0 in der Eintrittsszene.
+        //
+        // Neu: Wenn das die ALLERERSTE Custody-Szene ist (gerade erst gefangen worden),
+        // gilt das als Eintritt - kein Folter-Wuerfel, kein delta-Push. Erst ab der
+        // 2. Custody-Szene (= echte Verhoer/Folter) zaehlen.
+        const isCustodyEntry = (folterSceneCount === 0);
         folterSceneCount++;
-        const fatalChances = [0, 0.05, 0.12, 0.20, 0.30];
-        const chance = fatalChances[Math.min(folterSceneCount - 1, fatalChances.length - 1)] || 0.30;
-        if (folterSceneCount >= 2 && Math.random() < chance) {
-          console.log('[Schatten] Folter-Tod gewuerfelt (chance', chance + ').');
-          diag('roll', 'Folter-Tod gewuerfelt (Szene ' + folterSceneCount + ', Chance ' + (chance * 100).toFixed(0) + '%)');
-          scene.verfassung_delta = -4;
-          pendingFolterDeath = true;
+        if (isCustodyEntry) {
+          console.log('[Schatten] Custody-Eintrittsszene - kein Folter-Wuerfel, kein Schaden.');
+          diag('roll', 'Custody-Eintrittsszene (Folter-Szene 1) - Verhaftung selbst, kein Folter-Roll');
+          // v7.9.10: zusaetzlich verfassung_delta abfangen wenn KI in Eintrittsszene
+          // einen -1 schickt - die Verhaftung selbst soll nicht toedlich sein
+          if (typeof scene.verfassung_delta === 'number' && scene.verfassung_delta < 0 && verfassung <= 1) {
+            console.log('[Schatten] Vf-Drop in Custody-Eintritt bei niedriger Verfassung blockiert.');
+            diag('cap', 'Vf-Drop ' + scene.verfassung_delta + ' in Custody-Eintrittsszene bei Vf=' + verfassung + ' geblockt (Verhaftung != Tod)');
+            scene.verfassung_delta = 0;
+          }
         } else {
-          console.log('[Schatten] Folter-Szene', folterSceneCount + ', Karl ueberlebt (chance war', chance + ').');
-          diag('roll', 'Folter-Szene ' + folterSceneCount + ', Karl ueberlebt (' + (chance * 100).toFixed(0) + '% Tod-Chance)');
+          const fatalChances = [0, 0.05, 0.12, 0.20, 0.30];
+          const chance = fatalChances[Math.min(folterSceneCount - 1, fatalChances.length - 1)] || 0.30;
+          if (folterSceneCount >= 2 && Math.random() < chance) {
+            console.log('[Schatten] Folter-Tod gewuerfelt (chance', chance + ').');
+            diag('roll', 'Folter-Tod gewuerfelt (Szene ' + folterSceneCount + ', Chance ' + (chance * 100).toFixed(0) + '%)');
+            scene.verfassung_delta = -4;
+            pendingFolterDeath = true;
+          } else {
+            console.log('[Schatten] Folter-Szene', folterSceneCount + ', Karl ueberlebt (chance war', chance + ').');
+            diag('roll', 'Folter-Szene ' + folterSceneCount + ', Karl ueberlebt (' + (chance * 100).toFixed(0) + '% Tod-Chance)');
+          }
         }
       }
     }
@@ -12187,9 +12263,19 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       // auf 0 gecapt haben).
       if (delta < 0) {
         const hasLightTrigger = lightTriggers.some(p => p.test(combined));
+        // v7.9.10 FIX 2: Vf-1-Sticky-Trap blockieren.
+        // Anlass: Kessler-Run Sz 44 - Karl klebt 14 Szenen mit Vf 1, Mann stoesst
+        // ihn am Schreibtisch, "Schulter pocht", lightTrigger matcht, Vf 1 -> 0.
+        // Aber: Beschattungs-Fall mit Stasi-Tension 1/5 sollte nicht so banal toedlich
+        // enden. Bei Vf<=1 ist nur HARTE neue Gewalt akzeptabel, sonst stagniert
+        // Karl narrativ ohne tot zu sein (kann sich noch verarzten lassen).
         if (!hasLightTrigger) {
           console.warn('[Schatten] Delta', delta, 'ohne erkennbaren Trigger im Szenentext. Cap auf 0.');
           diag('cap', 'Verfassung-Delta ' + delta + ' ohne Trigger im Text -> auf 0 gecapt');
+          delta = 0;
+        } else if (verfassung <= 1 && !hasNewViolence) {
+          console.warn('[Schatten] Delta', delta, 'bei Vf=' + verfassung + ' nur mit Light-Trigger (keine neue Gewalt). Cap auf 0.');
+          diag('cap', 'Verfassung-Delta ' + delta + ' bei kritischer Vf=' + verfassung + ' ohne NEUE Gewalt -> auf 0 gecapt (alte Wunden pochen nicht toedlich)');
           delta = 0;
         } else {
           diag('detect', 'Leichter Verfassungs-Drop ' + delta + ' mit Trigger akzeptiert');
@@ -14235,6 +14321,7 @@ function resetGame() {
   pendingSuspectReminder = null;  // v6.98
   pendingForcedCustodyArrest = null;  // v6.99
   hardForcedArrestUsed = false;  // v6.99
+  autoReleaseUsedCount = 0;  // v7.9.10
   pendingForcedFahndung = null;  // v7.0
   fahndungUsed = false;  // v7.0
   ortPflichtIgnoredCount = 0;  // v7.0
