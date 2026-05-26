@@ -2011,7 +2011,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.9.22 · Hunger raus + Stage-2-Force + Verletzungs-Drift entschärft + Spannungs-Bilanz</div>
+    <div class="start-version">Schatten v7.9.22 · Hunger raus + Stage-2-Force + Verletzungs-Drift + Toast-Tracking + Spannungs-Bilanz</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -6546,6 +6546,53 @@ function buildTranscriptText() {
       }
       out += '\n';
     }
+
+    // v7.9.22 v2: TOAST-VERLAUF (Lektorat). Alle Toast-Trigger durch den Run.
+    // User-Punkt: "wenn ein Hunger-Toast laut Code feuern muesste aber im
+    // Export nicht auftaucht, wissen wir nicht ob das ein Anzeige-Bug ist oder
+    // ob die Bedingung doch nicht erfuellt war". Jetzt: jeder Toast-Versuch
+    // (auch unterdrueckte) wird gelistet mit Grund.
+    if (caseProgress.toastLog && caseProgress.toastLog.length > 0) {
+      out += '\nToast-Verlauf (Lektorat):\n';
+      const byVariant = { success: 0, danger: 0, caution: 0, info: 0 };
+      const shownByVariant = { success: 0, danger: 0, caution: 0, info: 0 };
+      for (const t of caseProgress.toastLog) {
+        byVariant[t.variant] = (byVariant[t.variant] || 0) + 1;
+        if (t.shown) shownByVariant[t.variant] = (shownByVariant[t.variant] || 0) + 1;
+      }
+      out += '  - Gesamt: ' + caseProgress.toastLog.length + ' Versuche, '
+           + caseProgress.toastLog.filter(t => t.shown).length + ' angezeigt\n';
+      out += '  - Nach Variant: success ' + shownByVariant.success + '/' + byVariant.success
+           + ', danger ' + shownByVariant.danger + '/' + byVariant.danger
+           + ', caution ' + shownByVariant.caution + '/' + byVariant.caution
+           + ', info ' + shownByVariant.info + '/' + byVariant.info + ' (shown/versucht)\n';
+      // Chronologie - alle angezeigten Toasts
+      const shownToasts = caseProgress.toastLog.filter(t => t.shown);
+      if (shownToasts.length > 0) {
+        out += '  - Angezeigte Toasts (chronologisch):\n';
+        for (const t of shownToasts) {
+          const tagStr = 'Sz ' + t.szene + ' (T' + t.tag + (t.tageszeit ? ' ' + t.tageszeit : '') + ')';
+          out += '      ' + tagStr + ' [' + t.variant + '] ' + t.title + '\n';
+        }
+      }
+      // Unterdrueckte Toasts gruppiert nach Grund
+      const suppressed = caseProgress.toastLog.filter(t => !t.shown);
+      if (suppressed.length > 0) {
+        out += '  - Unterdrueckt: ' + suppressed.length + ' Toast-Versuche\n';
+        const byReason = {};
+        for (const t of suppressed) {
+          const reason = t.suppressed || 'unbekannt';
+          if (!byReason[reason]) byReason[reason] = [];
+          byReason[reason].push(t.title + ' (Sz ' + t.szene + ')');
+        }
+        for (const reason of Object.keys(byReason)) {
+          out += '      Grund "' + reason + '": ' + byReason[reason].length + ' x'
+               + ' [' + byReason[reason].slice(0, 5).join(', ')
+               + (byReason[reason].length > 5 ? ', +' + (byReason[reason].length - 5) + ' weitere' : '')
+               + ']\n';
+        }
+      }
+    }
   }
   // Autoplay-Info wenn aktiv
   if (window.__schattenBotInfo) {
@@ -6968,17 +7015,8 @@ function showStatusDetails() {
 
   // Hunger (nur wenn >= 4, also wenn spuerbar)
   const hungerRow = document.getElementById('popup-hunger-row');
-  const hungerEl = document.getElementById('popup-hunger');
-  if (karlHunger >= 4) {
-    let label = karlHunger >= 8 ? 'Sehr hungrig' : karlHunger >= 6 ? 'Hungrig' : 'Leichter Hunger';
-    hungerEl.textContent = label + ' (' + karlHunger + '/10)';
-    if (karlHunger >= 8) hungerEl.style.color = '#f0a050';
-    else if (karlHunger >= 6) hungerEl.style.color = '#d4b270';
-    else hungerEl.style.color = '';
-    hungerRow.style.display = '';
-  } else {
-    hungerRow.style.display = 'none';
-  }
+  // v7.9.22: Hunger-Zeile im Status-Popup immer ausgeblendet (Mechanik deaktiviert).
+  if (hungerRow) hungerRow.style.display = 'none';
 
   // Stimmung / Romantik (nur wenn 2+)
   const romanceRow = document.getElementById('popup-romance-row');
@@ -9692,8 +9730,16 @@ Wenn Karl die Behandlungs-Option NICHT waehlt: respektiere die Wahl, erwaehne ku
     }
 
     // v7.9.14: Energie unter 20 ohne Action -> Schlaf-Option erzwingen
-    if (karlEnergie <= 20 && !karlInStasiCustody && (typeof lastSpannung !== 'number' || lastSpannung <= 3)) {
-      recap += `\n\nERSCHOEPFUNGS-PUSH (PFLICHT): Karl hat Energie ${karlEnergie}/100 - am Ende seiner Kraft. Keine Action gerade. Eine der 4 Optionen MUSS eine Ruhe/Schlaf-Option sein. Bei Tageszeit Abend/Nacht: "Geh nach Hause und leg dich ins Bett". Bei Tag: "Setz dich in den Imbiss bei Trude und ess was Heisses, ruh dich kurz aus" oder "Fahr ins Buero, knall die Tuer zu und schlaf eine Stunde auf der Couch".`;
+    // v7.9.22 v2: ERSCHOEPFUNGS-PUSH auch bei Action-Szenen (Sp 4-5) wenn
+    // Energie <=15 - dann braucht Karl wirklich eine Pause-Moeglichkeit.
+    // Krause-Run hatte 6 Sz mit En <=20 ohne Push (lastSpannung >3 hat geblockt).
+    if (karlEnergie <= 20 && !karlInStasiCustody) {
+      const isActionScene = (typeof lastSpannung === 'number' && lastSpannung >= 4);
+      if (!isActionScene) {
+        recap += `\n\nERSCHOEPFUNGS-PUSH (PFLICHT): Karl hat Energie ${karlEnergie}/100 - am Ende seiner Kraft. Keine Action gerade. Eine der 4 Optionen MUSS eine Ruhe/Schlaf-Option sein. Bei Tageszeit Abend/Nacht: "Geh nach Hause und leg dich ins Bett". Bei Tag: "Fahr ins Buero und schlaf eine Stunde auf der Couch" oder "Setz dich in eine ruhige Ecke und ruh dich kurz aus".`;
+      } else if (karlEnergie <= 15) {
+        recap += `\n\nERSCHOEPFUNGS-PUSH (PFLICHT, auch bei Action): Karl hat Energie ${karlEnergie}/100 - er kippt fast um. Selbst in dieser angespannten Lage MUSS eine der 4 Optionen einen Notfall-Rueckzug anbieten: "Brich ab und zieh dich zurueck" oder "Setz dich ab und sammel dich kurz" - sonst kollabiert Karl mitten in der Action.`;
+      }
     }
 
     // v7.9.19: ROMANTIK-PUSH. Wenn Romantik-Tension >= 3 UND Frau im aktuellen
@@ -10794,6 +10840,7 @@ async function startGame() {
     npcMemory: {},
     stage2StartDay: null,
     meilensteine: [],  // v7.9.7
+    toastLog: [],      // v7.9.22 v2 - Toast-Tracking fuer Lektorat
   };
   // Reset Klient-Profil (wird beim ersten Cast-Add gesetzt)
   clientProfile = {
@@ -15942,21 +15989,11 @@ function botChooseByStrategy(options) {
         return botRngChoice(sleepOptions);
       }
     }
-    // PRIO 2: Karl muss essen.
-    // v6.97: Schwelle gesenkt von 9 auf 7. Plus: aggressive Strategie greift
-    // schon bei 6, weil aggressive Spieler "schnell zugreifen" auch beim Essen.
-    // Anlass: Doc-Wagner-Hardenberg-Run hatte Hu 7-10 ueber 10 Szenen am
-    // Tag 1 ABEND, Bot waehlte trotzdem A-Optionen (aggressive). Toast
-    // "Hunger meldet sich" kam mehrfach ohne Effekt.
-    const hungerThreshold = isAggressive ? 6 : 7;
-    if (karlHunger >= hungerThreshold) {
-      const eatPattern = /\b(currywurst|bockwurst|bulett|schrippe|stulle|eisbein|schmalz|streuselkuchen|sahne|kartoffel|suppe|soljanka|essen|imbiss|wuerstchen|bratkartoffel|frikadell|wurst\s+essen|brot\s+essen|mittag\s+essen|abend\s+essen|fruehstueck|fruestueck|mahlzeit|cafe|kaffee\s+(trink|bestell)|bei\s+trude|trude|moehring|kranzler|kneipe|bestell\s+(dir|eine|ein)|geh\s+in\s+das\s+naechste\s+(cafe|wirtshaus|gasthaus))/i;
-      const eatOptions = options.filter(opt => eatPattern.test(opt.text));
-      if (eatOptions.length > 0) {
-        console.log('[Bot] Survival-Override: Karl muss essen (Hu=' + karlHunger + ', threshold=' + hungerThreshold + '), waehle Ess-Option');
-        return botRngChoice(eatOptions);
-      }
-    }
+    // PRIO 2: ESSEN entfernt in v7.9.22.
+    // Anlass: User-Lektorat - Hunger-Mechanik ohne erzaehlerischen Wert.
+    // Hunger-Pushes im Recap sind raus, also waeren auch keine Ess-Optionen
+    // mehr da die der Bot waehlen koennte. Block entfernt damit der Bot nicht
+    // jede Szene nach nicht-existenten Imbiss-Optionen scannt.
     // PRIO 3: Karl ist schwer verletzt (Verfassung <=2) - Doc Wagner / Hilfe suchen
     // v7.9.14: Auch Vf 3 wenn keine Action - Vorbeugung gegen Abwaerts-Spirale.
     // Brauer-Run: Vf 3 (Sz 7) -> keine Behandlung gesucht -> Vf 1 in Sz 9 -> Tod in Sz 12.
@@ -16205,7 +16242,7 @@ async function botRunMainLoop() {
       cast = [];
       mentionedDeadOrAbsent = {};
       storyFacts = {};
-      caseProgress = { stufe: 0, indizien: [], tatverdaechtiger: '', ueberfuehrt: false, klientBerichtet: false };
+      caseProgress = { stufe: 0, indizien: [], tatverdaechtiger: '', ueberfuehrt: false, klientBerichtet: false, meilensteine: [], toastLog: [] };
       caseIsPolitical = false;
       stasiTension = 0;
       stasiHighTensionStreak = 0;
@@ -16609,8 +16646,30 @@ function logMilestone(typ, text) {
 function showProgressToast(title, subtitle, variant, triggerKey) {
   variant = variant || 'success';
   const v = TOAST_VARIANTS[variant] || TOAST_VARIANTS.success;
+  // v7.9.22 v2: ALLE Toast-Versuche loggen (auch unterdrueckte).
+  // User-Befund: Hunger-Toasts feuerten laut Code-Bedingung (Hu>=7), wurden
+  // aber im Export NICHT angezeigt - weil canShowToast oder Suppression sie
+  // gefiltert hat. Fuers Lektorat brauchen wir Sichtbarkeit OB ein Toast
+  // versucht wurde + ob er angezeigt wurde.
+  try {
+    if (!caseProgress.toastLog) caseProgress.toastLog = [];
+    caseProgress.toastLog.push({
+      szene: sceneCounter,
+      tag: gameDay,
+      tageszeit: (typeof TIMES_OF_DAY !== 'undefined' ? TIMES_OF_DAY[gameTimeIdx] : ''),
+      variant: variant,
+      title: title,
+      triggerKey: triggerKey || '',
+      attempted: true,
+      shown: false,  // wird gleich auf true gesetzt wenn nicht unterdrueckt
+    });
+  } catch (e) { /* ignore */ }
   // Anti-Spam wenn triggerKey gesetzt
   if (triggerKey && !canShowToast(variant, triggerKey)) {
+    try {
+      const last = caseProgress.toastLog && caseProgress.toastLog[caseProgress.toastLog.length - 1];
+      if (last) last.suppressed = 'cooldown';
+    } catch (e) { /* ignore */ }
     return;
   }
   // v7.9.13: Festnahme-Suppression. Wenn in DIESER Szene bereits ein FESTNAHME
@@ -16624,9 +16683,18 @@ function showProgressToast(title, subtitle, variant, triggerKey) {
     // Pruefe ob in dieser Szene schon eine kritische Festnahme/Alarm war
     if (toastHistory.criticalThisScene === sceneCounter) {
       console.log('[Schatten] Toast unterdrueckt - Festnahme dominiert diese Szene:', title);
+      try {
+        const last = caseProgress.toastLog && caseProgress.toastLog[caseProgress.toastLog.length - 1];
+        if (last) last.suppressed = 'festnahme-dominanz';
+      } catch (e) { /* ignore */ }
       return;
     }
   }
+  // v7.9.22 v2: hier ankommen heisst Toast wird wirklich angezeigt
+  try {
+    const last = caseProgress.toastLog && caseProgress.toastLog[caseProgress.toastLog.length - 1];
+    if (last) last.shown = true;
+  } catch (e) { /* ignore */ }
   if (isCriticalToast) {
     toastHistory.criticalThisScene = sceneCounter;
   }
