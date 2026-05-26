@@ -2043,7 +2043,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.9.41 · Lektorats-Fixes Wagner+Kessler Runs: Aktions-Header gegen Off-by-One bei schwachen Modellen, Aggressiv-Selbstschutz bei Vf=1, Beschatten-Stages entschaerft (Stage 3 ab Sz4 + 8 Indizien, Stage 4 braucht 2 Sz Distanz), Tageszeit-Force nach 5 Action-Szenen, Stufe-undefined-Bug gefixt, Schaeferstrasse+Wartburgstrasse in Setup-Whitelist, West-Berlin-Radio-Hinweis (kein "Volksempfaenger" als 50er-Begriff).</div>
+    <div class="start-version">Schatten v7.9.42 · Modell-Chain umsortiert: Mistral Large 3 jetzt im Tier 1, Mistral Medium 3 ans Ende der Story-Modelle (vor Groq). Anlass: Mistral Medium hat in Wagner-Run v7.9.41 die Eroeffnungsszene reproduziert statt auf Spieler-Aktion zu reagieren - bei 98KB-Recap nicht stabil.</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2120,7 +2120,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.9.41</span>
+    <span>Schatten v7.9.42</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4355,7 +4355,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.9.41';
+window.SCHATTEN_VERSION = 'v7.9.42';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -8517,21 +8517,28 @@ function getCurrentUtcDay() {
 // aber das RPD-Limit ist PRO MODELL. Heisst: Wenn Flash-Lite durch ist, kann Flash
 // trotzdem noch ~20 Anfragen liefern (eigener RPD-Topf).
 const MODEL_CHAIN = [
-  // Strategische Reihenfolge nach Deutsch-Qualitaet:
-  // Die staerksten zuerst, schwaechere als Backup. Lite-Modelle ans Ende,
-  // sie haben oefter Grammatik-Patzer ("fordere sie auf laut zum...").
+  // v7.9.42: Chain umsortiert nach Lektorats-Befund Wagner-Run v7.9.41.
+  // Mistral Medium 3 hat in 2 Runs in Folge die Story komplett zerrissen
+  // (Off-by-One in v7.9.38, Szenen-Reset in v7.9.41). Bei 98KB-Recap kommt
+  // Medium nicht klar und reproduziert entweder die Eroeffnung neu oder
+  // reagiert auf falsche Aktion. Daher: Medium ans Ende der Story-Modelle,
+  // vor den Groq-Notnaegeln. Damit wird Medium im Alltag (1-Tab-Spiel) nie
+  // mehr gezogen - nur als Notfall wenn alle anderen down sind.
   //
-  // 1. Tier: Solide deutsche Story-Modelle
+  // 1. Tier: Beste deutsche Story-Modelle. Gemini Flash und Mistral Large
+  //          haben sich in den Test-Runs durchgehend konsistent gezeigt.
   { provider: 'gemini', model: 'gemini-2.5-flash',       label: 'Gemini 2.5 Flash' },
-  { provider: 'mistral', model: 'mistral-medium-latest', label: 'Mistral Medium 3' },
-  // 2. Tier: Premium (knapp im Daily-Limit ~5-10 RPD)
-  { provider: 'gemini', model: 'gemini-2.5-pro',         label: 'Gemini 2.5 Pro' },
   { provider: 'mistral', model: 'mistral-large-latest',  label: 'Mistral Large 3' },
+  // 2. Tier: Premium (knapp im Daily-Limit ~50-100 RPD bei Pro)
+  { provider: 'gemini', model: 'gemini-2.5-pro',         label: 'Gemini 2.5 Pro' },
   { provider: 'gemini', model: 'gemini-3-flash-preview', label: 'Gemini 3 Flash Preview' },
   // 3. Tier: Schnelle Lite-Modelle, ausreichend aber mit Grammatik-Schwaechen
   { provider: 'mistral', model: 'mistral-small-latest',  label: 'Mistral Small 3.1' },
   { provider: 'gemini', model: 'gemini-2.5-flash-lite',  label: 'Gemini 2.5 Flash-Lite' },
   { provider: 'gemini', model: 'gemini-3.1-flash-lite',  label: 'Gemini 3.1 Flash-Lite' },
+  // v7.9.42: Mistral Medium 3 ans Ende (vor Groq) - Story-Halluzinationen
+  // bei 98KB-Recap nicht reparabel ohne Modell-spezifische Prompt-Aenderungen.
+  { provider: 'mistral', model: 'mistral-medium-latest', label: 'Mistral Medium 3' },
   // 4. Tier: Groq-Modelle (TPM-eng, deutscher Stil meist schlechter als Gemini/Mistral)
   { provider: 'groq',   model: 'llama-3.3-70b-versatile',                  label: 'Llama 3.3 70B' },
   // v7.9.39: Kimi K2 (moonshotai/kimi-k2-instruct-0905) am 23.03.2026 von Groq
@@ -8547,7 +8554,7 @@ const MODEL_CHAIN = [
 // localStorage-Indizes nicht in der neuen Reihenfolge auf falsche Modelle zeigen.
 // v7.9.39: bump 4 -> 5 weil Kimi K2 (Groq deprecation) aus der Chain entfernt wurde.
 // Sonst zeigen alte Indizes auf falsche Modelle.
-const MODEL_CHAIN_VERSION = 5;
+const MODEL_CHAIN_VERSION = 6;
 
 // Aktuelle Position in der Kette aus localStorage (mit Tagesreset + Chain-Version-Check).
 // Session-Skip-Liste: Modelle die strukturell zu wenig TPM fuer unseren
