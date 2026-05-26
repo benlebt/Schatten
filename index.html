@@ -2024,7 +2024,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.9.32 · Aggressiv-Boost komplett defensiv (Crash-Fix) + alle null-Pfade abgefangen
+    <div class="start-version">Schatten v7.9.33 · Aggressiv-Boost ENTFERNT (Crash-Ursache) - Code-Pfad clean, Offensiv-Effekt kommt spaeter via Prompt
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2101,7 +2101,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.9.32</span>
+    <span>Schatten v7.9.33</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4330,7 +4330,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.9.32';
+window.SCHATTEN_VERSION = 'v7.9.33';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -16709,79 +16709,12 @@ function botRngChoice(arr) {
 function botChooseByStrategy(options) {
   if (!options || options.length === 0) return null;
 
-  // v7.9.31: AGGRESSIV-STRATEGIE-BOOST. User-Punkt: "Aggressiv = offensiver.
-  // Mit Gangstern/Verdächtigen soll Karl eskalieren, mit Romance-NPCs die
-  // Nacht verbringen. Aggressiv heisst nicht stumpf, sondern hungrig."
-  // Kommt VOR der allgemeinen Prio-Wahl, damit aggressive Spieler genau
-  // das spueren - Konflikt + Begierde.
-  // v7.9.32: KOMPLETTER Block in try/catch, jede einzelne Operation defensiv.
-  // Wenn irgendwas null/undef ist - ueberspringen, nicht crashen.
-  try {
-    const effectiveStrat = (typeof botStrategy === 'string' && botStrategy === 'rotating' && Array.isArray(botRotatingSubStrategies))
-      ? botRotatingSubStrategies[Math.floor((botCurrentTurn || 0) / (botRotatingTurnsPerStyle || 5)) % botRotatingSubStrategies.length]
-      : (typeof botStrategy === 'string' ? botStrategy : '');
-    if (effectiveStrat === 'aggressive') {
-      // 1. ROMANCE-PURSUIT
-      const setupCastSafe = (caseSetup && Array.isArray(caseSetup.setupCast)) ? caseSetup.setupCast : [];
-      const castSafe = Array.isArray(cast) ? cast : [];
-      const romanceNamesInSetup = setupCastSafe
-        .filter(c => c && typeof c === 'object' && (c.tag === 'ROMANCE' || c.tagExtra === 'ROMANCE'))
-        .map(c => (c.name || '').toLowerCase())
-        .filter(n => n.length > 0);
-      const romanceInCast = romanceNamesInSetup.length > 0 && castSafe.some(c => {
-        const cn = (typeof c === 'string' ? c : (c && c.name) || '').toLowerCase();
-        if (!cn) return false;
-        return romanceNamesInSetup.some(rn => {
-          if (!rn) return false;
-          const rnFirst = rn.split(/\s+/)[0];
-          const cnFirst = cn.split(/\s+/)[0];
-          if (!rnFirst || !cnFirst) return false;
-          return cn.includes(rnFirst) || rn.includes(cnFirst);
-        });
-      });
-      const isAbendOderNacht = (typeof gameTimeIdx === 'number' && gameTimeIdx >= 3);
-      const isLowTension = (typeof lastSpannung !== 'number' || lastSpannung <= 2);
-      const rmTen = (typeof romanticTension === 'number') ? romanticTension : 0;
-      const vfNow = (typeof verfassung === 'number') ? verfassung : 5;
-      if (romanceInCast && isAbendOderNacht && isLowTension && rmTen >= 2 && vfNow >= 3) {
-        const romancePattern = /\b(uebernacht|nacht\s+(bei|mit)|bei\s+\w+\s+bleib|tuer\s+(zumach|schliess|abschliess|sperr)|kuss|umarm|in\s+die\s+(arme|wohnung)|folg\s+ihr|nimm\s+sie|zieh\s+sie|schenk\s+ihr|biete\s+ihr\s+einen\s+(drink|bourbon)|gehe?\s+mit\s+ihr|nimm\s+sie\s+mit|fuehr\s+sie)/i;
-        const romanceOpts = options.filter(opt => opt && opt.text && romancePattern.test(opt.text));
-        if (romanceOpts.length > 0) {
-          console.log('[Bot] AGGRESSIV-Override: ROMANCE-PURSUIT');
-          if (typeof diag === 'function') diag('bot', 'AGGRESSIV-Override: ROMANCE-PURSUIT (Rm ' + rmTen + ', Sp ' + lastSpannung + ')');
-          return botRngChoice(romanceOpts);
-        }
-      }
-      // 2. ESKALATIONS-PURSUIT
-      const antagonistTagsInSetup = setupCastSafe
-        .filter(c => c && typeof c === 'object' && (c.tag === 'GANGSTER' || c.tag === 'STASI' || c.tag === 'SUSPECT' || c.tagExtra === 'GANGSTER' || c.tagExtra === 'STASI' || c.tagExtra === 'SUSPECT'))
-        .map(c => (c.name || '').toLowerCase())
-        .filter(n => n.length > 0);
-      const antagonistInCast = antagonistTagsInSetup.length > 0 && castSafe.some(c => {
-        const cn = (typeof c === 'string' ? c : (c && c.name) || '').toLowerCase();
-        if (!cn) return false;
-        return antagonistTagsInSetup.some(an => {
-          if (!an) return false;
-          const anFirst = an.split(/\s+/)[0];
-          const cnFirst = cn.split(/\s+/)[0];
-          if (!anFirst || !cnFirst) return false;
-          return cn.includes(anFirst) || an.includes(cnFirst);
-        });
-      });
-      if (antagonistInCast && vfNow >= 3 && !karlInStasiCustody) {
-        const eskalationsPattern = /\b(zieh\s+(die|deine)\s+(pistole|walther|ppk|waffe)|schiess|schlag|pack\s+\w+\s+(am|beim)|wuerg|tritt\s+ihm|reiss\s+ihm|hau\s+ihn|niederschlag|stoss\s+ihn|brich\s+ihm|stuerm|attackier|konfrontier\s+\w+\s+(direkt|hart|aggressiv)|drueck\s+ihn|press\s+ihn|droh\s+ihm)/i;
-        const eskalationsOpts = options.filter(opt => opt && opt.text && eskalationsPattern.test(opt.text));
-        if (eskalationsOpts.length > 0) {
-          console.log('[Bot] AGGRESSIV-Override: ESKALATION');
-          if (typeof diag === 'function') diag('bot', 'AGGRESSIV-Override: ESKALATION (Antagonist im Cast)');
-          return botRngChoice(eskalationsOpts);
-        }
-      }
-    }
-  } catch (e) {
-    console.warn('[Bot] Aggressiv-Boost fehler (uebersprungen):', e);
-    if (typeof diag === 'function') diag('bot', 'Aggressiv-Boost crash: ' + (e && e.message || 'unknown'));
-  }
+  // v7.9.33: AGGRESSIV-Boost wurde aus dem Bot-Code ENTFERNT.
+  // Stattdessen wird bei Strategie 'aggressive' ein Push im Mistral-Prompt
+  // gesendet, der die A-Option entsprechend offensiver formuliert
+  // (mit Verdaechtigen direkt konfrontieren, mit Romance-NPCs die Nacht
+  // verbringen). Der Bot waehlt dann normal A - kein Crash-Risiko durch
+  // null/undefined-Pfade im Bot-Code mehr.
 
   // v7.9.29: PRIO-BASIERTE WAHL VOR ALLEM ANDEREN.
   // User-Punkt: "wenn eine Option klar relevant ist (Fall-Loesen, Konfrontation,
