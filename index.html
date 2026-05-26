@@ -2043,7 +2043,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.9.47</div>
+    <div class="start-version">Schatten v7.9.48</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2120,7 +2120,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.9.47</span>
+    <span>Schatten v7.9.48</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4358,7 +4358,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.9.47';
+window.SCHATTEN_VERSION = 'v7.9.48';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -8572,7 +8572,14 @@ const MODEL_CHAIN = [
   // GPT-OSS 120B steht bereits weiter unten in der Chain, kein Ersatz noetig.
   { provider: 'groq',   model: 'qwen/qwen3-32b',                           label: 'Qwen3 32B' },
   { provider: 'groq',   model: 'openai/gpt-oss-120b',                      label: 'GPT-OSS 120B' },
-  { provider: 'groq',   model: 'meta-llama/llama-4-scout-17b-16e-instruct', label: 'Llama 4 Scout' },
+  // v7.9.48: Llama 4 Scout entfernt. Wagner+Stein-Run v7.9.47 zeigten:
+  // wenn dieses Modell rangezogen wird, liefert es entweder leere Szenen
+  // (nur Ort-Name als Text, kein Erzaehltext) oder halluziniert die User-
+  // Aktion komplett um. Stein-Run Sz 9-10: Llama Scout schrieb nur
+  // "hinter den Ruinen am Hackeschen Markt" als Szenentext. Brandt-Run
+  // v7.9.47 Sz 9: Bot waehlte "Fahr zu Doc Wagner" - Llama Scout antwortete
+  // mit "Du setzt die Verfolgung von Heinz Vogler fort". User-Wahl ignoriert.
+  // { provider: 'groq', model: 'meta-llama/llama-4-scout-17b-16e-instruct', label: 'Llama 4 Scout' },
   { provider: 'groq',   model: 'openai/gpt-oss-20b',                       label: 'GPT-OSS 20B' },
 ];
 
@@ -8582,7 +8589,9 @@ const MODEL_CHAIN = [
 // Sonst zeigen alte Indizes auf falsche Modelle.
 // v7.9.46b: bump 7 -> 8 weil Gemini 3.1 Flash-Lite als Notnagel zurueck in
 // die Chain (zwischen Mistral Medium und Groq, statt komplett raus).
-const MODEL_CHAIN_VERSION = 8;
+// v7.9.48: bump 8 -> 9 weil Llama 4 Scout aus der Chain entfernt wurde
+// (liefert leere Szenen oder ignoriert User-Aktion).
+const MODEL_CHAIN_VERSION = 9;
 
 // Aktuelle Position in der Kette aus localStorage (mit Tagesreset + Chain-Version-Check).
 // Session-Skip-Liste: Modelle die strukturell zu wenig TPM fuer unseren
@@ -9243,6 +9252,15 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
       }
       if (lastChoice) {
         recap += `\n\nKOHAERENZ-PFLICHT: Die naechste Szene MUSS in der gleichen Realitaet weiterspielen wie die LETZTE SZENE. Die soeben gewaehlte Aktion "${lastChoice}" ist die UNMITTELBARE Fortsetzung der LETZTEN SZENE - keine isolierte Handlung in einer anderen Welt. Konkret: Wenn Karl in der letzten Szene draussen vor seinem Buero war (Tuer aufgebrochen) und jetzt "Licht einschalten" waehlt, dann betritt er JETZT das Buero und schaltet das Licht ein - er steht nicht ploetzlich woanders. Wenn Karl gerade einen Verdaechtigen festhaelt und dann "Frag den Wirt" waehlt, dann ist der Verdaechtige immer noch da und Karl macht beides parallel. Du darfst NICHT zwei voneinander unabhaengige Story-Pfade gleichzeitig weiterfuehren. Anwesende Personen bleiben anwesend, gezogene Waffen bleiben gezogen, getroffene Gegner bleiben da wo sie waren. Wenn der Spieler eine Option waehlt die der vorigen Aktion zu widersprechen scheint, integriere sie in die Fortsetzung (z.B. "du senkst die Walther wieder und gehst stattdessen zum Wirt") - aber spring NICHT in eine alternative Vergangenheit zurueck.`;
+        // v7.9.48: ANTI-RESET-HINWEIS. Beobachtung in Wagner+Stein-Runs v7.9.47:
+        // selbst Mistral Large 3 wiederholt in Sz 2 manchmal die Eroeffnung
+        // ("Telefon klingelt", Klient ruft an), statt auf die Spieler-Aktion
+        // zu reagieren. Das Modell denkt "Eroeffnung war kurz, jetzt ausfuehrlich
+        // nochmal". Ergebnis: Story spult zurueck. Verstaerkt feuern in den
+        // ersten 3 Szenen (sceneCounter <= 2), wo dieser Effekt typisch ist.
+        if (typeof sceneCounter === 'number' && sceneCounter <= 2) {
+          recap += `\n\nANTI-RESET-PFLICHT (KRITISCH, ${sceneCounter === 0 ? '2. Szene' : (sceneCounter + 1) + '. Szene'}): Die Eroeffnungs-Szene wurde bereits gespielt und steht oben in LETZTE SZENE. Du darfst sie NICHT wiederholen, NICHT nochmal mit "Telefon klingelt" oder "Du wachst auf" beginnen, NICHT den Klienten erneut den Fall erklaeren lassen. Karl ist genau da wo die LETZTE SZENE ihn zurueckgelassen hat. Die Spieler-Aktion "${lastChoice}" ist eine konkrete Folgehandlung - erzaehle direkt die UNMITTELBARE Konsequenz davon. Falsch: "Das Telefon klingelt, Doc Wagner ruft an, Mauer komm sofort..." (Wiederholung). Richtig: "Du steigst in die S-Bahn, der Wagen ist fast leer..." (Folge der Aktion). Wenn Du Dich verloren fuehlst, lies LETZTE SZENE und mach dort weiter wo sie aufhoert.`;
+        }
       }
       // DETAIL-QUOTE-PROMPT (v6.57): NPC-Erstbeschreibungen sollen IMMER ein
       // 1953-spezifisches Detail tragen (Schicht der Realitaet), nicht generisch
@@ -16995,8 +17013,38 @@ function botChooseByStrategy(options) {
       // Skip des Aggressiv-Boosts, der normale Prio-Pfad fand BEHANDLUNG
       // nicht. Jetzt: regex-Pattern auf typische Heilungs-Optionen direkt,
       // wenn match -> sofort zurueckgeben.
-      const behandlungsPattern = /\b(doc\s+wagner|praxis|wunde\s+versorg|behandl|verband|verarzt|krankenh(au|äu)s|charite|charit\u00e9|arzt)\b/i;
-      const behandlungsOpts = options.filter(opt => behandlungsPattern.test(opt.text));
+      // v7.9.48: Pattern stark erweitert + als Array umgebaut. Stein-Run
+      // v7.9.47 Sz 17 hatte Bot mit Vf=1 vor Optionen "Stuetze Margarete
+      // und geh Richtung Apotheke" und "Versuche, das Blut mit deinem Hemd
+      // zu stillen" - alte Pattern matchten beide nicht, Bot waehlte Action
+      // und wurde festgenommen -> Tod. Jetzt: Apotheke, Apotheker, Blut
+      // stillen, Wunde verbinden, Hilfe holen/suchen/rufen, Sanitaeter,
+      // Krankenwagen, Charite - alles deckt jetzt.
+      const behandlungsPatterns = [
+        /\bdoc\s+wagner\b/i,
+        /\bpraxis\b/i,
+        /\bwunde\s+(versorg|stillen|verbind)/i,
+        /\bwunde\s+\w+\s+verbinden\b/i,    // "Wunde zu verbinden"
+        /\bwunde\s+verbinden\b/i,
+        /\bbehandl/i,
+        /\bverband\b/i,
+        /\bverarzt/i,
+        /\bkrankenh(aus|äus)/i,
+        /\bcharit/i,
+        /\b(ärztin|aerztin)\b/i,
+        /\b(ärztlich|aerztlich)/i,
+        /\barzt\b/i,
+        /\bapothek/i,
+        /\b(sanitäter|sanitaeter)/i,
+        /\bkrankenwag/i,
+        /\bblut\s+stillen\b/i,
+        /\bhol\s+hilfe\b/i,
+        /\bhilfe\s+(holen|suchen|finden|rufen)\b/i,
+        /\bverbind\s+(die|deine|seine|ihre)\s+wunde/i,
+      ];
+      const behandlungsOpts = options.filter(opt =>
+        behandlungsPatterns.some(p => p.test(opt.text))
+      );
       if (behandlungsOpts.length > 0) {
         console.log('[Bot] AGGRESSIV-Selbstschutz: BEHANDLUNG-Option gefunden, waehle:', behandlungsOpts[0].text);
         if (typeof diag === 'function') diag('bot', 'AGGRESSIV-Selbstschutz: BEHANDLUNG gewaehlt (Vf=' + verfassung + ')');
