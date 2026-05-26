@@ -1831,6 +1831,11 @@
     <button id="autoplay-start-btn" onclick="startAutoplayFromSettings()">▶ Autoplay starten</button>
 
     <div class="settings-divider"></div>
+    <div class="settings-info">KI-Modelle</div>
+    <button onclick="showModelStatus(event)">🔍 Modell-Status pruefen</button>
+    <button onclick="resetModelBlocks(event)">🗑 Alle Modell-Sperren loeschen</button>
+
+    <div class="settings-divider"></div>
     <div class="settings-info">Deploy</div>
     <button onclick="openDeployModal(event)">🚀 Datei deployen (GitHub-Push)</button>
 
@@ -2011,7 +2016,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.9.23 · Auto-Stage-4-Fix + Eureka-Tautologie-Filter + Tageswechsel-Anchor + Bot-Klient-Prio + Marathon-Reset</div>
+    <div class="start-version">Schatten v7.9.24 · Case-Type-Goals + Suspect-Anker + 503-Failover + Modell-Status-UI + vage Eureka-Toasts</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2088,7 +2093,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.9.23</span>
+    <span>Schatten v7.9.24</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -2950,6 +2955,58 @@ Selbst wenn das Setting ungewoehnlich oder dramaturgisch schwierig wirkt: spiele
 ERÖFFNUNGSSETUP:
 `;
 
+// v7.9.24: Lösungs-Definitionen pro caseType.
+// User-Punkt: "Hauptziel bei einem vermissten Fall ist den Vermissten zu
+// finden. Der Suspect ist nur optional. Bei Mord ist der Taeter das Ziel.
+// Bei Wahrheit die Wahrheit." Pro Type ein klares Erfolgskriterium das das
+// Spiel zu Stage 3 (Hauptziel erreicht) und Stage 4 (Klient informiert)
+// fuehrt. Verhindert dass Mistral Diebstahl-Faelle wie Mordfaelle behandelt
+// (Tante Frieda als Taeter ueberfuehren statt das Etui zurueckzubringen).
+const CASE_TYPE_GOALS = {
+  'vermisst': {
+    hauptziel: 'Den Vermissten (TARGET) physisch finden - lokalisieren, lebend oder tot',
+    stage3Bedingung: 'TARGET ist bei Karl (in Sichtweite, in seinem Wagen, oder Karl weiss konkret wo TARGET ist)',
+    stage4Bedingung: 'Karl hat dem Klient das Ergebnis berichtet (Person gefunden, ggf. abgeliefert oder lebend zurueck)',
+    suspectRolle: 'OPTIONAL - der Verantwortliche (Gangster/Entfuehrer) ist der Weg zum Vermissten, aber kein zentrales Loesungsziel. Karl kann ihn an die VP/Polizei uebergeben, muss aber nicht.',
+    erfolgssatz: 'Fall geloest wenn Vermisster gefunden und Klient informiert ist.',
+  },
+  'mord': {
+    hauptziel: 'Den Moerder (SUSPECT) ermitteln und ueberfuehren',
+    stage3Bedingung: 'Karl hat den Taeter identifiziert und entweder festgenommen, der Polizei uebergeben, oder mit Beweisen konfrontiert',
+    stage4Bedingung: 'Karl hat dem Klient das Ergebnis berichtet (Moerder gefasst, Beweise gesichert)',
+    suspectRolle: 'PFLICHT - der Moerder ist das zentrale Loesungsziel. Ohne ihn ist der Fall offen.',
+    erfolgssatz: 'Fall geloest wenn Moerder ueberfuehrt und Klient informiert ist.',
+  },
+  'diebstahl': {
+    hauptziel: 'Das gestohlene Gut (TARGET) zurueckholen',
+    stage3Bedingung: 'TARGET (das Diebesgut) ist bei Karl oder Karl weiss sicher wo es ist und kann es zurueckbringen',
+    stage4Bedingung: 'Karl hat dem Klient das Diebesgut zurueckgegeben',
+    suspectRolle: 'OPTIONAL - der Hehler/Dieb ist der Weg zum Gut. Karl kann ihn anzeigen, aber Hauptziel ist Rueckgabe.',
+    erfolgssatz: 'Fall geloest wenn Diebesgut zurueckgegeben und Klient informiert ist.',
+  },
+  'beschatten': {
+    hauptziel: 'Beweise sammeln (Fotos, Beobachtungen, Aussagen)',
+    stage3Bedingung: 'Karl hat klare Beweise zum Beobachtungsgegenstand (Treffen mit Geliebter dokumentiert, heimliche Geldzahlung beobachtet, etc.)',
+    stage4Bedingung: 'Karl hat dem Klient die Beobachtungen mitgeteilt',
+    suspectRolle: 'OPTIONAL - der Beobachtete ist die Zielperson, aber er wird nicht "ueberfuehrt" - Karl liefert Fakten, Klient entscheidet.',
+    erfolgssatz: 'Fall geloest wenn Beobachtung dokumentiert und Klient informiert ist.',
+  },
+  'wahrheit': {
+    hauptziel: 'Die Wahrheit hinter dem Ereignis ermitteln',
+    stage3Bedingung: 'Karl hat eine klare Erkenntnis was wirklich passiert ist (Selbstmord oder Mord? Wer war es? Was war das Motiv?)',
+    stage4Bedingung: 'Karl hat dem Klient die Wahrheit erzaehlt',
+    suspectRolle: 'OPTIONAL - es gibt eventuell einen Taeter, aber das Hauptziel ist die WAHRHEIT zu kennen. Karl muss den Taeter nicht selbst fassen wenn es einen gibt.',
+    erfolgssatz: 'Fall geloest wenn Wahrheit ermittelt und Klient informiert ist.',
+  },
+  'politisch': {
+    hauptziel: 'Den politisch sensiblen Auftrag erfuellen (oft eine Mischung aus Personen-Schutz, Beweise-Sichern, oder Stasi-Falle ausweichen)',
+    stage3Bedingung: 'Karl hat den konkreten Auftrag erledigt (Person sicher rausgeholt, Akten gesichert, etc.)',
+    stage4Bedingung: 'Karl hat dem Klient (oder dem westlichen Auftraggeber) Vollzug gemeldet',
+    suspectRolle: 'KONTEXT - die Stasi/SED ist der politische Gegenspieler, aber kein klassischer "Taeter".',
+    erfolgssatz: 'Fall geloest wenn Auftrag erledigt und Klient informiert ist.',
+  },
+};
+
 const INTRO_VARIANTS = [
   // v6.76: Setup 1 (Default-Random) entfernt - zu viel Drift-Potenzial.
   // Wir haben jetzt 14 klar definierte Setups mit festem Cast, historischem
@@ -3020,11 +3077,25 @@ const INTRO_VARIANTS = [
           detail: 'brunett, rote Schuerze, raucht heimlich hinter dem Tresen, Mann ist vor 2 Jahren gefallen, allein in einer Stube ueber dem Anker',
           triggerWhen: 'Karl trifft sie alleine an der Theke, Abend/Nacht, niedrige Spannung',
           persistent: false, anwesend: false },
-        { name: 'Bruno Schaefer', tag: 'GANGSTER', alter: 47, rolle: 'Halbweltkontakt am Anker',
-          beziehung: 'organisiert Schmuggel ueber die Werft Koepenick (Westkonsum), Friedrich war moeglicherweise drin',
-          detail: 'breite Schultern, narbige Hand, kurzer Mantel, immer mit zwei Maennern, kassiert in bar, kennt jeden Werftarbeiter',
+        // v7.9.24: Bei vermisst-Faellen ist das HAUPTZIEL den Vermissten zu
+        // FINDEN, nicht den Taeter zu fangen. Bruno ist GANGSTER (der Weg zum
+        // Ziel - er weiss wo Friedrich ist und kann eine Spur liefern), aber
+        // NICHT der zentrale Stage-2-Verdaechtige. Beim Lokalisieren von
+        // Friedrich ist der Fall geloest, Bruno kann optional spaeter dran.
+        { name: 'Bruno Schaefer', tag: 'GANGSTER', alter: 47, rolle: 'Halbweltkontakt am Anker (haelt Friedrich fest)',
+          beziehung: 'Organisiert Schmuggel ueber die Werft Koepenick (Westkonsum). Friedrich wollte aussteigen und drohte mit der VP - Bruno haelt ihn deshalb in einem Lager an der Spree fest.',
+          detail: 'breite Schultern, narbige Hand, kurzer Mantel, immer mit zwei Maennern, kassiert in bar, kennt jeden Werftarbeiter. Karl muss ueber Bruno (oder seine Maenner) den Aufenthaltsort herausfinden.',
           triggerWhen: 'Karl ermittelt im Schmuggel-Umfeld der Werft',
-          persistent: false, anwesend: false },
+          persistent: true, anwesend: false },
+      ],
+      // v7.9.24: KEY-CLUES - Spur-Indizien die zum vermissten Friedrich fuehren.
+      // Hauptziel: Friedrich finden. Bruno ist der Weg dahin.
+      keyClues: [
+        'Friedrichs letzter Lohnzettel mit ungewoehnlicher Notiz (Schmuggel-Schicht?)',
+        'Aussage von Schiele: Friedrich hatte Streit mit Bruno vor 6 Tagen',
+        'Werft-Stempelkarte zeigt: Friedrich hat seine letzte Schicht nicht beendet',
+        'Aussage eines Werftarbeiters: Bruno hat eine alte Lagerhalle an der Spree',
+        'Schluessel zur Lagerhalle hat Bruno - Karl muss ihn dazu bringen ihn rauszugeben',
       ],
       // v6.76: HISTORISCHER KONTEXT - 12. Februar 1953 (Donnerstagnacht)
       historicalContext: {
@@ -3083,12 +3154,26 @@ const INTRO_VARIANTS = [
           tagExtra: 'ROMANCE', // v7.9.20: Doppel-Rolle ueber tagExtra
           triggerRomanceWhen: 'Karl trifft Lola alleine nach Schluss, niedrige Spannung, Abend/Nacht',
           persistent: true, anwesend: false },
-        // v7.9.19: Pool-Gangster fuer Brandt-Setup.
-        { name: 'Kurt Lange', tag: 'GANGSTER', alter: 51, rolle: 'Spielklub-Boss der Roten Laterne',
-          beziehung: 'Erich hatte Spielschulden bei ihm, koennte hinter dem "Selbstmord" stecken',
-          detail: 'feiste Figur, brauner Anzug mit zu engem Kragen, dicke Goldkette, raucht Zigarillos, zwei Schlaeger immer dabei',
+        // v7.9.23: Lange war GANGSTER, jetzt klarer SUSPECT+GANGSTER.
+        // Brandt-Setup hat damit einen festen Taeter (Spielklub-Boss mit
+        // Schulden-Motiv) - die Spur fuehrt eindeutig zu ihm.
+        { name: 'Kurt Lange', tag: 'SUSPECT', alter: 51, rolle: 'Spielklub-Boss der Roten Laterne (Taeter)',
+          beziehung: 'Erich hatte 800 D-Mark Spielschulden bei ihm. Lange hat den "Selbstmord" inszeniert um andere Schuldner einzuschuechtern.',
+          detail: 'feiste Figur, brauner Anzug mit zu engem Kragen, dicke Goldkette, raucht Zigarillos, zwei Schlaeger immer dabei. Hat Erichs Walther genommen und ihm in den Kopf geschossen, dann die Waffe in Karls Wagen geworfen damit Karl vergisst und sich nicht erinnert.',
+          tagExtra: 'GANGSTER',
           triggerWhen: 'Karl ermittelt im Roten-Laterne-Umfeld, Schuldenmotiv aufgeklaert',
-          persistent: false, anwesend: false },
+          persistent: true, anwesend: false },
+      ],
+      // v7.9.23: KEY-CLUES - Spur-Indizien die zum SUSPECT fuehren.
+      // 3-5 konkrete Indizien die im Verlauf entdeckt werden sollten.
+      // Verhindert dass Mistral beliebige Indizien halluziniert. Der Bot/
+      // Spieler soll am Ende DIESE Sachen gesammelt haben.
+      keyClues: [
+        'Erichs Schuldschein bei Lange (800 D-Mark, in seiner Wohnung versteckt)',
+        'Zigarillo-Asche am Tatort (Lange raucht Zigarillos, Erich nicht)',
+        'Aussage von Lola: Erich hatte Angst vor "den Leuten von der Laterne"',
+        'Karls Walther im Handschuhfach: NICHT Karls Walther sondern Erichs (Seriennummer pruefen)',
+        'Zeuge in der Roten Laterne: jemand hat Lange Erichs Walther einsacken sehen',
       ],
       // v6.76: HISTORISCHER KONTEXT - 21. Mai 1953 (kurz vor 17. Juni!)
       historicalContext: {
@@ -3686,12 +3771,29 @@ const INTRO_VARIANTS = [
           tagExtra: 'ROMANCE',
           triggerRomanceWhen: 'Karl und Marlene alleine, Abend in der Praxis oder Wartburgstrasse, niedrige Spannung',
           persistent: true, anwesend: true },
+        // v7.9.23: Fester SUSPECT fuer jeden Setup-Fall.
+        // Karl Walther ist der ehemalige Praxis-Angestellte mit dem Schluessel.
+        // Er kannte die Praxis, hatte einen Konflikt mit Doc Wagner, und hat
+        // den Toten dort abgelegt um Doc Wagner zu belasten / zu warnen.
+        { name: 'Karl Walther', tag: 'SUSPECT', alter: 38, rolle: 'Ex-Praxis-Angestellter (Taeter)',
+          beziehung: 'Hat 2 Jahre fuer Doc Wagner gearbeitet, wurde rausgeworfen weil er Morphium gestohlen hat. Kannte die Hintertuer, hatte noch einen Zweitschluessel.',
+          detail: 'schmaechtig, blass, abgewetzte Schuhe, schiebermuetze, raucht Karo. Hat den Toten dort abgelegt - der Tote war ein junger Mann der ihn beim Schmuggel mit verbotenen Medikamenten erwischt hat.',
+          triggerWhen: 'Karl ermittelt um Doc Wagners ehemalige Mitarbeiter, oder findet die Karo-Kippen vor der Hintertuer',
+          persistent: true, anwesend: false },
         // v7.9.19: Pool-Stasi bei politischer Eskalation.
         { name: 'Genosse Hauptmann Stender', tag: 'STASI', alter: 46, rolle: 'MfS-Hauptmann Charite-Verbindung',
           beziehung: 'kennt Marlene aus der Charite, vermutet dass Doc Wagner unangemeldet behandelt',
           detail: 'glatte Stirn, dunkles Haar zurueckgekaemmt, blauer Anzug, Karteikarten-Aktentasche, immer mit Notizbuch',
           triggerWhen: 'stasiTension >= 2, Karl ermittelt um die Charite-Pathologie',
           persistent: false, anwesend: false },
+      ],
+      // v7.9.23: KEY-CLUES - Spur-Indizien die zu Karl Walther fuehren.
+      keyClues: [
+        'Karo-Kippen vor der Hintertuer (Walther raucht Karo, Doc nicht)',
+        'Personalakte: Karl Walther war Praxis-Angestellter, vor 8 Monaten gefeuert wegen Morphium-Diebstahl',
+        'Zweitschluessel zur Hintertuer fehlt - nur Doc und Walther hatten je einen',
+        'Identitaet des Toten: junger Mann namens Erich Holm, hatte einen Notizzettel mit "Walther" und einer Adresse',
+        'Aussage Marlene: hat Walther vor 3 Tagen abends in der Naehe der Praxis gesehen',
       ],
       // v6.76: HISTORISCHER KONTEXT - 4. Juni 1953 (Donnerstag, 13 Tage VOR 17. Juni)
       historicalContext: {
@@ -4066,7 +4168,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.9.23';
+window.SCHATTEN_VERSION = 'v7.9.24';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -8562,6 +8664,48 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
           }
           recap += 'Diese Cast-Liste ist FEST. CLIENT-Slot und ZIELPERSON-Slot sind belegt - erfinde KEINE weiteren Personen mit diesen Rollen. Du DARFST neue ZEUGEN, INFORMANTEN, GEGNER einfuehren wenn die Story sie braucht. Aber CLIENT und ZIELPERSON sind oben definiert und fix.\n';
 
+          // v7.9.24: LOESUNGS-DEFINITION pro caseType.
+          // User-Punkt: "Hauptziel bei vermisst-Fall ist den Vermissten zu
+          // FINDEN, nicht den Taeter zu fangen. Bei Mord ist der Taeter das
+          // Ziel. Bei Wahrheit die Wahrheit." Mistral bekommt jetzt klar
+          // was "Fall geloest" konkret bedeutet, abhaengig vom Case-Type.
+          const ct = (caseSetup.caseType || '').toLowerCase();
+          const goalDef = (typeof CASE_TYPE_GOALS !== 'undefined') ? CASE_TYPE_GOALS[ct] : null;
+          if (goalDef) {
+            recap += '\nLOESUNGS-DEFINITION fuer diesen Fall-Typ (' + ct.toUpperCase() + '):\n';
+            recap += '  HAUPTZIEL: ' + goalDef.hauptziel + '\n';
+            recap += '  Stage 3 (Hauptziel erreicht): ' + goalDef.stage3Bedingung + '\n';
+            recap += '  Stage 4 (Fall offiziell geloest): ' + goalDef.stage4Bedingung + '\n';
+            recap += '  TAETER-Rolle: ' + goalDef.suspectRolle + '\n';
+            recap += '  Erfolgskriterium: ' + goalDef.erfolgssatz + '\n';
+            recap += 'WICHTIG: Das Spiel erkennt "Fall geloest" wenn die Stage-Bedingungen oben erfuellt sind. Behandle den Fall passend zum Typ - bei vermisst zaehlt das Finden, nicht das Festnehmen des Verantwortlichen.\n';
+          }
+
+          // v7.9.23: KLARER TAETER-ANKER. User-Punkt: "jedes Setup sollte
+          // nen klaren Verdaechtigen haben - die Spur fuehrt am Ende zum
+          // selben Verdaechtigen, nicht je nach Fall mal unterschiedlich".
+          // Wenn ein SUSPECT im Setup steht (oder SUSPECT als tagExtra), ist
+          // DAS die Loesung des Falls - alle Indizien sollen am Ende dahin
+          // fuehren. Verhindert dass Mistral fremde Namen erfindet.
+          const suspectPersons = caseSetup.setupCast.filter(c =>
+            c && ((c.tag || '').toUpperCase() === 'SUSPECT' ||
+                  (c.tagExtra || '').toUpperCase() === 'SUSPECT'));
+          if (suspectPersons.length > 0) {
+            const isVermisstOrDiebstahl = (ct === 'vermisst' || ct === 'diebstahl');
+            recap += '\nTAETER-ANKER (HOECHSTE PRIORITAET): Die Spur dieses Falls fuehrt zu folgender Person:\n';
+            for (const sp of suspectPersons) {
+              recap += '  >>> ' + sp.name + ' <<< ';
+              if (sp.rolle) recap += '(' + sp.rolle + ')';
+              if (sp.beziehung) recap += ' - ' + sp.beziehung;
+              recap += '\n';
+            }
+            if (isVermisstOrDiebstahl) {
+              recap += 'WICHTIG: Bei diesem Fall-Typ ist der TAETER nicht das Hauptziel - er ist der WEG zum Hauptziel (oben in der Loesungs-Definition genannt). Karl muss den Taeter NICHT zwangslaeufig fassen. Aber die Spur fuehrt ueber ihn (er weiss wo das Diebesgut / die vermisste Person ist). Erfinde KEINE alternativen Verantwortlichen.\n';
+            } else {
+              recap += 'KRITISCH: Diese Person ist der TAETER. Die Aufklaerung des Falls fuehrt am Ende zu ihm/ihr. Erfinde KEINE alternativen Verdaechtigen aus dem Nichts. Wenn Mistral spontan einen "Karl Walther" oder "die rothaarige Fee" als Taeter ins Spiel bringt obwohl der wahre Taeter oben definiert ist - das ist falsch. Die Indizien sollen schrittweise zum genannten TAETER fuehren, nicht zu einer halluzinierten Person. Du DARFST am Anfang auch andere Personen verdaechtig wirken lassen (Misdirection ist erlaubt) - aber am Ende muss der TAETER der oben genannte sein.\n';
+            }
+          }
+
           // v7.9.14: FAMILY-Anker brauchen Extra-Schutz. Hilde-Run zeigte in Sz 2:
           // "Vor der Tür steht eine Frau, die du noch nie gesehen hast. Hilde Brauer..."
           // Karls SCHWESTER war fuer Karl "nie gesehen" - massiver Anker-Drift.
@@ -9279,6 +9423,11 @@ Es ist NICHT realistisch, dass eine Trauergesellschaft 18 Stunden an einem Grab 
       // Mistral identifiziert keinen Verdaechtigen wenn die Story unklar ist
       // (z.B. Brandt-Run: Erich tot, kein klarer Taeter). Hier zwingen wir
       // entweder Stage-Promotion ODER expliziten Fall-Loesung-Hinweis.
+      // v7.9.24: Case-Type-spezifisch.
+      const caseTypeNow = (caseSetup && caseSetup.caseType || '').toLowerCase();
+      const isVermisstFall = caseTypeNow === 'vermisst';
+      const isDiebstahlFall = caseTypeNow === 'diebstahl';
+      const isBeschattenFall = caseTypeNow === 'beschatten';
       if (indCount >= 15) {
         // Aus dem Setup-Cast: wer waere ein plausibler Verdaechtiger?
         let suspectCandidates = [];
@@ -9296,7 +9445,23 @@ Es ist NICHT realistisch, dass eine Trauergesellschaft 18 Stunden an einem Grab 
         const suggestionText = suspectCandidates.length > 0
           ? ` Kandidaten aus dem Setup: ${suspectCandidates.join(', ')}.`
           : '';
-        recap += `\nFALL-LÖSEN-PFLICHT: Karl hat ${indCount} Indizien gesammelt - das ist mehr als genug. Die Story stagniert seit vielen Szenen ohne dass ein Verdaechtiger fixiert wurde. Du MUSST in dieser Szene EINE von zwei Optionen waehlen: (1) Karl identifiziert einen konkreten Verdaechtigen mit Namen aus den Indizien - setze "tatverdaechtiger_identifiziert" auf den Namen.${suggestionText} ODER (2) Karl kommt zu dem Schluss dass es kein klassisches Verbrechen war (z.B. Brandt-Run: Erich hat sich vielleicht wirklich umgebracht, oder ist abgehauen) - dann setze "fall_aufgegeben": true mit kurzer Begruendung. KEIN weiteres Indizien-Sammeln. KEIN "Karl bleibt unklar" - eine Entscheidung muss her.`;
+        if (isVermisstFall) {
+          // Bei vermisst: Hauptziel ist TARGET finden, nicht Taeter
+          const targetFact = caseSetup.setupCast.find(c => c.tag === 'TARGET');
+          const targetN = targetFact ? targetFact.name : 'die vermisste Person';
+          recap += `\nVERMISSTEN-FINDEN-PFLICHT: Karl hat ${indCount} Indizien gesammelt. Die Story stagniert. Hauptziel dieses Falls ist ${targetN} zu FINDEN, nicht den Taeter zu fangen. Du MUSST in dieser Szene EINE von diesen Optionen anbieten: (1) Karl spuert ${targetN} konkret auf (lebend oder tot) - setze "tatverdaechtiger_ueberfuehrt": true wenn die Person bei Karl ist ODER (2) Karl macht aus den Indizien klar wo ${targetN} ist und faehrt direkt dorthin - die naechste Szene zeigt das Auffinden.${suggestionText} KEIN weiteres Indizien-Sammeln. Karl muss handeln und die Person finden.`;
+        } else if (isDiebstahlFall) {
+          // Bei diebstahl: Hauptziel ist Diebesgut zurueck
+          const targetFact = caseSetup.setupCast.find(c => c.tag === 'TARGET');
+          const targetN = targetFact ? targetFact.name : 'das Diebesgut';
+          recap += `\nDIEBESGUT-ZURUECK-PFLICHT: Karl hat ${indCount} Indizien gesammelt. Die Story stagniert. Hauptziel dieses Falls ist ${targetN} zurueckzubringen, nicht den Hehler/Dieb zu fangen. Du MUSST in dieser Szene EINE von diesen Optionen anbieten: (1) Karl konfrontiert den Hehler und holt sich ${targetN} (mit Druck, Beweisen oder Bezahlung) - setze tatverdaechtiger_ueberfuehrt": true wenn das Gut in Karls Inventar ist ODER (2) Karl handelt aus, dass er ${targetN} bekommt im Tausch gegen etwas (Schweigen, Geld, einen Tip).${suggestionText} KEIN weiteres Indizien-Sammeln.`;
+        } else if (isBeschattenFall) {
+          // Bei beschatten: Hauptziel ist Beweise sichern
+          recap += `\nBEWEISE-SICHERN-PFLICHT: Karl hat ${indCount} Indizien gesammelt - das ist genug. Beweise sind beisammen. Du MUSST in dieser Szene EINE von diesen Optionen anbieten: (1) Karl dokumentiert die letzte Beobachtung (Foto, Notiz, oder Aussage festgehalten) und der Auftrag ist erfuellt - setze tatverdaechtiger_ueberfuehrt": true ODER (2) Karl entscheidet dass die Beweislage reicht und faehrt zum Klient.`;
+        } else {
+          // Mord/Wahrheit/Politisch: klassische Taeter-Identifikation
+          recap += `\nFALL-LÖSEN-PFLICHT: Karl hat ${indCount} Indizien gesammelt - das ist mehr als genug. Die Story stagniert seit vielen Szenen ohne dass ein Verdaechtiger fixiert wurde. Du MUSST in dieser Szene EINE von zwei Optionen waehlen: (1) Karl identifiziert einen konkreten Verdaechtigen mit Namen aus den Indizien - setze "tatverdaechtiger_identifiziert" auf den Namen.${suggestionText} ODER (2) Karl kommt zu dem Schluss dass es kein klassisches Verbrechen war (z.B. Brandt-Run: Erich hat sich vielleicht wirklich umgebracht, oder ist abgehauen) - dann setze "fall_aufgegeben": true mit kurzer Begruendung. KEIN weiteres Indizien-Sammeln. KEIN "Karl bleibt unklar" - eine Entscheidung muss her.`;
+        }
       } else if (indCount >= 7 || gameDay >= 3) {
         recap += `\nFALL-ZWANG (KRITISCH): Karl hat ${indCount} Indizien und ist an Tag ${gameDay}. Das ist genug. Du DARFST in dieser Szene NICHT mehr nur neue Indizien anhaengen - das ist Stagnation. In dieser ODER spaetestens der naechsten Szene MUSS Karl einen konkreten Tatverdaechtigen mit Namen nennen (entweder durch eine Konfrontation, eine Schlussfolgerung im Kopf, oder ein Zufallsfund der die Sache klaert). Setze "tatverdaechtiger_identifiziert" auf den Namen. Auch wenn die Beweislage nicht 100% ist - Karl muss eine Theorie formen und sie aussprechen. Falls die Story noch keinen klaren Verdaechtigen hat: schau dir die Indizien-Liste an und schliesse auf die Person (KEIN Opfer / KEINE Zielperson / KEIN Klient), die am haeufigsten genannt wird oder das groesste Motiv haette.`;
       } else if (indCount >= 5) {
@@ -10319,6 +10484,14 @@ VERBOTEN: einfach mit "schraegem Morgenlicht" anfangen ohne zu erklaeren wo Karl
     const err = new Error('API-Fehler ' + response.status + ': ' + errMsg);
     if (response.status === 400 || response.status >= 500) {
       err.isRetryable = true;
+      // v7.9.23: Bei 503/504 (Server vorübergehend nicht erreichbar) das Modell
+      // für 90s blockieren statt sofort retry am selben Modell. Anlass:
+      // User-Screenshot 26.05.2026 04:31 - Gemini 2.5 Flash-Lite lieferte
+      // 503 ServiceUnavailable, System hing dann an Mistral als Backup obwohl
+      // Gemini wenige Minuten später wieder oben war.
+      if (response.status === 503 || response.status === 504) {
+        err.isServiceUnavailable = true;
+      }
     }
     err.debugInfo = { stage: 'api_error', status: response.status, body: JSON.stringify(data).slice(0, 1000) };
     throw err;
@@ -14653,6 +14826,31 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           console.log('[Schatten] AUTO-FORCING Stage 3 (vermisst): TARGET ' + targetName + ' physisch bei Karl');
           diag('progress', '✦ AUTO-STAGE 3 (vermisst) erzwungen: ' + targetName + ' bei Karl (gefunden)');
           showProgressToast('VERMISSTE PERSON GEFUNDEN', targetName + ' ist bei Karl.');
+        } else if (ct === 'diebstahl' && targetName && Array.isArray(inventory) && stage2Scenes >= 1) {
+          // v7.9.24: Diebstahl-Stage-3: Diebesgut (TARGET) ist im Inventar
+          // User-Punkt: "bei diebstahl ist Hauptziel Rueckgabe, nicht Festnahme".
+          // Wenn das gestohlene Objekt in Karls Inventar landet, ist Hauptziel
+          // im Prinzip erreicht - er muss es nur noch zum Klient bringen.
+          const tName = (targetName || '').toLowerCase()
+            .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+          const tWords = tName.split(/\s+/).filter(w => w.length >= 4);
+          let targetInInventory = false;
+          for (const item of inventory) {
+            const itLower = (item || '').toLowerCase()
+              .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+            for (const w of tWords) {
+              if (itLower.includes(w)) { targetInInventory = true; break; }
+            }
+            if (targetInInventory) break;
+          }
+          if (targetInInventory) {
+            caseProgress.ueberfuehrt = true;
+            caseProgress.stage = 3;
+            caseProgress.stage3StartScene = sceneCounter;
+            console.log('[Schatten] AUTO-FORCING Stage 3 (diebstahl): ' + targetName + ' im Inventar');
+            diag('progress', '✦ AUTO-STAGE 3 (diebstahl) erzwungen: ' + targetName + ' wieder bei Karl');
+            showProgressToast('DIEBESGUT ZURUECKGEHOLT', 'Karl hat ' + targetName + ' - jetzt zum Klient.');
+          }
         } else if (stage2Scenes >= 10) {
           // Inhalts-Check
           const recentScenes = logEntries.filter(e => e && e.type === 'scene').slice(-5);
@@ -15151,9 +15349,16 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         });
         caseProgress.lastEurekaScene = sceneCounter;
         console.log('[Schatten] Eureka-Verknuepfung:', verb);
+        // v7.9.23: Eureka-Diag-Log behaelt vollen Text fuer Lektorat,
+        // aber der USER-TOAST zeigt nur eine generische Meldung ohne
+        // spezifische Behauptungen. User-Punkt: "weil es da eine extrem
+        // hohe Wahrscheinlichkeit fuer Halluzinationen gibt - lieber
+        // vermeiden zu viel Details zu nennen". Im Status-Popup sieht
+        // der Spieler die Anzahl Indizien. Echte Schluesse zeigt die
+        // Erzaehlung selbst, nicht ein Toast-Banner.
         diag('progress', '✦ EUREKA: ' + verb);
-        // Bei wirklich verbundenen Indizien gibt's auch einen kleinen Toast
-        showProgressToast('VERBINDUNG ENTDECKT', verb);
+        const totalVerknuepfungen = caseProgress.verknuepfungen.length;
+        showProgressToast('NEUE VERBINDUNG', 'Die Spuren formen ein klareres Bild (' + totalVerknuepfungen + ' Verknuepfung' + (totalVerknuepfungen === 1 ? '' : 'en') + ').');
       }
       } // schliesst v7.9.10 Phantom-Fact-else
       } // schliesst v7.9.23 isTrivial-else
@@ -15666,6 +15871,31 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     pendingRetry = null;
     lastErrorDebug = null;
   } catch (e) {
+    // v7.9.23: 503/504 Service Unavailable - Server temporaer down.
+    // Modell fuer 90s blockieren und sofort zu naechstem wechseln, statt
+    // an der selben URL festzuhaengen. Anlass: Gemini 2.5 Flash-Lite lieferte
+    // 503 um 04:31, System ging auf Mistral und probierte nicht wieder Gemini.
+    if (e.isServiceUnavailable) {
+      hideLoading();
+      const previousModel = getActiveModel();
+      blockModel(previousModel.model, 90 * 1000, 'service-unavailable-503');
+      const nextModel = advanceModel();
+      if (nextModel && nextModel.label !== previousModel.label) {
+        console.log('[Schatten] 503 ServiceUnavailable on', previousModel.label, '-> 90s blockiert, switching to', nextModel.label);
+        skipNextThrottle = true;
+        if (optionForRollback) {
+          performApiCall(userMsg, isStart, optionForRollback, retryCount, rateLimitCount, openingRetryCount);
+        } else {
+          performApiCall(userMsg, isStart, undefined, retryCount, rateLimitCount, openingRetryCount);
+        }
+        return;
+      }
+      // Alle Modelle blockiert
+      console.warn('[Schatten] 503 ServiceUnavailable - alle Modelle blockiert');
+      lastErrorDebug = buildDebugDump(e, userMsg, retryCount);
+      showError('Alle KI-Server sind gerade ueberlastet. In 1-2 Minuten erneut versuchen.', lastErrorDebug);
+      return;
+    }
     if (e.isRateLimit) {
       // Rate limit handling with loop protection
       hideLoading();
@@ -16135,15 +16365,26 @@ function botChooseByStrategy(options) {
           return botRngChoice(konfrontOptions);
         }
       }
-      // v7.9.23: Stage 1 + 15+ Indizien: Verdaechtigen-Suche-Options.
-      // Krause-Run v7.9.22: 17 Indizien aber nie Stage 2 - Bot scannte nie
-      // nach "Konfrontation"-/"Verdacht"-Patterns weil Stage noch 1 war.
+      // v7.9.23: Stage 1 + 15+ Indizien: Zielsuch-Options.
+      // v7.9.24: Case-Type-spezifisch. Vermisst sucht Person, Diebstahl sucht
+      // Diebesgut, Mord/Wahrheit sucht Verdaechtigen.
       if (caseProgress.stage === 1 && (caseProgress.indizien || []).length >= 15) {
-        const verdachtPattern = /\b(konfrontier|verhoer|verdacht|stelle?\s+\w+\s+zur\s+rede|verfolge\s+den\s+verdacht|beweise?\s+vorleg|gestaendnis|zwing|drohne?\s+mit|geh\s+zu\s+\w+\s+und\s+(frag|stell)|fall\s+(loesen|abschliess|aufkl)|melde\s+(roth|lindner|kommissar))/i;
-        const verdachtOptions = options.filter(opt => verdachtPattern.test(opt.text));
-        if (verdachtOptions.length > 0) {
-          console.log('[Bot] Survival-Override: VERDACHT SUCHEN (Stage 1, ' + caseProgress.indizien.length + ' Indizien) - Konfrontations-Option waehlen');
-          return botRngChoice(verdachtOptions);
+        const caseT = (caseSetup && caseSetup.caseType || '').toLowerCase();
+        let zielPattern;
+        if (caseT === 'vermisst') {
+          // Bei vermisst: Optionen die zum Auffinden fuehren
+          zielPattern = /\b(such|find|aufspuer|verfolge\s+die\s+spur|geh\s+zu(r|m)?\s+|fahr\s+zu(r|m)?\s+|nimm\s+die\s+spur|haus(durchsuch|durchsuchung)|kontroll\s+\w+\s+(lager|halle|hinterhof)|brich\s+in|durchforsch)/i;
+        } else if (caseT === 'diebstahl') {
+          // Bei diebstahl: Optionen die zum Diebesgut fuehren
+          zielPattern = /\b(such|find|hol|durchsuch|nimm\s+\w+\s+mit|stell\s+sie?\s+|verlange?\s+\w+\s+(zurueck|her)|brich\s+in|geh\s+zu(r|m)?\s+(hehler|antiqu|laden|lager)|kontroll\s+\w+\s+(lager|halle)|drucke\s+\w+\s+(an|aus)|drohne?\s+mit\s+(polizei|vp))/i;
+        } else {
+          // Mord/Wahrheit/Beschatten/Politisch: Konfrontation/Verdacht-Pattern
+          zielPattern = /\b(konfrontier|verhoer|verdacht|stelle?\s+\w+\s+zur\s+rede|verfolge\s+den\s+verdacht|beweise?\s+vorleg|gestaendnis|zwing|drohne?\s+mit|geh\s+zu\s+\w+\s+und\s+(frag|stell)|fall\s+(loesen|abschliess|aufkl)|melde\s+(roth|lindner|kommissar))/i;
+        }
+        const zielOptions = options.filter(opt => zielPattern.test(opt.text));
+        if (zielOptions.length > 0) {
+          console.log('[Bot] Survival-Override: ZIEL-SUCHE (Stage 1, ' + caseProgress.indizien.length + ' Indizien, Type=' + caseT + ') - Ziel-Option waehlen');
+          return botRngChoice(zielOptions);
         }
       }
     }
@@ -17014,6 +17255,62 @@ function deactivateDebugMode(event) {
   const menu = document.getElementById('settings-menu');
   if (menu) menu.classList.add('hidden');
   showAdminToast('Debug-Modus deaktiviert. Settings-Menue ist jetzt im Standard-Modus.');
+}
+
+// v7.9.23: Modell-Status anzeigen. User-Frage: "kriegen wir 503-Fehler, sind
+// Modelle gesperrt?". Listet alle Modelle in der Chain mit Status (gruen
+// verfuegbar / rot blockiert mit Grund + Ablaufzeit).
+function showModelStatus(event) {
+  if (event) event.stopPropagation();
+  const now = Date.now();
+  const lines = ['<strong>Modell-Status:</strong><br>'];
+  for (const m of MODEL_CHAIN) {
+    const cd = modelCooldowns[m.model];
+    const skipped = sessionSkippedModels && sessionSkippedModels.has(m.model);
+    let status, color;
+    if (skipped) {
+      status = 'session-skip (TPM zu klein)';
+      color = '#c08080';
+    } else if (cd && cd.until > now) {
+      const minLeft = Math.ceil((cd.until - now) / 60000);
+      const untilStr = new Date(cd.until).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+      status = '🔴 blockiert bis ' + untilStr + ' (' + minLeft + ' min) - ' + (cd.reason || 'unbekannt');
+      color = '#d28080';
+    } else {
+      status = '🟢 verfuegbar';
+      color = '#90c090';
+    }
+    lines.push('<div style="color:' + color + ';margin:4px 0;font-size:11px;font-family:monospace">' + m.label + ' [' + m.provider + ']: ' + status + '</div>');
+  }
+  // Modal-Box anzeigen
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.onclick = () => overlay.remove();
+  const box = document.createElement('div');
+  box.style.cssText = 'max-width:600px;background:#1a1a1a;border:1px solid #d4b270;border-radius:8px;padding:24px;color:#d2b46e;max-height:80vh;overflow-y:auto;';
+  box.onclick = (e) => e.stopPropagation();
+  box.innerHTML = lines.join('') + '<br><div style="text-align:right;margin-top:16px;"><button onclick="this.closest(\'.model-status-overlay\').remove()" style="background:rgba(212,178,112,0.15);border:1px solid rgba(212,178,112,0.4);color:#d4b270;padding:8px 16px;cursor:pointer;border-radius:4px;font-family:monospace;">Schliessen</button></div>';
+  overlay.classList.add('model-status-overlay');
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+}
+
+function resetModelBlocks(event) {
+  if (event) event.stopPropagation();
+  const blocked = Object.keys(modelCooldowns || {});
+  if (blocked.length === 0) {
+    showAdminToast('Keine Modell-Sperren aktiv.');
+    return;
+  }
+  if (!confirm('Alle ' + blocked.length + ' Modell-Sperren loeschen?\n\nDamit landen alle Modelle wieder oben in der Auswahl-Kette. Bei echten Daily-Limits wird das Modell beim naechsten Versuch sofort wieder gesperrt.')) return;
+  modelCooldowns = {};
+  if (sessionSkippedModels) sessionSkippedModels.clear();
+  saveModelCooldowns();
+  // Modell-Index zuruecksetzen damit das staerkste Modell oben drankommt
+  if (typeof activeModelIndex !== 'undefined') {
+    activeModelIndex = 0;
+  }
+  showAdminToast(blocked.length + ' Modell-Sperren geloescht. Naechste Anfrage startet wieder mit dem staerksten Modell.');
 }
 
 // URL-Param-Variante des Bots (parallel, fuer Skript-Steuerung).
