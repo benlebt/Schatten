@@ -1212,7 +1212,7 @@
     background: rgba(220,180,80,0.1);
     font-weight: 600;
   }
-  /* v7.7: HEILUNGS-Marker - Doc Wagner aufsuchen bei niedriger Verfassung */
+  /* v7.7: GENESUNGS-Marker - Doc Wagner aufsuchen bei niedriger Verfassung */
   .option-marker-heal {
     border-color: rgba(110,180,120,0.55);
     color: rgba(150,220,160,0.95);
@@ -1978,7 +1978,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.9.14 · Tageszeit-Marathon-Override + Stage-2-Floor + FAMILY-Schutz</div>
+    <div class="start-version">Schatten v7.9.14 · Behandlungs-Push + Spielzeit-Rhythmik + Custody-Konsistenz-Bilanz</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -4033,7 +4033,7 @@ let lastInjury = '';
 let lastInjuryScene = 0; // v6.92: Szene in der die aktuelle Verletzung gesetzt wurde
 // v7.1: An welchem Spieltag hat Doc Wagner Karl zuletzt verarztet?
 // Verhindert dass Karl 5 Szenen lang in Doc Wagners Praxis sitzt und jede
-// Szene +1 Heilung sammelt. Eine Behandlung pro Tag.
+// Szene +1 Genesung sammelt. Eine Behandlung pro Tag.
 let lastDocHealingDay = 0;
 // Letzte Spannung (1-5), damit advanceGameTime in Action-Sequenzen pausieren kann
 let lastSpannung = 1;
@@ -6179,6 +6179,119 @@ function buildTranscriptText() {
     else if (historicalAnchorCount >= 1) bewertung = 'duenn';
     else bewertung = 'leer';
     out += '  - Bewertung: ' + bewertung + '\n';
+
+    // v7.9.14: CUSTODY-KONSISTENZ-BILANZ. Erkennt Sprünge zwischen
+    // "Karl im Gewahrsam"-Flag und Story-Inhalt. Lindenbaum-Run hatte 3 rein-raus-
+    // Wechsel in 23 Szenen (Cust 0->1->2->0->1->2->3->0->...) - Inkonsistenz-Verdacht.
+    let custodyChanges = 0;
+    let lastCust = null;
+    let lastSceneInCustody = -1;
+    let custodyWasActive = false;
+    for (const e of logEntries) {
+      if (e.type !== 'scene') continue;
+      const cur = !!e.gewahrsam;
+      if (lastCust === null) {
+        lastCust = cur;
+        if (cur) custodyWasActive = true;
+        continue;
+      }
+      if (cur !== lastCust) {
+        custodyChanges++;
+        lastCust = cur;
+        if (cur) custodyWasActive = true;
+      }
+    }
+    if (custodyWasActive) {
+      out += '\nCustody-Konsistenz (Lektorat):\n';
+      out += '  - Custody-Statuswechsel im Run: ' + custodyChanges + '\n';
+      if (custodyChanges >= 4) {
+        out += '  - ⚠ MEHRFACHE Custody-Wechsel - moeglicherweise narrativ inkonsistent (Karl springt zu oft zwischen Verhoer und Freiheit)\n';
+      } else if (custodyChanges >= 2) {
+        out += '  - mehrere Custody-Wechsel - Lektorat empfohlen (war jeder Wechsel narrativ erklaert?)\n';
+      } else {
+        out += '  - sauber\n';
+      }
+    }
+
+    // v7.9.14: VF-KONSISTENZ-BILANZ. Wenn Karl irgendwo Vf 1 hatte ohne Genesung,
+    // sollte das Lektorat es als Spitze flaggen.
+    let vfMin = 5;
+    let scenesAtCriticalVf = 0;
+    let hadHealingTrip = false;
+    for (const e of logEntries) {
+      if (e.type !== 'scene') continue;
+      if (typeof e.verfassung === 'number') {
+        if (e.verfassung < vfMin) vfMin = e.verfassung;
+        if (e.verfassung <= 2) scenesAtCriticalVf++;
+        if (e.ort && /doc wagner|praxis|charite|krankenhaus|schaeferstrasse/i.test(e.ort)) {
+          hadHealingTrip = true;
+        }
+      }
+    }
+    if (vfMin <= 2) {
+      out += '\nVerletzungs-Konsistenz (Lektorat):\n';
+      out += '  - Tiefster Vf-Stand: ' + vfMin + '/5\n';
+      out += '  - Szenen mit Vf<=2 (schwer verletzt): ' + scenesAtCriticalVf + '\n';
+      out += '  - Behandlungs-Trip (Doc/Praxis/Krankenhaus): ' + (hadHealingTrip ? 'JA' : 'NEIN - Karl war kritisch verletzt ohne Behandlungs-Versuch') + '\n';
+      if (scenesAtCriticalVf >= 4 && !hadHealingTrip) {
+        out += '  - ⚠ LANGE Vf<=2 ohne Genesung - Behandlungs-Push wurde nicht befolgt!\n';
+      }
+    }
+
+    // v7.9.14: TAGESZEIT-MARATHON-BILANZ. Lange Blöcke in derselben Tageszeit
+    // wie Brandt-Run Sz 1-16 alles MORGEN sind unrealistisch.
+    const sceneEntries = logEntries.filter(e => e.type === 'scene');
+    let maxTzBlock = 0;
+    let curTzBlock = 1;
+    let prevTz = null;
+    const tzBlockDetails = [];
+    let blockStart = 0;
+    for (let i = 0; i < sceneEntries.length; i++) {
+      const e = sceneEntries[i];
+      const key = (e.day || '') + '_' + (e.time || '');
+      if (key !== prevTz) {
+        if (prevTz !== null && curTzBlock >= 6) {
+          tzBlockDetails.push('Sz ' + (blockStart + 1) + '-' + i + ': ' + prevTz.replace('_', ' ') + ' (' + curTzBlock + ' Sz)');
+        }
+        if (curTzBlock > maxTzBlock) maxTzBlock = curTzBlock;
+        curTzBlock = 1;
+        blockStart = i;
+        prevTz = key;
+      } else {
+        curTzBlock++;
+      }
+    }
+    if (curTzBlock > maxTzBlock) maxTzBlock = curTzBlock;
+    if (prevTz !== null && curTzBlock >= 6) {
+      tzBlockDetails.push('Sz ' + (blockStart + 1) + '-' + sceneEntries.length + ': ' + prevTz.replace('_', ' ') + ' (' + curTzBlock + ' Sz)');
+    }
+    if (maxTzBlock >= 6) {
+      out += '\nTageszeit-Marathon (Lektorat):\n';
+      out += '  - Laengster Block in derselben Tageszeit: ' + maxTzBlock + ' Szenen\n';
+      if (tzBlockDetails.length > 0) {
+        out += '  - Marathon-Bloecke (>=6 Sz):\n';
+        for (const d of tzBlockDetails) out += '    * ' + d + '\n';
+      }
+      if (maxTzBlock >= 10) {
+        out += '  - ⚠ extrem langer Marathon - Tageszeit-Force-Push hat versagt\n';
+      }
+    }
+
+    // v7.9.14: SPIELZEIT-RHYTHMIK. Wie viele Tage hatte der Run?
+    const totalDays = sceneEntries.length > 0 ? Math.max(...sceneEntries.map(e => e.day || 1)) : 1;
+    const totalScenes = sceneEntries.length;
+    out += '\nSpielzeit (Lektorat):\n';
+    out += '  - Insgesamt: ' + totalDays + ' Tag(e), ' + totalScenes + ' Szenen\n';
+    out += '  - Szenen pro Tag (Schnitt): ' + (totalDays > 0 ? (totalScenes / totalDays).toFixed(1) : '?') + '\n';
+    if (totalScenes >= 30 && totalDays < 2) {
+      out += '  - ⚠ Run zu lang fuer einen Tag - sollte ueber 2-3 Tage gehen\n';
+    } else if (totalScenes >= 20 && totalDays === 1) {
+      out += '  - knapp (1 Tag mit ' + totalScenes + ' Szenen) - leichter Marathon\n';
+    } else if (totalDays >= 2 && totalDays <= 5) {
+      out += '  - im Soll (Schatten-Faelle dauern 1-5 Tage)\n';
+    } else if (totalDays > 5) {
+      out += '  - sehr lang (' + totalDays + ' Tage) - Schatten-Faelle sollten unter 5 Tage bleiben\n';
+    }
   }
   // Autoplay-Info wenn aktiv
   if (window.__schattenBotInfo) {
@@ -7152,20 +7265,23 @@ function advanceGameTime() {
   // sceneCounter wird in performApiCall hochgezaehlt (nach erfolgreichem Receive),
   // damit Retries nicht doppelt zaehlen. Hier nur Tageszeit/Tag voranschreiten.
   // NACHT (Index 5) ist die laengste Phase im Krimi: Verhoere ziehen sich, Aktion in der Dunkelheit
-  // dauert. Daher kleinere Token-Schritte fuer NACHT (0.2-0.35) als fuer andere Phasen (0.4-0.65).
+  // dauert. Daher kleinere Token-Schritte fuer NACHT (0.25-0.4) als fuer andere Phasen (0.55-0.8).
+  // v7.9.14: Token-Schritte erhoeht. Vorher 0.4-0.65 = ~2 Sz pro Phase = 12 Sz/Tag.
+  // Beobachtet: Runs hatten 19-29 Sz pro Tag. Ziel: 10-14 Sz/Tag, Runs ueber 2-4 Tage.
+  // Neu: 0.55-0.8 = ~1.5 Sz pro Phase = 9 Sz/Tag. Bei 30-Sz-Run also 3 Tage.
   const isNacht = gameTimeIdx === 5;
   if (isNacht) {
-    timeAdvanceTokens += 0.2 + Math.random() * 0.15;
+    timeAdvanceTokens += 0.25 + Math.random() * 0.15;
   } else {
-    // v6.55: erhoeht von 0.3-0.5 auf 0.4-0.65 damit Tageszeiten zackiger voranschreiten.
-    // Im Hilde-Run gab es 5x MORGEN in Folge, was sich seltsam langsam anfuehlte.
-    timeAdvanceTokens += 0.4 + Math.random() * 0.25;
+    timeAdvanceTokens += 0.55 + Math.random() * 0.25;
   }
 
-  // FORCE-PUSH (v6.55): Nach 4 Szenen in derselben Tageszeit ohne Action MUSS
-  // die Tageszeit voranschreiten. Sonst stockt die Welt - z.B. 5x MORGEN in Folge
-  // wirkt wie Spielmechanik-Bug. NACHT-Pausen sind erlaubt (lange Phase).
-  if (!isNacht && scenesInCurrentTime >= 4 && timeAdvanceTokens < 1) {
+  // FORCE-PUSH (v6.55): Nach 3 Szenen in derselben Tageszeit ohne Action MUSS
+  // die Tageszeit voranschreiten. Sonst stockt die Welt.
+  // v7.9.14: Cap von 4 auf 3 gesenkt - zusammen mit erhoehten Tokens ergibt das
+  // realistischeres ~9 Szenen/Tag-Tempo. Vorher 4-Cap + 0.4-Token = bis zu 16 Sz/Tag
+  // (Brandt-Run T1 hatte 32 Szenen).
+  if (!isNacht && scenesInCurrentTime >= 3 && timeAdvanceTokens < 1) {
     console.log('[Schatten] Tageszeit-Force-Push nach', scenesInCurrentTime, 'Szenen in derselben Phase.');
     diag('detect', 'Tageszeit-Force-Push: ' + scenesInCurrentTime + ' Szenen in ' + (TIMES_OF_DAY[gameTimeIdx] || '?'));
     timeAdvanceTokens = 1;
@@ -7202,22 +7318,22 @@ function advanceGameTime() {
       karlEnergie = 100;
       karlHunger = Math.max(2, karlHunger - 4);  // morgens leichter Hunger ist normal
       hungerAccumulator = 0;
-      // v6.83: VERFASSUNG-HEILUNG bei Tageswechsel.
+      // v6.83: VERFASSUNG-GENESUNG bei Tageswechsel.
       // Karl ist nicht unverwundbar, aber er heilt im Schlaf etwas. Bei Tageswechsel
       // mit ruhiger letzter Szene (Spannung <=2) heilt Karl 1 Punkt Verfassung.
       // Bei sehr ruhiger letzter Szene (Bett, Schlafzimmer, Buero) +1 extra.
       // Max-Cap: bei Verfassung 2/5 max +1 (nicht direkt zurueck auf 5).
-      // Bei Verfassung 1 (lebensgefaehrlich) keine spontane Heilung - braucht Arzt.
+      // Bei Verfassung 1 (lebensgefaehrlich) keine spontane Genesung - braucht Arzt.
       if (typeof verfassung === 'number' && verfassung > 0 && verfassung < 5) {
         const wasInRestfulPlace = lastFullScene && lastFullScene.szene && /bett|schlafzimmer|hotel|wohnung|buero|doc wagner|charite/i.test(lastFullScene.szene);
         const wasCalm = (typeof lastSpannung === 'number' && lastSpannung <= 2);
         if (verfassung >= 2 && wasCalm && wasInRestfulPlace) {
           const before = verfassung;
           verfassung = Math.min(5, verfassung + 1);
-          console.log('[Schatten] Tagesheilung: Verfassung', before, '->', verfassung, '(ruhiger Schlafplatz)');
-          diag('state', 'Tagesheilung Verfassung ' + before + ' -> ' + verfassung + ' (ruhig + Schlafplatz)');
+          console.log('[Schatten] Tagesgenesung: Verfassung', before, '->', verfassung, '(ruhiger Schlafplatz)');
+          diag('state', 'Tagesgenesung Verfassung ' + before + ' -> ' + verfassung + ' (ruhig + Schlafplatz)');
         }
-        // bei Verfassung 1 KEINE Heilung - braucht echten Arzt
+        // bei Verfassung 1 KEINE Genesung - braucht echten Arzt
       }
       // FORCE-SLEEP-NARRATIVE: Wenn der gradullen Tageswechsel bei niedriger Energie
       // greift, ist Karl im Verlauf sehr muede geworden. Die KI muss in der naechsten
@@ -7599,7 +7715,7 @@ function renderOptions(scene) {
   scene.optionen.forEach(opt => {
     const btn = document.createElement('button');
     btn.className = 'option-btn';
-    // Marker: wenn diese Option Tageswechsel/Essen/Romantik/Aufloesung/Heilung triggert,
+    // Marker: wenn diese Option Tageswechsel/Essen/Romantik/Aufloesung/Genesung triggert,
     // visuell anzeigen. Detektion vor dem Klick, damit der Spieler informiert entscheiden kann.
     // v7.7: Reihenfolge nach Prioritaet - Aufloesung hat hoechste Prioritaet (golden,
     // signalisiert dem User dass der Fall hier endet)
@@ -7613,7 +7729,7 @@ function renderOptions(scene) {
       // v7.7: HOECHSTE Prioritaet - signalisiert Fall-Aufloesung
       markerHtml = '<span class="option-marker option-marker-resolve">⚡ AUFLOESUNG</span>';
     } else if (isHealOption) {
-      // v7.7: Heilung bei niedriger Verfassung
+      // v7.7: Genesung bei niedriger Verfassung
       markerHtml = '<span class="option-marker option-marker-heal">+ BEHANDLUNG</span>';
     } else if (isRomanticOption) {
       // Romantik impliziert auch Tageswechsel wenn Uebernachten dabei ist
@@ -9186,6 +9302,41 @@ Marlowe-Stil: stilvoll, elliptisch, NICHT explizit. Tuer schliesst sich, Schnitt
       recap += `\n\nKARL IM STASI-GEWAHRSAM (Verhoer-Szene ${folterSceneCount + 1}): Karl ist in einer Zelle/Verhoerraum des MfS. Optionen muessen Verhoer-typisch sein: schweigen, kooperieren, bestechen, Roth-Kontakt erwaehnen. ${folterSceneCount >= 2 && verfassung <= 2 && isAbendOderNacht ? 'Karl ist geschwaecht und es ist Abend/Nacht. EINE Option sollte "Vor Erschoepfung einnicken" sein - das fuehrt zum Tageswechsel in der Zelle, Karl wacht morgens auf.' : 'Verhoer geht weiter.'} ${folterSceneCount >= 3 ? 'Das Verhoer dauert nun schon lange. Erwaehne im Erzaehltext deutliche koerperliche Konsequenzen (geschwollene Lippen, Prellungen, taube Finger von Handschellen).' : ''}`;
     }
 
+    // v7.9.14: BEHANDLUNGS-PUSH. Wenn Karl verletzt UND nicht im Gewahrsam UND keine
+    // akute Action (Spannung <=3), MUSS die KI mindestens eine Behandlungs-Option anbieten.
+    // Sonst stirbt der Spieler an unheilbarer Wunde - Brauer-Run war ein Beispiel:
+    // Vf 5->4->3->2->1->1->1->0->0 ueber 8 Szenen, keine einzige Behandlungs-Option dazwischen.
+    // Bot waehlte zufaellig.
+    // Zwei Eskalations-Stufen:
+    //   Vf <= 2 (schwer verletzt): PFLICHT Behandlungs-Option
+    //   Vf <= 3 (angeschlagen): SOLL Behandlungs-Option (Vorbeugung gegen Spirale nach unten)
+    if (verfassung <= 3 && !karlInStasiCustody && (typeof lastSpannung !== 'number' || lastSpannung <= 3)) {
+      const localSektor = (caseSetup && caseSetup.setup && /West/i.test(caseSetup.setup.sektor || '')) ? 'West' : 'Ost';
+      const behandlungsOrt = localSektor === 'West' ? 'Doc Wagner Praxis (Schaeferstrasse Schoeneberg, West)' : 'Charite-Notaufnahme (Mitte, Ost) ODER nach Schoeneberg zu Doc Wagner (West)';
+      const pflicht = verfassung <= 2 ? 'PFLICHT' : 'SOLL';
+      recap += `\n\nBEHANDLUNGS-PUSH (${pflicht}): Karl hat Verfassung ${verfassung}/5 - ${verfassung <= 2 ? 'schwer verletzt' : 'angeschlagen'}. Die Spannung ist niedrig (${lastSpannung || '?'}/5) und Karl ist NICHT in Gewahrsam. Karl kann sich also versorgen.
+
+DEINE PFLICHT: Eine der 4 Optionen ${verfassung <= 2 ? 'MUSS' : 'SOLL'} eine Behandlungs-Option sein. Konkret eine dieser Varianten:
+- "Geh zu ${behandlungsOrt}, dich verarzten lassen"
+- "Setz dich kurz hin und versorg die Wunde mit Verbandzeug aus der Schublade" (wenn Karl im Buero ist)
+- "Ruf Doc Wagner an, er soll vorbeikommen" (wenn Karl gerade nicht weg kann)
+- "Geh zur Charite Krankenhaus in Mitte, dort gibt es Notaufnahme" (Ost-Variante)
+
+Die Behandlungs-Option soll konkret formuliert sein (Ort genannt), nicht vage. Karl ist nicht professionell distanziert - die Schmerzen ueberwiegen jetzt.
+
+Wenn Karl die Behandlungs-Option waehlt:
+- Erzaehle den Weg dorthin (5-10 Min S-Bahn West oder Strassenbahn Ost)
+- Doc Wagner / Krankenhaus-Schwester verarztet konkret (Jod, Nahen, Verband)
+- Verfassung steigt um +1 bis +2 (verfassung_delta entsprechend)
+- Karl ist danach "leicht angeschlagen" statt "stark verletzt"
+
+Wenn Karl die Behandlungs-Option NICHT waehlt und stattdessen weiter ermittelt, IST DAS RISIKANT - aber respektiere die Spieler-Wahl. Erwaehne im naechsten Erzaehltext aber die Konsequenz (Wunde brennt, Hand zittert, Schwindel beim Aufstehen).`;
+    }
+
+    // v7.9.14: Energie unter 20 ohne Action -> Schlaf-Option erzwingen
+    if (karlEnergie <= 20 && !karlInStasiCustody && (typeof lastSpannung !== 'number' || lastSpannung <= 3)) {
+      recap += `\n\nERSCHOEPFUNGS-PUSH (PFLICHT): Karl hat Energie ${karlEnergie}/100 - am Ende seiner Kraft. Keine Action gerade. Eine der 4 Optionen MUSS eine Ruhe/Schlaf-Option sein. Bei Tageszeit Abend/Nacht: "Geh nach Hause und leg dich ins Bett". Bei Tag: "Setz dich in den Imbiss bei Trude und ess was Heisses, ruh dich kurz aus" oder "Fahr ins Buero, knall die Tuer zu und schlaf eine Stunde auf der Couch".`;
+    }
     messages.push({ role: 'user', content: recap });
     messages.push({ role: 'assistant', content: 'Verstanden. Ich knüpfe nahtlos und räumlich konsistent an die letzte Szene an, bleibe im Präsens und in der Du-Perspektive.' });
   }
@@ -11508,7 +11659,7 @@ function detectResolveAction(text, context) {
     .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
   const ctx = context || {};
   // v7.7: Negation - wenn die Option zu Doc Wagner / Praxis / Arzt fuehrt, ist es
-  // KEINE Aufloesung sondern eine Heilung. Auch wenn dabei TARGET-Person mitgenommen wird.
+  // KEINE Aufloesung sondern eine Genesung. Auch wenn dabei TARGET-Person mitgenommen wird.
   if (/\b(doc\s+wagner|wagner|praxis|schaeferstrasse|krankenhaus|arzt|verarzt)\b/.test(lower)) {
     return false;
   }
@@ -12900,13 +13051,13 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       }
     }
 
-    // v7.1: DOC-WAGNER-HEILUNG. Wenn Karl in Doc Wagners Praxis ist und tatsaechlich
+    // v7.1: DOC-WAGNER-BEHANDLUNG. Wenn Karl in Doc Wagners Praxis ist und tatsaechlich
     // behandelt/verarztet wird, sollte Verfassung steigen. Anlass: Run30 zeigte einen
     // Toast "Doc Wagner aufsuchen oder Pause machen", Karl ging hin, redete mit Doc -
     // aber Verfassung stieg nicht. Es war narrativ also unsinnig.
     //
     // Triggert nur 1x pro Spieltag (verhindert dass Karl 5 Szenen in der Praxis sitzt
-    // und jede Szene +1 sammelt). Heilung: +1 bei Verfassung 3-4, +2 bei Verfassung 1-2.
+    // und jede Szene +1 sammelt). Genesung: +1 bei Verfassung 3-4, +2 bei Verfassung 1-2.
     // Bedingung: Szene MUSS Doc Wagner / Praxis erwaehnen UND eine echte Behandlung
     // erzaehlen (verbinden, naehen, spritze, salbe, untersuchen).
     if (typeof verfassung === 'number' && verfassung > 0 && verfassung < 5 && lastDocHealingDay < gameDay) {
@@ -12928,8 +13079,8 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         verfassung = Math.min(5, verfassung + heal);
         lastDocHealingDay = gameDay;
         if (verfassung >= 5) { lastInjury = ''; lastInjuryScene = 0; }
-        console.log('[Schatten] Doc-Wagner-Heilung: Verfassung', before, '->', verfassung, '(+' + heal + ')');
-        diag('state', 'Doc-Wagner-Heilung Verfassung ' + before + ' -> ' + verfassung + ' (+' + heal + ', max 1x pro Tag)');
+        console.log('[Schatten] Doc-Wagner-Genesung: Verfassung', before, '->', verfassung, '(+' + heal + ')');
+        diag('state', 'Doc-Wagner-Genesung Verfassung ' + before + ' -> ' + verfassung + ' (+' + heal + ', max 1x pro Tag)');
         if (typeof showProgressToast === 'function') {
           showProgressToast('VERARZTET', 'Doc Wagner hat Karl verarztet. Verfassung +' + heal + '.');
         }
@@ -15301,11 +15452,16 @@ function botChooseByStrategy(options) {
       }
     }
     // PRIO 3: Karl ist schwer verletzt (Verfassung <=2) - Doc Wagner / Hilfe suchen
-    if (verfassung <= 2) {
-      const helpPattern = /\b(doc\s+wagner|arzt|krankenhaus|charite|wagner.*praxis|verbind\s+die|notarzt|medizin|sanitaeter|hilfe\s+(holen|suchen|rufen)|behandl|wunde\s+versorg)/i;
+    // v7.9.14: Auch Vf 3 wenn keine Action - Vorbeugung gegen Abwaerts-Spirale.
+    // Brauer-Run: Vf 3 (Sz 7) -> keine Behandlung gesucht -> Vf 1 in Sz 9 -> Tod in Sz 12.
+    // Wenn Karl bei Vf 3 schon zum Doc gegangen waere, haette der Run anders enden koennen.
+    const isNotActionScene = (typeof lastSpannung !== 'number' || lastSpannung <= 3);
+    const needsHelp = verfassung <= 2 || (verfassung === 3 && isNotActionScene);
+    if (needsHelp) {
+      const helpPattern = /\b(doc\s+wagner|arzt|krankenhaus|charite|wagner.*praxis|verbind\s+die|notarzt|medizin|sanitaeter|hilfe\s+(holen|suchen|rufen)|behandl|wunde\s+versorg|verband|jodtinkt)/i;
       const helpOptions = options.filter(opt => helpPattern.test(opt.text));
       if (helpOptions.length > 0) {
-        console.log('[Bot] Survival-Override: Karl ist schwer verletzt (Vf=' + verfassung + '), suche Hilfe');
+        console.log('[Bot] Survival-Override: Karl ist verletzt (Vf=' + verfassung + ', Sp=' + (lastSpannung || '?') + '), suche Hilfe');
         return botRngChoice(helpOptions);
       }
     }
