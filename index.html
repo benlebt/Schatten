@@ -2016,7 +2016,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.9.25 · KeyClues-System + alle Setups mit Spur-Indizien + case-type-spezifische Bot-Logic</div>
+    <div class="start-version">Schatten v7.9.26 · Loesung-Pflicht-Felder pro caseType + KeyClues-Stage-3 fuer beschatten/wahrheit + Diebstahl-Suspect-Begegnung</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2093,7 +2093,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.9.25</span>
+    <span>Schatten v7.9.26</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -2956,54 +2956,83 @@ ERÖFFNUNGSSETUP:
 `;
 
 // v7.9.24: Lösungs-Definitionen pro caseType.
-// User-Punkt: "Hauptziel bei einem vermissten Fall ist den Vermissten zu
-// finden. Der Suspect ist nur optional. Bei Mord ist der Taeter das Ziel.
-// Bei Wahrheit die Wahrheit." Pro Type ein klares Erfolgskriterium das das
-// Spiel zu Stage 3 (Hauptziel erreicht) und Stage 4 (Klient informiert)
-// fuehrt. Verhindert dass Mistral Diebstahl-Faelle wie Mordfaelle behandelt
-// (Tante Frieda als Taeter ueberfuehren statt das Etui zurueckzubringen).
+// v7.9.26: Geschaerft - klar unterscheiden zwischen Fall-Typen die KONKRETE
+// PERSON/OBJEKT brauchen vs. Fall-Typen wo keyClues allein reichen.
+// User-Punkt: "bei affaeren reicht keyClues - kein Suspect noetig. Bei Mord
+// muss Moerder gefasst werden. Bei vermisst muss Person lokalisiert werden.
+// Bei diebstahl muss Diebesgut zurueckgeholt UND man trifft dabei meist
+// den Hehler/Suspect."
+//
+// Felder pro Type:
+//   benoetigtPerson:  'TARGET' (vermisst), 'SUSPECT' (mord), 'BEIDE' (diebstahl), 'KEINE' (beschatten/wahrheit/politisch)
+//   benoetigtObjekt:  'TARGET' (diebstahl), 'KEINE' (alle anderen)
+//   loesungViaKeyClues: true wenn 4-5 keyClues + Klient-Bericht ausreichen (beschatten/wahrheit)
 const CASE_TYPE_GOALS = {
   'vermisst': {
-    hauptziel: 'Den Vermissten (TARGET) physisch finden - lokalisieren, lebend oder tot',
-    stage3Bedingung: 'TARGET ist bei Karl (in Sichtweite, in seinem Wagen, oder Karl weiss konkret wo TARGET ist)',
+    hauptziel: 'Den Vermissten (TARGET-Person) physisch finden - lokalisieren, lebend oder tot',
+    benoetigtPerson: 'TARGET',
+    benoetigtObjekt: 'KEINE',
+    loesungViaKeyClues: false,
+    stage3Bedingung: 'TARGET ist bei Karl (in Sichtweite, in seinem Wagen) ODER Karl weiss konkret wo TARGET ist und kommt dort an',
     stage4Bedingung: 'Karl hat dem Klient das Ergebnis berichtet (Person gefunden, ggf. abgeliefert oder lebend zurueck)',
-    suspectRolle: 'OPTIONAL - der Verantwortliche (Gangster/Entfuehrer) ist der Weg zum Vermissten, aber kein zentrales Loesungsziel. Karl kann ihn an die VP/Polizei uebergeben, muss aber nicht.',
+    suspectRolle: 'OPTIONAL - der Verantwortliche (Gangster/Entfuehrer) ist der Weg zum Vermissten, aber kein Loesungsziel. Karl kann ihn an die VP/Polizei uebergeben, muss aber nicht.',
     erfolgssatz: 'Fall geloest wenn Vermisster gefunden und Klient informiert ist.',
+    pflichtHinweis: 'TARGET-PERSON MUSS LOKALISIERT WERDEN. KeyClues allein reichen NICHT - Karl muss am Ende konkret bei der Person sein oder ihren genauen Aufenthaltsort kennen.',
   },
   'mord': {
     hauptziel: 'Den Moerder (SUSPECT) ermitteln und ueberfuehren',
-    stage3Bedingung: 'Karl hat den Taeter identifiziert und entweder festgenommen, der Polizei uebergeben, oder mit Beweisen konfrontiert',
+    benoetigtPerson: 'SUSPECT',
+    benoetigtObjekt: 'KEINE',
+    loesungViaKeyClues: false,
+    stage3Bedingung: 'Karl hat den Taeter identifiziert UND entweder festgenommen, der Polizei uebergeben, oder mit Beweisen konfrontiert (Gestaendnis erzwungen)',
     stage4Bedingung: 'Karl hat dem Klient das Ergebnis berichtet (Moerder gefasst, Beweise gesichert)',
     suspectRolle: 'PFLICHT - der Moerder ist das zentrale Loesungsziel. Ohne ihn ist der Fall offen.',
     erfolgssatz: 'Fall geloest wenn Moerder ueberfuehrt und Klient informiert ist.',
+    pflichtHinweis: 'SUSPECT-PERSON MUSS UEBERFUEHRT WERDEN. KeyClues allein reichen NICHT - der konkrete Taeter muss am Ende gefasst oder ueberfuehrt sein.',
   },
   'diebstahl': {
-    hauptziel: 'Das gestohlene Gut (TARGET) zurueckholen',
-    stage3Bedingung: 'TARGET (das Diebesgut) ist bei Karl oder Karl weiss sicher wo es ist und kann es zurueckbringen',
-    stage4Bedingung: 'Karl hat dem Klient das Diebesgut zurueckgegeben',
-    suspectRolle: 'OPTIONAL - der Hehler/Dieb ist der Weg zum Gut. Karl kann ihn anzeigen, aber Hauptziel ist Rueckgabe.',
-    erfolgssatz: 'Fall geloest wenn Diebesgut zurueckgegeben und Klient informiert ist.',
+    hauptziel: 'Das gestohlene Gut (TARGET-Objekt) zurueckholen - der Hehler/Dieb (SUSPECT) wird dabei meist getroffen',
+    benoetigtPerson: 'SUSPECT_OPTIONAL',  // wird meist getroffen, kann aber auch via Mittelsmann/Bestechung umgangen werden
+    benoetigtObjekt: 'TARGET',
+    loesungViaKeyClues: false,
+    stage3Bedingung: 'TARGET (das Diebesgut) ist bei Karl (im Inventar) - er hat es vom Hehler zurueck (mit Druck, Tausch, Bestechung, oder Diebstahl-Zurueck)',
+    stage4Bedingung: 'Karl hat dem Klient das Diebesgut persoenlich zurueckgegeben',
+    suspectRolle: 'TYPISCH GETROFFEN - der Hehler/Dieb (SUSPECT) hat das Gut. Karl trifft ihn in 90% der Faelle waehrend er das Gut holt. Aber: Karl muss SUSPECT nicht zwingend festsetzen - Hauptziel ist Rueckgabe.',
+    erfolgssatz: 'Fall geloest wenn Diebesgut bei Karl im Inventar UND zum Klient zurueckgegeben.',
+    pflichtHinweis: 'TARGET-OBJEKT MUSS IM INVENTAR LANDEN. Der SUSPECT-Hehler wird in der Regel angetroffen waehrend Karl das Gut holt - das passiert organisch. KeyClues fuehren zum Hehler, dort liegt das Gut.',
   },
   'beschatten': {
-    hauptziel: 'Beweise sammeln (Fotos, Beobachtungen, Aussagen)',
-    stage3Bedingung: 'Karl hat klare Beweise zum Beobachtungsgegenstand (Treffen mit Geliebter dokumentiert, heimliche Geldzahlung beobachtet, etc.)',
-    stage4Bedingung: 'Karl hat dem Klient die Beobachtungen mitgeteilt',
-    suspectRolle: 'OPTIONAL - der Beobachtete ist die Zielperson, aber er wird nicht "ueberfuehrt" - Karl liefert Fakten, Klient entscheidet.',
-    erfolgssatz: 'Fall geloest wenn Beobachtung dokumentiert und Klient informiert ist.',
+    hauptziel: 'Beweise/Beobachtungen sammeln (Fotos, Notizen, Aussagen) - keine Person muss "gefasst" werden',
+    benoetigtPerson: 'KEINE',
+    benoetigtObjekt: 'KEINE',
+    loesungViaKeyClues: true,
+    stage3Bedingung: 'Karl hat mindestens 4-5 der vorgesehenen KEY-CLUES gesammelt (Beobachtungen dokumentiert, Personen identifiziert, Treffen bezeugt)',
+    stage4Bedingung: 'Karl hat dem Klient die Beobachtungen mitgeteilt (Bericht, Foto-Mappe, muendlich)',
+    suspectRolle: 'KEIN klassischer Taeter - die beobachtete Person macht nichts strafrechtlich Relevantes (Affaere, Schmuggel). Karl liefert Fakten, Klient entscheidet was er damit tut.',
+    erfolgssatz: 'Fall geloest wenn Beobachtungen reichen + Klient informiert.',
+    pflichtHinweis: 'KEYCLUES REICHEN AUS. Es muss keine Person gefasst oder kein Objekt geborgen werden. Wenn 4-5 der vorgesehenen Spur-Indizien gesammelt sind, kann Karl direkt zum Klient gehen.',
   },
   'wahrheit': {
-    hauptziel: 'Die Wahrheit hinter dem Ereignis ermitteln',
-    stage3Bedingung: 'Karl hat eine klare Erkenntnis was wirklich passiert ist (Selbstmord oder Mord? Wer war es? Was war das Motiv?)',
-    stage4Bedingung: 'Karl hat dem Klient die Wahrheit erzaehlt',
-    suspectRolle: 'OPTIONAL - es gibt eventuell einen Taeter, aber das Hauptziel ist die WAHRHEIT zu kennen. Karl muss den Taeter nicht selbst fassen wenn es einen gibt.',
-    erfolgssatz: 'Fall geloest wenn Wahrheit ermittelt und Klient informiert ist.',
+    hauptziel: 'Die Wahrheit hinter dem Ereignis ermitteln - kann Mord, Selbstmord, Unfall, Republikflucht, Affaere sein',
+    benoetigtPerson: 'OPTIONAL',  // SUSPECT nur wenn die Wahrheit "war Mord"
+    benoetigtObjekt: 'KEINE',
+    loesungViaKeyClues: true,
+    stage3Bedingung: 'Karl hat eine klare Erkenntnis was wirklich passiert ist (mindestens 4-5 der vorgesehenen KEY-CLUES haben das Bild ergeben). Wenn die Wahrheit "Mord" lautet UND der SUSPECT im Setup steht, sollte er auch ueberfuehrt werden - aber wenn die Wahrheit "Selbstmord" oder "Unfall" ist, ist kein Taeter noetig.',
+    stage4Bedingung: 'Karl hat dem Klient die Wahrheit erzaehlt - auch wenn unbequem',
+    suspectRolle: 'KONTEXT-ABHAENGIG - wenn das Setup einen SUSPECT hat und die Wahrheit "Mord/Verbrechen" ist, sollte er ueberfuehrt sein. Andernfalls reichen KeyClues.',
+    erfolgssatz: 'Fall geloest wenn Wahrheit ermittelt + Klient informiert.',
+    pflichtHinweis: 'KEYCLUES REICHEN AUS wenn die Wahrheit nicht "Mord" lautet. Bei aktivem SUSPECT im Setup: dieser sollte auch konfrontiert werden, aber Wahrheit-Erkenntnis ist Hauptziel.',
   },
   'politisch': {
-    hauptziel: 'Den politisch sensiblen Auftrag erfuellen (oft eine Mischung aus Personen-Schutz, Beweise-Sichern, oder Stasi-Falle ausweichen)',
-    stage3Bedingung: 'Karl hat den konkreten Auftrag erledigt (Person sicher rausgeholt, Akten gesichert, etc.)',
+    hauptziel: 'Den politisch sensiblen Auftrag erfuellen (Personen-Schutz, Beweise-Sichern, Stasi-Falle ausweichen, Akten uebergeben)',
+    benoetigtPerson: 'KONTEXT',  // haengt vom Sub-Ziel ab
+    benoetigtObjekt: 'OPTIONAL',
+    loesungViaKeyClues: true,
+    stage3Bedingung: 'Karl hat den konkreten Auftrag erledigt (Person sicher rausgeholt zu Westkontakt, Akten gesichert/uebergeben, Stasi-Falle umgangen)',
     stage4Bedingung: 'Karl hat dem Klient (oder dem westlichen Auftraggeber) Vollzug gemeldet',
-    suspectRolle: 'KONTEXT - die Stasi/SED ist der politische Gegenspieler, aber kein klassischer "Taeter".',
-    erfolgssatz: 'Fall geloest wenn Auftrag erledigt und Klient informiert ist.',
+    suspectRolle: 'KONTEXT - die Stasi/SED ist der politische Gegenspieler, kein klassischer "Taeter" der gefasst werden muss.',
+    erfolgssatz: 'Fall geloest wenn Auftrag erledigt + Klient informiert.',
+    pflichtHinweis: 'KEYCLUES REICHEN AUS in den meisten Faellen. Setup-spezifisch: manche politischen Faelle sind "Person rausbringen" (= Person muss bei Karl/im Westen sein), andere "Akten sichern" (= Objekt im Inventar).',
   },
 };
 
@@ -3730,7 +3759,7 @@ const INTRO_VARIANTS = [
     timeIdx: 5, // NACHT
     startDate: '1953-08-13', // 1953-08-13
     setup: {
-      klient: 'Renate Schiffer (Saengerin in der "Roten Laterne", flueht aus dem Westen zu Karl)',
+      klient: 'Renate Schiffer (Saengerin in der "Roten Laterne", flieht aus dem Westen zu Karl)',
       caseType: 'vermisst',
       stasiRelevance: 2,  // v7.9.19 v2: hochgesetzt von 1 weil Lange=IM und Reuss=STASI im Cast
       opfer: 'Bruno Schiffer (Renate\'s Bruder, hat sich beim Spielklub "Roter Stern" verschuldet, jetzt unter Druck)',
@@ -4269,7 +4298,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.9.25';
+window.SCHATTEN_VERSION = 'v7.9.26';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -8779,7 +8808,14 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
             recap += '  Stage 4 (Fall offiziell geloest): ' + goalDef.stage4Bedingung + '\n';
             recap += '  TAETER-Rolle: ' + goalDef.suspectRolle + '\n';
             recap += '  Erfolgskriterium: ' + goalDef.erfolgssatz + '\n';
-            recap += 'WICHTIG: Das Spiel erkennt "Fall geloest" wenn die Stage-Bedingungen oben erfuellt sind. Behandle den Fall passend zum Typ - bei vermisst zaehlt das Finden, nicht das Festnehmen des Verantwortlichen.\n';
+            // v7.9.26: pflichtHinweis ist die klarste Aussage was zwingend zum
+            // Loesen noetig ist. Verhindert dass Mistral bei beschatten den
+            // Beschatteten "ueberfuehren" will, oder bei mord den Fall ohne
+            // konkreten Taeter abschliesst.
+            if (goalDef.pflichtHinweis) {
+              recap += '  ▶▶▶ PFLICHT: ' + goalDef.pflichtHinweis + '\n';
+            }
+            recap += 'WICHTIG: Das Spiel erkennt "Fall geloest" wenn die Stage-Bedingungen oben erfuellt sind. Behandle den Fall passend zum Typ - bei vermisst zaehlt das Finden, nicht das Festnehmen des Verantwortlichen. Bei beschatten/wahrheit reichen die KeyClues unten - keine Person muss gefasst werden.\n';
           }
 
           // v7.9.23: KLARER TAETER-ANKER. User-Punkt: "jedes Setup sollte
@@ -8792,7 +8828,6 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
             c && ((c.tag || '').toUpperCase() === 'SUSPECT' ||
                   (c.tagExtra || '').toUpperCase() === 'SUSPECT'));
           if (suspectPersons.length > 0) {
-            const isVermisstOrDiebstahl = (ct === 'vermisst' || ct === 'diebstahl');
             recap += '\nTAETER-ANKER (HOECHSTE PRIORITAET): Die Spur dieses Falls fuehrt zu folgender Person:\n';
             for (const sp of suspectPersons) {
               recap += '  >>> ' + sp.name + ' <<< ';
@@ -8800,10 +8835,12 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
               if (sp.beziehung) recap += ' - ' + sp.beziehung;
               recap += '\n';
             }
-            if (isVermisstOrDiebstahl) {
-              recap += 'WICHTIG: Bei diesem Fall-Typ ist der TAETER nicht das Hauptziel - er ist der WEG zum Hauptziel (oben in der Loesungs-Definition genannt). Karl muss den Taeter NICHT zwangslaeufig fassen. Aber die Spur fuehrt ueber ihn (er weiss wo das Diebesgut / die vermisste Person ist). Erfinde KEINE alternativen Verantwortlichen.\n';
+            if (ct === 'vermisst') {
+              recap += 'WICHTIG (vermisst): Bei diesem Fall-Typ ist der TAETER nicht das Hauptziel - er ist der WEG zum Hauptziel (TARGET-Person finden). Karl muss den Taeter NICHT zwangslaeufig fassen. Aber die Spur fuehrt ueber ihn (er weiss wo die vermisste Person ist). Erfinde KEINE alternativen Verantwortlichen.\n';
+            } else if (ct === 'diebstahl') {
+              recap += 'WICHTIG (diebstahl): Der TAETER (Hehler/Dieb) hat das Diebesgut. Karl trifft ihn typischerweise WAEHREND er das Diebesgut holt - das ist die natuerliche Aufloesung. Beide Loesungs-Elemente (TARGET-Objekt + SUSPECT-Person) kommen zusammen. Karl muss SUSPECT nicht zwangslaeufig festsetzen oder der Polizei uebergeben - aber er muss das Diebesgut von ihm bekommen (Druck, Bestechung, Tausch, oder Diebstahl-zurueck). Hauptziel bleibt das DIEBESGUT - die Begegnung mit dem Hehler ist der Weg dorthin. Erfinde KEINE alternativen Hehler aus dem Nichts.\n';
             } else {
-              recap += 'KRITISCH: Diese Person ist der TAETER. Die Aufklaerung des Falls fuehrt am Ende zu ihm/ihr. Erfinde KEINE alternativen Verdaechtigen aus dem Nichts. Wenn Mistral spontan einen "Karl Walther" oder "die rothaarige Fee" als Taeter ins Spiel bringt obwohl der wahre Taeter oben definiert ist - das ist falsch. Die Indizien sollen schrittweise zum genannten TAETER fuehren, nicht zu einer halluzinierten Person. Du DARFST am Anfang auch andere Personen verdaechtig wirken lassen (Misdirection ist erlaubt) - aber am Ende muss der TAETER der oben genannte sein.\n';
+              recap += 'KRITISCH (' + ct + '): Diese Person ist der TAETER. Die Aufklaerung des Falls fuehrt am Ende zu ihm/ihr. Erfinde KEINE alternativen Verdaechtigen aus dem Nichts. Wenn Mistral spontan einen "Karl Walther" oder "die rothaarige Fee" als Taeter ins Spiel bringt obwohl der wahre Taeter oben definiert ist - das ist falsch. Die Indizien sollen schrittweise zum genannten TAETER fuehren, nicht zu einer halluzinierten Person. Du DARFST am Anfang auch andere Personen verdaechtig wirken lassen (Misdirection ist erlaubt) - aber am Ende muss der TAETER der oben genannte sein.\n';
             }
           }
 
@@ -14864,9 +14901,14 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     // Bei beschatten: Stage 2 = Verdacht bestaetigt (Affaere/Heimlichkeit),
     //                 Stage 3 = Beweise gesichert (Fotos/Notizen),
     //                 Stage 4 = Klient berichtet.
-    if (caseSetup && (caseSetup.caseType === 'vermisst' || caseSetup.caseType === 'beschatten')) {
+    // v7.9.26: Auch wahrheit hinzugefuegt. Bei beschatten/wahrheit
+    // (loesungViaKeyClues=true) reicht KeyClues-Count - kein TARGET-Name noetig.
+    const eligibleType = caseSetup && ['vermisst', 'beschatten', 'wahrheit'].includes(caseSetup.caseType);
+    if (eligibleType) {
       const ct = caseSetup.caseType;
       const ind = caseProgress.indizien.length;
+      const goalDef = (typeof CASE_TYPE_GOALS !== 'undefined') ? CASE_TYPE_GOALS[ct] : null;
+      const loesungViaKeyClues = goalDef && goalDef.loesungViaKeyClues === true;
       // Stage 0/1 -> Stage 2: bei vielen Indizien automatisch hochsetzen
       // v6.95: Schwellen verschaerft + TARGET-Name-Verifikation.
       // Anlass Brauer-Run v6.94: Stage 2 (vermisst) wurde Sz6/Tag1 ausgeloest
@@ -14875,9 +14917,14 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       // Jetzt: ind >= 6 + TARGET-Name muss in mindestens 1 Indiz vorkommen.
       const targetFact = caseSetup.setupCast && caseSetup.setupCast.find(c => c.tag === 'TARGET');
       const targetName = targetFact ? targetFact.name : null;
-      // Pruefe ob TARGET-Name in den Indizien tatsaechlich auftaucht
+      // v7.9.26: TARGET-Verifikation nur bei vermisst (Person muss in Spur sein).
+      // Bei beschatten/wahrheit ist TARGET von Anfang an bekannt - verlangt
+      // keine Erwaehnung in den Indizien.
       let targetMentionedInIndizien = false;
-      if (targetName) {
+      if (loesungViaKeyClues) {
+        // beschatten/wahrheit: keine TARGET-Verifikation, KeyClues zaehlen
+        targetMentionedInIndizien = true;
+      } else if (targetName) {
         const targetWords = targetName.toLowerCase().split(/\s+/).filter(w => w.length >= 4);
         const indText = (caseProgress.indizien || []).join(' ').toLowerCase();
         for (const w of targetWords) {
@@ -14986,8 +15033,49 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             diag('progress', '✦ AUTO-STAGE 3 (diebstahl) erzwungen: ' + targetName + ' wieder bei Karl');
             showProgressToast('DIEBESGUT ZURUECKGEHOLT', 'Karl hat ' + targetName + ' - jetzt zum Klient.');
           }
+        } else if ((ct === 'beschatten' || ct === 'wahrheit') && stage2Scenes >= 2) {
+          // v7.9.26: Auto-Stage-3 fuer beschatten/wahrheit ueber KeyClues-Count.
+          // User-Punkt: "bei affaeren reichen keyClues, kein Suspect noetig".
+          // Wenn das Setup keyClues hat: mind. 60% gesammelt = Beweislage reicht.
+          // Wenn keine keyClues: Fallback auf Indizien-Gesamt-Count >= 7.
+          let beweislageOk = false;
+          let beweisGrund = '';
+          if (Array.isArray(caseSetup.keyClues) && caseSetup.keyClues.length > 0) {
+            // Pruefe wie viele der vorgesehenen KeyClues in den gesammelten
+            // Indizien zumindest teilweise auftauchen (Match per Hauptwoerter).
+            const indText = caseProgress.indizien.join(' ').toLowerCase()
+              .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+            let matched = 0;
+            for (const kc of caseSetup.keyClues) {
+              const kcLower = kc.toLowerCase()
+                .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+              // Hauptwoerter aus dem KeyClue extrahieren (>= 5 Buchstaben)
+              const kcWords = kcLower.split(/[\s,\-:;.]+/).filter(w => w.length >= 5);
+              if (kcWords.length === 0) continue;
+              // Wenn mindestens 1 Hauptwort des KeyClues im Indizien-Text steht: Match
+              const wordMatches = kcWords.filter(w => indText.includes(w));
+              if (wordMatches.length >= 1) matched++;
+            }
+            const threshold = Math.ceil(caseSetup.keyClues.length * 0.6);
+            if (matched >= threshold) {
+              beweislageOk = true;
+              beweisGrund = matched + '/' + caseSetup.keyClues.length + ' KeyClues abgedeckt';
+            }
+          } else if (ind >= 7) {
+            // Fallback ohne KeyClues
+            beweislageOk = true;
+            beweisGrund = ind + ' Indizien gesammelt (Fallback ohne KeyClues)';
+          }
+          if (beweislageOk) {
+            caseProgress.ueberfuehrt = true;
+            caseProgress.stage = 3;
+            caseProgress.stage3StartScene = sceneCounter;
+            console.log('[Schatten] AUTO-FORCING Stage 3 (' + ct + '): Beweislage reicht (' + beweisGrund + ')');
+            diag('progress', '✦ AUTO-STAGE 3 (' + ct + ') erzwungen: ' + beweisGrund);
+            showProgressToast(ct === 'beschatten' ? 'BEWEISE GESICHERT' : 'WAHRHEIT KLAR', 'Karl hat genug - jetzt zum Klient.');
+          }
         } else if (stage2Scenes >= 10) {
-          // Inhalts-Check
+          // Inhalts-Check (Fallback fuer alle Faelle die nicht schon getriggert haben)
           const recentScenes = logEntries.filter(e => e && e.type === 'scene').slice(-5);
           const recentText = recentScenes.map(e => (e.text || '').toLowerCase()).join(' ');
           const tName = (targetName || '').toLowerCase();
