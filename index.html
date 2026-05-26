@@ -2043,7 +2043,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.9.45</div>
+    <div class="start-version">Schatten v7.9.46</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2120,7 +2120,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.9.45</span>
+    <span>Schatten v7.9.46</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4355,7 +4355,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.9.45';
+window.SCHATTEN_VERSION = 'v7.9.46';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -8543,7 +8543,11 @@ const MODEL_CHAIN = [
   // 3. Tier: Schnelle Lite-Modelle, ausreichend aber mit Grammatik-Schwaechen
   { provider: 'mistral', model: 'mistral-small-latest',  label: 'Mistral Small 3.1' },
   { provider: 'gemini', model: 'gemini-2.5-flash-lite',  label: 'Gemini 2.5 Flash-Lite' },
-  { provider: 'gemini', model: 'gemini-3.1-flash-lite',  label: 'Gemini 3.1 Flash-Lite' },
+  // v7.9.46: Gemini 3.1 Flash-Lite raus. Brandt-Run v7.9.44 Sz 1->2 zeigte
+  // Eroeffnungs-Reset OHNE Modell-Switch (beide Szenen Gemini 3.1 Flash-Lite).
+  // Bei 99KB-Recap reagiert das Modell auf den "LETZTE SZENE"-Text im Recap
+  // statt auf die User-Message - reproduziert die Eroeffnung. Sub-Para-Sized
+  // Modelle koennen unseren Recap nicht stemmen.
   // v7.9.42: Mistral Medium 3 ans Ende (vor Groq) - Story-Halluzinationen
   // bei 98KB-Recap nicht reparabel ohne Modell-spezifische Prompt-Aenderungen.
   { provider: 'mistral', model: 'mistral-medium-latest', label: 'Mistral Medium 3' },
@@ -8562,7 +8566,8 @@ const MODEL_CHAIN = [
 // localStorage-Indizes nicht in der neuen Reihenfolge auf falsche Modelle zeigen.
 // v7.9.39: bump 4 -> 5 weil Kimi K2 (Groq deprecation) aus der Chain entfernt wurde.
 // Sonst zeigen alte Indizes auf falsche Modelle.
-const MODEL_CHAIN_VERSION = 6;
+// v7.9.46: bump 6 -> 7 weil Gemini 3.1 Flash-Lite aus der Chain entfernt wurde.
+const MODEL_CHAIN_VERSION = 7;
 
 // Aktuelle Position in der Kette aus localStorage (mit Tagesreset + Chain-Version-Check).
 // Session-Skip-Liste: Modelle die strukturell zu wenig TPM fuer unseren
@@ -12957,23 +12962,12 @@ function updateEnergyAndHunger(scene) {
     return;
   }
 
-  // Essen erkannt: Hunger reset, kleiner Energie-Boost.
-  // Wenn Karl bereits voll satt UND volle Energie hat, skippen wir den Effekt
-  // - das passiert oft in Folgeszenen am Bäcker/Cafe wo "Bäcker"/"Brot" im
-  // Settings-Text vorkommen aber Karl nicht aktiv isst.
-  if (detectFoodAction(scene.szene || '')) {
-    const alreadyFull = karlHunger === 0 && karlEnergie >= 100;
-    if (alreadyFull) {
-      diag('detect', 'Essen-Pattern matcht, aber Karl bereits voll - kein Effekt');
-    } else {
-      karlHunger = 0;
-      hungerAccumulator = 0;
-      karlEnergie = Math.min(100, karlEnergie + 8);
-      console.log('[Schatten] Essen erkannt -> Hunger 0, Energie +8 =', karlEnergie);
-      diag('detect', 'Essen erkannt -> Hunger 0, Energie +8 = ' + karlEnergie);
-    }
-    return;
-  }
+  // v7.9.46: Essen-Detektion komplett entfernt. Vorher: bei "Schrippe", "Brot",
+  // "Wurst" usw. im Erzaehltext wurde Hunger auf 0 gesetzt und Energie +8.
+  // Da Hunger als Mechanik weg ist, soll auch der Energie-Effekt weg. Brandt-
+  // Run v7.9.44 Sz 13: Mistral schrieb "Schrippe" beilaeufig in den Text,
+  // System lieferte "[detect] Essen erkannt -> Hunger 0, Energie +8 = 96"
+  // plus Inventar-Push. Beides unerwuenscht.
 
   // Normale Abnahme: abhaengig von Tageszeit
   // MORGEN (0): -1, MITTAG (1): -1, NACHMITTAG (2): -2, FRUEHER ABEND (3): -3, ABEND (4): -5, NACHT (5): -7
@@ -13980,8 +13974,22 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     const curMainOrt = curOrt.split(',')[0].trim();
     const locationChanged = (curOrt && lastLocation && curOrt !== lastLocation);
     const mainLocationChanged = (curMainOrt && lastMainLocation && curMainOrt !== lastMainLocation);
+    // v7.9.46: Sub-Ort-Wechsel bei Verfolgungsjagd nicht voll als Stagnation
+    // zaehlen. Brandt-Run v7.9.44 hatte 6 Sub-Variationen "Tempelhofer Feld,
+    // Westseite/Hangars/Haupteingang Ostseite" - das war eine Verfolgungsjagd
+    // ueber das Flugfeld, narrativ sinnvoll. Counter triggerte trotzdem 6x
+    // Pflichtwechsel-Toast. Jetzt: wenn MainOrt gleich aber Sub anders UND
+    // hohe Spannung (Sp>=4 = Action) - Counter steigt nicht weiter, weil
+    // Karl sich tatsaechlich bewegt.
+    const subLocationChanged = (curOrt && lastLocation && curOrt !== lastLocation && !mainLocationChanged);
+    const isActionScene = (typeof lastSpannung === 'number' && lastSpannung >= 4);
     if (curMainOrt && curMainOrt === lastMainLocation) {
-      scenesAtSameLocation++;
+      if (subLocationChanged && isActionScene) {
+        // Verfolgungsjagd-Bewegung - Counter haelt
+        diag('detect', 'Sub-Ort-Wechsel waehrend Action (Sp ' + lastSpannung + '): Counter haelt bei ' + scenesAtSameLocation);
+      } else {
+        scenesAtSameLocation++;
+      }
     } else {
       scenesAtSameLocation = 1;
       lastMainLocation = curMainOrt;
@@ -14032,6 +14040,19 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           const locFirst = locLower.split(/[\s,]+/)[0];
           const curFirst = curNorm.split(/[\s,]+/)[0];
           if (locFirst && curFirst && locFirst.length >= 6 && locFirst === curFirst) return true;
+          // v7.9.46: Multi-Token-Substring-Match fuer komplexere Orte.
+          // Brandt-Run v7.9.44 Sz 2: "hintertreppe praxis doc wagner" matcht
+          // nicht "Doc Wagners Praxis" weil erste Token "hintertreppe" != "doc".
+          // Jetzt: wenn 2+ signifikante Tokens (Laenge>=4) aus dem Setup-Eintrag
+          // im curNorm vorkommen, gilt als Match. Setup "Doc Wagners Praxis"
+          // hat ['doc', 'wagners', 'praxis'] - 'wagners' und 'praxis' beide
+          // im curNorm = Match.
+          const locTokens = locLower.split(/[\s,]+/).filter(t => t.length >= 4);
+          const curTokens = curNorm.split(/[\s,]+/);
+          if (locTokens.length >= 2) {
+            const matchCount = locTokens.filter(t => curTokens.some(c => c.includes(t) || t.includes(c))).length;
+            if (matchCount >= 2) return true;
+          }
           return false;
         });
         // v6.95: Generische Whitelist zusaetzlich pruefen
@@ -14682,6 +14703,17 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         });
 
         if (!isDuplicate) {
+          // v7.9.46: Essens-Items NICHT ins Inventar pushen. Brandt-Run v7.9.44
+          // hatte "Schrippe" im Inventar weil Mistral die in den Erzaehltext
+          // einbaute. Da Hunger/Essen als Mechanik weg sind, gehoeren auch
+          // keine Lebensmittel ins Inventar. Filter umfasst typische Berliner
+          // 50er-Snacks.
+          const foodPatterns = /^(schrippe|stulle|bockwurst|currywurst|brot|broetchen|brötchen|bratwurst|bulette|frikadelle|kuchen|brezel|kaffee|kakao|tee|bier|limonade|brause|kraeuter\s+kaffee|malzkaffee|wurst|kaese|käse|leberwurst|salami|schinken|hering|matjes|sauerkraut|kartoffel|knoedel|knödel)(\b|s\b|n\b)/i;
+          if (foodPatterns.test(newItem.trim())) {
+            console.log('[Schatten] Essens-Item nicht ins Inventar:', newItem);
+            diag('filter', 'Essens-Item nicht ins Inventar: "' + newItem + '" (Hunger-Mechanik ist deaktiviert)');
+            continue;
+          }
           // v6.96: WALTHER-STRING-KONSTANZ. Wenn Mistral die Walther wieder
           // einfuegt nach einem Verlust, kommt sie als "Walther PPK" ohne
           // "(eigene Pistole)"-Anhang. Wir normalisieren auf den kanonischen
@@ -16941,8 +16973,28 @@ function botChooseByStrategy(options) {
     // zum Game-Over fuehrt. Normaler Prio-Pfad uebernimmt und waehlt
     // BEHANDLUNG (Prio 70) falls vorhanden, sonst defensivere Option.
     if (typeof verfassung === 'number' && verfassung <= 1) {
-      console.log('[Bot] AGGRESSIV-Selbstschutz: Vf =', verfassung, '<= 1 - Aggressiv-Boost geskipped, normaler Prio-Pfad uebernimmt');
+      console.log('[Bot] AGGRESSIV-Selbstschutz: Vf =', verfassung, '<= 1 - Aggressiv-Boost geskipped, suche Behandlung');
       if (typeof diag === 'function') diag('bot', 'AGGRESSIV-Selbstschutz: Vf=' + verfassung + ' kritisch - Boost geskipped');
+      // v7.9.46: Aktiv BEHANDLUNG-Option suchen. Brandt-Run v7.9.44 zeigte:
+      // 7 Sz Karl mit Vf=1, Bot waehlte trotzdem Action. Vorher griff nur das
+      // Skip des Aggressiv-Boosts, der normale Prio-Pfad fand BEHANDLUNG
+      // nicht. Jetzt: regex-Pattern auf typische Heilungs-Optionen direkt,
+      // wenn match -> sofort zurueckgeben.
+      const behandlungsPattern = /\b(doc\s+wagner|praxis|wunde\s+versorg|behandl|verband|verarzt|krankenh(au|äu)s|charite|charit\u00e9|arzt)\b/i;
+      const behandlungsOpts = options.filter(opt => behandlungsPattern.test(opt.text));
+      if (behandlungsOpts.length > 0) {
+        console.log('[Bot] AGGRESSIV-Selbstschutz: BEHANDLUNG-Option gefunden, waehle:', behandlungsOpts[0].text);
+        if (typeof diag === 'function') diag('bot', 'AGGRESSIV-Selbstschutz: BEHANDLUNG gewaehlt (Vf=' + verfassung + ')');
+        return botRngChoice(behandlungsOpts);
+      }
+      // Sonst defensivste Option: Pattern auf "Deckung", "Flucht", "Zurueck"
+      const defensivePattern = /\b(deck(e|ung)|flieh|abhau|zur(ue|ü)ck|ent(kommen|fern)|zwei\s+stra(ß|ss)en\s+weg|sicher|ruhig\s+stell|verstecken?)\b/i;
+      const defensiveOpts = options.filter(opt => defensivePattern.test(opt.text));
+      if (defensiveOpts.length > 0) {
+        console.log('[Bot] AGGRESSIV-Selbstschutz: Defensive Option gewaehlt (keine Behandlung verfuegbar)');
+        if (typeof diag === 'function') diag('bot', 'AGGRESSIV-Selbstschutz: Defensive Option (Vf=' + verfassung + ', keine Behandlung)');
+        return botRngChoice(defensiveOpts);
+      }
       // KEIN return - Fluss laeuft weiter zum normalen Prio-Pfad unten
     } else {
     try {
