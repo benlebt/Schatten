@@ -215,12 +215,24 @@ OUTPUT: Nur valides JSON, kein Markdown, kein Text drumherum.
   "cast_hinzugefuegt": [],
   "cast_entfernt": [],
   "indiz_neu": [],
+  "indiz_verbindung": "",
+  "npc_kernhinweis": [],
   "tatverdaechtiger_identifiziert": "",
   "tatverdaechtiger_ueberfuehrt": false,
   "klient_berichtet": false,
   "zusammenfassung": "1 Satz: Ort, was getan, wichtige Personen/Fakten + Status (verschwunden/anwesend/tot)."
 }
-spannung: 1 (ruhig) bis 5 (Lebensgefahr).`;
+spannung: 1 (ruhig) bis 5 (Lebensgefahr).
+indiz_verbindung: wenn 2 Indizien sich verknuepfen lassen, kurzer Satz wie "Brief + Telefonnotiz beweisen X". Sonst leer.
+npc_kernhinweis: wenn NPC etwas Konkretes ueber Tat/Opfer/Verdaechtigen sagt: [{"npc":"Name","hinweis":"max 60 Zeichen"}]. Nur echte Hinweise, kein Smalltalk.
+
+TAGESZEIT-MARATHON-VERMEIDEN: Wenn du im Push "Tageszeit wechselt" oder "neuer Tag" siehst, MUSS deine Szene das umsetzen (Karl bewegt sich, Zeit vergeht, Lichtstimmung wechselt). Bleib NICHT 10 Szenen am Stueck im selben MORGEN/MITTAG - das wirkt unrealistisch. Eine Tageszeit dauert in Spielzeit ~2-3 Szenen.
+
+FAMILIEN-ANKER: Wenn der Recap-Block FAMILIEN-ANKER erwaehnt (Karls Schwester Hilde, Bruder Paul gefallen Stalingrad), Karl KENNT diese Personen seit Jahrzehnten. NIEMALS schreiben "eine Frau die du noch nie gesehen hast" - Karl erkennt sie sofort.
+
+BEHANDLUNGS-PUSH: Wenn der Recap-Block "BEHANDLUNGS-PUSH" enthaelt, MUSS eine der 4 Optionen eine konkrete Behandlungs-Option sein (Doc Wagner Praxis, Charite, verarzten lassen, Wunde versorgen). Karl ist verletzt und kann sich versorgen.
+
+POOL-NPCs: Im Recap-Block koennen vorbereitete NPCs stehen (ROMANCE-MOEGLICH, STASI-AGENT, GANGSTER). Diese sind dem Fall vorab bekannt, aber noch nicht aktiv - bringe sie ein, wenn der Trigger im Recap passt (z.B. "ROMANCE: aktivieren wenn Karl in Sektor X").`;
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
