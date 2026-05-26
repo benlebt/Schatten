@@ -2043,7 +2043,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.9.40 · 404-Handler: Bei "model_not_found" Modell 24h blockieren und zum naechsten switchen statt Bot abbrechen. Anlass: Llama 4 Scout 404 mitten im Bot-Run, vorher fiel 404 durch alle Filter.</div>
+    <div class="start-version">Schatten v7.9.41 · Lektorats-Fixes Wagner+Kessler Runs: Aktions-Header gegen Off-by-One bei schwachen Modellen, Aggressiv-Selbstschutz bei Vf=1, Beschatten-Stages entschaerft (Stage 3 ab Sz4 + 8 Indizien, Stage 4 braucht 2 Sz Distanz), Tageszeit-Force nach 5 Action-Szenen, Stufe-undefined-Bug gefixt, Schaeferstrasse+Wartburgstrasse in Setup-Whitelist, West-Berlin-Radio-Hinweis (kein "Volksempfaenger" als 50er-Begriff).</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2120,7 +2120,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.9.40</span>
+    <span>Schatten v7.9.41</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -2382,7 +2382,7 @@ ALLTAGSDETAILS 1953 (für Atmosphäre, sparsam einsetzen):
 
 ALLTAGSDETAILS 1953 (für Atmosphäre, sparsam einsetzen):
 - KOHLEÖFEN: Wohnungen werden mit Briketts geheizt, der Geruch von Braunkohle, Kohlenkeller pro Mietshaus, Kohlenträger ("Kohlenmann") liefert in Säcken
-- KEIN FERNSEHEN für Privatleute - DDR-Fernsehen startet erst Dez 1952 Versuchsbetrieb, Privatgeräte rar. RADIO ist König (Volksempfänger, Sachsenwerk, RIAS-Empfang)
+- KEIN FERNSEHEN für Privatleute - DDR-Fernsehen startet erst Dez 1952 Versuchsbetrieb, Privatgeräte rar. RADIO ist König. WEST-Berlin: RIAS, NWDR, SFB (gegründet 1.6.1954, vorher NWDR), Radiogeräte Grundig/Telefunken/Saba/Nordmende. OST-Berlin: Deutschlandsender, Berliner Rundfunk, Geräte vom Sachsenwerk (Olympia/Phonosuper), Stern-Radio, REMA. ACHTUNG: "Volksempfänger" war ein NS-Begriff (VE301, 1933-45) und wurde in den 50ern nicht mehr als generisches Wort für Radio benutzt - nur als historische Referenz auf alte Geräte. Im Westen sendet RIAS Ulbricht-kritische Programme, im Osten hört man Ulbricht-Reden auf dem Deutschlandsender. Eine West-Berliner Wohnung 1953 mit "Volksempfänger der Ulbricht predigt" ist anachronistisch UND politisch unstimmig (RIAS war westlich, propagandistisch anti-DDR).
 - TELEFON-KULTUR: Privathaushalte selten Telefon (vor allem im Osten), öffentliche Telefonzellen mit Münzschlitz, Vermittlung über Fernamt ("Fräulein, geben Sie mir Köpenick 4471"), zwischen Ost und West eingeschränkte Leitungen
 - ZIGARETTEN: Im Osten "Juwel" (Ost-Marke seit 1951), "Karo" (Filterlos), "Adler"; im Westen "Juno" (Reemtsma, Hamburg), "Reval", "Lord". Lucky Strike/Camel sind US-Schwarzmarkt-Ware (Tausch-Währung).
 - ZAHLUNGSMITTEL: D-Mark West vs. M-Mark Ost (offiziell 1:1, real 4:1 oder schlimmer auf Schwarzmarkt). 25 D-Mark Zwangsumtausch fuer Westler ins Ost-Visum.
@@ -3965,6 +3965,12 @@ const INTRO_VARIANTS = [
       },
       locations: [
         { name: 'Doc Wagners Praxis', typ: 'praxis', sektor: 'West (Schoeneberg)', detail: 'Schaeferstrasse 12, Hinterhaus mit Hintereingang - Tatort, der Tote liegt auf der Hintertreppe' },
+        // v7.9.41: Schaeferstrasse + Wartburgstrasse explizit als legitime Orte
+        // im Schoeneberg-Setup. Beide existieren seit ~1900 in Schoeneberg, sind
+        // historisch korrekt. Vorher wurden sie als "Mistral hat spontan erfunden"
+        // im Diag-Log markiert obwohl sie zum Setting passen.
+        { name: 'Schaeferstrasse', typ: 'strasse', sektor: 'West (Schoeneberg)', detail: 'Wohnstrasse nahe Bayerischer Platz - Verfolgungsszenen, Hinterhoefe' },
+        { name: 'Wartburgstrasse', typ: 'strasse', sektor: 'West (Schoeneberg)', detail: 'zwei Strassen weiter, Mietshaeuser - Marlenes Wohnung, evtl. Walthers Versteck' },
         { name: 'Karl Mauers Buero', typ: 'buero', sektor: 'Ost (Mitte)', detail: 'Hackescher Markt - Karl muss in den Westen' },
         { name: 'Marlene Wagner Wohnung', typ: 'wohnung', sektor: 'West (Schoeneberg)', detail: 'Wartburgstrasse, zwei Strassen weiter von der Praxis' },
         { name: 'Charite Pathologie', typ: 'klinik', sektor: 'Ost (Mitte)', detail: 'Schumannstrasse - falls der Tote in die offizielle Pathologie kommt' },
@@ -4349,7 +4355,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.9.40';
+window.SCHATTEN_VERSION = 'v7.9.41';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -6563,7 +6569,9 @@ function buildTranscriptText() {
     out += 'Besuchte Orte: ' + visitedLocations.join(' | ') + '\n';
   }
   // Fall-Fortschritt: kompletter Stand inkl. ALLER Indizien (kein Cut-Off)
-  const stageLabels = ['Aufbau', 'Indizien gesammelt', 'Verdächtiger identifiziert', 'Fall gelöst'];
+  // v7.9.41: stageLabels auf 5 Eintraege erweitert. Stage 4 (gelöst) zeigte sonst
+  // "Stufe: undefined" im Export. Anlass: Kessler-Run v7.9.38.
+  const stageLabels = ['Aufbau', 'Indizien gesammelt', 'Verdächtiger identifiziert', 'Verdächtiger überführt', 'Fall gelöst'];
   const hasFallInfo = caseProgress.indizien.length > 0 || caseProgress.tatverdaechtiger || clientProfile.name;
   if (hasFallInfo) {
     out += '\nFall-Fortschritt:\n';
@@ -7384,7 +7392,8 @@ function showStatusDetails() {
   // Fall-Fortschritt
   const caseRow = document.getElementById('popup-case-row');
   const caseEl = document.getElementById('popup-case');
-  const stageLabels = ['Aufbau', 'Indizien gesammelt', 'Verdächtiger identifiziert', 'Fall gelöst'];
+  // v7.9.41: stageLabels auf 5 Eintraege + Stage-4 Progress-Line ergaenzt.
+  const stageLabels = ['Aufbau', 'Indizien gesammelt', 'Verdächtiger identifiziert', 'Verdächtiger überführt', 'Fall gelöst'];
   const hasProgress = caseProgress.indizien.length > 0 || caseProgress.tatverdaechtiger || clientProfile.name;
   if (hasProgress) {
     let lines = [];
@@ -7393,10 +7402,11 @@ function showStatusDetails() {
     // Stage 1: 3+ Indizien, kein Verdaechtiger
     // Stage 2: Verdaechtiger steht, nicht ueberfuehrt
     // Stage 3: Ueberfuehrt
+    // Stage 4: Klient berichtet (geloest)
     const indCount = caseProgress.indizien.length;
     const indNeeded = 3;
     const stage = caseProgress.stage;
-    lines.push('Stufe: ' + stageLabels[stage]);
+    lines.push('Stufe: ' + (stageLabels[stage] || 'Unbekannt'));
     // ASCII-Fortschrittsleiste
     let progressLine = '';
     if (stage === 0) {
@@ -7408,7 +7418,9 @@ function showStatusDetails() {
     } else if (stage === 2) {
       progressLine = '▓▓▓▓░ (Verdächtigen überführen)';
     } else if (stage === 3) {
-      progressLine = caseProgress.klientGesprochen ? '▓▓▓▓▓ FALL GELÖST' : '▓▓▓▓▓ (Klient berichten)';
+      progressLine = '▓▓▓▓▓ (Klient berichten)';
+    } else if (stage === 4) {
+      progressLine = '▓▓▓▓▓ FALL GELÖST';
     }
     lines.push(progressLine);
     if (caseProgress.indizien.length > 0) {
@@ -7816,6 +7828,7 @@ function showSceneStatusPopup(entry, sceneIdx) {
 let sceneCounter = 0;
 let timeAdvanceTokens = 0; // accumulator for fractional time progression
 let scenesInCurrentTime = 0; // v6.55: counts scenes since last tageszeit change
+let physicalStreakInTime = 0; // v7.9.41: counts isPhysical scenes in current Tageszeit, force-advance bei >= 5
 function advanceGameTime() {
   // ACTION-PAUSE: Wenn die vorige Szene Spannung 4 oder 5 hatte (Brenzlig/Lebensgefahr),
   // pausiert die Tageszeit komplett. So bleibt in einer Verfolgungsjagd oder Schiesserei
@@ -7888,6 +7901,7 @@ function advanceGameTime() {
   if (timeAdvanceTokens >= 1) {
     timeAdvanceTokens -= 1;
     scenesInCurrentTime = 0;  // reset bei Tageszeit-Wechsel
+    physicalStreakInTime = 0; // v7.9.41: Counter ebenfalls reset
     gameTimeIdx++;
     if (gameTimeIdx >= TIMES_OF_DAY.length) {
       gameTimeIdx = 0; // back to MORGEN
@@ -10648,7 +10662,18 @@ VERBOTEN: einfach mit "schraegem Morgenlicht" anfangen ohne zu erklaeren wo Karl
   }
 
   // New user message
-  messages.push({ role: 'user', content: userMessage });
+  // v7.9.41: Aktions-Header. Schwaechere Modelle (Mistral Medium, Gemini
+  // Flash-Lite) ignorierten bei 98KB Recap manchmal die letzte User-Wahl und
+  // reagierten stattdessen auf die LETZTE-SZENE-Beschreibung im Recap.
+  // Symptom: Spieler waehlt Aktion N, KI antwortet zu Aktion N-1 ("Off-by-One").
+  // Dokumentiert in Wagner+Kessler Test-Runs v7.9.38 (Sz 4-10 systematisch desynchron).
+  // Fix: explizit als "AKTUELLE-AKTION"-Block markieren, mit Anweisung dass DIESE
+  // (nicht die letzte Szene oben) die zu beantwortende Spieler-Wahl ist.
+  const userMsgWrapped =
+    '*** AKTUELLE SPIELER-AKTION (DIESE Aktion fuehrst du jetzt aus, nicht die im Recap oben erwaehnte LETZTE SZENE): ***\n\n' +
+    userMessage +
+    '\n\n*** ENDE AKTUELLE AKTION. Die LETZTE SZENE oben ist bereits passiert - du knuepfst RAEUMLICH und ZEITLICH genau daran an, aber die JETZT zu erzaehlende Szene ist die unmittelbare Konsequenz der AKTUELLEN SPIELER-AKTION oben. ***';
+  messages.push({ role: 'user', content: userMsgWrapped });
 
   // Aktives Modell aus der Failover-Kette holen
   const activeModel = getActiveModel();
@@ -11380,6 +11405,7 @@ async function startGame() {
   pendingForcedLocationChange = null;  // v7.0
   scenesAtSameLocation = 0;
   scenesInCurrentTime = 0; // v7.9.23: Marathon-Counter reset (war vorher persistent zwischen Runs)
+  physicalStreakInTime = 0; // v7.9.41
   lastLocation = '';
   lastMainLocation = ''; // v6.58
   // Reset Verfassung
@@ -13250,7 +13276,22 @@ async function chooseOption(option) {
     // wird dann normal weiter vorgeschritten.
     timeAdvanceTokens += 0.15; // minimaler Schritt, kein roll-over moeglich
     console.log('[Schatten] Physical action detected, deferring time advance:', option.text);
+    // v7.9.41: Counter fuer physische Aktionen in derselben Tageszeit.
+    // Anlass: Wagner-Run v7.9.38 hatte 13 Sz MORGEN, weil isPhysical-Pause
+    // permanent griff. Nach 5 physischen Aktionen in Folge MUSS Tageszeit
+    // trotzdem voranschreiten - sonst entstehen 13-Sz-Marathons.
+    if (typeof physicalStreakInTime !== 'number') physicalStreakInTime = 0;
+    physicalStreakInTime++;
+    if (physicalStreakInTime >= 5) {
+      console.log('[Schatten] PHYSICAL-STREAK-OVERRIDE: ' + physicalStreakInTime + ' Action-Szenen in derselben Tageszeit - Tageszeit voranschreiten');
+      diag('detect', 'Physical-Streak-Override: ' + physicalStreakInTime + ' Action-Szenen - Tageszeit voranschreiten erzwungen');
+      physicalStreakInTime = 0;
+      // Override: trotz isPhysical normalen Tageszeit-Push triggern
+      advanceGameTime();
+    }
   } else {
+    // Bei nicht-physischer Aktion Counter zuruecksetzen
+    if (typeof physicalStreakInTime === 'number' && physicalStreakInTime > 0) physicalStreakInTime = 0;
     advanceGameTime();
   }
 
@@ -15239,14 +15280,18 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             diag('progress', '✦ AUTO-STAGE 3 (diebstahl) erzwungen: ' + targetName + ' wieder bei Karl');
             showProgressToast('FALL-STUFE 3', targetName + ' zurück. Jetzt zum Klienten.');
           }
-        } else if ((ct === 'beschatten' || ct === 'wahrheit') && stage2Scenes >= 2) {
+        } else if ((ct === 'beschatten' || ct === 'wahrheit') && stage2Scenes >= 4) {
           // v7.9.26: Auto-Stage-3 fuer beschatten/wahrheit ueber KeyClues-Count.
           // User-Punkt: "bei affaeren reichen keyClues, kein Suspect noetig".
           // Wenn das Setup keyClues hat: mind. 60% gesammelt = Beweislage reicht.
           // Wenn keine keyClues: Fallback auf Indizien-Gesamt-Count >= 7.
+          // v7.9.41: Schwellen verschaerft. Anlass Kessler-Run v7.9.38 - Stage 3
+          // wurde in Sz 8 erreicht, 1 Tag, kein Tageszeit-Wechsel. Zu schnell.
+          // Jetzt: stage2Scenes >= 4 (vorher 2), Indizien >= 8 (vorher 7),
+          // KeyClues-Threshold 75% (vorher 60%).
           let beweislageOk = false;
           let beweisGrund = '';
-          if (Array.isArray(caseSetup.keyClues) && caseSetup.keyClues.length > 0) {
+          if (Array.isArray(caseSetup.keyClues) && caseSetup.keyClues.length > 0 && ind >= 7) {
             // Pruefe wie viele der vorgesehenen KeyClues in den gesammelten
             // Indizien zumindest teilweise auftauchen (Match per Hauptwoerter).
             const indText = caseProgress.indizien.join(' ').toLowerCase()
@@ -15262,13 +15307,13 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
               const wordMatches = kcWords.filter(w => indText.includes(w));
               if (wordMatches.length >= 1) matched++;
             }
-            const threshold = Math.ceil(caseSetup.keyClues.length * 0.6);
+            const threshold = Math.ceil(caseSetup.keyClues.length * 0.75);
             if (matched >= threshold) {
               beweislageOk = true;
-              beweisGrund = matched + '/' + caseSetup.keyClues.length + ' KeyClues abgedeckt';
+              beweisGrund = matched + '/' + caseSetup.keyClues.length + ' KeyClues abgedeckt (>=75%)';
             }
-          } else if (ind >= 7) {
-            // Fallback ohne KeyClues
+          } else if (ind >= 8) {
+            // Fallback ohne KeyClues - v7.9.41: 7 -> 8
             beweislageOk = true;
             beweisGrund = ind + ' Indizien gesammelt (Fallback ohne KeyClues)';
           }
@@ -15894,12 +15939,35 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     }
     // 4) Klient berichtet - finale Win-Bedingung
     if (scene.klient_berichtet === true && caseProgress.ueberfuehrt) {
-      caseProgress.klientGesprochen = true;
-      caseProgress.istGelöst = true;
-      caseProgress.stage = 4; // v6.81: Stage 4 = geloest (vorher Stage 3 doppelt belegt)
-      console.log('[Schatten] FALL GELÖST! Win-Screen wird ausgeloest.');
-      diag('progress', '✦ FALL GELOEST (Stage 4) - Klient berichtet');
-      showProgressToast('FALL-STUFE 4', 'Fall gelöst. Klient informiert.');
+      // v7.9.41: Stage-4-Sperre fuer beschatten/wahrheit. Anlass: Kessler-Run
+      // v7.9.38 - 9 Szenen vom Start bis "Fall geloest" (Stage 1->2->3->4 in
+      // Sz 4,7,8,9). Mistral hat klient_berichtet:true direkt nach Stage 3
+      // gesetzt. Fuer beschatten/wahrheit MUSS Karl mindestens 1 Tageszeit-
+      // Wechsel zwischen Stage 3 und Stage 4 erleben (Beweise sortieren,
+      // hinfahren etc.) - sonst wirkt der Abschluss billig.
+      const ctClose = (caseSetup && caseSetup.caseType) || '';
+      const requiresGap = (ctClose === 'beschatten' || ctClose === 'wahrheit');
+      if (requiresGap) {
+        const stage3Scenes = sceneCounter - (caseProgress.stage3StartScene || sceneCounter);
+        if (stage3Scenes < 2) {
+          diag('drift', 'klient_berichtet:true ignoriert - Stage 3 erst seit ' + stage3Scenes + ' Szene (beschatten/wahrheit braucht 2+)');
+          console.log('[Schatten] Stage-4-Sperre: beschatten/wahrheit braucht 2+ Szenen Stage 3 (aktuell ' + stage3Scenes + ')');
+        } else {
+          caseProgress.klientGesprochen = true;
+          caseProgress.istGelöst = true;
+          caseProgress.stage = 4;
+          console.log('[Schatten] FALL GELÖST! Win-Screen wird ausgeloest.');
+          diag('progress', '✦ FALL GELOEST (Stage 4) - Klient berichtet');
+          showProgressToast('FALL-STUFE 4', 'Fall gelöst. Klient informiert.');
+        }
+      } else {
+        caseProgress.klientGesprochen = true;
+        caseProgress.istGelöst = true;
+        caseProgress.stage = 4; // v6.81: Stage 4 = geloest (vorher Stage 3 doppelt belegt)
+        console.log('[Schatten] FALL GELÖST! Win-Screen wird ausgeloest.');
+        diag('progress', '✦ FALL GELOEST (Stage 4) - Klient berichtet');
+        showProgressToast('FALL-STUFE 4', 'Fall gelöst. Klient informiert.');
+      }
     }
 
     // Politik-Detection: ist der Fall MfS-relevant?
@@ -16708,6 +16776,7 @@ function resetGame() {
   pendingForcedLocationChange = null;  // v7.0
   scenesAtSameLocation = 0;
   scenesInCurrentTime = 0; // v7.9.23
+  physicalStreakInTime = 0; // v7.9.41
   lastLocation = '';
   lastMainLocation = ''; // v6.58
   visitedLocations = [];
@@ -16799,6 +16868,17 @@ function botChooseByStrategy(options) {
     ? botRotatingSubStrategies[Math.floor(botCurrentTurn / botRotatingTurnsPerStyle) % botRotatingSubStrategies.length]
     : botStrategy;
   if (effectiveStrat === 'aggressive') {
+    // v7.9.41: SELBSTSCHUTZ vor Aggression. Wenn Karls Verfassung kritisch ist
+    // (Vf <= 1), den Aggressiv-Boost SKIPPEN. Anlass: Wagner-Run v7.9.38 - Bot
+    // mit 'aggressive' wählte bei Vf=1 noch "Tritt die Tuer ein" -> Karl stirbt
+    // beim Sturz. Heilung gehoert zur offensiven Strategie wenn alles andere
+    // zum Game-Over fuehrt. Normaler Prio-Pfad uebernimmt und waehlt
+    // BEHANDLUNG (Prio 70) falls vorhanden, sonst defensivere Option.
+    if (typeof verfassung === 'number' && verfassung <= 1) {
+      console.log('[Bot] AGGRESSIV-Selbstschutz: Vf =', verfassung, '<= 1 - Aggressiv-Boost geskipped, normaler Prio-Pfad uebernimmt');
+      if (typeof diag === 'function') diag('bot', 'AGGRESSIV-Selbstschutz: Vf=' + verfassung + ' kritisch - Boost geskipped');
+      // KEIN return - Fluss laeuft weiter zum normalen Prio-Pfad unten
+    } else {
     try {
       // 1. ROMANCE-PURSUIT: Wenn ROMANCE-NPC im aktuellen Cast UND Romantik-Tension
       //    hoch UND Abend/Nacht UND niedrige Spannung -> aggressiv = Nacht suchen.
@@ -16841,6 +16921,7 @@ function botChooseByStrategy(options) {
     } catch (e) {
       console.warn('[Bot] Aggressiv-Boost fehler:', e);
     }
+    } // v7.9.41: schliesst else-Block fuer Vf>1 Aggressiv-Boost
   }
 
   // v7.9.29: PRIO-BASIERTE WAHL VOR ALLEM ANDEREN.
@@ -17332,6 +17413,7 @@ async function botRunMainLoop() {
       lastMainLocation = ''; // v6.58
       scenesAtSameLocation = 0;
       scenesInCurrentTime = 0; // v7.9.23
+      physicalStreakInTime = 0; // v7.9.41
       caseSetup = null;
       expandedAbbreviations = new Set();
       // v7.9.21: User-gewaehltes Setup vor startGame() wieder setzen.
