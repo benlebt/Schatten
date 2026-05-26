@@ -2011,7 +2011,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.9.21 · Bot-Setup-Bug-Fix (Random-Override behoben)</div>
+    <div class="start-version">Schatten v7.9.22 · Hunger raus + Stage-2-Force + Verletzungs-Drift entschärft + Spannungs-Bilanz</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2088,7 +2088,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.9.21</span>
+    <span>Schatten v7.9.22</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4066,7 +4066,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.9.21';
+window.SCHATTEN_VERSION = 'v7.9.22';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -6475,6 +6475,37 @@ function buildTranscriptText() {
       out += '  - sehr lang (' + totalDays + ' Tage) - Schatten-Faelle sollten unter 5 Tage bleiben\n';
     }
 
+    // v7.9.22: SPANNUNGSVERLAUF-BILANZ. Zeigt wie sich Spannung 1-5 durch den Run zog.
+    // Anlass: User-Wunsch fuer Lektorat - "wie viel Action vs. Ruhe hatten wir?"
+    const spannungValues = sceneEntries
+      .map(e => typeof e.spannung === 'number' ? e.spannung : null)
+      .filter(s => s !== null);
+    if (spannungValues.length > 0) {
+      const sp1 = spannungValues.filter(s => s === 1).length;
+      const sp2 = spannungValues.filter(s => s === 2).length;
+      const sp3 = spannungValues.filter(s => s === 3).length;
+      const sp4 = spannungValues.filter(s => s === 4).length;
+      const sp5 = spannungValues.filter(s => s === 5).length;
+      const total = spannungValues.length;
+      const pct = n => Math.round(100 * n / total) + '%';
+      const avg = (spannungValues.reduce((a, b) => a + b, 0) / total).toFixed(1);
+      out += '\nSpannungsverlauf (Lektorat):\n';
+      out += '  - Schnitt: Sp ' + avg + '/5\n';
+      out += '  - Verteilung: Sp1 ' + sp1 + ' (' + pct(sp1) + '), Sp2 ' + sp2 + ' (' + pct(sp2)
+           + '), Sp3 ' + sp3 + ' (' + pct(sp3) + '), Sp4 ' + sp4 + ' (' + pct(sp4)
+           + '), Sp5 ' + sp5 + ' (' + pct(sp5) + ')\n';
+      // Action-Anteil (Sp 4-5)
+      const actionPct = Math.round(100 * (sp4 + sp5) / total);
+      const calmPct = Math.round(100 * (sp1 + sp2) / total);
+      if (actionPct >= 50) {
+        out += '  - ⚠ Run sehr action-lastig (' + actionPct + '% Sp 4-5) - wenig Ruhe-Szenen\n';
+      } else if (calmPct >= 70) {
+        out += '  - ⚠ Run sehr ruhe-lastig (' + calmPct + '% Sp 1-2) - wenig Bedrohung/Konfrontation\n';
+      } else {
+        out += '  - Spannungs-Mischung balanciert\n';
+      }
+    }
+
     // v7.9.20: SETUP-TAG-AUDIT. Welche Pool-NPC-Tags wurden im Run aktiviert?
     // Zeigt ob die Setup-Mechanik greift (ROMANCE/STASI/GANGSTER auftauchen lassen).
     if (caseSetup && Array.isArray(caseSetup.setupCast)) {
@@ -6846,26 +6877,13 @@ function showHeader(scene) {
   }
 
   // HUNGER-Striche (v6.57): erst ab Hunger 4 sichtbar, davor versteckt.
-  // 4 Striche entsprechen 4 Hunger-Stufen: 4-5 medium, 6-7 high, 8-9 critical, 10 = volle Skala.
+  // v7.9.22: Hunger-Bar komplett ausgeblendet. User-Befund: Hunger-Mechanik
+  // hatte keinen spielerischen Wert (Karl macht trotz Hunger 10/10 weiter).
+  // Variable bleibt im Code, aber UI-Anzeige raus damit Spieler nicht denkt
+  // "ich muss jetzt etwas tun" - tun sollen sie nichts.
   const hungerDotsEl = document.getElementById('hunger-dots');
   if (hungerDotsEl) {
-    if (karlHunger >= 4) {
-      hungerDotsEl.classList.remove('hidden');
-      const dashes = hungerDotsEl.querySelectorAll('.hunger-dash');
-      // Stufen: 4->1, 6->2, 8->3, 10->4
-      let filled = 0;
-      if (karlHunger >= 4) filled = 1;
-      if (karlHunger >= 6) filled = 2;
-      if (karlHunger >= 8) filled = 3;
-      if (karlHunger >= 10) filled = 4;
-      const stufenClass = karlHunger >= 8 ? 'critical' : karlHunger >= 6 ? 'high' : 'medium';
-      dashes.forEach((d, idx) => {
-        d.className = 'hunger-dash';
-        if (idx < filled) d.classList.add(stufenClass);
-      });
-    } else {
-      hungerDotsEl.classList.add('hidden');
-    }
+    hungerDotsEl.classList.add('hidden');
   }
 
   // ROMANTIK-Dots (v6.57): erst ab Tension 2 sichtbar (matched popup threshold).
@@ -7521,9 +7539,12 @@ function advanceGameTime() {
     timeAdvanceTokens = 1;
   }
   // v7.9.14: HARD-Override bei extrem langen Marathons (Action-Streak)
-  // Selbst wenn Spannung andauernd hoch ist, nach 10 Szenen in derselben Phase
+  // Selbst wenn Spannung andauernd hoch ist, nach N Szenen in derselben Phase
   // MUSS gewechselt werden - sonst 16-Sz-Marathons wie Brandt-Run Sz 1-16 MORGEN.
-  if (scenesInCurrentTime >= 10) {
+  // v7.9.22: Schwelle 10 -> 8. Krause-Run v7.9.21 hatte 12 Sz Marathon trotz
+  // 10er-Cap (Cap traf bei Sz 10, aber dann lief noch 2 Sz weiter bis Wechsel).
+  // Bei 8 ist Wechsel garantiert spaetestens bei Sz 9-10.
+  if (scenesInCurrentTime >= 8) {
     console.log('[Schatten] HARD-Tageszeit-Override nach', scenesInCurrentTime, 'Szenen.');
     diag('detect', 'HARD-Tageszeit-Override: ' + scenesInCurrentTime + ' Szenen am Stueck - Wechsel ERZWUNGEN');
     timeAdvanceTokens = Math.max(timeAdvanceTokens, 1);
@@ -9169,10 +9190,30 @@ Es ist NICHT realistisch, dass eine Trauergesellschaft 18 Stunden an einem Grab 
       }
     } else if (caseProgress.stage === 1) {
       const indCount = caseProgress.indizien.length;
-      // v6.80: Schwellen gesenkt fuer Arcade-Feeling. Karl soll nach 15-25
-      // Szenen einen Verdaechtigen identifiziert haben, nicht erst nach 40+.
-      // Eskalation nach Indizien-Anzahl + Spieltagen
-      if (indCount >= 7 || gameDay >= 3) {
+      // v7.9.22: AUTO-FORCE bei extrem vielen Indizien ohne Stage-Promotion.
+      // Brandt-Run hatte 25 Indizien aber NIE Stage 2! Krause hatte 26.
+      // Mistral identifiziert keinen Verdaechtigen wenn die Story unklar ist
+      // (z.B. Brandt-Run: Erich tot, kein klarer Taeter). Hier zwingen wir
+      // entweder Stage-Promotion ODER expliziten Fall-Loesung-Hinweis.
+      if (indCount >= 15) {
+        // Aus dem Setup-Cast: wer waere ein plausibler Verdaechtiger?
+        let suspectCandidates = [];
+        try {
+          if (caseSetup && Array.isArray(caseSetup.setupCast)) {
+            // Bevorzuge SUSPECT/GANGSTER/ANTAGONIST-Tags (auch tagExtra)
+            suspectCandidates = caseSetup.setupCast
+              .filter(p => p && p.name && (
+                p.tag === 'SUSPECT' || p.tag === 'GANGSTER' || p.tag === 'ANTAGONIST' ||
+                p.tagExtra === 'SUSPECT' || p.tagExtra === 'GANGSTER'
+              ))
+              .map(p => p.name);
+          }
+        } catch (e) { /* ignore */ }
+        const suggestionText = suspectCandidates.length > 0
+          ? ` Kandidaten aus dem Setup: ${suspectCandidates.join(', ')}.`
+          : '';
+        recap += `\nFALL-LÖSEN-PFLICHT: Karl hat ${indCount} Indizien gesammelt - das ist mehr als genug. Die Story stagniert seit vielen Szenen ohne dass ein Verdaechtiger fixiert wurde. Du MUSST in dieser Szene EINE von zwei Optionen waehlen: (1) Karl identifiziert einen konkreten Verdaechtigen mit Namen aus den Indizien - setze "tatverdaechtiger_identifiziert" auf den Namen.${suggestionText} ODER (2) Karl kommt zu dem Schluss dass es kein klassisches Verbrechen war (z.B. Brandt-Run: Erich hat sich vielleicht wirklich umgebracht, oder ist abgehauen) - dann setze "fall_aufgegeben": true mit kurzer Begruendung. KEIN weiteres Indizien-Sammeln. KEIN "Karl bleibt unklar" - eine Entscheidung muss her.`;
+      } else if (indCount >= 7 || gameDay >= 3) {
         recap += `\nFALL-ZWANG (KRITISCH): Karl hat ${indCount} Indizien und ist an Tag ${gameDay}. Das ist genug. Du DARFST in dieser Szene NICHT mehr nur neue Indizien anhaengen - das ist Stagnation. In dieser ODER spaetestens der naechsten Szene MUSS Karl einen konkreten Tatverdaechtigen mit Namen nennen (entweder durch eine Konfrontation, eine Schlussfolgerung im Kopf, oder ein Zufallsfund der die Sache klaert). Setze "tatverdaechtiger_identifiziert" auf den Namen. Auch wenn die Beweislage nicht 100% ist - Karl muss eine Theorie formen und sie aussprechen. Falls die Story noch keinen klaren Verdaechtigen hat: schau dir die Indizien-Liste an und schliesse auf die Person (KEIN Opfer / KEINE Zielperson / KEIN Klient), die am haeufigsten genannt wird oder das groesste Motiv haette.`;
       } else if (indCount >= 5) {
         recap += `\nNAECHSTER SCHRITT (DRINGEND): Karl hat ${indCount} Indizien - das ist genug fuer einen konkreten Verdacht. In dieser oder der naechsten Szene MUSS Karl einen Verdaechtigen mit Namen nennen (durch Schlussfolgerung oder Konfrontation). Setze dann "tatverdaechtiger_identifiziert" auf den Namen. Reines weiter-Indizien-Sammeln wirkt nicht mehr wie Fortschritt.`;
@@ -9388,21 +9429,14 @@ Die Option soll konkret formuliert sein, nicht vage. Karl hat den Fall - jetzt i
     // v6.79: Bei Hunger 9-10 + niedrige Spannung -> 2+ Essens-Optionen erzwingen.
     // v6.97: Hu>=6 + ANY Spannung (ausser Sp 5 Lebensgefahr) loest jetzt EINEN
     // moderaten Push aus. Anlass: Doc-Wagner-Hardenberg-Run zeigte Karl mit
-    // Hunger 7-10 ueber viele Szenen ohne dass eine Ess-Option in den A/B/C/D
-    // kam, weil Spannung 3-4 war (Verfolgung, MfS).
-    const hungerCriticalForceEat = karlHunger >= 8 && lastSpannung < 5;
-    const hungerStrongForceEat = karlHunger >= 6 && lastSpannung < 5; // v6.97 neu
-    if (karlHunger >= 9 && isLowTension) {
-      // SEHR HUNGRIG + ruhig: 2+ Essens-Optionen, Karl muss handeln
-      recap += `\n\nKARL HAT EXTREMEN HUNGER (Hunger ${karlHunger}/10, ${currentTime}): Karl kann kaum mehr klar denken vor Hunger, ihm wird schwindlig, der Magen krampft. MINDESTENS 2 der 4 Optionen MUESSEN Essens-Optionen sein - die anderen 2 koennen normale Ermittlung sein. Beispiele je nach Sektor: OST (Mitte/Friedrichshain/Prenzlauer Berg): Bockwurst-Stand am Alex, Soljanka in HO-Gaststaette Frankfurter Allee, Bouletten mit Kartoffelsalat bei Trude, Erbsensuppe vom Suppenwagen, Eisbein in der Mitropa-Gaststaette, Kartoffelpuffer vom Strassenstand, Stulle mit Schmalz. WEST (Charlottenburg/Schoeneberg/Tempelhof): Currywurst-Bude, Buletten-Imbiss, Wiener Wuerstchen am Kurfuerstendamm. KEINE 3 Ermittlungs-Optionen mehr - Karl MUSS jetzt essen oder er bricht zusammen. Im Erzaehltext: der Magen knurrt laut, Schwindel, Karl muss sich an etwas festhalten.`;
-    } else if (karlHunger >= 7 && (isLowTension || hungerCriticalForceEat)) {
-      recap += `\n\nKARL HAT GROSSEN HUNGER (Hunger ${karlHunger}/10): Karl hat seit Stunden nichts gegessen, der Magen knurrt deutlich. EINE der Optionen MUSS eine konkrete Essens-Option sein - nicht nur Kaffee trinken, sondern wirklich etwas essen (Bockwurst, Bulette, Schrippe, Suppe, Currywurst, Streuselkuchen mit Sahne, Stulle, Eisbein etc). Wenn Karl bereits in einer Kneipe/Café sitzt: EINE Option MUSS "etwas essen" sein (z.B. "Eine Bulette zum Bier bestellen", "Vom Wirt eine Bockwurst holen lassen"). WICHTIG: VARIIERE - keine Currywurst-Monokultur! Wenn Karl im OSTEN ist (Mitte, Friedrichshain, Prenzlauer Berg, Hackescher Markt, Alexanderplatz): Bockwurst-Stand, Soljanka in der HO-Gaststaette, Bouletten mit Kartoffelsalat, Erbsensuppe vom Suppenwagen, Eisbein mit Sauerkraut, Strammer Max in der Mitropa, Kartoffelpuffer vom Strassenstand, Heringsschmaus, Stulle mit Schmalz, Schrippe vom HO-Baecker. Wenn Karl im WESTEN ist (Charlottenburg, Schoeneberg, Tempelhof): Currywurst-Bude, Buletten-Imbiss, Wiener Wuerstchen. In Cafes/Kneipen beider Sektoren: Malzkaffee mit Schrippe, Streuselkuchen, Schmalzbrot. ALLE Essens-Optionen MUESSEN explizit den konkreten Essens-Begriff enthalten. Im Erzaehltext erwaehne den knurrenden Magen oder den Imbissgeruch direkt.`;
-    } else if (karlHunger >= 6 && hungerStrongForceEat) {
-      // v6.97: Mittlere Hunger-Schwelle 6+ auch bei Action-Spannung 3-4.
-      recap += `\n\nKARL HAT SOLIDE HUNGER (Hunger ${karlHunger}/10): Der Magen meldet sich deutlich, Karl bemerkt es selbst. EINE der A/B/C/D-Optionen sollte eine konkrete Essens-Moeglichkeit anbieten - auch wenn die Lage angespannt ist, gibt es zwischendurch immer Gelegenheiten (Imbiss-Geruch im Vorbeigehen, ein Wurststand an der Ecke, ein Cafe). Wenn Karl gerade jemanden verfolgt oder in einer Konfrontation steht, kann die Ess-Option "Zwischenstopp am Imbiss" oder "Geh in das naechste Cafe" sein. VARIIERE je nach Sektor: OST = Bockwurst, Bulette, Soljanka, Schrippe; WEST = Currywurst, Wiener.`;
-    } else if (karlHunger >= 4 && isLowTension) {
-      recap += `\n\nKARL WIRD HUNGRIG (Hunger ${karlHunger}/10): Karl koennte langsam was essen, der Magen meldet sich. Wenn die Situation es passend hergibt, biete EINE Option an. VARIIERE: nicht immer Currywurst! Je nach Sektor: OST (Karls Heimatgegend) Bockwurst-Stand, Soljanka in HO-Gaststaette, Bouletten, Erbsensuppe, Kartoffelpuffer, Schrippe vom HO-Baecker, Stulle mit Schmalz. WEST nur wenn Karl drueben ist: Currywurst-Bude. KEIN Zwang - nur wenn es zur Story passt. Auch im Erzaehltext kann ein Imbiss-Geruch oder ein knurrender Magen beilaeufig erwaehnt werden.`;
-    }
+    // v7.9.22: HUNGER-PUSHES KOMPLETT ENTFERNT.
+    // User-Befund nach 4 v7.9.21-Runs: Hunger-Mechanik hat keinen erzaehlerischen
+    // Mehrwert. Krause-Run Hunger 10/10 + Energie 0/100 - Karl macht trotzdem
+    // aggressiv weiter, "Schwacher Hunger-Schwindel"-Toast feuerte 0× in 4 Runs.
+    // In einem Kriminalroman geht es nicht um Essen.
+    // Variable bleibt im Code (zu tief verwoben), aber keine erzwungenen
+    // Essens-Optionen mehr. Wenn die KI organisch eine Pause einbauen will,
+    // kann sie das, aber wir zwingen sie nicht mehr.
 
     // v6.74: ROMANTIK-MECHANIK mehrstufig wie Stasi - proaktive Eskalation.
     // Vorher: nur ein Push bei Tension >=2 mit "DARF (muss nicht)", Mistral waehlte nie.
@@ -9632,26 +9666,29 @@ Stasi-Cap fuer diesen Fall: ${stasiCapForCase}/5 (Setup-Relevanz). ${stasiTensio
     //   Vf <= 2 (schwer verletzt): PFLICHT Behandlungs-Option
     //   Vf <= 3 (angeschlagen): SOLL Behandlungs-Option (Vorbeugung gegen Spirale nach unten)
     if (verfassung <= 3 && !karlInStasiCustody && (typeof lastSpannung !== 'number' || lastSpannung <= 3)) {
-      const localSektor = (caseSetup && caseSetup.setup && /West/i.test(caseSetup.setup.sektor || '')) ? 'West' : 'Ost';
-      const behandlungsOrt = localSektor === 'West' ? 'Doc Wagner Praxis (Schaeferstrasse Schoeneberg, West)' : 'Charite-Notaufnahme (Mitte, Ost) ODER nach Schoeneberg zu Doc Wagner (West)';
       const pflicht = verfassung <= 2 ? 'PFLICHT' : 'SOLL';
-      recap += `\n\nBEHANDLUNGS-PUSH (${pflicht}): Karl hat Verfassung ${verfassung}/5 - ${verfassung <= 2 ? 'schwer verletzt' : 'angeschlagen'}. Die Spannung ist niedrig (${lastSpannung || '?'}/5) und Karl ist NICHT in Gewahrsam. Karl kann sich also versorgen.
+      // v7.9.22: Behandlungs-Push vereinfacht. User-Wunsch: Option-Text
+      // arcade-maessig generisch ("Doc Wagner aufsuchen (Behandlung)") statt
+      // spezifisch ("Schulter behandeln lassen"). Verletzungs-Drift war hoch
+      // (Wagner-Run: 53 Drift-Events, 13× Schulter-Erwaehnungen). KI soll
+      // nicht raten WAS verletzt ist - nur DASS Karl angeschlagen ist.
+      recap += `\n\nBEHANDLUNGS-PUSH (${pflicht}): Karl hat Verfassung ${verfassung}/5 - ${verfassung <= 2 ? 'schwer verletzt' : 'angeschlagen'}. Spannung niedrig (${lastSpannung || '?'}/5), Karl ist NICHT in Gewahrsam.
 
-DEINE PFLICHT: Eine der 4 Optionen ${verfassung <= 2 ? 'MUSS' : 'SOLL'} eine Behandlungs-Option sein. Konkret eine dieser Varianten:
-- "Geh zu ${behandlungsOrt}, dich verarzten lassen"
-- "Setz dich kurz hin und versorg die Wunde mit Verbandzeug aus der Schublade" (wenn Karl im Buero ist)
-- "Ruf Doc Wagner an, er soll vorbeikommen" (wenn Karl gerade nicht weg kann)
-- "Geh zur Charite Krankenhaus in Mitte, dort gibt es Notaufnahme" (Ost-Variante)
+DEINE PFLICHT: Eine der 4 Optionen ${verfassung <= 2 ? 'MUSS' : 'SOLL'} eine Behandlungs-Option sein. Formuliere sie GENERISCH ohne spezifische Koerperteil-Details:
+- "Doc Wagner aufsuchen (Behandlung)"
+- "Zur Charite Notaufnahme (Mitte, Ost)" 
+- "Doc Wagner anrufen, er soll vorbeikommen" (falls Karl gerade nicht weg kann)
+- "Mit Verbandzeug aus der Schublade versorgen" (Karl im Buero, leichte Faelle)
 
-Die Behandlungs-Option soll konkret formuliert sein (Ort genannt), nicht vage. Karl ist nicht professionell distanziert - die Schmerzen ueberwiegen jetzt.
+WICHTIG: ERFINDE KEINE spezifischen Verletzungen (Schulter / Knie / Stirn / Rippen etc.) wenn die Story sie nicht klar etabliert hat. Schreibe nur "Karl ist angeschlagen", "die Wunde brennt", "Karl bewegt sich steif". Wenn die Story eine konkrete Verletzung NENNT (z.B. Schlag auf den Kopf in Sz X), dann darfst du DIESE eine Verletzung weiter erwaehnen - aber keine NEUEN dazu erfinden.
 
 Wenn Karl die Behandlungs-Option waehlt:
-- Erzaehle den Weg dorthin (5-10 Min S-Bahn West oder Strassenbahn Ost)
-- Doc Wagner / Krankenhaus-Schwester verarztet konkret (Jod, Nahen, Verband)
+- Erzaehl den Weg (5-10 Min S-Bahn West / Strassenbahn Ost)
+- Doc Wagner / Schwester verarztet (Jod, Verband - generisch)
 - Verfassung steigt um +1 bis +2 (verfassung_delta entsprechend)
-- Karl ist danach "leicht angeschlagen" statt "stark verletzt"
+- Karl ist danach "leicht angeschlagen"
 
-Wenn Karl die Behandlungs-Option NICHT waehlt und stattdessen weiter ermittelt, IST DAS RISIKANT - aber respektiere die Spieler-Wahl. Erwaehne im naechsten Erzaehltext aber die Konsequenz (Wunde brennt, Hand zittert, Schwindel beim Aufstehen).`;
+Wenn Karl die Behandlungs-Option NICHT waehlt: respektiere die Wahl, erwaehne kurz die Konsequenz (Wunde brennt, Hand zittert) - aber KEINE neue Verletzungs-Details erfinden.`;
     }
 
     // v7.9.14: Energie unter 20 ohne Action -> Schlaf-Option erzwingen
@@ -12336,10 +12373,11 @@ function checkStatusToasts(spannung) {
   if (karlEnergie <= 15) {
     showProgressToast('Am Ende der Kraft', 'Karl ist voellig erschoepft.', 'danger', 'energie-kritisch');
   }
-  // DANGER: Hunger 9-10 (extrem)
-  if (karlHunger >= 9) {
-    showProgressToast('Schwacher Hunger-Schwindel', 'Karl hat seit zu langem nichts gegessen.', 'danger', 'hunger-kritisch');
-  }
+  // v7.9.22: Hunger-Toasts entfernt. User-Befund: "Schwacher Hunger-Schwindel"
+  // feuerte in 4 Runs gar nicht (Cooldown-Konflikt) und selbst wenn er feuerte,
+  // hatte er null Effekt: Karl macht trotzdem aggressiv weiter. In einem
+  // Kriminalroman geht es nicht um Essen. Hunger-Mechanik bleibt als interne
+  // Variable im Code erhalten (zu tief verwoben), aber liefert keinen Spam mehr.
   // CAUTION: Muedigkeit (Energie 20-40, abends/nachts)
   if (karlEnergie <= 35 && karlEnergie > 15 && gameTimeIdx >= 4) {
     showProgressToast('Karl wird müde', 'Der Tag war lang.', 'caution', 'energie-muede');
@@ -12352,10 +12390,6 @@ function checkStatusToasts(spannung) {
   // die Doku als "ewig warnen ohne Konsequenz" beschreibt. Lieber raus.
   // Bei stasiTension >= 3 greift weiter "Stasi auf den Fersen" (Zeile 11058)
   // - der hat wenigstens den direkten Vorlauf zu echter Festnahme (StT 4+ hard-force).
-  // CAUTION: Hunger 7-8 (deutlich)
-  if (karlHunger >= 7 && karlHunger < 9) {
-    showProgressToast('Hunger meldet sich', 'Karls Magen knurrt deutlich.', 'caution', 'hunger-deutlich');
-  }
   // CAUTION: Lange wach (2+ Tage ohne Schlaf)
   // Hier wird ein "Tag" als ein vollstaendiger Zyklus gerechnet.
   if (gameDay >= 2 && gameTimeIdx >= 5 && karlEnergie < 50) {
@@ -12377,6 +12411,37 @@ function updateRomanticTension(scene) {
     }
     return;
   }
+
+  // v7.9.22: ROMANTIK-BOOTSTRAP. User-Befund: in 4 Runs Romantik-Tension 0/5
+  // durchgehend - Pattern-Erkennung greift nicht weil Mistral keine
+  // expliziten Hints schreibt im Bot-Modus.
+  // Wenn Karl in einer Szene mit einer Setup-ROMANCE-Person ist (Haupt-Tag
+  // oder tagExtra) UND niedrige Spannung UND nicht im Gewahrsam, gibt es
+  // eine implizite +1 Tension pro Szene bis Schwelle 2 erreicht. Ab dann
+  // greifen die normalen Pattern-Hits.
+  try {
+    if (spannung <= 2 && !karlInStasiCustody && romanticTension < 2 &&
+        caseSetup && Array.isArray(caseSetup.setupCast)) {
+      const setupRomanceNames = [];
+      for (const ce of caseSetup.setupCast) {
+        if (!ce || !ce.name) continue;
+        if (ce.tag === 'ROMANCE' || ce.tagExtra === 'ROMANCE') {
+          setupRomanceNames.push(ce.name);
+        }
+      }
+      if (setupRomanceNames.length > 0) {
+        // Ist eine dieser Personen im aktuellen Cast?
+        const romanceInCurrentCast = cast.some(c => {
+          const cName = typeof c === 'string' ? c : (c && c.name) || '';
+          return setupRomanceNames.includes(cName);
+        });
+        if (romanceInCurrentCast) {
+          romanticTension = Math.min(2, romanticTension + 1);
+          diag('detect', 'Romantik-Bootstrap +1 (Setup-ROMANCE-Person aktiv) = ' + romanticTension);
+        }
+      }
+    }
+  } catch (e) { /* ignore */ }
 
   // Pruefen ob eine Frau im Cast ist (Klientin, Zeugin, Bekanntschaft)
   const hasFemaleNPC = cast.some(c => {
