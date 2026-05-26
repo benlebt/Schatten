@@ -2011,7 +2011,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.9.20 · NPC-Konsolidierung via tagExtra + Hard-Lock + Setup-Cast-Audit</div>
+    <div class="start-version">Schatten v7.9.21 · Bot-Setup-Bug-Fix (Random-Override behoben)</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2088,7 +2088,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.9.20</span>
+    <span>Schatten v7.9.21</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4066,7 +4066,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.9.20';
+window.SCHATTEN_VERSION = 'v7.9.21';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -16115,6 +16115,25 @@ async function botRunMainLoop() {
       // damit der Bot nicht von einem alten State verfaelscht wird.
       // (Bsp: karlVehicle = null aus altem Run wuerde sonst hier weitergeschleppt.)
       console.log('[Bot] Erzwinge frischen Spielstand (Bot-Start mitten im Spiel).');
+      // v7.9.21: KRITISCHER BUG-FIX. Vorher hat dieser Pfad das User-gewaehlte
+      // Setup verworfen weil startGame() ohne selectedSetupIdx gerufen wurde
+      // (= pickIntro(undefined) = Random). Beispiel-Run: User waehlte Brauer
+      // (Index 11), Bot wurde gestartet, mitten drin reset -> Random gewaehlt
+      // -> Kessler-Story (Index 4) erschien stattdessen. Aktuelles Setup
+      // identifizieren und denselben Index neu setzen vor startGame().
+      let preservedIdx;
+      if (typeof caseSetup !== 'undefined' && caseSetup && caseSetup.klient && Array.isArray(INTRO_VARIANTS)) {
+        const currentKlient = caseSetup.klient;
+        for (let i = 0; i < INTRO_VARIANTS.length; i++) {
+          if (INTRO_VARIANTS[i] && INTRO_VARIANTS[i].setup && INTRO_VARIANTS[i].setup.klient === currentKlient) {
+            preservedIdx = i;
+            break;
+          }
+        }
+        if (typeof preservedIdx === 'number') {
+          console.log('[Bot] Setup wird vom laufenden Spiel uebernommen: Index ' + preservedIdx + ' (' + currentKlient + ')');
+        }
+      }
       // Spielzustand-Variablen zuruecksetzen (alles was sich akkumuliert hat).
       karlVehicle = 'Opel Olympia';
       inventory = ['Walther PPK (eigene Pistole)', 'Brieftasche mit Detektiv-Lizenz', 'Notizbuch und Bleistift'];
@@ -16159,6 +16178,11 @@ async function botRunMainLoop() {
       scenesAtSameLocation = 0;
       caseSetup = null;
       expandedAbbreviations = new Set();
+      // v7.9.21: User-gewaehltes Setup vor startGame() wieder setzen.
+      // pickIntro(undefined) = Random - das war der Bug.
+      if (typeof preservedIdx === 'number') {
+        selectedSetupIdx = preservedIdx;
+      }
       // Jetzt startGame() aufrufen damit ein neues Intro gewaehlt wird
       try {
         startGame();
