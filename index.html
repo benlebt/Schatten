@@ -2011,7 +2011,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.9.22 · Hunger raus + Stage-2-Force + Verletzungs-Drift + Toast-Tracking + Spannungs-Bilanz</div>
+    <div class="start-version">Schatten v7.9.23 · Auto-Stage-4-Fix + Eureka-Tautologie-Filter + Tageswechsel-Anchor + Bot-Klient-Prio + Marathon-Reset</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2088,7 +2088,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.9.22</span>
+    <span>Schatten v7.9.23</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4066,7 +4066,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.9.22';
+window.SCHATTEN_VERSION = 'v7.9.23';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -6618,6 +6618,23 @@ function buildTranscriptText() {
         out += '      ' + k + ': ' + modelCounts[k] + ' Szenen\n';
       }
     }
+    // v7.9.23: Blockierte Modelle anzeigen (Daily-Limits etc.).
+    // User-Frage v7.9.22: "Warum permanent Mistral Medium? Sind andere KIs leer?"
+    try {
+      if (typeof modelCooldowns === 'object' && modelCooldowns) {
+        const now = Date.now();
+        const blocked = Object.keys(modelCooldowns).filter(k => modelCooldowns[k] && modelCooldowns[k].until > now);
+        if (blocked.length > 0) {
+          out += '  - Blockierte Modelle (Daily-Limit / 429):\n';
+          for (const k of blocked) {
+            const cd = modelCooldowns[k];
+            const untilStr = new Date(cd.until).toLocaleTimeString('de-DE');
+            const remaining = Math.round((cd.until - now) / 60000);
+            out += '      ' + k + ': bis ' + untilStr + ' (noch ' + remaining + ' min) - ' + (cd.reason || 'unbekannt') + '\n';
+          }
+        }
+      }
+    } catch (e) { /* ignore */ }
   }
   out += '\nSzenen total: ' + logEntries.filter(e => e.type === 'scene').length + '\n';
   return out;
@@ -7674,6 +7691,13 @@ let autoReleaseUsedCount = 0;
 // Buero). In der DDR 1953 ist das absurd - es muesste sofort Grossalarm geben.
 // Werte: { severity: 'wound'|'kill', sceneIdx: <Szenennummer> }
 let pendingForcedFahndung = null;
+// v7.9.23: Wenn Stage-4-Auto-Force blockiert wird (Karl in Action/Verletzt/Custody),
+// merken wir uns das und feuern in der naechsten ruhigen Szene einen klaren
+// "Geh zum Klienten und schliess den Fall ab"-Push. Verhindert dass Karl
+// ewig Stage 3 bleibt ohne dass das Spiel den Abschluss ermoeglicht.
+let pendingKlientPushAfterCalm = false;
+// v7.9.23: Anti-Romantik-Counter nach Sex. Detektiv ist nuechtern, danke fuer die Nacht.
+let postRomanticScenes = 0;
 // v7.0: Verhindert dass die Fahndung-Eskalation mehrfach pro Run greift.
 let fahndungUsed = false;
 // v7.0: Counter fuer Hauptort-Wechsel-Toasts die Mistral ignoriert hat.
@@ -8005,6 +8029,23 @@ function renderOptions(scene) {
     // v7.7: Reihenfolge nach Prioritaet - Aufloesung hat hoechste Prioritaet (golden,
     // signalisiert dem User dass der Fall hier endet)
     const isResolveOption = detectResolveAction(opt.text, resolveContext);
+    // v7.9.23: Konfrontations-Marker fuer Stage 2 + Verdaechtiger gesetzt.
+    // User-Befund: Bot/Spieler sieht nicht klar genug welche Option zum
+    // Verdaechtigen-Stellen fuehrt. Marker bei Stage 2 + Konfrontations-Verb.
+    let isConfrontOption = false;
+    try {
+      if (resolveContext && resolveContext.stage === 2 && !resolveContext.ueberfuehrt) {
+        const lower = (opt.text || '').toLowerCase()
+          .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+        const tdName = ((caseProgress && caseProgress.tatverdaechtiger) || '').toLowerCase()
+          .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+        const tdLastWord = tdName.split(/\s+/).pop();
+        const hasConfrontVerb = /\b(konfrontier|verhoer|stelle?\s+\w+\s+zur?\s+rede|verhafte?|beweise?\s+(vorleg|zeig)|gestaendnis|zwing\s+\w+\s+(zu|zum)|uebergib\s+\w*\s*beweise?)/.test(lower);
+        if (hasConfrontVerb && (tdLastWord.length < 4 || lower.includes(tdLastWord))) {
+          isConfrontOption = true;
+        }
+      }
+    } catch (e) { /* ignore */ }
     const isHealOption = detectHealAction(opt.text, resolveContext);
     const isSleepOption = detectExplicitSleep(opt.text);
     const isRomanticOption = detectRomanticAction(opt.text);
@@ -8013,6 +8054,9 @@ function renderOptions(scene) {
     if (isResolveOption) {
       // v7.7: HOECHSTE Prioritaet - signalisiert Fall-Aufloesung
       markerHtml = '<span class="option-marker option-marker-resolve">⚡ AUFLOESUNG</span>';
+    } else if (isConfrontOption) {
+      // v7.9.23: Konfrontations-Marker (Stage 2, Verdaechtiger steht)
+      markerHtml = '<span class="option-marker option-marker-resolve">⚔ KONFRONTATION</span>';
     } else if (isHealOption) {
       // v7.7: Genesung bei niedriger Verfassung
       markerHtml = '<span class="option-marker option-marker-heal">+ BEHANDLUNG</span>';
@@ -8768,14 +8812,16 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
       } else {
         recap += ` Karl hat noch ${lastInjury}, aber das ist schon ${scenesSinceInjury} Szenen her. NICHT mehr in der Erzaehlung erwaehnen ausser es passiert etwas das die Wunde wieder reizt (neuer Schlag, schnelle Bewegung, jemand fasst die Stelle an). Konstante Erinnerungen an alte Verletzungen werden zur Pumphrase.`;
       }
-    } else if (verfassung >= 4) {
+    } else if (verfassung >= 3) {
       // v7.7: Anti-Phantom-Verletzungs-Push - wenn Karl KEINE getrackte Verletzung
       // hat und gut bei Verfassung ist, explizit der KI sagen: keine Verletzung
       // erfinden. Anlass: Renate-Run v7.6 - Mistral erfand spontan "Schulter
       // schmerzt von dem Sturz vorhin, ein Bluterguss bildet sich" in Sz 8,
       // ohne dass Karl je gestuerzt war. Die Verletzung verfestigte sich dann
       // ueber 7 Szenen und wurde sogar im Status-Export gespeichert.
-      recap += ` Karl hat KEINE relevante Verletzung. Erfinde NICHT spontan Stuerze, Prellungen, Blutergusse oder Schmerzen aus dem Nichts (kein "die Schulter schmerzt von dem Sturz vorhin" wenn Karl gar nicht gestuerzt ist). Wenn neue Verletzungen auftreten, dann nur als direkte Folge einer KONKRETEN Handlung in dieser Szene (z.B. ein Schlag von einem NPC, ein echter Sturz den du erzaehlst).`;
+      // v7.9.23: Auch bei Vf 3 - Wagner-Run hatte 13x "Schulter" trotz nur
+      // 1 etablierter Schreibtisch-Anstoss-Verletzung. Schwellenwert gesenkt.
+      recap += ` Karl hat KEINE neuen Verletzungen seit Spielstart. ERFINDE NICHT spontan Stuerze, Prellungen, Blutergusse, Schmerzen aus dem Nichts (KEIN "die Schulter schmerzt von dem Sturz vorhin" wenn Karl gar nicht gestuerzt ist, KEIN "der Ellbogen brennt von gestern" wenn das nie passiert ist). Wenn neue Verletzungen auftreten, MUSS das eine direkte Folge einer KONKRETEN, in DIESER Szene erzaehlten Handlung sein (ein Schlag von einem NPC, ein echter Sturz mit Beschreibung). Karl ist gerade unversehrt - das bleibt so bis was Konkretes passiert.`;
     }
     if (verfassung <= 3) {
       // v7.9.11 FIX: User-Beobachtung "wurde getroffen, Toast kam, aber dann ging
@@ -9279,6 +9325,12 @@ Es ist NICHT realistisch, dass eine Trauergesellschaft 18 Stunden an einem Grab 
       // v6.90: Schwellen - schon nach 3 Szenen wird gepushed (Auto-Force bei 7).
       // v6.94: bei fluechtigem Verdaechtigen statt direkter Konfrontation Karls
       // Beweise-Pfad pushen: Beweise zu Roth/Lindner, oder Klient sicher informieren.
+      // v7.9.23: Wenn Auto-Stage-4-Force in einer vorigen Action-Szene blockiert
+      // wurde, soll JETZT (Spannung niedrig) ein extra-harter Push kommen.
+      if (pendingKlientPushAfterCalm && (typeof lastSpannung !== 'number' || lastSpannung <= 2)) {
+        recap += `\n\nFALL-ABSCHLUSS DRINGEND (PFLICHT): In einer der letzten Szenen war Karl bereits am Ziel (${caseProgress.tatverdaechtiger} ueberfuehrt), aber Auto-Abschluss wurde blockiert weil Karl gerade in Action/Verletzt war. JETZT ist es ruhig. Diese Szene MUSS damit beginnen dass Karl klar zur Klient-Berichtung aufbricht (mit Optionen die DAHIN fuehren) oder gleich beim Klienten ankommt. Setze "klient_berichtet": true wenn Karl das Gespraech fuehrt. Spieler hat Vortrieb verdient - keine neuen Nebenstraenge mehr.`;
+        pendingKlientPushAfterCalm = false; // Flag zuruecksetzen
+      }
       const stage3Scenes = sceneCounter - (caseProgress.stage3StartScene || sceneCounter);
       // Pruefen ob Verdaechtige geflohen / verschwunden ist
       const suspectName = (caseProgress.tatverdaechtiger || '').toLowerCase();
@@ -9795,6 +9847,14 @@ Wenn Karl waehlt: Schnitt zur naechsten Szene am Morgen, Kaffee zu zweit, keine 
       }
     }
 
+    // v7.9.23: POST-ROMANCE-Push. Nach Sex ist der Detektiv wieder bei der Arbeit.
+    // User-Punkt: "sobald ein Mann Sex hatte, geht er wieder seiner Arbeit nach.
+    // Sie fragt 'rufst du mich an?' Er 'sicher' und geht."
+    if (postRomanticScenes > 0) {
+      recap += `\n\nPOST-ROMANCE-MODUS (PFLICHT): Karl hatte gerade eine Nacht mit einer Frau. Jetzt ist Morgen. Der Detektiv ist nuechtern, der Kaffee schmeckt schwarz, der Fall ruft. KEINE weitere Romantik-Eskalation in dieser oder der naechsten Szene - Karl gibt der Frau einen kurzen Abschied (allenfalls ein Halbsatz wie "Ich melde mich") und geht seiner Arbeit nach. Die Frau bleibt freundlich aber wird in den naechsten Szenen nicht zentral sein. Wenn sie noch da ist: sie macht Kaffee, raucht am Fenster, nicht intim. Keine "${'haelt seine Hand'}", "${'lehnt sich an ihn'}", "${'kuesst ihn'}". Karl ist im Marlowe-Modus zurueck.`;
+      postRomanticScenes--;
+    }
+
     messages.push({ role: 'user', content: recap });
     messages.push({ role: 'assistant', content: 'Verstanden. Ich knüpfe nahtlos und räumlich konsistent an die letzte Szene an, bleibe im Präsens und in der Du-Perspektive.' });
   }
@@ -9833,13 +9893,17 @@ Wenn Karl waehlt: Schnitt zur naechsten Szene am Morgen, Kaffee zu zweit, keine 
       // Schlafplatz bestimmen: je nach Spielzustand andere Wahrscheinlichkeit.
       // Default ist Karls eigene Wohnung am Hackeschen Markt (Genre-Konstante:
       // der Detektiv kehrt zur Base zurueck wie bei Marlowe, Spade, Bogart-Filmen).
+      // v7.9.23: Tageswechsel darf nicht teleportieren. User-Befund Krause-Run
+      // v7.9.22: Karl war abends im Antiquitaetenladen Sz 60 mit Vf 2 ->
+      // Tageswechsel "Karl wachte bei Doc Wagner auf" obwohl Karl NIE dorthin
+      // gegangen war. Mistral hat den Tageswechsel als Heilsubstitut genutzt.
+      // Loesung: sleepPlace ist jetzt eine ANWEISUNG an Mistral diesen Ort
+      // erzaehlerisch zu begruenden ODER einen anderen Aufwachort zu waehlen
+      // der zur letzten Szene passt.
       let sleepPlace;
       if (verfassung <= 2) {
-        // Stark verletzt: Krankenhaus oder Doc Wagner in Schoeneberg
-
-        sleepPlace = Math.random() < 0.5
-          ? `Karl ist die ganze Nacht von Doc Wagner in Schoeneberg verarztet worden (Schaeferstrasse, kleine Praxis). Er erwacht auf der Liege, der Doc reicht ihm Kaffee.`
-          : `Karl wurde in die Charite Krankenhaus eingeliefert. Er liegt in einem schmalen Bett auf der Station. Eine Schwester wechselt gerade den Verband.`;
+        // Stark verletzt: Karl muss Hilfe gesucht haben - aber nur wenn er hin konnte
+        sleepPlace = `Karl ist verletzt (Vf ${verfassung}/5). Falls er ABENDS NOCH AKTIV den Weg zu Doc Wagner oder zur Charite gefunden hat (oder von jemandem hingebracht wurde), kann er dort aufwachen. WICHTIG: Wenn Karls letzte Szene gestern im Antiquitaetenladen, in einer Spielhoelle, oder mitten in einer Konfrontation war - dann ist er NICHT bei Doc Wagner aufgewacht. Dann hat er die Nacht am LETZTEN ORT verbracht (umgekippt im Hinterzimmer, von Schlaegern weggesperrt, oder mit Hilfe eines Anwesenden in eine naheliegende Pension geschleppt). Erzaehle die Bruecke vom letzten Ort zum Aufwachort plausibel.`;
       } else if (verfassung === 3 && lastSpannung >= 4) {
         // Angeschlagen + war in Action: Notunterkunft / Hotel / Versteck
         const opts = [
@@ -10805,6 +10869,7 @@ async function startGame() {
   ortPflichtIgnoredCount = 0;  // v7.0
   pendingForcedLocationChange = null;  // v7.0
   scenesAtSameLocation = 0;
+  scenesInCurrentTime = 0; // v7.9.23: Marathon-Counter reset (war vorher persistent zwischen Runs)
   lastLocation = '';
   lastMainLocation = ''; // v6.58
   // Reset Verfassung
@@ -12316,8 +12381,12 @@ function updateEnergyAndHunger(scene) {
     karlEnergie = 100;
     karlHunger = Math.max(0, karlHunger - 2);
     romanticTension = 0;  // entspannt nach der Nacht
-    console.log('[Schatten] Romantische Aktion erkannt -> Energie 100.');
-    diag('detect', 'Romantische Aktion -> Energie 100, Romantik-Tension reset');
+    // v7.9.23: User-Punkt - "sobald ein Mann Sex hatte, geht er wieder
+    // seiner Arbeit nach". Nach der Nacht soll der NAECHSTE Recap einen
+    // Detektiv-Push haben, kein weiteres Romantik-Eskalations-Geplaenkel.
+    postRomanticScenes = 2; // 2 Szenen lang anti-romantik
+    console.log('[Schatten] Romantische Aktion erkannt -> Energie 100, post-romance Detektiv-Modus.');
+    diag('detect', 'Romantische Aktion -> Energie 100, Romantik-Tension reset, Detektiv-Push aktiv');
     return;
   }
 
@@ -12437,11 +12506,12 @@ function checkStatusToasts(spannung) {
   // die Doku als "ewig warnen ohne Konsequenz" beschreibt. Lieber raus.
   // Bei stasiTension >= 3 greift weiter "Stasi auf den Fersen" (Zeile 11058)
   // - der hat wenigstens den direkten Vorlauf zu echter Festnahme (StT 4+ hard-force).
-  // CAUTION: Lange wach (2+ Tage ohne Schlaf)
-  // Hier wird ein "Tag" als ein vollstaendiger Zyklus gerechnet.
-  if (gameDay >= 2 && gameTimeIdx >= 5 && karlEnergie < 50) {
-    showProgressToast('Seit Tagen wach', 'Karl ist seit zwei Tagen kaum zum Schlafen gekommen.', 'caution', 'lange-wach');
-  }
+  // v7.9.23: "Seit Tagen wach"-Toast entfernt. User-Punkt:
+  // Bei jedem Tageswechsel wird karlEnergie auf 100 resettet (Karl schlaeft
+  // ueber Nacht). Es kann also nie wirklich "seit Tagen wach" sein -
+  // hoechstens "seit einem langen Tag wach". Toast hatte keinen erzaehlerischen
+  // Wert da Karl jeden Morgen frisch ist. "Karl wird muede" (oben) + Energie-Push
+  // im Recap reichen aus.
 }
 
 // Romantik-Tension Update: prueft Cast (sind Frauen im Raum?) und Erzaehltext.
@@ -12467,7 +12537,7 @@ function updateRomanticTension(scene) {
   // eine implizite +1 Tension pro Szene bis Schwelle 2 erreicht. Ab dann
   // greifen die normalen Pattern-Hits.
   try {
-    if (spannung <= 2 && !karlInStasiCustody && romanticTension < 2 &&
+    if (spannung <= 2 && !karlInStasiCustody && romanticTension < 3 &&
         caseSetup && Array.isArray(caseSetup.setupCast)) {
       const setupRomanceNames = [];
       for (const ce of caseSetup.setupCast) {
@@ -12483,7 +12553,11 @@ function updateRomanticTension(scene) {
           return setupRomanceNames.includes(cName);
         });
         if (romanceInCurrentCast) {
-          romanticTension = Math.min(2, romanticTension + 1);
+          // v7.9.23: Bootstrap-Cap 2 -> 3 angehoben. Krause-Run v7.9.22 zeigte
+          // Tension stieg nur auf 2 (Cap) - Push greift aber erst bei >=3.
+          // Mistral schreibt im Bot-Modus keine echten Hints, also muss der
+          // Bootstrap allein bis 3 reichen.
+          romanticTension = Math.min(3, romanticTension + 1);
           diag('detect', 'Romantik-Bootstrap +1 (Setup-ROMANCE-Person aktiv) = ' + romanticTension);
         }
       }
@@ -14664,14 +14738,13 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
               }
             }
           }
-          if (bestNpc && bestCount >= 2) {
-            // v6.97: Inhalts-Check analog v6.95 Stage-3. Wenn der gewaehlte
-            // Verdaechtige in den letzten 5 Szenen-Texten gar nicht vorkommt,
-            // ist er kein guter Stage-2-Kandidat. Anlass: Doc-Wagner-Schaefer-
-            // strasse-Run v6.95 erkor "Horst" zum Verdaechtigen, aber Horst war
-            // nur in Sz4 erwaehnt (Mistral hatte den Namen mal genannt, dann
-            // ist er aus dem Plot verschwunden). Karl hatte ab Sz12 nichts mehr
-            // mit Horst zu tun.
+          // v7.9.23: Bei extremer Stagnation (15+ Indizien) reicht 1 Erwaehnung.
+          // User-Befund Krause-Run v7.9.22: Tante Frieda war einziger SUSPECT
+          // im Setup, kam aber nur 1x in Indizien direkt vor (oft nur indirekt
+          // via Etui/Schmuck). Run lief 60 Sz nie zu Stage 2.
+          const extremeStagnation = ind >= 15;
+          const minCount = extremeStagnation ? 1 : 2;
+          if (bestNpc && bestCount >= minCount) {
             const bestNpcLastName = bestNpc.split(/\s+/).pop().toLowerCase();
             const last5SceneTexts = logEntries
               .filter(e => e.type === 'scene')
@@ -14693,6 +14766,17 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
               diag('progress', '✦ AUTO-STAGE 2 erzwungen (Verdaechtiger: ' + bestNpc + ', ' + bestCount + 'x in Indizien, Tag ' + tag + ', ' + ind + ' Indizien)');
               showProgressToast('VERDACHT FORMT SICH', bestNpc + ' - die Spuren deuten klar in diese Richtung.');
             }
+          } else if (extremeStagnation && namenAusFacts.length > 0) {
+            // v7.9.23: NOTFALL-Force bei 15+ Indizien aber keinem klaren Kandidaten:
+            // nimm den ersten Cast-NPC der nicht CLIENT/TARGET/ROMANCE ist.
+            const fallbackNpc = namenAusFacts[0];
+            caseProgress.tatverdaechtiger = fallbackNpc;
+            caseProgress.stage = 2;
+            caseProgress.stage2StartDay = gameDay;
+            caseProgress.stage2StartScene = sceneCounter;
+            console.log('[Schatten] AUTO-FORCING Stage 2 (NOTFALL): ' + fallbackNpc + ' bei ' + ind + ' Indizien ohne klaren Kandidaten');
+            diag('progress', '✦ AUTO-STAGE 2 NOTFALL erzwungen (' + fallbackNpc + ', kein klarer Kandidat aber ' + ind + ' Indizien)');
+            showProgressToast('VERDACHT FORMT SICH', fallbackNpc + ' - die Spuren deuten in diese Richtung.');
           } else {
             diag('drift', 'Auto-Forcing blockiert: kein klarer Kandidat in Indizien (Ind:' + ind + ', Tag:' + tag + ')');
           }
@@ -14801,26 +14885,35 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     if (caseProgress.stage === 3 && caseProgress.ueberfuehrt && !caseProgress.klientGesprochen) {
       const stage3Scenes = sceneCounter - (caseProgress.stage3StartScene || sceneCounter);
       if (stage3Scenes >= 7) {
-        // Handlungsfaehigkeits-Check - HART, kein Override mehr
-        // v7.9.18: Bei EXTREMER Stagnation (>=15 Sz Stage 3) Soft-Block ueberschreiben.
-        // Heinrich-Run war 24 Szenen Stage 3 ohne Stage 4 - dauerhaft Vf 2 hat blockiert.
-        // Bei 15+ Sz Stage 3: nur noch Custody UND Sp 5 blockieren, Vf 2 nicht mehr.
-        const extremeStagnation = stage3Scenes >= 15;
-        const karlBlocked = extremeStagnation
-          ? (karlInStasiCustody || (typeof lastSpannung === 'number' && lastSpannung >= 5))
-          : (karlInStasiCustody || (verfassung <= 2) || (typeof lastSpannung === 'number' && lastSpannung >= 4));
+        // v7.9.23: Stage-4-Auto-Force darf NIE in einer aktiven Szene
+        // greifen. User-Befund: Wagner-Run hatte Sz 36 = Stender stuermt
+        // Praxis, Karl versteckt sich hinter Vorhang, mitten im Dialog
+        // -> AUTO-STAGE 4 "Fall geloest, Klient informiert". Absurd.
+        // Brandt-Run Sz 36: Karl spricht mit Juergen ueber rothaarige Fee
+        // -> AUTO-STAGE 4 mitten im Gespraech.
+        // Lieber: Auto-Force nur wenn Karl WIRKLICH ruhig steht (Sp <= 2 + Vf >=3 + nicht Custody).
+        // Falls Stagnation extrem ist, geben wir lieber im naechsten Prompt
+        // einen Klient-Push aus statt willkuerlich zu schliessen.
+        const karlBlocked =
+          karlInStasiCustody ||
+          (verfassung <= 2) ||
+          (typeof lastSpannung === 'number' && lastSpannung >= 3);
         if (!karlBlocked) {
-          // Stage 4 forcen nur wenn Karl frei und gesund
+          // Stage 4 forcen nur wenn Karl frei, ruhig, und nicht mitten in einem Dialog
           caseProgress.klientGesprochen = true;
           caseProgress.istGelöst = true;
           caseProgress.stage = 4;
-          console.log('[Schatten] AUTO-FORCING Stage 4: Fall geloest nach ' + stage3Scenes + ' Szenen in Stage 3' + (extremeStagnation ? ' (Soft-Block ueberschrieben wegen extremer Stagnation)' : ''));
+          console.log('[Schatten] AUTO-FORCING Stage 4: Fall geloest nach ' + stage3Scenes + ' Szenen in Stage 3');
           diag('progress', '✦ AUTO-STAGE 4 erzwungen (Fall geloest, Klient berichtet, ' + stage3Scenes + ' Szenen Stagnation)');
           showProgressToast('FALL GELÖST', 'Klient ist informiert.');
         } else {
-          // Karl handlungsunfaehig - Stage 4 verschieben, dafuer Hinweis im Diag
-          const reason = karlInStasiCustody ? 'in Gewahrsam' : (verfassung <= 2 ? 'verletzt (Vf ' + verfassung + ')' : 'Action-Szene (Sp ' + lastSpannung + ')');
-          diag('drift', 'Stage-4-Force blockiert: Karl ' + reason + ' (' + stage3Scenes + ' Szenen Stage 3)');
+          // Karl handlungsunfaehig oder mitten in Action - Stage 4 nicht jetzt
+          const reason = karlInStasiCustody ? 'in Gewahrsam'
+                       : (verfassung <= 2 ? 'verletzt (Vf ' + verfassung + ')'
+                       : 'Action-Szene (Sp ' + lastSpannung + ')');
+          diag('drift', 'Stage-4-Force blockiert: Karl ' + reason + ' (' + stage3Scenes + ' Szenen Stage 3) - setze stattdessen Klient-Push');
+          // Setze Klient-Push fuer naechste ruhige Szene
+          pendingKlientPushAfterCalm = true;
         }
       }
     }
@@ -14990,6 +15083,50 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         console.warn('[Schatten] Phantom-Fakt im Eureka erkannt:', phantomFact, '- Eureka unterdrueckt:', verb);
         diag('filter', 'Eureka mit Phantom-Fakt unterdrueckt (' + phantomFact + '): ' + verb.slice(0, 100));
       } else {
+      // v7.9.23: TRIVIALITAETS-FILTER. Eureka unterdruecken wenn die Verknuepfung
+      // nur etablierte Setup-Fakten miteinander verbindet ohne neuen Schluss.
+      // Anlass Krause-Run v7.9.22: "Der Name Krause verbindet sich mit dem
+      // silbernen Etui und dem Diebesgut" - Krause IST der Klient, das Etui
+      // IST sein Diebesgut. Reine Tautologie ohne Erkenntnisgewinn.
+      let isTrivial = false;
+      try {
+        if (caseSetup && caseSetup.setupCast) {
+          // Sammle alle Setup-Namen + bekannte Setup-Begriffe (rolle/beziehung-Wörter)
+          const setupNouns = new Set();
+          for (const ce of caseSetup.setupCast) {
+            if (!ce) continue;
+            if (ce.name) {
+              ce.name.toLowerCase().split(/\s+/).forEach(w => {
+                if (w.length >= 4) setupNouns.add(w
+                  .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss'));
+              });
+            }
+          }
+          // Plus Setup-Anlass/Tat-Begriffe
+          const setupCtx = ((caseSetup.tat || '') + ' ' + (caseSetup.anlass || '') + ' ' + (caseSetup.opfer || '')).toLowerCase()
+            .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+          setupCtx.split(/\W+/).forEach(w => {
+            if (w.length >= 4) setupNouns.add(w);
+          });
+          // Pruefe: wie viele Konzeptworte aus dem Eureka stehen schon im Setup?
+          const eurekaWords = verbLower.split(/\W+/).filter(w => w.length >= 4 && !stopwords.has(w));
+          const eurekaUnique = [...new Set(eurekaWords)];
+          if (eurekaUnique.length >= 2) {
+            const inSetup = eurekaUnique.filter(w => setupNouns.has(w));
+            const setupRatio = inSetup.length / eurekaUnique.length;
+            // Wenn 80%+ der Konzepte schon im Setup standen: Tautologie
+            if (setupRatio >= 0.8) {
+              isTrivial = true;
+              console.warn('[Schatten] Triviales Eureka unterdrueckt (' + Math.round(setupRatio * 100) + '% Setup-Worte):', verb);
+              diag('filter', 'Eureka trivial (verbindet nur Setup-Fakten, ' + Math.round(setupRatio * 100) + '% Setup-Worte): ' + verb.slice(0, 100));
+            }
+          }
+        }
+      } catch (e) { /* ignore */ }
+
+      if (isTrivial) {
+        // Unterdruecken - kein Eureka
+      } else {
       const istDuplikat = caseProgress.verknuepfungen.some(v => {
         const otherTxt = v.beschreibung || '';
         const otherNorm = otherTxt.toLowerCase().replace(/[.,;!?:]/g, '').replace(/\s+/g, ' ').trim();
@@ -15019,6 +15156,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         showProgressToast('VERBINDUNG ENTDECKT', verb);
       }
       } // schliesst v7.9.10 Phantom-Fact-else
+      } // schliesst v7.9.23 isTrivial-else
       } // schliesst v7.8 Plausibility-else
       } // schliesst v7.8 Sz<3-else
     }
@@ -15863,6 +16001,7 @@ function resetGame() {
   ortPflichtIgnoredCount = 0;  // v7.0
   pendingForcedLocationChange = null;  // v7.0
   scenesAtSameLocation = 0;
+  scenesInCurrentTime = 0; // v7.9.23
   lastLocation = '';
   lastMainLocation = ''; // v6.58
   visitedLocations = [];
@@ -15968,8 +16107,59 @@ function botChooseByStrategy(options) {
     // und es Abend/Nacht ist, nutzt der Bot Romantik-Optionen statt stur
     // weiter zu ermitteln. Macht die Romantik-Storyline ueberhaupt erlebbar
     // im Autoplay. Anlass: in 14 v6.x-Runs war romanticTension immer 0/5 am
-    // Ende, weil der Bot Romantik-Optionen ignorierte und Mistral sie dann
-    // nicht weiter anbot.
+    // v7.9.23: PRIO 0 - FALL ABSCHLIESSEN. Hoechste Prioritaet.
+    // User-Befund Brandt-Run v7.9.22: VERDÄCHTIGER ÜBERFÜHRT in Sz 30, Bot
+    // machte aber bis Sz 36 weiter mit "rothaarige Fee" befragen statt zum
+    // Klient zu gehen. Auto-Stage-4 schloss dann mitten im Dialog.
+    if (caseProgress && !karlInStasiCustody && verfassung >= 3) {
+      // Stage 3 + ueberfuehrt: Klient-Options priorisieren
+      if (caseProgress.stage === 3 && caseProgress.ueberfuehrt && !caseProgress.klientGesprochen) {
+        const klientPattern = /\b(zum?\s+klient|zur?\s+klient|zur?\s+auftraggeb|nach\s+hause\s+(zu|bring)|heimbring|heimfahr|fall\s+(loesen|abschliess|beenden|berichten|aufkl)|melde\s+(roth|lindner|kommissar)|uebergib\s+(die\s+)?beweis|fall\s+ist\s+geloest|ueberstell)/i;
+        const klientOptions = options.filter(opt => klientPattern.test(opt.text));
+        if (klientOptions.length > 0) {
+          console.log('[Bot] Survival-Override: FALL ABSCHLIESSEN (Stage 3, Verdaechtiger ueberfuehrt) - Klient-Option waehlen');
+          return botRngChoice(klientOptions);
+        }
+      }
+      // Stage 2 + Verdaechtiger gesetzt + nicht ueberfuehrt: Konfrontations-Options
+      if (caseProgress.stage === 2 && caseProgress.tatverdaechtiger && !caseProgress.ueberfuehrt) {
+        const tdName = (caseProgress.tatverdaechtiger || '').toLowerCase();
+        const tdLastName = tdName.split(/\s+/).pop();
+        const konfrontPattern = new RegExp(
+          '\\b(konfrontier|stelle?\\s+\\w*' + (tdLastName || 'verdacht') + '|verhafte?\\s+\\w*' + (tdLastName || 'verdacht') + 
+          '|bring\\s+\\w*' + (tdLastName || 'verdacht') + '|verhoer|gestaendnis|beweise?\\s+(vorleg|zeig)|uebergib\\s+(die\\s+)?beweise?|melde\\s+(roth|lindner|kommissar))',
+          'i');
+        const konfrontOptions = options.filter(opt => konfrontPattern.test(opt.text));
+        if (konfrontOptions.length > 0) {
+          console.log('[Bot] Survival-Override: KONFRONTATION (Stage 2, Verdaechtiger ' + caseProgress.tatverdaechtiger + ') - Konfrontations-Option waehlen');
+          return botRngChoice(konfrontOptions);
+        }
+      }
+      // v7.9.23: Stage 1 + 15+ Indizien: Verdaechtigen-Suche-Options.
+      // Krause-Run v7.9.22: 17 Indizien aber nie Stage 2 - Bot scannte nie
+      // nach "Konfrontation"-/"Verdacht"-Patterns weil Stage noch 1 war.
+      if (caseProgress.stage === 1 && (caseProgress.indizien || []).length >= 15) {
+        const verdachtPattern = /\b(konfrontier|verhoer|verdacht|stelle?\s+\w+\s+zur\s+rede|verfolge\s+den\s+verdacht|beweise?\s+vorleg|gestaendnis|zwing|drohne?\s+mit|geh\s+zu\s+\w+\s+und\s+(frag|stell)|fall\s+(loesen|abschliess|aufkl)|melde\s+(roth|lindner|kommissar))/i;
+        const verdachtOptions = options.filter(opt => verdachtPattern.test(opt.text));
+        if (verdachtOptions.length > 0) {
+          console.log('[Bot] Survival-Override: VERDACHT SUCHEN (Stage 1, ' + caseProgress.indizien.length + ' Indizien) - Konfrontations-Option waehlen');
+          return botRngChoice(verdachtOptions);
+        }
+      }
+    }
+
+    // v7.9.23: MARATHON-BREAKER. Bei 6+ Sz am selben Ort: Bewegungs-Options.
+    // User-Befund: zu langes Kleben an einem Ort. Bot muss aktiv weg.
+    if (scenesAtSameLocation >= 6 && !karlInStasiCustody) {
+      const bewegungsPattern = /\b(geh\s+(zu|nach|in|zum|zur)|fahr\s+(zu|nach|zum|zur)|verlass|raus\s+aus|weg\s+von|zurueck\s+(ins?|zum?|zur)|setz\s+dich\s+in\s+den\s+(opel|wagen)|nimm\s+die\s+(strassenbahn|s-bahn|u-bahn))/i;
+      const bewegungOpts = options.filter(opt => bewegungsPattern.test(opt.text));
+      if (bewegungOpts.length > 0) {
+        console.log('[Bot] Survival-Override: MARATHON-BREAKER (' + scenesAtSameLocation + ' Sz am selben Ort) - Bewegungs-Option waehlen');
+        return botRngChoice(bewegungOpts);
+      }
+    }
+
+    // ROMANTIK-PURSUIT bei Tension >=3 + Frau im Cast (v7.9.20).
     if (typeof romanticTension === 'number' && romanticTension >= 3 && gameTimeIdx >= 3) {
       const romancePattern = /\b(kuess|kuss|umarm|lehn\s+dich\s+(zu|an|vor)|leg\s+(eine\s+hand|deine\s+hand|den\s+arm)|nimm\s+(ihre|ihre\s+hand)|streich|haelt\s+(ihre|seine)\s+hand|nah\s+heran|naeher\s+heran|verfuehr|begehr|liebkos|zieh\s+sie\s+naeher)/i;
       const romanceOptions = options.filter(opt => romancePattern.test(opt.text));
@@ -16278,6 +16468,7 @@ async function botRunMainLoop() {
       lastLocation = '';
       lastMainLocation = ''; // v6.58
       scenesAtSameLocation = 0;
+      scenesInCurrentTime = 0; // v7.9.23
       caseSetup = null;
       expandedAbbreviations = new Set();
       // v7.9.21: User-gewaehltes Setup vor startGame() wieder setzen.
