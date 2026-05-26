@@ -6977,7 +6977,14 @@ function showSceneStatusPopup(entry, sceneIdx) {
 
   document.getElementById('popup-day').textContent = entry.day || '—';
   const dateEl = document.getElementById('popup-date');
-  if (dateEl) dateEl.textContent = '—';  // historisches Datum nicht gespeichert pro Szene
+  if (dateEl) {
+    // v7.9.13: historisches Datum jetzt pro Szene gespeichert
+    if (entry.gameDate && typeof formatGameDateShort === 'function') {
+      dateEl.textContent = formatGameDateShort(entry.gameDate);
+    } else {
+      dateEl.textContent = '—';
+    }
+  }
   const timeEl = document.getElementById('popup-time');
   if (timeEl) {
     const tStr = entry.time || '—';
@@ -7010,33 +7017,104 @@ function showSceneStatusPopup(entry, sceneIdx) {
     else if (eStufe.stufe === 3) eEl.style.color = '#d2b46e';
     else eEl.style.color = '';
   }
-  // Hunger
+  // Hunger - nur zeigen wenn relevant (>=1)
   const hEl = document.getElementById('popup-hunger');
-  if (hEl && typeof entry.hunger === 'number') {
-    if (entry.hunger >= 7) { hEl.textContent = 'Sehr hungrig (' + entry.hunger + '/10)'; hEl.style.color = '#ff8844'; }
-    else if (entry.hunger >= 4) { hEl.textContent = 'Hungrig (' + entry.hunger + '/10)'; hEl.style.color = '#f0c040'; }
-    else if (entry.hunger >= 1) { hEl.textContent = 'Leicht hungrig (' + entry.hunger + '/10)'; hEl.style.color = ''; }
-    else { hEl.textContent = 'Satt'; hEl.style.color = ''; }
+  const hRow = document.getElementById('popup-hunger-row');
+  if (hEl && hRow) {
+    if (typeof entry.hunger === 'number' && entry.hunger >= 1) {
+      hRow.style.display = '';
+      if (entry.hunger >= 7) { hEl.textContent = 'Sehr hungrig (' + entry.hunger + '/10)'; hEl.style.color = '#ff8844'; }
+      else if (entry.hunger >= 4) { hEl.textContent = 'Hungrig (' + entry.hunger + '/10)'; hEl.style.color = '#f0c040'; }
+      else { hEl.textContent = 'Leicht hungrig (' + entry.hunger + '/10)'; hEl.style.color = ''; }
+    } else {
+      hRow.style.display = 'none';
+    }
   }
-  // Verletzung
+  // v7.9.13: Romantik-Tension - nur zeigen wenn >=1
+  const romEl = document.getElementById('popup-romance');
+  const romRow = document.getElementById('popup-romance-row');
+  if (romEl && romRow) {
+    if (typeof entry.romantik === 'number' && entry.romantik >= 1) {
+      romRow.style.display = '';
+      const labels = ['', 'Aufmerksamkeit', 'Sympathie', 'Naehe', 'Anziehung', 'Verbindung'];
+      romEl.textContent = (labels[entry.romantik] || 'Unbekannt') + ' (' + entry.romantik + '/5)';
+      romEl.style.color = entry.romantik >= 3 ? '#d090b0' : '';
+    } else {
+      romRow.style.display = 'none';
+    }
+  }
+  // Verletzung - nur zeigen wenn vorhanden
   const injEl = document.getElementById('popup-injury');
-  if (injEl) {
-    injEl.textContent = entry.injury || '—';
+  const injRow = document.getElementById('popup-injury-row');
+  if (injEl && injRow) {
+    if (entry.injury) {
+      injRow.style.display = '';
+      injEl.textContent = entry.injury;
+    } else {
+      injRow.style.display = 'none';
+    }
   }
-  // Stasi/Politisch
+  // Stasi/Politisch - nur zeigen wenn relevant
   const stasiEl = document.getElementById('popup-stasi');
-  if (stasiEl) {
+  const stasiRow = document.getElementById('popup-stasi-row');
+  if (stasiEl && stasiRow) {
     if (entry.gewahrsam) {
+      stasiRow.style.display = '';
       stasiEl.textContent = 'Im Gewahrsam (Verhoer ' + (entry.folterCnt || 0) + ')';
       stasiEl.style.color = '#ff6644';
     } else if (typeof entry.stasiT === 'number' && entry.stasiT > 0) {
+      stasiRow.style.display = '';
       stasiEl.textContent = 'Aufmerksam (' + entry.stasiT + '/5)';
       stasiEl.style.color = entry.stasiT >= 3 ? '#f0c040' : '';
     } else {
-      stasiEl.textContent = '—';
-      stasiEl.style.color = '';
+      stasiRow.style.display = 'none';
     }
   }
+  // v7.9.13: Fall-Fortschritt im Popup. Wurde bisher nur in der globalen Bar
+  // angezeigt - jetzt auch im historischen Popup pro Szene damit der Spieler
+  // immer sieht wie weit er war. Stage-Labels analog zum Live-Popup.
+  const caseEl = document.getElementById('popup-case');
+  const caseRow = document.getElementById('popup-case-row');
+  if (caseEl && caseRow) {
+    if (typeof entry.caseStufe === 'number') {
+      caseRow.style.display = '';
+      const stage = entry.caseStufe;
+      const solved = entry.caseGeloest === true;
+      // Stages: 0 Aufbau, 1 Indizien, 2 Verdaechtiger, 3 Ueberfuehrt, 4 Klient berichtet (geloest)
+      const stageLabels = ['Aufbau', 'Indizien gesammelt', 'Verdaechtiger identifiziert', 'Ueberfuehrt', 'Fall geloest'];
+      const label = stageLabels[Math.min(stage, 4)] || 'Aufbau';
+      // ASCII-Bar fuer schnelle Sicht
+      const bars = [
+        '░░░░ (Aufbau)',
+        '▓░░░ (Indizien gesammelt)',
+        '▓▓░░ (Verdaechtiger steht)',
+        '▓▓▓░ (Ueberfuehrt)',
+        '▓▓▓▓ FALL GELOEST',
+      ];
+      const bar = bars[Math.min(stage, 4)] || bars[0];
+      // Indizien-Count wenn vorhanden
+      const indStr = (typeof entry.indizienCnt === 'number' && entry.indizienCnt > 0) ? ' · ' + entry.indizienCnt + ' Indizien' : '';
+      caseEl.textContent = label + indStr + '\n' + bar;
+      caseEl.style.color = solved ? '#90c090' : '#d2b46e';
+      caseEl.style.whiteSpace = 'pre-line';
+    } else {
+      caseRow.style.display = 'none';
+    }
+  }
+  // v7.9.13: Inventar / Dabei - aus entry.inventarSnap (pro Szene gespeichert)
+  const invEl = document.getElementById('popup-inventory');
+  if (invEl) {
+    if (Array.isArray(entry.inventarSnap) && entry.inventarSnap.length > 0) {
+      invEl.textContent = entry.inventarSnap.join(', ');
+      invEl.style.color = '';
+    } else {
+      invEl.textContent = '—';
+      invEl.style.color = '#666';
+    }
+  }
+  // Cast-Row im historischen Popup ausblenden (Cast nicht pro Szene gespeichert)
+  const castRow = document.getElementById('popup-cast-row');
+  if (castRow) castRow.style.display = 'none';
 
   document.getElementById('status-popup').classList.remove('hidden');
 }
@@ -7309,8 +7387,10 @@ function renderLog() {
   logEl.classList.remove('hidden');
   logEl.innerHTML = '';
   let lastRenderedDay = null;
+  let sceneNumber = 0; // v7.9.13: korrekte Szenen-Zaehlung (nicht logEntries-Index)
   logEntries.forEach((entry, i) => {
     if (entry.type === 'scene') {
+      sceneNumber++;
       const isLast = i === logEntries.length - 1;
 
       // Day separator: if this scene's day differs from previous scene's day
@@ -7351,7 +7431,7 @@ function renderLog() {
       // ein Wisch-Scroll der zufaellig auf der Bar startet kein Popup oeffnet.
       // Wird IMMER gerendert (nicht nur Debug-Modus) sobald die noetigen Werte da sind.
       if (i > 0 && (typeof entry.verfassung === 'number' || typeof entry.energie === 'number')) {
-        const strip = renderSceneStatusStrip(entry, i);
+        const strip = renderSceneStatusStrip(entry, sceneNumber - 1);
         if (strip) div.appendChild(strip);
       }
       // Status-Snapshot pro Szene: zeigt alle relevanten Werte zum Zeitpunkt der Szene
@@ -14670,6 +14750,10 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       indizienCnt: caseProgress.indizien.length,
       // v7.9.13: Fall-Geloest-Flag fuer Pro-Szene-Strip (gruene Segmente)
       caseGeloest: caseProgress.istGelöst === true || caseProgress.stage >= 4 || caseProgress.klientGesprochen === true,
+      // v7.9.13: Historisches Datum pro Szene fuer Popup-Anzeige
+      gameDate: gameCurrentDate,
+      // v7.9.13: Inventar-Snapshot pro Szene (3 wichtigste Items)
+      inventarSnap: Array.isArray(karlInventar) ? karlInventar.slice(0, 6).map(i => (typeof i === 'string' ? i : (i && i.name) || '?')) : [],
       // Diagnose-Index im sceneDiagnosticsBuffer (fuer Debug-Modus-Export)
       diagId: diagId,
       // Angebotene Optionen mit speichern fuer Debug/Lektorat - oft sind Optionen
