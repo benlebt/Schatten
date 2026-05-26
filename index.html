@@ -2011,7 +2011,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.9.20 · Pool-Konsolidierung + Hard-Lock bei rel≤1 + Setup-Cast-Audit</div>
+    <div class="start-version">Schatten v7.9.20 · NPC-Konsolidierung via tagExtra + Hard-Lock + Setup-Cast-Audit</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -6483,10 +6483,15 @@ function buildTranscriptText() {
       for (const ce of caseSetup.setupCast) {
         const t = (ce && ce.tag) || '?';
         tagCounts[t] = (tagCounts[t] || 0) + 1;
+        // v7.9.20 v2: tagExtra mit auflisten (mit *-Marker)
+        if (ce && ce.tagExtra) {
+          const te = ce.tagExtra + '*';
+          tagCounts[te] = (tagCounts[te] || 0) + 1;
+        }
       }
       const totalNpcs = caseSetup.setupCast.length;
       const tagStr = Object.keys(tagCounts).sort().map(t => t + '=' + tagCounts[t]).join(', ');
-      out += '  - Setup-NPCs gesamt: ' + totalNpcs + ' (' + tagStr + ')\n';
+      out += '  - Setup-NPCs gesamt: ' + totalNpcs + ' (' + tagStr + ')   (* = Doppel-Rolle via tagExtra)\n';
       // stasiRelevance + caseIsPolitical zeigen
       const rel = typeof caseSetup.stasiRelevance === 'number' ? caseSetup.stasiRelevance : '?';
       out += '  - Stasi-Relevanz: ' + rel + '/5, Tension erreicht: ' + (stasiTension || 0) + '/5\n';
@@ -6500,7 +6505,8 @@ function buildTranscriptText() {
         const found = storyFacts && Object.values(storyFacts).find(f => f && f.name === ce.name);
         if (found) {
           activatedCount++;
-          activatedNames.push(ce.name + ' (' + ce.tag + ')');
+          const tagDisplay = ce.tagExtra ? (ce.tag + '+' + ce.tagExtra) : ce.tag;
+          activatedNames.push(ce.name + ' (' + tagDisplay + ')');
         }
       }
       out += '  - Aktivierte Setup-NPCs: ' + activatedCount + '/' + totalNpcs;
@@ -8420,6 +8426,12 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
       if (Array.isArray(caseSetup.setupCast) && caseSetup.setupCast.length > 0) {
         const fixCast = caseSetup.setupCast.filter(c => c && !['ROMANCE', 'STASI', 'GANGSTER'].includes((c.tag || '').toUpperCase()));
         const poolCast = caseSetup.setupCast.filter(c => c && ['ROMANCE', 'STASI', 'GANGSTER'].includes((c.tag || '').toUpperCase()));
+        // v7.9.20 v2: Personen mit tagExtra (Doppel-Rolle) erscheinen ZUSAETZLICH
+        // im Pool-Block damit der Trigger fuer die Zweitrolle sichtbar ist.
+        // Beispiel: Lola Brandt steht im fixCast als ZEUGE (tag=WITNESS), und
+        // zusaetzlich im poolCast als ROMANTIK-MOEGLICH (tagExtra=ROMANCE).
+        const extraRolePersons = caseSetup.setupCast.filter(c =>
+          c && c.tagExtra && ['ROMANCE', 'STASI', 'GANGSTER'].includes((c.tagExtra || '').toUpperCase()));
 
         if (fixCast.length > 0) {
           recap += '\nBEKANNTER CAST (FEST, gilt fuer ALLE Szenen):\n';
@@ -8468,7 +8480,7 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
         // v7.9.12: Pool-NPCs separat - werden bei bestimmten Triggern aktiviert.
         // Diese NPCs sind dem Setup vorab bekannt aber nicht in der Eingangsszene -
         // Mistral darf sie spaeter ins Spiel bringen wenn der Kontext passt.
-        if (poolCast.length > 0) {
+        if (poolCast.length > 0 || extraRolePersons.length > 0) {
           recap += '\nPOOL-NPCs (vorbereitete Personen die je nach Spielverlauf aktiviert werden):\n';
           for (const ce of poolCast) {
             if (!ce || !ce.name) continue;
@@ -8485,7 +8497,24 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
             if (ce.triggerWhen) parts.push('| AKTIVIEREN WENN: ' + ce.triggerWhen);
             recap += '  ' + parts.join(' ') + '\n';
           }
-          recap += 'Diese Pool-NPCs sind dem Setup bekannt aber tauchen NICHT in Szene 1 auf. Bringe sie ins Spiel wenn der jeweilige Trigger zutrifft - ROMANCE bei niedriger Spannung am Abend/Nacht und Karl ist allein/unterwegs; STASI wenn die politische Spannung steigt oder Karl in politisches Terrain geraet; GANGSTER wenn der Plot organisierte Kriminalitaet betrifft. Bevorzuge diese vorab definierten Personen statt neue zu erfinden, wenn der Trigger zutrifft.\n';
+          // v7.9.20 v2: Personen mit tagExtra (Doppel-Rolle) erscheinen hier mit
+          // ihrem ZWEITEN Tag und dem entsprechenden Trigger. Sie sind bereits
+          // im fixCast aufgefuehrt - hier zur Klarstellung der Zweitrolle.
+          for (const ce of extraRolePersons) {
+            if (!ce || !ce.name || !ce.tagExtra) continue;
+            const teLabel = {
+              'ROMANCE': 'ROMANTIK-MOEGLICH (Doppel-Rolle, zusaetzlich zu Haupt-Tag oben)',
+              'STASI': 'STASI-VERBINDUNG (Doppel-Rolle, zusaetzlich zu Haupt-Tag oben)',
+              'GANGSTER': 'GANGSTER-VERBINDUNG (Doppel-Rolle, zusaetzlich zu Haupt-Tag oben)',
+            }[ce.tagExtra] || ce.tagExtra;
+            const triggerField = ce.tagExtra === 'ROMANCE' ? ce.triggerRomanceWhen :
+                                 ce.tagExtra === 'STASI' ? ce.triggerStasiWhen :
+                                 ce.tagExtra === 'GANGSTER' ? ce.triggerGangsterWhen : null;
+            const parts = ['[' + teLabel + ']', ce.name];
+            if (triggerField) parts.push('| AKTIVIEREN WENN: ' + triggerField);
+            recap += '  ' + parts.join(' ') + '\n';
+          }
+          recap += 'Diese Pool-NPCs sind dem Setup bekannt aber tauchen NICHT in Szene 1 auf (ausser Doppel-Rolle-Personen die im fixCast schon sichtbar waren). Bringe sie ins Spiel wenn der jeweilige Trigger zutrifft - ROMANCE bei niedriger Spannung am Abend/Nacht und Karl ist allein/unterwegs; STASI wenn die politische Spannung steigt oder Karl in politisches Terrain geraet; GANGSTER wenn der Plot organisierte Kriminalitaet betrifft. Bevorzuge diese vorab definierten Personen statt neue zu erfinden, wenn der Trigger zutrifft.\n';
         }
       }
 
@@ -9555,7 +9584,8 @@ Im Erzaehltext zeige die Schwaeche: Karls Stimme bricht, die Haende zittern, das
       try {
         if (caseSetup && Array.isArray(caseSetup.setupCast)) {
           stasiNpcsImSetup = caseSetup.setupCast
-            .filter(p => p && (p.tag === 'STASI' || /MfS|Stasi|IM\s|VP-/.test(p.rolle || '')))
+            // v7.9.20 v2: tagExtra mitchecken (eine WITNESS-Person kann tagExtra='STASI' haben)
+            .filter(p => p && (p.tag === 'STASI' || p.tagExtra === 'STASI' || /MfS|Stasi|IM\s|VP-/.test(p.rolle || '')))
             .map(p => p.name)
             .filter(n => n);
         }
@@ -9633,23 +9663,41 @@ Wenn Karl die Behandlungs-Option NICHT waehlt und stattdessen weiter ermittelt, 
     // Cast UND niedrige Spannung UND Abend/Nacht UND nicht im Gewahrsam,
     // SOLL eine romantische Option angeboten werden. User-Wunsch: Spiele
     // muessen abwechslungsreich sein - nicht nur Action und Verhoer.
+    // v7.9.20 v2: Priorisiert Setup-Cast-Personen mit tag='ROMANCE' oder tagExtra='ROMANCE'.
     if (romanticTension >= 3 && !karlInStasiCustody &&
         (typeof lastSpannung !== 'number' || lastSpannung <= 2) &&
         gameTimeIdx >= 4 /* ABEND oder NACHT */) {
-      // Frauen im Cast finden
+      // Frauen im Cast finden - mit Prioritaet auf Setup-definierte ROMANCE-Personen
+      const setupRomanceNames = [];
+      if (caseSetup && Array.isArray(caseSetup.setupCast)) {
+        for (const ce of caseSetup.setupCast) {
+          if (!ce || !ce.name) continue;
+          if (ce.tag === 'ROMANCE' || ce.tagExtra === 'ROMANCE') {
+            setupRomanceNames.push(ce.name);
+          }
+        }
+      }
       const frauNamen = [];
+      // Erst Setup-ROMANCE-Personen die im aktuellen Cast sind
       for (const c of (cast || [])) {
         const cName = typeof c === 'string' ? c : (c && c.name) || '';
         if (!cName) continue;
-        // Schauen ob die Person als ROMANCE im setupCast taggte ODER ein Vorname
-        // weiblich klingt (heuristisch via storyFacts)
-        const fact = storyFacts && Object.values(storyFacts).find(f => f && f.name === cName);
-        if (fact) {
-          const rolle = (fact.rolle || '').toLowerCase();
-          const bez = (fact.beziehung || '').toLowerCase();
-          // Klare weibliche Indikatoren
-          if (/(witwe|saengerin|tochter|sekretaerin|naeherin|schwester|kellnerin|krankenschwester|tante|ehefrau|klientin|zeugin|geliebte|freundin|frau)/i.test(rolle + ' ' + bez)) {
-            frauNamen.push(cName);
+        if (setupRomanceNames.includes(cName)) {
+          frauNamen.push(cName);
+        }
+      }
+      // Falls keine Setup-ROMANCE im aktuellen Cast: Fallback auf Heuristik
+      if (frauNamen.length === 0) {
+        for (const c of (cast || [])) {
+          const cName = typeof c === 'string' ? c : (c && c.name) || '';
+          if (!cName) continue;
+          const fact = storyFacts && Object.values(storyFacts).find(f => f && f.name === cName);
+          if (fact) {
+            const rolle = (fact.rolle || '').toLowerCase();
+            const bez = (fact.beziehung || '').toLowerCase();
+            if (/(witwe|saengerin|tochter|sekretaerin|naeherin|schwester|kellnerin|krankenschwester|tante|ehefrau|klientin|zeugin|geliebte|freundin|frau)/i.test(rolle + ' ' + bez)) {
+              frauNamen.push(cName);
+            }
           }
         }
       }
@@ -10810,6 +10858,14 @@ async function startGame() {
         fahrzeug: ce.fahrzeug || null,
         frozen: true,
         setupTag: ce.tag,
+        // v7.9.20 v2: Doppel-Rolle ueber tagExtra (z.B. WITNESS+ROMANCE).
+        // Erlaubt einer Person zwei Aktivierungsmodi ohne Cast-Dopplung.
+        // Frueher wurde ein zweiter Eintrag mit gleichem Namen vom ersten ueberschrieben
+        // (normalizeNpcName ergibt gleichen Key) - jetzt explizit als Property.
+        setupTagExtra: ce.tagExtra || null,
+        triggerRomanceWhen: ce.triggerRomanceWhen || null,
+        triggerGangsterWhen: ce.triggerGangsterWhen || null,
+        triggerStasiWhen: ce.triggerStasiWhen || null,
         persistent: ce.persistent === true,
       };
       // v6.75: TARGET mit anwesend=false und Status-Rolle (Opfer/Vermisster) wird
