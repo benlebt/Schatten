@@ -18,6 +18,42 @@
     --error: #ff6060;
   }
   * { box-sizing: border-box; }
+  /* v7.9.6: Boot-Indicator - sichtbar SOFORT bei Page-Load, bevor das eigentliche
+     JS lauft. Verhindert schwarzen Screen waehrend der Browser 845KB HTML parst.
+     Pulsiert sanft damit User sieht: es passiert was. */
+  .boot-indicator {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    background: #1a1612;
+    color: #b0a890;
+    font-family: 'Courier New', Courier, monospace;
+    z-index: 9999;
+    transition: opacity 0.3s ease-out;
+  }
+  .boot-indicator.fade-out {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .boot-dots {
+    font-size: 32px;
+    letter-spacing: 8px;
+    animation: boot-pulse 1.2s infinite ease-in-out;
+  }
+  .boot-text {
+    font-size: 13px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    opacity: 0.6;
+  }
+  @keyframes boot-pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+  }
   body {
     margin: 0;
     min-height: 100vh;
@@ -1136,6 +1172,35 @@
     font-size: 11px;
     font-style: italic;
   }
+  /* v7.9.6: Loading-Element soll mehr Praesenz haben wenn es allein im Container
+     steht (nach hideAll() ohne Szenen). Anlass: User-Feedback - "Karl denkt nach"
+     war zu unscheinbar bei leerem Bildschirm, wirkte wie nichts. Jetzt mit
+     Centering, groesserer Schrift und Box-Hintergrund. */
+  .loading.loading-prominent {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    padding: 60px 20px;
+    margin: 40px auto;
+    max-width: 400px;
+    border: 1px solid rgba(200, 191, 168, 0.15);
+    background: rgba(28, 24, 18, 0.4);
+    border-radius: 4px;
+  }
+  .loading.loading-prominent .dots {
+    font-size: 32px;
+    letter-spacing: 8px;
+    color: #b0a890;
+  }
+  .loading.loading-prominent .loading-text {
+    color: #b0a890;
+    font-size: 13px;
+    font-style: normal;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    text-align: center;
+  }
   /* Narrative wait box (rate-limit pause, story-themed) */
   .wait-box {
     border-left: 3px solid var(--accent);
@@ -1615,6 +1680,14 @@
 </style>
 </head>
 <body>
+<!-- v7.9.6: Boot-Indicator. Direkt nach <body> damit der Browser ihn sofort
+     beim ersten Render zeigt, BEVOR die 845KB index.html durchgeparst sind.
+     Verhindert den minutenlangen schwarzen Screen den User vorher hatten.
+     Wird per JS am Ende des Skripts ausgeblendet wenn showStart() laeuft. -->
+<div id="boot-indicator" class="boot-indicator">
+  <div class="boot-dots">···</div>
+  <div class="boot-text">Schatten startet</div>
+</div>
 <!-- Settings button (always visible) -->
 <button class="settings-btn" onclick="toggleSettings(event)" title="Menü">⚙</button>
 
@@ -1828,7 +1901,7 @@
     <button class="btn-primary" onclick="startRandomGame()">Zufällige Ermittlung</button>
     <br>
     <button class="btn-secondary" onclick="showSetupSelector()">Fall auswählen</button>
-    <div class="start-version">Schatten v7.9.5 · Diagnose-Overlay scrollbar statt alert()</div>
+    <div class="start-version">Schatten v7.9.9 · Fall-Loesungen plausibler + Karl-stirbt-wieder + sprachliche Fixes</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -1905,7 +1978,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.9.5</span>
+    <span>Schatten v7.9.9</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -3570,7 +3643,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.9.5';
+window.SCHATTEN_VERSION = 'v7.9.9';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -3768,6 +3841,11 @@ let caseProgress = {
   npcMemory: {},
   // v6.69: Tag an dem Stage 2 erreicht wurde - fuer Eskalations-Logik
   stage2StartDay: null,
+  // v7.9.7: Meilensteine - chronologisch wichtige Ereignisse die als Toast
+  // gefeuert wurden. Damit der Spieler im Status-Popup nachvollziehen kann
+  // was bisher passiert ist, nicht nur den aktuellen Stand sieht.
+  // milestones[i] = { szene: N, tag: D, typ: 'stage'|'eureka'|'custody'|'heal'|'find', text: "..." }
+  meilensteine: [],
 };
 // Auftrags-Setup aus dem Intro: feste Story-Anker die Karl NIE vergessen darf.
 // Wird beim Spielstart aus dem gewaehlten Intro befuellt und bei JEDER KI-Anfrage
@@ -5287,14 +5365,26 @@ function showCaseSolved() {
     solvedEl.id = 'case-solved';
     solvedEl.className = 'case-solved';
     const numIndizien = caseProgress.indizien.length;
+    const ct = (caseSetup && caseSetup.caseType) || '';
     const verdName = caseProgress.tatverdaechtiger || 'der Schuldige';
+    // v7.9.9: End-Screen-Text nach Falltyp differenziert. "Friedrich Hollenbeck
+    // lokalisiert ueberfuehrt" wie vorher war Quatsch (vermischte Stage-Marker
+    // mit "ueberfuehrt"-Flag). Jetzt sauberer Satz pro Falltyp.
+    let outcomeSentence;
+    if (ct === 'vermisst') {
+      outcomeSentence = numIndizien + ' Indiz' + (numIndizien === 1 ? '' : 'ien') + ' gesammelt, ' + verdName + ' aufgespuert und der Klientin uebergeben.';
+    } else if (ct === 'beschatten') {
+      outcomeSentence = numIndizien + ' Indiz' + (numIndizien === 1 ? '' : 'ien') + ' gesammelt, ' + verdName + ' beschattet und der Verdacht bestaetigt.';
+    } else {
+      outcomeSentence = numIndizien + ' Indiz' + (numIndizien === 1 ? '' : 'ien') + ' gesammelt, ' + verdName + ' ueberfuehrt.';
+    }
     solvedEl.innerHTML = `
       <div class="solved-title">— FALL ABGESCHLOSSEN —</div>
-      <div class="solved-text">Karl Mauer hat den Fall gelöst.<br>
-      ${numIndizien} Indiz${numIndizien === 1 ? '' : 'ien'} gesammelt, ${verdName} überführt.<br>
-      Die Klienten sind informiert, das Honorar ist fällig.</div>
+      <div class="solved-text">Karl Mauer hat den Fall geloest.<br>
+      ${outcomeSentence}<br>
+      Der Klient ist informiert, das Honorar ist faellig.</div>
       <div class="solved-text-small">Tag ${gameDay}, Tageszeit: ${TIMES_OF_DAY[gameTimeIdx]}<br>
-      Karl gönnt sich endlich einen ehrlichen Schluck Bourbon.</div>
+      Karl goennt sich endlich einen ehrlichen Schluck Bourbon.</div>
       <button class="solved-button" onclick="resetGame()">Neue Ermittlung</button>
     `;
     document.querySelector('.container').appendChild(solvedEl);
@@ -5327,13 +5417,25 @@ function showCaseFailed(reason) {
   failEl.classList.remove('hidden');
 }
 function showLoading(customText) {
-  document.getElementById('loading').classList.remove('hidden');
+  const loading = document.getElementById('loading');
+  loading.classList.remove('hidden');
   document.getElementById('options').classList.add('hidden');
   document.getElementById('error').classList.add('hidden');
   document.getElementById('wait-box').classList.add('hidden');
   document.getElementById('daily-limit').classList.add('hidden');
-  const textEl = document.querySelector('#loading .loading-text');
+  const textEl = loading.querySelector('.loading-text');
   if (textEl) textEl.textContent = customText || 'Karl denkt nach';
+  // v7.9.6: Wenn keine Szenen sichtbar sind (z.B. ganz am Anfang oder nach
+  // Reset), das Loading prominent in der Mitte zeigen statt unauffaellig unten.
+  const logEl = document.getElementById('log');
+  const hasScenes = logEl && !logEl.classList.contains('hidden') && logEl.children.length > 0;
+  if (hasScenes) {
+    loading.classList.remove('loading-prominent');
+  } else {
+    loading.classList.add('loading-prominent');
+    // Scroll to top damit der Loading-Indicator sicher sichtbar ist
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }
 }
 function hideLoading() {
   document.getElementById('loading').classList.add('hidden');
@@ -5672,7 +5774,7 @@ function buildTranscriptText() {
       }
     }
     if (caseProgress.tatverdaechtiger) {
-      out += '  Tatverdächtiger: ' + caseProgress.tatverdaechtiger + (caseProgress.ueberfuehrt ? ' (überführt)' : '') + '\n';
+      out += '  Tatverdächtiger: ' + formatSuspectStatus() + '\n';
     }
     if (clientProfile.name) {
       out += '  Klient: ' + clientProfile.name + ' (Charakter: ' + clientProfile.charakter + ')\n';
@@ -6281,9 +6383,27 @@ function showStatusDetails() {
         }
       }
     }
+    // v7.9.7: Meilensteine - chronologische Liste der wichtigen Ereignisse
+    // damit Spieler nachvollziehen kann was im Spiel passiert ist (nicht nur
+    // den aktuellen Stand sieht). Symbol pro Typ macht die Liste scannbar.
+    if (caseProgress.meilensteine && caseProgress.meilensteine.length > 0) {
+      lines.push('');
+      lines.push('Wichtige Ereignisse:');
+      const symbols = { stage: '★', eureka: '✦', custody: '▼', heal: '+', alarm: '⚠', find: '◉' };
+      // Nur die letzten 8 anzeigen damit's nicht ausartet
+      const recent = caseProgress.meilensteine.slice(-8);
+      for (const m of recent) {
+        const sym = symbols[m.typ] || '·';
+        lines.push('  ' + sym + ' T' + m.tag + ' Sz' + m.szene + ': ' + m.text);
+      }
+      if (caseProgress.meilensteine.length > 8) {
+        lines.unshift('Wichtige Ereignisse (letzte 8 von ' + caseProgress.meilensteine.length + '):');
+        lines.splice(1, 1);  // ersetzt das alte "Wichtige Ereignisse:" oben
+      }
+    }
     if (caseProgress.tatverdaechtiger) {
       lines.push('');
-      lines.push('Verdächtiger: ' + caseProgress.tatverdaechtiger + (caseProgress.ueberfuehrt ? ' (überführt!)' : ''));
+      lines.push('Verdächtiger: ' + formatSuspectStatus());
     }
     if (clientProfile.name) {
       lines.push('');
@@ -9425,6 +9545,7 @@ async function startGame() {
     lastEurekaScene: 0,
     npcMemory: {},
     stage2StartDay: null,
+    meilensteine: [],  // v7.9.7
   };
   // Reset Klient-Profil (wird beim ersten Cast-Add gesetzt)
   clientProfile = {
@@ -10961,13 +11082,14 @@ function checkStatusToasts(spannung) {
   if (karlEnergie <= 35 && karlEnergie > 15 && gameTimeIdx >= 4) {
     showProgressToast('Karl wird muede', 'Der Tag war lang. Bald sollte Karl ans Schlafen denken.', 'caution', 'energie-muede');
   }
-  // CAUTION: Stasi-Tension mittel (>= 2)
-  // v7.2: Nur wenn Karl noch NICHT in Custody ist
-  // v7.9.3: NICHT in den ersten 2 Szenen - Beobachtung-Toast in Sz 1 ist Quatsch
-  // (Karl hat noch nichts gemacht was die Volkspolizei interessieren wuerde).
-  if (caseIsPolitical && stasiTension >= 2 && stasiTension < 3 && !karlInStasiCustody && sceneCounter >= 3) {
-    showProgressToast('Beobachtet', 'Karl spuert dass jemand ihn beschattet. Vorsicht beim naechsten Schritt.', 'caution', 'stasi-mittel');
-  }
+  // v7.9.8: "Beobachtet"-Toast (stasiTension 2) entfernt.
+  // Anlass: User-Audit + Projekt-Doku Punkt 28 (Stasi-Eskalations-Konsequenz).
+  // Der Toast hatte NULL Wirkung in der Story - keine Push-Logik, keine erzwungene
+  // Beschattungs-Szene, kein veraenderter Cast. Karl "spuert dass jemand ihn
+  // beschattet" und es passiert genau gar nichts. Das ist genau das Problem das
+  // die Doku als "ewig warnen ohne Konsequenz" beschreibt. Lieber raus.
+  // Bei stasiTension >= 3 greift weiter "Stasi auf den Fersen" (Zeile 11058)
+  // - der hat wenigstens den direkten Vorlauf zu echter Festnahme (StT 4+ hard-force).
   // CAUTION: Hunger 7-8 (deutlich)
   if (karlHunger >= 7 && karlHunger < 9) {
     showProgressToast('Hunger meldet sich', 'Karls Magen knurrt deutlich. Bald sollte er etwas essen.', 'caution', 'hunger-deutlich');
@@ -11876,6 +11998,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     // "Karl wacht nicht mehr auf" im Text steht obwohl die Validierung den Tod
     // gecapt hat.
     let pendingFolterDeath = false;
+    let pendingMfsLiquidation = false;  // v7.9.9
     if (karlInStasiCustody) {
       // Sanity-Check: die aktuelle Szene MUSS Folter-/Verhoer-Kontext zeigen.
       // Wenn karlInStasiCustody durch False-Positive gesetzt wurde aber die Szene
@@ -11924,10 +12047,27 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
               showProgressToast('FESTNAHME', 'Karl wird festgenommen. MfS hat ihn auf der Strasse erwischt.');
             }
           } else {
-            console.warn('[Schatten] 3+ Szenen ohne Stasi-Kontext - Custody-Flag automatisch geloescht.');
-            diag('state', 'Stasi-Custody automatisch beendet - 3+ Szenen ohne Kontext (vermutlich False-Positive-Recovery)');
-            karlInStasiCustody = false;
-            folterSceneCount = 0;
+            // v7.9.9: Wenn hardForcedArrestUsed schon true ist, sollte das System
+            // NICHT noch ein weiteres Mal "freundlich auto-releasen". Anlass:
+            // Bruno-Run v7.9.5 hatte 14 AUTO-CUSTODY-Forces + 9 STASI-FESTNAHME-Toasts,
+            // aber durch wiederholte FP-Recovery kam KEINE echte Custody-Szene.
+            // Fall wurde dann via Stage-4-Stagnation-Force "geloest" obwohl Karl
+            // mehrfach festgenommen werden sollte.
+            // Jetzt: zweiter Reset = Game-Over (Karl wurde von MfS wegen wiederholter
+            // Provokation eliminiert).
+            if (caseIsPolitical && stasiTension >= 4) {
+              console.warn('[Schatten] WIEDERHOLTE Custody-Auto-Release nach hard-force - System gibt auf, Game-Over.');
+              diag('progress', '⚠ GAME-OVER: Karl wurde mehrfach festgenommen aber Mistral hat ignoriert. Karl wird liquidiert.');
+              karlInStasiCustody = true;  // bleibt drin
+              folterSceneCount = 99;
+              isGameOver = true;
+              pendingMfsLiquidation = true;
+            } else {
+              console.warn('[Schatten] 3+ Szenen ohne Stasi-Kontext - Custody-Flag automatisch geloescht.');
+              diag('state', 'Stasi-Custody automatisch beendet - 3+ Szenen ohne Kontext (vermutlich False-Positive-Recovery)');
+              karlInStasiCustody = false;
+              folterSceneCount = 0;
+            }
           }
         }
       } else {
@@ -12133,6 +12273,15 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     // Game Over wenn Verfassung auf 0
     if (verfassung === 0) {
       isGameOver = true;
+    }
+    // v7.9.9: MfS-Liquidation - wenn das System aufgegeben hat weil wiederholt
+    // Custody-Forces ignoriert wurden, wird Karl narrativ eliminiert.
+    if (pendingMfsLiquidation) {
+      verfassung = 0;
+      isGameOver = true;
+      if (!scene.verletzungsbeschreibung || scene.verletzungsbeschreibung.length < 10) {
+        scene.verletzungsbeschreibung = 'Schwarzer EMW haelt vor dem Haus. Maenner in Lederjacken steigen aus. Karl wird ins Auto gezerrt - aber er kommt nicht im Verhoerraum an. Spuren verlieren sich in der Frankfurter Allee.';
+      }
     }
     // Folter-Tod-Text NUR anhaengen wenn Verfassung wirklich auf 0 gefallen ist.
     // So verhindern wir "Karl wacht nicht mehr auf" im Text obwohl Karl noch
@@ -12848,10 +12997,16 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         // Kein TARGET im Setup definiert (selten) -> Verifikation skippen
         targetMentionedInIndizien = true;
       }
-      const stage2Ready = caseProgress.stage <= 1 && targetMentionedInIndizien && (
-        ind >= 8 ||                       // viele Indizien -> reicht
-        (gameDay >= 2 && ind >= 6) ||     // Tag 2+: 6 statt 5
-        (gameDay >= 4 && ind >= 4)        // Tag 4+: notbremse, aber NICHT Tag 3 sofort
+      // v7.9.9: Schwellen weiter verschaerft. Anlass: Hollenbeck-Run v7.9.5 
+      // - Stage 2 (vermisst) in Sz 4 mit 6 Klient-Briefing-Indizien forciert,
+      // obwohl Karl Hollenbeck nie gesehen hatte. Tag 1 sollte gar nicht zu
+      // Stage 2 fuehren (Eroeffnungs-Phase), Tag 2+ braucht mind. 7 Indizien.
+      // Plus: sceneCounter >= 6 als Hard-Floor - nicht Stage 2 in den ersten
+      // 5 Szenen, das ist immer Briefing/erste Spuren.
+      const stage2Ready = caseProgress.stage <= 1 && targetMentionedInIndizien && sceneCounter >= 6 && (
+        (gameDay >= 2 && ind >= 7) ||     // Tag 2+: mind 7 echte Indizien
+        (gameDay >= 3 && ind >= 5) ||     // Tag 3+: 5 reichen
+        (gameDay >= 5 && ind >= 4)        // Tag 5+: Notbremse
       );
       if (stage2Ready) {
         // v7.4: Placeholder nach Falltyp differenziert. Bei beschatten ist der
@@ -12859,22 +13014,29 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         // (z.B. dass Robert wirklich eine Affaere hat). Anlass: Kessler-Run
         // v7.1 zeigte "Robert Kessler lokalisiert" obwohl Robert von Anfang an
         // bekannt war und Karl ihn nur beschattet.
-        let placeholder;
+        // v7.9.9: tatverdaechtiger ist jetzt nur noch der reine Name, der Status
+        // wird in caseProgress.stage2Marker separat gespeichert. Damit kein
+        // Display-Quatsch wie "Friedrich Hollenbeck lokalisiert (ueberfuehrt)".
+        let stage2Marker;  // 'lokalisiert' | 'verdacht_bestaetigt' | 'identifiziert' | 'spur_gefunden'
         if (!targetName) {
-          placeholder = 'Spur gefunden';
+          caseProgress.tatverdaechtiger = 'Unbekannter Verdaechtiger';
+          stage2Marker = 'spur_gefunden';
         } else if (ct === 'vermisst') {
-          placeholder = targetName + ' lokalisiert';
+          caseProgress.tatverdaechtiger = targetName;
+          stage2Marker = 'lokalisiert';
         } else if (ct === 'beschatten') {
-          placeholder = targetName + ' (Verdacht bestaetigt)';
+          caseProgress.tatverdaechtiger = targetName;
+          stage2Marker = 'verdacht_bestaetigt';
         } else {
-          placeholder = targetName + ' identifiziert';
+          caseProgress.tatverdaechtiger = targetName;
+          stage2Marker = 'identifiziert';
         }
-        caseProgress.tatverdaechtiger = placeholder;
+        caseProgress.stage2Marker = stage2Marker;
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten] AUTO-FORCING Stage 2 (' + ct + '): ' + placeholder);
-        diag('progress', '✦ AUTO-STAGE 2 (' + ct + ') erzwungen: ' + placeholder);
+        console.log('[Schatten] AUTO-FORCING Stage 2 (' + ct + '): ' + caseProgress.tatverdaechtiger + ' [' + stage2Marker + ']');
+        diag('progress', '✦ AUTO-STAGE 2 (' + ct + ') erzwungen: ' + caseProgress.tatverdaechtiger + ' [' + stage2Marker + ']');
         showProgressToast(ct === 'vermisst' ? 'ZIELPERSON LOKALISIERT' : 'VERDACHT BESTAETIGT', 'Die Spuren werden konkret. Karl ist nah dran.');
       } else if (caseProgress.stage <= 1 && (ind >= 5 || gameDay >= 3) && !targetMentionedInIndizien && targetName) {
         // Diagnose-Hinweis: Schwelle prinzipiell erreicht, aber TARGET fehlt
@@ -13114,13 +13276,18 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     //   - gerade in einer Action-Szene am Boden liegt (Spannung >= 4)
     // Anlass Wessel-Run v6.94: Stage 4 erzwang sich in Sz25 obwohl Karl angeschossen
     // am Boden lag, MfS-umstellt, und Werner noch in Hohenschoenhausen.
+    // v7.9.9: Block-Override entfernt. Vorher konnte 12+ Szenen Stagnation den
+    // Block ueberschreiben - was zu absurden "Fall geloest"-Forcings fuehrte bei
+    // Vf=1, Spannung 3, mitten in Walther-gezogen-Action (Hollenbeck-Run Sz30).
+    // Jetzt: bei Vf<=2 ODER Custody ODER Sp>=4 wird Stage 4 NIE forciert. Lieber
+    // bleibt der Fall offen oder Karl stirbt (kommt extra-Logik in v7.9.9).
     if (caseProgress.stage === 3 && caseProgress.ueberfuehrt && !caseProgress.klientGesprochen) {
       const stage3Scenes = sceneCounter - (caseProgress.stage3StartScene || sceneCounter);
       if (stage3Scenes >= 7) {
-        // Handlungsfaehigkeits-Check
+        // Handlungsfaehigkeits-Check - HART, kein Override mehr
         const karlBlocked = karlInStasiCustody || (verfassung <= 2) || (typeof lastSpannung === 'number' && lastSpannung >= 4);
-        if (!karlBlocked || stage3Scenes >= 12) {
-          // Stage 4 forcen wenn Karl frei und gesund ODER wenn Stagnation extrem (12+)
+        if (!karlBlocked) {
+          // Stage 4 forcen nur wenn Karl frei und gesund
           caseProgress.klientGesprochen = true;
           caseProgress.istGelöst = true;
           caseProgress.stage = 4;
@@ -14776,14 +14943,89 @@ const TOAST_VARIANTS = {
   },
 };
 
+// v7.9.9: Liefert einen sprachlich sauberen Status-String fuer den Tatverdaechtigen.
+// Vorher wurde "X lokalisiert" als Name gespeichert und dann " (ueberfuehrt)"
+// drangehaengt - ergab Quatsch wie "Friedrich Hollenbeck lokalisiert (ueberfuehrt)".
+// Jetzt: tatverdaechtiger = reiner Name, stage2Marker + ueberfuehrt-Flag werden
+// separat als Klammer-Annotation gerendert.
+function formatSuspectStatus() {
+  const name = caseProgress.tatverdaechtiger || '';
+  if (!name) return '';
+  const ct = (caseSetup && caseSetup.caseType) || '';
+  const ueberfuehrt = caseProgress.ueberfuehrt;
+  const marker = caseProgress.stage2Marker;
+  // Bei Stage 3+ (ueberfuehrt) hat der Falltyp den Vorrang:
+  if (ueberfuehrt) {
+    if (ct === 'vermisst') return name + ' (gefunden)';
+    if (ct === 'beschatten') return name + ' (Verdacht erhaertet)';
+    return name + ' (ueberfuehrt)';
+  }
+  // Sonst Stage 2 Marker zeigen:
+  if (marker === 'lokalisiert') return name + ' (lokalisiert)';
+  if (marker === 'verdacht_bestaetigt') return name + ' (Verdacht bestaetigt)';
+  if (marker === 'identifiziert') return name + ' (identifiziert)';
+  if (marker === 'spur_gefunden') return name;
+  return name;
+}
+
 // v6.78: Erweiterte Signatur. variant ist optional fuer Rueckwaertskompatibilitaet
 // (default success), triggerKey optional fuer Anti-Spam.
+// v7.9.7: Meilenstein-Log. Wird in den wichtigsten Ereignis-Stellen aufgerufen
+// damit der Spieler im Status-Popup nachvollziehen kann was im Spiel passiert
+// ist - nicht nur den aktuellen Stand sieht. Dedup gegen Doppel-Aufrufe in
+// derselben Szene mit demselben Text.
+function logMilestone(typ, text) {
+  if (!text) return;
+  if (!caseProgress.meilensteine) caseProgress.meilensteine = [];
+  // Dedup: gleichen Typ + Text in derselben Szene nicht doppelt
+  const recent = caseProgress.meilensteine[caseProgress.meilensteine.length - 1];
+  if (recent && recent.szene === sceneCounter && recent.typ === typ && recent.text === text) {
+    return;
+  }
+  caseProgress.meilensteine.push({
+    szene: sceneCounter,
+    tag: gameDay,
+    tageszeit: (typeof TIMES_OF_DAY !== 'undefined' ? TIMES_OF_DAY[gameTimeIdx] : ''),
+    typ: typ,
+    text: text,
+  });
+}
+
 function showProgressToast(title, subtitle, variant, triggerKey) {
   variant = variant || 'success';
   const v = TOAST_VARIANTS[variant] || TOAST_VARIANTS.success;
   // Anti-Spam wenn triggerKey gesetzt
   if (triggerKey && !canShowToast(variant, triggerKey)) {
     return;
+  }
+  // v7.9.7: Wichtige Ereignisse automatisch ins Meilenstein-Log eintragen.
+  // Damit kann der Spieler im Status-Popup nachvollziehen was passiert ist
+  // - nicht nur den aktuellen Stand sehen. Dedup uebernimmt logMilestone().
+  try {
+    const t = title || '';
+    if (/ERSTE SPUREN BEISAMMEN|SPUREN BEISAMMEN/i.test(t)) {
+      logMilestone('stage', 'Stufe 1: Indizien gesammelt');
+    } else if (/VERDACHT BESTAETIGT|ZIELPERSON LOKALISIERT/i.test(t)) {
+      logMilestone('stage', 'Stufe 2: ' + t);
+    } else if (/VERMISSTE PERSON GEFUNDEN|VERDAECHTIGER UEBERFUEHRT|OBSERVATION ABGESCHLOSSEN|BEWEISE GESICHERT|ZIELPERSON GEFUNDEN/i.test(t)) {
+      logMilestone('stage', 'Stufe 3: ' + t);
+    } else if (/FALL GELOEST/i.test(t)) {
+      logMilestone('stage', 'Fall geloest');
+    } else if (/VERBINDUNG ENTDECKT/i.test(t)) {
+      logMilestone('eureka', subtitle || t);
+    } else if (/FESTNAHME|UEBERSTELLT/i.test(t) || /\bin gewahrsam\b/i.test(subtitle || '')) {
+      logMilestone('custody', t + (subtitle ? ': ' + subtitle.slice(0, 80) : ''));
+    } else if (/VERARZTET|BEHANDLUNG ABGESCHLOSSEN/i.test(t)) {
+      logMilestone('heal', t);
+    } else if (/EUREKA/i.test(t)) {
+      logMilestone('eureka', subtitle || t);
+    } else if (/GROSSALARM|FAHNDUNG/i.test(t)) {
+      logMilestone('alarm', t + (subtitle ? ': ' + subtitle.slice(0, 80) : ''));
+    } else if (/STASI AUF DEN FERSEN/i.test(t)) {
+      logMilestone('alarm', 'Stasi hat Karl im Visier');
+    }
+  } catch (err) {
+    console.warn('[Schatten] logMilestone failed:', err);
   }
   // v6.97: Toast-Stack-Layout. Wenn schon Toasts auf dem Bildschirm sind,
   // wird der neue UNTER den bestehenden positioniert statt ueberlagert.
@@ -14910,6 +15152,18 @@ function deactivateDebugMode(event) {
 processAdminUrlParam().then(() => applyAdminVisibility());
 applyAdminVisibility(); // sofort initial (falls schon localStorage gesetzt)
 showStart();
+// v7.9.6: Boot-Indicator ausblenden sobald der Start-Screen sichtbar ist.
+// Anlass: User-Feedback - lange schwarze Phase beim Page-Load, viele Spieler
+// springen ab bevor das Spiel zeigt was es will. Der Boot-Indicator zeigt
+// sofort "Schatten startet" und verschwindet wenn der Start-Screen da ist.
+(function hideBootIndicator() {
+  const boot = document.getElementById('boot-indicator');
+  if (boot) {
+    boot.classList.add('fade-out');
+    // Nach Fade-Out komplett entfernen damit es keinen z-index-Konflikt gibt
+    setTimeout(() => { if (boot.parentNode) boot.parentNode.removeChild(boot); }, 400);
+  }
+})();
 </script>
 </body>
 </html>
