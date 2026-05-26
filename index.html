@@ -2174,7 +2174,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.10.5</div>
+    <div class="start-version">Schatten v7.10.6</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2251,7 +2251,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.10.5</span>
+    <span>Schatten v7.10.6</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4578,7 +4578,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.10.5';
+window.SCHATTEN_VERSION = 'v7.10.6';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -14117,7 +14117,7 @@ async function chooseOption(option) {
   // pendingCategoryMessages.
   if (chosenKategorie === 'SCHLAFEN') {
     pendingSleepChoice = true;
-    console.log('[Schatten v7.10.5.1] SCHLAFEN gewaehlt - pendingSleepChoice=true (Tageswechsel garantiert)');
+    console.log('[Schatten v7.10.1] SCHLAFEN gewaehlt - pendingSleepChoice=true (Tageswechsel garantiert)');
   }
 
   // Kategorie-Streak tracken (fuer ERKUNDEN-Bonus / OFFENSIV-Todes-Trigger)
@@ -15304,13 +15304,14 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     // auf Marlene, Charite, Krankenhaus, Apotheke, Sanitaeter sowie "selbst versorgt"-
     // Faelle (Verbandskasten, Whisky-gegen-Schmerz, Verstecken-und-ausruhen).
     if (typeof verfassung === 'number' && verfassung > 0 && verfassung < 5 && lastDocHealingDay < gameDay) {
-      // v7.10: SCHUTZ vor Doppel-Heilung. Wenn die Kategorie-Mechanik (HEILEN)
+      // v7.10.6: SCHUTZ vor Doppel-Heilung. Wenn die Kategorie-Mechanik (HEILEN)
       // bereits Vf erhoeht hat, ueberspringen wir den alten Text-Detection-
       // Heal-Pfad komplett. Sonst kriegt Karl Heilung doppelt (Kategorie + Text).
-      // Erkennbar an pendingCategoryChoice === 'HEILEN' VOR dem reset oder
-      // categoryMechanicsResult.vfDelta > 0 (gleich danach gesetzt).
-      const categoryAlreadyHealed = (pendingCategoryChoice === 'HEILEN') ||
-        (typeof categoryMechanicsResult !== 'undefined' && categoryMechanicsResult && categoryMechanicsResult.vfDelta > 0);
+      // v7.10.6 BUGFIX: pendingCategoryChoice wird ERST nach diesem Block
+      // genullt - hier ist er noch gesetzt wenn der Spieler HEILEN klickte.
+      // Frueher (v7.10): zusaetzlich auf categoryMechanicsResult geschaut, was
+      // einen TDZ-Fehler ausloeste (Variable wurde erst spaeter deklariert).
+      const categoryAlreadyHealed = (pendingCategoryChoice === 'HEILEN');
       if (categoryAlreadyHealed) {
         // Skip - Kategorie hat schon gehandelt
         if (typeof diag === 'function') diag('detect', 'Heal-Text-Pfad uebersprungen (Kategorie HEILEN hat schon Vf erhoeht)');
