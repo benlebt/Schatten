@@ -2043,7 +2043,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.9.39 · Hotfix: Kimi K2 aus Modell-Chain entfernt (von Groq am 23.03.2026 deprecated, antwortet seit kurzem mit 404 und bricht Spielfluss). MODEL_CHAIN_VERSION 4 -> 5 fuer sauberen localStorage-Reset.</div>
+    <div class="start-version">Schatten v7.9.40 · 404-Handler: Bei "model_not_found" Modell 24h blockieren und zum naechsten switchen statt Bot abbrechen. Anlass: Llama 4 Scout 404 mitten im Bot-Run, vorher fiel 404 durch alle Filter.</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2120,7 +2120,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.9.39</span>
+    <span>Schatten v7.9.40</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4349,7 +4349,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.9.39';
+window.SCHATTEN_VERSION = 'v7.9.40';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -10821,6 +10821,15 @@ VERBOTEN: einfach mit "schraegem Morgenlicht" anfangen ohne zu erklaeren wo Karl
         err.isServiceUnavailable = true;
       }
     }
+    // v7.9.40: 404 = "model_not_found" - Modell wurde deprecated, umbenannt,
+    // oder ist fuer diesen API-Key nicht zugaenglich. Anlass: 26.05.2026
+    // Llama 4 Scout warf 404 mitten im Bot-Run, Bot blieb stehen. Vorher
+    // fiel 404 durch alle Filter und wurde als fataler Error geworfen.
+    // Behandlung: Modell session-permanent blockieren (24h, damit Reload
+    // den localStorage zurueck setzt) und zum naechsten Modell switchen.
+    if (response.status === 404) {
+      err.isModelNotFound = true;
+    }
     err.debugInfo = { stage: 'api_error', status: response.status, body: JSON.stringify(data).slice(0, 1000) };
     throw err;
   }
@@ -16309,6 +16318,35 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     pendingRetry = null;
     lastErrorDebug = null;
   } catch (e) {
+    // v7.9.40: 404 model_not_found - Modell ist deprecated/umbenannt/nicht
+    // zugaenglich. Modell fuer 24h blockieren (Page-Reload setzt localStorage
+    // zurueck, dann probieren wir es wieder) und sofort zum naechsten Modell
+    // switchen. Anlass: Llama 4 Scout 404 mitten im Bot-Run am 26.05.2026.
+    // Vorher fiel 404 durch alle Handler -> Bot blieb stehen.
+    if (e.isModelNotFound) {
+      hideLoading();
+      const previousModel = getActiveModel();
+      // 24h Block (wie bei daily-limit) - bei naechstem Page-Reload neu probieren.
+      // Falls das Modell wirklich tot ist, bleibt es einfach geblockt - das
+      // ist OK, dann fehlt eine Position in der Chain, der Rest laeuft weiter.
+      blockModel(previousModel.model, 24 * 60 * 60 * 1000, 'model-not-found-404');
+      const nextModel = advanceModel();
+      if (nextModel && nextModel.label !== previousModel.label) {
+        console.warn('[Schatten] 404 model_not_found on', previousModel.label, '-> 24h blockiert (Modell deprecated/umbenannt), switching to', nextModel.label);
+        skipNextThrottle = true;
+        if (optionForRollback) {
+          performApiCall(userMsg, isStart, optionForRollback, retryCount, rateLimitCount, openingRetryCount);
+        } else {
+          performApiCall(userMsg, isStart, undefined, retryCount, rateLimitCount, openingRetryCount);
+        }
+        return;
+      }
+      // Alle Modelle blockiert
+      console.warn('[Schatten] 404 model_not_found - alle Modelle blockiert');
+      lastErrorDebug = buildDebugDump(e, userMsg, retryCount);
+      showError('Alle KI-Modelle sind nicht erreichbar. Page neu laden und erneut versuchen.', lastErrorDebug);
+      return;
+    }
     // v7.9.23: 503/504 Service Unavailable - Server temporaer down.
     // Modell fuer 90s blockieren und sofort zu naechstem wechseln, statt
     // an der selben URL festzuhaengen. Anlass: Gemini 2.5 Flash-Lite lieferte
