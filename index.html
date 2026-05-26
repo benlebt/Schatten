@@ -2174,7 +2174,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.10.9</div>
+    <div class="start-version">Schatten v7.10.10</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2251,7 +2251,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.10.9</span>
+    <span>Schatten v7.10.10</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -3119,6 +3119,7 @@ JSON-Output ist Pflicht (kein Markdown, kein Text drumherum):
     {"id":"D","text":"...","kategorie":"BEOBACHTEN"}
   ],
   "spannung": 3,
+  "verfassung_delta": 0,
   "verletzungsbeschreibung": "",
   "inventar_hinzugefuegt": [],
   "inventar_entfernt": [],
@@ -3166,11 +3167,23 @@ NICHT in die 4 Optionen (das macht das System ueber separate Buttons):
 - SCHLAFEN/EINNICKEN/INS BETT GEHEN: Spieler hat einen separaten "Schlafen"-Button am Abend/Nachts. NICHT als Option anbieten ("Geh ins Bett", "Schlaf jetzt" sind nur System-Buttons).
 - ROMANTISCHE ANNAEHERUNG (Kuss, intimer Blick, Bett, Liebe): Spieler hat einen separaten "Naeher kommen"-Button wenn ein ROMANCE-NPC in der Szene ist. NICHT als Option anbieten.
 
-NICHT MEHR LIEFERN (System uebernimmt das):
-- "verfassung_delta" wird AUTOMATISCH vom System gesetzt anhand der Kategorie. NICHT mehr im JSON.
-- "spannung_delta" entfaellt - "spannung" allein reicht.
+VERFASSUNGS-DELTA (v7.10.10 - WIEDER PFLICHT):
+Du lieferst "verfassung_delta" als Zahl basierend auf wie schwer Karl in DIESER Szene VERLETZT wurde. Skala:
+   0 = Karl unbeschadet. Nichts passiert mit ihm koerperlich. Die Norm.
+  -1 = leichter Treffer / leichte Belastung. Faust ins Gesicht, Stoss, Sturz, Prellung, leichter Schmerz, durchwachte Nacht ohne ausreichend Schlaf, langer Marsch im Regen ohne Mantel. SICHTBARE Spur muss im Szenentext stehen ("Blut an der Lippe", "die Rippen pochen", "du humpelst").
+  -2 = schwere Wunde / harte Belastung. Schuss-Streifschuss, Stichwunde, Knauf der Pistole gegen die Rippen, Schlag mit hartem Gegenstand, Sturz aus Hoehe, vergiftet (langsam). Karl ist deutlich angeschlagen, blutet, muss versorgt werden bald.
+  -3 = lebensbedrohlich. Kugel im Bauch, ernsthafter Stich in lebenswichtige Organe, Sturz aus grosser Hoehe, schwere Folter-Misshandlung. Karl kann ohne Hilfe sterben in 1-2 Szenen. NUR setzen wenn wirklich kritisch.
+  -4 = NIE selbst setzen. Das macht die Engine ueber Conclusion-Trigger.
+  +1 = Karl regeneriert. NUR bei DEFENSIV-Pause (Karl atmet durch, holt sich Whisky) - nicht bei HEILEN (das macht die Engine).
+  +2 oder hoeher = NIE selbst setzen.
 
-spannung: 1 (ruhig) bis 5 (Lebensgefahr).`;
+Pflicht: Der Szenentext MUSS den Wert begruenden. Wenn du -2 setzt aber keine Schussverletzung/Stichwunde/harten Schlag im Text beschreibst, blockiert die Engine den Wert und cappt auf -1 oder 0.
+
+Das System hat eine Kategorie-Mindest-Kostentabelle (z.B. OFFENSIV kostet mindestens -1 wenn Karl in Aktion geht). Die Engine nimmt dann den GROESSEREN Verlust aus deinem Wert und dem Kategorie-Wert. Wenn du also "Karl packt jemanden ohne Verletzung" mit verfassung_delta=0 lieferst, setzt die Engine -1 wegen OFFENSIV-Kategorie. Wenn du -2 lieferst (Schuss), nimmt die Engine -2.
+
+WICHTIG bei HEILEN-Kategorie: lass verfassung_delta=0 oder weglassen. Die Engine setzt die positive Heilung (+1 oder +2) ueber die Kategorie.
+
+spannung: 1 (ruhig) bis 5 (Lebensgefahr). "spannung_delta" entfaellt - "spannung" allein reicht.`;
 
 const INTRO_REQUIREMENTS = `
 PFLICHT FÜR DIE ERÖFFNUNGSSZENE:
@@ -4585,7 +4598,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.10.9';
+window.SCHATTEN_VERSION = 'v7.10.10';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -15556,12 +15569,52 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         stasiTension = Math.min(5, stasiTension + categoryMechanicsResult.stasiTension);
         if (typeof diag === 'function') diag('state', 'Stasi-Tension ' + beforeS + ' -> ' + stasiTension);
       }
-      // verfassung_delta von KI ignorieren wenn Kategorie eine setzt
-      if (categoryMechanicsResult.vfDelta !== 0) {
-        delta = categoryMechanicsResult.vfDelta;
-        // Auch scene.verfassung_delta ueberschreiben damit alte Code-Pfade nicht spaeter doppelt rechnen
-        scene.verfassung_delta = delta;
+      // v7.10.10: MAX_VERLUST zwischen KI-Wert und Kategorie-Mindest-Kosten.
+      // Frueher (v7.10): Kategorie hat KI-Wert immer ueberschrieben.
+      // Folge: Karl konnte nicht mehr Schaden nehmen als die Kategorie sagte
+      // (OFFENSIV bei Vf>3 = nur -1, auch bei Schuss in die Schulter).
+      // Jetzt: KI darf situativ ESKALIEREN (Schuss = -2, kritischer Treffer = -3),
+      // Engine setzt nur den BODEN (Mindest-Kosten pro Kategorie).
+      //
+      // Logik: final = MIN(kiWert, kategorieWert)
+      //   (MIN weil beide negativ sind und der "schlimmere" Verlust gewinnt)
+      // Bei positiven Werten (DEFENSIV +1 bei Vf=1): kategorie gewinnt
+      // weil KI bei DEFENSIV in der Regel 0 liefert.
+      const kategorieDelta = categoryMechanicsResult.vfDelta;
+      const kiDelta = (typeof scene.verfassung_delta === 'number') ? scene.verfassung_delta : 0;
+      let finalDelta = kategorieDelta;
+      let deltaSource = 'kategorie';
+      if (kategorieDelta < 0 && kiDelta < 0) {
+        // Beide negativ - MIN (groesserer Verlust) gewinnt
+        if (kiDelta < kategorieDelta) {
+          finalDelta = kiDelta;
+          deltaSource = 'ki-eskalation';
+        }
+      } else if (kategorieDelta >= 0 && kiDelta < 0) {
+        // Kategorie ist neutral/positiv, KI sagt Verlust - KI gewinnt
+        // (z.B. BEOBACHTEN + plötzlich Schlag in den Nacken)
+        finalDelta = kiDelta;
+        deltaSource = 'ki-ueberraschung';
+      } else if (kategorieDelta > 0 && kiDelta === 0) {
+        // DEFENSIV/HEILEN-Bonus, KI sagt nichts - Kategorie gewinnt
+        finalDelta = kategorieDelta;
+        deltaSource = 'kategorie-heilung';
       }
+      // Wenn KI positiv liefert ausserhalb DEFENSIV/HEILEN: ignorieren
+      if (kiDelta > 0 && pendingCategoryChoice !== 'DEFENSIV' && pendingCategoryChoice !== 'HEILEN' && pendingCategoryChoice !== 'SCHLAFEN') {
+        if (typeof diag === 'function') diag('cap', 'KI lieferte positives verfassung_delta=' + kiDelta + ' bei Kategorie ' + pendingCategoryChoice + ' - ignoriert (Heilung nur via HEILEN/DEFENSIV-Kategorie)');
+        finalDelta = kategorieDelta;
+        deltaSource = 'kategorie';
+      }
+
+      if (typeof diag === 'function') {
+        const desc = `Vf-Delta: kategorie=${kategorieDelta} ki=${kiDelta} → final=${finalDelta} (via ${deltaSource})`;
+        diag('state', desc);
+      }
+
+      delta = finalDelta;
+      // scene.verfassung_delta synchronisieren damit Folge-Code denselben Wert sieht
+      scene.verfassung_delta = delta;
     }
 
     pendingCategoryChoice = null;  // verbraucht
