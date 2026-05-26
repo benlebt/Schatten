@@ -2043,7 +2043,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.9.48</div>
+    <div class="start-version">Schatten v7.9.49</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2120,7 +2120,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.9.48</span>
+    <span>Schatten v7.9.49</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4358,7 +4358,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.9.48';
+window.SCHATTEN_VERSION = 'v7.9.49';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -16641,6 +16641,21 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         }
         lastErrorDebug = buildDebugDump(e, userMsg, retryCount);
 
+        // v7.9.49: Wenn die Wartezeit kurz ist (<5 Minuten), zeigen wir NICHT
+        // das voreilige "Karl macht Feierabend"-Endbild. Beobachtung in
+        // Stein-Run v7.9.48: Gemini sagte "retry in 54s", System zeigte
+        // trotzdem Endbild mit "in 1 Min weiter". Bot sah "Daily-Limit"-Match
+        // und gab auf statt zu warten. Jetzt: kurze Waits werden als
+        // Rate-Limit (wait-box) behandelt, Bot retry-Logik greift normal.
+        if (requestedWait < 5 * 60) {
+          console.log('[Schatten] Daily-Limit aber Wait-Zeit nur', requestedWait, 's - behandle als Rate-Limit');
+          showError(
+            'Karl muss ' + requestedWait + 's verschnaufen. "Erneut versuchen" tippen.',
+            lastErrorDebug
+          );
+          return;
+        }
+
         const minutes = Math.ceil(requestedWait / 60);
         const returnTime = new Date(Date.now() + requestedWait * 1000);
         const hh = returnTime.getHours().toString().padStart(2, '0');
@@ -17423,8 +17438,21 @@ function botWaitForOptionsReady(maxMs) {
       const loadingVisible = loading && !loading.classList.contains('hidden');
 
       // 2. Endbildschirme erkennen
+      // v7.9.49: case-failed nicht mehr direkt als Spielende werten. Stein-Run
+      // v7.9.48 zeigte: case-failed feuert auch bei kurzen Daily-Limit-Waits
+      // (z.B. 54s). Bot soll erstmal "Erneut versuchen" klicken bevor er
+      // aufgibt. echtes Tageslimit erkennt der Bot dann durch wiederholten
+      // Timeout in der Recovery-Schleife.
       const dailyLimit = document.getElementById('case-failed');
       if (dailyLimit && !dailyLimit.classList.contains('hidden')) {
+        // Versuche Retry-Button im Endbildschirm zu klicken
+        const retryBtn = Array.from(dailyLimit.querySelectorAll('button'))
+          .find(b => /erneut\s+versuchen|retry|nochmal/i.test(b.textContent));
+        if (retryBtn) {
+          console.log('[Bot] case-failed sichtbar, klicke "Erneut versuchen" automatisch');
+          retryBtn.click();
+          return; // Schleife laeuft weiter
+        }
         return reject(new Error('Spielende oder Daily-Limit erreicht'));
       }
       const solved = document.getElementById('case-solved');
@@ -17639,6 +17667,11 @@ async function botRunMainLoop() {
       // - Modell-Failover-Ketten (3+ Modelle hintereinander langsam)
       // - 503 Service-Unavailable mit autom. Failover
       // - Loading-Race-Conditions
+      // v7.9.49: Daily-Limit aus dem Filter entfernt. Anlass: User-Screenshot
+      // Stein-Run v7.9.48 - case-failed-Bildschirm wegen "retry in 54s" (kein
+      // echtes Tageslimit!), Bot las "Daily-Limit erreicht" und gab auf statt
+      // zu warten. Jetzt: nur noch "gestorben" und "geloest" sind echte
+      // Spielende-Bedingungen. Bei case-failed retry-Pfad probieren.
       let waitAttempt = 0;
       while (true) {
         try {
@@ -17646,7 +17679,7 @@ async function botRunMainLoop() {
           break; // Erfolg
         } catch (e) {
           if (botShouldStop) throw e;
-          if (e.message && /Spielende|gestorben|Daily-Limit|geloest/i.test(e.message)) {
+          if (e.message && /gestorben|geloest|fall gel\u00f6st/i.test(e.message)) {
             throw e; // echte Spielende-Bedingungen sofort durchreichen
           }
           waitAttempt++;
