@@ -2174,7 +2174,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.10.12</div>
+    <div class="start-version">Schatten v7.10.13</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2251,7 +2251,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.10.12</span>
+    <span>Schatten v7.10.13</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4588,7 +4588,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.10.12';
+window.SCHATTEN_VERSION = 'v7.10.13';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -15629,29 +15629,60 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       // Jetzt: KI darf situativ ESKALIEREN (Schuss = -2, kritischer Treffer = -3),
       // Engine setzt nur den BODEN (Mindest-Kosten pro Kategorie).
       //
-      // Logik: final = MIN(kiWert, kategorieWert)
-      //   (MIN weil beide negativ sind und der "schlimmere" Verlust gewinnt)
-      // Bei positiven Werten (DEFENSIV +1 bei Vf=1): kategorie gewinnt
-      // weil KI bei DEFENSIV in der Regel 0 liefert.
+      // v7.10.13: KRITISCHE-Vf-SCHUTZ. Anlass: 0102-Run, Karl bei Vf=2 trat
+      // Tuer ein, Bruno meldete sich aus Keller (kein Treffer im Text). KI sagte
+      // -1 (passend), Kategorie sagte -2 (OFFENSIV bei Vf<=3 Boden). MIN=-2
+      // -> Karl tot bei Vf=0 ohne dass im Text etwas Toedliches passierte.
+      // Loesung: Bei Vf<=2 vertrauen wir der KI staerker (sie sieht den Text).
+      // Die Kategorie-Mindest-Kosten greifen NUR wenn KI 0 sagt (dann -1 statt 0).
+      //
+      // Logik:
+      // - Vf > 2: MIN(kiWert, kategorieWert) wie bisher (Mindest-Boden plus KI-Eskalation)
+      // - Vf <= 2 (kritisch): KI-Wert hat Vorrang, Kategorie nur Mindest-Boden
+      //   * KI sagt -1 oder -2 -> KI-Wert nehmen (sie weiss was passiert)
+      //   * KI sagt 0 -> Kategorie-Wert nur wenn negativ (auf max -1 cappen!)
+      //   * KI sagt +1 (bei DEFENSIV) -> Kategorie-Wert
       const kategorieDelta = categoryMechanicsResult.vfDelta;
       const kiDelta = (typeof scene.verfassung_delta === 'number') ? scene.verfassung_delta : 0;
+      const vfKritisch = (typeof verfassung === 'number' && verfassung <= 2);
       let finalDelta = kategorieDelta;
       let deltaSource = 'kategorie';
-      if (kategorieDelta < 0 && kiDelta < 0) {
-        // Beide negativ - MIN (groesserer Verlust) gewinnt
-        if (kiDelta < kategorieDelta) {
+
+      if (vfKritisch) {
+        // Karl ist schon stark angeschlagen - KI hat Vorrang weil sie den Text kennt
+        if (kiDelta < 0) {
+          // KI sagt Verlust -> nehmen (egal ob -1, -2, -3)
           finalDelta = kiDelta;
-          deltaSource = 'ki-eskalation';
+          deltaSource = 'ki-bei-kritisch';
+        } else if (kiDelta === 0 && kategorieDelta < 0) {
+          // KI sagt nichts, aber Kategorie will mindestens -1 setzen
+          // Bei kritischer Vf cappen wir das auf -1 (nicht -2) damit OFFENSIV
+          // nicht direkt toedlich wird wenn die Szene nichts Schlimmes zeigt
+          finalDelta = -1;
+          deltaSource = 'kategorie-cap-bei-kritisch';
+        } else if (kategorieDelta > 0) {
+          // DEFENSIV/HEILEN-Bonus
+          finalDelta = kategorieDelta;
+          deltaSource = 'kategorie-heilung';
         }
-      } else if (kategorieDelta >= 0 && kiDelta < 0) {
-        // Kategorie ist neutral/positiv, KI sagt Verlust - KI gewinnt
-        // (z.B. BEOBACHTEN + plötzlich Schlag in den Nacken)
-        finalDelta = kiDelta;
-        deltaSource = 'ki-ueberraschung';
-      } else if (kategorieDelta > 0 && kiDelta === 0) {
-        // DEFENSIV/HEILEN-Bonus, KI sagt nichts - Kategorie gewinnt
-        finalDelta = kategorieDelta;
-        deltaSource = 'kategorie-heilung';
+      } else {
+        // Normale Vf-Range: MIN-Logik (groesserer Verlust gewinnt)
+        if (kategorieDelta < 0 && kiDelta < 0) {
+          // Beide negativ - MIN (groesserer Verlust) gewinnt
+          if (kiDelta < kategorieDelta) {
+            finalDelta = kiDelta;
+            deltaSource = 'ki-eskalation';
+          }
+        } else if (kategorieDelta >= 0 && kiDelta < 0) {
+          // Kategorie ist neutral/positiv, KI sagt Verlust - KI gewinnt
+          // (z.B. BEOBACHTEN + plötzlich Schlag in den Nacken)
+          finalDelta = kiDelta;
+          deltaSource = 'ki-ueberraschung';
+        } else if (kategorieDelta > 0 && kiDelta === 0) {
+          // DEFENSIV/HEILEN-Bonus, KI sagt nichts - Kategorie gewinnt
+          finalDelta = kategorieDelta;
+          deltaSource = 'kategorie-heilung';
+        }
       }
       // Wenn KI positiv liefert ausserhalb DEFENSIV/HEILEN: ignorieren
       if (kiDelta > 0 && pendingCategoryChoice !== 'DEFENSIV' && pendingCategoryChoice !== 'HEILEN' && pendingCategoryChoice !== 'SCHLAFEN') {
