@@ -538,6 +538,27 @@
     color: var(--fg-bright);
     border-color: rgba(200,191,168,0.5);
   }
+  /* v7.9.10: Musik-Angebot im Start-Screen */
+  .start-music-hint {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(200,191,168,0.1);
+  }
+  .btn-tertiary {
+    background: transparent;
+    border: 1px dashed rgba(200,191,168,0.18);
+    color: #6f6759;
+    padding: 8px 18px;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .btn-tertiary:hover {
+    color: #b8ad95;
+    border-color: rgba(200,191,168,0.35);
+  }
   .setup-selector {
     max-width: 640px;
     margin: 0 auto;
@@ -1901,7 +1922,12 @@
     <button class="btn-primary" onclick="startRandomGame()">Zufällige Ermittlung</button>
     <br>
     <button class="btn-secondary" onclick="showSetupSelector()">Fall auswählen</button>
-    <div class="start-version">Schatten v7.9.10 · Phantom-Folter raus + Vf-1-Trap raus + Spion-FP raus + Liquidation entschaerft</div>
+    <!-- v7.9.10: Musik-Angebot direkt am Start. Spieler braucht nicht ins Settings-Menue.
+         Atmosphaerische Hintergrundmusik im Loop, lautstaerke moderat. -->
+    <div class="start-music-hint" id="start-music-hint">
+      <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
+    </div>
+    <div class="start-version">Schatten v7.9.10 · Tode raus + Cast-Hijack raus + Pumphrasen + Phantom-Eureka + Musik</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -4168,6 +4194,9 @@ function toggleSettings(event) {
   if (menu.classList.contains('hidden')) {
     updateProviderInfo();
     if (typeof applyAdminVisibility === 'function') applyAdminVisibility();
+    // v7.9.10: Musik-Button-Text mit echtem Audio-State synchronisieren
+    // (Browser kann Musik im Hintergrund pausiert haben)
+    if (typeof syncMusicButtonText === 'function') syncMusicButtonText();
   }
   menu.classList.toggle('hidden');
 }
@@ -4217,6 +4246,86 @@ function toggleMusic(event) {
     diag('state', 'Musik ausgeschaltet');
   }
 }
+
+// v7.9.10: Musik-Toggle vom Start-Screen aus. Wrapper um toggleMusic mit eigenem
+// Button-Text-Handling fuer den Start-Button. Anlass: User-Wunsch - Musik soll
+// direkt beim Spielstart einschaltbar sein, ohne Settings-Menue.
+function toggleMusicFromStart(event) {
+  if (event) event.stopPropagation();
+  const audio = document.getElementById('bg-music');
+  const startBtn = document.getElementById('start-music-btn');
+  const settingsBtn = document.getElementById('music-toggle-btn');
+  if (!audio || !startBtn) return;
+  if (audio.paused) {
+    audio.volume = getMusicVolumeNormal();
+    audio.play().then(() => {
+      startBtn.textContent = '🔇 Musik ausschalten';
+      if (settingsBtn) settingsBtn.textContent = '🔇 Musik ausschalten';
+      localStorage.setItem('schatten-music-on', '1');
+      diag('state', 'Musik eingeschaltet (vom Start)');
+    }).catch(err => {
+      console.warn('[Schatten] Musik-Start fehlgeschlagen:', err);
+      startBtn.textContent = '🎵 music.mp3 nicht ladbar';
+      setTimeout(() => { startBtn.textContent = '🎵 Hintergrundmusik einschalten'; }, 3000);
+    });
+  } else {
+    audio.pause();
+    startBtn.textContent = '🎵 Hintergrundmusik einschalten';
+    if (settingsBtn) settingsBtn.textContent = '🎵 Musik einschalten';
+    localStorage.removeItem('schatten-music-on');
+  }
+}
+// v7.9.10: Start-Screen-Button initial setzen sobald Audio-Element existiert,
+// damit nach Reload (Musik-Status in localStorage) der Button-Text stimmt.
+function syncStartMusicButton() {
+  const audio = document.getElementById('bg-music');
+  const startBtn = document.getElementById('start-music-btn');
+  if (!audio || !startBtn) return;
+  if (startBtn.textContent.indexOf('nicht ladbar') !== -1) return;
+  if (audio.paused) {
+    startBtn.textContent = '🎵 Hintergrundmusik einschalten';
+  } else {
+    startBtn.textContent = '🔇 Musik ausschalten';
+  }
+}
+
+// v7.9.10: Button-Text reaktiv mit Audio-State synchron halten.
+// Anlass: User-Report - Browser pausiert Musik im Hintergrund (iOS Safari Tab-Wechsel),
+// aber Button steht noch auf "Musik ausschalten". Click triggert dann ein "play",
+// nicht ein "pause" wie der Button-Text suggeriert. Fix: pause/play-Events des
+// audio-Elements abhoeren und Button-Text bei jeder Aenderung neu setzen.
+function syncMusicButtonText() {
+  const audio = document.getElementById('bg-music');
+  const settingsBtn = document.getElementById('music-toggle-btn');
+  const startBtn = document.getElementById('start-music-btn');
+  if (!audio) return;
+  const paused = audio.paused;
+  if (settingsBtn && settingsBtn.textContent.indexOf('nicht ladbar') === -1) {
+    settingsBtn.textContent = paused ? '🎵 Musik einschalten' : '🔇 Musik ausschalten';
+  }
+  if (startBtn && startBtn.textContent.indexOf('nicht ladbar') === -1) {
+    startBtn.textContent = paused ? '🎵 Hintergrundmusik einschalten' : '🔇 Musik ausschalten';
+  }
+}
+// Einmal beim Laden registrieren
+(function registerMusicSync() {
+  const tryRegister = () => {
+    const audio = document.getElementById('bg-music');
+    if (!audio) { setTimeout(tryRegister, 200); return; }
+    audio.addEventListener('play', syncMusicButtonText);
+    audio.addEventListener('pause', syncMusicButtonText);
+    audio.addEventListener('ended', syncMusicButtonText);
+    // Wenn das Tab wieder sichtbar wird, Status nachsynchronisieren
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) syncMusicButtonText();
+    });
+  };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', tryRegister);
+  } else {
+    tryRegister();
+  }
+})();
 
 // v7.6: Musik-Lautstaerke beim Vorlesen anpassen.
 // iOS macht "audio ducking" - dimmt automatisch alle anderen Audio-Quellen wenn
@@ -5113,6 +5222,8 @@ document.addEventListener('click', (e) => {
 // --- UI ---
 function showStart() {
   document.getElementById('start').classList.remove('hidden');
+  // v7.9.10: Musik-Button-Text passend zum aktuellen Audio-State setzen
+  if (typeof syncMusicButtonText === 'function') syncMusicButtonText();
 }
 function showSetup() {
   document.getElementById('setup').classList.remove('hidden');
@@ -9483,6 +9594,73 @@ function validateOpening(text, required) {
   return { ok: missing.length === 0, missing: missing };
 }
 
+// v7.9.10: Setup-Pollution-Check.
+// Anlass: Goerke-Run v7.9.9 Sz 1 - statt Goerke-Gericht-Setup rendert Mistral ein
+// Hertha-Lindenbaum-Buero-Setup (anderes Setup aus dem Code-Kontext). Validator
+// "OK" weil Pflichtworte nicht spezifisch genug waren.
+//
+// Schaerferer Check: in der Eroeffnungsszene MUSS mindestens 1 Setup-Cast-Name
+// vorkommen (Klient ODER Opfer ODER Target). Wenn statt dessen NPCs aus anderen
+// Setups auftauchen (Lindenbaum bei Goerke, Stein bei Schiffer, etc.), retry.
+function validateOpeningCastPurity(text, setup) {
+  if (!text || !setup) return { ok: true, foreignNames: [] };
+  const norm = text.toLowerCase()
+    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+  // Sammle Setup-Cast-Namen
+  const ownNames = new Set();
+  const addName = (name) => {
+    if (!name || typeof name !== 'string') return;
+    // Vor- und Nachname einzeln + komplett
+    const parts = name.match(/[A-ZÄÖÜ][a-zäöüß]+/g) || [];
+    parts.forEach(p => ownNames.add(p.toLowerCase()
+      .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss')));
+  };
+  if (setup.klient) {
+    const m = setup.klient.match(/^([A-ZÄÖÜ][a-zäöüß]+(?:\s+[A-ZÄÖÜ][a-zäöüß]+)*)/);
+    if (m) addName(m[1]);
+  }
+  if (setup.opfer) {
+    const m = setup.opfer.match(/^([A-ZÄÖÜ][a-zäöüß]+(?:\s+[A-ZÄÖÜ][a-zäöüß]+)*)/);
+    if (m) addName(m[1]);
+  }
+  if (Array.isArray(setup.setupCast)) {
+    setup.setupCast.forEach(c => addName(c.name));
+  }
+  if (Array.isArray(setup.anchorNpcs)) {
+    // Anchor-NPCs sind keys wie "wilhelm_roth" - die sind universell verfuegbar
+    setup.anchorNpcs.forEach(key => {
+      const name = String(key).replace(/_/g, ' ');
+      addName(name);
+    });
+  }
+  // Liste bekannter Cross-Setup-Namen (Hertha Lindenbaum, Albert Lindenbaum, etc.)
+  // die NICHT auftauchen duerfen wenn nicht im eigenen Cast
+  const foreignFamousNames = [
+    'lindenbaum', 'albert', 'hertha',  // Setup 15
+    'goerke', 'albrecht', 'mathilde', 'baumgarten',  // Setup 12 (cross-bleed)
+    'kessler', 'edith', 'robert',  // Setup 10
+    'schiffer', 'renate', 'bruno', 'lange',  // Setup 11
+    'stein', 'margarete', 'sokolow',  // Setup 4
+    'hollenbeck', 'friedrich', 'lindner',  // Setup 6
+    'wegener', 'helga', 'schiele',  // Setup 1
+    'brandt', 'anton', 'erich', 'lola',  // Setup 2
+    'strauss', 'erwin',  // Setup 8
+    'vogt', 'sigrid', 'manfred',  // Setup 9
+    'krause', 'wilhelm', 'frieda',  // Setup 13
+    'brauer', 'hilde',  // Setup 14
+  ];
+  const foreignNames = [];
+  for (const fname of foreignFamousNames) {
+    if (ownNames.has(fname)) continue;  // im eigenen Cast, OK
+    // Wortgrenzen-Match im Szenentext
+    const regex = new RegExp('\\b' + fname + '\\b');
+    if (regex.test(norm)) {
+      foreignNames.push(fname);
+    }
+  }
+  return { ok: foreignNames.length === 0, foreignNames: foreignNames };
+}
+
 async function startGame() {
   hideAll();
   showLoading();
@@ -11402,6 +11580,8 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       if (isStart && openingRetryCount < MAX_OPENING_RETRIES && caseSetup) {
         const required = getOpeningRequiredKeywords(caseSetup);
         const check = validateOpening(scene.szene, required);
+        // v7.9.10: ZUSAETZLICH Cast-Purity pruefen - keine NPCs aus anderen Setups
+        const castCheck = validateOpeningCastPurity(scene.szene, caseSetup);
         if (!check.ok) {
           const missingLabels = check.missing.map(m => m.label).join('; ');
           diag('detect', 'Opening-Validierung fehlgeschlagen, Retry: fehlend = ' + missingLabels);
@@ -11420,8 +11600,37 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             'Liefere die Szene erneut als JSON.';
           // Diagnose-Frame fortsetzen, nicht neu oeffnen
           return await performApiCall(retryPrompt, isStart, optionForRollback, retryCount, rateLimitCount, openingRetryCount + 1);
+        } else if (!castCheck.ok) {
+          // v7.9.10: Setup-Pollution erkannt - andere Setup-Cast-Namen in Sz 1.
+          // Anlass: Goerke-Run v7.9.9 Sz 1 - "Hertha Lindenbaum steht im Tuerrahmen"
+          // statt Goerke-Gerichts-Setup. Klassischer Cross-Setup-Hallucination-Bug.
+          const fNames = castCheck.foreignNames.join(', ');
+          diag('detect', 'Setup-Pollution: fremde NPC-Namen in Sz 1: ' + fNames);
+          console.warn('[Schatten] Setup-Pollution erkannt - Retry mit explizitem Cast-Pinning. Fremde Namen:', fNames);
+          // Sammle Setup-eigene Namen fuer expliziten Hinweis
+          const ownCastNames = [];
+          if (caseSetup.klient) {
+            const m = caseSetup.klient.match(/^([A-ZÄÖÜ][a-zäöüß]+(?:\s+[A-ZÄÖÜ][a-zäöüß]+)*)/);
+            if (m) ownCastNames.push(m[1]);
+          }
+          if (caseSetup.opfer) {
+            const m = caseSetup.opfer.match(/^([A-ZÄÖÜ][a-zäöüß]+(?:\s+[A-ZÄÖÜ][a-zäöüß]+)*)/);
+            if (m) ownCastNames.push(m[1]);
+          }
+          if (Array.isArray(caseSetup.setupCast)) {
+            caseSetup.setupCast.forEach(c => { if (c.name) ownCastNames.push(c.name); });
+          }
+          const retryPrompt = userMsg +
+            '\n\nKRITISCHE NACHBESSERUNG: Deine letzte Antwort enthielt NAMEN/PERSONEN AUS EINEM ANDEREN FALL.\n' +
+            'In der Eroeffnungsszene tauchen auf: ' + fNames + '\n' +
+            'Das ist FALSCH. Diese Personen gehoeren nicht zu DIESEM Fall.\n' +
+            'DIESER FALL hat folgende Personen: ' + ownCastNames.join(', ') + '\n' +
+            'Schreibe die Eroeffnungsszene KOMPLETT NEU mit den richtigen Personen aus DIESEM Fall.\n' +
+            'KEINE Erwaehnung von ' + fNames + '!\n' +
+            'Liefere die Szene erneut als JSON.';
+          return await performApiCall(retryPrompt, isStart, optionForRollback, retryCount, rateLimitCount, openingRetryCount + 1);
         } else if (required.length > 0) {
-          diag('detect', 'Opening-Validierung OK (' + required.length + ' Pflichtelemente erkannt)');
+          diag('detect', 'Opening-Validierung OK (' + required.length + ' Pflichtelemente erkannt' + (castCheck.foreignNames.length === 0 ? ', Cast sauber' : '') + ')');
         }
       }
 
@@ -11506,7 +11715,16 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           // 5 Szenen noetig - bei Abstaenden >5 entwischte die Phrase.
           pumphraseRunCounts[pi] = (pumphraseRunCounts[pi] || 0) + 1;
           const runCount = pumphraseRunCounts[pi];
-          if (runCount >= 2) {
+          // v7.9.10: Fuer die TOP-Pumphrasen aus 4-Run-Lektorat sofort beim 1.
+          // Vorkommen capen - die feuern in jedem Run mehrfach und nerven massiv.
+          // Indices: 7 = "abblaetternde farbe" - belasse bei 2.
+          // 11 = rattern strassenbahn (ASCII) - SOFORT
+          // 12 = bahn rattert (ASCII) - SOFORT
+          // 13 = geruch von altem... - SOFORT
+          // 0 = "draussen hupen autos" - SOFORT
+          const aggressiveCapIndices = new Set([0, 11, 12, 13]);
+          const hardCapThreshold = aggressiveCapIndices.has(pi) ? 1 : 2;
+          if (runCount >= hardCapThreshold) {
             // HARDCAP: Satz mit der Pumphrase aus dem Text loeschen.
             // v6.71: Pattern wird umlaut-tolerant gemacht, damit es auch das
             // Original mit ä/ö/ü/ß matched.
@@ -13494,6 +13712,65 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         console.log('[Schatten] Eureka unterdrueckt (Konzepte nur in 1 Indiz, triviale Selbst-Verknuepfung):', verb);
         diag('filter', 'Eureka unterdrueckt (Konzepte stecken alle in 1 Indiz): ' + verb.slice(0, 80));
       } else {
+      // v7.9.10 FIX 7: Phantom-Fakt-Detektor.
+      // Anlass: Schiffer-Run Sz 9 - Eureka "Karo-Zigaretten verbinden sich mit
+      // Spielschulden bei Roter Stern - Lange und seine Leute rauchen oft diese
+      // Marke". Plausibility passt (Karo + Lange in 2 versch. Indizien), aber
+      // die BEHAUPTUNG "Lange raucht Karo" wurde nie etabliert - Mistral erfindet
+      // den Fakt spontan im Eureka-Text. Klassische Hellseher-Verknuepfung.
+      //
+      // Detektor: Wenn der Eureka-Text Behauptungen ueber NPCs aufstellt
+      // ("X raucht/trinkt/kennt/ist/hat/arbeitet/wohnt") aber diese Behauptung
+      // nicht in npcMemory[X] oder storyFacts steht, ist es ein Phantom-Fakt.
+      let phantomFact = null;
+      const verbLower = verb.toLowerCase()
+        .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+      // NPC-Namen aus storyFacts/npcMemory holen
+      const knownNpcs = [];
+      if (typeof storyFacts === 'object' && storyFacts) {
+        Object.values(storyFacts).forEach(f => {
+          if (f && f.name) knownNpcs.push(f.name);
+        });
+      }
+      if (caseProgress.npcMemory) {
+        Object.keys(caseProgress.npcMemory).forEach(n => {
+          if (!knownNpcs.includes(n)) knownNpcs.push(n);
+        });
+      }
+      // Pruefe ob im Eureka-Text ein NPC-Name + Aktionsverb vorkommt
+      const actionVerbs = /\b(raucht|rauchen|rauchte|rauchten|trinkt|trinken|trank|tranken|kennt|kennen|kannte|kannten|ist|war|waren|sind|hat|haben|hatte|hatten|arbeitet|arbeiten|arbeitete|arbeiteten|wohnt|wohnen|wohnte|wohnten|sagt|sagen|sagte|sagten|gehoert|gehoeren|gehoerte|kontaktiert|kontaktieren|trifft|treffen|traf|trafen|verbindet sich mit|leitet|leiten|leitete|leiteten|fuehrt|fuehren|fuehrte|fuehrten)\b/;
+      for (const npcName of knownNpcs) {
+        // Nur Nachnamen pruefen (mind. 4 Zeichen, eindeutig)
+        const lastName = npcName.split(/\s+/).pop().toLowerCase()
+          .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+        if (lastName.length < 4) continue;
+        // Pattern: NPC-Name + Aktion innerhalb 30 Zeichen
+        const npcActionRegex = new RegExp('\\b' + lastName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b[^.!?]{0,30}' + actionVerbs.source, 'i');
+        if (npcActionRegex.test(verbLower)) {
+          // NPC + Behauptung gefunden. Steht das in npcMemory oder Indizien?
+          const npcKey = npcName;
+          const memoryEntries = (caseProgress.npcMemory && caseProgress.npcMemory[npcKey]) || [];
+          const memoryText = memoryEntries.map(e => (e.hinweis || '').toLowerCase()).join(' ')
+            .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+          const indizienText = (caseProgress.indizien || []).join(' ').toLowerCase()
+            .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+          // Extrahiere das Aktions-Verb aus dem Match
+          const actionMatch = verbLower.match(npcActionRegex);
+          const actionPhrase = actionMatch ? actionMatch[0].toLowerCase() : '';
+          // Pruefe ob NPC + Verb in den Indizien/Memory vorkommt
+          // Vereinfacht: Konzeptworte aus actionPhrase (>= 4 Zeichen, ohne NPC-Name) gegen Memory/Indizien
+          const phraseWords = actionPhrase.split(/\s+/).filter(w => w.length >= 4 && w !== lastName && !stopwords.has(w));
+          const allFound = phraseWords.every(w => memoryText.includes(w) || indizienText.includes(w));
+          if (!allFound && phraseWords.length >= 1) {
+            phantomFact = npcName + ' + "' + phraseWords.join(' ') + '"';
+            break;  // erster Phantom-Fakt reicht
+          }
+        }
+      }
+      if (phantomFact) {
+        console.warn('[Schatten] Phantom-Fakt im Eureka erkannt:', phantomFact, '- Eureka unterdrueckt:', verb);
+        diag('filter', 'Eureka mit Phantom-Fakt unterdrueckt (' + phantomFact + '): ' + verb.slice(0, 100));
+      } else {
       const istDuplikat = caseProgress.verknuepfungen.some(v => {
         const otherTxt = v.beschreibung || '';
         const otherNorm = otherTxt.toLowerCase().replace(/[.,;!?:]/g, '').replace(/\s+/g, ' ').trim();
@@ -13522,6 +13799,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         // Bei wirklich verbundenen Indizien gibt's auch einen kleinen Toast
         showProgressToast('VERBINDUNG ENTDECKT', verb);
       }
+      } // schliesst v7.9.10 Phantom-Fact-else
       } // schliesst v7.8 Plausibility-else
       } // schliesst v7.8 Sz<3-else
     }
@@ -13554,7 +13832,14 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       if (!caseProgress.tatverdaechtiger) {
         caseProgress.tatverdaechtiger = scene.tatverdaechtiger_identifiziert.trim();
         // Stage 2 erst wenn vorher Stage 1 (Indizien beisammen)
-        if (caseProgress.stage >= 1) {
+        // v7.9.10 FIX 4: Tag-Floor + Szenen-Floor erzwingen.
+        // Anlass: Goerke-Run v7.9.9 Sz 12 - Stage 2 von KI gesetzt obwohl Tag 1
+        // und nur 4 Indizien. Frueher Stage-Aufstieg wirkt fueher dramatisch
+        // aber laesst dem Spieler keine Zeit, den Fall zu erkunden.
+        // Neu: mindestens Sz 6, und Tag 2+ braucht mind. 7 Indizien.
+        const indCount = (caseProgress.indizien || []).length;
+        const stage2FloorOk = (sceneCounter >= 6) && (gameDay >= 2 || indCount >= 7);
+        if (caseProgress.stage >= 1 && stage2FloorOk) {
           caseProgress.stage = 2;
           caseProgress.stage2StartDay = gameDay; // v6.69: fuer Eskalations-Timing
           caseProgress.stage2StartScene = sceneCounter; // v6.81
@@ -13562,6 +13847,12 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           diag('progress', '✦ STAGE 2 erreicht (Verdaechtiger: ' + caseProgress.tatverdaechtiger + ')');
           // v6.68: Toast bei Verdaechtigen-Identifikation
           showProgressToast('VERDAECHTIGER STEHT FEST', caseProgress.tatverdaechtiger + ' - jetzt muss Karl ihn ueberfuehren.');
+        } else if (caseProgress.stage >= 1 && !stage2FloorOk) {
+          // v7.9.10: KI hat Stage 2 versucht, aber zu frueh. Tatverdaechtiger
+          // bleibt vorgemerkt, Stage bleibt 1 - der Fall braucht mehr Indizien.
+          console.log('[Schatten] Stage 2 zu frueh: Sz=' + sceneCounter + ', Tag=' + gameDay + ', Ind=' + indCount + ' - Tatverdaechtiger vorgemerkt aber Stage bleibt 1');
+          diag('filter', 'Stage-2-Floor (Sz>=6, Tag>=2 oder Ind>=7) verfehlt: Sz=' + sceneCounter + ', Tag=' + gameDay + ', Ind=' + indCount + ' - Aufstieg geblockt');
+          // tatverdaechtiger bleibt gesetzt, kann spaeter Stage 2 ausloesen
         } else {
           console.log('[Schatten] Tatverdaechtiger genannt, aber zu frueh fuer Stage 2 (erst Indizien sammeln).');
           diag('filter', 'Tatverdaechtiger zu frueh genannt, Stage-Aufstieg blockiert');
@@ -13927,7 +14218,10 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         historicalAnchorsUsed: historicalAnchorsUsed.slice(),
         // v6.57: Kategorien tracken (Variety-Bonus)
         historicalAnchorCategories: historicalAnchorCategories.slice(),
-        timedEvent: timedEventState ? (timedEventState.kind + ' (Szene ' + timedEventState.scenesActive + ')') : null,
+        // v7.9.10 FIX 6: Property-Namen korrigiert. Vorher 'kind'/'scenesActive'
+        // (existieren nicht in timedEventState) -> 'undefined (Szene undefined)'
+        // in Goerke-Run 11x sichtbar. timedEventState hat: type, startScene, sceneCount.
+        timedEvent: timedEventState ? (timedEventState.type + ' (Szene ' + timedEventState.sceneCount + ')') : null,
         clientName: clientProfile.name || null,
         clientCharakter: clientProfile.charakter || null,
         currentCast: cast.map(c => {
