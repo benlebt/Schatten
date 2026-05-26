@@ -350,6 +350,59 @@
   /* Reserve space for settings cog (top-right) so text doesn't underrun it */
   .status-bar { padding-right: 56px; }
 
+  /* v7.9.57: Datum als kompakte Anker-Info in der Top-Bar (links). Tag und
+     Tageszeit stehen im Scene-Header, brauchen hier nicht doppelt zu sein. */
+  .status-bar .status-date {
+    font-size: 11px;
+    opacity: 0.75;
+    color: #aaa;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  /* v7.9.56: Auf schmalen iPhone-Viewports (< 430px) die Status-Bar
+     kompakter rendern damit Fall-Balken und Verfassungs-Dots nicht
+     hinter den Settings-Cog rutschen. User-Beobachtung: iPhone-Screenshot
+     zeigte FALL-Balken halb verdeckt vom Cog-Button. Fixes:
+     - Mehr Padding rechts (60px statt 56px)
+     - Kleinere Gaps zwischen Items
+     - Kompaktere Schrift
+     - status-loc komplett ausblenden (steht in Szene) */
+  @media (max-width: 430px) {
+    .status-bar {
+      padding: 8px 64px 8px 10px;
+      gap: 5px;
+      font-size: 9px;
+      letter-spacing: 1px;
+    }
+    .status-bar .status-date {
+      font-size: 10px; /* etwas kleiner, aber sichtbar */
+    }
+    .status-bar .case-progress-label,
+    .status-bar .hunger-label,
+    .status-bar .romance-label {
+      font-size: 8px;
+      margin-right: 1px;
+    }
+    .status-bar-segment {
+      width: 6px; /* Verfassung-Dots etwas kleiner */
+    }
+    .status-bar .case-progress-segment {
+      width: 5px; /* Fall-Balken etwas kleiner */
+    }
+  }
+  /* Extra-kompakter Modus fuer sehr kleine iPhones (iPhone SE etc.) */
+  @media (max-width: 380px) {
+    .status-bar {
+      gap: 4px;
+      padding: 7px 60px 7px 8px;
+    }
+    .status-bar .hunger-dots,
+    .status-bar .romance-dots {
+      display: none !important; /* Optional-Stats ganz weg */
+    }
+  }
+
   /* Status popup (shown on tap) */
   .status-popup {
     position: fixed;
@@ -1938,14 +1991,11 @@
   </header>
 
   <!-- Sticky status bar (always visible during play, tap for details) -->
+  <!-- v7.9.57: Tag, Tageszeit und Ort raus aus der Top-Bar weil sie in jedem
+       Scene-Header (ort-divider) ohnehin stehen. Spart Platz auf iPhone
+       sodass die Energie/Verfassung/Fall-Balken nicht mehr ueberlappen. -->
   <div id="status-bar" class="status-bar hidden" role="button" aria-label="Details anzeigen" tabindex="0">
-    <span class="status-tag" id="status-tag">T1</span>
-    <span class="status-dot">·</span>
-    <span class="status-time" id="status-time">ABEND</span>
-    <span class="status-dot">·</span>
-    <span class="status-date" id="status-date" style="font-size:11px;opacity:0.75;"></span>
-    <span class="status-dot">·</span>
-    <span class="status-loc" id="status-loc"></span>
+    <span class="status-date" id="status-date"></span>
     <span class="status-spacer"></span>
     <div class="verfassung-dots" id="verfassung-dots" title="Verfassung"></div>
     <div class="energie-dots" id="energie-dots" title="Energie"></div>
@@ -1973,6 +2023,12 @@
       <span class="romance-dot"></span>
     </div>
     <div class="status-bars" id="status-bars"></div>
+    <!-- v7.9.57: hidden Spans fuer status-tag/status-time/status-loc damit
+         JS-Code der diese Elemente befuellt nicht crasht. Werden nicht
+         angezeigt. -->
+    <span id="status-tag" class="hidden"></span>
+    <span id="status-time" class="hidden"></span>
+    <span id="status-loc" class="hidden"></span>
   </div>
 
   <!-- Status details popup -->
@@ -2058,7 +2114,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.9.54</div>
+    <div class="start-version">Schatten v7.9.57</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2135,7 +2191,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.9.54</span>
+    <span>Schatten v7.9.57</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -3008,8 +3064,16 @@ JSON-Output ist Pflicht (kein Markdown, kein Text drumherum):
 
 spannung: 1 (ruhig) bis 5 (Lebensgefahr).
 
-OPTIONS-TAG (sehr wichtig, v7.9.53):
-Jede Option hat ein "tag"-Feld. Das Spiel-System verlaesst sich darauf um Game-Mechaniken auszuloesen (Vf-Heilung, Tageswechsel, Romance-Tension). Wenn du ein Tag falsch setzt, bricht die Spiel-Logik.
+OPTIONS-TAG (KRITISCH - bricht die Spiel-Logik wenn falsch, v7.9.53):
+Jede Option MUSS ein "tag"-Feld haben. Das Spiel-System nutzt das Tag direkt um Game-Mechaniken auszuloesen (Vf-Heilung, Tageswechsel, Romance-Tension). WENN DU DAS FELD WEGLAESST, fallen die Game-Mechaniken auf eine fehleranfaellige Text-Erkennung zurueck - Karls Verfassung steigt dann nicht obwohl er sich verbinden laesst, der Tag wechselt nicht obwohl er schlaeft, etc.
+
+BEISPIEL (so MUSST du es liefern):
+"optionen": [
+  {"id":"A","text":"Geh zu Doc Wagner und lass dich verarzten.","tag":"behandlung"},
+  {"id":"B","text":"Frag Marlene was sie gesehen hat.","tag":"normal"},
+  {"id":"C","text":"Verfolg den Mann mit der Schiebermuetze.","tag":"heisse-spur"},
+  {"id":"D","text":"Geh ins Buero zurueck und schlaf dich aus.","tag":"schlaf"}
+]
 
 Erlaubte Tags und ihre Bedeutung:
 - "behandlung" - Diese Option fuehrt zu medizinischer Versorgung von Karls Verletzungen. Setze NUR wenn die Option konkret zur Heilung fuehrt (Doc Wagner / Marlene / Apotheke aufsuchen + Behandlung erhalten, Wunde verbinden, Verband anlegen, Blut stillen, Hilfe holen). NICHT setzen fuer reine Gespraeche mit Heilern ohne Versorgung (z.B. "Sprich mit Doc Wagner ueber den Fall"). FOLGE: Karls Verfassung steigt automatisch um +1 (oder +2 wenn schwer verletzt). Maximal 1x pro Spieltag.
@@ -3020,15 +3084,15 @@ Erlaubte Tags und ihre Bedeutung:
 - "heisse-spur" - Diese Option fuehrt direkt zum Verdaechtigen oder Ziel (Tatort, Versteck, Hehler). Bei Stage 1 mit vielen Indizien oder Stage 2 ohne Verdacht. FOLGE: Spannung erhoeht sich, Story-Beschleunigung.
 - "normal" - Standardfall fuer alle anderen Optionen (Nachfragen, Erkunden, Beobachten, kleine Aktionen). KEINE besondere Folge.
 
-Mehrere Tags pro Szene moeglich (z.B. eine "behandlung" + eine "heisse-spur" + 2x "normal"). Aber pro Option NUR EIN Tag. Wenn unsicher: "normal" waehlen. Das ist sicherer als ein falscher Tag.
+Pro Option NUR EIN Tag. Wenn unsicher: "normal" waehlen. Das ist sicherer als ein falscher Tag.
 
-WICHTIG: Wenn der Spieler eine getaggte Option waehlt, MUSST du in der naechsten Szene die zugehoerige Konsequenz narrativ darstellen:
+KRITISCHE PFLICHT: Wenn der Spieler eine getaggte Option waehlt, MUSST du in der naechsten Szene die zugehoerige Konsequenz narrativ darstellen:
 - "behandlung" gewaehlt -> naechste Szene zeigt Karl wird tatsaechlich verarztet (Verband, Wunde reinigen, Spritze) - keine Aktion oder Flucht waehrend der Heilung
 - "schlaf" gewaehlt -> naechste Szene zeigt neue Tageszeit/neuer Tag, Karl wacht auf
 - "romance" gewaehlt -> naechste Szene zeigt intime Naehe (Kuss, gemeinsame Nacht, etc.)
 - "aufloesung" gewaehlt -> naechste Szene ist der Abschluss-Bericht beim Klienten, der Fall steht
 
-Wenn du den Tag falsch setzt, wird Karls Vf nicht steigen obwohl er sich verbunden hat, oder der Tag wechselt nicht obwohl er geschlafen hat - das frustriert den Spieler.`;
+WENN DU DAS TAG-FELD WEGLAESST oder einen Tag erfindest der nicht in der Liste steht, gibt es einen Diagnose-Eintrag im Debug-Log und die Mechaniken funktionieren nicht. JEDE Option BRAUCHT ein tag-Feld.`;
 
 const INTRO_REQUIREMENTS = `
 PFLICHT FÜR DIE ERÖFFNUNGSSZENE:
@@ -4405,7 +4469,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.9.54';
+window.SCHATTEN_VERSION = 'v7.9.57';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -8254,10 +8318,16 @@ function renderLog(shouldScroll) {
         ort.className = 'ort-divider';
         const ortText = document.createElement('span');
         ortText.className = 'ort-divider-name';
-        // Tag + Tageszeit + Ort kombinieren, damit man tracken kann ob Tageszeit zur Szene passt
+        // Tag + Tageszeit + Datum + Ort kombinieren.
+        // v7.9.57: Datum mit reingenommen weil aus Top-Bar entfernt
+        // (User-Wunsch: Top-Bar nur Datum + Energie/Verfassung/Fall-Balken).
         let prefixParts = [];
         if (entry.day) prefixParts.push('T' + entry.day);
         if (entry.time) prefixParts.push(entry.time);
+        if (entry.gameDate && typeof formatGameDateShort === 'function') {
+          const shortDate = formatGameDateShort(entry.gameDate);
+          if (shortDate) prefixParts.push(shortDate);
+        }
         const prefix = prefixParts.length > 0 ? prefixParts.join(' · ') + ' · ' : '';
         ortText.textContent = '· ' + prefix + entry.ort + ' ·';
         ort.appendChild(ortText);
@@ -8536,6 +8606,22 @@ function renderOptions(scene) {
     console.warn('[Schatten] renderOptions context bauen fehlgeschlagen:', err);
     resolveContext = {};
   }
+  // v7.9.57: Diagnose ob die KI tag-Felder geliefert hat. Erkennen wann
+  // wir im Text-Detection-Fallback laufen. Bei wiederholtem Tag-Mangel
+  // sehen wir am Pattern welche Modelle das Schema ignorieren.
+  try {
+    if (Array.isArray(scene.optionen) && scene.optionen.length > 0) {
+      const tagged = scene.optionen.filter(o => o && typeof o.tag === 'string').length;
+      const total = scene.optionen.length;
+      if (tagged === 0 && typeof diag === 'function') {
+        diag('drift', 'KI lieferte 0/' + total + ' Options-Tags - Text-Detection-Fallback aktiv');
+      } else if (tagged < total && typeof diag === 'function') {
+        diag('detect', 'KI-Tags: ' + tagged + '/' + total + ' Optionen getaggt');
+      } else if (tagged === total && typeof diag === 'function') {
+        diag('detect', 'KI-Tags: alle ' + total + ' Optionen getaggt');
+      }
+    }
+  } catch (e) { /* ignore */ }
   scene.optionen.forEach(opt => {
     const btn = document.createElement('button');
     btn.className = 'option-btn';
@@ -8646,33 +8732,34 @@ function getCurrentUtcDay() {
 // aber das RPD-Limit ist PRO MODELL. Heisst: Wenn Flash-Lite durch ist, kann Flash
 // trotzdem noch ~20 Anfragen liefern (eigener RPD-Topf).
 const MODEL_CHAIN = [
-  // v7.9.42: Chain umsortiert nach Lektorats-Befund Wagner-Run v7.9.41.
-  // Mistral Medium 3 hat in 2 Runs in Folge die Story komplett zerrissen
-  // (Off-by-One in v7.9.38, Szenen-Reset in v7.9.41). Bei 98KB-Recap kommt
-  // Medium nicht klar und reproduziert entweder die Eroeffnung neu oder
-  // reagiert auf falsche Aktion. Daher: Medium ans Ende der Story-Modelle,
-  // vor den Groq-Notnaegeln. Damit wird Medium im Alltag (1-Tab-Spiel) nie
-  // mehr gezogen - nur als Notfall wenn alle anderen down sind.
+  // v7.9.57: Umsortiert nach Performance-Tracking-Daten aus v7.9.53.
+  // Lektorat Wagner+Stein-Runs v7.9.53 zeigten:
+  // - Gemini 3.1 Flash-Lite: avg 4.1s (3 calls)
+  // - Mistral Large 3: avg 15.8-16.9s (max 24s!)
+  // - Mistral Medium 3: avg 17.7-18.2s
+  // - Mistral Small 3.1: avg 17.4s
+  // -> Alle Mistral-Modelle 4x langsamer als Gemini-Modelle.
+  // -> Mistral Large hat KEINEN Performance-Vorteil ggu Medium.
   //
-  // 1. Tier: Beste deutsche Story-Modelle. Gemini Flash und Mistral Large
-  //          haben sich in den Test-Runs durchgehend konsistent gezeigt.
+  // Neue Logik: schnelle Gemini-Modelle nach oben, langsame Mistrals
+  // erst wenn Gemini-Daily-Limits ausgeschoepft. Mistral Large bleibt
+  // Premium-Backup wegen Qualitaet, aber nicht mehr Standard.
+  //
+  // 1. Tier: Schnelle Gemini-Modelle (avg 3-5s, gute Qualitaet)
   { provider: 'gemini', model: 'gemini-2.5-flash',       label: 'Gemini 2.5 Flash' },
-  { provider: 'mistral', model: 'mistral-large-latest',  label: 'Mistral Large 3' },
-  // 2. Tier: Premium (knapp im Daily-Limit ~50-100 RPD bei Pro)
-  { provider: 'gemini', model: 'gemini-2.5-pro',         label: 'Gemini 2.5 Pro' },
   { provider: 'gemini', model: 'gemini-3-flash-preview', label: 'Gemini 3 Flash Preview' },
-  // 3. Tier: Schnelle Lite-Modelle, ausreichend aber mit Grammatik-Schwaechen
-  { provider: 'mistral', model: 'mistral-small-latest',  label: 'Mistral Small 3.1' },
+  // 2. Tier: Premium Gemini Pro + Mistral Large als Quality-Fallback
+  { provider: 'gemini', model: 'gemini-2.5-pro',         label: 'Gemini 2.5 Pro' },
+  { provider: 'mistral', model: 'mistral-large-latest',  label: 'Mistral Large 3' },
+  // 3. Tier: Lite/Small-Modelle
   { provider: 'gemini', model: 'gemini-2.5-flash-lite',  label: 'Gemini 2.5 Flash-Lite' },
-  // v7.9.46: Gemini 3.1 Flash-Lite war zuerst komplett raus weil Brandt-Run
-  // Sz 1->2 Eroeffnungs-Reset zeigte. Aber dadurch bei Tageslimit-Stress nur
-  // noch Groq als Fallback - mit schlechterem deutschen Stil. Daher: Lite als
-  // ALLERLETZTEN Notnagel zwischen Mistral Medium und Groq. Greift nur wenn
-  // alle Premium- und Standard-Modelle ausgeschoepft sind.
+  { provider: 'gemini', model: 'gemini-3.1-flash-lite',  label: 'Gemini 3.1 Flash-Lite' },
+  { provider: 'mistral', model: 'mistral-small-latest',  label: 'Mistral Small 3.1' },
   // v7.9.42: Mistral Medium 3 ans Ende (vor Groq) - Story-Halluzinationen
   // bei 98KB-Recap nicht reparabel ohne Modell-spezifische Prompt-Aenderungen.
+  // Bleibt drin als Notnagel weil Wagner-Run v7.9.53 zeigte: trotz Sz1->Sz2
+  // Reset liefert Mistral Medium funktional verwertbare Szenen.
   { provider: 'mistral', model: 'mistral-medium-latest', label: 'Mistral Medium 3' },
-  { provider: 'gemini', model: 'gemini-3.1-flash-lite',  label: 'Gemini 3.1 Flash-Lite' },
   // 4. Tier: Groq-Modelle (TPM-eng, deutscher Stil meist schlechter als Gemini/Mistral)
   { provider: 'groq',   model: 'llama-3.3-70b-versatile',                  label: 'Llama 3.3 70B' },
   // v7.9.39: Kimi K2 (moonshotai/kimi-k2-instruct-0905) am 23.03.2026 von Groq
@@ -8699,7 +8786,7 @@ const MODEL_CHAIN = [
 // die Chain (zwischen Mistral Medium und Groq, statt komplett raus).
 // v7.9.48: bump 8 -> 9 weil Llama 4 Scout aus der Chain entfernt wurde
 // (liefert leere Szenen oder ignoriert User-Aktion).
-const MODEL_CHAIN_VERSION = 9;
+const MODEL_CHAIN_VERSION = 10;
 
 // Aktuelle Position in der Kette aus localStorage (mit Tagesreset + Chain-Version-Check).
 // Session-Skip-Liste: Modelle die strukturell zu wenig TPM fuer unseren
@@ -10429,33 +10516,52 @@ Stasi-Cap fuer diesen Fall: ${stasiCapForCase}/5 (Setup-Relevanz). ${stasiTensio
     // Sonst stirbt der Spieler an unheilbarer Wunde - Brauer-Run war ein Beispiel:
     // Vf 5->4->3->2->1->1->1->0->0 ueber 8 Szenen, keine einzige Behandlungs-Option dazwischen.
     // Bot waehlte zufaellig.
-    // Zwei Eskalations-Stufen:
-    //   Vf <= 2 (schwer verletzt): PFLICHT Behandlungs-Option
-    //   Vf <= 3 (angeschlagen): SOLL Behandlungs-Option (Vorbeugung gegen Spirale nach unten)
-    if (verfassung <= 3 && !karlInStasiCustody && (typeof lastSpannung !== 'number' || lastSpannung <= 3)) {
-      const pflicht = verfassung <= 2 ? 'PFLICHT' : 'SOLL';
-      // v7.9.22: Behandlungs-Push vereinfacht. User-Wunsch: Option-Text
-      // arcade-maessig generisch ("Doc Wagner aufsuchen (Behandlung)") statt
-      // spezifisch ("Schulter behandeln lassen"). Verletzungs-Drift war hoch
-      // (Wagner-Run: 53 Drift-Events, 13× Schulter-Erwaehnungen). KI soll
-      // nicht raten WAS verletzt ist - nur DASS Karl angeschlagen ist.
-      recap += `\n\nBEHANDLUNGS-PUSH (${pflicht}): Karl hat Verfassung ${verfassung}/5 - ${verfassung <= 2 ? 'schwer verletzt' : 'angeschlagen'}. Spannung niedrig (${lastSpannung || '?'}/5), Karl ist NICHT in Gewahrsam.
+    // v7.9.57: Push verschärft. Anlass: Stein-Run v7.9.53 hatte Vf 3->2->2->1->0
+    // in 4 Szenen, KEINE einzige Behandlungs-Option weil Spannung 3-5 war
+    // (die alte Bedingung lastSpannung <= 3 hat den Push deaktiviert). Jetzt:
+    //   Vf <= 1 (lebensgefaehrlich): ZWEI von 4 Optionen MUESSEN Defensive/Flucht/Behandlung sein,
+    //                                 UNABHAENGIG von Spannung
+    //   Vf == 2 (schwer verletzt): EINE Option MUSS Behandlung sein, auch in Action-Szenen
+    //   Vf == 3 (angeschlagen): SOLL Behandlung anbieten wenn Spannung <= 3
+    const isCritical = verfassung <= 1;
+    const isSevere = verfassung === 2;
+    const isInjured = verfassung === 3;
+    if ((isCritical || isSevere) && !karlInStasiCustody) {
+      // PFLICHT auch in Action-Szenen
+      const optionCount = isCritical ? 'ZWEI' : 'EINE';
+      const pflicht = 'PFLICHT';
+      recap += `\n\nBEHANDLUNGS-PUSH (${pflicht}): Karl hat Verfassung ${verfassung}/5 - ${isCritical ? 'LEBENSGEFAEHRLICH verletzt' : 'schwer verletzt'}. Spannung ${lastSpannung || '?'}/5, Karl ist NICHT in Gewahrsam.
 
-DEINE PFLICHT: Eine der 4 Optionen ${verfassung <= 2 ? 'MUSS' : 'SOLL'} eine Behandlungs-Option sein. Formuliere sie GENERISCH ohne spezifische Koerperteil-Details:
+DEINE PFLICHT: ${optionCount} der 4 Optionen MUSS eine Behandlungs-Option ODER eine Defensiv-/Flucht-Option sein. ${isCritical ? 'Karl ist sterbensnah - er kann NICHT mehr aktiv kaempfen oder zuschlagen. Aktive Action-Optionen waeren toedlich.' : 'Karl ist schwer verletzt - eine weitere Verletzung kann zum Tod fuehren.'}
+
+Behandlungs-Optionen:
 - "Doc Wagner aufsuchen (Behandlung)"
 - "Zur Charite Notaufnahme (Mitte, Ost)" 
 - "Doc Wagner anrufen, er soll vorbeikommen" (falls Karl gerade nicht weg kann)
-- "Mit Verbandzeug aus der Schublade versorgen" (Karl im Buero, leichte Faelle)
+- "Wunde notduerftig mit Verbandzeug versorgen" (im Buero, leichte Faelle)
+${isCritical ? `Defensiv-Optionen bei Vf<=1 (Karl kann sich kaum auf den Beinen halten):
+- "Sinke an der Wand zusammen, hoffe dass er weitergeht"
+- "Fluestere kraftlos: bring mich zu Doc Wagner"
+- "Schliess die Augen, spiel bewusstlos"
+- "Rolle dich zur Seite, weg vom Tritt"
+- "Bleib still, schau wie tot aus"` : `Defensiv-Optionen bei Vf=2:
+- "Geh hinter Deckung, beobachte"
+- "Verstecke dich im Hauseingang"
+- "Schleich dich weg, raus aus der Action"`}
 
 WICHTIG: ERFINDE KEINE spezifischen Verletzungen (Schulter / Knie / Stirn / Rippen etc.) wenn die Story sie nicht klar etabliert hat. Schreibe nur "Karl ist angeschlagen", "die Wunde brennt", "Karl bewegt sich steif". Wenn die Story eine konkrete Verletzung NENNT (z.B. Schlag auf den Kopf in Sz X), dann darfst du DIESE eine Verletzung weiter erwaehnen - aber keine NEUEN dazu erfinden.
 
-Wenn Karl die Behandlungs-Option waehlt:
-- Erzaehl den Weg (5-10 Min S-Bahn West / Strassenbahn Ost)
-- Doc Wagner / Schwester verarztet (Jod, Verband - generisch)
-- Verfassung steigt um +1 bis +2 (verfassung_delta entsprechend)
-- Karl ist danach "leicht angeschlagen"
+WENN du die Behandlungs-Option mit tag="behandlung" markierst, MUSST du in der Folge-Szene die Heilung narrativ zeigen (Verband, Spritze, Wunde reinigen).`;
+    } else if (isInjured && !karlInStasiCustody && (typeof lastSpannung !== 'number' || lastSpannung <= 3)) {
+      // SOLL bei Vf=3 nur wenn Spannung niedrig (alte Logik)
+      recap += `\n\nBEHANDLUNGS-PUSH (SOLL): Karl hat Verfassung ${verfassung}/5 - angeschlagen. Spannung niedrig (${lastSpannung || '?'}/5), Karl ist NICHT in Gewahrsam.
 
-Wenn Karl die Behandlungs-Option NICHT waehlt: respektiere die Wahl, erwaehne kurz die Konsequenz (Wunde brennt, Hand zittert) - aber KEINE neue Verletzungs-Details erfinden.`;
+EMPFEHLUNG: Eine der 4 Optionen SOLL eine Behandlungs-Option sein:
+- "Doc Wagner aufsuchen (Behandlung)"
+- "Zur Charite Notaufnahme (Mitte, Ost)"
+- "Mit Verbandzeug aus der Schublade versorgen" (Karl im Buero, leichte Faelle)
+
+Wenn du die Behandlungs-Option mit tag="behandlung" markierst, MUSST du in der Folge-Szene die Heilung narrativ zeigen.`;
     }
 
     // v7.9.14: Energie unter 20 ohne Action -> Schlaf-Option erzwingen
@@ -16542,11 +16648,15 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     // Folge aber Karl noch nicht in Gewahrsam ist (Mistral hat es trotz Push
     // ignoriert), erzwingen wir die Festnahme im naechsten Szene-Push.
     // Verhindert dass "STASI-FESTNAHME UNAUSWEICHLICH" ewig staut ohne Effekt.
+    // v7.9.57: Schwellen entschaerft. Anlass: Stein-Run v7.9.53 zeigte
+    // STASI-FESTNAHME UNAUSWEICHLICH ab Sz 8, AUTO-CUSTODY Sz 9, HARD-FORCE
+    // FESTNAHME Sz 13. Karl hatte keine Chance der Eskalation zu entkommen.
+    // Jetzt: AUTO-CUSTODY-Schwelle 3->5, System-Override 4->6.
     if (caseIsPolitical && !karlInStasiCustody) {
       if (stasiTension >= 4) {
         stasiHighTensionStreak++;
         console.log('[Schatten] StasiHighTensionStreak:', stasiHighTensionStreak, '(Tension', stasiTension + ')');
-        if (stasiHighTensionStreak >= 3) {
+        if (stasiHighTensionStreak >= 5) {
           // Forciere Custody in der NAECHSTEN Szene - Marker setzen damit der
           // Recap-Builder einen harten "JETZT FESTNAHME EINBAUEN" Push macht.
           caseProgress.forceCustodyNextScene = true;
@@ -16564,14 +16674,15 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         // HARD-FORCE pusht Mistral 1x klar zur Festnahme; wenn das nicht
         // greift, ist es ehrlicher den Diag-Event zu machen als chaotisch
         // den State zu manipulieren.
-        if (stasiHighTensionStreak >= 4 && !hardForcedArrestUsed) {
-          console.warn('[Schatten] Mistral hat Custody-Push 4x ignoriert - setze karlInStasiCustody=true systemseitig');
+        // v7.9.57: Schwelle 4 -> 6 fuer Spieler-Chance.
+        if (stasiHighTensionStreak >= 6 && !hardForcedArrestUsed) {
+          console.warn('[Schatten] Mistral hat Custody-Push 6x ignoriert - setze karlInStasiCustody=true systemseitig');
           diag('state', 'System-Force-Custody: Mistral hat ' + stasiHighTensionStreak + ' Pushes ignoriert, Custody-Status systemseitig gesetzt');
           karlInStasiCustody = true;
           folterSceneCount = 0;
           stasiHighTensionStreak = 0;
           caseProgress.forceCustodyNextScene = true; // bleibt - Recap muss Festnahme erzaehlen
-        } else if (stasiHighTensionStreak >= 4 && hardForcedArrestUsed) {
+        } else if (stasiHighTensionStreak >= 6 && hardForcedArrestUsed) {
           // HARD-FORCE wurde schon verwendet - kein zweiter System-Override.
           // Nur Diag-Event damit der Bug sichtbar bleibt.
           diag('drift', 'Stasi-Tension auf 4+ fuer ' + stasiHighTensionStreak + ' Szenen, HARD-FORCE bereits verbraucht - keine weitere System-Force (Pingpong-Schutz)');
@@ -16916,14 +17027,26 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         // das voreilige "Karl macht Feierabend"-Endbild. Beobachtung in
         // Stein-Run v7.9.48: Gemini sagte "retry in 54s", System zeigte
         // trotzdem Endbild mit "in 1 Min weiter". Bot sah "Daily-Limit"-Match
-        // und gab auf statt zu warten. Jetzt: kurze Waits werden als
-        // Rate-Limit (wait-box) behandelt, Bot retry-Logik greift normal.
+        // und gab auf statt zu warten.
+        // v7.9.55: showError ersetzt durch showNarrativeWait mit konkretem
+        // Countdown. Anlass: User-Run zeigte showError "Karl muss 32s
+        // verschnaufen" aber Bot klickte SOFORT "Erneut versuchen" -> neuer
+        // Daily-Limit-Fehler weil 32s noch nicht abgelaufen -> Endlosschleife.
+        // Mit showNarrativeWait wartet das System tatsaechlich die Sekunden
+        // und triggert dann automatisch den Retry.
         if (requestedWait < 5 * 60) {
-          console.log('[Schatten] Daily-Limit aber Wait-Zeit nur', requestedWait, 's - behandle als Rate-Limit');
-          showError(
-            'Karl muss ' + requestedWait + 's verschnaufen. "Erneut versuchen" tippen.',
-            lastErrorDebug
-          );
+          console.log('[Schatten] Daily-Limit aber Wait-Zeit nur', requestedWait, 's - zeige narrative Wait-Box');
+          const doRetryDaily = () => {
+            if (optionForRollback) {
+              performApiCall(userMsg, isStart, optionForRollback, retryCount, rateLimitCount, openingRetryCount);
+            } else {
+              performApiCall(userMsg, isStart, undefined, retryCount, rateLimitCount, openingRetryCount);
+            }
+          };
+          // +2s Puffer drauf damit das Backend definitiv wieder frei ist
+          const safeWait = Math.min(requestedWait + 2, 60);
+          pendingRetry = doRetryDaily;
+          showNarrativeWait(safeWait);
           return;
         }
 
@@ -17741,6 +17864,9 @@ function botWaitForOptionsReady(maxMs) {
       // (z.B. 54s). Bot soll erstmal "Erneut versuchen" klicken bevor er
       // aufgibt. echtes Tageslimit erkennt der Bot dann durch wiederholten
       // Timeout in der Recovery-Schleife.
+      // v7.9.55: setTimeout(check, 400) nach Retry-Click damit Polling weiter
+      // laeuft. Vorher war hier nur 'return;' das Polling unterbrach -> Bot
+      // haengt fest weil Promise nie resolved/rejected.
       const dailyLimit = document.getElementById('case-failed');
       if (dailyLimit && !dailyLimit.classList.contains('hidden')) {
         // Versuche Retry-Button im Endbildschirm zu klicken
@@ -17749,7 +17875,8 @@ function botWaitForOptionsReady(maxMs) {
         if (retryBtn) {
           console.log('[Bot] case-failed sichtbar, klicke "Erneut versuchen" automatisch');
           retryBtn.click();
-          return; // Schleife laeuft weiter
+          setTimeout(check, 400); // Schleife laeuft weiter
+          return;
         }
         return reject(new Error('Spielende oder Daily-Limit erreicht'));
       }
@@ -17764,6 +17891,8 @@ function botWaitForOptionsReady(maxMs) {
 
       // 3. Fehler-Anzeige sichtbar? -> versuche "Erneut versuchen" zu klicken,
       // sonst Abbruch
+      // v7.9.55: setTimeout(check, 400) nach Klick damit Polling-Schleife
+      // weiterlaeuft. Vorher 'return;' ohne weiteres Timeout = Bot hing fest.
       const errBox = document.querySelector('#error:not(.hidden)');
       if (errBox) {
         // Pruefe ob ein "Erneut versuchen"-Button da ist und klickbar ist.
@@ -17774,6 +17903,7 @@ function botWaitForOptionsReady(maxMs) {
           console.log('[Bot] Fehler-Box sichtbar, klicke Erneut versuchen automatisch.');
           retryBtn.click();
           // Nach Klick: noch nicht resolven, schleife weiterlaufen lassen
+          setTimeout(check, 400);
           return;
         }
         return reject(new Error('Fehler im Spiel - kein Retry-Button gefunden'));
@@ -18120,6 +18250,33 @@ function stopAutoplayBot() {
   }
   console.log('[Bot] Stopp-Signal vom Benutzer empfangen');
   botShouldStop = true;
+  // v7.9.55: Auch aktive Wait-Countdown / Pending-Retry abbrechen damit
+  // der Bot wirklich anhaelt. Sonst kann er sekundenlang in einer Wait-Box
+  // haengen bevor er den Stop-Flag sieht. User-Beobachtung: Stopp-Button
+  // im roten Balken hat nichts mehr gemacht, weil das Spiel auf einer
+  // 32s-Daily-Limit-Wait wartete.
+  if (typeof waitTimer !== 'undefined' && waitTimer) {
+    clearTimeout(waitTimer);
+    waitTimer = null;
+  }
+  if (typeof waitInterval !== 'undefined' && waitInterval) {
+    clearInterval(waitInterval);
+    waitInterval = null;
+  }
+  if (typeof pendingRetry !== 'undefined') {
+    pendingRetry = null;
+  }
+  // Wait-Box sofort verstecken
+  try { hideWait(); } catch (e) {}
+  // Error-Box auch verstecken falls sichtbar
+  try {
+    const errBox = document.getElementById('error');
+    if (errBox) errBox.classList.add('hidden');
+  } catch (e) {}
+  // Status-Bar mit "Stoppe..." sichtbar lassen damit User sieht es klappt
+  try { botUpdateStatusBar('Bot wird gestoppt...'); } catch (e) {}
+  // Status-Bar nach 2s ganz weg
+  setTimeout(() => { try { botHideStatusBar(); } catch (e) {} }, 2000);
 }
 
 // Wird vom Settings-Button aufgerufen
