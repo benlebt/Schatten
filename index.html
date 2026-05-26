@@ -2043,7 +2043,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.9.50</div>
+    <div class="start-version">Schatten v7.9.53</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2120,7 +2120,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.9.50</span>
+    <span>Schatten v7.9.53</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -2974,7 +2974,7 @@ JSON-Output ist Pflicht (kein Markdown, kein Text drumherum):
 {
   "szene": "3-5 Sätze...",
   "ort": "Kurzname",
-  "optionen": [{"id":"A","text":"..."},{"id":"B","text":"..."},{"id":"C","text":"..."},{"id":"D","text":"..."}],
+  "optionen": [{"id":"A","text":"...","tag":"normal"},{"id":"B","text":"...","tag":"normal"},{"id":"C","text":"...","tag":"normal"},{"id":"D","text":"...","tag":"normal"}],
   "spannung": 3,
   "verfassung_delta": 0,
   "verletzungsbeschreibung": "",
@@ -2991,7 +2991,29 @@ JSON-Output ist Pflicht (kein Markdown, kein Text drumherum):
   "zusammenfassung": "1 Satz für dein Gedächtnis: Ort, was getan wurde, wichtige Personen/Fakten."
 }
 
-spannung: 1 (ruhig) bis 5 (Lebensgefahr).`;
+spannung: 1 (ruhig) bis 5 (Lebensgefahr).
+
+OPTIONS-TAG (sehr wichtig, v7.9.53):
+Jede Option hat ein "tag"-Feld. Das Spiel-System verlaesst sich darauf um Game-Mechaniken auszuloesen (Vf-Heilung, Tageswechsel, Romance-Tension). Wenn du ein Tag falsch setzt, bricht die Spiel-Logik.
+
+Erlaubte Tags und ihre Bedeutung:
+- "behandlung" - Diese Option fuehrt zu medizinischer Versorgung von Karls Verletzungen. Setze NUR wenn die Option konkret zur Heilung fuehrt (Doc Wagner / Marlene / Apotheke aufsuchen + Behandlung erhalten, Wunde verbinden, Verband anlegen, Blut stillen, Hilfe holen). NICHT setzen fuer reine Gespraeche mit Heilern ohne Versorgung (z.B. "Sprich mit Doc Wagner ueber den Fall"). FOLGE: Karls Verfassung steigt automatisch um +1 (oder +2 wenn schwer verletzt). Maximal 1x pro Spieltag.
+- "schlaf" - Diese Option fuehrt zum Tag-/Nachtwechsel. Setze NUR wenn Karl sich konkret schlafen legt, einnickt, in ein Bett geht, "den Tag beendet". FOLGE: Tagwechsel im Spiel, Karl wacht in der naechsten Szene am naechsten Tag/in neuer Tageszeit auf, Energie wird teilweise wiederhergestellt.
+- "romance" - Diese Option fuehrt zu romantischer/intimer Naehe mit einem ROMANCE-NPC. Setze nur wenn Karl konkret Naehe sucht (Kuss, Umarmung, Einladung zum Bleiben, intime Geste). NICHT setzen fuer Flirt-Smalltalk ohne Konsequenz. FOLGE: Romantik-Tension steigt um +1.
+- "aufloesung" - Diese Option loest den Fall final. Setze NUR wenn Karl konkret den Klienten kontaktiert um Bericht zu erstatten ODER den Verdaechtigen zur Polizei/Klient bringt UND der Fall steht fest. NICHT setzen fuer "Klient anrufen um Bericht zu geben" mitten im Fall. FOLGE: Spiel-Ende, Fall geloest.
+- "konfrontation" - Karl stellt den Verdaechtigen zur Rede mit Beweisen. Stage 2 oder hoeher, der Verdaechtige ist anwesend. FOLGE: Story-Klimax, fuehrt zu Stage 3.
+- "heisse-spur" - Diese Option fuehrt direkt zum Verdaechtigen oder Ziel (Tatort, Versteck, Hehler). Bei Stage 1 mit vielen Indizien oder Stage 2 ohne Verdacht. FOLGE: Spannung erhoeht sich, Story-Beschleunigung.
+- "normal" - Standardfall fuer alle anderen Optionen (Nachfragen, Erkunden, Beobachten, kleine Aktionen). KEINE besondere Folge.
+
+Mehrere Tags pro Szene moeglich (z.B. eine "behandlung" + eine "heisse-spur" + 2x "normal"). Aber pro Option NUR EIN Tag. Wenn unsicher: "normal" waehlen. Das ist sicherer als ein falscher Tag.
+
+WICHTIG: Wenn der Spieler eine getaggte Option waehlt, MUSST du in der naechsten Szene die zugehoerige Konsequenz narrativ darstellen:
+- "behandlung" gewaehlt -> naechste Szene zeigt Karl wird tatsaechlich verarztet (Verband, Wunde reinigen, Spritze) - keine Aktion oder Flucht waehrend der Heilung
+- "schlaf" gewaehlt -> naechste Szene zeigt neue Tageszeit/neuer Tag, Karl wacht auf
+- "romance" gewaehlt -> naechste Szene zeigt intime Naehe (Kuss, gemeinsame Nacht, etc.)
+- "aufloesung" gewaehlt -> naechste Szene ist der Abschluss-Bericht beim Klienten, der Fall steht
+
+Wenn du den Tag falsch setzt, wird Karls Vf nicht steigen obwohl er sich verbunden hat, oder der Tag wechselt nicht obwohl er geschlafen hat - das frustriert den Spieler.`;
 
 const INTRO_REQUIREMENTS = `
 PFLICHT FÜR DIE ERÖFFNUNGSSZENE:
@@ -4368,7 +4390,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.9.50';
+window.SCHATTEN_VERSION = 'v7.9.53';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -6940,6 +6962,30 @@ function buildTranscriptText() {
         }
       }
     } catch (e) { /* ignore */ }
+    // v7.9.53: Performance-Stats pro Modell. Antwortzeiten min/median/max/avg.
+    try {
+      if (typeof modelPerformanceStats === 'object' && modelPerformanceStats) {
+        const perfKeys = Object.keys(modelPerformanceStats);
+        if (perfKeys.length > 0) {
+          out += '  - Modell-Performance (Antwortzeit):\n';
+          // Sortiere nach durchschnittlicher Geschwindigkeit (schnellste zuerst)
+          perfKeys.sort((a, b) => {
+            const avgA = modelPerformanceStats[a].totalMs / modelPerformanceStats[a].count;
+            const avgB = modelPerformanceStats[b].totalMs / modelPerformanceStats[b].count;
+            return avgA - avgB;
+          });
+          for (const k of perfKeys) {
+            const s = modelPerformanceStats[k];
+            const avg = Math.round(s.totalMs / s.count);
+            const sorted = [...s.durations].sort((a, b) => a - b);
+            const median = sorted[Math.floor(sorted.length / 2)];
+            const min = sorted[0];
+            const max = sorted[sorted.length - 1];
+            out += '      ' + k + ': avg ' + avg + 'ms · med ' + median + 'ms · min ' + min + 'ms · max ' + max + 'ms (' + s.count + ' calls)\n';
+          }
+        }
+      }
+    } catch (e) { /* ignore */ }
   }
   out += '\nSzenen total: ' + logEntries.filter(e => e.type === 'scene').length + '\n';
   return out;
@@ -8026,6 +8072,28 @@ let pendingForcedLocationChange = null;
 // Die naechste Szene-Anfrage instruiert die KI dann, eine kurze Story-Brücke zu erzählen.
 let pendingDayTransition = false;
 
+// v7.9.52: Wird gesetzt wenn der Spieler eine Option mit "BEHANDLUNG"-Marker geklickt hat.
+// Die naechste Szene-Verarbeitung garantiert dann eine Genesung (sofern Tageslimit nicht
+// erreicht). Plus: KI-Prompt fuer die Folge-Szene wird erweitert um narrative Heilungs-
+// Pflicht. Anlass: Corinna-Run Wagner-Fall - Bot waehlte 2x Behandlungs-Option, aber
+// Engine erkannte Heilung im Antwort-Text nicht (Marlene/Apotheke statt Doc-Wagner-Praxis).
+// Vor: nur Text-basierte Erkennung -> Vf blieb stehen. Jetzt: Tag-basierte Erkennung -
+// wenn die Option als 'behandlung' klassifiziert war, heilen wir auf jeden Fall.
+let pendingHealingChoice = false;
+
+// v7.9.53: Wird gesetzt wenn eine ROMANCE-Tag-Option geklickt wurde. Die naechste
+// Szene-Verarbeitung erhoeht romanticTension garantiert um +1 (sofern noch < 5).
+let pendingRomanceChoice = false;
+
+// v7.9.53: Wird gesetzt wenn eine SCHLAF-Tag-Option geklickt wurde. Sorgt dafuer
+// dass advanceGameTime() in der Folge-Szene den Tageswechsel garantiert ausloest.
+let pendingSleepChoice = false;
+
+// v7.9.53: PERFORMANCE-TRACKING pro Modell. User-Feedback "Mistral Large ist
+// extrem langsam" - wir wollen Antwortzeiten messen und im Export sehen welches
+// Modell wie schnell ist. Pro Modell: count, totalMs, durations[].
+let modelPerformanceStats = {};
+
 // v6.96: Wird true gesetzt wenn die VORANGEGANGENE Szene-Verarbeitung schon einen
 // Tag-Wechsel ausgeloest hat (entweder durch KI-Schlaf-Detection in scene.szene oder
 // durch ZWANGS-EINNICKEN). Verhindert dass die NACHFOLGENDE Spieleraktion
@@ -8318,17 +8386,41 @@ function renderLog(shouldScroll) {
 // soll der Bot die wählen egal welcher Stil. Markierungen wie 'AUFLOESUNG'
 // oder 'HEISSE SPUR' sollen sichtbar im UI sein."
 //
+// v7.9.53: ZWEI-PFAD-LOGIK. Wenn die KI im JSON ein "tag"-Feld an der Option
+// gesetzt hat, wird das primaer benutzt - die KI weiss am besten, was sie
+// mit der Option gemeint hat. Text-Detection (detectHealAction etc.) laeuft
+// nur noch als FALLBACK fuer Optionen ohne tag-Feld oder mit tag="normal".
+// Anlass: Corinna-Run Wagner-Fall - Bot waehlte 2x "BEHANDLUNG"-Option,
+// aber Engine-Heilung griff nicht weil Antwort-Text das passende Vokabular
+// nicht hatte. Jetzt: KI-Tag triggert Heilung direkt, kein Text-Raten noetig.
+//
 // Returns: { kategorie: 'aufloesung'|'konfrontation'|'heisse-spur'|'behandlung'|'romance'|'schlaf'|'imbiss'|'normal', priority: number }
 // Höhere priority = wichtiger. Bot bevorzugt höhere priority unabhängig vom Strategie-Stil.
 function classifyOption(opt, resolveContext) {
   if (!opt || !opt.text) return { kategorie: 'normal', priority: 0 };
+
+  // v7.9.53: KI-Tag hat Vorrang. Mapping: KI-tag -> {kategorie, priority}
+  const VALID_TAGS = {
+    'aufloesung': { kategorie: 'aufloesung', priority: 100 },
+    'konfrontation': { kategorie: 'konfrontation', priority: 90 },
+    'heisse-spur': { kategorie: 'heisse-spur', priority: 80 },
+    'behandlung': { kategorie: 'behandlung', priority: 70 },
+    'romance': { kategorie: 'romance', priority: 60 },
+    'schlaf': { kategorie: 'schlaf', priority: 40 },
+  };
+  if (opt.tag && typeof opt.tag === 'string' && VALID_TAGS[opt.tag.toLowerCase()]) {
+    return VALID_TAGS[opt.tag.toLowerCase()];
+  }
+  // Falls KI ein unbekanntes Tag liefert (Schreibfehler, andere Bezeichnung),
+  // ignorieren wir es und gehen in den Text-Detection-Fallback.
+
   const text = opt.text;
   const ctx = resolveContext || {};
-  // 1. AUFLOESUNG (Fall lösen) - hoechste Prio
+  // FALLBACK 1. AUFLOESUNG (Fall lösen) - hoechste Prio
   if (detectResolveAction(text, ctx)) {
     return { kategorie: 'aufloesung', priority: 100 };
   }
-  // 2. KONFRONTATION (Stage 2, Verdaechtiger steht)
+  // FALLBACK 2. KONFRONTATION (Stage 2, Verdaechtiger steht)
   try {
     if (ctx.stage === 2 && !ctx.ueberfuehrt) {
       const lower = text.toLowerCase()
@@ -8342,8 +8434,7 @@ function classifyOption(opt, resolveContext) {
       }
     }
   } catch (e) { /* ignore */ }
-  // 3. HEISSE SPUR (Stage 1 mit Indizien>=7, oder Stage 2 ohne Verdacht, Option fuehrt zum Ziel)
-  // Bei vermisst: zum TARGET, bei diebstahl: zum Diebesgut, bei mord/wahrheit: zum SUSPECT
+  // FALLBACK 3. HEISSE SPUR
   try {
     const stage = ctx.stage || 0;
     const indCount = (caseProgress && caseProgress.indizien && caseProgress.indizien.length) || 0;
@@ -8352,7 +8443,6 @@ function classifyOption(opt, resolveContext) {
     if (eligibleForHotLead) {
       const lower = text.toLowerCase()
         .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
-      // SUSPECT-Name aus Setup holen
       const suspectFact = (caseSetup && Array.isArray(caseSetup.setupCast))
         ? caseSetup.setupCast.find(c => c && (c.tag === 'SUSPECT' || c.tagExtra === 'SUSPECT'))
         : null;
@@ -8360,20 +8450,17 @@ function classifyOption(opt, resolveContext) {
       const suspectLastWord = suspectName.split(/\s+/).pop();
       const targetName = (ctx.targetName || '').toLowerCase();
       const targetLastWord = targetName.split(/\s+/).pop();
-      // Option erwaehnt SUSPECT-Name + Verb das zum Konfrontieren/Erreichen fuehrt?
       let isHotLead = false;
       if (suspectLastWord && suspectLastWord.length >= 4 && lower.includes(suspectLastWord)) {
         if (/\b(fahr|geh|besuche?|treff|konfrontier|stelle?|verhafte?|brich\s+in|durchsuch|kontroll)\w*/.test(lower)) {
           isHotLead = true;
         }
       }
-      // Bei vermisst: Option erwaehnt TARGET-Name oder typischen Aufenthaltsort
       if (!isHotLead && caseT === 'vermisst' && targetLastWord && targetLastWord.length >= 4) {
         if (lower.includes(targetLastWord) && /\b(such|find|aufspuer|befrei|hol\s+\w+\s+(raus|frei)|bring)\w*/.test(lower)) {
           isHotLead = true;
         }
       }
-      // Bei diebstahl: Option erwaehnt Hehler-Name oder das Diebesgut + Hol-Verb
       if (!isHotLead && caseT === 'diebstahl') {
         if (/\b(hol|durchsuch|stell\s+sie?|verlange?\s+\w+\s+(zurueck|her)|brich\s+in|drohne?\s+mit\s+(polizei|vp))\w*/.test(lower)) {
           isHotLead = true;
@@ -8384,22 +8471,18 @@ function classifyOption(opt, resolveContext) {
       }
     }
   } catch (e) { /* ignore */ }
-  // 4. BEHANDLUNG (Doc Wagner, niedrige Verfassung)
+  // FALLBACK 4. BEHANDLUNG
   if (detectHealAction(text, ctx)) {
     return { kategorie: 'behandlung', priority: 70 };
   }
-  // 5. ROMANCE
+  // FALLBACK 5. ROMANCE
   if (detectRomanticAction(text)) {
     return { kategorie: 'romance', priority: 60 };
   }
-  // 6. SCHLAF (Tageswechsel)
+  // FALLBACK 6. SCHLAF (Tageswechsel)
   if (detectExplicitSleep(text)) {
     return { kategorie: 'schlaf', priority: 40 };
   }
-  // v7.9.30: IMBISS-Kategorie entfernt - Hunger-Mechanik wurde in v7.9.22
-  // deaktiviert, daher hat eine "Essen"-Markierung keine Bedeutung mehr fuer
-  // den Spieler oder Bot. detectFoodAction laeuft noch weiter (wird woanders
-  // verwendet z.B. fuer Atmosphaere-Detection), aber keine Marker mehr.
   return { kategorie: 'normal', priority: 0 };
 }
 
@@ -10595,6 +10678,18 @@ VERBOTEN: einfach mit "schraegem Morgenlicht" anfangen ohne zu erklaeren wo Karl
         if (typeof diag === 'function') {
           diag('drift', 'Doc-Wagner-Behandlungs-Push gesendet (Vf=' + verfassung + ', Tag ' + gameDay + ')');
         }
+      }
+    }
+    // v7.9.52: TAG-BASIERTE BEHANDLUNGS-PFLICHT. Wenn der Spieler eine als
+    // 'behandlung' markierte Option geklickt hat, MUSS die Folge-Szene die
+    // Heilung narrativ darstellen. Die Engine-Heilung erfolgt jetzt schon
+    // automatisch (Tag-basiert in scene-Verarbeitung). Aber die KI sollte die
+    // Story auch passend dazu erzaehlen, sonst sind Vf-Aenderung und Erzaehlung
+    // inkonsistent.
+    if (pendingHealingChoice && typeof verfassung === 'number' && verfassung < 5) {
+      timeContext += `\n\nBEHANDLUNGS-FOLGE-PFLICHT: Der Spieler hat soeben eine BEHANDLUNGS-Option gewaehlt. Die Folge-Szene MUSS die Heilung narrativ zeigen - im Erzaehltext: Verband angelegt, Wunde gereinigt, Schmerzmittel genommen, Apothekersalbe drauf, oder der Heiler (Marlene/Doc/Apotheker/Krankenschwester) versorgt Karl konkret. NICHT nur Smalltalk oder Karl-sitzt-rum. verfassung_delta MUSS 0 sein (das System heilt automatisch via Tag-Erkennung +1 oder +2). Auch die naechsten 4 Optionen sollten Karl jetzt als versorgt zeigen - er kann handlungsfaehig weitermachen.`;
+      if (typeof diag === 'function') {
+        diag('drift', 'Tag-basierte Behandlungs-Folge-Pflicht gesendet (Vf=' + verfassung + ', Tag ' + gameDay + ')');
       }
     }
     if (scenesAtSameLocation >= 3) {
@@ -12873,6 +12968,13 @@ function detectResolveAction(text, context) {
 
 // v7.7: Erkennt ob diese Option zur Verarztung bei Doc Wagner fuehrt.
 // Wird nur als Marker angezeigt wenn Karls Verfassung niedrig ist (<=3).
+// v7.9.52: Erweitert um synchron mit Bot-behandlungsPatterns zu sein.
+// Vorher zu eng (nur Doc Wagner + Hin-Verb). Optionen wie "Frag Marlene, ob
+// sie deine Wunde verbinden kann" wurden nicht als BEHANDLUNG markiert.
+// Jetzt 2-Klassen-Logik:
+//   Klasse A: Heiler im Text PLUS Hin-/Aktions-Verb (z.B. "Geh zu Doc Wagner")
+//   Klasse B: Direkte medizinische Aktion (z.B. "Wunde verbinden", "Verband anlegen")
+// Wenn nur Heiler-Name OHNE Aktions-Verb (z.B. "Sprich mit Doc Wagner") = NICHT Heilung
 function detectHealAction(text, context) {
   if (!text) return false;
   const lower = text.toLowerCase()
@@ -12881,16 +12983,38 @@ function detectHealAction(text, context) {
   const verfassung = typeof ctx.verfassung === 'number' ? ctx.verfassung : 5;
   // Nur relevant wenn Verfassung niedrig
   if (verfassung > 3) return false;
-  // Doc-Wagner-spezifisch oder allgemeine medizinische Aktion
-  if (/\b(doc\s+wagner|wagner|schaeferstrasse|praxis)\b/.test(lower)
-      && /\b(zu|zur|in\s+die|aufsuch|besuch|fahr|fahre|gehe?|geh\s|bring)\w*/.test(lower)) {
+
+  // KLASSE A: Heiler im Text PLUS Hin-/Aktions-Verb
+  // (Geh zu Doc Wagner, Lass dich verarzten, Ruf Marlene, Apotheke aufsuchen)
+  // Stamm-Patterns OHNE abschliessendes \b damit "krankenwagen", "apotheke", etc matchen
+  const healerInText = /\b(doc\s+wagner|wagners?\s+praxis|schaeferstrasse|marlene|krankenschwester|aerztin|arzt|apothek|apotheker|charit|krankenh|sanitaeter|krankenwag|praxis)/.test(lower);
+  const healingVerb = /\b(zu|zur|in\s+die|aufsuch|besuch|fahr|fahre|gehe?|geh\s|bring|hol|rufe?|rufen|anrufen?|anrufst|telefonier|verlange?|lass|verarzten\s+lassen|behandeln\s+lassen|verbinden\s+lassen)\w*/.test(lower);
+  if (healerInText && healingVerb) {
     return true;
   }
-  // Allgemein: Arzt/Krankenhaus aufsuchen, verarzten lassen
-  if (/\b(verarzt|verbinden\s+lassen|behandel|krankenhaus|arzt)\b/.test(lower)
-      && /\b(zu|zur|aufsuch|besuch|lass|fahr|fahre|gehe?|bring)\w*/.test(lower)) {
+
+  // KLASSE B: Direkte medizinische Aktion (egal welcher Heiler)
+  const medicalActionPatterns = [
+    /\bwunde\s+(versorg|stillen|verbind)/,
+    /\bwunde\s+\w+\s+verbinden\b/,
+    /\bwunde\s+verbinden\b/,
+    /\b(verbind|versorg|stille|stillen|reinige|saeuber|desinfizier)e?\s+(die|deine|seine|ihre)?\s*wunde/,
+    /\bverband\s+(anleg|umleg|machen|wickeln)/,
+    /\bverarzt/,
+    /\bbehandel/,
+    /\bbehandl/,
+    /\bblut\s+stillen\b/,
+    /\b(stillst|stoppst|stoppe|stille)\s+(das\s+)?blut/,
+    /\bhol\s+hilfe\b/,
+    /\bhilfe\s+(holen|suchen|finden|rufen)\b/,
+    /\b(salbe|jodtinktur|morphium|schmerzmittel)\s+(nehmen|nimmst|drauf|anwenden)/,
+    /\b(setz|leg|legst)\s+(dir\s+)?einen\s+verband/,
+    /\b(machst|baust)\s+(dir\s+)?einen\s+verband/,
+  ];
+  if (medicalActionPatterns.some(p => p.test(lower))) {
     return true;
   }
+
   return false;
 }
 
@@ -13127,6 +13251,20 @@ function checkStatusToasts(spannung) {
 // Szene vorkommen (Klientin im Verhoer, Witwe am Friedhof, etc).
 // Praefix-Schutz: bei akuter Action sinkt Tension stark.
 function updateRomanticTension(scene) {
+  // v7.9.53: TAG-BASIERTER PFAD. Wenn der Spieler eine als 'romance' getaggte
+  // Option geklickt hat, garantieren wir Romantik-Tension +1 (sofern < 5).
+  // Anlass: User-Feedback "wenn ich romantik klicke, dann folgt auch eine
+  // romantik szene mit den entsprechenden folgen". Tag-Erkennung statt
+  // Text-Detection-Raterei.
+  if (pendingRomanceChoice) {
+    const before = romanticTension;
+    romanticTension = Math.min(5, romanticTension + 1);
+    console.log('[Schatten] Tag-basierte Romance: Romantik-Tension', before, '->', romanticTension, '(+1)');
+    diag('state', 'Romantik-Tension (Tag-basiert) ' + before + ' -> ' + romanticTension);
+    pendingRomanceChoice = false;
+    return;
+  }
+
   const spannung = typeof scene.spannung === 'number' ? scene.spannung : (lastSpannung || 2);
   // Bei hoher Spannung sinkt Romantik-Tension stark
   if (spannung >= 4) {
@@ -13325,6 +13463,34 @@ async function chooseOption(option) {
   logEntries.push({ type: 'choice', text: option.text });
   renderLog(false); // v7.9.47: kein Scroll - User soll seine Wahl + Loader sehen, nicht zum Header gerissen werden
 
+  // v7.9.52: TAG-BASIERTE HEILUNGS-ERKENNUNG. Wenn die Option als 'behandlung'
+  // klassifiziert war (also den + BEHANDLUNG-Marker im UI hatte), setzen wir
+  // den pendingHealingChoice-Flag. Die naechste Szene-Verarbeitung garantiert
+  // dann eine Genesung (mit oder ohne narrativem Behandlungs-Text). Plus: der
+  // KI-Prompt fuer die Folge-Szene bekommt eine Heilungs-Pflicht.
+  if (option && option._kategorie === 'behandlung') {
+    pendingHealingChoice = true;
+    console.log('[Schatten] Behandlungs-Option gewaehlt - pendingHealingChoice=true');
+    if (typeof diag === 'function') diag('detect', 'Behandlungs-Option gewaehlt (Tag-basiert) - Heilung wird in naechster Szene garantiert');
+  }
+
+  // v7.9.53: TAG-BASIERTE ROMANCE-ERKENNUNG. Romance-Tag erhoeht romanticTension
+  // garantiert um +1, statt sich auf Text-Detection im Antwort-Text zu verlassen.
+  if (option && option._kategorie === 'romance') {
+    pendingRomanceChoice = true;
+    console.log('[Schatten] Romance-Option gewaehlt - pendingRomanceChoice=true');
+    if (typeof diag === 'function') diag('detect', 'Romance-Option gewaehlt (Tag-basiert) - Romantik-Tension wird in naechster Szene garantiert erhoeht');
+  }
+
+  // v7.9.53: TAG-BASIERTER SCHLAF. Wenn die Option den schlaf-Tag hat, wird
+  // pendingSleepChoice gesetzt. advanceGameTime() in der Folge-Szene wird dann
+  // sicher den Tageswechsel triggern (statt nur tokenbasiert).
+  if (option && option._kategorie === 'schlaf') {
+    pendingSleepChoice = true;
+    console.log('[Schatten] Schlaf-Option gewaehlt - pendingSleepChoice=true');
+    if (typeof diag === 'function') diag('detect', 'Schlaf-Option gewaehlt (Tag-basiert) - Tageswechsel wird in naechster Szene garantiert');
+  }
+
   // Tageszeit/Tag voranschreiten lassen BEVOR wir die naechste Szene anfordern,
   // damit der pendingDayTransition-Flag schon gesetzt ist und die KI den
   // Tageswechsel direkt in die Szene einbauen kann.
@@ -13388,8 +13554,11 @@ async function chooseOption(option) {
   // sonst nur graduell weiterruckt und dann am Abend ein Anruf moeglich waere.
   // ABER: wenn advanceGameTime schon den Tag gewechselt hat, NICHT nochmal!
   // Sonst springen wir von "T3 Nacht" zu "T5 Morgen" statt zu "T4 Morgen".
-  if (!isPhysical && detectExplicitSleep(option.text)) {
-    console.log('[Schatten] Explicit sleep detected:', option.text);
+  // v7.9.53: Tag-basierter Pfad UND Text-Detection-Fallback. pendingSleepChoice
+  // wird gesetzt wenn KI-Tag "schlaf" gewaehlt wurde; sonst fallback auf
+  // Textsuche.
+  if (!isPhysical && (pendingSleepChoice || detectExplicitSleep(option.text))) {
+    console.log('[Schatten] Sleep detected:', pendingSleepChoice ? '(Tag-basiert)' : '(Text-basiert)', option.text);
     const alreadyAdvancedToMorning = (gameDay > preAdvanceDay && gameTimeIdx === 0);
     // v6.96: Zusaetzliche Sperre: wenn die VORANGEGANGENE Szene-Verarbeitung
     // (KI-Schlaf-Detection ODER ZWANGS-EINNICKEN) schon Tag++ ausgeloest hat,
@@ -13411,6 +13580,7 @@ async function chooseOption(option) {
       timeAdvanceTokens = 0;
       pendingDayTransition = true;
     }
+    pendingSleepChoice = false; // Tag verbrauchen
   }
 
   // v6.96: Flag JETZT zuruecksetzen, nachdem die Schlaf-Sperre es gelesen hat.
@@ -13467,14 +13637,33 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
   }
 
   try {
+    // v7.9.53: PERFORMANCE-TRACKING. Antwortzeit pro Modell messen.
+    // Anlass: User-Feedback "Mistral Large ist extrem langsam". Wir wollen
+    // im Debug-Log sehen wie lange jeder Request gedauert hat, damit am Ende
+    // klar ist: welches Modell ist wie schnell + qualitativ wie gut.
+    const apiCallStart = Date.now();
     const { scene, rawAssistantText } = await callGroq(userMsg, history, compactMode);
+    const apiCallDuration = Date.now() - apiCallStart;
     currentScene = scene;
     // Rohe JSONs ablegen (Browser-RAM, kein extra Traffic)
     if (currentSceneDiagnostics) {
       currentSceneDiagnostics.responseJson = scene;
       currentSceneDiagnostics.rawResponseText = rawAssistantText ? rawAssistantText.slice(0, 8000) : null;
       currentSceneDiagnostics.modelUsed = getActiveModel ? (getActiveModel() && getActiveModel().label) : null;
+      currentSceneDiagnostics.apiCallDurationMs = apiCallDuration;
     }
+    // Performance-Tracking pro Modell: sessionweite Map
+    if (typeof modelPerformanceStats === 'object' && modelPerformanceStats) {
+      const modelLabel = getActiveModel ? (getActiveModel() && getActiveModel().label) : 'Unknown';
+      if (!modelPerformanceStats[modelLabel]) {
+        modelPerformanceStats[modelLabel] = { count: 0, totalMs: 0, durations: [] };
+      }
+      modelPerformanceStats[modelLabel].count++;
+      modelPerformanceStats[modelLabel].totalMs += apiCallDuration;
+      modelPerformanceStats[modelLabel].durations.push(apiCallDuration);
+    }
+    console.log('[Schatten] API-Call dauerte', apiCallDuration + 'ms', 'fuer', getActiveModel ? getActiveModel().label : '?');
+    diag('info', 'Antwortzeit: ' + apiCallDuration + 'ms (' + (getActiveModel ? getActiveModel().label : '?') + ')');
 
     // Abkuerzungen aufloesen (VP, MfS, RIAS, KaDeWe, etc.) - falls die KI
     // die Ausschreib-Regel ignoriert hat, machen wir es client-side.
@@ -14363,39 +14552,96 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     //
     // Triggert nur 1x pro Spieltag (verhindert dass Karl 5 Szenen in der Praxis sitzt
     // und jede Szene +1 sammelt). Genesung: +1 bei Verfassung 3-4, +2 bei Verfassung 1-2.
-    // Bedingung: Szene MUSS Doc Wagner / Praxis erwaehnen UND eine echte Behandlung
-    // erzaehlen (verbinden, naehen, spritze, salbe, untersuchen).
+    //
+    // v7.9.51: Erweitert auf ALLE Heilungs-Schauplaetze, nicht nur Doc Wagners Praxis.
+    // Anlass: Corinna-Run im Wagner-Fall - Bot waehlte 2x Behandlungs-Optionen
+    // (Marlene verbindet die Wunde, Apotheker hilft), aber Verfassung stieg nicht weil
+    // "Doc Wagner Praxis" Bedingung nicht erfuellt war. Jetzt: jede Heilungs-Szene
+    // mit echter Behandlungs-Aktion triggert Genesung. Heiler-Whitelist erweitert
+    // auf Marlene, Charite, Krankenhaus, Apotheke, Sanitaeter sowie "selbst versorgt"-
+    // Faelle (Verbandskasten, Whisky-gegen-Schmerz, Verstecken-und-ausruhen).
     if (typeof verfassung === 'number' && verfassung > 0 && verfassung < 5 && lastDocHealingDay < gameDay) {
       const sceneLower = (scene.szene || '').toLowerCase()
         .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
-      const inDocPraxis = /\b(doc wagner|wagners?\s+praxis|schaeferstrasse|in der praxis)\b/.test(sceneLower);
+      // v7.9.51: Erweiterter Schauplatz-Check. "in Doc Wagners Praxis" ist nicht
+      // mehr Pflicht - jeder plausible Heilungs-Ort/Heiler reicht.
+      const inHealingContext = /\b(doc wagner|wagners?\s+praxis|schaeferstrasse|in der praxis|marlene|krankenschwester|charite|krankenhaus|krankenhaeus|apotheke|apotheker|sanitaeter|krankenwagen|verbandskasten|notfallambulanz)\b/.test(sceneLower);
       const treatmentTriggers = [
         /\b(verarzt|verbind|verband|naeh(en|t|st)|salbe|spritze|tablette|morphium|jodtinktur)/,
         /\bdoc\s+\w+\s+(untersuch|reinig|desinfizier|behand|naeh|verbind)/,
-        /\b(wagner|doc)\s+(faehrt|fuehrt|streift|legt|drueckt)[^.!?]{0,40}\b(verband|kompresse|salbe|jodtinktur|naht)/,
+        /\b(wagner|doc|marlene|apotheker|krankenschwester)\s+(faehrt|fuehrt|streift|legt|drueckt|reicht|gibt)[^.!?]{0,40}\b(verband|kompresse|salbe|jodtinktur|naht|spritze|tablette)/,
         /\b(reinig|saeuber|desinfizier)t?\s+(die\s+)?(wunde|schramme|schnitt|kratze)/,
-        /\b(schmerzmittel|morphium|kodein|baldrian)\s+(bekommst|kriegst|reicht|gibt)/,
+        /\b(schmerzmittel|morphium|kodein|baldrian)\s+(bekommst|kriegst|reicht|gibt|nimmst|schluckst)/,
         /\b(setzt|legt|gibt)\s+dir\s+(eine\s+)?(spritze|infusion|injektion|naht)/,
+        // v7.9.51: Neue Trigger fuer Selbstversorgung + andere Heiler
+        /\bdu\s+(verbind|versorg|stillst|reinigst|saeuberst|desinfizierst)[^.!?]{0,30}\b(wunde|schramme|schnitt|kratze|blut)/,
+        /\b(legst|machst|baust)\s+(dir\s+)?(einen\s+)?verband\s+(an|um)/,
+        /\b(stillst|stoppst)\s+(das\s+)?blut/,
+        /\bder?\s+(blutfluss|blutung)\s+(stoppt|kommt\s+zum\s+stehen|laesst\s+nach)/,
+        /\b(wickelt|legt|streift)\s+(dir\s+)?(einen\s+)?verband\s+(um|an)/,
       ];
       const isTreated = treatmentTriggers.some(p => p.test(sceneLower));
-      if (inDocPraxis && isTreated) {
+      // v7.9.51: Selbst-Behandlung erkennen. Wenn Karl unterwegs ohne Heiler
+      // die eigene Wunde versorgt ("Du verbindest die Wunde", "Du stillst das
+      // Blut"), zaehlt das als +1 (nicht +2 wie bei Heiler), weil Selbst-
+      // Versorgung weniger effektiv ist.
+      const selfTreatmentPattern = /\b(du\s+(verbind|versorg|stillst|reinigst)[^.!?]{0,30}\b(wunde|schramme|schnitt|kratze|blut)|stillst\s+(das\s+)?blut|legst\s+dir\s+einen\s+verband\s+(an|um)|machst\s+dir\s+einen\s+verband)\b/i;
+      const isSelfTreated = selfTreatmentPattern.test(sceneLower);
+      // v7.9.52: TAG-BASIERTER PFAD. Wenn der Spieler eine als 'behandlung'
+      // markierte Option geklickt hat, garantieren wir die Heilung - egal
+      // ob der Antwort-Text Heilungs-Vokabular enthaelt. Anlass: Corinna
+      // klickte 2x BEHANDLUNG-Optionen, Engine fand kein Heilungs-Wort im
+      // Antwort-Text -> Vf blieb stehen. Mit pendingHealingChoice umgehen
+      // wir die Text-Erkennung komplett.
+      if (pendingHealingChoice) {
         const heal = (verfassung <= 2) ? 2 : 1;
         const before = verfassung;
         verfassung = Math.min(5, verfassung + heal);
         lastDocHealingDay = gameDay;
         if (verfassung >= 5) { lastInjury = ''; lastInjuryScene = 0; }
-        console.log('[Schatten] Doc-Wagner-Genesung: Verfassung', before, '->', verfassung, '(+' + heal + ')');
-        diag('state', 'Doc-Wagner-Genesung Verfassung ' + before + ' -> ' + verfassung + ' (+' + heal + ', max 1x pro Tag)');
+        console.log('[Schatten] Tag-basierte Heilung: Verfassung', before, '->', verfassung, '(+' + heal + ')');
+        diag('state', 'Behandlungs-Genesung (Tag-basiert) Verfassung ' + before + ' -> ' + verfassung + ' (+' + heal + ', max 1x pro Tag)');
         if (typeof showProgressToast === 'function') {
-          showProgressToast('VERARZTET', 'Doc Wagner hat Karl verarztet. Verfassung +' + heal + '.');
+          showProgressToast('VERARZTET', 'Karl wurde verarztet. Verfassung +' + heal + '.');
         }
-      } else if (inDocPraxis && !isTreated) {
-        // Diagnostisches Event: Karl ist in der Praxis, aber wird nicht behandelt
+        pendingHealingChoice = false; // Flag verbrauchen
+      } else if (inHealingContext && isTreated) {
+        const heal = (verfassung <= 2) ? 2 : 1;
+        const before = verfassung;
+        verfassung = Math.min(5, verfassung + heal);
+        lastDocHealingDay = gameDay;
+        if (verfassung >= 5) { lastInjury = ''; lastInjuryScene = 0; }
+        console.log('[Schatten] Behandlungs-Genesung: Verfassung', before, '->', verfassung, '(+' + heal + ')');
+        diag('state', 'Behandlungs-Genesung Verfassung ' + before + ' -> ' + verfassung + ' (+' + heal + ', max 1x pro Tag)');
+        if (typeof showProgressToast === 'function') {
+          showProgressToast('VERARZTET', 'Karl wurde verarztet. Verfassung +' + heal + '.');
+        }
+      } else if (isSelfTreated && !inHealingContext) {
+        // v7.9.51: Selbst-Behandlung ohne Heiler-Kontext - immer +1
+        const before = verfassung;
+        verfassung = Math.min(5, verfassung + 1);
+        lastDocHealingDay = gameDay;
+        if (verfassung >= 5) { lastInjury = ''; lastInjuryScene = 0; }
+        console.log('[Schatten] Selbst-Behandlungs-Genesung: Verfassung', before, '->', verfassung, '(+1)');
+        diag('state', 'Selbst-Behandlungs-Genesung Verfassung ' + before + ' -> ' + verfassung + ' (+1, max 1x pro Tag)');
+        if (typeof showProgressToast === 'function') {
+          showProgressToast('VERSORGT', 'Karl hat sich notduerftig versorgt. Verfassung +1.');
+        }
+      } else if (inHealingContext && !isTreated) {
+        // Diagnostisches Event: Karl ist beim Heiler, aber wird nicht behandelt
         // (nur Smalltalk). Soll Mistral selbst aufdecken.
         if (typeof diag === 'function') {
-          diag('drift', 'Karl bei Doc Wagner, aber keine Behandlung erkannt (kein Verband/Spritze/Salbe im Text)');
+          diag('drift', 'Karl bei Heiler, aber keine Behandlung erkannt (kein Verband/Spritze/Salbe im Text)');
         }
       }
+    }
+    // v7.9.52: Flag in jedem Fall verbrauchen, auch wenn Heilung nicht greifen
+    // konnte (z.B. weil Vf bereits 5 oder Tageslimit erreicht). Sonst haengt
+    // der Flag und triggert irgendwann spaeter unerwartet.
+    if (pendingHealingChoice) {
+      console.log('[Schatten] pendingHealingChoice verbraucht ohne Heilung (Vf=' + verfassung + ', Tag=' + gameDay + ', lastHeal=' + lastDocHealingDay + ')');
+      diag('detect', 'Behandlungs-Option gewaehlt, aber Heilung nicht moeglich (Vf=' + verfassung + (lastDocHealingDay >= gameDay ? ', heute schon geheilt' : '') + ')');
+      pendingHealingChoice = false;
     }
 
     // Verfassung anpassen basierend auf KI-Antwort
@@ -17057,6 +17303,7 @@ function botChooseByStrategy(options) {
         /\bwunde\s+(versorg|stillen|verbind)/i,
         /\bwunde\s+\w+\s+verbinden\b/i,    // "Wunde zu verbinden"
         /\bwunde\s+verbinden\b/i,
+        /\bbehandel/i,
         /\bbehandl/i,
         /\bverband\b/i,
         /\bverarzt/i,
