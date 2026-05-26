@@ -1629,7 +1629,6 @@
   <button onclick="exportTranscript(event)">📋 Verlauf kopieren</button>
   <button onclick="shareTranscript(event)">📤 Verlauf teilen</button>
   <button onclick="downloadTranscript(event)">💾 Verlauf als Datei</button>
-  <button onclick="selectCurrentSceneAndOptions(event)">✍ Szene+Optionen markieren</button>
   <button onclick="showVoicePicker(event)">🎤 Vorlese-Stimme waehlen</button>
   <button onclick="resetGame()">↻ Spiel neu starten</button>
 
@@ -1829,7 +1828,7 @@
     <button class="btn-primary" onclick="startRandomGame()">Zufällige Ermittlung</button>
     <br>
     <button class="btn-secondary" onclick="showSetupSelector()">Fall auswählen</button>
-    <div class="start-version">Schatten v7.9.2 · Doppel-Buchstaben beim Vorlesen gefixt</div>
+    <div class="start-version">Schatten v7.9.4 · Markieren-Button raus + präziser iOS-Stimmen-Hinweis</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -1906,7 +1905,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.9.2</span>
+    <span>Schatten v7.9.4</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -3571,7 +3570,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.9.2';
+window.SCHATTEN_VERSION = 'v7.9.4';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -4556,15 +4555,15 @@ function showVoicePicker(event) {
     browserHint.style.background = 'rgba(80,60,30,0.2)';
     browserHint.style.color = '#d4b894';
     browserHint.innerHTML = '<b>Nur eine Stimme sichtbar?</b><br>'
-      + 'Das ist eine iOS/WebKit-Beschraenkung der SpeechSynthesis-API: '
-      + 'pro Sprache wird oft nur die System-Default-Stimme zurueckgegeben, '
-      + 'auch wenn mehrere installiert sind.<br><br>'
-      + '<b>Workaround:</b> in iOS-Einstellungen → Bedienungshilfen → '
-      + 'Gesprochene Inhalte → Stimmen → Deutsch die gewuenschte Stimme '
-      + 'als System-Default setzen (z.B. Markus erweitert). Dann wird sie '
-      + 'auch hier verwendet (auch wenn der Name "Anna" angezeigt wird, '
-      + 'oder als einzige Auswahl - die Stimme ist die system-default).<br><br>'
-      + 'Klick auf Diagnose unten zeigt was die API wirklich liefert.';
+      + 'Das ist eine harte Apple-Beschraenkung: die Web-Sprachausgabe (SpeechSynthesis-API) '
+      + 'bekommt von iOS nur die <b>Default-Stimme pro Sprache</b> zugeteilt - fuer Deutsch ist '
+      + 'das Anna. Premium-/Siri-Stimmen wie Markus oder Anna (erweitert) sind nur fuer '
+      + 'VoiceOver und die iOS-System-Sprechen-Funktion verfuegbar, NICHT fuer Webseiten.<br><br>'
+      + 'Anna klingt schlechter als die Premium-Stimmen, das ist leider technisch nicht '
+      + 'aenderbar von unserer Seite. Wenn du die Premium-Stimme willst, markier in Karls '
+      + 'Erzaehlung den Text und tippe im iOS-Popup auf "Sprechen" - dort wird deine '
+      + 'gewaehlte System-Stimme verwendet.<br><br>'
+      + 'Diagnose unten zeigt was die Web-API wirklich liefert.';
     inner.appendChild(browserHint);
   }
 
@@ -10873,7 +10872,9 @@ function checkStatusToasts(spannung) {
   // DANGER: Stasi-Tension hoch (>= 3 = Festnahme moeglich)
   // v7.2: Nur wenn Karl noch NICHT in Custody ist - sonst inhaltlich falsch
   // ("Stasi auf den Fersen" wenn Karl in der Zelle sitzt).
-  if (caseIsPolitical && stasiTension >= 3 && !karlInStasiCustody) {
+  // v7.9.3: NICHT in den ersten 2 Szenen - Karl hat da nichts gemacht was
+  // Stasi-Aufmerksamkeit rechtfertigt (Klient-Briefing-Phase).
+  if (caseIsPolitical && stasiTension >= 3 && !karlInStasiCustody && sceneCounter >= 3) {
     showProgressToast('Stasi auf den Fersen', 'Die Volkspolizei beobachtet Karl gezielt. Eine falsche Bewegung und sie schlagen zu.', 'danger', 'stasi-hoch');
   }
   // DANGER: Verfassung kritisch (2 oder weniger - schwer verletzt)
@@ -10894,7 +10895,9 @@ function checkStatusToasts(spannung) {
   }
   // CAUTION: Stasi-Tension mittel (>= 2)
   // v7.2: Nur wenn Karl noch NICHT in Custody ist
-  if (caseIsPolitical && stasiTension >= 2 && stasiTension < 3 && !karlInStasiCustody) {
+  // v7.9.3: NICHT in den ersten 2 Szenen - Beobachtung-Toast in Sz 1 ist Quatsch
+  // (Karl hat noch nichts gemacht was die Volkspolizei interessieren wuerde).
+  if (caseIsPolitical && stasiTension >= 2 && stasiTension < 3 && !karlInStasiCustody && sceneCounter >= 3) {
     showProgressToast('Beobachtet', 'Karl spuert dass jemand ihn beschattet. Vorsicht beim naechsten Schritt.', 'caution', 'stasi-mittel');
   }
   // CAUTION: Hunger 7-8 (deutlich)
