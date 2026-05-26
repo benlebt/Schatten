@@ -2043,7 +2043,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.9.44 · 3 Bug-Fixes aus Wagner-Run v7.9.42: (1) Tageszeit-Marathon - scenesInCurrentTime auch bei isPhysical zaehlen, HARD-Override greift jetzt nach 8 Szenen auch bei reinen Action-Ketten. (2) Schwer-verletzt/Lebensgefahr-Toast - checkStatusToasts wurde bei Spannung>=4 nicht aufgerufen (early-return); jetzt garantiert auch in Action-Szenen. (3) Whitelist-Match normalisiert ß->ss und Umlaute, plus Token-Prefix-Match fuer "wartburgstraße 14" -> "wartburgstrasse".</div>
+    <div class="start-version">Schatten v7.9.45</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2120,7 +2120,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.9.44</span>
+    <span>Schatten v7.9.45</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -2643,8 +2643,8 @@ BUERO-SOFA vs SCHLAFZIMMER-BETT: Karls Wohnung am Hackeschen Markt hat ZWEI Raeu
 
 WICHTIG: Schlaf-Optionen muessen IMMER explizit "schlafen", "hinlegen", "bis morgen", "die Nacht verbringen", "am naechsten Morgen weiter" oder "Couch/Bett/Bank" enthalten, damit das System sie automatisch erkennen kann. Optionen wie "ausruhen" allein reichen NICHT.
 
-ESSEN ALS ATMOSPHAERE (NICHT ALS MECHANIK, v7.9.30):
-Hunger ist KEINE Mechanik im aktuellen Spiel - du bekommst keinen Hunger-Wert mehr, biete KEINE Essens-Optionen mehr an (KEIN "Geh zu Trude und iss eine Bockwurst", KEIN "Hol dir Currywurst", KEIN "Iss in der Mitropa"). Karl isst gelegentlich beilaeufig im Erzaehltext (eine Schrippe vom HO-Baecker am Morgen, eine Stulle am Schreibtisch, eine Bockwurst im Stehen am Stand waehrend er einen Verdaechtigen beobachtet) - das ist Berlin-Atmosphaere, aber NIE eine waehlbare Option am Ende der Szene. Trude und ihr Imbiss sind weiterhin Treff-Locations fuer Informanten-Gespraeche, aber das "Essen" ist Beiwerk, nicht der Anlass. Falsch (Option): "Geh zu Trude und iss eine Bockwurst." Richtig (im Erzaehltext eingewoben): "Du beisst von der Bockwurst ab, die Trude dir rueber geschoben hat, und beobachtest weiter den Eingang gegenueber." Richtig (Option): "Geh zu Trude und horche nach Geruechten." Essens-Optionen sind generell raus.
+ESSEN UND HUNGER (komplett ausgeblendet, v7.9.45):
+Hunger und Essen sind KEINE Themen im Spiel. Es gibt keinen Hunger-Wert mehr. Biete NIEMALS Essens-Optionen an. Erwaehne Essen nicht im Erzaehltext (keine Bockwurst, keine Schrippe, keine Stulle, keine Mitropa-Bestellung, keine Bratheringe). Trude bleibt als Informantin verfuegbar, aber als Treffpunkt fuer Gespraeche/Geruechte, NICHT als Imbissszene. Falsch (Option): "Geh zu Trude und iss eine Bockwurst." Falsch (Erzaehltext): "Du beisst von der Bockwurst ab, die Trude dir rueber geschoben hat..." Richtig (Option): "Geh zu Trude und horche nach Geruechten." Karl trinkt Kaffee und Bourbon - das ist Genuss-Atmosphaere, kein Hunger-Stillen. Keine Reste-Sandwich im Buero, keine Pausenbrote, keine "knurrender Magen"-Beschreibungen. Karl isst irgendwo offscreen, der Spieler sieht es nicht.
 
 ROMANTIK / UEBERNACHTUNG (stilvoll, Marlowe-Stil):
 Du bekommst eine ROMANTIK-TENSION (0-5). Wenn diese 3+ ist UND eine Frau im Cast ist UND Spannung niedrig UND Abend/Nacht: DARF (muss nicht) eine romantische Option dabei sein:
@@ -4355,7 +4355,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.9.44';
+window.SCHATTEN_VERSION = 'v7.9.45';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -8690,7 +8690,16 @@ function getActiveModelIndex() {
     if (isModelBlocked(m.model)) continue;
     return i;
   }
-  // Alles blockiert? Letzten Index zurueckgeben (das ist die Daily-Limit-Anzeige)
+  // v7.9.45: Alles blockiert ODER alle uebrigen sind in sessionSkippedModels.
+  // FRUEHER: gab blind length-1 zurueck = letztes Modell der Chain. Das ist
+  // GPT-OSS 20B (8K TPM) - faellt sofort mit 413 zurueck und Bot bricht ab.
+  // JETZT: erstes Modell zurueckgeben das NICHT in sessionSkippedModels ist
+  // (auch wenn temporaer blockiert) - dann greift advanceModel sauber.
+  // Falls wirklich alles geskipped: doch length-1 als Hard-Fallback, aber
+  // der Aufrufer wird dann den Fehler bekommen.
+  for (let i = 0; i < MODEL_CHAIN.length; i++) {
+    if (!sessionSkippedModels.has(MODEL_CHAIN[i].model)) return i;
+  }
   return MODEL_CHAIN.length - 1;
 }
 
@@ -12994,18 +13003,13 @@ function updateEnergyAndHunger(scene) {
 
   karlEnergie = Math.max(0, karlEnergie - drain);
 
-  // Hunger: steigt LANGSAM (0.4 pro Szene = ~2-3 Szenen pro Hunger-Punkt).
-  // Eine Mahlzeit haelt so spuerbar laenger, vermeidet "alle 4 Szenen Imbiss".
-  // Bei Stasi: Hunger steigt etwas schneller (Stress).
-  const hungerInc = karlInStasiCustody ? 0.6 : 0.4;
-  hungerAccumulator = (hungerAccumulator || 0) + hungerInc;
-  if (hungerAccumulator >= 1) {
-    const inc = Math.floor(hungerAccumulator);
-    karlHunger = Math.min(10, karlHunger + inc);
-    hungerAccumulator -= inc;
-  }
+  // v7.9.45: Hunger-Mechanik komplett stillgelegt. karlHunger bleibt 0,
+  // hungerAccumulator wird nicht mehr hochgezaehlt. Variable existiert noch
+  // damit Lese-Stellen (Recap, Toast-Bedingungen) nicht crashen, liefert
+  // aber konstant 0 - dadurch verschwinden alle Hunger-bezogenen Mistral-
+  // Prompts, Toasts und Recap-Hinweise automatisch.
 
-  console.log('[Schatten] Energie:', karlEnergie, '(-' + drain + '), Hunger:', karlHunger);
+  console.log('[Schatten] Energie:', karlEnergie, '(-' + drain + ')');
 
   // v6.78: Status-Toast-Trigger nach State-Update.
   // Toast nur ausloesen bei kritischen Wendepunkten - nicht jeden Szene.
