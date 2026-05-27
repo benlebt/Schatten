@@ -2205,7 +2205,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.11.0</div>
+    <div class="start-version">Schatten v7.11.1</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2282,7 +2282,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.11.0</span>
+    <span>Schatten v7.11.1</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4625,7 +4625,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.11.0';
+window.SCHATTEN_VERSION = 'v7.11.1';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -8779,10 +8779,25 @@ function classifyOption(opt, resolveContext) {
   while ((pMatch = parenRe.exec(opt.text)) !== null) {
     allParens.push({ full: pMatch[0], inner: pMatch[1], pos: pMatch.index });
   }
-  // Auch das "Eine Kategorie[-ID]: X" Pattern erkennen (Prompt-Bleed)
-  const promptBleedMatch = opt.text.match(/[Ee]ine\s+[Kk]ategorie(?:-ID)?(?:\s+ist\s+obligatorisch)?\s*:\s*(OFFENSIV|DEFENSIV|ERKUNDEN|BEOBACHTEN|HEILEN|SCHLAFEN|ROMANTIK)\.?/);
+  // v7.11.1: "Kategorie: X" Prompt-Bleed-Pattern erweitert.
+  // Vorher: nur "Eine Kategorie[-ID]: X" matched. Aber Gemini schreibt
+  // mittlerweile auch "KATEGORIE: ERKUNDEN." direkt am Textende ohne "Eine".
+  // Plus AUFLOESEN war nicht in der Liste.
+  const promptBleedMatch = opt.text.match(/(?:[Ee]ine\s+)?[Kk]ategorie(?:-ID)?(?:\s+ist\s+obligatorisch)?\s*:\s*(OFFENSIV|DEFENSIV|ERKUNDEN|BEOBACHTEN|HEILEN|AUFLOESEN|SCHLAFEN|ROMANTIK)\.?/i);
+
+  // v7.11.1: Deutsche Klammer-Marker (Heilung), (Offensiv/Empathisch), (Bewegung)
+  // als zweite Heuristik. Mapping zu unseren Kategorien.
+  const DEUTSCH_KLAMMER_MAP = {
+    'heilung': 'HEILEN', 'heilen': 'HEILEN', 'genesung': 'HEILEN',
+    'offensiv': 'OFFENSIV', 'angriff': 'OFFENSIV', 'konfrontation': 'OFFENSIV', 'aggression': 'OFFENSIV',
+    'defensiv': 'DEFENSIV', 'verteidigung': 'DEFENSIV', 'rueckzug': 'DEFENSIV', 'deeskalation': 'DEFENSIV',
+    'erkunden': 'ERKUNDEN', 'erkundung': 'ERKUNDEN', 'suche': 'ERKUNDEN', 'recherche': 'ERKUNDEN', 'bewegung': 'ERKUNDEN',
+    'beobachten': 'BEOBACHTEN', 'beobachtung': 'BEOBACHTEN', 'information': 'BEOBACHTEN', 'befragung': 'BEOBACHTEN',
+    'aufloesen': 'AUFLOESEN', 'aufloesung': 'AUFLOESEN', 'abschluss': 'AUFLOESEN', 'fallabschluss': 'AUFLOESEN',
+  };
 
   // Pruefe jede Klammer von HINTEN nach VORN, nimm erste mit valider Kategorie
+  // 1. Erst alle Klammern auf DIREKTE Kategorie pruefen (OFFENSIV, ERKUNDEN...)
   for (let i = allParens.length - 1; i >= 0; i--) {
     const innerText = allParens[i].inner.toUpperCase();
     const parts = innerText.split(/[\s\/\|,;\-]+/).map(s => s.trim()).filter(Boolean);
@@ -8793,19 +8808,38 @@ function classifyOption(opt, resolveContext) {
       break;
     }
   }
-  // Fallback: Prompt-Bleed-Pattern
+  // 2. v7.11.1: Wenn keine direkte Klammer, ABER Prompt-Bleed-Pattern -> nehmen.
+  // Prompt-Bleed hat Vorrang vor deutscher Klammer-Heuristik, weil die KI hier
+  // ihre Absicht EXPLIZIT macht ("Kategorie: OFFENSIV"). Deutsche Klammern
+  // wie "(Heilung)" sind oft nur narrative Andeutungen.
   if (!inlineCat && promptBleedMatch) {
     inlineCat = promptBleedMatch[1].toUpperCase();
     inlineSource = 'prompt-bleed';
+  }
+  // 3. Fallback: deutsche Klammer-Marker als letzte Heuristik
+  if (!inlineCat) {
+    for (let i = allParens.length - 1; i >= 0; i--) {
+      const parts = allParens[i].inner.split(/[\s\/\|,;\-]+/).map(s => s.trim()).filter(Boolean);
+      for (const part of parts) {
+        const partLow = part.toLowerCase();
+        if (DEUTSCH_KLAMMER_MAP[partLow]) {
+          inlineCat = DEUTSCH_KLAMMER_MAP[partLow];
+          inlineSource = 'parens-deutsch';
+          break;
+        }
+      }
+      if (inlineCat) break;
+    }
   }
 
   // Wenn etwas gefunden: Original speichern + ALLE Marker aus dem Text entfernen
   if (inlineCat) {
     if (!opt._originalText) opt._originalText = opt.text;
-    // Entferne alle Klammer-Suffixe mit Kategorien
-    opt.text = opt.text.replace(/\s*\([^)]*(?:OFFENSIV|DEFENSIV|ERKUNDEN|BEOBACHTEN|HEILEN|SCHLAFEN|ROMANTIK)[^)]*\)\.?/gi, ' ');
-    // Entferne das "Eine Kategorie[-ID]: X[.]" Pattern (mit oder ohne Suffix)
-    opt.text = opt.text.replace(/\s*[Ee]ine\s+[Kk]ategorie(?:-ID)?(?:\s+ist\s+obligatorisch)?\s*:\s*(?:OFFENSIV|DEFENSIV|ERKUNDEN|BEOBACHTEN|HEILEN|SCHLAFEN|ROMANTIK)\.?/g, '');
+    // Entferne alle Klammer-Suffixe mit Kategorien (auch deutsche Marker)
+    opt.text = opt.text.replace(/\s*\([^)]*(?:OFFENSIV|DEFENSIV|ERKUNDEN|BEOBACHTEN|HEILEN|AUFLOESEN|SCHLAFEN|ROMANTIK)[^)]*\)\.?/gi, ' ');
+    opt.text = opt.text.replace(/\s*\((?:Heilung|Heilen|Genesung|Offensiv|Angriff|Konfrontation|Aggression|Defensiv|Verteidigung|Rueckzug|R\u00fcckzug|Deeskalation|Erkunden|Erkundung|Suche|Recherche|Bewegung|Beobachten|Beobachtung|Information|Befragung|Aufloesen|Aufl\u00f6sen|Aufloesung|Aufl\u00f6sung|Abschluss|Fallabschluss)[^)]*\)\.?/gi, ' ');
+    // Entferne das "Eine Kategorie[-ID]: X[.]" Pattern (auch ohne "Eine")
+    opt.text = opt.text.replace(/\s*(?:[Ee]ine\s+)?[Kk]ategorie(?:-ID)?(?:\s+ist\s+obligatorisch)?\s*:\s*(?:OFFENSIV|DEFENSIV|ERKUNDEN|BEOBACHTEN|HEILEN|AUFLOESEN|SCHLAFEN|ROMANTIK)\.?/gi, '');
     // Mehrfach-Whitespace + nachhaengende Satzzeichen aufraeumen
     opt.text = opt.text.replace(/\s+/g, ' ').replace(/\s+([.!?,])/g, '$1').trim();
     // Falls am Ende kein Satzzeichen mehr ist, Punkt anhaengen
@@ -15259,7 +15293,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         const fieldHas = validCategories.indexOf(fc) >= 0;
         // Check Inline-Marker im Text (egal an welcher Position)
         // - Klammern: (KAT), (KAT/MOD), (KAT, MOD) etc.
-        // - Prompt-Bleed: "Eine Kategorie[-ID]: KAT"
+        // - Prompt-Bleed: "[Eine] Kategorie[-ID]: KAT" (mit oder ohne "Eine")
         const txt = opt.text || '';
         let inlineHas = false;
         const allParens = txt.match(/\(([^)]+)\)/g) || [];
@@ -15267,7 +15301,8 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           const parts = p.replace(/[()]/g, '').toUpperCase().split(/[\s\/\|,;\-]+/).map(s => s.trim()).filter(Boolean);
           if (parts.some(x => validCategories.indexOf(x) !== -1)) { inlineHas = true; break; }
         }
-        if (!inlineHas && /[Ee]ine\s+[Kk]ategorie(?:-ID)?(?:\s+ist\s+obligatorisch)?\s*:\s*(OFFENSIV|DEFENSIV|ERKUNDEN|BEOBACHTEN|HEILEN)/.test(txt)) {
+        // v7.11.1: Erweitert auf "Kategorie: X" (ohne "Eine") + AUFLOESEN
+        if (!inlineHas && /(?:[Ee]ine\s+)?[Kk]ategorie(?:-ID)?(?:\s+ist\s+obligatorisch)?\s*:\s*(OFFENSIV|DEFENSIV|ERKUNDEN|BEOBACHTEN|HEILEN|AUFLOESEN)/i.test(txt)) {
           inlineHas = true;
         }
         if (inlineHas) sourcesCount.inline++;
