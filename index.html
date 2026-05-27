@@ -2205,7 +2205,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.11.5</div>
+    <div class="start-version">Schatten v7.11.6</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2282,7 +2282,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.11.5</span>
+    <span>Schatten v7.11.6</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4625,7 +4625,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.11.5';
+window.SCHATTEN_VERSION = 'v7.11.6';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5564,6 +5564,16 @@ function showVoicePicker(event) {
   const savedRate = parseFloat(localStorage.getItem('schatten-speech-rate'));
   const currentRate = (isFinite(savedRate) && savedRate >= 0.5 && savedRate <= 2.0) ? savedRate : 1.0;
 
+  // v7.11.6: OPTION A - Schlanker Picker wenn nur 1 deutsche Stimme verfuegbar.
+  // Apple gibt der Web-SpeechSynthesis-API nur die Default-Stimme pro Sprache
+  // (Anna fuer Deutsch). Premium-Stimmen wie Markus sind fuer Web-Apps
+  // unsichtbar - das ist eine harte iOS-Beschraenkung, nicht aenderbar.
+  // Wenn also nur 1 Stimme da ist: Stimm-Liste + Reset-Button + Diagnose
+  // ausblenden (waere nur Frust). Nur Geschwindigkeit + Lautstaerken zeigen,
+  // plus ein 1-zeiliger Tipp fuer die native iOS-Sprechen-Funktion.
+  // Auf Android und Desktop funktioniert der volle Picker normal.
+  const minimalUI = (deVoices.length <= 1);
+
   // Overlay bauen
   let overlay = document.getElementById('voice-picker-overlay');
   if (overlay) overlay.remove();
@@ -5581,60 +5591,62 @@ function showVoicePicker(event) {
   title.textContent = 'Sound-Einstellungen';
   inner.appendChild(title);
 
-  const hint = document.createElement('div');
-  hint.className = 'voice-picker-hint';
-  hint.textContent = 'Tipp 1x = Anhoeren. Tipp 2x = Auswaehlen. Bei iOS-Problemen unten "Beste Stimme automatisch waehlen".';
-  inner.appendChild(hint);
+  // Hint nur im vollen Modus (sonst irrelevant ohne Stimm-Liste)
+  if (!minimalUI) {
+    const hint = document.createElement('div');
+    hint.className = 'voice-picker-hint';
+    hint.textContent = 'Tipp 1x = Anhoeren. Tipp 2x = Auswaehlen.';
+    inner.appendChild(hint);
+  }
 
-  // Liste
+  // Liste nur im vollen Modus
   const list = document.createElement('div');
   list.className = 'voice-picker-list';
-  let lastTappedName = null;
-  deVoices.forEach(v => {
-    const row = document.createElement('button');
-    row.className = 'voice-picker-row' + (v.name === savedVoiceName ? ' selected' : '');
-    const label = document.createElement('span');
-    label.className = 'voice-picker-name';
-    label.textContent = v.name;
-    const meta = document.createElement('span');
-    meta.className = 'voice-picker-meta';
-    const langTag = v.lang || '';
-    const premium = /enhanced|premium|siri|neural/i.test(v.name) ? ' · ★' : '';
-    meta.textContent = langTag + premium;
-    row.appendChild(label);
-    row.appendChild(meta);
-    row.onclick = (e) => {
-      e.stopPropagation();
-      if (lastTappedName === v.name) {
-        // 2. Tap = Auswaehlen
-        localStorage.setItem('schatten-speech-voice', v.name);
-        // visuell: alle deselektieren, diesen selektieren
-        Array.from(list.children).forEach(c => c.classList.remove('selected'));
-        row.classList.add('selected');
-        // Bestaetigung
-        window.speechSynthesis.cancel();
-        const u = new SpeechSynthesisUtterance('Karl Mauer ermittelt.');
-        u.voice = v;
-        u.lang = 'de-DE';
-        u.rate = currentRate;
-        window.speechSynthesis.speak(u);
-        // Kurze Status-Anzeige
-        title.textContent = '✓ ' + v.name + ' ausgewaehlt';
-        setTimeout(() => { title.textContent = 'Sound-Einstellungen'; }, 1500);
-      } else {
-        // 1. Tap = Preview
-        lastTappedName = v.name;
-        window.speechSynthesis.cancel();
-        const u = new SpeechSynthesisUtterance('Karl Mauer ermittelt. Berlin, neunzehnhundertdreiundfuenfzig.');
-        u.voice = v;
-        u.lang = 'de-DE';
-        u.rate = currentRate;
-        window.speechSynthesis.speak(u);
-      }
-    };
-    list.appendChild(row);
-  });
-  inner.appendChild(list);
+  if (!minimalUI) {
+    let lastTappedName = null;
+    deVoices.forEach(v => {
+      const row = document.createElement('button');
+      row.className = 'voice-picker-row' + (v.name === savedVoiceName ? ' selected' : '');
+      const label = document.createElement('span');
+      label.className = 'voice-picker-name';
+      label.textContent = v.name;
+      const meta = document.createElement('span');
+      meta.className = 'voice-picker-meta';
+      const langTag = v.lang || '';
+      const premium = /enhanced|premium|siri|neural|erweitert/i.test(v.name) ? ' · ★' : '';
+      meta.textContent = langTag + premium;
+      row.appendChild(label);
+      row.appendChild(meta);
+      row.onclick = (e) => {
+        e.stopPropagation();
+        if (lastTappedName === v.name) {
+          // 2. Tap = Auswaehlen
+          localStorage.setItem('schatten-speech-voice', v.name);
+          Array.from(list.children).forEach(c => c.classList.remove('selected'));
+          row.classList.add('selected');
+          window.speechSynthesis.cancel();
+          const u = new SpeechSynthesisUtterance('Karl Mauer ermittelt.');
+          u.voice = v;
+          u.lang = 'de-DE';
+          u.rate = currentRate;
+          window.speechSynthesis.speak(u);
+          title.textContent = '✓ ' + v.name + ' ausgewaehlt';
+          setTimeout(() => { title.textContent = 'Sound-Einstellungen'; }, 1500);
+        } else {
+          // 1. Tap = Preview
+          lastTappedName = v.name;
+          window.speechSynthesis.cancel();
+          const u = new SpeechSynthesisUtterance('Karl Mauer ermittelt. Berlin, neunzehnhundertdreiundfuenfzig.');
+          u.voice = v;
+          u.lang = 'de-DE';
+          u.rate = currentRate;
+          window.speechSynthesis.speak(u);
+        }
+      };
+      list.appendChild(row);
+    });
+    inner.appendChild(list);
+  }
 
   // Geschwindigkeit-Slider
   const rateBlock = document.createElement('div');
@@ -5736,160 +5748,136 @@ function showVoicePicker(event) {
   closeBtn.onclick = () => overlay.remove();
   inner.appendChild(closeBtn);
 
-  // System-Default-Button (Auswahl loeschen, dann nimmt Browser default)
-  const resetBtn = document.createElement('button');
-  resetBtn.className = 'voice-picker-reset';
-  resetBtn.textContent = 'Beste Stimme automatisch waehlen';
-  resetBtn.onclick = () => {
-    // v7.11.5: Statt "leeren + Browser-Default nehmen" (was zur nervigen Anna
-    // fuehrt), erkennen wir aktiv die BESTE Stimme aus der aktuellen Liste
-    // und speichern die. So bleibt's sticky auch beim 2./3. Klick.
-    const best = pickBestGermanVoice(voices);
-    if (best) {
-      localStorage.setItem('schatten-speech-voice', best.name);
-      // Visuelle Selektion aktualisieren
-      Array.from(list.children).forEach(c => c.classList.remove('selected'));
-      const targetRow = Array.from(list.children).find(c =>
-        c.querySelector('.voice-picker-name')?.textContent === best.name
-      );
-      if (targetRow) targetRow.classList.add('selected');
-      // Preview spielen
-      window.speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance('Karl Mauer ermittelt.');
-      u.voice = best;
-      u.lang = 'de-DE';
-      u.rate = currentRate;
-      window.speechSynthesis.speak(u);
-      title.textContent = '✓ Beste Stimme: ' + best.name;
-      setTimeout(() => { title.textContent = 'Sound-Einstellungen'; }, 1800);
-    } else {
-      // Fallback: localStorage leeren
-      localStorage.removeItem('schatten-speech-voice');
-      Array.from(list.children).forEach(c => c.classList.remove('selected'));
-      title.textContent = '✓ Browser-Default aktiv';
-      setTimeout(() => { title.textContent = 'Sound-Einstellungen'; }, 1500);
-    }
-  };
-  inner.appendChild(resetBtn);
-
-  // v7.9: Browser-Hinweis - manche Browser (Brave/Chrome iOS) liefern nur eine
-  // einzige Stimme zurueck obwohl mehr installiert sind. Wenn das der Fall
-  // scheint, zeigen wir den Hinweis und einen Diagnose-Button.
-  // v7.9.1: Auch Safari iOS hat das Problem - die SpeechSynthesis-API liefert
-  // pro Sprache oft nur EINE Default-Stimme zurueck, auch wenn mehrere
-  // installiert sind. Das ist eine WebKit-Einschraenkung, kein App-Bug.
-  const totalVoices = voices.length;
-  if (deVoices.length <= 1 || totalVoices < 5) {
-    const browserHint = document.createElement('div');
-    browserHint.className = 'voice-picker-hint';
-    browserHint.style.marginTop = '12px';
-    browserHint.style.padding = '10px';
-    browserHint.style.border = '1px solid rgba(200,150,80,0.3)';
-    browserHint.style.borderRadius = '4px';
-    browserHint.style.background = 'rgba(80,60,30,0.2)';
-    browserHint.style.color = '#d4b894';
-    browserHint.innerHTML = '<b>Nur eine Stimme sichtbar?</b><br>'
-      + 'Das ist eine harte Apple-Beschraenkung: die Web-Sprachausgabe (SpeechSynthesis-API) '
-      + 'bekommt von iOS nur die <b>Default-Stimme pro Sprache</b> zugeteilt - fuer Deutsch ist '
-      + 'das Anna. Premium-/Siri-Stimmen wie Markus oder Anna (erweitert) sind nur fuer '
-      + 'VoiceOver und die iOS-System-Sprechen-Funktion verfuegbar, NICHT fuer Webseiten.<br><br>'
-      + 'Anna klingt schlechter als die Premium-Stimmen, das ist leider technisch nicht '
-      + 'aenderbar von unserer Seite. Wenn du die Premium-Stimme willst, markier in Karls '
-      + 'Erzaehlung den Text und tippe im iOS-Popup auf "Sprechen" - dort wird deine '
-      + 'gewaehlte System-Stimme verwendet.<br><br>'
-      + 'Diagnose unten zeigt was die Web-API wirklich liefert.';
-    inner.appendChild(browserHint);
-  }
-
-  // v7.9: Diagnose-Button - zeigt alle Voices die die API zurueckliefert
-  // (auch nicht-deutsche). Hilft bei der Fehlersuche.
-  // v7.9.5: Statt alert() (das auf iOS bei langen Texten truncated wird oder
-  // gar nicht erscheint) zeigen wir die Liste in einem scrollbaren Overlay.
-  const diagBtn = document.createElement('button');
-  diagBtn.className = 'voice-picker-reset';
-  diagBtn.textContent = '🔍 Alle Stimmen anzeigen (Diagnose)';
-  diagBtn.onclick = (e) => {
-    if (e) e.stopPropagation();
-    const all = window.speechSynthesis.getVoices() || [];
-    // Eigenes Overlay bauen (lang scrollbar, kein iOS-alert-Truncation)
-    let diagOverlay = document.getElementById('voice-diag-overlay');
-    if (diagOverlay) diagOverlay.remove();
-    diagOverlay = document.createElement('div');
-    diagOverlay.id = 'voice-diag-overlay';
-    diagOverlay.className = 'voice-picker-overlay';
-    diagOverlay.style.zIndex = '300';  // ueber dem Voice-Picker
-    diagOverlay.onclick = (ev) => { if (ev.target === diagOverlay) diagOverlay.remove(); };
-    const diagInner = document.createElement('div');
-    diagInner.className = 'voice-picker-inner';
-    diagInner.onclick = (ev) => ev.stopPropagation();
-    const diagTitle = document.createElement('div');
-    diagTitle.className = 'voice-picker-title';
-    diagTitle.textContent = 'API liefert ' + all.length + ' Stimme(n)';
-    diagInner.appendChild(diagTitle);
-    if (all.length === 0) {
-      const empty = document.createElement('div');
-      empty.className = 'voice-picker-hint';
-      empty.textContent = 'Keine Stimmen verfuegbar. Browser oder iOS-Settings pruefen.';
-      diagInner.appendChild(empty);
-    } else {
-      const diagList = document.createElement('div');
-      diagList.className = 'voice-picker-list';
-      diagList.style.maxHeight = '50vh';
-      diagList.style.overflowY = 'auto';
-      // Hervorhebung von Markus/Anna/Petra etc - falls die in nicht-de-Lang stecken
-      const HIGHLIGHT_NAMES = /\b(markus|anna|petra|helena|viktor|yannick|klara|martin)\b/i;
-      all.forEach((v, i) => {
-        const row = document.createElement('div');
-        row.className = 'voice-picker-row';
-        const highlight = v.name && HIGHLIGHT_NAMES.test(v.name);
-        if (highlight) {
-          row.style.borderColor = 'rgba(240, 208, 144, 0.6)';
-          row.style.color = '#f0d090';
-        }
-        const nameSpan = document.createElement('span');
-        nameSpan.className = 'voice-picker-name';
-        nameSpan.textContent = (i+1) + '. ' + (v.name || '?');
-        const metaSpan = document.createElement('span');
-        metaSpan.className = 'voice-picker-meta';
-        metaSpan.textContent = '[' + (v.lang || '-') + ']'
-          + (v.default ? ' default' : '')
-          + (v.localService ? ' lokal' : ' remote');
-        row.appendChild(nameSpan);
-        row.appendChild(metaSpan);
-        diagList.appendChild(row);
-      });
-      diagInner.appendChild(diagList);
-      // Hinweis ob ein deutscher Name in der Liste war ohne de-Lang
-      const dePresent = all.some(v => v.lang && v.lang.toLowerCase().startsWith('de'));
-      const otherGermanNamesAvailable = all.filter(v =>
-        v.name && /\b(markus|petra|helena|viktor|yannick|klara|martin)\b/i.test(v.name)
-        && !(v.lang || '').toLowerCase().startsWith('de')
-      );
-      const hint = document.createElement('div');
-      hint.className = 'voice-picker-hint';
-      hint.style.marginTop = '12px';
-      if (otherGermanNamesAvailable.length > 0) {
-        hint.innerHTML = '<b>Gold gefunden:</b> ' + otherGermanNamesAvailable.length
-          + ' deutsch klingende Name(n) mit nicht-deutschem Lang-Tag entdeckt '
-          + '(gelb markiert). Diese werden vom Filter aktuell uebersprungen.';
-      } else if (all.filter(v => v.lang && v.lang.toLowerCase().startsWith('de')).length <= 1) {
-        hint.innerHTML = '<b>Bestaetigt:</b> nur eine deutsche Stimme in der API. '
-          + 'Apple-Beschraenkung wie befuerchtet - Premium-/Siri-Stimmen sind '
-          + 'fuer Web-Apps unsichtbar.';
+  // v7.11.6: Reset-Button + Apple-Hint + Diagnose-Button nur im vollen Modus.
+  // Bei nur 1 Stimme sind die alle sinnlos (kein anderes Pickable, kein
+  // Drift-Problem, keine Diagnose noetig - der minimale Modus ist die
+  // Diagnose).
+  if (!minimalUI) {
+    // Beste-Stimme-Button (smart reset)
+    const resetBtn = document.createElement('button');
+    resetBtn.className = 'voice-picker-reset';
+    resetBtn.textContent = 'Beste Stimme automatisch waehlen';
+    resetBtn.onclick = () => {
+      const best = pickBestGermanVoice(voices);
+      if (best) {
+        localStorage.setItem('schatten-speech-voice', best.name);
+        Array.from(list.children).forEach(c => c.classList.remove('selected'));
+        const targetRow = Array.from(list.children).find(c =>
+          c.querySelector('.voice-picker-name')?.textContent === best.name
+        );
+        if (targetRow) targetRow.classList.add('selected');
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance('Karl Mauer ermittelt.');
+        u.voice = best;
+        u.lang = 'de-DE';
+        u.rate = currentRate;
+        window.speechSynthesis.speak(u);
+        title.textContent = '✓ Beste Stimme: ' + best.name;
+        setTimeout(() => { title.textContent = 'Sound-Einstellungen'; }, 1800);
       } else {
-        hint.innerHTML = 'Mehrere deutsche Stimmen verfuegbar.';
+        localStorage.removeItem('schatten-speech-voice');
+        Array.from(list.children).forEach(c => c.classList.remove('selected'));
+        title.textContent = '✓ Browser-Default aktiv';
+        setTimeout(() => { title.textContent = 'Sound-Einstellungen'; }, 1500);
       }
-      diagInner.appendChild(hint);
-    }
-    const closeDiag = document.createElement('button');
-    closeDiag.className = 'voice-picker-close';
-    closeDiag.textContent = 'Schliessen';
-    closeDiag.onclick = () => diagOverlay.remove();
-    diagInner.appendChild(closeDiag);
-    diagOverlay.appendChild(diagInner);
-    document.body.appendChild(diagOverlay);
-  };
-  inner.appendChild(diagBtn);
+    };
+    inner.appendChild(resetBtn);
+
+    // Diagnose-Button - zeigt alle Voices die die API zurueckliefert
+    const diagBtn = document.createElement('button');
+    diagBtn.className = 'voice-picker-reset';
+    diagBtn.textContent = '🔍 Alle Stimmen anzeigen (Diagnose)';
+    diagBtn.onclick = (e) => {
+      if (e) e.stopPropagation();
+      const all = window.speechSynthesis.getVoices() || [];
+      let diagOverlay = document.getElementById('voice-diag-overlay');
+      if (diagOverlay) diagOverlay.remove();
+      diagOverlay = document.createElement('div');
+      diagOverlay.id = 'voice-diag-overlay';
+      diagOverlay.className = 'voice-picker-overlay';
+      diagOverlay.style.zIndex = '300';
+      diagOverlay.onclick = (ev) => { if (ev.target === diagOverlay) diagOverlay.remove(); };
+      const diagInner = document.createElement('div');
+      diagInner.className = 'voice-picker-inner';
+      diagInner.onclick = (ev) => ev.stopPropagation();
+      const diagTitle = document.createElement('div');
+      diagTitle.className = 'voice-picker-title';
+      diagTitle.textContent = 'API liefert ' + all.length + ' Stimme(n)';
+      diagInner.appendChild(diagTitle);
+      if (all.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'voice-picker-hint';
+        empty.textContent = 'Keine Stimmen verfuegbar. Browser oder iOS-Settings pruefen.';
+        diagInner.appendChild(empty);
+      } else {
+        const diagList = document.createElement('div');
+        diagList.className = 'voice-picker-list';
+        diagList.style.maxHeight = '50vh';
+        diagList.style.overflowY = 'auto';
+        const HIGHLIGHT_NAMES = /\b(markus|anna|petra|helena|viktor|yannick|klara|martin)\b/i;
+        all.forEach((v, i) => {
+          const row = document.createElement('div');
+          row.className = 'voice-picker-row';
+          const highlight = v.name && HIGHLIGHT_NAMES.test(v.name);
+          if (highlight) {
+            row.style.borderColor = 'rgba(240, 208, 144, 0.6)';
+            row.style.color = '#f0d090';
+          }
+          const nameSpan = document.createElement('span');
+          nameSpan.className = 'voice-picker-name';
+          nameSpan.textContent = (i+1) + '. ' + (v.name || '?');
+          const metaSpan = document.createElement('span');
+          metaSpan.className = 'voice-picker-meta';
+          metaSpan.textContent = '[' + (v.lang || '-') + ']'
+            + (v.default ? ' default' : '')
+            + (v.localService ? ' lokal' : ' remote');
+          row.appendChild(nameSpan);
+          row.appendChild(metaSpan);
+          diagList.appendChild(row);
+        });
+        diagInner.appendChild(diagList);
+        const otherGermanNamesAvailable = all.filter(v =>
+          v.name && /\b(markus|petra|helena|viktor|yannick|klara|martin)\b/i.test(v.name)
+          && !(v.lang || '').toLowerCase().startsWith('de')
+        );
+        const diagHint = document.createElement('div');
+        diagHint.className = 'voice-picker-hint';
+        diagHint.style.marginTop = '12px';
+        if (otherGermanNamesAvailable.length > 0) {
+          diagHint.innerHTML = '<b>Gold gefunden:</b> ' + otherGermanNamesAvailable.length
+            + ' deutsch klingende Name(n) mit nicht-deutschem Lang-Tag entdeckt '
+            + '(gelb markiert). Diese werden vom Filter aktuell uebersprungen.';
+        } else if (all.filter(v => v.lang && v.lang.toLowerCase().startsWith('de')).length <= 1) {
+          diagHint.innerHTML = '<b>Bestaetigt:</b> nur eine deutsche Stimme in der API. '
+            + 'Apple-Beschraenkung wie befuerchtet - Premium-/Siri-Stimmen sind '
+            + 'fuer Web-Apps unsichtbar.';
+        } else {
+          diagHint.innerHTML = 'Mehrere deutsche Stimmen verfuegbar.';
+        }
+        diagInner.appendChild(diagHint);
+      }
+      const closeDiag = document.createElement('button');
+      closeDiag.className = 'voice-picker-close';
+      closeDiag.textContent = 'Schliessen';
+      closeDiag.onclick = () => diagOverlay.remove();
+      diagInner.appendChild(closeDiag);
+      diagOverlay.appendChild(diagInner);
+      document.body.appendChild(diagOverlay);
+    };
+    inner.appendChild(diagBtn);
+  } else {
+    // v7.11.6 MINIMAL-MODUS: 1-zeiliger Tipp fuer native iOS-Sprechen-Funktion
+    // (das ist die einzige Moeglichkeit eine bessere Stimme zu bekommen, und
+    // sie funktioniert tatsaechlich gut wenn der User sie kennt).
+    const iosTip = document.createElement('div');
+    iosTip.className = 'voice-picker-hint';
+    iosTip.style.marginTop = '10px';
+    iosTip.style.fontSize = '12px';
+    iosTip.style.lineHeight = '1.5';
+    iosTip.style.opacity = '0.75';
+    iosTip.innerHTML = 'Tipp fuer bessere Stimme: Text in der Szene markieren → im Popup auf <b>Sprechen</b> tippen. Dann wird deine iOS-System-Stimme verwendet (z.B. Markus Premium).';
+    inner.appendChild(iosTip);
+  }
 
   overlay.appendChild(inner);
   document.body.appendChild(overlay);
