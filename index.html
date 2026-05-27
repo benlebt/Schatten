@@ -1784,6 +1784,58 @@
     background: rgba(200,191,168,0.15);
     margin: 8px 4px;
   }
+  /* v7.11.37: Toggle-Switch fuer Gemini-Exklusiv-Modus */
+  .settings-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+  }
+  .settings-toggle-row:hover {
+    background: rgba(200,191,168,0.05);
+  }
+  .settings-toggle-label {
+    font-size: 13px;
+    color: #d8d2bc;
+    letter-spacing: 0.5px;
+  }
+  .settings-toggle-switch {
+    width: 42px;
+    height: 22px;
+    background: rgba(80,75,65,0.6);
+    border-radius: 11px;
+    position: relative;
+    transition: background 0.2s;
+    border: 1px solid rgba(200,191,168,0.2);
+    flex-shrink: 0;
+  }
+  .settings-toggle-switch.active {
+    background: rgba(120,180,140,0.45);
+    border-color: rgba(160,220,180,0.5);
+  }
+  .settings-toggle-knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    background: #b0a890;
+    border-radius: 50%;
+    transition: transform 0.2s, background 0.2s;
+  }
+  .settings-toggle-switch.active .settings-toggle-knob {
+    transform: translateX(20px);
+    background: #d8e8c8;
+  }
+  .settings-hint {
+    padding: 0 14px 8px;
+    font-size: 11px;
+    color: #786f5a;
+    font-style: italic;
+  }
   .autoplay-row {
     display: flex;
     align-items: center;
@@ -2062,6 +2114,18 @@
   <button onclick="showVoicePicker(event)">🔊 Sound-Einstellungen</button>
   <button onclick="resetGame()">↻ Spiel neu starten</button>
 
+  <!-- v7.11.37: Gemini-Exklusiv-Modus. Wenn aktiv, werden Mistral/Groq aus der
+       Modell-Chain gefiltert. Nur Gemini-Modelle laufen. Empfohlen wenn Spieler
+       Gemini-API-Billing aktiviert hat (~$2-3/Monat ohne Daily-Limits). -->
+  <div class="settings-divider"></div>
+  <div class="settings-toggle-row" onclick="toggleGeminiOnly(event)">
+    <span class="settings-toggle-label">⚡ Gemini Exklusiv</span>
+    <span class="settings-toggle-switch" id="gemini-only-switch">
+      <span class="settings-toggle-knob"></span>
+    </span>
+  </div>
+  <div class="settings-info settings-hint" id="gemini-only-hint">Nutze alle Modelle (Standard)</div>
+
   <!-- v6.60: Audio-Loop fuer Atmosphaere-Musik (instrumentaler Detektiv-Loop) -->
   <button id="music-toggle-btn" onclick="toggleMusic(event)">🎵 Musik einschalten</button>
   <audio id="bg-music" loop preload="none">
@@ -2279,7 +2343,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.11.36</div>
+    <div class="start-version">Schatten v7.11.37</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2357,7 +2421,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.11.36</span>
+    <span>Schatten v7.11.37</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4753,7 +4817,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.11.36';
+window.SCHATTEN_VERSION = 'v7.11.37';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5314,9 +5378,48 @@ function toggleSettings(event) {
     // v7.9.10: Musik-Button-Text mit echtem Audio-State synchronisieren
     // (Browser kann Musik im Hintergrund pausiert haben)
     if (typeof syncMusicButtonText === 'function') syncMusicButtonText();
+    // v7.11.37: Gemini-Only-Switch-Zustand syncen
+    if (typeof syncGeminiOnlySwitch === 'function') syncGeminiOnlySwitch();
   }
   menu.classList.toggle('hidden');
 }
+
+// v7.11.37: Gemini-Exklusiv-Modus-Toggle. State in localStorage + window-Var.
+// Wenn aktiv, filtert getActiveModelIndex/advanceModel alle Nicht-Gemini raus.
+function toggleGeminiOnly(event) {
+  if (event) event.stopPropagation();
+  window.geminiOnlyMode = !window.geminiOnlyMode;
+  try {
+    localStorage.setItem('schatten-gemini-only', window.geminiOnlyMode ? '1' : '0');
+  } catch (e) { /* private mode */ }
+  syncGeminiOnlySwitch();
+  if (typeof updateFooterModel === 'function') updateFooterModel();
+  if (typeof updateProviderInfo === 'function') updateProviderInfo();
+  console.log('[Schatten v7.11.37] Gemini-Only-Modus:', window.geminiOnlyMode ? 'AN' : 'AUS');
+}
+
+function syncGeminiOnlySwitch() {
+  const sw = document.getElementById('gemini-only-switch');
+  const hint = document.getElementById('gemini-only-hint');
+  if (!sw) return;
+  if (window.geminiOnlyMode) {
+    sw.classList.add('active');
+    if (hint) hint.textContent = 'Nur Gemini (Billing aktiv, kein Mistral/Groq)';
+  } else {
+    sw.classList.remove('active');
+    if (hint) hint.textContent = 'Nutze alle Modelle (Standard, Free-Tier)';
+  }
+}
+
+// Beim Laden: gespeicherten Zustand aus localStorage laden
+(function loadGeminiOnlyMode() {
+  try {
+    const stored = localStorage.getItem('schatten-gemini-only');
+    window.geminiOnlyMode = (stored === '1');
+  } catch (e) {
+    window.geminiOnlyMode = false;
+  }
+})();
 function closeSettings() {
   document.getElementById('settings-menu').classList.add('hidden');
 }
@@ -9816,7 +9919,7 @@ function renderOptions(scene) {
     && !karlInStasiCustody
     && (gameTimeIdx === 4 || gameTimeIdx === 5));  // nur ABEND oder NACHT
   if (forceSleepMode) {
-    console.log('[Schatten v7.11.36] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.11.37] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -10649,8 +10752,11 @@ function getActiveModelIndex() {
   // Legacy-API: gibt den Index des aktiven Modells zurueck.
   // Da wir jetzt per-Modell-Cooldowns nutzen, ist das das ERSTE nicht-blockierte
   // Modell in der Chain (von oben), das auch nicht in der Session-Skip-Liste ist.
+  // v7.11.37: geminiOnlyMode filtert Mistral/Groq raus wenn aktiv.
+  const onlyGemini = !!window.geminiOnlyMode;
   for (let i = 0; i < MODEL_CHAIN.length; i++) {
     const m = MODEL_CHAIN[i];
+    if (onlyGemini && m.provider !== 'gemini') continue;
     if (sessionSkippedModels.has(m.model)) continue;
     if (isModelBlocked(m.model)) continue;
     return i;
@@ -10662,6 +10768,12 @@ function getActiveModelIndex() {
   // (auch wenn temporaer blockiert) - dann greift advanceModel sauber.
   // Falls wirklich alles geskipped: doch length-1 als Hard-Fallback, aber
   // der Aufrufer wird dann den Fehler bekommen.
+  for (let i = 0; i < MODEL_CHAIN.length; i++) {
+    const m = MODEL_CHAIN[i];
+    if (onlyGemini && m.provider !== 'gemini') continue;
+    if (!sessionSkippedModels.has(m.model)) return i;
+  }
+  // Final fallback: ignoriere onlyGemini damit wir keinen Crash haben
   for (let i = 0; i < MODEL_CHAIN.length; i++) {
     if (!sessionSkippedModels.has(MODEL_CHAIN[i].model)) return i;
   }
@@ -10691,9 +10803,12 @@ function advanceModel() {
   if (!isModelBlocked(current.model)) {
     blockModel(current.model, 60 * 1000, 'auto-advance');
   }
+  // v7.11.37: geminiOnlyMode filtert Mistral/Groq raus.
+  const onlyGemini = !!window.geminiOnlyMode;
   // Das naechste verfuegbare Modell suchen
   for (let i = 0; i < MODEL_CHAIN.length; i++) {
     const m = MODEL_CHAIN[i];
+    if (onlyGemini && m.provider !== 'gemini') continue;
     if (sessionSkippedModels.has(m.model)) continue;
     if (isModelBlocked(m.model)) continue;
     return m;
@@ -15887,7 +16002,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.11.36] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.11.37] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
