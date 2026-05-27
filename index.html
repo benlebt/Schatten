@@ -2240,7 +2240,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.11.20</div>
+    <div class="start-version">Schatten v7.11.21</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2317,7 +2317,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.11.20</span>
+    <span>Schatten v7.11.21</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -3200,13 +3200,20 @@ JSON-Output ist Pflicht (kein Markdown, kein Text drumherum):
   "zusammenfassung": "1 Satz für dein Gedächtnis: Ort, was getan wurde, wichtige Personen/Fakten."
 }
 
-OPTIONS-KATEGORIE pro Option:
-Jede der 4 Optionen bekommt ein "kategorie"-Feld mit einem dieser Werte:
-OFFENSIV, DEFENSIV, ERKUNDEN, BEOBACHTEN, HEILEN, AUFLOESEN
+OPTIONS-KATEGORIE pro Option (KRITISCH - NICHT VERGESSEN!):
+JEDE der 4 Optionen MUSS ein "kategorie"-Feld haben. Ohne dieses Feld kann
+die Engine die Spielmechanik nicht anwenden und Karl nimmt schaden ohne dass
+die Logik greift. Das ist der HAEUFIGSTE Fehler - bitte besonders aufpassen.
+
+Erlaubte Werte: OFFENSIV, DEFENSIV, ERKUNDEN, BEOBACHTEN, HEILEN, AUFLOESEN
 
 So sieht eine korrekte Option aus:
   {"id":"A","text":"Nimm die fremde Pistole aus dem Fach.","kategorie":"ERKUNDEN"}
   {"id":"A","text":"Steh auf und stell den Mann zur Rede.","kategorie":"OFFENSIV"}
+  {"id":"B","text":"Ziehe dich zurueck und warte ab.","kategorie":"DEFENSIV"}
+  {"id":"C","text":"Hoere genau zu was er sagt.","kategorie":"BEOBACHTEN"}
+
+NIEMALS Optionen OHNE "kategorie"-Feld liefern - das ist KEIN optionales Feld.
 
 Der "text" enthaelt NUR den natursprachlichen Optionstext. Schreibe NIEMALS "(KATEGORIE)" oder "Kategorie: X" in den Text - das macht die UI haesslich, der Spieler sieht den Marker schon farbig.
 
@@ -4706,7 +4713,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.11.20';
+window.SCHATTEN_VERSION = 'v7.11.21';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -8705,7 +8712,7 @@ let chooseOptionInFlight = false;
 // - Ausnahme: wenn der Szenentext "neue Wunde" enthaelt (Schuss/Schlag/Stich/Sturz)
 //   wird Cooldown sofort beendet UND der Drop normal akzeptiert
 let lastHealedSceneCounter = -999;  // sehr negativer Startwert = kein Cooldown aktiv
-const HEALING_COOLDOWN_SCENES = 3;
+const HEALING_COOLDOWN_SCENES = 5;  // v7.11.21: 3 -> 5 wegen Lindner Vf-Ping-Pong (NOTHEILEN repariert nur Bottom, KI driftet weiter aggressiv)
 
 // v7.11.7: ROMANTIK-KLICK-TRACKING.
 // Anlass: 0926-Run - Spieler klickte 5x in Folge "Naeher kommen" mit Rita,
@@ -20281,21 +20288,18 @@ function botChooseByStrategy(options) {
       return byCat.SCHLAFEN[0];
     }
   }
-  // v7.11.0: AUFLOESEN-Priorisierung. Wenn die KI eine AUFLOESEN-Option angeboten
-  // hat UND Stage >= 3 + ruhige Verfassung, soll der Bot sie in 70% der Faelle
-  // nehmen - sonst beendet der Bot jeden Run sofort sobald moeglich. Mit 30%
-  // Restwahrscheinlichkeit folgt er weiter der Strategie (laesst noch ein paar
-  // Szenen Spiel).
+  // v7.11.21: AUFLOESEN-Priorisierung 70% -> 90%. Krause+Lindner-Runs erreichten
+  // Stage 3 aber haengten dort fest weil Bot AUFLOESEN nur 70% nahm. Jetzt 90%,
+  // damit Stage 4 zuverlaessig geschlossen wird.
   if (byCat.AUFLOESEN && byCat.AUFLOESEN.length > 0) {
     const currentStage = (caseProgress && caseProgress.stage) || 0;
     if (currentStage >= 3 && (typeof verfassung !== 'number' || verfassung >= 3)) {
-      // 70% Wahrscheinlichkeit AUFLOESEN waehlen
-      if (botRng() < 0.7) {
-        console.log('[Bot v7.10] AUFLOESEN bevorzugt (Stage ' + currentStage + ')');
-        if (typeof diag === 'function') diag('bot', 'Bot waehlt AUFLOESEN (Stage ' + currentStage + ', Fall reif)');
+      if (botRng() < 0.9) {
+        console.log('[Bot v7.11.21] AUFLOESEN bevorzugt (Stage ' + currentStage + ', 90%)');
+        if (typeof diag === 'function') diag('bot', 'Bot waehlt AUFLOESEN (Stage ' + currentStage + ', 90%, Fall reif)');
         return byCat.AUFLOESEN[0];
       } else {
-        if (typeof diag === 'function') diag('bot', 'Bot ueberspringt AUFLOESEN (30% chance, spielt weiter)');
+        if (typeof diag === 'function') diag('bot', 'Bot ueberspringt AUFLOESEN (10% Restchance, spielt weiter)');
       }
     }
   }
