@@ -2240,7 +2240,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.11.13</div>
+    <div class="start-version">Schatten v7.11.14</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2317,7 +2317,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.11.13</span>
+    <span>Schatten v7.11.14</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4706,7 +4706,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.11.13';
+window.SCHATTEN_VERSION = 'v7.11.14';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5537,7 +5537,35 @@ function makeUtterance(text) {
   // v7.11.8: VOICE-DRIFT-TRACKING. Jeder Pick wird geloggt mit Listen-Groesse
   // + Wahl + Sprache, damit wir sehen wenn iOS die Liste reduziert oder
   // eine andere Stimme picked als beim letzten Mal.
-  const voices = window.speechSynthesis.getVoices();
+  // v7.11.13: iOS WebKit Voice-Reload-Versuch. Wenn die gespeicherte Premium-
+  // Stimme in der aktuellen getVoices()-Liste fehlt, ist das oft der iOS-Bug
+  // wo zwischen Calls die Liste verkleinert wird. Wir machen einen Workaround:
+  // speechSynthesis.cancel() + erneutes Polling.
+  let voices = window.speechSynthesis.getVoices();
+  const savedVoiceNamePreCheck = localStorage.getItem('schatten-speech-voice');
+  if (savedVoiceNamePreCheck && voices && voices.length > 0) {
+    const stillThere = voices.some(v => v && v.name === savedVoiceNamePreCheck);
+    if (!stillThere) {
+      // Premium-Stimme verschwunden - WebKit-Bug. Trick: cancel + reload.
+      try {
+        window.speechSynthesis.cancel();
+        // Sync-Loop fuer max 30ms: getVoices() nochmal aufrufen, oft kommt
+        // die volle Liste zurueck wenn WebKit "aufwacht".
+        const reloadT0 = Date.now();
+        while (Date.now() - reloadT0 < 30) {
+          const reloaded = window.speechSynthesis.getVoices();
+          if (reloaded && reloaded.length > voices.length) {
+            voices = reloaded;
+            break;
+          }
+        }
+        if (typeof diag === 'function') {
+          const stillMissing = !voices.some(v => v && v.name === savedVoiceNamePreCheck);
+          diag('voice', 'iOS-Reload-Versuch: ' + (stillMissing ? 'erfolglos' : 'erfolgreich') + ' (Liste jetzt: ' + voices.length + ')');
+        }
+      } catch (e) { /* ignore */ }
+    }
+  }
   const deVoiceCount = voices ? voices.filter(v =>
     v && v.lang && v.lang.toLowerCase().startsWith('de')).length : 0;
   if (voices && voices.length > 0) {
@@ -8836,7 +8864,7 @@ function renderLog(shouldScroll) {
 
       const div = document.createElement('div');
       div.className = 'scene-entry' + (isLast ? ' current' : '');
-      if (entry.ort && i > 0) {
+      if (entry.ort) {
         const ort = document.createElement('div');
         ort.className = 'ort-divider';
         const ortText = document.createElement('span');
@@ -12644,6 +12672,10 @@ VERBOTEN: Karl wacht woanders auf ohne Erklaerung. Wenn du Pfad B waehlst, MUSST
   // Aktives Modell aus der Failover-Kette holen
   const activeModel = getActiveModel();
   const endpoint = getProviderEndpoint(activeModel.provider);
+  // v7.11.13: Modell-Try-Log fuer iPhone-Debugging
+  const modelTryT0 = Date.now();
+  if (typeof diag === 'function') diag('info', 'TRY: ' + activeModel.label + ' (' + activeModel.provider + ')');
+  console.log('[Schatten] TRY model:', activeModel.label, '(' + activeModel.provider + ')');
 
   // Body: messages plus explizites Modell (beide Proxies akzeptieren das jetzt)
   const requestBody = { messages, model: activeModel.model };
@@ -13413,6 +13445,17 @@ function validateOpeningCastPurity(text, setup) {
 }
 
 async function startGame() {
+  // v7.11.13: Startup-Timing-Log fuer iPhone-Debugging.
+  // User-Report: auf iOS Safari/Chrome haengt der Start lange waehrend
+  // Modelle durchprobiert werden, auf Desktop ist's instant. Wir loggen
+  // jetzt jeden Step damit wir sehen wo's klemmt.
+  const startupT0 = Date.now();
+  const log = (msg) => {
+    const dt = Date.now() - startupT0;
+    console.log('[Schatten Startup +' + dt + 'ms]', msg);
+    if (typeof diag === 'function') diag('info', 'Startup +' + dt + 'ms: ' + msg);
+  };
+  log('startGame() begin');
   hideAll();
   showLoading();
   history = [];
@@ -20164,6 +20207,23 @@ function botChooseByStrategy(options) {
     console.log('[Bot v7.10] HEILEN bevorzugt (Vf=' + verfassung + ')');
     if (typeof diag === 'function') diag('bot', 'Bot waehlt HEILEN (Selbstschutz Vf=' + verfassung + ')');
     return byCat.HEILEN[0];
+  }
+
+  // v7.11.13: HEILEN bei Vf<=3 strategie-abhängig.
+  // - aggressive: gar nicht (treibts auf die Spitze)
+  // - cautious: 60% Chance
+  // - explorer: 50%
+  // - sonst (varied/random/rotating/balanced): 40%
+  if (typeof verfassung === 'number' && verfassung <= 3 && byCat.HEILEN.length > 0) {
+    let healChance = 0;
+    if (effectiveStrat === 'cautious') healChance = 0.6;
+    else if (effectiveStrat === 'explorer' || effectiveStrat === 'thorough') healChance = 0.5;
+    else if (effectiveStrat !== 'aggressive') healChance = 0.4;
+    if (healChance > 0 && botRng() < healChance) {
+      console.log('[Bot v7.11.13] HEILEN proaktiv (Vf=' + verfassung + ', ' + effectiveStrat + ', ' + Math.round(healChance * 100) + '%)');
+      if (typeof diag === 'function') diag('bot', 'Bot waehlt HEILEN proaktiv (Vf=' + verfassung + ', ' + effectiveStrat + ' ' + Math.round(healChance * 100) + '%)');
+      return byCat.HEILEN[0];
+    }
   }
 
   // v7.11.12: FLUCHT bei hohem Druck + Verletzung.
