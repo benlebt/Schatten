@@ -2469,7 +2469,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.11.45</div>
+    <div class="start-version">Schatten v7.11.47</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2547,7 +2547,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.11.45</span>
+    <span>Schatten v7.11.47</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4943,7 +4943,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.11.45';
+window.SCHATTEN_VERSION = 'v7.11.47';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5547,7 +5547,7 @@ function toggleGeminiOnly(event) {
   syncGeminiOnlySwitch();
   if (typeof updateFooterModel === 'function') updateFooterModel();
   if (typeof updateProviderInfo === 'function') updateProviderInfo();
-  console.log('[Schatten v7.11.45] Gemini-Only-Modus:', window.geminiOnlyMode ? 'AN' : 'AUS');
+  console.log('[Schatten v7.11.47] Gemini-Only-Modus:', window.geminiOnlyMode ? 'AN' : 'AUS');
 }
 
 function syncGeminiOnlySwitch() {
@@ -6847,6 +6847,44 @@ function asciiToUmlaut(s) {
     [/spuert/g, 'spürt'], [/spueren/g, 'spüren'],
     [/Voelkische/g, 'Völkische'],
     [/zerstoer/g, 'zerstör'],
+    // v7.11.46: Weitere fehlende Mappings aus Setup-Beschreibungen
+    [/fuerchtet/g, 'fürchtet'], [/Fuerchtet/g, 'Fürchtet'], [/fuerchten/g, 'fürchten'],
+    [/\brueber\b/g, 'rüber'], [/\bRueber\b/g, 'Rüber'],
+    [/Funktionaer/g, 'Funktionär'], [/Funktionaere/g, 'Funktionäre'],
+    [/Hardenbergstrasse/g, 'Hardenbergstraße'],
+    [/Sybelstrasse/g, 'Sybelstraße'],
+    [/Pruefen/g, 'Prüfen'], [/pruefen/g, 'prüfen'], [/prueft/g, 'prüft'],
+    [/gefluechtet/g, 'geflüchtet'], [/gefluchtet/g, 'geflüchtet'],
+    [/ausgeraubt/g, 'ausgeraubt'], // bleibt
+    [/Hehlerei/g, 'Hehlerei'], // bleibt
+    [/Saenger/g, 'Sänger'], [/saengerin/g, 'sängerin'], [/Saengerin/g, 'Sängerin'],
+    [/Maenner/g, 'Männer'], [/maennlich/g, 'männlich'],
+    [/Frueh/g, 'Früh'], [/frueh/g, 'früh'],
+    [/Hause/g, 'Hause'], // bleibt
+    [/Verdaecht/g, 'Verdächt'],
+    [/raechen/g, 'rächen'], [/Raechen/g, 'Rächen'], [/Rache/g, 'Rache'],
+    [/Erloesung/g, 'Erlösung'], [/erloest/g, 'erlöst'],
+    [/Boer/g, 'Bör'], // Boerse -> Börse, Boersenmakler
+    [/gehoer(?=t|te|ten|en)/g, 'gehör'], // gehoert -> gehört
+    [/zustaend/g, 'zuständ'], // zustaendig
+    [/Schluessel/g, 'Schlüssel'], [/schluessel/g, 'schlüssel'],
+    [/duester/g, 'düster'], [/Duester/g, 'Düster'],
+    [/wuerd/g, 'würd'], [/Wuerd/g, 'Würd'],
+    [/koenn/g, 'könn'], [/Koenn/g, 'Könn'],
+    [/laeng/g, 'läng'], [/Laeng/g, 'Läng'],
+    [/aengstlich/g, 'ängstlich'], [/Aengst/g, 'Ängst'],
+    [/Glueck/g, 'Glück'], [/glueck/g, 'glück'],
+    [/Stueck/g, 'Stück'], [/stueck/g, 'stück'],
+    [/Buecher/g, 'Bücher'], [/Buch/g, 'Buch'], // Buch bleibt
+    [/erklaeren/g, 'erklären'], [/Erklaerung/g, 'Erklärung'],
+    [/waehrend/g, 'während'], [/Waehrend/g, 'Während'],
+    [/Wahrheit/g, 'Wahrheit'], // bleibt
+    [/Suende/g, 'Sünde'], [/suende/g, 'sünde'],
+    [/Toechter/g, 'Töchter'], [/Tochter/g, 'Tochter'],
+    [/Soehne/g, 'Söhne'],
+    [/Brueder/g, 'Brüder'],
+    [/Familienangehoer/g, 'Familienangehör'],
+    [/aengstigt/g, 'ängstigt'],
   ];
   let out = s;
   for (const [pat, rep] of replacements) {
@@ -6858,25 +6896,11 @@ function asciiToUmlaut(s) {
 // v6.77: Schneidet einen Beschreibungstext sauber bei Satz- oder Komma-Grenze
 // ab. Vermeidet den "17."-Bug (Punkt + Zahl + Leerzeichen + Monatsname wird
 // als Satzgrenze interpretiert).
+// v7.11.46: User-Wunsch: Beschreibungen MUESSEN vollstaendig sein, kein "...".
+// Funktion bleibt fuer Abwaertskompatibilitaet erhalten, kuerzt aber nichts mehr.
 function trimDescription(s, maxLen) {
   if (!s) return '';
-  maxLen = maxLen || 140;
-  // Satz-Grenze: Punkt/Frage/Ausruf + Leerzeichen + Grossbuchstabe,
-  // ABER NICHT nach einer Zahl (Datum-Pattern wie "17. Juni")
-  const sentenceMatch = s.match(/^(.*?[.!?])\s+(?=[A-ZÄÖÜ])/);
-  if (sentenceMatch && !sentenceMatch[1].match(/\b\d{1,2}\.\s*$/)) {
-    const candidate = sentenceMatch[1];
-    if (candidate.length <= maxLen) return candidate;
-  }
-  // Sonst: hard-cut bei maxLen, aber am letzten Wort/Komma schneiden
-  if (s.length <= maxLen) return s;
-  const cut = s.substring(0, maxLen);
-  // Letzte Komma- oder Leerzeichen-Grenze finden
-  const lastSep = Math.max(cut.lastIndexOf(', '), cut.lastIndexOf(' '));
-  if (lastSep > maxLen * 0.6) {
-    return cut.substring(0, lastSep) + '…';
-  }
-  return cut + '…';
+  return s;
 }
 
 // Setup-Card-Beschreibung dynamisch aus dem Setup-Objekt bauen.
@@ -9926,7 +9950,13 @@ function applyCategoryMechanics(kategorie, ctx) {
   const isHealLocation = !!(ctx && ctx.isHealLocation); // Praxis/Charite/Apotheke
   switch (kategorie) {
     case 'OFFENSIV':
-      result.vfDelta = (verfassung > 3) ? -1 : -2;
+      // v7.11.47: Gestaffelte Strafe (vorher: Vf>3 ? -1 : -2 - zu hart).
+      // User-Run Karl_Mauer_2033: Vf 3 -> 1 -> 0 in 2 OFFENSIV-Klicks weil
+      // -2 ab Vf<=3 griff. Jetzt: -1 wenn Vf hoch genug ist, -2 nur noch
+      // wenn Karl wirklich schwer angeschlagen ist (Vf<=1). Bei Vf=2 nur -1,
+      // bei Vf=3 nur -1. Tod bei Vf=1+OFFENSIV-Streak bleibt aber aktiv -
+      // konsistent: Karl ueberreitzt seinen Koerper, kollabiert.
+      result.vfDelta = (verfassung > 3) ? -1 : (verfassung <= 1) ? -2 : -1;
       result.spannungDelta = 1;
       result.energieDelta = 0;  // v7.11.20: Arcade - Energie sinkt nur durch Verletzung
       result.indizChance = 0.30;
@@ -10284,7 +10314,7 @@ function renderOptions(scene) {
     && !karlInStasiCustody
     && (gameTimeIdx === 4 || gameTimeIdx === 5));  // nur ABEND oder NACHT
   if (forceSleepMode) {
-    console.log('[Schatten v7.11.45] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.11.47] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -10292,6 +10322,24 @@ function renderOptions(scene) {
     banner.style.cssText = 'padding:14px 18px; margin:0 0 18px 0; border:1px solid rgba(110,140,200,0.35); background:rgba(40,55,85,0.25); border-radius:6px; color:#9dc; font-size:0.95em; line-height:1.5;';
     banner.innerHTML = '💤 <strong>Karl kann nicht mehr.</strong> Er muss jetzt schlafen, wo er gerade ist. Klicke unten auf <strong>SCHLAFEN</strong>.';
     list.appendChild(banner);
+  }
+  // v7.11.47: WARNUNG bei kritischer Verfassung. User-Run Karl_Mauer_2033:
+  // Vf 3 -> 1 -> 0 in 3 Szenen wegen 2x OFFENSIV bei niedriger Verfassung.
+  // Engine-Mechanik OFFENSIV vergibt Vf-2 bei Vf<=3, was bei Vf=1+OFFENSIV
+  // triggerTod = true setzt (Z.9684). Spieler hat das nicht gesehen -
+  // Toast "Schwer verletzt" kam, aber keine direkte Warnung VOR der Wahl.
+  // Banner explizit ueber die Optionen damit Vf-kritisch-Status klar ist.
+  if (typeof verfassung === 'number' && verfassung <= 1 && !forceSleepMode && !karlInStasiCustody) {
+    const warnBanner = document.createElement('div');
+    warnBanner.className = 'verfassung-warn-banner';
+    warnBanner.style.cssText = 'padding:14px 18px; margin:0 0 18px 0; border:1px solid rgba(220,70,70,0.55); background:rgba(80,20,20,0.30); border-radius:6px; color:#f4b8b8; font-size:0.95em; line-height:1.5;';
+    if (verfassung === 0) {
+      warnBanner.innerHTML = '☠️ <strong>Karl ist am Ende.</strong> Jeder weitere Treffer ist tödlich. <strong>Heilen ist jetzt überlebenswichtig.</strong>';
+    } else {
+      // Vf = 1
+      warnBanner.innerHTML = '⚠️ <strong>Karl ist schwer verletzt.</strong> Eine weitere offensive Aktion kann tödlich sein. <strong>Wenn möglich heilen</strong> (Doc Wagner, Notheilen oder Schlaf).';
+    }
+    list.appendChild(warnBanner);
   }
   // v7.11.30: classifyOption nutzt jetzt Spezialkat-Heuristik + Position als
   // Fallback. Drift-Detector aus v7.11.29 nicht mehr noetig - Heuristik liefert
@@ -16422,7 +16470,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.11.45] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.11.47] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
