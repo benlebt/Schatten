@@ -2240,7 +2240,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.11.24</div>
+    <div class="start-version">Schatten v7.11.25</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2317,7 +2317,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.11.24</span>
+    <span>Schatten v7.11.25</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4713,7 +4713,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.11.24';
+window.SCHATTEN_VERSION = 'v7.11.25';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -12911,6 +12911,24 @@ VERBOTEN: Karl wacht woanders auf ohne Erklaerung. Wenn du Pfad B waehlst, MUSST
     err.isRetryable = true;
     err.debugInfo = { stage: 'no_text', response: JSON.stringify(data).slice(0, 1000) };
     throw err;
+  }
+
+  // v7.11.25: Implicit-Caching-Diagnostik. Gemini liefert usageMetadata mit
+  // cachedContentTokenCount = Anzahl gecachter Input-Tokens. Wenn das > 0 ist,
+  // hat Implicit Caching gegriffen und wir sparen Free-Tier-Tokens-Quota.
+  if (data && data.usageMetadata) {
+    const meta = data.usageMetadata;
+    const totalIn = meta.promptTokenCount || 0;
+    const cached = meta.cachedContentTokenCount || 0;
+    const out = meta.candidatesTokenCount || 0;
+    const cacheRate = totalIn > 0 ? Math.round((cached / totalIn) * 100) : 0;
+    if (cached > 0) {
+      console.log('[Schatten Cache] HIT - ' + cached + '/' + totalIn + ' Input-Tokens gecacht (' + cacheRate + '%), Out: ' + out);
+      if (typeof diag === 'function') diag('info', 'Cache-HIT: ' + cached + '/' + totalIn + ' Tokens (' + cacheRate + '%) - Free-Tier-Quota geschont');
+    } else if (totalIn > 0) {
+      console.log('[Schatten Cache] MISS - 0/' + totalIn + ' gecacht, Out: ' + out);
+      if (typeof diag === 'function') diag('info', 'Cache-MISS: 0/' + totalIn + ' Tokens gecacht');
+    }
   }
 
   // Parse JSON from text
