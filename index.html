@@ -2205,7 +2205,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.11.3</div>
+    <div class="start-version">Schatten v7.11.4</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2282,7 +2282,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.11.3</span>
+    <span>Schatten v7.11.4</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4625,7 +4625,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.11.3';
+window.SCHATTEN_VERSION = 'v7.11.4';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -8417,6 +8417,21 @@ let lastSceneOrt = '';  // merkt sich den Ort vor dem Wechsel, fuer Ort-Konsiste
 // auf false zurueck.
 let chooseOptionInFlight = false;
 
+// v7.11.4: HEILUNGS-COOLDOWN.
+// Anlass: 0323-Run - Karl wird bei Doc Wagner auf Vf 5 geheilt, dann driftet
+// die KI in den naechsten 5+ Szenen kontinuierlich Vf-Drops rein ("alte Wunden
+// pochen", "Brust schmerzt", "Atem geht schwer") obwohl Karl narrativ frisch
+// verarztet ist. Wie bei RPG-Heiltraenken: nach Behandlung bleibt die Vf stabil
+// bis NEUE konkrete Gewalt passiert.
+//
+// Mechanik:
+// - Nach HEILEN-Aktion ODER Behandlungs-Genesung: lastHealedSceneCounter = aktuelle Sz
+// - In den naechsten HEALING_COOLDOWN_SCENES: KI-Drops <= 0 werden gecapped
+// - Ausnahme: wenn der Szenentext "neue Wunde" enthaelt (Schuss/Schlag/Stich/Sturz)
+//   wird Cooldown sofort beendet UND der Drop normal akzeptiert
+let lastHealedSceneCounter = -999;  // sehr negativer Startwert = kein Cooldown aktiv
+const HEALING_COOLDOWN_SCENES = 3;
+
 // v7.9.53: PERFORMANCE-TRACKING pro Modell. User-Feedback "Mistral Large ist
 // extrem langsam" - wir wollen Antwortzeiten messen und im Export sehen welches
 // Modell wie schnell ist. Pro Modell: count, totalMs, durations[].
@@ -9000,6 +9015,27 @@ function classifyOption(opt, resolveContext) {
 //   HEILEN      Vf: +1 (Vf=4) / +2 (Vf<=3)   Sp: -2   En: +30
 //                + Tageszeit +1 volle Phase
 //                + An HEILUNGS-Ort: +2 garantiert. Sonst (Selbst-Versorgung): +1.
+
+// v7.11.4: Detektor fuer "neue Wunde" im Szenentext. Wird vom Heilungs-
+// Cooldown verwendet: wenn nach HEILEN eine Szene konkrete neue Gewalt
+// gegen Karl zeigt, bricht der Cooldown sofort.
+// Pattern: nur Karl-bezogene Gewalt-Verben akzeptieren (NICHT "der Mann
+// wird erschossen" - das ist ein NPC, kein Karl-Schaden).
+function detectNewWound(sceneText) {
+  if (!sceneText || typeof sceneText !== 'string') return false;
+  const t = sceneText.toLowerCase();
+  // Pattern 1: "Schuss trifft dich", "Kugel in deine X", "Stich in deine X"
+  const treffer = /\b(schuss|kugel|stich|messer|klinge|geschoss|projektil|salve)\b[^.!?]{0,40}\b(trifft|durchbohrt|durchschlägt|durchschlaegt|reisst|reißt|fährt in|faehrt in|in dein|in deinen|in deine|in dich)\b/i.test(t)
+    || /\b(trifft\s+dich|trifft\s+karl)\b[^.!?]{0,30}\b(in|am|an|im)\b/i.test(t);
+  // Pattern 2: Schlag/Stoss auf Karl
+  const schlag = /\b(schlag|hieb|stoss|stoß|tritt|faust|faustschlag|kopfstoss|kopfstoß|knauf|kolben|rohr|stange|knüppel|knueppel|treffer)\b[^.!?]{0,50}\b(trifft\s+dich|trifft\s+karl|trifft\s+dein|trifft\s+deine|trifft\s+deinen|gegen\s+dein|gegen\s+deinen|in\s+dein|in\s+deinen|an\s+der\s+schläfe|an\s+der\s+schlaefe|an\s+deinen?|an\s+deine|auf\s+dein|auf\s+deinen?|brichst\s+zusammen)\b/i.test(t);
+  // Pattern 3: Karl-spezifische Schadens-Phrasen
+  const directKarl = /\b(du\s+(stürzt|stuerzt|fällst|faellst|sackst|brichst|kollabierst|taumelst)\s+(hart|schwer|zu boden|gegen|auf|in))\b/i.test(t)
+    || /\b(blut\s+(rinnt|läuft|laeuft|tränkt|traenkt|sickert)\s+(aus\s+deiner?|aus\s+deinem|aus\s+dem\s+verband))\b/i.test(t)
+    || /\b(schmerz\s+explodiert|schmerz\s+durchfährt|schmerz\s+durchfaehrt|reisst\s+in\s+dir|reißt\s+in\s+dir|brennende?r?\s+riss\s+geht\s+durch|wunde\s+(reisst|reißt)\s+(auf|wieder)|verband\s+(blutet|reisst|reißt|löst|loest))\b/i.test(t);
+  return treffer || schlag || directKarl;
+}
+
 function applyCategoryMechanics(kategorie, ctx) {
   const result = {
     vfDelta: 0,
@@ -12699,6 +12735,8 @@ async function startGame() {
   // v7.11.3: Doppel-Klick-Lock reset (sonst koennte ein abgestuerztes
   // chooseOption den Lock fuer immer blockieren)
   chooseOptionInFlight = false;
+  // v7.11.4: Heilungs-Cooldown reset
+  lastHealedSceneCounter = -999;
   // Reset Klient-Profil (wird beim ersten Cast-Add gesetzt)
   clientProfile = {
     name: '',
@@ -16007,6 +16045,9 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof showProgressToast === 'function') {
           showProgressToast('VERARZTET', 'Karl wurde verarztet. Verfassung +' + heal + '.');
         }
+        // v7.11.4: Heilungs-Cooldown setzen (3 Sz Schonfrist gegen KI-Drift)
+        lastHealedSceneCounter = sceneCounter;
+        diag('state', 'HEILUNGS-COOLDOWN aktiviert (' + HEALING_COOLDOWN_SCENES + ' Szenen, nach Tag-basierter Behandlung)');
         pendingHealingChoice = false; // Flag verbrauchen
       } else if (inHealingContext && isTreated) {
         const heal = (verfassung <= 2) ? 2 : 1;
@@ -16019,6 +16060,9 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof showProgressToast === 'function') {
           showProgressToast('VERARZTET', 'Karl wurde verarztet. Verfassung +' + heal + '.');
         }
+        // v7.11.4: Heilungs-Cooldown setzen
+        lastHealedSceneCounter = sceneCounter;
+        diag('state', 'HEILUNGS-COOLDOWN aktiviert (' + HEALING_COOLDOWN_SCENES + ' Szenen, nach Behandlungs-Genesung)');
       } else if (isSelfTreated && !inHealingContext) {
         // v7.9.51: Selbst-Behandlung ohne Heiler-Kontext - immer +1
         const before = verfassung;
@@ -16030,6 +16074,11 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof showProgressToast === 'function') {
           showProgressToast('VERSORGT', 'Karl hat sich notduerftig versorgt. Verfassung +1.');
         }
+        // v7.11.4: Heilungs-Cooldown auch bei Selbst-Versorgung (kuerzer effektiv,
+        // weil's nur +1 ist und somit oft kein "voller Heilzustand" - aber gegen
+        // Drift trotzdem sinnvoll)
+        lastHealedSceneCounter = sceneCounter;
+        diag('state', 'HEILUNGS-COOLDOWN aktiviert (' + HEALING_COOLDOWN_SCENES + ' Szenen, nach Selbst-Versorgung)');
       } else if (inHealingContext && !isTreated) {
         // Diagnostisches Event: Karl ist beim Heiler, aber wird nicht behandelt
         // (nur Smalltalk). Soll Mistral selbst aufdecken.
@@ -16176,6 +16225,13 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           // DEFENSIV/HEILEN-Bonus
           finalDelta = kategorieDelta;
           deltaSource = 'kategorie-heilung';
+          // v7.11.4: HEILEN-Cooldown setzen wenn echte Heilung passiert
+          if (pendingCategoryChoice === 'HEILEN' && kategorieDelta > 0) {
+            lastHealedSceneCounter = sceneCounter;
+            if (typeof diag === 'function') {
+              diag('state', 'HEILUNGS-COOLDOWN aktiviert (' + HEALING_COOLDOWN_SCENES + ' Szenen Schonfrist nach HEILEN)');
+            }
+          }
         }
       } else {
         // Normale Vf-Range: MIN-Logik (groesserer Verlust gewinnt)
@@ -16194,6 +16250,13 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           // DEFENSIV/HEILEN-Bonus, KI sagt nichts - Kategorie gewinnt
           finalDelta = kategorieDelta;
           deltaSource = 'kategorie-heilung';
+          // v7.11.4: HEILEN-Cooldown setzen wenn echte Heilung passiert
+          if (pendingCategoryChoice === 'HEILEN' && kategorieDelta > 0) {
+            lastHealedSceneCounter = sceneCounter;
+            if (typeof diag === 'function') {
+              diag('state', 'HEILUNGS-COOLDOWN aktiviert (' + HEALING_COOLDOWN_SCENES + ' Szenen Schonfrist nach HEILEN)');
+            }
+          }
         }
       }
       // Wenn KI positiv liefert ausserhalb DEFENSIV/HEILEN: ignorieren
@@ -16227,6 +16290,33 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
       const combined = sceneText + ' ' + injuryText;
       const newSpannung = typeof scene.spannung === 'number' ? scene.spannung : (lastSpannung || 1);
+      // v7.11.4: HEILUNGS-COOLDOWN. Wenn Karl in den letzten N Szenen geheilt
+      // wurde UND die aktuelle Szene KEINE neue konkrete Gewalt zeigt
+      // (Schuss/Schlag/Stich/Sturz auf Karl), wird der KI-Drop auf 0 gecappt.
+      // So bleibt Karl nach einem Doc-Wagner-Besuch tatsaechlich verarztet,
+      // statt dass die KI in den Folge-Szenen "alte Wunden pochen" laesst und
+      // Vf langsam wieder runter driftet. Anlass: 0323-Run.
+      // Wenn neue Gewalt da ist -> Cooldown sofort beenden (echte Verletzung
+      // ueberschreibt Heilung).
+      const scenesSinceHealing = sceneCounter - lastHealedSceneCounter;
+      const healingCooldownActive = scenesSinceHealing < HEALING_COOLDOWN_SCENES;
+      if (healingCooldownActive) {
+        const hasNewWound = detectNewWound(sceneText) || detectNewWound(injuryText);
+        if (hasNewWound) {
+          // Echte neue Gewalt -> Cooldown sofort beenden, Drop normal laufen lassen
+          lastHealedSceneCounter = -999;
+          if (typeof diag === 'function') {
+            diag('detect', 'HEILUNGS-COOLDOWN: durch neue Gewalt durchbrochen (KI-Drop ' + delta + ' wird durchgelassen)');
+          }
+        } else {
+          // Keine neue Gewalt -> Drop ignorieren (Karl ist frisch verarztet)
+          const remaining = HEALING_COOLDOWN_SCENES - scenesSinceHealing;
+          if (typeof diag === 'function') {
+            diag('cap', 'HEILUNGS-COOLDOWN: KI-Drop ' + delta + ' ignoriert (Karl frisch verarztet, ' + remaining + ' Sz Schonfrist uebrig)');
+          }
+          delta = 0;
+        }
+      }
       // v6.83: SCHUTZ VOR ALTE-WUNDEN-AKKUMULATION.
       // Wenn die Szene NICHT actionreich ist (Spannung <=2) und nur SCHMERZ-WORTE
       // erwaehnt werden (keine NEUE Gewalt), ist das nur Beschreibung der bestehenden
