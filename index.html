@@ -274,6 +274,16 @@
   .case-progress-segment.solved {
     background: #6fa86f;  /* gruen wenn Fall geloest */
   }
+  /* v7.11.40: "ready" = Fall ist abschlussreif. Segment pulsiert in einem
+     helleren Gold um zu signalisieren: "Klick FALL LÖSEN jetzt moeglich". */
+  .case-progress-segment.ready {
+    background: #e8c870;
+    animation: case-ready-pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes case-ready-pulse {
+    0%, 100% { background: #c8a850; opacity: 0.7; }
+    50% { background: #f0d890; opacity: 1; }
+  }
   .energie-dash {
     width: 4px;
     height: 8px;
@@ -2343,7 +2353,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.11.39</div>
+    <div class="start-version">Schatten v7.11.41</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2421,7 +2431,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.11.39</span>
+    <span>Schatten v7.11.41</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4817,7 +4827,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.11.39';
+window.SCHATTEN_VERSION = 'v7.11.41';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5395,7 +5405,7 @@ function toggleGeminiOnly(event) {
   syncGeminiOnlySwitch();
   if (typeof updateFooterModel === 'function') updateFooterModel();
   if (typeof updateProviderInfo === 'function') updateProviderInfo();
-  console.log('[Schatten v7.11.39] Gemini-Only-Modus:', window.geminiOnlyMode ? 'AN' : 'AUS');
+  console.log('[Schatten v7.11.41] Gemini-Only-Modus:', window.geminiOnlyMode ? 'AN' : 'AUS');
 }
 
 function syncGeminiOnlySwitch() {
@@ -7987,11 +7997,21 @@ function showHeader(scene) {
     const segments = caseProgressEl.querySelectorAll('.case-progress-segment');
     const reachedStage = caseProgress.stage || 0;
     const isSolved = caseProgress.istGelöst === true || reachedStage >= 4;
+    // v7.11.40: Wenn Stage 3 reif fuer FALL LÖSEN ist (Indizien voll, 2+ Sz in
+    // Stage 3), Segment 4 als "ready" anzeigen statt leer. So sieht der Spieler:
+    // "Balken voll = jetzt kann ich abschliessen".
+    const stage3ScenesUI = caseProgress.stage3StartScene
+      ? (sceneCounter - caseProgress.stage3StartScene) : 0;
+    const indCntUI = (caseProgress.indizien || []).length;
+    const resolveReady = !isSolved && reachedStage >= 3 && stage3ScenesUI >= 2 && indCntUI >= 6;
     segments.forEach(seg => {
-      seg.classList.remove('reached', 'solved');
+      seg.classList.remove('reached', 'solved', 'ready');
       const segStage = parseInt(seg.getAttribute('data-stage'), 10);
       if (segStage <= reachedStage) {
         seg.classList.add(isSolved ? 'solved' : 'reached');
+      } else if (resolveReady && segStage === 4) {
+        // Segment 4 als "ready"-Vorschau (pulsierend, halb-leuchtend)
+        seg.classList.add('ready');
       }
     });
   }
@@ -9919,7 +9939,7 @@ function renderOptions(scene) {
     && !karlInStasiCustody
     && (gameTimeIdx === 4 || gameTimeIdx === 5));  // nur ABEND oder NACHT
   if (forceSleepMode) {
-    console.log('[Schatten v7.11.39] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.11.41] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -10456,10 +10476,18 @@ function renderOptions(scene) {
     ? caseProgress.indizien.length : 0;
   const currentSp = scene.spannung || 2;
   const karlVfOk = (typeof verfassung === 'number') ? verfassung >= 2 : true;
+  // v7.11.40: FALL LÖSEN erst zeigen wenn der Fall-Balken "voll" wirkt.
+  // Vorher: Stage>=3 + Ind>=4 reichte. Spieler-Feedback: "fuehlt sich an als
+  // koennte ich zu frueh loesen". Jetzt: Stage 3 muss mindestens 2 Szenen
+  // gehalten haben + 6 Indizien (statt 4). Das mappt visuell auf "Balken voll".
+  const stage3Scenes = caseProgress.stage3StartScene
+    ? (sceneCounter - caseProgress.stage3StartScene)
+    : 0;
   const showResolveButton =
     !hasAufloesenOption &&
     currentStage >= 3 &&
-    indizCount >= 4 &&
+    stage3Scenes >= 2 &&
+    indizCount >= 6 &&
     karlVfOk &&
     currentSp <= 3 &&
     !karlInStasiCustody;
@@ -16008,7 +16036,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.11.39] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.11.41] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -19832,7 +19860,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       if (isGameOver) {
         showGameOver();
       } else if (caseProgress.istGelöst) {
-        // WIN: Fall geloest
+        // WIN: Fall geloest - End-Screen wie immer
         showCaseSolved();
       } else if (clientFired) {
         // LOSE: Vom Klient gefeuert
