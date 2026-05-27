@@ -1365,6 +1365,29 @@
   .option-btn-romance .option-id {
     color: rgba(210,140,170,0.95);
   }
+  /* v7.11.12: Arcade-Sicherheitsventile - markanter weil Notfall-Tools */
+  .option-btn-notheilen {
+    border-left-color: rgba(200,140,100,0.55) !important;
+    opacity: 0.92;
+  }
+  .option-btn-notheilen:hover {
+    opacity: 1;
+    border-left-color: rgba(220,160,110,0.85) !important;
+  }
+  .option-btn-notheilen .option-id {
+    color: rgba(220,160,110,0.95);
+  }
+  .option-btn-flucht {
+    border-left-color: rgba(160,180,140,0.5) !important;
+    opacity: 0.88;
+  }
+  .option-btn-flucht:hover {
+    opacity: 1;
+    border-left-color: rgba(180,200,150,0.8) !important;
+  }
+  .option-btn-flucht .option-id {
+    color: rgba(180,200,150,0.95);
+  }
   .option-marker-system {
     border-color: rgba(140,130,160,0.4);
     color: rgba(170,160,190,0.85);
@@ -2205,7 +2228,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.11.11</div>
+    <div class="start-version">Schatten v7.11.12</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2282,7 +2305,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.11.11</span>
+    <span>Schatten v7.11.12</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -3193,6 +3216,8 @@ Die 4 Optionen sollten moeglichst VERSCHIEDENE Kategorien haben (eine OFFENSIV +
 NICHT in die 4 Optionen (das macht das System ueber separate Buttons):
 - SCHLAFEN/EINNICKEN/INS BETT GEHEN: Spieler hat einen separaten "Schlafen"-Button am Abend/Nachts. NICHT als Option anbieten ("Geh ins Bett", "Schlaf jetzt" sind nur System-Buttons).
 - ROMANTISCHE ANNAEHERUNG (Kuss, intimer Blick, Bett, Liebe): Spieler hat einen separaten "Naeher kommen"-Button wenn ein ROMANCE-NPC in der Szene ist. NICHT als Option anbieten.
+- FLUCHT-RAUS-AUS-DER-SZENE: Spieler hat einen separaten "Flucht"-Button wenn Sp>=3 + nicht in Custody. Du KANNST in den 4 Optionen "Flucht zu X" anbieten, aber das ist dann ERKUNDEN-Bewegung mit Zielort. Der System-Button ist die "panische Flucht ohne Ziel" - die musst du nicht anbieten.
+- NOTDUERFTIG-SELBST-VERBINDEN bei Vf<=2: Spieler hat separaten "Notheilen"-Button. Du KANNST eine HEILEN-Option wie "Doc Wagner aufsuchen" oder "Verbandszeug holen" anbieten, aber der reine "Selbst-Verband-hier-und-jetzt" ist der System-Button.
 
 VERFASSUNGS-DELTA (v7.10.10 - WIEDER PFLICHT):
 Du lieferst "verfassung_delta" als Zahl basierend auf wie schwer Karl in DIESER Szene VERLETZT wurde. Skala:
@@ -4625,7 +4650,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.11.11';
+window.SCHATTEN_VERSION = 'v7.11.12';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -4757,6 +4782,9 @@ let lastInjuryScene = 0; // v6.92: Szene in der die aktuelle Verletzung gesetzt 
 // Verhindert dass Karl 5 Szenen lang in Doc Wagners Praxis sitzt und jede
 // Szene +1 Genesung sammelt. Eine Behandlung pro Tag.
 let lastDocHealingDay = 0;
+// v7.11.12: NOTHEILEN ohne Cooldown - lastNotheilenDay nicht mehr noetig.
+// Bei Bedarf koennen wir wieder Cooldown einfuehren, aktuell reicht der
+// Vf<=2-Verfuegbarkeits-Check.
 // Letzte Spannung (1-5), damit advanceGameTime in Action-Sequenzen pausieren kann
 let lastSpannung = 1;
 // Wie viele Szenen am Stueck Spannung >= 4 hatten (Action-Streak)
@@ -4878,6 +4906,9 @@ let folterSceneCount = 0;
 // Flag: ist Karl gerade in Stasi-Gewahrsam? Wird gesetzt wenn detectStasiCustody
 // im Erzaehltext greift, zurueckgesetzt wenn Karl wieder frei ist.
 let karlInStasiCustody = false;
+// v7.11.12: Counter wie viele Szenen Karl schon in Custody ist
+// (fuer Schlaf-Button-Verfuegbarkeit in Custody nach 5+ Sz)
+let stasiCustodyScenesSince = 0;
 
 // === ENERGIE-SYSTEM ===
 // Karls Energie 0-100 (intern, sichtbar als 5-Stufen-Balken).
@@ -5458,7 +5489,7 @@ function makeUtterance(text) {
         if (best) {
           chosenVoice = best;
           pickReason = 'gespeichert-WEG-fallback-auf-' + best.name;
-          console.warn('[Schatten v7.11.11 Voice-Drift] Gespeicherte Stimme "' + savedVoiceName + '" nicht in aktueller Liste (' + voices.length + ' total, ' + deVoiceCount + ' de). Fallback: "' + best.name + '". Liste: [' + voices.slice(0, 5).map(v => v.name + '@' + v.lang).join(', ') + (voices.length > 5 ? ', ...' : '') + ']');
+          console.warn('[Schatten v7.11.12 Voice-Drift] Gespeicherte Stimme "' + savedVoiceName + '" nicht in aktueller Liste (' + voices.length + ' total, ' + deVoiceCount + ' de). Fallback: "' + best.name + '". Liste: [' + voices.slice(0, 5).map(v => v.name + '@' + v.lang).join(', ') + (voices.length > 5 ? ', ...' : '') + ']');
           if (typeof diag === 'function') {
             diag('voice', 'Voice-Drift: gespeichert "' + savedVoiceName + '" weg, nehme "' + best.name + '" (Liste: ' + voices.length + ' total, ' + deVoiceCount + ' de)');
           }
@@ -8389,18 +8420,40 @@ function advanceGameTime() {
     timeAdvanceTokens -= 1;
     scenesInCurrentTime = 0;  // reset bei Tageszeit-Wechsel
     physicalStreakInTime = 0; // v7.9.41: Counter ebenfalls reset
-    gameTimeIdx++;
-    if (gameTimeIdx >= TIMES_OF_DAY.length) {
-      gameTimeIdx = 0; // back to MORGEN
-      gameDay++;       // new day
-      recalcGameCurrentDate();
-      // Flag, damit die naechste Szene einen expliziten Tageswechsel-Story-Beat bekommt
-      pendingDayTransition = true;
-      // ENERGIE/HUNGER REGENERATION: Tageswechsel = Karl hat (wo auch immer) geschlafen.
-      // Ohne diesen Reset waere Karl jeden Morgen weiterhin erschoepft, was unsinnig ist.
-      karlEnergie = 100;
-      karlHunger = Math.max(2, karlHunger - 4);  // morgens leichter Hunger ist normal
-      hungerAccumulator = 0;
+    // v7.11.12: Tagwechsel-Block. Tageszeit kann weiterhin natuerlich
+    // voranschreiten (MORGEN -> MITTAG -> ABEND -> NACHT), aber der Sprung
+    // von NACHT zum naechsten MORGEN passiert NUR noch via SCHLAFEN/
+    // UEBERNACHTUNG (=pendingSleepChoice). Sonst bleibt Karl in der NACHT
+    // bis der Spieler aktiv "Schlafen" klickt.
+    // Hintergrund: User-Beobachtung dass automatische Tagwechsel willkuerlich
+    // wirken (Goerke/Vogt-Runs 1111 hatten Tagwechsel mitten in Action).
+    const wuerdeWechselnZuMorgen = (gameTimeIdx >= TIMES_OF_DAY.length - 1)
+      && !pendingSleepChoice;
+    if (wuerdeWechselnZuMorgen) {
+      // Karl bleibt in der Nacht - keine Auto-Tagwechsel mehr
+      timeAdvanceTokens = 0.5; // halten, aber Push-Schwelle erreicht damit
+                                 // SCHLAFEN-Push-Message in der naechsten Szene
+                                 // kommt (siehe pushMessages)
+      console.log('[Schatten v7.11.12] Auto-Tagwechsel BLOCKIERT - Karl muss SCHLAFEN-Button klicken (Nacht haelt an)');
+      diag('detect', 'Tagwechsel-Block: Karl ist in der Nacht und muss aktiv SCHLAFEN waehlen (kein Auto-Wechsel mehr)');
+      // Push-Message fuer KI: "Karl spuert die Erschoepfung, Schlaf liegt nahe"
+      if (Array.isArray(pendingCategoryMessages)) {
+        pendingCategoryMessages.push('NACHT-HALT: Es ist tief in der Nacht. Karl ist erschoepft. Beschreibe sensorisch die Muedigkeit - schwere Augenlider, Gaehnen, der Wunsch nach Bett. Spieler hat einen SCHLAFEN-Button um den Tag zu wechseln. Treibe NICHT die Zeit weiter, die Szene spielt weiter in der NACHT.');
+      }
+      // NICHT gameTimeIdx hochzaehlen / NICHT gameDay++
+    } else {
+      gameTimeIdx++;
+      if (gameTimeIdx >= TIMES_OF_DAY.length) {
+        gameTimeIdx = 0; // back to MORGEN
+        gameDay++;       // new day
+        recalcGameCurrentDate();
+        // Flag, damit die naechste Szene einen expliziten Tageswechsel-Story-Beat bekommt
+        pendingDayTransition = true;
+        // ENERGIE/HUNGER REGENERATION: Tageswechsel = Karl hat (wo auch immer) geschlafen.
+        // Ohne diesen Reset waere Karl jeden Morgen weiterhin erschoepft, was unsinnig ist.
+        karlEnergie = 100;
+        karlHunger = Math.max(2, karlHunger - 4);  // morgens leichter Hunger ist normal
+        hungerAccumulator = 0;
       // v6.83: VERFASSUNG-GENESUNG bei Tageswechsel.
       // Karl ist nicht unverwundbar, aber er heilt im Schlaf etwas. Bei Tageswechsel
       // mit ruhiger letzter Szene (Spannung <=2) heilt Karl 1 Punkt Verfassung.
@@ -8426,9 +8479,10 @@ function advanceGameTime() {
       pendingForcedSleepNarrative = (karlEnergie === 100 ? 'unbequem' : 'normal');
       console.log('[Schatten] Tageswechsel (graduell) -> Energie 100, Hunger', karlHunger, '| Forced sleep narrative');
       diag('state', 'Tageswechsel (graduell) -> Tag ' + gameDay + ' MORGEN, Energie 100, Hunger ' + karlHunger);
-    } else {
-      diag('state', 'Tageszeit -> ' + (typeof TIMES_OF_DAY !== 'undefined' ? TIMES_OF_DAY[gameTimeIdx] : gameTimeIdx));
-    }
+      } else {
+        diag('state', 'Tageszeit -> ' + (typeof TIMES_OF_DAY !== 'undefined' ? TIMES_OF_DAY[gameTimeIdx] : gameTimeIdx));
+      }
+    }  // v7.11.12: schliesst das if(!wuerdeWechselnZuMorgen)-else
   }
 }
 
@@ -8910,9 +8964,10 @@ function renderLog(shouldScroll) {
 // Heuristik. KI darf AUFLOESEN ab Stage 3 als Option liefern (z.B. "Fahr zu
 // Helga und uebergib das Notizbuch", "Ruf Helga vom Praxis-Telefon an").
 // Mechanik: keine Vf-Strafe, kein En-Verlust, setzt Stage 4 direkt.
-const VALID_CATEGORIES = ['OFFENSIV', 'DEFENSIV', 'ERKUNDEN', 'BEOBACHTEN', 'HEILEN', 'AUFLOESEN', 'SCHLAFEN', 'ROMANTIK', 'UEBERNACHTUNG'];
+const VALID_CATEGORIES = ['OFFENSIV', 'DEFENSIV', 'ERKUNDEN', 'BEOBACHTEN', 'HEILEN', 'AUFLOESEN', 'SCHLAFEN', 'ROMANTIK', 'UEBERNACHTUNG', 'FLUCHT', 'NOTHEILEN'];
 const CATEGORY_PRIORITY = {
   AUFLOESEN: 95,  // hoechste Prio - wenn KI sie liefert, ist sie meist die richtige Wahl
+  NOTHEILEN: 90,  // v7.11.12: bei Vf<=2 ist das fast immer richtig
   OFFENSIV: 80,
   ERKUNDEN: 70,
   BEOBACHTEN: 60,
@@ -8920,6 +8975,7 @@ const CATEGORY_PRIORITY = {
   DEFENSIV: 40,
   UEBERNACHTUNG: 35,  // v7.11.7: Romantik-Climax mit Tagwechsel
   ROMANTIK: 30,
+  FLUCHT: 25,  // v7.11.12: Ausstieg aus Action - Bot waehlt nur in Notlage
   SCHLAFEN: 20,
 };
 
@@ -9224,7 +9280,7 @@ function applyCategoryMechanics(kategorie, ctx) {
       result.spannungDelta = 1;
       result.energieDelta = -4;
       result.indizChance = 0.30;
-      result.timeAdvanceBonus = 0.7;
+      result.timeAdvanceBonus = 0.4;  // v7.11.12: war 0.7 - weniger auto-Tagwechsel
       if (romanceInScene) {
         result.romanceTension = 1;
         result.pushMessages.push('OFFENSIV-ROMANCE: Karl macht eine romantische Avance. Beschreibe die Reaktion - kann angenommen oder zurueckgewiesen werden.');
@@ -9246,7 +9302,7 @@ function applyCategoryMechanics(kategorie, ctx) {
       result.spannungDelta = -1;
       result.energieDelta = -2;
       result.pursuitDelta = -1;
-      result.timeAdvanceBonus = 0.7;
+      result.timeAdvanceBonus = 0.4;  // v7.11.12: war 0.7
       result.pushMessages.push('DEFENSIV: Karl zieht sich zurueck/deckt sich/weicht aus. Beschreibe die Deeskalation. Druck nimmt ab. KEIN neues Indiz, KEINE Eskalation.');
       break;
 
@@ -9256,7 +9312,7 @@ function applyCategoryMechanics(kategorie, ctx) {
       result.energieDelta = -5;
       result.indizPflicht = true;  // GARANTIERT
       result.indizChance = 1.0;
-      result.timeAdvanceBonus = 0.8;
+      result.timeAdvanceBonus = 0.5;  // v7.11.12: war 0.8
       result.pushMessages.push('ERKUNDEN-INDIZ-PFLICHT: Karl untersucht/sucht/bewegt sich aktiv. Diese Szene MUSS ein neues konkretes Indiz oder eine konkrete Verbindung liefern. Lass Karl etwas finden: einen Zettel, ein Foto, eine Aussage, eine Spur, einen Namen. Setze "indiz_neu" oder "indiz_verbindung" im JSON. NICHT nur Stimmung.');
       if (erkundenStreak >= 2) {
         result.pushMessages.push('ERKUNDEN-STREAK: Karl hat 3+ Mal in Folge erkundet. Liefere ein STARKES Indiz das den Fall vorwaerts treibt - z.B. eine direkte Verbindung zwischen zwei vorhandenen Indizien, oder einen klaren Verdaechtigen-Hinweis.');
@@ -9268,7 +9324,7 @@ function applyCategoryMechanics(kategorie, ctx) {
       result.spannungDelta = -1;
       result.energieDelta = -2;
       result.indizChance = 0.6;
-      result.timeAdvanceBonus = 0.5;
+      result.timeAdvanceBonus = 0.3;  // v7.11.12: war 0.5
       if (romanceInScene) {
         result.romanceTension = 1;
         result.pushMessages.push('BEOBACHTEN-ROMANCE: Karl beobachtet/redet mit der ROMANCE-Person. Beschreibe eine intime Nuance - Blickkontakt, eine Geste, ein Satz mit Untertext.');
@@ -9288,25 +9344,48 @@ function applyCategoryMechanics(kategorie, ctx) {
       result.vfDelta = (verfassung < 5) ? 2 : 0;
       result.spannungDelta = -2;
       result.energieDelta = 30;
-      result.timeAdvanceBonus = 1.0;  // ganze Phase
+      result.timeAdvanceBonus = 0.5;  // v7.11.12: war 1.0 - weniger auto-Tagwechsel nach HEILEN
       result.healingApplied = true;  // v7.11.11: Marker fuer Cooldown-Verlaengerung
       result.pushMessages.push('HEILEN-IMPROVISIERT: Karl regeneriert (+2 Vf). Erfinde eine plausible Heilungs-Methode passend zum AKTUELLEN ORT und Cast. In der Charite/Praxis: professionelle Versorgung. In der Kneipe: aufs Klo, Wasser, ein Geschirrtuch als Verband. Im Auto: altes Verbandszeug aus dem Handschuhfach. Im Hauseingang: Karl reisst sein Hemd auf. Auf der Strasse: humpelt zur naechsten Apotheke. KI hat Freiheit den Ort kreativ zu nutzen - Karl ist NICHT auf "Heilungs-Orte" angewiesen. Wenn ein Heiler-NPC (Doc Wagner, Marlene, Apotheker) zufaellig in der Szene ist, kann er die Versorgung uebernehmen - sonst macht Karl es selbst. Die Heilung wirkt mechanisch immer (+2 Vf bis voll).');
       break;
 
     case 'SCHLAFEN':
-      // v7.11.11: User-Konzept:
-      // - Nicht verletzt (Vf 4-5): Schlaf erholt voll, Vf bleibt/+0
-      // - Verletzt (Vf <= 3): Schlaf hilft nur leicht (+1 Vf), Karl bekommt
-      //   am naechsten Morgen weiter HEILEN-Optionen angeboten
-      // - WICHTIG: Wunden duerfen am Folgetag NICHT weiter Vf reduzieren
-      //   -> healingApplied=true setzt langen Cooldown
-      result.vfDelta = (verfassung <= 3) ? 1 : 0;
-      result.spannungDelta = -3;
-      result.energieDelta = 100; // wird in Verarbeitung auf 100 gecapped
-      result.timeAdvanceBonus = 99; // erzwingt Tageswechsel (siehe pendingSleepChoice)
-      result.triggerSchlaf = true;
-      result.healingApplied = (verfassung <= 3);  // v7.11.11: Cooldown nur wenn verletzt geschlafen
-      result.pushMessages.push('SCHLAFEN-VOR-ORT: Karl schlaeft AM AKTUELLEN ORT ein (wo er gerade ist - Park, Hauseingang, Hotel, Buero, Strassenecke, Auto, was auch immer). Beschreibe kurz wie er einnickt (1-2 Saetze) und dann den UEBERGANG zum naechsten Morgen am SELBEN ORT. KEIN Teleport zu Buero/Wohnung/Doc Wagner. Die neue Szene MUSS am gleichen Ort spielen oder unmittelbar daneben (z.B. Karl wacht im Park auf einer Bank auf, oder im Hauseingang an die Wand gelehnt). Erzaehle die Spuren der Nacht - kalter Tau, steife Glieder, fremde Blicke, ein Polizist der ihn weckt, etc. - aber bleib am ORT. ' + (verfassung <= 3 ? 'WICHTIG: Karl ist verletzt - Schlaf hilft nur leicht (+1 Vf). Beschreibe dass die Wunden noch schmerzen am Morgen, Karl braucht weitere Versorgung. Aber er ist nicht in akuter Lebensgefahr - das Schlafen hat zumindest die Erschoepfung beseitigt.' : ''));
+      // v7.11.11+v7.11.12: User-Konzept differenziert nach Tageszeit:
+      // - Abend/Nacht: voller Schlaf, Tagwechsel garantiert
+      // - Tagsueber (En<=30 oder sicherer Ort): kurzes Nickerchen,
+      //   En auf 100, KEIN Tagwechsel, KEINE Vf-Heilung (zu kurz)
+      // - Verletzt + Nacht (Vf<=3): nur +1 Vf, Karl bekommt morgens noch HEILEN
+      // - Nicht verletzt + Nacht: kein Vf-Effekt (er ist eh gesund)
+      // - WICHTIG: bei Nacht-Schlaf duerfen Wunden Folgetag nicht weiter
+      //   reduzieren -> healingApplied=true
+      const gameTimeIdxNow = (typeof gameTimeIdx === 'number') ? gameTimeIdx : 4;
+      const isNapDuringDay = (gameTimeIdxNow < 4);  // 4=ABEND, 5=NACHT
+      if (isNapDuringDay) {
+        // Nickerchen - kein Tagwechsel, nur Erholung
+        result.vfDelta = 0;
+        result.spannungDelta = -2;
+        result.energieDelta = 70;  // partielle Erholung (nicht voll, war kein voller Schlaf)
+        result.timeAdvanceBonus = 0.3;  // leichter Zeitfortschritt (1 Phase max)
+        result.triggerSchlaf = false;  // KEIN Tagwechsel
+        result.healingApplied = false;
+        result.pushMessages.push('NICKERCHEN: Karl macht eine kurze Pause AM AKTUELLEN ORT - lehnt sich zurueck, schliesst die Augen fuer ein paar Minuten. Beschreibe knapp wie er kurz wegnickt, dann wieder hochschreckt - Geraeusche, eine Bewegung, ein Gedanke der ihn zurueckholt. Dies ist KEIN Tagwechsel. Die naechste Szene spielt am SELBEN Ort, KURZ SPAETER (vielleicht 15 Minuten). Karl ist etwas frischer aber nicht voll erholt. KEIN Schlaf-uebergang ueber 8 Stunden, KEIN "naechster Morgen". Die Tageszeit bleibt fast gleich oder schreitet nur leicht voran (z.B. NACHMITTAG bleibt NACHMITTAG, oder von SPAET-NACHMITTAG zu FRUEH-ABEND).');
+      } else {
+        // Echter Nacht-Schlaf (oder Custody-Schlaf) - Tagwechsel
+        result.vfDelta = (verfassung <= 3) ? 1 : 0;
+        result.spannungDelta = -3;
+        result.energieDelta = 100; // wird in Verarbeitung auf 100 gecapped
+        result.timeAdvanceBonus = 99; // erzwingt Tageswechsel (siehe pendingSleepChoice)
+        result.triggerSchlaf = true;
+        result.healingApplied = (verfassung <= 3);  // v7.11.11: Cooldown nur wenn verletzt geschlafen
+        // v7.11.12: Custody-Schlaf -> Freilassung am Morgen + Heilung
+        if (karlInStasiCustody) {
+          result.vfDelta = Math.max(result.vfDelta, 1); // +1 garantiert (Verband in Zelle)
+          result.releaseFromCustody = true;
+          result.pushMessages.push('CUSTODY-NACHT-SCHLAF: Karl ist in MfS-Custody (Verhoer-Zelle Genslerstrasse oder vergleichbar). Er schliesst die Augen, lehnt sich zurueck, irgendwann verliert er das Bewusstsein vor Erschoepfung. Beschreibe in 2-3 Saetzen wie er einnickt - kalte Pritsche, Gluehbirne, Stille der Zelle. Dann UEBERGANG zum naechsten Morgen: Karl wird FREIGELASSEN. Die Stasi hat ihn nicht offiziell festgehalten - "Befragung beendet, Sie koennen gehen, Genosse Mauer". Beschreibe wie er aus der Zelle/dem Raum entlassen wird, draussen ist Morgen, er nimmt seinen Hut/Mantel zurueck. NEUE Szene: Karl steht vor dem MfS-Gebaeude (Normannenstrasse, Hohenschoenhausen, oder Polizeirevier wenn nur Volkspolizei), Morgensonne, Wachen-Blick. Er kann weiter ermitteln, hat aber Stasi-Tension behalten - sie wissen jetzt wer er ist.');
+        } else {
+          result.pushMessages.push('SCHLAFEN-VOR-ORT: Karl schlaeft AM AKTUELLEN ORT ein (wo er gerade ist - Park, Hauseingang, Hotel, Buero, Strassenecke, Auto, was auch immer). Beschreibe kurz wie er einnickt (1-2 Saetze) und dann den UEBERGANG zum naechsten Morgen am SELBEN ORT. KEIN Teleport zu Buero/Wohnung/Doc Wagner. Die neue Szene MUSS am gleichen Ort spielen oder unmittelbar daneben (z.B. Karl wacht im Park auf einer Bank auf, oder im Hauseingang an die Wand gelehnt). Erzaehle die Spuren der Nacht - kalter Tau, steife Glieder, fremde Blicke, ein Polizist der ihn weckt, etc. - aber bleib am ORT. ' + (verfassung <= 3 ? 'WICHTIG: Karl ist verletzt - Schlaf hilft nur leicht (+1 Vf). Beschreibe dass die Wunden noch schmerzen am Morgen, Karl braucht weitere Versorgung. Aber er ist nicht in akuter Lebensgefahr - das Schlafen hat zumindest die Erschoepfung beseitigt.' : ''));
+        }
+      }
       break;
 
     case 'ROMANTIK':
@@ -9346,6 +9425,32 @@ function applyCategoryMechanics(kategorie, ctx) {
       result.energieDelta = -3;
       result.timeAdvanceBonus = 0.5;
       result.pushMessages.push('AUFLOESEN: Karl loest den Fall ab JETZT auf. Beschreibe wie Karl der Klientin alle gesammelten Beweise / Erkenntnisse uebergibt. Die FORM passt zum aktuellen Ort: wenn Karl bei der Klientin ist -> persoenlicher Bericht; wenn an einem Telefon (Praxis, Buero, Kneipe) -> Anruf; wenn unterwegs -> Telegramm via naechster Post oder Bote. Setze "klient_berichtet": true im JSON. Diese Szene ist der ABSCHLIESSENDE Akt - keine neuen Indizien, keine neue Gefahr. Beschreibe die Reaktion der Klientin (Erleichterung, Trauer, Wut, je nach Ergebnis) und Karls letzten Eindruck. Halte es ruhig und stilvoll - Film noir Ende, keine Action.');
+      break;
+
+    case 'FLUCHT':
+      // v7.11.12: System-Aktion. Arcade-Sicherheitsventil aus Action raus.
+      // Karl verlaesst die akute Szene zu einem sicheren Ort (Auto, Buero,
+      // Wohnung). Keine Heilung selbst, aber Spannungs-Reset und Vf bleibt.
+      // KI improvisiert den Flucht-Weg passend zum Ort.
+      result.vfDelta = 0;
+      result.spannungDelta = -3;
+      result.energieDelta = -5;  // Karl rennt, kostet Kraft
+      result.timeAdvanceBonus = 0.3;
+      result.pushMessages.push('FLUCHT: Karl verlaesst die akute Szene SOFORT. Beschreibe in 2-3 Saetzen wie er rauskommt - durch eine Hintertuer, ueber einen Hinterhof, in den Opel und weg, ueber die Strasse zur naechsten S-Bahn, was zum Ort passt. KEIN Kampf, KEINE Verfolgung-im-Detail. Karl entkommt. Die naechste Szene spielt an einem SICHEREN Ort - sein Buero, seine Wohnung, der Opel auf einer ruhigen Strasse, eine fremde Kneipe wo er sich verstecken kann. Spannung sinkt deutlich. Gegner ist abgehaengt aber NICHT besiegt - sie koennen Karl spaeter wieder finden.');
+      break;
+
+    case 'NOTHEILEN':
+      // v7.11.12: System-Aktion. Bei Vf<=2 immer verfuegbar (1x pro Tag).
+      // Karl verbindet sich selbst notduerftig wo immer er ist - Hemd
+      // zerreissen, Handschuhfach-Verbandszeug, Apotheken-Kauf im Vorbeigehen.
+      // Effekt: Vf+1, En-5. Schwaecher als HEILEN (+2) aber immer verfuegbar.
+      result.vfDelta = (verfassung <= 2) ? 1 : 0;
+      result.spannungDelta = -1;
+      result.energieDelta = -5;  // Selbst-Versorgen kostet Kraft
+      result.timeAdvanceBonus = 0.3;
+      result.healingApplied = true;  // Cooldown gegen alte-Wunden-Drift
+      result.notheilenUsed = true;   // 1x pro Tag-Flag
+      result.pushMessages.push('NOTHEILEN: Karl versorgt sich SELBST notduerftig (nicht bei einem Doc, nicht in einer Praxis - Karl macht es allein). Beschreibe in 1-2 Saetzen WIE - Hemd zerreissen als Verband, Handschuhfach-Verbandszeug, Schluck Whisky gegen Schmerz, Provisorium aus dem was da ist. WICHTIG: Die Versorgung ist NOTDUERFTIG. Karl blutet weiter durch, aber die akute Lebensgefahr ist abgewendet. Vf+1 (von 1 auf 2 oder 2 auf 3). KEINE volle Genesung. Die Wunde bleibt sichtbar, Karl bewegt sich steifer.');
       break;
 
     default:
@@ -9507,6 +9612,13 @@ function renderOptions(scene) {
     const optClass = classifyOption(opt, resolveContext);
     opt._kategorie = optClass.kategorie;
     opt._priority = optClass.priority;
+    // v7.11.12 KRITISCHER FIX: Kategorie auf DOM-Element schreiben, sonst kann
+    // der Bot (der via querySelectorAll DOM liest) sie nicht erkennen.
+    // Vor v7.11.12 war opt._kategorie nur auf dem JS-Objekt, der Bot las nur
+    // text aus dem DOM - alle HEILEN/UEBERNACHTUNG-Prio-Logiken im Bot waren
+    // tot Code. Goerke/Heinrich-Runs 1111/1112 starben weil byCat.HEILEN immer
+    // leer war (Bot konnte HEILEN-Option nicht finden trotz Heuristik-Erkennung).
+    btn.dataset.kategorie = optClass.kategorie;
     let markerHtml = '';
     // v7.10: NEUE KATEGORIE-LABELS. Jede Option zeigt ihren Typ damit der
     // Spieler weiss was passieren wird (mechanisch).
@@ -9619,10 +9731,31 @@ function renderOptions(scene) {
     console.warn('[Schatten] Verteilungs-Log fehlgeschlagen:', e);
   }
 
+  // v7.11.12: Stasi-Custody-Schlaf-Logik
+  // Wenn Karl in Custody ist, FLUCHT/NOTHEILEN nicht verfuegbar.
+  // ABER nach 5+ Sz Custody darf er die Augen schliessen und einschlafen
+  // ("Augen zu machen, irgendwann werden sie dich verhoeren oder gehen lassen").
+  // Bei Tagwechsel via Custody-Schlaf wird Karl freigelassen (im Normalfall).
+  if (karlInStasiCustody) {
+    stasiCustodyScenesSince++;
+  } else {
+    stasiCustodyScenesSince = 0;
+  }
+  const canSleepInCustody = karlInStasiCustody && stasiCustodyScenesSince >= 5;
+
   // v7.10.1: SYSTEM-BUTTONS - kontext-abhaengig
-  // SCHLAFEN: nur ABEND oder NACHT (Karl schlaeft am aktuellen Ort)
+  // SCHLAFEN: Abend/Nacht ODER En<=30 (Karl macht ein Schlaefchen) ODER in Buero/Wohnung
+  //          ODER in Stasi-Custody seit 5+ Sz (Augen zu, abwarten)
   // ROMANTIK: nur wenn ROMANCE-NPC im aktuellen Cast
+  // v7.11.12: FLUCHT (immer wenn Sp >= 3 + nicht in Custody)
+  // v7.11.12: NOTHEILEN (immer wenn Vf <= 2 + NICHT in Custody)
   const isAbendOderNacht = (typeof gameTimeIdx === 'number') && (gameTimeIdx >= 4); // 4=ABEND, 5=NACHT
+  // v7.11.12: SCHLAFEN auch tagsueber wenn Karl ueberzogen ist oder in seinem Buero/Wohnung
+  const currentEnergie = (typeof karlEnergie === 'number') ? karlEnergie : 100;
+  const currentLocation = (typeof lastLocation === 'string') ? lastLocation.toLowerCase() : '';
+  const isInSafeRestPlace = /\b(buero|wohnung|schlafzimmer|hotel|bett|hauptbahnhof|charit)/.test(currentLocation);
+  const canSleepDuringDay = currentEnergie <= 30 || isInSafeRestPlace;
+  const showSleepButton = isAbendOderNacht || canSleepDuringDay || canSleepInCustody;
   let romanceNpcInScene = null;
   try {
     if (caseSetup && Array.isArray(caseSetup.setupCast) && Array.isArray(cast)) {
@@ -9640,22 +9773,141 @@ function renderOptions(scene) {
     }
   } catch (e) { /* ignore */ }
 
+  // v7.11.12: FLUCHT-Verfuegbarkeit:
+  // - Sp >= 3 (es muss "Action" sein damit Flucht Sinn macht)
+  // - nicht in Stasi-Custody (gefangen kann man nicht fluechten)
+  // - nicht in einer komplett ruhigen Indoor-Szene (Sp 1-2 = nichts wovon man fluechtet)
+  const currentSpannung = (typeof spannung === 'number') ? spannung : 1;
+  const showFluchtButton = currentSpannung >= 3 && !karlInStasiCustody;
+
+  // v7.11.12: NOTHEILEN-Verfuegbarkeit:
+  // - Vf <= 2 (Karl ist schwer verletzt)
+  // - KEIN Tag-Cooldown (User-Konzept: wenn man verletzt ist, kann man sich
+  //   so oft wie noetig verbinden - aber der Button erscheint nur bei Vf<=2,
+  //   also nach NOTHEILEN -> Vf=3 verschwindet er von alleine)
+  const currentVerfassung = (typeof verfassung === 'number') ? verfassung : 5;
+  const showNotheilenButton = currentVerfassung <= 2;
+
   // Separator nur wenn mindestens ein System-Button gezeigt wird
-  if (isAbendOderNacht || romanceNpcInScene) {
+  if (showSleepButton || romanceNpcInScene || showFluchtButton || showNotheilenButton) {
     const sep = document.createElement('div');
     sep.className = 'system-button-separator';
     sep.textContent = '— besondere Aktionen —';
     list.appendChild(sep);
   }
 
+  // v7.11.12: NOTHEILEN-Button - immer verfuegbar bei Vf<=2 (1x pro Tag)
+  // Arcade-Sicherheitsventil. Karl verbindet sich selbst notduerftig, Vf+1.
+  if (showNotheilenButton) {
+    const ntBtn = document.createElement('button');
+    ntBtn.className = 'option-btn option-btn-system option-btn-notheilen';
+    ntBtn.dataset.kategorie = 'NOTHEILEN';  // damit Bot's findet
+    ntBtn.innerHTML = '<span class="option-id">🩹</span><span class="option-text-wrap"><span>Notheilen (selbst verbinden)</span><span class="option-marker option-marker-system">→ Vf+1</span></span>';
+    const ntOpt = {
+      id: 'NOTHEILEN',
+      text: 'Notheilen (selbst verbinden)',
+      kategorie: 'NOTHEILEN',
+      _kategorie: 'NOTHEILEN',
+      _priority: 90,
+      _isSystemButton: true,
+    };
+    let ntTouchStartX = 0, ntTouchStartY = 0, ntTouchStartTime = 0;
+    let ntTouchCancelled = false, ntTouchHandled = false;
+    const NT_TAP_MAX_MOVE = 12, NT_TAP_MAX_DURATION = 800;
+    ntBtn.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1) { ntTouchCancelled = true; return; }
+      ntTouchStartX = e.touches[0].clientX;
+      ntTouchStartY = e.touches[0].clientY;
+      ntTouchStartTime = Date.now();
+      ntTouchCancelled = false; ntTouchHandled = false;
+    }, { passive: true });
+    ntBtn.addEventListener('touchmove', (e) => {
+      if (ntTouchCancelled) return;
+      if (e.touches.length !== 1) { ntTouchCancelled = true; return; }
+      const dx = Math.abs(e.touches[0].clientX - ntTouchStartX);
+      const dy = Math.abs(e.touches[0].clientY - ntTouchStartY);
+      if (dx > NT_TAP_MAX_MOVE || dy > NT_TAP_MAX_MOVE) ntTouchCancelled = true;
+    }, { passive: true });
+    ntBtn.addEventListener('touchend', (e) => {
+      if (ntTouchCancelled) { e.preventDefault(); return; }
+      if (Date.now() - ntTouchStartTime > NT_TAP_MAX_DURATION) { e.preventDefault(); return; }
+      e.preventDefault();
+      ntTouchHandled = true;
+      chooseOption(ntOpt);
+    });
+    ntBtn.addEventListener('click', () => {
+      if (ntTouchHandled) { ntTouchHandled = false; return; }
+      chooseOption(ntOpt);
+    });
+    list.appendChild(ntBtn);
+  }
+
+  // v7.11.12: FLUCHT-Button - Sp>=3 + nicht in Custody
+  // Arcade-Sicherheitsventil. Karl verlaesst die Szene zu sicherem Ort.
+  if (showFluchtButton) {
+    const flBtn = document.createElement('button');
+    flBtn.className = 'option-btn option-btn-system option-btn-flucht';
+    flBtn.dataset.kategorie = 'FLUCHT';
+    flBtn.innerHTML = '<span class="option-id">🏃</span><span class="option-text-wrap"><span>Flucht (raus aus der Szene)</span><span class="option-marker option-marker-system">→ SICHER</span></span>';
+    const flOpt = {
+      id: 'FLUCHT',
+      text: 'Flucht (raus aus der Szene)',
+      kategorie: 'FLUCHT',
+      _kategorie: 'FLUCHT',
+      _priority: 25,
+      _isSystemButton: true,
+    };
+    let flTouchStartX = 0, flTouchStartY = 0, flTouchStartTime = 0;
+    let flTouchCancelled = false, flTouchHandled = false;
+    const FL_TAP_MAX_MOVE = 12, FL_TAP_MAX_DURATION = 800;
+    flBtn.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1) { flTouchCancelled = true; return; }
+      flTouchStartX = e.touches[0].clientX;
+      flTouchStartY = e.touches[0].clientY;
+      flTouchStartTime = Date.now();
+      flTouchCancelled = false; flTouchHandled = false;
+    }, { passive: true });
+    flBtn.addEventListener('touchmove', (e) => {
+      if (flTouchCancelled) return;
+      if (e.touches.length !== 1) { flTouchCancelled = true; return; }
+      const dx = Math.abs(e.touches[0].clientX - flTouchStartX);
+      const dy = Math.abs(e.touches[0].clientY - flTouchStartY);
+      if (dx > FL_TAP_MAX_MOVE || dy > FL_TAP_MAX_MOVE) flTouchCancelled = true;
+    }, { passive: true });
+    flBtn.addEventListener('touchend', (e) => {
+      if (flTouchCancelled) { e.preventDefault(); return; }
+      if (Date.now() - flTouchStartTime > FL_TAP_MAX_DURATION) { e.preventDefault(); return; }
+      e.preventDefault();
+      flTouchHandled = true;
+      chooseOption(flOpt);
+    });
+    flBtn.addEventListener('click', () => {
+      if (flTouchHandled) { flTouchHandled = false; return; }
+      chooseOption(flOpt);
+    });
+    list.appendChild(flBtn);
+  }
+
   // SCHLAFEN-Button
-  if (isAbendOderNacht) {
+  // v7.11.12: Verfuegbar bei Abend/Nacht ODER bei Erschoepfung ODER in sicherem Ort
+  if (showSleepButton) {
     const sleepBtn = document.createElement('button');
     sleepBtn.className = 'option-btn option-btn-system option-btn-sleep';
-    sleepBtn.innerHTML = '<span class="option-id">💤</span><span class="option-text-wrap"><span>Schlafen (am aktuellen Ort)</span><span class="option-marker option-marker-system">→ MORGEN</span></span>';
+    sleepBtn.dataset.kategorie = 'SCHLAFEN';
+    // v7.11.12: Text passt sich an Kontext an
+    let sleepLabel = 'Schlafen (am aktuellen Ort)';
+    let sleepMarker = '→ MORGEN';
+    if (!isAbendOderNacht && currentEnergie <= 30) {
+      sleepLabel = 'Nickerchen machen (kurz ausruhen)';
+      sleepMarker = '→ PAUSE';
+    } else if (!isAbendOderNacht && isInSafeRestPlace) {
+      sleepLabel = 'Schlafen gehen (nach Hause/ins Bett)';
+      sleepMarker = '→ MORGEN';
+    }
+    sleepBtn.innerHTML = '<span class="option-id">💤</span><span class="option-text-wrap"><span>' + sleepLabel + '</span><span class="option-marker option-marker-system">' + sleepMarker + '</span></span>';
     const sleepOpt = {
       id: 'SCHLAFEN',
-      text: 'Schlafen (am aktuellen Ort)',
+      text: sleepLabel,
       kategorie: 'SCHLAFEN',
       _kategorie: 'SCHLAFEN',
       _priority: 20,
@@ -13076,6 +13328,7 @@ async function startGame() {
   stasiCooldownCounter = 0;
   folterSceneCount = 0;
   karlInStasiCustody = false;
+  stasiCustodyScenesSince = 0;  // v7.11.12: Custody-Counter Reset
   // Reset Story-Anker (wird gleich aus dem Intro neu befuellt)
   caseSetup = null;
   // Reset zeitlich-begrenzte-Anlaesse-Tracking (Beerdigung, Hochzeit, etc.)
@@ -14998,14 +15251,32 @@ async function chooseOption(option) {
   // den Push "Karl schlaeft am aktuellen Ort, wacht morgen dort auf" via
   // pendingCategoryMessages.
   if (chosenKategorie === 'SCHLAFEN') {
-    pendingSleepChoice = true;
-    console.log('[Schatten v7.10.1] SCHLAFEN gewaehlt - pendingSleepChoice=true (Tageswechsel garantiert)');
+    // v7.11.12: Nur bei echtem Nacht-Schlaf ODER Custody-Schlaf Tagwechsel triggern.
+    // Tagsueber-Nickerchen (En<=30 oder sicherer Ort) ist KEIN Tagwechsel.
+    const gameTimeIdxNow = (typeof gameTimeIdx === 'number') ? gameTimeIdx : 4;
+    const isAbendOderNachtNow = (gameTimeIdxNow >= 4);
+    if (isAbendOderNachtNow || karlInStasiCustody) {
+      pendingSleepChoice = true;
+      const why = karlInStasiCustody ? 'Custody-Schlaf (Freilassung)' : 'Nacht';
+      console.log('[Schatten v7.11.12] SCHLAFEN (' + why + ') - pendingSleepChoice=true (Tageswechsel)');
+    } else {
+      pendingSleepChoice = false;
+      console.log('[Schatten v7.11.12] SCHLAFEN (Nickerchen tagsueber) - KEIN Tagwechsel, nur Erholung');
+    }
   }
   // v7.11.7: UEBERNACHTUNG nutzt denselben Mechanismus wie SCHLAFEN - Tagwechsel
   // ist garantiert. Unterschied: Karl wacht bei der ROMANCE-Person auf.
   if (chosenKategorie === 'UEBERNACHTUNG') {
     pendingSleepChoice = true;
-    console.log('[Schatten v7.11.11] UEBERNACHTUNG gewaehlt - pendingSleepChoice=true (Tageswechsel garantiert, bei ROMANCE-NPC)');
+    console.log('[Schatten v7.11.12] UEBERNACHTUNG gewaehlt - pendingSleepChoice=true (Tageswechsel garantiert, bei ROMANCE-NPC)');
+  }
+  // v7.11.12: NOTHEILEN - kein Tag-Cooldown mehr. Button erscheint nur wenn Vf<=2.
+  // Nach NOTHEILEN: Vf wird +1 -> wenn jetzt 3, Button verschwindet automatisch.
+  if (chosenKategorie === 'NOTHEILEN') {
+    console.log('[Schatten v7.11.12] NOTHEILEN verwendet (Vf+1, En-5, kein Cooldown)');
+    if (typeof diag === 'function') {
+      diag('state', 'NOTHEILEN: Karl verbindet sich selbst notduerftig');
+    }
   }
 
   // v7.11.7: ROMANTIK-KLICK-COUNTER
@@ -15020,7 +15291,7 @@ async function chooseOption(option) {
       lastRomanceNpcName = npcName;
     }
     romanticClicksSinceProgress++;
-    console.log('[Schatten v7.11.11] ROMANTIK-Klick #' + romanticClicksSinceProgress + ' mit ' + (npcName || '?'));
+    console.log('[Schatten v7.11.12] ROMANTIK-Klick #' + romanticClicksSinceProgress + ' mit ' + (npcName || '?'));
     if (typeof diag === 'function') {
       diag('detect', 'Romantik-Klick ' + romanticClicksSinceProgress + '/3 mit ' + (npcName || '?'));
     }
@@ -16653,6 +16924,16 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof diag === 'function') {
           diag('state', 'HEILUNGS-COOLDOWN aktiviert via ' + pendingCategoryChoice + ' (' + HEALING_COOLDOWN_SCENES + ' Sz, schuetzt vor "alte Wunden pochen"-Drift)');
         }
+      }
+
+      // v7.11.12: Custody-Schlaf -> Karl wird freigelassen am Morgen
+      if (categoryMechanicsResult && categoryMechanicsResult.releaseFromCustody) {
+        karlInStasiCustody = false;
+        stasiCustodyScenesSince = 0;
+        if (typeof diag === 'function') {
+          diag('state', 'CUSTODY-FREILASSUNG via Schlaf - Karl wacht morgens auf der Strasse vor MfS-Gebaeude auf');
+        }
+        console.log('[Schatten v7.11.12] Karl aus Custody entlassen (via Schlaf-Mechanik)');
       }
 
       if (typeof diag === 'function') {
@@ -19428,6 +19709,7 @@ function botChooseByStrategy(options) {
   const byCat = {
     OFFENSIV: [], DEFENSIV: [], ERKUNDEN: [], BEOBACHTEN: [], HEILEN: [],
     AUFLOESEN: [], ROMANTIK: [], UEBERNACHTUNG: [], SCHLAFEN: [],
+    FLUCHT: [], NOTHEILEN: [],  // v7.11.12: Arcade-Sicherheitsventile
     normal: []
   };
   for (const opt of options) {
@@ -19439,11 +19721,22 @@ function botChooseByStrategy(options) {
   const effectiveStrat = (botStrategy === 'rotating' && botRotatingSubStrategies)
     ? botRotatingSubStrategies[Math.floor(botCurrentTurn / botRotatingTurnsPerStyle) % botRotatingSubStrategies.length]
     : botStrategy;
+
+  // v7.11.12 ABSOLUTE PRIO: NOTHEILEN bei Vf<=2.
+  // Garantie dass Karl nicht stirbt wenn KI keine HEILEN-Option anbietet.
+  // 1x pro Tag-Cooldown wird via showNotheilenButton-Check schon vor dem Rendern
+  // ausgewertet (Button erscheint nur wenn verfuegbar). Wenn er also da ist,
+  // ist er gueltig zu klicken.
+  if (typeof verfassung === 'number' && verfassung <= 2 && byCat.NOTHEILEN.length > 0) {
+    console.log('[Bot v7.11.12] NOTHEILEN ZWINGEND (Vf=' + verfassung + ')');
+    if (typeof diag === 'function') diag('bot', 'Bot waehlt NOTHEILEN (Vf=' + verfassung + ' - Arcade-Sicherheitsventil)');
+    return byCat.NOTHEILEN[0];
+  }
+
   // SELBSTSCHUTZ: Wenn Karl sehr schwer verletzt, HEILEN priorisieren.
   // v7.11.10: Bei Vf=1 (dem letzten Atemzug) MUSS HEILEN gewaehlt werden
   // wenn irgendwie verfuegbar. Sonst stirbt Karl in der naechsten Action-Sz.
-  // Vogt-Run zeigte: Bot waehlte bei Vf=1 ERKUNDEN/Flucht statt Charité -
-  // tot. Wegener-Run: 2x Vf<=2 ohne Genesung trotz angebotener HEILEN.
+  // v7.11.12: Bot kann jetzt _kategorie via data-Attribut lesen - Fix kritisch.
   if (typeof verfassung === 'number' && verfassung <= 1 && byCat.HEILEN.length > 0) {
     // ABSOLUTE Prio bei Vf=1 - kein Roll wie sonst, einfach HEILEN
     console.log('[Bot v7.11.10] HEILEN ZWINGEND (Vf=' + verfassung + ' - letzter Atemzug)');
@@ -19455,9 +19748,25 @@ function botChooseByStrategy(options) {
     if (typeof diag === 'function') diag('bot', 'Bot waehlt HEILEN (Selbstschutz Vf=' + verfassung + ')');
     return byCat.HEILEN[0];
   }
+
+  // v7.11.12: FLUCHT bei hohem Druck + Verletzung.
+  // Wenn Karl Sp >= 4 hat und Vf <= 2 - lieber rausfluechten als kaempfen.
+  // Wenn FLUCHT-Button im UI da ist (= Sp>=3, nicht in Custody), kann der Bot
+  // ihn nutzen. Wir loesen es konservativ: nur bei akuter Lebensgefahr.
+  const currentSp = (typeof spannung === 'number') ? spannung : 1;
+  if (typeof verfassung === 'number' && verfassung <= 2
+      && currentSp >= 4
+      && byCat.FLUCHT.length > 0) {
+    console.log('[Bot v7.11.12] FLUCHT gewaehlt (Vf=' + verfassung + ', Sp=' + currentSp + ' - Rueckzug)');
+    if (typeof diag === 'function') diag('bot', 'Bot waehlt FLUCHT (Vf=' + verfassung + ' + Sp=' + currentSp + ' = Lebensgefahr ohne Heilung)');
+    return byCat.FLUCHT[0];
+  }
+
   // v7.11.10: Wenn Vf=1 ABER keine HEILEN-Option in den 4 KI-Optionen ist,
   // DEFENSIV als zweitbeste Option waehlen (Karl versteckt sich, bekommt
   // wenigstens +1 Vf-Bonus statt sich in eine OFFENSIV-Action zu stuerzen).
+  // v7.11.12: NOTHEILEN-Check schon oben - hier ist Vf=1 ohne irgendeine
+  // Heilungs-Option (auch NOTHEILEN nicht da, z.B. heute schon benutzt).
   if (typeof verfassung === 'number' && verfassung <= 1 && byCat.DEFENSIV.length > 0) {
     console.log('[Bot v7.11.10] DEFENSIV ZWINGEND (Vf=' + verfassung + ', keine HEILEN-Option)');
     if (typeof diag === 'function') diag('bot', 'Bot waehlt DEFENSIV ZWINGEND (Vf=' + verfassung + ', kein HEILEN angeboten)');
@@ -19675,15 +19984,30 @@ function botGetCurrentOptions() {
   const optList = document.getElementById('options-list');
   if (!optList) return [];
   // v7.10.1: System-Buttons (SCHLAFEN/ROMANTIK) AUSFILTERN.
-  // Der Bot soll nur aus den 4 KI-Optionen waehlen, nicht aus den
-  // Spieler-Lebensaktions-Buttons.
-  const buttons = optList.querySelectorAll('.option-btn:not(.option-btn-system)');
-  return Array.from(buttons).map(btn => {
+  // Der Bot soll nicht ungewollt schlafen oder romantisch werden.
+  // v7.11.12: ABER FLUCHT + NOTHEILEN sind Arcade-Sicherheitsventile -
+  // die SOLL der Bot wahrnehmen koennen. Daher: alle non-system Buttons
+  // + die Arcade-System-Buttons (option-btn-notheilen, option-btn-flucht).
+  // SCHLAFEN/ROMANTIK/UEBERNACHTUNG bleiben ausgefiltert (Bot-Code hat
+  // dafuer eigene Pruefungen wenn er sie haben will).
+  const allBtns = optList.querySelectorAll('.option-btn');
+  const buttons = Array.from(allBtns).filter(btn => {
+    if (!btn.classList.contains('option-btn-system')) return true;  // KI-Option
+    // Nur Arcade-System-Buttons erlauben:
+    if (btn.classList.contains('option-btn-notheilen')) return true;
+    if (btn.classList.contains('option-btn-flucht')) return true;
+    return false;  // SCHLAFEN, ROMANTIK, UEBERNACHTUNG -> raus
+  });
+  return buttons.map(btn => {
     const idEl = btn.querySelector('.option-id');
     const textEl = btn.querySelector('.option-text-wrap > span');
     return {
       id: (idEl?.textContent || '').trim(),
       text: (textEl?.textContent || btn.textContent || '').trim(),
+      // v7.11.12 FIX: Kategorie vom DOM lesen (vorher fehlte das, alle Bot-Kategorie-
+      // Prios waren wirkungslos). data-kategorie wird in der Option-Render-Stelle
+      // (~Z.9510) gesetzt.
+      _kategorie: btn.dataset.kategorie || 'normal',
       element: btn,
     };
   });
