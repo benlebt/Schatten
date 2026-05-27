@@ -2205,7 +2205,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.11.6</div>
+    <div class="start-version">Schatten v7.11.8</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2282,7 +2282,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.11.6</span>
+    <span>Schatten v7.11.8</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4625,7 +4625,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.11.6';
+window.SCHATTEN_VERSION = 'v7.11.8';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5439,37 +5439,64 @@ function makeUtterance(text) {
   // v7.11.5: STICKY-VOICE. Wenn keine gespeichert -> automatisch die beste
   // erkennen und speichern (damit iOS WebKit-Bug "reduzierte Voice-Liste
   // beim 2. Call" nicht zur nervigen Anna-Default zurueckfaellt).
+  // v7.11.8: VOICE-DRIFT-TRACKING. Jeder Pick wird geloggt mit Listen-Groesse
+  // + Wahl + Sprache, damit wir sehen wenn iOS die Liste reduziert oder
+  // eine andere Stimme picked als beim letzten Mal.
   const voices = window.speechSynthesis.getVoices();
+  const deVoiceCount = voices ? voices.filter(v =>
+    v && v.lang && v.lang.toLowerCase().startsWith('de')).length : 0;
   if (voices && voices.length > 0) {
     let savedVoiceName = localStorage.getItem('schatten-speech-voice');
     let chosenVoice = null;
+    let pickReason = '';
     if (savedVoiceName) {
       chosenVoice = voices.find(v => v.name === savedVoiceName);
-      // v7.11.5: Wenn gespeicherte Stimme in aktueller (evtl. reduzierter)
-      // Liste NICHT vorhanden ist: NICHT auf Default zurueckfallen, sondern
-      // die beste verfuegbare Stimme nehmen (auch wenn das nicht die exakt
-      // gespeicherte ist). Beim naechsten Call ist die Original-Stimme oft
-      // wieder da - dann wird sie wieder gefunden.
-      if (!chosenVoice) {
+      if (chosenVoice) {
+        pickReason = 'gespeichert-gefunden';
+      } else {
         const best = pickBestGermanVoice(voices);
         if (best) {
           chosenVoice = best;
-          console.log('[Schatten] Gespeicherte Stimme "' + savedVoiceName + '" nicht in aktueller Liste, nehme stattdessen "' + best.name + '" (kein Reset auf Default)');
+          pickReason = 'gespeichert-WEG-fallback-auf-' + best.name;
+          console.warn('[Schatten v7.11.8 Voice-Drift] Gespeicherte Stimme "' + savedVoiceName + '" nicht in aktueller Liste (' + voices.length + ' total, ' + deVoiceCount + ' de). Fallback: "' + best.name + '". Liste: [' + voices.slice(0, 5).map(v => v.name + '@' + v.lang).join(', ') + (voices.length > 5 ? ', ...' : '') + ']');
+          if (typeof diag === 'function') {
+            diag('voice', 'Voice-Drift: gespeichert "' + savedVoiceName + '" weg, nehme "' + best.name + '" (Liste: ' + voices.length + ' total, ' + deVoiceCount + ' de)');
+          }
+          // v7.11.8: SICHTBARER Toast fuer den User - nur EINMAL pro Drift,
+          // nicht bei jedem makeUtterance-Call.
+          try {
+            const driftKey = 'voicedrift-' + savedVoiceName + '-' + best.name;
+            if (typeof showProgressToast === 'function' && typeof canShowToast === 'function' && canShowToast('info', driftKey)) {
+              showProgressToast('Stimme gewechselt', 'iOS hat "' + savedVoiceName + '" entzogen - jetzt: "' + best.name + '"', 'info', driftKey);
+            }
+          } catch (e) { /* ignore */ }
+        } else {
+          pickReason = 'kein-fallback-moeglich';
         }
       }
     } else {
       // v7.11.5: STICKY-PICK beim ersten Mal. Beste Stimme erkennen + speichern.
-      // So spielt die App beim 1. Klick gleich die beste Stimme, und beim
-      // 2. Klick wird sie wiedergefunden (auch wenn iOS die Liste reduziert).
       chosenVoice = pickBestGermanVoice(voices);
       if (chosenVoice) {
         try {
           localStorage.setItem('schatten-speech-voice', chosenVoice.name);
-          console.log('[Schatten] v7.11.5: Beste Stimme automatisch gewaehlt + gespeichert: "' + chosenVoice.name + '"');
+          pickReason = 'erstmaliger-pick-' + chosenVoice.name;
+          console.log('[Schatten v7.11.5] Beste Stimme automatisch gewaehlt + gespeichert: "' + chosenVoice.name + '" (Liste: ' + voices.length + ' total, ' + deVoiceCount + ' de)');
+          if (typeof diag === 'function') {
+            diag('voice', 'Erstmaliger Pick: "' + chosenVoice.name + '" (Liste: ' + deVoiceCount + ' de Stimmen)');
+          }
         } catch (e) { /* localStorage voll/blockiert - ignorieren */ }
+      } else {
+        pickReason = 'keine-de-stimme';
       }
     }
+    // v7.11.8: Tracking-Log fuer jeden makeUtterance-Call (Browser-Konsole)
+    console.log('[Schatten Voice]', 'gewaehlt:', (chosenVoice ? chosenVoice.name : 'NULL'),
+      '| Liste:', voices.length + 'tot/' + deVoiceCount + 'de',
+      '| Reason:', pickReason);
     if (chosenVoice) u.voice = chosenVoice;
+  } else if (typeof diag === 'function') {
+    diag('voice', 'Voice-Liste leer beim makeUtterance-Call');
   }
   return u;
 }
@@ -8530,6 +8557,22 @@ let chooseOptionInFlight = false;
 let lastHealedSceneCounter = -999;  // sehr negativer Startwert = kein Cooldown aktiv
 const HEALING_COOLDOWN_SCENES = 3;
 
+// v7.11.7: ROMANTIK-KLICK-TRACKING.
+// Anlass: 0926-Run - Spieler klickte 5x in Folge "Naeher kommen" mit Rita,
+// Tageszeit wechselte von NACHT bis ABEND (5 Wechsel!), aber nichts passierte
+// ausser dass die Stimmung "intim" blieb. RPG-Logik: nach 3 Klicks ohne
+// echten Progress hat die Frau keine Lust mehr (Suessholzraspeln nervt).
+//
+// Mechanik:
+// - romanticClicksSinceProgress zaehlt aufeinanderfolgende ROMANTIK-Klicks
+//   ohne Uebernachtung (= echter Progress)
+// - Reset wenn Karl bei ihr uebernachtet ODER Ort verlaesst ODER andere
+//   Kategorie waehlt
+// - Bei 3 Klicks ohne Progress -> ROMANTIK-Button verschwindet, Hinweis
+//   im Prompt dass sie abgeturnt ist
+let romanticClicksSinceProgress = 0;
+let lastRomanceNpcName = '';  // welche Frau gerade angeflirtet wird
+
 // v7.9.53: PERFORMANCE-TRACKING pro Modell. User-Feedback "Mistral Large ist
 // extrem langsam" - wir wollen Antwortzeiten messen und im Export sehen welches
 // Modell wie schnell ist. Pro Modell: count, totalMs, durations[].
@@ -8867,7 +8910,7 @@ function renderLog(shouldScroll) {
 // Heuristik. KI darf AUFLOESEN ab Stage 3 als Option liefern (z.B. "Fahr zu
 // Helga und uebergib das Notizbuch", "Ruf Helga vom Praxis-Telefon an").
 // Mechanik: keine Vf-Strafe, kein En-Verlust, setzt Stage 4 direkt.
-const VALID_CATEGORIES = ['OFFENSIV', 'DEFENSIV', 'ERKUNDEN', 'BEOBACHTEN', 'HEILEN', 'AUFLOESEN', 'SCHLAFEN', 'ROMANTIK'];
+const VALID_CATEGORIES = ['OFFENSIV', 'DEFENSIV', 'ERKUNDEN', 'BEOBACHTEN', 'HEILEN', 'AUFLOESEN', 'SCHLAFEN', 'ROMANTIK', 'UEBERNACHTUNG'];
 const CATEGORY_PRIORITY = {
   AUFLOESEN: 95,  // hoechste Prio - wenn KI sie liefert, ist sie meist die richtige Wahl
   OFFENSIV: 80,
@@ -8875,6 +8918,7 @@ const CATEGORY_PRIORITY = {
   BEOBACHTEN: 60,
   HEILEN: 50,
   DEFENSIV: 40,
+  UEBERNACHTUNG: 35,  // v7.11.7: Romantik-Climax mit Tagwechsel
   ROMANTIK: 30,
   SCHLAFEN: 20,
 };
@@ -9254,6 +9298,21 @@ function applyCategoryMechanics(kategorie, ctx) {
       result.pushMessages.push('ROMANTIK-MOMENT: Karl wagt eine Annaeherung an die ROMANCE-Person AM AKTUELLEN ORT. Beschreibe einen intimen Moment - Blick, Beruehrung, eine Geste, ein Satz mit Untertext, vielleicht ein Kuss. Was passiert haengt vom aktuellen Romance-Tension-Stand ab: Tension 1-2 = vorsichtige Annaeherung, Tension 3 = klarer Funke, Tension 4-5 = Karl nimmt einen entscheidenden Schritt. KEINE explizite Sex-Szene - 1953 Film-noir-Stil, Andeutung statt Schauen.');
       break;
 
+    case 'UEBERNACHTUNG':
+      // v7.11.7: Romantik-Climax mit Tagwechsel. Karl verbringt die Nacht
+      // bei der ROMANCE-Person, wacht am naechsten Morgen bei ihr auf, dann
+      // weiter ermittelnd. Wie SCHLAFEN aber mit ROMANCE-Wendung.
+      // Mechanik: Vf+1 (Karl ist ausgeruht und versorgt), Sp-3 (totale Beruhigung),
+      // En+30 (Erholung), Romantik-Tension wird nicht weiter erhoeht (Climax
+      // ist erreicht), Tagwechsel garantiert.
+      result.vfDelta = 1;
+      result.spannungDelta = -3;
+      result.energieDelta = 80; // wird auf 100 gecapped
+      result.timeAdvanceBonus = 99; // wie SCHLAFEN: erzwingt Tageswechsel
+      result.triggerSchlaf = true; // gleicher Mechanismus wie SCHLAFEN
+      result.pushMessages.push('UEBERNACHTUNG-MIT-ROMANCE: Karl verbringt die Nacht bei der ROMANCE-Person AM AKTUELLEN ORT (Wohnung der Frau, oder wo sie sich gerade befinden). Beschreibe in 2-3 Saetzen wie der Abend stilvoll endet - Marlowe-Stil, elliptisch, NICHT explizit. Tuer schliesst sich, Schnitt. Dann UEBERGANG zum naechsten Morgen: Karl wacht bei ihr auf (Kaffeegeruch, Sonnenlicht, Lippenstift-Rand auf Tasse, ein Gespraech am Fruehstueck oder kurzer Abschied). NEUE Szene ist Morgen-nach-der-Nacht: Karl ist ausgeruht, die Frau ist da oder die Wohnung ist leer und ein Zettel liegt da. Karl macht sich dann auf den Weg zur Ermittlung - keine Verzoegerung mehr im Privaten. WICHTIG: Diese Szene zeigt den Morgen DANACH, nicht den intimen Abend selbst. Romantik-Tension wurde geloest, weitere romantische Annaeherungen an dieselbe Person sind ab jetzt seltener (aber nicht ausgeschlossen).');
+      break;
+
     case 'AUFLOESEN':
       // v7.11.0: SCHLUSS-AKT. Karl berichtet der Klientin und uebergibt
       // die Beweise. Kann persoenlich, per Telefon, oder per Telegramm
@@ -9613,7 +9672,21 @@ function renderOptions(scene) {
   }
 
   // ROMANTIK-Button
-  if (romanceNpcInScene) {
+  // v7.11.8: Logik klarer:
+  // - ROMANTIK sichtbar solange Rm < 5 (Maximum nicht erreicht) UND
+  //   Klick-Counter < 3 (sie hat noch Geduld)
+  // - UEBERNACHTUNG sichtbar parallel wenn Rm >= 4 + Abend/Nacht
+  //   (Spieler kann waehlen: weiter flirten oder Nacht verbringen)
+  // - Bei Rm = 5: nur UEBERNACHTUNG (Bogen-Maximum erreicht)
+  const romCurrentTension = (typeof romanticTension === 'number') ? romanticTension : 0;
+  const showRomanceButton = romanceNpcInScene
+    && romanticClicksSinceProgress < 3
+    && romCurrentTension < 5;
+  const showOvernightButton = romanceNpcInScene
+    && isAbendOderNacht
+    && romCurrentTension >= 4;
+
+  if (showRomanceButton) {
     const romBtn = document.createElement('button');
     romBtn.className = 'option-btn option-btn-system option-btn-romance';
     romBtn.innerHTML = '<span class="option-id">♥</span><span class="option-text-wrap"><span>Näher kommen (mit ' + escapeHtml(romanceNpcInScene) + ')</span><span class="option-marker option-marker-system">→ INTIM</span></span>';
@@ -9655,6 +9728,53 @@ function renderOptions(scene) {
       chooseOption(romOpt);
     });
     list.appendChild(romBtn);
+  }
+
+  // v7.11.7: UEBERNACHTUNG-Button - bei hoher Romantik-Tension + Abend/Nacht
+  // erscheint diese Option statt "Naeher kommen". Klick fuehrt zum Tagwechsel
+  // und Karl wacht morgens bei der Frau auf.
+  if (showOvernightButton) {
+    const overnightBtn = document.createElement('button');
+    overnightBtn.className = 'option-btn option-btn-system option-btn-romance';
+    overnightBtn.innerHTML = '<span class="option-id">♥</span><span class="option-text-wrap"><span>Die Nacht bei ' + escapeHtml(romanceNpcInScene) + ' verbringen</span><span class="option-marker option-marker-system">→ MORGEN</span></span>';
+    const overnightOpt = {
+      id: 'UEBERNACHTUNG',
+      text: 'Die Nacht bei ' + romanceNpcInScene + ' verbringen',
+      kategorie: 'UEBERNACHTUNG',
+      _kategorie: 'UEBERNACHTUNG',
+      _priority: 35,
+      _isSystemButton: true,
+      _romanceNpc: romanceNpcInScene,
+    };
+    let touchStartX3 = 0, touchStartY3 = 0, touchStartTime3 = 0;
+    let touchCancelled3 = false, touchHandled3 = false;
+    const TAP_MAX_MOVE3 = 12, TAP_MAX_DURATION3 = 800;
+    overnightBtn.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1) { touchCancelled3 = true; return; }
+      touchStartX3 = e.touches[0].clientX;
+      touchStartY3 = e.touches[0].clientY;
+      touchStartTime3 = Date.now();
+      touchCancelled3 = false; touchHandled3 = false;
+    }, { passive: true });
+    overnightBtn.addEventListener('touchmove', (e) => {
+      if (touchCancelled3) return;
+      if (e.touches.length !== 1) { touchCancelled3 = true; return; }
+      const dx = Math.abs(e.touches[0].clientX - touchStartX3);
+      const dy = Math.abs(e.touches[0].clientY - touchStartY3);
+      if (dx > TAP_MAX_MOVE3 || dy > TAP_MAX_MOVE3) touchCancelled3 = true;
+    }, { passive: true });
+    overnightBtn.addEventListener('touchend', (e) => {
+      if (touchCancelled3) { e.preventDefault(); return; }
+      if (Date.now() - touchStartTime3 > TAP_MAX_DURATION3) { e.preventDefault(); return; }
+      e.preventDefault();
+      touchHandled3 = true;
+      chooseOption(overnightOpt);
+    });
+    overnightBtn.addEventListener('click', () => {
+      if (touchHandled3) { touchHandled3 = false; return; }
+      chooseOption(overnightOpt);
+    });
+    list.appendChild(overnightBtn);
   }
 
   // v7.11.0: FALL LOESEN-Button (System-Backup)
@@ -9798,16 +9918,22 @@ const MODEL_CHAIN = [
   // 2. Wenn Spieler 22s pro Szene wartet, ist Qualitaet egal
   // 3. Mistrale haben jeweils 20 RPD eigener Topf - bleiben als Fallback
   //
-  // 1. Tier: Schnelle Gemini-Modelle (Premium-Qualitaet, ~3-5s avg)
-  { provider: 'gemini', model: 'gemini-2.5-flash',       label: 'Gemini 2.5 Flash' },
-  { provider: 'gemini', model: 'gemini-3-flash-preview', label: 'Gemini 3 Flash Preview' },
-  // 2. Tier: Gemini Pro (etwas langsamer aber stabil)
-  { provider: 'gemini', model: 'gemini-2.5-pro',         label: 'Gemini 2.5 Pro' },
-  // 3. Tier: Gemini Flash-Lites (ebenfalls schnell ~4s)
+  // 1. Tier: Flash-Lite-Modelle ZUERST (schnellste + zuverlaessigste, ~5-9s avg).
+  // v7.11.7: Reihenfolge aus Run-0926-Statistik. Flash-Lites hatten beste
+  // Mischung aus Geschwindigkeit (6-9s) und Output-Qualitaet. Lite-Tier
+  // ueberraschend stabil im Output.
   { provider: 'gemini', model: 'gemini-2.5-flash-lite',  label: 'Gemini 2.5 Flash-Lite' },
   { provider: 'gemini', model: 'gemini-3.1-flash-lite',  label: 'Gemini 3.1 Flash-Lite' },
-  // 4. Tier: Mistrals NUR wenn alle Geminis ausgeschoepft (~17-22s avg)
-  // Large vor Medium weil Story-Qualitaet (kein Sz1->Sz2 Reset wie Medium)
+  // 2. Tier: Gemini 3 Flash Preview (~18s, hohe Qualitaet, klare Inline-Kategorien)
+  { provider: 'gemini', model: 'gemini-3-flash-preview', label: 'Gemini 3 Flash Preview' },
+  // 3. Tier: Gemini 2.5 Flash (variable Performance - manchmal Phrasen-Repeat
+  // in Optionen, wird durch Output-Cap in v7.11.7 abgefangen)
+  { provider: 'gemini', model: 'gemini-2.5-flash',       label: 'Gemini 2.5 Flash' },
+  // 4. Tier: Gemini Pro (langsamer, 50 RPD limit - nur wenn alles andere aus)
+  { provider: 'gemini', model: 'gemini-2.5-pro',         label: 'Gemini 2.5 Pro' },
+  // 5. Tier: Mistrals als Backup (~17-22s avg, aber zuverlaessig).
+  // v7.11.7: User-Feedback bestaetigt aelteres Lektorat - Mistral Large hat
+  // konsistent gute atmosphaerische Szenen geliefert, bleibt verlaesslich.
   { provider: 'mistral', model: 'mistral-large-latest',  label: 'Mistral Large 3' },
   { provider: 'mistral', model: 'mistral-small-latest',  label: 'Mistral Small 3.1' },
   // v7.9.42: Mistral Medium 3 ans Ende (vor Groq) - Story-Halluzinationen
@@ -9815,7 +9941,7 @@ const MODEL_CHAIN = [
   // Bleibt drin als Notnagel weil Wagner-Run v7.9.53 zeigte: trotz Sz1->Sz2
   // Reset liefert Mistral Medium funktional verwertbare Szenen.
   { provider: 'mistral', model: 'mistral-medium-latest', label: 'Mistral Medium 3' },
-  // 5. Tier: Groq-Modelle (TPM-eng, deutscher Stil meist schlechter als Gemini/Mistral)
+  // 6. Tier: Groq-Modelle (TPM-eng, deutscher Stil meist schlechter als Gemini/Mistral)
   { provider: 'groq',   model: 'llama-3.3-70b-versatile',                  label: 'Llama 3.3 70B' },
   // v7.9.39: Kimi K2 (moonshotai/kimi-k2-instruct-0905) am 23.03.2026 von Groq
   // deprecated zugunsten von openai/gpt-oss-120b. Ist seit ~26.05.2026 tot (404).
@@ -12331,12 +12457,86 @@ VERBOTEN: Karl wacht woanders auf ohne Erklaerung. Wenn du Pfad B waehlst, MUSST
   if (parsed.optionen.length > 4) {
     parsed.optionen = parsed.optionen.slice(0, 4);
   }
-  // Ensure each option has id and text
-  const validIds = ['A','B','C','D'];
-  parsed.optionen = parsed.optionen.map((o, i) => ({
-    id: o.id || validIds[i],
-    text: o.text || ''
-  }));
+
+  // v7.11.7: OUTPUT-CAP + PHRASEN-REPEAT-DETEKTOR fuer Optionen.
+  // Anlass: 0926-Run Sz 1+8 mit Gemini 2.5 Flash - Optionen A+B hatten je
+  // 600+ Woerter mit phrasalem Endlos-Loop ("Das ist alles, was zaehlt.
+  // Das ist alles, was zaehlt. Du spuerst es in den Knochen..."). Statt
+  // das Modell zu entfernen: Cap erkennt das beim Parsen und schneidet.
+  //
+  // Strategie:
+  // 1. Phrasen-Repeat erkennen (gleicher 5-Wort-Satz 2x+ in Option)
+  //    -> Option wird durch generische ersetzt (Modell ist krank)
+  // 2. Sonst: bei > 200 Zeichen am ersten Satzende abschneiden
+  // 3. Beides protokollieren fuer Modell-Statistik
+  const MAX_OPTION_LENGTH = 200;
+  const GENERIC_FALLBACKS = [
+    'Sieh dich um und nimm die Lage in dich auf.',
+    'Geh naeher heran und beobachte genau.',
+    'Frag jemanden in der Naehe nach den Hintergruenden.',
+    'Zieh dich kurz zurueck und ueberdenke das Ganze.',
+  ];
+  parsed.optionen = parsed.optionen.map((o, idx) => {
+    const validIds = ['A','B','C','D'];
+    const id = o.id || validIds[idx];
+    let text = (o.text || '').trim();
+    if (!text) return { id, text: GENERIC_FALLBACKS[idx] || 'Sieh dich erstmal um.' };
+
+    // Phrasen-Repeat-Check: zerlege in Saetze, suche nach Duplikaten
+    // (4+ Worte, mindestens 2x identisch). Bei Treffer: Option ist krank.
+    // v7.11.7 Iteration 2: Komma + Satzzeichen aus Normalisierung raus, weil
+    // KI manchmal "Das ist alles was zählt." und "Das ist alles, was zählt."
+    // direkt hintereinander schreibt - sind logisch identisch.
+    const sentences = text.split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 0);
+    if (sentences.length >= 6) {
+      // Mehr als 6 Saetze in einer Option -> verdaechtig
+      const sentMap = new Map();
+      for (const s of sentences) {
+        const normalized = s.toLowerCase()
+          .replace(/[,;:'"„""()\-–—]/g, ' ')  // Satzzeichen raus
+          .replace(/\s+/g, ' ')
+          .trim();
+        if (normalized.split(/\s+/).length < 4) continue; // zu kurze Saetze ignorieren
+        sentMap.set(normalized, (sentMap.get(normalized) || 0) + 1);
+      }
+      const repeats = [...sentMap.values()].filter(c => c >= 2).length;
+      if (repeats >= 1) {
+        // Mindestens ein Satz wurde wiederholt UND Option hat 6+ Saetze
+        // -> Modell hat Repeat-Crashout. Diag-Log + Generic Fallback.
+        if (typeof diag === 'function') {
+          diag('cap', 'Option ' + id + ' hatte Phrasen-Repeat (' + sentences.length + ' Saetze, ' + repeats + ' Wiederholung) - ersetzt durch generische');
+        }
+        console.warn('[Schatten] v7.11.7 Phrasen-Repeat in Option', id, '- Modell-Crashout abgefangen');
+        return { id, text: GENERIC_FALLBACKS[idx] || 'Sieh dich erstmal um.' };
+      }
+    }
+
+    // Laengen-Cap: bei > 200 Zeichen am ersten Satzende cutten
+    if (text.length > MAX_OPTION_LENGTH) {
+      // Erste Satzende-Position suchen (. ! ?)
+      const firstSentenceEnd = text.search(/[.!?]/);
+      if (firstSentenceEnd > 30 && firstSentenceEnd < MAX_OPTION_LENGTH * 1.5) {
+        // Schoenes Satzende vorhanden -> da abschneiden
+        text = text.substring(0, firstSentenceEnd + 1).trim();
+      } else {
+        // Kein gutes Satzende -> hard cut bei MAX_OPTION_LENGTH + ...
+        text = text.substring(0, MAX_OPTION_LENGTH).trim();
+        // Letztes Wort entfernen falls abgeschnitten
+        const lastSpace = text.lastIndexOf(' ');
+        if (lastSpace > MAX_OPTION_LENGTH * 0.7) {
+          text = text.substring(0, lastSpace) + '...';
+        } else {
+          text = text + '...';
+        }
+      }
+      if (typeof diag === 'function') {
+        diag('cap', 'Option ' + id + ' Laenge gekuerzt (' + (o.text || '').length + ' -> ' + text.length + ' Zeichen)');
+      }
+      console.log('[Schatten] v7.11.7 Option', id, 'gekuerzt von', (o.text || '').length, 'auf', text.length, 'Zeichen');
+    }
+
+    return { id, text };
+  });
 
   // Defensive cleanup: strip em/en dashes. Name removal is left to the prompt;
   // doing it client-side either mangles conjugations or breaks dialog quotes,
@@ -12835,6 +13035,9 @@ async function startGame() {
   chooseOptionInFlight = false;
   // v7.11.4: Heilungs-Cooldown reset
   lastHealedSceneCounter = -999;
+  // v7.11.7: Romantik-Klick-Tracking reset
+  romanticClicksSinceProgress = 0;
+  lastRomanceNpcName = '';
   // Reset Klient-Profil (wird beim ersten Cast-Add gesetzt)
   clientProfile = {
     name: '',
@@ -14776,6 +14979,40 @@ async function chooseOption(option) {
     pendingSleepChoice = true;
     console.log('[Schatten v7.10.1] SCHLAFEN gewaehlt - pendingSleepChoice=true (Tageswechsel garantiert)');
   }
+  // v7.11.7: UEBERNACHTUNG nutzt denselben Mechanismus wie SCHLAFEN - Tagwechsel
+  // ist garantiert. Unterschied: Karl wacht bei der ROMANCE-Person auf.
+  if (chosenKategorie === 'UEBERNACHTUNG') {
+    pendingSleepChoice = true;
+    console.log('[Schatten v7.11.8] UEBERNACHTUNG gewaehlt - pendingSleepChoice=true (Tageswechsel garantiert, bei ROMANCE-NPC)');
+  }
+
+  // v7.11.7: ROMANTIK-KLICK-COUNTER
+  // - Bei ROMANTIK: counter++ und Name merken (falls Frau wechselt -> reset)
+  // - Bei UEBERNACHTUNG (echter Progress) -> counter zuruecksetzen
+  // - Bei anderer Kategorie -> counter zuruecksetzen (Karl wechselt Thema)
+  if (chosenKategorie === 'ROMANTIK') {
+    const npcName = (option && option._romanceNpc) || '';
+    if (npcName && npcName !== lastRomanceNpcName) {
+      // Neue Frau -> Counter resetten
+      romanticClicksSinceProgress = 0;
+      lastRomanceNpcName = npcName;
+    }
+    romanticClicksSinceProgress++;
+    console.log('[Schatten v7.11.8] ROMANTIK-Klick #' + romanticClicksSinceProgress + ' mit ' + (npcName || '?'));
+    if (typeof diag === 'function') {
+      diag('detect', 'Romantik-Klick ' + romanticClicksSinceProgress + '/3 mit ' + (npcName || '?'));
+    }
+  } else if (chosenKategorie === 'UEBERNACHTUNG') {
+    // Echter Progress - Counter zuruecksetzen
+    romanticClicksSinceProgress = 0;
+    if (typeof diag === 'function') {
+      diag('state', 'Uebernachtung gewaehlt - Romantik-Counter reset');
+    }
+  } else if (chosenKategorie !== 'normal' && lastRomanceNpcName) {
+    // Karl wechselt Thema (waehlt andere Kategorie) -> Counter reset
+    romanticClicksSinceProgress = 0;
+    lastRomanceNpcName = '';
+  }
 
   // Kategorie-Streak tracken (fuer ERKUNDEN-Bonus / OFFENSIV-Todes-Trigger)
   if (chosenKategorie === lastChosenKategorie) {
@@ -14951,12 +15188,17 @@ async function chooseOption(option) {
 
   // v7.11.0: AUFLOESEN bekommt eine eigene userMsg die der KI klar sagt was zu
   // tun ist - die naechste Szene MUSS die finale Klient-Berichts-Szene werden.
+  // v7.11.7: UEBERNACHTUNG bekommt auch eigene userMsg - die naechste Szene
+  // MUSS am Morgen DANACH spielen, bei der ROMANCE-Person aufgewacht.
   const isAufloesen = (chosenKategorie === 'AUFLOESEN');
+  const isUebernachtung = (chosenKategorie === 'UEBERNACHTUNG');
   const userMsg = isAufloesen
     ? `Der Spieler wählt Option ${option.id}: "${option.text}". WICHTIG: Karl entscheidet jetzt aktiv den Fall ABZUSCHLIESSEN. Die nächste Szene MUSS die finale Berichts-Szene mit der Klientin sein - persönlich, per Telefon, per Telegramm oder per Bote, je nachdem was am aktuellen Ort plausibel ist. Beschreibe die Reaktion der Klientin (Erleichterung/Trauer/Wut/Dank je nach Charakter und Ergebnis). Setze "klient_berichtet": true im JSON. Halte die Szene ruhig und stilvoll - Film-noir-Ende, keine Action, keine neuen Indizien. Liefere die nächste Szene als JSON.`
-    : (isPhysical
-      ? `Der Spieler wählt Option ${option.id}: "${option.text}". WICHTIG: Dies ist eine direkte physische Aktion. Die nächste Szene MUSS die UNMITTELBARE Konsequenz in derselben Situation erzählen (Reaktion der Gegenüber, körperlicher Schmerz, Eskalation oder Folgen). KEIN Zeitsprung, KEIN Ortswechsel, KEINE Übergangsformulierung wie "später" oder "am nächsten Morgen". Liefere die nächste Szene als JSON.`
-      : `Der Spieler wählt Option ${option.id}: "${option.text}". Führe die Konsequenzen aus und liefere die nächste Szene als JSON.`);
+    : (isUebernachtung
+      ? `Der Spieler wählt UEBERNACHTUNG mit ${option._romanceNpc || 'der ROMANCE-Person'}: "${option.text}". WICHTIG: Die Nacht ist romantisch und intim - aber beschreibe das nur stilvoll und elliptisch (1-2 Sätze, Marlowe-Stil, keine expliziten Beschreibungen). Dann ZEITSPRUNG zum NÄCHSTEN MORGEN. Die nächste Szene MUSS am Morgen danach spielen: Karl wacht in der Wohnung von ${option._romanceNpc || 'ihr'} auf. Beschreibe Atmosphäre (Kaffeegeruch, Sonnenlicht, Lippenstift-Rand, Zigarettenrest im Aschenbecher, ein Zettel, ein Frühstück). Karl ist ausgeruht und versorgt. Die Szene endet damit dass Karl sich auf den Weg zur Ermittlung macht - die Optionen sind dann normale ERKUNDEN/BEOBACHTEN/OFFENSIV-Aktionen zum Fall, KEINE weitere Romantik (die ist erstmal abgeschlossen). Liefere die nächste Szene als JSON.`
+      : (isPhysical
+        ? `Der Spieler wählt Option ${option.id}: "${option.text}". WICHTIG: Dies ist eine direkte physische Aktion. Die nächste Szene MUSS die UNMITTELBARE Konsequenz in derselben Situation erzählen (Reaktion der Gegenüber, körperlicher Schmerz, Eskalation oder Folgen). KEIN Zeitsprung, KEIN Ortswechsel, KEINE Übergangsformulierung wie "später" oder "am nächsten Morgen". Liefere die nächste Szene als JSON.`
+        : `Der Spieler wählt Option ${option.id}: "${option.text}". Führe die Konsequenzen aus und liefere die nächste Szene als JSON.`));
   lastUserMessage = userMsg;
 
   await performApiCall(userMsg, /*isStart*/false, option);
