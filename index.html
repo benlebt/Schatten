@@ -2469,7 +2469,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.11.57</div>
+    <div class="start-version">Schatten v7.11.59</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2547,7 +2547,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.11.57</span>
+    <span>Schatten v7.11.59</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4943,7 +4943,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.11.57';
+window.SCHATTEN_VERSION = 'v7.11.59';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5550,7 +5550,7 @@ function toggleGeminiOnly(event) {
   syncGeminiOnlySwitch();
   if (typeof updateFooterModel === 'function') updateFooterModel();
   if (typeof updateProviderInfo === 'function') updateProviderInfo();
-  console.log('[Schatten v7.11.57] Gemini-Only-Modus:', window.geminiOnlyMode ? 'AN' : 'AUS');
+  console.log('[Schatten v7.11.59] Gemini-Only-Modus:', window.geminiOnlyMode ? 'AN' : 'AUS');
 }
 
 function syncGeminiOnlySwitch() {
@@ -8175,7 +8175,8 @@ function showHeader(scene) {
     const stage3ScenesUI = caseProgress.stage3StartScene
       ? (sceneCounter - caseProgress.stage3StartScene) : 0;
     const indCntUI = (caseProgress.indizien || []).length;
-    const resolveReady = !isSolved && reachedStage >= 3 && stage3ScenesUI >= 3 && indCntUI >= 10;
+    // v7.11.59: Schwelle synchron mit FALL LÖSEN-Button (Z.10974): Stage 3 + 8 Ind.
+    const resolveReady = !isSolved && reachedStage >= 3 && indCntUI >= 8;
     segments.forEach(seg => {
       seg.classList.remove('reached', 'solved', 'ready');
       const segStage = parseInt(seg.getAttribute('data-stage'), 10);
@@ -10365,7 +10366,7 @@ function renderOptions(scene) {
     && !karlInStasiCustody
     && (gameTimeIdx === 4 || gameTimeIdx === 5));  // nur ABEND oder NACHT
   if (forceSleepMode) {
-    console.log('[Schatten v7.11.57] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.11.59] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -10961,22 +10962,15 @@ function renderOptions(scene) {
   const stage3Scenes = caseProgress.stage3StartScene
     ? (sceneCounter - caseProgress.stage3StartScene)
     : 0;
-  // v7.11.44: Bedingungen aufgeteilt: "GRUND-Voraussetzungen erfuellt" (Stufe/
-  // Indizien-Reife) vs "JETZT-Voraussetzungen" (Sp/Custody/Vf - situativ).
-  // Sobald GRUND-Voraussetzungen einmal erfuellt sind, bleibt der Button
-  // sichtbar - bei verletzten JETZT-Voraussetzungen wird er ausgegraut + zeigt
-  // Sperr-Grund. Spieler weiss dann: Button ist da, aber jetzt grad blockiert.
-  // v7.11.45: Schwellen verschaerft: 3 Sz in Stage 3 + 10 Indizien.
-  // v7.11.57: User-Feedback Vogt 2216: FALL LÖSEN war nie verfuegbar trotz
-  // Stage 3 + 14 Indizien (resolveEverReady wurde nie gesetzt). Stage 3 wird
-  // oft erst spaet erreicht (z.B. nach NOTFLUCHT-Force), und "3 Sz in Stage 3"
-  // hinzufuegen ist dann nochmal Verzoegerung. Schwelle: 1 Sz in Stage 3
-  // reicht. Indizien-Mindest auf 8 reduziert (Karl muss nicht 10 sammeln
-  // wenn er den Fall gerade narrative aufgeklaert hat).
+  // v7.11.45/57/59: Schwellen-Historie. v7.11.45: 3 Sz Stage 3 + 10 Ind.
+  // v7.11.57: 1 Sz Stage 3 + 8 Ind. v7.11.59: stage3Scenes-Check entfernt -
+  // sobald Stage 3 erreicht ist UND 8 Indizien gesammelt sind, soll der
+  // Button da sein. User-Wunsch: "wenn einmal fall loesen auftaucht dann
+  // muss es stehen bleiben". Stage 3 selbst ist die Bedingung, nicht "X Sz
+  // danach gewartet".
   const resolveCoreReady =
     !hasAufloesenOption &&
     currentStage >= 3 &&
-    stage3Scenes >= 1 &&
     indizCount >= 8;
   // Persistent merken: war Resolve mal verfuegbar? Wenn ja, bleibt der Button.
   if (resolveCoreReady) {
@@ -16429,6 +16423,22 @@ async function chooseOption(option) {
       caseProgress.stage = progress.newStage;
       if (progress.newStage === 2) scenesInStage2 = 0;
       if (progress.newStage === 3) scenesInStage3 = 0;
+      // v7.11.59: KRITISCHER FIX. stage2StartScene + stage3StartScene wurden
+      // hier NICHT gesetzt (nur in applyScene-Pfaden). User-Run Vogt 2240:
+      // Stage 3 wurde via Kategorie-Trigger (OFFENSIV+tatverdaechtiger known)
+      // erreicht in Sz 13 -> Toast "Konfrontation" -> caseProgress.stage = 3
+      // -> aber stage3StartScene blieb null. In renderOptions: stage3Scenes
+      // fiel auf 0 zurueck (fallback), resolveCoreReady brauchte >=3 (jetzt
+      // >=1) Szenen -> FALL LÖSEN-Button erschien NIE trotz Stage 3.
+      // Jetzt: Start-Scene mit erfassen wenn Stage 2 oder 3 ueber diesen Pfad
+      // erreicht wird.
+      if (progress.newStage === 2 && !caseProgress.stage2StartScene) {
+        caseProgress.stage2StartScene = sceneCounter;
+        caseProgress.stage2StartDay = gameDay;
+      }
+      if (progress.newStage === 3 && !caseProgress.stage3StartScene) {
+        caseProgress.stage3StartScene = sceneCounter;
+      }
       // v7.11.0: Bei Stage 4 (durch AUFLOESEN) auch die anderen Fall-Flags setzen
       // damit der End-Screen sauber laeuft. Bei frueher AUFLOESEN-Wahl (Stage<3)
       // ueberfuehrt NICHT setzen - das ist Signal fuer "earlyAbort" im End-Screen.
@@ -16580,7 +16590,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.11.57] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.11.59] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -17588,7 +17598,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.11.57] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.11.59] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -19925,6 +19935,26 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           console.log('[Schatten] Tatverdaechtiger genannt, aber zu frueh fuer Stage 2 (erst Indizien sammeln).');
           diag('filter', 'Tatverdaechtiger zu frueh genannt, Stage-Aufstieg blockiert');
         }
+      }
+    }
+    // v7.11.58: RETRY-PFAD. User-Run Vogt 2240: tatverdaechtiger (Pieck) wurde
+    // in Sz 12 gesetzt, aber stage2FloorOk verfehlt (Tag 1). Stage blieb 1.
+    // Im naechsten Frame: tatverdaechtiger != null, daher gesamter Stage-2-
+    // Auto-Force-Block (Z.19123) wird uebersprungen (Bedingung
+    // !caseProgress.tatverdaechtiger). Resultat: Stage 2 wurde NIE erreicht,
+    // 70 Sz lang in Stage 1 - FALL LÖSEN nie verfuegbar.
+    // Fix: Wenn tatverdaechtiger schon gesetzt UND Stage immer noch 1 UND
+    // Floor jetzt erfuellt: Stage 2 hochsetzen.
+    if (caseProgress.stage === 1 && caseProgress.tatverdaechtiger) {
+      const indCountRetry = (caseProgress.indizien || []).length;
+      const floorRetryOk = (sceneCounter >= 8) && (indCountRetry >= 8) && (gameDay >= 2);
+      if (floorRetryOk) {
+        caseProgress.stage = 2;
+        caseProgress.stage2StartDay = gameDay;
+        caseProgress.stage2StartScene = sceneCounter;
+        console.log('[Schatten v7.11.59] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
+        showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
     }
     // 3) Tatverdaechtiger ueberfuehrt - Voraussetzung Stage 2 + Mindestlaufzeit
