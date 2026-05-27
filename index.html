@@ -2326,6 +2326,10 @@
         <span class="status-popup-label">Im Raum</span>
         <span class="status-popup-value" id="popup-cast">—</span>
       </div>
+      <div class="status-popup-row status-popup-row-block" id="popup-characters-row" style="display:none;">
+        <span class="status-popup-label">Personen</span>
+        <span class="status-popup-value" id="popup-characters">—</span>
+      </div>
       <div class="status-popup-row status-popup-row-block" id="popup-case-row" style="display:none;">
         <span class="status-popup-label">Fall</span>
         <span class="status-popup-value" id="popup-case">—</span>
@@ -2353,7 +2357,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.11.41</div>
+    <div class="start-version">Schatten v7.11.42</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2431,7 +2435,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.11.41</span>
+    <span>Schatten v7.11.42</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4827,7 +4831,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.11.41';
+window.SCHATTEN_VERSION = 'v7.11.42';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5405,7 +5409,7 @@ function toggleGeminiOnly(event) {
   syncGeminiOnlySwitch();
   if (typeof updateFooterModel === 'function') updateFooterModel();
   if (typeof updateProviderInfo === 'function') updateProviderInfo();
-  console.log('[Schatten v7.11.41] Gemini-Only-Modus:', window.geminiOnlyMode ? 'AN' : 'AUS');
+  console.log('[Schatten v7.11.42] Gemini-Only-Modus:', window.geminiOnlyMode ? 'AN' : 'AUS');
 }
 
 function syncGeminiOnlySwitch() {
@@ -8173,6 +8177,76 @@ function showStatusDetails() {
   } else {
     castRow.style.display = 'none';
   }
+  // v7.11.42: Charakter-Übersicht ALLER getroffenen Personen im Fall.
+  // Spieler-Wunsch: "wenn Bruno Schäfer auf einmal auftaucht, dann steht er als
+  // Person oben drin in aktueller Stand...mit Name und in Klammern dahinter
+  // welche Rolle er hat". Quelle: storyFacts (alle eingefrorenen NPCs) +
+  // caseSetup.setupCast (alle vorgesehenen Rollen).
+  // Tag-Bezeichnungen neutral und nicht-sexistisch.
+  const charsRow = document.getElementById('popup-characters-row');
+  const charsEl = document.getElementById('popup-characters');
+  if (charsRow && charsEl) {
+    const ROLE_LABELS = {
+      CLIENT: 'Klient',
+      TARGET: 'Zielperson',
+      SUSPECT: 'Verdächtige/r',
+      ROMANCE: 'Vertraute',
+      STASI: 'Stasi',
+      INFORMANT: 'Informant',
+      MYSTERY: 'Mysteriös',
+      ANTAGONIST: 'Gegenspieler',
+      GANGSTER: 'Gangster',
+      AUTHORITY: 'Autorität',
+    };
+    // Setup-Cast als Basis (NPCs die definiert sind, aber evtl. noch nicht
+    // im Spiel aufgetaucht)
+    const knownChars = {};
+    if (caseSetup && Array.isArray(caseSetup.setupCast)) {
+      for (const sc of caseSetup.setupCast) {
+        if (!sc || !sc.name) continue;
+        knownChars[sc.name.toLowerCase()] = {
+          name: sc.name,
+          tag: sc.tag || '',
+          fromSetup: true,
+          encountered: false,
+        };
+      }
+    }
+    // Alle NPCs aus storyFacts (= sind in Sznen aufgetaucht) markieren als 'encountered'
+    if (typeof storyFacts === 'object' && storyFacts) {
+      for (const k in storyFacts) {
+        const f = storyFacts[k];
+        if (!f || !f.name) continue;
+        const lower = f.name.toLowerCase();
+        if (knownChars[lower]) {
+          knownChars[lower].encountered = true;
+          knownChars[lower].rolle = f.rolle;
+          knownChars[lower].beziehung = f.beziehung;
+        } else {
+          // Spontaner NPC der nicht im Setup war (z.B. von KI eingeführt)
+          knownChars[lower] = {
+            name: f.name,
+            tag: '',
+            rolle: f.rolle || '',
+            beziehung: f.beziehung || '',
+            fromSetup: false,
+            encountered: true,
+          };
+        }
+      }
+    }
+    // Filter: nur Charaktere die AUFGETAUCHT sind (encountered=true)
+    const visible = Object.values(knownChars).filter(c => c.encountered);
+    if (visible.length > 0) {
+      charsEl.textContent = visible.map(c => {
+        const tagLabel = ROLE_LABELS[c.tag] || c.rolle || 'Person';
+        return '· ' + c.name + ' (' + tagLabel + ')';
+      }).join('\n');
+      charsRow.style.display = '';
+    } else {
+      charsRow.style.display = 'none';
+    }
+  }
   // Fall-Fortschritt
   const caseRow = document.getElementById('popup-case-row');
   const caseEl = document.getElementById('popup-case');
@@ -9337,6 +9411,18 @@ function classifyOption(opt, resolveContext) {
       break;
     }
   }
+  // v7.11.42: NAKED-Suffix-Pattern. Wegener-Run v7.11.41 zeigte Gemini schreibt:
+  // "Stürme in die Passage und stell ihn vor der Bahn. Stellen, OFFENSIV."
+  // -> Suffix ohne Klammer, ohne "Kategorie:"-Prefix. Vorher nicht erkannt.
+  // Regex matched: Komma/Punkt/Whitespace + KATEGORIE + optionaler Punkt am Ende.
+  // Wir scannen am Textende.
+  const nakedSuffixRe = /[\s,.]+(OFFENSIV|DEFENSIV|ERKUNDEN|BEOBACHTEN|HEILEN|AUFLOESEN|SCHLAFEN|ROMANTIK)\s*\.?\s*$/i;
+  const nakedMatch = opt.text.match(nakedSuffixRe);
+  if (!inlineCat && nakedMatch) {
+    inlineCat = nakedMatch[1].toUpperCase();
+    inlineSource = 'naked-suffix';
+  }
+
   // 2. v7.11.1: Wenn keine direkte Klammer, ABER Prompt-Bleed-Pattern -> nehmen.
   // Prompt-Bleed hat Vorrang vor deutscher Klammer-Heuristik, weil die KI hier
   // ihre Absicht EXPLIZIT macht ("Kategorie: OFFENSIV"). Deutsche Klammern
@@ -9383,6 +9469,8 @@ function classifyOption(opt, resolveContext) {
     opt.text = opt.text.replace(/\s*\((?:Heilung|Heilen|Genesung|Behandlung|Verarztung|Wundversorgung|Versorgung|Arzt|Medizin|Offensiv|Angriff|Konfrontation|Aggression|Defensiv|Verteidigung|Rueckzug|R\u00fcckzug|Deeskalation|Erkunden|Erkundung|Suche|Recherche|Bewegung|Beobachten|Beobachtung|Information|Befragung|Aufloesen|Aufl\u00f6sen|Aufloesung|Aufl\u00f6sung|Abschluss|Fallabschluss)[^)]*\)\.?/gi, ' ');
     // Entferne das "Eine Kategorie[-ID]: X[.]" Pattern (auch ohne "Eine")
     opt.text = opt.text.replace(/\s*(?:[Ee]ine\s+)?[Kk]ategorie(?:-ID)?(?:\s+ist\s+obligatorisch)?\s*:\s*(?:OFFENSIV|DEFENSIV|ERKUNDEN|BEOBACHTEN|HEILEN|AUFLOESEN|SCHLAFEN|ROMANTIK)\.?/gi, '');
+    // v7.11.42: Naked-Suffix am Ende entfernen ", OFFENSIV." oder ". DEFENSIV."
+    opt.text = opt.text.replace(/[\s,.]+(?:OFFENSIV|DEFENSIV|ERKUNDEN|BEOBACHTEN|HEILEN|AUFLOESEN|SCHLAFEN|ROMANTIK)\s*\.?\s*$/i, '');
     // Mehrfach-Whitespace + nachhaengende Satzzeichen aufraeumen
     opt.text = opt.text.replace(/\s+/g, ' ').replace(/\s+([.!?,])/g, '$1').trim();
     // Falls am Ende kein Satzzeichen mehr ist, Punkt anhaengen
@@ -9939,7 +10027,7 @@ function renderOptions(scene) {
     && !karlInStasiCustody
     && (gameTimeIdx === 4 || gameTimeIdx === 5));  // nur ABEND oder NACHT
   if (forceSleepMode) {
-    console.log('[Schatten v7.11.41] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.11.42] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -16036,7 +16124,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.11.41] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.11.42] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
