@@ -2469,7 +2469,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.11.59</div>
+    <div class="start-version">Schatten v7.11.60</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2547,7 +2547,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.11.59</span>
+    <span>Schatten v7.11.60</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4943,7 +4943,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.11.59';
+window.SCHATTEN_VERSION = 'v7.11.60';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5550,7 +5550,7 @@ function toggleGeminiOnly(event) {
   syncGeminiOnlySwitch();
   if (typeof updateFooterModel === 'function') updateFooterModel();
   if (typeof updateProviderInfo === 'function') updateProviderInfo();
-  console.log('[Schatten v7.11.59] Gemini-Only-Modus:', window.geminiOnlyMode ? 'AN' : 'AUS');
+  console.log('[Schatten v7.11.60] Gemini-Only-Modus:', window.geminiOnlyMode ? 'AN' : 'AUS');
 }
 
 function syncGeminiOnlySwitch() {
@@ -10366,7 +10366,7 @@ function renderOptions(scene) {
     && !karlInStasiCustody
     && (gameTimeIdx === 4 || gameTimeIdx === 5));  // nur ABEND oder NACHT
   if (forceSleepMode) {
-    console.log('[Schatten v7.11.59] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.11.60] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -16590,7 +16590,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.11.59] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.11.60] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -17598,7 +17598,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.11.59] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.11.60] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -19952,7 +19952,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.11.59] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.11.60] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
@@ -20202,7 +20202,8 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       }
 
       // Meta-Custody-Wuerfel: Wahrscheinlichkeit basiert auf Risk-Counter
-      if (!karlInStasiCustody && stasiRiskCounter >= 1) {
+      // v7.11.60: Bei Custody-Lock keinen Wuerfel mehr werfen (Pingpong-Schutz).
+      if (!karlInStasiCustody && stasiRiskCounter >= 1 && !custodyLocked) {
         const custodyChance = stasiRiskCounter === 1 ? 0.10 :
                               stasiRiskCounter === 2 ? 0.25 :
                               0.50;
@@ -20215,6 +20216,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           metaCustodyGracePeriod = 3;  // v7.11.16: 3 Sz Schonfrist beim Folter-Sanity
           console.log('[Schatten v7.11.13] META-CUSTODY ausgelöst (Risk ' + (riskPrev + 1) + ', Chance ' + Math.round(custodyChance * 100) + '%, Roll ' + roll.toFixed(2) + ')');
           diag('detect', '⚠ META-CUSTODY: Karl wird verhaftet (Risk ' + (riskPrev + 1) + ' = ' + Math.round(custodyChance * 100) + '% Chance, Roll ' + roll.toFixed(2) + ')');
+          if (typeof trackCustodyChange === 'function') trackCustodyChange('meta-custody');
           // Push-Message an KI fuer naechste Szene: Custody-Eintritt
           if (Array.isArray(pendingCategoryMessages)) {
             pendingCategoryMessages.push('META-CUSTODY-EINTRITT: Karl wird JETZT von der Stasi verhaftet. Beschreibe in der naechsten Szene die Festnahme - ein Stasi-Beamter (der schon in der Szene war) gibt das Zeichen, weitere Beamte stuermen rein oder kommen aus dem Hinterzimmer, Karl wird gefesselt und abgefuehrt. Naechste Szene: Karl waeht in einer Zelle (Hohenschoenhausen, Genslerstrasse, oder andere MfS-Haftanstalt) auf - kalte Pritsche, vergittertes Fenster oder Gluehbirne, Stille. Karl bleibt jetzt in Custody bis er DEFENSIV durchhaelt + Schlaf-Button waehlt (= Freilassung am Morgen) oder NOTFLUCHT klickt (= 30% Erfolgschance).');
@@ -20302,12 +20304,22 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       } else if (isClientPrivateLoc && clientPresent && !mfsActorPresent && !karlActuallyHeld) {
         // v6.97: Karl in Klient-Privatraum ohne MfS-Akteur und ohne echten Festnahme-Marker.
         diag('detect', 'Custody-Trigger im Klient-Privatraum unterdrueckt (' + (clientProfile.name || 'Klient') + ' anwesend, kein MfS-Akteur)');
+      } else if (custodyLocked) {
+        // v7.11.60: Custody-Lock aktiv (2+ Wechsel) - Auto-Custody-Detection
+        // im Text wird unterdrueckt. Verhindert Yo-Yo wenn KI noch eine
+        // Festnahme-Szene narrativ liefert obwohl Karl gerade freigekommen ist.
+        diag('detect', 'Custody-Trigger via Text UNTERDRUECKT - Custody-Lock aktiv (' + custodySwitchCount + ' Wechsel)');
+        if (stasiTension > 2) {
+          stasiTension = 2;
+          diag('state', 'Stasi-Tension auf 2 reduziert wegen Custody-Lock (Pingpong-Pause)');
+        }
       } else {
         karlInStasiCustody = true;
         folterSceneCount = 0;
         stasiHighTensionStreak = 0;
         console.log('[Schatten] Karl in Stasi-Gewahrsam. Folter-Wuerfel ab Szene 2 aktiv.');
         diag('detect', 'Karl in Stasi-Gewahrsam - Folter-Wuerfel aktiv ab Szene 2 (politischer Fall + Stasi-Praesenz bestaetigt)');
+        if (typeof trackCustodyChange === 'function') trackCustodyChange('text-detected-custody');
       }
     } else if (karlInStasiCustody && detectStasiRelease(scene.szene || '')) {
       // v7.11.45: Wenn Custody schon gelockt war (>=3 Wechsel), erlauben wir
@@ -20359,18 +20371,35 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         // greift, ist es ehrlicher den Diag-Event zu machen als chaotisch
         // den State zu manipulieren.
         // v7.9.57: Schwelle 4 -> 6 fuer Spieler-Chance.
-        if (stasiHighTensionStreak >= 6 && !hardForcedArrestUsed) {
+        // v7.11.60: custodyLocked muss respektiert werden. User-Run Vogt 2300:
+        // 3x System-Force-Custody trotz 8 Custody-Wechsel-Yo-Yo. Der Lock greift
+        // nur in der HARD-FORCE-Pfad und im 3+Sz-Auto-Release, NICHT hier in
+        // der System-Force. Folge: Karl kam aus Custody raus -> Tension blieb
+        // hoch (Stasi sucht) -> stasiHighTensionStreak >= 6 -> System-Force
+        // setzt karlInStasiCustody=true OHNE Lock-Check -> Yo-Yo.
+        // Plus: trackCustodyChange explizit aufrufen damit der Wechsel registriert
+        // wird (sonst sieht nur showHeader den finalen Zustand).
+        if (stasiHighTensionStreak >= 6 && !hardForcedArrestUsed && !custodyLocked) {
           console.warn('[Schatten] Mistral hat Custody-Push 6x ignoriert - setze karlInStasiCustody=true systemseitig');
           diag('state', 'System-Force-Custody: Mistral hat ' + stasiHighTensionStreak + ' Pushes ignoriert, Custody-Status systemseitig gesetzt');
           karlInStasiCustody = true;
           folterSceneCount = 0;
           stasiHighTensionStreak = 0;
           caseProgress.forceCustodyNextScene = true; // bleibt - Recap muss Festnahme erzaehlen
-        } else if (stasiHighTensionStreak >= 6 && hardForcedArrestUsed) {
-          // HARD-FORCE wurde schon verwendet - kein zweiter System-Override.
-          // Nur Diag-Event damit der Bug sichtbar bleibt.
-          diag('drift', 'Stasi-Tension auf 4+ fuer ' + stasiHighTensionStreak + ' Szenen, HARD-FORCE bereits verbraucht - keine weitere System-Force (Pingpong-Schutz)');
+          if (typeof trackCustodyChange === 'function') trackCustodyChange('system-force-custody');
+        } else if (stasiHighTensionStreak >= 6 && (hardForcedArrestUsed || custodyLocked)) {
+          // HARD-FORCE wurde schon verwendet ODER Custody-Lock aktiv - kein zweiter
+          // System-Override. Nur Diag-Event damit der Bug sichtbar bleibt.
+          const reason = custodyLocked ? 'Custody-Lock aktiv (' + custodySwitchCount + ' Wechsel)' : 'HARD-FORCE bereits verbraucht';
+          diag('drift', 'Stasi-Tension auf 4+ fuer ' + stasiHighTensionStreak + ' Szenen, ' + reason + ' - keine weitere System-Force (Pingpong-Schutz)');
           stasiHighTensionStreak = 0;  // reset damit Diag nicht jede Szene feuert
+          // v7.11.60: Wenn Lock aktiv ist, auch Stasi-Tension senken damit das System
+          // sich beruhigt statt jede 6 Sz neu zu kochen.
+          if (custodyLocked && stasiTension > 2) {
+            const prevT = stasiTension;
+            stasiTension = 2;
+            diag('state', 'Stasi-Tension Reset wegen Custody-Lock: ' + prevT + ' -> 2 (Pingpong-Pause)');
+          }
         }
       } else {
         stasiHighTensionStreak = 0;
