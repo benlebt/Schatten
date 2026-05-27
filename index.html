@@ -516,6 +516,80 @@
   .status-popup-export:hover {
     background: rgba(140,180,140,0.08);
   }
+  /* v7.11.44: Klickbare Personen-Eintraege im Status-Popup */
+  .char-link {
+    cursor: pointer;
+    border-bottom: 1px dotted rgba(200,191,168,0.3);
+    transition: color 0.15s ease, border-color 0.15s ease;
+  }
+  .char-link:hover {
+    color: var(--fg-bright);
+    border-bottom-color: rgba(200,191,168,0.7);
+  }
+  .char-tag {
+    opacity: 0.7;
+    font-size: 0.92em;
+  }
+  /* v7.11.44: Charakter-Detail-Popup. Ueberlagert Status-Popup. */
+  .char-detail-popup {
+    position: fixed;
+    inset: 0;
+    background: rgba(8,10,14,0.88);
+    z-index: 250;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+  }
+  .char-detail-popup.hidden {
+    display: none;
+  }
+  .char-detail-inner {
+    background: linear-gradient(180deg, rgba(28,30,36,0.98), rgba(18,20,26,0.98));
+    border: 1px solid rgba(200,191,168,0.35);
+    border-radius: 6px;
+    padding: 24px 28px;
+    max-width: 480px;
+    width: 100%;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+  }
+  .char-detail-title {
+    font-size: 18px;
+    color: var(--fg-bright);
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+  .char-detail-tag {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(200,191,168,0.65);
+    margin-bottom: 16px;
+  }
+  .char-detail-desc {
+    font-size: 14px;
+    line-height: 1.55;
+    color: rgba(220,215,200,0.92);
+    margin-bottom: 20px;
+  }
+  .char-detail-close {
+    background: transparent;
+    border: 1px solid rgba(200,191,168,0.4);
+    color: var(--fg-bright);
+    padding: 10px 24px;
+    font-family: inherit;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    cursor: pointer;
+    width: 100%;
+  }
+  .char-detail-close:hover {
+    background: rgba(200,191,168,0.08);
+  }
   .status-popup-version {
     margin-top: 16px;
     padding-top: 12px;
@@ -1350,6 +1424,33 @@
   }
   .option-btn-resolve .option-id {
     color: rgba(255,205,120,0.85);
+  }
+  /* v7.11.44: Gesperrter Resolve-Button. Bleibt sichtbar (Spieler weiss: "Fall
+     kann gelöst werden") aber ist ausgegraut + zeigt Sperr-Grund. */
+  .option-btn-resolve-locked {
+    opacity: 0.55 !important;
+    cursor: not-allowed !important;
+    border-left-color: rgba(150,150,150,0.45) !important;
+    background: rgba(150,150,150,0.02) !important;
+  }
+  .option-btn-resolve-locked:hover {
+    opacity: 0.55 !important;
+    background: rgba(150,150,150,0.02) !important;
+  }
+  .option-btn-resolve-locked .option-id {
+    color: rgba(180,170,160,0.55);
+  }
+  .option-marker-aufloesen-locked {
+    display: inline-block;
+    padding: 2px 8px;
+    border: 1px solid rgba(180,170,160,0.4);
+    border-radius: 3px;
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    color: rgba(200,180,140,0.75);
+    background: rgba(150,150,150,0.05);
+    font-weight: 600;
+    text-transform: uppercase;
   }
   /* v7.10.1: SYSTEM-BUTTONS - dezent abgesetzt unter den 4 KI-Optionen.
      SCHLAFEN (nur Abend/Nacht) und ROMANTIK (nur wenn ROMANCE-NPC da). */
@@ -2340,6 +2441,17 @@
     </div>
   </div>
 
+  <!-- v7.11.44: Charakter-Detail-Popup. Wird ueber Status-Popup gelegt wenn
+       Spieler auf einen Personen-Eintrag klickt. Zeigt Name + Tag + 1-2 Saetze. -->
+  <div id="char-detail-popup" class="char-detail-popup hidden" onclick="hideCharacterDetail(event)">
+    <div class="char-detail-inner" onclick="event.stopPropagation()">
+      <div class="char-detail-title" id="char-detail-title">—</div>
+      <div class="char-detail-tag" id="char-detail-tag">—</div>
+      <div class="char-detail-desc" id="char-detail-desc">—</div>
+      <button class="char-detail-close" onclick="hideCharacterDetail()">Schließen</button>
+    </div>
+  </div>
+
   <!-- Start Screen -->
   <div id="start" class="start-screen hidden">
     <div class="emoji-large">🕵️</div>
@@ -2357,7 +2469,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.11.42</div>
+    <div class="start-version">Schatten v7.11.44</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2435,7 +2547,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.11.42</span>
+    <span>Schatten v7.11.44</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4831,7 +4943,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.11.42';
+window.SCHATTEN_VERSION = 'v7.11.44';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5092,6 +5204,32 @@ let karlInStasiCustody = false;
 // v7.11.12: Counter wie viele Szenen Karl schon in Custody ist
 // (fuer Schlaf-Button-Verfuegbarkeit in Custody nach 5+ Sz)
 let stasiCustodyScenesSince = 0;
+// v7.11.44: Custody-Switch-Counter + Lock. Vogt-Run zeigte 6 Wechsel zwischen
+// "Karl in Custody" und "Karl frei" - narrativ inkonsistent. Tracker erfasst
+// Wechsel; bei mehr als 2 wird via custodyLocked=true weitere Wechsel
+// im Engine-Code blockiert. Erste Festnahme + erste Flucht sind okay.
+// Pruefung passiert via trackCustodyChange() das vor jedem Szene-Render
+// aufgerufen wird - blockt nicht aktiv, dokumentiert nur den Zustand und
+// wird in den Custody-Settern eingehakt.
+let custodySwitchCount = 0;
+let lastTrackedCustodyState = false;
+let custodyLocked = false;
+function trackCustodyChange(source) {
+  if (lastTrackedCustodyState !== karlInStasiCustody) {
+    custodySwitchCount++;
+    if (typeof diag === 'function') {
+      diag('state', 'Custody-Wechsel #' + custodySwitchCount + ': ' + lastTrackedCustodyState + '->' + karlInStasiCustody + ' (' + (source || '?') + ')');
+    }
+    lastTrackedCustodyState = karlInStasiCustody;
+    // Ab dem 3. Wechsel (z.B. rein, raus, rein wieder) Lock setzen
+    if (custodySwitchCount >= 3 && !custodyLocked) {
+      custodyLocked = true;
+      if (typeof diag === 'function') {
+        diag('state', 'CUSTODY-LOCK: 3+ Wechsel - keine weiteren Auto-Wechsel mehr');
+      }
+    }
+  }
+}
 
 // v7.11.13: META-CUSTODY-RISIKO-COUNTER. Steigt wenn:
 // - Stasi-NPC im Cast anwesend
@@ -5409,7 +5547,7 @@ function toggleGeminiOnly(event) {
   syncGeminiOnlySwitch();
   if (typeof updateFooterModel === 'function') updateFooterModel();
   if (typeof updateProviderInfo === 'function') updateProviderInfo();
-  console.log('[Schatten v7.11.42] Gemini-Only-Modus:', window.geminiOnlyMode ? 'AN' : 'AUS');
+  console.log('[Schatten v7.11.44] Gemini-Only-Modus:', window.geminiOnlyMode ? 'AN' : 'AUS');
 }
 
 function syncGeminiOnlySwitch() {
@@ -7948,6 +8086,9 @@ function showHeader(scene) {
   document.getElementById('status-bar').classList.remove('hidden');
   document.getElementById('footer').classList.remove('hidden');
 
+  // v7.11.44: Track Custody-Wechsel (siehe trackCustodyChange Funktion)
+  if (typeof trackCustodyChange === 'function') trackCustodyChange('render-' + sceneCounter);
+
   // Update tension bars
   const bars = document.getElementById('status-bars');
   bars.innerHTML = '';
@@ -8198,6 +8339,24 @@ function showStatusDetails() {
       GANGSTER: 'Gangster',
       AUTHORITY: 'Autorität',
     };
+    // v7.11.44: Spezial-Label fuer Anker-NPCs die Karl persoenlich kennt.
+    // Roth (VP-Ost) + Lindner (Schupo-West) sind beide Polizisten + alte
+    // Freunde aus Karls Kripo-Vergangenheit. Spieler-Wunsch: "Wort das
+    // ausdrueckt das Karl die schon gut kennt".
+    const SPECIAL_NPC_LABELS = {
+      'kommissar wilhelm roth': 'Alter Polizei-Freund (Ost)',
+      'wilhelm roth': 'Alter Polizei-Freund (Ost)',
+      'kommissar heinrich lindner': 'Alter Polizei-Freund (West)',
+      'heinrich lindner': 'Alter Polizei-Freund (West)',
+      'doc wagner': 'Arzt (diskret)',
+      'hausmeister gregor halbe': 'Hauswart (Karls Haus)',
+      'gregor halbe': 'Hauswart (Karls Haus)',
+      'heinz wernicke (taxi-heinz)': 'Taxifahrer (Vertrauter)',
+      'heinz wernicke': 'Taxifahrer (Vertrauter)',
+      'taxi-heinz': 'Taxifahrer (Vertrauter)',
+      'fraeulein elfriede': 'Telefonistin (Karls Kontakt)',
+      'fräulein elfriede': 'Telefonistin (Karls Kontakt)',
+    };
     // Setup-Cast als Basis (NPCs die definiert sind, aber evtl. noch nicht
     // im Spiel aufgetaucht)
     const knownChars = {};
@@ -8238,10 +8397,56 @@ function showStatusDetails() {
     // Filter: nur Charaktere die AUFGETAUCHT sind (encountered=true)
     const visible = Object.values(knownChars).filter(c => c.encountered);
     if (visible.length > 0) {
-      charsEl.textContent = visible.map(c => {
-        const tagLabel = ROLE_LABELS[c.tag] || c.rolle || 'Person';
-        return '· ' + c.name + ' (' + tagLabel + ')';
-      }).join('\n');
+      // v7.11.44: Klickbare Charakter-Eintraege. Tippen oeffnet Detail-Popup
+      // mit 1-2 Saetzen zur Person. window.__charDetails wird befuellt damit
+      // showCharacterDetail() darauf zugreifen kann.
+      window.__charDetails = window.__charDetails || {};
+      // HTML statt textContent damit wir Buttons rendern koennen
+      let html = '';
+      for (const c of visible) {
+        const nameLower = (c.name || '').toLowerCase();
+        let tagLabel;
+        // 1. Spezial-Label fuer Anker-NPCs (Roth/Lindner/Wagner etc) - hoechste Prioritaet
+        if (SPECIAL_NPC_LABELS[nameLower]) {
+          tagLabel = SPECIAL_NPC_LABELS[nameLower];
+        } else {
+          // Fuzzy-Match: enthaelt der Name einen bekannten Nachnamen?
+          let specialMatch = null;
+          for (const k in SPECIAL_NPC_LABELS) {
+            const lastWord = k.split(/\s+/).pop();
+            if (lastWord.length >= 4 && nameLower.includes(lastWord)) {
+              specialMatch = SPECIAL_NPC_LABELS[k];
+              break;
+            }
+          }
+          if (specialMatch) {
+            tagLabel = specialMatch;
+          } else if (c.tag && ROLE_LABELS[c.tag]) {
+            tagLabel = ROLE_LABELS[c.tag];
+          } else if (c.rolle) {
+            let short = c.rolle.split('(')[0].trim();
+            short = short.replace(/^(privater?|befreundeter?|alter?|junger?|guter?|netter?|alter?\s+)\s+/i, '');
+            if (short.length > 24) short = short.substring(0, 22) + '…';
+            tagLabel = short || 'Person';
+          } else {
+            tagLabel = 'Person';
+          }
+        }
+        // Detail-Info merken fuer Klick
+        const detailKey = nameLower;
+        window.__charDetails[detailKey] = {
+          name: c.name,
+          tagLabel: tagLabel,
+          rolle: c.rolle || '',
+          beziehung: c.beziehung || '',
+        };
+        // Escapen fuer HTML-Attribut
+        const safeKey = detailKey.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        const safeName = (c.name || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const safeLabel = tagLabel.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        html += '· <span class="char-link" onclick="showCharacterDetail(\'' + safeKey + '\', event)">' + safeName + ' <span class="char-tag">(' + safeLabel + ')</span></span>\n';
+      }
+      charsEl.innerHTML = html;
       charsRow.style.display = '';
     } else {
       charsRow.style.display = 'none';
@@ -8356,6 +8561,58 @@ function hideStatusDetails(event) {
     delete titleEl.dataset.origTitle;
   }
   document.getElementById('status-popup').classList.add('hidden');
+}
+
+// v7.11.44: Charakter-Detail-Popup. Klick auf einen Personen-Eintrag in der
+// "Personen"-Zeile zeigt 1-2 Saetze ueber die Person (rolle + beziehung).
+// Datenquelle: window.__charDetails (befuellt beim Render der Personen-Zeile)
+// + ANCHOR_NPCS-Daten fuer fest verdrahtete Bekanntschaften.
+function showCharacterDetail(key, event) {
+  if (event) {
+    event.stopPropagation();
+    event.preventDefault();
+  }
+  const details = (window.__charDetails || {})[key];
+  if (!details) return;
+  // Reichere mit Anker-NPC-Daten an wenn vorhanden (gibt detailliertere Beschreibungen)
+  let extra = null;
+  if (typeof getAnchorNpc === 'function') {
+    extra = getAnchorNpc(details.name);
+  }
+  const titleEl = document.getElementById('char-detail-title');
+  const tagEl = document.getElementById('char-detail-tag');
+  const descEl = document.getElementById('char-detail-desc');
+  if (titleEl) titleEl.textContent = details.name || 'Person';
+  if (tagEl) tagEl.textContent = details.tagLabel || '';
+  // Beschreibung: Anker-Daten bevorzugen wenn vorhanden, sonst storyFacts-Daten
+  let desc = '';
+  if (extra && extra.beziehung) {
+    // Anker-NPC mit ausfuehrlicher Beschreibung
+    desc = extra.beziehung;
+    if (extra.rolle && !desc.toLowerCase().includes(extra.rolle.toLowerCase().split('(')[0].trim().toLowerCase())) {
+      desc = extra.rolle + '. ' + desc;
+    }
+  } else if (details.beziehung) {
+    desc = details.beziehung;
+    if (details.rolle && !desc.toLowerCase().includes(details.rolle.toLowerCase().substring(0, 10))) {
+      desc = details.rolle + '. ' + desc;
+    }
+  } else if (details.rolle) {
+    desc = details.rolle;
+  } else {
+    desc = 'Keine weiteren Informationen.';
+  }
+  // Ersten Buchstaben groß
+  if (desc.length > 0) desc = desc.charAt(0).toUpperCase() + desc.slice(1);
+  // Punkt am Ende
+  if (desc.length > 0 && !/[.!?]$/.test(desc)) desc += '.';
+  if (descEl) descEl.textContent = desc;
+  document.getElementById('char-detail-popup').classList.remove('hidden');
+}
+
+function hideCharacterDetail(event) {
+  if (event) event.stopPropagation();
+  document.getElementById('char-detail-popup').classList.add('hidden');
 }
 
 // v6.98: Pro-Szene-Status-Strip - kompakte Wiederholung der Top-Status-Bar
@@ -10027,7 +10284,7 @@ function renderOptions(scene) {
     && !karlInStasiCustody
     && (gameTimeIdx === 4 || gameTimeIdx === 5));  // nur ABEND oder NACHT
   if (forceSleepMode) {
-    console.log('[Schatten v7.11.42] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.11.44] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -10571,14 +10828,34 @@ function renderOptions(scene) {
   const stage3Scenes = caseProgress.stage3StartScene
     ? (sceneCounter - caseProgress.stage3StartScene)
     : 0;
-  const showResolveButton =
+  // v7.11.44: Bedingungen aufgeteilt: "GRUND-Voraussetzungen erfuellt" (Stufe/
+  // Indizien-Reife) vs "JETZT-Voraussetzungen" (Sp/Custody/Vf - situativ).
+  // Sobald GRUND-Voraussetzungen einmal erfuellt sind, bleibt der Button
+  // sichtbar - bei verletzten JETZT-Voraussetzungen wird er ausgegraut + zeigt
+  // Sperr-Grund. Spieler weiss dann: Button ist da, aber jetzt grad blockiert.
+  const resolveCoreReady =
     !hasAufloesenOption &&
     currentStage >= 3 &&
     stage3Scenes >= 2 &&
-    indizCount >= 6 &&
-    karlVfOk &&
-    currentSp <= 3 &&
-    !karlInStasiCustody;
+    indizCount >= 6;
+  // Persistent merken: war Resolve mal verfuegbar? Wenn ja, bleibt der Button.
+  if (resolveCoreReady) {
+    caseProgress.resolveEverReady = true;
+  }
+  const resolveCanClick = resolveCoreReady && karlVfOk && currentSp <= 3 && !karlInStasiCustody;
+  const showResolveButton = resolveCoreReady || caseProgress.resolveEverReady === true;
+  // Sperr-Grund bestimmen (in Reihenfolge der Wichtigkeit)
+  let resolveLockReason = '';
+  if (showResolveButton && !resolveCanClick) {
+    if (karlInStasiCustody) resolveLockReason = 'in Gewahrsam';
+    else if (currentSp > 3) resolveLockReason = 'zu hohe Spannung';
+    else if (!karlVfOk) resolveLockReason = 'zu schwer verletzt';
+    else if (!resolveCoreReady) {
+      // Sollte nicht passieren wenn resolveEverReady war, aber Sicherheitsnetz:
+      // z.B. wenn neue Indizien-Bedingung verschaerft wurde nach Save-Load.
+      resolveLockReason = 'noch nicht genug Beweise';
+    }
+  }
 
   if (showResolveButton) {
     // Falls noch kein Separator drin: einfuegen
@@ -10591,7 +10868,14 @@ function renderOptions(scene) {
     }
     const resolveBtn = document.createElement('button');
     resolveBtn.className = 'option-btn option-btn-system option-btn-resolve';
-    resolveBtn.innerHTML = '<span class="option-id">🎯</span><span class="option-text-wrap"><span>Fall lösen — Klient informieren</span><span class="option-marker option-marker-aufloesen">FALL LÖSEN</span></span>';
+    // v7.11.44: Wenn ausgegraut, Sperr-Grund daneben zeigen.
+    if (resolveCanClick) {
+      resolveBtn.innerHTML = '<span class="option-id">🎯</span><span class="option-text-wrap"><span>Fall lösen — Klient informieren</span><span class="option-marker option-marker-aufloesen">FALL LÖSEN</span></span>';
+    } else {
+      resolveBtn.classList.add('option-btn-resolve-locked');
+      resolveBtn.disabled = true;
+      resolveBtn.innerHTML = '<span class="option-id">🎯</span><span class="option-text-wrap"><span>Fall lösen — Klient informieren</span><span class="option-marker option-marker-aufloesen-locked">GESPERRT · ' + (resolveLockReason || 'jetzt nicht möglich').toUpperCase() + '</span></span>';
+    }
     const resolveOpt = {
       id: 'AUFLOESEN',
       text: 'Karl entscheidet, den Fall jetzt abzuschließen und die Klientin zu informieren - persönlich, per Telefon oder per Telegramm, je nach Situation am aktuellen Ort.',
@@ -10622,10 +10906,12 @@ function renderOptions(scene) {
       if (Date.now() - rTouchStartTime > R_TAP_MAX_DURATION) { e.preventDefault(); return; }
       e.preventDefault();
       rTouchHandled = true;
+      if (!resolveCanClick) return;
       chooseOption(resolveOpt);
     });
     resolveBtn.addEventListener('click', () => {
       if (rTouchHandled) { rTouchHandled = false; return; }
+      if (!resolveCanClick) return;
       chooseOption(resolveOpt);
     });
     list.appendChild(resolveBtn);
@@ -13910,6 +14196,9 @@ async function startGame() {
   folterSceneCount = 0;
   karlInStasiCustody = false;
   stasiCustodyScenesSince = 0;  // v7.11.12: Custody-Counter Reset
+  custodySwitchCount = 0;  // v7.11.44: Switch-Counter Reset
+  lastTrackedCustodyState = false;  // v7.11.44: Tracker Reset
+  custodyLocked = false;  // v7.11.44: Lock-Flag Reset
   stasiRiskCounter = 0;  // v7.11.13: Meta-Custody-Risk-Counter Reset
   metaCustodyGracePeriod = 0;  // v7.11.16: Meta-Custody-Grace-Period Reset
   pendingCustodyResolveReady = false;  // v7.11.23
@@ -15550,7 +15839,11 @@ function checkStatusToasts(spannung) {
   // v7.9.20: Bei stasiCapForCase <= 1 KEIN Toast - Setup ist nicht stasi-relevant.
   // User-Wunsch: bei reinen Privatfaellen (Affaere/Diebstahl) darf die Stasi
   // gar nicht auftauchen - das waere unmotivierter Drift.
-  if (caseIsPolitical && stasiTension >= 3 && !karlInStasiCustody && sceneCounter >= 3
+  // v7.11.44: Auch nicht wenn Karl im Stasi-Gefaengnis ermittelt (Genslerstr,
+  // Hohenschoenhausen, MfS-U-Haft etc) - dort ist "auf den Fersen" widersinnig.
+  const ortNow = (typeof ortHauptText === 'string' ? ortHauptText : (typeof ortNorm === 'string' ? ortNorm : ''));
+  const inStasiZone = /genslerstr|hohenschoenhausen|hohenschönhausen|mfs.{0,4}(unters|haft|verhoer|verh\u00f6r|gef\u00e4ngn|gefaengn)|stasi.{0,4}(gef\u00e4ngn|gefaengn|haft|zelle)/i.test(ortNow);
+  if (caseIsPolitical && stasiTension >= 3 && !karlInStasiCustody && !inStasiZone && sceneCounter >= 3
       && (typeof stasiCapForCase !== 'number' || stasiCapForCase >= 2)) {
     showProgressToast('Stasi auf den Fersen', 'Die Volkspolizei beobachtet Karl gezielt.', 'danger', 'stasi-hoch');
   }
@@ -16124,7 +16417,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.11.42] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.11.44] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -17190,10 +17483,19 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
                 showProgressToast('FESTNAHME', 'MfS hat Karl gefasst. Verhör steht bevor.', 'danger', 'festnahme-2');
               }
             } else {
-              console.warn('[Schatten] 3+ Szenen ohne Stasi-Kontext - Custody-Flag automatisch geloescht.');
-              diag('state', 'Stasi-Custody automatisch beendet - 3+ Szenen ohne Kontext (vermutlich False-Positive-Recovery)');
-              karlInStasiCustody = false;
-              folterSceneCount = 0;
+              // v7.11.44: Wenn Custody schon gelockt ist (Karl war mehrfach in
+              // Custody), nicht mehr auto-releasen. Spieler-Wunsch:
+              // narrativ konsistent bleiben - Karl bleibt in Haft bis er
+              // explizit (z.B. via NOTFLUCHT-Option) ausbricht.
+              if (custodyLocked) {
+                console.warn('[Schatten] Auto-Release blockiert durch Custody-Lock - Karl bleibt in Haft.');
+                diag('filter', 'Custody-Auto-Release blockiert (Lock aktiv nach ' + custodySwitchCount + ' Wechseln) - Karl bleibt narrativ konsistent in Haft');
+              } else {
+                console.warn('[Schatten] 3+ Szenen ohne Stasi-Kontext - Custody-Flag automatisch geloescht.');
+                diag('state', 'Stasi-Custody automatisch beendet - 3+ Szenen ohne Kontext (vermutlich False-Positive-Recovery)');
+                karlInStasiCustody = false;
+                folterSceneCount = 0;
+              }
             }
           }
         }
@@ -18462,6 +18764,65 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     // Max 8 NPCs im aktiven Cast
     if (cast.length > 8) {
       cast = cast.slice(-8);
+    }
+
+    // v7.11.43: ANKER-NPC-AUTO-REGISTRATION
+    // Wenn die KI im Erzähltext oder in den Optionen Anker-NPCs erwaehnt
+    // (z.B. "Ruf Kommissar Roth an"), wird die Person nie als anwesender
+    // Cast-Eintrag in storyFacts gespeichert - dann fehlt sie in der
+    // Charakter-Uebersicht. Vogt-Run zeigte: Roth+Lindner kamen mehrfach
+    // im Text vor (Telefonate), erschienen aber nicht in 'Personen'.
+    // Loesung: nach Cast-Verarbeitung Szenetext + Optionen nach bekannten
+    // Anker-NPC-Namen scannen, fehlende registrieren.
+    try {
+      const sceneTextRaw = (scene.szene || '') + ' ' +
+        (Array.isArray(scene.optionen) ? scene.optionen.map(o => (o && o.text) || '').join(' ') : '');
+      if (sceneTextRaw && caseSetup && Array.isArray(caseSetup.anchorNpcs)) {
+        for (const anchorKey of caseSetup.anchorNpcs) {
+          const anchor = ANCHOR_NPCS[anchorKey];
+          if (!anchor) continue;
+          // Extrahiere distinkten Nachnamen aus canonicalName (z.B. "Kommissar Wilhelm Roth" -> "Roth")
+          const nameParts = anchor.canonicalName.replace(/^(Kommissar|Dr\.|Doc|Herr|Frau|Fraeulein|Major|Oberst|Hauptmann|Leutnant|ABV-Meister|Hausmeister|Professor)\s+/i, '').split(/\s+/);
+          // Letzter Namensteil ist meist der Nachname (z.B. "Wilhelm Roth" -> "Roth")
+          const lastName = nameParts[nameParts.length - 1];
+          if (!lastName || lastName.length < 4) continue; // zu kurz, kollidiert ggf.
+          // Wort-Grenze-Match: "Roth" matched, "Roth-Krieger" auch, aber nicht "Brot"
+          const lastNameRegex = new RegExp('\\b' + lastName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+          if (lastNameRegex.test(sceneTextRaw)) {
+            // Pruefe ob schon in storyFacts (egal unter welchem Key)
+            const factKey = normalizeNpcName(anchor.canonicalName);
+            if (!storyFacts[factKey]) {
+              // Pruefe ob unter anderem Key (z.B. nur "roth" statt "wilhelm_roth")
+              let alreadyExists = false;
+              for (const k of Object.keys(storyFacts)) {
+                const f = storyFacts[k];
+                if (f && f.name && new RegExp('\\b' + lastName + '\\b', 'i').test(f.name)) {
+                  alreadyExists = true;
+                  break;
+                }
+              }
+              if (!alreadyExists) {
+                storyFacts[factKey] = {
+                  name: anchor.canonicalName,
+                  rolle: anchor.rolle,
+                  beziehung: anchor.beziehung,
+                  frozen: true,
+                  fromAnchor: true,
+                  firstSeenScene: sceneCounter,
+                  // Tag basierend auf Anker-Typ. Roth/Lindner = AUTHORITY (Polizei).
+                  // Doc Wagner = nicht im Tag-Set (zeigt "Arzt" via rolle).
+                  tag: /Kommissar|Volkspolizei|Schutzpolizei|ABV|Inspektor/i.test(anchor.rolle) ? 'AUTHORITY' :
+                       /MfS|Stasi|NKWD/i.test(anchor.rolle) ? 'STASI' :
+                       /Sokolow|Krylow/i.test(anchor.canonicalName) ? 'STASI' : null,
+                };
+                if (typeof diag === 'function') diag('detect', 'Anker-NPC im Erzaehltext erkannt + registriert: ' + anchor.canonicalName);
+              }
+            }
+          }
+        }
+      }
+    } catch (anchorErr) {
+      console.warn('[Schatten] Anker-NPC-Auto-Detect Fehler:', anchorErr);
     }
 
     // Fall-Fortschritt verarbeiten
