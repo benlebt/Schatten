@@ -2240,7 +2240,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.11.30</div>
+    <div class="start-version">Schatten v7.11.32</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2317,7 +2317,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.11.30</span>
+    <span>Schatten v7.11.32</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4713,7 +4713,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.11.30';
+window.SCHATTEN_VERSION = 'v7.11.32';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -8511,21 +8511,15 @@ function advanceGameTime() {
     diag('detect', 'Tageszeit-Force-Push: ' + scenesInCurrentTime + ' Szenen in ' + (TIMES_OF_DAY[gameTimeIdx] || '?'));
     timeAdvanceTokens = 1;
   }
-  // v7.9.13: Auch NACHT hat eine Obergrenze.
-  // v7.9.14: Cap von 8 auf 6 gesenkt (Brauer-Run hatte 11 Nacht-Szenen trotz Cap).
-  // Eine reale Nacht 22-06 sind 8 Stunden; 6 Szenen Action + Schlaf reicht.
-  if (isNacht && scenesInCurrentTime >= 6 && timeAdvanceTokens < 1) {
-    console.log('[Schatten] NACHT-Force-Push nach', scenesInCurrentTime, 'Szenen Nacht.');
-    diag('detect', 'NACHT-Force-Push: ' + scenesInCurrentTime + ' Szenen NACHT - Morgen erzwungen');
-    timeAdvanceTokens = 1;
-  }
-  // v7.9.14: HARD-Override bei extrem langen Marathons (Action-Streak)
-  // Selbst wenn Spannung andauernd hoch ist, nach N Szenen in derselben Phase
-  // MUSS gewechselt werden - sonst 16-Sz-Marathons wie Brandt-Run Sz 1-16 MORGEN.
-  // v7.9.22: Schwelle 10 -> 8. Krause-Run v7.9.21 hatte 12 Sz Marathon trotz
-  // 10er-Cap (Cap traf bei Sz 10, aber dann lief noch 2 Sz weiter bis Wechsel).
-  // Bei 8 ist Wechsel garantiert spaetestens bei Sz 9-10.
-  if (scenesInCurrentTime >= 8) {
+  // v7.11.32: NACHT-Force-Push entfernt. Bei NACHT haben wir den
+  // wuerdeWechselnZuMorgen-Block (Z. ~8545) der jeden Auto-Wechsel verhindert.
+  // Der Force-Push war redundant und versteckte die Logik.
+
+  // HARD-Override bei extrem langen Marathons (Action-Streak).
+  // v7.11.32: NUR fuer NICHT-NACHT-Phasen. Bei NACHT muss Spieler aktiv SCHLAFEN.
+  // Hintergrund: Eine MORGEN-Phase von 16 Szenen waere unrealistisch -
+  // bei Tag muss die Zeit voran. NACHT bleibt aber stehen.
+  if (!isNacht && scenesInCurrentTime >= 8) {
     console.log('[Schatten] HARD-Tageszeit-Override nach', scenesInCurrentTime, 'Szenen.');
     diag('detect', 'HARD-Tageszeit-Override: ' + scenesInCurrentTime + ' Szenen am Stueck - Wechsel ERZWUNGEN');
     timeAdvanceTokens = Math.max(timeAdvanceTokens, 1);
@@ -8762,7 +8756,12 @@ let lastSceneTriggeredDayAdvance = false;
 // Bei einem Treffer wird sofort zum naechsten Morgen gesprungen, statt graduell.
 // Loest das Problem: "Trinke Bourbon und schlafe" muss SOFORT den Tag wechseln,
 // nicht erst nach mehreren Token-Schritten.
-function detectExplicitSleep(text) {
+// v7.11.31: strict-Parameter. Wenn true (fuer KI-Szene-Texte), nur sehr klare
+// Schlaf-Indikatoren akzeptieren. "Schlafzimmer" als Ort-Erwaehnung reicht nicht.
+// Anlass: Lindenbaum-Run v7.11.30 - KI schrieb "Versteck im Schlafzimmer" als Ort
+// in einer Hinterhof-Frage-Sz, detectExplicitSleep matched es, Tag wurde
+// automatisch gewechselt obwohl Karl noch wach war.
+function detectExplicitSleep(text, strict) {
   if (!text) return false;
   const lower = text.toLowerCase()
     .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
@@ -8850,6 +8849,17 @@ function detectExplicitSleep(text) {
   ];
   const hasSleepPattern = patterns.some(p => p.test(lower));
   if (!hasSleepPattern) return false;
+
+  // v7.11.31: STRICT-MODE fuer Szene-Texte. Erfordert explizites Schlaf-Verb,
+  // weil die KI oft "Schlafzimmer"/"Bett" als Ort-Erwaehnung schreibt ohne dass
+  // Karl tatsaechlich schlaeft. Beispiel-Bug: KI schreibt "Versteck hinter
+  // Stuck im Schlafzimmer" -> matched /im schlafzimmer/ -> Tag wechselt.
+  // Im strict-Mode brauchen wir einen klaren Schlaf-Akt (schlafen, einnicken,
+  // hinlegen, aufwachen, naechtigen, naechster Morgen, Tag beenden).
+  if (strict) {
+    const realSleepAct = /\b(schlaf(e|en|st|t|s)?|schl(ae|ä)f(st|t|s)?|eingeschlafen|einschlafen|einnick(en|st|t)?|naechtig(en|st|t)?|leg(st|t|s)?\s+(dich|sich)\s+hin|sich\s+hinlegen|wach(st|t|s)?\s+(auf|am|vom)|weckt\s+dich|am\s+(naechsten|folgenden)\s+(morgen|tag)|bis\s+(morgen|tagesanbruch|sonnenaufgang|zum\s+morgen)|nacht\s+ueber|die\s+nacht\s+(im|bei|auf|verbringen|durchschlafen)|feierabend\s+machen|den\s+tag\s+beenden|(vor|aus)\s+erschoepfung\s+(einnicken|einschlafen|sinkst|kollabieren))\b/.test(lower);
+    if (!realSleepAct) return false;
+  }
   // KONTEXT-CHECK: Wenn der Text auch klare Aktion zum Schlafplatz enthaelt
   // (Karl rennt/schleicht/eilt/bewegt sich zum Schlafzimmer um was zu tun),
   // dann ist es Bewegung, KEIN Schlaf - es sei denn auch ein
@@ -9752,6 +9762,26 @@ function renderOptions(scene) {
     console.warn('[Schatten] renderOptions context bauen fehlgeschlagen:', err);
     resolveContext = {};
   }
+  // v7.11.32: ZWANGS-SCHLAFEN-Check. Bei En<=15 + Sp<4 + nicht-Custody soll der
+  // Spieler nur noch SCHLAFEN klicken koennen. Alle anderen Optionen ausgegraut.
+  // Hintergrund: User-Konzept "Spieler muss schlafen wenn Karl am Ende ist".
+  // Statt versteckter Engine-Action (ZWANGS-EINNICKEN entfernt in v7.11.32)
+  // sieht der Spieler klar: "Karl kann nicht mehr - schlaf jetzt."
+  const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
+  const forceSleepMode = (karlEnergie <= 15
+    && lastSp < 4
+    && !karlInStasiCustody
+    && (gameTimeIdx === 4 || gameTimeIdx === 5));  // nur ABEND oder NACHT
+  if (forceSleepMode) {
+    console.log('[Schatten v7.11.32] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
+    // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
+    const banner = document.createElement('div');
+    banner.className = 'force-sleep-banner';
+    banner.style.cssText = 'padding:14px 18px; margin:0 0 18px 0; border:1px solid rgba(110,140,200,0.35); background:rgba(40,55,85,0.25); border-radius:6px; color:#9dc; font-size:0.95em; line-height:1.5;';
+    banner.innerHTML = '💤 <strong>Karl kann nicht mehr.</strong> Er muss jetzt schlafen, wo er gerade ist. Klicke unten auf <strong>SCHLAFEN</strong>.';
+    list.appendChild(banner);
+  }
   // v7.11.30: classifyOption nutzt jetzt Spezialkat-Heuristik + Position als
   // Fallback. Drift-Detector aus v7.11.29 nicht mehr noetig - Heuristik liefert
   // nur noch HEILEN/AUFLOESEN, alle anderen 4 Basis-Kategorien kommen direkt
@@ -9759,6 +9789,11 @@ function renderOptions(scene) {
   scene.optionen.forEach((opt, idx) => {
     const btn = document.createElement('button');
     btn.className = 'option-btn';
+    // v7.11.32: Im Zwangs-Schlaf-Modus alle ABCD-Optionen ausgrauen
+    if (forceSleepMode) {
+      btn.disabled = true;
+      btn.title = 'Karl ist zu erschoepft. Klicke SCHLAFEN.';
+    }
     // Marker: wenn diese Option Tageswechsel/Essen/Romantik/Aufloesung/Genesung triggert,
     // visuell anzeigen. Detektion vor dem Klick, damit der Spieler informiert entscheiden kann.
     // v7.9.29: Zentrale Klassifizierung statt einzelner Detector-Aufrufe.
@@ -15144,7 +15179,9 @@ function updateEnergyAndHunger(scene) {
   }
 
   // Schlaf-Aktion: voll regenerieren
-  if (detectExplicitSleep(scene.szene || '')) {
+  // v7.11.31: strict=true verhindert dass blosse "Schlafzimmer"-Erwaehnung
+  // Energie reseten triggert.
+  if (detectExplicitSleep(scene.szene || '', true)) {
     karlEnergie = 100;
     karlHunger = 0;  // Morgens neu, normalerweise auch Fruehstueck
     console.log('[Schatten] Schlaf erkannt -> Energie 100, Hunger 0.');
@@ -19452,35 +19489,15 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       }
     }
 
-    // Tageszeit-Sync: Wenn die KI im Erzaehltext explizit einen Morgen oder
-    // einen Tageswechsel erwaehnt, aber unser System noch auf Abend/Nacht steht,
-    // ziehen wir nach. Verhindert dass "am naechsten Morgen weckt dich..."
-    // mit T1 ABEND im UI markiert wird.
-    if (detectExplicitSleep(scene.szene) && (gameTimeIdx === 3 || gameTimeIdx === 4 || gameTimeIdx === 5)) {
-      // AI hat eine Schlafsequenz/Morgen erzaehlt, aber wir sind noch im Abend/Nacht
-      const oldDay = gameDay;
-      const oldTime = TIMES_OF_DAY[gameTimeIdx];
-      gameTimeIdx = 0;
-      gameDay++;
-      recalcGameCurrentDate();
-      timeAdvanceTokens = 0;
-      // Auch Energie regenerieren: KI hat den Schlaf erzaehlt, also hat Karl geschlafen
-      karlEnergie = 100;
-      karlHunger = Math.max(2, karlHunger - 4);
-      hungerAccumulator = 0;
-      // Flag fuer naechste Anfrage: TAGESWECHSEL-Block soll geschickt werden,
-      // damit die NACHFOLGENDE Szene den Morgen sauber erzaehlt (nicht die KI
-      // selbst die naechste Szene als "Du sitzt noch im Sessel" beschreibt).
-      pendingDayTransition = true;
-      // v6.96: Markiere dass diese Szene-Verarbeitung schon Tag++ gemacht hat.
-      // Der naechste chooseOption-Klick darf NICHT nochmal Tag++ ausloesen, selbst
-      // wenn der Spieler dann "Geh schlafen" waehlt. Fix fuer Vogt-Run-Bug
-      // (Tag 2 hatte nur 1 Szene Spielzeit).
-      lastSceneTriggeredDayAdvance = true;
-      console.log('[Schatten] KI hat Morgensequenz erzaehlt, ziehe Zeit nach:',
-                  'T' + oldDay + ' ' + oldTime, '->', 'T' + gameDay + ' MORGEN',
-                  '| Energie -> 100, Hunger', karlHunger, '| lastSceneTriggeredDayAdvance gesetzt');
-    }
+    // v7.11.32: KI-Szenen-Text triggert KEINEN Tagwechsel mehr.
+    // Vorher: detectExplicitSleep auf scene.szene + Auto-Tag-Inkrement.
+    // Problem: KI schreibt oft "im Schlafzimmer" / "am naechsten Morgen" als
+    // Erzaehl-Detail ohne dass Karl tatsaechlich geschlafen hat (Lindenbaum-Run).
+    // Tagwechsel passiert NUR noch via:
+    //   1. SCHLAFEN-Button (pendingSleepChoice)
+    //   2. UEBERNACHTUNG (Romance)
+    //   3. detectExplicitSleep auf OPTION-Text in chooseOption (Z. ~15744)
+
 
     // ENERGIE + HUNGER + ROMANTIK aktualisieren basierend auf dieser Szene
     updateEnergyAndHunger(scene);
@@ -19494,25 +19511,14 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       karlVehicle = null;
     }
 
-    // ZWANGS-EINNICKEN: wenn Karl bei Energie 0 ist UND Spannung niedrig UND
-    // nicht in Gewahrsam UND Abend/Nacht UND die KI hat das nicht selbst erzaehlt.
-    const thisSceneWasSleep = detectExplicitSleep(scene.szene);
-    if (!thisSceneWasSleep && karlEnergie <= 10 && lastSpannung <= 2 && !karlInStasiCustody && (gameTimeIdx === 5 || gameTimeIdx === 4 || gameTimeIdx === 3)) {
-      console.log('[Schatten] ZWANGS-EINNICKEN bei Energie', karlEnergie);
-      gameTimeIdx = 0;
-      gameDay++;
-      recalcGameCurrentDate();
-      timeAdvanceTokens = 0;
-      karlEnergie = 100;
-      karlHunger = 0;
-      verfassung = Math.max(1, verfassung - 1);
-      scene.szene = (scene.szene || '') + '\n\nDeine Augen werden bleiern. Du kaempfst dagegen, aber die Erschoepfung ist staerker. Du sinkst dort ein, wo du gerade bist, der Kopf faellt vornueber. Am naechsten Morgen weckt dich das Quietschen einer Strassenbahn. Der Nacken ist verspannt, der Ruecken steif, aber du hast die Nacht ueberstanden.';
-      lastInjury = 'Steifer Nacken vom unbequemen Schlaf';
-      // v6.96: Sperre fuer chooseOption (gleicher Bug wie KI-Schlaf-Detection oben):
-      // Falls der naechste Spieler-Klick eine Schlaf-Option ist, soll nicht
-      // nochmal Tag++ passieren.
-      lastSceneTriggeredDayAdvance = true;
-    }
+    // v7.11.32: ZWANGS-EINNICKEN entfernt. Spieler MUSS aktiv SCHLAFEN klicken
+    // wenn die Energie unten ist. Engine zwingt nicht mehr automatisch in den
+    // naechsten Tag rein. Stattdessen wird bei En<=15 die Option-UI gesperrt
+    // (nur SCHLAFEN waehlbar) - siehe renderOptions().
+    // Hintergrund: Lindenbaum-Run v7.11.30 zeigte dass Auto-Tagwechsel verwirrend
+    // sind und der Spieler nicht weiss wann sie ausgeloest werden.
+    const thisSceneWasSleep = detectExplicitSleep(scene.szene, true);
+
 
     // Diagnose-Frame finalisieren und an die Log-Entry haengen.
     // diagId = Index im sceneDiagnosticsBuffer (-1 wenn kein Frame offen war).
