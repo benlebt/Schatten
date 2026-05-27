@@ -2240,7 +2240,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.11.14</div>
+    <div class="start-version">Schatten v7.11.16</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2317,7 +2317,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.11.14</span>
+    <span>Schatten v7.11.16</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4706,7 +4706,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.11.14';
+window.SCHATTEN_VERSION = 'v7.11.16';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -4973,6 +4973,10 @@ let stasiCustodyScenesSince = 0;
 // Risk 1 = 10% Custody-Chance, Risk 2 = 25%, Risk 3+ = 50%
 // Reset bei Ortswechsel, DEFENSIV (Counter -1), oder Spannung-Drop <4
 let stasiRiskCounter = 0;
+// v7.11.16: Wie viele Szenen Schonfrist beim Folter-Sanity-Check nach Meta-Custody.
+// Verhindert dass Meta-Custody sofort wieder durch Text-Sanity geblockt wird
+// weil die Eintritts-Szene noch keinen Zellen-Kontext hat (KI braucht 1-2 Sz dafuer).
+let metaCustodyGracePeriod = 0;
 
 // === ENERGIE-SYSTEM ===
 // Karls Energie 0-100 (intern, sichtbar als 5-Stufen-Balken).
@@ -8873,7 +8877,7 @@ function renderLog(shouldScroll) {
         // v7.9.57: Datum mit reingenommen weil aus Top-Bar entfernt
         // (User-Wunsch: Top-Bar nur Datum + Energie/Verfassung/Fall-Balken).
         let prefixParts = [];
-        if (entry.day) prefixParts.push('T' + entry.day);
+        if (entry.day) prefixParts.push('Tag ' + entry.day);
         if (entry.time) prefixParts.push(entry.time);
         if (entry.gameDate && typeof formatGameDateShort === 'function') {
           const shortDate = formatGameDateShort(entry.gameDate);
@@ -13562,6 +13566,7 @@ async function startGame() {
   karlInStasiCustody = false;
   stasiCustodyScenesSince = 0;  // v7.11.12: Custody-Counter Reset
   stasiRiskCounter = 0;  // v7.11.13: Meta-Custody-Risk-Counter Reset
+  metaCustodyGracePeriod = 0;  // v7.11.16: Meta-Custody-Grace-Period Reset
   // Reset Story-Anker (wird gleich aus dem Intro neu befuellt)
   caseSetup = null;
   // Reset zeitlich-begrenzte-Anlaesse-Tracking (Beerdigung, Hochzeit, etc.)
@@ -16738,7 +16743,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         || /\b(durchsucht\s+dich|durchsucht\s+deine\s+(taschen|kleidung|jacke))/.test(sceneLower)
         || /\b(walther|pistole|notizbuch|brieftasche|portemonnaie)\s+(landet|wird\s+abgenommen|wird\s+eingesteckt)/.test(sceneLower)
         || /\bwirst\s+(in\s+den|auf\s+die)\s+(wagen|lkw|emw|ladeflaeche|gaz|pobeda)\s+(gestossen|gedrueckt|gezerrt|geschoben)/.test(sceneLower);
-      if (!stasiContext) {
+      if (!stasiContext && metaCustodyGracePeriod <= 0) {
         console.warn('[Schatten] karlInStasiCustody=true aber Szene zeigt keinen Stasi-Kontext - Folter-Wuerfel uebersprungen.');
         diag('roll', 'Folter-Wuerfel uebersprungen - kein Stasi-Kontext in Szene (vermutlich False-Positive)');
         // Auto-Release: wenn 3 Szenen lang kein Stasi-Kontext, Custody-Flag loeschen
@@ -16882,6 +16887,8 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           }
         }
       }
+      // v7.11.16: Grace-Period dekrementieren pro Custody-Szene
+      if (metaCustodyGracePeriod > 0) metaCustodyGracePeriod--;
     }
 
     // v7.1: DOC-WAGNER-BEHANDLUNG. Wenn Karl in Doc Wagners Praxis ist und tatsaechlich
@@ -19220,6 +19227,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           folterSceneCount = 0;
           stasiHighTensionStreak = 0;
           stasiRiskCounter = 0;
+          metaCustodyGracePeriod = 3;  // v7.11.16: 3 Sz Schonfrist beim Folter-Sanity
           console.log('[Schatten v7.11.13] META-CUSTODY ausgelöst (Risk ' + (riskPrev + 1) + ', Chance ' + Math.round(custodyChance * 100) + '%, Roll ' + roll.toFixed(2) + ')');
           diag('detect', '⚠ META-CUSTODY: Karl wird verhaftet (Risk ' + (riskPrev + 1) + ' = ' + Math.round(custodyChance * 100) + '% Chance, Roll ' + roll.toFixed(2) + ')');
           // Push-Message an KI fuer naechste Szene: Custody-Eintritt
@@ -20262,10 +20270,10 @@ function botChooseByStrategy(options) {
       if (typeof diag === 'function') diag('bot', 'Bot ueberspringt UEBERNACHTUNG (20% Sampling)');
     }
   }
-  // v7.11.9: SCHLAFEN bei kritischer Erschoepfung (En <= 30 oder Hu >= 7).
-  // Sonst sterben Bots an Erschoepfung in langen Runs.
+  // v7.11.16: SCHLAFEN-Schwelle hochgezogen 30->40. Anlass: Wessel+Stein-Runs
+  // v7.11.13 starben beide an En=0 (Erschoepfungstod) weil Bot nie SCHLAFEN waehlte.
   if (byCat.SCHLAFEN && byCat.SCHLAFEN.length > 0) {
-    const lowEnergy = (typeof energie === 'number' && energie <= 30);
+    const lowEnergy = (typeof energie === 'number' && energie <= 40);
     const veryHungry = (typeof hunger === 'number' && hunger >= 7);
     if (lowEnergy || veryHungry) {
       console.log('[Bot v7.11.9] SCHLAFEN noetig (En=' + (energie || '?') + ', Hu=' + (hunger || '?') + ')');
