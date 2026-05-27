@@ -2240,7 +2240,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.11.22</div>
+    <div class="start-version">Schatten v7.11.23</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2317,7 +2317,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.11.22</span>
+    <span>Schatten v7.11.23</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4713,7 +4713,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.11.22';
+window.SCHATTEN_VERSION = 'v7.11.23';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -4984,6 +4984,8 @@ let stasiRiskCounter = 0;
 // Verhindert dass Meta-Custody sofort wieder durch Text-Sanity geblockt wird
 // weil die Eintritts-Szene noch keinen Zellen-Kontext hat (KI braucht 1-2 Sz dafuer).
 let metaCustodyGracePeriod = 0;
+// v7.11.23: Wenn Karl aus Custody freikam + Stage 3 + Indiz>=4 -> AUFLOESEN forcieren
+let pendingCustodyResolveReady = false;
 
 // === ENERGIE-SYSTEM ===
 // Karls Energie 0-100 (intern, sichtbar als 5-Stufen-Balken).
@@ -11758,6 +11760,11 @@ KEINE anderen Themen, KEINE Indizien-Suche, KEINE Nebenfiguren - die naechsten 1
         recap += `\n\nFALL-ABSCHLUSS DRINGEND (PFLICHT): In einer der letzten Szenen war Karl bereits am Ziel (${caseProgress.tatverdaechtiger} ueberfuehrt), aber Auto-Abschluss wurde blockiert weil Karl gerade in Action/Verletzt war. JETZT ist es ruhig. Diese Szene MUSS damit beginnen dass Karl klar zur Klient-Berichtung aufbricht (mit Optionen die DAHIN fuehren) oder gleich beim Klienten ankommt. Setze "klient_berichtet": true wenn Karl das Gespraech fuehrt. Spieler hat Vortrieb verdient - keine neuen Nebenstraenge mehr.`;
         pendingKlientPushAfterCalm = false; // Flag zuruecksetzen
       }
+      // v7.11.23: Nach Custody-Release mit Stage 3 + Indizien -> AUFLOESEN forcieren
+      if (pendingCustodyResolveReady) {
+        recap += `\n\nCUSTODY-RELEASE-RESOLVE (PFLICHT): Karl ist gerade aus Stasi-Gewahrsam freigekommen. Stage 3 ist erreicht (${caseProgress.tatverdaechtiger || 'Verdaechtiger'} ueberfuehrt), Indizien vollstaendig. Diese Szene MUSS Karl zur Fall-Aufloesung fuehren - er muss zum Klienten oder kontaktiert ihn (persoenlich/Telefon/Telegramm). MINDESTENS eine der 4 Optionen MUSS Kategorie "AUFLOESEN" haben mit Text "Den Fall jetzt abschliessen und Klient informieren" oder aehnlich. Karl hat genug gelitten, der Fall muss schliessen. Setze "klient_berichtet": true wenn Karl AUFLOESEN waehlt.`;
+        pendingCustodyResolveReady = false;
+      }
       const stage3Scenes = sceneCounter - (caseProgress.stage3StartScene || sceneCounter);
       // Pruefen ob Verdaechtige geflohen / verschwunden ist
       const suspectName = (caseProgress.tatverdaechtiger || '').toLowerCase();
@@ -13594,6 +13601,7 @@ async function startGame() {
   stasiCustodyScenesSince = 0;  // v7.11.12: Custody-Counter Reset
   stasiRiskCounter = 0;  // v7.11.13: Meta-Custody-Risk-Counter Reset
   metaCustodyGracePeriod = 0;  // v7.11.16: Meta-Custody-Grace-Period Reset
+  pendingCustodyResolveReady = false;  // v7.11.23
   // Reset Story-Anker (wird gleich aus dem Intro neu befuellt)
   caseSetup = null;
   // Reset zeitlich-begrenzte-Anlaesse-Tracking (Beerdigung, Hochzeit, etc.)
@@ -17245,6 +17253,13 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           diag('state', 'CUSTODY-FREILASSUNG via Schlaf - Karl wacht morgens auf der Strasse vor MfS-Gebaeude auf');
         }
         console.log('[Schatten v7.11.12] Karl aus Custody entlassen (via Schlaf-Mechanik)');
+        // v7.11.23: Wenn Stage 3 + Indizien gesammelt -> AUFLOESEN sofort priorisieren
+        const indCount = (caseProgress && Array.isArray(caseProgress.indizien))
+          ? caseProgress.indizien.length : 0;
+        if (caseProgress && caseProgress.stage >= 3 && indCount >= 4) {
+          pendingCustodyResolveReady = true;
+          if (typeof diag === 'function') diag('progress', 'CUSTODY-RELEASE-RESOLVE: Stage ' + caseProgress.stage + ' + ' + indCount + ' Indizien - AUFLOESEN naechste Sz forcieren');
+        }
       }
 
       // v7.11.13: NOTFLUCHT-Erfolg -> Karl ist frei + gehetzt
@@ -17258,6 +17273,13 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           diag('state', '⚡ NOTFLUCHT GELUNGEN - Karl frei, aber Stasi-Tension ' + prevTension + ' -> 5 (gesucht)');
         }
         console.log('[Schatten v7.11.13] Karl via NOTFLUCHT entkommen - Stasi-Fahndung laeuft');
+        // v7.11.23: Auch nach NOTFLUCHT bei Stage 3 + Indizien -> AUFLOESEN forcieren
+        const indCount2 = (caseProgress && Array.isArray(caseProgress.indizien))
+          ? caseProgress.indizien.length : 0;
+        if (caseProgress && caseProgress.stage >= 3 && indCount2 >= 4) {
+          pendingCustodyResolveReady = true;
+          if (typeof diag === 'function') diag('progress', 'NOTFLUCHT-RESOLVE: Stage ' + caseProgress.stage + ' + ' + indCount2 + ' Indizien - AUFLOESEN naechste Sz forcieren');
+        }
       } else if (categoryMechanicsResult && categoryMechanicsResult.notfluchtSuccess === false) {
         // Misserfolg: bleibt in Custody, Stasi-Tension steigt
         if (typeof diag === 'function') {
