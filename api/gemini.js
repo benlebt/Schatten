@@ -235,12 +235,14 @@ export default async function handler(req, res) {
     }
 
     // OpenAI-kompatible Response
+    // v7.11.25: usageMetadata mit Cache-Info durchreichen (fuer Implicit-Caching-Diagnostik)
     return res.status(200).json({
       choices: [{
         message: { role: 'assistant', content: text },
         finish_reason: 'stop',
       }],
       model,
+      usageMetadata: data?.usageMetadata || null,
     });
   } catch (err) {
     return res.status(502).json({
