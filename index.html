@@ -2240,7 +2240,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.11.25</div>
+    <div class="start-version">Schatten v7.11.26</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2317,7 +2317,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.11.25</span>
+    <span>Schatten v7.11.26</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4713,7 +4713,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.11.25';
+window.SCHATTEN_VERSION = 'v7.11.26';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -15207,13 +15207,14 @@ function updateEnergyAndHunger(scene) {
 
   // Normale Abnahme: abhaengig von Tageszeit
   // MORGEN (0): -1, MITTAG (1): -1, NACHMITTAG (2): -2, FRUEHER ABEND (3): -3, ABEND (4): -5, NACHT (5): -7
-  const drainByTime = [1, 1, 2, 3, 5, 7];
-  let drain = drainByTime[gameTimeIdx] || 3;
+  // v7.11.26: Tageszeit-Drift KOMPLETT entfernt (Arcade-Style).
+  // User-Konzept: Energie sinkt NUR durch Verletzungen, Folter oder explizite
+  // Anstrengung (Verfolgungsjagden). Tageszeit allein kostet keine Energie mehr.
+  // Vorher: [1,1,2,3,5,7] pro Sz - bei Nacht-Run waren das ~10 En/Sz.
+  let drain = 0;
 
-  // Extra-Abnahme bei mittel-hoher Spannung (Spannung 3 = Verfolgung, angespannt)
-  if (spannung === 3) drain += 2;
-
-  // Extra-Abnahme bei expliziten Anstrengungs-Phrasen im Erzaehltext
+  // Anstrengung im Erzaehltext: explizite Action-Phrasen kosten weiter Energie.
+  // Aber nur diese - kein passiver Drift.
   const exertionPatterns = [
     /\b(rennst?|hetzt|gerannt|gehetzt|sprintest)\b/,
     /\b(klett(er)|kletterst|kletterte)\b/,
@@ -15222,11 +15223,11 @@ function updateEnergyAndHunger(scene) {
     /\b(atemlos|ausser\s+atem|keuchst|aussseratem|aussatem)\b/,
   ];
   if (exertionPatterns.some(p => p.test(sceneText))) {
-    drain += 3;
-    console.log('[Schatten] Anstrengung im Text erkannt, +3 Energie-Abnahme.');
+    drain += 5;
+    console.log('[Schatten] Anstrengung im Text erkannt, +5 Energie-Abnahme.');
   }
 
-  // Karl in Stasi-Gewahrsam: jedes Verhoer kostet zusaetzlich
+  // Karl in Stasi-Gewahrsam: jedes Verhoer kostet zusaetzlich (Folter, kein Schlaf)
   if (karlInStasiCustody) {
     drain += 4;
   }
@@ -15285,10 +15286,8 @@ function checkStatusToasts(spannung) {
   } else if (verfassung <= 2) {
     showProgressToast('Schwer verletzt', 'Karls Verfassung ist kritisch.', 'danger', 'verfassung-tief');
   }
-  // DANGER: Energie unter 15 (am Ende)
-  if (karlEnergie <= 15) {
-    showProgressToast('Am Ende der Kraft', 'Karl ist völlig erschöpft.', 'danger', 'energie-kritisch');
-  }
+  // v7.11.26: "Am Ende der Kraft"-Toast entfernt. Arcade-Style:
+  // Spieler entscheidet wann er schlaeft, kein nerviger Energie-Warning.
   // v7.9.22: Hunger-Toasts entfernt. User-Befund: "Schwacher Hunger-Schwindel"
   // feuerte in 4 Runs gar nicht (Cooldown-Konflikt) und selbst wenn er feuerte,
   // hatte er null Effekt: Karl macht trotzdem aggressiv weiter. In einem
