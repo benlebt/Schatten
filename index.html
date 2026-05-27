@@ -2205,7 +2205,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.11.4</div>
+    <div class="start-version">Schatten v7.11.5</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2282,7 +2282,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.11.4</span>
+    <span>Schatten v7.11.5</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4625,7 +4625,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.11.4';
+window.SCHATTEN_VERSION = 'v7.11.5';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5383,6 +5383,48 @@ function buildSpeakText() {
   return blocks;
 }
 
+// v7.11.5: Best-Voice-Picker. Findet die beste verfuegbare deutsche Stimme
+// aus der aktuellen WebKit-Voice-Liste. Premium/Siri/Enhanced/Erweitert
+// werden bevorzugt vor "Default"-Stimmen (z.B. Anna ohne "Premium"-Suffix).
+// Wird verwendet:
+// 1. Beim allerersten Vorlesen wenn noch keine Stimme gespeichert ist
+//    -> automatisch beste Stimme auswaehlen + speichern
+// 2. Im Voice-Picker als "iOS-Stimme erkennen"-Button
+//
+// Anlass v7.11.5: User-Bericht "iOS-Premium-Stimme wird beim 1. Klick verwendet,
+// beim 2. Klick switcht es zurueck auf die nervige Anna". Das liegt an einem
+// WebKit-Bug: getVoices() liefert zwischen Calls inkonsistente Listen.
+// Loesung: einmal die beste Stimme erkennen, speichern, von da an STICKY.
+function pickBestGermanVoice(voices) {
+  if (!voices || voices.length === 0) return null;
+  const KNOWN_DE_NAMES = /^(anna|markus|petra|helena|viktor|yannick|klara|martin)\b/i;
+  const deVoices = voices.filter(v => {
+    if (!v) return false;
+    const lang = (v.lang || '').toLowerCase().replace(/_/g, '-');
+    if (lang.startsWith('de')) return true;
+    if (lang === '' && v.name && KNOWN_DE_NAMES.test(v.name)) return true;
+    return false;
+  });
+  if (deVoices.length === 0) return null;
+  // Score: Premium/Enhanced/Siri/Neural/Erweitert = 0 (gut), sonst 1
+  // localService=true (auf Geraet) bevorzugt vor Cloud-Stimmen
+  function score(v) {
+    let s = 0;
+    if (!/enhanced|premium|siri|neural|erweitert/i.test(v.name)) s += 10;
+    if (v.localService === false) s += 1;  // Cloud-Voice leicht abwerten
+    // Markus/Helena/Petra Premium bevorzugt vor Anna (User-Feedback)
+    if (/anna/i.test(v.name) && !/premium|enhanced|siri|erweitert/i.test(v.name)) s += 5;
+    return s;
+  }
+  const sorted = [...deVoices].sort((a, b) => {
+    const sa = score(a);
+    const sb = score(b);
+    if (sa !== sb) return sa - sb;
+    return (a.name || '').localeCompare(b.name || '');
+  });
+  return sorted[0];
+}
+
 // Erzeugt eine SpeechSynthesisUtterance mit deutschen Stimme-Einstellungen.
 function makeUtterance(text) {
   const u = new SpeechSynthesisUtterance(text);
@@ -5394,23 +5436,38 @@ function makeUtterance(text) {
   u.volume = 1.0;
   // v7.5: Stimm-Auswahl aus localStorage. Wenn der User eine Stimme gewaehlt
   // hat, wird die genommen. Sonst Fallback auf erste de-Stimme.
+  // v7.11.5: STICKY-VOICE. Wenn keine gespeichert -> automatisch die beste
+  // erkennen und speichern (damit iOS WebKit-Bug "reduzierte Voice-Liste
+  // beim 2. Call" nicht zur nervigen Anna-Default zurueckfaellt).
   const voices = window.speechSynthesis.getVoices();
   if (voices && voices.length > 0) {
-    const savedVoiceName = localStorage.getItem('schatten-speech-voice');
+    let savedVoiceName = localStorage.getItem('schatten-speech-voice');
     let chosenVoice = null;
     if (savedVoiceName) {
       chosenVoice = voices.find(v => v.name === savedVoiceName);
-    }
-    if (!chosenVoice) {
-      // v7.9: Robuster Fallback - de_DE (Unterstrich) + bekannte deutsche Namen
-      const KNOWN_DE_NAMES = /^(anna|markus|petra|helena|viktor|yannick|klara|martin)\b/i;
-      chosenVoice = voices.find(v => {
-        if (!v) return false;
-        const lang = (v.lang || '').toLowerCase().replace(/_/g, '-');
-        if (lang.startsWith('de')) return true;
-        if (lang === '' && v.name && KNOWN_DE_NAMES.test(v.name)) return true;
-        return false;
-      });
+      // v7.11.5: Wenn gespeicherte Stimme in aktueller (evtl. reduzierter)
+      // Liste NICHT vorhanden ist: NICHT auf Default zurueckfallen, sondern
+      // die beste verfuegbare Stimme nehmen (auch wenn das nicht die exakt
+      // gespeicherte ist). Beim naechsten Call ist die Original-Stimme oft
+      // wieder da - dann wird sie wieder gefunden.
+      if (!chosenVoice) {
+        const best = pickBestGermanVoice(voices);
+        if (best) {
+          chosenVoice = best;
+          console.log('[Schatten] Gespeicherte Stimme "' + savedVoiceName + '" nicht in aktueller Liste, nehme stattdessen "' + best.name + '" (kein Reset auf Default)');
+        }
+      }
+    } else {
+      // v7.11.5: STICKY-PICK beim ersten Mal. Beste Stimme erkennen + speichern.
+      // So spielt die App beim 1. Klick gleich die beste Stimme, und beim
+      // 2. Klick wird sie wiedergefunden (auch wenn iOS die Liste reduziert).
+      chosenVoice = pickBestGermanVoice(voices);
+      if (chosenVoice) {
+        try {
+          localStorage.setItem('schatten-speech-voice', chosenVoice.name);
+          console.log('[Schatten] v7.11.5: Beste Stimme automatisch gewaehlt + gespeichert: "' + chosenVoice.name + '"');
+        } catch (e) { /* localStorage voll/blockiert - ignorieren */ }
+      }
     }
     if (chosenVoice) u.voice = chosenVoice;
   }
@@ -5526,7 +5583,7 @@ function showVoicePicker(event) {
 
   const hint = document.createElement('div');
   hint.className = 'voice-picker-hint';
-  hint.textContent = 'Stimme und Lautstaerken. Auf einen Namen tippen: Anhoeren. Erneut tippen: Auswaehlen.';
+  hint.textContent = 'Tipp 1x = Anhoeren. Tipp 2x = Auswaehlen. Bei iOS-Problemen unten "Beste Stimme automatisch waehlen".';
   inner.appendChild(hint);
 
   // Liste
@@ -5682,12 +5739,36 @@ function showVoicePicker(event) {
   // System-Default-Button (Auswahl loeschen, dann nimmt Browser default)
   const resetBtn = document.createElement('button');
   resetBtn.className = 'voice-picker-reset';
-  resetBtn.textContent = 'Browser-Default verwenden';
+  resetBtn.textContent = 'Beste Stimme automatisch waehlen';
   resetBtn.onclick = () => {
-    localStorage.removeItem('schatten-speech-voice');
-    Array.from(list.children).forEach(c => c.classList.remove('selected'));
-    title.textContent = '✓ Browser-Default aktiv';
-    setTimeout(() => { title.textContent = 'Sound-Einstellungen'; }, 1500);
+    // v7.11.5: Statt "leeren + Browser-Default nehmen" (was zur nervigen Anna
+    // fuehrt), erkennen wir aktiv die BESTE Stimme aus der aktuellen Liste
+    // und speichern die. So bleibt's sticky auch beim 2./3. Klick.
+    const best = pickBestGermanVoice(voices);
+    if (best) {
+      localStorage.setItem('schatten-speech-voice', best.name);
+      // Visuelle Selektion aktualisieren
+      Array.from(list.children).forEach(c => c.classList.remove('selected'));
+      const targetRow = Array.from(list.children).find(c =>
+        c.querySelector('.voice-picker-name')?.textContent === best.name
+      );
+      if (targetRow) targetRow.classList.add('selected');
+      // Preview spielen
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance('Karl Mauer ermittelt.');
+      u.voice = best;
+      u.lang = 'de-DE';
+      u.rate = currentRate;
+      window.speechSynthesis.speak(u);
+      title.textContent = '✓ Beste Stimme: ' + best.name;
+      setTimeout(() => { title.textContent = 'Sound-Einstellungen'; }, 1800);
+    } else {
+      // Fallback: localStorage leeren
+      localStorage.removeItem('schatten-speech-voice');
+      Array.from(list.children).forEach(c => c.classList.remove('selected'));
+      title.textContent = '✓ Browser-Default aktiv';
+      setTimeout(() => { title.textContent = 'Sound-Einstellungen'; }, 1500);
+    }
   };
   inner.appendChild(resetBtn);
 
@@ -5848,28 +5929,57 @@ function startSpeakCurrent() {
     fab.textContent = '⏹';
     fab.title = 'Vorlesen stoppen';
   }
-  // Utterances bauen und queuen
-  blocks.forEach((text, idx) => {
-    const u = makeUtterance(text);
-    if (idx === blocks.length - 1) {
-      // Letzter Block: nach Ende den FAB zuruecksetzen
-      u.onend = () => {
-        speakCurrentActive = false;
-        // v7.6: Musik wieder runter auf normal
-        fadeMusicForSpeech(false);
-        if (fab) {
-          fab.classList.remove('speaking');
-          fab.textContent = '🔊';
-          fab.title = 'Aktuelle Szene und Optionen vorlesen';
-        }
-      };
-      u.onerror = u.onend;
+
+  // v7.11.5: iOS WebKit-Bug Workaround. Beim allerersten Aufruf liefert
+  // getVoices() oft eine reduzierte Liste (nur die System-Default-Stimme,
+  // z.B. Anna ohne Premium). Erst NACH einer (silent) Utterance baut WebKit
+  // den vollen Voice-Cache auf. Wir machen einen Warmup wenn:
+  // - keine Stimme gespeichert ist (erster Vorlesen-Klick) ODER
+  // - die gespeicherte Stimme in der aktuellen Liste fehlt
+  // Dann starten wir die echte Wiedergabe leicht verzoegert damit WebKit
+  // Zeit hat den Cache zu fuellen und unser Stimme-Lookup die richtige
+  // findet.
+  const savedVoiceName = localStorage.getItem('schatten-speech-voice');
+  const currentVoices = window.speechSynthesis.getVoices() || [];
+  const needsWarmup = !savedVoiceName ||
+    (savedVoiceName && !currentVoices.some(v => v && v.name === savedVoiceName));
+
+  function actuallySpeak() {
+    // Utterances bauen und queuen
+    blocks.forEach((text, idx) => {
+      const u = makeUtterance(text);
+      if (idx === blocks.length - 1) {
+        u.onend = () => {
+          speakCurrentActive = false;
+          fadeMusicForSpeech(false);
+          if (fab) {
+            fab.classList.remove('speaking');
+            fab.textContent = '🔊';
+            fab.title = 'Aktuelle Szene und Optionen vorlesen';
+          }
+        };
+        u.onerror = u.onend;
+      }
+      speakCurrentUtterances.push(u);
+      window.speechSynthesis.speak(u);
+    });
+    if (typeof diag === 'function') {
+      diag('state', 'Vorlesen gestartet (' + blocks.length + ' Bloecke)');
     }
-    speakCurrentUtterances.push(u);
-    window.speechSynthesis.speak(u);
-  });
-  if (typeof diag === 'function') {
-    diag('state', 'Vorlesen gestartet (' + blocks.length + ' Bloecke)');
+  }
+
+  if (needsWarmup) {
+    try {
+      const warmup = new SpeechSynthesisUtterance(' ');
+      warmup.volume = 0;
+      warmup.rate = 10;
+      window.speechSynthesis.speak(warmup);
+      window.speechSynthesis.cancel();
+    } catch (e) { /* ignore */ }
+    // 80ms warten damit WebKit Voice-Cache aufgebaut hat
+    setTimeout(actuallySpeak, 80);
+  } else {
+    actuallySpeak();
   }
 }
 
