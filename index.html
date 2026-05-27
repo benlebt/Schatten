@@ -2240,7 +2240,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.11.16</div>
+    <div class="start-version">Schatten v7.11.17</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2317,7 +2317,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.11.16</span>
+    <span>Schatten v7.11.17</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4706,7 +4706,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.11.16';
+window.SCHATTEN_VERSION = 'v7.11.17';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -17136,7 +17136,8 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         const istHeilWahl = (pendingCategoryChoice === 'HEILEN'
           || pendingCategoryChoice === 'DEFENSIV'
           || pendingCategoryChoice === 'SCHLAFEN'
-          || pendingCategoryChoice === 'UEBERNACHTUNG');
+          || pendingCategoryChoice === 'UEBERNACHTUNG'
+          || pendingCategoryChoice === 'NOTHEILEN');  // v7.11.17 Bug-Fix: NOTHEILEN gehoerte hier rein, sonst gewann KI-Drift -1 ueber Kategorie +1 (Wegener-Run 1307)
         if (istHeilWahl && kategorieDelta > 0) {
           // Spieler hat aktiv Heilung gewaehlt - Kategorie gewinnt, KI-Drift ignoriert
           finalDelta = kategorieDelta;
@@ -17192,8 +17193,8 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           }
         }
       }
-      // Wenn KI positiv liefert ausserhalb DEFENSIV/HEILEN: ignorieren
-      if (kiDelta > 0 && pendingCategoryChoice !== 'DEFENSIV' && pendingCategoryChoice !== 'HEILEN' && pendingCategoryChoice !== 'SCHLAFEN' && pendingCategoryChoice !== 'UEBERNACHTUNG') {
+      // Wenn KI positiv liefert ausserhalb DEFENSIV/HEILEN/NOTHEILEN: ignorieren
+      if (kiDelta > 0 && pendingCategoryChoice !== 'DEFENSIV' && pendingCategoryChoice !== 'HEILEN' && pendingCategoryChoice !== 'SCHLAFEN' && pendingCategoryChoice !== 'UEBERNACHTUNG' && pendingCategoryChoice !== 'NOTHEILEN') {
         if (typeof diag === 'function') diag('cap', 'KI lieferte positives verfassung_delta=' + kiDelta + ' bei Kategorie ' + pendingCategoryChoice + ' - ignoriert (Heilung nur via HEILEN/DEFENSIV-Kategorie)');
         finalDelta = kategorieDelta;
         deltaSource = 'kategorie';
