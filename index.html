@@ -2205,7 +2205,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.11.8</div>
+    <div class="start-version">Schatten v7.11.9</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2282,7 +2282,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.11.8</span>
+    <span>Schatten v7.11.9</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4625,7 +4625,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.11.8';
+window.SCHATTEN_VERSION = 'v7.11.9';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5458,7 +5458,7 @@ function makeUtterance(text) {
         if (best) {
           chosenVoice = best;
           pickReason = 'gespeichert-WEG-fallback-auf-' + best.name;
-          console.warn('[Schatten v7.11.8 Voice-Drift] Gespeicherte Stimme "' + savedVoiceName + '" nicht in aktueller Liste (' + voices.length + ' total, ' + deVoiceCount + ' de). Fallback: "' + best.name + '". Liste: [' + voices.slice(0, 5).map(v => v.name + '@' + v.lang).join(', ') + (voices.length > 5 ? ', ...' : '') + ']');
+          console.warn('[Schatten v7.11.9 Voice-Drift] Gespeicherte Stimme "' + savedVoiceName + '" nicht in aktueller Liste (' + voices.length + ' total, ' + deVoiceCount + ' de). Fallback: "' + best.name + '". Liste: [' + voices.slice(0, 5).map(v => v.name + '@' + v.lang).join(', ') + (voices.length > 5 ? ', ...' : '') + ']');
           if (typeof diag === 'function') {
             diag('voice', 'Voice-Drift: gespeichert "' + savedVoiceName + '" weg, nehme "' + best.name + '" (Liste: ' + voices.length + ' total, ' + deVoiceCount + ' de)');
           }
@@ -14983,7 +14983,7 @@ async function chooseOption(option) {
   // ist garantiert. Unterschied: Karl wacht bei der ROMANCE-Person auf.
   if (chosenKategorie === 'UEBERNACHTUNG') {
     pendingSleepChoice = true;
-    console.log('[Schatten v7.11.8] UEBERNACHTUNG gewaehlt - pendingSleepChoice=true (Tageswechsel garantiert, bei ROMANCE-NPC)');
+    console.log('[Schatten v7.11.9] UEBERNACHTUNG gewaehlt - pendingSleepChoice=true (Tageswechsel garantiert, bei ROMANCE-NPC)');
   }
 
   // v7.11.7: ROMANTIK-KLICK-COUNTER
@@ -14998,7 +14998,7 @@ async function chooseOption(option) {
       lastRomanceNpcName = npcName;
     }
     romanticClicksSinceProgress++;
-    console.log('[Schatten v7.11.8] ROMANTIK-Klick #' + romanticClicksSinceProgress + ' mit ' + (npcName || '?'));
+    console.log('[Schatten v7.11.9] ROMANTIK-Klick #' + romanticClicksSinceProgress + ' mit ' + (npcName || '?'));
     if (typeof diag === 'function') {
       diag('detect', 'Romantik-Klick ' + romanticClicksSinceProgress + '/3 mit ' + (npcName || '?'));
     }
@@ -19373,7 +19373,14 @@ function botRngChoice(arr) {
 function botChooseByStrategy(options) {
   if (!options || options.length === 0) return null;
   // Auflist-by-Kategorie
-  const byCat = { OFFENSIV: [], DEFENSIV: [], ERKUNDEN: [], BEOBACHTEN: [], HEILEN: [], AUFLOESEN: [], normal: [] };
+  // v7.11.9: System-Kategorien ergaenzt (ROMANTIK, UEBERNACHTUNG, SCHLAFEN)
+  // - frueher fielen sie in 'normal' und wurden nie gewaehlt, was die ganze
+  // Romantik-/Schlaf-Logik im Bot-Test unsichtbar machte.
+  const byCat = {
+    OFFENSIV: [], DEFENSIV: [], ERKUNDEN: [], BEOBACHTEN: [], HEILEN: [],
+    AUFLOESEN: [], ROMANTIK: [], UEBERNACHTUNG: [], SCHLAFEN: [],
+    normal: []
+  };
   for (const opt of options) {
     const cat = (opt._kategorie || 'normal').toUpperCase();
     if (byCat[cat]) byCat[cat].push(opt);
@@ -19389,6 +19396,30 @@ function botChooseByStrategy(options) {
     if (typeof diag === 'function') diag('bot', 'Bot waehlt HEILEN (Selbstschutz Vf=' + verfassung + ')');
     return byCat.HEILEN[0];
   }
+  // v7.11.9: UEBERNACHTUNG immer nehmen wenn verfuegbar - Bogen-Climax.
+  // Das ist eine eindeutige Entscheidung: wenn die Frau bereit ist und es ist
+  // Nacht, ist UEBERNACHTUNG ein klarer Story-Progress. Bot waehlt sie 80% der
+  // Faelle (20% bleibt strategie-frei fuers Lektorat-Sampling).
+  if (byCat.UEBERNACHTUNG && byCat.UEBERNACHTUNG.length > 0) {
+    if (botRng() < 0.8) {
+      console.log('[Bot v7.11.9] UEBERNACHTUNG bevorzugt');
+      if (typeof diag === 'function') diag('bot', 'Bot waehlt UEBERNACHTUNG (80%, Bogen-Climax)');
+      return byCat.UEBERNACHTUNG[0];
+    } else {
+      if (typeof diag === 'function') diag('bot', 'Bot ueberspringt UEBERNACHTUNG (20% Sampling)');
+    }
+  }
+  // v7.11.9: SCHLAFEN bei kritischer Erschoepfung (En <= 30 oder Hu >= 7).
+  // Sonst sterben Bots an Erschoepfung in langen Runs.
+  if (byCat.SCHLAFEN && byCat.SCHLAFEN.length > 0) {
+    const lowEnergy = (typeof energie === 'number' && energie <= 30);
+    const veryHungry = (typeof hunger === 'number' && hunger >= 7);
+    if (lowEnergy || veryHungry) {
+      console.log('[Bot v7.11.9] SCHLAFEN noetig (En=' + (energie || '?') + ', Hu=' + (hunger || '?') + ')');
+      if (typeof diag === 'function') diag('bot', 'Bot waehlt SCHLAFEN (En=' + (energie || '?') + ', Hu=' + (hunger || '?') + ')');
+      return byCat.SCHLAFEN[0];
+    }
+  }
   // v7.11.0: AUFLOESEN-Priorisierung. Wenn die KI eine AUFLOESEN-Option angeboten
   // hat UND Stage >= 3 + ruhige Verfassung, soll der Bot sie in 70% der Faelle
   // nehmen - sonst beendet der Bot jeden Run sofort sobald moeglich. Mit 30%
@@ -19398,13 +19429,24 @@ function botChooseByStrategy(options) {
     const currentStage = (caseProgress && caseProgress.stage) || 0;
     if (currentStage >= 3 && (typeof verfassung !== 'number' || verfassung >= 3)) {
       // 70% Wahrscheinlichkeit AUFLOESEN waehlen
-      if (Math.random() < 0.7) {
+      if (botRng() < 0.7) {
         console.log('[Bot v7.10] AUFLOESEN bevorzugt (Stage ' + currentStage + ')');
         if (typeof diag === 'function') diag('bot', 'Bot waehlt AUFLOESEN (Stage ' + currentStage + ', Fall reif)');
         return byCat.AUFLOESEN[0];
       } else {
         if (typeof diag === 'function') diag('bot', 'Bot ueberspringt AUFLOESEN (30% chance, spielt weiter)');
       }
+    }
+  }
+  // v7.11.9: ROMANTIK nur strategie-abhaengig. aggressive + balanced nehmen
+  // sie gelegentlich (20%), cautious + thorough seltener (5%). Sonst arbeitet
+  // der Bot ueber den Fall, was die Hauptaufgabe ist.
+  if (byCat.ROMANTIK && byCat.ROMANTIK.length > 0) {
+    const romChance = (effectiveStrat === 'aggressive' || effectiveStrat === 'balanced') ? 0.20 : 0.05;
+    if (botRng() < romChance) {
+      console.log('[Bot v7.11.9] ROMANTIK gewaehlt (' + effectiveStrat + ', ' + (romChance * 100) + '% chance)');
+      if (typeof diag === 'function') diag('bot', 'Bot waehlt ROMANTIK (' + effectiveStrat + ', sporadische Wahl)');
+      return byCat.ROMANTIK[0];
     }
   }
   // Strategie-spezifische Priorisierung
