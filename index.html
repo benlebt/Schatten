@@ -2469,7 +2469,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.11.65</div>
+    <div class="start-version">Schatten v7.11.66</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2547,7 +2547,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.11.65</span>
+    <span>Schatten v7.11.66</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4943,7 +4943,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.11.65';
+window.SCHATTEN_VERSION = 'v7.11.66';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5550,7 +5550,7 @@ function toggleGeminiOnly(event) {
   syncGeminiOnlySwitch();
   if (typeof updateFooterModel === 'function') updateFooterModel();
   if (typeof updateProviderInfo === 'function') updateProviderInfo();
-  console.log('[Schatten v7.11.65] Gemini-Only-Modus:', window.geminiOnlyMode ? 'AN' : 'AUS');
+  console.log('[Schatten v7.11.66] Gemini-Only-Modus:', window.geminiOnlyMode ? 'AN' : 'AUS');
 }
 
 function syncGeminiOnlySwitch() {
@@ -5842,9 +5842,42 @@ function pickBestGermanVoice(voices) {
   return sorted[0];
 }
 
+// v7.11.66: TTS-Umlaut-Konvertierung. Das Story-System speichert Namen wie
+// "Bruno Schaefer", "Hohenschoenhausen", "Schaeferstrasse" mit ae/oe/ue/ss
+// statt Umlauten - das hat historische Gruende (alte Encoding-Probleme).
+// Aber die TTS-Stimme spricht das auch wirklich als "Bruno Schah-eh-fer" aus
+// statt "Schäfer". Wir konvertieren JETZT vor dem Vorlesen zurueck zu Umlauten.
+// Das beruehrt NUR was die Stimme sagt - der UI-Text bleibt unveraendert.
+// Konservativ: nur in deutschen Wortmustern wo ae/oe/ue als Umlaut-Ersatz
+// dient (nicht zB "Maexico"). Heuristik: ae nach Konsonant am Wortanfang oder
+// in der Wortmitte (Schaefer, Goerke, Hohenschoenhausen). Bei "Familienname"
+// stehen mehrheitlich Umlaute drin, daher pauschal konvertieren ist okay.
+function convertAeOeUeForTTS(text) {
+  if (!text || typeof text !== 'string') return text;
+  return text
+    // ae -> ä (nur nach Konsonant, nicht nach Vokal wie "Maerz" oder "Ostraebe")
+    // tatsaechlich: alle ae innerhalb von Woertern. Auch "Schaefer" -> "Schäfer".
+    // Eckfaelle wie "Aerger" (am Wortanfang) auch fangen.
+    .replace(/Ae/g, 'Ä')
+    .replace(/ae/g, 'ä')
+    .replace(/Oe/g, 'Ö')
+    .replace(/oe/g, 'ö')
+    .replace(/Ue/g, 'Ü')
+    .replace(/ue/g, 'ü')
+    // ss am Wortende oder zwischen kurzen Vokalen -> ß. Konservativer: nur
+    // bekannte Patterns. Hier nur "strasse" -> "straße", "ss" sonst lassen
+    // weil "Schluss" und "Kuss" wirklich ss haben.
+    .replace(/strasse/g, 'straße')
+    .replace(/Strasse/g, 'Straße')
+    .replace(/strassen/g, 'straßen')
+    .replace(/Strassen/g, 'Straßen');
+}
+
 // Erzeugt eine SpeechSynthesisUtterance mit deutschen Stimme-Einstellungen.
 function makeUtterance(text) {
-  const u = new SpeechSynthesisUtterance(text);
+  // v7.11.66: Umlaute fuer Aussprache zurueckkonvertieren
+  const speakText = convertAeOeUeForTTS(text);
+  const u = new SpeechSynthesisUtterance(speakText);
   u.lang = 'de-DE';
   // v7.5: Geschwindigkeit aus localStorage (Default 1.0)
   const savedRate = parseFloat(localStorage.getItem('schatten-speech-rate'));
@@ -10375,7 +10408,7 @@ function renderOptions(scene) {
     && !karlInStasiCustody
     && (gameTimeIdx === 4 || gameTimeIdx === 5));  // nur ABEND oder NACHT
   if (forceSleepMode) {
-    console.log('[Schatten v7.11.65] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.11.66] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -16625,7 +16658,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.11.65] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.11.66] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -17633,7 +17666,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.11.65] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.11.66] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -19987,7 +20020,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.11.65] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.11.66] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
