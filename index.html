@@ -2205,7 +2205,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.11.2</div>
+    <div class="start-version">Schatten v7.11.3</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2282,7 +2282,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.11.2</span>
+    <span>Schatten v7.11.3</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4625,7 +4625,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.11.2';
+window.SCHATTEN_VERSION = 'v7.11.3';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -8409,6 +8409,14 @@ let scenesInStage3 = 0;               // fuer Stage-3->Loesung Auto-Trigger
 let lastSceneEndedInUnconsciousness = false;
 let lastSceneOrt = '';  // merkt sich den Ort vor dem Wechsel, fuer Ort-Konsistenz-Push
 
+// v7.11.3: Doppel-Klick-Schutz fuer chooseOption. Wenn der Spieler waehrend
+// einer laufenden API-Anfrage nochmal klickt (Touch-Race, versehentlicher
+// Second-Tap, oder System-Race), wird die zweite Anfrage geblockt. Sonst
+// koennten zwei Szenen gleichzeitig zurueckkommen und Renderpfad bricht.
+// Wird in chooseOption() bei Beginn auf true gesetzt, am Ende in finally
+// auf false zurueck.
+let chooseOptionInFlight = false;
+
 // v7.9.53: PERFORMANCE-TRACKING pro Modell. User-Feedback "Mistral Large ist
 // extrem langsam" - wir wollen Antwortzeiten messen und im Export sehen welches
 // Modell wie schnell ist. Pro Modell: count, totalMs, durations[].
@@ -9218,10 +9226,32 @@ function checkProgressTriggers(kategorie, ctx) {
 
 function renderOptions(scene) {
   const list = document.getElementById('options-list');
-  list.innerHTML = '';
-  // v7.7: Context fuer Resolve/Heal-Detektion vorab bauen
-  // (gleicher Kontext fuer alle Optionen dieser Szene)
-  let resolveContext = null;
+  const optionsContainer = document.getElementById('options');
+  // v7.11.3: Defensive Wrapping. Wenn irgendetwas im Render schief geht
+  // (forEach-Fehler, undefined-Property-Access, etc.), MUSS am Ende
+  // #options trotzdem sichtbar werden - sonst sieht der Spieler garnichts
+  // und das System wirkt eingefroren ("Karl denkt nach"-Bug aus 0252-Run).
+  // Plus: wenn scene.optionen leer/kaputt, generischen Fallback rendern
+  // damit immer mindestens "Geh weiter"/"Warte ab"-Buttons da sind.
+  try {
+    list.innerHTML = '';
+    // Validation: scene.optionen muss existieren und array sein
+    if (!scene || !Array.isArray(scene.optionen) || scene.optionen.length === 0) {
+      console.warn('[Schatten] renderOptions: scene.optionen fehlt/leer - generischer Fallback');
+      if (typeof diag === 'function') {
+        diag('drift', 'renderOptions FALLBACK: scene.optionen war leer/kaputt - 4 generische Optionen eingesetzt');
+      }
+      scene = scene || {};
+      scene.optionen = [
+        { id: 'A', text: 'Sieh dich um und nimm die Lage in dich auf.' },
+        { id: 'B', text: 'Geh näher heran und beobachte genau.' },
+        { id: 'C', text: 'Frag jemanden in der Nähe nach den Hintergründen.' },
+        { id: 'D', text: 'Zieh dich kurz zurück und überdenke das Ganze.' },
+      ];
+    }
+    // v7.7: Context fuer Resolve/Heal-Detektion vorab bauen
+    // (gleicher Kontext fuer alle Optionen dieser Szene)
+    let resolveContext = null;
   try {
     const targetFact = (caseSetup && caseSetup.setupCast)
       ? caseSetup.setupCast.find(c => c && c.tag === 'TARGET') : null;
@@ -9569,6 +9599,36 @@ function renderOptions(scene) {
   }
 
   document.getElementById('options').classList.remove('hidden');
+  } catch (renderErr) {
+    // v7.11.3: Catch-all fuer renderOptions. Wenn irgendwas schief geht,
+    // wenigstens NOT-Optionen rendern damit der Spieler nicht im Nichts haengt.
+    // Anlass: 0252-Run-User-Bericht "keine Optionen sichtbar, aber System
+    // schickt weitere Anfrage als haette man geklickt".
+    console.error('[Schatten] renderOptions FATAL:', renderErr);
+    if (typeof diag === 'function') {
+      diag('drift', 'renderOptions FATAL: ' + (renderErr.message || renderErr) + ' - NOT-Optionen werden gezeigt');
+    }
+    try {
+      const list = document.getElementById('options-list');
+      list.innerHTML = '<div style="padding:16px;color:#f88;font-size:14px;">Render-Fehler. Tippe eine Option zum Weiterspielen:</div>';
+      const notOptions = [
+        { id: 'A', text: 'Sieh dich um und nimm die Lage in dich auf.' },
+        { id: 'B', text: 'Geh näher heran und beobachte genau.' },
+        { id: 'C', text: 'Frag jemanden nach Informationen.' },
+        { id: 'D', text: 'Zieh dich kurz zurück.' },
+      ];
+      for (const opt of notOptions) {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.innerHTML = '<span class="option-id">' + opt.id + '</span><span class="option-text-wrap"><span>' + opt.text + '</span></span>';
+        btn.addEventListener('click', () => chooseOption(opt));
+        list.appendChild(btn);
+      }
+      document.getElementById('options').classList.remove('hidden');
+    } catch (e2) {
+      console.error('[Schatten] renderOptions: auch NOT-Render fehlgeschlagen', e2);
+    }
+  }
 }
 function escapeHtml(s) {
   return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -12633,6 +12693,12 @@ async function startGame() {
   categoryStreak = 0;
   scenesInStage2 = 0;
   scenesInStage3 = 0;
+  // v7.11.2: Bewusstlosigkeits-Tracking reset
+  lastSceneEndedInUnconsciousness = false;
+  lastSceneOrt = '';
+  // v7.11.3: Doppel-Klick-Lock reset (sonst koennte ein abgestuerztes
+  // chooseOption den Lock fuer immer blockieren)
+  chooseOptionInFlight = false;
   // Reset Klient-Profil (wird beim ersten Cast-Add gesetzt)
   clientProfile = {
     name: '',
@@ -14528,13 +14594,28 @@ function classifyScene(sceneText, ort) {
 let recentSceneTypes = [];
 
 async function chooseOption(option) {
-  // v7.3: Laufendes Vorlesen stoppen wenn User Option waehlt
-  if (typeof stopSpeakCurrent === 'function' && speakCurrentActive) {
-    stopSpeakCurrent();
+  // v7.11.3: Doppel-Klick-Schutz. Wenn der Spieler waehrend einer laufenden
+  // API-Anfrage nochmal klickt (z.B. Touch-Event-Race, oder System-Button +
+  // versehentlicher Second-Tap), wuerde sonst die zweite Anfrage gestartet
+  // bevor die erste fertig ist. Folge: Race-Condition wo zwei Szenen
+  // gleichzeitig kommen, Renderpfad bricht. Lock-Variable verhindert das.
+  if (chooseOptionInFlight) {
+    console.warn('[Schatten] chooseOption ignoriert: noch eine Anfrage in-flight');
+    if (typeof diag === 'function') {
+      diag('drift', 'Doppel-Klick blockiert (chooseOptionInFlight=true)');
+    }
+    return;
   }
-  showLoading();
-  logEntries.push({ type: 'choice', text: option.text });
-  renderLog(false); // v7.9.47: kein Scroll - User soll seine Wahl + Loader sehen, nicht zum Header gerissen werden
+  chooseOptionInFlight = true;
+
+  try {
+    // v7.3: Laufendes Vorlesen stoppen wenn User Option waehlt
+    if (typeof stopSpeakCurrent === 'function' && speakCurrentActive) {
+      stopSpeakCurrent();
+    }
+    showLoading();
+    logEntries.push({ type: 'choice', text: option.text });
+    renderLog(false); // v7.9.47: kein Scroll - User soll seine Wahl + Loader sehen, nicht zum Header gerissen werden
 
   // v7.10: NEUE KATEGORIE-MECHANIK. Wenn der Spieler eine Option geklickt hat,
   // ermitteln wir die Kategorie (KI hat sie im JSON geliefert, oder Fallback)
@@ -14743,6 +14824,11 @@ async function chooseOption(option) {
   lastUserMessage = userMsg;
 
   await performApiCall(userMsg, /*isStart*/false, option);
+  } finally {
+    // v7.11.3: Lock IMMER freigeben - auch bei Exception irgendwo im Flow.
+    // Sonst koennte chooseOption fuer immer blockiert bleiben.
+    chooseOptionInFlight = false;
+  }
 }
 
 async function performApiCall(userMsg, isStart, optionForRollback, retryCount, rateLimitCount, openingRetryCount) {
@@ -18286,17 +18372,40 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     document.getElementById('error').classList.add('hidden');
     showHeader(scene);
     renderLog();
-    // Game Over wenn Verfassung auf 0
-    if (isGameOver) {
-      showGameOver();
-    } else if (caseProgress.istGelöst) {
-      // WIN: Fall geloest
-      showCaseSolved();
-    } else if (clientFired) {
-      // LOSE: Vom Klient gefeuert
-      showCaseFailed(`Tag ${gameDay}: ${clientProfile.name} hat Karl den Auftrag entzogen. Zu lange ohne Ergebnis.`);
-    } else {
-      renderOptions(scene);
+    // v7.11.3: Render-Pfad mit eigenem try/catch absichern. Wenn showHeader,
+    // renderLog, oder renderOptions einen Fehler werfen, FAELLT er sonst in
+    // den aeusseren catch der das als "API-Fehler" interpretiert und ggf.
+    // einen weiteren API-Call triggert ("Karl denkt nach"-Bug). Stattdessen:
+    // Render-Fehler isolieren, Notfall-Anzeige zeigen, KEIN automatischer Retry.
+    try {
+      // Game Over wenn Verfassung auf 0
+      if (isGameOver) {
+        showGameOver();
+      } else if (caseProgress.istGelöst) {
+        // WIN: Fall geloest
+        showCaseSolved();
+      } else if (clientFired) {
+        // LOSE: Vom Klient gefeuert
+        showCaseFailed(`Tag ${gameDay}: ${clientProfile.name} hat Karl den Auftrag entzogen. Zu lange ohne Ergebnis.`);
+      } else {
+        renderOptions(scene);
+      }
+    } catch (renderErr) {
+      console.error('[Schatten] Render-Pfad nach API-Antwort fehlgeschlagen:', renderErr);
+      if (typeof diag === 'function') {
+        diag('drift', 'Render-Fehler nach API-Antwort: ' + (renderErr.message || renderErr));
+      }
+      // Sicherheits-Fallback: zeige NOT-Optionen damit Spieler nicht haengt
+      try {
+        renderOptions({ optionen: null });  // triggert den NOT-Render-Pfad
+      } catch (e2) {
+        // Letzte Verteidigung: Reload-Hint
+        const list = document.getElementById('options-list');
+        if (list) {
+          list.innerHTML = '<div style="padding:16px;color:#f88;">Render-Fehler. Bitte Seite neu laden.</div>';
+        }
+        document.getElementById('options').classList.remove('hidden');
+      }
     }
     updateFooterModel();
     pendingRetry = null;
@@ -18611,6 +18720,10 @@ function buildDebugDump(err, userMsg, retryCount) {
 }
 
 async function retry() {
+  // v7.11.3: Lock freigeben - falls ein vorheriger chooseOption haengen
+  // geblieben ist (z.B. durch Render-Fehler), waere er sonst weiterhin
+  // gelockt und retry-Klick wuerde nichts machen.
+  chooseOptionInFlight = false;
   if (pendingRetry) {
     const fn = pendingRetry;
     pendingRetry = null;
