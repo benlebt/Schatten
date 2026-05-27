@@ -2240,7 +2240,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.11.32</div>
+    <div class="start-version">Schatten v7.11.33</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2317,7 +2317,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.11.32</span>
+    <span>Schatten v7.11.33</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4713,7 +4713,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.11.32';
+window.SCHATTEN_VERSION = 'v7.11.33';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -8704,6 +8704,7 @@ let lastSceneOrt = '';  // merkt sich den Ort vor dem Wechsel, fuer Ort-Konsiste
 // Wird in chooseOption() bei Beginn auf true gesetzt, am Ende in finally
 // auf false zurueck.
 let chooseOptionInFlight = false;
+let lastClickTimestamp = 0; // v7.11.33: fuer Race-Condition-Diagnostik
 
 // v7.11.4: HEILUNGS-COOLDOWN.
 // Anlass: 0323-Run - Karl wird bei Doc Wagner auf Vf 5 geheilt, dann driftet
@@ -9773,7 +9774,7 @@ function renderOptions(scene) {
     && !karlInStasiCustody
     && (gameTimeIdx === 4 || gameTimeIdx === 5));  // nur ABEND oder NACHT
   if (forceSleepMode) {
-    console.log('[Schatten v7.11.32] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.11.33] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -15535,11 +15536,21 @@ async function chooseOption(option) {
   if (chooseOptionInFlight) {
     console.warn('[Schatten] chooseOption ignoriert: noch eine Anfrage in-flight');
     if (typeof diag === 'function') {
-      diag('drift', 'Doppel-Klick blockiert (chooseOptionInFlight=true)');
+      // v7.11.33: detailliertes Tracking - wann gegen wann
+      const sincelast = lastClickTimestamp ? Math.round((Date.now() - lastClickTimestamp) / 100) / 10 : '?';
+      diag('drift', 'GEISTER-KLICK blockiert (Lock=true, ' + sincelast + 's seit letztem Klick, pendingRetry=' + (typeof pendingRetry === 'function' ? 'JA' : 'nein') + ')');
     }
     return;
   }
   chooseOptionInFlight = true;
+  // v7.11.33: Click-Timestamp fuer Race-Condition-Diagnostik
+  if (typeof lastClickTimestamp !== 'undefined') {
+    const delta = lastClickTimestamp ? Math.round((Date.now() - lastClickTimestamp) / 100) / 10 : 0;
+    if (lastClickTimestamp && delta < 2.0 && typeof diag === 'function') {
+      diag('drift', 'Schnell-Klick: nur ' + delta + 's seit letztem Klick');
+    }
+    lastClickTimestamp = Date.now();
+  }
 
   try {
     // v7.3: Laufendes Vorlesen stoppen wenn User Option waehlt
@@ -15825,9 +15836,23 @@ async function chooseOption(option) {
 
   await performApiCall(userMsg, /*isStart*/false, option);
   } finally {
-    // v7.11.3: Lock IMMER freigeben - auch bei Exception irgendwo im Flow.
-    // Sonst koennte chooseOption fuer immer blockiert bleiben.
-    chooseOptionInFlight = false;
+    // v7.11.33: Lock NUR freigeben wenn KEIN Retry pending ist.
+    // Vorher (v7.11.3): finally lief immer, aber performApiCall returns sofort
+    // wenn ein Retry per showNarrativeWait gequeued ist. Folge: chooseOption
+    // freigegeben waehrend Retry noch laeuft -> User kann erneut klicken ->
+    // Race-Condition zwei parallele Szenen.
+    // Beobachtung Vogt-Run v7.11.32: Mistral Large 3 Timeout, retry queued,
+    // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
+    // logEntries.pop().
+    if (typeof pendingRetry === 'function') {
+      console.log('[Schatten v7.11.33] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      if (typeof diag === 'function') {
+        diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
+      }
+      // Lock wird in pendingRetry-Trigger oder showError freigegeben
+    } else {
+      chooseOptionInFlight = false;
+    }
   }
 }
 
@@ -19660,6 +19685,8 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     updateFooterModel();
     pendingRetry = null;
     lastErrorDebug = null;
+    // v7.11.33: Lock freigeben - Anfrage erfolgreich abgeschlossen
+    chooseOptionInFlight = false;
   } catch (e) {
     // v7.9.40: 404 model_not_found - Modell ist deprecated/umbenannt/nicht
     // zugaenglich. Modell fuer 24h blockieren (Page-Reload setzt localStorage
@@ -19936,6 +19963,8 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       }
       lastErrorDebug = buildDebugDump(e, userMsg, retryCount);
       showError(e.message, lastErrorDebug);
+      // v7.11.33: Lock freigeben damit User den "Erneut versuchen"-Button klicken kann
+      chooseOptionInFlight = false;
     }
   }
 }
