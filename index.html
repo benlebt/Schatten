@@ -2343,7 +2343,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.11.37</div>
+    <div class="start-version">Schatten v7.11.38</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2421,7 +2421,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.11.37</span>
+    <span>Schatten v7.11.38</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4817,7 +4817,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.11.37';
+window.SCHATTEN_VERSION = 'v7.11.38';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5395,7 +5395,7 @@ function toggleGeminiOnly(event) {
   syncGeminiOnlySwitch();
   if (typeof updateFooterModel === 'function') updateFooterModel();
   if (typeof updateProviderInfo === 'function') updateProviderInfo();
-  console.log('[Schatten v7.11.37] Gemini-Only-Modus:', window.geminiOnlyMode ? 'AN' : 'AUS');
+  console.log('[Schatten v7.11.38] Gemini-Only-Modus:', window.geminiOnlyMode ? 'AN' : 'AUS');
 }
 
 function syncGeminiOnlySwitch() {
@@ -9919,7 +9919,7 @@ function renderOptions(scene) {
     && !karlInStasiCustody
     && (gameTimeIdx === 4 || gameTimeIdx === 5));  // nur ABEND oder NACHT
   if (forceSleepMode) {
-    console.log('[Schatten v7.11.37] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.11.38] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -10581,12 +10581,17 @@ const MODEL_CHAIN = [
   // 2. Wenn Spieler 22s pro Szene wartet, ist Qualitaet egal
   // 3. Mistrale haben jeweils 20 RPD eigener Topf - bleiben als Fallback
   //
-  // 1. Tier: Flash-Lite-Modelle ZUERST (schnellste + zuverlaessigste, ~5-9s avg).
-  // v7.11.7: Reihenfolge aus Run-0926-Statistik. Flash-Lites hatten beste
-  // Mischung aus Geschwindigkeit (6-9s) und Output-Qualitaet. Lite-Tier
-  // ueberraschend stabil im Output.
-  { provider: 'gemini', model: 'gemini-2.5-flash-lite',  label: 'Gemini 2.5 Flash-Lite' },
+  // 1. Tier: Flash-Lite-Modelle ZUERST (schnellste + zuverlaessigste, ~4-9s avg).
+  // v7.11.38: 3.1 Flash-Lite (Position 1) statt 2.5 (Position 2). Anlass:
+  // Goerke-Run v7.11.37 mit 2.5 Flash-Lite zeigte massive Szene-Wiederholungen
+  // (84% Satz-Ueberlapp Sz 22->23->24 trotz Anti-Wdh-Push), 26 von 35 Sz mit
+  // 0-Kategorien-Drift (gegen 0% in Lindenbaum-Run v7.11.30 mit 3.1 Flash-Lite),
+  // und Stage-Logik korrupt (Stage 4 -> Stage 2 nach Final-Failover). 3.1 ist
+  // ~2.5x teurer ($0.25/1M Input vs $0.10) aber merklich bessere Story-Qualitaet.
+  // Mit Implicit Caching (~76% Hits) ~$1/Run statt $0.40. 2.5 bleibt als Backup
+  // wenn 3.1 limitiert ist (Per-Minute-Bursts).
   { provider: 'gemini', model: 'gemini-3.1-flash-lite',  label: 'Gemini 3.1 Flash-Lite' },
+  { provider: 'gemini', model: 'gemini-2.5-flash-lite',  label: 'Gemini 2.5 Flash-Lite' },
   // 2. Tier: Gemini 3 Flash Preview (~18s, hohe Qualitaet, klare Inline-Kategorien)
   { provider: 'gemini', model: 'gemini-3-flash-preview', label: 'Gemini 3 Flash Preview' },
   // 3. Tier: Gemini 2.5 Flash (variable Performance - manchmal Phrasen-Repeat
@@ -10630,7 +10635,8 @@ const MODEL_CHAIN = [
 // die Chain (zwischen Mistral Medium und Groq, statt komplett raus).
 // v7.9.48: bump 8 -> 9 weil Llama 4 Scout aus der Chain entfernt wurde
 // (liefert leere Szenen oder ignoriert User-Aktion).
-const MODEL_CHAIN_VERSION = 11;
+// v7.11.38: bump 11 -> 12 weil Position 1+2 getauscht (3.1 Flash-Lite vor 2.5)
+const MODEL_CHAIN_VERSION = 12;
 
 // Aktuelle Position in der Kette aus localStorage (mit Tagesreset + Chain-Version-Check).
 // Session-Skip-Liste: Modelle die strukturell zu wenig TPM fuer unseren
@@ -16002,7 +16008,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.11.37] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.11.38] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
