@@ -2469,7 +2469,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.11.64</div>
+    <div class="start-version">Schatten v7.11.65</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2547,7 +2547,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.11.64</span>
+    <span>Schatten v7.11.65</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4943,7 +4943,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.11.64';
+window.SCHATTEN_VERSION = 'v7.11.65';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5550,7 +5550,7 @@ function toggleGeminiOnly(event) {
   syncGeminiOnlySwitch();
   if (typeof updateFooterModel === 'function') updateFooterModel();
   if (typeof updateProviderInfo === 'function') updateProviderInfo();
-  console.log('[Schatten v7.11.64] Gemini-Only-Modus:', window.geminiOnlyMode ? 'AN' : 'AUS');
+  console.log('[Schatten v7.11.65] Gemini-Only-Modus:', window.geminiOnlyMode ? 'AN' : 'AUS');
 }
 
 function syncGeminiOnlySwitch() {
@@ -10375,7 +10375,7 @@ function renderOptions(scene) {
     && !karlInStasiCustody
     && (gameTimeIdx === 4 || gameTimeIdx === 5));  // nur ABEND oder NACHT
   if (forceSleepMode) {
-    console.log('[Schatten v7.11.64] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.11.65] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -10617,16 +10617,23 @@ function renderOptions(scene) {
   } catch (e) { /* ignore */ }
 
   // v7.11.12: FLUCHT-Verfuegbarkeit:
-  // - Sp >= 3 (es muss "Action" sein damit Flucht Sinn macht)
+  // - Sp >= 4 (es muss "Action" sein damit Flucht Sinn macht)
   // - nicht in Stasi-Custody (gefangen kann man nicht fluechten)
   // - nicht in einer komplett ruhigen Indoor-Szene (Sp 1-2 = nichts wovon man fluechtet)
   // v7.11.63: BUG-FIX. Variable hiess immer "spannung" (existiert nicht global) ->
   // typeof undefined !== 'number' -> Fallback 1 -> currentSpannung war IMMER 1.
-  // FLUCHT-Button hat das nie geschadet weil zusaetzlich showFluchtButton-Logik
-  // gleich nochmal andere Checks macht. Aber SCHLAFEN-Sperre v7.11.61 war
-  // dadurch tot. Richtige Quelle: lastSpannung (global) oder scene.spannung.
-  const currentSpannung = (typeof lastSpannung === 'number') ? lastSpannung : 1;
-  const showFluchtButton = currentSpannung >= 3 && !karlInStasiCustody;
+  // v7.11.65: BUG-FIX 2. lastSpannung hat das gleiche Race-Problem - wird
+  // nach applyScene gesetzt aber renderOptions kann VOR dem naechsten apply
+  // re-rendern. Nutze scene.spannung direkt (ist der Parameter dieser
+  // Funktion). Plus Schwelle auf >= 4 angehoben - User-Run Wegener 2342:
+  // FLUCHT war bei Sp=3 (ERKUNDEN-Schauplatz) sichtbar, User klickte 8x
+  // hintereinander obwohl Karl schon im Opel auf einer ruhigen Strasse war
+  // -> Sp=2 ab Sz 17, FLUCHT trotzdem geklickt -> KI machte weiter "Karl
+  // faehrt noch weiter weg"-Sz statt was Sinnvolles.
+  const currentSpannung = (typeof scene.spannung === 'number') ? scene.spannung
+                          : (typeof lastSpannung === 'number') ? lastSpannung
+                          : 1;
+  const showFluchtButton = currentSpannung >= 4 && !karlInStasiCustody;
 
   // v7.11.12: NOTHEILEN-Verfuegbarkeit:
   // - Vf <= 2 (Karl ist schwer verletzt)
@@ -16618,7 +16625,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.11.64] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.11.65] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -17626,7 +17633,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.11.64] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.11.65] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -19980,7 +19987,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.11.64] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.11.65] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
