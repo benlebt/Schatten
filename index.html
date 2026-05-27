@@ -2205,7 +2205,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.11.9</div>
+    <div class="start-version">Schatten v7.11.10</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2282,7 +2282,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.11.9</span>
+    <span>Schatten v7.11.10</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4625,7 +4625,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.11.9';
+window.SCHATTEN_VERSION = 'v7.11.10';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5458,7 +5458,7 @@ function makeUtterance(text) {
         if (best) {
           chosenVoice = best;
           pickReason = 'gespeichert-WEG-fallback-auf-' + best.name;
-          console.warn('[Schatten v7.11.9 Voice-Drift] Gespeicherte Stimme "' + savedVoiceName + '" nicht in aktueller Liste (' + voices.length + ' total, ' + deVoiceCount + ' de). Fallback: "' + best.name + '". Liste: [' + voices.slice(0, 5).map(v => v.name + '@' + v.lang).join(', ') + (voices.length > 5 ? ', ...' : '') + ']');
+          console.warn('[Schatten v7.11.10 Voice-Drift] Gespeicherte Stimme "' + savedVoiceName + '" nicht in aktueller Liste (' + voices.length + ' total, ' + deVoiceCount + ' de). Fallback: "' + best.name + '". Liste: [' + voices.slice(0, 5).map(v => v.name + '@' + v.lang).join(', ') + (voices.length > 5 ? ', ...' : '') + ']');
           if (typeof diag === 'function') {
             diag('voice', 'Voice-Drift: gespeichert "' + savedVoiceName + '" weg, nehme "' + best.name + '" (Liste: ' + voices.length + ' total, ' + deVoiceCount + ' de)');
           }
@@ -8962,8 +8962,14 @@ function classifyOption(opt, resolveContext) {
 
   // v7.11.1: Deutsche Klammer-Marker (Heilung), (Offensiv/Empathisch), (Bewegung)
   // als zweite Heuristik. Mapping zu unseren Kategorien.
+  // v7.11.10: "Behandlung", "Verarztung" etc. ergaenzt - KI schreibt das oft
+  // statt "Heilung". Vogt-Run Sz 9: Optionen "(Behandlung)" wurden zu ERKUNDEN
+  // klassifiziert weil "behandlung" nicht im Mapping war + "fahr zur Charité"
+  // matchte das Bewegungs-Pattern.
   const DEUTSCH_KLAMMER_MAP = {
     'heilung': 'HEILEN', 'heilen': 'HEILEN', 'genesung': 'HEILEN',
+    'behandlung': 'HEILEN', 'verarztung': 'HEILEN', 'wundversorgung': 'HEILEN',
+    'versorgung': 'HEILEN', 'arzt': 'HEILEN', 'medizin': 'HEILEN',
     'offensiv': 'OFFENSIV', 'angriff': 'OFFENSIV', 'konfrontation': 'OFFENSIV', 'aggression': 'OFFENSIV',
     'defensiv': 'DEFENSIV', 'verteidigung': 'DEFENSIV', 'rueckzug': 'DEFENSIV', 'deeskalation': 'DEFENSIV',
     'erkunden': 'ERKUNDEN', 'erkundung': 'ERKUNDEN', 'suche': 'ERKUNDEN', 'recherche': 'ERKUNDEN', 'bewegung': 'ERKUNDEN',
@@ -9012,7 +9018,7 @@ function classifyOption(opt, resolveContext) {
     if (!opt._originalText) opt._originalText = opt.text;
     // Entferne alle Klammer-Suffixe mit Kategorien (auch deutsche Marker)
     opt.text = opt.text.replace(/\s*\([^)]*(?:OFFENSIV|DEFENSIV|ERKUNDEN|BEOBACHTEN|HEILEN|AUFLOESEN|SCHLAFEN|ROMANTIK)[^)]*\)\.?/gi, ' ');
-    opt.text = opt.text.replace(/\s*\((?:Heilung|Heilen|Genesung|Offensiv|Angriff|Konfrontation|Aggression|Defensiv|Verteidigung|Rueckzug|R\u00fcckzug|Deeskalation|Erkunden|Erkundung|Suche|Recherche|Bewegung|Beobachten|Beobachtung|Information|Befragung|Aufloesen|Aufl\u00f6sen|Aufloesung|Aufl\u00f6sung|Abschluss|Fallabschluss)[^)]*\)\.?/gi, ' ');
+    opt.text = opt.text.replace(/\s*\((?:Heilung|Heilen|Genesung|Behandlung|Verarztung|Wundversorgung|Versorgung|Arzt|Medizin|Offensiv|Angriff|Konfrontation|Aggression|Defensiv|Verteidigung|Rueckzug|R\u00fcckzug|Deeskalation|Erkunden|Erkundung|Suche|Recherche|Bewegung|Beobachten|Beobachtung|Information|Befragung|Aufloesen|Aufl\u00f6sen|Aufloesung|Aufl\u00f6sung|Abschluss|Fallabschluss)[^)]*\)\.?/gi, ' ');
     // Entferne das "Eine Kategorie[-ID]: X[.]" Pattern (auch ohne "Eine")
     opt.text = opt.text.replace(/\s*(?:[Ee]ine\s+)?[Kk]ategorie(?:-ID)?(?:\s+ist\s+obligatorisch)?\s*:\s*(?:OFFENSIV|DEFENSIV|ERKUNDEN|BEOBACHTEN|HEILEN|AUFLOESEN|SCHLAFEN|ROMANTIK)\.?/gi, '');
     // Mehrfach-Whitespace + nachhaengende Satzzeichen aufraeumen
@@ -9073,10 +9079,21 @@ function classifyOption(opt, resolveContext) {
   }
   else if (/\b(tritt|schlag|schiess|pack|stuerm|reiss|brich|drueck|zwing|fordere|forder|stell.*zur rede|konfrontier|attackier|angreif|press|kuess|verfuehr|verhaft|leg.*festnehm|droh|knall|eroeffne.*feuer|feuer.*eroeffn|zieh.*pistol|zieh.*waffe|zieh.*walther|zieh.*ppk)/.test(t)) {
     heuristicCat = 'OFFENSIV';
-  } else if (/\b(verlass|raus aus|weg von|weg aus|fahr (zu(r|m)?|nach|in|ab|los|direkt|an die|zum)|los (zu|nach)|begib dich|steig.*aus)\b/.test(t)) {
+  }
+  // v7.11.10: HEILEN-Erkennung VOR Bewegungs-Erkennung wenn klare Heilungs-
+  // Indikatoren da sind. "Fahr zur Charité um dich behandeln zu lassen" ist
+  // HEILEN, nicht ERKUNDEN, weil Karl-Ziel = sich heilen.
+  // Vogt-Run Sz 9: "Steuere die Praxis von Doc Wagner an (Behandlung)" wurde
+  // zu ERKUNDEN klassifiziert -> Karl bekam keinen Heal-Bonus -> tot.
+  else if (/\b(zu(r|m)?\s+(doc|praxis|charit|krankenhaus|sanitaeter|notaufnahme|apothek|arzt)|um.*(behandel|verarzt|versorg|heil|hilfe.*such)|behandel\s+lass|verarzt\s+lass|wunde.*versorg|versorge\s+dich|selbst.*verarzt)\b/.test(t)) {
+    heuristicCat = 'HEILEN';
+  }
+  else if (/\b(verlass|raus aus|weg von|weg aus|fahr (zu(r|m)?|nach|in|ab|los|direkt|an die|zum)|los (zu|nach)|begib dich|steig.*aus)\b/.test(t)) {
     // v7.10.11 Fix 2: Bewegungs-Verben VOR HEILEN pruefen. Karl der die Praxis
     // VERLAESST ist nicht HEILEN sondern ERKUNDEN, auch wenn das Wort "Praxis"
     // im Text steht. "Fahr zur Charité" = ERKUNDEN (Reise), nicht HEILEN.
+    // v7.11.10: aber WENN klarer Heilungs-Kontext da ist (siehe oben),
+    // ueberschreibt HEILEN diese Bewegungs-Heuristik.
     heuristicCat = 'ERKUNDEN';
   } else if (/\b(frag|befrag|sprich|red|erkundig|tax.*aus|verlange)\s+(den\s+)?(doc|wagner|apotheker|krankenschwester|marlene|arzt|aerzt)/.test(t)) {
     // v7.10.11 Fix 2b: "Frag den Doc nach X" ist BEOBACHTEN (Befragung), nicht
@@ -14983,7 +15000,7 @@ async function chooseOption(option) {
   // ist garantiert. Unterschied: Karl wacht bei der ROMANCE-Person auf.
   if (chosenKategorie === 'UEBERNACHTUNG') {
     pendingSleepChoice = true;
-    console.log('[Schatten v7.11.9] UEBERNACHTUNG gewaehlt - pendingSleepChoice=true (Tageswechsel garantiert, bei ROMANCE-NPC)');
+    console.log('[Schatten v7.11.10] UEBERNACHTUNG gewaehlt - pendingSleepChoice=true (Tageswechsel garantiert, bei ROMANCE-NPC)');
   }
 
   // v7.11.7: ROMANTIK-KLICK-COUNTER
@@ -14998,7 +15015,7 @@ async function chooseOption(option) {
       lastRomanceNpcName = npcName;
     }
     romanticClicksSinceProgress++;
-    console.log('[Schatten v7.11.9] ROMANTIK-Klick #' + romanticClicksSinceProgress + ' mit ' + (npcName || '?'));
+    console.log('[Schatten v7.11.10] ROMANTIK-Klick #' + romanticClicksSinceProgress + ' mit ' + (npcName || '?'));
     if (typeof diag === 'function') {
       diag('detect', 'Romantik-Klick ' + romanticClicksSinceProgress + '/3 mit ' + (npcName || '?'));
     }
@@ -16550,8 +16567,31 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       let deltaSource = 'kategorie';
 
       if (vfKritisch) {
-        // Karl ist schon stark angeschlagen - KI hat Vorrang weil sie den Text kennt
-        if (kiDelta < 0) {
+        // v7.11.10 FIX: Bei HEILEN/DEFENSIV-Wahl hat die Kategorie IMMER
+        // Vorrang. Sonst war Karl in 0926/1037-Runs gestorben obwohl der Bot
+        // gerade HEILEN waehlte - KI-Drift sagte -1, Engine nahm -1.
+        // Wegener Sz 12->13: Vf 1 + HEILEN(+2) + ki(-1) -> sollte +1 ergeben,
+        // ergab aber -1 weil "ki-bei-kritisch" gewann. Karl heilbar erst wenn
+        // HEILEN die zustaendige Mechanik ist.
+        const istHeilWahl = (pendingCategoryChoice === 'HEILEN'
+          || pendingCategoryChoice === 'DEFENSIV'
+          || pendingCategoryChoice === 'SCHLAFEN'
+          || pendingCategoryChoice === 'UEBERNACHTUNG');
+        if (istHeilWahl && kategorieDelta > 0) {
+          // Spieler hat aktiv Heilung gewaehlt - Kategorie gewinnt, KI-Drift ignoriert
+          finalDelta = kategorieDelta;
+          deltaSource = 'heilwahl-vorrang-' + pendingCategoryChoice;
+          if (kiDelta < 0 && typeof diag === 'function') {
+            diag('state', 'KI-Drift ' + kiDelta + ' ignoriert weil ' + pendingCategoryChoice + ' aktiv gewaehlt (Vf=' + verfassung + ')');
+          }
+          // HEILEN-Cooldown setzen
+          if (pendingCategoryChoice === 'HEILEN') {
+            lastHealedSceneCounter = sceneCounter;
+            if (typeof diag === 'function') {
+              diag('state', 'HEILUNGS-COOLDOWN aktiviert (' + HEALING_COOLDOWN_SCENES + ' Szenen Schonfrist nach HEILEN)');
+            }
+          }
+        } else if (kiDelta < 0) {
           // KI sagt Verlust -> nehmen (egal ob -1, -2, -3)
           finalDelta = kiDelta;
           deltaSource = 'ki-bei-kritisch';
@@ -16562,16 +16602,9 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           finalDelta = -1;
           deltaSource = 'kategorie-cap-bei-kritisch';
         } else if (kategorieDelta > 0) {
-          // DEFENSIV/HEILEN-Bonus
+          // DEFENSIV/HEILEN-Bonus (wenn nicht durch istHeilWahl oben gefangen)
           finalDelta = kategorieDelta;
           deltaSource = 'kategorie-heilung';
-          // v7.11.4: HEILEN-Cooldown setzen wenn echte Heilung passiert
-          if (pendingCategoryChoice === 'HEILEN' && kategorieDelta > 0) {
-            lastHealedSceneCounter = sceneCounter;
-            if (typeof diag === 'function') {
-              diag('state', 'HEILUNGS-COOLDOWN aktiviert (' + HEALING_COOLDOWN_SCENES + ' Szenen Schonfrist nach HEILEN)');
-            }
-          }
         }
       } else {
         // Normale Vf-Range: MIN-Logik (groesserer Verlust gewinnt)
@@ -19391,10 +19424,28 @@ function botChooseByStrategy(options) {
     ? botRotatingSubStrategies[Math.floor(botCurrentTurn / botRotatingTurnsPerStyle) % botRotatingSubStrategies.length]
     : botStrategy;
   // SELBSTSCHUTZ: Wenn Karl sehr schwer verletzt, HEILEN priorisieren.
+  // v7.11.10: Bei Vf=1 (dem letzten Atemzug) MUSS HEILEN gewaehlt werden
+  // wenn irgendwie verfuegbar. Sonst stirbt Karl in der naechsten Action-Sz.
+  // Vogt-Run zeigte: Bot waehlte bei Vf=1 ERKUNDEN/Flucht statt Charité -
+  // tot. Wegener-Run: 2x Vf<=2 ohne Genesung trotz angebotener HEILEN.
+  if (typeof verfassung === 'number' && verfassung <= 1 && byCat.HEILEN.length > 0) {
+    // ABSOLUTE Prio bei Vf=1 - kein Roll wie sonst, einfach HEILEN
+    console.log('[Bot v7.11.10] HEILEN ZWINGEND (Vf=' + verfassung + ' - letzter Atemzug)');
+    if (typeof diag === 'function') diag('bot', 'Bot waehlt HEILEN ZWINGEND (Vf=' + verfassung + ' kritisch)');
+    return byCat.HEILEN[0];
+  }
   if (typeof verfassung === 'number' && verfassung <= 2 && byCat.HEILEN.length > 0) {
     console.log('[Bot v7.10] HEILEN bevorzugt (Vf=' + verfassung + ')');
     if (typeof diag === 'function') diag('bot', 'Bot waehlt HEILEN (Selbstschutz Vf=' + verfassung + ')');
     return byCat.HEILEN[0];
+  }
+  // v7.11.10: Wenn Vf=1 ABER keine HEILEN-Option in den 4 KI-Optionen ist,
+  // DEFENSIV als zweitbeste Option waehlen (Karl versteckt sich, bekommt
+  // wenigstens +1 Vf-Bonus statt sich in eine OFFENSIV-Action zu stuerzen).
+  if (typeof verfassung === 'number' && verfassung <= 1 && byCat.DEFENSIV.length > 0) {
+    console.log('[Bot v7.11.10] DEFENSIV ZWINGEND (Vf=' + verfassung + ', keine HEILEN-Option)');
+    if (typeof diag === 'function') diag('bot', 'Bot waehlt DEFENSIV ZWINGEND (Vf=' + verfassung + ', kein HEILEN angeboten)');
+    return byCat.DEFENSIV[0];
   }
   // v7.11.9: UEBERNACHTUNG immer nehmen wenn verfuegbar - Bogen-Climax.
   // Das ist eine eindeutige Entscheidung: wenn die Frau bereit ist und es ist
