@@ -2205,7 +2205,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.11.1</div>
+    <div class="start-version">Schatten v7.11.2</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2282,7 +2282,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.11.1</span>
+    <span>Schatten v7.11.2</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4625,7 +4625,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.11.1';
+window.SCHATTEN_VERSION = 'v7.11.2';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -8188,19 +8188,31 @@ function advanceGameTime() {
   // 12-Sz-Verhoer-Marathons entstehen.
   const isNacht = gameTimeIdx === 5;
   const actionOverrideLimit = isNacht ? 6 : 8;
+  // v7.11.2: Action-Pause war frueher KOMPLETT (Tageszeit froren ganz ein, 8
+  // Szenen lang). Anlass: 0252-Run hatte 8 Sz T2 MORGEN ohne Wechsel weil
+  // viele Sz Sp 5 hatten. Jetzt: Bei Sp 4-5 schreitet Tageszeit GEDAEMPFT
+  // voran (50% der normalen Tokens), nicht komplett pausiert. So fuehlt sich
+  // Action immer noch wie kurze Zeit an aber 8 Szenen am Stueck = sicherer
+  // Wechsel auch ohne HARD-Override.
   if (lastSpannung >= 4 && scenesInCurrentTime < actionOverrideLimit) {
-    console.log('[Schatten] Action-Sequenz (Spannung', lastSpannung + '), Tageszeit pausiert.');
-    diag('detect', 'Action-Pause: Spannung ' + lastSpannung + ', Tageszeit haelt an');
-    scenesInCurrentTime++;  // zaehlt trotzdem fuer Force-Push
+    console.log('[Schatten] Action-Sequenz (Spannung', lastSpannung + '), Tageszeit gedaempft.');
+    diag('detect', 'Action-Daempfung: Spannung ' + lastSpannung + ', Tageszeit haelt durch (1/2-Tokens)');
+    scenesInCurrentTime++;
+    // Gedaempfte Tokens (statt komplett einfrieren)
+    if (isNacht) {
+      timeAdvanceTokens += 0.18 + Math.random() * 0.10;  // ~50% von 0.35-0.55
+    } else {
+      timeAdvanceTokens += 0.35 + Math.random() * 0.12;  // ~50% von 0.70-0.95
+    }
     // v7.9.44: Pruefe NACH dem Inkrement nochmal ob jetzt HARD-Override-Schwelle
     // erreicht ist. Wagner-Run v7.9.42 hatte 13 Sz MORGEN weil Action-Pause early-
-    // return die HARD-Override-Logik unten nie erreichen liess. Wenn jetzt durch
-    // diesen Increment scenesInCurrentTime den Cap erreicht, faellt durch zur
-    // Wechsel-Logik.
-    if (scenesInCurrentTime < actionOverrideLimit) {
+    // return die HARD-Override-Logik unten nie erreichen liess.
+    // Bei v7.11.2: wenn Tokens nicht > 1 sind UND Cap noch nicht erreicht, return.
+    if (scenesInCurrentTime < actionOverrideLimit && timeAdvanceTokens < 1) {
       return;
     }
-    // Sonst: Action-Pause-Override greift jetzt (siehe naechster Block)
+    // Sonst: Action-Pause-Override greift jetzt (siehe naechster Block) ODER
+    // die gedaempften Tokens haben es geschafft die Schwelle zu erreichen
   }
   if (lastSpannung >= 4 && scenesInCurrentTime >= actionOverrideLimit) {
     console.log('[Schatten] Action-Pause-OVERRIDE: ' + scenesInCurrentTime + '+ Szenen Action - Tageszeit muss wechseln');
@@ -8208,23 +8220,14 @@ function advanceGameTime() {
     // Fall durch zur Wechsel-Logik
   }
 
-  scenesInCurrentTime++;
-
-  // sceneCounter wird in performApiCall hochgezaehlt (nach erfolgreichem Receive),
-  // damit Retries nicht doppelt zaehlen. Hier nur Tageszeit/Tag voranschreiten.
-  // NACHT (Index 5) ist die laengste Phase im Krimi: Verhoere ziehen sich, Aktion in der Dunkelheit
-  // dauert. Daher kleinere Token-Schritte fuer NACHT (0.25-0.4) als fuer andere Phasen (0.55-0.8).
-  // v7.9.14: Token-Schritte erhoeht. Vorher 0.4-0.65 = ~2 Sz pro Phase = 12 Sz/Tag.
-  // Beobachtet: Runs hatten 19-29 Sz pro Tag. Ziel: 10-14 Sz/Tag, Runs ueber 2-4 Tage.
-  // Neu: 0.55-0.8 = ~1.5 Sz pro Phase = 9 Sz/Tag. Bei 30-Sz-Run also 3 Tage.
-  // v7.9.60: Wagner-Run v7.9.59 hatte 30 Sz an Tag 1 trotz dieser Tokens.
-  // Token-Werte WEITER erhoeht: 0.7-0.95 (avg 0.825) = ~1.2 Sz pro Phase = 5 Sz/Tag bei avg.
-  // Plus Action-Pause kommt dazu, also ~10-14 Sz/Tag realistisch.
-  // (isNacht oben schon deklariert fuer actionOverrideLimit)
-  if (isNacht) {
-    timeAdvanceTokens += 0.35 + Math.random() * 0.20;  // war 0.25 + 0.15
-  } else {
-    timeAdvanceTokens += 0.70 + Math.random() * 0.25;  // war 0.55 + 0.25
+  // Normaler Pfad (Sp < 4): scenesInCurrentTime++ und volle Tokens
+  if (lastSpannung < 4) {
+    scenesInCurrentTime++;
+    if (isNacht) {
+      timeAdvanceTokens += 0.35 + Math.random() * 0.20;
+    } else {
+      timeAdvanceTokens += 0.70 + Math.random() * 0.25;
+    }
   }
 
   // FORCE-PUSH (v6.55): Nach 3 Szenen in derselben Tageszeit ohne Action MUSS
@@ -8398,6 +8401,13 @@ let lastChosenKategorie = null;
 let categoryStreak = 0;               // wie oft dieselbe Kategorie hintereinander
 let scenesInStage2 = 0;               // fuer Stage-2->3 Auto-Trigger
 let scenesInStage3 = 0;               // fuer Stage-3->Loesung Auto-Trigger
+
+// v7.11.2: BEWUSSTLOSIGKEITS-TRACKING. Wenn die letzte Szene mit Karl in
+// Ohnmacht endet, MUSS die naechste Szene entweder am gleichen Ort spielen
+// ODER den Transport explizit erzaehlen. Sonst springt Karl wundersam von
+// Kneipe nach Lagerhalle, wie im 0252-Run Sz 7->8 passiert.
+let lastSceneEndedInUnconsciousness = false;
+let lastSceneOrt = '';  // merkt sich den Ort vor dem Wechsel, fuer Ort-Konsistenz-Push
 
 // v7.9.53: PERFORMANCE-TRACKING pro Modell. User-Feedback "Mistral Large ist
 // extrem langsam" - wir wollen Antwortzeiten messen und im Export sehen welches
@@ -11591,6 +11601,28 @@ VERBOTEN: einfach mit "schraegem Morgenlicht" anfangen ohne zu erklaeren wo Karl
       }
       pendingDayTransition = false; // Flag zurücksetzen, damit es nur einmal wirkt
     }
+
+    // v7.11.2: BEWUSSTLOSIGKEITS-PUSH. Wenn die letzte Szene mit Karl
+    // ohnmaechtig endete, MUSS die naechste Szene entweder:
+    // (a) am gleichen Ort spielen mit Karl der dort aufwacht
+    // (b) den Transport explizit erzaehlen ("zwei Maenner schleppen dich raus")
+    // Anlass: 0252-Run Sz 7->8 - Karl wird in Kneipe ohnmaechtig, wacht in
+    // Lagerhalle auf ohne dass der Transport erklaert wird.
+    if (lastSceneEndedInUnconsciousness && lastSceneOrt) {
+      timeContext += `\n\nBEWUSSTLOSIGKEITS-KONSISTENZ (PFLICHT): Die letzte Szene endete damit dass Karl das Bewusstsein verloren hat. Er war zuletzt an diesem Ort: "${lastSceneOrt}". Die naechste Szene MUSS einen dieser beiden Pfade nehmen:
+
+PFAD A - GLEICHER ORT: Karl wacht am selben Ort wieder auf. Beschreibe wie viel Zeit vergangen ist (Minuten, Stunden), was sich um ihn herum veraendert hat (NPCs weg, Polizei da, andere Gaeste, anderes Licht). Plausibel wenn er an einem oeffentlichen Ort lag (Kneipe, Strasse, Hauseingang) oder wenn niemand ihn wegbringen konnte.
+
+PFAD B - TRANSPORT EXPLIZIT: Wenn Karl an einem anderen Ort aufwacht, MUSS der Text klar machen WER ihn dort hingebracht hat und WIE. Das kann sein: Bruno-Maenner haben ihn abtransportiert (zur Lagerhalle, ins Lager), Polizei hat ihn in eine Zelle gebracht, ein Anwesender hat ihn weggeschleppt (zu Doc Wagner, in den Opel, zu seiner Wohnung). KEIN stillschweigendes Erwachen an einem fremden Ort. KEIN Teleport.
+
+VERBOTEN: Karl wacht woanders auf ohne Erklaerung. Wenn du Pfad B waehlst, MUSST du in 1-2 Saetzen den Transport beschreiben - das ist der wichtigste Story-Beat dieser Szene.`;
+      if (typeof diag === 'function') {
+        diag('drift', 'BEWUSSTLOSIGKEITS-PUSH gesendet (letzter Ort: ' + lastSceneOrt + ')');
+      }
+      // Flag konsumieren - greift NUR eine Szene lang
+      lastSceneEndedInUnconsciousness = false;
+      lastSceneOrt = '';
+    }
     // v6.98: WIEDERHOLUNGS-PUSH wenn die letzte Szene zu sehr der vorigen aehnelte.
     // Anlass: Goerke-Run v6.96 Sz 7+8 - Mistral lieferte 83% identische Saetze,
     // nur die woertliche Rede war anders. Der naechste Recap pusht die KI explizit
@@ -14763,6 +14795,42 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     const { scene, rawAssistantText } = await callGroq(userMsg, history, compactMode);
     const apiCallDuration = Date.now() - apiCallStart;
     currentScene = scene;
+
+    // v7.11.2: Bewusstlosigkeits-Detektion. Wenn der Szenentext mit
+    // Karl-bewusstlos-Indikatoren endet, setze ein Flag damit die NAECHSTE
+    // Szene entweder am gleichen Ort spielt ODER den Transport explizit erzaehlt.
+    // Anlass: 0252-Run Sz 7->8 - Karl wird in der Kneipe ohnmaechtig,
+    // wacht in der Lagerhalle auf, ohne dass der Text den Transport erklaert.
+    // Pattern: nur die LETZTEN 200 Zeichen pruefen (es muss am Ende der
+    // Szene passieren, nicht in der Mitte - sonst false positives bei
+    // Vergleichen wie "wie wenn das Bewusstsein...").
+    try {
+      const sceneText = (scene && scene.szene) || '';
+      const lastChunk = sceneText.slice(-300).toLowerCase();
+      // Karl-bezogene Bewusstlosigkeits-Indikatoren. Direkte Phrasen-Matches
+      // statt komplizierter Regex - false positives sind weniger schlimm als
+      // missed positives, weil der Push die KI nur erinnert sich am Ort
+      // konsistent zu verhalten.
+      const karlBewusstlos =
+        /\b(das\s+bewusstsein\s+entgleitet|verlier(s|)t?\s+(du|er|karl)\s+das\s+bewusstsein|sinkst\s+in\s+bewusstlosigkeit|sinkst\s+ohnmächtig|sinkst\s+bewusstlos|versinkst\s+in\s+(bewusstlosigkeit|finsternis|dunkel)|in\s+(bewusstlosigkeit|finsternis|dunkel)\s+versinkst|bricht\s+(die\s+)?finsternis\s+(herein|über)|alles\s+(wird|um\s+dich\s+(wird|verschwimmt))\s+(schwarz|finster|dunkel)|wird\s+schwarz\s+und\s+(weiss|weiß)|sicht\s+verschwimmt\s+zu\s+einem\s+tunnel|schwinden\s+die\s+sinne|sinne\s+schwinden|wirst\s+ohnmächtig|brichst\s+du\s+zusammen|knickst\s+du\s+ein\s+und\s+verlierst|verweigert\s+den\s+dienst|kraft\s+verläss[ts]?\s+(dich|karl|ihn)|bricht\s+zusammen.{0,40}(bewusstsein|finsternis|dunkel|schwarz)|nichts\s+mehr\s*\.?\s*$|(\.|,)\s*dann\s+(nichts|schwarz|dunkel)\b)/i.test(lastChunk);
+
+      if (karlBewusstlos && verfassung > 0) {
+        lastSceneEndedInUnconsciousness = true;
+        lastSceneOrt = (scene && scene.ort) || '';
+        if (typeof diag === 'function') {
+          diag('detect', 'BEWUSSTLOSIGKEITS-DETEKTION: Szene endet mit Karl ohnmaechtig - naechste Szene MUSS Ort halten oder Transport erklaeren');
+        }
+        console.log('[Schatten] Karl ohnmaechtig am Ende der Szene - Ort-Lock aktiv fuer naechste Szene');
+      } else {
+        // Flag konsumieren (wir wollen es nur GENAU eine Szene lang aktiv haben).
+        // Bei Vf=0 setzen wir das Flag NICHT, weil dann Game-Over kommt und kein
+        // Push gebraucht wird.
+        lastSceneEndedInUnconsciousness = false;
+        lastSceneOrt = '';
+      }
+    } catch (e) {
+      console.warn('[Schatten] Bewusstlosigkeits-Detektion fehlgeschlagen:', e);
+    }
     // Rohe JSONs ablegen (Browser-RAM, kein extra Traffic)
     if (currentSceneDiagnostics) {
       currentSceneDiagnostics.responseJson = scene;
@@ -15949,6 +16017,25 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         const beforeEn = karlEnergie;
         karlEnergie = Math.max(0, Math.min(100, karlEnergie + categoryMechanicsResult.energieDelta));
         if (typeof diag === 'function') diag('state', 'Energie ' + beforeEn + ' -> ' + karlEnergie + ' (' + (categoryMechanicsResult.energieDelta > 0 ? '+' : '') + categoryMechanicsResult.energieDelta + ' via ' + pendingCategoryChoice + ')');
+      }
+      // v7.11.2: timeAdvanceBonus anwenden. War vorher in applyCategoryMechanics
+      // gesetzt aber nirgends benutzt - dadurch lief Tageszeit nur ueber die
+      // pauschalen Token-Tropfen (0.7-0.95) in advanceGameTime. Mit Bonus
+      // kommen ERKUNDEN/OFFENSIV-Szenen schneller in die naechste Phase.
+      // Anlass: 0252-Run hatte 8 Sz T2 MORGEN ohne Tageszeit-Wechsel weil
+      // viele Sz Sp 4-5 Action waren -> Action-Pause -> Tokens froren.
+      // ERKUNDEN/OFFENSIV-Bonus sorgt dafuer dass selbst in Action die Zeit
+      // bisschen voranschreitet.
+      if (typeof categoryMechanicsResult.timeAdvanceBonus === 'number' &&
+          categoryMechanicsResult.timeAdvanceBonus > 0 &&
+          categoryMechanicsResult.timeAdvanceBonus < 10) {
+        // Nur normale Boni anwenden (kein 99=SCHLAFEN, das wird separat behandelt)
+        timeAdvanceTokens += categoryMechanicsResult.timeAdvanceBonus * 0.4;
+        // Faktor 0.4 damit der Bonus nicht alleine Tageszeit-Wechsel triggert -
+        // er ist eine ZUSATZ-Quelle neben den Basis-Tokens in advanceGameTime.
+        if (typeof diag === 'function') {
+          diag('state', 'Tageszeit-Bonus +' + (categoryMechanicsResult.timeAdvanceBonus * 0.4).toFixed(2) + ' (' + pendingCategoryChoice + ')');
+        }
       }
       // Romance/Stasi-Tension
       if (categoryMechanicsResult.romanceTension > 0 && typeof romanticTension === 'number') {
@@ -18231,6 +18318,9 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       if (nextModel && nextModel.label !== previousModel.label) {
         console.warn('[Schatten] 404 model_not_found on', previousModel.label, '-> 24h blockiert (Modell deprecated/umbenannt), switching to', nextModel.label);
         skipNextThrottle = true;
+        // v7.11.2: UI-Feedback bei Failover. Sonst sieht der Spieler nur
+        // "Karl denkt nach" ohne zu wissen dass mehrere Modelle blockiert sind.
+        showLoading('Modell wechselt: ' + nextModel.label + '...');
         if (optionForRollback) {
           performApiCall(userMsg, isStart, optionForRollback, retryCount, rateLimitCount, openingRetryCount);
         } else {
@@ -18256,6 +18346,8 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       if (nextModel && nextModel.label !== previousModel.label) {
         console.log('[Schatten] 503 ServiceUnavailable on', previousModel.label, '-> 90s blockiert, switching to', nextModel.label);
         skipNextThrottle = true;
+        // v7.11.2: UI-Feedback bei Failover
+        showLoading('Server ueberlastet, wechsle zu ' + nextModel.label + '...');
         if (optionForRollback) {
           performApiCall(userMsg, isStart, optionForRollback, retryCount, rateLimitCount, openingRetryCount);
         } else {
@@ -18321,6 +18413,8 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (nextModel && nextModel.label !== previousModel.label) {
           console.log('[Schatten] Per-minute limit on', previousModel.label, '(2nd hit) -> switching to', nextModel.label);
           skipNextThrottle = true;
+          // v7.11.2: UI-Feedback bei Rate-Limit-Failover
+          showLoading('Modell ausgelastet, wechsle zu ' + nextModel.label + '...');
           if (optionForRollback) {
             performApiCall(userMsg, isStart, optionForRollback, retryCount, rateLimitCount, openingRetryCount);
           } else {
@@ -18465,7 +18559,9 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         }
       };
       if (retryCount === 0) {
-        showLoading('Du sammelst dich kurz neu...');
+        // v7.11.2: Mehr Kontext im Loading-Text. Spieler weiss jetzt dass
+        // alle Modelle einmal durchgekommen sind.
+        showLoading('Alle Modelle einmal durch, nochmal versuchen...');
         doRetry();
       } else {
         const waitSec = retryCount === 1 ? 2 : 4;
