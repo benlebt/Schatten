@@ -2469,7 +2469,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.11.55</div>
+    <div class="start-version">Schatten v7.11.57</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2547,7 +2547,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.11.55</span>
+    <span>Schatten v7.11.57</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4943,7 +4943,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.11.55';
+window.SCHATTEN_VERSION = 'v7.11.57';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5550,7 +5550,7 @@ function toggleGeminiOnly(event) {
   syncGeminiOnlySwitch();
   if (typeof updateFooterModel === 'function') updateFooterModel();
   if (typeof updateProviderInfo === 'function') updateProviderInfo();
-  console.log('[Schatten v7.11.55] Gemini-Only-Modus:', window.geminiOnlyMode ? 'AN' : 'AUS');
+  console.log('[Schatten v7.11.57] Gemini-Only-Modus:', window.geminiOnlyMode ? 'AN' : 'AUS');
 }
 
 function syncGeminiOnlySwitch() {
@@ -10365,7 +10365,7 @@ function renderOptions(scene) {
     && !karlInStasiCustody
     && (gameTimeIdx === 4 || gameTimeIdx === 5));  // nur ABEND oder NACHT
   if (forceSleepMode) {
-    console.log('[Schatten v7.11.55] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.11.57] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -10426,6 +10426,21 @@ function renderOptions(scene) {
     const optClass = classifyOption(opt, resolveContext);
     opt._kategorie = optClass.kategorie;
     opt._priority = optClass.priority;
+    // v7.11.57: AUFLOESEN-Konvertierung an die richtige Stelle verschoben.
+    // Vorher in v7.11.54 lief der Code VOR classifyOption -> _kategorie war
+    // undefined, Konvertierung wirkungslos. User-Run Vogt 2216 Sz 25 hatte
+    // FALL LÖSEN als ABCD-Marker trotz Code. Jetzt: direkt nach classify.
+    // FALL LÖSEN ist AUSSCHLIESSLICH der System-Button unten - wenn die KI/
+    // Heuristik eine AUFLOESEN-Option liefert (z.B. "Fall beenden"),
+    // klassifizieren wir sie um zu BEOBACHTEN.
+    if (opt._kategorie === 'AUFLOESEN') {
+      opt._kategorie = 'BEOBACHTEN';
+      optClass.kategorie = 'BEOBACHTEN';
+      optClass.priority = 60;
+      if (typeof diag === 'function') {
+        diag('detect', 'AUFLOESEN-Option ' + (opt.id || '?') + ' zu BEOBACHTEN konvertiert (FALL LÖSEN nur via System-Button)');
+      }
+    }
     // v7.11.12 KRITISCHER FIX: Kategorie auf DOM-Element schreiben, sonst kann
     // der Bot (der via querySelectorAll DOM liest) sie nicht erkennen.
     // Vor v7.11.12 war opt._kategorie nur auf dem JS-Objekt, der Bot las nur
@@ -10721,7 +10736,7 @@ function renderOptions(scene) {
     const nfBtn = document.createElement('button');
     nfBtn.className = 'option-btn option-btn-system option-btn-flucht';  // Re-use FLUCHT-Styling
     nfBtn.dataset.kategorie = 'NOTFLUCHT';
-    nfBtn.innerHTML = '<span class="option-id">⚡</span><span class="option-text-wrap"><span>Notflucht (Ausbruch versuchen)</span><span class="option-marker option-marker-system">→ 30% ERFOLG</span></span>';
+    nfBtn.innerHTML = '<span class="option-id">⚡</span><span class="option-text-wrap"><span>Notflucht (Ausbruch versuchen)</span><span class="option-marker option-marker-system">RISIKO: nur 1 von 3 gelingt</span></span>';
     const nfOpt = {
       id: 'NOTFLUCHT',
       text: 'Notflucht (Ausbruch versuchen)',
@@ -10930,20 +10945,9 @@ function renderOptions(scene) {
   // 2. Indizien >= 4 (substantielle Beweise)
   // 3. Karl ist nicht in toedlicher Gefahr (Vf >= 2)
   // 4. Aktuelle Szene ist nicht hochspannungs-Action (Sp <= 3)
-  // v7.11.54: AUFLOESEN-Option in ABCD entfernt. User-Feedback: "FALL LÖSEN war
-  // mal da, mal weg, mal als 3. Option in ABCD, mal als System-Button". Jetzt:
-  // FALL LÖSEN ist AUSSCHLIESSLICH der System-Button unten. Wenn die KI eine
-  // AUFLOESEN-Option liefert (z.B. "Ruf Klient an und berichte"), klassifizieren
-  // wir sie um zu BEOBACHTEN (passt narrativ - kein Schaden, KI kann die Sz
-  // normal weiterspielen). Damit ist die UI konsistent.
-  for (const opt of scene.optionen) {
-    if (opt._kategorie === 'AUFLOESEN') {
-      opt._kategorie = 'BEOBACHTEN';
-      if (typeof diag === 'function') {
-        diag('detect', 'AUFLOESEN-Option ' + (opt.id || '?') + ' zu BEOBACHTEN konvertiert (FALL LÖSEN nur via System-Button)');
-      }
-    }
-  }
+  // v7.11.54/57: FALL LÖSEN ist AUSSCHLIESSLICH der System-Button unten.
+  // AUFLOESEN-Optionen in ABCD werden in der forEach-Schleife unten
+  // (nach classifyOption) zu BEOBACHTEN konvertiert.
   const hasAufloesenOption = false; // immer false jetzt - System-Button entscheidet
   const currentStage = (caseProgress && caseProgress.stage) || 0;
   const indizCount = (caseProgress && Array.isArray(caseProgress.indizien))
@@ -10962,16 +10966,18 @@ function renderOptions(scene) {
   // Sobald GRUND-Voraussetzungen einmal erfuellt sind, bleibt der Button
   // sichtbar - bei verletzten JETZT-Voraussetzungen wird er ausgegraut + zeigt
   // Sperr-Grund. Spieler weiss dann: Button ist da, aber jetzt grad blockiert.
-  // v7.11.45: Schwellen nochmal verschaerft. User-Feedback: "Fall lösen kommt
-  // zu früh, nach 1-2 Tagen schon vorbei". Jetzt: 3 Sz in Stage 3 (vorher 2)
-  // + 10 Indizien (vorher 6). Stage 2/3 sind aussedem strenger erreichbar
-  // (siehe stage2FloorOk / stage3FloorOk). Gesamt: Spieler braucht jetzt
-  // mindestens Tag 2 + ~16 Szenen + 10 Beweise bevor Resolve klickbar wird.
+  // v7.11.45: Schwellen verschaerft: 3 Sz in Stage 3 + 10 Indizien.
+  // v7.11.57: User-Feedback Vogt 2216: FALL LÖSEN war nie verfuegbar trotz
+  // Stage 3 + 14 Indizien (resolveEverReady wurde nie gesetzt). Stage 3 wird
+  // oft erst spaet erreicht (z.B. nach NOTFLUCHT-Force), und "3 Sz in Stage 3"
+  // hinzufuegen ist dann nochmal Verzoegerung. Schwelle: 1 Sz in Stage 3
+  // reicht. Indizien-Mindest auf 8 reduziert (Karl muss nicht 10 sammeln
+  // wenn er den Fall gerade narrative aufgeklaert hat).
   const resolveCoreReady =
     !hasAufloesenOption &&
     currentStage >= 3 &&
-    stage3Scenes >= 3 &&
-    indizCount >= 10;
+    stage3Scenes >= 1 &&
+    indizCount >= 8;
   // Persistent merken: war Resolve mal verfuegbar? Wenn ja, bleibt der Button.
   if (resolveCoreReady) {
     caseProgress.resolveEverReady = true;
@@ -16574,7 +16580,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.11.55] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.11.57] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -17582,7 +17588,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.11.55] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.11.57] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -18093,6 +18099,11 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           diag('state', '⚡ NOTFLUCHT GELUNGEN - Karl frei, aber Stasi-Tension ' + prevTension + ' -> 5 (gesucht)');
         }
         console.log('[Schatten v7.11.13] Karl via NOTFLUCHT entkommen - Stasi-Fahndung laeuft');
+        // v7.11.56: Toast bei Erfolg - Spieler hat geklickt und soll Wuerfel-
+        // Ergebnis direkt sehen, nicht nur narrative Andeutungen.
+        if (typeof showProgressToast === 'function') {
+          showProgressToast('FLUCHT GELUNGEN', 'Karl ist entkommen — verletzt, aber frei. Stasi-Fahndung läuft.', 'success', 'notflucht-erfolg');
+        }
         // v7.11.23: Auch nach NOTFLUCHT bei Stage 3 + Indizien -> AUFLOESEN forcieren
         const indCount2 = (caseProgress && Array.isArray(caseProgress.indizien))
           ? caseProgress.indizien.length : 0;
@@ -18106,6 +18117,10 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           diag('state', '⚠ NOTFLUCHT GESCHEITERT - Karl bleibt in Custody, naechste Schlaege drohen');
         }
         console.log('[Schatten v7.11.13] Karl NOTFLUCHT misslungen - bleibt gefangen');
+        // v7.11.56: Toast bei Misserfolg - 2/3 schlagen fehl, das soll klar sein.
+        if (typeof showProgressToast === 'function') {
+          showProgressToast('FLUCHT GESCHEITERT', 'Karl wurde überwältigt. Er bleibt in Gewahrsam, die Wachen sind jetzt wütender.', 'danger', 'notflucht-fail');
+        }
       }
 
       if (typeof diag === 'function') {
