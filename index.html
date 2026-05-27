@@ -2240,7 +2240,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.11.23</div>
+    <div class="start-version">Schatten v7.11.24</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2317,7 +2317,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.11.23</span>
+    <span>Schatten v7.11.24</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4713,7 +4713,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.11.23';
+window.SCHATTEN_VERSION = 'v7.11.24';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5630,7 +5630,17 @@ function makeUtterance(text) {
     console.log('[Schatten Voice]', 'gewaehlt:', (chosenVoice ? chosenVoice.name : 'NULL'),
       '| Liste:', voices.length + 'tot/' + deVoiceCount + 'de',
       '| Reason:', pickReason);
-    if (chosenVoice) u.voice = chosenVoice;
+    if (chosenVoice) {
+      // v7.11.24: iOS 26 Workaround. Apple-Bug FB20271264 in iOS 26.0-26.5: die
+      // Voice-API ignoriert die voice-Property beim 2. speak() teilweise. Wir
+      // setzen redundant: voice-Object, voiceURI als String UND lang aus der
+      // Voice. Das erhoeht die Chance dass iOS die richtige Stimme nimmt.
+      u.voice = chosenVoice;
+      try {
+        if (chosenVoice.voiceURI) u.voiceURI = chosenVoice.voiceURI;
+        if (chosenVoice.lang) u.lang = chosenVoice.lang;
+      } catch (e) { /* iOS Safari erlaubt voiceURI-Setzen evtl. nicht */ }
+    }
   } else if (typeof diag === 'function') {
     diag('voice', 'Voice-Liste leer beim makeUtterance-Call');
   }
