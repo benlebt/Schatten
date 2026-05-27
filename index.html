@@ -2469,7 +2469,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.11.60</div>
+    <div class="start-version">Schatten v7.11.62</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2547,7 +2547,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.11.60</span>
+    <span>Schatten v7.11.62</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4943,7 +4943,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.11.60';
+window.SCHATTEN_VERSION = 'v7.11.62';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5550,7 +5550,7 @@ function toggleGeminiOnly(event) {
   syncGeminiOnlySwitch();
   if (typeof updateFooterModel === 'function') updateFooterModel();
   if (typeof updateProviderInfo === 'function') updateProviderInfo();
-  console.log('[Schatten v7.11.60] Gemini-Only-Modus:', window.geminiOnlyMode ? 'AN' : 'AUS');
+  console.log('[Schatten v7.11.62] Gemini-Only-Modus:', window.geminiOnlyMode ? 'AN' : 'AUS');
 }
 
 function syncGeminiOnlySwitch() {
@@ -10366,7 +10366,7 @@ function renderOptions(scene) {
     && !karlInStasiCustody
     && (gameTimeIdx === 4 || gameTimeIdx === 5));  // nur ABEND oder NACHT
   if (forceSleepMode) {
-    console.log('[Schatten v7.11.60] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.11.62] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -10581,11 +10581,15 @@ function renderOptions(scene) {
   // v7.11.12: NOTHEILEN (immer wenn Vf <= 2 + NICHT in Custody)
   const isAbendOderNacht = (typeof gameTimeIdx === 'number') && (gameTimeIdx >= 4); // 4=ABEND, 5=NACHT
   // v7.11.12: SCHLAFEN auch tagsueber wenn Karl ueberzogen ist oder in seinem Buero/Wohnung
+  // v7.11.62: User-Wunsch zurueckgenommen - SCHLAFEN nur noch bei Abend/Nacht
+  // oder in Custody (5+ Sz). Tagsueber-Schlafen (Nickerchen, Buero-Pause) raus
+  // weil es narrativ schief klingt mitten am Tag. Variablen bleiben definiert
+  // weil unten Labels darauf zugreifen.
   const currentEnergie = (typeof karlEnergie === 'number') ? karlEnergie : 100;
   const currentLocation = (typeof lastLocation === 'string') ? lastLocation.toLowerCase() : '';
   const isInSafeRestPlace = /\b(buero|wohnung|schlafzimmer|hotel|bett|hauptbahnhof|charit)/.test(currentLocation);
-  const canSleepDuringDay = currentEnergie <= 30 || isInSafeRestPlace;
-  const showSleepButton = isAbendOderNacht || canSleepDuringDay || canSleepInCustody;
+  const canSleepDuringDay = false; // v7.11.62: deaktiviert
+  const showSleepButton = isAbendOderNacht || canSleepInCustody;
   let romanceNpcInScene = null;
   try {
     if (caseSetup && Array.isArray(caseSetup.setupCast) && Array.isArray(cast)) {
@@ -10792,6 +10796,16 @@ function renderOptions(scene) {
     } else if (!isAbendOderNacht && isInSafeRestPlace) {
       sleepLabel = 'Schlafen gehen (nach Hause/ins Bett)';
       sleepMarker = '→ MORGEN';
+    }
+    // v7.11.61: Bei hoher Spannung Schlafen blockieren (mit Sperrgrund).
+    // Karl mitten in Kampf/Verfolgung/Konfrontation kann sich nicht hinlegen.
+    // Custody ist Ausnahme - dort ist "Augen zu, Zeit vergeht" plausibel.
+    const sleepBlockedBySpannung = (currentSpannung >= 4) && !canSleepInCustody;
+    if (sleepBlockedBySpannung) {
+      sleepBtn.disabled = true;
+      sleepBtn.classList.add('locked');
+      sleepBtn.title = 'Karl kann jetzt nicht schlafen - zu hohe Spannung';
+      sleepMarker = 'GESPERRT · ZU HOHE SPANNUNG';
     }
     sleepBtn.innerHTML = '<span class="option-id">💤</span><span class="option-text-wrap"><span>' + sleepLabel + '</span><span class="option-marker option-marker-system">' + sleepMarker + '</span></span>';
     const sleepOpt = {
@@ -16590,7 +16604,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.11.60] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.11.62] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -17598,7 +17612,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.11.60] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.11.62] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -19952,7 +19966,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.11.60] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.11.62] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
