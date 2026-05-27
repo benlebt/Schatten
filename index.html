@@ -2240,7 +2240,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.11.21</div>
+    <div class="start-version">Schatten v7.11.22</div>
   </div>
 
   <!-- v6.77: Setup-Auswahl-Bildschirm -->
@@ -2317,7 +2317,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.11.21</span>
+    <span>Schatten v7.11.22</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4713,7 +4713,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.11.21';
+window.SCHATTEN_VERSION = 'v7.11.22';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -12712,29 +12712,49 @@ VERBOTEN: Karl wacht woanders auf ohne Erklaerung. Wenn du Pfad B waehlst, MUSST
   // Wrap fetch in try/catch um Netzwerkfehler (z.B. "Load failed" auf iOS
   // bei Hintergrund-Switch oder Verbindungsabbruch) sauber mit debugInfo
   // zu loggen statt einer leeren generischen Fehlermeldung.
+  // v7.11.22: Hard-Timeout 18s. Lektorat zeigt Mistral Medium/Small oft 20-27s.
+  // Statt zu warten -> abort, naechstes Modell. Spieler sieht spuerbar weniger
+  // Wartezeit, auch wenn Gemini-Daily-Limit aufgebraucht ist.
+  const REQUEST_TIMEOUT_MS = 18000;
   let response;
+  let timeoutId;
   try {
+    const controller = new AbortController();
+    timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(requestBody)
+      body: JSON.stringify(requestBody),
+      signal: controller.signal
     });
+    clearTimeout(timeoutId);
   } catch (networkErr) {
-    const err = new Error('Netzwerkfehler: ' + (networkErr.message || 'Load failed') +
-      ' (' + activeModel.label + ')');
+    if (timeoutId) clearTimeout(timeoutId);
+    const isTimeout = networkErr && (networkErr.name === 'AbortError');
+    const errMsg = isTimeout
+      ? 'Timeout nach ' + (REQUEST_TIMEOUT_MS / 1000) + 's (' + activeModel.label + ')'
+      : 'Netzwerkfehler: ' + (networkErr.message || 'Load failed') + ' (' + activeModel.label + ')';
+    const err = new Error(errMsg);
     err.isRetryable = true;
     err.debugInfo = {
-      stage: 'network_fetch',
+      stage: isTimeout ? 'request_timeout' : 'network_fetch',
       provider: activeModel.provider,
       model: activeModel.model,
       label: activeModel.label,
       endpoint: endpoint,
       networkError: networkErr.message || String(networkErr),
       networkErrorName: networkErr.name || 'Unknown',
-      hint: 'Vermutlich Verbindungsabbruch (iOS Hintergrund-Switch, WLAN-Wechsel) oder Vercel-Function-Timeout. Smart-Failover wechselt automatisch zum naechsten Modell.',
+      hint: isTimeout
+        ? 'Modell-Timeout nach 18s. Failover wechselt zum naechsten Modell - oft Mistral langsam, Gemini schnell.'
+        : 'Vermutlich Verbindungsabbruch (iOS Hintergrund-Switch, WLAN-Wechsel) oder Vercel-Function-Timeout. Smart-Failover wechselt automatisch zum naechsten Modell.',
     };
+    // Bei Timeout: Modell direkt fuer 90s blockieren damit Failover-Chain das Modell ueberspringt
+    if (isTimeout && typeof blockModel === 'function') {
+      blockModel(activeModel.model, 90 * 1000, 'timeout-18s');
+      if (typeof diag === 'function') diag('info', 'TIMEOUT: ' + activeModel.label + ' nach 18s abgebrochen, 90s blockiert');
+    }
     throw err;
   }
 
