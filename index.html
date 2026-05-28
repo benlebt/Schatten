@@ -2630,7 +2630,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.11.86</div>
+    <div class="start-version">Schatten v7.11.87</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2794,7 +2794,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.11.86</span>
+    <span>Schatten v7.11.87</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5190,7 +5190,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.11.86';
+window.SCHATTEN_VERSION = 'v7.11.87';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5797,7 +5797,7 @@ function toggleGeminiOnly(event) {
   syncGeminiOnlySwitch();
   if (typeof updateFooterModel === 'function') updateFooterModel();
   if (typeof updateProviderInfo === 'function') updateProviderInfo();
-  console.log('[Schatten v7.11.86] Gemini-Only-Modus:', window.geminiOnlyMode ? 'AN' : 'AUS');
+  console.log('[Schatten v7.11.87] Gemini-Only-Modus:', window.geminiOnlyMode ? 'AN' : 'AUS');
 }
 
 function syncGeminiOnlySwitch() {
@@ -9511,6 +9511,7 @@ let pendingRomanceChoice = false;
 // v7.9.53: Wird gesetzt wenn eine SCHLAF-Tag-Option geklickt wurde. Sorgt dafuer
 // dass advanceGameTime() in der Folge-Szene den Tageswechsel garantiert ausloest.
 let pendingSleepChoice = false;
+let pendingHeimfahrt = false;  // v7.11.87: Spieler waehlte "Schlafen (zu Hause)"
 
 // v7.9.62: Wird gesetzt wenn eine HEISSE-SPUR-Option geklickt wurde. Die naechste
 // Szene-Verarbeitung pusht die KI explizit: liefere ZWINGEND ein neues Indiz oder
@@ -10477,6 +10478,9 @@ function applyCategoryMechanics(kategorie, ctx) {
           result.vfDelta = Math.max(result.vfDelta, 1); // +1 garantiert (Verband in Zelle)
           result.releaseFromCustody = true;
           result.pushMessages.push('CUSTODY-NACHT-SCHLAF: Karl ist in MfS-Custody (Verhoer-Zelle Genslerstrasse oder vergleichbar). Er schliesst die Augen, lehnt sich zurueck, irgendwann verliert er das Bewusstsein vor Erschoepfung. Beschreibe in 2-3 Saetzen wie er einnickt - kalte Pritsche, Gluehbirne, Stille der Zelle. Dann UEBERGANG zum naechsten Morgen: Karl wird FREIGELASSEN. Die Stasi hat ihn nicht offiziell festgehalten - "Befragung beendet, Sie koennen gehen, Genosse Mauer". Beschreibe wie er aus der Zelle/dem Raum entlassen wird, draussen ist Morgen, er nimmt seinen Hut/Mantel zurueck. NEUE Szene: Karl steht vor dem MfS-Gebaeude (Normannenstrasse, Hohenschoenhausen, oder Polizeirevier wenn nur Volkspolizei), Morgensonne, Wachen-Blick. Er kann weiter ermitteln, hat aber Stasi-Tension behalten - sie wissen jetzt wer er ist.');
+        } else if (pendingHeimfahrt) {
+          // v7.11.87: Spieler waehlte "Schlafen (zu Hause)" - Karl faehrt heim.
+          result.pushMessages.push('SCHLAFEN-HEIMFAHRT: Karl bricht auf und faehrt zu seiner Wohnung/seinem Buero am Hackeschen Markt (Ost-Berlin, Mitte) - mit dem Opel oder per Taxi (Taxi-Heinz). Beschreibe in 1-2 Saetzen die naechtliche Heimfahrt durch die stille Stadt, dann das Ankommen und Einschlafen im eigenen Bett. Karl wacht am naechsten Morgen ZU HAUSE auf - NICHT am vorigen Ort. Die neue Szene spielt in Karls Wohnung/Buero am Hackeschen Markt (Morgensonne, Kaffee, der vertraute Blick aus dem Fenster auf den Hof). ' + (verfassung <= 3 ? 'Karl ist verletzt - der Schlaf hilft nur leicht (+1 Vf), die Wunden schmerzen noch, er braucht weitere Versorgung.' : ''));
         } else {
           result.pushMessages.push('SCHLAFEN-VOR-ORT: Karl schlaeft AM AKTUELLEN ORT ein (wo er gerade ist - Park, Hauseingang, Hotel, Buero, Strassenecke, Auto, was auch immer). Beschreibe kurz wie er einnickt (1-2 Saetze) und dann den UEBERGANG zum naechsten Morgen am SELBEN ORT. KEIN Teleport zu Buero/Wohnung/Doc Wagner. Die neue Szene MUSS am gleichen Ort spielen oder unmittelbar daneben (z.B. Karl wacht im Park auf einer Bank auf, oder im Hauseingang an die Wand gelehnt). Erzaehle die Spuren der Nacht - kalter Tau, steife Glieder, fremde Blicke, ein Polizist der ihn weckt, etc. - aber bleib am ORT. ' + (verfassung <= 3 ? 'WICHTIG: Karl ist verletzt - Schlaf hilft nur leicht (+1 Vf). Beschreibe dass die Wunden noch schmerzen am Morgen, Karl braucht weitere Versorgung. Aber er ist nicht in akuter Lebensgefahr - das Schlafen hat zumindest die Erschoepfung beseitigt.' : ''));
         }
@@ -10740,7 +10744,7 @@ function renderOptions(scene) {
     && !karlInStasiCustody
     && (gameTimeIdx === 4 || gameTimeIdx === 5));  // nur ABEND oder NACHT
   if (forceSleepMode) {
-    console.log('[Schatten v7.11.86] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.11.87] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -11167,71 +11171,71 @@ function renderOptions(scene) {
     list.appendChild(nfBtn);
   }
 
-  // SCHLAFEN-Button
-  // v7.11.12: Verfuegbar bei Abend/Nacht ODER bei Erschoepfung ODER in sicherem Ort
+  // SCHLAFEN-Button(s)
+  // v7.11.87: Vereinfacht auf GTA-Modell. ZWEI generische Buttons, immer gleich
+  // beschriftet (keine ortsabhaengigen Labels mehr - die waren fehleranfaellig
+  // bei Ort-Fehlerkennung). "Schlafen (am aktuellen Ort)" = vor Ort pennen.
+  // "Schlafen (zu Hause)" = Karl faehrt heim ins Buero/Wohnung und wacht dort auf.
+  // Beide nur wenn Spannung niedrig genug (Sp <= 2, gesenkt von <= 3 - User-Befund:
+  // man konnte zu oft mitten in Action schlafen wenn der Gegner kurz innehielt).
   if (showSleepButton) {
-    const sleepBtn = document.createElement('button');
-    sleepBtn.className = 'option-btn option-btn-system option-btn-sleep';
-    sleepBtn.dataset.kategorie = 'SCHLAFEN';
-    // v7.11.12: Text passt sich an Kontext an
-    let sleepLabel = 'Schlafen (am aktuellen Ort)';
-    let sleepMarker = '→ MORGEN';
-    if (!isAbendOderNacht && currentEnergie <= 30) {
-      sleepLabel = 'Nickerchen machen (kurz ausruhen)';
-      sleepMarker = '→ PAUSE';
-    } else if (!isAbendOderNacht && isInSafeRestPlace) {
-      sleepLabel = 'Schlafen gehen (nach Hause/ins Bett)';
-      sleepMarker = '→ MORGEN';
-    }
-    // v7.11.61: Bei hoher Spannung Schlafen blockieren (mit Sperrgrund).
-    // Karl mitten in Kampf/Verfolgung/Konfrontation kann sich nicht hinlegen.
-    // Custody ist Ausnahme - dort ist "Augen zu, Zeit vergeht" plausibel.
-    const sleepBlockedBySpannung = (currentSpannung >= 4) && !canSleepInCustody;
-    if (sleepBlockedBySpannung) {
-      sleepBtn.disabled = true;
-      sleepBtn.classList.add('locked');
-      sleepBtn.title = 'Karl kann jetzt nicht schlafen - zu hohe Spannung';
-      sleepMarker = 'GESPERRT · ZU HOHE SPANNUNG';
-    }
-    sleepBtn.innerHTML = '<span class="option-id">💤</span><span class="option-text-wrap"><span>' + sleepLabel + '</span><span class="option-marker option-marker-system">' + sleepMarker + '</span></span>';
-    const sleepOpt = {
-      id: 'SCHLAFEN',
-      text: sleepLabel,
-      kategorie: 'SCHLAFEN',
-      _kategorie: 'SCHLAFEN',
-      _priority: 20,
-      _isSystemButton: true,
+    // v7.11.87: Schlaf-Sperre ab Spannung >= 3 (war >= 4). Custody-Schlaf bleibt
+    // erlaubt (dort ist "Augen zu, Zeit vergeht" plausibel, auch unter Druck).
+    const sleepBlockedBySpannung = (currentSpannung >= 3) && !canSleepInCustody;
+
+    // Helper: baut einen Schlaf-Button. heimfahrt=true -> "zu Hause"-Variante.
+    const buildSleepButton = (sleepLabel, sleepMarker, heimfahrt, blockedBySpannung) => {
+      const btn = document.createElement('button');
+      btn.className = 'option-btn option-btn-system option-btn-sleep';
+      btn.dataset.kategorie = 'SCHLAFEN';
+      let marker = sleepMarker;
+      if (blockedBySpannung) {
+        btn.disabled = true;
+        btn.classList.add('locked');
+        btn.title = 'Karl kann jetzt nicht schlafen - zu hohe Spannung';
+        marker = 'GESPERRT · ZU HOHE SPANNUNG';
+      }
+      btn.innerHTML = '<span class="option-id">💤</span><span class="option-text-wrap"><span>' + sleepLabel + '</span><span class="option-marker option-marker-system">' + marker + '</span></span>';
+      const opt = {
+        id: heimfahrt ? 'SCHLAFEN_HEIM' : 'SCHLAFEN',
+        text: sleepLabel,
+        kategorie: 'SCHLAFEN',
+        _kategorie: 'SCHLAFEN',
+        _priority: 20,
+        _isSystemButton: true,
+        _heimfahrt: heimfahrt,
+      };
+      let tsX = 0, tsY = 0, tsT = 0, tCancel = false, tHandled = false;
+      const TMM = 12, TMD = 800;
+      btn.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) { tCancel = true; return; }
+        tsX = e.touches[0].clientX; tsY = e.touches[0].clientY; tsT = Date.now();
+        tCancel = false; tHandled = false;
+      }, { passive: true });
+      btn.addEventListener('touchmove', (e) => {
+        if (tCancel) return;
+        if (e.touches.length !== 1) { tCancel = true; return; }
+        if (Math.abs(e.touches[0].clientX - tsX) > TMM || Math.abs(e.touches[0].clientY - tsY) > TMM) tCancel = true;
+      }, { passive: true });
+      btn.addEventListener('touchend', (e) => {
+        if (tCancel) { e.preventDefault(); return; }
+        if (Date.now() - tsT > TMD) { e.preventDefault(); return; }
+        e.preventDefault(); tHandled = true; chooseOption(opt);
+      });
+      btn.addEventListener('click', () => {
+        if (tHandled) { tHandled = false; return; }
+        chooseOption(opt);
+      });
+      return btn;
     };
-    // Tap-Handler (gleich wie normale Options)
-    let touchStartX = 0, touchStartY = 0, touchStartTime = 0;
-    let touchCancelled = false, touchHandled = false;
-    const TAP_MAX_MOVE = 12, TAP_MAX_DURATION = 800;
-    sleepBtn.addEventListener('touchstart', (e) => {
-      if (e.touches.length !== 1) { touchCancelled = true; return; }
-      touchStartX = e.touches[0].clientX;
-      touchStartY = e.touches[0].clientY;
-      touchStartTime = Date.now();
-      touchCancelled = false; touchHandled = false;
-    }, { passive: true });
-    sleepBtn.addEventListener('touchmove', (e) => {
-      if (touchCancelled) return;
-      if (e.touches.length !== 1) { touchCancelled = true; return; }
-      const dx = Math.abs(e.touches[0].clientX - touchStartX);
-      const dy = Math.abs(e.touches[0].clientY - touchStartY);
-      if (dx > TAP_MAX_MOVE || dy > TAP_MAX_MOVE) touchCancelled = true;
-    }, { passive: true });
-    sleepBtn.addEventListener('touchend', (e) => {
-      if (touchCancelled) { e.preventDefault(); return; }
-      if (Date.now() - touchStartTime > TAP_MAX_DURATION) { e.preventDefault(); return; }
-      e.preventDefault();
-      touchHandled = true;
-      chooseOption(sleepOpt);
-    });
-    sleepBtn.addEventListener('click', () => {
-      if (touchHandled) { touchHandled = false; return; }
-      chooseOption(sleepOpt);
-    });
-    list.appendChild(sleepBtn);
+
+    // Button 1: am aktuellen Ort schlafen (immer)
+    list.appendChild(buildSleepButton('Schlafen (am aktuellen Ort)', '→ MORGEN', false, sleepBlockedBySpannung));
+    // Button 2: nach Hause fahren und schlafen (immer, ausser in Custody -
+    // da kann Karl nicht einfach heimfahren). Generisch, keine Ort-Erkennung.
+    if (!canSleepInCustody) {
+      list.appendChild(buildSleepButton('Schlafen (zu Hause)', '→ HEIMFAHRT · MORGEN', true, sleepBlockedBySpannung));
+    }
   }
 
   // ROMANTIK-Button
@@ -14750,6 +14754,7 @@ async function startGame() {
   stasiCooldownCounter = 0;
   folterSceneCount = 0;
   karlInStasiCustody = false;
+  pendingHeimfahrt = false;  // v7.11.87: Heimfahrt-Flag reset bei Spielstart
   stasiCustodyScenesSince = 0;  // v7.11.12: Custody-Counter Reset
   custodySwitchCount = 0;  // v7.11.44: Switch-Counter Reset
   lastTrackedCustodyState = false;  // v7.11.44: Tracker Reset
@@ -14801,8 +14806,18 @@ async function startGame() {
   // weil es zufaellig "Mann im Trenchcoat" erwaehnt hat.
   // Default: politisch=true -> Cap 5 (alle Tension moeglich)
   //          politisch=false -> Cap 2 (leichte Stasi-Atmo erlaubt, aber kein Vollalarm)
+  // v7.11.87: Bei politischen Faellen einen MINDEST-Cap von 4 garantieren, auch
+  // wenn die KI im Setup eine niedrige stasiRelevance liefert. User-Befund: In
+  // mehreren politischen Runs (mit Sokolow etc.) baute sich KEINE Stasi-Tension
+  // auf - die Stasi blieb blosser Hintergrund. Ursache: stasiRelevance (KI-Zahl)
+  // ueberschrieb politisch===true und war oft zu niedrig. Jetzt: politisch+true
+  // hebt einen zu niedrigen Relevance-Wert auf mind. 4 an (die Stasi-Verfolgungs-
+  // Mechanik soll in politischen Faellen spuerbar sein).
   if (intro.setup && typeof intro.setup.stasiRelevance === 'number') {
     stasiCapForCase = Math.max(0, Math.min(5, intro.setup.stasiRelevance));
+    if (intro.setup.politisch === true) {
+      stasiCapForCase = Math.max(stasiCapForCase, 4);  // politisch -> Cap mind. 4
+    }
   } else if (intro.setup && intro.setup.politisch === true) {
     stasiCapForCase = 5;  // Politische Setups: voller Cap
   } else {
@@ -16758,6 +16773,11 @@ async function chooseOption(option) {
       pendingSleepChoice = false;
       console.log('[Schatten v7.11.12] SCHLAFEN (Nickerchen tagsueber) - KEIN Tagwechsel, nur Erholung');
     }
+    // v7.11.87: Heimfahrt-Variante. Spieler waehlte "Schlafen (zu Hause)" statt
+    // vor Ort. Wir setzen ein Flag, das im SCHLAFEN-VOR-ORT-Push (applyCategoryMechanics)
+    // ausgewertet wird - das ist der verlaessliche Kanal (pendingCategoryMessages
+    // wird in der API-Phase teils ueberschrieben, das Flag nicht).
+    pendingHeimfahrt = !!(option && option._heimfahrt);
   }
   // v7.11.7: UEBERNACHTUNG nutzt denselben Mechanismus wie SCHLAFEN - Tagwechsel
   // ist garantiert. Unterschied: Karl wacht bei der ROMANCE-Person auf.
@@ -17024,6 +17044,7 @@ async function chooseOption(option) {
       }
     }
     pendingSleepChoice = false; // Tag verbrauchen
+    pendingHeimfahrt = false;   // v7.11.87: Heimfahrt-Flag verbraucht
   }
 
   // v6.96: Flag JETZT zuruecksetzen, nachdem die Schlaf-Sperre es gelesen hat.
@@ -17056,7 +17077,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.11.86] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.11.87] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -18065,7 +18086,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           const tensionHighEnoughForArrest = (typeof stasiTension === 'number' && stasiTension >= 4);
           if (!tensionHighEnoughForArrest) {
             // STILLER RELEASE: Karl ist faktisch frei, das System zieht nach.
-            console.warn('[Schatten v7.11.86] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
+            console.warn('[Schatten v7.11.87] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet, kein Hard-Force');
             karlInStasiCustody = false;
             folterSceneCount = 0;
@@ -18080,7 +18101,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.11.86] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.11.87] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -20454,7 +20475,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.11.86] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.11.87] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
