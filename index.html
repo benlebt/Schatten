@@ -2630,7 +2630,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.11.88</div>
+    <div class="start-version">Schatten v7.11.90</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2794,7 +2794,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.11.88</span>
+    <span>Schatten v7.11.90</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5190,7 +5190,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.11.88';
+window.SCHATTEN_VERSION = 'v7.11.90';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5797,7 +5797,7 @@ function toggleGeminiOnly(event) {
   syncGeminiOnlySwitch();
   if (typeof updateFooterModel === 'function') updateFooterModel();
   if (typeof updateProviderInfo === 'function') updateProviderInfo();
-  console.log('[Schatten v7.11.88] Gemini-Only-Modus:', window.geminiOnlyMode ? 'AN' : 'AUS');
+  console.log('[Schatten v7.11.90] Gemini-Only-Modus:', window.geminiOnlyMode ? 'AN' : 'AUS');
 }
 
 function syncGeminiOnlySwitch() {
@@ -10335,11 +10335,11 @@ function detectSevereWound(sceneText) {
 // doppelt uebereinander. Diese Funktion zeigt den Loesungs-Toast nur EINMAL
 // pro Run. Mehrere Stage-4-Codepfade koennen sie gefahrlos aufrufen.
 let stage4ToastShown = false;
-function showSolvedToastOnce(body) {
+function showSolvedToastOnce(body, icon) {
   if (stage4ToastShown) return;
   stage4ToastShown = true;
   if (typeof showProgressToast === 'function') {
-    showProgressToast('FALL-STUFE 4', body || 'Fall gelöst. Klient informiert.');
+    showProgressToast('FALL-STUFE 4', body || 'Fall gelöst. Klient informiert.', 'success', null, icon || '🎉');
   }
 }
 
@@ -10614,7 +10614,7 @@ function checkProgressTriggers(kategorie, ctx) {
     result.newStage = 1;
     // v7.10.12: Title geaendert von "STUFE 1" zu "Ermittlung laeuft" damit
     // Spieler nicht denkt das ist schon FALL-STUFE 1 (Verwirrung im Helga-Run).
-    result.showToast = { title: 'Ermittlung läuft', body: 'Erste Spuren gesammelt.' };
+    result.showToast = { title: 'Ermittlung läuft', body: 'Erste Spuren gesammelt.', icon: '🔎' };
     result.pushMessages.push('STAGE 1 ERREICHT: Briefing ist vorbei, Karl ist im Fall drin.');
   }
   // v7.11.83/84: Stage-Progression ist indizien-getrieben (KEINE Offensiv-Pflicht).
@@ -10627,7 +10627,7 @@ function checkProgressTriggers(kategorie, ctx) {
                   (erkundenStreak >= 2 && indCount >= 5);
     if (ready) {
       result.newStage = 2;
-      result.showToast = { title: 'Verdacht formt sich', body: 'Spur konkret - Verdacht formt sich.' };
+      result.showToast = { title: 'Verdacht formt sich', body: 'Spur konkret - Verdacht formt sich.', icon: '🧩' };
       result.pushMessages.push('STAGE 2 ERREICHT: Karl hat genug Indizien um einen konkreten Verdaechtigen zu identifizieren. Diese Szene MUSS einen Namen / eine konkrete Person nennen die als Verdaechtiger in Frage kommt. Setze "tatverdaechtiger_identifiziert" im JSON.');
     }
   }
@@ -10642,7 +10642,7 @@ function checkProgressTriggers(kategorie, ctx) {
     const aktiveKonfrontation = (kategorie === 'OFFENSIV' && (suspectInScene || tatverdaechtigerKnown) && indCount >= 5);
     if (indizReady || aktiveKonfrontation) {
       result.newStage = 3;
-      result.showToast = { title: 'Konfrontation', body: 'Wahrheit kommt ans Licht.' };
+      result.showToast = { title: 'Konfrontation', body: 'Wahrheit kommt ans Licht.', icon: '⚡' };
       result.pushMessages.push('STAGE 3 ERREICHT: Karl hat genug in der Hand, um den Verdaechtigen direkt zu stellen. Lass ihn gestehen, fluechten, oder sich verteidigen - der Hoehepunkt der Geschichte. Setze "tatverdaechtiger_ueberfuehrt": true wenn er keine Ausreden mehr hat.');
     }
   }
@@ -10660,12 +10660,12 @@ function checkProgressTriggers(kategorie, ctx) {
   // will - aber die UI sollte AUFLOESEN gar nicht erst anbieten unter Stage 3.
   if (kategorie === 'AUFLOESEN' && stage >= 3) {
     result.newStage = 4;
-    result.showToast = { title: 'FALL-STUFE 4', body: 'Fall gelöst. Klient informiert.' };
+    result.showToast = { title: 'FALL-STUFE 4', body: 'Fall gelöst. Klient informiert.', icon: '🎉' };
     result.pushMessages.push('STAGE 4 ERREICHT (Spieler-AUFLOESEN): Karl loest den Fall jetzt aktiv auf. Diese Szene MUSS die Klient-Berichts-Szene sein. Setze "klient_berichtet": true im JSON.');
   } else if (kategorie === 'AUFLOESEN' && stage < 3) {
     // Spieler will frueh raus - akzeptieren aber Hinweis pushen
     result.newStage = 4;
-    result.showToast = { title: 'FALL-STUFE 4', body: 'Karl bricht ab und berichtet.' };
+    result.showToast = { title: 'FALL-STUFE 4', body: 'Karl bricht ab und berichtet.', icon: '🏁' };
     result.pushMessages.push('STAGE 4 (FRUEHER ABBRUCH): Karl entscheidet trotz unfertiger Beweise den Fall jetzt mit dem Klient abzuschliessen. Beschreibe das ehrlich - es ist KEIN Triumph. Karl uebergibt was er hat, der Klient ist enttaeuscht/dankbar je nach Charakter. Setze "klient_berichtet": true.');
   }
   // Conclusion-Trigger: TOD
@@ -10750,7 +10750,7 @@ function renderOptions(scene) {
     && !karlInStasiCustody
     && (gameTimeIdx === 4 || gameTimeIdx === 5));  // nur ABEND oder NACHT
   if (forceSleepMode) {
-    console.log('[Schatten v7.11.88] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.11.90] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -16462,7 +16462,16 @@ function checkStatusToasts(spannung) {
   if (caseIsPolitical && stasiTension >= 3 && !karlInStasiCustody && !inStasiZone && sceneCounter >= 3
       && !fallGeloest
       && (typeof stasiCapForCase !== 'number' || stasiCapForCase >= 2)) {
-    showProgressToast('Stasi auf den Fersen', 'Die Volkspolizei beobachtet Karl gezielt.', 'danger', 'stasi-hoch');
+    // v7.11.89: Abgestufte Warnung. Bei Tension 5 (Maximum, Zugriff/Liquidation
+    // steht unmittelbar bevor) eine deutlich eindringlichere Warnung mit eigenem
+    // Trigger-Key, damit der Spieler die Chance hat zu reagieren (fliehen, unter-
+    // tauchen, kooperieren) BEVOR die Liquidation zuschlaegt. User-Run Stein 0934:
+    // Karl wurde nach 17 Szenen Hochdruck liquidiert ohne spuerbare Vorwarnung.
+    if (stasiTension >= 5) {
+      showProgressToast('Stasi greift zu', 'Das MfS schliesst den Kreis. Karl muss JETZT fliehen, untertauchen oder verschwinden - sonst holen sie ihn.', 'danger', 'stasi-kritisch', '🕵️');
+    } else {
+      showProgressToast('Stasi auf den Fersen', 'Die Volkspolizei beobachtet Karl gezielt.', 'danger', 'stasi-hoch', '🕵️');
+    }
   }
   // v7.9.18: Toasts beschreiben ZUSTAENDE, KEINE Anweisungen.
   // User-Feedback: "Doc Wagner aufsuchen oder Pause machen" ist eine
@@ -16477,9 +16486,9 @@ function checkStatusToasts(spannung) {
   // (verfassung-null), so dass die finale Warnung garantiert durchkommt selbst
   // wenn der Vf<=2-Toast schon im Cooldown ist.
   if (verfassung === 0) {
-    showProgressToast('Lebensgefahr', 'Karl ist am Limit. EIN weiterer Treffer ist tödlich.', 'danger', 'verfassung-null');
+    showProgressToast('Lebensgefahr', 'Karl ist am Limit. EIN weiterer Treffer ist tödlich.', 'danger', 'verfassung-null', '💀');
   } else if (verfassung <= 2) {
-    showProgressToast('Schwer verletzt', 'Karls Verfassung ist kritisch.', 'danger', 'verfassung-tief');
+    showProgressToast('Schwer verletzt', 'Karls Verfassung ist kritisch.', 'danger', 'verfassung-tief', '🩹');
   }
   // v7.11.26: "Am Ende der Kraft"-Toast entfernt. Arcade-Style:
   // Spieler entscheidet wann er schlaeft, kein nerviger Energie-Warning.
@@ -16931,9 +16940,10 @@ async function chooseOption(option) {
         // v7.11.81: FALL-STUFE-4-Toast durch Doppel-Guard leiten (sonst koennte
         // er zusammen mit AUTO-STAGE-4/klient_berichtet doppelt erscheinen).
         if (progress.newStage === 4) {
-          showSolvedToastOnce(progress.showToast.body);
+          showSolvedToastOnce(progress.showToast.body, progress.showToast.icon);
         } else {
-          showProgressToast(progress.showToast.title, progress.showToast.body);
+          // v7.11.90: Icon aus der Toast-Definition durchreichen.
+          showProgressToast(progress.showToast.title, progress.showToast.body, 'success', null, progress.showToast.icon);
         }
       }
     }
@@ -17059,7 +17069,7 @@ async function chooseOption(option) {
       // bewusst geklickt: Tagwechsel-Hinweis ist hilfreich.
       if (typeof showProgressToast === 'function') {
         const dayLabel = 'Tag ' + gameDay;
-        showProgressToast('NEUER TAG', 'Karl schläft. Am nächsten Morgen geht es weiter (' + dayLabel + ').', 'success', 'tagwechsel-' + gameDay);
+        showProgressToast('NEUER TAG', 'Karl schläft. Am nächsten Morgen geht es weiter (' + dayLabel + ').', 'success', 'tagwechsel-' + gameDay, '🌅');
       }
     }
     pendingSleepChoice = false; // Tag verbrauchen
@@ -17096,7 +17106,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.11.88] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.11.90] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -18105,7 +18115,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           const tensionHighEnoughForArrest = (typeof stasiTension === 'number' && stasiTension >= 4);
           if (!tensionHighEnoughForArrest) {
             // STILLER RELEASE: Karl ist faktisch frei, das System zieht nach.
-            console.warn('[Schatten v7.11.88] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
+            console.warn('[Schatten v7.11.90] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet, kein Hard-Force');
             karlInStasiCustody = false;
             folterSceneCount = 0;
@@ -18120,7 +18130,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.11.88] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.11.90] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -18338,7 +18348,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         console.log('[Schatten] Tag-basierte Heilung: Verfassung', before, '->', verfassung, '(+' + heal + ')');
         diag('state', 'Behandlungs-Genesung (Tag-basiert) Verfassung ' + before + ' -> ' + verfassung + ' (+' + heal + ', max 1x pro Tag)');
         if (typeof showProgressToast === 'function') {
-          showProgressToast('VERARZTET', 'Karl wurde verarztet. Verfassung +' + heal + '.');
+          showProgressToast('VERARZTET', 'Karl wurde verarztet. Verfassung +' + heal + '.', 'success', null, '🩹');
         }
         // v7.11.4: Heilungs-Cooldown setzen (3 Sz Schonfrist gegen KI-Drift)
         lastHealedSceneCounter = sceneCounter;
@@ -18353,7 +18363,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         console.log('[Schatten] Behandlungs-Genesung: Verfassung', before, '->', verfassung, '(+' + heal + ')');
         diag('state', 'Behandlungs-Genesung Verfassung ' + before + ' -> ' + verfassung + ' (+' + heal + ', max 1x pro Tag)');
         if (typeof showProgressToast === 'function') {
-          showProgressToast('VERARZTET', 'Karl wurde verarztet. Verfassung +' + heal + '.');
+          showProgressToast('VERARZTET', 'Karl wurde verarztet. Verfassung +' + heal + '.', 'success', null, '🩹');
         }
         // v7.11.4: Heilungs-Cooldown setzen
         lastHealedSceneCounter = sceneCounter;
@@ -19677,7 +19687,10 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         } else {
           body = newlyFoundIndizien.map(i => '• ' + i).join('\n');
         }
-        showProgressToast(title, body, 'clue', 'indiz-' + sceneCounter);
+        // v7.11.90: Passendes Emoji zum Indiztext (bei mehreren: zum ersten Fund).
+        const indizEmoji = (typeof pickIndizEmoji === 'function')
+          ? pickIndizEmoji(newlyFoundIndizien[0]) : '🔍';
+        showProgressToast(title, body, 'clue', 'indiz-' + sceneCounter, indizEmoji);
       }
       // Stage-Aufstieg: ab 3 Indizien -> Stage 1
       // v7.8: NICHT in der allerersten Szene triggern - die KI generiert dort
@@ -20504,7 +20517,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.11.88] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.11.90] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
@@ -20610,7 +20623,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           const msg = vpCrime === 'kill'
             ? 'Karl hat einen VP-Beamten getötet. Großalarm.'
             : 'Karl hat einen VP-Beamten angeschossen. Fahndung läuft.';
-          showProgressToast('GROSSALARM', msg, 'danger', 'grossalarm');
+          showProgressToast('GROSSALARM', msg, 'danger', 'grossalarm', '🚨');
         }
       }
     }
@@ -22493,10 +22506,11 @@ function showAdminToast(message) {
 let toastHistory = {
   shownThisDay: {}, // key: 'danger:stasi' -> dayNum bei letztem Trigger
   lastSceneByVariant: {}, // key: 'danger' -> letzte Szenennummer
+  lastSceneByTrigger: {}, // v7.11.89: key: 'stasi-kritisch' -> letzte Szenennummer (pro Trigger)
 };
 
 function resetToastHistory() {
-  toastHistory = { shownThisDay: {}, lastSceneByVariant: {} };
+  toastHistory = { shownThisDay: {}, lastSceneByVariant: {}, lastSceneByTrigger: {} };
 }
 
 // Pruefe ob ein Toast getriggert werden darf (Anti-Spam).
@@ -22508,7 +22522,13 @@ function canShowToast(variant, triggerKey) {
   // der Variant-Cooldown sie nicht unterdruecken darf. Anlass: Wagner-Run
   // v7.9.38 - Karls Vf-Abfall 2->1->0, finaler "Lebensgefahr"-Toast wurde
   // gecooldownt weil 1 Szene vorher schon ein danger-Toast lief.
-  const lifeCriticalTriggers = ['verfassung-null'];
+  // v7.11.89: Stasi-Eskalations-Trigger ergaenzt. User-Run Stein 0934: Karl
+  // wurde liquidiert nach 17 Szenen Stasi-Hochdruck, aber der "Stasi auf den
+  // Fersen"-Toast lief NIE durch - er fiel in den danger-Variant-Cooldown
+  // (andere danger-Toasts wie "Schwer verletzt" blockierten ihn). Die toedliche
+  // Eskalation war fuer den Spieler unsichtbar. Jetzt: stasi-hoch + stasi-kritisch
+  // umgehen den 3-Szenen-Variant-Cooldown (1x/Tag bleibt, damit es nicht spammt).
+  const lifeCriticalTriggers = ['verfassung-null', 'stasi-hoch', 'stasi-kritisch'];
   const isLifeCritical = lifeCriticalTriggers.includes(triggerKey);
   // v7.11.85: clue-Toasts (Indiz-Funde) IMMER zeigen. User-Wunsch: "Indiz-
   // Toasts konsistent zeigen, damit der User merkt wann er ein Indiz gefunden
@@ -22518,13 +22538,27 @@ function canShowToast(variant, triggerKey) {
     return true;
   }
   const dayKey = variant + ':' + triggerKey;
+  // v7.11.89: stasi-kritisch umgeht das 1x/Tag-Limit (die Liquidations-Gefahr
+  // ist akut und kann mehrere Tage anhalten - der Spieler muss wiederholt
+  // gewarnt werden). Stattdessen greift fuer diesen Trigger nur eine sanfte
+  // 3-Szenen-Drossel unten, damit es nicht jede Szene spammt.
+  const isAcuteRecurring = (triggerKey === 'stasi-kritisch');
   // Pro spezifischem Trigger: max 1x pro Tag (gilt auch fuer life-critical -
   // wir muellen den Spieler nicht mit 5 Lebensgefahr-Toasts pro Tag voll,
   // aber 1x pro Tag muss er ihn sehen)
-  if (toastHistory.shownThisDay[dayKey] === gameDay) {
+  if (!isAcuteRecurring && toastHistory.shownThisDay[dayKey] === gameDay) {
     return false;
   }
-  // Pro Variant: max 1x in 3 Szenen - ABER nicht fuer life-critical Trigger
+  // Pro Variant: max 1x in 3 Szenen - ABER nicht fuer life-critical Trigger.
+  // stasi-kritisch nutzt einen EIGENEN 3-Szenen-Zaehler (pro Trigger, nicht pro
+  // Variant), damit es regelmaessig aber nicht spammend warnt.
+  if (isAcuteRecurring) {
+    const lastCritScene = toastHistory.lastSceneByTrigger && toastHistory.lastSceneByTrigger[triggerKey];
+    if (typeof lastCritScene === 'number' && (sceneCounter - lastCritScene) < 3) {
+      return false;
+    }
+    return true;
+  }
   if (!isLifeCritical) {
     const lastScene = toastHistory.lastSceneByVariant[variant];
     if (typeof lastScene === 'number' && (sceneCounter - lastScene) < 3) {
@@ -22538,6 +22572,9 @@ function markToastShown(variant, triggerKey) {
   const dayKey = variant + ':' + triggerKey;
   toastHistory.shownThisDay[dayKey] = gameDay;
   toastHistory.lastSceneByVariant[variant] = sceneCounter;
+  // v7.11.89: Pro-Trigger-Szenenzaehler (fuer stasi-kritisch 3-Szenen-Drossel).
+  if (!toastHistory.lastSceneByTrigger) toastHistory.lastSceneByTrigger = {};
+  toastHistory.lastSceneByTrigger[triggerKey] = sceneCounter;
 }
 
 // Farb-Schemata fuer die Varianten.
@@ -22553,7 +22590,7 @@ const TOAST_VARIANTS = {
     shadow: 'rgba(180,140,70,0.18)',
     titleColor: '#e6c98a',
     bodyColor: '#c0a878',
-    icon: '✦',
+    icon: '✨',
   },
   danger: {
     bg: 'linear-gradient(180deg,rgba(70,20,18,0.94),rgba(45,12,12,0.94))',
@@ -22561,7 +22598,7 @@ const TOAST_VARIANTS = {
     shadow: 'rgba(180,60,55,0.18)',
     titleColor: '#e6a8a0',
     bodyColor: '#c89088',
-    icon: '⚠',
+    icon: '⚠️',
   },
   caution: {
     bg: 'linear-gradient(180deg,rgba(22,34,50,0.94),rgba(14,22,38,0.94))',
@@ -22569,7 +22606,7 @@ const TOAST_VARIANTS = {
     shadow: 'rgba(80,120,180,0.18)',
     titleColor: '#a8c4e6',
     bodyColor: '#90a8c8',
-    icon: '◌',
+    icon: 'ℹ️',
   },
   info: {
     bg: 'linear-gradient(180deg,rgba(38,38,38,0.94),rgba(24,24,24,0.94))',
@@ -22577,9 +22614,11 @@ const TOAST_VARIANTS = {
     shadow: 'rgba(150,150,150,0.15)',
     titleColor: '#d0d0d8',
     bodyColor: '#a0a0aa',
-    icon: '·',
+    icon: '📋',
   },
   // v7.11.82: 'clue' - dezenter Indiz-Fund-Toast. Gedaempftes Gruen-Gold.
+  // v7.11.90: Das Icon wird bei Indiz-Toasts dynamisch durch ein zum Indiztext
+  // passendes Emoji ersetzt (siehe pickIndizEmoji + showProgressToast iconOverride).
   clue: {
     bg: 'linear-gradient(180deg,rgba(35,40,30,0.94),rgba(22,26,18,0.94))',
     border: 'rgba(150,170,110,0.45)',
@@ -22589,6 +22628,43 @@ const TOAST_VARIANTS = {
     icon: '🔍',
   },
 };
+
+// v7.11.90: Waehlt ein zum Indiztext passendes Emoji. User-Wunsch: "bei Indiz
+// gefunden ein Indiz-Emoji das zum aktuellen Indizientext passt". Wir scannen
+// den Text nach Schluesselwoertern (Gegenstaende, Spuren) und geben das erste
+// passende Emoji zurueck. Fallback: 🔍 (Lupe). Reihenfolge = Prioritaet bei
+// Mehrfach-Treffern (spezifischere Begriffe zuerst).
+function pickIndizEmoji(text) {
+  const t = (text || '').toLowerCase()
+    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+  const map = [
+    [/(pistole|waffe|revolver|walther|schuss|kugel|geschoss|munition|patrone)/, '🔫'],
+    [/(messer|klinge|dolch)/, '🔪'],
+    [/(blut|wunde|verletz|leiche|toter|tote|\bmord)/, '🩸'],
+    [/(foto|fotografie|aufnahme|negativ)/, '📷'],
+    [/(feuerzeug|streichholz|tabak|zigarette|kippe)/, '🚬'],
+    [/(brief|schreiben|notizzettel|zettel|umschlag|telegramm|telegram|postkarte)/, '✉️'],
+    [/(protokoll|formular|dokument|unterlage|dossier|urkunde|frachtbrief|transportbefehl|akte|papier)/, '📄'],
+    [/(notizbuch|tagebuch|manuskript)/, '📓'],
+    [/(schluessel|tresor|schliessfach|\bsafe)/, '🔑'],
+    [/(telefon|anruf|fernsprecher|leitung|hoerer)/, '📞'],
+    [/(geld|bargeld|d-mark|devisen|konto|\bbank|honorar)/, '💰'],
+    [/(auto|wagen|opel|\bemw|limousine|kennzeichen|fahrzeug|fluchtfahrzeug)/, '🚗'],
+    [/(\bzug|stellwerk|gleis|waggon|reichsbahn|bahnhof|bahnsteig)/, '🚂'],
+    [/(adresse|wohnung|datscha|versteck)/, '📍'],
+    [/(uhr|uhrzeit|termin)/, '🕐'],
+    [/(flasche|alkohol|schnaps|wodka|\bbier|\bwein|bourbon)/, '🍸'],
+    [/(fussabdruck|fingerabdruck|fussspur)/, '👣'],
+    [/(zeuge|aussage|gestaendnis|gehoert|gesehen)/, '🗣️'],
+    [/(stasi|\bmfs|sokolow|spitzel|observation|verschleppung)/, '🕵️'],
+    [/(schmuck|\bring\b|halskette|gold|silber|brosche)/, '💍'],
+    [/(mantel|\bhut\b|hornknopf|knopf|jacke)/, '🧥'],
+  ];
+  for (const [re, emoji] of map) {
+    if (re.test(t)) return emoji;
+  }
+  return '🔍';
+}
 
 // v7.9.9: Liefert einen sprachlich sauberen Status-String fuer den Tatverdaechtigen.
 // Vorher wurde "X lokalisiert" als Name gespeichert und dann " (ueberfuehrt)"
@@ -22638,7 +22714,7 @@ function logMilestone(typ, text) {
   });
 }
 
-function showProgressToast(title, subtitle, variant, triggerKey) {
+function showProgressToast(title, subtitle, variant, triggerKey, iconOverride) {
   variant = variant || 'success';
   const v = TOAST_VARIANTS[variant] || TOAST_VARIANTS.success;
   // v7.9.22 v2: ALLE Toast-Versuche loggen (auch unterdrueckte).
@@ -22750,7 +22826,7 @@ function showProgressToast(title, subtitle, variant, triggerKey) {
                        'transition:top 0.3s ease-out, opacity 0.5s ease-out;';
   const titleDiv = document.createElement('div');
   titleDiv.style.cssText = 'font-weight:600;font-size:12px;color:' + v.titleColor + ';margin-bottom:4px;letter-spacing:1.5px;';
-  titleDiv.textContent = v.icon + ' ' + asciiToUmlaut(title);
+  titleDiv.textContent = (iconOverride || v.icon) + ' ' + asciiToUmlaut(title);
   toast.appendChild(titleDiv);
   if (subtitle) {
     const subDiv = document.createElement('div');
