@@ -2495,7 +2495,7 @@
     <span class="status-date" id="status-date"></span>
     <span class="status-spacer"></span>
     <div class="verfassung-dots" id="verfassung-dots" title="Verfassung"></div>
-    <div class="energie-dots" id="energie-dots" title="Energie"></div>
+    <div class="energie-dots" id="energie-dots" title="Energie" style="display:none;"></div>
     <!-- v7.9.11: Fall-Fortschritts-Anzeige. 4 Segmente: Stage 1 (Indizien), Stage 2 (Verdaechtiger), Stage 3 (Ueberfuehrt), Stage 4 (Klient berichtet). -->
     <div class="case-progress" id="case-progress" title="Fall-Fortschritt">
       <span class="case-progress-label">Fall</span>
@@ -2556,7 +2556,7 @@
         <span class="status-popup-label">Verfassung</span>
         <span class="status-popup-value" id="popup-verfassung">—</span>
       </div>
-      <div class="status-popup-row">
+      <div class="status-popup-row" id="popup-energie-row" style="display:none;">
         <span class="status-popup-label">Energie</span>
         <span class="status-popup-value" id="popup-energie">—</span>
       </div>
@@ -2634,7 +2634,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.12</div>
+    <div class="start-version">Schatten v7.12.13</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2798,7 +2798,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.12</span>
+    <span>Schatten v7.12.13</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5194,7 +5194,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.12';
+window.SCHATTEN_VERSION = 'v7.12.13';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -10571,12 +10571,17 @@ function applyCategoryMechanics(kategorie, ctx) {
         result.pushMessages.push('NICKERCHEN: Karl macht eine kurze Pause AM AKTUELLEN ORT - lehnt sich zurueck, schliesst die Augen fuer ein paar Minuten. Beschreibe knapp wie er kurz wegnickt, dann wieder hochschreckt - Geraeusche, eine Bewegung, ein Gedanke der ihn zurueckholt. Dies ist KEIN Tagwechsel. Die naechste Szene spielt am SELBEN Ort, KURZ SPAETER (vielleicht 15 Minuten). Karl ist etwas frischer aber nicht voll erholt. KEIN Schlaf-uebergang ueber 8 Stunden, KEIN "naechster Morgen". Die Tageszeit bleibt fast gleich oder schreitet nur leicht voran (z.B. NACHMITTAG bleibt NACHMITTAG, oder von SPAET-NACHMITTAG zu FRUEH-ABEND).');
       } else {
         // Echter Nacht-Schlaf (oder Custody-Schlaf) - Tagwechsel
-        result.vfDelta = (verfassung <= 3) ? 1 : 0;
+        // v7.12.13: Voller Nachtschlaf heilt KOMPLETT auf Vf 5 (User-Wunsch,
+        // Arcade). Behebt das "Vf 4 feststecken"-Problem: bei Vf 4 gab es keine
+        // Heilung (Notheilen nur Vf<=2, Wagner nur bei Praesenz). Jetzt stellt
+        // eine durchgeschlafene Nacht die Verfassung immer voll wieder her.
+        const vfNow = (typeof verfassung === 'number') ? verfassung : 5;
+        result.vfDelta = Math.max(0, 5 - vfNow);  // auffuellen auf 5
         result.spannungDelta = -3;
         result.energieDelta = 100; // wird in Verarbeitung auf 100 gecapped
         result.timeAdvanceBonus = 99; // erzwingt Tageswechsel (siehe pendingSleepChoice)
         result.triggerSchlaf = true;
-        result.healingApplied = (verfassung <= 3);  // v7.11.11: Cooldown nur wenn verletzt geschlafen
+        result.healingApplied = (vfNow < 5);  // Cooldown nur wenn verletzt geschlafen
         // v7.11.12: Custody-Schlaf -> Freilassung am Morgen + Heilung
         if (karlInStasiCustody) {
           result.vfDelta = Math.max(result.vfDelta, 1); // +1 garantiert (Verband in Zelle)
@@ -10840,15 +10845,15 @@ function renderOptions(scene) {
   // v7.11.32: ZWANGS-SCHLAFEN-Check. Bei En<=15 + Sp<4 + nicht-Custody soll der
   // Spieler nur noch SCHLAFEN klicken koennen. Alle anderen Optionen ausgegraut.
   // Hintergrund: User-Konzept "Spieler muss schlafen wenn Karl am Ende ist".
-  // Statt versteckter Engine-Action (ZWANGS-EINNICKEN entfernt in v7.11.32)
-  // sieht der Spieler klar: "Karl kann nicht mehr - schlaf jetzt."
+  // v7.12.13: ZWANGS-SCHLAF KOMPLETT DEAKTIVIERT (User-Entscheidung). Energie
+  // steuert nichts mehr - der Spieler entscheidet arcade-maessig selbst, wann er
+  // schlaeft (nur abends/nachts bei niedriger Spannung, ueber die Schlaf-Buttons).
+  // Karl kann nie mehr gegen seinen Willen einnicken. forceSleepMode bleibt als
+  // Variable (false), damit der nachfolgende Banner-Code unveraendert bleiben kann.
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
-  const forceSleepMode = (karlEnergie <= 15
-    && lastSp < 4
-    && !karlInStasiCustody
-    && (gameTimeIdx === 4 || gameTimeIdx === 5));  // nur ABEND oder NACHT
+  const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.12] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.13] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -10880,7 +10885,7 @@ function renderOptions(scene) {
     } else if (verfassung === 2) {
       warnHtml = '⚠️ Karl ist schwer verletzt. Eine weitere offensive Aktion kann tödlich sein. Wenn möglich heilen.';
     } else if (verfassung === 3) {
-      warnHtml = '⚠️ Karl ist angeschlagen. Offensive Aktionen verbrauchen weitere Kraft.';
+      warnHtml = '⚠️ Karl ist angeschlagen. Offensive Aktionen können die Verletzung verschlimmern und die Lage eskalieren.';
     }
     if (warnHtml) {
       const warnBanner = document.createElement('div');
@@ -13316,35 +13321,19 @@ KEINE anderen Themen mehr - kein neuer Tatort, keine neuen Verdaechtigen, keine 
     const formalHint = isFormalSetting ?
       ' WICHTIG: Karl ist in einer formellen Situation (Gericht/Verhandlung/Verhoer/Beerdigung). Die Situation MUSS zuerst beendet sein (Vertagung, Schluss der Trauerfeier, Karl wird entlassen, Verhandlung wird abgebrochen) bevor er schlafen kann. Erzaehle in dieser Szene das Ende der formellen Situation - dann erst die Schlaf-Optionen.' : '';
 
-    if (karlEnergie <= 15 && isLowTension) {
-      // KOMPLETT AM ENDE: erzwungener Einnick, KEINE Wahl mehr
-      recap += `\n\nKARL VOELLIG AM ENDE (Energie ${karlEnergie}/100, ${currentTime}): Karl kann buchstaeblich nicht mehr stehen. Die Augen fallen ihm zu, er torkelt, die Welt verschwimmt. In dieser Szene MUSST du eine erzwungene Einnick-Sequenz erzaehlen - keine Wahl mehr, Karl SINKT EIN.${formalHint} Beschreibe wie er ploetzlich einnickt (auf dem Buero-Stuhl, an einer Theke, auf der Bank im Wachraum, im Auto am Steuer, in einem Hauseingang, je nachdem wo er gerade ist). verfassung_delta: -1 (schlechter Schlafplatz). Erzaehle den Tageswechsel direkt im Text der NACHFOLGENDEN Szene: "Du wachst auf, als..." Die 4 Optionen sind dann normale MORGEN-Optionen (Kaffee, Hilde anrufen, zum naechsten Ermittlungsschritt). KEINE Optionen vom Vortag wieder anbieten.`;
-    } else if (karlEnergie <= 25 && isAbendOderNacht && isLowTension) {
-      // SEHR ERSCHOEPFT + Abend/Nacht + ruhig: ALLE 4 OPTIONEN MUESSEN Schlaf/Heimweg sein
-      // v6.93: Sofa-Optionen komplett aus den Beispielen entfernt. Mistral nahm
-      // die Notfall-Variante als Default - das Wort "Sofa" steht im Prompt = Mistral
-      // schreibt es in die Optionen. Lieber gar nicht erwaehnen.
-      recap += `\n\nKARL MUSS SCHLAFEN JETZT (Energie ${karlEnergie}/100, ${currentTime}): Karl ist am Limit. ALLE 4 OPTIONEN MUESSEN Schlaf- oder Heimweg-Optionen sein - KEINE inhaltliche Ermittlungs-Option mehr erlaubt.${formalHint} Karl hat eine Wohnung am Hackeschen Markt mit Schlafzimmer und richtigem BETT. Beispiele die sich anbieten: "Zurueck ins Schlafzimmer am Hackeschen Markt und ins Bett", "Mit dem Opel nach Hause und ins Bett", "Bei Doc Wagner uebernachten auf seiner Liege", "Bei [Person im Raum] uebernachten falls Karl zu weit weg von zu Hause ist", "Im Auto am Steuer einnicken (Notfall)". Verwende das Wort "Bett" oder "schlafen" oder "uebernachten" - NICHT "Sofa" oder "Couch" (Karl ist kein Penner). Im Erzaehltext: Karl gaehnt, reibt sich die Augen, die Schultern haengen, alles zieht ihn zum Schlaf. NPCs reagieren ("Mauer, Sie sehen fertig aus, gehen Sie nach Hause"). KEINE Option wie "noch eine Frage stellen", "noch zum naechsten Ort", "noch akten lesen" - das ist physisch unmoeglich.`;
-    } else if (karlEnergie <= 40 && isAbendOderNacht && isLowTension) {
-      // Erschoepft + Abend/Nacht + ruhig: 2-3 Schlaf-Optionen
-      // v6.93: Wort "Sofa" ganz weg, nur "Bett" + "schlafen"
-      recap += `\n\nKARL ERSCHOEPFT (Energie: ${karlEnergie}/100 = ${eStufe.label}, ${currentTime}): In den 4 Optionen MUESSEN 2-3 davon Tageswechsel-Optionen sein. Karl hat ein BETT zu Hause am Hackeschen Markt: "Zurueck ins Schlafzimmer und schlafen", "Nach Hause am Hackeschen Markt und ins Bett", "Bei Doc Wagner uebernachten". KEIN "Sofa" oder "Couch" in den Optionen verwenden. ALLE Tageswechsel-Optionen MUESSEN das Wort "schlafen" oder "Bett" oder "uebernachten" enthalten, damit das System sie erkennt. MAX 1 inhaltliche Option, sonst nur noch Schlaf.`;
-    } else if (karlEnergie <= 60 && isAbendOderNacht) {
-      // Muede + Abend/Nacht: 1 Schlaf-Option
-      recap += `\n\nKARL WIRD MUEDE (Energie: ${karlEnergie}/100 = ${eStufe.label}, ${currentTime}): EINE der 4 Optionen sollte ein Tageswechsel sein (zurueck zum Hackeschen Markt und ins Bett, oder ein anderer plausibler Schlafplatz wenn jemand in der Naehe ist). Diese Option MUSS "schlafen" oder "Bett" oder "bis morgen" enthalten.`;
-    } else if (gameTimeIdx === 5 && isLowTension) {
-      // NACHT, aber Karl noch fit: trotzdem 1 Schlaf-Option zur Wahl
-      recap += `\n\nNACHT-OPTION (Energie ${karlEnergie}/100): Es ist Nacht. EINE der 4 Optionen darf ein Tageswechsel sein, mit Wort "schlafen" oder "die Nacht verbringen". Aber Karl ist noch nicht erschoepft, du kannst es ihm anbieten oder auch nicht.`;
+    // v7.12.13: ENERGIE-ENTMACHTET. Schlaf-Optionen haengen jetzt NUR noch an
+    // Tageszeit + Spannung, nicht mehr an Energie. Kein Zwang, kein "Karl muss
+    // schlafen" - der Spieler entscheidet arcade-maessig selbst. Abends/nachts bei
+    // niedriger Spannung wird EINE Schlaf-Option angeboten (nicht aufgedraengt).
+    if (isAbendOderNacht && isLowTension) {
+      recap += `\n\nNACHT-OPTION (${currentTime}): Es ist Abend/Nacht und die Lage ist ruhig. EINE der 4 Optionen DARF ein Tageswechsel sein (zurueck zum Hackeschen Markt und ins Bett, oder ein anderer plausibler Schlafplatz wenn jemand in der Naehe ist), mit dem Wort "schlafen" oder "Bett" oder "die Nacht verbringen". Kein Zwang - du kannst es anbieten oder auch nicht, je nachdem was dramaturgisch passt. Die anderen Optionen bleiben aktive Ermittlungsschritte.`;
     }
 
-    // v6.83: KEINE-SCHLAF-OPTIONEN-PFLICHT wenn Karl frisch ausgeschlafen ist.
-    // Anlass: nach Tageswechsel war Energie=100 und es war MORGEN, aber Mistral
-    // bot trotzdem "Versuch, noch ein paar Stunden zu schlafen" an - mechanisch
-    // Unsinn, denn Karl ist frisch wach. Wenn er das wahlt, springt das Spiel
-    // weitere 24h vor (gameDay++) ohne dass es erzaehlerisch passt.
-    // Bei Energie >=80 + Morgen/Vormittag/Mittag: explizit KEINE Schlaf-Optionen.
-    if (karlEnergie >= 80 && gameTimeIdx <= 2) {
-      recap += `\n\nKARL IST FRISCH WACH (Energie ${karlEnergie}/100, ${currentTime}): Karl ist gerade ausgeschlafen oder hat morgens Kaffee getrunken. KEINE Option darf "schlafen", "noch ein paar Stunden", "wieder ins Bett", "auf die Couch", "Bett", "Sofa" oder "bis morgen" enthalten. Niemand legt sich morgens nach dem Aufwachen wieder hin. Karl arbeitet jetzt. Alle 4 Optionen sind aktive Ermittlungsschritte (Telefonate, Recherche, Befragungen, Ortsbesuche).`;
+    // v6.83: KEINE-SCHLAF-OPTIONEN-PFLICHT wenn es MORGEN/Tag ist.
+    // v7.12.13: nicht mehr an Energie gekoppelt, nur noch an Tageszeit - niemand
+    // legt sich morgens/mittags nach dem Aufwachen wieder hin.
+    if (gameTimeIdx <= 2) {
+      recap += `\n\nTAG-MODUS (${currentTime}): Es ist Morgen/Vormittag/Mittag. KEINE Option darf "schlafen", "noch ein paar Stunden", "wieder ins Bett", "auf die Couch", "Bett", "Sofa" oder "bis morgen" enthalten. Niemand legt sich tagsueber schlafen. Karl arbeitet. Alle 4 Optionen sind aktive Ermittlungsschritte (Telefonate, Recherche, Befragungen, Ortsbesuche).`;
     }
 
     // HUNGER-Hinweis: ab 7+ MUSS Essens-Option dabei sein, ab 4+ leichter Hint.
@@ -13635,18 +13624,9 @@ EMPFEHLUNG: Eine der 4 Optionen SOLL eine Behandlungs-Option sein:
 Wenn du die Behandlungs-Option mit tag="behandlung" markierst, MUSST du in der Folge-Szene die Heilung narrativ zeigen.`;
     }
 
-    // v7.9.14: Energie unter 20 ohne Action -> Schlaf-Option erzwingen
-    // v7.9.22 v2: ERSCHOEPFUNGS-PUSH auch bei Action-Szenen (Sp 4-5) wenn
-    // Energie <=15 - dann braucht Karl wirklich eine Pause-Moeglichkeit.
-    // Krause-Run hatte 6 Sz mit En <=20 ohne Push (lastSpannung >3 hat geblockt).
-    if (karlEnergie <= 20 && !karlInStasiCustody) {
-      const isActionScene = (typeof lastSpannung === 'number' && lastSpannung >= 4);
-      if (!isActionScene) {
-        recap += `\n\nERSCHOEPFUNGS-PUSH (PFLICHT): Karl hat Energie ${karlEnergie}/100 - am Ende seiner Kraft. Keine Action gerade. Eine der 4 Optionen MUSS eine Ruhe/Schlaf-Option sein. Bei Tageszeit Abend/Nacht: "Geh nach Hause und leg dich ins Bett". Bei Tag: "Fahr ins Buero und schlaf eine Stunde auf der Couch" oder "Setz dich in eine ruhige Ecke und ruh dich kurz aus".`;
-      } else if (karlEnergie <= 15) {
-        recap += `\n\nERSCHOEPFUNGS-PUSH (PFLICHT, auch bei Action): Karl hat Energie ${karlEnergie}/100 - er kippt fast um. Selbst in dieser angespannten Lage MUSS eine der 4 Optionen einen Notfall-Rueckzug anbieten: "Brich ab und zieh dich zurueck" oder "Setz dich ab und sammel dich kurz" - sonst kollabiert Karl mitten in der Action.`;
-      }
-    }
+    // v7.12.13: ERSCHOEPFUNGS-PUSH ENTFERNT. Energie steuert nichts mehr - es
+    // gibt keinen "Karl ist am Ende seiner Kraft"-Zwang mehr. Schlaf-Optionen
+    // kommen nur noch ueber die Tageszeit-Logik (NACHT-OPTION oben).
 
     // v7.9.19: ROMANTIK-PUSH. Wenn Romantik-Tension >= 3 UND Frau im aktuellen
     // Cast UND niedrige Spannung UND Abend/Nacht UND nicht im Gewahrsam,
@@ -16661,7 +16641,11 @@ function updateEnergyAndHunger(scene) {
     drain += 4;
   }
 
-  karlEnergie = Math.max(0, karlEnergie - drain);
+  // v7.12.13: ENERGIE-DRAIN STILLGELEGT. Energie steuert nichts mehr (kein
+  // Zwangsschlaf, keine Pushes, keine Anzeige). karlEnergie bleibt konstant 100,
+  // damit verbleibende Lese-Stellen (Recap, Restore) nicht crashen - analog zur
+  // stillgelegten Hunger-Mechanik. Der oben berechnete drain wird verworfen.
+  karlEnergie = 100;
 
   // v7.9.45: Hunger-Mechanik komplett stillgelegt. karlHunger bleibt 0,
   // hungerAccumulator wird nicht mehr hochgezaehlt. Variable existiert noch
@@ -17361,7 +17345,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.12] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.13] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -18370,7 +18354,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           const tensionHighEnoughForArrest = (typeof stasiTension === 'number' && stasiTension >= 4);
           if (!tensionHighEnoughForArrest) {
             // STILLER RELEASE: Karl ist faktisch frei, das System zieht nach.
-            console.warn('[Schatten v7.12.12] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
+            console.warn('[Schatten v7.12.13] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet, kein Hard-Force');
             karlInStasiCustody = false;
             folterSceneCount = 0;
@@ -18385,7 +18369,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.12] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.13] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -20838,7 +20822,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.12] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.13] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
