@@ -2630,7 +2630,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.11.76</div>
+    <div class="start-version">Schatten v7.11.77</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2794,7 +2794,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.11.76</span>
+    <span>Schatten v7.11.77</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5190,7 +5190,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.11.76';
+window.SCHATTEN_VERSION = 'v7.11.77';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5797,7 +5797,7 @@ function toggleGeminiOnly(event) {
   syncGeminiOnlySwitch();
   if (typeof updateFooterModel === 'function') updateFooterModel();
   if (typeof updateProviderInfo === 'function') updateProviderInfo();
-  console.log('[Schatten v7.11.76] Gemini-Only-Modus:', window.geminiOnlyMode ? 'AN' : 'AUS');
+  console.log('[Schatten v7.11.77] Gemini-Only-Modus:', window.geminiOnlyMode ? 'AN' : 'AUS');
 }
 
 function syncGeminiOnlySwitch() {
@@ -10135,10 +10135,26 @@ function classifyOption(opt, resolveContext) {
   }
   // HEILEN: explizite Heilungs-Signale (Doc, Praxis, sich behandeln lassen)
   // v7.11.54: "bei Doc Wagner" + "Zuflucht bei Arzt" + "zu Doc Wagner" ergänzt.
-  // User-Run Vogt 2145 hatte "Suche Zuflucht bei Doc Wagner in Schoeneberg,
-  // bevor deine Wunde dich ohnmaechtig werden laesst" - klar HEILEN-Intent,
-  // wurde aber als BEOBACHTEN (Position D) klassifiziert.
-  else if (/\b(zu(r|m)?\s+(doc|praxis|charit|krankenhaus|sanitaeter|notaufnahme|apothek|arzt)|um.*(behandel|verarzt|versorg|heil|hilfe.*such)|behandel\s+lass|verarzt\s+lass|wunde.*versorg|versorge\s+dich|selbst.*verarzt|bei\s+(doc|dem\s+arzt|sanitaeter|apotheker)\s+\w+|zuflucht\s+bei\s+(doc|dem\s+arzt|sanitaeter|apotheker)|(zu|bei)\s+doc\s+wagner|(zu|bei)\s+dem\s+arzt)\b/.test(t)) {
+  // v7.11.77: BUG-FIX. User-Run Stein 0731: "Fahr zur Charité und such nach
+  // Schwester Helene, um Margarete zu finden" wurde als HEILEN klassifiziert,
+  // weil "zur charit" matchte. Aber das ist ERKUNDEN (Person suchen), Karl
+  // will sich nicht behandeln lassen. Charité/Krankenhaus sind auch Orte wo
+  // Leute arbeiten (Helene als Krankenschwester) und wo Verdaechtige/Zeugen
+  // sind, nicht nur Heilorte. Fix: Wenn die Option ein Such-/Finde-/Treff-
+  // Verb auf eine PERSON enthaelt, ist es KEIN Heilen, auch wenn ein
+  // medizinischer Ort genannt wird. Echtes Heilen braucht Behandlungs-Intent.
+  else if (
+    /\b(zu(r|m)?\s+(doc|praxis|charit|krankenhaus|sanitaeter|notaufnahme|apothek|arzt)|um.*(behandel|verarzt|versorg|heil|hilfe.*such)|behandel|verarzt\s+lass|wunde.*versorg|versorge\s+dich|selbst.*verarzt|bei\s+(doc|dem\s+arzt|sanitaeter|apotheker)\s+\w+|zuflucht\s+bei\s+(doc|dem\s+arzt|sanitaeter|apotheker)|(zu|bei|ruf)\s+doc\s+wagner|(zu|bei)\s+dem\s+arzt|wunde.*(in|bei).*(notaufnahme|praxis|charit|krankenhaus)|(in|bei)\s+(der\s+)?(notaufnahme|praxis).*(versorg|behandel|verarzt))\b/.test(t)
+    // v7.11.77: Ausschluss - Personensuche/Treffen/Befragung an med. Ort ist
+    // ERKUNDEN/BEOBACHTEN, nicht HEILEN. ABER: echter Heil-Intent (Wunde,
+    // Behandlung, Zuflucht) schlaegt den Ausschluss. "Zuflucht suchen" ist
+    // Heilen, "nach Person suchen" ist Erkunden.
+    && !(
+      /\b(such|finde|triff|treffen|sprech|befrag|verhoer|wer\s|zeuge|verdaecht)/.test(t)
+      && !/\b(zuflucht|wunde|verletz|prellung|blut|behandel|verarzt|versorg)\b/.test(t)
+    )
+    && !/\bum\s+\w+\s+zu\s+(finden|treffen|sprechen|befragen|stellen)/.test(t)
+  ) {
     heuristicCat = 'HEILEN';
   }
   // v7.11.52: DEFENSIV-Heuristik wieder eingefuehrt fuer eindeutige
@@ -10670,7 +10686,7 @@ function renderOptions(scene) {
     && !karlInStasiCustody
     && (gameTimeIdx === 4 || gameTimeIdx === 5));  // nur ABEND oder NACHT
   if (forceSleepMode) {
-    console.log('[Schatten v7.11.76] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.11.77] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -16920,7 +16936,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.11.76] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.11.77] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -17915,11 +17931,27 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         // Auto-Release: wenn 3 Szenen lang kein Stasi-Kontext, Custody-Flag loeschen
         folterSceneCount++;
         if (folterSceneCount >= 3) {
-          // v6.99: Statt silently die Custody-Eskalation zurueckzunehmen, EINMAL
-          // pro Run einen HARD-FORCED Festnahme-Eingang erzwingen. Anlass:
-          // Vogt-Run v6.97 hatte 42 Stasi-Warnungen + 20 AutoCustody-Forces aber
-          // NULL Verhoer-Szenen. Das System darf nicht ewig warnen ohne Konsequenz.
-          if (!hardForcedArrestUsed) {
+          // v7.11.77: KRITISCHER FIX. Bisher feuerte hier IMMER ein HARD-FORCE
+          // Festnahme-Eingang - egal wie hoch die Stasi-Tension war. User-Run
+          // Stein 0731: Karl wurde Sz 33 (System-Force) verhaftet, KI erzaehlte
+          // ihn dann 10 Sz lang FREI (Charite, Romantik mit Helene), Tension
+          // fiel auf 0. Aber karlInStasiCustody blieb true, folterSceneCount
+          // stieg, und in Sz 44 zog HARD-FORCE Karl per Festnahme zurueck in
+          // die Zelle - obwohl Tension 0 war und er nichts getan hatte.
+          // Logik-Fehler: "kein Stasi-Kontext fuer 3 Sz" bei NIEDRIGER Tension
+          // ist ein STILLER RELEASE durch die KI (sie hat Karl freigelassen),
+          // KEINE ignorierte Festnahme. HARD-FORCE nur noch bei HOHER Tension
+          // (>=4), wo die KI wirklich eine faellige Konsequenz verschleppt.
+          const tensionHighEnoughForArrest = (typeof stasiTension === 'number' && stasiTension >= 4);
+          if (!tensionHighEnoughForArrest) {
+            // STILLER RELEASE: Karl ist faktisch frei, das System zieht nach.
+            console.warn('[Schatten v7.11.77] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
+            diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet, kein Hard-Force');
+            karlInStasiCustody = false;
+            folterSceneCount = 0;
+            stasiHighTensionStreak = 0;
+            if (typeof trackCustodyChange === 'function') trackCustodyChange('stiller-release');
+          } else if (!hardForcedArrestUsed) {
             // v7.11.55: HARD-FORCE FESTNAHME aufschieben wenn Karl zu kritisch.
             // User-Run Vogt 2145 Sz 61: Hard-Force triggerte bei Vf=3, Karl
             // wurde festgenommen, Notflucht bei Vf=2 -> Vf 0 -> Tod. Bei
@@ -17928,7 +17960,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.11.76] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.11.77] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -20282,7 +20314,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.11.76] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.11.77] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
