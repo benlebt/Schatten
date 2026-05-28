@@ -2630,7 +2630,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.11.83</div>
+    <div class="start-version">Schatten v7.11.85</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2794,7 +2794,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.11.83</span>
+    <span>Schatten v7.11.85</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5190,7 +5190,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.11.83';
+window.SCHATTEN_VERSION = 'v7.11.85';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5797,7 +5797,7 @@ function toggleGeminiOnly(event) {
   syncGeminiOnlySwitch();
   if (typeof updateFooterModel === 'function') updateFooterModel();
   if (typeof updateProviderInfo === 'function') updateProviderInfo();
-  console.log('[Schatten v7.11.83] Gemini-Only-Modus:', window.geminiOnlyMode ? 'AN' : 'AUS');
+  console.log('[Schatten v7.11.85] Gemini-Only-Modus:', window.geminiOnlyMode ? 'AN' : 'AUS');
 }
 
 function syncGeminiOnlySwitch() {
@@ -7369,8 +7369,11 @@ function showCaseSolved() {
         }
       } catch (e) { /* ignore */ }
       const targetLabel = targetName || 'die gesuchte Person';
+      // v7.11.85: "Klient ist informiert" hier ENTFERNT - der closingText unten
+      // sagt es ohnehin fuer alle Fall-Typen ("Der Klient ist informiert, das
+      // Honorar ist faellig"). Vorher stand es doppelt im Win-Screen.
       outcomeSentence = numIndizien + ' Indiz' + (numIndizien === 1 ? '' : 'ien') + ' gesammelt, '
-        + 'Spur zu ' + targetLabel + ' aufgeklärt. Klient ist informiert.';
+        + 'Spur zu ' + targetLabel + ' aufgeklärt.';
     } else if (ct === 'beschatten') {
       outcomeSentence = numIndizien + ' Indiz' + (numIndizien === 1 ? '' : 'ien') + ' gesammelt, ' + verdName + ' beschattet und der Verdacht bestätigt.';
     } else {
@@ -8482,7 +8485,7 @@ function showHeader(scene) {
     // v7.11.59/83: Schwelle synchron mit FALL LÖSEN-Button: Stage 3 UND
     // (8 Indizien ODER Durchbruch: Taeter ueberfuehrt / Zielperson gefunden).
     const durchbruchUI = !!(caseProgress.ueberfuehrt || caseProgress.zielpersonGefunden);
-    const resolveReady = !isSolved && reachedStage >= 3 && (indCntUI >= 8 || durchbruchUI);
+    const resolveReady = !isSolved && reachedStage >= 3 && (indCntUI >= 11 || durchbruchUI);
     segments.forEach(seg => {
       seg.classList.remove('reached', 'solved', 'ready');
       const segStage = parseInt(seg.getAttribute('data-stage'), 10);
@@ -10404,7 +10407,11 @@ function applyCategoryMechanics(kategorie, ctx) {
       result.vfDelta = 0;
       result.spannungDelta = -1;
       result.energieDelta = 0;  // v7.11.20: Arcade - Energie sinkt nur durch Verletzung
-      result.indizChance = 0.6;
+      // v7.11.84: Indiz-Chance 0.6 -> 0.25. User-Wunsch: "wenn man nur beobachtet
+      // findet man kaum Indizien und es geht kaum weiter". Reines Zuschauen ist
+      // eine Verschnaufpause, kein echter Ermittlungsfortschritt. Wer Indizien
+      // will, muss ERKUNDEN (100%) oder OFFENSIV (30%).
+      result.indizChance = 0.25;
       result.timeAdvanceBonus = 0.3;  // v7.11.12: war 0.5
       if (romanceInScene) {
         result.romanceTension = 1;
@@ -10414,7 +10421,7 @@ function applyCategoryMechanics(kategorie, ctx) {
         result.stasiTension = 1;
         result.pushMessages.push('BEOBACHTEN-STASI: Karl spuert/sieht Stasi-Praesenz. Beschreibe es subtil - Mantelmaenner, ein zu langer Blick, ein wartendes Auto.');
       }
-      result.pushMessages.push('BEOBACHTEN: Karl bleibt zurueckhaltend und sammelt Information. Lass ihn etwas hoeren/sehen/erfahren das nuetzlich ist (60% Chance auf neues Indiz).');
+      result.pushMessages.push('BEOBACHTEN: Karl bleibt zurueckhaltend und haelt sich raus. Meist passiert hier atmosphaerisch etwas, aber SELTEN ein echtes Indiz (nur 25% Chance). Wenn kein Indiz: beschreibe Stimmung, Karls Gedanken, die Umgebung - aber draenge die Handlung NICHT voran.');
       break;
 
     case 'HEILEN':
@@ -10589,41 +10596,40 @@ function checkProgressTriggers(kategorie, ctx) {
     result.showToast = { title: 'Ermittlung läuft', body: 'Erste Spuren gesammelt.' };
     result.pushMessages.push('STAGE 1 ERREICHT: Briefing ist vorbei, Karl ist im Fall drin.');
   }
-  // v7.11.83: Stage-Progression ist indizien-getrieben (KEINE Offensiv-Pflicht).
-  // User-Korrektur zu v7.11.82: "Der Nutzer soll nicht am Ende immer Offensiv
-  // druecken muessen - ein Fall loest sich durch Beweise, dann berichtet man."
-  // Jede Stage steigt durch genug Indizien. WIE man an Indizien kommt, haengt
-  // an den Aktionen + ihren Multiplikatoren (ERKUNDEN/OFFENSIV hoch, BEOBACHTEN
-  // niedrig) und am Stage-Faktor (frueh leichter, spaet schwerer - siehe
-  // applyCategoryMechanics). So baut sich der Fall ruhig auf und wird zum Ende
-  // dichter, ohne dass eine Pflicht-Kategorie erzwungen wird.
-  // Stage 1 -> 2: ~4 Indizien (frueher Verdacht formt sich)
+  // v7.11.83/84: Stage-Progression ist indizien-getrieben (KEINE Offensiv-Pflicht).
+  // v7.11.84: Schwellen angehoben gegen "zu schnell am Anfang" (User-Lektorat
+  // Vogt 0849: 6 Indizien in 4 Sz -> Stage 2 nach 4 Sz, fuehlte sich express an).
+  // Plus: KI-Indiz-Drosselung in Sz 1-3 (max 1/Szene, siehe Recap-Push).
+  // Stage 1 -> 2: ~6 Indizien (war 4)
   else if (stage === 1) {
-    const ready = (indCount >= 4) ||
-                  (erkundenStreak >= 2 && indCount >= 3);
+    const ready = (indCount >= 6) ||
+                  (erkundenStreak >= 2 && indCount >= 5);
     if (ready) {
       result.newStage = 2;
       result.showToast = { title: 'Verdacht formt sich', body: 'Spur konkret - Verdacht formt sich.' };
       result.pushMessages.push('STAGE 2 ERREICHT: Karl hat genug Indizien um einen konkreten Verdaechtigen zu identifizieren. Diese Szene MUSS einen Namen / eine konkrete Person nennen die als Verdaechtiger in Frage kommt. Setze "tatverdaechtiger_identifiziert" im JSON.');
     }
   }
-  // Stage 2 -> 3: ~7 Indizien ODER aktive Konfrontation (OFFENSIV gegen Suspect).
-  // Indizien sind der Hauptweg; Offensiv ist eine ABKUERZUNG, kein Zwang.
+  // Stage 2 -> 3: ~9 Indizien ODER aktive Konfrontation (OFFENSIV gegen Suspect
+  // UND mind. 5 Indizien). v7.11.84: Offensiv-Abkuerzung an Beweisgrundlage
+  // gekoppelt - Karl stuermt vor WEIL er genug in der Hand hat, nicht aus dem
+  // Nichts. Verhindert Stage-3 bei Indiz-Stagnation (Vogt 0849: Stage 3 bei 6
+  // Ind die 10 Sz stagnierten - jetzt braucht's mind. 5, was ok ist, aber kein
+  // Vorpreschen ohne jede Spur).
   else if (stage === 2) {
-    const indizReady = indCount >= 7;
-    const aktiveKonfrontation = (kategorie === 'OFFENSIV' && (suspectInScene || tatverdaechtigerKnown));
+    const indizReady = indCount >= 9;
+    const aktiveKonfrontation = (kategorie === 'OFFENSIV' && (suspectInScene || tatverdaechtigerKnown) && indCount >= 5);
     if (indizReady || aktiveKonfrontation) {
       result.newStage = 3;
       result.showToast = { title: 'Konfrontation', body: 'Wahrheit kommt ans Licht.' };
       result.pushMessages.push('STAGE 3 ERREICHT: Karl hat genug in der Hand, um den Verdaechtigen direkt zu stellen. Lass ihn gestehen, fluechten, oder sich verteidigen - der Hoehepunkt der Geschichte. Setze "tatverdaechtiger_ueberfuehrt": true wenn er keine Ausreden mehr hat.');
     }
   }
-  // Stage 3 -> Loesungs-Reife: ~9 Indizien ODER Durchbruch (ueberfuehrt/gefunden).
-  // Reiner Hinweis-Push an die KI; der Spieler loest selbst via FALL-LOESEN-Button.
+  // Stage 3 -> Loesungs-Reife: ~11 Indizien ODER Durchbruch (ueberfuehrt/gefunden).
   else if (stage === 3) {
-    const indizReady = indCount >= 9;
+    const indizReady = indCount >= 11;
     const durchbruch = !!(ctx && (ctx.ueberfuehrt || ctx.zielpersonGefunden));
-    if (indizReady || durchbruch || kategorie === 'OFFENSIV') {
+    if (indizReady || durchbruch) {
       result.pushMessages.push('LOESUNGS-REIF: Karl hat genug, um den Fall abzuschliessen. Setze "tatverdaechtiger_ueberfuehrt": true wenn der Verdaechtige geschlagen/festgenommen/identifiziert ist (oder bei Vermisstenfall: Zielperson gefunden). Klient kann jetzt informiert werden ("klient_berichtet": true).');
     }
   }
@@ -10723,7 +10729,7 @@ function renderOptions(scene) {
     && !karlInStasiCustody
     && (gameTimeIdx === 4 || gameTimeIdx === 5));  // nur ABEND oder NACHT
   if (forceSleepMode) {
-    console.log('[Schatten v7.11.83] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.11.85] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -11365,7 +11371,7 @@ function renderOptions(scene) {
   const resolveCoreReady =
     !hasAufloesenOption &&
     (
-      (currentStage >= 3 && indizCount >= 8) ||   // (A) normale Beweis-Reife
+      (currentStage >= 3 && indizCount >= 11) ||  // (A) normale Beweis-Reife (v7.11.84: war 8)
       (currentStage >= 3 && durchbruchErreicht)   // (B) Durchbruch - Indiz-Zahl egal
     );
   // Persistent merken: war Resolve mal verfuegbar? Wenn ja, bleibt der Button.
@@ -12649,6 +12655,13 @@ Es ist NICHT realistisch, dass eine Trauergesellschaft 18 Stunden an einem Grab 
           `STRIKTE REGELN fuer Sz${nextScene}: (1) KEIN zweiter Fall, KEIN zweiter Klient, KEINE zweite Zielperson. (2) KEINE alten Auftraege oder verstorbene Klienten aus frueheren Zeiten als Plot-Anker neu einfuehren. (3) Das laufende Datum ${startDate ? '(' + startDate + ')' : ''} bleibt - keine "vor zwei Jahren"-Plots. (4) Die naechste Szene zeigt die DIREKTE KONSEQUENZ der Spieler-Aktion in DERSELBEN Story. Wenn der Spieler einen Ortswechsel impliziert hat, fuehrt der Weg zu einem fall-relevanten Ort - NICHT zu einem komplett anderen Fall.\n`;
         if (client) {
           recap += `KLIENT-KONTINUITAETS-SPERRE: ${client.name} ist seit Sz1 bei Karl im Buero/am Ort und spricht/handelt jetzt mit ihm. Sz${nextScene} darf NICHT noch einmal mit "es klopft an der Tuer", "${client.name} betritt das Buero", "ein Mann/eine Frau steht im Eingang" o.ae. beginnen - das waere eine Wiederholung der Eroeffnung. Der Klient ist BEREITS DA. Sz${nextScene} setzt das laufende Gespraech / die Untersuchung direkt fort.\n`;
+        }
+        // v7.11.84: INDIZ-DROSSELUNG in fruehen Szenen. User-Lektorat Vogt 0849:
+        // KI warf 6 Indizien in 4 Szenen raus -> Fall fuehlte sich express an,
+        // Stage 2 nach 4 Sz. Jetzt: in Sz 1-3 hoechstens EIN neues Indiz pro
+        // Szene, damit sich der Fall ruhig aufbaut statt sofort zu explodieren.
+        if (sceneCounter <= 3) {
+          recap += `INDIZ-TEMPO (Sz${nextScene}, fruehe Ermittlung): Hoechstens EIN neues Indiz ("indiz_neu") in dieser Szene. Der Fall baut sich langsam auf - Karl tastet sich ran. Lieber atmosphaerische Ermittlungsarbeit als ein Indizien-Dump. Keine Haeufung von 2-3 Spuren auf einmal.\n`;
         }
         // v6.96: NEGATIVE-DRIFT-SPERRE - explizit Namen verbieten die Mistral
         // gerne als "Standard-Hintergrund" eingeflickt hat in Runs der v6.94er Serie.
@@ -17032,7 +17045,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.11.83] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.11.85] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -18041,7 +18054,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           const tensionHighEnoughForArrest = (typeof stasiTension === 'number' && stasiTension >= 4);
           if (!tensionHighEnoughForArrest) {
             // STILLER RELEASE: Karl ist faktisch frei, das System zieht nach.
-            console.warn('[Schatten v7.11.83] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
+            console.warn('[Schatten v7.11.85] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet, kein Hard-Force');
             karlInStasiCustody = false;
             folterSceneCount = 0;
@@ -18056,7 +18069,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.11.83] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.11.85] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -18601,6 +18614,10 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       scene.verfassung_delta = delta;
     }
 
+    // v7.11.84: Kategorie fuer den spaeteren Indiz-Filter sichern, BEVOR
+    // pendingCategoryChoice auf null gesetzt wird (Indiz-Verarbeitung kommt erst
+    // weiter unten, da waere der Wert sonst schon weg).
+    var _catForIndizFilter = pendingCategoryChoice;
     pendingCategoryChoice = null;  // verbraucht
 
     // CLIENT-SIDE VALIDIERUNG fuer JEDEN Verfassungs-Drop:
@@ -19492,6 +19509,23 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
 
     // Fall-Fortschritt verarbeiten
     // 1) Neue Indizien sammeln
+    // v7.11.84: HARTER INDIZ-FILTER bei passiven Pausen-Aktionen. User-Wunsch:
+    // "wenn man nur beobachtet, mit Frauen intim wird oder schlaeft, findet man
+    // keine/kaum Indizien und es geht kaum weiter". Diese Kategorien sollen den
+    // Fall NICHT vorantreiben - sie sind Verschnaufpausen / Charakter-Momente.
+    // Bisher waren die Indiz-Chancen nur PROMPT-Hinweise (kein harter Filter),
+    // die KI lieferte trotzdem Indizien. Jetzt: bei diesen Kategorien werden
+    // KI-Indizien verworfen. AUSNAHME: ein Durchbruch (Taeter gefasst, Zielperson
+    // gefunden) wird nie verworfen - der ist immer fall-relevant.
+    const passiveNoProgressCats = ['SCHLAFEN', 'UEBERNACHTUNG', 'HEILEN', 'NOTHEILEN', 'ROMANTIK', 'FLUCHT', 'NOTFLUCHT', 'DEFENSIV'];
+    const chosenCatForIndiz = (typeof _catForIndizFilter === 'string') ? _catForIndizFilter : '';
+    const suppressIndizThisScene = passiveNoProgressCats.indexOf(chosenCatForIndiz) !== -1
+      && !scene.tatverdaechtiger_ueberfuehrt
+      && !scene.zielperson_gefunden;
+    if (suppressIndizThisScene && Array.isArray(scene.indiz_neu) && scene.indiz_neu.length > 0) {
+      diag('filter', 'Indiz(e) verworfen: passive Aktion ' + chosenCatForIndiz + ' treibt den Fall nicht voran (' + scene.indiz_neu.length + ' KI-Indiz(e) ignoriert)');
+      scene.indiz_neu = [];
+    }
     if (Array.isArray(scene.indiz_neu) && scene.indiz_neu.length > 0) {
       // Synonym-Map: gleiche Konzepte mit verschiedenen Begriffen werden gleichbehandelt
       // damit Mistral nicht "Feuerzeug" und "Zigarettenanzuender" als zwei Indizien fuer
@@ -20409,7 +20443,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.11.83] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.11.85] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
@@ -22414,6 +22448,13 @@ function canShowToast(variant, triggerKey) {
   // gecooldownt weil 1 Szene vorher schon ein danger-Toast lief.
   const lifeCriticalTriggers = ['verfassung-null'];
   const isLifeCritical = lifeCriticalTriggers.includes(triggerKey);
+  // v7.11.85: clue-Toasts (Indiz-Funde) IMMER zeigen. User-Wunsch: "Indiz-
+  // Toasts konsistent zeigen, damit der User merkt wann er ein Indiz gefunden
+  // hat". Jeder Fund ist ein eigenes Ereignis - kein Cooldown, keine Tages-
+  // sperre. Der triggerKey ist ohnehin pro Szene eindeutig (indiz-<sceneNr>).
+  if (variant === 'clue') {
+    return true;
+  }
   const dayKey = variant + ':' + triggerKey;
   // Pro spezifischem Trigger: max 1x pro Tag (gilt auch fuer life-critical -
   // wir muellen den Spieler nicht mit 5 Lebensgefahr-Toasts pro Tag voll,
