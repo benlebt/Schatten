@@ -2636,7 +2636,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.11.98</div>
+    <div class="start-version">Schatten v7.12.7</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2800,7 +2800,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.11.98</span>
+    <span>Schatten v7.12.7</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5196,7 +5196,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.11.98';
+window.SCHATTEN_VERSION = 'v7.12.7';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5804,7 +5804,7 @@ function toggleGeminiOnly(event) {
   syncGeminiOnlySwitch();
   if (typeof updateFooterModel === 'function') updateFooterModel();
   if (typeof updateProviderInfo === 'function') updateProviderInfo();
-  console.log('[Schatten v7.11.98] Gemini-Only-Modus:', window.geminiOnlyMode ? 'AN' : 'AUS');
+  console.log('[Schatten v7.12.7] Gemini-Only-Modus:', window.geminiOnlyMode ? 'AN' : 'AUS');
 }
 
 function syncGeminiOnlySwitch() {
@@ -7245,12 +7245,51 @@ function asciiToUmlaut(s) {
     [/Brueder/g, 'Brüder'],
     [/Familienangehoer/g, 'Familienangehör'],
     [/aengstigt/g, 'ängstigt'],
+    // v7.12.3: EIGENNAMEN aus den Setups. Das Setup nutzt durchgaengig ae/oe/ue
+    // (Encoding-Konvention ueber die KI-API-Grenze), die KI uebernimmt das woertlich
+    // in Text + Optionen ("Bruno Schaefer"). Hier die eindeutigen Namens-Umlaute
+    // fuer die ANZEIGE korrigieren. User-Befund: "Bruno Schaefer" mit ae im Text.
+    [/Schaefer/g, 'Schäfer'],         // Bruno Schäfer
+    [/Goerke/g, 'Görke'],             // Albrecht/Mathilde Görke
+    [/Koepenick/g, 'Köpenick'],       // Ortsname
+    [/Gaehlert/g, 'Gählert'],         // Heinz Gählert
+    [/Schoening/g, 'Schöning'],       // Richterin Anna Schöning
+    [/Hohenschoenhausen/g, 'Hohenschönhausen'],
+    [/Keibelstrasse/g, 'Keibelstraße'],
+    [/Genslerstrasse/g, 'Genslerstraße'],
+    [/Auguststrasse/g, 'Auguststraße'],
+    [/Waescherei/g, 'Wäscherei'],
+    [/Antiquitaeten/g, 'Antiquitäten'],
+    [/Geschaeft/g, 'Geschäft'],       // Strauss-Geschäft, deckt auch Geschaefte
+    [/Taenzerin/g, 'Tänzerin'],
   ];
   let out = s;
   for (const [pat, rep] of replacements) {
     out = out.replace(pat, rep);
   }
   return out;
+}
+
+// v7.12.3: Schlanke Eigennamen-Korrektur fuer Szenentext + Optionen. Die KI
+// uebernimmt Setup-Namen woertlich mit ae/oe/ue ("Bruno Schaefer"). Hier NUR die
+// eindeutigen Eigennamen korrigieren - NICHT die volle asciiToUmlaut-Wortliste,
+// weil der KI-Text sonst legitime ae-Woerter behalten soll (die KI schreibt
+// normale Woerter ohnehin korrekt mit Umlaut). Konservativ: nur Namen die
+// zweifelsfrei Umlaute sind.
+function fixEigennamen(s) {
+  if (!s) return s;
+  // Reihenfolge: laengere/zusammengesetzte Namen ZUERST (sonst greift "Schaefer"
+  // vor "Schaeferstrasse" und laesst "-strasse" stehen).
+  return s
+    .replace(/Schaeferstrasse/g, 'Schäferstraße')
+    .replace(/Hohenschoenhausen/g, 'Hohenschönhausen')
+    .replace(/Keibelstrasse/g, 'Keibelstraße')
+    .replace(/Genslerstrasse/g, 'Genslerstraße')
+    .replace(/Schaefer/g, 'Schäfer')
+    .replace(/Goerke/g, 'Görke')
+    .replace(/Koepenick/g, 'Köpenick')
+    .replace(/Gaehlert/g, 'Gählert')
+    .replace(/Schoening/g, 'Schöning');
 }
 
 // v6.77: Schneidet einen Beschreibungstext sauber bei Satz- oder Komma-Grenze
@@ -9913,13 +9952,13 @@ function renderLog(shouldScroll) {
       }
       const p = document.createElement('p');
       p.className = 'scene-text';
-      p.textContent = entry.text;
+      p.textContent = fixEigennamen(entry.text);
       div.appendChild(p);
       logEl.appendChild(div);
     } else if (entry.type === 'choice') {
       const div = document.createElement('div');
       div.className = 'choice-entry';
-      div.innerHTML = '<span class="choice-marker">▶</span><span>' + escapeHtml(entry.text) + '</span>';
+      div.innerHTML = '<span class="choice-marker">▶</span><span>' + escapeHtml(fixEigennamen(entry.text)) + '</span>';
       logEl.appendChild(div);
     }
   });
@@ -10680,7 +10719,7 @@ function checkProgressTriggers(kategorie, ctx) {
                   (erkundenStreak >= 2 && indCount >= 5);
     if (ready) {
       result.newStage = 2;
-      result.showToast = { title: 'Verdacht formt sich', body: 'Spur konkret - Verdacht formt sich.', icon: '🧩' };
+      result.showToast = { title: 'Verdacht formt sich', body: 'Die Spuren deuten auf einen Verdächtigen.', icon: '🧩' };
       result.pushMessages.push('STAGE 2 ERREICHT: Karl hat genug Indizien um einen konkreten Verdaechtigen zu identifizieren. Diese Szene MUSS einen Namen / eine konkrete Person nennen die als Verdaechtiger in Frage kommt. Setze "tatverdaechtiger_identifiziert" im JSON.');
     }
   }
@@ -10803,7 +10842,7 @@ function renderOptions(scene) {
     && !karlInStasiCustody
     && (gameTimeIdx === 4 || gameTimeIdx === 5));  // nur ABEND oder NACHT
   if (forceSleepMode) {
-    console.log('[Schatten v7.11.98] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.7] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -10909,7 +10948,7 @@ function renderOptions(scene) {
       btn.classList.add('option-btn-aufloesen');
     }
     // 'normal' = kein Marker (KI hat keine Kategorie geliefert - selten)
-    btn.innerHTML = '<span class="option-id">' + opt.id + '</span><span class="option-text-wrap"><span>' + escapeHtml(opt.text) + '</span>' + markerHtml + '</span>';
+    btn.innerHTML = '<span class="option-id">' + opt.id + '</span><span class="option-text-wrap"><span>' + escapeHtml(fixEigennamen(opt.text)) + '</span>' + markerHtml + '</span>';
     // Tap-Detector: erlaubt Scrolling auch wenn der Finger auf einem Button startet.
     // Click wird nur ausgeloest wenn:
     // - Finger sich um weniger als TAP_MAX_MOVE Pixel bewegt hat
@@ -11083,6 +11122,24 @@ function renderOptions(scene) {
   const currentVerfassung = (typeof verfassung === 'number') ? verfassung : 5;
   const showNotheilenButton = currentVerfassung <= 2 && !karlInStasiCustody;
 
+  // v7.12.5: DOC-WAGNER-HEILEN-BUTTON. User-Wunsch: Wenn Karl WIRKLICH bei Doc
+  // Wagner ist, soll ein dedizierter Heilen-Button (+2) erscheinen - zusaetzlich
+  // zum Notheilen-Button (+1). So ersetzt der bewusste Klick die alte "magische"
+  // Auto-Heilung (v7.12.5 entfernt). Erkennung: Karl ist PRAESENT bei Wagner
+  // (nicht nur "faehrt hin"). Wir pruefen den Szenentext auf Wagner-Praesenz UND
+  // schliessen reine Reise-/Erwaehnungs-Formulierungen aus.
+  const wagnerSceneLower = (scene.szene || '').toLowerCase()
+    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+  const wagnerPresent = /\b(doc wagner|wagners?\s+praxis|in der praxis|marlene)\b/.test(wagnerSceneLower);
+  // Ausschluss: reine Anfahrt ("faehrst zu Doc Wagner", "auf dem weg zu Wagner")
+  const wagnerOnlyTravel = /\b(faehrst|fahre|fahr|unterwegs|weg|richtung|auf dem weg)\s+[^.!?]{0,30}\bwagner/.test(wagnerSceneLower)
+    && !/\b(empfaengt|untersucht|begruesst|oeffnet die tuer|bittet (dich )?herein|in der praxis|sitzt|liegst|behandelt|wartezimmer)\b/.test(wagnerSceneLower);
+  // Button nur wenn Karl verletzt (Vf<5), bei Wagner praesent, nicht bloss anreisend,
+  // nicht in Custody, und heute noch nicht bei Wagner geheilt (1x/Tag).
+  const showWagnerHealButton = wagnerPresent && !wagnerOnlyTravel
+    && currentVerfassung < 5 && !karlInStasiCustody
+    && (typeof lastDocHealingDay !== 'number' || lastDocHealingDay < gameDay);
+
   // v7.11.13: NOTFLUCHT-Button - nur in Stasi-Custody. 30% Erfolgschance.
   // Karl versucht aus der Zelle/Verhoer-Raum auszubrechen.
   // Erfolg: Karl frei, Vf-3 (Verletzung beim Ausbruch), Sp-1, Stasi-Tension bleibt hoch
@@ -11096,7 +11153,7 @@ function renderOptions(scene) {
   const showNotfluchtButton = karlInStasiCustody && sceneShowsCustody;
 
   // Separator nur wenn mindestens ein System-Button gezeigt wird
-  if (showSleepButton || romanceNpcInScene || showFluchtButton || showNotheilenButton || showNotfluchtButton) {
+  if (showSleepButton || romanceNpcInScene || showFluchtButton || showNotheilenButton || showNotfluchtButton || showWagnerHealButton) {
     const sep = document.createElement('div');
     sep.className = 'system-button-separator';
     sep.textContent = '— besondere Aktionen —';
@@ -11147,6 +11204,54 @@ function renderOptions(scene) {
       chooseOption(ntOpt);
     });
     list.appendChild(ntBtn);
+  }
+
+  // v7.12.5: DOC-WAGNER-HEILEN-BUTTON (+2). Erscheint nur wenn Karl wirklich bei
+  // Wagner ist (siehe showWagnerHealButton oben). Ersetzt die alte Auto-Heilung
+  // durch einen bewussten Klick. Nutzt Kategorie HEILEN -> heilt +2 (bzw. +1 ab
+  // Vf 3, wie die Kategorie-Mechanik es vorgibt) ueber den regulaeren HEILEN-Pfad.
+  if (showWagnerHealButton) {
+    const dwBtn = document.createElement('button');
+    dwBtn.className = 'option-btn option-btn-system option-btn-notheilen';
+    dwBtn.dataset.kategorie = 'HEILEN';
+    dwBtn.innerHTML = '<span class="option-id">🩺</span><span class="option-text-wrap"><span>Von Doc Wagner behandeln lassen</span><span class="option-marker option-marker-system">→ HEILEN</span></span>';
+    const dwOpt = {
+      id: 'HEILEN',
+      text: 'Von Doc Wagner behandeln lassen',
+      kategorie: 'HEILEN',
+      _kategorie: 'HEILEN',
+      _priority: 90,
+      _isSystemButton: true,
+    };
+    let dwTouchStartX = 0, dwTouchStartY = 0, dwTouchStartTime = 0;
+    let dwTouchCancelled = false, dwTouchHandled = false;
+    const DW_TAP_MAX_MOVE = 12, DW_TAP_MAX_DURATION = 800;
+    dwBtn.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1) { dwTouchCancelled = true; return; }
+      dwTouchStartX = e.touches[0].clientX;
+      dwTouchStartY = e.touches[0].clientY;
+      dwTouchStartTime = Date.now();
+      dwTouchCancelled = false; dwTouchHandled = false;
+    }, { passive: true });
+    dwBtn.addEventListener('touchmove', (e) => {
+      if (dwTouchCancelled) return;
+      if (e.touches.length !== 1) { dwTouchCancelled = true; return; }
+      const dx = Math.abs(e.touches[0].clientX - dwTouchStartX);
+      const dy = Math.abs(e.touches[0].clientY - dwTouchStartY);
+      if (dx > DW_TAP_MAX_MOVE || dy > DW_TAP_MAX_MOVE) dwTouchCancelled = true;
+    }, { passive: true });
+    dwBtn.addEventListener('touchend', (e) => {
+      if (dwTouchCancelled) { e.preventDefault(); return; }
+      if (Date.now() - dwTouchStartTime > DW_TAP_MAX_DURATION) { e.preventDefault(); return; }
+      e.preventDefault();
+      dwTouchHandled = true;
+      chooseOption(dwOpt);
+    });
+    dwBtn.addEventListener('click', () => {
+      if (dwTouchHandled) { dwTouchHandled = false; return; }
+      chooseOption(dwOpt);
+    });
+    list.appendChild(dwBtn);
   }
 
   // v7.11.12: FLUCHT-Button - Sp>=3 + nicht in Custody
@@ -11341,12 +11446,22 @@ function renderOptions(scene) {
   //   (Spieler kann waehlen: weiter flirten oder Nacht verbringen)
   // - Bei Rm = 5: nur UEBERNACHTUNG (Bogen-Maximum erreicht)
   const romCurrentTension = (typeof romanticTension === 'number') ? romanticTension : 0;
+  // v7.11.99: Romantik bei hoher Spannung (Gefahr) NICHT moeglich. User-Befund
+  // Wegener-Run 1337: Schlafen war bei Sp 4 gesperrt ("zu hohe Spannung"), aber
+  // "Naeher kommen (intim)" war erlaubt - bei derselben Gefahr (Bruno, Glas
+  // zerbricht). Unlogisch: wenn es zu brenzlig zum Schlafen ist, ist es auch zu
+  // brenzlig fuer Intimitaet. Romantik braucht Ruhe wie Schlaf. Sperre ab Sp>=4
+  // (eine Stufe hoeher als Schlaf-Sperre bei Sp>=3 - ein kurzer Moment der Naehe
+  // ist bei leichter Anspannung noch denkbar, aber nicht in Action/Gefahr).
+  const romanceBlockedBySpannung = (currentSpannung >= 4);
   const showRomanceButton = romanceNpcInScene
     && romanticClicksSinceProgress < 3
-    && romCurrentTension < 5;
+    && romCurrentTension < 5
+    && !romanceBlockedBySpannung;
   const showOvernightButton = romanceNpcInScene
     && isAbendOderNacht
-    && romCurrentTension >= 4;
+    && romCurrentTension >= 4
+    && !romanceBlockedBySpannung;
 
   if (showRomanceButton) {
     const romBtn = document.createElement('button');
@@ -12997,6 +13112,12 @@ KEINE anderen Themen, KEINE Indizien-Suche, KEINE Nebenfiguren - die naechsten 1
         recap += `\nNAECHSTER SCHRITT: Karl muss ${caseProgress.tatverdaechtiger} ueberfuehren - Konfrontation mit Beweisen, Festnahme, Gestaendnis. Wenn das in dieser Szene gelingt, setze "tatverdaechtiger_ueberfuehrt": true.`;
       }
     } else if (caseProgress.stage === 3 && !caseProgress.klientGesprochen) {
+      // v7.12.0: ENDSPURT-INDIZ-DRAMATURGIE. Die Engine drosselt in Stage 3 die
+      // Indizien hart (passiveres Vorgehen -> oft verworfen). Damit die KI nicht
+      // staendig Funde erzaehlt die dann mechanisch "nicht zaehlen" (fuehlt sich
+      // wie Bug an), bekommt sie hier den passenden narrativen Hinweis: im
+      // Endspurt geht es um KONFRONTATION, nicht ums Sammeln.
+      recap += `\n\nENDSPURT-DRAMATURGIE (Stage 3): Die Ermittlungsphase ist vorbei - jetzt zaehlt die KONFRONTATION, nicht das weitere Sammeln von Spuren. Streue KAUM noch neue Indizien (hoechstens eines, und nur wenn Karl den Verdaechtigen aktiv stellt/bedraengt). Der Fokus liegt auf der direkten Auseinandersetzung mit ${caseProgress.tatverdaechtiger || 'dem Verdaechtigen'}: Gestaendnis, Flucht, Verteidigung, Showdown. Lass die Szene auf den Hoehepunkt zulaufen statt Karl neue kleine Hinweise finden zu lassen.`;
       // v6.81: Stage 4 (Klient berichten) wurde in 0/7 Runs erreicht. Pflicht-Push.
       // v6.90: Schwellen - schon nach 3 Szenen wird gepushed (Auto-Force bei 7).
       // v6.94: bei fluechtigem Verdaechtigen statt direkter Konfrontation Karls
@@ -13249,7 +13370,7 @@ KEINE anderen Themen mehr - kein neuer Tatort, keine neuen Verdaechtigen, keine 
       if (romanticTension >= 4) {
         // ÜBERNACHTUNG-OPTION PFLICHT - v6.88: in A/B/C/D-Logik einbauen
         recap += `\n\nROMANTIK STARK (Tension ${romanticTension}/5, PFLICHT): Karl und eine Frau im Cast hatten in den letzten 3+ Szenen klar vertraute Momente (Blicke, Beruehrungen, Hand auf seiner). Es ist Abend/Nacht. ROMANTIK UMFORMT JETZT DIE A/B/C/D-OPTIONEN:
-- Option A (aggressiv/wagen): "Lehn dich vor und kuess sie." / "Frag sie direkt ob du bei ihr schlafen darfst." / "Zieh sie naeher, ohne ein Wort." - Karl WAGT den Schritt, direkt und mutig.
+- Option A (aggressiv/wagen): "Lehn dich vor und kuess sie." / "Frag sie direkt ob du bei ihr schlafen darfst." / "Zieh sie sanft naeher, ohne ein Wort." - Karl WAGT den Schritt, direkt und mutig, aber NIE grob oder uebergriffig (kein Packen/Zerren/Gegen-die-Wand). "Wagen" heisst hier: den ersten Schritt machen, nicht Kraft anwenden. Die Frau erwidert es freiwillig oder weist ihn ruhig ab.
 - Option B (vorsichtig/zoegerlich): "Frag freundlich ob sie noch einen trinken moechte." / "Lehn dich zurueck und schau sie nur an." - Karl ist zurueckhaltend; wenn SIE offensiv ist, kann es trotzdem zu naher Begegnung kommen.
 - Option C (erkundend/Themawechsel): "Frag sie nach Erichs/dem Fall - bleib professionell." - lenkt zurueck zur Ermittlung, baut Tension wieder ab.
 - Option D (abwartend/Rueckzug): "Bedank dich fuer den Drink und geh." / "Sag du musst noch zur Arbeit." - Karl zieht sich raus, Romantik endet.
@@ -13563,6 +13684,7 @@ Wenn du die Behandlungs-Option mit tag="behandlung" markierst, MUSST du in der F
 - "Frag ${f}, ob sie noch einen Bourbon mit dir trinkt"
 - "Bitte ${f}, dich nach Hause zu fahren"
 - "Schweig und sieh ${f} an"
+WICHTIG (Ton): Die Anbahnung ist WARM, RESPEKTVOLL und EINVERNEHMLICH - beide wollen es. KEINE groben, gewaltsamen oder uebergriffigen Uebergaenge (kein Packen, Zerren, Gegen-die-Wand-Druecken, kein "wirft sie auf..."). Karl ist hartgesotten, aber kein Rohling gegenueber einer Frau - die Naehe entsteht aus gegenseitigem Einverstaendnis, einem Blick, einer leisen Geste, nicht aus Kraft. Wenn die Szene gerade gefaehrlich/gewaltsam ist, ist KEINE romantische Option angebracht - erst wenn Ruhe einkehrt.
 Wenn Karl waehlt: Schnitt zur naechsten Szene am Morgen, Kaffee zu zweit, keine expliziten Details. Wenn er nicht waehlt: ${f} verabschiedet sich hoeflich, der Moment verstreicht.`;
       }
     }
@@ -13928,6 +14050,23 @@ VERBOTEN: Karl wacht woanders auf ohne Erklaerung. Wenn du Pfad B waehlst, MUSST
   // Dokumentiert in Wagner+Kessler Test-Runs v7.9.38 (Sz 4-10 systematisch desynchron).
   // Fix: explizit als "AKTUELLE-AKTION"-Block markieren, mit Anweisung dass DIESE
   // (nicht die letzte Szene oben) die zu beantwortende Spieler-Wahl ist.
+  // v7.12.7: HARD-FACTS-ANKER (Anchor-Framing). Flash-Modelle lesen Prompts
+  // sequentiell - Fakten die ganz oben im System-Prompt stehen (1953, Opel,
+  // keine Mauer) "verblassen" bis zur Generierung am Ende, wenn dazwischen
+  // tausende Token Kontext + Recap liegen. Loesung: die wichtigsten No-Go-Fakten
+  // ultrakurz DIREKT vor dem Generierungs-Befehl spiegeln, wo die Attention im
+  // Moment des Schreibens am hoechsten ist. Kostet wenige Token, daempft Drift
+  // (Anachronismen, Auto/EMW-Verwechslung) ohne teureres Modell.
+  const hardFactsAnchor =
+    'HARTE FAKTEN (bei jeder Szene beachten, NICHT abweichen):\n' +
+    '- Jahr: 1953. KEINE Mauer (kommt erst 1961). Berlin in 4 Sektoren, Grenzen offen aber hart.\n' +
+    '- Karl faehrt einen OPEL OLYMPIA (nie einen Horch). Stasi/VP nutzen schwarze EMW 340.\n' +
+    '- Karls einzige Wohnung: Hackescher Markt (Ost). Keine zweite Wohnung im Westen.\n' +
+    '- Keine Anachronismen (keine Technik/Begriffe/Orte nach 1953).\n' +
+    '- Praesens, Du-Perspektive, knapper Noir-Stil.';
+  messages.push({ role: 'user', content: hardFactsAnchor });
+  messages.push({ role: 'assistant', content: 'Verstanden. 1953, Opel Olympia, keine Mauer, keine Anachronismen - ich halte die harten Fakten ein.' });
+
   const userMsgWrapped =
     '*** AKTUELLE SPIELER-AKTION (DIESE Aktion fuehrst du jetzt aus, nicht die im Recap oben erwaehnte LETZTE SZENE): ***\n\n' +
     userMessage +
@@ -17042,7 +17181,11 @@ async function chooseOption(option) {
           showSolvedToastOnce(progress.showToast.body, progress.showToast.icon);
         } else {
           // v7.11.90: Icon aus der Toast-Definition durchreichen.
-          showProgressToast(progress.showToast.title, progress.showToast.body, 'success', null, progress.showToast.icon);
+          // v7.12.2: Stage-Meilensteine nutzen jetzt die einheitliche 'progress'-
+          // Variante (blau-violett) statt 'success' (gold). So sind Zwischen-
+          // fortschritte optisch klar von Indiz-Funden (gruen) UND vom finalen
+          // Fall-Geloest (gold) getrennt - aber alle in derselben Toast-Optik.
+          showProgressToast(progress.showToast.title, progress.showToast.body, 'progress', null, progress.showToast.icon);
         }
       }
     }
@@ -17205,7 +17348,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.11.98] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.7] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -18214,7 +18357,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           const tensionHighEnoughForArrest = (typeof stasiTension === 'number' && stasiTension >= 4);
           if (!tensionHighEnoughForArrest) {
             // STILLER RELEASE: Karl ist faktisch frei, das System zieht nach.
-            console.warn('[Schatten v7.11.98] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
+            console.warn('[Schatten v7.12.7] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet, kein Hard-Force');
             karlInStasiCustody = false;
             folterSceneCount = 0;
@@ -18229,7 +18372,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.11.98] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.7] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -18432,63 +18575,23 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       // Versorgung weniger effektiv ist.
       const selfTreatmentPattern = /\b(du\s+(verbind|versorg|stillst|reinigst)[^.!?]{0,30}\b(wunde|schramme|schnitt|kratze|blut)|stillst\s+(das\s+)?blut|legst\s+dir\s+einen\s+verband\s+(an|um)|machst\s+dir\s+einen\s+verband)\b/i;
       const isSelfTreated = selfTreatmentPattern.test(sceneLower);
-      // v7.9.52: TAG-BASIERTER PFAD. Wenn der Spieler eine als 'behandlung'
-      // markierte Option geklickt hat, garantieren wir die Heilung - egal
-      // ob der Antwort-Text Heilungs-Vokabular enthaelt. Anlass: Corinna
-      // klickte 2x BEHANDLUNG-Optionen, Engine fand kein Heilungs-Wort im
-      // Antwort-Text -> Vf blieb stehen. Mit pendingHealingChoice umgehen
-      // wir die Text-Erkennung komplett.
+      // v7.12.5: TEXT-BASIERTE AUTO-HEILUNG ENTFERNT. User-Wunsch: "nur die
+      // geklickte Kategorie soll heilen". Bisher heilten drei Text-Pfade
+      // (inHealingContext+isTreated, isSelfTreated, pendingHealingChoice) den
+      // Spieler, sobald der SZENENTEXT Behandlung erwaehnte - auch wenn er gar
+      // keine HEILEN-Option geklickt hatte (z.B. BEOBACHTEN bei Doc Wagner ->
+      // ungewollte Heilung). Das war "magisch" und unvorhersehbar. Jetzt heilt
+      // NUR noch die aktiv geklickte Kategorie HEILEN/NOTHEILEN (ueber die
+      // Kategorie-Mechanik weiter unten: heilwahl-vorrang / kategorie-heilung).
+      // Die Text-Erkennung bleibt nur als DIAGNOSE erhalten (zeigt im Log wenn
+      // der Text Behandlung erwaehnt, ohne zu heilen) - hilft beim Lektorat.
       if (pendingHealingChoice) {
-        const heal = (verfassung <= 2) ? 2 : 1;
-        const before = verfassung;
-        verfassung = Math.min(5, verfassung + heal);
-        lastDocHealingDay = gameDay;
-        if (verfassung >= 5) { lastInjury = ''; lastInjuryScene = 0; }
-        console.log('[Schatten] Tag-basierte Heilung: Verfassung', before, '->', verfassung, '(+' + heal + ')');
-        diag('state', 'Behandlungs-Genesung (Tag-basiert) Verfassung ' + before + ' -> ' + verfassung + ' (+' + heal + ', max 1x pro Tag)');
-        if (typeof showProgressToast === 'function') {
-          showProgressToast('VERARZTET', 'Karl wurde verarztet. Verfassung +' + heal + '.', 'success', null, '🩹');
-        }
-        // v7.11.4: Heilungs-Cooldown setzen (3 Sz Schonfrist gegen KI-Drift)
-        lastHealedSceneCounter = sceneCounter;
-        diag('state', 'HEILUNGS-COOLDOWN aktiviert (' + HEALING_COOLDOWN_SCENES + ' Szenen, nach Tag-basierter Behandlung)');
-        pendingHealingChoice = false; // Flag verbrauchen
-      } else if (inHealingContext && isTreated) {
-        const heal = (verfassung <= 2) ? 2 : 1;
-        const before = verfassung;
-        verfassung = Math.min(5, verfassung + heal);
-        lastDocHealingDay = gameDay;
-        if (verfassung >= 5) { lastInjury = ''; lastInjuryScene = 0; }
-        console.log('[Schatten] Behandlungs-Genesung: Verfassung', before, '->', verfassung, '(+' + heal + ')');
-        diag('state', 'Behandlungs-Genesung Verfassung ' + before + ' -> ' + verfassung + ' (+' + heal + ', max 1x pro Tag)');
-        if (typeof showProgressToast === 'function') {
-          showProgressToast('VERARZTET', 'Karl wurde verarztet. Verfassung +' + heal + '.', 'success', null, '🩹');
-        }
-        // v7.11.4: Heilungs-Cooldown setzen
-        lastHealedSceneCounter = sceneCounter;
-        diag('state', 'HEILUNGS-COOLDOWN aktiviert (' + HEALING_COOLDOWN_SCENES + ' Szenen, nach Behandlungs-Genesung)');
-      } else if (isSelfTreated && !inHealingContext) {
-        // v7.9.51: Selbst-Behandlung ohne Heiler-Kontext - immer +1
-        const before = verfassung;
-        verfassung = Math.min(5, verfassung + 1);
-        lastDocHealingDay = gameDay;
-        if (verfassung >= 5) { lastInjury = ''; lastInjuryScene = 0; }
-        console.log('[Schatten] Selbst-Behandlungs-Genesung: Verfassung', before, '->', verfassung, '(+1)');
-        diag('state', 'Selbst-Behandlungs-Genesung Verfassung ' + before + ' -> ' + verfassung + ' (+1, max 1x pro Tag)');
-        if (typeof showProgressToast === 'function') {
-          showProgressToast('VERSORGT', 'Karl hat sich notdürftig versorgt. Verfassung +1.');
-        }
-        // v7.11.4: Heilungs-Cooldown auch bei Selbst-Versorgung (kuerzer effektiv,
-        // weil's nur +1 ist und somit oft kein "voller Heilzustand" - aber gegen
-        // Drift trotzdem sinnvoll)
-        lastHealedSceneCounter = sceneCounter;
-        diag('state', 'HEILUNGS-COOLDOWN aktiviert (' + HEALING_COOLDOWN_SCENES + ' Szenen, nach Selbst-Versorgung)');
-      } else if (inHealingContext && !isTreated) {
-        // Diagnostisches Event: Karl ist beim Heiler, aber wird nicht behandelt
-        // (nur Smalltalk). Soll Mistral selbst aufdecken.
-        if (typeof diag === 'function') {
-          diag('drift', 'Karl bei Heiler, aber keine Behandlung erkannt (kein Verband/Spritze/Salbe im Text)');
-        }
+        pendingHealingChoice = false; // Flag verbrauchen (Pfad ist tot, nur Sauberkeit)
+      }
+      if (inHealingContext && isTreated && typeof diag === 'function') {
+        diag('detect', 'Behandlungs-Text erkannt, aber KEINE Auto-Heilung (v7.12.5: nur geklickte HEILEN/NOTHEILEN-Kategorie heilt)');
+      } else if (isSelfTreated && typeof diag === 'function') {
+        diag('detect', 'Selbst-Versorgungs-Text erkannt, aber KEINE Auto-Heilung (v7.12.5: nur geklickte NOTHEILEN-Kategorie heilt)');
       }
       } // v7.10: schliesst else (categoryAlreadyHealed = false)
     }
@@ -18499,6 +18602,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     // Mechanik ueberschrieben wenn Kategorie geklickt wurde.
     let delta = typeof scene.verfassung_delta === 'number' ? scene.verfassung_delta : 0;
     let _vfDeltaSource = '';  // v7.11.98: Quelle des Vf-Deltas (fuer Heilungs-Toast)
+    let _vfHealCategory = '';  // v7.12.4: gewaehlte Kategorie (fuer Heilungs-Toast bei Vf 3/4)
 
     // v7.10: KATEGORIE-MECHANIK ueberschreibt verfassung_delta.
     // Wenn der Spieler eine Option mit kategorie geklickt hat (OFFENSIV/
@@ -18776,6 +18880,8 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       // v7.11.98: deltaSource ueber den Block hinaus retten (fuer Heilungs-Toast
       // bei Z.~18957 - deltaSource ist dort sonst nicht mehr im Scope).
       _vfDeltaSource = deltaSource;
+      // v7.12.4: gewaehlte Kategorie ebenfalls retten (fuer Heilungs-Toast bei Vf 3/4).
+      _vfHealCategory = (typeof pendingCategoryChoice === 'string') ? pendingCategoryChoice : '';
     }
 
     // v7.11.84: Kategorie fuer den spaeteren Indiz-Filter sichern, BEVOR
@@ -18975,16 +19081,19 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (verfassung >= 5) { lastInjury = ''; lastInjuryScene = 0; }
       }
       // v7.11.98: HEILUNGS-TOAST bei positivem Delta aus einer Heilwahl. User-Befund
-      // Stein-Run 1323: NOTHEILEN gab Vf+1, aber KEIN Toast kam (der Toast existierte
-      // nur im Tag-basierten/Text-Heilungs-Pfad, NICHT im heilwahl-vorrang-Pfad ueber
-      // den NOTHEILEN/HEILEN laufen). Jetzt: jede aktive Heilung zeigt einen Toast mit
-      // den geheilten Punkten. Quelle 'heilwahl-vorrang-X' = aktive Heilung.
+      // Stein-Run 1323: NOTHEILEN gab Vf+1, aber KEIN Toast kam.
+      // v7.12.4: ERWEITERT. User-Befund Wegener-Run: Doc-Wagner-Heilung bei Vf 3/4
+      // (NICHT kritisch) gab Vf+2, aber KEIN Toast. Ursache: der heilwahl-vorrang-
+      // Pfad greift nur bei kritischer Vf (<=2). Bei Vf 3/4 laeuft die Heilung ueber
+      // 'kategorie-heilung' - der war im Toast-Check NICHT abgedeckt. Jetzt: Toast
+      // bei JEDEM positiven Heal aus einer Heilkategorie (HEILEN/NOTHEILEN), egal
+      // ueber welchen internen Pfad (heilwahl-vorrang ODER kategorie-heilung).
       const realHeal = verfassung - prevVerf;  // tatsaechlich geheilt (nach Cap)
-      if (realHeal > 0 && typeof _vfDeltaSource === 'string' && _vfDeltaSource.indexOf('heilwahl-vorrang') === 0) {
-        const cat = _vfDeltaSource.replace('heilwahl-vorrang-', '');
-        let toastTitle = 'Versorgt';
-        if (cat === 'HEILEN') toastTitle = 'Verarztet';
-        else if (cat === 'NOTHEILEN') toastTitle = 'Notversorgt';
+      const istHeilSource = (typeof _vfDeltaSource === 'string')
+        && (_vfDeltaSource.indexOf('heilwahl-vorrang') === 0 || _vfDeltaSource === 'kategorie-heilung');
+      const istHeilKategorie = (_vfHealCategory === 'HEILEN' || _vfHealCategory === 'NOTHEILEN');
+      if (realHeal > 0 && istHeilSource && istHeilKategorie) {
+        const toastTitle = (_vfHealCategory === 'HEILEN') ? 'Verarztet' : 'Notversorgt';
         if (typeof showProgressToast === 'function') {
           showProgressToast(toastTitle, 'Verfassung +' + realHeal + '.', 'success', 'heal-' + sceneCounter, '🩹');
         }
@@ -19735,6 +19844,66 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       diag('filter', 'Indiz(e) verworfen: passive Aktion ' + chosenCatForIndiz + ' treibt den Fall nicht voran (' + scene.indiz_neu.length + ' KI-Indiz(e) ignoriert)');
       scene.indiz_neu = [];
     }
+    // v7.12.0: STAGE-DRAMATURGIE-FILTER. User-Wunsch (mehrfach): Indizien sollen
+    // sich ueber den Fall hinweg unterschiedlich verteilen - frueh leichter,
+    // zum Ende hin schwerer/dichter, damit man spaet offensiver vorgehen MUSS
+    // und der Showdown nicht in 2 Szenen durchrast (Befund: 3 Runs endeten mit
+    // "4-5 Indizien -> ploetzlich geloest"). Die KI kennt diese Dramaturgie nicht,
+    // also drosseln wir hart nach Stage:
+    //   Stage 0-1 (Anfang): alle Indizien durch - Karl tastet sich ran, soll
+    //              schnell erste Spuren finden (Fundament). Frueh-Drossel Sz1-3
+    //              (max 1) greift separat.
+    //   Stage 2 (Mitte): max 1 Indiz pro Szene - keine Haeufung mehr, stetiger
+    //              Aufbau.
+    //   Stage 3 (Endspurt): Indizien sind ZAEH. Bei OFFENSIV (aktive Konfrontation)
+    //              kommen sie durch - das ist der Weg zum Abschluss. Bei passiverem
+    //              ERKUNDEN/BEOBACHTEN nur max 1 UND 50% Chance dass es verworfen
+    //              wird. So muss Karl am Ende den Verdaechtigen stellen statt
+    //              gemuetlich weiter zu sammeln. Durchbruch (ueberfuehrt/gefunden)
+    //              ist immer ausgenommen.
+    if (Array.isArray(scene.indiz_neu) && scene.indiz_neu.length > 0
+        && !scene.tatverdaechtiger_ueberfuehrt && !scene.zielperson_gefunden) {
+      const dramaStage = (caseProgress && typeof caseProgress.stage === 'number') ? caseProgress.stage : 0;
+      const cat = chosenCatForIndiz;
+      if (dramaStage === 2 && scene.indiz_neu.length > 1) {
+        // Mitte: auf 1 Indiz begrenzen
+        diag('filter', 'Stage-2-Dramaturgie: ' + scene.indiz_neu.length + ' Indizien auf 1 begrenzt (stetiger Aufbau, keine Haeufung)');
+        scene.indiz_neu = scene.indiz_neu.slice(0, 1);
+      } else if (dramaStage >= 3) {
+        // v7.12.1: SICHERHEITSVENTIL gegen Sackgasse. Die Stage-3-Drossel darf
+        // den Spieler nicht festhalten. Wenn Karl schon nahe der Loesungs-Schwelle
+        // ist (>=10 von 11 Indizien) ODER lange in Stage 3 stagniert (>=4 Szenen
+        // ohne neues Indiz), wird NICHT mehr verworfen - sonst wuerde das letzte
+        // fehlende Indiz zum Gluecksspiel und der Fall koennte zaeh haengen
+        // (User-Skepsis zu v7.12.0: "kann das unbalanced sein / Sackgasse?").
+        const indCntNow = (caseProgress.indizien || []).length;
+        const scenesSinceLastIndiz = sceneCounter - (caseProgress._lastIndizScene || 0);
+        const naheSchwelle = indCntNow >= 10;
+        const langeStagnation = scenesSinceLastIndiz >= 4;
+        const ventilOffen = naheSchwelle || langeStagnation;
+        if (cat === 'OFFENSIV') {
+          // Endspurt + Konfrontation: max 1 durch (Belohnung fuers Vorpreschen)
+          if (scene.indiz_neu.length > 1) {
+            scene.indiz_neu = scene.indiz_neu.slice(0, 1);
+          }
+          diag('filter', 'Stage-3-Dramaturgie: OFFENSIV - Indiz kommt durch (Konfrontation treibt den Abschluss)');
+        } else if (ventilOffen) {
+          // Sicherheitsventil offen: 1 Indiz durchlassen (keine Verwerfung)
+          scene.indiz_neu = scene.indiz_neu.slice(0, 1);
+          const grund = naheSchwelle ? 'nahe Loesungs-Schwelle (' + indCntNow + ' Ind)' : 'Stagnation (' + scenesSinceLastIndiz + ' Sz ohne Indiz)';
+          diag('filter', 'Stage-3-Dramaturgie: Sicherheitsventil offen (' + grund + ') - Indiz durchgelassen statt verworfen');
+        } else {
+          // Endspurt + passiveres Vorgehen: max 1 UND 50% Chance auf Verwerfung
+          if (Math.random() < 0.5) {
+            diag('filter', 'Stage-3-Dramaturgie: ' + cat + ' im Endspurt - Indiz(e) verworfen (Karl muss jetzt konfrontieren, nicht weiter sammeln)');
+            scene.indiz_neu = [];
+          } else {
+            scene.indiz_neu = scene.indiz_neu.slice(0, 1);
+            diag('filter', 'Stage-3-Dramaturgie: ' + cat + ' - 1 Indiz durchgelassen (zaeher Endspurt)');
+          }
+        }
+      }
+    }
     if (Array.isArray(scene.indiz_neu) && scene.indiz_neu.length > 0) {
       // Synonym-Map: gleiche Konzepte mit verschiedenen Begriffen werden gleichbehandelt
       // damit Mistral nicht "Feuerzeug" und "Zigarettenanzuender" als zwei Indizien fuer
@@ -19803,6 +19972,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (!isDuplicate) {
           caseProgress.indizien.push(newInd);
           newlyFoundIndizien.push(newInd);
+          caseProgress._lastIndizScene = sceneCounter;  // v7.12.1: fuer Stagnations-Ventil
           console.log('[Schatten] Neues Indiz:', newInd);
           diag('state', 'Neues Indiz: ' + newInd);
         } else {
@@ -20655,7 +20825,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.11.98] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.7] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
@@ -23001,6 +23171,20 @@ const TOAST_VARIANTS = {
     bodyColor: '#a8b088',
     icon: '🔍',
   },
+  // v7.12.2: 'progress' - Stage-Meilensteine (Ermittlung laeuft, Verdacht formt
+  // sich, Konfrontation). Eigene einheitliche Fortschritts-Farbe (gedaempftes
+  // Blau-Violett), damit Zwischenfortschritt klar unterscheidbar ist von Indiz-
+  // Funden (gruen) und vom finalen Fall-Geloest (gold/success). User-Wunsch:
+  // alle Toasts gleiche Optik, nur Farbe nach Typ. Layout ist ohnehin
+  // vereinheitlicht (gleiches Padding/Schriftgroesse via showProgressToast).
+  progress: {
+    bg: 'linear-gradient(180deg,rgba(40,34,54,0.94),rgba(26,22,38,0.94))',
+    border: 'rgba(150,130,200,0.45)',
+    shadow: 'rgba(120,100,170,0.18)',
+    titleColor: '#bcaee0',
+    bodyColor: '#9c90c0',
+    icon: '🧩',
+  },
 };
 
 // v7.11.90: Waehlt ein zum Indiztext passendes Emoji. User-Wunsch: "bei Indiz
@@ -23212,7 +23396,11 @@ function showProgressToast(title, subtitle, variant, triggerKey, iconOverride) {
   if (triggerKey) markToastShown(variant, triggerKey);
   // v7.11.82: Anzeigedauer gestaffelt. danger laenger (kritisch), clue kuerzer
   // (dezenter Hinweis), Rest normal. Vorher pauschal 5500ms = zu lange.
-  const showDuration = variant === 'danger' ? 6000 : (variant === 'clue' ? 3800 : 4500);
+  // v7.12.2: 'progress' (Stage-Meilensteine) gleiche Dauer wie 'clue' (3800ms).
+  // Wenn Indiz-Toast + Stage-Toast zusammen kommen, sollen beide gleich lang
+  // stehen - sonst wirkt der kuerzere (Indiz) "verschwunden" waehrend der
+  // laengere (Stage) noch steht (User-Eindruck: "Indiz-Toast fehlt").
+  const showDuration = variant === 'danger' ? 6000 : (variant === 'clue' || variant === 'progress' ? 3800 : 4500);
   setTimeout(() => {
     toast.style.opacity = '0';
   }, showDuration);
