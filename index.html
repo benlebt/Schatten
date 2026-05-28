@@ -951,6 +951,18 @@
     font-size: 12px;
     line-height: 1.6;
   }
+  /* v7.12.23: Historischer Kontext - dezent abgesetzt, gedaempfter Sepia-Ton,
+     leichter linker Akzentstrich wie ein Aktenrand. */
+  .setup-card-history {
+    margin-top: 10px;
+    padding: 7px 10px;
+    border-left: 2px solid rgba(190,160,90,0.45);
+    background: rgba(190,160,90,0.06);
+    color: #968a72;
+    font-size: 11px;
+    line-height: 1.55;
+    font-style: italic;
+  }
   .setup-card-pol {
     display: inline-block;
     background: rgba(220,60,40,0.15);
@@ -2651,7 +2663,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.22</div>
+    <div class="start-version">Schatten v7.12.24</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2815,7 +2827,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.22</span>
+    <span>Schatten v7.12.24</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5211,7 +5223,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.22';
+window.SCHATTEN_VERSION = 'v7.12.24';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -7329,6 +7341,49 @@ function trimDescription(s, maxLen) {
 }
 
 // Setup-Card-Beschreibung dynamisch aus dem Setup-Objekt bauen.
+// v7.12.23: Historischer Kontext zu einem Falldatum (1953 Berlin/DDR). Gibt einen
+// kurzen, atmosphaerischen Einordnungssatz zurueck, der das Ereignisumfeld des
+// Falls beschreibt (Stalins Tod, Normerhoehung, 17.-Juni-Aufstand, Neuer Kurs).
+// Datumsbasiert, damit es automatisch fuer alle Faelle stimmt.
+function getHistoricalContext(startDate) {
+  if (!startDate) return '';
+  // startDate Format "1953-MM-DD" -> Tag im Jahr grob ueber Monat/Tag
+  const m = /^1953-(\d{2})-(\d{2})/.exec(startDate);
+  if (!m) return '';
+  const mon = parseInt(m[1], 10), day = parseInt(m[2], 10);
+  const ord = mon * 100 + day; // z.B. 0617 fuer 17. Juni, vergleichbar
+  // Zeitfenster mit historischem Kontext (chronologisch)
+  if (ord <= 304) {
+    // bis 4. Maerz: Stalin lebt noch
+    return 'Winter 1953. Stalin lebt noch, der Staat ist eisig und misstrauisch. Die Versorgungslage ist schlecht, immer mehr Menschen fliehen ueber das noch offene Berlin in den Westen.';
+  }
+  if (ord <= 308) {
+    // 5.-8. Maerz: unmittelbar nach Stalins Tod
+    return 'Stalin ist am 5. Maerz gestorben. Der Ostsektor liegt unter angeordneter Trauer: Trauerflore, Schweigeminuten, Trauermusik im Rundfunk. Hinter den Kulissen hat ein Machtkampf um die Nachfolge begonnen, niemand weiss, wohin die Reise geht.';
+  }
+  if (ord <= 527) {
+    // bis 27. Mai: Tauwetter-Hoffnung nach Stalins Tod, vor Normerhoehung
+    return 'Fruehjahr 1953, die Wochen nach Stalins Tod. Eine vorsichtige Hoffnung auf Tauwetter liegt in der Luft, doch die Wirtschaftskrise spitzt sich zu und die Republikflucht erreicht Rekordwerte.';
+  }
+  if (ord <= 616) {
+    // 28. Mai - 16. Juni: Normerhoehung beschlossen, Unruhe waechst
+    return 'Spaetes Fruehjahr 1953. Die SED hat die Arbeitsnormen um zehn Prozent erhoeht, ohne die Loehne anzuheben. In den Betrieben, besonders auf den Grossbaustellen der Stalinallee, brodelt es. Die Stimmung ist explosiv.';
+  }
+  if (ord === 617) {
+    return '17. Juni 1953. In ueber 700 Staedten der DDR erheben sich die Arbeiter gegen das Regime. In Berlin rollen sowjetische Panzer, der Ausnahmezustand wird verhaengt. Auf den Strassen faellt geschossen.';
+  }
+  if (ord <= 630) {
+    // 18.-30. Juni: direkt nach dem Aufstand
+    return 'Die Tage nach dem 17. Juni. Der Volksaufstand ist von sowjetischen Panzern blutig niedergeschlagen. Standrecht, Ausgangssperren, und eine beginnende Verhaftungswelle: Volkspolizei und Stasi greifen jeden auf, der als Raedelsfuehrer gilt. Ein gefaehrliches Pflaster fuer einen Ermittler.';
+  }
+  if (ord <= 831) {
+    // Juli-August: Verhaftungswelle, Neuer Kurs, Beria-Sturz
+    return 'Sommer 1953, nach dem niedergeschlagenen Aufstand. Die Verhaftungswelle laeuft auf Hochtouren, Tausende sitzen in Haft. Zugleich verkuendet die SED den "Neuen Kurs" mit sozialen Zugestaendnissen, um die Lage zu beruhigen. Misstrauen ueberall.';
+  }
+  // September-Oktober: Konsolidierung, Neuer Kurs
+  return 'Herbst 1953. Der "Neue Kurs" soll die Bevoelkerung beruhigen, doch die Narben des 17. Juni sitzen tief. Die Stasi baut ihr Netz aus Informanten weiter aus, waehrend die Verhaftungswelle langsam abebbt. Eine truegerische Ruhe.';
+}
+
 function formatSetupCard(idx, setup) {
   const s = setup.setup || {};
   // Datum schoen formatieren
@@ -7367,10 +7422,13 @@ function formatSetupCard(idx, setup) {
   // Politik-/Familie-Badges
   const isPol = s.politisch === true;
   const isFam = s.familieMatter === true;
+  // v7.12.23: Historischer Kontext zum Falldatum
+  const histContext = getHistoricalContext(setup.startDate);
   return {
     title: asciiToUmlaut(title),
     meta: asciiToUmlaut((dateStr ? dateStr + ' · ' : '') + tageszeit + (ortShort ? ' · ' + ortShort : '')),
     desc: asciiToUmlaut(desc),
+    histContext: asciiToUmlaut(histContext),
     isPol: isPol,
     isFam: isFam,
   };
@@ -7405,7 +7463,8 @@ function showSetupSelector() {
     card.innerHTML =
       '<div class="setup-card-title">' + escapeHtml(fmt.title) + badges + '</div>' +
       '<div class="setup-card-meta">' + escapeHtml(fmt.meta) + '</div>' +
-      '<div class="setup-card-desc">' + escapeHtml(fmt.desc) + '</div>';
+      '<div class="setup-card-desc">' + escapeHtml(fmt.desc) + '</div>' +
+      (fmt.histContext ? '<div class="setup-card-history">🕰 ' + escapeHtml(fmt.histContext) + '</div>' : '');
     card.onclick = (function(idx) {
       return function() {
         selectedSetupIdx = idx;
@@ -7769,7 +7828,17 @@ function buildTranscriptText() {
       if (debugExport && Array.isArray(e.optionen) && e.optionen.length > 0) {
         out += '\nAngebotene Optionen:\n';
         for (const opt of e.optionen) {
-          out += '  ' + (opt.id || '?') + ') ' + (opt.text || '') + '\n';
+          // v7.12.24: Optionstext fuer den Export von Kategorie-Meta-Suffixen
+          // saeubern (z.B. "...falls sie kommen. (OFFENSIV)."). Im echten Spiel-
+          // Button ist der Text laengst bereinigt (classifyOption), aber das
+          // gespeicherte e.optionen-Objekt traegt teils noch den KI-Rohtext -
+          // das verwirrte beim Lektorat. Hier rein kosmetisch fuers Log.
+          let ot = (opt.text || '');
+          ot = ot.replace(/\s*[\(\[][^\)\]]*(?:OFFENSIV|DEFENSIV|ERKUNDEN|BEOBACHTEN|HEILEN|AUFLOESEN|SCHLAFEN|ROMANTIK)[^\)\]]*[\)\]]\.?/gi, ' ')
+                 .replace(/[\s,.]*(?:->|=>|→)?\s*(?:OFFENSIV|DEFENSIV|ERKUNDEN|BEOBACHTEN|HEILEN|AUFLOESEN|SCHLAFEN|ROMANTIK)\s*\.?\s*$/i, '')
+                 .replace(/\s+/g, ' ').replace(/\s+([.!?,])/g, '$1').trim();
+          if (ot && !/[.!?]$/.test(ot)) ot += '.';
+          out += '  ' + (opt.id || '?') + ') ' + ot + '\n';
         }
       }
       // DEBUG-DIAGNOSE: nur im Admin/Debug-Modus sichtbar.
@@ -10858,7 +10927,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.22] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.24] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -11499,12 +11568,16 @@ function renderOptions(scene) {
   // (eine Stufe hoeher als Schlaf-Sperre bei Sp>=3 - ein kurzer Moment der Naehe
   // ist bei leichter Anspannung noch denkbar, aber nicht in Action/Gefahr).
   const romanceBlockedBySpannung = (currentSpannung >= 4);
+  // v7.12.24: Im Gewahrsam KEINE Romantik - eine Verhoerzelle ist kein Ort fuer
+  // Annaeherung (Wessel-Run 2014: romantische Buttons/Stimmung im Gewahrsam).
+  const romanceBlockedByCustody = !!karlInStasiCustody;
   // v7.12.17: Wenn dieser NPC die Annaeherung schon abgelehnt hat (50/50-Wuerfel
   // ging schief), erscheint KEIN Romance-Button mehr fuer ihn.
   const romanceNpcRejected = !!(romanceNpcInScene && romanceRejected[romanceNpcInScene]);
   // "Nacht verbringen" (Climax) hat ab Tension>=4 abends/nachts Vorrang.
   const showOvernightButton = romanceNpcInScene
     && !romanceNpcRejected
+    && !romanceBlockedByCustody
     && isAbendOderNacht
     && romCurrentTension >= 4
     && !romanceBlockedBySpannung;
@@ -11512,6 +11585,7 @@ function renderOptions(scene) {
   // verfuegbar ist (vorher waren bei Tension 4 beide sichtbar - User-Befund).
   const showRomanceButton = romanceNpcInScene
     && !romanceNpcRejected
+    && !romanceBlockedByCustody
     && !showOvernightButton
     && romanticClicksSinceProgress < 3
     && romCurrentTension < 5
@@ -16820,6 +16894,32 @@ function updateRomanticTension(scene) {
     }
     return;
   }
+  // v7.12.24: ABWESENHEITS-ABKUEHLUNG. Bug (Wessel-Run 2014): Romantik-Tension
+  // blieb auf 4 kleben, lange nachdem Karl die Romance-Person verlassen hatte
+  // (sogar im Gewahrsam). Es gab nur eine Spannungs-Abkuehlung, keine fuer
+  // "Person nicht mehr da". Jetzt: ist KEINE Setup-ROMANCE-Person mehr im Cast
+  // (oder die anwesende wurde abgewiesen), sinkt die Tension um 1 pro Szene -
+  // die Stimmung verfliegt, wenn das Gegenueber weg ist. Im Gewahrsam ebenso.
+  try {
+    if (romanticTension > 0 && caseSetup && Array.isArray(caseSetup.setupCast)) {
+      const setupRomNames = caseSetup.setupCast
+        .filter(ce => ce && ce.name && (ce.tag === 'ROMANCE' || ce.tagExtra === 'ROMANCE'))
+        .map(ce => ce.name);
+      const aktiveRomancePerson = Array.isArray(cast) && cast.some(c => {
+        const cName = typeof c === 'string' ? c : (c && c.name) || '';
+        if (!setupRomNames.includes(cName)) return false;
+        if (typeof romanceRejected !== 'undefined' && romanceRejected[cName]) return false;
+        return true;
+      });
+      if (!aktiveRomancePerson || karlInStasiCustody) {
+        const beforeR = romanticTension;
+        romanticTension = Math.max(0, romanticTension - 1);
+        if (beforeR !== romanticTension) {
+          diag('state', 'Romantik-Tension abgekuehlt ' + beforeR + ' -> ' + romanticTension + ' (Person abwesend/abgewiesen/Gewahrsam)');
+        }
+      }
+    }
+  } catch (e) { /* ignore */ }
 
   // v7.9.22: ROMANTIK-BOOTSTRAP. User-Befund: in 4 Runs Romantik-Tension 0/5
   // durchgehend - Pattern-Erkennung greift nicht weil Mistral keine
@@ -16839,16 +16939,21 @@ function updateRomanticTension(scene) {
         }
       }
       if (setupRomanceNames.length > 0) {
-        // Ist eine dieser Personen im aktuellen Cast?
+        // v7.12.24: Ist eine dieser Personen im aktuellen Cast UND noch nicht
+        // abgewiesen? Bug (Wessel-Run 2014): Der Bootstrap pumpte die Romantik-
+        // Tension hoch, OBWOHL der 50/50-Wuerfel die Person als "nicht offen"
+        // markiert hatte (romanceRejected) - die romantische Stimmung blieb kleben,
+        // sogar im Gewahrsam. Jetzt zaehlt nur eine Person, die NICHT abgewiesen
+        // wurde. Wenn noch nie gewuerfelt wurde, darf der Bootstrap anschieben
+        // (erste Annaeherung), aber sobald eine Abweisung vorliegt, ist Schluss.
         const romanceInCurrentCast = cast.some(c => {
           const cName = typeof c === 'string' ? c : (c && c.name) || '';
-          return setupRomanceNames.includes(cName);
+          if (!setupRomanceNames.includes(cName)) return false;
+          // abgewiesene Person zaehlt NICHT
+          if (typeof romanceRejected !== 'undefined' && romanceRejected[cName]) return false;
+          return true;
         });
         if (romanceInCurrentCast) {
-          // v7.9.23: Bootstrap-Cap 2 -> 3 angehoben. Krause-Run v7.9.22 zeigte
-          // Tension stieg nur auf 2 (Cap) - Push greift aber erst bei >=3.
-          // Mistral schreibt im Bot-Modus keine echten Hints, also muss der
-          // Bootstrap allein bis 3 reichen.
           romanticTension = Math.min(3, romanticTension + 1);
           diag('detect', 'Romantik-Bootstrap +1 (Setup-ROMANCE-Person aktiv) = ' + romanticTension);
         }
@@ -17109,7 +17214,7 @@ async function chooseOption(option) {
     if (npcName && typeof romanceReceptive[npcName] === 'undefined') {
       const offen = Math.random() < 0.5;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.22] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.24] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -17428,7 +17533,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.22] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.24] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -18437,7 +18542,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           const tensionHighEnoughForArrest = (typeof stasiTension === 'number' && stasiTension >= 4);
           if (!tensionHighEnoughForArrest) {
             // STILLER RELEASE: Karl ist faktisch frei, das System zieht nach.
-            console.warn('[Schatten v7.12.22] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
+            console.warn('[Schatten v7.12.24] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet, kein Hard-Force');
             karlInStasiCustody = false;
             folterSceneCount = 0;
@@ -18452,7 +18557,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.22] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.24] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -20919,7 +21024,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.22] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.24] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
