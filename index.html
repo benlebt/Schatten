@@ -2630,7 +2630,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.11.78</div>
+    <div class="start-version">Schatten v7.11.79</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2794,7 +2794,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.11.78</span>
+    <span>Schatten v7.11.79</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5190,7 +5190,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.11.78';
+window.SCHATTEN_VERSION = 'v7.11.79';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5797,7 +5797,7 @@ function toggleGeminiOnly(event) {
   syncGeminiOnlySwitch();
   if (typeof updateFooterModel === 'function') updateFooterModel();
   if (typeof updateProviderInfo === 'function') updateProviderInfo();
-  console.log('[Schatten v7.11.78] Gemini-Only-Modus:', window.geminiOnlyMode ? 'AN' : 'AUS');
+  console.log('[Schatten v7.11.79] Gemini-Only-Modus:', window.geminiOnlyMode ? 'AN' : 'AUS');
 }
 
 function syncGeminiOnlySwitch() {
@@ -10694,7 +10694,7 @@ function renderOptions(scene) {
     && !karlInStasiCustody
     && (gameTimeIdx === 4 || gameTimeIdx === 5));  // nur ABEND oder NACHT
   if (forceSleepMode) {
-    console.log('[Schatten v7.11.78] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.11.79] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -15173,6 +15173,13 @@ function detectVPCrime(sceneText) {
 // Ab Wert 3 ist eine Stasi-Festnahme moeglich (wenn caseIsPolitical).
 function updateStasiTension(sceneText) {
   if (!sceneText) return;
+  // v7.11.79: Wenn der Fall geloest ist, keine Stasi-Tension mehr aufbauen.
+  // User-Run Heinrich 0803: nach AUFLOESEN (Stage 4) stieg Tension noch 2->3
+  // und triggerte einen "Stasi auf den Fersen"-Toast - nach Fall-Abschluss
+  // sinnlos. Der Fall ist vorbei, die Story laeuft aus.
+  if (typeof caseProgress === 'object' && caseProgress && (caseProgress.istGelöst === true || (caseProgress.stage || 0) >= 4)) {
+    return;
+  }
   const lower = sceneText.toLowerCase()
     .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
   // v6.74: Trigger-Pattern erweitert. Vorher: nur explizite Stasi/MfS/sowjet-Worte.
@@ -16346,7 +16353,13 @@ function checkStatusToasts(spannung) {
   // Hohenschoenhausen, MfS-U-Haft etc) - dort ist "auf den Fersen" widersinnig.
   const ortNow = (typeof ortHauptText === 'string' ? ortHauptText : (typeof ortNorm === 'string' ? ortNorm : ''));
   const inStasiZone = /genslerstr|hohenschoenhausen|hohenschönhausen|mfs.{0,4}(unters|haft|verhoer|verh\u00f6r|gef\u00e4ngn|gefaengn)|stasi.{0,4}(gef\u00e4ngn|gefaengn|haft|zelle)/i.test(ortNow);
+  // v7.11.79: KEIN Stasi-Toast mehr wenn der Fall bereits geloest ist. User-Run
+  // Heinrich 0803: Karl loeste den Fall in Sz 17 (AUFLOESEN, Stage 4), aber in
+  // Sz 18 stieg Stasi-Tension 2->3 und triggerte "Stasi auf den Fersen" - nach
+  // dem Abschluss inhaltlich falsch und verwirrend (der Fall ist vorbei).
+  const fallGeloest = (typeof caseProgress === 'object' && caseProgress && (caseProgress.istGelöst === true || (caseProgress.stage || 0) >= 4));
   if (caseIsPolitical && stasiTension >= 3 && !karlInStasiCustody && !inStasiZone && sceneCounter >= 3
+      && !fallGeloest
       && (typeof stasiCapForCase !== 'number' || stasiCapForCase >= 2)) {
     showProgressToast('Stasi auf den Fersen', 'Die Volkspolizei beobachtet Karl gezielt.', 'danger', 'stasi-hoch');
   }
@@ -16944,7 +16957,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.11.78] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.11.79] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -17953,7 +17966,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           const tensionHighEnoughForArrest = (typeof stasiTension === 'number' && stasiTension >= 4);
           if (!tensionHighEnoughForArrest) {
             // STILLER RELEASE: Karl ist faktisch frei, das System zieht nach.
-            console.warn('[Schatten v7.11.78] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
+            console.warn('[Schatten v7.11.79] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet, kein Hard-Force');
             karlInStasiCustody = false;
             folterSceneCount = 0;
@@ -17968,7 +17981,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.11.78] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.11.79] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -20322,7 +20335,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.11.78] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.11.79] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
