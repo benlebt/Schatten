@@ -2651,7 +2651,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.19</div>
+    <div class="start-version">Schatten v7.12.22</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2815,7 +2815,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.19</span>
+    <span>Schatten v7.12.22</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5211,7 +5211,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.19';
+window.SCHATTEN_VERSION = 'v7.12.22';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -9510,23 +9510,14 @@ function advanceGameTime() {
         karlEnergie = 100;
         karlHunger = Math.max(2, karlHunger - 4);  // morgens leichter Hunger ist normal
         hungerAccumulator = 0;
-      // v6.83: VERFASSUNG-GENESUNG bei Tageswechsel.
-      // Karl ist nicht unverwundbar, aber er heilt im Schlaf etwas. Bei Tageswechsel
-      // mit ruhiger letzter Szene (Spannung <=2) heilt Karl 1 Punkt Verfassung.
-      // Bei sehr ruhiger letzter Szene (Bett, Schlafzimmer, Buero) +1 extra.
-      // Max-Cap: bei Verfassung 2/5 max +1 (nicht direkt zurueck auf 5).
-      // Bei Verfassung 1 (lebensgefaehrlich) keine spontane Genesung - braucht Arzt.
-      if (typeof verfassung === 'number' && verfassung > 0 && verfassung < 5) {
-        const wasInRestfulPlace = lastFullScene && lastFullScene.szene && /bett|schlafzimmer|hotel|wohnung|buero|doc wagner|charite/i.test(lastFullScene.szene);
-        const wasCalm = (typeof lastSpannung === 'number' && lastSpannung <= 2);
-        if (verfassung >= 2 && wasCalm && wasInRestfulPlace) {
-          const before = verfassung;
-          verfassung = Math.min(5, verfassung + 1);
-          console.log('[Schatten] Tagesgenesung: Verfassung', before, '->', verfassung, '(ruhiger Schlafplatz)');
-          diag('state', 'Tagesgenesung Verfassung ' + before + ' -> ' + verfassung + ' (ruhig + Schlafplatz)');
-        }
-        // bei Verfassung 1 KEINE Genesung - braucht echten Arzt
-      }
+      // v7.12.21: AUTOMATISCHE TAGESGENESUNG ABGESCHALTET (User-Entscheidung).
+      // Frueher gab ein Tageswechsel an ruhigem Ort automatisch +1 Verfassung.
+      // Das widerspricht dem ab v7.12.13 etablierten Prinzip "nichts heilt
+      // automatisch, nur durch bewusste Aktion": Heilung gibt es jetzt
+      // AUSSCHLIESSLICH ueber den Schlaf-Button (heilt voll auf Vf 5), den
+      // Doc-Wagner-Button (+2) und Notheilen (+1). Ein bloszer Tageswechsel,
+      // der NICHT ueber den Schlaf-Button ausgeloest wurde, heilt nichts mehr.
+      // (Block bewusst leer gelassen statt entfernt - Kontext fuer die History.)
       // FORCE-SLEEP-NARRATIVE: Wenn der gradullen Tageswechsel bei niedriger Energie
       // greift, ist Karl im Verlauf sehr muede geworden. Die KI muss in der naechsten
       // Szene erzaehlen WIE Karl geschlafen hat - sonst wirkt der Sprung "Bulette
@@ -10867,7 +10858,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.19] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.22] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -11091,8 +11082,15 @@ function renderOptions(scene) {
   // weil es narrativ schief klingt mitten am Tag. Variablen bleiben definiert
   // weil unten Labels darauf zugreifen.
   const currentEnergie = (typeof karlEnergie === 'number') ? karlEnergie : 100;
-  const currentLocation = (typeof lastLocation === 'string') ? lastLocation.toLowerCase() : '';
-  const isInSafeRestPlace = /\b(buero|wohnung|schlafzimmer|hotel|bett|hauptbahnhof|charit)/.test(currentLocation);
+  // v7.12.20: Umlaute normalisieren (ue/oe/ae) BEVOR gematcht wird. Bug: die KI
+  // schreibt den Ort als "Karls Büro" (mit ü), das Pattern suchte aber "buero"
+  // (mit ue) -> "zu Hause / im Buero"-Erkennung schlug bei JEDER Buero-Szene fehl.
+  // Jetzt werden beide Schreibweisen abgedeckt. Zusaetzlich "hackescher markt"
+  // (Karls Adresse) + "detektei"/"arbeitszimmer"/"schreibtisch" als Heim-Synonyme.
+  const currentLocation = (typeof lastLocation === 'string')
+    ? lastLocation.toLowerCase().replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss')
+    : '';
+  const isInSafeRestPlace = /\b(buero|wohnung|schlafzimmer|hotel|bett|hauptbahnhof|charit|hackescher markt|detektei|arbeitszimmer|schreibtisch)/.test(currentLocation);
   const canSleepDuringDay = false; // v7.11.62: deaktiviert
   // v7.11.94: Schlafen erst ab Szene 3 verfuegbar. User-Befund: Bei Spielstart
   // abends/nachts war "Schlafen" sofort in Szene 1 da - direkt schlafen gehen
@@ -11421,6 +11419,15 @@ function renderOptions(scene) {
       btn.className = 'option-btn option-btn-system option-btn-sleep';
       btn.dataset.kategorie = 'SCHLAFEN';
       let marker = sleepMarker;
+      // v7.12.22: HEILUNGS-HINWEIS im Marker. Schlaf fuellt die Verfassung IMMER
+      // voll auf Vf 5 auf (in jedem Fall - am Ort, Heimfahrt, Custody). Wenn Karl
+      // verletzt ist, machen wir das sichtbar, damit der Spieler weiss dass Schlaf
+      // auch heilt (User-Wunsch). Bei voller Verfassung bleibt es beim Tagwechsel-
+      // Marker (kein irrefuehrendes "heilt voll" wenn nichts zu heilen ist).
+      const _vfForSleep = (typeof verfassung === 'number') ? verfassung : 5;
+      if (!blocked && _vfForSleep < 5) {
+        marker = marker + ' · HEILT VOLL';
+      }
       if (blocked) {
         btn.disabled = true;
         btn.classList.add('locked');
@@ -17102,7 +17109,7 @@ async function chooseOption(option) {
     if (npcName && typeof romanceReceptive[npcName] === 'undefined') {
       const offen = Math.random() < 0.5;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.19] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.22] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -17421,7 +17428,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.19] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.22] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -18430,7 +18437,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           const tensionHighEnoughForArrest = (typeof stasiTension === 'number' && stasiTension >= 4);
           if (!tensionHighEnoughForArrest) {
             // STILLER RELEASE: Karl ist faktisch frei, das System zieht nach.
-            console.warn('[Schatten v7.12.19] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
+            console.warn('[Schatten v7.12.22] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet, kein Hard-Force');
             karlInStasiCustody = false;
             folterSceneCount = 0;
@@ -18445,7 +18452,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.19] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.22] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -20912,7 +20919,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.19] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.22] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
