@@ -2636,7 +2636,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.11.97</div>
+    <div class="start-version">Schatten v7.11.98</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2800,7 +2800,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.11.97</span>
+    <span>Schatten v7.11.98</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5196,7 +5196,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.11.97';
+window.SCHATTEN_VERSION = 'v7.11.98';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5444,6 +5444,7 @@ let stasiTension = 0;
 // 3+ Szenen passiert OHNE dass Karl tatsaechlich verhaftet wurde, erzwingt das
 // System die Custody - sonst staut sich UNAUSWEICHLICH-Tension endlos auf.
 let stasiHighTensionStreak = 0;
+let stasiMaxTensionStreak = 0;  // v7.11.98: zaehlt Szenen bei Tension===5 (Option-2-Festnahme)
 // v6.74: Counter fuer ruhige Szenen zwischen Stasi-Erwaehnungen. Tension sinkt
 // erst nach 3 ruhigen Szenen um 1, damit kein Pingpong-Bug entsteht.
 let stasiCooldownCounter = 0;
@@ -5803,7 +5804,7 @@ function toggleGeminiOnly(event) {
   syncGeminiOnlySwitch();
   if (typeof updateFooterModel === 'function') updateFooterModel();
   if (typeof updateProviderInfo === 'function') updateProviderInfo();
-  console.log('[Schatten v7.11.97] Gemini-Only-Modus:', window.geminiOnlyMode ? 'AN' : 'AUS');
+  console.log('[Schatten v7.11.98] Gemini-Only-Modus:', window.geminiOnlyMode ? 'AN' : 'AUS');
 }
 
 function syncGeminiOnlySwitch() {
@@ -10802,7 +10803,7 @@ function renderOptions(scene) {
     && !karlInStasiCustody
     && (gameTimeIdx === 4 || gameTimeIdx === 5));  // nur ABEND oder NACHT
   if (forceSleepMode) {
-    console.log('[Schatten v7.11.97] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.11.98] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -14860,6 +14861,7 @@ async function startGame() {
   stasiTension = 0;
   stasiCapForCase = 5;  // v7.9.19: Cap reset auf default
   stasiHighTensionStreak = 0;
+  stasiMaxTensionStreak = 0;  // v7.11.98: Tension-5-Streak reset
   stasiCooldownCounter = 0;
   folterSceneCount = 0;
   karlInStasiCustody = false;
@@ -16557,8 +16559,12 @@ function checkStatusToasts(spannung) {
     // Trigger-Key, damit der Spieler die Chance hat zu reagieren (fliehen, unter-
     // tauchen, kooperieren) BEVOR die Liquidation zuschlaegt. User-Run Stein 0934:
     // Karl wurde nach 17 Szenen Hochdruck liquidiert ohne spuerbare Vorwarnung.
+    // v7.11.98: Titel praeziser. User-Befund: "Stasi greift zu" suggeriert die
+    // Festnahme passiert JETZT - aber es ist eine WARNUNG vor dem drohenden Zugriff
+    // (niemand nahm Karl in der Szene fest). "Schliesst den Kreis" / "auf den
+    // Fersen" sind ehrliche Bedrohungs-Warnungen, kein Versprechen einer Festnahme.
     if (stasiTension >= 5) {
-      showProgressToast('Stasi greift zu', 'Das MfS schliesst den Kreis. Karl muss JETZT fliehen, untertauchen oder verschwinden - sonst holen sie ihn.', 'danger', 'stasi-kritisch', '🕶');
+      showProgressToast('Stasi schließt den Kreis', 'Das MfS ist dicht dran. Karl muss JETZT fliehen, untertauchen oder verschwinden - sonst greifen sie zu.', 'danger', 'stasi-kritisch', '🕶');
     } else {
       showProgressToast('Stasi auf den Fersen', 'Die Volkspolizei beobachtet Karl gezielt.', 'danger', 'stasi-hoch', '🕶');
     }
@@ -17199,7 +17205,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.11.97] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.11.98] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -18208,7 +18214,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           const tensionHighEnoughForArrest = (typeof stasiTension === 'number' && stasiTension >= 4);
           if (!tensionHighEnoughForArrest) {
             // STILLER RELEASE: Karl ist faktisch frei, das System zieht nach.
-            console.warn('[Schatten v7.11.97] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
+            console.warn('[Schatten v7.11.98] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet, kein Hard-Force');
             karlInStasiCustody = false;
             folterSceneCount = 0;
@@ -18223,7 +18229,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.11.97] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.11.98] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -18492,6 +18498,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     // v7.10: Verfassung-Delta. Default: aus KI-Antwort, wird von Kategorie-
     // Mechanik ueberschrieben wenn Kategorie geklickt wurde.
     let delta = typeof scene.verfassung_delta === 'number' ? scene.verfassung_delta : 0;
+    let _vfDeltaSource = '';  // v7.11.98: Quelle des Vf-Deltas (fuer Heilungs-Toast)
 
     // v7.10: KATEGORIE-MECHANIK ueberschreibt verfassung_delta.
     // Wenn der Spieler eine Option mit kategorie geklickt hat (OFFENSIV/
@@ -18766,6 +18773,9 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       delta = finalDelta;
       // scene.verfassung_delta synchronisieren damit Folge-Code denselben Wert sieht
       scene.verfassung_delta = delta;
+      // v7.11.98: deltaSource ueber den Block hinaus retten (fuer Heilungs-Toast
+      // bei Z.~18957 - deltaSource ist dort sonst nicht mehr im Scope).
+      _vfDeltaSource = deltaSource;
     }
 
     // v7.11.84: Kategorie fuer den spaeteren Indiz-Filter sichern, BEVOR
@@ -18964,6 +18974,21 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         // Bei Erholung: Verletzung verblasst (aber nicht ganz weg, bis verfassung = 5)
         if (verfassung >= 5) { lastInjury = ''; lastInjuryScene = 0; }
       }
+      // v7.11.98: HEILUNGS-TOAST bei positivem Delta aus einer Heilwahl. User-Befund
+      // Stein-Run 1323: NOTHEILEN gab Vf+1, aber KEIN Toast kam (der Toast existierte
+      // nur im Tag-basierten/Text-Heilungs-Pfad, NICHT im heilwahl-vorrang-Pfad ueber
+      // den NOTHEILEN/HEILEN laufen). Jetzt: jede aktive Heilung zeigt einen Toast mit
+      // den geheilten Punkten. Quelle 'heilwahl-vorrang-X' = aktive Heilung.
+      const realHeal = verfassung - prevVerf;  // tatsaechlich geheilt (nach Cap)
+      if (realHeal > 0 && typeof _vfDeltaSource === 'string' && _vfDeltaSource.indexOf('heilwahl-vorrang') === 0) {
+        const cat = _vfDeltaSource.replace('heilwahl-vorrang-', '');
+        let toastTitle = 'Versorgt';
+        if (cat === 'HEILEN') toastTitle = 'Verarztet';
+        else if (cat === 'NOTHEILEN') toastTitle = 'Notversorgt';
+        if (typeof showProgressToast === 'function') {
+          showProgressToast(toastTitle, 'Verfassung +' + realHeal + '.', 'success', 'heal-' + sceneCounter, '🩹');
+        }
+      }
     }
     // Game Over wenn Verfassung auf 0
     if (verfassung === 0) {
@@ -19016,6 +19041,26 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     if (detectedAction > newSpannung) {
       console.log('[Schatten] Spannung korrigiert:', newSpannung, '->', detectedAction, '(Action-Woerter im Text)');
       newSpannung = detectedAction;
+    }
+    // v7.11.98: STASI-TENSION -> SPANNUNGS-KOPPLUNG. User-Befund Stein-Run 1323:
+    // "Stasi auf den Fersen"/"Stasi greift zu" kam, aber die Spannung war nur 2 -
+    // das passte nicht (wenn die Stasi zugreift, ist es brenzlig). Die KI kennt
+    // die Stasi-Tension nicht und setzt die Spannung unabhaengig. Jetzt: hohe
+    // Stasi-Tension hebt die Mindest-Spannung an, solange der Fall nicht geloest
+    // ist und Karl nicht schon in Gewahrsam (in der Zelle ist die akute Jagd
+    // vorbei). So passt die Spannung zur Bedrohung - und die Schlaf-Sperre
+    // (ab Sp 3) greift automatisch wenn die Stasi nah ist.
+    if (caseIsPolitical && !karlInStasiCustody && typeof stasiTension === 'number') {
+      const fallGeloestNow = (caseProgress && (caseProgress.istGelöst || (caseProgress.stage || 0) >= 4));
+      if (!fallGeloestNow) {
+        let stasiMinSpannung = 0;
+        if (stasiTension >= 5) stasiMinSpannung = 4;       // Zugriff steht bevor -> brenzlig
+        else if (stasiTension >= 4) stasiMinSpannung = 3;  // auf den Fersen -> angespannt
+        if (stasiMinSpannung > newSpannung) {
+          diag('state', 'Spannung durch Stasi-Tension ' + stasiTension + '/5 angehoben: ' + newSpannung + ' -> ' + stasiMinSpannung);
+          newSpannung = stasiMinSpannung;
+        }
+      }
     }
     // Streak-Tracking fuer Eskalations-Bremse
     if (newSpannung >= 4) {
@@ -20610,7 +20655,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.11.97] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.11.98] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
@@ -21007,6 +21052,31 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     // FESTNAHME Sz 13. Karl hatte keine Chance der Eskalation zu entkommen.
     // Jetzt: AUTO-CUSTODY-Schwelle 3->5, System-Override 4->6.
     if (caseIsPolitical && !karlInStasiCustody) {
+      // v7.11.98: OPTION-2-FESTNAHME. Separater Zaehler fuer Tension===5 (Maximum).
+      // User-Wunsch: faire Warnung -> Reaktionsfenster -> unausweichliche Festnahme.
+      // Wenn die Tension 3 Szenen am Maximum (5) bleibt UND Karl nicht reagiert
+      // (nicht geflohen/untergetaucht -> dann waere Tension gesunken), wird die
+      // Festnahme hart forciert. Der pendingCustodyConfirm-Mechanismus (v7.11.97)
+      // sorgt dafuer dass der Gewahrsam erst aktiviert wird wenn die KI die
+      // Festnahme im Text erzaehlt - synchron zur Story. So fasst die Stasi Karl
+      // wirklich, wenn er die Warnungen ignoriert, statt folgenlos zu drohen.
+      if (stasiTension >= 5) {
+        stasiMaxTensionStreak++;
+        console.log('[Schatten] StasiMaxTensionStreak:', stasiMaxTensionStreak, '(Tension 5)');
+        if (stasiMaxTensionStreak >= 3 && !custodyLocked && !caseProgress.pendingCustodyConfirm) {
+          // 3 Szenen am Maximum ohne Reaktion -> Festnahme unausweichlich
+          caseProgress.forceCustodyNextScene = true;
+          caseProgress.pendingCustodyConfirm = true;  // Custody nach Text-Bestaetigung
+          stasiMaxTensionStreak = 0;
+          diag('progress', '✦ OPTION-2-FESTNAHME forciert: Tension 5 fuer 3 Szenen ohne Reaktion - Stasi greift jetzt unausweichlich zu');
+        }
+      } else {
+        // Tension unter 5 -> Streak zuruecksetzen (Karl hat die Lage entschaerft)
+        if (stasiMaxTensionStreak > 0) {
+          diag('state', 'Stasi-Max-Tension-Streak zurueckgesetzt (Tension auf ' + stasiTension + ' gesunken - Karl hat reagiert)');
+        }
+        stasiMaxTensionStreak = 0;
+      }
       if (stasiTension >= 4) {
         stasiHighTensionStreak++;
         console.log('[Schatten] StasiHighTensionStreak:', stasiHighTensionStreak, '(Tension', stasiTension + ')');
