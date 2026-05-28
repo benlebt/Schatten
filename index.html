@@ -2630,7 +2630,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.11.85</div>
+    <div class="start-version">Schatten v7.11.86</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2794,7 +2794,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.11.85</span>
+    <span>Schatten v7.11.86</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5190,7 +5190,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.11.85';
+window.SCHATTEN_VERSION = 'v7.11.86';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5797,7 +5797,7 @@ function toggleGeminiOnly(event) {
   syncGeminiOnlySwitch();
   if (typeof updateFooterModel === 'function') updateFooterModel();
   if (typeof updateProviderInfo === 'function') updateProviderInfo();
-  console.log('[Schatten v7.11.85] Gemini-Only-Modus:', window.geminiOnlyMode ? 'AN' : 'AUS');
+  console.log('[Schatten v7.11.86] Gemini-Only-Modus:', window.geminiOnlyMode ? 'AN' : 'AUS');
 }
 
 function syncGeminiOnlySwitch() {
@@ -7662,7 +7662,14 @@ function buildTranscriptText() {
           sceneDiagnosticsBuffer[e.diagId]) {
         const diag = sceneDiagnosticsBuffer[e.diagId];
         const lines = [];
-        lines.push('--- DEBUG-DIAGNOSE ---');
+        // v7.11.86: Szene-Nummer im Header (User-Wunsch: "schreib im Debug-Modus
+        // immer die Szene dazu"). Erleichtert das Lektorat - man kann Events
+        // direkt einer Szene zuordnen.
+        if (typeof e.sceneNr === 'number') {
+          lines.push('--- DEBUG-DIAGNOSE (Szene ' + e.sceneNr + ') ---');
+        } else {
+          lines.push('--- DEBUG-DIAGNOSE ---');
+        }
         if (diag.modelUsed) lines.push('Modell: ' + diag.modelUsed);
         if (diag.requestJson) {
           lines.push('Request: ' + diag.requestJson.model + ' (' + diag.requestJson.provider + '), ' +
@@ -10588,8 +10595,12 @@ function checkProgressTriggers(kategorie, ctx) {
   const verfassung = (ctx && typeof ctx.verfassung === 'number') ? ctx.verfassung : 5;
   const suspectInScene = !!(ctx && ctx.suspectInScene);
   const tatverdaechtigerKnown = !!(ctx && ctx.tatverdaechtiger);
-  // Stage 0 -> 1: nach 3 Szenen
-  if (stage === 0 && sceneCounter >= 3) {
+  // Stage 0 -> 1: nach 3 Szenen UND mindestens 1 echtes Indiz.
+  // v7.11.86: Indiz-Bedingung ergaenzt. User-Befund: "Erste Spuren gesammelt"-
+  // Toast feuerte nach 3 Sz obwohl 0 Indizien in der Liste waren - der Toast
+  // log, denn es waren keine Spuren da. Jetzt: erst wenn Karl wirklich was
+  // gefunden hat. Der "Erste Spuren gesammelt"-Text stimmt dann auch.
+  if (stage === 0 && sceneCounter >= 3 && indCount >= 1) {
     result.newStage = 1;
     // v7.10.12: Title geaendert von "STUFE 1" zu "Ermittlung laeuft" damit
     // Spieler nicht denkt das ist schon FALL-STUFE 1 (Verwirrung im Helga-Run).
@@ -10729,7 +10740,7 @@ function renderOptions(scene) {
     && !karlInStasiCustody
     && (gameTimeIdx === 4 || gameTimeIdx === 5));  // nur ABEND oder NACHT
   if (forceSleepMode) {
-    console.log('[Schatten v7.11.85] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.11.86] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -17045,7 +17056,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.11.85] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.11.86] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -18054,7 +18065,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           const tensionHighEnoughForArrest = (typeof stasiTension === 'number' && stasiTension >= 4);
           if (!tensionHighEnoughForArrest) {
             // STILLER RELEASE: Karl ist faktisch frei, das System zieht nach.
-            console.warn('[Schatten v7.11.85] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
+            console.warn('[Schatten v7.11.86] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet, kein Hard-Force');
             karlInStasiCustody = false;
             folterSceneCount = 0;
@@ -18069,7 +18080,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.11.85] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.11.86] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -20443,7 +20454,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.11.85] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.11.86] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
@@ -21010,6 +21021,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       type: 'scene',
       text: scene.szene,
       ort: scene.ort,
+      sceneNr: sceneCounter,  // v7.11.86: Szene-Nummer fuer Debug-Header
       day: gameDay,
       time: TIMES_OF_DAY[gameTimeIdx],
       modelLabel: getActiveModel().label,
@@ -22478,43 +22490,46 @@ function markToastShown(variant, triggerKey) {
   toastHistory.lastSceneByVariant[variant] = sceneCounter;
 }
 
-// Farb-Schemata fuer die vier Varianten.
+// Farb-Schemata fuer die Varianten.
+// v7.11.86: Alle Varianten auf die dezente Saettigung des clue-Toasts angeglichen
+// (User-Wunsch: "passe die grossen Toasties an die neuen Indiz-Toasties an"). Die
+// FARBEN bleiben wie gehabt (gelb/rot/blau/grau), aber Deckkraft 0.97->0.94,
+// Border-Alpha runter, Schatten weicher (0 4px 18px statt harter Glow). So wirken
+// alle Toasts gleich angenehm und verdecken weniger.
 const TOAST_VARIANTS = {
   success: {
-    bg: 'linear-gradient(180deg,rgba(60,50,20,0.97),rgba(40,30,10,0.97))',
-    border: 'rgba(220,180,90,0.6)',
-    shadow: 'rgba(220,180,90,0.3)',
-    titleColor: '#fda',
-    bodyColor: '#c98',
+    bg: 'linear-gradient(180deg,rgba(58,48,20,0.94),rgba(38,30,12,0.94))',
+    border: 'rgba(200,165,85,0.45)',
+    shadow: 'rgba(180,140,70,0.18)',
+    titleColor: '#e6c98a',
+    bodyColor: '#c0a878',
     icon: '✦',
   },
   danger: {
-    bg: 'linear-gradient(180deg,rgba(80,15,15,0.97),rgba(50,8,8,0.97))',
-    border: 'rgba(220,70,60,0.7)',
-    shadow: 'rgba(220,70,60,0.35)',
-    titleColor: '#fcc',
-    bodyColor: '#daa',
+    bg: 'linear-gradient(180deg,rgba(70,20,18,0.94),rgba(45,12,12,0.94))',
+    border: 'rgba(200,75,65,0.45)',
+    shadow: 'rgba(180,60,55,0.18)',
+    titleColor: '#e6a8a0',
+    bodyColor: '#c89088',
     icon: '⚠',
   },
   caution: {
-    bg: 'linear-gradient(180deg,rgba(20,35,55,0.97),rgba(10,20,40,0.97))',
-    border: 'rgba(100,150,220,0.6)',
-    shadow: 'rgba(100,150,220,0.3)',
-    titleColor: '#bcf',
-    bodyColor: '#aad',
+    bg: 'linear-gradient(180deg,rgba(22,34,50,0.94),rgba(14,22,38,0.94))',
+    border: 'rgba(95,140,200,0.45)',
+    shadow: 'rgba(80,120,180,0.18)',
+    titleColor: '#a8c4e6',
+    bodyColor: '#90a8c8',
     icon: '◌',
   },
   info: {
-    bg: 'linear-gradient(180deg,rgba(40,40,40,0.97),rgba(25,25,25,0.97))',
-    border: 'rgba(180,180,180,0.5)',
-    shadow: 'rgba(180,180,180,0.2)',
-    titleColor: '#dde',
-    bodyColor: '#aac',
+    bg: 'linear-gradient(180deg,rgba(38,38,38,0.94),rgba(24,24,24,0.94))',
+    border: 'rgba(160,160,160,0.4)',
+    shadow: 'rgba(150,150,150,0.15)',
+    titleColor: '#d0d0d8',
+    bodyColor: '#a0a0aa',
     icon: '·',
   },
-  // v7.11.82: 'clue' - dezenter Indiz-Fund-Toast. Gedaempftes Gold, kleinerer
-  // visueller Fussabdruck als 'success'. Signalisiert "neue Spur" ohne den
-  // Triumph-Ton eines Stage-Aufstiegs.
+  // v7.11.82: 'clue' - dezenter Indiz-Fund-Toast. Gedaempftes Gruen-Gold.
   clue: {
     bg: 'linear-gradient(180deg,rgba(35,40,30,0.94),rgba(22,26,18,0.94))',
     border: 'rgba(150,170,110,0.45)',
