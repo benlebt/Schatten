@@ -2620,6 +2620,12 @@
       Berlin, 1953. Du bist Karl Mauer, Privatdetektiv, geschieden, immer knapp bei Kasse.
       Die KI generiert jede Szene frisch. Keine zwei Partien sind gleich.
     </p>
+    <!-- v7.11.93: Fortsetzen-Button. Nur sichtbar wenn ein Spielstand existiert.
+         Sicherheitsnetz falls der Auto-Restore mal nicht greift (z.B. iOS hat
+         neu geladen, Restore-Render scheiterte still -> Startscreen). Der Save
+         bleibt erhalten, der Spieler kann hier manuell fortsetzen. -->
+    <button class="btn-primary" id="continue-game-btn" onclick="continueGameFromStart()" style="display:none;">▶ Spiel fortsetzen</button>
+    <br id="continue-game-br" style="display:none;">
     <button class="btn-primary" onclick="startRandomGame()">Zufällige Ermittlung</button>
     <br>
     <button class="btn-primary" onclick="showSetupSelector()">Fall auswählen</button>
@@ -2630,7 +2636,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.11.91</div>
+    <div class="start-version">Schatten v7.11.93</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2794,7 +2800,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.11.91</span>
+    <span>Schatten v7.11.93</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5190,7 +5196,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.11.91';
+window.SCHATTEN_VERSION = 'v7.11.93';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5797,7 +5803,7 @@ function toggleGeminiOnly(event) {
   syncGeminiOnlySwitch();
   if (typeof updateFooterModel === 'function') updateFooterModel();
   if (typeof updateProviderInfo === 'function') updateProviderInfo();
-  console.log('[Schatten v7.11.91] Gemini-Only-Modus:', window.geminiOnlyMode ? 'AN' : 'AUS');
+  console.log('[Schatten v7.11.93] Gemini-Only-Modus:', window.geminiOnlyMode ? 'AN' : 'AUS');
 }
 
 function syncGeminiOnlySwitch() {
@@ -7050,6 +7056,52 @@ function showStart() {
   document.getElementById('start').classList.remove('hidden');
   // v7.9.10: Musik-Button-Text passend zum aktuellen Audio-State setzen
   if (typeof syncMusicButtonText === 'function') syncMusicButtonText();
+  // v7.11.93: Fortsetzen-Button zeigen, wenn ein Spielstand existiert.
+  try {
+    const hasGame = (typeof hasSavedGame === 'function') && hasSavedGame();
+    const btn = document.getElementById('continue-game-btn');
+    const br = document.getElementById('continue-game-br');
+    if (btn) btn.style.display = hasGame ? '' : 'none';
+    if (br) br.style.display = hasGame ? '' : 'none';
+  } catch (e) {}
+}
+
+// v7.11.93: Manuelles Fortsetzen vom Startscreen (Sicherheitsnetz zum Auto-Restore).
+function continueGameFromStart() {
+  try {
+    const ok = restoreGameState();
+    if (!ok) {
+      alert('Spielstand konnte nicht geladen werden. Er ist moeglicherweise beschaedigt.');
+      showStart();
+    }
+  } catch (e) {
+    console.warn('[Schatten] continueGameFromStart fehlgeschlagen:', e && e.message);
+    alert('Spielstand konnte nicht geladen werden.');
+    showStart();
+  }
+}
+
+// v7.11.93: Notfall-Fortsetzung wenn nach dem Restore die Options-Buttons fehlen
+// (currentScene war unvollstaendig). Loest einen "weiter"-Zug aus, der die KI
+// bittet, aus dem bestehenden Kontext heraus die naechste Szene mit Optionen zu
+// liefern. Nutzt denselben Pfad wie ein normaler Options-Klick.
+function retryLastSceneFromRestore() {
+  try {
+    if (typeof chooseOption === 'function') {
+      // Synthetische Fortsetzungs-Aktion. _isContinuation sorgt (falls vom
+      // Folge-Code beachtet) fuer einen neutralen Uebergang; ansonsten ist es
+      // eine normale freie Aktion die die naechste Szene generiert.
+      chooseOption({
+        id: 'WEITER',
+        text: 'Karl macht weiter, wo er aufgehoert hat.',
+        _kategorie: 'ERKUNDEN',
+        kategorie: 'ERKUNDEN',
+        _isContinuation: true,
+      });
+    }
+  } catch (e) {
+    console.warn('[Schatten] retryLastSceneFromRestore fehlgeschlagen:', e && e.message);
+  }
 }
 function showSetup() {
   document.getElementById('setup').classList.remove('hidden');
@@ -10750,7 +10802,7 @@ function renderOptions(scene) {
     && !karlInStasiCustody
     && (gameTimeIdx === 4 || gameTimeIdx === 5));  // nur ABEND oder NACHT
   if (forceSleepMode) {
-    console.log('[Schatten v7.11.91] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.11.93] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -17121,7 +17173,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.11.91] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.11.93] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -18130,7 +18182,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           const tensionHighEnoughForArrest = (typeof stasiTension === 'number' && stasiTension >= 4);
           if (!tensionHighEnoughForArrest) {
             // STILLER RELEASE: Karl ist faktisch frei, das System zieht nach.
-            console.warn('[Schatten v7.11.91] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
+            console.warn('[Schatten v7.11.93] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet, kein Hard-Force');
             karlInStasiCustody = false;
             folterSceneCount = 0;
@@ -18145,7 +18197,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.11.91] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.11.93] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -20532,7 +20584,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.11.91] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.11.93] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
@@ -21196,6 +21248,13 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     lastErrorDebug = null;
     // v7.11.33: Lock freigeben - Anfrage erfolgreich abgeschlossen
     chooseOptionInFlight = false;
+    // v7.11.92: State nach jeder Szene speichern (Schutz vor iOS-Tab-Entladung).
+    // Bei Spielende den Save loeschen, damit der naechste Besuch frisch startet.
+    if (isGameOver || caseProgress.istGelöst || clientFired) {
+      clearSavedGame();
+    } else {
+      saveGameState();
+    }
   } catch (e) {
     // v7.9.40: 404 model_not_found - Modell ist deprecated/umbenannt/nicht
     // zugaenglich. Modell fuer 24h blockieren (Page-Reload setzt localStorage
@@ -21608,8 +21667,173 @@ function hideWait() {
   if (waitInterval) { clearInterval(waitInterval); waitInterval = null; }
 }
 
+// === v7.11.92: AUTO-SAVE / RESTORE (gegen iOS-Tab-Entladung) ===
+// Problem: iOS Safari entlaedt Hintergrund-Tabs aggressiv aus dem RAM. Kommt der
+// Spieler nach laengerer Hintergrund-Zeit zurueck, laedt Safari die Seite KOMPLETT
+// neu - und der gesamte Spielstand (nur in JS-Variablen) ist weg. Teurer
+// Token-Verlust, mitten im Run. Loesung: nach jeder Szene den kompletten State in
+// localStorage serialisieren. Beim Laden wird er zurueckgespielt + renderLog()
+// baut alle Szenen wieder auf -> der Screen sieht aus als waere nie etwas passiert.
+// Der KI-Kontext (recap) wird ohnehin bei jedem Call aus diesen Variablen NEU
+// gebaut, daher reicht es, die Quell-Variablen zu speichern (kein Message-Array).
+const SCHATTEN_SAVE_KEY = 'schatten-savegame-v1';
+const SCHATTEN_SAVE_VERSION = 2;  // bei inkompatiblen State-Aenderungen erhoehen
+
+function saveGameState() {
+  try {
+    if (!Array.isArray(logEntries) || logEntries.length === 0) return;
+    const snap = {
+      _v: SCHATTEN_SAVE_VERSION,
+      _ts: Date.now(),
+      _appVersion: (window.SCHATTEN_VERSION || ''),
+      logEntries: logEntries,
+      storySummaries: storySummaries,
+      recentTexts: recentTexts,
+      caseProgress: caseProgress,
+      caseSetup: caseSetup,
+      storyFacts: storyFacts,
+      currentScene: currentScene,
+      lastFullScene: lastFullScene,
+      gameDay: gameDay,
+      gameTimeIdx: gameTimeIdx,
+      sceneCounter: sceneCounter,
+      timeAdvanceTokens: timeAdvanceTokens,
+      verfassung: verfassung,
+      karlEnergie: karlEnergie,
+      karlHunger: (typeof karlHunger === 'number' ? karlHunger : 0),
+      stasiTension: stasiTension,
+      stasiCapForCase: stasiCapForCase,
+      karlInStasiCustody: karlInStasiCustody,
+      folterSceneCount: folterSceneCount,
+      custodySwitchCount: custodySwitchCount,
+      autoReleaseUsedCount: (typeof autoReleaseUsedCount === 'number' ? autoReleaseUsedCount : 0),
+      hardForcedArrestUsed: hardForcedArrestUsed,
+      lastHealedSceneCounter: lastHealedSceneCounter,
+      pendingSleepChoice: pendingSleepChoice,
+      pendingHeimfahrt: pendingHeimfahrt,
+      lastLocation: lastLocation,
+      lastMainLocation: lastMainLocation,
+      visitedLocations: visitedLocations,
+      scenesAtSameLocation: scenesAtSameLocation,
+      scenesInCurrentTime: scenesInCurrentTime,
+      physicalStreakInTime: physicalStreakInTime,
+      pendingDayTransition: pendingDayTransition,
+      lastSceneTriggeredDayAdvance: lastSceneTriggeredDayAdvance,
+      ortPflichtIgnoredCount: (typeof ortPflichtIgnoredCount === 'number' ? ortPflichtIgnoredCount : 0),
+      fahndungUsed: (typeof fahndungUsed === 'boolean' ? fahndungUsed : false),
+      toastHistory: toastHistory,
+    };
+    localStorage.setItem(SCHATTEN_SAVE_KEY, JSON.stringify(snap));
+  } catch (e) {
+    console.warn('[Schatten] saveGameState fehlgeschlagen:', e && e.message);
+  }
+}
+
+function hasSavedGame() {
+  try {
+    const raw = localStorage.getItem(SCHATTEN_SAVE_KEY);
+    if (!raw) return false;
+    const snap = JSON.parse(raw);
+    return !!(snap && snap._v === SCHATTEN_SAVE_VERSION && Array.isArray(snap.logEntries) && snap.logEntries.length > 0);
+  } catch (e) {
+    return false;
+  }
+}
+
+function clearSavedGame() {
+  try { localStorage.removeItem(SCHATTEN_SAVE_KEY); } catch (e) {}
+}
+
+function restoreGameState() {
+  try {
+    const raw = localStorage.getItem(SCHATTEN_SAVE_KEY);
+    if (!raw) return false;
+    const snap = JSON.parse(raw);
+    if (!snap || snap._v !== SCHATTEN_SAVE_VERSION) return false;
+    if (!Array.isArray(snap.logEntries) || snap.logEntries.length === 0) return false;
+
+    logEntries = snap.logEntries || [];
+    storySummaries = snap.storySummaries || [];
+    recentTexts = snap.recentTexts || [];
+    caseProgress = snap.caseProgress || caseProgress;
+    caseSetup = snap.caseSetup || null;
+    storyFacts = snap.storyFacts || {};
+    currentScene = snap.currentScene || null;
+    lastFullScene = snap.lastFullScene || null;
+    gameDay = snap.gameDay || 1;
+    gameTimeIdx = (typeof snap.gameTimeIdx === 'number') ? snap.gameTimeIdx : 4;
+    sceneCounter = snap.sceneCounter || 0;
+    timeAdvanceTokens = snap.timeAdvanceTokens || 0;
+    verfassung = (typeof snap.verfassung === 'number') ? snap.verfassung : 5;
+    karlEnergie = (typeof snap.karlEnergie === 'number') ? snap.karlEnergie : 100;
+    if (typeof karlHunger !== 'undefined') karlHunger = snap.karlHunger || 0;
+    stasiTension = snap.stasiTension || 0;
+    stasiCapForCase = (typeof snap.stasiCapForCase === 'number') ? snap.stasiCapForCase : 5;
+    karlInStasiCustody = !!snap.karlInStasiCustody;
+    folterSceneCount = snap.folterSceneCount || 0;
+    custodySwitchCount = snap.custodySwitchCount || 0;
+    if (typeof autoReleaseUsedCount !== 'undefined') autoReleaseUsedCount = snap.autoReleaseUsedCount || 0;
+    hardForcedArrestUsed = !!snap.hardForcedArrestUsed;
+    lastHealedSceneCounter = (typeof snap.lastHealedSceneCounter === 'number') ? snap.lastHealedSceneCounter : -999;
+    pendingSleepChoice = !!snap.pendingSleepChoice;
+    pendingHeimfahrt = !!snap.pendingHeimfahrt;
+    lastLocation = snap.lastLocation || '';
+    lastMainLocation = snap.lastMainLocation || '';
+    visitedLocations = snap.visitedLocations || [];
+    scenesAtSameLocation = snap.scenesAtSameLocation || 0;
+    scenesInCurrentTime = snap.scenesInCurrentTime || 0;
+    physicalStreakInTime = snap.physicalStreakInTime || 0;
+    pendingDayTransition = !!snap.pendingDayTransition;
+    lastSceneTriggeredDayAdvance = !!snap.lastSceneTriggeredDayAdvance;
+    if (typeof ortPflichtIgnoredCount !== 'undefined') ortPflichtIgnoredCount = snap.ortPflichtIgnoredCount || 0;
+    if (typeof fahndungUsed !== 'undefined') fahndungUsed = !!snap.fahndungUsed;
+    if (snap.toastHistory) toastHistory = snap.toastHistory;
+
+    hideAll();
+    const headerEl = document.getElementById('header');
+    const statusEl = document.getElementById('status-bar');
+    const footerEl = document.getElementById('footer');
+    if (headerEl) headerEl.classList.remove('hidden');
+    if (statusEl) statusEl.classList.remove('hidden');
+    if (footerEl) footerEl.classList.remove('hidden');
+    // Header + Status-Bar (Tag, Verfassung, Fall-Balken) aus der aktuellen Szene.
+    if (currentScene && typeof showHeader === 'function') { try { showHeader(currentScene); } catch (e) {} }
+    if (typeof renderLog === 'function') renderLog(true);
+    // Optionen der letzten Szene wieder anzeigen, damit der Spieler weiterspielen
+    // kann. v7.11.93: robuster - options-Container sichtbar machen + Fallback.
+    let optionsRendered = false;
+    if (currentScene && typeof renderOptions === 'function') {
+      try {
+        renderOptions(currentScene);
+        optionsRendered = true;
+      } catch (e) {
+        console.warn('[Schatten] renderOptions im Restore fehlgeschlagen:', e && e.message);
+      }
+    }
+    // Fallback: Wenn keine Optionen gerendert werden konnten (z.B. currentScene
+    // unvollstaendig), bietet ein Button an, die letzte Szene neu zu generieren,
+    // statt dass der Spieler ohne Handlungsmoeglichkeit feststeckt.
+    if (!optionsRendered) {
+      const optList = document.getElementById('options-list');
+      const optBox = document.getElementById('options');
+      if (optList && optBox) {
+        optBox.classList.remove('hidden');
+        optList.innerHTML = '<div style="padding:14px;color:#caa;font-size:13px;line-height:1.5;">'
+          + 'Spielstand geladen, aber die letzten Optionen fehlen. '
+          + '<button class="btn-primary" style="margin-top:10px;" onclick="retryLastSceneFromRestore()">Letzte Szene fortsetzen</button></div>';
+      }
+    }
+    console.log('[Schatten] Spielstand wiederhergestellt (Szene ' + sceneCounter + ', Tag ' + gameDay + ')');
+    return true;
+  } catch (e) {
+    console.warn('[Schatten] restoreGameState fehlgeschlagen:', e && e.message);
+    return false;
+  }
+}
+
 function resetGame() {
   if (!confirm('Spiel wirklich neu starten? Aktueller Fortschritt geht verloren.')) return;
+  clearSavedGame();  // v7.11.92: Save loeschen bei bewusstem Neustart
   // Falls Bot laeuft: stoppen
   if (botActive) {
     botShouldStop = true;
@@ -22997,7 +23221,47 @@ function resetModelBlocks(event) {
 // applyAdminVisibility per .then().
 processAdminUrlParam().then(() => applyAdminVisibility());
 applyAdminVisibility(); // sofort initial (falls schon localStorage gesetzt)
-showStart();
+// v7.11.92: Beim Laden zuerst pruefen, ob ein Spielstand existiert (iOS hat den
+// Tab evtl. aus dem RAM entladen und neu geladen). Wenn ja: nahtlos wiederher-
+// stellen, sodass der Screen aussieht wie vor dem Hintergrund-Wechsel. Sonst:
+// normaler Start-Screen. Der Restore wird in try/catch gekapselt - schlaegt er
+// fehl, faellt das Spiel sauber auf den Start-Screen zurueck.
+(function bootRestoreOrStart() {
+  let restored = false;
+  try {
+    if (hasSavedGame()) {
+      restored = restoreGameState();
+    }
+  } catch (e) {
+    console.warn('[Schatten] Boot-Restore fehlgeschlagen:', e && e.message);
+    restored = false;
+  }
+  if (restored) {
+    // Dezenter Hinweis dass wiederhergestellt wurde (verschwindet von selbst).
+    setTimeout(() => {
+      try {
+        if (typeof showProgressToast === 'function') {
+          showProgressToast('Spielstand wiederhergestellt', 'Weiter geht\'s, wo du aufgehoert hast.', 'info', 'restore-' + Date.now());
+        }
+      } catch (e) {}
+    }, 600);
+  } else {
+    showStart();
+  }
+})();
+
+// v7.11.92: Zusaetzliche Save-Trigger fuer iOS. visibilitychange feuert wenn der
+// Tab in den Hintergrund geht (App-Switch, Home-Button) - der zuverlaessigste
+// Moment, kurz bevor iOS den Tab evtl. aus dem RAM wirft. pagehide ist die letzte
+// Chance vor dem Entladen. Beide speichern den aktuellen Stand.
+window.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    try { saveGameState(); } catch (e) {}
+  }
+});
+window.addEventListener('pagehide', () => {
+  try { saveGameState(); } catch (e) {}
+});
 // v7.9.6: Boot-Indicator ausblenden sobald der Start-Screen sichtbar ist.
 // Anlass: User-Feedback - lange schwarze Phase beim Page-Load, viele Spieler
 // springen ab bevor das Spiel zeigt was es will. Der Boot-Indicator zeigt
