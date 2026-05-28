@@ -2384,17 +2384,7 @@
   <button onclick="showVoicePicker(event)">🔊 Sound-Einstellungen</button>
   <button onclick="resetGame()">↻ Spiel neu starten</button>
 
-  <!-- v7.11.37: Gemini-Exklusiv-Modus. Wenn aktiv, werden Mistral/Groq aus der
-       Modell-Chain gefiltert. Nur Gemini-Modelle laufen. Empfohlen wenn Spieler
-       Gemini-API-Billing aktiviert hat (~$2-3/Monat ohne Daily-Limits). -->
   <div class="settings-divider"></div>
-  <div class="settings-toggle-row" onclick="toggleGeminiOnly(event)">
-    <span class="settings-toggle-label">⚡ Gemini Exklusiv</span>
-    <span class="settings-toggle-switch" id="gemini-only-switch">
-      <span class="settings-toggle-knob"></span>
-    </span>
-  </div>
-  <div class="settings-info settings-hint" id="gemini-only-hint">Nutze alle Modelle (Standard)</div>
 
   <!-- v6.60: Audio-Loop fuer Atmosphaere-Musik (instrumentaler Detektiv-Loop) -->
   <button id="music-toggle-btn" onclick="toggleMusic(event)">🎵 Musik einschalten</button>
@@ -2426,6 +2416,14 @@
 
     <div class="settings-divider"></div>
     <div class="settings-info">KI-Modelle</div>
+    <div class="autoplay-row">
+      <label class="autoplay-label">Modell:</label>
+      <select id="debug-model-select" class="autoplay-input" onchange="setDebugPreferredModel(this.value)">
+        <option value="">Standard (3.1 Flash-Lite)</option>
+        <option value="gemini-3-flash-preview">Test: Gemini 3 Flash Preview</option>
+      </select>
+    </div>
+    <div class="settings-info settings-hint" id="debug-model-hint" style="margin-top:4px;">Nur fuer Tests. Failover-Chain bleibt aktiv.</div>
     <button onclick="showModelStatus(event)">🔍 Modell-Status pruefen</button>
     <button onclick="resetModelBlocks(event)">🗑 Alle Modell-Sperren loeschen</button>
 
@@ -2636,7 +2634,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.7</div>
+    <div class="start-version">Schatten v7.12.12</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2800,7 +2798,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.7</span>
+    <span>Schatten v7.12.12</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5196,7 +5194,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.7';
+window.SCHATTEN_VERSION = 'v7.12.12';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5787,57 +5785,61 @@ function toggleSettings(event) {
     // v7.9.10: Musik-Button-Text mit echtem Audio-State synchronisieren
     // (Browser kann Musik im Hintergrund pausiert haben)
     if (typeof syncMusicButtonText === 'function') syncMusicButtonText();
-    // v7.11.37: Gemini-Only-Switch-Zustand syncen
-    if (typeof syncGeminiOnlySwitch === 'function') syncGeminiOnlySwitch();
+    // v7.12.9: Debug-Modell-Auswahl im Select-Feld syncen (nur Admin sichtbar)
+    if (typeof syncDebugModelSelect === 'function') syncDebugModelSelect();
   }
   menu.classList.toggle('hidden');
 }
 
-// v7.11.37: Gemini-Exklusiv-Modus-Toggle. State in localStorage + window-Var.
-// Wenn aktiv, filtert getActiveModelIndex/advanceModel alle Nicht-Gemini raus.
-function toggleGeminiOnly(event) {
-  if (event) event.stopPropagation();
-  window.geminiOnlyMode = !window.geminiOnlyMode;
+// v7.12.9: Gemini-Exklusiv-Schalter ENTFERNT. geminiOnlyMode ist jetzt fest AN -
+// Mistral/Groq bleiben nur als Notfall-Failover (wenn ALLE Gemini-Modelle
+// blockiert sind, siehe getActiveModelIndex-Fallback). Der frueher manuelle
+// Toggle ist weg; window.geminiOnlyMode bleibt als interne Konstante bestehen,
+// damit getActiveModelIndex/advanceModel weiterhin Nicht-Gemini rausfiltern.
+window.geminiOnlyMode = true;
+
+// v7.12.9: DEBUG-MODELL-WAHL. Nur im Admin/Debug-Modus sichtbar. Erlaubt
+// testweise, statt des Standard-Modells (3.1 Flash-Lite) ein anderes Gemini-
+// Modell an die Spitze der Chain zu setzen (z.B. Gemini 3 Flash Preview), um
+// die Story-Qualitaet zu vergleichen. Wird in localStorage gespeichert. Die
+// Failover-Chain bleibt aktiv: wenn das gewaehlte Modell blockiert/down ist,
+// rutscht es normal weiter. Leerer String = Standard-Verhalten (Chain von oben).
+window.debugPreferredModel = '';
+(function loadDebugPreferredModel() {
   try {
-    localStorage.setItem('schatten-gemini-only', window.geminiOnlyMode ? '1' : '0');
+    const stored = localStorage.getItem('schatten-debug-model');
+    if (stored && typeof stored === 'string') window.debugPreferredModel = stored;
   } catch (e) { /* private mode */ }
-  syncGeminiOnlySwitch();
-  if (typeof updateFooterModel === 'function') updateFooterModel();
-  if (typeof updateProviderInfo === 'function') updateProviderInfo();
-  console.log('[Schatten v7.12.7] Gemini-Only-Modus:', window.geminiOnlyMode ? 'AN' : 'AUS');
-}
-
-function syncGeminiOnlySwitch() {
-  const sw = document.getElementById('gemini-only-switch');
-  const hint = document.getElementById('gemini-only-hint');
-  if (!sw) return;
-  if (window.geminiOnlyMode) {
-    sw.classList.add('active');
-    if (hint) hint.textContent = 'Nur Gemini (Billing aktiv, kein Mistral/Groq)';
-  } else {
-    sw.classList.remove('active');
-    if (hint) hint.textContent = 'Nutze alle Modelle (Standard, Free-Tier)';
-  }
-}
-
-// Beim Laden: gespeicherten Zustand aus localStorage laden
-// v7.11.64: Default ist jetzt AN. Wenn der User noch nie umgeschaltet hat
-// (kein localStorage-Eintrag), starten wir mit Gemini-Only. User kann es
-// im Settings-Menue ausschalten falls gewuenscht.
-(function loadGeminiOnlyMode() {
-  try {
-    const stored = localStorage.getItem('schatten-gemini-only');
-    if (stored === null) {
-      // Noch nie umgeschaltet -> Default AN
-      window.geminiOnlyMode = true;
-      localStorage.setItem('schatten-gemini-only', '1');
-    } else {
-      window.geminiOnlyMode = (stored === '1');
-    }
-  } catch (e) {
-    window.geminiOnlyMode = true;
-  }
 })();
+
+function setDebugPreferredModel(model) {
+  window.debugPreferredModel = model || '';
+  try {
+    if (window.debugPreferredModel) {
+      localStorage.setItem('schatten-debug-model', window.debugPreferredModel);
+    } else {
+      localStorage.removeItem('schatten-debug-model');
+    }
+  } catch (e) { /* private mode */ }
+  const hint = document.getElementById('debug-model-hint');
+  if (hint) {
+    hint.textContent = window.debugPreferredModel
+      ? 'AKTIV: ' + window.debugPreferredModel + ' (Test). Failover-Chain bleibt aktiv.'
+      : 'Standard (3.1 Flash-Lite). Failover-Chain bleibt aktiv.';
+  }
+  if (typeof updateFooterModel === 'function') updateFooterModel();
+  console.log('[Schatten] Debug-Modell:', window.debugPreferredModel || 'Standard (3.1 Flash-Lite)');
+}
+
+// Beim Laden: Select-Feld auf gespeicherten Wert setzen (falls Admin-Section da)
+function syncDebugModelSelect() {
+  const sel = document.getElementById('debug-model-select');
+  if (sel) sel.value = window.debugPreferredModel || '';
+  const hint = document.getElementById('debug-model-hint');
+  if (hint && window.debugPreferredModel) {
+    hint.textContent = 'AKTIV: ' + window.debugPreferredModel + ' (Test). Failover-Chain bleibt aktiv.';
+  }
+}
 function closeSettings() {
   document.getElementById('settings-menu').classList.add('hidden');
 }
@@ -10259,28 +10261,16 @@ function classifyOption(opt, resolveContext) {
   // sind, nicht nur Heilorte. Fix: Wenn die Option ein Such-/Finde-/Treff-
   // Verb auf eine PERSON enthaelt, ist es KEIN Heilen, auch wenn ein
   // medizinischer Ort genannt wird. Echtes Heilen braucht Behandlungs-Intent.
-  else if (
-    (
-      /\b(zu(r|m)?\s+(doc|praxis|charit|krankenhaus|sanitaeter|notaufnahme|apothek|arzt)|behandel|verarzt|wundversorg|(zu|bei|ruf|waehle?|weg\s+zu)\s+doc\s+wagner|bei\s+(doc|dem\s+arzt|sanitaeter|apotheker)\s+\w+|zuflucht\s+bei\s+(doc|dem\s+arzt|sanitaeter|apotheker)|(zu|bei)\s+dem\s+arzt)\b/.test(t)
-      // v7.11.78: Heil-Intent-Phrasen ohne striktes End-\b (sonst scheitern
-      // Flexionsformen wie "versorgen", "behandeln", "verarzten").
-      || /\b(wunde|prellung|verletz)\w*\s+([\w\s]{0,30}\s+)?(versorg|behandel|verarzt)/.test(t)
-      || /\b(versorg|behandel|verarzt)\w*\s+(zu\s+)?lass/.test(t)
-      || /\bsuch\w*\s+schutz\s+bei\s+doc/.test(t)
-      || /\bdoc\s+wagner\s+(fuer|um)/.test(t)
-    )
-    // v7.11.77/78: Ausschluss - Personensuche/Treffen/Befragung an med. Ort ist
-    // ERKUNDEN/BEOBACHTEN, nicht HEILEN. ABER: echter Heil-Intent (Wunde,
-    // Behandlung, Zuflucht, Schutz, Versorgung, Doc Wagner) schlaegt den
-    // Ausschluss.
-    && !(
-      /\b(such|finde|triff|treffen|sprech|befrag|verhoer|wer\s|zeuge|verdaecht)/.test(t)
-      && !/\b(zuflucht|schutz|wunde|verletz|prellung|blut|behandel|verarzt|versorg|wagner)/.test(t)
-    )
-    && !/\bum\s+\w+\s+zu\s+(finden|treffen|sprechen|befragen|stellen)/.test(t)
-  ) {
-    heuristicCat = 'HEILEN';
-  }
+  // v7.12.8: HEILEN-HEURISTIK KOMPLETT ENTFERNT. User-Prinzip: A/B/C/D-Optionen
+  // heilen NIE - Heilung passiert AUSSCHLIESSLICH ueber die zwei System-Buttons
+  // (Notheilen +1, "Von Doc Wagner behandeln lassen" +2). Grund: Die alte
+  // Heuristik machte aus "fahr zu Doc Wagner" eine HEILEN-Kategorie -> sofortige
+  // Heilung waehrend der Fahrt (Geisterhand-Heilung, Run 1514). Auch "behandeln
+  // lassen" im Text einer Reise-Option soll nicht mehr heilen - der "HEILEN"-Tag
+  // auf einer A/B/C/D-Option ist nur ein HINWEIS "dort wartet Heilung". Geheilt
+  // wird erst durch bewussten Klick auf den Wagner-Button VOR ORT (bei niedriger
+  // Spannung). Reise-zu-Wagner wird jetzt ueber die Position als ERKUNDEN
+  // (Bewegung) klassifiziert - heilt nicht, advanced nur die Szene.
   // v7.11.52: DEFENSIV-Heuristik wieder eingefuehrt fuer eindeutige
   // Flucht/Versteck/Verharren-Verben. User-Run Vogt 2109: Option A
   // "Humpel tiefer in die Ruinen, um dich vollstaendig zu verstecken"
@@ -10321,6 +10311,22 @@ function classifyOption(opt, resolveContext) {
       finalCat = positionMap[idUpper];
       source = 'position-' + idUpper;
     }
+  }
+
+  // v7.12.8: HEILUNGS-RIEGEL. User-Prinzip: A/B/C/D-Optionen heilen NIE - Heilung
+  // passiert NUR ueber die System-Buttons (Notheilen/Von-Doc-Wagner), die
+  // _isSystemButton:true tragen. Falls eine normale Option (egal aus welcher
+  // Quelle: KI-Suffix, JSON-Feld, Heuristik) als HEILEN/NOTHEILEN klassifiziert
+  // wurde, stufen wir sie auf ERKUNDEN (Reise/Bewegung) zurueck. So heilt
+  // "fahr zu Doc Wagner" oder "lass dich behandeln" als A/B/C/D-Option NICHT
+  // mehr - der HEILEN-Tag darauf waere nur ein irrefuehrender "Hinweis". Der
+  // Spieler muss bei Wagner den dedizierten Button druecken.
+  if (!opt._isSystemButton && (finalCat === 'HEILEN' || finalCat === 'NOTHEILEN')) {
+    if (typeof diag === 'function') {
+      diag('detect', 'Option ' + (opt.id || '?') + ': HEILEN/NOTHEILEN auf ERKUNDEN zurueckgestuft (v7.12.8: A/B/C/D heilen nie, nur System-Buttons) - war via ' + source);
+    }
+    finalCat = 'ERKUNDEN';
+    source = source + '-healblock';
   }
 
   // === DIAGNOSE-LOGGING: alle Quellen aufzeichnen ===
@@ -10842,7 +10848,7 @@ function renderOptions(scene) {
     && !karlInStasiCustody
     && (gameTimeIdx === 4 || gameTimeIdx === 5));  // nur ABEND oder NACHT
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.7] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.12] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -11136,8 +11142,13 @@ function renderOptions(scene) {
     && !/\b(empfaengt|untersucht|begruesst|oeffnet die tuer|bittet (dich )?herein|in der praxis|sitzt|liegst|behandelt|wartezimmer)\b/.test(wagnerSceneLower);
   // Button nur wenn Karl verletzt (Vf<5), bei Wagner praesent, nicht bloss anreisend,
   // nicht in Custody, und heute noch nicht bei Wagner geheilt (1x/Tag).
+  // v7.12.8: SPANNUNGS-SPERRE. User-Befund (Run 1514, Screenshot): der Button
+  // erschien waehrend einer Schiesserei in Wagners Praxis (Sp 5) - man kann sich
+  // nicht in Ruhe behandeln lassen, waehrend Kugeln fliegen. Heilen bei Wagner
+  // nur wenn die Lage ruhig ist (Sp<=2), analog zur Schlaf-Sperre.
   const showWagnerHealButton = wagnerPresent && !wagnerOnlyTravel
     && currentVerfassung < 5 && !karlInStasiCustody
+    && currentSpannung <= 2
     && (typeof lastDocHealingDay !== 'number' || lastDocHealingDay < gameDay);
 
   // v7.11.13: NOTFLUCHT-Button - nur in Stasi-Custody. 30% Erfolgschance.
@@ -11754,40 +11765,30 @@ const MODEL_CHAIN = [
   // Mit Implicit Caching (~76% Hits) ~$1/Run statt $0.40. 2.5 bleibt als Backup
   // wenn 3.1 limitiert ist (Per-Minute-Bursts).
   { provider: 'gemini', model: 'gemini-3.1-flash-lite',  label: 'Gemini 3.1 Flash-Lite' },
-  { provider: 'gemini', model: 'gemini-2.5-flash-lite',  label: 'Gemini 2.5 Flash-Lite' },
+  // v7.12.10: 2.5 Flash-Lite ENTFERNT. War als Failover-Position 2 drin, aber der
+  // Goerke-Run (v7.11.37) zeigte genau die Schwaechen, die wir bekaempfen: 84%
+  // Satz-Ueberlapp zwischen Szenen + 26/35 Szenen mit 0-Kategorien-Drift (gegen
+  // 0% bei 3.1). Als Backup bei 3.1-Limit will der User Qualitaet, nicht das
+  // schwaechste Modell. Erster Failover ist jetzt 3 Flash Preview (staerker).
   // 2. Tier: Gemini 3 Flash Preview (~18s, hohe Qualitaet, klare Inline-Kategorien)
   { provider: 'gemini', model: 'gemini-3-flash-preview', label: 'Gemini 3 Flash Preview' },
-  // 3. Tier: Gemini 2.5 Flash (variable Performance - manchmal Phrasen-Repeat
-  // in Optionen, wird durch Output-Cap in v7.11.7 abgefangen)
-  { provider: 'gemini', model: 'gemini-2.5-flash',       label: 'Gemini 2.5 Flash' },
-  // 4. Tier: Gemini Pro (langsamer, 50 RPD limit - nur wenn alles andere aus)
-  { provider: 'gemini', model: 'gemini-2.5-pro',         label: 'Gemini 2.5 Pro' },
-  // 5. Tier: Mistrals als Backup (~17-22s avg, aber zuverlaessig).
-  // v7.11.7: User-Feedback bestaetigt aelteres Lektorat - Mistral Large hat
-  // konsistent gute atmosphaerische Szenen geliefert, bleibt verlaesslich.
+  // v7.12.12: GROSSES AUFRAEUMEN auf 4 Modelle (User-Entscheidung). Entfernt:
+  // - Gemini 2.5 Flash: laut Google/Erfahrung der 3er-Architektur unterlegen,
+  //   teurer als 3.1-Lite aber schlechter - sinnlos in der Chain.
+  // - Gemini 2.5 Pro: schon v7.12.11 raus (teuer/langsam).
+  // - Mistral Small 3.1: Qualitaet unklar/schwach, raus (Large gut, Medium ok).
+  // - KOMPLETTER Groq-Block (Llama 3.3, Qwen3, GPT-OSS 120B/20B): deutscher Stil
+  //   konsistent schwach (leere Szenen, halluzinierte User-Aktionen, TPM-eng).
+  //   Lieber dem User eine ehrliche Fehlermeldung zeigen ("Alle KI-Modelle nicht
+  //   erreichbar, neu laden") als eine kaputte Groq-Szene.
+  // Aktive Chain jetzt: 3.1 Flash-Lite -> 3 Flash Preview -> Mistral Large ->
+  // Mistral Medium. Wenn alle 4 durch sind, greift showError() (sauberer Stop).
+  // 3. Tier: Mistral als Notfall-Failover (~17-22s avg, zuverlaessig).
+  // v7.11.7: Mistral Large liefert konsistent gute atmosphaerische Szenen.
   { provider: 'mistral', model: 'mistral-large-latest',  label: 'Mistral Large 3' },
-  { provider: 'mistral', model: 'mistral-small-latest',  label: 'Mistral Small 3.1' },
-  // v7.9.42: Mistral Medium 3 ans Ende (vor Groq) - Story-Halluzinationen
-  // bei 98KB-Recap nicht reparabel ohne Modell-spezifische Prompt-Aenderungen.
-  // Bleibt drin als Notnagel weil Wagner-Run v7.9.53 zeigte: trotz Sz1->Sz2
-  // Reset liefert Mistral Medium funktional verwertbare Szenen.
+  // Mistral Medium 3: Story-Halluzinationen bei langem Recap moeglich, aber
+  // funktional verwertbar (Wagner-Run v7.9.53) - letzter Notnagel vor Fehler.
   { provider: 'mistral', model: 'mistral-medium-latest', label: 'Mistral Medium 3' },
-  // 6. Tier: Groq-Modelle (TPM-eng, deutscher Stil meist schlechter als Gemini/Mistral)
-  { provider: 'groq',   model: 'llama-3.3-70b-versatile',                  label: 'Llama 3.3 70B' },
-  // v7.9.39: Kimi K2 (moonshotai/kimi-k2-instruct-0905) am 23.03.2026 von Groq
-  // deprecated zugunsten von openai/gpt-oss-120b. Ist seit ~26.05.2026 tot (404).
-  // GPT-OSS 120B steht bereits weiter unten in der Chain, kein Ersatz noetig.
-  { provider: 'groq',   model: 'qwen/qwen3-32b',                           label: 'Qwen3 32B' },
-  { provider: 'groq',   model: 'openai/gpt-oss-120b',                      label: 'GPT-OSS 120B' },
-  // v7.9.48: Llama 4 Scout entfernt. Wagner+Stein-Run v7.9.47 zeigten:
-  // wenn dieses Modell rangezogen wird, liefert es entweder leere Szenen
-  // (nur Ort-Name als Text, kein Erzaehltext) oder halluziniert die User-
-  // Aktion komplett um. Stein-Run Sz 9-10: Llama Scout schrieb nur
-  // "hinter den Ruinen am Hackeschen Markt" als Szenentext. Brandt-Run
-  // v7.9.47 Sz 9: Bot waehlte "Fahr zu Doc Wagner" - Llama Scout antwortete
-  // mit "Du setzt die Verfolgung von Heinz Vogler fort". User-Wahl ignoriert.
-  // { provider: 'groq', model: 'meta-llama/llama-4-scout-17b-16e-instruct', label: 'Llama 4 Scout' },
-  { provider: 'groq',   model: 'openai/gpt-oss-20b',                       label: 'GPT-OSS 20B' },
 ];
 
 // Chain-Version: hochzaehlen wenn MODEL_CHAIN umsortiert wird, damit alte
@@ -11923,6 +11924,18 @@ function getActiveModelIndex() {
   // Modell in der Chain (von oben), das auch nicht in der Session-Skip-Liste ist.
   // v7.11.37: geminiOnlyMode filtert Mistral/Groq raus wenn aktiv.
   const onlyGemini = !!window.geminiOnlyMode;
+  // v7.12.9: DEBUG-MODELL-WAHL. Wenn im Debug-Modus ein Test-Modell gewaehlt
+  // wurde und es verfuegbar ist (nicht blockiert/geskippt), bevorzuge es vor
+  // dem Standard. Failover bleibt: ist es blockiert, faellt der normale
+  // Chain-Durchlauf unten zurueck auf das naechste verfuegbare Modell.
+  if (window.debugPreferredModel) {
+    for (let i = 0; i < MODEL_CHAIN.length; i++) {
+      if (MODEL_CHAIN[i].model !== window.debugPreferredModel) continue;
+      if (sessionSkippedModels.has(MODEL_CHAIN[i].model)) break;
+      if (isModelBlocked(MODEL_CHAIN[i].model)) break;
+      return i;
+    }
+  }
   for (let i = 0; i < MODEL_CHAIN.length; i++) {
     const m = MODEL_CHAIN[i];
     if (onlyGemini && m.provider !== 'gemini') continue;
@@ -17348,7 +17361,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.7] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.12] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -18357,7 +18370,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           const tensionHighEnoughForArrest = (typeof stasiTension === 'number' && stasiTension >= 4);
           if (!tensionHighEnoughForArrest) {
             // STILLER RELEASE: Karl ist faktisch frei, das System zieht nach.
-            console.warn('[Schatten v7.12.7] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
+            console.warn('[Schatten v7.12.12] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet, kein Hard-Force');
             karlInStasiCustody = false;
             folterSceneCount = 0;
@@ -18372,7 +18385,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.7] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.12] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -20825,7 +20838,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.7] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.12] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
