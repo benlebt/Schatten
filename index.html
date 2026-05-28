@@ -2651,7 +2651,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.17</div>
+    <div class="start-version">Schatten v7.12.18</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2815,7 +2815,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.17</span>
+    <span>Schatten v7.12.18</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -2856,7 +2856,7 @@ Berlin ist seit Juli 1945 in vier Sektoren geteilt. 1953 noch keine Mauer (kommt
 
 SOWJETISCHER SEKTOR / OST-BERLIN (DDR seit 1949):
 - Bezirke: Mitte, Prenzlauer Berg, Friedrichshain, Lichtenberg, Treptow, Köpenick, Pankow, Weißensee
-- Wichtige Orte: Alexanderplatz, Hackescher Markt (Karls Base!), Stalinallee (heute Karl-Marx-Allee), Friedrichstraße, Brandenburger Tor (Grenze). Friedhof Plötzensee liegt am Westhafen (technisch Charlottenburg-Nord, also BRITISCHER Sektor — Karl kann da hin, ist ein Grenzgebiet).
+- Wichtige Orte: Alexanderplatz, Hackescher Markt (Karls Base!), Stalinallee (heute Karl-Marx-Allee), Friedrichstraße, Brandenburger Tor (Grenze). Friedhof Plötzensee liegt am Westhafen (technisch Charlottenburg-Nord, also BRITISCHER Sektor, Karl kann da hin, ist ein Grenzgebiet).
 - Atmosphäre: Trümmer, Volkspolizei (VP), Reichsbahn, sowjetische Soldaten, Stasi, Lebensmittelmarken noch verbreitet
 - Volkspolizei (VP) statt Schutzpolizei. Volkseigene Betriebe (VEB). FDGB.
 - ABKUERZUNGEN AUSSCHREIBEN: Wenn eine Abkuerzung das erste Mal vorkommt (VP, MfS, VEB, RIAS, KaDeWe), MUSS sie sofort ausgeschrieben sein, damit der Spieler sie versteht. Falsch: "VP, sagt er und zeigt seinen Ausweis". Richtig: "Volkspolizei, sagt er und zeigt seinen Ausweis." oder "VP - Volkspolizei - sagt er...". Spaetere Erwaehnungen duerfen die Abkuerzung verwenden, aber nie ohne vorherige Ausschreibung.
@@ -3204,9 +3204,9 @@ VORANSCHREITEN (gegen Trägheit):
 - Nach max. 3 Szenen am gleichen Ort MUSS etwas passieren: jemand tritt ein/geht, Anruf, Schuss in der Ferne, neuer Hinweis, Ortswechsel.
 - KEINE Frage-Ausweich-Schleifen. Nach max. 2 Ausweich-Antworten kommt entweder konkrete Info (Name/Ort/Datum) oder Unterbrechung von außen.
 - Klienten/Besucher: nach 2 Szenen treten sie ein, gehen, oder etwas anderes passiert. Nicht ewig in der Tür.
-- Hinweise (Akten, Fotos, Namen) tauchen nicht zufällig auf — sie folgen kausal aus der vorigen Szene.
+- Hinweise (Akten, Fotos, Namen) tauchen nicht zufällig auf, sie folgen kausal aus der vorigen Szene.
 
-FALL-FORTSCHRITT (sehr wichtig — Karl muss den Fall LÖSEN können):
+FALL-FORTSCHRITT (sehr wichtig, Karl muss den Fall LÖSEN können):
 Das Spiel hat ein klares Ziel: den Fall lösen. Das passiert in drei Stufen, die du im JSON markierst:
 
 Stufe 1 - INDIZIEN SAMMELN (Tag 1-3 typisch):
@@ -5211,7 +5211,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.17';
+window.SCHATTEN_VERSION = 'v7.12.18';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -7498,7 +7498,7 @@ function showCaseSolved() {
       outcomeSentence = numIndizien + ' Indiz' + (numIndizien === 1 ? '' : 'ien') + ' gesammelt, ' + verdName + ' überführt.';
     }
     // v7.11.0: Titel und Schluss-Saetze auch fuer earlyAbort anpassen
-    const titleText = earlyAbort ? '— FALL BEENDET —' : '— FALL ABGESCHLOSSEN —';
+    const titleText = earlyAbort ? '· FALL BEENDET ·' : '· FALL ABGESCHLOSSEN ·';
     const mainText = earlyAbort
       ? 'Karl Mauer hat den Fall beendet.'
       : 'Karl Mauer hat den Fall gelöst.';
@@ -8768,11 +8768,13 @@ function showStatusDetails() {
   const castEl = document.getElementById('popup-cast');
   if (cast.length > 0) {
     castEl.textContent = cast.map(c => {
-      if (typeof c === 'string') return '· ' + c;
-      let line = '· ' + c.name;
+      // v7.12.18: fixEigennamen auf Anzeige (Schaefer->Schaefer mit Umlaut etc.)
+      const fix = (typeof fixEigennamen === 'function') ? fixEigennamen : (x => x);
+      if (typeof c === 'string') return '· ' + fix(c);
+      let line = '· ' + fix(c.name);
       const meta = [];
-      if (c.rolle) meta.push(c.rolle);
-      if (c.beziehung) meta.push(c.beziehung);
+      if (c.rolle) meta.push(fix(c.rolle));
+      if (c.beziehung) meta.push(fix(c.beziehung));
       if (meta.length > 0) line += ' (' + meta.join(', ') + ')';
       return line;
     }).join('\n');
@@ -8904,7 +8906,8 @@ function showStatusDetails() {
         };
         // Escapen fuer HTML-Attribut
         const safeKey = detailKey.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-        const safeName = (c.name || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const fixName = (typeof fixEigennamen === 'function') ? fixEigennamen(c.name || '') : (c.name || '');
+        const safeName = fixName.replace(/</g, '&lt;').replace(/>/g, '&gt;');
         const safeLabel = tagLabel.replace(/</g, '&lt;').replace(/>/g, '&gt;');
         html += '· <span class="char-link" onclick="showCharacterDetail(\'' + safeKey + '\', event)">' + safeName + ' <span class="char-tag">(' + safeLabel + ')</span></span>\n';
       }
@@ -9003,7 +9006,10 @@ function showStatusDetails() {
     }
     // Hinweis: Energie/Hunger/Romantik/Stasi werden jetzt in eigenen Popup-Zeilen
     // angezeigt (oben unter Verfassung), nicht mehr im Fall-Block.
-    caseEl.textContent = lines.join('\n');
+    // v7.12.18: fixEigennamen auf den ganzen Fall-Block (Indizien, Verdaechtiger,
+    // Klient, Meilensteine) - korrigiert Setup-ae/oe/ue fuer die Anzeige.
+    const caseText = lines.join('\n');
+    caseEl.textContent = (typeof fixEigennamen === 'function') ? fixEigennamen(caseText) : caseText;
     caseRow.style.display = '';
   } else {
     caseRow.style.display = 'none';
@@ -9833,7 +9839,7 @@ function renderLog(shouldScroll) {
       if (entry.day && lastRenderedDay !== null && entry.day !== lastRenderedDay) {
         const sep = document.createElement('div');
         sep.className = 'day-separator';
-        sep.innerHTML = '<span>— TAG ' + entry.day + ' —</span>';
+        sep.innerHTML = '<span>· TAG ' + entry.day + ' ·</span>';
         logEl.appendChild(sep);
       }
       if (entry.day) lastRenderedDay = entry.day;
@@ -10861,7 +10867,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.17] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.18] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -11188,7 +11194,7 @@ function renderOptions(scene) {
   if (showSleepButton || romanceNpcInScene || showFluchtButton || showNotheilenButton || showNotfluchtButton || showWagnerHealButton) {
     const sep = document.createElement('div');
     sep.className = 'system-button-separator';
-    sep.textContent = '— besondere Aktionen —';
+    sep.textContent = '· besondere Aktionen ·';
     list.appendChild(sep);
   }
 
@@ -11664,11 +11670,11 @@ function renderOptions(scene) {
     resolveBtn.className = 'option-btn option-btn-system option-btn-resolve';
     // v7.11.44: Wenn ausgegraut, Sperr-Grund daneben zeigen.
     if (resolveCanClick) {
-      resolveBtn.innerHTML = '<span class="option-id">🎯</span><span class="option-text-wrap"><span>Fall lösen — Klient informieren</span><span class="option-marker option-marker-aufloesen">FALL LÖSEN</span></span>';
+      resolveBtn.innerHTML = '<span class="option-id">🎯</span><span class="option-text-wrap"><span>Fall lösen, Klient informieren</span><span class="option-marker option-marker-aufloesen">FALL LÖSEN</span></span>';
     } else {
       resolveBtn.classList.add('option-btn-resolve-locked');
       resolveBtn.disabled = true;
-      resolveBtn.innerHTML = '<span class="option-id">🎯</span><span class="option-text-wrap"><span>Fall lösen — Klient informieren</span><span class="option-marker option-marker-aufloesen-locked">GESPERRT · ' + (resolveLockReason || 'jetzt nicht möglich').toUpperCase() + '</span></span>';
+      resolveBtn.innerHTML = '<span class="option-id">🎯</span><span class="option-text-wrap"><span>Fall lösen, Klient informieren</span><span class="option-marker option-marker-aufloesen-locked">GESPERRT · ' + (resolveLockReason || 'jetzt nicht möglich').toUpperCase() + '</span></span>';
     }
     const resolveOpt = {
       id: 'AUFLOESEN',
@@ -11714,7 +11720,7 @@ function renderOptions(scene) {
     // Hardcore-Spieler koennen ihn ignorieren und unten normal weiterermitteln.
     const resolveSep = document.createElement('div');
     resolveSep.className = 'system-button-separator resolve-top-separator';
-    resolveSep.textContent = '— Ermittlung —';
+    resolveSep.textContent = '· Ermittlung ·';
     list.insertBefore(resolveSep, list.firstChild);
     list.insertBefore(resolveBtn, list.firstChild);
   }
@@ -12430,7 +12436,7 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
           if (!loc || !loc.name) continue;
           const parts = ['- ' + loc.name];
           if (loc.sektor) parts.push('[' + loc.sektor + ']');
-          if (loc.detail) parts.push('— ' + loc.detail);
+          if (loc.detail) parts.push(': ' + loc.detail);
           recap += parts.join(' ') + '\n';
         }
         recap += 'Wenn du einen anderen Ort brauchst, waehle bekannte Berlin-1953-Adressen (S-Bahnhoefe, etablierte Cafes, reale Strassen, Hinterhoefe, Mietskasernen, Volkspolizei-Reviere, MfS-Tarn-Adressen, Trummergrundstuecke). Erfinde KEINE neuen Strassennamen, Cafe-Namen oder Geschaeftsnamen die nicht historisch belegt sind.\n';
@@ -17096,7 +17102,7 @@ async function chooseOption(option) {
     if (npcName && typeof romanceReceptive[npcName] === 'undefined') {
       const offen = Math.random() < 0.5;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.17] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.18] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -17374,10 +17380,29 @@ async function chooseOption(option) {
   // nicht offen fuer Intimitaet. Die KI schreibt eine respektvolle, warme Abfuhr
   // (kein Drama, keine Demuetigung). Danach geht die Ermittlung normal weiter.
   const isRomanceRejected = (chosenKategorie === 'ROMANTIK' && option && option._romanceRejected);
+  // v7.12.18: KLIENT-ANWESENHEIT beim Aufloesen. User-Befund (Run 1724): Karl
+  // brachte Friedrich persoenlich zu Helga, stand in ihrer Wohnung - und beim
+  // "Fall loesen" rief er sie per MUENZTELEFON an, obwohl sie im selben Raum war.
+  // Absurd. Wenn die Klientin (oder ein anwesender Begleiter) im aktuellen Cast
+  // ist, MUSS der Bericht PERSOENLICH sein - kein Telefon, kein Telegramm.
+  let aufloesenForm = 'persönlich, per Telefon, per Telegramm oder per Bote, je nachdem was am aktuellen Ort plausibel ist';
+  if (isAufloesen) {
+    const klientLower = ((clientProfile && clientProfile.name) || '').toLowerCase().trim();
+    let klientAnwesend = false;
+    if (klientLower && Array.isArray(cast)) {
+      for (const c of cast) {
+        const cn = (typeof c === 'string' ? c : (c && c.name) || '').toLowerCase();
+        if (cn && (cn === klientLower || cn.includes(klientLower) || klientLower.includes(cn))) { klientAnwesend = true; break; }
+      }
+    }
+    if (klientAnwesend) {
+      aufloesenForm = 'PERSÖNLICH und direkt vor Ort - die Klientin ' + (clientProfile.name || '') + ' ist GERADE HIER bei Karl im selben Raum. Karl berichtet ihr von Angesicht zu Angesicht. KEIN Telefon, KEIN Münztelefon, KEIN Telegramm, KEIN Anruf - das wäre absurd, wenn sie direkt vor ihm steht';
+    }
+  }
   const userMsg = isRomanceRejected
     ? `Der Spieler wählt "Näher kommen" mit ${option._romanceNpc || 'der Person'}: "${option.text}". WICHTIG: ${option._romanceNpc || 'Die Person'} ist NICHT offen für eine romantische/intime Annäherung - reagiere mit einer sanften, respektvollen ABFUHR. Beschreibe in 2-3 Sätzen wie ${option._romanceNpc || 'sie'} Karls Annäherung freundlich aber bestimmt zurückweist (ein Schritt zurück, ein "Nicht jetzt, Karl", ein Blick der Grenzen setzt, vielleicht ein Hauch Wehmut oder schlicht kein Interesse). KEINE Demütigung, kein Drama, kein Streit - würdevoll und menschlich. Karl respektiert das ohne zu drängen. Danach kehrt die Szene zur normalen Ermittlung zurück: die 4 Optionen sind wieder sachliche Fall-Aktionen (ERKUNDEN/BEOBACHTEN/OFFENSIV/DEFENSIV), KEINE Romantik mehr. Liefere die nächste Szene als JSON.`
     : (isAufloesen
-    ? `Der Spieler wählt Option ${option.id}: "${option.text}". WICHTIG: Karl entscheidet jetzt aktiv den Fall ABZUSCHLIESSEN. Die nächste Szene MUSS die finale Berichts-Szene mit der Klientin sein - persönlich, per Telefon, per Telegramm oder per Bote, je nachdem was am aktuellen Ort plausibel ist. Beschreibe die Reaktion der Klientin (Erleichterung/Trauer/Wut/Dank je nach Charakter und Ergebnis). Setze "klient_berichtet": true im JSON. Halte die Szene ruhig und stilvoll - Film-noir-Ende, keine Action, keine neuen Indizien. Liefere die nächste Szene als JSON.`
+    ? `Der Spieler wählt Option ${option.id}: "${option.text}". WICHTIG: Karl entscheidet jetzt aktiv den Fall ABZUSCHLIESSEN. Die nächste Szene MUSS die finale Berichts-Szene mit der Klientin sein - ${aufloesenForm}. Beschreibe die Reaktion der Klientin (Erleichterung/Trauer/Wut/Dank je nach Charakter und Ergebnis). Setze "klient_berichtet": true im JSON. Halte die Szene ruhig und stilvoll - Film-noir-Ende, keine Action, keine neuen Indizien. Liefere die nächste Szene als JSON.`
     : (isUebernachtung
       ? `Der Spieler wählt UEBERNACHTUNG mit ${option._romanceNpc || 'der ROMANCE-Person'}: "${option.text}". WICHTIG: Die Nacht ist romantisch und intim - aber beschreibe das nur stilvoll und elliptisch (1-2 Sätze, Marlowe-Stil, keine expliziten Beschreibungen). Dann ZEITSPRUNG zum NÄCHSTEN MORGEN. Die nächste Szene MUSS am Morgen danach spielen: Karl wacht in der Wohnung von ${option._romanceNpc || 'ihr'} auf. Beschreibe Atmosphäre (Kaffeegeruch, Sonnenlicht, Lippenstift-Rand, Zigarettenrest im Aschenbecher, ein Zettel, ein Frühstück). Karl ist ausgeruht und versorgt. Die Szene endet damit dass Karl sich auf den Weg zur Ermittlung macht - die Optionen sind dann normale ERKUNDEN/BEOBACHTEN/OFFENSIV-Aktionen zum Fall, KEINE weitere Romantik (die ist erstmal abgeschlossen). Liefere die nächste Szene als JSON.`
       : (isPhysical
@@ -17396,7 +17421,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.17] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.18] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -18405,7 +18430,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           const tensionHighEnoughForArrest = (typeof stasiTension === 'number' && stasiTension >= 4);
           if (!tensionHighEnoughForArrest) {
             // STILLER RELEASE: Karl ist faktisch frei, das System zieht nach.
-            console.warn('[Schatten v7.12.17] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
+            console.warn('[Schatten v7.12.18] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet, kein Hard-Force');
             karlInStasiCustody = false;
             folterSceneCount = 0;
@@ -18420,7 +18445,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.17] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.18] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -20877,7 +20902,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.17] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.18] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
