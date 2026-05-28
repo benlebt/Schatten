@@ -223,6 +223,19 @@
     background: rgba(200,191,168,0.15);
     transition: background 0.5s, transform 0.3s;
   }
+  /* v7.12.14: Verfassung bekommt die abgestufte Farbskala, die frueher der
+     Energie-Balken hatte (gruen voll -> gelb -> orange -> rot+puls). Die
+     Faerbung haengt am GESAMT-Verfassungswert (vf 5=gruen ... vf 1=rot), nicht
+     am einzelnen Dot - alle gefuellten Dots tragen dieselbe Stufenfarbe. */
+  .verfassung-dot.vf5 { background: rgba(140,180,140,0.9); }   /* gruen = topfit */
+  .verfassung-dot.vf4 { background: rgba(190,195,120,0.9); }   /* gelbgruen */
+  .verfassung-dot.vf3 { background: rgba(210,180,110,0.9); }   /* gelb-braun = angeschlagen */
+  .verfassung-dot.vf2 { background: rgba(220,150,100,0.92); }  /* orange = schwer verletzt */
+  .verfassung-dot.vf1 {
+    background: rgba(230,70,70,0.95);                          /* rot = lebensgefahr */
+    animation: pulse-critical 1.2s infinite ease-in-out;
+  }
+  /* Legacy-Klassen (full/injured/critical) bleiben als Fallback erhalten */
   .verfassung-dot.full {
     background: #c8bfa8; /* fg-dim */
   }
@@ -2634,7 +2647,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-tertiary" onclick="toggleMusicFromStart(event)" id="start-music-btn">🎵 Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.13</div>
+    <div class="start-version">Schatten v7.12.15</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2798,7 +2811,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.13</span>
+    <span>Schatten v7.12.15</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5194,7 +5207,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.13';
+window.SCHATTEN_VERSION = 'v7.12.15';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -8540,13 +8553,13 @@ function showHeader(scene) {
   // Verfassungs-Punkte (5 Punkte; rot bei verletzt, pulsierend bei kritisch)
   const verfDots = document.getElementById('verfassung-dots');
   verfDots.innerHTML = '';
+  // v7.12.14: abgestufte Farbskala (gruen->gelb->orange->rot+puls) nach Gesamt-Vf.
+  const vfClass = 'vf' + Math.max(1, Math.min(5, verfassung || 5));
   for (let i = 1; i <= 5; i++) {
     const d = document.createElement('div');
     d.className = 'verfassung-dot';
     if (i <= verfassung) {
-      if (verfassung <= 1) d.classList.add('critical');
-      else if (verfassung <= 2) d.classList.add('injured');
-      else d.classList.add('full');
+      d.classList.add(vfClass);
     }
     verfDots.appendChild(d);
   }
@@ -9069,37 +9082,20 @@ function renderSceneStatusStrip(entry, sceneIdx) {
   verfDots.className = 'verfassung-dots';
   verfDots.title = 'Verfassung';
   const verf = typeof entry.verfassung === 'number' ? entry.verfassung : 5;
+  const vfClassH = 'vf' + Math.max(1, Math.min(5, verf));
   for (let i = 1; i <= 5; i++) {
     const d = document.createElement('div');
     d.className = 'verfassung-dot';
     if (i <= verf) {
-      if (verf <= 1) d.classList.add('critical');
-      else if (verf <= 2) d.classList.add('injured');
-      else d.classList.add('full');
+      d.classList.add(vfClassH);
     }
     verfDots.appendChild(d);
   }
   strip.appendChild(verfDots);
 
-  // 2. Energie-Striche (5 Striche, je nach Stufe gefaerbt)
-  if (typeof entry.energie === 'number' && typeof getEnergieStufe === 'function') {
-    const energieDots = document.createElement('div');
-    energieDots.className = 'energie-dots';
-    energieDots.title = 'Energie';
-    const eStufe = getEnergieStufe(entry.energie);
-    for (let i = 1; i <= 5; i++) {
-      const d = document.createElement('div');
-      d.className = 'energie-dash';
-      if (i <= eStufe.stufe) {
-        if (eStufe.stufe === 1) d.classList.add('critical');
-        else if (eStufe.stufe === 2) d.classList.add('low');
-        else if (eStufe.stufe === 3) d.classList.add('medium');
-        else d.classList.add('full');
-      }
-      energieDots.appendChild(d);
-    }
-    strip.appendChild(energieDots);
-  }
+  // v7.12.14: Energie-Striche im Szenen-Header ENTFERNT. Energie ist seit v7.12.13
+  // entmachtet und wird nirgends mehr angezeigt - diese dynamisch erzeugte
+  // Header-Anzeige war die zweite (uebersehene) Stelle.
 
   // v7.11.19: Fall-Fortschritt vor Spannung (Reihenfolge wie in Top-Bar)
   // Spieler sieht damit zu jeder Szene wie weit er im Fall war.
@@ -10549,41 +10545,26 @@ function applyCategoryMechanics(kategorie, ctx) {
       result.pushMessages.push('HEILEN-IMPROVISIERT: Karl regeneriert (+2 Vf). Erfinde eine plausible Heilungs-Methode passend zum AKTUELLEN ORT und Cast. In der Charite/Praxis: professionelle Versorgung. In der Kneipe: aufs Klo, Wasser, ein Geschirrtuch als Verband. Im Auto: altes Verbandszeug aus dem Handschuhfach. Im Hauseingang: Karl reisst sein Hemd auf. Auf der Strasse: humpelt zur naechsten Apotheke. KI hat Freiheit den Ort kreativ zu nutzen - Karl ist NICHT auf "Heilungs-Orte" angewiesen. Wenn ein Heiler-NPC (Doc Wagner, Marlene, Apotheker) zufaellig in der Szene ist, kann er die Versorgung uebernehmen - sonst macht Karl es selbst. Die Heilung wirkt mechanisch immer (+2 Vf bis voll).');
       break;
 
-    case 'SCHLAFEN':
-      // v7.11.11+v7.11.12: User-Konzept differenziert nach Tageszeit:
-      // - Abend/Nacht: voller Schlaf, Tagwechsel garantiert
-      // - Tagsueber (En<=30 oder sicherer Ort): kurzes Nickerchen,
-      //   En auf 100, KEIN Tagwechsel, KEINE Vf-Heilung (zu kurz)
-      // - Verletzt + Nacht (Vf<=3): nur +1 Vf, Karl bekommt morgens noch HEILEN
-      // - Nicht verletzt + Nacht: kein Vf-Effekt (er ist eh gesund)
-      // - WICHTIG: bei Nacht-Schlaf duerfen Wunden Folgetag nicht weiter
-      //   reduzieren -> healingApplied=true
-      const gameTimeIdxNow = (typeof gameTimeIdx === 'number') ? gameTimeIdx : 4;
-      const isNapDuringDay = (gameTimeIdxNow < 4);  // 4=ABEND, 5=NACHT
-      if (isNapDuringDay) {
-        // Nickerchen - kein Tagwechsel, nur Erholung
-        result.vfDelta = 0;
-        result.spannungDelta = -2;
-        result.energieDelta = 70;  // partielle Erholung (nicht voll, war kein voller Schlaf)
-        result.timeAdvanceBonus = 0.3;  // leichter Zeitfortschritt (1 Phase max)
-        result.triggerSchlaf = false;  // KEIN Tagwechsel
-        result.healingApplied = false;
-        result.pushMessages.push('NICKERCHEN: Karl macht eine kurze Pause AM AKTUELLEN ORT - lehnt sich zurueck, schliesst die Augen fuer ein paar Minuten. Beschreibe knapp wie er kurz wegnickt, dann wieder hochschreckt - Geraeusche, eine Bewegung, ein Gedanke der ihn zurueckholt. Dies ist KEIN Tagwechsel. Die naechste Szene spielt am SELBEN Ort, KURZ SPAETER (vielleicht 15 Minuten). Karl ist etwas frischer aber nicht voll erholt. KEIN Schlaf-uebergang ueber 8 Stunden, KEIN "naechster Morgen". Die Tageszeit bleibt fast gleich oder schreitet nur leicht voran (z.B. NACHMITTAG bleibt NACHMITTAG, oder von SPAET-NACHMITTAG zu FRUEH-ABEND).');
-      } else {
-        // Echter Nacht-Schlaf (oder Custody-Schlaf) - Tagwechsel
-        // v7.12.13: Voller Nachtschlaf heilt KOMPLETT auf Vf 5 (User-Wunsch,
-        // Arcade). Behebt das "Vf 4 feststecken"-Problem: bei Vf 4 gab es keine
-        // Heilung (Notheilen nur Vf<=2, Wagner nur bei Praesenz). Jetzt stellt
-        // eine durchgeschlafene Nacht die Verfassung immer voll wieder her.
-        const vfNow = (typeof verfassung === 'number') ? verfassung : 5;
-        result.vfDelta = Math.max(0, 5 - vfNow);  // auffuellen auf 5
-        result.spannungDelta = -3;
-        result.energieDelta = 100; // wird in Verarbeitung auf 100 gecapped
-        result.timeAdvanceBonus = 99; // erzwingt Tageswechsel (siehe pendingSleepChoice)
-        result.triggerSchlaf = true;
-        result.healingApplied = (vfNow < 5);  // Cooldown nur wenn verletzt geschlafen
-        // v7.11.12: Custody-Schlaf -> Freilassung am Morgen + Heilung
-        if (karlInStasiCustody) {
+    case 'SCHLAFEN': {
+      // v7.12.14: NICKERCHEN-PFAD ENTFERNT. Vorher unterschied der Code nach
+      // gameTimeIdx zwischen Tag-Nickerchen (kein Tagwechsel, Vf+0) und Nacht-
+      // Schlaf (Tagwechsel, volle Heilung). Das fuehrte zu einem Timing-Bug:
+      // wenn gameTimeIdx im Mechanik-Moment schon umgesprungen war, griff faelsch-
+      // lich der Nickerchen-Pfad -> Schlaf heilte nicht (User-Run 1642: Vf+0 trotz
+      // Nacht-Schlaf). Da Energie entmachtet ist (v7.12.13) und die Schlaf-Buttons
+      // ohnehin nur abends/nachts + bei niedriger Spannung erscheinen, ist JEDER
+      // Schlaf ueber die Buttons ein voller Nacht-Schlaf: heilt komplett auf Vf 5,
+      // Tagwechsel garantiert. Kein Nickerchen mehr.
+      // Echter Nacht-Schlaf - Tagwechsel + volle Heilung auf Vf 5.
+      const vfNow = (typeof verfassung === 'number') ? verfassung : 5;
+      result.vfDelta = Math.max(0, 5 - vfNow);  // auffuellen auf 5
+      result.spannungDelta = -3;
+      result.energieDelta = 100;
+      result.timeAdvanceBonus = 99; // erzwingt Tageswechsel (siehe pendingSleepChoice)
+      result.triggerSchlaf = true;
+      result.healingApplied = (vfNow < 5);  // Cooldown nur wenn verletzt geschlafen
+      // v7.11.12: Custody-Schlaf -> Freilassung am Morgen + Heilung
+      if (karlInStasiCustody) {
           result.vfDelta = Math.max(result.vfDelta, 1); // +1 garantiert (Verband in Zelle)
           result.releaseFromCustody = true;
           result.pushMessages.push('CUSTODY-NACHT-SCHLAF: Karl ist in MfS-Custody (Verhoer-Zelle Genslerstrasse oder vergleichbar). Er schliesst die Augen, lehnt sich zurueck, irgendwann verliert er das Bewusstsein vor Erschoepfung. Beschreibe in 2-3 Saetzen wie er einnickt - kalte Pritsche, Gluehbirne, Stille der Zelle. Dann UEBERGANG zum naechsten Morgen: Karl wird FREIGELASSEN. Die Stasi hat ihn nicht offiziell festgehalten - "Befragung beendet, Sie koennen gehen, Genosse Mauer". Beschreibe wie er aus der Zelle/dem Raum entlassen wird, draussen ist Morgen, er nimmt seinen Hut/Mantel zurueck. NEUE Szene: Karl steht vor dem MfS-Gebaeude (Normannenstrasse, Hohenschoenhausen, oder Polizeirevier wenn nur Volkspolizei), Morgensonne, Wachen-Blick. Er kann weiter ermitteln, hat aber Stasi-Tension behalten - sie wissen jetzt wer er ist.');
@@ -10632,7 +10613,23 @@ function applyCategoryMechanics(kategorie, ctx) {
       result.spannungDelta = -2;
       result.energieDelta = 0;  // v7.11.20: Arcade - Energie sinkt nur durch Verletzung
       result.timeAdvanceBonus = 0.5;
-      result.pushMessages.push('AUFLOESEN: Karl loest den Fall ab JETZT auf. Beschreibe wie Karl der Klientin alle gesammelten Beweise / Erkenntnisse uebergibt. Die FORM passt zum aktuellen Ort: wenn Karl bei der Klientin ist -> persoenlicher Bericht; wenn an einem Telefon (Praxis, Buero, Kneipe) -> Anruf; wenn unterwegs -> Telegramm via naechster Post oder Bote. Setze "klient_berichtet": true im JSON. Diese Szene ist der ABSCHLIESSENDE Akt - keine neuen Indizien, keine neue Gefahr. Beschreibe die Reaktion der Klientin (Erleichterung, Trauer, Wut, je nach Ergebnis) und Karls letzten Eindruck. Halte es ruhig und stilvoll - Film noir Ende, keine Action.');
+      // v7.12.15: ERGEBNIS-KONTEXT fuer das Ende-Framing. User-Befund (Run 1642):
+      // Karl brachte den vermissten Friedrich LEBEND zu Helga zurueck, aber das
+      // Ende klang melancholisch ("sie ist traurig, weiss jetzt was war") - die
+      // KI kannte den Ausgang nicht und griff zum Noir-Default. Jetzt sagen wir
+      // ihr klar, ob das Ergebnis gut (Zielperson lebend gefunden/befreit) oder
+      // schwer (nur Taeter ueberfuehrt, Opfer evtl. tot) war.
+      let ergebnisHint = '';
+      const cpZiel = !!(typeof caseProgress !== 'undefined' && caseProgress && caseProgress.zielpersonGefunden);
+      const cpUeber = !!(typeof caseProgress !== 'undefined' && caseProgress && caseProgress.ueberfuehrt);
+      if (cpZiel) {
+        ergebnisHint = ' ERGEBNIS: ERFOLG. Die gesuchte/vermisste Person wurde LEBEND gefunden bzw. befreit und ist (falls Karl sie mitgebracht hat) JETZT HIER beim Klienten im Raum. Das ist ein GUTES Ende - die Reaktion der Klientin ist ERLEICHTERUNG, Dankbarkeit, vielleicht Traenen der Freude und ein Wiedersehen. KEIN trauriges/melancholisches Framing wie "sie weiss jetzt wenigstens was geschah" - die Person LEBT und ist zurueck. Wenn die Person mit im Raum ist, zeige das Wiedersehen (Umarmung, Helga laeuft auf ihn zu).';
+      } else if (cpUeber) {
+        ergebnisHint = ' ERGEBNIS: Der Taeter/Schuldige wurde ueberfuehrt. Je nach Fall kann das Ende erleichtert (Gerechtigkeit) oder bittersuess sein (der Schaden ist geschehen, aber die Wahrheit ist ans Licht gekommen). Passe die Reaktion an, was im Fall tatsaechlich passiert ist - erfinde KEINEN Tod, wenn niemand gestorben ist.';
+      } else {
+        ergebnisHint = ' ERGEBNIS: Karl uebergibt seine Erkenntnisse. Beschreibe die Reaktion passend zu dem, was im Fall TATSAECHLICH herauskam - erfinde kein trauriges Ergebnis, wenn das Ziel erreicht wurde.';
+      }
+      result.pushMessages.push('AUFLOESEN: Karl loest den Fall ab JETZT auf. Beschreibe wie Karl der Klientin alle gesammelten Beweise / Erkenntnisse uebergibt. Die FORM passt zum aktuellen Ort: wenn Karl bei der Klientin ist -> persoenlicher Bericht; wenn an einem Telefon (Praxis, Buero, Kneipe) -> Anruf; wenn unterwegs -> Telegramm via naechster Post oder Bote. Setze "klient_berichtet": true im JSON. Diese Szene ist der ABSCHLIESSENDE Akt - keine neuen Indizien, keine neue Gefahr.' + ergebnisHint + ' Halte es ruhig und stilvoll - Film noir Ende, keine Action.');
       break;
 
     case 'FLUCHT':
@@ -10853,7 +10850,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.13] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.15] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -11141,10 +11138,18 @@ function renderOptions(scene) {
   // schliessen reine Reise-/Erwaehnungs-Formulierungen aus.
   const wagnerSceneLower = (scene.szene || '').toLowerCase()
     .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
-  const wagnerPresent = /\b(doc wagner|wagners?\s+praxis|in der praxis|marlene)\b/.test(wagnerSceneLower);
+  // v7.12.14: Erkennung ROBUSTER. Vorher verlangte sie "doc wagner"/"praxis"/
+  // "marlene" - aber die KI nennt ihn oft nur "Wagner" ("Wagner oeffnet", "Wagner
+  // tupft Jod auf"). User-Run 1642: bei Wagner, aber kein Heal-Button weil
+  // "Wagner oeffnet" nicht matchte. Jetzt: "wagner" als Person/Ort reicht, plus
+  // Praxis-Indikatoren + Schaeferstrasse (Wagners Adresse).
+  const wagnerPresent = /\bwagner\b/.test(wagnerSceneLower)
+    || /\b(in der praxis|marlene|schaeferstrasse)\b/.test(wagnerSceneLower);
   // Ausschluss: reine Anfahrt ("faehrst zu Doc Wagner", "auf dem weg zu Wagner")
-  const wagnerOnlyTravel = /\b(faehrst|fahre|fahr|unterwegs|weg|richtung|auf dem weg)\s+[^.!?]{0,30}\bwagner/.test(wagnerSceneLower)
-    && !/\b(empfaengt|untersucht|begruesst|oeffnet die tuer|bittet (dich )?herein|in der praxis|sitzt|liegst|behandelt|wartezimmer)\b/.test(wagnerSceneLower);
+  // OHNE Ankunfts-/Behandlungs-Indikator. Sobald Wagner aktiv etwas tut (oeffnet,
+  // tupft, untersucht...) oder Karl in der Praxis ist, zaehlt es als anwesend.
+  const wagnerArrived = /\b(empfaengt|untersucht|begruesst|oeffnet|tupft|legt|naeht|verbindet|bittet (dich )?herein|in der praxis|sitzt|liegst|behandelt|wartezimmer|tritt an dich|schiebt seine brille|hintertuer|hinterhof|riegel)\b/.test(wagnerSceneLower);
+  const wagnerOnlyTravel = /\b(faehrst|fahre|fahr|unterwegs|richtung|auf dem weg|einbiegst|steuerst)\s+[^.!?]{0,40}\bwagner/.test(wagnerSceneLower) && !wagnerArrived;
   // Button nur wenn Karl verletzt (Vf<5), bei Wagner praesent, nicht bloss anreisend,
   // nicht in Custody, und heute noch nicht bei Wagner geheilt (1x/Tag).
   // v7.12.8: SPANNUNGS-SPERRE. User-Befund (Run 1514, Screenshot): der Button
@@ -17345,7 +17350,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.13] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.15] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -18354,7 +18359,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           const tensionHighEnoughForArrest = (typeof stasiTension === 'number' && stasiTension >= 4);
           if (!tensionHighEnoughForArrest) {
             // STILLER RELEASE: Karl ist faktisch frei, das System zieht nach.
-            console.warn('[Schatten v7.12.13] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
+            console.warn('[Schatten v7.12.15] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet, kein Hard-Force');
             karlInStasiCustody = false;
             folterSceneCount = 0;
@@ -18369,7 +18374,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.13] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.15] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -20822,7 +20827,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.13] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.15] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
