@@ -2742,7 +2742,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.37</div>
+    <div class="start-version">Schatten v7.12.39</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2906,7 +2906,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.37</span>
+    <span>Schatten v7.12.39</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5372,7 +5372,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.37';
+window.SCHATTEN_VERSION = 'v7.12.39';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -8032,6 +8032,17 @@ function buildTranscriptText() {
             }
           } catch(e2) { katInfo = ''; }
           out += '  ' + (opt.id || '?') + ') ' + ot + katInfo + '\n';
+        }
+      }
+      // v7.12.38: System-Button-Zustand im Export
+      if (debugExport && Array.isArray(e.systemButtons) && e.systemButtons.length > 0) {
+        out += 'System-Buttons:\n';
+        for (const sb of e.systemButtons) {
+          if (sb.shown) {
+            out += '  [✓ ' + sb.id + ']\n';
+          } else {
+            out += '  [✗ ' + sb.id + ' — gesperrt: ' + (sb.blocked || '?') + ']\n';
+          }
         }
       }
       // DEBUG-DIAGNOSE: nur im Admin/Debug-Modus sichtbar.
@@ -10889,14 +10900,23 @@ function applyCategoryMechanics(kategorie, ctx) {
     case 'HEILEN':
       // v7.11.11: Konsistente Heil-Werte nach User-Konzept:
       // - HEILEN gibt +2 Vf solange verletzt (Vf < 5)
-      // - Methode egal: Doc Wagner, Selbst-Verband, Apotheke - alle gleich stark
-      // - Karl kann sich bis Vollheilung mehrfach heilen
-      result.vfDelta = (verfassung < 5) ? 2 : 0;
-      result.spannungDelta = -2;
-      result.energieDelta = 30;
-      result.timeAdvanceBonus = 0.5;  // v7.11.12: war 1.0 - weniger auto-Tagwechsel nach HEILEN
-      result.healingApplied = true;  // v7.11.11: Marker fuer Cooldown-Verlaengerung
-      result.pushMessages.push('HEILEN-IMPROVISIERT: Karl regeneriert (+2 Vf). Erfinde eine plausible Heilungs-Methode passend zum AKTUELLEN ORT und Cast. In der Charite/Praxis: professionelle Versorgung. In der Kneipe: aufs Klo, Wasser, ein Geschirrtuch als Verband. Im Auto: altes Verbandszeug aus dem Handschuhfach. Im Hauseingang: Karl reisst sein Hemd auf. Auf der Strasse: humpelt zur naechsten Apotheke. KI hat Freiheit den Ort kreativ zu nutzen - Karl ist NICHT auf "Heilungs-Orte" angewiesen. Wenn ein Heiler-NPC (Doc Wagner, Marlene, Apotheker) zufaellig in der Szene ist, kann er die Versorgung uebernehmen - sonst macht Karl es selbst. Die Heilung wirkt mechanisch immer (+2 Vf bis voll).');
+      // - v7.12.38: MARLENE-Ausnahme: Marlene kann nur notdürftig helfen (+1),
+      //   analog NOTHEILEN. Marker: option._marleneHeal === true.
+      if (option && option._marleneHeal) {
+        result.vfDelta = (verfassung < 5) ? 1 : 0;
+        result.spannungDelta = -1;
+        result.energieDelta = 0;
+        result.timeAdvanceBonus = 0.2;
+        result.healingApplied = true;
+        result.pushMessages.push('MARLENE-VERSORGUNG: Marlene Wagner hilft Karl unter der Hand in der Charité - diskret, schnell, ohne offizielle Aufnahme. Sie reinigt die Wunde, legt einen Verband an, gibt ihm vielleicht ein paar Tabletten. Kurze Szene (2-3 Sätze), dann weiter. Karl ist etwas stabiler (+1 Vf), aber noch nicht geheilt - er braucht richtige Ruhe.');
+      } else {
+        result.vfDelta = (verfassung < 5) ? 2 : 0;
+        result.spannungDelta = -2;
+        result.energieDelta = 30;
+        result.timeAdvanceBonus = 0.5;
+        result.healingApplied = true;
+        result.pushMessages.push('HEILEN-IMPROVISIERT: Karl regeneriert (+2 Vf). Erfinde eine plausible Heilungs-Methode passend zum AKTUELLEN ORT und Cast. In der Charite/Praxis: professionelle Versorgung. In der Kneipe: aufs Klo, Wasser, ein Geschirrtuch als Verband. Im Auto: altes Verbandszeug aus dem Handschuhfach. Im Hauseingang: Karl reisst sein Hemd auf. Auf der Strasse: humpelt zur naechsten Apotheke. KI hat Freiheit den Ort kreativ zu nutzen - Karl ist NICHT auf "Heilungs-Orte" angewiesen. Wenn ein Heiler-NPC (Doc Wagner, Marlene, Apotheker) zufaellig in der Szene ist, kann er die Versorgung uebernehmen - sonst macht Karl es selbst. Die Heilung wirkt mechanisch immer (+2 Vf bis voll).');
+      }
       break;
 
     case 'SCHLAFEN': {
@@ -11204,7 +11224,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.37] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.39] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -11505,7 +11525,11 @@ function renderOptions(scene) {
   // "Wagner oeffnet" nicht matchte. Jetzt: "wagner" als Person/Ort reicht, plus
   // Praxis-Indikatoren + Schaeferstrasse (Wagners Adresse).
   const wagnerPresent = /\bwagner\b/.test(wagnerSceneLower)
-    || /\b(in der praxis|marlene|schaeferstrasse)\b/.test(wagnerSceneLower);
+    || /\b(in der praxis|schaeferstrasse)\b/.test(wagnerSceneLower)
+    // v7.12.37: "marlene" allein reicht NICHT mehr - Marlene Wagner ist auch
+    // Krankenschwester in der Charite. Nur wenn "marlene" zusammen mit
+    // Wagner-spezifischen Ort-Indikatoren auftaucht.
+    || (/\bmarlene\b/.test(wagnerSceneLower) && /\b(wagner|praxis|schaeferstrasse|behandlungsraum)\b/.test(wagnerSceneLower));
   // Ausschluss: reine Anfahrt ("faehrst zu Doc Wagner", "auf dem weg zu Wagner")
   // OHNE Ankunfts-/Behandlungs-Indikator. Sobald Wagner aktiv etwas tut (oeffnet,
   // tupft, untersucht...) oder Karl in der Praxis ist, zaehlt es als anwesend.
@@ -11539,8 +11563,85 @@ function renderOptions(scene) {
   const sceneShowsCustody = /\b(zelle|verhoer|verhör|verhoertisch|verhörtisch|fesseln|handschellen|haftanstalt|hohenschoenhausen|hohenschönhausen|verhörraum|verhoerraum|haeftling|häftling|knast|gefaengnis|gefängnis|untersuchungshaft|in\s+gewahrsam|wachposten\s+(bewacht|steht|sitzt)|bewachter\s+raum|du\s+sitzt\s+(in|auf)\s+(dem|der)\s+(stuhl|bank|pritsche|boden)|du\s+liegst\s+(auf|in)\s+(der\s+zelle|dem\s+verhoer))\b/.test(sceneTextLower);
   const showNotfluchtButton = karlInStasiCustody && sceneShowsCustody;
 
+  // v7.12.38: MARLENE-HEILEN-BUTTON. Wenn Karl in der Charité ist UND Marlene
+  // Wagner als Krankenschwester dort ist, kann sie ihm "unter der Hand" helfen.
+  // Schwächer als Doc Wagner (+1 statt +2), aber ohne Tageslimit.
+  const marleneSceneLower = sceneTextLower; // bereits oben berechnet
+  const marlenePresent = /\bmarlene\b/.test(marleneSceneLower);
+  const charitePresent = /\b(charit[eé]|charite|notaufnahme|krankenhau[s]|krankenhaus)\b/.test(marleneSceneLower)
+    || /\b(charit[eé]|charite)\b/.test((scene.ort || '').toLowerCase().replace(/ü/g,'ue').replace(/ö/g,'oe').replace(/ä/g,'ae').replace(/ß/g,'ss'));
+  const showMarleneHealButton = marlenePresent && charitePresent
+    && currentVerfassung < 5 && !karlInStasiCustody
+    && currentSpannung <= 2;
+
+  // v7.12.38: SYSTEM-BUTTON-LOGGING fuer Debug-Export.
+  // Trackt alle System-Buttons: ob sichtbar, ob gesperrt und warum.
+  // Wird in window._lastSystemButtons gespeichert und beim naechsten
+  // logEntry-Push mitgespeichert.
+  window._lastSystemButtons = [];
+  const _sb = (id, shown, blockedReason) => {
+    window._lastSystemButtons.push({ id, shown: !!shown, blocked: !shown ? (blockedReason || 'bedingung nicht erfuellt') : null });
+  };
+  // NOTHEILEN
+  if (currentVerfassung <= 2) {
+    _sb('NOTHEILEN', showNotheilenButton, karlInStasiCustody ? 'in Custody (gefesselt)' : null);
+  } else {
+    _sb('NOTHEILEN', false, 'Vf ' + currentVerfassung + ' > 2');
+  }
+  // SCHLAFEN
+  if (!showSleepButton) {
+    const sleepBlockReason = karlInStasiCustody ? 'in Custody' :
+      (!isAbendOderNacht && !sleepSceneOk) ? 'kein Abend/Nacht (' + (TIMES_OF_DAY[gameTimeIdx]||'?') + ')' :
+      (typeof pendingSleepChoice !== 'undefined' && pendingSleepChoice) ? 'bereits gewählt' : 'Bedingung';
+    _sb('SCHLAFEN', false, sleepBlockReason);
+  } else {
+    _sb('SCHLAFEN', true);
+  }
+  // FLUCHT
+  if (currentSpannung >= 4) {
+    _sb('FLUCHT', showFluchtButton, karlInStasiCustody ? 'in Custody (NOTFLUCHT stattdessen)' : null);
+  } else {
+    _sb('FLUCHT', false, 'Spannung ' + currentSpannung + ' < 4');
+  }
+  // DOC WAGNER
+  if (wagnerPresent) {
+    const wagnerBlock = wagnerOnlyTravel ? 'nur Anfahrt, noch nicht angekommen' :
+      karlInStasiCustody ? 'in Custody' :
+      currentSpannung > 2 ? 'Spannung ' + currentSpannung + ' > 2 (Schiesserei)' :
+      currentVerfassung >= 5 ? 'Vf bereits 5 (unverletzt)' :
+      (typeof lastDocHealingDay === 'number' && lastDocHealingDay >= gameDay) ? 'heute bereits behandelt (1x/Tag)' : null;
+    _sb('WAGNER_HEILEN', showWagnerHealButton, wagnerBlock);
+  }
+  // MARLENE
+  if (marlenePresent) {
+    const marleneBlock = !charitePresent ? 'nicht in Charité' :
+      karlInStasiCustody ? 'in Custody' :
+      currentSpannung > 2 ? 'Spannung ' + currentSpannung + ' > 2' :
+      currentVerfassung >= 5 ? 'Vf bereits 5' : null;
+    _sb('MARLENE_HEILEN', showMarleneHealButton, marleneBlock);
+  }
+  // ROMANCE / NACHT-VERBRINGEN
+  if (romanceNpcInScene) {
+    _sb('ROMANTIK', true);
+  }
+  // UEBERNACHTUNG
+  const _showOvernight = romanceNpcInScene && typeof romanticTension === 'number' && romanticTension >= 4;
+  if (_showOvernight || romanceNpcInScene) {
+    _sb('UEBERNACHTUNG', _showOvernight,
+      !_showOvernight ? ('Rm ' + (romanticTension||0) + ' < 4') : null);
+  }
+  // NOTFLUCHT
+  if (karlInStasiCustody) {
+    _sb('NOTFLUCHT', showNotfluchtButton, !showNotfluchtButton ? 'Szene zeigt keinen Haft-Kontext' : null);
+  }
+
+  if (typeof diag === 'function') {
+    const sbLog = window._lastSystemButtons.map(b => b.id + ':' + (b.shown ? '✓' : '✗' + (b.blocked ? '(' + b.blocked + ')' : ''))).join(' ');
+    diag('detect', 'System-Buttons: ' + sbLog);
+  }
+
   // Separator nur wenn mindestens ein System-Button gezeigt wird
-  if (showSleepButton || romanceNpcInScene || showFluchtButton || showNotheilenButton || showNotfluchtButton || showWagnerHealButton) {
+  if (showSleepButton || romanceNpcInScene || showFluchtButton || showNotheilenButton || showNotfluchtButton || showWagnerHealButton || showMarleneHealButton) {
     const sep = document.createElement('div');
     sep.className = 'system-button-separator';
     sep.textContent = '· besondere Aktionen ·';
@@ -11639,6 +11740,47 @@ function renderOptions(scene) {
       chooseOption(dwOpt);
     });
     list.appendChild(dwBtn);
+  }
+
+  // v7.12.38: MARLENE-HEILEN-BUTTON. Wenn Karl in der Charité ist und Marlene
+  // Wagner als Krankenschwester präsent ist, kann sie ihm unter der Hand helfen.
+  // Schwächer als Doc Wagner: +1 Vf (wie NOTHEILEN) statt +2, dafür kein Tageslimit.
+  if (showMarleneHealButton) {
+    const mlBtn = document.createElement('button');
+    mlBtn.className = 'option-btn option-btn-system option-btn-notheilen';
+    mlBtn.dataset.kategorie = 'HEILEN';
+    mlBtn.innerHTML = '<span class="option-id">💉</span><span class="option-text-wrap"><span>Von Marlene versorgen lassen</span><span class="option-marker option-marker-system">→ Vf+1</span></span>';
+    const mlOpt = {
+      id: 'MARLENE_HEILEN',
+      text: 'Von Marlene versorgen lassen',
+      kategorie: 'HEILEN',
+      _kategorie: 'HEILEN',
+      _priority: 88,
+      _isSystemButton: true,
+      _marleneHeal: true,   // Flag damit applyCategoryMechanics weiss: nur +1 (nicht +2)
+    };
+    let mlTouchStartX = 0, mlTouchStartY = 0, mlTouchStartTime = 0;
+    let mlTouchCancelled = false, mlTouchHandled = false;
+    const ML_TAP_MAX_MOVE = 12, ML_TAP_MAX_DURATION = 800;
+    mlBtn.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1) { mlTouchCancelled = true; return; }
+      mlTouchStartX = e.touches[0].clientX; mlTouchStartY = e.touches[0].clientY;
+      mlTouchStartTime = Date.now(); mlTouchCancelled = false; mlTouchHandled = false;
+    }, { passive: true });
+    mlBtn.addEventListener('touchmove', (e) => {
+      if (mlTouchCancelled) return;
+      if (e.touches.length !== 1) { mlTouchCancelled = true; return; }
+      if (Math.abs(e.touches[0].clientX-mlTouchStartX) > ML_TAP_MAX_MOVE || Math.abs(e.touches[0].clientY-mlTouchStartY) > ML_TAP_MAX_MOVE) mlTouchCancelled = true;
+    }, { passive: true });
+    mlBtn.addEventListener('touchend', (e) => {
+      if (mlTouchCancelled) { e.preventDefault(); return; }
+      if (Date.now() - mlTouchStartTime > ML_TAP_MAX_DURATION) { e.preventDefault(); return; }
+      e.preventDefault(); mlTouchHandled = true; chooseOption(mlOpt);
+    });
+    mlBtn.addEventListener('click', () => {
+      if (mlTouchHandled) { mlTouchHandled = false; return; } chooseOption(mlOpt);
+    });
+    list.appendChild(mlBtn);
   }
 
   // v7.11.12: FLUCHT-Button - Sp>=3 + nicht in Custody
@@ -17559,7 +17701,7 @@ async function chooseOption(option) {
     if (npcName && typeof romanceReceptive[npcName] === 'undefined') {
       const offen = Math.random() < 0.5;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.37] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.39] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -17886,7 +18028,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.37] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.39] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -18895,7 +19037,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           const tensionHighEnoughForArrest = (typeof stasiTension === 'number' && stasiTension >= 4);
           if (!tensionHighEnoughForArrest) {
             // STILLER RELEASE: Karl ist faktisch frei, das System zieht nach.
-            console.warn('[Schatten v7.12.37] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
+            console.warn('[Schatten v7.12.39] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet, kein Hard-Force');
             karlInStasiCustody = false;
             folterSceneCount = 0;
@@ -18910,7 +19052,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.37] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.39] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -21388,7 +21530,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.37] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.39] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
@@ -22070,6 +22212,10 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         id: o.id || '?',
         text: o.text || '',
       })) : [],
+      // v7.12.38: System-Button-Zustand (welche sichtbar/gesperrt und warum)
+      // Wird von renderOptions() in window._lastSystemButtons geschrieben,
+      // BEVOR logEntries.push. So weiss das Lektorat genau was der Spieler sah.
+      systemButtons: Array.isArray(window._lastSystemButtons) ? window._lastSystemButtons.slice() : [],
     });
     hideLoading();
     hideWait();
