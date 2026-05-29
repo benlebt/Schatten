@@ -2742,7 +2742,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.39</div>
+    <div class="start-version">Schatten v7.12.41</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2906,7 +2906,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.39</span>
+    <span>Schatten v7.12.41</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5372,7 +5372,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.39';
+window.SCHATTEN_VERSION = 'v7.12.41';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -7803,9 +7803,14 @@ function showLoading(customText) {
     // Scroll to top damit der Loading-Indicator sicher sichtbar ist
     window.scrollTo({ top: 0, behavior: 'instant' });
   }
+  // v7.12.40: SAFETY-WATCHDOG. Timestamp setzen damit der Watchdog weiss
+  // wann dieser Loading-Call gestartet hat.
+  loading.dataset.showSince = Date.now();
 }
 function hideLoading() {
   document.getElementById('loading').classList.add('hidden');
+  const loading = document.getElementById('loading');
+  if (loading) delete loading.dataset.showSince;
 }
 function showError(msg, debug) {
   document.getElementById('error').classList.remove('hidden');
@@ -10586,7 +10591,7 @@ function classifyOption(opt, resolveContext) {
   // wurde als DEFENSIV klassifiziert (nur wegen Position). Verben wie durchsuch,
   // untersuche, fahr zu, begib dich, suche X ab sind eindeutig ERKUNDEN.
   // Schmaler Filter: nur klare Faelle, kein "frag" (zu mehrdeutig).
-  else if (/\b(durchsuch[et]?\s+(die|den|das|seine?|ihre?)|untersuche?\s+(die|den|das|den\s+bereich|die\s+umgebung|die\s+wohnung)|absuche?\w*|suche?\s+\w+\s+ab|such\s+die\s+\w+\s+ab|fahr\s+zu|fahr\s+direkt|begib\s+dich|verlass\s+(das|die|den)\s+haus|verlass\s+\w+\s+und\s+fahr|renn\s+zum|lauf\s+zum|eile\s+zum|aufzusuchen|suche?\s+(ihn|sie|den|die|das)\s+auf)\b/i.test(t)) {
+  else if (/\b(durchsuch[et]?\s+(die|den|das|seine?|ihre?)|untersuche?\s+(die|den|das|den\s+bereich|die\s+umgebung|die\s+wohnung)|absuche?\w*|suche?\s+\w+\s+ab|such\s+die\s+\w+\s+ab|fahr\s+zu|fahr\s+direkt|begib\s+dich|verlass\s+(das|die|den)\s+haus|verlass\s+\w+\s+und\s+fahr|renn\s+zum|lauf\s+zum|eile\s+zum|aufzusuchen|suche?\s+(ihn|sie|den|die|das)\s+auf|versuch[et]?,?\s+\w+[\w\s]{0,30}\s+(ausfindig|aufzuspueren|aufzuspüren|herauszufinden|zu\s+entziffern|zu\s+lesen|zu\s+finden|abzusuchen|nachzuverfolgen))\b/i.test(t)) {
     heuristicCat = 'ERKUNDEN';
   }
   // v7.12.30: OFFENSIV-Heuristik fuer eindeutige Körper-Gewalt die nicht
@@ -10600,8 +10605,8 @@ function classifyOption(opt, resolveContext) {
   // und "frag marlene direkt nach dem namen" fehlten. Patterns ergaenzt:
   // - frag[et]? [NPC,] ob → BEOBACHTEN (Komma-tolerant)
   // - frag[et]? [NPC] direkt nach → BEOBACHTEN
-  else if (!/^(pack[et]?\s|stuerm[et]?\s|reiss[et]?\s|reiß[et]?\s|zwing[et]?\s|press[et]?\s|grabb?[et]?\s)/i.test(t) &&
-    /\b(frage?\s+\w+,?\s+ob\s|frage?\s+\w+,\s+ob\s|frage?\s+\w+\s+(nach|wegen|ueber|ob\s)|befrage?\s+(ihn|sie|den|die|das)|frage?\s+nach\s+(dem|der|den)|ruf[et]?\s+\w+\s+an\s+und\s+(frag|bitte|bitte\s+um|frag\s+nach)|frag[et]?\s+\w+\s+(diskret|hoeflich|leise|ruhig|fluesternde?|direkt,|vorsichtig)|erkundige\s+dich|horche?\s+aus|hoere?\s+(zu|ihn|sie)\s+an|frag[et]?\s+\w+\s+(direkt|leise),?\s+(warum|ob|wer|was|wie|wo|wohin|woher)|frag[et]?\s+\w+\s+direkt\s+nach\s+(dem|der|den|einem|einer)|frag[et]?\s+[\w\s]{1,20},\s+ob\s)\b/i.test(t)) {
+  else if (!/^(pack[et]?\s|stuerm[et]?\s|reiss[et]?\s|reiß[et]?\s|zwing[et]?\s|press[et]?\s|grabb?[et]?\s|stemm[et]?\s)/i.test(t) &&
+    /\b(frage?\s+\w+,?\s+ob\s|frage?\s+\w+,\s+ob\s|frage?\s+\w+\s+(nach|wegen|ueber|ob\s)|befrage?\s+(ihn|sie|den|die|das)|frage?\s+nach\s+(dem|der|den)|ruf[et]?\s+\w+\s+an\s+und\s+(frag|bitte|bitte\s+um|frag\s+nach)|frag[et]?\s+\w+\s+(diskret|hoeflich|leise|ruhig|fluesternde?|direkt,|vorsichtig)|erkundige\s+dich|horche?\s+aus|hoere?\s+(zu|ihn|sie)\s+an|frag[et]?\s+\w+\s+(direkt|leise),?\s+(warum|ob|wer|was|wie|wo|wohin|woher)|frag[et]?\s+\w+\s+direkt\s+nach\s+(dem|der|den|einem|einer)|frag[et]?\s+[\w\s]{1,20},\s+ob\s|bitte[nt]?\s+\w+,?\s+(dir|ihm|ihr)\s+\w{1,20}\s+(zu\s+zeigen|mitzuteilen|zu\s+nennen|zu\s+erklaeren|zu\s+erkläre|preiszugeben|offenzulegen))\b/i.test(t)) {
     heuristicCat = 'BEOBACHTEN';
   }
   // ENTFERNT v7.11.30 (Wort-Heuristik fuer Basis-Kategorien war zu trigger-happy):
@@ -11224,7 +11229,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.39] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.41] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -17701,7 +17706,7 @@ async function chooseOption(option) {
     if (npcName && typeof romanceReceptive[npcName] === 'undefined') {
       const offen = Math.random() < 0.5;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.39] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.41] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -18028,7 +18033,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.39] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.41] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -19037,7 +19042,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           const tensionHighEnoughForArrest = (typeof stasiTension === 'number' && stasiTension >= 4);
           if (!tensionHighEnoughForArrest) {
             // STILLER RELEASE: Karl ist faktisch frei, das System zieht nach.
-            console.warn('[Schatten v7.12.39] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
+            console.warn('[Schatten v7.12.41] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet, kein Hard-Force');
             karlInStasiCustody = false;
             folterSceneCount = 0;
@@ -19052,7 +19057,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.39] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.41] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -21530,7 +21535,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.39] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.41] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
@@ -24336,6 +24341,41 @@ window.addEventListener('pagehide', () => {
     setTimeout(() => { if (boot.parentNode) boot.parentNode.removeChild(boot); }, 400);
   }
 })();
+
+// v7.12.40: LOADING-WATCHDOG. Schutz gegen endloses "Karl denkt nach".
+// Anlass: iOS/Mobile-Bug wo fetch() haengt ohne Timeout-Fehler - AbortController
+// feuert nicht wenn die Verbindung tot (aber nicht explizit getrennt) ist.
+// Der Watchdog prueft alle 15s ob das Loading-Overlay seit mehr als 55s aktiv ist.
+// Wenn ja: chooseOptionInFlight reset + Fehler anzeigen, damit der Spieler
+// manuell nochmal versuchen kann. 55s ist grosszuegig (adaptiver Timeout max 35s
+// + Verarbeitungszeit) - echter Hanger laesst sich so sicher erkennen.
+setInterval(function() {
+  try {
+    const loading = document.getElementById('loading');
+    if (!loading || loading.classList.contains('hidden')) return;
+    const since = parseInt(loading.dataset.showSince || '0', 10);
+    if (!since) return;
+    const elapsed = Date.now() - since;
+    if (elapsed > 55000) {
+      console.warn('[Schatten Watchdog] Loading seit ' + Math.round(elapsed/1000) + 's - erzwinge Reset');
+      // In-Flight-Flag zuruecksetzen
+      if (typeof chooseOptionInFlight !== 'undefined') chooseOptionInFlight = false;
+      // Loading ausblenden
+      loading.classList.add('hidden');
+      delete loading.dataset.showSince;
+      // Fehler anzeigen damit Spieler weiss was passiert + Retry anbieten
+      if (typeof showError === 'function') {
+        showError(
+          'Die KI hat nicht geantwortet (>' + Math.round(elapsed/1000) + 's). Bitte nochmal versuchen.',
+          'Watchdog: Loading-Timeout nach ' + Math.round(elapsed/1000) + 's. chooseOptionInFlight reset.'
+        );
+      }
+      if (typeof pendingRetry !== 'undefined' && pendingRetry) {
+        if (typeof showWait === 'function') showWait();
+      }
+    }
+  } catch(e) {}
+}, 15000);
 </script>
 </body>
 </html>
