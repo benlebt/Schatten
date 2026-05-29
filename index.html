@@ -2742,7 +2742,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.31</div>
+    <div class="start-version">Schatten v7.12.32</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2906,7 +2906,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.31</span>
+    <span>Schatten v7.12.32</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5372,7 +5372,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.31';
+window.SCHATTEN_VERSION = 'v7.12.32';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -10562,6 +10562,15 @@ function classifyOption(opt, resolveContext) {
   else if (/\b(drueck[et]?\s+(ihn|sie|ihm|ihr)\s+(an|gegen|auf|in|mit)|knie\s+(in\s+den\s+(magen|ruecken))|ramm[et]?\s+(ihm|ihr|ihn)|entreiß\s+(ihm|ihr|ihn)|wuerg[et]?\s+(ihn|sie)|schlag\s+(ihn|sie|ihm|ihr)\s+(gegen|auf|in)|schlage?\s+(seinen|ihren|dem\s+mann)|greif[et]?\s+(ihn|sie|ihm|ihr)\s+(am|beim)\s+(kragen|hals|arm))\b/i.test(t)) {
     heuristicCat = 'OFFENSIV';
   }
+  // v7.12.32: BEOBACHTEN-Heuristik fuer klare Befragungs-/Recherche-Verben.
+  // Goerke-Run: "Frag höflich, ob sie Mertens kennt" und "Ruf Baumgarten an
+  // und bitte um ein Treffen" wurden als DEFENSIV (Position B) klassifiziert.
+  // "Frag ob", "ruf ... an", "frage ... nach" sind Informations-Sammel-Aktionen
+  // -> BEOBACHTEN, nicht DEFENSIV. Schmaler Filter: nur mit klarem Befragungs-
+  // oder Nachfrage-Intent, nicht bloßes "frag" allein.
+  else if (/\b(frage?\s+\w+,?\s+ob\s|frage?\s+\w+\s+(nach|wegen|ueber|ob\s)|befrage?\s+(ihn|sie|den|die|das)|frage?\s+nach\s+(dem|der|den)|ruf[et]?\s+\w+\s+an\s+und\s+(frag|bitte|bitte\s+um|frag\s+nach)|frag[et]?\s+\w+\s+(diskret|hoeflich|leise|ruhig)|erkundige\s+dich|horche?\s+aus|hoere?\s+(zu|ihn|sie)\s+an)\b/i.test(t)) {
+    heuristicCat = 'BEOBACHTEN';
+  }
   // ENTFERNT v7.11.30 (Wort-Heuristik fuer Basis-Kategorien war zu trigger-happy):
   // - OFFENSIV: tritt|schlag|schiess|pack|stuerm|reiss|brich|drueck|zwing|fordere
   // - ERKUNDEN: verlass|raus aus|fahr|los|begib dich|such|durchsuch
@@ -11158,7 +11167,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.31] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.32] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -17508,7 +17517,7 @@ async function chooseOption(option) {
     if (npcName && typeof romanceReceptive[npcName] === 'undefined') {
       const offen = Math.random() < 0.5;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.31] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.32] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -17835,7 +17844,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.31] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.32] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -18844,7 +18853,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           const tensionHighEnoughForArrest = (typeof stasiTension === 'number' && stasiTension >= 4);
           if (!tensionHighEnoughForArrest) {
             // STILLER RELEASE: Karl ist faktisch frei, das System zieht nach.
-            console.warn('[Schatten v7.12.31] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
+            console.warn('[Schatten v7.12.32] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet, kein Hard-Force');
             karlInStasiCustody = false;
             folterSceneCount = 0;
@@ -18859,7 +18868,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.31] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.32] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -21326,7 +21335,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.31] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.32] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
