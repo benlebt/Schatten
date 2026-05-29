@@ -2633,6 +2633,8 @@
     <span id="status-tag" class="hidden"></span>
     <span id="status-time" class="hidden"></span>
     <span id="status-loc" class="hidden"></span>
+    <!-- v7.12.41: GEWAHRSAM-Badge - erscheint wenn karlInStasiCustody=true -->
+    <span id="status-custody-badge" class="hidden" style="font-size:0.65em;color:#ff4444;font-family:var(--font-mono);letter-spacing:0.05em;margin-left:4px;">⚠ GEWAHRSAM</span>
   </div>
 
   <!-- Status details popup -->
@@ -2742,7 +2744,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.41</div>
+    <div class="start-version">Schatten v7.12.42</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2906,7 +2908,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.41</span>
+    <span>Schatten v7.12.42</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5372,7 +5374,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.41';
+window.SCHATTEN_VERSION = 'v7.12.42';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -8946,6 +8948,17 @@ function showHeader(scene) {
   if (dateEl) dateEl.textContent = formatGameDateShort(gameCurrentDate);
   document.getElementById('status-loc').textContent = normalizeLocForDisplay(scene.ort);
 
+  // v7.12.41: GEWAHRSAM in Status-Bar anzeigen wenn aktiv
+  const custodyBadge = document.getElementById('status-custody-badge');
+  if (custodyBadge) {
+    if (karlInStasiCustody) {
+      custodyBadge.textContent = '⚠ GEWAHRSAM';
+      custodyBadge.classList.remove('hidden');
+    } else {
+      custodyBadge.classList.add('hidden');
+    }
+  }
+
   // Stash full info for the popup
   const VERFASSUNG_LABELS = ['Tot', 'Lebensgefährlich', 'Stark verletzt', 'Angeschlagen', 'Leicht angeschlagen', 'Unverletzt'];
   // Aktuelles Spieldatum (historisch echt, 1953)
@@ -10484,6 +10497,12 @@ function classifyOption(opt, resolveContext) {
   // Block unten greift nur wenn inlineCat gesetzt ist, sodass bei Fall-Through
   // (Position-Klassifikation) der Tag im UI blieb.
   opt.text = opt.text.replace(/\s*\[\s*(?:OFFENSIV|DEFENSIV|ERKUNDEN|BEOBACHTEN|HEILEN|AUFLOESEN|SCHLAFEN|ROMANTIK)\s*\]\.?/gi, ' ');
+  // v7.12.41: Vogt-Run: KI schrieb "(OFFENSIV/ERKUNDEN, kategori=ERKUNDEN)"
+  // und "(BEOBACHTEN, kategorie=BEOBACHTEN)" direkt in den Optionstext.
+  // Generisches Pattern: alles in Klammern das "kategori" (mit oder ohne e)
+  // oder Slash-Kategorie-Kombination enthaelt.
+  opt.text = opt.text.replace(/\s*\([^)]*(?:kategori(?:e)?=|OFFENSIV\/|DEFENSIV\/|ERKUNDEN\/|BEOBACHTEN\/)[^)]*\)\.?/gi, '');
+  opt.text = opt.text.replace(/\s*,?\s*kategori(?:e)?\s*=\s*(?:OFFENSIV|DEFENSIV|ERKUNDEN|BEOBACHTEN|HEILEN|AUFLOESEN|SCHLAFEN|ROMANTIK)\.?/gi, '');
   // v7.11.88: Verwaiste Unterstrich-Artefakte am Ende entfernen (GENERISCH, fuer
   // ALLE Optionen - nicht nur wenn inlineCat erkannt wurde). User-Run: Gemini
   // schrieb "...behandeln zu lassen _.✚ HEILEN" - der Icon+Kategorie-Teil ist ein
@@ -11229,7 +11248,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.41] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.42] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -11566,6 +11585,20 @@ function renderOptions(scene) {
   // text (die Stasi sucht ihn) liess den NOTFLUCHT-Button wieder erscheinen.
   // Echter Haft-Kontext braucht physische Einschliessungs-Woerter.
   const sceneShowsCustody = /\b(zelle|verhoer|verhör|verhoertisch|verhörtisch|fesseln|handschellen|haftanstalt|hohenschoenhausen|hohenschönhausen|verhörraum|verhoerraum|haeftling|häftling|knast|gefaengnis|gefängnis|untersuchungshaft|in\s+gewahrsam|wachposten\s+(bewacht|steht|sitzt)|bewachter\s+raum|du\s+sitzt\s+(in|auf)\s+(dem|der)\s+(stuhl|bank|pritsche|boden)|du\s+liegst\s+(auf|in)\s+(der\s+zelle|dem\s+verhoer))\b/.test(sceneTextLower);
+
+  // v7.12.41: ORT-BASIERTER CUSTODY-DETECT. Vogt-Run: KI schrieb Karl in eine
+  // Zelle (ort="ZELLE, HOHENSCHOENHAUSEN") ohne dass AUTO-CUSTODY triggerte.
+  // karlInStasiCustody blieb false -> NOTFLUCHT erschien nicht, normaler FLUCHT-
+  // Button erschien stattdessen, SCHLAFEN war sichtbar. Kompletter State-Desync.
+  // Fix: wenn der ORT explizit "zelle" oder "hohenschoenhausen" oder "verhoer"
+  // enthaelt, setzen wir karlInStasiCustody=true (narrativer Override).
+  const ortLower = (scene.ort || '').toLowerCase().replace(/ü/g,'ue').replace(/ö/g,'oe').replace(/ä/g,'ae').replace(/ß/g,'ss');
+  const ortImpliesCustody = /\b(zelle|hohenschoenhausen|hohenschonhausen|untersuchungshaft|verhoerraum|haftanstalt|keibelstrasse.*mfs|normannenstrasse.*zelle)\b/.test(ortLower);
+  if (ortImpliesCustody && !karlInStasiCustody) {
+    karlInStasiCustody = true;
+    if (typeof diag === 'function') diag('state', 'ORT-CUSTODY-DETECT: Ort "' + scene.ort + '" impliziert Haft -> karlInStasiCustody=true gesetzt');
+  }
+
   const showNotfluchtButton = karlInStasiCustody && sceneShowsCustody;
 
   // v7.12.38: MARLENE-HEILEN-BUTTON. Wenn Karl in der Charité ist UND Marlene
@@ -17706,7 +17739,7 @@ async function chooseOption(option) {
     if (npcName && typeof romanceReceptive[npcName] === 'undefined') {
       const offen = Math.random() < 0.5;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.41] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.42] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -18033,7 +18066,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.41] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.42] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -19042,7 +19075,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           const tensionHighEnoughForArrest = (typeof stasiTension === 'number' && stasiTension >= 4);
           if (!tensionHighEnoughForArrest) {
             // STILLER RELEASE: Karl ist faktisch frei, das System zieht nach.
-            console.warn('[Schatten v7.12.41] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
+            console.warn('[Schatten v7.12.42] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet, kein Hard-Force');
             karlInStasiCustody = false;
             folterSceneCount = 0;
@@ -19057,7 +19090,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.41] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.42] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -21535,7 +21568,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.41] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.42] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
