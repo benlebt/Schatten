@@ -10596,10 +10596,25 @@ function classifyOption(opt, resolveContext) {
     // A=Offensiv-Action, B=Defensiv/alternativ, C=Erkunden/Bewegung, D=Beobachten.
     // Wenn keine andere Quelle eine Kategorie liefert, nehmen wir die Position.
     // Besser als "normal" weil die Engine sonst keine Mechanik anwendet.
+    // v7.12.32: A-Position-Guard. Wenn Position A eine schlichte Bewegungs-,
+    // Abschluss- oder soziale Option ist OHNE Aggression, NICHT als OFFENSIV
+    // klassifizieren. Anlass Strauss-Run: "Geh zum Opel und fahr zurueck" (A)
+    // wurde OFFENSIV -> -1 Vf fuer eine harmlose Heimfahrt.
+    // Guard greift wenn A mit "Geh/Fahr/Verlass/Bedank" beginnt OHNE "stuerm/
+    // pack/reiß/zwing/konfrontier/schlage" darunter. Dann auf ERKUNDEN stufen.
     const idUpper = String(opt.id).toUpperCase().trim();
     const positionMap = { 'A': 'OFFENSIV', 'B': 'DEFENSIV', 'C': 'ERKUNDEN', 'D': 'BEOBACHTEN' };
-    if (positionMap[idUpper]) {
-      finalCat = positionMap[idUpper];
+    let mappedCat = positionMap[idUpper];
+    if (mappedCat === 'OFFENSIV') {
+      // Negative Guard: ist es eigentlich eine harmlose Bewegung?
+      const isHarmlessA = /^(geh\s+(zum|zur|nach|zurueck|zurück)|fahr\s+(zum|zur|nach|zurueck|zurück|direkt\s+zu)|verlass\s+(die|den|das|diesen)|bedanke?\s+dich|steig\s+in|nimm\s+(die|den|das)\s+(opel|wagen|auto|zug|strassenbahn)|kehr\s+(zurueck|zurück)|verlasse?\s+(das|die|den)|geh\s+nach\s+hause|fahre?\s+(heim|nach\s+hause))/i.test(t);
+      if (isHarmlessA) {
+        mappedCat = 'ERKUNDEN';
+        if (typeof diag === 'function') diag('detect', 'Position-A-Guard: harmlose Bewegungsoption auf ERKUNDEN gestuft statt OFFENSIV');
+      }
+    }
+    if (mappedCat) {
+      finalCat = mappedCat;
       source = 'position-' + idUpper;
     }
   }
