@@ -2742,7 +2742,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.33</div>
+    <div class="start-version">Schatten v7.12.34</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2906,7 +2906,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.33</span>
+    <span>Schatten v7.12.34</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5372,7 +5372,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.33';
+window.SCHATTEN_VERSION = 'v7.12.34';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -9720,6 +9720,26 @@ function advanceGameTime() {
   // v7.11.32: NACHT-Force-Push entfernt. Bei NACHT haben wir den
   // wuerdeWechselnZuMorgen-Block (Z. ~8545) der jeden Auto-Wechsel verhindert.
   // Der Force-Push war redundant und versteckte die Logik.
+  // v7.12.34: NACHT-MARATHON-PUSH. Hilde-Brauer-Run: 16 Szenen in T1 NACHT
+  // weil der Spieler einfach nie SCHLAFEN klickte. Nach 6 Szenen in NACHT
+  // wird ein staerkerer Push gesetzt; nach 10 Szenen ein harter Force-Push.
+  // WICHTIG: Nur bei niedriger Spannung (<=2). Bei Action (Sp>=3) waere
+  // ein Schlaf-Force absurd - Karl kann nicht schlafen wenn er Bruno an
+  // der Werft stellt oder mitten im Schusswechsel ist.
+  if (isNacht && scenesInCurrentTime >= 6 && !pendingSleepChoice && lastSpannung <= 2) {
+    const nightStages = scenesInCurrentTime >= 10 ? 'HARD' : 'SOFT';
+    if (nightStages === 'HARD') {
+      if (Array.isArray(pendingCategoryMessages)) {
+        pendingCategoryMessages.push('NACHT-MARATHON-FORCE: Karl ist nach ' + scenesInCurrentTime + ' Szenen in der Nacht am absoluten Limit. Diese Szene MUSS damit enden dass Karl schlaeft oder Schutz sucht. Alle 4 Optionen sollen zum Schlaf fuehren (zu Hause, im Wagen, bei jemandem, oder an einem sicheren Ort). SCHLAFEN-Button ist aktiv.');
+      }
+      diag('detect', 'NACHT-MARATHON-FORCE: ' + scenesInCurrentTime + ' Szenen in NACHT (Sp ' + lastSpannung + '<=2) - alle Optionen auf Schlaf');
+    } else {
+      if (Array.isArray(pendingCategoryMessages)) {
+        pendingCategoryMessages.push('NACHT-MUEDIGKEIT: Karl ermittelt seit ' + scenesInCurrentTime + ' Szenen ohne Pause in der Nacht. Beschreibe spuerbar: schwere Glieder, Konzentrationsprobleme, der Wunsch nach einem Bett. Mindestens eine der 4 Optionen soll explizit SCHLAFEN anbieten (z.B. "Fahr nach Hause und schlaf"). SCHLAFEN-Button ist aktiv.');
+      }
+      diag('detect', 'NACHT-MUEDIGKEIT-PUSH: ' + scenesInCurrentTime + ' Szenen in NACHT (Sp ' + lastSpannung + '<=2)');
+    }
+  }
 
   // HARD-Override bei extrem langen Marathons (Action-Streak).
   // v7.11.32: NUR fuer NICHT-NACHT-Phasen. Bei NACHT muss Spieler aktiv SCHLAFEN.
@@ -10563,12 +10583,12 @@ function classifyOption(opt, resolveContext) {
     heuristicCat = 'OFFENSIV';
   }
   // v7.12.32: BEOBACHTEN-Heuristik fuer klare Befragungs-/Recherche-Verben.
-  // Goerke-Run: "Frag höflich, ob sie Mertens kennt" und "Ruf Baumgarten an
-  // und bitte um ein Treffen" wurden als DEFENSIV (Position B) klassifiziert.
-  // "Frag ob", "ruf ... an", "frage ... nach" sind Informations-Sammel-Aktionen
-  // -> BEOBACHTEN, nicht DEFENSIV. Schmaler Filter: nur mit klarem Befragungs-
-  // oder Nachfrage-Intent, nicht bloßes "frag" allein.
-  else if (/\b(frage?\s+\w+,?\s+ob\s|frage?\s+\w+\s+(nach|wegen|ueber|ob\s)|befrage?\s+(ihn|sie|den|die|das)|frage?\s+nach\s+(dem|der|den)|ruf[et]?\s+\w+\s+an\s+und\s+(frag|bitte|bitte\s+um|frag\s+nach)|frag[et]?\s+\w+\s+(diskret|hoeflich|leise|ruhig)|erkundige\s+dich|horche?\s+aus|hoere?\s+(zu|ihn|sie)\s+an)\b/i.test(t)) {
+  // v7.12.34: Erweitert um fluesternde/direkte Befragungen (Brauer-Run-Daten).
+  // OFFENSIV-Vorrang: wenn ein Aggressions-Verb am Satzanfang steht (pack, stürm,
+  // reiß, zwing), soll kein späteres "frag ob" das auf BEOBACHTEN ziehen.
+  // Brauer-Run: "Pack sie am Arm und frag direkt, ob er..." -> BEOBACHTEN falsch.
+  else if (!/^(pack[et]?\s|stuerm[et]?\s|reiss[et]?\s|reiß[et]?\s|zwing[et]?\s|press[et]?\s|grabb?[et]?\s)/i.test(t) &&
+    /\b(frage?\s+\w+,?\s+ob\s|frage?\s+\w+\s+(nach|wegen|ueber|ob\s)|befrage?\s+(ihn|sie|den|die|das)|frage?\s+nach\s+(dem|der|den)|ruf[et]?\s+\w+\s+an\s+und\s+(frag|bitte|bitte\s+um|frag\s+nach)|frag[et]?\s+\w+\s+(diskret|hoeflich|leise|ruhig|fluesternde?|direkt,|vorsichtig)|erkundige\s+dich|horche?\s+aus|hoere?\s+(zu|ihn|sie)\s+an|frag[et]?\s+\w+\s+(direkt|leise),?\s+(warum|ob|wer|was|wie|wo|wohin|woher))\b/i.test(t)) {
     heuristicCat = 'BEOBACHTEN';
   }
   // ENTFERNT v7.11.30 (Wort-Heuristik fuer Basis-Kategorien war zu trigger-happy):
@@ -11182,7 +11202,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.33] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.34] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -17532,7 +17552,7 @@ async function chooseOption(option) {
     if (npcName && typeof romanceReceptive[npcName] === 'undefined') {
       const offen = Math.random() < 0.5;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.33] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.34] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -17859,7 +17879,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.33] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.34] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -18868,7 +18888,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           const tensionHighEnoughForArrest = (typeof stasiTension === 'number' && stasiTension >= 4);
           if (!tensionHighEnoughForArrest) {
             // STILLER RELEASE: Karl ist faktisch frei, das System zieht nach.
-            console.warn('[Schatten v7.12.33] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
+            console.warn('[Schatten v7.12.34] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet, kein Hard-Force');
             karlInStasiCustody = false;
             folterSceneCount = 0;
@@ -18883,7 +18903,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.33] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.34] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -21350,7 +21370,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.33] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.34] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
