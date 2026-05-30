@@ -2773,7 +2773,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.74</div>
+    <div class="start-version">Schatten v7.12.75</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2937,7 +2937,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.74</span>
+    <span>Schatten v7.12.75</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5469,7 +5469,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.74';
+window.SCHATTEN_VERSION = 'v7.12.75';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -11676,7 +11676,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.74] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.75] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -13327,6 +13327,14 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
               recap += 'WICHTIG (vermisst): Bei diesem Fall-Typ ist der TAETER nicht das Hauptziel - er ist der WEG zum Hauptziel (TARGET-Person finden). Karl muss den Taeter NICHT zwangslaeufig fassen. Aber die Spur fuehrt ueber ihn (er weiss wo die vermisste Person ist). Erfinde KEINE alternativen Verantwortlichen.\n';
             } else if (ct === 'diebstahl') {
               recap += 'WICHTIG (diebstahl): Der TAETER (Hehler/Dieb) hat das Diebesgut. Karl trifft ihn typischerweise WAEHREND er das Diebesgut holt - das ist die natuerliche Aufloesung. Beide Loesungs-Elemente (TARGET-Objekt + SUSPECT-Person) kommen zusammen. Karl muss SUSPECT nicht zwangslaeufig festsetzen oder der Polizei uebergeben - aber er muss das Diebesgut von ihm bekommen (Druck, Bestechung, Tausch, oder Diebstahl-zurueck). Hauptziel bleibt das DIEBESGUT - die Begegnung mit dem Hehler ist der Weg dorthin. Erfinde KEINE alternativen Hehler aus dem Nichts.\n';
+              // v7.12.75 (Lektorat Krause-Run 16:27): Inventar-Pflicht fuer das TARGET.
+              // Der 42-Sz-Marathon entstand, weil die KI das Etui narrativ "in Karls
+              // Hand" beschrieb (Sz 8, 17), es aber erst Sz 39 ins inventar_hinzugefuegt-
+              // Feld schrieb -> Durchbruch sprang nie ueber das Objekt. Jetzt explizite
+              // Pflicht: sobald Karl das Gut greift, MUSS es ins Inventar-Feld.
+              const tgtObj = caseSetup.setupCast.find(c => (c.tag || '').toUpperCase() === 'TARGET');
+              const tgtNm = tgtObj && tgtObj.name ? tgtObj.name : 'das Diebesgut';
+              recap += 'INVENTAR-PFLICHT (kritisch fuer den Fall-Abschluss): In DERSELBEN Szene, in der Karl "' + tgtNm + '" tatsaechlich an sich nimmt (in die Hand, einsteckt, an sich nimmt), MUSST du es in "inventar_hinzugefuegt" eintragen - nicht nur im Erzaehltext erwaehnen. Das Spiel erkennt den Fall-Durchbruch (Diebesgut zurueck) ueber dieses Feld. Wenn Karl das Gut greift, der Eintrag aber fehlt, bleibt der Fall faelschlich offen und zieht sich endlos. Schreibe das TARGET-Objekt also GENAU EINMAL ins Inventar - in dem Moment, in dem Karl es bekommt, nicht spaeter, nicht doppelt.\n';
             } else {
               recap += 'KRITISCH (' + ct + '): Diese Person ist der TAETER. Die Aufklaerung des Falls fuehrt am Ende zu ihm/ihr. Erfinde KEINE alternativen Verdaechtigen aus dem Nichts. Wenn Mistral spontan einen "Karl Walther" oder "die rothaarige Fee" als Taeter ins Spiel bringt obwohl der wahre Taeter oben definiert ist - das ist falsch. Die Indizien sollen schrittweise zum genannten TAETER fuehren, nicht zu einer halluzinierten Person. Du DARFST am Anfang auch andere Personen verdaechtig wirken lassen (Misdirection ist erlaubt) - aber am Ende muss der TAETER der oben genannte sein.\n';
             }
@@ -18304,7 +18312,7 @@ async function chooseOption(option) {
     if (npcName && typeof romanceReceptive[npcName] === 'undefined') {
       const offen = Math.random() < 0.5;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.74] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.75] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -18631,7 +18639,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.74] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.75] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -19649,7 +19657,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           const tensionHighEnoughForArrest = (typeof stasiTension === 'number' && stasiTension >= 4);
           if (!tensionHighEnoughForArrest) {
             // STILLER RELEASE: Karl ist faktisch frei, das System zieht nach.
-            console.warn('[Schatten v7.12.74] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
+            console.warn('[Schatten v7.12.75] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet, kein Hard-Force');
             karlInStasiCustody = false;
             folterSceneCount = 0;
@@ -19664,7 +19672,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.74] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.75] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -21491,7 +21499,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           // v7.11.39: TARGET physisch da, aber Stage 2 noch zu kurz - Stage 3
           // blockiert damit Spieler nicht sofort aufloesen kann.
           diag('filter', 'Stage-3-Force blockiert: ' + targetName + ' bei Karl aber Stage 2 erst seit ' + stage2Scenes + ' Sz (Min: 3)');
-        } else if (ct === 'diebstahl' && targetName && Array.isArray(inventory) && stage2Scenes >= 1) {
+        } else if (ct === 'diebstahl' && targetName && stage2Scenes >= 1) {
           // v7.9.24: Diebstahl-Stage-3: Diebesgut (TARGET) ist im Inventar
           // User-Punkt: "bei diebstahl ist Hauptziel Rueckgabe, nicht Festnahme".
           // Wenn das gestohlene Objekt in Karls Inventar landet, ist Hauptziel
@@ -21499,19 +21507,47 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           const tName = normForMatch(targetName || '');
           const tWords = tName.split(/\s+/).filter(w => w.length >= 4);
           let targetInInventory = false;
-          for (const item of inventory) {
-            const itLower = normForMatch(item || '');
-            for (const w of tWords) {
-              if (itLower.includes(w)) { targetInInventory = true; break; }
+          if (Array.isArray(inventory)) {
+            for (const item of inventory) {
+              const itLower = normForMatch(item || '');
+              for (const w of tWords) {
+                if (itLower.includes(w)) { targetInInventory = true; break; }
+              }
+              if (targetInInventory) break;
             }
-            if (targetInInventory) break;
           }
-          if (targetInInventory) {
+          // v7.12.75 (Lektorat Krause-Run 16:27, 42-Sz-Marathon): TEXT-SICHERHEITSNETZ.
+          // Problem: Die KI beschrieb das Etui mehrfach narrativ als "in deiner Hand"
+          // (Sz 8, 17/18), schrieb es aber erst Sz 39 ins inventar_hinzugefuegt-Feld
+          // -> der Diebstahl-Durchbruch sprang nie ueber das Objekt, der Fall lief
+          // 42 Szenen bis Frieda als "ueberfuehrt" zaehlte. Narrativ hatte Karl das
+          // Diebesgut laengst. Fix: Wenn der TARGET-Name + ein eindeutiges BESITZ-Verb
+          // im Szenentext steht (nicht bloss Sicht/Erwaehnung), gilt das Gut als zurueck.
+          // Schutz gegen Fehlausloesung: reine Sicht-Phrasen ("siehst", "liegt auf dem
+          // Tresen", "entdeckst") zaehlen NICHT - nur klarer Besitz.
+          let targetInText = false;
+          if (!targetInInventory && tWords.length > 0) {
+            const sceneNorm = normForMatch(scene.szene || '');
+            // Steht der TARGET-Name im Text? (mind. 1 distinktes Wort)
+            const targetMentioned = tWords.some(w => sceneNorm.includes(w));
+            if (targetMentioned) {
+              // Besitz-Verben (Karl HAT das Objekt aktiv): in der Hand, eingesteckt,
+              // umklammert, an sich genommen, im Mantel/in der Tasche verstaut.
+              const besitzRe = /(in (deiner|der) (hand|faust)|in (deinen|den) (haenden|haendend))|umklammer|umgreif|umfass|steckst (es|ihn|sie|das (etui|diebesgut)|den schmuck)? ?(ein|weg|in)|nimmst (es|ihn|sie|das (etui|diebesgut)) an dich|an dich genommen|in (deine[rn]?|die) (innen)?(tasche|mantel|jacke)|in deinem besitz|sicher verstaut|haeltst (es|ihn|sie|das (etui|diebesgut)|den schmuck) (fest|umklammert|in)|birgst (es|ihn|sie)|hast (es|ihn|sie|das (etui|diebesgut)|den schmuck) (endlich |wieder |jetzt )?(sicher |an dich genommen|in der hand|zurueck)/i;
+            // Negativ-Guard: reine Sicht/Naehe ohne Besitz
+              const nurSicht = /(siehst|erblickst|entdeckst|liegt (auf|vor|in)|funkelt|glaenzt|steht) /i.test(sceneNorm) && !besitzRe.test(sceneNorm);
+              if (besitzRe.test(sceneNorm) && !nurSicht) {
+                targetInText = true;
+              }
+            }
+          }
+          if (targetInInventory || targetInText) {
             caseProgress.ueberfuehrt = true;
             caseProgress.stage = 3;
             caseProgress.stage3StartScene = sceneCounter;
-            console.log('[Schatten] AUTO-FORCING Stage 3 (diebstahl): ' + targetName + ' im Inventar');
-            diag('progress', '✦ AUTO-STAGE 3 (diebstahl) erzwungen: ' + targetName + ' wieder bei Karl');
+            const wie = targetInInventory ? 'im Inventar' : 'laut Szenentext in Karls Besitz';
+            console.log('[Schatten] AUTO-FORCING Stage 3 (diebstahl): ' + targetName + ' ' + wie);
+            diag('progress', '✦ AUTO-STAGE 3 (diebstahl) erzwungen: ' + targetName + ' wieder bei Karl (' + wie + ')');
             showProgressToast('FALL-STUFE 3', targetName + ' zurück. Jetzt zum Klienten.');
           }
         } else if ((ct === 'beschatten' || ct === 'wahrheit') && stage2Scenes >= 4) {
@@ -22150,7 +22186,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.74] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.75] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
