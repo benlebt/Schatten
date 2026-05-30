@@ -2773,7 +2773,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.92</div>
+    <div class="start-version">Schatten v7.12.93</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2937,7 +2937,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.92</span>
+    <span>Schatten v7.12.93</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5474,7 +5474,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.92';
+window.SCHATTEN_VERSION = 'v7.12.93';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -11690,7 +11690,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.92] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.93] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -18369,7 +18369,7 @@ async function chooseOption(option) {
     if (npcName && typeof romanceReceptive[npcName] === 'undefined') {
       const offen = Math.random() < 0.5;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.92] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.93] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -18698,7 +18698,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.92] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.93] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -19714,14 +19714,33 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           // KEINE ignorierte Festnahme. HARD-FORCE nur noch bei HOHER Tension
           // (>=4), wo die KI wirklich eine faellige Konsequenz verschleppt.
           const tensionHighEnoughForArrest = (typeof stasiTension === 'number' && stasiTension >= 4);
-          if (!tensionHighEnoughForArrest) {
-            // STILLER RELEASE: Karl ist faktisch frei, das System zieht nach.
-            console.warn('[Schatten v7.12.92] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
-            diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet, kein Hard-Force');
+          // v7.12.93 (Wessel-Run 2244, 14 Custody-Wechsel): Der stille Release riss Karl
+          // immer wieder aus der laufenden Verhör-Episode (rein/raus/rein 14x = "Kaffee in
+          // Gewahrsam"-Drift + Wessel kam nie 3 Sz am Stück voran). NEU: Custody endet
+          // bevorzugt durch die SAUBEREN Ausgänge (Schlaf->Morgen-Freilassung ab 5 Sz, oder
+          // Notflucht). Der stille Release greift NUR noch als Notventil bei einem echten
+          // langen Drift (5+ Sz ohne Stasi-Kontext UND Tension niedrig) - nicht schon nach 3.
+          // Und wenn custodyLocked aktiv ist (Yo-Yo-Schutz nach 2 Wechseln), gibt es GAR KEINEN
+          // automatischen Wechsel mehr - dann nur noch Schlaf oder Notflucht (beide bewusst).
+          const custodyReleaseFloor = 5;  // statt 3: laesst die Verhör-Episode laufen
+          if (custodyLocked) {
+            // Lock aktiv: kein Auto-Wechsel. Karl bleibt in Custody bis Schlaf/Notflucht.
+            // Tension dämpfen, damit keine ESKALATION, aber NICHT releasen.
+            if (typeof stasiTension === 'number' && stasiTension > 2) stasiTension = 2;
+            diag('state', 'CUSTODY-LOCK aktiv: kein Auto-Release/Force - Karl bleibt in Custody bis Schlaf (ab ' + custodyReleaseFloor + ' Sz) oder Notflucht (folterSz ' + folterSceneCount + ')');
+          } else if (!tensionHighEnoughForArrest && folterSceneCount >= custodyReleaseFloor) {
+            // STILLER RELEASE: nur noch als Notventil bei langem Drift (5+ Sz). Karl ist
+            // faktisch frei (KI erzaehlt ihn lange ohne Stasi-Kontext), System zieht nach.
+            console.warn('[Schatten v7.12.93] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
+            diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet');
             karlInStasiCustody = false;
             folterSceneCount = 0;
             stasiHighTensionStreak = 0;
             if (typeof trackCustodyChange === 'function') trackCustodyChange('stiller-release');
+          } else if (!tensionHighEnoughForArrest) {
+            // Drift, aber noch nicht lang genug (< 5 Sz): Karl bleibt vorerst in Custody.
+            // Das laesst die Schlaf-Freilassung (ab 5 Sz) der Normalweg sein.
+            diag('state', 'Custody-Drift ' + folterSceneCount + '/' + custodyReleaseFloor + ' Sz (Tension ' + stasiTension + ') - noch kein Release, Schlaf-Ausgang ab ' + custodyReleaseFloor + ' Sz');
           } else if (!hardForcedArrestUsed) {
             // v7.11.55: HARD-FORCE FESTNAHME aufschieben wenn Karl zu kritisch.
             // User-Run Vogt 2145 Sz 61: Hard-Force triggerte bei Vf=3, Karl
@@ -19731,7 +19750,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.92] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.93] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -22364,7 +22383,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.92] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.93] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
@@ -22548,7 +22567,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         }
         pendingForcedFahndung = {
           severity: vpCrime,
-          sceneIdx: scenesPlayed || 0,
+          sceneIdx: (typeof sceneCounter === 'number' ? sceneCounter : 0),  // v7.12.93: war 'scenesPlayed' (undefined) -> Crash bei VP-Verbrechen
         };
         fahndungUsed = true;
         console.warn('[Schatten] VP-Verbrechen erkannt (' + vpCrime + ') -> Fahndung-Force fuer naechste Szene.');
