@@ -8,6 +8,17 @@
 // Antwort: Im OpenAI-kompatiblen Format zurueck, damit das Frontend
 //   den gleichen Parsing-Code wie vorher (fuer Groq) verwenden kann.
 
+// EIGENSTAENDIGE VERSION dieser Proxy-Datei. Wird bei JEDER Aenderung an
+// gemini.js manuell hochgezaehlt (unabhaengig von der index.html/SCHATTEN-
+// Version). Wird bei jedem Aufruf in der Response (_geminiJsVersion) zurueck-
+// gegeben und vom Frontend ins Debug-Log geschrieben. So sehen wir im Run-
+// Export-Log eindeutig, welche gemini.js-Version live war - z.B. um zu klaeren,
+// ob ein Schema-Fix beim Run schon deployt war.
+// v1.0 (2026-05-30): Erste versionierte Fassung. Enthaelt den responseSchema-
+//   Kernfix (kategorie als enum+required pro Option; zielperson_gefunden,
+//   wahrheit_erkannt, indiz_verbindung, npc_kernhinweis ergaenzt).
+const GEMINI_JS_VERSION = 'v1.0';
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -250,6 +261,7 @@ export default async function handler(req, res) {
           }],
           model,
           _truncated: true,
+          _geminiJsVersion: GEMINI_JS_VERSION,
         });
       }
       return res.status(502).json({
@@ -273,6 +285,7 @@ export default async function handler(req, res) {
       }],
       model,
       usageMetadata: data?.usageMetadata || null,
+      _geminiJsVersion: GEMINI_JS_VERSION,
     });
   } catch (err) {
     return res.status(502).json({
