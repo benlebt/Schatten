@@ -3547,7 +3547,7 @@ KONKRETE KUERZUNGS-STRATEGIE wenn du dich beim Schreiben ueber 180 Worten findes
 5. Wenn weiter zu lang: einen Nebenstrang ganz streichen
 
 Falsch (zu lang, 350 Worte): "Die ganze Atmosphaere der Strasse, der Geruch der Baeckerei, das Geraeusch der Strassenbahn, die Geschichte der Mietskaserne, dann erst die Handlung."
-Richtig (140 Worte): "1 Satz Anker zur Vorszene + 3-5 Saetze konkrete Konsequenz/Begegnung + 1-2 Saetze atmosphaerischer Schluss."
+Richtig (140 Worte): "1 Satz Anker zur Vorszene + 3-5 Saetze konkrete Konsequenz/Begegnung + optional 1 Satz atmosphaerischer Schluss." Der atmosphaerische Schluss ist NICHT Pflicht - bei Action (hohe Spannung) oder an einem bereits etablierten Ort weglassen. Atmosphaere gehoert primaer ans Etablieren eines NEUEN Orts, nicht in jede Folgeszene.
 
 DETAIL-OEKONOMIE (sehr wichtig):
 Eine Szene hat MAXIMAL 2-3 atmosphärische Details (Geruch, Geräusch, Lichtstimmung). Der Rest muss konkrete Handlung sein. Falsch: 5 Sätze Stimmung, 1 Satz Handlung. Richtig: 1 Satz Stimmung, 4 Sätze Handlung mit Detail. Die Spieler-Aktion in der Szene davor MUSS die zentrale erzählerische Bewegung sein - alles drumherum ist Beiwerk.
@@ -14784,6 +14784,21 @@ VERBOTEN: Karl wacht woanders auf ohne Erklaerung. Wenn du Pfad B waehlst, MUSST
     } else {
       // v7.0: Ortswechsel hat funktioniert, Counter zuruecksetzen
       ortPflichtIgnoredCount = 0;
+    }
+
+    // v7.12.66 (User-Wunsch): ATMOSPHAERE-DOSIERUNG nach Ortsverweildauer.
+    // Problem: blumige Umgebungsbeschreibung (Licht, Staub, flackernde Neonroehren/
+    // Gluehbirnen) ist beim ERSTEN Betreten eines Orts stimmungsvoll, nervt aber
+    // wenn sie in JEDER Folgeszene am selben Ort wiederholt wird - besonders bei
+    // Action/Dialog. Zieht den Text unnoetig in die Laenge (+ kostet Gemini-Tokens).
+    // Loesung: Beim Establishing (neuer Ort, 0-1 Szenen) Atmosphaere erlaubt;
+    // ab der 2. Szene am selben Ort wird sie reduziert; bei Action (Sp>=4) hart raus.
+    if (scenesAtSameLocation <= 1) {
+      timeContext += `\n\nATMOSPHAERE (neuer Ort): Karl kommt an einem neuen Schauplatz an - hier DARF ein knapper atmosphaerischer Einstieg stehen (1-2 Saetze: was Karl sieht/riecht/hoert), um den Ort zu etablieren. Danach zur Handlung.`;
+    } else if (typeof lastSpannung === 'number' && lastSpannung >= 4) {
+      timeContext += `\n\nATMOSPHAERE (Action, Ort bekannt): Spannung ist hoch und der Ort ist bereits etabliert. KEINE Umgebungsbeschreibung mehr - kein Licht, kein Staub, keine flackernden Gluehbirnen/Neonroehren, keine Stimmungssaetze. NUR Handlung, Bewegung, Dialog. Knapp und schnell. Jeder atmosphaerische Fuellsatz bremst die Szene.`;
+    } else if (scenesAtSameLocation >= 2) {
+      timeContext += `\n\nATMOSPHAERE (Ort bereits etabliert): Dieser Ort wurde schon beschrieben. Wiederhole die Umgebungs-Stimmung NICHT (kein erneutes Licht/Staub/Flackern/abblaetternder Putz). Der Leser kennt den Ort. Fokus auf das, was NEU passiert: Handlung, Dialog, Reaktion. Hoechstens EIN knapper Sinneseindruck wenn sich konkret etwas veraendert hat.`;
     }
     // v7.0: HARD-FORCE ORTSWECHSEL-PUSH wenn Mistral 3+ Pflichtwechsel-Toasts
     // ignoriert hat. Anlass: Wagner-Run v6.98 ignorierte 7 Pflichtwechsel-Toasts
