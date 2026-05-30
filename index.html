@@ -2745,7 +2745,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.63</div>
+    <div class="start-version">Schatten v7.12.65</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2909,7 +2909,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.63</span>
+    <span>Schatten v7.12.65</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -3319,6 +3319,7 @@ Stufe 3 - ÜBERFÜHREN (Tag 3-5 typisch):
 Wenn der Tatverdächtige nicht mehr leugnen kann (Karl konfrontiert ihn mit Beweisen und er gesteht / Karl übergibt Beweise an die Volkspolizei mit eindeutigem Ergebnis / Karl verhaftet ihn selbst mit Hilfe Kommissar Roth), setze "tatverdaechtiger_ueberfuehrt": true.
   
   VERMISSTENFALL - PERSON GEFUNDEN: Wenn es ein Vermisstenfall ist und Karl die gesuchte Person tatsächlich auffindet (lebend, tot, oder im Gewahrsam eines Dritten) und bei ihr ist / sie eindeutig lokalisiert hat, setze "zielperson_gefunden": true. Das ist bei Vermisstenfällen der Durchbruch - Karl muss dann nicht noch einen Täter überführen, das Auffinden selbst ist die Auflösung. NICHT setzen, wenn Karl nur eine Spur hat wo die Person sein KÖNNTE - erst wenn er sie wirklich gefunden hat.
+  WAHRHEITS-FALL - WAHRHEIT ERKANNT: Wenn es ein Wahrheits-Fall ist (Karl soll herausfinden was WIRKLICH passiert ist) und sich herausstellt, dass es KEIN klassisches Verbrechen mit Täter war (echter Selbstmord, Unfall, Republikflucht, die Person ist freiwillig gegangen, eine Affäre bestätigt sich oder zerschlägt sich) - also es gibt niemanden zu überführen - dann setze "wahrheit_erkannt": true, sobald Karl die Wahrheit zweifelsfrei ermittelt hat. Das ist bei solchen Fällen der Durchbruch: Karl kann dem Klienten die (oft unbequeme) Wahrheit berichten, auch wenn kein Schuldiger existiert. NUR setzen wenn die Wahrheit wirklich feststeht, NICHT bei bloßer Vermutung. Wenn es DOCH ein Verbrechen mit Täter war, nutze stattdessen "tatverdaechtiger_ueberfuehrt".
 
 WIN-BEDINGUNG - KLIENT BERICHTEN:
 NACHDEM der Verdächtige überführt wurde, MUSS Karl dem Klienten/der Klientin Bericht erstatten (zurück ins Büro, Anruf, persönliches Treffen). In dieser Szene setze "klient_berichtet": true. DANN gilt der Fall als gelöst.
@@ -3791,6 +3792,7 @@ JSON-Output ist Pflicht (kein Markdown, kein Text drumherum):
   "tatverdaechtiger_identifiziert": "",
   "tatverdaechtiger_ueberfuehrt": false,
   "zielperson_gefunden": false,
+  "wahrheit_erkannt": false,
   "klient_berichtet": false,
   "zusammenfassung": "1 Satz für dein Gedächtnis: Ort, was getan wurde, wichtige Personen/Fakten."
 }
@@ -5408,7 +5410,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.63';
+window.SCHATTEN_VERSION = 'v7.12.65';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5599,6 +5601,7 @@ let caseProgress = {
   tatverdaechtiger: null,   // Name des Hauptverdaechtigen
   ueberfuehrt: false,       // wurde der Verdaechtige festgenagelt? (starker Durchbruch)
   zielpersonGefunden: false, // v7.12.63: Vermisste/r gefunden (starker Durchbruch)
+  wahrheitErkannt: false,    // v7.12.64: Wahrheit erkannt, kein Taeter noetig (starker Durchbruch)
   suspectConfronted: false,  // v7.12.63: Verdaechtiger konfrontiert (mittlerer Loesungs-Anker)
   istGelöst: false,         // Win-Flag
   klientGesprochen: false,  // hat Karl dem Klient das Ergebnis berichtet?
@@ -8313,7 +8316,6 @@ function buildTranscriptText() {
     // Wechsel in 23 Szenen (Cust 0->1->2->0->1->2->3->0->...) - Inkonsistenz-Verdacht.
     let custodyChanges = 0;
     let lastCust = null;
-    let lastSceneInCustody = -1;
     let custodyWasActive = false;
     for (const e of logEntries) {
       if (e.type !== 'scene') continue;
@@ -8932,13 +8934,11 @@ function showHeader(scene) {
     // v7.11.40: Wenn Stage 3 reif fuer FALL LÖSEN ist (Indizien voll, 2+ Sz in
     // Stage 3), Segment 4 als "ready" anzeigen statt leer. So sieht der Spieler:
     // "Balken voll = jetzt kann ich abschliessen".
-    const stage3ScenesUI = caseProgress.stage3StartScene
-      ? (sceneCounter - caseProgress.stage3StartScene) : 0;
     const indCntUI = (caseProgress.indizien || []).length;
     // v7.12.63: Schwelle synchron mit FALL LÖSEN-Button (neues Modell):
     // Durchbruch (ueberfuehrt/gefunden) ODER genug Indizien + benannter +
     // konfrontierter Verdaechtiger.
-    const durchbruchUI = !!(caseProgress.ueberfuehrt || caseProgress.zielpersonGefunden);
+    const durchbruchUI = !!(caseProgress.ueberfuehrt || caseProgress.zielpersonGefunden || caseProgress.wahrheitErkannt);
     const mittelAnkerUI = indCntUI >= 11 && !!caseProgress.tatverdaechtiger && !!caseProgress.suspectConfronted;
     const resolveReady = !isSolved && reachedStage >= 3 && (durchbruchUI || mittelAnkerUI);
     segments.forEach(seg => {
@@ -9993,7 +9993,6 @@ let pendingHeimfahrt = false;  // v7.11.87: Spieler waehlte "Schlafen (zu Hause)
 // einen Sz frueher erreicht werden kann. Anlass: Wagner-Run v7.9.60 hatte
 // 60 Szenen mit 15 Indizien Stagnation - "Heisse Spur"-Klicks brachten keine
 // Story-Beschleunigung.
-let pendingHotLeadChoice = false;
 
 // v7.10: KATEGORIE-ARCHITEKTUR. Speichert die Kategorie der letzten Wahl
 // damit applyCategoryMechanics in scene-Verarbeitung darauf zugreifen kann.
@@ -11191,10 +11190,13 @@ function applyCategoryMechanics(kategorie, ctx) {
       let ergebnisHint = '';
       const cpZiel = !!(typeof caseProgress !== 'undefined' && caseProgress && caseProgress.zielpersonGefunden);
       const cpUeber = !!(typeof caseProgress !== 'undefined' && caseProgress && caseProgress.ueberfuehrt);
+      const cpWahr = !!(typeof caseProgress !== 'undefined' && caseProgress && caseProgress.wahrheitErkannt);
       if (cpZiel) {
         ergebnisHint = ' ERGEBNIS: ERFOLG. Die gesuchte/vermisste Person wurde LEBEND gefunden bzw. befreit und ist (falls Karl sie mitgebracht hat) JETZT HIER beim Klienten im Raum. Das ist ein GUTES Ende - die Reaktion der Klientin ist ERLEICHTERUNG, Dankbarkeit, vielleicht Traenen der Freude und ein Wiedersehen. KEIN trauriges/melancholisches Framing wie "sie weiss jetzt wenigstens was geschah" - die Person LEBT und ist zurueck. Wenn die Person mit im Raum ist, zeige das Wiedersehen (Umarmung, Helga laeuft auf ihn zu).';
       } else if (cpUeber) {
         ergebnisHint = ' ERGEBNIS: Der Taeter/Schuldige wurde ueberfuehrt. Je nach Fall kann das Ende erleichtert (Gerechtigkeit) oder bittersuess sein (der Schaden ist geschehen, aber die Wahrheit ist ans Licht gekommen). Passe die Reaktion an, was im Fall tatsaechlich passiert ist - erfinde KEINEN Tod, wenn niemand gestorben ist.';
+      } else if (cpWahr) {
+        ergebnisHint = ' ERGEBNIS: Karl hat die WAHRHEIT ermittelt - es war kein klassisches Verbrechen mit Schuldigem (z.B. echter Selbstmord, Unfall, Republikflucht, eine Affaere die sich bestaetigt/zerschlagen hat). Karl ueberbringt dem Klienten diese oft unbequeme Wahrheit ehrlich und ohne Beschoenigung. KEIN Taeter wird genannt, KEINE Festnahme - es gibt keinen. Die Reaktion des Klienten passt zur Wahrheit: Trauer, Erleichterung, bittere Akzeptanz, manchmal Unglaube. Ein ruhiges, ehrliches Noir-Ende.';
       } else {
         ergebnisHint = ' ERGEBNIS: Karl uebergibt seine Erkenntnisse. Beschreibe die Reaktion passend zu dem, was im Fall TATSAECHLICH herauskam - erfinde kein trauriges Ergebnis, wenn das Ziel erreicht wurde.';
       }
@@ -11318,7 +11320,7 @@ function checkProgressTriggers(kategorie, ctx) {
   // Stage 3 -> Loesungs-Reife: ~11 Indizien ODER Durchbruch (ueberfuehrt/gefunden).
   else if (stage === 3) {
     const indizReady = indCount >= 11;
-    const durchbruch = !!(ctx && (ctx.ueberfuehrt || ctx.zielpersonGefunden));
+    const durchbruch = !!(ctx && (ctx.ueberfuehrt || ctx.zielpersonGefunden || ctx.wahrheitErkannt));
     if (indizReady || durchbruch) {
       result.pushMessages.push('LOESUNGS-REIF: Karl hat genug, um den Fall abzuschliessen. Setze "tatverdaechtiger_ueberfuehrt": true wenn der Verdaechtige geschlagen/festgenommen/identifiziert ist (oder bei Vermisstenfall: Zielperson gefunden). Klient kann jetzt informiert werden ("klient_berichtet": true).');
     }
@@ -11419,7 +11421,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.63] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.65] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -11664,21 +11666,12 @@ function renderOptions(scene) {
   // v7.11.12: NOTHEILEN (immer wenn Vf <= 2 + NICHT in Custody)
   const isAbendOderNacht = isAbendOderNachtTime(gameTimeIdx); // v7.12.56: zentral, ABEND/NACHT (>=4)
   // v7.11.12: SCHLAFEN auch tagsueber wenn Karl ueberzogen ist oder in seinem Buero/Wohnung
-  // v7.11.62: User-Wunsch zurueckgenommen - SCHLAFEN nur noch bei Abend/Nacht
-  // oder in Custody (5+ Sz). Tagsueber-Schlafen (Nickerchen, Buero-Pause) raus
-  // weil es narrativ schief klingt mitten am Tag. Variablen bleiben definiert
-  // weil unten Labels darauf zugreifen.
-  const currentEnergie = (typeof karlEnergie === 'number') ? karlEnergie : 100;
-  // v7.12.20: Umlaute normalisieren (ue/oe/ae) BEVOR gematcht wird. Bug: die KI
-  // schreibt den Ort als "Karls Büro" (mit ü), das Pattern suchte aber "buero"
-  // (mit ue) -> "zu Hause / im Buero"-Erkennung schlug bei JEDER Buero-Szene fehl.
-  // Jetzt werden beide Schreibweisen abgedeckt. Zusaetzlich "hackescher markt"
-  // (Karls Adresse) + "detektei"/"arbeitszimmer"/"schreibtisch" als Heim-Synonyme.
-  const currentLocation = (typeof lastLocation === 'string')
-    ? normForMatch(lastLocation)
-    : '';
-  const isInSafeRestPlace = /\b(buero|wohnung|schlafzimmer|hotel|bett|hauptbahnhof|charit|hackescher markt|detektei|arbeitszimmer|schreibtisch)/.test(currentLocation);
-  const canSleepDuringDay = false; // v7.11.62: deaktiviert
+  // v7.11.62: SCHLAFEN nur noch bei Abend/Nacht oder in Custody (5+ Sz).
+  // Tagsueber-Schlafen (Nickerchen, Buero-Pause) raus weil es narrativ schief
+  // klingt mitten am Tag. v7.12.65: die fruehere Tagschlaf-Heuristik
+  // (currentEnergie/isInSafeRestPlace/canSleepDuringDay) wurde entfernt - sie
+  // wurde seit v7.11.62 von keinem Label mehr gelesen (toter Code, der nur durch
+  // einen veralteten Kommentar "geschuetzt" war).
   // v7.11.94: Schlafen erst ab Szene 3 verfuegbar. User-Befund: Bei Spielstart
   // abends/nachts war "Schlafen" sofort in Szene 1 da - direkt schlafen gehen
   // bevor ueberhaupt etwas im Fall passiert ist, ist unlogisch. Karl muss erst
@@ -11779,7 +11772,6 @@ function renderOptions(scene) {
   // v7.12.48: "zelle" allein reicht NICHT - Telefonzellen! Nur echte Haft-Wörter.
   const sceneShowsCustody = /\b(verhoer|verhoertisch|fesseln|handschellen|haftanstalt|hohenschoenhausen|verhoerraum|haeftling|knast|gefaengnis|untersuchungshaft|in\s+gewahrsam|wachposten\s+(bewacht|steht|sitzt)|bewachter\s+raum|du\s+sitzt\s+(in|auf)\s+(dem|der)\s+(stuhl|bank|pritsche|boden)|du\s+liegst\s+(auf|in)\s+(der\s+zelle|dem\s+verhoer)|haftzelle|einzelzelle|die\s+zelle\s+(ist|riecht|misst|hat))\b/.test(sceneTextNorm);
 
-  const ortLower = normForMatch(scene.ort || '');
   // v7.12.48: ortImpliesCustody nutzt currentOrtType (der bereits Telefonzellen ausschließt)
   const ortImpliesCustody = currentOrtType === 'CUSTODY';
   if (ortImpliesCustody && !karlInStasiCustody) {
@@ -12373,7 +12365,8 @@ function renderOptions(scene) {
   // Verhindert die Sackgasse "Taeter steht, aber Button gesperrt mangels Beweisen".
   const taeterUeberfuehrt = !!(caseProgress && caseProgress.ueberfuehrt);
   const zielpersonGefunden = !!(caseProgress && caseProgress.zielpersonGefunden);
-  const durchbruchErreicht = taeterUeberfuehrt || zielpersonGefunden;
+  const wahrheitErkannt = !!(caseProgress && caseProgress.wahrheitErkannt);
+  const durchbruchErreicht = taeterUeberfuehrt || zielpersonGefunden || wahrheitErkannt;
   // v7.12.63: NEUES LOESBARKEITS-MODELL (User-Wunsch). Vorher konnte der Fall
   // allein durch Indizien-Anzahl (>=11) loesbar werden - das fuehlte sich
   // "automatisch" an: 11 Indizien gesammelt, aber den Vermissten nie gefunden /
@@ -13878,7 +13871,7 @@ ZIEL-OPTIONEN (PFLICHT - ALLE 4 OPTIONEN MUESSEN AUF FALL-ABSCHLUSS ABZIELEN, je
 KEINE neuen Beobachtungen mehr. Karl hat alles - er muss nur noch berichten.`;
         } else {
           // Mord/Wahrheit/Politisch: klassische Taeter-Identifikation
-          recap += `\nFALL-LÖSEN-PFLICHT: Karl hat ${indCount} Indizien gesammelt - das ist mehr als genug. Die Story stagniert seit vielen Szenen ohne dass ein Verdaechtiger fixiert wurde. Du MUSST in dieser Szene EINE von zwei Optionen waehlen: (1) Karl identifiziert einen konkreten Verdaechtigen mit Namen aus den Indizien - setze "tatverdaechtiger_identifiziert" auf den Namen.${suggestionText} ODER (2) Karl kommt zu dem Schluss dass es kein klassisches Verbrechen war (z.B. Brandt-Run: Erich hat sich vielleicht wirklich umgebracht, oder ist abgehauen) - dann setze "fall_aufgegeben": true mit kurzer Begruendung. KEIN weiteres Indizien-Sammeln. KEIN "Karl bleibt unklar" - eine Entscheidung muss her.`;
+          recap += `\nFALL-LÖSEN-PFLICHT: Karl hat ${indCount} Indizien gesammelt - das ist mehr als genug. Die Story stagniert seit vielen Szenen ohne dass ein Verdaechtiger fixiert wurde. Du MUSST in dieser Szene EINE von zwei Optionen waehlen: (1) Karl identifiziert einen konkreten Verdaechtigen mit Namen aus den Indizien - setze "tatverdaechtiger_identifiziert" auf den Namen.${suggestionText} ODER (2) Karl kommt zu dem Schluss dass es kein klassisches Verbrechen war (z.B. Brandt-Run: Erich hat sich vielleicht wirklich umgebracht, oder ist abgehauen) - dann setze "wahrheit_erkannt": true mit kurzer Begruendung. KEIN weiteres Indizien-Sammeln. KEIN "Karl bleibt unklar" - eine Entscheidung muss her.`;
         }
       } else if (indCount >= 7 || gameDay >= 3) {
         recap += `\nFALL-ZWANG (KRITISCH): Karl hat ${indCount} Indizien und ist an Tag ${gameDay}. Das ist genug. Du DARFST in dieser Szene NICHT mehr nur neue Indizien anhaengen - das ist Stagnation. In dieser ODER spaetestens der naechsten Szene MUSS Karl einen konkreten Tatverdaechtigen mit Namen nennen (entweder durch eine Konfrontation, eine Schlussfolgerung im Kopf, oder ein Zufallsfund der die Sache klaert). Setze "tatverdaechtiger_identifiziert" auf den Namen. Auch wenn die Beweislage nicht 100% ist - Karl muss eine Theorie formen und sie aussprechen. Falls die Story noch keinen klaren Verdaechtigen hat: schau dir die Indizien-Liste an und schliesse auf die Person (KEIN Opfer / KEINE Zielperson / KEIN Klient), die am haeufigsten genannt wird oder das groesste Motiv haette.`;
@@ -14108,7 +14101,7 @@ KEINE anderen Themen mehr - kein neuer Tatort, keine neuen Verdaechtigen, keine 
     // schlafen" - der Spieler entscheidet arcade-maessig selbst. Abends/nachts bei
     // niedriger Spannung wird EINE Schlaf-Option angeboten (nicht aufgedraengt).
     if (isAbendOderNacht && isLowTension) {
-      recap += `\n\nNACHT-OPTION (${currentTime}): Es ist Abend/Nacht und die Lage ist ruhig. EINE der 4 Optionen DARF ein Tageswechsel sein (zurueck zum Hackeschen Markt und ins Bett, oder ein anderer plausibler Schlafplatz wenn jemand in der Naehe ist), mit dem Wort "schlafen" oder "Bett" oder "die Nacht verbringen". Kein Zwang - du kannst es anbieten oder auch nicht, je nachdem was dramaturgisch passt. Die anderen Optionen bleiben aktive Ermittlungsschritte.`;
+      recap += `\n\nNACHT-OPTION (${currentTime}): Es ist Abend/Nacht und die Lage ist ruhig. EINE der 4 Optionen DARF ein Tageswechsel sein (zurueck zum Hackeschen Markt und ins Bett, oder ein anderer plausibler Schlafplatz wenn jemand in der Naehe ist), mit dem Wort "schlafen" oder "Bett" oder "die Nacht verbringen". Kein Zwang - du kannst es anbieten oder auch nicht, je nachdem was dramaturgisch passt. Die anderen Optionen bleiben aktive Ermittlungsschritte.` + formalHint;
     }
 
     // v6.83: KEINE-SCHLAF-OPTIONEN-PFLICHT wenn es MORGEN/Tag ist.
@@ -14861,7 +14854,6 @@ VERBOTEN: Karl wacht woanders auf ohne Erklaerung. Wenn du Pfad B waehlst, MUSST
   const activeModel = getActiveModel();
   const endpoint = getProviderEndpoint(activeModel.provider);
   // v7.11.13: Modell-Try-Log fuer iPhone-Debugging
-  const modelTryT0 = Date.now();
   if (typeof diag === 'function') diag('info', 'TRY: ' + activeModel.label + ' (' + activeModel.provider + ')');
   console.log('[Schatten] TRY model:', activeModel.label, '(' + activeModel.provider + ')');
 
@@ -17932,7 +17924,7 @@ async function chooseOption(option) {
     if (npcName && typeof romanceReceptive[npcName] === 'undefined') {
       const offen = Math.random() < 0.5;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.63] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.65] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -18021,6 +18013,7 @@ async function chooseOption(option) {
       // v7.11.83: Durchbruch-Flags fuer Stage-3-Loesungsreife
       ueberfuehrt: !!(caseProgress && caseProgress.ueberfuehrt),
       zielpersonGefunden: !!(caseProgress && caseProgress.zielpersonGefunden),
+        wahrheitErkannt: !!(caseProgress && caseProgress.wahrheitErkannt),
     };
     const progress = checkProgressTriggers(chosenKategorie, progressCtx);
     if (progress.pushMessages && progress.pushMessages.length > 0) {
@@ -18116,7 +18109,6 @@ async function chooseOption(option) {
   // nicht versehentlich doppelt inkrementieren falls der graduelle Wechsel
   // schon getriggert hat (Token-Roll-Over).
   const preAdvanceDay = gameDay;
-  const preAdvanceTimeIdx = gameTimeIdx;
 
   if (isPhysical) {
     // Tokens schon mal ansammeln, aber keinen Roll-over zulassen.
@@ -18259,7 +18251,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.63] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.65] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -19277,7 +19269,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           const tensionHighEnoughForArrest = (typeof stasiTension === 'number' && stasiTension >= 4);
           if (!tensionHighEnoughForArrest) {
             // STILLER RELEASE: Karl ist faktisch frei, das System zieht nach.
-            console.warn('[Schatten v7.12.63] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
+            console.warn('[Schatten v7.12.65] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet, kein Hard-Force');
             karlInStasiCustody = false;
             folterSceneCount = 0;
@@ -19292,7 +19284,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.63] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.65] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -21542,7 +21534,6 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         // Wieviele Indizien haben mindestens ein Konzept?
         const indizMitMatch = indizConceptCoverage.filter(c => c >= 1).length;
         // Wieviele Indizien decken die meisten Konzepte ab?
-        const maxMatchInSingleIndiz = Math.max(...indizConceptCoverage, 0);
         // Wenn ALLE Konzepte in einem einzigen Indiz stecken (oder kein Indiz
         // bedeckt mehr als 50% der Konzepte alleine), aber UNGEACHTET dessen
         // alle Treffer in 1 Indiz konzentriert sind, ist es trivial.
@@ -21766,7 +21757,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.63] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.65] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
@@ -21795,34 +21786,60 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         }
         showProgressToast('FALL-STUFE 3', toastText);
       }
-      // v7.12.63: VERMISSTEN-DURCHBRUCH persistieren. scene.zielperson_gefunden
-      // (KI-Feld) wurde bisher nur als Indiz-Filter gelesen, aber NIE in
-      // caseProgress.zielpersonGefunden uebernommen -> der "Vermisster gefunden"-
-      // Loesungspfad war faktisch tot (Button kam nur ueber die Indizien-Zahl).
-      // Das ist der starke Durchbruch fuer Vermisstenfaelle: wer den Vermissten
-      // gefunden hat, loest sofort - ohne Indizien-Schwelle. Floor: nicht in den
-      // ersten Szenen (sonst Express-Fund durch KI-Halluzination).
-      if (scene.zielperson_gefunden === true && !caseProgress.zielpersonGefunden) {
-        const zpFloorOk = caseProgress.stage >= 1 && sceneCounter >= 4;
-        if (zpFloorOk) {
-          caseProgress.zielpersonGefunden = true;
-          if (caseProgress.stage < 3) {
-            caseProgress.stage = 3;
-            caseProgress.stage3StartScene = sceneCounter;
-          }
-          console.log('[Schatten] Fall-Durchbruch: Zielperson gefunden (Stage 3)');
-          diag('progress', '✦ ZIELPERSON GEFUNDEN (' + (caseProgress.tatverdaechtiger || 'Vermisste/r') + ') - Fall loesbar');
-          showProgressToast('GEFUNDEN', (caseProgress.tatverdaechtiger || 'Die vermisste Person') + ' ist gefunden. Jetzt zum Klienten.', 'success', 'zielperson-gefunden', '🔦');
-        } else {
-          diag('drift', 'scene.zielperson_gefunden:true ignoriert - zu frueh (Sz ' + sceneCounter + ', Stage ' + caseProgress.stage + ')');
+    }
+    // v7.12.63: VERMISSTEN-DURCHBRUCH persistieren. scene.zielperson_gefunden
+    // (KI-Feld) wurde bisher nur als Indiz-Filter gelesen, aber NIE in
+    // caseProgress.zielpersonGefunden uebernommen -> der "Vermisster gefunden"-
+    // Loesungspfad war faktisch tot (Button kam nur ueber die Indizien-Zahl).
+    // Das ist der starke Durchbruch fuer Vermisstenfaelle: wer den Vermissten
+    // gefunden hat, loest sofort - ohne Indizien-Schwelle. Floor: nicht in den
+    // ersten Szenen (sonst Express-Fund durch KI-Halluzination).
+    // v7.12.64 FIX: Dieser Block (und der wahrheit-Block) lagen faelschlich
+    // INNERHALB des ueberfuehrt-if -> wurden nur verarbeitet wenn gleichzeitig
+    // tatverdaechtiger_ueberfuehrt=true war, was bei reinen Vermissten-/Wahrheits-
+    // faellen nie zutrifft. Jetzt eigenstaendig auf derselben Ebene.
+    if (scene.zielperson_gefunden === true && !caseProgress.zielpersonGefunden) {
+      const zpFloorOk = caseProgress.stage >= 1 && sceneCounter >= 4;
+      if (zpFloorOk) {
+        caseProgress.zielpersonGefunden = true;
+        if (caseProgress.stage < 3) {
+          caseProgress.stage = 3;
+          caseProgress.stage3StartScene = sceneCounter;
         }
+        console.log('[Schatten] Fall-Durchbruch: Zielperson gefunden (Stage 3)');
+        diag('progress', '✦ ZIELPERSON GEFUNDEN (' + (caseProgress.tatverdaechtiger || 'Vermisste/r') + ') - Fall loesbar');
+        showProgressToast('GEFUNDEN', (caseProgress.tatverdaechtiger || 'Die vermisste Person') + ' ist gefunden. Jetzt zum Klienten.', 'success', 'zielperson-gefunden', '🔦');
+      } else {
+        diag('drift', 'scene.zielperson_gefunden:true ignoriert - zu frueh (Sz ' + sceneCounter + ', Stage ' + caseProgress.stage + ')');
+      }
+    }
+    // v7.12.64: WAHRHEITS-DURCHBRUCH persistieren. Bei Wahrheits-Faellen kann
+    // sich herausstellen, dass es KEIN Verbrechen mit Taeter war (echter
+    // Selbstmord, Unfall, Republikflucht, Affaere). Dann gibt es niemanden zu
+    // ueberfuehren und keine Zielperson zu finden - vorher eine Sackgasse: der
+    // Loesungs-Button kam nie, der Fall endete nur in der Niederlage an Tag 7.
+    // Jetzt ist "Wahrheit erkannt" der dritte starke Durchbruch: Karl kann dem
+    // Klienten die (oft unbequeme) Wahrheit berichten. Floor wie bei Zielperson.
+    if (scene.wahrheit_erkannt === true && !caseProgress.wahrheitErkannt) {
+      const wsFloorOk = caseProgress.stage >= 1 && sceneCounter >= 4;
+      if (wsFloorOk) {
+        caseProgress.wahrheitErkannt = true;
+        if (caseProgress.stage < 3) {
+          caseProgress.stage = 3;
+          caseProgress.stage3StartScene = sceneCounter;
+        }
+        console.log('[Schatten] Fall-Durchbruch: Wahrheit erkannt (Stage 3, kein Taeter noetig)');
+        diag('progress', '✦ WAHRHEIT ERKANNT - Fall loesbar (kein klassisches Verbrechen)');
+        showProgressToast('WAHRHEIT', 'Karl weiss jetzt, was wirklich geschah. Jetzt zum Klienten.', 'success', 'wahrheit-erkannt', '🔍');
+      } else {
+        diag('drift', 'scene.wahrheit_erkannt:true ignoriert - zu frueh (Sz ' + sceneCounter + ', Stage ' + caseProgress.stage + ')');
       }
     }
     // 4) Klient berichtet - finale Win-Bedingung
     // v7.12.63: zielpersonGefunden als gleichwertiger Durchbruch ergaenzt - bei
     // Vermisstenfaellen ist das Auffinden der Person der Abschluss, nicht eine
     // Taeter-Ueberfuehrung.
-    if (scene.klient_berichtet === true && (caseProgress.ueberfuehrt || caseProgress.zielpersonGefunden)) {
+    if (scene.klient_berichtet === true && (caseProgress.ueberfuehrt || caseProgress.zielpersonGefunden || caseProgress.wahrheitErkannt)) {
       // v7.9.41: Stage-4-Sperre fuer beschatten/wahrheit. Anlass: Kessler-Run
       // v7.9.38 - 9 Szenen vom Start bis "Fall geloest" (Stage 1->2->3->4 in
       // Sz 4,7,8,9). Mistral hat klient_berichtet:true direkt nach Stage 3
@@ -22358,7 +22375,6 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     // (nur SCHLAFEN waehlbar) - siehe renderOptions().
     // Hintergrund: Lindenbaum-Run v7.11.30 zeigte dass Auto-Tagwechsel verwirrend
     // sind und der Spieler nicht weiss wann sie ausgeloest werden.
-    const thisSceneWasSleep = detectExplicitSleep(scene.szene, true);
 
 
     // Diagnose-Frame finalisieren und an die Log-Entry haengen.
@@ -23905,7 +23921,6 @@ function startAutoplayBot(options) {
   const rawStrategy = options.strategy || 'random';
   const seed = options.seed || Math.floor(Math.random() * 1000000);
 
-  const STRATEGIES = ['random', 'aggressive', 'cautious', 'varied', 'explorer'];
   let strategy;
   if (rawStrategy === 'rotating') {
     strategy = 'rotating';
