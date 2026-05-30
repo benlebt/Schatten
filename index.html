@@ -2773,7 +2773,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.90</div>
+    <div class="start-version">Schatten v7.12.92</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2937,7 +2937,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.90</span>
+    <span>Schatten v7.12.92</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5474,7 +5474,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.90';
+window.SCHATTEN_VERSION = 'v7.12.92';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -8295,14 +8295,17 @@ function buildTranscriptText() {
           out += '  ' + (opt.id || '?') + ') ' + ot + katInfo + '\n';
         }
       }
-      // v7.12.38: System-Button-Zustand im Export
+      // v7.12.92: System-Button-Zustand im Export (Fall lösen, Heilen, Flucht,
+      // Schlafen, Romanze, Übernachten). Zeigt VOLLSTAENDIG was der Spieler waehlen
+      // konnte - inkl. gesperrter Buttons. Vorher kannte der Export nur die A/B/C/D-
+      // KI-Optionen, dadurch war z.B. der Resolve-Button im Export unsichtbar.
       if (debugExport && Array.isArray(e.systemButtons) && e.systemButtons.length > 0) {
-        out += 'System-Buttons:\n';
+        out += 'System-Buttons (zusätzlich zu A-D):\n';
         for (const sb of e.systemButtons) {
-          if (sb.shown) {
-            out += '  [✓ ' + sb.id + ']\n';
+          if (sb.gesperrt) {
+            out += '  [✗ ' + (sb.typ || 'SYSTEM') + ' — GESPERRT] ' + (sb.text || '') + '\n';
           } else {
-            out += '  [✗ ' + sb.id + ' — gesperrt: ' + (sb.blocked || '?') + ']\n';
+            out += '  [✓ ' + (sb.typ || 'SYSTEM') + ' — klickbar] ' + (sb.text || '') + '\n';
           }
         }
       }
@@ -11687,7 +11690,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.90] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.92] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -12717,6 +12720,7 @@ function renderOptions(scene) {
   if (showResolveButton) {
     const resolveBtn = document.createElement('button');
     resolveBtn.className = 'option-btn option-btn-system option-btn-resolve';
+    resolveBtn.dataset.kategorie = 'AUFLOESEN';  // v7.12.91: damit botGetCurrentOptions die Kategorie liest (byCat.AUFLOESEN)
     // v7.11.44: Wenn ausgegraut, Sperr-Grund daneben zeigen.
     if (resolveCanClick) {
       resolveBtn.innerHTML = '<span class="option-id">🎯</span><span class="option-text-wrap"><span>Fall lösen, Klient informieren</span><span class="option-marker option-marker-aufloesen">FALL LÖSEN</span></span>';
@@ -12775,6 +12779,38 @@ function renderOptions(scene) {
   }
 
   document.getElementById('options').classList.remove('hidden');
+
+  // v7.12.92: ALLE sichtbaren Buttons (nicht nur A/B/C/D, sondern auch System-Buttons
+  // wie Fall lösen, Notheilen, Doc-Wagner-Heilung, Schlafen, Romanze, Übernachtung,
+  // Flucht) am aktuellen Szenen-logEntry erfassen. So zeigt der Export VOLLSTAENDIG,
+  // was der Spieler tatsaechlich sehen/waehlen konnte. Anlass: der Resolve-Button-Bug
+  // war unsichtbar, weil der Export nur die KI-Optionen kannte. try-catch, damit eine
+  // Erfassungs-Panne nie das Rendern stoert.
+  try {
+    const _list = document.getElementById('options-list');
+    if (_list && Array.isArray(logEntries)) {
+      let _le = null;
+      for (let _i = logEntries.length - 1; _i >= 0; _i--) {
+        if (logEntries[_i] && logEntries[_i].type === 'scene') { _le = logEntries[_i]; break; }
+      }
+      if (_le) {
+        const _sysBtns = [];
+        _list.querySelectorAll('.option-btn-system').forEach(b => {
+          const _txtEl = b.querySelector('.option-text-wrap > span');
+          const _txt = (_txtEl ? _txtEl.textContent : b.textContent || '').trim();
+          // Button-Typ aus der Klasse ableiten (lesbares Label)
+          let _typ = 'SYSTEM';
+          if (b.classList.contains('option-btn-resolve')) _typ = 'FALL LÖSEN';
+          else if (b.classList.contains('option-btn-notheilen')) _typ = 'HEILEN';
+          else if (b.classList.contains('option-btn-flucht')) _typ = 'FLUCHT';
+          else if (b.classList.contains('option-btn-sleep')) _typ = 'SCHLAFEN';
+          else if (b.classList.contains('option-btn-romance')) _typ = 'ROMANTIK/ÜBERNACHTEN';
+          _sysBtns.push({ typ: _typ, text: _txt, gesperrt: !!b.disabled });
+        });
+        _le.systemButtons = _sysBtns;
+      }
+    }
+  } catch (_capErr) { /* Erfassung ist optional, niemals blockieren */ }
   } catch (renderErr) {
     // v7.11.3: Catch-all fuer renderOptions. Wenn irgendwas schief geht,
     // wenigstens NOT-Optionen rendern damit der Spieler nicht im Nichts haengt.
@@ -18333,7 +18369,7 @@ async function chooseOption(option) {
     if (npcName && typeof romanceReceptive[npcName] === 'undefined') {
       const offen = Math.random() < 0.5;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.90] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.92] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -18662,7 +18698,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.90] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.92] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -19680,7 +19716,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           const tensionHighEnoughForArrest = (typeof stasiTension === 'number' && stasiTension >= 4);
           if (!tensionHighEnoughForArrest) {
             // STILLER RELEASE: Karl ist faktisch frei, das System zieht nach.
-            console.warn('[Schatten v7.12.90] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
+            console.warn('[Schatten v7.12.92] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet, kein Hard-Force');
             karlInStasiCustody = false;
             folterSceneCount = 0;
@@ -19695,7 +19731,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.90] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.92] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -22328,7 +22364,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.90] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.92] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
@@ -24304,6 +24340,14 @@ function botGetCurrentOptions() {
     // Nur Arcade-System-Buttons erlauben:
     if (btn.classList.contains('option-btn-notheilen')) return true;
     if (btn.classList.contains('option-btn-flucht')) return true;
+    // v7.12.91: Der "Fall lösen"-Button (AUFLOESEN) MUSS fuer den Bot waehlbar sein -
+    // sonst kann der Bot einen lösbaren Fall (Stage 3 + Durchbruch) NIE abschliessen.
+    // Befund: politische Bot-Runs (Wessel offensiv) erreichten Stage 3, kreisten dann
+    // aber 20 Szenen ohne Abschluss, weil der resolve-Button (option-btn-system
+    // option-btn-resolve) hier rausgefiltert wurde. Die Bot-AUFLOESEN-Logik (90%-Wahl)
+    // lief ins Leere, weil byCat.AUFLOESEN nie befuellt wurde. Nur den KLICKBAREN
+    // (nicht den gesperrten) Resolve-Button durchlassen - gesperrte sind disabled.
+    if (btn.classList.contains('option-btn-resolve') && !btn.disabled) return true;
     return false;  // SCHLAFEN, ROMANTIK, UEBERNACHTUNG -> raus
   });
   return buttons.map(btn => {
