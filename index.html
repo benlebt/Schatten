@@ -2773,7 +2773,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.80</div>
+    <div class="start-version">Schatten v7.12.81</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2937,7 +2937,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.80</span>
+    <span>Schatten v7.12.81</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5469,7 +5469,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.80';
+window.SCHATTEN_VERSION = 'v7.12.81';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -11676,7 +11676,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.80] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.81] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -18312,7 +18312,7 @@ async function chooseOption(option) {
     if (npcName && typeof romanceReceptive[npcName] === 'undefined') {
       const offen = Math.random() < 0.5;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.80] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.81] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -18641,7 +18641,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.80] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.81] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -19659,7 +19659,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           const tensionHighEnoughForArrest = (typeof stasiTension === 'number' && stasiTension >= 4);
           if (!tensionHighEnoughForArrest) {
             // STILLER RELEASE: Karl ist faktisch frei, das System zieht nach.
-            console.warn('[Schatten v7.12.80] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
+            console.warn('[Schatten v7.12.81] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet, kein Hard-Force');
             karlInStasiCustody = false;
             folterSceneCount = 0;
@@ -19674,7 +19674,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.80] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.81] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -21420,10 +21420,17 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       if (ct === 'diebstahl' && targetName && !caseProgress.ueberfuehrt && sceneCounter >= 4) {
         const tNameN = normForMatch(targetName || '');
         const tWordsN = tNameN.split(/\s+/).filter(w => w.length >= 4);
+        // v7.12.81 (Krause-Run 17:32 False-Positive): Ein Beleg/Dokument UEBER das
+        // Diebesgut ist NICHT das Diebesgut. Run hatte "Kaufvertrag-Kopie fuer
+        // silbernes Zigarettenetui" im Inventar -> "etui" matchte -> Fall faelschlich
+        // als geloest gewertet, obwohl das Etui laut Indiz noch in Friedas Tresor lag.
+        // Dieser Guard schliesst Surrogate aus (Vertrag/Kopie/Foto/Quittung/Beleg/etc.).
+        const istSurrogat = (s) => /\b(kaufvertrag|vertrag|kopie|abschrift|foto|fotografie|aufnahme|quittung|beleg|rechnung|zettel|notiz|dokument|unterlage|liste|akte|brief|schein|urkunde|bon|adressbuch|skizze|zeichnung)\b/.test(s);
         let gutInInventory = false;
         if (Array.isArray(inventory)) {
           for (const item of inventory) {
             const itLower = normForMatch(item || '');
+            if (istSurrogat(itLower)) continue;  // Beleg ueber das Gut zaehlt nicht
             // Teilstring-tolerant: TARGET-Wort ODER generisches Diebesgut-Wort
             if (tWordsN.some(w => itLower.includes(w)) ||
                 /\b(etui|diebesgut|schmuck|beute)\b/.test(itLower)) {
@@ -21437,8 +21444,11 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           const gutErwaehnt = tWordsN.some(w => sceneNorm.includes(w)) || /\b(etui|diebesgut|schmuck|beute)\b/.test(sceneNorm);
           if (gutErwaehnt) {
             const besitzRe = /(in (deiner|der) (hand|faust)|in (deinen|den) (haenden))|umklammer|umgreif|umfass|steckst (es|ihn|sie|das (etui|diebesgut)|den schmuck)? ?(ein|weg|in)|nimmst (es|ihn|sie|das (etui|diebesgut)) an dich|an dich genommen|in (deine[rn]?|die) (innen)?(tasche|mantel|jacke)|in deinem besitz|sicher verstaut|haeltst (es|ihn|sie|das (etui|diebesgut)|den schmuck) (fest|umklammert|in)|birgst (es|ihn|sie)|hast (es|ihn|sie|das (etui|diebesgut)|den schmuck) (endlich |wieder |jetzt )?(sicher |an dich genommen|in der hand|zurueck)|verschwindet (tief )?in (deiner|der) (jacke|jackentasche|manteltasche|tasche|innentasche)/i;
+            // Negativ-Guard: reine Sicht ODER Surrogat-Kontext (Vertrag/Kopie ueber das Gut)
             const nurSicht = /(siehst|erblickst|entdeckst|liegt (auf|vor|in)|funkelt|glaenzt|steht) /i.test(sceneNorm) && !besitzRe.test(sceneNorm);
-            if (besitzRe.test(sceneNorm) && !nurSicht) gutInText = true;
+            // v7.12.81: Wenn im selben Satzraum ein Surrogat-Wort steht (Kaufvertrag etc.),
+            // ist nicht das Gut gemeint sondern ein Beleg -> nicht ausloesen.
+            if (besitzRe.test(sceneNorm) && !nurSicht && !istSurrogat(sceneNorm)) gutInText = true;
           }
         }
         if (gutInInventory || gutInText) {
@@ -22276,7 +22286,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.80] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.81] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
