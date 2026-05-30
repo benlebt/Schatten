@@ -2771,7 +2771,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.69</div>
+    <div class="start-version">Schatten v7.12.71</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2935,7 +2935,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.69</span>
+    <span>Schatten v7.12.71</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5467,7 +5467,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.69';
+window.SCHATTEN_VERSION = 'v7.12.71';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -8193,7 +8193,17 @@ function buildTranscriptText() {
           try {
             const kat = opt._kategorie || (typeof classifyOption === 'function' ? classifyOption(opt).kategorie : '');
             const prio = opt._priority || 0;
-            const src = opt._kategorieSource || (opt.kategorie && opt.kategorie !== 'normal' ? 'ki-tag' : 'heuristik');
+            // v7.12.69: Quelle aus dem echten Klassifizierungs-Debug ableiten statt
+            // pauschal "heuristik" zu schreiben. _kategorieSource kommt aus
+            // _classifyDebug.source: 'field'/'inline' -> KI hat die Kategorie geliefert
+            // (ki-tag), 'heuristic' -> Wort-Heuristik, 'position-X' -> Positions-Fallback.
+            let rawSrc = opt._kategorieSource || '';
+            let src;
+            if (rawSrc === 'field' || rawSrc === 'inline') src = 'ki-tag';
+            else if (rawSrc === 'heuristic') src = 'heuristik';
+            else if (rawSrc.indexOf('position') === 0) src = 'position';
+            else if (rawSrc) src = rawSrc;
+            else src = (opt.kategorie && opt.kategorie !== 'normal' ? 'ki-tag' : 'heuristik');
             if (kat && kat !== 'normal') {
               katInfo = '  [' + kat + (prio ? ' p' + prio : '') + (src ? ' via ' + src : '') + ']';
             } else {
@@ -11590,7 +11600,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.69] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.71] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -11674,6 +11684,15 @@ function renderOptions(scene) {
     const optClass = classifyOption(opt, resolveContext);
     opt._kategorie = optClass.kategorie;
     opt._priority = optClass.priority;
+    // v7.12.69: Echte Klassifizierungs-Quelle fuer den Run-Export festhalten.
+    // Bisher zeigte der Export pauschal "via heuristik" (Z.8196-Fallback), weil
+    // _kategorieSource nie gesetzt war - dadurch sah JEDE Option nach Heuristik
+    // aus, auch wenn real der Positions-Fallback oder (nach dem Kategorie-Fix)
+    // das KI-Feld griff. classifyOption legt die echte Quelle in _classifyDebug.source
+    // ab (z.B. 'field', 'heuristic', 'position-A', 'inline'). Die uebernehmen wir.
+    if (opt._classifyDebug && opt._classifyDebug.source && opt._classifyDebug.source !== 'none') {
+      opt._kategorieSource = opt._classifyDebug.source;
+    }
 
     // v7.12.42: CUSTODY-OPTION-GUARD. Wenn Karl inhaftiert ist, werden
     // Optionen die freie Bewegung implizieren visuell markiert und mechanisch
@@ -14888,7 +14907,23 @@ VERBOTEN: Karl wacht woanders auf ohne Erklaerung. Wenn du Pfad B waehlst, MUSST
     // intelligente clue-Kopplung frueh, aber produktives Verweilen wird nicht
     // brutal abgewuergt. Der eigentliche Fehler war, die stumpfe Schwelle zu senken.
     const _pflichtSchwelle = (scenesAtSameLocation >= 8) || (scenesAtSameLocation >= 6 && _stagniert);
-    if (scenesAtSameLocation >= 3) {
+    // v7.12.69 (Lektorat Krause-Run, alle 3 Lektorate + User): Wenn der Fall bereits
+    // LOESBAR ist (starker Durchbruch: Taeter ueberfuehrt ODER Zielperson gefunden
+    // ODER Wahrheit erkannt), ist ein stumpfer "geh irgendwohin"-Ortswechselzwang
+    // kontraproduktiv. Der Krause-Run klebte ab Sz13 (Etui + Erika + Wahrheit) bei
+    // Erika fest und bekam 7 Force-Ortswechsel-Toasts statt eines Abschluss-Pushes.
+    // Korrektur: Bei erreichtem Durchbruch wird der Ortswechselzwang AUSGESETZT und
+    // durch einen gezielten Abschluss-Push ersetzt - alle Optionen fuehren Richtung
+    // Klient / Fall loesen, nicht "in eine zufaellige andere Location".
+    const _durchbruchErreicht = !!(caseProgress && (caseProgress.ueberfuehrt || caseProgress.zielpersonGefunden || caseProgress.wahrheitErkannt));
+    const _klientNameFuerAbschluss = (clientProfile && clientProfile.name) || 'deinem Klienten';
+    if (_durchbruchErreicht && scenesAtSameLocation >= 3) {
+      // Abschluss-Fokus statt Ortswechsel-Lotterie. Zwang-Tracking zuruecksetzen,
+      // damit kein HARD-FORCE-Ortswechsel mehr getriggert wird.
+      ortPflichtIgnoredCount = 0;
+      timeContext += `\n\nFALL-AUFLOESUNG (wichtig): Der Fall ist im Kern geloest - Karl hat den entscheidenden Durchbruch (Tatverdaechtiger ueberfuehrt, Zielperson gefunden oder Wahrheit erkannt). Am aktuellen Ort gibt es nichts Wesentliches mehr zu ERMITTELN - das blosse Weiter-Suchen/Weiter-Beobachten am selben Ort ist auserzaehlt und soll NICHT mehr angeboten werden. ABER: Der Spieler soll jetzt nicht in EINE vorgegebene Bahn gezwungen werden. Es gibt mehrere LEGITIME Wege, den Fall abzuschliessen - und genau diese Entscheidungsfreiheit ist der Reiz. Biete 4 Optionen an, die UNTERSCHIEDLICHE Aufloesungs-Wege oder -Haltungen darstellen, je nach Situation z.B.: die gefundene Person mitnehmen ODER sie zuruecklassen und allein berichten; Verstaerkung/Polizei (z.B. Roth) hinzuziehen ODER es diskret allein zu Ende bringen; direkt und ehrlich zu ${_klientNameFuerAbschluss} fahren ODER die Wahrheit erst abwaegen (was berichtet Karl, was verschweigt er); eine letzte Konfrontation suchen ODER sauber abschliessen. Jede dieser Optionen bringt die Handlung Richtung Ende voran (Bewegung weg vom Festhaengen), aber sie fuehren zu spuerbar verschiedenen Ausgaengen. KEINE Option "bleibe hier und ermittle weiter". Wenn am Ort noch Gefahr lauert (Schlaeger, Stasi), darf eine Option das aufloesen. Karl entscheidet, WIE der Fall endet.`;
+      diag('progress', '✦ AUFLOESUNGS-PUSH (Durchbruch erreicht, ' + scenesAtSameLocation + ' Sz am Ort) - verschiedene Endwege, kein Ortswechselzwang');
+    } else if (scenesAtSameLocation >= 3) {
       if (_pflichtSchwelle) {
         // ESKALATION 3: PFLICHT-Ortswechsel (ab 8 Sz, oder ab 6 Sz ohne Indiz-Fund).
         // Verhindert dass die KI 14 Szenen lang in einem Friedhof bleibt
@@ -15518,7 +15553,13 @@ VERBOTEN: Karl wacht woanders auf ohne Erklaerung. Wenn du Pfad B waehlst, MUSST
       console.log('[Schatten] v7.11.7 Option', id, 'gekuerzt von', (o.text || '').length, 'auf', text.length, 'Zeichen');
     }
 
-    return { id, text };
+    // v7.12.69 KERNFIX: Bisher gab dieses .map NUR { id, text } zurueck und warf
+    // damit ALLE anderen von der KI gelieferten Option-Felder weg - allen voran
+    // opt.kategorie. Das war der wahre Grund fuer "0 Kategorien / 84 via heuristik"
+    // (NICHT das gemini.js-Schema, das die Kategorie korrekt liefert - sie wurde
+    // hier im Frontend direkt nach dem Parse verworfen). Jetzt: alle Felder von o
+    // erhalten, nur id+text ueberschreiben.
+    return { ...o, id, text };
   });
 
   // Defensive cleanup: strip em/en dashes. Name removal is left to the prompt;
@@ -18163,7 +18204,7 @@ async function chooseOption(option) {
     if (npcName && typeof romanceReceptive[npcName] === 'undefined') {
       const offen = Math.random() < 0.5;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.69] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.71] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -18490,7 +18531,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.69] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.71] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -19508,7 +19549,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           const tensionHighEnoughForArrest = (typeof stasiTension === 'number' && stasiTension >= 4);
           if (!tensionHighEnoughForArrest) {
             // STILLER RELEASE: Karl ist faktisch frei, das System zieht nach.
-            console.warn('[Schatten v7.12.69] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
+            console.warn('[Schatten v7.12.71] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet, kein Hard-Force');
             karlInStasiCustody = false;
             folterSceneCount = 0;
@@ -19523,7 +19564,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.69] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.71] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -22009,7 +22050,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.69] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.71] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
