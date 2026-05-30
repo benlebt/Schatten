@@ -2773,7 +2773,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.87</div>
+    <div class="start-version">Schatten v7.12.88</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2937,7 +2937,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.87</span>
+    <span>Schatten v7.12.88</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5470,7 +5470,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.87';
+window.SCHATTEN_VERSION = 'v7.12.88';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -11677,7 +11677,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.87] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.88] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -18313,7 +18313,7 @@ async function chooseOption(option) {
     if (npcName && typeof romanceReceptive[npcName] === 'undefined') {
       const offen = Math.random() < 0.5;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.87] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.88] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -18642,7 +18642,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.87] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.88] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -19660,7 +19660,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           const tensionHighEnoughForArrest = (typeof stasiTension === 'number' && stasiTension >= 4);
           if (!tensionHighEnoughForArrest) {
             // STILLER RELEASE: Karl ist faktisch frei, das System zieht nach.
-            console.warn('[Schatten v7.12.87] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
+            console.warn('[Schatten v7.12.88] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet, kein Hard-Force');
             karlInStasiCustody = false;
             folterSceneCount = 0;
@@ -19675,7 +19675,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.87] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.88] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -21362,7 +21362,15 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         const _ct = caseSetup && caseSetup.caseType;
         const _tFact = caseSetup && caseSetup.setupCast && caseSetup.setupCast.find(c => c.tag === 'TARGET');
         const _tName = _tFact ? _tFact.name : null;
-        if (_ct === 'diebstahl' && _tName && !caseProgress.ueberfuehrt && sceneCounter >= 4) {
+        // v7.12.88 (Krause-Run 18:37 Sackgassen-Fix): Bedingung von "!ueberfuehrt" auf
+        // "!diebesgutZurueck" umgestellt. Problem: ueberfuehrt wird AUCH vom allgemeinen
+        // Taeter-Force gesetzt (Frieda). Wenn der in derselben Szene wie der Etui-Fund
+        // VOR diesem Block lief, war ueberfuehrt schon true -> dieser Block uebersprungen
+        // -> diebesgutZurueck NIE gesetzt -> die v7.12.87-Win-Sperre blockierte den
+        // Abschluss ewig (Etui im Inventar, aber Fall nicht abschliessbar = Sackgasse).
+        // Jetzt entkoppelt: der Gut-Besitz wird geprueft solange diebesgutZurueck fehlt,
+        // egal ob schon ein Taeter ueberfuehrt ist.
+        if (_ct === 'diebstahl' && _tName && !caseProgress.diebesgutZurueck && sceneCounter >= 4) {
           const tNameN = normForMatch(_tName || '');
           const tWordsN = tNameN.split(/\s+/).filter(w => w.length >= 4);
           // v7.12.83: KEINE fallspezifischen Objektwoerter mehr hartcodiert (frueher
@@ -21398,6 +21406,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             }
           }
           if (gutInInventory || gutInText) {
+            const warSchonDurchbruch = !!caseProgress.ueberfuehrt || (caseProgress.stage || 0) >= 3;
             if ((caseProgress.stage || 0) < 2) {
               const suspectFact = caseSetup.setupCast && caseSetup.setupCast.find(c =>
                 (c.tag || '').toUpperCase() === 'SUSPECT' || (c.tagExtra || '').toUpperCase() === 'SUSPECT');
@@ -21407,12 +21416,16 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             }
             caseProgress.ueberfuehrt = true;
             caseProgress.diebesgutZurueck = true;  // v7.12.87: explizites Flag - NUR der echte Gut-Besitz setzt das
-            caseProgress.stage = 3;
-            caseProgress.stage3StartScene = sceneCounter;
+            // v7.12.88: Stage/Timer nur setzen wenn dies der ERSTE Durchbruch ist -
+            // sonst (Taeter schon ueberfuehrt) wuerde stage3StartScene zurueckgesetzt.
+            if ((caseProgress.stage || 0) < 3) {
+              caseProgress.stage = 3;
+              caseProgress.stage3StartScene = sceneCounter;
+            }
             const wieG = gutInInventory ? 'im Inventar' : 'laut Szenentext in Karls Besitz';
-            console.log('[Schatten] AUTO-FORCING Stage 3 (diebstahl, stage-unabh.): ' + _tName + ' ' + wieG);
-            diag('progress', '✦ AUTO-STAGE 3 (diebstahl) erzwungen: Diebesgut wieder bei Karl (' + wieG + ')');
-            if (typeof showProgressToast === 'function') showProgressToast('FALL-STUFE 3', 'Diebesgut zurück. Jetzt zum Klienten.');
+            console.log('[Schatten] Diebesgut zurueck (diebstahl): ' + _tName + ' ' + wieG + (warSchonDurchbruch ? ' [Taeter war schon ueberfuehrt]' : ''));
+            diag('progress', '✦ DIEBESGUT ZURÜCK (diebstahl): ' + _tName + ' wieder bei Karl (' + wieG + ')');
+            if (typeof showProgressToast === 'function') showProgressToast('DIEBESGUT ZURÜCK', 'Das Diebesgut ist sicher. Jetzt zum Klienten.', 'success', 'diebesgut-zurueck', '💼');
           }
         }
       }
@@ -22295,7 +22308,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.87] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.88] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
