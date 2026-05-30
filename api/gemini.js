@@ -80,8 +80,16 @@ export default async function handler(req, res) {
               properties: {
                 id: { type: 'string' },
                 text: { type: 'string' },
+                // v7.12.67 KERNFIX: kategorie war NICHT im Schema -> Gemini filterte
+                // sie bei responseMimeType:application/json aktiv weg (42/43 Szenen
+                // ohne Kategorie -> Heuristik musste raten). Jetzt als enum + required
+                // erzwungen. Eigentlicher Hebel gegen das Kategorie-Problem.
+                kategorie: {
+                  type: 'string',
+                  enum: ['OFFENSIV', 'DEFENSIV', 'ERKUNDEN', 'BEOBACHTEN'],
+                },
               },
-              required: ['id', 'text'],
+              required: ['id', 'text', 'kategorie'],
             },
             minItems: 4,
             maxItems: 4,
@@ -131,6 +139,28 @@ export default async function handler(req, res) {
           // Wenn Karl in dieser Szene dem Klient/der Klientin das Ergebnis berichtet hat
           // (NACH Ueberfuehrung): true setzen. Damit wird der Fall als geloest markiert.
           klient_berichtet: { type: 'boolean' },
+          // v7.12.67: Diese 4 Felder liest index.html, aber sie fehlten im Schema
+          // -> Gemini filterte sie bei responseMimeType:application/json weg.
+          // zielperson_gefunden + wahrheit_erkannt sind die zwei Durchbruch-Pfade
+          // (v7.63/64) - ohne Schema-Eintrag waren sie wirkungslos (die KI KONNTE
+          // sie gar nicht liefern). zielperson_gefunden: Vermisste:r lokalisiert.
+          // wahrheit_erkannt: kein Verbrechen (z.B. echter Selbstmord) - Fall ohne
+          // Taeter loesbar. indiz_verbindung: zwei Indizien verknuepft.
+          // npc_kernhinweis: konkrete neue NPC-Aussage (wird Karl spaeter vorgehalten).
+          zielperson_gefunden: { type: 'boolean' },
+          wahrheit_erkannt: { type: 'boolean' },
+          indiz_verbindung: { type: 'array', items: { type: 'string' } },
+          npc_kernhinweis: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                npc: { type: 'string' },
+                hinweis: { type: 'string' },
+              },
+              required: ['npc', 'hinweis'],
+            },
+          },
         },
         required: ['szene', 'ort', 'optionen', 'spannung', 'zusammenfassung'],
       },
