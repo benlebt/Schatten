@@ -6332,6 +6332,14 @@ function buildSpeakText() {
     const optionBtns = document.querySelectorAll(
       '#options-list .option-btn:not(.option-btn-system), #options-list .option-btn-system.option-btn-romance'
     );
+    // v7.12.68: Reihenfolge-Fix. Die Romance-Buttons stehen visuell OBEN (topActions),
+    // kaemen in DOM-Reihenfolge also VOR A/B/C/D - das klingt beim Hoeren falsch
+    // ("Was tust du? ... intim werden ... Option A"). Stattdessen sammeln wir
+    // getrennt: erst alle ABCD-Optionen vorlesen, dann die besondere(n) Moeglichkeit(en)
+    // ans Ende. Natuerliche Hoerreihenfolge: "Was tust du? A..B..C..D.. und als
+    // besondere Moeglichkeit: ...".
+    const abcdBlocks = [];
+    const romanceBlocks = [];
     let ttsLetterIdx = 0;
     optionBtns.forEach((btn) => {
       // v7.9.2: Gezielt nur den reinen Option-Text auslesen, NICHT btn.textContent.
@@ -6356,17 +6364,20 @@ function buildSpeakText() {
           .trim();
       }
       if (!cleanText) return;
-      // v7.12.68: Romance-Buttons (Intim/Uebernachtung) mit eigenem Label statt
-      // "Option A" - sie sind keine ABCD-Story-Option. ttsLetterIdx zaehlt NUR die
-      // echten Optionen, damit A/B/C/D korrekt bleibt.
+      // v7.12.68: Romance-Buttons (Intim/Uebernachtung) gesammelt fuer ANS ENDE,
+      // mit eigenem Label statt "Option A". ttsLetterIdx zaehlt NUR die echten
+      // Optionen, damit A/B/C/D korrekt bleibt.
       if (btn.classList.contains('option-btn-romance')) {
-        blocks.push('Besondere Moeglichkeit. ' + cleanText);
+        romanceBlocks.push('Besondere Moeglichkeit. ' + cleanText);
       } else {
         const letter = String.fromCharCode(65 + ttsLetterIdx);
-        blocks.push('Option ' + letter + '. ' + cleanText);
+        abcdBlocks.push('Option ' + letter + '. ' + cleanText);
         ttsLetterIdx++;
       }
     });
+    // Erst die normalen Story-Optionen, dann die besondere(n) Moeglichkeit(en).
+    abcdBlocks.forEach(b => blocks.push(b));
+    romanceBlocks.forEach(b => blocks.push(b));
   }
   return blocks;
 }
