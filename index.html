@@ -2512,6 +2512,7 @@
       <label class="autoplay-label">Stil:</label>
       <select id="autoplay-strategy" class="autoplay-input">
         <option value="random">Würfeln</option>
+        <option value="natural">Natürlich (wie ein Mensch spielt)</option>
         <option value="aggressive">Offensiv (Aktion + direkt)</option>
         <option value="cautious">Vorsichtig (Beobachten)</option>
         <option value="explorer">Erkunder (Recherche)</option>
@@ -2744,7 +2745,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.43</div>
+    <div class="start-version">Schatten v7.12.63</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2908,7 +2909,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.43</span>
+    <span>Schatten v7.12.63</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -3316,6 +3317,8 @@ Wenn Karl genug Indizien hat, um eine konkrete Person zu beschuldigen, trag den 
 
 Stufe 3 - ÜBERFÜHREN (Tag 3-5 typisch):
 Wenn der Tatverdächtige nicht mehr leugnen kann (Karl konfrontiert ihn mit Beweisen und er gesteht / Karl übergibt Beweise an die Volkspolizei mit eindeutigem Ergebnis / Karl verhaftet ihn selbst mit Hilfe Kommissar Roth), setze "tatverdaechtiger_ueberfuehrt": true.
+  
+  VERMISSTENFALL - PERSON GEFUNDEN: Wenn es ein Vermisstenfall ist und Karl die gesuchte Person tatsächlich auffindet (lebend, tot, oder im Gewahrsam eines Dritten) und bei ihr ist / sie eindeutig lokalisiert hat, setze "zielperson_gefunden": true. Das ist bei Vermisstenfällen der Durchbruch - Karl muss dann nicht noch einen Täter überführen, das Auffinden selbst ist die Auflösung. NICHT setzen, wenn Karl nur eine Spur hat wo die Person sein KÖNNTE - erst wenn er sie wirklich gefunden hat.
 
 WIN-BEDINGUNG - KLIENT BERICHTEN:
 NACHDEM der Verdächtige überführt wurde, MUSS Karl dem Klienten/der Klientin Bericht erstatten (zurück ins Büro, Anruf, persönliches Treffen). In dieser Szene setze "klient_berichtet": true. DANN gilt der Fall als gelöst.
@@ -3787,6 +3790,7 @@ JSON-Output ist Pflicht (kein Markdown, kein Text drumherum):
   "npc_kernhinweis": [],
   "tatverdaechtiger_identifiziert": "",
   "tatverdaechtiger_ueberfuehrt": false,
+  "zielperson_gefunden": false,
   "klient_berichtet": false,
   "zusammenfassung": "1 Satz für dein Gedächtnis: Ort, was getan wurde, wichtige Personen/Fakten."
 }
@@ -5308,6 +5312,29 @@ const DIFFICULTY_ORDER = [
 // Freischalt-Status: localStorage speichert wie viele Faelle in
 // DIFFICULTY_ORDER der Spieler bereits freigeschaltet hat. Default 1
 // (nur der erste Fall ist spielbar). Im Debug-Modus alles offen.
+// v7.12.55: ZENTRALE TEXT-NORMALISIERUNG fuer Pattern-Matching.
+// Wurde vorher 67x inline dupliziert (toLowerCase + Umlaut->ae/oe/ue + ß->ss).
+// Eine Funktion = eine Wahrheit. Wenn wir die Normalisierung aendern muessen
+// (z.B. weitere Sonderzeichen), passiert das an genau einer Stelle.
+// NUR fuers Matching gedacht - NICHT fuer Anzeige (dafuer normalizeLocForDisplay).
+function normForMatch(s) {
+  if (!s || typeof s !== 'string') return '';
+  return s.toLowerCase()
+    .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
+    .trim();
+}
+
+// v7.12.56: ZENTRALE TAGESZEIT-LOGIK. "Ist es Abend oder Nacht?" wurde an 3
+// Stellen mit UNTERSCHIEDLICHEN Schwellwerten definiert (>=4 beim Schlaf-Button,
+// >=3 beim KI-Prompt, >=4 beim Romance-Check). Index 3 ist NACHMITTAG, nicht
+// "früher Abend" wie ein alter Kommentar faelschlich behauptete. Das fuehrte
+// dazu dass die KI ab Nachmittag Schlaf-Kontext bekam, der Button aber erst
+// abends erschien. Jetzt: eine Wahrheit. ABEND=4, NACHT=5.
+// TIMES_OF_DAY = ['MORGEN'(0),'VORMITTAG'(1),'MITTAG'(2),'NACHMITTAG'(3),'ABEND'(4),'NACHT'(5)]
+function isAbendOderNachtTime(idx) {
+  return (typeof idx === 'number') && idx >= 4;
+}
+
 function getUnlockedCount() {
   try {
     const stored = localStorage.getItem('schatten-unlocked-count');
@@ -5369,12 +5396,19 @@ let selectedSetupIdx = undefined;
 
 const TENSION_COLORS = ['#4a9eff','#4a9eff','#f0c040','#f07040','#ff3030','#ff0000'];
 
+// v7.12.57: ZENTRALE HAFT-ORT-BEGRIFFE. Vorher an 5+ Stellen einzeln gepflegt
+// (classifyOrt, hasEchteStasiIndikatoren, Stasi-Trigger, Telefonzellen-Ausschluss).
+// Wenn ein neuer Haft-Ort dazukommt (z.B. neues Gefaengnis im Setup), reicht
+// EINE Aenderung hier. Alle Begriffe in normForMatch-Form (ae/oe/ue/ss).
+// Genutzt mit \b...\b oder als Teil groesserer Patterns.
+const HAFT_ORT_BEGRIFFE = 'hohenschoenhausen|hohenschonhausen|untersuchungshaft|untersuchungshaftanstalt|haftanstalt';
+
 // Time-of-day progression (each new scene advances time by 1, day advances every ~5-7 scenes)
 const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'NACHT'];
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.43';
+window.SCHATTEN_VERSION = 'v7.12.63';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5563,7 +5597,9 @@ let caseProgress = {
   stage: 0,
   indizien: [],            // gesammelte Beweisstuecke / Zeugen
   tatverdaechtiger: null,   // Name des Hauptverdaechtigen
-  ueberfuehrt: false,       // wurde der Verdaechtige festgenagelt?
+  ueberfuehrt: false,       // wurde der Verdaechtige festgenagelt? (starker Durchbruch)
+  zielpersonGefunden: false, // v7.12.63: Vermisste/r gefunden (starker Durchbruch)
+  suspectConfronted: false,  // v7.12.63: Verdaechtiger konfrontiert (mittlerer Loesungs-Anker)
   istGelöst: false,         // Win-Flag
   klientGesprochen: false,  // hat Karl dem Klient das Ergebnis berichtet?
   // v6.68: Verknuepfungen zwischen Indizien (Eureka-Momente).
@@ -6901,6 +6937,11 @@ function startSpeakCurrent() {
     (savedVoiceName && !currentVoices.some(v => v && v.name === savedVoiceName));
 
   function actuallySpeak() {
+    // v7.12.52: cancel() direkt vor dem ersten speak(). Recherche (dev.to,
+    // huggingface ORA) bestaetigt: auf iOS hilft ein cancel() unmittelbar vor
+    // speak() gegen den "2. Klick faellt auf Default-Stimme zurueck"-Bug, weil
+    // WebKit die interne Utterance-Queue + Voice-Binding zurueecksetzt.
+    try { window.speechSynthesis.cancel(); } catch (e) { /* ignore */ }
     // Utterances bauen und queuen
     blocks.forEach((text, idx) => {
       const u = makeUtterance(text);
@@ -7646,8 +7687,8 @@ function showSetupSelector() {
         lockMarker;
       card.onclick = function() {
         // Kleine Erinnerung wenn jemand draufklickt
-        if (typeof showToast === 'function') {
-          showToast('Loese erst die vorherigen Faelle.');
+        if (typeof showAdminToast === 'function') {
+          showAdminToast('Loese erst die vorherigen Faelle.');
         }
       };
     }
@@ -8050,6 +8091,13 @@ function buildTranscriptText() {
           } else {
             out += '  [✗ ' + sb.id + ' — gesperrt: ' + (sb.blocked || '?') + ']\n';
           }
+        }
+      }
+      // v7.12.43: Custody-Guard: ausgegrautte Freiheits-Optionen
+      if (debugExport && Array.isArray(e.custodyBlocked) && e.custodyBlocked.length > 0) {
+        out += 'Custody-Guard ausgegraut (' + e.custodyBlocked.length + '):\n';
+        for (const cb of e.custodyBlocked) {
+          out += '  ⚠ ' + cb + '\n';
         }
       }
       // DEBUG-DIAGNOSE: nur im Admin/Debug-Modus sichtbar.
@@ -8887,10 +8935,12 @@ function showHeader(scene) {
     const stage3ScenesUI = caseProgress.stage3StartScene
       ? (sceneCounter - caseProgress.stage3StartScene) : 0;
     const indCntUI = (caseProgress.indizien || []).length;
-    // v7.11.59/83: Schwelle synchron mit FALL LÖSEN-Button: Stage 3 UND
-    // (8 Indizien ODER Durchbruch: Taeter ueberfuehrt / Zielperson gefunden).
+    // v7.12.63: Schwelle synchron mit FALL LÖSEN-Button (neues Modell):
+    // Durchbruch (ueberfuehrt/gefunden) ODER genug Indizien + benannter +
+    // konfrontierter Verdaechtiger.
     const durchbruchUI = !!(caseProgress.ueberfuehrt || caseProgress.zielpersonGefunden);
-    const resolveReady = !isSolved && reachedStage >= 3 && (indCntUI >= 11 || durchbruchUI);
+    const mittelAnkerUI = indCntUI >= 11 && !!caseProgress.tatverdaechtiger && !!caseProgress.suspectConfronted;
+    const resolveReady = !isSolved && reachedStage >= 3 && (durchbruchUI || mittelAnkerUI);
     segments.forEach(seg => {
       seg.classList.remove('reached', 'solved', 'ready');
       const segStage = parseInt(seg.getAttribute('data-stage'), 10);
@@ -8947,6 +8997,21 @@ function showHeader(scene) {
   const dateEl = document.getElementById('status-date');
   if (dateEl) dateEl.textContent = formatGameDateShort(gameCurrentDate);
   document.getElementById('status-loc').textContent = normalizeLocForDisplay(scene.ort);
+  // v7.12.44: currentOrt global aktualisieren - normalisierter Kleinbuchstaben-Ort
+  // fuer spätere Ort-Abfragen (isAlreadyHome, Custody-Detect etc.)
+  // v7.12.53: Bei fehlendem scene.ort NICHT den alten Wert halten (Geister-Zustand!),
+  // sondern auf NEUTRAL zuruecksetzen. Sonst bleibt z.B. CUSTODY haengen wenn die
+  // KI mal keinen Ort liefert, und Custody-Logik feuert faelschlich weiter.
+  if (scene && scene.ort) {
+    currentOrt = normForMatch(scene.ort);
+    const ortClass = classifyOrtDetailed(scene.ort);
+    currentOrtType = ortClass.type;
+    if (typeof diag === 'function') diag('detect', 'ORT: "' + scene.ort + '" → Typ: ' + ortClass.type + ' [Regel: ' + ortClass.rule + ']');
+  } else {
+    currentOrt = '';
+    currentOrtType = 'NEUTRAL';
+    if (typeof diag === 'function') diag('detect', 'ORT: (kein ort von KI) → Typ: NEUTRAL');
+  }
 
   // v7.12.41: GEWAHRSAM in Status-Bar anzeigen wenn aktiv
   const custodyBadge = document.getElementById('status-custody-badge');
@@ -9946,6 +10011,86 @@ let scenesInStage3 = 0;               // fuer Stage-3->Loesung Auto-Trigger
 // Kneipe nach Lagerhalle, wie im 0252-Run Sz 7->8 passiert.
 let lastSceneEndedInUnconsciousness = false;
 let lastSceneOrt = '';  // merkt sich den Ort vor dem Wechsel, fuer Ort-Konsistenz-Push
+let currentOrt = '';   // v7.12.44: aktueller Ort nach jeder Szene. Normalisiert lowercase.
+let currentOrtType = 'NEUTRAL'; // v7.12.46: klassifizierter Ort-Typ (HOME|WAGNER|CHARITE|CUSTODY|NEUTRAL)
+let ortTypeBeforeAction = 'NEUTRAL'; // v7.12.54: Ort-Typ VOR der geklickten Aktion.
+                                     // Fuer Mechaniken die wissen muessen wo Karl war
+                                     // als er die Aktion waehlte (z.B. SCHLAFEN: war er
+                                     // schon zu Hause?), NICHT wo die Folge-Szene spielt.
+
+// v7.12.46: ZENTRALE ORT-KLASSIFIZIERUNG.
+// Die KI liefert scene.ort als freien Text ("BÜRO HACKESCHER MARKT",
+// "ZELLE, HOHENSCHÖNHAUSEN" etc.). Statt überall verschiedene Regexen zu
+// nutzen, klassifizieren wir den String einmalig hier.
+// Alle anderen Stellen fragen nur noch currentOrtType ab.
+// v7.12.50: classifyOrtDetailed() gibt {type, rule} zurück - welche Regel
+// gegriffen hat. Fürs Debug-Logging und Lektorat-Auswertung.
+function classifyOrtDetailed(ortString) {
+  if (!ortString) return { type: 'NEUTRAL', rule: 'leer' };
+  const t = normForMatch(ortString);
+
+  // CUSTODY: Haft-Orte (höchste Priorität)
+  // v7.12.49/61: ABER Bewegung zu einem Haftort ("unterwegs nach Hohenschönhausen",
+  // "auf dem weg nach Gensler", "EMW, fahrt nach...") ist FAHRT, nicht CUSTODY -
+  // Karl fährt erst hin, ist noch nicht inhaftiert. EIN Bewegungs-Check vor dem
+  // CUSTODY-Block, derselbe der unten F5 auslöst (vorher zwei verschiedene Checks).
+  const istAufDemWeg = /\b(unterwegs|fahrend|fahrt\s+(nach|richtung|zum|zur)|auf\s+dem\s+weg\s+(nach|zu|zum|zur))\b/.test(t);
+  if (!istAufDemWeg) {
+    if (new RegExp('\\b(' + HAFT_ORT_BEGRIFFE + ')\\b').test(t)) return { type: 'CUSTODY', rule: 'C1-haftort' };
+    if (/\bzelle\b.*\b(hohenschoenhausen|mfs|haft|untersuchung)\b/.test(t)) return { type: 'CUSTODY', rule: 'C2-zelle+kontext' };
+    if (/\b(mfs|haft|untersuchung).*\bzelle\b/.test(t)) return { type: 'CUSTODY', rule: 'C3-kontext+zelle' };
+    if (/\b(genslerstrasse\s+66|normannenstrasse.*zelle|keibelstrasse.*mfs)\b/.test(t)) return { type: 'CUSTODY', rule: 'C4-mfs-adresse' };
+    if (/\bverhoerraum\b/.test(t)) return { type: 'CUSTODY', rule: 'C5-verhoerraum' };
+  }
+
+  // v7.12.50: "auf dem weg nach X" ist Bewegung (FAHRT), auch wenn "karls büro"
+  // im String steht. Edge-Case: "KARLS BÜRO / AUF DEM WEG NACH SCHÖNEBERG".
+  if (/\bauf\s+dem\s+weg\s+(nach|zu|zum|zur)\b/.test(t)) {
+    return { type: 'FAHRT', rule: 'F5-auf-dem-weg' };
+  }
+
+  // POLIZEI muss VOR HOME (Revier am Hackeschen Markt)
+  if (/\b(volkspolizei|polizeirevier|revier\s+volkspolizei|vopo-revier)\b/.test(t)) return { type: 'POLIZEI', rule: 'P1-revier' };
+
+  // HOME: v7.12.49 FIX "hackesche" matcht hackescher UND hackeschen (Dativ)
+  if (/hackesche/.test(t)) return { type: 'HOME', rule: 'H1-hackesche' };
+  if (/\bkarls\s+(wohnung|schlafzimmer|buero)\b/.test(t)) return { type: 'HOME', rule: 'H2-karls-wohnung' };
+
+  // WAGNER: Doc Wagners Praxis (Heilungs-Ort)
+  if (/\b(doc\s+wagner|wagners\s+praxis|praxis\s+wagner|praxis\s+dr\.\s*wagner)\b/.test(t)) return { type: 'WAGNER', rule: 'W1-wagner-praxis' };
+  if (/\bschaeferstrasse\b/.test(t)) return { type: 'WAGNER', rule: 'W2-schaeferstrasse' };
+  if (/\bhinterhof\s+(praxis|von\s+doc|dr\.)\b/.test(t)) return { type: 'WAGNER', rule: 'W3-hinterhof-praxis' };
+
+  // CHARITE: Krankenhaus (Marlene-Heilungs-Ort)
+  if (/\bcharit[eé]?\b/.test(t)) return { type: 'CHARITE', rule: 'CH1-charite' };
+  if (/\bkrankenhaus\b/.test(t)) return { type: 'CHARITE', rule: 'CH2-krankenhaus' };
+  if (/\bnotaufnahme\b/.test(t)) return { type: 'CHARITE', rule: 'CH3-notaufnahme' };
+
+  // FAHRT: Karl explizit in Bewegung (kein Schlaf sinnvoll)
+  if (/\b(fahrend|unterwegs)\b/.test(t)) return { type: 'FAHRT', rule: 'F1-fahrend-unterwegs' };
+  if (/\bfahrt\s+(richtung|nach|zum|zur|durch)\b/.test(t)) return { type: 'FAHRT', rule: 'F2-fahrt-richtung' };
+  if (/^s-bahn\b/.test(t)) return { type: 'FAHRT', rule: 'F3-sbahn' };
+  if (/(opel\s+olympia|emw\s+340),\s*(fahrt|unterwegs|fahrend|richtung)/.test(t)) return { type: 'FAHRT', rule: 'F4-auto+fahrt' };
+
+  // KNEIPE: Bars (Romance-Ort, Info-Sammlung)
+  if (/\b(goldenen\s+anker|rote\s+laterne|badewanne)\b/.test(t)) return { type: 'KNEIPE', rule: 'K1-namen' };
+  if (/\b(kneipe|gaststaette|gasthaus|bar\b|schankraum)\b/.test(t)) return { type: 'KNEIPE', rule: 'K2-generisch' };
+
+  // GERICHT: Formelle Justizsituation (Schlafen gesperrt)
+  if (/\b(kreisgericht|gericht\s+mitte|littenplatz|littenstrasse)\b/.test(t)) return { type: 'GERICHT', rule: 'G1-kreisgericht' };
+  if (/\b(verhandlungssaal|gerichtssaal|saal\s+\d)\b/.test(t)) return { type: 'GERICHT', rule: 'G2-saal' };
+
+  // INDUSTRIE: Werften, Lager, VEB-Betriebe
+  if (/\b(werft|werftgelaende|veb-betriebe|veb\s+koepenick|lagerhalle|schuppen\b|lokschuppen)\b/.test(t)) return { type: 'INDUSTRIE', rule: 'I1-werft-lager' };
+  if (/\bwerfthalle\b/.test(t)) return { type: 'INDUSTRIE', rule: 'I2-werfthalle' };
+
+  return { type: 'NEUTRAL', rule: 'kein-match' };
+}
+
+// Wrapper für Kompatibilität - gibt nur den Typ zurück
+function classifyOrt(ortString) {
+  return classifyOrtDetailed(ortString).type;
+}
 
 // v7.11.3: Doppel-Klick-Schutz fuer chooseOption. Wenn der Spieler waehrend
 // einer laufenden API-Anfrage nochmal klickt (Touch-Race, versehentlicher
@@ -10014,8 +10159,7 @@ let lastSceneTriggeredDayAdvance = false;
 // automatisch gewechselt obwohl Karl noch wach war.
 function detectExplicitSleep(text, strict) {
   if (!text) return false;
-  const lower = text.toLowerCase()
-    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+  const lower = normForMatch(text);
 
   // FALSE-POSITIVE-FILTER: bestimmte Phrasen sehen nach Schlaf/Ruhe aus, sind
   // aber Hoeflichkeitsfloskeln oder Wuensche. Wenn diese erkannt werden,
@@ -10560,16 +10704,32 @@ function classifyOption(opt, resolveContext) {
   // Stattdessen greift bei Basis-Kategorien der POSITIONS-FALLBACK (Quelle 4).
   // Die ENTFERNTEN Pattern stehen unten als Kommentar zur Doku.
   let heuristicCat = '';
-  const t = (opt.text || '').toLowerCase()
-    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+  const t = normForMatch(opt.text || '');
+
+  // v7.12.61: ECHTEN Klienten-Namen aus dem Setup-Kontext holen. Vorher hatte
+  // die AUFLOESEN-Heuristik nur eine hartcodierte Vornamen-Liste, die genau die
+  // Hälfte der echten Klienten verfehlte (Anton, Sigrid, Wilhelm, Albrecht, Hilde,
+  // Bruno, Hertha, Lindner, Doc Wagner standen nicht drin) -> "Geh zu Anton und
+  // berichte" wurde nicht als Fall-Abschluss erkannt. Jetzt: der tatsächliche
+  // Klient jedes Setups wird dynamisch ergänzt. Die statische Liste bleibt als
+  // Fallback (falls clientName mal leer ist).
+  const clientNameNorm = normForMatch((resolveContext && resolveContext.clientName) || '');
+  const clientWords = clientNameNorm.split(/\s+/).filter(w => w.length >= 3 &&
+    !/^(doc|herr|frau|kommissar|dr|der|die|das)$/.test(w));
+  // Alternations-Fragment: echte Klient-Namen-Wörter ODER statische Fallback-Liste
+  const staticClients = 'helga|edith|margarete|hannelore|liselotte|gertrud|hildegard|charlotte|annelies|brigitte|ilse|ursula|gisela|renate|inge|erna';
+  const clientAlt = 'klient(in)?|auftraggeber(in)?|' + (clientWords.length ? clientWords.join('|') + '|' : '') + staticClients;
+  // Kombinierte AUFLOESEN-Patterns mit dynamischer Namens-Alternation
+  const auflPat1 = new RegExp('\\b(berichte|informiere|schliess.*ab|fall.*loes|fall.*aufkl|honorar|ueberg(eb|i)b|alles erzaehl|geschichte erzaehl)\\b.{0,40}\\b(' + clientAlt + ')\\b');
+  const auflPat2 = new RegExp('\\b(' + clientAlt + ')\\b.{0,40}\\b(informier|bericht|berichten|berichte|ueberg(eb|i)b|alles erzaehl|wahrheit sag|loesung mitteil|ergebnis mitteil)\\b');
+  const auflPat3 = new RegExp('\\b(fahr|ruf|telegrafier|telegram|geh|kehr|triff|treff)\\b.{0,40}\\b(' + clientAlt + ')\\b.{0,80}\\b(berichte|uebergeb|uebergib|abschluss|ende|loesung|alles erzaehl|informiere|beweise|honorar|sag.*alles)');
 
   // AUFLOESEN: klare Schluss-Akt-Signale (Klient informieren, Fall abschliessen)
-  if (/\b(berichte|informiere|schliess.*ab|fall.*loes|fall.*aufkl|honorar|ueberg(eb|i)b|alles erzaehl|geschichte erzaehl)\b.{0,40}\b(klient|auftraggeber|helga|edith|margarete|hannelore|liselotte|gertrud|hildegard|charlotte|annelies|brigitte|ilse|ursula|gisela|renate|inge|erna)\b/.test(t) ||
-      /\b(klient|auftraggeber|helga|edith|margarete|hannelore|liselotte|gertrud|hildegard|charlotte|annelies|brigitte|ilse|ursula|gisela|renate|inge|erna)\b.{0,40}\b(informier|bericht|berichten|berichte|ueberg(eb|i)b|alles erzaehl|wahrheit sag|loesung mitteil|ergebnis mitteil)\b/.test(t) ||
+  if (auflPat1.test(t) || auflPat2.test(t) ||
       /\b(ueberg(eb|i)b)\b.{0,25}\b(der|die|dem|den)\s+klient(in)?\b/.test(t) ||
       /\b(ueberg(eb|i)b)\b.{0,25}\b(dem|der)\s+auftraggeber(in)?\b/.test(t) ||
       /\b(ueberg(eb|i)b)\s+(ihr|ihm|der klient|dem klient|dem auftraggeber|der auftraggeber)\b/.test(t) ||
-      /\b(fahr|ruf|telegrafier|telegram|geh|kehr|triff|treff)\b.{0,40}\b(klient|auftraggeber|helga|edith|margarete|hannelore|liselotte|gertrud|hildegard|charlotte|annelies|brigitte|ilse|ursula|gisela|renate|inge|erna)\b.{0,80}\b(berichte|uebergeb|uebergib|abschluss|ende|loesung|alles erzaehl|informiere|beweise|honorar|sag.*alles)/.test(t) ||
+      auflPat3.test(t) ||
       /\b(fall|akte|sache|ermittlung)\b.{0,15}(abschliess|loes|aufkl|beend|zu ende bring|geschlossen|abschluss|fertig|erledigt)/.test(t) ||
       /\b(schliess|loes|aufkl|beend)\w*\s+.{0,15}\b(den\s+fall|die\s+akte|die\s+sache|die\s+ermittlung)/.test(t) ||
       /\b(schliess.*den.*fall|loes.*den.*fall|fall.*loes|fall.*aufkl|akte schliess|akte zumach|honorar.*einforder|honorar.*kassier|kassier.*honorar)\b/.test(t)) {
@@ -10610,7 +10770,7 @@ function classifyOption(opt, resolveContext) {
   // wurde als DEFENSIV klassifiziert (nur wegen Position). Verben wie durchsuch,
   // untersuche, fahr zu, begib dich, suche X ab sind eindeutig ERKUNDEN.
   // Schmaler Filter: nur klare Faelle, kein "frag" (zu mehrdeutig).
-  else if (/\b(durchsuch[et]?\s+(die|den|das|seine?|ihre?)|untersuche?\s+(die|den|das|den\s+bereich|die\s+umgebung|die\s+wohnung)|absuche?\w*|suche?\s+\w+\s+ab|such\s+die\s+\w+\s+ab|fahr\s+zu|fahr\s+direkt|begib\s+dich|verlass\s+(das|die|den)\s+haus|verlass\s+\w+\s+und\s+fahr|renn\s+zum|lauf\s+zum|eile\s+zum|aufzusuchen|suche?\s+(ihn|sie|den|die|das)\s+auf|versuch[et]?,?\s+\w+[\w\s]{0,30}\s+(ausfindig|aufzuspueren|aufzuspüren|herauszufinden|zu\s+entziffern|zu\s+lesen|zu\s+finden|abzusuchen|nachzuverfolgen))\b/i.test(t)) {
+  else if (/\b(durchsuch[et]?\s+(die|den|das|seine?|ihre?)|untersuche?\s+(die|den|das|den\s+bereich|die\s+umgebung|die\s+wohnung)|absuche?\w*|suche?\s+\w+\s+ab|such\s+die\s+\w+\s+ab|fahr\s+zu\w*|fahr\s+direkt|begib\s+dich|verlass\w*\s+(das|die|den)\s+(haus|buero|büro|gebaeude|gebäude|zimmer|raum)|verlass\w*\s+[\w\s]{0,15}\s+und\s+fahr|renn\s+zu[rm]\b|lauf\s+zu[rm]\b|eile\s+zu[rm]\b|geh\s+zu\w*\s+(adresse|tatort|hafen|werft|treffpunkt|wohnung|haus|praxis|kneipe|fabrik|lager)|aufzusuchen|suche?\s+(ihn|sie|den|die|das)\s+auf|versuch[et]?,?\s+\w+[\w\s]{0,30}\s+(ausfindig|aufzuspueren|aufzuspüren|herauszufinden|zu\s+entziffern|zu\s+lesen|zu\s+finden|abzusuchen|nachzuverfolgen))\b/i.test(t)) {
     heuristicCat = 'ERKUNDEN';
   }
   // v7.12.30: OFFENSIV-Heuristik fuer eindeutige Körper-Gewalt die nicht
@@ -10926,7 +11086,7 @@ function applyCategoryMechanics(kategorie, ctx) {
       // - HEILEN gibt +2 Vf solange verletzt (Vf < 5)
       // - v7.12.38: MARLENE-Ausnahme: Marlene kann nur notdürftig helfen (+1),
       //   analog NOTHEILEN. Marker: option._marleneHeal === true.
-      if (option && option._marleneHeal) {
+      if (ctx.option && ctx.option._marleneHeal) {
         result.vfDelta = (verfassung < 5) ? 1 : 0;
         result.spannungDelta = -1;
         result.energieDelta = 0;
@@ -10968,7 +11128,18 @@ function applyCategoryMechanics(kategorie, ctx) {
           result.pushMessages.push('CUSTODY-NACHT-SCHLAF: Karl ist in MfS-Custody (Verhoer-Zelle Genslerstrasse oder vergleichbar). Er schliesst die Augen, lehnt sich zurueck, irgendwann verliert er das Bewusstsein vor Erschoepfung. Beschreibe in 2-3 Saetzen wie er einnickt - kalte Pritsche, Gluehbirne, Stille der Zelle. Dann UEBERGANG zum naechsten Morgen: Karl wird FREIGELASSEN. Die Stasi hat ihn nicht offiziell festgehalten - "Befragung beendet, Sie koennen gehen, Genosse Mauer". Beschreibe wie er aus der Zelle/dem Raum entlassen wird, draussen ist Morgen, er nimmt seinen Hut/Mantel zurueck. NEUE Szene: Karl steht vor dem MfS-Gebaeude (Normannenstrasse, Hohenschoenhausen, oder Polizeirevier wenn nur Volkspolizei), Morgensonne, Wachen-Blick. Er kann weiter ermitteln, hat aber Stasi-Tension behalten - sie wissen jetzt wer er ist.');
         } else if (pendingHeimfahrt) {
           // v7.11.87: Spieler waehlte "Schlafen (zu Hause)" - Karl faehrt heim.
-          result.pushMessages.push('SCHLAFEN-HEIMFAHRT: Karl steigt in seinen Opel Olympia und faehrt zu seiner Wohnung/seinem Buero am Hackeschen Markt (Ost-Berlin, Mitte). Beschreibe in 1-2 Saetzen die naechtliche Fahrt durch die stille Stadt, dann das Ankommen und Einschlafen im eigenen Bett. Karl wacht am naechsten Morgen ZU HAUSE auf - NICHT am vorigen Ort. Die neue Szene spielt in Karls Wohnung/Buero am Hackeschen Markt (Morgensonne, Kaffee, der vertraute Blick aus dem Fenster auf den Hof). WICHTIG: KEIN RUECKBLICK auf den vorigen Ort (Lagerhalle, Hinterhof, Kneipe, etc.) - Karl ist zu Hause und der vorige Ort ist nicht erwaehnenswert. Beginne die Morgen-Szene DIREKT in der Wohnung, nicht mit "Die Nacht an Ort X war..." ' + (verfassung <= 3 ? 'Karl ist verletzt - der Schlaf hilft nur leicht (+1 Vf), die Wunden schmerzen noch, er braucht weitere Versorgung.' : ''));
+          // v7.12.54: isAlreadyHome nutzt ortTypeBeforeAction (Ort-Typ als Karl SCHLAFEN
+          // klickte), nicht currentOrtType (das ist beim 2. applyCategoryMechanics-Aufruf
+          // schon die neue Szene). classifyOrtDetailed klassifiziert alle Home-Varianten
+          // ("BÜRO HACKESCHER MARKT", "KARLS WOHNUNG", "SCHLAFZIMMER, HACKESCHER MARKT")
+          // zuverlässig als HOME (Regel H1 /hackesche/ + H2). Wenn Karl schon daheim ist,
+          // braucht er keine Heimfahrt.
+          const isAlreadyHome = (ortTypeBeforeAction === 'HOME');
+          if (isAlreadyHome) {
+            result.pushMessages.push('SCHLAFEN-ZU-HAUSE: Karl ist bereits in seiner Wohnung/seinem Buero am Hackeschen Markt. Er legt sich direkt schlafen - kein Autofahrt noetig. Kurze Beschreibung wie er ins Bett sinkt (2 Saetze), dann Zeitsprung zu naechstem Morgen. Beginne die Morgen-Szene DIREKT in Karls Wohnung (Morgensonne, Kaffee).' + (verfassung <= 3 ? ' Karl ist verletzt - Schlaf hilft leicht (+1 Vf).' : ''));
+          } else {
+            result.pushMessages.push('SCHLAFEN-HEIMFAHRT: Karl steigt in seinen Opel Olympia und faehrt zu seiner Wohnung/seinem Buero am Hackeschen Markt (Ost-Berlin, Mitte). Beschreibe in 1-2 Saetzen die naechtliche Fahrt durch die stille Stadt, dann das Ankommen und Einschlafen im eigenen Bett. Karl wacht am naechsten Morgen ZU HAUSE auf - NICHT am vorigen Ort. Die neue Szene spielt in Karls Wohnung/Buero am Hackeschen Markt (Morgensonne, Kaffee, der vertraute Blick aus dem Fenster auf den Hof). WICHTIG: KEIN RUECKBLICK auf den vorigen Ort (Lagerhalle, Hinterhof, Kneipe, etc.) - Karl ist zu Hause und der vorige Ort ist nicht erwaehnenswert. Beginne die Morgen-Szene DIREKT in der Wohnung, nicht mit "Die Nacht an Ort X war..." ' + (verfassung <= 3 ? 'Karl ist verletzt - der Schlaf hilft nur leicht (+1 Vf), die Wunden schmerzen noch, er braucht weitere Versorgung.' : ''));
+          }
         } else {
           result.pushMessages.push('SCHLAFEN-VOR-ORT: Karl schlaeft AM AKTUELLEN ORT ein (wo er gerade ist - Park, Hauseingang, Hotel, Buero, Strassenecke, Auto, was auch immer). Beschreibe kurz wie er einnickt (1-2 Saetze) und dann den UEBERGANG zum naechsten Morgen am SELBEN ORT. KEIN Teleport zu Buero/Wohnung/Doc Wagner. Die neue Szene MUSS am gleichen Ort spielen oder unmittelbar daneben (z.B. Karl wacht im Park auf einer Bank auf, oder im Hauseingang an die Wand gelehnt). Erzaehle die Spuren der Nacht - kalter Tau, steife Glieder, fremde Blicke, ein Polizist der ihn weckt, etc. - aber bleib am ORT. ' + (verfassung <= 3 ? 'WICHTIG: Karl ist verletzt - Schlaf hilft nur leicht (+1 Vf). Beschreibe dass die Wunden noch schmerzen am Morgen, Karl braucht weitere Versorgung. Aber er ist nicht in akuter Lebensgefahr - das Schlafen hat zumindest die Erschoepfung beseitigt.' : ''));
         }
@@ -11248,7 +11419,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.43] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.63] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -11328,12 +11499,15 @@ function renderOptions(scene) {
     // Vogt-Run 2029: Sz16-17 boten "Fahr direkt zu Sigrid" + "Verlasse die Halle"
     // obwohl GEWAHRSAM 1 aktiv war. Karl loeste den Fall aus der Zelle.
     if (karlInStasiCustody) {
-      const tLow = (opt.text || '').toLowerCase().replace(/ü/g,'ue').replace(/ö/g,'oe').replace(/ä/g,'ae').replace(/ß/g,'ss');
+      const tLow = normForMatch(opt.text || '');
       const isFreeMovement = /\b(fahr\s+(direkt\s+)?zu|fahr\s+nach|verlasse?\s+(die|den|das|diesen)|geh\s+(zum|zur|nach|raus)|begib\s+dich|renn\s+zum|lauf\s+zum|kehr\s+zurueck|fahre?\s+(heim|nach\s+hause))\b/i.test(tLow);
       if (isFreeMovement) {
         opt._custodyBlocked = true;
         opt._kategorie = 'DEFENSIV'; // neutralisieren
-        if (typeof diag === 'function') diag('detect', 'CUSTODY-GUARD: Option "' + (opt.text||'').slice(0,50) + '" als Freiheits-Option markiert (Karl in Gewahrsam)');
+        // v7.12.43: Ausgegraut-Tracking im Debug-Export
+        if (!window._custodyBlockedOptions) window._custodyBlockedOptions = [];
+        window._custodyBlockedOptions.push(opt.id + ') ' + (opt.text||'').slice(0,55));
+        if (typeof diag === 'function') diag('detect', 'CUSTODY-GUARD ausgegraut: ' + opt.id + ') "' + (opt.text||'').slice(0,55) + '" (Freiheitsbewegung in Gewahrsam)');
       }
     }
     // v7.11.57: AUFLOESEN-Konvertierung an die richtige Stelle verschoben.
@@ -11488,7 +11662,7 @@ function renderOptions(scene) {
   // ROMANTIK: nur wenn ROMANCE-NPC im aktuellen Cast
   // v7.11.12: FLUCHT (immer wenn Sp >= 3 + nicht in Custody)
   // v7.11.12: NOTHEILEN (immer wenn Vf <= 2 + NICHT in Custody)
-  const isAbendOderNacht = (typeof gameTimeIdx === 'number') && (gameTimeIdx >= 4); // 4=ABEND, 5=NACHT
+  const isAbendOderNacht = isAbendOderNachtTime(gameTimeIdx); // v7.12.56: zentral, ABEND/NACHT (>=4)
   // v7.11.12: SCHLAFEN auch tagsueber wenn Karl ueberzogen ist oder in seinem Buero/Wohnung
   // v7.11.62: User-Wunsch zurueckgenommen - SCHLAFEN nur noch bei Abend/Nacht
   // oder in Custody (5+ Sz). Tagsueber-Schlafen (Nickerchen, Buero-Pause) raus
@@ -11501,7 +11675,7 @@ function renderOptions(scene) {
   // Jetzt werden beide Schreibweisen abgedeckt. Zusaetzlich "hackescher markt"
   // (Karls Adresse) + "detektei"/"arbeitszimmer"/"schreibtisch" als Heim-Synonyme.
   const currentLocation = (typeof lastLocation === 'string')
-    ? lastLocation.toLowerCase().replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss')
+    ? normForMatch(lastLocation)
     : '';
   const isInSafeRestPlace = /\b(buero|wohnung|schlafzimmer|hotel|bett|hauptbahnhof|charit|hackescher markt|detektei|arbeitszimmer|schreibtisch)/.test(currentLocation);
   const canSleepDuringDay = false; // v7.11.62: deaktiviert
@@ -11512,7 +11686,9 @@ function renderOptions(scene) {
   // absitzen" auch frueh plausibel - Karl sitzt fest und kann nichts tun).
   const SLEEP_MIN_SCENE = 3;
   const sleepSceneOk = (sceneCounter >= SLEEP_MIN_SCENE);
-  const showSleepButton = (isAbendOderNacht && sleepSceneOk) || canSleepInCustody;
+  // v7.12.47: Kein Schlaf wenn Karl im Auto/Zug unterwegs ist
+  const isOnTheRoad = currentOrtType === 'FAHRT';
+  const showSleepButton = (isAbendOderNacht && sleepSceneOk && !isOnTheRoad) || canSleepInCustody;
   let romanceNpcInScene = null;
   try {
     if (caseSetup && Array.isArray(caseSetup.setupCast) && Array.isArray(cast)) {
@@ -11564,18 +11740,14 @@ function renderOptions(scene) {
   // Auto-Heilung (v7.12.5 entfernt). Erkennung: Karl ist PRAESENT bei Wagner
   // (nicht nur "faehrt hin"). Wir pruefen den Szenentext auf Wagner-Praesenz UND
   // schliessen reine Reise-/Erwaehnungs-Formulierungen aus.
-  const wagnerSceneLower = (scene.szene || '').toLowerCase()
-    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+  const wagnerSceneLower = normForMatch(scene.szene || '');
   // v7.12.14: Erkennung ROBUSTER. Vorher verlangte sie "doc wagner"/"praxis"/
   // "marlene" - aber die KI nennt ihn oft nur "Wagner" ("Wagner oeffnet", "Wagner
   // tupft Jod auf"). User-Run 1642: bei Wagner, aber kein Heal-Button weil
   // "Wagner oeffnet" nicht matchte. Jetzt: "wagner" als Person/Ort reicht, plus
   // Praxis-Indikatoren + Schaeferstrasse (Wagners Adresse).
-  const wagnerPresent = /\bwagner\b/.test(wagnerSceneLower)
-    || /\b(in der praxis|schaeferstrasse)\b/.test(wagnerSceneLower)
-    // v7.12.37: "marlene" allein reicht NICHT mehr - Marlene Wagner ist auch
-    // Krankenschwester in der Charite. Nur wenn "marlene" zusammen mit
-    // Wagner-spezifischen Ort-Indikatoren auftaucht.
+  const wagnerPresent = currentOrtType === 'WAGNER' ||
+    /\bwagner\b/.test(wagnerSceneLower)
     || (/\bmarlene\b/.test(wagnerSceneLower) && /\b(wagner|praxis|schaeferstrasse|behandlungsraum)\b/.test(wagnerSceneLower));
   // Ausschluss: reine Anfahrt ("faehrst zu Doc Wagner", "auf dem weg zu Wagner")
   // OHNE Ankunfts-/Behandlungs-Indikator. Sobald Wagner aktiv etwas tut (oeffnet,
@@ -11601,25 +11773,18 @@ function renderOptions(scene) {
   // Notflucht-Button obwohl Status-Strip kein GEWAHRSAM zeigte - weil Status-
   // Marker nur bei Stasi-Woertern in der Szene gesetzt wird, der Button aber
   // direkt karlInStasiCustody nutzt. Jetzt: gleiche Bedingung wie Status-Marker.
-  const sceneTextLower = (scene.szene || '').toLowerCase();
-  // v7.11.50: Gleiche Bedingung wie Status-Marker.
-  // v7.12.35: Enger gefasst - "stasi" und "mfs" allein reichen NICHT mehr.
-  // Wessel-Run: Karl war frei nach NOTFLUCHT, aber "Stasi" im naechsten Szenen-
-  // text (die Stasi sucht ihn) liess den NOTFLUCHT-Button wieder erscheinen.
-  // Echter Haft-Kontext braucht physische Einschliessungs-Woerter.
-  const sceneShowsCustody = /\b(zelle|verhoer|verhör|verhoertisch|verhörtisch|fesseln|handschellen|haftanstalt|hohenschoenhausen|hohenschönhausen|verhörraum|verhoerraum|haeftling|häftling|knast|gefaengnis|gefängnis|untersuchungshaft|in\s+gewahrsam|wachposten\s+(bewacht|steht|sitzt)|bewachter\s+raum|du\s+sitzt\s+(in|auf)\s+(dem|der)\s+(stuhl|bank|pritsche|boden)|du\s+liegst\s+(auf|in)\s+(der\s+zelle|dem\s+verhoer))\b/.test(sceneTextLower);
+  // v7.12.55: normForMatch statt nur toLowerCase - dann reichen oe/ae/ue-Varianten
+  // im Regex (vorher doppelt: verhör|verhoer, hohenschönhausen|hohenschoenhausen).
+  const sceneTextNorm = normForMatch(scene.szene || '');
+  // v7.12.48: "zelle" allein reicht NICHT - Telefonzellen! Nur echte Haft-Wörter.
+  const sceneShowsCustody = /\b(verhoer|verhoertisch|fesseln|handschellen|haftanstalt|hohenschoenhausen|verhoerraum|haeftling|knast|gefaengnis|untersuchungshaft|in\s+gewahrsam|wachposten\s+(bewacht|steht|sitzt)|bewachter\s+raum|du\s+sitzt\s+(in|auf)\s+(dem|der)\s+(stuhl|bank|pritsche|boden)|du\s+liegst\s+(auf|in)\s+(der\s+zelle|dem\s+verhoer)|haftzelle|einzelzelle|die\s+zelle\s+(ist|riecht|misst|hat))\b/.test(sceneTextNorm);
 
-  // v7.12.41: ORT-BASIERTER CUSTODY-DETECT. Vogt-Run: KI schrieb Karl in eine
-  // Zelle (ort="ZELLE, HOHENSCHOENHAUSEN") ohne dass AUTO-CUSTODY triggerte.
-  // karlInStasiCustody blieb false -> NOTFLUCHT erschien nicht, normaler FLUCHT-
-  // Button erschien stattdessen, SCHLAFEN war sichtbar. Kompletter State-Desync.
-  // Fix: wenn der ORT explizit "zelle" oder "hohenschoenhausen" oder "verhoer"
-  // enthaelt, setzen wir karlInStasiCustody=true (narrativer Override).
-  const ortLower = (scene.ort || '').toLowerCase().replace(/ü/g,'ue').replace(/ö/g,'oe').replace(/ä/g,'ae').replace(/ß/g,'ss');
-  const ortImpliesCustody = /\b(zelle|hohenschoenhausen|hohenschonhausen|untersuchungshaft|verhoerraum|haftanstalt|keibelstrasse.*mfs|normannenstrasse.*zelle)\b/.test(ortLower);
+  const ortLower = normForMatch(scene.ort || '');
+  // v7.12.48: ortImpliesCustody nutzt currentOrtType (der bereits Telefonzellen ausschließt)
+  const ortImpliesCustody = currentOrtType === 'CUSTODY';
   if (ortImpliesCustody && !karlInStasiCustody) {
     karlInStasiCustody = true;
-    if (typeof diag === 'function') diag('state', 'ORT-CUSTODY-DETECT: Ort "' + scene.ort + '" impliziert Haft -> karlInStasiCustody=true gesetzt');
+    if (typeof diag === 'function') diag('state', 'ORT-CUSTODY-DETECT: Ort "' + scene.ort + '" (Typ: CUSTODY) -> karlInStasiCustody=true');
   }
 
   const showNotfluchtButton = karlInStasiCustody && sceneShowsCustody;
@@ -11627,10 +11792,11 @@ function renderOptions(scene) {
   // v7.12.38: MARLENE-HEILEN-BUTTON. Wenn Karl in der Charité ist UND Marlene
   // Wagner als Krankenschwester dort ist, kann sie ihm "unter der Hand" helfen.
   // Schwächer als Doc Wagner (+1 statt +2), aber ohne Tageslimit.
-  const marleneSceneLower = sceneTextLower; // bereits oben berechnet
-  const marlenePresent = /\bmarlene\b/.test(marleneSceneLower);
-  const charitePresent = /\b(charit[eé]|charite|notaufnahme|krankenhau[s]|krankenhaus)\b/.test(marleneSceneLower)
-    || /\b(charit[eé]|charite)\b/.test((scene.ort || '').toLowerCase().replace(/ü/g,'ue').replace(/ö/g,'oe').replace(/ä/g,'ae').replace(/ß/g,'ss'));
+  const marleneSceneNorm = sceneTextNorm; // bereits oben berechnet (normForMatch)
+  const marlenePresent = /\bmarlene\b/.test(marleneSceneNorm);
+  // normForMatch wandelt é nicht um, daher charit[eé]? fuer "charité" und "charite"
+  const charitePresent = currentOrtType === 'CHARITE' ||
+    /\b(charit[eé]?|notaufnahme|krankenhaus)\b/.test(marleneSceneNorm);
   const showMarleneHealButton = marlenePresent && charitePresent
     && currentVerfassung < 5 && !karlInStasiCustody
     && currentSpannung <= 2;
@@ -11700,6 +11866,8 @@ function renderOptions(scene) {
     const sbLog = window._lastSystemButtons.map(b => b.id + ':' + (b.shown ? '✓' : '✗' + (b.blocked ? '(' + b.blocked + ')' : ''))).join(' ');
     diag('detect', 'System-Buttons: ' + sbLog);
   }
+  // Reset custody-blocked tracker nach Render
+  window._custodyBlockedOptions = [];
 
   // Separator nur wenn mindestens ein System-Button gezeigt wird
   if (showSleepButton || romanceNpcInScene || showFluchtButton || showNotheilenButton || showNotfluchtButton || showWagnerHealButton || showMarleneHealButton) {
@@ -12206,11 +12374,27 @@ function renderOptions(scene) {
   const taeterUeberfuehrt = !!(caseProgress && caseProgress.ueberfuehrt);
   const zielpersonGefunden = !!(caseProgress && caseProgress.zielpersonGefunden);
   const durchbruchErreicht = taeterUeberfuehrt || zielpersonGefunden;
+  // v7.12.63: NEUES LOESBARKEITS-MODELL (User-Wunsch). Vorher konnte der Fall
+  // allein durch Indizien-Anzahl (>=11) loesbar werden - das fuehlte sich
+  // "automatisch" an: 11 Indizien gesammelt, aber den Vermissten nie gefunden /
+  // den Taeter nie gestellt -> trotzdem loesbar. Jetzt zwei Wege:
+  //   (STARK) Echter Durchbruch -> sofort loesbar, OHNE Indizien-Schwelle.
+  //           Taeter ueberfuehrt (Gestaendnis/Festnahme) ODER Zielperson gefunden.
+  //           "Ich hab ihn gefunden / er hat gestanden" - da zaehlt niemand Indizien.
+  //   (MITTEL) Genug Indizien UND ein identifizierter Verdaechtiger, den Karl
+  //           konfrontiert hat. Karl weiss wer es war (auch ohne Gestaendnis) und
+  //           kann es dem Klienten melden, der es an die Polizei weitergibt.
+  // Reine Indizien-Anzahl ohne benannten+konfrontierten Verdaechtigen reicht NICHT
+  // mehr. Das behebt das "loest sich von selbst"-Gefuehl.
+  const verdaechtigerBenannt = !!(caseProgress && caseProgress.tatverdaechtiger);
+  const verdaechtigerKonfrontiert = !!(caseProgress && caseProgress.suspectConfronted);
   const resolveCoreReady =
     !hasAufloesenOption &&
     (
-      (currentStage >= 3 && indizCount >= 11) ||  // (A) normale Beweis-Reife (v7.11.84: war 8)
-      (currentStage >= 3 && durchbruchErreicht)   // (B) Durchbruch - Indiz-Zahl egal
+      // (STARK) Durchbruch - sofort loesbar, Indiz-Zahl egal
+      (currentStage >= 3 && durchbruchErreicht) ||
+      // (MITTEL) genug Indizien + identifizierter + konfrontierter Verdaechtiger
+      (currentStage >= 3 && indizCount >= 11 && verdaechtigerBenannt && verdaechtigerKonfrontiert)
     );
   // Persistent merken: war Resolve mal verfuegbar? Wenn ja, bleibt der Button.
   if (resolveCoreReady) {
@@ -13270,7 +13454,7 @@ Karl war an diesen Orten bereits. Biete KEINE Optionen an wie "Fahr zur Adresse 
     //   (nur konspirativ - Spione, heimliche Entfuehrungen, NICHT als
     //   uniformierte Festnahme-Truppe in Wohnungen)
     if (lastMainLocation && lastMainLocation.length > 0) {
-      const locLower = lastMainLocation.toLowerCase();
+      const locLower = normForMatch(lastMainLocation);
       // West-Sektor-Indikatoren
       const isWest = /charlottenburg|tempelhof|schoeneberg|wilmersdorf|kreuzberg|wedding|neukoelln|tiergarten|spandau|reinickendorf|zehlendorf|wannsee|nollendorfplatz|hardenbergstr|kurfuerstendamm|ku.?damm|kadewe|hardenberg|sybelstr|bismarckstr|kantstr|leibnitzstr|grunewald|dahlem|rias|hardenbergstrasse|schoneberg|caf[ée] kranzler/.test(locLower);
       // Ost-Sektor-Indikatoren
@@ -13900,7 +14084,7 @@ KEINE anderen Themen mehr - kein neuer Tatort, keine neuen Verdaechtigen, keine 
     // Wir schicken die aktuelle Stufe + Tageszeit; die KI entscheidet die Optionen.
     const currentTime = TIMES_OF_DAY[gameTimeIdx] || 'unbekannt';
     const isLowTension = lastSpannung <= 2;
-    const isAbendOderNacht = gameTimeIdx >= 3; // FRÜHER ABEND, ABEND, NACHT
+    const isAbendOderNacht = isAbendOderNachtTime(gameTimeIdx); // v7.12.56: zentral - vorher faelschlich >=3 (Nachmittag)
     const eStufe = getEnergieStufe(karlEnergie);
 
     // Schlaf-Optionen-Logik nach Energie-Stufe (NICHT nach Szenen-Counter,
@@ -13912,9 +14096,10 @@ KEINE anderen Themen mehr - kein neuer Tatort, keine neuen Verdaechtigen, keine 
     // v6.79: Wenn Karl in einer formellen stationaeren Situation ist
     // (Gericht, Verhoer, Beerdigung), MUSS die Situation erst beendet werden
     // bevor er schlafen kann - wir signalisieren das im Push.
-    const currentOrt = (lastMainLocation || '').toLowerCase();
-    const recentSceneText = (lastFullScene && lastFullScene.szene ? lastFullScene.szene : '').toLowerCase();
-    const isFormalSetting = /gericht|verhandl|saal\s*\d|kreisgericht|kanzlei|beerdigung|trauerfeier|verhoer|haftanstalt|u-haft|untersuchungshaft|polizeirevier.*befragung/.test(currentOrt + ' ' + recentSceneText);
+    const currentOrtLocal = normForMatch(lastMainLocation || '');
+    const recentSceneText = normForMatch(lastFullScene && lastFullScene.szene ? lastFullScene.szene : '');
+    const isFormalSetting = currentOrtType === 'GERICHT' || currentOrtType === 'CUSTODY' ||
+      /\b(verhoer|haftanstalt|u-haft|beerdigung|trauerfeier|polizeirevier.*befragung)\b/.test(currentOrtLocal + ' ' + recentSceneText);
     const formalHint = isFormalSetting ?
       ' WICHTIG: Karl ist in einer formellen Situation (Gericht/Verhandlung/Verhoer/Beerdigung). Die Situation MUSS zuerst beendet sein (Vertagung, Schluss der Trauerfeier, Karl wird entlassen, Verhandlung wird abgebrochen) bevor er schlafen kann. Erzaehle in dieser Szene das Ende der formellen Situation - dann erst die Schlaf-Optionen.' : '';
 
@@ -14232,7 +14417,7 @@ Wenn du die Behandlungs-Option mit tag="behandlung" markierst, MUSST du in der F
     // v7.9.20 v2: Priorisiert Setup-Cast-Personen mit tag='ROMANCE' oder tagExtra='ROMANCE'.
     if (romanticTension >= 3 && !karlInStasiCustody &&
         (typeof lastSpannung !== 'number' || lastSpannung <= 2) &&
-        gameTimeIdx >= 4 /* ABEND oder NACHT */) {
+        isAbendOderNachtTime(gameTimeIdx) /* v7.12.56: ABEND oder NACHT, zentral */) {
       // Frauen im Cast finden - mit Prioritaet auf Setup-definierte ROMANCE-Personen
       const setupRomanceNames = [];
       if (caseSetup && Array.isArray(caseSetup.setupCast)) {
@@ -14483,7 +14668,7 @@ VERBOTEN: Karl wacht woanders auf ohne Erklaerung. Wenn du Pfad B waehlst, MUSST
     // der Besuch sinnlos. Anlass: Run31 Sz12: Karl mit Vf 1 in Doc Wagners Praxis,
     // Marlene sieht die Schulterwunde, aber 0 Behandlung im Erzaehltext, Vf bleibt 1.
     {
-      const mainLocLower = (lastMainLocation || '').toLowerCase();
+      const mainLocLower = normForMatch(lastMainLocation || '');
       const inDocPraxis = /\b(doc wagner|wagners?\s+praxis|schaeferstrasse|praxis schoeneberg)\b/.test(mainLocLower);
       if (inDocPraxis && typeof verfassung === 'number' && verfassung > 0 && verfassung <= 3 && lastDocHealingDay < gameDay) {
         timeContext += `\n\nDOC-WAGNER-BEHANDLUNGS-PFLICHT: Karl ist in Doc Wagners Praxis und seine Verfassung ist ${verfassung}/5 - er braucht Behandlung, nicht nur Smalltalk. In dieser ODER der naechsten Szene MUSS Doc Wagner (oder seine Tochter Marlene als Krankenschwester) Karl wirklich verarzten - das bedeutet konkret im Erzaehltext: Wunde reinigen mit Jodtinktur, naehen, Verband anlegen, Schmerzmittel-Spritze setzen, oder Salbe drauf. NICHT nur "Doc untersucht Karl kurz" - das zaehlt nicht. Konkrete Behandlungs-Aktionen muessen vorkommen. Mindestens eine der 4 Optionen darf "Lass dich verarzten / Halte still / Frag nach Schmerzmittel" sein. verfassung_delta darf in dieser Szene NICHT negativ werden (Karl ist beim Arzt, nicht in Gefahr). Das System heilt automatisch +1 oder +2, sobald die Behandlungs-Aktion im Text erscheint.`;
@@ -15396,13 +15581,11 @@ function getOpeningRequiredKeywords(setup) {
 function validateOpening(text, required) {
   if (!text || required.length === 0) return { ok: true, missing: [] };
   // Normalisieren: lowercase, Umlaute aufloesen fuer Match
-  const norm = text.toLowerCase()
-    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+  const norm = normForMatch(text);
   const missing = [];
   for (const req of required) {
     const found = req.alternatives.some(alt => {
-      const altNorm = alt.toLowerCase()
-        .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+      const altNorm = normForMatch(alt);
       return norm.includes(altNorm);
     });
     if (!found) missing.push(req);
@@ -15432,16 +15615,14 @@ function validateOpening(text, required) {
 // Kreisgericht = Setup 12, Friedhof Ploetzensee = Setup 7, etc) - Setup-Pollution.
 function validateOpeningCastPurity(text, setup) {
   if (!text || !setup) return { ok: true, foreignNames: [], foreignLocations: [] };
-  const norm = text.toLowerCase()
-    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+  const norm = normForMatch(text);
   // Sammle Setup-Cast-Namen
   const ownNames = new Set();
   const addName = (name) => {
     if (!name || typeof name !== 'string') return;
     // Vor- und Nachname einzeln + komplett
     const parts = name.match(/[A-ZÄÖÜ][a-zäöüß]+/g) || [];
-    parts.forEach(p => ownNames.add(p.toLowerCase()
-      .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss')));
+    parts.forEach(p => ownNames.add(normForMatch(p)));
   };
   if (setup.klient) {
     const m = setup.klient.match(/^([A-ZÄÖÜ][a-zäöüß]+(?:\s+[A-ZÄÖÜ][a-zäöüß]+)*)/);
@@ -15501,10 +15682,9 @@ function validateOpeningCastPurity(text, setup) {
   ];
   const foreignLocations = [];
   // Eigene Setup-Ort-Schluesselworte: ortHaupt + setupLocations
-  const ownLocationText = ((setup.ortHaupt || '') + ' ' +
+  const ownLocationText = normForMatch((setup.ortHaupt || '') + ' ' +
     (Array.isArray(setup.setupLocations) ? setup.setupLocations.map(l => (l.name || '') + ' ' + (l.detail || '')).join(' ') : '')
-  ).toLowerCase()
-    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+  );
   for (const flp of foreignLocationPatterns) {
     // Wenn der Ort im eigenen Setup vorkommt, skippen
     if (ownLocationText.includes(flp.key)) continue;
@@ -15563,6 +15743,7 @@ async function startGame() {
   physicalStreakInTime = 0; // v7.9.41
   lastLocation = '';
   lastMainLocation = ''; // v6.58
+  currentOrt = ''; currentOrtType = 'NEUTRAL'; ortTypeBeforeAction = 'NEUTRAL'; // v7.12.54: State-Leak-Fix
   // Reset Verfassung
   verfassung = 5;
   isGameOver = false;
@@ -15753,7 +15934,7 @@ async function startGame() {
       // automatisch in mentionedDeadOrAbsent eingetragen, damit Cast-Filter
       // weiss dass diese Person NICHT physisch im Raum ist.
       if (ce.tag === 'TARGET' && ce.anwesend === false) {
-        const rolleLower = (ce.rolle || '').toLowerCase();
+        const rolleLower = normForMatch(ce.rolle || '');
         let targetReason = null;
         if (/verstorben|tot|opfer|leiche|getoetet/.test(rolleLower)) {
           targetReason = 'verstorben';
@@ -15784,8 +15965,8 @@ async function startGame() {
       // 3 Tagen verschwunden - wurde als "gelassen" klassifiziert (Mahnung Tag 5).
       // Eine verzweifelte Schwester ist nicht gelassen. Wir scannen Opening
       // und Beziehungs-Beschreibung nach Indikatoren, BEVOR wir Random rollen.
-      const openingLower = (caseSetup.eroeffnung || caseSetup.opening || '').toLowerCase();
-      const beziehungLower = (clientFromCast.beziehung || '').toLowerCase();
+      const openingLower = normForMatch(caseSetup.eroeffnung || caseSetup.opening || '');
+      const beziehungLower = normForMatch(clientFromCast.beziehung || '');
       const probeText = openingLower + ' ' + beziehungLower;
       // Verzweiflungs-/Druck-Indikatoren -> ungeduldig
       const isVerzweifelt = /verzweifelt|verzweiflung|bruechige?\s+stimme|bruechig|zitternde?\s+haenden?|haende\s+zittern|mascara\s+(verlaufen|verschmiert)|weint|weinen|panisch|panik|atemlos|aufgeloest|aufgewuehlt|fassungslos|aengstlich|todesangst|am\s+rande|am\s+ende\s+(ihrer|seiner)\s+kraefte|in\s+grosser\s+sorge|krank\s+vor\s+sorge|kein\s+auge\s+zugemacht|seit\s+tagen\s+nicht\s+geschlafen|fleht|barmt|stoesst\s+hervor|stiess\s+hervor|stockend|stockt|tastend|tropfen\s+(ihr|ihm)\s+ueber\s+die\s+wangen|ringen?\s+mit\s+(den|ihren|seinen)\s+haenden|kann\s+(nicht\s+mehr|nicht\s+laenger)|wenn\s+sie\s+nicht\s+bald|wenn\s+er\s+nicht\s+bald|jede\s+stunde\s+zaehlt|jede\s+minute\s+zaehlt|spurlos\s+verschwunden|seit\s+drei\s+tagen|seit\s+vier\s+tagen|seit\s+drei\s+wochen|seit\s+zwei\s+wochen|seit.*tagen.*verschwunden|seit.*woche.*verschwunden|seit.*woche.*vermisst|seit.*tagen.*vermisst|krank\s+vor|sorge\s+um|in\s+ihrer\s+verzweiflung|vermisstenfall/.test(probeText);
@@ -15930,8 +16111,7 @@ async function startGame() {
 function isPhysicalConflictAction(text) {
   if (!text) return false;
   // Umlaute normalisieren, damit Patterns sowohl ue/oe/ae als auch ü/ö/ä matchen
-  const lower = text.toLowerCase()
-    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+  const lower = normForMatch(text);
   // Wir wollen sehr spezifische Verben und Wortkombinationen, die direkte Konfrontation/Aktion bedeuten.
   // Wortgrenzen pruefen mit \b, damit z.B. 'pack' nicht auf 'package' matcht.
   const patterns = [
@@ -15977,8 +16157,7 @@ function countWaffeUsage() {
 // Returns 1-5.
 function computeActionLevel(sceneText) {
   if (!sceneText) return 1;
-  const lower = sceneText.toLowerCase()
-    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+  const lower = normForMatch(sceneText);
 
   // Spannung 5: konkrete Gewalt, Schuesse, Treffer
   const lvl5 = [
@@ -16031,8 +16210,7 @@ function computeActionLevel(sceneText) {
 // Eindringlinge fuer mehrere Szenen blockiert.
 function detectIntruder(sceneText) {
   if (!sceneText) return false;
-  const lower = sceneText.toLowerCase()
-    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+  const lower = normForMatch(sceneText);
   // Charakteristische Phrasen fuer "jemand kommt unangekuendigt rein"
   const patterns = [
     /\bklopft? .* (an der|gegen die) (tuer|bueroture|wohnungstuer)/,
@@ -16051,8 +16229,7 @@ function detectIntruder(sceneText) {
 // bleibt caseIsPolitical true. Wird im Erzaehltext UND in den Indizien geprueft.
 function detectPolitical(sceneText) {
   if (!sceneText) return false;
-  const lower = sceneText.toLowerCase()
-    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+  const lower = normForMatch(sceneText);
   // v7.9.10 FIX 3: "Spion" (= Tuerspion/Guckloch) NICHT als Spionage werten.
   // Anlass: Schiffer-Run Sz 21 - "durch den Spion siehst du..." (Klassiker Tuer-
   // Guckloch) wurde als Spionage-Pattern erkannt. Falscher Spielklub-Gangster-Fall
@@ -16095,8 +16272,7 @@ function detectPolitical(sceneText) {
 // Returns 'shoot' | 'kill' | 'wound' | null je nach Schwere.
 function detectVPCrime(sceneText) {
   if (!sceneText) return null;
-  const lower = sceneText.toLowerCase()
-    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+  const lower = normForMatch(sceneText);
 
   // VP-Beamter in der Naehe (notwendige Bedingung)
   // Wir wollen kein "vp" matchen das z.B. in "improvisierter" steckt -
@@ -16145,8 +16321,7 @@ function updateStasiTension(sceneText) {
   if (typeof caseProgress === 'object' && caseProgress && (caseProgress.istGelöst === true || (caseProgress.stage || 0) >= 4)) {
     return;
   }
-  const lower = sceneText.toLowerCase()
-    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+  const lower = normForMatch(sceneText);
   // v6.74: Trigger-Pattern erweitert. Vorher: nur explizite Stasi/MfS/sowjet-Worte.
   // Jetzt: auch "Beschattung", "Verfolgung", "Telefon klickt", "Mann im Trenchcoat",
   // Karlshorst, politische Verhaftungen, sowie HO-Funktionaer-/SED-Affaeren.
@@ -16210,15 +16385,14 @@ function updateStasiTension(sceneText) {
 // Loest das Folter-Mechanik-Toggle aus.
 function detectStasiCustody(sceneText) {
   if (!sceneText) return false;
-  const lower = sceneText.toLowerCase()
-    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+  const lower = normForMatch(sceneText);
 
   // v7.11.13: Sicherheits-Frueh-Exit. Wenn der Text klar von TELEFONZELLE
   // (oder Fernsprech-Anlage) handelt und keine echten Stasi-Indikatoren da
   // sind, KEIN Custody. Wegener-Run 1203: "Du bist allein in der Zelle" in
   // einer Telefonzelle wurde als Stasi-Custody erkannt.
   const hasTelefonzelle = /\b(telefonzelle|fernsprechzelle|telefonzellen)\b/.test(lower);
-  const hasEchteStasiIndikatoren = /\b(stasi|mfs|hohenschoenhausen|haftanstalt|untersuchungshaft|verhoer|gefesselt|handschell|nackte gluehbirne|verhoertisch|gepruegelt|gefoltert)\b/.test(lower);
+  const hasEchteStasiIndikatoren = new RegExp('\\b(stasi|mfs|' + HAFT_ORT_BEGRIFFE + '|verhoer|gefesselt|handschell|nackte gluehbirne|verhoertisch|gepruegelt|gefoltert)\\b').test(lower);
   if (hasTelefonzelle && !hasEchteStasiIndikatoren) {
     return false;
   }
@@ -16276,8 +16450,7 @@ function detectStasiCustody(sceneText) {
 // Erkennt ob Karl aus Stasi-Gewahrsam freikommt (geht raus, freigelassen, fluechtet).
 function detectStasiRelease(sceneText) {
   if (!sceneText) return false;
-  const lower = sceneText.toLowerCase()
-    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+  const lower = normForMatch(sceneText);
   // v7.11.51: Pattern erweitert. User-Run Stein 2053 zeigte KI schrieb:
   // "Befragung beendet, Genosse Mauer. Verschwinden Sie." + "Du taumelst hinaus
   // in die kalte Morgenluft der Normannenstrasse." - keiner der alten Patterns
@@ -16307,10 +16480,8 @@ function detectStasiRelease(sceneText) {
 // Solche Anlaesse haben in der Realitaet ein klares Ende (1-2 Stunden), die KI muss
 // sie aufloesen statt Karl 18h dort stehen zu lassen.
 function detectTimedEvent(scene) {
-  const txt = ((scene && scene.szene) || '').toLowerCase()
-    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
-  const ort = ((scene && scene.ort) || '').toLowerCase()
-    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+  const txt = normForMatch((scene && scene.szene) || '');
+  const ort = normForMatch((scene && scene.ort) || '');
   const combined = txt + ' ' + ort;
   // Beerdigung / Trauerfeier / Friedhof
   if (/\b(beerdigung|begraebnis|trauerfeier|trauergaeste|grab|friedhof|sarg|grabstein|pastor|pfarrer\s+spricht)\b/.test(combined)) {
@@ -16481,8 +16652,7 @@ function getAnchorNpc(name) {
 
 function normalizeNpcName(name) {
   if (!name || typeof name !== 'string') return '';
-  let n = name.toLowerCase()
-    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+  let n = normForMatch(name);
   // Pruefen ob Geschlechts-Anrede vorhanden ist
   const genderPrefixMatch = n.match(/^(herr|frau|fraeulein)\s+/);
   const genderPrefix = genderPrefixMatch ? genderPrefixMatch[1] : '';
@@ -16519,8 +16689,7 @@ function normalizeNpcName(name) {
 // individuell trackbaren Personen.
 function isGenericPersonName(name) {
   if (!name) return true;
-  const n = name.toLowerCase().trim()
-    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+  const n = normForMatch(name);
   // Match 1: typische "Mann/Frau im/mit/in/aus" Konstruktionen
   if (/^(unbekannter?|unbekannte|ein\s+mann|eine\s+frau|der\s+mann|die\s+frau|mann\s+(im|mit|in|aus)|frau\s+(im|mit|in|aus)|uniformierter?|fremder?|fremde)\b/.test(n)) {
     return true;
@@ -16585,8 +16754,7 @@ function isGenericPersonName(name) {
 
 function detectVehicleLoss(text) {
   if (!text) return null;
-  const lower = text.toLowerCase()
-    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+  const lower = normForMatch(text);
 
   // Vorpruefung: ist von einem ANDEREN Auto die Rede? Dann nicht triggern.
   // Wenn die Szene einen Opel mit Farbattribut, Untertyp oder Kennzeichen erwaehnt,
@@ -16639,10 +16807,8 @@ function detectDeadOrAbsent(rolle, beziehung) {
   // (z.B. "Ehefrau des Vermissten"). Wir pruefen primaer die Rolle.
   // Die Beziehung pruefen wir nur wenn sie nicht offenkundig auf jemand
   // anderes referenziert ("Ehefrau des...", "Mutter des...", "Sohn des...").
-  const rolleTxt = (rolle || '').toLowerCase()
-    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
-  const beziehungTxt = (beziehung || '').toLowerCase()
-    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+  const rolleTxt = normForMatch(rolle || '');
+  const beziehungTxt = normForMatch(beziehung || '');
   const patterns = [
     /\b(verstorbene[rn]?|tote[rn]?|toter|leiche|verblichene[rn]?)\b/,
     /\b(opfer)\b/,
@@ -16983,8 +17149,7 @@ function expandAbbreviations(text) {
 // goldenes ⚡ AUFLOESUNG hilft dem Spieler zu erkennen wann der Fall geloest werden kann.
 function detectResolveAction(text, context) {
   if (!text) return false;
-  const lower = text.toLowerCase()
-    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+  const lower = normForMatch(text);
   const ctx = context || {};
   // v7.7: Negation - wenn die Option zu Doc Wagner / Praxis / Arzt fuehrt, ist es
   // KEINE Aufloesung sondern eine Genesung. Auch wenn dabei TARGET-Person mitgenommen wird.
@@ -16996,8 +17161,7 @@ function detectResolveAction(text, context) {
   const ueberfuehrt = !!ctx.ueberfuehrt;
   const caseType = ctx.caseType || '';
   const targetPresent = !!ctx.targetPresent;  // TARGET-Person ist in personenImRaum
-  const klientName = (ctx.clientName || '').toLowerCase()
-    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+  const klientName = normForMatch(ctx.clientName || '');
   // v7.7: Auch bei Stage 2+TARGET-Present qualifiziert als Aufloesung
   // (Mistral setzt bei Vermisst manchmal nie tatverdaechtiger_ueberfuehrt)
   const eligibleForResolve = ueberfuehrt
@@ -17026,8 +17190,7 @@ function detectResolveAction(text, context) {
   }
   // 2d) Bei Vermisst + TARGET present: "<Name> nach Hause bringen" / "<Name> abliefern"
   if (caseType === 'vermisst' && targetPresent) {
-    const targetName = (ctx.targetName || '').toLowerCase()
-      .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+    const targetName = normForMatch(ctx.targetName || '');
     const targetFirst = targetName.split(/\s+/)[0];
     if (targetFirst.length >= 3 && lower.includes(targetFirst)) {
       // Verb der TARGET wegbringt / abliefert
@@ -17050,8 +17213,7 @@ function detectResolveAction(text, context) {
 // Wenn nur Heiler-Name OHNE Aktions-Verb (z.B. "Sprich mit Doc Wagner") = NICHT Heilung
 function detectHealAction(text, context) {
   if (!text) return false;
-  const lower = text.toLowerCase()
-    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+  const lower = normForMatch(text);
   const ctx = context || {};
   const verfassung = typeof ctx.verfassung === 'number' ? ctx.verfassung : 5;
   // Nur relevant wenn Verfassung niedrig
@@ -17143,8 +17305,7 @@ function detectHealAction(text, context) {
 
 function detectFoodAction(text) {
   if (!text) return false;
-  const lower = text.toLowerCase()
-    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+  const lower = normForMatch(text);
 
   // Negationen: wenn diese Phrasen drin sind, ist es KEINE Essens-Aktion
   // (Karl wirft die Schrippe weg, ignoriert das Essen, etc.)
@@ -17186,8 +17347,7 @@ function detectFoodAction(text) {
 // wenn UNZWEIFELHAFT eine romantische Aktion stattfindet.
 function detectRomanticAction(text) {
   if (!text) return false;
-  const lower = text.toLowerCase()
-    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+  const lower = normForMatch(text);
   // Explizit-Frau-Kontext: Eine Frau muss UNZWEIFELHAFT im Spiel sein.
   // Generisches "die Tuer schliesst sich" oder "Buero abschliessen" reicht NICHT.
   const hasFemaleContext = /\b(sie|ihr|ihre|frau|lola|lotte|marlene|hilde|trude|helga|edith|renate|margot|elfriede)\b/.test(lower);
@@ -17211,8 +17371,7 @@ function detectRomanticAction(text) {
 // Update Energie + Hunger basierend auf Tageszeit, Spannung, Szenen-Inhalt.
 // Wird nach jeder erfolgreichen Szene aufgerufen.
 function updateEnergyAndHunger(scene) {
-  const sceneText = (scene.szene || '').toLowerCase()
-    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+  const sceneText = normForMatch(scene.szene || '');
   const spannung = typeof scene.spannung === 'number' ? scene.spannung : (lastSpannung || 2);
 
   // Action friert alles ein: bei Spannung 4-5 keine Energie-Abnahme, kein Hunger
@@ -17327,8 +17486,11 @@ function checkStatusToasts(spannung) {
   // gar nicht auftauchen - das waere unmotivierter Drift.
   // v7.11.44: Auch nicht wenn Karl im Stasi-Gefaengnis ermittelt (Genslerstr,
   // Hohenschoenhausen, MfS-U-Haft etc) - dort ist "auf den Fersen" widersinnig.
-  const ortNow = (typeof ortHauptText === 'string' ? ortHauptText : (typeof ortNorm === 'string' ? ortNorm : ''));
-  const inStasiZone = /genslerstr|hohenschoenhausen|hohenschönhausen|mfs.{0,4}(unters|haft|verhoer|verh\u00f6r|gef\u00e4ngn|gefaengn)|stasi.{0,4}(gef\u00e4ngn|gefaengn|haft|zelle)/i.test(ortNow);
+    // v7.12.63: war ortHauptText/ortNorm (existierten nie in dieser Funktion)
+    // -> ortNow immer '' -> inStasiZone immer false -> der Unterdruecker griff nie.
+    // Jetzt currentOrt (global, normForMatch). Pattern auf normalisierte Formen reduziert.
+    const ortNow = (typeof currentOrt === 'string') ? currentOrt : '';
+    const inStasiZone = /genslerstr|hohenschoenhausen|mfs.{0,4}(unters|haft|verhoer|gefaengn)|stasi.{0,4}(gefaengn|haft|zelle)/.test(ortNow);
   // v7.11.79: KEIN Stasi-Toast mehr wenn der Fall bereits geloest ist. User-Run
   // Heinrich 0803: Karl loeste den Fall in Sz 17 (AUFLOESEN, Stage 4), aber in
   // Sz 18 stieg Stasi-Tension 2->3 und triggerte "Stasi auf den Fersen" - nach
@@ -17501,8 +17663,7 @@ function updateRomanticTension(scene) {
     return /\b(klientin|witwe|zeugin|frau|tochter|sekretaerin|kellnerin|baronin|saengerin|tanzpartnerin|barfrau|kassiererin|krankenschwester|aerztin|verkaeuferin|wirtin|sekretarin|bardame|tanzpartnerin|gespielin|geliebte|bekanntschaft)\b/.test(rolle + ' ' + beziehung);
   });
 
-  const sceneText = (scene.szene || '').toLowerCase()
-    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+  const sceneText = normForMatch(scene.szene || '');
 
   // ZWEITE TRIGGER-SCHIENE (v6.56): Frauen-Vornamen im Erzaehltext.
   // Wenn ein typischer 1953er Frauenvorname mit weiblichen Pronomina im
@@ -17589,8 +17750,7 @@ function updateRomanticTension(scene) {
 // abwechslungsreich: Verhoere, Recherche, Begegnungen, Action, Routine, etc.
 function classifyScene(sceneText, ort) {
   if (!sceneText) return 'unbekannt';
-  const lower = (sceneText + ' ' + (ort || '')).toLowerCase()
-    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+  const lower = normForMatch((sceneText + ' ' + (ort || '')));
   // Action / Lebensgefahr
   if (/\b(schuss|schiess|kugel|verfolg|flieh|jag|kampf|schlag|brueller|brennt|schreit auf|stirbt|trifft|bauchschuss|kopfschuss|feuer(st|n|t)?\b|drueckst? ab|muendung|holster|walther ppk)\b/.test(lower)) {
     return 'action';
@@ -17692,6 +17852,8 @@ async function chooseOption(option) {
     chosenKategorie = String(option.kategorie).toUpperCase();
   }
   pendingCategoryChoice = chosenKategorie;
+  window.pendingChosenOption = option; // v7.12.44: fuer applyCategoryMechanics
+  ortTypeBeforeAction = currentOrtType; // v7.12.54: Ort-Typ VOR dieser Aktion sichern
   console.log('[Schatten] Option gewaehlt mit Kategorie:', chosenKategorie);
   if (typeof diag === 'function') {
     diag('detect', 'Spieler-Wahl Kategorie: ' + chosenKategorie + ' - Engine wendet Mechanik an');
@@ -17705,7 +17867,7 @@ async function chooseOption(option) {
     // v7.11.12: Nur bei echtem Nacht-Schlaf ODER Custody-Schlaf Tagwechsel triggern.
     // Tagsueber-Nickerchen (En<=30 oder sicherer Ort) ist KEIN Tagwechsel.
     const gameTimeIdxNow = (typeof gameTimeIdx === 'number') ? gameTimeIdx : 4;
-    const isAbendOderNachtNow = (gameTimeIdxNow >= 4);
+    const isAbendOderNachtNow = isAbendOderNachtTime(gameTimeIdxNow); // v7.12.56: zentral
     if (isAbendOderNachtNow || karlInStasiCustody) {
       pendingSleepChoice = true;
       const why = karlInStasiCustody ? 'Custody-Schlaf (Freilassung)' : 'Nacht';
@@ -17770,7 +17932,7 @@ async function chooseOption(option) {
     if (npcName && typeof romanceReceptive[npcName] === 'undefined') {
       const offen = Math.random() < 0.5;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.43] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.63] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -18097,7 +18259,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.43] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.63] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -18158,6 +18320,19 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     const { scene, rawAssistantText } = await callGroq(userMsg, history, compactMode);
     const apiCallDuration = Date.now() - apiCallStart;
     currentScene = scene;
+
+    // v7.12.54: ORT-KLASSIFIZIERUNG FRÜH setzen - direkt wenn die neue Szene
+    // ankommt, NICHT erst in showHeader (das laeuft viel spaeter, nach
+    // applyCategoryMechanics). Sonst nutzt isHealLocation/wagnerPresent etc.
+    // in performApiCall noch den currentOrtType der VORHERIGEN Szene -> um eine
+    // Szene versetzt. showHeader setzt es spaeter nochmal (idempotent).
+    if (scene && scene.ort) {
+      currentOrt = normForMatch(scene.ort);
+      currentOrtType = classifyOrtDetailed(scene.ort).type;
+    } else {
+      currentOrt = '';
+      currentOrtType = 'NEUTRAL';
+    }
 
     // v7.11.2: Bewusstlosigkeits-Detektion. Wenn der Szenentext mit
     // Karl-bewusstlos-Indikatoren endet, setze ein Flag damit die NAECHSTE
@@ -18352,8 +18527,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         /Die\s+Akustik\s+des\s+(leeren\s+)?Flurs/i,
         /Der\s+Wind\s+tr(ä|ae)gt\s+den\s+Geruch/i,
       ];
-      const sceneLower = scene.szene.toLowerCase()
-        .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+      const sceneLower = normForMatch(scene.szene);
       // v6.71: Erzeugt aus einem ASCII-Pattern (strassenbahn) ein umlaut-tolerantes
       // Pattern (str(a|ä)(ss|ß)enbahn), das gegen den ORIGINAL-Text mit Umlauten
       // matched. Vorher: Pumphrase-Hardcap erkannt im ASCII-sceneLower aber konnte
@@ -18878,8 +19052,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           // nicht weil ß != ss. Plus: Hausnummer am Ende ("wartburgstraße 14")
           // brach Includes-Match. Jetzt: beide normalisieren (Umlaute, ß->ss,
           // lowercase) und dann auch Prefix-Match auf erstes Token erlauben.
-          const norm = s => s.toLowerCase()
-            .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+          const norm = s => normForMatch(s);
           const locLower = norm(loc.name);
           const curNorm = norm(curMainOrt);
           // Direkte Includes (wie vorher)
@@ -18937,7 +19110,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     // sie zu Hause sitzt - das triggerte faelschlich Stage-4 in Sz 19 (Doc).
     if (locationChanged && cast.length > 0) {
       const locationBoundRoles = /\b(krankenschwester|krankenpfleger|arzt|aerztin|wirt|wirtin|schaffner|pfoertner|waechter|portier|empfangsdame|empfangsschwester|empfangskraft|vorarbeiter|kellner|kellnerin|bedienung|sekretaerin|kassierer|kassiererin|verkaeufer|verkaeuferin|stammgast|barkeeper|barfrau|skatspieler|informant|bauarbeiter|wachtmeister|nachtdienstbeamter)\b/i;
-      const sceneText = (scene.szene || '').toLowerCase();
+      const sceneText = normForMatch(scene.szene || '');
 
       // Klient-Spezial-Erkennung: Klient-Namen aus Setup holen
       let klientNameLower = '';
@@ -18947,7 +19120,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (caseSetup && Array.isArray(caseSetup.setupCast)) {
           const klientEntry = caseSetup.setupCast.find(c => c && c.tag === 'CLIENT');
           if (klientEntry && klientEntry.name) {
-            klientNameLower = klientEntry.name.toLowerCase();
+            klientNameLower = normForMatch(klientEntry.name);
             klientFirstName = klientNameLower.split(' ')[0];
             klientLastName = klientNameLower.split(' ').slice(-1)[0];
           }
@@ -18955,7 +19128,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       } catch (e) { /* ignore */ }
 
       // Pruefe ob aktueller Ort die Klient-Wohnung ist
-      const ortLowerForCast = ((scene && scene.ort) || '').toLowerCase();
+      const ortLowerForCast = normForMatch((scene && scene.ort) || '');
       const ortIsKlientHome = klientLastName && (
         ortLowerForCast.includes(klientLastName) ||
         ortLowerForCast.includes(klientFirstName + '-wohnung') ||
@@ -18966,7 +19139,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       const removedByLocationBind = [];
       const removedKlientByLocation = [];
       for (const c of cast) {
-        const cName = (typeof c === 'string' ? c : (c.name || '')).toLowerCase();
+        const cName = normForMatch(typeof c === 'string' ? c : (c.name || ''));
         const cRolle = (typeof c === 'object' ? (c.rolle || '') : '').toLowerCase();
         const isLocationBound = locationBoundRoles.test(cName) || locationBoundRoles.test(cRolle);
         // Pruefe ob NPC im Szenentext erwaehnt wird - dann ist er offenbar mitgegangen oder neu eingeführt
@@ -19030,8 +19203,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       // Trunc) und "Reichsbahn-Ausbesserungswerk Schoeneweide" (41 Zeichen,
       // Trunc auf 40 = "Reichsbahn-Ausbesserungswerk Schoeneweid") wurden als
       // zwei verschiedene Orte gefuehrt. Mit Umlaut-Normalisierung beide gleich.
-      const normalizeForDedup = (s) => s.toLowerCase()
-        .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+      const normalizeForDedup = (s) => normForMatch(s);
       const ortKeyLower = ortKey.toLowerCase();
       const ortKeyNorm = normalizeForDedup(ortKey);
       const existsIdx = visitedLocations.findIndex(o => {
@@ -19068,8 +19240,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       // Wenn karlInStasiCustody durch False-Positive gesetzt wurde aber die Szene
       // in einem normalen Buero/Cafe spielt, ist der Folter-Wuerfel unangebracht.
       // Bei 3+ Szenen ohne Kontext: Custody wieder freigeben.
-      const sceneLower = (scene.szene || '').toLowerCase()
-        .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+      const sceneLower = normForMatch(scene.szene || '');
       const stasiContext = /\b(zelle|zellentuer|verhoer|stasi|mfs|fesseln|handschellen|kellerverhoer|verhoertisch|gepruegelt|gefoltert|geschlagen|gestoss|gestossen|hohenschoenhausen|untersuchungshaftanstalt|haftanstalt|wachtmeister|waerter|gefaengnis|gefangener|stundenlang|verhoer(raum|zimmer)|nackte\s+gluehbirne|eisernen?\s+stuhl|pritsche|vergittert|gitterfenster|haeftling|knast|gitter\s+am\s+fenster)\b/.test(sceneLower)
         || /\b(will|verlange?|verlangst?|moechte|fordere)\s+einen?\s+anwalt\b/.test(sceneLower)
         || /\bhier\s+gibt\s+es\s+keine?\s+anwaelte/.test(sceneLower)
@@ -19106,7 +19277,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           const tensionHighEnoughForArrest = (typeof stasiTension === 'number' && stasiTension >= 4);
           if (!tensionHighEnoughForArrest) {
             // STILLER RELEASE: Karl ist faktisch frei, das System zieht nach.
-            console.warn('[Schatten v7.12.43] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
+            console.warn('[Schatten v7.12.63] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet, kein Hard-Force');
             karlInStasiCustody = false;
             folterSceneCount = 0;
@@ -19121,7 +19292,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.43] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.63] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -19298,8 +19469,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         // Skip - Kategorie hat schon gehandelt
         if (typeof diag === 'function') diag('detect', 'Heal-Text-Pfad uebersprungen (Kategorie HEILEN hat schon Vf erhoeht)');
       } else {
-      const sceneLower = (scene.szene || '').toLowerCase()
-        .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+      const sceneLower = normForMatch(scene.szene || '');
       // v7.9.51: Erweiterter Schauplatz-Check. "in Doc Wagners Praxis" ist nicht
       // mehr Pflicht - jeder plausible Heilungs-Ort/Heiler reicht.
       const inHealingContext = /\b(doc wagner|wagners?\s+praxis|schaeferstrasse|in der praxis|marlene|krankenschwester|charite|krankenhaus|krankenhaeus|apotheke|apotheker|sanitaeter|krankenwagen|verbandskasten|notfallambulanz)\b/.test(sceneLower);
@@ -19366,18 +19536,29 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       // suspectInScene: ist der Verdaechtige in der aktuellen Szene erwaehnt?
       let suspectInScene = false;
       if (caseProgress && caseProgress.tatverdaechtiger) {
-        const sus = caseProgress.tatverdaechtiger.toLowerCase();
+        const sus = normForMatch(caseProgress.tatverdaechtiger);
         const susWord = sus.split(/\s+/).pop();
-        const sceneLow = (scene.szene || '').toLowerCase();
+        const sceneLow = normForMatch(scene.szene || '');
         if (susWord.length >= 4 && sceneLow.includes(susWord)) suspectInScene = true;
       }
-      // romanceInScene/stasiInScene: simpel ueber Setup-Cast pruefen
+      // v7.12.63: Persistenter "mittlerer Loesungs-Anker". Wenn Karl eine
+      // OFFENSIV-Aktion waehlt WAEHREND der benannte Verdaechtige in der Szene
+      // ist, gilt der Verdaechtige als konfrontiert. Zusammen mit genug Indizien
+      // macht das den Fall loesbar - auch ohne volles Gestaendnis (ueberfuehrt).
+      // Das bildet ab: Karl weiss wer es war und kann es dem Klienten melden,
+      // der es an die Polizei weitergibt. Setzt NICHT ueberfuehrt (das bleibt
+      // dem echten Durchbruch vorbehalten).
+      if (suspectInScene && pendingCategoryChoice === 'OFFENSIV'
+          && caseProgress && !caseProgress.suspectConfronted) {
+        caseProgress.suspectConfronted = true;
+        if (typeof diag === 'function') diag('progress', 'Verdaechtiger konfrontiert: ' + caseProgress.tatverdaechtiger + ' (OFFENSIV-Aktion - mittlerer Loesungs-Anker)');
+      }
       let romanceInScene = false, stasiInScene = false;
       if (caseSetup && Array.isArray(caseSetup.setupCast)) {
-        const sceneLow = (scene.szene || '').toLowerCase();
+        const sceneLow = normForMatch(scene.szene || '');
         for (const c of caseSetup.setupCast) {
           if (!c || !c.name) continue;
-          const last = c.name.toLowerCase().split(/\s+/).pop();
+          const last = normForMatch(c.name).split(/\s+/).pop();
           if (last.length >= 4 && sceneLow.includes(last)) {
             if (c.tag === 'ROMANCE' || c.tagExtra === 'ROMANCE') romanceInScene = true;
             if (c.tag === 'STASI' || c.tagExtra === 'STASI') stasiInScene = true;
@@ -19385,8 +19566,8 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         }
       }
       // isHealLocation: ist Karl an einem Heilungs-Ort?
-      const ortLow = (scene.ort || '').toLowerCase();
-      const isHealLocation = /\b(praxis|wagner|charit|notaufnahme|apotheke|krankenh)/.test(ortLow);
+      const isHealLocation = currentOrtType === 'WAGNER' || currentOrtType === 'CHARITE' ||
+        /\b(praxis|apotheke)/.test(normForMatch(scene.ort || ''));
       // Streak nur fuer die GLEICHE Kategorie
       const offensivStreak = (pendingCategoryChoice === 'OFFENSIV') ? categoryStreak : 0;
       const erkundenStreak = (pendingCategoryChoice === 'ERKUNDEN') ? categoryStreak : 0;
@@ -19399,6 +19580,10 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         offensivStreak: offensivStreak,
         erkundenStreak: erkundenStreak,
         isHealLocation: isHealLocation,
+        // v7.12.44: option-Objekt mitgeben damit applyCategoryMechanics
+        // auf _marleneHeal, _romanceNpc etc. zugreifen kann.
+        // Vorher crashte Wagner-Heal mit "Can't find variable: option".
+        option: (typeof pendingChosenOption !== 'undefined') ? pendingChosenOption : null,
       };
       categoryMechanicsResult = applyCategoryMechanics(pendingCategoryChoice, mechCtx);
       console.log('[Schatten] Kategorie-Mechanik (' + pendingCategoryChoice + '):', categoryMechanicsResult);
@@ -19660,10 +19845,8 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     // konkreten Vorfall, was zu unmotivierten Tod-Spiralen fuehrt.
     // Bei -1/-2 reicht ein LEICHTER Trigger (Treffer, Stoss, Schlag, Sturz, Schmerz).
     if (delta < 0 && delta >= -2) {
-      const sceneText = (scene.szene || '').toLowerCase()
-        .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
-      const injuryText = (scene.verletzungsbeschreibung || '').toLowerCase()
-        .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+      const sceneText = normForMatch(scene.szene || '');
+      const injuryText = normForMatch(scene.verletzungsbeschreibung || '');
       const combined = sceneText + ' ' + injuryText;
       const newSpannung = typeof scene.spannung === 'number' ? scene.spannung : (lastSpannung || 1);
       // v7.11.4: HEILUNGS-COOLDOWN. Wenn Karl in den letzten N Szenen geheilt
@@ -19993,8 +20176,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       for (const item of scene.inventar_hinzugefuegt) {
         if (typeof item !== 'string' || !item.trim()) continue;
         const newItem = item.trim();
-        const newLowerRaw = newItem.toLowerCase()
-          .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+        const newLowerRaw = normForMatch(newItem);
         const newLower = normalizeInventorySynonyms(newLowerRaw);
 
         // FILTER 1: Informations-Einträge sind KEINE Gegenstaende.
@@ -20020,8 +20202,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         // Pruefe ob ein bestehender Eintrag stark ueberlappt
         const newHasWalther = newLowerRaw.includes('walther');
         const isDuplicate = inventory.some(existing => {
-          const existLowerRaw = existing.toLowerCase()
-            .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+          const existLowerRaw = normForMatch(existing);
           const existLower = normalizeInventorySynonyms(existLowerRaw);
           const existHasWalther = existLowerRaw.includes('walther');
           // SCHUTZ: Karls Walther und eine fremde Pistole sind NIEMALS dasselbe.
@@ -20138,14 +20319,14 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     if (Array.isArray(scene.inventar_entfernt) && scene.inventar_entfernt.length > 0) {
       for (const item of scene.inventar_entfernt) {
         if (typeof item !== 'string') continue;
-        const needle = item.trim().toLowerCase();
+        const needle = normForMatch(item);
         // Karls Walther PPK darf nur entfernt werden wenn explizit "Walther"
         // in der Entfern-Anfrage steht (nicht durch tolerantes "Pistole"-Match,
         // sonst nimmt die KI versehentlich die Walther weg wenn die Polizei
         // die Mauser HSc beschlagnahmt).
         const isWaltherRemoval = needle.includes('walther') || needle.includes('eigene pistole');
         const idx = inventory.findIndex(it => {
-          const itLower = it.toLowerCase();
+          const itLower = normForMatch(it);
           // Schutz fuer Karls Walther: nur entfernen wenn explizit Walther genannt
           if (itLower.includes('walther') && !isWaltherRemoval) return false;
           return itLower.includes(needle) || needle.includes(itLower);
@@ -20225,7 +20406,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           const key = entry.name.toLowerCase();
           mentionedDeadOrAbsent[key] = {
             name: entry.name,
-            reason: /vermisst|verschwunden|gefluechtet|abgetaucht/i.test((entry.rolle||'') + ' ' + (entry.beziehung||''))
+            reason: /vermisst|verschwunden|gefluechtet|abgetaucht/.test(normForMatch((entry.rolle||'') + ' ' + (entry.beziehung||'')))
               ? 'vermisst' : 'verstorben',
             rolle: entry.rolle,
             beziehung: entry.beziehung,
@@ -20252,10 +20433,10 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           if (isBeschattung) {
             // Klient-Name extrahieren (gleiche Logik wie im Recap)
             const klientNameMatch = caseSetup.klient.match(/^([A-ZÄÖÜ][a-zäöüß]+(?:\s+[A-ZÄÖÜ][a-zäöüß]+)*)/);
-            const klientName = klientNameMatch ? klientNameMatch[1].trim().toLowerCase() : '';
-            if (klientName && entry.name.toLowerCase() === klientName) {
+            const klientName = klientNameMatch ? normForMatch(klientNameMatch[1]) : '';
+            if (klientName && normForMatch(entry.name) === klientName) {
               // Klient soll NICHT in Verfolgungs-/Action-Szenen auftauchen
-              const sceneOrtLower = (scene.ort || '').toLowerCase();
+              const sceneOrtLower = normForMatch(scene.ort || '');
               // Erlaubt: Buero, Wohnung, Telefon. Verboten: alles draussen/Action.
               const isAtKlientLocation = /buero|wohnung|telefon|empfang/.test(sceneOrtLower);
               if (!isAtKlientLocation) {
@@ -20684,8 +20865,8 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       // denselben Gegenstand speichern kann.
       const normalizeIndizSynonyms = (text) => {
         return text
-          .replace(/zigarettenanzuender|zigarettenanzünder/g, 'feuerzeug')
-          .replace(/anzuender|anzünder/g, 'feuerzeug')
+          .replace(/zigarettenanzuender/g, 'feuerzeug')  // Input bereits normForMatch-normalisiert
+          .replace(/anzuender/g, 'feuerzeug')
           .replace(/automobil|wagen|fahrzeug|pkw/g, 'auto')
           .replace(/polizeibeamter|polizist|wachtmeister/g, 'polizist')
           .replace(/sowjet(isch)?|russisch/g, 'russisch')
@@ -20698,13 +20879,11 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       for (const ind of scene.indiz_neu) {
         if (typeof ind !== 'string' || !ind.trim()) continue;
         const newInd = ind.trim();
-        const newLower = normalizeIndizSynonyms(newInd.toLowerCase()
-          .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss'));
+        const newLower = normalizeIndizSynonyms(normForMatch(newInd));
         // Fuzzy-Dedup: pruefe ob ein sehr aehnliches Indiz schon drin ist.
         const newWords = newLower.split(/[\s,\-]+/).filter(w => w.length >= 4);
         const isDuplicate = caseProgress.indizien.some(existing => {
-          const existLower = normalizeIndizSynonyms(existing.toLowerCase()
-            .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss'));
+          const existLower = normalizeIndizSynonyms(normForMatch(existing));
           if (existLower === newLower) return true;
           if (existLower.includes(newLower) || newLower.includes(existLower)) return true;
           // Hoher Wort-Overlap (>=3 gemeinsame Hauptwoerter bei kurzen Indizien)?
@@ -20932,13 +21111,11 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           // User-Punkt: "bei diebstahl ist Hauptziel Rueckgabe, nicht Festnahme".
           // Wenn das gestohlene Objekt in Karls Inventar landet, ist Hauptziel
           // im Prinzip erreicht - er muss es nur noch zum Klient bringen.
-          const tName = (targetName || '').toLowerCase()
-            .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+          const tName = normForMatch(targetName || '');
           const tWords = tName.split(/\s+/).filter(w => w.length >= 4);
           let targetInInventory = false;
           for (const item of inventory) {
-            const itLower = (item || '').toLowerCase()
-              .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+            const itLower = normForMatch(item || '');
             for (const w of tWords) {
               if (itLower.includes(w)) { targetInInventory = true; break; }
             }
@@ -20966,12 +21143,10 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           if (Array.isArray(caseSetup.keyClues) && caseSetup.keyClues.length > 0 && ind >= 7) {
             // Pruefe wie viele der vorgesehenen KeyClues in den gesammelten
             // Indizien zumindest teilweise auftauchen (Match per Hauptwoerter).
-            const indText = caseProgress.indizien.join(' ').toLowerCase()
-              .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+            const indText = normForMatch(caseProgress.indizien.join(' '));
             let matched = 0;
             for (const kc of caseSetup.keyClues) {
-              const kcLower = kc.toLowerCase()
-                .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+              const kcLower = normForMatch(kc);
               // Hauptwoerter aus dem KeyClue extrahieren (>= 5 Buchstaben)
               const kcWords = kcLower.split(/[\s,\-:;.]+/).filter(w => w.length >= 5);
               if (kcWords.length === 0) continue;
@@ -21166,8 +21341,8 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       if (stage2Scenes >= 14) {
         // Inhalts-Check: kommt der Verdaechtigen-Name in den letzten 5 Szenen-Texten vor?
         const recentScenes = logEntries.filter(e => e && e.type === 'scene').slice(-5);
-        const recentText = recentScenes.map(e => (e.text || '').toLowerCase()).join(' ');
-        const verdName = (caseProgress.tatverdaechtiger || '').toLowerCase();
+        const recentText = recentScenes.map(e => normForMatch(e.text || '')).join(' ');
+        const verdName = normForMatch(caseProgress.tatverdaechtiger || '');
         const verdWords = verdName.split(/\s+/).filter(w => w.length >= 4 && !/^lokalisiert$/.test(w));
         let verdMentioned = false;
         for (const w of verdWords) {
@@ -21181,7 +21356,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         // 5 Spieler-Aktionen tatsaechlich eine Aktion zum Verdaechtigen gemacht haben
         // (konfrontier, stell, verhaft, fahr zu, geh zu + Name).
         const recentActions = logEntries.filter(e => e && e.type === 'choice').slice(-5);
-        const recentActionText = recentActions.map(e => (e.text || '').toLowerCase()).join(' ');
+        const recentActionText = recentActions.map(e => normForMatch(e.text || '')).join(' ');
         let karlActedTowardsSuspect = false;
         if (verdWords.length > 0) {
           // Aktion enthaelt sowohl Konfrontations-Verb als auch Verdaechtigen-Name
@@ -21356,12 +21531,10 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       if (conceptsA.size >= 1 && caseProgress.indizien && caseProgress.indizien.length >= 2) {
         // Pro Indiz pruefen welche conceptsA-Worte vorkommen
         const indizConceptCoverage = caseProgress.indizien.map(ind => {
-          const indLower = ind.toLowerCase()
-            .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+          const indLower = normForMatch(ind);
           let matchCount = 0;
           for (const c of conceptsA) {
-            const cNorm = c.toLowerCase()
-              .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+            const cNorm = normForMatch(c);
             if (cNorm.length >= 4 && indLower.includes(cNorm)) matchCount++;
           }
           return matchCount;
@@ -21393,8 +21566,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       // ("X raucht/trinkt/kennt/ist/hat/arbeitet/wohnt") aber diese Behauptung
       // nicht in npcMemory[X] oder storyFacts steht, ist es ein Phantom-Fakt.
       let phantomFact = null;
-      const verbLower = verb.toLowerCase()
-        .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+      const verbLower = normForMatch(verb);
       // NPC-Namen aus storyFacts/npcMemory holen
       const knownNpcs = [];
       if (typeof storyFacts === 'object' && storyFacts) {
@@ -21411,8 +21583,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       const actionVerbs = /\b(raucht|rauchen|rauchte|rauchten|trinkt|trinken|trank|tranken|kennt|kennen|kannte|kannten|ist|war|waren|sind|hat|haben|hatte|hatten|arbeitet|arbeiten|arbeitete|arbeiteten|wohnt|wohnen|wohnte|wohnten|sagt|sagen|sagte|sagten|gehoert|gehoeren|gehoerte|kontaktiert|kontaktieren|trifft|treffen|traf|trafen|verbindet sich mit|leitet|leiten|leitete|leiteten|fuehrt|fuehren|fuehrte|fuehrten)\b/;
       for (const npcName of knownNpcs) {
         // Nur Nachnamen pruefen (mind. 4 Zeichen, eindeutig)
-        const lastName = npcName.split(/\s+/).pop().toLowerCase()
-          .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+        const lastName = normForMatch(npcName.split(/\s+/).pop());
         if (lastName.length < 4) continue;
         // Pattern: NPC-Name + Aktion innerhalb 30 Zeichen
         const npcActionRegex = new RegExp('\\b' + lastName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b[^.!?]{0,30}' + actionVerbs.source, 'i');
@@ -21420,10 +21591,8 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           // NPC + Behauptung gefunden. Steht das in npcMemory oder Indizien?
           const npcKey = npcName;
           const memoryEntries = (caseProgress.npcMemory && caseProgress.npcMemory[npcKey]) || [];
-          const memoryText = memoryEntries.map(e => (e.hinweis || '').toLowerCase()).join(' ')
-            .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
-          const indizienText = (caseProgress.indizien || []).join(' ').toLowerCase()
-            .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+          const memoryText = normForMatch(memoryEntries.map(e => (e.hinweis || '')).join(' '));
+          const indizienText = normForMatch((caseProgress.indizien || []).join(' '));
           // Extrahiere das Aktions-Verb aus dem Match
           const actionMatch = verbLower.match(npcActionRegex);
           const actionPhrase = actionMatch ? actionMatch[0].toLowerCase() : '';
@@ -21455,14 +21624,12 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             if (!ce) continue;
             if (ce.name) {
               ce.name.toLowerCase().split(/\s+/).forEach(w => {
-                if (w.length >= 4) setupNouns.add(w
-                  .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss'));
+                if (w.length >= 4) setupNouns.add(normForMatch(w));
               });
             }
           }
           // Plus Setup-Anlass/Tat-Begriffe
-          const setupCtx = ((caseSetup.tat || '') + ' ' + (caseSetup.anlass || '') + ' ' + (caseSetup.opfer || '')).toLowerCase()
-            .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+          const setupCtx = normForMatch(((caseSetup.tat || '') + ' ' + (caseSetup.anlass || '') + ' ' + (caseSetup.opfer || '')));
           setupCtx.split(/\W+/).forEach(w => {
             if (w.length >= 4) setupNouns.add(w);
           });
@@ -21599,7 +21766,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.43] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.63] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
@@ -21628,9 +21795,34 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         }
         showProgressToast('FALL-STUFE 3', toastText);
       }
+      // v7.12.63: VERMISSTEN-DURCHBRUCH persistieren. scene.zielperson_gefunden
+      // (KI-Feld) wurde bisher nur als Indiz-Filter gelesen, aber NIE in
+      // caseProgress.zielpersonGefunden uebernommen -> der "Vermisster gefunden"-
+      // Loesungspfad war faktisch tot (Button kam nur ueber die Indizien-Zahl).
+      // Das ist der starke Durchbruch fuer Vermisstenfaelle: wer den Vermissten
+      // gefunden hat, loest sofort - ohne Indizien-Schwelle. Floor: nicht in den
+      // ersten Szenen (sonst Express-Fund durch KI-Halluzination).
+      if (scene.zielperson_gefunden === true && !caseProgress.zielpersonGefunden) {
+        const zpFloorOk = caseProgress.stage >= 1 && sceneCounter >= 4;
+        if (zpFloorOk) {
+          caseProgress.zielpersonGefunden = true;
+          if (caseProgress.stage < 3) {
+            caseProgress.stage = 3;
+            caseProgress.stage3StartScene = sceneCounter;
+          }
+          console.log('[Schatten] Fall-Durchbruch: Zielperson gefunden (Stage 3)');
+          diag('progress', '✦ ZIELPERSON GEFUNDEN (' + (caseProgress.tatverdaechtiger || 'Vermisste/r') + ') - Fall loesbar');
+          showProgressToast('GEFUNDEN', (caseProgress.tatverdaechtiger || 'Die vermisste Person') + ' ist gefunden. Jetzt zum Klienten.', 'success', 'zielperson-gefunden', '🔦');
+        } else {
+          diag('drift', 'scene.zielperson_gefunden:true ignoriert - zu frueh (Sz ' + sceneCounter + ', Stage ' + caseProgress.stage + ')');
+        }
+      }
     }
     // 4) Klient berichtet - finale Win-Bedingung
-    if (scene.klient_berichtet === true && caseProgress.ueberfuehrt) {
+    // v7.12.63: zielpersonGefunden als gleichwertiger Durchbruch ergaenzt - bei
+    // Vermisstenfaellen ist das Auffinden der Person der Abschluss, nicht eine
+    // Taeter-Ueberfuehrung.
+    if (scene.klient_berichtet === true && (caseProgress.ueberfuehrt || caseProgress.zielpersonGefunden)) {
       // v7.9.41: Stage-4-Sperre fuer beschatten/wahrheit. Anlass: Kessler-Run
       // v7.9.38 - 9 Szenen vom Start bis "Fall geloest" (Stage 1->2->3->4 in
       // Sz 4,7,8,9). Mistral hat klient_berichtet:true direkt nach Stage 3
@@ -21721,8 +21913,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           break;
         }
       }
-      const choiceLower = recentChoice.toLowerCase()
-        .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+      const choiceLower = normForMatch(recentChoice);
       const heikleChoiceTrigger = [
         /\b(geh\s+nach\s+karlshorst|fahr\s+nach\s+karlshorst)\b/,
         /\b(stell\s+den?\s+(stasi|mfs|sowjet))\b/,
@@ -21753,8 +21944,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           break;
         }
       }
-      const choiceLower = recentChoice.toLowerCase()
-        .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+      const choiceLower = normForMatch(recentChoice);
       const flirtChoiceTrigger = [
         /\b(lade\s+sie\s+(zum\s+)?(essen|trinken|drink|getraenk)\s+ein|spendier(e|st)\s+ihr|biete\s+ihr\s+(einen\s+)?(drink|kaffee|kognac))\b/,
         /\b(lehne?\s+dich\s+vor|komm(e|st)?\s+naeher|leg(e|st)?\s+(deine\s+)?hand\s+auf\s+ihr|nimm\s+ihre\s+hand)\b/,
@@ -21810,9 +22000,9 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       } catch (e) { /* ignore */ }
 
       // Ortswechsel-Detection: hat sich der Hauptort seit letzter Sz geändert?
-      const currentOrt = (scene.ort || '').toLowerCase().trim();
+      const sceneOrt = (scene.ort || '').toLowerCase().trim();
       const lastOrt = (typeof lastLocation === 'string') ? lastLocation.toLowerCase().trim() : '';
-      const ortChanged = currentOrt && lastOrt && currentOrt !== lastOrt;
+      const ortChanged = sceneOrt && lastOrt && sceneOrt !== lastOrt;
 
       // Spielerwahl in dieser Szene war DEFENSIV?
       const wasDefensiv = (pendingCategoryChoice === 'DEFENSIV');
@@ -21896,10 +22086,8 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       // klare MfS-Akteure namentlich in der Szene). Sonst macht's keinen
       // Sinn dass Karl in Stasi-Haft landet (z.B. Wegener-Vermisstenfall,
       // unpolitisch, hatte 1x Custody-Trigger durch "Telefonzelle"-Wort).
-      const ortLower = (scene.ort || '').toLowerCase();
-      const txtLower = (scene.szene || '').toLowerCase()
-        .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
-      const ortLowerNorm = ortLower.replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+      const ortLowerNorm = normForMatch(scene.ort || '');
+      const txtLower = normForMatch(scene.szene || '');
 
       // v7.11.13: Politischer Fall? - aus caseSetup
       const caseIsPoliticalLocal = !!(caseSetup && caseSetup.politisch);
@@ -21926,8 +22114,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       // Kanzlei-Stichworte enthaelt UND der Klient-Nachname im Ort oder im
       // Szenentext vorkommt, ist Karl im Privatraum des Klienten - nicht in
       // MfS-Gewahrsam.
-      const clientNameLower = clientProfile && clientProfile.name ? clientProfile.name.toLowerCase()
-        .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss') : '';
+      const clientNameLower = clientProfile && clientProfile.name ? normForMatch(clientProfile.name) : '';
       const clientLastName = clientNameLower ? clientNameLower.split(/\s+/).pop() : '';
       const hasPrivateRoomKeyword = /\b(praxis|sprechzimmer|behandlungsraum|wartezimmer|hintertreppe|hausflur|wohnung|kanzlei|salon|werkstatt|laden|fabrikbuero|atelier)\b/.test(ortLowerNorm);
       const clientPresent = clientLastName && clientLastName.length >= 4 && txtLower.includes(clientLastName);
@@ -22088,7 +22275,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     // UND wir im Geduldsstufe-3-Bereich sind, triggern wir die Fail-Bedingung.
     let clientFired = false;
     if (clientProfile.name && gameDay >= clientProfile.geduldsstufe3 && !caseProgress.istGelöst && !caseProgress.ueberfuehrt) {
-      const lower = (scene.szene || '').toLowerCase();
+      const lower = normForMatch(scene.szene || '');
       const firePatterns = [
         /\bauftrag (entzogen|zurueckziehen|zurueckgezogen|beendet|aufkuendig|annullier)/,
         /\bauftrag .* zurueck/,
@@ -22132,12 +22319,12 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     // entkommt erzaehlerisch), bleibt Custody false - der Header bleibt korrekt.
     if (caseProgress.pendingCustodyConfirm && !karlInStasiCustody) {
       try {
-        const sTxt = ((scene && scene.szene) || '').toLowerCase();
-        const oTxt = (scene && scene.ort || '').toLowerCase();
+        const sTxt = normForMatch((scene && scene.szene) || '');
+        const oTxt = normForMatch((scene && scene.ort) || '');
         // Marker fuer eine TATSAECHLICH vollzogene Festnahme/Haft im Text.
-        const arrestConfirmRe = /(handschellen|abgefuehrt|abgeführt|in den fond|in den emw gedraengt|in den wagen gedraengt|zelle|verhoerraum|verhörraum|hohenschoenhausen|hohenschönhausen|genslerstrasse|genslerstraße|untersuchungshaft|haeftlingskleidung|häftlingskleidung|wird durchsucht|in gewahrsam|festgenommen|verhaftet)/;
+        const arrestConfirmRe = new RegExp('(handschellen|abgefuehrt|in den fond|in den emw gedraengt|in den wagen gedraengt|zelle|verhoerraum|' + HAFT_ORT_BEGRIFFE + '|genslerstrasse|haeftlingskleidung|wird durchsucht|in gewahrsam|festgenommen|verhaftet)');
         // Marker dass Karl ENTKOMMEN ist (dann KEINE Custody).
-        const escapeRe = /(entkommst|entkommt|entkommen|reisst dich los|reißt dich los|fluchtest|fliehst erfolgreich|lassen von dir ab|laesst von dir ab|schuettelst sie ab|schüttelst sie ab|kannst entkommen|wagen schiesst davon.*ohne dich|ohne dich davon)/;
+        const escapeRe = /(entkommst|entkommt|entkommen|reisst dich los|fluchtest|fliehst erfolgreich|lassen von dir ab|laesst von dir ab|schuettelst sie ab|kannst entkommen|wagen schiesst davon.*ohne dich|ohne dich davon)/;
         const confirmed = arrestConfirmRe.test(sTxt) || arrestConfirmRe.test(oTxt);
         const escaped = escapeRe.test(sTxt);
         if (confirmed && !escaped) {
@@ -22254,8 +22441,8 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       // gewahrsam=false setzen damit der Status-Strip ehrlich zeigt was die Szene
       // erzaehlt - auch wenn Stasi-Woerter wegen Custody-Eingang noch im Text sind.
       gewahrsam: karlInStasiCustody && (function() {
-        const sLower = (scene.szene || '').toLowerCase();
-        const hasStasiContext = /\b(zelle|verhoer|verhör|verhoertisch|verhörtisch|stasi|mfs|fesseln|handschellen|haftanstalt|hohenschoenhausen|hohenschönhausen|verhörraum|verhoerraum|haeftling|häftling|knast)\b/.test(sLower);
+        const sLower = normForMatch(scene.szene || '');
+        const hasStasiContext = new RegExp('\\b(zelle|verhoer|verhoertisch|stasi|mfs|fesseln|handschellen|' + HAFT_ORT_BEGRIFFE + '|verhoerraum|haeftling|knast)\\b').test(sLower);
         if (!hasStasiContext) return false;
         // Wenn Szene Release-Wendung zeigt -> Karl ist am Ende der Szene draussen
         if (typeof detectStasiRelease === 'function' && detectStasiRelease(scene.szene || '')) {
@@ -22285,6 +22472,8 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       // Wird von renderOptions() in window._lastSystemButtons geschrieben,
       // BEVOR logEntries.push. So weiss das Lektorat genau was der Spieler sah.
       systemButtons: Array.isArray(window._lastSystemButtons) ? window._lastSystemButtons.slice() : [],
+      // v7.12.43: Custody-Guard - ausgegrautte Freiheits-Optionen
+      custodyBlocked: Array.isArray(window._custodyBlockedOptions) ? window._custodyBlockedOptions.slice() : [],
     });
     hideLoading();
     hideWait();
@@ -22971,6 +23160,7 @@ function resetGame(skipConfirm) {
   physicalStreakInTime = 0; // v7.9.41
   lastLocation = '';
   lastMainLocation = ''; // v6.58
+  currentOrt = ''; currentOrtType = 'NEUTRAL'; ortTypeBeforeAction = 'NEUTRAL'; // v7.12.54: State-Leak-Fix
   visitedLocations = [];
   hideWait();
   document.getElementById('log').innerHTML = '';
@@ -23024,6 +23214,7 @@ const STRATEGY_LABELS = {
   cautious: 'Vorsichtig',
   varied: 'Variiert',
   explorer: 'Erkunder',
+  natural: 'Natürlich',
   rotating: 'Rotierend',
   mixed: 'Mix',
 };
@@ -23150,6 +23341,7 @@ function botChooseByStrategy(options) {
     let healChance = 0;
     if (effectiveStrat === 'cautious') healChance = 0.6;
     else if (effectiveStrat === 'explorer' || effectiveStrat === 'thorough') healChance = 0.5;
+    else if (effectiveStrat === 'natural') healChance = 0.5;
     else if (effectiveStrat !== 'aggressive') healChance = 0.4;
     if (healChance > 0 && botRng() < healChance) {
       console.log('[Bot v7.11.13] HEILEN proaktiv (Vf=' + verfassung + ', ' + effectiveStrat + ', ' + Math.round(healChance * 100) + '%)');
@@ -23162,7 +23354,7 @@ function botChooseByStrategy(options) {
   // Wenn Karl Sp >= 4 hat und Vf <= 2 - lieber rausfluechten als kaempfen.
   // Wenn FLUCHT-Button im UI da ist (= Sp>=3, nicht in Custody), kann der Bot
   // ihn nutzen. Wir loesen es konservativ: nur bei akuter Lebensgefahr.
-  const currentSp = (typeof spannung === 'number') ? spannung : 1;
+  const currentSp = (typeof lastSpannung === 'number') ? lastSpannung : 1;
   if (typeof verfassung === 'number' && verfassung <= 2
       && currentSp >= 4
       && byCat.FLUCHT.length > 0) {
@@ -23197,11 +23389,11 @@ function botChooseByStrategy(options) {
   // v7.11.16: SCHLAFEN-Schwelle hochgezogen 30->40. Anlass: Wessel+Stein-Runs
   // v7.11.13 starben beide an En=0 (Erschoepfungstod) weil Bot nie SCHLAFEN waehlte.
   if (byCat.SCHLAFEN && byCat.SCHLAFEN.length > 0) {
-    const lowEnergy = (typeof energie === 'number' && energie <= 40);
-    const veryHungry = (typeof hunger === 'number' && hunger >= 7);
+    const lowEnergy = (typeof karlEnergie === 'number' && karlEnergie <= 40);
+    const veryHungry = (typeof karlHunger === 'number' && karlHunger >= 7);
     if (lowEnergy || veryHungry) {
-      console.log('[Bot v7.11.9] SCHLAFEN noetig (En=' + (energie || '?') + ', Hu=' + (hunger || '?') + ')');
-      if (typeof diag === 'function') diag('bot', 'Bot waehlt SCHLAFEN (En=' + (energie || '?') + ', Hu=' + (hunger || '?') + ')');
+      console.log('[Bot v7.11.9] SCHLAFEN noetig (En=' + (karlEnergie || '?') + ', Hu=' + (karlHunger || '?') + ')');
+      if (typeof diag === 'function') diag('bot', 'Bot waehlt SCHLAFEN (En=' + (karlEnergie || '?') + ', Hu=' + (karlHunger || '?') + ')');
       return byCat.SCHLAFEN[0];
     }
   }
@@ -23233,7 +23425,46 @@ function botChooseByStrategy(options) {
   }
   // Strategie-spezifische Priorisierung
   let order;
-  if (effectiveStrat === 'aggressive') {
+  if (effectiveStrat === 'natural') {
+    // v7.12.63: NATÜRLICH - spielt wie ein menschlicher Detektiv.
+    // Kein statisches Order, sondern kontextsensitiv:
+    // - Standard: Recherche (BEOBACHTEN/ERKUNDEN), Konfrontation vermeiden.
+    // - Fliehen BEVOR es kritisch wird: schon bei Spannung>=4 ODER Stasi-Tension
+    //   hoch lieber raus/defensiv - nicht erst bei Vf<=2 (das deckt der globale
+    //   FLUCHT-Check oben ab, hier geht es ums proaktive Vermeiden).
+    // - OFFENSIV nur wenn der Fall reif ist (Stage>=3, Konfrontation steht an)
+    //   UND Karl gesund genug (Vf>=3). Sonst meidet ein vernünftiger Spieler
+    //   die direkte Auseinandersetzung.
+    // - Bei sinkender Verfassung (Vf<=3) eher absichern als draufgehen.
+    const nStage = (caseProgress && caseProgress.stage) || 0;
+    const nVf = (typeof verfassung === 'number') ? verfassung : 5;
+    const nSp = (typeof lastSpannung === 'number') ? lastSpannung : 1;
+    const nStasi = (typeof stasiTension === 'number') ? stasiTension : 0;
+    const gefahrImAnzug = (nSp >= 4) || (nStasi >= 3);
+
+    if (gefahrImAnzug) {
+      // Es wird brenzlig - ein menschlicher Spieler zieht sich zurück, bevor
+      // Karl verletzt/gefasst wird. FLUCHT > DEFENSIV > Beobachten/Erkunden,
+      // OFFENSIV ganz hinten (nur wenn gar nichts anderes da ist).
+      if (byCat.FLUCHT && byCat.FLUCHT.length > 0 && botRng() < 0.7) {
+        console.log('[Bot v7.12.63] NATÜRLICH: FLUCHT (Gefahr: Sp=' + nSp + ', Stasi=' + nStasi + ')');
+        if (typeof diag === 'function') diag('bot', 'Bot (natürlich) flieht proaktiv (Sp=' + nSp + ', Stasi=' + nStasi + ')');
+        return byCat.FLUCHT[0];
+      }
+      order = ['DEFENSIV', 'BEOBACHTEN', 'ERKUNDEN', 'HEILEN', 'OFFENSIV'];
+    } else if (nStage >= 3 && nVf >= 3) {
+      // Fall ist reif + Karl gesund: jetzt darf konfrontiert werden, aber
+      // Recherche bleibt gleichwertig (der Detektiv sammelt noch das letzte
+      // Detail, bevor er zuschlägt).
+      order = ['OFFENSIV', 'BEOBACHTEN', 'ERKUNDEN', 'HEILEN', 'DEFENSIV'];
+    } else if (nVf <= 3) {
+      // Angeschlagen: absichern, Recherche aus sicherer Distanz, kein Risiko.
+      order = ['BEOBACHTEN', 'ERKUNDEN', 'HEILEN', 'DEFENSIV', 'OFFENSIV'];
+    } else {
+      // Normalfall: ermitteln. Recherche zuerst, Konfrontation gemieden.
+      order = ['ERKUNDEN', 'BEOBACHTEN', 'DEFENSIV', 'OFFENSIV', 'HEILEN'];
+    }
+  } else if (effectiveStrat === 'aggressive') {
     order = ['OFFENSIV', 'ERKUNDEN', 'BEOBACHTEN', 'HEILEN', 'DEFENSIV'];
   } else if (effectiveStrat === 'thorough') {
     order = ['ERKUNDEN', 'BEOBACHTEN', 'OFFENSIV', 'HEILEN', 'DEFENSIV'];
@@ -23516,6 +23747,7 @@ async function botRunMainLoop() {
       currentScene = null;
       lastLocation = '';
       lastMainLocation = ''; // v6.58
+      currentOrt = ''; currentOrtType = 'NEUTRAL'; ortTypeBeforeAction = 'NEUTRAL'; // v7.12.54: State-Leak-Fix
       scenesAtSameLocation = 0;
       scenesInCurrentTime = 0; // v7.9.23
       physicalStreakInTime = 0; // v7.9.41
@@ -24001,8 +24233,7 @@ const TOAST_VARIANTS = {
 // passende Emoji zurueck. Fallback: 🔍 (Lupe). Reihenfolge = Prioritaet bei
 // Mehrfach-Treffern (spezifischere Begriffe zuerst).
 function pickIndizEmoji(text) {
-  const t = (text || '').toLowerCase()
-    .replace(/ü/g, 'ue').replace(/ö/g, 'oe').replace(/ä/g, 'ae').replace(/ß/g, 'ss');
+  const t = normForMatch(text || '');
   const map = [
     [/(pistole|waffe|revolver|walther|schuss|kugel|geschoss|munition|patrone)/, '🔫'],
     [/(messer|klinge|dolch)/, '🔪'],
@@ -24319,10 +24550,9 @@ function resetModelBlocks(event) {
   modelCooldowns = {};
   if (sessionSkippedModels) sessionSkippedModels.clear();
   saveModelCooldowns();
-  // Modell-Index zuruecksetzen damit das staerkste Modell oben drankommt
-  if (typeof activeModelIndex !== 'undefined') {
-    activeModelIndex = 0;
-  }
+  // Modell-Auswahl laeuft dynamisch ueber getActiveModelIndex() (erstes nicht-
+  // blockiertes Modell der Chain). Nach dem Cooldown-Reset oben kommt automatisch
+  // wieder das staerkste Modell dran - kein expliziter Index-Reset noetig.
   showAdminToast(blocked.length + ' Modell-Sperren geloescht. Naechste Anfrage startet wieder mit dem staerksten Modell.');
 }
 
