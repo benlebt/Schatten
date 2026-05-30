@@ -2520,10 +2520,12 @@
   <div class="settings-divider"></div>
 
   <!-- v6.60: Audio-Loop fuer Atmosphaere-Musik (instrumentaler Detektiv-Loop) -->
+  <!-- v7.12.73: 4 Tracks (music1..4.mp3) in immer neu gewuerfelter Reihenfolge,
+       Endlosschleife. KEIN loop-Attribut mehr (das wuerde nur EINEN Track loopen);
+       der Wechsel laeuft ueber das 'ended'-Event + die Playlist-Logik. src wird
+       dynamisch gesetzt (playMusicTrack), darum keine feste <source> hier. -->
   <button id="music-toggle-btn" onclick="toggleMusic(event)">♪ Musik einschalten</button>
-  <audio id="bg-music" loop preload="none">
-    <source src="music.mp3" type="audio/mpeg">
-  </audio>
+  <audio id="bg-music" preload="none"></audio>
 
   <!-- Admin-only Autoplay section. Hidden by default, only revealed when
        localStorage.schatten-admin === 'true'. Set via ?admin=PASSWORT URL. -->
@@ -2771,7 +2773,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.72</div>
+    <div class="start-version">Schatten v7.12.73</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2935,7 +2937,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.72</span>
+    <span>Schatten v7.12.73</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5467,7 +5469,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.72';
+window.SCHATTEN_VERSION = 'v7.12.73';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -6133,7 +6135,8 @@ function closeSettings() {
 }
 
 // v6.60: Atmosphaere-Musik-Loop-Button.
-// Spielt music.mp3 (im Repo-Root, neben index.html) im Loop ab.
+// v7.12.73: Spielt 4 Tracks (music1..4.mp3, im Repo-Root neben index.html) in
+// immer neu gewuerfelter Reihenfolge als Endlosschleife (siehe Playlist-Logik).
 // Toggle-State in localStorage, damit es bei naechstem Besuch erhalten bleibt.
 // User-initiated wegen Autoplay-Block der Browser (Brave/Safari/Chrome).
 // v7.6: Lautstaerke ist jetzt user-konfigurierbar in localStorage.
@@ -6152,23 +6155,90 @@ function getMusicVolumeWhileSpeaking() {
   return (isFinite(v) && v >= 0 && v <= 1) ? v : 0.2;
 }
 
+// v7.12.73: MUSIK-PLAYLIST. Statt einer einzelnen music.mp3 im loop laufen jetzt
+// 4 Tracks (music1.mp3 .. music4.mp3) in immer neu gewuerfelter Reihenfolge,
+// Endlosschleife. Beispiel: 1,3,2,4 -> (neu wuerfeln) 3,2,4,1 -> 1,4,2,3 -> ...
+// Beim Neuwuerfeln nach jeder 4er-Runde wird vermieden, dass der erste Track der
+// neuen Runde derselbe ist wie der zuletzt gespielte (kein doppeltes Abspielen
+// desselben Songs direkt hintereinander, User-Wunsch).
+const MUSIC_TRACKS = ['music1.mp3', 'music2.mp3', 'music3.mp3', 'music4.mp3'];
+let musicPlaylist = [];      // aktuelle gewuerfelte Reihenfolge (Array von Dateinamen)
+let musicPlaylistIdx = 0;    // Position in musicPlaylist
+let musicLastTrack = null;   // zuletzt gespielter Track (fuer Anti-Doppel)
+
+// Fisher-Yates-Shuffle einer Kopie von MUSIC_TRACKS.
+function shuffleMusicTracks() {
+  const arr = MUSIC_TRACKS.slice();
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// Baut eine neue gewuerfelte Playlist. Wenn der erste Track gleich dem zuletzt
+// gespielten waere, tausche ihn mit einem anderen (kein Song doppelt direkt
+// hintereinander). Bei nur 1 Track (theoretisch) kann das nicht vermieden werden.
+function buildMusicPlaylist() {
+  let pl = shuffleMusicTracks();
+  if (musicLastTrack && pl.length > 1 && pl[0] === musicLastTrack) {
+    // Tausche das erste Element mit einem zufaelligen anderen
+    const swapWith = 1 + Math.floor(Math.random() * (pl.length - 1));
+    [pl[0], pl[swapWith]] = [pl[swapWith], pl[0]];
+  }
+  musicPlaylist = pl;
+  musicPlaylistIdx = 0;
+}
+
+// Spielt den aktuellen Track der Playlist. Setzt die Lautstaerke wie gehabt
+// (leiser beim Vorlesen). Gibt das play()-Promise zurueck, damit der Aufrufer
+// Erfolg/Fehler (Autoplay-Block) behandeln kann.
+function playMusicTrack(audio) {
+  if (!audio) return Promise.reject(new Error('kein Audio-Element'));
+  if (!musicPlaylist.length) buildMusicPlaylist();
+  const track = musicPlaylist[musicPlaylistIdx];
+  musicLastTrack = track;
+  audio.src = track;
+  audio.volume = (typeof speakCurrentActive !== 'undefined' && speakCurrentActive)
+    ? getMusicVolumeWhileSpeaking()
+    : getMusicVolumeNormal();
+  return audio.play();
+}
+
+// Wird vom 'ended'-Event des Audio-Elements gerufen: zum naechsten Track
+// weiterschalten. Nach dem letzten Track der Runde neu wuerfeln und von vorn
+// (Endlosschleife). Nur weiterspielen, wenn Musik eingeschaltet bleiben soll.
+function advanceMusicTrack() {
+  const audio = document.getElementById('bg-music');
+  if (!audio) return;
+  // Nur fortsetzen wenn Musik laut localStorage AN ist (User hat nicht pausiert).
+  if (localStorage.getItem('schatten-music-on') !== '1') return;
+  musicPlaylistIdx++;
+  if (musicPlaylistIdx >= musicPlaylist.length) {
+    buildMusicPlaylist();  // neue gewuerfelte Runde
+  }
+  playMusicTrack(audio).catch(err => {
+    console.warn('[Schatten] Musik-Weiterschaltung fehlgeschlagen:', err);
+  });
+}
+
 function toggleMusic(event) {
   if (event) event.stopPropagation();
   const audio = document.getElementById('bg-music');
   const btn = document.getElementById('music-toggle-btn');
   if (!audio || !btn) return;
   if (audio.paused) {
-    // v7.6: Lautstaerke aus localStorage statt hartem Default
-    audio.volume = (typeof speakCurrentActive !== 'undefined' && speakCurrentActive)
-      ? getMusicVolumeWhileSpeaking()
-      : getMusicVolumeNormal();
-    audio.play().then(() => {
+    // v7.12.73: Playlist starten. Beim ERSTEN Einschalten (oder nach Reset) eine
+    // neue gewuerfelte Reihenfolge bauen; bei Resume nach Pause die laufende
+    // Position behalten. Lautstaerke setzt playMusicTrack.
+    if (!musicPlaylist.length) buildMusicPlaylist();
+    playMusicTrack(audio).then(() => {
       btn.textContent = '♪ Musik ausschalten';
       localStorage.setItem('schatten-music-on', '1');
       diag('state', 'Musik eingeschaltet');
     }).catch(err => {
       console.warn('[Schatten] Musik-Start fehlgeschlagen:', err);
-      btn.textContent = '♪ Musik nicht ladbar (music.mp3?)';
+      btn.textContent = '♪ Musik nicht ladbar (music1.mp3?)';
       setTimeout(() => { btn.textContent = '♪ Musik einschalten'; }, 3000);
     });
   } else {
@@ -6189,8 +6259,9 @@ function toggleMusicFromStart(event) {
   const settingsBtn = document.getElementById('music-toggle-btn');
   if (!audio || !startBtn) return;
   if (audio.paused) {
-    audio.volume = getMusicVolumeNormal();
-    audio.play().then(() => {
+    // v7.12.73: Playlist starten (siehe toggleMusic).
+    if (!musicPlaylist.length) buildMusicPlaylist();
+    playMusicTrack(audio).then(() => {
       // v7.12.25: neues Symbol (♪) statt 🎵 - sichtbarer bei Sonnenlicht.
       // Plus is-playing-Klasse fuer aktiven Look.
       startBtn.textContent = '♪ Musik ausschalten';
@@ -6200,7 +6271,7 @@ function toggleMusicFromStart(event) {
       diag('state', 'Musik eingeschaltet (vom Start)');
     }).catch(err => {
       console.warn('[Schatten] Musik-Start fehlgeschlagen:', err);
-      startBtn.textContent = '♪ music.mp3 nicht ladbar';
+      startBtn.textContent = '♪ music1.mp3 nicht ladbar';
       setTimeout(() => { startBtn.textContent = '♪ Hintergrundmusik einschalten'; }, 3000);
     });
   } else {
@@ -6255,6 +6326,11 @@ function syncMusicButtonText() {
     if (!audio) { setTimeout(tryRegister, 200); return; }
     audio.addEventListener('play', syncMusicButtonText);
     audio.addEventListener('pause', syncMusicButtonText);
+    // v7.12.73: ended -> naechsten Playlist-Track starten (Endlosschleife mit
+    // immer neu gewuerfelter Reihenfolge). advanceMusicTrack ZUERST, damit der
+    // naechste Track sofort startet (play-Event korrigiert den Button-Text);
+    // syncMusicButtonText danach als Fallback (falls Musik aus war).
+    audio.addEventListener('ended', advanceMusicTrack);
     audio.addEventListener('ended', syncMusicButtonText);
     // Wenn das Tab wieder sichtbar wird, Status nachsynchronisieren
     document.addEventListener('visibilitychange', () => {
@@ -11600,7 +11676,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.72] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.73] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -18204,7 +18280,7 @@ async function chooseOption(option) {
     if (npcName && typeof romanceReceptive[npcName] === 'undefined') {
       const offen = Math.random() < 0.5;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.72] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.73] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -18531,7 +18607,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.72] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.73] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -19549,7 +19625,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           const tensionHighEnoughForArrest = (typeof stasiTension === 'number' && stasiTension >= 4);
           if (!tensionHighEnoughForArrest) {
             // STILLER RELEASE: Karl ist faktisch frei, das System zieht nach.
-            console.warn('[Schatten v7.12.72] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
+            console.warn('[Schatten v7.12.73] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet, kein Hard-Force');
             karlInStasiCustody = false;
             folterSceneCount = 0;
@@ -19564,7 +19640,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.72] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.73] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -22050,7 +22126,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.72] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.73] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
