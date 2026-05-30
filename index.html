@@ -2773,7 +2773,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.73</div>
+    <div class="start-version">Schatten v7.12.74</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2937,7 +2937,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.73</span>
+    <span>Schatten v7.12.74</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5469,7 +5469,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.73';
+window.SCHATTEN_VERSION = 'v7.12.74';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -11676,7 +11676,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.73] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.74] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -13329,6 +13329,30 @@ async function callGroq(userMessage, conversationHistory, compactMode) {
               recap += 'WICHTIG (diebstahl): Der TAETER (Hehler/Dieb) hat das Diebesgut. Karl trifft ihn typischerweise WAEHREND er das Diebesgut holt - das ist die natuerliche Aufloesung. Beide Loesungs-Elemente (TARGET-Objekt + SUSPECT-Person) kommen zusammen. Karl muss SUSPECT nicht zwangslaeufig festsetzen oder der Polizei uebergeben - aber er muss das Diebesgut von ihm bekommen (Druck, Bestechung, Tausch, oder Diebstahl-zurueck). Hauptziel bleibt das DIEBESGUT - die Begegnung mit dem Hehler ist der Weg dorthin. Erfinde KEINE alternativen Hehler aus dem Nichts.\n';
             } else {
               recap += 'KRITISCH (' + ct + '): Diese Person ist der TAETER. Die Aufklaerung des Falls fuehrt am Ende zu ihm/ihr. Erfinde KEINE alternativen Verdaechtigen aus dem Nichts. Wenn Mistral spontan einen "Karl Walther" oder "die rothaarige Fee" als Taeter ins Spiel bringt obwohl der wahre Taeter oben definiert ist - das ist falsch. Die Indizien sollen schrittweise zum genannten TAETER fuehren, nicht zu einer halluzinierten Person. Du DARFST am Anfang auch andere Personen verdaechtig wirken lassen (Misdirection ist erlaubt) - aber am Ende muss der TAETER der oben genannte sein.\n';
+            }
+          }
+
+          // v7.12.74 (Lektorat Krause-Run 16:08, alle 3 Lektorate): Kern-NPCs
+          // (SUSPECT/INFORMANT) wurden im Setup gross angekuendigt (Tante Frieda
+          // als Hehlerin, Bornstein als Informant), aber im Run NIE genutzt - der
+          // Spieler loeste ueber einen emergenten Pfad (Verfolgungsjagd) und die
+          // angekuendigten NPCs blieben "Hintergrundbild". Fix: In der FRUEHPHASE
+          // (Stage 0-1) soll die KI diese NPCs ORGANISCH einweben - als Erwaehnung,
+          // Geruecht, Spur, sodass der Spieler sie wahrnimmt und selbst hingehen
+          // KANN. KEIN Zwang (der gewaehlte Pfad bleibt frei - das ist der Reiz),
+          // nur Sichtbarkeit. So verpufft das reichste Setup-Material nicht mehr.
+          // Gated auf Stage < 2, damit es das Finale nicht stoert.
+          if ((caseProgress.stage || 0) < 2) {
+            const kernNpcs = caseSetup.setupCast.filter(c =>
+              c && ['SUSPECT', 'INFORMANT'].includes((c.tag || '').toUpperCase()) && c.name);
+            if (kernNpcs.length > 0) {
+              recap += '\nKERN-NPCS EINWEBEN (Fruehphase, wichtig fuer die Falltiefe): Das Setup hat zentrale Halbwelt-/Informanten-Figuren, die der Geschichte Tiefe geben. Webe sie FRUEH und ORGANISCH ein - als Erwaehnung, Geruecht, Hinweis eines anderen NPCs, ein Name der faellt, eine Spur die zu ihnen zeigt. Der Spieler soll WISSEN dass es sie gibt und selbst entscheiden koennen, ob er sie aufsucht:\n';
+              for (const kn of kernNpcs) {
+                const rolleStr = kn.rolle ? ' (' + kn.rolle + ')' : '';
+                const wegStr = kn.triggerWhen ? ' - relevant wenn: ' + kn.triggerWhen : '';
+                recap += '  - ' + kn.name + rolleStr + wegStr + '\n';
+              }
+              recap += 'WICHTIG: Das ist KEINE Pflicht, dorthin zu gehen - zwinge den Spieler NICHT zu einem Besuch und blockiere seinen eigenen Weg nicht. Sorge nur dafuer, dass diese Figuren in den ersten Szenen spuerbar PRAESENT sind (durch Erwaehnung/Spur), statt unerwaehnt zu verstauben. Wenn der Spieler einen ganz anderen Weg waehlt, ist das voellig in Ordnung.\n';
             }
           }
 
@@ -18280,7 +18304,7 @@ async function chooseOption(option) {
     if (npcName && typeof romanceReceptive[npcName] === 'undefined') {
       const offen = Math.random() < 0.5;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.73] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.74] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -18607,7 +18631,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.73] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.74] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -19625,7 +19649,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           const tensionHighEnoughForArrest = (typeof stasiTension === 'number' && stasiTension >= 4);
           if (!tensionHighEnoughForArrest) {
             // STILLER RELEASE: Karl ist faktisch frei, das System zieht nach.
-            console.warn('[Schatten v7.12.73] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
+            console.warn('[Schatten v7.12.74] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet, kein Hard-Force');
             karlInStasiCustody = false;
             folterSceneCount = 0;
@@ -19640,7 +19664,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.73] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.74] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -22126,7 +22150,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.73] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.74] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
