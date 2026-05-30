@@ -1737,6 +1737,23 @@
   .resolve-top-separator {
     margin: 8px 0 14px 0;
   }
+  /* v7.12.68: Container fuer die oben angepinnten besonderen Aktionen
+     (Intim/Uebernachtung, Notheilen, Flucht/Notflucht, Doc-Heilen). Sitzt
+     ueber den ABCD-Optionen, damit situative Gelegenheiten nicht untergehen. */
+  .top-actions-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .top-actions-container:empty {
+    display: none;
+  }
+  /* Abschluss-Trenner unter den besonderen Aktionen ("oder"), leitet zu den
+     normalen Story-Optionen ueber. */
+  .system-button-separator-top {
+    margin: 10px 0 12px 0;
+    color: rgba(170,160,200,0.55);
+  }
   /* v7.11.13: System-Buttons VOLL sichtbar - vorher opacity 0.78 (User uebersah Schlaf-/Romantik-Button).
      Schrift jetzt 100% sichtbar, dezenter Border-Akzent zur Abgrenzung. */
   .option-btn-system {
@@ -2754,7 +2771,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.67</div>
+    <div class="start-version">Schatten v7.12.68</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2918,7 +2935,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.67</span>
+    <span>Schatten v7.12.68</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5450,7 +5467,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.67';
+window.SCHATTEN_VERSION = 'v7.12.68';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -6307,10 +6324,16 @@ function buildSpeakText() {
   const optionsBlock = document.getElementById('options');
   if (optionsBlock && !optionsBlock.classList.contains('hidden')) {
     blocks.push('Was tust du?');
-    // v7.10.8: System-Buttons (SCHLAFEN/ROMANTIK) AUSFILTERN beim Vorlesen.
-    // Sie sind Spieler-Lebensaktionen, keine Story-Optionen.
-    const optionBtns = document.querySelectorAll('#options-list .option-btn:not(.option-btn-system)');
-    optionBtns.forEach((btn, idx) => {
+    // v7.10.8 / v7.12.68: System-Buttons grundsaetzlich AUSFILTERN beim Vorlesen
+    // (SCHLAFEN/NOTHEILEN/FLUCHT sind wiederkehrende Ventile - jedes Mal vorlesen
+    // wuerde den Hoerfluss aufblaehen). AUSNAHME: die Romance-Buttons (Intim/
+    // Uebernachtung, .option-btn-romance) WERDEN mitgelesen - das ist eine seltene,
+    // besondere Gelegenheit, die beim reinen Zuhoeren sonst untergeht (User-Wunsch).
+    const optionBtns = document.querySelectorAll(
+      '#options-list .option-btn:not(.option-btn-system), #options-list .option-btn-system.option-btn-romance'
+    );
+    let ttsLetterIdx = 0;
+    optionBtns.forEach((btn) => {
       // v7.9.2: Gezielt nur den reinen Option-Text auslesen, NICHT btn.textContent.
       // textContent wuerde enthalten: (1) die .option-id "A", (2) den eigentlichen
       // Text, (3) den Marker "⚡ AUFLOESUNG" - was zu Doppel-A's und vorgelesenen
@@ -6332,9 +6355,17 @@ function buildSpeakText() {
           .replace(/[⚡♥≈→+]\s+[A-ZAEOEUE ]+$/i, '')  // trailing Marker
           .trim();
       }
-      // Buchstabe A/B/C/D + Text. Wir lesen "Option A:" + Text.
-      const letter = String.fromCharCode(65 + idx);
-      if (cleanText) blocks.push('Option ' + letter + '. ' + cleanText);
+      if (!cleanText) return;
+      // v7.12.68: Romance-Buttons (Intim/Uebernachtung) mit eigenem Label statt
+      // "Option A" - sie sind keine ABCD-Story-Option. ttsLetterIdx zaehlt NUR die
+      // echten Optionen, damit A/B/C/D korrekt bleibt.
+      if (btn.classList.contains('option-btn-romance')) {
+        blocks.push('Besondere Moeglichkeit. ' + cleanText);
+      } else {
+        const letter = String.fromCharCode(65 + ttsLetterIdx);
+        blocks.push('Option ' + letter + '. ' + cleanText);
+        ttsLetterIdx++;
+      }
     });
   }
   return blocks;
@@ -11463,6 +11494,19 @@ function renderOptions(scene) {
   // damit immer mindestens "Geh weiter"/"Warte ab"-Buttons da sind.
   try {
     list.innerHTML = '';
+    // v7.12.68 BUTTON-UMBAU: Zustandsgetriggerte besondere Aktionen (Intim/
+    // Uebernachtung, Notheilen, Flucht/Notflucht, Doc-Heilen) gehoeren NACH OBEN,
+    // ueber die ABCD-Optionen - sie tauchen nur situativ auf, gehen sonst unter,
+    // und konkurrieren mit ABCD-Optionen die aehnlich KLINGEN aber nur erzaehlerisch
+    // wirken (z.B. "zieh dich zurueck" = BEOBACHTEN != FLUCHT-Button). Schlafen
+    // bleibt UNTEN (Dauer-Button, immer bei Abend/Nacht, nicht situativ + Toasts).
+    // Die einzelnen System-Buttons haengen sich an topActions statt an list, wenn
+    // topActions existiert (siehe weiter unten). topActions wird als ERSTES Kind
+    // eingefuegt, damit es ueber den ABCD-Optionen steht.
+    const topActions = document.createElement('div');
+    topActions.id = 'top-actions';
+    topActions.className = 'top-actions-container';
+    list.appendChild(topActions);
     // Validation: scene.optionen muss existieren und array sein
     if (!scene || !Array.isArray(scene.optionen) || scene.optionen.length === 0) {
       console.warn('[Schatten] renderOptions: scene.optionen fehlt/leer - generischer Fallback');
@@ -11520,7 +11564,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.67] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.68] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -11960,8 +12004,18 @@ function renderOptions(scene) {
   // Reset custody-blocked tracker nach Render
   window._custodyBlockedOptions = [];
 
-  // Separator nur wenn mindestens ein System-Button gezeigt wird
-  if (showSleepButton || romanceNpcInScene || showFluchtButton || showNotheilenButton || showNotfluchtButton || showWagnerHealButton || showMarleneHealButton) {
+  // v7.12.68: Separator-Logik nach dem Button-Umbau. Die besonderen Aktionen
+  // (Heilen/Flucht/Romance) sitzen jetzt OBEN in topActions, Schlafen bleibt unten.
+  // OBEN: wenn topActions Buttons enthaelt, einen Abschluss-Trenner anhaengen, damit
+  // optisch klar wird wo die normalen Story-Optionen (ABCD) beginnen.
+  if (typeof topActions !== 'undefined' && topActions.children.length > 0) {
+    const topSep = document.createElement('div');
+    topSep.className = 'system-button-separator system-button-separator-top';
+    topSep.textContent = '· oder ·';
+    topActions.appendChild(topSep);
+  }
+  // UNTEN: Trenner nur noch wenn der Schlafen-Button gezeigt wird (Dauer-Button).
+  if (showSleepButton) {
     const sep = document.createElement('div');
     sep.className = 'system-button-separator';
     sep.textContent = '· besondere Aktionen ·';
@@ -12011,7 +12065,7 @@ function renderOptions(scene) {
       if (ntTouchHandled) { ntTouchHandled = false; return; }
       chooseOption(ntOpt);
     });
-    list.appendChild(ntBtn);
+    (typeof topActions !== 'undefined' ? topActions : list).appendChild(ntBtn);
   }
 
   // v7.12.5: DOC-WAGNER-HEILEN-BUTTON (+2). Erscheint nur wenn Karl wirklich bei
@@ -12059,7 +12113,7 @@ function renderOptions(scene) {
       if (dwTouchHandled) { dwTouchHandled = false; return; }
       chooseOption(dwOpt);
     });
-    list.appendChild(dwBtn);
+    (typeof topActions !== 'undefined' ? topActions : list).appendChild(dwBtn);
   }
 
   // v7.12.38: MARLENE-HEILEN-BUTTON. Wenn Karl in der Charité ist und Marlene
@@ -12100,7 +12154,7 @@ function renderOptions(scene) {
     mlBtn.addEventListener('click', () => {
       if (mlTouchHandled) { mlTouchHandled = false; return; } chooseOption(mlOpt);
     });
-    list.appendChild(mlBtn);
+    (typeof topActions !== 'undefined' ? topActions : list).appendChild(mlBtn);
   }
 
   // v7.11.12: FLUCHT-Button - Sp>=3 + nicht in Custody
@@ -12146,7 +12200,7 @@ function renderOptions(scene) {
       if (flTouchHandled) { flTouchHandled = false; return; }
       chooseOption(flOpt);
     });
-    list.appendChild(flBtn);
+    (typeof topActions !== 'undefined' ? topActions : list).appendChild(flBtn);
   }
 
   // v7.11.13: NOTFLUCHT-Button - nur in Stasi-Custody. 30% Erfolg.
@@ -12192,7 +12246,7 @@ function renderOptions(scene) {
       if (nfTouchHandled) { nfTouchHandled = false; return; }
       chooseOption(nfOpt);
     });
-    list.appendChild(nfBtn);
+    (typeof topActions !== 'undefined' ? topActions : list).appendChild(nfBtn);
   }
 
   // SCHLAFEN-Button(s)
@@ -12376,7 +12430,7 @@ function renderOptions(scene) {
       if (touchHandled2) { touchHandled2 = false; return; }
       chooseOption(romOpt);
     });
-    list.appendChild(romBtn);
+    (typeof topActions !== 'undefined' ? topActions : list).appendChild(romBtn);
   }
 
   // v7.11.7: UEBERNACHTUNG-Button - bei hoher Romantik-Tension + Abend/Nacht
@@ -12423,7 +12477,7 @@ function renderOptions(scene) {
       if (touchHandled3) { touchHandled3 = false; return; }
       chooseOption(overnightOpt);
     });
-    list.appendChild(overnightBtn);
+    (typeof topActions !== 'undefined' ? topActions : list).appendChild(overnightBtn);
   }
 
   // v7.11.0: FALL LOESEN-Button (System-Backup)
@@ -15232,6 +15286,16 @@ VERBOTEN: Karl wacht woanders auf ohne Erklaerung. Wenn du Pfad B waehlst, MUSST
     err.isRetryable = true;
     err.debugInfo = { stage: 'no_text', response: JSON.stringify(data).slice(0, 1000) };
     throw err;
+  }
+
+  // v7.12.68: gemini.js-Version ins Debug-Log. Die serverseitige Proxy-Datei
+  // gemini.js hat eine eigenstaendige Version (GEMINI_JS_VERSION), die sie in
+  // _geminiJsVersion zurueckgibt. So sehen wir im Run-Export eindeutig, welche
+  // gemini.js-Version live war (index.html und gemini.js werden getrennt deployt
+  // - ohne das konnten wir nicht sicher sagen, ob ein Server-Fix schon aktiv war).
+  // Nur bei Gemini vorhanden; Mistral/Groq liefern das Feld nicht.
+  if (data && data._geminiJsVersion && typeof diag === 'function') {
+    diag('info', 'gemini.js ' + data._geminiJsVersion + ' (serverseitig)');
   }
 
   // v7.11.25: Implicit-Caching-Diagnostik. Gemini liefert usageMetadata mit
@@ -18062,7 +18126,7 @@ async function chooseOption(option) {
     if (npcName && typeof romanceReceptive[npcName] === 'undefined') {
       const offen = Math.random() < 0.5;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.67] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.68] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -18389,7 +18453,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.67] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.68] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -19407,7 +19471,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           const tensionHighEnoughForArrest = (typeof stasiTension === 'number' && stasiTension >= 4);
           if (!tensionHighEnoughForArrest) {
             // STILLER RELEASE: Karl ist faktisch frei, das System zieht nach.
-            console.warn('[Schatten v7.12.67] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
+            console.warn('[Schatten v7.12.68] Stiller Release - Karl 3 Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht, KEINE Festnahme.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet, kein Hard-Force');
             karlInStasiCustody = false;
             folterSceneCount = 0;
@@ -19422,7 +19486,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.67] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.68] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -21908,7 +21972,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.67] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.68] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
