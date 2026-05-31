@@ -2773,7 +2773,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.131</div>
+    <div class="start-version">Schatten v7.12.132</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2937,7 +2937,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.131</span>
+    <span>Schatten v7.12.132</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5488,7 +5488,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.131';
+window.SCHATTEN_VERSION = 'v7.12.132';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -11995,7 +11995,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.131] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.132] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -18852,7 +18852,7 @@ async function chooseOption(option) {
       // das ~63% Erfolg bei der ersten Annaeherung (vorher ~25%).
       const offen = Math.random() < 0.70;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.131] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.132] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -19040,6 +19040,15 @@ async function chooseOption(option) {
   // Antwort/Reaktion der Person) die naechste Szene liefern MUSS - kein Zeitsprung,
   // kein Schlaf, kein Ortswechsel. Nur wenn nicht ohnehin physisch/Aufloesen/Romantik.
   const _optLowBefr = (option.text || '').toLowerCase();
+  // v7.12.132 (Anlass Heinrich-Run v7.12.131, "Bürosessel-Wunder"): FLUCHT-GUARD.
+  // Befund: Karl floh vor Wegner (West-Berlin), die KI rief Wegner danach magisch
+  // zurueck - erst Rueck-Teleport zur Friedrichstrasse (Sz20), dann sass Wegner
+  // ueber die Sektorengrenze hinweg in Karls Ost-Bero (Sz24, "hat die Nacht im
+  // Buerosessel verbracht"). Ursache: bei Flucht "verliert" die KI den raeumlichen
+  // Zustand des verlassenen NPC. Eigener Guard (VOR isPhysical, weil der physische
+  // Guard faelschlich "UNMITTELBARE Konsequenz in DERSELBEN Situation" sagt - bei
+  // Flucht ist das Gegenteil korrekt: Karl entfernt sich, die Person bleibt zurueck).
+  const isFlucht = /\b(flieh|fliehe|flucht|entkomm|entwisch|abhau|hau ab|setz.* ab|schuettel.* ab|abschuetteln|weg von|raus aus|verschwind|renn(e|st)? (weg|davon)|fahr.* (weg|davon))/i.test(_optLowBefr);
   const isBefragung = !isPhysical &&
     /\b(frag|befrag|verhoer|verhör|sprich mit|rede mit|red mit|klingel|klopf|horch|hak nach|konfrontier|stell .* zur rede|zeug|nachbar|wirt|kellner|barkeeper|informant)/i.test(_optLowBefr);
   // gameDay/gameTimeIdx VOR advanceGameTime merken, damit wir bei explizitem Schlaf
@@ -19174,11 +19183,13 @@ async function chooseOption(option) {
     ? `Der Spieler wählt Option ${option.id}: "${option.text}". WICHTIG: Karl entscheidet jetzt aktiv den Fall ABZUSCHLIESSEN. Die nächste Szene MUSS die finale Berichts-Szene mit der Klientin sein - ${aufloesenForm}. Beschreibe die Reaktion der Klientin (Erleichterung/Trauer/Wut/Dank je nach Charakter und Ergebnis). Setze "klient_berichtet": true im JSON. Halte die Szene ruhig und stilvoll - Film-noir-Ende, keine Action, keine neuen Indizien. Liefere die nächste Szene als JSON.`
     : (isUebernachtung
       ? `Der Spieler wählt UEBERNACHTUNG mit ${option._romanceNpc || 'der ROMANCE-Person'}: "${option.text}". WICHTIG: Die Nacht ist romantisch und intim - aber beschreibe das nur stilvoll und elliptisch (1-2 Sätze, Marlowe-Stil, keine expliziten Beschreibungen). Dann ZEITSPRUNG zum NÄCHSTEN MORGEN. Die nächste Szene MUSS am Morgen danach spielen: Karl wacht in der Wohnung von ${option._romanceNpc || 'ihr'} auf. Beschreibe Atmosphäre (Kaffeegeruch, Sonnenlicht, Lippenstift-Rand, Zigarettenrest im Aschenbecher, ein Zettel, ein Frühstück). Karl ist ausgeruht und versorgt. Die Szene endet damit dass Karl sich auf den Weg zur Ermittlung macht - die Optionen sind dann normale ERKUNDEN/BEOBACHTEN/OFFENSIV-Aktionen zum Fall, KEINE weitere Romantik (die ist erstmal abgeschlossen). Liefere die nächste Szene als JSON.`
-      : (isPhysical
+      : (isFlucht
+        ? `Der Spieler wählt Option ${option.id}: "${option.text}". WICHTIG: Karl FLIEHT/entfernt sich aktiv vom aktuellen Ort. Die nächste Szene spielt an einem ANDEREN Ort (wohin Karl flieht) oder auf dem Fluchtweg. Alle Personen, die am verlassenen Ort waren (besonders ein verfolgter/konfrontierter Verdächtiger), BLEIBEN DORT ZURÜCK - sie sind in der nächsten Szene NICHT bei Karl, tauchen NICHT magisch wieder auf und sitzen NICHT plötzlich in Karls Büro/Wohnung. Falls so eine Person später wieder ins Spiel kommt, MUSS erzählt werden, wie und warum (Karl sucht sie erneut auf, sie verfolgt ihn sichtbar, ein Treffen wird vereinbart). Eine Sektorengrenze (Ost/West) überquert niemand beiläufig. Beschreibe die unmittelbare Flucht und wo Karl landet. Liefere die nächste Szene als JSON.`
+        : (isPhysical
         ? `Der Spieler wählt Option ${option.id}: "${option.text}". WICHTIG: Dies ist eine direkte physische Aktion. Die nächste Szene MUSS die UNMITTELBARE Konsequenz in derselben Situation erzählen (Reaktion der Gegenüber, körperlicher Schmerz, Eskalation oder Folgen). KEIN Zeitsprung, KEIN Ortswechsel, KEINE Übergangsformulierung wie "später" oder "am nächsten Morgen". Liefere die nächste Szene als JSON.`
         : (isBefragung
           ? `Der Spieler wählt Option ${option.id}: "${option.text}". WICHTIG: Karl spricht/befragt hier gezielt eine konkrete Person. Die nächste Szene MUSS die UNMITTELBARE Reaktion dieser Person liefern - was sie sagt, ob sie ausweicht, lügt, schweigt, hilft oder flieht. KEIN Zeitsprung, KEIN Schlaf, KEIN "am nächsten Morgen", KEIN Ortswechsel weg von dieser Person, bevor die Begegnung erzählt wurde. Die Befragung findet JETZT statt, am aktuellen Ort. Wenn die Person Information hat, kann ein konkretes Indiz entstehen (indiz_neu). Liefere die nächste Szene als JSON.`
-          : `Der Spieler wählt Option ${option.id}: "${option.text}". Führe die Konsequenzen aus und liefere die nächste Szene als JSON.`))));
+          : `Der Spieler wählt Option ${option.id}: "${option.text}". Führe die Konsequenzen aus und liefere die nächste Szene als JSON.`)))));
   lastUserMessage = userMsg;
 
   await performApiCall(userMsg, /*isStart*/false, option);
@@ -19192,7 +19203,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.131] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.132] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -20247,7 +20258,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           } else if (!tensionHighEnoughForArrest && folterSceneCount >= custodyReleaseFloor) {
             // STILLER RELEASE: nur noch als Notventil bei langem Drift (5+ Sz). Karl ist
             // faktisch frei (KI erzaehlt ihn lange ohne Stasi-Kontext), System zieht nach.
-            console.warn('[Schatten v7.12.131] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
+            console.warn('[Schatten v7.12.132] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet');
             setCustodyState(false, 'stiller-release');
           } else if (!tensionHighEnoughForArrest) {
@@ -20263,7 +20274,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.131] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.132] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -20789,7 +20800,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof diag === 'function') {
           diag('state', '⚡ NOTFLUCHT GELUNGEN - Karl frei + 4 Sz Gnadenfrist, Stasi-Tension ' + prevTension + ' -> 3 (gesucht, aber nicht sofort wieder greifbar)');
         }
-        console.log('[Schatten v7.12.131] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
+        console.log('[Schatten v7.12.132] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
         // v7.11.56: Toast bei Erfolg - Spieler hat geklickt und soll Wuerfel-
         // Ergebnis direkt sehen, nicht nur narrative Andeutungen.
         if (typeof showProgressToast === 'function') {
@@ -22920,7 +22931,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.131] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.132] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
