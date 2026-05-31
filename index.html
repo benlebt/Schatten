@@ -2773,7 +2773,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.129</div>
+    <div class="start-version">Schatten v7.12.130</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2937,7 +2937,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.129</span>
+    <span>Schatten v7.12.130</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5488,7 +5488,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.129';
+window.SCHATTEN_VERSION = 'v7.12.130';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5992,6 +5992,7 @@ let karlMuedeSignalScene = -99;
 // Entscheidungen sichtbar (Schlaf, Heilen, Flucht-Ventil etc.).
 let botDecisionLog = [];
 let lastRomanceNpcScene = -99;  // v7.12.104: Szene, in der zuletzt eine ROMANCE-NPC aktiv im Cast war (fuer Einfuehrungs-Push)
+let lastRomancePushScene = -99; // v7.12.130: Szene des letzten ROMANCE-FIGUR-PUSH (Cooldown gegen "Stalking"-Effekt)
 
 // v7.12.128: Run-Kosten-Tracker. Summiert Token/Requests pro Run und schaetzt
 // die Gemini-API-Kosten (NUR fuer Debug-Export sichtbar, nicht oeffentlich).
@@ -11993,7 +11994,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.129] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.130] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -14905,9 +14906,17 @@ Marlowe-Stil: stilvoll, elliptisch, NICHT explizit. Tuer schliesst sich, Schnitt
         // Einführung feuert also bei lastSpannung < schwelle -> politisch bis Sp4, normal Sp3.
         const _einfuehrSchwelle = (typeof caseIsPolitical !== 'undefined' && caseIsPolitical) ? 5 : 4;
         const _spOk = (typeof lastSpannung !== 'number') || (lastSpannung < _einfuehrSchwelle);
-        if (!_romInCast && sceneCounter >= 5 && _scenesSinceRom >= 6 &&
+        // v7.12.130 (Anlass Stein/Goerke-Runs, beide Reviews): COOLDOWN gegen den
+        // "Stalking"-Effekt. Der Push feuerte erneut, sobald die NPC durch einen
+        // Ortswechsel aus dem Cast fiel (Edith 4x, Helene 4x ueber den Run). Jetzt:
+        // nach einem erfolgten Push mind. 10 Szenen Ruhe - egal ob die NPC im Cast
+        // war oder nicht. Massvoll (nicht 15 wie vorgeschlagen), damit eine begonnene
+        // Beziehung nicht abgewuergt wird, aber die Wiederhol-Pushes aufhoeren.
+        const _pushCooldownOk = (sceneCounter - (typeof lastRomancePushScene === 'number' ? lastRomancePushScene : -99)) >= 10;
+        if (!_romInCast && sceneCounter >= 5 && _scenesSinceRom >= 6 && _pushCooldownOk &&
             _spOk && !karlInStasiCustody && sceneCounter % 6 === 0) {
           const _rn = _romNames[0];
+          lastRomancePushScene = sceneCounter;
           recap += `\n\nROMANCE-FIGUR EINFUEHREN (SOLL): ${_rn} ist eine Schluesselfigur dieses Falls, war aber seit Szenen nicht praesent. Bringe ${_rn} in dieser oder der naechsten passenden Szene WIEDER aktiv ins Geschehen - nicht nur erwaehnt, sondern anwesend und handelnd (sie taucht auf, spricht Karl an, hat eine Information, kreuzt seinen Weg). Auch in einem angespannten/politischen Umfeld kann eine Frau auftauchen: als Kontaktperson, Mitwisserin, jemand der Karl warnt oder um Hilfe bittet. Die Anspannung des Falls macht die Begegnung sogar intensiver (geteilte Gefahr verbindet). KEINE erzwungene Romantik - nur ihre Praesenz, damit eine Beziehung ueberhaupt entstehen KANN.`;
           if (typeof diag === 'function') diag('progress', 'ROMANCE-FIGUR-PUSH: ' + _rn + ' wird herangezogen (seit ' + _scenesSinceRom + ' Sz nicht im Cast, Sp<' + _einfuehrSchwelle + ' [' + (caseIsPolitical ? 'politisch' : 'normal') + '], frei)');
         }
@@ -15557,8 +15566,20 @@ VERBOTEN: Karl wacht woanders auf ohne Erklaerung. Wenn du Pfad B waehlst, MUSST
       // Nicht wenn der Fall schon im Durchbruch ist (dann gehts um Abschluss, nicht Indizien)
       const _imDurchbruch = !!(caseProgress && (caseProgress.ueberfuehrt || caseProgress.zielpersonGefunden || caseProgress.wahrheitErkannt));
       if (_ermittlungHinktNach && !_imDurchbruch) {
-        timeContext += `\n\nNEUER ORT - HINWEIS-CHANCE (dezent): Karl kommt an einem neuen, fall-relevanten Schauplatz an. Dieser Ort SOLLTE etwas Konkretes zur Ermittlung beitragen - ein beobachtbares Detail, eine Aussage einer Person hier, eine Spur, ein Dokument, ein Widerspruch. NICHT erzwungen-kuenstlich ("hier liegt zufaellig der entscheidende Beweis"), sondern plausibel aus dem Ort heraus. Es muss KEIN grosser Durchbruch sein - ein kleiner, konkreter Mosaikstein reicht. Wenn der Ort dramaturgisch nichts hergibt, ist das auch ok - dann liefert die naechste Station etwas.`;
-        if (typeof diag === 'function') diag('progress', 'Indiz-Kopplung (neuer Ort, Ermittlung duenn: ' + _indizCount + ' Indizien / erwartet ~' + _erwartetIndiz + ') - dezenter Hinweis-Push');
+        // v7.12.130 (Anlass Stein-Run v7.12.129): GESTAFFELTE Eskalation. Befund:
+        // 14x "Ermittlung duenn: 3 Indizien" gemeldet, aber der dezente Push war
+        // wirkungslos (sagte selbst "wenn der Ort nichts hergibt, ist das auch ok")
+        // -> Fall blieb 27 Szenen bei 3 Indizien. Jetzt: kleine Luecke = dezent
+        // (bleibt organisch), grosse Luecke (>=3) = HARTER Pflicht-Push mit
+        // indiz_neu-Zwang. So haengt kein Fall mehr dutzende Szenen bei 3 Indizien.
+        const _indizLuecke = _erwartetIndiz - _indizCount;
+        if (_indizLuecke >= 3) {
+          timeContext += `\n\nERMITTLUNG STOCKT (PFLICHT, Sz${nextScene}): Karl ist seit vielen Szenen bei nur ${_indizCount} Indizien (erwartet waeren ~${_erwartetIndiz}). Der Fall darf NICHT weiter auf der Stelle treten. Diese Szene MUSS einen konkreten neuen Ermittlungsfortschritt liefern und ihn in "indiz_neu" eintragen: ein Beweisstueck, eine belastende Aussage, ein Dokument, ein Name, eine konkrete Verbindung. KEINE rein atmosphaerische Szene, KEINE Wiederholung von Bekanntem. Ein konkreter Mosaikstein, der den Fall messbar voranbringt - jetzt.`;
+          if (typeof diag === 'function') diag('progress', '⚡ INDIZ-PFLICHT (Ermittlung stockt hart: ' + _indizCount + ' Ind / erwartet ~' + _erwartetIndiz + ', Luecke ' + _indizLuecke + ') - HARTER Push mit indiz_neu-Zwang');
+        } else {
+          timeContext += `\n\nNEUER ORT - HINWEIS-CHANCE (dezent): Karl kommt an einem neuen, fall-relevanten Schauplatz an. Dieser Ort SOLLTE etwas Konkretes zur Ermittlung beitragen - ein beobachtbares Detail, eine Aussage einer Person hier, eine Spur, ein Dokument, ein Widerspruch. NICHT erzwungen-kuenstlich ("hier liegt zufaellig der entscheidende Beweis"), sondern plausibel aus dem Ort heraus. Es muss KEIN grosser Durchbruch sein - ein kleiner, konkreter Mosaikstein reicht. Wenn der Ort dramaturgisch nichts hergibt, ist das auch ok - dann liefert die naechste Station etwas.`;
+          if (typeof diag === 'function') diag('progress', 'Indiz-Kopplung (neuer Ort, Ermittlung duenn: ' + _indizCount + ' Indizien / erwartet ~' + _erwartetIndiz + ') - dezenter Hinweis-Push');
+        }
       }
     }
 
@@ -16701,6 +16722,7 @@ async function startGame() {
   hungerAccumulator = 0;
   romanticTension = 0;
   lastRomanceNpcScene = -99;  // v7.12.104: Romance-NPC-Tracking zuruecksetzen
+  lastRomancePushScene = -99; // v7.12.130: Romance-Push-Cooldown zuruecksetzen
   karlMuedeSignalScene = -99; // v7.12.112: Müdigkeits-Signal zuruecksetzen
   romanceReceptive = {};   // v7.12.17: Wuerfel-Ergebnisse zuruecksetzen
   romanceRejected = {};
@@ -18824,7 +18846,7 @@ async function chooseOption(option) {
       // das ~63% Erfolg bei der ersten Annaeherung (vorher ~25%).
       const offen = Math.random() < 0.70;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.129] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.130] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -19153,7 +19175,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.129] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.130] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -20208,7 +20230,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           } else if (!tensionHighEnoughForArrest && folterSceneCount >= custodyReleaseFloor) {
             // STILLER RELEASE: nur noch als Notventil bei langem Drift (5+ Sz). Karl ist
             // faktisch frei (KI erzaehlt ihn lange ohne Stasi-Kontext), System zieht nach.
-            console.warn('[Schatten v7.12.129] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
+            console.warn('[Schatten v7.12.130] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet');
             setCustodyState(false, 'stiller-release');
           } else if (!tensionHighEnoughForArrest) {
@@ -20224,7 +20246,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.129] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.130] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -20750,7 +20772,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof diag === 'function') {
           diag('state', '⚡ NOTFLUCHT GELUNGEN - Karl frei + 4 Sz Gnadenfrist, Stasi-Tension ' + prevTension + ' -> 3 (gesucht, aber nicht sofort wieder greifbar)');
         }
-        console.log('[Schatten v7.12.129] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
+        console.log('[Schatten v7.12.130] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
         // v7.11.56: Toast bei Erfolg - Spieler hat geklickt und soll Wuerfel-
         // Ergebnis direkt sehen, nicht nur narrative Andeutungen.
         if (typeof showProgressToast === 'function') {
@@ -22881,7 +22903,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.129] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.130] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
@@ -22924,6 +22946,17 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     // faellen nie zutrifft. Jetzt eigenstaendig auf derselben Ebene.
     if (scene.zielperson_gefunden === true && !caseProgress.zielpersonGefunden) {
       const zpFloorOk = caseProgress.stage >= 1 && sceneCounter >= 4;
+      // v7.12.130 (Anlass Goerke-Run v7.12.129): MORDFALL-AUSSCHLUSS. Bei einem
+      // Mordfall ist das Opfer TOT - "Zielperson gefunden" ("X ist gefunden,
+      // jetzt zum Klienten") ist dann sprachlich/logisch falsch (Mathilde war
+      // seit 4 Monaten tot, trotzdem feuerte "GEFUNDEN"). Der korrekte Loesungsweg
+      // bei Mord ist "Wahrheit erkannt"/"Taeter ueberfuehrt", NICHT "gefunden".
+      // Darum: bei caseType 'mord' das zielperson_gefunden-Signal gar nicht als
+      // Auffinde-Erfolg werten (wahrheitErkannt/ueberfuehrt tragen die Loesung).
+      const _ctZp = (caseSetup && caseSetup.caseType) || '';
+      if (_ctZp === 'mord') {
+        diag('drift', 'scene.zielperson_gefunden:true bei MORDFALL ignoriert - Opfer ist tot, "gefunden" unpassend. Loesung laeuft ueber Wahrheit erkannt / ueberfuehrt.');
+      } else {
       // v7.12.129 PLAUSIBILITAETS-GATE (Anlass Wessel- + Wegener-Run v7.12.127):
       // Die KI setzte zielperson_gefunden:true, sobald Karl den VERDAECHTIGEN
       // stellte, der die Zielperson festhaelt - obwohl die ZIELPERSON selbst
@@ -22980,6 +23013,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       } else {
         diag('drift', 'scene.zielperson_gefunden:true ignoriert - zu frueh (Sz ' + sceneCounter + ', Stage ' + caseProgress.stage + ')');
       }
+      } // Ende Nicht-Mord-Zweig (v7.12.130)
     }
     // v7.12.64: WAHRHEITS-DURCHBRUCH persistieren. Bei Wahrheits-Faellen kann
     // sich herausstellen, dass es KEIN Verbrechen mit Taeter war (echter
