@@ -2777,7 +2777,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.123</div>
+    <div class="start-version">Schatten v7.12.124</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2941,7 +2941,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.123</span>
+    <span>Schatten v7.12.124</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5488,7 +5488,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.123';
+window.SCHATTEN_VERSION = 'v7.12.124';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5736,16 +5736,20 @@ function normalizeCaseProgress(raw) {
   if (!Array.isArray(merged.toastLog)) merged.toastLog = [];
   if (!Array.isArray(merged.verknuepfungen)) merged.verknuepfungen = [];
   if (!merged.npcMemory || typeof merged.npcMemory !== 'object') merged.npcMemory = {};
-  // v7.12.123 (ChatGPT-Review): Typen haerten - alte/manipulierte Saves koennen "3",
-  // "true" als Strings enthalten. stage clampen, Booleans strikt, Zahlen parsen.
+  // v7.12.124 (ChatGPT-Review): String-Booleans KORREKT migrieren. Vorher machte
+  // "merged[key] === true" aus "true"/"1"/1 faelschlich false - das Gegenteil von robustem
+  // Migrieren (ein alter Save mit istGelöst:"true" wurde wieder ungelöst). Jetzt via toBool.
+  const _toBool = (v) => v === true || v === 1 || v === '1' || String(v).toLowerCase() === 'true';
   merged.stage = Math.max(0, Math.min(4, parseInt(merged.stage, 10) || 0));
   for (const key of ['ueberfuehrt','zielpersonGefunden','wahrheitErkannt','suspectConfronted','istGelöst','klientGesprochen','resolveEverReady','pendingCustodyConfirm','forceCustodyNextScene','diebesgutZurueck']) {
-    merged[key] = merged[key] === true;
+    merged[key] = _toBool(merged[key]);
   }
   merged.lastEurekaScene = parseInt(merged.lastEurekaScene, 10) || 0;
   merged._lastIndizScene = parseInt(merged._lastIndizScene, 10) || 0;
   merged.lastStasiScene = parseInt(merged.lastStasiScene, 10) || 0;
   merged.stage2StartDay = (merged.stage2StartDay == null) ? null : (parseInt(merged.stage2StartDay, 10) || null);
+  merged.stage2StartScene = parseInt(merged.stage2StartScene, 10) || 0;
+  merged.stage3StartScene = parseInt(merged.stage3StartScene, 10) || 0;
   return merged;
 }
 // Auftrags-Setup aus dem Intro: feste Story-Anker die Karl NIE vergessen darf.
@@ -5783,6 +5787,27 @@ let caseIsPolitical = false;
 // Das verhindert dass Mistral spontan "Mann im Trenchcoat" einbaut und damit
 // Stasi-Tension auf einem privaten Affaere-Fall auf 4/5 hochpusht.
 let stasiCapForCase = 5;  // Default 5 = jede Tension moeglich (Backward-Compat)
+// v7.12.124 (ChatGPT-Review): zentrale Tension-Erhoehung, die IMMER den Setup-Cap
+// respektiert. Vorher umgingen zwei Stellen den Cap mit Math.min(5,...) statt
+// Math.min(cap,...), wodurch ein niedriger Cap (z.B. 2 bei unpolitischen Faellen)
+// trotzdem ueberschritten werden konnte. allowOverCap=true nur fuer bewusste
+// Grossalarme (z.B. Karl erschiesst einen VP-Beamten).
+function getStasiCap() {
+  return (typeof stasiCapForCase === 'number') ? stasiCapForCase : 5;
+}
+function raiseStasiTension(amount, reason, allowOverCap) {
+  const before = (typeof stasiTension === 'number') ? stasiTension : 0;
+  const target = before + (amount || 0);
+  if (allowOverCap) {
+    stasiTension = Math.min(5, target);
+  } else {
+    stasiTension = Math.min(getStasiCap(), target);
+  }
+  if (stasiTension !== before && typeof diag === 'function') {
+    diag('state', 'Stasi-Tension ' + before + ' -> ' + stasiTension + ' (' + (reason || '?') + ', Cap ' + (allowOverCap ? '5 (Grossalarm)' : getStasiCap()) + ')');
+  }
+  return stasiTension;
+}
 // Warnung-Counter: wie oft hat die KI in den letzten Szenen Stasi/MfS erwaehnt?
 // Steigt mit jedem Erwaehnen, sinkt mit ruhigen Szenen. Bei 3+ kommt Festnahme moeglich.
 let stasiTension = 0;
@@ -6641,23 +6666,35 @@ function pickBestGermanVoice(voices) {
 // stehen mehrheitlich Umlaute drin, daher pauschal konvertieren ist okay.
 function convertAeOeUeForTTS(text) {
   if (!text || typeof text !== 'string') return text;
-  return text
-    // ae -> ä (nur nach Konsonant, nicht nach Vokal wie "Maerz" oder "Ostraebe")
-    // tatsaechlich: alle ae innerhalb von Woertern. Auch "Schaefer" -> "Schäfer".
-    // Eckfaelle wie "Aerger" (am Wortanfang) auch fangen.
-    .replace(/Ae/g, 'Ä')
-    .replace(/ae/g, 'ä')
-    .replace(/Oe/g, 'Ö')
-    .replace(/oe/g, 'ö')
-    .replace(/Ue/g, 'Ü')
-    .replace(/ue/g, 'ü')
-    // ss am Wortende oder zwischen kurzen Vokalen -> ß. Konservativer: nur
-    // bekannte Patterns. Hier nur "strasse" -> "straße", "ss" sonst lassen
-    // weil "Schluss" und "Kuss" wirklich ss haben.
-    .replace(/strasse/g, 'straße')
-    .replace(/Strasse/g, 'Straße')
-    .replace(/strassen/g, 'straßen')
-    .replace(/Strassen/g, 'Straßen');
+  // v7.12.124 (ChatGPT-Review): "ue" NICHT mehr pauschal zu "ü". Das zerstoerte normale
+  // Woerter: Mauer->Maür (!), neue->neü, Feuer->Feür, heute->heüte, teuer->teür. Gerade
+  // "Karl Mauer" kommt staendig vor. Jetzt: haeufige echte ue/ae/oe-Woerter schuetzen
+  // (Platzhalter), dann ASCII-Umlaute konvertieren, dann Platzhalter zurueck.
+  // So wird "Hohenschoenhausen"->"Hohenschönhausen" und "fuer"->"für", aber "Mauer" bleibt.
+  const _guard = [
+    // ue-Woerter, die KEINE Umlaute sind:
+    'neue','neuen','neuer','neues','neue','heute','heutige','heutigen','Feuer','feuer','teuer','teure','teuren','Steuer','steuer','Abenteuer','Mauer','mauer','Mauern','mauern','Bauer','bauer','Dauer','dauer','dauert','dauern','genau','sauer','schlau','grau','blau','Frau','frauen','Frauen','treu','scheu','Reue','Leute','leute','deute','deuten','heuer','Scheune','Beute','Meute','beuteln','Kreuz','kreuz','Europa','neugierig','Neugier','euch','euer','eure','euren','Bernauer','Prenzlauer','genauer','schlauer','blauer','grauer','Brauer','brauer',
+    // oe-Woerter (selten ASCII-Umlaut): keine haeufigen Faelle die brechen
+    // ae-Woerter:
+    'Israel'
+  ];
+  let s = text;
+  const _marks = [];
+  // Schuetze Guard-Woerter mit eindeutigem Platzhalter
+  _guard.forEach((w, i) => {
+    if (!w) return;
+    const re = new RegExp('\\b' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'g');
+    s = s.replace(re, () => { const ph = '\u0001' + i + '\u0001'; _marks.push([ph, w]); return ph; });
+  });
+  s = s
+    .replace(/Ae/g, 'Ä').replace(/ae/g, 'ä')
+    .replace(/Oe/g, 'Ö').replace(/oe/g, 'ö')
+    .replace(/Ue/g, 'Ü').replace(/ue/g, 'ü')
+    .replace(/strasse/g, 'straße').replace(/Strasse/g, 'Straße')
+    .replace(/strassen/g, 'straßen').replace(/Strassen/g, 'Straßen');
+  // Platzhalter zuruecksetzen
+  _marks.forEach(([ph, w]) => { s = s.split(ph).join(w); });
+  return s;
 }
 
 // Erzeugt eine SpeechSynthesisUtterance mit deutschen Stimme-Einstellungen.
@@ -6950,7 +6987,8 @@ function showVoicePicker(event) {
           window.speechSynthesis.cancel();
           const u = new SpeechSynthesisUtterance('Karl Mauer ermittelt.');
           u.voice = v;
-          u.lang = 'de-DE';
+          if (v.voiceURI) u.voiceURI = v.voiceURI; // v7.12.124
+          u.lang = v.lang || 'de-DE';
           u.rate = currentRate;
           window.speechSynthesis.speak(u);
           title.textContent = '✓ ' + v.name + ' ausgewählt';
@@ -6961,7 +6999,8 @@ function showVoicePicker(event) {
           window.speechSynthesis.cancel();
           const u = new SpeechSynthesisUtterance('Karl Mauer ermittelt. Berlin, neunzehnhundertdreiundfuenfzig.');
           u.voice = v;
-          u.lang = 'de-DE';
+          if (v.voiceURI) u.voiceURI = v.voiceURI; // v7.12.124
+          u.lang = v.lang || 'de-DE';
           u.rate = currentRate;
           window.speechSynthesis.speak(u);
         }
@@ -7092,7 +7131,8 @@ function showVoicePicker(event) {
         window.speechSynthesis.cancel();
         const u = new SpeechSynthesisUtterance('Karl Mauer ermittelt.');
         u.voice = best;
-        u.lang = 'de-DE';
+        if (best.voiceURI) u.voiceURI = best.voiceURI; // v7.12.124
+        u.lang = best.lang || 'de-DE';
         u.rate = currentRate;
         window.speechSynthesis.speak(u);
         title.textContent = '✓ Beste Stimme: ' + best.name;
@@ -8177,14 +8217,20 @@ function showCaseFailed(reason) {
   failEl.classList.remove('hidden');
 }
 function showLoading(customText) {
+  // v7.12.124 (ChatGPT-Review): nullsicher wie showError.
   const loading = document.getElementById('loading');
-  loading.classList.remove('hidden');
-  document.getElementById('options').classList.add('hidden');
-  document.getElementById('error').classList.add('hidden');
-  document.getElementById('wait-box').classList.add('hidden');
-  document.getElementById('daily-limit').classList.add('hidden');
-  const textEl = loading.querySelector('.loading-text');
+  const options = document.getElementById('options');
+  const error = document.getElementById('error');
+  const waitBox = document.getElementById('wait-box');
+  const dailyLimit = document.getElementById('daily-limit');
+  if (loading) loading.classList.remove('hidden');
+  if (options) options.classList.add('hidden');
+  if (error) error.classList.add('hidden');
+  if (waitBox) waitBox.classList.add('hidden');
+  if (dailyLimit) dailyLimit.classList.add('hidden');
+  const textEl = loading ? loading.querySelector('.loading-text') : null;
   if (textEl) textEl.textContent = customText || 'Karl denkt nach';
+  if (!loading) return;
   // v7.9.6: Wenn keine Szenen sichtbar sind (z.B. ganz am Anfang oder nach
   // Reset), das Loading prominent in der Mitte zeigen statt unauffaellig unten.
   const logEl = document.getElementById('log');
@@ -11875,7 +11921,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.123] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.124] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -18668,7 +18714,7 @@ async function chooseOption(option) {
       // das ~63% Erfolg bei der ersten Annaeherung (vorher ~25%).
       const offen = Math.random() < 0.70;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.123] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.124] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -18997,7 +19043,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.123] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.124] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -20045,7 +20091,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           } else if (!tensionHighEnoughForArrest && folterSceneCount >= custodyReleaseFloor) {
             // STILLER RELEASE: nur noch als Notventil bei langem Drift (5+ Sz). Karl ist
             // faktisch frei (KI erzaehlt ihn lange ohne Stasi-Kontext), System zieht nach.
-            console.warn('[Schatten v7.12.123] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
+            console.warn('[Schatten v7.12.124] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet');
             setCustodyState(false, 'stiller-release');
           } else if (!tensionHighEnoughForArrest) {
@@ -20061,7 +20107,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.123] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.124] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -20406,9 +20452,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof diag === 'function') diag('state', 'Romance-Tension ' + beforeR + ' -> ' + romanticTension);
       }
       if (categoryMechanicsResult.stasiTension > 0 && typeof stasiTension === 'number') {
-        const beforeS = stasiTension;
-        stasiTension = Math.min(5, stasiTension + categoryMechanicsResult.stasiTension);
-        if (typeof diag === 'function') diag('state', 'Stasi-Tension ' + beforeS + ' -> ' + stasiTension);
+        raiseStasiTension(categoryMechanicsResult.stasiTension, 'Kategorie-Mechanik'); // v7.12.124: Cap respektieren
       }
       // v7.10.10: MAX_VERLUST zwischen KI-Wert und Kategorie-Mindest-Kosten.
       // Frueher (v7.10): Kategorie hat KI-Wert immer ueberschrieben.
@@ -20589,7 +20633,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof diag === 'function') {
           diag('state', '⚡ NOTFLUCHT GELUNGEN - Karl frei + 4 Sz Gnadenfrist, Stasi-Tension ' + prevTension + ' -> 3 (gesucht, aber nicht sofort wieder greifbar)');
         }
-        console.log('[Schatten v7.12.123] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
+        console.log('[Schatten v7.12.124] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
         // v7.11.56: Toast bei Erfolg - Spieler hat geklickt und soll Wuerfel-
         // Ergebnis direkt sehen, nicht nur narrative Andeutungen.
         if (typeof showProgressToast === 'function') {
@@ -22710,7 +22754,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.123] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.124] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
@@ -22931,11 +22975,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       ];
       const heikleHits = heikleChoiceTrigger.filter(p => p.test(choiceLower)).length;
       if (heikleHits > 0) {
-        const prev = stasiTension;
-        stasiTension = Math.min(5, stasiTension + heikleHits);
-        if (stasiTension !== prev) {
-          diag('state', 'Stasi-Tension durch heikle Spieleraktion: ' + prev + ' -> ' + stasiTension);
-        }
+        raiseStasiTension(heikleHits, 'heikle Spieleraktion'); // v7.12.124: Cap respektieren
       }
     }
 
