@@ -2821,7 +2821,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.142</div>
+    <div class="start-version">Schatten v7.12.143</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2985,7 +2985,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.142</span>
+    <span>Schatten v7.12.143</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5536,7 +5536,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.142';
+window.SCHATTEN_VERSION = 'v7.12.143';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -12192,7 +12192,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.142] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.143] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -14513,6 +14513,28 @@ Es ist NICHT realistisch, dass eine Trauergesellschaft 18 Stunden an einem Grab 
         recap += `\nFALL-TYP: WAHRHEITS-FALL. Eine offizielle Version steht (Selbstmord/Herzinfarkt/Albrechts Schuld), Karl glaubt sie nicht. Stages: (1) Indizien gegen offizielle Version, (2) eigene Theorie formen, (3) Beweis fuer wahre Version, (4) Klient/Oeffentlichkeit informieren. Tatverdaechtiger erst wenn klar ist WER tatsaechlich verantwortlich ist (kann auch eine Institution / Politik sein).\n`;
       } else if (ct === 'diebstahl') {
         recap += `\nFALL-TYP: DIEBSTAHL-FALL. Karl soll das Diebesgut zurueck und/oder die Diebe identifizieren. Stages: (1) Spur zur Hehlerei, (2) Hehler oder Dieb finden, (3) Diebesgut/Geld zurueckholen oder Polizei, (4) Klient berichten.\n`;
+        // v7.12.143 (Anlass: 2x Krause-Run v7.12.142, je 61 Szenen ohne Abschluss):
+        // PROAKTIVER GUT-HOL-PUSH. Befund: Karl wusste seit Sz~40, dass das Etui in
+        // "Schliessfach 412" liegt - aber die KI bot DANACH nie eine Option zum HOLEN an
+        // (nur "zu Krause fahren/berichten", "Roth anrufen", "Schreibtisch durchsuchen").
+        // Ohne physisches Holen blieb der Fall (korrekt) gesperrt -> Endlosschleife. Die
+        // bestehenden Diebstahl-Pushes feuern nur bei einem ABSCHLUSS-Versuch der KI -
+        // hier versuchte die KI nie abzuschliessen. Fix: sobald das Diebesgut-Versteck
+        // bekannt ist (Versteck-Indiz) ODER der Fall reif ist (Stage>=2 / viele Szenen)
+        // UND das Gut noch nicht zurueck -> die KI MUSS eine konkrete HOL-Option anbieten.
+        if (!caseProgress.diebesgutZurueck) {
+          const _indz = Array.isArray(caseProgress.indizien) ? caseProgress.indizien : [];
+          const _indzText = _indz.map(i => (typeof i === 'string' ? i : (i && (i.text || i.beschreibung)) || '')).join(' ').toLowerCase();
+          const _versteckBekannt = /(schliessfach|schließfach|versteck|lager|hinterzimmer|kofferraum|tresor|depot|aufbewahr|befindet sich|liegt (in|im|bei|auf)|bei (tante |frau |herr )?\w+ im|adresse)/.test(_indzText);
+          const _reif = (caseProgress.stage || 0) >= 2 || sceneCounter >= 12;
+          if (_versteckBekannt || _reif) {
+            if (_versteckBekannt) {
+              recap += `\nGUT-HOL-PFLICHT (DIEBSTAHL, KRITISCH): Karl WEISS bereits, wo das Diebesgut ist (siehe Indizien - z.B. ein Schliessfach, Versteck, Lager oder eine konkrete Adresse). Der Fall kann NUR abgeschlossen werden, wenn Karl das Gut PHYSISCH an sich bringt. Biete JETZT mindestens EINE Option an, die Karl direkt zum Versteck/Aufbewahrungsort fuehrt, um das Gut zu HOLEN (hinfahren, aufbrechen, abholen, an sich nehmen) - kein blosses Weiterermitteln, kein Berichten an den Klienten, BEVOR das Gut in Karls Haenden ist. Wenn Karl beim Gut ankommt: zeige konkret, wie er es an sich nimmt (in die Manteltasche steckt, an sich nimmt, sichert).\n`;
+            } else {
+              recap += `\nGUT-BESCHAFFUNG (DIEBSTAHL): Der Fall ist reif, aber das Diebesgut ist NOCH NICHT zurueck. Lenke die Ermittlung jetzt aktiv auf das AUFFINDEN UND HOLEN des Guts - wo ist es (Hehler, Versteck, Lager)? Biete Optionen an, die Karl naeher ans physische Diebesgut bringen, nicht nur weitere Hintergrund-Aufklaerung. Der Auftrag ist die WIEDERBESCHAFFUNG.\n`;
+            }
+          }
+        }
       } else if (ct === 'mord') {
         recap += `\nFALL-TYP: MORD-FALL. Klassischer Krimi-Pfad. Stages: (1) Indizien sammeln, (2) Verdaechtigen identifizieren (Motiv+Gelegenheit), (3) Verdaechtigen ueberfuehren (Gestaendnis/handfester Beweis), (4) Klient berichten.\n`;
       } else if (ct === 'politisch') {
@@ -19055,7 +19077,7 @@ async function chooseOption(option) {
       // das ~63% Erfolg bei der ersten Annaeherung (vorher ~25%).
       const offen = Math.random() < 0.70;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.142] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.143] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -19412,7 +19434,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.142] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.143] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -20467,7 +20489,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           } else if (!tensionHighEnoughForArrest && folterSceneCount >= custodyReleaseFloor) {
             // STILLER RELEASE: nur noch als Notventil bei langem Drift (5+ Sz). Karl ist
             // faktisch frei (KI erzaehlt ihn lange ohne Stasi-Kontext), System zieht nach.
-            console.warn('[Schatten v7.12.142] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
+            console.warn('[Schatten v7.12.143] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet');
             setCustodyState(false, 'stiller-release');
           } else if (!tensionHighEnoughForArrest) {
@@ -20483,7 +20505,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.142] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.143] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -21009,7 +21031,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof diag === 'function') {
           diag('state', '⚡ NOTFLUCHT GELUNGEN - Karl frei + 4 Sz Gnadenfrist, Stasi-Tension ' + prevTension + ' -> 3 (gesucht, aber nicht sofort wieder greifbar)');
         }
-        console.log('[Schatten v7.12.142] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
+        console.log('[Schatten v7.12.143] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
         // v7.11.56: Toast bei Erfolg - Spieler hat geklickt und soll Wuerfel-
         // Ergebnis direkt sehen, nicht nur narrative Andeutungen.
         if (typeof showProgressToast === 'function') {
@@ -23140,7 +23162,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.142] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.143] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
