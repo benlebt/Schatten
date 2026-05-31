@@ -22,6 +22,10 @@
     --tension-3: #f4c850;   /* war #f0c040 - kraeftiger */
     --tension-5: #ff4040;   /* war #ff3030 - kraeftiger */
     --error: #ff7070;       /* war #ff6060 - kraeftiger */
+    /* v7.12.135: Leseschrift-Skalierung (Settings, layout-sicher). Skaliert NUR
+       Erzaehltext + Optionen ueber calc(), nicht die UI-Chrome (Status/Header),
+       damit nichts umbricht. Default 1.0, Stufen 0.9-1.6 per localStorage. */
+    --reading-scale: 1;
   }
   * { box-sizing: border-box; }
   /* v7.9.6: Boot-Indicator - sichtbar SOFORT bei Page-Load, bevor das eigentliche
@@ -1354,7 +1358,7 @@
   }
   .scene-text {
     line-height: 1.9;
-    font-size: 15px;
+    font-size: calc(15px * var(--reading-scale));
     color: var(--fg-dim);
     transition: color 0.5s;
     margin: 0;
@@ -1370,7 +1374,7 @@
     border-left: 2px solid rgba(200,191,168,0.35);
     margin: 16px 0 16px 8px;
     color: #7a7060;
-    font-size: 13px;
+    font-size: calc(13px * var(--reading-scale));
     font-style: italic;
   }
   .choice-marker { color: #555; font-size: 11px; }
@@ -1559,7 +1563,7 @@
     color: #cabea2;
     padding: 10px 16px;
     text-align: left;
-    font-size: 13px;
+    font-size: calc(13px * var(--reading-scale));
     line-height: 1.5;
     margin-bottom: 6px;
   }
@@ -2201,6 +2205,36 @@
     user-select: none;
     transition: background 0.15s;
   }
+  /* v7.12.135: Schriftgroessen-Button-Reihe im Settings-Menue */
+  .fontsize-row {
+    display: flex;
+    gap: 6px;
+    padding: 4px 14px 10px;
+  }
+  .fontsize-btn {
+    flex: 1;
+    background: rgba(200,191,168,0.06);
+    border: 1px solid rgba(200,191,168,0.3);
+    color: #cabea2;
+    border-radius: 5px;
+    padding: 8px 4px;
+    cursor: pointer;
+    font-family: inherit;
+    line-height: 1;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .fontsize-btn:nth-child(1) { font-size: 13px; }
+  .fontsize-btn:nth-child(2) { font-size: 15px; }
+  .fontsize-btn:nth-child(3) { font-size: 17px; }
+  .fontsize-btn:nth-child(4) { font-size: 19px; }
+  .fontsize-btn:nth-child(5) { font-size: 21px; }
+  .fontsize-btn small { font-size: 0.6em; vertical-align: middle; }
+  .fontsize-btn:hover { background: rgba(200,191,168,0.12); }
+  .fontsize-btn.active {
+    border-color: var(--accent);
+    color: var(--fg-bright);
+    background: rgba(212,172,104,0.15);
+  }
   .settings-toggle-row:hover {
     background: rgba(200,191,168,0.05);
   }
@@ -2523,6 +2557,18 @@
 
   <div class="settings-divider"></div>
 
+  <!-- v7.12.135: Leseschrift-Groesse (layout-sicher, skaliert nur Erzaehltext +
+       Optionen via --reading-scale, nicht die UI). Fuer Spieler die groessere
+       Schrift brauchen, ohne dass Browser-Zoom das Layout zerlegt. -->
+  <div class="settings-info">Schriftgröße (Lesetext)</div>
+  <div class="fontsize-row" id="fontsize-row">
+    <button type="button" class="fontsize-btn" data-scale="0.9" onclick="setReadingScale(0.9, event)">A<small>−</small></button>
+    <button type="button" class="fontsize-btn" data-scale="1" onclick="setReadingScale(1, event)">A</button>
+    <button type="button" class="fontsize-btn" data-scale="1.15" onclick="setReadingScale(1.15, event)">A<small>+</small></button>
+    <button type="button" class="fontsize-btn" data-scale="1.3" onclick="setReadingScale(1.3, event)">A<small>++</small></button>
+    <button type="button" class="fontsize-btn" data-scale="1.5" onclick="setReadingScale(1.5, event)">A<small>+++</small></button>
+  </div>
+
   <!-- v6.60: Audio-Loop fuer Atmosphaere-Musik (instrumentaler Detektiv-Loop) -->
   <!-- v7.12.73: 4 Tracks (music1..4.mp3) in immer neu gewuerfelter Reihenfolge,
        Endlosschleife. KEIN loop-Attribut mehr (das wuerde nur EINEN Track loopen);
@@ -2773,7 +2819,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.133</div>
+    <div class="start-version">Schatten v7.12.135</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2937,7 +2983,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.133</span>
+    <span>Schatten v7.12.135</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5488,7 +5534,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.133';
+window.SCHATTEN_VERSION = 'v7.12.135';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5822,6 +5868,21 @@ function canForceStasiCustody() {
   if (typeof sceneCounter === 'number' && sceneCounter < 6) return false;
   if (clues < 2) return false;
   if (typeof stasiTension !== 'number' || stasiTension < 5) return false;
+  return true;
+}
+// v7.12.134 (Code-Review): Guard fuer den System-Force-Pfad (stasiHighTensionStreak>=6).
+// Dieser Pfad lief bei Tension>=4 OHNE jeden Floor-Check -> konnte einen politischen
+// Fall doch zu frueh von der Stasi ueberrollen, obwohl getEffectiveStasiCap/
+// canForceStasiCustody das eigentlich verhindern sollen. Gleiche Schutzphilosophie
+// wie canForceStasiCustody (nicht zu frueh, genug Ermittlung), aber Tension>=4 (sonst
+// griffe der High-Tension-Pfad nie, weil canForceStasiCustody Tension>=5 verlangt).
+function canForceStasiCustodyHighTension() {
+  if (!caseIsPolitical) return false;
+  const clues = (caseProgress && Array.isArray(caseProgress.indizien)) ? caseProgress.indizien.length : 0;
+  const stage = (caseProgress && typeof caseProgress.stage === 'number') ? caseProgress.stage : 0;
+  if (typeof sceneCounter === 'number' && sceneCounter < 8) return false; // etwas spaeter als der 5er-Pfad
+  if (clues < 4 && stage < 2) return false; // genug Ermittlung ODER Fall schon fortgeschritten
+  if (typeof stasiTension !== 'number' || stasiTension < 4) return false;
   return true;
 }
 function raiseStasiTension(amount, reason, allowOverCap) {
@@ -6245,6 +6306,36 @@ function updateFooterModel() {
   el.textContent = m.label.toUpperCase() + suffix;
 }
 
+// v7.12.135: Leseschrift-Skalierung. Setzt die CSS-Variable --reading-scale auf
+// dem Wurzelelement; nur .scene-text/.option-btn/.choice-entry haengen per calc()
+// daran, die UI-Chrome bleibt unberuehrt (layout-sicher). Persistenz via localStorage.
+function applyReadingScale(scale) {
+  const s = (typeof scale === 'number' && scale >= 0.8 && scale <= 1.8) ? scale : 1;
+  try { document.documentElement.style.setProperty('--reading-scale', String(s)); } catch (e) {}
+  // Aktiven Button markieren (falls Menue im DOM)
+  try {
+    const btns = document.querySelectorAll('#fontsize-row .fontsize-btn');
+    btns.forEach(b => {
+      const bs = parseFloat(b.getAttribute('data-scale'));
+      b.classList.toggle('active', Math.abs(bs - s) < 0.001);
+    });
+  } catch (e) {}
+  return s;
+}
+function setReadingScale(scale, event) {
+  if (event) event.stopPropagation();
+  const s = applyReadingScale(scale);
+  try { localStorage.setItem('schatten-reading-scale', String(s)); } catch (e) {}
+}
+function loadReadingScale() {
+  let s = 1;
+  try {
+    const raw = localStorage.getItem('schatten-reading-scale');
+    if (raw) { const p = parseFloat(raw); if (p >= 0.8 && p <= 1.8) s = p; }
+  } catch (e) {}
+  applyReadingScale(s);
+  return s;
+}
 function toggleSettings(event) {
   if (event) event.stopPropagation();
   const menu = document.getElementById('settings-menu');
@@ -6261,6 +6352,8 @@ function toggleSettings(event) {
     if (typeof syncMusicButtonText === 'function') syncMusicButtonText();
     // v7.12.9: Debug-Modell-Auswahl im Select-Feld syncen (nur Admin sichtbar)
     if (typeof syncDebugModelSelect === 'function') syncDebugModelSelect();
+    // v7.12.135: aktiven Schriftgroessen-Button markieren
+    if (typeof loadReadingScale === 'function') loadReadingScale();
   }
   menu.classList.toggle('hidden');
 }
@@ -6711,34 +6804,31 @@ function pickBestGermanVoice(voices) {
 // stehen mehrheitlich Umlaute drin, daher pauschal konvertieren ist okay.
 function convertAeOeUeForTTS(text) {
   if (!text || typeof text !== 'string') return text;
-  // v7.12.124 (ChatGPT-Review): "ue" NICHT mehr pauschal zu "ü". Das zerstoerte normale
-  // Woerter: Mauer->Maür (!), neue->neü, Feuer->Feür, heute->heüte, teuer->teür. Gerade
-  // "Karl Mauer" kommt staendig vor. Jetzt: haeufige echte ue/ae/oe-Woerter schuetzen
-  // (Platzhalter), dann ASCII-Umlaute konvertieren, dann Platzhalter zurueck.
-  // So wird "Hohenschoenhausen"->"Hohenschönhausen" und "fuer"->"für", aber "Mauer" bleibt.
-  const _guard = [
-    // ue-Woerter, die KEINE Umlaute sind:
-    'neue','neuen','neuer','neues','neue','heute','heutige','heutigen','Feuer','feuer','teuer','teure','teuren','Steuer','steuer','Abenteuer','Mauer','mauer','Mauern','mauern','Bauer','bauer','Dauer','dauer','dauert','dauern','genau','sauer','schlau','grau','blau','Frau','frauen','Frauen','treu','scheu','Reue','Leute','leute','deute','deuten','heuer','Scheune','Beute','Meute','beuteln','Kreuz','kreuz','Europa','neugierig','Neugier','euch','euer','eure','euren','Bernauer','Prenzlauer','genauer','schlauer','blauer','grauer','Brauer','brauer',
-    // oe-Woerter (selten ASCII-Umlaut): keine haeufigen Faelle die brechen
-    // ae-Woerter:
-    'Israel'
-  ];
+  // v7.12.134 (Code-Review + Datenanalyse): Die globale ue->ü/ae->ä/oe->ö-Regel
+  // war FALSCH und wurde entfernt. Befund aus echten Runs: Gemini-Szenentexte
+  // enthalten bereits ECHTE Umlaute (379 ä/ö/ü vs. 1 ASCII-"fuer" pro Run) - die
+  // Konvertierung war also fast ueberfluessig, zerstoerte aber Woerter, die der
+  // case-sensitive Negativ-Guard nicht abdeckte: "Mauers"->"Maürs", "Neue"->"Neü",
+  // "Die Neue Welt"->"Die Neü Welt". Gerade "Karl Mauers Buero" kommt staendig vor.
+  // Negativ- wie Positivliste sind beide ein Wettruesten (hunderte echte ue-Woerter).
+  // Loesung: nur eine kleine POSITIVliste sicherer Eigennamen/Woerter ersetzen, die
+  // (a) als ASCII durchrutschen koennten und (b) NIE Teil eines normalen Wortes sind.
+  // Plus strasse->straße (sicher, "strasse" wird nie zu etwas Falschem).
   let s = text;
-  const _marks = [];
-  // Schuetze Guard-Woerter mit eindeutigem Platzhalter
-  _guard.forEach((w, i) => {
-    if (!w) return;
-    const re = new RegExp('\\b' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'g');
-    s = s.replace(re, () => { const ph = '\u0001' + i + '\u0001'; _marks.push([ph, w]); return ph; });
+  const _fix = [
+    ['Hohenschoenhausen','Hohenschönhausen'], ['Schoenhauser','Schönhauser'],
+    ['Schoeneberg','Schöneberg'], ['Koepenick','Köpenick'], ['Koethener','Köthener'],
+    ['Schaefer','Schäfer'], ['Schroeder','Schröder'], ['Mueller','Müller'],
+    ['Goerke','Görke'], ['Wuensche','Wünsche'], ['Naehe','Nähe'],
+    ['Buero','Büro'], ['Bueros','Büros'],
+    ['fuer','für'], ['Fuer','Für'], ['ueber','über'], ['Ueber','Über'],
+    ['zurueck','zurück'], ['Tuer','Tür'], ['Tueren','Türen'],
+    ['Strasse','Straße'], ['strasse','straße'], ['Strassen','Straßen'], ['strassen','straßen']
+  ];
+  _fix.forEach(([a, b]) => {
+    const re = new RegExp('\\b' + a.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'g');
+    s = s.replace(re, b);
   });
-  s = s
-    .replace(/Ae/g, 'Ä').replace(/ae/g, 'ä')
-    .replace(/Oe/g, 'Ö').replace(/oe/g, 'ö')
-    .replace(/Ue/g, 'Ü').replace(/ue/g, 'ü')
-    .replace(/strasse/g, 'straße').replace(/Strasse/g, 'Straße')
-    .replace(/strassen/g, 'straßen').replace(/Strassen/g, 'Straßen');
-  // Platzhalter zuruecksetzen
-  _marks.forEach(([ph, w]) => { s = s.split(ph).join(w); });
   return s;
 }
 
@@ -7476,6 +7566,8 @@ function selectCurrentSceneAndOptions(event) {
 // labeln. NICHT automatisch starten (Autoplay-Policy verbietet das ohne
 // user gesture). User muss Button erneut druecken.
 window.addEventListener('DOMContentLoaded', () => {
+  // v7.12.135: gespeicherte Leseschrift-Groesse sofort anwenden (vor erstem Render)
+  if (typeof loadReadingScale === 'function') loadReadingScale();
   // v7.12.66: Einmalige Migration. Bis v7.12.65 war der "Musik beim Vorlesen"-
   // Default 1.0 (100%) - das fuehlte sich auf iOS zu laut an (Musik uebertoente
   // die Stimme / sprang nach dem Leiserstellen wieder hoch). Wer diesen Wert
@@ -11995,7 +12087,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.133] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.135] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -15492,7 +15584,7 @@ VERBOTEN: Karl wacht woanders auf ohne Erklaerung. Wenn du Pfad B waehlst, MUSST
         ? `nach "${_spielerReiseZiel}"`
         : 'zu dem angesagten Ort';
       timeContext += `\n\nSPIELER-ORTSWECHSEL DURCHSETZEN (KRITISCH): Die soeben gewaehlte Aktion war eine klare REISE ${_zielText}. Die naechste Szene MUSS Karl auf dem Weg dorthin oder bereits am Zielort zeigen - der "ort"-Eintrag MUSS sich entsprechend aendern. Bleibe NICHT am vorigen Ort (z.B. Buero), erfinde KEINE neue Person die an die Tuer klopft, KEINEN Anruf der Karl aufhaelt, KEINE Mikroszene die die Reise verzoegert. Karl bricht auf und kommt an. Der Ortswechsel passiert zu Beginn der Szene.`;
-      if (typeof diag === 'function') diag('drift', 'SPIELER-ORTSWECHSEL durchgesetzt (Reise ' + (_spielerReiseZiel || 'angesagt') + ', KI blieb am Ort - scenesAtSameLocation=' + scenesAtSameLocation + ')');
+      if (typeof diag === 'function') diag('drift', 'SPIELER-ORTSWECHSEL-PUSH aktiv (Reise ' + (_spielerReiseZiel || 'angesagt') + ' - praeventiver Push VOR KI-Antwort, scenesAtSameLocation=' + scenesAtSameLocation + ')');
     }
     // v7.12.67: Ortswechsel-Pflicht NEU justiert. Die v7.12.66-Verschaerfung (6 Sz
     // hart + HARD-FORCE bei 2 ignoriert) war zu aggressiv - der 13:22-Run hatte 8
@@ -18852,7 +18944,7 @@ async function chooseOption(option) {
       // das ~63% Erfolg bei der ersten Annaeherung (vorher ~25%).
       const offen = Math.random() < 0.70;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.133] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.135] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -19209,7 +19301,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.133] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.135] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -20264,7 +20356,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           } else if (!tensionHighEnoughForArrest && folterSceneCount >= custodyReleaseFloor) {
             // STILLER RELEASE: nur noch als Notventil bei langem Drift (5+ Sz). Karl ist
             // faktisch frei (KI erzaehlt ihn lange ohne Stasi-Kontext), System zieht nach.
-            console.warn('[Schatten v7.12.133] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
+            console.warn('[Schatten v7.12.135] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet');
             setCustodyState(false, 'stiller-release');
           } else if (!tensionHighEnoughForArrest) {
@@ -20280,7 +20372,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.133] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.135] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -20806,7 +20898,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof diag === 'function') {
           diag('state', '⚡ NOTFLUCHT GELUNGEN - Karl frei + 4 Sz Gnadenfrist, Stasi-Tension ' + prevTension + ' -> 3 (gesucht, aber nicht sofort wieder greifbar)');
         }
-        console.log('[Schatten v7.12.133] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
+        console.log('[Schatten v7.12.135] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
         // v7.11.56: Toast bei Erfolg - Spieler hat geklickt und soll Wuerfel-
         // Ergebnis direkt sehen, nicht nur narrative Andeutungen.
         if (typeof showProgressToast === 'function') {
@@ -22937,7 +23029,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.133] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.135] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
@@ -23578,7 +23670,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         // setzt karlInStasiCustody=true OHNE Lock-Check -> Yo-Yo.
         // Plus: trackCustodyChange explizit aufrufen damit der Wechsel registriert
         // wird (sonst sieht nur showHeader den finalen Zustand).
-        if (stasiHighTensionStreak >= 6 && !hardForcedArrestUsed && !custodyLocked) {
+        if (stasiHighTensionStreak >= 6 && !hardForcedArrestUsed && !custodyLocked && canForceStasiCustodyHighTension()) {
           // v7.11.97: Custody NICHT mehr sofort setzen. User-Befund Vogt-Run 1304:
           // Der Header zeigte "GEWAHRSAM" eine Szene BEVOR die Story die Festnahme
           // erzaehlte (manchmal entkam Karl sogar erzaehlerisch, aber der Header
@@ -23605,6 +23697,15 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             stasiTension = 2;
             diag('state', 'Stasi-Tension Reset wegen Custody-Lock: ' + prevT + ' -> 2 (Pingpong-Pause)');
           }
+        } else if (stasiHighTensionStreak >= 6) {
+          // v7.12.134: Streak hoch, aber canForceStasiCustodyHighTension() blockt
+          // (zu frueh / zu wenig Ermittlung). KEINE Festnahme - der Fall soll erst
+          // ermittelbar bleiben. Streak leicht daempfen, damit das Diag nicht jede
+          // Szene spammt, aber NICHT auf 0 (sobald die Floors erfuellt sind, greift
+          // der Force-Pfad oben sofort).
+          const _cl = (caseProgress && Array.isArray(caseProgress.indizien)) ? caseProgress.indizien.length : 0;
+          diag('progress', 'System-Force-Custody UNTERDRUECKT (Schutz): Streak ' + stasiHighTensionStreak + ', aber zu frueh/zu duenn (Sz ' + sceneCounter + ', ' + _cl + ' Indizien, Tension ' + stasiTension + ') - Fall bleibt ermittelbar');
+          stasiHighTensionStreak = 4;
         }
       } else {
         stasiHighTensionStreak = 0;
@@ -24395,6 +24496,21 @@ function saveGameState() {
       ortPflichtIgnoredCount: (typeof ortPflichtIgnoredCount === 'number' ? ortPflichtIgnoredCount : 0),
       fahndungUsed: (typeof fahndungUsed === 'boolean' ? fahndungUsed : false),
       toastHistory: toastHistory,
+      // v7.12.134 (Code-Review iOS-Restore): bisher fehlende, aber mechanik-relevante
+      // State-Felder. Ohne caseIsPolitical kippen nach Reload alle politischen Pfade
+      // (Stasi, Romance-Schwelle, Toasts); ohne die Datumsfelder springt das historische
+      // Datum auf den Default 1953-11-10 zurueck; die Stasi/Custody-Streaks gingen verloren.
+      caseIsPolitical: (typeof caseIsPolitical === 'boolean' ? caseIsPolitical : false),
+      gameStartDate: gameStartDate,
+      gameCurrentDate: gameCurrentDate,
+      stasiHighTensionStreak: (typeof stasiHighTensionStreak === 'number' ? stasiHighTensionStreak : 0),
+      stasiMaxTensionStreak: (typeof stasiMaxTensionStreak === 'number' ? stasiMaxTensionStreak : 0),
+      stasiCooldownCounter: (typeof stasiCooldownCounter === 'number' ? stasiCooldownCounter : 0),
+      metaCustodyGracePeriod: (typeof metaCustodyGracePeriod === 'number' ? metaCustodyGracePeriod : 0),
+      pendingCustodyResolveReady: (typeof pendingCustodyResolveReady === 'boolean' ? pendingCustodyResolveReady : false),
+      timedEventState: (typeof timedEventState !== 'undefined' ? timedEventState : null),
+      lastRomancePushScene: (typeof lastRomancePushScene === 'number' ? lastRomancePushScene : -99),
+      romancePushCount: (typeof romancePushCount === 'number' ? romancePushCount : 0),
     };
     localStorage.setItem(SCHATTEN_SAVE_KEY, JSON.stringify(snap));
   } catch (e) {
@@ -24478,6 +24594,22 @@ function restoreGameState() {
     if (typeof ortPflichtIgnoredCount !== 'undefined') ortPflichtIgnoredCount = snap.ortPflichtIgnoredCount || 0;
     if (typeof fahndungUsed !== 'undefined') fahndungUsed = !!snap.fahndungUsed;
     if (snap.toastHistory) toastHistory = snap.toastHistory;
+    // v7.12.134 (Code-Review iOS-Restore): mechanik-relevante Felder wiederherstellen.
+    caseIsPolitical = (typeof snap.caseIsPolitical === 'boolean')
+      ? snap.caseIsPolitical
+      : !!(caseSetup && (caseSetup.politisch || caseSetup.caseType === 'politisch'));
+    gameStartDate = snap.gameStartDate || (caseSetup && caseSetup.startDate) || gameStartDate || '1953-11-10';
+    gameCurrentDate = snap.gameCurrentDate || gameCurrentDate || gameStartDate;
+    if (typeof stasiHighTensionStreak !== 'undefined') stasiHighTensionStreak = snap.stasiHighTensionStreak || 0;
+    if (typeof stasiMaxTensionStreak !== 'undefined') stasiMaxTensionStreak = snap.stasiMaxTensionStreak || 0;
+    if (typeof stasiCooldownCounter !== 'undefined') stasiCooldownCounter = snap.stasiCooldownCounter || 0;
+    if (typeof metaCustodyGracePeriod !== 'undefined') metaCustodyGracePeriod = snap.metaCustodyGracePeriod || 0;
+    if (typeof pendingCustodyResolveReady !== 'undefined') pendingCustodyResolveReady = !!snap.pendingCustodyResolveReady;
+    if (typeof timedEventState !== 'undefined') timedEventState = snap.timedEventState || null;
+    if (typeof lastRomancePushScene !== 'undefined') lastRomancePushScene = (typeof snap.lastRomancePushScene === 'number') ? snap.lastRomancePushScene : -99;
+    if (typeof romancePushCount !== 'undefined') romancePushCount = snap.romancePushCount || 0;
+    // Datum nach Restore aus gameDay/gameStartDate konsistent neu berechnen.
+    if (typeof recalcGameCurrentDate === 'function') { try { recalcGameCurrentDate(); } catch (e) {} }
 
     hideAll();
     const headerEl = document.getElementById('header');
