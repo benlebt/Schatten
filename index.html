@@ -2821,7 +2821,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.143</div>
+    <div class="start-version">Schatten v7.12.144</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2985,7 +2985,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.143</span>
+    <span>Schatten v7.12.144</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5536,7 +5536,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.143';
+window.SCHATTEN_VERSION = 'v7.12.144';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -8332,13 +8332,29 @@ function showCaseSolved() {
     const closingText = earlyAbort
       ? 'Was Karl nicht weiß, wird er nicht mehr finden. Der Korn hilft auch heute.'
       : 'Der Klient ist informiert, das Honorar ist fällig.';
+    // v7.12.144 (User-Wunsch: Abwechslung): zufaelliger Noir-Schlusssatz statt
+    // immer "Karl goennt sich einen ehrlichen Schluck Doppelkorn". Tageszeit-/
+    // Stimmungs-neutral, passt zu jedem Fallausgang.
+    const _flavorPool = [
+      'Karl gönnt sich einen ehrlichen Schluck Doppelkorn.',
+      'Die Underwood bleibt heute kalt. Karl macht Feierabend.',
+      'Draußen fällt der Regen wie immer. Drinnen brennt nur die Schreibtischlampe.',
+      'Karl lehnt sich zurück, die Zigarette glüht im Halbdunkel.',
+      'Ein Fall weniger. Die Miete ist trotzdem noch fällig.',
+      'Berlin schläft nie ganz. Karl für heute schon.',
+      'Das Honorar reicht für ein paar ruhige Tage. Mehr will Karl nicht.',
+      'Karl klappt die Akte zu und löscht das Licht.',
+      'Irgendwo heult eine Sirene. Karl hört schon nicht mehr hin.',
+      'Der Korn schmeckt nach nichts. Aber er wärmt.'
+    ];
+    const _flavor = _flavorPool[Math.floor(Math.random() * _flavorPool.length)];
     solvedEl.innerHTML = `
       <div class="solved-title">${titleText}</div>
       <div class="solved-text">${mainText}<br>
       ${typeof escapeHtml === 'function' ? escapeHtml(outcomeSentence) : outcomeSentence}<br>
       ${closingText}</div>
       <div class="solved-text-small">Tag ${gameDay}, Tageszeit: ${TIMES_OF_DAY[gameTimeIdx]}<br>
-      Karl gönnt sich endlich einen ehrlichen Schluck Doppelkorn.</div>
+      ${typeof escapeHtml === 'function' ? escapeHtml(_flavor) : _flavor}</div>
       <button class="solved-button" onclick="resetGame(true)">Neue Ermittlung</button>
     `;
   }
@@ -12192,7 +12208,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.143] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.144] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -19077,7 +19093,7 @@ async function chooseOption(option) {
       // das ~63% Erfolg bei der ersten Annaeherung (vorher ~25%).
       const offen = Math.random() < 0.70;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.143] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.144] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -19434,7 +19450,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.143] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.144] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -20489,7 +20505,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           } else if (!tensionHighEnoughForArrest && folterSceneCount >= custodyReleaseFloor) {
             // STILLER RELEASE: nur noch als Notventil bei langem Drift (5+ Sz). Karl ist
             // faktisch frei (KI erzaehlt ihn lange ohne Stasi-Kontext), System zieht nach.
-            console.warn('[Schatten v7.12.143] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
+            console.warn('[Schatten v7.12.144] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet');
             setCustodyState(false, 'stiller-release');
           } else if (!tensionHighEnoughForArrest) {
@@ -20505,7 +20521,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.143] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.144] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -21031,7 +21047,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof diag === 'function') {
           diag('state', '⚡ NOTFLUCHT GELUNGEN - Karl frei + 4 Sz Gnadenfrist, Stasi-Tension ' + prevTension + ' -> 3 (gesucht, aber nicht sofort wieder greifbar)');
         }
-        console.log('[Schatten v7.12.143] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
+        console.log('[Schatten v7.12.144] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
         // v7.11.56: Toast bei Erfolg - Spieler hat geklickt und soll Wuerfel-
         // Ergebnis direkt sehen, nicht nur narrative Andeutungen.
         if (typeof showProgressToast === 'function') {
@@ -22786,6 +22802,11 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
               toastText = caseProgress.tatverdaechtiger + ' lokalisiert. Jetzt zum Klienten.';
             } else if (ct === 'beschatten') {
               toastText = 'Beweise gesichert. Jetzt zum Klienten.';
+            } else if (ct === 'diebstahl' && !caseProgress.diebesgutZurueck) {
+              // v7.12.144 (User-Befund Krause-Run): bei Diebstahl ist "zum Klienten"
+              // FALSCH, solange das Diebesgut nicht zurueck ist - der Auftrag ist die
+              // Wiederbeschaffung. Toast lenkt korrekt aufs Holen statt auf den Klienten.
+              toastText = caseProgress.tatverdaechtiger + ' überführt. Jetzt das Diebesgut holen.';
             } else {
               toastText = caseProgress.tatverdaechtiger + ' überführt. Jetzt zum Klienten.';
             }
@@ -23162,7 +23183,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.143] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.144] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
@@ -23186,6 +23207,9 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           toastText = caseProgress.tatverdaechtiger + ' lokalisiert. Jetzt zum Klienten.';
         } else if (ct === 'beschatten') {
           toastText = 'Beweise gesichert. Jetzt zum Klienten.';
+        } else if (ct === 'diebstahl' && !caseProgress.diebesgutZurueck) {
+          // v7.12.144: bei Diebstahl ohne Gut korrekt aufs Holen lenken, nicht zum Klienten.
+          toastText = caseProgress.tatverdaechtiger + ' überführt. Jetzt das Diebesgut holen.';
         } else {
           toastText = caseProgress.tatverdaechtiger + ' überführt. Jetzt zum Klienten.';
         }
@@ -23305,7 +23329,13 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       // zurueck ist (caseProgress.ueberfuehrt via Etui-Durchbruch). Sonst: ignorieren
       // + die KI in Richtung Diebesgut-Beschaffung pushen statt vorzeitig abschliessen.
       const ctW = (caseSetup && caseSetup.caseType) || '';
-      const diebstahlOhneGut = (ctW === 'diebstahl' && !caseProgress.ueberfuehrt);
+      // v7.12.144 (User-Befund Krause-Run): FIX. Vorher prueffte dies !ueberfuehrt -
+      // aber im Run war der Taeter ueberfuehrt, nur das GUT war nicht zurueck. Dadurch
+      // ging der Wahrheits-Durchbruch durch + Toast "Karl weiss jetzt... jetzt zum
+      // Klienten" feuerte, obwohl der Fall wegen fehlendem Diebesgut gar nicht loesbar
+      // war (Win-Sperre nutzt diebesgutZurueck). Inkonsistenz zwischen Durchbruch-Flag
+      // (ueberfuehrt) und Win-Sperre (diebesgutZurueck). Jetzt einheitlich diebesgutZurueck.
+      const diebstahlOhneGut = (ctW === 'diebstahl' && !caseProgress.diebesgutZurueck);
       // v7.12.136 (Anlass Kessler-Run): BESCHATTUNG braucht etwas mehr Substanz als
       // der 4-Szenen-Default. Sonst loest der Fall, sobald das Subjekt einmal gesehen
       // wurde (Kessler: 8 Szenen). Das Verhalten muss wirklich belegt sein: Stage>=2
