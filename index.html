@@ -2543,13 +2543,9 @@
     <div class="autoplay-row">
       <label class="autoplay-label">Stil:</label>
       <select id="autoplay-strategy" class="autoplay-input">
-        <option value="random">Würfeln</option>
         <option value="natural">Natürlich (wie ein Mensch spielt)</option>
         <option value="aggressive">Offensiv (Aktion + direkt)</option>
-        <option value="cautious">Vorsichtig (Beobachten)</option>
-        <option value="explorer">Erkunder (Recherche)</option>
-        <option value="varied">Variiert (A→B→C→D)</option>
-        <option value="rotating">Rotierend (Stilwechsel)</option>
+        <option value="random">Würfeln (Zufall)</option>
       </select>
     </div>
     <button id="autoplay-start-btn" onclick="startAutoplayFromSettings()">▶ Autoplay starten</button>
@@ -2777,7 +2773,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.127</div>
+    <div class="start-version">Schatten v7.12.128</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2941,7 +2937,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.127</span>
+    <span>Schatten v7.12.128</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5490,7 +5486,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.127';
+window.SCHATTEN_VERSION = 'v7.12.128';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5994,6 +5990,23 @@ let karlMuedeSignalScene = -99;
 // Entscheidungen sichtbar (Schlaf, Heilen, Flucht-Ventil etc.).
 let botDecisionLog = [];
 let lastRomanceNpcScene = -99;  // v7.12.104: Szene, in der zuletzt eine ROMANCE-NPC aktiv im Cast war (fuer Einfuehrungs-Push)
+
+// v7.12.128: Run-Kosten-Tracker. Summiert Token/Requests pro Run und schaetzt
+// die Gemini-API-Kosten (NUR fuer Debug-Export sichtbar, nicht oeffentlich).
+// Preise gemini-3.1-flash-lite (Stand Mai 2026): Input(Cache-Miss) $0.25/M,
+// Output $1.50/M, Cache-Hit-Input 10% = $0.025/M. USD->EUR grob *0.92.
+let runCostTracker = { requests: 0, inputUncached: 0, inputCached: 0, output: 0 };
+function resetRunCostTracker() {
+  runCostTracker = { requests: 0, inputUncached: 0, inputCached: 0, output: 0 };
+}
+function estimateRunCostEUR() {
+  const t = runCostTracker;
+  const usd = (t.inputUncached / 1e6) * 0.25
+            + (t.inputCached   / 1e6) * 0.025
+            + (t.output        / 1e6) * 1.50;
+  return usd * 0.92; // grobe USD->EUR-Naeherung
+}
+
 
 // v7.12.17: ROMANCE-WUERFEL. Beim ERSTEN "Naeher kommen"-Klick auf einen NPC wird
 // einmalig 50/50 gewuerfelt, ob die Person offen fuer Intimitaet ist. Ergebnis
@@ -8413,6 +8426,25 @@ function buildTranscriptText() {
   // Ueberfuehrung, Fall geloest). Hilft beim Lektorat zu sehen, wann der Spieler
   // welche Toasts gesehen hat. Toasts sind sonst fluechtig.
   const debugExport = (typeof isDebugExportEnabled === 'function' && isDebugExportEnabled());
+
+  // v7.12.128: Run-Kosten-Schaetzung (NUR Debug-Export, nicht oeffentlich sichtbar).
+  // Zeigt Requests, Token-Summen und eine grobe EUR-Schaetzung fuer diesen Run.
+  if (debugExport && typeof runCostTracker === 'object' && runCostTracker && runCostTracker.requests > 0) {
+    const t = runCostTracker;
+    const totalIn = t.inputUncached + t.inputCached;
+    const cacheRate = totalIn > 0 ? Math.round((t.inputCached / totalIn) * 100) : 0;
+    const eur = (typeof estimateRunCostEUR === 'function') ? estimateRunCostEUR() : 0;
+    const cent = (eur * 100);
+    out += 'API-KOSTEN DIESER RUN (Schaetzung, gemini-3.1-flash-lite):\n';
+    out += '  Requests: ' + t.requests + '\n';
+    out += '  Input-Tokens: ' + totalIn.toLocaleString('de-DE')
+         + ' (davon ' + t.inputCached.toLocaleString('de-DE') + ' gecacht = ' + cacheRate + '%)\n';
+    out += '  Output-Tokens: ' + t.output.toLocaleString('de-DE') + '\n';
+    out += '  Geschaetzte Kosten: ~' + cent.toFixed(2) + ' Cent (~' + eur.toFixed(4) + ' EUR)\n';
+    out += '  Hinweis: Schaetzung. Hoehere Cache-Rate = guenstiger. Preise Stand Mai 2026.\n';
+    out += '\n' + '='.repeat(60) + '\n\n';
+  }
+
   if (debugExport && Array.isArray(sceneDiagnosticsBuffer) && sceneDiagnosticsBuffer.length > 0) {
     const progressEvents = [];
     for (let bi = 0; bi < sceneDiagnosticsBuffer.length; bi++) {
@@ -11959,7 +11991,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.127] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.128] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -15949,6 +15981,13 @@ VERBOTEN: Karl wacht woanders auf ohne Erklaerung. Wenn du Pfad B waehlst, MUSST
     const cached = meta.cachedContentTokenCount || 0;
     const out = meta.candidatesTokenCount || 0;
     const cacheRate = totalIn > 0 ? Math.round((cached / totalIn) * 100) : 0;
+    // v7.12.128: in Run-Kosten-Tracker aufsummieren (nur Debug-Export-Anzeige).
+    if (typeof runCostTracker === 'object' && runCostTracker) {
+      runCostTracker.requests += 1;
+      runCostTracker.inputUncached += Math.max(0, totalIn - cached);
+      runCostTracker.inputCached += cached;
+      runCostTracker.output += out;
+    }
     if (cached > 0) {
       console.log('[Schatten Cache] HIT - ' + cached + '/' + totalIn + ' Input-Tokens gecacht (' + cacheRate + '%), Out: ' + out);
       if (typeof diag === 'function') diag('info', 'Cache-HIT: ' + cached + '/' + totalIn + ' Tokens (' + cacheRate + '%) - Free-Tier-Quota geschont');
@@ -16565,6 +16604,8 @@ async function startGame() {
   // laengst abgelaufen. So beginnt jeder neue Run mit dem staerksten Modell.
   // Daily-Blocks bleiben (laufen erst um Mitternacht UTC aus).
   clearShortModelBlocks();
+  // v7.12.128: Kosten-Tracker fuer den neuen Run zuruecksetzen.
+  if (typeof resetRunCostTracker === 'function') resetRunCostTracker();
   // Reset day/time/location tracking
   gameDay = 1;
   sceneCounter = 0;
@@ -18781,7 +18822,7 @@ async function chooseOption(option) {
       // das ~63% Erfolg bei der ersten Annaeherung (vorher ~25%).
       const offen = Math.random() < 0.70;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.127] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.128] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -19110,7 +19151,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.127] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.128] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -20158,7 +20199,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           } else if (!tensionHighEnoughForArrest && folterSceneCount >= custodyReleaseFloor) {
             // STILLER RELEASE: nur noch als Notventil bei langem Drift (5+ Sz). Karl ist
             // faktisch frei (KI erzaehlt ihn lange ohne Stasi-Kontext), System zieht nach.
-            console.warn('[Schatten v7.12.127] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
+            console.warn('[Schatten v7.12.128] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet');
             setCustodyState(false, 'stiller-release');
           } else if (!tensionHighEnoughForArrest) {
@@ -20174,7 +20215,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.127] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.128] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -20700,7 +20741,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof diag === 'function') {
           diag('state', '⚡ NOTFLUCHT GELUNGEN - Karl frei + 4 Sz Gnadenfrist, Stasi-Tension ' + prevTension + ' -> 3 (gesucht, aber nicht sofort wieder greifbar)');
         }
-        console.log('[Schatten v7.12.127] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
+        console.log('[Schatten v7.12.128] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
         // v7.11.56: Toast bei Erfolg - Spieler hat geklickt und soll Wuerfel-
         // Ergebnis direkt sehen, nicht nur narrative Andeutungen.
         if (typeof showProgressToast === 'function') {
@@ -22831,7 +22872,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.127] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.128] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
@@ -24800,28 +24841,33 @@ function botChooseByStrategy(options) {
   //     automatisch offensiv weiter (kein Extra-Handling nötig).
   const _romTension = (typeof romanticTension === 'number') ? romanticTension : 0;
   if (byCat.UEBERNACHTUNG && byCat.UEBERNACHTUNG.length > 0) {
-    // Climax: all in. 90% (bei offensiv), sonst auch noch deutlich (60%).
-    const overnightChance = (effectiveStrat === 'aggressive') ? 0.9 : 0.6;
+    // v7.12.128: Climax = all-in in ALLEN Modi. User-Wunsch: sobald die Romanze
+    // einmal laeuft, wird sie bis zur Nacht durchgezogen, egal welcher Bot-Modus.
+    // Wenn eine UEBERNACHTUNG-Option ueberhaupt angeboten wird, ist der Strang
+    // bereits im Climax -> nahezu sicher mitnehmen (0.98, minimaler Rest-Zufall).
+    const overnightChance = 0.98;
     if (botRng() < overnightChance) {
-      console.log('[Bot v7.12.96] UEBERNACHTUNG gewaehlt (all-in, Romanze-Climax, ' + (overnightChance*100) + '%)');
-      if (typeof diag === 'function') diag('bot', 'Bot waehlt UEBERNACHTUNG (Romanze-Climax - die Nacht verbringen)');
+      console.log('[Bot v7.12.128] UEBERNACHTUNG gewaehlt (all-in, Romanze-Climax, alle Modi, ' + (overnightChance*100) + '%)');
+      if (typeof diag === 'function') diag('bot', 'Bot waehlt UEBERNACHTUNG (Romanze-Climax all-in - die Nacht verbringen)');
       return byCat.UEBERNACHTUNG[0];
     }
   }
   if (byCat.ROMANTIK && byCat.ROMANTIK.length > 0) {
     let romChance;
     if (_romTension > 0) {
-      // Romanze läuft bereits -> dranbleiben (all-in Richtung Nacht), kaum abbrechen.
-      romChance = (effectiveStrat === 'aggressive') ? 0.85 : 0.5;
+      // v7.12.128: Romanze laeuft bereits -> in ALLEN Modi all-in dranbleiben
+      // (User-Wunsch). Sobald einmal Intimitaet gewaehlt wurde, wird der Strang
+      // bis zur Nacht durchgezogen, egal welcher Bot-Modus. 0.98 = nahezu sicher.
+      romChance = 0.98;
     } else {
-      // Erste Annäherung. v7.12.118: bei aggressive 90% (offensiv = mitnehmen wollen,
-      // vorher 50% -> zusammen mit dem NPC-Wuerfel kam Romantik fast nie zustande).
-      // Sonst weiterhin selten.
+      // Erste Annaeherung (Einstieg) - HIER bleibt der strategieabhaengige Wuerfel:
+      // bei aggressive 90% (offensiv = mitnehmen wollen), sonst selten (5%).
+      // v7.12.118 / v7.12.128.
       romChance = (effectiveStrat === 'aggressive') ? 0.90 : 0.05;
     }
     if (botRng() < romChance) {
-      const phase = _romTension > 0 ? 'dranbleiben Rm' + _romTension : 'Initiierung';
-      console.log('[Bot v7.12.96] ROMANTIK gewaehlt (' + effectiveStrat + ', ' + phase + ', ' + (romChance * 100) + '%)');
+      const phase = _romTension > 0 ? 'dranbleiben Rm' + _romTension + ' (all-in)' : 'Initiierung';
+      console.log('[Bot v7.12.128] ROMANTIK gewaehlt (' + effectiveStrat + ', ' + phase + ', ' + (romChance * 100) + '%)');
       if (typeof diag === 'function') diag('bot', 'Bot waehlt ROMANTIK (' + effectiveStrat + ', ' + phase + ')');
       return byCat.ROMANTIK[0];
     }
