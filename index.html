@@ -2773,7 +2773,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.113</div>
+    <div class="start-version">Schatten v7.12.114</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2937,7 +2937,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.113</span>
+    <span>Schatten v7.12.114</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5484,7 +5484,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.113';
+window.SCHATTEN_VERSION = 'v7.12.114';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5587,6 +5587,14 @@ function diagBegin(stage) {
     modelUsed: null,
     deltas: {},                // state-Veraenderungen
   };
+  // v7.12.114: gepufferte Bot-Entscheidungen der vorigen Szene uebernehmen (sie
+  // entstanden nach dem diagCommit, haetten sonst keinen Frame).
+  if (typeof botDecisionLog !== 'undefined' && Array.isArray(botDecisionLog) && botDecisionLog.length > 0) {
+    for (const ev of botDecisionLog) {
+      currentSceneDiagnostics.events.push({ type: 'bot', msg: ev, detail: null });
+    }
+    botDecisionLog = [];
+  }
 }
 
 // Logged ein Diagnose-Event in den aktuellen Frame.
@@ -5879,6 +5887,12 @@ let romanticTension = 0;
 // "schlaf jetzt", soll er GARANTIERT reagieren (schlafen, zur Not erst fliehen), nicht
 // nur mit Wahrscheinlichkeit wie die normale Nacht-Schlaf-Praeferenz.
 let karlMuedeSignalScene = -99;
+// v7.12.114: Bot-Entscheidungen landen in einem persistenten Puffer, weil
+// botChooseByStrategy NACH dem diagCommit der Szene laeuft -> diag('bot',...) ging
+// bisher ins Leere (currentSceneDiagnostics war schon null). Der Puffer wird beim
+// naechsten Szenenstart in den Diagnose-Frame uebernommen. So werden ALLE Bot-
+// Entscheidungen sichtbar (Schlaf, Heilen, Flucht-Ventil etc.).
+let botDecisionLog = [];
 let lastRomanceNpcScene = -99;  // v7.12.104: Szene, in der zuletzt eine ROMANCE-NPC aktiv im Cast war (fuer Einfuehrungs-Push)
 
 // v7.12.17: ROMANCE-WUERFEL. Beim ERSTEN "Naeher kommen"-Klick auf einen NPC wird
@@ -11745,7 +11759,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.113] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.114] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -18477,7 +18491,7 @@ async function chooseOption(option) {
     if (npcName && typeof romanceReceptive[npcName] === 'undefined') {
       const offen = Math.random() < 0.5;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.113] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.114] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -18806,7 +18820,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.113] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.114] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -19846,7 +19860,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           } else if (!tensionHighEnoughForArrest && folterSceneCount >= custodyReleaseFloor) {
             // STILLER RELEASE: nur noch als Notventil bei langem Drift (5+ Sz). Karl ist
             // faktisch frei (KI erzaehlt ihn lange ohne Stasi-Kontext), System zieht nach.
-            console.warn('[Schatten v7.12.113] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
+            console.warn('[Schatten v7.12.114] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet');
             setCustodyState(false, 'stiller-release');
           } else if (!tensionHighEnoughForArrest) {
@@ -19862,7 +19876,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.113] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.114] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -20390,7 +20404,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof diag === 'function') {
           diag('state', '⚡ NOTFLUCHT GELUNGEN - Karl frei + 4 Sz Gnadenfrist, Stasi-Tension ' + prevTension + ' -> 3 (gesucht, aber nicht sofort wieder greifbar)');
         }
-        console.log('[Schatten v7.12.113] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
+        console.log('[Schatten v7.12.114] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
         // v7.11.56: Toast bei Erfolg - Spieler hat geklickt und soll Wuerfel-
         // Ergebnis direkt sehen, nicht nur narrative Andeutungen.
         if (typeof showProgressToast === 'function') {
@@ -22509,7 +22523,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.113] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.114] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
@@ -24265,6 +24279,14 @@ function botChooseByStrategy(options) {
   const _muedeAktiv = (typeof karlMuedeSignalScene === 'number' && typeof sceneCounter === 'number' &&
                        (sceneCounter - karlMuedeSignalScene) <= 1 && karlMuedeSignalScene >= 0);
 
+  // v7.12.114: Diagnose - bei JEDEM Bot-Aufruf in der Nacht die Schlaf-relevanten Werte
+  // puffern, damit wir sehen WARUM der Bot (nicht) schlaeft. Erscheint im naechsten Frame.
+  if (typeof gameTimeIdx === 'number' && isAbendOderNachtTime(gameTimeIdx) && typeof botDecisionLog !== 'undefined') {
+    const _sl = (byCat.SCHLAFEN ? byCat.SCHLAFEN.length : 0);
+    const _fl = (byCat.FLUCHT ? byCat.FLUCHT.length : 0);
+    botDecisionLog.push('NACHT-CHECK Sz' + sceneCounter + ': scenesInCurrentTime=' + (typeof scenesInCurrentTime==='number'?scenesInCurrentTime:'?') + ', SCHLAFEN-Optionen=' + _sl + ', FLUCHT-Optionen=' + _fl + ', Vf=' + verfassung + ', muedeAktiv=' + _muedeAktiv);
+  }
+
   if (byCat.SCHLAFEN && byCat.SCHLAFEN.length > 0 &&
       typeof gameTimeIdx === 'number' && isAbendOderNachtTime(gameTimeIdx)) {
     const nachtSzenen = (typeof scenesInCurrentTime === 'number') ? scenesInCurrentTime : 0;
@@ -24301,6 +24323,7 @@ function botChooseByStrategy(options) {
       }
       console.log('[Bot v7.12.107] NACHT-SCHLAF (' + nachtSzenen + ' Sz, ' + (schlafChance*100) + '%): ' + wahlOrt);
       if (typeof diag === 'function') diag('bot', 'Bot waehlt SCHLAFEN ' + wahlOrt + ' (' + nachtSzenen + ' Sz in der Nacht, Tension ' + _tension + ', Sp ' + _lastSp + ')');
+      if (typeof botDecisionLog !== 'undefined') botDecisionLog.push('Bot waehlt SCHLAFEN ' + wahlOrt + ' (' + nachtSzenen + ' Sz Nacht, Tension ' + _tension + ', Sp ' + _lastSp + (_muedeAktiv ? ', MUEDE-Signal' : '') + ')');
       return wahl;
     }
   }
