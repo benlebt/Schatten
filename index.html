@@ -2773,7 +2773,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.99</div>
+    <div class="start-version">Schatten v7.12.102</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2937,7 +2937,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.99</span>
+    <span>Schatten v7.12.102</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -3832,6 +3832,7 @@ JSON-Output ist Pflicht (kein Markdown, kein Text drumherum):
   "zielperson_gefunden": false,
   "wahrheit_erkannt": false,
   "klient_berichtet": false,
+  "gewahrsam": false,
   "zusammenfassung": "1 Satz für dein Gedächtnis: Ort, was getan wurde, wichtige Personen/Fakten."
 }
 
@@ -3889,7 +3890,9 @@ Das System hat eine Kategorie-Mindest-Kostentabelle (z.B. OFFENSIV kostet mindes
 
 WICHTIG bei HEILEN-Kategorie: lass verfassung_delta=0 oder weglassen. Die Engine setzt die positive Heilung (+1 oder +2) ueber die Kategorie.
 
-spannung: 1 (ruhig) bis 5 (Lebensgefahr). "spannung_delta" entfaellt - "spannung" allein reicht.`;
+spannung: 1 (ruhig) bis 5 (Lebensgefahr). "spannung_delta" entfaellt - "spannung" allein reicht.
+
+gewahrsam: true/false - der WICHTIGSTE Status fuer Karls Aufenthaltsort. Setze "gewahrsam": true NUR wenn Karl in DIESER Szene physisch in Stasi/MfS-Gewahrsam ist (Verhoerzelle, Verhoerraum, gefesselt, von Waechtern bewacht, im Vernehmungsstuhl, in Hohenschoenhausen einsitzend). Setze "gewahrsam": false sobald Karl frei ist - auch wenn er gerade erst entkommen/freigelassen wurde, sich versteckt, durch die Stadt laeuft, in einem Cafe sitzt, fluechtet oder sich bei jemandem aufhaelt. ENTSCHEIDEND: Dieses Feld MUSS exakt zu dem passen was du im Szenentext erzaehlst. Wenn du schreibst dass die Stasi-Maenner wegfahren und Karl allein zuruecklaesst, MUSS gewahrsam=false sein. Wenn du schreibst dass Karl in der Zelle auf dem Pritsche liegt, MUSS gewahrsam=true sein. Niemals frei herumlaufen lassen UND gleichzeitig gewahrsam=true.`;
 
 const INTRO_REQUIREMENTS = `
 PFLICHT FÜR DIE ERÖFFNUNGSSZENE:
@@ -5481,7 +5484,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.99';
+window.SCHATTEN_VERSION = 'v7.12.102';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5774,6 +5777,38 @@ function trackCustodyChange(source) {
       }
     }
   }
+}
+
+// v7.12.101: ZENTRALES CUSTODY-STATE-MANAGEMENT. Bisher wurde karlInStasiCustody an
+// ~12 verstreuten Stellen direkt gesetzt - jede mit eigenen (teils vergessenen)
+// Begleit-Resets und ohne konsistentes Wechsel-Tracking. Folge: Flag-Flackern, nicht
+// gezaehlte Wechsel (Lock griff zu spaet), Status-Text-Desync. Diese Funktion ist ab
+// jetzt die EINZIGE empfohlene Art, den Custody-State zu aendern. Sie buendelt:
+//   - das Flag-Setzen
+//   - die Begleit-Resets (Eintritt: folter/Streak; Austritt: folter/scenesSince)
+//   - das Wechsel-Tracking (trackCustodyChange) - JEDER Wechsel wird gezaehlt
+// Parameter:
+//   newState (bool) - true=in Gewahrsam, false=frei
+//   source (string) - Grund fuer Diagnose/Tracking
+//   opts (obj) - { track:true, resetFolter:true, resetStreak:true, resetScenesSince:true }
+//                Defaults passend zum Ein-/Austritt; einzeln ueberschreibbar.
+function setCustodyState(newState, source, opts) {
+  opts = opts || {};
+  const wasState = karlInStasiCustody;
+  newState = !!newState;
+  // Defaults je nach Richtung (entspricht dem bisherigen Verhalten der Einzelstellen)
+  const track = (opts.track !== undefined) ? opts.track : true;
+  const resetFolter = (opts.resetFolter !== undefined) ? opts.resetFolter : true;
+  const resetStreak = (opts.resetStreak !== undefined) ? opts.resetStreak : true;
+  const resetScenesSince = (opts.resetScenesSince !== undefined) ? opts.resetScenesSince : !newState;
+  karlInStasiCustody = newState;
+  if (resetFolter && typeof folterSceneCount !== 'undefined') folterSceneCount = 0;
+  if (resetStreak && typeof stasiHighTensionStreak !== 'undefined') stasiHighTensionStreak = 0;
+  if (resetScenesSince && typeof stasiCustodyScenesSince !== 'undefined') stasiCustodyScenesSince = 0;
+  if (track && wasState !== newState && typeof trackCustodyChange === 'function') {
+    trackCustodyChange(source || 'setCustodyState');
+  }
+  return newState;
 }
 
 // v7.11.13: META-CUSTODY-RISIKO-COUNTER. Steigt wenn:
@@ -11697,7 +11732,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.99] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.102] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -12071,7 +12106,7 @@ function renderOptions(scene) {
   // v7.12.48: ortImpliesCustody nutzt currentOrtType (der bereits Telefonzellen ausschließt)
   const ortImpliesCustody = currentOrtType === 'CUSTODY';
   if (ortImpliesCustody && !karlInStasiCustody) {
-    karlInStasiCustody = true;
+    setCustodyState(true, 'ort-custody-detect');
     if (typeof diag === 'function') diag('state', 'ORT-CUSTODY-DETECT: Ort "' + scene.ort + '" (Typ: CUSTODY) -> karlInStasiCustody=true');
   }
 
@@ -18385,7 +18420,7 @@ async function chooseOption(option) {
     if (npcName && typeof romanceReceptive[npcName] === 'undefined') {
       const offen = Math.random() < 0.5;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.99] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.102] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -18714,7 +18749,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.99] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.102] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -19754,12 +19789,9 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           } else if (!tensionHighEnoughForArrest && folterSceneCount >= custodyReleaseFloor) {
             // STILLER RELEASE: nur noch als Notventil bei langem Drift (5+ Sz). Karl ist
             // faktisch frei (KI erzaehlt ihn lange ohne Stasi-Kontext), System zieht nach.
-            console.warn('[Schatten v7.12.99] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
+            console.warn('[Schatten v7.12.102] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet');
-            karlInStasiCustody = false;
-            folterSceneCount = 0;
-            stasiHighTensionStreak = 0;
-            if (typeof trackCustodyChange === 'function') trackCustodyChange('stiller-release');
+            setCustodyState(false, 'stiller-release');
           } else if (!tensionHighEnoughForArrest) {
             // Drift, aber noch nicht lang genug (< 5 Sz): Karl bleibt vorerst in Custody.
             // Das laesst die Schlaf-Freilassung (ab 5 Sz) der Normalweg sein.
@@ -19773,7 +19805,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.99] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.102] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -19840,14 +19872,12 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
                 secondAttempt: true,
               };
               autoReleaseUsedCount = (autoReleaseUsedCount || 0) + 1;
-              karlInStasiCustody = true;
-              folterSceneCount = 0;
+              setCustodyState(true, 'auto-rearrest');
               // v7.11.50: FESTNAHME-Toast entfernt (siehe Z.17490 oben).
             } else {
               console.warn('[Schatten] 3+ Szenen ohne Stasi-Kontext - Custody-Flag automatisch geloescht.');
               diag('state', 'Stasi-Custody automatisch beendet - 3+ Szenen ohne Kontext (vermutlich False-Positive-Recovery)');
-              karlInStasiCustody = false;
-              folterSceneCount = 0;
+              setCustodyState(false, 'false-positive-recovery', { resetScenesSince: false });
               // v7.11.45: Wenn Custody schon mehrfach gewechselt hat (Lock aktiv),
               // Stasi-Tension senken damit Karl nicht direkt wieder festgenommen wird.
               if (custodyLocked) {
@@ -20251,8 +20281,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
 
       // v7.11.12: Custody-Schlaf -> Karl wird freigelassen am Morgen
       if (categoryMechanicsResult && categoryMechanicsResult.releaseFromCustody) {
-        karlInStasiCustody = false;
-        stasiCustodyScenesSince = 0;
+        setCustodyState(false, 'schlaf-freilassung');
         if (typeof diag === 'function') {
           diag('state', 'CUSTODY-FREILASSUNG via Schlaf - Karl wacht morgens auf der Strasse vor MfS-Gebaeude auf');
         }
@@ -20268,8 +20297,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
 
       // v7.11.13: NOTFLUCHT-Erfolg -> Karl ist frei + gehetzt
       if (categoryMechanicsResult && categoryMechanicsResult.notfluchtSuccess === true) {
-        karlInStasiCustody = false;
-        stasiCustodyScenesSince = 0;
+        setCustodyState(false, 'notflucht-erfolg');
         // v7.12.35: BUG-FIX. Wessel-Run: NOTFLUCHT GELUNGEN, aber sofortige
         // Wiedereinlieferung weil stasiMaxTensionStreak und stasiHighTensionStreak
         // noch auf 3+ standen -> OPTION-2-FESTNAHME triggerte direkt in der
@@ -20295,7 +20323,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof diag === 'function') {
           diag('state', '⚡ NOTFLUCHT GELUNGEN - Karl frei + 4 Sz Gnadenfrist, Stasi-Tension ' + prevTension + ' -> 3 (gesucht, aber nicht sofort wieder greifbar)');
         }
-        console.log('[Schatten v7.12.99] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
+        console.log('[Schatten v7.12.102] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
         // v7.11.56: Toast bei Erfolg - Spieler hat geklickt und soll Wuerfel-
         // Ergebnis direkt sehen, nicht nur narrative Andeutungen.
         if (typeof showProgressToast === 'function') {
@@ -22414,7 +22442,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.99] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.102] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
@@ -22756,9 +22784,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
                               0.50;
         const roll = Math.random();
         if (roll < custodyChance) {
-          karlInStasiCustody = true;
-          folterSceneCount = 0;
-          stasiHighTensionStreak = 0;
+          setCustodyState(true, 'meta-custody-risiko');
           stasiRiskCounter = 0;
           metaCustodyGracePeriod = 3;  // v7.11.16: 3 Sz Schonfrist beim Folter-Sanity
           console.log('[Schatten v7.11.13] META-CUSTODY ausgelöst (Risk ' + (riskPrev + 1) + ', Chance ' + Math.round(custodyChance * 100) + '%, Roll ' + roll.toFixed(2) + ')');
@@ -22781,7 +22807,42 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     // v7.11.13: Text-Match bleibt als SEKUNDÄRER Pfad - nur wenn KI explizit
     // "MfS führt dich ab" / "du landest in Hohenschönhausen" beschreibt.
     // Meta-Würfel (oben) ist primärer Trigger.
-    if (!karlInStasiCustody && detectStasiCustody(scene.szene || '')) {
+    // v7.12.102 (SCHRITT 2): KI-gewahrsam-Signal ist die PRIMAERE Wahrheit fuer Karls
+    // Aufenthaltsort. Die KI schreibt die Szene - sie weiss am besten ob Karl in der
+    // Zelle sitzt oder frei laeuft. Bisher wurde der Status nur aus Text + 12 verstreuten
+    // Engine-Stellen geraten -> Status-Text-Desync ("Mertens faehrt weg, Karl frei, aber
+    // Header sagt GEWAHRSAM"). Jetzt: explizites KI-Signal gewinnt, Textanalyse ist nur
+    // noch Fallback wenn die KI kein Signal liefert.
+    const kiGewahrsamSignal = (typeof scene.gewahrsam === 'boolean') ? scene.gewahrsam
+                            : (scene.gewahrsam === 'true' ? true : (scene.gewahrsam === 'false' ? false : null));
+    let kiSignalHandled = false;
+    if (kiGewahrsamSignal !== null) {
+      if (kiGewahrsamSignal === false && karlInStasiCustody) {
+        // KI sagt: Karl ist FREI, aber Engine-Flag steht auf Gewahrsam -> KI gewinnt.
+        // Das ist der Haupt-Desync-Fall (KI erzaehlt Freilassung/Flucht, Flag klebt).
+        const survivedFolter = folterSceneCount;
+        setCustodyState(false, 'ki-signal-frei');
+        if (custodyLocked && stasiTension > 2) stasiTension = 2;
+        diag('detect', 'KI-SIGNAL gewahrsam=false - Karl ist frei (Engine-Flag korrigiert nach ' + survivedFolter + ' Folter-Sz). Erzaehlung gewinnt.');
+        kiSignalHandled = true;
+      } else if (kiGewahrsamSignal === true && !karlInStasiCustody) {
+        // KI sagt: Karl ist in Gewahrsam, Engine-Flag steht auf frei.
+        // Nur uebernehmen wenn es plausibel ist (politischer Fall) - sonst koennte die
+        // KI faelschlich gewahrsam=true bei einer harmlosen Szene setzen. Bei Lock NICHT
+        // (sonst Yo-Yo-Wiedereinstieg). Ansonsten: KI-Erzaehlung gewinnt.
+        if (caseIsPolitical && !custodyLocked) {
+          setCustodyState(true, 'ki-signal-gewahrsam');
+          diag('detect', 'KI-SIGNAL gewahrsam=true - Karl in Gewahrsam (Engine-Flag korrigiert). Erzaehlung gewinnt.');
+          kiSignalHandled = true;
+        } else {
+          diag('detect', 'KI-SIGNAL gewahrsam=true ignoriert (' + (custodyLocked ? 'Custody-Lock aktiv' : 'kein politischer Fall') + ')');
+        }
+      }
+      // Wenn KI-Signal und Flag uebereinstimmen: nichts zu tun, Status ist konsistent.
+    }
+
+    // Textanalyse nur noch als FALLBACK wenn die KI KEIN verwertbares Signal lieferte.
+    if (!kiSignalHandled && kiGewahrsamSignal === null && !karlInStasiCustody && detectStasiCustody(scene.szene || '')) {
       // v6.95: Kontext-Filter bevor wir Custody setzen.
       // Wenn die Szene an einem befreundeten Polizei-Ort spielt (VP-Revier mit
       // Roth/Lindner) und KEIN MfS/Stasi-Akteur namentlich anwesend ist, ist
@@ -22858,22 +22919,17 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           diag('state', 'Stasi-Tension auf 2 reduziert wegen Custody-Lock (Pingpong-Pause)');
         }
       } else {
-        karlInStasiCustody = true;
-        folterSceneCount = 0;
-        stasiHighTensionStreak = 0;
+        setCustodyState(true, 'text-detected-custody');
         console.log('[Schatten] Karl in Stasi-Gewahrsam. Folter-Wuerfel ab Szene 2 aktiv.');
         diag('detect', 'Karl in Stasi-Gewahrsam - Folter-Wuerfel aktiv ab Szene 2 (politischer Fall + Stasi-Praesenz bestaetigt)');
-        if (typeof trackCustodyChange === 'function') trackCustodyChange('text-detected-custody');
       }
-    } else if (karlInStasiCustody && detectStasiRelease(scene.szene || '')) {
+    } else if (!kiSignalHandled && kiGewahrsamSignal === null && karlInStasiCustody && detectStasiRelease(scene.szene || '')) {
       // v7.11.45: Wenn Custody schon gelockt war (>=3 Wechsel), erlauben wir
       // den Release weiterhin (Spieler soll nicht ewig festsitzen), aber
       // wir senken die Stasi-Tension drastisch damit nicht direkt wieder
       // ein Auto-Force-Festnahme-Push kommt. So bleibt Karl draussen.
-      karlInStasiCustody = false;
       const survivedFolter = folterSceneCount;
-      folterSceneCount = 0;
-      stasiHighTensionStreak = 0;
+      setCustodyState(false, 'text-detected-release');
       if (custodyLocked) {
         // Lock war aktiv - Tension halbieren damit Re-Festnahme nicht direkt greift
         const prevT = stasiTension;
@@ -23039,10 +23095,8 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         const confirmed = arrestConfirmRe.test(sTxt) || arrestConfirmRe.test(oTxt);
         const escaped = escapeRe.test(sTxt);
         if (confirmed && !escaped) {
-          karlInStasiCustody = true;
-          folterSceneCount = 0;
+          setCustodyState(true, 'text-confirmed-custody');
           caseProgress.pendingCustodyConfirm = false;
-          if (typeof trackCustodyChange === 'function') trackCustodyChange('text-confirmed-custody');
           diag('state', 'Custody bestaetigt durch Szenentext - karlInStasiCustody=true (Header zeigt Gewahrsam ab JETZT, synchron zur Story)');
         } else if (escaped) {
           // Karl ist erzaehlerisch entkommen - Festnahme abbrechen, kein Gewahrsam.
@@ -24445,6 +24499,12 @@ function botGetCurrentOptions() {
     // am Filter). Der Bot hat eigene Romantik-Wahl-Logik (botChooseByStrategy), die nur
     // greifen kann wenn der Button durchkommt. Nur klickbare (nicht gesperrte).
     if (btn.classList.contains('option-btn-romance') && !btn.disabled) return true;
+    // v7.12.100: SCHLAFEN für den Bot wählbar machen. War rausgefiltert -> Bot SAH den
+    // Schlaf-Button nie (Wessel/Stein-Run 0904: Button 45x klickbar, Bot schlief 0x ->
+    // Custody zog sich ewig, weil der sichere Schlaf->Morgen-Ausgang nie genommen wurde,
+    // obwohl die Bot-Logik (v7.12.95) ihn bevorzugen WOLLTE - byCat.SCHLAFEN war nur nie
+    // befüllt). Selber Bug wie zuvor bei Resolve/Romance. Nur klickbare.
+    if (btn.classList.contains('option-btn-sleep') && !btn.disabled) return true;
     return false;  // SCHLAFEN, ROMANTIK, UEBERNACHTUNG -> raus
   });
   return buttons.map(btn => {
