@@ -1579,8 +1579,10 @@
   .option-id {
     /* v7.12.26: A/B/C/D-Label kontrastreicher. Wichtige Orientierungshilfe,
        darf nicht im Hintergrundgrau verschwinden. */
+    /* v7.12.137: skaliert mit --reading-scale (sonst bleiben A/B/C/D + ♥/🔦-Emojis
+       winzig, waehrend der Button-Text waechst - sieht kaputt aus). */
     color: #a8a8a8;
-    font-size: 11px;
+    font-size: calc(11px * var(--reading-scale));
     margin-top: 2px;
     flex-shrink: 0;
     font-weight: 600;
@@ -1595,7 +1597,7 @@
      Gedaempftes Blau-Grau, klar als Hinweis erkennbar ohne aufdringlich zu sein. */
   .option-marker {
     display: inline-block;
-    font-size: 9px;
+    font-size: calc(9px * var(--reading-scale));
     letter-spacing: 2px;
     padding: 2px 6px;
     border: 1px solid rgba(120,140,170,0.4);
@@ -2819,7 +2821,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.136</div>
+    <div class="start-version">Schatten v7.12.137</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2983,7 +2985,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.136</span>
+    <span>Schatten v7.12.137</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5534,7 +5536,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.136';
+window.SCHATTEN_VERSION = 'v7.12.137';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -12013,6 +12015,31 @@ function checkProgressTriggers(kategorie, ctx) {
 }
 
 
+// v7.12.137: Zentrale Praesenz-Pruefung. Beantwortet "ist Person X gerade in der
+// Szene anwesend?" aus DREI Quellen kombiniert (robust gegen Flash-Lite-Schwaeche
+// bei strukturierten Feldern): (a) scene.personenImRaum, (b) scene.cast, (c) der
+// Szenentext selbst (voller Name oder Vorname). Der Szenentext ist die verlaesslichste
+// Quelle, weil Gemini Namen in der Prosa zuverlaessig schreibt - das KI-Feld
+// personenImRaum allein waere wie beim 'gewahrsam'-Feld zu unzuverlaessig. Darum
+// KEIN neues Pflicht-Feld, sondern Kombination mit Text als Wahrheitsquelle.
+// Bewusst OHNE strengen Auffinde-Kontext (anders als das Zielperson-Gate) - hier
+// reicht "ist erkennbar in der Szene" (fuer Romance-Button, NPC-Anwesenheit etc.).
+function istPersonInSzene(name, scene) {
+  if (!name || !scene) return false;
+  const _first = String(name).trim().split(/\s+/)[0].toLowerCase();
+  if (_first.length < 3) return false;
+  // (a)+(b) strukturierte Listen (wenn vorhanden)
+  const _raum = Array.isArray(scene.personenImRaum) ? scene.personenImRaum
+              : (Array.isArray(scene.cast) ? scene.cast : []);
+  for (const p of _raum) {
+    const pn = (typeof p === 'string' ? p : (p && p.name) || '').toLowerCase();
+    if (pn && pn.includes(_first)) return true;
+  }
+  // (c) Szenentext (verlaesslichste Quelle)
+  const _txt = (typeof scene.szene === 'string') ? scene.szene.toLowerCase() : '';
+  if (_txt && _txt.includes(_first)) return true;
+  return false;
+}
 function renderOptions(scene) {
   const list = document.getElementById('options-list');
   const optionsContainer = document.getElementById('options');
@@ -12094,7 +12121,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.136] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.137] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -12378,24 +12405,18 @@ function renderOptions(scene) {
   let romanceNpcInScene = null;
   try {
     if (caseSetup && Array.isArray(caseSetup.setupCast) && Array.isArray(cast)) {
-      // v7.12.136 (Anlass Kessler-Run): Praesenz-Check. Der Button erschien, sobald
-      // eine ROMANCE-NPC im KUMULATIVEN cast war (Ilse), auch wenn Karl gerade ganz
-      // woanders stand (bei Frau Lemke im Hof). "Naeher kommen (mit Ilse)" war dann
-      // klickbar, obwohl Ilse nicht da war. Fix: die NPC muss zusaetzlich im aktuellen
-      // Szenentext namentlich vorkommen (= wirklich in der Szene praesent).
-      const _sceneTxtLow = (scene && typeof scene.szene === 'string') ? scene.szene.toLowerCase() : '';
+      // v7.12.136/137 (Anlass Kessler-Run): Praesenz-Check ueber die zentrale
+      // Funktion istPersonInSzene (personenImRaum + cast + Szenentext). Der Button
+      // erschien frueher, sobald eine ROMANCE-NPC im KUMULATIVEN cast war (Ilse),
+      // auch wenn Karl ganz woanders stand (bei Frau Lemke). Jetzt: NPC muss
+      // tatsaechlich in der aktuellen Szene praesent sein.
       for (const npc of cast) {
         const npcName = (typeof npc === 'string' ? npc : (npc && npc.name) || '');
         if (!npcName) continue;
-        // Suche in setupCast nach ROMANCE-Tag
         const setupEntry = caseSetup.setupCast.find(c => c && c.name &&
           c.name.toLowerCase() === npcName.toLowerCase());
         if (setupEntry && (setupEntry.tag === 'ROMANCE' || setupEntry.tagExtra === 'ROMANCE')) {
-          // Praesenz: voller Name ODER Vorname im Szenentext (robust gegen "Ilse" vs "Ilse Hauke")
-          const _full = setupEntry.name.toLowerCase();
-          const _first = _full.split(/\s+/)[0];
-          const _praesent = _sceneTxtLow && (_sceneTxtLow.includes(_full) || (_first.length >= 3 && _sceneTxtLow.includes(_first)));
-          if (_praesent) {
+          if (istPersonInSzene(setupEntry.name, scene)) {
             romanceNpcInScene = setupEntry.name;
             break;
           }
@@ -18963,7 +18984,7 @@ async function chooseOption(option) {
       // das ~63% Erfolg bei der ersten Annaeherung (vorher ~25%).
       const offen = Math.random() < 0.70;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.136] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.137] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -19320,7 +19341,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.136] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.137] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -20375,7 +20396,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           } else if (!tensionHighEnoughForArrest && folterSceneCount >= custodyReleaseFloor) {
             // STILLER RELEASE: nur noch als Notventil bei langem Drift (5+ Sz). Karl ist
             // faktisch frei (KI erzaehlt ihn lange ohne Stasi-Kontext), System zieht nach.
-            console.warn('[Schatten v7.12.136] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
+            console.warn('[Schatten v7.12.137] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet');
             setCustodyState(false, 'stiller-release');
           } else if (!tensionHighEnoughForArrest) {
@@ -20391,7 +20412,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.136] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.137] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -20917,7 +20938,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof diag === 'function') {
           diag('state', '⚡ NOTFLUCHT GELUNGEN - Karl frei + 4 Sz Gnadenfrist, Stasi-Tension ' + prevTension + ' -> 3 (gesucht, aber nicht sofort wieder greifbar)');
         }
-        console.log('[Schatten v7.12.136] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
+        console.log('[Schatten v7.12.137] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
         // v7.11.56: Toast bei Erfolg - Spieler hat geklickt und soll Wuerfel-
         // Ergebnis direkt sehen, nicht nur narrative Andeutungen.
         if (typeof showProgressToast === 'function') {
@@ -23048,7 +23069,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.136] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.137] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
