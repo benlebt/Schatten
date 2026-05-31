@@ -2773,7 +2773,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.115</div>
+    <div class="start-version">Schatten v7.12.116</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2937,7 +2937,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.115</span>
+    <span>Schatten v7.12.116</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5484,7 +5484,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let history = [];
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.115';
+window.SCHATTEN_VERSION = 'v7.12.116';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -10035,6 +10035,13 @@ let sceneCounter = 0;
 let timeAdvanceTokens = 0; // accumulator for fractional time progression
 let scenesInCurrentTime = 0; // v6.55: counts scenes since last tageszeit change
 let physicalStreakInTime = 0; // v7.9.41: counts isPhysical scenes in current Tageszeit, force-advance bei >= 5
+// v7.12.116: Zaehlt Szenen am Stueck in Abend ODER Nacht. Anders als scenesInCurrentTime
+// wird er NICHT bei jedem Tageszeit-Subschritt (MORGEN->MITTAG->ABEND->NACHT) genullt,
+// sondern nur wenn es wieder Tag wird (Schlaf/Tagwechsel zu MORGEN). Misst also "wie lange
+// haengt Karl schon im Abend/Nacht-Block fest" - die richtige Metrik fuer die Bot-Schlaf-
+// Praeferenz. Befund Stein-Run 1135: scenesInCurrentTime sprang staendig auf 0 (bei jedem
+// Subschritt), erreichte die Schlaf-Schwelle 3 fast nie zeitgleich mit verfuegbarem Schlaf.
+let abendNachtStreak = 0;
 function advanceGameTime() {
   // ACTION-PAUSE: Wenn die vorige Szene Spannung 4 oder 5 hatte (Brenzlig/Lebensgefahr),
   // pausiert die Tageszeit komplett. So bleibt in einer Verfolgungsjagd oder Schiesserei
@@ -10045,6 +10052,15 @@ function advanceGameTime() {
   // griff (Sp 3-5). Bei NACHT + Action wird's leichter forciert weil sonst
   // 12-Sz-Verhoer-Marathons entstehen.
   const isNacht = gameTimeIdx === 5;
+  // v7.12.116: Nacht-Streak pflegen. Wenn es gerade Abend/Nacht ist (idx>=4), zaehle hoch;
+  // sonst (Tag) auf 0. Dieser Zaehler ueberlebt MORGEN->...->NACHT-Subschritte und wird nur
+  // beim echten Tagwechsel zu MORGEN genullt (weiter unten). Misst "Szenen am Stueck im
+  // Abend/Nacht-Block" - die Metrik, an der die Bot-Schlaf-Praeferenz haengen soll.
+  if (typeof isAbendOderNachtTime === 'function' && isAbendOderNachtTime(gameTimeIdx)) {
+    abendNachtStreak++;
+  } else {
+    abendNachtStreak = 0;
+  }
   const actionOverrideLimit = isNacht ? 6 : 8;
   // v7.11.2: Action-Pause war frueher KOMPLETT (Tageszeit froren ganz ein, 8
   // Szenen lang). Anlass: 0252-Run hatte 8 Sz T2 MORGEN ohne Wechsel weil
@@ -10183,6 +10199,7 @@ function advanceGameTime() {
       if (gameTimeIdx >= TIMES_OF_DAY.length) {
         gameTimeIdx = 0; // back to MORGEN
         gameDay++;       // new day
+        abendNachtStreak = 0; // v7.12.116: neuer Tag -> Nacht-Streak zuruecksetzen
         recalcGameCurrentDate();
         // Flag, damit die naechste Szene einen expliziten Tageswechsel-Story-Beat bekommt
         pendingDayTransition = true;
@@ -11759,7 +11776,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.115] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.116] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -16297,6 +16314,7 @@ async function startGame() {
   pendingForcedLocationChange = null;  // v7.0
   scenesAtSameLocation = 0;
   scenesInCurrentTime = 0; // v7.9.23: Marathon-Counter reset (war vorher persistent zwischen Runs)
+  abendNachtStreak = 0; // v7.12.116: Nacht-Streak reset
   physicalStreakInTime = 0; // v7.9.41
   lastLocation = '';
   lastMainLocation = ''; // v6.58
@@ -18491,7 +18509,7 @@ async function chooseOption(option) {
     if (npcName && typeof romanceReceptive[npcName] === 'undefined') {
       const offen = Math.random() < 0.5;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.115] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.116] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -18820,7 +18838,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.115] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.116] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -19860,7 +19878,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           } else if (!tensionHighEnoughForArrest && folterSceneCount >= custodyReleaseFloor) {
             // STILLER RELEASE: nur noch als Notventil bei langem Drift (5+ Sz). Karl ist
             // faktisch frei (KI erzaehlt ihn lange ohne Stasi-Kontext), System zieht nach.
-            console.warn('[Schatten v7.12.115] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
+            console.warn('[Schatten v7.12.116] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet');
             setCustodyState(false, 'stiller-release');
           } else if (!tensionHighEnoughForArrest) {
@@ -19876,7 +19894,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.115] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.116] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -20404,7 +20422,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof diag === 'function') {
           diag('state', '⚡ NOTFLUCHT GELUNGEN - Karl frei + 4 Sz Gnadenfrist, Stasi-Tension ' + prevTension + ' -> 3 (gesucht, aber nicht sofort wieder greifbar)');
         }
-        console.log('[Schatten v7.12.115] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
+        console.log('[Schatten v7.12.116] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
         // v7.11.56: Toast bei Erfolg - Spieler hat geklickt und soll Wuerfel-
         // Ergebnis direkt sehen, nicht nur narrative Andeutungen.
         if (typeof showProgressToast === 'function') {
@@ -22523,7 +22541,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.115] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.116] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
@@ -24293,12 +24311,12 @@ function botChooseByStrategy(options) {
   if (typeof gameTimeIdx === 'number' && isAbendOderNachtTime(gameTimeIdx) && typeof botDecisionLog !== 'undefined') {
     const _sl = (byCat.SCHLAFEN ? byCat.SCHLAFEN.length : 0);
     const _fl = (byCat.FLUCHT ? byCat.FLUCHT.length : 0);
-    botDecisionLog.push('NACHT-CHECK Sz' + sceneCounter + ': scenesInCurrentTime=' + (typeof scenesInCurrentTime==='number'?scenesInCurrentTime:'?') + ', SCHLAFEN-Optionen=' + _sl + ', FLUCHT-Optionen=' + _fl + ', Vf=' + verfassung + ', muedeAktiv=' + _muedeAktiv);
+    botDecisionLog.push('NACHT-CHECK Sz' + sceneCounter + ': abendNachtStreak=' + (typeof abendNachtStreak==='number'?abendNachtStreak:'?') + ' (scenesInCurrentTime=' + (typeof scenesInCurrentTime==='number'?scenesInCurrentTime:'?') + '), SCHLAFEN-Optionen=' + _sl + ', FLUCHT-Optionen=' + _fl + ', Vf=' + verfassung + ', muedeAktiv=' + _muedeAktiv);
   }
 
   if (byCat.SCHLAFEN && byCat.SCHLAFEN.length > 0 &&
       typeof gameTimeIdx === 'number' && isAbendOderNachtTime(gameTimeIdx)) {
-    const nachtSzenen = (typeof scenesInCurrentTime === 'number') ? scenesInCurrentTime : 0;
+    const nachtSzenen = (typeof abendNachtStreak === 'number') ? abendNachtStreak : 0;
     let schlafChance = 0;
     if (nachtSzenen >= 7) schlafChance = 0.80;
     else if (nachtSzenen >= 5) schlafChance = 0.55;
@@ -24348,7 +24366,7 @@ function botChooseByStrategy(options) {
   // Greift erst ab laengerer Nacht (>=5 Sz), damit es nicht jede Action sofort abbricht.
   if (typeof gameTimeIdx === 'number' && isAbendOderNachtTime(gameTimeIdx) &&
       byCat.FLUCHT && byCat.FLUCHT.length > 0) {
-    const _nachtSz = (typeof scenesInCurrentTime === 'number') ? scenesInCurrentTime : 0;
+    const _nachtSz = (typeof abendNachtStreak === 'number') ? abendNachtStreak : 0;
     // Schlaf gerade NICHT verfuegbar (sonst haette der Block oben gegriffen)?
     const _schlafGesperrt = !(byCat.SCHLAFEN && byCat.SCHLAFEN.length > 0);
     // v7.12.112: Bei aktivem Müdigkeits-Toast greift das Ventil frueher (ab 3 statt 5 Sz)
