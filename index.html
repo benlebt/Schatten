@@ -2821,7 +2821,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.148</div>
+    <div class="start-version">Schatten v7.12.149</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2985,7 +2985,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.148</span>
+    <span>Schatten v7.12.149</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5536,7 +5536,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.148';
+window.SCHATTEN_VERSION = 'v7.12.149';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -12233,7 +12233,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.148] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.149] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -19135,7 +19135,7 @@ async function chooseOption(option) {
       // das ~63% Erfolg bei der ersten Annaeherung (vorher ~25%).
       const offen = Math.random() < 0.70;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.148] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.149] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -19341,8 +19341,16 @@ async function chooseOption(option) {
   try {
     if (typeof parsePlayerIntent === 'function') {
       option._intent = parsePlayerIntent(option, currentScene);
-      if (option._intent && typeof diag === 'function') {
-        diag('info', 'Intent erkannt: ' + option._intent.type + (option._intent.target ? ' -> ' + option._intent.target : (option._intent.object ? ' -> ' + option._intent.object : '')));
+      if (option._intent) {
+        // v7.12.149: in botDecisionLog (export-sichtbar) statt diag() - eine diag()-Zeile
+        // hier verfaellt, weil sie VOR dem naechsten diagBegin gepusht wird (gleicher
+        // Mechanismus wie bei den Bot-Entscheidungen, v7.12.114/141). botDecisionLog wird
+        // beim naechsten diagBegin in den Frame uebernommen.
+        const _it = option._intent;
+        const _ziel = _it.target || _it.object || '';
+        if (typeof botDecisionLog !== 'undefined' && Array.isArray(botDecisionLog)) {
+          botDecisionLog.push('Intent erkannt: ' + _it.type + (_ziel ? ' -> ' + _ziel : '') + ' (Aktion: "' + (option.text || '').slice(0, 40) + '")');
+        }
       }
     }
   } catch (e) { option._intent = null; }
@@ -19504,7 +19512,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.148] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.149] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -19567,13 +19575,20 @@ function parsePlayerIntent(option, currentScene) {
     if (objekt) return { type: 'inspect', previousOrt: previousOrt, object: objekt };
   }
 
-  // REISE: Karl bewegt sich an einen anderen Ort. Bewegungsverb ODER ein Zielpraefix
-  // am ANFANG des Optionstextes (^), damit ein mittiges "nach/zur" (z.B. in einer
-  // Befragung) nicht faelschlich als Reise zaehlt. Nur werten, wenn ein Ziel da ist.
-  if (/\b(fahr|fahre|fahrst|geh\b|gehe|gehst|begib|begeb|lauf|steig in|steig ins|setz dich in)\b/.test(t) ||
-      /^(zur|zum|nach|richtung|auf zum|auf zur|ins|in die|in den)\b/.test(t)) {
+  // REISE: Karl bewegt sich an einen ANDEREN ORT (Straße, Bezirk, Gebäude) - NICHT
+  // eine Bewegung INNERHALB des Raums (ans Fenster, zur Tür). v7.12.149 (Anlass iv_b
+  // Sz14): "Geh zum Fenster und beobachte" wurde faelschlich als Reise gewertet
+  // -> travel_ignored-Fehlalarm + unnoetiger Repair. Zwei Schutzebenen:
+  //  (a) Wenn die Aktion ein BEOBACHTEN/Warten-Verb traegt, ist es keine Reise.
+  //  (b) Wenn das Ziel ein Innenraum-Detail (fenster/tuer/tresen/...) ist, keine Reise.
+  const istBeobachten = /\b(beobacht|lausch|horch|warte|wart\b|spaeh|spaehe|sieh dich um|schau dich um|halt(e)? ausschau|behalt|im auge)/.test(t);
+  if (!istBeobachten &&
+      (/\b(fahr|fahre|fahrst|geh\b|gehe|gehst|begib|begeb|lauf|steig in|steig ins|setz dich in)\b/.test(t) ||
+       /^(zur|zum|nach|richtung|auf zum|auf zur|ins|in die|in den)\b/.test(t))) {
     const ziel = extractTravelTarget(raw);
-    if (ziel) return { type: 'travel', previousOrt: previousOrt, target: ziel };
+    // Innenraum-Ziele sind keine Reise (Bewegung im Raum, Ort bleibt gleich).
+    const istInnenraum = ziel && /^(fenster|tuer|tuere|tresen|theke|schreibtisch|tisch|regal|schrank|ecke|wand|sofa|sessel|stuhl|bett|kamin|ofen|spiegel|treppe|tresor|safe|schublade|bar|ausgang|eingang|empfang)\b/.test(ziel);
+    if (ziel && !istInnenraum) return { type: 'travel', previousOrt: previousOrt, target: ziel };
   }
 
   return null;
@@ -19663,9 +19678,15 @@ function validateIntentFollowup(scene, intent) {
   }
 
   if (intent.type === 'inspect') {
+    // v7.12.149 (Anlass iv_b Sz8): TOLERANTER. Vorher feuerte ein Repair, sobald das
+    // EXAKTE Objektwort fehlte ("durchsuch das Lager" -> KI schreibt "der Raum/die
+    // Regale" = Synonym, kein Bruch). Jetzt nur Repair, wenn (a) das Objektwort fehlt
+    // UND (b) die Szene auch sonst KEINERLEI Untersuchungs-/Fund-Handlung beschreibt.
     if (intent.object) {
       const first = String(intent.object).split(/\s+/)[0];
-      if (first && first.length >= 4 && !text.includes(first)) return 'inspection_target_missing';
+      const objektFehlt = first && first.length >= 4 && !text.includes(first);
+      const untersuchtIrgendwas = /\b(durchsuch|durchwuehl|oeffn|findest|entdeckst|liegt|stapel|regal|schublade|papiere|akten|kiste|kisten|fund|durchstoeber|durchwuehlst|inhalt|leer|nichts|spur|hinweis|kram|gegenstand|raum|zimmer)\b/.test(text);
+      if (objektFehlt && !untersuchtIrgendwas) return 'inspection_target_missing';
     }
     return null;
   }
@@ -20759,7 +20780,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           } else if (!tensionHighEnoughForArrest && folterSceneCount >= custodyReleaseFloor) {
             // STILLER RELEASE: nur noch als Notventil bei langem Drift (5+ Sz). Karl ist
             // faktisch frei (KI erzaehlt ihn lange ohne Stasi-Kontext), System zieht nach.
-            console.warn('[Schatten v7.12.148] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
+            console.warn('[Schatten v7.12.149] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet');
             setCustodyState(false, 'stiller-release');
           } else if (!tensionHighEnoughForArrest) {
@@ -20775,7 +20796,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.148] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.149] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -21301,7 +21322,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof diag === 'function') {
           diag('state', '⚡ NOTFLUCHT GELUNGEN - Karl frei + 4 Sz Gnadenfrist, Stasi-Tension ' + prevTension + ' -> 3 (gesucht, aber nicht sofort wieder greifbar)');
         }
-        console.log('[Schatten v7.12.148] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
+        console.log('[Schatten v7.12.149] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
         // v7.11.56: Toast bei Erfolg - Spieler hat geklickt und soll Wuerfel-
         // Ergebnis direkt sehen, nicht nur narrative Andeutungen.
         if (typeof showProgressToast === 'function') {
@@ -23452,7 +23473,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.148] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.149] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
