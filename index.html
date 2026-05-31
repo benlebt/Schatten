@@ -2821,7 +2821,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.144</div>
+    <div class="start-version">Schatten v7.12.145</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2985,7 +2985,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.144</span>
+    <span>Schatten v7.12.145</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5536,7 +5536,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.144';
+window.SCHATTEN_VERSION = 'v7.12.145';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -6823,6 +6823,7 @@ function convertAeOeUeForTTS(text) {
     ['Schaefer','Schäfer'], ['Schroeder','Schröder'], ['Mueller','Müller'],
     ['Goerke','Görke'], ['Wuensche','Wünsche'], ['Naehe','Nähe'],
     ['Buero','Büro'], ['buero','Büro'], ['Bueros','Büros'], ['bueros','Büros'],
+    ['Buerger','Bürger'], ['buerger','Bürger'], ['Buergermeister','Bürgermeister'], ['buergermeister','Bürgermeister'],
     // v7.12.138 (Code-Review): zusammengesetzte Strassennamen + flektierte Formen,
     // die die Einzelregeln nicht erfassten (Schaeferstrasse blieb sonst ASCII).
     ['Schaeferstrasse','Schäferstraße'], ['schaeferstrasse','Schäferstraße'],
@@ -8232,8 +8233,12 @@ function showSetupSelector() {
   }
 }
 function showGameOver() {
-  document.getElementById('options').classList.add('hidden');
-  document.getElementById('game-over').classList.remove('hidden');
+  // v7.12.145 (Code-Review): nullsichere Hides, konsistent mit showCaseSolved/Failed.
+  ['options','error','wait-box','loading','daily-limit'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.classList.add('hidden');
+  });
+  const gameOver = document.getElementById('game-over');
+  if (gameOver) gameOver.classList.remove('hidden');
   // v7.12.36: Save loeschen bei Tod - wie bei Win/Fail. Verhindert dass der
   // naechste Besuch in einen toten Spielstand restored.
   if (typeof clearSavedGame === 'function') clearSavedGame();
@@ -12107,12 +12112,14 @@ function istPersonPhysischAnwesend(name, scene) {
   if (!name || !scene) return false;
   const _first = String(name).trim().split(/\s+/)[0].toLowerCase();
   if (_first.length < 3) return false;
-  // personenImRaum/cast = harte Praesenz
-  const _raum = Array.isArray(scene.personenImRaum) ? scene.personenImRaum
-              : (Array.isArray(scene.cast) ? scene.cast : []);
-  for (const p of _raum) {
+  // v7.12.145 (Code-Review): personenImRaum = HARTE Praesenz (zaehlt sofort).
+  // scene.cast dagegen NUR, wenn zusaetzlich Text-Praesenz vorliegt - Gemini fuellt
+  // cast manchmal als "relevant fuer die Szene" statt "koerperlich im Raum", was den
+  // Romance-Button faelschlich zeigen koennte. personenImRaum ist verlaesslicher.
+  const _imRaum = Array.isArray(scene.personenImRaum) ? scene.personenImRaum : [];
+  for (const p of _imRaum) {
     const pn = (typeof p === 'string' ? p : (p && p.name) || '').toLowerCase();
-    if (pn && pn.includes(_first)) return true;
+    if (pn && pn.includes(_first)) return true;  // harte Praesenz
   }
   const _txt = (typeof scene.szene === 'string') ? scene.szene.toLowerCase() : '';
   if (!_txt || !_txt.includes(_first)) return false;
@@ -12208,7 +12215,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.144] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.145] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -14541,7 +14548,24 @@ Es ist NICHT realistisch, dass eine Trauergesellschaft 18 Stunden an einem Grab 
         if (!caseProgress.diebesgutZurueck) {
           const _indz = Array.isArray(caseProgress.indizien) ? caseProgress.indizien : [];
           const _indzText = _indz.map(i => (typeof i === 'string' ? i : (i && (i.text || i.beschreibung)) || '')).join(' ').toLowerCase();
-          const _versteckBekannt = /(schliessfach|schließfach|versteck|lager|hinterzimmer|kofferraum|tresor|depot|aufbewahr|befindet sich|liegt (in|im|bei|auf)|bei (tante |frau |herr )?\w+ im|adresse)/.test(_indzText);
+          // v7.12.145 (Code-Review): "adresse" allein triggerte zu frueh (Adresse eines
+          // Zeugen/Klienten/Juweliers ist NICHT der Gut-Ort). Jetzt zweistufig:
+          // (a) STARKE Versteck-Begriffe (Schliessfach/Tresor/Lager...) zaehlen direkt -
+          //     die meinen praktisch immer ein Versteck.
+          // (b) SCHWACHE Begriffe (adresse/liegt bei/wohnung) nur, wenn zusaetzlich ein
+          //     Diebesgut-Wort in den Indizien steht (Diebesgut-Synonyme + TARGET-Name).
+          const _starkVersteck = /(schliessfach|schließfach|versteck|lager|hinterzimmer|kofferraum|tresor|depot|aufbewahr)/.test(_indzText);
+          const _schwachOrt = /(befindet sich|liegt (in|im|bei|auf)|bei (tante |frau |herr )?\w+ im|adresse|wohnung|laden)/.test(_indzText);
+          // Diebesgut-Begriffe: generisch + TARGET-Name aus Setup (z.B. "Etui")
+          let _lootWords = /(diebe?s?gut|beute|gestohlen|gestohlene|ware|schmuck|etui|kette|ring|uhr|gemaelde|gemälde)/i;
+          try {
+            const _tgt = caseSetup && Array.isArray(caseSetup.setupCast) && caseSetup.setupCast.find(c => c && (c.tag === 'TARGET' || c.tagExtra === 'TARGET'));
+            if (_tgt && _tgt.name) {
+              const _tw = _tgt.name.toLowerCase().split(/\s+/).filter(w => w.length >= 4);
+              if (_tw.length && _tw.some(w => _indzText.includes(w))) _lootWords = { test: () => true };
+            }
+          } catch (e) { /* ignore */ }
+          const _versteckBekannt = _starkVersteck || (_schwachOrt && _lootWords.test(_indzText));
           const _reif = (caseProgress.stage || 0) >= 2 || sceneCounter >= 12;
           if (_versteckBekannt || _reif) {
             if (_versteckBekannt) {
@@ -19093,7 +19117,7 @@ async function chooseOption(option) {
       // das ~63% Erfolg bei der ersten Annaeherung (vorher ~25%).
       const offen = Math.random() < 0.70;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.144] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.145] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -19450,7 +19474,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.144] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.145] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -20505,7 +20529,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           } else if (!tensionHighEnoughForArrest && folterSceneCount >= custodyReleaseFloor) {
             // STILLER RELEASE: nur noch als Notventil bei langem Drift (5+ Sz). Karl ist
             // faktisch frei (KI erzaehlt ihn lange ohne Stasi-Kontext), System zieht nach.
-            console.warn('[Schatten v7.12.144] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
+            console.warn('[Schatten v7.12.145] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet');
             setCustodyState(false, 'stiller-release');
           } else if (!tensionHighEnoughForArrest) {
@@ -20521,7 +20545,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.144] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.145] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -21047,7 +21071,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof diag === 'function') {
           diag('state', '⚡ NOTFLUCHT GELUNGEN - Karl frei + 4 Sz Gnadenfrist, Stasi-Tension ' + prevTension + ' -> 3 (gesucht, aber nicht sofort wieder greifbar)');
         }
-        console.log('[Schatten v7.12.144] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
+        console.log('[Schatten v7.12.145] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
         // v7.11.56: Toast bei Erfolg - Spieler hat geklickt und soll Wuerfel-
         // Ergebnis direkt sehen, nicht nur narrative Andeutungen.
         if (typeof showProgressToast === 'function') {
@@ -23183,7 +23207,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.144] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.145] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
@@ -24699,6 +24723,24 @@ function saveGameState() {
       timedEventState: (typeof timedEventState !== 'undefined' ? timedEventState : null),
       lastRomancePushScene: (typeof lastRomancePushScene === 'number' ? lastRomancePushScene : -99),
       romancePushCount: (typeof romancePushCount === 'number' ? romancePushCount : 0),
+      // v7.12.145 (Code-Review): weitere mechanik-relevante Felder, die bei einem
+      // Mobile-Reload (iOS) sonst auf Defaults zuruecksprangen. karlVehicle (sonst
+      // bringt Reload den Opel heimlich zurueck), lastInjury/-Scene (Verletzungs-
+      // kontinuitaet), lastSpannung (sonst geht der naechste Tick von falscher Ruhe aus),
+      // custodyLocked/stasiCustodyScenesSince/lastTrackedCustodyState/stasiRiskCounter
+      // (gegen Custody-Yo-Yo), scenesInStage2/3 (Progression/Abschluss), stage4ToastShown
+      // (kein doppelter Abschluss-Toast).
+      karlVehicle: (typeof karlVehicle !== 'undefined' ? karlVehicle : null),
+      lastInjury: (typeof lastInjury !== 'undefined' ? lastInjury : null),
+      lastInjuryScene: (typeof lastInjuryScene === 'number' ? lastInjuryScene : -99),
+      lastSpannung: (typeof lastSpannung === 'number' ? lastSpannung : 1),
+      custodyLocked: (typeof custodyLocked === 'boolean' ? custodyLocked : false),
+      stasiCustodyScenesSince: (typeof stasiCustodyScenesSince === 'number' ? stasiCustodyScenesSince : 0),
+      lastTrackedCustodyState: (typeof lastTrackedCustodyState !== 'undefined' ? lastTrackedCustodyState : null),
+      stasiRiskCounter: (typeof stasiRiskCounter === 'number' ? stasiRiskCounter : 0),
+      scenesInStage2: (typeof scenesInStage2 === 'number' ? scenesInStage2 : 0),
+      scenesInStage3: (typeof scenesInStage3 === 'number' ? scenesInStage3 : 0),
+      stage4ToastShown: (typeof stage4ToastShown === 'boolean' ? stage4ToastShown : false),
     };
     localStorage.setItem(SCHATTEN_SAVE_KEY, JSON.stringify(snap));
   } catch (e) {
@@ -24796,6 +24838,18 @@ function restoreGameState() {
     if (typeof timedEventState !== 'undefined') timedEventState = snap.timedEventState || null;
     if (typeof lastRomancePushScene !== 'undefined') lastRomancePushScene = (typeof snap.lastRomancePushScene === 'number') ? snap.lastRomancePushScene : -99;
     if (typeof romancePushCount !== 'undefined') romancePushCount = snap.romancePushCount || 0;
+    // v7.12.145 (Code-Review): die 11 neu gespeicherten Felder zuruecklesen.
+    if (typeof karlVehicle !== 'undefined' && typeof snap.karlVehicle !== 'undefined') karlVehicle = snap.karlVehicle;
+    if (typeof lastInjury !== 'undefined' && typeof snap.lastInjury !== 'undefined') lastInjury = snap.lastInjury;
+    if (typeof lastInjuryScene !== 'undefined') lastInjuryScene = (typeof snap.lastInjuryScene === 'number') ? snap.lastInjuryScene : -99;
+    if (typeof lastSpannung !== 'undefined') lastSpannung = (typeof snap.lastSpannung === 'number') ? snap.lastSpannung : 1;
+    if (typeof custodyLocked !== 'undefined') custodyLocked = !!snap.custodyLocked;
+    if (typeof stasiCustodyScenesSince !== 'undefined') stasiCustodyScenesSince = snap.stasiCustodyScenesSince || 0;
+    if (typeof lastTrackedCustodyState !== 'undefined' && typeof snap.lastTrackedCustodyState !== 'undefined') lastTrackedCustodyState = snap.lastTrackedCustodyState;
+    if (typeof stasiRiskCounter !== 'undefined') stasiRiskCounter = snap.stasiRiskCounter || 0;
+    if (typeof scenesInStage2 !== 'undefined') scenesInStage2 = snap.scenesInStage2 || 0;
+    if (typeof scenesInStage3 !== 'undefined') scenesInStage3 = snap.scenesInStage3 || 0;
+    if (typeof stage4ToastShown !== 'undefined') stage4ToastShown = !!snap.stage4ToastShown;
     // Datum nach Restore aus gameDay/gameStartDate konsistent neu berechnen.
     if (typeof recalcGameCurrentDate === 'function') { try { recalcGameCurrentDate(); } catch (e) {} }
 
