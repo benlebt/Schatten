@@ -17,7 +17,7 @@
 // v1.0 (2026-05-30): Erste versionierte Fassung. Enthaelt den responseSchema-
 //   Kernfix (kategorie als enum+required pro Option; zielperson_gefunden,
 //   wahrheit_erkannt, indiz_verbindung, npc_kernhinweis ergaenzt).
-const GEMINI_JS_VERSION = 'v1.0';
+const GEMINI_JS_VERSION = 'v1.1';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -150,6 +150,11 @@ export default async function handler(req, res) {
           // Wenn Karl in dieser Szene dem Klient/der Klientin das Ergebnis berichtet hat
           // (NACH Ueberfuehrung): true setzen. Damit wird der Fall als geloest markiert.
           klient_berichtet: { type: 'boolean' },
+          // v1.1 (v7.12.105): gewahrsam-Feld fuer den Custody-Umbau Schritt 2. index.html
+          // liest scene.gewahrsam als PRIMAERE Custody-Wahrheit (KI weiss am besten ob Karl
+          // in der Zelle sitzt). Fehlte im Schema -> Gemini filterte es weg -> KI-SIGNAL kam
+          // nie an (0x im Run). Genau der Schema-Filter-Effekt wie v7.12.67. Jetzt ergaenzt.
+          gewahrsam: { type: 'boolean' },
           // v7.12.67: Diese 4 Felder liest index.html, aber sie fehlten im Schema
           // -> Gemini filterte sie bei responseMimeType:application/json weg.
           // zielperson_gefunden + wahrheit_erkannt sind die zwei Durchbruch-Pfade
