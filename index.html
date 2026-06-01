@@ -2804,7 +2804,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.189</div>
+    <div class="start-version">Schatten v7.12.192</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2968,7 +2968,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.189</span>
+    <span>Schatten v7.12.192</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4966,6 +4966,23 @@ const INTRO_VARIANTS = [
           triggerWhen: 'Karl besucht den geschlossenen Salon oder Ediths Wohnung alleine, Abend, niedrige Spannung',
           persistent: false, anwesend: false },
       ],
+      // v7.12.192 (Block 3 - Goerke Setup-Beats gegen Stagnation): Goerke hatte als einer
+      // der wenigen Faelle KEINE keyClues -> die KI suchte planlos, der Bot musste durch 6
+      // harte Indiz-Pushes gerettet werden (49-56 Szenen). Diese 5 keyClues sind die natuerlichen
+      // Ermittlungsachsen aus den echten v189-Runs und fuehren organisch zur etablierten Wahrheit
+      // (Krollwitz verantwortlich, Albrecht entlastet, Mathilde Opfer).
+      // WICHTIG (User-Befund): Die Obduktions-/Befund-Manipulation laeuft BEWUSST NICHT ueber die
+      // Charite als physischen Ermittlungsort. Die Charite ist mechanisch ein HEIL-Ort (CHARITE-Typ,
+      // Marlene-Heilen-Button) - ein keyClue "fahr zur Charite" wuerde Heil- und Story-Zuordnung
+      // vermischen. Darum fuehrt die Aktenspur ueber Gericht (Prozessakte), Volkspolizei-Praesidium
+      // (Roth) und Zeugen (Edith), NICHT ueber das Krankenhaus.
+      keyClues: [
+        'Prozessakte am Kreisgericht: der im Verfahren verwendete Totenschein/Befund weicht vom urspruenglichen Ermittlungsstand ab - die Todesursache "Treppensturz" wurde nachtraeglich hineingeschrieben',
+        'Edith Brommer (Salon-Kollegin) bezeugt: Mathilde hatte in den Wochen vor ihrem Tod Angst, fuehlte sich beobachtet/bedraengt - und zwar NICHT von Albrecht, sondern von jemandem mit Behoerden-Auftreten',
+        'Volkspolizei-Akte (Keibelstrasse, ueber Roth): der erste VP-Ermittler hatte Zweifel am Sturz vermerkt - diese Notiz wurde aus der spaeteren Anklageakte entfernt',
+        'Hauptmann Krollwitz (MfS) hatte Zugriff auf den Ermittlungsvorgang und ein Interesse daran, Mathildes Tod als privates Familiendrama (Albrecht als Taeter) erscheinen zu lassen - er steuerte die Aktenlage',
+        'Albrechts Alibi fuer die Tatnacht wurde von der Anklage unterschlagen - ein Zeuge (Reichsbahn-Kollege) bestaetigt, dass Albrecht zur fraglichen Zeit nicht bei Mathilde war',
+      ],
       // v6.76: HISTORISCHER KONTEXT - 15. September 1953 (Dienstagmorgen)
       historicalContext: {
         weltlage: 'Stalin tot seit 6 Monaten. Chruschtschow seit 7.9. Erster Sekretaer KPdSU - 8 Tage frischer Machtwechsel in Moskau. Berija seit 26.6. in Haft (Prozess Dezember erwartet). In Bonn hat Adenauer-CDU vor 9 Tagen (6.9.1953) die Bundestagswahl gewonnen, Regierungsbildung laeuft. Im Osten ist die Stimmung nach 17. Juni gespannt, MfS-Verhaftungen gehen weiter.',
@@ -5498,7 +5515,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.189';
+window.SCHATTEN_VERSION = 'v7.12.192';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -8788,11 +8805,16 @@ function deriveResponsibleAndExonerated() {
 // ueberfuehrt" bedeuten). Diese Funktion korrigiert die Flags streng nach Falltyp und wird an
 // allen kritischen Abschluss-Stellen aufgerufen (AUFLOESEN Stage 4, scene.tatverdaechtiger_
 // ueberfuehrt, Auto-Stage-3 fuer wahrheit/beschatten). Idempotent.
-function syncResolutionFlagsByCaseType() {
+function syncResolutionFlagsByCaseType(source) {
   const ct = (caseSetup && caseSetup.caseType) || '';
   const cp = caseProgress || {};
   const verd = (cp.tatverdaechtiger || '').trim();
   const _generic = !verd || (typeof isGenericPersonName === 'function' && isGenericPersonName(verd));
+  // v7.12.190 (ChatGPT-Lektorat v189 P1): source unterscheidet, OB ein ungueltiger ueberfuehrt
+  // automatisch zu wahrheitErkannt werden darf. Bei 'scene_overfuehrung' (rohes KI-Feld) NICHT -
+  // ein kaputtes KI-Signal soll keinen sauberen Wahrheitsabschluss erzeugen. Bei Beweislage/
+  // Abschluss-Quellen (Default) schon, weil dort echte Ermittlung dahintersteht.
+  const _kiRoh = (source === 'scene_overfuehrung');
   if (ct === 'mord') {
     // Nur mit konkretem, nicht-generischem Taeter ueberfuehrt.
     cp.ueberfuehrt = !!(cp.ueberfuehrt && !_generic);
@@ -8819,11 +8841,11 @@ function syncResolutionFlagsByCaseType() {
         // bleibt ueberfuehrt (Verantwortlicher)
       } else {
         cp.ueberfuehrt = false;
-        cp.wahrheitErkannt = true;
+        if (!_kiRoh) cp.wahrheitErkannt = true; // kaputtes KI-Feld -> NICHT automatisch Wahrheit
       }
     } else {
       cp.ueberfuehrt = false;
-      cp.wahrheitErkannt = true;
+      if (!_kiRoh) cp.wahrheitErkannt = true;   // bei rohem KI-Signal Wahrheit nicht erzwingen
     }
   } else if (ct === 'vermisst') {
     // Vermisst loest ueber zielpersonGefunden, NICHT ueber ueberfuehrt.
@@ -8832,11 +8854,28 @@ function syncResolutionFlagsByCaseType() {
   } else if (ct === 'beschatten') {
     // Beschatten = Verdacht bestaetigt (intern wahrheitErkannt), NICHT ueberfuehrt.
     cp.ueberfuehrt = false;
-    cp.wahrheitErkannt = true;
+    if (!_kiRoh) cp.wahrheitErkannt = true;
   } else if (ct === 'diebstahl') {
     // Diebstahl loest ueber Objekt-Status, nicht ueber ueberfuehrt.
     cp.ueberfuehrt = false;
   }
+}
+
+// v7.12.190 (ChatGPT-Lektorat v189 P1): Korrektes Stage-3-Label nach Falltyp/conclusionKind.
+// "Verdächtiger überführt" ist bei Wahrheit/Politisch/Beschatten/Vermisst/Diebstahl falsch.
+function stage3LabelByCaseType() {
+  try {
+    const ct = (caseSetup && caseSetup.caseType) || '';
+    const cp = caseProgress || {};
+    if (ct === 'diebstahl') return cp.diebesgutZurueck ? 'Diebesgut zurück' : 'Täter überführt';
+    if (ct === 'vermisst') return cp.zielpersonGefunden ? 'Zielperson gefunden' : 'Spur aufgeklärt';
+    if (ct === 'beschatten') return 'Verdacht bestätigt';
+    if (ct === 'wahrheit' || ct === 'politisch') {
+      return cp.ueberfuehrt ? 'Verantwortlicher benannt' : 'Wahrheit bewiesen';
+    }
+    // mord + Default
+    return cp.ueberfuehrt ? 'Täter überführt' : 'Täterspur belastbar';
+  } catch (e) { return 'Verdächtiger überführt'; }
 }
 
 function determineConclusionKind() {
@@ -9326,8 +9365,27 @@ function buildTranscriptText() {
       if (e.politisch) statusParts.push('pol');
       if (typeof e.caseStufe === 'number' && e.caseStufe > 0) statusParts.push('Fs ' + e.caseStufe);
       if (typeof e.indizienCnt === 'number' && e.indizienCnt > 0) statusParts.push('Ind ' + e.indizienCnt);
+      // v7.12.190 (User-Wunsch "ALLES engine-relevante pro Szene"): Abschluss-Flags sichtbar.
+      if (e.ueberfuehrt) statusParts.push('UEBERF');
+      if (e.wahrheitErkannt) statusParts.push('WAHRH');
+      if (e.zielpersonGefunden) statusParts.push('ZIELGEF');
+      if (e.diebesgutZurueck) statusParts.push('GUT-ZUR');
       if (statusParts.length > 0) {
         out += '[' + statusParts.join(' · ') + ']\n';
+      }
+      // v7.12.190: vollstaendige Engine-Diagnose-Zeile pro Szene (Falltyp, Verdaechtiger,
+      // conclusionKind + Rollen). Macht fuer Lektorate auf einen Blick sichtbar, was die
+      // neue Abschluss-Engine in JEDER Szene bestimmt - nicht nur am Ende.
+      {
+        const engParts = [];
+        if (e.caseType) engParts.push('Typ:' + e.caseType);
+        if (e.tatverdaechtiger) engParts.push('Verd:' + e.tatverdaechtiger);
+        if (e.conclusionSnap && e.conclusionSnap.kind) {
+          engParts.push('Concl:' + e.conclusionSnap.kind);
+          if (e.conclusionSnap.responsible) engParts.push('Resp:' + e.conclusionSnap.responsible);
+          if (e.conclusionSnap.exonerated) engParts.push('Entl:' + e.conclusionSnap.exonerated);
+        }
+        if (engParts.length > 0) out += '{ENGINE: ' + engParts.join(' · ') + '}\n';
       }
       out += (e.text || '').trim() + '\n';
       // Angebotene Optionen NUR im Debug-Modus mit ausgeben (Lektorat-Hilfe).
@@ -9526,8 +9584,11 @@ function buildTranscriptText() {
   // Fall-Fortschritt: kompletter Stand inkl. ALLER Indizien (kein Cut-Off)
   // v7.9.41: stageLabels auf 5 Eintraege erweitert. Stage 4 (gelöst) zeigte sonst
   // "Stufe: undefined" im Export. Anlass: Kessler-Run v7.9.38.
-  const stageLabels = ['Aufbau', 'Indizien gesammelt', 'Verdächtiger identifiziert', 'Verdächtiger überführt', 'Fall gelöst'];
-  const hasFallInfo = caseProgress.indizien.length > 0 || caseProgress.tatverdaechtiger || clientProfile.name;
+  // v7.12.190 (ChatGPT-Lektorat v189 P1): Stage-3-Label falltypisch. "Verdächtiger überführt"
+  // ist bei Goerke (wahrheit) falsch - dort gehoert "Wahrheit bewiesen"/"Verantwortlicher
+  // benannt". stage3LabelByCaseType liefert den korrekten Begriff nach conclusionKind.
+  const _stage3Label = (typeof stage3LabelByCaseType === 'function') ? stage3LabelByCaseType() : 'Verdächtiger überführt';
+  const stageLabels = ['Aufbau', 'Indizien gesammelt', 'Verdächtiger identifiziert', _stage3Label, 'Fall gelöst'];
   if (hasFallInfo) {
     out += '\nFall-Fortschritt:\n';
     out += '  Stufe: ' + stageLabels[caseProgress.stage] + '\n';
@@ -10606,8 +10667,9 @@ function showStatusDetails() {
   // Fall-Fortschritt
   const caseRow = document.getElementById('popup-case-row');
   const caseEl = document.getElementById('popup-case');
-  // v7.9.41: stageLabels auf 5 Eintraege + Stage-4 Progress-Line ergaenzt.
-  const stageLabels = ['Aufbau', 'Indizien gesammelt', 'Verdächtiger identifiziert', 'Verdächtiger überführt', 'Fall gelöst'];
+  // v7.12.190: Stage-3-Label falltypisch (siehe formatSuspectStatus).
+  const _stage3LabelP = (typeof stage3LabelByCaseType === 'function') ? stage3LabelByCaseType() : 'Verdächtiger überführt';
+  const stageLabels = ['Aufbau', 'Indizien gesammelt', 'Verdächtiger identifiziert', _stage3LabelP, 'Fall gelöst'];
   const hasProgress = caseProgress.indizien.length > 0 || caseProgress.tatverdaechtiger || clientProfile.name;
   if (hasProgress) {
     let lines = [];
@@ -12948,7 +13010,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.189] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.192] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -19944,7 +20006,7 @@ async function chooseOption(option) {
       // das ~63% Erfolg bei der ersten Annaeherung (vorher ~25%).
       const offen = Math.random() < 0.70;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.189] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.192] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -20323,7 +20385,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.189] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.192] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -21719,7 +21781,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           } else if (!tensionHighEnoughForArrest && folterSceneCount >= custodyReleaseFloor) {
             // STILLER RELEASE: nur noch als Notventil bei langem Drift (5+ Sz). Karl ist
             // faktisch frei (KI erzaehlt ihn lange ohne Stasi-Kontext), System zieht nach.
-            console.warn('[Schatten v7.12.189] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
+            console.warn('[Schatten v7.12.192] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet');
             setCustodyState(false, 'stiller-release');
           } else if (!tensionHighEnoughForArrest) {
@@ -21735,7 +21797,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.189] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.192] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -22261,7 +22323,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof diag === 'function') {
           diag('state', '⚡ NOTFLUCHT GELUNGEN - Karl frei + 4 Sz Gnadenfrist, Stasi-Tension ' + prevTension + ' -> 3 (gesucht, aber nicht sofort wieder greifbar)');
         }
-        console.log('[Schatten v7.12.189] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
+        console.log('[Schatten v7.12.192] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
         // v7.11.56: Toast bei Erfolg - Spieler hat geklickt und soll Wuerfel-
         // Ergebnis direkt sehen, nicht nur narrative Andeutungen.
         if (typeof showProgressToast === 'function') {
@@ -23757,13 +23819,25 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             ? tMentioned                                      // Vermisst: NUR wenn Person auftaucht
             : (tMentioned || stage2Scenes >= 16 || !targetName); // sonst: wie bisher
           if (forceOk) {
-            caseProgress.ueberfuehrt = true;
+            // v7.12.190 (ChatGPT-Lektorat v189 P0): Dieser Stagnations-Fallback laeuft im
+            // wahrheit/beschatten-Kontext und setzte pauschal ueberfuehrt=true -> Goerke/Kessler
+            // kippten trotz neuer Architektur in Taeterlogik. Jetzt falltypisch via Sync.
             caseProgress.stage = 3;
             caseProgress.stage3StartScene = sceneCounter;
-            const msg = istVermisstFall ? 'Zielperson gefunden' : 'Beweise gesichert';
+            if (istVermisstFall) {
+              // Vermisst: Zielperson in Szene praesent -> gefunden (nicht ueberfuehrt).
+              caseProgress.zielpersonGefunden = true;
+              caseProgress.ueberfuehrt = false;
+            } else {
+              // wahrheit/beschatten: Beweislage reicht -> wahrheitErkannt, dann falltypisch
+              // absichern (ueberfuehrt nur bei konkretem plausiblem Verantwortlichem).
+              caseProgress.wahrheitErkannt = true;
+              if (typeof syncResolutionFlagsByCaseType === 'function') syncResolutionFlagsByCaseType();
+            }
+            const msg = istVermisstFall ? 'Zielperson gefunden' : (caseProgress.ueberfuehrt ? 'Verantwortlicher' : 'Wahrheit/Verdacht belegt');
             console.log('[Schatten] AUTO-FORCING Stage 3 (' + ct + '): ' + msg);
-            diag('progress', '✦ AUTO-STAGE 3 (' + ct + ') erzwungen nach ' + stage2Scenes + ' Szenen (' + (istVermisstFall ? 'Zielperson in Szene praesent' : 'Beweislage') + ')');
-            showProgressToast('FALL-STUFE 3', istVermisstFall ? 'Karl hat die Spur zur Zielperson.' : 'Karl hat was er braucht.');
+            diag('progress', '✦ AUTO-STAGE 3 (' + ct + ') erzwungen nach ' + stage2Scenes + ' Szenen (' + msg + ')');
+            showProgressToast('FALL-STUFE 3', istVermisstFall ? 'Karl hat die Spur zur Zielperson.' : (ct === 'beschatten' ? 'Verdacht bestätigt.' : 'Karl hat was er braucht.'));
           } else {
             diag('drift', 'Stage-3-Force (' + ct + ') blockiert: ' + (istVermisstFall ? 'Zielperson ' + targetName + ' nicht in letzten 5 Szenen praesent' : targetName + ' nicht in letzten 5 Szenen') + ' (' + stage2Scenes + ' Szenen Stage 2)');
           }
@@ -23987,11 +24061,24 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             } else {
               caseProgress.wahrheitErkannt = true; // kein plausibler Taeter -> Wahrheit bewiesen (Goerke)
             }
+          } else if (_ctF === 'mord') {
+            // v7.12.190 (ChatGPT-Lektorat v189): Mord nur ueberfuehrt wenn plausibler,
+            // konkreter Taeter (_plausibel deckt generisch + ROMANCE/Opfer/Klient ab).
+            caseProgress.ueberfuehrt = !!_plausibel;
+            if (!_plausibel) diag('drift', 'Auto-Force Mord: "' + (caseProgress.tatverdaechtiger || '?') + '" kein plausibler Taeter - NICHT ueberfuehrt');
+          } else if (_ctF === 'vermisst') {
+            caseProgress.zielpersonGefunden = true; // vermisst loest ueber gefunden
+            caseProgress.ueberfuehrt = false;
+          } else if (_ctF === 'beschatten') {
+            caseProgress.wahrheitErkannt = true;     // beschatten = Verdacht bestaetigt
+            caseProgress.ueberfuehrt = false;
+          } else if (_ctF === 'diebstahl') {
+            caseProgress.ueberfuehrt = false;        // Diebstahl loest ueber Objekt-Status
           } else {
-            caseProgress.ueberfuehrt = true;     // mord/diebstahl/vermisst/beschatten wie bisher
+            caseProgress.ueberfuehrt = true;         // unbekannter Falltyp: konservativ wie bisher
           }
           const reason = karlActedTowardsSuspect ? 'Karl hat Verdaechtigen aktiv verfolgt' : 'extreme Stagnation (' + stage2Scenes + ' Sz)';
-          console.log('[Schatten] AUTO-FORCING Stage 3: ' + caseProgress.tatverdaechtiger + ' (' + reason + ', ' + (caseProgress.ueberfuehrt ? 'ueberfuehrt' : 'wahrheitErkannt') + ')');
+          console.log('[Schatten] AUTO-FORCING Stage 3: ' + caseProgress.tatverdaechtiger + ' (' + reason + ', ' + (caseProgress.ueberfuehrt ? 'ueberfuehrt' : (caseProgress.zielpersonGefunden ? 'gefunden' : 'wahrheitErkannt')) + ')');
           diag('progress', '✦ AUTO-STAGE 3 erzwungen (' + caseProgress.tatverdaechtiger + ', ' + reason + ')');
           // v7.1: Toast-Text nach Falltyp differenziert. Bei vermisst-Fall ist der
           // "Tatverdaechtige" eigentlich die vermisste Person - die muss nicht
@@ -24567,7 +24654,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.189] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.192] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
@@ -24585,20 +24672,24 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       // auch bei wahrheit/beschatten zu leicht setzen. Falltypisch absichern: bei wahrheit
       // ohne konkreten Verantwortlichen -> wahrheitErkannt statt ueberfuehrt; bei beschatten/
       // vermisst -> korrekter Hebel. Sonst kippt Goerke wieder in faelschliche Taeterlogik.
-      if (typeof syncResolutionFlagsByCaseType === 'function') syncResolutionFlagsByCaseType();
+      if (typeof syncResolutionFlagsByCaseType === 'function') syncResolutionFlagsByCaseType('scene_overfuehrung');
       console.log('[Schatten] Fall-Fortschritt: Verdaechtiger ueberfuehrt (Stage 3, ' + (caseProgress.ueberfuehrt ? 'ueberfuehrt' : 'wahrheitErkannt') + ')');
       diag('progress', '✦ STAGE 3 erreicht (' + caseProgress.tatverdaechtiger + ', ' + (caseProgress.ueberfuehrt ? 'ueberfuehrt' : 'Wahrheit/Spur') + ')');
-      // v7.1: Toast-Text nach Falltyp (v7.9.27 harmonisiert)
+      // v7.12.190 (ChatGPT-Lektorat v189 P1): Toast nach dem TATSAECHLICHEN Zustand nach Sync.
+      // Wenn Sync ueberfuehrt zu wahrheitErkannt korrigiert hat, darf der Toast nicht mehr
+      // "X ueberfuehrt" sagen. Falltyp + ueberfuehrt-Status zusammen entscheiden.
       {
         const ct = (caseSetup && caseSetup.caseType) || '';
         let toastText;
         if (ct === 'vermisst') {
           toastText = caseProgress.tatverdaechtiger + ' lokalisiert. Jetzt zum Klienten.';
         } else if (ct === 'beschatten') {
-          toastText = 'Beweise gesichert. Jetzt zum Klienten.';
+          toastText = 'Verdacht bestätigt. Jetzt zum Klienten.';
         } else if (ct === 'diebstahl' && !caseProgress.diebesgutZurueck) {
-          // v7.12.144: bei Diebstahl ohne Gut korrekt aufs Holen lenken, nicht zum Klienten.
           toastText = caseProgress.tatverdaechtiger + ' überführt. Jetzt das Diebesgut holen.';
+        } else if ((ct === 'wahrheit' || ct === 'politisch') && !caseProgress.ueberfuehrt) {
+          // Sync hat zu Wahrheit-bewiesen korrigiert -> kein "ueberfuehrt"-Toast.
+          toastText = 'Die Wahrheit ist klar. Jetzt zum Klienten.';
         } else {
           toastText = caseProgress.tatverdaechtiger + ' überführt. Jetzt zum Klienten.';
         }
@@ -24751,6 +24842,40 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       const beschattungZuDuenn = (ctW === 'beschatten' &&
         !((caseProgress.stage >= 2) && ((caseProgress.indizien || []).length >= 4)));
       if (wsFloorOk && !diebstahlOhneGut && !beschattungZuDuenn) {
+        // v7.12.190 (ChatGPT-Lektorat v189 P0): MORDFALL-SONDERWEG. Bei caseType 'mord' darf
+        // das KI-Feld wahrheit_erkannt NICHT zu "Wahrheit bewiesen, kein klassischer Taeter"
+        // fuehren (Achterberg-Run Sz48: Vossberg ist klar der Moerder, trotzdem feuerte "kein
+        // klassischer Taeter"). Bei Mord mit konkretem plausiblem Verdaechtigen ist der
+        // Durchbruch eine TAETERSPUR, keine taeterlose Wahrheit.
+        if (ctW === 'mord') {
+          const _vM = (caseProgress.tatverdaechtiger || '').trim();
+          const _genM = !_vM || (typeof isGenericPersonName === 'function' && isGenericPersonName(_vM));
+          // Plausibilitaet: konkreter Name, nicht ROMANCE/Opfer/Klient.
+          let _plausM = !_genM;
+          if (_plausM && caseSetup && Array.isArray(caseSetup.setupCast)) {
+            try {
+              const _ceM = caseSetup.setupCast.find(c => c && c.name && c.name.toLowerCase().split(/\s+/).filter(w => w.length >= 4).some(t => _vM.toLowerCase().includes(t)));
+              if (_ceM) {
+                const _tM = (_ceM.tag || '').toUpperCase();
+                const _rM = (_ceM.rolle || '').toLowerCase();
+                if (_tM === 'ROMANCE' || _tM === 'CLIENT' || _tM === 'TARGET' || /opfer|verstorben|tot|leiche|klient|auftraggeber/.test(_rM)) _plausM = false;
+              }
+            } catch (e) {}
+          }
+          if (_plausM) {
+            // Konkreter Moerder belastet -> als ueberfuehrt werten, NICHT taeterlose Wahrheit.
+            caseProgress.ueberfuehrt = true;
+            caseProgress.wahrheitErkannt = false;
+            if (caseProgress.stage < 3) { caseProgress.stage = 3; caseProgress.stage3StartScene = sceneCounter; }
+            console.log('[Schatten] Mord-Durchbruch: ' + _vM + ' belastet (Taeterspur, kein Wahrheit-ohne-Taeter)');
+            diag('progress', '✦ TAETERSPUR BELASTBAR - ' + _vM + ' ist belastet. Jetzt zum Klienten.');
+            showProgressToast('TÄTERSPUR', _vM + ' ist belastet. Jetzt brauchst du den Abschluss.', 'success', 'taeter-belastet', '🔍');
+            return; // Mord-Sonderweg fertig - generischen Wahrheit-Pfad NICHT durchlaufen.
+          }
+          // Kein plausibler Moerder -> Mord bleibt OFFEN, KEIN Wahrheit-Abschluss erzwingen.
+          diag('drift', 'Mord wahrheit_erkannt ignoriert: kein plausibler konkreter Taeter ("' + (_vM || '?') + '") - Mord bleibt offen, kein taeterloser Wahrheitsabschluss.');
+          return;
+        }
         caseProgress.wahrheitErkannt = true;
         // v7.12.181 (beide Lektorate, Brandt "Kurt Lange zu hart zurueckgenommen"): Es gibt
         // ZWEI Wahrheitsfall-Untertypen, die v178 faelschlich gleich behandelte:
@@ -24879,10 +25004,15 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         }
       } else {
       const requiresGap = (ctClose === 'beschatten' || ctClose === 'wahrheit');
-      if (requiresGap) {
+      // v7.12.190 (ChatGPT-Lektorat v189 P0): Wenn der Spieler/Bot EXPLIZIT AUFLOESEN gewaehlt
+      // hat und die Szene den Klientenbericht enthaelt, ist die bewusste Abschluss-Wahl staerker
+      // als die Anti-Billig-Sperre. Sonst entsteht der Goerke-Widerspruch: dieser Guard blockt
+      // (Stage 3 erst seit 0 Sz), aber ein anderer Pfad loest den DOM-Win-Screen trotzdem.
+      const explizitAufloesen = (typeof lastChosenKategorie !== 'undefined' && lastChosenKategorie === 'AUFLOESEN');
+      if (requiresGap && !explizitAufloesen) {
         const stage3Scenes = sceneCounter - (caseProgress.stage3StartScene || sceneCounter);
         if (stage3Scenes < 2) {
-          diag('drift', 'klient_berichtet:true ignoriert - Stage 3 erst seit ' + stage3Scenes + ' Szene (beschatten/wahrheit braucht 2+)');
+          diag('drift', 'klient_berichtet:true ignoriert - Stage 3 erst seit ' + stage3Scenes + ' Szene (beschatten/wahrheit braucht 2+, kein explizites AUFLOESEN)');
           console.log('[Schatten] Stage-4-Sperre: beschatten/wahrheit braucht 2+ Szenen Stage 3 (aktuell ' + stage3Scenes + ')');
         } else {
           caseProgress.klientGesprochen = true;
@@ -25577,6 +25707,28 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       folterCnt: folterSceneCount,
       caseStufe: caseProgress.stage,
       indizienCnt: caseProgress.indizien.length,
+      // v7.12.190 (User-Wunsch "ALLES engine-relevante pro Szene"): vollstaendiger
+      // Abschluss-State-Snapshot pro Szene fuer maximale Lektorat-Auswertbarkeit.
+      ueberfuehrt: caseProgress.ueberfuehrt === true,
+      wahrheitErkannt: caseProgress.wahrheitErkannt === true,
+      zielpersonGefunden: caseProgress.zielpersonGefunden === true,
+      diebesgutZurueck: caseProgress.diebesgutZurueck === true,
+      tatverdaechtiger: caseProgress.tatverdaechtiger || null,
+      caseType: (caseSetup && caseSetup.caseType) || null,
+      // conclusionKind/responsible/exonerated: was die NEUE Engine als Endzustand+Rollen
+      // bestimmt (auch pro Szene, nicht nur am Ende). try, da determineConclusionKind den
+      // State liest - bei fruehen Szenen ohne Durchbruch ist das Ergebnis erwartungsgemaess leer.
+      conclusionSnap: (function() {
+        try {
+          if (typeof determineConclusionKind !== 'function') return null;
+          const _c = determineConclusionKind();
+          return {
+            kind: _c && _c.kind || null,
+            responsible: (caseProgress && caseProgress.responsible) || null,
+            exonerated: (caseProgress && caseProgress.exonerated) || null
+          };
+        } catch (e) { return null; }
+      })(),
       // v7.9.13: Fall-Geloest-Flag fuer Pro-Szene-Strip (gruene Segmente)
       caseGeloest: caseProgress.istGelöst === true || caseProgress.stage >= 4 || caseProgress.klientGesprochen === true,
       // v7.9.13: Historisches Datum pro Szene fuer Popup-Anzeige
