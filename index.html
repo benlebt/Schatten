@@ -2848,7 +2848,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.236</div>
+    <div class="start-version">Schatten v7.12.237</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3012,7 +3012,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.236</span>
+    <span>Schatten v7.12.237</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5607,7 +5607,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.236';
+window.SCHATTEN_VERSION = 'v7.12.237';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -10061,26 +10061,22 @@ function buildTranscriptText() {
     let vfMin = 5;
     let scenesAtCriticalVf = 0;
     let hadHealingTrip = false;
-    let _prevVf = null;
     for (const e of logEntries) {
       if (e.type !== 'scene') continue;
       if (typeof e.verfassung === 'number') {
         if (e.verfassung < vfMin) vfMin = e.verfassung;
         if (e.verfassung <= 2) scenesAtCriticalVf++;
-        // v7.12.236: Behandlungs-Trip robuster erkennen (Lektorat-Befund: Audit sagte faelschlich
-        // "kein Behandlungs-Versuch", obwohl Doc Wagner behandelte - Toast wegen Cooldown unterdrueckt
-        // ODER Ort anders benannt). Jetzt 3 Wege: (1) Ortsname, (2) Szenentext nennt Doc/Behandlung,
-        // (3) Verfassung steigt nach kritischem Stand (= es wurde aktiv geheilt).
+        // v7.12.237: Behandlungs-Trip ueber TATSAECHLICH ERZAEHLTE Behandlung erkennen - Ortsname
+        // ODER Szenentext nennt Doc Wagner/Verarztung. (v236 hatte zusaetzlich "Vf steigt nach
+        // kritisch" -> RAUSGENOMMEN: das schliesst vom Symptom auf die Ursache und wuerde gerade
+        // die KI-Zauberheilung KASCHIEREN, die dieses Audit eigentlich aufdecken soll. Nur eine
+        // im Text belegte Behandlung zaehlt - kein blosser Vf-Anstieg.)
         if (e.ort && /doc wagner|praxis|charite|krankenhaus|schaeferstrasse|schäferstrasse/i.test(e.ort)) {
           hadHealingTrip = true;
         }
-        if (e.text && /doc wagner|doktor wagner|verarztet|verbindet die wunde|behandelt|naht die|versorgt die wunde|spritze|morphium|verband/i.test(e.text)) {
+        if (e.text && /doc wagner|doktor wagner|verarztet|verbindet die wunde|behandelt die wunde|naht die wunde|versorgt die wunde|legt einen verband/i.test(e.text)) {
           hadHealingTrip = true;
         }
-        if (_prevVf !== null && _prevVf <= 2 && e.verfassung > _prevVf) {
-          hadHealingTrip = true; // Verfassung erholte sich aktiv nach kritischem Stand
-        }
-        _prevVf = e.verfassung;
       }
     }
     if (vfMin <= 2) {
@@ -13451,7 +13447,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.236] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.237] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -20588,7 +20584,7 @@ async function chooseOption(option) {
       const _romRng = (typeof botWasEverActive !== 'undefined' && botWasEverActive && typeof botRng === 'function') ? botRng() : Math.random();
       const offen = _romRng < 0.70;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.236] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.237] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -20967,7 +20963,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.236] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.237] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -22370,7 +22366,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           } else if (!tensionHighEnoughForArrest && folterSceneCount >= custodyReleaseFloor) {
             // STILLER RELEASE: nur noch als Notventil bei langem Drift (5+ Sz). Karl ist
             // faktisch frei (KI erzaehlt ihn lange ohne Stasi-Kontext), System zieht nach.
-            console.warn('[Schatten v7.12.236] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
+            console.warn('[Schatten v7.12.237] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet');
             setCustodyState(false, 'stiller-release');
           } else if (!tensionHighEnoughForArrest) {
@@ -22386,7 +22382,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.236] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.237] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -22914,7 +22910,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof diag === 'function') {
           diag('state', '⚡ NOTFLUCHT GELUNGEN - Karl frei + 4 Sz Gnadenfrist, Stasi-Tension ' + prevTension + ' -> 3 (gesucht, aber nicht sofort wieder greifbar)');
         }
-        console.log('[Schatten v7.12.236] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
+        console.log('[Schatten v7.12.237] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
         // v7.11.56: Toast bei Erfolg - Spieler hat geklickt und soll Wuerfel-
         // Ergebnis direkt sehen, nicht nur narrative Andeutungen.
         if (typeof showProgressToast === 'function') {
@@ -25271,7 +25267,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.236] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.237] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
