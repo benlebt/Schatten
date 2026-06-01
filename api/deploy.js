@@ -38,6 +38,16 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // KILL-SWITCH (Sicherheit): Dieser Endpoint kann als EINZIGER ins GitHub-Repo schreiben
+  // und ist damit die sensibelste Funktion. Standardmaessig DEAKTIVIERT. Er laeuft NUR,
+  // wenn die Vercel-Env DEPLOY_ENABLED exakt 'true' ist. Solange sie fehlt/anders ist,
+  // antwortet er sofort mit 403 - kein GitHub-Token wird geladen, kein Schreibzugriff
+  // moeglich, selbst mit korrektem Passwort. Deploy laeuft ohnehin manuell ueber Vercel
+  // Settings -> Deploy; dieser Weg bleibt tot bis er bewusst per Env-Var reaktiviert wird.
+  if (process.env.DEPLOY_ENABLED !== 'true') {
+    return res.status(403).json({ error: 'Deploy-Endpoint ist deaktiviert. (Aktivierung nur ueber Vercel-Env DEPLOY_ENABLED=true.)' });
+  }
+
   // Env-Vars laden
   const githubToken = process.env.GITHUB_TOKEN;
   const deployPasswordHash = process.env.DEPLOY_PASSWORD_HASH;
