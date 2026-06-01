@@ -2804,7 +2804,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.204</div>
+    <div class="start-version">Schatten v7.12.205</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2968,7 +2968,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.204</span>
+    <span>Schatten v7.12.205</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5555,7 +5555,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.204';
+window.SCHATTEN_VERSION = 'v7.12.205';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -6080,7 +6080,7 @@ function processTheftTargetState(scene) {
             return;
           }
           if (_meaningfulHit) {
-            const warSchonDurchbruch = !!caseProgress.ueberfuehrt || (caseProgress.stage || 0) >= 3;
+            const warSchonDurchbruch = !!caseProgress.diebesgutZurueck || (caseProgress.stage || 0) >= 3;
             // v7.12.147 (Lektorat 19:48-Run): Wenn der Besitz nur ueber den SZENENTEXT
             // erkannt wurde (gutInText), das Diebesgut AUCH ins Inventar uebernehmen.
             // Befund: diebesgutZurueck wurde "laut Szenentext" gesetzt, aber das Etui kam
@@ -6110,7 +6110,12 @@ function processTheftTargetState(scene) {
               caseProgress.stage2Marker = 'spur_gefunden';
               caseProgress.stage2StartScene = caseProgress.stage2StartScene || sceneCounter;
             }
-            caseProgress.ueberfuehrt = true;
+            // v7.12.205 (ChatGPT-Lektorat v204 ToDo 2): ueberfuehrt NICHT mehr bei Diebstahl
+            // setzen. Der Durchbruch laeuft jetzt ueber diebesgutZurueck (in allen Durchbruch-
+            // Lesern ergaenzt) + die explizite Stage-Setzung unten. ueberfuehrt bedeutet jetzt
+            // ausschliesslich "Taeter/Verantwortlicher ueberfuehrt" - bei Diebstahl gibt es den
+            // nicht (Auftrag = Objekt zurueck, nicht Person bestrafen).
+            caseProgress.diebesgutZurueck = true;
             // v7.12.156 (Code-Review Punkt 3): gutBeiKlient hat VORRANG. Befund: Wenn Karl
             // das Etui schon im Inventar hatte (gutInInventory) UND die Szene die Rueckgabe
             // an den Klienten beschreibt, landete der alte Code (gutBeiKlient && !gutInInventory)
@@ -6154,7 +6159,7 @@ function processTheftTargetState(scene) {
             const wieG = _stG === 'returnedToClient' ? 'beim Klienten'
               : _stG === 'inKarlInventory' ? (gutInInventory ? 'im Inventar' : 'laut Szenentext in Karls Besitz')
               : (gutBeiKlient ? 'vage Rueckgabe erwaehnt' : 'laut Szenentext');
-            console.log('[Schatten] Diebesgut zurueck (diebstahl): ' + _tName + ' ' + wieG + (warSchonDurchbruch ? ' [Taeter war schon ueberfuehrt]' : ''));
+            console.log('[Schatten] Diebesgut zurueck (diebstahl): ' + _tName + ' ' + wieG + (warSchonDurchbruch ? ' [Durchbruch war schon erreicht]' : ''));
             diag('progress', '✦ DIEBESGUT ZURÜCK (diebstahl): ' + _tName + ' (' + wieG + ')');
             // v7.12.165 (Code-Review Punkt 3): Bei harter Rueckgabe wurde oben schon
             // showSolvedToastOnce("Fall geloest") gezeigt + istGelöst gesetzt. Den
@@ -10475,7 +10480,7 @@ function showHeader(scene) {
     // v7.12.63: Schwelle synchron mit FALL LÖSEN-Button (neues Modell):
     // Durchbruch (ueberfuehrt/gefunden) ODER genug Indizien + benannter +
     // konfrontierter Verdaechtiger.
-    const durchbruchUI = !!(caseProgress.ueberfuehrt || caseProgress.zielpersonGefunden || caseProgress.wahrheitErkannt);
+    const durchbruchUI = !!(caseProgress.ueberfuehrt || caseProgress.zielpersonGefunden || caseProgress.wahrheitErkannt || caseProgress.diebesgutZurueck);
     const mittelAnkerUI = indCntUI >= 11 && !!caseProgress.tatverdaechtiger && !!caseProgress.suspectConfronted;
     const resolveReady = !isSolved && reachedStage >= 3 && (durchbruchUI || mittelAnkerUI);
     segments.forEach(seg => {
@@ -13008,7 +13013,7 @@ function checkProgressTriggers(kategorie, ctx) {
   // Stage 3 -> Loesungs-Reife: ~11 Indizien ODER Durchbruch (ueberfuehrt/gefunden).
   else if (stage === 3) {
     const indizReady = indCount >= 11;
-    const durchbruch = !!(ctx && (ctx.ueberfuehrt || ctx.zielpersonGefunden || ctx.wahrheitErkannt));
+    const durchbruch = !!(ctx && (ctx.ueberfuehrt || ctx.zielpersonGefunden || ctx.wahrheitErkannt || ctx.diebesgutZurueck));
     if (indizReady || durchbruch) {
       // v7.12.196 (ChatGPT-Lektorat v194 Punkt 3): falltypisch statt pauschal "ueberfuehrt".
       const _ctL = (caseSetup && caseSetup.caseType) || '';
@@ -13193,7 +13198,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.204] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.205] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -14184,7 +14189,11 @@ function renderOptions(scene) {
   const taeterUeberfuehrt = !!(caseProgress && caseProgress.ueberfuehrt);
   const zielpersonGefunden = !!(caseProgress && caseProgress.zielpersonGefunden);
   const wahrheitErkannt = !!(caseProgress && caseProgress.wahrheitErkannt);
-  const durchbruchErreicht = taeterUeberfuehrt || zielpersonGefunden || wahrheitErkannt;
+  // v7.12.205 (ChatGPT-Lektorat v204 ToDo 2): diebesgutZurueck als eigenstaendiger Durchbruch-
+  // Pfad. Vorher trug ueberfuehrt=true diese Rolle bei Diebstahl mit (semantisch unsauber).
+  // Jetzt ist der Diebstahl-Durchbruch an das Objekt geknuepft, nicht an eine "ueberfuehrte" Person.
+  const diebesgutZurueck = !!(caseProgress && caseProgress.diebesgutZurueck);
+  const durchbruchErreicht = taeterUeberfuehrt || zielpersonGefunden || wahrheitErkannt || diebesgutZurueck;
   // v7.12.63: NEUES LOESBARKEITS-MODELL (User-Wunsch). Vorher konnte der Fall
   // allein durch Indizien-Anzahl (>=11) loesbar werden - das fuehlte sich
   // "automatisch" an: 11 Indizien gesammelt, aber den Vermissten nie gefunden /
@@ -16819,7 +16828,7 @@ VERBOTEN: Karl wacht woanders auf ohne Erklaerung. Wenn du Pfad B waehlst, MUSST
     // Korrektur: Bei erreichtem Durchbruch wird der Ortswechselzwang AUSGESETZT und
     // durch einen gezielten Abschluss-Push ersetzt - alle Optionen fuehren Richtung
     // Klient / Fall loesen, nicht "in eine zufaellige andere Location".
-    const _durchbruchErreicht = !!(caseProgress && (caseProgress.ueberfuehrt || caseProgress.zielpersonGefunden || caseProgress.wahrheitErkannt));
+    const _durchbruchErreicht = !!(caseProgress && (caseProgress.ueberfuehrt || caseProgress.zielpersonGefunden || caseProgress.wahrheitErkannt || caseProgress.diebesgutZurueck));
     const _klientNameFuerAbschluss = (clientProfile && clientProfile.name) || 'deinem Klienten';
     if (_durchbruchErreicht && scenesAtSameLocation >= 3) {
       // Abschluss-Fokus statt Ortswechsel-Lotterie. Zwang-Tracking zuruecksetzen,
@@ -20196,7 +20205,7 @@ async function chooseOption(option) {
       // das ~63% Erfolg bei der ersten Annaeherung (vorher ~25%).
       const offen = Math.random() < 0.70;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.204] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.205] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -20575,7 +20584,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.204] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.205] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -21971,7 +21980,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           } else if (!tensionHighEnoughForArrest && folterSceneCount >= custodyReleaseFloor) {
             // STILLER RELEASE: nur noch als Notventil bei langem Drift (5+ Sz). Karl ist
             // faktisch frei (KI erzaehlt ihn lange ohne Stasi-Kontext), System zieht nach.
-            console.warn('[Schatten v7.12.204] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
+            console.warn('[Schatten v7.12.205] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet');
             setCustodyState(false, 'stiller-release');
           } else if (!tensionHighEnoughForArrest) {
@@ -21987,7 +21996,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.204] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.205] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -22513,7 +22522,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof diag === 'function') {
           diag('state', '⚡ NOTFLUCHT GELUNGEN - Karl frei + 4 Sz Gnadenfrist, Stasi-Tension ' + prevTension + ' -> 3 (gesucht, aber nicht sofort wieder greifbar)');
         }
-        console.log('[Schatten v7.12.204] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
+        console.log('[Schatten v7.12.205] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
         // v7.11.56: Toast bei Erfolg - Spieler hat geklickt und soll Wuerfel-
         // Ergebnis direkt sehen, nicht nur narrative Andeutungen.
         if (typeof showProgressToast === 'function') {
@@ -24835,7 +24844,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.204] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.205] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
