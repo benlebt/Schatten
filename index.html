@@ -2821,7 +2821,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.164</div>
+    <div class="start-version">Schatten v7.12.165</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2985,7 +2985,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.164</span>
+    <span>Schatten v7.12.165</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5536,7 +5536,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.164';
+window.SCHATTEN_VERSION = 'v7.12.165';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -5799,30 +5799,35 @@ function isHardClientReturn(sceneText, clientName, targetName, gutSynonyme) {
   // clientFirst-Check (nahm "wilhelm"), obwohl der Text "krause" enthielt.
   const clientParts = ((typeof normForMatch === 'function') ? normForMatch(clientName || '') : '').split(/\s+/).filter(w => w.length >= 4);
   if (!clientParts.length || !clientParts.some(p => t.includes(p))) return false;
-  // (a) SPIELER-Handlung: Karl gibt/uebergibt/reicht/legt das Gut zurueck. Eng genug
-  //     (Verb + Richtung max 120 Zeichen, ueblicherweise im selben Satz).
-  if (/\b(gibst|uebergibst|reichst|haendigst|ueberreichst|legst)\b.{0,120}\b(zurueck|in seine hand|in ihre hand|in seine haende|vor ihn|vor sie|auf den tisch)\b/.test(t)) return true;
-  // (b) v7.12.159/161 (Code-Review Punkt 3): KLIENTEN-Handlung ("Krause nimmt das Etui
-  //     entgegen / haelt es wieder in den Haenden"). v7.12.161: SATZGEBUNDEN - Empfangs-Verb,
-  //     Klientenname UND Gut-/zurueck-Bezug muessen im SELBEN Satz stehen. Verhindert den
-  //     Fehlalarm "Krause nimmt einen Schluck. Auf dem Tisch liegt wieder das Etui." (zwei
-  //     Saetze - vorher feuerte das faelschlich, weil Verb+Gut textweit gesucht wurden).
-  const _tWords = ((typeof normForMatch === 'function') ? normForMatch(targetName || '') : '').split(/\s+/).filter(w => w.length >= 4);
   // v7.12.164 (Fallspezifik): fallspezifische Synonyme aus dem Setup einbeziehen, statt
   // hartcodierter Objektwoerter. So greift die Erkennung fuer Halskette/Ring/Diamant/Auto
   // genauso wie fuer das Etui - das konkrete Objektwort kommt aus TARGET-Name + gutSynonyme.
+  const _tWords = ((typeof normForMatch === 'function') ? normForMatch(targetName || '') : '').split(/\s+/).filter(w => w.length >= 4);
   const _gutSynN = Array.isArray(gutSynonyme) ? gutSynonyme.map(s => normForMatch(s)).filter(s => s.length >= 3) : [];
   const _gutKeys = [].concat(_tWords, _gutSynN);
   const _sentences = t.split(/[.!?]/);
-  const _empfangRe = /\b(nimmt|bekommt|erhaelt|haelt|steckt)\b/;
   // Nur GENERISCHE, fallunabhaengige Gut-/Rueckgabe-Hinweise hartcodiert (kein konkretes
   // Objektwort wie "etui"/"schmuck" mehr - die kommen ueber _gutKeys aus dem Setup).
   const _gutBezugRe = /\b(zurueck|wieder|diebesgut|beute|entgegen|in den haenden|in die hand|in seine hand|an sich)\b/;
+  // v7.12.165 (Code-Review Punkt 2): BEIDE Rueckgabewege satzgebunden. Vorher war (a) noch
+  // textweit - "Krause sitzt am Fenster. Du legst das Etui auf den Tisch zurueck." haette
+  // faelschlich gegriffen, obwohl der Klient gar nicht im Uebergabe-Satz steht.
+  // (a) SPIELER-Handlung: Karl gibt/uebergibt/reicht/legt das Gut zurueck.
+  // Starke Uebergabe-Verben sind allein eindeutig (mit Klient+Gut im Satz): "uebergibst
+  // Krause das Etui". Schwache/mehrdeutige Verben (gibst/reichst/legst) brauchen zusaetzlich
+  // ein Richtungswort, sonst zu breit ("du legst los").
+  const _giveStarkRe = /\b(uebergibst|haendigst|ueberreichst)\b/;
+  const _giveSchwachRe = /\b(gibst|reichst|legst)\b.{0,120}\b(zurueck|in seine hand|in ihre hand|in seine haende|vor ihn|vor sie|auf den tisch)\b/;
+  // (b) KLIENTEN-Handlung: "Krause nimmt das Etui entgegen / haelt es wieder in den Haenden".
+  const _empfangRe = /\b(nimmt|bekommt|erhaelt|haelt|steckt)\b/;
   for (const s of _sentences) {
-    if (!_empfangRe.test(s)) continue;
-    const _hatGut = _gutKeys.some(w => s.includes(w)) || _gutBezugRe.test(s);
     const _hatKlient = clientParts.some(p => s.includes(p));
-    if (_hatGut && _hatKlient) return true;
+    if (!_hatKlient) continue;  // Klient MUSS im selben Satz wie die Rueckgabe stehen
+    const _hatGut = _gutKeys.some(w => s.includes(w)) || _gutBezugRe.test(s);
+    if (!_hatGut) continue;
+    if (_giveStarkRe.test(s)) return true;        // (a1) starkes Uebergabe-Verb
+    if (_giveSchwachRe.test(s)) return true;       // (a2) schwaches Verb + Richtung
+    if (_empfangRe.test(s)) return true;           // (b) Klient empfaengt
   }
   return false;
 }
@@ -5882,7 +5887,14 @@ function processTheftTargetState(scene) {
         const _canClientReturn = _ct === 'diebstahl' && _tName && _tisStatus === 'inKarlInventory' && sceneCounter >= 4;
         if (_canInitial || _canClientReturn) {
           const tNameN = normForMatch(_tName || '');
-          const tWordsN = tNameN.split(/\s+/).filter(w => w.length >= 4);
+          // v7.12.165 (Code-Review-Folgefund): tWordsN ueber getTargetItemKeys bilden, damit
+          // generische Adjektive ("silbernes") als Match-Wort RAUSFALLEN. Sonst matchte
+          // "silbernes" gegen ein zufaelliges "silbernes Feuerzeug" im Inventar -> gutInInventory
+          // faelschlich true (vom Review-Test aufgedeckt). getTargetItemKeys faellt nur auf die
+          // Adjektive zurueck, wenn KEIN spezifisches Wort uebrig bleibt.
+          const tWordsN = (typeof getTargetItemKeys === 'function')
+            ? getTargetItemKeys(_tName)
+            : tNameN.split(/\s+/).filter(w => w.length >= 4);
           // v7.12.83: KEINE fallspezifischen Objektwoerter mehr hartcodiert (frueher
           // stand hier "etui|schmuck" aus dem Krause-Fall - das haette in einem anderen
           // Diebstahlfall, wo z.B. ein Gemaelde gestohlen wurde, jedes zufaellig im Text
@@ -6009,8 +6021,17 @@ function processTheftTargetState(scene) {
             // Jetzt: Text-Besitz => Inventar-Eintrag, damit Flag/Inventar/Endbericht
             // konsistent sind (gutInInventory braucht das nicht - da ist es schon drin).
             if (gutInText && !gutInInventory && Array.isArray(inventory) && _tName) {
-              const _tNameLowChk = normForMatch(_tName);
-              const _schonDrin = inventory.some(it => normForMatch(it || '').includes(_tNameLowChk.split(/\s+/).filter(w => w.length >= 4)[0] || _tNameLowChk));
+              // v7.12.165 (Code-Review): zentrale getTargetItemKeys statt erstem Zielwort.
+              // Vorher split(...)[0] -> bei "Silbernes Zigarettenetui" der Key "silbernes",
+              // sodass ein "silbernes Feuerzeug" im Inventar faelschlich verhindert haette,
+              // dass das Etui ergaenzt wird. (Dieselbe Fehlerklasse wie v162 an 2 Stellen.)
+              const _keys = (typeof getTargetItemKeys === 'function')
+                ? getTargetItemKeys(_tName)
+                : normForMatch(_tName).split(/\s+/).filter(w => w.length >= 4);
+              const _schonDrin = _keys.length && inventory.some(it => {
+                const s = normForMatch(it || '');
+                return _keys.some(k => s.includes(k));
+              });
               if (!_schonDrin) {
                 inventory.push(_tName);
                 diag('state', 'Diebesgut "' + _tName + '" ins Inventar uebernommen (Text-Besitz erkannt) - haelt Flag/Inventar/Endbericht konsistent');
@@ -6069,7 +6090,12 @@ function processTheftTargetState(scene) {
               : (gutBeiKlient ? 'vage Rueckgabe erwaehnt' : 'laut Szenentext');
             console.log('[Schatten] Diebesgut zurueck (diebstahl): ' + _tName + ' ' + wieG + (warSchonDurchbruch ? ' [Taeter war schon ueberfuehrt]' : ''));
             diag('progress', '✦ DIEBESGUT ZURÜCK (diebstahl): ' + _tName + ' (' + wieG + ')');
-            if (typeof showProgressToast === 'function') {
+            // v7.12.165 (Code-Review Punkt 3): Bei harter Rueckgabe wurde oben schon
+            // showSolvedToastOnce("Fall geloest") gezeigt + istGelöst gesetzt. Den
+            // zusaetzlichen Fortschritts-Toast dann unterdruecken - sonst zwei Toasts fuers
+            // selbe Ereignis, und "Jetzt zum Klienten" waere bei Stage 4 sogar falsch.
+            // diag-Eintrag bleibt (nuetzt dem Lektorat).
+            if (typeof showProgressToast === 'function' && !caseProgress.istGelöst) {
               const _toastMsg = (caseProgress.targetItemState && caseProgress.targetItemState.status === 'returnedToClient')
                 ? 'Das Diebesgut ist zurück beim Klienten. Der Fall kann abgeschlossen werden.'
                 : 'Das Diebesgut ist sicher. Jetzt zum Klienten.';
@@ -12687,7 +12713,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.164] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.165] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -19658,7 +19684,7 @@ async function chooseOption(option) {
       // das ~63% Erfolg bei der ersten Annaeherung (vorher ~25%).
       const offen = Math.random() < 0.70;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.164] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.165] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -20035,7 +20061,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.164] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.165] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -21365,7 +21391,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           } else if (!tensionHighEnoughForArrest && folterSceneCount >= custodyReleaseFloor) {
             // STILLER RELEASE: nur noch als Notventil bei langem Drift (5+ Sz). Karl ist
             // faktisch frei (KI erzaehlt ihn lange ohne Stasi-Kontext), System zieht nach.
-            console.warn('[Schatten v7.12.164] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
+            console.warn('[Schatten v7.12.165] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet');
             setCustodyState(false, 'stiller-release');
           } else if (!tensionHighEnoughForArrest) {
@@ -21381,7 +21407,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.164] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.165] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -21907,7 +21933,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof diag === 'function') {
           diag('state', '⚡ NOTFLUCHT GELUNGEN - Karl frei + 4 Sz Gnadenfrist, Stasi-Tension ' + prevTension + ' -> 3 (gesucht, aber nicht sofort wieder greifbar)');
         }
-        console.log('[Schatten v7.12.164] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
+        console.log('[Schatten v7.12.165] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
         // v7.11.56: Toast bei Erfolg - Spieler hat geklickt und soll Wuerfel-
         // Ergebnis direkt sehen, nicht nur narrative Andeutungen.
         if (typeof showProgressToast === 'function') {
@@ -23930,7 +23956,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.164] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.165] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
