@@ -2804,7 +2804,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.201</div>
+    <div class="start-version">Schatten v7.12.204</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2968,7 +2968,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.201</span>
+    <span>Schatten v7.12.204</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5555,7 +5555,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.201';
+window.SCHATTEN_VERSION = 'v7.12.204';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -10023,7 +10023,12 @@ function buildTranscriptText() {
       const shownToasts = caseProgress.toastLog.filter(t => t.shown);
       if (shownToasts.length > 0) {
         out += '  - Angezeigte Toasts (chronologisch):\n';
-        for (const t of shownToasts) {
+        // v7.12.204 (ChatGPT-Lektorat v201): nach Szene sortieren. Vorher war es Insert-
+        // Reihenfolge - bei AUFLOESEN (setzt Stage 4 zuerst, dann zieht Sync Stage 3/TÄTERSPUR
+        // nach) erschien "FALL-STUFE 4" VOR "FALL-STUFE 3" im Verlauf, was Lektorate irritierte.
+        // Reine Anzeige-Sortierung, kein State-Eingriff.
+        const _sortedShown = shownToasts.slice().sort((a, b) => (a.szene || 0) - (b.szene || 0));
+        for (const t of _sortedShown) {
           const tagStr = 'Sz ' + t.szene + ' (T' + t.tag + (t.tageszeit ? ' ' + t.tageszeit : '') + ')';
           out += '      ' + tagStr + ' [' + t.variant + '] ' + t.title + '\n';
         }
@@ -13188,7 +13193,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.201] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.204] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -20191,7 +20196,7 @@ async function chooseOption(option) {
       // das ~63% Erfolg bei der ersten Annaeherung (vorher ~25%).
       const offen = Math.random() < 0.70;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.201] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.204] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -20570,7 +20575,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.201] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.204] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -21966,7 +21971,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           } else if (!tensionHighEnoughForArrest && folterSceneCount >= custodyReleaseFloor) {
             // STILLER RELEASE: nur noch als Notventil bei langem Drift (5+ Sz). Karl ist
             // faktisch frei (KI erzaehlt ihn lange ohne Stasi-Kontext), System zieht nach.
-            console.warn('[Schatten v7.12.201] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
+            console.warn('[Schatten v7.12.204] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet');
             setCustodyState(false, 'stiller-release');
           } else if (!tensionHighEnoughForArrest) {
@@ -21982,7 +21987,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.201] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.204] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -22508,7 +22513,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof diag === 'function') {
           diag('state', '⚡ NOTFLUCHT GELUNGEN - Karl frei + 4 Sz Gnadenfrist, Stasi-Tension ' + prevTension + ' -> 3 (gesucht, aber nicht sofort wieder greifbar)');
         }
-        console.log('[Schatten v7.12.201] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
+        console.log('[Schatten v7.12.204] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
         // v7.11.56: Toast bei Erfolg - Spieler hat geklickt und soll Wuerfel-
         // Ergebnis direkt sehen, nicht nur narrative Andeutungen.
         if (typeof showProgressToast === 'function') {
@@ -24830,7 +24835,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.201] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.204] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
@@ -25050,6 +25055,20 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           }
           // Kein plausibler Moerder -> Mord bleibt OFFEN, KEIN Wahrheit-Abschluss erzwingen.
           diag('drift', 'Mord wahrheit_erkannt ignoriert: kein plausibler konkreter Taeter ("' + (_vM || '?') + '") - Mord bleibt offen, kein taeterloser Wahrheitsabschluss.');
+          return;
+        }
+        // v7.12.203 (ChatGPT-Lektorat v201, Krause-Befund): DIEBSTAHL-SONDERWEG. Bei caseType
+        // 'diebstahl' darf das KI-Feld wahrheit_erkannt NICHT in den Wahrheit-MIT-Verantwortlichem-
+        // Pfad laufen (Krause-Run: "WAHRHEIT MIT VERANTWORTLICHEM: Tante Frieda bleibt ueberfuehrt"
+        // - semantisch falsch). Diebstahl loest AUSSCHLIESSLICH ueber targetItemState/diebesgutZurueck.
+        // Der Hehler/Dieb darf identifiziert sein, aber das ist kein "Wahrheit-Verantwortlicher".
+        if (ctW === 'diebstahl') {
+          diag('drift', 'Diebstahl wahrheit_erkannt ignoriert: Diebstahl loest ueber Objekt-Status (diebesgutZurueck), nicht ueber Wahrheit/Verantwortlichen. Kein Wahrheit-Toast.');
+          // Stage darf vorankommen (Spur gefunden), aber KEIN wahrheitErkannt/ueberfuehrt-Wahrheitspfad.
+          if (caseProgress.stage < 3 && (caseProgress.diebesgutZurueck || (caseProgress.targetItemState && caseProgress.targetItemState.status === 'inKarlInventory'))) {
+            caseProgress.stage = 3;
+            caseProgress.stage3StartScene = sceneCounter;
+          }
           return;
         }
         caseProgress.wahrheitErkannt = true;
@@ -26335,6 +26354,16 @@ function buildDebugDump(err, userMsg, retryCount) {
     '',
     'RECENT TEXTS (' + recentTexts.length + '):',
     recentTexts.map((t, i) => `${i + 1}. ${t.slice(0, 200)}`).join('\n'),
+    '',
+    // v7.12.202: API-Event-Log mit ins Fehler-Popup - so ist die Timeout/Retry/Failover-
+    // Historie direkt per "Debug-Log kopieren" sichtbar, auch ohne vollen Verlauf-Export.
+    'API-EVENT-LOG (' + ((typeof apiEventLog !== 'undefined' && Array.isArray(apiEventLog)) ? apiEventLog.length : 0) + ' Ereignisse):',
+    (typeof apiEventLog !== 'undefined' && Array.isArray(apiEventLog) && apiEventLog.length
+      ? apiEventLog.slice(-30).map(e => {
+          let ts = ''; try { ts = new Date(e.t).toLocaleTimeString('de-DE'); } catch (x) {}
+          return '[' + ts + '] Szene ' + e.scene + ' · ' + e.kind.toUpperCase() + ': ' + e.info;
+        }).join('\n')
+      : '(keine)'),
   ].join('\n');
 }
 
@@ -27609,6 +27638,30 @@ function botWaitForOptionsReady(maxMs) {
   return new Promise((resolve, reject) => {
     function check() {
       if (botShouldStop) return reject(new Error('Vom Benutzer gestoppt'));
+
+      // v7.12.202 (User-Befund Achterberg-Hänger): Fall am STATE erkennen, nicht erst am
+      // gerenderten Endscreen. Problem: Wenn der Fall in einer Szene geloest wird (stage>=4),
+      // versuchte der Bot trotzdem noch EINE weitere Szene zu generieren, weil case-solved
+      // erst NACH dem naechsten API-Call gerendert wird. Diese Phantom-Szene lief bei langem
+      // Kontext (Szene 38+) in den Timeout -> "Karl denkt nach" haengt ewig. Jetzt: sobald
+      // der State gelöst meldet, sofort als Spielende behandeln (kein weiterer API-Call).
+      try {
+        if (typeof caseProgress === 'object' && caseProgress &&
+            (caseProgress.istGelöst === true || (caseProgress.stage || 0) >= 4)) {
+          // Loading noch aktiv? Kurz warten, damit der Endscreen sauber rendern kann.
+          const _ld = document.getElementById('loading');
+          if (_ld && !_ld.classList.contains('hidden')) {
+            // Endscreen kommt gleich - aber nicht ewig warten: max ~3s ab jetzt.
+            if (!check._solvedSince) check._solvedSince = Date.now();
+            if (Date.now() - check._solvedSince > 3000) {
+              return reject(new Error('Fall geloest - Spielende'));
+            }
+            setTimeout(check, 300);
+            return;
+          }
+          return reject(new Error('Fall geloest - Spielende'));
+        }
+      } catch (e) { /* im Zweifel normale Logik unten */ }
 
       // 1. Loading-Container aktiv? Dann auf jeden Fall warten
       const loading = document.getElementById('loading');
