@@ -2804,7 +2804,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.168</div>
+    <div class="start-version">Schatten v7.12.171</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2968,7 +2968,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.168</span>
+    <span>Schatten v7.12.171</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5519,7 +5519,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.168';
+window.SCHATTEN_VERSION = 'v7.12.171';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -9968,7 +9968,11 @@ function downloadTranscript(event) {
   const ts = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate())
            + '_' + pad(now.getHours()) + pad(now.getMinutes());
 
-  const filename = 'Mauer_' + klientName + '_' + ts + '.txt';
+  // v7.12.169: bot/manual im Dateinamen - erleichtert das spaetere Einsortieren von
+  // Test-Exporten (Bot-Lauf vs. echter manueller Spielverlauf). botWasEverActive ist true,
+  // wenn in diesem Lauf mindestens ein Bot-Klick erfolgte.
+  const _laufArt = (typeof botWasEverActive !== 'undefined' && botWasEverActive) ? 'bot' : 'manual';
+  const filename = 'Mauer_' + klientName + '_' + _laufArt + '_' + ts + '.txt';
 
   // Blob mit UTF-8-BOM, damit Windows Notepad/Editor die Umlaute korrekt zeigt.
   // Ohne BOM zeigt der alte Notepad oft "MÃ¼ller" statt "Müller".
@@ -12726,7 +12730,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.168] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.171] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -17482,6 +17486,7 @@ async function startGame() {
   // Reset day/time/location tracking
   gameDay = 1;
   sceneCounter = 0;
+  if (typeof botWasEverActive !== 'undefined') botWasEverActive = false;  // v7.12.169: neuer Lauf
   timeAdvanceTokens = 0;
   pendingDayTransition = false;
   lastSceneTriggeredDayAdvance = false; // v6.96
@@ -19597,6 +19602,8 @@ async function chooseOption(option) {
     // Conditions und "Geister-Klicks" wo eine Szene weiterspringt ohne dass
     // jemand wirklich geklickt hat.
     const isBotChoice = !!(typeof botActive !== 'undefined' && botActive);
+    // v7.12.169: Sobald EIN Bot-Klick erfolgte, gilt der Lauf als Bot-Lauf (fuer Dateiname).
+    if (isBotChoice) botWasEverActive = true;
     if (typeof diag === 'function') {
       diag('info', (isBotChoice ? 'BOT-KLICK' : 'USER-KLICK') + ' Option ' + (option.id || '?') + ': "' + (option.text || '').substring(0, 60) + '"');
     }
@@ -19697,7 +19704,7 @@ async function chooseOption(option) {
       // das ~63% Erfolg bei der ersten Annaeherung (vorher ~25%).
       const offen = Math.random() < 0.70;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.168] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.171] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -20074,7 +20081,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.168] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.171] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -20525,6 +20532,62 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           return await performApiCall(retryPrompt, isStart, optionForRollback, retryCount, rateLimitCount, openingRetryCount + 1);
         } else if (required.length > 0) {
           diag('detect', 'Opening-Validierung OK (' + required.length + ' Pflichtelemente erkannt, Cast und Ort sauber)');
+        }
+      }
+
+      // v7.12.170 (Lektorat Krause-Run, Szene 23/24): DIEBSTAHL-RUECKGABE-PROSA-REPAIR.
+      // Befund: Bei Diebstahl blockt die Engine den State korrekt (zielperson_gefunden/
+      // klient_berichtet ignoriert, solange das Gut nicht physisch zurueck ist) - ABER die
+      // KI-PROSA behauptet trotzdem die Rueckgabe ("Du legst das Etui auf die Glasplatte...
+      // der Fall ist abgeschlossen"). Das ist ein Objekt-Kontinuitaetsfehler: spaeter wird
+      // das Gut erst wirklich geholt. Fix: Wenn caseType=diebstahl, die Szene eine Rueckgabe/
+      // einen Abschluss BEHAUPTET, aber targetItemState NICHT inKarlInventory/returnedToClient
+      // ist -> genau EIN Repair-Retry (nutzt denselben Zaehler wie der Intent-Repair, also max.
+      // 1 Repair pro Szene). Konservativ: nur bei klarer Rueckgabe-Formulierung.
+      if (!isStart && intentRepairCount < MAX_INTENT_REPAIRS) {
+        let _theftProsaProblem = false;
+        try {
+          const _ctR = (caseSetup && caseSetup.caseType) || '';
+          const _tisR = caseProgress && caseProgress.targetItemState;
+          const _gutDa = _tisR && (_tisR.status === 'inKarlInventory' || _tisR.status === 'returnedToClient');
+          if (_ctR === 'diebstahl' && !_gutDa && scene && scene.szene) {
+            const _txtR = normForMatch(scene.szene);
+            // Zielwoerter dynamisch aus Setup (TARGET + gutSynonyme).
+            let _zw = [];
+            const _tg = caseSetup.setupCast && caseSetup.setupCast.find(c => c && (c.tag === 'TARGET' || c.tagExtra === 'TARGET'));
+            if (_tg && _tg.name) (typeof getTargetItemKeys === 'function' ? getTargetItemKeys(_tg.name) : []).forEach(w => _zw.push(w));
+            if (_tg && Array.isArray(_tg.gutSynonyme)) _tg.gutSynonyme.forEach(s => _zw.push(normForMatch(s)));
+            const _zielRe = _zw.filter(Boolean).length ? new RegExp(_zw.filter(Boolean).map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'i') : null;
+            // Klar behauptete Rueckgabe/Abschluss MIT Gut-Bezug:
+            //  (a) Karl uebergibt/legt das Gut hin, ODER
+            //  (b) "Fall ist abgeschlossen / Schmuck/Gut ist zurueck"
+            const _saetze = _txtR.split(/[.!?]/);
+            for (const s of _saetze) {
+              const _hatGut = (_zielRe && _zielRe.test(s)) || /\b(diebesgut|beute|schmuck)\b/.test(s);
+              if (!_hatGut) continue;
+              const _rueckgabeProsa = /\b(legst|uebergibst|reichst|haendigst|ueberreichst)\b/.test(s)
+                || /\b(ist (zurueck|wieder da)|abgeschlossen|zurueckgebracht|zurueckgegeben|zurueckerstattet)\b/.test(s);
+              if (_rueckgabeProsa) { _theftProsaProblem = true; break; }
+            }
+          }
+        } catch (e) { _theftProsaProblem = false; }
+        if (_theftProsaProblem) {
+          diag('drift', '⚠ DIEBSTAHL-PROSA-BRUCH: Szene behauptet Rueckgabe/Abschluss, aber das Diebesgut ist noch nicht bei Karl (targetItemState) - Repair-Retry ' + (intentRepairCount + 1) + '/' + MAX_INTENT_REPAIRS);
+          console.warn('[Schatten] Diebstahl-Prosa-Bruch: Rueckgabe behauptet, Gut nicht zurueck - Repair-Retry');
+          currentScene = _prevCurrentScene;
+          currentOrt = _prevCurrentOrt;
+          currentOrtType = _prevCurrentOrtType;
+          if (typeof lastSceneEndedInUnconsciousness !== 'undefined') lastSceneEndedInUnconsciousness = _prevUnconscious;
+          if (typeof lastSceneOrt !== 'undefined') lastSceneOrt = _prevLastSceneOrt;
+          const _tgName = (caseProgress.targetItemState && caseProgress.targetItemState.name) || 'das Diebesgut';
+          const repairPrompt = userMsg +
+            '\n\nNACHBESSERUNG (KONTINUITAETSFEHLER): Deine letzte Szene hat behauptet, dass Karl ' + _tgName +
+            ' an den Klienten zurueckgibt bzw. der Fall abgeschlossen sei. Das ist FALSCH - Karl hat ' + _tgName +
+            ' noch NICHT physisch in der Hand (es wurde bisher nur gesehen/lokalisiert, nicht beschafft).' +
+            ' Erzaehle KEINE Rueckgabe und KEINEN Abschluss. Zeige stattdessen, dass Karl dem Klienten' +
+            ' nur BERICHTEN kann, wo das Gut ist bzw. wer es hat - der Auftrag ist erst erfuellt, wenn Karl' +
+            ' das Gut tatsaechlich beschafft hat. Liefere die KORRIGIERTE Szene erneut als JSON - sie ERSETZT die vorige.';
+          return await performApiCall(repairPrompt, isStart, optionForRollback, retryCount, rateLimitCount, openingRetryCount, intentRepairCount + 1);
         }
       }
 
@@ -21404,7 +21467,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           } else if (!tensionHighEnoughForArrest && folterSceneCount >= custodyReleaseFloor) {
             // STILLER RELEASE: nur noch als Notventil bei langem Drift (5+ Sz). Karl ist
             // faktisch frei (KI erzaehlt ihn lange ohne Stasi-Kontext), System zieht nach.
-            console.warn('[Schatten v7.12.168] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
+            console.warn('[Schatten v7.12.171] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet');
             setCustodyState(false, 'stiller-release');
           } else if (!tensionHighEnoughForArrest) {
@@ -21420,7 +21483,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.168] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.171] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -21946,7 +22009,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof diag === 'function') {
           diag('state', '⚡ NOTFLUCHT GELUNGEN - Karl frei + 4 Sz Gnadenfrist, Stasi-Tension ' + prevTension + ' -> 3 (gesucht, aber nicht sofort wieder greifbar)');
         }
-        console.log('[Schatten v7.12.168] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
+        console.log('[Schatten v7.12.171] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
         // v7.11.56: Toast bei Erfolg - Spieler hat geklickt und soll Wuerfel-
         // Ergebnis direkt sehen, nicht nur narrative Andeutungen.
         if (typeof showProgressToast === 'function') {
@@ -22898,7 +22961,25 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           if (!lastName || lastName.length < 4) continue; // zu kurz, kollidiert ggf.
           // Wort-Grenze-Match: "Roth" matched, "Roth-Krieger" auch, aber nicht "Brot"
           const lastNameRegex = new RegExp('\\b' + lastName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
-          if (lastNameRegex.test(sceneTextRaw)) {
+          // v7.12.170 (Lektorat Krause-Run): FALSCH-POSITIV-SCHUTZ. "Bergmann" (Nachname des
+          // Setup-NPC Walter Bergmann) matchte faelschlich in der FIRMA "VEB Bergmann-Borsig"
+          // -> der Konkurrenz-Detektiv wurde aktiviert, obwohl nur ein Betrieb gemeint war.
+          // Schutz: Wenn der Name als Teil eines Komposita (Name-Wort, z.B. "Bergmann-Borsig")
+          // ODER direkt nach einem Firmen-Praefix (VEB/Betrieb/Firma/Werk) steht, NICHT als
+          // NPC-Erwaehnung werten. Pruefen am Roh-Vorkommen.
+          let _istFirmenKontext = false;
+          try {
+            const _mm = sceneTextRaw.match(new RegExp('([\\wäöüÄÖÜß-]*)\\b' + lastName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b([\\wäöüÄÖÜß-]*)', 'i'));
+            if (_mm) {
+              const _vor = sceneTextRaw.substring(Math.max(0, _mm.index - 20), _mm.index).toLowerCase();
+              const _nach = (_mm[2] || '');
+              // Komposita: direkt gefolgt von "-Grosswort" (Bergmann-Borsig)
+              if (/^-[A-ZÄÖÜ]/.test(_nach)) _istFirmenKontext = true;
+              // Firmen-Praefix unmittelbar davor
+              if (/\b(veb|betrieb|firma|werk|werke|kombinat|fabrik)\s*$/.test(_vor)) _istFirmenKontext = true;
+            }
+          } catch (e) { /* im Zweifel normal pruefen */ }
+          if (lastNameRegex.test(sceneTextRaw) && !_istFirmenKontext) {
             // Pruefe ob schon in storyFacts (egal unter welchem Key)
             const factKey = normalizeNpcName(anchor.canonicalName);
             if (!storyFacts[factKey]) {
@@ -23969,7 +24050,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.168] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.171] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
@@ -25745,6 +25826,7 @@ function resetGame(skipConfirm) {
   gameDay = 1;
   gameTimeIdx = 4;
   sceneCounter = 0;
+  if (typeof botWasEverActive !== 'undefined') botWasEverActive = false;  // v7.12.169: neuer Lauf
   timeAdvanceTokens = 0;
   pendingDayTransition = false;
   lastSceneTriggeredDayAdvance = false; // v6.96
@@ -25795,6 +25877,10 @@ function resetGame(skipConfirm) {
 
 // Globaler Bot-State
 let botActive = false;
+// v7.12.169: Lauf-weites Flag - wird true, sobald in diesem Lauf MINDESTENS EIN Bot-Klick
+// erfolgte. Anders als botActive (momentaner Status) bleibt es true, auch wenn der Bot
+// spaeter gestoppt wurde. Steuert den bot/manual-Teil im Export-Dateinamen.
+let botWasEverActive = false;
 let botShouldStop = false;
 let botCurrentTurn = 0;
 let botPlannedTurns = 0;
@@ -25949,6 +26035,71 @@ function botChooseByStrategy(options) {
     if (typeof diag === 'function') diag('bot', 'Bot waehlt HEILEN (Selbstschutz Vf=' + verfassung + ')');
     return byCat.HEILEN[0];
   }
+
+  // v7.12.169 (Lehre aus manuellem Krause-Run vs. Bot-Runs 1204/1205): GUT-HOL-PRIORITAET.
+  // Befund: In Bot-Runs kam das Diebesgut NIE zurueck - der Bot waehlte in der Schlussphase
+  // SCHLAFEN/DEFENSIV statt die angebotene Hol-Option ("Stuerm rein und hol das Etui"). Ein
+  // MENSCH (manueller Run) waehlte konsequent die Beschaffung und schloss den Fall ab. Diese
+  // Regel macht den Bot in genau dieser Lage menschlicher: Wenn es ein Diebstahlfall ist, das
+  // Gut noch nicht zurueck ist UND der Fall reif ist, bevorzugt der Bot eine Option, die das
+  // Gut PHYSISCH beschafft. Steht NACH den Lebensrettungs-Checks (Vf<=2 Heilung hat Vorrang -
+  // ein toter Karl holt kein Etui) und VOR der Nacht-Schlaf-Praeferenz (sonst schlaeft der Bot
+  // statt zu holen). Nur fuer Bot-Tests; das menschliche Spiel ist unberuehrt.
+  try {
+    const _ctBot = (typeof caseSetup !== 'undefined' && caseSetup && caseSetup.caseType) || '';
+    const _gutZurueck = (typeof caseProgress !== 'undefined' && caseProgress && caseProgress.diebesgutZurueck);
+    const _stageBot = (typeof caseProgress !== 'undefined' && caseProgress && caseProgress.stage) || 0;
+    const _szBot = (typeof sceneCounter === 'number') ? sceneCounter : 0;
+    const _vfBot = (typeof verfassung === 'number') ? verfassung : 5;
+    // Reif: Stage>=2 ODER >=12 Szenen (gleiche Schwelle wie der GUT-HOL-Push im Prompt).
+    const _fallReif = _stageBot >= 2 || _szBot >= 12;
+    if (_ctBot === 'diebstahl' && !_gutZurueck && _fallReif && _vfBot > 2) {
+      // Zielwoerter aus dem Setup (TARGET + gutSynonyme) - dynamisch, fallunabhaengig.
+      let _zielWords = [];
+      try {
+        const _tgt = caseSetup.setupCast && caseSetup.setupCast.find(c => c && (c.tag === 'TARGET' || c.tagExtra === 'TARGET'));
+        if (_tgt && _tgt.name) (typeof getTargetItemKeys === 'function' ? getTargetItemKeys(_tgt.name) : _tgt.name.toLowerCase().split(/\s+/)).forEach(w => _zielWords.push(w));
+        if (_tgt && Array.isArray(_tgt.gutSynonyme)) _tgt.gutSynonyme.forEach(s => _zielWords.push((s || '').toLowerCase()));
+      } catch (e) { /* ignore */ }
+      // Hol-Verben: physisches Beschaffen, NICHT blosses Weiterermitteln/Berichten.
+      const _holVerbRe = /\b(hol|schnapp|nimm|stürm|sturm|sicher|greif|pack|brich|aufbrech|durchsuch|stell|zwing|entreiss|entreiß)\w*/i;
+      const _zielRe = _zielWords.filter(Boolean).length
+        ? new RegExp(_zielWords.filter(Boolean).map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'i')
+        : null;
+      const _ortRe = /\b(versteck|lager|schließfach|schliessfach|tresor|hinterhof|hehler|tasche|kiste|depot|hintereingang|hinterausgang)\b/i;
+      // PRIMAER: echter Zugriff - Hol-Verb mit Ort/Ziel-Bezug ODER direkter Zielobjekt-Bezug.
+      const _holKandidaten = [].concat(byCat.OFFENSIV || [], byCat.ERKUNDEN || []).filter(o => {
+        const t = (o && o.text) ? o.text.toLowerCase() : '';
+        if (!t) return false;
+        const _hatHol = _holVerbRe.test(t);
+        const _hatZiel = _zielRe ? _zielRe.test(t) : false;
+        const _ortBezug = _ortRe.test(t) || _hatZiel;
+        return (_hatHol && _ortBezug) || _hatZiel;
+      });
+      // SEKUNDAER: Annaeherung an den Gut-Ort (Ortbezug ohne Hol-Verb, z.B. "schleich zum
+      // Hintereingang der Hehlerei"). Das ist die Vorstufe zum Zugriff - besser als Schlaf,
+      // aber nachrangig. Ein Mensch geht erst hin, dann greift er zu. So vermeiden wir, dass
+      // der Bot in der Annaeherung stecken bleibt (er nimmt sie nur, wenn es keine echte
+      // Hol-Option gibt) UND dass er stattdessen schlafen geht.
+      const _annaeherung = [].concat(byCat.OFFENSIV || [], byCat.ERKUNDEN || [], byCat.BEOBACHTEN || []).filter(o => {
+        const t = (o && o.text) ? o.text.toLowerCase() : '';
+        return t && _ortRe.test(t) && !_holKandidaten.includes(o);
+      });
+      const _kandidaten = _holKandidaten.length > 0 ? _holKandidaten : _annaeherung;
+      if (_kandidaten.length > 0) {
+        // Nicht 100% - ein Mensch zoegert auch mal. Hohe, aber nicht absolute Praeferenz,
+        // damit der Bot in Gefahr noch ausweichen kann und es nicht mechanisch wirkt.
+        const _holChance = _holKandidaten.length > 0 ? 0.85 : 0.65;
+        if (botRng() < _holChance) {
+          const _wahl = _kandidaten[0];
+          const _art = _holKandidaten.length > 0 ? 'Beschaffung' : 'Annaeherung an Gut-Ort';
+          console.log('[Bot v7.12.169] GUT-HOL-PRIO (' + _art + '): "' + (_wahl.text || '').substring(0, 50) + '"');
+          if (typeof diag === 'function') diag('bot', 'Bot waehlt GUT-HOL [' + _art + '] (Diebstahl-Schlussphase, Gut noch nicht zurueck): "' + (_wahl.text || '').substring(0, 50) + '"');
+          return _wahl;
+        }
+      }
+    }
+  } catch (e) { /* ignore - Bot faellt auf normale Strategie zurueck */ }
 
   // v7.12.106: NACHT-SCHLAF-PRAEFERENZ (ausserhalb Custody, nach Lebensrettung).
   // Bug-Befund Wessel-Run 1019: Schlaf-Button war Sz48-52 klickbar (Sp<=2, Karl frei),
