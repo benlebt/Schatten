@@ -2804,7 +2804,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.198</div>
+    <div class="start-version">Schatten v7.12.200</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2968,7 +2968,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.198</span>
+    <span>Schatten v7.12.200</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5555,7 +5555,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.198';
+window.SCHATTEN_VERSION = 'v7.12.200';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -5681,6 +5681,23 @@ function diag(type, msg, detail) {
     msg: msg,
     detail: detail !== undefined ? detail : null,
   });
+}
+
+// v7.12.199 (User-Wunsch): PERSISTENTER API-Event-Log. Timeouts/Retries/Failover passieren
+// OHNE erfolgreiche Szene - diagCommit() wird dann nie gerufen, sodass diese Ereignisse im
+// Szenen-Export FEHLEN (genau warum Hänger nie im Log auftauchten). Dieser Log ueberlebt
+// szenenuebergreifend und wird separat in den Export geschrieben.
+let apiEventLog = [];
+function logApiEvent(kind, info) {
+  try {
+    apiEventLog.push({
+      t: Date.now(),
+      scene: (typeof sceneCounter === 'number') ? sceneCounter : -1,
+      kind: kind,            // 'timeout' | 'retry' | 'failover' | 'http_error' | 'rate_limit' | 'bot_abort' | 'slow'
+      info: (info === undefined || info === null) ? '' : String(info).substring(0, 300),
+    });
+    if (apiEventLog.length > 200) apiEventLog.shift();  // Ringpuffer
+  } catch (e) { /* nie den Spielfluss stoeren */ }
 }
 
 // Speichert den aktuellen Frame im Buffer (max ~50 zurueck)
@@ -8886,8 +8903,13 @@ function deriveResponsibleAndExonerated() {
   // korrekten Zustand, daher ist die Mutation aus determineConclusionKind ungefaehrlich (Punkt 4).
   const verd = (cp.tatverdaechtiger || '').trim();
   const _verdGenerisch = !verd || (typeof isGenericPersonName === 'function' && isGenericPersonName(verd));
-  // responsible: nur bei ueberfuehrtem, konkretem Taeter - sonst NULL (Reset).
-  cp.responsible = (cp.ueberfuehrt && !_verdGenerisch) ? verd : null;
+  // v7.12.200 (ChatGPT-Lektorat v198 P2): Bei DIEBSTAHL nie einen responsible setzen - der
+  // Fall loest ueber Objekt-Status (diebesgutZurueck), nicht ueber eine ueberfuehrte Person.
+  // ueberfuehrt wird im Diebstahl-Pfad nur als genereller Durchbruch-Marker mitbenutzt; das
+  // darf aber NICHT zu einem "Verantwortlichen" fuehren (sonst Inkonsistenz mit objekt_erfuellt).
+  const _ctRE = (caseSetup && caseSetup.caseType) || '';
+  // responsible: nur bei ueberfuehrtem, konkretem Taeter - sonst NULL (Reset). Diebstahl: immer NULL.
+  cp.responsible = (_ctRE !== 'diebstahl' && cp.ueberfuehrt && !_verdGenerisch) ? verd : null;
   // exonerated: Klient, aber nur wenn urspruenglich angeklagt/verdaechtig UND nicht selbst Taeter.
   let _exo = null;
   try {
@@ -9351,6 +9373,31 @@ function buildTranscriptText() {
   out += 'Version: ' + (window.SCHATTEN_VERSION || 'unbekannt') + '\n';
   out += 'Exportiert: ' + new Date().toLocaleString('de-DE') + '\n';
   out += '\n' + '='.repeat(60) + '\n\n';
+
+  // v7.12.199 (User-Wunsch): API-EVENT-LOG ganz oben - Timeouts/Retries/Failover/Bot-Abbrueche.
+  // Diese Ereignisse fehlten bisher im Export, weil sie OHNE erfolgreiche Szene passieren
+  // (kein diagCommit). Jetzt persistent geloggt und hier sichtbar - so ist diagnostizierbar,
+  // WARUM ein Fall haengt (welches Modell, welche Szene, wie oft).
+  try {
+    if (Array.isArray(apiEventLog) && apiEventLog.length > 0) {
+      out += '=== API-EVENT-LOG (Timeouts / Retries / Failover) ===\n';
+      out += 'Gesamt: ' + apiEventLog.length + ' Ereignis(se)\n';
+      const _byKind = {};
+      apiEventLog.forEach(e => { _byKind[e.kind] = (_byKind[e.kind] || 0) + 1; });
+      out += 'Zusammenfassung: ' + Object.keys(_byKind).map(k => k + '=' + _byKind[k]).join(' · ') + '\n';
+      const _byScene = {};
+      apiEventLog.forEach(e => { const s = e.scene; _byScene[s] = (_byScene[s] || 0) + 1; });
+      const _hotScenes = Object.keys(_byScene).filter(s => _byScene[s] >= 2).map(s => 'Szene ' + s + ' (' + _byScene[s] + 'x)');
+      if (_hotScenes.length) out += 'Auffaellige Szenen: ' + _hotScenes.join(', ') + '\n';
+      out += '-'.repeat(50) + '\n';
+      apiEventLog.forEach(e => {
+        let ts = '';
+        try { ts = new Date(e.t).toLocaleTimeString('de-DE'); } catch (x) {}
+        out += '[' + ts + '] Szene ' + e.scene + ' · ' + e.kind.toUpperCase() + ': ' + e.info + '\n';
+      });
+      out += '\n' + '='.repeat(60) + '\n\n';
+    }
+  } catch (e) { /* Export nie wegen Logging brechen */ }
 
   // v6.70: Fortschritts-Events-Uebersicht (nur Debug). Sammelt alle 'progress'-Diag-
   // Events aus allen Szenen (Stage-Aufstiege, Eureka-Verknuepfungen, Auto-Forcing,
@@ -13141,7 +13188,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.198] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.200] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -14602,8 +14649,11 @@ function advanceModel() {
     if (onlyGemini && m.provider !== 'gemini') continue;
     if (sessionSkippedModels.has(m.model)) continue;
     if (isModelBlocked(m.model)) continue;
+    // v7.12.199: Modellwechsel persistent loggen.
+    if (typeof logApiEvent === 'function') logApiEvent('failover', (current && current.label ? current.label : '?') + ' -> ' + m.label);
     return m;
   }
+  if (typeof logApiEvent === 'function') logApiEvent('failover_exhausted', 'kein Modell mehr verfuegbar (alle blockiert)');
   return null;
 }
 
@@ -17079,6 +17129,9 @@ VERBOTEN: Karl wacht woanders auf ohne Erklaerung. Wenn du Pfad B waehlst, MUSST
     const errMsg = isTimeout
       ? 'Timeout nach ' + (REQUEST_TIMEOUT_MS / 1000) + 's (' + activeModel.label + ')'
       : 'Netzwerkfehler: ' + (networkErr.message || 'Load failed') + ' (' + activeModel.label + ')';
+    // v7.12.199: persistent loggen (ueberlebt fehlende Szenen-Commits).
+    logApiEvent(isTimeout ? 'timeout' : 'network_error',
+      activeModel.label + ' @ ' + (REQUEST_TIMEOUT_MS/1000) + 's-Limit: ' + (networkErr.message || networkErr.name || 'unbekannt'));
     const err = new Error(errMsg);
     err.isRetryable = true;
     err.debugInfo = {
@@ -17897,6 +17950,7 @@ async function startGame() {
   // Diagnose-Buffer leeren bei neuem Spiel
   sceneDiagnosticsBuffer = [];
   currentSceneDiagnostics = null;
+  if (typeof apiEventLog !== 'undefined') apiEventLog = [];  // v7.12.199: API-Event-Log pro Fall frisch
   // Per-Minute-Blocks loeschen: nach evtl. langer Pause sind sie wahrscheinlich
   // laengst abgelaufen. So beginnt jeder neue Run mit dem staerksten Modell.
   // Daily-Blocks bleiben (laufen erst um Mitternacht UTC aus).
@@ -20137,7 +20191,7 @@ async function chooseOption(option) {
       // das ~63% Erfolg bei der ersten Annaeherung (vorher ~25%).
       const offen = Math.random() < 0.70;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.198] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.200] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -20516,7 +20570,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.198] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.200] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -21912,7 +21966,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           } else if (!tensionHighEnoughForArrest && folterSceneCount >= custodyReleaseFloor) {
             // STILLER RELEASE: nur noch als Notventil bei langem Drift (5+ Sz). Karl ist
             // faktisch frei (KI erzaehlt ihn lange ohne Stasi-Kontext), System zieht nach.
-            console.warn('[Schatten v7.12.198] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
+            console.warn('[Schatten v7.12.200] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet');
             setCustodyState(false, 'stiller-release');
           } else if (!tensionHighEnoughForArrest) {
@@ -21928,7 +21982,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.198] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.200] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -22454,7 +22508,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof diag === 'function') {
           diag('state', '⚡ NOTFLUCHT GELUNGEN - Karl frei + 4 Sz Gnadenfrist, Stasi-Tension ' + prevTension + ' -> 3 (gesucht, aber nicht sofort wieder greifbar)');
         }
-        console.log('[Schatten v7.12.198] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
+        console.log('[Schatten v7.12.200] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
         // v7.11.56: Toast bei Erfolg - Spieler hat geklickt und soll Wuerfel-
         // Ergebnis direkt sehen, nicht nur narrative Andeutungen.
         if (typeof showProgressToast === 'function') {
@@ -24776,7 +24830,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.198] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.200] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
@@ -27634,6 +27688,7 @@ function botWaitForOptionsReady(maxMs) {
       }
 
       if (Date.now() > deadline) {
+        logApiEvent('bot_wait_timeout', 'Bot wartete 90s vergeblich auf neue Optionen (Szene ' + ((typeof sceneCounter === 'number') ? sceneCounter : '?') + ')');
         return reject(new Error('Timeout beim Warten auf neue Optionen (90s)'));
       }
       setTimeout(check, 400);
