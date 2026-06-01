@@ -19,11 +19,22 @@
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Spiel-Auth');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') {
     return res.status(405).json({ error: { message: 'Method not allowed' } });
+  }
+
+  // --- ZUGANGSSCHUTZ (serverseitig, schuetzt die Tokens) ---
+  // Passwort nur als Vercel-Env SPIEL_PASSWORT, nie im Frontend. Ohne gueltiges Passwort
+  // (Header X-Spiel-Auth) kein Modell-Aufruf -> keine Tokens. Nicht gesetzt = offen.
+  const erwartetesPw = process.env.SPIEL_PASSWORT;
+  if (erwartetesPw) {
+    const gesendetesPw = req.headers['x-spiel-auth'] || '';
+    if (gesendetesPw !== erwartetesPw) {
+      return res.status(403).json({ error: { message: 'Zugang verweigert. Bitte das korrekte Passwort eingeben.' } });
+    }
   }
 
   const apiKey = process.env.MISTRAL_API_KEY;
