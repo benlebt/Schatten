@@ -25149,6 +25149,22 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       caseProgress.ueberfuehrt = true;
       caseProgress.stage = 3; // v6.81: Eigener Stage 3 fuer "ueberfuehrt aber noch nicht berichtet"
       caseProgress.stage3StartScene = sceneCounter; // v6.81: Stage 3 tracken
+      // v7.12.221 (Kessler-Run-Bug): Bei beschatten ist das Subjekt IMMER der TARGET (Robert).
+      // Wenn tatverdaechtiger auf eine andere Figur gedriftet ist (z.B. Ilse, die Romance-Figur,
+      // weil Karl mit ihr interagierte), hier auf den TARGET zuruecksetzen - sonst zeigt Stage 3
+      // "Ilse Hauke, Wahrheit/Spur" statt "Robert Kessler, Verdacht bestaetigt".
+      if ((caseSetup && caseSetup.caseType) === 'beschatten') {
+        const _tgtFix = (caseSetup.setupCast || []).find(c => c && c.tag === 'TARGET');
+        if (_tgtFix) {
+          const _isT = (typeof sameNamedPerson === 'function')
+            ? sameNamedPerson(caseProgress.tatverdaechtiger, _tgtFix.name)
+            : normForMatch(caseProgress.tatverdaechtiger || '') === normForMatch(_tgtFix.name);
+          if (!_isT) {
+            if (typeof diag === 'function') diag('drift', 'Beschattungs-Subjekt korrigiert: war "' + caseProgress.tatverdaechtiger + '", TARGET ist ' + _tgtFix.name);
+            caseProgress.tatverdaechtiger = _tgtFix.name;
+          }
+        }
+      }
       // v7.12.189 (ChatGPT-Lektorat P0 Bug 3): Die KI kann tatverdaechtiger_ueberfuehrt:true
       // auch bei wahrheit/beschatten zu leicht setzen. Falltypisch absichern: bei wahrheit
       // ohne konkreten Verantwortlichen -> wahrheitErkannt statt ueberfuehrt; bei beschatten/
