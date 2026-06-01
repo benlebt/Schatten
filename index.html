@@ -2848,7 +2848,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.209</div>
+    <div class="start-version">Schatten v7.12.210</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3012,7 +3012,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.209</span>
+    <span>Schatten v7.12.210</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5599,7 +5599,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.209';
+window.SCHATTEN_VERSION = 'v7.12.210';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -6582,6 +6582,7 @@ let lastRomanceNpcScene = -99;  // v7.12.104: Szene, in der zuletzt eine ROMANCE
 let lastRomancePushScene = -99; // v7.12.130: Szene des letzten ROMANCE-FIGUR-PUSH (Cooldown gegen "Stalking"-Effekt)
 let romancePushCount = 0;       // v7.12.131: Anzahl Romance-Pushes im Run (Stopp wenn Spieler konsequent ignoriert)
 let pendingRomancePushScene = -99; // v7.12.207: Szene eines ROMANCE-FIGUR-PUSH, dessen Präsenz-Wirkung noch nicht verifiziert ist (ChatGPT: Push darf erst als verbraucht gelten, wenn die Figur wirklich auftauchte)
+let lastRomanceTensionUpScene = -99; // v7.12.210: Szene, in der romanticTension zuletzt STIEG (für Grace-Schonfrist gegen sofortiges Abkühlen)
 
 // v7.12.128: Run-Kosten-Tracker. Summiert Token/Requests pro Run und schaetzt
 // die Gemini-API-Kosten (NUR fuer Debug-Export sichtbar, nicht oeffentlich).
@@ -13275,7 +13276,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.209] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.210] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -18203,6 +18204,7 @@ async function startGame() {
   lastRomancePushScene = -99; // v7.12.130: Romance-Push-Cooldown zuruecksetzen
   romancePushCount = 0;       // v7.12.131: Romance-Push-Zaehler zuruecksetzen
   pendingRomancePushScene = -99; // v7.12.207: ausstehende Push-Verifikation zuruecksetzen
+  lastRomanceTensionUpScene = -99; // v7.12.210: Grace-Schonfrist zuruecksetzen
   karlMuedeSignalScene = -99; // v7.12.112: Müdigkeits-Signal zuruecksetzen
   romanceReceptive = {};   // v7.12.17: Wuerfel-Ergebnisse zuruecksetzen
   romanceRejected = {};
@@ -19967,6 +19969,9 @@ function checkStatusToasts(spannung) {
 // Szene vorkommen (Klientin im Verhoer, Witwe am Friedhof, etc).
 // Praefix-Schutz: bei akuter Action sinkt Tension stark.
 function updateRomanticTension(scene) {
+  // v7.12.210: Eingangswert merken, um einen Tension-ANSTIEG in dieser Szene zu erkennen
+  // (für Grace-Schonfrist gegen sofortiges Abkühlen).
+  const _rtAtEntry = (typeof romanticTension === 'number') ? romanticTension : 0;
   // v7.9.53: TAG-BASIERTER PFAD. Wenn der Spieler eine als 'romance' getaggte
   // Option geklickt hat, garantieren wir Romantik-Tension +1 (sofern < 5).
   // Anlass: User-Feedback "wenn ich romantik klicke, dann folgt auch eine
@@ -19975,6 +19980,7 @@ function updateRomanticTension(scene) {
   if (pendingRomanceChoice) {
     const before = romanticTension;
     romanticTension = Math.min(5, romanticTension + 1);
+    if (romanticTension > before) lastRomanceTensionUpScene = sceneCounter; // v7.12.210 Grace
     console.log('[Schatten] Tag-basierte Romance: Romantik-Tension', before, '->', romanticTension, '(+1)');
     diag('state', 'Romantik-Tension (Tag-basiert) ' + before + ' -> ' + romanticTension);
     pendingRomanceChoice = false;
@@ -20007,10 +20013,22 @@ function updateRomanticTension(scene) {
         return true;
       });
       if (!aktiveRomancePerson || karlInStasiCustody) {
-        const beforeR = romanticTension;
-        romanticTension = Math.max(0, romanticTension - 1);
-        if (beforeR !== romanticTension) {
-          diag('state', 'Romantik-Tension abgekuehlt ' + beforeR + ' -> ' + romanticTension + ' (Person abwesend/abgewiesen/Gewahrsam)');
+        // v7.12.210 (ChatGPT-Lektorat v209 P1): GRACE-SCHONFRIST. Befund: Tension sprang in
+        // allen Runs kurz auf 1, kühlte aber sofort wieder auf 0 ab, sobald die Figur eine Szene
+        // nicht im Raum war -> der erste Funke verpuffte immer, die Kette kam nie über 1 hinaus.
+        // Jetzt: Eine frisch gestiegene Tension (in den letzten 3 Szenen) wird NICHT abgekühlt,
+        // wenn die Person nur kurz abwesend ist - sie bekommt Zeit, sich zu entwickeln. In
+        // Custody (Gewahrsam) gilt die Schonfrist NICHT - dort ist Abkühlung inhaltlich zwingend.
+        const _graceAktiv = !karlInStasiCustody
+          && (sceneCounter - (typeof lastRomanceTensionUpScene === 'number' ? lastRomanceTensionUpScene : -99)) < 3;
+        if (_graceAktiv) {
+          if (typeof diag === 'function') diag('state', 'Romantik-Tension ' + romanticTension + ' gehalten (Grace-Schonfrist, Funke erst ' + (sceneCounter - lastRomanceTensionUpScene) + ' Sz alt, Person kurz abwesend)');
+        } else {
+          const beforeR = romanticTension;
+          romanticTension = Math.max(0, romanticTension - 1);
+          if (beforeR !== romanticTension) {
+            diag('state', 'Romantik-Tension abgekuehlt ' + beforeR + ' -> ' + romanticTension + ' (Person abwesend/abgewiesen/Gewahrsam)');
+          }
         }
       }
     }
@@ -20340,7 +20358,7 @@ async function chooseOption(option) {
       // das ~63% Erfolg bei der ersten Annaeherung (vorher ~25%).
       const offen = Math.random() < 0.70;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.209] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.210] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -20719,7 +20737,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.209] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.210] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -22115,7 +22133,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           } else if (!tensionHighEnoughForArrest && folterSceneCount >= custodyReleaseFloor) {
             // STILLER RELEASE: nur noch als Notventil bei langem Drift (5+ Sz). Karl ist
             // faktisch frei (KI erzaehlt ihn lange ohne Stasi-Kontext), System zieht nach.
-            console.warn('[Schatten v7.12.209] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
+            console.warn('[Schatten v7.12.210] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet');
             setCustodyState(false, 'stiller-release');
           } else if (!tensionHighEnoughForArrest) {
@@ -22131,7 +22149,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.209] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.210] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -22472,7 +22490,9 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof diag === 'function') diag('state', 'Romance-Tension eingefroren (Abweisung)');
       } else if (categoryMechanicsResult.romanceTension > 0 && typeof romanticTension === 'number') {
         const beforeR = romanticTension;
+        const _rtBeforeCat = romanticTension;
         romanticTension = Math.min(5, romanticTension + categoryMechanicsResult.romanceTension);
+        if (romanticTension > _rtBeforeCat) lastRomanceTensionUpScene = sceneCounter; // v7.12.210 Grace
         if (typeof diag === 'function') diag('state', 'Romance-Tension ' + beforeR + ' -> ' + romanticTension);
       }
       if (categoryMechanicsResult.stasiTension > 0 && typeof stasiTension === 'number') {
@@ -22657,7 +22677,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof diag === 'function') {
           diag('state', '⚡ NOTFLUCHT GELUNGEN - Karl frei + 4 Sz Gnadenfrist, Stasi-Tension ' + prevTension + ' -> 3 (gesucht, aber nicht sofort wieder greifbar)');
         }
-        console.log('[Schatten v7.12.209] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
+        console.log('[Schatten v7.12.210] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
         // v7.11.56: Toast bei Erfolg - Spieler hat geklickt und soll Wuerfel-
         // Ergebnis direkt sehen, nicht nur narrative Andeutungen.
         if (typeof showProgressToast === 'function') {
@@ -24979,7 +24999,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.209] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.210] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
@@ -27538,6 +27558,39 @@ function botChooseByStrategy(options) {
       return byCat.SCHLAFEN[0];
     }
   }
+  // v7.12.210 (ChatGPT-Lektorat v209 P0, Krause-Regression): DIEBSTAHL-GUT-HOL-PRIORITAET.
+  // Befund: Krause-Run erreichte Stage 3 (Versteck bekannt), 18+ GUT-HOL-PFLICHT-Pushes feuerten,
+  // aber das Etui kam NIE ins Inventar/zum Klienten - der Bot ermittelte im natural-Modus weiter
+  // statt das Gut zu holen. Es gab keine Bot-Prioritaet fuer die Hol-Aktion. Jetzt: Bei Diebstahl
+  // + Stage>=3 + Gut noch NICHT beim Klienten waehlt der Bot mit hoher Prioritaet die Option, die
+  // ihn zum Gut fuehrt (Text-Heuristik: holen/abholen/sichern/Versteck/an sich nehmen). Das ist
+  // KEINE Rueckkehr zur ueberfuehrt-Logik (v205 bleibt) - nur eine Bot-Aktionslenkung zum Objekt.
+  try {
+    const _ctBot = (caseSetup && caseSetup.caseType) || (caseProgress && caseProgress.caseType) || '';
+    const _stageBot = (caseProgress && caseProgress.stage) || 0;
+    const _tis = caseProgress && caseProgress.targetItemState;
+    const _gutBeiKlient = _tis && _tis.status === 'returnedToClient';
+    const _gutBeiKarl = _tis && _tis.status === 'inKarlInventory';
+    if (_ctBot === 'diebstahl' && _stageBot >= 3 && !_gutBeiKlient && !caseProgress.istGelöst) {
+      // Wenn das Gut schon bei Karl ist -> AUFLOESEN/Klient hat Vorrang (faellt unten in AUFLOESEN).
+      // Wenn nicht: Hol-Option suchen.
+      if (!_gutBeiKarl) {
+        const _holRe = /\b(hol|abhol|abzuhol|holen|versteck|lager|schliessfach|schließfach|an sich|einsteck|sicher|aufbrech|aufzubrech|mitnehm|greif|schnapp|beschaff|wiederbeschaff|zurueckhol|zurückhol|etui|diebesgut|gut\b)/i;
+        const _alle = [].concat(byCat.OFFENSIV||[], byCat.ERKUNDEN||[], byCat.BEOBACHTEN||[], byCat.normal||[], byCat.DEFENSIV||[]);
+        const _holOpt = _alle.find(o => o && o.text && _holRe.test(o.text));
+        if (_holOpt) {
+          console.log('[Bot v7.12.210] DIEBESGUT-HOLEN priorisiert (Stage ' + _stageBot + ', Gut noch nicht zurueck)');
+          if (typeof diag === 'function') diag('bot', 'Bot waehlt DIEBESGUT-HOLEN (Diebstahl Stage ' + _stageBot + ', Gut noch nicht zurueck - Objektabschluss erzwungen)');
+          return _holOpt;
+        }
+        // Keine passende Hol-Option angeboten -> ERKUNDEN bevorzugen (naeher ans Gut) statt Konfrontation.
+        if (byCat.ERKUNDEN && byCat.ERKUNDEN.length > 0) {
+          if (typeof diag === 'function') diag('bot', 'Bot waehlt ERKUNDEN (Diebstahl Stage ' + _stageBot + ', keine direkte Hol-Option - naeher ans Gut)');
+          return byCat.ERKUNDEN[0];
+        }
+      }
+    }
+  } catch (e) { /* diebstahl-prio optional */ }
   // v7.11.21: AUFLOESEN-Priorisierung 70% -> 90%. Krause+Lindner-Runs erreichten
   // Stage 3 aber haengten dort fest weil Bot AUFLOESEN nur 70% nahm. Jetzt 90%,
   // damit Stage 4 zuverlaessig geschlossen wird.
