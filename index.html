@@ -17393,7 +17393,13 @@ VERBOTEN: Karl wacht woanders auf ohne Erklaerung. Wenn du Pfad B waehlst, MUSST
         // Median der letzten 5 erfolgreichen Antworten
         const recent = stats.durations.slice(-5).slice().sort((a,b)=>a-b);
         const median = recent[Math.floor(recent.length / 2)];
-        const adaptive = Math.round(Math.max(18000, Math.min(35000, median * 1.5)));
+        // v7.12.227: Das schnelle Flash-Lite (Median ~4s) bekommt eine knappere Obergrenze (15s):
+        // wenn es nicht in 15s antwortet, hängt es - schneller zum Failover statt 35s warten.
+        // So braucht die volle 4er-Kette im Worst Case nicht ~2min (Achterberg-Timeout 114s).
+        // Langsamere Fallback-Modelle (Gemini 3 Preview ~18s, Mistral ~22s) behalten 35s.
+        const _isFastPrimary = (lbl || '').indexOf('Flash-Lite') >= 0;
+        const _cap = _isFastPrimary ? 15000 : 35000;
+        const adaptive = Math.round(Math.max(_isFastPrimary ? 10000 : 18000, Math.min(_cap, median * 1.5)));
         if (adaptive !== REQUEST_TIMEOUT_MS) {
           REQUEST_TIMEOUT_MS = adaptive;
           if (typeof diag === 'function') diag('info', 'Adaptiver Timeout: ' + (adaptive/1000) + 's (Median letzter ' + recent.length + ' Antworten: ' + median + 'ms)');
