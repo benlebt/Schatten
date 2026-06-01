@@ -2848,7 +2848,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.230</div>
+    <div class="start-version">Schatten v7.12.234</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3012,7 +3012,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.230</span>
+    <span>Schatten v7.12.234</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5607,7 +5607,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.230';
+window.SCHATTEN_VERSION = 'v7.12.234';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -11601,6 +11601,12 @@ function advanceGameTime() {
   // auf Schlaf) bleibt bei Sp<=2, weil ein harter Schlaf-Zwang bei Sp3 (Karl
   // koennte noch mitten in einer Befragung/leichten Anspannung sein) zu rigide
   // waere - der Spieler soll bei Sp3 erinnert, aber nicht gezwungen werden.
+  // v7.12.234: Müdigkeits-Hinweis. Bei Sp<=3 wie bisher (ab 6 Nachtszenen). NEU: bei langer
+  // Action-Nacht (Sp>=4, ab 12 Szenen) kommt jetzt AUCH ein Hinweis - vorher kam bei Dauer-Action
+  // GAR keiner (Achterberg: 20 Nachtszenen ohne ein Wort über Müdigkeit). Eindeutig + Spieler
+  // entscheidet: nie ein Zwang, nur ein deutlich werdender Hinweis + Toast. Tagwechsel weiter NUR
+  // via aktivem SCHLAFEN-Klick (kein Auto-Zeitsprung, kein Sonderzustand).
+  const _langeActionNacht = isNacht && scenesInCurrentTime >= 12 && lastSpannung >= 4 && !pendingSleepChoice;
   if (isNacht && scenesInCurrentTime >= 6 && !pendingSleepChoice && lastSpannung <= 3) {
     const nightStages = (scenesInCurrentTime >= 10 && lastSpannung <= 2) ? 'HARD' : 'SOFT';
     if (nightStages === 'HARD') {
@@ -11626,6 +11632,18 @@ function advanceGameTime() {
       if (_canShow) showProgressToast(_muedeTitel, _muedeText, 'info', 'muede-nacht');
       // v7.12.112: Müdigkeits-Signal fuer den Bot setzen. Das Toast-Logging selbst passiert
       // jetzt zentral in showProgressToast (v7.12.113, loggt JEDEN Toast).
+      karlMuedeSignalScene = (typeof sceneCounter === 'number') ? sceneCounter : -99;
+    }
+  } else if (_langeActionNacht) {
+    // Lange Action-Nacht: deutlicher Hinweis, aber KEIN Zwang (Karl kann mitten in der Konfrontation
+    // nicht einfach schlafen). Wir erinnern den Spieler nur klar, dass die Nacht extrem lang wird.
+    if (Array.isArray(pendingCategoryMessages)) {
+      pendingCategoryMessages.push('LANGE NACHT (Hinweis, kein Zwang): Karl ist seit ' + scenesInCurrentTime + ' Szenen ohne Schlaf in der Nacht unterwegs - das zehrt sichtbar. Wenn die aktuelle Anspannung es zulaesst, lass die Erschoepfung durchscheinen (brennende Augen, Zittern, der Gedanke "ich muss bald raus hier und schlafen"). Wenn gerade eine ruhigere Gelegenheit entsteht, biete eine SCHLAFEN-Option an. KEIN Zwang mitten in Action - nur ein spuerbarer werdender Druck zur Rast.');
+    }
+    diag('detect', 'LANGE-ACTION-NACHT-HINWEIS: ' + scenesInCurrentTime + ' Szenen NACHT bei Sp ' + lastSpannung + ' (Hinweis ohne Zwang)');
+    if (typeof showProgressToast === 'function') {
+      const _canShow = (typeof canShowToast !== 'function') || canShowToast('info', 'muede-nacht');
+      if (_canShow) showProgressToast('Lange Nacht', 'Karl ist erschöpft. Sobald es ruhiger wird, sollte er schlafen.', 'info', 'muede-nacht');
       karlMuedeSignalScene = (typeof sceneCounter === 'number') ? sceneCounter : -99;
     }
   }
@@ -11654,19 +11672,19 @@ function advanceGameTime() {
     const wuerdeWechselnZuMorgen = (gameTimeIdx >= TIMES_OF_DAY.length - 1)
       && !pendingSleepChoice;
     if (wuerdeWechselnZuMorgen) {
-      // Karl bleibt in der Nacht - keine Auto-Tagwechsel mehr
+      // Karl bleibt in der Nacht - keine Auto-Tagwechsel mehr (Tagwechsel NUR via SCHLAFEN).
       timeAdvanceTokens = 0.5; // halten, aber Push-Schwelle erreicht damit
-                                 // SCHLAFEN-Push-Message in der naechsten Szene
-                                 // kommt (siehe pushMessages)
+                                 // SCHLAFEN-Push-Message in der naechsten Szene kommt
       console.log('[Schatten v7.11.12] Auto-Tagwechsel BLOCKIERT - Karl muss SCHLAFEN-Button klicken (Nacht haelt an)');
       diag('detect', 'Tagwechsel-Block: Karl ist in der Nacht und muss aktiv SCHLAFEN waehlen (kein Auto-Wechsel mehr)');
-      // Push-Message fuer KI: "Karl spuert die Erschoepfung, Schlaf liegt nahe"
       if (Array.isArray(pendingCategoryMessages)) {
         pendingCategoryMessages.push('NACHT-HALT: Es ist tief in der Nacht. Karl ist erschoepft. Beschreibe sensorisch die Muedigkeit - schwere Augenlider, Gaehnen, der Wunsch nach Bett. Spieler hat einen SCHLAFEN-Button um den Tag zu wechseln. Treibe NICHT die Zeit weiter, die Szene spielt weiter in der NACHT.');
       }
       // NICHT gameTimeIdx hochzaehlen / NICHT gameDay++
     } else {
       gameTimeIdx++;
+      // v7.12.232: normaler Zeitfortschritt (z.B. früher Morgen -> Mittag) hebt das Notbremse-
+      // Nachholschlaf-Fenster auf - der Schlaf-Button verschwindet dann wieder bis zum Abend.
       if (gameTimeIdx >= TIMES_OF_DAY.length) {
         gameTimeIdx = 0; // back to MORGEN
         gameDay++;       // new day
@@ -13421,7 +13439,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.230] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.234] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -20547,7 +20565,7 @@ async function chooseOption(option) {
       const _romRng = (typeof botWasEverActive !== 'undefined' && botWasEverActive && typeof botRng === 'function') ? botRng() : Math.random();
       const offen = _romRng < 0.70;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.230] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.234] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -20926,7 +20944,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.230] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.234] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -22329,7 +22347,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           } else if (!tensionHighEnoughForArrest && folterSceneCount >= custodyReleaseFloor) {
             // STILLER RELEASE: nur noch als Notventil bei langem Drift (5+ Sz). Karl ist
             // faktisch frei (KI erzaehlt ihn lange ohne Stasi-Kontext), System zieht nach.
-            console.warn('[Schatten v7.12.230] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
+            console.warn('[Schatten v7.12.234] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet');
             setCustodyState(false, 'stiller-release');
           } else if (!tensionHighEnoughForArrest) {
@@ -22345,7 +22363,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.230] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.234] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -22873,7 +22891,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof diag === 'function') {
           diag('state', '⚡ NOTFLUCHT GELUNGEN - Karl frei + 4 Sz Gnadenfrist, Stasi-Tension ' + prevTension + ' -> 3 (gesucht, aber nicht sofort wieder greifbar)');
         }
-        console.log('[Schatten v7.12.230] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
+        console.log('[Schatten v7.12.234] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
         // v7.11.56: Toast bei Erfolg - Spieler hat geklickt und soll Wuerfel-
         // Ergebnis direkt sehen, nicht nur narrative Andeutungen.
         if (typeof showProgressToast === 'function') {
@@ -25230,7 +25248,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.230] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.234] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
