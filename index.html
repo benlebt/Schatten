@@ -2612,8 +2612,8 @@
     <button onclick="resetModelBlocks(event)">🗑 Alle Modell-Sperren loeschen</button>
 
     <div class="settings-divider"></div>
-    <div class="settings-info">Deploy</div>
-    <button onclick="openDeployModal(event)">🚀 Datei deployen (GitHub-Push)</button>
+    <div class="settings-info" id="deploy-section-label" style="display:none;">Deploy</div>
+    <button id="deploy-section-btn" style="display:none;" onclick="openDeployModal(event)">🚀 Datei deployen (GitHub-Push)</button>
 
     <div class="settings-divider"></div>
     <button onclick="deactivateDebugMode(event)" style="background: rgba(120, 60, 60, 0.4); border-color: rgba(180, 90, 90, 0.5);">🔒 Debug-Modus deaktivieren</button>
@@ -2821,7 +2821,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.161</div>
+    <div class="start-version">Schatten v7.12.163</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2866,7 +2866,7 @@
 
     <div class="howto-section">
       <h3>📑 Den Fall lösen</h3>
-      <p>Sobald du genug Indizien gesammelt und den Täter gestellt hast, erscheint unten der Button <strong>"Fall lösen, Klient informieren"</strong>. Den drückst du, wenn du bereit bist abzuschließen. Ist die Szene gerade zu gefährlich, ist er kurz gesperrt. Warte, bis es ruhiger wird.</p>
+      <p>Sobald du genug Indizien gesammelt und den Täter gestellt hast, erscheint unten der Button <strong>"Fall lösen, Auftraggeber informieren"</strong>. Den drückst du, wenn du bereit bist abzuschließen. Ist die Szene gerade zu gefährlich, ist er kurz gesperrt. Warte, bis es ruhiger wird.</p>
       <p>Du musst nicht hetzen. Ein Fall darf sich über mehrere Spieltage ziehen. Karl kann zwischendurch schlafen, essen, sich verarzten lassen.</p>
     </div>
 
@@ -2985,7 +2985,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.161</span>
+    <span>Schatten v7.12.163</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5536,7 +5536,11 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.161';
+window.SCHATTEN_VERSION = 'v7.12.163';
+// v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
+// gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
+// gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
+const DEPLOY_UI_ENABLED = false;
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5795,30 +5799,46 @@ function isHardClientReturn(sceneText, clientName, targetName) {
   // clientFirst-Check (nahm "wilhelm"), obwohl der Text "krause" enthielt.
   const clientParts = ((typeof normForMatch === 'function') ? normForMatch(clientName || '') : '').split(/\s+/).filter(w => w.length >= 4);
   if (!clientParts.length || !clientParts.some(p => t.includes(p))) return false;
-  // (a) SPIELER-Handlung: Karl gibt/uebergibt/reicht/legt das Gut zurueck.
+  // (a) SPIELER-Handlung: Karl gibt/uebergibt/reicht/legt das Gut zurueck. Eng genug
+  //     (Verb + Richtung max 120 Zeichen, ueblicherweise im selben Satz).
   if (/\b(gibst|uebergibst|reichst|haendigst|ueberreichst|legst)\b.{0,120}\b(zurueck|in seine hand|in ihre hand|in seine haende|vor ihn|vor sie|auf den tisch)\b/.test(t)) return true;
-  // (b) v7.12.159 (Code-Review Punkt 3): KLIENTEN-Handlung als plausible Endformulierung -
-  //     "Krause nimmt das Etui entgegen / haelt es wieder in den Haenden / steckt es ein".
-  //     Klientenname ist oben schon verifiziert; hier zusaetzlich Empfangs-Verb + Bezug
-  //     aufs Gut/zurueck im Nahbereich. Streng genug, um "Krause nimmt einen Schluck" o.ae.
-  //     nicht faelschlich als Rueckgabe zu werten (verlangt Gut-/zurueck-Bezug).
-  if (/\b(nimmt|bekommt|erhaelt|haelt|steckt)\b.{0,80}\b(zurueck|wieder|etui|diebesgut|beute|gut|schmuck|in den haenden|in die hand|in seine hand|an sich|entgegen)\b/.test(t)
-      && /\b(entgegen|zurueck|wieder|etui|diebesgut|beute|schmuck)\b/.test(t)) return true;
+  // (b) v7.12.159/161 (Code-Review Punkt 3): KLIENTEN-Handlung ("Krause nimmt das Etui
+  //     entgegen / haelt es wieder in den Haenden"). v7.12.161: SATZGEBUNDEN - Empfangs-Verb,
+  //     Klientenname UND Gut-/zurueck-Bezug muessen im SELBEN Satz stehen. Verhindert den
+  //     Fehlalarm "Krause nimmt einen Schluck. Auf dem Tisch liegt wieder das Etui." (zwei
+  //     Saetze - vorher feuerte das faelschlich, weil Verb+Gut textweit gesucht wurden).
+  const _tWords = ((typeof normForMatch === 'function') ? normForMatch(targetName || '') : '').split(/\s+/).filter(w => w.length >= 4);
+  const _sentences = t.split(/[.!?]/);
+  const _empfangRe = /\b(nimmt|bekommt|erhaelt|haelt|steckt)\b/;
+  const _gutBezugRe = /\b(zurueck|wieder|etui|diebesgut|beute|schmuck|entgegen|in den haenden|in die hand|in seine hand|an sich)\b/;
+  for (const s of _sentences) {
+    if (!_empfangRe.test(s)) continue;
+    const _hatGut = _tWords.some(w => s.includes(w)) || _gutBezugRe.test(s);
+    const _hatKlient = clientParts.some(p => s.includes(p));
+    if (_hatGut && _hatKlient) return true;
+  }
   return false;
 }
 
 // v7.12.158 (Code-Review Punkt 3): Zielobjekt aus dem Inventar entfernen (nach Rueckgabe
 // an den Klienten). Wird im harten Rueckgabe-Pfad UND im klient_berichtet-Abschluss genutzt.
+// v7.12.161 (Code-Review Punkt 2): Zentrale spezifische Zielwort-Schluessel. Vermeidet
+// generische Farb-/Groessen-Adjektive ("silbernes") als Key - die wuerden andere Dinge
+// (silbernes Feuerzeug) faelschlich treffen. Bevorzugt das spezifische Objektwort
+// ("zigarettenetui"). Gemeinsam genutzt von removeTargetItemFromInventory UND der
+// Restore-Inventar-Reparatur, damit beide DIESELBE Logik verwenden (vorher divergent).
+function getTargetItemKeys(targetName) {
+  const words = normForMatch(targetName || '').split(/\s+/).filter(w => w.length >= 4);
+  if (!words.length) return [];
+  const preferred = words.filter(w => !/^(silbernes|silberne|silberner|goldenes|goldene|goldener|kleines|kleine|grosses|grosse|altes|alte|neues|neue|schwarzes|schwarze|weisses|weisse|rotes|rote|blaues|blaue|braunes|braune|graues|graue)$/.test(w));
+  return preferred.length ? preferred : words;
+}
+
 function removeTargetItemFromInventory(targetName) {
   if (!targetName || !Array.isArray(inventory)) return;
-  // v7.12.160 (Code-Review Punkt 4): spezifischere Schluesselwoerter. Vorher wurde das
-  // ERSTE Wort >=4 Zeichen genommen - bei "Silbernes Zigarettenetui" waere das "silbernes"
-  // (zu breit, koennte andere silberne Dinge treffen). Jetzt: generische Farb-/Groessen-
-  // Adjektive ausschliessen, das spezifische Objektwort ("zigarettenetui") bevorzugen.
-  const words = normForMatch(targetName).split(/\s+/).filter(w => w.length >= 4);
-  if (!words.length) return;
-  const preferred = words.filter(w => !/^(silbernes|silberne|silberner|goldenes|goldene|goldener|kleines|kleine|grosses|grosse|altes|alte|neues|neue|schwarzes|schwarze|weisses|weisse|rotes|rote|blaues|blaue)$/.test(w));
-  const keys = preferred.length ? preferred : words;
+  // v7.12.161: nutzt jetzt die zentrale getTargetItemKeys (vorher inline dupliziert).
+  const keys = getTargetItemKeys(targetName);
+  if (!keys.length) return;
   const before = inventory.length;
   inventory = inventory.filter(it => {
     const s = normForMatch(it || '');
@@ -5905,7 +5925,7 @@ function processTheftTargetState(scene) {
                 const _possNear = (function() {
                   const _keys = [].concat(tWordsN, gutSyn).filter(Boolean);
                   if (!_keys.length) return null;  // kein konkretes Zielwort -> Nahfenster n/a
-                  // v7.12.160: Da im Nahfenster das Zielwort GARANTIERT vorkommt, darf das
+                  // v7.12.160: Da im Fenster das Zielwort GARANTIERT vorkommt, darf das
                   // Besitzverb hier auch den konkreten Objektnamen umschliessen ("steckst das
                   // Zigarettenetui ein", "nimmst das Etui an dich") - das deckt die globale
                   // besitzRe (nur Pronomen es/ihn/sie) nicht ab. Zusatz-Muster nur fuers Fenster.
@@ -5913,12 +5933,24 @@ function processTheftTargetState(scene) {
                   for (const key of _keys) {
                     let idx = sceneNorm.indexOf(key);
                     while (idx >= 0) {
-                      const win = sceneNorm.slice(Math.max(0, idx - 100), idx + key.length + 140);
-                      if ((besitzRe.test(win) || besitzNah.test(win)) && !istSurrogat(win)) return true;
+                      // v7.12.161 (Code-Review Punkt 1): Fenster auf den SELBEN SATZ begrenzen.
+                      // Vorher reines Zeichenfenster (-100..+140) - "Etui liegt auf dem Tisch.
+                      // Du hast den Zettel in der Hand." konnte noch falsch positiv werden, weil
+                      // "in der hand" im Zeichenfenster lag (anderer Satz!). Jetzt am naechsten
+                      // Satzende (.!?) vor und nach dem Zielwort abschneiden -> Besitzverb zaehlt
+                      // nur, wenn es im selben Satz wie das Zielobjekt steht.
+                      const _vorRaw = sceneNorm.slice(Math.max(0, idx - 140), idx);
+                      const _satzStart = Math.max(_vorRaw.lastIndexOf('.'), _vorRaw.lastIndexOf('!'), _vorRaw.lastIndexOf('?'));
+                      const _vor = _satzStart >= 0 ? _vorRaw.slice(_satzStart + 1) : _vorRaw;
+                      const _nachRaw = sceneNorm.slice(idx, idx + key.length + 160);
+                      const _satzEnde = _nachRaw.search(/[.!?]/);
+                      const _nach = _satzEnde >= 0 ? _nachRaw.slice(0, _satzEnde) : _nachRaw;
+                      const satz = _vor + _nach;  // genau der Satz um das Zielwort
+                      if ((besitzRe.test(satz) || besitzNah.test(satz)) && !istSurrogat(satz)) return true;
                       idx = sceneNorm.indexOf(key, idx + key.length);
                     }
                   }
-                  return false;  // konkretes Zielwort da, aber kein Besitzverb im Nahfenster
+                  return false;  // konkretes Zielwort da, aber kein Besitzverb im selben Satz
                 })();
                 if (_possNear === true) {
                   gutInText = true;
@@ -8003,6 +8035,15 @@ window.addEventListener('DOMContentLoaded', () => {
 
 function openDeployModal(event) {
   if (event) event.stopPropagation();
+  // v7.12.163 (Sicherheit): Deploy-UI standardmaessig deaktiviert. Deploy laeuft manuell
+  // ueber Vercel Settings->Deploy; der /api/deploy-Weg ist serverseitig per Kill-Switch
+  // (DEPLOY_ENABLED) gesperrt. Diese Frontend-Sperre ist nur die zusaetzliche Ebene -
+  // der echte Schutz sitzt im Server. Zum Reaktivieren: DEPLOY_UI_ENABLED auf true setzen
+  // UND in Vercel DEPLOY_ENABLED=true.
+  if (typeof DEPLOY_UI_ENABLED === 'undefined' || !DEPLOY_UI_ENABLED) {
+    alert('Der Deploy-Weg ist aktuell deaktiviert (Sicherheit). Bitte manuell über Vercel Settings → Deploy hochladen.');
+    return;
+  }
   closeSettings();
   const overlay = document.getElementById('deploy-overlay');
   if (!overlay) return;
@@ -12628,7 +12669,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.161] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.163] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -13689,11 +13730,11 @@ function renderOptions(scene) {
     resolveBtn.dataset.kategorie = 'AUFLOESEN';  // v7.12.91: damit botGetCurrentOptions die Kategorie liest (byCat.AUFLOESEN)
     // v7.11.44: Wenn ausgegraut, Sperr-Grund daneben zeigen.
     if (resolveCanClick) {
-      resolveBtn.innerHTML = '<span class="option-id">🎯</span><span class="option-text-wrap"><span>Fall lösen, Klient informieren</span><span class="option-marker option-marker-aufloesen">FALL LÖSEN</span></span>';
+      resolveBtn.innerHTML = '<span class="option-id">🎯</span><span class="option-text-wrap"><span>Fall lösen, Auftraggeber informieren</span><span class="option-marker option-marker-aufloesen">FALL LÖSEN</span></span>';
     } else {
       resolveBtn.classList.add('option-btn-resolve-locked');
       resolveBtn.disabled = true;
-      resolveBtn.innerHTML = '<span class="option-id">🎯</span><span class="option-text-wrap"><span>Fall lösen, Klient informieren</span><span class="option-marker option-marker-aufloesen-locked">GESPERRT · ' + (resolveLockReason || 'jetzt nicht möglich').toUpperCase() + '</span></span>';
+      resolveBtn.innerHTML = '<span class="option-id">🎯</span><span class="option-text-wrap"><span>Fall lösen, Auftraggeber informieren</span><span class="option-marker option-marker-aufloesen-locked">GESPERRT · ' + (resolveLockReason || 'jetzt nicht möglich').toUpperCase() + '</span></span>';
     }
     const resolveOpt = {
       id: 'AUFLOESEN',
@@ -19591,7 +19632,7 @@ async function chooseOption(option) {
       // das ~63% Erfolg bei der ersten Annaeherung (vorher ~25%).
       const offen = Math.random() < 0.70;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.161] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.163] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -19968,7 +20009,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.161] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.163] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -21298,7 +21339,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           } else if (!tensionHighEnoughForArrest && folterSceneCount >= custodyReleaseFloor) {
             // STILLER RELEASE: nur noch als Notventil bei langem Drift (5+ Sz). Karl ist
             // faktisch frei (KI erzaehlt ihn lange ohne Stasi-Kontext), System zieht nach.
-            console.warn('[Schatten v7.12.161] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
+            console.warn('[Schatten v7.12.163] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet');
             setCustodyState(false, 'stiller-release');
           } else if (!tensionHighEnoughForArrest) {
@@ -21314,7 +21355,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.161] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.163] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -21840,7 +21881,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof diag === 'function') {
           diag('state', '⚡ NOTFLUCHT GELUNGEN - Karl frei + 4 Sz Gnadenfrist, Stasi-Tension ' + prevTension + ' -> 3 (gesucht, aber nicht sofort wieder greifbar)');
         }
-        console.log('[Schatten v7.12.161] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
+        console.log('[Schatten v7.12.163] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
         // v7.11.56: Toast bei Erfolg - Spieler hat geklickt und soll Wuerfel-
         // Ergebnis direkt sehen, nicht nur narrative Andeutungen.
         if (typeof showProgressToast === 'function') {
@@ -23907,7 +23948,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.161] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.163] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
@@ -25536,8 +25577,10 @@ function restoreGameState() {
     try {
       const _tis = caseProgress && caseProgress.targetItemState;
       if (_tis && _tis.status === 'inKarlInventory' && _tis.name && Array.isArray(inventory)) {
-        const _key = normForMatch(_tis.name).split(/\s+/).filter(w => w.length >= 4)[0];
-        const _exists = _key && inventory.some(it => normForMatch(it || '').includes(_key));
+        // v7.12.161 (Code-Review Punkt 2): spezifische Keys (nicht erstes Wort "silbernes",
+        // das ein "silbernes Feuerzeug" faelschlich als vorhanden werten wuerde).
+        const _keys = (typeof getTargetItemKeys === 'function') ? getTargetItemKeys(_tis.name) : [normForMatch(_tis.name)];
+        const _exists = _keys.length && inventory.some(it => { const s = normForMatch(it || ''); return _keys.some(k => s.includes(k)); });
         if (!_exists) {
           inventory.push(_tis.name);
           if (typeof diag === 'function') diag('state', 'Inventar nach Restore repariert: Zielobjekt aus targetItemState ergaenzt');
@@ -27287,6 +27330,13 @@ function applyAdminVisibility() {
       section.classList.add('hidden');
     }
   }
+  // v7.12.163 (Sicherheit): Deploy-Button nur zeigen, wenn Admin entsperrt UND der
+  // Deploy-Weg bewusst aktiviert ist (DEPLOY_UI_ENABLED). Standard: versteckt.
+  const _depBtn = document.getElementById('deploy-section-btn');
+  const _depLbl = document.getElementById('deploy-section-label');
+  const _depOn = (typeof DEPLOY_UI_ENABLED !== 'undefined' && DEPLOY_UI_ENABLED) && isAdminUnlocked();
+  if (_depBtn) _depBtn.style.display = _depOn ? '' : 'none';
+  if (_depLbl) _depLbl.style.display = _depOn ? '' : 'none';
   // Live-Log neu rendern, damit die Diagnose-Panels sichtbar bzw. unsichtbar werden
   if (typeof renderLog === 'function' && Array.isArray(logEntries) && logEntries.length > 0) {
     try { renderLog(); } catch {}
