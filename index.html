@@ -2804,7 +2804,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.176</div>
+    <div class="start-version">Schatten v7.12.177</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2968,7 +2968,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.176</span>
+    <span>Schatten v7.12.177</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5420,7 +5420,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.176';
+window.SCHATTEN_VERSION = 'v7.12.177';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -8699,7 +8699,22 @@ function showCaseSolved() {
       outcomeSentence = numIndizien + ' Indiz' + (numIndizien === 1 ? '' : 'ien') + ' gesammelt, '
         + _gutLabel + (_zurueck ? ' zurückgebracht.' : ' lokalisiert.');
     } else {
-      outcomeSentence = numIndizien + ' Indiz' + (numIndizien === 1 ? '' : 'ien') + ' gesammelt, ' + verdName + ' überführt.';
+      // v7.12.177 (beide Lektorate, Goerke "noch unbekannt ueberfuehrt"-Bug): WIN-SCREEN-GUARD.
+      // Wenn kein konkreter Taeter feststeht (verdName leer/"noch unbekannt"/"unbekannt"/
+      // Platzhalter), darf der Win-Screen NICHT "X ueberfuehrt" sagen. Bei Wahrheitsfaellen
+      // ohne Einzeltaeter (Wahrheit war System/Institution, oder kein klassisches Verbrechen)
+      // formulieren wir "Wahrheit bewiesen" statt einen Platzhalter zu ueberfuehren.
+      const _vn = (verdName || '').toLowerCase().trim();
+      const _keinEchterTaeter = !_vn || _vn === 'noch unbekannt' || _vn === 'unbekannt'
+        || _vn === 'der schuldige' || _vn === 'unbekannter taeter' || _vn === 'unbekannter täter';
+      if (_keinEchterTaeter) {
+        // Kein benennbarer Einzeltaeter -> Wahrheitsfall-Formulierung. Klient (z.B. Albrecht)
+        // ist entlastet, die Wahrheit/Tatstruktur ist offengelegt, auch ohne Einzelschuldigen.
+        outcomeSentence = numIndizien + ' Indiz' + (numIndizien === 1 ? '' : 'ien') + ' gesammelt, '
+          + 'Wahrheit bewiesen.';
+      } else {
+        outcomeSentence = numIndizien + ' Indiz' + (numIndizien === 1 ? '' : 'ien') + ' gesammelt, ' + verdName + ' überführt.';
+      }
     }
     // v7.11.0: Titel und Schluss-Saetze auch fuer earlyAbort anpassen
     const titleText = earlyAbort ? '· FALL BEENDET ·' : '· FALL ABGESCHLOSSEN ·';
@@ -12631,7 +12646,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.176] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.177] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -13672,6 +13687,13 @@ function renderOptions(scene) {
   const diebstahlGutFehlt = (caseSetup && caseSetup.caseType === 'diebstahl' && !caseProgress.diebesgutZurueck);
   const resolveCanClick = resolveCoreReady && karlVfOk && currentSp <= 3 && !karlInStasiCustody && !diebstahlGutFehlt;
   const showResolveButton = resolveCoreReady || caseProgress.resolveEverReady === true;
+  // v7.12.177: Resolve-Status global merken, damit die Bot-Status-Bar live anzeigen kann,
+  // ob "Fall lösen" schon klickbar ist (oder noch gesperrt, mit Grund).
+  try {
+    window._botFallStatus = window._botFallStatus || {};
+    window._botFallStatus.resolveShown = !!showResolveButton;
+    window._botFallStatus.resolveCanClick = !!resolveCanClick;
+  } catch (e) { /* ignore */ }
   // Sperr-Grund bestimmen (in Reihenfolge der Wichtigkeit)
   let resolveLockReason = '';
   if (showResolveButton && !resolveCanClick) {
@@ -13685,6 +13707,8 @@ function renderOptions(scene) {
       resolveLockReason = 'noch nicht genug Beweise';
     }
   }
+  // v7.12.177: Sperr-Grund fuer die Bot-Status-Bar merken.
+  try { if (window._botFallStatus) window._botFallStatus.resolveLockReason = resolveLockReason; } catch (e) { /* ignore */ }
 
   if (showResolveButton) {
     const resolveBtn = document.createElement('button');
@@ -17388,6 +17412,7 @@ async function startGame() {
   gameDay = 1;
   sceneCounter = 0;
   if (typeof botWasEverActive !== 'undefined') botWasEverActive = false;  // v7.12.169: neuer Lauf
+  try { window._botFallStatus = { resolveShown:false, resolveCanClick:false, resolveLockReason:'' }; } catch (e) {}  // v7.12.177: Fall-Status fuer Bot-Bar zuruecksetzen
   timeAdvanceTokens = 0;
   pendingDayTransition = false;
   lastSceneTriggeredDayAdvance = false; // v6.96
@@ -19605,7 +19630,7 @@ async function chooseOption(option) {
       // das ~63% Erfolg bei der ersten Annaeherung (vorher ~25%).
       const offen = Math.random() < 0.70;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.176] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.177] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -19982,7 +20007,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.176] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.177] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -21378,7 +21403,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           } else if (!tensionHighEnoughForArrest && folterSceneCount >= custodyReleaseFloor) {
             // STILLER RELEASE: nur noch als Notventil bei langem Drift (5+ Sz). Karl ist
             // faktisch frei (KI erzaehlt ihn lange ohne Stasi-Kontext), System zieht nach.
-            console.warn('[Schatten v7.12.176] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
+            console.warn('[Schatten v7.12.177] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet');
             setCustodyState(false, 'stiller-release');
           } else if (!tensionHighEnoughForArrest) {
@@ -21394,7 +21419,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.176] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.177] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -21920,7 +21945,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof diag === 'function') {
           diag('state', '⚡ NOTFLUCHT GELUNGEN - Karl frei + 4 Sz Gnadenfrist, Stasi-Tension ' + prevTension + ' -> 3 (gesucht, aber nicht sofort wieder greifbar)');
         }
-        console.log('[Schatten v7.12.176] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
+        console.log('[Schatten v7.12.177] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
         // v7.11.56: Toast bei Erfolg - Spieler hat geklickt und soll Wuerfel-
         // Ergebnis direkt sehen, nicht nur narrative Andeutungen.
         if (typeof showProgressToast === 'function') {
@@ -23273,14 +23298,20 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         } else {
           // v7.12.174 (Lektorat Goerke-Bug): Bei mord/wahrheit/politisch ist targetName das
           // OPFER (TARGET, z.B. Mathilde Goerke = verstorben) - NIEMALS der Taeter. Frueher
-          // wurde hier faelschlich targetName als Tatverdaechtiger gesetzt -> "Mathilde
-          // (ueberfuehrt)". Korrekt: den SUSPECT aus dem Setup nehmen. Wenn kein SUSPECT
-          // definiert ist, bleibt der Verdaechtige offen ("noch unbekannt") statt das Opfer
-          // zu beschuldigen - die KI/spaetere Identifikation fuellt ihn dann.
-          const _suspectFact = caseSetup.setupCast && caseSetup.setupCast.find(c =>
-            (c.tag || '').toUpperCase() === 'SUSPECT' || (c.tagExtra || '').toUpperCase() === 'SUSPECT');
-          if (_suspectFact && _suspectFact.name) {
-            caseProgress.tatverdaechtiger = _suspectFact.name;
+          // wurde hier faelschlich targetName als Tatverdaechtiger gesetzt -> "Mathilde".
+          // v7.12.177 (Folge-Lektorat: "noch unbekannt ueberfuehrt"): Die SUSPECT-Suche war
+          // zu eng - Goerke hat KEINEN SUSPECT-Tag, der Taeter Mertens ist ANTAGONIST,
+          // Krollwitz STASI. Daher fiel alles auf "noch unbekannt" zurueck. Jetzt zaehlen
+          // auch ANTAGONIST/STASI/GANGSTER als moegliche Taeter (das sind die Taeter-Rollen
+          // bei Wahrheits-/Politik-/Mordfaellen). Prioritaet: SUSPECT > ANTAGONIST > STASI/GANGSTER.
+          const _findByTags = (tags) => caseSetup.setupCast && caseSetup.setupCast.find(c => {
+            const _tg = (c.tag || '').toUpperCase();
+            const _tx = (c.tagExtra || '').toUpperCase();
+            return tags.includes(_tg) || tags.includes(_tx);
+          });
+          const _taeterFact = _findByTags(['SUSPECT']) || _findByTags(['ANTAGONIST']) || _findByTags(['STASI', 'GANGSTER']);
+          if (_taeterFact && _taeterFact.name) {
+            caseProgress.tatverdaechtiger = _taeterFact.name;
           } else {
             caseProgress.tatverdaechtiger = 'noch unbekannt';
           }
@@ -24046,7 +24077,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.176] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.177] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
@@ -25823,6 +25854,7 @@ function resetGame(skipConfirm) {
   gameTimeIdx = 4;
   sceneCounter = 0;
   if (typeof botWasEverActive !== 'undefined') botWasEverActive = false;  // v7.12.169: neuer Lauf
+  try { window._botFallStatus = { resolveShown:false, resolveCanClick:false, resolveLockReason:'' }; } catch (e) {}  // v7.12.177: Fall-Status fuer Bot-Bar zuruecksetzen
   timeAdvanceTokens = 0;
   pendingDayTransition = false;
   lastSceneTriggeredDayAdvance = false; // v6.96
@@ -26885,7 +26917,24 @@ async function botRunMainLoop() {
           if (m && m[1]) caseLbl = ' · Fall ' + m[1];
         }
       } catch (e) { /* ignore */ }
-      botUpdateStatusBar('Bot wartet auf Szene... Zug ' + (botCurrentTurn + 1) + '/' + botPlannedTurns + ' · ' + lbl + caseLbl);
+      // v7.12.177 (User-Wunsch): Fall-Fortschritt in der Bot-Status-Bar. Zeigt die aktuelle
+      // Stage und ob "Fall lösen" schon klickbar/gesperrt ist - so sieht man beim Zuschauen
+      // direkt, wo der Fall steht, ohne in den Export zu schauen.
+      let fortschrittLbl = '';
+      try {
+        const _st = (typeof caseProgress !== 'undefined' && caseProgress && typeof caseProgress.stage === 'number') ? caseProgress.stage : 0;
+        const _stageNamen = { 0: 'Ermittlung', 1: 'Indizien', 2: 'Verdacht', 3: 'Überführt', 4: 'Gelöst' };
+        fortschrittLbl = ' · Stage ' + _st + ' (' + (_stageNamen[_st] || '?') + ')';
+        const _fs = window._botFallStatus;
+        if (_fs && _fs.resolveShown) {
+          if (_fs.resolveCanClick) {
+            fortschrittLbl += ' · 🎯 FALL LÖSEN frei';
+          } else {
+            fortschrittLbl += ' · 🔒 Fall lösen (' + (_fs.resolveLockReason || 'gesperrt') + ')';
+          }
+        }
+      } catch (e) { /* ignore */ }
+      botUpdateStatusBar('Bot wartet auf Szene... Zug ' + (botCurrentTurn + 1) + '/' + botPlannedTurns + ' · ' + lbl + caseLbl + fortschrittLbl);
 
       // v7.9.47b: Soft-Recovery. Bei Timeout: nicht direkt abbrechen, sondern
       // 1x Retry-Button suchen + klicken, dann nochmal warten. Erst beim
@@ -27410,6 +27459,15 @@ function formatSuspectStatus() {
   const ct = (caseSetup && caseSetup.caseType) || '';
   const ueberfuehrt = caseProgress.ueberfuehrt;
   const marker = caseProgress.stage2Marker;
+  // v7.12.177 (beide Lektorate, Goerke-Bug): Platzhalter-Taeter ("noch unbekannt") NICHT
+  // mit "(ueberfuehrt)" ausgeben. Bei Wahrheitsfaellen ohne Einzeltaeter -> "Wahrheit bewiesen".
+  const _vn = name.toLowerCase().trim();
+  const _keinEchterTaeter = _vn === 'noch unbekannt' || _vn === 'unbekannt'
+    || _vn === 'der schuldige' || _vn === 'unbekannter taeter' || _vn === 'unbekannter täter';
+  if (_keinEchterTaeter) {
+    if (ueberfuehrt) return 'Wahrheit bewiesen (kein Einzeltäter)';
+    return 'noch offen';
+  }
   // Bei Stage 3+ (ueberfuehrt) hat der Falltyp den Vorrang:
   if (ueberfuehrt) {
     if (ct === 'vermisst') return name + ' (gefunden)';
