@@ -17,16 +17,30 @@
 // v1.0 (2026-05-30): Erste versionierte Fassung. Enthaelt den responseSchema-
 //   Kernfix (kategorie als enum+required pro Option; zielperson_gefunden,
 //   wahrheit_erkannt, indiz_verbindung, npc_kernhinweis ergaenzt).
-const GEMINI_JS_VERSION = 'v1.1';
+const GEMINI_JS_VERSION = 'v1.2';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Spiel-Auth');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') {
     return res.status(405).json({ error: { message: 'Method not allowed' } });
+  }
+
+  // --- ZUGANGSSCHUTZ (serverseitig, schuetzt die Tokens) ---
+  // Das Passwort liegt NUR als Vercel Environment Variable SPIEL_PASSWORT vor, nie im
+  // Frontend-Code. Das Frontend schickt das vom Nutzer eingegebene Passwort im Header
+  // X-Spiel-Auth mit. Ohne gueltiges Passwort wird KEIN Modell aufgerufen -> keine Tokens.
+  // Wenn SPIEL_PASSWORT in Vercel NICHT gesetzt ist, ist die Sperre deaktiviert (offen) -
+  // so sperrt man sich nicht versehentlich aus, bevor die Variable gesetzt wurde.
+  const erwartetesPw = process.env.SPIEL_PASSWORT;
+  if (erwartetesPw) {
+    const gesendetesPw = req.headers['x-spiel-auth'] || '';
+    if (gesendetesPw !== erwartetesPw) {
+      return res.status(403).json({ error: { message: 'Zugang verweigert. Bitte das korrekte Passwort eingeben.' } });
+    }
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
