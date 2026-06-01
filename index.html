@@ -2804,7 +2804,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.195</div>
+    <div class="start-version">Schatten v7.12.198</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2968,7 +2968,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.195</span>
+    <span>Schatten v7.12.198</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5555,7 +5555,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.195';
+window.SCHATTEN_VERSION = 'v7.12.198';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -8306,7 +8306,15 @@ function showStart() {
     const hasGame = (typeof hasSavedGame === 'function') && hasSavedGame();
     const btn = document.getElementById('continue-game-btn');
     const br = document.getElementById('continue-game-br');
-    if (btn) btn.style.display = hasGame ? '' : 'none';
+    if (btn) {
+      btn.style.display = hasGame ? '' : 'none';
+      // v7.12.197: bei abgeschlossenem Fall passenderer Text (man setzt nichts fort,
+      // man sieht den Abschluss + Verlauf an).
+      if (hasGame) {
+        const _ended = (typeof savedGameIsEnded === 'function') && savedGameIsEnded();
+        btn.textContent = _ended ? '▶ Abgeschlossenen Fall ansehen' : '▶ Spiel fortsetzen';
+      }
+    }
     if (br) br.style.display = hasGame ? '' : 'none';
   } catch (e) {}
 }
@@ -8802,8 +8810,71 @@ function sameNamedPerson(a, b) {
     // Vorname + Nachname muessen beide passen.
     return aParts[0] === bParts[0] && aParts[aParts.length - 1] === bParts[bParts.length - 1];
   }
-  // Einer der Namen ist einteilig -> nur exakte Gleichheit (oben schon geprueft) zaehlt.
+  // v7.12.196 (ChatGPT-Lektorat v194 Punkt 4): Einwortname (z.B. KI schreibt nur "Albrecht",
+  // Klient heisst "Albrecht Goerke"). Match NUR wenn der Token im setupCast EINDEUTIG ist -
+  // sonst wuerden geteilte Nachnamen (Albrecht/Mathilde Goerke) wieder kollidieren.
+  const token = (aParts.length === 1) ? aParts[0] : ((bParts.length === 1) ? bParts[0] : '');
+  if (token) {
+    try {
+      if (caseSetup && Array.isArray(caseSetup.setupCast)) {
+        const castNorm = caseSetup.setupCast
+          .map(c => (c && c.name) ? ((typeof normForMatch === 'function') ? normForMatch(c.name) : c.name.toLowerCase()) : '')
+          .filter(Boolean);
+        const matches = castNorm.filter(n => n.split(/\s+/).includes(token));
+        // Eindeutig (genau eine Cast-Person traegt den Token) UND beide Namen enthalten ihn.
+        if (matches.length === 1 && an.split(/\s+/).includes(token) && bn.split(/\s+/).includes(token)) {
+          return true;
+        }
+      }
+    } catch (e) { /* fallthrough zu false */ }
+  }
   return false;
+}
+
+// v7.12.198 (ChatGPT-Lektorat v195 ToDo 4): ZENTRALE Plausibilitaetspruefung fuer einen
+// Verantwortlichen/Taeter. Vorher lebte diese Logik in zwei Bloecken (syncResolutionFlags +
+// Auto-Force) mit ABWEICHENDEM Standard - die Auto-Force-Stelle pruefte nur Cast, nicht
+// storyFacts/Institution, sodass ein halluzinierter Name ("Klaus Fischer") dort durchrutschte.
+// Ein Standard fuer alle: nicht generisch, nicht ROMANCE/Opfer/Klient/Target, und belegt
+// durch Setup-Cast ODER storyFacts ODER (bei wahrheit/politisch) bekannte Institution.
+function isPlausibleResponsibleName(name, caseType) {
+  try {
+    const verd = (name || '').trim();
+    if (!verd) return false;
+    if (typeof isGenericPersonName === 'function' && isGenericPersonName(verd)) return false;
+    const _vl = verd.toLowerCase();
+    const ct = caseType || (caseSetup && caseSetup.caseType) || '';
+    // (a) Institution/Apparat - nur bei wahrheit/politisch eine zulaessige "Verantwortung".
+    const _istInstitution = (ct === 'wahrheit' || ct === 'politisch')
+      && /\b(mfs|stasi|staatssicherheit|apparat|dienststelle|ministerium|volkspolizei|kgb|nkwd|sed)\b/.test(_vl);
+    // (b) im Setup-Cast? (und NICHT ROMANCE/Opfer/Klient/Target)
+    let _ce = null;
+    if (caseSetup && Array.isArray(caseSetup.setupCast)) {
+      _ce = caseSetup.setupCast.find(c => {
+        if (!c || !c.name) return false;
+        return c.name.toLowerCase().split(/\s+/).filter(w => w.length >= 4).some(t => _vl.includes(t));
+      });
+    }
+    if (_ce) {
+      const _t = (_ce.tag || '').toUpperCase();
+      const _r = (_ce.rolle || '').toLowerCase();
+      return !(_t === 'ROMANCE' || _t === 'CLIENT' || _t === 'TARGET' || /opfer|verstorben|tot|klient|auftraggeber/.test(_r));
+    }
+    // (c) in storyFacts etabliert?
+    if (typeof storyFacts === 'object' && storyFacts) {
+      const _inFacts = Object.values(storyFacts).some(f => {
+        if (!f || !f.name) return false;
+        const _fn = f.name.toLowerCase();
+        return _vl === _fn || _fn.split(/\s+/).some(w => w.length >= 4 && _vl.includes(w));
+      });
+      if (_inFacts) return true;
+    }
+    if (_istInstitution) return true;
+    // Nicht im Cast, nicht in storyFacts, keine Institution -> halluzinierter Name.
+    return false;
+  } catch (e) {
+    return false;
+  }
 }
 
 function deriveResponsibleAndExonerated() {
@@ -8862,21 +8933,8 @@ function syncResolutionFlagsByCaseType(source) {
     // ueberfuehrt NUR wenn konkreter Verantwortlicher (Brandt: Kurt Lange). Sonst Wahrheit
     // bewiesen (Goerke: Albrecht entlastet, kein "X ueberfuehrt").
     if (cp.ueberfuehrt && !_generic) {
-      // Verantwortlicher bleibt - zusaetzlich pruefen, dass es kein ROMANCE/Opfer/Klient ist.
-      let _plausibel = true;
-      try {
-        if (caseSetup && Array.isArray(caseSetup.setupCast)) {
-          const _ce = caseSetup.setupCast.find(c => {
-            if (!c || !c.name) return false;
-            return c.name.toLowerCase().split(/\s+/).filter(w => w.length >= 4).some(t => verd.toLowerCase().includes(t));
-          });
-          if (_ce) {
-            const _t = (_ce.tag || '').toUpperCase();
-            const _r = (_ce.rolle || '').toLowerCase();
-            if (_t === 'ROMANCE' || _t === 'CLIENT' || _t === 'TARGET' || /opfer|verstorben|tot|klient|auftraggeber/.test(_r)) _plausibel = false;
-          }
-        }
-      } catch (e) {}
+      // v7.12.198 (ChatGPT v195 ToDo 4): zentrale Plausibilitaetspruefung statt Inline-Logik.
+      const _plausibel = isPlausibleResponsibleName(verd, ct);
       if (_plausibel) {
         // bleibt ueberfuehrt (Verantwortlicher)
       } else {
@@ -8907,7 +8965,7 @@ function stage3LabelByCaseType() {
   try {
     const ct = (caseSetup && caseSetup.caseType) || '';
     const cp = caseProgress || {};
-    if (ct === 'diebstahl') return cp.diebesgutZurueck ? 'Diebesgut zurück' : 'Täter überführt';
+    if (ct === 'diebstahl') return cp.diebesgutZurueck ? 'Diebesgut zurück' : 'Diebesgut sichern';
     if (ct === 'vermisst') return cp.zielpersonGefunden ? 'Zielperson gefunden' : 'Spur aufgeklärt';
     if (ct === 'beschatten') return 'Verdacht bestätigt';
     if (ct === 'wahrheit' || ct === 'politisch') {
@@ -12874,7 +12932,25 @@ function checkProgressTriggers(kategorie, ctx) {
     if (indizReady || aktiveKonfrontation || spaeterFloor) {
       result.newStage = 3;
       result.showToast = { title: 'Konfrontation', body: 'Wahrheit kommt ans Licht.', icon: '⚡' };
-      result.pushMessages.push('STAGE 3 ERREICHT: Karl hat genug in der Hand, um den Verdaechtigen direkt zu stellen. Lass ihn gestehen, fluechten, oder sich verteidigen - der Hoehepunkt der Geschichte. Setze "tatverdaechtiger_ueberfuehrt": true wenn er keine Ausreden mehr hat.');
+      // v7.12.196 (ChatGPT-Lektorat v194 Punkt 3): Push-Text falltypisch - die KI nicht mehr
+      // pauschal "tatverdaechtiger_ueberfuehrt:true" instruieren (alte Semantik). Je Falltyp
+      // das richtige Abschlussfeld nennen, damit weniger Engine-Repair noetig ist.
+      const _ctP = (caseSetup && caseSetup.caseType) || '';
+      let _stage3Push;
+      if (_ctP === 'mord') {
+        _stage3Push = 'STAGE 3 ERREICHT: Karl hat genug, um den Taeter direkt zu stellen. Lass ihn gestehen, fluechten oder sich verteidigen. Setze "tatverdaechtiger_ueberfuehrt": true NUR wenn der Taeter belastbar ueberfuehrt ist.';
+      } else if (_ctP === 'wahrheit' || _ctP === 'politisch') {
+        _stage3Push = 'STAGE 3 ERREICHT: Karl hat genug, um die Wahrheit offenzulegen. Setze "wahrheit_erkannt": true, wenn zweifelsfrei feststeht was geschah. Setze "tatverdaechtiger_ueberfuehrt": true NUR wenn es einen konkreten Verantwortlichen gibt (kein Unfall/Selbstmord).';
+      } else if (_ctP === 'vermisst') {
+        _stage3Push = 'STAGE 3 ERREICHT: Karl ist der Zielperson nah. Setze "zielperson_gefunden": true, wenn Karl sie physisch findet oder ihren Aufenthalt belastbar klaert.';
+      } else if (_ctP === 'beschatten') {
+        _stage3Push = 'STAGE 3 ERREICHT: Karl hat das belastende Verhalten fast belegt. Setze "wahrheit_erkannt": true, wenn der Verdacht zweifelsfrei bestaetigt ist.';
+      } else if (_ctP === 'diebstahl') {
+        _stage3Push = 'STAGE 3 ERREICHT: Karl ist nah am Diebesgut. Setze KEIN Abschlussfeld, bevor das gestohlene Objekt mechanisch bei Karl ist - zeige die Beschaffungsszene.';
+      } else {
+        _stage3Push = 'STAGE 3 ERREICHT: Karl hat genug in der Hand, um den Verdaechtigen direkt zu stellen. Lass ihn gestehen, fluechten oder sich verteidigen.';
+      }
+      result.pushMessages.push(_stage3Push);
     }
   }
   // Stage 3 -> Loesungs-Reife: ~11 Indizien ODER Durchbruch (ueberfuehrt/gefunden).
@@ -12882,7 +12958,21 @@ function checkProgressTriggers(kategorie, ctx) {
     const indizReady = indCount >= 11;
     const durchbruch = !!(ctx && (ctx.ueberfuehrt || ctx.zielpersonGefunden || ctx.wahrheitErkannt));
     if (indizReady || durchbruch) {
-      result.pushMessages.push('LOESUNGS-REIF: Karl hat genug, um den Fall abzuschliessen. Setze "tatverdaechtiger_ueberfuehrt": true wenn der Verdaechtige geschlagen/festgenommen/identifiziert ist (oder bei Vermisstenfall: Zielperson gefunden). Klient kann jetzt informiert werden ("klient_berichtet": true).');
+      // v7.12.196 (ChatGPT-Lektorat v194 Punkt 3): falltypisch statt pauschal "ueberfuehrt".
+      const _ctL = (caseSetup && caseSetup.caseType) || '';
+      let _loesPush;
+      if (_ctL === 'vermisst') {
+        _loesPush = 'LOESUNGS-REIF: Karl kann den Fall abschliessen. Wenn die Zielperson gefunden ist ("zielperson_gefunden": true), kann Karl den Klienten informieren ("klient_berichtet": true).';
+      } else if (_ctL === 'beschatten') {
+        _loesPush = 'LOESUNGS-REIF: Der Verdacht ist belegt ("wahrheit_erkannt": true). Karl kann dem Klienten berichten ("klient_berichtet": true) - es muss niemand "ueberfuehrt" werden.';
+      } else if (_ctL === 'wahrheit' || _ctL === 'politisch') {
+        _loesPush = 'LOESUNGS-REIF: Die Wahrheit steht fest ("wahrheit_erkannt": true). Nur bei konkretem Verantwortlichem auch "tatverdaechtiger_ueberfuehrt": true. Dann Klient informieren ("klient_berichtet": true).';
+      } else if (_ctL === 'diebstahl') {
+        _loesPush = 'LOESUNGS-REIF: Sobald das Diebesgut tatsaechlich bei Karl ist, kann er es dem Klienten zurueckgeben ("klient_berichtet": true). Kein Abschluss ohne das Objekt.';
+      } else {
+        _loesPush = 'LOESUNGS-REIF: Karl hat genug, um den Fall abzuschliessen. Setze "tatverdaechtiger_ueberfuehrt": true wenn der Taeter geschlagen/festgenommen/identifiziert ist. Klient kann jetzt informiert werden ("klient_berichtet": true).';
+      }
+      result.pushMessages.push(_loesPush);
     }
   }
   // v7.11.0: AUFLOESEN ist explizite Spieler-Wahl - triggert Stage 4 direkt.
@@ -13051,7 +13141,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.195] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.198] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -20047,7 +20137,7 @@ async function chooseOption(option) {
       // das ~63% Erfolg bei der ersten Annaeherung (vorher ~25%).
       const offen = Math.random() < 0.70;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.195] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.198] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -20426,7 +20516,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.195] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.198] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -21822,7 +21912,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           } else if (!tensionHighEnoughForArrest && folterSceneCount >= custodyReleaseFloor) {
             // STILLER RELEASE: nur noch als Notventil bei langem Drift (5+ Sz). Karl ist
             // faktisch frei (KI erzaehlt ihn lange ohne Stasi-Kontext), System zieht nach.
-            console.warn('[Schatten v7.12.195] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
+            console.warn('[Schatten v7.12.198] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet');
             setCustodyState(false, 'stiller-release');
           } else if (!tensionHighEnoughForArrest) {
@@ -21838,7 +21928,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.195] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.198] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -22364,7 +22454,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof diag === 'function') {
           diag('state', '⚡ NOTFLUCHT GELUNGEN - Karl frei + 4 Sz Gnadenfrist, Stasi-Tension ' + prevTension + ' -> 3 (gesucht, aber nicht sofort wieder greifbar)');
         }
-        console.log('[Schatten v7.12.195] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
+        console.log('[Schatten v7.12.198] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
         // v7.11.56: Toast bei Erfolg - Spieler hat geklickt und soll Wuerfel-
         // Ergebnis direkt sehen, nicht nur narrative Andeutungen.
         if (typeof showProgressToast === 'function') {
@@ -24074,26 +24164,13 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           // + wahrheitErkannt (Wahrheit bewiesen) statt einen Unschuldigen zu "ueberfuehren".
           const _ctF = (caseSetup && caseSetup.caseType) || '';
           const _vF = (caseProgress.tatverdaechtiger || '').trim();
-          let _plausibel = !!_vF && !(typeof isGenericPersonName === 'function' && isGenericPersonName(_vF));
-          if (_plausibel && (_ctF === 'wahrheit' || _ctF === 'politisch')) {
-            try {
-              if (caseSetup && Array.isArray(caseSetup.setupCast)) {
-                const _ce = caseSetup.setupCast.find(c => {
-                  if (!c || !c.name) return false;
-                  const _cn = c.name.toLowerCase();
-                  return _cn.split(/\s+/).filter(w => w.length >= 4).some(t => _vF.toLowerCase().includes(t));
-                });
-                if (_ce) {
-                  const _t = (_ce.tag || '').toUpperCase();
-                  const _r = (_ce.rolle || '').toLowerCase();
-                  if (_t === 'ROMANCE' || _t === 'CLIENT' || _t === 'TARGET'
-                      || /opfer|verstorben|tot|klient|auftraggeber/.test(_r)) {
-                    _plausibel = false;
-                  }
-                }
-              }
-            } catch (e) {}
-          }
+          // v7.12.198 (ChatGPT v195 ToDo 4): zentrale Plausibilitaetspruefung. Vorher pruefte
+          // dieser Block NUR Cast (nicht storyFacts/Institution) und liess einen nicht im Cast
+          // gefundenen Namen als plausibel durch - derselbe "Klaus Fischer"-Bug wie an der
+          // Hauptstelle, hier aber bis v7.12.197 ungefixt. Jetzt identischer Standard.
+          let _plausibel = (_ctF === 'wahrheit' || _ctF === 'politisch')
+            ? isPlausibleResponsibleName(_vF, _ctF)
+            : (!!_vF && !(typeof isGenericPersonName === 'function' && isGenericPersonName(_vF)));
           caseProgress.stage = 3;
           caseProgress.stage3StartScene = sceneCounter;
           if (_ctF === 'wahrheit' || _ctF === 'politisch') {
@@ -24132,12 +24209,16 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             if (ct === 'vermisst') {
               toastText = caseProgress.tatverdaechtiger + ' lokalisiert. Jetzt zum Klienten.';
             } else if (ct === 'beschatten') {
-              toastText = 'Beweise gesichert. Jetzt zum Klienten.';
+              toastText = 'Verdacht bestätigt. Jetzt zum Klienten.';
             } else if (ct === 'diebstahl' && !caseProgress.diebesgutZurueck) {
               // v7.12.144 (User-Befund Krause-Run): bei Diebstahl ist "zum Klienten"
               // FALSCH, solange das Diebesgut nicht zurueck ist - der Auftrag ist die
               // Wiederbeschaffung. Toast lenkt korrekt aufs Holen statt auf den Klienten.
               toastText = caseProgress.tatverdaechtiger + ' überführt. Jetzt das Diebesgut holen.';
+            } else if ((ct === 'wahrheit' || ct === 'politisch') && !caseProgress.ueberfuehrt) {
+              // v7.12.196 (ChatGPT-Lektorat v194 P1): Wahrheit/Politisch OHNE Verantwortlichen
+              // (ueberfuehrt=false, nur wahrheitErkannt) darf NICHT "X überführt" sagen.
+              toastText = (ct === 'politisch') ? 'Politische Verantwortung belegt. Jetzt zum Klienten.' : 'Die Wahrheit ist belegt. Jetzt zum Klienten.';
             } else {
               toastText = caseProgress.tatverdaechtiger + ' überführt. Jetzt zum Klienten.';
             }
@@ -24695,7 +24776,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.195] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.198] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
@@ -26309,23 +26390,26 @@ const SCHATTEN_SAVE_VERSION = 3;  // bei inkompatiblen State-Aenderungen erhoehe
 function saveGameState() {
   try {
     if (!Array.isArray(logEntries) || logEntries.length === 0) return;
-    // v7.12.85 (User-Bug): Wenn der Fall bereits geloest/vorbei ist, KEINEN Spielstand
-    // schreiben - sonst ueberschreiben die visibilitychange/pagehide-Handler (die beim
-    // Browser-Schlafen/Tab-Wechsel feuern) das von clearSavedGame() geloeschte Save mit
-    // dem Endzustand. Beim Restore landet der Spieler dann eine Szene VOR dem Abschluss
-    // und kann den schon geloesten Fall erneut "loesen". Geloest = vorbei = kein Save.
+    // v7.12.197 (User-Bug): Geloesten/abgeschlossenen Fall NICHT mehr loeschen, sondern MIT
+    // Flag speichern. Frueher (v7.12.85) wurde clearSavedGame() gerufen -> beim Refresh landete
+    // der Spieler auf der Startseite, der komplette Verlauf + Export-Moeglichkeit waren weg.
+    // Neu: _solved/_failed-Flag im Snapshot. Beim Restore wird dann direkt der ENDSCREEN
+    // gezeigt (nicht eine spielbare Szene) - so kann der Fall NICHT erneut geloest werden
+    // (urspruengliche Schutzabsicht bleibt), aber Verlauf + "Verlauf als Datei" bleiben da.
     const _geloest = (typeof caseProgress === 'object' && caseProgress &&
       (caseProgress.istGelöst === true || (caseProgress.stage || 0) >= 4));
     const _gameOverEl = (typeof document !== 'undefined') ? document.getElementById('game-over') : null;
     const _gameOverVisible = _gameOverEl && !_gameOverEl.classList.contains('hidden');
-    if (_geloest || _gameOverVisible) {
-      clearSavedGame();
-      return;
-    }
+    const _isEndState = (_geloest || _gameOverVisible);
     const snap = {
       _v: SCHATTEN_SAVE_VERSION,
       _ts: Date.now(),
       _appVersion: (window.SCHATTEN_VERSION || ''),
+      // v7.12.197: Endzustand-Flags. _solved=Fall geloest (Win-Screen), _failed=Game-Over.
+      // Beim Restore wird dann der Endscreen gezeigt statt eine spielbare Szene.
+      _ended: _isEndState,
+      _solved: _geloest,
+      _failed: (!_geloest && _gameOverVisible),
       logEntries: logEntries,
       storySummaries: storySummaries,
       recentTexts: recentTexts,
@@ -26422,11 +26506,26 @@ function hasSavedGame() {
     const raw = localStorage.getItem(SCHATTEN_SAVE_KEY);
     if (!raw) return false;
     const snap = JSON.parse(raw);
-    // v7.12.85: Ein geloester/abgeschlossener Fall zaehlt nicht als fortsetzbarer Stand.
-    if (snap && snap.caseProgress &&
-        (snap.caseProgress.istGelöst === true || (snap.caseProgress.stage || 0) >= 4))
-      return false;
+    // v7.12.197: Ein geloester/abgeschlossener Fall zaehlt jetzt AUCH als vorhandener Stand
+    // (frueher v7.12.85: false -> Stand verschwand). Restore zeigt dann den Endscreen, nicht
+    // eine spielbare Szene - so bleibt Verlauf + Export, ohne dass der Fall re-loesbar wird.
     return !!(snap && snap._v === SCHATTEN_SAVE_VERSION && Array.isArray(snap.logEntries) && snap.logEntries.length > 0);
+  } catch (e) {
+    return false;
+  }
+}
+
+// v7.12.197: Ist der gespeicherte Stand ein abgeschlossener Fall (gelöst/Game-Over)?
+// Steuert, ob beim Restore der Endscreen statt einer spielbaren Szene gezeigt wird.
+function savedGameIsEnded() {
+  try {
+    const raw = localStorage.getItem(SCHATTEN_SAVE_KEY);
+    if (!raw) return false;
+    const snap = JSON.parse(raw);
+    if (!snap) return false;
+    if (snap._ended === true || snap._solved === true || snap._failed === true) return true;
+    // Fallback fuer Altstaende ohne Flags: aus caseProgress ableiten.
+    return !!(snap.caseProgress && (snap.caseProgress.istGelöst === true || (snap.caseProgress.stage || 0) >= 4));
   } catch (e) {
     return false;
   }
@@ -26443,13 +26542,13 @@ function restoreGameState() {
     const snap = JSON.parse(raw);
     if (!snap || snap._v !== SCHATTEN_SAVE_VERSION) return false;
     if (!Array.isArray(snap.logEntries) || snap.logEntries.length === 0) return false;
-    // v7.12.85: Einen bereits geloesten/abgeschlossenen Fall NICHT wiederherstellen.
-    // Schuetzt vor Altstaenden (vor dem saveGameState-Guard) und davor, dass der
-    // Spieler nach Fall-Abschluss in eine Szene VOR dem Abschluss zurueckspringt.
-    if (snap.caseProgress && (snap.caseProgress.istGelöst === true || (snap.caseProgress.stage || 0) >= 4)) {
-      clearSavedGame();
-      return false;
-    }
+    // v7.12.197 (User-Bug): Abgeschlossenen Fall jetzt WIEDERHERSTELLEN (frueher v7.12.85:
+    // abbrechen + loeschen -> Verlauf weg beim Refresh). Wir laden den vollen State, zeigen
+    // aber am Ende den ENDSCREEN statt spielbarer Optionen (siehe _restoreEnded unten) - so
+    // bleibt Verlauf + Export erhalten, der Fall ist aber nicht erneut loesbar.
+    const _restoreEnded = (snap._ended === true || snap._solved === true || snap._failed === true)
+      || !!(snap.caseProgress && (snap.caseProgress.istGelöst === true || (snap.caseProgress.stage || 0) >= 4));
+    const _restoreFailed = (snap._failed === true);
 
     logEntries = snap.logEntries || [];
     storySummaries = snap.storySummaries || [];
@@ -26560,6 +26659,24 @@ function restoreGameState() {
     // Header + Status-Bar (Tag, Verfassung, Fall-Balken) aus der aktuellen Szene.
     if (currentScene && typeof showHeader === 'function') { try { showHeader(currentScene); } catch (e) {} }
     if (typeof renderLog === 'function') renderLog(true);
+
+    // v7.12.197: Abgeschlossener Fall -> Endscreen zeigen (Win oder Fail), KEINE spielbaren
+    // Optionen. Der Verlauf ist via renderLog schon da, der Export-Button funktioniert. Der
+    // Spieler kann nur ueber "neue Ermittlung" zur Startseite (kein Re-Loesen moeglich).
+    if (_restoreEnded) {
+      try {
+        if (_restoreFailed && typeof showCaseFailed === 'function') {
+          showCaseFailed((caseProgress && caseProgress.failReason) || '');
+        } else if (typeof showCaseSolved === 'function') {
+          showCaseSolved();
+        }
+      } catch (e) {
+        console.warn('[Schatten] Endscreen-Restore fehlgeschlagen:', e && e.message);
+      }
+      console.log('[Schatten] Abgeschlossener Fall wiederhergestellt (Endscreen, Szene ' + sceneCounter + ')');
+      return true;
+    }
+
     // Optionen der letzten Szene wieder anzeigen, damit der Spieler weiterspielen
     // kann. v7.11.93: robuster - options-Container sichtbar machen + Fallback.
     let optionsRendered = false;
