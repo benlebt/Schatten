@@ -2821,7 +2821,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.151</div>
+    <div class="start-version">Schatten v7.12.157</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2985,7 +2985,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.151</span>
+    <span>Schatten v7.12.157</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5536,7 +5536,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.151';
+window.SCHATTEN_VERSION = 'v7.12.157';
 let currentScene = null;
 let apiKey = null; // unused, kept for compatibility
 let storySummaries = [];   // compressed history
@@ -5736,6 +5736,208 @@ let storyFacts = {};
 // ganz weg. Folge: nach Bot-Reset war caseProgress.stage = undefined und die Stage-
 // Logik startete kaputt - ein moeglicher Mitgrund, warum Bot-Runs Faelle schlechter
 // loesten als manuelle. Jetzt EINE Quelle der Wahrheit fuer alle Resets.
+// v7.12.152: Zentraler Setter fuer den Zielobjekt-Zustand (Diebstahl). Haelt
+// caseProgress.diebesgutZurueck synchron (abgeleitete Wahrheit fuer die bestehende
+// Win-Sperre), damit die ~20 vorhandenen diebesgutZurueck-Lesestellen unveraendert
+// funktionieren. Statusrang verhindert Rueckfall: returnedToClient > inKarlInventory >
+// located > seen > unknown. Ein hoeherer Status wird nie durch einen niedrigeren
+// ueberschrieben (ausser explizit erzwungen) - so kann das Etui nach Rueckgabe nicht
+// "wieder gesehen" werden und in einen frueheren Zustand zurueckfallen.
+function setTargetItemState(status, holder, opts) {
+  if (typeof caseProgress === 'undefined' || !caseProgress) return;
+  const RANK = { unknown: 0, seen: 1, located: 2, inKarlInventory: 3, returnedToClient: 4 };
+  if (!caseProgress.targetItemState) caseProgress.targetItemState = { name: '', status: 'unknown', holder: '', scene: 0 };
+  const cur = caseProgress.targetItemState;
+  const curRank = RANK[cur.status] || 0;
+  const newRank = RANK[status] || 0;
+  const force = opts && opts.force;
+  // Nur vorwaerts (oder gleich) - kein Rueckfall, ausser force.
+  if (!force && newRank < curRank) return;
+  cur.status = status;
+  if (holder) cur.holder = holder;
+  cur.scene = (typeof sceneCounter === 'number') ? sceneCounter : 0;
+  // v7.12.154 (Code-Review Punkt 7): Namen setzen, wenn leer ODER bisher nur generisch
+  // ("Diebesgut"/"Beute"/...). So ueberschreibt ein spaeter bekannter echter Target-Name
+  // einen frueheren Platzhalter (besserer Win-Screen + Inventar-Filter).
+  if (opts && opts.name && (!cur.name || /^(diebe?s?gut|beute|objekt|gegenstand|das gut)$/i.test(cur.name))) {
+    cur.name = opts.name;
+  }
+  // diebesgutZurueck = abgeleitet: true sobald bei Karl ODER beim Klienten zurueck.
+  if (status === 'inKarlInventory' || status === 'returnedToClient') {
+    caseProgress.diebesgutZurueck = true;
+  }
+  if (typeof diag === 'function') {
+    diag('state', 'targetItemState -> ' + status + (holder ? ' (' + holder + ')' : '') + ' [Sz ' + cur.scene + ']');
+  }
+}
+
+// v7.12.155 (Refactoring-Sprint, Schritt 1): DIEBSTAHL-ZIELOBJEKT-VERARBEITUNG aus
+// performApiCall herausgeloest (war ~110 Zeilen inline). Bei der Extraktion v7.12.155
+// VERHALTENSNEUTRAL. SEITHER bewusst erweitert (also NICHT mehr identisch zum alten
+// Inline-Code): v7.12.156 - harte Klient-Rueckgabe (isHardClientReturn) darf Stage 4
+// direkt setzen; v7.12.157 - Funktion laeuft auch bei status inKarlInventory weiter,
+// um eine spaete Klient-Rueckgabe zu erkennen (nicht mehr nur bei !diebesgutZurueck).
+// Liest/schreibt ausschliesslich globale Variablen (caseSetup, caseProgress, inventory,
+// sceneCounter, clientProfile, normForMatch, diag, showProgressToast, setTargetItemState)
+// + den scene-Parameter. inventory wird nur mutiert (push), nie neu zugewiesen.
+// v7.12.156 (Code-Review Punkt 1): STRENGE Rueckgabe-an-Klient-Erkennung fuer den
+// HARTEN Fallabschluss. Wird nur aufgerufen, NACHDEM processTheftTargetState bereits
+// gutBeiKlient festgestellt hat (also matchGut + rueckgabeRe griffen) - daher KEINE
+// eigene Zielwort-Pruefung mehr (die wuerde an Synonymen scheitern: Ziel "Zigarettenetui",
+// Text "Etui"). Diese Funktion verlangt zusaetzlich: Klientenname genannt UND ein
+// explizites Uebergabe-Verb mit Richtung im selben Text. Nur dieser harte Treffer darf
+// den Fall unwiderruflich auf Stage 4 setzen (vager rueckgabeRe-Treffer -> nur resolveEverReady).
+function isHardClientReturn(sceneText, clientName, targetName) {
+  const t = (typeof normForMatch === 'function') ? normForMatch(sceneText || '') : String(sceneText || '').toLowerCase();
+  if (!t) return false;
+  // v7.12.156: IRGENDEINEN Namensteil pruefen (>=4 Zeichen), nicht nur den Vornamen -
+  // "Wilhelm Krause" wird im Text oft nur "Krause" genannt. Vorher scheiterte der
+  // clientFirst-Check (nahm "wilhelm"), obwohl der Text "krause" enthielt.
+  const clientParts = ((typeof normForMatch === 'function') ? normForMatch(clientName || '') : '').split(/\s+/).filter(w => w.length >= 4);
+  if (!clientParts.length || !clientParts.some(p => t.includes(p))) return false;
+  return /\b(gibst|uebergibst|reichst|haendigst|ueberreichst|legst)\b.{0,120}\b(zurueck|in seine hand|in ihre hand|in seine haende|vor ihn|vor sie|auf den tisch)\b/.test(t);
+}
+
+function processTheftTargetState(scene) {
+        const _ct = caseSetup && caseSetup.caseType;
+        const _tFact = caseSetup && caseSetup.setupCast && caseSetup.setupCast.find(c => c.tag === 'TARGET');
+        const _tName = _tFact ? _tFact.name : null;
+        // v7.12.88 (Krause-Run 18:37 Sackgassen-Fix): Bedingung von "!ueberfuehrt" auf
+        // "!diebesgutZurueck" umgestellt. Problem: ueberfuehrt wird AUCH vom allgemeinen
+        // Taeter-Force gesetzt (Frieda). Wenn der in derselben Szene wie der Etui-Fund
+        // VOR diesem Block lief, war ueberfuehrt schon true -> dieser Block uebersprungen
+        // -> diebesgutZurueck NIE gesetzt -> die v7.12.87-Win-Sperre blockierte den
+        // Abschluss ewig (Etui im Inventar, aber Fall nicht abschliessbar = Sackgasse).
+        // Jetzt entkoppelt: der Gut-Besitz wird geprueft solange diebesgutZurueck fehlt,
+        // egal ob schon ein Taeter ueberfuehrt ist.
+        // v7.12.157 (Code-Review Punkt 1): Funktion laeuft jetzt in ZWEI Faellen:
+        //  (a) initiale Rueckholung (!diebesgutZurueck) - Etui kommt zu Karl ODER direkt
+        //      zum Klienten. Wie bisher.
+        //  (b) spaetere Klient-Rueckgabe, wenn das Etui bereits bei Karl ist
+        //      (status inKarlInventory). Befund: sobald diebesgutZurueck true war, lief die
+        //      Funktion NIE wieder -> eine spaetere "Karl gibt Krause das Etui zurueck"-Szene
+        //      wurde hier nicht mehr auf returnedToClient geprueft, der Abschluss hing allein
+        //      an scene.klient_berichtet (das Flash-Lite manchmal vergisst) -> Stage-3-Drift.
+        //  Bei (b) wird NUR returnedToClient gesetzt, nie erneut inKarlInventory.
+        const _tisStatus = (caseProgress.targetItemState && caseProgress.targetItemState.status) || 'unknown';
+        const _canInitial = _ct === 'diebstahl' && _tName && !caseProgress.diebesgutZurueck && sceneCounter >= 4;
+        const _canClientReturn = _ct === 'diebstahl' && _tName && _tisStatus === 'inKarlInventory' && sceneCounter >= 4;
+        if (_canInitial || _canClientReturn) {
+          const tNameN = normForMatch(_tName || '');
+          const tWordsN = tNameN.split(/\s+/).filter(w => w.length >= 4);
+          // v7.12.83: KEINE fallspezifischen Objektwoerter mehr hartcodiert (frueher
+          // stand hier "etui|schmuck" aus dem Krause-Fall - das haette in einem anderen
+          // Diebstahlfall, wo z.B. ein Gemaelde gestohlen wurde, jedes zufaellig im Text
+          // auftauchende Etui faelschlich als Diebesgut-Rueckkehr gewertet). Stattdessen:
+          // (a) die TARGET-Woerter des AKTUELLEN Setups (tWordsN, dynamisch), plus
+          // (b) optionale, pro Fall definierbare Synonyme aus _tFact.gutSynonyme, plus
+          // (c) NUR echte fallunabhaengige Begriffe, die immer das jeweilige Diebesgut
+          //     meinen ("diebesgut/beute/diebstahl/gestohlen") - nie ein konkretes Objekt.
+          const gutSyn = Array.isArray(_tFact && _tFact.gutSynonyme)
+            ? _tFact.gutSynonyme.map(s => normForMatch(s)).filter(s => s.length >= 3)
+            : [];
+          const genericRe = /\b(diebesgut|beute|diebstahl|gestohlene[srn]?|gestohlen)\b/;
+          const matchGut = (s) => tWordsN.some(w => s.includes(w)) || gutSyn.some(w => s.includes(w)) || genericRe.test(s);
+          const istSurrogat = (s) => /\b(kaufvertrag|vertrag|kopie|abschrift|foto|fotografie|aufnahme|quittung|beleg|rechnung|zettel|notiz|dokument|unterlage|liste|akte|brief|schein|urkunde|bon|adressbuch|skizze|zeichnung)\b/.test(s);
+          let gutInInventory = false;
+          if (Array.isArray(inventory)) {
+            for (const item of inventory) {
+              const itLower = normForMatch(item || '');
+              if (istSurrogat(itLower)) continue;
+              if (matchGut(itLower)) { gutInInventory = true; break; }
+            }
+          }
+          let gutInText = false;
+          let gutBeiKlient = false;  // v7.12.152: direkte Rueckgabe an den Klienten
+          // v7.12.157: Rueckgabe-an-Klient IMMER pruefen (auch wenn Gut schon im Inventar),
+          // damit der spaete "Karl gibt Krause das Etui zurueck"-Fall erkannt wird. Die
+          // Karl-Besitz-Erkennung (gutInText) bleibt auf !gutInInventory beschraenkt (sie
+          // soll das Gut erst INS Inventar bringen - unnoetig wenn schon drin).
+          {
+            const sceneNorm = normForMatch(scene.szene || '');
+            if (matchGut(sceneNorm)) {
+              const istSurrogatScene = istSurrogat(sceneNorm);
+              const rueckgabeRe = /(beim?|zum|an (den|die|seinen|ihren)) (rechtmaessigen |wahren )?(besitzer|eigentuemer|klient|auftraggeber|krause)|(uebergibst|uebergeben|haendigst|ueberreichst|zurueckgegeben|zurueckgebracht|zurueckerstattet)|(gibst|reichst) (es|ihn|sie|das (gut|diebesgut|etui)|ihm das|ihr das|dem|der)|(wieder|zurueck) (beim?|in (den|die) haende)/i;
+              if (rueckgabeRe.test(sceneNorm) && !istSurrogatScene) gutBeiKlient = true;
+              if (!gutInInventory) {
+                // Besitz-Verben generisch (es/ihn/sie/das gut) - kein fallspezifisches Objektwort.
+                const besitzRe = /(in (deiner|der) (hand|faust)|in (deinen|den) (haenden))|umklammer|umgreif|umfass|steckst (es|ihn|sie|das (gut|diebesgut))? ?(ein|weg|in)|nimmst (es|ihn|sie|das (gut|diebesgut)) an dich|an dich genommen|in (deine[rn]?|die) (innen)?(tasche|mantel|jacke)|in deinem besitz|sicher verstaut|haeltst (es|ihn|sie|das (gut|diebesgut)) (fest|umklammert|in)|birgst (es|ihn|sie)|hast (es|ihn|sie|das (gut|diebesgut)) (endlich |wieder |jetzt )?(sicher |an dich genommen|in der hand|zurueck)|verschwindet (tief )?in (deiner|der) (jacke|jackentasche|manteltasche|tasche|innentasche)/i;
+                const nurSicht = /(siehst|erblickst|entdeckst|liegt (auf|vor|in)|funkelt|glaenzt|steht) /i.test(sceneNorm) && !besitzRe.test(sceneNorm) && !rueckgabeRe.test(sceneNorm);
+                if (besitzRe.test(sceneNorm) && !nurSicht && !istSurrogatScene) gutInText = true;
+              }
+            }
+          }
+          if (gutInInventory || gutInText || gutBeiKlient) {
+            const warSchonDurchbruch = !!caseProgress.ueberfuehrt || (caseProgress.stage || 0) >= 3;
+            // v7.12.147 (Lektorat 19:48-Run): Wenn der Besitz nur ueber den SZENENTEXT
+            // erkannt wurde (gutInText), das Diebesgut AUCH ins Inventar uebernehmen.
+            // Befund: diebesgutZurueck wurde "laut Szenentext" gesetzt, aber das Etui kam
+            // NIE ins Inventar -> Endbericht behauptete "Etui ist zurueck", Inventar war
+            // leer. Inkonsistenz zwischen Durchbruch-Flag und tatsaechlichem Inventar.
+            // Jetzt: Text-Besitz => Inventar-Eintrag, damit Flag/Inventar/Endbericht
+            // konsistent sind (gutInInventory braucht das nicht - da ist es schon drin).
+            if (gutInText && !gutInInventory && Array.isArray(inventory) && _tName) {
+              const _tNameLowChk = normForMatch(_tName);
+              const _schonDrin = inventory.some(it => normForMatch(it || '').includes(_tNameLowChk.split(/\s+/).filter(w => w.length >= 4)[0] || _tNameLowChk));
+              if (!_schonDrin) {
+                inventory.push(_tName);
+                diag('state', 'Diebesgut "' + _tName + '" ins Inventar uebernommen (Text-Besitz erkannt) - haelt Flag/Inventar/Endbericht konsistent');
+              }
+            }
+            if ((caseProgress.stage || 0) < 2) {
+              const suspectFact = caseSetup.setupCast && caseSetup.setupCast.find(c =>
+                (c.tag || '').toUpperCase() === 'SUSPECT' || (c.tagExtra || '').toUpperCase() === 'SUSPECT');
+              if (!caseProgress.tatverdaechtiger) caseProgress.tatverdaechtiger = (suspectFact && suspectFact.name) || 'der Hehler';
+              caseProgress.stage2Marker = 'spur_gefunden';
+              caseProgress.stage2StartScene = caseProgress.stage2StartScene || sceneCounter;
+            }
+            caseProgress.ueberfuehrt = true;
+            // v7.12.156 (Code-Review Punkt 3): gutBeiKlient hat VORRANG. Befund: Wenn Karl
+            // das Etui schon im Inventar hatte (gutInInventory) UND die Szene die Rueckgabe
+            // an den Klienten beschreibt, landete der alte Code (gutBeiKlient && !gutInInventory)
+            // faelschlich im else-Zweig und setzte wieder inKarlInventory - obwohl die Szene
+            // die RUECKGABE erzaehlt. Das ist der haeufigste reale Ablauf (Karl holt Gut ->
+            // traegt es zum Klienten -> gibt zurueck). Jetzt: Rueckgabe zuerst pruefen.
+            if (gutBeiKlient) {
+              setTargetItemState('returnedToClient', (clientProfile && clientProfile.name) || 'Klient', { name: _tName });
+              caseProgress.resolveEverReady = true;
+              // v7.12.156 (Code-Review Punkt 1): NUR bei einer HARTEN Rueckgabe (Klientenname
+              // + Zielobjekt + explizites Rueckgabe-Verb im selben Text) den Fall direkt
+              // abschliessen. Das ist strenger als rueckgabeRe (die auch "beim rechtmaessigen
+              // Besitzer" ohne Klientennennung matcht) - so kann ein vager Treffer den Fall
+              // NICHT mitten im Spiel unwiderruflich beenden, eine eindeutige Uebergabe aber schon.
+              if (typeof isHardClientReturn === 'function' && isHardClientReturn(scene && scene.szene, (clientProfile && clientProfile.name), _tName)) {
+                if (!caseProgress.istGelöst) {
+                  caseProgress.klientGesprochen = true;
+                  caseProgress.istGelöst = true;
+                  caseProgress.stage = 4;
+                  diag('progress', '✦ FALL GELOEST (Stage 4) - harte Diebesgut-Rueckgabe an Klient erkannt');
+                  if (typeof showSolvedToastOnce === 'function') showSolvedToastOnce('Fall gelöst. Diebesgut zurückgegeben.');
+                }
+              }
+            } else if (gutInInventory || gutInText) {
+              setTargetItemState('inKarlInventory', 'Karl', { name: _tName });
+            }
+            // v7.12.88: Stage/Timer nur setzen wenn dies der ERSTE Durchbruch ist -
+            // sonst (Taeter schon ueberfuehrt) wuerde stage3StartScene zurueckgesetzt.
+            if ((caseProgress.stage || 0) < 3) {
+              caseProgress.stage = 3;
+              caseProgress.stage3StartScene = sceneCounter;
+            }
+            const wieG = gutInInventory ? 'im Inventar' : (gutBeiKlient ? 'laut Szenentext beim Klienten' : 'laut Szenentext in Karls Besitz');
+            console.log('[Schatten] Diebesgut zurueck (diebstahl): ' + _tName + ' ' + wieG + (warSchonDurchbruch ? ' [Taeter war schon ueberfuehrt]' : ''));
+            diag('progress', '✦ DIEBESGUT ZURÜCK (diebstahl): ' + _tName + ' (' + wieG + ')');
+            if (typeof showProgressToast === 'function') {
+              const _toastMsg = (caseProgress.targetItemState && caseProgress.targetItemState.status === 'returnedToClient')
+                ? 'Das Diebesgut ist zurück beim Klienten. Der Fall kann abgeschlossen werden.'
+                : 'Das Diebesgut ist sicher. Jetzt zum Klienten.';
+              showProgressToast('DIEBESGUT ZURÜCK', _toastMsg, 'success', 'diebesgut-zurueck', '💼');
+            }
+          }
+        }
+
+}
+
 function createInitialCaseProgress() {
   return {
     stage: 0,
@@ -5757,6 +5959,15 @@ function createInitialCaseProgress() {
     pendingCustodyConfirm: false,
     forceCustodyNextScene: false,
     diebesgutZurueck: false,
+    // v7.12.152 (Code-Review + Lektorat iz_a-Run): harter Zielobjekt-Zustand fuer
+    // Diebstahlfaelle. Befund: KI beschrieb "Diebesgut wieder beim rechtmaessigen
+    // Besitzer", aber diebesgutZurueck blieb false (besitzRe erkennt nur Besitz DURCH
+    // KARL, nicht direkte Rueckgabe an den Klienten) -> Fall nie loesbar, 32 Szenen
+    // Stage-3-Nachlauf. targetItemState bildet den ganzen Lebenszyklus ab und schliesst
+    // die Luecke. status: unknown|seen|located|inKarlInventory|returnedToClient.
+    // diebesgutZurueck bleibt als abgeleitete Wahrheit fuer die bestehende Win-Sperre
+    // synchron (true sobald status inKarlInventory ODER returnedToClient).
+    targetItemState: { name: '', status: 'unknown', holder: '', scene: 0 },
     _lastIndizScene: 0,
     lastStasiScene: 0,
     // v7.12.123 (ChatGPT-Review): spaeter benutzte Felder vollstaendig dokumentieren
@@ -5784,6 +5995,13 @@ function normalizeCaseProgress(raw) {
   if (!Array.isArray(merged.toastLog)) merged.toastLog = [];
   if (!Array.isArray(merged.verknuepfungen)) merged.verknuepfungen = [];
   if (!merged.npcMemory || typeof merged.npcMemory !== 'object') merged.npcMemory = {};
+  // v7.12.152: targetItemState-Struktur absichern (alte Saves haben es nicht).
+  if (!merged.targetItemState || typeof merged.targetItemState !== 'object') {
+    merged.targetItemState = { name: '', status: 'unknown', holder: '', scene: 0 };
+  } else {
+    const _valid = ['unknown','seen','located','inKarlInventory','returnedToClient'];
+    if (_valid.indexOf(merged.targetItemState.status) === -1) merged.targetItemState.status = 'unknown';
+  }
   // v7.12.124 (ChatGPT-Review): String-Booleans KORREKT migrieren. Vorher machte
   // "merged[key] === true" aus "true"/"1"/1 faelschlich false - das Gegenteil von robustem
   // Migrieren (ein alter Save mit istGelöst:"true" wurde wieder ungelöst). Jetzt via toBool.
@@ -5793,6 +6011,23 @@ function normalizeCaseProgress(raw) {
     merged[key] = _toBool(merged[key]);
   }
   merged.lastEurekaScene = parseInt(merged.lastEurekaScene, 10) || 0;
+  // v7.12.154 (Code-Review Punkt 4): targetItemState <-> diebesgutZurueck synchronisieren.
+  // Nach Restore/alten Saves koennen die beiden Wahrheiten auseinanderlaufen
+  // (diebesgutZurueck:true aber status:'unknown', oder umgekehrt). Hier angleichen,
+  // damit die abgeleitete Wahrheit konsistent bleibt. Plus Felder typsichern.
+  {
+    const tis = merged.targetItemState;
+    tis.scene = parseInt(tis.scene, 10) || 0;
+    tis.name = String(tis.name || '');
+    tis.holder = String(tis.holder || '');
+    if ((tis.status === 'inKarlInventory' || tis.status === 'returnedToClient') && !merged.diebesgutZurueck) {
+      merged.diebesgutZurueck = true;
+    }
+    if (merged.diebesgutZurueck && (!tis.status || tis.status === 'unknown')) {
+      tis.status = 'inKarlInventory';
+      if (!tis.holder) tis.holder = 'Karl';
+    }
+  }
   merged._lastIndizScene = parseInt(merged._lastIndizScene, 10) || 0;
   merged.lastStasiScene = parseInt(merged.lastStasiScene, 10) || 0;
   merged.stage2StartDay = (merged.stage2StartDay == null) ? null : (parseInt(merged.stage2StartDay, 10) || null);
@@ -12247,7 +12482,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.151] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.157] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -13316,7 +13551,7 @@ function renderOptions(scene) {
     }
     const resolveOpt = {
       id: 'AUFLOESEN',
-      text: 'Karl entscheidet, den Fall jetzt abzuschließen und die Klientin zu informieren - persönlich, per Telefon oder per Telegramm, je nach Situation am aktuellen Ort.',
+      text: 'Karl entscheidet, den Fall jetzt abzuschließen und den Auftraggeber zu informieren - persönlich, per Telefon oder per Telegramm, je nach Situation am aktuellen Ort.',
       kategorie: 'AUFLOESEN',
       _kategorie: 'AUFLOESEN',
       _priority: 95,
@@ -14568,6 +14803,15 @@ Es ist NICHT realistisch, dass eine Trauergesellschaft 18 Stunden an einem Grab 
         recap += `\nFALL-TYP: WAHRHEITS-FALL. Eine offizielle Version steht (Selbstmord/Herzinfarkt/Albrechts Schuld), Karl glaubt sie nicht. Stages: (1) Indizien gegen offizielle Version, (2) eigene Theorie formen, (3) Beweis fuer wahre Version, (4) Klient/Oeffentlichkeit informieren. Tatverdaechtiger erst wenn klar ist WER tatsaechlich verantwortlich ist (kann auch eine Institution / Politik sein).\n`;
       } else if (ct === 'diebstahl') {
         recap += `\nFALL-TYP: DIEBSTAHL-FALL. Karl soll das Diebesgut zurueck und/oder die Diebe identifizieren. Stages: (1) Spur zur Hehlerei, (2) Hehler oder Dieb finden, (3) Diebesgut/Geld zurueckholen oder Polizei, (4) Klient berichten.\n`;
+        // v7.12.152: OBJEKT-STATE-HINWEIS. Wenn das Diebesgut bereits an den Klienten
+        // zurueckgegeben wurde, darf es NICHT wieder bei Karl auftauchen (iz_a-Run-Bug:
+        // Etui nach Uebergabe wieder in Karls Buero). Spiegelt den harten targetItemState.
+        const _tis = caseProgress.targetItemState;
+        if (_tis && _tis.status === 'returnedToClient') {
+          recap += `\nOBJEKT-STATE: Das Diebesgut wurde bereits dem Klienten zurueckgegeben und ist NICHT mehr in Karls Besitz. Es darf NICHT erneut in Karls Buero, Tasche oder Hand auftauchen. Der Auftrag ist erfuellt.\n`;
+        } else if (_tis && _tis.status === 'inKarlInventory') {
+          recap += `\nOBJEKT-STATE: Karl HAT das Diebesgut bereits physisch sicher (in seinem Besitz). Es muss jetzt nur noch dem Klienten uebergeben werden - lass Karl es nicht erneut "finden" oder "holen".\n`;
+        }
         // v7.12.143 (Anlass: 2x Krause-Run v7.12.142, je 61 Szenen ohne Abschluss):
         // PROAKTIVER GUT-HOL-PUSH. Befund: Karl wusste seit Sz~40, dass das Etui in
         // "Schliessfach 412" liegt - aber die KI bot DANACH nie eine Option zum HOLEN an
@@ -15763,7 +16007,10 @@ VERBOTEN: Karl wacht woanders auf ohne Erklaerung. Wenn du Pfad B waehlst, MUSST
             // Plus Verfolgungs-Aktionen (folge/verfolge/dranbleiben) als Reise behandeln -
             // die sind dramaturgisch Ortswechsel, wurden aber nicht erkannt.
             const _reiseVerbRe = /\b(fahr|fahre|geh|gehe|lauf|laufe|begib dich|mach dich auf|verlass|verlasse|steig in|setz dich in (?:den|dein) (?:wagen|opel|auto)|nimm (?:die|den) (?:s-?bahn|u-?bahn|wagen)|folge|verfolge|haeng dich an|haeng dich an|setz nach)\b/i;
-            const _zielRe = /\b(zur?|zum|nach|in die|in den|ins|richtung)\s+([^.,;!?]{3,60})/i;
+            // v7.12.153 (Code-Review Punkt 5B): "zur?" matchte auch nacktes "zu" ->
+            // "zu hoeren" wurde als Reiseziel "hoeren" erkannt. Jetzt "zur" (kein nacktes
+            // "zu"), plus Infinitiv-Ausschluss unten.
+            const _zielRe = /\b(zur|zum|nach|in die|in den|ins|richtung)\s+([^.,;!?]{3,60})/i;
             const _ct_norm = _ct.toLowerCase();
             const _fahrFort = /\bfahr(e)?\s+fort\b/.test(_ct_norm); // "fahr fort" = weitermachen, KEINE Reise
             const _hatZiel = _zielRe.test(_ct);
@@ -15772,6 +16019,9 @@ VERBOTEN: Karl wacht woanders auf ohne Erklaerung. Wenn du Pfad B waehlst, MUSST
               _spielerWollteReise = true;
               const _zm = _ct.match(_zielRe);
               if (_zm) _spielerReiseZiel = _zm[2].trim().replace(/\s+(um|damit|bevor|und|wo|der|die|das)\b.*$/i, '').replace(/[.,;:!?]+$/, '');
+              // Infinitiv-Verben sind keine Orte ("zu hoeren/sehen/fragen").
+              const _badZiel = /^(hoeren|hören|sehen|fragen|erfahren|wissen|klaeren|klären|pruefen|prüfen|reden|sprechen|schauen|gucken|lauschen|verstehen|herausfinden|nachsehen|nachfragen)$/i;
+              if (_spielerReiseZiel && _badZiel.test(normForMatch(_spielerReiseZiel))) _spielerReiseZiel = '';
             }
             break;
           }
@@ -19149,7 +19399,7 @@ async function chooseOption(option) {
       // das ~63% Erfolg bei der ersten Annaeherung (vorher ~25%).
       const offen = Math.random() < 0.70;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.151] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.157] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -19526,7 +19776,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.151] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.157] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -19579,7 +19829,7 @@ function parsePlayerIntent(option, currentScene) {
   // BEFRAGUNG: Karl spricht/befragt eine konkrete Person. (Wortstaemme ohne
   // abschliessendes \b, damit "frage/befrage/klopfe/konfrontiere" greifen.)
   if (/\b(frag|befrag|verhoer|sprich mit|rede mit|red mit|klingel|klopf|hak nach|konfrontier|stell\b.{0,30}zur rede)/.test(t)) {
-    const person = extractPersonTarget(raw);
+    const person = extractPersonTarget(raw, currentScene);
     return { type: 'question', previousOrt: previousOrt, target: person };
   }
 
@@ -19611,30 +19861,54 @@ function parsePlayerIntent(option, currentScene) {
 // Extrahiert ein Reiseziel aus dem Optionstext. Sucht nach "zur/zum/nach/in die/ins X".
 // Arbeitet auf normalisiertem Text (Umlaut-robust). Gibt den Ziel-Kern zurueck oder ''.
 function extractTravelTarget(raw) {
-  const t = (typeof normForMatch === 'function') ? normForMatch(raw) : String(raw).toLowerCase();
-  const m = t.match(/\b(?:zur|zum|nach|richtung|in die|in den|ins|auf zum|auf zur)\s+([a-z][\w\-]+(?:\s*(?:[a-z]+\s+)?[a-z][\w\-]+){0,2})/);
-  if (m && m[1]) {
-    const o = m[1].trim();
-    // Stopwoerter, die kein echtes Ziel sind (z.B. "nach hause" ist ok, aber "nach dem")
-    if (/^(dem|der|den|die|das|ihm|ihr|ihnen|oben|unten|hinten|vorne)$/.test(o)) return '';
+  const rawStr = String(raw || '');
+  const t = (typeof normForMatch === 'function') ? normForMatch(rawStr) : rawStr.toLowerCase();
+  // v7.12.154 (Code-Review Punkt 5): BEIDE Kandidaten suchen - klassische Praeposition
+  // (zur/zum/nach/in die...) UND nacktes "zu [Eigenname]" (Geh zu Trude/Krause/Roth) -
+  // und den FRUEHER im Text stehenden bevorzugen. Der v7.12.153-Fix hatte nacktes "zu"
+  // entfernt (wegen "zu hoeren"), wodurch legitime Personenreisen nicht mehr validiert
+  // wurden. Infinitive ("zu Hoeren/Sehen/...") bleiben ausgeschlossen.
+  const mPraep = t.match(/\b(?:zur|zum|nach|richtung|in die|in den|ins|auf zum|auf zur)\s+([a-z][\w\-]+(?:\s*(?:[a-z]+\s+)?[a-z][\w\-]+){0,2})/);
+  const mZuName = rawStr.match(/\bzu\s+([A-ZÄÖÜ][A-Za-zÄÖÜäöüß\-]+(?:\s+[A-ZÄÖÜ][A-Za-zÄÖÜäöüß\-]+){0,2})/);
+  const praepPos = mPraep ? t.indexOf(mPraep[0]) : Infinity;
+  const zuPos = mZuName ? rawStr.indexOf(mZuName[0]) : Infinity;
+  const stop = /^(dem|der|den|die|das|ihm|ihr|ihnen|oben|unten|hinten|vorne)$/;
+  const badInf = /^(Hoeren|Hören|Sehen|Fragen|Reden|Sprechen|Erfahren|Wissen|Pruefen|Prüfen|Klaeren|Klären|Schauen|Gucken|Lauschen|Verstehen)$/i;
+  const zuValid = mZuName && !badInf.test(mZuName[1]);
+  if (zuValid && zuPos <= praepPos) return normForMatch(mZuName[1]);
+  if (mPraep && mPraep[1]) {
+    const o = mPraep[1].trim();
+    if (stop.test(o)) return '';
     return o;
   }
+  if (zuValid) return normForMatch(mZuName[1]);
   return '';
 }
 
 // Extrahiert die befragte Person. Sucht Eigennamen oder bekannte Rollen-Begriffe.
 // Arbeitet auf normalisiertem Text (Umlaut-robust).
-function extractPersonTarget(raw) {
+function extractPersonTarget(raw, currentScene) {
   const t = (typeof normForMatch === 'function') ? normForMatch(raw) : String(raw).toLowerCase();
   // Zuerst Eigenname nach dem Befragungsverb (frag/sprich mit wilhelm krause...)
-  const m = t.match(/\b(?:frag|befrag|verhoer|sprich mit|rede mit|red mit|konfrontier|stell)\w*\s+(?:den|die|das|dem|der|mit\s+)?\s*([a-z][\w\-]+(?:\s+[a-z][\w\-]+)?)/);
+  const m = t.match(/\b(?:frag|befrag|verhoer|sprich mit|rede mit|red mit|konfrontier|stell)\w*\s+(?:den|die|das|dem|der|mit\s+)?\s*([a-z][\w\- ]+?)(?=\s+(?:nach|ueber|wegen|ob|wie|warum|nochmal|erneut|direkt|genauer|zu)\b|[,.]|$)/);
   if (m && m[1]) {
-    const o = m[1].trim();
-    if (/^(den|die|das|dem|der|ihn|sie|ihm|ihr|nach|ueber|wegen)$/.test(o)) {
-      // Verb gefolgt von Artikel/Pronomen ohne Namen -> Rollen-Fallback unten versuchen
-    } else {
-      return o;
+    // v7.12.153 (Code-Review Punkt 5A): "Frag ihn nach der Adresse" ergab faelschlich
+    // Ziel "ihn nach". Fix: fuehrendes Pronomen/Artikel entfernen, bei nach/ueber/ob
+    // etc. abschneiden (per Lookahead oben schon), Rest pruefen.
+    let o = m[1].trim()
+      .replace(/^(ihn|sie|ihm|ihr|den|die|das|dem|der|mich|dir|uns)\s+/i, '')
+      .replace(/\s+(nach|ueber|wegen|ob|wie|warum)\b.*$/i, '')
+      .trim();
+    // Wenn nur ein Pronomen/Artikel uebrig (kein echter Name) -> aktuelle Person im Raum
+    if (!o || /^(ihn|sie|ihm|ihr|den|die|das|dem|der|nach|ueber|wegen|ihm|mich|uns)$/.test(o)) {
+      if (currentScene && Array.isArray(currentScene.personenImRaum) && currentScene.personenImRaum.length === 1) {
+        const p = currentScene.personenImRaum[0];
+        const pn = (typeof p === 'string' ? p : (p && p.name) || '');
+        if (pn) return normForMatch(pn).split(/\s+/)[0];
+      }
+      o = '';
     }
+    if (o) return o;
   }
   // sonst Rollen-Begriff (nachbarin, wirt, zeuge...)
   const r = t.match(/\b(nachbarin|nachbar|wirt|kellner|barkeeper|informant|zeugin|zeuge|portier|hausmeister|wirtin)\b/);
@@ -19798,6 +20072,11 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     const _prevCurrentScene = currentScene;
     const _prevCurrentOrt = currentOrt;
     const _prevCurrentOrtType = currentOrtType;
+    // v7.12.153 (Code-Review Punkt 6): auch die Bewusstlosigkeits-Flags sichern, die
+    // VOR der Intent-Validierung gesetzt werden - sonst laeuft ein Repair-Retry mit
+    // falschem Ort-Lock (verworfene Szene endete bewusstlos -> Repair denkt Karl ist k.o.).
+    const _prevUnconscious = (typeof lastSceneEndedInUnconsciousness !== 'undefined') ? lastSceneEndedInUnconsciousness : false;
+    const _prevLastSceneOrt = (typeof lastSceneOrt !== 'undefined') ? lastSceneOrt : '';
     const { scene, rawAssistantText } = await requestSceneFromModel(userMsg, conversationHistory, compactMode);
     const apiCallDuration = Date.now() - apiCallStart;
     currentScene = scene;
@@ -19969,6 +20248,9 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           currentScene = _prevCurrentScene;
           currentOrt = _prevCurrentOrt;
           currentOrtType = _prevCurrentOrtType;
+          // v7.12.153: Bewusstlosigkeits-Flags ebenfalls zuruecksetzen.
+          if (typeof lastSceneEndedInUnconsciousness !== 'undefined') lastSceneEndedInUnconsciousness = _prevUnconscious;
+          if (typeof lastSceneOrt !== 'undefined') lastSceneOrt = _prevLastSceneOrt;
           const _repairHint = buildIntentRepairHint(_intentProblem, optionForRollback._intent);
           const repairPrompt = userMsg +
             '\n\nNACHBESSERUNG (deine letzte Antwort hat die gewaehlte Aktion nicht erfuellt): ' +
@@ -20824,7 +21106,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           } else if (!tensionHighEnoughForArrest && folterSceneCount >= custodyReleaseFloor) {
             // STILLER RELEASE: nur noch als Notventil bei langem Drift (5+ Sz). Karl ist
             // faktisch frei (KI erzaehlt ihn lange ohne Stasi-Kontext), System zieht nach.
-            console.warn('[Schatten v7.12.151] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
+            console.warn('[Schatten v7.12.157] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet');
             setCustodyState(false, 'stiller-release');
           } else if (!tensionHighEnoughForArrest) {
@@ -20840,7 +21122,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.151] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.157] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -21366,7 +21648,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof diag === 'function') {
           diag('state', '⚡ NOTFLUCHT GELUNGEN - Karl frei + 4 Sz Gnadenfrist, Stasi-Tension ' + prevTension + ' -> 3 (gesucht, aber nicht sofort wieder greifbar)');
         }
-        console.log('[Schatten v7.12.151] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
+        console.log('[Schatten v7.12.157] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
         // v7.11.56: Toast bei Erfolg - Spieler hat geklickt und soll Wuerfel-
         // Ergebnis direkt sehen, nicht nur narrative Andeutungen.
         if (typeof showProgressToast === 'function') {
@@ -22536,93 +22818,9 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       // anderen Pfad, "Fall loesen" war 2 Szenen lang nicht klickbar (User-Bug). Jetzt
       // steht der Block HIER, vor dem stage===0-Check, auf der jeden-Szene-Ebene.
       // Greift bei diebstahl sobald das ECHTE Diebesgut bei Karl ist (Inventar ODER
-      // Besitz-Verb im Text), Surrogate (Vertrag/Foto/Quittung) ausgeschlossen.
-      {
-        const _ct = caseSetup && caseSetup.caseType;
-        const _tFact = caseSetup && caseSetup.setupCast && caseSetup.setupCast.find(c => c.tag === 'TARGET');
-        const _tName = _tFact ? _tFact.name : null;
-        // v7.12.88 (Krause-Run 18:37 Sackgassen-Fix): Bedingung von "!ueberfuehrt" auf
-        // "!diebesgutZurueck" umgestellt. Problem: ueberfuehrt wird AUCH vom allgemeinen
-        // Taeter-Force gesetzt (Frieda). Wenn der in derselben Szene wie der Etui-Fund
-        // VOR diesem Block lief, war ueberfuehrt schon true -> dieser Block uebersprungen
-        // -> diebesgutZurueck NIE gesetzt -> die v7.12.87-Win-Sperre blockierte den
-        // Abschluss ewig (Etui im Inventar, aber Fall nicht abschliessbar = Sackgasse).
-        // Jetzt entkoppelt: der Gut-Besitz wird geprueft solange diebesgutZurueck fehlt,
-        // egal ob schon ein Taeter ueberfuehrt ist.
-        if (_ct === 'diebstahl' && _tName && !caseProgress.diebesgutZurueck && sceneCounter >= 4) {
-          const tNameN = normForMatch(_tName || '');
-          const tWordsN = tNameN.split(/\s+/).filter(w => w.length >= 4);
-          // v7.12.83: KEINE fallspezifischen Objektwoerter mehr hartcodiert (frueher
-          // stand hier "etui|schmuck" aus dem Krause-Fall - das haette in einem anderen
-          // Diebstahlfall, wo z.B. ein Gemaelde gestohlen wurde, jedes zufaellig im Text
-          // auftauchende Etui faelschlich als Diebesgut-Rueckkehr gewertet). Stattdessen:
-          // (a) die TARGET-Woerter des AKTUELLEN Setups (tWordsN, dynamisch), plus
-          // (b) optionale, pro Fall definierbare Synonyme aus _tFact.gutSynonyme, plus
-          // (c) NUR echte fallunabhaengige Begriffe, die immer das jeweilige Diebesgut
-          //     meinen ("diebesgut/beute/diebstahl/gestohlen") - nie ein konkretes Objekt.
-          const gutSyn = Array.isArray(_tFact && _tFact.gutSynonyme)
-            ? _tFact.gutSynonyme.map(s => normForMatch(s)).filter(s => s.length >= 3)
-            : [];
-          const genericRe = /\b(diebesgut|beute|diebstahl|gestohlene[srn]?|gestohlen)\b/;
-          const matchGut = (s) => tWordsN.some(w => s.includes(w)) || gutSyn.some(w => s.includes(w)) || genericRe.test(s);
-          const istSurrogat = (s) => /\b(kaufvertrag|vertrag|kopie|abschrift|foto|fotografie|aufnahme|quittung|beleg|rechnung|zettel|notiz|dokument|unterlage|liste|akte|brief|schein|urkunde|bon|adressbuch|skizze|zeichnung)\b/.test(s);
-          let gutInInventory = false;
-          if (Array.isArray(inventory)) {
-            for (const item of inventory) {
-              const itLower = normForMatch(item || '');
-              if (istSurrogat(itLower)) continue;
-              if (matchGut(itLower)) { gutInInventory = true; break; }
-            }
-          }
-          let gutInText = false;
-          if (!gutInInventory) {
-            const sceneNorm = normForMatch(scene.szene || '');
-            if (matchGut(sceneNorm)) {
-              // Besitz-Verben generisch (es/ihn/sie/das gut) - kein fallspezifisches Objektwort.
-              const besitzRe = /(in (deiner|der) (hand|faust)|in (deinen|den) (haenden))|umklammer|umgreif|umfass|steckst (es|ihn|sie|das (gut|diebesgut))? ?(ein|weg|in)|nimmst (es|ihn|sie|das (gut|diebesgut)) an dich|an dich genommen|in (deine[rn]?|die) (innen)?(tasche|mantel|jacke)|in deinem besitz|sicher verstaut|haeltst (es|ihn|sie|das (gut|diebesgut)) (fest|umklammert|in)|birgst (es|ihn|sie)|hast (es|ihn|sie|das (gut|diebesgut)) (endlich |wieder |jetzt )?(sicher |an dich genommen|in der hand|zurueck)|verschwindet (tief )?in (deiner|der) (jacke|jackentasche|manteltasche|tasche|innentasche)/i;
-              const nurSicht = /(siehst|erblickst|entdeckst|liegt (auf|vor|in)|funkelt|glaenzt|steht) /i.test(sceneNorm) && !besitzRe.test(sceneNorm);
-              if (besitzRe.test(sceneNorm) && !nurSicht && !istSurrogat(sceneNorm)) gutInText = true;
-            }
-          }
-          if (gutInInventory || gutInText) {
-            const warSchonDurchbruch = !!caseProgress.ueberfuehrt || (caseProgress.stage || 0) >= 3;
-            // v7.12.147 (Lektorat 19:48-Run): Wenn der Besitz nur ueber den SZENENTEXT
-            // erkannt wurde (gutInText), das Diebesgut AUCH ins Inventar uebernehmen.
-            // Befund: diebesgutZurueck wurde "laut Szenentext" gesetzt, aber das Etui kam
-            // NIE ins Inventar -> Endbericht behauptete "Etui ist zurueck", Inventar war
-            // leer. Inkonsistenz zwischen Durchbruch-Flag und tatsaechlichem Inventar.
-            // Jetzt: Text-Besitz => Inventar-Eintrag, damit Flag/Inventar/Endbericht
-            // konsistent sind (gutInInventory braucht das nicht - da ist es schon drin).
-            if (gutInText && !gutInInventory && Array.isArray(inventory) && _tName) {
-              const _tNameLowChk = normForMatch(_tName);
-              const _schonDrin = inventory.some(it => normForMatch(it || '').includes(_tNameLowChk.split(/\s+/).filter(w => w.length >= 4)[0] || _tNameLowChk));
-              if (!_schonDrin) {
-                inventory.push(_tName);
-                diag('state', 'Diebesgut "' + _tName + '" ins Inventar uebernommen (Text-Besitz erkannt) - haelt Flag/Inventar/Endbericht konsistent');
-              }
-            }
-            if ((caseProgress.stage || 0) < 2) {
-              const suspectFact = caseSetup.setupCast && caseSetup.setupCast.find(c =>
-                (c.tag || '').toUpperCase() === 'SUSPECT' || (c.tagExtra || '').toUpperCase() === 'SUSPECT');
-              if (!caseProgress.tatverdaechtiger) caseProgress.tatverdaechtiger = (suspectFact && suspectFact.name) || 'der Hehler';
-              caseProgress.stage2Marker = 'spur_gefunden';
-              caseProgress.stage2StartScene = caseProgress.stage2StartScene || sceneCounter;
-            }
-            caseProgress.ueberfuehrt = true;
-            caseProgress.diebesgutZurueck = true;  // v7.12.87: explizites Flag - NUR der echte Gut-Besitz setzt das
-            // v7.12.88: Stage/Timer nur setzen wenn dies der ERSTE Durchbruch ist -
-            // sonst (Taeter schon ueberfuehrt) wuerde stage3StartScene zurueckgesetzt.
-            if ((caseProgress.stage || 0) < 3) {
-              caseProgress.stage = 3;
-              caseProgress.stage3StartScene = sceneCounter;
-            }
-            const wieG = gutInInventory ? 'im Inventar' : 'laut Szenentext in Karls Besitz';
-            console.log('[Schatten] Diebesgut zurueck (diebstahl): ' + _tName + ' ' + wieG + (warSchonDurchbruch ? ' [Taeter war schon ueberfuehrt]' : ''));
-            diag('progress', '✦ DIEBESGUT ZURÜCK (diebstahl): ' + _tName + ' wieder bei Karl (' + wieG + ')');
-            if (typeof showProgressToast === 'function') showProgressToast('DIEBESGUT ZURÜCK', 'Das Diebesgut ist sicher. Jetzt zum Klienten.', 'success', 'diebesgut-zurueck', '💼');
-          }
-        }
-      }
+      // Besitz-Verb im Text), Surrogate ausgeschlossen. v7.12.155: ausgelagert nach
+      // processTheftTargetState(scene) - verhaltensneutral, siehe Funktionsdefinition.
+      processTheftTargetState(scene);
       // Stage-Aufstieg: ab 3 Indizien -> Stage 1
       // v7.8: NICHT in der allerersten Szene triggern - die KI generiert dort
       // oft 3-4 "Indizien" die nur das Klient-Briefing wiedergeben ("Erwin ist
@@ -23517,7 +23715,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.151] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.157] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
@@ -23761,6 +23959,20 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.klientGesprochen = true;
         caseProgress.istGelöst = true;
         caseProgress.stage = 4; // v6.81: Stage 4 = geloest (vorher Stage 3 doppelt belegt)
+        // v7.12.152: Bei Diebstahl-Abschluss das Zielobjekt final auf returnedToClient
+        // setzen UND aus Karls Inventar entfernen. Verhindert den iz_a-Run-Bug, wo das
+        // Etui nach der Uebergabe wieder bei Karl auftauchte. Nach returnedToClient
+        // sperrt der Status-Rang (setTargetItemState) jeden Rueckfall.
+        if (ctClose === 'diebstahl') {
+          const _tgN = (caseProgress.targetItemState && caseProgress.targetItemState.name) || '';
+          setTargetItemState('returnedToClient', (clientProfile && clientProfile.name) || 'Klient');
+          if (_tgN && Array.isArray(inventory)) {
+            const _kern = normForMatch(_tgN).split(/\s+/).filter(w => w.length >= 4)[0] || normForMatch(_tgN);
+            const _vorher = inventory.length;
+            inventory = inventory.filter(it => !normForMatch(it || '').includes(_kern));
+            if (inventory.length < _vorher) diag('state', 'Diebesgut "' + _tgN + '" aus Inventar entfernt (an Klient zurueckgegeben)');
+          }
+        }
         console.log('[Schatten] FALL GELÖST! Win-Screen wird ausgeloest.');
         diag('progress', '✦ FALL GELOEST (Stage 4) - Klient berichtet');
         showSolvedToastOnce('Fall gelöst. Klient informiert.');
@@ -24967,7 +25179,7 @@ function hideWait() {
 // Der KI-Kontext (recap) wird ohnehin bei jedem Call aus diesen Variablen NEU
 // gebaut, daher reicht es, die Quell-Variablen zu speichern (kein Message-Array).
 const SCHATTEN_SAVE_KEY = 'schatten-savegame-v1';
-const SCHATTEN_SAVE_VERSION = 3;  // bei inkompatiblen State-Aenderungen erhoehen (v3: zentralisiertes caseProgress/clientProfile-Schema)
+const SCHATTEN_SAVE_VERSION = 3;  // bei inkompatiblen State-Aenderungen erhoehen. v3 bleibt bewusst kompatibel: targetItemState (v7.12.152) wird in normalizeCaseProgress migriert + mit diebesgutZurueck synchronisiert (v7.12.154), kein Versionssprung noetig.
 
 function saveGameState() {
   try {
