@@ -2864,7 +2864,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.268</div>
+    <div class="start-version">Schatten v7.12.271</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3028,7 +3028,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.268</span>
+    <span>Schatten v7.12.271</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5698,7 +5698,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.268';
+window.SCHATTEN_VERSION = 'v7.12.271';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -5854,11 +5854,18 @@ function markPhase(name) {
   try {
     const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
     const dt = now - (window.__phaseT0 || now);
-    // Nur SYNCHRONE Phasen messen wir auf Langsamkeit. Die fetch-Phasen
-    // (Netzwerk) sind erwartbar lang - die schliessen wir aus, sonst Rauschen.
-    const istFetchPhase = /^fetch-|^nach-throttle|^throttle:/.test(window.__phasePrev || '');
-    if (dt > 2000 && !istFetchPhase && typeof logApiEvent === 'function') {
-      logApiEvent('slow_phase', 'SYNC-PHASE LANGSAM: "' + window.__phasePrev + '" -> "' + name + '" dauerte ' + Math.round(dt) + 'ms');
+    // v7.12.269: Fetch-Phasen NICHT mehr ausschliessen, sondern separat labeln. Die langsame
+    // Spanne "vor-renderOptions@SzN -> verarbeitung-start@Sz(N+1)" ist der FETCH (Netzwerk +
+    // Modell). Die Spanne "verarbeitung-start -> vor-X" waere SYNCHRONE Verarbeitung. Durch
+    // getrennte Labels sieht man im Export sofort, WO die Zeit verloren geht.
+    const prev = window.__phasePrev || '';
+    if (dt > 2500 && typeof logApiEvent === 'function') {
+      // Ist die vorige Phase ein Szenen-ENDE (renderOptions/showHeader) und die neue ein
+      // verarbeitung-start? Dann lag die Zeit im fetch-Zyklus zwischen zwei Szenen.
+      const istFetchSpanne = /^vor-renderOptions|^vor-showHeader/.test(prev) && /^verarbeitung-start/.test(name);
+      const istFetchPhaseRoh = /^fetch-|^nach-throttle|^throttle:|^body-gelesen|^json-geparst/.test(prev);
+      const label = (istFetchSpanne || istFetchPhaseRoh) ? 'FETCH/Netzwerk' : 'SYNC-Verarbeitung';
+      logApiEvent('slow_phase', label + ': "' + prev + '" -> "' + name + '" dauerte ' + Math.round(dt) + 'ms');
     }
     window.__phaseT0 = now;
     window.__phasePrev = name;
@@ -9536,8 +9543,16 @@ function showCaseSolved() {
     // keinen Abschluss zu berichten.
     let _berichtZeile = '';
     if (!earlyAbort) {
-      const _bp = buildFallbackAbschlussProsa();
-      if (_bp) _berichtZeile = '<div class="solved-text" style="margin-top:10px;opacity:0.92;">' + _bp + '</div>';
+      // v7.12.269 (Lektorat v268): Fallback-Satz NUR wenn die KI KEINE echte Abschluss-Szene
+      // mit Klient-Bericht geliefert hat (klientGesprochen). Sonst ist der Satz redundant - die
+      // Szene erzählt den Abschluss bereits (Lektorat: "etwas doppelt"). Der Fallback bleibt das
+      // Sicherheitsnetz für den Hänger-Fall (Abschluss-Szene kam nie), stört aber nicht mehr bei
+      // sauberem KI-Abschluss.
+      const _echterAbschluss = !!(caseProgress && caseProgress.klientGesprochen);
+      if (!_echterAbschluss) {
+        const _bp = buildFallbackAbschlussProsa();
+        if (_bp) _berichtZeile = '<div class="solved-text" style="margin-top:10px;opacity:0.92;">' + _bp + '</div>';
+      }
     }
     solvedEl.innerHTML = `
       <div class="solved-title">${titleText}</div>
@@ -13786,7 +13801,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.268] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.271] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -21000,7 +21015,7 @@ async function chooseOption(option) {
       const _romRng = (typeof botWasEverActive !== 'undefined' && botWasEverActive && typeof botRng === 'function') ? botRng() : Math.random();
       const offen = _romRng < 0.70;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.268] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.271] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -21380,7 +21395,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.268] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.271] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -22788,7 +22803,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           } else if (!tensionHighEnoughForArrest && folterSceneCount >= custodyReleaseFloor) {
             // STILLER RELEASE: nur noch als Notventil bei langem Drift (5+ Sz). Karl ist
             // faktisch frei (KI erzaehlt ihn lange ohne Stasi-Kontext), System zieht nach.
-            console.warn('[Schatten v7.12.268] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
+            console.warn('[Schatten v7.12.271] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet');
             setCustodyState(false, 'stiller-release');
           } else if (!tensionHighEnoughForArrest) {
@@ -22804,7 +22819,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.268] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.271] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -23334,7 +23349,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof diag === 'function') {
           diag('state', '⚡ NOTFLUCHT GELUNGEN - Karl frei + 4 Sz Gnadenfrist, Stasi-Tension ' + prevTension + ' -> 3 (gesucht, aber nicht sofort wieder greifbar)');
         }
-        console.log('[Schatten v7.12.268] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
+        console.log('[Schatten v7.12.271] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
         // v7.11.56: Toast bei Erfolg - Spieler hat geklickt und soll Wuerfel-
         // Ergebnis direkt sehen, nicht nur narrative Andeutungen.
         if (typeof showProgressToast === 'function') {
@@ -24428,6 +24443,23 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     // KI-Indizien verworfen. AUSNAHME: ein Durchbruch (Taeter gefasst, Zielperson
     // gefunden) wird nie verworfen - der ist immer fall-relevant.
     try { markPhase('vor-indizVerarbeitung@Sz' + (typeof sceneCounter === 'number' ? sceneCounter : '?')); } catch(e){}
+    // v7.12.270 (Lektorat v268: "Story beweist Vossberg besser als die Indizliste zeigt"):
+    // STARKE-MORDINDIZ-ERKENNUNG. Die Stage-3-Drossel verwarf Indizien nach AKTIONSTYP (passiv
+    // vs offensiv) mit 50% Zufall - dabei flogen zentrale Beweise raus, die Karl beim ERKUNDEN
+    // fand (Rezeptbuch mit Vossbergs Handschrift, Digitalis-Eintrag). Ein harter Beweis (Tatmittel/
+    // Motiv/Täterbindung/Zeugenbeweis) darf NIE weggewürfelt werden, egal über welche Aktion.
+    // Diese Funktion erkennt solche Indizien an Schlüsselwörtern - konservativ, nur klare Fälle.
+    const istStarkesMordindiz = (txt) => {
+      const _t = (typeof txt === 'string' ? txt : (txt && txt.text) || '').toLowerCase();
+      if (!_t || _t.length < 8) return false;
+      // Tatmittel (Waffe/Gift/Methode), Motiv, Täterbindung (Name+Beweis), Zeugenbeweis.
+      // Pro Kategorie ein paar belastbare Marker. Treffer in EINER Kategorie reicht.
+      const _tatmittel = /\b(digitalis|gift|ueberdos|überdos|tatwaffe|mordwaffe|tatmittel|dosis|barbiturat|zyankali|arsen|messer|pistole|walther|schuss|erdrossel|erwuergt|erwürgt|vergiftung|rezept|verschrieben|apotheke)\w*/i;
+      const _motiv = /\b(motiv|devisen|west-?gage|unterschlag|erpress|schulden|eifersucht|rache|erbe|testament|veruntreu|betrug|anzeige drohte|drohte zu melden|wollte (ihn|sie) anzeigen)\w*/i;
+      const _taeterbindung = /\b(handschrift|unterschrift|fingerabdruck|gestaendnis|geständnis|gesteht|gestand|alibi (platzt|faellt|fällt)|belastet|ueberfuehrt|überführt|beweis gegen|quittung|beleg.*name|name.*beleg|in (seiner|ihrer) schublade|in (seinem|ihrem) (buero|büro|besitz))\w*/i;
+      const _zeuge = /\b(zeug\w*|aussage|gesehen|beobachtet|hat .{0,20}(gesehen|bemerkt)|sah (ihn|sie|wie)|bestaetig|bestätig|identifizier)\w*/i;
+      return _tatmittel.test(_t) || _motiv.test(_t) || _taeterbindung.test(_t) || _zeuge.test(_t);
+    };
     const passiveNoProgressCats = ['SCHLAFEN', 'UEBERNACHTUNG', 'HEILEN', 'NOTHEILEN', 'ROMANTIK', 'FLUCHT', 'NOTFLUCHT', 'DEFENSIV'];
     const chosenCatForIndiz = (typeof _catForIndizFilter === 'string') ? _catForIndizFilter : '';
     const suppressIndizThisScene = passiveNoProgressCats.indexOf(chosenCatForIndiz) !== -1
@@ -24489,9 +24521,16 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       const dramaStage = (caseProgress && typeof caseProgress.stage === 'number') ? caseProgress.stage : 0;
       const cat = chosenCatForIndiz;
       if (dramaStage === 2 && scene.indiz_neu.length > 1) {
-        // Mitte: auf 1 Indiz begrenzen
-        diag('filter', 'Stage-2-Dramaturgie: ' + scene.indiz_neu.length + ' Indizien auf 1 begrenzt (stetiger Aufbau, keine Haeufung)');
-        scene.indiz_neu = scene.indiz_neu.slice(0, 1);
+        // Mitte: auf 1 Indiz begrenzen - aber das STARKE bevorzugen, falls vorhanden
+        // (v7.12.270: sonst geht ein Tatmittel/Motiv verloren, weil das erste schwache gewinnt).
+        const _starkeS2 = scene.indiz_neu.filter(istStarkesMordindiz);
+        if (_starkeS2.length > 0) {
+          scene.indiz_neu = _starkeS2.slice(0, 1);
+          diag('filter', 'Stage-2-Dramaturgie: auf 1 begrenzt, STARKES Indiz bevorzugt (Tatmittel/Motiv/Täterbindung)');
+        } else {
+          diag('filter', 'Stage-2-Dramaturgie: ' + scene.indiz_neu.length + ' Indizien auf 1 begrenzt (stetiger Aufbau, keine Haeufung)');
+          scene.indiz_neu = scene.indiz_neu.slice(0, 1);
+        }
       } else if (dramaStage >= 3) {
         // v7.12.1: SICHERHEITSVENTIL gegen Sackgasse. Die Stage-3-Drossel darf
         // den Spieler nicht festhalten. Wenn Karl schon nahe der Loesungs-Schwelle
@@ -24516,13 +24555,21 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           const grund = naheSchwelle ? 'nahe Loesungs-Schwelle (' + indCntNow + ' Ind)' : 'Stagnation (' + scenesSinceLastIndiz + ' Sz ohne Indiz)';
           diag('filter', 'Stage-3-Dramaturgie: Sicherheitsventil offen (' + grund + ') - Indiz durchgelassen statt verworfen');
         } else {
-          // Endspurt + passiveres Vorgehen: max 1 UND 50% Chance auf Verwerfung
-          if (Math.random() < 0.5) {
-            diag('filter', 'Stage-3-Dramaturgie: ' + cat + ' im Endspurt - Indiz(e) verworfen (Karl muss jetzt konfrontieren, nicht weiter sammeln)');
+          // Endspurt + passiveres Vorgehen: max 1 UND 50% Chance auf Verwerfung -
+          // ABER nur für SCHWACHE Indizien. Ein starker Mordbeweis (Tatmittel/Motiv/
+          // Täterbindung/Zeuge) wird NIE weggewürfelt (v7.12.270 - Rezeptbuch-Befund).
+          const _hatStarkes = scene.indiz_neu.some(istStarkesMordindiz);
+          if (_hatStarkes) {
+            // Starkes Indiz priorisieren und durchlassen (das erste starke behalten)
+            const _starke = scene.indiz_neu.filter(istStarkesMordindiz);
+            scene.indiz_neu = _starke.slice(0, 1);
+            diag('progress', 'Stage-3: STARKES Mordindiz durchgelassen (Tatmittel/Motiv/Täterbindung) - nicht der Zufallsdrossel unterworfen');
+          } else if (Math.random() < 0.5) {
+            diag('filter', 'Stage-3-Dramaturgie: ' + cat + ' im Endspurt - schwaches Indiz verworfen (Karl muss jetzt konfrontieren, nicht weiter sammeln)');
             scene.indiz_neu = [];
           } else {
             scene.indiz_neu = scene.indiz_neu.slice(0, 1);
-            diag('filter', 'Stage-3-Dramaturgie: ' + cat + ' - 1 Indiz durchgelassen (zaeher Endspurt)');
+            diag('filter', 'Stage-3-Dramaturgie: ' + cat + ' - 1 schwaches Indiz durchgelassen (zaeher Endspurt)');
           }
         }
       }
@@ -25757,7 +25804,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.268] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.271] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
@@ -26948,6 +26995,10 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     });
     hideLoading();
     hideWait();
+    // v7.12.271: Szene erfolgreich da -> Watchdog-Auto-Retry-Budget zurücksetzen.
+    // Sonst würde sich das Budget über den Run aufsummieren und nach 2 Hängern dauerhaft
+    // erschöpft bleiben. Pro Hänger sollen aber wieder 2 Auto-Versuche zur Verfügung stehen.
+    try { window.__watchdogAutoRetries = 0; } catch(e){}
     document.getElementById('error').classList.add('hidden');
     try { markPhase('vor-showHeader@Sz' + (typeof sceneCounter === 'number' ? sceneCounter : '?')); } catch(e){}
     showHeader(scene);
@@ -29917,10 +29968,11 @@ window.addEventListener('pagehide', () => {
 // v7.12.40: LOADING-WATCHDOG. Schutz gegen endloses "Karl denkt nach".
 // Anlass: iOS/Mobile-Bug wo fetch() haengt ohne Timeout-Fehler - AbortController
 // feuert nicht wenn die Verbindung tot (aber nicht explizit getrennt) ist.
-// Der Watchdog prueft alle 15s ob das Loading-Overlay seit mehr als 55s aktiv ist.
-// Wenn ja: chooseOptionInFlight reset + Fehler anzeigen, damit der Spieler
-// manuell nochmal versuchen kann. 55s ist grosszuegig (adaptiver Timeout max 35s
-// + Verarbeitungszeit) - echter Hanger laesst sich so sicher erkennen.
+// v7.12.269: Der Watchdog prueft alle 5s (vorher 15s) ob das Loading-Overlay seit mehr als
+// 45s (vorher 55s) aktiv ist. Anlass: Dumps zeigten 69s Wartezeit (55s-Schwelle + bis zu 15s
+// bis zum naechsten Check). 45s + 5s-Intervall -> der Spieler bekommt nach ~45-50s den Retry-
+// Dialog statt nach 69s. 45s bleibt klar ueber dem 38s-Hart-Timer und dem 35s-AbortController,
+// also kein Fehlalarm bei normal-langsamen Antworten - nur bei echten Haengern (iOS-fetch tot).
 setInterval(function() {
   try {
     const loading = document.getElementById('loading');
@@ -29933,7 +29985,7 @@ setInterval(function() {
     // sichtbar - der Watchdog darf dann nicht eingreifen. Verhindert Falsch-Alarm bei langen Runs
     // mit vollem RPM-Budget (vermeintliche "Haenger" waren in Wahrheit lange Wartezeiten).
     if (typeof throttleInterval !== 'undefined' && throttleInterval !== null) return;
-    if (elapsed > 55000) {
+    if (elapsed > 45000) {
       const _phase = (function(){ try { return window.__lastPhase || '(keine Phase erfasst - hängt VOR requestSceneFromModel)'; } catch(e){ return '?'; } })();
       console.warn('[Schatten Watchdog] Loading seit ' + Math.round(elapsed/1000) + 's - erzwinge Reset. Letzte Phase: ' + _phase);
       // v7.12.261 (User-Wunsch): Watchdog-Timeout PERSISTENT in den apiEventLog schreiben, damit
@@ -29948,7 +30000,30 @@ setInterval(function() {
       // Loading ausblenden
       loading.classList.add('hidden');
       delete loading.dataset.showSince;
-      // Fehler anzeigen damit Spieler weiss was passiert + Retry anbieten
+      // v7.12.271 (User-Wunsch "Hänger unsichtbar machen"): Statt sofort den manuellen
+      // Fehlerdialog zu zeigen, AUTOMATISCH neu anfragen. Der iOS-fetch-Hänger wirft keinen
+      // Fehler (AbortController feuert nicht) -> der normale Auto-Retry in performApiCall greift
+      // nie. Der Watchdog ist die einzige Instanz, die den Hänger erkennt - also stößt ER jetzt
+      // den Retry an. Bis zu 2 automatische Versuche; jeder verwirft den toten fetch und fragt
+      // frisch an (retry() resettet die Zähler + nutzt lastUserMessage). Erst wenn das Budget
+      // erschöpft ist ODER keine lastUserMessage da ist, kommt der manuelle Dialog.
+      const WATCHDOG_MAX_AUTO = 2;
+      if (typeof window.__watchdogAutoRetries !== 'number') window.__watchdogAutoRetries = 0;
+      const _kannAutoRetry = (typeof retry === 'function')
+        && (typeof lastUserMessage !== 'undefined' && lastUserMessage)
+        && (window.__watchdogAutoRetries < WATCHDOG_MAX_AUTO);
+      if (_kannAutoRetry) {
+        window.__watchdogAutoRetries++;
+        if (typeof logApiEvent === 'function') {
+          try { logApiEvent('watchdog_autoretry', 'Auto-Retry ' + window.__watchdogAutoRetries + '/' + WATCHDOG_MAX_AUTO + ' nach Hänger (' + Math.round(elapsed/1000) + 's). Phase: ' + _phase); } catch(e){}
+        }
+        console.warn('[Schatten Watchdog] Auto-Retry ' + window.__watchdogAutoRetries + '/' + WATCHDOG_MAX_AUTO + ' - frische Anfrage statt Fehlerdialog.');
+        // Kurzer sichtbarer Hinweis, dann automatisch neu anfragen.
+        showLoading('Karl sammelt sich neu...');
+        setTimeout(function(){ try { retry(); } catch(e){ console.warn('[Schatten] Watchdog-Auto-Retry fehlgeschlagen:', e); } }, 400);
+        return;
+      }
+      // Auto-Retry-Budget erschöpft (oder kein lastUserMessage) -> manueller Dialog.
       if (typeof showError === 'function') {
         // v7.12.235: Vollen Diagnose-Dump bauen (Stage/Szene/Prompt/API-Event-Log) statt nur der
         // kurzen Watchdog-Zeile. Der Watchdog-Pfad ueberschrieb bisher den brauchbaren buildDebugDump
@@ -29958,14 +30033,14 @@ setInterval(function() {
         if (typeof buildDebugDump === 'function') {
           try {
             _wdDump = buildDebugDump(
-              { message: 'WATCHDOG-TIMEOUT nach ' + Math.round(elapsed/1000) + 's (fetch haengt, Failover-Kette feuerte nicht sauber). LETZTE PHASE: ' + _phase, debugInfo: { stage: 'watchdog', lastPhase: _phase } },
+              { message: 'WATCHDOG-TIMEOUT nach ' + Math.round(elapsed/1000) + 's (fetch haengt, ' + window.__watchdogAutoRetries + ' Auto-Retries erschöpft). LETZTE PHASE: ' + _phase, debugInfo: { stage: 'watchdog', lastPhase: _phase } },
               (typeof lastUserMessage !== 'undefined' ? lastUserMessage : ''),
               0
             );
           } catch (e) {}
         }
         showError(
-          'Die KI hat nicht geantwortet (>' + Math.round(elapsed/1000) + 's). Bitte nochmal versuchen.',
+          'Die KI hat mehrfach nicht geantwortet. Bitte nochmal versuchen.',
           _wdDump
         );
       }
@@ -29973,7 +30048,7 @@ setInterval(function() {
       // nicht). showError oben informiert den Spieler bereits, pendingRetry bleibt gesetzt.
     }
   } catch(e) {}
-}, 15000);
+}, 5000);
 </script>
 </body>
 </html>
