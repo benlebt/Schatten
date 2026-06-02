@@ -2864,7 +2864,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.287</div>
+    <div class="start-version">Schatten v7.12.289</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3028,7 +3028,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.287</span>
+    <span>Schatten v7.12.289</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5777,7 +5777,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.287';
+window.SCHATTEN_VERSION = 'v7.12.289';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -14107,7 +14107,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.287] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.289] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -17042,6 +17042,32 @@ KEINE anderen Themen mehr - kein neuer Tatort, keine neuen Verdaechtigen, keine 
         recap += `\n\nSTASI-ATMOSPHAERE (POLITISCHER FALL): Dieser Fall ist politisch heikel, aber das MfS war ${scenesSinceLastStasi} Szenen lang gar nicht praesent. Das ist unrealistisch fuer 1953-Berlin. In dieser ODER der naechsten Szene MUSS ein konkreter Stasi-Bezug eingebaut werden: ein Volkspolizist der zu viele Fragen stellt, ein Nachbar der durch den Vorhang schaut wenn Karl die Treppe hoch kommt, ein Anruf wo niemand spricht, eine Akte die im Buero verschoben wurde, der Klient der angedeutet sagt "Sie wissen schon, in welchem Land wir leben". Subtil, aber konkret.`;
       }
       } // Schliesst else-Block von forceCustodyNextScene (v6.80)
+
+      // v7.12.288 (ChatGPT-Vorschlag, weicher Eskalationskorridor - KEIN Gate):
+      // Stein-Run-Befund: Karl hatte 13 Indizien (Schmuggelroute belegt, Wahler verantwortlich),
+      // aber die SICHERUNG fehlte (Akten nie übergeben, Margarete nie geschützt) -> Fail zu Recht.
+      // Wurzel: nichts drängte Karl zur Sicherung, er driftete in Dauer-Action. Dieser Korridor
+      // erinnert ab Sz 45 zunehmend an die fehlende Übergabe/Sicherung. Reine Prompt-Lenkung,
+      // kein Zwang, kein Scheitern - nur ein sichtbarer werdendes "schließe den Fall ab".
+      try {
+        if (Array.isArray(caseSetup && caseSetup.politicalBeats) && caseSetup.politicalBeats.length) {
+          const _pbHit = caseProgress.politicalBeatsHit || [];
+          const _hatBeweis = ['schmuggelroute_belegt', 'wahler_verantwortlich', 'im_anker_identifiziert'].some(id => _pbHit.indexOf(id) !== -1);
+          const _aktenSicher = _pbHit.indexOf('akten_gesichert') !== -1;
+          const _margareteSicher = _pbHit.indexOf('margarete_gesichert') !== -1;
+          const _sicherungFehlt = !_aktenSicher || !_margareteSicher;
+          // Nur drängen wenn Karl schon Beweise hat, aber die Sicherung fehlt, und der Fall reift.
+          if (_hatBeweis && _sicherungFehlt && sceneCounter >= 45) {
+            if (sceneCounter >= 60) {
+              recap += `\n\nABSCHLUSS-DRUCK (POLITISCH, HOCH): Das Netz zieht sich zu. Karl hat die Beweise (Schmuggelroute, Wahlers Verantwortung), aber sie sind noch nicht in Sicherheit. Noch ein Umweg und Wahler bereinigt die Route, Margarete verschwindet aus den Akten. In DIESER oder der naechsten Szene MUSS mindestens eine konkrete Abschluss-Option erscheinen: Beweise an Vera Lindqvist / RIAS / Kommissar Roth uebergeben, ODER Margarete an einen sicheren Ort bringen. Die Optionen A-D sollen alle in Richtung Sicherung/Uebergabe zielen, nur im Stil variierend.`;
+            } else if (sceneCounter >= 55) {
+              recap += `\n\nABSCHLUSS-PRIORITAET (POLITISCH): Karl hat genug Beweise zusammen. Jetzt fehlt die Sicherung. Biete in dieser Szene mindestens einen klaren Weg an: Akten an Vera/RIAS/Roth uebergeben oder kopieren/verstecken, ODER Margarete sichern. ${_margareteSicher ? '' : 'Margaretes Schicksal ist noch offen - das ist der Schluessel. '}${_aktenSicher ? '' : 'Die Akten sind noch nicht in Sicherheit. '}Lenke sanft, aber spuerbar zum Abschluss.`;
+            } else {
+              recap += `\n\nABSCHLUSS-HINWEIS (POLITISCH, dezent): Karl hat starke Spuren, aber ohne sichere Uebergabe (Vera Lindqvist, RIAS, Kommissar Roth) bleiben die Akten nur Papier in seiner Tasche. Du darfst - musst nicht - eine Option andeuten, die in Richtung Sicherung oder Uebergabe weist. Subtil.`;
+            }
+          }
+        }
+      } catch (e) { /* eskalationskorridor optional */ }
     } else if (gameDay >= 2 && sceneCounter >= 6) {
       // v6.74: AUCH in nicht-politischen Faellen kann die Stasi-Atmosphaere praesent sein,
       // wenn Karl im Ostsektor (Hackescher Markt) viel herumfaehrt. Subtil, kein Zugriff.
@@ -21448,7 +21474,7 @@ async function chooseOption(option) {
       const _romRng = (typeof botWasEverActive !== 'undefined' && botWasEverActive && typeof botRng === 'function') ? botRng() : Math.random();
       const offen = _romRng < 0.70;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.287] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.289] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -21490,7 +21516,7 @@ async function chooseOption(option) {
         || (typeof romanticTension === 'number' && romanticTension >= 3);
       if (_offen && _annaeherung && !nachtMitFrau) {
         nachtMitFrau = _frau;
-        console.log('[Schatten v7.12.287] NACHT MIT FRAU verbracht:', _frau);
+        console.log('[Schatten v7.12.289] NACHT MIT FRAU verbracht:', _frau);
         if (typeof diag === 'function') diag('state', 'Nacht mit ' + _frau + ' verbracht (offene Romance + Übernachtung) - für Fail-Spitze gemerkt');
       }
     } catch (e) {}
@@ -21843,7 +21869,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.287] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.289] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -23299,7 +23325,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           } else if (!tensionHighEnoughForArrest && folterSceneCount >= custodyReleaseFloor) {
             // STILLER RELEASE: nur noch als Notventil bei langem Drift (5+ Sz). Karl ist
             // faktisch frei (KI erzaehlt ihn lange ohne Stasi-Kontext), System zieht nach.
-            console.warn('[Schatten v7.12.287] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
+            console.warn('[Schatten v7.12.289] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet');
             setCustodyState(false, 'stiller-release');
           } else if (!tensionHighEnoughForArrest) {
@@ -23315,7 +23341,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.287] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.289] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -23845,7 +23871,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof diag === 'function') {
           diag('state', '⚡ NOTFLUCHT GELUNGEN - Karl frei + 4 Sz Gnadenfrist, Stasi-Tension ' + prevTension + ' -> 3 (gesucht, aber nicht sofort wieder greifbar)');
         }
-        console.log('[Schatten v7.12.287] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
+        console.log('[Schatten v7.12.289] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
         // v7.11.56: Toast bei Erfolg - Spieler hat geklickt und soll Wuerfel-
         // Ergebnis direkt sehen, nicht nur narrative Andeutungen.
         if (typeof showProgressToast === 'function') {
@@ -25913,8 +25939,12 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         // am Hard-Cap NIEMALS einen zufaelligen storyFacts-Taeter "ueberfuehren". Erfolg NUR
         // mit einem KONKRETEN, nicht-generischen, ueberfuehrten Taeter. Sonst: ehrlich gescheitert.
         const _mVerd = (caseProgress.tatverdaechtiger || '').trim();
+        // v7.12.289 (Source-Lektorat): isPlausibleResponsibleName statt nur !generic - selbe
+        // robuste Plausibilität wie determineConclusionKind. Fallback auf alte Logik wenn Fn fehlt.
         const _mValid = caseProgress.ueberfuehrt && _mVerd
-          && !(typeof isGenericPersonName === 'function' && isGenericPersonName(_mVerd));
+          && (typeof isPlausibleResponsibleName === 'function'
+              ? isPlausibleResponsibleName(_mVerd, 'mord')
+              : !(typeof isGenericPersonName === 'function' && isGenericPersonName(_mVerd)));
         if (_mValid) {
           caseProgress.klientGesprochen = true;
           caseProgress.istGelöst = true;
@@ -26371,7 +26401,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.287] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.289] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
@@ -26610,7 +26640,12 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           let _plausM = !_genM;
           if (_plausM && caseSetup && Array.isArray(caseSetup.setupCast)) {
             try {
-              const _ceM = caseSetup.setupCast.find(c => c && c.name && c.name.toLowerCase().split(/\s+/).filter(w => w.length >= 4).some(t => _vM.toLowerCase().includes(t)));
+              // v7.12.289 (Source-Lektorat): sameNamedPerson statt Token-Split (alte Goerke/Brandt-Falle).
+              const _ceM = caseSetup.setupCast.find(c => c && c.name && (
+                typeof sameNamedPerson === 'function'
+                  ? sameNamedPerson(_vM, c.name)
+                  : c.name.toLowerCase().split(/\s+/).filter(w => w.length >= 4).some(t => _vM.toLowerCase().includes(t))
+              ));
               if (_ceM) {
                 const _tM = (_ceM.tag || '').toUpperCase();
                 const _rM = (_ceM.rolle || '').toLowerCase();
