@@ -2848,7 +2848,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.241</div>
+    <div class="start-version">Schatten v7.12.243</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3012,7 +3012,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.241</span>
+    <span>Schatten v7.12.243</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5607,7 +5607,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.241';
+window.SCHATTEN_VERSION = 'v7.12.243';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -13447,7 +13447,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.241] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.243] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -14405,6 +14405,46 @@ function renderOptions(scene) {
       chooseOption(overnightOpt);
     });
     (typeof topActions !== 'undefined' ? topActions : list).appendChild(overnightBtn);
+  }
+
+  // v7.12.242: AUSGEGRAUTER ROMANCE-HINWEIS. Problem (User-Befund + Log-Analyse manueller Run 0922):
+  // Der "Näher kommen"/"Nacht verbringen"-Button verschwindet je nach Szene komplett, ohne Erklärung -
+  // das wirkt wie ein Bug, obwohl die Romance lebt. Reale Verschwinde-Gründe aus dem Log: (a) Figur
+  // gerade nicht in der Szene, (b) Spannung zu hoch (Action), (c) Tension auf Maximum (5), aber es ist
+  // Tag -> "Nacht verbringen" erst abends. Wenn eine Romance ETABLIERT ist (Tension>=2 ODER schon mal
+  // empfänglich gewürfelt) und KEIN Romance-Button gezeigt wird, zeigen wir einen ausgegrauten Hinweis
+  // mit dem konkreten Grund. Rein informativ, nicht klickbar - die Mechanik bleibt unverändert.
+  const _romanceEtabliert = (romCurrentTension >= 2)
+    || (romanceNpcInScene && romanceReceptive[romanceNpcInScene] === true);
+  const _keinRomanceButtonGezeigt = !showRomanceButton && !showOvernightButton;
+  if (_romanceEtabliert && _keinRomanceButtonGezeigt && !romanceBlockedByCustody) {
+    // Grund bestimmen (Reihenfolge = Priorität)
+    let _romHintText = null;
+    const _npcName = romanceNpcInScene || (() => {
+      // Name der etablierten Romance-Figur auch wenn gerade nicht präsent
+      try {
+        const e = (caseSetup && caseSetup.setupCast || []).find(c => (c.tag === 'ROMANCE' || c.tagExtra === 'ROMANCE'));
+        return e ? e.name : null;
+      } catch (x) { return null; }
+    })();
+    if (!romanceNpcInScene) {
+      _romHintText = (_npcName || 'Die Romanze') + ' ist gerade nicht hier';
+    } else if (romanceNpcRejected) {
+      _romHintText = null; // abgewiesen -> bewusst KEIN Hinweis (Romance ist beendet)
+    } else if (romanceBlockedBySpannung) {
+      _romHintText = 'Zu gefährlich für Nähe gerade – warte, bis es ruhiger wird';
+    } else if (romCurrentTension >= 4 && !isAbendOderNacht) {
+      _romHintText = 'Für die Nacht mit ' + escapeHtml(_npcName || 'ihr') + ' – am Abend';
+    } else if (romanticClicksSinceProgress >= 3) {
+      _romHintText = 'Die Nähe braucht einen Moment';
+    }
+    if (_romHintText) {
+      const hintEl = document.createElement('div');
+      hintEl.className = 'romance-hint-disabled';
+      hintEl.style.cssText = 'opacity:0.42;font-style:italic;font-size:0.82em;padding:6px 10px;margin:2px 0;border-left:2px solid rgba(200,140,160,0.35);color:#c89ca8;';
+      hintEl.innerHTML = '♥ ' + _romHintText;
+      (typeof topActions !== 'undefined' ? topActions : list).appendChild(hintEl);
+    }
   }
 
   // v7.11.0: FALL LOESEN-Button (System-Backup)
@@ -20627,7 +20667,7 @@ async function chooseOption(option) {
       const _romRng = (typeof botWasEverActive !== 'undefined' && botWasEverActive && typeof botRng === 'function') ? botRng() : Math.random();
       const offen = _romRng < 0.70;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.241] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.243] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -21006,7 +21046,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.241] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.243] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -22409,7 +22449,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           } else if (!tensionHighEnoughForArrest && folterSceneCount >= custodyReleaseFloor) {
             // STILLER RELEASE: nur noch als Notventil bei langem Drift (5+ Sz). Karl ist
             // faktisch frei (KI erzaehlt ihn lange ohne Stasi-Kontext), System zieht nach.
-            console.warn('[Schatten v7.12.241] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
+            console.warn('[Schatten v7.12.243] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet');
             setCustodyState(false, 'stiller-release');
           } else if (!tensionHighEnoughForArrest) {
@@ -22425,7 +22465,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.241] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.243] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -22953,7 +22993,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof diag === 'function') {
           diag('state', '⚡ NOTFLUCHT GELUNGEN - Karl frei + 4 Sz Gnadenfrist, Stasi-Tension ' + prevTension + ' -> 3 (gesucht, aber nicht sofort wieder greifbar)');
         }
-        console.log('[Schatten v7.12.241] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
+        console.log('[Schatten v7.12.243] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
         // v7.11.56: Toast bei Erfolg - Spieler hat geklickt und soll Wuerfel-
         // Ergebnis direkt sehen, nicht nur narrative Andeutungen.
         if (typeof showProgressToast === 'function') {
@@ -25310,7 +25350,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.241] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.243] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
