@@ -2864,7 +2864,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.265</div>
+    <div class="start-version">Schatten v7.12.268</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3028,7 +3028,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.265</span>
+    <span>Schatten v7.12.268</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -3896,6 +3896,7 @@ Du bekommst pro Anfrage eine Liste der NPCs die PHYSISCH bei Karl sind. Diese Pe
   - rolle: Was die Person FUER KARL ist, z.B. "Klientin", "Verfolger", "Kommissar", "Informant", "Zeugin", "Verdaechtiger"
   - beziehung: Wie die Person zu wichtigen Story-Figuren steht, z.B. "Mutter des Vermissten", "Kollege des Opfers", "Witwe von Person X". Wenn die KI noch nicht weiss wer die Person ist: "unbekannt" eintragen. Wenn keine Beziehung zu einer anderen Story-Figur: leer lassen.
   - fahrzeug (OPTIONAL): Wenn die Person mit eigenem Fahrzeug ankommt, hier eintragen: "BMW R51 mit Beiwagen", "schwarzer Opel Kapitaen", "Fahrrad" etc. Wenn ohne Fahrzeug: leer lassen.
+- PERSONEN IM RAUM (WICHTIG): In "personenImRaum" traegst du die Namen ALLER Personen ein, die in DIESER Szene physisch bei Karl sind und mit ihm interagieren koennen - nicht nur neu hinzugekommene, sondern auch schon bekannte, die weiterhin anwesend sind. Beispiel: Karl spricht in Vossbergs Wohnung mit Vossberg und der Cellistin Liesel -> personenImRaum: ["Egon Vossberg", "Liesel Forsthuber"]. Nutze die KONKRETEN NAMEN (nicht "die Cellistin"). NICHT eintragen: Tote, Vermisste, Abwesende, Personen ueber die nur GESPROCHEN wird, der Klient wenn er nicht physisch dabei ist. Wenn Karl allein ist: leere Liste. Dieses Feld ist wichtig, damit das Spiel weiss, wer gerade im Raum ist.
 - KLIENT-ETABLIERUNG: Wenn in der ersten Szene ein Klient sich vorstellt (Name + Auftrag), MUSST du diese Person in cast_hinzugefuegt eintragen mit ihrem konkreten Namen. Wenn der Klient eine Person sucht (vermisst), MUSST du die GESUCHTE Person mit konkretem Namen in der storyFacts erwaehnen (aber NICHT in cast_hinzugefuegt - die ist vermisst und nicht anwesend). Vermeide Eintraege wie "Unbekannt" oder "Klient" als Name - der Klient hat sich in der Szene vorgestellt, also nutze seinen wirklichen Namen.
 - ROLLEN- UND BEZIEHUNGS-KONSISTENZ IST PFLICHT: Wenn eine Person mit einer Rolle/Beziehung eingetragen wurde (z.B. "Informant" oder "Schwester des Vermissten"), MUSS sie in allen folgenden Szenen dieselbe Rolle und Beziehung behalten. Konkret: Wer als "Motorradfahrer" / "Informant" eingefuehrt wurde, ist NIE in der naechsten Szene "Volkspolizist mit Ausweis". Wer als "Schwester" eingefuehrt wurde, ist NIE Ehefrau. Wenn eine Person ihre wahre Identitaet enthuellt: das ist eine EXPLIZITE Story-Wendung im Erzaehltext ("er zieht einen VP-Ausweis - der angebliche Informant war die ganze Zeit Polizist"), nicht ein stilles Umschreiben des Rollen-Feldes.
 - FAHRZEUG-KONSISTENZ: Wer mit eigenem Fahrzeug ankommt, fluechtet/geht NUR mit diesem eigenen Fahrzeug. Ein NPC der mit Motorrad kommt, springt nicht in Karls Auto. Niemand klaut Karls Opel - er gehoert Karl und nur Karl hat den Schluessel. Wenn ein NPC zurueckkommt: mit demselben Fahrzeug wie zuvor.
@@ -3921,6 +3922,7 @@ JSON-Output ist Pflicht (kein Markdown, kein Text drumherum):
   "inventar_entfernt": [],
   "cast_hinzugefuegt": [],
   "cast_entfernt": [],
+  "personenImRaum": [],
   "indiz_neu": [],
   "indiz_verbindung": "",
   "npc_kernhinweis": [],
@@ -5696,7 +5698,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.265';
+window.SCHATTEN_VERSION = 'v7.12.268';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -6749,6 +6751,7 @@ function isActivePriceVerified() {
 // wird pro NPC-Name gemerkt. JA -> weitere Klicks steigern Romantik wie gehabt.
 // NEIN -> NPC weist ab, "Naeher kommen" verschwindet dauerhaft fuer diesen NPC.
 let romanceReceptive = {};   // npcName -> true (offen) | false (abgewiesen)
+let romanceNpcLastSeenScene = -99;  // v7.12.266: Szene-Nr, in der die Romance-Figur zuletzt präsent war (für "nicht hier"-Hinweis-Gating)
 let romanceRejected = {};    // npcName -> true wenn abgewiesen (Button dauerhaft weg)
 let romanceClimaxed = {};    // v7.12.28: npcName -> true wenn die Nacht mit dieser Person verbracht wurde - Folge-Annaeherungen wuerfeln neu
 
@@ -9037,8 +9040,55 @@ function showGameOver() {
   if (typeof clearSavedGame === 'function') clearSavedGame();
 }
 
-// Win-Screen: Fall geloest
-// v6.95: Bei Fall-Aufloesung Karls Standardausruestung wieder herstellen.
+// v7.12.267 (User-Wunsch, Lektorat P0): FALLBACK-ABSCHLUSSPROSA. Wenn die KI-Abschluss-Szene
+// (klient_berichtet) wegen Hänger/Timeout NICHT ausgespielt wurde, sah der Spieler nur den nackten
+// mechanischen Endscreen ("wieder keine Abschlussszene"). Diese Funktion baut aus den bekannten
+// Laufzeit-Fakten (Täter, Klient, Falltyp) einen kurzen Bericht-Absatz - bewusst als DISTANZ-/
+// Telefonbericht formuliert (KEIN Ort, KEINE Teleportation der Klientin in einen fremden Raum -
+// vermeidet den State-Widerspruch "Wilhelmine in Vossbergs Wohnung"). Erfindet nichts: nutzt nur
+// tatverdaechtiger, clientProfile.name, caseType. Wird im Win-Screen als Bericht-Zeile gezeigt.
+function buildFallbackAbschlussProsa() {
+  try {
+    const ct = (caseSetup && caseSetup.caseType) || '';
+    const klient = (clientProfile && clientProfile.name) || '';
+    const verd = (caseProgress && caseProgress.tatverdaechtiger) || '';
+    // TARGET-Name (Opfer/Vermisster/Diebesgut) aus Setup
+    let tgt = '';
+    try {
+      if (caseSetup && Array.isArray(caseSetup.setupCast)) {
+        const _t = caseSetup.setupCast.find(c => c && c.tag === 'TARGET');
+        if (_t && _t.name) tgt = _t.name.split(/\s+/)[0]; // Vorname reicht im Bericht
+      }
+    } catch (e) {}
+    // Wer wird berichtet? Klient-Vorname (oder neutral). Dativ ohne "an" (klingt natürlicher).
+    const klientKurz = klient ? klient.split(/\s+/)[0] : '';
+    const wemDat = klientKurz ? escapeHtml(klientKurz) : 'der Klientschaft';
+    const verdKurz = verd ? escapeHtml(verd) : '';
+    // Kern je nach Falltyp - knapp, distanziert, faktenbasiert.
+    let kern;
+    if (ct === 'mord') {
+      kern = verdKurz
+        ? ('Karl übermittelt ' + wemDat + ' seinen Bericht: ' + verdKurz + ' ist überführt. Die Beweise liegen vor.')
+        : ('Karl übermittelt ' + wemDat + ' seinen Bericht. Der Fall ist aufgeklärt.');
+    } else if (ct === 'diebstahl') {
+      kern = 'Karl meldet ' + wemDat + ', dass die Sache erledigt ist und das Gesuchte gesichert wurde.';
+    } else if (ct === 'beschatten') {
+      kern = 'Karl meldet ' + wemDat + ', was er beobachtet hat. Der Verdacht ist bestätigt.';
+    } else if (ct === 'vermisst') {
+      kern = (tgt ? ('Karl meldet ' + wemDat + ', dass die Spur zu ' + escapeHtml(tgt) + ' geklärt ist.')
+                  : ('Karl meldet ' + wemDat + ', dass die Suche ein Ende hat.'));
+    } else { // wahrheit/politisch
+      kern = verdKurz
+        ? ('Karl legt ' + wemDat + ' dar, was wirklich geschah - und benennt ' + verdKurz + ' als Verantwortlichen.')
+        : ('Karl legt ' + wemDat + ' dar, was wirklich geschah. Die Wahrheit ist belegt.');
+    }
+    return kern;
+  } catch (e) {
+    return null;
+  }
+}
+
+
 // Wenn Karl im Verlauf seine Walther verloren hat (durch Stasi-Beschlagnahme,
 // Hinterhof-Ueberfall, etc.) und der Fall jetzt geloest ist, wird die Walther
 // narrativ als "spaeter wiedergefunden" wieder eingefuegt - sie ist Karls
@@ -9481,11 +9531,20 @@ function showCaseSolved() {
       'Der Korn schmeckt nach nichts. Aber er wärmt.'
     ];
     const _flavor = _flavorPool[Math.floor(Math.random() * _flavorPool.length)];
+    // v7.12.267: Bericht-Absatz aus Fakten (Rettung wenn die KI-Abschluss-Szene wegen
+    // Hänger/Timeout nie ausgespielt wurde). Bei earlyAbort weggelassen - da gibt es
+    // keinen Abschluss zu berichten.
+    let _berichtZeile = '';
+    if (!earlyAbort) {
+      const _bp = buildFallbackAbschlussProsa();
+      if (_bp) _berichtZeile = '<div class="solved-text" style="margin-top:10px;opacity:0.92;">' + _bp + '</div>';
+    }
     solvedEl.innerHTML = `
       <div class="solved-title">${titleText}</div>
       <div class="solved-text">${mainText}<br>
       ${typeof escapeHtml === 'function' ? escapeHtml(outcomeSentence) : outcomeSentence}<br>
       ${closingText}</div>
+      ${_berichtZeile}
       <div class="solved-text-small">Tag ${gameDay}, Tageszeit: ${TIMES_OF_DAY[gameTimeIdx]}<br>
       ${typeof escapeHtml === 'function' ? escapeHtml(_flavor) : _flavor}</div>
       <button class="solved-button" onclick="resetGame(true)">Neue Ermittlung</button>
@@ -13528,7 +13587,66 @@ function istPersonInSzene(name, scene) {
 // den Romance-Button braucht es ECHTE physische Anwesenheit. Logik: personenImRaum
 // zaehlt immer; im Text zaehlt der Name nur, wenn er NICHT in einem reinen Erwaehnungs-
 // Kontext steht (wohnt/heisst/kennt/Adresse/dritter Stock/erzaehlt von...).
-function istPersonPhysischAnwesend(name, scene) {
+// v7.12.266: GENERISCHE ROLLENWORT-ERKENNUNG. Problem (User-Befund Achterberg, beide Lektorate):
+// Gemini benennt Romance-Figuren oft über ihren Beruf statt den Vornamen ("die dunkelhaarige
+// Cellistin" statt "Liesel"). Die namensbasierte Präsenzprüfung findet sie dann nicht -> Intim-
+// Button gesperrt, "ist nicht hier" obwohl sie redet. Betrifft potentiell alle Romance-NPCs mit
+// prägnanter Rolle (Kellnerin, Krankenschwester, Aktmodell, Sängerin, Ärztin...). Lösung: aus dem
+// rolle-Feld das markante Substantiv ziehen UND nur nutzen, wenn es im Setup EINDEUTIG dieser
+// einen Figur gehört (keine zweite Cellistin). Konservativ: nur als Zusatz-Signal mit Präsenzverb.
+function extractRollenwort(rolle) {
+  if (!rolle || typeof rolle !== 'string') return null;
+  // Erstes "wichtiges" Substantiv: meist die Berufsbezeichnung am Anfang. Wir nehmen das
+  // erste Wort >= 5 Zeichen, das auf -in/-in-typische oder bekannte Rollenendungen passt,
+  // sonst das erste lange Wort. Klein halten - lieber kein Match als ein falscher.
+  const _clean = rolle.toLowerCase()
+    .replace(/\([^)]*\)/g, ' ')          // Klammern raus: "(in der Kunstschule...)"
+    .replace(/[^a-zäöüß\s-]/g, ' ');
+  const _worte = _clean.split(/\s+/).filter(w => w.length >= 5);
+  if (!_worte.length) return null;
+  // Bevorzugt ein Wort mit typischer Personen-Rollen-Endung (-in, -istin, -erin, -frau, -modell, -schwester, -aerztin)
+  const _rollenEndung = /(istin|erin|schwester|aerztin|ärztin|saengerin|sängerin|kellnerin|modell|helferin|korrespondentin|journalistin|cellistin|sekretaerin|sekretärin)$/;
+  const _fuellwort = /^(verdacht|bekannte|kollegin|umfeld|zweite|erste|solo|haupt|ehemalige|frühere|fruehere)$/;
+  // Bindestrich-Komposita zerlegen ("Solo-Cellistin" -> "cellistin", "Saengerin-Kollegin" -> "saengerin").
+  // Den ersten Teil nehmen, der eine Rollenendung hat und kein Füllwort ist; sonst den letzten Nicht-Füllwort-Teil.
+  function _kern(w) {
+    if (w.indexOf('-') === -1) return w;
+    const teile = w.split('-').filter(t => t.length >= 4);
+    const mitEndung = teile.find(t => _rollenEndung.test(t) && !_fuellwort.test(t));
+    if (mitEndung) return mitEndung;
+    const nichtFuell = teile.filter(t => !_fuellwort.test(t));
+    return nichtFuell.length ? nichtFuell[nichtFuell.length - 1] : w;
+  }
+  const _bevorzugt = _worte.map(_kern).find(w => _rollenEndung.test(w) && !_fuellwort.test(w));
+  const _wort = _bevorzugt || _kern(_worte[0]);
+  if (_fuellwort.test(_wort)) {
+    if (!_bevorzugt) return null;
+  }
+  // v7.12.266: Ohne echte Rollenendung nur akzeptieren, wenn es kein Possessiv-Eigenname
+  // ("manfreds") und kein zu generisches Wort ("witwe", "ehefrau") ist. Diese würden sonst
+  // fälschlich als Präsenz-Signal taugen. Mit Rollenendung (cellistin etc.) immer ok.
+  if (!_bevorzugt) {
+    if (/s$/.test(_wort)) return null;  // Possessiv-Eigenname
+    if (/^(witwe|ehefrau|ehemann|frau|mann|nachbarin|nachbar|tante|onkel|cousine)$/.test(_wort)) return null;
+  }
+  return (_wort && _wort.length >= 5) ? _wort : null;
+}
+// Prüft ob ein Rollenwort im aktuellen Setup-Cast EINDEUTIG einer Figur gehört (keine zwei
+// Cellistinnen). Nur dann darf das Rollenwort als Präsenz-Signal für diese Figur zählen.
+function rollenwortIstEindeutig(rollenwort, fuerName) {
+  if (!rollenwort) return false;
+  try {
+    if (!caseSetup || !Array.isArray(caseSetup.setupCast)) return false;
+    let treffer = 0;
+    for (const c of caseSetup.setupCast) {
+      if (!c || !c.rolle) continue;
+      const rw = extractRollenwort(c.rolle);
+      if (rw && rw === rollenwort) treffer++;
+    }
+    return treffer === 1;  // nur eindeutig wenn genau EINE Figur dieses Rollenwort hat
+  } catch (e) { return false; }
+}
+function istPersonPhysischAnwesend(name, scene, rolleHint) {
   if (!name || !scene) return false;
   const _first = String(name).trim().split(/\s+/)[0].toLowerCase();
   if (_first.length < 3) return false;
@@ -13568,6 +13686,22 @@ function istPersonPhysischAnwesend(name, scene) {
   // Ergänzt: huscht/zögert/drückt/reicht/übergibt/hält/greift/wendet/atmet/lehnt/weicht/schweigt.
   const _praesenz = new RegExp('(vor dir|neben dir|sitzt|steht|blickt|sieht dich|tritt|legt|nimmt|beruehrt|berührt|oeffnet|öffnet|laechelt|lächelt|fluestert|flüstert|dreht sich|drueckt|drückt|reicht|haelt|hält|greift|zoegert|zögert|huscht|wendet sich|lehnt sich|weicht|atmet)[^.]{0,30}' + _first + '|' + _first + '[^.]{0,40}(vor dir|neben dir|sitzt|steht|blickt|sieht dich|tritt ein|legt|nimmt|beruehrt|berührt|oeffnet|öffnet|laechelt|lächelt|fluestert|flüstert|sagt|fragt|antwortet|lehnt sich|kommt naeher|kommt näher|zieht dich|nickt|seufzt|drueckt|drückt|reicht|haelt|hält|greift|zoegert|zögert|huscht|wendet|atmet|schweigt|fluestert)', 'i');
   if (_praesenz.test(_txt)) return true;
+  // v7.12.266: ROLLENWORT-FALLBACK. Name nicht gefunden - aber wenn die KI die Figur über
+  // ihre (eindeutige) Rolle benennt ("die dunkelhaarige Cellistin steht vor dir"), zählt das
+  // als Präsenz. NUR mit klarem Präsenzverb (gleiche Strenge wie beim Namen) und NUR wenn das
+  // Rollenwort im Setup eindeutig dieser Figur gehört. Sonst würde der Intim-Button zu früh
+  // erscheinen (bloße Erwähnung). rolleHint wird vom Aufrufer aus dem setupCast übergeben.
+  try {
+    const _rw = extractRollenwort(rolleHint);
+    if (_rw && _txt.includes(_rw) && rollenwortIstEindeutig(_rw, name)) {
+      // reine Erwähnung des Rollenworts ausschliessen (wie beim Namen)
+      const _rwErwaehnung = new RegExp('(\\bvon|ueber|über|nach|wegen|fuer|für)\\s+(der|die|das|den|dem)?\\s*' + _rw, 'i');
+      if (!_rwErwaehnung.test(_txt)) {
+        const _rwPraesenz = new RegExp('(vor dir|neben dir|sitzt|steht|blickt|sieht dich|tritt|legt|nimmt|beruehrt|berührt|oeffnet|öffnet|laechelt|lächelt|fluestert|flüstert|dreht sich|drueckt|drückt|reicht|haelt|hält|greift|zoegert|zögert|huscht|wendet sich|lehnt sich|weicht|atmet)[^.]{0,30}' + _rw + '|' + _rw + '[^.]{0,40}(vor dir|neben dir|sitzt|steht|blickt|sieht dich|tritt ein|legt|nimmt|beruehrt|berührt|oeffnet|öffnet|laechelt|lächelt|fluestert|flüstert|sagt|fragt|antwortet|lehnt sich|kommt naeher|kommt näher|zieht dich|nickt|seufzt|drueckt|drückt|reicht|haelt|hält|greift|zoegert|zögert|huscht|wendet|atmet|schweigt)', 'i');
+        if (_rwPraesenz.test(_txt)) return true;
+      }
+    }
+  } catch (e) { /* Rollenwort-Fallback optional - nie blockieren */ }
   // Default bei blossem Namen ohne klaren Kontext: vorsichtig NEIN fuer Romance
   return false;
 }
@@ -13652,7 +13786,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.265] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.268] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -13947,11 +14081,30 @@ function renderOptions(scene) {
         const setupEntry = caseSetup.setupCast.find(c => c && c.name &&
           c.name.toLowerCase() === npcName.toLowerCase());
         if (setupEntry && (setupEntry.tag === 'ROMANCE' || setupEntry.tagExtra === 'ROMANCE')) {
-          if (istPersonPhysischAnwesend(setupEntry.name, scene)) {
+          if (istPersonPhysischAnwesend(setupEntry.name, scene, setupEntry.rolle)) {
             romanceNpcInScene = setupEntry.name;
             break;
           }
         }
+      }
+      // v7.12.266: FALLBACK. Die KI nimmt die Romance-Figur manchmal NICHT in cast/
+      // personenImRaum auf, sondern benennt sie nur per Rolle im Text ("die Cellistin
+      // steht vor dir"). Dann findet die cast-Schleife oben nichts. Zweiter Durchlauf
+      // direkt über die Setup-Romance-Figuren mit Rollenwort-Erkennung.
+      if (!romanceNpcInScene) {
+        for (const c of caseSetup.setupCast) {
+          if (!c || !c.name || !(c.tag === 'ROMANCE' || c.tagExtra === 'ROMANCE')) continue;
+          if (istPersonPhysischAnwesend(c.name, scene, c.rolle)) {
+            romanceNpcInScene = c.name;
+            if (typeof diag === 'function') diag('info', 'Romance-Präsenz über ROLLENWORT erkannt (' + (extractRollenwort(c.rolle) || '?') + ') - ' + c.name + ' war nicht namentlich im Text/Cast');
+            break;
+          }
+        }
+      }
+      // v7.12.266: Wenn die Romance-Figur jetzt präsent ist, Szene-Nr merken (für das
+      // Gating des "nicht hier"-Hinweises - der soll nur kurz nach letzter Präsenz kommen).
+      if (romanceNpcInScene && typeof sceneCounter === 'number') {
+        romanceNpcLastSeenScene = sceneCounter;
       }
     }
   } catch (e) { /* ignore */ }
@@ -14636,7 +14789,17 @@ function renderOptions(scene) {
       } catch (x) { return null; }
     })();
     if (!romanceNpcInScene) {
-      _romHintText = (_npcName || 'Die Romanze') + ' ist gerade nicht hier';
+      // v7.12.266: "nicht hier" war ein nerviger Dauerhinweis (blieb auch am nächsten
+      // Morgen im Büro stehen, wo die Romance-Figur logisch gar nicht sein kann). Diesen
+      // Hinweis NUR zeigen, wenn sie plausibel gleich wieder auftauchen könnte - d.h. sie
+      // war in einer der letzten Szenen präsent (romanceNpcLastSeenScene nah). Sonst gar
+      // kein Hinweis (Abwesenheit ist dann selbsterklärend durch Ort/Tag).
+      const _kuerzlichGesehen = (typeof romanceNpcLastSeenScene === 'number')
+        && (typeof sceneCounter === 'number')
+        && (sceneCounter - romanceNpcLastSeenScene <= 1);
+      _romHintText = _kuerzlichGesehen
+        ? ((_npcName || 'Die Romanze') + ' ist gerade nicht hier')
+        : null;
     } else if (romanceNpcRejected) {
       _romHintText = null; // abgewiesen -> bewusst KEIN Hinweis (Romance ist beendet)
     } else if (romanceBlockedBySpannung) {
@@ -18650,6 +18813,7 @@ async function startGame() {
   pendingRomancePushScene = -99; // v7.12.207: ausstehende Push-Verifikation zuruecksetzen
   lastRomanceTensionUpScene = -99; // v7.12.210: Grace-Schonfrist zuruecksetzen
   peakRomanticTension = 0; // v7.12.216: Peak-Tracker zuruecksetzen
+  romanceNpcLastSeenScene = -99; // v7.12.266: Last-Seen-Tracker zuruecksetzen
   peakStasiTension = 0;
   karlMuedeSignalScene = -99; // v7.12.112: Müdigkeits-Signal zuruecksetzen
   romanceReceptive = {};   // v7.12.17: Wuerfel-Ergebnisse zuruecksetzen
@@ -20836,7 +21000,7 @@ async function chooseOption(option) {
       const _romRng = (typeof botWasEverActive !== 'undefined' && botWasEverActive && typeof botRng === 'function') ? botRng() : Math.random();
       const offen = _romRng < 0.70;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.265] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.268] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -21216,7 +21380,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.265] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.268] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -22624,7 +22788,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           } else if (!tensionHighEnoughForArrest && folterSceneCount >= custodyReleaseFloor) {
             // STILLER RELEASE: nur noch als Notventil bei langem Drift (5+ Sz). Karl ist
             // faktisch frei (KI erzaehlt ihn lange ohne Stasi-Kontext), System zieht nach.
-            console.warn('[Schatten v7.12.265] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
+            console.warn('[Schatten v7.12.268] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet');
             setCustodyState(false, 'stiller-release');
           } else if (!tensionHighEnoughForArrest) {
@@ -22640,7 +22804,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.265] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.268] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -23170,7 +23334,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof diag === 'function') {
           diag('state', '⚡ NOTFLUCHT GELUNGEN - Karl frei + 4 Sz Gnadenfrist, Stasi-Tension ' + prevTension + ' -> 3 (gesucht, aber nicht sofort wieder greifbar)');
         }
-        console.log('[Schatten v7.12.265] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
+        console.log('[Schatten v7.12.268] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
         // v7.11.56: Toast bei Erfolg - Spieler hat geklickt und soll Wuerfel-
         // Ergebnis direkt sehen, nicht nur narrative Andeutungen.
         if (typeof showProgressToast === 'function') {
@@ -24082,6 +24246,53 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         } else {
           cast.push(entry);
         }
+      }
+    }
+    // v7.12.268 (Cast:0-Fix): personenImRaum als ZUSÄTZLICHE Cast-Quelle. Gemini meldet bekannte
+    // NPCs oft NICHT in cast_hinzugefuegt ("schon da") -> cast blieb leer/veraltet -> KI-Recap
+    // ohne Personen -> Kontinuitäts-Drift. personenImRaum (v1.5 Schema) listet ALLE Anwesenden.
+    // Wir ergänzen daraus nur Namen, die noch NICHT im cast sind. Defensiv: leeres/fehlendes Feld
+    // = keine Änderung. Tote/Vermisste werden gefiltert, Setup-Tag/Rolle angereichert.
+    if (Array.isArray(scene.personenImRaum) && scene.personenImRaum.length > 0) {
+      for (const pRaw of scene.personenImRaum) {
+        const pName = (typeof pRaw === 'string' ? pRaw : (pRaw && pRaw.name) || '').trim();
+        if (!pName || pName.length < 2) continue;
+        const pLow = pName.toLowerCase();
+        // Schon im Cast? (Fuzzy: Substring in beide Richtungen, wie der Haupt-Dedup)
+        const schonDa = cast.some(c => {
+          const cn = ((c.name || c) + '').toLowerCase().trim();
+          if (!cn) return false;
+          return cn === pLow || cn.includes(pLow) || pLow.includes(cn);
+        });
+        if (schonDa) continue;
+        // Bekannt tot/vermisst? Dann NICHT als anwesend aufnehmen.
+        if (mentionedDeadOrAbsent[pLow]) {
+          diag('filter', 'personenImRaum: ' + pName + ' ist bekannt tot/vermisst - nicht in Cast aufgenommen');
+          continue;
+        }
+        // Setup-Tag/Rolle anreichern, falls die Person im Setup steht.
+        let pTag = null, pTagExtra = null, pRolle = '', pBez = '';
+        try {
+          if (caseSetup && Array.isArray(caseSetup.setupCast)) {
+            const se = caseSetup.setupCast.find(c => {
+              if (!c || !c.name) return false;
+              const nLow = c.name.toLowerCase();
+              return nLow === pLow || nLow.includes(pLow) || pLow.includes(nLow);
+            });
+            if (se) {
+              pTag = se.tag || null; pTagExtra = se.tagExtra || null;
+              pRolle = se.rolle || ''; pBez = se.beziehung || '';
+              // Toten/vermissten TARGET nicht als anwesend werten (Mord-Opfer etc.)
+              const _rl = (pRolle + ' ' + pBez).toLowerCase();
+              if (/opfer|verstorben|\btot\b|leiche|vermisst|verschwunden/.test(_rl)) {
+                diag('filter', 'personenImRaum: ' + pName + ' ist laut Setup Opfer/vermisst - nicht aufgenommen');
+                continue;
+              }
+            }
+          }
+        } catch (e) { /* anreicherung optional */ }
+        cast.push({ name: pName, rolle: pRolle, beziehung: pBez, fahrzeug: '', tag: pTag, tagExtra: pTagExtra });
+        diag('state', 'Cast aus personenImRaum ergänzt: ' + pName + (pTag ? ' [' + pTag + ']' : '') + ' (war nicht in cast_hinzugefuegt)');
       }
     }
     if (Array.isArray(scene.cast_entfernt) && scene.cast_entfernt.length > 0) {
@@ -25546,7 +25757,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.265] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.268] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
@@ -27287,6 +27498,7 @@ function saveGameState() {
       romanticTension: (typeof romanticTension === 'number' ? romanticTension : 0),
       lastRomanceNpcName: (typeof lastRomanceNpcName === 'string' ? lastRomanceNpcName : ''),
       romanceReceptive: (typeof romanceReceptive === 'object' && romanceReceptive) ? romanceReceptive : {},
+      romanceNpcLastSeenScene: (typeof romanceNpcLastSeenScene === 'number') ? romanceNpcLastSeenScene : -99,
       romanceRejected: (typeof romanceRejected === 'object' && romanceRejected) ? romanceRejected : {},
       romanceClimaxed: (typeof romanceClimaxed === 'object' && romanceClimaxed) ? romanceClimaxed : {},
       stasiTension: stasiTension,
@@ -27445,6 +27657,7 @@ function restoreGameState() {
     romanticTension = (typeof snap.romanticTension === 'number') ? snap.romanticTension : 0;
     lastRomanceNpcName = (typeof snap.lastRomanceNpcName === 'string') ? snap.lastRomanceNpcName : '';
     romanceReceptive = (snap.romanceReceptive && typeof snap.romanceReceptive === 'object') ? snap.romanceReceptive : {};
+    romanceNpcLastSeenScene = (typeof snap.romanceNpcLastSeenScene === 'number') ? snap.romanceNpcLastSeenScene : -99;
     romanceRejected = (snap.romanceRejected && typeof snap.romanceRejected === 'object') ? snap.romanceRejected : {};
     romanceClimaxed = (snap.romanceClimaxed && typeof snap.romanceClimaxed === 'object') ? snap.romanceClimaxed : {};
     if (typeof karlHunger !== 'undefined') karlHunger = snap.karlHunger || 0;
