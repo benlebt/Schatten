@@ -1730,6 +1730,20 @@
   .option-btn-resolve:hover {
     opacity: 1;
   }
+  /* v7.12.245: DOMINANTER Resolve-Button (Fall seit mehreren Szenen abschlussreif).
+     Leuchtender goldener Rand + sanfter Puls - macht den Abschluss deutlich sichtbar,
+     ohne automatisch zu lösen. Spieler entscheidet weiter selbst. */
+  .option-btn-resolve-dominant {
+    opacity: 1 !important;
+    border-left-color: rgba(255,205,120,0.95) !important;
+    background: rgba(220,165,90,0.10) !important;
+    box-shadow: 0 0 0 1px rgba(255,205,120,0.35), 0 0 14px rgba(220,165,90,0.25);
+    animation: resolvePulse 2.4s ease-in-out infinite;
+  }
+  @keyframes resolvePulse {
+    0%, 100% { box-shadow: 0 0 0 1px rgba(255,205,120,0.30), 0 0 10px rgba(220,165,90,0.18); }
+    50%      { box-shadow: 0 0 0 1px rgba(255,205,120,0.55), 0 0 18px rgba(220,165,90,0.38); }
+  }
   .option-btn-resolve .option-id {
     color: rgba(255,205,120,0.85);
   }
@@ -2632,7 +2646,8 @@
       <label class="autoplay-label">Modell:</label>
       <select id="debug-model-select" class="autoplay-input" onchange="setDebugPreferredModel(this.value)">
         <option value="">Standard (3.1 Flash-Lite)</option>
-        <option value="gemini-3-flash-preview">Test: Gemini 3 Flash Preview</option>
+        <option value="gemini-3.1-flash">Test: Gemini 3.1 Flash</option>
+        <option value="gemini-3.1-pro">Test: Gemini 3.1 Pro</option>
       </select>
     </div>
     <div class="settings-info settings-hint" id="debug-model-hint" style="margin-top:4px;">Nur fuer Tests. Failover-Chain bleibt aktiv.</div>
@@ -2848,7 +2863,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.243</div>
+    <div class="start-version">Schatten v7.12.248</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3012,7 +3027,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.243</span>
+    <span>Schatten v7.12.248</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5607,7 +5622,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.243';
+window.SCHATTEN_VERSION = 'v7.12.248';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -6602,12 +6617,32 @@ let runCostTracker = { requests: 0, inputUncached: 0, inputCached: 0, output: 0 
 function resetRunCostTracker() {
   runCostTracker = { requests: 0, inputUncached: 0, inputCached: 0, output: 0 };
 }
+// v7.12.247: Preise pro Modell (USD pro 1M Tokens). Flash-Lite ist verifiziert (Billing).
+// Flash + Pro sind PLATZHALTER (Google-Listenpreise grob, vom User noch zu verifizieren) -
+// das Kosten-Tracking im Debug-Test zeigt damit eine GROBE Schätzung, klar gekennzeichnet.
+const MODEL_PRICES_USD = {
+  'gemini-3.1-flash-lite': { inUncached: 0.25, inCached: 0.025, out: 1.50, verified: true },
+  'gemini-3.1-flash':      { inUncached: 0.50, inCached: 0.05,  out: 3.00, verified: false }, // PLATZHALTER
+  'gemini-3.1-pro':        { inUncached: 2.50, inCached: 0.25,  out: 10.0, verified: false }, // PLATZHALTER
+};
+function getActivePriceModel() {
+  try {
+    if (window.debugPreferredModel && MODEL_PRICES_USD[window.debugPreferredModel]) return window.debugPreferredModel;
+  } catch (e) {}
+  return 'gemini-3.1-flash-lite';
+}
 function estimateRunCostEUR() {
   const t = runCostTracker;
-  const usd = (t.inputUncached / 1e6) * 0.25
-            + (t.inputCached   / 1e6) * 0.025
-            + (t.output        / 1e6) * 1.50;
+  const p = MODEL_PRICES_USD[getActivePriceModel()] || MODEL_PRICES_USD['gemini-3.1-flash-lite'];
+  const usd = (t.inputUncached / 1e6) * p.inUncached
+            + (t.inputCached   / 1e6) * p.inCached
+            + (t.output        / 1e6) * p.out;
   return usd * 0.92; // grobe USD->EUR-Naeherung
+}
+// Ist der aktuelle Preis verifiziert? (für Kennzeichnung im Export)
+function isActivePriceVerified() {
+  const p = MODEL_PRICES_USD[getActivePriceModel()];
+  return !!(p && p.verified);
 }
 
 
@@ -9566,13 +9601,17 @@ function buildTranscriptText() {
     const cacheRate = totalIn > 0 ? Math.round((t.inputCached / totalIn) * 100) : 0;
     const eur = (typeof estimateRunCostEUR === 'function') ? estimateRunCostEUR() : 0;
     const cent = (eur * 100);
-    out += 'API-KOSTEN DIESER RUN (Schaetzung, gemini-3.1-flash-lite):\n';
+    const _priceModel = (typeof getActivePriceModel === 'function') ? getActivePriceModel() : 'gemini-3.1-flash-lite';
+    const _priceVerified = (typeof isActivePriceVerified === 'function') ? isActivePriceVerified() : true;
+    out += 'API-KOSTEN DIESER RUN (Schaetzung, ' + _priceModel + '):\n';
     out += '  Requests: ' + t.requests + '\n';
     out += '  Input-Tokens: ' + totalIn.toLocaleString('de-DE')
          + ' (davon ' + t.inputCached.toLocaleString('de-DE') + ' gecacht = ' + cacheRate + '%)\n';
     out += '  Output-Tokens: ' + t.output.toLocaleString('de-DE') + '\n';
     out += '  Geschaetzte Kosten: ~' + cent.toFixed(2) + ' Cent (~' + eur.toFixed(4) + ' EUR)\n';
-    out += '  Hinweis: Schaetzung. Hoehere Cache-Rate = guenstiger. Preise Stand Mai 2026.\n';
+    out += _priceVerified
+      ? '  Hinweis: Preise verifiziert (Billing). Hoehere Cache-Rate = guenstiger.\n'
+      : '  ACHTUNG: Preise fuer ' + _priceModel + ' sind PLATZHALTER (noch nicht verifiziert) - Kosten nur grob!\n';
     out += '\n' + '='.repeat(60) + '\n\n';
   }
 
@@ -13356,7 +13395,20 @@ function istPersonPhysischAnwesend(name, scene) {
   // ueber das "sagt"-Praesenzsignal faelschlich als anwesend gilt.
   const _erwaehnungOnly = new RegExp(_first + '\\s+\\w*\\s*(wohnt|wohne|heisst|heißt|kennt|kenne|soll|sei|waere|wäre|arbeitet|erzaehlt|wuerde|würde)|(\\bvon|ueber|über|nach|wegen|fuer|für)\\s+' + _first + '|' + _first + '[^.]{0,30}(dritter stock|dritten stock|adresse|etage|wohnung im)', 'i');
   if (_erwaehnungOnly.test(_txt)) return false;
-  // Anwesenheits-Signale (mit ihr, sie handelt/spricht hier)
+  // v7.12.244 (User-Befund manueller Run 0959: "Liesel ist nicht hier" über VIELE Szenen, obwohl
+  // sie nachweislich im Cast steht und der Spieler mit ihr interagiert): Die Verb-Regex unten war zu
+  // unvollständig - die KI formuliert Präsenz endlos variantenreich ("steht hinter dir, die Hand um
+  // ihr Cello-Etui geklammert"), kein gelistetes Verb matchte -> Default NEIN. Whack-a-Mole.
+  // ZUVERLÄSSIGERES SIGNAL: Wenn die Figur im aktuellen (pro-Szene aktualisierten) cast steht UND ihr
+  // Name im Text vorkommt UND es keine reine Erwähnung ist, IST sie präsent - ohne Verb-Zwang.
+  try {
+    const _inCast = Array.isArray(cast) && cast.some(c => {
+      const cn = (typeof c === 'string' ? c : (c && c.name) || '').toLowerCase();
+      return cn && cn.includes(_first);
+    });
+    if (_inCast) return true;
+  } catch (e) { /* fällt unten auf Verb-Regex zurück */ }
+  // Anwesenheits-Signale (mit ihr, sie handelt/spricht hier) - Fallback wenn nicht im cast
   // v7.12.220 (Kessler-Screenshot RM4/Sp2, kein Button): Verb-Liste war zu eng. Ilse "drückt
   // dir ein Kuvert in die Hand", "zögert", "ihr Blick huscht" - klare körperliche Präsenz, aber
   // keines der Verben war gelistet -> Default NEIN -> kein Romance-Button trotz idealer Lage.
@@ -13447,7 +13499,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.243] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.248] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -14568,8 +14620,14 @@ function renderOptions(scene) {
     resolveBtn.className = 'option-btn option-btn-system option-btn-resolve';
     resolveBtn.dataset.kategorie = 'AUFLOESEN';  // v7.12.91: damit botGetCurrentOptions die Kategorie liest (byCat.AUFLOESEN)
     // v7.11.44: Wenn ausgegraut, Sperr-Grund daneben zeigen.
+    // v7.12.245: DOMINANT machen wenn der Fall schon mehrere Szenen abschlussreif ist
+    // (Drift-Zone). Kein Auto-Klick - nur deutlich sichtbar, damit der Spieler bewusst
+    // entscheidet statt den Button zu übersehen. Greift ab 3 Szenen Stage 3 + klickbar.
+    const _resolveDominant = resolveCanClick && stage3Scenes >= 3;
     if (resolveCanClick) {
-      resolveBtn.innerHTML = '<span class="option-id">🎯</span><span class="option-text-wrap"><span>Fall lösen, Auftraggeber informieren</span><span class="option-marker option-marker-aufloesen">FALL LÖSEN</span></span>';
+      const _emph = _resolveDominant ? ' option-btn-resolve-dominant' : '';
+      resolveBtn.innerHTML = '<span class="option-id">🎯</span><span class="option-text-wrap"><span>Fall lösen, Auftraggeber informieren</span><span class="option-marker option-marker-aufloesen">FALL LÖSEN' + (_resolveDominant ? ' · JETZT EMPFOHLEN' : '') + '</span></span>';
+      if (_emph) resolveBtn.className += _emph;
     } else {
       resolveBtn.classList.add('option-btn-resolve-locked');
       resolveBtn.disabled = true;
@@ -14732,30 +14790,17 @@ const MODEL_CHAIN = [
   // Mit Implicit Caching (~76% Hits) ~$1/Run statt $0.40. 2.5 bleibt als Backup
   // wenn 3.1 limitiert ist (Per-Minute-Bursts).
   { provider: 'gemini', model: 'gemini-3.1-flash-lite',  label: 'Gemini 3.1 Flash-Lite' },
-  // v7.12.10: 2.5 Flash-Lite ENTFERNT. War als Failover-Position 2 drin, aber der
-  // Goerke-Run (v7.11.37) zeigte genau die Schwaechen, die wir bekaempfen: 84%
-  // Satz-Ueberlapp zwischen Szenen + 26/35 Szenen mit 0-Kategorien-Drift (gegen
-  // 0% bei 3.1). Als Backup bei 3.1-Limit will der User Qualitaet, nicht das
-  // schwaechste Modell. Erster Failover ist jetzt 3 Flash Preview (staerker).
-  // 2. Tier: Gemini 3 Flash Preview (~18s, hohe Qualitaet, klare Inline-Kategorien)
-  { provider: 'gemini', model: 'gemini-3-flash-preview', label: 'Gemini 3 Flash Preview' },
-  // v7.12.12: GROSSES AUFRAEUMEN auf 4 Modelle (User-Entscheidung). Entfernt:
-  // - Gemini 2.5 Flash: laut Google/Erfahrung der 3er-Architektur unterlegen,
-  //   teurer als 3.1-Lite aber schlechter - sinnlos in der Chain.
-  // - Gemini 2.5 Pro: schon v7.12.11 raus (teuer/langsam).
-  // - Mistral Small 3.1: Qualitaet unklar/schwach, raus (Large gut, Medium ok).
-  // - KOMPLETTER Groq-Block (Llama 3.3, Qwen3, GPT-OSS 120B/20B): deutscher Stil
-  //   konsistent schwach (leere Szenen, halluzinierte User-Aktionen, TPM-eng).
-  //   Lieber dem User eine ehrliche Fehlermeldung zeigen ("Alle KI-Modelle nicht
-  //   erreichbar, neu laden") als eine kaputte Groq-Szene.
-  // Aktive Chain jetzt: 3.1 Flash-Lite -> 3 Flash Preview -> Mistral Large ->
-  // Mistral Medium. Wenn alle 4 durch sind, greift showError() (sauberer Stop).
-  // 3. Tier: Mistral als Notfall-Failover (~17-22s avg, zuverlaessig).
-  // v7.11.7: Mistral Large liefert konsistent gute atmosphaerische Szenen.
-  { provider: 'mistral', model: 'mistral-large-latest',  label: 'Mistral Large 3' },
-  // Mistral Medium 3: Story-Halluzinationen bei langem Recap moeglich, aber
-  // funktional verwertbar (Wagner-Run v7.9.53) - letzter Notnagel vor Fehler.
-  { provider: 'mistral', model: 'mistral-medium-latest', label: 'Mistral Medium 3' },
+  // v7.12.247: SINGLE-MODEL-ARCHITEKTUR (User-Entscheidung). KEIN automatisches Failover-
+  // Wandern mehr innerhalb eines Runs - das brachte Stil-/Konsistenz-Drift UND war eine
+  // Hänger-Quelle ("Failover-Kette feuerte nicht sauber"). Mechanik jetzt eindeutig:
+  // EIN Modell, 1 Auto-Retry (in performApiCall), dann manueller Retry-Button. Sauber & klar.
+  // Mistral/Groq KOMPLETT raus (Groq lieferte schlechten deutschen Stil, Mistral nur als
+  // Notnagel - beides nicht mehr nötig ohne Failover-Konzept).
+  // Flash 3.1 + Pro 3.1 NUR im Debug-Schalter wählbar (debugOnly), NIE als Failover für
+  // normale Spieler. getActiveModelIndex/advanceModel überspringen debugOnly-Einträge,
+  // außer das Modell ist explizit per window.debugPreferredModel gewählt.
+  { provider: 'gemini', model: 'gemini-3.1-flash', label: 'Gemini 3.1 Flash (Test)', debugOnly: true },
+  { provider: 'gemini', model: 'gemini-3.1-pro',   label: 'Gemini 3.1 Pro (Test)',   debugOnly: true },
 ];
 
 // Chain-Version: hochzaehlen wenn MODEL_CHAIN umsortiert wird, damit alte
@@ -14886,47 +14931,17 @@ function clearShortModelBlocks() {
 }
 
 function getActiveModelIndex() {
-  // Legacy-API: gibt den Index des aktiven Modells zurueck.
-  // Da wir jetzt per-Modell-Cooldowns nutzen, ist das das ERSTE nicht-blockierte
-  // Modell in der Chain (von oben), das auch nicht in der Session-Skip-Liste ist.
-  // v7.11.37: geminiOnlyMode filtert Mistral/Groq raus wenn aktiv.
-  const onlyGemini = !!window.geminiOnlyMode;
-  // v7.12.9: DEBUG-MODELL-WAHL. Wenn im Debug-Modus ein Test-Modell gewaehlt
-  // wurde und es verfuegbar ist (nicht blockiert/geskippt), bevorzuge es vor
-  // dem Standard. Failover bleibt: ist es blockiert, faellt der normale
-  // Chain-Durchlauf unten zurueck auf das naechste verfuegbare Modell.
+  // v7.12.248: SINGLE-MODEL, KEIN Fallback mehr (User-Entscheidung). Das gewählte Modell
+  // BLEIBT das gewählte Modell - kein Hin-und-Her, kein Chain-Durchlauf. Wenn ein Debug-Modell
+  // gewählt ist, gib genau das zurück (auch wenn temporär blockiert - der Aufrufer zeigt dann
+  // sauber die Fehlermeldung + Retry-Button, statt heimlich auf ein anderes Modell zu springen).
+  // Sonst: Standardmodell = Index 0 (Flash-Lite). So weiß der User immer GENAU welches Modell läuft.
   if (window.debugPreferredModel) {
     for (let i = 0; i < MODEL_CHAIN.length; i++) {
-      if (MODEL_CHAIN[i].model !== window.debugPreferredModel) continue;
-      if (sessionSkippedModels.has(MODEL_CHAIN[i].model)) break;
-      if (isModelBlocked(MODEL_CHAIN[i].model)) break;
-      return i;
+      if (MODEL_CHAIN[i].model === window.debugPreferredModel) return i;
     }
   }
-  for (let i = 0; i < MODEL_CHAIN.length; i++) {
-    const m = MODEL_CHAIN[i];
-    if (onlyGemini && m.provider !== 'gemini') continue;
-    if (sessionSkippedModels.has(m.model)) continue;
-    if (isModelBlocked(m.model)) continue;
-    return i;
-  }
-  // v7.9.45: Alles blockiert ODER alle uebrigen sind in sessionSkippedModels.
-  // FRUEHER: gab blind length-1 zurueck = letztes Modell der Chain. Das ist
-  // GPT-OSS 20B (8K TPM) - faellt sofort mit 413 zurueck und Bot bricht ab.
-  // JETZT: erstes Modell zurueckgeben das NICHT in sessionSkippedModels ist
-  // (auch wenn temporaer blockiert) - dann greift advanceModel sauber.
-  // Falls wirklich alles geskipped: doch length-1 als Hard-Fallback, aber
-  // der Aufrufer wird dann den Fehler bekommen.
-  for (let i = 0; i < MODEL_CHAIN.length; i++) {
-    const m = MODEL_CHAIN[i];
-    if (onlyGemini && m.provider !== 'gemini') continue;
-    if (!sessionSkippedModels.has(m.model)) return i;
-  }
-  // Final fallback: ignoriere onlyGemini damit wir keinen Crash haben
-  for (let i = 0; i < MODEL_CHAIN.length; i++) {
-    if (!sessionSkippedModels.has(MODEL_CHAIN[i].model)) return i;
-  }
-  return MODEL_CHAIN.length - 1;
+  return 0; // Standard: Flash-Lite
 }
 
 function setActiveModelIndex(idx) {
@@ -14945,26 +14960,12 @@ function getActiveModel() {
 // Wechsle zum naechsten verfuegbaren Modell. Markiert das aktuelle als blockiert
 // (Default 60s, oder ueber blockModel mit konkreter Dauer aufgerufen vorher).
 // Gibt das neue Modell-Objekt zurueck, oder null wenn alle durch sind.
+// Gibt null zurueck - es gibt KEIN naechstes Modell mehr (Single-Model-Architektur v7.12.248).
 function advanceModel() {
-  // Aktuelles Modell muss blockiert sein, sonst gibt getActiveModel() es wieder
-  // zurueck. Falls noch nicht durch blockModel() blockiert: 60s Default-Block.
-  const current = getActiveModel();
-  if (!isModelBlocked(current.model)) {
-    blockModel(current.model, 60 * 1000, 'auto-advance');
-  }
-  // v7.11.37: geminiOnlyMode filtert Mistral/Groq raus.
-  const onlyGemini = !!window.geminiOnlyMode;
-  // Das naechste verfuegbare Modell suchen
-  for (let i = 0; i < MODEL_CHAIN.length; i++) {
-    const m = MODEL_CHAIN[i];
-    if (onlyGemini && m.provider !== 'gemini') continue;
-    if (sessionSkippedModels.has(m.model)) continue;
-    if (isModelBlocked(m.model)) continue;
-    // v7.12.199: Modellwechsel persistent loggen.
-    if (typeof logApiEvent === 'function') logApiEvent('failover', (current && current.label ? current.label : '?') + ' -> ' + m.label);
-    return m;
-  }
-  if (typeof logApiEvent === 'function') logApiEvent('failover_exhausted', 'kein Modell mehr verfuegbar (alle blockiert)');
+  // v7.12.248: KEIN Failover mehr. Das gewählte Modell ist das einzige. Jeder Aufrufer, der
+  // hier ein Ersatzmodell erwartet, bekommt null -> zeigt sauber Fehlermeldung + Retry-Button,
+  // statt heimlich das Modell zu wechseln. Eindeutige Mechanik: 1 Modell, 1 Auto-Retry, dann manuell.
+  if (typeof logApiEvent === 'function') logApiEvent('no_failover', 'Single-Model: kein Modellwechsel (gewähltes Modell bleibt)');
   return null;
 }
 
@@ -15132,7 +15133,9 @@ async function requestSceneFromModel(userMessage, conversationHistory, compactMo
 
   // Throttle vor dem Call, damit wir das jeweilige RPM/TPM-Limit nicht ueberschreiten.
   // Groq braucht groessere Pausen wegen 8K TPM-Limit.
+  try { window.__lastPhase = 'throttle:' + provider + '@Sz' + (typeof sceneCounter === 'number' ? sceneCounter : '?'); } catch(e){}
   await throttleRequest(provider);
+  try { window.__lastPhase = 'nach-throttle@Sz' + (typeof sceneCounter === 'number' ? sceneCounter : '?'); } catch(e){}
 
   const messages = [
     { role: 'system', content: SYSTEM_PROMPT }
@@ -17472,38 +17475,12 @@ VERBOTEN: Karl wacht woanders auf ohne Erklaerung. Wenn du Pfad B waehlst, MUSST
   // Wrap fetch in try/catch um Netzwerkfehler (z.B. "Load failed" auf iOS
   // bei Hintergrund-Switch oder Verbindungsabbruch) sauber mit debugInfo
   // zu loggen statt einer leeren generischen Fehlermeldung.
-  // v7.12.28: ADAPTIVER TIMEOUT statt fest 18s. User-Befund (5G instabil):
-  // Antworten kamen regelmaessig nach 23s, aber 18s-Timeout brach ab und
-  // triggerte Retry. Loesung: Timeout passt sich an die letzten erfolgreichen
-  // Antwortzeiten des aktiven Modells an.
-  //   Basis: 18000ms (Default - keine Daten)
-  //   Mit Daten: max(18000, 1.5 * Median letzter 5 Antworten)
-  //   Cap: 35000ms (irgendwann muessen wir auch aufgeben)
-  // So bekommt der Spieler bei stabiler Verbindung schnelles Failover,
-  // bei langsamer Verbindung aber genug Zeit fuer die echte Antwort.
-  let REQUEST_TIMEOUT_MS = 18000;
-  try {
-    if (typeof modelPerformanceStats === 'object' && modelPerformanceStats && typeof getActiveModel === 'function') {
-      const lbl = getActiveModel() && getActiveModel().label;
-      const stats = lbl && modelPerformanceStats[lbl];
-      if (stats && Array.isArray(stats.durations) && stats.durations.length >= 3) {
-        // Median der letzten 5 erfolgreichen Antworten
-        const recent = stats.durations.slice(-5).slice().sort((a,b)=>a-b);
-        const median = recent[Math.floor(recent.length / 2)];
-        // v7.12.227: Das schnelle Flash-Lite (Median ~4s) bekommt eine knappere Obergrenze (15s):
-        // wenn es nicht in 15s antwortet, hängt es - schneller zum Failover statt 35s warten.
-        // So braucht die volle 4er-Kette im Worst Case nicht ~2min (Achterberg-Timeout 114s).
-        // Langsamere Fallback-Modelle (Gemini 3 Preview ~18s, Mistral ~22s) behalten 35s.
-        const _isFastPrimary = (lbl || '').indexOf('Flash-Lite') >= 0;
-        const _cap = _isFastPrimary ? 15000 : 35000;
-        const adaptive = Math.round(Math.max(_isFastPrimary ? 10000 : 18000, Math.min(_cap, median * 1.5)));
-        if (adaptive !== REQUEST_TIMEOUT_MS) {
-          REQUEST_TIMEOUT_MS = adaptive;
-          if (typeof diag === 'function') diag('info', 'Adaptiver Timeout: ' + (adaptive/1000) + 's (Median letzter ' + recent.length + ' Antworten: ' + median + 'ms)');
-        }
-      }
-    }
-  } catch (e) { /* Fallback auf 18000 */ }
+  // v7.12.248: EINHEITLICHER FESTER TIMEOUT 35s (User-Entscheidung). Der adaptive Timeout
+  // (10-35s je nach Modell-Historie) war Teil der Failover-Logik - um schnell zwischen Modellen
+  // zu wechseln. Ohne Failover (Single-Model) brauchen wir das nicht mehr. 35s deckt auch das
+  // langsame Pro-Modell (20-30s) sicher ab; da es eh keinen Modellwechsel mehr gibt, "verlieren"
+  // wir nichts mit dem Warten. Der Watchdog (55s) bleibt als Notnetz darüber.
+  const REQUEST_TIMEOUT_MS = 35000;
   let response;
   let timeoutId;
   let hardTimeoutId;
@@ -17511,15 +17488,11 @@ VERBOTEN: Karl wacht woanders auf ohne Erklaerung. Wenn du Pfad B waehlst, MUSST
   try {
     const controller = new AbortController();
     timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-    // v7.12.239/240: HARTER Failover-Timer als Absicherung gegen den iOS/Mobile-fetch-Bug, bei dem
-    // controller.abort() NICHT feuert wenn die Verbindung tot-aber-nicht-getrennt ist. Ohne ihn liefe
-    // erst der 55s-Watchdog. Promise.race gegen einen eigenen Timer. WICHTIG (v240): FESTE 30s, NICHT
-    // Timeout+3s. Grund (Run 0142 gemessen): Flash-Lite hat gelegentlich langsame-aber-LEBENDE Antworten
-    // (18-21s, kommen erfolgreich zurück). Ein 13s-Timer würde die abwürgen und einen unnötigen Failover
-    // zum oft langsameren Mistral auslösen - man wartet dann LÄNGER, nicht kürzer. 30s liegt sicher über
-    // dem beobachteten Maximum (21,5s), lässt also echte Antworten durch, und fängt nur WIRKLICH tote
-    // Verbindungen (>30s = praktisch immer hängend) 25s früher als der Watchdog.
-    const hardLimitMs = 30000;
+    // v7.12.248: HARTER Backup-Timer gegen den iOS/Mobile-fetch-Bug, bei dem controller.abort()
+    // NICHT feuert wenn die Verbindung tot-aber-nicht-getrennt ist. Liegt mit 38s knapp ÜBER dem
+    // 35s-AbortController-Timeout (der zuerst greifen soll) und klar UNTER dem 55s-Watchdog.
+    // Promise.race gegen einen eigenen Timer - fängt den Fall, dass abort() ins Leere läuft.
+    const hardLimitMs = 38000;
     const fetchPromise = fetch(endpoint, {
       method: 'POST',
       headers: {
@@ -17541,11 +17514,14 @@ VERBOTEN: Karl wacht woanders auf ohne Erklaerung. Wenn du Pfad B waehlst, MUSST
         reject(e);
       }, hardLimitMs);
     });
+    try { window.__lastPhase = 'fetch-gestartet:' + (activeModel && activeModel.label || '?'); } catch(e){}
     response = await Promise.race([fetchPromise, hardTimeoutPromise]);
+    try { window.__lastPhase = 'fetch-antwort-da:' + (activeModel && activeModel.label || '?') + ' status=' + (response && response.status); } catch(e){}
     clearTimeout(timeoutId);
     // v7.12.240: Body-Lesen ebenfalls gegen den Hart-Timer racen - bei totem iOS-fetch haengt oft
     // genau das Body-Streaming, nicht der initiale fetch. Erst danach den Timer clearen.
     rawBodyText = await Promise.race([response.text(), hardTimeoutPromise]);
+    try { window.__lastPhase = 'body-gelesen:' + (rawBodyText ? rawBodyText.length + 'z' : '0'); } catch(e){}
     clearTimeout(hardTimeoutId);
   } catch (networkErr) {
     if (timeoutId) clearTimeout(timeoutId);
@@ -17608,6 +17584,7 @@ VERBOTEN: Karl wacht woanders auf ohne Erklaerung. Wenn du Pfad B waehlst, MUSST
     };
     throw err;
   }
+  try { window.__lastPhase = 'json-geparst@Sz' + (typeof sceneCounter === 'number' ? sceneCounter : '?'); } catch(e){}
 
   if (!response.ok) {
     const errMsg = data?.error?.message || rawText;
@@ -20667,7 +20644,7 @@ async function chooseOption(option) {
       const _romRng = (typeof botWasEverActive !== 'undefined' && botWasEverActive && typeof botRng === 'function') ? botRng() : Math.random();
       const offen = _romRng < 0.70;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.243] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.248] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -21035,6 +21012,7 @@ async function chooseOption(option) {
   }
   lastUserMessage = userMsg;
 
+  try { window.__lastPhase = 'chooseOption->performApiCall@Sz' + (typeof sceneCounter === 'number' ? sceneCounter : '?'); } catch(e){}
   await performApiCall(userMsg, /*isStart*/false, option);
   } finally {
     // v7.11.33: Lock NUR freigeben wenn KEIN Retry pending ist.
@@ -21046,7 +21024,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.243] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.248] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -22449,7 +22427,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           } else if (!tensionHighEnoughForArrest && folterSceneCount >= custodyReleaseFloor) {
             // STILLER RELEASE: nur noch als Notventil bei langem Drift (5+ Sz). Karl ist
             // faktisch frei (KI erzaehlt ihn lange ohne Stasi-Kontext), System zieht nach.
-            console.warn('[Schatten v7.12.243] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
+            console.warn('[Schatten v7.12.248] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet');
             setCustodyState(false, 'stiller-release');
           } else if (!tensionHighEnoughForArrest) {
@@ -22465,7 +22443,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.243] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.248] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -22993,7 +22971,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof diag === 'function') {
           diag('state', '⚡ NOTFLUCHT GELUNGEN - Karl frei + 4 Sz Gnadenfrist, Stasi-Tension ' + prevTension + ' -> 3 (gesucht, aber nicht sofort wieder greifbar)');
         }
-        console.log('[Schatten v7.12.243] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
+        console.log('[Schatten v7.12.248] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
         // v7.11.56: Toast bei Erfolg - Spieler hat geklickt und soll Wuerfel-
         // Ergebnis direkt sehen, nicht nur narrative Andeutungen.
         if (typeof showProgressToast === 'function') {
@@ -24843,16 +24821,23 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       // dass der Fall abschlussreif ist) - der FALL-LOESEN-Button ist verfuegbar
       // sobald der Taeter ueberfuehrt ist, der Spieler entscheidet selbst wann
       // er abschliesst. Die absolute Notbremse bleibt die 70-Szenen-HARD-CAP.
-      if (stage3Scenes >= 5) {
-        diag('progress', 'Klient-Push: Taeter ueberfuehrt, ' + stage3Scenes + ' Szenen Stage 3 - KI-Hinweis dass FALL LOESEN bereit ist (kein Auto-Force)');
+      // v7.12.245: Klient-Push früher (3 statt 5 Stage-3-Szenen) + dringlicher. KEIN Auto-Force
+      // (v7.11.82 bewusst entfernt - "Mario-Kart-Automodus"). Der Spieler entscheidet weiter selbst,
+      // wird aber deutlicher geführt: Push früher, FALL-LÖSEN-Button dominant (s.u. renderOptions),
+      // Hard-Cap früher (50 statt 70). Respektiert "kein Autopilot, nicht überraschen".
+      if (stage3Scenes >= 3) {
+        diag('progress', 'Klient-Push: Taeter ueberfuehrt, ' + stage3Scenes + ' Szenen Stage 3 - FALL LOESEN dominant, KI-Hinweis dass Abschluss bereit ist (kein Auto-Force)');
         pendingKlientPushAfterCalm = true;
       }
     }
-    // v6.90: HARD-CAP nach 70 Szenen Gesamtspiel - gesunde Range 40-70
-    // Wenn das Spiel ueber 70 Szenen geht und der Fall noch nicht geloest ist,
+    // v6.90: HARD-CAP Gesamtspiel - gesunde Range 40-70
+    // Wenn das Spiel zu lange geht und der Fall noch nicht geloest ist,
     // forciert das System die Loesung. Anlass User v6.90: "40-70 ist gesunde
     // Range wo das Spiel enden sollte - sterben, loesen oder Schluss".
-    if (sceneCounter >= 70 && caseProgress.stage < 4 && !caseProgress.istGelöst) {
+    // v7.12.245: von 70 auf 60 gesenkt (Achterberg-Stage-3-Drift bis Sz 47+). Die
+    // eigentliche Führung macht der dominante FALL-LÖSEN-Button + frühe Klient-Push;
+    // dieser Cap ist nur die ABSOLUTE Notbremse, jetzt früher.
+    if (sceneCounter >= 60 && caseProgress.stage < 4 && !caseProgress.istGelöst) {
       // v7.12.175 (Lektorat-Empfehlung 2): Bei DIEBSTAHL ist ein Abschluss OHNE zurueck-
       // gebrachtes Gut KEIN Erfolg. Frueher setzte der Hard-Cap pauschal istGelöst=true,
       // auch wenn das Etui nie geholt wurde - inkonsequent zur ganzen Diebstahl-Logik.
@@ -25350,7 +25335,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.243] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.248] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
@@ -29519,7 +29504,8 @@ setInterval(function() {
     // mit vollem RPM-Budget (vermeintliche "Haenger" waren in Wahrheit lange Wartezeiten).
     if (typeof throttleInterval !== 'undefined' && throttleInterval !== null) return;
     if (elapsed > 55000) {
-      console.warn('[Schatten Watchdog] Loading seit ' + Math.round(elapsed/1000) + 's - erzwinge Reset');
+      const _phase = (function(){ try { return window.__lastPhase || '(keine Phase erfasst - hängt VOR requestSceneFromModel)'; } catch(e){ return '?'; } })();
+      console.warn('[Schatten Watchdog] Loading seit ' + Math.round(elapsed/1000) + 's - erzwinge Reset. Letzte Phase: ' + _phase);
       // In-Flight-Flag zuruecksetzen
       if (typeof chooseOptionInFlight !== 'undefined') chooseOptionInFlight = false;
       // Loading ausblenden
@@ -29535,7 +29521,7 @@ setInterval(function() {
         if (typeof buildDebugDump === 'function') {
           try {
             _wdDump = buildDebugDump(
-              { message: 'WATCHDOG-TIMEOUT nach ' + Math.round(elapsed/1000) + 's (fetch haengt, Failover-Kette feuerte nicht sauber)', debugInfo: { stage: 'watchdog' } },
+              { message: 'WATCHDOG-TIMEOUT nach ' + Math.round(elapsed/1000) + 's (fetch haengt, Failover-Kette feuerte nicht sauber). LETZTE PHASE: ' + _phase, debugInfo: { stage: 'watchdog', lastPhase: _phase } },
               (typeof lastUserMessage !== 'undefined' ? lastUserMessage : ''),
               0
             );
