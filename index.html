@@ -2864,7 +2864,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.284</div>
+    <div class="start-version">Schatten v7.12.285</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3028,7 +3028,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.284</span>
+    <span>Schatten v7.12.285</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5777,7 +5777,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.284';
+window.SCHATTEN_VERSION = 'v7.12.285';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -14107,7 +14107,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.284] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.285] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -17002,10 +17002,25 @@ KEINE anderen Themen mehr - kein neuer Tatort, keine neuen Verdaechtigen, keine 
           recap += `\n\nSTASI-FESTNAHME PFLICHT (Tension ${stasiTension}/5, KRITISCH): Das MfS hat Karl voll im Visier. In dieser ODER spaetestens der NAECHSTEN Szene MUSS die Stasi zugreifen. Konkret: zwei zivile MfS-Maenner (Trenchcoat, Lodenmantel oder grauer Anzug, knappe Huete, kalte Gesichter) treten Karl in den Weg. Einer zeigt kurz einen Ausweis: "MfS, kommen Sie mit. Keine Diskussion." Karl wird zum schwarzen EMW 340 oder GAZ M20 Pobeda gebracht (NICHT zu einem "Horch"), in den Fond gedrueckt, ein Mann links, ein Mann rechts. Die Walther wird ihm abgenommen. Fahrt schweigend nach Hohenschoenhausen (Genslerstrasse 66, Lichtenberg) - die zentrale Untersuchungshaftanstalt - ODER in eines der unauffaelligen MfS-Verhoerhaeuser in Pankow/Lichtenberg. Karl wird durchsucht (Geld, Notizbuch, Schluessel weggenommen), bekommt eine graue Haeftlingskleidung, kommt in eine fensterlose Zelle (3x2 Meter, harte Pritsche, kein Schlaf-Komfort, Lampe brennt durchgehend). NICHT toedlich - das ist Untersuchungshaft, keine Hinrichtung. KEINE Optionen wie "Geh nach Hause" anbieten - Karl kann nicht weg. Optionen muessen sein: "Klopf an die Tuer, verlange einen Anwalt", "Schreie nach den Waechtern", "Setz dich auf die Pritsche und denk nach", "Versuch durchs vergitterte Fensterchen oben zu lugen". Setze in Folge: ortHaupt = "MfS-Untersuchungshaftanstalt Hohenschoenhausen, Zelle 14" (oder aehnlich). DAS IST DIE WENDE DES FALLES.`;
           diag('progress', '✦ STASI-FESTNAHME PFLICHT angesagt (Tension ' + stasiTension + '/5)');
         } else if (sceneCounter - _pflichtSeit >= 2) {
-          // Die KI hat 2 Szenen lang NICHT zugegriffen -> echte Custody forcieren statt wiederholen.
-          caseProgress.forceCustodyNextScene = true;
-          caseProgress.stasiPflichtSeitScene = 0; // verbraucht
-          diag('progress', '✦ Stasi-Zugriff blieb 2 Szenen aus -> forceCustodyNextScene (echte Konsequenz statt Wiederholung)');
+          // v7.12.285 (Lektorat Stein-Run, Richtung B): Karl hatte 2 Szenen Zeit zu reagieren.
+          // Hat er klug reagiert (Flucht/Untertauchen/Ausweichen)? Dann ehrliche Abkühlung -
+          // die Drohung tritt zurück, kluges Spiel wird belohnt. Nur wenn er stur blieb
+          // (keine Ausweich-Reaktion): echte Custody forcieren statt endloser Drohung.
+          const _klugReagiert = ['FLUCHT', 'NOTFLUCHT', 'BEOBACHTEN'].indexOf(lastChosenKategorie) !== -1
+            || (typeof metaCustodyGracePeriod === 'number' && metaCustodyGracePeriod > 0);
+          if (_klugReagiert) {
+            const _prevT = stasiTension;
+            stasiTension = Math.max(2, stasiTension - 2); // spürbar runter, aber nicht ganz weg
+            caseProgress.stasiPflichtSeitScene = 0;
+            if (typeof stasiCooldownCounter !== 'undefined') stasiCooldownCounter = 0;
+            diag('state', 'Stasi-Tension ' + _prevT + ' -> ' + stasiTension + ' (Karl ist knapp entkommen - Drohung tritt zurück)');
+            recap += `\n\nSTASI KNAPP ENTKOMMEN (Tension jetzt ${stasiTension}/5): Karl hat sich dem Zugriff durch kluges Ausweichen/Flucht entzogen. Die naechste Szene zeigt EINE konkrete Folge der Beinahe-Festnahme (ein verbrannter Kontakt, ein Wagen der abdreht, ein knapp verpasster Zugriff, eine Atempause an einem sicheren Ort) - dann laesst der unmittelbare Druck spuerbar nach. KEINE erneute "Festnahme unausweichlich"-Drohung in dieser Szene.`;
+          } else {
+            // Karl blieb stur -> echte Custody forcieren.
+            caseProgress.forceCustodyNextScene = true;
+            caseProgress.stasiPflichtSeitScene = 0;
+            diag('progress', '✦ Stasi-Zugriff blieb 2 Szenen aus + Karl wich nicht aus -> forceCustodyNextScene (echte Konsequenz)');
+          }
         } else {
           // Direkt nach dem ersten Push (1 Szene danach): nur knappe Erinnerung, KEIN Spam-Toast.
           recap += `\n\nSTASI-ZUGRIFF LAEUFT (Tension ${stasiTension}/5): Der angesagte MfS-Zugriff MUSS jetzt konkret werden oder Karl entkommt knapp mit klarer Konsequenz (Verletzung, verlorener Kontakt, abgeschnittener Fluchtweg). KEINE Wiederholung der Drohung ohne Folge.`;
@@ -17224,8 +17239,12 @@ Marlowe-Stil: stilvoll, elliptisch, NICHT explizit. Tuer schliesst sich, Schnitt
         const _rt = (typeof romanticTension === 'number') ? romanticTension : 0;
         const _pushCooldownOk = (sceneCounter - (typeof lastRomancePushScene === 'number' ? lastRomancePushScene : -99)) >= 15;
         const _pushBudgetOk = !(romancePushCount >= 2 && _rt === 0); // Spieler ignoriert konsequent -> Stopp
+        // v7.12.285 (Lektorat Stein-Run): KEIN Romance-Push bei akutem Stasi-Zugriff (Tension>=4).
+        // Im Run wurde Helene bei Tension 4-5 herangezogen - das wirkt aufgepfropft, sie ist dann
+        // Ally/Fluchthelferin, nicht Romance. Das Bond-Prinzip gilt weiter bei moderater Lage.
+        const _stasiRuhigOk = !(typeof stasiTension === 'number' && stasiTension >= 4);
         if (!_romInCast && sceneCounter >= 5 && _scenesSinceRom >= 6 && _pushCooldownOk && _pushBudgetOk &&
-            _spOk && !karlInStasiCustody && sceneCounter % 6 === 0) {
+            _spOk && _stasiRuhigOk && !karlInStasiCustody && sceneCounter % 6 === 0) {
           const _rn = _romNames[0];
           lastRomancePushScene = sceneCounter;
           romancePushCount++;
@@ -21429,7 +21448,7 @@ async function chooseOption(option) {
       const _romRng = (typeof botWasEverActive !== 'undefined' && botWasEverActive && typeof botRng === 'function') ? botRng() : Math.random();
       const offen = _romRng < 0.70;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.284] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.285] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -21471,7 +21490,7 @@ async function chooseOption(option) {
         || (typeof romanticTension === 'number' && romanticTension >= 3);
       if (_offen && _annaeherung && !nachtMitFrau) {
         nachtMitFrau = _frau;
-        console.log('[Schatten v7.12.284] NACHT MIT FRAU verbracht:', _frau);
+        console.log('[Schatten v7.12.285] NACHT MIT FRAU verbracht:', _frau);
         if (typeof diag === 'function') diag('state', 'Nacht mit ' + _frau + ' verbracht (offene Romance + Übernachtung) - für Fail-Spitze gemerkt');
       }
     } catch (e) {}
@@ -21824,7 +21843,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.284] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.285] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -23280,7 +23299,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           } else if (!tensionHighEnoughForArrest && folterSceneCount >= custodyReleaseFloor) {
             // STILLER RELEASE: nur noch als Notventil bei langem Drift (5+ Sz). Karl ist
             // faktisch frei (KI erzaehlt ihn lange ohne Stasi-Kontext), System zieht nach.
-            console.warn('[Schatten v7.12.284] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
+            console.warn('[Schatten v7.12.285] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet');
             setCustodyState(false, 'stiller-release');
           } else if (!tensionHighEnoughForArrest) {
@@ -23296,7 +23315,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.284] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.285] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -23826,7 +23845,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof diag === 'function') {
           diag('state', '⚡ NOTFLUCHT GELUNGEN - Karl frei + 4 Sz Gnadenfrist, Stasi-Tension ' + prevTension + ' -> 3 (gesucht, aber nicht sofort wieder greifbar)');
         }
-        console.log('[Schatten v7.12.284] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
+        console.log('[Schatten v7.12.285] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
         // v7.11.56: Toast bei Erfolg - Spieler hat geklickt und soll Wuerfel-
         // Ergebnis direkt sehen, nicht nur narrative Andeutungen.
         if (typeof showProgressToast === 'function') {
@@ -26362,7 +26381,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.284] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.285] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
