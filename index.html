@@ -2864,7 +2864,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.293</div>
+    <div class="start-version">Schatten v7.12.296</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3028,7 +3028,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.293</span>
+    <span>Schatten v7.12.296</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5777,7 +5777,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.293';
+window.SCHATTEN_VERSION = 'v7.12.296';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -9557,6 +9557,32 @@ function politicalBeatsStatus() {
   } catch (e) { return null; }
 }
 
+// v7.12.295 (Goerke-Lektorat, proaktive Beat-Führung): GENERISCHE Beat-Lücke. Liefert für den
+// AKTIVEN Beat-Typ des Falls (truthBeats ODER murderAxes ODER politicalBeats) einheitlich:
+// die Beat-Liste, das Hit-Array, minHits und die noch fehlenden Beats. So braucht die
+// proaktive Führung nur EINE Quelle statt drei Sonderpfade. Defensiv (null wenn kein Beat-System).
+function aktiveBeatLuecke() {
+  try {
+    if (!caseSetup) return null;
+    let beats = null, hitArr = null, minHits = 3, typ = '';
+    if (Array.isArray(caseSetup.truthBeats) && caseSetup.truthBeats.length) {
+      beats = caseSetup.truthBeats; hitArr = caseProgress.truthBeatsHit; typ = 'truth';
+      minHits = (typeof caseSetup.truthBeatsMinHits === 'number') ? caseSetup.truthBeatsMinHits : 3;
+    } else if (Array.isArray(caseSetup.murderAxes) && caseSetup.murderAxes.length) {
+      beats = caseSetup.murderAxes; hitArr = caseProgress.murderAxesHit; typ = 'murder';
+      minHits = (typeof caseSetup.murderAxesMinHits === 'number') ? caseSetup.murderAxesMinHits : 2;
+    } else if (Array.isArray(caseSetup.politicalBeats) && caseSetup.politicalBeats.length) {
+      beats = caseSetup.politicalBeats; hitArr = caseProgress.politicalBeatsHit; typ = 'political';
+      minHits = (typeof caseSetup.politicalBeatsMinHits === 'number') ? caseSetup.politicalBeatsMinHits : 3;
+    } else {
+      return null; // kein Beat-System in diesem Fall
+    }
+    const hit = Array.isArray(hitArr) ? hitArr : [];
+    const fehlend = beats.filter(b => b && b.id && hit.indexOf(b.id) === -1);
+    return { typ: typ, total: beats.length, hitCount: hit.length, minHits: minHits, fehlend: fehlend };
+  } catch (e) { return null; }
+}
+
 // v7.12.274 (Source-Code-Lektorat P0): ZENTRALER Stage-2-Floor. Vorher hatten Haupt-
 // und Retry-Pfad unterschiedliche Regeln (Retry fehlte gameDay===1 && sceneCounter>=14),
 // wodurch ein langer Tag-1-Run im Retry-Pfad nie Stage 2 erreichen konnte. Eine Quelle:
@@ -12324,6 +12350,11 @@ let hardForcedArrestUsed = false;
 // Wird fuer Liquidations-Schwelle benoetigt (erst ab 2. Auto-Release).
 let autoReleaseUsedCount = 0;
 
+// v7.12.295: proaktive Beat-Führung. lastBeatHitScene = Szene, in der zuletzt ein Beat dazukam
+// (für Stagnations-Erkennung). proaktiverBeatPushCount begrenzt die Push-Häufigkeit (kein Spam).
+let lastBeatHitScene = 0;
+let proaktiverBeatPushCount = 0;
+
 // v7.0: Wird gesetzt wenn Karl ein Verbrechen GEGEN den Staatsapparat begeht
 // (auf VP schiessen, VP toeten). Anlass: Wegener-Run v6.98 hatte Karl 2 VP-
 // Beamte anschiessen, danach lief Mistral seelenruhig weiter ("Sirenen
@@ -14121,7 +14152,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.293] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.296] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -19140,9 +19171,14 @@ function validateOpeningCastPurity(text, setup) {
     { key: 'tante frieda', label: 'Tante Frieda Stallschreiberstrasse (Setup 13 Krause)', regex: /\btante\s+frieda|stallschreiberstrasse|antiquitaeten.*krause/ },
   ];
   const foreignLocations = [];
-  // Eigene Setup-Ort-Schluesselworte: ortHaupt + setupLocations
+  // Eigene Setup-Ort-Schluesselworte: ortHaupt + locations (alle Faelle nutzen 'locations';
+  // 'setupLocations' als Fallback, falls je eins definiert wird). v7.12.294: vorher wurde nur
+  // setupLocations gelesen -> die echten Setup-Orte (Goerke: Kreisgericht/U-Haft/Keibelstrasse)
+  // waren der Cross-Case-Pruefung unsichtbar und wurden faelschlich als fremd markiert.
+  const _ownLocs = (Array.isArray(setup.locations) && setup.locations.length) ? setup.locations
+                   : (Array.isArray(setup.setupLocations) ? setup.setupLocations : []);
   const ownLocationText = normForMatch((setup.ortHaupt || '') + ' ' +
-    (Array.isArray(setup.setupLocations) ? setup.setupLocations.map(l => (l.name || '') + ' ' + (l.detail || '')).join(' ') : '')
+    _ownLocs.map(l => (l.name || '') + ' ' + (l.detail || '')).join(' ')
   );
   for (const flp of foreignLocationPatterns) {
     // Wenn der Ort im eigenen Setup vorkommt, skippen
@@ -19201,6 +19237,7 @@ async function startGame() {
   autoReleaseUsedCount = 0;  // v7.9.10
   pendingForcedFahndung = null;  // v7.0
   pendingTruthBeatPush = null;  // v7.12.280
+  lastBeatHitScene = 0; proaktiverBeatPushCount = 0;  // v7.12.295 proaktive Beat-Führung
   fahndungUsed = false;  // v7.0
   ortPflichtIgnoredCount = 0;  // v7.0
   pendingForcedLocationChange = null;  // v7.0
@@ -21499,7 +21536,7 @@ async function chooseOption(option) {
       const _romRng = (typeof botWasEverActive !== 'undefined' && botWasEverActive && typeof botRng === 'function') ? botRng() : Math.random();
       const offen = _romRng < 0.70;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.293] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.296] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -21541,7 +21578,7 @@ async function chooseOption(option) {
         || (typeof romanticTension === 'number' && romanticTension >= 3);
       if (_offen && _annaeherung && !nachtMitFrau) {
         nachtMitFrau = _frau;
-        console.log('[Schatten v7.12.293] NACHT MIT FRAU verbracht:', _frau);
+        console.log('[Schatten v7.12.296] NACHT MIT FRAU verbracht:', _frau);
         if (typeof diag === 'function') diag('state', 'Nacht mit ' + _frau + ' verbracht (offene Romance + Übernachtung) - für Fail-Spitze gemerkt');
       }
     } catch (e) {}
@@ -21894,7 +21931,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.293] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.296] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -23104,6 +23141,10 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         /telefonzelle/, /telefon\s+(?:in|am)/,
         /kreisgericht\s+mitte/, /gerichtssaal/, /saal\s+\d/,
         /s[\s\-]?bahn(?:hof)?\b/, /strassenbahn(?:haltestell)?/, /haltestelle/,
+        // v7.12.294 (Goerke-Lektorat): Doc Wagners Praxis ist Karls falluebergreifender
+        // Diskret-Heilort (Schaeferstrasse Schoeneberg, in fast jedem Setup anchorNpc) -
+        // global legitim, nicht je Fall als fremd markieren.
+        /doc\s+wagner/, /wagners?\s+praxis/, /praxis\s+(?:doc\s+)?wagner/, /sch[aä]ferstr/,
       ];
       if (curMainOrt && caseSetup && Array.isArray(caseSetup.locations) && caseSetup.locations.length > 0) {
         const isSetupWhitelisted = caseSetup.locations.some(loc => {
@@ -23360,7 +23401,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           } else if (!tensionHighEnoughForArrest && folterSceneCount >= custodyReleaseFloor) {
             // STILLER RELEASE: nur noch als Notventil bei langem Drift (5+ Sz). Karl ist
             // faktisch frei (KI erzaehlt ihn lange ohne Stasi-Kontext), System zieht nach.
-            console.warn('[Schatten v7.12.293] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
+            console.warn('[Schatten v7.12.296] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet');
             setCustodyState(false, 'stiller-release');
           } else if (!tensionHighEnoughForArrest) {
@@ -23376,7 +23417,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.293] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.296] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -23906,7 +23947,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof diag === 'function') {
           diag('state', '⚡ NOTFLUCHT GELUNGEN - Karl frei + 4 Sz Gnadenfrist, Stasi-Tension ' + prevTension + ' -> 3 (gesucht, aber nicht sofort wieder greifbar)');
         }
-        console.log('[Schatten v7.12.293] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
+        console.log('[Schatten v7.12.296] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
         // v7.11.56: Toast bei Erfolg - Spieler hat geklickt und soll Wuerfel-
         // Ergebnis direkt sehen, nicht nur narrative Andeutungen.
         if (typeof showProgressToast === 'function') {
@@ -25340,9 +25381,36 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         const _polOk = (Array.isArray(caseSetup.politicalBeats) && caseSetup.politicalBeats[0] && caseSetup.politicalBeats[0].keywords instanceof RegExp) ? 'RegOK' : (Array.isArray(caseSetup.politicalBeats) ? 'RegKAPUTT' : '-');
         diag('state', 'BEAT-DIAG Sz' + sceneCounter + ': ' + (caseSetup.caseType||'?') + ' murderAxes=' + _ax + '/' + _axOk + ' politicalBeats=' + _pol + '/' + _polOk + ' indizienLen=' + _allIndizien.length);
       }
+      // v7.12.295: Beat-Zahl VOR den Updates merken (für Stagnations-Erkennung).
+      let _beatVor = 0;
+      try { const _lv = aktiveBeatLuecke(); if (_lv) _beatVor = _lv.hitCount; } catch(e){}
       if (typeof updateTruthBeats === 'function') updateTruthBeats(_progressText);
       if (typeof updateMurderAxes === 'function') updateMurderAxes(_progressText);
       if (typeof updatePoliticalBeats === 'function') updatePoliticalBeats(_progressText);
+      // v7.12.295: PROAKTIVE BEAT-FÜHRUNG - spät + sanft (User-Vorgabe). Wenn ein Beat dazukam,
+      // Stagnations-Zähler zurücksetzen. Sonst: ab Szene 30, wenn seit >=6 Szenen kein neuer Beat
+      // UND Beats noch unter minHits, EINEN sanften Prompt-Hinweis auf den nächsten fehlenden Beat
+      // setzen. Nur Lenkung (kein erzwungener Button, kein Abschluss-Block). Max 3x/Run, damit es
+      // nicht nervt. Der bestehende pendingTruthBeatPush (Gate-Pfad) hat Vorrang - wenn der schon
+      // gesetzt ist, nicht überschreiben.
+      try {
+        const _lueckeNach = aktiveBeatLuecke();
+        if (_lueckeNach) {
+          if (_lueckeNach.hitCount > _beatVor) {
+            lastBeatHitScene = sceneCounter; // Fortschritt -> Stagnation zurücksetzen
+          }
+          const _stagnation = sceneCounter - (lastBeatHitScene || 0);
+          const _unterMin = _lueckeNach.hitCount < _lueckeNach.minHits;
+          if (!pendingTruthBeatPush && sceneCounter >= 30 && _stagnation >= 6 && _unterMin
+              && _lueckeNach.fehlend.length && proaktiverBeatPushCount < 3) {
+            const _next = _lueckeNach.fehlend.slice(0, 2).map(b => '- ' + (b.label || b.id)).join('\n');
+            pendingTruthBeatPush = 'FALLKERN-ERINNERUNG (beilaeufig, nicht erzwungen): Karl hat seit einigen Szenen keinen neuen Durchbruch im eigentlichen Fall gemacht. Noch offen ist:\n' + _next + '\nLass in dieser oder einer der naechsten Szenen beilaeufig eine Gelegenheit aufscheinen, genau hier weiterzukommen (ein Dokument, ein Zeuge, eine Spur, eine Konfrontation) - OHNE die laufende Handlung abzuwuergen und ohne den Fall vorzeitig zu loesen. Karl darf weiter frei handeln.';
+            proaktiverBeatPushCount++;
+            lastBeatHitScene = sceneCounter; // Cooldown: nicht jede Folgeszene erneut pushen
+            if (typeof diag === 'function') diag('progress', 'Proaktive Beat-Führung (sanft, Sz' + sceneCounter + ', Push ' + proaktiverBeatPushCount + '/3): lenkt auf ' + _lueckeNach.fehlend.slice(0,2).map(b=>b.id).join(', '));
+          }
+        }
+      } catch(e) {}
     } catch (e) {}
     const eligibleType = caseSetup && ['vermisst', 'beschatten', 'wahrheit', 'diebstahl'].includes(caseSetup.caseType);
     if (eligibleType) {
@@ -25951,7 +26019,14 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         // zufaelligem storyFacts-Taeter "loesen". Wenn die Wahrheit erkannt ist, sauber
         // abschliessen ("Wahrheit berichtet"). Sonst: gescheitert (Wahrheit blieb unbewiesen),
         // statt einen Platzhalter-Taeter zu erfinden (das war der alte Goerke-Notbremsen-Bug).
-        if (caseProgress.wahrheitErkannt || caseProgress.ueberfuehrt) {
+        // v7.12.296 (Source-Lektorat v295 P1): Bei Faellen MIT truthBeats (Goerke) reicht
+        // wahrheitErkannt/ueberfuehrt am Hard-Cap NICHT - die Wahrheitskette muss erfuellt sein
+        // (truthBeatsErfuellt). Sonst koennte ein gesetztes ueberfuehrt (z.B. Mertens als plausibler
+        // Verantwortlicher) den Hard-Cap trotz unbewiesener Beats zum Erfolg machen - das normale
+        // Wahrheitsbeat-Gate (v280) schuetzt nur den regulaeren Abschluss, nicht diesen Pfad.
+        const _hasTruthGate = caseSetup && Array.isArray(caseSetup.truthBeats) && caseSetup.truthBeats.length;
+        const _truthGateOk = !_hasTruthGate || (typeof truthBeatsErfuellt === 'function' && truthBeatsErfuellt());
+        if (_truthGateOk && (caseProgress.wahrheitErkannt || caseProgress.ueberfuehrt)) {
           caseProgress.klientGesprochen = true;
           caseProgress.istGelöst = true;
           caseProgress.stage = 4;
@@ -25961,8 +26036,9 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         } else {
           caseProgress.stage = 4;
           caseProgress.istGescheitert = true;
-          console.log('[Schatten] HARD-CAP (wahrheit): Wahrheit nie bewiesen - kein Erfolg');
-          diag('progress', '✦ HARD-CAP (wahrheit) - Wahrheit blieb unbewiesen: Auftrag gescheitert, KEIN erfundener Taeter');
+          const _grund = (_hasTruthGate && !_truthGateOk) ? ' (Wahrheitsbeats nicht erfuellt - kein Erfolg trotz evtl. Verdaechtigem)' : '';
+          console.log('[Schatten] HARD-CAP (wahrheit): Wahrheit nie bewiesen - kein Erfolg' + _grund);
+          diag('progress', '✦ HARD-CAP (wahrheit) - Wahrheit blieb unbewiesen: Auftrag gescheitert, KEIN erfundener Taeter' + _grund);
           if (typeof showCaseFailed === 'function') {
             showCaseFailed(_capN + ' Szenen, und die Wahrheit über den Fall bleibt unbewiesen. Karl hat keine Klarheit gefunden.');
           }
@@ -26452,7 +26528,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.293] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.296] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
@@ -26543,7 +26619,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     // INNERHALB des ueberfuehrt-if -> wurden nur verarbeitet wenn gleichzeitig
     // tatverdaechtiger_ueberfuehrt=true war, was bei reinen Vermissten-/Wahrheits-
     // faellen nie zutrifft. Jetzt eigenstaendig auf derselben Ebene.
-    try { markPhase('vor-zielpersonGefunden@Sz' + (typeof sceneCounter === 'number' ? sceneCounter : '?')); } catch(e){}
+    try { const _ctPhase = (caseSetup && caseSetup.caseType) || ''; markPhase((_ctPhase === 'vermisst' ? 'vor-zielpersonGefunden@Sz' : 'vor-resolutionSignals@Sz') + (typeof sceneCounter === 'number' ? sceneCounter : '?')); } catch(e){}
     if (scene.zielperson_gefunden === true && !caseProgress.zielpersonGefunden) {
       const zpFloorOk = caseProgress.stage >= 1 && sceneCounter >= 4;
       // v7.12.130 (Anlass Goerke-Run v7.12.129): MORDFALL-AUSSCHLUSS. Bei einem
@@ -28545,6 +28621,7 @@ function resetGame(skipConfirm) {
   autoReleaseUsedCount = 0;  // v7.9.10
   pendingForcedFahndung = null;  // v7.0
   pendingTruthBeatPush = null;  // v7.12.280
+  lastBeatHitScene = 0; proaktiverBeatPushCount = 0;  // v7.12.295 proaktive Beat-Führung
   fahndungUsed = false;  // v7.0
   ortPflichtIgnoredCount = 0;  // v7.0
   pendingForcedLocationChange = null;  // v7.0
