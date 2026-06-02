@@ -2864,7 +2864,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.289</div>
+    <div class="start-version">Schatten v7.12.290</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3028,7 +3028,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.289</span>
+    <span>Schatten v7.12.290</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -3160,7 +3160,7 @@ ECHTE HISTORISCHE PERSOENLICHKEITEN 1953 (NUR als atmosphaerisches Hintergrund-S
 - WALTER ULBRICHT - SED-Generalsekretaer, 1953 in akuter Krise nach 17. Juni. Sein Bild haengt ueberall, seine Stimme dringt aus Lautsprechern.
 - OTTO GROTEWOHL - Ministerpraesident der DDR.
 - ERNST REUTER (1889-1953) - Regierender Buergermeister West-Berlin, stirbt am 29. September 1953 unerwartet an Herzinfarkt. ECHTER TODESFALL. Eine Million Menschen bei der Beisetzung. Trauerwelle in West-Berlin.
-- WALTHER SCHREIBER - Reuters Nachfolger als Buergermeister, ab Oktober 1953.
+- WALTHER SCHREIBER - wird am 22. Oktober 1953 Regierender Buergermeister West-Berlins (CDU). DAVOR (nach Reuters Tod 29.9.) Nachfolge- und Koalitionskrise - er ist noch NICHT im Amt. Fuer Faelle vor dem 22.10. nur als moeglicher Nachfolger/Kandidat erwaehnen.
 - HILDEGARD KNEF (1925-2002) - West-Berliner Schauspielerin, zwischen Hollywood und Berlin pendelnd. Stammgast im Diener Tattersall.
 - WOLFGANG NEUSS (1923-1989) - Kabarettist, in West-Berliner Kneipen-Szene.
 - HORST BUCHHOLZ (1933-2003) - junger West-Berliner Schauspieler, Anfang 20 im Jahr 1953.
@@ -5777,7 +5777,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.289';
+window.SCHATTEN_VERSION = 'v7.12.290';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -14107,7 +14107,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.289] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.290] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -19093,13 +19093,23 @@ function validateOpeningCastPurity(text, setup) {
     'brauer',  // Setup 14 (distinktiv; hilde RAUS)
     'achterberg',  // Setup 13 Mord - nur fremd wenn nicht im eigenen Cast
   ];
+  // v7.12.290 (Source-Lektorat): Distinktivität der Fall-Namen unterscheiden. Distinktive Namen
+  // (tauchen im Alltag/als Realname praktisch nie zufällig auf) lösen schon einzeln einen Repair
+  // aus. Normale Nachnamen (eine emergente Nebenfigur könnte sie zufällig tragen) erst mit einem
+  // ZWEITEN Signal (weiterer Fremdname ODER fremder Ort). Senkt False-Positives ohne echte Drift
+  // durchzulassen.
+  const COMMON_SURNAMES = new Set(['brandt', 'vogt', 'krause', 'goerke', 'kessler']);
   const foreignNames = [];
+  const foreignDistinctive = [];
+  const foreignCommon = [];
   for (const fname of foreignFamousNames) {
     if (ownNames.has(fname)) continue;  // im eigenen Cast, OK
     // Wortgrenzen-Match im Szenentext
     const regex = new RegExp('\\b' + fname + '\\b');
     if (regex.test(norm)) {
       foreignNames.push(fname);
+      if (COMMON_SURNAMES.has(fname)) foreignCommon.push(fname);
+      else foreignDistinctive.push(fname);
     }
   }
 
@@ -19128,7 +19138,8 @@ function validateOpeningCastPurity(text, setup) {
     }
   }
   const ok = (foreignNames.length === 0) && (foreignLocations.length === 0);
-  return { ok: ok, foreignNames: foreignNames, foreignLocations: foreignLocations };
+  return { ok: ok, foreignNames: foreignNames, foreignLocations: foreignLocations,
+           foreignDistinctive: foreignDistinctive, foreignCommon: foreignCommon };
 }
 
 async function startGame() {
@@ -21474,7 +21485,7 @@ async function chooseOption(option) {
       const _romRng = (typeof botWasEverActive !== 'undefined' && botWasEverActive && typeof botRng === 'function') ? botRng() : Math.random();
       const offen = _romRng < 0.70;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.289] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.290] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -21516,7 +21527,7 @@ async function chooseOption(option) {
         || (typeof romanticTension === 'number' && romanticTension >= 3);
       if (_offen && _annaeherung && !nachtMitFrau) {
         nachtMitFrau = _frau;
-        console.log('[Schatten v7.12.289] NACHT MIT FRAU verbracht:', _frau);
+        console.log('[Schatten v7.12.290] NACHT MIT FRAU verbracht:', _frau);
         if (typeof diag === 'function') diag('state', 'Nacht mit ' + _frau + ' verbracht (offene Romance + Übernachtung) - für Fail-Spitze gemerkt');
       }
     } catch (e) {}
@@ -21869,7 +21880,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.289] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.290] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -22347,7 +22358,17 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (_crossPollution && !_crossPollution.ok) {
           const _fNames = _crossPollution.foreignNames || [];
           const _fLocs = _crossPollution.foreignLocations || [];
-          const _hardForeign = _fNames.length >= 1 || _fLocs.length >= 2;
+          const _fDist = _crossPollution.foreignDistinctive || [];
+          const _fCommon = _crossPollution.foreignCommon || [];
+          // v7.12.290 (Source-Lektorat): distinktiver Fremdname (1 reicht) ODER normaler Nachname
+          // MIT Zweitsignal (weiterer Name/Ort) ODER >=2 fremde Orte. Einzelner normaler Nachname
+          // ohne Zweitsignal = nur Warnung (eine zufällige gleichnamige Nebenfigur soll keinen
+          // Szenen-Neuschrieb auslösen).
+          const _commonMitZweitsignal = _fCommon.length >= 1 && (_fNames.length >= 2 || _fLocs.length >= 1);
+          const _hardForeign = _fDist.length >= 1 || _commonMitZweitsignal || _fLocs.length >= 2;
+          if (!_hardForeign && _fCommon.length >= 1) {
+            diag('drift', 'Cross-Case-Hinweis (Sz' + sceneCounter + '): einzelner Nachname [' + _fCommon.join(', ') + '] ohne Zweitsignal - nur Warnung, kein Repair (könnte zufällige Nebenfigur sein)');
+          }
           if (_hardForeign) {
             diag('drift', '⚠ CROSS-CASE-DRIFT nach Opening (Sz' + sceneCounter + '): fremde Namen [' + _fNames.join(', ') + '] / fremde Orte [' + _fLocs.join(', ') + '] - Repair-Retry ' + (intentRepairCount + 1) + '/' + MAX_INTENT_REPAIRS);
             console.warn('[Schatten] Cross-Case-Drift nach Opening:', _fNames.join(', '), '/', _fLocs.join(', '), '- Repair-Retry');
@@ -23325,7 +23346,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           } else if (!tensionHighEnoughForArrest && folterSceneCount >= custodyReleaseFloor) {
             // STILLER RELEASE: nur noch als Notventil bei langem Drift (5+ Sz). Karl ist
             // faktisch frei (KI erzaehlt ihn lange ohne Stasi-Kontext), System zieht nach.
-            console.warn('[Schatten v7.12.289] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
+            console.warn('[Schatten v7.12.290] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet');
             setCustodyState(false, 'stiller-release');
           } else if (!tensionHighEnoughForArrest) {
@@ -23341,7 +23362,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.289] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.290] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -23871,7 +23892,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof diag === 'function') {
           diag('state', '⚡ NOTFLUCHT GELUNGEN - Karl frei + 4 Sz Gnadenfrist, Stasi-Tension ' + prevTension + ' -> 3 (gesucht, aber nicht sofort wieder greifbar)');
         }
-        console.log('[Schatten v7.12.289] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
+        console.log('[Schatten v7.12.290] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
         // v7.11.56: Toast bei Erfolg - Spieler hat geklickt und soll Wuerfel-
         // Ergebnis direkt sehen, nicht nur narrative Andeutungen.
         if (typeof showProgressToast === 'function') {
@@ -26401,7 +26422,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.289] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.290] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
