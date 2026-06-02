@@ -2848,7 +2848,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.240</div>
+    <div class="start-version">Schatten v7.12.241</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3012,7 +3012,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.240</span>
+    <span>Schatten v7.12.241</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5607,7 +5607,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.240';
+window.SCHATTEN_VERSION = 'v7.12.241';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -13447,7 +13447,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.240] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.241] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -15012,6 +15012,12 @@ async function throttleRequest(provider) {
 
   // Wenn es etwas zu warten gibt: EINEN Countdown anzeigen und warten
   if (totalWaitMs > 0) {
+    // v7.12.241: Throttle-Wartezeit loggen. Verdacht: bei langen Runs fuellt sich das RPM-Budget,
+    // die Wartezeit wird lang, das Loading-Overlay ueberschreitet 55s -> der Watchdog wertet die
+    // LEGITIME Rate-Limit-Wartezeit faelschlich als Haenger. Diese Zeile macht das im Debug-Log sichtbar.
+    if (typeof logApiEvent === 'function' && totalWaitMs > 5000) {
+      logApiEvent('throttle_wait', provider + ': ' + Math.round(totalWaitMs/1000) + 's Rate-Limit-Wartezeit (Budget ' + times.length + '/' + budget + ' im Fenster)');
+    }
     // Nur sichtbarer Countdown bei > 3 Sekunden (sonst ist's einfach Loading)
     if (totalWaitMs > 3000) {
       await runCountdown(totalWaitMs);
@@ -15054,6 +15060,13 @@ async function runCountdown(totalMs) {
     clearInterval(throttleInterval);
     throttleInterval = null;
   }
+  // v7.12.241: Loading-Timer zuruecksetzen, damit der Watchdog die ANSCHLIESSENDE echte fetch-Zeit
+  // frisch ab jetzt misst - nicht Wartezeit + fetch summiert (sonst Falsch-Alarm direkt nach langem
+  // Countdown). Der eigentliche API-Call beginnt erst nach diesem Countdown.
+  try {
+    const _ld = document.getElementById('loading');
+    if (_ld && !_ld.classList.contains('hidden')) _ld.dataset.showSince = String(Date.now());
+  } catch (e) {}
   // Text zurueck auf Standard, Loading bleibt sichtbar fuer den eigentlichen API-Call
   const textEl = document.querySelector('#loading .loading-text');
   if (textEl) textEl.textContent = 'Karl denkt nach';
@@ -20614,7 +20627,7 @@ async function chooseOption(option) {
       const _romRng = (typeof botWasEverActive !== 'undefined' && botWasEverActive && typeof botRng === 'function') ? botRng() : Math.random();
       const offen = _romRng < 0.70;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.240] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.241] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -20993,7 +21006,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.240] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.241] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -22396,7 +22409,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           } else if (!tensionHighEnoughForArrest && folterSceneCount >= custodyReleaseFloor) {
             // STILLER RELEASE: nur noch als Notventil bei langem Drift (5+ Sz). Karl ist
             // faktisch frei (KI erzaehlt ihn lange ohne Stasi-Kontext), System zieht nach.
-            console.warn('[Schatten v7.12.240] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
+            console.warn('[Schatten v7.12.241] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet');
             setCustodyState(false, 'stiller-release');
           } else if (!tensionHighEnoughForArrest) {
@@ -22412,7 +22425,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.240] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.241] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -22940,7 +22953,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof diag === 'function') {
           diag('state', '⚡ NOTFLUCHT GELUNGEN - Karl frei + 4 Sz Gnadenfrist, Stasi-Tension ' + prevTension + ' -> 3 (gesucht, aber nicht sofort wieder greifbar)');
         }
-        console.log('[Schatten v7.12.240] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
+        console.log('[Schatten v7.12.241] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
         // v7.11.56: Toast bei Erfolg - Spieler hat geklickt und soll Wuerfel-
         // Ergebnis direkt sehen, nicht nur narrative Andeutungen.
         if (typeof showProgressToast === 'function') {
@@ -25297,7 +25310,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.240] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.241] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
@@ -29460,6 +29473,11 @@ setInterval(function() {
     const since = parseInt(loading.dataset.showSince || '0', 10);
     if (!since) return;
     const elapsed = Date.now() - since;
+    // v7.12.241: Legitime Rate-Limit-Wartezeit NICHT als Haenger werten. Wenn gerade ein
+    // Throttle-Countdown laeuft (throttleInterval aktiv), ist das Loading-Overlay absichtlich
+    // sichtbar - der Watchdog darf dann nicht eingreifen. Verhindert Falsch-Alarm bei langen Runs
+    // mit vollem RPM-Budget (vermeintliche "Haenger" waren in Wahrheit lange Wartezeiten).
+    if (typeof throttleInterval !== 'undefined' && throttleInterval !== null) return;
     if (elapsed > 55000) {
       console.warn('[Schatten Watchdog] Loading seit ' + Math.round(elapsed/1000) + 's - erzwinge Reset');
       // In-Flight-Flag zuruecksetzen
