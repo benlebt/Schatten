@@ -2864,7 +2864,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.280</div>
+    <div class="start-version">Schatten v7.12.282</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3028,7 +3028,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.280</span>
+    <span>Schatten v7.12.282</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4101,6 +4101,28 @@ const CASE_TYPE_GOALS = {
   },
 };
 
+// v7.12.282: FALL-TYP-ABHÄNGIGER HARD-CAP (Spielende-Deckel).
+// Die Run-Daten zeigen zwei Klassen: kurze Fälle (diebstahl/beschatten, ~8-25 Szenen) und
+// lange/schwierige (wahrheit/politisch/mord/vermisst, oft 35-62 Szenen). Ein einheitlicher
+// Deckel ist für beide falsch. Diese Zahlen sind die JUSTIER-STELLEN - wir tracken weiter die
+// Szenenzahlen echter Runs und passen sie an. Logik bleibt unverändert.
+const HARD_CAP_BY_TYPE = {
+  diebstahl: 55,  // kompakt - löst über Objekt-Beschaffung
+  beschatten: 55, // kompakt - Beobachtung reicht
+  vermisst: 60,
+  mord: 60,
+  wahrheit: 65,   // braucht Raum für die Beat-Kette (Goerke: 3+ Beats + Entlastung)
+  politisch: 65,  // Stasi-Hektik frisst Ermittlungsraum -> mehr Puffer
+};
+const HARD_CAP_DEFAULT = 60;
+function getHardCap() {
+  try {
+    const ct = (typeof caseSetup === 'object' && caseSetup && caseSetup.caseType) || '';
+    if (ct && typeof HARD_CAP_BY_TYPE[ct] === 'number') return HARD_CAP_BY_TYPE[ct];
+  } catch (e) {}
+  return HARD_CAP_DEFAULT;
+}
+
 const INTRO_VARIANTS = [
   // v6.76: Setup 1 (Default-Random) entfernt - zu viel Drift-Potenzial.
   // Wir haben jetzt 14 klar definierte Setups mit festem Cast, historischem
@@ -5109,7 +5131,7 @@ const INTRO_VARIANTS = [
         'Edith Brommer (Salon-Kollegin) bezeugt: Mathilde hatte in den Wochen vor ihrem Tod Angst, fuehlte sich beobachtet/bedraengt - und zwar NICHT von Albrecht, sondern von jemandem mit Behoerden-Auftreten',
         'Volkspolizei-Akte (Keibelstrasse, ueber Roth): der erste VP-Ermittler hatte Zweifel am Sturz vermerkt - diese Notiz wurde aus der spaeteren Anklageakte entfernt',
         'Hauptmann Krollwitz (MfS) hatte Zugriff auf den Ermittlungsvorgang und ein Interesse daran, Mathildes Tod als privates Familiendrama (Albrecht als Taeter) erscheinen zu lassen - er steuerte die Aktenlage',
-        'Albrechts Alibi fuer die Tatnacht wurde von der Anklage unterschlagen - ein Zeuge (Reichsbahn-Kollege) bestaetigt, dass Albrecht zur fraglichen Zeit nicht bei Mathilde war',
+        'Albrechts Alibi fuer die Tatnacht wurde von der Anklage unterschlagen - Albrecht hatte in der Tatnacht Dienst beim Bahnausbesserungswerk Schoeneweide (Reichsbahn); ein Kollege (Stellwerk/Schicht) kann ueber Dienstplan und Schichtbuch bestaetigen, dass Albrecht zur fraglichen Zeit nicht bei Mathilde war',
       ],
       // v7.12.280 (Lektorat Goerke-Run P1): WAHRHEITSBEATS. Stage 3 / wahrheit_erkannt soll
       // bei diesem Fall NICHT über reine Indizmenge laufen (14 Indizien bewiesen die Wahrheit
@@ -5118,15 +5140,15 @@ const INTRO_VARIANTS = [
       // Entlastungs-Beat (Albrecht entlastet). Die Engine trackt das in caseProgress.truthBeatsHit.
       truthBeats: [
         { id: 'sturz_angezweifelt', label: 'Erstprotokoll/Befund widerspricht dem Treppensturz',
-          keywords: /\b(treppensturz|sturz)\b.{0,40}\b(zweifel|angezweifelt|in frage|in zweifel|widerspr|fragwuerdig|fragwürdig|passt nicht|unstimmig|inszeniert|vorgetaeuscht|vorgetäuscht)|\b(zweifel|widerspr|unstimmig|in frage)\w*.{0,40}\b(sturz|todesursache|befund)|totenschein.{0,40}(weicht ab|abweich|nachtraeglich|nachträglich|manipulier|gefaelscht|gefälscht|geändert|geaendert)|(erst\w*\s*(protokoll|ermittlung|befund)|ermittlungsprotokoll)\w*.{0,40}(sturz|treppensturz|todesursache)/i },
+          keywords: /\b(treppensturz|sturz|todesursache|totenschein)\b[\s\S]{0,60}\b(zweifel|angezweifelt|in frage|in zweifel|widerspr|fragwuerdig|fragwürdig|passt nicht|unstimmig|nicht eindeutig|inszeniert|vorgetaeuscht|vorgetäuscht|gestrichen|ersetzt|geaendert|geändert|umgeschrieben|nachtraeglich|nachträglich)|\b(nicht eindeutig|zweifel|widerspr|unstimmig|in frage)\w*[\s\S]{0,60}\b(sturz|todesursache|befund|totenschein)/i },
         { id: 'akte_manipuliert', label: 'Manipulation/Entfernung aus der Akte belegt',
-          keywords: /\b(akte|protokoll|vermerk|anklageakte|ermittlungsakt)\w*.{0,40}(entfernt|herausgenommen|fehlt|verschwunden|manipulier|gefaelscht|getilgt|geschwaerzt|geschwärzt)|\b(entfernt|getilgt|herausgenommen)\w*.{0,30}\b(notiz|vermerk|seite|protokoll)/i },
+          keywords: /\b(akte|akten|protokoll|vermerk|anklageakte|ermittlungsakt|prozessakt|totenschein|unterlagen|eintrag)\w*[\s\S]{0,60}(entfernt|herausgenommen|fehlt|verschwunden|manipul|gefaelscht|gefälscht|getilgt|geschwaerzt|geschwärzt|gestrichen|ersetzt|umgeschrieben|geaendert|geändert|verfaelscht|verfälscht|geglaettet|geglättet)|\b(manipul|gefaelscht|gefälscht|gestrichen|umgeschrieben|verfaelscht|verfälscht)\w*[\s\S]{0,40}\b(akte|akten|protokoll|prozess|vermerk|eintrag|unterlagen)/i },
         { id: 'krollwitz_mertens', label: 'Krollwitz/Mertens-Verbindung zur Manipulation',
-          keywords: /\b(krollwitz|mertens)\w*.{0,60}(akte|vorgang|steuert|gesteuert|zugriff|manipul|druck|einfluss|veranlasst|angeordnet|interesse)|\b(akte|vorgang|aktenlage)\w*.{0,40}(krollwitz|mertens)/i },
+          keywords: /\b(krollwitz|mertens)\w*[\s\S]{0,80}(akte|vorgang|steuert|gesteuert|zugriff|manipul|druck|bedraengt|bedrängt|einfluss|veranlasst|angeordnet|interesse|schreiber|prozess)|\b(akte|vorgang|aktenlage|zugriff|manipul|prozess)\w*[\s\S]{0,60}(krollwitz|mertens)/i },
         { id: 'alibi_unterschlagen', label: 'Albrechts Alibi belegt (unterschlagener Zeuge)',
-          keywords: /\balibi\w*.{0,50}(bestaetigt|bestätigt|belegt|zeuge|reichsbahn|unterschlagen|nicht bei|woanders)|\b(zeuge|reichsbahn-kollege)\w*.{0,40}\balbrecht\w*.{0,40}(nicht bei|woanders|alibi)/i },
+          keywords: /\balibi\w*[\s\S]{0,60}(bestaetigt|bestätigt|belegt|zeuge|reichsbahn|unterschlagen|nicht bei|woanders)|\b(zeuge|reichsbahn|kollege)\w*[\s\S]{0,60}(alibi|albrecht|entlastend|entlastet|bestaetigt|bestätigt|nicht bei|woanders)|entlastend\w*\s*zeug/i },
         { id: 'albrecht_entlastet', label: 'Albrecht durch die Beweiskette entlastet', entlastung: true,
-          keywords: /\balbrecht\w*.{0,50}(unschuldig|entlastet|nicht der taeter|nicht der täter|kein moerder|kein mörder|zu unrecht|falsch beschuldigt)|\b(unschuldig|entlastet|zu unrecht (angeklagt|verhaftet|beschuldigt))\w*.{0,40}albrecht/i },
+          keywords: /\balbrecht\w*[\s\S]{0,60}(unschuldig|entlastet|entlastend|nicht der taeter|nicht der täter|kein moerder|kein mörder|zu unrecht|falsch beschuldigt|alibi)|\b(unschuldig|entlastet|entlastend|zu unrecht (angeklagt|verhaftet|beschuldigt))\w*[\s\S]{0,40}albrecht|wahrheit bewiesen[\s\S]{0,30}entlastet/i },
       ],
       truthBeatsMinHits: 3, // mind. 3 von 5 Beats + Entlastungs-Beat fuer wahrheitErkannt
       // v6.76: HISTORISCHER KONTEXT - 15. September 1953 (Dienstagmorgen)
@@ -5153,6 +5175,8 @@ const INTRO_VARIANTS = [
         { name: 'Imbiss Bei Trude', sektor: 'Ost (Mitte)', detail: 'fuer Mittagspause nach Gericht' },
         { name: 'Gerichtsarchiv Kreisgericht Mitte', sektor: 'Ost (Mitte)', detail: 'Geschaeftsstelle/Archiv am Littenplatz - hier liegen die Prozess- und Ermittlungsakten zum Fall Goerke (Totenschein, VP-Vermerke). Akteneinsicht ueber Baumgartens Vollmacht.' },
         { name: 'Volkspolizei-Praesidium Keibelstrasse', sektor: 'Ost (Mitte)', detail: 'Roth: zustaendig fuer den Goerke-Fall vor Verhaftung' },
+        { name: 'Bahnausbesserungswerk Schoeneweide', sektor: 'Ost (Schoeneweide)', detail: 'Reichsbahn-Werk, wo Albrecht in der Tatnacht Dienst hatte - hier arbeiten Kollegen, die sein Alibi bestaetigen koennen (Dienstplan, Schichtnachweis)' },
+        { name: 'Stellwerk Schoeneweide', sektor: 'Ost (Schoeneweide)', detail: 'Reichsbahn-Stellwerk - der entlastende Zeuge (Albrechts Kollege) hat hier Dienst; Schichtbuch/Dienstplan koennen das Alibi dokumentieren' },
         { name: 'Karls Opel Olympia', sektor: 'mobil', detail: 'schwarzer Vorkriegswagen, springt schlecht an, Handschuhfach mit altem Verbandzeug, Korn-Flachmann unter Sitz' },
         { name: 'S-Bahnhof Friedrichstrasse', sektor: 'Grenze Ost/West', detail: 'noch durchlaessig 1953, MfS-Beobachter in zivil, lange Schatten der Wartenden, hier verschwinden Leute' },
       ],
@@ -5551,6 +5575,24 @@ const INTRO_VARIANTS = [
         'VERTUSCHUNG (Mordbeweis): Dr. Marquardt stellte gutglaeubig den Totenschein "Herzversagen" aus - die Aktennummer weicht jedoch ab, und Marquardt gibt zu, die auffaellig grosse fehlende Digitalis-Menge nie hinterfragt zu haben. Der Totenschein wurde bewusst glattgezogen',
         'MOTIV (nur Motiv, kein Hauptbeweis): Achterberg wollte aufdecken, dass Vossberg eine West-Gastspiel-Gage unterschlagen hat (Devisenvergehen). Der drohende Absturz - Devisenprozess + blockierter Aufstieg zum 1. Dirigenten - ist Vossbergs Tatmotiv, beweist aber allein NICHT den Mord. Die Wahrheit braucht Todesursache + Gelegenheit + Zugriff, nicht nur die Devisen',
       ],
+      // v7.12.282 (v277-Lektorat P2): MORD-KERNACHSEN. Analog zu Goerkes truthBeats, aber für
+      // Mordfälle und ZUNÄCHST NUR BEOBACHTEND (kein Abschluss-Gate). Erst wenn ein Achterberg-Run
+      // zeigt, dass die Achsen-Erkennung sauber greift, schalten wir das Gate scharf (Täter
+      // plausibel + mind. murderAxesMinHits Kernachsen). So vermeiden wir, dass eine ungetestete
+      // Erkennung einen lösbaren Mordfall blockiert (Goerke-Lehre: erst Erkennung verifizieren).
+      murderAxes: [
+        { id: 'todesursache', label: 'Todesursache geklärt (Vergiftung/Überdosis, kein Herzversagen)',
+          keywords: /\b(digitalis|vergiftung|vergiftet|überdosis|ueberdosis|toedlich|tödlich)\w*[\s\S]{0,70}(konzentration|dosis|blut|gerichtsmed|obduktion|nicht.{0,15}herz|kein.{0,15}herz)|\b(blut|obduktion|gerichtsmed|totenschein)\w*[\s\S]{0,60}(digitalis|vergift|überdos|ueberdos|toedlich|tödlich)/i },
+        { id: 'gelegenheit', label: 'Gelegenheit belegt (Täter allein am Tatort/zur Tatzeit)',
+          keywords: /\b(vossberg|garderobe|tropfflasche|tatzeit)\w*[\s\S]{0,70}(allein|hantier|kurz vor|gesehen|beobacht|zugang|tatzeit|tatnacht)|\b(allein|hantier|gesehen|beobacht)\w*[\s\S]{0,60}(garderobe|tropfflasche|achterberg.{0,20}flasche)/i },
+        { id: 'zugriff', label: 'Tatmittel-Zugriff belegt (Täter beschaffte das Gift)',
+          keywords: /\b(apotheke|rezept|beleg|digitalis)\w*[\s\S]{0,70}(vossberg|abgeholt|beschafft|nicht von ihm|gekauft)|\b(vossberg|beschafft|abgeholt)\w*[\s\S]{0,60}(apotheke|rezept|digitalis|gift|überdos|ueberdos)/i },
+        { id: 'vertuschung', label: 'Vertuschung belegt (Totenschein glattgezogen)',
+          keywords: /\b(totenschein|herzversagen|aktennummer|marquardt)\w*[\s\S]{0,70}(weicht ab|abweich|glattgezogen|glattge|nie hinterfragt|gutglaeubig|gutgläubig|manipul|fehlende.{0,20}digitalis)|\b(glattgezogen|vertuscht|manipul)\w*[\s\S]{0,50}(totenschein|befund|akte)/i },
+        { id: 'motiv', label: 'Motiv belegt (West-Gage/Devisen, drohender Absturz)',
+          keywords: /\b(west.?gage|gastspiel.?gage|devisen|unterschlagen|unterschlagung)\w*[\s\S]{0,70}(vossberg|achterberg|aufdeck|prozess|absturz|motiv)|\b(vossberg|motiv)\w*[\s\S]{0,60}(west.?gage|devisen|unterschlag|absturz|dirigent)/i },
+      ],
+      murderAxesMinHits: 2, // SPÄTER (wenn Gate scharf): Täter plausibel + mind. 2 Kernachsen
       historicalContext: {
         weltlage: 'Stalin tot seit 7 Monaten, Chruschtschow seit 13.9. Erster Sekretaer der KPdSU. Berija im Juni gestuerzt, sein Prozess wird fuer Dezember erwartet. Im Osten ist die Lage nach dem 17. Juni weiter angespannt, der Neue Kurs der SED laeuft. Kultur ist Staatssache: Die Staatsoper steht unter enger Aufsicht der Staatlichen Kommission fuer Kunstangelegenheiten und der SED-Kulturpolitik, West-Gastspiele sind Devisen- und Politikum zugleich.',
         berlinLage: 'Oktober 1953: Die Deutsche Staatsoper spielt noch im Ausweichquartier Admiralspalast (das Stammhaus Unter den Linden ist seit der Kriegszerstoerung 1941/45 im Wiederaufbau, Wiedereroeffnung erst 1955). Devisenvergehen werden hart verfolgt. Volkspolizei-Praesident ist Fritz Eikemeyer.',
@@ -5718,7 +5760,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.280';
+window.SCHATTEN_VERSION = 'v7.12.282';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -6389,6 +6431,7 @@ function createInitialCaseProgress() {
     istGelöst: false,
     istGescheitert: false, // v7.12.279: true wenn Hard-Cap-Fail (Auftrag gescheitert) - hat Vorrang vor stage
     truthBeatsHit: [], // v7.12.280: erreichte Wahrheitsbeat-IDs (nur bei Fällen mit truthBeats, z.B. Goerke)
+    murderAxesHit: [], // v7.12.282: erkannte Mord-Kernachsen (beobachtend, nur bei Fällen mit murderAxes, z.B. Achterberg)
     klientGesprochen: false,
     abschlussSzeneGerendert: false, // v7.12.275: nur true wenn echte KI-Abschluss-Szene gerendert
     verknuepfungen: [],
@@ -9423,6 +9466,36 @@ function truthBeatsFehlend() {
   } catch (e) { return []; }
 }
 
+// v7.12.282 (v277-Lektorat P2): MORD-KERNACHSEN-TRACKING - ZUNÄCHST NUR BEOBACHTEND.
+// Scannt Text gegen die murderAxes des Setups (aktuell Achterberg) und markiert erkannte Achsen
+// in caseProgress.murderAxesHit. KEIN Abschluss-Gate - das wird erst scharf geschaltet, wenn ein
+// echter Achterberg-Run zeigt, dass die Erkennung sauber greift (Goerke-Lehre).
+function updateMurderAxes(text) {
+  try {
+    if (!caseSetup || !Array.isArray(caseSetup.murderAxes) || !caseSetup.murderAxes.length) return;
+    if (!text || typeof text !== 'string') return;
+    if (!caseProgress.murderAxesHit || !Array.isArray(caseProgress.murderAxesHit)) caseProgress.murderAxesHit = [];
+    for (const axis of caseSetup.murderAxes) {
+      if (!axis || !axis.id || !axis.keywords) continue;
+      if (caseProgress.murderAxesHit.indexOf(axis.id) !== -1) continue;
+      if (axis.keywords.test(text)) {
+        caseProgress.murderAxesHit.push(axis.id);
+        if (typeof diag === 'function') diag('progress', '✦ MORD-ACHSE erkannt (beobachtend): ' + (axis.label || axis.id) + ' (' + caseProgress.murderAxesHit.length + '/' + caseSetup.murderAxes.length + ')');
+        console.log('[Schatten] Mord-Achse erkannt (beobachtend):', axis.id, '-', axis.label);
+      }
+    }
+  } catch (e) { /* defensiv: darf die Szene nie brechen */ }
+}
+// Status der Mord-Achsen (für Logging + spätere Gate-Aktivierung). minHits-Schwelle aus Setup.
+function murderAxesStatus() {
+  try {
+    if (!caseSetup || !Array.isArray(caseSetup.murderAxes) || !caseSetup.murderAxes.length) return null;
+    const hit = (caseProgress && Array.isArray(caseProgress.murderAxesHit)) ? caseProgress.murderAxesHit : [];
+    const minHits = (typeof caseSetup.murderAxesMinHits === 'number') ? caseSetup.murderAxesMinHits : 2;
+    return { hit: hit.length, total: caseSetup.murderAxes.length, minHits: minHits, erfuellt: hit.length >= minHits };
+  } catch (e) { return null; }
+}
+
 // v7.12.274 (Source-Code-Lektorat P0): ZENTRALER Stage-2-Floor. Vorher hatten Haupt-
 // und Retry-Pfad unterschiedliche Regeln (Retry fehlte gameDay===1 && sceneCounter>=14),
 // wodurch ein langer Tag-1-Run im Retry-Pfad nie Stage 2 erreichen konnte. Eine Quelle:
@@ -9694,10 +9767,25 @@ function showCaseFailed(reason) {
   }
   {
     const reasonText = reason || 'Der Klient hat das Vertrauen verloren.';
+    // v7.12.282: ROMANCE-FAIL-SPITZE. Hat Karl unterwegs eine Nacht mit einer Frau verbracht,
+    // greift der Klient das im Fail-Screen auf - bitter, namentlich, sehr Noir. NUR im Fail
+    // (diese Funktion läuft nie bei gelöstem Fall) und NUR wenn die Nacht wirklich stattfand.
+    let romanceSpitze = '';
+    if (nachtMitFrau && typeof nachtMitFrau === 'string' && nachtMitFrau.trim()) {
+      const _frau = (typeof escapeHtml === 'function') ? escapeHtml(nachtMitFrau.trim()) : nachtMitFrau.trim();
+      const _klient = (clientProfile && clientProfile.name) ? ((typeof escapeHtml === 'function') ? escapeHtml(clientProfile.name) : clientProfile.name) : 'Der Klient';
+      const _varianten = [
+        `„Eins versteh ich nicht, Mauer", sagt ${_klient} kalt. „Für eine Nacht bei ${_frau} hatten Sie Zeit. Aber für das, wofür ich Sie teuer bezahlt habe, nicht." Die Tür fällt ins Schloss.`,
+        `${_klient} sieht Karl lange an. „Man hört so einiges. Dass Sie bei ${_frau} übernachtet haben zum Beispiel. Schön für Sie. Für meinen Fall hat die Zeit dann wohl nicht mehr gereicht." Verachtung in der Stimme.`,
+        `„Sie hatten Muße, ${_frau} näherzukommen, Mauer. Mein Geld haben Sie genommen, mein Fall blieb liegen." ${_klient} lässt die Geldscheine gar nicht erst sehen, die Karl nicht bekommen wird.`,
+      ];
+      const _idx = (typeof sceneCounter === 'number' ? sceneCounter : 0) % _varianten.length;
+      romanceSpitze = `<br><br><span style="font-style:italic;opacity:0.92">${_varianten[_idx]}</span>`;
+    }
     failEl.innerHTML = `
       <div class="failed-title">— AUFTRAG ENTZOGEN —</div>
       <div class="failed-text">${typeof escapeHtml === 'function' ? escapeHtml(reasonText) : reasonText}<br>
-      Karl Mauer steht ohne Klient da. Wieder mal.</div>
+      Karl Mauer steht ohne Klient da. Wieder mal.${romanceSpitze}</div>
       <div class="failed-text-small">Tag ${gameDay}<br>
       Es bleibt die alte Frage: Wie zahle ich die Miete diesen Monat?</div>
       <button class="failed-button" onclick="resetGame(true)">Neue Ermittlung</button>
@@ -12336,6 +12424,10 @@ const HEALING_COOLDOWN_SCENES = 5;  // v7.11.21: 3 -> 5 wegen Lindner Vf-Ping-Po
 //   im Prompt dass sie abgeturnt ist
 let romanticClicksSinceProgress = 0;
 let lastRomanceNpcName = '';  // welche Frau gerade angeflirtet wird
+// v7.12.282: Name der Frau, mit der Karl tatsächlich eine Nacht verbracht hat (offene Romance-
+// Partnerin + Übernachtung). Leer = keine. Nur für die Fail-Spitze ("Zeit für Romantik, aber
+// nicht für meinen Fall") - NIE ein Vorwurf, wenn Karl den Fall löst.
+let nachtMitFrau = '';
 
 // v7.9.53: PERFORMANCE-TRACKING pro Modell. User-Feedback "Mistral Large ist
 // extrem langsam" - wir wollen Antwortzeiten messen und im Export sehen welches
@@ -13933,7 +14025,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.280] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.282] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -16773,14 +16865,16 @@ KEINE anderen Themen mehr - kein neuer Tatort, keine neuen Verdaechtigen, keine 
     // Anlass User v6.90: "40-70 ist gesunde Range wo das Spiel enden sollte".
     // Vor dem Hard-Cap (70) gibt es eine Vorwarnungs-Zone wo Mistral
     // narrativ unter Druck gesetzt wird, schneller zu loesen.
-    if (sceneCounter >= 40 && sceneCounter < 70 && caseProgress.stage < 4) {
-      const remaining = 70 - sceneCounter;
-      if (sceneCounter >= 55) {
-        recap += `\n\nSPIELDAUER-WARNUNG (HART): Szene ${sceneCounter} von max 70. Nur noch ${remaining} Szenen bis das Spiel automatisch endet. Diese Szene MUSS einen klaren Fortschritt zur Fall-Loesung bringen - Konfrontation, Gestaendnis, Festnahme, oder Karl uebergibt alles an Roth/Lindner. Kein Plaudern mehr, kein Indizien-Sammeln. Setze die naechste Stage-Flag (tatverdaechtiger_ueberfuehrt oder klient_berichtet).`;
-      } else if (sceneCounter >= 45) {
-        recap += `\n\nSPIELDAUER-WARNUNG: Szene ${sceneCounter} von max 70. Karl ist seit Tagen am Fall, Zeit zu liefern. Diese oder die naechsten 2-3 Szenen sollten den Fall in die Konfrontations-Phase bringen. Mistral: priorisiere Stage-Fortschritt vor neuen Subplots.`;
+    // v7.12.282: deckel-relativ (getHardCap) statt feste 70. Warnstufen relativ gestaffelt.
+    const _hcWarn = (typeof getHardCap === 'function') ? getHardCap() : 60;
+    if (sceneCounter >= (_hcWarn - 20) && sceneCounter < _hcWarn && caseProgress.stage < 4) {
+      const remaining = _hcWarn - sceneCounter;
+      if (sceneCounter >= (_hcWarn - 5)) {
+        recap += `\n\nSPIELDAUER-WARNUNG (HART): Szene ${sceneCounter} von max ${_hcWarn}. Nur noch ${remaining} Szenen bis das Spiel automatisch endet. Diese Szene MUSS einen klaren Fortschritt zur Fall-Loesung bringen - Konfrontation, Gestaendnis, Festnahme, oder Karl uebergibt alles an Roth/Lindner. Kein Plaudern mehr, kein Indizien-Sammeln. Setze die naechste Stage-Flag (tatverdaechtiger_ueberfuehrt oder klient_berichtet).`;
+      } else if (sceneCounter >= (_hcWarn - 15)) {
+        recap += `\n\nSPIELDAUER-WARNUNG: Szene ${sceneCounter} von max ${_hcWarn}. Karl ist seit Tagen am Fall, Zeit zu liefern. Diese oder die naechsten 2-3 Szenen sollten den Fall in die Konfrontations-Phase bringen. Mistral: priorisiere Stage-Fortschritt vor neuen Subplots.`;
       } else {
-        recap += `\n\nSPIELDAUER-HINWEIS: Szene ${sceneCounter} von max 70. Karl sollte bald zur Aufloesung kommen - keine neuen Nebenfiguren mehr einfuehren, fokussiere auf den Hauptverdacht.`;
+        recap += `\n\nSPIELDAUER-HINWEIS: Szene ${sceneCounter} von max ${_hcWarn}. Karl sollte bald zur Aufloesung kommen - keine neuen Nebenfiguren mehr einfuehren, fokussiere auf den Hauptverdacht.`;
       }
     }
     // Klient-Geduld: wenn Karl zu lange braucht, droht der Klient mit Auftragsentzug
@@ -19030,6 +19124,7 @@ async function startGame() {
   karlMuedeSignalScene = -99; // v7.12.112: Müdigkeits-Signal zuruecksetzen
   romanceReceptive = {};   // v7.12.17: Wuerfel-Ergebnisse zuruecksetzen
   romanceRejected = {};
+  nachtMitFrau = '';       // v7.12.282: Nacht-mit-Frau-Tracking zuruecksetzen
   romanceClimaxed = {};    // v7.12.28: Climax-Tracking zuruecksetzen
   // Reset Historische Anker (v6.56 -> v6.57)
   historicalAnchorCount = 0;
@@ -19065,6 +19160,11 @@ async function startGame() {
   if (caseSetup && Array.isArray(intro.truthBeats)) {
     caseSetup.truthBeats = intro.truthBeats.slice();
     if (typeof intro.truthBeatsMinHits === 'number') caseSetup.truthBeatsMinHits = intro.truthBeatsMinHits;
+  }
+  // v7.12.282: murderAxes (Mord-Kernachsen, zunächst nur beobachtend) nach caseSetup ziehen.
+  if (caseSetup && Array.isArray(intro.murderAxes)) {
+    caseSetup.murderAxes = intro.murderAxes.slice();
+    if (typeof intro.murderAxesMinHits === 'number') caseSetup.murderAxesMinHits = intro.murderAxesMinHits;
   }
   // Wenn das Intro politisch markiert ist (z.B. Stein/Reichsbahn, Hollenbeck), Stasi-Mechanik aktivieren
   if (intro.setup && intro.setup.politisch) {
@@ -21225,7 +21325,7 @@ async function chooseOption(option) {
       const _romRng = (typeof botWasEverActive !== 'undefined' && botWasEverActive && typeof botRng === 'function') ? botRng() : Math.random();
       const offen = _romRng < 0.70;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.280] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.282] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -21256,6 +21356,21 @@ async function chooseOption(option) {
       diag('detect', 'Romantik-Klick ' + romanticClicksSinceProgress + '/3 mit ' + (npcName || '?'));
     }
   } else if (chosenKategorie === 'UEBERNACHTUNG') {
+    // v7.12.282: NACHT-MIT-FRAU-ERKENNUNG (VOR dem Counter-Reset, damit die Klickzahl noch steht).
+    // Wenn Karl übernachtet UND die zuletzt umworbene Frau OFFEN für Intimität war
+    // (romanceReceptive===true) UND echte Annäherung lief (Klicks oder hohe Romance-Tension),
+    // dann hat Karl die Nacht mit ihr verbracht. Reine Übernachtung allein zählt NICHT.
+    try {
+      const _frau = lastRomanceNpcName || '';
+      const _offen = _frau && typeof romanceReceptive === 'object' && romanceReceptive[_frau] === true;
+      const _annaeherung = (typeof romanticClicksSinceProgress === 'number' && romanticClicksSinceProgress > 0)
+        || (typeof romanticTension === 'number' && romanticTension >= 3);
+      if (_offen && _annaeherung && !nachtMitFrau) {
+        nachtMitFrau = _frau;
+        console.log('[Schatten v7.12.282] NACHT MIT FRAU verbracht:', _frau);
+        if (typeof diag === 'function') diag('state', 'Nacht mit ' + _frau + ' verbracht (offene Romance + Übernachtung) - für Fail-Spitze gemerkt');
+      }
+    } catch (e) {}
     // Echter Progress - Counter zuruecksetzen
     romanticClicksSinceProgress = 0;
     if (typeof diag === 'function') {
@@ -21605,7 +21720,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.280] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.282] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -23061,7 +23176,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           } else if (!tensionHighEnoughForArrest && folterSceneCount >= custodyReleaseFloor) {
             // STILLER RELEASE: nur noch als Notventil bei langem Drift (5+ Sz). Karl ist
             // faktisch frei (KI erzaehlt ihn lange ohne Stasi-Kontext), System zieht nach.
-            console.warn('[Schatten v7.12.280] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
+            console.warn('[Schatten v7.12.282] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet');
             setCustodyState(false, 'stiller-release');
           } else if (!tensionHighEnoughForArrest) {
@@ -23077,7 +23192,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.280] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.282] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -23607,7 +23722,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof diag === 'function') {
           diag('state', '⚡ NOTFLUCHT GELUNGEN - Karl frei + 4 Sz Gnadenfrist, Stasi-Tension ' + prevTension + ' -> 3 (gesucht, aber nicht sofort wieder greifbar)');
         }
-        console.log('[Schatten v7.12.280] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
+        console.log('[Schatten v7.12.282] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
         // v7.11.56: Toast bei Erfolg - Spieler hat geklickt und soll Wuerfel-
         // Ergebnis direkt sehen, nicht nur narrative Andeutungen.
         if (typeof showProgressToast === 'function') {
@@ -25030,6 +25145,12 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             ((typeof newlyFoundIndizien !== 'undefined' && Array.isArray(newlyFoundIndizien)) ? newlyFoundIndizien.join(' ') : '');
           updateTruthBeats(_beatText);
         }
+        // v7.12.282: Mord-Achsen ebenfalls aktualisieren (beobachtend).
+        if (typeof updateMurderAxes === 'function' && caseSetup && Array.isArray(caseSetup.murderAxes)) {
+          const _axisText = ((scene && scene.szene) || '') + ' ' +
+            ((typeof newlyFoundIndizien !== 'undefined' && Array.isArray(newlyFoundIndizien)) ? newlyFoundIndizien.join(' ') : '');
+          updateMurderAxes(_axisText);
+        }
       } catch (e) {}
       const ct = caseSetup.caseType;
       const ind = caseProgress.indizien.length;
@@ -25608,7 +25729,9 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     // v7.12.245: von 70 auf 60 gesenkt (Achterberg-Stage-3-Drift bis Sz 47+). Die
     // eigentliche Führung macht der dominante FALL-LÖSEN-Button + frühe Klient-Push;
     // dieser Cap ist nur die ABSOLUTE Notbremse, jetzt früher.
-    if (sceneCounter >= 60 && caseProgress.stage < 4 && !caseProgress.istGelöst) {
+    // v7.12.282: fall-typ-abhängig (getHardCap) - kurze Fälle früher, schwierige später.
+    const _hc = (typeof getHardCap === 'function') ? getHardCap() : 60;
+    if (sceneCounter >= _hc && caseProgress.stage < 4 && !caseProgress.istGelöst) {
       // v7.12.175 (Lektorat-Empfehlung 2): Bei DIEBSTAHL ist ein Abschluss OHNE zurueck-
       // gebrachtes Gut KEIN Erfolg. Frueher setzte der Hard-Cap pauschal istGelöst=true,
       // auch wenn das Etui nie geholt wurde - inkonsequent zur ganzen Diebstahl-Logik.
@@ -25622,8 +25745,8 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         // Kein sauberer Erfolg - das Gut blieb verschwunden. Bitteres Noir-Ende.
         caseProgress.stage = 4;        // Fall ist beendet (kein weiterer Spielzug)
         caseProgress.istGescheitert = true;
-        console.log('[Schatten] HARD-CAP 70 (Diebstahl): Gut nie zurueck - kein Erfolg, offenes/bitteres Ende');
-        diag('progress', '✦ HARD-CAP 70 (Diebstahl) - Diebesgut nie beschafft: Auftrag gescheitert, KEIN Erfolg');
+        console.log('[Schatten] HARD-CAP (Diebstahl): Gut nie zurueck - kein Erfolg, offenes/bitteres Ende');
+        diag('progress', '✦ HARD-CAP (Diebstahl) - Diebesgut nie beschafft: Auftrag gescheitert, KEIN Erfolg');
         if (typeof showCaseFailed === 'function') {
           showCaseFailed('70 Szenen, und das Diebesgut bleibt verschwunden. Karl hat den Fall nicht zu Ende gebracht.');
         }
@@ -25636,14 +25759,14 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           caseProgress.klientGesprochen = true;
           caseProgress.istGelöst = true;
           caseProgress.stage = 4;
-          console.log('[Schatten] HARD-CAP 70 (wahrheit): Wahrheit erkannt - sauberer Abschluss');
-          diag('progress', '✦ HARD-CAP 70 (wahrheit) - Wahrheit berichtet' + (caseProgress.ueberfuehrt ? ' (Verantwortlicher: ' + caseProgress.tatverdaechtiger + ')' : ''));
+          console.log('[Schatten] HARD-CAP (wahrheit): Wahrheit erkannt - sauberer Abschluss');
+          diag('progress', '✦ HARD-CAP (wahrheit) - Wahrheit berichtet' + (caseProgress.ueberfuehrt ? ' (Verantwortlicher: ' + caseProgress.tatverdaechtiger + ')' : ''));
           showSolvedToastOnce('Fall beendet. Wahrheit berichtet.');
         } else {
           caseProgress.stage = 4;
           caseProgress.istGescheitert = true;
-          console.log('[Schatten] HARD-CAP 70 (wahrheit): Wahrheit nie bewiesen - kein Erfolg');
-          diag('progress', '✦ HARD-CAP 70 (wahrheit) - Wahrheit blieb unbewiesen: Auftrag gescheitert, KEIN erfundener Taeter');
+          console.log('[Schatten] HARD-CAP (wahrheit): Wahrheit nie bewiesen - kein Erfolg');
+          diag('progress', '✦ HARD-CAP (wahrheit) - Wahrheit blieb unbewiesen: Auftrag gescheitert, KEIN erfundener Taeter');
           if (typeof showCaseFailed === 'function') {
             showCaseFailed('70 Szenen, und die Wahrheit über den Fall bleibt unbewiesen. Karl hat keine Klarheit gefunden.');
           }
@@ -25654,14 +25777,14 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           caseProgress.klientGesprochen = true;
           caseProgress.istGelöst = true;
           caseProgress.stage = 4;
-          console.log('[Schatten] HARD-CAP 70 (politisch): Wahrheit/Verantwortung erkannt - sauberer Abschluss');
-          diag('progress', '✦ HARD-CAP 70 (politisch) - aufgeklaert' + (caseProgress.ueberfuehrt ? ' (Verantwortlicher: ' + caseProgress.tatverdaechtiger + ')' : ''));
+          console.log('[Schatten] HARD-CAP (politisch): Wahrheit/Verantwortung erkannt - sauberer Abschluss');
+          diag('progress', '✦ HARD-CAP (politisch) - aufgeklaert' + (caseProgress.ueberfuehrt ? ' (Verantwortlicher: ' + caseProgress.tatverdaechtiger + ')' : ''));
           showSolvedToastOnce('Fall beendet. Die Wahrheit ist benannt.');
         } else {
           caseProgress.stage = 4;
           caseProgress.istGescheitert = true;
-          console.log('[Schatten] HARD-CAP 70 (politisch): nichts bewiesen - kein Erfolg');
-          diag('progress', '✦ HARD-CAP 70 (politisch) - nichts bewiesen: Auftrag gescheitert, KEIN erfundener Taeter');
+          console.log('[Schatten] HARD-CAP (politisch): nichts bewiesen - kein Erfolg');
+          diag('progress', '✦ HARD-CAP (politisch) - nichts bewiesen: Auftrag gescheitert, KEIN erfundener Taeter');
           if (typeof showCaseFailed === 'function') {
             showCaseFailed('70 Szenen, und die politische Wahrheit bleibt im Dunkeln. Karl konnte nichts beweisen.');
           }
@@ -25677,14 +25800,14 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           caseProgress.klientGesprochen = true;
           caseProgress.istGelöst = true;
           caseProgress.stage = 4;
-          console.log('[Schatten] HARD-CAP 70 (mord): Taeter ueberfuehrt - sauberer Abschluss');
-          diag('progress', '✦ HARD-CAP 70 (mord) - Taeter ueberfuehrt: ' + _mVerd);
+          console.log('[Schatten] HARD-CAP (mord): Taeter ueberfuehrt - sauberer Abschluss');
+          diag('progress', '✦ HARD-CAP (mord) - Taeter ueberfuehrt: ' + _mVerd);
           showSolvedToastOnce('Fall gelöst. Der Mörder ist überführt.');
         } else {
           caseProgress.stage = 4;
           caseProgress.istGescheitert = true;
-          console.log('[Schatten] HARD-CAP 70 (mord): kein belastbarer Taeter - kein Erfolg');
-          diag('progress', '✦ HARD-CAP 70 (mord) - kein belastbarer Taeter: Fall ungeloest, KEIN erfundener Taeter');
+          console.log('[Schatten] HARD-CAP (mord): kein belastbarer Taeter - kein Erfolg');
+          diag('progress', '✦ HARD-CAP (mord) - kein belastbarer Taeter: Fall ungeloest, KEIN erfundener Taeter');
           if (typeof showCaseFailed === 'function') {
             showCaseFailed('70 Szenen, und der Mörder bleibt frei. Karl hat keinen belastbaren Täter überführen können.');
           }
@@ -25695,14 +25818,14 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           caseProgress.klientGesprochen = true;
           caseProgress.istGelöst = true;
           caseProgress.stage = 4;
-          console.log('[Schatten] HARD-CAP 70 (vermisst): Spur/Zielperson geklaert - sauberer Abschluss');
-          diag('progress', '✦ HARD-CAP 70 (vermisst) - Spur aufgeklaert');
+          console.log('[Schatten] HARD-CAP (vermisst): Spur/Zielperson geklaert - sauberer Abschluss');
+          diag('progress', '✦ HARD-CAP (vermisst) - Spur aufgeklaert');
           showSolvedToastOnce('Fall beendet. Die Spur ist aufgeklärt.');
         } else {
           caseProgress.stage = 4;
           caseProgress.istGescheitert = true;
-          console.log('[Schatten] HARD-CAP 70 (vermisst): keine Spur - kein Erfolg');
-          diag('progress', '✦ HARD-CAP 70 (vermisst) - keine Spur: Auftrag gescheitert');
+          console.log('[Schatten] HARD-CAP (vermisst): keine Spur - kein Erfolg');
+          diag('progress', '✦ HARD-CAP (vermisst) - keine Spur: Auftrag gescheitert');
           if (typeof showCaseFailed === 'function') {
             showCaseFailed('70 Szenen, und die vermisste Person bleibt verschwunden. Karl hat die Spur verloren.');
           }
@@ -25714,14 +25837,14 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           caseProgress.klientGesprochen = true;
           caseProgress.istGelöst = true;
           caseProgress.stage = 4;
-          console.log('[Schatten] HARD-CAP 70 (beschatten): Verdacht belegt - sauberer Abschluss');
-          diag('progress', '✦ HARD-CAP 70 (beschatten) - Verdacht bestaetigt');
+          console.log('[Schatten] HARD-CAP (beschatten): Verdacht belegt - sauberer Abschluss');
+          diag('progress', '✦ HARD-CAP (beschatten) - Verdacht bestaetigt');
           showSolvedToastOnce('Fall beendet. Der Verdacht ist bestätigt.');
         } else {
           caseProgress.stage = 4;
           caseProgress.istGescheitert = true;
-          console.log('[Schatten] HARD-CAP 70 (beschatten): nichts belegt - kein Erfolg');
-          diag('progress', '✦ HARD-CAP 70 (beschatten) - nichts belegt: Auftrag gescheitert');
+          console.log('[Schatten] HARD-CAP (beschatten): nichts belegt - kein Erfolg');
+          diag('progress', '✦ HARD-CAP (beschatten) - nichts belegt: Auftrag gescheitert');
           if (typeof showCaseFailed === 'function') {
             showCaseFailed('70 Szenen, und Karl hat nichts Belastbares beobachtet. Der Auftrag bleibt unerfüllt.');
           }
@@ -25737,14 +25860,14 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           caseProgress.klientGesprochen = true;
           caseProgress.istGelöst = true;
           caseProgress.stage = 4;
-          console.log('[Schatten] HARD-CAP 70 (fallback): valider Abschluss vorhanden');
-          diag('progress', '✦ HARD-CAP 70 - Fall abgeschlossen (' + (_fVerd || 'Wahrheit/Spur') + ')');
+          console.log('[Schatten] HARD-CAP (fallback): valider Abschluss vorhanden');
+          diag('progress', '✦ HARD-CAP - Fall abgeschlossen (' + (_fVerd || 'Wahrheit/Spur') + ')');
           showSolvedToastOnce('Fall beendet. Karl macht Schluss.');
         } else {
           caseProgress.stage = 4;
           caseProgress.istGescheitert = true;
-          console.log('[Schatten] HARD-CAP 70 (fallback): kein valider Abschluss - kein Erfolg');
-          diag('progress', '✦ HARD-CAP 70 - kein valider Abschluss: Auftrag gescheitert, KEIN erfundener Taeter');
+          console.log('[Schatten] HARD-CAP (fallback): kein valider Abschluss - kein Erfolg');
+          diag('progress', '✦ HARD-CAP - kein valider Abschluss: Auftrag gescheitert, KEIN erfundener Taeter');
           if (typeof showCaseFailed === 'function') {
             showCaseFailed('70 Szenen, und der Fall bleibt offen. Karl konnte ihn nicht zu Ende bringen.');
           }
@@ -26129,7 +26252,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.280] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.282] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
