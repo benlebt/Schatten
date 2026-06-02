@@ -17,7 +17,7 @@
 // v1.0 (2026-05-30): Erste versionierte Fassung. Enthaelt den responseSchema-
 //   Kernfix (kategorie als enum+required pro Option; zielperson_gefunden,
 //   wahrheit_erkannt, indiz_verbindung, npc_kernhinweis ergaenzt).
-const GEMINI_JS_VERSION = 'v1.3';
+const GEMINI_JS_VERSION = 'v1.4';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -60,12 +60,12 @@ export default async function handler(req, res) {
     'gemini-2.5-flash': true,
     'gemini-2.5-flash-lite': true,
     'gemini-2.5-pro': true,
-    'gemini-3-flash-preview': true,
+    'gemini-3-flash-preview': true,    // v1.4: Test-Modell (Debug-Schalter) - korrekter Google-String
     'gemini-3.1-flash-lite': true,
-    'gemini-3.1-flash': true,       // v1.3: Test-Modell (Debug-Schalter)
-    'gemini-3.1-pro': true,         // v1.3: Test-Modell (Debug-Schalter)
+    'gemini-3.1-pro-preview': true,    // v1.4: Test-Modell (Debug-Schalter) - korrekter Google-String
+    'gemini-3.5-flash': true,          // v1.4: GA-Modell, optional testbar
   };
-  // v1.3: Default-Fallback auf den NEUEN Standard 3.1-flash-lite (nicht mehr 2.5).
+  // v1.4: Default-Fallback auf den NEUEN Standard 3.1-flash-lite (nicht mehr 2.5).
   const modelRequested = requestedModel || '(keiner)';
   const modelAccepted = !!ALLOWED_MODELS[requestedModel];
   const model = modelAccepted ? requestedModel : 'gemini-3.1-flash-lite';
@@ -248,7 +248,7 @@ export default async function handler(req, res) {
         });
       }
 
-      // v1.3: Bei 404 (Modell-String bei Google unbekannt) den genutzten String mitgeben,
+      // v1.4: Bei 404 (Modell-String bei Google unbekannt) den genutzten String mitgeben,
       // damit im Debug-Log klar ist WELCHER String abgelehnt wurde.
       return res.status(geminiRes.status).json({
         error: {
