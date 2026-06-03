@@ -2864,7 +2864,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.319</div>
+    <div class="start-version">Schatten v7.12.320</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3044,7 +3044,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.319</span>
+    <span>Schatten v7.12.320</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -3094,6 +3094,7 @@ SOWJETISCHER SEKTOR / OST-BERLIN (DDR seit 1949):
 AMERIKANISCHER SEKTOR (West):
 - Bezirke: Tempelhof, Schöneberg, Neukölln, Zehlendorf, Steglitz, Kreuzberg
 - Wichtige Orte: Tempelhofer Feld (Luftbrücke 1948/49 noch frisch im Gedächtnis), Nollendorfplatz, RIAS
+- POLIZEI IM WESTSEKTOR: West-Berliner Schutzpolizei, im US-Sektor zusätzlich amerikanische Militärpolizei (MP). NIEMALS Volkspolizei (VP) im Westsektor - die VP ist ausschließlich Ost. Falsch (am Tempelhofer Feld): "bevor die Volkspolizei dich findet". Richtig: "bevor die Schutzpolizei oder die amerikanische Militärpolizei dich findet".
 
 BRITISCHER SEKTOR (West):
 - Bezirke: Charlottenburg, Wilmersdorf, Spandau, Tiergarten (teilweise)
@@ -3105,7 +3106,7 @@ FRANZÖSISCHER SEKTOR (West):
 
 REGELN FÜR SEKTOREN-KONSISTENZ:
 - Karls Büro ist am Hackeschen Markt = SOWJETISCHER SEKTOR. Karl ist ein Privatdetektiv in Ost-Berlin, eine seltene und politisch heikle Position. Westliche Klienten meiden den Osten, östliche Klienten misstrauen ihm.
-- Polizei in Karls Umgebung ist Volkspolizei (VP), nicht Schutzpolizei.
+- Polizei in Karls Büro-Umgebung (Hackescher Markt = Ost) ist Volkspolizei (VP), nicht Schutzpolizei. Im Westsektor dagegen Schutzpolizei / US-Militärpolizei (siehe Sektoren oben) - die VP ist NIE im Westen.
 - Wenn Karl in den Westen fährt (z.B. Charlottenburg, Tempelhof), ist das ein ÜBERGANG mit Kontrolle möglich. Er muss S-Bahn nehmen oder mit Auto durch einen offenen Übergang. Vor 1961 ist das möglich, aber nicht trivial.
 - Politisch heikle Anspielungen ("sowjetische Zone", "die da drüben") sind passend, aber Karl reagiert mit professioneller Reserve. Er trinkt im Osten wie im Westen.
 - Stasi (MfS) gibt es seit 1950. Wenn Karl sie zu nahe kommt, ist das echte Lebensgefahr. NICHT in jedem Fall einbauen.
@@ -5815,7 +5816,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.319';
+window.SCHATTEN_VERSION = 'v7.12.320';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -8957,7 +8958,7 @@ function fixEigennamen(s) {
   if (!s) return s;
   // Reihenfolge: laengere/zusammengesetzte Namen ZUERST (sonst greift "Schaefer"
   // vor "Schaeferstrasse" und laesst "-strasse" stehen).
-  return s
+  s = s
     .replace(/Schaeferstrasse/g, 'Schäferstraße')
     .replace(/Hohenschoenhausen/g, 'Hohenschönhausen')
     .replace(/Keibelstrasse/g, 'Keibelstraße')
@@ -8967,6 +8968,25 @@ function fixEigennamen(s) {
     .replace(/Koepenick/g, 'Köpenick')
     .replace(/Gaehlert/g, 'Gählert')
     .replace(/Schoening/g, 'Schöning');
+  return (typeof fixSprache === 'function') ? fixSprache(s) : s;
+}
+
+// v7.12.320 (Lektorat v318): KONSERVATIVE Sprach-/Grammatik-Korrektur für KI-Fließtext.
+// Nur eindeutige, häufige Fehler, die die KI wiederholt produziert. Bewusst KEINE breiten
+// Regeln (Fehlkorrektur-Risiko) - nur sichere 1:1-Ersetzungen mit Wortgrenzen.
+function fixSprache(s) {
+  if (!s || typeof s !== 'string') return s || '';
+  return s
+    // "du hälst" -> "du hältst" (häufiger KI-Konjugationsfehler)
+    .replace(/\bhälst\b/g, 'hältst')
+    .replace(/\bhaelst\b/g, 'hältst')
+    // "die Roten Laterne" -> "die Rote Laterne" (falsche Flexion des Lokal-Eigennamens).
+    // Nur im Akkusativ/Nominativ-Kontext mit Artikel "die" (nicht "der/den Roten Laterne",
+    // das wäre Dativ/Genitiv und korrekt).
+    .replace(/\bdie Roten Laterne\b/g, 'die Rote Laterne')
+    // "Licht des Mais" -> "Licht des Maitags" (unfreiwillig komisch: Mais=Gemüse).
+    .replace(/\bdes Mais\b/g, 'des Maitags')
+    .replace(/\bLicht des Maies\b/g, 'Licht des Maitags');
 }
 
 // v6.77: Schneidet einen Beschreibungstext sauber bei Satz- oder Komma-Grenze
@@ -14230,6 +14250,14 @@ function istPersonPhysischAnwesend(name, scene, rolleHint) {
   // ueber das "sagt"-Praesenzsignal faelschlich als anwesend gilt.
   const _erwaehnungOnly = new RegExp(_first + '\\s+\\w*\\s*(wohnt|wohne|heisst|heißt|kennt|kenne|soll|sei|waere|wäre|arbeitet|erzaehlt|wuerde|würde)|(\\bvon|ueber|über|nach|wegen|fuer|für)\\s+' + _first + '|' + _first + '[^.]{0,30}(dritter stock|dritten stock|adresse|etage|wohnung im)', 'i');
   if (_erwaehnungOnly.test(_txt)) return false;
+  // v7.12.319 (Lektorat v318 P0, Romance-Button in Sz1 am Tempelhofer Feld): Der gelockerte
+  // Praesenz-Check (Name im Text = praesent) liess Erinnerungen durch: "nach dem Besuch bei
+  // seiner Verlobten Lola Brandt gestern Abend" ist VERGANGENHEIT, nicht Praesenz. Lola war
+  // am Feld nicht da, der Romance-Button erschien trotzdem. Fix: Steht der Name nahe einem
+  // Vergangenheits-/Erinnerungs-Marker (gestern, letzte nacht, vorhin, nach dem besuch, damals,
+  // zuvor), ist es eine Erinnerung -> NICHT praesent.
+  const _vergangenheit = new RegExp('(gestern|letzte nacht|vorige nacht|vorhin|damals|zuvor|frueher|früher|am vorabend|nach dem besuch bei|beim letzten mal|vergangene nacht)[^.]{0,40}' + _first + '|' + _first + '[^.]{0,40}(gestern|letzte nacht|vorige nacht|vorhin|damals|am vorabend|vergangene nacht)', 'i');
+  if (_vergangenheit.test(_txt)) return false;
   // v7.12.316 (Brandt-Run v315, Lola Sz8 IMMER NOCH "nicht hier"): Die KI ließ den cast-Array leer
   // (Cast 0), schrieb aber "Lola zieht die Hand nicht weg / hebt den Blick / flüstert" - keines
   // dieser Verben war in der alten Whitelist -> Default NEIN (Whack-a-Mole). ENDGÜLTIGER FIX: Wenn
@@ -14625,12 +14653,25 @@ function renderOptions(scene) {
       // personenImRaum auf, sondern benennt sie nur per Rolle im Text ("die Cellistin
       // steht vor dir"). Dann findet die cast-Schleife oben nichts. Zweiter Durchlauf
       // direkt über die Setup-Romance-Figuren mit Rollenwort-Erkennung.
+      // v7.12.320 (Lektorat v318 P0, Romance-Button Sz1): HÄRTERE Absicherung. Der Fallback
+      // (ohne cast-Mitgliedschaft) ist riskant - er feuerte in Sz1 am Tempelhofer Feld, weil
+      // "Lola" im Erinnerungstext stand. Der Vergangenheits-Check in istPersonPhysischAnwesend
+      // fängt das jetzt schon ab. Zusätzlich: Der Fallback greift NUR, wenn die Figur per
+      // ROLLENWORT im Text präsent ist (sein eigentlicher Zweck), NICHT bei bloßer Namensnennung -
+      // bei reiner Namens-Präsenz ohne cast-Eintrag ist die Anwesenheit zu unsicher für einen
+      // Intim-Button. So bleibt der Button in figurlosen Szenen (Feld, Büro) sicher weg.
       if (!romanceNpcInScene) {
         for (const c of caseSetup.setupCast) {
           if (!c || !c.name || !(c.tag === 'ROMANCE' || c.tagExtra === 'ROMANCE')) continue;
-          if (istPersonPhysischAnwesend(c.name, scene, c.rolle)) {
+          // Nur Rollenwort-Präsenz zählt im Fallback (z.B. "die Tänzerin steht vor dir").
+          // Bloße Namensnennung ohne cast-Eintrag reicht NICHT (sonst Sz1-Erinnerungs-Bug).
+          const _rw = (typeof extractRollenwort === 'function') ? extractRollenwort(c.rolle) : null;
+          const _txtLc = (typeof scene.szene === 'string') ? scene.szene.toLowerCase() : '';
+          const _rollenwortImText = _rw && _txtLc.includes(_rw)
+            && (typeof rollenwortIstEindeutig === 'function') && rollenwortIstEindeutig(_rw, c.name);
+          if (_rollenwortImText && istPersonPhysischAnwesend(c.name, scene, c.rolle)) {
             romanceNpcInScene = c.name;
-            if (typeof diag === 'function') diag('info', 'Romance-Präsenz über ROLLENWORT erkannt (' + (extractRollenwort(c.rolle) || '?') + ') - ' + c.name + ' war nicht namentlich im Text/Cast');
+            if (typeof diag === 'function') diag('info', 'Romance-Präsenz über ROLLENWORT erkannt (' + (_rw || '?') + ') - ' + c.name + ' war nicht namentlich im Text/Cast');
             break;
           }
         }
