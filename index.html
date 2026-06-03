@@ -2864,7 +2864,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.315</div>
+    <div class="start-version">Schatten v7.12.316</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3044,7 +3044,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.315</span>
+    <span>Schatten v7.12.316</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5814,7 +5814,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.315';
+window.SCHATTEN_VERSION = 'v7.12.316';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -8720,10 +8720,13 @@ function hideAll() {
   // v7.12.315 (Source-Lektorat v314 P1): freitext-block ergaenzt - sonst blieb das Freitext-Feld
   // beim Screen-Wechsel (Win/Fail/Fehler/Start) bis zu 1s sichtbar (UI-Geist), weil nur das
   // 1s-Intervall es nachfuehrte. Jetzt wird es direkt mitversteckt.
-  ['setup','start','loading','error','options','freitext-block','wait-box','daily-limit','status-popup','game-over','setup-selector','howto'].forEach(id => {
+  ['setup','start','loading','error','options','freitext-block','wait-box','daily-limit','status-popup','char-detail-popup','game-over','setup-selector','howto'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.add('hidden');
   });
+  // v7.12.316 (Source-Lektorat v315 P2): settings-menu separat schliessen (steht nicht in der Liste
+  // oben, kann sonst beim Reset/Start ueber einem frischen Screen offen bleiben).
+  try { const _sm = document.getElementById('settings-menu'); if (_sm) _sm.classList.add('hidden'); } catch(e){}
 }
 
 // v6.77: Setup-Auswahl-Screen Funktionen.
@@ -8919,8 +8922,10 @@ function sanitizeRolleAnzeige(s) {
   // 1. Technische Tag-Marker in Klammern entfernen: "(Suspect)", "(GANGSTER)", "(MYSTERY)" etc.
   out = out.replace(/\s*\((?:suspect|gangster|mystery|stasi|antagonist|authority|informant|target|client|witness|romance)\)/gi, '');
   // 2. ROMANCE-Marker stilvoll ersetzen statt technisch ("+ ROMANCE-Kandidatin" / "spaeter ROMANCE")
-  out = out.replace(/\s*[+/]\s*(?:spaeter|später|potenziell|potentiell)?\s*romance[\s-]*kandidat(?:in)?/gi, ' – und mehr, wenn die Nacht es will');
-  out = out.replace(/\s*[+/]\s*(?:spaeter|später|potenziell|potentiell)\s+romance\b/gi, ' – und mehr, wenn die Nacht es will');
+  // v7.12.316 (Benjamin: Hinweis behalten, aber wuerdevoll - kein Gedankenstrich): natuerlicher
+  // Satzteil statt technischem Marker. Deutet an, ohne zu spoilern wie ein Steckbrief-Feld.
+  out = out.replace(/\s*[+/]\s*(?:spaeter|später|potenziell|potentiell)?\s*romance[\s-]*kandidat(?:in)?/gi, ', an der mehr hängt als ein Verhör');
+  out = out.replace(/\s*[+/]\s*(?:spaeter|später|potenziell|potentiell)\s+romance\b/gi, ', an der mehr hängt als ein Verhör');
   out = out.replace(/\s*[+/]\s*romance\b/gi, '');
   // 3. Verbleibende technische Doppelrollen-Suffixe ("+ GANGSTER-Verbindung", "+ STASI-Kontakt")
   out = out.replace(/\s*[+]\s*(?:gangster|stasi|suspect|antagonist|mfs|nkwd)[\s-]*(?:verbindung|kontakt|bezug|naehe|nähe)?/gi, '');
@@ -9971,7 +9976,7 @@ function showCaseFailed(reason) {
       romanceSpitze = `<br><br><span style="font-style:italic;opacity:0.92">${_varianten[_idx]}</span>`;
     }
     failEl.innerHTML = `
-      <div class="failed-title">— AUFTRAG ENTZOGEN —</div>
+      <div class="failed-title">AUFTRAG ENTZOGEN</div>
       <div class="failed-text">${typeof escapeHtml === 'function' ? escapeHtml(reasonText) : reasonText}<br>
       Karl Mauer steht ohne Klient da. Wieder mal.${romanceSpitze}</div>
       <div class="failed-text-small">Tag ${gameDay}<br>
@@ -10394,9 +10399,9 @@ function buildTranscriptText() {
           for (const sb of _sbWithText) {
             const _sbText = sb.text || sb.label || sb.title || '';
             if (sb.gesperrt) {
-              out += '  [✗ ' + (sb.typ || 'SYSTEM') + ' — GESPERRT] ' + _sbText + '\n';
+              out += '  [✗ ' + (sb.typ || 'SYSTEM') + ' | GESPERRT] ' + _sbText + '\n';
             } else {
-              out += '  [✓ ' + (sb.typ || 'SYSTEM') + ' — klickbar] ' + _sbText + '\n';
+              out += '  [✓ ' + (sb.typ || 'SYSTEM') + ' | klickbar] ' + _sbText + '\n';
             }
           }
         }
@@ -14210,44 +14215,14 @@ function istPersonPhysischAnwesend(name, scene, rolleHint) {
   // ueber das "sagt"-Praesenzsignal faelschlich als anwesend gilt.
   const _erwaehnungOnly = new RegExp(_first + '\\s+\\w*\\s*(wohnt|wohne|heisst|heißt|kennt|kenne|soll|sei|waere|wäre|arbeitet|erzaehlt|wuerde|würde)|(\\bvon|ueber|über|nach|wegen|fuer|für)\\s+' + _first + '|' + _first + '[^.]{0,30}(dritter stock|dritten stock|adresse|etage|wohnung im)', 'i');
   if (_erwaehnungOnly.test(_txt)) return false;
-  // v7.12.244 (User-Befund manueller Run 0959: "Liesel ist nicht hier" über VIELE Szenen, obwohl
-  // sie nachweislich im Cast steht und der Spieler mit ihr interagiert): Die Verb-Regex unten war zu
-  // unvollständig - die KI formuliert Präsenz endlos variantenreich ("steht hinter dir, die Hand um
-  // ihr Cello-Etui geklammert"), kein gelistetes Verb matchte -> Default NEIN. Whack-a-Mole.
-  // ZUVERLÄSSIGERES SIGNAL: Wenn die Figur im aktuellen (pro-Szene aktualisierten) cast steht UND ihr
-  // Name im Text vorkommt UND es keine reine Erwähnung ist, IST sie präsent - ohne Verb-Zwang.
-  try {
-    const _inCast = Array.isArray(cast) && cast.some(c => {
-      const cn = (typeof c === 'string' ? c : (c && c.name) || '').toLowerCase();
-      return cn && cn.includes(_first);
-    });
-    if (_inCast) return true;
-  } catch (e) { /* fällt unten auf Verb-Regex zurück */ }
-  // Anwesenheits-Signale (mit ihr, sie handelt/spricht hier) - Fallback wenn nicht im cast
-  // v7.12.220 (Kessler-Screenshot RM4/Sp2, kein Button): Verb-Liste war zu eng. Ilse "drückt
-  // dir ein Kuvert in die Hand", "zögert", "ihr Blick huscht" - klare körperliche Präsenz, aber
-  // keines der Verben war gelistet -> Default NEIN -> kein Romance-Button trotz idealer Lage.
-  // Ergänzt: huscht/zögert/drückt/reicht/übergibt/hält/greift/wendet/atmet/lehnt/weicht/schweigt.
-  const _praesenz = new RegExp('(vor dir|neben dir|sitzt|steht|blickt|sieht dich|tritt|legt|nimmt|beruehrt|berührt|oeffnet|öffnet|laechelt|lächelt|fluestert|flüstert|dreht sich|drueckt|drückt|reicht|haelt|hält|greift|zoegert|zögert|huscht|wendet sich|lehnt sich|weicht|atmet)[^.]{0,30}' + _first + '|' + _first + '[^.]{0,40}(vor dir|neben dir|sitzt|steht|blickt|sieht dich|tritt ein|legt|nimmt|beruehrt|berührt|oeffnet|öffnet|laechelt|lächelt|fluestert|flüstert|sagt|fragt|antwortet|lehnt sich|kommt naeher|kommt näher|zieht dich|nickt|seufzt|drueckt|drückt|reicht|haelt|hält|greift|zoegert|zögert|huscht|wendet|atmet|schweigt|fluestert)', 'i');
-  if (_praesenz.test(_txt)) return true;
-  // v7.12.266: ROLLENWORT-FALLBACK. Name nicht gefunden - aber wenn die KI die Figur über
-  // ihre (eindeutige) Rolle benennt ("die dunkelhaarige Cellistin steht vor dir"), zählt das
-  // als Präsenz. NUR mit klarem Präsenzverb (gleiche Strenge wie beim Namen) und NUR wenn das
-  // Rollenwort im Setup eindeutig dieser Figur gehört. Sonst würde der Intim-Button zu früh
-  // erscheinen (bloße Erwähnung). rolleHint wird vom Aufrufer aus dem setupCast übergeben.
-  try {
-    const _rw = extractRollenwort(rolleHint);
-    if (_rw && _txt.includes(_rw) && rollenwortIstEindeutig(_rw, name)) {
-      // reine Erwähnung des Rollenworts ausschliessen (wie beim Namen)
-      const _rwErwaehnung = new RegExp('(\\bvon|ueber|über|nach|wegen|fuer|für)\\s+(der|die|das|den|dem)?\\s*' + _rw, 'i');
-      if (!_rwErwaehnung.test(_txt)) {
-        const _rwPraesenz = new RegExp('(vor dir|neben dir|sitzt|steht|blickt|sieht dich|tritt|legt|nimmt|beruehrt|berührt|oeffnet|öffnet|laechelt|lächelt|fluestert|flüstert|dreht sich|drueckt|drückt|reicht|haelt|hält|greift|zoegert|zögert|huscht|wendet sich|lehnt sich|weicht|atmet)[^.]{0,30}' + _rw + '|' + _rw + '[^.]{0,40}(vor dir|neben dir|sitzt|steht|blickt|sieht dich|tritt ein|legt|nimmt|beruehrt|berührt|oeffnet|öffnet|laechelt|lächelt|fluestert|flüstert|sagt|fragt|antwortet|lehnt sich|kommt naeher|kommt näher|zieht dich|nickt|seufzt|drueckt|drückt|reicht|haelt|hält|greift|zoegert|zögert|huscht|wendet|atmet|schweigt)', 'i');
-        if (_rwPraesenz.test(_txt)) return true;
-      }
-    }
-  } catch (e) { /* Rollenwort-Fallback optional - nie blockieren */ }
-  // Default bei blossem Namen ohne klaren Kontext: vorsichtig NEIN fuer Romance
-  return false;
+  // v7.12.316 (Brandt-Run v315, Lola Sz8 IMMER NOCH "nicht hier"): Die KI ließ den cast-Array leer
+  // (Cast 0), schrieb aber "Lola zieht die Hand nicht weg / hebt den Blick / flüstert" - keines
+  // dieser Verben war in der alten Whitelist -> Default NEIN (Whack-a-Mole). ENDGÜLTIGER FIX: Wenn
+  // der NAME im Text steht (sind wir hier, sonst oben im Pronomen-Zweig) UND es KEINE reine Erwähnung
+  // ist (der _erwaehnungOnly-Check oben hat "über/von/nach X" + "X wohnt/heißt" schon gefiltert),
+  // IST die Person präsent - ohne dass jedes denkbare Präsenzverb gelistet sein muss. Der
+  // Erwähnungs-Filter ist der eigentliche Wächter, nicht eine endlose Verb-Whitelist.
+  return true;
 }
 function renderOptions(scene) {
   const list = document.getElementById('options-list');
@@ -15480,7 +15455,7 @@ function renderOptions(scene) {
           if (_b && _b.id && caseProgress.truthBeatsHit.indexOf(_b.id) === -1) caseProgress.truthBeatsHit.push(_b.id);
         }
         if (typeof diag === 'function') diag('warn', '⚠ NOTAUSGANG (Beat-Kulanz): Wahrheit erspielt (' + indizCount + ' Ind, ' + _szenenReif + ' Sz reif, ' + _hitY + '/' + caseSetup.truthBeats.length + ' Beats), aber Beat-Regex verfehlte: ' + _fehlendY.map(b => b.id).join(',') + ' - kuenstlich nachgetragen. REGEX PRUEFEN, ob dieser Pfad dauerhaft verfehlt wird.');
-        console.warn('[Schatten v7.12.314] Notausgang Y: Pflicht-Beat(s) nachgetragen nach ' + _szenenReif + ' Stage-3-Szenen + ' + indizCount + ' Indizien (Regex-Luecke/Watchdog-Verlust). Fall loesbar.');
+        console.warn('[Schatten v7.12.316] Notausgang Y: Pflicht-Beat(s) nachgetragen nach ' + _szenenReif + ' Stage-3-Szenen + ' + indizCount + ' Indizien (Regex-Luecke/Watchdog-Verlust). Fall loesbar.');
       }
     }
   } catch (eY) { /* Notausgang darf nie das Rendern brechen */ }
@@ -22357,8 +22332,19 @@ function extractPersonTarget(raw, currentScene) {
   // Person in der Szene auftaucht. Wird VOR dem generischen frag/sprich-Match geprueft.
   const mKlopf = t.match(/\b(?:klopf|klingel|klingl)\w*\s+(?:bei|an\s+(?:der|die|dem))?\s*([a-z][\w-]+(?:\s+[a-z][\w-]+)?)/);
   if (mKlopf && mKlopf[1]) {
-    let o = mKlopf[1].trim().replace(/\s+(tuer|tür|wohnung|haus|zimmer)$/i, '').trim();
-    if (o && !/^(der|die|das|dem|den|an|bei|tuer|tür)$/.test(o)) return o;
+    // v7.12.316 (Source-Lektorat v315 P1): Artikel/Anrede vorne strippen ("der nachbarin"->"nachbarin",
+    // "frau lemke"->"lemke"), Tuer/Wohnung/Haus-Objekte hinten ODER ganz raus (sonst wurde "Tuer" als
+    // Zielperson erkannt -> falscher Repair-Retry). Anrede strippen, damit der Validator nicht nur "frau"
+    // prueft (zu schwach - jede Frau in der Szene wuerde matchen).
+    let o = mKlopf[1].trim()
+      .replace(/^(der|die|das|dem|den|bei|an)\s+/i, '')
+      .replace(/^(frau|herr|herrn|fraeulein|fräulein)\s+/i, '')
+      .replace(/\s+(tuer|tür|wohnungstuer|wohnungstür|haustuer|haustür|zimmer|wohnung|haus)$/i, '')
+      .trim();
+    if (/^(tuer|tür|wohnungstuer|wohnungstür|haustuer|haustür|zimmer|wohnung|haus|der|die|das|dem|den|an|bei)$/i.test(o)) {
+      o = '';
+    }
+    if (o) return o;
   }
   // Zuerst Eigenname nach dem Befragungsverb (frag/sprich mit wilhelm krause...)
   const m = t.match(/\b(?:frag|befrag|verhoer|sprich mit|rede mit|red mit|konfrontier|stell)\w*\s+(?:den|die|das|dem|der|mit\s+)?\s*([a-z][\w\- ]+?)(?=\s+(?:nach|ueber|wegen|ob|wie|warum|nochmal|erneut|direkt|genauer|zu)\b|[,.]|$)/);
@@ -22455,8 +22441,9 @@ function validateIntentFollowup(scene, intent) {
     // sind harmlose Noir-Koerpersprache, loesten aber falsche (teure) Repair-Retries aus. Jetzt:
     // eindeutige Angriffsverben direkt; greifen/treten NUR mit Angriffsziel (Kragen/Arm/gegen ihn).
     const _assaultDirect = /\bdu\s+(packst|schlaegst|stoesst|reisst|wuergst|zerrst|schubst|rammst|haust)\b/.test(text);
-    const _trittAngriff = /\bdu\s+trittst\s+(?!einen?\s+schritt\b|zurueck\b|zur seite\b|naeher\b|ein\b)(?:ihn|sie|gegen|nach|dem|der)\b/.test(text);
-    const _greifAngriff = /\bdu\s+greifst\s+(?:ihn|sie|nach\s+(?:seinem|seiner|ihrem|ihrer)|an\s+(?:den|die|seinen|ihren))\s*(arm|kragen|hals|handgelenk|mantel|jacke|schulter|kehle|revers|aufschlag)\b/.test(text)
+    const _trittAngriff = /\bdu\s+trittst\s+(?!einen?\s+schritt\b|zurueck\b|zur seite\b|naeher\b|ein\b|beiseite\b)(?:ihn|sie|[a-z][\wae-]+\s+)?(?:gegen|nach|in)\b/.test(text);
+    const _greifAngriff = /\bdu\s+greifst\s+(?:ihn|sie|[a-z][\wae-]+)\s+(?:am|an den|an der|an die|bei)\s+(arm|kragen|hals|handgelenk|mantel|jacke|schulter|kehle|revers|aufschlag|haar|haare|haaren)\b/.test(text)
+      || /\bdu\s+greifst\s+nach\s+(?:seinem|seiner|ihrem|ihrer)\s+(arm|kragen|hals|handgelenk|mantel|jacke|schulter|kehle|revers|aufschlag)\b/.test(text)
       || /\bdu\s+(packst|greifst)\s+(?:ihn|sie)\s+(?:am|an der|an den|bei)\b/.test(text);
     const _unaskedFlucht = /\bdu\s+(rennst|fliehst|fluechtest|stuermst|sprintest)\b/.test(text);
     const unaskedPhysicalKarl = _assaultDirect || _trittAngriff || _greifAngriff || _unaskedFlucht;
@@ -22588,7 +22575,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     if (_myEpoch !== currentRequestEpoch) {
       try { if (typeof diag === 'function') diag('drift', 'STALE-LAUF verworfen: Epoche ' + _myEpoch + ' != aktuell ' + currentRequestEpoch + ' (Watchdog hat neu gestartet, fetch kam zu spaet) - kein Commit, kein sceneCounter++'); } catch(e){}
       try { if (typeof logApiEvent === 'function') logApiEvent('stale_discarded', 'Verspaeteter fetch verworfen (Epoche ' + _myEpoch + '/' + currentRequestEpoch + ') - Doppel-Szene verhindert.'); } catch(e){}
-      console.warn('[Schatten v7.12.314] Stale-Lauf verworfen (Epoche ' + _myEpoch + ' != ' + currentRequestEpoch + ') - der frische Retry committet.');
+      console.warn('[Schatten v7.12.316] Stale-Lauf verworfen (Epoche ' + _myEpoch + ' != ' + currentRequestEpoch + ') - der frische Retry committet.');
       return; // KEIN Commit - der aktuelle Lauf uebernimmt
     }
     const apiCallDuration = Date.now() - apiCallStart;
@@ -24301,7 +24288,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         // v7.11.56: Toast bei Erfolg - Spieler hat geklickt und soll Wuerfel-
         // Ergebnis direkt sehen, nicht nur narrative Andeutungen.
         if (typeof showProgressToast === 'function') {
-          showProgressToast('FLUCHT GELUNGEN', 'Karl ist entkommen — verletzt, aber frei. Stasi-Fahndung läuft.', 'success', 'notflucht-erfolg');
+          showProgressToast('FLUCHT GELUNGEN', 'Karl ist entkommen, verletzt, aber frei. Stasi-Fahndung läuft.', 'success', 'notflucht-erfolg');
         }
         // v7.11.23: Auch nach NOTFLUCHT bei Stage 3 + Indizien -> AUFLOESEN forcieren
         const indCount2 = (caseProgress && Array.isArray(caseProgress.indizien))
