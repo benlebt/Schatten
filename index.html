@@ -2864,7 +2864,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.330</div>
+    <div class="start-version">Schatten v7.12.332</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3044,7 +3044,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.330</span>
+    <span>Schatten v7.12.332</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5820,7 +5820,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.330';
+window.SCHATTEN_VERSION = 'v7.12.332';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -10915,6 +10915,7 @@ function buildTranscriptText() {
     let vfMin = 5;
     let scenesAtCriticalVf = 0;
     let hadHealingTrip = false;
+    let hadSelfHeal = false; // v7.12.332: Selbst-Notversorgung separat erfassen
     for (const e of logEntries) {
       if (e.type !== 'scene') continue;
       if (typeof e.verfassung === 'number') {
@@ -10931,14 +10932,29 @@ function buildTranscriptText() {
         if (e.text && /doc wagner|doktor wagner|verarztet|verbindet die wunde|behandelt die wunde|naht die wunde|versorgt die wunde|legt einen verband/i.test(e.text)) {
           hadHealingTrip = true;
         }
+        // v7.12.332 (Lektorat Helga-Run): Selbst-Notversorgung im Text erkennen. Der Report sagte
+        // fälschlich "ohne Behandlungs-Versuch", obwohl Karl 2x Notheilen genutzt hatte. Notheilen
+        // ist keine professionelle Behandlung, aber sehr wohl ein Versorgungs-Versuch.
+        if (e.text && /reisst (ein|einen)[^.]{0,30}(hemd|jacket|jackett|stoff|innenfutter)|streifen vom hemd|improvisiert\w* (verband|polster)|verbindet sich (selbst|notdürftig|notduerftig)|presst (ein|den)[^.]{0,20}(tuch|lappen|stoff) auf die wunde|notdürftig verbund|notduerftig verbund/i.test(e.text)) {
+          hadSelfHeal = true;
+        }
       }
     }
     if (vfMin <= 2) {
       out += '\nVerletzungs-Konsistenz (Lektorat):\n';
       out += '  - Tiefster Vf-Stand: ' + vfMin + '/5\n';
       out += '  - Szenen mit Vf<=2 (schwer verletzt): ' + scenesAtCriticalVf + '\n';
-      out += '  - Behandlungs-Trip (Doc/Praxis/Krankenhaus): ' + (hadHealingTrip ? 'JA' : 'NEIN - Karl war kritisch verletzt ohne Behandlungs-Versuch') + '\n';
-      if (scenesAtCriticalVf >= 4 && !hadHealingTrip) {
+      // v7.12.332: professionelle Behandlung UND Selbst-Notversorgung getrennt ausweisen.
+      let _behStatus;
+      if (hadHealingTrip) {
+        _behStatus = 'JA (professionell: Doc/Praxis/Krankenhaus)';
+      } else if (hadSelfHeal) {
+        _behStatus = 'Keine professionelle Behandlung, aber Selbst-Notversorgung im Text belegt';
+      } else {
+        _behStatus = 'NEIN - Karl war kritisch verletzt ohne erkennbaren Versorgungs-Versuch';
+      }
+      out += '  - Behandlungs-Status: ' + _behStatus + '\n';
+      if (scenesAtCriticalVf >= 4 && !hadHealingTrip && !hadSelfHeal) {
         out += '  - ⚠ LANGE Vf<=2 ohne Genesung - Behandlungs-Push wurde nicht befolgt!\n';
       }
     }
@@ -20139,8 +20155,8 @@ function pruefeTabuFreitext(txt) {
   if (sexGewalt.test(t)) return 'sexuelle Gewalt';
 
   // (2) KINDER - jegliche sexuelle ODER gewaltsame Handlung. Kinderbegriffe + (Gewalt ODER sexuell).
-  const kindWort = '(kind|kinder|kindes|kleinkind|saeugling|baby|babys|maedchen|junge(?!s)(?!\\s+(mann|frau|kerl|bursche|dame|herr|leute))|jungen(?!\\s+(mann|frau|kerl|bursche|dame|herr|leute|leuten))|knabe|minderjaehrig\\w*|schuelerin|schueler|zwoelfjaehrig\\w*|elfjaehrig\\w*|zehnjaehrig\\w*|neunjaehrig\\w*|achtjaehrig\\w*)';
-  const kindVerb = '(toete?|toetest|ermorde|erschiess|erschlage?|erschlaegst|totschlag\\w*|erwuerg|wuerg|schlage?|schlaegst|pruegel|verpruegel|trete?|trittst|tritts|stich|ersteche|miss?brauch|vergewaltig|begrabsch|befummel|fass\\w* an|zieh\\w* aus|nackt|sexuell|fessel|folter|quael|verstuemmel)';
+  const kindWort = '(kind|kinder|kindes|kleinkind|saeugling|baby|babys|maedchen|junge(?!s)(?!\\s+(mann|frau|kerl|bursche|dame|herr|leute))|jungen(?!\\s+(mann|frau|kerl|bursche|dame|herr|leute|leuten))|knabe(n)?|minderjaehrig\\w*|schuelerin|schueler|zwoelfjaehrig\\w*|elfjaehrig\\w*|zehnjaehrig\\w*|neunjaehrig\\w*|achtjaehrig\\w*)';
+  const kindVerb = '(toete?|toetest|ermorde|erschiess|erschiesse?|schiess|schiesse?|erschlage?|erschlaegst|totschlag\\w*|erwuerg|wuerg|schlage?|schlaegst|pruegel|verpruegel|trete?|tritt|trittst|tritts|stich|ersteche|miss?brauch|vergewaltig|begrabsch|befummel|fass\\w* an|zieh\\w* aus|nackt|sexuell|fessel|folter|quael|verstuemmel)';
   const kindGewaltSex = new RegExp(
     '\\b' + kindVerb + '\\w*\\b[^.]{0,40}\\b' + kindWort + '\\b' +
     '|\\b' + kindWort + '\\b[^.]{0,40}\\b' + kindVerb + '\\w*\\b',
@@ -23901,6 +23917,19 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         }
       } catch (e) { /* ignore */ }
 
+      // v7.12.332 (Lektorat Helga-Run P1, Folge): Sobald die Zielperson GEFUNDEN ist, will Karl sie
+      // zum Klienten bringen - sie geht also bei Ortswechseln mit, auch wenn der Szenentext keinen
+      // expliziten Mitgeh-Marker für sie enthält (z.B. "bring Friedrich zum Opel" -> Zielort Halle/
+      // Wagen ohne "Friedrich kommt mit"-Satz). Sie wird daher beim Hard-Move NICHT zurückgelassen,
+      // solange der Fall noch nicht abgeschlossen ist.
+      let zielpersonNameLower = '';
+      try {
+        if (caseSetup && Array.isArray(caseSetup.setupCast) && caseProgress && caseProgress.zielpersonGefunden) {
+          const _tgtEntry = caseSetup.setupCast.find(c => c && c.tag === 'TARGET');
+          if (_tgtEntry && _tgtEntry.name) zielpersonNameLower = normForMatch(_tgtEntry.name);
+        }
+      } catch (e) { /* ignore */ }
+
       // Pruefe ob aktueller Ort die Klient-Wohnung ist
       const ortLowerForCast = normForMatch((scene && scene.ort) || '');
       const ortIsKlientHome = klientLastName && (
@@ -23929,6 +23958,11 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (!cNameNorm) return false;
         const parts = cNameNorm.split(/\s+/).filter(Boolean);
         const keys = [cNameNorm, parts[0], parts[parts.length - 1]].filter(x => x && x.length >= 3);
+        // v7.12.331 (Source-Review v329 P1): zusätzlich den SPIELERTEXT prüfen. Fall: Spieler schreibt
+        // "fahr mit Erika ins Büro", die KI antwortet aber nur "Im Büro sitzt Erika neben dir" ohne
+        // expliziten Reise-Marker -> sceneText-Prüfung allein würde Erika rauswerfen, obwohl der
+        // Spieler sie ausdrücklich mitgenommen hat. Die Spielerabsicht ist hier maßgeblich.
+        const _playerTextNorm = normForMatch(typeof lastUserMessage === 'string' ? lastUserMessage : '');
         return keys.some(k => {
           const kEsc = k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
           const re = new RegExp(
@@ -23939,7 +23973,18 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             '|\\b(faehrst|faehrt|gehst|geht|kommst|kommt|laeufst|laeuft|ziehst|zieht)\\b[^.]{0,50}\\bmit\\s+' + kEsc + '\\b)',
             'i'
           );
-          return re.test(sceneText);
+          if (re.test(sceneText)) return true;
+          // Spielertext: explizite Mitnahme ("mit <Name>", "<Name> mit", "nimm <Name> ... mit").
+          if (_playerTextNorm) {
+            const reP = new RegExp(
+              '\\bmit\\s+' + kEsc + '\\b' +
+              '|\\b' + kEsc + '\\s+mit\\b' +
+              '|\\b(nimm|nimmst|schnapp|schnappst|zerr|zerrst|schlepp|schleppst)\\b[^.]{0,50}' + kEsc + '[^.]{0,30}\\bmit\\b',
+              'i'
+            );
+            if (reP.test(_playerTextNorm)) return true;
+          }
+          return false;
         });
       };
       for (const c of cast) {
@@ -23957,10 +24002,16 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           /\b(steigt|setzt sich|kommt mit|begleitet|folgt|fahren? gemeinsam|im opel mit|im wagen)\b/.test(sceneText);
         // v7.12.325: geht DIESE Figur (namentlich) bei diesem Ortswechsel aktiv mit?
         const goesAlongHard = _npcGoesAlongHard(cName);
+        // v7.12.332: ist DAS die gefundene Zielperson? Dann hält sie (Karl bringt sie zum Klienten).
+        const isGefundeneZielperson = zielpersonNameLower && cName &&
+          (cName.includes(zielpersonNameLower.split(' ')[0]) || zielpersonNameLower.includes(cName.split(' ')[0]));
 
         if (isKlient && !ortIsKlientHome && !klientGoesAlong) {
           // Klient sitzt zu Hause - aus Cast raus
           removedKlientByLocation.push(typeof c === 'string' ? c : c.name);
+        } else if (isGefundeneZielperson) {
+          // v7.12.332: gefundene Zielperson immer halten - sie wird zum Klienten gebracht.
+          newCast.push(c);
         } else if (isLocationBound && !mentionedInScene) {
           removedByLocationBind.push(typeof c === 'string' ? c : c.name);
         } else if (mainLocationChanged && !isKlient && !goesAlongHard) {
@@ -27512,6 +27563,24 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           caseProgress.stage3StartScene = sceneCounter;
         }
         const _zpNameAnzeige = zpTargetName || caseProgress.tatverdaechtiger || 'Die vermisste Person';
+        // v7.12.332 (Lektorat Helga-Run P1): Zielperson SOFORT in den Cast aufnehmen. Befund: Friedrich
+        // wurde in Sz18 gefunden (zielpersonGefunden=true, physisch in der Zelle), blieb aber bis Sz21
+        // NICHT im Cast ("Cast jetzt: Bruno Schaefer"). Folge-Optionen wie "stütze Friedrich" / "bring
+        // ihn zum Wagen" bauen aber auf seiner Anwesenheit auf. Da zielpersonWirklichPraesent hier
+        // bereits true ist, ist die Aufnahme sicher belegt (nicht bloß erwähnt).
+        try {
+          if (zpTargetName && Array.isArray(cast)) {
+            const _zpFirst = zpTargetName.split(/\s+/)[0].toLowerCase();
+            const _schonImCast = cast.some(c => {
+              const cn = (typeof c === 'string' ? c : (c && c.name) || '').toLowerCase();
+              return cn && cn.includes(_zpFirst);
+            });
+            if (!_schonImCast) {
+              cast.push({ name: zpTargetName, rolle: 'Zielperson (gefunden)' });
+              diag('detect', 'Zielperson ' + zpTargetName + ' nach Fund in Cast aufgenommen (war physisch präsent, fehlte aber im Cast)');
+            }
+          }
+        } catch (zpCastErr) { /* Cast-Aufnahme darf den Durchbruch nie brechen */ }
         console.log('[Schatten] Fall-Durchbruch: Zielperson gefunden (Stage 3) - ' + _zpNameAnzeige);
         diag('progress', '✦ ZIELPERSON GEFUNDEN (' + _zpNameAnzeige + ') - Fall loesbar');
         showProgressToast('GEFUNDEN', _zpNameAnzeige + ' ist gefunden. Jetzt zum Klienten.', 'success', 'zielperson-gefunden', '🔦');
