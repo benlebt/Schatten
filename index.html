@@ -2864,7 +2864,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.326</div>
+    <div class="start-version">Schatten v7.12.327</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3044,7 +3044,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.326</span>
+    <span>Schatten v7.12.327</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -3054,6 +3054,8 @@
 const SYSTEM_PROMPT = `Du bist der Spielleiter eines Noir-Krimi-Text-Adventures, Berlin 1953. Stil: Raymond Chandler auf Deutsch, lakonisch, konkret, sinnlich.
 
 INHALTLICHE GRENZEN (WICHTIG, gilt für ALLE Szenen): Schatten ist ein hartes Noir-Pulp - Schießereien, Faustkämpfe, harte Verhöre, Bedrohungen, auch absurde Slapstick-Gewalt sind erlaubt und gewollt. ABER vier Dinge führt Karl NIEMALS aus, egal was der Spieler eingibt: (1) sexuelle Gewalt / Vergewaltigung, (2) IRGENDETWAS Gewaltsames oder Sexuelles mit Kindern, (3) Folter eines wehrlosen/gefesselten Gefangenen als reiner Selbstzweck (ein hartes Verhör mit Druck ist erlaubt, das genüssliche Quälen eines Hilflosen nicht), (4) ein Massaker an Unbeteiligten/Zivilisten. Wenn ein Spieler so etwas verlangt: Karl TUT ES NICHT. Deute es NICHT in etwas Harmloses um und führe es auch nicht abgeschwächt aus - lass Karl innehalten. Eine knappe Zeile genügt ("Manche Grenzen überschreitet selbst Mauer nicht" o.ä.), dann lenke die Szene zurück auf die Ermittlung. Erzähle solche Handlungen NIE aus, auch nicht andeutungsweise.
+
+TON / SPRACHE: Schatten ist atmosphärisch und erwachsen, aber NICHT vulgär. Sexuelle Nähe wird angedeutet und stimmungsvoll umschrieben (Chandler-Stil), nie explizit oder derb ausgeschrieben. Benutze NIEMALS vulgäre Sexvokabeln (ficken, vögeln, bumsen u.ä.) - weder im Erzähltext noch in Optionen, selbst wenn der Spieler sie verwendet. Formuliere zivil und andeutend.
 
 DER SPIELER:
 Privatdetektiv Karl Mauer, Anfang vierzig, abgebrüht, knapp bei Kasse. Im Erzähltext NIE beim Namen nennen, immer "du". Karl/Mauer nur in wörtlicher Rede von anderen Figuren erlaubt.
@@ -5818,7 +5820,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.326';
+window.SCHATTEN_VERSION = 'v7.12.327';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -20073,6 +20075,22 @@ function pruefeTabuFreitext(txt) {
   const massaker = /\b(massakrier\w*|abschlacht\w*|niedermetzel\w*|metzel\w*|ein blutbad|amoklauf)\b|\b(toete?|toetest|erschiess|ermorde|metzel)\w*\b[^.]{0,40}\b(alle|jeden|die menge|die gaeste|die leute|die zivilist\w*|die unbeteiligt\w*|das ganze (lokal|cafe|restaurant|haus)|wahllos)\b/i;
   if (massaker.test(t)) return 'ein Massaker an Unbeteiligten';
 
+  // (5) VULGAERSPRACHE (Benjamin v7.12.327): Schatten ist nicht vulgär. "Sex mit ihr haben" / "schlaf
+  // mit Lola" ist erlaubt, derbe Verben (fick/voegel/bums/popp/rammel) nicht - das geht auch ziviler.
+  // KEINE Gewalt-Kategorie, nur Ton. Sorgfältig gegen Fallen: "voegel/voegeln" allein = Tiere (gehen
+  // durch), nur mit Sex-Objekt = Verb. "nageln" bewusst NICHT drin (zu mehrdeutig: Handwerk).
+  const vulgaer = new RegExp(
+    '\\b(fick(en|e|st|t)?|gefickt|durchfick\\w*|verfick\\w*)\\b' +
+    '|\\b(voegle|voegelst|voegelt|gevoegelt)\\b' +
+    '|\\bvoegel\\s+(sie|ihn|ihr|die|den|das|lola|erika)\\b' +
+    '|\\b(voegeln)\\s+(sie|ihn|die\\s+frau|die\\s+\\w+in)\\b' +
+    '|\\b(bums(en|e|st|t)?|gebumst)\\b' +
+    '|\\b(poppe?(n|st|t)?|gepoppt)\\b' +
+    '|\\b(rammel(n|e|st|t)?|gerammelt)\\b',
+    'i'
+  );
+  if (vulgaer.test(t)) return 'vulgaer';
+
   return null;
 }
 
@@ -31576,7 +31594,11 @@ setInterval(function() {
           if (_tabu) {
             if (typeof diag === 'function') diag('filter', 'FREITEXT BLOCKIERT (Tabu: ' + _tabu + '): "' + txt + '" - kein KI-Call');
             if (typeof showProgressToast === 'function') {
-              showProgressToast('Das tut Karl nicht', 'Selbst in seinen dunkelsten Stunden hat Mauer Grenzen.', 'warning', 'tabu-freitext', '🚫');
+              if (_tabu === 'vulgaer') {
+                showProgressToast('Etwas weniger derb', 'Sag es Karl anders - er ist ein Gentleman alter Schule, kein Schmierfink.', 'warning', 'tabu-vulgaer', '🎩');
+              } else {
+                showProgressToast('Das tut Karl nicht', 'Selbst in seinen dunkelsten Stunden hat Mauer Grenzen.', 'warning', 'tabu-freitext', '🚫');
+              }
             }
             return; // Input NICHT leeren, KEIN chooseOption
           }
