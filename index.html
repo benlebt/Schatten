@@ -2864,7 +2864,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.339</div>
+    <div class="start-version">Schatten v7.12.340</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3044,7 +3044,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.339</span>
+    <span>Schatten v7.12.340</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5830,7 +5830,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.339';
+window.SCHATTEN_VERSION = 'v7.12.340';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -7595,10 +7595,17 @@ function pickBestGermanVoice(voices) {
   if (deVoices.length === 0) return null;
   // Score: Premium/Enhanced/Siri/Neural/Erweitert = 0 (gut), sonst 1
   // localService=true (auf Geraet) bevorzugt vor Cloud-Stimmen
+  // v7.12.340 (Chromium-Bug 374263394, macOS-Kollege-Befund): Auf Desktop-Chrome/Blink HÄNGEN
+  // Remote-Stimmen (localService=false) komplett - speak() feuert weder onstart noch onerror,
+  // kein Ton, speaking bleibt true. Das ist schlimmer als eine schlechtere Stimme. Daher dort
+  // lokale Stimmen MASSIV bevorzugen (statt nur +1). Auf iOS/Safari bleibt es bei der leichten
+  // Abwertung - dort funktionieren Remote/Premium-Stimmen und klingen besser.
+  let _isDesktopBlinkForVoice = false;
+  try { _isDesktopBlinkForVoice = (typeof _ttsBrowserInfo === 'function') && _ttsBrowserInfo().isDesktopBlink; } catch (e) {}
   function score(v) {
     let s = 0;
     if (!/enhanced|premium|siri|neural|erweitert/i.test(v.name)) s += 10;
-    if (v.localService === false) s += 1;  // Cloud-Voice leicht abwerten
+    if (v.localService === false) s += (_isDesktopBlinkForVoice ? 100 : 1);  // Cloud-Voice: Desktop-Chrome stark meiden (haengt), sonst leicht abwerten
     // Markus/Helena/Petra Premium bevorzugt vor Anna (User-Feedback)
     if (/anna/i.test(v.name) && !/premium|enhanced|siri|erweitert/i.test(v.name)) s += 5;
     return s;
@@ -8357,14 +8364,18 @@ function startSpeakCurrent() {
         fab.title = 'Aktuelle Szene und Optionen vorlesen';
       }
     }
-    function speakBlockAt(idx) {
+    function speakBlockAt(idx, _retryLocal) {
       // Abgebrochen? (User hat Stop gedrueckt -> speakCurrentActive=false)
       if (!speakCurrentActive) return;
       if (idx >= blocks.length) { finishSpeaking(); return; }
       const u = makeUtterance(blocks[idx]);  // Stimme wird HIER frisch gebunden
+      // v7.12.340: Beim Retry nach Haenger die (haengende Remote-)Stimme entfernen -> Chrome nimmt
+      // die System-Default-Stimme, die nicht uebers Netz muss.
+      if (_retryLocal) { try { u.voice = null; } catch(e){} }
+      let _started = false;
       // v7.12.339 TTS-DIAG: Lifecycle-Logging, um stumme-aber-laeuft-Faelle (macOS-Chrome)
       // einzugrenzen. onstart = Audio beginnt wirklich; onerror = Synthese-Fehler mit Grund.
-      u.onstart = () => { try { console.log('[TTS-DIAG] onstart Block ' + idx + ' (Audio beginnt) voice=' + (u.voice ? u.voice.name : 'KEINE!') + ' lang=' + u.lang + ' vol=' + u.volume); } catch(e){} };
+      u.onstart = () => { _started = true; try { console.log('[TTS-DIAG] onstart Block ' + idx + ' (Audio beginnt) voice=' + (u.voice ? u.voice.name : 'DEFAULT') + ' lang=' + u.lang + ' vol=' + u.volume); } catch(e){} };
       u.onend = () => {
         // kleine Pause zwischen Bloecken - gibt WebKit Zeit, das Voice-Binding
         // fuer die naechste Utterance sauber aufzubauen.
@@ -8379,6 +8390,25 @@ function startSpeakCurrent() {
         console.log('[TTS-DIAG] speak() Aufruf Block ' + idx + ' | speaking=' + window.speechSynthesis.speaking + ' pending=' + window.speechSynthesis.pending + ' paused=' + window.speechSynthesis.paused);
       } catch(e){}
       window.speechSynthesis.speak(u);
+      // v7.12.340 (Chromium-Bug 374263394): onstart-WATCHDOG auf Desktop-Chrome. Haengt die
+      // Utterance (Remote-Stimme, die nicht antwortet), feuert weder onstart noch onerror - sie
+      // bleibt einfach stumm haengen. Wenn nach 1.5s kein onstart kam: cancel + EINMAL neu
+      // versuchen ohne explizite Stimme (Default/lokal). Schlaegt auch das fehl, weiter zum
+      // naechsten Block, damit das Vorlesen nicht komplett blockiert.
+      if (_ttsInfo.isDesktopBlink) {
+        setTimeout(function(){
+          if (!speakCurrentActive) return;
+          if (_started) return; // laeuft - alles gut
+          try { console.warn('[TTS-DIAG] WATCHDOG Block ' + idx + ': kein onstart nach 1.5s' + (_retryLocal ? ' (auch im Retry)' : '') + ' -> cancel + ' + (_retryLocal ? 'skip' : 'Retry mit Default-Stimme')); } catch(e){}
+          try { window.speechSynthesis.cancel(); } catch(e){}
+          if (!_retryLocal) {
+            setTimeout(() => { if (speakCurrentActive) speakBlockAt(idx, true); }, 120);
+          } else {
+            // Retry hat auch nicht gegriffen -> diesen Block ueberspringen.
+            if (speakCurrentActive) setTimeout(() => speakBlockAt(idx + 1), 80);
+          }
+        }, 1500);
+      }
     }
     speakBlockAt(0);
     if (typeof diag === 'function') {
