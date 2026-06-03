@@ -2864,7 +2864,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.327</div>
+    <div class="start-version">Schatten v7.12.328</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3044,7 +3044,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.327</span>
+    <span>Schatten v7.12.328</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5820,7 +5820,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.327';
+window.SCHATTEN_VERSION = 'v7.12.328';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -20057,7 +20057,7 @@ function pruefeTabuFreitext(txt) {
   if (sexGewalt.test(t)) return 'sexuelle Gewalt';
 
   // (2) KINDER - jegliche sexuelle ODER gewaltsame Handlung. Kinderbegriffe + (Gewalt ODER sexuell).
-  const kindWort = '(kind|kinder|kindes|kleinkind|saeugling|baby|babys|maedchen|junge(?!s)|jungen|knabe|minderjaehrig\\w*|schuelerin|schueler|zwoelfjaehrig\\w*|elfjaehrig\\w*|zehnjaehrig\\w*|neunjaehrig\\w*|achtjaehrig\\w*)';
+  const kindWort = '(kind|kinder|kindes|kleinkind|saeugling|baby|babys|maedchen|junge(?!s)(?!\\s+(mann|frau|kerl|bursche|dame|herr|leute))|jungen(?!\\s+(mann|frau|kerl|bursche|dame|herr|leute|leuten))|knabe|minderjaehrig\\w*|schuelerin|schueler|zwoelfjaehrig\\w*|elfjaehrig\\w*|zehnjaehrig\\w*|neunjaehrig\\w*|achtjaehrig\\w*)';
   const kindVerb = '(toete?|toetest|ermorde|erschiess|erschlage?|erschlaegst|totschlag\\w*|erwuerg|wuerg|schlage?|schlaegst|pruegel|verpruegel|trete?|trittst|tritts|stich|ersteche|miss?brauch|vergewaltig|begrabsch|befummel|fass\\w* an|zieh\\w* aus|nackt|sexuell|fessel|folter|quael|verstuemmel)';
   const kindGewaltSex = new RegExp(
     '\\b' + kindVerb + '\\w*\\b[^.]{0,40}\\b' + kindWort + '\\b' +
@@ -20083,6 +20083,7 @@ function pruefeTabuFreitext(txt) {
     '\\b(fick(en|e|st|t)?|gefickt|durchfick\\w*|verfick\\w*)\\b' +
     '|\\b(voegle|voegelst|voegelt|gevoegelt)\\b' +
     '|\\bvoegel\\s+(sie|ihn|ihr|die|den|das|lola|erika)\\b' +
+    '|\\bvoegel(n)?\\s+mit\\s+(lola|erika|ihr|ihm|der\\s+frau|dem\\s+mann|[a-z][\\wae-]+)\\b' +
     '|\\b(voegeln)\\s+(sie|ihn|die\\s+frau|die\\s+\\w+in)\\b' +
     '|\\b(bums(en|e|st|t)?|gebumst)\\b' +
     '|\\b(poppe?(n|st|t)?|gepoppt)\\b' +
@@ -22673,7 +22674,11 @@ function validateIntentFollowup(scene, intent) {
     // sind harmlose Noir-Koerpersprache, loesten aber falsche (teure) Repair-Retries aus. Jetzt:
     // eindeutige Angriffsverben direkt; greifen/treten NUR mit Angriffsziel (Kragen/Arm/gegen ihn).
     const _assaultDirect = /\bdu\s+(packst|schlaegst|stoesst|reisst|wuergst|zerrst|schubst|rammst|haust)\b/.test(text);
-    const _trittAngriff = /\bdu\s+trittst\s+(?!einen?\s+schritt\b|zurueck\b|zur seite\b|naeher\b|ein\b|beiseite\b)(?:ihn|sie|den\s+mann|die\s+frau|den\s+kerl|[a-z][\wae-]+(?:\s+[a-z][\wae-]+){0,2}\s+)?(?:gegen|nach|in)\b/.test(text);
+    const _trittZiel = '(?:ihn|sie|den\\s+mann|die\\s+frau|den\\s+kerl|[a-z][\\wae-]+(?:\\s+[a-z][\\wae-]+){0,2}\\s+)?';
+    const _trittAngriff = new RegExp('\\bdu\\s+trittst\\s+(?!einen?\\s+schritt\\b|zurueck\\b|zur seite\\b|naeher\\b|ein\\b|beiseite\\b)' + _trittZiel + '(?:gegen|nach)\\b', 'i').test(text)
+      // v7.12.328 (Source-Review v327 P1): "in" NUR bei Körperziel. "du trittst in den Raum/ins
+      // Zimmer" ist KEIN Angriff (Noir-Standardsatz) - vorher fälschlich als Angriff gewertet.
+      || new RegExp('\\bdu\\s+trittst\\s+' + _trittZiel + 'in\\s+(?:den|die|das|ihm\\s+(?:den|die|in)|ihr\\s+(?:den|die|in))\\s*(bauch|gesicht|rippen|schienbein|knie|leib|magen|unterleib|hals|nacken|ruecken|weichteile|gemaecht)\\b', 'i').test(text);
     const _greifZiel = '(?:ihn|sie|den\\s+mann|die\\s+frau|den\\s+kerl|den\\s+typen|[a-z][\\wae-]+(?:\\s+[a-z][\\wae-]+){0,2})';
     const _greifKoerper = '(arm|kragen|hals|handgelenk|mantel|jacke|schulter|kehle|revers|aufschlag|haar|haare|haaren)';
     const _greifAngriff = new RegExp('\\bdu\\s+greifst\\s+' + _greifZiel + '\\s+(?:am|an den|an der|an die|bei)\\s+' + _greifKoerper + '\\b', 'i').test(text)
@@ -23846,7 +23851,10 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           const kEsc = k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
           const re = new RegExp(
             '(' + kEsc + '[^.]{0,60}\\b(kommt mit|kommt mit dir|begleitet|folgt dir|folgt euch|steigt (ein|in den|in dein)|setzt sich (zu dir|in den)|faehrt mit|fahrt gemeinsam|fahren gemeinsam|im opel mit|im wagen mit)\\b' +
-            '|\\b(nimmst|zerrst|schleppst|schnappst)\\b[^.]{0,60}' + kEsc + '[^.]{0,30}\\bmit\\b)',
+            '|\\b(nimmst|zerrst|schleppst|schnappst)\\b[^.]{0,60}' + kEsc + '[^.]{0,30}\\bmit\\b' +
+            // v7.12.328 (Source-Review v327 P1): auch "du faehrst/gehst/kommst mit <Name>" - sonst
+            // nahm der Prompt-Cast Erika mit, aber der Cleanup warf sie nach der Antwort wieder raus.
+            '|\\b(faehrst|faehrt|gehst|geht|kommst|kommt|laeufst|laeuft|ziehst|zieht)\\b[^.]{0,50}\\bmit\\s+' + kEsc + '\\b)',
             'i'
           );
           return re.test(sceneText);
