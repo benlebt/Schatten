@@ -2864,7 +2864,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.328</div>
+    <div class="start-version">Schatten v7.12.329</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3044,7 +3044,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.328</span>
+    <span>Schatten v7.12.329</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5820,7 +5820,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.328';
+window.SCHATTEN_VERSION = 'v7.12.329';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -7602,6 +7602,30 @@ function pickBestGermanVoice(voices) {
   return sorted[0];
 }
 
+// v7.12.329 (macOS-Chrome-Befund: englisches System -> Chrome liefert keine de-getaggte Stimme,
+// Vorlese-Button blieb stumm obwohl System-TTS lief): FALLBACK-Stimme, wenn pickBestGermanVoice
+// null liefert. Lieber irgendeine verfügbare Stimme (englischer Akzent) als komplette Stille.
+// Bevorzugt: lokale Stimme (localService) vor Cloud, und eine Stimme die NICHT offensichtlich
+// eine Spezial-/Effektstimme ist. So spricht der Vorlese-Button den deutschen Text wenigstens
+// lautlich durch. Gibt null nur zurück, wenn die Liste komplett leer ist.
+function pickFallbackVoice(voices) {
+  if (!voices || voices.length === 0) return null;
+  // Effekt-/Novelty-Stimmen meiden (Apple hat z.B. "Bells", "Bad News", "Trinoids" etc.).
+  const NOVELTY = /(bells|bad news|good news|bahh|boing|bubbles|cellos|deranged|hysterical|pipe organ|trinoids|whisper|wobble|zarvox|albert|jester|organ|superstar|fred|junior|kathy|ralph|princess)/i;
+  const usable = voices.filter(v => v && v.name && !NOVELTY.test(v.name));
+  const pool = usable.length ? usable : voices;
+  // Bevorzugt eine englische lokale Stimme (klarste Aussprache), sonst irgendeine lokale, sonst die erste.
+  function score(v) {
+    let s = 0;
+    const lang = (v.lang || '').toLowerCase();
+    if (lang.startsWith('en')) s -= 2;          // Englisch bevorzugt (verständlichste Default-Aussprache)
+    if (v.localService === false) s += 3;       // Cloud abwerten (kann offline/blockiert sein)
+    if (v.default) s -= 1;                       // Browser-Default leicht bevorzugen
+    return s;
+  }
+  return [...pool].sort((a, b) => score(a) - score(b))[0] || null;
+}
+
 // v7.11.66: TTS-Umlaut-Konvertierung. Das Story-System speichert Namen wie
 // "Bruno Schaefer", "Hohenschoenhausen", "Schaeferstrasse" mit ae/oe/ue/ss
 // statt Umlauten - das hat historische Gruende (alte Encoding-Probleme).
@@ -7766,6 +7790,24 @@ function makeUtterance(text) {
         pickReason = 'keine-de-stimme';
       }
     }
+    // v7.12.329: FALLBACK. Wenn bis hier KEINE (deutsche) Stimme gewählt wurde, aber Stimmen
+    // existieren (Chrome/englisches System: de-Stimmen fehlen oder sind nicht de-getaggt), nimm
+    // eine verfügbare Ersatzstimme statt stumm zu bleiben. Einmaliger dezenter Hinweis an den User.
+    if (!chosenVoice && voices && voices.length > 0) {
+      const fb = pickFallbackVoice(voices);
+      if (fb) {
+        chosenVoice = fb;
+        pickReason = 'fallback-keine-de-stimme-' + fb.name;
+        if (typeof diag === 'function') {
+          diag('voice', 'FALLBACK-Stimme (keine de-Stimme verfügbar): "' + fb.name + '" @ ' + (fb.lang || '?') + ' (Liste: ' + voices.length + ' total, 0 de)');
+        }
+        try {
+          if (typeof showProgressToast === 'function' && typeof canShowToast === 'function' && canShowToast('info', 'tts-fallback-voice')) {
+            showProgressToast('Keine deutsche Stimme', 'Vorlesen läuft mit Ersatzstimme. In Safari oder mit installierter deutscher Stimme klingt es natürlicher.', 'info', 'tts-fallback-voice', '🔊');
+          }
+        } catch (e) { /* ignore */ }
+      }
+    }
     // v7.11.8: Tracking-Log fuer jeden makeUtterance-Call (Browser-Konsole)
     console.log('[Schatten Voice]', 'gewaehlt:', (chosenVoice ? chosenVoice.name : 'NULL'),
       '| Liste:', voices.length + 'tot/' + deVoiceCount + 'de',
@@ -7778,7 +7820,12 @@ function makeUtterance(text) {
       u.voice = chosenVoice;
       try {
         if (chosenVoice.voiceURI) u.voiceURI = chosenVoice.voiceURI;
-        if (chosenVoice.lang) u.lang = chosenVoice.lang;
+        // v7.12.329: Bei einer FALLBACK-Stimme (keine de-Stimme, z.B. englische Ersatzstimme)
+        // u.lang auf 'de-DE' LASSEN - dann spricht die Engine den Text nach deutschen
+        // Ausspracheregeln, was mit einer fremden Stimme deutlich besser klingt als deren
+        // Originalsprache. Nur bei einer echten de-Stimme die Voice-Lang übernehmen.
+        const _istFallback = (pickReason || '').indexOf('fallback-keine-de-stimme') === 0;
+        if (!_istFallback && chosenVoice.lang) u.lang = chosenVoice.lang;
       } catch (e) { /* iOS Safari erlaubt voiceURI-Setzen evtl. nicht */ }
     }
   } else if (typeof diag === 'function') {
