@@ -2864,7 +2864,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.336</div>
+    <div class="start-version">Schatten v7.12.338</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3044,7 +3044,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.336</span>
+    <span>Schatten v7.12.338</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5826,7 +5826,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.336';
+window.SCHATTEN_VERSION = 'v7.12.338';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -27669,10 +27669,20 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     // Der Watchdog meldet IMMER 'nach-zielpersonGefunden' als letzte Phase -> der 55-65s-Haenger
     // sitzt zwischen hier und 'nach-resolutionSignals'. Diese Sub-Marker zeigen im naechsten Run
     // den genauen Teilschritt: betritt der wahrheit_erkannt-Block? laeuft die Beat-Pruefung?
-    try { markPhase('diag-vor-wahrheitBlock@Sz' + (typeof sceneCounter === 'number' ? sceneCounter : '?') + '(we=' + (scene.wahrheit_erkannt === true ? '1' : '0') + ',werk=' + (caseProgress.wahrheitErkannt ? '1' : '0') + ')'); } catch(e){}
-    if (scene.wahrheit_erkannt === true && !caseProgress.wahrheitErkannt) {
-      try { markPhase('diag-IM-wahrheitBlock-start@Sz' + (typeof sceneCounter === 'number' ? sceneCounter : '?')); } catch(e){}
-      const wsFloorOk = caseProgress.stage >= 1 && sceneCounter >= 4;
+    if (scene.wahrheit_erkannt === true && !caseProgress.wahrheitErkannt) (function(){
+      const ctW = (caseSetup && caseSetup.caseType) || '';
+      // v7.12.338 (Balance-Fix, Achterberg-Run v337): Gemini 3.1 schickt scene.wahrheit_erkannt:true
+      // sehr aggressiv - schon ab Sz5/6, lange vor jedem echten Abschluss. Der alte Floor
+      // (stage>=1 && Sz>=4) war absurd niedrig: der Täter-DURCHBRUCH war damit leichter zu
+      // erreichen als ein simpler Stage-2-Aufstieg (der Sz>=8 + Ind>=8 verlangt). Folge: Vossberg
+      // galt in Szene 6 als "überführt". Fix: Für mord/wahrheit braucht der Durchbruch echte
+      // Substanz - mindestens Stage 2 (= laufende Ermittlung) UND mind. 6 Indizien. Andere caseTypes
+      // (diebstahl/beschatten haben eigene Sonderwege unten; vermisst löst über zielpersonGefunden)
+      // behalten den bisherigen, weicheren Floor.
+      const _indCountW = (caseProgress && Array.isArray(caseProgress.indizien)) ? caseProgress.indizien.length : 0;
+      const wsFloorOk = (ctW === 'mord' || ctW === 'wahrheit')
+        ? (caseProgress.stage >= 2 && sceneCounter >= 8 && _indCountW >= 6)
+        : (caseProgress.stage >= 1 && sceneCounter >= 4);
       // v7.12.86 (Lektorat Krause-Run 18:11): Bei DIEBSTAHL ist "wahrheit_erkannt"
       // NICHT der richtige Abschluss. Hauptziel ist laut Setup das Diebesgut
       // zurueckzuholen - nicht nur aufzuklaeren, WER es hat. Im Run loeste die KI
@@ -27683,7 +27693,6 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       // gilt wahrheit_erkannt nur als Durchbruch, wenn das Diebesgut tatsaechlich
       // zurueck ist (caseProgress.ueberfuehrt via Etui-Durchbruch). Sonst: ignorieren
       // + die KI in Richtung Diebesgut-Beschaffung pushen statt vorzeitig abschliessen.
-      const ctW = (caseSetup && caseSetup.caseType) || '';
       // v7.12.144 (User-Befund Krause-Run): FIX. Vorher prueffte dies !ueberfuehrt -
       // aber im Run war der Taeter ueberfuehrt, nur das GUT war nicht zurueck. Dadurch
       // ging der Wahrheits-Durchbruch durch + Toast "Karl weiss jetzt... jetzt zum
@@ -27699,7 +27708,6 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       const beschattungZuDuenn = (ctW === 'beschatten' &&
         !((caseProgress.stage >= 2) && ((caseProgress.indizien || []).length >= 4)));
       if (wsFloorOk && !diebstahlOhneGut && !beschattungZuDuenn) {
-        try { markPhase('diag-wb-A-vorMordzweig@Sz' + (typeof sceneCounter === 'number' ? sceneCounter : '?')); } catch(e){}
         // v7.12.190 (ChatGPT-Lektorat v189 P0): MORDFALL-SONDERWEG. Bei caseType 'mord' darf
         // das KI-Feld wahrheit_erkannt NICHT zu "Wahrheit bewiesen, kein klassischer Taeter"
         // fuehren (Achterberg-Run Sz48: Vossberg ist klar der Moerder, trotzdem feuerte "kein
@@ -27707,9 +27715,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         // Durchbruch eine TAETERSPUR, keine taeterlose Wahrheit.
         if (ctW === 'mord') {
           const _vM = (caseProgress.tatverdaechtiger || '').trim();
-          try { markPhase('diag-wb-B-vorIsGeneric@Sz' + (typeof sceneCounter === 'number' ? sceneCounter : '?')); } catch(e){}
           const _genM = !_vM || (typeof isGenericPersonName === 'function' && isGenericPersonName(_vM));
-          try { markPhase('diag-wb-C-nachIsGeneric@Sz' + (typeof sceneCounter === 'number' ? sceneCounter : '?')); } catch(e){}
           // Plausibilitaet: konkreter Name, nicht ROMANCE/Opfer/Klient.
           let _plausM = !_genM;
           if (_plausM && caseSetup && Array.isArray(caseSetup.setupCast)) {
@@ -27720,7 +27726,6 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
                   ? sameNamedPerson(_vM, c.name)
                   : c.name.toLowerCase().split(/\s+/).filter(w => w.length >= 4).some(t => _vM.toLowerCase().includes(t))
               ));
-              try { markPhase('diag-wb-D-nachSetupFind@Sz' + (typeof sceneCounter === 'number' ? sceneCounter : '?')); } catch(e){}
               if (_ceM) {
                 const _tM = (_ceM.tag || '').toUpperCase();
                 const _rM = (_ceM.rolle || '').toLowerCase();
@@ -27735,9 +27740,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             if (caseProgress.stage < 3) { caseProgress.stage = 3; caseProgress.stage3StartScene = sceneCounter; }
             console.log('[Schatten] Mord-Durchbruch: ' + _vM + ' belastet (Taeterspur, kein Wahrheit-ohne-Taeter)');
             diag('progress', '✦ TAETERSPUR BELASTBAR - ' + _vM + ' ist belastet. Jetzt zum Klienten.');
-            try { markPhase('diag-wb-E-vorToast@Sz' + (typeof sceneCounter === 'number' ? sceneCounter : '?')); } catch(e){}
             showProgressToast('TÄTERSPUR', _vM + ' ist belastet. Jetzt brauchst du den Abschluss.', 'success', 'taeter-belastet', '🔍');
-            try { markPhase('diag-wb-F-nachToast@Sz' + (typeof sceneCounter === 'number' ? sceneCounter : '?')); } catch(e){}
             return; // Mord-Sonderweg fertig - generischen Wahrheit-Pfad NICHT durchlaufen.
           }
           // Kein plausibler Moerder -> Mord bleibt OFFEN, KEIN Wahrheit-Abschluss erzwingen.
@@ -27888,8 +27891,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       } else {
         diag('drift', 'scene.wahrheit_erkannt:true ignoriert - zu frueh (Sz ' + sceneCounter + ', Stage ' + caseProgress.stage + ')');
       }
-    }
-    try { markPhase('diag-nach-wahrheitBlock@Sz' + (typeof sceneCounter === 'number' ? sceneCounter : '?')); } catch(e){}
+    })();
     // 4) Klient berichtet - finale Win-Bedingung
     // v7.12.63: zielpersonGefunden als gleichwertiger Durchbruch ergaenzt - bei
     // Vermisstenfaellen ist das Auffinden der Person der Abschluss, nicht eine
