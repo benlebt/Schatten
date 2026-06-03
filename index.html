@@ -2864,7 +2864,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.333</div>
+    <div class="start-version">Schatten v7.12.334</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3044,7 +3044,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.333</span>
+    <span>Schatten v7.12.334</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5820,7 +5820,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.333';
+window.SCHATTEN_VERSION = 'v7.12.334';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -27605,7 +27605,13 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     // ist der Verdaechtige - moeglicherweise ReDoS durch eine [\s\S]{0,N}-Regex auf langem Text.
     // Feine Marker grenzen den genauen Schritt im naechsten Run ein.
     try { markPhase('nach-zielpersonGefunden@Sz' + (typeof sceneCounter === 'number' ? sceneCounter : '?')); } catch(e){}
+    // v7.12.334 (Haenger-Diagnose Achterberg-Run Sz31+): feinere Marker im Verdaechtigen-Block.
+    // Der Watchdog meldet IMMER 'nach-zielpersonGefunden' als letzte Phase -> der 55-65s-Haenger
+    // sitzt zwischen hier und 'nach-resolutionSignals'. Diese Sub-Marker zeigen im naechsten Run
+    // den genauen Teilschritt: betritt der wahrheit_erkannt-Block? laeuft die Beat-Pruefung?
+    try { markPhase('diag-vor-wahrheitBlock@Sz' + (typeof sceneCounter === 'number' ? sceneCounter : '?') + '(we=' + (scene.wahrheit_erkannt === true ? '1' : '0') + ',werk=' + (caseProgress.wahrheitErkannt ? '1' : '0') + ')'); } catch(e){}
     if (scene.wahrheit_erkannt === true && !caseProgress.wahrheitErkannt) {
+      try { markPhase('diag-IM-wahrheitBlock-start@Sz' + (typeof sceneCounter === 'number' ? sceneCounter : '?')); } catch(e){}
       const wsFloorOk = caseProgress.stage >= 1 && sceneCounter >= 4;
       // v7.12.86 (Lektorat Krause-Run 18:11): Bei DIEBSTAHL ist "wahrheit_erkannt"
       // NICHT der richtige Abschluss. Hauptziel ist laut Setup das Diebesgut
@@ -27817,6 +27823,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         diag('drift', 'scene.wahrheit_erkannt:true ignoriert - zu frueh (Sz ' + sceneCounter + ', Stage ' + caseProgress.stage + ')');
       }
     }
+    try { markPhase('diag-nach-wahrheitBlock@Sz' + (typeof sceneCounter === 'number' ? sceneCounter : '?')); } catch(e){}
     // 4) Klient berichtet - finale Win-Bedingung
     // v7.12.63: zielpersonGefunden als gleichwertiger Durchbruch ergaenzt - bei
     // Vermisstenfaellen ist das Auffinden der Person der Abschluss, nicht eine
