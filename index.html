@@ -2864,7 +2864,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.340</div>
+    <div class="start-version">Schatten v7.12.341</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3044,7 +3044,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.340</span>
+    <span>Schatten v7.12.341</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5830,7 +5830,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.340';
+window.SCHATTEN_VERSION = 'v7.12.341';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -7505,16 +7505,6 @@ function buildSpeakText() {
     const optionBtns = document.querySelectorAll(
       '#options-list .option-btn:not(.option-btn-system), #options-list .option-btn-system.option-btn-romance'
     );
-    // v7.12.69 TTS-DIAGNOSE: Logge ALLE Buttons in #options-list mit ihren Klassen,
-    // und was der Vorlese-Selektor faengt. Klaert warum Romance-Buttons nicht gelesen werden.
-    try {
-      const allBtns = document.querySelectorAll('#options-list .option-btn');
-      console.log('[TTS-DIAG] Alle .option-btn in #options-list:', allBtns.length);
-      allBtns.forEach((b, i) => {
-        console.log('[TTS-DIAG]   #' + i + ' classes="' + b.className + '" text="' + (b.textContent||'').trim().substring(0,40) + '"');
-      });
-      console.log('[TTS-DIAG] Selektor faengt:', optionBtns.length, 'Buttons');
-    } catch(e) { console.warn('[TTS-DIAG] Fehler:', e); }
     // v7.12.68: Reihenfolge-Fix. Die Romance-Buttons stehen visuell OBEN (topActions),
     // kaemen in DOM-Reihenfolge also VOR A/B/C/D - das klingt beim Hoeren falsch
     // ("Was tust du? ... intim werden ... Option A"). Stattdessen sammeln wir
@@ -7561,12 +7551,7 @@ function buildSpeakText() {
     // Erst die normalen Story-Optionen, dann die besondere(n) Moeglichkeit(en).
     abcdBlocks.forEach(b => blocks.push(b));
     romanceBlocks.forEach(b => blocks.push(b));
-    // v7.12.69 TTS-DIAGNOSE
-    console.log('[TTS-DIAG] abcdBlocks:', abcdBlocks.length, '| romanceBlocks:', romanceBlocks.length);
   }
-  // v7.12.69 TTS-DIAGNOSE: die komplette vorgelesene Block-Liste
-  console.log('[TTS-DIAG] === VORGELESEN (' + blocks.length + ' Bloecke) ===');
-  blocks.forEach((b, i) => console.log('[TTS-DIAG]   [' + i + '] ' + b.substring(0, 80)));
   return blocks;
 }
 
@@ -8364,51 +8349,21 @@ function startSpeakCurrent() {
         fab.title = 'Aktuelle Szene und Optionen vorlesen';
       }
     }
-    function speakBlockAt(idx, _retryLocal) {
+    function speakBlockAt(idx) {
       // Abgebrochen? (User hat Stop gedrueckt -> speakCurrentActive=false)
       if (!speakCurrentActive) return;
       if (idx >= blocks.length) { finishSpeaking(); return; }
       const u = makeUtterance(blocks[idx]);  // Stimme wird HIER frisch gebunden
-      // v7.12.340: Beim Retry nach Haenger die (haengende Remote-)Stimme entfernen -> Chrome nimmt
-      // die System-Default-Stimme, die nicht uebers Netz muss.
-      if (_retryLocal) { try { u.voice = null; } catch(e){} }
-      let _started = false;
-      // v7.12.339 TTS-DIAG: Lifecycle-Logging, um stumme-aber-laeuft-Faelle (macOS-Chrome)
-      // einzugrenzen. onstart = Audio beginnt wirklich; onerror = Synthese-Fehler mit Grund.
-      u.onstart = () => { _started = true; try { console.log('[TTS-DIAG] onstart Block ' + idx + ' (Audio beginnt) voice=' + (u.voice ? u.voice.name : 'DEFAULT') + ' lang=' + u.lang + ' vol=' + u.volume); } catch(e){} };
       u.onend = () => {
         // kleine Pause zwischen Bloecken - gibt WebKit Zeit, das Voice-Binding
         // fuer die naechste Utterance sauber aufzubauen.
         if (speakCurrentActive) setTimeout(() => speakBlockAt(idx + 1), 80);
       };
-      u.onerror = (ev) => {
-        try { console.warn('[TTS-DIAG] onerror Block ' + idx + ' error=' + (ev && ev.error ? ev.error : '?')); } catch(e){}
+      u.onerror = () => {
         if (speakCurrentActive) setTimeout(() => speakBlockAt(idx + 1), 80);
       };
       speakCurrentUtterances.push(u);
-      try {
-        console.log('[TTS-DIAG] speak() Aufruf Block ' + idx + ' | speaking=' + window.speechSynthesis.speaking + ' pending=' + window.speechSynthesis.pending + ' paused=' + window.speechSynthesis.paused);
-      } catch(e){}
       window.speechSynthesis.speak(u);
-      // v7.12.340 (Chromium-Bug 374263394): onstart-WATCHDOG auf Desktop-Chrome. Haengt die
-      // Utterance (Remote-Stimme, die nicht antwortet), feuert weder onstart noch onerror - sie
-      // bleibt einfach stumm haengen. Wenn nach 1.5s kein onstart kam: cancel + EINMAL neu
-      // versuchen ohne explizite Stimme (Default/lokal). Schlaegt auch das fehl, weiter zum
-      // naechsten Block, damit das Vorlesen nicht komplett blockiert.
-      if (_ttsInfo.isDesktopBlink) {
-        setTimeout(function(){
-          if (!speakCurrentActive) return;
-          if (_started) return; // laeuft - alles gut
-          try { console.warn('[TTS-DIAG] WATCHDOG Block ' + idx + ': kein onstart nach 1.5s' + (_retryLocal ? ' (auch im Retry)' : '') + ' -> cancel + ' + (_retryLocal ? 'skip' : 'Retry mit Default-Stimme')); } catch(e){}
-          try { window.speechSynthesis.cancel(); } catch(e){}
-          if (!_retryLocal) {
-            setTimeout(() => { if (speakCurrentActive) speakBlockAt(idx, true); }, 120);
-          } else {
-            // Retry hat auch nicht gegriffen -> diesen Block ueberspringen.
-            if (speakCurrentActive) setTimeout(() => speakBlockAt(idx + 1), 80);
-          }
-        }, 1500);
-      }
     }
     speakBlockAt(0);
     if (typeof diag === 'function') {
