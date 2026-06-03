@@ -2861,7 +2861,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.312</div>
+    <div class="start-version">Schatten v7.12.314</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3041,7 +3041,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.312</span>
+    <span>Schatten v7.12.314</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4347,7 +4347,7 @@ const INTRO_VARIANTS = [
         { id: 'zeugen_aussage', label: 'Harte Zeugenaussage (Lola/Pohl/Otto) zu Erichs letzter Nacht',
           keywords: /\b(lola|pohl|otto|wachtmeister)\w*[\s\S]{0,90}(angst|gedroht|drohung|bedroht|letzte nacht|zuletzt|nicht selbstmord|nicht freiwillig|gesehen|bezeugt|aussage|misstrauisch|zweifel|lange|laterne|leute von der)|\b(angst|gedroht|drohung|bedroht|zuletzt lebend|letzte nacht)\w*[\s\S]{0,70}(lola|pohl|otto|erich)/i },
         { id: 'lange_verantwortlich', label: 'Kurt Lange als Verantwortlicher fuer Erichs Tod belegt', pflicht: true,
-          keywords: /\b(lange|kurt lange)\b[\s\S]{0,120}\b(verantwortlich|hat (ihn|erich)\s+(getoetet|getötet|ermordet|erschossen|umgebracht|inszeniert|in den tod)|inszenierte?|inszenierung|toetete|tötete|umgebracht|erschossen|ermordet|getoetet|getötet|ueberfuehrt|überführt|gestanden|gestaendnis|geständnis|drahtzieher|hinter (erichs|dem) tod|schuld an (erichs|dem) tod|exempel|kaltbluetig|kaltblütig|kalte berechnung|berechnung)|\b(verantwortlich|drahtzieher|ueberfuehrt|überführt|inszenierte?\s+den (selbstmord|tod)|inszenierung|hinter erichs tod|schuld an erichs tod|als (bloßes |blosses )?exempel)\b[\s\S]{0,90}\b(lange|kurt lange)\b|\berich\w*[\s\S]{0,50}\b(getoetet|getötet|ermordet|erschossen|umgebracht|inszeniert|exempel)\b[\s\S]{0,60}\blange\b/i },
+          keywords: /\b(lange|kurt lange)\b[\s\S]{0,120}\b(verantwortlich|hat (ihn|erich)\s+(getoetet|getötet|ermordet|erschossen|umgebracht|inszeniert|in den tod)|inszenierte?|inszenierung|toetete|tötete|umgebracht|erschossen|ermordet|getoetet|getötet|ueberfuehrt|überführt|gestanden|gestaendnis|geständnis|drahtzieher|hinter (erichs|dem) tod|schuld an (erichs|dem) tod|exempel|kaltbluetig|kaltblütig|kalte berechnung|berechnung|liquidiert|liquidierung|beseitigt|zum schweigen|aus dem weg)|\b(verantwortlich|drahtzieher|ueberfuehrt|überführt|inszenierte?\s+den (selbstmord|tod)|inszenierung|hinter erichs tod|schuld an erichs tod|als (bloßes |blosses )?exempel|liquidiert|liquidierung)\b[\s\S]{0,90}\b(lange|kurt lange)\b|\berich\w*[\s\S]{0,50}\b(getoetet|getötet|ermordet|erschossen|umgebracht|inszeniert|exempel|liquidiert|beseitigt)\b[\s\S]{0,60}\blange\b|\b(lange|kurt lange)\b[\s\S]{0,140}\b(mfs|stasi|nkwd|nkvd|sowjetische?r? (agent|verbindung|geheimdienst)|hauptabteilung|tarnidentitaet|tarnidentität|tarnname|getarnt|agent)\b[\s\S]{0,120}\b(erich|mord|tod|operation|liquid|beseitig|exempel|auftrag)\b|\b(politische?r?|geheimdienstliche?r?|inszenierte?r?)\s+(operation|liquidierung|mord|hinrichtung|aktion)\b[\s\S]{0,120}\b(lange|erich)\b|\berich\w*[\s\S]{0,80}\b(politische?r?|geheimdienstliche?r?)\s+(operation|liquidierung|mord|aktion)\b/i },
       ],
       truthBeatsMinHits: 3, // mind. 3 von 5 + Pflicht-Beat (Lange als Verantwortlicher belegt)
       // v6.76: HISTORISCHER KONTEXT - 21. Mai 1953 (kurz vor 17. Juni!)
@@ -5811,7 +5811,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.312';
+window.SCHATTEN_VERSION = 'v7.12.314';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -12595,6 +12595,16 @@ function classifyOrt(ortString) {
 let chooseOptionInFlight = false;
 let lastClickTimestamp = 0; // v7.11.33: fuer Race-Condition-Diagnostik
 
+// v7.12.314 (Brandt-Run v313, Doppel-Szenen-Bug): REQUEST-EPOCHE als Stale-Guard.
+// Anlass: Der Watchdog (Z~30930) hielt einen LANGSAMEN-aber-noch-lebenden fetch faelschlich
+// fuer tot und feuerte retry() -> der alte Lauf lieferte trotzdem ab UND der Retry lieferte ab
+// -> ZWEI sceneCounter++ fuer EINEN Klick (Sprung Sz20->23, zerstoerte Durchbruch-Flags).
+// Loesung: Jeder neue Lauf (chooseOption-Start ODER Watchdog-retry) erhoeht currentRequestEpoch.
+// performApiCall merkt sich seine Epoche; direkt VOR dem Szenen-Commit (sceneCounter++) wird
+// geprueft: "Bin ich noch der aktuelle Lauf?" Wenn nicht -> Ergebnis sauber verwerfen, KEIN
+// Commit. So kann es physisch nie wieder eine Doppel-Szene geben, egal wie die Timer stehen.
+let currentRequestEpoch = 0;
+
 // v7.11.4: HEILUNGS-COOLDOWN.
 // Anlass: 0323-Run - Karl wird bei Doc Wagner auf Vf 5 geheilt, dann driftet
 // die KI in den naechsten 5+ Szenen kontinuierlich Vf-Drops rein ("alte Wunden
@@ -14108,7 +14118,41 @@ function istPersonPhysischAnwesend(name, scene, rolleHint) {
     if (pn && pn.includes(_first)) return true;  // harte Praesenz
   }
   const _txt = (typeof scene.szene === 'string') ? scene.szene.toLowerCase() : '';
-  if (!_txt || !_txt.includes(_first)) return false;
+  // v7.12.314 (Brandt-Run v313, "Lola ist nicht hier" waehrend Gespraech mit ihr):
+  // Frueher stieg die Funktion hier hart aus, wenn der NAME nicht woertlich im Text stand
+  // (!_txt.includes(_first) -> return false) - BEVOR der cast/personenImRaum-Check unten lief.
+  // Die KI fuehrt eine aktive Gespraechspartnerin aber oft nur ueber Pronomen ("sie schaut aus
+  // dem Fenster", "ihre Stimme") - ihr Name faellt im Absatz nicht. Folge: Romance-Button weg +
+  // "ist nicht hier", obwohl Lola gerade redet (Screenshots). Fix: Wenn die Figur im aktuellen
+  // cast ODER in personenImRaum steht UND der Text klare Pronomen-Praesenz mit Praesenzverb zeigt,
+  // gilt sie als anwesend - auch ohne Namen. KONSERVATIV: greift NUR bei cast/personenImRaum-
+  // Mitgliedschaft, damit nicht jeder beliebige "sie"-Satz irgendeine Frau praesent macht.
+  const _istImCastOderRaum = (function() {
+    try {
+      const inImRaum = _imRaum.some(p => {
+        const pn = (typeof p === 'string' ? p : (p && p.name) || '').toLowerCase();
+        return pn && pn.includes(_first);
+      });
+      if (inImRaum) return true;
+      const inCast = Array.isArray(cast) && cast.some(c => {
+        const cn = (typeof c === 'string' ? c : (c && c.name) || '').toLowerCase();
+        return cn && cn.includes(_first);
+      });
+      return inCast;
+    } catch (e) { return false; }
+  })();
+  if (!_txt || !_txt.includes(_first)) {
+    // Name nicht im Text. Letzter Versuch: Figur ist im cast/Raum UND es gibt eine
+    // klare Pronomen-Handlung (sie/ihr + Praesenzverb). Sonst wie bisher: NEIN.
+    if (_istImCastOderRaum) {
+      const _pronomenPraesenz = /\b(sie|ihr|ihre|ihren|ihrem|ihrer)\b[^.]{0,40}(sagt|fragt|antwortet|fluestert|flüstert|sitzt|steht|blickt|lehnt|nickt|seufzt|zoegert|zögert|huscht|dreht sich|schaut|sieht dich|laechelt|lächelt|wiederholt|haelt|hält|greift|reicht|drueckt|drückt|atmet|schweigt|weicht|kauert|zittert|wendet)|(sagt|fragt|antwortet|fluestert|flüstert|wiederholt|blickt|schaut)[^.]{0,20}\b(sie|ihr)\b/i;
+      if (_pronomenPraesenz.test(_txt)) {
+        try { if (typeof diag === 'function') diag('info', 'Romance-Praesenz ueber PRONOMEN erkannt (' + name + ' im cast/Raum, aktiv im Text ohne Namen)'); } catch(e){}
+        return true;
+      }
+    }
+    return false;
+  }
   // Reine Erwaehnung (ueber sie gesprochen, nicht mit ihr) -> NICHT anwesend.
   // Wird ZUERST geprueft (Vorrang), damit "Frau Lemke sagt, Ilse wohnt..." nicht
   // ueber das "sagt"-Praesenzsignal faelschlich als anwesend gilt.
@@ -14234,7 +14278,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.312] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.313] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -15357,6 +15401,37 @@ function renderOptions(scene) {
   // der klient_berichtet-Sperre (v7.12.87), die diese umging. Jetzt konsistent: bei
   // diebstahl ohne zurueckgeholtes Gut bleibt der Button GESPERRT (Hinweis: Gut holen).
   const diebstahlGutFehlt = (caseSetup && caseSetup.caseType === 'diebstahl' && !caseProgress.diebesgutZurueck);
+  // v7.12.314 Schicht 3 (Notausgang Y, Brandt-Run v313): SACKGASSEN-SCHUTZ. Wenn der Spieler die
+  // Wahrheit faktisch erspielt hat (wahrheitErkannt + Stage 3 + >=10 Indizien + seit >=5 Szenen
+  // abschlussreif) UND die Wahrheitskette FAST komplett ist (nur noch der Pflicht-Beat fehlt, weil
+  // die Beat-Regex den gespielten Prosa-Pfad nicht erkannt hat ODER der Watchdog die Beleg-Szene
+  // fraß), werden die fehlenden Beats nachgetragen. Sonst bliebe der Fall fuer immer gesperrt und
+  // liefe am Hard-Cap (65) sogar ins ungerechte Scheitern, obwohl er geloest ist.
+  // STRENG: greift NUR bei fast-kompletter Kette (hit >= minHits-1) - wer nur 1-2 Beats hat (also
+  // wenig ermittelt / nur getroedelt) bekommt KEINEN Notausgang und scheitert weiter regulaer.
+  // wahrheitErkannt selbst ist nur durch echte Ermittlung (>=4 Stage-2-Szenen + Beweislage) erreichbar.
+  try {
+    const _ctY = (caseSetup && caseSetup.caseType) || '';
+    const _hatBeatsY = caseSetup && Array.isArray(caseSetup.truthBeats) && caseSetup.truthBeats.length
+      && (_ctY === 'wahrheit' || _ctY === 'politisch');
+    if (_hatBeatsY && wahrheitErkannt && currentStage >= 3 && indizCount >= 10
+        && typeof truthBeatsErfuellt === 'function' && !truthBeatsErfuellt()) {
+      const _s3Start = (caseProgress && typeof caseProgress.stage3StartScene === 'number') ? caseProgress.stage3StartScene : sceneCounter;
+      const _szenenReif = (typeof sceneCounter === 'number') ? (sceneCounter - _s3Start) : 0;
+      const _minHitsY = (typeof caseSetup.truthBeatsMinHits === 'number') ? caseSetup.truthBeatsMinHits : 3;
+      const _hitY = (caseProgress && Array.isArray(caseProgress.truthBeatsHit)) ? caseProgress.truthBeatsHit.length : 0;
+      const _fastKomplett = _hitY >= (_minHitsY - 1);
+      if (_szenenReif >= 5 && _fastKomplett) {
+        if (!Array.isArray(caseProgress.truthBeatsHit)) caseProgress.truthBeatsHit = [];
+        const _fehlendY = (typeof truthBeatsFehlend === 'function') ? truthBeatsFehlend() : [];
+        for (const _b of _fehlendY) {
+          if (_b && _b.id && caseProgress.truthBeatsHit.indexOf(_b.id) === -1) caseProgress.truthBeatsHit.push(_b.id);
+        }
+        if (typeof diag === 'function') diag('progress', '✦ NOTAUSGANG (Beat-Kulanz): Wahrheit erspielt (' + indizCount + ' Ind, ' + _szenenReif + ' Sz reif, ' + _hitY + '/' + caseSetup.truthBeats.length + ' Beats), aber Regex verfehlte ' + _fehlendY.map(b => b.id).join(',') + ' - nachgetragen, Fall jetzt loesbar.');
+        console.warn('[Schatten v7.12.314] Notausgang Y: Pflicht-Beat(s) nachgetragen nach ' + _szenenReif + ' Stage-3-Szenen + ' + indizCount + ' Indizien (Regex-Luecke/Watchdog-Verlust). Fall loesbar.');
+      }
+    }
+  } catch (eY) { /* Notausgang darf nie das Rendern brechen */ }
   // v7.12.312 (Benjamin-Regel, Brandt-Run v311): Bei Fällen MIT truthBeats (Goerke/Brandt) darf der
   // "Fall lösen"-Button NICHT klickbar sein, solange die Wahrheitskette nicht erfüllt ist. Vorher
   // konnte man klicken, die KI erzählte den Abschluss, aber das v303-Gate verweigerte istGelöst ->
@@ -19753,6 +19828,22 @@ async function startGame() {
 // Erkennt direkte physische Konfliktaktionen, die NICHT mit einem Time-Skip
 // uebersprungen werden duerfen. Wenn der Spieler so etwas waehlt, muss die
 // naechste Szene UNMITTELBAR die Konsequenz erzaehlen.
+// v7.12.313 (Source-Lektorat v312 P1): Freitext-Kategorie nach Verb schätzen statt pauschal ERKUNDEN.
+// Sonst lief 'würge Stadler' als ERKUNDEN durch (mechanischer Drift: Spannungs-/Verletzungsmechanik
+// falsch). Frage-Anfang gewinnt vor eingebetteten Gewaltwörtern (konsistent mit dem isPhysical-Fix).
+function classifyFreitextKategorie(txt) {
+  try {
+    const t = (typeof normForMatch === 'function') ? normForMatch(txt || '') : (txt || '').toLowerCase();
+    // Frage/Befragung zuerst - schlägt Gewaltwörter im Nebensatz ('frag ob er flieht').
+    if (/^\s*(frag|befrag|verhoer|sprich|rede|red|klingel|klopf|horch|hak|konfrontier|stell)\b/.test(t)) return 'ERKUNDEN';
+    if (/\b(schlag|schiess|pack|greif|wuerg|tritt|sturm|stuerm|zwing|bedroh|attackier|stoss|reiss|zieh die (waffe|pistole|knarre|messer)|zueck|wirf)/.test(t)) return 'OFFENSIV';
+    if (/\b(flieh|flucht|entkomm|versteck|deck dich|geh in deckung|zieh dich zurueck|weich aus|halt dich zurueck)/.test(t)) return 'DEFENSIV';
+    if (/\b(beobacht|warte|lausch|horch|schau|sieh|spaeh|beschatt)/.test(t)) return 'BEOBACHTEN';
+    // Erkunden/Untersuchen/Befragen als Default (deckt durchsuch/untersuch/lies/fahr zu...)
+    return 'ERKUNDEN';
+  } catch (e) { return 'ERKUNDEN'; }
+}
+
 function isPhysicalConflictAction(text) {
   if (!text) return false;
   // Umlaute normalisieren, damit Patterns sowohl ue/oe/ae als auch ü/ö/ä matchen
@@ -21527,6 +21618,9 @@ async function chooseOption(option) {
     return;
   }
   chooseOptionInFlight = true;
+  // v7.12.314: Neuer Spieler-getriebener Lauf -> Epoche hochzaehlen. Ein evtl. noch im
+  // Hintergrund haengender alter Lauf wird dadurch "stale" und committet nichts mehr.
+  currentRequestEpoch++;
   // v7.11.33: Click-Timestamp fuer Race-Condition-Diagnostik
   if (typeof lastClickTimestamp !== 'undefined') {
     const delta = lastClickTimestamp ? Math.round((Date.now() - lastClickTimestamp) / 100) / 10 : 0;
@@ -21656,7 +21750,7 @@ async function chooseOption(option) {
       const _romRng = (typeof botWasEverActive !== 'undefined' && botWasEverActive && typeof botRng === 'function') ? botRng() : Math.random();
       const offen = _romRng < 0.70;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.312] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.313] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -21698,7 +21792,7 @@ async function chooseOption(option) {
         || (typeof romanticTension === 'number' && romanticTension >= 3);
       if (_offen && _annaeherung && !nachtMitFrau) {
         nachtMitFrau = _frau;
-        console.log('[Schatten v7.12.312] NACHT MIT FRAU verbracht:', _frau);
+        console.log('[Schatten v7.12.313] NACHT MIT FRAU verbracht:', _frau);
         if (typeof diag === 'function') diag('state', 'Nacht mit ' + _frau + ' verbracht (offene Romance + Übernachtung) - für Fail-Spitze gemerkt');
       }
     } catch (e) {}
@@ -21873,16 +21967,20 @@ async function chooseOption(option) {
   //
   // AUSNAHME: Wenn die Spieleraktion eine direkte physische Konfliktaktion ist
   // (schlagen, schiessen, packen, fliehen), darf KEIN Tageswechsel ausgeloest
+  // v7.12.313 (Source-Lektorat v312 P0): _beginntMitFrage VOR isPhysical bestimmen. isPhysicalConflictAction
+  // matcht auch 'flieh/renn/verfolg/beruehr' im Fragesatz -> 'Frag Robert, ob er flieht' wurde sonst als
+  // physische Aktion behandelt (Kessler-Sz8-Bug, durch v304 nur halb behoben). Frage hat Vorrang.
+  const _optLowBefr = (option.text || '').toLowerCase();
+  const _beginntMitFrage = /^\s*(frag|befrag|verhoer|verhör|sprich|rede|red|klingel|klopf|horch|hak|konfrontier|stell)/i.test(_optLowBefr);
   // werden. Die naechste Szene muss die UNMITTELBARE Konsequenz erzaehlen.
   // Wir merken uns die Token-Position und schreiten erst danach voran.
-  const isPhysical = isPhysicalConflictAction(option.text);
+  const isPhysical = !_beginntMitFrage && isPhysicalConflictAction(option.text);
   // v7.12.131 (Anlass Renate-Run v7.12.130 Sz9): BEFRAGUNGS-GUARD. Befund: Bot
   // waehlte "Frag die Nachbarin", aber die KI lieferte eine Schlaf-/Heimkehr-Szene
   // -> die Zeugin wurde nie befragt (Followup-Bruch). Eine Befragung ist wie eine
   // physische Aktion ein konkreter Intent, dessen UNMITTELBARE Konsequenz (= die
   // Antwort/Reaktion der Person) die naechste Szene liefern MUSS - kein Zeitsprung,
   // kein Schlaf, kein Ortswechsel. Nur wenn nicht ohnehin physisch/Aufloesen/Romantik.
-  const _optLowBefr = (option.text || '').toLowerCase();
   // v7.12.132 (Anlass Heinrich-Run v7.12.131, "Bürosessel-Wunder"): FLUCHT-GUARD.
   // Befund: Karl floh vor Wegner (West-Berlin), die KI rief Wegner danach magisch
   // zurueck - erst Rueck-Teleport zur Friedrichstrasse (Sz20), dann sass Wegner
@@ -21896,9 +21994,7 @@ async function chooseOption(option) {
     /\b(frag|befrag|verhoer|verhör|sprich mit|rede mit|red mit|klingel|klopf|horch|hak nach|konfrontier|stell .* zur rede|zeug|nachbar|wirt|kellner|barkeeper|informant)/i.test(_optLowBefr);
   // v7.12.304 (Kessler-Run Sz8): Wenn die Aktion mit einem FRAGE-/Befragungs-Verb BEGINNT, ist
   // alles danach Inhalt der Frage ("frag Robert, ob er flieht") - der Flucht-Detektor darf dann
-  // NICHT auf ein eingebettetes Wort wie "flieht" anspringen. Sonst wird aus einer Frage eine
-  // Fluchtszene (Intent-Drift). Befragung hat Vorrang. Trifft besonders Freitext-Eingaben.
-  const _beginntMitFrage = /^\s*(frag|befrag|verhoer|verhör|sprich|rede|red|klingel|klopf|horch|hak|konfrontier|stell)/i.test(_optLowBefr);
+  // NICHT auf ein eingebettetes Wort wie "flieht" anspringen. Befragung hat Vorrang.
   const isFlucht = isFlucht0 && !_beginntMitFrage;
   // v7.12.148: POST-OUTPUT-INTENT-VALIDATOR. Hier den Spieler-Intent aus der Option
   // ableiten und am option-Objekt ablegen (option._intent). performApiCall liest das
@@ -22079,7 +22175,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.312] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.313] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -22279,6 +22375,12 @@ function validateIntentFollowup(scene, intent) {
     // zu lassen. (Schlaf/naechster Morgen mitten in einer Befragung = Followup-Bruch.)
     const zeitsprung = /\b(am naechsten morgen|am naechsten tag|du schlaefst|du legst dich|du faehrst zurueck ins buero|spaeter am|stunden spaeter|am abend darauf)\b/.test(text);
     if (zeitsprung) return 'question_skipped';
+    // v7.12.313 (Source-Lektorat v312 P0): Frage wurde zu körperlicher Karl-Aktion. Die alte
+    // Prüfung (Person kommt vor? kein Zeitsprung?) ließ Kessler-Sz8 durch ("du packst Robert am
+    // Kragen" - Robert kam ja vor). Jetzt: wenn KARL unaufgefordert zupackt/schlägt/flieht, Bruch.
+    const unaskedPhysicalKarl = /\bdu\s+(packst|greifst|schlaegst|trittst|stoesst|reisst|wuergst|zerrst|schubst|rammst|haust)\b/.test(text)
+      || /\bdu\s+(rennst|fliehst|fluechtest|stuermst|sprintest)\b/.test(text);
+    if (unaskedPhysicalKarl) return 'question_became_physical';
     // Wenn ein Personen-Ziel bekannt ist, sollte ihr Name/Rolle in der Szene vorkommen.
     if (intent.target) {
       const first = String(intent.target).split(/\s+/)[0];
@@ -22313,6 +22415,8 @@ function buildIntentRepairHint(problem, intent) {
       return 'Die gewaehlte Aktion war eine BEFRAGUNG, aber deine Szene machte einen Zeitsprung/Schlaf, statt die Person antworten zu lassen. Schreibe die Szene NEU: zeige die UNMITTELBARE Reaktion der befragten Person - was sie sagt, ausweicht, luegt oder verraet. Kein Zeitsprung, kein "am naechsten Morgen".';
     case 'question_target_missing':
       return 'Die gewaehlte Aktion war eine Befragung von "' + (intent.target || 'der Person') + '", aber diese Person kommt in deiner Szene gar nicht vor. Schreibe die Szene NEU: die Begegnung mit dieser Person findet JETZT statt, sie reagiert direkt auf Karl.';
+    case 'question_became_physical':
+      return 'Die gewaehlte Aktion war eine FRAGE/Befragung. Deine Szene hat daraus eine koerperliche Aktion Karls gemacht (packen, schlagen, stossen, fliehen). Schreibe die Szene NEU: Karl FRAGT die Person, und die Person antwortet, weicht aus, luegt, schweigt oder blockt verbal. Karl packt, schlaegt, stoesst oder flieht NICHT, solange der Spieler das nicht ausdruecklich angewiesen hat.';
     case 'inspection_target_missing':
       return 'Die gewaehlte Aktion war das Untersuchen/Oeffnen von "' + (intent.object || 'dem Objekt') + '", aber das kommt in deiner Szene nicht vor. Schreibe die Szene NEU: zeige konkret, was Karl findet/sieht, wenn er es untersucht.';
     default:
@@ -22325,6 +22429,12 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
   intentRepairCount = intentRepairCount || 0;
   rateLimitCount = rateLimitCount || 0;
   openingRetryCount = openingRetryCount || 0;
+  // v7.12.314: Epoche dieses Laufs festhalten. Interne Retries (Intent-Repair, Opening-Retry,
+  // Rate-Limit) rufen performApiCall rekursiv auf, AENDERN die Epoche aber NICHT (gleicher Klick,
+  // gleicher Lauf). Nur chooseOption-Start und retry() erhoehen currentRequestEpoch. Direkt vor
+  // dem Szenen-Commit (sceneCounter++) wird _myEpoch gegen currentRequestEpoch geprueft - stimmt
+  // es nicht mehr, hat der Watchdog inzwischen einen neuen Lauf gestartet und dieser hier ist stale.
+  const _myEpoch = currentRequestEpoch;
   const MAX_AUTO_RETRIES = 3;
   const MAX_OPENING_RETRIES = 1; // v6.59: nur 1 Retry fuer Opening-Pflichtfakten
   const MAX_INTENT_REPAIRS = 1; // v7.12.148: genau 1 Repair-Retry bei Intent-Bruch (Kosten-/Endlosschutz)
@@ -22389,6 +22499,18 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     const _prevLastSceneOrt = (typeof lastSceneOrt !== 'undefined') ? lastSceneOrt : '';
     const { scene, rawAssistantText } = await requestSceneFromModel(userMsg, conversationHistory, compactMode);
     try { markPhase('verarbeitung-start@Sz' + (typeof sceneCounter === 'number' ? sceneCounter : '?')); } catch(e){}
+    // v7.12.314: STALE-GUARD. Wenn der Watchdog waehrend dieses (langsamen) fetch einen neuen
+    // Lauf gestartet hat, ist currentRequestEpoch inzwischen hoeher als _myEpoch. Dann ist DIESER
+    // Lauf veraltet - er darf NICHTS mehr committen (kein currentScene, kein sceneCounter++, kein
+    // Indiz/Stage/Flag), sonst entsteht die Doppel-Szene. Sauber aussteigen, BEVOR irgendein State
+    // geschrieben wird. Der frische Watchdog-Retry uebernimmt. (Greift nicht bei internen Retries -
+    // die behalten _myEpoch === currentRequestEpoch.)
+    if (_myEpoch !== currentRequestEpoch) {
+      try { if (typeof diag === 'function') diag('drift', 'STALE-LAUF verworfen: Epoche ' + _myEpoch + ' != aktuell ' + currentRequestEpoch + ' (Watchdog hat neu gestartet, fetch kam zu spaet) - kein Commit, kein sceneCounter++'); } catch(e){}
+      try { if (typeof logApiEvent === 'function') logApiEvent('stale_discarded', 'Verspaeteter fetch verworfen (Epoche ' + _myEpoch + '/' + currentRequestEpoch + ') - Doppel-Szene verhindert.'); } catch(e){}
+      console.warn('[Schatten v7.12.314] Stale-Lauf verworfen (Epoche ' + _myEpoch + ' != ' + currentRequestEpoch + ') - der frische Retry committet.');
+      return; // KEIN Commit - der aktuelle Lauf uebernimmt
+    }
     const apiCallDuration = Date.now() - apiCallStart;
     currentScene = scene;
 
@@ -23333,7 +23455,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         // v6.95: Generische Whitelist zusaetzlich pruefen
         const isGenericAllowed = GENERIC_LOCATIONS.some(rx => rx.test(curMainOrt));
         if (!isSetupWhitelisted && !isGenericAllowed && mainLocationChanged) {
-          diag('detect', 'Location ausserhalb Setup-Whitelist: "' + curMainOrt + '" (Mistral hat spontan erfunden, evtl. Whitelist erweitern)');
+          diag('detect', 'Location ausserhalb Setup-Whitelist: "' + curMainOrt + '" (KI hat spontan erfunden, evtl. Whitelist erweitern)');
         } else if (!isSetupWhitelisted && isGenericAllowed && mainLocationChanged) {
           // Generisch erlaubt - nur leichte Diag-Notiz, kein Fingerzeig
           diag('detect', 'Hauptort-Wechsel: "' + curMainOrt + '" (Generic-Whitelist, OK)');
@@ -23549,7 +23671,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           } else if (!tensionHighEnoughForArrest && folterSceneCount >= custodyReleaseFloor) {
             // STILLER RELEASE: nur noch als Notventil bei langem Drift (5+ Sz). Karl ist
             // faktisch frei (KI erzaehlt ihn lange ohne Stasi-Kontext), System zieht nach.
-            console.warn('[Schatten v7.12.312] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
+            console.warn('[Schatten v7.12.313] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet');
             setCustodyState(false, 'stiller-release');
           } else if (!tensionHighEnoughForArrest) {
@@ -23565,7 +23687,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.312] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.313] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -24095,7 +24217,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof diag === 'function') {
           diag('state', '⚡ NOTFLUCHT GELUNGEN - Karl frei + 4 Sz Gnadenfrist, Stasi-Tension ' + prevTension + ' -> 3 (gesucht, aber nicht sofort wieder greifbar)');
         }
-        console.log('[Schatten v7.12.312] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
+        console.log('[Schatten v7.12.313] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
         // v7.11.56: Toast bei Erfolg - Spieler hat geklickt und soll Wuerfel-
         // Ergebnis direkt sehen, nicht nur narrative Andeutungen.
         if (typeof showProgressToast === 'function') {
@@ -25775,7 +25897,21 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             if (typeof syncResolutionFlagsByCaseType === 'function') syncResolutionFlagsByCaseType();
             console.log('[Schatten] AUTO-FORCING Stage 3 (' + ct + '): Beweislage reicht (' + beweisGrund + ', ' + (caseProgress.ueberfuehrt ? 'Verantwortlicher' : 'Wahrheit/Verdacht') + ')');
             diag('progress', '✦ AUTO-STAGE 3 (' + ct + ') erzwungen: ' + beweisGrund);
-            showProgressToast('FALL-STUFE 3', ct === 'beschatten' ? 'Verdacht bestätigt. Jetzt zum Klienten.' : 'Wahrheit klar. Jetzt zum Klienten.');
+            // v7.12.314 Schicht 2 (Brandt-Run v313): Toast EHRLICH machen. Bei Faellen MIT truthBeats
+            // (Brandt/Goerke) darf der Toast NICHT "Wahrheit klar, jetzt zum Klienten" sagen, solange
+            // die Wahrheitskette nicht steht - sonst widerspricht er dem (korrekt) gesperrten FALL-LOESEN-
+            // Button ("WAHRHEIT NOCH NICHT BEWIESEN"). Das war der verwirrende Kern von Bug #3. Jetzt:
+            // wenn truthBeats existieren UND noch nicht erfuellt -> Hinweis WAS fehlt, statt "jetzt loesen".
+            const _hatBeatGate = caseSetup && Array.isArray(caseSetup.truthBeats) && caseSetup.truthBeats.length
+              && (ct === 'wahrheit' || ct === 'politisch');
+            const _beatsOk = !_hatBeatGate || (typeof truthBeatsErfuellt === 'function' && truthBeatsErfuellt());
+            if (_hatBeatGate && !_beatsOk) {
+              const _fehlend = (typeof truthBeatsFehlend === 'function') ? truthBeatsFehlend() : [];
+              const _ersterFehlend = _fehlend.length ? (_fehlend[0].label || 'die Kernfrage') : 'die Kernfrage';
+              showProgressToast('FALL-STUFE 3', 'Du bist nah dran – noch offen: ' + _ersterFehlend, 'info');
+            } else {
+              showProgressToast('FALL-STUFE 3', ct === 'beschatten' ? 'Verdacht bestätigt. Jetzt zum Klienten.' : 'Wahrheit klar. Jetzt zum Klienten.');
+            }
           }
         } else if (stage2Scenes >= 10) {
           // Inhalts-Check (Fallback fuer alle Faelle die nicht schon getriggert haben)
@@ -25816,7 +25952,17 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             const msg = istVermisstFall ? 'Zielperson gefunden' : (caseProgress.ueberfuehrt ? 'Verantwortlicher' : 'Wahrheit/Verdacht belegt');
             console.log('[Schatten] AUTO-FORCING Stage 3 (' + ct + '): ' + msg);
             diag('progress', '✦ AUTO-STAGE 3 (' + ct + ') erzwungen nach ' + stage2Scenes + ' Szenen (' + msg + ')');
-            showProgressToast('FALL-STUFE 3', istVermisstFall ? 'Karl hat die Spur zur Zielperson.' : (ct === 'beschatten' ? 'Verdacht bestätigt.' : 'Karl hat was er braucht.'));
+            // v7.12.314 Schicht 2: bei offenen truthBeats ehrlich bleiben (kein "jetzt zum Klienten"-Gefuehl).
+            const _hatBeatGate2 = caseSetup && Array.isArray(caseSetup.truthBeats) && caseSetup.truthBeats.length
+              && (ct === 'wahrheit' || ct === 'politisch');
+            const _beatsOk2 = !_hatBeatGate2 || (typeof truthBeatsErfuellt === 'function' && truthBeatsErfuellt());
+            if (_hatBeatGate2 && !_beatsOk2) {
+              const _fehlend2 = (typeof truthBeatsFehlend === 'function') ? truthBeatsFehlend() : [];
+              const _erster2 = _fehlend2.length ? (_fehlend2[0].label || 'die Kernfrage') : 'die Kernfrage';
+              showProgressToast('FALL-STUFE 3', 'Du bist nah dran – noch offen: ' + _erster2, 'info');
+            } else {
+              showProgressToast('FALL-STUFE 3', istVermisstFall ? 'Karl hat die Spur zur Zielperson.' : (ct === 'beschatten' ? 'Verdacht bestätigt.' : 'Karl hat was er braucht.'));
+            }
           } else {
             diag('drift', 'Stage-3-Force (' + ct + ') blockiert: ' + (istVermisstFall ? 'Zielperson ' + targetName + ' nicht in letzten 5 Szenen praesent' : targetName + ' nicht in letzten 5 Szenen') + ' (' + stage2Scenes + ' Szenen Stage 2)');
           }
@@ -26070,7 +26216,16 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             } else {
               toastText = caseProgress.tatverdaechtiger + ' überführt. Jetzt zum Klienten.';
             }
-            showProgressToast('FALL-STUFE 3', toastText);
+            // v7.12.314 Schicht 2: bei offenen truthBeats (Brandt/Goerke) Toast NICHT "jetzt zum
+            // Klienten" - der FALL-LOESEN-Button ist dann noch gesperrt. Ehrlicher Hinweis stattdessen.
+            if ((ct === 'wahrheit' || ct === 'politisch') && caseSetup && Array.isArray(caseSetup.truthBeats)
+                && caseSetup.truthBeats.length && typeof truthBeatsErfuellt === 'function' && !truthBeatsErfuellt()) {
+              const _fb = (typeof truthBeatsFehlend === 'function') ? truthBeatsFehlend() : [];
+              toastText = 'Du bist nah dran – noch offen: ' + (_fb.length ? (_fb[0].label || 'die Kernfrage') : 'die Kernfrage');
+              showProgressToast('FALL-STUFE 3', toastText, 'info');
+            } else {
+              showProgressToast('FALL-STUFE 3', toastText);
+            }
           }
         } else {
           // Verdaechtiger taucht nicht auf - statt forcen lieber Push an KI
@@ -26676,7 +26831,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.312] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.313] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
@@ -26753,7 +26908,14 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         } else {
           toastText = caseProgress.tatverdaechtiger + ' überführt. Jetzt zum Klienten.';
         }
-        showProgressToast('FALL-STUFE 3', toastText);
+        // v7.12.314 Schicht 2: bei offenen truthBeats ehrlich bleiben statt "jetzt zum Klienten".
+        if ((ct === 'wahrheit' || ct === 'politisch') && caseSetup && Array.isArray(caseSetup.truthBeats)
+            && caseSetup.truthBeats.length && typeof truthBeatsErfuellt === 'function' && !truthBeatsErfuellt()) {
+          const _fbk = (typeof truthBeatsFehlend === 'function') ? truthBeatsFehlend() : [];
+          showProgressToast('FALL-STUFE 3', 'Du bist nah dran – noch offen: ' + (_fbk.length ? (_fbk[0].label || 'die Kernfrage') : 'die Kernfrage'), 'info');
+        } else {
+          showProgressToast('FALL-STUFE 3', toastText);
+        }
       }
     }
     // v7.12.63: VERMISSTEN-DURCHBRUCH persistieren. scene.zielperson_gefunden
@@ -28321,6 +28483,10 @@ async function retry() {
   // geblieben ist (z.B. durch Render-Fehler), waere er sonst weiterhin
   // gelockt und retry-Klick wuerde nichts machen.
   chooseOptionInFlight = false;
+  // v7.12.314: Neuer Lauf (manueller ODER Watchdog-Auto-Retry) -> Epoche hochzaehlen.
+  // Der evtl. noch haengende fetch des Vorgaengers wird dadurch stale und darf nicht mehr
+  // committen (Doppel-Szenen-Schutz). Gilt fuer BEIDE Retry-Pfade (pendingRetry + frisch).
+  currentRequestEpoch++;
   if (pendingRetry) {
     const fn = pendingRetry;
     pendingRetry = null;
@@ -30895,6 +31061,12 @@ window.addEventListener('pagehide', () => {
 // 45s (vorher 55s) aktiv ist. Anlass: Dumps zeigten 69s Wartezeit (55s-Schwelle + bis zu 15s
 // bis zum naechsten Check). 45s + 5s-Intervall -> der Spieler bekommt nach ~45-50s den Retry-
 // Dialog statt nach 69s. 45s bleibt klar ueber dem 38s-Hart-Timer und dem 35s-AbortController,
+// v7.12.314 (Brandt-Run v313): Schwelle 45s -> 60s. Befund: Gemini Flash-Lite antwortet bei
+// Stage 3 manchmal ECHT langsam (40-55s lebender fetch, KEIN iOS-Tod - im Log fehlt jedes
+// timeout/network_error/slow_fetch_detail). Mit 45s feuerte der Watchdog gegen lebende fetches
+// und loeste den Doppel-Szenen-Bug aus. 60s gibt langsamen-aber-lebenden Antworten Luft; der
+// 38s-Hart-Timer bleibt der echte Faenger fuer tote fetches. Der NEUE Stale-Guard (Epoche)
+// faengt zusaetzlich jeden Fall ab, in dem der alte fetch doch noch verspaetet zurueckkommt.
 // also kein Fehlalarm bei normal-langsamen Antworten - nur bei echten Haengern (iOS-fetch tot).
 setInterval(function() {
   try {
@@ -30908,7 +31080,7 @@ setInterval(function() {
     // sichtbar - der Watchdog darf dann nicht eingreifen. Verhindert Falsch-Alarm bei langen Runs
     // mit vollem RPM-Budget (vermeintliche "Haenger" waren in Wahrheit lange Wartezeiten).
     if (typeof throttleInterval !== 'undefined' && throttleInterval !== null) return;
-    if (elapsed > 45000) {
+    if (elapsed > 60000) {
       const _phase = (function(){ try { return window.__lastPhase || '(keine Phase erfasst - hängt VOR requestSceneFromModel)'; } catch(e){ return '?'; } })();
       console.warn('[Schatten Watchdog] Loading seit ' + Math.round(elapsed/1000) + 's - erzwinge Reset. Letzte Phase: ' + _phase);
       // v7.12.261 (User-Wunsch): Watchdog-Timeout PERSISTENT in den apiEventLog schreiben, damit
@@ -31000,14 +31172,15 @@ setInterval(function() {
         if (typeof chooseOptionInFlight !== 'undefined' && chooseOptionInFlight) return; // laufende Anfrage nicht stören
         if (typeof caseProgress === 'object' && caseProgress && (caseProgress.istGescheitert || caseProgress.istGelöst)) return;
         input.value = '';
-        if (typeof diag === 'function') diag('progress', 'FREITEXT-Aktion (Debug): "' + txt + '"');
-        // Als freie Spieleraktion mit neutraler Kategorie (ERKUNDEN) in die normale Pipeline geben.
+        // v7.12.313 (Source-Lektorat P1): Kategorie nach Verb schätzen statt pauschal ERKUNDEN.
+        const _katFt = (typeof classifyFreitextKategorie === 'function') ? classifyFreitextKategorie(txt) : 'ERKUNDEN';
+        if (typeof diag === 'function') diag('progress', 'FREITEXT-Aktion: "' + txt + '" (Kategorie: ' + _katFt + ')');
         if (typeof chooseOption === 'function') {
           chooseOption({
             id: 'FREITEXT',
             text: txt,
-            _kategorie: 'ERKUNDEN',
-            kategorie: 'ERKUNDEN',
+            _kategorie: _katFt,
+            kategorie: _katFt,
             _freitext: true,
           });
         }
