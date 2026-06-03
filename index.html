@@ -13,6 +13,9 @@
        weiter tief schwarz, kein Hell-Modus). Profitieren alle Spieler,
        nicht nur die im hellen Licht. */
     --bg: #0a0a0f;
+    /* v7.12.315 (Source-Lektorat v314 P2): --font-mono war referenziert (Gewahrsam-Badge), aber
+       nirgends definiert -> Browser fiel auf inherited zurueck. Jetzt sauber gesetzt. */
+    --font-mono: 'Courier New', Courier, monospace;
     --fg: #ddd0b4;          /* war #ddd0b4 - heller, klarer auf schwarz */
     --fg-bright: #f4ead0;   /* war #f4ead0 - heller fuer Hauptueberschriften */
     --fg-dim: #8a7e68;      /* war #8a7e68 - aus dem "kaum lesbar"-Bereich raus */
@@ -2861,7 +2864,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.314</div>
+    <div class="start-version">Schatten v7.12.315</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3041,7 +3044,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.314</span>
+    <span>Schatten v7.12.315</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5811,7 +5814,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.314';
+window.SCHATTEN_VERSION = 'v7.12.315';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -8714,7 +8717,10 @@ function showSetup() {
   document.getElementById('setup').classList.remove('hidden');
 }
 function hideAll() {
-  ['setup','start','loading','error','options','wait-box','daily-limit','status-popup','game-over','setup-selector','howto'].forEach(id => {
+  // v7.12.315 (Source-Lektorat v314 P1): freitext-block ergaenzt - sonst blieb das Freitext-Feld
+  // beim Screen-Wechsel (Win/Fail/Fehler/Start) bis zu 1s sichtbar (UI-Geist), weil nur das
+  // 1s-Intervall es nachfuehrte. Jetzt wird es direkt mitversteckt.
+  ['setup','start','loading','error','options','freitext-block','wait-box','daily-limit','status-popup','game-over','setup-selector','howto'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.add('hidden');
   });
@@ -8896,6 +8902,35 @@ function asciiToUmlaut(s) {
   for (const [pat, rep] of replacements) {
     out = out.replace(pat, rep);
   }
+  return out;
+}
+
+// v7.12.315 (Benjamin-Befund Brandt-Run): CAST-BESCHREIBUNGEN ENTRUEMPELN. Problem: Im sichtbaren
+// "Aktueller Stand"-Panel + Charakter-Detail erschienen technische Setup-Marker, die der Spieler
+// NICHT sehen soll - "ROMANCE-Kandidatin", "(Suspect)", "+ GANGSTER-Verbindung", "blackout",
+// "triggerRomanceWhen"-Sprache. Dazu Redundanzen ("Verlobte des Toten ... war Erichs Verlobte")
+// und harte 24-Zeichen-Abschnitte ("Zeugin / Verlobte des T..."). Das wirkt billig + entwuerdigend
+// in einem Noir-Spiel. Diese Funktion saeubert JEDEN angezeigten rolle/beziehung-String zentral:
+// entfernt Technik-Marker, ersetzt "ROMANCE-Kandidatin" durch eine stilvolle Andeutung, glaettet
+// Doppelrollen-Trenner (/ und +) zu lesbarer Prosa. Wird an allen Anzeige-Stellen genutzt.
+function sanitizeRolleAnzeige(s) {
+  if (!s || typeof s !== 'string') return s || '';
+  let out = s;
+  // 1. Technische Tag-Marker in Klammern entfernen: "(Suspect)", "(GANGSTER)", "(MYSTERY)" etc.
+  out = out.replace(/\s*\((?:suspect|gangster|mystery|stasi|antagonist|authority|informant|target|client|witness|romance)\)/gi, '');
+  // 2. ROMANCE-Marker stilvoll ersetzen statt technisch ("+ ROMANCE-Kandidatin" / "spaeter ROMANCE")
+  out = out.replace(/\s*[+/]\s*(?:spaeter|später|potenziell|potentiell)?\s*romance[\s-]*kandidat(?:in)?/gi, ' – und mehr, wenn die Nacht es will');
+  out = out.replace(/\s*[+/]\s*(?:spaeter|später|potenziell|potentiell)\s+romance\b/gi, ' – und mehr, wenn die Nacht es will');
+  out = out.replace(/\s*[+/]\s*romance\b/gi, '');
+  // 3. Verbleibende technische Doppelrollen-Suffixe ("+ GANGSTER-Verbindung", "+ STASI-Kontakt")
+  out = out.replace(/\s*[+]\s*(?:gangster|stasi|suspect|antagonist|mfs|nkwd)[\s-]*(?:verbindung|kontakt|bezug|naehe|nähe)?/gi, '');
+  // 4. Technische Begriffe, die nie in die Anzeige gehoeren
+  out = out.replace(/\btriggerromancewhen\b/gi, '').replace(/\btagextra\b/gi, '');
+  // 5. Trenner glaetten: "Zeugin / Verlobte" -> "Zeugin und Verlobte" (lesbarer als der Slash)
+  out = out.replace(/\s*\/\s*/g, ' und ');
+  // 6. Mehrfach-Leerzeichen + haengende Satzzeichen aufraeumen
+  out = out.replace(/\s{2,}/g, ' ').replace(/\s+([,.;])/g, '$1').replace(/[+]\s*$/, '').trim();
+  out = out.replace(/^[-–—,.\s]+/, '').replace(/[-–—,;\s]+$/, '').trim();
   return out;
 }
 
@@ -11550,8 +11585,17 @@ function showStatusDetails() {
       if (typeof c === 'string') return '· ' + fix(c);
       let line = '· ' + fix(c.name);
       const meta = [];
-      if (c.rolle) meta.push(fix(c.rolle));
-      if (c.beziehung) meta.push(fix(c.beziehung));
+      // v7.12.315: rolle/beziehung saeubern (Technik-Marker raus) + Redundanz vermeiden.
+      const _rolleClean = c.rolle ? sanitizeRolleAnzeige(fix(c.rolle)) : '';
+      const _bezClean = c.beziehung ? sanitizeRolleAnzeige(fix(c.beziehung)) : '';
+      if (_rolleClean) meta.push(_rolleClean);
+      // beziehung nur ergaenzen, wenn sie nicht bloss die rolle wiederholt (Redundanz-Schutz)
+      if (_bezClean) {
+        const _rl = _rolleClean.toLowerCase();
+        const _bl = _bezClean.toLowerCase();
+        const _redundant = _rl && (_rl.includes(_bl.slice(0, 18)) || _bl.includes(_rl.slice(0, 18)));
+        if (!_redundant) meta.push(_bezClean);
+      }
       if (meta.length > 0) line += ' (' + meta.join(', ') + ')';
       return line;
     }).join('\n');
@@ -11665,8 +11709,12 @@ function showStatusDetails() {
           } else if (c.tag && ROLE_LABELS[c.tag]) {
             tagLabel = ROLE_LABELS[c.tag];
           } else if (c.rolle) {
-            let short = c.rolle.split('(')[0].trim();
+            // v7.12.315: zuerst Technik-Marker raus (sonst stand "Zeugin und Verlobte des T..."
+            // als harter 24-Zeichen-Abbruch mit "+ ROMANCE-Kandidatin" drin). Dann erst kuerzen.
+            let short = sanitizeRolleAnzeige(c.rolle).split('(')[0].trim();
             short = short.replace(/^(privater?|befreundeter?|alter?|junger?|guter?|netter?|alter?\s+)\s+/i, '');
+            // Bei langen Doppelrollen die ERSTE Rolle als Label nehmen (vor "und"), nicht hart abschneiden.
+            if (short.length > 24 && / und /.test(short)) short = short.split(' und ')[0].trim();
             if (short.length > 24) short = short.substring(0, 22) + '…';
             tagLabel = short || 'Person';
           } else {
@@ -11833,20 +11881,24 @@ function showCharacterDetail(key, event) {
   if (titleEl) titleEl.textContent = details.name || 'Person';
   if (tagEl) tagEl.textContent = details.tagLabel || '';
   // Beschreibung: Anker-Daten bevorzugen wenn vorhanden, sonst storyFacts-Daten
+  // v7.12.315: alle Quellen durch sanitizeRolleAnzeige (Technik-Marker raus, Doppelrollen geglaettet).
   let desc = '';
-  if (extra && extra.beziehung) {
-    // Anker-NPC mit ausfuehrlicher Beschreibung
-    desc = extra.beziehung;
-    if (extra.rolle && !desc.toLowerCase().includes(extra.rolle.toLowerCase().split('(')[0].trim().toLowerCase())) {
-      desc = extra.rolle + '. ' + desc;
+  const _exBez = (extra && extra.beziehung) ? sanitizeRolleAnzeige(extra.beziehung) : '';
+  const _exRol = (extra && extra.rolle) ? sanitizeRolleAnzeige(extra.rolle) : '';
+  const _dtBez = details.beziehung ? sanitizeRolleAnzeige(details.beziehung) : '';
+  const _dtRol = details.rolle ? sanitizeRolleAnzeige(details.rolle) : '';
+  if (_exBez) {
+    desc = _exBez;
+    if (_exRol && !desc.toLowerCase().includes(_exRol.toLowerCase().split('(')[0].trim().toLowerCase())) {
+      desc = _exRol + '. ' + desc;
     }
-  } else if (details.beziehung) {
-    desc = details.beziehung;
-    if (details.rolle && !desc.toLowerCase().includes(details.rolle.toLowerCase().substring(0, 10))) {
-      desc = details.rolle + '. ' + desc;
+  } else if (_dtBez) {
+    desc = _dtBez;
+    if (_dtRol && !desc.toLowerCase().includes(_dtRol.toLowerCase().substring(0, 10))) {
+      desc = _dtRol + '. ' + desc;
     }
-  } else if (details.rolle) {
-    desc = details.rolle;
+  } else if (_dtRol) {
+    desc = _dtRol;
   } else {
     desc = 'Keine weiteren Informationen.';
   }
@@ -12282,9 +12334,9 @@ function advanceGameTime() {
     const nightStages = (scenesInCurrentTime >= 10 && lastSpannung <= 2) ? 'HARD' : 'SOFT';
     if (nightStages === 'HARD') {
       if (Array.isArray(pendingCategoryMessages)) {
-        pendingCategoryMessages.push('NACHT-MARATHON-FORCE: Karl ist nach ' + scenesInCurrentTime + ' Szenen in der Nacht am absoluten Limit. Diese Szene MUSS damit enden dass Karl schlaeft oder Schutz sucht. Alle 4 Optionen sollen zum Schlaf fuehren (zu Hause, im Wagen, bei jemandem, oder an einem sicheren Ort). SCHLAFEN-Button ist aktiv.');
+        pendingCategoryMessages.push('LANGE NACHT (HART): Karl ist nach ' + scenesInCurrentTime + ' Szenen in der Nacht am absoluten Limit - beschreibe das DRASTISCH: bleischwere Glieder, brennende Augen, er nickt fast im Stehen weg, die Gedanken franst aus. Der SCHLAFEN-Button ist aktiv und soll als bewusste Spieler-Entscheidung deutlich praesent bleiben (z.B. eine Option, die explizit Schlaf/Schutz anbietet). Die vier A/B/C/D bleiben aber ECHTE Ermittlungsoptionen - KEIN erzwungener Schlaf, KEIN automatischer Tageswechsel. Karl KANN sich noch zwingen weiterzumachen, der Preis dafuer wird nur spuerbar.');
       }
-      diag('detect', 'NACHT-MARATHON-FORCE: ' + scenesInCurrentTime + ' Szenen in NACHT (Sp ' + lastSpannung + '<=2) - alle Optionen auf Schlaf');
+      diag('detect', 'LANGE NACHT (HART): ' + scenesInCurrentTime + ' Szenen in NACHT (Sp ' + lastSpannung + '<=2) - drastischer Muedigkeitshinweis, KEIN Schlafzwang (4 echte Optionen)');
     } else {
       if (Array.isArray(pendingCategoryMessages)) {
         pendingCategoryMessages.push('NACHT-MUEDIGKEIT: Karl ermittelt seit ' + scenesInCurrentTime + ' Szenen ohne Pause in der Nacht. Beschreibe spuerbar: schwere Glieder, Konzentrationsprobleme, der Wunsch nach einem Bett. Mindestens eine der 4 Optionen soll explizit SCHLAFEN anbieten (z.B. "Fahr nach Hause und schlaf"). SCHLAFEN-Button ist aktiv.');
@@ -15427,7 +15479,7 @@ function renderOptions(scene) {
         for (const _b of _fehlendY) {
           if (_b && _b.id && caseProgress.truthBeatsHit.indexOf(_b.id) === -1) caseProgress.truthBeatsHit.push(_b.id);
         }
-        if (typeof diag === 'function') diag('progress', '✦ NOTAUSGANG (Beat-Kulanz): Wahrheit erspielt (' + indizCount + ' Ind, ' + _szenenReif + ' Sz reif, ' + _hitY + '/' + caseSetup.truthBeats.length + ' Beats), aber Regex verfehlte ' + _fehlendY.map(b => b.id).join(',') + ' - nachgetragen, Fall jetzt loesbar.');
+        if (typeof diag === 'function') diag('warn', '⚠ NOTAUSGANG (Beat-Kulanz): Wahrheit erspielt (' + indizCount + ' Ind, ' + _szenenReif + ' Sz reif, ' + _hitY + '/' + caseSetup.truthBeats.length + ' Beats), aber Beat-Regex verfehlte: ' + _fehlendY.map(b => b.id).join(',') + ' - kuenstlich nachgetragen. REGEX PRUEFEN, ob dieser Pfad dauerhaft verfehlt wird.');
         console.warn('[Schatten v7.12.314] Notausgang Y: Pflicht-Beat(s) nachgetragen nach ' + _szenenReif + ' Stage-3-Szenen + ' + indizCount + ' Indizien (Regex-Luecke/Watchdog-Verlust). Fall loesbar.');
       }
     }
@@ -15534,8 +15586,14 @@ function renderOptions(scene) {
   }
 
   document.getElementById('options').classList.remove('hidden');
-
-  // v7.12.92: ALLE sichtbaren Buttons (nicht nur A/B/C/D, sondern auch System-Buttons
+  // v7.12.315 (Source-Lektorat v314 P1): Freitext-Feld DIREKT mit-einblenden statt erst ueber das
+  // 1s-Intervall (das bleibt nur Sicherheitsnetz). Nur in der Spielphase (Optionen sichtbar, Fall
+  // laeuft) - bei Win/Fail bleibt es ueber hideAll versteckt.
+  try {
+    const _ftBlock = document.getElementById('freitext-block');
+    const _fallVorbei = (typeof caseProgress === 'object' && caseProgress && (caseProgress.istGescheitert || caseProgress.istGelöst));
+    if (_ftBlock && !_fallVorbei) _ftBlock.classList.remove('hidden');
+  } catch (e) { /* Freitext-Einblenden darf das Rendern nie brechen */ }
   // wie Fall lösen, Notheilen, Doc-Wagner-Heilung, Schlafen, Romanze, Übernachtung,
   // Flucht) am aktuellen Szenen-logEntry erfassen. So zeigt der Export VOLLSTAENDIG,
   // was der Spieler tatsaechlich sehen/waehlen konnte. Anlass: der Resolve-Button-Bug
@@ -19388,6 +19446,11 @@ function validateOpeningCastPurity(text, setup) {
 }
 
 async function startGame() {
+  // v7.12.315 (Source-Lektorat v314 P0): Request-Epoche hochzaehlen, damit ein evtl. noch
+  // laufender alter fetch (aus einem vorherigen Spiel/Versuch) nach dem Start nicht mehr
+  // committen kann (Stale-Guard-Luecke geschlossen). chooseOptionInFlight ebenfalls freigeben.
+  try { currentRequestEpoch++; } catch(e){}
+  chooseOptionInFlight = false;
   // v7.11.13: Startup-Timing-Log fuer iPhone-Debugging.
   // User-Report: auf iOS Safari/Chrome haengt der Start lange waehrend
   // Modelle durchprobiert werden, auf Desktop ist's instant. Wir loggen
@@ -22288,6 +22351,15 @@ function extractTravelTarget(raw) {
 // Arbeitet auf normalisiertem Text (Umlaut-robust).
 function extractPersonTarget(raw, currentScene) {
   const t = (typeof normForMatch === 'function') ? normForMatch(raw) : String(raw).toLowerCase();
+  // v7.12.315 (Source-Lektorat v314 P1): "klopf/klingel bei X" als Befragungsziel erkennen.
+  // Anlass: viele Freitext-Aktionen lauten "klopf bei Ilse" - parsePlayerIntent erkennt das als
+  // Frage, aber extractPersonTarget fand kein Ziel -> der Validator konnte nicht pruefen, ob die
+  // Person in der Szene auftaucht. Wird VOR dem generischen frag/sprich-Match geprueft.
+  const mKlopf = t.match(/\b(?:klopf|klingel|klingl)\w*\s+(?:bei|an\s+(?:der|die|dem))?\s*([a-z][\w-]+(?:\s+[a-z][\w-]+)?)/);
+  if (mKlopf && mKlopf[1]) {
+    let o = mKlopf[1].trim().replace(/\s+(tuer|tür|wohnung|haus|zimmer)$/i, '').trim();
+    if (o && !/^(der|die|das|dem|den|an|bei|tuer|tür)$/.test(o)) return o;
+  }
   // Zuerst Eigenname nach dem Befragungsverb (frag/sprich mit wilhelm krause...)
   const m = t.match(/\b(?:frag|befrag|verhoer|sprich mit|rede mit|red mit|konfrontier|stell)\w*\s+(?:den|die|das|dem|der|mit\s+)?\s*([a-z][\w\- ]+?)(?=\s+(?:nach|ueber|wegen|ob|wie|warum|nochmal|erneut|direkt|genauer|zu)\b|[,.]|$)/);
   if (m && m[1]) {
@@ -22378,8 +22450,16 @@ function validateIntentFollowup(scene, intent) {
     // v7.12.313 (Source-Lektorat v312 P0): Frage wurde zu körperlicher Karl-Aktion. Die alte
     // Prüfung (Person kommt vor? kein Zeitsprung?) ließ Kessler-Sz8 durch ("du packst Robert am
     // Kragen" - Robert kam ja vor). Jetzt: wenn KARL unaufgefordert zupackt/schlägt/flieht, Bruch.
-    const unaskedPhysicalKarl = /\bdu\s+(packst|greifst|schlaegst|trittst|stoesst|reisst|wuergst|zerrst|schubst|rammst|haust)\b/.test(text)
-      || /\bdu\s+(rennst|fliehst|fluechtest|stuermst|sprintest)\b/.test(text);
+    // v7.12.315 (Source-Lektorat v314 P1): Regex ENTSCHAERFT. "du greifst"/"du trittst" pauschal
+    // war zu breit - "du greifst nach deinem Notizbuch/Hut" + "du trittst einen Schritt zurueck"
+    // sind harmlose Noir-Koerpersprache, loesten aber falsche (teure) Repair-Retries aus. Jetzt:
+    // eindeutige Angriffsverben direkt; greifen/treten NUR mit Angriffsziel (Kragen/Arm/gegen ihn).
+    const _assaultDirect = /\bdu\s+(packst|schlaegst|stoesst|reisst|wuergst|zerrst|schubst|rammst|haust)\b/.test(text);
+    const _trittAngriff = /\bdu\s+trittst\s+(?!einen?\s+schritt\b|zurueck\b|zur seite\b|naeher\b|ein\b)(?:ihn|sie|gegen|nach|dem|der)\b/.test(text);
+    const _greifAngriff = /\bdu\s+greifst\s+(?:ihn|sie|nach\s+(?:seinem|seiner|ihrem|ihrer)|an\s+(?:den|die|seinen|ihren))\s*(arm|kragen|hals|handgelenk|mantel|jacke|schulter|kehle|revers|aufschlag)\b/.test(text)
+      || /\bdu\s+(packst|greifst)\s+(?:ihn|sie)\s+(?:am|an der|an den|bei)\b/.test(text);
+    const _unaskedFlucht = /\bdu\s+(rennst|fliehst|fluechtest|stuermst|sprintest)\b/.test(text);
+    const unaskedPhysicalKarl = _assaultDirect || _trittAngriff || _greifAngriff || _unaskedFlucht;
     if (unaskedPhysicalKarl) return 'question_became_physical';
     // Wenn ein Personen-Ziel bekannt ist, sollte ihr Name/Rolle in der Szene vorkommen.
     if (intent.target) {
@@ -28915,6 +28995,11 @@ function resetGame(skipConfirm) {
   // Die Rueckfrage bleibt nur fuer "Spiel neu starten" aus den Settings
   // (mitten in einem laufenden Fall).
   if (!skipConfirm && !confirm('Spiel wirklich neu starten? Aktueller Fortschritt geht verloren.')) return;
+  // v7.12.315 (Source-Lektorat v314 P0): Epoche hochzaehlen + Lock/pendingRetry freigeben, damit
+  // ein noch laufender alter fetch nach dem Reset nicht den frischen Stand verschmutzt (Stale-Guard).
+  try { currentRequestEpoch++; } catch(e){}
+  chooseOptionInFlight = false;
+  pendingRetry = null;
   clearSavedGame();  // v7.11.92: Save loeschen bei bewusstem Neustart
   // Falls Bot laeuft: stoppen
   if (botActive) {
