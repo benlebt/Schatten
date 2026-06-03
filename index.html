@@ -2864,7 +2864,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.318</div>
+    <div class="start-version">Schatten v7.12.319</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3044,7 +3044,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.318</span>
+    <span>Schatten v7.12.319</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5815,7 +5815,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.318';
+window.SCHATTEN_VERSION = 'v7.12.319';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -14207,12 +14207,19 @@ function istPersonPhysischAnwesend(name, scene, rolleHint) {
     } catch (e) { return false; }
   })();
   if (!_txt || !_txt.includes(_first)) {
-    // Name nicht im Text. Letzter Versuch: Figur ist im cast/Raum UND es gibt eine
-    // klare Pronomen-Handlung (sie/ihr + Praesenzverb). Sonst wie bisher: NEIN.
+    // Name nicht im Text. Letzter Versuch: Figur ist im cast/Raum UND der Text zeigt
+    // Pronomen-Praesenz (sie/ihr). v7.12.319 (Brandt-Run v318, Lola Sz4/6 IMMER NOCH "nicht hier"):
+    // Die KI schrieb "Du legst die Hand an IHREN Nacken, SIE beugt sich vor, IHRE Lippen streifen
+    // dein Ohr" - voller Praesenz-Pronomen, aber die Verben (beugt/streifen/zurueckzieht) waren
+    // NICHT in der Whitelist -> Default NEIN. Schon wieder Whack-a-Mole, jetzt bei den Verben.
+    // ENDGUELTIG: Wenn die Figur im cast/Raum steht (= die KI hat sie EXPLIZIT als anwesend
+    // markiert) UND der Text ein Praesenz-Pronomen (sie/ihr/ihre/...) enthaelt, IST sie praesent -
+    // ohne Verb-Zwang. Die cast-Mitgliedschaft ist das verlaessliche Signal, nicht eine Verbliste.
+    // Schutz gegen "ueber sie geredet": reine Erwaehnung braucht kein sie/ihr im Handlungskontext.
     if (_istImCastOderRaum) {
-      const _pronomenPraesenz = /\b(sie|ihr|ihre|ihren|ihrem|ihrer)\b[^.]{0,40}(sagt|fragt|antwortet|fluestert|flüstert|sitzt|steht|blickt|lehnt|nickt|seufzt|zoegert|zögert|huscht|dreht sich|schaut|sieht dich|laechelt|lächelt|wiederholt|haelt|hält|greift|reicht|drueckt|drückt|atmet|schweigt|weicht|kauert|zittert|wendet)|(sagt|fragt|antwortet|fluestert|flüstert|wiederholt|blickt|schaut)[^.]{0,20}\b(sie|ihr)\b/i;
-      if (_pronomenPraesenz.test(_txt)) {
-        try { if (typeof diag === 'function') diag('info', 'Romance-Praesenz ueber PRONOMEN erkannt (' + name + ' im cast/Raum, aktiv im Text ohne Namen)'); } catch(e){}
+      const _hatPronomen = /\b(sie|ihr|ihre|ihren|ihrem|ihrer|sich)\b/i.test(_txt);
+      if (_hatPronomen) {
+        try { if (typeof diag === 'function') diag('info', 'Praesenz ueber cast/Raum + Pronomen erkannt (' + name + ' im cast, aktiv im Text ohne Namen)'); } catch(e){}
         return true;
       }
     }
@@ -15329,6 +15336,13 @@ function renderOptions(scene) {
         : null;
     } else if (romanceNpcRejected) {
       _romHintText = null; // abgewiesen -> bewusst KEIN Hinweis (Romance ist beendet)
+    } else if (!romanceNpcInScene) {
+      // v7.12.319 (Brandt-Run v318, ausgegraute Intim-Option in Langes Buero): Die folgenden
+      // Hinweise (Spannung/Tension/Naehe) setzen voraus, dass die Romance-Figur PRAESENT ist.
+      // Ist sie nicht in der Szene (Karl allein bei Lange), ist jeder Naehe-Hinweis sinnlos und
+      // verwirrend ("Zu gefaehrlich fuer Naehe" - mit wem?). Dann gar kein Hinweis. Der
+      // "nicht hier"-Fall wurde oben schon behandelt (nur wenn kuerzlich gesehen).
+      _romHintText = null;
     } else if (romanceBlockedBySpannung) {
       _romHintText = 'Zu gefährlich für Nähe gerade – warte, bis es ruhiger wird';
     } else if (romCurrentTension >= 4 && !isAbendOderNacht) {
@@ -22586,6 +22600,10 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     // falschem Ort-Lock (verworfene Szene endete bewusstlos -> Repair denkt Karl ist k.o.).
     const _prevUnconscious = (typeof lastSceneEndedInUnconsciousness !== 'undefined') ? lastSceneEndedInUnconsciousness : false;
     const _prevLastSceneOrt = (typeof lastSceneOrt !== 'undefined') ? lastSceneOrt : '';
+    // v7.12.318 (Haenger-Diagnose): Marker DIREKT vor dem fetch. Wenn der naechste Watchdog-Hang
+    // diesen Marker als letzte Phase zeigt, sitzt der Haenger im fetch (Netzwerk/Modell). Zeigt er
+    // 'nach-resolutionSignals', sitzt er in der synchronen Verarbeitung. Das entscheidet den Fix.
+    try { markPhase('vor-requestSceneFromModel@Sz' + (typeof sceneCounter === 'number' ? sceneCounter : '?')); } catch(e){}
     const { scene, rawAssistantText } = await requestSceneFromModel(userMsg, conversationHistory, compactMode);
     try { markPhase('verarbeitung-start@Sz' + (typeof sceneCounter === 'number' ? sceneCounter : '?')); } catch(e){}
     // v7.12.314: STALE-GUARD. Wenn der Watchdog waehrend dieses (langsamen) fetch einen neuen
@@ -27133,6 +27151,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     // Feine Marker grenzen den genauen Schritt im naechsten Run ein.
     try { markPhase('nach-zielpersonGefunden@Sz' + (typeof sceneCounter === 'number' ? sceneCounter : '?')); } catch(e){}
     if (scene.wahrheit_erkannt === true && !caseProgress.wahrheitErkannt) {
+      const wsFloorOk = caseProgress.stage >= 1 && sceneCounter >= 4;
       // v7.12.86 (Lektorat Krause-Run 18:11): Bei DIEBSTAHL ist "wahrheit_erkannt"
       // NICHT der richtige Abschluss. Hauptziel ist laut Setup das Diebesgut
       // zurueckzuholen - nicht nur aufzuklaeren, WER es hat. Im Run loeste die KI
