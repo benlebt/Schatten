@@ -2864,7 +2864,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.341</div>
+    <div class="start-version">Schatten v7.12.342</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3044,7 +3044,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.341</span>
+    <span>Schatten v7.12.342</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5830,7 +5830,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.341';
+window.SCHATTEN_VERSION = 'v7.12.342';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -25829,6 +25829,20 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           // aussagekräftige Namensteile (Titel/kurze Tokens raus)
           const _parts = scNameNorm.split(/\s+/).filter(w => w.length >= 3 && !/^(dr|prof|herr|frau|der|die|das|von|van)\.?$/.test(w));
           if (!_parts.length) continue;
+          // v7.12.342 (Lektorat Kessler-Run P1): ABSCHIEDS-GUARD. 'Heinz starrt dir nach, bevor er im
+          // Schatten der Spedition verschwindet' ist eine rückblickende ABGANGS-Erwähnung am ALTEN Ort -
+          // KEINE Anwesenheit am neuen. Wenn der Name in Nähe eines Abschieds-/Rückblick-Markers steht,
+          // NICHT reintroduzieren (auch wenn ein Aktiv-Verb wie 'starrt/verschwindet' mitschwingt).
+          const _abschiedMarker = '(starrt dir (nur )?(kurz )?nach|sieht dir nach|blickt dir nach|schaut dir nach|bleibt zurueck|bleibt (allein |einsam )?zurueck|verschwindet|verschwand|im schatten [^.]{0,30}verschwind|laesst du [^.]{0,20}zurueck|du laesst [^.]{0,20}zurueck|zurueckgelassen|winkt (dir )?(zum abschied|nach)|sieht dich gehen|wird kleiner im rueckspiegel|tritt den rueckzug)';
+          const _abschied = _parts.some(p => {
+            const pEsc = p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const re = new RegExp(pEsc + '[^.]{0,60}\\b' + _abschiedMarker + '|' + _abschiedMarker + '[^.]{0,60}' + pEsc, 'i');
+            return re.test(_stxt);
+          });
+          if (_abschied) {
+            if (typeof diag === 'function') diag('detect', 'Auto-Cast-Reintroduce ÜBERSPRUNGEN: ' + sc.name + ' steht in Abschieds-/Rückblick-Kontext (z.B. "starrt dir nach/verschwindet") - keine Anwesenheit am neuen Ort.');
+            continue;
+          }
           // Name + Aktiv-Verb in Nähe (max 40 Zeichen dazwischen, beide Richtungen)?
           const aktiv = _parts.some(p => {
             const pEsc = p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -25950,6 +25964,23 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       const _zeuge = /\b(zeug\w*|aussage|gesehen|beobachtet|hat .{0,20}(gesehen|bemerkt)|sah (ihn|sie|wie)|bestaetig|bestätig|identifizier)\w*/i;
       return _tatmittel.test(_t) || _motiv.test(_t) || _taeterbindung.test(_t) || _zeuge.test(_t);
     };
+    // v7.12.342 (Lektorat Kessler-Run P1): HARTE SPUR (fall-typ-unabhängig). istStarkesMordindiz ist
+    // mord-spezifisch (Tatmittel/Motiv) - bei Beschattung/Diebstahl/Vermisst greift es nicht, deshalb
+    // wurde im Kessler-Run das Pobeda-Kennzeichen B-82-41 als "schwaches BEOBACHTEN-Indiz" weggewürfelt.
+    // Ein Kennzeichen/Fahrzeug/Adresse/Schlüssel/Quittung/eine namentliche Benennung ist aber IMMER eine
+    // harte Spur, egal bei welchem Falltyp - die darf die Dramaturgie-Drossel NIE verwerfen.
+    const istHarteSpur = (txt) => {
+      const _t = (typeof txt === 'string' ? txt : (txt && txt.text) || '').toLowerCase();
+      if (!_t || _t.length < 6) return false;
+      const _kennz = /\bkennzeichen\b|\b[a-z]{1,3}\s*-\s*\d{2,4}\s*-?\s*\d{0,4}\b/i;       // "Kennzeichen" oder B-82-41
+      const _fahrzeug = /\b(pobeda|gaz\s*m20|wartburg|emw|bmw|opel|mercedes|limousine|lieferwagen|lkw|motorrad)\b/i;
+      const _adresse = /\b(strasse|straße|str\.|allee|platz|gasse|weg|hausnummer|\d{1,3}\.\s*(stock|etage)|lagerhalle|westhafen|hinterhof)\b/i;
+      const _objekt = /\b(schluessel|schlüssel|quittung|frachtbrief|frachtquittung|beleg|dokument|kontonummer|telefonnummer|nummernschild|bakelit-anhaenger|fracht(liste|brief))\b/i;
+      const _benennung = /\b(nennt den namen|benennt|der name (lautet|ist)|heisst|heißt|geschwaerzte[rn]? name|geschwärzte[rn]? name|identifizier|name hinter)\w*/i;
+      return _kennz.test(_t) || _fahrzeug.test(_t) || _adresse.test(_t) || _objekt.test(_t) || _benennung.test(_t);
+    };
+    // Kombinierter Schutz: mord-stark ODER fall-typ-unabhängig harte Spur.
+    const istSchuetzenswertesIndiz = (txt) => istStarkesMordindiz(txt) || istHarteSpur(txt);
     const passiveNoProgressCats = ['SCHLAFEN', 'UEBERNACHTUNG', 'HEILEN', 'NOTHEILEN', 'ROMANTIK', 'FLUCHT', 'NOTFLUCHT', 'DEFENSIV'];
     const chosenCatForIndiz = (typeof _catForIndizFilter === 'string') ? _catForIndizFilter : '';
     const suppressIndizThisScene = passiveNoProgressCats.indexOf(chosenCatForIndiz) !== -1
@@ -26117,12 +26148,12 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           // Endspurt + passiveres Vorgehen: max 1 UND 50% Chance auf Verwerfung -
           // ABER nur für SCHWACHE Indizien. Ein starker Mordbeweis (Tatmittel/Motiv/
           // Täterbindung/Zeuge) wird NIE weggewürfelt (v7.12.270 - Rezeptbuch-Befund).
-          const _hatStarkes = scene.indiz_neu.some(istStarkesMordindiz);
+          const _hatStarkes = scene.indiz_neu.some(istSchuetzenswertesIndiz);
           if (_hatStarkes) {
-            // Starkes Indiz priorisieren und durchlassen (das erste starke behalten)
-            const _starke = scene.indiz_neu.filter(istStarkesMordindiz);
+            // Starkes/hartes Indiz priorisieren und durchlassen (das erste behalten)
+            const _starke = scene.indiz_neu.filter(istSchuetzenswertesIndiz);
             scene.indiz_neu = _starke.slice(0, 1);
-            diag('progress', 'Stage-3: STARKES Mordindiz durchgelassen (Tatmittel/Motiv/Täterbindung) - nicht der Zufallsdrossel unterworfen');
+            diag('progress', 'Stage-3: SCHÜTZENSWERTES Indiz durchgelassen (Mordbeweis ODER harte Spur: Kennzeichen/Adresse/Schlüssel/Name) - nicht der Zufallsdrossel unterworfen');
           } else if (Math.random() < 0.5) {
             diag('filter', 'Stage-3-Dramaturgie: ' + cat + ' im Endspurt - schwaches Indiz verworfen (Karl muss jetzt konfrontieren, nicht weiter sammeln)');
             scene.indiz_neu = [];
