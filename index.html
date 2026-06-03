@@ -2864,7 +2864,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.338</div>
+    <div class="start-version">Schatten v7.12.339</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3044,7 +3044,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.338</span>
+    <span>Schatten v7.12.339</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -3461,6 +3461,10 @@ Wenn Karl genug Indizien hat, um eine konkrete Person zu beschuldigen, trag den 
 
 Stufe 3 - ÜBERFÜHREN (Tag 3-5 typisch):
 Wenn der Tatverdächtige nicht mehr leugnen kann (Karl konfrontiert ihn mit Beweisen und er gesteht / Karl übergibt Beweise an die Volkspolizei mit eindeutigem Ergebnis / Karl verhaftet ihn selbst mit Hilfe Kommissar Roth), setze "tatverdaechtiger_ueberfuehrt": true.
+
+BEWEIS-EHRLICHKEIT (Wording, v7.12.339): Benenne Beweise so, wie sie WIRKLICH entstanden sind - das ist Noir, kein Schönreden.
+- Eine unter Druck/Gewalt erzwungene Unterschrift oder Aussage ist KEIN sauberer, freiwilliger Beweis. Beschreibe sie als das, was sie ist: ein Hebel, ein schmutziges Druckmittel - juristisch wertlos, aber als Druck gegen den Täter brauchbar. Tu NICHT so, als hätte Karl damit einen sauberen Gerichtsbeweis. Karl weiß selbst, was so eine Unterschrift wert ist, wenn jemand fragt, wie sie zustande kam.
+- Wenn eine Person (z.B. ein Zeuge, Arzt, Mitwisser) unter Druck eine ANDERE Person belastet, ist das deren AUSSAGE, die den Dritten belastet - NICHT das eigene Geständnis dieser Person. Formuliere präzise: "X' Aussage belastet Y als Täter", NICHT "Geständnis von X über Ys Mord". Sonst wirkt der Zeuge fälschlich wie der Täter.
   
   VERMISSTENFALL - PERSON GEFUNDEN: Wenn es ein Vermisstenfall ist und Karl die gesuchte Person tatsächlich auffindet (lebend, tot, oder im Gewahrsam eines Dritten) und bei ihr ist / sie eindeutig lokalisiert hat, setze "zielperson_gefunden": true. Das ist bei Vermisstenfällen der Durchbruch - Karl muss dann nicht noch einen Täter überführen, das Auffinden selbst ist die Auflösung. NICHT setzen, wenn Karl nur eine Spur hat wo die Person sein KÖNNTE - erst wenn er sie wirklich gefunden hat.
   WAHRHEITS-FALL - WAHRHEIT ERKANNT: Wenn es ein Wahrheits-Fall ist (Karl soll herausfinden was WIRKLICH passiert ist) und sich herausstellt, dass es KEIN klassisches Verbrechen mit Täter war (echter Selbstmord, Unfall, Republikflucht, die Person ist freiwillig gegangen, eine Affäre bestätigt sich oder zerschlägt sich) - also es gibt niemanden zu überführen - dann setze "wahrheit_erkannt": true, sobald Karl die Wahrheit zweifelsfrei ermittelt hat. Das ist bei solchen Fällen der Durchbruch: Karl kann dem Klienten die (oft unbequeme) Wahrheit berichten, auch wenn kein Schuldiger existiert. NUR setzen wenn die Wahrheit wirklich feststeht, NICHT bei bloßer Vermutung. Wenn es DOCH ein Verbrechen mit Täter war, nutze stattdessen "tatverdaechtiger_ueberfuehrt".
@@ -5826,7 +5830,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.338';
+window.SCHATTEN_VERSION = 'v7.12.339';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -8358,15 +8362,22 @@ function startSpeakCurrent() {
       if (!speakCurrentActive) return;
       if (idx >= blocks.length) { finishSpeaking(); return; }
       const u = makeUtterance(blocks[idx]);  // Stimme wird HIER frisch gebunden
+      // v7.12.339 TTS-DIAG: Lifecycle-Logging, um stumme-aber-laeuft-Faelle (macOS-Chrome)
+      // einzugrenzen. onstart = Audio beginnt wirklich; onerror = Synthese-Fehler mit Grund.
+      u.onstart = () => { try { console.log('[TTS-DIAG] onstart Block ' + idx + ' (Audio beginnt) voice=' + (u.voice ? u.voice.name : 'KEINE!') + ' lang=' + u.lang + ' vol=' + u.volume); } catch(e){} };
       u.onend = () => {
         // kleine Pause zwischen Bloecken - gibt WebKit Zeit, das Voice-Binding
         // fuer die naechste Utterance sauber aufzubauen.
         if (speakCurrentActive) setTimeout(() => speakBlockAt(idx + 1), 80);
       };
-      u.onerror = () => {
+      u.onerror = (ev) => {
+        try { console.warn('[TTS-DIAG] onerror Block ' + idx + ' error=' + (ev && ev.error ? ev.error : '?')); } catch(e){}
         if (speakCurrentActive) setTimeout(() => speakBlockAt(idx + 1), 80);
       };
       speakCurrentUtterances.push(u);
+      try {
+        console.log('[TTS-DIAG] speak() Aufruf Block ' + idx + ' | speaking=' + window.speechSynthesis.speaking + ' pending=' + window.speechSynthesis.pending + ' paused=' + window.speechSynthesis.paused);
+      } catch(e){}
       window.speechSynthesis.speak(u);
     }
     speakBlockAt(0);
@@ -8379,6 +8390,10 @@ function startSpeakCurrent() {
     // v7.12.330: Desktop-Chrome/Firefox. KEIN Warmup-cancel, KEIN setTimeout-Delay -
     // beides würde hier die Utterance verschlucken bzw. die Nutzergeste "verfallen" lassen.
     // Direkt aus dem Klick heraus sprechen ist in Blink am stabilsten.
+    // v7.12.339: Chrome hält speechSynthesis manchmal im paused-Zustand (nach Tab-Wechsel,
+    // oder schlicht beim ersten Start) - dann bleibt speak() stumm. resume() vor dem Sprechen
+    // ist der etablierte Blink-Workaround und auf Desktop ungefaehrlich.
+    try { if (window.speechSynthesis.paused) window.speechSynthesis.resume(); } catch (e) { /* ignore */ }
     actuallySpeak();
   } else if (needsWarmup) {
     try {
@@ -24052,7 +24067,13 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         const cRolle = (typeof c === 'object' ? (c.rolle || '') : '').toLowerCase();
         const isLocationBound = locationBoundRoles.test(cName) || locationBoundRoles.test(cRolle);
         // Pruefe ob NPC im Szenentext erwaehnt wird - dann ist er offenbar mitgegangen oder neu eingeführt
-        const mentionedInScene = cName && sceneText.includes(cName.split(' ')[0]);
+        // v7.12.339 (Lektorat Achterberg-Run v338 P1): Vorher nur cName.split(' ')[0] geprueft. Bei
+        // "Dr. Theo Marquardt" ist das erste Token "dr." -> nie im Text -> Figur galt als nicht erwaehnt
+        // und wurde vom Auto-Cast-Clean entfernt, OBWOHL die Szene "Marquardt" (Nachname) aktiv nennt
+        // (gepackt, verhoert, notversorgt). Fix: ALLE aussagekraeftigen Namensteile pruefen (Titel/kurze
+        // Tokens raus), Treffer reicht. So bleibt eine im Text aktive Figur erhalten.
+        const _nameParts = cName.split(/\s+/).filter(w => w.length >= 3 && !/^(dr|prof|herr|frau|der|die|das|von|van)\.?$/.test(w));
+        const mentionedInScene = _nameParts.length > 0 && _nameParts.some(w => sceneText.includes(w));
 
         // v7.10.16: Klient-Check. Klient ist im Cast nur sinnvoll wenn Karl in
         // ihrer Wohnung ist. Sobald er weg ist und Klient nicht aktiv mitgeht
@@ -25793,6 +25814,51 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     if (cast.length > 8) {
       cast = cast.slice(-8);
     }
+
+    // v7.12.339 (Lektorat Achterberg-Run v338 P1): AUTO-CAST-REINTRODUCE. Befund: Vossberg stürzt
+    // sich in Sz3 auf Karl (würgt, verfolgt), aber die KI trägt ihn NICHT in cast_hinzugefuegt ein
+    // (er wurde in Sz2 beim Ortswechsel zurückgelassen, taucht jetzt narrativ wieder auf) -> Cast 0,
+    // obwohl die Figur körperlich aktiv ist. Daran hängt Systemlogik (Anwesenheit, Optionen, Romance).
+    // Fix: bekannte setupCast-Figuren, die im aktuellen Szenentext mit einem AKTIV-Verb in Namensnähe
+    // vorkommen, aber nicht im Cast sind, automatisch (wieder) aufnehmen. Konservativ: nur Aktiv-Handlung
+    // (kämpfen/sprechen/sich bewegen), nicht bloße Erwähnung; keine Toten/Vermissten.
+    try {
+      const _stxt = normForMatch(scene.szene || '');
+      if (_stxt && caseSetup && Array.isArray(caseSetup.setupCast)) {
+        // Aktiv-Verben, die eine körperliche/sprachliche Präsenz belegen (nahe am Namen).
+        const _aktivVerb = '(stuerzt|sturzt|wirft|packt|greift|krallt|wuergt|schreit|bruellt|zerrt|schlaegt|tritt|rennt|flieht|stolpert|sackt|keucht|zischt|fluestert|sagt|antwortet|ruft|brummt|murmelt|starrt|blickt|nickt|zittert|weicht|stoesst|reisst|zieht|presst|kniet|lehnt|sinkt|wankt|taumelt|hebt|senkt|fasst|umklammert|steht|sitzt|kommt|geht|dreht)';
+        const _alreadyIn = (nm) => cast.some(c => {
+          const cn = normForMatch(typeof c === 'string' ? c : (c.name || ''));
+          return cn && (cn === nm || cn.split(/\s+/).some(t => t.length >= 3 && nm.split(/\s+/).includes(t)));
+        });
+        for (const sc of caseSetup.setupCast) {
+          if (!sc || !sc.name) continue;
+          const scNameNorm = normForMatch(sc.name);
+          const scTag = (sc.tag || '').toUpperCase();
+          const scRolle = (sc.rolle || '').toLowerCase();
+          // Tote/Vermisste/Opfer/Klient NIE auto-reintroduzieren.
+          if (scTag === 'CLIENT' || scTag === 'TARGET' || /opfer|verstorben|tot|leiche|vermisst|verschwunden/.test(scRolle)) continue;
+          if (typeof detectDeadOrAbsent === 'function' && detectDeadOrAbsent(sc.rolle || '', sc.beziehung || '')) continue;
+          if (mentionedDeadOrAbsent && mentionedDeadOrAbsent[sc.name.toLowerCase()]) continue;
+          if (_alreadyIn(scNameNorm)) continue;
+          // aussagekräftige Namensteile (Titel/kurze Tokens raus)
+          const _parts = scNameNorm.split(/\s+/).filter(w => w.length >= 3 && !/^(dr|prof|herr|frau|der|die|das|von|van)\.?$/.test(w));
+          if (!_parts.length) continue;
+          // Name + Aktiv-Verb in Nähe (max 40 Zeichen dazwischen, beide Richtungen)?
+          const aktiv = _parts.some(p => {
+            const pEsc = p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const re = new RegExp(pEsc + '[^.]{0,40}\\b' + _aktivVerb + '\\b|\\b' + _aktivVerb + '\\b[^.]{0,40}' + pEsc, 'i');
+            return re.test(_stxt);
+          });
+          if (aktiv) {
+            cast.push({ name: sc.name, rolle: sc.rolle || '', beziehung: sc.beziehung || '', fahrzeug: '', tag: sc.tag || '', tagExtra: sc.tagExtra || '' });
+            if (typeof diag === 'function') diag('detect', 'Auto-Cast-Reintroduce: ' + sc.name + ' ist im Szenentext aktiv (handelt/spricht), war aber nicht im Cast - wieder aufgenommen.');
+            console.log('[Schatten] Auto-Cast-Reintroduce:', sc.name, '(aktiv im Text, KI hatte cast_hinzugefuegt vergessen)');
+          }
+        }
+        if (cast.length > 8) cast = cast.slice(-8);
+      }
+    } catch (e) { /* reintroduce optional, darf Szene nie brechen */ }
 
     // v7.11.43: ANKER-NPC-AUTO-REGISTRATION
     // Wenn die KI im Erzähltext oder in den Optionen Anker-NPCs erwaehnt
