@@ -2864,7 +2864,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.299</div>
+    <div class="start-version">Schatten v7.12.300</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3028,7 +3028,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.299</span>
+    <span>Schatten v7.12.300</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4438,8 +4438,8 @@ const INTRO_VARIANTS = [
         'UEBERGABE / SCHUTZ (Loesungsweg): Vera Lindqvist (schwedische Korrespondentin, Westkontakt) ODER Margaretes Schwester beim RIAS koennen die Beweise in den Westen bringen und Margarete unterbringen. Der Fall ist geloest, wenn die Wahrheit ueber die Route belegt ist UND Margaretes Schicksal geklaert ist (untergetaucht, ueber die Grenze, oder geschuetzt) - NICHT durch "Wahler ueberfuehrt".',
       ],
       // v7.12.284 (Lektorat Stein-Run): POLITISCHE BEATS - analog Goerke truthBeats / Achterberg
-      // murderAxes, aber ZUNÄCHST NUR BEOBACHTEND (kein Abschluss-Gate). Erst wenn ein echter
-      // Stein-Run zeigt, dass die Erkennung greift, schalten wir das Gate scharf. So unterscheidet
+      // politicalBeats: weiche Führungsachse (seit v295 proaktiv genutzt), aber KEIN Abschluss-Gate.
+      // Erst wenn ein echter Stein-Run zeigt, dass die Erkennung greift, schalten wir das Gate scharf. So unterscheidet
       // die Engine später: wirklich der politische Fall gelöst, oder nur lange genug überlebt?
       politicalBeats: [
         { id: 'akten_gesichert', label: 'Margaretes Akten physisch gesichert (Kopie/Versteck/Übergabe)',
@@ -5612,7 +5612,7 @@ const INTRO_VARIANTS = [
         'MOTIV (nur Motiv, kein Hauptbeweis): Achterberg wollte aufdecken, dass Vossberg eine West-Gastspiel-Gage unterschlagen hat (Devisenvergehen). Der drohende Absturz - Devisenprozess + blockierter Aufstieg zum 1. Dirigenten - ist Vossbergs Tatmotiv, beweist aber allein NICHT den Mord. Die Wahrheit braucht Todesursache + Gelegenheit + Zugriff, nicht nur die Devisen',
       ],
       // v7.12.282 (v277-Lektorat P2): MORD-KERNACHSEN. Analog zu Goerkes truthBeats, aber für
-      // Mordfälle und ZUNÄCHST NUR BEOBACHTEND (kein Abschluss-Gate). Erst wenn ein Achterberg-Run
+      // Mordfälle: weiche Führungsachse (seit v295 proaktiv genutzt), aber KEIN Abschluss-Gate. Erst wenn ein Achterberg-Run
       // zeigt, dass die Achsen-Erkennung sauber greift, schalten wir das Gate scharf (Täter
       // plausibel + mind. murderAxesMinHits Kernachsen). So vermeiden wir, dass eine ungetestete
       // Erkennung einen lösbaren Mordfall blockiert (Goerke-Lehre: erst Erkennung verifizieren).
@@ -5796,7 +5796,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.299';
+window.SCHATTEN_VERSION = 'v7.12.300';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -9518,10 +9518,11 @@ function truthBeatsFehlend() {
   } catch (e) { return []; }
 }
 
-// v7.12.282 (v277-Lektorat P2): MORD-KERNACHSEN-TRACKING - ZUNÄCHST NUR BEOBACHTEND.
+// v7.12.282 (v277-Lektorat P2): MORD-KERNACHSEN-TRACKING - WEICHE FÜHRUNGSACHSE OHNE GATE.
 // Scannt Text gegen die murderAxes des Setups (aktuell Achterberg) und markiert erkannte Achsen
-// in caseProgress.murderAxesHit. KEIN Abschluss-Gate - das wird erst scharf geschaltet, wenn ein
-// echter Achterberg-Run zeigt, dass die Erkennung sauber greift (Goerke-Lehre).
+// in caseProgress.murderAxesHit. KEIN Abschluss-Gate (nur truthBeats blockieren den Abschluss) -
+// ABER seit v295 nutzt die proaktive Beat-Führung (aktiveBeatLuecke) diese Achsen aktiv zur
+// sanften Lenkung. Also nicht mehr rein beobachtend, sondern weiche Qualitäts-/Führungsachse.
 function updateMurderAxes(text) {
   try {
     if (!caseSetup || !Array.isArray(caseSetup.murderAxes) || !caseSetup.murderAxes.length) return;
@@ -9548,9 +9549,10 @@ function murderAxesStatus() {
   } catch (e) { return null; }
 }
 
-// v7.12.284 (Lektorat Stein-Run): POLITISCHE BEATS - ZUNÄCHST NUR BEOBACHTEND (kein Gate).
+// v7.12.284 (Lektorat Stein-Run): POLITISCHE BEATS - WEICHE FÜHRUNGSACHSE OHNE GATE.
 // Analog updateMurderAxes/updateTruthBeats. Trackt erkannte politische Beats in
-// caseProgress.politicalBeatsHit. Erst nach Verifikation am echten Run ggf. Gate scharf.
+// caseProgress.politicalBeatsHit. KEIN Abschluss-Gate (Gate noch nicht scharf - offene
+// Entscheidung), ABER seit v295 von der proaktiven Beat-Führung (aktiveBeatLuecke) aktiv genutzt.
 function updatePoliticalBeats(text) {
   try {
     if (!caseSetup || !Array.isArray(caseSetup.politicalBeats) || !caseSetup.politicalBeats.length) return;
@@ -10505,7 +10507,7 @@ function buildTranscriptText() {
         out += '    ' + (got ? '\u2713' : '\u2717') + ' ' + (b.label || b.id) + (b.entlastung ? ' [Entlastung]' : '') + '\n';
       }
     }
-    // v7.12.283: Mord-Achsen-Übersicht (Fälle mit murderAxes, aktuell beobachtend ohne Gate).
+    // v7.12.283: Mord-Achsen-Übersicht (Fälle mit murderAxes - weiche Führungsachse, kein Abschluss-Gate).
     if (caseSetup && Array.isArray(caseSetup.murderAxes) && caseSetup.murderAxes.length) {
       const _hitA = (caseProgress.murderAxesHit || []);
       const _st = (typeof murderAxesStatus === 'function') ? murderAxesStatus() : null;
@@ -10516,7 +10518,7 @@ function buildTranscriptText() {
         out += '    ' + (got ? '\u2713' : '\u2717') + ' ' + (ax.label || ax.id) + '\n';
       }
     }
-    // v7.12.284: Politische-Beats-Übersicht (Fälle mit politicalBeats, aktuell beobachtend ohne Gate).
+    // v7.12.284: Politische-Beats-Übersicht (Fälle mit politicalBeats - weiche Führungsachse, kein Abschluss-Gate).
     if (caseSetup && Array.isArray(caseSetup.politicalBeats) && caseSetup.politicalBeats.length) {
       const _hitP = (caseProgress.politicalBeatsHit || []);
       const _stP = (typeof politicalBeatsStatus === 'function') ? politicalBeatsStatus() : null;
@@ -14171,7 +14173,7 @@ function renderOptions(scene) {
   const lastSp = (typeof lastSpannung === 'number') ? lastSpannung : 2;
   const forceSleepMode = false;
   if (forceSleepMode) {
-    console.log('[Schatten v7.12.299] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
+    console.log('[Schatten v7.12.300] ZWANGS-SCHLAF-Modus: En=' + karlEnergie + ', Sp=' + lastSp + ' - nur SCHLAFEN-Button klickbar');
     if (typeof diag === 'function') diag('detect', 'Zwangs-Schlaf-Modus: Karl kann nicht mehr (En=' + karlEnergie + ', Sp=' + lastSp + ') - Spieler muss SCHLAFEN klicken');
     // Banner direkt in die options-list einfuegen, oberhalb der ABCD-Buttons
     const banner = document.createElement('div');
@@ -19399,12 +19401,12 @@ async function startGame() {
     caseSetup.truthBeats = intro.truthBeats.slice();
     if (typeof intro.truthBeatsMinHits === 'number') caseSetup.truthBeatsMinHits = intro.truthBeatsMinHits;
   }
-  // v7.12.282: murderAxes (Mord-Kernachsen, zunächst nur beobachtend) nach caseSetup ziehen.
+  // v7.12.282: murderAxes (Mord-Kernachsen, weiche Führungsachse seit v295) nach caseSetup ziehen.
   if (caseSetup && Array.isArray(intro.murderAxes)) {
     caseSetup.murderAxes = intro.murderAxes.slice();
     if (typeof intro.murderAxesMinHits === 'number') caseSetup.murderAxesMinHits = intro.murderAxesMinHits;
   }
-  // v7.12.284: politicalBeats (politische Beats, zunächst nur beobachtend) nach caseSetup ziehen.
+  // v7.12.284: politicalBeats (politische Beats, weiche Führungsachse seit v295) nach caseSetup ziehen.
   if (caseSetup && Array.isArray(intro.politicalBeats)) {
     caseSetup.politicalBeats = intro.politicalBeats.slice();
     if (typeof intro.politicalBeatsMinHits === 'number') caseSetup.politicalBeatsMinHits = intro.politicalBeatsMinHits;
@@ -21568,7 +21570,7 @@ async function chooseOption(option) {
       const _romRng = (typeof botWasEverActive !== 'undefined' && botWasEverActive && typeof botRng === 'function') ? botRng() : Math.random();
       const offen = _romRng < 0.70;
       romanceReceptive[npcName] = offen;
-      console.log('[Schatten v7.12.299] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
+      console.log('[Schatten v7.12.300] ROMANCE-WUERFEL fuer ' + npcName + ': ' + (offen ? 'OFFEN' : 'ABGEWIESEN'));
       if (typeof diag === 'function') diag('detect', 'Romance-Wuerfel ' + npcName + ': ' + (offen ? 'offen' : 'abgewiesen'));
       if (!offen) {
         // NEIN -> NPC weist Karl ab. Button verschwindet dauerhaft fuer diesen NPC.
@@ -21610,7 +21612,7 @@ async function chooseOption(option) {
         || (typeof romanticTension === 'number' && romanticTension >= 3);
       if (_offen && _annaeherung && !nachtMitFrau) {
         nachtMitFrau = _frau;
-        console.log('[Schatten v7.12.299] NACHT MIT FRAU verbracht:', _frau);
+        console.log('[Schatten v7.12.300] NACHT MIT FRAU verbracht:', _frau);
         if (typeof diag === 'function') diag('state', 'Nacht mit ' + _frau + ' verbracht (offene Romance + Übernachtung) - für Fail-Spitze gemerkt');
       }
     } catch (e) {}
@@ -21963,7 +21965,7 @@ async function chooseOption(option) {
     // User klickt nochmal, Engine rendert beide Szenen + State-Rollback durch
     // logEntries.pop().
     if (typeof pendingRetry === 'function') {
-      console.log('[Schatten v7.12.299] Lock bleibt aktiv waehrend Retry-Wait laeuft');
+      console.log('[Schatten v7.12.300] Lock bleibt aktiv waehrend Retry-Wait laeuft');
       if (typeof diag === 'function') {
         diag('info', 'Click-Lock: bleibt aktiv bis Retry-Zyklus durch ist');
       }
@@ -23433,7 +23435,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           } else if (!tensionHighEnoughForArrest && folterSceneCount >= custodyReleaseFloor) {
             // STILLER RELEASE: nur noch als Notventil bei langem Drift (5+ Sz). Karl ist
             // faktisch frei (KI erzaehlt ihn lange ohne Stasi-Kontext), System zieht nach.
-            console.warn('[Schatten v7.12.299] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
+            console.warn('[Schatten v7.12.300] Stiller Release - Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei Tension ' + stasiTension + '. Custody-Flag geloescht.');
             diag('state', 'STILLER RELEASE: Karl ' + folterSceneCount + ' Sz ohne Stasi-Kontext bei niedriger Tension (' + stasiTension + ') - Custody beendet');
             setCustodyState(false, 'stiller-release');
           } else if (!tensionHighEnoughForArrest) {
@@ -23449,7 +23451,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // bekommt Atempause zum Heilen. Wenn er sich nicht heilt und
             // Tension wieder steigt, kommt der Trigger erneut.
             if (typeof verfassung === 'number' && verfassung <= 2) {
-              console.warn('[Schatten v7.12.299] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
+              console.warn('[Schatten v7.12.300] HARD-FORCE FESTNAHME aufgeschoben - Karl zu schwach (Vf=' + verfassung + '). Tension reset.');
               diag('progress', '⏸ HARD-FORCE FESTNAHME aufgeschoben (Vf=' + verfassung + ' zu kritisch) - Tension ' + stasiTension + ' -> 1, Karl muss erst heilen');
               stasiTension = 1;
               stasiHighTensionStreak = 0;
@@ -23979,7 +23981,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof diag === 'function') {
           diag('state', '⚡ NOTFLUCHT GELUNGEN - Karl frei + 4 Sz Gnadenfrist, Stasi-Tension ' + prevTension + ' -> 3 (gesucht, aber nicht sofort wieder greifbar)');
         }
-        console.log('[Schatten v7.12.299] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
+        console.log('[Schatten v7.12.300] Karl via NOTFLUCHT entkommen - Gnadenfrist 4 Sz, Stasi-Fahndung laeuft');
         // v7.11.56: Toast bei Erfolg - Spieler hat geklickt und soll Wuerfel-
         // Ergebnis direkt sehen, nicht nur narrative Andeutungen.
         if (typeof showProgressToast === 'function') {
@@ -26560,7 +26562,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.stage = 2;
         caseProgress.stage2StartDay = gameDay;
         caseProgress.stage2StartScene = sceneCounter;
-        console.log('[Schatten v7.12.299] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
+        console.log('[Schatten v7.12.300] Fall-Fortschritt: Stage 2 RETRY (Verdaechtiger ' + caseProgress.tatverdaechtiger + ' war schon gesetzt, Floor jetzt erreicht)');
         diag('progress', '✦ STAGE 2 erreicht (RETRY: Verdaechtiger ' + caseProgress.tatverdaechtiger + ', Floor jetzt OK)');
         showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
       }
