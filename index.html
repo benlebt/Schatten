@@ -2864,7 +2864,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.346</div>
+    <div class="start-version">Schatten v7.12.347</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3044,7 +3044,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.346</span>
+    <span>Schatten v7.12.347</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5830,7 +5830,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.346';
+window.SCHATTEN_VERSION = 'v7.12.347';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -6473,8 +6473,18 @@ function processTheftTargetState(scene) {
             const wieG = _stG === 'returnedToClient' ? 'beim Klienten'
               : _stG === 'inKarlInventory' ? (gutInInventory ? 'im Inventar' : 'laut Szenentext in Karls Besitz')
               : (gutBeiKlient ? 'vage Rueckgabe erwaehnt' : 'laut Szenentext');
-            console.log('[Schatten] Diebesgut zurueck (diebstahl): ' + _tName + ' ' + wieG + (warSchonDurchbruch ? ' [Durchbruch war schon erreicht]' : ''));
-            diag('progress', '✦ DIEBESGUT ZURÜCK (diebstahl): ' + _tName + ' (' + wieG + ')');
+            // v7.12.347 (Lektorat Krause 10:36 P1/P2): diag/console/Toast nur EINMAL pro Status-Stufe.
+            // Seit v346 laeuft processTheftTargetState JEDE Szene -> ohne Guard feuert "DIEBESGUT
+            // ZURÜCK" wiederholt im Log (Toast war schon cooldown-gedrosselt, aber diag+console
+            // blieben laut, und nach Stage-4-Abschluss versuchte es sogar rueckwaerts). Die
+            // State-Updates oben sind idempotent (setTargetItemState-Rang), nur das Ankuendigen
+            // wird hier einmalig gemacht. Bei Status-Wechsel (inKarlInventory -> returnedToClient)
+            // darf es nochmal ankuendigen, daher Status im Flag.
+            const _announceKey = _stG || 'unknown';
+            if (caseProgress._itemSecuredAnnounced !== _announceKey) {
+              caseProgress._itemSecuredAnnounced = _announceKey;
+              console.log('[Schatten] Diebesgut zurueck (diebstahl): ' + _tName + ' ' + wieG + (warSchonDurchbruch ? ' [Durchbruch war schon erreicht]' : ''));
+              diag('progress', '✦ DIEBESGUT ZURÜCK (diebstahl): ' + _tName + ' (' + wieG + ')');
             // v7.12.165 (Code-Review Punkt 3): Bei harter Rueckgabe wurde oben schon
             // showSolvedToastOnce("Fall geloest") gezeigt + istGelöst gesetzt. Den
             // zusaetzlichen Fortschritts-Toast dann unterdruecken - sonst zwei Toasts fuers
@@ -6486,6 +6496,7 @@ function processTheftTargetState(scene) {
                 : 'Das Diebesgut ist sicher. Jetzt zum Klienten.';
               showProgressToast('DIEBESGUT ZURÜCK', _toastMsg, 'success', 'diebesgut-zurueck', '💼');
             }
+            }  // v7.12.347: Ende _itemSecuredAnnounced-Guard
           }
         }
 
@@ -26927,7 +26938,11 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
               // v7.12.144 (User-Befund Krause-Run): bei Diebstahl ist "zum Klienten"
               // FALSCH, solange das Diebesgut nicht zurueck ist - der Auftrag ist die
               // Wiederbeschaffung. Toast lenkt korrekt aufs Holen statt auf den Klienten.
-              toastText = caseProgress.tatverdaechtiger + ' überführt. Jetzt das Diebesgut holen.';
+              // v7.12.347 (Lektorat Krause 10:36 P2): "überführt" abgeschwächt. Der Hehler/
+              // Verdächtige (z.B. Tante Frieda) wird bei Diebstahl oft NUR durch Hinweise
+              // belastet, nie konfrontiert/überführt - "überführt" ist dann zu stark. "Spur
+              // bestätigt" ist ehrlicher. Der eigentliche Durchbruch ist ohnehin das Diebesgut.
+              toastText = 'Spur zu ' + caseProgress.tatverdaechtiger + ' bestätigt. Jetzt das Diebesgut holen.';
             } else if ((ct === 'wahrheit' || ct === 'politisch') && !caseProgress.ueberfuehrt) {
               // v7.12.196 (ChatGPT-Lektorat v194 P1): Wahrheit/Politisch OHNE Verantwortlichen
               // (ueberfuehrt=false, nur wahrheitErkannt) darf NICHT "X überführt" sagen.
