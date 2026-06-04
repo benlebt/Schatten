@@ -2864,7 +2864,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.344</div>
+    <div class="start-version">Schatten v7.12.345</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3044,7 +3044,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.344</span>
+    <span>Schatten v7.12.345</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5830,7 +5830,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.344';
+window.SCHATTEN_VERSION = 'v7.12.345';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -6238,6 +6238,13 @@ function processTheftTargetState(scene) {
         const _ct = caseSetup && caseSetup.caseType;
         const _tFact = caseSetup && caseSetup.setupCast && caseSetup.setupCast.find(c => c.tag === 'TARGET');
         const _tName = _tFact ? _tFact.name : null;
+        // v7.12.345 (Krause-Run 10:08 Desync-Diagnose): Etui war im Inventar, aber diebesgutZurueck
+        // blieb false (FALL LÖSEN gesperrt). Kein einziger targetItemState-Marker im ganzen Run.
+        // Dieser Marker zeigt, ob die Funktion überhaupt bis zum Besitz-Check kommt und was sie sieht.
+        if (typeof diag === 'function' && _ct === 'diebstahl') {
+          const _invSnapshot = Array.isArray(inventory) ? inventory.join(' | ') : '(kein Array)';
+          diag('detect', 'THEFT-DIAG: ct=' + _ct + ' tName=' + (_tName || 'NULL') + ' diebesgutZurueck=' + !!caseProgress.diebesgutZurueck + ' tisStatus=' + ((caseProgress.targetItemState && caseProgress.targetItemState.status) || 'unknown') + ' sceneCounter=' + sceneCounter + ' | Inventar=[' + _invSnapshot + ']');
+        }
         // v7.12.88 (Krause-Run 18:37 Sackgassen-Fix): Bedingung von "!ueberfuehrt" auf
         // "!diebesgutZurueck" umgestellt. Problem: ueberfuehrt wird AUCH vom allgemeinen
         // Taeter-Force gesetzt (Frieda). Wenn der in derselben Szene wie der Etui-Fund
@@ -6290,6 +6297,7 @@ function processTheftTargetState(scene) {
               if (matchGut(itLower)) { gutInInventory = true; break; }
             }
           }
+          if (typeof diag === 'function') diag('detect', 'THEFT-DIAG: Block betreten (canInitial=' + _canInitial + ' canClientReturn=' + _canClientReturn + ') tWords=[' + tWordsN.join(',') + '] gutInInventory=' + gutInInventory);
           let gutInText = false;
           let gutBeiKlient = false;  // v7.12.152: direkte Rueckgabe an den Klienten
           // v7.12.157: Rueckgabe-an-Klient IMMER pruefen (auch wenn Gut schon im Inventar),
