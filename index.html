@@ -2864,7 +2864,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.363</div>
+    <div class="start-version">Schatten v7.12.364</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3055,7 +3055,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.363</span>
+    <span>Schatten v7.12.364</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5841,7 +5841,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.363';
+window.SCHATTEN_VERSION = 'v7.12.364';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -11328,20 +11328,51 @@ function buildTranscriptText() {
       // Romantik-Maximum erreicht?
       out += '  - Romantik-Tension erreicht: ' + (romanticTension || 0) + '/5 (Peak: ' + (peakRomanticTension || 0) + '/5)\n';
       // Welche NPCs aus dem Setup-Cast sind im storyFacts gelandet (wurden aktiviert)?
+      // v7.12.364 (Lektorat Kessler-Run P2): "aktiviert" darf NICHT bloß storyFacts-Existenz
+      // bedeuten - ALLE Setup-NPCs werden beim Start in storyFacts eingefroren (frozen:true,
+      // Z20242), daher zählte das Audit immer 6/6, auch wenn ein NPC nie auftrat (Frau Lemke,
+      // Hellbach). Das maß das Lektorat zu positiv. Echte Aktivierung jetzt an Präsenz-Signalen:
+      // (a) NPC hat einen Kernhinweis gegeben (steht in npcMemory = wurde aktiv bespielt), ODER
+      // (b) NPC ist/war im rekonstruierten Cast präsent. Bloße Setup-Definition zählt NICHT.
       let activatedCount = 0;
       const activatedNames = [];
+      const definedOnlyNames = [];
+      const _npcMem = (caseProgress && caseProgress.npcMemory) || {};
+      const _castArr = (typeof cast !== 'undefined' && Array.isArray(cast)) ? cast : [];
+      const _echtAktiv = (name) => {
+        if (!name) return false;
+        const nN = normForMatch(name);
+        const vn = nN.split(/\s+/)[0];
+        // (a) Kernhinweis-Memory (Schlüssel sind NPC-Namen)
+        for (const k in _npcMem) {
+          if (Array.isArray(_npcMem[k]) && _npcMem[k].length) {
+            const kN = normForMatch(k);
+            if (kN === nN || (vn.length >= 3 && (kN.includes(vn) || nN.includes(kN.split(/\s+/)[0])))) return true;
+          }
+        }
+        // (b) im Cast präsent (jetzt oder via Reise-Bereinigung zurückgelassen, aber war da)
+        for (const c of _castArr) {
+          const cn = (typeof c === 'string' ? c : (c && c.name) || '');
+          if (cn && (normForMatch(cn) === nN || (vn.length >= 3 && normForMatch(cn).includes(vn)))) return true;
+        }
+        return false;
+      };
       for (const ce of caseSetup.setupCast) {
         if (!ce || !ce.name) continue;
-        const found = storyFacts && Object.values(storyFacts).find(f => f && f.name === ce.name);
-        if (found) {
+        const tagDisplay = ce.tagExtra ? (ce.tag + '+' + ce.tagExtra) : ce.tag;
+        if (_echtAktiv(ce.name)) {
           activatedCount++;
-          const tagDisplay = ce.tagExtra ? (ce.tag + '+' + ce.tagExtra) : ce.tag;
           activatedNames.push(ce.name + ' (' + tagDisplay + ')');
+        } else {
+          definedOnlyNames.push(ce.name + ' (' + tagDisplay + ')');
         }
       }
       out += '  - Aktivierte Setup-NPCs: ' + activatedCount + '/' + totalNpcs;
       if (activatedNames.length > 0) {
         out += ' [' + activatedNames.join(', ') + ']';
+      }
+      if (definedOnlyNames.length > 0) {
+        out += '\n  - Nur im Setup definiert (NICHT bespielt): [' + definedOnlyNames.join(', ') + ']';
       }
       out += '\n';
     }
@@ -21810,11 +21841,22 @@ function updateEnergyAndHunger(scene) {
   // Schlaf-Aktion: voll regenerieren
   // v7.11.31: strict=true verhindert dass blosse "Schlafzimmer"-Erwaehnung
   // Energie reseten triggert.
-  if (detectExplicitSleep(scene.szene || '', true)) {
+  // v7.12.364 (Lektorat Kessler-Run P1): Der Energie/Hunger-Reset darf NICHT mehr
+  // aus dem SZENENTEXT abgeleitet werden. Befund: "Robert kann nachts nicht schlafen"
+  // (Ilse über eine DRITTE Person) triggerte fälschlich Karls Schlaf-Reset -> Hunger
+  // 2->0 obwohl Karl wach war (Status-Desync). Schlaf ist eine SPIELER-AKTION, kein
+  // Erzähldetail - genau wie der Tagwechsel (Z29132ff) nur über SCHLAFEN-Button/
+  // UEBERNACHTUNG läuft. Reset jetzt an dieselbe Bedingung gekettet: echte Schlaf-Wahl
+  // (pendingSleepChoice ODER lastChosenKategorie SCHLAFEN/UEBERNACHTUNG). Der frühere
+  // detectExplicitSleep(scene.szene)-Pfad ist damit raus.
+  const _istSchlafAktion =
+    (typeof pendingSleepChoice !== 'undefined' && pendingSleepChoice)
+    || (typeof lastChosenKategorie !== 'undefined' && (lastChosenKategorie === 'SCHLAFEN' || lastChosenKategorie === 'UEBERNACHTUNG'));
+  if (_istSchlafAktion) {
     karlEnergie = 100;
     karlHunger = 0;  // Morgens neu, normalerweise auch Fruehstueck
-    console.log('[Schatten] Schlaf erkannt -> Energie 100, Hunger 0.');
-    diag('detect', 'Schlaf erkannt -> Energie 100, Hunger 0');
+    console.log('[Schatten] Schlaf-Aktion (' + (lastChosenKategorie || 'pendingSleepChoice') + ') -> Energie 100, Hunger 0.');
+    diag('detect', 'Schlaf-Aktion erkannt (' + (lastChosenKategorie || 'pendingSleepChoice') + ') -> Energie 100, Hunger 0');
     return;
   }
 
@@ -23166,7 +23208,34 @@ function validateIntentFollowup(scene, intent) {
     // Wenn ein Personen-Ziel bekannt ist, sollte ihr Name/Rolle in der Szene vorkommen.
     if (intent.target) {
       const first = String(intent.target).split(/\s+/)[0];
-      if (first && first.length >= 3 && !text.includes(first)) return 'question_target_missing';
+      if (first && first.length >= 3 && !text.includes(first)) {
+        // v7.12.364 (Lektorat Kessler-Run P2): FALSE-POSITIVE-Schutz. Die KI nennt die
+        // befragte Person im Antworttext oft nicht beim Vornamen, sondern referenziert sie
+        // per Pronomen/Rolle ("sie zögert", "die Frau weicht aus") - der reine Vorname-
+        // Textmatch wertet das fälschlich als question_target_missing und verschwendet
+        // Repair-Budget, obwohl die Befragung korrekt umgesetzt wurde. Daher: NICHT als
+        // gebrochen werten, wenn (a) direkte Rede im Text steht UND eine Person präsent ist,
+        // oder (b) genau EINE Person im Raum/Cast ist (dann ist die Antwort eindeutig sie).
+        try {
+          const _hatDirekteRede = /[„"»][^"«]{3,}[""«]|:\s*[„"»]/.test(scene && scene.szene || text);
+          const _pir = (currentScene && Array.isArray(currentScene.personenImRaum)) ? currentScene.personenImRaum : [];
+          const _castArr = (typeof cast !== 'undefined' && Array.isArray(cast)) ? cast : [];
+          const _genauEine = (_pir.length === 1) || (_castArr.length === 1);
+          // Reagiert eine Cast-Person namentlich im Text? (auch wenn != intent.target)
+          const _andereCastImText = _castArr.some(c => {
+            const nm = (typeof c === 'string' ? c : (c && c.name) || '');
+            const vn = nm ? normForMatch(nm).split(/\s+/)[0] : '';
+            return vn && vn.length >= 3 && text.includes(vn);
+          });
+          if ((_hatDirekteRede && (_genauEine || _andereCastImText)) || _genauEine || _andereCastImText) {
+            // Befragung gilt als umgesetzt - kein Repair.
+          } else {
+            return 'question_target_missing';
+          }
+        } catch (e) {
+          return 'question_target_missing'; // im Zweifel altes Verhalten
+        }
+      }
     }
     return null;
   }
