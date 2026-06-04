@@ -2864,7 +2864,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.348</div>
+    <div class="start-version">Schatten v7.12.352</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3044,7 +3044,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.348</span>
+    <span>Schatten v7.12.352</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5830,7 +5830,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.348';
+window.SCHATTEN_VERSION = 'v7.12.352';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -6384,7 +6384,53 @@ function processTheftTargetState(scene) {
           // Fall mechanisch voran. Vager gutBeiKlient -> nur resolveEverReady, sonst nichts.
           const _hardReturn = gutBeiKlient && (typeof isHardClientReturn === 'function') &&
             isHardClientReturn(scene && scene.szene, (clientProfile && clientProfile.name), _tName, gutSyn);
-          const _meaningfulHit = gutInInventory || gutInText || _hardReturn;
+          // v7.12.349 (Lektorat v348 P1): ZWEITER harter Rückgabeweg, satzgrenzen-unabhängig.
+          // isHardClientReturn verlangt Klient+Gut+Verb im SELBEN Satz - verfehlt typische KI-Prosa
+          // ("Krause wartet. Du legst das Etui hin. Er nimmt es entgegen." - über 3 Sätze verteilt).
+          // Robusteres Signal: die KI hat das ZIELOBJEKT in DIESER Szene aktiv aus dem Inventar
+          // entfernt (scene.inventar_entfernt) UND der Klient kommt im Szenentext vor UND es ist
+          // eine Rückgabe erwähnt (gutBeiKlient). Drei Bedingungen zusammen = praktisch kein
+          // Fehlalarm-Risiko (ein Inventar-Entfernen des Guts in Klient-Präsenz IST eine Rückgabe),
+          // aber unabhängig von Satzgrenzen/Pronomen. Greift nur, wenn das Gut vorher bei Karl war.
+          let _hardReturnViaInvRemoval = false;
+          if (!_hardReturn && gutBeiKlient && Array.isArray(scene.inventar_entfernt) && scene.inventar_entfernt.length) {
+            const _zielAusInvEntfernt = scene.inventar_entfernt.some(x => {
+              const xn = normForMatch(x || '');
+              return xn && matchGut(xn) && !istSurrogat(xn);
+            });
+            const _klientTeileR = ((clientProfile && clientProfile.name) ? normForMatch(clientProfile.name) : '')
+              .split(/\s+/).filter(w => w.length >= 4);
+            const _klientImText = _klientTeileR.length && _klientTeileR.some(p => normForMatch(scene.szene || '').includes(p));
+            if (_zielAusInvEntfernt && _klientImText) {
+              _hardReturnViaInvRemoval = true;
+              if (typeof diag === 'function') diag('detect', 'Harte Rückgabe via Inventar-Entfernung erkannt (Zielobjekt in inventar_entfernt + Klient im Text + Rückgabe-Erwähnung) - satzgrenzen-unabhängig');
+            }
+          }
+          // v7.12.349 (Lektorat v348 P1 #2): DRITTER Weg über die SPIELER-ABSICHT. Wenn der Spieler
+          // im Freitext explizit eine Rückgabe an den Klienten formuliert hat ("fahr zu Krause und
+          // übergib ihm sein Etui"), ist die Absicht eindeutig - egal wie die KI die Szene dann
+          // formuliert (Pronomen, Folgesätze). Greift nur, wenn das Gut nachweislich bei Karl ist
+          // (gutInInventory/inKarlInventory) UND der Klient im Spielertext genannt ist UND ein
+          // Rückgabe-Verb + Gut-Bezug im Spielertext steht. Drei Bedingungen = kein Fehlalarm.
+          let _hardReturnViaPlayerIntent = false;
+          if (!_hardReturn && !_hardReturnViaInvRemoval) {
+            const _tisNow = (caseProgress.targetItemState && caseProgress.targetItemState.status) || 'unknown';
+            const _gutBeiKarl = gutInInventory || _tisNow === 'inKarlInventory';
+            const _ptNorm = normForMatch(typeof lastUserMessage === 'string' ? lastUserMessage : '');
+            if (_gutBeiKarl && _ptNorm) {
+              const _klientTeileP = ((clientProfile && clientProfile.name) ? normForMatch(clientProfile.name) : '')
+                .split(/\s+/).filter(w => w.length >= 4);
+              const _klientImPlayer = _klientTeileP.length && _klientTeileP.some(p => _ptNorm.includes(p));
+              const _rueckgabeVerbPlayer = /\b(uebergib|übergib|uebergeben|gib ihm|gib ihr|gib es|bring|bringe|zurueckbring|zurückbring|zurueckgeb|zurückgeb|haendig|händig|liefer|reich ihm|reich ihr)\w*/i.test(_ptNorm);
+              const _gutImPlayer = matchGut(_ptNorm) && !istSurrogat(_ptNorm);
+              if (_klientImPlayer && _rueckgabeVerbPlayer && _gutImPlayer) {
+                _hardReturnViaPlayerIntent = true;
+                if (typeof diag === 'function') diag('detect', 'Harte Rückgabe via SPIELER-ABSICHT erkannt (Spielertext: Klient + Rückgabe-Verb + Gut, Gut bei Karl) - satzgrenzen-unabhängig');
+              }
+            }
+          }
+          const _hardReturnFinal = _hardReturn || _hardReturnViaInvRemoval || _hardReturnViaPlayerIntent;
+          const _meaningfulHit = gutInInventory || gutInText || _hardReturnFinal;
           if (!_meaningfulHit) {
             if (gutBeiKlient) {
               caseProgress.resolveEverReady = true;  // Fall ist abschlussreif markiert, aber NICHT vorangetrieben
@@ -6441,7 +6487,8 @@ function processTheftTargetState(scene) {
               // + Stage 4 (_hardReturn oben berechnet). Ein vager Treffer ohne Besitz wurde
               // schon vor diesem Block per return abgefangen - hier sind wir nur, wenn
               // _meaningfulHit galt (Gut bei Karl ODER harte Rueckgabe).
-              if (_hardReturn) {
+              // v7.12.349: _hardReturnFinal = isHardClientReturn ODER Inventar-Entfernungs-Weg.
+              if (_hardReturnFinal) {
                 setTargetItemState('returnedToClient', (clientProfile && clientProfile.name) || 'Klient', { name: _tName });
                 if (!caseProgress.istGelöst) {
                   caseProgress.klientGesprochen = true;
@@ -10838,9 +10885,14 @@ function buildTranscriptText() {
         } else {
           out += '  Zielobjekt: noch nicht zurück\n';
         }
-        // Den tatverdaechtiger-Eintrag nur dann als Täter zeigen, wenn er KEINE Objekt-Statusmeldung ist.
+        // Den tatverdaechtiger-Eintrag nur dann zeigen, wenn er KEINE Objekt-Statusmeldung ist.
+        // v7.12.349 (Lektorat v348 P1): NICHT formatSuspectStatus() verwenden - das zieht bei
+        // objekt_erfuellt-Status "Diebesgut zurückgebracht" und ergäbe "Täterstatus: Diebesgut
+        // zurückgebracht", obwohl tatverdaechtiger z.B. "Tante Frieda" ist. Stattdessen den
+        // Rohverdacht direkt + ehrlich als Hehlerspur (Diebstahl ist objektbasiert, der Verdächtige
+        // ist meist nur belastet, nicht überführt - siehe v347 Toast-Wording).
         if (!_istObjektStatus && _suspRaw) {
-          out += '  Täterstatus: ' + formatSuspectStatus() + '\n';
+          out += '  Hehlerspur: ' + (typeof fixEigennamen === 'function' ? fixEigennamen(_suspRaw) : _suspRaw) + ' belastet\n';
         }
         label = null;
       }
@@ -11696,10 +11748,18 @@ function showHeader(scene) {
   // sondern auf NEUTRAL zuruecksetzen. Sonst bleibt z.B. CUSTODY haengen wenn die
   // KI mal keinen Ort liefert, und Custody-Logik feuert faelschlich weiter.
   if (scene && scene.ort) {
+    const _ortVorher = currentOrt;  // v7.12.352: für Wechsel-Diagnose
     currentOrt = normForMatch(scene.ort);
     const ortClass = classifyOrtDetailed(scene.ort);
     currentOrtType = ortClass.type;
-    if (typeof diag === 'function') diag('detect', 'ORT: "' + scene.ort + '" → Typ: ' + ortClass.type + ' [Regel: ' + ortClass.rule + ']');
+    if (typeof diag === 'function') {
+      // v7.12.352 (ORT-DIAG): Wechsel explizit machen. Ein unerklärter Ortssprung (ohne Spieler-
+      // Reise) war die Wurzel mehrerer Bugs (zur-Aufgabe-Drift, Greta-Befragung springt zur
+      // Wäscherei). Der bestehende Marker zeigte nur den NEUEN Ort - der Sprung blieb unsichtbar.
+      const _gewechselt = _ortVorher && currentOrt && _ortVorher !== currentOrt;
+      diag('detect', 'ORT: "' + scene.ort + '" → Typ: ' + ortClass.type + ' [Regel: ' + ortClass.rule + ']'
+        + (_gewechselt ? ' | WECHSEL von "' + _ortVorher + '"' : (_ortVorher === currentOrt && _ortVorher ? ' | (gleicher Ort)' : '')));
+    }
   } else {
     currentOrt = '';
     currentOrtType = 'NEUTRAL';
@@ -22453,6 +22513,12 @@ async function chooseOption(option) {
         if (typeof botDecisionLog !== 'undefined' && Array.isArray(botDecisionLog)) {
           botDecisionLog.push('Intent erkannt: ' + _it.type + (_ziel ? ' -> ' + _ziel : '') + ' (Aktion: "' + (option.text || '').slice(0, 40) + '")');
         }
+      } else if (typeof botDecisionLog !== 'undefined' && Array.isArray(botDecisionLog)) {
+        // v7.12.352 (INTENT-DIAG): auch den Negativfall loggen. Beim "zur Aufgabe"-Bug
+        // (travel fälschlich erkannt) und beim Greta-Ortsdrift war entscheidend, OB und WIE
+        // ein Intent erkannt wurde. "kein Intent" ist genauso diagnostisch wertvoll wie ein
+        // Treffer - zeigt, dass die Aktion als reine Handlung (kein Reise/Befrage/Inspect) lief.
+        botDecisionLog.push('Intent: KEINER erkannt (Aktion: "' + (option.text || '').slice(0, 40) + '") - läuft als freie Handlung');
       }
     }
   } catch (e) { option._intent = null; }
@@ -22685,8 +22751,13 @@ function parsePlayerIntent(option, currentScene) {
   //  (a) Wenn die Aktion ein BEOBACHTEN/Warten-Verb traegt, ist es keine Reise.
   //  (b) Wenn das Ziel ein Innenraum-Detail (fenster/tuer/tresen/...) ist, keine Reise.
   const istBeobachten = /\b(beobacht|lausch|horch|warte|wart\b|spaeh|spaehe|sieh dich um|schau dich um|halt(e)? ausschau|behalt|im auge)/.test(t);
+  // v7.12.350 (Lektorat Brauer-Run P1 #2): "lauf" als Reiseverb präzisiert. Befund: "Drück den
+  // LAUF fester gegen seine Brust" (Gewehrlauf, Substantiv) matchte das Reiseverb "lauf" -> zusammen
+  // mit "zur Aufgabe" als travel erkannt. Jetzt verlangt "lauf" eine Verbform (laufe/laufst/lauf los/
+  // lauf zu/lauf zum/lauf nach...) ODER Satzanfang - das Substantiv "den/dem/der Lauf" greift nicht.
+  const _reiseVerb = /\b(fahr|fahre|fahrst|geh\b|gehe|gehst|begib|begeb|steig in|steig ins|setz dich in)\b|\b(laufe|laufst)\b|\blauf\b\s+(los|zu|zur|zum|nach|richtung|ins|in (die|den))|^lauf\b/;
   if (!istBeobachten &&
-      (/\b(fahr|fahre|fahrst|geh\b|gehe|gehst|begib|begeb|lauf|steig in|steig ins|setz dich in)\b/.test(t) ||
+      (_reiseVerb.test(t) ||
        /^(zur|zum|nach|richtung|auf zum|auf zur|ins|in die|in den)\b/.test(t))) {
     const ziel = extractTravelTarget(raw);
     // Innenraum-Ziele sind keine Reise (Bewegung im Raum, Ort bleibt gleich).
@@ -22713,11 +22784,20 @@ function extractTravelTarget(raw) {
   const zuPos = mZuName ? rawStr.indexOf(mZuName[0]) : Infinity;
   const stop = /^(dem|der|den|die|das|ihm|ihr|ihnen|oben|unten|hinten|vorne)$/;
   const badInf = /^(Hoeren|Hören|Sehen|Fragen|Reden|Sprechen|Erfahren|Wissen|Pruefen|Prüfen|Klaeren|Klären|Schauen|Gucken|Lauschen|Verstehen)$/i;
+  // v7.12.350 (Lektorat Brauer-Run P1 #2): REDEWENDUNGS-STOPLISTE. "zur Aufgabe zwingen",
+  // "zur Rede stellen", "zum Schweigen bringen", "zu Boden zwingen", "zur Strecke bringen",
+  // "zur Seite drängen", "zur Ruhe kommen", "zur Vernunft bringen" sind feste Wendungen, KEINE
+  // Ortsreise. Befund: "Drück den Lauf gegen seine Brust und zwing ihn ZUR AUFGABE" wurde als
+  // travel->aufgabe erkannt -> Ortsdrift (Bahnhof -> Lokschuppen). Diese Substantive sind nie ein Ort.
+  const badZiel = /^(aufgabe|rede|ruhe|vernunft|seite|boden|strecke|wehr|hilfe|last|kasse|sache|tat|wehr\b|raison|schweigen|nachdenken|besinnung|einsicht|umkehr|aufgeben)$/i;
   const zuValid = mZuName && !badInf.test(mZuName[1]);
   if (zuValid && zuPos <= praepPos) return normForMatch(mZuName[1]);
   if (mPraep && mPraep[1]) {
     const o = mPraep[1].trim();
     if (stop.test(o)) return '';
+    // v7.12.350: erstes Wort gegen Redewendungs-Stopliste prüfen ("zur Aufgabe" etc. = kein Ort)
+    const _erstesWort = o.split(/\s+/)[0] || '';
+    if (badZiel.test(_erstesWort)) return '';
     return o;
   }
   if (zuValid) return normForMatch(mZuName[1]);
@@ -25391,6 +25471,72 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         }
       }
     }
+    // v7.12.351 (Lektorat Brauer-Run P1 #5): ALLGEMEINE HANDOVER-LOGIK. Befund: Spieler übergibt
+    // den Abschiedsbrief an Hilde ("du drückst ihr den Brief in die Hand"), aber der Brief bleibt
+    // im Inventar -> nächste Szene "du legst den Brief auf den Tisch" (Doppelung). Die v349-Logik
+    // greift NUR fürs Diebstahl-TARGET (Etui). Hier: jeder Questgegenstand, wenn (1) der Spielertext
+    // eine Übergabe signalisiert UND (2) die Szene sie bestätigt UND (3) der Gegenstand über ein
+    // gemeinsames Kernwort identifizierbar ist. Läuft NACH der KI-eigenen inventar_entfernt-Verarbeitung
+    // (fängt nur den Fall ab, wo die KI das Entfernen vergessen hat). Identity-Items bleiben tabu.
+    try {
+      const _ptH = normForMatch(typeof lastUserMessage === 'string' ? lastUserMessage : '');
+      const _szH = normForMatch(scene.szene || '');
+      // (1) Spielertext signalisiert Übergabe an jemanden
+      const _playerHandover = /\b(uebergib|übergib|uebergeben|haendig|händig|gib (ihr|ihm|es|sie|den|die|das)|reich (ihr|ihm|es|sie|den|die|das)|bring (ihr|ihm)|ueberreich|überreich)\w*/i.test(_ptH);
+      // (2) Szene bestätigt die Übergabe (Empfangs-/Übergabe-Geste)
+      const _sceneHandover = /(drueckst (ihr|ihm|es)?\s?\w*\s?in (die|seine|ihre) hand|legst\s[^.]{0,40}\b(vor (ihr|ihm|sie|ihn)|auf (den|ihren|seinen) (tisch|tresen|schoss))|reichst\s[^.]{0,40}\b(ihr|ihm|hinueber)|(sie|er) nimmt\s[^.]{0,40}\b(entgegen|an sich|in (die|ihre|seine) hand)|haendigst[^.]{0,40}aus|ueberreichst|in (ihre|seine) (zitternden? )?haende?)/i.test(_szH);
+      if (_playerHandover && _sceneHandover && Array.isArray(inventory) && inventory.length) {
+        // (3) Gegenstand identifizieren: Kernwort (>=4 Zeichen), das in Spielertext UND Szene vorkommt
+        //     und zu einem Inventar-Eintrag gehört. Identity-Items + Diebstahl-TARGET ausgenommen
+        //     (TARGET läuft über die eigene v349-Logik, nicht hier doppelt).
+        const _tgtFactH = caseSetup && caseSetup.setupCast && caseSetup.setupCast.find(c => c && c.tag === 'TARGET');
+        const _tgtNameH = _tgtFactH ? normForMatch(_tgtFactH.name || '') : '';
+        let _removedH = null;
+        // Komposita-tolerantes Matching: ein Inventar-Kernwort gilt als im Text vorhanden,
+        // wenn es direkt vorkommt ODER als ENDGLIED eines Kompositums ("Abschiedsbrief" ~ "Brief").
+        // Nur Endglied (nicht beliebiges includes) + Mindestlänge 5 -> kein "Brief"~"Brieftasche"-Fehlalarm.
+        const _tokenInText = (tok, text) => {
+          if (text.includes(tok)) return true;
+          if (tok.length < 5) return false;
+          return text.split(/\s+/).some(tw => {
+            const a = tw.replace(/[^a-z]/g, '');
+            if (a.length < 5) return false;
+            return tok.endsWith(a) || a.endsWith(tok);
+          });
+        };
+        for (let _i = 0; _i < inventory.length; _i++) {
+          const _itH = inventory[_i];
+          const _itL = normForMatch(_itH || '');
+          if (!_itL) continue;
+          // Identity-Items tabu (gleiche Liste wie oben)
+          const _isIdentity =
+            _itL.includes('walther') || _itL.includes('eigene pistole') ||
+            (_itL.includes('brieftasche') && (_itL.includes('lizenz') || _itL.includes('detektiv'))) ||
+            (_itL.includes('notizbuch') && _itL.includes('bleistift')) ||
+            (_itL.includes('opel') && _itL.includes('olympia'));
+          if (_isIdentity) continue;
+          // Diebstahl-TARGET hier auslassen (eigene Logik)
+          if (_tgtNameH && (_itL.includes(_tgtNameH) || _tgtNameH.includes(_itL))) continue;
+          // Kernwörter des Inventar-Eintrags, die in BEIDEN Texten vorkommen (Komposita-tolerant)
+          const _itWords = _itL.split(/\s+/).filter(w => w.length >= 4 && !/^(eine?r?|eines|der|die|das|den|dem|mit|und|von|fuer)$/.test(w));
+          const _gemeinsam = _itWords.find(w => _tokenInText(w, _ptH) && _tokenInText(w, _szH));
+          if (_gemeinsam) { _removedH = { idx: _i, item: _itH, key: _gemeinsam }; break; }
+        }
+        if (_removedH) {
+          console.log('[Schatten] Handover: "' + _removedH.item + '" an NPC übergeben (Spieler+Szene), aus Inventar entfernt');
+          if (typeof diag === 'function') diag('state', 'Handover erkannt: "' + _removedH.item + '" übergeben (Spielertext + Szenen-Bestätigung, Kernwort "' + _removedH.key + '") - aus Inventar entfernt');
+          inventory.splice(_removedH.idx, 1);
+        } else if (typeof diag === 'function') {
+          // v7.12.352 (HANDOVER-DIAG): Fast-Treffer. Beide Übergabe-Signale (Spielertext + Szene)
+          // waren erfüllt, aber KEIN Inventar-Item passte. Das ist der diagnostisch wichtige Fall -
+          // z.B. Teilwort-Mismatch (abschiedsbrief~brief, der uns beim Bauen aufgefallen ist) oder
+          // ein Gegenstand, den die KI nie ins Inventar gelegt hat. Ohne diesen Marker bliebe so ein
+          // verpasster Handover unsichtbar.
+          const _invList = Array.isArray(inventory) ? inventory.join(', ') : '';
+          diag('detect', 'HANDOVER-DIAG: Übergabe-Signale erfüllt (Spielertext + Szene), aber KEIN passendes Inventar-Item gefunden. Inventar=[' + _invList + ']');
+        }
+      }
+    } catch (_eH) { /* Handover-Erkennung ist best-effort, nie blockierend */ }
     // Max 12 Eintraege im Inventar, sonst aelteste raus.
     // ABER: Karls Standardausruestung (Walther PPK, Brieftasche, Notizbuch+Bleistift)
     // muss IMMER drinbleiben - das ist Karls Identitaet als Detektiv. Wenn die
@@ -25757,6 +25903,16 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     // ohne Personen -> Kontinuitäts-Drift. personenImRaum (v1.5 Schema) listet ALLE Anwesenden.
     // Wir ergänzen daraus nur Namen, die noch NICHT im cast sind. Defensiv: leeres/fehlendes Feld
     // = keine Änderung. Tote/Vermisste werden gefiltert, Setup-Tag/Rolle angereichert.
+    // v7.12.352 (CAST-DIAG): Roh-Inhalt des KI-Feldes personenImRaum loggen - auch wenn leer.
+    // Datengrundlage für die Architektur-Frage: füllt Flash-Lite das strukturierte Cast-Feld
+    // verlässlich, oder kommt die Wahrheit (wie vermutet) primär aus Prosa+Heuristik? Vergleiche
+    // diese Zeile mit den nachfolgenden Reintroduce/Cast-Clean-Markern derselben Szene.
+    if (typeof diag === 'function') {
+      const _pirRaw = Array.isArray(scene.personenImRaum)
+        ? scene.personenImRaum.map(p => (typeof p === 'string' ? p : (p && p.name) || '?')).filter(Boolean)
+        : null;
+      diag('detect', 'CAST-DIAG: personenImRaum (KI-Feld) = ' + (_pirRaw === null ? 'FEHLT/kein Array' : (_pirRaw.length ? '[' + _pirRaw.join(', ') + ']' : 'LEER')) + ' | cast vor Ergänzung = [' + (Array.isArray(cast) ? cast.map(c => typeof c === 'string' ? c : (c && c.name) || '?').join(', ') : '') + ']');
+    }
     if (Array.isArray(scene.personenImRaum) && scene.personenImRaum.length > 0) {
       for (const pRaw of scene.personenImRaum) {
         const pName = (typeof pRaw === 'string' ? pRaw : (pRaw && pRaw.name) || '').trim();
@@ -25885,6 +26041,26 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           });
           if (_abschied) {
             if (typeof diag === 'function') diag('detect', 'Auto-Cast-Reintroduce ÜBERSPRUNGEN: ' + sc.name + ' steht in Abschieds-/Rückblick-Kontext (z.B. "starrt dir nach/verschwindet") - keine Anwesenheit am neuen Ort.');
+            continue;
+          }
+          // v7.12.350 (Lektorat Brauer-Run P1): BERICHT-GUARD. "Sie blickt zu Boden und fügt hinzu,
+          // dass Kurt ein sturer Hund sei" / "Mahlke? Er schiebt auf der Strecke..." sind Berichte
+          // ÜBER eine ABWESENDE Person (Hilde erzählt von Mahlke), keine Präsenz. Die Aktiv-Verb-
+          // Nähe-Heuristik kann das Verb fälschlich dem Namen zuordnen ("blickt" gehört zu Hilde).
+          // Wenn der Name in klarem Bericht-/Erwähnungs-/Frage-Kontext steht, NICHT reintroduzieren.
+          const _bericht = _parts.some(p => {
+            const pEsc = p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const re = new RegExp(
+              '\\bdass\\s+' + pEsc + '\\b'                                  // indirekte Rede: "dass Kurt..."
+              + '|\\b(ueber|von|nach|wegen)\\s+' + pEsc + '\\b'             // "über/von Mahlke"
+              + '|' + pEsc + '\\?\\s'                                       // "Mahlke?" (Rückfrage/Aufgreifen)
+              + '|\\b(wo|wie|ob)\\s+(du\\s+)?(diesen?\\s+|den\\s+|die\\s+)?' + pEsc + '\\b'  // "wo du diesen Mahlke findest"
+              + '|' + pEsc + '\\b[^.]{0,30}\\b(sei|seien|haette|waere|habe|haben|koennte|wuerde|verschwand|verschwunden|gewesen)\\b',  // Konjunktiv/Vergangenheit = Bericht
+              'i');
+            return re.test(_stxt);
+          });
+          if (_bericht) {
+            if (typeof diag === 'function') diag('detect', 'Auto-Cast-Reintroduce ÜBERSPRUNGEN: ' + sc.name + ' steht in Bericht-/Erwähnungs-Kontext (jemand spricht ÜBER die Person, z.B. "dass X..." / "X?" / "wo du X findest") - keine physische Präsenz.');
             continue;
           }
           // Name + Aktiv-Verb in Nähe (max 40 Zeichen dazwischen, beide Richtungen)?
@@ -26049,7 +26225,10 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         scene.indiz_neu = _dedup.slice(0, 2);
         diag('progress', 'DEFENSIV: ' + scene.indiz_neu.length + ' starke(s) Mordindiz(e) gerettet (Beweis trotz defensiver Aktion, max 2)');
       } else {
-        diag('filter', 'Indiz(e) verworfen: passive Aktion ' + chosenCatForIndiz + ' treibt den Fall nicht voran (' + scene.indiz_neu.length + ' KI-Indiz(e) ignoriert)');
+        // v7.12.352 (INDIZ-DIAG): auch den INHALT der verworfenen Indizien loggen, nicht nur die
+        // Anzahl. Beim Passierschein-Befund (harter Beweis ging verloren) hätte das sofort gezeigt,
+        // WAS verworfen wurde - wichtig um zu erkennen, ob die Drossel mal einen starken Beweis frisst.
+        diag('filter', 'Indiz(e) verworfen: passive Aktion ' + chosenCatForIndiz + ' treibt den Fall nicht voran (' + scene.indiz_neu.length + ' ignoriert: [' + scene.indiz_neu.map(i => (typeof i === 'string' ? i : (i && i.text) || '?')).join(' | ').slice(0, 200) + '])');
         scene.indiz_neu = [];
       }
     }
