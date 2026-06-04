@@ -2864,7 +2864,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.367</div>
+    <div class="start-version">Schatten v7.12.368</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3055,7 +3055,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.367</span>
+    <span>Schatten v7.12.368</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5841,7 +5841,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.367';
+window.SCHATTEN_VERSION = 'v7.12.368';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -5922,6 +5922,17 @@ let _lastLoggedStage = null;     // STAGE-DIAG: Stage-Wechsel
 let _lastLoggedSpannung = null;  // STATE-DIAG: Spannungs-Wechsel
 let _lastLoggedVf = null;        // STATE-DIAG: Verfassungs-Wechsel
 let _lastLoggedFlags = '';       // STATE-DIAG: Romance/Gewahrsam/Tod-Flag-Wechsel (serialisiert)
+
+// v7.12.368 (RUF-DIAG, reine Beobachtung - KEINE Spielwirkung): zählt über den Run, wie hart
+// vs. behutsam Karl agiert. Datenbasis für die Frage, ob ein echtes Ruf-System (NPCs reagieren
+// auf Karls Härte) sich lohnt. Aggregiert vorhandene Signale (isPhysical/isBefragung/isFlucht/
+// folterSceneCount/custody) pro gewählter Aktion. NICHTS davon beeinflusst das Spiel.
+let _rufGewaltAktionen = 0;      // physische Konfliktaktionen (Schlag, Schuss, Packen...)
+let _rufBefragungen = 0;         // Befragungen/Gespräche (behutsamer Pfad)
+let _rufNeutralAktionen = 0;     // weder Gewalt noch Befragung (Erkunden, Reise, Beobachten...)
+let _rufFluchtAktionen = 0;      // Flucht/Rückzug
+let _rufCustodyEreignisse = 0;   // wie oft Karl in Gewahrsam geriet
+let _rufLetzteCustodyState = false; // Flanke für Custody-Zählung
 
 
 // VERFASSUNG: Karls koerperlicher Zustand. Skala 1-5.
@@ -20161,6 +20172,9 @@ async function startGame() {
   actionStreak = 0;
   calmStreak = 0;
   intruderCooldown = 0;
+  // v7.12.368 (RUF-DIAG): Härte-Profil-Counter zurücksetzen (reine Beobachtung, kein Leak zwischen Runs)
+  _rufGewaltAktionen = 0; _rufBefragungen = 0; _rufNeutralAktionen = 0;
+  _rufFluchtAktionen = 0; _rufCustodyEreignisse = 0; _rufLetzteCustodyState = false;
   // Reset Inventar auf Startausstattung
   inventory = ['Walther PPK (eigene Pistole)', 'Brieftasche mit Detektiv-Lizenz', 'Notizbuch und Bleistift'];
   // Reset Cast (NPCs im Raum)
@@ -22828,6 +22842,14 @@ async function chooseOption(option) {
   // alles danach Inhalt der Frage ("frag Robert, ob er flieht") - der Flucht-Detektor darf dann
   // NICHT auf ein eingebettetes Wort wie "flieht" anspringen. Befragung hat Vorrang.
   const isFlucht = isFlucht0 && !_beginntMitFrage;
+  // v7.12.368 (RUF-DIAG, reine Beobachtung): die gewählte Aktion ins Härte-Profil einsortieren.
+  // KEINE Spielwirkung - nur Zählung für spätere Entscheidung über ein Ruf-System.
+  try {
+    if (isPhysical) _rufGewaltAktionen++;
+    else if (isBefragung) _rufBefragungen++;
+    else if (isFlucht) _rufFluchtAktionen++;
+    else _rufNeutralAktionen++;
+  } catch (e) { /* Diagnose darf nie brechen */ }
   // v7.12.148: POST-OUTPUT-INTENT-VALIDATOR. Hier den Spieler-Intent aus der Option
   // ableiten und am option-Objekt ablegen (option._intent). performApiCall liest das
   // nach der KI-Antwort und prueft, ob die Aktion umgesetzt wurde (max. 1 Repair).
@@ -27163,6 +27185,29 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           if (_vf !== null) _lastLoggedVf = _vf;
           _lastLoggedFlags = _flags;
         }
+      } catch (e) { /* Diagnose darf Szene nie brechen */ }
+      // v7.12.368 (RUF-DIAG, reine Beobachtung): Härte-Profil pro Szene zusammenfassen. KEINE
+      // Spielwirkung - nur Datenbasis für die spätere Frage, ob ein Ruf-System (NPCs reagieren
+      // auf Karls Härte) sich lohnt. Custody als Flanke zählen (nur beim Übergang frei->Gewahrsam).
+      try {
+        if (karlInStasiCustody && !_rufLetzteCustodyState) _rufCustodyEreignisse++;
+        _rufLetzteCustodyState = !!karlInStasiCustody;
+        const _rufAktionenGesamt = _rufGewaltAktionen + _rufBefragungen + _rufNeutralAktionen + _rufFluchtAktionen;
+        const _gewaltQuote = _rufAktionenGesamt > 0 ? Math.round(100 * _rufGewaltAktionen / _rufAktionenGesamt) : 0;
+        const _behutsamQuote = _rufAktionenGesamt > 0 ? Math.round(100 * _rufBefragungen / _rufAktionenGesamt) : 0;
+        // Grobe Tendenz-Einordnung (nur Label, keine Wertung, keine Wirkung)
+        let _tendenz = 'neutral';
+        if (_rufAktionenGesamt >= 4) {
+          if (_gewaltQuote >= 50 || folterSceneCount >= 2) _tendenz = 'hart/gewaltbereit';
+          else if (_behutsamQuote >= 50 && _gewaltQuote <= 15) _tendenz = 'behutsam/ermittelnd';
+          else if (_gewaltQuote >= 25) _tendenz = 'gemischt, eher hart';
+          else _tendenz = 'gemischt, eher behutsam';
+        }
+        diag('state', 'RUF-DIAG Sz' + sceneCounter + ': Tendenz=' + _tendenz
+          + ' | Gewalt=' + _rufGewaltAktionen + ' (' + _gewaltQuote + '%) · Befragung=' + _rufBefragungen + ' (' + _behutsamQuote + '%)'
+          + ' · neutral=' + _rufNeutralAktionen + ' · Flucht=' + _rufFluchtAktionen
+          + ' · Folterszenen=' + folterSceneCount + ' · Custody-Ereignisse=' + _rufCustodyEreignisse
+          + ' · actionStreak=' + actionStreak + ' calmStreak=' + calmStreak);
       } catch (e) { /* Diagnose darf Szene nie brechen */ }
       // Stagnations-Zähler zurücksetzen. Sonst: ab Szene 30, wenn seit >=6 Szenen kein neuer Beat
       // UND Beats noch unter minHits, EINEN sanften Prompt-Hinweis auf den nächsten fehlenden Beat
