@@ -2864,7 +2864,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.352</div>
+    <div class="start-version">Schatten v7.12.355</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3044,7 +3044,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.352</span>
+    <span>Schatten v7.12.355</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5830,7 +5830,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.352';
+window.SCHATTEN_VERSION = 'v7.12.355';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -9752,7 +9752,12 @@ function syncResolutionFlagsByCaseType(source) {
               + '\nLass in dieser oder einer der naechsten Szenen eine konkrete Spur dazu aufscheinen, bevor Karl den Fall abschliesst.';
           }
         } catch (e) {}
-        if (typeof diag === 'function') diag('drift', 'Abschluss abgelehnt (' + source + '): truthBeats unvollständig - ueberfuehrt/wahrheitErkannt zurückgenommen');
+        if (typeof diag === 'function') {
+          const _fehlLabels = (typeof truthBeatsFehlend === 'function') ? truthBeatsFehlend().map(b => b.label || b.id) : [];
+          const _hitN = (cp && Array.isArray(cp.truthBeatsHit)) ? cp.truthBeatsHit.length : 0;
+          const _minN = (typeof caseSetup.truthBeatsMinHits === 'number') ? caseSetup.truthBeatsMinHits : 3;
+          diag('drift', 'Abschluss ABGELEHNT (' + source + '): truthBeats unvollständig (' + _hitN + '/' + caseSetup.truthBeats.length + ', min ' + _minN + ') - überführt/wahrheitErkannt zurückgenommen. Fehlend: [' + _fehlLabels.join(' · ') + ']');
+        }
       }
     }
   } else if (ct === 'vermisst') {
@@ -15858,6 +15863,21 @@ function renderOptions(scene) {
   }
   // v7.12.177: Sperr-Grund fuer die Bot-Status-Bar merken.
   try { if (window._botFallStatus) window._botFallStatus.resolveLockReason = resolveLockReason; } catch (e) { /* ignore */ }
+  // v7.12.355 (RESOLVE-DIAG): Resolve-Status pro Szene ins Export-Log. War bisher nur in
+  // window._botFallStatus (Bot-Statusbar), im manuellen Spiel also unsichtbar. Beantwortet bei der
+  // Auswertung sofort "warum lässt sich der Fall (nicht) lösen" - für ALLE Falltypen, ohne dass die
+  // Faktoren (Stage/Durchbruch/Indizien/Verdächtiger/Gut/Beats) aus mehreren Zeilen rekonstruiert
+  // werden müssen.
+  if (typeof diag === 'function') {
+    if (showResolveButton) {
+      diag('progress', 'RESOLVE-DIAG Sz' + sceneCounter + ': Button SICHTBAR, ' + (resolveCanClick ? 'KLICKBAR' : 'gesperrt (' + (resolveLockReason || 'unbekannt') + ')')
+        + ' | Stage=' + currentStage + ' Durchbruch=' + (durchbruchErreicht ? 'ja' : 'nein') + ' Indizien=' + indizCount
+        + ' Verdächtiger=' + (verdaechtigerBenannt ? (verdaechtigerKonfrontiert ? 'benannt+konfrontiert' : 'nur benannt') : 'keiner'));
+    } else {
+      diag('progress', 'RESOLVE-DIAG Sz' + sceneCounter + ': Button noch NICHT sichtbar | Stage=' + currentStage + ' Durchbruch=' + (durchbruchErreicht ? 'ja' : 'nein') + ' Indizien=' + indizCount
+        + ' Verdächtiger=' + (verdaechtigerBenannt ? (verdaechtigerKonfrontiert ? 'benannt+konfrontiert' : 'nur benannt') : 'keiner'));
+    }
+  }
 
   if (showResolveButton) {
     const resolveBtn = document.createElement('button');
@@ -25482,7 +25502,13 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       const _ptH = normForMatch(typeof lastUserMessage === 'string' ? lastUserMessage : '');
       const _szH = normForMatch(scene.szene || '');
       // (1) Spielertext signalisiert Übergabe an jemanden
-      const _playerHandover = /\b(uebergib|übergib|uebergeben|haendig|händig|gib (ihr|ihm|es|sie|den|die|das)|reich (ihr|ihm|es|sie|den|die|das)|bring (ihr|ihm)|ueberreich|überreich)\w*/i.test(_ptH);
+      // v7.12.353 (Lektorat v352 P1): Verb-Set erweitert. Vorher fielen natürliche Formulierungen
+      // durch: "übergebe Hilde den Brief", "gib Hilde den Brief" (Eigenname statt Pronomen),
+      // "reiche/bringe/lege ... hin". Jetzt: Übergabe-Verb in vielen Flexionsformen + Aushändigen.
+      // Das großzügigere Verb-Set ist UNGEFÄHRLICH, weil ein Treffer NUR zusammen mit der Szenen-
+      // Bestätigung (_sceneHandover) UND einem passenden Inventar-Item zum Entfernen führt.
+      const _playerHandover = /\b(uebergib|uebergebe|uebergeb|uebergeben|ueberreich\w*|aushaendig\w*|haendig\w*|gib|gebe|gibst|reich|reiche|reichst|bring|bringe|bringst|leg|lege|legst)\b/i.test(_ptH)
+        && /\b(ihr|ihm|ihn|sie|hilde|krause|klient\w*|auftraggeber\w*|schwester|frau|mann|den|die|das|brief\w*|schreiben|mappe|akte|foto|zettel|umschlag|paket|geld|schluessel)\b/i.test(_ptH);
       // (2) Szene bestätigt die Übergabe (Empfangs-/Übergabe-Geste)
       const _sceneHandover = /(drueckst (ihr|ihm|es)?\s?\w*\s?in (die|seine|ihre) hand|legst\s[^.]{0,40}\b(vor (ihr|ihm|sie|ihn)|auf (den|ihren|seinen) (tisch|tresen|schoss))|reichst\s[^.]{0,40}\b(ihr|ihm|hinueber)|(sie|er) nimmt\s[^.]{0,40}\b(entgegen|an sich|in (die|ihre|seine) hand)|haendigst[^.]{0,40}aus|ueberreichst|in (ihre|seine) (zitternden? )?haende?)/i.test(_szH);
       if (_playerHandover && _sceneHandover && Array.isArray(inventory) && inventory.length) {
@@ -26055,9 +26081,28 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
               + '|\\b(ueber|von|nach|wegen)\\s+' + pEsc + '\\b'             // "über/von Mahlke"
               + '|' + pEsc + '\\?\\s'                                       // "Mahlke?" (Rückfrage/Aufgreifen)
               + '|\\b(wo|wie|ob)\\s+(du\\s+)?(diesen?\\s+|den\\s+|die\\s+)?' + pEsc + '\\b'  // "wo du diesen Mahlke findest"
-              + '|' + pEsc + '\\b[^.]{0,30}\\b(sei|seien|haette|waere|habe|haben|koennte|wuerde|verschwand|verschwunden|gewesen)\\b',  // Konjunktiv/Vergangenheit = Bericht
+              + '|' + pEsc + '\\b[^.]{0,30}\\b(sei|seien|haette|waere|koennte|wuerde|verschwand|verschwunden|gewesen)\\b',  // Konjunktiv = Bericht (habe/haben RAUS: zu häufig als Indikativ "ich habe ihn getötet" = Geständnis = Präsenz)
               'i');
-            return re.test(_stxt);
+            if (re.test(_stxt)) return true;
+            // v7.12.354 (Lektorat Achterberg P1): ZEUGENBERICHT IM INDIKATIV. "Vossberg hat mich
+            // bedroht", "Er wusste, dass..." sind Aussagen ÜBER einen Abwesenden (Zeugin erzählt),
+            // grammatisch aber im Indikativ - der Konjunktiv-Check oben fängt sie nicht. Vossberg
+            // landete dadurch fälschlich im Opel auf dem Rücksitz. Muster: "NAME hat mich/mir/uns..."
+            // (Opfer-Perspektive) oder "NAME wusste/wollte/drohte..." (Zustandsbericht Vergangenheit).
+            const reZeuge = new RegExp(
+              pEsc + '\\b\\s+(hat|hatte)\\s+(mich|mir|ihn|sie|uns|euch|dich|dir)\\b'
+              + '|' + pEsc + '\\b\\s+(wusste|wollte|drohte|zwang|verlangte|befahl|schickte|kannte)\\b',
+              'i');
+            if (reZeuge.test(_stxt)) return true;
+            // v7.12.354: FREMD-SPRECHVERB. "Vossberg hat..., flüstert sie" - ein ANDERES Subjekt
+            // (sie/er/Name) spricht, der gesuchte Name ist nur Zitatinhalt. WICHTIG: blockt NICHT
+            // "Vossberg sagt/gesteht" (Name VOR dem Sprechverb = anwesender Täter spricht selbst) -
+            // nur das Muster "NAME ... , <sprechverb> sie/er/<andererName>".
+            const reFremdsprech = new RegExp(
+              pEsc + '\\b[^.\"]{0,80},?\\s*(fluestert|fluesterte|sagt|sagte|erzaehlt|erzaehlte|murmelt|murmelte|berichtet|berichtete|meint|meinte|stoesst|stiess)\\s+(sie|er|der|die|das)\\b',
+              'i');
+            if (reFremdsprech.test(_stxt)) return true;
+            return false;
           });
           if (_bericht) {
             if (typeof diag === 'function') diag('detect', 'Auto-Cast-Reintroduce ÜBERSPRUNGEN: ' + sc.name + ' steht in Bericht-/Erwähnungs-Kontext (jemand spricht ÜBER die Person, z.B. "dass X..." / "X?" / "wo du X findest") - keine physische Präsenz.');
@@ -26195,7 +26240,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       const _kennz = /\bkennzeichen\b|\b[a-z]{1,3}\s*-\s*\d{2,4}\s*-?\s*\d{0,4}\b/i;       // "Kennzeichen" oder B-82-41
       const _fahrzeug = /\b(pobeda|gaz\s*m20|emw|bmw|opel|mercedes|ifa|framo|phaenomen|borgward|ford\s+taunus|limousine|lieferwagen|lkw|motorrad)\b/i;
       const _adresse = /\b(strasse|straße|str\.|allee|platz|gasse|weg|hausnummer|\d{1,3}\.\s*(stock|etage)|lagerhalle|westhafen|hinterhof)\b/i;
-      const _objekt = /\b(schluessel|schlüssel|quittung|frachtbrief|frachtquittung|beleg|dokument|kontonummer|telefonnummer|nummernschild|bakelit-anhaenger|fracht(liste|brief))\b/i;
+      const _objekt = /\b(schluessel|schlüssel|quittung|frachtbrief|frachtquittung|beleg|dokument|passierschein|ausweis|stempel|genehmigung|registrierung|formular|meldeschein|karteikarte|visum|dienstplan|fahrplan|kontonummer|telefonnummer|nummernschild|bakelit-anhaenger|fracht(liste|brief))\b/i;
       const _benennung = /\b(nennt den namen|benennt|der name (lautet|ist)|heisst|heißt|geschwaerzte[rn]? name|geschwärzte[rn]? name|identifizier|name hinter)\w*/i;
       return _kennz.test(_t) || _fahrzeug.test(_t) || _adresse.test(_t) || _objekt.test(_t) || _benennung.test(_t);
     };
@@ -26572,6 +26617,23 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       if (typeof updateTruthBeats === 'function') updateTruthBeats(_progressText);
       if (typeof updateMurderAxes === 'function') updateMurderAxes(_progressText);
       if (typeof updatePoliticalBeats === 'function') updatePoliticalBeats(_progressText);
+      // v7.12.355 (TRUTHBEAT-DIAG): vollständiger Beat-Status NACH den Updates. Für die Auswertung
+      // von wahrheit-Fällen (Brandt/Goerke) ohne manuelle Text-Prüfung: zeigt getroffene + fehlende
+      // Beat-Labels und ob das Abschluss-Gate (truthBeatsErfuellt) gerade greift. Wenn ein wahrheit-
+      // Fall sich nicht lösen lässt, zeigt diese Zeile sofort, WELCHER Beat fehlt und ob der Pflicht-
+      // Beat das Problem ist - statt im Log raten zu müssen.
+      if (typeof diag === 'function' && caseSetup && Array.isArray(caseSetup.truthBeats) && caseSetup.truthBeats.length) {
+        const _hit = (caseProgress && Array.isArray(caseProgress.truthBeatsHit)) ? caseProgress.truthBeatsHit : [];
+        const _min = (typeof caseSetup.truthBeatsMinHits === 'number') ? caseSetup.truthBeatsMinHits : 3;
+        const _fehlend = caseSetup.truthBeats.filter(b => b && b.id && _hit.indexOf(b.id) === -1);
+        const _pflichtBeats = caseSetup.truthBeats.filter(b => b && (b.entlastung || b.pflicht));
+        const _pflichtOk = _pflichtBeats.length === 0 || _pflichtBeats.some(b => _hit.indexOf(b.id) !== -1);
+        const _gateOk = (typeof truthBeatsErfuellt === 'function') ? truthBeatsErfuellt() : '?';
+        diag('progress', 'TRUTHBEAT-DIAG Sz' + sceneCounter + ': ' + _hit.length + '/' + caseSetup.truthBeats.length + ' (min ' + _min + ')'
+          + ' | Pflicht-Beat: ' + (_pflichtOk ? 'OK' : 'FEHLT (' + _pflichtBeats.map(b => b.label || b.id).join('/') + ')')
+          + ' | Gate erfüllt: ' + _gateOk
+          + (_fehlend.length ? ' | fehlend: [' + _fehlend.map(b => b.label || b.id).join(' · ') + ']' : ' | alle Beats getroffen'));
+      }
       // v7.12.295: PROAKTIVE BEAT-FÜHRUNG - spät + sanft (User-Vorgabe). Wenn ein Beat dazukam,
       // Stagnations-Zähler zurücksetzen. Sonst: ab Szene 30, wenn seit >=6 Szenen kein neuer Beat
       // UND Beats noch unter minHits, EINEN sanften Prompt-Hinweis auf den nächsten fehlenden Beat
