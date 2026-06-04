@@ -2864,7 +2864,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.362</div>
+    <div class="start-version">Schatten v7.12.363</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3055,7 +3055,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.362</span>
+    <span>Schatten v7.12.363</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5841,7 +5841,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.362';
+window.SCHATTEN_VERSION = 'v7.12.363';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -5916,6 +5916,13 @@ let lastMainLocation = ''; // v6.58: nur Hauptort vor erstem Komma (fuer Stagnat
 // Wird im Kontext mitgeschickt damit die KI nicht "fahr zu Ort X" anbietet
 // nachdem Karl da schon war. Format: Array von Strings, max 12 Eintraege.
 let visitedLocations = [];
+
+// v7.12.363 (Fine-Tuning-Marker): letzter geloggter Zustand, um Übergänge explizit zu machen.
+let _lastLoggedStage = null;     // STAGE-DIAG: Stage-Wechsel
+let _lastLoggedSpannung = null;  // STATE-DIAG: Spannungs-Wechsel
+let _lastLoggedVf = null;        // STATE-DIAG: Verfassungs-Wechsel
+let _lastLoggedFlags = '';       // STATE-DIAG: Romance/Gewahrsam/Tod-Flag-Wechsel (serialisiert)
+
 
 // VERFASSUNG: Karls koerperlicher Zustand. Skala 1-5.
 // 5 = unverletzt, ausgeruht
@@ -23606,6 +23613,22 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         } else {
           diag('detect', 'Intent-Validierung OK (' + optionForRollback._intent.type + ' umgesetzt)');
         }
+      } else if (!isStart && intentRepairCount >= MAX_INTENT_REPAIRS && optionForRollback && optionForRollback._intent) {
+        // v7.12.363 (REPAIR-OUTCOME, D): Budget erschöpft. Der Validierungsblock oben wird dann
+        // übersprungen - die Szene wird so akzeptiert, wie sie ist. Für Fine-Tuning des Intent-
+        // Validators MÜSSEN wir wissen, ob der eine Repair-Retry GEHOLFEN hat (Intent jetzt
+        // erfüllt) oder ob die Szene trotz Repair noch gebrochen durchgewunken wird. Genau dieser
+        // Ausgang war bisher unsichtbar.
+        try {
+          let _stillBroken = null;
+          try { _stillBroken = validateIntentFollowup(scene, optionForRollback._intent); }
+          catch (e) { _stillBroken = null; }
+          if (_stillBroken) {
+            diag('drift', '⚠ REPAIR-OUTCOME Sz' + sceneCounter + ': Repair-Budget erschöpft, Intent (' + optionForRollback._intent.type + ') WEITERHIN gebrochen (' + _stillBroken + ') - fehlerhafte Szene wird akzeptiert');
+          } else {
+            diag('detect', 'REPAIR-OUTCOME Sz' + sceneCounter + ': Repair ERFOLGREICH - Intent (' + optionForRollback._intent.type + ') nach Retry erfüllt');
+          }
+        } catch (e) { /* ignore */ }
       }
 
       // Metaphern-Zaehler: warne wenn >=2 "wie ein/wie eine"-Vergleiche in einer
@@ -26834,7 +26857,51 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           + ' | Gate erfüllt: ' + _gateOk
           + (_fehlend.length ? ' | fehlend: [' + _fehlend.map(b => b.label || b.id).join(' · ') + ']' : ' | alle Beats getroffen'));
       }
-      // v7.12.295: PROAKTIVE BEAT-FÜHRUNG - spät + sanft (User-Vorgabe). Wenn ein Beat dazukam,
+      // v7.12.363 (STAGE-DIAG): Stage-Stand + Übergänge zentral pro Szene loggen. Die ~34
+      // verstreuten caseProgress.stage-Zuweisungen einzeln zu markern wäre fehleranfällig;
+      // dieser eine Marker zeigt den Stand JEDER Szene + macht jeden Wechsel explizit (mit
+      // stage3-Dauer für die Stage-3-Nachlauf-Analyse: ab wann lösbar vs wann real gelöst).
+      try {
+        if (typeof diag === 'function' && caseProgress) {
+          const _stg = (typeof caseProgress.stage === 'number') ? caseProgress.stage : '?';
+          const _s3 = caseProgress.stage3StartScene || 0;
+          const _s3dauer = (_s3 && typeof sceneCounter === 'number') ? (sceneCounter - _s3) : 0;
+          const _gewechselt = (typeof _lastLoggedStage !== 'undefined' && _lastLoggedStage !== null && _lastLoggedStage !== _stg);
+          diag('progress', 'STAGE-DIAG Sz' + sceneCounter + ': Stage ' + _stg
+            + (_gewechselt ? ' ⟵ WECHSEL von ' + _lastLoggedStage : '')
+            + (_s3 ? ' | Stage3 seit Sz' + _s3 + ' (' + _s3dauer + ' Sz' + (_s3dauer >= 0 ? ', lösbar' : '') + ')' : '')
+            + ' | überführt=' + (!!caseProgress.ueberfuehrt) + ' wahrheitErkannt=' + (!!caseProgress.wahrheitErkannt)
+            + ' zielGefunden=' + (!!caseProgress.zielpersonGefunden) + ' klientGesprochen=' + (!!caseProgress.klientGesprochen));
+          _lastLoggedStage = _stg;
+        }
+      } catch (e) { /* Diagnose darf Szene nie brechen */ }
+      // v7.12.363 (STATE-DIAG, G+H): Spannung/Verfassung + Romance/Gewahrsam/Tod pro Szene,
+      // jeder Wechsel explizit. Liefert die Daten für Outcome-Monokultur-Analyse: zeigt ob ein
+      // Run überhaupt Spannungsspitzen, Verletzungen, Gewahrsam oder Romance erreicht - oder ob
+      // alles flach Richtung "Fall gelöst" läuft (Failure-State laut Projekt-Doku).
+      try {
+        if (typeof diag === 'function') {
+          const _sp = (typeof scene !== 'undefined' && scene && typeof scene.spannung === 'number') ? scene.spannung
+                      : ((typeof lastSpannung === 'number') ? lastSpannung : null);
+          const _vf = (typeof verfassung === 'number') ? verfassung : null;
+          const _spW = (_lastLoggedSpannung !== null && _sp !== null && _lastLoggedSpannung !== _sp);
+          const _vfW = (_lastLoggedVf !== null && _vf !== null && _lastLoggedVf !== _vf);
+          // Romance-Aggregat
+          const _rcv = (typeof romanceReceptive === 'object' && romanceReceptive) ? Object.keys(romanceReceptive).filter(k => romanceReceptive[k] === true).length : 0;
+          const _rcli = (typeof romanceClimaxed === 'object' && romanceClimaxed) ? Object.keys(romanceClimaxed).filter(k => romanceClimaxed[k] === true).length : 0;
+          const _rrej = (typeof romanceRejected === 'object' && romanceRejected) ? Object.keys(romanceRejected).filter(k => romanceRejected[k] === true).length : 0;
+          const _cust = (typeof karlInStasiCustody !== 'undefined') ? !!karlInStasiCustody : false;
+          const _tot = (_vf === 0);
+          const _flags = 'cust=' + _cust + ' tot=' + _tot + ' rcv=' + _rcv + ' rcli=' + _rcli + ' rrej=' + _rrej;
+          const _flagsW = (_lastLoggedFlags && _lastLoggedFlags !== _flags);
+          diag('state', 'STATE-DIAG Sz' + sceneCounter + ': Spannung=' + (_sp === null ? '?' : _sp) + (_spW ? '⟵' + _lastLoggedSpannung : '')
+            + ' Verfassung=' + (_vf === null ? '?' : _vf) + (_vfW ? '⟵' + _lastLoggedVf : '')
+            + ' | ' + _flags + (_flagsW ? '  [FLAG-WECHSEL von: ' + _lastLoggedFlags + ']' : ''));
+          if (_sp !== null) _lastLoggedSpannung = _sp;
+          if (_vf !== null) _lastLoggedVf = _vf;
+          _lastLoggedFlags = _flags;
+        }
+      } catch (e) { /* Diagnose darf Szene nie brechen */ }
       // Stagnations-Zähler zurücksetzen. Sonst: ab Szene 30, wenn seit >=6 Szenen kein neuer Beat
       // UND Beats noch unter minHits, EINEN sanften Prompt-Hinweis auf den nächsten fehlenden Beat
       // setzen. Nur Lenkung (kein erzwungener Button, kein Abschluss-Block). Max 3x/Run, damit es
@@ -28476,6 +28543,17 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     try { markPhase('nach-resolutionSignals@Sz' + (typeof sceneCounter === 'number' ? sceneCounter : '?')); } catch(e){}
     try { markPhase('vor-klientBerichtet@Sz' + (typeof sceneCounter === 'number' ? sceneCounter : '?')); } catch(e){}
     if (scene.klient_berichtet === true && (caseProgress.ueberfuehrt || caseProgress.zielpersonGefunden || caseProgress.wahrheitErkannt)) {
+      // v7.12.363 (REPORT-DIAG, A): Doppel-Bericht-Erkennung. Brandt-Run Sz43/44 hatte ZWEI
+      // klient_berichtet-Finals hintereinander. Dieser Marker zeigt, wenn die KI erneut einen
+      // Klientenbericht liefert, obwohl Karl bereits berichtet hat oder der Fall schon gelöst
+      // ist - die Datenbasis, um zu entscheiden, ob ein harter Zweit-Bericht-Block nötig wird.
+      try {
+        if (typeof diag === 'function' && (caseProgress.klientGesprochen || caseProgress.istGelöst || caseProgress.abschlussSzeneGerendert)) {
+          diag('drift', 'REPORT-DIAG ⚠ ZWEIT-BERICHT Sz' + sceneCounter + ': scene.klient_berichtet=true, aber bereits berichtet (klientGesprochen='
+            + (!!caseProgress.klientGesprochen) + ' istGelöst=' + (!!caseProgress.istGelöst) + ' abschlussGerendert=' + (!!caseProgress.abschlussSzeneGerendert)
+            + ') → möglicher Doppel-Bericht/Logikbruch');
+        }
+      } catch (e) { /* ignore */ }
       // v7.9.41: Stage-4-Sperre fuer beschatten/wahrheit. Anlass: Kessler-Run
       // v7.9.38 - 9 Szenen vom Start bis "Fall geloest" (Stage 1->2->3->4 in
       // Sz 4,7,8,9). Mistral hat klient_berichtet:true direkt nach Stage 3
