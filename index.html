@@ -2864,7 +2864,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.347</div>
+    <div class="start-version">Schatten v7.12.348</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3044,7 +3044,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.347</span>
+    <span>Schatten v7.12.348</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5830,7 +5830,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.347';
+window.SCHATTEN_VERSION = 'v7.12.348';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -15479,12 +15479,18 @@ function renderOptions(scene) {
     && !romanceBlockedBySpannung;
   // v7.12.17: EXKLUSIV - "Naeher kommen" verschwindet sobald "Nacht verbringen"
   // verfuegbar ist (vorher waren bei Tension 4 beide sichtbar - User-Befund).
+  // v7.12.348 (Krause-Run 10:36 Szene 16, Benjamin-Freigabe): Die frühere Schranke
+  // "romCurrentTension < 5" riss bei Maximal-Tension TAGSÜBER ein Loch: "Näher kommen"
+  // verschwand (Tension=5), "Nacht verbringen" war noch nicht da (braucht Abend/Nacht)
+  // -> gar kein Romance-Button trotz intimer Szene. Jetzt: "Näher kommen" darf auch bei
+  // Tension 5 erscheinen, SOLANGE "Nacht verbringen" nicht verfügbar ist. Das regelt bereits
+  // !showOvernightButton (abends/nachts ab Tension>=4 ist Overnight true -> Näher-kommen aus,
+  // nur der Climax-Button bleibt). Die <5-Schranke ist damit überflüssig und wird entfernt.
   const showRomanceButton = romanceNpcInScene
     && !romanceNpcRejected
     && !romanceBlockedByCustody
     && !showOvernightButton
     && romanticClicksSinceProgress < 3
-    && romCurrentTension < 5
     && !romanceBlockedBySpannung;
 
   if (showRomanceButton) {
