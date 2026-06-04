@@ -2864,7 +2864,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.343</div>
+    <div class="start-version">Schatten v7.12.344</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3044,7 +3044,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.343</span>
+    <span>Schatten v7.12.344</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5830,7 +5830,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.343';
+window.SCHATTEN_VERSION = 'v7.12.344';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -8420,8 +8420,23 @@ function stopSpeakCurrent() {
 // Button bzw. den A/B/C/D-Optionen. Jetzt sitzt er im Fluss am Ende des Szenentextes.
 // Wird von renderLog() am Ende aufgerufen.
 function updateSpeakFabVisibility() {
-  const fab = document.getElementById('speak-fab');
-  if (!fab) return;
+  let fab = document.getElementById('speak-fab');
+  // v7.12.344: SELBSTHEILUNG. Befund (Windows-Chrome): der Button war komplett aus dem DOM
+  // verschwunden (existiert:false) - er wird in die Szene innerhalb #log verschoben, und wenn
+  // der Rettungs-Mechanismus beim Log-Leeren mal nicht greift, löscht innerHTML='' ihn endgültig
+  // und er kommt nie wieder. Statt hier nur auszusteigen, erzeugen wir ihn bei Bedarf neu - das
+  // ist robust gegen jeden Verlust-Pfad.
+  if (!fab) {
+    fab = document.createElement('button');
+    fab.className = 'speak-fab hidden';
+    fab.id = 'speak-fab';
+    fab.setAttribute('onclick', 'toggleSpeakCurrent(event)');
+    fab.setAttribute('title', 'Tippen: Vorlesen. Lang druecken: Sound-Einstellungen');
+    fab.setAttribute('aria-label', 'Vorlesen');
+    fab.textContent = '🔊';
+    document.body.appendChild(fab);
+    if (typeof attachSpeakFabLongPress === 'function') attachSpeakFabLongPress(fab);
+  }
   const currentScene = document.querySelector('.scene-entry.current');
   const hasScene = !!(currentScene && currentScene.querySelector('.scene-text'));
   if (hasScene) {
@@ -8538,40 +8553,44 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   // v7.5: Long-Press auf den Vorlesen-FAB oeffnet die Stimm-Auswahl.
   // Kurzes Tippen feuert den normalen onclick (toggleSpeakCurrent).
-  const fab = document.getElementById('speak-fab');
-  if (fab) {
-    let longPressTimer = null;
-    let longPressFired = false;
-    fab.addEventListener('pointerdown', (e) => {
-      longPressFired = false;
-      longPressTimer = setTimeout(() => {
-        longPressFired = true;
-        // Wenn gerade vorgelesen wird, erst stoppen
-        if (typeof speakCurrentActive !== 'undefined' && speakCurrentActive) {
-          stopSpeakCurrent();
-        }
-        showVoicePicker();
-      }, 600);
-    });
-    const cancelLongPress = () => {
-      if (longPressTimer) {
-        clearTimeout(longPressTimer);
-        longPressTimer = null;
-      }
-    };
-    fab.addEventListener('pointerup', cancelLongPress);
-    fab.addEventListener('pointerleave', cancelLongPress);
-    fab.addEventListener('pointercancel', cancelLongPress);
-    // Click-Handler wird durch Long-Press unterdrueckt
-    fab.addEventListener('click', (e) => {
-      if (longPressFired) {
-        e.preventDefault();
-        e.stopPropagation();
-        longPressFired = false;
-      }
-    }, true);  // capture-phase damit der onclick=toggleSpeakCurrent danach nicht feuert
-  }
+  // v7.12.344: in attachSpeakFabLongPress() ausgelagert, damit ein neu erzeugter FAB
+  // (Selbstheilung in updateSpeakFabVisibility) dieselben Handler bekommt.
+  attachSpeakFabLongPress(document.getElementById('speak-fab'));
 });
+
+// v7.12.344: Long-Press-Handler-Setup, wiederverwendbar. Guard via dataset gegen Doppel-Anhängen.
+function attachSpeakFabLongPress(fab) {
+  if (!fab || fab.dataset.lpAttached === '1') return;
+  fab.dataset.lpAttached = '1';
+  let longPressTimer = null;
+  let longPressFired = false;
+  fab.addEventListener('pointerdown', (e) => {
+    longPressFired = false;
+    longPressTimer = setTimeout(() => {
+      longPressFired = true;
+      if (typeof speakCurrentActive !== 'undefined' && speakCurrentActive) {
+        stopSpeakCurrent();
+      }
+      showVoicePicker();
+    }, 600);
+  });
+  const cancelLongPress = () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    }
+  };
+  fab.addEventListener('pointerup', cancelLongPress);
+  fab.addEventListener('pointerleave', cancelLongPress);
+  fab.addEventListener('pointercancel', cancelLongPress);
+  fab.addEventListener('click', (e) => {
+    if (longPressFired) {
+      e.preventDefault();
+      e.stopPropagation();
+      longPressFired = false;
+    }
+  }, true);  // capture-phase damit der onclick=toggleSpeakCurrent danach nicht feuert
+}
 
 // v6.63: DEPLOY-MODAL FUER GITHUB-PUSH
 // Oeffnet ein Modal in dem Admin eine Datei + Inhalt eingibt, der dann ueber
