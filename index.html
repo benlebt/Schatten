@@ -2864,7 +2864,7 @@
     <div class="start-music-hint" id="start-music-hint">
       <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
     </div>
-    <div class="start-version">Schatten v7.12.345</div>
+    <div class="start-version">Schatten v7.12.346</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3044,7 +3044,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.345</span>
+    <span>Schatten v7.12.346</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5830,7 +5830,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.345';
+window.SCHATTEN_VERSION = 'v7.12.346';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -26191,6 +26191,15 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         }
       }
     }
+    // v7.12.346 (Krause-Run 10:18 THEFT-DIAG ROOT CAUSE): DIEBSTAHL-ZIELOBJEKT-VERARBEITUNG
+    // MUSS bei JEDER Szene laufen - nicht nur wenn die Szene neue Indizien liefert. Befund: der
+    // Aufruf sass faelschlich INNERHALB von "if (scene.indiz_neu.length > 0)" (der Kommentar am
+    // Aufruf behauptete schon "jede-Szene-Ebene", stimmte aber nicht mehr). In der Etui-Schnapp-
+    // Szene gab es KEIN neues Indiz (eine Aktion, kein Indiz) -> Block uebersprungen ->
+    // processTheftTargetState lief nie -> diebesgutZurueck nie gesetzt, obwohl das Etui ins
+    // Inventar kam -> FALL LÖSEN ewig gesperrt ("Diebesgut noch nicht zurueck"). Jetzt VOR dem
+    // Indiz-Block, echt auf jede-Szene-Ebene.
+    processTheftTargetState(scene);
     if (Array.isArray(scene.indiz_neu) && scene.indiz_neu.length > 0) {
       // Synonym-Map: gleiche Konzepte mit verschiedenen Begriffen werden gleichbehandelt
       // damit Mistral nicht "Feuerzeug" und "Zigarettenanzuender" als zwei Indizien fuer
@@ -26290,12 +26299,9 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       // !tatverdaechtiger)" - er lief also nur solange kein Verdaechtiger feststand.
       // Im 17:42-Run war Erika ab Sz22 als Verdaechtige gesetzt; als das Etui Sz29 ins
       // Inventar kam, war der Block laengst tot -> Stage 3 sprang erst Sz31 ueber einen
-      // anderen Pfad, "Fall loesen" war 2 Szenen lang nicht klickbar (User-Bug). Jetzt
-      // steht der Block HIER, vor dem stage===0-Check, auf der jeden-Szene-Ebene.
-      // Greift bei diebstahl sobald das ECHTE Diebesgut bei Karl ist (Inventar ODER
-      // Besitz-Verb im Text), Surrogate ausgeschlossen. v7.12.155: ausgelagert nach
-      // processTheftTargetState(scene) - verhaltensneutral, siehe Funktionsdefinition.
-      processTheftTargetState(scene);
+      // anderen Pfad, "Fall loesen" war 2 Szenen lang nicht klickbar (User-Bug).
+      // v7.12.346: processTheftTargetState wurde VOR diesen Indiz-Block gezogen (jede-Szene-
+      // Ebene) - der frühere Aufruf an dieser Stelle ist entfernt, sonst liefe er doppelt.
       // Stage-Aufstieg: ab 3 Indizien -> Stage 1
       // v7.8: NICHT in der allerersten Szene triggern - die KI generiert dort
       // oft 3-4 "Indizien" die nur das Klient-Briefing wiedergeben ("Erwin ist
