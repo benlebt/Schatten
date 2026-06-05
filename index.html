@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Schatten · Ein Krimi-Adventure</title>
 <style>
   :root {
@@ -67,14 +67,28 @@
     0%, 100% { opacity: 0.4; }
     50% { opacity: 1; }
   }
+  /* v7.12.374: Mobile-Fix - horizontales Scrollen/Verschieben komplett unterbinden.
+     User-Befund iPhone: Seite liess sich seitlich verschieben, Text+Menue rutschten
+     aus dem lesbaren Bereich. html UND body brauchen overflow-x:hidden + width-Begrenzung;
+     touch-action:pan-y erlaubt nur vertikales Scrollen (kein horizontales Pan, kein Pinch). */
+  html {
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100%;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
   body {
     margin: 0;
     min-height: 100vh;
+    width: 100%;
+    max-width: 100%;
     background: var(--bg);
     color: var(--fg);
     font-family: 'Courier New', Courier, monospace;
     position: relative;
     overflow-x: hidden;
+    touch-action: pan-y;
   }
   body::before {
     content: '';
@@ -408,10 +422,11 @@
      - status-loc komplett ausblenden (steht in Szene) */
   @media (max-width: 430px) {
     .status-bar {
-      padding: 8px 64px 8px 10px;
+      padding: 13px 70px 13px 12px;
       gap: 5px;
       font-size: 9px;
       letter-spacing: 1px;
+      min-height: 22px;
     }
     .status-bar .status-date {
       font-size: 10px; /* etwas kleiner, aber sichtbar */
@@ -438,7 +453,7 @@
   @media (max-width: 380px) {
     .status-bar {
       gap: 4px;
-      padding: 7px 60px 7px 8px;
+      padding: 12px 66px 12px 10px;
     }
     .status-bar .hunger-dots,
     .status-bar .romance-dots {
@@ -474,6 +489,8 @@
     max-height: calc(100vh - 40px);
     max-height: calc(100dvh - 40px - env(safe-area-inset-bottom, 0px));
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
     border-radius: 4px;
   }
   .status-popup-title {
@@ -488,9 +505,9 @@
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    padding: 10px 0;
+    padding: 12px 0;
     border-bottom: 1px solid rgba(200,191,168,0.08);
-    font-size: 13px;
+    font-size: 15px;
   }
   .status-popup-row.status-popup-row-block {
     display: block;
@@ -502,9 +519,9 @@
   .status-popup-row.status-popup-row-block .status-popup-value {
     text-align: left;
     margin-left: 0;
-    line-height: 1.7;
+    line-height: 1.8;
     white-space: pre-line;
-    font-size: 12px;
+    font-size: 14px;
   }
   .status-popup-row:last-of-type {
     border-bottom: none;
@@ -512,9 +529,9 @@
   }
   .status-popup-label {
     color: #b0b0b0;
-    letter-spacing: 2px;
+    letter-spacing: 1.5px;
     text-transform: uppercase;
-    font-size: 10px;
+    font-size: 12px;
   }
   .status-popup-value {
     color: var(--fg-bright);
@@ -539,15 +556,22 @@
   .status-popup-close:hover {
     background: rgba(200,191,168,0.08);
   }
-  /* v7.11.44: Klickbare Personen-Eintraege im Status-Popup */
+  /* v7.11.44 / v7.12.374: Klickbare Personen-Eintraege im Status-Popup.
+     Mobile-Fix: groessere Touch-Flaeche (Padding + Zeilenabstand), damit Personen
+     auf dem iPhone leicht antippbar sind. Vorher nur dünne dotted-Linie = schwer zu treffen. */
   .char-link {
     cursor: pointer;
-    border-bottom: 1px dotted rgba(200,191,168,0.45);
-    transition: color 0.15s ease, border-color 0.15s ease;
+    display: inline-block;
+    padding: 5px 4px;
+    margin: 2px 0;
+    border-bottom: 1px dotted rgba(200,191,168,0.5);
+    transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+    border-radius: 2px;
   }
-  .char-link:hover {
+  .char-link:hover, .char-link:active {
     color: var(--fg-bright);
-    border-bottom-color: rgba(200,191,168,0.7);
+    border-bottom-color: rgba(200,191,168,0.8);
+    background: rgba(200,160,96,0.10);
   }
   .char-tag {
     opacity: 0.7;
@@ -2234,16 +2258,16 @@
   /* Settings menu */
   .settings-btn {
     position: fixed;
-    top: 16px;
-    right: 16px;
+    top: 14px;
+    right: 14px;
     z-index: 100;
-    background: rgba(10,10,15,0.8);
+    background: rgba(10,10,15,0.85);
     border: 1px solid rgba(200,191,168,0.35);
     color: var(--fg);
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
-    font-size: 18px;
+    font-size: 21px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2677,6 +2701,7 @@
 <div id="settings-menu" class="settings-menu hidden" onclick="event.stopPropagation()">
   <div class="settings-info" id="settings-provider-info">Provider: lade...</div>
   <div class="settings-info settings-version" id="settings-version-info">Schatten</div>
+  <button onclick="showStatusDetails()">📋 Aktueller Stand</button>
   <button onclick="exportTranscript(event)">📋 Verlauf kopieren</button>
   <button onclick="shareTranscript(event)">📤 Verlauf teilen</button>
   <button onclick="downloadTranscript(event)">💾 Verlauf als Datei</button>
@@ -2704,10 +2729,10 @@
   <div class="settings-info">Spielmodus (Musik &amp; Vorlesen)</div>
   <div class="playmode-select-wrap">
     <select id="playmode-select" onchange="setPlayMode(this.value,'settings')">
-      <option value="still">Still — keine Musik, kein Vorlesen</option>
-      <option value="stimmung">Stimmung — Musik an, Vorlesen per Klick</option>
-      <option value="hoerbuch">Hörbuch — Musik an, Szenen vorgelesen</option>
-      <option value="hoerbuch_plus">Hörbuch Plus — Szenen + Optionen vorgelesen</option>
+      <option value="still">Still: keine Musik, kein Vorlesen</option>
+      <option value="stimmung">Stimmung: Musik an, Vorlesen per Klick</option>
+      <option value="hoerbuch">Hörbuch: Musik an, Szenen vorgelesen</option>
+      <option value="hoerbuch_plus">Hörbuch Plus: Szenen + Optionen vorgelesen</option>
     </select>
   </div>
 
@@ -2953,14 +2978,14 @@
     <br id="continue-game-br" style="display:none;">
     <button class="btn-primary" onclick="showSetupSelector()">Fall auswählen</button>
     <br>
-    <button class="btn-howto" onclick="showHowTo()">? So funktioniert's — bitte einmal lesen</button>
+    <button class="btn-howto" onclick="showHowTo()">? So funktioniert's (bitte einmal lesen)</button>
     <!-- v7.12.373: Spielmodus-Auswahl ersetzt den alten Musik-an/aus-Button. Vier Modi
          untereinander; der gewaehlte ist hervorgehoben. Steuert Musik UND Vorlesen.
          Viele Tester wussten nicht, dass Musik + Vorlesen existieren - daher hier prominent
          direkt vor dem Start sichtbar. -->
     <div class="playmode-box" id="playmode-box">
       <div class="playmode-title">Spielmodus</div>
-      <div class="playmode-subtitle">Schatten kann mit Musik und Vorlesefunktion gespielt werden. Wähle, wie du spielen möchtest — später jederzeit in den Einstellungen änderbar.</div>
+      <div class="playmode-subtitle">Schatten kann mit Musik und Vorlesefunktion gespielt werden. Wähle, wie du spielen möchtest. Später jederzeit in den Einstellungen änderbar.</div>
       <div class="playmode-list">
         <button class="playmode-btn" id="playmode-btn-still" onclick="setPlayMode('still','start')">
           <span class="pm-label">Still</span>
@@ -2980,7 +3005,7 @@
         </button>
       </div>
     </div>
-    <div class="start-version">Schatten v7.12.373</div>
+    <div class="start-version">Schatten v7.12.374</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3181,7 +3206,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.373</span>
+    <span>Schatten v7.12.374</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5979,7 +6004,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.373';
+window.SCHATTEN_VERSION = 'v7.12.374';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
