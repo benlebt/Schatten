@@ -740,6 +740,90 @@
     padding-top: 16px;
     border-top: 1px solid rgba(200,191,168,0.1);
   }
+  /* v7.12.373: Spielmodus-Auswahl auf der Startseite (4 Modi untereinander) */
+  .playmode-box {
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid rgba(200,191,168,0.1);
+  }
+  .playmode-title {
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .playmode-subtitle {
+    font-size: 12px;
+    color: rgba(200,191,168,0.6);
+    margin-bottom: 14px;
+    line-height: 1.4;
+  }
+  .playmode-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: 360px;
+    margin: 0 auto;
+  }
+  .playmode-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    background: rgba(200,191,168,0.04);
+    border: 1px solid rgba(200,191,168,0.18);
+    color: var(--ink, #c8bfa8);
+    padding: 11px 16px;
+    cursor: pointer;
+    font-family: inherit;
+    border-radius: 3px;
+    text-align: left;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .playmode-btn:hover {
+    background: rgba(200,160,96,0.10);
+    border-color: rgba(200,160,96,0.5);
+  }
+  .playmode-btn .pm-label {
+    font-size: 13px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  .playmode-btn .pm-desc {
+    font-size: 11px;
+    color: rgba(200,191,168,0.55);
+    letter-spacing: 0.3px;
+    text-transform: none;
+  }
+  .playmode-btn.playmode-active {
+    background: rgba(200,160,96,0.18);
+    border-color: var(--accent);
+    color: #f0d4a0;
+  }
+  .playmode-btn.playmode-active .pm-label::before {
+    content: "▸ ";
+    color: var(--accent);
+  }
+  .playmode-btn.playmode-active .pm-desc {
+    color: rgba(240,212,160,0.8);
+  }
+  /* Settings-Dropdown fuer den Spielmodus */
+  .playmode-select-wrap {
+    margin: 10px 0;
+  }
+  #playmode-select {
+    width: 100%;
+    background: rgba(20,18,16,0.9);
+    border: 1px solid var(--accent);
+    color: #f0d4a0;
+    padding: 9px 12px;
+    font-family: inherit;
+    font-size: 13px;
+    border-radius: 3px;
+    cursor: pointer;
+  }
   /* v7.11.67: Anleitungs-Seite ("So funktioniert's") */
   .howto-screen {
     max-width: 560px;
@@ -2613,6 +2697,20 @@
     <button type="button" class="fontsize-btn" data-scale="1.5" onclick="setReadingScale(1.5, event)">A<small>+++</small></button>
   </div>
 
+  <div class="settings-divider"></div>
+
+  <!-- v7.12.373: Spielmodus-Dropdown ersetzt den alten Musik-an/aus-Schalter. Steuert Musik
+       UND Vorlesen zentral. Aenderung wirkt sofort (Musik wird passend gestartet/gestoppt). -->
+  <div class="settings-info">Spielmodus (Musik &amp; Vorlesen)</div>
+  <div class="playmode-select-wrap">
+    <select id="playmode-select" onchange="setPlayMode(this.value,'settings')">
+      <option value="still">Still — keine Musik, kein Vorlesen</option>
+      <option value="stimmung">Stimmung — Musik an, Vorlesen per Klick</option>
+      <option value="hoerbuch">Hörbuch — Musik an, Szenen vorgelesen</option>
+      <option value="hoerbuch_plus">Hörbuch Plus — Szenen + Optionen vorgelesen</option>
+    </select>
+  </div>
+
   <!-- v6.60: Audio-Loop fuer Atmosphaere-Musik (instrumentaler Detektiv-Loop) -->
   <!-- v7.12.73 / v7.12.358: 10 Tracks (music1..10.mp3) in immer neu gewuerfelter Reihenfolge,
        Endlosschleife. KEIN loop-Attribut mehr (das wuerde nur EINEN Track loopen);
@@ -2855,16 +2953,34 @@
     <br id="continue-game-br" style="display:none;">
     <button class="btn-primary" onclick="showSetupSelector()">Fall auswählen</button>
     <br>
-    <button class="btn-howto" onclick="showHowTo()">? So funktioniert's</button>
-    <!-- v7.12.25: Musik-Button prominenter. User-Tester am Pool/Sonne fand den
-         Button nicht (war btn-tertiary mit niedrigem Kontrast). Jetzt eigene
-         btn-music-Klasse mit Akzentfarbe + Note-Symbol, klar sichtbar.
-         "Zufaellige Ermittlung" entfernt (User-Wunsch) - die Fall-Auswahl
-         ist der bewusste Einstieg, kein blinder Sprung. -->
-    <div class="start-music-hint" id="start-music-hint">
-      <button class="btn-music" onclick="toggleMusicFromStart(event)" id="start-music-btn">♪ Hintergrundmusik einschalten</button>
+    <button class="btn-howto" onclick="showHowTo()">? So funktioniert's — bitte einmal lesen</button>
+    <!-- v7.12.373: Spielmodus-Auswahl ersetzt den alten Musik-an/aus-Button. Vier Modi
+         untereinander; der gewaehlte ist hervorgehoben. Steuert Musik UND Vorlesen.
+         Viele Tester wussten nicht, dass Musik + Vorlesen existieren - daher hier prominent
+         direkt vor dem Start sichtbar. -->
+    <div class="playmode-box" id="playmode-box">
+      <div class="playmode-title">Spielmodus</div>
+      <div class="playmode-subtitle">Schatten kann mit Musik und Vorlesefunktion gespielt werden. Wähle, wie du spielen möchtest — später jederzeit in den Einstellungen änderbar.</div>
+      <div class="playmode-list">
+        <button class="playmode-btn" id="playmode-btn-still" onclick="setPlayMode('still','start')">
+          <span class="pm-label">Still</span>
+          <span class="pm-desc">Keine Musik, kein Vorlesen</span>
+        </button>
+        <button class="playmode-btn" id="playmode-btn-stimmung" onclick="setPlayMode('stimmung','start')">
+          <span class="pm-label">Stimmung</span>
+          <span class="pm-desc">Musik an · Vorlesen per Klick auf das 🔊-Symbol</span>
+        </button>
+        <button class="playmode-btn" id="playmode-btn-hoerbuch" onclick="setPlayMode('hoerbuch','start')">
+          <span class="pm-label">Hörbuch</span>
+          <span class="pm-desc">Musik an · jede Szene wird automatisch vorgelesen</span>
+        </button>
+        <button class="playmode-btn" id="playmode-btn-hoerbuch_plus" onclick="setPlayMode('hoerbuch_plus','start')">
+          <span class="pm-label">Hörbuch Plus</span>
+          <span class="pm-desc">Musik an · Szenen + Handlungsoptionen werden vorgelesen</span>
+        </button>
+      </div>
     </div>
-    <div class="start-version">Schatten v7.12.370</div>
+    <div class="start-version">Schatten v7.12.373</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -2877,6 +2993,16 @@
       <p>Du bist <strong>Karl Mauer</strong>, Privatdetektiv im geteilten Berlin von 1953, geschieden, abgebrannt, zynisch, aber zäh. Ein Klient heuert dich an: ein vermisster Ehemann, ein ungeklärter Mord, ein Diebstahl, ein Verdächtiger, dessen Unschuld bewiesen werden soll. Manchmal sollst du auch jemanden beschatten oder einer heiklen Wahrheit auf den Grund gehen. Deine Aufgabe ist, den Fall zu lösen.</p>
       <p>Eine <strong>KI erzählt jede Szene frisch</strong>, keine zwei Partien sind gleich. Du liest, was passiert, und wählst dann, was Karl als Nächstes tut. Daraus entsteht die nächste Szene. Wie ein interaktiver Kriminalroman, der auf dich reagiert, mit einer guten Portion Selbstironie und Noir-Schmäh.</p>
       <p>Erwarte keinen perfekten Realismus. Betrachte es eher wie ein GTA in Schwarzweiß: Du kannst fast alles tun. Jemanden offensiv anfahren oder mit ihm flirten, auf Gangster schießen oder absurde Gespräche mit ihnen führen, einen Verdächtigen bestechen oder ihm eine Torte ins Gesicht werfen. Die Welt spielt mit, nimmt deine Aktionen ernst und reagiert mit Konsequenzen, oftmals auf ihre ganz eigene, fantasievolle Art. Genau darin liegt der Spaß.</p>
+    </div>
+
+    <div class="howto-section">
+      <h3>🎧 Spielmodus: Musik &amp; Vorlesen</h3>
+      <p>Schatten kannst du <strong>still lesen</strong> oder dir als <strong>Hörbuch vorlesen lassen</strong>, mit stimmungsvoller Hintergrundmusik. Den Modus wählst du direkt auf der Startseite vor dem Spielen, und kannst ihn jederzeit in den <strong>Einstellungen</strong> (Zahnrad oben) umstellen.</p>
+      <div class="howto-stat"><b>Still:</b> Keine Musik, kein Vorlesen. Du liest selbst, in Ruhe.</div>
+      <div class="howto-stat"><b>Stimmung:</b> Hintergrundmusik läuft. Vorlesen nur, wenn du auf das Lautsprecher-Symbol <span style="white-space:nowrap;">🔊</span> tippst.</div>
+      <div class="howto-stat"><b>Hörbuch:</b> Musik läuft, und <strong>jede neue Szene wird automatisch vorgelesen</strong>, ohne dass du etwas tun musst. Vorgelesen wird der Szenentext, nicht die Handlungsoptionen.</div>
+      <div class="howto-stat"><b>Hörbuch Plus:</b> Wie Hörbuch, aber es werden <strong>auch die Handlungsoptionen</strong> (A, B, C, D und die besonderen Möglichkeiten) mit vorgelesen.</div>
+      <p style="margin-top:12px;">Beim manuellen Vorlesen (Modus <strong>Stimmung</strong>) findest du das Lautsprecher-Symbol <span style="white-space:nowrap;">🔊</span> am rechten Rand der Szene. Einmal tippen startet das Vorlesen, noch einmal tippen stoppt es. In den beiden Hörbuch-Modi passiert das automatisch bei jeder neuen Szene, du musst nichts klicken.</p>
     </div>
 
     <div class="howto-section">
@@ -3055,7 +3181,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.370</span>
+    <span>Schatten v7.12.373</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5853,7 +5979,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.370';
+window.SCHATTEN_VERSION = 'v7.12.373';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -7294,6 +7420,8 @@ function toggleSettings(event) {
     if (typeof syncDebugModelSelect === 'function') syncDebugModelSelect();
     // v7.12.135: aktiven Schriftgroessen-Button markieren
     if (typeof loadReadingScale === 'function') loadReadingScale();
+    // v7.12.373: Spielmodus-Dropdown auf aktuellen Modus setzen
+    if (typeof syncPlayModeUI === 'function') syncPlayModeUI();
   }
   menu.classList.toggle('hidden');
 }
@@ -7437,6 +7565,102 @@ function advanceMusicTrack() {
   playMusicTrack(audio).catch(err => {
     console.warn('[Schatten] Musik-Weiterschaltung fehlgeschlagen:', err);
   });
+}
+
+// v7.12.373 (User-Wunsch: Spielmodus-Schalter). Vier Modi ersetzen den alten Musik-an/aus-Button.
+// Der Modus steuert Musik UND Vorlesen zentral. localStorage-Key: schatten-playmode.
+//   still        - keine Musik, kein Vorlesen
+//   stimmung     - Musik an, Vorlesen nur per Lautsprecher-Klick (altes manuelles Verhalten)
+//   hoerbuch     - Musik an, JEDE neue Szene wird automatisch vorgelesen (nur Szenentext, OHNE Optionen)
+//   hoerbuch_plus- Musik an, jede neue Szene automatisch vorgelesen INKL. Handlungsoptionen
+const PLAYMODES = ['still', 'stimmung', 'hoerbuch', 'hoerbuch_plus'];
+const PLAYMODE_LABELS = {
+  still: 'Still',
+  stimmung: 'Stimmung',
+  hoerbuch: 'Hörbuch',
+  hoerbuch_plus: 'Hörbuch Plus'
+};
+const PLAYMODE_DESC = {
+  still: 'Keine Musik, kein Vorlesen',
+  stimmung: 'Musik an, Vorlesen per Klick',
+  hoerbuch: 'Musik an, Szenen werden vorgelesen',
+  hoerbuch_plus: 'Musik an, Szenen + Handlungsoptionen vorgelesen'
+};
+function getPlayMode() {
+  try {
+    const m = localStorage.getItem('schatten-playmode');
+    if (m && PLAYMODES.indexOf(m) !== -1) return m;
+  } catch (e) { /* ignore */ }
+  return 'still';
+}
+function playModeWantsMusic(mode) {
+  const m = mode || getPlayMode();
+  return m === 'stimmung' || m === 'hoerbuch' || m === 'hoerbuch_plus';
+}
+function playModeAutoSpeaks(mode) {
+  const m = mode || getPlayMode();
+  return m === 'hoerbuch' || m === 'hoerbuch_plus';
+}
+function playModeSpeaksOptions(mode) {
+  const m = mode || getPlayMode();
+  return m === 'hoerbuch_plus';
+}
+// Setzt den Modus, speichert ihn, schaltet Musik passend an/aus und aktualisiert die UI.
+// quelle: 'start' | 'settings' - nur fuer Diagnose.
+function setPlayMode(mode, quelle) {
+  if (PLAYMODES.indexOf(mode) === -1) mode = 'still';
+  try { localStorage.setItem('schatten-playmode', mode); } catch (e) { /* ignore */ }
+  if (typeof diag === 'function') diag('state', 'Spielmodus gesetzt: ' + mode + (quelle ? ' (' + quelle + ')' : ''));
+  // Musik passend schalten
+  try {
+    const audio = document.getElementById('bg-music');
+    if (audio) {
+      if (playModeWantsMusic(mode)) {
+        if (audio.paused) {
+          if (!musicPlaylist.length && typeof buildMusicPlaylist === 'function') buildMusicPlaylist();
+          if (typeof playMusicTrack === 'function') {
+            playMusicTrack(audio).then(() => {
+              try { localStorage.setItem('schatten-music-on', '1'); } catch (e) {}
+            }).catch(() => { /* Autoplay evtl. blockiert - Klick auf Modus-Button zaehlt aber als Geste */ });
+          }
+        }
+      } else {
+        if (!audio.paused) audio.pause();
+        try { localStorage.removeItem('schatten-music-on'); } catch (e) {}
+      }
+    }
+  } catch (e) { /* Musik darf nie blockieren */ }
+  // Lautsprecher-Sichtbarkeit: bei 'still' verstecken, sonst zeigen (sofern eine Szene laeuft)
+  try { if (typeof syncSpeakFabVisibility === 'function') syncSpeakFabVisibility(); } catch (e) {}
+  // UI-Buttons (Startseite + Settings) aktualisieren
+  try { if (typeof syncPlayModeUI === 'function') syncPlayModeUI(); } catch (e) {}
+}
+// Aktualisiert die Modus-Auswahl-Buttons auf der Startseite + das Settings-Dropdown.
+function syncPlayModeUI() {
+  const mode = getPlayMode();
+  // Startseiten-Buttons
+  PLAYMODES.forEach(m => {
+    const b = document.getElementById('playmode-btn-' + m);
+    if (b) {
+      if (m === mode) b.classList.add('playmode-active');
+      else b.classList.remove('playmode-active');
+    }
+  });
+  // Settings-Dropdown
+  const sel = document.getElementById('playmode-select');
+  if (sel && sel.value !== mode) sel.value = mode;
+}
+// Lautsprecher-FAB nur verstecken wenn Modus 'still' ODER keine Szene laeuft.
+function syncSpeakFabVisibility() {
+  const fab = document.getElementById('speak-fab');
+  if (!fab) return;
+  const mode = getPlayMode();
+  const sceneActive = !!document.querySelector('.scene-entry.current');
+  if (mode === 'still' || !sceneActive) {
+    fab.classList.add('hidden');
+  } else {
+    fab.classList.remove('hidden');
+  }
 }
 
 function toggleMusic(event) {
@@ -7598,7 +7822,10 @@ let speakCurrentActive = false;
 // Holt den lesbaren Text der aktuellen Szene und Optionen.
 // Liefert ein Array von Bloecken die einzeln vorgelesen werden, damit
 // iOS Speech nicht bei langen Texten abbricht.
-function buildSpeakText() {
+function buildSpeakText(includeOptions) {
+  // v7.12.373: includeOptions steuert, ob Handlungsoptionen mitgelesen werden.
+  // Default true (manuelles Vorlesen + Hörbuch Plus). Hörbuch-Modus ruft mit false auf.
+  if (typeof includeOptions === 'undefined') includeOptions = true;
   const blocks = [];
   // Aktuelle Szene: das letzte .scene-entry.current
   const currentScene = document.querySelector('.scene-entry.current');
@@ -7613,6 +7840,8 @@ function buildSpeakText() {
       if (t) blocks.push(t);
     });
   }
+  // v7.12.373: Im Hörbuch-Modus (ohne Plus) werden die Optionen NICHT vorgelesen.
+  if (!includeOptions) return blocks;
   // Optionen
   const optionsBlock = document.getElementById('options');
   if (optionsBlock && !optionsBlock.classList.contains('hidden')) {
@@ -8381,8 +8610,27 @@ function toggleSpeakCurrent(event) {
     stopSpeakCurrent();
     return;
   }
-  // Sonst starten
-  startSpeakCurrent();
+  // Sonst starten - manuelles Vorlesen liest immer ALLES (Szene + Optionen).
+  startSpeakCurrent(true);
+}
+
+// v7.12.373 (Hörbuch-Modi): Wird nach jeder neu gerenderten Szene aufgerufen. Liest im
+// Hörbuch/Hörbuch-Plus-Modus automatisch vor - Hörbuch nur den Szenentext, Hörbuch Plus
+// inkl. Handlungsoptionen. In 'still'/'stimmung' passiert nichts (Vorlesen bleibt manuell).
+function autoSpeakIfEnabled() {
+  try {
+    if (!playModeAutoSpeaks()) return;
+    if (!('speechSynthesis' in window)) return;
+    // Laufende Wiedergabe sauber stoppen, dann die neue Szene lesen.
+    if (typeof stopSpeakCurrent === 'function' && (speakCurrentActive || window.speechSynthesis.speaking)) {
+      stopSpeakCurrent();
+    }
+    const includeOptions = playModeSpeaksOptions();
+    // kleine Verzoegerung, damit das DOM der neuen Szene sicher steht
+    setTimeout(() => {
+      try { startSpeakCurrent(includeOptions); } catch (e) { /* Vorlesen darf nie blockieren */ }
+    }, 350);
+  } catch (e) { /* nie blockieren */ }
 }
 
 // v7.12.330 (macOS-Chrome-Befund: Stimme "Flo" wird korrekt gewählt + speak() läuft durch,
@@ -8403,9 +8651,12 @@ function _ttsBrowserInfo() {
   return { isIOS: isIOS, isSafari: isSafari, isWebKitLike: isWebKitLike, isDesktopBlink: isDesktopBlink };
 }
 
-function startSpeakCurrent() {
+function startSpeakCurrent(includeOptions) {
+  // v7.12.373: includeOptions - bei Auto-Vorlesen im Hörbuch-Modus (ohne Plus) false.
+  // Manuelles Vorlesen + Hörbuch Plus: true (Default).
+  if (typeof includeOptions === 'undefined') includeOptions = true;
   const _ttsInfo = _ttsBrowserInfo();
-  const blocks = buildSpeakText();
+  const blocks = buildSpeakText(includeOptions);
   if (blocks.length === 0) {
     console.warn('[Schatten] Vorlesen: kein Text in aktueller Szene gefunden');
     return;
@@ -8634,6 +8885,8 @@ window.addEventListener('DOMContentLoaded', () => {
     const btn = document.getElementById('music-toggle-btn');
     if (btn) btn.title = 'Musik war zuletzt an - drücken zum Aktivieren';
   }
+  // v7.12.373: Spielmodus-UI (Startseiten-Buttons + Settings-Dropdown) auf gespeicherten Modus setzen.
+  if (typeof syncPlayModeUI === 'function') syncPlayModeUI();
   // v6.98: Top-Status-Bar mit Scroll-Schutz statt nacktem onclick.
   // Anlass: User-Feedback - bei Mobile passierte oft dass das Popup beim
   // Scroll-Start ueber der sticky Bar versehentlich aufging. Lösung wie bei
@@ -8886,6 +9139,8 @@ function showStart() {
   document.getElementById('start').classList.remove('hidden');
   // v7.9.10: Musik-Button-Text passend zum aktuellen Audio-State setzen
   if (typeof syncMusicButtonText === 'function') syncMusicButtonText();
+  // v7.12.373: Spielmodus-Auswahl-Buttons markieren (aktiver Modus hervorgehoben)
+  if (typeof syncPlayModeUI === 'function') syncPlayModeUI();
   // v7.11.93: Fortsetzen-Button zeigen, wenn ein Spielstand existiert.
   try {
     const hasGame = (typeof hasSavedGame === 'function') && hasSavedGame();
@@ -11461,6 +11716,14 @@ function buildTranscriptText() {
         }
         // (c) Name kommt in einem gesammelten Indiz vor (kausal aktiv im Fall)
         if (vn.length >= 4 && _indizBlob.includes(vn)) return true;
+        // v7.12.372 (Lektorat Achterberg P2): der Tatverdächtige/Täter ist immer "bespielt" -
+        // er ist der zentrale Antagonist (oft über Text/Reintro präsent, nicht über npcMemory).
+        // Befund: Vossberg galt als "nur im Setup definiert, nicht bespielt", obwohl er Karl
+        // bedrohte, mehrfach reintroduced wurde und der überführte Täter ist.
+        try {
+          const _tv = normForMatch((caseProgress && caseProgress.tatverdaechtiger) || '');
+          if (_tv && (_tv === nN || (vn.length >= 3 && (_tv.includes(vn) || nN.includes(_tv.split(/\s+/)[0]))))) return true;
+        } catch (e) { /* ignore */ }
         return false;
       };
       for (const ce of caseSetup.setupCast) {
@@ -17635,8 +17898,15 @@ Es ist NICHT realistisch, dass eine Trauergesellschaft 18 Stunden an einem Grab 
           const scenesSinceHeal = nextScene - lastHealedSceneCounter;
           const freshlyHealed = (scenesSinceHeal >= 0 && scenesSinceHeal < HEALING_COOLDOWN_SCENES);
           const vfNow = (typeof verfassung === 'number') ? verfassung : 5;
-          if (freshlyHealed && vfNow >= 4) {
-            recap += `HEILUNGS-ABSCHLUSS (Sz${nextScene}): Karl ist FRISCH VERARZTET und wieder bei Kraeften (Verfassung ${vfNow}/5). Das Wund-/Heilungs-Thema ist ABGESCHLOSSEN. Biete KEINE Optionen mehr an wie "zeig die Wunde", "bitte um Verband", "lass dich behandeln", "klopf bei Doc Wagner" o.ae. - Karl ist versorgt. Beschreibe ihn als wieder einsatzfaehig (vielleicht ein frischer Verband unter dem Mantel, aber kein akuter Schmerz mehr) und lenke die Szene + Optionen zurueck auf die ERMITTLUNG. Falls Karl gerade bei Doc Wagner / dessen Praxis ist, lass ihn sich verabschieden und aufbrechen.\n`;
+          // v7.12.371 (User-Wunsch): Bei VOLLER Verfassung (5/5) ist die Wunde KOMPLETT Geschichte -
+          // kein Bluten, kein Pochen, kein "frischer Verband unter dem Mantel". Frühere Formulierung
+          // ("vielleicht ein frischer Verband, kein akuter Schmerz") war zu weich - Flash-Lite las
+          // "Verband" und erzählte die Wunde weiter. Jetzt harte Trennung: Vf 5 = gar keine
+          // Wund-Erwähnung; Vf 4 = höchstens beiläufig abklingend.
+          if (vfNow >= 5) {
+            recap += `WUNDE VOLLSTÄNDIG VERSORGT (Sz${nextScene}, PFLICHT): Karl ist KOMPLETT wiederhergestellt (Verfassung 5/5). Die frühere Verletzung ist GESCHICHTE und wird in dieser und den folgenden Szenen GAR NICHT mehr erwähnt - KEIN Bluten, KEIN Pochen, KEIN Ziehen in Arm/Schulter/Rippen, KEIN "frischer Verband", KEIN Zusammenzucken vor Schmerz, KEIN durchgebluteter Ärmel. Karl bewegt sich uneingeschränkt und schmerzfrei. Beschreibe ihn als voll einsatzfähig und lenke Szene + Optionen auf die ERMITTLUNG. Biete KEINE Heil-/Versorgungs-Optionen mehr an. Falls Karl noch bei Doc Wagner / Marlene / in der Praxis ist, lass ihn sich knapp verabschieden und aufbrechen.\n`;
+          } else if (freshlyHealed && vfNow >= 4) {
+            recap += `HEILUNGS-ABSCHLUSS (Sz${nextScene}): Karl ist frisch verarztet und wieder weitgehend bei Kräften (Verfassung ${vfNow}/5). Das Wund-/Heilungs-Thema ist abgeschlossen. Biete KEINE Optionen mehr an wie "zeig die Wunde", "bitte um Verband", "lass dich behandeln", "klopf bei Doc Wagner" o.ä. Die Verletzung darf höchstens EINMAL beiläufig als abklingend erwähnt werden (ein dumpfes, nachlassendes Ziehen) - KEINE akute Schmerz-/Blut-Beschreibung mehr. Lenke Szene + Optionen zurück auf die ERMITTLUNG. Falls Karl gerade bei Doc Wagner / dessen Praxis ist, lass ihn sich verabschieden und aufbrechen.\n`;
           }
         }
         // v6.96: NEGATIVE-DRIFT-SPERRE - explizit Namen verbieten die Mistral
@@ -23028,7 +23298,32 @@ async function chooseOption(option) {
   // tun ist - die naechste Szene MUSS die finale Klient-Berichts-Szene werden.
   // v7.11.7: UEBERNACHTUNG bekommt auch eigene userMsg - die naechste Szene
   // MUSS am Morgen DANACH spielen, bei der ROMANCE-Person aufgewacht.
-  const isAufloesen = (chosenKategorie === 'AUFLOESEN');
+  // v7.12.373 (Lektorat Achterberg P2 + User-Wunsch): FREITEXT-RESOLVE. Befund: Bei reifem Fall
+  // schrieb der Spieler "fahr zum klienten und berichte alles" - das wurde als travel erkannt, nicht
+  // als Abschluss -> erst Fahrt-Szene, dann nochmal "Fall lösen" nötig. Jetzt: wenn der Fall ABSCHLUSS-
+  // REIF ist (Stage>=3 + ein Durchbruch-Flag) UND der Freitext eine klare Bericht-/Abschluss-Absicht
+  // zum Klienten trägt, wird daraus ein AUFLOESEN. Konservativ: verlangt Bericht-Verb + Klient-/Fall-
+  // Bezug, damit ein bloßer Zwischenbericht oder eine Fahrt ohne Abschlussabsicht den Fall NICHT beendet.
+  let isAufloesen = (chosenKategorie === 'AUFLOESEN');
+  try {
+    if (!isAufloesen && option && option.text && caseProgress) {
+      const _stg = caseProgress.stage || 0;
+      const _durchbruch = !!(caseProgress.ueberfuehrt || caseProgress.wahrheitErkannt || caseProgress.zielpersonGefunden || caseProgress.diebesgutZurueck || caseProgress.resolveEverReady);
+      const _reif = _stg >= 3 && _durchbruch && !caseProgress.istGelöst && !caseProgress.klientGesprochen;
+      if (_reif) {
+        const _ft = (typeof normForMatch === 'function') ? normForMatch(option.text) : option.text.toLowerCase();
+        // Bericht-/Abschluss-Verb UND Klient-/Fall-Bezug (oder explizit "fall lösen/abschliessen")
+        const _berichtVerb = /\b(berichte|bericht erstatt|erstatt.{0,4}bericht|erzaehl|informier|unterrichte|melde mich|sag(e|st)? (ihr|ihm|dem|der|alles)|teil(e|st)? .{0,12}mit|klaer .{0,12}auf|klaere|erklaer|praesentier|uebergib)/.test(_ft);
+        const _klientBezug = /\b(klient|auftraggeber|mandant)/.test(_ft)
+          || (clientProfile && clientProfile.name && _ft.includes(normForMatch(clientProfile.name.split(' ')[0])));
+        const _explizitAbschluss = /\b(fall (loesen|abschliess|abschlies|beenden)|den fall (loesen|abschliess)|schliess(e|t)? den fall|loese den fall)/.test(_ft);
+        if (_explizitAbschluss || (_berichtVerb && _klientBezug)) {
+          isAufloesen = true;
+          if (typeof diag === 'function') diag('detect', 'FREITEXT-RESOLVE erkannt (Fall reif, Bericht-Absicht zum Klienten): "' + option.text.slice(0, 50) + '" -> als AUFLOESEN behandelt');
+        }
+      }
+    }
+  } catch (e) { /* im Zweifel kein Auto-Resolve */ }
   const isUebernachtung = (chosenKategorie === 'UEBERNACHTUNG');
   // v7.12.17: ROMANCE-ABWEISUNG. Der 70%-Wuerfel ging schief - die Person ist
   // nicht offen fuer Intimitaet. Die KI schreibt eine respektvolle, warme Abfuhr
@@ -26988,6 +27283,42 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     // Inventar kam -> FALL LÖSEN ewig gesperrt ("Diebesgut noch nicht zurueck"). Jetzt VOR dem
     // Indiz-Block, echt auf jede-Szene-Ebene.
     processTheftTargetState(scene);
+    // v7.12.372 (WURZEL-FIX, Lektorat Achterberg + Brandt + verstummte RUF-DIAG): Beat-/Achsen-
+    // Updates und die Diagnose-Marker liefen bisher INNERHALB von "if (indiz_neu>0)" UND
+    // "if (stage===1 && !tatverdaechtiger)" (Klammer-Verschachtelung trotz gegenteiligem Kommentar).
+    // Folge: Sobald ein Verdächtiger feststand ODER eine Szene kein neues Indiz lieferte, wurden
+    // Geständnisse/Mordachsen GAR NICHT geprüft - der Fall blieb unlösbar, RUF-/STATE-DIAG verstummten
+    // nach Sz4. Hier auf echter jede-Szene-Ebene (idempotent - jeder Beat zählt nur einmal).
+    try {
+      const _jsAll = (caseProgress && Array.isArray(caseProgress.indizien)) ? caseProgress.indizien.join(' ') : '';
+      const _jsNeu = (typeof newlyFoundIndizien !== 'undefined' && Array.isArray(newlyFoundIndizien)) ? newlyFoundIndizien.join(' ') : '';
+      const _jsText = ((scene && scene.szene) || '') + ' ' + _jsNeu + ' ' + _jsAll;
+      if (typeof updateTruthBeats === 'function') updateTruthBeats(_jsText);
+      if (typeof updateMurderAxes === 'function') updateMurderAxes(_jsText);
+      if (typeof updatePoliticalBeats === 'function') updatePoliticalBeats(_jsText);
+    } catch (e) { /* darf Szene nie brechen */ }
+    // v7.12.372: RUF-DIAG (Härte-Profil) jede Szene - lag vorher mit im toten Block, feuerte nur Sz4.
+    try {
+      if (typeof diag === 'function') {
+        if (karlInStasiCustody && !_rufLetzteCustodyState) _rufCustodyEreignisse++;
+        _rufLetzteCustodyState = !!karlInStasiCustody;
+        const _rufGesamt = _rufGewaltAktionen + _rufBefragungen + _rufNeutralAktionen + _rufFluchtAktionen;
+        const _gewaltQ = _rufGesamt > 0 ? Math.round(100 * _rufGewaltAktionen / _rufGesamt) : 0;
+        const _behutsamQ = _rufGesamt > 0 ? Math.round(100 * _rufBefragungen / _rufGesamt) : 0;
+        let _tend = 'neutral';
+        if (_rufGesamt >= 4) {
+          if (_gewaltQ >= 50 || folterSceneCount >= 2) _tend = 'hart/gewaltbereit';
+          else if (_behutsamQ >= 50 && _gewaltQ <= 15) _tend = 'behutsam/ermittelnd';
+          else if (_gewaltQ >= 25) _tend = 'gemischt, eher hart';
+          else _tend = 'gemischt, eher behutsam';
+        }
+        diag('state', 'RUF-DIAG Sz' + sceneCounter + ': Tendenz=' + _tend
+          + ' | Gewalt=' + _rufGewaltAktionen + ' (' + _gewaltQ + '%) · Befragung=' + _rufBefragungen + ' (' + _behutsamQ + '%)'
+          + ' · neutral=' + _rufNeutralAktionen + ' · Flucht=' + _rufFluchtAktionen
+          + ' · Folterszenen=' + folterSceneCount + ' · Custody-Ereignisse=' + _rufCustodyEreignisse
+          + ' · actionStreak=' + actionStreak + ' calmStreak=' + calmStreak);
+      }
+    } catch (e) { /* Diagnose darf Szene nie brechen */ }
     if (Array.isArray(scene.indiz_neu) && scene.indiz_neu.length > 0) {
       // Synonym-Map: gleiche Konzepte mit verschiedenen Begriffen werden gleichbehandelt
       // damit Mistral nicht "Feuerzeug" und "Zigarettenanzuender" als zwei Indizien fuer
@@ -27014,7 +27345,11 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         // (Burgergase, betrunken, nass, stinkend, verkleidet) dürfen als Requisite/Zustand
         // existieren, aber nicht als Indiz. Filtern, bevor sie in caseProgress.indizien wandern.
         const _indLower = normForMatch(newInd);
-        const _istZustandKeinIndiz = /(teil deines (aktuellen )?zustands|aktuellen zustands|burger|hamburger|zwiebel|zwiebelgas|burgergas|bockwurst|currywurst|schrippe|stulle|bratwurst|pommes|verdauung|furz|blaehung|blähung|ruelps|rülps|betrunken|besoffen|durchn(ä|ae)sst|verschwitzt|stinkt nach|riecht nach schwei|verkleidet als|als zustand)/i.test(_indLower);
+        const _istZustandKeinIndiz = /(teil deines (aktuellen )?zustands|aktuellen zustands|burger|hamburger|zwiebel|zwiebelgas|burgergas|bockwurst|currywurst|schrippe|stulle|bratwurst|pommes|verdauung|furz|blaehung|blähung|ruelps|rülps|betrunken|besoffen|durchn(ä|ae)sst|verschwitzt|stinkt nach|riecht nach schwei|verkleidet als|als zustand)/i.test(_indLower)
+          // v7.12.372 (Lektorat Achterberg P3): reine Verlaufs-/Fortschrittsereignisse sind keine
+          // Indizien ("Die Flucht war erfolgreich und hat dir Zeit verschafft"). Sie blähen die
+          // Beweisliste auf und können Finale-/Stage-Logik verunreinigen. Status/Toast, kein indiz_neu.
+          || /(flucht (war|ist|gelang|gelungen|erfolgreich)|hat dir zeit verschafft|zeit verschafft|du bist entkommen|bist entkommen|konntest (du )?(entkommen|fliehen|entwischen)|du hast dich (beruhigt|gesammelt|in sicherheit)|in sicherheit gebracht|du konntest die (beweise|spuren) sichern|erfolgreich (entkommen|geflohen|abgeschuettelt|abgehaengt)|verfolger abgeschuettelt|abgehaengt)/i.test(_indLower);
         if (_istZustandKeinIndiz) {
           if (typeof diag === 'function') diag('filter', 'Pseudo-Indiz abgelehnt (Essen/Freitext-Zustand, kein Beweis): "' + newInd + '"');
           continue;
@@ -27240,25 +27575,10 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       // v7.12.368 (RUF-DIAG, reine Beobachtung): Härte-Profil pro Szene zusammenfassen. KEINE
       // Spielwirkung - nur Datenbasis für die spätere Frage, ob ein Ruf-System (NPCs reagieren
       // auf Karls Härte) sich lohnt. Custody als Flanke zählen (nur beim Übergang frei->Gewahrsam).
+      // v7.12.372: RUF-DIAG + Custody-Flanke wurden auf jede-Szene-Ebene gezogen (vor dem
+      // indiz_neu-Block) - hier NICHT mehr, sonst Doppel-Zählung/Doppel-Log in Indiz-Szenen.
       try {
-        if (karlInStasiCustody && !_rufLetzteCustodyState) _rufCustodyEreignisse++;
-        _rufLetzteCustodyState = !!karlInStasiCustody;
-        const _rufAktionenGesamt = _rufGewaltAktionen + _rufBefragungen + _rufNeutralAktionen + _rufFluchtAktionen;
-        const _gewaltQuote = _rufAktionenGesamt > 0 ? Math.round(100 * _rufGewaltAktionen / _rufAktionenGesamt) : 0;
-        const _behutsamQuote = _rufAktionenGesamt > 0 ? Math.round(100 * _rufBefragungen / _rufAktionenGesamt) : 0;
-        // Grobe Tendenz-Einordnung (nur Label, keine Wertung, keine Wirkung)
-        let _tendenz = 'neutral';
-        if (_rufAktionenGesamt >= 4) {
-          if (_gewaltQuote >= 50 || folterSceneCount >= 2) _tendenz = 'hart/gewaltbereit';
-          else if (_behutsamQuote >= 50 && _gewaltQuote <= 15) _tendenz = 'behutsam/ermittelnd';
-          else if (_gewaltQuote >= 25) _tendenz = 'gemischt, eher hart';
-          else _tendenz = 'gemischt, eher behutsam';
-        }
-        diag('state', 'RUF-DIAG Sz' + sceneCounter + ': Tendenz=' + _tendenz
-          + ' | Gewalt=' + _rufGewaltAktionen + ' (' + _gewaltQuote + '%) · Befragung=' + _rufBefragungen + ' (' + _behutsamQuote + '%)'
-          + ' · neutral=' + _rufNeutralAktionen + ' · Flucht=' + _rufFluchtAktionen
-          + ' · Folterszenen=' + folterSceneCount + ' · Custody-Ereignisse=' + _rufCustodyEreignisse
-          + ' · actionStreak=' + actionStreak + ' calmStreak=' + calmStreak);
+        const _beatVorDummy = 0; void _beatVorDummy;
       } catch (e) { /* Diagnose darf Szene nie brechen */ }
       // Stagnations-Zähler zurücksetzen. Sonst: ab Szene 30, wenn seit >=6 Szenen kein neuer Beat
       // UND Beats noch unter minHits, EINEN sanften Prompt-Hinweis auf den nächsten fehlenden Beat
@@ -29770,6 +30090,9 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         showCaseFailed(`Tag ${gameDay}: ${clientProfile.name} hat Karl den Auftrag entzogen. Zu lange ohne Ergebnis.`);
       } else {
         renderOptions(scene);
+        // v7.12.373 (Hörbuch-Modi): frische Szene fertig gerendert -> ggf. automatisch vorlesen.
+        // Nur im Hörbuch/Hörbuch-Plus-Modus aktiv (sonst No-Op). NICHT im Restore-Pfad.
+        try { if (typeof autoSpeakIfEnabled === 'function') autoSpeakIfEnabled(); } catch (e) { /* nie blockieren */ }
       }
     } catch (renderErr) {
       console.error('[Schatten] Render-Pfad nach API-Antwort fehlgeschlagen:', renderErr);
