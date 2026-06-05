@@ -3062,7 +3062,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.392</div>
+    <div class="start-version">Schatten v7.12.393</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3283,7 +3283,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.392</span>
+    <span>Schatten v7.12.393</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -3707,7 +3707,7 @@ BEWEIS-EHRLICHKEIT (Wording, v7.12.339): Benenne Beweise so, wie sie WIRKLICH en
 - Wenn eine Person (z.B. ein Zeuge, Arzt, Mitwisser) unter Druck eine ANDERE Person belastet, ist das deren AUSSAGE, die den Dritten belastet - NICHT das eigene Geständnis dieser Person. Formuliere präzise: "X' Aussage belastet Y als Täter", NICHT "Geständnis von X über Ys Mord". Sonst wirkt der Zeuge fälschlich wie der Täter.
   
   VERMISSTENFALL - PERSON GEFUNDEN: Setze "zielperson_gefunden": true NUR, wenn Karl die gesuchte Person WIRKLICH PHYSISCH auffindet und bei ihr ist - er sieht sie mit eigenen Augen (lebend oder tot), steht im selben Raum, fasst sie an, ODER hat ein eindeutiges offizielles Dokument in der Hand, das ihren genauen Aufenthaltsort beweist (z.B. ein Haftbefehl/eine Akte, die er selbst gelesen hat). Das Auffinden selbst ist dann der Durchbruch - Karl muss keinen Täter mehr überführen.
-  ABSOLUT NICHT setzen bei BLOSSER INFORMATION über den Aufenthaltsort: ein Telefonbericht ("man hat mir gesagt, er sitzt in X"), ein Gerücht, eine Zeugenaussage vom Hörensagen, eine Vermutung wo die Person sein KÖNNTE, oder die Nachricht "die Person wurde irgendwo festgenommen". Das alles ist eine SPUR (lokalisiert), KEIN Fund. Beispiel: "Werner wurde in Hohenschönhausen festgenommen" aus einem Telefonat ist eine Spur, NICHT zielperson_gefunden - Karl hat ihn nicht gesehen und kann ihn nicht zum Klienten bringen. In solchen Fällen lass zielperson_gefunden FALSE und beschreibe die Spur als Zwischenstand.
+  ABSOLUT NICHT setzen bei BLOSSER INFORMATION über den Aufenthaltsort: ein Telefonbericht ("man hat mir gesagt, er sitzt in X"), ein Gerücht, eine Zeugenaussage vom Hörensagen, eine Vermutung wo die Person sein KÖNNTE, oder die Nachricht "die Person wurde irgendwo festgenommen". Das alles ist eine SPUR (lokalisiert), KEIN Fund. Beispiel: "Werner wurde in Hohenschönhausen festgenommen" aus einem Telefonat oder Gerücht ist eine Spur, NICHT zielperson_gefunden - Karl hat ihn nicht gesehen und kann ihn nicht zum Klienten bringen. Auch wenn Karl dem Klienten BERICHTET ("du sagst ihm, dass Werner in X festsitzt"), ist das kein Fund, sondern die Weitergabe einer Spur. In solchen Fällen lass zielperson_gefunden FALSE und beschreibe die Spur als Zwischenstand.
   WAHRHEITS-FALL - WAHRHEIT ERKANNT: Wenn es ein Wahrheits-Fall ist (Karl soll herausfinden was WIRKLICH passiert ist) und sich herausstellt, dass es KEIN klassisches Verbrechen mit Täter war (echter Selbstmord, Unfall, Republikflucht, die Person ist freiwillig gegangen, eine Affäre bestätigt sich oder zerschlägt sich) - also es gibt niemanden zu überführen - dann setze "wahrheit_erkannt": true, sobald Karl die Wahrheit zweifelsfrei ermittelt hat. Das ist bei solchen Fällen der Durchbruch: Karl kann dem Klienten die (oft unbequeme) Wahrheit berichten, auch wenn kein Schuldiger existiert. NUR setzen wenn die Wahrheit wirklich feststeht, NICHT bei bloßer Vermutung. Wenn es DOCH ein Verbrechen mit Täter war, nutze stattdessen "tatverdaechtiger_ueberfuehrt".
 
 WIN-BEDINGUNG - KLIENT BERICHTEN:
@@ -6097,7 +6097,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.392';
+window.SCHATTEN_VERSION = 'v7.12.393';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -15752,16 +15752,17 @@ function renderOptions(scene) {
   // Konservativ: blockiert nur in klar unsicheren Lagen, nicht im normalen Abend-Heimweg.
   const _schlafSpannung = (typeof scene.spannung === 'number') ? scene.spannung
                           : (typeof lastSpannung === 'number') ? lastSpannung : 1;
-  let _laufendeRettung = false;
-  try {
-    const _ct = (caseSetup && caseSetup.caseType) || '';
-    _laufendeRettung = (_ct === 'vermisst') && caseProgress && !caseProgress.zielpersonGefunden && (caseProgress.stage || 0) >= 2;
-  } catch (e) { _laufendeRettung = false; }
+  // v7.12.393 (Wessel-Run Tag-2-Schlaf-Bug): _laufendeRettung ENTFERNT. Sperrte bei
+  // ungeloestem Vermisstenfall (Stage>=2) den Schlaf ueber Tage - der Spieler konnte an
+  // Tag 2 nicht mehr schlafen, obwohl die Lage ruhig war. Benjamin-Entscheidung: Schlaf ist
+  // Karls Entscheidung mit allen Konsequenzen (geht er schlafen waehrend jemand in Gefahr ist,
+  // ist das sein Risiko). Schlaf wird jetzt NUR noch bei akut hoher Spannung gesperrt
+  // (mitten im Schusswechsel legt man sich nicht hin).
   const _akuteGefahr = _schlafSpannung >= 4;
-  const _unsichereLageFuerSchlaf = (_laufendeRettung || _akuteGefahr) && !karlInStasiCustody;
+  const _unsichereLageFuerSchlaf = _akuteGefahr && !karlInStasiCustody;
   const showSleepButton = ((isAbendOderNacht && sleepSceneOk && !isOnTheRoad && !_unsichereLageFuerSchlaf) || canSleepInCustody);
   if (isAbendOderNacht && sleepSceneOk && !isOnTheRoad && _unsichereLageFuerSchlaf && !canSleepInCustody && typeof diag === 'function') {
-    diag('detect', 'SCHLAFEN-Button gesperrt: unsichere Lage (' + (_laufendeRettung ? 'laufende Rettung, Zielperson noch nicht gefunden' : 'akute Gefahr Sp' + _schlafSpannung) + ')');
+    diag('detect', 'SCHLAFEN-Button gesperrt: akute Gefahr Sp' + _schlafSpannung);
   }
   let romanceNpcInScene = null;
   try {
@@ -28529,8 +28530,20 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             caseProgress.ueberfuehrt = !!_plausibel;
             if (!_plausibel) diag('drift', 'Auto-Force Mord: "' + (caseProgress.tatverdaechtiger || '?') + '" kein plausibler Taeter - NICHT ueberfuehrt');
           } else if (_ctF === 'vermisst') {
-            caseProgress.zielpersonGefunden = true; // vermisst loest ueber gefunden
-            caseProgress.ueberfuehrt = false;
+            // v7.12.393 (Wessel-Run Sz40): NICHT mehr bedingungslos zielpersonGefunden=true.
+            // Der Force-Abschluss nahm an "Vermisstenfall abgeschlossen = Person gefunden" -
+            // aber Werner war nie physisch präsent (Karl hatte nur eine Spur nach Hohenschönhausen).
+            // Wenn die Zielperson bis hierher NICHT echt gefunden wurde (das KI-Feld-Gate mit
+            // Präsenz-Check hätte zielpersonGefunden gesetzt), ist das ein SPUR-GEKLÄRT-Abschluss,
+            // kein Fund. wahrheitErkannt liefert bei vermisst das Label "Spur aufgeklärt".
+            if (caseProgress.zielpersonGefunden) {
+              // schon echt gefunden (Präsenz-Gate früher bestätigt) - bleibt gefunden
+              caseProgress.ueberfuehrt = false;
+            } else {
+              caseProgress.wahrheitErkannt = true; // Spur/Lage geklärt, Person nur lokalisiert
+              caseProgress.ueberfuehrt = false;
+              diag('drift', 'Force-Abschluss vermisst: Zielperson NICHT physisch gefunden (nur Spur) -> spur_ziel_geklaert statt zielpersonGefunden');
+            }
           } else if (_ctF === 'beschatten') {
             caseProgress.wahrheitErkannt = true;     // beschatten = Verdacht bestaetigt
             caseProgress.ueberfuehrt = false;
@@ -29386,14 +29399,14 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // angekettet, eingesperrt + Auffinde-Verben (befreist/loest/packst/ziehst hoch).
             if (!zielpersonWirklichPraesent) {
               const _txt = (scene.szene || '').toLowerCase();
-              // v7.12.392 (Wessel-Run Sz15): BERICHT-AUSSCHLUSS. Wenn die Zielperson nur in
-              // einem Telefonat/Bericht/Hörensagen vorkommt ("dass Werner lebt, aber in X
-              // festgenommen wurde"), ist sie NICHT physisch präsent. Solche Sätze enthalten
-              // Bericht-Marker - dann blockieren wir die Präsenz-Erkennung für diese Szene.
-              const berichtRe = /(berichtest|berichtet|am (anderen )?ende der leitung|am telefon|telefon(zelle|hoerer|at)|hoerer|man (hat |sagt|sagte|erzaehlt)|so heisst es|geruecht|soll (er|sie) |angeblich|wie du hoerst|hast du erfahren|in erfahrung gebracht|nimmt nach dem .* klingeln ab)/;
+              // v7.12.393 (Wessel-Run Sz15+Sz40): BERICHT-AUSSCHLUSS. Wenn die Zielperson nur
+              // in einem Bericht vorkommt - per Telefon, Hörensagen ODER weil Karl sie einem
+              // Dritten gegenüber erwähnt ("du sagst ihm, dass Werner in X festsitzt") - ist sie
+              // NICHT physisch präsent. 'lebt' als Allein-Indikator entfernt (mehrdeutig:
+              // Bericht "Werner lebt" vs. "Werner liegt vor dir und lebt").
+              const berichtRe = /(berichtest|berichtet|am (anderen )?ende der leitung|am telefon|telefon(zelle|hoerer|at)|hoerer|man (hat |sagt|sagte|erzaehlt)|so heisst es|geruecht|soll (er|sie) |angeblich|wie du hoerst|hast du erfahren|in erfahrung gebracht|nimmt nach dem .* klingeln ab|(sagst|erzaehlst|teilst) (ihm|ihr|ihnen)|du sagst (ihm|ihr|ihnen)|setzt (ihn|sie) in kenntnis|informierst (ihn|sie))/;
               const istBericht = berichtRe.test(_txt);
               if (_txt.includes(_tFirst) && !istBericht) {
-                // 'lebt' v7.12.392 entfernt - allein zu schwach/mehrdeutig (Bericht "Werner lebt").
                 const findeRe = new RegExp(_tFirst + '[^.]{0,70}(steht|sitzt|liegt|kauert|hockt|kniet|lehnt|atmet|vor dir|neben dir|bei dir|in deinen armen|zusammengesunken|gefesselt|festgebunden|fixiert|gefasst|angekettet|angebunden|eingesperrt|gefangen|bewusstlos|verletzt|blutet|blickt dich|sieht dich|schaut dich|erkennt dich|reagiert|spricht|fluestert|stammelt|nickt|stoehnt|zittert|hebt (den|seinen) kopf|zuckt)|(siehst|findest|entdeckst|erkennst|stehst vor|kniest (neben|vor)|haeltst|befreist|loest|loesst|schneidest los|packst|ziehst (hoch|raus)|hilfst|stuetzt|traegst)[^.]{0,50}' + _tFirst, 'i');
                 if (findeRe.test(_txt)) zielpersonWirklichPraesent = true;
               }
