@@ -2793,7 +2793,7 @@
   </div>
 
   <!-- v6.60: Audio-Loop fuer Atmosphaere-Musik (instrumentaler Detektiv-Loop) -->
-  <!-- v7.12.73 / v7.12.358: 10 Tracks (music1..10.mp3) in immer neu gewuerfelter Reihenfolge,
+  <!-- v7.12.73 / v7.12.358: 12 Tracks (music1..12.mp3) in immer neu gewuerfelter Reihenfolge,
        Endlosschleife. KEIN loop-Attribut mehr (das wuerde nur EINEN Track loopen);
        der Wechsel laeuft ueber das 'ended'-Event + die Playlist-Logik. src wird
        dynamisch gesetzt (playMusicTrack), darum keine feste <source> hier. -->
@@ -3062,7 +3062,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.403</div>
+    <div class="start-version">Schatten v7.12.407</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3283,7 +3283,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.403</span>
+    <span>Schatten v7.12.407</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6126,7 +6126,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.403';
+window.SCHATTEN_VERSION = 'v7.12.407';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -7689,7 +7689,7 @@ function closeSettings() {
 })();
 
 // v6.60: Atmosphaere-Musik-Loop-Button.
-// v7.12.73 / v7.12.358: Spielt 10 Tracks (music1..10.mp3, im Repo-Root neben index.html) in
+// v7.12.73 / v7.12.358: Spielt 12 Tracks (music1..12.mp3, im Repo-Root neben index.html) in
 // immer neu gewuerfelter Reihenfolge als Endlosschleife (siehe Playlist-Logik).
 // Toggle-State in localStorage, damit es bei naechstem Besuch erhalten bleibt.
 // User-initiated wegen Autoplay-Block der Browser (Brave/Safari/Chrome).
@@ -7710,12 +7710,12 @@ function getMusicVolumeWhileSpeaking() {
 }
 
 // v7.12.73: MUSIK-PLAYLIST. Statt einer einzelnen music.mp3 im loop laufen jetzt
-// 10 Tracks (music1.mp3 .. music10.mp3) in immer neu gewuerfelter Reihenfolge,
+// 12 Tracks (music1.mp3 .. music12.mp3) in immer neu gewuerfelter Reihenfolge,
 // Endlosschleife. Beispiel: 1,3,2,4 -> (neu wuerfeln) 3,2,4,1 -> 1,4,2,3 -> ...
 // Beim Neuwuerfeln nach jeder 4er-Runde wird vermieden, dass der erste Track der
 // neuen Runde derselbe ist wie der zuletzt gespielte (kein doppeltes Abspielen
 // desselben Songs direkt hintereinander, User-Wunsch).
-const MUSIC_TRACKS = ['music1.mp3', 'music2.mp3', 'music3.mp3', 'music4.mp3', 'music5.mp3', 'music6.mp3', 'music7.mp3', 'music8.mp3', 'music9.mp3', 'music10.mp3'];
+const MUSIC_TRACKS = ['music1.mp3', 'music2.mp3', 'music3.mp3', 'music4.mp3', 'music5.mp3', 'music6.mp3', 'music7.mp3', 'music8.mp3', 'music9.mp3', 'music10.mp3', 'music11.mp3', 'music12.mp3'];
 let musicPlaylist = [];      // aktuelle gewuerfelte Reihenfolge (Array von Dateinamen)
 let musicPlaylistIdx = 0;    // Position in musicPlaylist
 let musicLastTrack = null;   // zuletzt gespielter Track (fuer Anti-Doppel)
@@ -7826,7 +7826,11 @@ function setPlayMode(mode, quelle) {
     if (audio) {
       if (playModeWantsMusic(mode)) {
         if (audio.paused) {
-          if (!musicPlaylist.length && typeof buildMusicPlaylist === 'function') buildMusicPlaylist();
+          // v7.12.407 (Benjamin): Bei jedem Wechsel still -> Musik-Modus eine NEUE gewuerfelte
+          // Reihenfolge auslosen, statt die alte Playlist am alten Index fortzusetzen. So bekommt
+          // man durch erneutes Anklippen eines Musik-Buttons einen neuen Startsong, ohne die Seite
+          // neu laden zu muessen. (Vorher wurde nur bei leerer Playlist neu gebaut.)
+          if (typeof buildMusicPlaylist === 'function') buildMusicPlaylist();
           if (typeof playMusicTrack === 'function') {
             playMusicTrack(audio).then(() => {
               try { localStorage.setItem('schatten-music-on', '1'); } catch (e) {}
@@ -10362,6 +10366,64 @@ function diagFinaleWahrheitstreue(scene) {
       diag('drift', 'FINALE-DIAG ⚠ Beweis-/Bestaetigungssprache mit Bezug zu UNBESUCHTEM Ort (Verdacht: erfundener Beweis a la "Bestaetigung aus Marienfelde")');
     }
   } catch (e) { /* Diagnose darf den Abschluss NIE brechen */ }
+}
+
+// v7.12.405 (WAHRHEITSLECK-DIAGNOSE, Prio-1-Messgrundlage): Prueft in FRUEHEN Szenen (vor dem
+// Durchbruch), ob der Szenentext bereits die geheime Fall-LOESUNG als Faktum ausspielt, die Karl
+// noch nicht erspielt hat. Ziel: messen, wie oft das Setup-Wahrheitsleck (z.B. Wessel: "Werner
+// sitzt in Hohenschoenhausen") tatsaechlich durchschlaegt - Entscheidungsgrundlage fuer
+// truthForEngine/promptForAI-Architektur. NUR Diagnose, greift NICHT in den Spielzustand ein.
+// Markiert mit LECK-DIAG, damit Run-Logs analytisch ausgewertet werden koennen.
+function diagWahrheitsleck(scene) {
+  try {
+    if (typeof diag !== 'function' || !scene || typeof scene.szene !== 'string') return;
+    if (!caseSetup) return;
+    const durchbruch = !!(caseProgress && (caseProgress.ueberfuehrt || caseProgress.zielpersonGefunden
+      || caseProgress.wahrheitErkannt || caseProgress.diebesgutZurueck));
+    // Nur frueh + vor Durchbruch interessant - danach DARF die Wahrheit ausgespielt werden.
+    if (durchbruch) return;
+    if (typeof sceneCounter === 'number' && sceneCounter > 12) return; // spaeter ist Leck-Risiko geringer/erwartbar
+    const txt = normForMatch(scene.szene || '');
+    if (!txt) return;
+    // Geheime Loesungs-Schluesselwoerter aus dem Setup ziehen: SUSPECT-beziehung + Ziel-Haftorte.
+    const leakTerms = [];
+    try {
+      const ct = (caseSetup.caseType || '');
+      if (Array.isArray(caseSetup.setupCast)) {
+        for (const c of caseSetup.setupCast) {
+          if (!c) continue;
+          const tag = (c.tag || '').toUpperCase();
+          const tagX = (c.tagExtra || '').toUpperCase();
+          // Bei vermisst: der Ziel-Haftort/Status ist die geheime Loesung (steht in SUSPECT-beziehung).
+          if (tag === 'SUSPECT' || tagX === 'SUSPECT') {
+            const bez = normForMatch(c.beziehung || '');
+            // Distinktive Orts-/Status-Begriffe extrahieren (keine Allerweltswoerter).
+            for (const term of ['hohenschoenhausen', 'genslerstrasse', 'untersuchungsgefaengnis', 'u-haft',
+                                 'datscha', 'mueggelsee', 'keller des roten stern', 'lagerhalle an der spree']) {
+              if (bez.includes(term) && !leakTerms.includes(term)) leakTerms.push(term);
+            }
+          }
+        }
+      }
+      // Falltyp-spezifische Status-Lecks (die Aufloesung als Faktum):
+      if (ct === 'vermisst') {
+        // "sitzt/festgesetzt/aufgegriffen + im Untersuchungsgefaengnis" als frueh ausgesprochene Wahrheit.
+        // (Der BERICHT_RE-Kontext zaehlt NICHT als Leck - ein Geruecht/Bericht ist erlaubt.)
+      }
+    } catch (e) { /* term-Sammlung defensiv */ }
+    if (!leakTerms.length) return;
+    // Treffer: geheimes Loesungs-Wort steht im fruehen Text UND es ist KEIN blosser Bericht/Geruecht.
+    const istBericht = (typeof istBerichtKontext === 'function') ? istBerichtKontext(scene.szene) : false;
+    const treffer = leakTerms.filter(t => txt.includes(t));
+    if (treffer.length && !istBericht) {
+      diag('drift', 'LECK-DIAG ⚠ Sz' + (typeof sceneCounter === 'number' ? sceneCounter : '?')
+        + ': Geheime Fall-Loesung evtl. VORZEITIG ausgespielt (kein Bericht-Kontext): [' + treffer.join(', ')
+        + '] - Durchbruch noch nicht erreicht. Kandidat fuer Wessel-Truth-Leak-Analyse.');
+    } else if (treffer.length && istBericht) {
+      diag('detect', 'LECK-DIAG ok Sz' + (typeof sceneCounter === 'number' ? sceneCounter : '?')
+        + ': Loesungs-Begriff [' + treffer.join(', ') + '] genannt, aber als BERICHT/Spur (erlaubt).');
+    }
+  } catch (e) { /* Diagnose darf nie brechen */ }
 }
 
 
@@ -21897,6 +21959,15 @@ function normalizeNpcName(name) {
 // Beschreibung wie "Unbekannter Mann", "Mann im dunklen Anzug", "Uniformierter".
 // Solche sollten NICHT als storyFacts eingefroren werden - sie sind keine
 // individuell trackbaren Personen.
+// v7.12.404: ZENTRALER Bericht-Ausschluss-Regex (vorher dupliziert/nur im scene-Gate). Eine
+// Quelle der Wahrheit, damit Haupt-Gate und Stagnations-Fallback denselben Schutz nutzen.
+// Erkennt: Zielperson nur in einem BERICHT (Telefon, Hoerensagen, "man sagt", "du sagst ihm",
+// Zeugenaussage) = NICHT physisch praesent. Erwartet normForMatch-Text (ae/oe/ue/ss).
+const BERICHT_RE = /(berichtest|berichtet|am (anderen )?ende der leitung|am telefon|telefon(zelle|hoerer|at)|hoerer|man (hat |sagt|sagte|erzaehlt)|so heisst es|geruecht|soll (er|sie) |angeblich|wie du hoerst|hast du erfahren|du erfaehrst|in erfahrung gebracht|laut aussage|laut bericht|zeugenaussage|nimmt nach dem .* klingeln ab|(sagst|erzaehlst|teilst) (ihm|ihr|ihnen)|du sagst (ihm|ihr|ihnen)|setzt (ihn|sie) in kenntnis|informierst (ihn|sie))/;
+function istBerichtKontext(text) {
+  return BERICHT_RE.test(normForMatch(text || ''));
+}
+
 // v7.12.398 (Lektorat Wessel-Run P1, verschaerft): Zentrale Identitaets-Pruefung der Zielperson.
 // PROBLEM: Alle drei Praesenz-Checks prueften NUR den Vornamen (tFirst). Bei "Werner Wessel"
 // (Ziel) wuerde ein "Alfred Otto" im Raum den Fund ausloesen. Die v397-Variante "Vorname OK
@@ -25629,6 +25700,11 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     // aufgerufen. Hier nicht nochmal, sonst springen Tageszeit/Tag doppelt.
     sceneCounter++;
 
+    // v7.12.405: WAHRHEITSLECK-MESSUNG. Direkt nach dem Szenen-Commit, BEVOR das Force-System
+    // einen Durchbruch setzen kann - prueft ob die geheime Loesung vorzeitig ausgespielt wurde.
+    // Reine Diagnose (LECK-DIAG-Marker), greift nicht in den Spielzustand ein.
+    try { diagWahrheitsleck(scene); } catch (e) { /* Diagnose darf nie brechen */ }
+
     // v7.12.99: Notflucht-Gnadenfrist pro Szene herunterzaehlen - auch wenn Karl FREI
     // ist (der andere Dekrement bei Z~19915 laeuft nur in Custody-Szenen; nach
     // gelungener Flucht ist Karl aber frei -> sonst bliebe die Gnadenfrist ewig stehen
@@ -28393,8 +28469,20 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           // auch fuer Vermisste - jetzt nur noch fuer andere Falltypen (wo "Beweise gesichert"
           // gemeint ist, nicht "Person gefunden").
           const istVermisstFall = (ct === 'vermisst');
+          // v7.12.404 (Benjamin-Befund): Auch dieser Stagnations-Fallback braucht den BERICHT-
+          // AUSSCHLUSS. Vorher reichte bei Vermisst die blosse Namens-Praesenz (tMentioned) - ein
+          // reiner Bericht ueber die Zielperson ("man sagt, Werner sitzt in X") konnte nach 10+
+          // Szenen Phantom-"gefunden" ausloesen. Jetzt: tMentioned zaehlt nur, wenn der Text NICHT
+          // bloss ein Bericht ist ODER ein echtes Auffinde-Verb enthaelt (Karl sieht/findet sie physisch).
+          const _findeVerbRe = /\b(siehst|findest|entdeckst|erkennst|stehst vor|kniest|haeltst|befreist|loest|schneidest los|packst|ziehst (hoch|raus)|hilfst|stuetzt|traegst|vor dir|neben dir|bei dir|in deinen armen|gefesselt|festgebunden|fixiert|angekettet|eingesperrt|bewusstlos)\b/;
+          const _tMentionedEcht = istVermisstFall
+            ? (tMentioned && (!istBerichtKontext(recentText) || _findeVerbRe.test(recentText)))
+            : tMentioned;
+          if (istVermisstFall && tMentioned && !_tMentionedEcht) {
+            diag('drift', 'Stagnations-Fallback (vermisst): Zielperson nur in BERICHT-Kontext erwaehnt (kein Auffinde-Verb) -> KEIN Phantom-Fund erzwungen');
+          }
           const forceOk = istVermisstFall
-            ? tMentioned                                      // Vermisst: NUR wenn Person auftaucht
+            ? _tMentionedEcht                                 // Vermisst: NUR echter Fund (kein blosser Bericht)
             : (tMentioned || stage2Scenes >= 16 || !targetName); // sonst: wie bisher
           if (forceOk) {
             // v7.12.190 (ChatGPT-Lektorat v189 P0): Dieser Stagnations-Fallback laeuft im
@@ -29515,8 +29603,8 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
               // "erzählt"!="erzaehlt", "heißt"!="heisst") - der Fund-Regex konnte trotzdem
               // anschlagen -> Phantom-Fund ueber einen blossen Bericht.
               const _txt = normForMatch(scene.szene || '');
-              const berichtRe = /(berichtest|berichtet|am (anderen )?ende der leitung|am telefon|telefon(zelle|hoerer|at)|hoerer|man (hat |sagt|sagte|erzaehlt)|so heisst es|geruecht|soll (er|sie) |angeblich|wie du hoerst|hast du erfahren|du erfaehrst|in erfahrung gebracht|laut aussage|laut bericht|zeugenaussage|nimmt nach dem .* klingeln ab|(sagst|erzaehlst|teilst) (ihm|ihr|ihnen)|du sagst (ihm|ihr|ihnen)|setzt (ihn|sie) in kenntnis|informierst (ihn|sie))/;
-              const istBericht = berichtRe.test(_txt);
+              // v7.12.404: nutzt zentrale BERICHT_RE (Single Source of Truth, _txt ist bereits normForMatch).
+              const istBericht = BERICHT_RE.test(_txt);
               if (_txt.includes(_tFirst) && !istBericht) {
                 const findeRe = new RegExp(_tFirst + '[^.]{0,70}(steht|sitzt|liegt|kauert|hockt|kniet|lehnt|atmet|vor dir|neben dir|bei dir|in deinen armen|zusammengesunken|gefesselt|festgebunden|fixiert|gefasst|angekettet|angebunden|eingesperrt|gefangen|bewusstlos|verletzt|blutet|blickt dich|sieht dich|schaut dich|erkennt dich|reagiert|spricht|fluestert|stammelt|nickt|stoehnt|zittert|hebt (den|seinen) kopf|zuckt)|(siehst|findest|entdeckst|erkennst|stehst vor|kniest (neben|vor)|haeltst|befreist|loest|loesst|schneidest los|packst|ziehst (hoch|raus)|hilfst|stuetzt|traegst)[^.]{0,50}' + _tFirst, 'i');
                 if (findeRe.test(_txt)) {
