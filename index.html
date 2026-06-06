@@ -2984,7 +2984,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.427</div>
+    <div class="start-version">Schatten v7.12.428</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3205,7 +3205,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.427</span>
+    <span>Schatten v7.12.428</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6079,7 +6079,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.427';
+window.SCHATTEN_VERSION = 'v7.12.428';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -6734,7 +6734,13 @@ function processTheftTargetState(scene) {
           // Fehlalarm-Risiko (ein Inventar-Entfernen des Guts in Klient-Präsenz IST eine Rückgabe),
           // aber unabhängig von Satzgrenzen/Pronomen. Greift nur, wenn das Gut vorher bei Karl war.
           let _hardReturnViaInvRemoval = false;
-          if (!_hardReturn && gutBeiKlient && Array.isArray(scene.inventar_entfernt) && scene.inventar_entfernt.length) {
+          // v7.12.428 (Lektorat v427 P1, Run-Wurzel): NICHT mehr von gutBeiKlient (rueckgabeRe)
+          // abhaengig. Befund: AUFLOESEN entfernt das Etui per scene.inventar_entfernt ZUERST,
+          // danach sah processTheftTargetState gutInInventory=false und rueckgabeRe griff nicht ->
+          // returnedToClient wurde nie gesetzt, Status blieb inKarlInventory. Das Zielobjekt in
+          // inventar_entfernt + Klient im Text + Status war inKarlInventory (Karl hatte es) IST
+          // bereits ein eindeutiger Rueckgabe-Beweis - kein gutBeiKlient noetig.
+          if (!_hardReturn && Array.isArray(scene.inventar_entfernt) && scene.inventar_entfernt.length) {
             const _zielAusInvEntfernt = scene.inventar_entfernt.some(x => {
               const xn = normForMatch(x || '');
               return xn && matchGut(xn) && !istSurrogat(xn);
@@ -6742,9 +6748,11 @@ function processTheftTargetState(scene) {
             const _klientTeileR = ((clientProfile && clientProfile.name) ? normForMatch(clientProfile.name) : '')
               .split(/\s+/).filter(w => w.length >= 4);
             const _klientImText = _klientTeileR.length && _klientTeileR.some(p => normForMatch(scene.szene || '').includes(p));
-            if (_zielAusInvEntfernt && _klientImText) {
+            // Karl hatte das Gut nachweislich: entweder noch im Inventar ODER Status inKarlInventory.
+            const _hatteGut = gutInInventory || _tisStatus === 'inKarlInventory';
+            if (_zielAusInvEntfernt && _klientImText && _hatteGut) {
               _hardReturnViaInvRemoval = true;
-              if (typeof diag === 'function') diag('detect', 'Harte Rückgabe via Inventar-Entfernung erkannt (Zielobjekt in inventar_entfernt + Klient im Text + Rückgabe-Erwähnung) - satzgrenzen-unabhängig');
+              if (typeof diag === 'function') diag('detect', 'Harte Rückgabe via Inventar-Entfernung erkannt (Zielobjekt in inventar_entfernt + Klient im Text + Gut war bei Karl) - satzgrenzen-unabhängig, gutBeiKlient nicht erforderlich');
             }
           }
           // v7.12.349 (Lektorat v348 P1 #2): DRITTER Weg über die SPIELER-ABSICHT. Wenn der Spieler
@@ -10797,6 +10805,7 @@ function showCaseSolved() {
     const ct = (caseSetup && caseSetup.caseType) || '';
     const verdName = caseProgress.tatverdaechtiger || 'der Schuldige';
     let outcomeSentence;
+    let _diebGesichertInformiert = false; // v7.12.428: Win-Schlusssatz nicht doppeln (Benjamin)
     const _indizPrefix = numIndizien + ' Indiz' + (numIndizien === 1 ? '' : 'ien') + ' gesammelt, ';
     // v7.11.0: Frueher Abbruch (AUFLOESEN vor Stage 3): ueberfuehrt=false, stage=4.
     const earlyAbort = !caseProgress.ueberfuehrt && !caseProgress.wahrheitErkannt
@@ -10843,7 +10852,8 @@ function showCaseSolved() {
             outcomeSentence = _indizPrefix + _gutLabel + ' zurückgebracht.';
           } else if (_zurueck) {
             // bei Karl gesichert, aber nicht physisch uebergeben (Klient ggf. informiert)
-            outcomeSentence = _indizPrefix + _gutLabel + ' gesichert, Klient informiert.';
+            outcomeSentence = _indizPrefix + _gutLabel + ' gesichert, Klient informiert, das Honorar ist fällig.';
+            _diebGesichertInformiert = true;
           } else {
             outcomeSentence = _indizPrefix + _gutLabel + ' lokalisiert.';
           }
@@ -10922,7 +10932,11 @@ function showCaseSolved() {
       ? 'Was Karl nicht weiß, wird er nicht mehr finden. Der Korn hilft auch heute.'
       : (_istEigenauftrag
           ? 'Kein Klient, kein Honorar. Aber die Wahrheit steht - und die alte Schuld wiegt heute etwas leichter.'
-          : 'Der Klient ist informiert, das Honorar ist fällig.');
+          : (_diebGesichertInformiert
+              // v7.12.428 (Benjamin): outcomeSentence sagt schon "Klient informiert, das Honorar ist
+              // fällig" - hier NICHT wiederholen, sonst doppelt. Neutraler Noir-Schlusssatz.
+              ? 'Der Fall ist abgeschlossen.'
+              : 'Der Klient ist informiert, das Honorar ist fällig.'));
     // v7.12.144 (User-Wunsch: Abwechslung): zufaelliger Noir-Schlusssatz statt
     // immer "Karl goennt sich einen ehrlichen Schluck Doppelkorn". Tageszeit-/
     // Stimmungs-neutral, passt zu jedem Fallausgang.
