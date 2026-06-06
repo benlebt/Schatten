@@ -3062,7 +3062,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.414</div>
+    <div class="start-version">Schatten v7.12.415</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3283,7 +3283,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.414</span>
+    <span>Schatten v7.12.415</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6141,7 +6141,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.414';
+window.SCHATTEN_VERSION = 'v7.12.415';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -13803,6 +13803,79 @@ function classifyOrt(ortString) {
   return classifyOrtDetailed(ortString).type;
 }
 
+// v7.12.415: NPC-TEXTUR-HINT. Gibt der KI pro Szene EINEN konkreten Nebenfiguren-Archetyp
+// als harten Impuls mit, statt nur auf die allgemeine "variiere"-Prompt-Disziplin zu vertrauen.
+// Ziel (Benjamin): Waechter, Handlanger, Zeugen werden wirklich individuell - der eine breit
+// und aggressiv, der andere nervoes und bestechlich, statt austauschbarer Statisten.
+// Feuert NICHT in jeder Szene (sonst mechanisch) und nur wenn eine Sprech-Nebenfigur plausibel
+// ist. Anti-Wiederholung ueber lastNpcTextureKey, damit nicht 3x derselbe Typ kommt.
+let lastNpcTextureKey = '';
+function buildNpcTextureHint(ctx) {
+  ctx = ctx || {};
+  const ortType = ctx.ortType || 'NEUTRAL';
+  const sp = (typeof ctx.spannung === 'number') ? ctx.spannung : 2;
+  const politisch = !!ctx.politisch;
+  const stasiT = (typeof ctx.stasiTension === 'number') ? ctx.stasiTension : 0;
+
+  // Orte, an denen KEINE fremde Sprech-Nebenfigur sinnvoll ist: Karl zu Hause, beim Arzt,
+  // bei Marlene. Dort macht ein Waechter/Schlaeger/Zeuge-Hint keinen Sinn.
+  if (ortType === 'HOME' || ortType === 'WAGNER' || ortType === 'CHARITE') return '';
+
+  // Pools nach Kontext. Jeder Eintrag ist EIN konkreter Archetyp - die KI macht daraus
+  // einen halben bis ganzen Satz, kein Steckbrief.
+  const POOL_STASI = [
+    'Der eine, der spricht, ist ein junger MfS-Mann - zu eifrig, die Sache ist ihm sichtlich zu gross, er ueberspielt die eigene Unsicherheit mit Strenge.',
+    'Der wortfuehrende Offizier ist aelter, mued und routiniert - fast hoeflich, er hat das schon hundertmal gemacht und langweilt sich beinahe.',
+    'Einer der Beamten raucht heimlich, wo er nicht duerfte, und wirkt mehr genervt von der Buerokratie als von Karl.',
+    'Der Vernehmer hat einen Tick - putzt staendig die Brille / klopft mit dem Bleistift / redet auffaellig leise - und das macht ihn unheimlicher als jede Drohung.',
+    'Der MfS-Mann hat selbst Angst - vor seinem Vorgesetzten, nicht vor Karl; man spuert, dass er Fehler vermeiden will.',
+    'Einer zeigt eine merkwuerdige Schwaeche: mag Jazz, hat Heimweh nach Sachsen, fragt Karl beilaeufig etwas Privates - mitten im Verhoer.',
+  ];
+  const POOL_SCHLAEGER = [
+    'Zwei Maenner - der eine breit und aggressiv und sofort auf Krawall, der andere kleiner, nervoes, redet zu viel und wirkt bestechlich.',
+    'Der Waechter ist kein Profi: jung, uebermuedet, unterbezahlt, will eigentlich nur keinen Aerger und keine Schlaegerei.',
+    'Ein abgebruehter Profi - ruhig, knapp, unbestechlich, schaut Karl nur an und sagt fast nichts; das ist gefaehrlicher als Geschrei.',
+    'Der Schlaeger ist aberglaeubisch oder dumm - leicht abzulenken, mit dem richtigen Wort oder einer Geste aus dem Konzept zu bringen.',
+    'Einer der beiden ist klar der Chef, der andere wartet auf Befehle und traut sich nichts allein - spiel die beiden gegeneinander aus.',
+    'Der Mann ist gelangweilt, lehnt an der Wand, kaut etwas - er hat keine Lust auf Aerger und laesst sich mit Smalltalk oder einer Zigarette weich klopfen.',
+  ];
+  const POOL_ZIVIL = [
+    'Der Wirt/Kellner plaudert bereitwillig drauflos - fast zu viel, man muss ihn eher bremsen als locken.',
+    'Die Zeugin/Nachbarin ist misstrauisch und knapp, will Karl eigentlich nur loswerden - oeffnet sich erst, wenn er Geduld zeigt.',
+    'Der Auskunftgeber ist wichtigtuerisch, blaeht Halbwissen zu Insider-Wissen auf - man muss das Echte vom Aufgeblasenen trennen.',
+    'Die Person will erst Geld oder einen Gefallen, bevor sie redet - ganz nuechtern, kein Drama, reine Geschaeftssache.',
+    'Der Passant/Nachbar verwechselt Karl mit jemandem oder haelt ihn faelschlich fuer einen Beamten - und redet deshalb erst zu offen, dann zu vorsichtig.',
+    'Ein muerrischer, genervter Typ, der einsilbig antwortet - jede Information muss ihm einzeln aus der Nase gezogen werden.',
+  ];
+
+  // Pool + Feuer-Wahrscheinlichkeit nach Kontext bestimmen.
+  let pool, key, chance;
+  if (politisch && (stasiT >= 2 || ortType === 'CUSTODY')) {
+    pool = POOL_STASI; key = 'stasi'; chance = 0.7;
+  } else if (sp >= 3) {
+    pool = POOL_SCHLAEGER; key = 'schlaeger'; chance = 0.7;
+  } else if (ortType === 'CUSTODY') {
+    pool = POOL_STASI; key = 'stasi'; chance = 0.6;
+  } else {
+    // ruhige/neutrale Szene: Zivil-Nebenfiguren, aber seltener (nicht jede ruhige Szene
+    // hat ueberhaupt eine Sprech-Nebenfigur).
+    pool = POOL_ZIVIL; key = 'zivil'; chance = 0.45;
+  }
+
+  if (Math.random() > chance) return '';
+
+  // Anti-Wiederholung: nicht denselben exakten Eintrag direkt nochmal. Bis zu 3 Versuche.
+  let pick = pool[Math.floor(Math.random() * pool.length)];
+  for (let i = 0; i < 3 && (key + '|' + pick) === lastNpcTextureKey; i++) {
+    pick = pool[Math.floor(Math.random() * pool.length)];
+  }
+  lastNpcTextureKey = key + '|' + pick;
+
+  return 'NPC-TEXTUR (konkreter Impuls fuer die Sprech-Nebenfigur DIESER Szene, falls eine vorkommt - '
+    + 'KEIN Zwang eine zu erfinden, aber wenn Waechter/Handlanger/Zeuge/Beamter auftaucht, gib IHM dieses Gesicht): '
+    + pick + ' Nur EINE Figur so ausgestalten (der Wortfuehrer), die anderen bleiben Kulisse. Ein halber bis ganzer Satz reicht, kein Steckbrief, kein Bösewicht-Monolog.';
+}
+
 // v7.11.3: Doppel-Klick-Schutz fuer chooseOption. Wenn der Spieler waehrend
 // einer laufenden API-Anfrage nochmal klickt (Touch-Race, versehentlicher
 // Second-Tap, oder System-Race), wird die zweite Anfrage geblockt. Sonst
@@ -19304,6 +19377,23 @@ Wenn Karl waehlt: Schnitt zur naechsten Szene am Morgen, Kaffee zu zweit, keine 
       }
       // verbraucht
       pendingCategoryMessages = [];
+    }
+
+    // v7.12.415: NPC-TEXTUR-HINT. Pro Szene EINEN konkreten Nebenfiguren-Archetyp als harten
+    // Impuls mitgeben (Waechter/Handlanger/Zeuge/Beamter). Feuert situativ + nicht in jeder Szene
+    // (Wahrscheinlichkeit/Pool steckt in buildNpcTextureHint). Nicht waehrend Karl in Gewahrsam ist
+    // (dort regelt der GEWAHRSAM-KONTEXT die Szene), nicht bei Tageswechsel/Schlaf.
+    if (!karlInStasiCustody && !pendingDayTransition && !pendingSleepChoice && typeof buildNpcTextureHint === 'function') {
+      const _npcTex = buildNpcTextureHint({
+        ortType: currentOrtType,
+        spannung: (typeof lastSpannung === 'number') ? lastSpannung : 2,
+        politisch: caseIsPolitical,
+        stasiTension: stasiTension
+      });
+      if (_npcTex) {
+        timeContext += '\n\n=== NPC-TEXTUR (v7.12.415) ===\n' + _npcTex;
+        if (typeof diag === 'function') diag('detect', 'NPC-TEXTUR-HINT gesetzt: ' + _npcTex.slice(0, 60) + '...');
+      }
     }
     // Expliziter Tageswechsel-Flag (gesetzt von advanceGameTime nach einem Roll-Over)
     if (pendingDayTransition) {
