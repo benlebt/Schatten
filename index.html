@@ -2984,7 +2984,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.428</div>
+    <div class="start-version">Schatten v7.12.429</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3205,7 +3205,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.428</span>
+    <span>Schatten v7.12.429</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6079,7 +6079,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.428';
+window.SCHATTEN_VERSION = 'v7.12.429';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -11226,6 +11226,81 @@ function copyDebug(event) {
 // Exportiert den gesamten Spielverlauf als Plaintext, damit Benjamin ihn fuer
 // Lektor-Analyse rauskopieren kann.
 // Baut den kompletten Verlauf-Text fuer Export oder Teilen
+// v7.12.429 (ChatGPT-Vorschlag, einziger wirklich neuer): ASSERTION-ENDREPORT. Statt einen
+// 1800-Zeilen-Run komplett zu lesen, zeigt dieser Block oben im Export die harten Mechanik-Checks:
+// Fall gelöst? Stage 4? Diebstahl-Objektstatus konsistent? Gewahrsam ohne echten Grund? etc.
+// Liest den LETZTEN endState aus dem sceneDiagnosticsBuffer (pro Szene erfasst). ✓ = ok,
+// ⚠ = auffällig (lesen!), ✗ = klarer Fehler, – = nicht anwendbar.
+function buildAssertionReport() {
+  try {
+    if (!Array.isArray(sceneDiagnosticsBuffer) || sceneDiagnosticsBuffer.length === 0) return '';
+    // Letzten Frame mit endState finden.
+    let es = null;
+    for (let i = sceneDiagnosticsBuffer.length - 1; i >= 0; i--) {
+      if (sceneDiagnosticsBuffer[i] && sceneDiagnosticsBuffer[i].endState) { es = sceneDiagnosticsBuffer[i].endState; break; }
+    }
+    if (!es) return '';
+    const ct = es.caseType || (caseSetup && caseSetup.caseType) || '?';
+    const geloest = !!es.istGeloest || (es.stage || 0) >= 4;
+    const L = [];
+    const row = (mark, text) => L.push('  ' + mark + ' ' + text);
+
+    // Fall-Abschluss
+    row(geloest ? '✓' : '–', 'Fall gelöst: ' + (geloest ? 'JA' : 'nein (Stage ' + (es.stage || 0) + ')'));
+    if (geloest) row((es.stage || 0) >= 4 ? '✓' : '⚠', 'Stage 4 erreicht: ' + (es.stage || 0));
+
+    // Diebstahl-Objektstatus-Konsistenz (der Brennpunkt der letzten Runden)
+    if (ct === 'diebstahl') {
+      const tis = es.targetItemStatus || 'unknown';
+      const imInv = es.zielObjektImInventar;
+      if (geloest) {
+        // Gelöst + zurückgegeben: Objekt sollte returnedToClient UND nicht mehr im Inventar sein.
+        if (tis === 'returnedToClient') {
+          row(imInv === false ? '✓' : (imInv === true ? '✗' : '⚠'),
+            'Diebesgut: returnedToClient' + (imInv === true ? ' ABER noch im Inventar (✗ Widerspruch!)' : (imInv === false ? ', nicht mehr im Inventar (ok)' : '')));
+        } else if (tis === 'inKarlInventory') {
+          row('⚠', 'Diebesgut: gelöst, aber Status noch inKarlInventory (Telefon-Abschluss? oder State-Bug - prüfen!)');
+        } else {
+          row('✗', 'Diebesgut: Fall gelöst, aber Status=' + tis + ' (sollte returnedToClient/inKarlInventory sein)');
+        }
+      } else {
+        row('–', 'Diebesgut-Status: ' + tis + (imInv === true ? ' (im Inventar)' : ''));
+      }
+    }
+
+    // Gewahrsam ohne echten Grund (nach den vielen Custody-Härtungen)
+    row(es.gewahrsam ? '⚠' : '✓', 'Gewahrsam am Ende: ' + (es.gewahrsam ? 'JA (bei Abschluss ungewöhnlich - prüfen)' : 'nein'));
+
+    // Verfassung / Überleben
+    row((es.verfassung || 0) >= 1 ? '✓' : '✗', 'Verfassung Ende: ' + es.verfassung + (es.verfassung <= 1 ? ' (kritisch!)' : ''));
+
+    // Indizien (Mord/Wahrheit brauchen welche)
+    if (ct === 'mord' || ct === 'wahrheit' || ct === 'politisch') {
+      row((es.indizienCount || 0) >= 2 ? '✓' : '⚠', 'Indizien gesammelt: ' + (es.indizienCount || 0));
+    }
+
+    // Historische Anker (Qualitäts-Differenzierer)
+    row((es.historicalAnchorCount || 0) >= 3 ? '✓' : '⚠', 'Historische Anker: ' + (es.historicalAnchorCount || 0) + ((es.historicalAnchorCount || 0) < 3 ? ' (Ziel >=3)' : ''));
+
+    // personenImRaum-Fehlrate (NPC-Tiefe) - aus den Frames zählen
+    try {
+      let fehlt = 0, total = 0;
+      sceneDiagnosticsBuffer.forEach(f => {
+        if (!f || !Array.isArray(f.events)) return;
+        f.events.forEach(ev => {
+          if (ev && /personenImRaum/i.test(ev.msg || '')) { total++; if (/FEHLT|kein Array/i.test(ev.msg || '')) fehlt++; }
+        });
+      });
+      if (total > 0) row(fehlt === total ? '⚠' : '✓', 'personenImRaum fehlt: ' + fehlt + '/' + total + ' Szenen' + (fehlt === total ? ' (Engine rekonstruiert aus Prosa)' : ''));
+    } catch (e) { /* optional */ }
+
+    if (L.length === 0) return '';
+    return '=== ASSERTION-REPORT (Mechanik-Check, ' + ct + ') ===\n' + L.join('\n') + '\n' + '-'.repeat(50) + '\n\n';
+  } catch (e) {
+    return '=== ASSERTION-REPORT: Fehler beim Erstellen (' + (e && e.message) + ') ===\n\n';
+  }
+}
+
 function buildTranscriptText() {
   // Header
   let out = 'KRIMINALBUERO MAUER\n';
@@ -11233,6 +11308,12 @@ function buildTranscriptText() {
   out += 'Version: ' + (window.SCHATTEN_VERSION || 'unbekannt') + '\n';
   out += 'Exportiert: ' + new Date().toLocaleString('de-DE') + '\n';
   out += '\n' + '='.repeat(60) + '\n\n';
+
+  // v7.12.429: ASSERTION-REPORT ganz oben (nur im Debug-Export, für Bot-Test-Batches).
+  if (typeof isDebugExportEnabled === 'function' && isDebugExportEnabled()) {
+    const _assert = buildAssertionReport();
+    if (_assert) out += _assert;
+  }
 
   // v7.12.199 (User-Wunsch): API-EVENT-LOG ganz oben - Timeouts/Retries/Failover/Bot-Abbrueche.
   // Diese Ereignisse fehlten bisher im Export, weil sie OHNE erfolgreiche Szene passieren
@@ -30825,6 +30906,20 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         timedEvent: timedEventState ? (timedEventState.type + ' (Szene ' + timedEventState.sceneCount + ')') : null,
         clientName: clientProfile.name || null,
         clientCharakter: clientProfile.charakter || null,
+        // v7.12.429 (Assertion-Report): Diebstahl-Zielobjekt-Status + ob es noch im Inventar liegt.
+        caseType: (caseSetup && caseSetup.caseType) || null,
+        targetItemStatus: (caseProgress.targetItemState && caseProgress.targetItemState.status) || 'unknown',
+        diebesgutZurueck: !!caseProgress.diebesgutZurueck,
+        zielObjektImInventar: (function() {
+          try {
+            const _tn = (caseProgress.targetItemState && caseProgress.targetItemState.name)
+              || (caseSetup && caseSetup.setupCast && (caseSetup.setupCast.find(c => c && c.tag === 'TARGET') || {}).name) || '';
+            if (!_tn || typeof getTargetItemKeys !== 'function') return null;
+            const _keys = getTargetItemKeys(_tn);
+            return inventory.some(it => { const n = normForMatch(typeof it === 'string' ? it : (it && it.name) || ''); return _keys.some(k => n.includes(k)); });
+          } catch (e) { return null; }
+        })(),
+        istGeloest: !!caseProgress.istGelöst,
         currentCast: cast.map(c => {
           if (typeof c === 'string') return c;
           return (c.name || '?') + ' (' + (c.rolle || '?') + ')';
