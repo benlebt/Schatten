@@ -2984,7 +2984,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.424</div>
+    <div class="start-version">Schatten v7.12.425</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3205,7 +3205,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.424</span>
+    <span>Schatten v7.12.425</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6079,7 +6079,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.424';
+window.SCHATTEN_VERSION = 'v7.12.425';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -6807,27 +6807,30 @@ function processTheftTargetState(scene) {
             // faelschlich im else-Zweig und setzte wieder inKarlInventory - obwohl die Szene
             // die RUECKGABE erzaehlt. Das ist der haeufigste reale Ablauf (Karl holt Gut ->
             // traegt es zum Klienten -> gibt zurueck). Jetzt: Rueckgabe zuerst pruefen.
-            if (gutBeiKlient) {
+            // v7.12.425 (Lektorat v424 P1): Eine erkannte HARTE Rueckgabe (inkl. SPIELER-ABSICHT)
+            // setzt returnedToClient IMMER - unabhaengig von gutBeiKlient. Befund Krause-Run Sz23/24:
+            // "Harte Rueckgabe via SPIELER-ABSICHT erkannt", Etui aus Inventar entfernt, aber Status
+            // blieb inKarlInventory, weil gutBeiKlient (aus dem KI-Szenentext) false war - die Absicht
+            // stand im SPIELERTEXT. Daher zuerst _hardReturnFinal pruefen, dann erst gutBeiKlient.
+            if (_hardReturnFinal) {
+              setTargetItemState('returnedToClient', (clientProfile && clientProfile.name) || 'Klient', { name: _tName });
+              caseProgress.diebesgutZurueck = true;
               caseProgress.resolveEverReady = true;
-              // v7.12.158/159 (Code-Review): NUR die HARTE Rueckgabe setzt returnedToClient
-              // + Stage 4 (_hardReturn oben berechnet). Ein vager Treffer ohne Besitz wurde
-              // schon vor diesem Block per return abgefangen - hier sind wir nur, wenn
-              // _meaningfulHit galt (Gut bei Karl ODER harte Rueckgabe).
-              // v7.12.349: _hardReturnFinal = isHardClientReturn ODER Inventar-Entfernungs-Weg.
-              if (_hardReturnFinal) {
-                setTargetItemState('returnedToClient', (clientProfile && clientProfile.name) || 'Klient', { name: _tName });
-                if (!caseProgress.istGelöst) {
-                  caseProgress.klientGesprochen = true;
-                  caseProgress.abschlussSzeneGerendert = true; // v7.12.275: echte Rueckgabe-Szene lag vor
-                  caseProgress.istGelöst = true;
-                  caseProgress.stage = 4;
-                  removeTargetItemFromInventory(_tName);  // v7.12.158 (Punkt 3)
-                  diag('progress', '✦ FALL GELOEST (Stage 4) - harte Diebesgut-Rueckgabe an Klient erkannt');
-                  if (typeof showSolvedToastOnce === 'function') showSolvedToastOnce('Fall gelöst. Diebesgut zurückgegeben.');
-                }
-              } else if (gutInInventory || gutInText) {
-                // Vage Rueckgabe-Formulierung, aber Karl hat das Gut nachweislich (Inventar/
-                // Text) -> mindestens inKarlInventory (nicht returnedToClient).
+              if (!caseProgress.istGelöst) {
+                caseProgress.klientGesprochen = true;
+                caseProgress.abschlussSzeneGerendert = true;
+                caseProgress.istGelöst = true;
+                caseProgress.stage = 4;
+                diag('progress', '✦ FALL GELOEST (Stage 4) - harte Diebesgut-Rueckgabe an Klient erkannt');
+                if (typeof showSolvedToastOnce === 'function') showSolvedToastOnce('Fall gelöst. Diebesgut zurückgegeben.');
+              }
+              // Etui immer aus dem Inventar entfernen (auch wenn der Fall schon als geloest galt) -
+              // sonst bleibt es bei Karl liegen, obwohl es physisch zurueckgegeben wurde.
+              if (_tName && typeof removeTargetItemFromInventory === 'function') removeTargetItemFromInventory(_tName);
+            } else if (gutBeiKlient) {
+              caseProgress.resolveEverReady = true;
+              if (gutInInventory || gutInText) {
+                // Vage Rueckgabe-Formulierung, aber Karl hat das Gut nachweislich -> inKarlInventory.
                 setTargetItemState('inKarlInventory', 'Karl', { name: _tName });
               }
             } else if (gutInInventory || gutInText) {
