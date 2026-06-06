@@ -3017,7 +3017,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.435</div>
+    <div class="start-version">Schatten v7.12.437</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3238,7 +3238,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.435</span>
+    <span>Schatten v7.12.437</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6113,7 +6113,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.435';
+window.SCHATTEN_VERSION = 'v7.12.437';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -6186,6 +6186,22 @@ function recalcGameCurrentDate() {
   gameCurrentDate = `${yyyy}-${mm}-${dd}`;
 }
 let scenesAtSameLocation = 0; // counter for location stagnation
+// v7.12.437 (ChatGPT-Lektorat Brandt-Run P1, Kurt-Lange-Beaming): LOKALE BEWEGUNG ist
+// KEINE Reise. Befund Sz19: "Geh zur Tür und schau durch den Spion" matchte den Reise-
+// Detektor ("geh zur") -> Kurt Lange (gefesselt im Raum) wurde reise-bereinigt aus dem
+// Prompt-Cast entfernt, die KI verlor den Kontext und erfand "Büro von Kurt Lange". Auch
+// "ins Gesicht pfeffern" (Sz16) loeste faelschlich einen ORTSWECHSEL-PUSH aus. Dieser
+// Guard erkennt Bewegungen INNERHALB des aktuellen Raums (zur Tür/zum Fenster/zum
+// Schreibtisch/durch den Spion ...) sowie Gewaltphrasen mit "zu/ins" und unterdrueckt
+// dann die Reise-Klassifikation an beiden Travel-Pfaden. Single Source of Truth.
+// Erwartet normForMatch-Text (ae/oe/ue/ss, lowercase).
+const LOCAL_MOVEMENT_RE = /\b(zur tuer|zur tür|an die tuer|an die tür|durch den spion|durch das schluesselloch|zum fenster|ans fenster|zum schreibtisch|an den schreibtisch|zum tresen|an den tresen|zur bar|zum stuhl|zur wand|an die wand|zum schrank|zum regal|zum kuehlschrank|zum bett|zum sofa|zum sessel|zum tisch|an den tisch|zur theke|an die theke|einen spalt|in den flur|auf den flur|zum ausgang|zur treppe|zu (deinem|dem|der) (kuehlschrank|schreibtisch|fenster|schrank|regal|tresen|tisch|bett|sofa|sessel|stuhl|tuer|tür|wand|theke|bar|kommode|vitrine|aktenschrank))\b/;
+// Gewaltphrasen/physische Aktionen mit "zu/ins/an" - keine Reise (Sz16 "ins Gesicht pfeffern").
+const LOCAL_VIOLENCE_RE = /\b(ins gesicht|an den kopf|gegen die wand|auf den tresen|auf den tisch|zu boden|zur rede|zum schweigen|in die mangel|am kragen|an der gurgel|in den schwitzkasten)\b/;
+function isLocalMovementAction(normTxt) {
+  if (!normTxt) return false;
+  return LOCAL_MOVEMENT_RE.test(normTxt) || LOCAL_VIOLENCE_RE.test(normTxt);
+}
 let lastLocation = '';     // for stagnation check (full string, fuer Auto-Cast-Clean)
 let lastMainLocation = ''; // v6.58: nur Hauptort vor erstem Komma (fuer Stagnation-Zaehler)
 // Besuchte Orte: alle einzigartigen Orte die Karl bisher betreten hat.
@@ -18066,7 +18082,9 @@ async function requestSceneFromModel(userMessage, conversationHistory, compactMo
       // hier geht es nur darum, was die KI als "im Raum" vorgelegt bekommt.
       const _umsg = normForMatch(typeof userMessage === 'string' ? userMessage : '');
       const _reiseRe = /\b(fahr|fahre|fahren|fahr zu|fahr zur|fahr nach|geh zu|geh zur|geh nach|geh ins|begib|begeb|mach dich auf|auf zum|auf zur|zurueck zum|zurueck zur|zum buero|nach hause|raus aus|verlasse?|verlass den|verlass die|verlass das|setz dich in den opel|steig in|nimm die s-bahn|fahr los)\b/i;
-      const _istReise = _reiseRe.test(_umsg);
+      // v7.12.437 (Brandt-Run P1): Lokale Bewegung ("geh zur Tür", "ins Gesicht") ist KEINE
+      // Reise - sonst wird ein gefesselter NPC faelschlich aus dem Prompt-Cast bereinigt.
+      const _istReise = _reiseRe.test(_umsg) && !isLocalMovementAction(_umsg);
       const _mitnahmeRe = /\b(nimm|nimmst|schnapp|schnappst|zerr|zerrst|schlepp|schleppst|begleitet|kommt mit|kommen mit|mitnehmen|mit dir|im schlepptau|bring|bringst|bringe|hol|holst|hole|schaff|schaffst|schaffe|fuehr|fuehrst|fuehre|trag|traegst|setz)\b/i;
       let _promptCast = cast;
       if (_istReise) {
@@ -18785,7 +18803,17 @@ KEINE anderen Themen, KEINE Indizien-Suche, KEINE Nebenfiguren - die naechsten 1
             return tf ? tf.name : '';
           })();
           if (caseTypeStage3 === 'vermisst' && targetForReport) {
-            recap += `\nFALL-ENDE PFLICHT (vermisst): Karl hat ${targetForReport} gefunden bzw. weiss wo die Person ist. Diese Szene MUSS damit enden: Karl bringt ${targetForReport} zum Klient zurueck (falls lebend und mit Karl) ODER faehrt zum Klient und meldet das Auffinden (lebend / tot / verhaftet). Setze "klient_berichtet": true.`;
+            // v7.12.435 (ChatGPT-Lektorat v434 P1/P2, Wegener-Run): Finale-Wahrheit. Der alte
+            // Push sagte PAUSCHAL "Karl hat X gefunden / bringt X zurueck" - auch wenn die
+            // Zielperson NIE physisch praesent war (zielpersonGefunden wurde verworfen, nur
+            // Aufenthaltsort/Verantwortlicher ermittelt). Folge im Run: KI dichtete "Konstantin
+            // wohlbehalten gefunden, aus der Halle geholt" ins Finale, obwohl eine Szene vorher
+            // noch "noch immer nicht gefunden" stand. Jetzt zwei getrennte Finale-Anweisungen.
+            if (caseProgress.zielpersonGefunden === true) {
+              recap += `\nFALL-ENDE PFLICHT (vermisst, PERSON GEFUNDEN): Karl hat ${targetForReport} tatsaechlich physisch gefunden. Diese Szene MUSS damit enden: Karl bringt ${targetForReport} zum Klient zurueck (falls lebend und mit Karl) ODER faehrt zum Klient und meldet das Auffinden (lebend / tot / verhaftet). Setze "klient_berichtet": true.`;
+            } else {
+              recap += `\nFALL-ENDE PFLICHT (vermisst, NUR SPUR GEKLAERT): WICHTIG - Karl hat ${targetForReport} NICHT selbst gefunden und NICHT herausgeholt. Karl kennt nur den Aufenthaltsort / den Verantwortlichen. Das Finale darf AUF KEINEN FALL behaupten, Karl habe ${targetForReport} "gefunden", "gerettet", "befreit", "wohlbehalten zurueckgebracht" oder "aus X herausgeholt" - das waere gelogen. Diese Szene MUSS damit enden: Karl faehrt zum Klient und meldet EHRLICH, was er weiss: wo ${targetForReport} festgehalten wird / wer verantwortlich ist / dass jetzt Polizei (Roth/Lindner) oder der Klient handeln kann. Der Klient reagiert auf eine SPUR, nicht auf eine Rettung (Hoffnung, Angst, Dankbarkeit fuer die Information). Setze "klient_berichtet": true.`;
+            }
           } else if (caseTypeStage3 === 'diebstahl' && targetForReport) {
             recap += `\nFALL-ENDE PFLICHT (diebstahl): Karl hat ${targetForReport} wieder. Diese Szene MUSS damit enden: Karl bringt das Diebesgut zum Klient zurueck (zurueck ins Buero oder zu Klients Adresse), uebergibt es persoenlich. Klient bezahlt den Rest des Honorars. Setze "klient_berichtet": true.`;
           } else if (caseTypeStage3 === 'beschatten') {
@@ -19855,6 +19883,9 @@ VERBOTEN: Karl wacht woanders auf ohne Erklaerung. Wenn du Pfad B waehlst, MUSST
             const _hatZiel = _zielRe.test(_ct);
             const _echteBewegung = /\b(verlass|verlasse|brich auf|steig in|setz dich in|nimm.{0,6}(s-?bahn|wagen)|folge|verfolge|haeng dich|auf den fersen|fahr.{0,10}(hin|zu|nach)|geh.{0,10}(zu|nach)|setz nach)\b/i.test(_ct_norm);
             if (_reiseVerbRe.test(_ct) && !_fahrFort && (_hatZiel || _echteBewegung)) {
+              // v7.12.437 (Brandt-Run P1/P2): lokale Bewegung/Gewaltphrase ist keine Reise.
+              // "Geh zur Tür", "ins Gesicht pfeffern" duerfen keinen Ortswechsel-Push ausloesen.
+              if (isLocalMovementAction(_ct_norm)) { break; }
               _spielerWollteReise = true;
               const _zm = _ct.match(_zielRe);
               if (_zm) _spielerReiseZiel = _zm[2].trim().replace(/\s+(um|damit|bevor|und|wo|der|die|das)\b.*$/i, '').replace(/[.,;:!?]+$/, '');
