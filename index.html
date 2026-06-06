@@ -2984,7 +2984,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.418</div>
+    <div class="start-version">Schatten v7.12.420</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3205,7 +3205,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.418</span>
+    <span>Schatten v7.12.420</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6063,7 +6063,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.418';
+window.SCHATTEN_VERSION = 'v7.12.420';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -6623,6 +6623,12 @@ function processTheftTargetState(scene) {
               if (!gutInInventory) {
                 // Besitz-Verben generisch (es/ihn/sie/das gut) - kein fallspezifisches Objektwort.
                 const besitzRe = /(in (deiner|der) (hand|faust)|in (deinen|den) (haenden))|umklammer|umgreif|umfass|steckst (es|ihn|sie|das (gut|diebesgut))? ?(ein|weg|in)|nimmst (es|ihn|sie|das (gut|diebesgut)) an dich|an dich genommen|in (deine[rn]?|die) (innen)?(tasche|mantel|jacke)|in deinem besitz|sicher verstaut|haeltst (es|ihn|sie|das (gut|diebesgut)) (fest|umklammert|in)|birgst (es|ihn|sie)|hast (es|ihn|sie|das (gut|diebesgut)) (endlich |wieder |jetzt )?(sicher |an dich genommen|in der hand|zurueck)|verschwindet (tief )?in (deiner|der) (jacke|jackentasche|manteltasche|tasche|innentasche)/i;
+                // v7.12.419 (Lektorat Krause-Run P1, reproduziert): NEGATIONSGUARD. Die KI schrieb
+                // "Das Etui ist noch immer NICHT in deinem Besitz" - besitzRe matchte "in deinem besitz"
+                // und uebernahm das Etui faelschlich ins Inventar -> Fall zu frueh loesbar. Ein Satz,
+                // der den Besitz VERNEINT (nicht/kein/noch immer nicht/weiterhin nicht/ohne ... vor
+                // einer Besitz-Phrase), darf NIE als Besitz zaehlen. Greift satzweise.
+                const negBesitzRe = /\b(nicht|kein|keine|keinen|noch immer nicht|weiterhin nicht|nie|niemals|ohne|fehlt|vermisst|verloren|entgangen|nicht mehr)\b[^.!?]{0,60}\b(in (deinem|deinen|deiner|der|den) (besitz|hand|haenden|tasche)|bei dir|gesichert|an dich|verstaut|gefunden)/i;
                 const nurSicht = /(siehst|erblickst|entdeckst|liegt (auf|vor|in)|funkelt|glaenzt|steht) /i.test(sceneNorm) && !besitzRe.test(sceneNorm) && !rueckgabeRe.test(sceneNorm);
                 // v7.12.160 (Code-Review Punkt 1, lange offener Hauptpunkt): Besitz-NAHFENSTER.
                 // Befund: besitzRe wurde auf die GANZE Szene angewendet - "Das Etui liegt auf
@@ -6656,7 +6662,7 @@ function processTheftTargetState(scene) {
                       const _satzEnde = _nachRaw.search(/[.!?]/);
                       const _nach = _satzEnde >= 0 ? _nachRaw.slice(0, _satzEnde) : _nachRaw;
                       const satz = _vor + _nach;  // genau der Satz um das Zielwort
-                      if ((besitzRe.test(satz) || besitzNah.test(satz)) && !istSurrogat(satz)) return true;
+                      if ((besitzRe.test(satz) || besitzNah.test(satz)) && !istSurrogat(satz) && !negBesitzRe.test(satz)) return true;
                       idx = sceneNorm.indexOf(key, idx + key.length);
                     }
                   }
@@ -6666,7 +6672,7 @@ function processTheftTargetState(scene) {
                   gutInText = true;
                 } else if (_possNear === null) {
                   // Nur generisches Diebesgut-Wort (kein konkretes Zielwort) -> alte globale Logik.
-                  if (besitzRe.test(sceneNorm) && !nurSicht && !istSurrogatScene) gutInText = true;
+                  if (besitzRe.test(sceneNorm) && !nurSicht && !istSurrogatScene && !negBesitzRe.test(sceneNorm)) gutInText = true;
                 }
                 // _possNear === false: konkretes Zielwort vorhanden, aber Besitzverb NICHT im
                 // Nahfenster -> KEIN gutInText (das ist genau der verhinderte Fehlalarm).
@@ -7724,8 +7730,39 @@ function playModeSpeaksOptions(mode) {
 }
 // Setzt den Modus, speichert ihn, schaltet Musik passend an/aus und aktualisiert die UI.
 // quelle: 'start' | 'settings' - nur fuer Diagnose.
+// v7.12.419 (iOS-Hörbuch-Bug): iOS/Safari spielt speechSynthesis.speak() NUR ab, wenn die Engine
+// vorher durch eine DIREKTE Nutzer-Geste (Tap) entsperrt wurde. Der Auto-Vorlese-Aufruf nach einer
+// neuen Szene laeuft asynchron (KI-Antwort + setTimeout) und ist KEINE Geste -> iOS schluckt den Ton,
+// der Play-Button ist aktiv, aber es kommt keine Stimme (man muss manuell tappen). Loesung: beim
+// Aktivieren des Hörbuch-Modus PER TAP (= echte Geste) die Engine mit einer stillen Utterance warm
+// machen. Danach bleiben auch automatische speak()-Aufrufe hoerbar.
+let _speechUnlocked = false;
+function unlockSpeechForIOS() {
+  if (_speechUnlocked) return;
+  if (!('speechSynthesis' in window)) return;
+  try {
+    // getVoices() anstossen (iOS laedt die Liste oft erst nach dem ersten Aufruf)
+    window.speechSynthesis.getVoices();
+    const silent = new SpeechSynthesisUtterance(' ');
+    silent.volume = 0;
+    silent.rate = 10;
+    window.speechSynthesis.speak(silent); // INNERHALB der Geste -> entsperrt iOS-Audio
+    _speechUnlocked = true;
+    if (typeof diag === 'function') diag('state', 'iOS-Speech-Engine entsperrt (Geste: Hörbuch-Modus aktiviert)');
+  } catch (e) {
+    console.warn('[Schatten] Speech-Unlock fehlgeschlagen:', e);
+  }
+}
+
 function setPlayMode(mode, quelle) {
   if (PLAYMODES.indexOf(mode) === -1) mode = 'still';
+  // v7.12.419: Wenn ein Vorlese-Modus PER TAP (Geste) aktiviert wird, JETZT die iOS-Speech-Engine
+  // entsperren - das ist der einzige Moment mit echter Nutzer-Geste vor dem spaeteren Auto-Vorlesen.
+  try {
+    if (quelle === 'start' && (mode === 'hoerbuch' || mode === 'hoerbuch_plus')) {
+      unlockSpeechForIOS();
+    }
+  } catch (e) { /* nie blockieren */ }
   try { localStorage.setItem('schatten-playmode', mode); } catch (e) { /* ignore */ }
   if (typeof diag === 'function') diag('state', 'Spielmodus gesetzt: ' + mode + (quelle ? ' (' + quelle + ')' : ''));
   // Musik passend schalten
@@ -10746,22 +10783,32 @@ function showCaseSolved() {
       switch (_concl.kind) {
         case 'objekt_erfuellt': {
           const _gutLabel = _getTargetName() || 'das Diebesgut';
+          // v7.12.420 (Lektorat Krause-Run P1/P2): Win-Screen ehrlich nach ECHTEM Status
+          // differenzieren statt nur diebesgutZurueck (das ist schon bei Karl-Besitz true).
+          //  - returnedToClient: physisch an den Klienten uebergeben -> "zurueckgebracht"
+          //  - inKarlInventory: gesichert + Klient informiert (z.B. telefonisch) -> "gesichert, Klient informiert"
+          //  - sonst: nur "lokalisiert"
+          const _tisStatusWin = (caseProgress && caseProgress.targetItemState && caseProgress.targetItemState.status) || 'unknown';
           const _zurueck = !!(caseProgress && caseProgress.diebesgutZurueck);
-          // v7.12.211 (ChatGPT-Lektorat v210 P0): Inventar-Konsistenz. Befund (Krause-Run):
-          // Win-Screen sagte "zurückgebracht", aber das Etui stand noch in Karls Inventar -
-          // der Fall wurde über einen Pfad gelöst, der removeTargetItemFromInventory nicht
-          // durchlief. Wenn der Win-Screen "zurückgebracht" zeigt, MUSS das Item raus sein.
-          // Hier final absichern (fängt ALLE Lösungspfade ab): Status hochstufen + entfernen.
-          if (_zurueck) {
+          const _physischZurueck = (_tisStatusWin === 'returnedToClient');
+          // Inventar-Konsistenz: NUR wenn physisch zurueckgegeben, das Item aus dem Inventar
+          // entfernen. Bei "gesichert + informiert" bleibt das Gut korrekt bei Karl im Inventar.
+          // v7.12.420: die fruehere blinde Hochstufung auf returnedToClient bei jedem _zurueck
+          // ist RAUS - sie hat genau die Unterscheidung zerstoert (informiert wurde zu "zurueck").
+          if (_physischZurueck) {
             try {
               const _tn = (caseProgress.targetItemState && caseProgress.targetItemState.name) || _getTargetName() || '';
-              if (typeof setTargetItemState === 'function') {
-                setTargetItemState('returnedToClient', (clientProfile && clientProfile.name) || 'Klient', _tn ? { name: _tn } : undefined);
-              }
               if (_tn && typeof removeTargetItemFromInventory === 'function') removeTargetItemFromInventory(_tn);
             } catch (e) { /* konsistenz-absicherung optional */ }
           }
-          outcomeSentence = _indizPrefix + _gutLabel + (_zurueck ? ' zurückgebracht.' : ' lokalisiert.');
+          if (_physischZurueck) {
+            outcomeSentence = _indizPrefix + _gutLabel + ' zurückgebracht.';
+          } else if (_zurueck) {
+            // bei Karl gesichert, aber nicht physisch uebergeben (Klient ggf. informiert)
+            outcomeSentence = _indizPrefix + _gutLabel + ' gesichert, Klient informiert.';
+          } else {
+            outcomeSentence = _indizPrefix + _gutLabel + ' lokalisiert.';
+          }
           break;
         }
         case 'spur_ziel_geklaert': {
@@ -18878,8 +18925,16 @@ Marlowe-Stil: stilvoll, elliptisch, NICHT explizit. Tuer schliesst sich, Schnitt
         // Im Run wurde Helene bei Tension 4-5 herangezogen - das wirkt aufgepfropft, sie ist dann
         // Ally/Fluchthelferin, nicht Romance. Das Bond-Prinzip gilt weiter bei moderater Lage.
         const _stasiRuhigOk = !(typeof stasiTension === 'number' && stasiTension >= 4);
+        // v7.12.419 (Lektorat Krause-Run P2): KEIN Romance-Push, solange die DIEBESGUT-HOLPFLICHT
+        // aktiv ist. Befund: Erika wurde mitten auf der Hehler-Spur gepusht und verpuffte. Bei
+        // Diebstahl hat das Holen des Guts Vorrang - Romance erst, wenn das Gut gesichert ist.
+        const _ctRom = (caseSetup && caseSetup.caseType) ? normForMatch(caseSetup.caseType) : '';
+        const _tisRom = (caseProgress && caseProgress.targetItemState && caseProgress.targetItemState.status) || 'unknown';
+        const _gutHolPflichtAktiv = (_ctRom === 'diebstahl')
+          && !caseProgress.diebesgutZurueck
+          && _tisRom !== 'inKarlInventory' && _tisRom !== 'returnedToClient';
         if (!_romInCast && sceneCounter >= 5 && _scenesSinceRom >= 6 && _pushCooldownOk && _pushBudgetOk &&
-            _spOk && _stasiRuhigOk && !karlInStasiCustody && sceneCounter % 6 === 0) {
+            _spOk && _stasiRuhigOk && !_gutHolPflichtAktiv && !karlInStasiCustody && sceneCounter % 6 === 0) {
           const _rn = _romNames[0];
           lastRomancePushScene = sceneCounter;
           romancePushCount++;
