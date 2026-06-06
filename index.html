@@ -3017,7 +3017,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.434</div>
+    <div class="start-version">Schatten v7.12.435</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3238,7 +3238,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.434</span>
+    <span>Schatten v7.12.435</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6113,7 +6113,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.434';
+window.SCHATTEN_VERSION = 'v7.12.435';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -30296,6 +30296,17 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             + ') → möglicher Doppel-Bericht/Logikbruch');
         }
       } catch (e) { /* ignore */ }
+      // v7.12.435 (ChatGPT-Lektorat v434 P2, Margarete-Run Sz41): DOPPELBERICHT-GUARD.
+      // Befund: Margarete loeste in Sz41 sauber, aber die KI lieferte erneut klient_berichtet:true,
+      // nachdem der Fall schon gelöst/berichtet war. Bisher lief der gesamte Abschluss-Block
+      // dann ein ZWEITES Mal durch (setzt klientGesprochen/istGelöst/abschlussSzeneGerendert
+      // erneut, wirft bei Diebstahl die returnedToClient-/Inventar-Logik nochmal an, feuert
+      // Win-Toast doppelt). Sobald der Fall bereits abgeschlossen ist, ist ein weiterer
+      // KI-Klientenbericht nur Erzaehl-Nachklang - KEIN neuer Abschluss. Diag bleibt (oben),
+      // aber die State-/Render-Mechanik wird uebersprungen.
+      if (caseProgress.istGelöst || caseProgress.abschlussSzeneGerendert) {
+        // bereits gelöst/gerendert -> kein zweiter Abschluss-Durchlauf
+      } else {
       // v7.9.41: Stage-4-Sperre fuer beschatten/wahrheit. Anlass: Kessler-Run
       // v7.9.38 - 9 Szenen vom Start bis "Fall geloest" (Stage 1->2->3->4 in
       // Sz 4,7,8,9). Mistral hat klient_berichtet:true direkt nach Stage 3
@@ -30388,6 +30399,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         showSolvedToastOnce('Fall gelöst. Klient informiert.');
       }
       }
+      } // Ende Doppelbericht-Guard (v7.12.435): nur wenn Fall noch nicht gelöst/gerendert
     }
 
     // Politik-Detection: ist der Fall MfS-relevant?
