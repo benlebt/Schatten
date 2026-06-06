@@ -3062,7 +3062,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.415</div>
+    <div class="start-version">Schatten v7.12.416</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3283,7 +3283,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.415</span>
+    <span>Schatten v7.12.416</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6141,7 +6141,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.415';
+window.SCHATTEN_VERSION = 'v7.12.416';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -15998,7 +15998,7 @@ function renderOptions(scene) {
   // im Regex (vorher doppelt: verhör|verhoer, hohenschönhausen|hohenschoenhausen).
   const sceneTextNorm = normForMatch(scene.szene || '');
   // v7.12.48: "zelle" allein reicht NICHT - Telefonzellen! Nur echte Haft-Wörter.
-  const sceneShowsCustody = new RegExp('\\b(' + CUSTODY_KEYWORDS + '|haftanstalt|hohenschoenhausen|gefaengnis|untersuchungshaft|in\\s+gewahrsam|wachposten\\s+(bewacht|steht|sitzt)|bewachter\\s+raum|du\\s+sitzt\\s+(in|auf)\\s+(dem|der)\\s+(stuhl|bank|pritsche|boden)|du\\s+liegst\\s+(auf|in)\\s+(der\\s+zelle|dem\\s+verhoer|der\\s+pritsche)|haftzelle|einzelzelle|die\\s+zelle\\s+(ist|riecht|misst|hat))\\b').test(sceneTextNorm);
+  const sceneShowsCustody = new RegExp('\\b(' + CUSTODY_KEYWORDS + '|in\\s+gewahrsam|wachposten\\s+(bewacht|steht|sitzt)|bewachter\\s+raum|du\\s+sitzt\\s+(in|auf)\\s+(dem|der)\\s+(stuhl|bank|pritsche|boden)|du\\s+liegst\\s+(auf|in)\\s+(der\\s+zelle|dem\\s+verhoer|der\\s+pritsche)|haftzelle|einzelzelle|die\\s+zelle\\s+(ist|riecht|misst|hat))\\b').test(sceneTextNorm);
 
   // v7.12.413 (Lektorat Wessel-Run P1, WURZEL): Ort-Typ CUSTODY (Hohenschoenhausen, Haftanstalt)
   // allein darf Karl NICHT automatisch in Gewahrsam setzen - sonst gilt er beim INFILTRIEREN
@@ -21743,15 +21743,21 @@ function detectStasiCustody(sceneText) {
     // billigen Buero- und Hinterzimmern. Wir verlangen explizite Stasi/Verhoer-
     // Umgebung in der gleichen Szene.
     /\b(eisernen?\s+st(u|ue)hl)\b.*\b(stasi|mfs|verhoer|kgb|sokolow)/,
-    /\b(verhoertisch)\b/,
-    // "Gepruegelt/gefoltert" darf NUR triggern wenn Karl der Empfaenger ist,
-    // nicht wenn ein NPC eine vergangene Pruegelei erzaehlt. Sonst False-Positive
-    // bei "Heinz hat sich mit einem Kollegen gepruegelt" -> Karl angeblich in Folter.
+    // v7.12.416: "verhoertisch" als Marker ENTFERNT - zu schwach. "Du schleichst am Verhoertisch
+    // vorbei" ist Infiltration, kein Gewahrsam. Echte Custody deckt "du sitzt/man stoesst dich in
+    // den Verhoerraum/die Zelle" weiter unten ab.
+    // "Gepruegelt/gefoltert" darf NUR triggern wenn KARL der Empfaenger ist,
+    // nicht wenn ein NPC eine vergangene Pruegelei erzaehlt oder es ueber die
+    // ZIELPERSON (Werner/Manfred) geht. v7.12.416: "ihn" entfernt - in Vermissten-
+    // faellen meint "ihn" fast immer die gesuchte Person, NICHT Karl.
     /\b(du\s+wirst|du\s+bist|dich\s+haben\s+sie|man\s+pruegelt\s+dich|man\s+foltert\s+dich)\b.*\b(gepruegelt|gefoltert)\b/,
-    /\b(gepruegelt|gefoltert)\b.*\b(stasi|mfs|verhoerzimmer|kellerverhoer|sokolow)/,
-    // "Stasi/MfS/Beamte pruegeln Karl/ihn/dich" - klar Karl als Opfer
-    /\b(stasi|mfs|beamte|wachen|maenner)\b.*\b(pruegeln|pruegelt|foltern|foltert)\b.*\b(karl|ihn|dich)\b/,
-    /\b(pruegeln|pruegelt|foltern|foltert)\b.*\b(karl|ihn|dich)\b.*\b(stasi|mfs|stunden|stundenlang)\b/,
+    // v7.12.416: "gefoltert ... stasi" nur noch MIT Karl-Bezug (vorher Allein-Marker -> "Die
+    // Stasi hat ihn (Werner) gefoltert" loeste faelschlich Karls Custody aus).
+    /\b(du|dich|karl)\b.{0,80}\b(gepruegelt|gefoltert)\b.{0,80}\b(stasi|mfs|verhoerzimmer|kellerverhoer|sokolow)/,
+    /\b(gepruegelt|gefoltert)\b.{0,80}\b(stasi|mfs|verhoerzimmer|kellerverhoer|sokolow)\b.{0,80}\b(du|dich|karl)\b/,
+    // "Stasi/MfS/Beamte pruegeln Karl/dich" - klar Karl als Opfer. v7.12.416: "ihn" raus.
+    /\b(stasi|mfs|beamte|wachen|maenner)\b.*\b(pruegeln|pruegelt|foltern|foltert)\b.*\b(karl|dich)\b/,
+    /\b(pruegeln|pruegelt|foltern|foltert)\b.*\b(karl|dich)\b.*\b(stasi|mfs|stunden|stundenlang)\b/,
     /\b(nackte\s+gluehbirne)\b.*\b(zelle|verhoer|stasi|mfs|fesseln|handschellen|kelleranlage|kellerverhoer)/,
     /\b(zelle|verhoer|stasi|mfs|fesseln|handschellen|kellerverhoer)\b.*\b(nackte\s+gluehbirne)/,
   ];
@@ -30253,17 +30259,24 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           kiSignalHandled = true;
         }
       } else if (kiGewahrsamSignal === true && !karlInStasiCustody) {
-        // KI sagt GEWAHRSAM, Flag=frei. Uebernehmen nur wenn (a) politischer Fall, (b) kein
-        // Lock, UND (c) der Text nicht klar FREI sagt (Run 1035: KI=true aber Karl im Buero).
+        // KI sagt GEWAHRSAM, Flag=frei. v7.12.416 (Lektorat): Uebernahme nur mit POSITIVER
+        // Textbestaetigung (txtSagtCustody bzw. detectStasiCustody). Vorher reichte "Text sagt
+        // nicht klar frei" - das setzte Karl bei NEUTRALEM Text (Infiltration: Karl schleicht
+        // durch Hohenschoenhausen) faelschlich in Gewahrsam, wenn die KI irrtuemlich true lieferte.
+        // KI=true ist ein schwaches Signal; nur Text + politischer Fall + kein Lock zaehlt.
+        const _textBestaetigtCustody = txtSagtCustody || detectStasiCustody(scene.szene || '');
         if (txtSagtFrei && !txtSagtCustody) {
           diag('detect', 'KI-SIGNAL gewahrsam=true IGNORIERT - Szenentext zeigt klar FREI (KI-Feld widerspricht eigenem Text, Buero/Flucht/Strasse). Flag bleibt frei.');
           kiSignalHandled = true;
-        } else if (caseIsPolitical && !custodyLocked) {
+        } else if (_textBestaetigtCustody && caseIsPolitical && !custodyLocked) {
           setCustodyState(true, 'ki-signal-gewahrsam');
-          diag('detect', 'KI-SIGNAL gewahrsam=true - Karl in Gewahrsam (Engine-Flag korrigiert, Text bestaetigt/neutral). Erzaehlung gewinnt.');
+          diag('detect', 'KI-SIGNAL gewahrsam=true - Karl in Gewahrsam (Text bestaetigt Custody mit Karl-Bezug, politischer Fall).');
           kiSignalHandled = true;
         } else {
-          diag('detect', 'KI-SIGNAL gewahrsam=true ignoriert (' + (custodyLocked ? 'Custody-Lock aktiv' : 'kein politischer Fall') + ')');
+          const _grund = !_textBestaetigtCustody ? 'keine Textbestaetigung (neutraler Text - moegl. Infiltration)'
+                       : custodyLocked ? 'Custody-Lock aktiv' : 'kein politischer Fall';
+          diag('detect', 'KI-SIGNAL gewahrsam=true IGNORIERT (' + _grund + ')');
+          kiSignalHandled = true;
         }
       }
       // Wenn KI-Signal und Flag uebereinstimmen: nichts zu tun, Status ist konsistent.
