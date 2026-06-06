@@ -3017,7 +3017,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.437</div>
+    <div class="start-version">Schatten v7.12.440</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3238,7 +3238,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.437</span>
+    <span>Schatten v7.12.440</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5927,7 +5927,10 @@ const INTRO_VARIANTS = [
         { id: 'todesursache', label: 'Todesursache geklärt (Vergiftung/Überdosis, kein Herzversagen)',
           keywords: /\b(digitalis|vergiftung|vergiftet|überdosis|ueberdosis|toedlich|tödlich)\w*[\s\S]{0,70}(konzentration|dosis|blut|gerichtsmed|obduktion|nicht.{0,15}herz|kein.{0,15}herz)|\b(blut|obduktion|gerichtsmed|totenschein)\w*[\s\S]{0,60}(digitalis|vergift|überdos|ueberdos|toedlich|tödlich)|\b(digitalis|herztropfen|tropfflasche|flasche|ampullen)\w*[\s\S]{0,50}(fast leer|halb leer|geleert|ueberdos|überdos|zu viel|mehr als|hohe dosis)|\b(fast leer|geleert|frisch gefuellt|frisch gefüllt)\w*[\s\S]{0,40}(digitalis|tropfen|flasche)/i },
         { id: 'gelegenheit', label: 'Gelegenheit belegt (Täter allein am Tatort/zur Tatzeit)',
-          keywords: /\b(vossberg|garderobe|tropfflasche|tatzeit)\w*[\s\S]{0,70}(allein|hantier|kurz vor|gesehen|beobacht|zugang|tatzeit|tatnacht)|\b(allein|hantier|gesehen|beobacht)\w*[\s\S]{0,60}(garderobe|tropfflasche|achterberg.{0,20}flasche)/i },
+          keywords: /\b(vossberg|garderobe|tropfflasche|tatzeit)\w*[\s\S]{0,70}(allein|hantier|kurz vor|gesehen|beobacht|zugang|tatzeit|tatnacht)|\b(allein|hantier|gesehen|beobacht)\w*[\s\S]{0,60}(garderobe|tropfflasche|achterberg.{0,20}flasche)/i,
+          // v7.12.440 (Lektorat v438 P2): Gegenaussagen entkraeften die Gelegenheit. "nicht allein",
+          // "war nicht der einzige", "jemand anders war auch da", "mehrere Stimmen" -> kein Beleg.
+          negGuard: /\b(nicht allein|war nicht allein|nicht der einzige|nicht die einzige|jemand (anderes|anders) war (auch )?(da|dabei|dort)|mehrere (stimmen|leute|personen)|war (jemand|wer) (anderes|anders)|war nicht allein|kam (noch )?(jemand|wer)|noch (jemand|wer) (anderes|anders)|nicht ungestoert|nicht unbeobachtet)\b/i },
         { id: 'zugriff', label: 'Tatmittel-Zugriff belegt (Täter beschaffte das Gift)',
           keywords: /\b(apotheke|rezept|beleg|digitalis)\w*[\s\S]{0,70}(vossberg|abgeholt|beschafft|nicht von ihm|gekauft)|\b(vossberg|beschafft|abgeholt)\w*[\s\S]{0,60}(apotheke|rezept|digitalis|gift|überdos|ueberdos)/i },
         { id: 'vertuschung', label: 'Vertuschung belegt (Totenschein glattgezogen)',
@@ -6113,7 +6116,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.437';
+window.SCHATTEN_VERSION = 'v7.12.440';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -10600,6 +10603,7 @@ function updateTruthBeats(text) {
       if (!beat || !beat.id || !beat.keywords) continue;
       if (caseProgress.truthBeatsHit.indexOf(beat.id) !== -1) continue; // schon erreicht
       let _treffer = beat.keywords.test(text);
+      let _trefferMethode = _treffer ? 'Regex' : '';
       // v7.12.370 (Lektorat Brandt-Run P1): KOMBINATORISCHER FALLBACK. Befund: Lange gestand
       // mehrfach (mündlich, schriftlich, vor dem Vater), aber das verteilte/umschriebene
       // Geständnis ("der Spielklub-Boss arrangierte den Tod", "das war mein Werk", "der Mann,
@@ -10617,11 +10621,39 @@ function updateTruthBeats(text) {
         const _minKombi = (typeof beat.kombiMinHits === 'number') ? beat.kombiMinHits : 2;
         if (_kombiHits >= _minKombi) {
           _treffer = true;
+          _trefferMethode = 'Kombi';
           if (typeof diag === 'function') diag('progress', 'WAHRHEITSBEAT via Kombi-Signale (' + _kombiHits + '/' + _minKombi + ': ' + _wer.join('+') + ') statt starrer Regex: ' + beat.id);
         }
       }
       if (_treffer) {
         caseProgress.truthBeatsHit.push(beat.id);
+        // v7.12.439 (Benjamin-Auftrag: Truthbeat-Tracking fuer spaetere Optimierung): erweiterte
+        // Diagnose. Ziel: spaeter datengestuetzt entscheiden, welche Beat-Keywords zu grosszuegig
+        // sind (Befund Brandt: Sz1 setzte 2 Beats ohne Beleg). Wir loggen jetzt JE Beat-Treffer:
+        // Szene, Methode (Regex/Kombi), und den AUSLOESENDEN Textausschnitt (~80 Zeichen um den
+        // Match). Reine Diagnose - die Erkennung selbst bleibt unveraendert.
+        try {
+          let _ausschnitt = '';
+          let _methode = _trefferMethode || 'Regex';
+          if (_methode === 'Regex' && beat.keywords instanceof RegExp) {
+            const _m = text.match(beat.keywords);
+            if (_m && typeof _m.index === 'number') {
+              const _s = Math.max(0, _m.index - 30);
+              _ausschnitt = text.slice(_s, _m.index + (_m[0] ? _m[0].length : 0) + 30).replace(/\s+/g, ' ').trim();
+            }
+          }
+          const _szNr = (typeof sceneCounter === 'number') ? sceneCounter : '?';
+          const _hitN = caseProgress.truthBeatsHit.length;
+          const _totalN = caseSetup.truthBeats.length;
+          if (typeof diag === 'function') {
+            diag('progress', 'TRUTHBEAT-DIAG Sz' + _szNr + ': "' + beat.id + '" erreicht (' + _hitN + '/' + _totalN + ', via ' + _methode + ')'
+              + (_ausschnitt ? ' | Ausloeser: "' + _ausschnitt + '..."' : ' | Ausloeser: (Kombi-Signale, kein einzelner Match)'));
+            // Fruehwarnung: mehrere Beats in den ersten 2 Szenen = verdaechtig grosszuegige Keywords.
+            if (typeof sceneCounter === 'number' && sceneCounter <= 2 && _hitN >= 2) {
+              diag('drift', 'TRUTHBEAT-FRUEHWARNUNG: ' + _hitN + ' Beats bereits in Szene ' + _szNr + ' gesetzt - moeglicherweise zu grosszuegige Keyword-Erkennung (spaeter pruefen, ob die Run-Prosa das wirklich belegt).');
+            }
+          }
+        } catch (_diagErr) { /* Diagnose darf nie brechen */ }
         if (typeof diag === 'function') diag('progress', '✦ WAHRHEITSBEAT erreicht: ' + (beat.label || beat.id) + ' (' + caseProgress.truthBeatsHit.length + '/' + caseSetup.truthBeats.length + ')');
         console.log('[Schatten] Wahrheitsbeat erreicht:', beat.id, '-', beat.label);
       }
@@ -10664,6 +10696,15 @@ function updateMurderAxes(text) {
       if (!axis || !axis.id || !axis.keywords) continue;
       if (caseProgress.murderAxesHit.indexOf(axis.id) !== -1) continue;
       if (axis.keywords.test(text)) {
+        // v7.12.440 (ChatGPT-Lektorat v438 P2, Achterberg-Run Sz3): NEGATIONS-GUARD. Befund:
+        // "Er war NICHT allein in der Garderobe" matchte die gelegenheit-Achse (garderobe+allein),
+        // obwohl die Aussage das GEGENTEIL belegt. Wenn eine Achse ein negGuard-Muster definiert
+        // und der Text es trifft, gilt die Achse NICHT als belegt (Regex-Falschpositiv durch
+        // Negation). Generisch fuer jede Achse nutzbar, nicht Achterberg-hartcodiert.
+        if (axis.negGuard instanceof RegExp && axis.negGuard.test(text)) {
+          if (typeof diag === 'function') diag('drift', 'MORD-ACHSE VERWORFEN (Negation): "' + axis.id + '" - Text enthaelt Gegenaussage (z.B. "nicht allein"), kein Beleg - "' + text.slice(0, 60).replace(/\s+/g, ' ') + '..."');
+          continue;
+        }
         caseProgress.murderAxesHit.push(axis.id);
         if (typeof diag === 'function') diag('progress', '✦ MORD-ACHSE erkannt (beobachtend): ' + (axis.label || axis.id) + ' (' + caseProgress.murderAxesHit.length + '/' + caseSetup.murderAxes.length + ')');
         console.log('[Schatten] Mord-Achse erkannt (beobachtend):', axis.id, '-', axis.label);
@@ -16706,10 +16747,13 @@ function renderOptions(scene) {
   // v7.12.17: Wenn dieser NPC die Annaeherung schon abgelehnt hat (50/50-Wuerfel
   // ging schief), erscheint KEIN Romance-Button mehr fuer ihn.
   const romanceNpcRejected = !!(romanceNpcInScene && romanceRejected[romanceNpcInScene]);
+  // v7.12.439 (Benjamin-Freigabe): KEIN Romance-Button in der ALLERERSTEN Szene (sceneCounter<=1).
+  const romanceBlockedFirstScene = (typeof sceneCounter === 'number' && sceneCounter <= 1);
   // "Nacht verbringen" (Climax) hat ab Tension>=4 abends/nachts Vorrang.
   const showOvernightButton = romanceNpcInScene
     && !romanceNpcRejected
     && !romanceBlockedByCustody
+    && !romanceBlockedFirstScene
     && isAbendOderNacht
     && romCurrentTension >= 4
     && !romanceBlockedBySpannung;
@@ -16722,10 +16766,16 @@ function renderOptions(scene) {
   // Tension 5 erscheinen, SOLANGE "Nacht verbringen" nicht verfügbar ist. Das regelt bereits
   // !showOvernightButton (abends/nachts ab Tension>=4 ist Overnight true -> Näher-kommen aus,
   // nur der Climax-Button bleibt). Die <5-Schranke ist damit überflüssig und wird entfernt.
+  // v7.12.439 (Benjamin-Freigabe, Achterberg-Bot-Run): KEIN Romance-Button in der ALLERERSTEN
+  // Szene. Befund: Liesel war als Setup-ROMANCE-Person ab Sz1 am Tatort -> Button sofort sichtbar,
+  // der Bot machte aus dem Mordfall fast einen Romance-Run (Näher-kommen Sz2-4, Kuss neben dem
+  // Mordfall). Romance bleibt ansonsten OFFEN (organisch ab Sz2) - nur der Direkt-Cast in Szene 1
+  // wird unterbunden. romanceBlockedFirstScene ist oben (vor Overnight-Button) definiert.
   const showRomanceButton = romanceNpcInScene
     && !romanceNpcRejected
     && !romanceBlockedByCustody
     && !showOvernightButton
+    && !romanceBlockedFirstScene
     && romanticClicksSinceProgress < 3
     && !romanceBlockedBySpannung;
 
@@ -23377,8 +23427,14 @@ function updateRomanticTension(scene) {
           return true;
         });
         if (romanceInCurrentCast) {
-          romanticTension = Math.min(3, romanticTension + 1);
-          diag('detect', 'Romantik-Bootstrap +1 (Setup-ROMANCE-Person aktiv) = ' + romanticTension);
+          // v7.12.439 (Benjamin-Freigabe): Bootstrap erst ab Szene 2 - in der ersten Szene
+          // soll keine Romance-Stimmung vorgepumpt werden (kein Direkt-Cast der Romanze).
+          if (typeof sceneCounter === 'number' && sceneCounter <= 1) {
+            diag('detect', 'Romantik-Bootstrap unterdrueckt (Szene 1 - kein Romance-Direkt-Cast)');
+          } else {
+            romanticTension = Math.min(3, romanticTension + 1);
+            diag('detect', 'Romantik-Bootstrap +1 (Setup-ROMANCE-Person aktiv) = ' + romanticTension);
+          }
         }
       }
     }
@@ -27808,6 +27864,24 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           if (_abschied) {
             if (typeof diag === 'function') diag('detect', 'Auto-Cast-Reintroduce ÜBERSPRUNGEN: ' + sc.name + ' steht in Abschieds-/Rückblick-Kontext (z.B. "starrt dir nach/verschwindet") - keine Anwesenheit am neuen Ort.');
             _castEvent('reintro-übersprungen(abschied): ' + sc.name);
+            continue;
+          }
+          // v7.12.438 (ChatGPT-Lektorat v437 P1/P2, Brandt-Bot-Run): ERINNERUNG/TRAUM/VISION/
+          // HYPOTHESE-GUARD. Befund Sz2: "Fragmente drängen sich... Kurt Lange. Er stand da" -
+          // eine ERINNERUNG, Kurt ist nicht physisch da, aber "stand da" triggerte Reintro.
+          // Sz30: "Stell dich auf die Lauer, falls Lange dich verfolgt hat" - HYPOTHESE. Sz35:
+          // Langes Gesicht in Träumen. Solche Kontexte erzeugen KEINE physische Präsenz. Wie der
+          // Abschieds-Guard: namensnah geprüft, damit eine Misch-Szene (Erinnerung + echte
+          // Ankunft) nicht faelschlich blockt.
+          const _visionMarker = '(erinnerung|erinnerst dich|fragmente drang|fragmente draeng|im traum|traeumst|traeumt|traeumen|im schlaf|vor deinem inneren auge|bild vor (deinen )?augen|in deinem kopf|stimme im kopf|riss in der erinnerung|wie ein (zerrissenes|zerfetztes) (kinoplakat|film)|falls|fuer den fall|als waere|als ob|du glaubst[^.]{0,15}zu sehen|du koenntest schwoeren|im spiegel|spiegelbild|du meinst[^.]{0,15}zu sehen|einbildung|du bildest dir ein|wie ein gespenst|wie ein schatten|als stuende)';
+          const _vision = _parts.some(p => {
+            const pEsc = p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const re = new RegExp(_visionMarker + '[^.]{0,80}' + pEsc + '|' + pEsc + '[^.]{0,60}' + _visionMarker, 'i');
+            return re.test(_stxt);
+          });
+          if (_vision) {
+            if (typeof diag === 'function') diag('detect', 'Auto-Cast-Reintroduce ÜBERSPRUNGEN: ' + sc.name + ' steht in Erinnerungs-/Traum-/Hypothese-Kontext (kein physischer Fund, nur Vorstellung/Bedingung).');
+            _castEvent('reintro-übersprungen(vision): ' + sc.name);
             continue;
           }
           // v7.12.350 (Lektorat Brauer-Run P1): BERICHT-GUARD. "Sie blickt zu Boden und fügt hinzu,
