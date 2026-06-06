@@ -2984,7 +2984,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.423</div>
+    <div class="start-version">Schatten v7.12.424</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3205,7 +3205,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.423</span>
+    <span>Schatten v7.12.424</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6079,7 +6079,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.423';
+window.SCHATTEN_VERSION = 'v7.12.424';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -16895,9 +16895,23 @@ function renderOptions(scene) {
       resolveBtn.disabled = true;
       resolveBtn.innerHTML = '<span class="option-id">🎯</span><span class="option-text-wrap"><span>Fall lösen, Auftraggeber informieren</span><span class="option-marker option-marker-aufloesen-locked">GESPERRT · ' + (resolveLockReason || 'jetzt nicht möglich').toUpperCase() + '</span></span>';
     }
+    // v7.12.424 (Lektorat v420 Krause-Run): AUFLOESEN-Text kontextsensitiv. Befund Sz28: Karl steht
+    // beim Klienten (Schoenhauser Allee), waehlt AUFLOESEN - die KI sprang ins Buero am Hackeschen
+    // Markt, weil der alte Text "je nach Situation am aktuellen Ort" zum Bericht-im-Buero verleitete.
+    // Wenn der Klient bereits in der Szene praesent ist (im Cast), soll die Uebergabe HIER passieren.
+    let _klientPraesent = false;
+    try {
+      const _kn = (clientProfile && clientProfile.name) ? normForMatch(clientProfile.name) : '';
+      if (_kn && Array.isArray(cast)) {
+        _klientPraesent = cast.some(c => normForMatch(typeof c === 'string' ? c : (c && c.name) || '') === _kn);
+      }
+    } catch (e) { _klientPraesent = false; }
+    const _resolveText = _klientPraesent
+      ? 'Karl schließt den Fall jetzt ab und berichtet dem Auftraggeber, der GERADE ANWESEND ist - die Übergabe/der Bericht passiert HIER am aktuellen Ort, KEIN Ortswechsel, KEIN Sprung zurück ins Büro. Der Klient bleibt in der Szene.'
+      : 'Karl entscheidet, den Fall jetzt abzuschließen und den Auftraggeber zu informieren - persönlich, per Telefon oder per Telegramm, je nach Situation am aktuellen Ort.';
     const resolveOpt = {
       id: 'AUFLOESEN',
-      text: 'Karl entscheidet, den Fall jetzt abzuschließen und den Auftraggeber zu informieren - persönlich, per Telefon oder per Telegramm, je nach Situation am aktuellen Ort.',
+      text: _resolveText,
       kategorie: 'AUFLOESEN',
       _kategorie: 'AUFLOESEN',
       _priority: 95,
@@ -25648,13 +25662,20 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         const isKlient = klientNameLower && cName === klientNameLower;
         const klientGoesAlong = isKlient && mentionedInScene &&
           /\b(steigt|setzt sich|kommt mit|begleitet|folgt|fahren? gemeinsam|im opel mit|im wagen)\b/.test(sceneText);
+        // v7.12.424 (Lektorat v420 Krause-Run): Klient NICHT entfernen, wenn er in DIESER Szene
+        // physisch/aktiv handelt - typisch beim Abschluss (Karl bringt das Gut, Klient nimmt es
+        // entgegen, zahlt). Befund Sz28: Karl im Buero, "Krause nimmt das Etui ... schiebt einen
+        // Umschlag rueber" -> Krause wurde trotzdem aus dem Cast geputzt (Cast: []), weil weder
+        // ortIsKlientHome noch ein Mitfahr-Verb griff. Aktiv-Marker: Empfangs-/Zahl-/Dank-Gesten.
+        const klientAktivImText = isKlient && mentionedInScene &&
+          /\b(nimmt|greift|haelt|umklammer\w*|nachzeichn\w*|zahlt|bezahlt|honorar|umschlag|geldscheine|unterschreib\w*|bedankt|atmet auf|aufatmen|drueckt dir|schuettelt dir|reicht dir|gibt dir)\b/.test(sceneText);
         // v7.12.325: geht DIESE Figur (namentlich) bei diesem Ortswechsel aktiv mit?
         const goesAlongHard = _npcGoesAlongHard(cName, normForMatch(cRolle || ''));
         // v7.12.332: ist DAS die gefundene Zielperson? Dann hält sie (Karl bringt sie zum Klienten).
         const isGefundeneZielperson = zielpersonNameLower && cName &&
           (cName.includes(zielpersonNameLower.split(' ')[0]) || zielpersonNameLower.includes(cName.split(' ')[0]));
 
-        if (isKlient && !ortIsKlientHome && !klientGoesAlong) {
+        if (isKlient && !ortIsKlientHome && !klientGoesAlong && !klientAktivImText) {
           // Klient sitzt zu Hause - aus Cast raus
           removedKlientByLocation.push(typeof c === 'string' ? c : c.name);
         } else if (isGefundeneZielperson) {
