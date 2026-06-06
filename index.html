@@ -3017,7 +3017,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.430</div>
+    <div class="start-version">Schatten v7.12.431</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3238,7 +3238,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.430</span>
+    <span>Schatten v7.12.431</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6112,7 +6112,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.430';
+window.SCHATTEN_VERSION = 'v7.12.431';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -15274,7 +15274,16 @@ function applyCategoryMechanics(kategorie, ctx) {
       result.vfDelta = 0;
       result.spannungDelta = -3;
       result.timeAdvanceBonus = 0.3;
-      result.pushMessages.push('FLUCHT: Karl verlaesst die akute Szene SOFORT. Beschreibe in 2-3 Saetzen wie er rauskommt - durch eine Hintertuer, ueber einen Hinterhof, in den Opel und weg, ueber die Strasse zur naechsten S-Bahn, was zum Ort passt. KEIN Kampf, KEINE Verfolgung-im-Detail. Karl entkommt. Die naechste Szene spielt an einem SICHEREN Ort - sein Buero, seine Wohnung, der Opel auf einer ruhigen Strasse, eine fremde Kneipe wo er sich verstecken kann. Spannung sinkt deutlich. Gegner ist abgehaengt aber NICHT besiegt - sie koennen Karl spaeter wieder finden.');
+      // v7.12.431 (User-Befund Stein-Run): FLUCHT senkt jetzt auch die STASI-TENSION (den
+      // "Fahndungslevel"), nicht nur die normale Spannung. Befund: Tension blieb im ganzen
+      // Run auf 4/5, FLUCHT senkte sie nie -> "FESTNAHME PFLICHT" feuerte endlos, wurde
+      // unterdrueckt, feuerte wieder = Endlosschleife. Wie GTA: erfolgreiche Flucht senkt den
+      // Fahndungslevel SPUERBAR - die Stasi ist abgeschuettelt, aber NICHT weg.
+      // WICHTIG: nur als FLAG setzen, NICHT hier direkt stasiTension aendern - diese Funktion
+      // wird auch als PREVIEW (Trockenlauf) aufgerufen; der echte Effekt wird beim Apply-Punkt
+      // (categoryMechanicsResult) angewandt, damit die Senkung nicht doppelt/zu frueh passiert.
+      result.fluchtStasiAbschuetteln = true;
+      result.pushMessages.push('FLUCHT: Karl verlaesst die akute Szene SOFORT. Beschreibe in 2-3 Saetzen wie er rauskommt - durch eine Hintertuer, ueber einen Hinterhof, in den Opel und weg, ueber die Strasse zur naechsten S-Bahn, was zum Ort passt. KEIN Kampf, KEINE Verfolgung-im-Detail. Karl entkommt und SCHUETTELT DIE VERFOLGER AB. Die naechste Szene spielt an einem SICHEREN Ort - sein Buero, seine Wohnung, der Opel auf einer ruhigen Strasse, eine fremde Kneipe wo er sich verstecken kann. Der unmittelbare Stasi-Druck laesst SPUERBAR nach (Karl ist erstmal aus dem Visier). KEINE "Festnahme unausweichlich"-Drohung in der naechsten Szene. Gegner ist abgehaengt aber NICHT besiegt - sie koennen Karl SPAETER wieder finden, wenn er erneut auffaellt.');
       break;
 
     case 'NOTHEILEN':
@@ -26365,6 +26374,20 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         }
       }
       // v7.12.410: Energie-Anwendung entfernt (Mechanik ausgebaut). energieDelta wird ignoriert.
+      // v7.12.431 (User-Befund Stein-Run): FLUCHT-Abschuetteln HIER anwenden (echter Apply, nicht
+      // im Preview-Aufruf von applyCategoryMechanics). Senkt den Stasi-"Fahndungslevel" spuerbar
+      // und bricht die Festnahme-Pflicht-Schleife (Tension blieb sonst auf 4/5, "PFLICHT" feuerte
+      // endlos). Wie GTA: Flucht senkt den Level um 2 (min. 1) - abgeschuettelt, aber nicht weg.
+      if (categoryMechanicsResult.fluchtStasiAbschuetteln && typeof stasiTension === 'number' && stasiTension > 0) {
+        const _stBefore = stasiTension;
+        stasiTension = Math.max(1, stasiTension - 2);
+        if (typeof stasiHighTensionStreak !== 'undefined') stasiHighTensionStreak = 0;
+        if (typeof stasiMaxTensionStreak !== 'undefined') stasiMaxTensionStreak = 0;
+        if (typeof stasiCooldownCounter !== 'undefined') stasiCooldownCounter = 0;
+        if (caseProgress && typeof caseProgress.stasiPflichtSeitScene === 'number') caseProgress.stasiPflichtSeitScene = 0;
+        if (caseProgress && caseProgress.forceCustodyNextScene) caseProgress.forceCustodyNextScene = false;
+        if (typeof diag === 'function') diag('state', 'FLUCHT: Stasi-Tension ' + _stBefore + ' -> ' + stasiTension + ' (Fahndungslevel gesenkt, Verfolger abgeschuettelt - Festnahme-Schleife unterbrochen)');
+      }
       // v7.11.2: timeAdvanceBonus anwenden. War vorher in applyCategoryMechanics
       // gesetzt aber nirgends benutzt - dadurch lief Tageszeit nur ueber die
       // pauschalen Token-Tropfen (0.7-0.95) in advanceGameTime. Mit Bonus
