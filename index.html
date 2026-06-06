@@ -2984,7 +2984,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.420</div>
+    <div class="start-version">Schatten v7.12.423</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3205,7 +3205,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.420</span>
+    <span>Schatten v7.12.423</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5205,6 +5205,20 @@ const INTRO_VARIANTS = [
           detail: 'glatzkoepfig, Goldzahn, riecht nach Pfefferminze. Hat Laden in der Bergmannstrasse Kreuzberg. 30 D-Mark plus eine Flasche Korn loesen die Zunge.',
           triggerWhen: 'Karl braucht Hehlerei-Insider-Infos oder will Tante Frieda umgehen',
           persistent: false, anwesend: false },
+        // v7.12.421 (Lektorat Krause-Run): Friedas zwei Schlaeger als FESTE Pool-NPCs eingefroren,
+        // damit Koerperbau + Waffe stabil bleiben (Befund: Kalle driftete vom bulligen Anker-Typ
+        // zum hageren Messer-Typ, weil er nur aus Prosa entstand). Klar kontrastiert: Kalle bullig
+        // + Schlagring, Jochen hager + Messer - so kann die Cast-Drift-Logik beide auseinanderhalten.
+        { name: 'Kalle', tag: 'GANGSTER', alter: 40, rolle: 'Friedas bulliger Schlaeger',
+          beziehung: 'Schlaeger von Tante Frieda, bewacht das Lager hinter der Hehlerei',
+          detail: 'bullig, breite Schultern, Schlapphut, verblasstes Anker-Tattoo am rechten Unterarm, traegt einen Schlagring. Ruhiger und gefaehrlicher als Jochen, redet wenig.',
+          triggerWhen: 'Karl naehert sich Tante Friedas Hehlerei in der Stallschreiberstrasse oder dem Lager dahinter',
+          persistent: false, anwesend: false },
+        { name: 'Jochen', tag: 'GANGSTER', alter: 33, rolle: 'Friedas hagerer Messer-Mann',
+          beziehung: 'zweiter Schlaeger von Tante Frieda, oft zusammen mit Kalle',
+          detail: 'hager, Lederjacke, langes Messer im Stiefelschaft. Nervoeser und schneller gereizt als Kalle, redet zu viel wenn er unter Druck steht.',
+          triggerWhen: 'wie Kalle, meist gemeinsam mit ihm bei Friedas Hehlerei',
+          persistent: false, anwesend: false },
       ],
       // v7.9.25: KEY-CLUES. Diebstahl-Fall: das Etui zurueckholen.
       // Tante Frieda ist der Weg zum Etui, nicht das Ziel selbst.
@@ -5232,6 +5246,8 @@ const INTRO_VARIANTS = [
       locations: [
         { name: 'Karl Mauers Buero', sektor: 'Ost (Mitte)', detail: 'Hackescher Markt - Krause sitzt hier in Mittag' },
         { name: 'Tante Friedas Hehlerei', sektor: 'West (Kreuzberg)', detail: 'Stallschreiberstrasse, Hinterhof, kleines Ladenlokal mit Wohnung dahinter' },
+        { name: 'Stallschreiberstrasse 12', sektor: 'West (Kreuzberg)', detail: 'Hinterhof von Tante Friedas Hehlerei, Lagerzugang, hier halten sich Kalle und Jochen auf' },
+        { name: 'Bornsteins Antiquitaetenladen', sektor: 'West (Kreuzberg)', detail: 'Bergmannstrasse, schmaler Laden mit Schmuck- und Hehlerkontakten, Bornsteins Treffpunkt' },
         { name: 'Krauses Antiquitaeten', sektor: 'Ost (Prenzlauer Berg)', detail: 'Schoenhauser Allee, ausgeraubt nachts vor 3 Tagen' },
         { name: 'Krause-Wohnung', sektor: 'Ost (Prenzlauer Berg)', detail: 'ueber dem Laden Schoenhauser Allee' },
         { name: 'Doc Wagners Praxis', sektor: 'West (Schoeneberg)', detail: 'Schaeferstrasse 12 - wenn Karl in Stallschreiberstr verletzt wird' },
@@ -6063,7 +6079,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.420';
+window.SCHATTEN_VERSION = 'v7.12.423';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -6471,8 +6487,13 @@ function isHardClientReturn(sceneText, clientName, targetName, gutSynonyme) {
     const _hatZielwort = _gutKeys.some(w => s.includes(w));
     if (!_hatZielwort && !/\b(diebesgut|beute)\b/.test(s)) continue;
     // Satz A: Spieler legt/uebergibt das Gut ab (Ablage- oder Uebergabe-Geste)
+    // v7.12.423 (Lektorat v420 Krause-Run Sz28): "auf den abgewetzten Schreibtisch" wurde nicht
+    // als Ablage erkannt - "schreibtisch" fehlte UND ein Adjektiv zwischen "auf den" und der
+    // Oberflaeche brach "auf den tisch". Jetzt: Schreibtisch/Pult/Platte ergaenzt + bis zu zwei
+    // Woerter (Adjektive) zwischen Artikel und Oberflaeche erlaubt. Die echte Uebergabe
+    // (Karl legt Etui auf Schreibtisch -> Krause nimmt es in die Hand) wird so hart erkannt.
     const _spielerAblage = /\b(legst|legt|uebergibst|uebergibt|reichst|reicht|haendigst|stellst|stellt|schiebst|schiebt)\b/.test(s)
-      && /\b(auf den tresen|auf den tisch|auf die theke|zurueck|hin|vor (ihn|sie|krause|den klient))/.test(s);
+      && /\b(auf (den|die|das)( \w+){0,2} (tresen|tisch|theke|schreibtisch|pult|platte)|zurueck|hin|vor (ihn|sie|krause|den klient))/.test(s);
     if (!_spielerAblage) continue;
     // benachbarter Satz: Klient nimmt/umklammert/haelt das Gut
     for (const j of [i - 1, i + 1]) {
@@ -11678,8 +11699,17 @@ function buildTranscriptText() {
         // Zielobjekt-Status separat, Täter (falls eine Person identifiziert wurde) separat.
         const _suspRaw = caseProgress.tatverdaechtiger || '';
         const _istObjektStatus = /diebesgut|zielobjekt|etui|schmuck|zurueck|zurück|sicherge|wiederbeschafft/i.test(_suspRaw);
-        if (caseProgress.diebesgutZurueck) {
+        // v7.12.421 (Lektorat v420 P2): Export dreistufig nach echtem targetItemState, nicht
+        // pauschal diebesgutZurueck (das ist schon bei Karl-Besitz true).
+        const _tisStExp = (caseProgress.targetItemState && caseProgress.targetItemState.status) || 'unknown';
+        if (_tisStExp === 'returnedToClient') {
           out += '  Zielobjekt: zurückgebracht\n';
+        } else if (_tisStExp === 'inKarlInventory') {
+          out += '  Zielobjekt: bei Karl gesichert' + (caseProgress.clientInformedAboutSecuredItem ? ', Klient informiert' : '') + '\n';
+        } else if (_tisStExp === 'located') {
+          out += '  Zielobjekt: lokalisiert\n';
+        } else if (caseProgress.diebesgutZurueck) {
+          out += '  Zielobjekt: bei Karl gesichert\n';
         } else {
           out += '  Zielobjekt: noch nicht zurück\n';
         }
@@ -30030,14 +30060,41 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.istGelöst = true;
         caseProgress.stage = 4; // v6.81: Stage 4 = geloest (vorher Stage 3 doppelt belegt)
         diagFinaleWahrheitstreue(scene); // v7.12.362 (#6-Diagnose): Finaltext vs Canonical State
-        // v7.12.152: Bei Diebstahl-Abschluss das Zielobjekt final auf returnedToClient
-        // setzen UND aus Karls Inventar entfernen. Verhindert den iz_a-Run-Bug, wo das
-        // Etui nach der Uebergabe wieder bei Karl auftauchte. Nach returnedToClient
-        // sperrt der Status-Rang (setTargetItemState) jeden Rueckfall.
+        // v7.12.421 (Lektorat v420 P1): Bei Diebstahl-Abschluss NICHT mehr pauschal
+        // returnedToClient. klient_berichtet kann telefonisch/per Telegramm erfolgt sein -
+        // dann ist der Klient INFORMIERT, das Gut aber noch bei Karl. Nur eine harte physische
+        // Uebergabe (isHardClientReturn) setzt returnedToClient + entfernt das Item. Sonst bleibt
+        // der Status inKarlInventory (Gut bleibt im Inventar) und wir merken "Klient informiert".
         if (ctClose === 'diebstahl') {
-          const _tgN = (caseProgress.targetItemState && caseProgress.targetItemState.name) || '';
-          setTargetItemState('returnedToClient', (clientProfile && clientProfile.name) || 'Klient');
-          if (_tgN) removeTargetItemFromInventory(_tgN);  // v7.12.158: zentrale Hilfsfunktion
+          let _tgN = (caseProgress.targetItemState && caseProgress.targetItemState.name) || '';
+          if (!_tgN) {
+            try {
+              const _tgtCast = caseSetup && caseSetup.setupCast && caseSetup.setupCast.find(c => c && c.tag === 'TARGET');
+              if (_tgtCast && _tgtCast.name) _tgN = _tgtCast.name;
+            } catch (e) { /* optional */ }
+          }
+          const _tisNow = (caseProgress.targetItemState && caseProgress.targetItemState.status) || 'unknown';
+          // v7.12.423 (Lektorat v420 Sz28): _gutKeys MUSS die Setup-Synonyme enthalten (z.B. "etui"),
+          // sonst verfehlt isHardClientReturn die echte Uebergabe, weil die KI "Etui" statt
+          // "Zigarettenetui" schreibt. TARGET-Keys + gutSynonyme aus dem Setup zusammenfuehren.
+          let _gutKeys = (typeof getTargetItemKeys === 'function' && _tgN) ? getTargetItemKeys(_tgN) : [];
+          try {
+            const _tgtCastK = caseSetup && caseSetup.setupCast && caseSetup.setupCast.find(c => c && c.tag === 'TARGET');
+            if (_tgtCastK && Array.isArray(_tgtCastK.gutSynonyme)) {
+              _gutKeys = _gutKeys.concat(_tgtCastK.gutSynonyme.map(s => (s || '').toLowerCase()).filter(s => s.length >= 3));
+            }
+          } catch (e) { /* optional */ }
+          const _hardPhysReturn = (typeof isHardClientReturn === 'function')
+            && isHardClientReturn(scene && scene.szene, (clientProfile && clientProfile.name), _tgN, _gutKeys);
+          if (_hardPhysReturn) {
+            setTargetItemState('returnedToClient', (clientProfile && clientProfile.name) || 'Klient', _tgN ? { name: _tgN } : undefined);
+            if (_tgN) removeTargetItemFromInventory(_tgN);  // physisch uebergeben -> raus aus Inventar
+          } else {
+            // Klient informiert (Telefon/Telegramm/muendlich), Gut bleibt bei Karl.
+            caseProgress.clientInformedAboutSecuredItem = true;
+            if (_tisNow !== 'returnedToClient' && _tgN) setTargetItemState('inKarlInventory', 'Karl', { name: _tgN });
+            if (typeof diag === 'function') diag('state', 'Diebstahl-Abschluss: Klient informiert, Gut bei Karl gesichert (keine harte physische Uebergabe erkannt) - Etui bleibt im Inventar');
+          }
         }
         console.log('[Schatten] FALL GELÖST! Win-Screen wird ausgeloest.');
         diag('progress', '✦ FALL GELOEST (Stage 4) - Klient berichtet');
@@ -33498,8 +33555,13 @@ function formatSuspectStatus() {
       case 'spur_ziel_geklaert':
         if (_c.label === 'beschatten') return (name ? name + ' - ' : '') + 'Verdacht bestätigt';
         return 'Spur aufgeklärt';
-      case 'objekt_erfuellt':
-        return caseProgress.diebesgutZurueck ? 'Diebesgut zurückgebracht' : 'Diebesgut lokalisiert';
+      case 'objekt_erfuellt': {
+        // v7.12.421 (Lektorat v420 P2): dreistufig nach echtem Status statt pauschal diebesgutZurueck.
+        const _tisSt = (caseProgress.targetItemState && caseProgress.targetItemState.status) || 'unknown';
+        if (_tisSt === 'returnedToClient') return 'Diebesgut zurückgebracht';
+        if (_tisSt === 'inKarlInventory' || caseProgress.diebesgutZurueck) return 'Diebesgut gesichert';
+        return 'Diebesgut lokalisiert';
+      }
     }
   }
   // Noch kein Abschluss: Stage-2-Marker zeigen (laufende Ermittlung).
