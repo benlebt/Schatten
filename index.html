@@ -205,6 +205,35 @@
   .status-bar:hover, .status-bar:active {
     background: rgba(20, 18, 25, 0.96);
   }
+  /* v7.12.430 (User-Wunsch): Auf dem DESKTOP soll die Status-Leiste IMMER oben am Bildschirm
+     kleben (wie auf dem iPhone), nicht nur am .container-Rand. Ursache: .container ist
+     position:relative -> ein sticky-Kind klebt am Container-Top, nicht am Viewport. Loesung:
+     ab Container-Breite (760px) die Leiste fixed am Viewport-Top, mittig auf Container-Breite,
+     plus ein Platzhalter, der den Hoehensprung auffaengt (sonst springt der Inhalt nach oben).
+     Auf schmalen Screens (Handy) bleibt das bestehende sticky-Verhalten unveraendert. */
+  @media (min-width: 761px) {
+    .status-bar {
+      position: fixed;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 760px;          /* = .container max-width */
+      max-width: 100vw;
+      margin: 0;             /* das negative margin der sticky-Variante hier neutralisieren */
+      box-sizing: border-box;
+      border-radius: 0 0 6px 6px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.45);
+    }
+    /* Platzhalter direkt nach der Leiste: gleicht die nun fehlende Flusshoehe aus -
+       aber NUR wenn die Leiste sichtbar ist (Spiel laeuft). Vor Spielstart (.hidden) kein Platz. */
+    #status-bar-spacer-desktop {
+      display: none;
+      height: 52px;          /* ~ Leistenhoehe (14px padding *2 + ~24px Inhalt) */
+    }
+    .status-bar:not(.hidden) + #status-bar-spacer-desktop {
+      display: block;
+    }
+  }
   .status-tag {
     color: var(--fg-bright);
     font-weight: bold;
@@ -2866,6 +2895,10 @@
     <!-- v7.12.41: GEWAHRSAM-Badge - erscheint wenn karlInStasiCustody=true -->
     <span id="status-custody-badge" class="hidden" style="font-size:0.65em;color:#ff4444;font-family:var(--font-mono);letter-spacing:0.05em;margin-left:4px;">⚠ GEWAHRSAM</span>
   </div>
+  <!-- v7.12.430: Platzhalter, der auf dem Desktop die nun fixierte (fixed) Status-Leiste im
+       Layout-Fluss ersetzt, damit der Szeneninhalt nicht nach oben springt. Nur sichtbar, wenn
+       die Leiste sichtbar ist (Spiel laeuft) - via Geschwister-Selektor an .status-bar gekoppelt. -->
+  <div id="status-bar-spacer-desktop" aria-hidden="true"></div>
 
   <!-- Status details popup -->
   <div id="status-popup" class="status-popup hidden" onclick="hideStatusDetails(event)">
@@ -2984,7 +3017,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.429</div>
+    <div class="start-version">Schatten v7.12.430</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3205,7 +3238,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.429</span>
+    <span>Schatten v7.12.430</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6079,7 +6112,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.429';
+window.SCHATTEN_VERSION = 'v7.12.430';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
