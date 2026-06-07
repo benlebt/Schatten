@@ -3017,7 +3017,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.467</div>
+    <div class="start-version">Schatten v7.12.469</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3238,7 +3238,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.467</span>
+    <span>Schatten v7.12.469</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6136,7 +6136,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.467';
+window.SCHATTEN_VERSION = 'v7.12.469';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -15797,9 +15797,32 @@ function checkProgressTriggers(kategorie, ctx) {
   // bei Stage < 3 geklickt wird, fragen wir Karl ob er wirklich frueh aufgeben
   // will - aber die UI sollte AUFLOESEN gar nicht erst anbieten unter Stage 3.
   if (kategorie === 'AUFLOESEN' && stage >= 3) {
-    result.newStage = 4;
-    result.showToast = { title: 'FALL-STUFE 4', body: 'Fall gelöst. Klient informiert.', icon: '🎉' };
-    result.pushMessages.push('STAGE 4 ERREICHT (Spieler-AUFLOESEN): Karl loest den Fall jetzt aktiv auf. Diese Szene MUSS die Klient-Berichts-Szene sein. Setze "klient_berichtet": true im JSON.');
+    // v7.12.468 (Run 2035__2_ 1/5 gelöst trotz v467-Gate): das politische Gate saß NUR im
+    // klient_berichtet-Pfad, aber AUFLOESEN setzt Stage 4 HIER direkt (eigener Pfad) - die Sperre
+    // wurde umgangen. Daher das Gate AUCH hier prüfen: bei aktivem, unerfülltem politischem Gate
+    // KEINE Stage 4, stattdessen Sicherungs-Push (analog zur klient_berichtet-Sperre). Greift nur
+    // bei Margarete (einziger Fall mit politicalBeats).
+    let _polGateBlockt = false;
+    try {
+      if (typeof politicalBeatsGateErfuellt === 'function') {
+        const _pg = politicalBeatsGateErfuellt();
+        if (_pg && _pg.aktiv && !_pg.erfuellt) _polGateBlockt = true;
+        if (_polGateBlockt) {
+          if (_pg.basisOk && !_pg.sicherungOk) {
+            result.pushMessages.push('AUFLOESEN NOCH NICHT MÖGLICH (politische Sicherung fehlt): Die Wahrheit ist belegt (Schmuggelroute + Wahler), aber Margaretes Akten sind nicht gesichert UND Margarete ist nicht in Sicherheit. Karl kann den Fall noch NICHT abschließen. Biete dem Spieler JETZT konkrete Handlungsoptionen an, die das erledigen: die Akten zu Vera Lindqvist bringen, Margarete bei Schwester Helene verstecken, eine Kopie an Kommissar Roth oder die RIAS-Korrespondentin geben, oder Margarete über die Sektorengrenze bringen. KEIN Abschluss, solange diese Sicherung nicht als echte Handlung geschehen ist.');
+          } else {
+            result.pushMessages.push('AUFLOESEN NOCH NICHT MÖGLICH (politische Wahrheit unvollständig): Es fehlt noch - ' + _pg.fehlend.join('; ') + '. Karl muss zuerst die Schmuggelroute und Wahler als Verantwortlichen belegen UND Margaretes Akten oder Margarete selbst in Sicherheit bringen, bevor er den Fall abschließt.');
+          }
+          if (typeof diag === 'function') diag('drift', 'AUFLOESEN-Stage-4 BLOCKIERT (politisch): Gate offen [' + _pg.fehlend.join('] [') + '] - Sicherungs-Push gesendet, Stage bleibt 3.');
+          console.log('[Schatten] AUFLOESEN-Stage-4-Sperre (politisch): Gate offen - ' + (_pg.basisOk ? 'Sicherung fehlt' : 'Basis fehlt'));
+        }
+      }
+    } catch (e) { _polGateBlockt = false; /* defensiv - nie den Zug brechen */ }
+    if (!_polGateBlockt) {
+      result.newStage = 4;
+      result.showToast = { title: 'FALL-STUFE 4', body: 'Fall gelöst. Klient informiert.', icon: '🎉' };
+      result.pushMessages.push('STAGE 4 ERREICHT (Spieler-AUFLOESEN): Karl loest den Fall jetzt aktiv auf. Diese Szene MUSS die Klient-Berichts-Szene sein. Setze "klient_berichtet": true im JSON.');
+    }
   } else if (kategorie === 'AUFLOESEN' && stage < 3) {
     // Spieler will frueh raus - akzeptieren aber Hinweis pushen
     result.newStage = 4;
@@ -17355,7 +17378,17 @@ function renderOptions(scene) {
   const truthBeatsFehltFuerResolve = (caseSetup && Array.isArray(caseSetup.truthBeats) && caseSetup.truthBeats.length
     && (caseSetup.caseType === 'wahrheit' || caseSetup.caseType === 'politisch')
     && typeof truthBeatsErfuellt === 'function' && !truthBeatsErfuellt());
-  const resolveCanClick = resolveCoreReady && karlVfOk && currentSp <= 3 && !karlInStasiCustody && !diebstahlGutFehlt && !truthBeatsFehltFuerResolve;
+  // v7.12.469 (Source-Check v467 P1.1, ChatGPT): politisches Gate auch am sichtbaren "Fall lösen"-
+  // Button. Sonst ist der Button bei Margarete klickbar, obwohl das Gate offen ist - der Spieler/Bot
+  // klickt, die KI schreibt Abschluss, die Engine blockt später -> widersprüchlich. Button sperren.
+  let politicalGateFehltFuerResolve = false;
+  try {
+    if (typeof politicalBeatsGateErfuellt === 'function') {
+      const _pgR = politicalBeatsGateErfuellt();
+      politicalGateFehltFuerResolve = !!(_pgR && _pgR.aktiv && !_pgR.erfuellt);
+    }
+  } catch (e) { politicalGateFehltFuerResolve = false; }
+  const resolveCanClick = resolveCoreReady && karlVfOk && currentSp <= 3 && !karlInStasiCustody && !diebstahlGutFehlt && !truthBeatsFehltFuerResolve && !politicalGateFehltFuerResolve;
   const showResolveButton = resolveCoreReady || caseProgress.resolveEverReady === true;
   // v7.12.177: Resolve-Status global merken, damit die Bot-Status-Bar live anzeigen kann,
   // ob "Fall lösen" schon klickbar ist (oder noch gesperrt, mit Grund).
@@ -17370,6 +17403,11 @@ function renderOptions(scene) {
     if (karlInStasiCustody) resolveLockReason = 'in Gewahrsam';
     else if (diebstahlGutFehlt) resolveLockReason = 'Diebesgut noch nicht zurück';
     else if (truthBeatsFehltFuerResolve) resolveLockReason = 'Wahrheit noch nicht bewiesen';
+    else if (politicalGateFehltFuerResolve) {
+      let _pgReason = 'politische Sicherung fehlt';
+      try { const _pgL = politicalBeatsGateErfuellt(); _pgReason = _pgL.basisOk ? 'Akten oder Margarete noch nicht gesichert' : 'politische Wahrheit noch nicht belegt'; } catch (e) {}
+      resolveLockReason = _pgReason;
+    }
     else if (currentSp > 3) resolveLockReason = 'zu hohe Spannung';
     else if (!karlVfOk) resolveLockReason = 'zu schwer verletzt';
     else if (!resolveCoreReady) {
@@ -24301,19 +24339,42 @@ async function chooseOption(option) {
         const _hatTruthGate = caseSetup && Array.isArray(caseSetup.truthBeats) && caseSetup.truthBeats.length
           && (caseSetup.caseType === 'wahrheit' || caseSetup.caseType === 'politisch');
         const _truthGateBlockt = _hatTruthGate && typeof truthBeatsErfuellt === 'function' && !truthBeatsErfuellt();
-        if (_truthGateBlockt) {
+        // v7.12.469 (Source-Check v467 P1.2/P1.3, ChatGPT): POLITISCHES GATE auch an DIESER zentralen
+        // istGelöst-Setzstelle. Befund: _truthGateBlockt prüft nur truthBeats - Margarete hat aber
+        // politicalBeats (keine truthBeats), daher umging JEDER Stage-4-Trigger (AUFLOESEN, Hard-Cap)
+        // hier das Gate und setzte istGelöst=true. Das war die eigentliche Hintertür hinter Run 2035_2
+        // (1/5 gelöst). Jetzt: politisches Gate gleichwertig zum truthGate prüfen - blockt istGelöst.
+        let _polGateBlockt469 = false;
+        try {
+          if (typeof politicalBeatsGateErfuellt === 'function') {
+            const _pg469 = politicalBeatsGateErfuellt();
+            _polGateBlockt469 = !!(_pg469 && _pg469.aktiv && !_pg469.erfuellt);
+          }
+        } catch (e) { _polGateBlockt469 = false; }
+        if (_truthGateBlockt || _polGateBlockt469) {
           // Abschluss verweigern: Stage bleibt 3, kein istGelöst. Auf fehlenden Beat lenken.
           caseProgress.stage = Math.max(3, caseProgress.stage || 0);
-          try {
-            const _fehlend = (typeof truthBeatsFehlend === 'function') ? truthBeatsFehlend() : [];
-            if (_fehlend.length && typeof pendingTruthBeatPush !== 'undefined') {
-              pendingTruthBeatPush = 'WAHRHEIT NOCH NICHT BEWIESEN: Karl will abschliessen, aber die Wahrheitskette ist nicht belastbar. Es fehlt konkret:\n'
-                + _fehlend.slice(0, 2).map(b => '- ' + (b.label || b.id)).join('\n')
-                + '\nDie naechste Szene MUSS mindestens eine konkrete Spur/Option dazu anbieten, bevor der Fall geschlossen wird.';
-            }
-          } catch (e) {}
-          if (typeof diag === 'function') diag('drift', 'AUFLOESEN abgelehnt: truthBeats unvollständig - Fall bleibt offen (Stage 3), Lenkung auf fehlenden Beat');
-          if (typeof showProgressToast === 'function') showProgressToast('NOCH NICHT BEWIESEN', 'Die Wahrheit ist noch nicht belastbar. Karl braucht mehr.', 'caution', 'truthbeat-block', '🔍');
+          if (_polGateBlockt469 && typeof pendingTruthBeatPush !== 'undefined') {
+            try {
+              const _pg469 = politicalBeatsGateErfuellt();
+              pendingTruthBeatPush = _pg469.basisOk
+                ? 'POLITISCHES FINALE FEHLT (SICHERUNG): Die Wahrheit ist belegt (Route + Wahler), aber Margaretes Akten sind nicht gesichert und Margarete ist nicht in Sicherheit. Karl kann NOCH NICHT abschließen. Biete jetzt konkrete Sicherungs-Optionen an (Akten zu Vera Lindqvist, Margarete bei Helene verstecken, Kopie an Roth/RIAS, über die Sektorengrenze) - als echte Handlung, nicht als Behauptung.'
+                : 'POLITISCHES FINALE FEHLT (WAHRHEIT): Es fehlt noch - ' + _pg469.fehlend.join('; ') + '. Schmuggelroute und Wahler müssen belegt UND Akten/Margarete in Sicherheit sein, bevor Karl abschließt.';
+            } catch (e) {}
+            if (typeof diag === 'function') diag('drift', 'AUFLOESEN/Hard-Cap abgelehnt: politisches Gate offen - Fall bleibt offen (Stage 3), Sicherungs-Lenkung');
+            if (typeof showProgressToast === 'function') showProgressToast('NOCH NICHT GESICHERT', 'Die Wahrheit trägt, aber Akten/Margarete sind noch nicht in Sicherheit.', 'caution', 'political-gate-block', '🔒');
+          } else if (_truthGateBlockt) {
+            try {
+              const _fehlend = (typeof truthBeatsFehlend === 'function') ? truthBeatsFehlend() : [];
+              if (_fehlend.length && typeof pendingTruthBeatPush !== 'undefined') {
+                pendingTruthBeatPush = 'WAHRHEIT NOCH NICHT BEWIESEN: Karl will abschliessen, aber die Wahrheitskette ist nicht belastbar. Es fehlt konkret:\n'
+                  + _fehlend.slice(0, 2).map(b => '- ' + (b.label || b.id)).join('\n')
+                  + '\nDie naechste Szene MUSS mindestens eine konkrete Spur/Option dazu anbieten, bevor der Fall geschlossen wird.';
+              }
+            } catch (e) {}
+            if (typeof diag === 'function') diag('drift', 'AUFLOESEN abgelehnt: truthBeats unvollständig - Fall bleibt offen (Stage 3), Lenkung auf fehlenden Beat');
+            if (typeof showProgressToast === 'function') showProgressToast('NOCH NICHT BEWIESEN', 'Die Wahrheit ist noch nicht belastbar. Karl braucht mehr.', 'caution', 'truthbeat-block', '🔍');
+          }
         } else {
           caseProgress.klientGesprochen = true;
           caseProgress.istGelöst = true;
@@ -28971,9 +29032,14 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           if (_aktion) {
             // Sicherungs-Handlung in der AKTION: Übergabe/Verstecken an einen Schutz-Empfänger ODER Grenzübertritt.
             const _sicherungsAktionRe = /\b(bring|übergib|uebergib|gib|fahr|versteck|schmuggel|deponier|sicher|rette|hol .{0,20}raus|über die (grenze|sektorengrenze)|ueber die (grenze|sektorengrenze))\w*[\s\S]{0,60}(vera|lindqvist|rias|helene|roth|presse|westen|akten|unterlagen|beweise|kopie|margarete|sicherheit|grenze)/i;
+            // v7.12.469 (Source-Check v467 P2.4): zweiter Zweig für OBJEKT-ZUERST-Formulierungen
+            // ("Die Akten zu Vera bringen", "Margarete bei Helene verstecken", "Unterlagen an RIAS
+            // übergeben"). Das natürliche Deutsch stellt oft das Objekt vor das Verb - der erste Zweig
+            // (Verb zuerst) verfehlte das. Erhöht die Treffer-Quote der Sicherungs-Erkennung deutlich.
+            const _sicherungsAktionRe2 = /\b(akten|unterlagen|beweise|kopie|dokument|mappe|margarete|stein)\b[\s\S]{0,70}\b(zu|bei|an|in|über|ueber)\b[\s\S]{0,40}\b(vera|lindqvist|rias|helene|roth|presse|westen|sicherheit|grenze|sektorengrenze)\b[\s\S]{0,40}(bring|übergib|uebergib|übergeb|uebergeb|versteck|sicher|rette|deponier|schaff)\w*/i;
             const _aktenFokusRe = /\b(akte|akten|unterlagen|kopie|dokument|mappe|beweise)\b/i;
             const _margFokusRe = /\b(margarete|stein|sie .{0,15}(verstecken|sicher|rausbringen)|über die (grenze|sektorengrenze)|ueber die (grenze|sektorengrenze))\b/i;
-            if (_sicherungsAktionRe.test(_aktion)) {
+            if (_sicherungsAktionRe.test(_aktion) || _sicherungsAktionRe2.test(_aktion)) {
               const _setBeat = (id, label) => {
                 if (caseProgress.politicalBeatsHit.indexOf(id) === -1
                     && caseSetup.politicalBeats.some(b => b && b.id === id)) {
