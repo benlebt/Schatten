@@ -3017,7 +3017,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.470</div>
+    <div class="start-version">Schatten v7.12.471</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3238,7 +3238,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.470</span>
+    <span>Schatten v7.12.471</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6136,7 +6136,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.470';
+window.SCHATTEN_VERSION = 'v7.12.471';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -20562,8 +20562,26 @@ VERBOTEN: Karl wacht woanders auf ohne Erklaerung. Wenn du Pfad B waehlst, MUSST
         }
       } catch (e) { /* push optional */ }
     }
-    // v7.12.280: Wahrheitsbeat-Push einspeisen, falls ein vorzeitiges wahrheit_erkannt abgelehnt
-    // wurde. Lenkt die KI gezielt auf den naechsten fehlenden Beat (statt nur "ermittle weiter").
+    // v7.12.471 (Lektorat v470 P1, proaktiver Sicherungs-Push): für POLITISCHE Fälle (politicalBeats,
+    // keine truthBeats - der Block oben greift nicht). Befund: alle 3 v470-Runs hingen, weil der Bot
+    // nach erkannter Basis-Wahrheit nicht zur Sicherung fand (fuhr/floh/konfrontierte weiter). Sobald
+    // die Basis steht (Route + Wahler), aber die Sicherung fehlt, lenkt JEDE Szene konkret auf die
+    // Sicherungs-Handlungen - "keine neuen Konfrontationen/Verfolger/Nebenorte". Das ist das politische
+    // Gegenstück zum truthBeats-Push und macht den vorher fehlenden Sicherungs-Schritt sichtbar.
+    if (!pendingTruthBeatPush) {
+      try {
+        const _ctPP = (caseSetup && caseSetup.caseType) || '';
+        const _hatPolPP = caseSetup && Array.isArray(caseSetup.politicalBeats) && caseSetup.politicalBeats.length && _ctPP === 'politisch';
+        if (_hatPolPP && typeof politicalBeatsGateErfuellt === 'function') {
+          const _pgPP = politicalBeatsGateErfuellt();
+          if (_pgPP && _pgPP.aktiv && _pgPP.basisOk && !_pgPP.sicherungOk) {
+            pendingTruthBeatPush = 'SICHERUNG JETZT NÖTIG (Fall fast gelöst): Die politische Wahrheit ist belegt - die Schmuggelroute und Wahler als Verantwortlicher stehen. Es fehlt NUR noch die Sicherung: Margaretes Akten müssen physisch in Sicherheit ODER Margarete selbst muss geschützt werden. Die naechste Szene MUSS konkrete Handlungsoptionen anbieten, die GENAU das tun - z.B.: die Akten zu Vera Lindqvist bringen, Margarete bei Schwester Helene verstecken, eine Kopie an Kommissar Roth oder die RIAS-Korrespondentin übergeben, oder Margarete über die Sektorengrenze bringen. KEINE neuen Wahler-/Mertens-Konfrontationen, KEINE neuen Verfolger-Schleifen, KEINE neuen Nebenorte, solange die Sicherung offen ist. Das ist der letzte Schritt zum Abschluss.';
+          }
+        }
+      } catch (e) { /* push optional */ }
+    }
+    // v7.12.280: Wahrheitsbeat-Push einspeisen (truthBeats ODER politische Sicherung), falls oben gesetzt.
+    // Lenkt die KI gezielt auf den naechsten fehlenden Beat (statt nur "ermittle weiter").
     if (pendingTruthBeatPush) {
       timeContext += '\n\n' + pendingTruthBeatPush;
       if (typeof diag === 'function') diag('progress', 'Wahrheitsbeat-Push in Prompt eingespeist (naechster fehlender Beat)');
@@ -29378,7 +29396,42 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           }
         }
       } catch (e) { /* defensiv */ }
-      // Stage 2 -> Stage 3: nach 10 Szenen in Stage 2 (v6.90 von 8 erhoeht)
+      // v7.12.471 (Lektorat v470 P1, Run 2055 hing auf Stage 1 trotz 3/5): POLITISCHE BASIS-WAHRHEIT
+      // zieht Stage 3 hoch - analog zum truthBeats-Hochzug oben, aber für Fälle mit politicalBeats
+      // (Margarete, KEINE truthBeats - daher griff der Block oben nie). Befund: alle 3 v470-Runs hingen
+      // auf Stage 0/1, der Resolve-Button wurde NIE sichtbar (braucht Stage>=3), das Gate kam nie zum
+      // Zug. WURZEL: politische Beats zogen die Stage nicht hoch. FIX: sobald die BASIS-Wahrheit steht
+      // (Schmuggelroute + Wahler = politicalBeatsGateErfuellt().basisOk), ist der Durchbruch erreicht ->
+      // Stage 3 + wahrheitErkannt. Das Abschluss-GATE verlangt dann zusätzlich die Sicherung (Akten/
+      // Margarete) - so wird der Resolve-Button sichtbar (gesperrt mit "Sicherung fehlt"), der Bot
+      // bekommt den Sicherungs-Push und kann gezielt sichern. KEIN Henne-Ei: Stage-Hochzug an der
+      // Basis, Abschluss am vollen Gate.
+      try {
+        const _ctPol = caseSetup && caseSetup.caseType;
+        const _hatPolBeats = caseSetup && Array.isArray(caseSetup.politicalBeats) && caseSetup.politicalBeats.length;
+        if (_hatPolBeats && (_ctPol === 'politisch') && caseProgress.stage >= 1 && caseProgress.stage < 3
+            && typeof politicalBeatsGateErfuellt === 'function') {
+          const _pgS3 = politicalBeatsGateErfuellt();
+          if (_pgS3 && _pgS3.aktiv && _pgS3.basisOk) {
+            if (typeof caseProgress._polBasisSeitSzene !== 'number') caseProgress._polBasisSeitSzene = sceneCounter;
+            const _warteP = sceneCounter - caseProgress._polBasisSeitSzene;
+            if (_warteP >= 2 && caseProgress.stage < 3) {
+              if (caseProgress.stage < 2 && !caseProgress.stage2StartScene) caseProgress.stage2StartScene = sceneCounter;
+              caseProgress.stage = 3;
+              if (!caseProgress.stage3StartScene) caseProgress.stage3StartScene = sceneCounter;
+              if (typeof scenesInStage3 !== 'undefined') scenesInStage3 = 0;
+              // Durchbruch markieren (politische Fälle laufen über Wahrheit, nicht Täter-Überführung).
+              if (!caseProgress.wahrheitErkannt) caseProgress.wahrheitErkannt = true;
+              console.log('[Schatten] AUTO-STAGE 3 (politische Basis-Wahrheit Route+Wahler seit ' + _warteP + ' Sz) - Durchbruch, Resolve wird sichtbar (Gate verlangt noch Sicherung)');
+              diag('progress', '✦ AUTO-STAGE 3 (politische Basis-Wahrheit erfüllt seit ' + _warteP + ' Sz: Route + Wahler) - Durchbruch. Resolve sichtbar; Abschluss noch durch Sicherungs-Gate gesperrt.');
+              if (typeof showProgressToast === 'function') showProgressToast('Wahrheit verdichtet', 'Route und Wahler belastet. Jetzt Akten oder Margarete sichern.');
+            }
+          } else {
+            // Basis (noch) nicht erfüllt -> Timer zurücksetzen, damit später sauber 2 Sz gezählt werden.
+            if (typeof caseProgress._polBasisSeitSzene === 'number') caseProgress._polBasisSeitSzene = undefined;
+          }
+        }
+      } catch (e) { /* defensiv */ }
       // v6.95: Plus TARGET-Name-Check in letzten 5 Szenen-Texten.
       // Anlass Lindner-Run: Hollenbeck war seit Sz7 weg, dann erzwang sich Stage 3 Sz21
       // obwohl die Erzaehlung 14 Szenen lang gar nicht mehr bei Hollenbeck war.
