@@ -3017,7 +3017,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.463</div>
+    <div class="start-version">Schatten v7.12.464</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3238,7 +3238,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.463</span>
+    <span>Schatten v7.12.464</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6127,7 +6127,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.463';
+window.SCHATTEN_VERSION = 'v7.12.464';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -10477,6 +10477,46 @@ function diagFinaleWahrheitstreue(scene) {
       }
     } catch (e) { /* Diagnose darf den Abschluss NIE brechen */ }
   } catch (e) { /* Diagnose darf den Abschluss NIE brechen */ }
+}
+
+// v7.12.464 (Source-Check v463, ChatGPT-Einwand): HARTER FINALE-PROOF-GUARD (Postprocess).
+// Der v463-Fix war ein reiner Prompt-HINWEIS - die KI KANN ihn ignorieren (so wie sie den v459-
+// Hinweis ignorierte und "Erwin ist in Marienfelde, in Sicherheit" schrieb, obwohl der Win-Screen
+// korrekt "Verbleib ungesichert" sagte). Dieser Guard ist die zweite Verteidigungslinie: Wenn das
+// Setup einen requiredProof verlangt und KEIN erspieltes Indiz ihn erfüllt UND die Zielperson nicht
+// physisch gefunden wurde, der Finaltext aber dennoch "in Sicherheit/im Westen/registriert/<Proof-
+// Ort>" behauptet, wird der betroffene Satz durch den ehrlichen requiredProofPartialText ersetzt.
+// So sagen DOM-Win-Screen und Finale-Prosa garantiert dieselbe Wahrheit - unabhaengig davon, ob die
+// KI den Prompt-Hinweis befolgt hat. Gibt true zurueck, wenn repariert wurde (fuer Diagnose).
+function repairFinaleProofLeak(scene) {
+  try {
+    if (!scene || typeof scene.szene !== 'string') return false;
+    const _rp = caseSetup && caseSetup.requiredProof;
+    if (!_rp) return false;
+    if (caseProgress && caseProgress.zielpersonGefunden) return false; // Person gefunden -> Sicherheit erlaubt
+    const _inds = (caseProgress && caseProgress.indizien) || [];
+    const _proofOk = _inds.some(i => _rp.test(i));
+    if (_proofOk) return false; // Nachweis erspielt -> Sicherheit erlaubt (z.B. Hilde-1811 mit Marienfelde-Indiz)
+    // Kein Nachweis: behauptet der Finaltext trotzdem einen gesicherten/positiven Verbleib?
+    const _txt = scene.szene;
+    // Sicherheits-/Ankunfts-Behauptungen, die ohne Nachweis NICHT vorkommen duerfen.
+    const _sicherheitRe = /\b(in sicherheit|in den westen|im westen angekommen|im westen, in|hat es geschafft|ist entkommen|sicher entkommen|hat sich registriert|registriert worden|wohlbehalten|in freiheit|ist gerettet|hat die flucht geschafft|erfolgreich geflohen|ist in [A-ZÄÖÜ][a-zäöüß]+-?(lager|notaufnahme))\b/i;
+    if (!_sicherheitRe.test(_txt)) return false; // keine unzulaessige Behauptung -> nichts zu tun
+    // Reparatur: betroffene Saetze (mit Sicherheits-Behauptung) durch ehrlichen Teilerfolg ersetzen.
+    const _partial = (caseSetup.requiredProofPartialText || 'Die Spur führt weit, doch der genaue Verbleib bleibt ungesichert.');
+    const _saetze = _txt.split(/(?<=[.!?])\s+/);
+    let _repariert = false;
+    const _neu = _saetze.map(s => {
+      if (_sicherheitRe.test(s)) { _repariert = true; return _partial; }
+      return s;
+    });
+    if (_repariert) {
+      scene.szene = _neu.join(' ');
+      if (typeof diag === 'function') diag('drift', 'FINALE-PROOF-GUARD ⚠ REPARIERT: Finaltext behauptete gesicherten Verbleib ohne erspielten requiredProof -> Satz durch ehrlichen Teilerfolg-Text ersetzt (DOM/Prosa-Konsistenz erzwungen).');
+      return true;
+    }
+    return false;
+  } catch (e) { return false; /* Repair darf den Abschluss NIE brechen */ }
 }
 
 // v7.12.405 (WAHRHEITSLECK-DIAGNOSE, Prio-1-Messgrundlage): Prueft in FRUEHEN Szenen (vor dem
@@ -30897,6 +30937,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           caseProgress.abschlussSzeneGerendert = true; // v7.12.275: echte KI-Abschluss-Szene lag vor
           caseProgress.istGelöst = true;
           caseProgress.stage = 4;
+          repairFinaleProofLeak(scene); // v7.12.464: harter Proof-Guard VOR Diagnose (Prosa an requiredProof klemmen)
           diagFinaleWahrheitstreue(scene); // v7.12.362 (#6-Diagnose): Finaltext vs Canonical State
           console.log('[Schatten] FALL GELÖST! Win-Screen wird ausgeloest.');
           diag('progress', '✦ FALL GELOEST (Stage 4) - Klient berichtet');
@@ -30907,6 +30948,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         caseProgress.abschlussSzeneGerendert = true; // v7.12.275: echte KI-Abschluss-Szene lag vor
         caseProgress.istGelöst = true;
         caseProgress.stage = 4; // v6.81: Stage 4 = geloest (vorher Stage 3 doppelt belegt)
+        repairFinaleProofLeak(scene); // v7.12.464: harter Proof-Guard VOR Diagnose (Prosa an requiredProof klemmen)
         diagFinaleWahrheitstreue(scene); // v7.12.362 (#6-Diagnose): Finaltext vs Canonical State
         // v7.12.421 (Lektorat v420 P1): Bei Diebstahl-Abschluss NICHT mehr pauschal
         // returnedToClient. klient_berichtet kann telefonisch/per Telegramm erfolgt sein -
