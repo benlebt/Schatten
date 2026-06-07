@@ -3017,7 +3017,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.442</div>
+    <div class="start-version">Schatten v7.12.443</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3238,7 +3238,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.442</span>
+    <span>Schatten v7.12.443</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6127,7 +6127,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.442';
+window.SCHATTEN_VERSION = 'v7.12.443';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -10690,6 +10690,23 @@ function updateTruthBeats(text) {
         console.log('[Schatten] Wahrheitsbeat erreicht:', beat.id, '-', beat.label);
       }
     }
+    // v7.12.443 (Benjamin-Freigabe, Lektorat v442 P1 #4): GESTÄNDNIS-MEHRFACHBELEG. Befund Brandt
+    // natural Sz28: "Lange gesteht, dass der Mord als Abschreckung..." setzte korrekt
+    // lange_verantwortlich, aber zeugen_aussage blieb aus - obwohl ein Tätergeständnis vor Karl
+    // faktisch die HÄRTESTE Aussage zu Erichs Tod IST. Folge: Fall blieb bei 3/5 statt 4/5. Wenn
+    // der Verantwortlich-Beat steht (echtes Geständnis, nicht aufgeweicht), gilt zeugen_aussage
+    // mit. KEINE Aufweichung der False-Positive-Härtung - es erkennt nur einen echten harten Beleg
+    // an, der bereits durch die strenge lange_verantwortlich-Erkennung gefiltert wurde. Generisch:
+    // greift nur, wenn das Setup einen pflicht-Beat UND einen zeugen-Beat hat.
+    try {
+      const _hit = caseProgress.truthBeatsHit;
+      const _hasVerantwortlich = caseSetup.truthBeats.some(b => b.pflicht && _hit.indexOf(b.id) !== -1);
+      const _zeugenBeat = caseSetup.truthBeats.find(b => /zeugen|aussage/i.test(b.id));
+      if (_hasVerantwortlich && _zeugenBeat && _hit.indexOf(_zeugenBeat.id) === -1) {
+        _hit.push(_zeugenBeat.id);
+        if (typeof diag === 'function') diag('progress', 'WAHRHEITSBEAT via Geständnis-Mehrfachbeleg: "' + _zeugenBeat.id + '" gilt, weil der Verantwortliche bereits durch (echtes, gefiltertes) Geständnis belegt ist - ein Tätergeständnis IST die härteste Zeugenaussage. (' + _hit.length + '/' + caseSetup.truthBeats.length + ')');
+      }
+    } catch (_gmErr) { /* defensiv */ }
   } catch (e) { /* defensiv: Beat-Tracking darf nie die Szene brechen */ }
 }
 // Prüft, ob die Wahrheitskette ausreichend belegt ist: mind. truthBeatsMinHits Beats UND
@@ -28728,7 +28745,21 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         (gameDay >= 5 && ind >= 4) ||     // Tag 5+: Notbremse
         (sceneCounter >= 15 && ind >= 10) // v7.9.60: viele Sz an Tag 1 mit vielen Indizien
       );
-      if (stage2Ready) {
+      // v7.12.443 (Benjamin-Freigabe, Lektorat v442: Brandt klebte auf Stage 1): TRUTHBEAT-PFAD.
+      // Befund: Brandt natural hatte 3/5 Truthbeats inkl. Pflicht-Beat (Lange verantwortlich,
+      // = faktisch geloest), aber nur 4 Indizien an Tag 1 -> KEINE der Indizien-/Tag-Schwellen
+      // erfuellt -> Stage klebte auf 1 -> AUFLOESEN nie reif -> Fall mechanisch unloesbar trotz
+      // erreichter Wahrheit. Bei Faellen MIT truthBeats ist die erfuellte Wahrheitskette ein
+      // gueltiges Stage-2-Signal, auch ohne hohe Indizien-Zahl - der Fortschritt IST erreicht.
+      // targetMentionedInIndizien wird hier NICHT verlangt, weil der Pflicht-Beat den
+      // Verantwortlichen bereits belegt. Hard-Floor sceneCounter>=6 bleibt (kein Briefing-Abschluss).
+      const stage2ReadyViaTruth = caseProgress.stage <= 1 && sceneCounter >= 6
+        && caseSetup && Array.isArray(caseSetup.truthBeats) && caseSetup.truthBeats.length
+        && typeof truthBeatsErfuellt === 'function' && truthBeatsErfuellt();
+      if (stage2ReadyViaTruth && !stage2Ready && typeof diag === 'function') {
+        diag('progress', '✦ STAGE-2 via Truthbeat-Kette (Wahrheitsfall reif trotz niedriger Indizien-Zahl: ' + ind + ') - Fortschritt ist erreicht.');
+      }
+      if (stage2Ready || stage2ReadyViaTruth) {
         // v7.4: Placeholder nach Falltyp differenziert. Bei beschatten ist der
         // Target NICHT "lokalisiert", sondern es geht um Verdachts-Bestaetigung
         // (z.B. dass Robert wirklich eine Affaere hat). Anlass: Kessler-Run
