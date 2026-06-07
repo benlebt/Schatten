@@ -3017,7 +3017,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.456</div>
+    <div class="start-version">Schatten v7.12.457</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3238,7 +3238,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.456</span>
+    <span>Schatten v7.12.457</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5341,7 +5341,7 @@ const INTRO_VARIANTS = [
         // v7.9.12: Pool-NPCs
         { name: 'Kalle "der Schiefe"', tag: 'GANGSTER', alter: 38, rolle: 'Schlaeger fuer Lange',
           beziehung: 'einer der zwei Maenner die Detlef aus seiner Wohnung abgeholt haben - Lange-Handlanger',
-          detail: 'breite Schultern, schiefe Nase (Boxen), spricht berlinerisch, raucht Juno, faehrt einen alten grauen BMW 340. War vor 45 im Reichsarbeitsdienst.',
+          detail: 'breite Schultern, schiefe Nase (Boxen), spricht berlinerisch, raucht Juno, faehrt einen alten grauen EMW 340 (Eisenacher Vorkriegs-BMW). War vor 45 im Reichsarbeitsdienst.',
           triggerWhen: 'Karl naehert sich dem Spielklub Roter Stern oder Detlefs Wohnung in Prenzlauer Berg',
           persistent: false, anwesend: false },
         { name: 'Rudi Mokka', tag: 'GANGSTER', alter: 44, rolle: 'Schlaeger fuer Lange',
@@ -6127,7 +6127,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.456';
+window.SCHATTEN_VERSION = 'v7.12.457';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -18593,21 +18593,29 @@ Es ist NICHT realistisch, dass eine Trauergesellschaft 18 Stunden an einem Grab 
           } catch (e) { /* ignore */ }
           const _versteckBekannt = _starkVersteck || (_schwachOrt && _lootWords.test(_indzText));
           const _reif = (caseProgress.stage || 0) >= 2 || sceneCounter >= 12;
+          // v7.12.457 (Lektorat v456 P2): Ist Karl WIRKLICH am Versteck? Der v456-Vollzug-Push
+          // feuerte schon, sobald das Versteck nur BEKANNT war (Karl noch im Büro/bei Bornstein) -
+          // "seit X Sz am Versteck" log war dann falsch. Jetzt zweistufig: nur wenn currentOrt
+          // einen Versteck-/Lager-Begriff enthält, gilt Karl als AM Versteck -> Vollzug-Druck.
+          // Sonst HINFAHREN-Push (erst zum Versteck fahren).
+          const _ortNorm = (typeof currentOrt === 'string') ? currentOrt : '';
+          const _karlAmVersteck = /(schliessfach|schließfach|versteck|lager|kohlenkeller|keller|hinterzimmer|hinterhof|depot|tresor|aufbewahr|stallschreiber|hehler)/.test(_ortNorm);
           if (_versteckBekannt || _reif) {
-            if (_versteckBekannt) {
-              // v7.12.456 (Lektorat v455 P1, Krause-Blocker): Zähler, wie lange der Versteck-Push
-              // schon erfolglos feuert. Nach >=3 Szenen ohne Gut-im-Inventar wird der Push von einer
-              // EMPFEHLUNG zu einem harten VOLLZUGS-Befehl - Flash-Lite vertagt die Bergung sonst
-              // endlos ("anderer Zugang", "Versteck suchen"). Befund Krause: 30+ Szenen Annäherung,
-              // Etui nie genommen.
+            if (_versteckBekannt && !_karlAmVersteck) {
+              // Versteck bekannt, aber Karl ist NICHT dort -> erst hinfahren.
+              caseProgress._gutHolPflichtSeit = sceneCounter; // Vollzug-Zähler erst ab Ankunft
+              recap += `\nGUT-HINFAHREN (DIEBSTAHL, KRITISCH): Karl WEISS, wo das Diebesgut liegt (siehe Indizien - Lager/Versteck/Adresse), ist aber noch NICHT dort. Biete JETZT eine Option an, die Karl direkt ZUM Versteck/Aufbewahrungsort bringt (hinfahren, sich Zugang verschaffen). Kein weiteres Herumfragen bei Dritten, kein Berichten an den Klienten, bevor Karl am Gut-Ort ist und es geholt hat.\n`;
+              if (typeof diag === 'function') diag('drift', 'GUT-HINFAHREN-Push (Versteck bekannt, Karl noch nicht dort: "' + (_ortNorm || '?').slice(0, 30) + '")');
+            } else if (_versteckBekannt && _karlAmVersteck) {
+              // v7.12.456 (Krause-Blocker): Zähler, wie lange Karl AM Versteck ohne Bergung ist.
               if (typeof caseProgress._gutHolPflichtSeit !== 'number') caseProgress._gutHolPflichtSeit = sceneCounter;
               const _holDauer = sceneCounter - caseProgress._gutHolPflichtSeit;
-              if (_holDauer >= 3) {
-                recap += `\nGUT-HOL JETZT VOLLZIEHEN (DIEBSTAHL, ABSOLUT KRITISCH): Karl ist seit mehreren Szenen am bekannten Versteck, hat das Diebesgut aber noch immer NICHT an sich genommen. SCHLUSS mit Annaeherung, anderem Zugang, Beobachten oder Warten. Diese Szene MUSS den Vollzug zeigen: Karl ueberwindet das letzte Hindernis (Wache/Schloss/Tuer) und NIMMT DAS DIEBESGUT PHYSISCH AN SICH - er haelt es in der Hand, steckt es ein, sichert es. Beschreibe konkret den Moment, in dem das Gut in Karls Besitz uebergeht. KEINE weitere Verzoegerung, KEINE neue Komplikation, die das Holen erneut aufschiebt.\n`;
-                if (typeof diag === 'function') diag('drift', 'GUT-HOL-VOLLZUG-Push (hart, seit ' + _holDauer + ' Sz am Versteck ohne Bergung) - KI MUSS Bergung zeigen');
+              if (_holDauer >= 2) {
+                recap += `\nGUT-HOL JETZT VOLLZIEHEN (DIEBSTAHL, ABSOLUT KRITISCH): Karl ist am bekannten Versteck, hat das Diebesgut aber noch immer NICHT an sich genommen. SCHLUSS mit Annaeherung, anderem Zugang, Beobachten oder Warten. Diese Szene MUSS den Vollzug zeigen: Karl ueberwindet das letzte Hindernis (Wache/Schloss/Tuer) und NIMMT DAS DIEBESGUT PHYSISCH AN SICH - er haelt es in der Hand, steckt es ein, sichert es. Beschreibe konkret den Moment, in dem das Gut in Karls Besitz uebergeht. KEINE weitere Verzoegerung, KEINE neue Komplikation, die das Holen erneut aufschiebt.\n`;
+                if (typeof diag === 'function') diag('drift', 'GUT-HOL-VOLLZUG-Push (hart, Karl seit ' + _holDauer + ' Sz AM Versteck ohne Bergung) - KI MUSS Bergung zeigen');
               } else {
-                recap += `\nGUT-HOL-PFLICHT (DIEBSTAHL, KRITISCH): Karl WEISS bereits, wo das Diebesgut ist (siehe Indizien - z.B. ein Schliessfach, Versteck, Lager oder eine konkrete Adresse). Der Fall kann NUR abgeschlossen werden, wenn Karl das Gut PHYSISCH an sich bringt. Biete JETZT mindestens EINE Option an, die Karl direkt zum Versteck/Aufbewahrungsort fuehrt, um das Gut zu HOLEN (hinfahren, aufbrechen, abholen, an sich nehmen) - kein blosses Weiterermitteln, kein Berichten an den Klienten, BEVOR das Gut in Karls Haenden ist. Wenn Karl beim Gut ankommt: zeige konkret, wie er es an sich nimmt (in die Manteltasche steckt, an sich nimmt, sichert).\n`;
-                if (typeof diag === 'function') diag('drift', 'GUT-HOL-PFLICHT-Push gesendet (Versteck bekannt, Diebesgut noch nicht zurueck)');
+                recap += `\nGUT-HOL-PFLICHT (DIEBSTAHL, KRITISCH): Karl ist am Versteck/Aufbewahrungsort. Der Fall kann NUR abgeschlossen werden, wenn Karl das Gut PHYSISCH an sich bringt. Zeige konkret, wie er es an sich nimmt (in die Manteltasche steckt, sichert) - kein blosses Weiterermitteln, kein Berichten an den Klienten, BEVOR das Gut in Karls Haenden ist.\n`;
+                if (typeof diag === 'function') diag('drift', 'GUT-HOL-PFLICHT-Push gesendet (Karl am Versteck, Diebesgut noch nicht zurueck)');
               }
             } else {
               recap += `\nGUT-BESCHAFFUNG (DIEBSTAHL): Der Fall ist reif, aber das Diebesgut ist NOCH NICHT zurueck. Lenke die Ermittlung jetzt aktiv auf das AUFFINDEN UND HOLEN des Guts - wo ist es (Hehler, Versteck, Lager)? Biete Optionen an, die Karl naeher ans physische Diebesgut bringen, nicht nur weitere Hintergrund-Aufklaerung. Der Auftrag ist die WIEDERBESCHAFFUNG.\n`;
@@ -28310,7 +28318,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           if (_norm && !_seen.has(_norm)) { _seen.add(_norm); _dedup.push(iz); }
         }
         scene.indiz_neu = _dedup.slice(0, 2);
-        diag('progress', 'DEFENSIV: ' + scene.indiz_neu.length + ' starke(s) Mordindiz(e) gerettet (Beweis trotz defensiver Aktion, max 2)');
+        diag('progress', 'DEFENSIV: ' + scene.indiz_neu.length + ' starke(s) Fallkern-Indiz(e) gerettet (harte Spur trotz defensiver Aktion, max 2)'); // v7.12.457: generisches Wording (nicht nur Mord)
       } else {
         // v7.12.352 (INDIZ-DIAG): auch den INHALT der verworfenen Indizien loggen, nicht nur die
         // Anzahl. Beim Passierschein-Befund (harter Beweis ging verloren) hätte das sofort gezeigt,
@@ -28463,7 +28471,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // Starkes/hartes Indiz priorisieren und durchlassen (das erste behalten)
             const _starke = scene.indiz_neu.filter(istSchuetzenswertesIndiz);
             scene.indiz_neu = _starke.slice(0, 1);
-            diag('progress', 'Stage-3: SCHÜTZENSWERTES Indiz durchgelassen (Mordbeweis ODER harte Spur: Kennzeichen/Adresse/Schlüssel/Name) - nicht der Zufallsdrossel unterworfen');
+            diag('progress', 'Stage-3: SCHÜTZENSWERTES Indiz durchgelassen (harte Fallkern-Spur: Kennzeichen/Adresse/Schlüssel/Name) - nicht der Zufallsdrossel unterworfen'); // v7.12.457: generisches Wording
           } else if (Math.random() < 0.5) {
             diag('filter', 'Stage-3-Dramaturgie: ' + cat + ' im Endspurt - schwaches Indiz verworfen (Karl muss jetzt konfrontieren, nicht weiter sammeln)');
             scene.indiz_neu = [];
