@@ -3017,7 +3017,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.464</div>
+    <div class="start-version">Schatten v7.12.466</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3238,7 +3238,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.464</span>
+    <span>Schatten v7.12.466</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4869,6 +4869,15 @@ const INTRO_VARIANTS = [
         'Sokolow-Briefe in Wegners Privatfach (Bank): kodierte Treffpunkte am Mueggelsee',
         'Margits Aussage (wenn sie Vertrauen hat): Friedrich hatte Streit mit Wegner am Tag bevor er verschwand',
       ],
+      // v7.12.466 (Lektorat v463 P1/P2, Heinrich Müggelsee-Leak): requiredProof für den EXAKTEN
+      // Aufenthaltsort. Befund: Finale nannte "Aufenthaltsort am Müggelsee/Datscha", obwohl die
+      // erspielten Indizien nur Wegner/Devisenbetrug/EMW belegten - KEIN Sokolow-Brief, kein
+      // Müggelsee-Treffpunkt, keine Datscha-Spur. Der konkrete Ort kam aus der Setup-Wahrheit.
+      // Mit diesem requiredProof greift der v465-Finale-Proof-Guard: ohne erspielten Müggelsee-/
+      // Sokolow-/Datscha-Beleg darf das Finale keinen gesicherten Ort behaupten, nur die Wegner-/
+      // Sokolow-SPUR. requiredProofPartialText = ehrlicher Teilerfolg.
+      requiredProof: /müggelsee|mueggelsee|datscha|sokolow.{0,40}(brief|treffpunkt|kodier)|kodierte? treffpunkt|hollenbeck.{0,30}(gefunden|befreit|lebend)|hollenbecks? (leiche|tot)/i,
+      requiredProofPartialText: 'Wegner hat Hollenbeck an sowjetische Kontakte ausgeliefert - die Spur führt über Wegner und Sokolow, doch Hollenbecks genauer Aufenthaltsort ist nicht gesichert und muss polizeilich verfolgt werden.',
       // v6.76: HISTORISCHER KONTEXT - 23. April 1953 (Donnerstag)
       historicalContext: {
         weltlage: 'Stalin tot seit 7 Wochen. In Moskau Malenkow Ministerpraesident, Berija Innenminister, Chruschtschow ZK-Sekretaer. Erste Entspannungssignale aus Moskau. Korea-Krieg Waffenstillstandsgespraeche laufen (eingefroren seit Oktober 1952, jetzt wieder).',
@@ -6127,7 +6136,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.464';
+window.SCHATTEN_VERSION = 'v7.12.466';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -10499,15 +10508,39 @@ function repairFinaleProofLeak(scene) {
     if (_proofOk) return false; // Nachweis erspielt -> Sicherheit erlaubt (z.B. Hilde-1811 mit Marienfelde-Indiz)
     // Kein Nachweis: behauptet der Finaltext trotzdem einen gesicherten/positiven Verbleib?
     const _txt = scene.szene;
-    // Sicherheits-/Ankunfts-Behauptungen, die ohne Nachweis NICHT vorkommen duerfen.
+    // v7.12.465 (Verifikation v464-Guard am echten 1937-Run): Der enge Phrasen-Guard verfehlte
+    // "Erwin in Marienfelde sicher registriert" (KI variiert die Formulierung). Robuster: zwei
+    // Treffer-Wege. (A) Allgemeine Sicherheits-/Ankunfts-Phrasen (Fall ohne konkreten Proof-Ort).
+    // (B) KOMBINATION aus einem Proof-Ort-Namen (aus requiredProof-Quelle) + positivem Verb im selben
+    // Satz - das fängt "in Marienfelde sicher registriert", "in Marienfelde angekommen" etc., egal
+    // wie die KI es genau formuliert.
     const _sicherheitRe = /\b(in sicherheit|in den westen|im westen angekommen|im westen, in|hat es geschafft|ist entkommen|sicher entkommen|hat sich registriert|registriert worden|wohlbehalten|in freiheit|ist gerettet|hat die flucht geschafft|erfolgreich geflohen|ist in [A-ZÄÖÜ][a-zäöüß]+-?(lager|notaufnahme))\b/i;
-    if (!_sicherheitRe.test(_txt)) return false; // keine unzulaessige Behauptung -> nichts zu tun
+    // Proof-Ort-Namen: Eigennamen aus dem requiredProof-Regex-Quelltext ziehen (z.B. "marienfelde",
+    // "ruth kellner", "rolf meissner", "lagerliste"). Wir nehmen die alphabetischen Literale.
+    const _proofWoerter = [];
+    try {
+      const _src = _rp.source || '';
+      _src.split('|').forEach(tok => {
+        const clean = tok.replace(/[^a-zäöüß\s]/gi, '').trim();
+        // nur Orts-/Eigennamen-artige Tokens (keine generischen Statuswörter wie "registriert"/"verhaftet"/"tot")
+        if (clean.length >= 5 && !/^(registriert|verhaftet|in haft|tot|leiche|notaufnahme)$/i.test(clean)) {
+          _proofWoerter.push(clean.toLowerCase());
+        }
+      });
+    } catch (e) { /* ignore */ }
+    const _positivVerbRe = /\b(sicher|registriert|angekommen|in sicherheit|aufgenommen|gemeldet|eingetroffen|untergekommen|gerettet|entkommen|geschafft|gut aufgehoben|wohlauf|in freiheit|aufenthaltsort|festgehalten|befindet sich|gefangen gehalten|wird .{0,20}festgehalten|versteckt gehalten|untergebracht)\b/i;
+    const _ortPositivKombi = (s) => {
+      const sl = s.toLowerCase();
+      return _proofWoerter.some(w => sl.includes(w)) && _positivVerbRe.test(s);
+    };
+    const _istLeckSatz = (s) => _sicherheitRe.test(s) || _ortPositivKombi(s);
+    if (!_istLeckSatz(_txt)) return false; // keine unzulaessige Behauptung -> nichts zu tun
     // Reparatur: betroffene Saetze (mit Sicherheits-Behauptung) durch ehrlichen Teilerfolg ersetzen.
     const _partial = (caseSetup.requiredProofPartialText || 'Die Spur führt weit, doch der genaue Verbleib bleibt ungesichert.');
     const _saetze = _txt.split(/(?<=[.!?])\s+/);
     let _repariert = false;
     const _neu = _saetze.map(s => {
-      if (_sicherheitRe.test(s)) { _repariert = true; return _partial; }
+      if (_istLeckSatz(s)) { _repariert = true; return _partial; }
       return s;
     });
     if (_repariert) {
