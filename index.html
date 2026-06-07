@@ -3017,7 +3017,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.466</div>
+    <div class="start-version">Schatten v7.12.467</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3238,7 +3238,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.466</span>
+    <span>Schatten v7.12.467</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6136,7 +6136,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.466';
+window.SCHATTEN_VERSION = 'v7.12.467';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -10944,6 +10944,31 @@ function politicalBeatsStatus() {
     const minHits = (typeof caseSetup.politicalBeatsMinHits === 'number') ? caseSetup.politicalBeatsMinHits : 3;
     return { hit: hit.length, total: caseSetup.politicalBeats.length, minHits: minHits, erfuellt: hit.length >= minHits };
   } catch (e) { return null; }
+}
+
+// v7.12.467 (Lektorat v466 P1 + ChatGPT-Freigabe A2): POLITISCHES ABSCHLUSS-GATE - semantische
+// Kombination statt roher Zahl. Befund: 2/3 Margarete-Runs lösten mit politicalBeats 2/5 ("würde-
+// erfüllen: nein"), weil politicalBeats bisher KEIN Gate war. Ein hartes 3/5-Gate wäre falsch, weil
+// 3 der 5 Beats strukturell schwer erreichbar sind (im_anker wird selten enttarnt, margarete_gesichert
+// passiert erst im Abschlussmoment). Stattdessen falllogisch: Route + Wahler (die zuverlässig feuern)
+// + EINE Sicherung (Akten ODER Margarete). im_anker bleibt BONUS, nicht Pflicht. Gibt {aktiv, erfuellt,
+// basisOk, sicherungOk, fehlend} zurueck. Greift nur bei Faellen mit politicalBeats (= Margarete).
+// Defensiv: bei Fehlern/keinem Beat-System -> erfuellt:true (nicht blockieren).
+function politicalBeatsGateErfuellt() {
+  try {
+    if (!caseSetup || !Array.isArray(caseSetup.politicalBeats) || !caseSetup.politicalBeats.length) {
+      return { aktiv: false, erfuellt: true, basisOk: true, sicherungOk: true, fehlend: [] };
+    }
+    const hit = (caseProgress && Array.isArray(caseProgress.politicalBeatsHit)) ? caseProgress.politicalBeatsHit : [];
+    const has = (id) => hit.indexOf(id) !== -1;
+    const basisOk = has('schmuggelroute_belegt') && has('wahler_verantwortlich');
+    const sicherungOk = has('akten_gesichert') || has('margarete_gesichert');
+    const fehlend = [];
+    if (!has('schmuggelroute_belegt')) fehlend.push('Schmuggelroute belegen');
+    if (!has('wahler_verantwortlich')) fehlend.push('Wahler als Verantwortlichen belegen');
+    if (!sicherungOk) fehlend.push('Akten sichern ODER Margarete/Beweise in Sicherheit bringen');
+    return { aktiv: true, erfuellt: basisOk && sicherungOk, basisOk: basisOk, sicherungOk: sicherungOk, fehlend: fehlend };
+  } catch (e) { return { aktiv: false, erfuellt: true, basisOk: true, sicherungOk: true, fehlend: [] }; }
 }
 
 // v7.12.295 (Goerke-Lektorat, proaktive Beat-Führung): GENERISCHE Beat-Lücke. Liefert für den
@@ -28931,6 +28956,40 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       if (typeof updateTruthBeats === 'function') updateTruthBeats(_progressText);
       if (typeof updateMurderAxes === 'function') updateMurderAxes(_progressText);
       if (typeof updatePoliticalBeats === 'function') updatePoliticalBeats(_progressText);
+      // v7.12.467 (ChatGPT-Freigabe A2, Punkt 4): SICHERUNGS-BEAT AUS SPIELER-AKTION. Befund: der
+      // margarete_gesichert-Beat wurde bisher nur im Szenentext erkannt - und der Sicherungssatz steht
+      // oft erst in der AUFLOESEN-Szene selbst (Henne-Ei: Beat zählt erst NACH dem Abschluss, nie davor).
+      // Lösung: die beiden SICHERUNGS-Beats (akten_gesichert / margarete_gesichert) dürfen AUCH aus der
+      // expliziten Spieler-/Bot-AKTION (lastUserMessage) gesetzt werden, sobald der Spieler eine echte
+      // Sicherungs-Handlung WÄHLT ("Akten zu Vera bringen", "Margarete bei Helene verstecken", "Kopie an
+      // Roth/RIAS", "über die Sektorengrenze"). So entsteht der Beat aus der HANDLUNG, nicht aus
+      // nachträglicher Finale-Prosa. Nur bei Fällen mit politicalBeats (= Margarete).
+      try {
+        if (caseSetup && Array.isArray(caseSetup.politicalBeats) && caseSetup.politicalBeats.length
+            && caseProgress && Array.isArray(caseProgress.politicalBeatsHit)) {
+          const _aktion = (typeof lastUserMessage === 'string') ? lastUserMessage : '';
+          if (_aktion) {
+            // Sicherungs-Handlung in der AKTION: Übergabe/Verstecken an einen Schutz-Empfänger ODER Grenzübertritt.
+            const _sicherungsAktionRe = /\b(bring|übergib|uebergib|gib|fahr|versteck|schmuggel|deponier|sicher|rette|hol .{0,20}raus|über die (grenze|sektorengrenze)|ueber die (grenze|sektorengrenze))\w*[\s\S]{0,60}(vera|lindqvist|rias|helene|roth|presse|westen|akten|unterlagen|beweise|kopie|margarete|sicherheit|grenze)/i;
+            const _aktenFokusRe = /\b(akte|akten|unterlagen|kopie|dokument|mappe|beweise)\b/i;
+            const _margFokusRe = /\b(margarete|stein|sie .{0,15}(verstecken|sicher|rausbringen)|über die (grenze|sektorengrenze)|ueber die (grenze|sektorengrenze))\b/i;
+            if (_sicherungsAktionRe.test(_aktion)) {
+              const _setBeat = (id, label) => {
+                if (caseProgress.politicalBeatsHit.indexOf(id) === -1
+                    && caseSetup.politicalBeats.some(b => b && b.id === id)) {
+                  caseProgress.politicalBeatsHit.push(id);
+                  if (typeof diag === 'function') diag('progress', '✦ POLIT-BEAT aus AKTION gesetzt: ' + label + ' (Sicherung über Spieler-Handlung, nicht Prosa) - "' + _aktion.slice(0,50).replace(/\s+/g,' ') + '..."');
+                  console.log('[Schatten] Polit-Beat aus Aktion:', id);
+                }
+              };
+              // Akten-Fokus -> akten_gesichert; Margarete-/Grenz-Fokus -> margarete_gesichert; sonst (allg. Übergabe an Vera/RIAS) -> margarete_gesichert (Beweise draußen).
+              if (_aktenFokusRe.test(_aktion)) _setBeat('akten_gesichert', 'Akten physisch gesichert');
+              if (_margFokusRe.test(_aktion)) _setBeat('margarete_gesichert', 'Margarete/Beweise in Sicherheit');
+              if (!_aktenFokusRe.test(_aktion) && !_margFokusRe.test(_aktion)) _setBeat('margarete_gesichert', 'Beweise an West-/Presse-Kontakt übergeben');
+            }
+          }
+        }
+      } catch (e) { /* defensiv - Beat-Setzung nie den Zug brechen */ }
       // v7.12.355 (TRUTHBEAT-DIAG): vollständiger Beat-Status NACH den Updates. Für die Auswertung
       // von wahrheit-Fällen (Brandt/Goerke) ohne manuelle Text-Prüfung: zeigt getroffene + fehlende
       // Beat-Labels und ob das Abschluss-Gate (truthBeatsErfuellt) gerade greift. Wenn ein wahrheit-
@@ -30943,8 +31002,30 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof pendingCategoryMessages !== 'undefined' && Array.isArray(pendingCategoryMessages)) {
           pendingCategoryMessages.push('MORD-FINALE FEHLT (medizinischer Kern): Der Fall darf NICHT als bewiesener Mord abgeschlossen werden, solange die Todesursache nicht geklaert ODER die Vertuschung (manipulierter Totenschein/Befund) nicht belegt ist. Motiv, Gelegenheit und Tatmittel-Zugriff allein reichen bei einem Giftmord nicht. Lass zuerst eine konkrete medizinische Spur aufscheinen (Obduktion/Digitalis-/Ueberdosis-Befund ODER glattgezogener Totenschein), BEVOR Karl dem Klienten den Mord als bewiesen meldet.');
         }
+      } else if (typeof politicalBeatsGateErfuellt === 'function'
+                 && (() => { const _pgC = politicalBeatsGateErfuellt(); return _pgC && _pgC.aktiv && !_pgC.erfuellt; })()) {
+        // v7.12.467 (Lektorat v466 P1 + ChatGPT-Freigabe A2): POLITISCHES GATE BLOCKT DEN ABSCHLUSS.
+        // Befund: 2/3 Margarete-Runs lösten mit politicalBeats 2/5 ("würde-erfüllen: nein") - nur
+        // Schmuggelroute + Wahler belegt, aber KEINE Sicherung (Akten/Margarete). Der Setup-Kanon
+        // verlangt: Wahrheit (Route+Wahler) UND Sicherung. Analog zur Diebstahl-/Mord-Sperre: bei
+        // aktivem, unerfülltem politischem Gate KEIN Abschluss - der Bot/Spieler muss erst eine
+        // Sicherungs-HANDLUNG wählen (Akten zu Vera, Margarete zu Helene, Kopie an Roth/RIAS, über die
+        // Grenze). KEIN Sonderbutton - die KI bietet normale A/B/C/D-Sicherungsoptionen an (Push unten).
+        // Greift für JEDEN Abschlusspfad (auch explizites AUFLOESEN). Sicherung wird über die AKTION
+        // erkannt (lastUserMessage, s. updatePoliticalBeats-Block), nicht über Finale-Prosa.
+        const _pgC = politicalBeatsGateErfuellt();
+        diag('drift', 'Abschluss BLOCKIERT (politisch): GATE - [' + _pgC.fehlend.join('] [') + '] - kein Abschluss ohne Wahrheit (Route+Wahler) UND Sicherung (Akten/Margarete).');
+        console.log('[Schatten] Stage-4-Sperre (politisch): ' + (_pgC.basisOk ? 'Sicherung fehlt' : 'Basis-Wahrheit fehlt') + ' - Abschluss blockiert');
+        if (typeof pendingCategoryMessages !== 'undefined' && Array.isArray(pendingCategoryMessages)) {
+          if (_pgC.basisOk && !_pgC.sicherungOk) {
+            // Wahrheit steht, nur die Sicherung fehlt -> gezielter SICHERUNGS-PFLICHT-Push.
+            pendingCategoryMessages.push('POLITISCHES FINALE FEHLT (SICHERUNG): Die Wahrheit ist belegt - die Schmuggelroute und Wahler als Verantwortlicher stehen. ABER Margaretes Akten sind noch nicht physisch gesichert UND Margarete selbst ist noch nicht in Sicherheit. Der Fall ist erst gelöst, wenn Karl die Beweise oder Margarete schützt. Biete dem Spieler JETZT konkrete Handlungsoptionen an (als normale Wahlmöglichkeiten, KEINE Abschluss-Prosa), die genau das tun, z.B.: die Akten zu Vera Lindqvist bringen, Margarete bei Schwester Helene verstecken, eine Kopie der Unterlagen an Kommissar Roth oder die RIAS-Korrespondentin geben, oder Margarete über die Sektorengrenze bringen. KEIN Abschluss-Bericht an den Klienten, solange diese Sicherung nicht als echte Handlung geschehen ist - eine bloße Behauptung "die Beweise sind in Sicherheit" reicht NICHT.');
+          } else {
+            // Auch die Basis-Wahrheit fehlt noch.
+            pendingCategoryMessages.push('POLITISCHES FINALE FEHLT (WAHRHEIT): Der Fall darf nicht abgeschlossen werden, solange die politische Wahrheit nicht belegt ist. Es fehlt noch: ' + _pgC.fehlend.join('; ') + '. Führe Karl zuerst dorthin - die Schmuggelroute (Reichsbahn/Westsektor) und Wahler als Verantwortlicher müssen belegt sein, und Margaretes Akten oder Margarete selbst müssen in Sicherheit gebracht werden, BEVOR Karl dem Klienten berichtet.');
+          }
+        }
       } else {
-      const requiresGap = (ctClose === 'beschatten' || ctClose === 'wahrheit');
       // v7.12.190 (ChatGPT-Lektorat v189 P0): Wenn der Spieler/Bot EXPLIZIT AUFLOESEN gewaehlt
       // hat und die Szene den Klientenbericht enthaelt, ist die bewusste Abschluss-Wahl staerker
       // als die Anti-Billig-Sperre. Sonst entsteht der Goerke-Widerspruch: dieser Guard blockt
