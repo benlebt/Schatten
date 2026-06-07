@@ -3017,7 +3017,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.457</div>
+    <div class="start-version">Schatten v7.12.458</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3238,7 +3238,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.457</span>
+    <span>Schatten v7.12.458</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6127,7 +6127,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.457';
+window.SCHATTEN_VERSION = 'v7.12.458';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -32811,9 +32811,21 @@ function botChooseByStrategy(options) {
       _mordReif = _mgW && _mgW.aktiv && _mgW.erfuellt && !!_plausW;
     }
     const _erfuelltW = _tbeW || _mordReif;
+    // v7.12.458 (Lektorat-Befund Heinrich-Run, vermisst): vermisst/beschatten lösen über
+    // zielpersonGefunden bzw. geklärte Spur (Stage 3 "lokalisiert"). Befund: Heinrich war ab Sz~35
+    // auf Stage 3 ("Otto Wegner lokalisiert, zum Klienten"), aber der Bot pendelte bis Sz50, ehe er
+    // abschloss (52 Sz total). Kein Endgame-Override für diesen Falltyp - dieselbe Lücke wie früher
+    // bei wahrheit/mord/diebstahl. Jetzt: vermisst/beschatten reif, wenn zielpersonGefunden ODER
+    // Stage>=3 (Spur geklärt) - dann zum Klienten/Abschluss statt weiter Zielperson-Suche.
+    let _vermisstReif = false;
+    if ((_ctW === 'vermisst' || _ctW === 'beschatten')) {
+      const _stageVm = (caseProgress && caseProgress.stage) || 0;
+      _vermisstReif = !!(caseProgress && caseProgress.zielpersonGefunden) || _stageVm >= 3;
+    }
     const _stageW = (caseProgress && caseProgress.stage) || 0;
     const _vfW = (typeof verfassung === 'number') ? verfassung : 5;
-    if (_erfuelltW && _stageW >= 3 && _vfW > 2 && !caseProgress.istGelöst) {
+    const _reifGesamt = _erfuelltW || _vermisstReif;
+    if (_reifGesamt && _stageW >= 3 && _vfW > 2 && !caseProgress.istGelöst) {
       // v7.12.450 (ChatGPT-Lektorat v449): Bei akuter Gefahr ZUERST Sicherheit. Wenn die Spannung
       // hoch ist und eine Flucht-/Notflucht-Option vorliegt, flieht der Bot erst aus der Gefahr -
       // der Abschluss-Button ist dann ohnehin gesperrt. Sonst würde (c) ERKUNDEN in der Schießerei
@@ -32834,7 +32846,7 @@ function botChooseByStrategy(options) {
       const _resolveOkW = !(typeof window !== 'undefined' && window._botFallStatus)
         || window._botFallStatus.resolveCanClick !== false;
       if (byCat.AUFLOESEN && byCat.AUFLOESEN.length > 0 && _resolveOkW) {
-        if (typeof diag === 'function') diag('bot', 'Bot waehlt AUFLOESEN (ABSCHLUSS-OVERRIDE: ' + (_mordReif ? 'Mordachsen erfüllt' : 'truthBeatsErfuellt') + ' + Stage ' + _stageW + ' - sofort abschließen statt Nebenpfade)');
+        if (typeof diag === 'function') diag('bot', 'Bot waehlt AUFLOESEN (ABSCHLUSS-OVERRIDE: ' + (_mordReif ? 'Mordachsen erfüllt' : (_vermisstReif && !_erfuelltW ? 'Zielperson lokalisiert/Spur geklärt' : 'truthBeatsErfuellt')) + ' + Stage ' + _stageW + ' - sofort abschließen statt Nebenpfade)');
         return byCat.AUFLOESEN[0];
       }
       // (b) Kein AUFLOESEN-Button da -> Rückkehr/Bericht zum Klienten erzwingen, KEINE Nebenpfade.
