@@ -3017,7 +3017,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.443</div>
+    <div class="start-version">Schatten v7.12.444</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3238,7 +3238,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.443</span>
+    <span>Schatten v7.12.444</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6127,7 +6127,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.443';
+window.SCHATTEN_VERSION = 'v7.12.444';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -28932,7 +28932,9 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             if (_hatBeatGate && !_beatsOk) {
               const _fehlend = (typeof truthBeatsFehlend === 'function') ? truthBeatsFehlend() : [];
               const _ersterFehlend = _fehlend.length ? (_fehlend[0].label || 'die Kernfrage') : 'die Kernfrage';
-              showProgressToast('FALL-STUFE 3', 'Du bist nah dran – noch offen: ' + _ersterFehlend, 'info');
+              // v7.12.444 (Lektorat v443 #2): Titel ehrlich - NICHT "FALL-STUFE 3" (suggeriert
+              // "fast gelöst"), sondern "Verdacht verdichtet", solange die Wahrheitskette offen ist.
+              showProgressToast('Verdacht verdichtet', 'Du bist nah dran – noch offen: ' + _ersterFehlend, 'info');
             } else {
               showProgressToast('FALL-STUFE 3', ct === 'beschatten' ? 'Verdacht bestätigt. Jetzt zum Klienten.' : 'Wahrheit klar. Jetzt zum Klienten.');
             }
@@ -32699,16 +32701,35 @@ function botChooseByStrategy(options) {
           const _hatKonfro = _konfroVerbRe.test(t);
           return _hatKonfro || _hatName;
         });
-        // v7.12.176 (Lektorat v175, Punkt 5 - bestaetigt durch Strauss-Run): Der alte
-        // Fallback "irgendeine OFFENSIV-Option" war ZU GROB. Im Strauss-Run feuerte er 21x
-        // und waehlte teils fallfremde Action/Zustand: "Trink den Korn und saeubere die
-        // Handwunde", "Starte den Motor und folge ihm", "Hechte ans Fenster und schiess ihm
-        // nach" - das treibt Action-Drift und haelt den Fall in Stage 1, statt zu klaeren.
-        // Jetzt: Fallback nur fuer FALLKLAERENDE OFFENSIV-Optionen (Verhoer/Beweis/Akte/
-        // Gestaendnis/durchsuchen/Zielperson-Bezug). Reine Action/Zustand -> kein Fallback,
-        // der Bot faellt in die normale Modus-Strategie (besser als Pseudo-Konfrontation).
-        if (_kandidaten.length === 0 && byCat.OFFENSIV && byCat.OFFENSIV.length > 0) {
-          const _fallklaerRe = /\b(verhör|verhoer|verhör|befrag|akte|beweis|gestaendnis|geständnis|durchsuch|durchwühl|durchwuehl|wahrheit|aussage|protokoll|zeug|alibi|dokument|unterlag|archiv)\w*/i;
+        // v7.12.444 (Benjamin-Wunsch "Bot wie abschluss-instinktiver Spieler", Lektorat v443):
+        // LOOPBREAKER + BEAT-BEWUSSTE PRIO. Befund: Bot konfrontierte Lange wiederholt ("pack ihn",
+        // "press den Lauf") ohne neuen Beat -> Pflicht-Beat fiel nie -> Fall nie reif. Ein
+        // abschluss-orientierter Spieler wechselt, wenn Gewalt nichts bringt, auf die BEWEISSPUR,
+        // die den Fall schliesst (Geständnis erzwingen / durchsuchen / Zeuge / Akte). Wir zaehlen
+        // Schlussphasen-Konfrontationen und ob seit der letzten ein neuer Beat kam.
+        let _beatCount = 0;
+        try {
+          _beatCount = (caseProgress.truthBeatsHit ? caseProgress.truthBeatsHit.length : 0)
+            + (caseProgress.murderAxesHit ? caseProgress.murderAxesHit.length : 0);
+        } catch (e) { /* ignore */ }
+        if (typeof caseProgress._botKonfroCount !== 'number') caseProgress._botKonfroCount = 0;
+        if (typeof caseProgress._botKonfroLastBeatCount !== 'number') caseProgress._botKonfroLastBeatCount = -1;
+        // beweis-/geständnissichernde Optionen (erzeugen den fehlenden Beat, statt nur Gewalt):
+        const _beweisRe = /\b(gestaendnis|geständnis|gesteh|durchsuch|durchwühl|durchwuehl|tasche|mantel|schreibtisch|akte|beweis|protokoll|zeug|aussage|alibi|dokument|unterlag|archiv|rezept|apotheke|totenschein|obduk|digitalis|befund|notiz|brief|schuldschein)\w*/i;
+        const _beweisKandidaten = (byCat.OFFENSIV || []).concat(byCat.ERKUNDEN || []).filter(o => {
+          const t = (o && o.text) ? o.text.toLowerCase() : '';
+          return t && _beweisRe.test(t);
+        });
+        // LOOPBREAKER: >=2 Konfrontationen ohne neuen Beat -> Beweisspur erzwingen, falls vorhanden.
+        const _konfroOhneFortschritt = caseProgress._botKonfroCount >= 2
+          && caseProgress._botKonfroLastBeatCount === _beatCount;
+        if (_konfroOhneFortschritt && _beweisKandidaten.length > 0) {
+          _kandidaten = _beweisKandidaten;
+          _artF = 'Beweisspur erzwingen (Loopbreaker - Konfrontation brachte keinen neuen Beat)';
+          if (typeof diag === 'function') diag('bot', 'Bot LOOPBREAKER: ' + caseProgress._botKonfroCount + 'x konfrontiert ohne neuen Beat (' + _beatCount + ') - wechselt auf Beweissicherung statt weiterer Gewalt.');
+        } else if (_kandidaten.length === 0 && byCat.OFFENSIV && byCat.OFFENSIV.length > 0) {
+          // v7.12.176: Fallback nur fuer FALLKLAERENDE OFFENSIV-Optionen (kein Action-Drift).
+          const _fallklaerRe = /\b(verhör|verhoer|befrag|akte|beweis|gestaendnis|geständnis|durchsuch|durchwühl|durchwuehl|wahrheit|aussage|protokoll|zeug|alibi|dokument|unterlag|archiv|rezept|apotheke|totenschein|digitalis)\w*/i;
           const _fallklaerKandidaten = byCat.OFFENSIV.filter(o => {
             const t = (o && o.text) ? o.text.toLowerCase() : '';
             return t && _fallklaerRe.test(t);
@@ -32719,7 +32740,22 @@ function botChooseByStrategy(options) {
           }
           // sonst: _kandidaten bleibt leer -> normale Modus-Strategie uebernimmt
         } else if (_kandidaten.length > 0) {
-          _artF = 'Verdaechtigen konfrontieren';
+          // v7.12.444: BEAT-BEWUSSTE PRIO - innerhalb der Konfrontations-Kandidaten die
+          // beweissichernden ZUERST (ein abschluss-orientierter Spieler erzwingt das Geständnis
+          // / sichert die Akte, statt nur zu prügeln - das erzeugt den fehlenden Beat).
+          const _beweisInKonfro = _kandidaten.filter(o => {
+            const t = (o && o.text) ? o.text.toLowerCase() : '';
+            return t && _beweisRe.test(t);
+          });
+          if (_beweisInKonfro.length > 0) {
+            _kandidaten = _beweisInKonfro;
+            _artF = 'Verdaechtigen konfrontieren (beweissichernd priorisiert)';
+          } else {
+            _artF = 'Verdaechtigen konfrontieren';
+          }
+          // Zaehler hochsetzen: wir waehlen gleich eine Konfrontation.
+          caseProgress._botKonfroCount++;
+          caseProgress._botKonfroLastBeatCount = _beatCount;
         }
       }
 
