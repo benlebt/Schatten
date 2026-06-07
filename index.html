@@ -3017,7 +3017,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.471</div>
+    <div class="start-version">Schatten v7.12.472</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3238,7 +3238,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.471</span>
+    <span>Schatten v7.12.472</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6136,7 +6136,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.471';
+window.SCHATTEN_VERSION = 'v7.12.472';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -33973,6 +33973,31 @@ function botChooseByStrategy(options) {
     const nSp = (typeof lastSpannung === 'number') ? lastSpannung : 1;
     const nStasi = (typeof stasiTension === 'number') ? stasiTension : 0;
     const gefahrImAnzug = (nSp >= 4) || (nStasi >= 3);
+
+    // v7.12.472 (Lektorat v470/v471, Flucht-Schleife isoliert): SICHERUNG SCHLÄGT FLUCHT bei reifem
+    // politischem Fall. Befund: alle Vorstufen (Gate, Stage-Brücke, Push) funktionieren - der Resolve-
+    // Button ist sichtbar+gesperrt ("Sicherung fehlt"), aber der Bot floh trotzdem 20x+ bei Sp4-5, statt
+    // zu sichern (proaktive Flucht greift bedingungslos bei Sp>=4 mit 70%). Ein Mensch, der weiß "ich
+    // muss nur noch die Akten zu Vera bringen", flieht nicht im Kreis - er bringt sie hin. Daher: wenn
+    // die politische Basis-Wahrheit steht und NUR die Sicherung fehlt UND eine Sicherungs-Option
+    // verfügbar ist, wähle DIESE - auch bei hoher Spannung (die Sicherung führt ohnehin aus der Gefahr).
+    try {
+      if (typeof politicalBeatsGateErfuellt === 'function') {
+        const _pgB = politicalBeatsGateErfuellt();
+        if (_pgB && _pgB.aktiv && _pgB.basisOk && !_pgB.sicherungOk) {
+          // Sicherungs-Option in den verfügbaren Optionen suchen (Übergabe/Verstecken an Schutz-Empfänger).
+          const _sichRe = /\b(vera|lindqvist|rias|helene|roth|presse|westen|sektorengrenze)\b|\b(akten|unterlagen|beweise|kopie|margarete)\b[\s\S]{0,40}\b(sicher|versteck|übergeb|uebergeb|bring|grenze)/i;
+          const _alleOpt = [].concat(byCat.ERKUNDEN || [], byCat.DEFENSIV || [], byCat.OFFENSIV || [], byCat.BEOBACHTEN || []);
+          const _sichOpt = _alleOpt.filter(o => { const t = (o && o.text) ? o.text.toLowerCase() : ''; return t && _sichRe.test(t); });
+          if (_sichOpt.length > 0) {
+            console.log('[Bot v7.12.472] NATÜRLICH: SICHERUNG statt Flucht (politisches Gate: Basis steht, nur Sicherung fehlt)');
+            if (typeof diag === 'function') diag('bot', 'Bot (natürlich) wählt SICHERUNG statt Flucht: politische Basis-Wahrheit steht, nur Sicherung fehlt - Sicherungs-Option priorisiert (durchbricht Flucht-Schleife).');
+            if (typeof botDecisionLog !== 'undefined') botDecisionLog.push('Bot (natürlich) SICHERUNG statt Flucht [politisches Endgame]');
+            return _sichOpt[0];
+          }
+        }
+      }
+    } catch (e) { /* defensiv - fällt auf normale Logik zurück */ }
 
     if (gefahrImAnzug) {
       // Es wird brenzlig - ein menschlicher Spieler zieht sich zurück, bevor
