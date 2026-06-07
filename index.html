@@ -3017,7 +3017,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.455</div>
+    <div class="start-version">Schatten v7.12.456</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3238,7 +3238,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.455</span>
+    <span>Schatten v7.12.456</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6127,7 +6127,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.455';
+window.SCHATTEN_VERSION = 'v7.12.456';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -18595,8 +18595,20 @@ Es ist NICHT realistisch, dass eine Trauergesellschaft 18 Stunden an einem Grab 
           const _reif = (caseProgress.stage || 0) >= 2 || sceneCounter >= 12;
           if (_versteckBekannt || _reif) {
             if (_versteckBekannt) {
-              recap += `\nGUT-HOL-PFLICHT (DIEBSTAHL, KRITISCH): Karl WEISS bereits, wo das Diebesgut ist (siehe Indizien - z.B. ein Schliessfach, Versteck, Lager oder eine konkrete Adresse). Der Fall kann NUR abgeschlossen werden, wenn Karl das Gut PHYSISCH an sich bringt. Biete JETZT mindestens EINE Option an, die Karl direkt zum Versteck/Aufbewahrungsort fuehrt, um das Gut zu HOLEN (hinfahren, aufbrechen, abholen, an sich nehmen) - kein blosses Weiterermitteln, kein Berichten an den Klienten, BEVOR das Gut in Karls Haenden ist. Wenn Karl beim Gut ankommt: zeige konkret, wie er es an sich nimmt (in die Manteltasche steckt, an sich nimmt, sichert).\n`;
-              if (typeof diag === 'function') diag('drift', 'GUT-HOL-PFLICHT-Push gesendet (Versteck bekannt, Diebesgut noch nicht zurueck)');
+              // v7.12.456 (Lektorat v455 P1, Krause-Blocker): Zähler, wie lange der Versteck-Push
+              // schon erfolglos feuert. Nach >=3 Szenen ohne Gut-im-Inventar wird der Push von einer
+              // EMPFEHLUNG zu einem harten VOLLZUGS-Befehl - Flash-Lite vertagt die Bergung sonst
+              // endlos ("anderer Zugang", "Versteck suchen"). Befund Krause: 30+ Szenen Annäherung,
+              // Etui nie genommen.
+              if (typeof caseProgress._gutHolPflichtSeit !== 'number') caseProgress._gutHolPflichtSeit = sceneCounter;
+              const _holDauer = sceneCounter - caseProgress._gutHolPflichtSeit;
+              if (_holDauer >= 3) {
+                recap += `\nGUT-HOL JETZT VOLLZIEHEN (DIEBSTAHL, ABSOLUT KRITISCH): Karl ist seit mehreren Szenen am bekannten Versteck, hat das Diebesgut aber noch immer NICHT an sich genommen. SCHLUSS mit Annaeherung, anderem Zugang, Beobachten oder Warten. Diese Szene MUSS den Vollzug zeigen: Karl ueberwindet das letzte Hindernis (Wache/Schloss/Tuer) und NIMMT DAS DIEBESGUT PHYSISCH AN SICH - er haelt es in der Hand, steckt es ein, sichert es. Beschreibe konkret den Moment, in dem das Gut in Karls Besitz uebergeht. KEINE weitere Verzoegerung, KEINE neue Komplikation, die das Holen erneut aufschiebt.\n`;
+                if (typeof diag === 'function') diag('drift', 'GUT-HOL-VOLLZUG-Push (hart, seit ' + _holDauer + ' Sz am Versteck ohne Bergung) - KI MUSS Bergung zeigen');
+              } else {
+                recap += `\nGUT-HOL-PFLICHT (DIEBSTAHL, KRITISCH): Karl WEISS bereits, wo das Diebesgut ist (siehe Indizien - z.B. ein Schliessfach, Versteck, Lager oder eine konkrete Adresse). Der Fall kann NUR abgeschlossen werden, wenn Karl das Gut PHYSISCH an sich bringt. Biete JETZT mindestens EINE Option an, die Karl direkt zum Versteck/Aufbewahrungsort fuehrt, um das Gut zu HOLEN (hinfahren, aufbrechen, abholen, an sich nehmen) - kein blosses Weiterermitteln, kein Berichten an den Klienten, BEVOR das Gut in Karls Haenden ist. Wenn Karl beim Gut ankommt: zeige konkret, wie er es an sich nimmt (in die Manteltasche steckt, an sich nimmt, sichert).\n`;
+                if (typeof diag === 'function') diag('drift', 'GUT-HOL-PFLICHT-Push gesendet (Versteck bekannt, Diebesgut noch nicht zurueck)');
+              }
             } else {
               recap += `\nGUT-BESCHAFFUNG (DIEBSTAHL): Der Fall ist reif, aber das Diebesgut ist NOCH NICHT zurueck. Lenke die Ermittlung jetzt aktiv auf das AUFFINDEN UND HOLEN des Guts - wo ist es (Hehler, Versteck, Lager)? Biete Optionen an, die Karl naeher ans physische Diebesgut bringen, nicht nur weitere Hintergrund-Aufklaerung. Der Auftrag ist die WIEDERBESCHAFFUNG.\n`;
               if (typeof diag === 'function') diag('drift', 'GUT-BESCHAFFUNG-Push gesendet (Fall reif, Diebesgut noch nicht zurueck)');
@@ -32912,16 +32924,20 @@ function botChooseByStrategy(options) {
       if (_kandidaten.length > 0) {
         // Nicht 100% - ein Mensch zoegert auch mal. Hohe, aber nicht absolute Praeferenz,
         // damit der Bot in Gefahr noch ausweichen kann und es nicht mechanisch wirkt.
-        const _holChance = _holKandidaten.length > 0 ? 0.85 : 0.65;
+        // v7.12.456 (Lektorat v455 P1, Krause): Wenn der GUT-HOL-PFLICHT-Push schon >=3 Szenen
+        // erfolglos feuert (Versteck bekannt, Gut nicht zurueck), ist Zögern vorbei - der Bot
+        // MUSS die Hol-/Beschaffungs-Option nehmen (100%), statt weiter zu pendeln. Sonst hängt
+        // der Diebstahlfall ewig (Krause 51 Sz). Annäherung weiter nachrangig (nur wenn keine
+        // echte Hol-Option), aber auch die mit voller Priorität bei langem Pflicht-Druck.
+        const _holDruckLang = (typeof caseProgress._gutHolPflichtSeit === 'number')
+          && (sceneCounter - caseProgress._gutHolPflichtSeit) >= 3;
+        const _holChance = _holDruckLang ? 1.0 : (_holKandidaten.length > 0 ? 0.85 : 0.65);
         if (botRng() < _holChance) {
           const _wahl = _kandidaten[0];
           const _art = _holKandidaten.length > 0 ? 'Beschaffung' : 'Annaeherung an Gut-Ort';
-          console.log('[Bot v7.12.169] GUT-HOL-PRIO (' + _art + '): "' + (_wahl.text || '').substring(0, 50) + '"');
-          if (typeof diag === 'function') diag('bot', 'Bot waehlt GUT-HOL [' + _art + '] (Diebstahl-Schlussphase, Gut noch nicht zurueck): "' + (_wahl.text || '').substring(0, 50) + '"');
-          // v7.12.174: botDecisionLog ist der EXPORT-SICHTBARE Kanal (diag verpufft nach dem
-          // Szenen-diagCommit). Ohne diese Zeile war im v172-Run NICHT erkennbar, ob die Prio
-          // greift - sie tat es vermutlich, blieb aber unsichtbar.
-          if (typeof botDecisionLog !== 'undefined') botDecisionLog.push('Bot waehlt GUT-HOL-PRIO [' + _art + '] (Diebstahl, Gut nicht zurueck, Stage' + _stageBot + '): ' + (_wahl.text || '').substring(0, 45));
+          console.log('[Bot v7.12.169] GUT-HOL-PRIO (' + _art + (_holDruckLang ? ', HART seit Pflicht-Druck' : '') + '): "' + (_wahl.text || '').substring(0, 50) + '"');
+          if (typeof diag === 'function') diag('bot', 'Bot waehlt GUT-HOL [' + _art + (_holDruckLang ? ', HART (Pflicht-Druck lang)' : '') + '] (Diebstahl-Schlussphase, Gut noch nicht zurueck): "' + (_wahl.text || '').substring(0, 50) + '"');
+          if (typeof botDecisionLog !== 'undefined') botDecisionLog.push('Bot waehlt GUT-HOL-PRIO [' + _art + '] (Diebstahl, Gut nicht zurueck, Stage' + _stageBot + (_holDruckLang ? ', HART' : '') + '): ' + (_wahl.text || '').substring(0, 45));
           return _wahl;
         }
       }
