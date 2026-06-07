@@ -3017,7 +3017,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.444</div>
+    <div class="start-version">Schatten v7.12.445</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3238,7 +3238,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.444</span>
+    <span>Schatten v7.12.445</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6127,7 +6127,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.444';
+window.SCHATTEN_VERSION = 'v7.12.445';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -30473,7 +30473,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       // ist - die Datenbasis, um zu entscheiden, ob ein harter Zweit-Bericht-Block nötig wird.
       try {
         if (typeof diag === 'function' && (caseProgress.klientGesprochen || caseProgress.istGelöst || caseProgress.abschlussSzeneGerendert)) {
-          diag('drift', 'REPORT-DIAG ⚠ ZWEIT-BERICHT Sz' + sceneCounter + ': scene.klient_berichtet=true, aber bereits berichtet (klientGesprochen='
+          diag('drift', 'REPORT-DIAG ⚠ Nachbericht nach Abschluss erkannt (Abschlussmechanik bereits geschützt) Sz' + sceneCounter + ': scene.klient_berichtet=true, aber bereits berichtet (klientGesprochen='
             + (!!caseProgress.klientGesprochen) + ' istGelöst=' + (!!caseProgress.istGelöst) + ' abschlussGerendert=' + (!!caseProgress.abschlussSzeneGerendert)
             + ') → möglicher Doppel-Bericht/Logikbruch');
         }
@@ -30524,7 +30524,17 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       // als die Anti-Billig-Sperre. Sonst entsteht der Goerke-Widerspruch: dieser Guard blockt
       // (Stage 3 erst seit 0 Sz), aber ein anderer Pfad loest den DOM-Win-Screen trotzdem.
       const explizitAufloesen = (typeof lastChosenKategorie !== 'undefined' && lastChosenKategorie === 'AUFLOESEN');
-      if (requiresGap && !explizitAufloesen) {
+      // v7.12.445 (Lektorat v444 P1, Brandt Run1): Die Stage-3-Frischsperre (Anti-Billig-Finale)
+      // blockte einen ECHTEN Abschluss: Brandt stand bei 4/5 Truthbeats inkl. Pflicht-Beat
+      // (truthBeatsErfuellt: JA), Karl berichtete dem Klienten, "Fall lösen" war sichtbar - aber
+      // Stage 3 war erst 0-1 Szenen alt -> klient_berichtet wurde verworfen, Fall hing. Wenn die
+      // Wahrheitskette nachweislich erfuellt ist, ist es KEIN Billig-Finale - der Gap darf
+      // ueberbrückt werden, genau wie bei explizitem AUFLOESEN. Die Anti-Billig-Sperre bleibt
+      // fuer alle Faelle OHNE erfuellte Beats voll wirksam (keine Aufweichung der alten Gefahr).
+      const _wahrheitBelegt = (typeof truthBeatsErfuellt === 'function')
+        && caseSetup && Array.isArray(caseSetup.truthBeats) && caseSetup.truthBeats.length
+        && truthBeatsErfuellt();
+      if (requiresGap && !explizitAufloesen && !_wahrheitBelegt) {
         const stage3Scenes = sceneCounter - (caseProgress.stage3StartScene || sceneCounter);
         if (stage3Scenes < 2) {
           diag('drift', 'klient_berichtet:true ignoriert - Stage 3 erst seit ' + stage3Scenes + ' Szene (beschatten/wahrheit braucht 2+, kein explizites AUFLOESEN)');
