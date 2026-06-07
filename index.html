@@ -3017,7 +3017,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.459</div>
+    <div class="start-version">Schatten v7.12.462</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3238,7 +3238,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.459</span>
+    <span>Schatten v7.12.462</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6127,7 +6127,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.459';
+window.SCHATTEN_VERSION = 'v7.12.462';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -10398,7 +10398,7 @@ function diagFinaleWahrheitstreue(scene) {
         _norm(nm).split(/\s+/).forEach(t => { if (t.length >= 3) _personenTokens.add(t); });
       }
     } catch (e) { /* ignore */ }
-    const _generischeOrtsworte = new Set(['wohnung','buero','büro','keller','zimmer','haus','strasse','strase','platz','hof','hinterhof','gebaeude','raum','etage','stock','wohnungen','kammer','lokal','bar','kneipe']);
+    const _generischeOrtsworte = new Set(['wohnung','buero','büro','keller','zimmer','haus','strasse','strase','platz','hof','hinterhof','gebaeude','raum','etage','stock','wohnungen','kammer','lokal','bar','kneipe','notaufnahmelager','aufnahmelager','lager','durchgangslager','trakt','anstalt','klinik','krankenhaus','praxis','revier','praesidium','präsidium','verwaltung','behoerde','behörde','ministerium','amt','kaserne','gefaengnis','gefängnis','haftanstalt','untersuchungshaft']);
     const _diskriminierend = (tok) => tok.length >= 5 && !_personenTokens.has(tok) && !_generischeOrtsworte.has(tok);
     const genanntUnbesucht = [];
     for (const so of setupOrte) {
@@ -10428,6 +10428,54 @@ function diagFinaleWahrheitstreue(scene) {
     if (bestaetigungNahOrt) {
       diag('drift', 'FINALE-DIAG ⚠ Beweis-/Bestaetigungssprache mit Bezug zu UNBESUCHTEM Ort (Verdacht: erfundener Beweis a la "Bestaetigung aus Marienfelde")');
     }
+    // --- (4) v7.12.462 (Lektorat v459 P2, Sigrid/Hohenschönhausen): SETUP-WISSENS-LECK aus Cast-Details.
+    // Befund: Das Finale nannte "Hohenschönhausen" als Manfreds Haftort, obwohl Karl dort nie war
+    // UND kein Indiz den Ort belegt - der Name stand nur in der Pieck-CAST-BESCHREIBUNG (detail-Feld),
+    // nicht in caseSetup.locations, also entging er Block (2). Diese Diagnose sammelt geografisch
+    // diskriminierende Orts-/Institutionsnamen aus den setupCast-detail/beziehung-Feldern, prüft ob
+    // sie im Finaltext stehen, und meldet sie NUR, wenn sie WEDER besucht NOCH in einem Indiz belegt
+    // sind. Das unterscheidet Sigrid (Hohenschönhausen, nirgends belegt -> Verdacht) sauber von Hilde
+    // (Marienfelde, durch Indiz "Notiz Meissner Marienfelde" belegt -> kein Verdacht). Reine
+    // Beobachtung, kein Eingriff.
+    try {
+      const _indizNorm = indizien.map(_norm).join(' ; ');
+      const _invNorm = inv.map(_norm).join(' ; ');
+      const _belegtInIndizOderInv = (tok) => _indizNorm.includes(tok) || _invNorm.includes(tok);
+      // Orts-/Institutionsnamen aus Cast-Detailfeldern einsammeln.
+      const _detailText = [];
+      if (caseSetup && Array.isArray(caseSetup.setupCast)) {
+        for (const c of caseSetup.setupCast) {
+          if (!c) continue;
+          if (c.detail) _detailText.push(String(c.detail));
+          if (c.beziehung) _detailText.push(String(c.beziehung));
+        }
+      }
+      // Kandidaten-Tokens: großgeschriebene Eigennamen (vor Normalisierung) aus den Detailfeldern,
+      // die geografisch diskriminierend sind (nicht Person, nicht generisches Ortswort).
+      const _kandidatenTokens = new Set();
+      for (const dt of _detailText) {
+        // Wortfolgen mit Großbuchstaben-Anfang (Eigennamen wie "Hohenschönhausen", "Marienfelde").
+        const _matches = dt.match(/[A-ZÄÖÜ][a-zäöüß]{4,}(?:[-\s][A-ZÄÖÜ][a-zäöüß]{2,})?/g) || [];
+        for (const m of _matches) {
+          const mn = _norm(m);
+          // nur diskriminierende Tokens (nicht Person, nicht generisch, lang genug)
+          const toks = mn.split(/[\s-]+/).filter(_diskriminierend);
+          for (const t of toks) _kandidatenTokens.add(t);
+        }
+      }
+      const _leakKandidaten = [];
+      for (const tok of _kandidatenTokens) {
+        if (!ftNorm.includes(tok)) continue;           // steht der Ort im Finaltext?
+        if (besuchtNorm.some(b => b.includes(tok))) continue; // besucht? -> ok
+        if (_belegtInIndizOderInv(tok)) continue;      // durch Indiz/Inventar belegt? -> ok (Hilde/Marienfelde)
+        _leakKandidaten.push(tok);
+      }
+      if (_leakKandidaten.length) {
+        diag('drift', 'FINALE-DIAG ⚠ SETUP-WISSENS-LECK: Finaltext nennt Ort/Institution aus Cast-Beschreibung, die WEDER besucht NOCH als Indiz belegt ist: ' + _leakKandidaten.join(' | ') + ' (Verdacht: KI zieht Setup-Wissen ins Finale, a la "Hohenschönhausen")');
+      } else {
+        diag('drift', 'FINALE-DIAG ✓ kein Setup-Wissens-Leck aus Cast-Details im Finaltext');
+      }
+    } catch (e) { /* Diagnose darf den Abschluss NIE brechen */ }
   } catch (e) { /* Diagnose darf den Abschluss NIE brechen */ }
 }
 
@@ -19405,7 +19453,12 @@ Marlowe-Stil: stilvoll, elliptisch, NICHT explizit. Tuer schliesst sich, Schnitt
           });
         } catch (e) { _aktiveRomanceImCast = false; }
         const _romanzeLaeuft = (typeof romanticTension === 'number' && romanticTension >= 2);
-        if (!_romInCast && !_aktiveRomanceImCast && !_romanzeLaeuft && sceneCounter >= 5 && _scenesSinceRom >= 6 && _pushCooldownOk && _pushBudgetOk &&
+        // v7.12.460 (Lektorat v459 P2, Auguste-Widerspruch): Wenn die Romance-Figur bereits
+        // "endgültig aufgegeben" wurde (2x wirkungslos, romanceWirkungslosCount>=2), darf KEIN
+        // weiterer Romance-Push mehr kommen - sonst widerspricht sich der Log selbst (Sz16
+        // "endgültig aufgegeben", Sz31 doch wieder "Push #2"). Variante A: endgültig = endgültig.
+        const _romNichtAufgegeben = (typeof romanceWirkungslosCount !== 'number') || romanceWirkungslosCount < 2;
+        if (!_romInCast && !_aktiveRomanceImCast && !_romanzeLaeuft && _romNichtAufgegeben && sceneCounter >= 5 && _scenesSinceRom >= 6 && _pushCooldownOk && _pushBudgetOk &&
             _spOk && _stasiRuhigOk && !_gutHolPflichtAktiv && !karlInStasiCustody && sceneCounter % 6 === 0) {
           const _rn = _romNames[0];
           lastRomancePushScene = sceneCounter;
@@ -22341,7 +22394,14 @@ function detectTimedEvent(scene) {
   const ort = normForMatch((scene && scene.ort) || '');
   const combined = txt + ' ' + ort;
   // Beerdigung / Trauerfeier / Friedhof
-  if (/\b(beerdigung|begraebnis|trauerfeier|trauergaeste|grab|friedhof|sarg|grabstein|pastor|pfarrer\s+spricht)\b/.test(combined)) {
+  // v7.12.460 (Lektorat v459 P2/P3, Sigrid-False-Positive): "grab" und "friedhof" als ALLEINSTEHENDE
+  // schwache Trigger entfernt. Befund: "Dein Büro liegt offen wie ein leeres Grab" (Metapher) löste
+  // fälschlich TimedEvent:beerdigung aus. Jetzt verlangen schwache Begriffe (grab/friedhof) einen
+  // echten Trauer-Kontext; die starken Begriffe (beerdigung/trauerfeier/sarg/...) zählen weiter solo.
+  const _starkTrauer = /\b(beerdigung|begraebnis|trauerfeier|trauergaeste|sarg|grabstein|grabrede|leichenzug|trauergemeinde|pfarrer\s+spricht)\b/.test(combined);
+  const _schwachTrauer = /\b(grab|friedhof|pastor)\b/.test(combined)
+    && /\b(beerdig|begraeb|trauer|sarg|verstorben|beigesetzt|beisetzung|kondol|kranz|grabrede|leichen)\b/.test(combined);
+  if (_starkTrauer || _schwachTrauer) {
     return 'beerdigung';
   }
   // Hochzeit / Trauung
@@ -22356,7 +22416,15 @@ function detectTimedEvent(scene) {
   // Goerke-Run hatte Saal 4 + Richterin + Anklagebank aber keinen "gerichtssaal".
   // Eine Verhandlung dauert in Wirklichkeit max 3-4 Stunden, dann wird vertagt.
   // Wir muessen den Anlass deutlich frueher erkennen.)
-  if (/\b(gerichtsverhandlung|anhoerung|gerichtssaal|prozess\s+gegen|verhandlungssaal|kreisgericht|landgericht|amtsgericht|saal\s+4|saal\s+\d+|richterin|richter\s+|anklagebank|anklage\s|zeugenbank|zeugenstand|staatsanwalt|verteidigung|verhandlung)\b/.test(combined)) {
+  // v7.12.460 (Lektorat v459 P2/P3, Auguste-False-Positive): "anklage"/"staatsanwalt"/"verteidigung"/
+  // "verhandlung" als ALLEINSTEHENDE Trigger entfernt. Befund: ein beiläufiges "Anklage" im Stalin-
+  // Wahrheitsfall löste fälschlich TimedEvent:gericht aus, obwohl Karl in keiner Verhandlung sitzt.
+  // STARKE Trigger (Karl ist physisch in einer Verhandlung) zählen solo; schwache brauchen Saal-Kontext.
+  const _starkGericht = /\b(gerichtsverhandlung|gerichtssaal|verhandlungssaal|anklagebank|zeugenbank|zeugenstand|saal\s+4|saal\s+\d+|kreisgericht|landgericht|amtsgericht)\b/.test(combined);
+  const _schwachGericht = /\b(anklage|staatsanwalt|verteidigung|verhandlung|anhoerung|richterin|prozess)\b/.test(combined)
+    && /\b(saal|gericht|verhandlung|sitzung|richter|angeklagt|anklagebank|zeugenstand|plaedoyer|urteil|verkuendet)\b/.test(combined)
+    && !/\b(verhandlungsbasis|verhandeln\s+ueber|preis)\b/.test(combined);
+  if (_starkGericht || _schwachGericht) {
     return 'gericht';
   }
   return null;
@@ -33100,6 +33168,33 @@ function botChooseByStrategy(options) {
         } catch (e) { /* ignore */ }
         if (typeof caseProgress._botKonfroCount !== 'number') caseProgress._botKonfroCount = 0;
         if (typeof caseProgress._botKonfroLastBeatCount !== 'number') caseProgress._botKonfroLastBeatCount = -1;
+        // v7.12.461 (Lektorat v459 P2, Auguste actionlastig): ESKALATIONS-STOPP für wahrheit-Fälle
+        // OHNE truthBeats. Befund: Auguste (wahrheit, keine Beats, kein Mord) -> _beatCount bleibt
+        // konstant 0 -> der Loopbreaker hielt "Konfrontation ohne neuen Beat" für dauerhaft wahr und
+        // ließ den Bot Brakke 5+x immer härter drücken ("pack ihn", "Taschen durchsuchen") -> Stage
+        // hing auf 1, Resolve-Button kam erst Sz36, 50% Sp4-5. Bei Fällen ohne Beats sind Beats kein
+        // gültiges Fortschrittssignal. Daher: genug Indizien (>=5) + Verdächtiger bekannt + mehrfach
+        // ergebnislos konfrontiert -> Stage 3 erzwingen (gibt Resolve frei), statt weiter zu eskalieren.
+        try {
+          const _ctEsk = caseSetup && caseSetup.caseType;
+          const _hatKeineBeats = !(caseSetup && Array.isArray(caseSetup.truthBeats) && caseSetup.truthBeats.length)
+            && !(caseSetup && Array.isArray(caseSetup.murderAxes) && caseSetup.murderAxes.length);
+          const _indEsk = (caseProgress && Array.isArray(caseProgress.indizien)) ? caseProgress.indizien.length : 0;
+          const _verdEsk = (caseProgress && caseProgress.tatverdaechtiger)
+            && caseProgress.tatverdaechtiger !== 'noch unbekannt' && caseProgress.tatverdaechtiger !== '?'
+            && caseProgress.tatverdaechtiger !== 'Unbekannter Verdaechtiger';
+          if ((_ctEsk === 'wahrheit' || _ctEsk === 'politisch') && _hatKeineBeats
+              && _indEsk >= 5 && _verdEsk && caseProgress._botKonfroCount >= 3
+              && (caseProgress.stage || 0) < 3 && !caseProgress.istGelöst) {
+            caseProgress.stage = 3;
+            if (!caseProgress.stage3StartScene) caseProgress.stage3StartScene = (typeof sceneCounter === 'number') ? sceneCounter : 0;
+            if (!caseProgress.stage2StartScene) caseProgress.stage2StartScene = caseProgress.stage3StartScene;
+            if (typeof scenesInStage3 !== 'undefined') scenesInStage3 = 0;
+            console.log('[Schatten] AUTO-STAGE 3 (wahrheit ohne Beats: ' + caseProgress._botKonfroCount + 'x ergebnislos konfrontiert, ' + _indEsk + ' Indizien) - Abschluss freigeben statt weiter eskalieren');
+            if (typeof diag === 'function') diag('progress', '✦ AUTO-STAGE 3 (wahrheit/politisch ohne truthBeats: ' + caseProgress._botKonfroCount + 'x konfrontiert ohne Fortschritt, Indizien ' + _indEsk + ', Verdächtiger benannt) - Fall ist belastbar, Abschluss freigeben statt Action-Schleife.');
+            if (typeof showProgressToast === 'function') showProgressToast('Verdacht verdichtet', 'Die Beweislage trägt.');
+          }
+        } catch (e) { /* defensiv */ }
         // beweis-/geständnissichernde Optionen (erzeugen den fehlenden Beat, statt nur Gewalt):
         const _beweisRe = /\b(gestaendnis|geständnis|gesteh|durchsuch|durchwühl|durchwuehl|tasche|mantel|schreibtisch|akte|beweis|protokoll|zeug|aussage|alibi|dokument|unterlag|archiv|rezept|apotheke|totenschein|obduk|digitalis|befund|notiz|brief|schuldschein)\w*/i;
         const _beweisKandidaten = (byCat.OFFENSIV || []).concat(byCat.ERKUNDEN || []).filter(o => {
