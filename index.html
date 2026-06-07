@@ -3017,7 +3017,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.462</div>
+    <div class="start-version">Schatten v7.12.463</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3238,7 +3238,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.462</span>
+    <span>Schatten v7.12.463</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6127,7 +6127,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.462';
+window.SCHATTEN_VERSION = 'v7.12.463';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -15485,6 +15485,24 @@ function applyCategoryMechanics(kategorie, ctx) {
       // Institutionen oder Nachweise als gesicherte Tatsache behaupten, die im Spielverlauf nicht
       // tatsaechlich erspielt wurden. Greift fuer alle Falltypen, ist also kein Hilde-Spezialfix.
       ergebnisHint += ' WAHRHEITSTREUE (WICHTIG): Nenne im Abschluss NUR Orte, Nachweise, Registrierungen oder Bestaetigungen, die Karl im Spielverlauf TATSAECHLICH aufgesucht oder als konkretes Indiz erhalten hat. Erfinde KEINEN gesicherten Verbleib und KEINEN konkreten Ort (z.B. ein bestimmtes Lager, Amt, Krankenhaus) als belegte Tatsache, wenn Karl dort nie war und kein Indiz ihn nennt. Wenn der genaue Verbleib/Ausgang offen ist, sage das ehrlich offen ("der genaue Weg bleibt ungesichert") statt einen konkreten Ort zu behaupten.';
+      // v7.12.463 (Lektorat v462 P1/P2, Hilde Finale-Wahrheitsbruch): HARTES requiredProof-GATE für
+      // den Finaltext. Befund: Win-Screen sagte korrekt "Erwin - Verbleib ungesichert" (requiredProof
+      // NICHT erfüllt), aber die KI-Finaltext-Prosa behauptete "Erwin im Westen, in Marienfelde, in
+      // Sicherheit". Der generische Wahrheitstreue-Hinweis oben reichte nicht. Jetzt: EXAKT dieselbe
+      // _proofOk-Prüfung wie im Win-Screen (Z11065ff), und bei fehlendem Nachweis ein expliziter
+      // Verbots-Befehl mit dem requiredProofPartialText - DOM und Prosa nutzen so dieselbe Wahrheit.
+      try {
+        const _rpF = caseSetup && caseSetup.requiredProof;
+        if (_rpF && !(caseProgress && caseProgress.zielpersonGefunden)) {
+          const _indsF = (caseProgress && caseProgress.indizien) || [];
+          const _proofOkF = _indsF.some(i => _rpF.test(i));
+          if (!_proofOkF) {
+            const _partial = (caseSetup.requiredProofPartialText || 'Die Spur führt weit, doch der genaue Verbleib bleibt ungesichert.');
+            ergebnisHint += ' PFLICHT-NACHWEIS FEHLT (ABSOLUT KRITISCH FÜR DEN ABSCHLUSS): Karl hat KEINEN gesicherten Beweis über den endgültigen Verbleib/Ausgang der Zielperson erspielt. Die Schlussszene DARF NICHT behaupten, die Person sei "in Sicherheit", "im Westen", "registriert", "angekommen" oder an einem konkreten sicheren Ort - das wäre eine Lüge gegenüber dem tatsächlichen Spielstand. Formuliere den Ausgang stattdessen GENAU SO ehrlich offen: "' + _partial + '" Karl berichtet dem Klienten das, was er WIRKLICH herausgefunden hat (die Fluchtabsicht/Spur), und benennt offen, dass der gesicherte Verbleib NICHT bestätigt ist. KEIN beruhigendes "alles gut, er ist sicher".';
+            if (typeof diag === 'function') diag('drift', 'FINALE requiredProof-GATE: Pflicht-Nachweis fehlt -> Finaltext-Prompt verbietet "in Sicherheit"-Behauptung (DOM/Prosa-Konsistenz erzwungen)');
+          }
+        }
+      } catch (e) { /* defensiv - Abschluss nie brechen */ }
       // v7.12.147 (Lektorat 19:46+19:48-Runs): DIEBSTAHL-ABSCHLUSS ehrlich halten. Befund:
       // Endtext behauptete "Etui UND Familienschmuck sind zurueck", obwohl nur das Etui
       // im Inventar war. Der Bericht darf nur nennen, was Karl WIRKLICH hat. Fehlende
@@ -33133,6 +33151,27 @@ function botChooseByStrategy(options) {
       let _kandidaten = [];
       let _artF = '';
       if (_ctF === 'vermisst') {
+        // v7.12.463 (Lektorat v462 P2/P3, Hilde 60 Sz): VERMISST-ESKALATIONS-STOPP. Befund: Hilde
+        // sammelte 20 Indizien, der Bot wählte wiederholt "Zielperson aufsuchen", aber SPUR GEKLÄRT/
+        // zielpersonGefunden kam erst Sz59 (Reife hängt am KI-Trigger, nicht an der Indizienmenge) ->
+        // 60 Szenen, 25 Cent. Analog zum v461-Stopp für wahrheit-ohne-Beats: wenn genug Spur-Indizien
+        // (>=8) gesammelt sind UND der Bot mehrfach (>=3x) erfolglos die Zielperson aufgesucht hat,
+        // Stage 3 erzwingen (gibt Resolve frei), statt weiter Nebenorte abzuklappern. Nur Bot-Test.
+        try {
+          if (typeof caseProgress._botVermisstSuchCount !== 'number') caseProgress._botVermisstSuchCount = 0;
+          const _indVm = (caseProgress && Array.isArray(caseProgress.indizien)) ? caseProgress.indizien.length : 0;
+          if (_indVm >= 8 && caseProgress._botVermisstSuchCount >= 3
+              && (caseProgress.stage || 0) < 3 && !caseProgress.istGelöst
+              && !(caseProgress && caseProgress.zielpersonGefunden)) {
+            caseProgress.stage = 3;
+            if (!caseProgress.stage3StartScene) caseProgress.stage3StartScene = (typeof sceneCounter === 'number') ? sceneCounter : 0;
+            if (!caseProgress.stage2StartScene) caseProgress.stage2StartScene = caseProgress.stage3StartScene;
+            if (typeof scenesInStage3 !== 'undefined') scenesInStage3 = 0;
+            console.log('[Schatten] AUTO-STAGE 3 (vermisst: ' + caseProgress._botVermisstSuchCount + 'x erfolglos aufgesucht, ' + _indVm + ' Indizien) - Spur belastbar, Abschluss freigeben');
+            if (typeof diag === 'function') diag('progress', '✦ AUTO-STAGE 3 (vermisst: ' + caseProgress._botVermisstSuchCount + 'x Zielperson aufgesucht ohne Fund, Indizien ' + _indVm + ') - Spur ist belastbar, Abschluss freigeben statt weitere Nebenorte.');
+            if (typeof showProgressToast === 'function') showProgressToast('Spur verdichtet', 'Die Spur trägt zum Abschluss.');
+          }
+        } catch (e) { /* defensiv */ }
         // AUFSUCHEN: Hin-/Reise-Verben mit Ziel-/Personenbezug ODER Personenname im Text.
         const _aufsuchVerbRe = /\b(such|find|spür|spueren|aufsuch|fahr|geh|dring|betret|befrei|hol)\w*/i;
         const _ortPersonRe = /\b(versteck|keller|wohnung|zimmer|lager|hinterhof|adresse|unterschlupf|krankenhaus|anstalt)\b/i;
@@ -33144,6 +33183,8 @@ function botChooseByStrategy(options) {
           return _hatName || _hatAufsuch;
         });
         _artF = 'Zielperson aufsuchen';
+        // Zähler hochsetzen, wenn der Bot gleich eine Aufsuch-Option wählt (Eskalations-Stopp-Basis).
+        if (_kandidaten.length > 0) caseProgress._botVermisstSuchCount = (caseProgress._botVermisstSuchCount || 0) + 1;
       } else {
         // mord/politisch/wahrheit/beschatten -> KONFRONTATION.
         // OFFENSIV-Optionen, deren Text Konfrontation signalisiert ODER den Verdaechtigen nennt.
