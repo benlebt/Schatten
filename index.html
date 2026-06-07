@@ -3017,7 +3017,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.476</div>
+    <div class="start-version">Schatten v7.12.477</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3238,7 +3238,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.476</span>
+    <span>Schatten v7.12.477</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6144,7 +6144,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.476';
+window.SCHATTEN_VERSION = 'v7.12.477';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -14370,12 +14370,17 @@ function buildNpcTextureHint(ctx) {
   } else if (sp >= 3 && _istKulturort) {
     // Spannung an einem Kulturort -> KEIN Gangsterpaar, sondern angespanntes Kulturpersonal.
     pool = POOL_KULTUR; key = 'kultur'; chance = 0.6;
-  } else if (sp >= 3 && politisch) {
-    // v7.12.476 (Lektorat v473 P2/P3, Bruno): bei einem POLITISCHEN Fall sind die Verfolger bei
-    // Spannung MfS-Leute, KEINE x-beliebigen Schläger. Befund: Bruno hatte viele Verfolgungs-/Flucht-
-    // Szenen mit anonymen "MfS-Männern/Verfolgern" ohne Gesicht, weil bei stasiT<2 der Schläger-Pool
-    // griff statt eines MfS-Profils. Dieser Pool gibt den Verfolgern konkrete, wechselnde Typen
-    // (ChatGPT-Liste) - eingefroren pro Ort wie die anderen Pools.
+  } else if (sp >= 3 && politisch && (() => {
+      // v7.12.477 (ChatGPT-Verfeinerung zu v476): MfS-Verfolger-Pool NUR, wenn der Kontext wirklich
+      // MfS/Stasi/VP-Signale trägt. Sonst könnte in einem politischen Fall auch ein UNABHÄNGIGER
+      // Krimineller/privater Schläger fälschlich zum MfS-Verfolger umgefärbt werden. stasiTension>0 ODER
+      // MfS-Signalwörter in Ort/Szenentext -> echter Apparat-Druck. Sonst normaler Schläger-Pool.
+      if (stasiT >= 1) return true;
+      const _sig = ((ctx.ort || '') + ' ' + (ctx.sceneText || '')).toLowerCase();
+      return /\b(mfs|stasi|staatssicherheit|vopo|volkspolizei|\bvp\b|verfolger|mann im mantel|aufgreif|zuführung|zufuehrung|genosse leutnant|spitzel|im\b|horch|greifkommando|schwarze limousine|emw)\b/.test(_sig);
+    })()) {
+    // bei einem POLITISCHEN Fall mit echtem Apparat-Druck sind die Verfolger MfS-Leute, KEINE
+    // x-beliebigen Schläger. Konkrete, wechselnde Typen statt "Mann im Mantel" - eingefroren pro Ort.
     pool = POOL_MFS_VERFOLGER; key = 'mfsverfolger'; chance = 0.7;
   } else if (sp >= 3) {
     pool = POOL_SCHLAEGER; key = 'schlaeger'; chance = 0.7;
@@ -14427,6 +14432,82 @@ function buildNpcTextureHint(ctx) {
   return 'NPC-TEXTUR (konkreter Impuls fuer die Sprech-Nebenfigur DIESER Szene, falls eine vorkommt - '
     + 'KEIN Zwang eine zu erfinden, aber wenn Waechter/Handlanger/Zeuge/Beamter auftaucht, gib IHM dieses Gesicht): '
     + pick + rufZusatz + ' Nur EINE Figur so ausgestalten (der Wortfuehrer), die anderen bleiben Kulisse. Ein halber bis ganzer Satz reicht, kein Steckbrief, kein Bösewicht-Monolog.';
+}
+
+// v7.12.477 (Lektorat-Wunsch Benjamin/ChatGPT "erlebbares Berlin 1953"): HISTORY-TEXTURE-HINT.
+// Analog zum NPC-Textur-Hint, aber für historische ALLTAGS-Einsprengsel: nicht "Anker als Stichwort"
+// (RIAS, EMW), sondern kleine körperlich spürbare Mini-Situationen, wie Menschen 1953 WIRKLICH reagiert
+// haben (RIAS leiser drehen bei Schritten, Fenster schließen, VP meiden, D-Mark unter dem Tresen,
+// Reichsbahner schaut zur Tür bevor er "Westen" sagt). Fallspezifische Pools für die Top-Fälle mit den
+// reichsten Themen (Bruno 18. Juni, Margarete Reichsbahn/Schmuggel, Heinrich Ost-West-Lähmung), sonst
+// generischer Ost/West-Fallback. Feuert sparsam (~jede 2.-3. Szene), Anti-Wiederholung wie beim NPC-Hint.
+let lastHistoryTextureKey = '';
+let historyTextureSceneGap = 0; // zählt Szenen seit letztem History-Hint (sparsam feuern)
+function buildHistoryTextureHint(ctx) {
+  ctx = ctx || {};
+  const ortType = ctx.ortType || 'NEUTRAL';
+  // Bei Karl zu Hause / Arzt: kein historisches Welt-Einsprengsel nötig (private Rückzugsszene).
+  if (ortType === 'HOME' || ortType === 'WAGNER') return '';
+  const caseId = (ctx.caseId || '').toLowerCase();
+  const _ortLower = (ctx.ort || '').toLowerCase();
+  const sektorWest = /west|charlottenburg|wannsee|hardenberg|kudamm|ku'damm|tempelhof|marienfelde|wilmersdorf|zehlendorf/.test(_ortLower);
+
+  // Fallspezifische Pools (reichste Themen).
+  const POOL_BRUNO = [
+    'Ein Nachbar dreht das RIAS-Radio leiser, sobald Schritte im Treppenhaus zu hören sind - am Tag nach dem Aufstand traut keiner dem anderen.',
+    'Auf der Straße senken zwei Frauen die Stimme und weichen einer VP-Streife in weitem Bogen aus; niemand will am 18. Juni auffallen.',
+    'Ein Hauswart mustert jeden, der kommt und geht - seit gestern notiert er, wer wann heimkam, man weiß ja nie, wer später fragt.',
+    'In der Kneipe verstummt das Gespräch über den Aufstand, sobald ein Fremder eintritt; erst ein Korn später wird wieder leiser weitergeredet.',
+    'Eine Mutter zieht ihren Jungen vom Fenster weg, als ein Sowjetpanzer die Straße herunterrollt - die Kette rasselt, die Scheiben klirren leise.',
+    'Jemand flüstert von Verhaftungen in der Nacht, nennt aber keine Namen - "die holen sie einfach ab" - und schaut dabei über die Schulter.',
+  ];
+  const POOL_MARGARETE = [
+    'Der Reichsbahner benutzt noch die alten Dienstbegriffe, aber schaut zur Tür, bevor er das Wort "Westen" auch nur ausspricht.',
+    'Ein Güterwagen-Frachtbrief liegt offen da - Oststempel, aber die Route führt durch den Westsektor; solche Papiere sind 1953 politischer Sprengstoff.',
+    'Die Frau am Kiosk nimmt die D-Mark nur unter dem Tresen und tut danach so, als hätte sie nichts gesehen.',
+    'Im Reichsbahn-Büro hängt das Soll-Plan-Plakat schief; ein Beamter senkt die Stimme, wenn er von Dienstplänen und Sektorengrenzen spricht.',
+    'Ein Funktionär grüßt zu laut und zu freundlich - die Sorte Freundlichkeit, hinter der man 1953 besser nichts Verfängliches sagt.',
+    'Am Bahnsteig stehen zwei Männer zu ruhig herum, lesen dieselbe Zeitung; der Schaffner sieht weg und beeilt sich.',
+  ];
+  const POOL_HEINRICH = [
+    'Lindner senkt die Stimme, wenn die Sprache auf "die Kollegen drüben" kommt - West-Kripo und Ost-Sektor, da hört 1953 die Zuständigkeit auf und die Angst fängt an.',
+    'In der Disconto-Bank riecht es nach Bohnerwachs und Aktenstaub; ein Angestellter wird einsilbig, sobald Devisen und D-Mark zur Sprache kommen.',
+    'Ein West-Polizist zuckt mit den Schultern: über die Sektorengrenze kann er nicht, "das ist dann sowjetische Sache" - und genau das lähmt den Fall.',
+    'Jemand erwähnt beiläufig alte Verbindungen aus der Kriegszeit, die heute in Bank und Behörde weiterwirken - man spricht es nicht aus, aber alle wissen es.',
+    'Ein Beamter legt die Akte demonstrativ zur Seite: "Da kommt Einfluss von oben" - mehr sagt er nicht, der Rest steht zwischen den Zeilen.',
+  ];
+  // Generische Ost/West-Alltags-Pools (alle anderen Fälle).
+  const POOL_OST = [
+    'Im Radio läuft leise der Berliner Rundfunk; jemand stellt auf RIAS um und dreht sofort leiser, als Schritte näherkommen.',
+    'Auf dem Tisch liegen Lebensmittelkarten neben ein paar Ostmark; echter Bohnenkaffee ist Mangelware, es gibt Malzkaffee aus der Kanne.',
+    'An der Wand ein HO-Kalender, daneben der Geruch von Kohlefeuerung und Bohnerwachs - die Wohnung atmet 1953.',
+    'Ein Gespräch über "drüben" bricht ab, sobald ein Unbekannter den Raum betritt; man redet über das Wetter weiter.',
+    'Vor dem HO-Laden eine kurze Schlange; die Frau zählt ihre Marken zweimal, bevor sie sich anstellt.',
+  ];
+  const POOL_WEST = [
+    'Im West-Café gibt es echten Bohnenkaffee und Torte mit Sahne - ein teures Gedeck, ein kleines Statussymbol mitten im Wiederaufbau.',
+    'Ein Schaufenster wirbt für Persil und Nylonstrümpfe; Wirtschaftswunder-Aufbruch, und doch sprechen die Leute halblaut über Verschleppungen in den Osten.',
+    'Die Preise stehen in D-Mark, an der Ecke wechselt jemand diskret Ostmark zum Schwarzkurs - vier zu eins, leise verhandelt.',
+    'RIAS läuft hier offen und laut; man muss die Lautstärke nicht fürchten, das ist der Luxus des Westsektors.',
+    'Ein Flüchtling aus dem Osten fragt nach dem Weg zum Auffanglager; die Übergangsstellen sind überfüllt, Marienfelde noch im Aufbau.',
+  ];
+
+  let pool, key;
+  if (caseId.indexOf('wessel') !== -1 || caseId.indexOf('bruno') !== -1) { pool = POOL_BRUNO; key = 'bruno'; }
+  else if (caseId.indexOf('stein') !== -1 || caseId.indexOf('margarete') !== -1) { pool = POOL_MARGARETE; key = 'margarete'; }
+  else if (caseId.indexOf('hollenbeck') !== -1 || caseId.indexOf('heinrich') !== -1 || caseId.indexOf('lindner') !== -1) { pool = POOL_HEINRICH; key = 'heinrich'; }
+  else if (sektorWest) { pool = POOL_WEST; key = 'west'; }
+  else { pool = POOL_OST; key = 'ost'; }
+
+  let pick = pool[Math.floor(Math.random() * pool.length)];
+  for (let i = 0; i < 3 && (key + '|' + pick) === lastHistoryTextureKey; i++) {
+    pick = pool[Math.floor(Math.random() * pool.length)];
+  }
+  lastHistoryTextureKey = key + '|' + pick;
+  return 'HISTORISCHE TEXTUR (v7.12.477 - erlebbares Berlin 1953, KEIN Pflicht-Einschub, sondern wenn '
+    + 'es organisch passt): Webe EIN kleines, körperlich spürbares Zeit-Detail beiläufig in die Szene - '
+    + 'NICHT als Stichwort/Name-dropping, sondern als Mini-Situation. Konkreter Impuls für diese Szene: '
+    + pick + ' Halt es knapp (ein Satz, ein Bild), brich den Noir-Ton nicht, und mach KEINEN Lexikon-Einschub daraus.';
 }
 
 // v7.11.3: Doppel-Klick-Schutz fuer chooseOption. Wenn der Spieler waehrend
@@ -20147,6 +20228,7 @@ Wenn Karl waehlt: Schnitt zur naechsten Szene am Morgen, Kaffee zu zweit, keine 
       const _npcTex = buildNpcTextureHint({
         ortType: currentOrtType,
         ort: (typeof currentOrt === 'string') ? currentOrt : '',
+        sceneText: (typeof recentTexts !== 'undefined' && Array.isArray(recentTexts) && recentTexts.length) ? recentTexts[recentTexts.length - 1] : '',
         spannung: (typeof lastSpannung === 'number') ? lastSpannung : 2,
         politisch: caseIsPolitical,
         stasiTension: stasiTension
@@ -20154,6 +20236,26 @@ Wenn Karl waehlt: Schnitt zur naechsten Szene am Morgen, Kaffee zu zweit, keine 
       if (_npcTex) {
         timeContext += '\n\n=== NPC-TEXTUR (v7.12.415) ===\n' + _npcTex;
         if (typeof diag === 'function') diag('detect', 'NPC-TEXTUR-HINT gesetzt: ' + _npcTex.slice(0, 60) + '...');
+      }
+    }
+
+    // v7.12.477: HISTORY-TEXTURE-HINT. Sparsam (~jede 2.-3. Szene) EIN historisches Alltags-
+    // Einsprengsel mitgeben, damit Berlin 1953 körperlich spürbar wird statt nur als Stichwort. Nicht
+    // im Gewahrsam/Tageswechsel/Schlaf. historyTextureSceneGap drosselt: erst ab 2 Szenen Abstand
+    // wieder feuern, dann mit 60% Wahrscheinlichkeit - kein Einschub in jeder Szene (sonst mechanisch).
+    if (!karlInStasiCustody && !pendingDayTransition && !pendingSleepChoice && typeof buildHistoryTextureHint === 'function') {
+      historyTextureSceneGap = (typeof historyTextureSceneGap === 'number') ? historyTextureSceneGap + 1 : 99;
+      if (historyTextureSceneGap >= 2 && Math.random() < 0.6) {
+        const _histTex = buildHistoryTextureHint({
+          ortType: currentOrtType,
+          ort: (typeof currentOrt === 'string') ? currentOrt : '',
+          caseId: (caseSetup && caseSetup.klient) ? String(caseSetup.klient) : ''
+        });
+        if (_histTex) {
+          timeContext += '\n\n=== HISTORISCHE TEXTUR (v7.12.477) ===\n' + _histTex;
+          historyTextureSceneGap = 0;
+          if (typeof diag === 'function') diag('detect', 'HISTORY-TEXTUR-HINT gesetzt: ' + _histTex.slice(80, 150).replace(/\s+/g, ' ') + '...');
+        }
       }
     }
 
