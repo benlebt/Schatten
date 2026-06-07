@@ -3017,7 +3017,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.472</div>
+    <div class="start-version">Schatten v7.12.473</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3238,7 +3238,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.472</span>
+    <span>Schatten v7.12.473</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5722,6 +5722,14 @@ const INTRO_VARIANTS = [
         'Werner lebt - sitzt in U-Haft Hohenschoenhausen, wird wegen "faschistischer Provokation" verhoert',
         'NAMENS-HINWEIS: Werners Freunde/Mitlaeufer NICHT "Krause" nennen (kollidiert mit einem anderen Fall). Wenn du einen Freund erfindest, nimm z.B. Rudi Kramm, Fritz Karger oder Paul Kretschmer.',
       ],
+      // v7.12.473 (Lektorat v471 P1, Bruno Hohenschönhausen-Leak): requiredProof für den EXAKTEN
+      // Haftort. Befund: Finale sagte "Werner sitzt in Hohenschönhausen", obwohl nur die Berner-/MfS-
+      // Spur belegt war - kein harter Festnahmelisten-Beleg, kein physischer Fund. Der konkrete Ort kam
+      // aus der Setup-Wahrheit. Mit diesem requiredProof greift der zentrale Finale-Proof-Guard: ohne
+      // erspielten Hohenschönhausen-/Festnahmelisten-Beleg darf das Finale keinen gesicherten Haftort
+      // behaupten, nur die Berner-/MfS-Spur. (Hohenschoenhausen-Schreibweisen + Festnahmeliste + Fund.)
+      requiredProof: /hohenschönhausen|hohenschoenhausen|festnahmeliste|festnahme-liste|auf der (mfs-)?liste|werner.{0,30}(gefunden|gesehen|befreit|lebend angetroffen)|genslerstr/i,
+      requiredProofPartialText: 'Die Spur führt zu Hauptmann Berner und in MfS-Gewahrsam - Werner ist sehr wahrscheinlich in den Händen der Staatssicherheit, doch der genaue Haftort ist nicht gesichert.',
       // v6.76: HISTORISCHER KONTEXT - 18. Juni 1953 (Tag NACH Aufstand)
       historicalContext: {
         weltlage: 'Stalin tot seit 3 Monaten (5.3.). In der Sowjetunion ist Berija im Politbuero - hat ueberraschend "Neuen Kurs" verkuendet (entspannte Linie). In der DDR hat SED-Politbuero am 9.6. einen weniger drastischen Kurs angekuendigt - zu spaet.',
@@ -6136,7 +6144,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.472';
+window.SCHATTEN_VERSION = 'v7.12.473';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -10528,7 +10536,7 @@ function repairFinaleProofLeak(scene) {
         }
       });
     } catch (e) { /* ignore */ }
-    const _positivVerbRe = /\b(sicher|registriert|angekommen|in sicherheit|aufgenommen|gemeldet|eingetroffen|untergekommen|gerettet|entkommen|geschafft|gut aufgehoben|wohlauf|in freiheit|aufenthaltsort|festgehalten|befindet sich|gefangen gehalten|wird .{0,20}festgehalten|versteckt gehalten|untergebracht)\b/i;
+    const _positivVerbRe = /\b(sicher|registriert|angekommen|in sicherheit|aufgenommen|gemeldet|eingetroffen|untergekommen|gerettet|entkommen|geschafft|gut aufgehoben|wohlauf|in freiheit|aufenthaltsort|festgehalten|befindet sich|gefangen gehalten|wird .{0,20}festgehalten|versteckt gehalten|untergebracht|sitzt|sitzt ein|wird verhört|wird verhoert|in u-haft|in untersuchungshaft|inhaftiert|gefangen)\b/i;
     const _ortPositivKombi = (s) => {
       const sl = s.toLowerCase();
       return _proofWoerter.some(w => sl.includes(w)) && _positivVerbRe.test(s);
@@ -25297,6 +25305,22 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     if (scene && typeof scene.szene === 'string') {
       scene.szene = fixCommonGrammarErrors(scene.szene);
       scene.szene = expandAbbreviations(scene.szene);
+      // v7.12.473 (Lektorat v471 P1, Heinrich/Bruno Finale-Leck): Proof-Guard ZENTRAL hier aufrufen.
+      // Befund: Heinrich löste über AUFLOESEN (Spieler-Klick), der Finaltext "Hollenbeck in Datscha am
+      // Müggelsee gefangen gehalten" lief NICHT durch den klient_berichtet-Block (wo der Guard saß) ->
+      // Guard feuerte nie, der Ort wurde trotz fehlendem requiredProof + trotz Prompt-Verbot ausgespielt.
+      // Diese Stelle erreicht JEDE geparste Szene vor der Anzeige, egal über welchen Pfad der Abschluss
+      // läuft. Der Guard ist intern abgesichert (greift nur bei fehlendem requiredProof + Sicherheits-/
+      // Ort-Behauptung), daher kann er hier gefahrlos für jede Abschluss-naheszene laufen. Bedingung:
+      // nur wenn die Szene einen Abschluss signalisiert (klient_berichtet/zielperson_gefunden) ODER der
+      // Fall bereits als gelöst markiert ist - normale Zwischenszenen bleiben unangetastet.
+      try {
+        const _istAbschlussSzene = (scene.klient_berichtet === true) || (scene.zielperson_gefunden === true)
+          || (caseProgress && (caseProgress.istGelöst || caseProgress.abschlussSzeneGerendert || (caseProgress.stage || 0) >= 4));
+        if (_istAbschlussSzene && typeof repairFinaleProofLeak === 'function') {
+          repairFinaleProofLeak(scene);
+        }
+      } catch (e) { /* defensiv - Anzeige nie brechen */ }
 
       // v6.59: OPENING-VALIDIERUNG mit max 1 Retry
       // Wenn die KI in der Eroeffnungsszene die Pflicht-Fakten (Klient,
