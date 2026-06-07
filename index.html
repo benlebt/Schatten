@@ -3017,7 +3017,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.454</div>
+    <div class="start-version">Schatten v7.12.455</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3238,7 +3238,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.454</span>
+    <span>Schatten v7.12.455</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6127,7 +6127,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.454';
+window.SCHATTEN_VERSION = 'v7.12.455';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -28966,6 +28966,33 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         // Diagnose-Hinweis: Schwelle prinzipiell erreicht, aber TARGET fehlt
         diag('drift', 'Stage-2-Force (' + ct + ') blockiert: ' + targetName + ' nicht in Indizien (Ind:' + ind + ', Tag:' + gameDay + ')');
       }
+      // v7.12.455 (Lektorat v454 P2): STAGE-3 via erfüllter Wahrheitskette. Befund Brandt A: 5/5
+      // Truthbeats inkl. Pflicht schon Sz17, aber Stage 3 erst Sz32 (15 Sz Verzug) - der Fall war
+      // lange lösbar, aber der "Fall lösen"-Button erschien viel zu spät. Wenn die Wahrheit
+      // nachweislich erfüllt ist (truthBeatsErfuellt + Pflichtbeat über das Gate) und seit >=2
+      // Szenen steht (Szene darf atmen, kein Sofort-Sprung), Stage 3 erzwingen. Nur wahrheit/
+      // politisch MIT truthBeats. Setzt ueberfuehrt NICHT (das Gate/determineConclusion regelt das),
+      // nur die Stage, damit der Abschluss-Pfad reif wird.
+      try {
+        const _ctS3 = caseSetup && caseSetup.caseType;
+        const _hatTB3 = caseSetup && Array.isArray(caseSetup.truthBeats) && caseSetup.truthBeats.length
+          && (_ctS3 === 'wahrheit' || _ctS3 === 'politisch');
+        if (_hatTB3 && caseProgress.stage === 2 && typeof truthBeatsErfuellt === 'function' && truthBeatsErfuellt()) {
+          // Seit wann ist die Wahrheit erfüllt? Erstmarkierung setzen, dann 2 Szenen warten.
+          if (typeof caseProgress._truthErfuelltSeitSzene !== 'number') {
+            caseProgress._truthErfuelltSeitSzene = sceneCounter;
+          }
+          const _warte = sceneCounter - caseProgress._truthErfuelltSeitSzene;
+          if (_warte >= 2 && caseProgress.stage < 3) {
+            caseProgress.stage = 3;
+            if (!caseProgress.stage3StartScene) caseProgress.stage3StartScene = sceneCounter;
+            if (typeof scenesInStage3 !== 'undefined') scenesInStage3 = 0;
+            console.log('[Schatten] AUTO-STAGE 3 (Wahrheitskette erfüllt seit ' + _warte + ' Sz): ' + caseProgress.tatverdaechtiger);
+            diag('progress', '✦ AUTO-STAGE 3 (Wahrheitskette erfüllt seit ' + _warte + ' Sz, ' + _ctS3 + ') - Fall ist lösbar, Abschluss freigeben statt 15 Szenen hängen.');
+            showProgressToast('Verdacht verdichtet', 'Die Wahrheit ist belastbar.');
+          }
+        }
+      } catch (e) { /* defensiv */ }
       // Stage 2 -> Stage 3: nach 10 Szenen in Stage 2 (v6.90 von 8 erhoeht)
       // v6.95: Plus TARGET-Name-Check in letzten 5 Szenen-Texten.
       // Anlass Lindner-Run: Hollenbeck war seit Sz7 weg, dann erzwang sich Stage 3 Sz21
@@ -30623,9 +30650,11 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       // ist - die Datenbasis, um zu entscheiden, ob ein harter Zweit-Bericht-Block nötig wird.
       try {
         if (typeof diag === 'function' && (caseProgress.klientGesprochen || caseProgress.istGelöst || caseProgress.abschlussSzeneGerendert)) {
-          diag('drift', 'REPORT-DIAG ⚠ Nachbericht nach Abschluss erkannt (Abschlussmechanik bereits geschützt) Sz' + sceneCounter + ': scene.klient_berichtet=true, aber bereits berichtet (klientGesprochen='
-            + (!!caseProgress.klientGesprochen) + ' istGelöst=' + (!!caseProgress.istGelöst) + ' abschlussGerendert=' + (!!caseProgress.abschlussSzeneGerendert)
-            + ') → möglicher Doppel-Bericht/Logikbruch');
+          // v7.12.455 (Lektorat v454 P3): ENTSCHÄRFT. Sobald der Fall gelöst/gerendert ist, ist ein
+          // weiterer klient_berichtet:true nur Erzähl-Nachklang - die Abschlussmechanik ist geschützt
+          // (Skip-Bedingung unten), es ist KEIN Logikbruch. Daher nur noch neutrale detect-Notiz
+          // statt drift-Warnung mit "möglicher Logikbruch" (das erzeugte unnötiges Lektorats-Rauschen).
+          diag('detect', 'Nachklang ignoriert: scene.klient_berichtet=true nach bereits abgeschlossenem Fall Sz' + sceneCounter + ' (Abschlussmechanik geschützt, kein Doppel-Abschluss)');
         }
       } catch (e) { /* ignore */ }
       // v7.12.435 (ChatGPT-Lektorat v434 P2, Margarete-Run Sz41): DOPPELBERICHT-GUARD.
@@ -33364,11 +33393,38 @@ function botChooseByStrategy(options) {
     // Nur die ERSTE Annaeherung (Einstieg, _romTension === 0) wird gewuerfelt:
     // v7.12.179 (User-Wunsch): nicht-offensive Modi (natural/cautious/balanced/thorough)
     // 50/50, aggressive 90%. Sobald EINMAL geklickt, greift oben das garantierte Durchziehen.
-    const romChance = (effectiveStrat === 'aggressive') ? 0.90 : 0.50;
-    if (botRng() < romChance) {
-      console.log('[Bot v7.12.180] ROMANTIK gewaehlt (' + effectiveStrat + ', Initiierung, ' + (romChance * 100) + '%)');
-      if (typeof diag === 'function') diag('bot', 'Bot waehlt ROMANTIK (' + effectiveStrat + ', Initiierung)');
-      return byCat.ROMANTIK[0];
+    // v7.12.455 (Lektorat v454 P2): ROMANCE-PACING für natural. Befund: Bot klickte Romance sehr
+    // früh mehrfach (Rm bis 5), bevor der Fall Fahrt aufnahm - verzerrt Falltests. Regel für die
+    // INITIIERUNG (nicht das Durchziehen): natural braucht Ermittlungsbasis (>=2 Indizien), Stage>=1,
+    // keine akute Gefahr (Sp<4) und 5 Szenen Cooldown seit der letzten Romance-Initiierung. So bleibt
+    // Romance im natural-Bot ein gelegentliches Element statt früher Spam. aggressive/random
+    // unverändert (random=Chaos inkl. Romance, aggressive=Druck). Spieler unberührt (nur Bot-Test).
+    if (effectiveStrat === 'natural') {
+      const _indR = (caseProgress && Array.isArray(caseProgress.indizien)) ? caseProgress.indizien.length : 0;
+      const _stageR = (caseProgress && caseProgress.stage) || 0;
+      const _spR = (typeof lastSpannung === 'number') ? lastSpannung : 2;
+      const _seitLetzterRom = (typeof caseProgress._botLetzteRomanceSzene === 'number')
+        ? (sceneCounter - caseProgress._botLetzteRomanceSzene) : 999;
+      if (_indR < 2 || _stageR < 1 || _spR >= 4 || _seitLetzterRom < 5) {
+        if (typeof diag === 'function') diag('bot', 'Bot überspringt ROMANTIK-Initiierung (natural-Pacing: Indizien=' + _indR + ' Stage=' + _stageR + ' Sp=' + _spR + ' seitLetzter=' + (_seitLetzterRom === 999 ? 'nie' : _seitLetzterRom) + ') - erst Ermittlung, Romance gelegentlich');
+        // NICHT initiieren -> faellt durch zur normalen Strategie-Logik unten.
+      } else {
+        const romChance = 0.50;
+        if (botRng() < romChance) {
+          caseProgress._botLetzteRomanceSzene = sceneCounter;
+          console.log('[Bot v7.12.455] ROMANTIK gewaehlt (natural, Initiierung mit Pacing, 50%)');
+          if (typeof diag === 'function') diag('bot', 'Bot waehlt ROMANTIK (natural, Initiierung - Ermittlungsbasis erreicht)');
+          return byCat.ROMANTIK[0];
+        }
+      }
+    } else {
+      const romChance = (effectiveStrat === 'aggressive') ? 0.90 : 0.50;
+      if (botRng() < romChance) {
+        if (caseProgress) caseProgress._botLetzteRomanceSzene = sceneCounter;
+        console.log('[Bot v7.12.180] ROMANTIK gewaehlt (' + effectiveStrat + ', Initiierung, ' + (romChance * 100) + '%)');
+        if (typeof diag === 'function') diag('bot', 'Bot waehlt ROMANTIK (' + effectiveStrat + ', Initiierung)');
+        return byCat.ROMANTIK[0];
+      }
     }
   }
   // Strategie-spezifische Priorisierung
