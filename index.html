@@ -3017,7 +3017,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.469</div>
+    <div class="start-version">Schatten v7.12.470</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3238,7 +3238,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.469</span>
+    <span>Schatten v7.12.470</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6136,7 +6136,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.469';
+window.SCHATTEN_VERSION = 'v7.12.470';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -10961,11 +10961,24 @@ function politicalBeatsGateErfuellt() {
     }
     const hit = (caseProgress && Array.isArray(caseProgress.politicalBeatsHit)) ? caseProgress.politicalBeatsHit : [];
     const has = (id) => hit.indexOf(id) !== -1;
-    const basisOk = has('schmuggelroute_belegt') && has('wahler_verantwortlich');
+    // v7.12.470 (Lektorat v467 P1/P2, Wahler-Beat-Inkonsistenz): Run 2035 hatte 4/5 "würde-erfüllen:JA",
+    // aber der Beat wahler_verantwortlich feuerte NICHT (✗) - obwohl die Engine Wahler als
+    // tatverdaechtiger/verantwortlich überführt hatte (Concl:verantwortlicher, Resp:Wahler, Stage-3-
+    // Toast "Wahler überführt"). Der Beat-Detektor hängt an Textmustern, die der Run nicht traf. Ohne
+    // diese Synchronisierung würde das neue Gate so einen Run FÄLSCHLICH blockieren, obwohl Wahler
+    // sauber benannt ist. Daher: wahler_verantwortlich gilt AUCH als erfüllt, wenn die Engine den
+    // Verantwortlichen bereits als "Wahler" führt (tatverdaechtiger ODER überführt+Wahler-Bezug).
+    let _wahlerEngineOk = false;
+    try {
+      const _verd = (caseProgress && caseProgress.tatverdaechtiger) ? String(caseProgress.tatverdaechtiger) : '';
+      _wahlerEngineOk = /wahler/i.test(_verd);
+    } catch (e) { _wahlerEngineOk = false; }
+    const _wahlerOk = has('wahler_verantwortlich') || _wahlerEngineOk;
+    const basisOk = has('schmuggelroute_belegt') && _wahlerOk;
     const sicherungOk = has('akten_gesichert') || has('margarete_gesichert');
     const fehlend = [];
     if (!has('schmuggelroute_belegt')) fehlend.push('Schmuggelroute belegen');
-    if (!has('wahler_verantwortlich')) fehlend.push('Wahler als Verantwortlichen belegen');
+    if (!_wahlerOk) fehlend.push('Wahler als Verantwortlichen belegen');
     if (!sicherungOk) fehlend.push('Akten sichern ODER Margarete/Beweise in Sicherheit bringen');
     return { aktiv: true, erfuellt: basisOk && sicherungOk, basisOk: basisOk, sicherungOk: sicherungOk, fehlend: fehlend };
   } catch (e) { return { aktiv: false, erfuellt: true, basisOk: true, sicherungOk: true, fehlend: [] }; }
@@ -15292,7 +15305,23 @@ function showSolvedToastOnce(body, icon) {
     if (_ct === 'vermisst') _s3 = 'Spur zur Zielperson. Jetzt zum Klienten.';
     else if (_ct === 'beschatten') _s3 = 'Verdacht bestätigt. Jetzt zum Klienten.';
     else if (_ct === 'diebstahl') _s3 = 'Diebesgut gesichert. Jetzt zum Klienten.';
-    else if (_ct === 'wahrheit' || _ct === 'politisch') _s3 = 'Die Wahrheit ist klar. Jetzt zum Klienten.';
+    else if (_ct === 'wahrheit' || _ct === 'politisch') {
+      _s3 = 'Die Wahrheit ist klar. Jetzt zum Klienten.';
+      // v7.12.470 (Lektorat v467 P2, Toast-Wording): bei offenem politischem Gate NICHT "zum Klienten"
+      // (das lenkt den Bot in den gesperrten Abschluss), sondern auf die Sicherung. Befund Run 2035_2:
+      // "WAHRHEIT - Jetzt zum Klienten" erschien, obwohl das Gate offen war -> Bot lief in falschen
+      // Abschluss. Jetzt: solange die Sicherung fehlt, weist der Toast den richtigen nächsten Schritt.
+      try {
+        if (typeof politicalBeatsGateErfuellt === 'function') {
+          const _pgT = politicalBeatsGateErfuellt();
+          if (_pgT && _pgT.aktiv && !_pgT.erfuellt) {
+            _s3 = _pgT.basisOk
+              ? 'Wahler und die Route belastet. Jetzt Akten oder Margarete in Sicherheit bringen.'
+              : 'Die Wahrheit zeichnet sich ab. Route und Wahler noch belegen, dann sichern.';
+          }
+        }
+      } catch (e) { /* defensiv */ }
+    }
     else _s3 = (caseProgress && caseProgress.tatverdaechtiger ? caseProgress.tatverdaechtiger + ' überführt. ' : '') + 'Jetzt zum Klienten.';
     showProgressToast('FALL-STUFE 3', _s3, 'success');
     stage3ToastShown = true;
