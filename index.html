@@ -3017,7 +3017,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.446</div>
+    <div class="start-version">Schatten v7.12.447</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3238,7 +3238,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.446</span>
+    <span>Schatten v7.12.447</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6127,7 +6127,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.446';
+window.SCHATTEN_VERSION = 'v7.12.447';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -28780,6 +28780,33 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       const stage2ReadyViaTruth = caseProgress.stage <= 1 && sceneCounter >= 6
         && caseSetup && Array.isArray(caseSetup.truthBeats) && caseSetup.truthBeats.length
         && typeof truthBeatsErfuellt === 'function' && truthBeatsErfuellt();
+      // v7.12.447 (Benjamin+ChatGPT: Rätselraten beenden): TRUTH-STAGE-DIAG. Bei JEDEM Wahrheits-/
+      // Politik-Fall MIT truthBeats pro Szene explizit loggen, ob die Wahrheit erfüllt ist, welche
+      // Stage, ob der Truth-Stage-Pfad greift und ob der Resolve-Button sichtbar/klickbar ist.
+      // KEIN SLOW_PHASE, KEIN optionaler Marker - immer im Export. Beendet das STAGE-DIAG-Rätsel.
+      try {
+        const _hatTB = caseSetup && Array.isArray(caseSetup.truthBeats) && caseSetup.truthBeats.length
+          && (ct === 'wahrheit' || ct === 'politisch');
+        if (_hatTB && typeof diag === 'function') {
+          const _tbe = (typeof truthBeatsErfuellt === 'function') && truthBeatsErfuellt();
+          const _hit = (caseProgress.truthBeatsHit || []).length;
+          const _tot = caseSetup.truthBeats.length;
+          const _rv = (typeof window !== 'undefined' && window._botFallStatus) ? window._botFallStatus.resolveShown : '?';
+          const _rc = (typeof window !== 'undefined' && window._botFallStatus) ? window._botFallStatus.resolveCanClick : '?';
+          diag('progress', 'TRUTH-STAGE-DIAG Sz' + sceneCounter + ': truthBeatsErfuellt=' + (!!_tbe) + ' (' + _hit + '/' + _tot + ')'
+            + ' | stage=' + (caseProgress.stage || 0)
+            + ' | stage2ReadyViaTruth=' + (!!stage2ReadyViaTruth)
+            + ' | resolveShown=' + _rv + ' resolveCanClick=' + _rc
+            + ' | ind=' + ind);
+          // v7.12.447 (ChatGPT-Zusatzregel): Wenn die Wahrheit erfüllt ist, der Fall aber noch
+          // NICHT auf Stage 3 steht, läuft die Truth-Kette möglicherweise am Stage-System vorbei.
+          // Explizit sichtbar machen (KEIN harter Stage-Sprung - nur Diagnose), damit der nächste
+          // Run zeigt, ob hier ein echter mechanischer Vorbeilauf vorliegt.
+          if (_tbe && (caseProgress.stage || 0) < 3) {
+            diag('drift', 'TRUTH-STAGE-WARNUNG Sz' + sceneCounter + ': Wahrheit ERFÜLLT, aber Stage erst ' + (caseProgress.stage || 0) + ' (<3). Truth-Kette evtl. am Stage-System vorbei - prüfen, ob Stage-Aufstieg greift.');
+          }
+        }
+      } catch (e) { /* Diagnose darf Szene nie brechen */ }
       if (stage2ReadyViaTruth && !stage2Ready && typeof diag === 'function') {
         diag('progress', '✦ STAGE-2 via Truthbeat-Kette (Wahrheitsfall reif trotz niedriger Indizien-Zahl: ' + ind + ') - Fortschritt ist erreicht.');
       }
@@ -32597,6 +32624,44 @@ function botChooseByStrategy(options) {
     if (typeof diag === 'function') diag('bot', 'Bot waehlt HEILEN (Selbstschutz Vf=' + verfassung + ')');
     return byCat.HEILEN[0];
   }
+
+  // v7.12.447 (Benjamin+ChatGPT, Brandt-Natural-Befund): WAHRHEIT-ERFÜLLT-ABSCHLUSS-OVERRIDE.
+  // Befund: Brandt natural hatte 4/5 Truthbeats inkl. Pflicht (truthBeatsErfuellt=JA), Stage 3,
+  // aber der Bot lief in Nebenpfade/Romance/Gewalt statt abzuschließen -> Run lief ins Turn-Limit.
+  // Ein abschluss-instinktiver Spieler schließt SOFORT ab, sobald die Wahrheit belegt und der
+  // Fall lösbar ist. Steht NACH Lebensrettung (toter Karl löst nicht), VOR allem anderen.
+  // Nur Bot-Test; Mensch unberührt.
+  try {
+    const _ctW = (caseSetup && caseSetup.caseType) || '';
+    const _hatTBW = caseSetup && Array.isArray(caseSetup.truthBeats) && caseSetup.truthBeats.length
+      && (_ctW === 'wahrheit' || _ctW === 'politisch');
+    const _tbeW = _hatTBW && typeof truthBeatsErfuellt === 'function' && truthBeatsErfuellt();
+    const _stageW = (caseProgress && caseProgress.stage) || 0;
+    const _vfW = (typeof verfassung === 'number') ? verfassung : 5;
+    if (_tbeW && _stageW >= 3 && _vfW > 2 && !caseProgress.istGelöst) {
+      // (a) AUFLOESEN-Button verfügbar -> sofort klicken (höchste Prio).
+      const _resolveOkW = !(typeof window !== 'undefined' && window._botFallStatus)
+        || window._botFallStatus.resolveCanClick !== false;
+      if (byCat.AUFLOESEN && byCat.AUFLOESEN.length > 0 && _resolveOkW) {
+        if (typeof diag === 'function') diag('bot', 'Bot waehlt AUFLOESEN (WAHRHEIT-ERFÜLLT-OVERRIDE: truthBeatsErfuellt + Stage ' + _stageW + ' - sofort abschließen statt Nebenpfade)');
+        return byCat.AUFLOESEN[0];
+      }
+      // (b) Kein AUFLOESEN-Button da -> Rückkehr/Bericht zum Klienten erzwingen, KEINE Nebenpfade.
+      const _klientRe = /\b(klient|auftraggeber|anton|brandt|berichte|bericht|melde|zurueck zum|zurück zum|fahr zu(m| )|ruf .* an|informiere|abschluss|fall (loesen|lösen|abschliessen|abschließen))/i;
+      const _klientOpt = [].concat(byCat.OFFENSIV || [], byCat.ERKUNDEN || [], byCat.normal || [], byCat.DEFENSIV || [])
+        .find(o => o && o.text && _klientRe.test(o.text.toLowerCase()));
+      if (_klientOpt) {
+        if (typeof diag === 'function') diag('bot', 'Bot waehlt KLIENT-RÜCKKEHR (WAHRHEIT-ERFÜLLT-OVERRIDE: kein AUFLOESEN-Button, Bot fährt zum Klienten/berichtet statt Nebenpfade): "' + (_klientOpt.text || '').slice(0, 45) + '"');
+        return _klientOpt;
+      }
+      // (c) Weder Button noch Klient-Option -> wenigstens KEINE Romance/Gewalt-Eskalation: nimm die
+      // ruhigste fallklärende Option (ERKUNDEN/BEOBACHTEN), nicht OFFENSIV/Nebenpfad.
+      if (byCat.ERKUNDEN && byCat.ERKUNDEN.length > 0) {
+        if (typeof diag === 'function') diag('bot', 'Bot waehlt ERKUNDEN (WAHRHEIT-ERFÜLLT-OVERRIDE: kein Abschluss/Klient angeboten - ruhig bleiben, keine neue Eskalation, bis Abschluss erscheint)');
+        return byCat.ERKUNDEN[0];
+      }
+    }
+  } catch (e) { /* override optional */ }
 
   // v7.12.169 (Lehre aus manuellem Krause-Run vs. Bot-Runs 1204/1205): GUT-HOL-PRIORITAET.
   // Befund: In Bot-Runs kam das Diebesgut NIE zurueck - der Bot waehlte in der Schlussphase
