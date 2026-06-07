@@ -3017,7 +3017,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.445</div>
+    <div class="start-version">Schatten v7.12.446</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3238,7 +3238,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.445</span>
+    <span>Schatten v7.12.446</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6127,7 +6127,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.445';
+window.SCHATTEN_VERSION = 'v7.12.446';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -20197,6 +20197,30 @@ VERBOTEN: Karl wacht woanders auf ohne Erklaerung. Wenn du Pfad B waehlst, MUSST
       pendingForcedLocationChange = null;
       ortPflichtIgnoredCount = 0;
     }
+    // v7.12.446 (Lektorat v445 P1/P2, Brandt-Endgame): PROAKTIVER Push. Bisher feuerte der
+    // Wahrheitsbeat-Push nur REAKTIV beim Abschlussversuch. Befund: Brandt erreicht Stage 3, aber
+    // der Bot driftet in Nebenpfade (Schließfach, Greiner, neue Adressen), statt die FEHLENDEN
+    // Pflicht-Beats zu jagen - der Fall wird teuer und löst nie. Jetzt: sobald der Fall reif
+    // aussieht (Stage>=2 ODER >=20 Szenen) UND die Wahrheitskette unerfüllt ist, lenkt JEDE Szene
+    // konkret auf die fehlenden Beats - "keine neuen Nebenorte". Nur Fälle MIT truthBeats.
+    if (!pendingTruthBeatPush) {
+      try {
+        const _ctP = (caseSetup && caseSetup.caseType) || '';
+        const _hatBeats = caseSetup && Array.isArray(caseSetup.truthBeats) && caseSetup.truthBeats.length
+          && (_ctP === 'wahrheit' || _ctP === 'politisch');
+        const _stP = (caseProgress && caseProgress.stage) || 0;
+        const _reifP = (_stP >= 2) || (typeof sceneCounter === 'number' && sceneCounter >= 20);
+        const _beatsOffen = _hatBeats && typeof truthBeatsErfuellt === 'function' && !truthBeatsErfuellt();
+        if (_hatBeats && _reifP && _beatsOffen) {
+          const _fehlendP = (typeof truthBeatsFehlend === 'function') ? truthBeatsFehlend() : [];
+          if (_fehlendP.length) {
+            pendingTruthBeatPush = 'WAHRHEITSSPUR NOCH OFFEN: Der Verdacht ist verdichtet, aber der Fall ist NOCH NICHT belastbar. Es fehlt konkret:\n'
+              + _fehlendP.slice(0, 2).map(b => '- ' + (b.label || b.id)).join('\n')
+              + '\nDie naechste Szene MUSS Optionen anbieten, die GENAU eine dieser fehlenden Spuren bedienen (Verdaechtigen direkt damit konfrontieren, Beweisobjekt mit Tat/Tatort verknuepfen, klare Aussage/Gestaendnis erzwingen). KEINE neuen Nebenorte, keine neuen Zufallszeugen, keine neuen Nebenspuren, solange diese Kernpunkte offen sind.';
+          }
+        }
+      } catch (e) { /* push optional */ }
+    }
     // v7.12.280: Wahrheitsbeat-Push einspeisen, falls ein vorzeitiges wahrheit_erkannt abgelehnt
     // wurde. Lenkt die KI gezielt auf den naechsten fehlenden Beat (statt nur "ermittle weiter").
     if (pendingTruthBeatPush) {
@@ -29004,7 +29028,9 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             if (_hatBeatGate2 && !_beatsOk2) {
               const _fehlend2 = (typeof truthBeatsFehlend === 'function') ? truthBeatsFehlend() : [];
               const _erster2 = _fehlend2.length ? (_fehlend2[0].label || 'die Kernfrage') : 'die Kernfrage';
-              showProgressToast('FALL-STUFE 3', 'Du bist nah dran – noch offen: ' + _erster2, 'info');
+              // v7.12.446 (Lektorat v445 P1): Titel ehrlich - "Verdacht verdichtet" statt
+              // "FALL-STUFE 3", solange die Wahrheitskette offen ist (kein "fast-fertig"-Gefühl).
+              showProgressToast('Verdacht verdichtet', 'Du bist nah dran – noch offen: ' + _erster2, 'info');
             } else {
               showProgressToast('FALL-STUFE 3', istVermisstFall ? 'Karl hat die Spur zur Zielperson.' : (ct === 'beschatten' ? 'Verdacht bestätigt.' : 'Karl hat was er braucht.'));
             }
@@ -30017,7 +30043,8 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if ((ct === 'wahrheit' || ct === 'politisch') && caseSetup && Array.isArray(caseSetup.truthBeats)
             && caseSetup.truthBeats.length && typeof truthBeatsErfuellt === 'function' && !truthBeatsErfuellt()) {
           const _fbk = (typeof truthBeatsFehlend === 'function') ? truthBeatsFehlend() : [];
-          showProgressToast('FALL-STUFE 3', 'Du bist nah dran – noch offen: ' + (_fbk.length ? (_fbk[0].label || 'die Kernfrage') : 'die Kernfrage'), 'info');
+          // v7.12.446 (Lektorat v445 P1): Titel ehrlich bei offener Wahrheitskette.
+          showProgressToast('Verdacht verdichtet', 'Du bist nah dran – noch offen: ' + (_fbk.length ? (_fbk[0].label || 'die Kernfrage') : 'die Kernfrage'), 'info');
         } else {
           showProgressToast('FALL-STUFE 3', toastText);
         }
@@ -34174,7 +34201,7 @@ function showProgressToast(title, subtitle, variant, triggerKey, iconOverride) {
   // Fall auf Stage 4 (gelöst) ist, ergeben rückwärtsgerichtete Fortschritts-Toasts (FALL-STUFE 3 /
   // TÄTERSPUR) keinen Sinn mehr - sie verwirren nur. Zentral hier blocken, das fängt alle Quellen
   // (6 verschiedene Call-Sites + Re-Run nach Hänger/Retry) auf einen Schlag ab.
-  if ((title === 'FALL-STUFE 3' || title === 'TÄTERSPUR')) {
+  if ((title === 'FALL-STUFE 3' || title === 'TÄTERSPUR' || title === 'Verdacht verdichtet')) {
     const _solved = (typeof stage4ToastShown !== 'undefined' && stage4ToastShown)
       || (typeof caseProgress !== 'undefined' && caseProgress && (caseProgress.stage >= 4 || caseProgress.istGelöst));
     if (_solved) {
