@@ -3017,7 +3017,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.451</div>
+    <div class="start-version">Schatten v7.12.452</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3238,7 +3238,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.451</span>
+    <span>Schatten v7.12.452</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6127,7 +6127,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.451';
+window.SCHATTEN_VERSION = 'v7.12.452';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -32776,15 +32776,24 @@ function botChooseByStrategy(options) {
   // v7.12.451 (Code-Check v449 P2): ECHTER RANDOM-MODUS. Befund: effectiveStrat 'random' hatte
   // KEINEN eigenen Branch -> fiel in die Default-Strategie (ERKUNDEN>OFFENSIV>...) und war damit
   // ein Explorer-Fallback, KEIN Zufall - entgegen Kommentar/UI-Versprechen. Jetzt: echte uniforme
-  // Zufallswahl über alle aktiven (nicht-deaktivierten) Optionen. Steht bewusst NACH den Safety-
-  // Checks (Custody/NOTHEILEN/HEILEN bei Vf<=2) und dem Abschluss-Override - random soll Karl nicht
-  // sterben lassen und keinen reifen Fall verschleppen -, aber VOR allen gerichteten Heuristiken
-  // (GUT-HOL, Romance, Strategie). So testet random echtes Chaos in der Aktionswahl. Nur Bot-Test.
+  // Zufallswahl. Steht bewusst NACH den Safety-Checks (Custody/NOTHEILEN/HEILEN bei Vf<=2) und dem
+  // Abschluss-Override - random soll Karl nicht sterben lassen und keinen reifen Fall verschleppen.
+  // v7.12.452 (ChatGPT-Verfeinerung): NUR über die echten A/B/C/D-KI-Optionen würfeln, NICHT über
+  // Systembuttons (Flucht/Heilen/Notheilen/Schlafen/Romance) - die gehören den Sicherheits-Overrides,
+  // die vorher greifen. Sonst klickt random ständig Sonderbuttons statt die eigentliche A-D-Aktions-
+  // logik zu testen. Fallback auf alle aktiven Optionen nur, falls keine A-D vorliegen. Nur Bot-Test.
   if (effectiveStrat === 'random') {
-    const _randPool = options.filter(o => o && o.element && !o.element.disabled);
+    const _aktiv = options.filter(o => o && o.element && !o.element.disabled);
+    // Nur echte KI-Optionen (A/B/C/D...), KEINE Systembuttons. Robust über die CSS-Klasse statt
+    // über den Buchstaben (eine Szene mit 6 KI-Optionen hätte sonst ein "F", das mit dem Flucht-
+    // Button kollidiert). Systembuttons tragen 'option-btn-system'; KI-Optionen nicht.
+    const _kiOnly = _aktiv.filter(o => {
+      try { return !o.element.classList.contains('option-btn-system'); } catch (e) { return true; }
+    });
+    const _randPool = _kiOnly.length > 0 ? _kiOnly : _aktiv;
     if (_randPool.length > 0) {
       const _pick = botRngChoice(_randPool);
-      if (typeof diag === 'function') diag('bot', 'Bot waehlt RANDOM (uniform zufällig aus ' + _randPool.length + ' aktiven Optionen): "' + ((_pick && _pick.text) || '').slice(0, 45) + '"');
+      if (typeof diag === 'function') diag('bot', 'Bot waehlt RANDOM (uniform zufällig aus ' + _randPool.length + ' ' + (_kiOnly.length > 0 ? 'KI-Optionen (A-D)' : 'aktiven Optionen') + '): "' + ((_pick && _pick.text) || '').slice(0, 45) + '"');
       return _pick;
     }
   }
