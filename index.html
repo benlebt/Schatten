@@ -3017,7 +3017,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.448</div>
+    <div class="start-version">Schatten v7.12.449</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3238,7 +3238,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.448</span>
+    <span>Schatten v7.12.449</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6127,7 +6127,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.448';
+window.SCHATTEN_VERSION = 'v7.12.449';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -28035,6 +28035,18 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
               pEsc + '\\b[^.\"]{0,80},?\\s*(fluestert|fluesterte|sagt|sagte|erzaehlt|erzaehlte|murmelt|murmelte|berichtet|berichtete|meint|meinte|stoesst|stiess)\\s+(sie|er|der|die|das)\\b',
               'i');
             if (reFremdsprech.test(_stxt)) return true;
+            // v7.12.448 (Lektorat v447 P1, Brandt natural+aggressive): PAPIER-/SCHREIB-KONTEXT.
+            // Befund: Karl schreibt einen Bericht ("du tippst: Kurt Lange, Spielschulden...") oder
+            // findet ein Notizbuch/Schuldschein mit dem Namen Lange -> die Engine wertete den Namen
+            // als aktive Präsenz und beamte Kurt Lange körperlich ins Büro/in die Praxis. Ein Name
+            // auf Papier (Bericht/Liste/Notizbuch/Schuldschein/Akte/Quittung/Zettel/Brief) ist KEINE
+            // physische Anwesenheit. Wenn der Name im Umfeld (±60 Zeichen) eines Papier-/Schreib-
+            // Begriffs steht, als Bericht-Kontext behandeln (kein Reintro).
+            const _papierRe = new RegExp(
+              '(bericht|notizbuch|notizblock|schuldschein|schuldverschreibung|akte|aktenordner|liste|namensliste|quittung|zettel|brief|dokument|protokoll|aufzeichnung|eintrag|schreibmaschine|tippst|tippt|schreibst|schreibt nieder|haeltst fest|notierst|kritzelst|fasst zusammen|zusammenfassung|steht (der name|geschrieben)|name[ns]?\\b)[^.]{0,60}' + p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+              + '|' + p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '[^.]{0,60}(steht (im|auf|in|geschrieben)|im bericht|in der liste|im notizbuch|auf dem (zettel|schuldschein|papier)|in der akte|notiert|aufgeschrieben|eingetragen|als verantwortlich)',
+              'i');
+            if (_papierRe.test(_stxt)) return true;
             return false;
           });
           if (_bericht) {
