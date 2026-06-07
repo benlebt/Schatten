@@ -3017,7 +3017,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.449</div>
+    <div class="start-version">Schatten v7.12.450</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3238,7 +3238,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.449</span>
+    <span>Schatten v7.12.450</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5988,7 +5988,7 @@ const INTRO_VARIANTS = [
       ],
       anchorNpcs: ['wilhelm_roth', 'doc_wagner', 'gregor_halbe', 'fraeulein_elfriede'],
     },
-    prompt: `Starte das Spiel. ${INTRO_REQUIREMENTS}Dienstagvormittag, Oktober 1953. Du betrittst die Deutsche Staatsoper durch den Buehneneingang am Admiralspalast - das Stammhaus Unter den Linden ist seit dem Krieg eine Ruine im Wiederaufbau, hier im Ausweichquartier probt das Orchester. Es riecht nach Kolophonium, Staub und kaltem Rauch. Aus dem Orchestergraben dringen Streicher, die wieder und wieder dieselbe getragene Passage proben - das Gedenkkonzert fuer den toten Dirigenten Reinhold Achterberg, der vor drei Tagen in seiner Garderobe gefunden wurde. Offiziell: Herzversagen. Seine Witwe Wilhelmine Achterberg, 52, aufrecht in Trauerschwarz mit Perlenkette, hat dich gestern in dein Buero bestellt: "Mein Mann nahm seine Tropfen seit Jahren, Herr Mauer. Genau dosiert. Die Flasche war frisch gefuellt - und fast leer, als er starb. Das war kein Herz, das einfach stehenblieb." 600 Mark. Jetzt stehst du im Halbdunkel hinter der Buehne, wo die Garderoben wie kleine Beichtstuehle warten. Der 2. Kapellmeister Egon Vossberg kommt dir mit ausgestreckter Hand entgegen, zu freundlich. Eine dunkelhaarige Cellistin senkt im Graben ihren Bogen und sieht zu dir herueber. Die erste Szene MUSS die Oper im Ausweichquartier (Stalins Tod liegt Monate zurueck, Oktober 1953, Kulturbetrieb), Wilhelmines Auftrag und Misstrauen am Herzversagen, Achterberg als ermordeten Dirigenten, und die Atmosphaere hinter der Buehne einbauen. Liefere die Szene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
+    prompt: `Starte das Spiel. ${INTRO_REQUIREMENTS}Dienstagvormittag, Oktober 1953. Du betrittst die Deutsche Staatsoper durch den Buehneneingang am Admiralspalast - das Stammhaus Unter den Linden ist seit dem Krieg eine Ruine im Wiederaufbau, hier im Ausweichquartier probt das Orchester. Es riecht nach Kolophonium, Staub und kaltem Rauch. Aus dem Orchestergraben dringen Streicher, die wieder und wieder dieselbe getragene Passage proben - das Gedenkkonzert fuer den toten Dirigenten Reinhold Achterberg, der vor drei Tagen in seiner Garderobe gefunden wurde. Offiziell: Herzversagen. Seine Witwe Wilhelmine Achterberg, 52, aufrecht in Trauerschwarz mit Perlenkette, hat dich gestern in dein Buero bestellt: "Mein Mann nahm seine Tropfen seit Jahren, Herr Mauer. Genau dosiert. Die Flasche war frisch gefuellt - und fast leer, als er starb. Das war kein Herz, das einfach stehenblieb." 600 Mark. Jetzt stehst du im Halbdunkel hinter der Buehne, wo die Garderoben wie kleine Beichtstuehle warten. Der 2. Kapellmeister Egon Vossberg kommt dir mit ausgestreckter Hand entgegen, zu freundlich. Die Solo-Cellistin Liesel Forsthuber, dunkelhaarig, senkt im Graben ihren Bogen und sieht zu dir herueber. Die erste Szene MUSS die Oper im Ausweichquartier (Stalins Tod liegt Monate zurueck, Oktober 1953, Kulturbetrieb), Wilhelmines Auftrag und Misstrauen am Herzversagen, Achterberg als ermordeten Dirigenten, und die Atmosphaere hinter der Buehne einbauen. Liefere die Szene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
   },
 ];
 
@@ -6127,7 +6127,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.449';
+window.SCHATTEN_VERSION = 'v7.12.450';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -14149,11 +14149,29 @@ function buildNpcTextureHint(ctx) {
   ];
 
   // Pool + Feuer-Wahrscheinlichkeit nach Kontext bestimmen.
+  // v7.12.450 (Lektorat v449 P2): KULTURORT-CHECK. Befund: Am Admiralspalast (Oper-Ausweichquartier)
+  // wurde bei Spannung fälschlich ein Schläger-Profil ("Einer ist klar der Chef...") eingefroren -
+  // dort sind aber Bühnenarbeiter, Musiker, Inspizienten die Nebenfiguren, keine Gangster. Wenn der
+  // konkrete Ort ein Kulturbetrieb ist, NICHT den Schläger-Pool nehmen, sondern Bühnen-/Kulturtypen.
+  const _ortLower = (ctx.ort || '').toLowerCase();
+  const _istKulturort = /(oper|admiralspalast|theater|buehne|bühne|orchester|graben|garderobe|konzert|staatsoper|probe|kapelle)/.test(_ortLower);
+  const POOL_KULTUR = [
+    'Ein alter Buehnenarbeiter/Inspizient - misstrauisch, kennt jeden Hintereingang und jeden Tratsch, redet erst, wenn er Karl einschaetzen konnte.',
+    'Ein nervoeser junger Orchestermusiker, der eigentlich nicht reden duerfte und staendig ueber die Schulter schaut, ob der Kapellmeister mithoert.',
+    'Die Garderobiere/Souffleuse - resolut, hat alles gesehen, haelt aber aus Loyalitaet oder Angst erst hinterm Berg.',
+    'Ein gelangweilter Pfoertner am Buehneneingang, der jeden kommen und gehen sieht und sich mit einer Zigarette gespraechig machen laesst.',
+    'Ein aelterer Kapellmeister/Korrepetitor, der den toten Dirigenten kannte - wuerdevoll, zurueckhaltend, jedes Wort abgewogen.',
+  ];
   let pool, key, chance;
   if (politisch && (stasiT >= 2 || ortType === 'CUSTODY')) {
     pool = POOL_STASI; key = 'stasi'; chance = 0.7;
+  } else if (sp >= 3 && _istKulturort) {
+    // Spannung an einem Kulturort -> KEIN Gangsterpaar, sondern angespanntes Kulturpersonal.
+    pool = POOL_KULTUR; key = 'kultur'; chance = 0.6;
   } else if (sp >= 3) {
     pool = POOL_SCHLAEGER; key = 'schlaeger'; chance = 0.7;
+  } else if (_istKulturort) {
+    pool = POOL_KULTUR; key = 'kultur'; chance = 0.5;
   } else if (ortType === 'CUSTODY') {
     pool = POOL_STASI; key = 'stasi'; chance = 0.6;
   } else {
@@ -28035,6 +28053,23 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
               pEsc + '\\b[^.\"]{0,80},?\\s*(fluestert|fluesterte|sagt|sagte|erzaehlt|erzaehlte|murmelt|murmelte|berichtet|berichtete|meint|meinte|stoesst|stiess)\\s+(sie|er|der|die|das)\\b',
               'i');
             if (reFremdsprech.test(_stxt)) return true;
+            // v7.12.450 (Lektorat v449, Doc-Wagner-Sz12): TÄTERNENNUNG DURCH ANWESENDEN. Ein
+            // anwesender Zeuge NENNT den abwesenden Täter ("Lange war es", "Er war es, Kurt Lange",
+            // "Lange, presst er hervor"). Das ist eine Aussage ÜBER den Abwesenden, KEINE Präsenz
+            // des Genannten. Muster: "NAME war es" / "es war NAME" / "NAME, <sprech/press>-Verb
+            // er/sie" / "Er/Sie war es ... NAME". Blockt NICHT "NAME tritt ein/packt/steht vor dir".
+            const reTaeterNennung = new RegExp(
+              pEsc + '\\b[^.]{0,10}\\b(war|wars|war es|gewesen)\\b'                        // "Lange war es"
+              + '|\\b(es war|das war|der taeter (war|ist)|schuldig (war|ist))\\b[^.]{0,20}' + pEsc  // "es war ... Lange"
+              + '|' + pEsc + '\\b\\s*,?\\s*(presst|presste|keucht|keuchte|stoehnt|stoehnte|haucht|hauchte|fluestert|fluesterte|spuckt|spuckte|zischt|zischte)\\s+(er|sie|der|die)\\b'  // "Lange, presst er hervor"
+              + '|\\b(er|sie)\\s+war\\s+es\\b[^.]{0,30}' + pEsc,                           // "Er war es, Kurt Lange"
+              'i');
+            if (reTaeterNennung.test(_stxt)) {
+              // Gegenprobe: NICHT blocken, wenn der Name unmittelbar mit einem PRÄSENZ-Verb steht
+              // (tritt ein / steht vor dir / packt / greift / sitzt) - dann ist er doch da.
+              const _praesenzRe = new RegExp(pEsc + '\\b[^.]{0,25}\\b(tritt (ein|vor|her)|steht (vor|in|am|neben)|sitzt (am|im|neben|vor)|packt|greift|stuermt|betritt|lehnt|kommt (herein|auf dich|naeher)|zieht (die|eine) (waffe|pistole))\\b', 'i');
+              if (!_praesenzRe.test(_stxt)) return true;
+            }
             // v7.12.448 (Lektorat v447 P1, Brandt natural+aggressive): PAPIER-/SCHREIB-KONTEXT.
             // Befund: Karl schreibt einen Bericht ("du tippst: Kurt Lange, Spielschulden...") oder
             // findet ein Notizbuch/Schuldschein mit dem Namen Lange -> die Engine wertete den Namen
@@ -32675,34 +32710,64 @@ function botChooseByStrategy(options) {
   // aber der Bot lief in Nebenpfade/Romance/Gewalt statt abzuschließen -> Run lief ins Turn-Limit.
   // Ein abschluss-instinktiver Spieler schließt SOFORT ab, sobald die Wahrheit belegt und der
   // Fall lösbar ist. Steht NACH Lebensrettung (toter Karl löst nicht), VOR allem anderen.
-  // Nur Bot-Test; Mensch unberührt.
+  // v7.12.450 (Lektorat v449, Achterberg-Regress): AUF MORD AUSGEWEITET. Befund: Achterberg
+  // (mord) hatte 4/5 Mordachsen, Gate erfüllt ("Täterspur belastbar"), Stage 3 - aber KEIN
+  // Override für mord existierte -> Bot lief in Nacht-Flucht-Schleife, Button blieb gesperrt,
+  // Run ungelöst. Jetzt deckt der Override mord (murderGateStatus erfüllt + plausibler Täter)
+  // genauso ab wie wahrheit/politisch. Nur Bot-Test; Mensch unberührt.
   try {
     const _ctW = (caseSetup && caseSetup.caseType) || '';
     const _hatTBW = caseSetup && Array.isArray(caseSetup.truthBeats) && caseSetup.truthBeats.length
       && (_ctW === 'wahrheit' || _ctW === 'politisch');
     const _tbeW = _hatTBW && typeof truthBeatsErfuellt === 'function' && truthBeatsErfuellt();
+    // mord: Gate erfüllt + plausibler Täter benannt = "Täterspur belastbar" (abschlussreif).
+    let _mordReif = false;
+    if (_ctW === 'mord' && typeof murderGateStatus === 'function') {
+      const _mgW = murderGateStatus();
+      const _verdW = (caseProgress && caseProgress.tatverdaechtiger) || '';
+      const _plausW = _verdW && _verdW !== '?' && _verdW !== 'noch unbekannt' && _verdW !== 'Unbekannter Verdaechtiger'
+        && (typeof isPlausibleResponsibleName !== 'function' || isPlausibleResponsibleName(_verdW, _ctW));
+      _mordReif = _mgW && _mgW.aktiv && _mgW.erfuellt && !!_plausW;
+    }
+    const _erfuelltW = _tbeW || _mordReif;
     const _stageW = (caseProgress && caseProgress.stage) || 0;
     const _vfW = (typeof verfassung === 'number') ? verfassung : 5;
-    if (_tbeW && _stageW >= 3 && _vfW > 2 && !caseProgress.istGelöst) {
+    if (_erfuelltW && _stageW >= 3 && _vfW > 2 && !caseProgress.istGelöst) {
+      // v7.12.450 (ChatGPT-Lektorat v449): Bei akuter Gefahr ZUERST Sicherheit. Wenn die Spannung
+      // hoch ist und eine Flucht-/Notflucht-Option vorliegt, flieht der Bot erst aus der Gefahr -
+      // der Abschluss-Button ist dann ohnehin gesperrt. Sonst würde (c) ERKUNDEN in der Schießerei
+      // wählen. Nach der Flucht (ruhige Szene) greift der Override regulär und schließt ab.
+      const _spW = (typeof lastSpannung === 'number') ? lastSpannung : ((typeof ctx !== 'undefined' && ctx) ? 2 : 2);
+      const _gefahr = (typeof lastSpannung === 'number' && lastSpannung >= 4);
+      if (_gefahr) {
+        if (byCat.NOTFLUCHT && byCat.NOTFLUCHT.length > 0) {
+          if (typeof diag === 'function') diag('bot', 'Bot waehlt NOTFLUCHT (ABSCHLUSS-OVERRIDE: Fall reif, aber akute Gefahr Sp' + lastSpannung + ' - erst raus, dann abschließen)');
+          return byCat.NOTFLUCHT[0];
+        }
+        if (byCat.FLUCHT && byCat.FLUCHT.length > 0) {
+          if (typeof diag === 'function') diag('bot', 'Bot waehlt FLUCHT (ABSCHLUSS-OVERRIDE: Fall reif, aber akute Gefahr Sp' + lastSpannung + ' - erst Sicherheit, dann Klient)');
+          return byCat.FLUCHT[0];
+        }
+      }
       // (a) AUFLOESEN-Button verfügbar -> sofort klicken (höchste Prio).
       const _resolveOkW = !(typeof window !== 'undefined' && window._botFallStatus)
         || window._botFallStatus.resolveCanClick !== false;
       if (byCat.AUFLOESEN && byCat.AUFLOESEN.length > 0 && _resolveOkW) {
-        if (typeof diag === 'function') diag('bot', 'Bot waehlt AUFLOESEN (WAHRHEIT-ERFÜLLT-OVERRIDE: truthBeatsErfuellt + Stage ' + _stageW + ' - sofort abschließen statt Nebenpfade)');
+        if (typeof diag === 'function') diag('bot', 'Bot waehlt AUFLOESEN (ABSCHLUSS-OVERRIDE: ' + (_mordReif ? 'Mordachsen erfüllt' : 'truthBeatsErfuellt') + ' + Stage ' + _stageW + ' - sofort abschließen statt Nebenpfade)');
         return byCat.AUFLOESEN[0];
       }
       // (b) Kein AUFLOESEN-Button da -> Rückkehr/Bericht zum Klienten erzwingen, KEINE Nebenpfade.
-      const _klientRe = /\b(klient|auftraggeber|anton|brandt|berichte|bericht|melde|zurueck zum|zurück zum|fahr zu(m| )|ruf .* an|informiere|abschluss|fall (loesen|lösen|abschliessen|abschließen))/i;
+      const _klientRe = /\b(klient|auftraggeber|anton|brandt|wilhelmine|achterberg|witwe|berichte|bericht|melde|zurueck zum|zurück zum|fahr zu(m| |r )|ruf .* an|informiere|abschluss|fall (loesen|lösen|abschliessen|abschließen))/i;
       const _klientOpt = [].concat(byCat.OFFENSIV || [], byCat.ERKUNDEN || [], byCat.normal || [], byCat.DEFENSIV || [])
         .find(o => o && o.text && _klientRe.test(o.text.toLowerCase()));
       if (_klientOpt) {
-        if (typeof diag === 'function') diag('bot', 'Bot waehlt KLIENT-RÜCKKEHR (WAHRHEIT-ERFÜLLT-OVERRIDE: kein AUFLOESEN-Button, Bot fährt zum Klienten/berichtet statt Nebenpfade): "' + (_klientOpt.text || '').slice(0, 45) + '"');
+        if (typeof diag === 'function') diag('bot', 'Bot waehlt KLIENT-RÜCKKEHR (ABSCHLUSS-OVERRIDE: kein AUFLOESEN-Button, Bot fährt zum Klienten/berichtet statt Nebenpfade): "' + (_klientOpt.text || '').slice(0, 45) + '"');
         return _klientOpt;
       }
       // (c) Weder Button noch Klient-Option -> wenigstens KEINE Romance/Gewalt-Eskalation: nimm die
       // ruhigste fallklärende Option (ERKUNDEN/BEOBACHTEN), nicht OFFENSIV/Nebenpfad.
       if (byCat.ERKUNDEN && byCat.ERKUNDEN.length > 0) {
-        if (typeof diag === 'function') diag('bot', 'Bot waehlt ERKUNDEN (WAHRHEIT-ERFÜLLT-OVERRIDE: kein Abschluss/Klient angeboten - ruhig bleiben, keine neue Eskalation, bis Abschluss erscheint)');
+        if (typeof diag === 'function') diag('bot', 'Bot waehlt ERKUNDEN (ABSCHLUSS-OVERRIDE: kein Abschluss/Klient angeboten - ruhig bleiben, keine neue Eskalation, bis Abschluss erscheint)');
         return byCat.ERKUNDEN[0];
       }
     }
