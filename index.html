@@ -3027,7 +3027,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.494</div>
+    <div class="start-version">Schatten v7.12.497</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3248,7 +3248,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.494</span>
+    <span>Schatten v7.12.497</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6154,7 +6154,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.494';
+window.SCHATTEN_VERSION = 'v7.12.497';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -11086,7 +11086,10 @@ function buildStuckHint() {
     const _isPolit = Array.isArray(caseSetup && caseSetup.politicalBeats) && caseSetup.politicalBeats.length > 0;
     let _was = '';
     if (_isPolit && typeof politicalBeatsGateErfuellt === 'function') {
-      const _pg = politicalBeatsGateErfuellt({ strict: false });
+      // v7.12.497 (ChatGPT P2): strict:true für SPIELER-Hinweise - "Wahrheit kenne ich" erst, wenn Wahler
+      // wirklich belegt ist (echter Beat), nicht schon bei bloßem Tatverdacht. (Bot-Lenkung nutzt anderswo
+      // bewusst strict:false; hier geht es um ehrliche Spielerführung, da ist Konservativität richtig.)
+      const _pg = politicalBeatsGateErfuellt({ strict: true });
       if (_pg && _pg.aktiv && _pg.basisOk && !_pg.sicherungOk) {
         _was = 'Die Wahrheit kenne ich inzwischen. Aber die Beweise und die Person, um die es geht, sind noch nicht in Sicherheit - ich muss sie zu jemandem bringen, dem ich traue (eine Übergabe der Akten an einen Westkontakt/die Presse/einen verlässlichen Polizisten, oder die Person bei einer Vertrauensperson unterbringen). Solange das nicht geschehen ist, ist der Fall nicht abgeschlossen.';
       } else if (_pg && _pg.aktiv && _pg.erfuellt) {
@@ -13222,7 +13225,7 @@ function showHeader(scene) {
     const _hc = (typeof getHardCap === 'function') ? getHardCap() : 0;
     let nrPart = '';
     if (typeof sceneCounter === 'number' && sceneCounter > 0) {
-      nrPart = _hc ? ('Szene ' + sceneCounter + ' / max. ' + _hc) : ('Szene Nr. ' + sceneCounter);
+      nrPart = _hc ? ('Szene ' + sceneCounter + ' von ' + _hc) : ('Szene Nr. ' + sceneCounter);
     }
     dateEl.textContent = nrPart && datePart ? (nrPart + ' · ' + datePart) : (nrPart || datePart);
     // Warn-Färbung wenn es eng wird (gelb ab -20, rot ab -10). Nicht in Stage 4 (Fall quasi durch).
@@ -13231,14 +13234,16 @@ function showHeader(scene) {
       const _rem = _hc - sceneCounter;
       if (_rem <= 10) dateEl.classList.add('scene-critical');
       else if (_rem <= 20) dateEl.classList.add('scene-warn');
-      // v7.12.494: Schwellen-Toasts bei -20 und -10. triggerKey + Fall-ID macht sie einmalig pro Fall.
+      // v7.12.494/496: Schwellen-Toasts bei -20 und -10. caseProgress-Flag macht sie WIRKLICH einmal pro
+      // Fall (canShowToast blockt nur pro Tag - bei mehrtägigen Fällen käme der Toast sonst erneut).
       try {
         if (typeof showProgressToast === 'function') {
-          const _caseKey = (caseSetup && (caseSetup.klient || caseSetup.opfer) || 'fall').slice(0, 24);
-          if (_rem <= 10 && _rem > 0) {
-            showProgressToast('Die Zeit läuft ab', 'Nur noch ' + _rem + ' Szenen, um den Fall abzuschließen. Danach ist er verloren - bring ihn jetzt zu Ende.', 'danger', 'scene-cap-10-' + _caseKey, '⏰');
-          } else if (_rem <= 20 && _rem > 10) {
-            showProgressToast('Noch ' + _rem + ' Szenen', 'Karl sollte langsam zum Abschluss kommen - sonst geht der Fall verloren.', 'info', 'scene-cap-20-' + _caseKey, '⏳');
+          if (_rem <= 10 && _rem > 0 && !caseProgress.sceneCapWarn10Shown) {
+            caseProgress.sceneCapWarn10Shown = true;
+            showProgressToast('Die Zeit läuft ab', 'Nur noch ' + _rem + ' Szenen, um den Fall abzuschließen. Danach ist er verloren - bring ihn jetzt zu Ende.', 'danger', 'scene-cap-10', '⏰');
+          } else if (_rem <= 20 && _rem > 10 && !caseProgress.sceneCapWarn20Shown) {
+            caseProgress.sceneCapWarn20Shown = true;
+            showProgressToast('Noch ' + _rem + ' Szenen', 'Karl sollte langsam zum Abschluss kommen - sonst geht der Fall verloren.', 'info', 'scene-cap-20', '⏳');
           }
         }
       } catch (e) {}
@@ -19379,6 +19384,9 @@ Es ist NICHT realistisch, dass eine Trauergesellschaft 18 Stunden an einem Grab 
       }
     }
     // Hinweis fuer die KI ueber den naechsten Schritt
+    // v7.12.496 (ChatGPT-Source-Check P1): "Karls Gedanken"-Hinweis HIER (vor dem Stage-Baum), damit er
+    // ALLE Stages erreicht - vorher hing der Aufruf im Stage-3-else-if und feuerte nie in Stage 0/1/2.
+    try { const _stuckHint = buildStuckHint(); if (_stuckHint) recap += _stuckHint; } catch (e) {}
     // v6.69: Eskalations-Logik - bei zu vielen Indizien ohne Stage-Promotion wird
     // der Push immer schaerfer. Mistral ist zu zaghaft mit "tatverdaechtiger_identifiziert".
     if (caseProgress.stage === 0) {
@@ -19525,8 +19533,6 @@ KEINE anderen Themen, KEINE Indizien-Suche, KEINE Nebenfiguren - die naechsten 1
         pendingCustodyResolveReady = false;
       }
       const stage3Scenes = sceneCounter - (caseProgress.stage3StartScene || sceneCounter);
-      // v7.12.493: Spielerführung - bei Stagnation einen diegetischen "Karl stockt"-Hinweis einweben.
-      try { const _stuckHint = buildStuckHint(); if (_stuckHint) recap += _stuckHint; } catch (e) {}
       // Pruefen ob Verdaechtige geflohen / verschwunden ist
       const suspectName = (caseProgress.tatverdaechtiger || '').toLowerCase();
       const suspectInCast = Array.isArray(cast) && cast.some(c => {
@@ -22051,6 +22057,9 @@ async function startGame() {
   // Reset day/time/location tracking
   gameDay = 1;
   sceneCounter = 0;
+  // v7.12.496 (ChatGPT-Source-Check P2): Hint-Tracker zuruecksetzen, sonst blockiert der Karl-Gedanke im
+  // naechsten Lauf (sceneCounter < altem _hintLastShownScene -> negativ -> lange gesperrt).
+  _hintLastProgressScene = 0; _hintLastSignature = ''; _hintLastShownScene = 0;
   if (typeof botWasEverActive !== 'undefined') botWasEverActive = false;  // v7.12.169: neuer Lauf
   try { window._botFallStatus = { resolveShown:false, resolveCanClick:false, resolveLockReason:'' }; } catch (e) {}  // v7.12.177: Fall-Status fuer Bot-Bar zuruecksetzen
   timeAdvanceTokens = 0;
@@ -26171,7 +26180,8 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         // v7.12.366 (Lektorat Karl-Mauer-Extremtest P2): fehlende Marker ergänzt. Run meldete
         // "Anker 0" trotz HO, Plötzensee, Tauentzien-/Kurfürstenstraße, Nordhäuser Doppelkorn.
         { id: 'handelsorganisation-ho', kat: 'zeit', re: /\b(handelsorganisation|ho-(laden|gaststaette|gaststätte|verkaufsstelle|bistro|kaufhalle)|\bho\s+(laden|gaststaette))\b/i },
-        { id: 'ploetzensee', kat: 'ort', re: /\b(pl(ö|oe)tzensee)\b/i },
+        // v7.12.497 (ChatGPT P2): doppelten ploetzensee-Anchor entfernt - 'plotzensee' (oben, inkl. westhafen)
+        // deckt dasselbe ab, beide matchten 'plötzensee' -> Doppelzählung verfälschte die Anker-Statistik.
         { id: 'west-berliner-strassen', kat: 'ort', re: /\b(tauentzienstra(ß|ss)e|kurf(ü|ue)rstendamm|kurf(ü|ue)rstenstra(ß|ss)e|ku.?damm|nollendorfplatz|wittenbergplatz|bahnhof\s+zoo|hardenbergstra(ß|ss)e)\b/i },
         { id: 'nordhaeuser-doppelkorn', kat: 'marke', re: /\b(nordh(ä|ae)user(\s+doppelkorn)?|doppelkorn)\b/i },
         { id: 'ost-west-kontakt', kat: 'zeit', re: /\b(west-?sektor|west-?berlin|ost-?kontakt|west-?kontakt|grenzg(ä|ae)nger|interzonen)/i },
@@ -30438,21 +30448,44 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         }
       } else if (_ctCap === 'politisch') {
         // v7.12.187 (ChatGPT-Lektorat P0): politisch wie wahrheit - kein erfundener Taeter.
-        if (caseProgress.wahrheitErkannt || caseProgress.ueberfuehrt) {
-          caseProgress.klientGesprochen = true;
-          caseProgress.istGelöst = true;
-          caseProgress.stage = 4;
-          console.log('[Schatten] HARD-CAP (politisch): Wahrheit/Verantwortung erkannt - sauberer Abschluss');
-          diag('progress', '✦ HARD-CAP (politisch) - aufgeklaert' + (caseProgress.ueberfuehrt ? ' (Verantwortlicher: ' + caseProgress.tatverdaechtiger + ')' : ''));
-          showSolvedToastOnce('Fall beendet. Die Wahrheit ist benannt.');
-        } else {
+        // v7.12.495 (einhelliger Lektorats-Befund + Benjamins Erlebnis): Der Hard-Cap darf im
+        // MANUELLEN Spiel NICHT heimlich lösen. Benjamin war bei Doc Wagner, der Fall löste sich
+        // automatisch (akten/margarete bereits gesichert + Wahrheit erkannt = Gate offen). Das ist der
+        // "Mario-Kart-Automodus". Korrektur: Wenn der Spieler (kein Bot) abschließen KÖNNTE (Gate offen),
+        // wird NICHT auto-gelöst - stattdessen dominanter Abschluss-Push + Karl-Gedanke. Der Klick bleibt
+        // beim Spieler. Nur Bot und der echte Misserfolg (Gate NICHT erfüllbar) lösen/scheitern automatisch.
+        const _polGateOk = (typeof politicalBeatsGateErfuellt === 'function')
+          ? (function(){ try { const g = politicalBeatsGateErfuellt({ strict: false }); return g && g.aktiv ? g.erfuellt : (caseProgress.wahrheitErkannt || caseProgress.ueberfuehrt); } catch(e){ return (caseProgress.wahrheitErkannt || caseProgress.ueberfuehrt); } })()
+          : (caseProgress.wahrheitErkannt || caseProgress.ueberfuehrt);
+        // v7.12.497 (ChatGPT-Source-Check v496 P1): Gate-Check ZUERST und HART. Der v495-Code hatte eine
+        // Hintertür: bei Bot + Gate NICHT erfüllt + wahrheitErkannt fiel er ins else-if und löste doch auto -
+        // genau die Lücke, die die Margarete-Serie geschlossen hat. Jetzt drei saubere, sich ausschließende
+        // Zweige: (1) Gate NICHT erfüllt -> IMMER gescheitert (Bot wie Mensch, kein Auto-Solve). (2) Gate
+        // erfüllt + Mensch -> kein Auto-Force, bewusst abschließen. (3) Gate erfüllt + Bot -> auto-lösen.
+        if (!_polGateOk) {
           caseProgress.stage = 4;
           caseProgress.istGescheitert = true;
-          console.log('[Schatten] HARD-CAP (politisch): nichts bewiesen - kein Erfolg');
-          diag('progress', '✦ HARD-CAP (politisch) - nichts bewiesen: Auftrag gescheitert, KEIN erfundener Taeter');
+          console.log('[Schatten] HARD-CAP (politisch): Gate nicht erfuellt - kein Erfolg (Bot wie Mensch)');
+          diag('progress', '✦ HARD-CAP (politisch) - Gate nicht erfuellt (Sicherung/Wahrheit fehlt): Auftrag gescheitert, KEIN Auto-Solve');
           if (typeof showCaseFailed === 'function') {
             showCaseFailed(_capN + ' Szenen. Die Wahrheit lag in Stücken vor dir, aber du hast sie nicht rechtzeitig gesichert oder in die richtigen Hände gebracht.');
           }
+        } else if (!botActive) {
+          // MENSCH + Gate erfüllt: NICHT auto-lösen. Abschluss bewusst herbeiführen lassen.
+          if (typeof showProgressToast === 'function') {
+            showProgressToast('Karl ist bereit', 'Du hast alles, was der Fall braucht. Schließ ihn jetzt bewusst ab - der Abschluss-Button wartet.', 'info', 'polit-cap-manual-abschluss', '✔');
+          }
+          // Der dominante FALL-LÖSEN-Push (separater recap-Block) und buildStuckHint führen den Spieler
+          // zum Abschluss. Hier KEINE Zustandsänderung - der Fall bleibt offen, bis der Spieler klickt.
+          if (typeof diag === 'function') diag('progress', 'HARD-CAP (politisch, MANUELL): Gate offen, aber KEIN Auto-Force - Spieler muss bewusst abschließen (kein Mario-Kart-Modus)');
+        } else {
+          // BOT + Gate erfüllt: auto-lösen, sonst hängt der Bot ewig.
+          caseProgress.klientGesprochen = true;
+          caseProgress.istGelöst = true;
+          caseProgress.stage = 4;
+          console.log('[Schatten] HARD-CAP (politisch): Gate erfuellt + Bot - sauberer Abschluss (Auto)');
+          diag('progress', '✦ HARD-CAP (politisch) - aufgeklaert' + (caseProgress.ueberfuehrt ? ' (Verantwortlicher: ' + caseProgress.tatverdaechtiger + ')' : ''));
+          showSolvedToastOnce('Fall beendet. Die Wahrheit ist benannt.');
         }
       } else if (_ctCap === 'mord') {
         // v7.12.187 (ChatGPT-Lektorat P0, KRITISCH für den neuen Mordfall): Ein Mordfall darf
@@ -36022,9 +36055,9 @@ setInterval(function() {
             if (typeof diag === 'function') diag('filter', 'FREITEXT BLOCKIERT (Tabu: ' + _tabu + '): "' + txt + '" - kein KI-Call');
             if (typeof showProgressToast === 'function') {
               if (_tabu === 'vulgaer') {
-                showProgressToast('Etwas weniger derb', 'Sag es Karl anders - er ist ein Gentleman alter Schule, kein Schmierfink.', 'warning', 'tabu-vulgaer', '🎩');
+                showProgressToast('Etwas weniger derb', 'Sag es Karl anders - er ist ein Gentleman alter Schule, kein Schmierfink.', 'caution', 'tabu-vulgaer', '🎩');
               } else {
-                showProgressToast('Das tut Karl nicht', 'Selbst in seinen dunkelsten Stunden hat Mauer Grenzen.', 'warning', 'tabu-freitext', '🚫');
+                showProgressToast('Das tut Karl nicht', 'Selbst in seinen dunkelsten Stunden hat Mauer Grenzen.', 'caution', 'tabu-freitext', '🚫');
               }
             }
             return; // Input NICHT leeren, KEIN chooseOption
