@@ -3017,7 +3017,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.482</div>
+    <div class="start-version">Schatten v7.12.484</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3238,7 +3238,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.482</span>
+    <span>Schatten v7.12.484</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6144,7 +6144,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.482';
+window.SCHATTEN_VERSION = 'v7.12.484';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -10946,6 +10946,10 @@ function updatePoliticalBeats(text) {
         // nicht "liegt in Karls Schublade/Büro/Handschuhfach". Auch Schlaf darf keine Sicherung erzeugen.
         if (beat.id === 'akten_gesichert' || beat.id === 'margarete_gesichert') {
           const _t = text.toLowerCase();
+          // v7.12.484 (Lektorat v482 P1, Negations-False-Positive): "Margarete ist NOCH NICHT in
+          // Sicherheit" feuerte den Beat (Run 2 Sz60: Regex matchte "margarete"+"Westen"[Fahrtrichtung]).
+          // Explizite Negation/Verneinung im Kontext blockt den Sicherungs-Beat.
+          const _negation = /\b(noch nicht|nicht in sicherheit|keine sicherheit|nicht gesichert|nicht sicher|alles andere als sicher|weit (davon )?entfernt|muss (noch|erst|sie|dort|raus|sie noch)|bevor sie sicher|wird (später|spaeter|noch) untertauch|soll (noch )?untertauch|ist gefährdet|ist gefaehrdet|in gefahr)\b/.test(_t);
           // (a) Zukunft/Absicht: "musst/sollst/willst ... (in sicherheit) bringen/schaffen/warnen", "muss noch", "bevor ... stürmt/holt"
           const _absicht = /\b(musst|sollst|willst|muss noch|sollte|sollten|wäre|waere|plan|vorhaben|bevor)\b[\s\S]{0,60}\b(in sicherheit|sicher|untertauch|versteck|warn|raus|bring|schaff|fliehen|fliucht)/.test(_t)
             || /\b(margarete|stein|sie)\b[\s\S]{0,30}\b(in sicherheit bringen|untertauchen lassen|warnen|holen|raushol)/.test(_t);
@@ -10953,8 +10957,8 @@ function updatePoliticalBeats(text) {
           const _eigenbesitz = /\b(schublade|büro|buero|handschuhfach|aktentasche|innentasche|underwood|kopfkissen|bei dir|bei karl|im wagen|im auto|auf dem (beifahrersitz|schreibtisch|tisch))\b/.test(_t);
           // (c) Schlaf-/Aufwach-Szene: Sicherung darf nicht aus Erholung entstehen
           const _schlaf = /\b(du hast die nacht|verbracht|weckt dich|wachst (du )?auf|aufgewacht|nach dem schlaf|am (nächsten|naechsten) morgen|feierabend|die underwood bleibt heute kalt)\b/.test(_t);
-          if (_absicht || _eigenbesitz || _schlaf) {
-            const _grund = _absicht ? 'Absicht/Zukunft (noch nicht geschehen)' : _eigenbesitz ? 'in Karls eigenem Besitz (nicht extern gesichert)' : 'Schlaf-/Aufwach-Szene';
+          if (_absicht || _eigenbesitz || _schlaf || _negation) {
+            const _grund = _negation ? 'explizite Negation (noch nicht/nicht in Sicherheit)' : _absicht ? 'Absicht/Zukunft (noch nicht geschehen)' : _eigenbesitz ? 'in Karls eigenem Besitz (nicht extern gesichert)' : 'Schlaf-/Aufwach-Szene';
             if (typeof diag === 'function') diag('progress', 'SICHERUNGS-BEAT ' + beat.id + ' UNTERDRÜCKT: ' + _grund + ' - keine abgeschlossene externe Sicherung.');
             continue;
           }
@@ -29282,7 +29286,21 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             const _sicherungsAktionRe2 = /\b(akten|unterlagen|beweise|kopie|dokument|mappe|margarete|stein)\b[\s\S]{0,70}\b(zu|bei|an|in|über|ueber)\b[\s\S]{0,40}\b(vera|lindqvist|rias|helene|roth|presse|westen|sicherheit|grenze|sektorengrenze)\b[\s\S]{0,40}(bring|übergib|uebergib|übergeb|uebergeb|versteck|sicher|rette|deponier|schaff)\w*/i;
             const _aktenFokusRe = /\b(akte|akten|unterlagen|kopie|dokument|mappe|beweise)\b/i;
             const _margFokusRe = /\b(margarete|stein|sie .{0,15}(verstecken|sicher|rausbringen)|über die (grenze|sektorengrenze)|ueber die (grenze|sektorengrenze))\b/i;
-            if (_sicherungsAktionRe.test(_aktion) || _sicherungsAktionRe2.test(_aktion)) {
+            // v7.12.483 (Run 0742: alle 3 Margarete hingen 61 Sz/3-5, weil der Bot die RICHTIGEN
+            // Sicherungsaktionen wählte ["Fahr zu Helene um die Akten zu sichern", "Bring Margarete zu
+            // Helene und lass sie untertauchen"], aber die beiden starren Regex sie wegen WORTSTELLUNG
+            // verfehlten). Robuster, reihenfolge-unabhängiger Ansatz: eine Sicherung liegt vor, wenn die
+            // Aktion (a) einen Schutz-EMPFÄNGER/ZIEL UND (b) ein Sicherungs-VERB enthält - egal in welcher
+            // Reihenfolge. Schutz davor, dass bloße Namensnennung ("frag Helene") zählt: das Verb muss ein
+            // echtes Sicherungs-/Schutz-Verb sein, nicht "fragen/reden/treffen".
+            const _aL = _aktion.toLowerCase();
+            const _hatZiel = /\b(vera|lindqvist|rias|korrespondent|helene|roth|presse|westkontakt|über die (grenze|sektorengrenze)|ueber die (grenze|sektorengrenze)|in den westen|sektorengrenze|schließfach|schliessfach)\b/.test(_aL);
+            const _hatSicherVerb = /(sicher|versteck|übergeb|uebergeb|übergib|uebergib|deponier|rette|untertauch|unterbring|schmuggel|in sicherheit (bring|schaff)|raushol|aus (der stadt|friedrichshain|dem haus)|außer landes|ausser landes)\w*/.test(_aL);
+            const _hatObjekt = /\b(akte|akten|unterlagen|beweise|kopie|dokument|mappe|margarete|stein|sie)\b/.test(_aL);
+            // Reihenfolge-unabhängig: Objekt + Sicherungs-Verb + (Ziel ODER Grenz-/Untertauch-Verb das selbst schon Sicherung impliziert).
+            const _implizitSicher = /\b(untertauch|über die (grenze|sektorengrenze)|ueber die (grenze|sektorengrenze)|in den westen|außer landes|ausser landes)\w*/.test(_aL);
+            const _robustSicherung = _hatObjekt && _hatSicherVerb && (_hatZiel || _implizitSicher);
+            if (_sicherungsAktionRe.test(_aktion) || _sicherungsAktionRe2.test(_aktion) || _robustSicherung) {
               const _setBeat = (id, label) => {
                 if (caseProgress.politicalBeatsHit.indexOf(id) === -1
                     && caseSetup.politicalBeats.some(b => b && b.id === id)) {
@@ -34103,6 +34121,32 @@ function botChooseByStrategy(options) {
       }
     }
   }
+  // v7.12.484 (Lektorat v482 P1, Bot-Endgame-Priorität): POLITISCHES SICHERUNGS-GATE hat VORRANG vor
+  // Romance, Übernachtung, Schlaf und Flucht. Befund (Runs 0742): Bot stand mehrfach direkt vor der
+  // Sicherungsoption (Umschlag an Vera übergeben, Margarete bei Helene unterbringen), wählte aber
+  // Romance ("Näher kommen mit Vera"), Schlaf oder Flucht -> Gate blieb offen, Run hing 61 Sz. Daher:
+  // wenn die politische Basis steht und NUR die Sicherung fehlt, und eine Sicherungsoption verfügbar ist,
+  // nimm SIE - und zwar bevorzugt eine RUHIGE/DEFENSIVE Variante (ChatGPT P2: nicht die offensive
+  // "Pfleger packen"-Sicherung, die wieder eskaliert). Dieser Vorrang steht VOR dem Romance/Schlaf-Block.
+  try {
+    if (effectiveStrat === 'natural' && typeof politicalBeatsGateErfuellt === 'function') {
+      const _pgPrio = politicalBeatsGateErfuellt({ strict: true });
+      if (_pgPrio && _pgPrio.aktiv && _pgPrio.basisOk && !_pgPrio.sicherungOk) {
+        const _sichRePrio = /\b(akten|unterlagen|beweise|kopie|dokument|mappe|margarete)\b[\s\S]{0,45}\b(sicher|versteck|übergeb|uebergeb|bring|deponier|rette|schaff|grenze|vera|lindqvist|rias|helene|roth|westen|presse)\b|\b(bring|übergib|uebergib|versteck|sicher|deponier|rette|fahr|schmuggel|begleit|unterbring|untertauch)\w*[\s\S]{0,45}\b(vera|lindqvist|rias|helene|roth|presse|westen|sektorengrenze|akten|unterlagen|beweise|kopie|margarete)\b|\büber die (grenze|sektorengrenze)\b|\b(bei|zu) (helene|vera|roth)\b[\s\S]{0,30}(untertauch|verstecken|unterbring|bleib|begleit)/i;
+        // Reihenfolge: erst ruhige/ermittelnde Kategorien (DEFENSIV/ERKUNDEN/BEOBACHTEN), dann erst OFFENSIV.
+        const _ruhigeOpt = [].concat(byCat.DEFENSIV || [], byCat.ERKUNDEN || [], byCat.BEOBACHTEN || []);
+        const _offensivOpt = [].concat(byCat.OFFENSIV || []);
+        const _findSich = (arr) => arr.filter(o => { const t = (o && o.text) ? o.text.toLowerCase() : ''; return t && _sichRePrio.test(t); });
+        let _pick = _findSich(_ruhigeOpt)[0] || _findSich(_offensivOpt)[0];
+        if (_pick) {
+          console.log('[Bot v7.12.484] POLIT-SICHERUNG VORRANG (vor Romance/Schlaf/Flucht, ruhige Variante bevorzugt)');
+          if (typeof diag === 'function') diag('bot', 'Bot (natürlich) POLIT-SICHERUNG VORRANG: Basis steht, Sicherung fehlt - ruhige Sicherungsoption gewählt VOR Romance/Schlaf/Flucht.');
+          if (typeof botDecisionLog !== 'undefined') botDecisionLog.push('Bot POLIT-SICHERUNG VORRANG [vor Romance/Schlaf/Flucht]');
+          return _pick;
+        }
+      }
+    }
+  } catch (e) { /* defensiv */ }
   // v7.12.96: ROMANTIK zweistufig (User-Vorgabe).
   // (1) "Nacht verbringen" (UEBERNACHTUNG) = der Climax. Wenn verfügbar (Romanze ist
   //     reif, Tension>=4), geht der Bot ALL IN - fast immer nehmen. "Wir wollen die Frau
