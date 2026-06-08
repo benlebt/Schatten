@@ -387,6 +387,16 @@
     flex-shrink: 0;
     white-space: nowrap;
   }
+  /* v7.12.494: Warn-Färbung wenn die Szenen knapp werden */
+  .status-bar .status-date.scene-warn {
+    color: #e0b020;
+    opacity: 1;
+  }
+  .status-bar .status-date.scene-critical {
+    color: #ff5555;
+    opacity: 1;
+    font-weight: 600;
+  }
 
   /* v7.9.56: Auf schmalen iPhone-Viewports (< 430px) die Status-Bar
      kompakter rendern damit Fall-Balken und Verfassungs-Dots nicht
@@ -3017,7 +3027,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.491</div>
+    <div class="start-version">Schatten v7.12.494</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3238,7 +3248,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.491</span>
+    <span>Schatten v7.12.494</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6144,7 +6154,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.491';
+window.SCHATTEN_VERSION = 'v7.12.494';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -6248,6 +6258,11 @@ let everVisitedLocations = [];
 
 // v7.12.363 (Fine-Tuning-Marker): letzter geloggter Zustand, um Übergänge explizit zu machen.
 let _lastLoggedStage = null;     // STAGE-DIAG: Stage-Wechsel
+// v7.12.493 (Karls-Gedanken-Hinweissystem): Stagnations-Erkennung für Spielerführung. Merkt sich den
+// letzten Stand (Beats+Indizien+Stage); wenn X Szenen kein Fortschritt -> diegetischer Hinweis, was fehlt.
+let _hintLastProgressScene = 0;
+let _hintLastSignature = '';
+let _hintLastShownScene = 0;
 let _lastLoggedSpannung = null;  // STATE-DIAG: Spannungs-Wechsel
 let _lastLoggedVf = null;        // STATE-DIAG: Verfassungs-Wechsel
 let _lastLoggedFlags = '';       // STATE-DIAG: Romance/Gewahrsam/Tod-Flag-Wechsel (serialisiert)
@@ -11040,6 +11055,60 @@ function istSicherungsVollzug(text) {
   return _leer;
 }
 
+// v7.12.493 (Spielerführung, Benjamin-Freigabe): "Karls Gedanken"-Hinweissystem. Wenn der Spieler X Szenen
+// keinen Fortschritt macht (kein neuer Beat/Indiz/Stage-Wechsel), liefert diese Funktion einen diegetischen
+// Hinweis (Karls innere Stimme), WAS noch fehlt - abgeleitet aus dem aktuellen Stand. Gibt einen recap-Zusatz
+// zurück (oder ''). Sparsam: max. 1 Hinweis, dann erst wieder nach weiteren stagnierenden Szenen. Reichweite:
+// alle Fälle; politische/komplexe bekommen den spezifischsten Hinweis (Sicherung/Abschluss).
+function buildStuckHint() {
+  try {
+    if (typeof sceneCounter !== 'number' || !caseProgress) return '';
+    const _beats = (Array.isArray(caseProgress.politicalBeatsHit) ? caseProgress.politicalBeatsHit.length : 0)
+      + (Array.isArray(caseProgress.truthBeatsHit) ? caseProgress.truthBeatsHit.length : 0)
+      + (Array.isArray(caseProgress.murderAxesHit) ? caseProgress.murderAxesHit.length : 0);
+    const _ind = Array.isArray(caseProgress.indizien) ? caseProgress.indizien.length : 0;
+    const _stg = (typeof caseProgress.stage === 'number') ? caseProgress.stage : 0;
+    const _sig = _stg + '|' + _beats + '|' + _ind + '|' + (caseProgress.tatverdaechtiger || '') + '|' + (!!caseProgress.wahrheitErkannt);
+    // Fortschritt? -> Tracker aktualisieren, kein Hinweis.
+    if (_sig !== _hintLastSignature) {
+      _hintLastSignature = _sig;
+      _hintLastProgressScene = sceneCounter;
+      return '';
+    }
+    // Stagnation: wie viele Szenen ohne Fortschritt?
+    const _stuck = sceneCounter - _hintLastProgressScene;
+    if (_stuck < 3) return '';
+    // Nicht öfter als alle 3 Szenen einen Hinweis (nicht bevormunden).
+    if (_hintLastShownScene && (sceneCounter - _hintLastShownScene) < 3) return '';
+    _hintLastShownScene = sceneCounter;
+
+    // Hinweis-Inhalt aus dem Stand ableiten.
+    const _isPolit = Array.isArray(caseSetup && caseSetup.politicalBeats) && caseSetup.politicalBeats.length > 0;
+    let _was = '';
+    if (_isPolit && typeof politicalBeatsGateErfuellt === 'function') {
+      const _pg = politicalBeatsGateErfuellt({ strict: false });
+      if (_pg && _pg.aktiv && _pg.basisOk && !_pg.sicherungOk) {
+        _was = 'Die Wahrheit kenne ich inzwischen. Aber die Beweise und die Person, um die es geht, sind noch nicht in Sicherheit - ich muss sie zu jemandem bringen, dem ich traue (eine Übergabe der Akten an einen Westkontakt/die Presse/einen verlässlichen Polizisten, oder die Person bei einer Vertrauensperson unterbringen). Solange das nicht geschehen ist, ist der Fall nicht abgeschlossen.';
+      } else if (_pg && _pg.aktiv && _pg.erfuellt) {
+        _was = 'Ich habe alles getan, was nötig war - die Wahrheit ist klar, die Beweise und die Person sind in Sicherheit. Jetzt kann ich den Fall abschließen.';
+      } else if (_pg && _pg.aktiv && !_pg.basisOk) {
+        _was = 'Ich habe noch nicht das ganze Bild. Wer steckt wirklich dahinter, und wie läuft die Sache ab? Ich muss tiefer graben, bevor ich handeln kann.';
+      }
+    }
+    if (!_was) {
+      // Generisch nach Stage.
+      if (_stg >= 3) {
+        _was = 'Ich glaube, ich habe, was ich brauche. Zeit, den Fall abzuschließen und den Klienten zu informieren.';
+      } else if (_stg <= 1 && _ind < 4) {
+        _was = 'Ich tappe noch im Dunkeln. Wen habe ich noch nicht befragt, welchen Ort noch nicht abgesucht? Mehr Anhaltspunkte müssen her.';
+      } else {
+        _was = 'Da ist noch ein loses Ende. Ich sollte den Spuren nachgehen, die ich habe, statt im Kreis zu laufen.';
+      }
+    }
+    return `\n\nKARL-STOCKT-HINWEIS (der Spieler kommt seit ${_stuck} Szenen nicht weiter - webe GENAU EINEN knappen, beiläufigen Gedanken-Satz in Karls innere Stimme ein, der in diese Richtung weist, ohne die Lösung zu verraten und ohne den Noir-Ton zu brechen): "${_was}"`;
+  } catch (e) { return ''; }
+}
+
 function politicalBeatsGateErfuellt(opts) {
   try {
     if (!caseSetup || !Array.isArray(caseSetup.politicalBeats) || !caseSetup.politicalBeats.length) {
@@ -13148,9 +13217,32 @@ function showHeader(scene) {
   const dateEl = document.getElementById('status-date');
   if (dateEl) {
     // v7.12.90: Szene-Nummer vor dem Datum anzeigen (Spieler sieht Fortschritt).
+    // v7.12.494 (Benjamin): Szene "X von max. Y" - der Spieler sieht, wie viel Zeit der Fall noch hat.
     const datePart = formatGameDateShort(gameCurrentDate);
-    const nrPart = (typeof sceneCounter === 'number' && sceneCounter > 0) ? ('Szene Nr. ' + sceneCounter) : '';
+    const _hc = (typeof getHardCap === 'function') ? getHardCap() : 0;
+    let nrPart = '';
+    if (typeof sceneCounter === 'number' && sceneCounter > 0) {
+      nrPart = _hc ? ('Szene ' + sceneCounter + ' / max. ' + _hc) : ('Szene Nr. ' + sceneCounter);
+    }
     dateEl.textContent = nrPart && datePart ? (nrPart + ' · ' + datePart) : (nrPart || datePart);
+    // Warn-Färbung wenn es eng wird (gelb ab -20, rot ab -10). Nicht in Stage 4 (Fall quasi durch).
+    dateEl.classList.remove('scene-warn', 'scene-critical');
+    if (_hc && caseProgress && (caseProgress.stage || 0) < 4) {
+      const _rem = _hc - sceneCounter;
+      if (_rem <= 10) dateEl.classList.add('scene-critical');
+      else if (_rem <= 20) dateEl.classList.add('scene-warn');
+      // v7.12.494: Schwellen-Toasts bei -20 und -10. triggerKey + Fall-ID macht sie einmalig pro Fall.
+      try {
+        if (typeof showProgressToast === 'function') {
+          const _caseKey = (caseSetup && (caseSetup.klient || caseSetup.opfer) || 'fall').slice(0, 24);
+          if (_rem <= 10 && _rem > 0) {
+            showProgressToast('Die Zeit läuft ab', 'Nur noch ' + _rem + ' Szenen, um den Fall abzuschließen. Danach ist er verloren - bring ihn jetzt zu Ende.', 'danger', 'scene-cap-10-' + _caseKey, '⏰');
+          } else if (_rem <= 20 && _rem > 10) {
+            showProgressToast('Noch ' + _rem + ' Szenen', 'Karl sollte langsam zum Abschluss kommen - sonst geht der Fall verloren.', 'info', 'scene-cap-20-' + _caseKey, '⏳');
+          }
+        }
+      } catch (e) {}
+    }
   }
   document.getElementById('status-loc').textContent = normalizeLocForDisplay(scene.ort);
   // v7.12.44: currentOrt global aktualisieren - normalisierter Kleinbuchstaben-Ort
@@ -19433,6 +19525,8 @@ KEINE anderen Themen, KEINE Indizien-Suche, KEINE Nebenfiguren - die naechsten 1
         pendingCustodyResolveReady = false;
       }
       const stage3Scenes = sceneCounter - (caseProgress.stage3StartScene || sceneCounter);
+      // v7.12.493: Spielerführung - bei Stagnation einen diegetischen "Karl stockt"-Hinweis einweben.
+      try { const _stuckHint = buildStuckHint(); if (_stuckHint) recap += _stuckHint; } catch (e) {}
       // Pruefen ob Verdaechtige geflohen / verschwunden ist
       const suspectName = (caseProgress.tatverdaechtiger || '').toLowerCase();
       const suspectInCast = Array.isArray(cast) && cast.some(c => {
@@ -19497,15 +19591,14 @@ KEINE anderen Themen mehr - kein neuer Tatort, keine neuen Verdaechtigen, keine 
     // Vor dem Hard-Cap (70) gibt es eine Vorwarnungs-Zone wo Mistral
     // narrativ unter Druck gesetzt wird, schneller zu loesen.
     // v7.12.282: deckel-relativ (getHardCap) statt feste 70. Warnstufen relativ gestaffelt.
+    // v7.12.494 (Benjamin): klare Schwellen bei -20 und -10, erzählerisch mit "Fall verlieren"-Konsequenz.
     const _hcWarn = (typeof getHardCap === 'function') ? getHardCap() : 60;
     if (sceneCounter >= (_hcWarn - 20) && sceneCounter < _hcWarn && caseProgress.stage < 4) {
       const remaining = _hcWarn - sceneCounter;
-      if (sceneCounter >= (_hcWarn - 5)) {
-        recap += `\n\nSPIELDAUER-WARNUNG (HART): Szene ${sceneCounter} von max ${_hcWarn}. Nur noch ${remaining} Szenen bis das Spiel automatisch endet. Diese Szene MUSS einen klaren Fortschritt zur Fall-Loesung bringen - Konfrontation, Gestaendnis, Festnahme, oder Karl uebergibt alles an Roth/Lindner. Kein Plaudern mehr, kein Indizien-Sammeln. Setze die naechste Stage-Flag (tatverdaechtiger_ueberfuehrt oder klient_berichtet).`;
-      } else if (sceneCounter >= (_hcWarn - 15)) {
-        recap += `\n\nSPIELDAUER-WARNUNG: Szene ${sceneCounter} von max ${_hcWarn}. Karl ist seit Tagen am Fall, Zeit zu liefern. Diese oder die naechsten 2-3 Szenen sollten den Fall in die Konfrontations-Phase bringen. Mistral: priorisiere Stage-Fortschritt vor neuen Subplots.`;
+      if (sceneCounter >= (_hcWarn - 10)) {
+        recap += `\n\nSPIELDAUER-WARNUNG (HART, ${remaining} Szenen bis Schluss): Szene ${sceneCounter} von max ${_hcWarn}. Webe in Karls innere Stimme einen DRINGLICHEN, beunruhigten Gedanken ein, dass ihm die Zeit davonläuft - wenn er den Fall nicht in den nächsten Szenen abschließt, ist er verloren (Klient springt ab, Spur erkaltet, Stasi schnappt zu). Diese Szene MUSS klaren Fortschritt zur Lösung bringen: Konfrontation, Geständnis, Festnahme, oder Karl sichert/übergibt alles. Kein Plaudern, kein Indizien-Sammeln mehr.`;
       } else {
-        recap += `\n\nSPIELDAUER-HINWEIS: Szene ${sceneCounter} von max ${_hcWarn}. Karl sollte bald zur Aufloesung kommen - keine neuen Nebenfiguren mehr einfuehren, fokussiere auf den Hauptverdacht.`;
+        recap += `\n\nSPIELDAUER-WARNUNG (${remaining} Szenen bis Schluss): Szene ${sceneCounter} von max ${_hcWarn}. Webe in Karls innere Stimme einen knappen Gedanken ein, dass die Zeit knapp wird und er bald zum Abschluss kommen muss, sonst verliert er den Fall. Die nächsten 2-3 Szenen sollten in die Konfrontations-/Abschluss-Phase führen. Keine neuen Nebenfiguren mehr.`;
       }
     }
     // Klient-Geduld: wenn Karl zu lange braucht, droht der Klient mit Auftragsentzug
@@ -25842,6 +25935,9 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         /(sein|ihr)\s+mantel\s+weht\s+im\s+wind/i,
         /die\s+akustik\s+des\s+(leeren\s+)?flurs/i,
         /der\s+wind\s+traegt\s+den\s+geruch/i,
+        // v7.12.492 (User-Befund: nerven mit der Zeit tierisch):
+        /pocht\s+(im\s+takt|im\s+rhythmus)(\s+(deines|des)\s+(herzschlags|herzens|pulses))?/i,
+        /(motor|opel|wagen)\s+hustet/i,
       ];
       // Original-Text-Versionen (mit Umlauten) fuer Satz-Entfernung
       const pumphrasesOriginal = [
@@ -25863,6 +25959,9 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         /(sein|ihr)\s+Mantel\s+weht\s+im\s+Wind/i,
         /Die\s+Akustik\s+des\s+(leeren\s+)?Flurs/i,
         /Der\s+Wind\s+tr(ä|ae)gt\s+den\s+Geruch/i,
+        // v7.12.492:
+        /pocht\s+(im\s+Takt|im\s+Rhythmus)(\s+(deines|des)\s+(Herzschlags|Herzens|Pulses))?/i,
+        /(Motor|Opel|Wagen)\s+hustet/i,
       ];
       const sceneLower = normForMatch(scene.szene);
       // v6.71: Erzeugt aus einem ASCII-Pattern (strassenbahn) ein umlaut-tolerantes
@@ -25894,7 +25993,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           // 12 = bahn rattert (ASCII) - SOFORT
           // 13 = geruch von altem... - SOFORT
           // 0 = "draussen hupen autos" - SOFORT
-          const aggressiveCapIndices = new Set([0, 11, 12, 13]);
+          const aggressiveCapIndices = new Set([0, 11, 12, 13, 17, 18]);
           const hardCapThreshold = aggressiveCapIndices.has(pi) ? 1 : 2;
           if (runCount >= hardCapThreshold) {
             // HARDCAP: Satz mit der Pumphrase aus dem Text loeschen.
@@ -25919,7 +26018,8 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
                 'abblaetternde Farbe', 'Laternen-Schatten', 'Sonne wirft Schatten',
                 'Stadt erwacht', 'Laerm der Stadt', 'Rattern/Klappern Bahn',
                 'Bahn/Wagen rattert', 'Geruch von altem Holz', 'Mantel weht im Wind',
-                'Akustik des Flurs', 'Wind traegt Geruch'
+                'Akustik des Flurs', 'Wind traegt Geruch',
+                'pocht im Takt (Verletzung)', 'Motor/Opel hustet'
               ];
               const phraseLabel = phraseDescriptions[pi] || ('Pattern ' + pi);
               diag('drift', 'Pumphrase-HARDCAP: "' + phraseLabel + '" entfernt (' + runCount + '. Vorkommen im Run)');
