@@ -233,6 +233,17 @@
     .status-bar:not(.hidden) + #status-bar-spacer-desktop {
       display: block;
     }
+    /* v7.12.499 (User-Befund): Der #header (BERLIN 1953) steht im Fluss ganz oben und wurde von der
+       fixed-Leiste ueberlagert (oben abgeschnitten). Fix: padding-top in Leistenhoehe schiebt "BERLIN
+       1953" unter die Leiste. Da der Header diesen Platz nun selbst schafft, wird der zusaetzliche
+       52px-Spacer zum Doppel-Abstand (grosser Leerraum zwischen Titel und Szene 1) -> auf 0, sobald
+       der Header sichtbar ist. Im seltenen header-losen Fall bleibt der Spacer wirksam. */
+    #header:not(.hidden) {
+      padding-top: 60px;
+    }
+    #header:not(.hidden) + .status-bar:not(.hidden) + #status-bar-spacer-desktop {
+      height: 0;
+    }
   }
   .status-tag {
     color: var(--fg-bright);
@@ -2927,6 +2938,10 @@
         <span class="status-popup-value" id="popup-time">Abend</span>
       </div>
       <div class="status-popup-row">
+        <span class="status-popup-label">Szene</span>
+        <span class="status-popup-value" id="popup-scene">k. A.</span>
+      </div>
+      <div class="status-popup-row">
         <span class="status-popup-label">Ort</span>
         <span class="status-popup-value" id="popup-loc">k. A.</span>
       </div>
@@ -3027,7 +3042,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.497</div>
+    <div class="start-version">Schatten v7.12.500</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3229,13 +3244,13 @@
 
   <!-- v7.12.305: Freitext-Eingabe (Parser-Adventure-Zusatz). Eigenständiges Element, berührt
        renderOptions nicht. Wird immer eingeblendet (sobald Optionen sichtbar). -->
-  <div id="freitext-block" class="hidden" style="margin-top:12px;padding:10px;border:1px dashed #6b5d4f;border-radius:6px;background:rgba(40,34,28,0.4);">
-    <div style="font-size:calc(11px * var(--reading-scale));color:#9a8a78;margin-bottom:6px;letter-spacing:0.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">⌨ Optional: z.B. „fahr in dein Büro" oder „durchsuche den Schreibtisch"</div>
+  <div id="freitext-block" class="hidden" style="margin-top:10px;padding:8px 10px;border:1px dashed #5a4e42;border-radius:6px;background:rgba(40,34,28,0.25);opacity:0.92;">
+    <div id="freitext-label" style="font-size:calc(10px * var(--reading-scale));color:#867868;margin-bottom:5px;letter-spacing:0.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Oder sag Karl in eigenen Worten, was er tun soll</div>
     <div class="freitext-row" style="display:flex;gap:6px;">
-      <input id="freitext-input" type="text" autocomplete="off" placeholder="Was tut Karl? (Enter)"
-        style="flex:1;padding:8px 10px;background:#1c1814;border:1px solid #4a4036;border-radius:4px;color:#e8dcc8;font-family:inherit;font-size:calc(13px * var(--reading-scale));line-height:1.5;" />
+      <input id="freitext-input" type="text" autocomplete="off" placeholder="z.B. fahr in dein Büro, durchsuche den Schreibtisch"
+        style="flex:1;padding:7px 10px;background:#1a1611;border:1px solid #403930;border-radius:4px;color:#cbbfa9;font-family:inherit;font-size:calc(12px * var(--reading-scale));line-height:1.5;" />
       <button id="freitext-send" type="button"
-        style="padding:8px 14px;background:#3a3128;border:1px solid #5a4d3e;border-radius:4px;color:#e8dcc8;cursor:pointer;font-family:inherit;font-size:calc(13px * var(--reading-scale));">Los</button>
+        style="padding:7px 13px;background:#322a22;border:1px solid #4d4234;border-radius:4px;color:#cbbfa9;cursor:pointer;font-family:inherit;font-size:calc(12px * var(--reading-scale));">Los</button>
     </div>
   </div>
 
@@ -3248,7 +3263,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.497</span>
+    <span>Schatten v7.12.500</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6154,7 +6169,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.497';
+window.SCHATTEN_VERSION = 'v7.12.500';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -6263,6 +6278,10 @@ let _lastLoggedStage = null;     // STAGE-DIAG: Stage-Wechsel
 let _hintLastProgressScene = 0;
 let _hintLastSignature = '';
 let _hintLastShownScene = 0;
+// v7.12.498 (Benjamin): Freitext-Cooldown. Nach einer Freitext-Aktion ist das Feld 3 Szenen gesperrt
+// (A/B/C/D bleiben immer verfügbar). Verhindert den "Flaschengeist"-Missbrauch (mehrfaches Wünschen).
+let _freitextCooldownBisSzene = 0;
+const FREITEXT_COOLDOWN = 3;
 let _lastLoggedSpannung = null;  // STATE-DIAG: Spannungs-Wechsel
 let _lastLoggedVf = null;        // STATE-DIAG: Verfassungs-Wechsel
 let _lastLoggedFlags = '';       // STATE-DIAG: Romance/Gewahrsam/Tod-Flag-Wechsel (serialisiert)
@@ -13220,12 +13239,14 @@ function showHeader(scene) {
   const dateEl = document.getElementById('status-date');
   if (dateEl) {
     // v7.12.90: Szene-Nummer vor dem Datum anzeigen (Spieler sieht Fortschritt).
-    // v7.12.494 (Benjamin): Szene "X von max. Y" - der Spieler sieht, wie viel Zeit der Fall noch hat.
+    // v7.12.500 (Benjamin): Leiste zeigt NUR "Szene X" (kein "von Y" - das wirkte wie Fall-Soll-Dauer
+    // statt Maximum/Hard-Cap). Die Cap-Zahl steht im "Aktueller Stand"-Popup ("von max. Y"). Die Warn-
+    // Färbung der Leiste (gelb/rot nahe Cap) bleibt als dezentes Signal ohne explizite Zahl.
     const datePart = formatGameDateShort(gameCurrentDate);
     const _hc = (typeof getHardCap === 'function') ? getHardCap() : 0;
     let nrPart = '';
     if (typeof sceneCounter === 'number' && sceneCounter > 0) {
-      nrPart = _hc ? ('Szene ' + sceneCounter + ' von ' + _hc) : ('Szene Nr. ' + sceneCounter);
+      nrPart = 'Szene ' + sceneCounter;
     }
     dateEl.textContent = nrPart && datePart ? (nrPart + ' · ' + datePart) : (nrPart || datePart);
     // Warn-Färbung wenn es eng wird (gelb ab -20, rot ab -10). Nicht in Stage 4 (Fall quasi durch).
@@ -13310,6 +13331,22 @@ function showStatusDetails() {
   const dateEl = document.getElementById('popup-date');
   if (dateEl) dateEl.textContent = info.date || 'k. A.';
   document.getElementById('popup-time').textContent = info.time;
+  // v7.12.498 (Benjamin): Szene "X von Y" im Aktueller-Stand-Popup, mit Warn-Färbung nahe Hard-Cap.
+  const scEl = document.getElementById('popup-scene');
+  if (scEl) {
+    const _hcPop = (typeof getHardCap === 'function') ? getHardCap() : 0;
+    if (typeof sceneCounter === 'number' && sceneCounter > 0 && _hcPop) {
+      scEl.textContent = sceneCounter + ' von max. ' + _hcPop;
+      const _remPop = _hcPop - sceneCounter;
+      const _stagePop = (typeof caseProgress === 'object' && caseProgress && typeof caseProgress.stage === 'number') ? caseProgress.stage : 0;
+      if (_stagePop < 4 && _remPop <= 10) scEl.style.color = '#ff5555';
+      else if (_stagePop < 4 && _remPop <= 20) scEl.style.color = '#e0b020';
+      else scEl.style.color = '';
+    } else {
+      scEl.textContent = (typeof sceneCounter === 'number' && sceneCounter > 0) ? String(sceneCounter) : 'k. A.';
+      scEl.style.color = '';
+    }
+  }
   document.getElementById('popup-loc').textContent = info.loc;
   // Version-Footer im Popup
   const verEl = document.getElementById('popup-version');
@@ -13883,6 +13920,12 @@ function showSceneStatusPopup(entry, sceneIdx) {
   if (timeEl) {
     const tStr = entry.time || 'k. A.';
     timeEl.textContent = tStr.charAt(0) + tStr.slice(1).toLowerCase();
+  }
+  // v7.12.498: Szene-Zeile im History-Popup aus dem Eintrag (nicht den Live-Wert hängen lassen).
+  const scHistEl = document.getElementById('popup-scene');
+  if (scHistEl) {
+    scHistEl.style.color = '';
+    scHistEl.textContent = (typeof entry.sceneNr === 'number' && entry.sceneNr > 0) ? String(entry.sceneNr) : 'k. A.';
   }
   document.getElementById('popup-loc').textContent = entry.ort || 'k. A.';
 
@@ -17869,7 +17912,26 @@ function renderOptions(scene) {
   try {
     const _ftBlock = document.getElementById('freitext-block');
     const _fallVorbei = (typeof caseProgress === 'object' && caseProgress && (caseProgress.istGescheitert || caseProgress.istGelöst));
-    if (_ftBlock && !_fallVorbei) _ftBlock.classList.remove('hidden');
+    if (_ftBlock && !_fallVorbei) {
+      _ftBlock.classList.remove('hidden');
+      // v7.12.498: Cooldown-Zustand visualisieren. Aktiv -> Feld gesperrt + Noir-Notiz; sonst normal.
+      const _ftInput = document.getElementById('freitext-input');
+      const _ftBtn = document.getElementById('freitext-send');
+      const _ftLabel = document.getElementById('freitext-label');
+      const _cdAktiv = (typeof sceneCounter === 'number') && sceneCounter < _freitextCooldownBisSzene;
+      if (_cdAktiv) {
+        const _rest = _freitextCooldownBisSzene - sceneCounter;
+        if (_ftLabel) _ftLabel.textContent = 'Keine Zeit zum Grübeln. Karl muss aus dem Bauch entscheiden. (noch ' + _rest + ' Szene' + (_rest === 1 ? '' : 'n') + ')';
+        if (_ftInput) { _ftInput.disabled = true; _ftInput.style.opacity = '0.45'; _ftInput.placeholder = 'Wähle jetzt A, B, C oder D ...'; }
+        if (_ftBtn) { _ftBtn.disabled = true; _ftBtn.style.opacity = '0.45'; _ftBtn.style.cursor = 'not-allowed'; }
+        _ftBlock.style.opacity = '0.6';
+      } else {
+        if (_ftLabel) _ftLabel.textContent = 'Oder sag Karl in eigenen Worten, was er tun soll';
+        if (_ftInput) { _ftInput.disabled = false; _ftInput.style.opacity = ''; _ftInput.placeholder = 'z.B. fahr in dein Büro, durchsuche den Schreibtisch'; }
+        if (_ftBtn) { _ftBtn.disabled = false; _ftBtn.style.opacity = ''; _ftBtn.style.cursor = 'pointer'; }
+        _ftBlock.style.opacity = '0.92';
+      }
+    }
   } catch (e) { /* Freitext-Einblenden darf das Rendern nie brechen */ }
   // wie Fall lösen, Notheilen, Doc-Wagner-Heilung, Schlafen, Romanze, Übernachtung,
   // Flucht) am aktuellen Szenen-logEntry erfassen. So zeigt der Export VOLLSTAENDIG,
@@ -22060,6 +22122,7 @@ async function startGame() {
   // v7.12.496 (ChatGPT-Source-Check P2): Hint-Tracker zuruecksetzen, sonst blockiert der Karl-Gedanke im
   // naechsten Lauf (sceneCounter < altem _hintLastShownScene -> negativ -> lange gesperrt).
   _hintLastProgressScene = 0; _hintLastSignature = ''; _hintLastShownScene = 0;
+  _freitextCooldownBisSzene = 0;  // v7.12.498: Freitext-Cooldown zuruecksetzen
   if (typeof botWasEverActive !== 'undefined') botWasEverActive = false;  // v7.12.169: neuer Lauf
   try { window._botFallStatus = { resolveShown:false, resolveCanClick:false, resolveLockReason:'' }; } catch (e) {}  // v7.12.177: Fall-Status fuer Bot-Bar zuruecksetzen
   timeAdvanceTokens = 0;
@@ -36046,6 +36109,14 @@ setInterval(function() {
         if (!txt) return;
         if (typeof chooseOptionInFlight !== 'undefined' && chooseOptionInFlight) return; // laufende Anfrage nicht stören
         if (typeof caseProgress === 'object' && caseProgress && (caseProgress.istGescheitert || caseProgress.istGelöst)) return;
+        // v7.12.498 (Benjamin): Freitext-Cooldown. Wenn noch aktiv, NICHT senden (A/B/C/D bleiben offen).
+        if (typeof sceneCounter === 'number' && sceneCounter < _freitextCooldownBisSzene) {
+          const _restCd = _freitextCooldownBisSzene - sceneCounter;
+          if (typeof showProgressToast === 'function') {
+            showProgressToast('Keine Zeit zum Grübeln', 'Karl muss aus dem Bauch entscheiden. Noch ' + _restCd + ' Szene' + (_restCd === 1 ? '' : 'n') + ', dann kannst du wieder frei handeln.', 'caution', 'freitext-cooldown', '⌨');
+          }
+          return;
+        }
         // v7.12.326 (Benjamin-Wunsch): Tabu-Pre-Check VOR dem KI-Call. Sexuelle Gewalt, Kinder,
         // Folter Wehrloser, Massaker -> blocken. Toast "Das tut Karl nicht", KEIN KI-Call. Input
         // bleibt stehen (falls Fehlalarm verliert der Spieler seinen Text nicht).
@@ -36075,6 +36146,8 @@ setInterval(function() {
             kategorie: _katFt,
             _freitext: true,
           });
+          // v7.12.498: Cooldown starten - ab jetzt 3 Szenen kein Freitext (A/B/C/D bleiben offen).
+          if (typeof sceneCounter === 'number') _freitextCooldownBisSzene = sceneCounter + FREITEXT_COOLDOWN;
         }
       } catch (e) { console.warn('[Schatten] Freitext-Senden fehlgeschlagen:', e && e.message); }
     }
