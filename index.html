@@ -3017,7 +3017,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.489</div>
+    <div class="start-version">Schatten v7.12.490</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3238,7 +3238,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.489</span>
+    <span>Schatten v7.12.490</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6144,7 +6144,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.489';
+window.SCHATTEN_VERSION = 'v7.12.490';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -29105,6 +29105,42 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       if (typeof updateTruthBeats === 'function') updateTruthBeats(_jsText);
       if (typeof updateMurderAxes === 'function') updateMurderAxes(_jsText);
       if (typeof updatePoliticalBeats === 'function') updatePoliticalBeats(_jsText);
+      // v7.12.490 (WURZEL-FIX des AKTION-Beat-Bugs): SICHERUNGS-BEAT AUS SPIELER-/BOT-AKTION. Lag bis v489
+      // im toten _progressText-Zweig (v7.12.372 als unerreichbar markiert) -> der Bot wählte echte Vollzüge
+      // ("Übergib Helene die Akten", "Übergib Roth die Kopie"), aber der Beat wurde NIE gesetzt (AKTION-Beat
+      // 0 in allen Runs, SICHERUNGS-AKTION-DIAG erschien nie). Jetzt hier auf jede-Szene-Ebene. Nutzt die
+      // gemeinsame istSicherungsVollzug-Funktion (identisch zur Bot-Optionswahl). Vollzug -> Beat sofort;
+      // Reise/Einleitung -> pendingSecurityIntent (Prosa-Vollzug bestätigt ihn dann im beobachtenden Pfad).
+      if (caseSetup && Array.isArray(caseSetup.politicalBeats) && caseSetup.politicalBeats.length
+          && caseProgress && Array.isArray(caseProgress.politicalBeatsHit)
+          && typeof istSicherungsVollzug === 'function') {
+        const _aktion = (typeof lastUserMessage === 'string') ? lastUserMessage : '';
+        if (_aktion) {
+          const _sv = istSicherungsVollzug(_aktion);
+          if (typeof diag === 'function') {
+            diag('progress', 'SICHERUNGS-AKTION-DIAG: _aktion="' + _aktion.slice(0,60).replace(/\s+/g,' ') + '" -> vollzug=' + _sv.vollzug + ' intent=' + _sv.intent + ' fokus=' + _sv.fokus);
+          }
+          if (_sv.vollzug || _sv.intent) {
+            const _setBeat = (id, label) => {
+              if (caseProgress.politicalBeatsHit.indexOf(id) === -1
+                  && caseSetup.politicalBeats.some(b => b && b.id === id)) {
+                caseProgress.politicalBeatsHit.push(id);
+                if (typeof diag === 'function') diag('progress', '✦ POLIT-BEAT aus AKTION gesetzt: ' + label + ' (Spieler-Handlung, nicht Prosa) - "' + _aktion.slice(0,50).replace(/\s+/g,' ') + '"');
+                console.log('[Schatten] Polit-Beat aus Aktion:', id);
+              }
+            };
+            const _zielId = (_sv.fokus === 'akten') ? 'akten_gesichert' : 'margarete_gesichert';
+            if (_sv.intent && !_sv.vollzug) {
+              caseProgress.pendingSecurityIntent = _zielId;
+              if (typeof diag === 'function') diag('progress', 'SICHERUNGS-INTENT gemerkt (' + _zielId + '): Reise/Einleitung - Beat feuert erst bei Übergabe/Ankunft. "' + _aktion.slice(0,45).replace(/\s+/g,' ') + '"');
+            } else {
+              if (_sv.fokus === 'akten') _setBeat('akten_gesichert', 'Akten physisch gesichert');
+              else _setBeat('margarete_gesichert', 'Margarete/Beweise in Sicherheit');
+              if (caseProgress.pendingSecurityIntent) caseProgress.pendingSecurityIntent = null;
+            }
+          }
+        }
+      }
     } catch (e) { /* darf Szene nie brechen */ }
     // v7.12.372: RUF-DIAG (Härte-Profil) jede Szene - lag vorher mit im toten Block, feuerte nur Sz4.
     try {
@@ -29327,73 +29363,9 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       if (typeof updateTruthBeats === 'function') updateTruthBeats(_progressText);
       if (typeof updateMurderAxes === 'function') updateMurderAxes(_progressText);
       if (typeof updatePoliticalBeats === 'function') updatePoliticalBeats(_progressText);
-      // v7.12.467 (ChatGPT-Freigabe A2, Punkt 4): SICHERUNGS-BEAT AUS SPIELER-AKTION. Befund: der
-      // margarete_gesichert-Beat wurde bisher nur im Szenentext erkannt - und der Sicherungssatz steht
-      // oft erst in der AUFLOESEN-Szene selbst (Henne-Ei: Beat zählt erst NACH dem Abschluss, nie davor).
-      // Lösung: die beiden SICHERUNGS-Beats (akten_gesichert / margarete_gesichert) dürfen AUCH aus der
-      // expliziten Spieler-/Bot-AKTION (lastUserMessage) gesetzt werden, sobald der Spieler eine echte
-      // Sicherungs-Handlung WÄHLT ("Akten zu Vera bringen", "Margarete bei Helene verstecken", "Kopie an
-      // Roth/RIAS", "über die Sektorengrenze"). So entsteht der Beat aus der HANDLUNG, nicht aus
-      // nachträglicher Finale-Prosa. Nur bei Fällen mit politicalBeats (= Margarete).
-      try {
-        if (caseSetup && Array.isArray(caseSetup.politicalBeats) && caseSetup.politicalBeats.length
-            && caseProgress && Array.isArray(caseProgress.politicalBeatsHit)) {
-          const _aktion = (typeof lastUserMessage === 'string') ? lastUserMessage : '';
-          // v7.12.489 (DIAG für den v488-Bug: VOLLZUG feuert im Bot, aber AKTION-Beat bleibt 0).
-          // Zeigt, was der Aktions-Pfad als _aktion sieht und was istSicherungsVollzug daraus macht.
-          try {
-            if (typeof diag === 'function') {
-              const _svDiag = (typeof istSicherungsVollzug === 'function') ? istSicherungsVollzug(_aktion) : null;
-              diag('progress', 'SICHERUNGS-AKTION-DIAG: _aktion="' + (_aktion || '(leer)').slice(0,70).replace(/\s+/g,' ') + '" -> ' + (_svDiag ? ('vollzug=' + _svDiag.vollzug + ' intent=' + _svDiag.intent + ' fokus=' + _svDiag.fokus) : 'FUNKTION FEHLT'));
-            }
-          } catch(e){}
-          if (_aktion) {
-            // Sicherungs-Handlung in der AKTION: Übergabe/Verstecken an einen Schutz-Empfänger ODER Grenzübertritt.
-            const _sicherungsAktionRe = /\b(bring|übergib|uebergib|gib|fahr|versteck|schmuggel|deponier|sicher|rette|hol .{0,20}raus|über die (grenze|sektorengrenze)|ueber die (grenze|sektorengrenze))\w*[\s\S]{0,60}(vera|lindqvist|rias|helene|roth|presse|westen|akten|unterlagen|beweise|kopie|margarete|sicherheit|grenze)/i;
-            // v7.12.469 (Source-Check v467 P2.4): zweiter Zweig für OBJEKT-ZUERST-Formulierungen
-            // ("Die Akten zu Vera bringen", "Margarete bei Helene verstecken", "Unterlagen an RIAS
-            // übergeben"). Das natürliche Deutsch stellt oft das Objekt vor das Verb - der erste Zweig
-            // (Verb zuerst) verfehlte das. Erhöht die Treffer-Quote der Sicherungs-Erkennung deutlich.
-            const _sicherungsAktionRe2 = /\b(akten|unterlagen|beweise|kopie|dokument|mappe|margarete|stein)\b[\s\S]{0,70}\b(zu|bei|an|in|über|ueber)\b[\s\S]{0,40}\b(vera|lindqvist|rias|helene|roth|presse|westen|sicherheit|grenze|sektorengrenze)\b[\s\S]{0,40}(bring|übergib|uebergib|übergeb|uebergeb|versteck|sicher|rette|deponier|schaff)\w*/i;
-            const _aktenFokusRe = /\b(akte|akten|unterlagen|kopie|dokument|mappe|beweise)\b/i;
-            const _margFokusRe = /\b(margarete|stein|sie .{0,15}(verstecken|sicher|rausbringen)|über die (grenze|sektorengrenze)|ueber die (grenze|sektorengrenze))\b/i;
-            // v7.12.483 (Run 0742: alle 3 Margarete hingen 61 Sz/3-5, weil der Bot die RICHTIGEN
-            // Sicherungsaktionen wählte ["Fahr zu Helene um die Akten zu sichern", "Bring Margarete zu
-            // Helene und lass sie untertauchen"], aber die beiden starren Regex sie wegen WORTSTELLUNG
-            // verfehlten). Robuster, reihenfolge-unabhängiger Ansatz: eine Sicherung liegt vor, wenn die
-            // Aktion (a) einen Schutz-EMPFÄNGER/ZIEL UND (b) ein Sicherungs-VERB enthält - egal in welcher
-            // Reihenfolge. Schutz davor, dass bloße Namensnennung ("frag Helene") zählt: das Verb muss ein
-            // echtes Sicherungs-/Schutz-Verb sein, nicht "fragen/reden/treffen".
-            const _aL = _aktion.toLowerCase();
-            // v7.12.488 (Lektorat v487 P1): EINE gemeinsame Erkennung (istSicherungsVollzug) - identisch
-            // mit der, die der Bot zur Optionswahl nutzt. Behebt die Asynchronität: was der Bot als Vollzug
-            // wählt ("gib die Beweise bei Roth ab", "lass Roth die Beweise übergeben"), setzt jetzt
-            // garantiert auch den Beat. Reise/Einleitung -> pendingSecurityIntent; Vollzug -> Beat sofort.
-            const _sv = (function(){ try { return istSicherungsVollzug(_aktion); } catch(e){ return {vollzug:false,intent:false,fokus:null}; } })();
-            if (_sv.vollzug || _sv.intent) {
-              const _setBeat = (id, label) => {
-                if (caseProgress.politicalBeatsHit.indexOf(id) === -1
-                    && caseSetup.politicalBeats.some(b => b && b.id === id)) {
-                  caseProgress.politicalBeatsHit.push(id);
-                  if (typeof diag === 'function') diag('progress', '✦ POLIT-BEAT aus AKTION gesetzt: ' + label + ' (Sicherung über Spieler-Handlung, nicht Prosa) - "' + _aktion.slice(0,50).replace(/\s+/g,' ') + '..."');
-                  console.log('[Schatten] Polit-Beat aus Aktion:', id);
-                }
-              };
-              const _zielId = (_sv.fokus === 'akten') ? 'akten_gesichert' : 'margarete_gesichert';
-              if (_sv.intent && !_sv.vollzug) {
-                // Einleitung/Reise: Intent merken, noch KEIN Beat. Vollzug muss folgen (Aktion od. Prosa-Bestätigung).
-                caseProgress.pendingSecurityIntent = _zielId;
-                if (typeof diag === 'function') diag('progress', 'SICHERUNGS-INTENT gemerkt (' + _zielId + '): Reise/Einleitung erkannt, aber noch kein Vollzug - Beat feuert erst bei Übergabe/Verstecken/Ankunft. "' + _aktion.slice(0,45).replace(/\s+/g,' ') + '..."');
-              } else {
-                // Vollzug: Beat sofort setzen. Fokus akten -> akten_gesichert; margarete/beweise -> margarete_gesichert.
-                if (_sv.fokus === 'akten') _setBeat('akten_gesichert', 'Akten physisch gesichert');
-                else _setBeat('margarete_gesichert', 'Margarete/Beweise in Sicherheit');
-                if (caseProgress.pendingSecurityIntent) caseProgress.pendingSecurityIntent = null;
-              }
-            }
-          }
-        }
-      } catch (e) { /* defensiv - Beat-Setzung nie den Zug brechen */ }
+      // v7.12.490: Der Sicherungs-Beat-AUS-AKTION-Block wurde von hier (totem _progressText-Zweig,
+      // v7.12.372 als unerreichbar markiert) in den lebenden _jsText-Block (jede-Szene-Ebene) verschoben.
+
       // v7.12.355 (TRUTHBEAT-DIAG): vollständiger Beat-Status NACH den Updates. Für die Auswertung
       // von wahrheit-Fällen (Brandt/Goerke) ohne manuelle Text-Prüfung: zeigt getroffene + fehlende
       // Beat-Labels und ob das Abschluss-Gate (truthBeatsErfuellt) gerade greift. Wenn ein wahrheit-
