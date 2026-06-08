@@ -3017,7 +3017,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.488</div>
+    <div class="start-version">Schatten v7.12.489</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3238,7 +3238,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.488</span>
+    <span>Schatten v7.12.489</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6144,7 +6144,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.488';
+window.SCHATTEN_VERSION = 'v7.12.489';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -29339,6 +29339,14 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (caseSetup && Array.isArray(caseSetup.politicalBeats) && caseSetup.politicalBeats.length
             && caseProgress && Array.isArray(caseProgress.politicalBeatsHit)) {
           const _aktion = (typeof lastUserMessage === 'string') ? lastUserMessage : '';
+          // v7.12.489 (DIAG für den v488-Bug: VOLLZUG feuert im Bot, aber AKTION-Beat bleibt 0).
+          // Zeigt, was der Aktions-Pfad als _aktion sieht und was istSicherungsVollzug daraus macht.
+          try {
+            if (typeof diag === 'function') {
+              const _svDiag = (typeof istSicherungsVollzug === 'function') ? istSicherungsVollzug(_aktion) : null;
+              diag('progress', 'SICHERUNGS-AKTION-DIAG: _aktion="' + (_aktion || '(leer)').slice(0,70).replace(/\s+/g,' ') + '" -> ' + (_svDiag ? ('vollzug=' + _svDiag.vollzug + ' intent=' + _svDiag.intent + ' fokus=' + _svDiag.fokus) : 'FUNKTION FEHLT'));
+            }
+          } catch(e){}
           if (_aktion) {
             // Sicherungs-Handlung in der AKTION: Übergabe/Verstecken an einen Schutz-Empfänger ODER Grenzübertritt.
             const _sicherungsAktionRe = /\b(bring|übergib|uebergib|gib|fahr|versteck|schmuggel|deponier|sicher|rette|hol .{0,20}raus|über die (grenze|sektorengrenze)|ueber die (grenze|sektorengrenze))\w*[\s\S]{0,60}(vera|lindqvist|rias|helene|roth|presse|westen|akten|unterlagen|beweise|kopie|margarete|sicherheit|grenze)/i;
