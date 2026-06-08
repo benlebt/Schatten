@@ -3017,7 +3017,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.486</div>
+    <div class="start-version">Schatten v7.12.487</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3238,7 +3238,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.486</span>
+    <span>Schatten v7.12.487</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6144,7 +6144,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.486';
+window.SCHATTEN_VERSION = 'v7.12.487';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -14111,6 +14111,7 @@ let pendingForcedFahndung = null;
 // "Geh zum Klienten und schliess den Fall ab"-Push. Verhindert dass Karl
 // ewig Stage 3 bleibt ohne dass das Spiel den Abschluss ermoeglicht.
 let pendingKlientPushAfterCalm = false;
+let pendingSecurityPushAfterCalm = false; // v7.12.487: politischer Sicherungs-Push (statt FALL-LÖSEN) bei offenem Gate
 // v7.9.23: Anti-Romantik-Counter nach Sex. Detektiv ist nuechtern, danke fuer die Nacht.
 let postRomanticScenes = 0;
 // v7.0: Verhindert dass die Fahndung-Eskalation mehrfach pro Run greift.
@@ -19366,6 +19367,15 @@ KEINE anderen Themen, KEINE Indizien-Suche, KEINE Nebenfiguren - die naechsten 1
       if (pendingKlientPushAfterCalm && (typeof lastSpannung !== 'number' || lastSpannung <= 2)) {
         recap += `\n\nFALL-ABSCHLUSS DRINGEND (PFLICHT): In einer der letzten Szenen war Karl bereits am Ziel (${caseProgress.tatverdaechtiger} ueberfuehrt), aber Auto-Abschluss wurde blockiert weil Karl gerade in Action/Verletzt war. JETZT ist es ruhig. Diese Szene MUSS damit beginnen dass Karl klar zur Klient-Berichtung aufbricht (mit Optionen die DAHIN fuehren) oder gleich beim Klienten ankommt. Setze "klient_berichtet": true wenn Karl das Gespraech fuehrt. Spieler hat Vortrieb verdient - keine neuen Nebenstraenge mehr.`;
         pendingKlientPushAfterCalm = false; // Flag zuruecksetzen
+      }
+      // v7.12.487 (Lektorat v486 P1): Politischer Sicherungs-Push. Bei offenem politischem Gate ist der
+      // Fall NICHT abschlussbereit - die Sicherung fehlt. Statt "Abschluss" verlangt dieser Push konkrete
+      // SICHERUNGS-VOLLZUGS-Optionen (echte Übergabe/Unterbringung), nicht nur Annäherung. Eine Option MUSS
+      // ein abgeschlossener Sicherungs-Vollzug sein, damit der Bot eine Aktion zu wählen hat, die den Beat
+      // auslöst (Sicherung kommt seit v485 nur aus Aktion, nie aus Prosa).
+      if (pendingSecurityPushAfterCalm && (typeof lastSpannung !== 'number' || lastSpannung <= 3)) {
+        recap += `\n\nSICHERUNG DRINGEND (PFLICHT, politischer Fall): Die Wahrheit steht (Route + Verantwortlicher belegt), ABER der Fall ist NICHT abschlussbereit, weil die Beweise und Margarete noch nicht extern in Sicherheit sind. Signalisiere NICHT, dass der Fall gelöst werden kann. Diese Szene MUSS mindestens eine Option anbieten, die eine ABGESCHLOSSENE Sicherungs-HANDLUNG ist - nicht nur Annäherung. Konkret z.B.: "Übergib Vera Lindqvist den Umschlag mit den Akten", "Gib Roth/dem RIAS-Kontakt die Kopien", "Bring Margarete zu Schwester Helene und lass sie dort untertauchen", "Schaff die Unterlagen über die Sektorengrenze". Formuliere die Option als VOLLZUG (übergeben/deponieren/untertauchen lassen), nicht als Absicht ("fahr zu", "triff dich mit"). Erst wenn eine solche Handlung gespielt ist, ist der Fall abschlussbereit.`;
+        pendingSecurityPushAfterCalm = false;
       }
       // v7.11.23: Nach Custody-Release mit Stage 3 + Indizien -> AUFLOESEN forcieren
       if (pendingCustodyResolveReady) {
@@ -30206,8 +30216,26 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       // wird aber deutlicher geführt: Push früher, FALL-LÖSEN-Button dominant (s.u. renderOptions),
       // Hard-Cap früher (50 statt 70). Respektiert "kein Autopilot, nicht überraschen".
       if (stage3Scenes >= 3) {
-        diag('progress', 'Klient-Push: Taeter ueberfuehrt, ' + stage3Scenes + ' Szenen Stage 3 - FALL LOESEN dominant, KI-Hinweis dass Abschluss bereit ist (kein Auto-Force)');
-        pendingKlientPushAfterCalm = true;
+        // v7.12.487 (Lektorat v486 P1): Bei offenem POLITISCHEM Sicherungs-Gate darf der Klient-Push
+        // NICHT "FALL LÖSEN dominant / Abschluss bereit" signalisieren - das widerspricht der Realität
+        // (Gate gesperrt, Sicherung fehlt) und untergräbt die Sicherungs-Führung. Befund Run 1217: über
+        // 31 Szenen lief "FALL LÖSEN dominant" parallel zum Ziel-Lock -> die KI bot ruhige Abschluss-
+        // statt Sicherungs-Optionen an. Stattdessen: SICHERUNG DOMINANT - die KI soll konkrete Übergabe-/
+        // Schutz-Optionen anbieten.
+        let _politGateOffen = false;
+        try {
+          if (typeof politicalBeatsGateErfuellt === 'function') {
+            const _pg = politicalBeatsGateErfuellt({ strict: false });
+            _politGateOffen = _pg && _pg.aktiv && !_pg.erfuellt;
+          }
+        } catch (e) {}
+        if (_politGateOffen) {
+          diag('progress', 'Klient-Push: SICHERUNG DOMINANT (politisches Gate offen, ' + stage3Scenes + ' Szenen Stage 3) - KI soll konkrete Übergabe-/Schutz-Optionen anbieten (Akten an Vera/Roth/RIAS, Margarete zu Helene), NICHT Abschluss signalisieren.');
+          pendingSecurityPushAfterCalm = true;
+        } else {
+          diag('progress', 'Klient-Push: Taeter ueberfuehrt, ' + stage3Scenes + ' Szenen Stage 3 - FALL LOESEN dominant, KI-Hinweis dass Abschluss bereit ist (kein Auto-Force)');
+          pendingKlientPushAfterCalm = true;
+        }
       }
     }
     // v6.90: HARD-CAP Gesamtspiel - gesunde Range 40-70
@@ -34152,15 +34180,43 @@ function botChooseByStrategy(options) {
     if (effectiveStrat === 'natural' && typeof politicalBeatsGateErfuellt === 'function') {
       const _pgPrio = politicalBeatsGateErfuellt({ strict: true });
       if (_pgPrio && _pgPrio.aktiv && _pgPrio.basisOk && !_pgPrio.sicherungOk) {
+        // v7.12.487 (Lektorat v486 P1): Unterscheide echten VOLLZUG von bloßer Annäherung/Überlegung.
+        // Befund Run 1217: die einzige echte Sicherungsoption "Dräng Vera, dir die Akten zu übergeben"
+        // war OFFENSIV; der Defensiv-Vorzug wählte stattdessen "Bleib ruhig, überleg wo sie sich
+        // verstecken könnte" (matchte "versteck", ist aber Überlegung, KEIN Vollzug) -> Gate blieb offen.
+        // Daher: eine VOLLZUGS-Option (echte abgeschlossene Handlung) schlägt die Kategorie - eine
+        // offensive echte Übergabe ist besser als ruhiges Kreisen. _vollzugRe verlangt ein Handlungs-Verb
+        // MIT Ziel/Objekt und schließt Überlegungs-/Absichtsfloskeln aus.
+        const _istVollzug = (t) => {
+          const _x = (t || '').toLowerCase();
+          if (!_x) return false;
+          // Ausschluss: Überlegung/Absicht/Frage ("überleg wo", "ob sie", "könnte", "frag ob", "wo sie sich verstecken")
+          if (/\b(überleg|ueberleg|ob (sie|er)|könnte|koennte|wo (sie|er) sich|nachdenk|frag .{0,20}ob|warte|beobacht|sieh dich um|umschau)\b/.test(_x)) return false;
+          // Vollzug: echtes Übergabe-/Unterbring-/Schmuggel-Verb + Schutzziel ODER implizit (Grenze/untertauchen)
+          const _verbZiel = /(übergib|uebergib|übergeb|uebergeb|gib|deponier|händig|haendig|dräng .{0,25}(übergeb|uebergeb|übergib|uebergib|herauszugeb)|versteck|bring|schaff|begleit|unterbring)\w*[\s\S]{0,40}(vera|lindqvist|rias|korrespondent|roth|helene|presse|westkontakt|über die (grenze|sektorengrenze)|sektorengrenze|schließfach|schliessfach)/.test(_x)
+            || /(vera|lindqvist|rias|roth|helene|presse)[\s\S]{0,40}(übergib|uebergib|übergeb|uebergeb|gib|deponier|nimmt .{0,15}entgegen|händig|haendig|untertauch|aufnehmen|unterbring)\w*/.test(_x)
+            || /\b(über die (grenze|sektorengrenze)|in den westen)\b/.test(_x)
+            || /(margarete|stein|sie)[\s\S]{0,30}(bei|zu) (helene|vera|roth)[\s\S]{0,25}(untertauch|unterbring|versteck|bleib|lass)/.test(_x);
+          return _verbZiel;
+        };
+        const _alleOpt = [].concat(byCat.DEFENSIV || [], byCat.ERKUNDEN || [], byCat.BEOBACHTEN || [], byCat.OFFENSIV || []);
+        // 1. PRIORITÄT: echter Vollzug, egal welche Kategorie (offensive Übergabe schlägt ruhiges Kreisen).
+        let _pick = _alleOpt.filter(o => _istVollzug(o && o.text))[0];
+        if (_pick) {
+          console.log('[Bot v7.12.487] POLIT-SICHERUNG VOLLZUG (echte abgeschlossene Sicherungshandlung, Kategorie egal)');
+          if (typeof diag === 'function') diag('bot', 'Bot (natürlich) POLIT-SICHERUNG VOLLZUG: echte Sicherungs-Handlung gewählt (Vollzug schlägt Kategorie/Defensiv-Vorzug) - "' + (_pick.text||'').slice(0,50) + '"');
+          if (typeof botDecisionLog !== 'undefined') botDecisionLog.push('Bot POLIT-SICHERUNG VOLLZUG [echte Handlung]');
+          return _pick;
+        }
+        // 2. Sonst: einleitende/annähernde Sicherungsoption, ruhige Variante bevorzugt (wie v484).
         const _sichRePrio = /\b(akten|unterlagen|beweise|kopie|dokument|mappe|margarete)\b[\s\S]{0,45}\b(sicher|versteck|übergeb|uebergeb|bring|deponier|rette|schaff|grenze|vera|lindqvist|rias|helene|roth|westen|presse)\b|\b(bring|übergib|uebergib|versteck|sicher|deponier|rette|fahr|schmuggel|begleit|unterbring|untertauch)\w*[\s\S]{0,45}\b(vera|lindqvist|rias|helene|roth|presse|westen|sektorengrenze|akten|unterlagen|beweise|kopie|margarete)\b|\büber die (grenze|sektorengrenze)\b|\b(bei|zu) (helene|vera|roth)\b[\s\S]{0,30}(untertauch|verstecken|unterbring|bleib|begleit)/i;
-        // Reihenfolge: erst ruhige/ermittelnde Kategorien (DEFENSIV/ERKUNDEN/BEOBACHTEN), dann erst OFFENSIV.
         const _ruhigeOpt = [].concat(byCat.DEFENSIV || [], byCat.ERKUNDEN || [], byCat.BEOBACHTEN || []);
         const _offensivOpt = [].concat(byCat.OFFENSIV || []);
         const _findSich = (arr) => arr.filter(o => { const t = (o && o.text) ? o.text.toLowerCase() : ''; return t && _sichRePrio.test(t); });
-        let _pick = _findSich(_ruhigeOpt)[0] || _findSich(_offensivOpt)[0];
+        _pick = _findSich(_ruhigeOpt)[0] || _findSich(_offensivOpt)[0];
         if (_pick) {
-          console.log('[Bot v7.12.484] POLIT-SICHERUNG VORRANG (vor Romance/Schlaf/Flucht, ruhige Variante bevorzugt)');
-          if (typeof diag === 'function') diag('bot', 'Bot (natürlich) POLIT-SICHERUNG VORRANG: Basis steht, Sicherung fehlt - ruhige Sicherungsoption gewählt VOR Romance/Schlaf/Flucht.');
+          console.log('[Bot v7.12.484] POLIT-SICHERUNG VORRANG (Annäherung, ruhige Variante bevorzugt)');
+          if (typeof diag === 'function') diag('bot', 'Bot (natürlich) POLIT-SICHERUNG VORRANG: Basis steht, Sicherung fehlt - Annäherungs-Sicherungsoption gewählt VOR Romance/Schlaf/Flucht.');
           if (typeof botDecisionLog !== 'undefined') botDecisionLog.push('Bot POLIT-SICHERUNG VORRANG [vor Romance/Schlaf/Flucht]');
           return _pick;
         }
