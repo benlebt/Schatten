@@ -3017,7 +3017,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.487</div>
+    <div class="start-version">Schatten v7.12.488</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3238,7 +3238,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.487</span>
+    <span>Schatten v7.12.488</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6144,7 +6144,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.487';
+window.SCHATTEN_VERSION = 'v7.12.488';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -10990,6 +10990,56 @@ function politicalBeatsStatus() {
 // + EINE Sicherung (Akten ODER Margarete). im_anker bleibt BONUS, nicht Pflicht. Gibt {aktiv, erfuellt,
 // basisOk, sicherungOk, fehlend} zurueck. Greift nur bei Faellen mit politicalBeats (= Margarete).
 // Defensiv: bei Fehlern/keinem Beat-System -> erfuellt:true (nicht blockieren).
+// v7.12.488 (Lektorat v487 P1, Asynchronität behoben): EINE gemeinsame Vollzugs-Erkennung für Bot UND
+// Aktions-Pfad. Befund Run 1322: der Bot wählte "Fahr zum Revier und gib die Beweise bei Roth ab" /
+// "Lass Roth die Beweise übergeben" und loggte POLIT-SICHERUNG VOLLZUG - aber der Aktions-Pfad setzte
+// KEINEN Beat, weil seine Regex "abgeben"/"lassen...übergeben" nicht kannte. Zwei verschiedene Erkennungen
+// = Drift: der Bot wählt etwas, das der Beat-Pfad nicht anerkennt. Lösung: beide rufen DIESE Funktion auf.
+// Gibt zurück: { vollzug, intent, fokus } - vollzug=true bei abgeschlossener externer Sicherung,
+// intent=true bei eingeleiteter (Reise, "fahr zu... um zu übergeben"), fokus='akten'|'margarete'|'beweise'.
+function istSicherungsVollzug(text) {
+  const _x = (text || '').toLowerCase();
+  const _leer = { vollzug: false, intent: false, fokus: null };
+  if (!_x) return _leer;
+  // Ausschluss: Überlegung/Absicht/Frage. "warte" nur, wenn KEIN Aufnahme-Vollzug folgt.
+  if (/\b(überleg|ueberleg|ob (sie|er)|könnte|koennte|wo (sie|er) sich|nachdenk|frag .{0,20}ob|beobacht|sieh dich um|umschau)\b/.test(_x)) return _leer;
+  if (/\bwarte\b/.test(_x) && !/(aufnimmt|aufnehmen|aufgenommen|untertauch|unterbring|übernimmt|uebernimmt|entgegennimmt|nimmt .{0,15}(auf|entgegen))/.test(_x)) return _leer;
+  // Richtungs-Guard (ChatGPT): "dir/Karl die Akten geben/aushändigen" = Akten zu Karl = KEINE Sicherung,
+  // außer explizites externes Ziel folgt.
+  const _akteZuKarl = /\b(dir|karl|mauer|mir)\b[\s\S]{0,30}(geben|gibt|aushändig|aushaendig|übergeb|uebergeb|übergib|uebergib|überreich|ueberreich|händig|haendig)/.test(_x);
+  const _externesZiel = /\b(damit|um)\b[\s\S]{0,40}(untertauch|in sicherheit|über die (grenze|sektorengrenze)|ueber die (grenze|sektorengrenze)|in den westen|außer landes|ausser landes|raus|fliehen|sicher (ist|wird|sein))/.test(_x)
+    || /\b(rias|presse|westkontakt|korrespondent|veröffentlich|veroeffentlich|publik)\b/.test(_x);
+  if (_akteZuKarl && !_externesZiel) return _leer;
+
+  const _ziel = /(vera|lindqvist|rias|korrespondent|roth|helene|presse|westkontakt|sektorengrenze|schließfach|schliessfach|revier|keibelstr|polizei|kommissar)/;
+  // Sicherungs-Verben - inkl. abgeben/abliefern/übergeben-lassen (v488 ergänzt).
+  const _verb = /(übergib|uebergib|übergeb|uebergeb|gib|abgeb|abliefer|abgib|deponier|händig|haendig|versteck|schaff|begleit|unterbring|untertauch|schmuggel|sicher|rette|raushol|bring|aufnimmt|aufnehm|aufgenommen|lass .{0,25}(übergeb|uebergeb|übernehm|uebernehm|aufnehm|untertauch|entgegennehm))/;
+  const _objekt = /(akte|akten|unterlagen|beweise|kopie|dokument|mappe|frachtlist|margarete|stein)/;
+  const _implizit = /\b(über die (grenze|sektorengrenze)|in den westen|außer landes|ausser landes)\b/;
+
+  const _hatVerb = _verb.test(_x);
+  const _hatZiel = _ziel.test(_x);
+  const _hatObjekt = _objekt.test(_x);
+  const _hatImplizit = _implizit.test(_x);
+
+  // Reise/Einleitung: "fahr/steuere/richtung ... " OHNE eigentliches Vollzugs-Verb am Objekt -> Intent.
+  const _nurReise = /\b(fahr|fahre|steuere|mach dich auf|begib dich|unterwegs|richtung|auf dem weg|fahr los|setz dich ins auto)\b/.test(_x)
+    && !/(übergib|uebergib|übergeb|uebergeb|gib|abgeb|abgib|deponier|versteck|händig|haendig|nimmt|entgegen|lass .{0,15}(übergeb|uebergeb|aufnehm|übernehm))/.test(_x);
+
+  const _fokus = /(margarete|stein)/.test(_x) && !_objekt.test(_x.replace(/margarete|stein/g,'')) ? 'margarete'
+    : /(akte|akten|unterlagen|mappe|frachtlist)/.test(_x) ? 'akten'
+    : 'beweise';
+
+  // Echter Vollzug: (Objekt ODER Margarete) + Sicherungs-Verb + (Ziel ODER implizit), und KEINE reine Reise.
+  const _vollzug = !_nurReise && (_hatObjekt || /(margarete|stein)/.test(_x)) && _hatVerb && (_hatZiel || _hatImplizit);
+  // Intent: Reise zu einem Schutzziel mit Sicherungs-Absicht.
+  const _intent = _nurReise && (_hatObjekt || /(margarete|stein)/.test(_x)) && _hatZiel;
+
+  if (_vollzug) return { vollzug: true, intent: false, fokus: _fokus };
+  if (_intent) return { vollzug: false, intent: true, fokus: _fokus };
+  return _leer;
+}
+
 function politicalBeatsGateErfuellt(opts) {
   try {
     if (!caseSetup || !Array.isArray(caseSetup.politicalBeats) || !caseSetup.politicalBeats.length) {
@@ -29307,13 +29357,12 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             // Reihenfolge. Schutz davor, dass bloße Namensnennung ("frag Helene") zählt: das Verb muss ein
             // echtes Sicherungs-/Schutz-Verb sein, nicht "fragen/reden/treffen".
             const _aL = _aktion.toLowerCase();
-            const _hatZiel = /\b(vera|lindqvist|rias|korrespondent|helene|roth|presse|westkontakt|über die (grenze|sektorengrenze)|ueber die (grenze|sektorengrenze)|in den westen|sektorengrenze|schließfach|schliessfach)\b/.test(_aL);
-            const _hatSicherVerb = /(sicher|versteck|übergeb|uebergeb|übergib|uebergib|deponier|rette|untertauch|unterbring|schmuggel|in sicherheit (bring|schaff)|raushol|aus (der stadt|friedrichshain|dem haus)|außer landes|ausser landes)\w*/.test(_aL);
-            const _hatObjekt = /\b(akte|akten|unterlagen|beweise|kopie|dokument|mappe|margarete|stein|sie)\b/.test(_aL);
-            // Reihenfolge-unabhängig: Objekt + Sicherungs-Verb + (Ziel ODER Grenz-/Untertauch-Verb das selbst schon Sicherung impliziert).
-            const _implizitSicher = /\b(untertauch|über die (grenze|sektorengrenze)|ueber die (grenze|sektorengrenze)|in den westen|außer landes|ausser landes)\w*/.test(_aL);
-            const _robustSicherung = _hatObjekt && _hatSicherVerb && (_hatZiel || _implizitSicher);
-            if (_sicherungsAktionRe.test(_aktion) || _sicherungsAktionRe2.test(_aktion) || _robustSicherung) {
+            // v7.12.488 (Lektorat v487 P1): EINE gemeinsame Erkennung (istSicherungsVollzug) - identisch
+            // mit der, die der Bot zur Optionswahl nutzt. Behebt die Asynchronität: was der Bot als Vollzug
+            // wählt ("gib die Beweise bei Roth ab", "lass Roth die Beweise übergeben"), setzt jetzt
+            // garantiert auch den Beat. Reise/Einleitung -> pendingSecurityIntent; Vollzug -> Beat sofort.
+            const _sv = (function(){ try { return istSicherungsVollzug(_aktion); } catch(e){ return {vollzug:false,intent:false,fokus:null}; } })();
+            if (_sv.vollzug || _sv.intent) {
               const _setBeat = (id, label) => {
                 if (caseProgress.politicalBeatsHit.indexOf(id) === -1
                     && caseSetup.politicalBeats.some(b => b && b.id === id)) {
@@ -29322,25 +29371,15 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
                   console.log('[Schatten] Polit-Beat aus Aktion:', id);
                 }
               };
-              // v7.12.485 (zweistufige Sicherung, ChatGPT-Verfeinerung): Eine REISE/EINLEITUNG ("fahr zu
-              // Vera, um die Akten zu übergeben", "mach dich auf zu Helene") ist noch nicht der Vollzug -
-              // sie setzt pendingSecurityIntent. Erst eine VOLLZUGS-Aktion ("übergib/gib/deponier/
-              // versteck/lass untertauchen", "X nimmt entgegen") schließt ab. Eine eindeutige Vollzugs-
-              // Aktion feuert sofort. So zählt "fahr Richtung Vera" nicht schon als erledigte Sicherung.
-              const _nurReise = /\b(fahr|fahre|steuere|mach dich auf|begib dich|unterwegs|richtung|auf dem weg|fahr los|setz dich ins auto)\b/.test(_aL)
-                && !/\b(übergeb|uebergeb|übergib|uebergib|gib|deponier|versteck|nimmt|entgegen|händig|haendig|lass .{0,15}untertauch|setz .{0,15}ab|bring .{0,25}(zu|bei|an|in sicherheit|über die grenze)|ist (jetzt )?(sicher|untergetaucht|bei))\b/.test(_aL);
-              const _aktenFokus = _aktenFokusRe.test(_aktion);
-              const _margFokus = _margFokusRe.test(_aktion);
-              const _zielId = _aktenFokus ? 'akten_gesichert' : 'margarete_gesichert';
-              if (_nurReise) {
-                // Einleitung: Intent merken, noch KEIN Beat. Vollzug muss folgen.
+              const _zielId = (_sv.fokus === 'akten') ? 'akten_gesichert' : 'margarete_gesichert';
+              if (_sv.intent && !_sv.vollzug) {
+                // Einleitung/Reise: Intent merken, noch KEIN Beat. Vollzug muss folgen (Aktion od. Prosa-Bestätigung).
                 caseProgress.pendingSecurityIntent = _zielId;
                 if (typeof diag === 'function') diag('progress', 'SICHERUNGS-INTENT gemerkt (' + _zielId + '): Reise/Einleitung erkannt, aber noch kein Vollzug - Beat feuert erst bei Übergabe/Verstecken/Ankunft. "' + _aktion.slice(0,45).replace(/\s+/g,' ') + '..."');
               } else {
-                // Vollzug: Beat sofort setzen (+ ggf. offenen Intent auflösen).
-                if (_aktenFokus) _setBeat('akten_gesichert', 'Akten physisch gesichert');
-                if (_margFokus) _setBeat('margarete_gesichert', 'Margarete/Beweise in Sicherheit');
-                if (!_aktenFokus && !_margFokus) _setBeat('margarete_gesichert', 'Beweise an West-/Presse-Kontakt übergeben');
+                // Vollzug: Beat sofort setzen. Fokus akten -> akten_gesichert; margarete/beweise -> margarete_gesichert.
+                if (_sv.fokus === 'akten') _setBeat('akten_gesichert', 'Akten physisch gesichert');
+                else _setBeat('margarete_gesichert', 'Margarete/Beweise in Sicherheit');
                 if (caseProgress.pendingSecurityIntent) caseProgress.pendingSecurityIntent = null;
               }
             }
@@ -34187,17 +34226,10 @@ function botChooseByStrategy(options) {
         // Daher: eine VOLLZUGS-Option (echte abgeschlossene Handlung) schlägt die Kategorie - eine
         // offensive echte Übergabe ist besser als ruhiges Kreisen. _vollzugRe verlangt ein Handlungs-Verb
         // MIT Ziel/Objekt und schließt Überlegungs-/Absichtsfloskeln aus.
+        // v7.12.488: nutzt jetzt die GEMEINSAME Funktion istSicherungsVollzug (gleiche Erkennung wie der
+        // Aktions-Pfad, der den Beat setzt) - so kann der Bot nichts mehr wählen, was der Beat-Pfad ablehnt.
         const _istVollzug = (t) => {
-          const _x = (t || '').toLowerCase();
-          if (!_x) return false;
-          // Ausschluss: Überlegung/Absicht/Frage ("überleg wo", "ob sie", "könnte", "frag ob", "wo sie sich verstecken")
-          if (/\b(überleg|ueberleg|ob (sie|er)|könnte|koennte|wo (sie|er) sich|nachdenk|frag .{0,20}ob|warte|beobacht|sieh dich um|umschau)\b/.test(_x)) return false;
-          // Vollzug: echtes Übergabe-/Unterbring-/Schmuggel-Verb + Schutzziel ODER implizit (Grenze/untertauchen)
-          const _verbZiel = /(übergib|uebergib|übergeb|uebergeb|gib|deponier|händig|haendig|dräng .{0,25}(übergeb|uebergeb|übergib|uebergib|herauszugeb)|versteck|bring|schaff|begleit|unterbring)\w*[\s\S]{0,40}(vera|lindqvist|rias|korrespondent|roth|helene|presse|westkontakt|über die (grenze|sektorengrenze)|sektorengrenze|schließfach|schliessfach)/.test(_x)
-            || /(vera|lindqvist|rias|roth|helene|presse)[\s\S]{0,40}(übergib|uebergib|übergeb|uebergeb|gib|deponier|nimmt .{0,15}entgegen|händig|haendig|untertauch|aufnehmen|unterbring)\w*/.test(_x)
-            || /\b(über die (grenze|sektorengrenze)|in den westen)\b/.test(_x)
-            || /(margarete|stein|sie)[\s\S]{0,30}(bei|zu) (helene|vera|roth)[\s\S]{0,25}(untertauch|unterbring|versteck|bleib|lass)/.test(_x);
-          return _verbZiel;
+          try { return istSicherungsVollzug(t).vollzug; } catch (e) { return false; }
         };
         const _alleOpt = [].concat(byCat.DEFENSIV || [], byCat.ERKUNDEN || [], byCat.BEOBACHTEN || [], byCat.OFFENSIV || []);
         // 1. PRIORITÄT: echter Vollzug, egal welche Kategorie (offensive Übergabe schlägt ruhiges Kreisen).
