@@ -3017,7 +3017,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.481</div>
+    <div class="start-version">Schatten v7.12.482</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3238,7 +3238,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.481</span>
+    <span>Schatten v7.12.482</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6144,7 +6144,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.481';
+window.SCHATTEN_VERSION = 'v7.12.482';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -10938,6 +10938,27 @@ function updatePoliticalBeats(text) {
       if (!beat || !beat.id || !beat.keywords) continue;
       if (caseProgress.politicalBeatsHit.indexOf(beat.id) !== -1) continue;
       if (beat.keywords.test(text)) {
+        // v7.12.482 (Lektorat v481 P1): Sicherungs-Beats (akten_gesichert/margarete_gesichert) dürfen
+        // NICHT auf eine bloße ABSICHT/ZUKUNFT oder auf Verwahrung in KARLS EIGENEM Besitz feuern.
+        // Befund Margarete 0719 (7 Sz): "Die Aktenmappe liegt sicher in der Schublade deiner Underwood"
+        // + "Du musst Margarete in Sicherheit bringen" (Zukunft!) in einer AUFWACH-Szene -> Beat feuerte,
+        // Fall löste in 6 Zügen. Echte Sicherung = abgeschlossene EXTERNE Handlung, nicht "muss noch" und
+        // nicht "liegt in Karls Schublade/Büro/Handschuhfach". Auch Schlaf darf keine Sicherung erzeugen.
+        if (beat.id === 'akten_gesichert' || beat.id === 'margarete_gesichert') {
+          const _t = text.toLowerCase();
+          // (a) Zukunft/Absicht: "musst/sollst/willst ... (in sicherheit) bringen/schaffen/warnen", "muss noch", "bevor ... stürmt/holt"
+          const _absicht = /\b(musst|sollst|willst|muss noch|sollte|sollten|wäre|waere|plan|vorhaben|bevor)\b[\s\S]{0,60}\b(in sicherheit|sicher|untertauch|versteck|warn|raus|bring|schaff|fliehen|fliucht)/.test(_t)
+            || /\b(margarete|stein|sie)\b[\s\S]{0,30}\b(in sicherheit bringen|untertauchen lassen|warnen|holen|raushol)/.test(_t);
+          // (b) Eigenbesitz Karls: Akten/Mappe "in der schublade/im büro/im handschuhfach/in der aktentasche/bei dir/unter dem kopfkissen/in der underwood"
+          const _eigenbesitz = /\b(schublade|büro|buero|handschuhfach|aktentasche|innentasche|underwood|kopfkissen|bei dir|bei karl|im wagen|im auto|auf dem (beifahrersitz|schreibtisch|tisch))\b/.test(_t);
+          // (c) Schlaf-/Aufwach-Szene: Sicherung darf nicht aus Erholung entstehen
+          const _schlaf = /\b(du hast die nacht|verbracht|weckt dich|wachst (du )?auf|aufgewacht|nach dem schlaf|am (nächsten|naechsten) morgen|feierabend|die underwood bleibt heute kalt)\b/.test(_t);
+          if (_absicht || _eigenbesitz || _schlaf) {
+            const _grund = _absicht ? 'Absicht/Zukunft (noch nicht geschehen)' : _eigenbesitz ? 'in Karls eigenem Besitz (nicht extern gesichert)' : 'Schlaf-/Aufwach-Szene';
+            if (typeof diag === 'function') diag('progress', 'SICHERUNGS-BEAT ' + beat.id + ' UNTERDRÜCKT: ' + _grund + ' - keine abgeschlossene externe Sicherung.');
+            continue;
+          }
+        }
         caseProgress.politicalBeatsHit.push(beat.id);
         if (typeof diag === 'function') diag('progress', '✦ POLIT-BEAT erkannt (beobachtend): ' + (beat.label || beat.id) + ' (' + caseProgress.politicalBeatsHit.length + '/' + caseSetup.politicalBeats.length + ')');
         console.log('[Schatten] Polit-Beat erkannt (beobachtend):', beat.id, '-', beat.label);
