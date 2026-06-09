@@ -3042,7 +3042,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.535</div>
+    <div class="start-version">Schatten v7.12.536</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3264,7 +3264,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.535</span>
+    <span>Schatten v7.12.536</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6467,7 +6467,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.535';
+window.SCHATTEN_VERSION = 'v7.12.536';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -17992,7 +17992,14 @@ function renderOptions(scene) {
   // v7.12.526 (Benjamin): SPANNUNGS-SPERRE. Bei echter Action (Sp>=4) kein Reisen - mitten im Schusswechsel
   // steigt man nicht in den Opel. Dann gibt es nur den Flucht-Button (raus aus der Szene). Erst wenn die Lage
   // wieder ruhiger ist (Sp<=3), ist Reisen möglich. (Heilen/Schlafen sind strenger bei Sp<=2; Reisen großzügiger.)
-  if (typeof engineCurrentLocation !== 'undefined' && engineCurrentLocation && !karlInStasiCustody && currentSpannung <= 3) {
+  // v7.12.536 (Benjamin, Run-Befund: Reise-Button fehlte in Szene 1): Die Sperre war zu grob - der dramatische
+  // Fallstart (Margarete: Sp4-Anruf) ist KEIN Schusswechsel, sondern Dringlichkeit, bei der Losfahren genau die
+  // natürliche Reaktion ist. Sperre jetzt NUR bei ECHTER Action: Sp>=4 UND nicht Szene 1 UND es lief schon eine
+  // Konfrontation (actionStreak>=1). So bleibt der Auftakt + jede ruhige Lage frei, nur die laufende Action sperrt.
+  const _sc = (typeof sceneCounter === 'number') ? sceneCounter : 0;
+  const _aStreak = (typeof actionStreak === 'number') ? actionStreak : 0;
+  const _reiseGesperrt = (currentSpannung >= 4) && (_sc >= 1) && (_aStreak >= 1);
+  if (typeof engineCurrentLocation !== 'undefined' && engineCurrentLocation && !karlInStasiCustody && !_reiseGesperrt) {
     const reiseBtn = document.createElement('button');
     reiseBtn.className = 'option-btn option-btn-system option-btn-reise';
     reiseBtn.dataset.kategorie = 'REISE';
