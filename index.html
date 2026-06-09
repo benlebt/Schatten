@@ -3042,7 +3042,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.560</div>
+    <div class="start-version">Schatten v7.12.562</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3264,7 +3264,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.560</span>
+    <span>Schatten v7.12.562</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6360,13 +6360,16 @@ function getNpcsAtCurrentLocation() {
   if (!engineCurrentLocation) return [];
   const locs = getCaseLocations();
   const loc = locs.find(l => normForMatch(l.name) === normForMatch(engineCurrentLocation.name));
-  if (!loc) return [];
+  // v7.12.562 (Benjamin-Befund Run 2259): KEIN early-return mehr bei !loc. Nach einer Flucht ist der Engine-Ort
+  // oft ein KI-Fluchtort ("Opel Olympia", "Schaeferstrasse"), der nicht in den definierten Locations steht. Das
+  // alte "if (!loc) return []" brach dann sofort ab -> die Party wurde nie angezeigt (Befund: nach Flucht keine
+  // ♦-Mitglieder mehr im Opel). Jetzt läuft die Funktion weiter; loc.npcs nur wenn loc existiert.
   const tzIdx = (typeof gameTimeIdx === 'number') ? gameTimeIdx : 5;
   const tzName = normForMatch((typeof TIMES_OF_DAY !== 'undefined' && TIMES_OF_DAY[tzIdx]) || 'nacht');
   const out = [];
   const seen = {};
-  // Feste/garantierte NPCs (immer/zeit)
-  if (Array.isArray(loc.npcs)) {
+  // Feste/garantierte NPCs (immer/zeit) - nur wenn der Ort definiert ist.
+  if (loc && Array.isArray(loc.npcs)) {
     for (const entry of loc.npcs) {
       if (!entry || !entry.id) continue;
       let daZeit = true;
@@ -6517,7 +6520,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.560';
+window.SCHATTEN_VERSION = 'v7.12.562';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -22788,19 +22791,38 @@ VERBOTEN: Karl wacht woanders auf ohne Erklaerung. Wenn du Pfad B waehlst, MUSST
       const _reiseRe = /\b(fahr|fahre|renn|renne|lauf|laufe|stuerm|stürm|stuerme|stürme|begib dich|mach dich auf|steig in (?:den|dein)|setz dich in (?:den|dein))\b[^.!?]*\b(zum|zur|nach|richtung|in die|in den|ins)\s+([^.,;!?]{3,})/i;
       // lokale Ziele, die KEINE Reise sind (Mobiliar/Raumteile/Personen am Ort)
       const _lokalRe = /\b(zur tuer|zur tür|zum fenster|zum schreibtisch|zum schrank|zur wand|zum telefon|zum aktenschrank|zur treppe|ins nebenzimmer|zum tisch|zur theke|zum tresen|zur kommode|ans fenster|an die tuer|an die tür|zu (?:ihm|ihr|ihnen|der frau|dem mann))\b/i;
-      const _ortsinterneErsatz = {
-        OFFENSIV: 'Geh hart auf die Sache zu - greif hier und jetzt durch, statt erst loszufahren.',
-        DEFENSIV: 'Bleib ruhig, sichere die Lage und überleg den nächsten Schritt in Ruhe.',
-        ERKUNDEN: 'Durchsuch den Raum gründlich nach einem brauchbaren Hinweis.',
-        BEOBACHTEN: 'Halt dich zurück und beobachte, was als Nächstes passiert.',
+      // v7.12.561 (Benjamin-Befund + ChatGPT P1.3): Ersatztext für abgefangene Reise-Optionen war ein einziger
+      // abstrakter Satz ("Geh hart auf die Sache zu, statt erst loszufahren") - wirkte weird (verriet die
+      // abgefangene Reise) und tauchte zu oft auf, während B/C/D szenenbasiert waren. Jetzt: ORTSBEZOGEN wo der
+      // Orttyp erkennbar ist, sonst bessere generische Varianten (mehrere, neutral, kein "statt loszufahren").
+      const _ortNorm = normForMatch(engineCurrentLocation.name || '');
+      // Ortsbezogene Ersatztexte je Orttyp (Schlüsselwort im Ortsnamen). Pro Kategorie ein passender lokaler Zug.
+      const _ortsTexte = [
+        { re: /buero|büro|kanzlei/, t: { OFFENSIV: 'Knöpf dir die Person hier im Büro vor und lass nicht locker.', DEFENSIV: 'Verriegle die Tür und sichere die Akten im Schrank.', ERKUNDEN: 'Geh den Schreibtisch und die Aktenstapel noch einmal gründlich durch.', BEOBACHTEN: 'Lösch das Licht und beobachte die Straße vom Fenster aus.' } },
+        { re: /praxis|charite|charité|apotheke/, t: { OFFENSIV: 'Dräng dein Gegenüber hier zu einer klaren Antwort, ohne lange zu fackeln.', DEFENSIV: 'Lass dich versorgen und sammle dich für den nächsten Schritt.', ERKUNDEN: 'Sieh dich zwischen Instrumenten und Karteikästen nach einem Hinweis um.', BEOBACHTEN: 'Halt dich im Hintergrund und beobachte, wer hier ein und aus geht.' } },
+        { re: /stellwerk|reichsbahn|bahnhof|gleis/, t: { OFFENSIV: 'Stell den Mann hier zwischen den Waggons und press die Wahrheit aus ihm heraus.', DEFENSIV: 'Zieh dich in den Schatten der Güterwagen zurück und sichere die Lage.', ERKUNDEN: 'Durchsuch die Frachtpapiere und Dienstpläne hier nach einem konkreten Namen.', BEOBACHTEN: 'Bleib zwischen den Waggons und beobachte, was auf den Gleisen vorgeht.' } },
+        { re: /imbiss|kneipe|bar|lokal/, t: { OFFENSIV: 'Pack den Kerl hier am Tresen und mach ihm klar, dass du Antworten willst.', DEFENSIV: 'Setz dich in eine ruhige Ecke und überleg den nächsten Zug.', ERKUNDEN: 'Horch dich hier um und frag den Wirt nach dem, was du brauchst.', BEOBACHTEN: 'Bleib am Tresen sitzen und behalte den Raum im Auge.' } },
+        { re: /wohnung|zimmer|keller/, t: { OFFENSIV: 'Stell die Person hier in der Wohnung zur Rede, sofort.', DEFENSIV: 'Sichere Tür und Fenster und bring euch hier erstmal in Sicherheit.', ERKUNDEN: 'Durchsuch die Wohnung gründlich nach einem Hinweis.', BEOBACHTEN: 'Bleib am Fenster und beobachte, ob jemand das Haus im Blick hat.' } },
+      ];
+      let _ortTreffer = null;
+      for (const o of _ortsTexte) { if (o.re.test(_ortNorm)) { _ortTreffer = o.t; break; } }
+      // Generische Varianten (mehrere pro Kategorie, neutral - kein Reise-Verräter). Zufällig gewählt für Abwechslung.
+      const _generisch = {
+        OFFENSIV: ['Geh die Sache hier direkt und hart an.', 'Setz die Person vor dir unter Druck, hier und jetzt.', 'Mach kurzen Prozess und greif direkt durch.'],
+        DEFENSIV: ['Bleib ruhig, sichere die Lage und überleg den nächsten Schritt.', 'Halt die Stellung und warte den richtigen Moment ab.', 'Deck dich und behalte die Kontrolle über die Lage.'],
+        ERKUNDEN: ['Durchsuch die Umgebung gründlich nach einem brauchbaren Hinweis.', 'Sieh dich hier genau um, irgendwas führt weiter.', 'Geh dem nach, was hier vor dir liegt.'],
+        BEOBACHTEN: ['Halt dich zurück und beobachte, was als Nächstes passiert.', 'Bleib unauffällig und sieh genau hin.', 'Warte ab und lies die Lage, bevor du handelst.'],
       };
+      const _pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
       parsed.optionen.forEach((opt, i) => {
         if (!opt || !opt.text) return;
         const t = opt.text;
         if (_reiseRe.test(t) && !_lokalRe.test(t)) {
           const _kat = (opt.kategorie || opt._kategorie || ['OFFENSIV','DEFENSIV','ERKUNDEN','BEOBACHTEN'][i] || 'ERKUNDEN').toUpperCase();
-          const _neu = _ortsinterneErsatz[_kat] || _ortsinterneErsatz.ERKUNDEN;
-          if (typeof diag === 'function') diag('drift', 'REISE-OPTION ABGEFANGEN (Opt ' + (opt.id||i) + ', Kat ' + _kat + '): "' + t.slice(0,60) + '..." -> ortsintern ersetzt (Reise nur per Reisen-Button)');
+          let _neu;
+          if (_ortTreffer && _ortTreffer[_kat]) _neu = _ortTreffer[_kat];
+          else _neu = _pick(_generisch[_kat] || _generisch.ERKUNDEN);
+          if (typeof diag === 'function') diag('drift', 'REISE-OPTION ABGEFANGEN (Opt ' + (opt.id||i) + ', Kat ' + _kat + (_ortTreffer ? ', ortsbezogen' : ', generisch') + '): "' + t.slice(0,60) + '..." -> ersetzt (Reise nur per Reisen-Button)');
           opt.text = _neu;
         }
       });
@@ -28765,13 +28787,18 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof stasiCooldownCounter !== 'undefined') stasiCooldownCounter = 0;
         if (caseProgress && typeof caseProgress.stasiPflichtSeitScene === 'number') caseProgress.stasiPflichtSeitScene = 0;
         if (caseProgress && caseProgress.forceCustodyNextScene) caseProgress.forceCustodyNextScene = false;
-        // v7.12.512 (Run 1314, Flucht-Spannung blieb hoch trotz v511-Prompt): HARTER Riegel. Der Prompt-Hinweis
-        // allein reichte nicht (KI-Action-Woerter + actionStreak zogen die Spannung sofort wieder auf 4-5). Setze
-        // ein Flag, das die NAECHSTE Szene als Post-Flucht markiert -> dort wird die Spannung hart auf <=2 gekappt
-        // (NACH allen Anheb-Mechaniken). So bedeutet "Flucht" mechanisch wirklich "raus aus der heissen Lage".
+        if (typeof diag === 'function') diag('state', 'FLUCHT: Stasi-Tension ' + _stBefore + ' -> ' + stasiTension + ' (Fahndungslevel gesenkt)');
+      }
+      // v7.12.562 (Benjamin-Befund Run 2259, KRITISCH): POST-FLUCHT-CAP + Reise-Frei-Fenster hingen IM
+      // stasiTension>0-Block - bei normaler Verfolgung (keine aktive Stasi-Fahndung, stasiTension=0) wurde der Cap
+      // also NIE gesetzt. Folge: 6x geflohen, Spannung blieb hoch -> kein Unterwegs-Heal (braucht Sp<=2) ->
+      // Party-Verlust-Gefühl. Cap + Fenster greifen jetzt bei JEDER Flucht (fluchtStasiAbschuetteln), unabhängig
+      // von der Stasi-Tension. v7.12.512: HARTER Riegel - die nächste Szene wird auf Sp<=2 gekappt (Prompt allein
+      // reichte nie, KI-Action-Wörter zogen die Spannung sofort wieder hoch).
+      if (categoryMechanicsResult.fluchtStasiAbschuetteln) {
         _postFluchtSpannungsCap = 2;
         _postFluchtReiseFrei = _POST_FLUCHT_REISE_FENSTER; // v7.12.554: Reise mehrere Szenen lang frei nach Flucht
-        if (typeof diag === 'function') diag('state', 'FLUCHT: Stasi-Tension ' + _stBefore + ' -> ' + stasiTension + ' (Fahndungslevel gesenkt) + Post-Flucht-Spannungs-Cap=2 fuer naechste Szene gesetzt + Reise-Frei-Fenster=' + _POST_FLUCHT_REISE_FENSTER + ' Szenen');
+        if (typeof diag === 'function') diag('state', 'POST-FLUCHT-CAP=2 gesetzt + Reise-Frei-Fenster=' + _POST_FLUCHT_REISE_FENSTER + ' Szenen (gilt für JEDE Flucht, v562)');
       }
       // v7.11.2: timeAdvanceBonus anwenden. War vorher in applyCategoryMechanics
       // gesetzt aber nirgends benutzt - dadurch lief Tageszeit nur ueber die
