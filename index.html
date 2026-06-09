@@ -3042,7 +3042,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.521</div>
+    <div class="start-version">Schatten v7.12.522</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3264,7 +3264,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.521</span>
+    <span>Schatten v7.12.522</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4087,8 +4087,9 @@ sich auf die Logik verlassen kann. Jede Option soll exemplarisch für ihre Rolle
 - Option B = VORSICHTIG/DIPLOMATISCH: ruhig, abwägend, vertrauensbildend.
   Beispiele: "Frag freundlich nach ihrem Mann." / "Biete ihm eine Zigarette und hör zu." / "Geh leise zur Tür und lausche." / "Sag, du verstehst seine Sorgen." / "Schweig und beobachte ihre Reaktion."
 
-- Option C = ERKUNDEND/AKTIV-NEUTRAL: einen neuen Hinweis verfolgen, einen anderen Ort/Person ansteuern, etwas Neues prüfen.
-  Beispiele: "Geh zum Schreibtisch und durchsuch die Schubladen." / "Verlass die Villa und fahr zur Klosterstraße." / "Frag den Nachbarn ob er etwas gehört hat." / "Geh zum Fenster und schau auf den Hof." / "Untersuch das Foto unter dem Licht."
+- Option C = ERKUNDEND/AKTIV-NEUTRAL: einen neuen Hinweis am AKTUELLEN Ort verfolgen, etwas Neues prüfen, eine anwesende Person ansprechen.
+  Beispiele: "Geh zum Schreibtisch und durchsuch die Schubladen." / "Frag den Nachbarn ob er etwas gehört hat." / "Geh zum Fenster und schau auf den Hof." / "Untersuch das Foto unter dem Licht."
+  WICHTIG (v7.12.522): Option C ist KEINE Reise an einen anderen Ort ("fahr zu X", "verlass das Haus und geh zu Y"). Ortswechsel macht der Spieler ausschliesslich ueber den separaten REISEN-Button - biete KEINE "fahr zu"/"geh zu einem anderen Ort"-Optionen in A/B/C/D an. Alle vier Optionen spielen am AKTUELLEN, vom System vorgegebenen Ort.
 
 - Option D = ABWARTEND/ZURÜCKHALTEND/UNAUFFÄLLIG: sich raushalten, beobachten, weggehen, Zeit gewinnen, kein Risiko eingehen.
   Beispiele: "Steck die Walther weg und geh." / "Sag nichts und warte ab." / "Bedank dich und geh ohne weitere Fragen." / "Lass ihn schwitzen und schweige." / "Geh nach Hause und denk drüber nach."
@@ -6298,7 +6299,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.521';
+window.SCHATTEN_VERSION = 'v7.12.522';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -21292,7 +21293,11 @@ VERBOTEN: Karl wacht woanders auf ohne Erklaerung. Wenn du Pfad B waehlst, MUSST
     // klebte. Befund: "Szene 1 Buero -> Option 'Fahr zur HO-Verwaltung' -> KI bleibt im
     // Buero" wurde verpasst, weil scenesAtSameLocation erst 1 war. Reisegehorsam darf nicht
     // von vorheriger Stagnation abhaengen. (Die Stagnationslogik unten greift zusaetzlich.)
-    const _wechselIgnoriert = _spielerWollteReise;
+    // v7.12.522: Wenn die ENGINE den Ort besitzt (Reisen-Button), darf die KI NICHT mehr per Prosa bewegt
+    // werden - dieser alte Push (KI zum Zielort zwingen) ist dann kontraproduktiv (er bewegt Karl an engine
+    // CurrentLocation vorbei). Nur noch Fallback ohne Engine-Ort (alter Spielstand).
+    const _engineBesitztOrt = (typeof engineCurrentLocation !== 'undefined' && engineCurrentLocation && engineCurrentLocation.name);
+    const _wechselIgnoriert = _spielerWollteReise && !_engineBesitztOrt;
     if (_wechselIgnoriert) {
       const _zielText = _spielerReiseZiel
         ? `nach "${_spielerReiseZiel}"`
@@ -21307,7 +21312,10 @@ VERBOTEN: Karl wacht woanders auf ohne Erklaerung. Wenn du Pfad B waehlst, MUSST
     // (kein neues Indiz seit 4 Sz = unproduktives Festkleben). So greift die
     // intelligente clue-Kopplung frueh, aber produktives Verweilen wird nicht
     // brutal abgewuergt. Der eigentliche Fehler war, die stumpfe Schwelle zu senken.
-    const _pflichtSchwelle = (scenesAtSameLocation >= 8) || (scenesAtSameLocation >= 6 && _stagniert);
+    // v7.12.522: Mit Engine-Ort (Reisen-Button) gibt es KEINEN Stagnations-Ortszwang mehr - der Spieler
+    // entscheidet selbst, wann er reist. Die ganze Pflichtwechsel-Mechanik nur noch als Fallback ohne Engine-Ort.
+    const _engineBesitztOrt2 = (typeof engineCurrentLocation !== 'undefined' && engineCurrentLocation && engineCurrentLocation.name);
+    const _pflichtSchwelle = !_engineBesitztOrt2 && ((scenesAtSameLocation >= 8) || (scenesAtSameLocation >= 6 && _stagniert));
     // v7.12.272 (Lektorat v271: "produktive Ortsblöcke werden zu aggressiv als Stagnation
     // behandelt", Marquardts Praxis): Ein Ort, an dem GERADE ein Indiz gefunden wurde, ist
     // produktiv - kein Hard-Force-Rauszwingen. Nur ganz frisch (Indiz in der letzten Szene),
@@ -21466,7 +21474,8 @@ VERBOTEN: Karl wacht woanders auf ohne Erklaerung. Wenn du Pfad B waehlst, MUSST
     // in Folge (18 Szenen in PRAXIS Schäferstraße). Mistral nimmt die Soft-Pushes
     // nicht ernst. Jetzt: die naechste Szene MUSS an einem komplett neuen Ort
     // spielen, kein Verhandlungsspielraum.
-    if (pendingForcedLocationChange) {
+    // v7.12.522: Nur noch ohne Engine-Ort (mit Engine-Ort bestimmt die Engine den Ort, nicht dieser Zwang).
+    if (pendingForcedLocationChange && !(typeof engineCurrentLocation !== 'undefined' && engineCurrentLocation && engineCurrentLocation.name)) {
       const pl = pendingForcedLocationChange;
       timeContext += `\n\n============================================================\nHARD-FORCE ORTSWECHSEL (KRITISCH, NICHT VERHANDELBAR)\n============================================================\n\nKarl ist seit ${pl.stuckScenes} Szenen am selben Ort und du hast ${pl.ignoredCount} Pflichtwechsel-Toasts hintereinander ignoriert. JETZT muss der Ort wechseln, kompromisslos.\n\nDie naechste Szene MUSS:\n- ortHaupt = ein KOMPLETT anderer Ort (nicht eine Sub-Variation wie "Vor dem Eingang" / "Im Hinterhof" / "Auf der Treppe" - das zaehlt nicht als Wechsel)\n- Eine konkrete Bewegung von Karl dahin: er geht/faehrt/laeuft, oder kommt schon irgendwo neu an\n- Der Wechsel passiert IMMER zu Beginn der Szene, nicht erst am Ende\n\nKonkrete Optionen fuer den neuen Ort (waehle einen relevanten):\n- Karls Buero am Hackeschen Markt\n- Polizeirevier Hackescher Markt (Roth)\n- Imbiss bei Trude\n- Praxis Doc Wagner\n- Eine Klienten-Wohnung\n- Eine relevante Location aus dem Setup (Werft, HO-Verwaltung, etc.)\n- Tante Elsas Pension\n- Goldener Anker / Schwarzer Kater (Kneipen)\n\nKEINE Sub-Variationen des aktuellen Ortes (kein "auf dem Gang vor X", kein "im Hinterhof von X"). Es muss eine andere Strasse, ein anderer Stadtteil, ein ganz anderes Gebaeude sein.\n\nNICHT die naechste Spieler-Option auswerten als waere die Bewegung schon passiert - die Szene zeigt aktiv die Bewegung oder das Ankommen.`;
       if (typeof diag === 'function') {
