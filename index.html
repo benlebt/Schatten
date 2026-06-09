@@ -3042,7 +3042,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.534</div>
+    <div class="start-version">Schatten v7.12.535</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3264,7 +3264,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.534</span>
+    <span>Schatten v7.12.535</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6467,7 +6467,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.534';
+window.SCHATTEN_VERSION = 'v7.12.535';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -16972,6 +16972,12 @@ function oeffneReiseMenue() {
   const aktuellNorm = engineCurrentLocation ? normForMatch(engineCurrentLocation.name) : '';
   // Nur freigeschaltete, reisbare Orte; aktueller Ort wird markiert (nicht klickbar).
   const ziele = locs.filter(l => istReisbarerOrt(l) && unlockedLocations.includes(normForMatch(l.name)));
+  // v7.12.535 (Diagnose): welche Orte standen beim Öffnen zur Auswahl? (Symbol-Markierung für Heil/Polizei)
+  if (typeof diag === 'function') {
+    diag('detect', 'REISE-MENÜ geöffnet (' + ziele.length + ' Ziele): ' + ziele.map(l => l.name
+      + (normForMatch(l.name) === aktuellNorm ? '[hier]' : '')
+      + (l.heilort ? '[✚]' : '') + (l.polizeiort ? '[★]' : '')).join(', '));
+  }
   const overlay = document.createElement('div');
   overlay.id = 'reise-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;z-index:9000;background:rgba(10,8,6,0.82);display:flex;align-items:center;justify-content:center;padding:18px;';
@@ -17111,6 +17117,10 @@ function oeffneNpcMenue(npc) {
     keys = ['befragen','beobachten'];
   }
   const verben = keys.map(k => ALLE_VERBEN[k]).filter(Boolean);
+  // v7.12.535 (Diagnose): welcher NPC angeklickt, welcher Typ, welche Verben angeboten?
+  if (typeof diag === 'function') {
+    diag('detect', 'NPC-MENÜ geöffnet: ' + npc.name + ' [Typ ' + (tag || '?') + '] -> Verben: ' + verben.map(v => v.label).join('/'));
+  }
   const overlay = document.createElement('div');
   overlay.id = 'npc-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;z-index:9000;background:rgba(10,8,6,0.82);display:flex;align-items:center;justify-content:center;padding:18px;';
@@ -33277,6 +33287,21 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     // v7.12.532 (Baustein B2): getaktete Gegner für den aktuellen Ort durchwürfeln (einmal pro Ort+Szene via
     // Dedup-Wrapper). Erscheinende Gegner kommen über getNpcsAtCurrentLocation in die "im Raum"-Anzeige (anklickbar).
     try { if (typeof maybeResolveThreatSpawn === 'function') maybeResolveThreatSpawn(); } catch (e) { /* nie Szene brechen */ }
+    // v7.12.535 (Diagnose-Snapshot): pro Szene festhalten, was JETZT anklickbar ist - reisbare Orte, NPCs im
+    // Raum (mit Gegner-Markierung), aktive ThreatBeat-Spawns. Steht damit fest im Export pro Szene (nicht nur als
+    // flüchtiges Klick-Event). Macht den ThreatBeat-Test nachvollziehbar.
+    try {
+      if (typeof diag === 'function') {
+        const _locs = (typeof getCaseLocations === 'function') ? getCaseLocations() : [];
+        const _reisbar = _locs.filter(l => (typeof istReisbarerOrt === 'function' && istReisbarerOrt(l)) && Array.isArray(unlockedLocations) && unlockedLocations.includes(normForMatch(l.name)));
+        const _npcsImRaum = (typeof getNpcsAtCurrentLocation === 'function') ? getNpcsAtCurrentLocation() : [];
+        const _spawnSet = {}; if (Array.isArray(_threatAktiveSpawns)) _threatAktiveSpawns.forEach(id => { _spawnSet[id] = true; });
+        diag('state', 'SNAPSHOT @ ' + (engineCurrentLocation ? engineCurrentLocation.name : '?')
+          + ' | reisbar: ' + (_reisbar.map(l => l.name).join(', ') || '-')
+          + ' | im Raum: ' + (_npcsImRaum.map(n => n.name + '[' + (n.tag||'?') + ']' + (_spawnSet[n.id] ? '⚔SPAWN' : '')).join(', ') || '-')
+          + ' | aktive Threats: ' + ((Array.isArray(_threatAktiveSpawns) && _threatAktiveSpawns.length) ? _threatAktiveSpawns.join(', ') : '-'));
+      }
+    } catch (e) { /* Snapshot darf Szene nie brechen */ }
     // v7.11.97: CUSTODY-BESTAETIGUNG. Wenn eine Festnahme forciert wurde
     // (pendingCustodyConfirm), pruefen wir JETZT - nachdem die KI die Szene
     // geliefert hat - ob der Text die Festnahme tatsaechlich erzaehlt. Erst dann
