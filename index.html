@@ -3042,7 +3042,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.559</div>
+    <div class="start-version">Schatten v7.12.560</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3264,7 +3264,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.559</span>
+    <span>Schatten v7.12.560</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6378,6 +6378,22 @@ function getNpcsAtCurrentLocation() {
       out.push(ident); seen[entry.id] = true;
     }
   }
+  // v7.12.560 (Benjamin-Befund Run 2246): Party-Mitglieder IMMER anzeigen. Doc Wagner war in der Party (Heal-
+  // Button funktionierte), wurde aber in der "im Raum"-Leiste nicht gezeigt - weil getNpcsAtCurrentLocation nur
+  // Ort-NPCs + Threat-Spawns + KI-Cast-Figuren listete, die Party aber nicht explizit. Sie sind garantiert dabei
+  // (Party-Garantie v557), also gehören sie immer in die Anzeige - unabhängig von Ort-Definition und KI-cast.
+  if (typeof _party !== 'undefined' && Array.isArray(_party)) {
+    for (const pm of _party) {
+      if (!pm || !pm.name) continue;
+      const pmId = pm.id || normForMatch(pm.name).replace(/\s+/g, '_');
+      if (seen[pmId]) continue;
+      // Setup-Identität auflösen (Tag/Name), falls vorhanden - sonst Party-Daten nutzen.
+      let ident = null;
+      try { if (typeof _resolveNpcIdentity === 'function' && pm.id) ident = _resolveNpcIdentity(pm.id); } catch (e) {}
+      if (!ident || !ident.name) ident = { id: pmId, name: pm.name, tag: pm.tag || '' };
+      out.push(ident); seen[pmId] = true;
+    }
+  }
   // v7.12.532 (B2): aktuell präsente getaktete Gegner (durchs Würfeln erschienen) dazunehmen -> anklickbar.
   if (Array.isArray(_threatAktiveSpawns)) {
     for (const npcId of _threatAktiveSpawns) {
@@ -6501,7 +6517,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.559';
+window.SCHATTEN_VERSION = 'v7.12.560';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
