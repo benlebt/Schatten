@@ -3042,7 +3042,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.514</div>
+    <div class="start-version">Schatten v7.12.515</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3238,6 +3238,7 @@
 
   <!-- Options -->
   <div id="options" class="options-block hidden">
+    <div id="im-raum-anzeige" class="hidden" style="font-family:inherit;font-size:calc(11px * var(--reading-scale));letter-spacing:0.02em;line-height:1.5;margin-bottom:8px;padding:6px 10px;border-left:2px solid #4d4234;background:rgba(40,34,28,0.3);"></div>
     <div class="options-label" aria-label="Was tust du?">Was tust du?</div>
     <div id="options-list"></div>
   </div>
@@ -3263,7 +3264,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.514</span>
+    <span>Schatten v7.12.515</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6287,7 +6288,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.514';
+window.SCHATTEN_VERSION = 'v7.12.515';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -6550,6 +6551,7 @@ function diagCommit() {
 // hart entmachtet - erst beobachten was bricht, dann (spaeter) die Lesestellen einzeln umstellen.
 let engineCurrentLocation = null;   // { name, sektor } oder null (noch nicht initialisiert)
 let unlockedLocations = [];         // Array von Orts-Namen (normForMatch), die im Reise-Menue sichtbar sind
+let _reiseGeradeErfolgt = null;     // v7.12.515: {name,sektor,detail} wenn der Spieler gerade gereist ist -> KI-Kontext für die nächste Szene
 
 // Letzte Verletzung als Kontext fuer Folgeszenen (z.B. "Schulterschuss")
 let lastInjury = '';
@@ -16687,6 +16689,87 @@ function istPersonPhysischAnwesend(name, scene, rolleHint) {
   // Erwähnungs-Filter ist der eigentliche Wächter, nicht eine endlose Verb-Whitelist.
   return true;
 }
+// ===== v7.12.515: REISE-UI (Umbau Stufe 1, sichtbare Hälfte) =====
+// Öffnet ein Overlay mit den freigeschalteten, reisbaren Orten. Auswahl wechselt engineCurrentLocation
+// SOFORT (keine Szene, keine KI, keine Tokens - Benjamins Entscheidung) und re-rendert den Status.
+function reiseZuOrt(loc) {
+  if (!loc) return;
+  const vorher = engineCurrentLocation ? engineCurrentLocation.name : '?';
+  engineCurrentLocation = { name: loc.name, sektor: loc.sektor || '' };
+  _reiseGeradeErfolgt = { name: loc.name, sektor: loc.sektor || '', detail: loc.detail || '' };
+  if (typeof diag === 'function') diag('state', 'REISE (Engine, ohne KI/Szene): "' + vorher + '" -> "' + loc.name + '"');
+  if (typeof showProgressToast === 'function') {
+    const _canShow = (typeof canShowToast !== 'function') || canShowToast('info', 'reise');
+    if (_canShow) showProgressToast('Angekommen', loc.name, 'info', 'reise');
+  }
+  // Spielstand sichern (Ort ist jetzt anders) + "im Raum"-Anzeige neu aufbauen.
+  try { if (typeof saveGameState === 'function') saveGameState(); } catch (e) {}
+  try { renderImRaumAnzeige(); } catch (e) {}
+  schliesseReiseMenue();
+}
+function schliesseReiseMenue() {
+  const ov = document.getElementById('reise-overlay');
+  if (ov) ov.remove();
+}
+function oeffneReiseMenue() {
+  schliesseReiseMenue(); // doppelte vermeiden
+  const locs = getCaseLocations();
+  const aktuellNorm = engineCurrentLocation ? normForMatch(engineCurrentLocation.name) : '';
+  // Nur freigeschaltete, reisbare Orte; aktueller Ort wird markiert (nicht klickbar).
+  const ziele = locs.filter(l => istReisbarerOrt(l) && unlockedLocations.includes(normForMatch(l.name)));
+  const overlay = document.createElement('div');
+  overlay.id = 'reise-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9000;background:rgba(10,8,6,0.82);display:flex;align-items:center;justify-content:center;padding:18px;';
+  const panel = document.createElement('div');
+  panel.style.cssText = 'max-width:440px;width:100%;max-height:80vh;overflow-y:auto;background:#1a1611;border:1px solid #4d4234;border-radius:8px;padding:18px 18px 14px;box-shadow:0 12px 40px rgba(0,0,0,0.6);';
+  let html = '<div style="font-family:inherit;color:#cbbfa9;font-size:calc(14px * var(--reading-scale));letter-spacing:0.08em;margin-bottom:4px;">WOHIN?</div>'
+    + '<div style="font-family:inherit;color:#867868;font-size:calc(10px * var(--reading-scale));margin-bottom:14px;line-height:1.4;">Karl steigt in den Opel. Der Ortswechsel kostet keine Zeit.</div>';
+  if (!ziele.length) {
+    html += '<div style="color:#867868;font-size:calc(11px * var(--reading-scale));font-style:italic;">Noch keine weiteren Orte bekannt. Ermittle, um neue Orte freizuschalten.</div>';
+  }
+  panel.innerHTML = html;
+  ziele.forEach(loc => {
+    const istAktuell = normForMatch(loc.name) === aktuellNorm;
+    const btn = document.createElement('button');
+    btn.style.cssText = 'display:block;width:100%;text-align:left;margin-bottom:8px;padding:10px 12px;background:'
+      + (istAktuell ? 'rgba(60,50,40,0.5)' : '#322a22') + ';border:1px solid '
+      + (istAktuell ? '#6b5d4a' : '#4d4234') + ';border-radius:5px;color:'
+      + (istAktuell ? '#867868' : '#cbbfa9') + ';cursor:' + (istAktuell ? 'default' : 'pointer')
+      + ';font-family:inherit;font-size:calc(12px * var(--reading-scale));line-height:1.45;';
+    const sektor = loc.sektor ? '<span style="color:#867868;font-size:0.85em;"> · ' + loc.sektor + '</span>' : '';
+    btn.innerHTML = '<span>' + loc.name + '</span>' + sektor
+      + (istAktuell ? '<span style="color:#867868;font-size:0.85em;float:right;">du bist hier</span>' : '');
+    if (!istAktuell) {
+      btn.addEventListener('click', () => reiseZuOrt(loc));
+    }
+    panel.appendChild(btn);
+  });
+  const abbrechen = document.createElement('button');
+  abbrechen.style.cssText = 'display:block;width:100%;margin-top:6px;padding:9px 12px;background:transparent;border:1px solid #403930;border-radius:5px;color:#867868;cursor:pointer;font-family:inherit;font-size:calc(11px * var(--reading-scale));';
+  abbrechen.textContent = 'Abbrechen';
+  abbrechen.addEventListener('click', schliesseReiseMenue);
+  panel.appendChild(abbrechen);
+  overlay.appendChild(panel);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) schliesseReiseMenue(); });
+  document.body.appendChild(overlay);
+}
+// Baut die dezente "im Raum: X, Y"-Zeile (wer ist beim aktuellen Engine-Ort, aus Ort+Tageszeit). Wird über
+// den Optionen gezeigt. Leert sich, wenn niemand da ist.
+function renderImRaumAnzeige() {
+  const el = document.getElementById('im-raum-anzeige');
+  if (!el) return;
+  const npcs = (typeof getNpcsAtCurrentLocation === 'function') ? getNpcsAtCurrentLocation() : [];
+  const ortName = engineCurrentLocation ? engineCurrentLocation.name : '';
+  if (!ortName) { el.classList.add('hidden'); el.innerHTML = ''; return; }
+  let html = '<span style="color:#867868;">Ort:</span> <span style="color:#cbbfa9;">' + ortName + '</span>';
+  if (npcs.length) {
+    html += '<span style="color:#5a4e42;"> · </span><span style="color:#867868;">im Raum:</span> <span style="color:#cbbfa9;">' + npcs.join(', ') + '</span>';
+  }
+  el.innerHTML = html;
+  el.classList.remove('hidden');
+}
+// ===== Ende Reise-UI =====
+
 function renderOptions(scene) {
   const list = document.getElementById('options-list');
   const optionsContainer = document.getElementById('options');
@@ -17510,7 +17593,24 @@ function renderOptions(scene) {
     (typeof topActions !== 'undefined' ? topActions : list).appendChild(flBtn);
   }
 
-  // v7.11.13: NOTFLUCHT-Button - nur in Stasi-Custody. 30% Erfolg.
+  // v7.12.515 (Umbau Stufe 1): REISE-Button. Immer verfügbar (außer in Custody - dann kann Karl nicht reisen),
+  // sobald das Engine-Ortssystem initialisiert ist. Öffnet das Ortsmenü (nur freigeschaltete Orte).
+  if (typeof engineCurrentLocation !== 'undefined' && engineCurrentLocation && !karlInStasiCustody) {
+    const reiseBtn = document.createElement('button');
+    reiseBtn.className = 'option-btn option-btn-system option-btn-reise';
+    reiseBtn.dataset.kategorie = 'REISE';
+    reiseBtn.innerHTML = '<span class="option-id">🚗</span><span class="option-text-wrap"><span>Reisen (Ort wechseln)</span><span class="option-marker option-marker-system">→ OPEL</span></span>';
+    let reTouchHandled = false;
+    reiseBtn.addEventListener('touchend', (e) => {
+      e.preventDefault(); reTouchHandled = true;
+      if (typeof oeffneReiseMenue === 'function') oeffneReiseMenue();
+    });
+    reiseBtn.addEventListener('click', () => {
+      if (reTouchHandled) { reTouchHandled = false; return; }
+      if (typeof oeffneReiseMenue === 'function') oeffneReiseMenue();
+    });
+    (typeof topActions !== 'undefined' ? topActions : list).appendChild(reiseBtn);
+  }
   // Karl versucht aus der Zelle/Verhoer-Raum auszubrechen.
   if (showNotfluchtButton) {
     const nfBtn = document.createElement('button');
@@ -18163,6 +18263,8 @@ function renderOptions(scene) {
   }
 
   document.getElementById('options').classList.remove('hidden');
+  // v7.12.515 (Umbau Stufe 1): "im Raum"-Anzeige aktualisieren (wer ist beim aktuellen Engine-Ort).
+  try { if (typeof renderImRaumAnzeige === 'function') renderImRaumAnzeige(); } catch (e) {}
   // v7.12.315 (Source-Lektorat v314 P1): Freitext-Feld DIREKT mit-einblenden statt erst ueber das
   // 1s-Intervall (das bleibt nur Sicherheitsnetz). Nur in der Spielphase (Optionen sichtbar, Fall
   // laeuft) - bei Win/Fail bleibt es ueber hideAll versteckt.
@@ -20731,6 +20833,15 @@ Wenn Karl waehlt: Schnitt zur naechsten Szene am Morgen, Kaffee zu zweit, keine 
       timeContext += '\n\n=== GEWAHRSAM-KONTEXT (PFLICHT) ===\nKarl Mauer ist FESTGENOMMEN und befindet sich in MfS-Gewahrsam (Verhörraum, Zelle oder unter Bewachung). DAS IST SEINE AKTUELLE SITUATION. Die Optionen A-D MÜSSEN diese Situation widerspiegeln - KEINE Optionen die freie Bewegung implizieren ("Fahr zu X", "Verlasse Y", "Geh zum Z"). Stattdessen: Verhör-Antworten, Flucht-Vorbereitung, Warten, Beobachten des Wächters, mit Mitgefangenen sprechen, Schwäche vortäuschen. Der NOTFLUCHT-Button unten ist der einzige Weg raus - der Spieler muss ihn bewusst wählen. WICHTIG: Nicht einfach Karl entlassen oder ihn ins Freie schreiben - die Festnahme bleibt bis NOTFLUCHT geklickt wird.';
     }
 
+    // v7.12.515 (Umbau Stufe 1): REISE-KONTEXT. Wenn der Spieler gerade über den Reise-Button den Ort
+    // gewechselt hat, MUSS die nächste Szene an diesem neuen Ort spielen (die Engine besitzt den Ort jetzt).
+    if (typeof _reiseGeradeErfolgt !== 'undefined' && _reiseGeradeErfolgt && _reiseGeradeErfolgt.name) {
+      const _r = _reiseGeradeErfolgt;
+      timeContext += '\n\n=== ORTSWECHSEL (PFLICHT, v7.12.515) ===\nKarl ist GERADE mit dem Opel an einen neuen Ort gefahren: "' + _r.name + '"'
+        + (_r.sektor ? ' (' + _r.sektor + ')' : '') + (_r.detail ? '. ' + _r.detail : '') + '.'
+        + ' Die nächste Szene MUSS an DIESEM Ort spielen - beschreibe die Ankunft kurz (1-2 Sätze: das Aussteigen, der erste Eindruck des Ortes zur aktuellen Tageszeit) und setze "ort" im JSON auf genau diesen Ort. KEINE Rückkehr zum vorigen Ort, KEIN anderer Schauplatz. Die Fahrt selbst ist schon vorbei - beginne AM Zielort.';
+      _reiseGeradeErfolgt = null; // verbraucht
+    }
     // v7.10: KATEGORIE-MECHANIK PUSH-HINTS. Wenn der Spieler eine Option mit
     // Kategorie geklickt hat, pushen wir die passenden Hints an die KI.
     // Diese werden in chooseOption gefuellt und hier in den Prompt eingefuegt.
