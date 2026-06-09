@@ -3042,7 +3042,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.545</div>
+    <div class="start-version">Schatten v7.12.548</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3264,7 +3264,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.545</span>
+    <span>Schatten v7.12.548</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6501,7 +6501,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.545';
+window.SCHATTEN_VERSION = 'v7.12.548';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -6619,6 +6619,36 @@ const FREITEXT_COOLDOWN = 3;
 // ("sitzt zu Hause" ist dann falsch - sie ist bei Karl). Wird gesetzt bei Mitnahme-Aktion, gelöst beim
 // Absetzen (Sicherung vollzogen) oder Fallende. {name, sinceScene} oder null.
 let _companionLock = null;
+// v7.12.546 (Baustein C/D - Party-System, Schicht 1: Fundament, NOCH OHNE Verhalten): _party ist die Liste der
+// NPCs, die Karl bewusst dabei hat (über "Mitnehmen" hinzugefügt, über "Hier lassen" entfernt). Wer in der Party
+// ist, reist mit (Schicht 3), ist an jedem Ort anklickbar/benutzbar, und kann gezielt abgesetzt werden. Anders
+// als _companionLock (1 Person, freitext-erkannt, Schutzperson) ist _party eine explizite Mehr-Personen-Liste,
+// vom Spieler über Buttons gesteuert. Einträge: { id, name, tag, sinceScene }.
+let _party = [];
+// Helper: ist ein NPC (per id ODER name) in der Party?
+function _istInParty(npcId, npcName) {
+  if (!Array.isArray(_party)) return false;
+  const idN = normForMatch(npcId || '');
+  const nmN = normForMatch(npcName || '');
+  return _party.some(p => (idN && normForMatch(p.id) === idN) || (nmN && normForMatch(p.name) === nmN)
+    || (nmN && normForMatch(p.name).split(/\s+/)[0] === nmN.split(/\s+/)[0]));
+}
+// Helper: NPC zur Party hinzufügen (Dedup).
+function _partyAdd(npc) {
+  if (!npc || !npc.id) return;
+  if (_istInParty(npc.id, npc.name)) return;
+  _party.push({ id: npc.id, name: npc.name || npc.id, tag: npc.tag || '', sinceScene: (typeof sceneCounter === 'number' ? sceneCounter : 0) });
+  if (typeof diag === 'function') diag('state', '✦ PARTY +: ' + (npc.name || npc.id) + ' [' + (npc.tag||'?') + '] -> Party (' + _party.length + ')');
+}
+// Helper: NPC aus der Party entfernen (per id oder name).
+function _partyRemove(npcId, npcName) {
+  if (!Array.isArray(_party)) return;
+  const idN = normForMatch(npcId || ''); const nmN = normForMatch(npcName || '');
+  const vorher = _party.length;
+  _party = _party.filter(p => !((idN && normForMatch(p.id) === idN) || (nmN && normForMatch(p.name) === nmN)
+    || (nmN && normForMatch(p.name).split(/\s+/)[0] === nmN.split(/\s+/)[0])));
+  if (_party.length !== vorher && typeof diag === 'function') diag('state', '✦ PARTY -: ' + (npcName || npcId) + ' verlässt die Party (' + _party.length + ')');
+}
 let _lastLoggedSpannung = null;  // STATE-DIAG: Spannungs-Wechsel
 let _lastLoggedVf = null;        // STATE-DIAG: Verfassungs-Wechsel
 let _lastLoggedFlags = '';       // STATE-DIAG: Romance/Gewahrsam/Tod-Flag-Wechsel (serialisiert)
@@ -17075,8 +17105,10 @@ function renderImRaumAnzeige() {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.style.cssText = 'display:inline;background:transparent;border:none;border-bottom:1px dotted #6b5d4a;color:#d8cbb0;cursor:pointer;font-family:inherit;font-size:inherit;padding:0 1px;margin:0;';
-      btn.textContent = npc.name;
-      btn.title = 'Mit ' + npc.name + ' interagieren';
+      // v7.12.547: Party-Mitglieder mit ♦-Marker kennzeichnen (man sieht, wen man dabei hat).
+      const _inParty = (typeof _istInParty === 'function') && _istInParty(npc.id, npc.name);
+      btn.textContent = (_inParty ? '♦ ' : '') + npc.name;
+      btn.title = (_inParty ? npc.name + ' ist in deiner Begleitung - ' : 'Mit ' + npc.name + ' interagieren');
       btn.addEventListener('click', () => { if (typeof oeffneNpcMenue === 'function') oeffneNpcMenue(npc); });
       el.appendChild(btn);
       if (i < npcs.length - 1) {
@@ -17165,6 +17197,17 @@ function oeffneNpcMenue(npc) {
     keys = _bedrohungAktiv ? ['befragen','angreifen','beobachten'] : ['befragen','beobachten'];
   }
   const verben = keys.map(k => ALLE_VERBEN[k]).filter(Boolean);
+  // v7.12.547 (Party-System Schicht 2): "Mitnehmen" / "Hier lassen" für Nicht-Gegner. Verwaltungs-Aktionen -
+  // lösen KEINE KI-Szene aus, ändern nur den Party-Zustand. Gegner (STASI/SUSPECT/...) nimmt man NICHT mit.
+  // Ist die Person schon in der Party -> "Hier lassen" (entfernen); sonst -> "Mitnehmen" (hinzufügen).
+  const _istGegnerTag = GEGNER.includes(tag);
+  if (!_istGegnerTag) {
+    if (typeof _istInParty === 'function' && _istInParty(npc.id, npc.name)) {
+      verben.push({ key: 'hierlassen', label: 'Hier lassen', kategorie: '_PARTY', _partyAction: 'remove' });
+    } else {
+      verben.push({ key: 'mitnehmen', label: 'Mitnehmen', kategorie: '_PARTY', _partyAction: 'add' });
+    }
+  }
   // v7.12.542 (Schritt 2, Benjamin): "Näher kommen"/"Nacht verbringen" auch im NPC-Menü, wenn der angeklickte
   // NPC die aktuelle Romance-Person ist. Nutzt DIESELBE Logik wie der ♥-Button oben (window._romanceMenuState
   // aus renderOptions) - kein Duplikat. _romance markiert den Sonderpfad (löst ROMANTIK/UEBERNACHTUNG-Option
@@ -17199,6 +17242,20 @@ function oeffneNpcMenue(npc) {
       + ';cursor:pointer;font-family:inherit;font-size:calc(12px * var(--reading-scale));line-height:1.45;';
     btn.textContent = verb.label;
     btn.addEventListener('click', () => {
+      // v7.12.547: Party-Verwaltung (Mitnehmen/Hier lassen) - KEINE KI-Szene, nur Zustand ändern + Anzeige refresh.
+      if (verb._partyAction) {
+        if (verb._partyAction === 'add' && typeof _partyAdd === 'function') {
+          _partyAdd({ id: npc.id, name: npc.name, tag: npc.tag });
+          if (typeof showProgressToast === 'function') { try { showProgressToast(npc.name + ' kommt mit', 'Ist jetzt in Karls Begleitung.', 'info', 'party-add'); } catch(e){} }
+        } else if (verb._partyAction === 'remove' && typeof _partyRemove === 'function') {
+          _partyRemove(npc.id, npc.name);
+          if (typeof showProgressToast === 'function') { try { showProgressToast(npc.name + ' bleibt hier', 'Verlässt Karls Begleitung.', 'info', 'party-remove'); } catch(e){} }
+        }
+        if (typeof schliesseNpcMenue === 'function') schliesseNpcMenue();
+        if (typeof renderImRaumAnzeige === 'function') { try { renderImRaumAnzeige(); } catch(e){} }
+        if (typeof saveGameState === 'function') { try { saveGameState(); } catch(e){} }
+        return;
+      }
       // v7.12.542: Romance-Verb löst die ROMANTIK/UEBERNACHTUNG-Option aus (gleiche Logik wie der ♥-Button),
       // nicht den normalen npcInteraktion-Pfad.
       if (verb._romance) {
@@ -19741,6 +19798,10 @@ async function requestSceneFromModel(userMessage, conversationHistory, compactMo
         _promptCast = cast.filter(c => {
           const _cName = normForMatch(typeof c === 'string' ? c : (c && c.name) || '');
           if (!_cName) return false;
+          // v7.12.548 (Party Schicht 3): Party-Mitglieder reisen IMMER mit - im Prompt-Cast behalten, egal was
+          // der Spielertext sagt (sie sind explizit per "Mitnehmen" in der Party).
+          const _cId = (typeof c === 'object' && c && c.id) ? c.id : '';
+          if (typeof _istInParty === 'function' && _istInParty(_cId, typeof c === 'string' ? c : (c && c.name))) return true;
           const _first = _cName.split(' ')[0];
           // v7.12.370 (Lektorat Brandt-Run P1/P2): auch NACHNAMEN prüfen. Befund: "fahr mit Lange
           // zu deinem Klienten" entfernte Kurt Lange aus dem Prompt-Cast, weil nur der Vorname
@@ -21350,6 +21411,12 @@ Wenn Karl waehlt: Schnitt zur naechsten Szene am Morgen, Kaffee zu zweit, keine 
       timeContext += '\n\n=== ORTSWECHSEL (PFLICHT, v7.12.515) ===\nKarl ist GERADE mit dem Opel an einen neuen Ort gefahren: "' + _r.name + '"'
         + (_r.sektor ? ' (' + _r.sektor + ')' : '') + (_r.detail ? '. ' + _r.detail : '') + '.'
         + ' Die nächste Szene MUSS an DIESEM Ort spielen - beschreibe die Ankunft kurz (1-2 Sätze: das Aussteigen, der erste Eindruck des Ortes zur aktuellen Tageszeit) und setze "ort" im JSON auf genau diesen Ort. KEINE Rückkehr zum vorigen Ort, KEIN anderer Schauplatz. Die Fahrt selbst ist schon vorbei - beginne AM Zielort.';
+      // v7.12.548 (Party Schicht 3): Begleiter sind mitgefahren - die KI MUSS sie als anwesend zeigen.
+      try {
+        if (Array.isArray(_party) && _party.length) {
+          timeContext += ' BEGLEITUNG: Karl ist NICHT allein gekommen - diese Person(en) sind mit ihm gefahren und JETZT mit ihm am Zielort: ' + _party.map(p => p.name).join(', ') + '. Zeige sie als anwesend (sie steigen mit aus, stehen bei Karl), sie reisen mit ihm.';
+        }
+      } catch (e) {}
       _reiseGeradeErfolgt = null; // verbraucht
     }
     // v7.12.534 (Baustein B4): Aktive Engine-Gegner (durchs ThreatBeat-Würfeln erschienen) als HARTE Anwesenheit
@@ -23079,6 +23146,7 @@ async function startGame() {
   _hintLastProgressScene = 0; _hintLastSignature = ''; _hintLastShownScene = 0;
   _freitextCooldownBisSzene = 0;  // v7.12.498: Freitext-Cooldown zuruecksetzen
   _companionLock = null;          // v7.12.504: Begleitperson-Lock zuruecksetzen
+  _party = [];                    // v7.12.546: Party leeren
   _threatGlobalCooldown = {};     // v7.12.531: ThreatBeat-Cooldowns frisch
   _threatOrtLastRoll = {};
   _threatAktiveSpawns = [];
@@ -27890,19 +27958,23 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         // Karl, nicht "zu Hause". Das war der Margarete-Bug: Sz61 mitgenommen, Sz62 trotzdem geputzt.
         const istBegleitpersonGelockt = _companionLock && _companionLock.name &&
           (cName === normForMatch(_companionLock.name) || cName.split(/\s+/)[0] === normForMatch(_companionLock.name).split(/\s+/)[0]);
+        // v7.12.548 (Party Schicht 3): wer in der PARTY ist, bleibt bei Ortswechseln im Cast (reist mit). Führt
+        // die neue _party mit dem alten _companionLock zusammen - beide halten eine Figur im Cast.
+        const istInParty = (typeof _istInParty === 'function') && _istInParty((typeof c === 'object' && c && c.id) ? c.id : '', (typeof c === 'string') ? c : (c && c.name));
+        const haeltImCast = istBegleitpersonGelockt || istInParty;
         // v7.12.325: geht DIESE Figur (namentlich) bei diesem Ortswechsel aktiv mit?
         const goesAlongHard = _npcGoesAlongHard(cName, normForMatch(cRolle || ''));
         // v7.12.332: ist DAS die gefundene Zielperson? Dann hält sie (Karl bringt sie zum Klienten).
         const isGefundeneZielperson = zielpersonNameLower && cName &&
           (cName.includes(zielpersonNameLower.split(' ')[0]) || zielpersonNameLower.includes(cName.split(' ')[0]));
 
-        if (isKlient && !ortIsKlientHome && !klientGoesAlong && !klientAktivImText && !istBegleitpersonGelockt) {
+        if (isKlient && !ortIsKlientHome && !klientGoesAlong && !klientAktivImText && !haeltImCast) {
           // Klient sitzt zu Hause - aus Cast raus
           removedKlientByLocation.push(typeof c === 'string' ? c : c.name);
-        } else if (istBegleitpersonGelockt) {
-          // v7.12.504: Schutz-Begleitperson bleibt im Cast (mitgenommen, noch nicht abgesetzt).
+        } else if (haeltImCast) {
+          // v7.12.504/548: Schutz-Begleitperson ODER Party-Mitglied bleibt im Cast (reist mit, noch nicht abgesetzt).
           newCast.push(c);
-          if (typeof diag === 'function') diag('detect', 'COMPANION-LOCK hält ' + (typeof c === 'string' ? c : c.name) + ' im Cast (mitgenommene Schutzperson, kein "sitzt zu Hause")');
+          if (typeof diag === 'function') diag('detect', (istInParty ? 'PARTY' : 'COMPANION-LOCK') + ' hält ' + (typeof c === 'string' ? c : c.name) + ' im Cast (reist mit, kein "sitzt zu Hause")');
         } else if (isGefundeneZielperson) {
           // v7.12.332: gefundene Zielperson immer halten - sie wird zum Klienten gebracht.
           newCast.push(c);
@@ -34310,6 +34382,7 @@ function saveGameState() {
       // Reload (iOS-Tab-Entladung real) der Begleitperson-Zustand verloren -> Margarete wurde nach Refresh
       // wieder als ortsgebunden behandelt und beim nächsten Ortswechsel rausgeputzt (alter v504-Bug zurück).
       companionLock: (typeof _companionLock === 'object' && _companionLock) ? _companionLock : null,
+      party: (Array.isArray(_party)) ? _party : [],
       // v7.12.531 (Baustein B1): ThreatBeat-Cooldowns mitsichern (sonst nach Reload Gegner-Timing verloren).
       threatGlobalCooldown: (typeof _threatGlobalCooldown === 'object' && _threatGlobalCooldown) ? _threatGlobalCooldown : {},
       threatOrtLastRoll: (typeof _threatOrtLastRoll === 'object' && _threatOrtLastRoll) ? _threatOrtLastRoll : {},
@@ -34517,6 +34590,7 @@ function restoreGameState() {
     if (typeof romancePushCount !== 'undefined') romancePushCount = snap.romancePushCount || 0;
     // v7.12.509: companionLock wiederherstellen (sonst nach Reload alter Margarete-Verschwind-Bug).
     _companionLock = (snap.companionLock && typeof snap.companionLock === 'object') ? snap.companionLock : null;
+    _party = Array.isArray(snap.party) ? snap.party : [];
     // v7.12.531 (Baustein B1): ThreatBeat-Cooldowns wiederherstellen.
     _threatGlobalCooldown = (snap.threatGlobalCooldown && typeof snap.threatGlobalCooldown === 'object') ? snap.threatGlobalCooldown : {};
     _threatOrtLastRoll = (snap.threatOrtLastRoll && typeof snap.threatOrtLastRoll === 'object') ? snap.threatOrtLastRoll : {};
