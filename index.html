@@ -3042,7 +3042,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.510</div>
+    <div class="start-version">Schatten v7.12.511</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3263,7 +3263,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.510</span>
+    <span>Schatten v7.12.511</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6191,7 +6191,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.510';
+window.SCHATTEN_VERSION = 'v7.12.511';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -11016,8 +11016,14 @@ function updatePoliticalBeats(text) {
           // BESTÄTIGT dann nur einen vom Spieler eingeleiteten Vorgang - sie erzeugt ihn nicht aus dem Nichts.
           if (caseProgress.pendingSecurityIntent === beat.id) {
             const _tt = text.toLowerCase();
-            const _vollzugProsa = /\b(nimmt|nahm|entgegen|händigt|haendigt|hat .{0,20}(übergeb|uebergeb|erhalten|bekommen)|ist (jetzt )?(bei|im|in) .{0,20}(sicher|untergetaucht|aufgenommen|angekommen)|untergetaucht bei|aufgenommen|in empfang|deponiert|im schließfach|im schliessfach|sicher verwahrt durch|verschwindet (mit|bei)|bringt .{0,15}in sicherheit)\b/.test(_tt);
-            const _negProsa = /\b(noch nicht|nicht in sicherheit|nicht gesichert|muss (noch|erst)|wird (noch|später|spaeter)|bevor)\b/.test(_tt);
+            // v7.12.511 (Run-Befund Sz55, echter Bug): Der Spieler brachte die Akten zu Roth (Intent gesetzt),
+            // aber die KI-Bestätigung "hast die Akten zu Roth gebracht / Roth die Akten übergeben" löste den
+            // Beat NICHT - das _vollzugProsa-Muster kannte die PARTIZIPIEN (gebracht/übergeben/abgegeben) nicht,
+            // nur Präsens (nimmt/händigt). Dadurch blieb der Fall trotz korrekter Übergabe ungelöst. Zusätzlich:
+            // \b matcht in JS NICHT vor Umlauten (übergeben/ausgehändigt) - daher dort keine führende Wortgrenze.
+            const _vollzugProsa = /\b(nimmt|nahm|entgegen|händigt|haendigt|hat .{0,20}(übergeb|uebergeb|erhalten|bekommen)|ist (jetzt )?(bei|im|in) .{0,20}(sicher|untergetaucht|aufgenommen|angekommen)|untergetaucht bei|aufgenommen|in empfang|deponiert|im schließfach|im schliessfach|sicher verwahrt durch|verschwindet (mit|bei)|bringt .{0,15}in sicherheit)\b/.test(_tt)
+              || /\b(hat|hast|ist|sind)\b[\s\S]{0,70}(übergeben|uebergeben|gebracht|abgegeben|abgeliefert|überbracht|ueberbracht|deponiert|ausgehändigt|ausgehaendigt|entgegengenommen)\b/.test(_tt);
+            const _negProsa = /\b(noch nicht|nicht in sicherheit|nicht gesichert|muss (noch|erst)|wird (noch|später|spaeter)|bevor|sollst|sollte|willst|möchtest|moechtest|planst|vorhast)\b/.test(_tt);
             if (_vollzugProsa && !_negProsa) {
               caseProgress.politicalBeatsHit.push(beat.id);
               caseProgress.pendingSecurityIntent = null;
@@ -16086,7 +16092,7 @@ function applyCategoryMechanics(kategorie, ctx) {
       // wird auch als PREVIEW (Trockenlauf) aufgerufen; der echte Effekt wird beim Apply-Punkt
       // (categoryMechanicsResult) angewandt, damit die Senkung nicht doppelt/zu frueh passiert.
       result.fluchtStasiAbschuetteln = true;
-      result.pushMessages.push('FLUCHT: Karl verlaesst die akute Szene SOFORT. Beschreibe in 2-3 Saetzen wie er rauskommt - durch eine Hintertuer, ueber einen Hinterhof, in den Opel und weg, ueber die Strasse zur naechsten S-Bahn, was zum Ort passt. KEIN Kampf, KEINE Verfolgung-im-Detail. Karl entkommt und SCHUETTELT DIE VERFOLGER AB. Die naechste Szene spielt an einem SICHEREN Ort - sein Buero, seine Wohnung, der Opel auf einer ruhigen Strasse, eine fremde Kneipe wo er sich verstecken kann. Der unmittelbare Stasi-Druck laesst SPUERBAR nach (Karl ist erstmal aus dem Visier). KEINE "Festnahme unausweichlich"-Drohung in der naechsten Szene. Gegner ist abgehaengt aber NICHT besiegt - sie koennen Karl SPAETER wieder finden, wenn er erneut auffaellt.');
+      result.pushMessages.push('FLUCHT: Karl verlaesst die akute Szene SOFORT. Beschreibe in 2-3 Saetzen wie er rauskommt - durch eine Hintertuer, ueber einen Hinterhof, in den Opel und weg, ueber die Strasse zur naechsten S-Bahn, was zum Ort passt. KEIN Kampf, KEINE Verfolgung-im-Detail. Karl entkommt und SCHUETTELT DIE VERFOLGER AB. Die naechste Szene spielt an einem SICHEREN Ort - sein Buero, seine Wohnung, der Opel auf einer ruhigen Strasse, eine fremde Kneipe wo er sich verstecken kann. PFLICHT: Setze "spannung" in der naechsten Szene auf 1 ODER 2 (Karl ist in Sicherheit, hat durchgeatmet) - NICHT 3, 4 oder 5. Die Flucht war erfolgreich, die unmittelbare Gefahr ist vorbei. KEINE "Festnahme unausweichlich"-Drohung, KEIN "der Verfolger steht ploetzlich wieder da", KEIN neuer Schatten/Angreifer am Fluchtort in derselben Szene. Gegner ist abgehaengt aber NICHT besiegt - sie koennen Karl SPAETER wieder finden, wenn er erneut auffaellt, aber NICHT jetzt sofort.');
       break;
 
     case 'NOTHEILEN':
@@ -26885,6 +26891,12 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       } catch (e) { /* Mitnahme-Pre-Check optional */ }
 
       const newCast = [];
+      // v7.12.511 (KRITISCHER FIX): Diese drei Deklarationen wurden beim v510-Einschub versehentlich
+      // mitgelöscht -> "Can't find variable: removedByHardMove/removedByLocationBind" in JEDER Szene
+      // (ReferenceError, den node --check nicht fängt). Wieder eingesetzt.
+      const removedByLocationBind = [];
+      const removedKlientByLocation = [];
+      const removedByHardMove = [];
       // v7.12.323 (Lektorat Krause-Run v320, wichtigster Bug): Bei HARTEM Ortswechsel (Hauptort
       // wechselt, nicht nur Sub-Move) bleiben Figuren, die nicht aktiv mitgenommen werden, am alten
       // Ort zurück. Befund: Hannelore Wirth (Zeugin) + zwei Diebe blieben im Cast, als Karl nach
