@@ -3042,7 +3042,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.522</div>
+    <div class="start-version">Schatten v7.12.524</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3264,7 +3264,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.522</span>
+    <span>Schatten v7.12.524</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4855,11 +4855,13 @@ const INTRO_VARIANTS = [
           startBekannt: false, freischaltBei: ['westkontakt','vera','flucht','grenze'], npcs: [] },
         { name: 'Cafe Kranzler', sektor: 'West (Charlottenburg)', detail: 'Kurfuerstendamm, wiedereroeffnet 1951 im Schwebes-Flachbau',
           startBekannt: false, freischaltBei: ['westkontakt','vera','lindqvist'], npcs: [{ id: 'vera_lindqvist', zeit: ['nachmittag','abend'] }] },
+        // v7.12.524: Doc Wagner + Charite werden jetzt ZENTRAL in getCaseLocations injiziert (fallübergreifend
+        // in JEDEM Fall) - hier nicht mehr einzeln nötig.
         { name: 'Karls Opel Olympia', sektor: 'mobil', detail: 'schwarzer Vorkriegswagen, springt schlecht an, Handschuhfach mit altem Verbandzeug, Korn-Flachmann unter Sitz',
           reisbar: false, npcs: [] },
       ],
       // v6.76: ANKER-NPCs die in diesem Setup vorkommen koennen
-      anchorNpcs: ['wilhelm_roth', 'doc_wagner', 'gregor_halbe', 'fraeulein_elfriede', 'wassilij_sokolow'],
+      anchorNpcs: ['wilhelm_roth', 'doc_wagner', 'marlene_wagner', 'gregor_halbe', 'fraeulein_elfriede', 'wassilij_sokolow'],
     },
     prompt: `Starte das Spiel. ${INTRO_REQUIREMENTS}Sonntag, 03:14 Uhr, März 1953. Du sitzt müde an deinem Schreibtisch im Büro am Hackeschen Markt, dein aktueller Fall liegt vor dir: Margarete Stein, Sekretärin der Reichsbahndirektion, hat dir letzte Woche heimlich Akten zugespielt, die eine Schmuggelroute durch Westberlin aufdecken. Du untersuchst, wer dahintersteckt. Jetzt klingelt das Telefon. Du hebst ab, am anderen Ende erst Atmen, dann Margaretes Stimme, panisch: "Mauer, sie wissen, dass ich Ihnen die Akten gegeben habe. Sie kommen jetzt." Klick. Im Hintergrund hast du eine Straßenbahn gehört. Die erste Szene MUSS den Fall (Stein, Reichsbahn-Akten, Schmuggel), den Anruf und Margaretes Notlage einbauen. Liefere die Szene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
   },
@@ -6122,8 +6124,44 @@ function normForMatch(s) {
 
 // ===== v7.12.513: ENGINE-ORTSSYSTEM (Umbau Stufe 1) =====
 // Liefert die locations des aktuellen Falls (oder []).
+// v7.12.524: Doc Wagner + Charite sind fallÜBERGREIFENDE Heilorte und müssen in JEDEM Fall im Reisemenü
+// verfügbar sein (nicht nur Margarete). Statt sie in 14 Fällen einzeln zu pflegen, injiziert getCaseLocations
+// sie zentral - immer startBekannt + heilort. Dedupliziert: hat ein Fall schon einen Wagner-/Charite-Ort
+// (altes Format), wird dieser auf das Heilort-Format angehoben statt eine Dublette zu erzeugen.
+const _GLOBALE_HEILORTE = [
+  { name: 'Doc Wagners Praxis', sektor: 'West (Schoeneberg)', detail: 'Schaeferstrasse, Hinterhof-Praxis, Karls Diskret-Arzt verarztet ohne Aktennotiz - hier kann Karl sich behandeln lassen (+2 Verfassung)', startBekannt: true, heilort: true, npcs: [{ id: 'doc_wagner', immer: true }] },
+  { name: 'Charite', sektor: 'Ost (Mitte)', detail: 'Schumannstrasse, Universitaetsklinik. Schwester Marlene Wagner versorgt Karl unter der Hand, diskret und ohne Aufnahme (+2 Verfassung)', startBekannt: true, heilort: true, npcs: [{ id: 'marlene_wagner', immer: true }] },
+];
+function _istWagnerOrt(loc) { return loc && /\b(doc\s+wagner|wagners?\s+praxis|praxis\s+wagner|schaeferstr)/i.test(normForMatch(loc.name || '')); }
+function _istChariteOrt(loc) { return loc && /\bcharit/i.test(normForMatch(loc.name || '')); }
 function getCaseLocations() {
-  return (caseSetup && Array.isArray(caseSetup.locations)) ? caseSetup.locations : [];
+  const base = (caseSetup && Array.isArray(caseSetup.locations)) ? caseSetup.locations.slice() : [];
+  // Doc Wagner sicherstellen
+  const wagnerIdx = base.findIndex(_istWagnerOrt);
+  if (wagnerIdx === -1) {
+    base.push(_GLOBALE_HEILORTE[0]);
+  } else {
+    // vorhandenen (alten) Wagner-Ort zum Heilort anheben, ohne den Fall-spezifischen Namen/Detail zu zerstören
+    const w = base[wagnerIdx];
+    if (!w.heilort) w.heilort = true;
+    if (typeof w.startBekannt === 'undefined') w.startBekannt = true;
+    if (!Array.isArray(w.npcs) || !w.npcs.length) w.npcs = [{ id: 'doc_wagner', immer: true }];
+  }
+  // Charite sicherstellen (aber NICHT, wenn der Fall die Charite als Story-/Pathologie-Ort nutzt - dann ist sie
+  // schon drin und wir heben sie nur an, falls sie ein Heilort sein soll; Pathologie-Charite bleibt unberührt).
+  const chariteIdx = base.findIndex(_istChariteOrt);
+  if (chariteIdx === -1) {
+    base.push(_GLOBALE_HEILORTE[1]);
+  } else {
+    const c = base[chariteIdx];
+    // Pathologie-Charite ist KEIN Heilort (dort liegt eine Leiche) - nur die normale Charite/Notaufnahme anheben.
+    if (!/pathologie/i.test(normForMatch(c.name || ''))) {
+      if (!c.heilort) c.heilort = true;
+      if (typeof c.startBekannt === 'undefined') c.startBekannt = true;
+      if (!Array.isArray(c.npcs) || !c.npcs.length) c.npcs = [{ id: 'marlene_wagner', immer: true }];
+    }
+  }
+  return base;
 }
 // Ein Ort ist "reisbar", wenn er nicht explizit reisbar:false hat (mobil = Opel) und nicht der mobile Sektor ist.
 function istReisbarerOrt(loc) {
@@ -6299,7 +6337,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.522';
+window.SCHATTEN_VERSION = 'v7.12.524';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -16787,7 +16825,9 @@ function oeffneReiseMenue() {
       + (istAktuell ? '#867868' : '#cbbfa9') + ';cursor:' + (istAktuell ? 'default' : 'pointer')
       + ';font-family:inherit;font-size:calc(12px * var(--reading-scale));line-height:1.45;';
     const sektor = loc.sektor ? '<span style="color:#867868;font-size:0.85em;"> · ' + loc.sektor + '</span>' : '';
-    btn.innerHTML = '<span>' + loc.name + '</span>' + sektor
+    // v7.12.523: Heilorte (Doc Wagner, Charite) mit Kreuz-Symbol markieren.
+    const heilMark = loc.heilort ? '<span style="color:#9ab8a0;font-size:0.9em;margin-right:5px;" title="Heilungsort">✚</span>' : '';
+    btn.innerHTML = heilMark + '<span>' + loc.name + '</span>' + sektor
       + (istAktuell ? '<span style="color:#867868;font-size:0.85em;float:right;">du bist hier</span>' : '');
     if (!istAktuell) {
       btn.addEventListener('click', () => reiseZuOrt(loc));
