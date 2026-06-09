@@ -3042,7 +3042,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.520</div>
+    <div class="start-version">Schatten v7.12.521</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3264,7 +3264,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.520</span>
+    <span>Schatten v7.12.521</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -3820,6 +3820,13 @@ Innerhalb einer einzelnen Szene darf KEIN Tageszeit-Sprung passieren. Wenn die S
 - "Du wartest. Stunden vergehen. Es wird dunkel."
 - "Am naechsten Tag suchst du..."
 Sowas IMMER auf eine neue Szene aufteilen. Innerhalb einer Szene: max. 30 Minuten Spielzeit, ein zusammenhaengender Moment. Der Tageszeit-Wechsel kommt NUR durch das System (du bekommst die neue Tageszeit im Header der naechsten Anfrage).
+
+EINE SZENE = EIN ORT (sehr wichtig, v7.12.521 - das System besitzt den Ort):
+Der ORT wird vom SYSTEM bestimmt, NICHT von dir. Du bekommst in jeder Anfrage den aktuellen Ort vorgegeben - die Szene spielt GENAU DORT. Bewege Karl NICHT eigenmaechtig an einen anderen Ort, auch nicht wenn eine Option danach klingt. Der Spieler hat einen eigenen REISEN-Button, mit dem ER den Ort wechselt - nur dann bekommst du einen neuen Ort vorgegeben. VERBOTEN ohne System-Ortswechsel:
+- "Du steigst in den Opel und faehrst zur Reichsbahndirektion." (Karl bleibt, wo das System sagt)
+- "Du verlaesst das Buero und gehst zu Margaretes Wohnung." (kein selbst-initiierter Ortswechsel)
+- "Spaeter, am Bahnhof angekommen..." (kein Sprung an einen neuen Ort)
+Wenn der Spieler eine Option waehlt, die nach Reise klingt ("fahr zu X"), erzaehle das AUFBRECHEN / die Absicht / die erste Bewegung - aber die Szene bleibt am aktuellen Ort, bis das System (Reisen-Button) den neuen Ort vorgibt. Die Ankunft am Zielort erzaehlst du erst, wenn das System dir den Zielort als aktuellen Ort uebergibt.
 
 EXPLIZITE SCHLAF-/RUHE-AKTION:
 Wenn der Spieler explizit schlafen, sich ausruhen, "bis morgen warten", "einen Korn trinken und schlafen" oder Ähnliches wählt, MUSST du sofort einen Tageswechsel erzählen ("Am nächsten Morgen wachst du...", "Du wachst auf von..."). Das System hat dann bereits den Tag und die Tageszeit aktualisiert - du bekommst MORGEN als Tageszeit. KEINE Szene zwischendrin am Abend mehr.
@@ -6291,7 +6298,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.520';
+window.SCHATTEN_VERSION = 'v7.12.521';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -12337,15 +12344,27 @@ function buildTranscriptText() {
   out += 'Tag: ' + gameDay + ', Tageszeit: ' + (TIMES_OF_DAY[gameTimeIdx] || '?') + '\n';
   recalcGameCurrentDate();
   out += 'Datum (historisch): ' + formatGameDate(gameCurrentDate) + '\n';
-  // Aktueller Ort - aus der letzten Szene extrahieren
+  // v7.12.521 (Stufe 1C-hard): Der ENGINE-Ort ist die Vorgabe, NICHT der KI-Ort aus der letzten Szene. So
+  // spielt die KI immer dort, wo das System Karl verortet (Bewegung nur per Reisen-Button).
   let currentLocation = '?';
-  for (let i = logEntries.length - 1; i >= 0; i--) {
-    if (logEntries[i].type === 'scene' && logEntries[i].ort) {
-      currentLocation = logEntries[i].ort;
-      break;
+  let _ortDetail = '';
+  if (engineCurrentLocation && engineCurrentLocation.name) {
+    currentLocation = engineCurrentLocation.name;
+    if (engineCurrentLocation.sektor) currentLocation += ' (' + engineCurrentLocation.sektor + ')';
+    // Detail aus den Setup-Locations ziehen, damit die KI den Ort konkret beschreiben kann.
+    try {
+      const _locs = (typeof getCaseLocations === 'function') ? getCaseLocations() : [];
+      const _loc = _locs.find(l => normForMatch(l.name) === normForMatch(engineCurrentLocation.name));
+      if (_loc && _loc.detail) _ortDetail = _loc.detail;
+    } catch (e) {}
+  } else {
+    // Fallback: aus der letzten Szene (alter Spielstand ohne Engine-Ort).
+    for (let i = logEntries.length - 1; i >= 0; i--) {
+      if (logEntries[i].type === 'scene' && logEntries[i].ort) { currentLocation = logEntries[i].ort; break; }
     }
   }
-  out += 'Aktueller Ort: ' + currentLocation + '\n';
+  out += 'Aktueller Ort (vom System vorgegeben - die Szene MUSS hier spielen): ' + currentLocation + '\n';
+  if (_ortDetail) out += 'Ort-Detail: ' + _ortDetail + '\n';
   out += 'Verfassung: ' + verfassung + '/5\n';
   if (lastInjury) out += 'Verletzung: ' + lastInjury + '\n';
   out += 'Fahrzeug: ' + (karlVehicle || 'keines (verloren/gestohlen/zerstoert)') + '\n';
@@ -13485,38 +13504,49 @@ function showHeader(scene) {
   // v7.12.53: Bei fehlendem scene.ort NICHT den alten Wert halten (Geister-Zustand!),
   // sondern auf NEUTRAL zuruecksetzen. Sonst bleibt z.B. CUSTODY haengen wenn die
   // KI mal keinen Ort liefert, und Custody-Logik feuert faelschlich weiter.
-  if (scene && scene.ort) {
-    const _ortVorher = currentOrt;  // v7.12.352: für Wechsel-Diagnose
-    currentOrt = normForMatch(scene.ort);
-    // v7.12.513 (Umbau Stufe 1, UEBERGANGSMODUS): Drift-MESSUNG. Engine-Ort vs KI-Ort vergleichen und bei
-    // Abweichung warnen - aber currentOrt NOCH aus scene.ort lassen (nichts entmachten). So sehen wir an
-    // echten Runs, wie oft + wo die KI vom Engine-Ort abweicht, BEVOR wir die Lesestellen umstellen (1C-hard).
-    try {
-      if (engineCurrentLocation && engineCurrentLocation.name) {
-        const _eng = normForMatch(engineCurrentLocation.name);
-        const _ki = currentOrt;
-        // grober Match: KI-Ort enthaelt Engine-Ortsnamen-Kern oder umgekehrt (Teilstring)
-        const _kern = _eng.split(/\s+/).filter(w => w.length >= 4);
-        const _trifft = _kern.some(w => _ki.includes(w)) || _eng.includes(_ki.split(/\s+/)[0] || '###');
-        if (!_trifft && typeof diag === 'function') {
-          diag('drift', 'ORT-DRIFT (Messung, nicht entmachtet): Engine="' + engineCurrentLocation.name + '" vs KI scene.ort="' + scene.ort + '"');
-        }
+  // v7.12.521 (Stufe 1C-HARD): Die ENGINE besitzt den Ort. currentOrt kommt jetzt aus engineCurrentLocation,
+  // NICHT mehr aus scene.ort. Damit sehen alle ~50 Lesestellen (Wagner-Button, Haftort, Cast-Clean, Charité...)
+  // automatisch den Engine-Ort - ohne dass jede einzeln umgestellt werden muss (Quelle statt Leser umstellen).
+  // scene.ort dient nur noch der DRIFT-MESSUNG (hat die KI versucht, Karl woandershin zu schreiben?).
+  // Bewegung passiert NUR noch über den Reisen-Button (der engineCurrentLocation setzt).
+  if (engineCurrentLocation && engineCurrentLocation.name) {
+    const _ortVorher = currentOrt;
+    const _engNorm = normForMatch(engineCurrentLocation.name);
+    // DRIFT-MESSUNG (repariert, v521): exakter Kern-Vergleich. Vorher zu lasch (Büro vs Holsteinische Str.
+    // wurde nicht erkannt). Jetzt: signifikante Wörter (>=4 Zeichen) müssen sich überschneiden, sonst Drift.
+    if (scene && scene.ort) {
+      const _kiNorm = normForMatch(scene.ort);
+      const _engWords = _engNorm.split(/[\s,]+/).filter(w => w.length >= 4);
+      const _kiWords = _kiNorm.split(/[\s,]+/).filter(w => w.length >= 4);
+      const _ueberschneidung = _engWords.some(w => _kiWords.some(kw => kw.includes(w) || w.includes(kw)));
+      if (!_ueberschneidung && typeof diag === 'function') {
+        diag('drift', 'ORT-DRIFT KORRIGIERT: KI schrieb "' + scene.ort + '", Engine hält "' + engineCurrentLocation.name + '" (Engine gewinnt - Bewegung nur per Reisen-Button)');
       }
-    } catch (e) { /* Drift-Messung optional */ }
+    }
+    currentOrt = _engNorm;
+    // Ort-Typ aus dem ENGINE-Ortsnamen klassifizieren (konsistent mit currentOrt).
+    const ortClass = classifyOrtDetailed(engineCurrentLocation.name);
+    currentOrtType = ortClass.type;
+    if (typeof diag === 'function') {
+      const _gewechselt = _ortVorher && currentOrt && _ortVorher !== currentOrt;
+      diag('detect', 'ORT (Engine): "' + engineCurrentLocation.name + '" → Typ: ' + ortClass.type + ' [' + ortClass.rule + ']'
+        + (_gewechselt ? ' | WECHSEL von "' + _ortVorher + '"' : ''));
+    }
+  } else if (scene && scene.ort) {
+    // Fallback (Engine-Ort noch nicht initialisiert, z.B. alter Spielstand): wie bisher aus scene.ort.
+    const _ortVorher = currentOrt;
+    currentOrt = normForMatch(scene.ort);
     const ortClass = classifyOrtDetailed(scene.ort);
     currentOrtType = ortClass.type;
     if (typeof diag === 'function') {
-      // v7.12.352 (ORT-DIAG): Wechsel explizit machen. Ein unerklärter Ortssprung (ohne Spieler-
-      // Reise) war die Wurzel mehrerer Bugs (zur-Aufgabe-Drift, Greta-Befragung springt zur
-      // Wäscherei). Der bestehende Marker zeigte nur den NEUEN Ort - der Sprung blieb unsichtbar.
       const _gewechselt = _ortVorher && currentOrt && _ortVorher !== currentOrt;
-      diag('detect', 'ORT: "' + scene.ort + '" → Typ: ' + ortClass.type + ' [Regel: ' + ortClass.rule + ']'
-        + (_gewechselt ? ' | WECHSEL von "' + _ortVorher + '"' : (_ortVorher === currentOrt && _ortVorher ? ' | (gleicher Ort)' : '')));
+      diag('detect', 'ORT (KI-Fallback, kein Engine-Ort): "' + scene.ort + '" → Typ: ' + ortClass.type + ' [Regel: ' + ortClass.rule + ']'
+        + (_gewechselt ? ' | WECHSEL von "' + _ortVorher + '"' : ''));
     }
   } else {
     currentOrt = '';
     currentOrtType = 'NEUTRAL';
-    if (typeof diag === 'function') diag('detect', 'ORT: (kein ort von KI) → Typ: NEUTRAL');
+    if (typeof diag === 'function') diag('detect', 'ORT: (kein Ort) → Typ: NEUTRAL');
   }
 
   // v7.12.41: GEWAHRSAM in Status-Bar anzeigen wenn aktiv
@@ -26165,7 +26195,11 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     // applyCategoryMechanics). Sonst nutzt isHealLocation/wagnerPresent etc.
     // in performApiCall noch den currentOrtType der VORHERIGEN Szene -> um eine
     // Szene versetzt. showHeader setzt es spaeter nochmal (idempotent).
-    if (scene && scene.ort) {
+    // v7.12.521 (Stufe 1C-hard): currentOrt aus engineCurrentLocation (Engine besitzt Ort), scene.ort nur Fallback.
+    if (engineCurrentLocation && engineCurrentLocation.name) {
+      currentOrt = normForMatch(engineCurrentLocation.name);
+      currentOrtType = classifyOrtDetailed(engineCurrentLocation.name).type;
+    } else if (scene && scene.ort) {
       currentOrt = normForMatch(scene.ort);
       currentOrtType = classifyOrtDetailed(scene.ort).type;
     } else {
