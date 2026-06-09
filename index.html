@@ -3042,7 +3042,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.558</div>
+    <div class="start-version">Schatten v7.12.559</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3264,7 +3264,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.558</span>
+    <span>Schatten v7.12.559</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6501,7 +6501,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.558';
+window.SCHATTEN_VERSION = 'v7.12.559';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -6625,6 +6625,11 @@ let _companionLock = null;
 // als _companionLock (1 Person, freitext-erkannt, Schutzperson) ist _party eine explizite Mehr-Personen-Liste,
 // vom Spieler über Buttons gesteuert. Einträge: { id, name, tag, sinceScene }.
 let _party = [];
+// v7.12.559 (Benjamin): Unterwegs-Heilung durch Doc Wagner/Marlene in der Party. Begrenzt durch Verbandszeug-
+// Vorrat (2 Anwendungen), damit ein mitreisender Arzt kein Cheat-Code ist. Vorrat erschöpft -> kein Button mehr,
+// bis er an einem Heilort (Praxis/Charité) wieder aufgefüllt wird. Volle Heilung pro Anwendung.
+let _verbandszeugVorrat = 2;
+const _VERBANDSZEUG_MAX = 2;
 // Helper: ist ein NPC (per id ODER name) in der Party?
 function _istInParty(npcId, npcName) {
   if (!Array.isArray(_party)) return false;
@@ -6648,6 +6653,22 @@ function _partyRemove(npcId, npcName) {
   _party = _party.filter(p => !((idN && normForMatch(p.id) === idN) || (nmN && normForMatch(p.name) === nmN)
     || (nmN && normForMatch(p.name).split(/\s+/)[0] === nmN.split(/\s+/)[0])));
   if (_party.length !== vorher && typeof diag === 'function') diag('state', '✦ PARTY -: ' + (npcName || npcId) + ' verlässt die Party (' + _party.length + ')');
+}
+// v7.12.559 (Benjamin-Wunsch): mitnehmbare NPCs am aktuellen Ort, die NICHT in der Party sind. Für das
+// Auto-Mitnehmen-Popup beim Reisen/Flüchten. Mitnehmbar = NICHT Gegner (ANTAGONIST/SUSPECT/GANGSTER/STASI) und
+// NICHT MYSTERY/Schatten (konsistent mit v558). Liefert [{id,name,tag}].
+function _mitnehmbareNpcsAmOrt() {
+  if (typeof getNpcsAtCurrentLocation !== 'function') return [];
+  const GEGNER_TAGS = ['ANTAGONIST', 'SUSPECT', 'GANGSTER', 'STASI', 'MYSTERY'];
+  let npcs = [];
+  try { npcs = getNpcsAtCurrentLocation() || []; } catch (e) { return []; }
+  return npcs.filter(n => {
+    if (!n || !n.name) return false;
+    const t = (n.tag || '').toUpperCase();
+    if (GEGNER_TAGS.includes(t)) return false;          // Gegner/Schatten nicht mitnehmbar
+    if (_istInParty(n.id, n.name)) return false;        // schon dabei
+    return true;
+  });
 }
 let _lastLoggedSpannung = null;  // STATE-DIAG: Spannungs-Wechsel
 let _lastLoggedVf = null;        // STATE-DIAG: Verfassungs-Wechsel
@@ -16367,6 +16388,17 @@ function applyCategoryMechanics(kategorie, ctx) {
       break;
 
     case 'HEILEN':
+      // v7.12.559: Unterwegs-Heilung (Doc/Marlene in Party) - voll wirksam (+2), aber zieht 1 Verbandszeug ab
+      // (echter Abzug am Apply-Punkt, nicht hier - diese Funktion läuft auch als Preview).
+      if (ctx.option && ctx.option._unterwegsHeal) {
+        result.vfDelta = (verfassung < 5) ? 2 : 0;
+        result.spannungDelta = -1;
+        result.timeAdvanceBonus = 0.3;
+        result.healingApplied = true;
+        result.unterwegsHealApplied = true; // Marker für Verbandszeug-Abzug beim Apply
+        result.pushMessages.push('UNTERWEGS-VERSORGUNG: Ein mitreisender Helfer (Doc Wagner oder Marlene) versorgt Karl notdürftig aber richtig - aus dem Verbandszeug, das er/sie dabei hat. KURZ (1-2 Sätze): Wunde abbinden, Schmerzmittel, weiter. Karl ist wieder stabil (+2 Vf). Es ist improvisiert, im Opel/Hinterhof/Hauseingang - kein Praxis-Komfort. VARIATION bei Wiederholung: nicht denselben Text.');
+        break;
+      }
       // v7.11.11: Konsistente Heil-Werte nach User-Konzept:
       // - HEILEN gibt +2 Vf solange verletzt (Vf < 5)
       // - v7.12.38: MARLENE-Ausnahme: Marlene kann nur notdürftig helfen (+1),
@@ -17009,6 +17041,64 @@ function istPersonPhysischAnwesend(name, scene, rolleHint) {
   return true;
 }
 // ===== v7.12.515: REISE-UI (Umbau Stufe 1, sichtbare Hälfte) =====
+// v7.12.559 (Benjamin-Wunsch): Auto-Mitnehmen-Popup. Beim Reisen ODER Flüchten von einem Ort, an dem mitnehmbare
+// NPCs stehen, die NICHT in der Party sind, wird gefragt "wen mitnehmen?". Mehrfachauswahl (antippen = toggle),
+// dann "Mitnehmen & weiter" (gewählte in Party) oder "Allein weiter" (niemand). Danach läuft weiterAktion().
+// Erscheint NUR wenn es mitnehmbare Nicht-Party-NPCs gibt - sonst ruft der Aufrufer weiterAktion() direkt.
+let _mitnehmenPopupOffen = false;
+function zeigeMitnehmenPopup(npcs, weiterAktion) {
+  if (_mitnehmenPopupOffen) return;
+  if (!Array.isArray(npcs) || npcs.length === 0) { if (typeof weiterAktion === 'function') weiterAktion(); return; }
+  _mitnehmenPopupOffen = true;
+  if (typeof _markPopupOpened === 'function') _markPopupOpened();
+  const gewaehlt = {}; // id/name -> true
+  const overlay = document.createElement('div');
+  overlay.id = 'mitnehmen-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9100;background:rgba(10,8,6,0.85);display:flex;align-items:center;justify-content:center;padding:18px;';
+  const panel = document.createElement('div');
+  panel.style.cssText = 'max-width:440px;width:100%;max-height:82vh;overflow-y:auto;background:#1a1611;border:1px solid #4d4234;border-radius:8px;padding:18px 18px 14px;box-shadow:0 12px 40px rgba(0,0,0,0.6);';
+  panel.innerHTML = '<div style="font-family:inherit;color:#cbbfa9;font-size:calc(14px * var(--reading-scale));letter-spacing:0.06em;margin-bottom:4px;">WEN MITNEHMEN?</div>'
+    + '<div style="font-family:inherit;color:#867868;font-size:calc(10px * var(--reading-scale));margin-bottom:14px;line-height:1.4;">Diese Personen sind hier. Tippe an, wen du mitnehmen willst (mehrere möglich) - oder geh allein weiter.</div>';
+  const btnRefs = [];
+  npcs.forEach(npc => {
+    const key = npc.id || npc.name;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    const _setStyle = () => {
+      const an = !!gewaehlt[key];
+      btn.style.cssText = 'display:block;width:100%;text-align:left;margin-bottom:8px;padding:10px 12px;border-radius:5px;cursor:pointer;font-family:inherit;font-size:calc(12px * var(--reading-scale));line-height:1.3;'
+        + (an ? 'background:#2d3a30;border:1px solid #7d9b8a;color:#cfe3d4;' : 'background:#221d16;border:1px dashed #5a4e42;color:#cbbfa9;');
+      btn.innerHTML = '<span style="display:block;">' + (an ? '✦ ' : '○ ') + escapeHtml(npc.name) + (npc.tag ? ' <span style="color:#867868;font-size:0.85em;">· ' + escapeHtml(npc.tag.toLowerCase()) + '</span>' : '') + '</span>';
+    };
+    _setStyle();
+    attachSafeTap(btn, () => { gewaehlt[key] = !gewaehlt[key]; _setStyle(); });
+    panel.appendChild(btn);
+    btnRefs.push(btn);
+  });
+  // Aktions-Buttons
+  const mitBtn = document.createElement('button');
+  mitBtn.type = 'button';
+  mitBtn.style.cssText = 'display:block;width:100%;margin-top:10px;padding:11px 12px;background:#2d3a30;border:1px solid #7d9b8a;border-radius:5px;color:#cfe3d4;cursor:pointer;font-family:inherit;font-size:calc(12px * var(--reading-scale));letter-spacing:0.04em;';
+  mitBtn.textContent = '✦ Mitnehmen & weiter';
+  const _schliessen = () => { try { overlay.remove(); } catch(e){} _mitnehmenPopupOffen = false; };
+  attachSafeTap(mitBtn, () => {
+    let n = 0;
+    npcs.forEach(npc => { const key = npc.id || npc.name; if (gewaehlt[key] && typeof _partyAdd === 'function') { _partyAdd({ id: npc.id, name: npc.name, tag: npc.tag }); n++; } });
+    if (n > 0 && typeof showProgressToast === 'function') { try { showProgressToast(n === 1 ? 'Begleitung' : n + ' kommen mit', 'In Karls Begleitung aufgenommen.', 'info', 'party-multiadd'); } catch(e){} }
+    _schliessen();
+    if (typeof weiterAktion === 'function') weiterAktion();
+  });
+  const alleinBtn = document.createElement('button');
+  alleinBtn.type = 'button';
+  alleinBtn.style.cssText = 'display:block;width:100%;margin-top:6px;padding:9px 12px;background:transparent;border:1px solid #403930;border-radius:5px;color:#867868;cursor:pointer;font-family:inherit;font-size:calc(11px * var(--reading-scale));';
+  alleinBtn.textContent = 'Allein weiter';
+  attachSafeTap(alleinBtn, () => { _schliessen(); if (typeof weiterAktion === 'function') weiterAktion(); });
+  panel.appendChild(mitBtn);
+  panel.appendChild(alleinBtn);
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
+}
+
 // Öffnet ein Overlay mit den freigeschalteten, reisbaren Orten. Auswahl wechselt engineCurrentLocation
 // SOFORT (keine Szene, keine KI, keine Tokens - Benjamins Entscheidung) und re-rendert den Status.
 function reiseZuOrt(loc) {
@@ -17021,28 +17111,35 @@ function reiseZuOrt(loc) {
     if (typeof diag === 'function') diag('drift', 'REISE-Klick ignoriert (Anfrage bereits in-flight)');
     return;
   }
-  const vorher = engineCurrentLocation ? engineCurrentLocation.name : '?';
-  engineCurrentLocation = { name: loc.name, sektor: loc.sektor || '' };
-  _reiseGeradeErfolgt = { name: loc.name, sektor: loc.sektor || '', detail: loc.detail || '' };
-  _aktuelleAktionIstReise = true; // v7.12.527: für mechCtx (kein Indiz-Zwang bei Reise)
-  _threatLetzterWuerfelOrt = ''; _threatAktiveSpawns = []; // v7.12.532: am Zielort frisch würfeln (beim Szene-Commit)
-  if (typeof diag === 'function') diag('state', 'REISE (Engine besitzt Ort, löst Szene aus): "' + vorher + '" -> "' + loc.name + '"');
-  if (typeof saveGameState === 'function') { try { saveGameState(); } catch (e) {} }
-  try { renderImRaumAnzeige(); } catch (e) {}
-  // v7.12.516 (Run 1400, Designfehler-Fix): Reise löst jetzt eine ECHTE Szene aus (Option 1). Vorher wechselte
-  // nur der Ort, aber die A/B/C/D-Optionen blieben von der Vorszene stehen (Käse). Jetzt schreibt die KI eine
-  // Ankunftsszene am neuen Ort + passende frische Optionen. Der ORTSWECHSEL-Kontext (timeContext, _reiseGerade
-  // Erfolgt) sorgt dafür, dass die Szene am Zielort spielt.
-  const reiseOpt = {
-    id: 'REISE',
-    text: 'Fahr mit dem Opel zu: ' + loc.name,
-    kategorie: 'ERKUNDEN',     // Reise ist eine Bewegungs-/Erkundungsaktion (kein Kampf)
-    _kategorie: 'ERKUNDEN',
-    _priority: 20,
-    _isSystemButton: true,
-    _istReise: true,
+  // v7.12.559: VOR dem Ortswechsel prüfen, ob mitnehmbare NPCs am AKTUELLEN Ort stehen, die nicht in der Party
+  // sind -> Mitnehmen-Popup. Der eigentliche Reise-Kern läuft erst danach (weiterAktion). NPCs jetzt ermitteln,
+  // weil engineCurrentLocation gleich wechselt.
+  const _mitnehmbar = (typeof _mitnehmbareNpcsAmOrt === 'function') ? _mitnehmbareNpcsAmOrt() : [];
+  const _reiseKern = () => {
+    const vorher = engineCurrentLocation ? engineCurrentLocation.name : '?';
+    engineCurrentLocation = { name: loc.name, sektor: loc.sektor || '' };
+    _reiseGeradeErfolgt = { name: loc.name, sektor: loc.sektor || '', detail: loc.detail || '' };
+    _aktuelleAktionIstReise = true; // v7.12.527: für mechCtx (kein Indiz-Zwang bei Reise)
+    _threatLetzterWuerfelOrt = ''; _threatAktiveSpawns = []; // v7.12.532: am Zielort frisch würfeln (beim Szene-Commit)
+    if (typeof diag === 'function') diag('state', 'REISE (Engine besitzt Ort, löst Szene aus): "' + vorher + '" -> "' + loc.name + '"');
+    if (typeof saveGameState === 'function') { try { saveGameState(); } catch (e) {} }
+    try { renderImRaumAnzeige(); } catch (e) {}
+    const reiseOpt = {
+      id: 'REISE',
+      text: 'Fahr mit dem Opel zu: ' + loc.name,
+      kategorie: 'ERKUNDEN',     // Reise ist eine Bewegungs-/Erkundungsaktion (kein Kampf)
+      _kategorie: 'ERKUNDEN',
+      _priority: 20,
+      _isSystemButton: true,
+      _istReise: true,
+    };
+    if (typeof chooseOption === 'function') chooseOption(reiseOpt);
   };
-  if (typeof chooseOption === 'function') chooseOption(reiseOpt);
+  if (_mitnehmbar.length > 0 && typeof zeigeMitnehmenPopup === 'function') {
+    zeigeMitnehmenPopup(_mitnehmbar, _reiseKern);
+  } else {
+    _reiseKern();
+  }
 }
 function schliesseReiseMenue() {
   const ov = document.getElementById('reise-overlay');
@@ -18124,6 +18221,34 @@ function renderOptions(scene) {
     (typeof topActions !== 'undefined' ? topActions : list).appendChild(dwBtn);
   }
 
+  // v7.12.559 (Benjamin): UNTERWEGS-HEILEN durch Doc Wagner/Marlene IN DER PARTY (ortsunabhängig). Anders als die
+  // ortsgebundenen Wagner/Marlene-Buttons oben: greift überall, solange einer von beiden mitreist. Begrenzt durch
+  // Verbandszeug-Vorrat (kein Cheat-Code) - 2 Anwendungen, dann erschöpft bis zur Auffüllung am Heilort.
+  // Bedingungen: Karl verletzt (Vf<5), Lage ruhig genug (Sp<=2 wie bei Wagner), nicht in Custody, Vorrat > 0,
+  // und NICHT schon an einem Heilort (dort gibt es ja die vollwertigen ortsgebundenen Buttons).
+  const _medicInParty = (typeof _istInParty === 'function') && (_istInParty('doc_wagner', 'Doc Wagner') || _istInParty('marlene_wagner', 'Marlene Wagner') || _istInParty('marlene', 'Marlene'));
+  const _medicName = (typeof _istInParty === 'function' && _istInParty('doc_wagner', 'Doc Wagner')) ? 'Doc Wagner' : 'Marlene';
+  const showUnterwegsHeal = _medicInParty && currentVerfassung < 5 && !karlInStasiCustody
+    && currentSpannung <= 2 && (typeof _verbandszeugVorrat === 'number' && _verbandszeugVorrat > 0)
+    && !showWagnerHealButton && !showMarleneHealButton; // am Heilort haben die anderen Buttons Vorrang
+  if (showUnterwegsHeal) {
+    const uwBtn = document.createElement('button');
+    uwBtn.className = 'option-btn option-btn-system option-btn-notheilen';
+    uwBtn.dataset.kategorie = 'HEILEN';
+    uwBtn.innerHTML = '<span class="option-id">🩹</span><span class="option-text-wrap"><span>' + escapeHtml(_medicName) + ' verbindet dich (unterwegs)</span><span class="option-marker option-marker-system">→ HEILEN · Verbandszeug ' + _verbandszeugVorrat + '/' + _VERBANDSZEUG_MAX + '</span></span>';
+    const uwOpt = {
+      id: 'HEILEN',
+      text: _medicName + ' verbindet Karl notdürftig unterwegs',
+      kategorie: 'HEILEN',
+      _kategorie: 'HEILEN',
+      _priority: 90,
+      _isSystemButton: true,
+      _unterwegsHeal: true,  // Marker: zieht beim Apply 1 Verbandszeug ab
+    };
+    attachSafeTap(uwBtn, () => { chooseOption(uwOpt); });
+    (typeof topActions !== 'undefined' ? topActions : list).appendChild(uwBtn);
+  }
+
   // v7.12.38: MARLENE-HEILEN-BUTTON. Wenn Karl in der Charité ist und Marlene
   // Wagner als Krankenschwester präsent ist, kann sie ihm unter der Hand helfen.
   // v7.12.414: +2 Vf (gleich wie Doc Wagner), kein Tageslimit.
@@ -18180,34 +18305,17 @@ function renderOptions(scene) {
       _priority: 25,
       _isSystemButton: true,
     };
-    let flTouchStartX = 0, flTouchStartY = 0, flTouchStartTime = 0;
-    let flTouchCancelled = false, flTouchHandled = false;
-    const FL_TAP_MAX_MOVE = 12, FL_TAP_MAX_DURATION = 800;
-    flBtn.addEventListener('touchstart', (e) => {
-      if (e.touches.length !== 1) { flTouchCancelled = true; return; }
-      flTouchStartX = e.touches[0].clientX;
-      flTouchStartY = e.touches[0].clientY;
-      flTouchStartTime = Date.now();
-      flTouchCancelled = false; flTouchHandled = false;
-    }, { passive: true });
-    flBtn.addEventListener('touchmove', (e) => {
-      if (flTouchCancelled) return;
-      if (e.touches.length !== 1) { flTouchCancelled = true; return; }
-      const dx = Math.abs(e.touches[0].clientX - flTouchStartX);
-      const dy = Math.abs(e.touches[0].clientY - flTouchStartY);
-      if (dx > FL_TAP_MAX_MOVE || dy > FL_TAP_MAX_MOVE) flTouchCancelled = true;
-    }, { passive: true });
-    flBtn.addEventListener('touchend', (e) => {
-      if (flTouchCancelled) { e.preventDefault(); return; }
-      if (Date.now() - flTouchStartTime > FL_TAP_MAX_DURATION) { e.preventDefault(); return; }
-      e.preventDefault();
-      flTouchHandled = true;
-      chooseOption(flOpt);
-    });
-    flBtn.addEventListener('click', () => {
-      if (flTouchHandled) { flTouchHandled = false; return; }
-      chooseOption(flOpt);
-    });
+    // v7.12.559: vor der Flucht ebenfalls fragen, wen man mitnimmt (Benjamin: auch bei Flucht). NPCs am aktuellen
+    // Ort ermitteln, dann Popup, dann Flucht. attachSafeTap vereinheitlicht den Tap-Schutz (war noch alter Stil).
+    const _starteFlucht = () => {
+      const _mitnehmbar = (typeof _mitnehmbareNpcsAmOrt === 'function') ? _mitnehmbareNpcsAmOrt() : [];
+      if (_mitnehmbar.length > 0 && typeof zeigeMitnehmenPopup === 'function') {
+        zeigeMitnehmenPopup(_mitnehmbar, () => chooseOption(flOpt));
+      } else {
+        chooseOption(flOpt);
+      }
+    };
+    attachSafeTap(flBtn, _starteFlucht);
     (typeof topActions !== 'undefined' ? topActions : list).appendChild(flBtn);
   }
 
@@ -23245,6 +23353,7 @@ async function startGame() {
   _freitextCooldownBisSzene = 0;  // v7.12.498: Freitext-Cooldown zuruecksetzen
   _companionLock = null;          // v7.12.504: Begleitperson-Lock zuruecksetzen
   _party = [];                    // v7.12.546: Party leeren
+  _verbandszeugVorrat = _VERBANDSZEUG_MAX; // v7.12.559: Verbandszeug-Vorrat zurücksetzen
   _threatGlobalCooldown = {};     // v7.12.531: ThreatBeat-Cooldowns frisch
   _threatOrtLastRoll = {};
   _threatAktiveSpawns = [];
@@ -28805,6 +28914,18 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (typeof diag === 'function') {
           diag('state', 'HEILUNGS-COOLDOWN aktiviert via ' + pendingCategoryChoice + ' (' + HEALING_COOLDOWN_SCENES + ' Sz, schuetzt vor "alte Wunden pochen"-Drift)');
         }
+      }
+      // v7.12.559: Unterwegs-Heilung verbraucht 1 Verbandszeug (echter Abzug, nicht im Preview).
+      if (categoryMechanicsResult && categoryMechanicsResult.unterwegsHealApplied && typeof _verbandszeugVorrat === 'number') {
+        _verbandszeugVorrat = Math.max(0, _verbandszeugVorrat - 1);
+        if (typeof diag === 'function') diag('state', '🩹 VERBANDSZEUG verbraucht (Unterwegs-Heilung) -> Vorrat ' + _verbandszeugVorrat + '/' + _VERBANDSZEUG_MAX);
+        if (_verbandszeugVorrat === 0 && typeof showProgressToast === 'function') { try { showProgressToast('Verbandszeug alle', 'Doc/Marlene können unterwegs nicht mehr verbinden. Auffüllen in der Praxis/Charité.', 'caution', 'verbandszeug-leer'); } catch(e){} }
+      }
+      // v7.12.559: Heilung an einem Heilort (Praxis/Charité) füllt den Verbandszeug-Vorrat wieder auf.
+      const _istHeilortFuerVorrat = (typeof currentOrtType !== 'undefined' && (currentOrtType === 'WAGNER' || currentOrtType === 'CHARITE')) || /\b(praxis|apotheke|charite)/.test(normForMatch((scene && scene.ort) || ''));
+      if (categoryMechanicsResult && categoryMechanicsResult.healingApplied && _istHeilortFuerVorrat && typeof _verbandszeugVorrat === 'number' && _verbandszeugVorrat < _VERBANDSZEUG_MAX) {
+        _verbandszeugVorrat = _VERBANDSZEUG_MAX;
+        if (typeof diag === 'function') diag('state', '🩹 VERBANDSZEUG aufgefüllt am Heilort -> ' + _verbandszeugVorrat + '/' + _VERBANDSZEUG_MAX);
       }
 
       // v7.11.12: Custody-Schlaf -> Karl wird freigelassen am Morgen
@@ -34582,6 +34703,7 @@ function saveGameState() {
       // wieder als ortsgebunden behandelt und beim nächsten Ortswechsel rausgeputzt (alter v504-Bug zurück).
       companionLock: (typeof _companionLock === 'object' && _companionLock) ? _companionLock : null,
       party: (Array.isArray(_party)) ? _party : [],
+      verbandszeugVorrat: (typeof _verbandszeugVorrat === 'number') ? _verbandszeugVorrat : _VERBANDSZEUG_MAX, // v7.12.559
       // v7.12.531 (Baustein B1): ThreatBeat-Cooldowns mitsichern (sonst nach Reload Gegner-Timing verloren).
       threatGlobalCooldown: (typeof _threatGlobalCooldown === 'object' && _threatGlobalCooldown) ? _threatGlobalCooldown : {},
       threatOrtLastRoll: (typeof _threatOrtLastRoll === 'object' && _threatOrtLastRoll) ? _threatOrtLastRoll : {},
@@ -34790,6 +34912,7 @@ function restoreGameState() {
     // v7.12.509: companionLock wiederherstellen (sonst nach Reload alter Margarete-Verschwind-Bug).
     _companionLock = (snap.companionLock && typeof snap.companionLock === 'object') ? snap.companionLock : null;
     _party = Array.isArray(snap.party) ? snap.party : [];
+    _verbandszeugVorrat = (typeof snap.verbandszeugVorrat === 'number') ? snap.verbandszeugVorrat : _VERBANDSZEUG_MAX; // v7.12.559
     // v7.12.531 (Baustein B1): ThreatBeat-Cooldowns wiederherstellen.
     _threatGlobalCooldown = (snap.threatGlobalCooldown && typeof snap.threatGlobalCooldown === 'object') ? snap.threatGlobalCooldown : {};
     _threatOrtLastRoll = (snap.threatOrtLastRoll && typeof snap.threatOrtLastRoll === 'object') ? snap.threatOrtLastRoll : {};
