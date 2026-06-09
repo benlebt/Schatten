@@ -3042,7 +3042,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.557</div>
+    <div class="start-version">Schatten v7.12.558</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3264,7 +3264,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.557</span>
+    <span>Schatten v7.12.558</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6501,7 +6501,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.557';
+window.SCHATTEN_VERSION = 'v7.12.558';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -17261,13 +17261,18 @@ function oeffneNpcMenue(npc) {
   // v7.12.547 (Party-System Schicht 2): "Mitnehmen" / "Hier lassen" für Nicht-Gegner. Verwaltungs-Aktionen -
   // lösen KEINE KI-Szene aus, ändern nur den Party-Zustand. Gegner (STASI/SUSPECT/...) nimmt man NICHT mit.
   // Ist die Person schon in der Party -> "Hier lassen" (entfernen); sonst -> "Mitnehmen" (hinzufügen).
-  const _istGegnerTag = GEGNER.includes(tag);
-  if (!_istGegnerTag) {
-    if (typeof _istInParty === 'function' && _istInParty(npc.id, npc.name)) {
-      verben.push({ key: 'hierlassen', label: 'Hier lassen', kategorie: '_PARTY', _partyAction: 'remove', _hint: 'Bleibt an diesem Ort · verlässt die Party · keine Szene' });
-    } else {
-      verben.push({ key: 'mitnehmen', label: 'Mitnehmen', kategorie: '_PARTY', _partyAction: 'add', _hint: 'In die Party aufnehmen · reist mit dir · keine Szene' });
-    }
+  // v7.12.558 (Benjamin-Entscheid, Befund Run 2130): MYSTERY/Schatten-Figuren sind NICHT mitnehmbar - eine
+  // anonyme, ungeklärte Verfolger-Figur (Mann im langen Mantel) ist kein Begleiter, den man einlädt. Verhindert
+  // den falschen "kommt mit"-Toast und das Party-Kleben. Wer sie ist, klärt die Engine, nicht das Mitnehmen.
+  const _istGegnerTag = GEGNER.includes(tag) || tag === 'MYSTERY';
+  const _schonInParty = (typeof _istInParty === 'function') && _istInParty(npc.id, npc.name);
+  if (_schonInParty) {
+    // "Hier lassen" IMMER anbieten wenn die Figur in der Party ist - auch MYSTERY/Gegner, falls sie aus einem
+    // früheren Stand noch drin steckt (sonst könnte man sie nicht mehr loswerden).
+    verben.push({ key: 'hierlassen', label: 'Hier lassen', kategorie: '_PARTY', _partyAction: 'remove', _hint: 'Bleibt an diesem Ort · verlässt die Party · keine Szene' });
+  } else if (!_istGegnerTag) {
+    // "Mitnehmen" nur für erlaubte Begleiter-Tags (nicht Gegner, nicht MYSTERY/Schatten).
+    verben.push({ key: 'mitnehmen', label: 'Mitnehmen', kategorie: '_PARTY', _partyAction: 'add', _hint: 'In die Party aufnehmen · reist mit dir · keine Szene' });
   }
   // v7.12.542 (Schritt 2, Benjamin): "Näher kommen"/"Nacht verbringen" auch im NPC-Menü, wenn der angeklickte
   // NPC die aktuelle Romance-Person ist. Nutzt DIESELBE Logik wie der ♥-Button oben (window._romanceMenuState
@@ -29970,13 +29975,28 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           // NUR namentlicher Abschied entfernt den NPC (konservativ - kein pauschaler "Karl allein"-
           // Zweig, der Klient/Romance fälschlich entfernen könnte). Karl verabschiedet sich von X,
           // oder X bleibt zurück / winkt nach / sieht Karl nach.
+          // v7.12.558: zusätzlich klare FLUCHT-Verben (X flieht/rennt weg/verschwindet/entkommt) - ein
+          // Party-Mitglied, das im Text flieht, verlässt die Party (Befund: Schattenmann floh Sz13, blieb aber
+          // durch die Party-Garantie kleben). Konservativ in Namensnähe.
           const _npcAbschied = new RegExp(
             '(verabschiedest dich von |winkst |nickst )[^.]{0,25}' + _first
             + '|' + _first + '[^.]{0,45}(bleibt (zurueck|zurück|stehen)|sieht dir nach|schaut dir nach|winkt (dir |zum abschied)|verabschiedet sich|laesst dich (gehen|ziehen)|kehrt (ins|zur).{0,20}zurueck)', 'i'
           ).test(_st);
-          if (_npcAbschied) {
-            if (typeof diag === 'function') diag('drift', 'NPC bei namentlichem Abschied aus Cast entfernt: ' + _cn + ' (verhindert Teleport-Rückkehr)');
+          const _npcFlucht = new RegExp(
+            _first + '[^.]{0,45}(flieht|fluechtet|flüchtet|rennt (weg|davon|fort)|laeuft (weg|davon|fort)|läuft (weg|davon|fort)|verschwindet (in|im|hinter|um|durch)|entkommt|stuermt (raus|hinaus|davon)|macht sich (aus dem staub|davon)|setzt sich ab|taucht (unter|ab)|ist (ploetzlich |plötzlich )?(weg|verschwunden))', 'i'
+          ).test(_st)
+          // Inversion (Verb vor Name): "rennt der Mann weg", "flieht Mertens", "verschwindet der Schatten"
+          || new RegExp('(flieht|fluechtet|flüchtet|rennt|laeuft|läuft|entkommt|verschwindet)\\s+(der |die |das |den )?' + _first, 'i').test(_st) && /\b(weg|davon|fort|flieht|fluechtet|flüchtet|entkommt|verschwindet)\b/i.test(_st);
+          if (_npcAbschied || _npcFlucht) {
+            const _grund = _npcFlucht ? 'Flucht' : 'Abschied';
+            const _pid = (cast[i] && cast[i].id) ? cast[i].id : ''; // VOR splice sichern
+            if (typeof diag === 'function') diag('drift', 'NPC bei namentlichem(r) ' + _grund + ' aus Cast entfernt: ' + _cn + ' (verhindert Teleport-Rückkehr)');
             cast.splice(i, 1);
+            // v7.12.558: auch aus der Party - sonst holt die Party-Garantie (v557) ihn sofort zurück.
+            if (typeof _istInParty === 'function' && typeof _partyRemove === 'function' && _istInParty(_pid, _cn)) {
+              _partyRemove(_pid, _cn);
+              if (typeof diag === 'function') diag('state', '✦ PARTY -: ' + _cn + ' verlässt die Party (' + _grund + ' im Text)');
+            }
           }
         }
       }
