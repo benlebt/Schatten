@@ -17,7 +17,7 @@
 // v1.0 (2026-05-30): Erste versionierte Fassung. Enthaelt den responseSchema-
 //   Kernfix (kategorie als enum+required pro Option; zielperson_gefunden,
 //   wahrheit_erkannt, indiz_verbindung, npc_kernhinweis ergaenzt).
-const GEMINI_JS_VERSION = 'v1.4';
+const GEMINI_JS_VERSION = 'v1.6';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -43,6 +43,13 @@ export default async function handler(req, res) {
     }
   }
 
+  // v7.12.514: Reiner PASSWORT-CHECK. Das Frontend kann VOR der Fallauswahl { authCheck: true } senden,
+  // um das Passwort zu validieren, ohne ein Modell aufzurufen (keine Tokens). Kommt der Request hier an,
+  // war das Passwort oben bereits korrekt (oder die Sperre ist deaktiviert) -> einfach 200 ok.
+  if (req.body && req.body.authCheck === true) {
+    return res.status(200).json({ ok: true });
+  }
+
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     return res.status(500).json({
@@ -60,12 +67,12 @@ export default async function handler(req, res) {
     'gemini-2.5-flash': true,
     'gemini-2.5-flash-lite': true,
     'gemini-2.5-pro': true,
-    'gemini-3-flash-preview': true,    // v1.4: Test-Modell (Debug-Schalter) - korrekter Google-String
-    'gemini-3.1-flash-lite': true,
-    'gemini-3.1-pro-preview': true,    // v1.4: Test-Modell (Debug-Schalter) - korrekter Google-String
-    'gemini-3.5-flash': true,          // v1.4: GA-Modell, optional testbar
+    'gemini-3-flash-preview': true,  // Test-Modell (Debug-Schalter)
+    'gemini-3.1-flash-lite': true,   // Standard-Produktionsmodell
+    'gemini-3.1-pro-preview': true,  // v1.5: Test-Modell (Debug-Schalter)
+    'gemini-3.5-flash': true,        // v1.5: Test-Modell (Debug-Schalter, GA/stabil)
   };
-  // v1.4: Default-Fallback auf den NEUEN Standard 3.1-flash-lite (nicht mehr 2.5).
+  // v1.3: Default-Fallback auf den NEUEN Standard 3.1-flash-lite (nicht mehr 2.5).
   const modelRequested = requestedModel || '(keiner)';
   const modelAccepted = !!ALLOWED_MODELS[requestedModel];
   const model = modelAccepted ? requestedModel : 'gemini-3.1-flash-lite';
@@ -155,6 +162,12 @@ export default async function handler(req, res) {
             },
           },
           cast_entfernt: { type: 'array', items: { type: 'string' } },
+          // v1.5: ALLE Personen, die in DIESER Szene physisch bei Karl im Raum sind
+          // (nicht nur neu hinzugekommene wie cast_hinzugefuegt, sondern der komplette
+          // aktuelle Personenbestand der Szene). Nur Namen. Tote/Vermisste/Abwesende NICHT.
+          // Dient als verlaessliche Praesenz-Quelle - Gemini fuellt cast_hinzugefuegt oft
+          // nicht, weil bekannte NPCs "schon da" sind; personenImRaum erfasst sie trotzdem.
+          personenImRaum: { type: 'array', items: { type: 'string' } },
           // Fall-Fortschritt: Indizien die Karl in dieser Szene neu gefunden hat
           // (Beweisstuecke, Zeugenaussagen, Fotos, Dokumente). Kurze Strings, z.B.
           // "Brief von Hans an Onkel Erwin", "Aussage Frau Vogel: Hans war Dienstag abend in Charlottenburg".
@@ -248,7 +261,7 @@ export default async function handler(req, res) {
         });
       }
 
-      // v1.4: Bei 404 (Modell-String bei Google unbekannt) den genutzten String mitgeben,
+      // v1.3: Bei 404 (Modell-String bei Google unbekannt) den genutzten String mitgeben,
       // damit im Debug-Log klar ist WELCHER String abgelehnt wurde.
       return res.status(geminiRes.status).json({
         error: {
