@@ -3042,7 +3042,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.515</div>
+    <div class="start-version">Schatten v7.12.516</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3264,7 +3264,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.515</span>
+    <span>Schatten v7.12.516</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6288,7 +6288,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.515';
+window.SCHATTEN_VERSION = 'v7.12.516';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -16694,18 +16694,34 @@ function istPersonPhysischAnwesend(name, scene, rolleHint) {
 // SOFORT (keine Szene, keine KI, keine Tokens - Benjamins Entscheidung) und re-rendert den Status.
 function reiseZuOrt(loc) {
   if (!loc) return;
+  // v7.12.516: Popup SOFORT schließen (vor allem anderen), damit ein versehentlicher Zweit-Tap nicht
+  // ein zweites Mal feuert. Zusätzlich greift der chooseOptionInFlight-Lock in chooseOption.
+  schliesseReiseMenue();
+  // Wenn schon eine Anfrage läuft, gar nicht erst reisen (Doppelklick-Schutz wie bei Optionen).
+  if (typeof chooseOptionInFlight !== 'undefined' && chooseOptionInFlight) {
+    if (typeof diag === 'function') diag('drift', 'REISE-Klick ignoriert (Anfrage bereits in-flight)');
+    return;
+  }
   const vorher = engineCurrentLocation ? engineCurrentLocation.name : '?';
   engineCurrentLocation = { name: loc.name, sektor: loc.sektor || '' };
   _reiseGeradeErfolgt = { name: loc.name, sektor: loc.sektor || '', detail: loc.detail || '' };
-  if (typeof diag === 'function') diag('state', 'REISE (Engine, ohne KI/Szene): "' + vorher + '" -> "' + loc.name + '"');
-  if (typeof showProgressToast === 'function') {
-    const _canShow = (typeof canShowToast !== 'function') || canShowToast('info', 'reise');
-    if (_canShow) showProgressToast('Angekommen', loc.name, 'info', 'reise');
-  }
-  // Spielstand sichern (Ort ist jetzt anders) + "im Raum"-Anzeige neu aufbauen.
-  try { if (typeof saveGameState === 'function') saveGameState(); } catch (e) {}
+  if (typeof diag === 'function') diag('state', 'REISE (Engine besitzt Ort, löst Szene aus): "' + vorher + '" -> "' + loc.name + '"');
+  if (typeof saveGameState === 'function') { try { saveGameState(); } catch (e) {} }
   try { renderImRaumAnzeige(); } catch (e) {}
-  schliesseReiseMenue();
+  // v7.12.516 (Run 1400, Designfehler-Fix): Reise löst jetzt eine ECHTE Szene aus (Option 1). Vorher wechselte
+  // nur der Ort, aber die A/B/C/D-Optionen blieben von der Vorszene stehen (Käse). Jetzt schreibt die KI eine
+  // Ankunftsszene am neuen Ort + passende frische Optionen. Der ORTSWECHSEL-Kontext (timeContext, _reiseGerade
+  // Erfolgt) sorgt dafür, dass die Szene am Zielort spielt.
+  const reiseOpt = {
+    id: 'REISE',
+    text: 'Fahr mit dem Opel zu: ' + loc.name,
+    kategorie: 'ERKUNDEN',     // Reise ist eine Bewegungs-/Erkundungsaktion (kein Kampf)
+    _kategorie: 'ERKUNDEN',
+    _priority: 20,
+    _isSystemButton: true,
+    _istReise: true,
+  };
+  if (typeof chooseOption === 'function') chooseOption(reiseOpt);
 }
 function schliesseReiseMenue() {
   const ov = document.getElementById('reise-overlay');
@@ -17225,7 +17241,10 @@ function renderOptions(scene) {
   const currentSpannung = (typeof scene.spannung === 'number') ? scene.spannung
                           : (typeof lastSpannung === 'number') ? lastSpannung
                           : 1;
-  const showFluchtButton = currentSpannung >= 4 && !karlInStasiCustody;
+  // v7.12.516 (Run 1400): Flucht-Button NICHT in Szene 1 (Fallstart - noch keine etablierte Bedrohung, ein
+  // "raus aus der Szene" direkt am Anfang wirkt absurd). Ab Szene 2 + hohe Spannung wie bisher.
+  const _sceneNr = (typeof sceneCounter === 'number') ? sceneCounter : 99;
+  const showFluchtButton = _sceneNr >= 2 && currentSpannung >= 4 && !karlInStasiCustody;
 
   // v7.11.12: NOTHEILEN-Verfuegbarkeit:
   // - Vf <= 2 (Karl ist schwer verletzt)
@@ -17595,7 +17614,8 @@ function renderOptions(scene) {
 
   // v7.12.515 (Umbau Stufe 1): REISE-Button. Immer verfügbar (außer in Custody - dann kann Karl nicht reisen),
   // sobald das Engine-Ortssystem initialisiert ist. Öffnet das Ortsmenü (nur freigeschaltete Orte).
-  if (typeof engineCurrentLocation !== 'undefined' && engineCurrentLocation && !karlInStasiCustody) {
+  // v7.12.516: NICHT in Szene 1 (Fallstart - der Spieler soll erst in der Situation ankommen, nicht sofort wegfahren).
+  if (typeof engineCurrentLocation !== 'undefined' && engineCurrentLocation && !karlInStasiCustody && _sceneNr >= 2) {
     const reiseBtn = document.createElement('button');
     reiseBtn.className = 'option-btn option-btn-system option-btn-reise';
     reiseBtn.dataset.kategorie = 'REISE';
