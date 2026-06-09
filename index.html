@@ -3042,7 +3042,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.566</div>
+    <div class="start-version">Schatten v7.12.568</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3264,7 +3264,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.566</span>
+    <span>Schatten v7.12.568</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6630,7 +6630,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.566';
+window.SCHATTEN_VERSION = 'v7.12.568';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -17283,6 +17283,50 @@ function schliesseReiseMenue() {
   const ov = document.getElementById('reise-overlay');
   if (ov) ov.remove();
 }
+// v7.12.567 (Benjamin, Indizien-Projekt Schritt 3b): NOTIZBUCH. Zeigt die gefundenen Indizien (Karls Wissen) in
+// einem Notizbuch-Look (liniertes Papier, roter Randstreifen). Nur GEFUNDENE Indizien - kein Spoiler auf offene
+// (die sieht man im Reisemenü). Karls Notizbuch ist sein Gedächtnis: was er weiß, nicht was er noch finden muss.
+function schliesseNotizbuch() {
+  const ov = document.getElementById('notizbuch-overlay');
+  if (ov) ov.remove();
+}
+function oeffneNotizbuch() {
+  schliesseNotizbuch();
+  if (typeof _markPopupOpened === 'function') _markPopupOpened();
+  const indizien = (caseProgress && Array.isArray(caseProgress.indizien)) ? caseProgress.indizien.slice() : [];
+  const overlay = document.createElement('div');
+  overlay.id = 'notizbuch-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9000;background:rgba(10,8,6,0.82);display:flex;align-items:center;justify-content:center;padding:18px;';
+  const panel = document.createElement('div');
+  // Notizbuch-Look: cremefarbenes Papier mit horizontalen Linien (repeating-linear-gradient) + roter Randstreifen links.
+  panel.style.cssText = 'max-width:440px;width:100%;max-height:80vh;overflow-y:auto;border-radius:4px;'
+    + 'box-shadow:0 12px 40px rgba(0,0,0,0.7);position:relative;'
+    + 'background-color:#ece3cf;'
+    + 'background-image:repeating-linear-gradient(transparent, transparent 27px, #c3b393 27px, #c3b393 28px);'
+    + 'background-position:0 14px;'
+    + 'border:1px solid #2a2118;border-left:14px solid #7a2e26;'
+    + 'padding:14px 18px 18px 22px;color:#2c2418;font-family:"Courier New",monospace;line-height:28px;';
+  let html = '<div style="font-size:calc(15px * var(--reading-scale));letter-spacing:0.04em;font-weight:bold;color:#3a2e1e;border-bottom:1px solid #9a8a68;padding-bottom:4px;margin-bottom:8px;">Karls Notizbuch</div>';
+  if (!indizien.length) {
+    html += '<div style="font-style:italic;color:#6b5d44;font-size:calc(12px * var(--reading-scale));">Noch nichts notiert. Ermittle, dann landet hier, was du herausfindest.</div>';
+  } else {
+    html += '<div style="font-size:calc(11px * var(--reading-scale));color:#6b5d44;margin-bottom:6px;">' + indizien.length + ' Notiz' + (indizien.length === 1 ? '' : 'en') + ':</div>';
+    html += '<ol style="margin:0;padding-left:22px;font-size:calc(12.5px * var(--reading-scale));color:#2c2418;">';
+    for (const ind of indizien) {
+      html += '<li style="margin-bottom:2px;">' + escapeHtml(String(ind)) + '</li>';
+    }
+    html += '</ol>';
+  }
+  panel.innerHTML = html;
+  const abbrechen = document.createElement('button');
+  abbrechen.style.cssText = 'display:block;width:100%;margin-top:14px;padding:8px 12px;background:rgba(122,46,38,0.12);border:1px solid #9a7a50;border-radius:4px;color:#5a3a28;cursor:pointer;font-family:inherit;font-size:calc(11px * var(--reading-scale));';
+  abbrechen.textContent = 'Zuklappen';
+  abbrechen.addEventListener('click', schliesseNotizbuch);
+  panel.appendChild(abbrechen);
+  overlay.appendChild(panel);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) schliesseNotizbuch(); });
+  document.body.appendChild(overlay);
+}
 function oeffneReiseMenue() {
   schliesseReiseMenue(); // doppelte vermeiden
   if (typeof _markPopupOpened === 'function') _markPopupOpened(); // v7.12.556: Tap-Durchschlag-Schutz
@@ -18520,6 +18564,16 @@ function renderOptions(scene) {
     // (Scroll) ab, Mindest-Kontaktzeit, Popup-Guard. Scrollen über den Button öffnet kein Popup mehr.
     attachSafeTap(reiseBtn, () => { if (typeof oeffneReiseMenue === 'function') oeffneReiseMenue(); });
     (typeof topActions !== 'undefined' ? topActions : list).appendChild(reiseBtn);
+  }
+  // v7.12.567 (Indizien-Projekt Schritt 3b): NOTIZBUCH-Button - immer verfügbar (Karl hat sein Notizbuch dabei).
+  // Öffnet die Liste der gefundenen Indizien im Notizbuch-Look. Nur anzeigen, wenn ein Fall läuft (caseProgress da).
+  if (typeof caseProgress !== 'undefined' && caseProgress && !karlInStasiCustody) {
+    const nbBtn = document.createElement('button');
+    nbBtn.className = 'option-btn option-btn-system option-btn-reise';
+    const _nbAnz = (Array.isArray(caseProgress.indizien)) ? caseProgress.indizien.length : 0;
+    nbBtn.innerHTML = '<span class="option-id">📓</span><span class="option-text-wrap"><span>Notizbuch</span><span class="option-marker option-marker-system">' + _nbAnz + ' Notiz' + (_nbAnz === 1 ? '' : 'en') + '</span></span>';
+    attachSafeTap(nbBtn, () => { if (typeof oeffneNotizbuch === 'function') oeffneNotizbuch(); });
+    (typeof topActions !== 'undefined' ? topActions : list).appendChild(nbBtn);
   }
   // Karl versucht aus der Zelle/Verhoer-Raum auszubrechen.
   if (showNotfluchtButton) {
@@ -28843,6 +28897,24 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         const sceneLow = normForMatch(scene.szene || '');
         if (susWord.length >= 4 && sceneLow.includes(susWord)) suspectInScene = true;
       }
+      // v7.12.568 (ChatGPT-P1, Run 0051): Der Verdaechtige darf nur als KONFRONTIERT gelten, wenn er ENGINEGÜLTIG am
+      // aktuellen Ort ist - nicht nur, weil die KI seinen Namen in die Prosa schreibt. Befund: Wahler wurde in Szene 28
+      // konfrontiert (-> AUTO-STAGE 3), obwohl der Engine-Ort Margaretes Wohnung war und der KI-Ort Reichsbahndirektion
+      // zurückkorrigiert wurde. Karl stand also gar nicht bei Wahler. Jetzt: getNpcsAtCurrentLocation() (Ort-NPCs +
+      // Party + Tageszeit) muss den Verdaechtigen enthalten. So kann eine räumlich ungültige Szene keinen Fallfortschritt
+      // mehr auslösen - der Spieler muss erst zum richtigen Ort reisen, wo der Verdaechtige wirklich ist.
+      let suspectEnginegueltigAmOrt = false;
+      try {
+        if (caseProgress && caseProgress.tatverdaechtiger && typeof getNpcsAtCurrentLocation === 'function') {
+          const susNorm = normForMatch(caseProgress.tatverdaechtiger);
+          const susWord2 = susNorm.split(/\s+/).pop();
+          const npcsHier = getNpcsAtCurrentLocation();
+          suspectEnginegueltigAmOrt = npcsHier.some(n => {
+            const nm = normForMatch((n && (n.name || n.id)) || '');
+            return nm && (nm === susNorm || (susWord2.length >= 4 && nm.indexOf(susWord2) !== -1));
+          });
+        }
+      } catch (e) { suspectEnginegueltigAmOrt = false; }
       // v7.12.63: Persistenter "mittlerer Loesungs-Anker". Wenn Karl eine
       // OFFENSIV-Aktion waehlt WAEHREND der benannte Verdaechtige in der Szene
       // ist, gilt der Verdaechtige als konfrontiert. Zusammen mit genug Indizien
@@ -28850,10 +28922,14 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       // Das bildet ab: Karl weiss wer es war und kann es dem Klienten melden,
       // der es an die Polizei weitergibt. Setzt NICHT ueberfuehrt (das bleibt
       // dem echten Durchbruch vorbehalten).
-      if (suspectInScene && pendingCategoryChoice === 'OFFENSIV'
+      if (suspectInScene && suspectEnginegueltigAmOrt && pendingCategoryChoice === 'OFFENSIV'
           && caseProgress && !caseProgress.suspectConfronted) {
         caseProgress.suspectConfronted = true;
-        if (typeof diag === 'function') diag('progress', 'Verdaechtiger konfrontiert: ' + caseProgress.tatverdaechtiger + ' (OFFENSIV-Aktion - mittlerer Loesungs-Anker)');
+        if (typeof diag === 'function') diag('progress', 'Verdaechtiger konfrontiert: ' + caseProgress.tatverdaechtiger + ' (OFFENSIV-Aktion, enginegültig am Ort - mittlerer Loesungs-Anker)');
+      } else if (suspectInScene && !suspectEnginegueltigAmOrt && pendingCategoryChoice === 'OFFENSIV'
+          && caseProgress && !caseProgress.suspectConfronted) {
+        // v7.12.568: Verdaechtiger in der Prosa, aber NICHT enginegültig am Ort -> KEIN Konfrontations-Fortschritt.
+        if (typeof diag === 'function') diag('drift', 'KONFRONTATION VERWORFEN: "' + caseProgress.tatverdaechtiger + '" steht in der Prosa, ist aber nicht enginegültig am Ort (' + (engineCurrentLocation ? engineCurrentLocation.name : '?') + ') - Spieler muss erst dorthin reisen, wo der Verdaechtige ist. Kein Stage-Aufstieg aus räumlich ungültiger Szene.');
       }
       let romanceInScene = false, stasiInScene = false;
       if (caseSetup && Array.isArray(caseSetup.setupCast)) {
