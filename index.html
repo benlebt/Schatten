@@ -3042,7 +3042,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.555</div>
+    <div class="start-version">Schatten v7.12.557</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3264,7 +3264,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.555</span>
+    <span>Schatten v7.12.557</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6501,7 +6501,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.555';
+window.SCHATTEN_VERSION = 'v7.12.557';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -17050,6 +17050,7 @@ function schliesseReiseMenue() {
 }
 function oeffneReiseMenue() {
   schliesseReiseMenue(); // doppelte vermeiden
+  if (typeof _markPopupOpened === 'function') _markPopupOpened(); // v7.12.556: Tap-Durchschlag-Schutz
   const locs = getCaseLocations();
   const aktuellNorm = engineCurrentLocation ? normForMatch(engineCurrentLocation.name) : '';
   // Nur freigeschaltete, reisbare Orte; aktueller Ort wird markiert (nicht klickbar).
@@ -17087,7 +17088,7 @@ function oeffneReiseMenue() {
     btn.innerHTML = heilMark + polizeiMark + '<span>' + loc.name + '</span>' + sektor
       + (istAktuell ? '<span style="color:#867868;font-size:0.85em;float:right;">du bist hier</span>' : '');
     if (!istAktuell) {
-      btn.addEventListener('click', () => reiseZuOrt(loc));
+      attachSafeTap(btn, () => reiseZuOrt(loc));
     }
     panel.appendChild(btn);
   });
@@ -17102,6 +17103,47 @@ function oeffneReiseMenue() {
 }
 // Baut die dezente "im Raum: X, Y"-Zeile (wer ist beim aktuellen Engine-Ort, aus Ort+Tageszeit). Wird über
 // den Optionen gezeigt. Leert sich, wenn niemand da ist.
+// v7.12.556 (Benjamin, iPhone-Fehlklick-Schutz): Mit den neuen anklickbaren Elementen (Personen im Raum,
+// Reise-Ziele, NPC-Verb-Menü) ist die Versehentlich-Tipp-Gefahr stark gestiegen - vor allem der "Tap-Durchschlag"
+// auf dem iPhone: Person antippen -> Popup öffnet -> der zweite Tap landet versehentlich auf einer Verb-Option.
+// Zwei Schutzmechanismen:
+// (1) _popupGuardUntil: kurz nach dem Öffnen eines Popups werden Taps ignoriert (gegen Durchschlag).
+// (2) attachSafeTap(btn, handler): zentraler Tap-vs-Swipe-Schutz (wie bei A/B/C/D) - Finger darf sich kaum
+//     bewegen, Mindest-Kontaktzeit gegen Streiftipper, plus Popup-Guard-Check. Eine Quelle statt Boilerplate-Kopien.
+let _popupGuardUntil = 0;
+const _POPUP_GUARD_MS = 350;          // nach Popup-Öffnung so lange keine Taps annehmen
+const _SAFE_TAP_MIN_CONTACT_MS = 60;  // Mindest-Kontaktzeit: ein echter bewusster Tap, kein Streifen
+const _SAFE_TAP_MAX_MOVE = 12;        // max. Fingerbewegung (sonst Swipe/Scroll)
+const _SAFE_TAP_MAX_DURATION = 900;   // darüber = kein Tap (z.B. Drücken+Loslassen ganz woanders)
+function _markPopupOpened() { _popupGuardUntil = Date.now() + _POPUP_GUARD_MS; }
+function attachSafeTap(btn, handler) {
+  if (!btn || typeof handler !== 'function') return;
+  let sx = 0, sy = 0, st = 0, cancelled = false, handled = false;
+  btn.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1) { cancelled = true; return; }
+    sx = e.touches[0].clientX; sy = e.touches[0].clientY; st = Date.now();
+    cancelled = false; handled = false;
+  }, { passive: true });
+  btn.addEventListener('touchmove', (e) => {
+    if (cancelled) return;
+    if (e.touches.length !== 1) { cancelled = true; return; }
+    if (Math.abs(e.touches[0].clientX - sx) > _SAFE_TAP_MAX_MOVE || Math.abs(e.touches[0].clientY - sy) > _SAFE_TAP_MAX_MOVE) cancelled = true;
+  }, { passive: true });
+  btn.addEventListener('touchend', (e) => {
+    if (cancelled) { return; }
+    const elapsed = Date.now() - st;
+    if (elapsed < _SAFE_TAP_MIN_CONTACT_MS || elapsed > _SAFE_TAP_MAX_DURATION) { e.preventDefault(); return; }
+    if (Date.now() < _popupGuardUntil) { e.preventDefault(); return; } // Tap-Durchschlag nach Popup-Öffnung
+    e.preventDefault(); handled = true;
+    handler(e);
+  });
+  // Maus/Desktop: normaler Klick, aber ebenfalls Popup-Guard beachten. handled verhindert Doppel-Feuern nach Touch.
+  btn.addEventListener('click', (e) => {
+    if (handled) { handled = false; return; }
+    if (Date.now() < _popupGuardUntil) { return; }
+    handler(e);
+  });
+}
 function renderImRaumAnzeige() {
   const el = document.getElementById('im-raum-anzeige');
   if (!el) return;
@@ -17127,7 +17169,7 @@ function renderImRaumAnzeige() {
       const _inParty = (typeof _istInParty === 'function') && _istInParty(npc.id, npc.name);
       btn.textContent = (_inParty ? '♦ ' : '') + npc.name;
       btn.title = (_inParty ? npc.name + ' ist in deiner Begleitung - ' : 'Mit ' + npc.name + ' interagieren');
-      btn.addEventListener('click', () => { if (typeof oeffneNpcMenue === 'function') oeffneNpcMenue(npc); });
+      attachSafeTap(btn, () => { if (typeof oeffneNpcMenue === 'function') { _markPopupOpened(); oeffneNpcMenue(npc); } });
       el.appendChild(btn);
       if (i < npcs.length - 1) {
         const komma = document.createElement('span');
@@ -17170,6 +17212,7 @@ function npcInteraktion(npc, verb) {
 }
 function oeffneNpcMenue(npc) {
   schliesseNpcMenue();
+  if (typeof _markPopupOpened === 'function') _markPopupOpened(); // v7.12.556: Tap-Durchschlag-Schutz
   // Alle möglichen Verben. aktion = was an die KI geht ({npc} wird ersetzt). kategorie = Mechanik-Bucket.
   const ALLE_VERBEN = {
     befragen:   { key: 'befragen',   label: 'Befragen',   kategorie: 'ERKUNDEN',   aktion: 'Sprich {npc} an und befrage die Person gezielt zum Fall.' },
@@ -17282,7 +17325,7 @@ function oeffneNpcMenue(npc) {
         + ';cursor:pointer;font-family:inherit;font-size:calc(12px * var(--reading-scale));line-height:1.45;';
       btn.textContent = verb.label;
     }
-    btn.addEventListener('click', () => {
+    attachSafeTap(btn, () => {
       // v7.12.547: Party-Verwaltung (Mitnehmen/Hier lassen) - KEINE KI-Szene, nur Zustand ändern + Anzeige refresh.
       if (verb._partyAction) {
         if (verb._partyAction === 'add' && typeof _partyAdd === 'function') {
@@ -18201,15 +18244,10 @@ function renderOptions(scene) {
     reiseBtn.className = 'option-btn option-btn-system option-btn-reise';
     reiseBtn.dataset.kategorie = 'REISE';
     reiseBtn.innerHTML = '<span class="option-id">🚗</span><span class="option-text-wrap"><span>Reisen (Ort wechseln)</span><span class="option-marker option-marker-system">→ OPEL</span></span>';
-    let reTouchHandled = false;
-    reiseBtn.addEventListener('touchend', (e) => {
-      e.preventDefault(); reTouchHandled = true;
-      if (typeof oeffneReiseMenue === 'function') oeffneReiseMenue();
-    });
-    reiseBtn.addEventListener('click', () => {
-      if (reTouchHandled) { reTouchHandled = false; return; }
-      if (typeof oeffneReiseMenue === 'function') oeffneReiseMenue();
-    });
+    // v7.12.557 (Benjamin-Befund): Reise-Button hatte nacktes touchend OHNE Bewegungsprüfung -> beim Scrollen
+    // löste der Finger beim Loslassen das Reise-Popup aus. Jetzt attachSafeTap: bricht bei Fingerbewegung
+    // (Scroll) ab, Mindest-Kontaktzeit, Popup-Guard. Scrollen über den Button öffnet kein Popup mehr.
+    attachSafeTap(reiseBtn, () => { if (typeof oeffneReiseMenue === 'function') oeffneReiseMenue(); });
     (typeof topActions !== 'undefined' ? topActions : list).appendChild(reiseBtn);
   }
   // Karl versucht aus der Zelle/Verhoer-Raum auszubrechen.
@@ -30126,6 +30164,34 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (cast.length > 8) cast = cast.slice(-8);
       }
     } catch (e) { /* reintroduce optional, darf Szene nie brechen */ }
+
+    // v7.12.557 (Benjamin-Befund Run 2058: Party-Verlust am Ende): Die Party wurde nur beim ORTSWECHSEL
+    // geschützt (Block ~Z28095 haeltImCast). In Szenen OHNE Ortswechsel + leerem KI-personenImRaum kollabierte
+    // der Cast trotzdem auf [] (Sz32: "PARTY hält Margot" geloggt, aber finaler Cast=[]). WURZEL: kein zentraler
+    // Schutz NACH dem ganzen Cast-Aufbau. FIX: Party-Garantie als LETZTES Wort - jedes _party-Mitglied MUSS im
+    // finalen Cast sein, egal was vorher lief. Eine Quelle, deckt alle Pfade ab (Ortswechsel ODER nicht).
+    try {
+      if (Array.isArray(_party) && _party.length > 0 && Array.isArray(cast)) {
+        for (const pm of _party) {
+          if (!pm || !pm.name) continue;
+          const pmNorm = normForMatch(pm.name);
+          const pmFirst = pmNorm.split(/\s+/)[0];
+          const schonImCast = cast.some(c => {
+            const cn = normForMatch((c && c.name) ? c.name : (typeof c === 'string' ? c : ''));
+            if (!cn) return false;
+            return cn === pmNorm || cn.split(/\s+/)[0] === pmFirst;
+          });
+          if (!schonImCast) {
+            // Setup-Daten anreichern, falls vorhanden.
+            let sc = null;
+            try { if (caseSetup && Array.isArray(caseSetup.setupCast)) sc = caseSetup.setupCast.find(s => s && s.name && (normForMatch(s.name) === pmNorm || normForMatch(s.name).split(/\s+/)[0] === pmFirst)); } catch(e){}
+            cast.push({ name: (sc && sc.name) || pm.name, rolle: (sc && sc.rolle) || '', beziehung: (sc && sc.beziehung) || '', fahrzeug: '', tag: (sc && sc.tag) || pm.tag || '', tagExtra: (sc && sc.tagExtra) || '' });
+            if (typeof diag === 'function') diag('state', '✦ PARTY-GARANTIE: ' + pm.name + ' fehlte im finalen Cast (Party-Mitglied) - wieder aufgenommen');
+            if (typeof _castEvent === 'function') { try { _castEvent('party-garantie-AUFGENOMMEN: ' + pm.name); } catch(e){} }
+          }
+        }
+      }
+    } catch (e) { /* party-garantie darf szene nie brechen */ }
 
     // v7.12.366 (Benjamin-Wunsch: verbose Cast-Diagnostik): EINE zusammenfassende Zeile pro Szene
     // mit dem vollständigen Cast-Lebenszyklus, damit wir Cast-Bugs (Ghost-Cast etc.) nach Testruns
