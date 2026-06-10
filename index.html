@@ -3191,7 +3191,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.622</div>
+    <div class="start-version">Schatten v7.12.624</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.622</span>
+    <span>Schatten v7.12.624</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7056,7 +7056,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.622';
+window.SCHATTEN_VERSION = 'v7.12.624';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -7381,7 +7381,7 @@ function _planAusfuehren() {
 }
 // ============ Ende AKTIONS-PLAN ============
 // ============ v7.12.617: AKTIONS-BAUKASTEN (Benjamins Lego-System: Akteur -> Item -> Aktion -> Ziel) ============
-window._baukasten = window._baukasten || { offen: false, akteur: null, item: null, aktion: null, ziel: null };
+window._baukasten = window._baukasten || { offen: false, akteur: null, item: null, aktion: null, ziele: [] };
 const BAUKASTEN_AKTIONEN = {
   angreifen:  { label: 'Angreifen',   zielNoetig: true,  wirkung: 'ko',
     txt: (a, i, z) => a + ' greift ' + z + ' an und schaltet die Person aus - ' + z + ' geht zu Boden und bleibt bewusstlos (K.O.) liegen.' },
@@ -7407,7 +7407,18 @@ const BAUKASTEN_AKTIONEN = {
 function _bkChip(label, aktiv, onclick) {
   return '<button onclick="' + onclick + '" style="margin:2px;padding:5px 10px;border-radius:14px;border:1px solid ' + (aktiv ? '#d4b86a' : '#555') + ';background:' + (aktiv ? '#d4b86a' : 'transparent') + ';color:' + (aktiv ? '#1a1a1c' : '#cfc6ae') + ';font-size:12px;cursor:pointer;">' + label + '</button>';
 }
-function _bkSet(feld, wert) { try { window._baukasten[feld] = (window._baukasten[feld] === wert) ? null : wert; _renderBaukasten(); } catch (e) {} }
+function _bkSet(feld, wert) {
+  try {
+    if (feld === 'ziel') {
+      if (!Array.isArray(window._baukasten.ziele)) window._baukasten.ziele = [];
+      const i = window._baukasten.ziele.indexOf(wert);
+      if (i === -1) window._baukasten.ziele.push(wert); else window._baukasten.ziele.splice(i, 1);
+    } else {
+      window._baukasten[feld] = (window._baukasten[feld] === wert) ? null : wert;
+    }
+    _renderBaukasten();
+  } catch (e) {}
+}
 function _bkToggle() { try { window._baukasten.offen = !window._baukasten.offen; _renderBaukasten(); } catch (e) {} }
 // v7.12.619 (Benjamin, Desktop-Screenshot): Button + Panel am CONTENT-Bereich (.container, max 760px)
 // ausrichten - nicht am Viewport-Rand und nicht exzessiv breit.
@@ -7494,9 +7505,9 @@ function _renderBaukasten() {
     h += '<div style="color:#9a8a68;font-size:11px;margin-bottom:2px;">1. WER</div><div>' + akteure.map(a => _bkChip(a, bk.akteur === a, "_bkSet('akteur','" + a.replace(/'/g, "\\'") + "')")).join('') + '</div>';
     h += '<div style="color:#9a8a68;font-size:11px;margin:6px 0 2px;">2. ITEM (optional)</div><div>' + (itemsK.length ? itemsK.map(it => _bkChip(it.name, bk.item === it.id, "_bkSet('item','" + it.id + "')")).join('') : '<span style="color:#666;font-size:11px;">Karls Taschen sind leer</span>') + '</div>';
     h += '<div style="color:#9a8a68;font-size:11px;margin:6px 0 2px;">3. AKTION</div><div>' + Object.keys(BAUKASTEN_AKTIONEN).map(k => _bkChip(BAUKASTEN_AKTIONEN[k].label, bk.aktion === k, "_bkSet('aktion','" + k + "')")).join('') + '</div>';
-    h += '<div style="color:#9a8a68;font-size:11px;margin:6px 0 2px;">4. ZIEL</div><div>' + (ziele.length ? ziele.map(z => _bkChip(z, bk.ziel === z, "_bkSet('ziel','" + z.replace(/'/g, "\\'") + "')")).join('') : '<span style="color:#666;font-size:11px;">niemand am Ort</span>') + '</div>';
+    h += '<div style="color:#9a8a68;font-size:11px;margin:6px 0 2px;">4. ZIEL (mehrere möglich)</div><div>' + (ziele.length ? ziele.map(z => _bkChip(z, (Array.isArray(bk.ziele) && bk.ziele.indexOf(z) !== -1), "_bkSet('ziel','" + z.replace(/'/g, "\\'") + "')")).join('') : '<span style="color:#666;font-size:11px;">niemand am Ort</span>') + '</div>';
     const def = bk.aktion ? BAUKASTEN_AKTIONEN[bk.aktion] : null;
-    const komplett = bk.akteur && def && (!def.zielNoetig || bk.ziel) && (!def.itemNoetig || bk.item);
+    const komplett = bk.akteur && def && (!def.zielNoetig || (Array.isArray(bk.ziele) && bk.ziele.length > 0)) && (!def.itemNoetig || bk.item);
     h += '<div style="margin-top:8px;display:flex;gap:8px;">'
       + '<button onclick="_bkUebernehmen(false)" ' + (komplett ? '' : 'disabled') + ' style="background:' + (komplett ? '#8a7a58' : '#333') + ';color:#1a1a1c;border:none;border-radius:6px;padding:6px 12px;font-weight:bold;cursor:pointer;">+ Zum Plan</button>'
       + '<button onclick="_bkUebernehmen(true)" ' + (komplett ? '' : 'disabled') + ' style="background:' + (komplett ? '#d4b86a' : '#333') + ';color:#1a1a1c;border:none;border-radius:6px;padding:6px 12px;font-weight:bold;cursor:pointer;">▶ Sofort ausführen</button>'
@@ -7510,16 +7521,19 @@ function _bkUebernehmen(sofort) {
     const def = BAUKASTEN_AKTIONEN[bk.aktion];
     if (!def || !bk.akteur) return;
     const it = bk.item && typeof _itemsMap === 'function' ? _itemsMap()[bk.item] : null;
-    const eintrag = {
-      label: bk.akteur + (it ? ' [' + it.name + ']' : '') + ' → ' + def.label.toLowerCase() + (bk.ziel ? ' → ' + bk.ziel : ''),
-      art: bk.aktion, akteur: bk.akteur, ziel: bk.ziel || '', itemId: bk.item || null,
-      aktionText: def.txt(bk.akteur, it, bk.ziel || '')
-    };
-    // Engine-Wirkungen für Item-Bewegung direkt am Plan-Eintrag vermerken - Ausführung in _planAusfuehren.
-    eintrag._wirkung = def.wirkung || null; eintrag._beute = !!def.beute;
-    eintrag._itemUebergabe = !!def.itemUebergabe && !!bk.item; eintrag._itemVerlust = !!def.itemVerlust && !!bk.item;
-    _planAdd(eintrag);
-    window._baukasten.akteur = null; window._baukasten.item = null; window._baukasten.aktion = null; window._baukasten.ziel = null;
+    // v7.12.623 (Benjamin: "beide fesseln"): pro gewähltem Ziel EIN Plan-Eintrag (Wirkung sauber pro Person).
+    const _zieleListe = (Array.isArray(bk.ziele) && bk.ziele.length) ? bk.ziele : [''];
+    _zieleListe.forEach(_z => {
+      const eintrag = {
+        label: bk.akteur + (it ? ' [' + it.name + ']' : '') + ' \u2192 ' + def.label.toLowerCase() + (_z ? ' \u2192 ' + _z : ''),
+        art: bk.aktion, akteur: bk.akteur, ziel: _z || '', itemId: bk.item || null,
+        aktionText: def.txt(bk.akteur, it, _z || '')
+      };
+      eintrag._wirkung = def.wirkung || null; eintrag._beute = !!def.beute;
+      eintrag._itemUebergabe = !!def.itemUebergabe && !!bk.item; eintrag._itemVerlust = !!def.itemVerlust && !!bk.item;
+      _planAdd(eintrag);
+    });
+    window._baukasten.akteur = null; window._baukasten.item = null; window._baukasten.aktion = null; window._baukasten.ziele = [];
     if (sofort) window._baukasten.offen = false;
     _renderBaukasten();
     if (sofort && typeof _planAusfuehren === 'function') _planAusfuehren();
@@ -7602,6 +7616,12 @@ function _partyRemove(npcId, npcName) {
 // Auto-Mitnehmen-Popup beim Reisen/Flüchten. Mitnehmbar = NICHT Gegner (ANTAGONIST/SUSPECT/GANGSTER/STASI) und
 // NICHT MYSTERY/Schatten (konsistent mit v558). Liefert [{id,name,tag}].
 function _mitnehmbareNpcsAmOrt() {
+  // v7.12.623 (Benjamin: Willi hatte kein Mitnehmen-Verb, wurde aber beim Reisen im Popup angeboten -
+  // inkonsistent): Ortsgebundene/ablehnende NPCs tauchen im Popup GAR NICHT mehr auf.
+  const _ergebnisRoh = _mitnehmbareNpcsAmOrtRoh();
+  try { return _ergebnisRoh.filter(n => !(typeof _npcLehntMitnahmeAb === 'function' && _npcLehntMitnahmeAb(n && n.name, n && n.tag))); } catch (e) { return _ergebnisRoh; }
+}
+function _mitnehmbareNpcsAmOrtRoh() {
   if (typeof getNpcsAtCurrentLocation !== 'function') return [];
   const GEGNER_TAGS = ['ANTAGONIST', 'SUSPECT', 'GANGSTER', 'STASI', 'MYSTERY'];
   let npcs = [];
@@ -21300,7 +21320,15 @@ async function requestSceneFromModel(userMessage, conversationHistory, compactMo
             recap += 'EHRLICHKEITS-REGEL (PFLICHT): Die Akten/Beweise sind NICHT physisch übergeben oder endgültig gesichert. Behaupte NIEMALS, sie seien bereits bei Vera, der Westpresse, Roth oder "im Westen in Sicherheit" - erlaubt ist nur: Karl WEISS, wohin sie gebracht werden können, der Weg ist identifiziert.\n\n';
           }
           if (typeof stasiTension !== 'undefined' && stasiTension >= 4) {
-            recap += 'EPILOG-REGEL: Die Stasi-Spannung ist hoch (' + stasiTension + '/5). Wenn der Fall endet, darf das Ende nach "knapp entkommen" schmecken - Mertens oder zwei Männer im Mantel kommen einen Atemzug ZU SPÄT - aber kein ruhiger Ausklang, als wäre nichts gewesen.\n\n';
+            try {
+            const _kx = ((window._letzteAktion && window._letzteAktion.kategorie) || '').toUpperCase();
+            if ((/ROMANTIK|UEBERNACHTUNG/.test(_kx)) && typeof _party !== 'undefined' && Array.isArray(_party) && _party.length) {
+              // v7.12.624 (Lektorat: Lemke stand neben der Romantik): Begleiter bleiben (Benjamins Regel),
+              // aber die PROSA schickt sie diskret weg - Nebenraum, Wache, Schankraum. Kein Zeuge im Zimmer.
+              recap += 'DISKRETIONS-REGEL (PFLICHT): Bei romantischen/intimen Momenten ziehen sich Karls Begleiter (' + _party.map(p => p.name).join(', ') + ') DISKRET zurück - Nebenraum, Wache am Fenster, Schankraum. Sie bleiben in Karls Begleitung, stehen aber NIEMALS im selben Zimmer bei intimen Szenen.\n\n';
+            }
+          } catch (e) {}
+          recap += 'EPILOG-REGEL: Die Stasi-Spannung ist hoch (' + stasiTension + '/5). Wenn der Fall endet, darf das Ende nach "knapp entkommen" schmecken - Mertens oder zwei Männer im Mantel kommen einen Atemzug ZU SPÄT - aber kein ruhiger Ausklang, als wäre nichts gewesen.\n\n';
           }
         }
       } catch (e) {}
@@ -22975,7 +23003,13 @@ Marlowe-Stil: stilvoll, elliptisch, NICHT explizit. Tuer schliesst sich, Schnitt
         // weiterer Romance-Push mehr kommen - sonst widerspricht sich der Log selbst (Sz16
         // "endgültig aufgegeben", Sz31 doch wieder "Push #2"). Variante A: endgültig = endgültig.
         const _romNichtAufgegeben = (typeof romanceWirkungslosCount !== 'number') || romanceWirkungslosCount < 2;
-        if (!_romInCast && !_aktiveRomanceImCast && !_romanzeLaeuft && _romNichtAufgegeben && sceneCounter >= 5 && _scenesSinceRom >= 6 && _pushCooldownOk && _pushBudgetOk &&
+        // v7.12.624 (Lektorat Run 0032: Margot-Push NACH erfüllten Pflichtbeats zog den gelösten Fall 6 Szenen
+        // in Romance-Nachlauf): Kein PUSH mehr, sobald der Fall abschlussreif ist (Wahrheit + Sicherung) -
+        // Romance bleibt als FREIE Spielerwahl jederzeit möglich, nur die Engine drängt nicht mehr.
+        const _fallAbschlussreif = !!(caseProgress && caseProgress.wahrheitErkannt
+          && (caseProgress.clientSecured || (Array.isArray(caseProgress.politicalBeatsHit) && caseProgress.politicalBeatsHit.indexOf('akten_gesichert') !== -1)));
+        if (_fallAbschlussreif && typeof diag === 'function') diag('state', 'ROMANCE-PUSH unterdrückt: Fall abschlussreif (Wahrheit + Sicherung) - Romance nur noch als freie Spielerwahl');
+        if (!_fallAbschlussreif && !_romInCast && !_aktiveRomanceImCast && !_romanzeLaeuft && _romNichtAufgegeben && sceneCounter >= 5 && _scenesSinceRom >= 6 && _pushCooldownOk && _pushBudgetOk &&
             _spOk && _stasiRuhigOk && !_gutHolPflichtAktiv && !karlInStasiCustody && sceneCounter % 6 === 0) {
           const _rn = _romNames[0];
           lastRomancePushScene = sceneCounter;
@@ -32829,7 +32863,13 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
               caseProgress.pendingSecurityIntent = _zielId;
               if (typeof diag === 'function') diag('progress', 'SICHERUNGS-INTENT gemerkt (' + _zielId + '): Reise/Einleitung - Beat feuert erst bei Übergabe/Ankunft. "' + _aktion.slice(0,45).replace(/\s+/g,' ') + '"');
             } else {
-              if (_sv.fokus === 'akten') _setBeat('akten_gesichert', 'Akten physisch gesichert');
+              if (_sv.fokus === 'akten') {
+                // v7.12.624 (Lektorat Run 0032 P1: Übergabe an Vera setzte Beat, Item blieb bei_karl - der
+                // v609-Move saß nur im Intent-Prosa-Pfad): JEDER Akten-Vollzug bewegt ZUERST die getragenen
+                // Beweis-Dokumente auf gesichert - der Beat ist die Folge desselben Vorgangs.
+                try { if (typeof _itemsBeiKarl === 'function' && typeof _itemMove === 'function') _itemsBeiKarl().filter(it => it.typ === 'beweis_dokument').forEach(it => _itemMove(it.id, { status: 'gesichert', owner: 'uebergeben' })); } catch (e) {}
+                _setBeat('akten_gesichert', 'Akten physisch gesichert');
+              }
               else _setBeat('margarete_gesichert', 'Margarete/Beweise in Sicherheit');
               if (caseProgress.pendingSecurityIntent) caseProgress.pendingSecurityIntent = null;
             }
