@@ -3191,7 +3191,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.611</div>
+    <div class="start-version">Schatten v7.12.614</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.611</span>
+    <span>Schatten v7.12.614</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5045,7 +5045,7 @@ const INTRO_VARIANTS = [
         { name: 'Stellwerk Schöneweide', sektor: 'Ost (Schöneweide)', detail: 'Reichsbahn-Ausbesserungswerk Schöneweide, ein altes Stellwerk am Rand des Bahngeländes - abgelegen, nachts kaum beleuchtet. Hierher liess Direktor Wahler die brisanten Akten schaffen.',
           startBekannt: false, freischaltBei: ['stellwerk','schoeneweide','schöneweide','akten verlegt','akten weggeschafft','ausbesserungswerk'], npcs: [],
           indizien: [
-            { id: 'original_akten', text: 'Die verlegten Original-Akten zur Schmuggelroute', quelle: 'umgebung', actions: ['ERKUNDEN','DURCHSUCHEN','AKTEN_LESEN'], schluessel: ['original-akten','originalakten','akten gefunden','aktenmappe','die akten'], stage: 3 },
+            { id: 'original_akten', itemType: 'beweis_dokument', text: 'Die verlegten Original-Akten zur Schmuggelroute', quelle: 'umgebung', actions: ['ERKUNDEN','DURCHSUCHEN','AKTEN_LESEN'], schluessel: ['original-akten','originalakten','akten gefunden','aktenmappe','die akten'], stage: 3 },
             { id: 'wahler_unterschrift', text: 'Wahlers Unterschrift auf dem Frachtbrief', quelle: 'umgebung', actions: ['ERKUNDEN','DURCHSUCHEN','AKTEN_LESEN'], schluessel: ['unterschrift','wahler unterschrieben','signatur','frachtbrief'], stage: 4 },
           ],
           bedrohungen: [
@@ -7056,7 +7056,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.611';
+window.SCHATTEN_VERSION = 'v7.12.614';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -7261,6 +7261,8 @@ function _itemAdd(item) {
     if (m[item.id]) { if (typeof diag === 'function') diag('state', 'ITEM bereits vorhanden (unique): ' + item.id); return false; }
     m[item.id] = { id: item.id, name: item.name || item.id, typ: item.typ || 'gegenstand', status: item.status || 'bei_karl', owner: item.owner || 'karl', locationId: item.locationId || null, quelle: item.quelle || '', seitSzene: (typeof sceneCounter === 'number') ? sceneCounter : 0 };
     if (typeof diag === 'function') diag('state', '🎒 ITEM eingebucht: "' + m[item.id].name + '" (' + item.id + ', ' + m[item.id].status + ')');
+    // v7.12.614 (Benjamin: "Items hab ich noch keine gesehen"): Toast statt nur Log - der Fund ist erlebbar.
+    if (m[item.id].status === 'bei_karl' && typeof showProgressToast === 'function') { try { showProgressToast('🎒 Eingesteckt', m[item.id].name + ' - jetzt in Karls Taschen (siehe Notizbuch).', 'success', 'item-add'); } catch (e) {} }
     return true;
   } catch (e) { return false; }
 }
@@ -7328,6 +7330,21 @@ function _npcLehntMitnahmeAb(npcName, npcTag) {
     }
     if (/wirt|wirtin|imbissbesitzer|imbiss-besitzer|kioskbesitzer|barkeeper|kellner/i.test(_rolle)) return 'kann den Laden nicht einfach verlassen';
     if (/korrespondent|journalist|reporter|presse/i.test(_rolle)) return 'arbeitet allein und trifft Karl nur an vereinbarten Orten';
+    // v7.12.612 (Run 2328: Willi wurde Dauer-Party): Orts-NPCs wie Willi stehen NICHT im setupCast, sondern
+    // nur im detail eines Ortes ("Wirt Willi Kummer kennt jeden"). Wer im Orts-detail als Wirt/Service
+    // verankert ist, ist ortsgebunden - egal über welchen Codepfad die Mitnahme versucht wird.
+    try {
+      const _nTok = normForMatch(npcName || '').split(/\s+/).filter(w => w.length >= 3);
+      if (_nTok.length) {
+        const _locsW = (typeof getCaseLocations === 'function') ? getCaseLocations() : [];
+        for (const l of _locsW) {
+          const d = normForMatch((l && l.detail) || '');
+          if (d && _nTok.every(w => d.includes(w)) && /wirt|wirtin|imbiss|kiosk|barkeeper|kellner|bedienung/.test(d)) {
+            return 'gehört zu diesem Laden und kann ihn nicht einfach verlassen';
+          }
+        }
+      }
+    } catch (e) {}
     return null;
   } catch (e) { return null; }
 }
@@ -18371,6 +18388,23 @@ function npcInteraktion(npc, verb) {
       if (typeof showProgressToast === 'function') showProgressToast('Übergeben', npc.name + ' an die Volkspolizei übergeben - aus dem Spiel.', 'success', 'manoever-vp');
     } catch (e) {}
   }
+  // v7.12.614: BEGLEITER-BEFEHL - npc ist der AKTEUR (Begleiter), verb._zielName das feindliche Ziel.
+  if (verb._begleiterBefehl && verb._zielName) {
+    try {
+      if (verb._begleiterBefehl === 'angriff') {
+        if (typeof _npcZustandSet === 'function') _npcZustandSet(verb._zielName, { status: 'ko' });
+        if (typeof showProgressToast === 'function') showProgressToast('Ausgeschaltet', npc.name + ' schaltet ' + verb._zielName + ' aus - K.O.', 'success', 'befehl-angriff');
+      } else if (verb._begleiterBefehl === 'ablenkung') {
+        if (typeof _npcZustandSet === 'function') _npcZustandSet(verb._zielName, { status: 'gefesselt' });
+        const _probeB = String(verb._zielName).toLowerCase();
+        if (/stasi|mfs|agent|mertens|mantel/.test(_probeB) && typeof _itemAdd === 'function') {
+          _itemAdd({ id: 'item_handschellen_' + normForMatch(verb._zielName).replace(/\s+/g, '_'), name: 'Handschellen (von ' + verb._zielName + ')', typ: 'werkzeug', quelle: 'befehl:ablenkung' });
+        }
+        if (typeof showProgressToast === 'function') showProgressToast('ZUGRIFF', npc.name + ' lenkt ab - ' + verb._zielName + ' gefesselt.', 'success', 'befehl-ablenkung');
+      }
+      if (typeof diag === 'function') diag('state', 'BEGLEITER-BEFEHL: ' + npc.name + ' -> ' + verb._begleiterBefehl + ' auf ' + verb._zielName);
+    } catch (e) {}
+  }
   // Verb-spezifischer Aktionstext + Kategorie. Die KI bekommt eine klare, gezielte Anweisung.
   const npcOpt = {
     id: 'NPC_' + verb.key,
@@ -18481,6 +18515,30 @@ function oeffneNpcMenue(npc, modus) {
           aktion: 'Karl meldet den gefesselten {npc} bei Kommissar Roth / der Volkspolizei und übergibt die Person. {npc} wird abgeholt und ist aus dem Spiel.' });
       }
     }
+    // v7.12.614 (Benjamin: "Party-Mitglied auswählen und ihm Anweisungen geben"): BEGLEITER-BEFEHLE.
+    // Klickt der Spieler ein PARTY-Mitglied an und es gibt freie Feinde am Ort, erscheinen pro Feind
+    // (max 2) zwei Befehle: Angriff (Begleiter schaltet den Feind aus -> K.O.) und Ablenkung (Begleiter
+    // bindet ihn, Karl fesselt -> gefesselt + Handschellen-Beute). Akteur + Aktion + Ziel per Klick.
+    try {
+      if (typeof _istInParty === 'function' && _istInParty(npc.id, npc.name)) {
+        let _feindeHier = [];
+        try {
+          _feindeHier = ((typeof getNpcsAtCurrentLocation === 'function') ? (getNpcsAtCurrentLocation() || []) : [])
+            .filter(n => n && n.name && typeof _npcIstFeindlich === 'function' && _npcIstFeindlich(n)
+              && normForMatch(n.name) !== normForMatch(npc.name)
+              && (!(typeof _npcZustandGet === 'function' && _npcZustandGet(n.name)) || _npcZustandGet(n.name).status === 'frei'))
+            .slice(0, 2);
+        } catch (e) {}
+        for (const _f of _feindeHier) {
+          verben.push({ key: 'befehl_angriff_' + normForMatch(_f.name).replace(/\s+/g, '_'), label: 'Befiehl: ' + _f.name + ' angreifen', kategorie: 'OFFENSIV',
+            _begleiterBefehl: 'angriff', _zielName: _f.name,
+            aktion: '{npc} greift auf Karls Zeichen ' + _f.name + ' an und schaltet die Person aus - ' + _f.name + ' geht zu Boden und bleibt bewusstlos (K.O.) liegen. Karl nutzt den Moment.' });
+          verben.push({ key: 'befehl_ablenkung_' + normForMatch(_f.name).replace(/\s+/g, '_'), label: 'Befiehl: ' + _f.name + ' ablenken', kategorie: 'OFFENSIV',
+            _begleiterBefehl: 'ablenkung', _zielName: _f.name,
+            aktion: '{npc} sorgt für eine laute, glaubwürdige, ortstypische Ablenkung bei ' + _f.name + ' - und während die Aufmerksamkeit weg ist, schlägt Karl ' + _f.name + ' nieder und fesselt die Person (mit ihren EIGENEN Handschellen, falls vorhanden). KEIN Gewahrsam für Karl.' });
+        }
+      }
+    } catch (e) {}
   }
   // v7.12.542 (Schritt 2, Benjamin): "Näher kommen"/"Nacht verbringen" auch im NPC-Menü, wenn der angeklickte
   // NPC die aktuelle Romance-Person ist. Nutzt DIESELBE Logik wie der ♥-Button oben (window._romanceMenuState
@@ -27339,6 +27397,43 @@ async function chooseOption(option) {
         }
       }
     } catch (e) {}
+    // v7.12.613 (OPTION-REISE, Lektorat Run 2328 Sz10+Sz27): Wenn der Spieler eine A-D-Option klickt, die
+    // erkennbar zu einem DEFINIERTEN Ort führt ("geh zum Stellwerk Schöneweide", "geh zu Roth und übergib"),
+    // dann FOLGT die Engine dem Klick - statt die erzählte Ankunft hinterher zurückzukorrigieren (Prosa
+    // spielte im Revier, Engine behauptete Stellwerk). Spielerklick = Spielerwille = legitimer Ortswechsel,
+    // dieselbe Logik wie bei der Flucht (v555). Nur A-D-Optionen - System-Buttons haben eigene Pfade.
+    try {
+      const _oid = (option && option.id) ? String(option.id) : '';
+      const _istSystem = /^(REISE|SICHERUNG|FLUCHT|AUFLOESEN|NPC_|NOTFLUCHT)/i.test(_oid) || (option && option._isSystemButton);
+      const _otxt = normForMatch((option && option.text) || '');
+      const _reiseSprache = /\b(geh|gehe|fahr|fahre|fahrt|lauf|laufe|begib dich|mach dich auf|aufsuchen|such .{0,25}auf|besuch|besuche|bring .{0,40}(zu|zur|zum|in)|zurueck (zu|zur|zum|in))\b/.test(_otxt);
+      if (!_istSystem && _reiseSprache && _otxt && typeof engineCurrentLocation !== 'undefined' && engineCurrentLocation && !engineCurrentLocation.transient) {
+        let _ziel = null;
+        const _locsR = (typeof getCaseLocations === 'function') ? getCaseLocations() : [];
+        // 1) Definierter Ortsname im Optionstext (Hauptname, >= 6 Zeichen).
+        for (const l of _locsR) {
+          if (!l || !l.name) continue;
+          const _ln = normForMatch(l.name.split(',')[0]);
+          if (_ln.length >= 6 && _otxt.includes(_ln)) { _ziel = l; break; }
+        }
+        // 2) Anker-Personen -> ihr Ort (Roth -> Revier, Helene -> Charité, Vera -> Kranzler): Name der Person
+        //    muss im Text stehen UND im detail des Ortes verankert sein.
+        if (!_ziel) {
+          for (const _pers of ['roth', 'helene', 'vera', 'doc wagner']) {
+            if (!_otxt.includes(_pers)) continue;
+            const _l2 = _locsR.find(l => l && normForMatch((l.detail || '') + ' ' + (l.name || '')).includes(_pers));
+            if (_l2) { _ziel = _l2; break; }
+          }
+        }
+        const _aktMain = normForMatch((engineCurrentLocation.name || '').split(',')[0]);
+        if (_ziel && normForMatch(_ziel.name.split(',')[0]) !== _aktMain) {
+          engineCurrentLocation = { name: _ziel.name, sektor: _ziel.sektor || '' };
+          window._letzteAktion.istOptionReise = true;
+          if (typeof diag === 'function') diag('state', '🚗 OPTION-REISE: Spieler-Option führt erkennbar nach "' + _ziel.name + '" - Engine folgt dem Klick (kein Rückkorrektur-Bruch).');
+          if (typeof renderImRaumAnzeige === 'function') { try { renderImRaumAnzeige(); } catch (e) {} }
+        }
+      }
+    } catch (e) {}
   } catch (e) { window._letzteAktion = null; }
   // v7.12.555: Flucht-Flag früh setzen, damit die v552-Orts-Korrektur die Flucht als legitimen Ortswechsel
   // erkennt und NICHT zurückkorrigiert (Flucht darf weg vom Gefahren-Ort). Reset passiert beim Apply-Punkt.
@@ -32011,6 +32106,18 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
                 continue;
               }
             } catch (e) { /* im Zweifel altes Verhalten */ }
+            // v7.12.612 (Run 2328: Wahler teleportierte per Freitext-Prosa in Doc Wagners Praxis und blieb
+            // 8 Szenen): Der TATVERDÄCHTIGE erscheint NIE per Prosa-Reintroduce. Wenn er wirklich da sein
+            // soll, ist er über Engine-Wege da (Orts-Setup, Konfrontation am gültigen Ort).
+            try {
+              const _verdN = (caseProgress && caseProgress.tatverdaechtiger) ? normForMatch(String(caseProgress.tatverdaechtiger)) : '';
+              const _scN = normForMatch(sc.name || '');
+              if (_verdN && _scN && (_scN.includes(_verdN) || _verdN.includes(_scN) || _scN.includes('wahler'))) {
+                if (typeof diag === 'function') diag('drift', '⚠ SUSPECT-GHOST gesperrt (W6): ' + sc.name + ' ist der Verdächtige - erscheint nicht per Prosa-Reintroduce.');
+                _castEvent('reintro-GESPERRT(suspect-ghost): ' + sc.name);
+                continue;
+              }
+            } catch (e) {}
             // v7.12.610 (W6): gefesselte/KO/geflohene NPCs kehren NICHT als freie Figuren zurück - nur an
             // ihrem Zustands-Ort und nur als das, was sie sind (liegt gefesselt da).
             try {
