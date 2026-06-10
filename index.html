@@ -3191,7 +3191,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.620</div>
+    <div class="start-version">Schatten v7.12.621</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.620</span>
+    <span>Schatten v7.12.621</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7056,7 +7056,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.620';
+window.SCHATTEN_VERSION = 'v7.12.621';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -7425,6 +7425,24 @@ function _bkAusrichten() {
 }
 function _renderBaukastenButton() {
   try {
+    // v7.12.621 (Benjamin: 🧩 erschien schon im Startbildschirm): Der Baukasten ist ein KONFLIKT-Werkzeug -
+    // sichtbar nur, wenn das Spiel läuft UND mindestens ein freier feindlicher NPC am Ort ist.
+    let _konflikt = false;
+    try {
+      const _spielLaeuft = (typeof engineCurrentLocation !== 'undefined' && engineCurrentLocation && engineCurrentLocation.name)
+        && (typeof sceneCounter === 'number' && sceneCounter > 0);
+      if (_spielLaeuft) {
+        const _npcsB = (typeof getNpcsAtCurrentLocation === 'function') ? (getNpcsAtCurrentLocation() || []) : [];
+        _konflikt = _npcsB.some(n => n && n.name && typeof _npcIstFeindlich === 'function' && _npcIstFeindlich(n)
+          && (!(typeof _npcZustandGet === 'function' && _npcZustandGet(n.name)) || _npcZustandGet(n.name).status === 'frei'));
+      }
+    } catch (e) {}
+    if (!_konflikt) {
+      const _alt = document.getElementById('baukastenToggle');
+      if (_alt) _alt.remove();
+      if (window._baukasten && window._baukasten.offen) { window._baukasten.offen = false; try { _renderBaukasten(); } catch (e) {} }
+      return;
+    }
     if (document.getElementById('baukastenToggle')) return;
     const b = document.createElement('button');
     b.id = 'baukastenToggle';
