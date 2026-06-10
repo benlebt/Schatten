@@ -3191,7 +3191,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.600</div>
+    <div class="start-version">Schatten v7.12.602</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.600</span>
+    <span>Schatten v7.12.602</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6878,19 +6878,24 @@ function pruefeKernIndizFund(sceneText) {
     const _fallbackErlaubt = !_deterministischVergeben
       && (!(typeof caseHasDefinedEvidence === 'function' && caseHasDefinedEvidence()) || !!_fundModus);
     if (_fallbackErlaubt) {
+      // v7.12.602 (ChatGPT P1, Runs 1847+2044 bewiesen): DEFINED-EVIDENCE STRICT MODE. Der Schlüsselwort-Fallback
+      // vergab erneut ein definiertes Indiz (lemke_belastet_wahler Sz18, BEVOR Lemke richtig befragt wurde) -
+      // der v597-Mittelweg war zu durchlässig. Bei definierten Fällen wird der Fallback NUR noch diagnostiziert
+      // (zeigt, wo die Klassifikation nachgeschärft werden muss), aber NIE vergeben. Finden trägt allein die
+      // deterministische Vergabe (richtige Aktion -> Ziel-Indiz, Benjamins Findbarkeits-Garantie bleibt dort).
+      const _strictDefined = (typeof caseHasDefinedEvidence === 'function') && caseHasDefinedEvidence();
       for (const ind of loc.indizien) {
         if (!ind || !ind.id) continue;
         if (caseProgress.gefundeneIndizIds && caseProgress.gefundeneIndizIds.indexOf(ind.id) !== -1) continue;
         if (Array.isArray(ind.zeit) && ind.zeit.length && !ind.zeit.map(z => normForMatch(z)).includes(tz)) continue;
         if (ind.npc && npcsHier.length && npcsHier.indexOf(normForMatch(ind.npc)) === -1) continue;
         if (Array.isArray(ind.schluessel) && ind.schluessel.some(k => txt.includes(normForMatch(k)))) {
+          if (_strictDefined) {
+            if (typeof diag === 'function') diag('drift', '⚠ STRICT: Schlüsselwort-Fallback hätte "' + ind.id + '" vergeben - UNTERDRÜCKT (Defined-Evidence Strict Mode; richtige Aktion nötig)');
+            break;
+          }
           if (_markiereIndizGefunden(ind)) {
             found.push(ind.text);
-            // v7.12.593 (P2a): sichtbar machen, wenn der alte Schlüsselwort-Pfad bei definierten Fällen noch greift
-            // (heißt: die deterministische Vergabe hat die Aktion nicht erkannt - Klassifikation nachschärfen).
-            if (typeof diag === 'function' && typeof caseHasDefinedEvidence === 'function' && caseHasDefinedEvidence()) {
-              diag('drift', '⚠ LEGACY-SCHLÜSSEL-FALLBACK für definiertes Indiz genutzt: ' + ind.id + ' (deterministische Vergabe griff nicht)');
-            }
           }
           break; // auch hier max 1 pro Szene (Tempo)
         }
@@ -7031,7 +7036,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.600';
+window.SCHATTEN_VERSION = 'v7.12.602';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -7196,8 +7201,29 @@ function setClientState(status, reason, locationId) {
     cs.lastChangeScene = (typeof sceneCounter === 'number') ? sceneCounter : null;
     cs.lastChangeReason = reason || '?';
     if (status === 'secured') cs.securedAt = locationId || (caseProgress.clientSecuredAt || null);
+    // v7.12.602 (ChatGPT P1, Run 2044): GESICHERT ist nicht BEGLEITEND. Der Companion-Lock hielt Margarete nach
+    // secured@helene weiter "bei Ortswechseln bis Fallende" - logisch falsch. Lock für die Klientin lösen.
+    if (status === 'secured' && typeof _companionLock !== 'undefined' && _companionLock && _companionLock.name
+        && _istKlient(_companionLock.name, _companionLock.id)) {
+      _companionLock = null;
+      if (typeof diag === 'function') diag('state', '✦ COMPANION-LOCK AUS: Klientin ist secured' + (locationId ? '@' + locationId : '') + ' - gesichert ist nicht mitreisend');
+    }
     if (typeof diag === 'function') diag('state', '✦ CLIENT-STATE: ' + vorher + ' -> ' + status + ' (' + (reason || '?') + (locationId ? ' @ ' + locationId : '') + ')');
   } catch (e) {}
+}
+// v7.12.601 (Benjamin, Run 2044 Screenshot): Der Schutz-NPC, BEI DEM die Klientin gesichert ist (Helene in der
+// Charité, Doc in der Praxis), ist nicht mitnehmbar - er/sie bewacht die Klientin. Mitnahme würde die Sicherung
+// de facto entwerten. Match über securedAt <-> NPC-Name (beidseitiger Teilstring, KEIN Token-Match - sonst
+// blockiert 'doc_wagner' fälschlich auch 'Marlene Wagner').
+function _istSchutzNpcDerGesichertenKlientin(npcName) {
+  try {
+    if (!caseProgress || !caseProgress.clientSecured) return false;
+    const wo = (caseProgress.clientSecuredAt || (caseProgress.clientState && caseProgress.clientState.securedAt) || '').toString().replace(/_/g, ' ');
+    if (!wo || wo === 'grenze' || wo === 'vera' || wo === 'roth') return false;
+    const n = normForMatch(npcName || '');
+    const w = normForMatch(wo);
+    return !!(n && w && (n.indexOf(w) !== -1 || w.indexOf(n) !== -1));
+  } catch (e) { return false; }
 }
 function _partyAdd(npc) {
   if (!npc || !npc.id) return;
@@ -7234,6 +7260,9 @@ function _mitnehmbareNpcsAmOrt() {
     const t = (n.tag || '').toUpperCase();
     if (GEGNER_TAGS.includes(t)) return false;          // Gegner/Schatten nicht mitnehmbar
     if (_istInParty(n.id, n.name)) return false;        // schon dabei
+    // v7.12.601: gesicherte Klientin + ihr Schutz-NPC (Helene/Doc) nicht mitnehmbar.
+    if (typeof _istKlient === 'function' && caseProgress && caseProgress.clientSecured && _istKlient(n.name, n.id)) return false;
+    if (typeof _istSchutzNpcDerGesichertenKlientin === 'function' && _istSchutzNpcDerGesichertenKlientin(n.name)) return false;
     return true;
   });
 }
@@ -18196,7 +18225,10 @@ function oeffneNpcMenue(npc, modus) {
     // (bei Doc/Helene/im Westen). Wieder mitnehmen würde die Sicherung de facto aufheben.
     const _istGesicherteKlientin = !!(caseProgress && caseProgress.clientSecured && clientProfile && clientProfile.name
       && normForMatch(npc.name || '') === normForMatch(clientProfile.name));
-    if (!_istGesicherteKlientin) {
+    // v7.12.601 (Benjamin, Run 2044): auch der Schutz-NPC, bei dem sie gesichert ist (Helene/Doc), bleibt da -
+    // er/sie bewacht die Klientin.
+    const _istSchutzNpc = (typeof _istSchutzNpcDerGesichertenKlientin === 'function') && _istSchutzNpcDerGesichertenKlientin(npc.name);
+    if (!_istGesicherteKlientin && !_istSchutzNpc) {
       // "Mitnehmen" nur für erlaubte Begleiter-Tags (nicht Gegner, nicht MYSTERY/Schatten).
       verben.push({ key: 'mitnehmen', label: 'Mitnehmen', kategorie: '_PARTY', _partyAction: 'add', _hint: 'In die Party aufnehmen · reist mit dir · keine Szene' });
     }
@@ -20622,6 +20654,16 @@ async function requestSceneFromModel(userMessage, conversationHistory, compactMo
     // v7.12.592 (I3, Margarete-Pilot): INDIZ-REGEL "Indiz vs. Detail" + ZIEL-INDIZ-Vorgabe. Die KI darf Atmosphäre
     // frei erzählen, aber keine zählenden Beweise erfinden - die Beweiskette gehört der Engine. Passt die Spieler-
     // Aktion zu einem offenen, jetzt findbaren Kern-Indiz, wird der KI GENAU dieser Fund vorgegeben.
+    // v7.12.602 (KONZEPT_WELTWAHRHEIT W2a, ChatGPT-freigegeben + Run-2044-Beweis: Atelier-Prosa bei Engine-Ort
+    // Goldener Anker, Sz23-28): HARTER ORT als Weltzustand in JEDEM Prompt. Billige Stufe vor dem teuren Retry
+    // (W2b). Ausnahme: aktive Flucht (dort folgt W3 mit transientem Ort).
+    try {
+      const _aktOrt = window._letzteAktion || {};
+      const _istFluchtAktion = /FLUCHT|NOTFLUCHT/.test((_aktOrt.kategorie || '').toUpperCase());
+      if (typeof engineCurrentLocation !== 'undefined' && engineCurrentLocation && engineCurrentLocation.name && !_istFluchtAktion) {
+        recap += 'HARTER WELTZUSTAND - ORT (PFLICHT): Die Szene spielt an genau diesem Ort: "' + engineCurrentLocation.name + '"' + (engineCurrentLocation.sektor ? ' (' + engineCurrentLocation.sektor + ')' : '') + '. Die Szene wechselt NICHT an einen anderen Ort - nicht in ein Atelier, eine Wohnung, ein Büro oder eine Gasse anderswo. Andere Orte dürfen nur ERWÄHNT werden (im Gespräch, in Gedanken). Einen Ortswechsel macht ausschließlich der Spieler über die Reise-Aktion. Auch Übernachtung/Romantik findet AN DIESEM ORT statt (Hinterzimmer, Lager, Stube - was zum Ort passt).\n\n';
+      }
+    } catch (e) {}
     try {
       if (typeof caseHasDefinedEvidence === 'function' && caseHasDefinedEvidence()) {
         recap += 'INDIZ-REGEL (PFLICHT, Indiz vs. Detail): Du darfst atmosphärische DETAILS frei beschreiben (Gerüche, Gegenstände, Stimmungen, Beobachtungen ohne Fallbedeutung). Aber du darfst KEINE neuen zählenden Indizien, Beweisstücke, Akten, Codes, Namen oder Täterhinweise ERFINDEN und NICHTS Eigenes in "indiz_neu" eintragen - die Beweiskette dieses Falls ist fest definiert und wird von der Engine vergeben.\n';
@@ -20661,10 +20703,16 @@ async function requestSceneFromModel(userMessage, conversationHistory, compactMo
       try {
         const _akt = window._letzteAktion || {};
         const _istNacht = /UEBERNACHTUNG|ROMANTIK/.test((_akt.kategorie || '').toUpperCase());
+        // v7.12.601 (Benjamin, Run 2044 Sz23: Lemke fehlte am Morgen trotz PARTY=[Lemke, Margot]): Beweis-
+        // Diagnostik - der Export loggt den recap nicht, also loggen wir HIER, ob die Regel gebaut wurde.
+        if (typeof diag === 'function') {
+          if (_istNacht) diag('state', 'ÜBERNACHTUNGS-REGEL-CHECK: kategorie=' + (_akt.kategorie || '?') + ' | Party=' + ((typeof _party !== 'undefined' && Array.isArray(_party)) ? _party.length : 'UNDEF'));
+        }
         if (_istNacht && typeof _party !== 'undefined' && Array.isArray(_party) && _party.length) {
           const _begleiter = _party.map(p => p && (p.name || p.id)).filter(Boolean).join(', ');
           if (_begleiter) {
             recap += 'ÜBERNACHTUNGS-REGEL (PFLICHT): Karls Begleiter (' + _begleiter + ') BLEIBEN über Nacht am selben Ort (Couch, Gästezimmer, Sessel, Küche) und sind am Morgen ANWESEND. NIEMAND verschwindet still in der Nacht oder "ist längst fort". Die Begleiter dürfen auf die Nacht menschlich reagieren - amüsiert, verlegen, eifersüchtig, ein trockener Kommentar am Frühstückstisch - aber sie bleiben da.\n\n';
+            if (typeof diag === 'function') diag('state', '✦ ÜBERNACHTUNGS-REGEL in Prompt (Begleiter: ' + _begleiter + ')');
           }
         }
       } catch (e) {}
@@ -29316,7 +29364,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           let _mNmPre = 'Margarete Stein';
           const _kmPre = (caseSetup && typeof caseSetup.klient === 'string') ? caseSetup.klient.match(/^([A-ZÄÖÜ][a-zäöüß]+(?:\s+[A-ZÄÖÜ][a-zäöüß]+)*)/) : null;
           if (_kmPre && _kmPre[1]) _mNmPre = _kmPre[1].trim();
-          _companionLock = { name: _mNmPre, sinceScene: (typeof sceneCounter === 'number' ? sceneCounter : 0), reason: 'mitgenommen' };
+          if (!(typeof _istKlient === 'function' && caseProgress && caseProgress.clientState && caseProgress.clientState.status === 'secured' && _istKlient(_mNmPre, null))) _companionLock = { name: _mNmPre, sinceScene: (typeof sceneCounter === 'number' ? sceneCounter : 0), reason: 'mitgenommen' }; // v7.12.602: gesicherte Klientin nie locken
           if (typeof diag === 'function') diag('detect', '✦ COMPANION-LOCK AN (vor Cast-Clean, Mitnahme): ' + _mNmPre + ' - "' + _umsgMit.slice(0,45).replace(/\s+/g,' ') + '"');
         }
       } catch (e) { /* Mitnahme-Pre-Check optional */ }
@@ -31988,7 +32036,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
               let _mNm = 'Margarete Stein';
               const _kmm = (caseSetup && typeof caseSetup.klient === 'string') ? caseSetup.klient.match(/^([A-ZÄÖÜ][a-zäöüß]+(?:\s+[A-ZÄÖÜ][a-zäöüß]+)*)/) : null;
               if (_kmm && _kmm[1]) _mNm = _kmm[1].trim();
-              _companionLock = { name: _mNm, sinceScene: (typeof sceneCounter === 'number' ? sceneCounter : 0), reason: 'mitgenommen' };
+              if (!(typeof _istKlient === 'function' && caseProgress && caseProgress.clientState && caseProgress.clientState.status === 'secured' && _istKlient(_mNm, null))) _companionLock = { name: _mNm, sinceScene: (typeof sceneCounter === 'number' ? sceneCounter : 0), reason: 'mitgenommen' }; // v7.12.602
               if (typeof diag === 'function') diag('detect', '✦ COMPANION-LOCK AN (Mitnahme erkannt, kein Beat): ' + _mNm + ' - "' + _aktion.slice(0,45).replace(/\s+/g,' ') + '"');
             }
           } catch (e) { /* Mitnahme-Erkennung optional */ }
@@ -32020,7 +32068,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
                 if (_km && _km[1]) _mName = _km[1].trim();
               } catch (e) {}
               if (!_companionLock) {
-                _companionLock = { name: _mName, sinceScene: (typeof sceneCounter === 'number' ? sceneCounter : 0) };
+                if (!(typeof _istKlient === 'function' && caseProgress && caseProgress.clientState && caseProgress.clientState.status === 'secured' && _istKlient(_mName, null))) _companionLock = { name: _mName, sinceScene: (typeof sceneCounter === 'number' ? sceneCounter : 0) }; // v7.12.602
                 if (typeof diag === 'function') diag('detect', '✦ COMPANION-LOCK AN: ' + _mName + ' ist Begleitperson (mitgenommen/geschützt) - wird bei Ortswechseln gehalten bis Fallende');
               }
             }
