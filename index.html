@@ -515,6 +515,10 @@
     max-height: calc(100dvh - 40px - env(safe-area-inset-bottom, 0px));
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+    /* v7.12.576 (Benjamin-Befund iPhone): overscroll-behavior:contain verhindert "scroll chaining" - sonst schlägt
+       die Scroll-Geste im Popup auf die Hintergrundseite durch (besonders wenn man kurz vorher die Seite gescrollt
+       hat). Zusammen mit dem Body-Scroll-Lock (JS) bleibt das Scrollen sauber im Popup. */
+    overscroll-behavior: contain;
     touch-action: pan-y;
     border-radius: 4px;
   }
@@ -1983,6 +1987,47 @@
   /* v7.12.68: Container fuer die oben angepinnten besonderen Aktionen
      (Intim/Uebernachtung, Notheilen, Flucht/Notflucht, Doc-Heilen). Sitzt
      ueber den ABCD-Optionen, damit situative Gelegenheiten nicht untergehen. */
+  /* v7.12.577 (UI-Projekt B1): Zwei Kategorie-Sektionen als Akkordeon (Zeit-Achse). iPhone: nur eine offen. */
+  .ui-kategorien {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .ui-kat-sektion {
+    border: 1px solid rgba(200,191,168,0.16);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .ui-kat-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    background: rgba(40,34,28,0.4);
+    border: none;
+    color: #cbbfa9;
+    font-family: inherit;
+    font-size: calc(12px * var(--reading-scale));
+    letter-spacing: 0.04em;
+    padding: 11px 14px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    text-align: left;
+  }
+  .ui-kat-bleibt .ui-kat-header {
+    background: rgba(28,30,34,0.4);
+    color: #9aa39a;  /* etwas kühler/zurückhaltender - "hier passiert nichts" */
+  }
+  .ui-kat-titel { font-weight: 600; }
+  .ui-kat-chevron { opacity: 0.7; font-size: 0.9em; }
+  .ui-kat-body {
+    display: none;
+    padding: 8px 8px 4px 8px;
+  }
+  .ui-kat-sektion.offen .ui-kat-body {
+    display: block;
+  }
   .top-actions-container {
     display: flex;
     flex-direction: column;
@@ -3095,7 +3140,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.575</div>
+    <div class="start-version">Schatten v7.12.577</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3317,7 +3362,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.575</span>
+    <span>Schatten v7.12.577</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6722,7 +6767,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.575';
+window.SCHATTEN_VERSION = 'v7.12.577';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -8321,7 +8366,7 @@ function toggleSettings(event) {
     // v7.12.66: Das "Aktueller Stand"-Popup zuerst schliessen - die beiden
     // duerfen sich nicht ueberlagern (User-Befund iOS). Nur eins offen.
     const _sp = document.getElementById('status-popup');
-    if (_sp && !_sp.classList.contains('hidden')) _sp.classList.add('hidden');
+    if (_sp && !_sp.classList.contains('hidden')) { _sp.classList.add('hidden'); if (typeof unlockBodyScroll === 'function') unlockBodyScroll(); /* v7.12.576 */ }
     updateProviderInfo();
     if (typeof applyAdminVisibility === 'function') applyAdminVisibility();
     // v7.9.10: Musik-Button-Text mit echtem Audio-State synchronisieren
@@ -14107,6 +14152,31 @@ function showHeader(scene) {
   };
 }
 
+// v7.12.576 (Benjamin-Befund iPhone): Body-Scroll-Lock gegen iOS scroll chaining. Wenn ein Vollbild-Popup offen ist
+// und man darin wischt, scrollt sonst die Hintergrundseite mit und das Popup lässt sich kaum schließen. Lösung:
+// beim Öffnen body fixieren (position:fixed + gemerkte Scroll-Y), beim Schließen wiederherstellen.
+let _savedScrollY = 0;
+function lockBodyScroll() {
+  try {
+    _savedScrollY = window.scrollY || window.pageYOffset || 0;
+    document.body.style.position = 'fixed';
+    document.body.style.top = '-' + _savedScrollY + 'px';
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+    document.body.style.width = '100%';
+  } catch (e) { /* defensiv */ }
+}
+function unlockBodyScroll() {
+  try {
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.left = '';
+    document.body.style.right = '';
+    document.body.style.width = '';
+    window.scrollTo(0, _savedScrollY);
+  } catch (e) { /* defensiv */ }
+}
+
 function showStatusDetails() {
   const info = currentStatusInfo;
   document.getElementById('popup-day').textContent = info.day;
@@ -14456,6 +14526,7 @@ function showStatusDetails() {
   // v7.12.66: Settings-Menue zuerst schliessen - nur eins offen (keine Ueberlagerung).
   { const _sm = document.getElementById('settings-menu'); if (_sm && !_sm.classList.contains('hidden')) _sm.classList.add('hidden'); }
   document.getElementById('status-popup').classList.remove('hidden');
+  if (typeof lockBodyScroll === 'function') lockBodyScroll(); // v7.12.576
 }
 
 function hideStatusDetails(event) {
@@ -14470,6 +14541,7 @@ function hideStatusDetails(event) {
     delete titleEl.dataset.origTitle;
   }
   document.getElementById('status-popup').classList.add('hidden');
+  if (typeof unlockBodyScroll === 'function') unlockBodyScroll(); // v7.12.576
 }
 
 // v7.11.44: Charakter-Detail-Popup. Klick auf einen Personen-Eintrag in der
@@ -14815,6 +14887,7 @@ function showSceneStatusPopup(entry, sceneIdx) {
   // v7.12.66: Settings-Menue zuerst schliessen - nur eins offen (keine Ueberlagerung).
   { const _sm = document.getElementById('settings-menu'); if (_sm && !_sm.classList.contains('hidden')) _sm.classList.add('hidden'); }
   document.getElementById('status-popup').classList.remove('hidden');
+  if (typeof lockBodyScroll === 'function') lockBodyScroll(); // v7.12.576
 }
 
 // v6.98: hideStatusDetails wurde oben um den Titel-Reset erweitert.
@@ -17810,6 +17883,44 @@ function renderOptions(scene) {
     topActions.id = 'top-actions';
     topActions.className = 'top-actions-container';
     list.appendChild(topActions);
+    // v7.12.577 (UI-Projekt B1, Zeit-Achse): Zwei Kategorie-Sektionen als Akkordeon.
+    // "Übergang in nächste Szene" (kostet eine Szene: A/B/C/D, Reisen, Flucht, Schlafen, Fall lösen) und
+    // "Bleibt in der Szene" (kostenlos/zeitlos: Notizbuch, Aktueller Stand, später Person mitnehmen/dalassen).
+    // Die szene-auslösenden Buttons hängen weiter an topActions/list (=Übergang-Sektion). Nur die szenelosen
+    // Buttons gehen an bleibtActions. Auf iPhone: Akkordeon (nur einer offen, Übergang beim Szenenstart offen).
+    const uiKatWrap = document.createElement('div');
+    uiKatWrap.id = 'ui-kategorien';
+    uiKatWrap.className = 'ui-kategorien';
+    const uebergangSektion = document.createElement('div');
+    uebergangSektion.className = 'ui-kat-sektion ui-kat-uebergang offen';
+    const uebergangHeader = document.createElement('button');
+    uebergangHeader.type = 'button';
+    uebergangHeader.className = 'ui-kat-header';
+    uebergangHeader.innerHTML = '<span class="ui-kat-titel">▶ Übergang in nächste Szene</span><span class="ui-kat-chevron">▾</span>';
+    const uebergangBody = document.createElement('div');
+    uebergangBody.className = 'ui-kat-body';
+    uebergangSektion.appendChild(uebergangHeader);
+    uebergangSektion.appendChild(uebergangBody);
+    const bleibtSektion = document.createElement('div');
+    bleibtSektion.className = 'ui-kat-sektion ui-kat-bleibt';
+    const bleibtHeader = document.createElement('button');
+    bleibtHeader.type = 'button';
+    bleibtHeader.className = 'ui-kat-header';
+    bleibtHeader.innerHTML = '<span class="ui-kat-titel">Bleibt in der Szene</span><span class="ui-kat-chevron">▸</span>';
+    const bleibtActions = document.createElement('div');
+    bleibtActions.className = 'ui-kat-body';
+    bleibtSektion.appendChild(bleibtHeader);
+    bleibtSektion.appendChild(bleibtActions);
+    uebergangHeader.addEventListener('click', function () {
+      uebergangSektion.classList.add('offen'); bleibtSektion.classList.remove('offen');
+    });
+    bleibtHeader.addEventListener('click', function () {
+      bleibtSektion.classList.add('offen'); uebergangSektion.classList.remove('offen');
+    });
+    uebergangBody.appendChild(topActions);
+    uiKatWrap.appendChild(uebergangSektion);
+    uiKatWrap.appendChild(bleibtSektion);
+    list.appendChild(uiKatWrap);
     // Validation: scene.optionen muss existieren und array sein
     if (!scene || !Array.isArray(scene.optionen) || scene.optionen.length === 0) {
       console.warn('[Schatten] renderOptions: scene.optionen fehlt/leer - generischer Fallback');
@@ -18076,7 +18187,7 @@ function renderOptions(scene) {
       chooseOption(opt);
     });
 
-    list.appendChild(btn);
+    uebergangBody.appendChild(btn); // v7.12.577: ABCD = szene-auslösend -> Übergang-Sektion
   });
 
   // v7.10.9: VERTEILUNGS-SUMMARY ueber alle 4 Story-Optionen.
@@ -18683,7 +18794,14 @@ function renderOptions(scene) {
     const _nbAnz = (Array.isArray(caseProgress.indizien)) ? caseProgress.indizien.length : 0;
     nbBtn.innerHTML = '<span class="option-id">📓</span><span class="option-text-wrap"><span>Notizbuch</span><span class="option-marker option-marker-system">' + _nbAnz + ' Notiz' + (_nbAnz === 1 ? '' : 'en') + '</span></span>';
     attachSafeTap(nbBtn, () => { if (typeof oeffneNotizbuch === 'function') oeffneNotizbuch(); });
-    (typeof topActions !== 'undefined' ? topActions : list).appendChild(nbBtn);
+    bleibtActions.appendChild(nbBtn); // v7.12.577: Notizbuch = zeitlos -> Bleibt-Sektion
+    // v7.12.577: Aktueller-Stand-Button in der Bleibt-Sektion (öffnet dasselbe Popup wie die Topleiste). Gibt dem
+    // Spieler einen zweiten, sichtbaren Weg zum Stand, falls er die antippbare Topleiste nicht wahrnimmt.
+    const standBtn = document.createElement('button');
+    standBtn.className = 'option-btn option-btn-system option-btn-reise';
+    standBtn.innerHTML = '<span class="option-id">📋</span><span class="option-text-wrap"><span>Aktueller Stand</span><span class="option-marker option-marker-system">Übersicht</span></span>';
+    attachSafeTap(standBtn, () => { if (typeof showStatusDetails === 'function') showStatusDetails(); });
+    bleibtActions.appendChild(standBtn);
   }
   // Karl versucht aus der Zelle/Verhoer-Raum auszubrechen.
   if (showNotfluchtButton) {
@@ -18832,7 +18950,7 @@ function renderOptions(scene) {
     // - Sonst: _heimfahrt=true -> Standard SCHLAFEN-HEIMFAHRT (nach Hause). Entscheidet die KI im
     //   Kontext, dass Karl vor Ort einnickt (verletzt, betrunken), ist das eine kohärente Erzählung,
     //   kein gebrochenes Versprechen - der Spieler hat nie etwas anderes gewählt.
-    list.appendChild(buildSleepButton('Schlafen', '→ MORGEN', !canSleepInCustody, sleepBlockedBySpannung));
+    uebergangBody.appendChild(buildSleepButton('Schlafen', '→ MORGEN', !canSleepInCustody, sleepBlockedBySpannung)); // v7.12.577: Schlafen = Übergang
   }
 
   // ROMANTIK-Button
