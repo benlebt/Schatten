@@ -3191,7 +3191,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.599</div>
+    <div class="start-version">Schatten v7.12.600</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.599</span>
+    <span>Schatten v7.12.600</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7031,7 +7031,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.599';
+window.SCHATTEN_VERSION = 'v7.12.600';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -7169,11 +7169,43 @@ function _istInParty(npcId, npcName) {
     || (nmN && normForMatch(p.name).split(/\s+/)[0] === nmN.split(/\s+/)[0]));
 }
 // Helper: NPC zur Party hinzufügen (Dedup).
+// v7.12.600 (KONZEPT_WELTWAHRHEIT W1, ChatGPT-freigegeben): CLIENT-STATE als harte State-Machine. Die Engine
+// besitzt den Klienten-Zustand; die KI erzählt nur innerhalb dieser Grenzen. Zustandsänderungen NUR durch Engine-
+// Ereignisse (party_add, player_action, security_action, threat_event) - NIE still durch Prosa-Detektoren (die
+// melden nur Widersprüche). with_karl ist STÄRKER als Cast: Cast = sichtbar in Szene, clientState = Weltwahrheit.
+function _istKlient(name, id) {
+  try {
+    if (!clientProfile || !clientProfile.name) return false;
+    const k = normForMatch(clientProfile.name);
+    return (name && normForMatch(name) === k) || (id && normForMatch(id) === k)
+      || (name && normForMatch(name).split(/\s+/)[0] === k.split(/\s+/)[0] && k.split(/\s+/)[0].length >= 4);
+  } catch (e) { return false; }
+}
+function setClientState(status, reason, locationId) {
+  try {
+    if (!caseProgress) return;
+    if (!caseProgress.clientState) caseProgress.clientState = { status: 'unknown', locationId: null, securedAt: null, lastChangeScene: null, lastChangeReason: null };
+    const cs = caseProgress.clientState;
+    const vorher = cs.status || 'unknown';
+    // SECURED ist stabil: nur eine explizite Spieler-/Sicherungs-Aktion darf es ändern (nicht left_behind durch
+    // das Party-Remove, das die Sicherung selbst auslöst).
+    if (vorher === 'secured' && reason !== 'security_action' && reason !== 'player_action_explizit') return;
+    if (vorher === status && cs.locationId === (locationId || null)) return;
+    cs.status = status;
+    cs.locationId = locationId || null;
+    cs.lastChangeScene = (typeof sceneCounter === 'number') ? sceneCounter : null;
+    cs.lastChangeReason = reason || '?';
+    if (status === 'secured') cs.securedAt = locationId || (caseProgress.clientSecuredAt || null);
+    if (typeof diag === 'function') diag('state', '✦ CLIENT-STATE: ' + vorher + ' -> ' + status + ' (' + (reason || '?') + (locationId ? ' @ ' + locationId : '') + ')');
+  } catch (e) {}
+}
 function _partyAdd(npc) {
   if (!npc || !npc.id) return;
   if (_istInParty(npc.id, npc.name)) return;
   _party.push({ id: npc.id, name: npc.name || npc.id, tag: npc.tag || '', sinceScene: (typeof sceneCounter === 'number' ? sceneCounter : 0) });
   if (typeof diag === 'function') diag('state', '✦ PARTY +: ' + (npc.name || npc.id) + ' [' + (npc.tag||'?') + '] -> Party (' + _party.length + ')');
+  // v7.12.600 (W1): Klientin in der Party = with_karl (Engine-Ereignis).
+  if (_istKlient(npc.name, npc.id)) setClientState('with_karl', 'party_add');
 }
 // Helper: NPC aus der Party entfernen (per id oder name).
 function _partyRemove(npcId, npcName) {
@@ -7183,6 +7215,11 @@ function _partyRemove(npcId, npcName) {
   _party = _party.filter(p => !((idN && normForMatch(p.id) === idN) || (nmN && normForMatch(p.name) === nmN)
     || (nmN && normForMatch(p.name).split(/\s+/)[0] === nmN.split(/\s+/)[0])));
   if (_party.length !== vorher && typeof diag === 'function') diag('state', '✦ PARTY -: ' + (npcName || npcId) + ' verlässt die Party (' + _party.length + ')');
+  // v7.12.600 (W1): Klientin verlässt die Party (Spieler-Aktion "hier lassen" o.ä.) -> left_behind am aktuellen
+  // Ort. (Die Sicherungs-Aktion setzt direkt 'secured' - das wird durch den secured-Schutz nicht überschrieben.)
+  if (_party.length !== vorher && _istKlient(npcName, npcId)) {
+    setClientState('left_behind', 'player_action', (typeof engineCurrentLocation !== 'undefined' && engineCurrentLocation) ? engineCurrentLocation.name : null);
+  }
 }
 // v7.12.559 (Benjamin-Wunsch): mitnehmbare NPCs am aktuellen Ort, die NICHT in der Party sind. Für das
 // Auto-Mitnehmen-Popup beim Reisen/Flüchten. Mitnehmbar = NICHT Gegner (ANTAGONIST/SUSPECT/GANGSTER/STASI) und
@@ -18380,6 +18417,9 @@ function baueSicherungsButtons(container) {
           if (b.beat === 'margarete_gesichert') {
             caseProgress.clientSecured = true;
             caseProgress.clientSecuredAt = b.securedAt;
+            // v7.12.600 (W1): secured VOR dem Party-Remove setzen (Engine-Ereignis security_action) - der
+            // secured-Schutz verhindert, dass das Remove den Zustand auf left_behind zieht.
+            if (typeof setClientState === 'function') setClientState('secured', 'security_action', b.securedAt);
             // v7.12.594 (Benjamin-Run 1800): Gesicherte Person verlässt AUTOMATISCH die Party - sonst "zieht man
             // sie wieder mit" und die Sicherung ist erzählerisch sofort wieder aufgehoben.
             try { if (typeof _partyRemove === 'function') _partyRemove(null, _klientName); } catch (e) {}
@@ -20603,6 +20643,14 @@ async function requestSceneFromModel(userMessage, conversationHistory, compactMo
           : caseProgress.clientSecuredAt === 'grenze' ? 'im Westen, außer Reichweite'
           : 'an einem sicheren Ort';
         recap += 'PERSONEN-REGEL (PFLICHT): ' + clientProfile.name + ' ist in Sicherheit gebracht (' + _sichWo + ') und bleibt dort. Sie tritt in den folgenden Szenen NICHT mehr auf, ist NICHT bei Karl, reist NICHT mit und taucht nicht "zufällig" wieder auf. Sie darf höchstens ERWÄHNT werden (z.B. "Margarete ist in Sicherheit").\n\n';
+      } else if (caseProgress && caseProgress.clientState && clientProfile && clientProfile.name) {
+        // v7.12.600 (W1): Engine-Zustand der Klientin als PFLICHT-Weltwahrheit in jedem Request.
+        const _cst = caseProgress.clientState.status;
+        if (_cst === 'with_karl') {
+          recap += 'PERSONEN-REGEL (PFLICHT): ' + clientProfile.name + ' ist BEI Karl und reist mit ihm. Erzähle sie NIEMALS als verschwunden, abgefangen, verlegt, geflohen oder "nirgends gemeldet" - sie ist physisch an Karls Seite. Sie verlässt Karl nur, wenn der SPIELER es entscheidet.\n\n';
+        } else if (_cst === 'left_behind') {
+          recap += 'PERSONEN-REGEL (PFLICHT): ' + clientProfile.name + ' ist ' + (caseProgress.clientState.locationId ? 'an diesem Ort zurückgeblieben: ' + caseProgress.clientState.locationId : 'zurückgeblieben') + ' - sie ist NICHT bei Karl und taucht nicht zufällig an seinem Ort auf. Höchstens Erwähnung.\n\n';
+        }
       }
       // v7.12.596 (Benjamin, Run 1847): ÜBERNACHTUNGS-PARTY-REGEL. Bei Romance-Nächten ließ die KI Begleiter
       // still verschwinden ("Margarete ist längst fort"), während die Engine-Party sie hielt - Widerspruch.
@@ -31324,6 +31372,17 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           if (_npcAbschied || _npcFlucht) {
             const _grund = _npcFlucht ? 'Flucht' : 'Abschied';
             const _pid = (cast[i] && cast[i].id) ? cast[i].id : ''; // VOR splice sichern
+            // v7.12.600 (W1, ChatGPT-Schärfung): Für die KLIENTIN mit Engine-Zustand with_karl ändert Prosa den
+            // Weltzustand NICHT - sie bleibt bei Karl. Widerspruch wird gemeldet + die nächste Szene bekommt einen
+            // Korrektur-Push (re-integrieren). Andere NPCs: Prosa-Folgen bleibt ok (Schattenmann etc.).
+            const _istKlientinWiderspruch = (typeof _istKlient === 'function') && _istKlient(_cn, _pid)
+              && caseProgress && caseProgress.clientState && caseProgress.clientState.status === 'with_karl';
+            if (_istKlientinWiderspruch) {
+              if (typeof diag === 'function') diag('drift', '⚠ CLIENT-STATE-WIDERSPRUCH: Prosa erzählt ' + _cn + ' als ' + _grund + ', Engine-Zustand ist with_karl - Zustand wird NICHT geändert (W1), Korrektur-Push folgt');
+              if (typeof pendingCategoryMessages !== 'undefined' && Array.isArray(pendingCategoryMessages)) {
+                pendingCategoryMessages.push('KORREKTUR (PFLICHT): ' + _cn + ' ist BEI Karl und reist mit ihm - die vorige Szene hat sie fälschlich als fort/verschwunden erzählt. Re-integriere sie natürlich (sie war nur kurz außer Sicht / im Nebenraum). Erzähle sie NICHT erneut als verschwunden.');
+              }
+            } else {
             if (typeof diag === 'function') diag('drift', 'NPC bei namentlichem(r) ' + _grund + ' aus Cast entfernt: ' + _cn + ' (verhindert Teleport-Rückkehr)');
             cast.splice(i, 1);
             // v7.12.558: auch aus der Party - sonst holt die Party-Garantie (v557) ihn sofort zurück.
@@ -31335,6 +31394,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
               if (typeof showProgressToast === 'function') {
                 try { showProgressToast(_cn + ' hat sich abgesetzt', _grund === 'Flucht' ? 'Sie/Er ist im Trubel verschwunden und reist nicht mehr mit.' : 'Verabschiedet - reist nicht mehr mit.', 'warn', 'party-weg-' + _pid); } catch (e) {}
               }
+            }
             }
           }
         }
@@ -31571,6 +31631,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           + ': finaler Cast[' + _finalCast.length + ']=[' + _finalCast.join(' | ') + ']'
           + ' · KI-personenImRaum=' + (_pirRoh === null ? 'FEHLT' : (_pirRoh.length ? '[' + _pirRoh.join(', ') + ']' : 'LEER'))
           + ' · PARTY=[' + _partyJetzt + ']'
+          + ' · CLIENT=' + ((caseProgress && caseProgress.clientState) ? (caseProgress.clientState.status + (caseProgress.clientState.locationId ? '@' + caseProgress.clientState.locationId : '')) : '-')
           + ' · Ereignisse=' + (_castDiagEvents.length ? '[' + _castDiagEvents.join(' ; ') + ']' : 'keine'));
       }
     } catch (e) { /* Diagnose darf Szene nie brechen */ }
