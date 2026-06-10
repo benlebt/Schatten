@@ -3191,7 +3191,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.614</div>
+    <div class="start-version">Schatten v7.12.617</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.614</span>
+    <span>Schatten v7.12.617</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7056,7 +7056,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.614';
+window.SCHATTEN_VERSION = 'v7.12.617';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -7317,6 +7317,158 @@ function _npcIstFeindlich(npc) {
   } catch (e) { return false; }
 }
 // ============ Ende NPC-ZUSTAND ============
+// ============ v7.12.616: AKTIONS-PLAN (Benjamin: "mehrere Aktionen kombinieren wie Strg-Auswahl im Explorer") ============
+// Manöver- und Begleiter-Befehle landen erst im PLAN. Die Plan-Leiste zeigt alle gesammelten Befehle;
+// "Ausführen" setzt ALLE Engine-Wirkungen und schickt EINEN koordinierten Prompt (eine Szene, ein Request).
+window._aktionsPlan = window._aktionsPlan || [];
+function _planAdd(eintrag) {
+  try {
+    window._aktionsPlan.push(eintrag);
+    if (typeof diag === 'function') diag('state', '📋 PLAN +: ' + eintrag.label + ' (' + window._aktionsPlan.length + ' geplant)');
+    if (typeof showProgressToast === 'function') { try { showProgressToast('📋 Geplant (' + window._aktionsPlan.length + ')', eintrag.label + ' - weitere Befehle wählen oder unten ausführen.', 'info', 'plan-add'); } catch (e) {} }
+    _renderPlanLeiste();
+  } catch (e) {}
+}
+function _renderPlanLeiste() {
+  try {
+    let el = document.getElementById('aktionsPlanLeiste');
+    if (!window._aktionsPlan.length) { if (el) el.remove(); return; }
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'aktionsPlanLeiste';
+      el.style.cssText = 'position:fixed;bottom:84px;left:50%;transform:translateX(-50%);z-index:9000;background:rgba(12,12,14,0.96);border:1px solid #8a7a58;border-radius:8px;padding:8px 12px;max-width:92vw;box-shadow:0 4px 18px rgba(0,0,0,0.6);font-size:13px;color:#e8e0cc;';
+      document.body.appendChild(el);
+    }
+    let h = '<div style="font-weight:bold;letter-spacing:0.05em;color:#d4b86a;margin-bottom:4px;">KOORDINIERTER ZUGRIFF - Plan</div>';
+    window._aktionsPlan.forEach((p, i) => { h += '<div style="margin:2px 0;">' + (i + 1) + '. ' + p.label + '</div>'; });
+    h += '<div style="margin-top:6px;display:flex;gap:8px;">'
+      + '<button onclick="_planAusfuehren()" style="background:#d4b86a;color:#1a1a1c;border:none;border-radius:6px;padding:6px 14px;font-weight:bold;cursor:pointer;">▶ Ausführen (' + window._aktionsPlan.length + ')</button>'
+      + '<button onclick="window._aktionsPlan=[];_renderPlanLeiste();" style="background:transparent;color:#9a8a68;border:1px solid #555;border-radius:6px;padding:6px 10px;cursor:pointer;">✕ Verwerfen</button></div>';
+    el.innerHTML = h;
+  } catch (e) {}
+}
+function _planAusfuehren() {
+  try {
+    const plan = window._aktionsPlan || [];
+    if (!plan.length) return;
+    // 1) ALLE Engine-Wirkungen setzen (Ablenkung/Fesseln -> gefesselt + Beute; Angriff -> ko).
+    plan.forEach(p => {
+      try {
+        // v7.12.617: Baukasten-Einträge tragen ihre Wirkung explizit (_wirkung/_beute/_item*); die alten
+        // Menü-Befehle (angriff/ablenkung/fesseln) behalten ihr Verhalten.
+        const _w = p._wirkung || (p.art === 'angriff' ? 'ko' : (p.art === 'ablenkung' || p.art === 'fesseln') ? 'gefesselt' : null);
+        if (_w && p.ziel && typeof _npcZustandSet === 'function') _npcZustandSet(p.ziel, { status: _w });
+        const _mitBeute = (typeof p._beute === 'boolean') ? p._beute : (_w === 'gefesselt');
+        if (_w === 'gefesselt' && _mitBeute && /stasi|mfs|agent|mertens|mantel/i.test(String(p.ziel)) && typeof _itemAdd === 'function') {
+          _itemAdd({ id: 'item_handschellen_' + normForMatch(p.ziel).replace(/\s+/g, '_'), name: 'Handschellen (von ' + p.ziel + ')', typ: 'werkzeug', quelle: 'plan:' + p.art });
+        }
+        if (p._itemUebergabe && p.itemId && typeof _itemMove === 'function') _itemMove(p.itemId, { status: 'bei_npc', owner: p.ziel || 'npc' });
+        if (p._itemVerlust && p.itemId && typeof _itemMove === 'function') _itemMove(p.itemId, { status: 'verloren', owner: '' });
+      } catch (e) {}
+    });
+    // 2) EIN kombinierter Prompt - alles gleichzeitig, eine Szene.
+    let txt = 'KOORDINIERTER ZUGRIFF - alle folgenden Handlungen passieren GLEICHZEITIG in DIESER EINEN Szene, als abgestimmtes Manöver: ';
+    txt += plan.map((p, i) => (i + 1) + ') ' + p.aktionText).join(' ');
+    txt += ' Erzähle das als EINE schnelle, koordinierte Aktion. Die ausgeschalteten/gefesselten Personen bleiben kampfunfähig zurück. KEIN Gewahrsam für Karl - Karl und seine Begleiter haben die Oberhand.';
+    if (typeof diag === 'function') diag('state', '📋 PLAN AUSGEFÜHRT: ' + plan.length + ' Aktionen -> ein Prompt');
+    window._aktionsPlan = [];
+    _renderPlanLeiste();
+    if (typeof chooseOption === 'function') chooseOption({ id: 'PLAN_ZUGRIFF', text: txt, kategorie: 'OFFENSIV', _kategorie: 'OFFENSIV', _priority: 18, _isSystemButton: true });
+  } catch (e) {}
+}
+// ============ Ende AKTIONS-PLAN ============
+// ============ v7.12.617: AKTIONS-BAUKASTEN (Benjamins Lego-System: Akteur -> Item -> Aktion -> Ziel) ============
+window._baukasten = window._baukasten || { offen: false, akteur: null, item: null, aktion: null, ziel: null };
+const BAUKASTEN_AKTIONEN = {
+  angreifen:  { label: 'Angreifen',   zielNoetig: true,  wirkung: 'ko',
+    txt: (a, i, z) => a + ' greift ' + z + ' an und schaltet die Person aus - ' + z + ' geht zu Boden und bleibt bewusstlos (K.O.) liegen.' },
+  ablenken:   { label: 'Ablenken',    zielNoetig: true,
+    txt: (a, i, z) => a + ' sorgt für eine laute, glaubwürdige, ortstypische Ablenkung bei ' + z + ' - die Aufmerksamkeit ist gebunden.' },
+  fesseln:    { label: 'Fesseln',     zielNoetig: true,  wirkung: 'gefesselt', beute: true,
+    txt: (a, i, z) => a + ' fesselt ' + z + ' - mit deren EIGENEN Handschellen, falls vorhanden. ' + z + ' bleibt kampfunfähig zurück. KEIN Gewahrsam für Karl.' },
+  befragen:   { label: 'Befragen',    zielNoetig: true,
+    txt: (a, i, z) => a + ' befragt ' + z + ' gezielt und hartnäckig' + (i ? ', ' + i.name + ' hilft dabei nach' : '') + '.' },
+  bestechen:  { label: 'Bestechen',   zielNoetig: true,  itemUebergabe: true,
+    txt: (a, i, z) => a + ' besticht ' + z + (i ? ' mit ' + i.name : ' - bietet Geld oder einen Gefallen') + ', um Informationen oder Kooperation zu bekommen.' },
+  geben:      { label: 'Geben',       zielNoetig: true,  itemNoetig: true, itemUebergabe: true,
+    txt: (a, i, z) => a + ' gibt ' + z + ' ' + (i ? i.name : 'etwas') + '.' },
+  werfen:     { label: 'Werfen',      zielNoetig: true,  itemNoetig: true, itemVerlust: true,
+    txt: (a, i, z) => a + ' wirft ' + (i ? i.name : 'etwas') + ' gezielt nach ' + z + '.' },
+  trinken:    { label: 'Trinken mit', zielNoetig: true,  itemVerlust: true,
+    txt: (a, i, z) => a + ' trinkt mit ' + z + (i ? ' - ' + i.name + ' macht die Runde' : '') + ', lockert die Stimmung und die Zunge.' },
+  beschuetzen:{ label: 'Beschützen',  zielNoetig: true,
+    txt: (a, i, z) => a + ' bleibt dicht bei ' + z + ' und schirmt die Person gegen jede Bedrohung ab.' },
+  beobachten: { label: 'Beobachten',  zielNoetig: true,
+    txt: (a, i, z) => a + ' beobachtet ' + z + ' unauffällig, ohne sich erwischen zu lassen.' }
+};
+function _bkChip(label, aktiv, onclick) {
+  return '<button onclick="' + onclick + '" style="margin:2px;padding:5px 10px;border-radius:14px;border:1px solid ' + (aktiv ? '#d4b86a' : '#555') + ';background:' + (aktiv ? '#d4b86a' : 'transparent') + ';color:' + (aktiv ? '#1a1a1c' : '#cfc6ae') + ';font-size:12px;cursor:pointer;">' + label + '</button>';
+}
+function _bkSet(feld, wert) { try { window._baukasten[feld] = (window._baukasten[feld] === wert) ? null : wert; _renderBaukasten(); } catch (e) {} }
+function _bkToggle() { try { window._baukasten.offen = !window._baukasten.offen; _renderBaukasten(); } catch (e) {} }
+function _renderBaukastenButton() {
+  try {
+    if (document.getElementById('baukastenToggle')) return;
+    const b = document.createElement('button');
+    b.id = 'baukastenToggle';
+    b.innerHTML = '🧩';
+    b.title = 'Aktions-Baukasten';
+    b.style.cssText = 'position:fixed;bottom:148px;right:10px;z-index:8999;width:42px;height:42px;border-radius:50%;border:1px solid #8a7a58;background:rgba(12,12,14,0.92);color:#d4b86a;font-size:20px;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,0.5);';
+    b.onclick = _bkToggle;
+    document.body.appendChild(b);
+  } catch (e) {}
+}
+function _renderBaukasten() {
+  try {
+    let el = document.getElementById('aktionsBaukasten');
+    const bk = window._baukasten;
+    if (!bk.offen) { if (el) el.remove(); return; }
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'aktionsBaukasten';
+      el.style.cssText = 'position:fixed;bottom:84px;right:10px;left:10px;z-index:8998;background:rgba(12,12,14,0.97);border:1px solid #8a7a58;border-radius:10px;padding:10px 12px;max-height:55vh;overflow-y:auto;box-shadow:0 6px 24px rgba(0,0,0,0.7);color:#e8e0cc;font-size:13px;';
+      document.body.appendChild(el);
+    }
+    const npcsHier = (typeof getNpcsAtCurrentLocation === 'function') ? (getNpcsAtCurrentLocation() || []) : [];
+    const akteure = ['Karl'].concat((typeof _party !== 'undefined' && Array.isArray(_party)) ? _party.map(p => p.name).filter(Boolean) : []);
+    const itemsK = (typeof _itemsBeiKarl === 'function') ? _itemsBeiKarl() : [];
+    const ziele = npcsHier.map(n => n && n.name).filter(n => n && (!bk.akteur || normForMatch(n) !== normForMatch(bk.akteur)));
+    let h = '<div style="font-weight:bold;color:#d4b86a;letter-spacing:0.05em;margin-bottom:4px;">🧩 AKTIONS-BAUKASTEN</div>';
+    h += '<div style="color:#9a8a68;font-size:11px;margin-bottom:2px;">1. WER</div><div>' + akteure.map(a => _bkChip(a, bk.akteur === a, "_bkSet('akteur','" + a.replace(/'/g, "\\'") + "')")).join('') + '</div>';
+    h += '<div style="color:#9a8a68;font-size:11px;margin:6px 0 2px;">2. ITEM (optional)</div><div>' + (itemsK.length ? itemsK.map(it => _bkChip(it.name, bk.item === it.id, "_bkSet('item','" + it.id + "')")).join('') : '<span style="color:#666;font-size:11px;">Karls Taschen sind leer</span>') + '</div>';
+    h += '<div style="color:#9a8a68;font-size:11px;margin:6px 0 2px;">3. AKTION</div><div>' + Object.keys(BAUKASTEN_AKTIONEN).map(k => _bkChip(BAUKASTEN_AKTIONEN[k].label, bk.aktion === k, "_bkSet('aktion','" + k + "')")).join('') + '</div>';
+    h += '<div style="color:#9a8a68;font-size:11px;margin:6px 0 2px;">4. ZIEL</div><div>' + (ziele.length ? ziele.map(z => _bkChip(z, bk.ziel === z, "_bkSet('ziel','" + z.replace(/'/g, "\\'") + "')")).join('') : '<span style="color:#666;font-size:11px;">niemand am Ort</span>') + '</div>';
+    const def = bk.aktion ? BAUKASTEN_AKTIONEN[bk.aktion] : null;
+    const komplett = bk.akteur && def && (!def.zielNoetig || bk.ziel) && (!def.itemNoetig || bk.item);
+    h += '<div style="margin-top:8px;display:flex;gap:8px;">'
+      + '<button onclick="_bkUebernehmen(false)" ' + (komplett ? '' : 'disabled') + ' style="background:' + (komplett ? '#8a7a58' : '#333') + ';color:#1a1a1c;border:none;border-radius:6px;padding:6px 12px;font-weight:bold;cursor:pointer;">+ Zum Plan</button>'
+      + '<button onclick="_bkUebernehmen(true)" ' + (komplett ? '' : 'disabled') + ' style="background:' + (komplett ? '#d4b86a' : '#333') + ';color:#1a1a1c;border:none;border-radius:6px;padding:6px 12px;font-weight:bold;cursor:pointer;">▶ Sofort ausführen</button>'
+      + '<button onclick="_bkToggle()" style="background:transparent;color:#9a8a68;border:1px solid #555;border-radius:6px;padding:6px 10px;cursor:pointer;">✕</button></div>';
+    el.innerHTML = h;
+  } catch (e) {}
+}
+function _bkUebernehmen(sofort) {
+  try {
+    const bk = window._baukasten;
+    const def = BAUKASTEN_AKTIONEN[bk.aktion];
+    if (!def || !bk.akteur) return;
+    const it = bk.item && typeof _itemsMap === 'function' ? _itemsMap()[bk.item] : null;
+    const eintrag = {
+      label: bk.akteur + (it ? ' [' + it.name + ']' : '') + ' → ' + def.label.toLowerCase() + (bk.ziel ? ' → ' + bk.ziel : ''),
+      art: bk.aktion, akteur: bk.akteur, ziel: bk.ziel || '', itemId: bk.item || null,
+      aktionText: def.txt(bk.akteur, it, bk.ziel || '')
+    };
+    // Engine-Wirkungen für Item-Bewegung direkt am Plan-Eintrag vermerken - Ausführung in _planAusfuehren.
+    eintrag._wirkung = def.wirkung || null; eintrag._beute = !!def.beute;
+    eintrag._itemUebergabe = !!def.itemUebergabe && !!bk.item; eintrag._itemVerlust = !!def.itemVerlust && !!bk.item;
+    _planAdd(eintrag);
+    window._baukasten = { offen: !sofort, akteur: null, item: null, aktion: null, ziel: null };
+    _renderBaukasten();
+    if (sofort && typeof _planAusfuehren === 'function') _planAusfuehren();
+  } catch (e) {}
+}
+try { if (document.readyState !== 'loading') _renderBaukastenButton(); else document.addEventListener('DOMContentLoaded', _renderBaukastenButton); } catch (e) {}
+// ============ Ende AKTIONS-BAUKASTEN ============
 // v7.12.605 (W4c, Benjamin-Wunsch "Willi ist Wirt, müsste normalerweise ablehnen" + ChatGPT: Vera kein AutoJoin):
 // Ortsgebundene/eigenständige NPCs LEHNEN die Mitnahme AB - menschlich, mit Grund (Toast), statt stillschweigend
 // als JRPG-Party-Figur durch halb Berlin zu ziehen. Liefert den Ablehnungs-Grund oder null (= darf mit).
@@ -18351,6 +18503,22 @@ function npcInteraktion(npc, verb) {
   if (typeof diag === 'function') diag('state', 'NPC-INTERAKTION: "' + verb.label + '" -> ' + npc.name);
   // v7.12.610 (M1): Manöver = Verb MIT Engine-Wirkung. Gates engine-validiert, Zustand wird VOR der
   // Erzählung gesetzt - die KI erzählt nur noch, was die Engine entschieden hat.
+  // v7.12.616: Kampf-Manöver + Begleiter-Befehle landen im PLAN (kombinierbar), nicht mehr sofort.
+  if ((verb._manoever === 'fesseln' || verb._manoever === 'fesseln_ablenkung' || verb._begleiterBefehl) && verb._planDirekt !== true) {
+    try {
+      const _vfP = (typeof verfassung !== 'undefined') ? verfassung : 5;
+      if (_vfP <= 1 && !verb._begleiterBefehl) {
+        if (typeof showProgressToast === 'function') showProgressToast('Zu angeschlagen', 'Karl ist zu schwach für einen Zugriff. Erst erholen.', 'warn', 'manoever-block');
+        return;
+      }
+      if (verb._begleiterBefehl) {
+        _planAdd({ label: npc.name + ' → ' + verb._zielName + ' ' + (verb._begleiterBefehl === 'angriff' ? 'angreifen' : 'ablenken'), art: verb._begleiterBefehl, akteur: npc.name, ziel: verb._zielName, aktionText: verb.aktion.replace(/\{npc\}/g, npc.name) });
+      } else {
+        _planAdd({ label: 'Karl → ' + npc.name + ' niederschlagen & fesseln' + (verb._manoever === 'fesseln_ablenkung' ? ' (mit Ablenkung)' : ''), art: 'fesseln', akteur: 'Karl', ziel: npc.name, aktionText: verb.aktion.replace(/\{npc\}/g, npc.name) });
+      }
+    } catch (e) {}
+    return;
+  }
   if (verb._manoever === 'fesseln' || verb._manoever === 'fesseln_ablenkung') {
     try {
       const _vf = (typeof verfassung !== 'undefined') ? verfassung : ((typeof caseProgress !== 'undefined' && caseProgress && typeof caseProgress.verfassung === 'number') ? caseProgress.verfassung : 5);
@@ -18478,22 +18646,9 @@ function oeffneNpcMenue(npc, modus) {
   // den falschen "kommt mit"-Toast und das Party-Kleben. Wer sie ist, klärt die Engine, nicht das Mitnehmen.
   const _istGegnerTag = GEGNER.includes(tag) || tag === 'MYSTERY';
   const _schonInParty = (typeof _istInParty === 'function') && _istInParty(npc.id, npc.name);
-  if (_schonInParty) {
-    // "Hier lassen" IMMER anbieten wenn die Figur in der Party ist - auch MYSTERY/Gegner, falls sie aus einem
-    // früheren Stand noch drin steckt (sonst könnte man sie nicht mehr loswerden).
-    verben.push({ key: 'hierlassen', label: 'Hier lassen', kategorie: '_PARTY', _partyAction: 'remove', _hint: 'Bleibt an diesem Ort · verlässt die Party · keine Szene' });
-  } else if (!_istGegnerTag) {
-    // v7.12.594: Eine GESICHERTE Klientin ist nicht mehr mitnehmbar - sie wurde bewusst in Sicherheit gebracht
-    // (bei Doc/Helene/im Westen). Wieder mitnehmen würde die Sicherung de facto aufheben.
-    const _istGesicherteKlientin = !!(caseProgress && caseProgress.clientSecured && clientProfile && clientProfile.name
-      && normForMatch(npc.name || '') === normForMatch(clientProfile.name));
-    // v7.12.601 (Benjamin, Run 2044): auch der Schutz-NPC, bei dem sie gesichert ist (Helene/Doc), bleibt da -
-    // er/sie bewacht die Klientin.
-    const _istSchutzNpc = (typeof _istSchutzNpcDerGesichertenKlientin === 'function') && _istSchutzNpcDerGesichertenKlientin(npc.name);
-    if (!_istGesicherteKlientin && !_istSchutzNpc) {
-      // "Mitnehmen" nur für erlaubte Begleiter-Tags (nicht Gegner, nicht MYSTERY/Schatten).
-      verben.push({ key: 'mitnehmen', label: 'Mitnehmen', kategorie: '_PARTY', _partyAction: 'add', _hint: 'In die Party aufnehmen · reist mit dir · keine Szene' });
-    }
+  // v7.12.615 (Benjamin: 'bei Mertens waren keine Actions'): Manöver + Begleiter-Befehle lagen im
+  // !_istGegnerTag-Zweig - GEGNER (Mertens, STASI-Tag) und PARTY-Mitglieder erreichten ihn NIE.
+  // Jetzt VOR der Verzweigung: läuft für ALLE NPCs (Gegner -> M1/M2, Party -> Befehle, gefesselt -> Folgen).
     // v7.12.610 (M1, Items-Konzept): Manöver "Niederschlagen & fesseln" - nur für feindliche, freie Ziele.
     if (typeof _npcIstFeindlich === 'function' && _npcIstFeindlich(npc)) {
       const _zM = (typeof _npcZustandGet === 'function') ? _npcZustandGet(npc.name) : null;
@@ -18539,6 +18694,22 @@ function oeffneNpcMenue(npc, modus) {
         }
       }
     } catch (e) {}
+  if (_schonInParty) {
+    // "Hier lassen" IMMER anbieten wenn die Figur in der Party ist - auch MYSTERY/Gegner, falls sie aus einem
+    // früheren Stand noch drin steckt (sonst könnte man sie nicht mehr loswerden).
+    verben.push({ key: 'hierlassen', label: 'Hier lassen', kategorie: '_PARTY', _partyAction: 'remove', _hint: 'Bleibt an diesem Ort · verlässt die Party · keine Szene' });
+  } else if (!_istGegnerTag) {
+    // v7.12.594: Eine GESICHERTE Klientin ist nicht mehr mitnehmbar - sie wurde bewusst in Sicherheit gebracht
+    // (bei Doc/Helene/im Westen). Wieder mitnehmen würde die Sicherung de facto aufheben.
+    const _istGesicherteKlientin = !!(caseProgress && caseProgress.clientSecured && clientProfile && clientProfile.name
+      && normForMatch(npc.name || '') === normForMatch(clientProfile.name));
+    // v7.12.601 (Benjamin, Run 2044): auch der Schutz-NPC, bei dem sie gesichert ist (Helene/Doc), bleibt da -
+    // er/sie bewacht die Klientin.
+    const _istSchutzNpc = (typeof _istSchutzNpcDerGesichertenKlientin === 'function') && _istSchutzNpcDerGesichertenKlientin(npc.name);
+    if (!_istGesicherteKlientin && !_istSchutzNpc) {
+      // "Mitnehmen" nur für erlaubte Begleiter-Tags (nicht Gegner, nicht MYSTERY/Schatten).
+      verben.push({ key: 'mitnehmen', label: 'Mitnehmen', kategorie: '_PARTY', _partyAction: 'add', _hint: 'In die Party aufnehmen · reist mit dir · keine Szene' });
+    }
   }
   // v7.12.542 (Schritt 2, Benjamin): "Näher kommen"/"Nacht verbringen" auch im NPC-Menü, wenn der angeklickte
   // NPC die aktuelle Romance-Person ist. Nutzt DIESELBE Logik wie der ♥-Button oben (window._romanceMenuState
