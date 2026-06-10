@@ -3191,7 +3191,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.595</div>
+    <div class="start-version">Schatten v7.12.597</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.595</span>
+    <span>Schatten v7.12.597</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6870,7 +6870,13 @@ function pruefeKernIndizFund(sceneText) {
       }
     }
     // Schlüsselwort-Pfad (Fallback / zusätzlich) - nur wenn nicht schon deterministisch vergeben.
-    if (!_deterministischVergeben) {
+    // v7.12.597 (ChatGPT P1, Run 1847 Sz2 bewiesen): Bei Fällen mit definierten Indizien greift der Fallback NUR
+    // noch, wenn die Aktion eine echte Ermittlungsaktion war (_fundModus gesetzt). Vorher fand die REISE das Indiz
+    // über den Fallback ("LEGACY-SCHLÜSSEL-FALLBACK ... akten_kopie_wohnung"), weil der Reise-Stopp nur die
+    // deterministische Vergabe deckte. Reise/Sicherung (_fundModus=null) -> kein Fallback. Legacy-Fälle unverändert.
+    const _fallbackErlaubt = !_deterministischVergeben
+      && (!(typeof caseHasDefinedEvidence === 'function' && caseHasDefinedEvidence()) || !!_fundModus);
+    if (_fallbackErlaubt) {
       for (const ind of loc.indizien) {
         if (!ind || !ind.id) continue;
         if (caseProgress.gefundeneIndizIds && caseProgress.gefundeneIndizIds.indexOf(ind.id) !== -1) continue;
@@ -7024,7 +7030,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.595';
+window.SCHATTEN_VERSION = 'v7.12.597';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -17193,7 +17199,18 @@ function applyCategoryMechanics(kategorie, ctx) {
           (_invListe ? ' (aktuell bei Karl: ' + _invListe + ')' : '') +
           '. Wenn Teile der Beute (z.B. weiterer Schmuck) NICHT zurueck sind, sage das ehrlich - das ist noiriger als ein Pauschal-Triumph: "Das Etui ist zurueck. Vom restlichen Schmuck fehlt jede Spur." KEINE Gegenstaende erfinden, die nicht im Besitz sind.';
       }
-      result.pushMessages.push('AUFLOESEN: Karl loest den Fall ab JETZT auf. Beschreibe wie Karl dem Auftraggeber (Klient/Klientin - richte dich nach dem tatsaechlichen Geschlecht des Klienten im Setup) alle gesammelten Beweise / Erkenntnisse uebergibt. Die FORM passt zum aktuellen Ort: wenn Karl beim Auftraggeber ist -> persoenlicher Bericht; wenn an einem Telefon (Praxis, Buero, Kneipe) -> Anruf; wenn unterwegs -> Telegramm via naechster Post oder Bote. Setze "klient_berichtet": true im JSON. Diese Szene ist der ABSCHLIESSENDE Akt - keine neuen Indizien, keine neue Gefahr.' + ergebnisHint + _diebstahlAbschlussHint + ' Halte es ruhig und stilvoll - Film noir Ende, keine Action.');
+      // v7.12.596 (Benjamin, Run 1847): Wenn die Klientin GESICHERT ist (bei Helene/Doc/im Westen), passt ein
+      // beiläufiger Telefonanruf nicht - Karl hat sie ja selbst dorthin gebracht. Abschluss-Form entsprechend.
+      let _sicherAbschlussHint = '';
+      try {
+        if (caseProgress && caseProgress.clientSecured) {
+          const _wo = caseProgress.clientSecuredAt === 'helene' ? 'bei Schwester Helene in der Charité'
+            : caseProgress.clientSecuredAt === 'doc_wagner' ? 'bei Doc Wagner'
+            : caseProgress.clientSecuredAt === 'grenze' ? 'im Westen' : 'an ihrem sicheren Ort';
+          _sicherAbschlussHint = ' WICHTIG: Die Klientin ist bereits von Karl in Sicherheit gebracht worden (' + _wo + '). Der Abschluss ist KEIN beilaeufiger Anruf bei einer Unbekannten, sondern entweder ein kurzer BESUCH an ihrem sicheren Ort oder eine diskrete Nachricht ueber ihre Beschuetzer - Karl und sie kennen sich, er hat sie selbst dorthin gebracht.';
+        }
+      } catch (e) {}
+      result.pushMessages.push('AUFLOESEN: Karl loest den Fall ab JETZT auf. Beschreibe wie Karl dem Auftraggeber (Klient/Klientin - richte dich nach dem tatsaechlichen Geschlecht des Klienten im Setup) alle gesammelten Beweise / Erkenntnisse uebergibt. Die FORM passt zum aktuellen Ort: wenn Karl beim Auftraggeber ist -> persoenlicher Bericht; wenn an einem Telefon (Praxis, Buero, Kneipe) -> Anruf; wenn unterwegs -> Telegramm via naechster Post oder Bote. Setze "klient_berichtet": true im JSON. Diese Szene ist der ABSCHLIESSENDE Akt - keine neuen Indizien, keine neue Gefahr.' + _sicherAbschlussHint + ergebnisHint + _diebstahlAbschlussHint + ' Halte es ruhig und stilvoll - Film noir Ende, keine Action.');
       break;
 
     case 'FLUCHT':
@@ -18316,9 +18333,9 @@ function baueSicherungsButtons(container) {
     if (!_aktenGesichert && _hatAktenBeweise) {
       // An Roth (Volkspolizei-Revier): wenn Revier bereisbar oder Karl dort ist.
       if (_ortVorhanden('revier') || _ortVorhanden('volkspolizei') || _amOrt('revier')) {
-        _buttons.push({ label: 'Die Akten an Kommissar Roth übergeben', emoji: '📁',
+        _buttons.push({ label: 'Die gesammelten Beweise an Kommissar Roth übergeben', emoji: '📁',
           beat: 'akten_gesichert', securedAt: 'roth', zielOrtSuche: 'revier',
-          aktionstext: 'Du übergibst die Akten an Kommissar Roth - in seinen Händen sind die Beweise sicher und können Wirkung entfalten.' });
+          aktionstext: 'Du übergibst Kommissar Roth alle gesammelten Beweise (Dokumente, Notizen, Aussagen) - in seinen Händen sind sie sicher und können Wirkung entfalten.' });
       }
       // An Vera Lindqvist (West-Kontakt/Presse): wenn als NPC/Kontakt im Setup.
       const _veraImSetup = (caseSetup && Array.isArray(caseSetup.setupCast) && caseSetup.setupCast.some(c => c && /vera|lindqvist/i.test((c.name||''))));
@@ -18962,9 +18979,12 @@ function renderOptions(scene) {
   // v7.12.409 (Benjamin): KEIN Tageslimit mehr. Doc Wagner heilt so oft Karl will, solange er
   // verletzt ist (Vf < 5) und die Lage ruhig (Sp<=2). Das "Limit" ist die Zeit/Szenen, die jede
   // Fahrt kostet - kein kuenstlicher 1x/Tag-Cap (Doc-Tageslimit v7.12.412 vollstaendig entfernt).
+  // v7.12.596 (Benjamin, Run 1847): Sp<=2 war zu streng - bei dauerhaft hoher Stasi-Spannung (Sp 4 über viele
+  // Szenen) war Behandlung NIE möglich, obwohl keine akute Action lief. Neu: Sp<=4 (nur bei Sp 5 = aktiver
+  // Schusswechsel/Zugriff bleibt gesperrt - die Original-Sperre v7.12.8 galt einer Schießerei bei Sp 5).
   const showWagnerHealButton = wagnerPresent && !wagnerOnlyTravel
     && currentVerfassung < 5 && !karlInStasiCustody
-    && currentSpannung <= 2;
+    && currentSpannung <= 4;
 
   // v7.11.13: NOTFLUCHT-Button - nur in Stasi-Custody. 30% Erfolgschance.
   // Karl versucht aus der Zelle/Verhoer-Raum auszubrechen.
@@ -19007,9 +19027,10 @@ function renderOptions(scene) {
   // normForMatch wandelt é nicht um, daher charit[eé]? fuer "charité" und "charite"
   const charitePresent = currentOrtType === 'CHARITE' ||
     (!_engineOrtBekannt && /\b(charit[eé]?|notaufnahme|krankenhaus)\b/.test(marleneSceneNorm));
+  // v7.12.596 (Benjamin): wie Doc Wagner - Sp<=4 statt <=2 (nur akute Sp-5-Action sperrt).
   const showMarleneHealButton = marlenePresent && charitePresent
     && currentVerfassung < 5 && !karlInStasiCustody
-    && currentSpannung <= 2;
+    && currentSpannung <= 4;
 
   // v7.12.409 (Benjamin): Wenn der staerkere/spezifischere Heil-Button (Doc Wagner ODER Marlene)
   // sichtbar ist, Notheilen ausblenden - sonst redundant und versehentliches Klicken nervt.
@@ -20570,6 +20591,22 @@ async function requestSceneFromModel(userMessage, conversationHistory, compactMo
           : 'an einem sicheren Ort';
         recap += 'PERSONEN-REGEL (PFLICHT): ' + clientProfile.name + ' ist in Sicherheit gebracht (' + _sichWo + ') und bleibt dort. Sie tritt in den folgenden Szenen NICHT mehr auf, ist NICHT bei Karl, reist NICHT mit und taucht nicht "zufällig" wieder auf. Sie darf höchstens ERWÄHNT werden (z.B. "Margarete ist in Sicherheit").\n\n';
       }
+      // v7.12.596 (Benjamin, Run 1847): ÜBERNACHTUNGS-PARTY-REGEL. Bei Romance-Nächten ließ die KI Begleiter
+      // still verschwinden ("Margarete ist längst fort"), während die Engine-Party sie hielt - Widerspruch.
+      // Neu: Begleiter BLEIBEN über Nacht da (Couch/Gästezimmer/Sessel) und sind morgens präsent. Die KI darf
+      // sie auf die Nacht REAGIEREN lassen (Benjamins Wunsch-Szenen: Doc beschwert sich über den Lärm, eine
+      // eifersüchtige Begleiterin würdigt Karl morgens keines Blickes). Wer gehen soll, wird vom SPIELER
+      // entlassen (hier lassen) - nicht von der Prosa.
+      try {
+        const _akt = window._letzteAktion || {};
+        const _istNacht = /UEBERNACHTUNG|ROMANTIK/.test((_akt.kategorie || '').toUpperCase());
+        if (_istNacht && typeof _party !== 'undefined' && Array.isArray(_party) && _party.length) {
+          const _begleiter = _party.map(p => p && (p.name || p.id)).filter(Boolean).join(', ');
+          if (_begleiter) {
+            recap += 'ÜBERNACHTUNGS-REGEL (PFLICHT): Karls Begleiter (' + _begleiter + ') BLEIBEN über Nacht am selben Ort (Couch, Gästezimmer, Sessel, Küche) und sind am Morgen ANWESEND. NIEMAND verschwindet still in der Nacht oder "ist längst fort". Die Begleiter dürfen auf die Nacht menschlich reagieren - amüsiert, verlegen, eifersüchtig, ein trockener Kommentar am Frühstückstisch - aber sie bleiben da.\n\n';
+          }
+        }
+      } catch (e) {}
     } catch (e) {}
     // STORY-ANKER zuerst: feste Auftrags-Fakten aus dem Intro, damit die KI nach
     // 10 Szenen nicht ploetzlich Ludwig Strauss durch Hans Strauss ersetzt.
@@ -22116,8 +22153,15 @@ Marlowe-Stil: stilvoll, elliptisch, NICHT explizit. Tuer schliesst sich, Schnitt
     // Kontaktperson/Mitwisserin ins Spiel (NICHT romantisch erzwungen), damit ueberhaupt
     // eine Beziehung entstehen KANN. Nicht in Custody. Alle 6 Szenen erneut.
     try {
+      // v7.12.597 (ChatGPT P1, Run 1847): ROMANCE-PUSH-GATE für politische Fälle. Margot wurde Sz7/8 in die
+      // akute Stasi-Lage gepusht und kaperte den Fall (Übernachtung, Klientin fiel aus der Schutzlogik, 48 statt
+      // 26 Szenen). Neu: In politischen Fällen KEIN Romance-Figur-Push, solange die Klientin nicht gesichert ist
+      // (clientSecured) - Romance bleibt möglich (Spieler-initiiert / nach der Sicherung), wird aber nicht mehr
+      // von der Engine in die Krise gedrückt.
+      const _istPolitisch = !!(caseSetup && caseSetup.caseType === 'politisch');
+      const _romPushErlaubt = !_istPolitisch || !!(caseProgress && caseProgress.clientSecured);
       const _romNames = [];
-      if (caseSetup && Array.isArray(caseSetup.setupCast)) {
+      if (_romPushErlaubt && caseSetup && Array.isArray(caseSetup.setupCast)) {
         for (const ce of caseSetup.setupCast) {
           if (ce && ce.name && (ce.tag === 'ROMANCE' || ce.tagExtra === 'ROMANCE')) _romNames.push(ce.name);
         }
@@ -31260,7 +31304,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             + '|' + _first + '[^.]{0,45}(bleibt (zurueck|zurück|stehen)|sieht dir nach|schaut dir nach|winkt (dir |zum abschied)|verabschiedet sich|laesst dich (gehen|ziehen)|kehrt (ins|zur).{0,20}zurueck)', 'i'
           ).test(_st);
           const _npcFlucht = new RegExp(
-            _first + '[^.]{0,45}(flieht|fluechtet|flüchtet|rennt (weg|davon|fort)|laeuft (weg|davon|fort)|läuft (weg|davon|fort)|verschwindet (in|im|hinter|um|durch)|entkommt|stuermt (raus|hinaus|davon)|macht sich (aus dem staub|davon)|setzt sich ab|taucht (unter|ab)|ist (ploetzlich |plötzlich )?(weg|verschwunden))', 'i'
+            _first + '[^.]{0,45}(flieht|fluechtet|flüchtet|rennt (weg|davon|fort)|laeuft (weg|davon|fort)|läuft (weg|davon|fort)|verschwindet (in|im|hinter|um|durch)|entkommt|stuermt (raus|hinaus|davon)|macht sich (aus dem staub|davon)|setzt sich ab|taucht (unter|ab)|ist (ploetzlich |plötzlich |laengst |längst )?(weg|verschwunden|fort|gegangen)|hat (die wohnung|das haus|das atelier|den raum|das zimmer)[^.]{0,45}verlassen)', 'i'
           ).test(_st)
           // Inversion (Verb vor Name): "rennt der Mann weg", "flieht Mertens", "verschwindet der Schatten"
           || new RegExp('(flieht|fluechtet|flüchtet|rennt|laeuft|läuft|entkommt|verschwindet)\\s+(der |die |das |den )?' + _first, 'i').test(_st) && /\b(weg|davon|fort|flieht|fluechtet|flüchtet|entkommt|verschwindet)\b/i.test(_st);
@@ -31273,6 +31317,11 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             if (typeof _istInParty === 'function' && typeof _partyRemove === 'function' && _istInParty(_pid, _cn)) {
               _partyRemove(_pid, _cn);
               if (typeof diag === 'function') diag('state', '✦ PARTY -: ' + _cn + ' verlässt die Party (' + _grund + ' im Text)');
+              // v7.12.596 (Benjamin, Run 1847 Sz30): Der Spieler MUSS es mitbekommen, wenn ein Begleiter per
+              // Erzählung verschwindet - sonst wirkt es wie "einfach weg" (Margarete floh, Benjamin sah es nicht).
+              if (typeof showProgressToast === 'function') {
+                try { showProgressToast(_cn + ' hat sich abgesetzt', _grund === 'Flucht' ? 'Sie/Er ist im Trubel verschwunden und reist nicht mehr mit.' : 'Verabschiedet - reist nicht mehr mit.', 'warn', 'party-weg-' + _pid); } catch (e) {}
+              }
             }
           }
         }
@@ -31501,9 +31550,14 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           return (c && c.name ? c.name : '?') + (c && c.rolle ? '/' + c.rolle : '');
         }) : [];
         const _pirRoh = (scene && Array.isArray(scene.personenImRaum)) ? scene.personenImRaum : null;
+        // v7.12.597 (Benjamin): Party-Stand PRO SZENE im Export - damit auswertbar ist, wer wann (laut Engine)
+        // in der Party war (Befund: Margarete blieb 13 Szenen in der Anzeige, obwohl die Prosa sie Sz17 verabschiedete).
+        const _partyJetzt = (typeof _party !== 'undefined' && Array.isArray(_party) && _party.length)
+          ? _party.map(p => p && (p.name || p.id) || '?').join(', ') : '-';
         diag('detect', 'CAST-SZENE-DIAG Sz' + (typeof sceneCounter === 'number' ? sceneCounter : '?')
           + ': finaler Cast[' + _finalCast.length + ']=[' + _finalCast.join(' | ') + ']'
           + ' · KI-personenImRaum=' + (_pirRoh === null ? 'FEHLT' : (_pirRoh.length ? '[' + _pirRoh.join(', ') + ']' : 'LEER'))
+          + ' · PARTY=[' + _partyJetzt + ']'
           + ' · Ereignisse=' + (_castDiagEvents.length ? '[' + _castDiagEvents.join(' ; ') + ']' : 'keine'));
       }
     } catch (e) { /* Diagnose darf Szene nie brechen */ }
@@ -32880,7 +32934,12 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         // Force-Bedingungen:
         // - Karl hat aktiv den Verdaechtigen verfolgt (konfrontier/fahr zu + Name) → OK
         // - ODER stage2Scenes >= 22 (statt 20) → extreme Stagnation Notfall-Force
-        if (karlActedTowardsSuspect || stage2Scenes >= 22) {
+        // v7.12.597 (ChatGPT P1, Run 1847 Sz42): Bei Fällen mit DEFINIERTEN Indizien KEINE Stage-3-Force durch
+        // reine Stagnation mehr ("Mario-Kart-Automodus") - dort führt der Weg über definierte Wahler-Indizien
+        // (frachtliste/dienstplan/wahler_unterschrift) bzw. echte Konfrontation. Aktive Verdächtigen-Konfrontation
+        // (karlActedTowardsSuspect) forciert weiterhin in ALLEN Fällen.
+        const _stagnationsForceErlaubt = !(typeof caseHasDefinedEvidence === 'function' && caseHasDefinedEvidence());
+        if (karlActedTowardsSuspect || (stage2Scenes >= 22 && _stagnationsForceErlaubt)) {
           // v7.12.187 (ChatGPT-Lektorat Punkt 3): ueberfuehrt darf ab jetzt NUR "konkreter
           // Taeter/Verantwortlicher ueberfuehrt" bedeuten - nicht mehr pauschal "Fall reif".
           // Bei wahrheit/politisch: ueberfuehrt nur, wenn der Verdaechtige ein PLAUSIBLER
