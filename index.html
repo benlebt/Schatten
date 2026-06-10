@@ -3191,7 +3191,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.617</div>
+    <div class="start-version">Schatten v7.12.618</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.617</span>
+    <span>Schatten v7.12.618</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7056,7 +7056,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.617';
+window.SCHATTEN_VERSION = 'v7.12.618';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -7313,7 +7313,8 @@ function _npcZustandGet(name) {
 function _npcIstFeindlich(npc) {
   try {
     const probe = ((npc && npc.tag) || '') + ' ' + ((npc && npc.rolle) || '') + ' ' + ((npc && npc.name) || '');
-    return /stasi|mfs|agent|spitzel|schlaeger|schläger|verfolger|gegner|mann im mantel|posten|wachmann/i.test(probe);
+    // v7.12.618 (Benjamin: "Mann im GRAUEN Mantel" bekam keine Manöver): Mantel-Varianten generisch.
+    return /stasi|mfs|agent|spitzel|schlaeger|schläger|verfolger|gegner|mann im [^,;.]{0,14}mantel|mantelmann|beschatter|posten|wachmann/i.test(probe);
   } catch (e) { return false; }
 }
 // ============ Ende NPC-ZUSTAND ============
@@ -18495,6 +18496,7 @@ function bauePersonenButtons(container, modus) {
   return gebaut;
 }
 function npcInteraktion(npc, verb) {
+  try { if (typeof _renderBaukastenButton === 'function') _renderBaukastenButton(); } catch (e) {}
   schliesseNpcMenue();
   if (typeof chooseOptionInFlight !== 'undefined' && chooseOptionInFlight) {
     if (typeof diag === 'function') diag('drift', 'NPC-Interaktion ignoriert (Anfrage in-flight)');
@@ -27533,6 +27535,8 @@ function classifyScene(sceneText, ort) {
 let recentSceneTypes = [];
 
 async function chooseOption(option) {
+  // v7.12.618: 🧩-Baukasten-Button robust sicherstellen (idempotent) - falls der DOM-Load-Hook ihn verpasste.
+  try { if (typeof _renderBaukastenButton === 'function') _renderBaukastenButton(); } catch (e) {}
   // v7.12.591 (I2b): Die gewählte Aktion global merken (Kategorie + Text), damit die deterministische Indiz-Vergabe
   // (pruefeKernIndizFund) klassifizieren kann, ob es eine Umgebungs- (erkunden/durchsuchen) oder Personen-Aktion
   // (ansprechen/befragen/bestechen) war. Ersetzt das reine Schlüsselwort-Raten für Fälle mit definierten Indizien.
