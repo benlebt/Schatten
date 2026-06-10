@@ -3191,7 +3191,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.588</div>
+    <div class="start-version">Schatten v7.12.589</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.588</span>
+    <span>Schatten v7.12.589</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6853,7 +6853,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.588';
+window.SCHATTEN_VERSION = 'v7.12.589';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -17663,7 +17663,7 @@ function oeffneReiseMenue() {
     let indizMark = '';
     if (_indizErr.jetzt > 0 || _indizErr.spaeter > 0) {
       const _teile = [];
-      if (_indizErr.jetzt > 0) _teile.push('<span style="color:#c8a84a;" title="jetzt erreichbar">● ' + _indizErr.jetzt + ' jetzt</span>');
+      if (_indizErr.jetzt > 0) _teile.push('<span style="color:#c8a84a;" title="jetzt erreichbar">● ' + _indizErr.jetzt + ' Indiz' + (_indizErr.jetzt === 1 ? '' : 'ien') + ' hier</span>');
       if (_indizErr.spaeter > 0) _teile.push('<span style="color:#7a6f5a;" title="zeit-/personengesperrt - später erreichbar">' + _indizErr.spaeter + ' später</span>');
       indizMark = '<span style="font-size:0.82em;margin-left:6px;">' + _teile.join('<span style="color:#5a5044;"> · </span>') + '</span>';
     } else if (_indizErr.hattIndizien) {
@@ -17815,16 +17815,26 @@ function bauePersonenButtons(container, modus) {
     const _marker = (modus === 'verwalten')
       ? (_inParty ? 'in Begleitung' : 'mitnehmen')
       : 'ansprechen';
-    // v7.12.582 (Benjamin): NPC-Typ-Emoji statt hässlichem Punkt - zeigt die Rolle (Verbündeter/Gegner/Zeuge/Stasi).
-    // Geschlecht ist am NPC nicht hinterlegt; der tag (Rolle) ist aussagekräftiger und passt zum Noir-Ton.
-    // In-Party-Mitglieder bekommen das Team-Symbol 🤝.
+    // v7.12.582/589 (Benjamin): NPC-Typ-Emoji statt Punkt - zeigt die Rolle. Geschlecht ist am NPC nicht als Feld
+    // hinterlegt, aber über den Vornamen ableitbar (femaleVornamen-Heuristik) - so bekommt Margarete ein weibliches
+    // Emoji (vorher sah 🙋 männlich aus). In-Party-Mitglieder bekommen das Team-Symbol 🤝.
     const _npcTag = (npc.tag || '').toUpperCase();
-    const _npcEmojiMap = {
-      CLIENT: '🙋', WITNESS: '👤', INFORMANT: '🗣', AUTHORITY: '👮', ROMANCE: '❤', FAMILY: '👪',
-      SCHUTZ: '🛟', KONTAKT: '🤝', VERBUENDETER: '🤝',
-      ANTAGONIST: '😠', SUSPECT: '🎭', GANGSTER: '🕴', STASI: '🕵', MYSTERY: '❔',
+    // Vorname extrahieren (erstes Wort des Namens, ohne Titel) und gegen die weibliche 1953er-Vornamenliste prüfen.
+    let _istWeiblich = false;
+    try {
+      const _vorname = normForMatch((npc.name || '').replace(/^(herr|frau|dr|direktor|kommissar|oberleutnant|hauptmann|schwester|fräulein|fraeulein)\.?\s+/i, '').split(/\s+/)[0] || '');
+      _istWeiblich = /^(hilde|helga|lotte|trude|edith|renate|margot|elfriede|marlene|lola|hertha|elsbeth|gertrud|gerda|ursel|ursula|ingrid|christel|liesel|magda|martha|anneliese|herta|brigitte|inge|ilse|grete|gretel|annemarie|annerose|charlotte|christa|cordula|dora|eleonore|erika|frieda|gisela|hannelore|hildegard|irma|klara|kaethe|marga|margarete|monika|rita|rosemarie|ruth|sigrid|sieglinde|sophie|theresa|traudl|ulrike|vera|waltraud|helene|margarete)$/.test(_vorname);
+    } catch (e) { _istWeiblich = false; }
+    const _npcEmojiMap = _istWeiblich ? {
+      CLIENT: '🙋‍♀️', WITNESS: '🧕', INFORMANT: '🗣', AUTHORITY: '👮‍♀️', ROMANCE: '❤', FAMILY: '👪',
+      SCHUTZ: '👩‍⚕️', KONTAKT: '🤝', VERBUENDETER: '🤝',
+      ANTAGONIST: '😠', SUSPECT: '🎭', GANGSTER: '🕴', STASI: '🕵‍♀️', MYSTERY: '❔',
+    } : {
+      CLIENT: '🙋‍♂️', WITNESS: '👤', INFORMANT: '🗣', AUTHORITY: '👮‍♂️', ROMANCE: '❤', FAMILY: '👪',
+      SCHUTZ: '👨‍⚕️', KONTAKT: '🤝', VERBUENDETER: '🤝',
+      ANTAGONIST: '😠', SUSPECT: '🎭', GANGSTER: '🕴', STASI: '🕵‍♂️', MYSTERY: '❔',
     };
-    const _npcEmoji = _inParty ? '🤝' : (_npcEmojiMap[_npcTag] || '👤');
+    const _npcEmoji = _inParty ? '🤝' : (_npcEmojiMap[_npcTag] || (_istWeiblich ? '👩' : '👤'));
     btn.innerHTML = '<span class="option-id option-id-person">' + _npcEmoji + '</span><span class="option-text-wrap"><span>'
       + escapeHtml(npc.name) + '</span><span class="option-marker option-marker-system">' + _marker + '</span></span>';
     attachSafeTap(btn, () => { if (typeof oeffneNpcMenue === 'function') { _markPopupOpened(); oeffneNpcMenue(npc, modus); } });
