@@ -3191,7 +3191,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.597</div>
+    <div class="start-version">Schatten v7.12.599</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.597</span>
+    <span>Schatten v7.12.599</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6328,6 +6328,7 @@ function normForMatch(s) {
   if (!s || typeof s !== 'string') return '';
   return s.toLowerCase()
     .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
+    .replace(/[éèê]/g, 'e') // v7.12.599: Charité === Charite (Whitelist-Warnung Run 2007)
     .trim();
 }
 
@@ -7030,7 +7031,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.597';
+window.SCHATTEN_VERSION = 'v7.12.599';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -13006,7 +13007,7 @@ function buildTranscriptText() {
             else if (/located/.test(_tis)) _conclShow = 'objekt_lokalisiert';
             else _conclShow = 'objekt_gesucht';
           }
-          engParts.push('Concl:' + _conclShow);
+          engParts.push('Ziel:' + _conclShow); // v7.12.599 (ChatGPT P2): 'Concl:' las sich wie erreichter Zustand - es ist das FALLZIEL
           if (e.conclusionSnap.responsible) engParts.push('Resp:' + e.conclusionSnap.responsible);
           if (e.conclusionSnap.exonerated) engParts.push('Entl:' + e.conclusionSnap.exonerated);
         }
@@ -17210,7 +17211,19 @@ function applyCategoryMechanics(kategorie, ctx) {
           _sicherAbschlussHint = ' WICHTIG: Die Klientin ist bereits von Karl in Sicherheit gebracht worden (' + _wo + '). Der Abschluss ist KEIN beilaeufiger Anruf bei einer Unbekannten, sondern entweder ein kurzer BESUCH an ihrem sicheren Ort oder eine diskrete Nachricht ueber ihre Beschuetzer - Karl und sie kennen sich, er hat sie selbst dorthin gebracht.';
         }
       } catch (e) {}
-      result.pushMessages.push('AUFLOESEN: Karl loest den Fall ab JETZT auf. Beschreibe wie Karl dem Auftraggeber (Klient/Klientin - richte dich nach dem tatsaechlichen Geschlecht des Klienten im Setup) alle gesammelten Beweise / Erkenntnisse uebergibt. Die FORM passt zum aktuellen Ort: wenn Karl beim Auftraggeber ist -> persoenlicher Bericht; wenn an einem Telefon (Praxis, Buero, Kneipe) -> Anruf; wenn unterwegs -> Telegramm via naechster Post oder Bote. Setze "klient_berichtet": true im JSON. Diese Szene ist der ABSCHLIESSENDE Akt - keine neuen Indizien, keine neue Gefahr.' + _sicherAbschlussHint + ergebnisHint + _diebstahlAbschlussHint + ' Halte es ruhig und stilvoll - Film noir Ende, keine Action.');
+      // v7.12.599 (ChatGPT P1.4, Run 2007): Das Finale darf NICHT mehr behaupten als erspielt ist ("Dokumente
+      // finden ihren Weg nach Schweden" ohne physische Akten-Übergabe). Beat-abhängige Verbote - das ehrliche
+      // bittersüße Noir-Ende ist sogar stärker.
+      let _beatEhrlichkeit = '';
+      try {
+        if (caseSetup && Array.isArray(caseSetup.politicalBeats) && caseSetup.politicalBeats.length) {
+          const _hits = (caseProgress && Array.isArray(caseProgress.politicalBeatsHit)) ? caseProgress.politicalBeatsHit : [];
+          if (_hits.indexOf('akten_gesichert') === -1) _beatEhrlichkeit += ' EHRLICHKEIT: Die Akten sind NICHT physisch gesichert oder übergeben worden - behaupte NICHT, dass Dokumente bereits bei Vera, der Westpresse, Roth oder auf dem Weg in den Westen/nach Schweden sind. Sie bleiben offen/im Spiel.';
+          if (_hits.indexOf('im_anker_identifiziert') === -1) _beatEhrlichkeit += ' IM "Anker" ist NICHT enttarnt - der interne Verräter bleibt ein Schatten im Apparat. Keine Enttarnungs-Behauptung.';
+          if (caseProgress && !caseProgress.clientSecured && _hits.indexOf('margarete_gesichert') === -1) _beatEhrlichkeit += ' Die Klientin ist NICHT in Sicherheit gebracht worden - behaupte es nicht.';
+        }
+      } catch (e) {}
+      result.pushMessages.push('AUFLOESEN: Karl loest den Fall ab JETZT auf. Beschreibe wie Karl dem Auftraggeber (Klient/Klientin - richte dich nach dem tatsaechlichen Geschlecht des Klienten im Setup) alle gesammelten Beweise / Erkenntnisse uebergibt. Die FORM passt zum aktuellen Ort: wenn Karl beim Auftraggeber ist -> persoenlicher Bericht; wenn an einem Telefon (Praxis, Buero, Kneipe) -> Anruf; wenn unterwegs -> Telegramm via naechster Post oder Bote. Setze "klient_berichtet": true im JSON. Diese Szene ist der ABSCHLIESSENDE Akt - keine neuen Indizien, keine neue Gefahr.' + _sicherAbschlussHint + _beatEhrlichkeit + ergebnisHint + _diebstahlAbschlussHint + ' Halte es ruhig und stilvoll - Film noir Ende, keine Action.');
       break;
 
     case 'FLUCHT':
@@ -34650,6 +34663,11 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           setCustodyState(true, 'meta-custody-risiko');
           stasiRiskCounter = 0;
           metaCustodyGracePeriod = 3;  // v7.11.16: 3 Sz Schonfrist beim Folter-Sanity
+          // v7.12.598 (Benjamin, Run 2007 Sz12): Der Spieler MUSS die Engine-Entscheidung sehen (vorher: unsichtbarer
+          // Gewahrsam - Fall-lösen gesperrt + Notizbuch weg, ohne dass irgendwas erzählt wurde). Toast + Erwartungs-
+          // Flag: die NÄCHSTE Szene muss die Festnahme erzählen, sonst nimmt der Wächter den Gewahrsam zurück.
+          window._metaCustodyErwarteErzaehlung = true;
+          if (typeof showProgressToast === 'function') { try { showProgressToast('ZUGRIFF', 'Die Stasi greift zu - Karl wird festgenommen.', 'danger', 'meta-custody'); } catch (e) {} }
           console.log('[Schatten v7.11.13] META-CUSTODY ausgelöst (Risk ' + (riskPrev + 1) + ', Chance ' + Math.round(custodyChance * 100) + '%, Roll ' + roll.toFixed(2) + ')');
           diag('detect', '⚠ META-CUSTODY: Karl wird verhaftet (Risk ' + (riskPrev + 1) + ' = ' + Math.round(custodyChance * 100) + '% Chance, Roll ' + roll.toFixed(2) + ')');
           if (typeof trackCustodyChange === 'function') trackCustodyChange('meta-custody');
@@ -34687,6 +34705,23 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
                    : String(kiGewahrsamSignal));
       diag('detect', 'KI-Feld gewahrsam: ' + rawVal + ' | Engine-Flag: ' + (karlInStasiCustody ? 'GEWAHRSAM' : 'frei'));
     }
+    // v7.12.598 (Benjamin, Run 2007 Sz12): META-CUSTODY-ERZÄHL-WÄCHTER. Der Meta-Würfel setzte Gewahrsam, aber die
+    // KI erzählte KEINE Festnahme (Karl stand frei rum, packte Mertens am Kragen) -> unsichtbarer Engine-Gewahrsam,
+    // Fall-lösen gesperrt, Notizbuch konfisziert, Spieler verwirrt. Regel (KONZEPT_CUSTODY_ENGINE): Engine entscheidet,
+    // KI erzählt - wenn die KI NICHT liefert, folgt die Engine der Szene und nimmt den Gewahrsam zurück (wirkt wie
+    // ein Beinahe-Zugriff, dem Karl entgangen ist).
+    try {
+      if (window._metaCustodyErwarteErzaehlung) {
+        window._metaCustodyErwarteErzaehlung = false;
+        const _mcTxt = normForMatch(scene.szene || '');
+        const _festnahmeErzaehlt = /(festgenommen|verhaftet|abgefuehrt|in gewahrsam|zelle|verhoer|haftanstalt|hohenschoenhausen|genslerstrasse|wirst (gefesselt|ueberwaeltigt|gepackt und)|stuermen (herein|hinein|rein)|zugriff|nehmen dich (fest|mit))/.test(_mcTxt);
+        if (!_festnahmeErzaehlt && karlInStasiCustody && kiGewahrsamSignal !== true) {
+          if (typeof setCustodyState === 'function') setCustodyState(false, 'meta-custody-nicht-erzaehlt');
+          if (typeof diag === 'function') diag('drift', '⚠ META-CUSTODY zurückgenommen: KI hat die Festnahme nicht erzählt (Szene zeigt Karl frei) - kein unsichtbarer Gewahrsam');
+          if (typeof showProgressToast === 'function') { try { showProgressToast('Dem Zugriff entgangen', 'Die Festnahme ist nicht zustande gekommen - Karl ist frei.', 'success', 'meta-custody-rueck'); } catch (e) {} }
+        }
+      }
+    } catch (e) {}
     let kiSignalHandled = false;
     if (kiGewahrsamSignal !== null) {
       // v7.12.108 (Fix B+C): KI-Signal + Textanalyse als TEAM, nicht KI allein. Gemini
