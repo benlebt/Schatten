@@ -3191,7 +3191,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.593</div>
+    <div class="start-version">Schatten v7.12.595</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.593</span>
+    <span>Schatten v7.12.595</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4881,7 +4881,7 @@ const INTRO_VARIANTS = [
       setupCast: [
         { name: 'Margarete Stein', tag: 'CLIENT', alter: 34, rolle: 'Klientin / Whistleblowerin',
           beziehung: 'beauftragt Karl per Telefon - hat ihm Reichsbahn-Akten zugespielt',
-          detail: 'Sekretaerin der Reichsbahndirektion Mitte, ledig, wohnt in Friedrichshain Holsteinische Strasse 18, dunkles Haar, Brille mit Drahtgestell, hat Akten ueber Schmuggelroute durch West-Berlin gestohlen. Politisch in akuter Gefahr.',
+          detail: 'Sekretaerin der Reichsbahndirektion Mitte, ledig, wohnt in Friedrichshain Mainzer Strasse 18, dunkles Haar, Brille mit Drahtgestell, hat Akten ueber Schmuggelroute durch West-Berlin gestohlen. Politisch in akuter Gefahr.',
           persistent: true, anwesend: false },
         { name: 'Direktor Bernhard Wahler', tag: 'SUSPECT', alter: 52, rolle: 'Vorgesetzter (Suspect)',
           beziehung: 'Direktor der Reichsbahndirektion Mitte, Margaretes Chef. Verdacht: er deckt die Schmuggelroute oder ist selbst involviert.',
@@ -4998,7 +4998,7 @@ const INTRO_VARIANTS = [
         // freischaltet; reisbar:false = kein Reiseziel (mobil). npcs = wer ist hier (zeit: Tageszeiten, sonst immer).
         { name: 'Karl Mauers Büro', sektor: 'Ost (Mitte)', detail: 'Hackescher Markt, 2. Stock, Hinterzimmer mit Sachsenwerk-Radio',
           startBekannt: true, npcs: [] },
-        { name: 'Margarete Steins Wohnung', sektor: 'Ost (Friedrichshain)', detail: 'Holsteinische Strasse 18, dritter Stock, Hinterhof - Klientin lebt hier',
+        { name: 'Margarete Steins Wohnung', sektor: 'Ost (Friedrichshain)', detail: 'Mainzer Strasse 18, dritter Stock, Hinterhof - Klientin lebt hier',
           startBekannt: true, npcs: [{ id: 'margarete_stein', immer: true }],
           indizien: [
             { id: 'margarete_aussage', text: 'Margaretes Schilderung der Bedrohung und der Schmuggelroute', npc: 'margarete_stein', quelle: 'person', actions: ['ANSPRECHEN','UEBERZEUGEN','BEFRAGEN'], schluessel: ['schmuggelroute','bedroht','aussage','margarete erzählt','margarete berichtet'], stage: 2 },
@@ -6721,6 +6721,11 @@ function gesamtDefinierteIndizien() {
 function classifyEvidenceAction() {
   try {
     const a = window._letzteAktion || {};
+    // v7.12.595 (ChatGPT P1, Run 1800 Sz2): REISE löst NIE ein Indiz aus. Die Reise-Option läuft technisch als
+    // Kategorie ERKUNDEN - der Kategorie-Fallback unten wertete sie als Umgebungs-Aktion und vergab beim bloßen
+    // Hinfahren die Akten-Kopie. Erst eine echte Ermittlungsaktion AM Zielort darf finden. (Sicherungs-Buttons
+    // ebenso: sie sichern, sie ermitteln nicht.)
+    if (a.istReise || a.sicherung) return null;
     const kat = (a.kategorie || '').toUpperCase();
     const txt = normForMatch(a.text || '');
     // Personen-Aktion: Kategorie ERKUNDEN/OFFENSIV mit NPC-Bezug ODER klare Sprech-/Druck-Verben.
@@ -6739,6 +6744,8 @@ function classifyEvidenceAction() {
 function getEvidenceActionKey() {
   try {
     const a = window._letzteAktion || {};
+    // v7.12.595: Reise/Sicherung sind keine Ermittlungsaktionen (Doppelsicherung zu classifyEvidenceAction).
+    if (a.istReise || a.sicherung) return null;
     const verb = (a.npcVerb || '').toString().toLowerCase();
     if (verb === 'befragen') return 'BEFRAGEN';
     if (verb === 'bestechen') return 'BESTECHEN';
@@ -7017,7 +7024,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.593';
+window.SCHATTEN_VERSION = 'v7.12.595';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -14342,7 +14349,7 @@ function showHeader(scene) {
   if (engineCurrentLocation && engineCurrentLocation.name) {
     const _ortVorher = currentOrt;
     const _engNorm = normForMatch(engineCurrentLocation.name);
-    // DRIFT-MESSUNG (repariert, v521): exakter Kern-Vergleich. Vorher zu lasch (Büro vs Holsteinische Str.
+    // DRIFT-MESSUNG (repariert, v521): exakter Kern-Vergleich. Vorher zu lasch (Büro vs Mainzer Str.
     // wurde nicht erkannt). Jetzt: signifikante Wörter (>=4 Zeichen) müssen sich überschneiden, sonst Drift.
     if (scene && scene.ort) {
       const _kiNorm = normForMatch(scene.ort);
@@ -17982,8 +17989,15 @@ function bauePersonenButtons(container, modus) {
   if (!container) return 0;
   const npcs = (typeof getNpcsAtCurrentLocation === 'function') ? getNpcsAtCurrentLocation() : [];
   if (!npcs.length) return 0;
+  // v7.12.595 (Benjamin, Run 1800): Eine GESICHERTE Klientin ist "eingelockt" - sie wurde bewusst in Sicherheit
+  // gebracht und taucht in den Personen-Buttons NICHT mehr auf (sonst kommt sie über ansprechen/mitnehmen sofort
+  // wieder in den Run zurück und die Sicherung ist erzählerisch wertlos).
+  const _gesicherterKlientNorm = (caseProgress && caseProgress.clientSecured && clientProfile && clientProfile.name)
+    ? normForMatch(clientProfile.name) : null;
   let gebaut = 0;
   npcs.forEach(npc => {
+    // v7.12.595: gesicherte Klientin überspringen (eingelockt, offstage).
+    if (_gesicherterKlientNorm && normForMatch(npc.name || '') === _gesicherterKlientNorm) return;
     // Im 'verwalten'-Modus nur Personen zeigen, für die es überhaupt eine Verwalten-Aktion gibt (Nicht-Gegner /
     // bereits in Party). Sonst öffnet sich ein leeres Menü. Grobe Vorab-Prüfung über den Tag.
     if (modus === 'verwalten') {
@@ -18111,8 +18125,14 @@ function oeffneNpcMenue(npc, modus) {
     // früheren Stand noch drin steckt (sonst könnte man sie nicht mehr loswerden).
     verben.push({ key: 'hierlassen', label: 'Hier lassen', kategorie: '_PARTY', _partyAction: 'remove', _hint: 'Bleibt an diesem Ort · verlässt die Party · keine Szene' });
   } else if (!_istGegnerTag) {
-    // "Mitnehmen" nur für erlaubte Begleiter-Tags (nicht Gegner, nicht MYSTERY/Schatten).
-    verben.push({ key: 'mitnehmen', label: 'Mitnehmen', kategorie: '_PARTY', _partyAction: 'add', _hint: 'In die Party aufnehmen · reist mit dir · keine Szene' });
+    // v7.12.594: Eine GESICHERTE Klientin ist nicht mehr mitnehmbar - sie wurde bewusst in Sicherheit gebracht
+    // (bei Doc/Helene/im Westen). Wieder mitnehmen würde die Sicherung de facto aufheben.
+    const _istGesicherteKlientin = !!(caseProgress && caseProgress.clientSecured && clientProfile && clientProfile.name
+      && normForMatch(npc.name || '') === normForMatch(clientProfile.name));
+    if (!_istGesicherteKlientin) {
+      // "Mitnehmen" nur für erlaubte Begleiter-Tags (nicht Gegner, nicht MYSTERY/Schatten).
+      verben.push({ key: 'mitnehmen', label: 'Mitnehmen', kategorie: '_PARTY', _partyAction: 'add', _hint: 'In die Party aufnehmen · reist mit dir · keine Szene' });
+    }
   }
   // v7.12.542 (Schritt 2, Benjamin): "Näher kommen"/"Nacht verbringen" auch im NPC-Menü, wenn der angeklickte
   // NPC die aktuelle Romance-Person ist. Nutzt DIESELBE Logik wie der ♥-Button oben (window._romanceMenuState
@@ -18272,29 +18292,39 @@ function baueSicherungsButtons(container) {
       // Zu Helene/Charité bringen: nur wenn Charité als Ort bereisbar ist (sonst nicht anbieten).
       if (_ortVorhanden('charite') || _ortVorhanden('charité')) {
         _buttons.push({ label: _klientName + ' zu Schwester Helene in die Charité bringen', emoji: '🛟',
-          beat: 'margarete_gesichert', securedAt: 'helene', reiseZiel: 'Charite',
+          beat: 'margarete_gesichert', securedAt: 'helene', reiseZiel: 'Charite', zielOrtSuche: 'charite',
           aktionstext: 'Du bringst ' + _klientName + ' zu Schwester Helene in die Charité - dort ist sie unter Helenes Schutz sicher aufgehoben.' });
       }
       // Über die Grenze: nur wenn ein Grenz-Ort bereisbar ist.
       if (_ortVorhanden('friedrichstr') || _ortVorhanden('grenze') || _ortVorhanden('sektoren')) {
         _buttons.push({ label: _klientName + ' über die Sektorengrenze in den Westen bringen', emoji: '🛟',
-          beat: 'margarete_gesichert', securedAt: 'grenze',
+          beat: 'margarete_gesichert', securedAt: 'grenze', zielOrtSuche: 'friedrichstr',
           aktionstext: 'Du bringst ' + _klientName + ' über die Sektorengrenze in den Westen - außer Reichweite des MfS.' });
       }
     }
     // --- AKTEN/BEWEISE ÜBERGEBEN (akten_gesichert) ---
-    if (!_aktenGesichert) {
+    // v7.12.594 (Benjamin-Run 1800 Sz18): Akten-Buttons erschienen, obwohl Karl die Akten nie gefunden hatte.
+    // Bei Fällen mit definierten Indizien: Übergabe nur anbieten, wenn ein Akten-Indiz wirklich gefunden ist
+    // (original_akten / akten_kopie_wohnung - generisch: gefundene Indiz-ID enthält 'akten').
+    let _hatAktenBeweise = true;
+    try {
+      if (typeof caseHasDefinedEvidence === 'function' && caseHasDefinedEvidence()) {
+        const _gef = (caseProgress && Array.isArray(caseProgress.gefundeneIndizIds)) ? caseProgress.gefundeneIndizIds : [];
+        _hatAktenBeweise = _gef.some(id => /akten/.test(String(id)));
+      }
+    } catch (e) { _hatAktenBeweise = true; }
+    if (!_aktenGesichert && _hatAktenBeweise) {
       // An Roth (Volkspolizei-Revier): wenn Revier bereisbar oder Karl dort ist.
       if (_ortVorhanden('revier') || _ortVorhanden('volkspolizei') || _amOrt('revier')) {
         _buttons.push({ label: 'Die Akten an Kommissar Roth übergeben', emoji: '📁',
-          beat: 'akten_gesichert', securedAt: 'roth',
+          beat: 'akten_gesichert', securedAt: 'roth', zielOrtSuche: 'revier',
           aktionstext: 'Du übergibst die Akten an Kommissar Roth - in seinen Händen sind die Beweise sicher und können Wirkung entfalten.' });
       }
       // An Vera Lindqvist (West-Kontakt/Presse): wenn als NPC/Kontakt im Setup.
       const _veraImSetup = (caseSetup && Array.isArray(caseSetup.setupCast) && caseSetup.setupCast.some(c => c && /vera|lindqvist/i.test((c.name||''))));
       if (_veraImSetup) {
         _buttons.push({ label: 'Die Beweise an Vera Lindqvist (Westpresse) übergeben', emoji: '📁',
-          beat: 'akten_gesichert', securedAt: 'vera',
+          beat: 'akten_gesichert', securedAt: 'vera', zielOrtSuche: 'kranzler',
           aktionstext: 'Du übergibst die Beweise an Vera Lindqvist - über die schwedische Korrespondentin erreichen sie die Westpresse.' });
       }
     }
@@ -18317,9 +18347,30 @@ function baueSicherungsButtons(container) {
         try {
           if (!Array.isArray(caseProgress.politicalBeatsHit)) caseProgress.politicalBeatsHit = [];
           if (caseProgress.politicalBeatsHit.indexOf(b.beat) === -1) caseProgress.politicalBeatsHit.push(b.beat);
-          if (b.beat === 'margarete_gesichert') { caseProgress.clientSecured = true; caseProgress.clientSecuredAt = b.securedAt; }
+          if (b.beat === 'margarete_gesichert') {
+            caseProgress.clientSecured = true;
+            caseProgress.clientSecuredAt = b.securedAt;
+            // v7.12.594 (Benjamin-Run 1800): Gesicherte Person verlässt AUTOMATISCH die Party - sonst "zieht man
+            // sie wieder mit" und die Sicherung ist erzählerisch sofort wieder aufgehoben.
+            try { if (typeof _partyRemove === 'function') _partyRemove(null, _klientName); } catch (e) {}
+          }
           if (b.beat === 'akten_gesichert') { caseProgress.evidenceSecured = true; caseProgress.evidenceSecuredAt = b.securedAt; }
           caseProgress.pendingSecurityIntent = null;
+          // v7.12.595 (ChatGPT P1, Run 1800 Sz19/20): Sicherungs-Aktionen mit Zielort (zu Helene/Roth/über die
+          // Grenze bringen) sind ECHTE Ortswechsel - der Engine-Ort wird HART aufs Ziel gesetzt (analog reiseZuOrt),
+          // sonst erzählt die KI die Charité, während der Header bei Doc Wagner klebt (Ortsbruch).
+          try {
+            if (b.zielOrtSuche) {
+              const _zielLoc = _orte.find(o => o && o.name && normForMatch(o.name).indexOf(normForMatch(b.zielOrtSuche)) !== -1);
+              if (_zielLoc && (!engineCurrentLocation || normForMatch(engineCurrentLocation.name) !== normForMatch(_zielLoc.name))) {
+                const _vorherOrt = engineCurrentLocation ? engineCurrentLocation.name : '?';
+                engineCurrentLocation = { name: _zielLoc.name, sektor: _zielLoc.sektor || '' };
+                if (typeof _reiseGeradeErfolgt !== 'undefined') _reiseGeradeErfolgt = { name: _zielLoc.name, sektor: _zielLoc.sektor || '', detail: _zielLoc.detail || '' };
+                if (typeof diag === 'function') diag('state', 'SICHERUNG mit Ortswechsel (Engine besitzt Ort): "' + _vorherOrt + '" -> "' + _zielLoc.name + '"');
+                if (typeof renderImRaumAnzeige === 'function') { try { renderImRaumAnzeige(); } catch (e) {} }
+              }
+            }
+          } catch (e) {}
           if (typeof diag === 'function') diag('progress', '✦ SICHERUNG (Engine-Button, HART): ' + b.beat + ' -> ' + b.securedAt + ' (' + caseProgress.politicalBeatsHit.length + ' Beats)');
           if (typeof showProgressToast === 'function') { try { showProgressToast('In Sicherheit', b.label, 'success', 'sicherung-' + b.beat); } catch(e){} }
         } catch (e) {}
@@ -20509,6 +20560,15 @@ async function requestSceneFromModel(userMessage, conversationHistory, compactMo
           window._zielIndizId = null;
         }
         recap += '\n';
+      }
+      // v7.12.595 (Benjamin, Run 1800): Gesicherte Klientin ist OFFSTAGE - die KI darf sie nicht wieder in Szenen
+      // schreiben, sonst taucht sie nach der Sicherung einfach wieder neben Karl auf und alles war umsonst.
+      if (caseProgress && caseProgress.clientSecured && clientProfile && clientProfile.name) {
+        const _sichWo = caseProgress.clientSecuredAt === 'helene' ? 'bei Schwester Helene in der Charité'
+          : caseProgress.clientSecuredAt === 'doc_wagner' ? 'bei Doc Wagner'
+          : caseProgress.clientSecuredAt === 'grenze' ? 'im Westen, außer Reichweite'
+          : 'an einem sicheren Ort';
+        recap += 'PERSONEN-REGEL (PFLICHT): ' + clientProfile.name + ' ist in Sicherheit gebracht (' + _sichWo + ') und bleibt dort. Sie tritt in den folgenden Szenen NICHT mehr auf, ist NICHT bei Karl, reist NICHT mit und taucht nicht "zufällig" wieder auf. Sie darf höchstens ERWÄHNT werden (z.B. "Margarete ist in Sicherheit").\n\n';
       }
     } catch (e) {}
     // STORY-ANKER zuerst: feste Auftrags-Fakten aus dem Intro, damit die KI nach
@@ -26784,6 +26844,8 @@ async function chooseOption(option) {
       npcId: (option && (option._npcId || option.npcId || (option._npcInteraktion && option._npcInteraktion.npcId))) || null,
       npcName: (option && (option._npcName || (option._npcInteraktion && option._npcInteraktion.npcName))) || null,
       npcVerb: (option && (option._npcVerb || (option._npcInteraktion && option._npcInteraktion.verb))) || null,
+      // v7.12.595 (ChatGPT P1, Run 1800 Sz2): Reise ist KEINE Ermittlungsaktion - sie darf nie ein Indiz auslösen.
+      istReise: !!(option && (option._istReise || option.id === 'REISE')),
       sicherung: (option && option._sicherung) || null,
     };
   } catch (e) { window._letzteAktion = null; }
@@ -34960,7 +35022,13 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         // bestaetigen Custody jetzt nur noch MIT Karl-ist-dort-Bezug (haftOrtMitBezug, s.u.).
         // Allein-Bestaetiger bleiben NUR eindeutig-koerperliche Vollzugs-Marker, die beim Schleichen
         // praktisch nie fallen (Handschellen an KARL, Karl wird abgefuehrt/in den Wagen gedraengt).
-        const arrestConfirmRe = /(handschellen|abgefuehrt|in den fond|in den emw gedraengt|in den wagen gedraengt|haeftlingskleidung)/;
+        // v7.12.594 (Benjamin-Run 1800 Sz20/21): 'handschellen' war ALLEIN-Bestätiger - aber Karl fesselte die
+        // MfS-Männer mit DEREN EIGENEN Handschellen ("ziehst du seine eigenen Handschellen fest") -> fälschlich
+        // Custody. Handschellen bestätigen jetzt NUR mit Karl-als-Gefesseltem-Bezug; wenn KARL fesselt, ist das
+        // ein SIEG und verhindert die Bestätigung (Gegenmarker).
+        const arrestConfirmRe = /(abgefuehrt|in den fond|in den emw gedraengt|in den wagen gedraengt|haeftlingskleidung)/;
+        const handschellenAnKarlRe = /(handschellen[^.]{0,40}(um deine|deine[nm]? handgelenk|dir\b)|(dir|um deine|an deine[nm]?)[^.]{0,40}handschellen|(legt|legen|schliesst|schliessen)[^.]{0,25}dir[^.]{0,25}handschellen)/;
+        const karlFesseltRe = /((du|karl)\s+fesselst|fesselst\s+(ihn|sie|den|die)|ziehst[^.]{0,25}(seine|ihre)[^.]{0,20}handschellen|legst\s+(ihm|ihr|ihnen)[^.]{0,25}handschellen|mit\s+(seinen|ihren)\s+eigenen\s+handschellen|du\s+(ihn|sie)\s+(fesselst|gefesselt))/;
         // 'festgenommen/verhaftet/gewahrsam/durchsucht' NUR wenn klar auf Karl bezogen.
         const arrestKarlBezugRe = /\b(du\s+wirst\s+(festgenommen|verhaftet|abgefuehrt|durchsucht|in\s+gewahrsam)|dich\s+(fest|ab)|man\s+nimmt\s+dich\s+(fest|in\s+gewahrsam)|(nehmen|nimmt)\s+(dich|karl)\s+(fest|in\s+gewahrsam)|wirst\s+(du\s+)?(festgenommen|verhaftet|abgefuehrt)|karl\s+wird\s+(festgenommen|verhaftet|abgefuehrt|in\s+gewahrsam))\b/;
         // v7.12.408: Haft-MOEBEL/RAUM-Marker (pritsche/zelle/verhoerraum/zellentuer) bestaetigen Custody
@@ -34970,7 +35038,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         const haftOrtMitBezug = new RegExp('\\b(du\\s+(sitzt|bist|liegst|landest|wachst|kauerst)|man\\s+(fuehrt|bringt|schleppt|sperrt)\\s+(dich|karl)|(fuehren|bringen|schleppen|sperren)\\s+(dich|karl)|bist\\s+(eingesperrt|gefangen))\\b.{0,60}\\b(' + HAFT_ORT_BEGRIFFE + ')\\b');
         // Marker dass Karl ENTKOMMEN ist (dann KEINE Custody).
         const escapeRe = /(entkommst|entkommt|entkommen|reisst dich los|fluchtest|fliehst erfolgreich|lassen von dir ab|laesst von dir ab|schuettelst sie ab|kannst entkommen|wagen schiesst davon.*ohne dich|ohne dich davon|bist du allein|hier drinnen allein|in deinem buero|in dein buero)/;
-        const confirmed = arrestConfirmRe.test(sTxt) || arrestConfirmRe.test(oTxt) || arrestKarlBezugRe.test(sTxt) || haftOrtMitBezug.test(sTxt) || haftMarkerMitKarlBezug.test(sTxt);
+        const confirmed = (arrestConfirmRe.test(sTxt) || arrestConfirmRe.test(oTxt) || handschellenAnKarlRe.test(sTxt) || handschellenAnKarlRe.test(oTxt) || arrestKarlBezugRe.test(sTxt) || haftOrtMitBezug.test(sTxt) || haftMarkerMitKarlBezug.test(sTxt)) && !karlFesseltRe.test(sTxt);
         const escaped = escapeRe.test(sTxt);
         if (confirmed && !escaped) {
           setCustodyState(true, 'text-confirmed-custody');
