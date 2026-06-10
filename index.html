@@ -3191,7 +3191,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.586</div>
+    <div class="start-version">Schatten v7.12.588</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.586</span>
+    <span>Schatten v7.12.588</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6641,6 +6641,41 @@ function offeneIndizienAmOrt(loc) {
   const gef = (caseProgress && Array.isArray(caseProgress.gefundeneIndizIds)) ? caseProgress.gefundeneIndizIds : [];
   return loc.indizien.filter(ind => ind && ind.id && gef.indexOf(ind.id) === -1).length;
 }
+// v7.12.588 (KONZEPT_REISE_WEGWEISER R1): offene Indizien getrennt nach Erreichbarkeit. "jetzt" = Gates (Tageszeit +
+// NPC am Ort) sind AKTUELL erfüllt; "spaeter" = zeit-/personengesperrt. So sieht der Spieler, wo er JETZT hinkann und
+// wo später noch was wartet (Benjamin: "● 1 jetzt · 1 später"). hattIndizien = der Ort hatte überhaupt mal Indizien.
+function offeneIndizienAmOrtNachErreichbarkeit(loc) {
+  const _res = { jetzt: 0, spaeter: 0, hattIndizien: false };
+  if (!loc || !Array.isArray(loc.indizien) || !loc.indizien.length) return _res;
+  _res.hattIndizien = true;
+  const gef = (caseProgress && Array.isArray(caseProgress.gefundeneIndizIds)) ? caseProgress.gefundeneIndizIds : [];
+  // Aktuelle Tageszeit + welche NPCs sind an DIESEM Ort (nicht am aktuellen Ort - am Ort loc, falls man hinreist).
+  const tz = (typeof _aktTageszeitName === 'function') ? _aktTageszeitName() : '';
+  // NPCs, die an loc laut Setup zur aktuellen Tageszeit präsent wären (garantierte loc.npcs mit zeit/immer).
+  let npcIdsAmOrt = [];
+  try {
+    if (Array.isArray(loc.npcs)) {
+      npcIdsAmOrt = loc.npcs.filter(n => {
+        if (!n || !n.id) return false;
+        if (n.immer) return true;
+        if (Array.isArray(n.zeit) && n.zeit.length) return n.zeit.map(z => normForMatch(z)).includes(tz);
+        return true;
+      }).map(n => normForMatch(n.id));
+    }
+  } catch (e) { npcIdsAmOrt = []; }
+  for (const ind of loc.indizien) {
+    if (!ind || !ind.id || gef.indexOf(ind.id) !== -1) continue; // gefunden -> raus
+    let erreichbar = true;
+    // Tageszeit-Gate
+    if (Array.isArray(ind.zeit) && ind.zeit.length && !ind.zeit.map(z => normForMatch(z)).includes(tz)) erreichbar = false;
+    // NPC-Gate: der benötigte NPC muss zur aktuellen Tageszeit an diesem Ort sein
+    if (erreichbar && ind.npc && npcIdsAmOrt.length && npcIdsAmOrt.indexOf(normForMatch(ind.npc)) === -1) erreichbar = false;
+    // Wenn ind.npc gesetzt, aber loc.npcs gar keine Liste hat, kann der NPC nicht garantiert da sein -> später
+    if (erreichbar && ind.npc && !npcIdsAmOrt.length) erreichbar = false;
+    if (erreichbar) _res.jetzt++; else _res.spaeter++;
+  }
+  return _res;
+}
 // Markiert ein Indiz als gefunden (idempotent). Trägt Text in caseProgress.indizien ein + hebt ggf. Stage-Floor.
 function _markiereIndizGefunden(ind) {
   if (!ind || !ind.id || !caseProgress) return false;
@@ -6818,7 +6853,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.586';
+window.SCHATTEN_VERSION = 'v7.12.588';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -17602,6 +17637,8 @@ function oeffneReiseMenue() {
     const istAktuell = normForMatch(loc.name) === aktuellNorm;
     // v7.12.565 (Indizien-Projekt Schritt 3): Öffnungszeit + offene Indizien anzeigen.
     const offen = (typeof offeneIndizienAmOrt === 'function') ? offeneIndizienAmOrt(loc) : 0;
+    // v7.12.588 (R1): offene Indizien getrennt nach jetzt/später erreichbar.
+    const _indizErr = (typeof offeneIndizienAmOrtNachErreichbarkeit === 'function') ? offeneIndizienAmOrtNachErreichbarkeit(loc) : { jetzt: offen, spaeter: 0, hattIndizien: offen > 0 };
     const geoeffnet = (typeof istOrtGeoeffnet === 'function') ? istOrtGeoeffnet(loc) : true;
     // Geschlossener Ort: ausgegraut + nicht klickbar (außer es ist der aktuelle Ort - da steht man ja schon).
     const gesperrt = !geoeffnet && !istAktuell;
@@ -17620,9 +17657,18 @@ function oeffneReiseMenue() {
     const polizeiMark = loc.polizeiort ? '<span style="color:#a8b0c8;font-size:0.9em;margin-right:5px;" title="Polizei-Dienststelle">★</span>' : '';
     // v7.12.565: Indizien-Marker - "● X offen" wenn der Ort noch nicht gefundene Kern-Indizien hat. Bleibt auch bei
     // geschlossenem Ort sichtbar (du weißt: da wartet was, nur noch nicht jetzt).
+    // v7.12.588 (R1+R2): Indizien-Marker getrennt "● X jetzt · Y später" (jetzt=gold erreichbar, später=gedämpft
+    // zeit-/NPC-gesperrt). Erledigte Orte (hatten Indizien, jetzt alle gefunden) bekommen einen Haken ✓ wie ein
+    // abgeschlossenes Level - man KANN noch hin, muss aber nicht.
     let indizMark = '';
-    if (offen > 0) {
-      indizMark = '<span style="color:#c8a84a;font-size:0.82em;margin-left:6px;" title="offene Indizien">● ' + offen + ' offen</span>';
+    if (_indizErr.jetzt > 0 || _indizErr.spaeter > 0) {
+      const _teile = [];
+      if (_indizErr.jetzt > 0) _teile.push('<span style="color:#c8a84a;" title="jetzt erreichbar">● ' + _indizErr.jetzt + ' jetzt</span>');
+      if (_indizErr.spaeter > 0) _teile.push('<span style="color:#7a6f5a;" title="zeit-/personengesperrt - später erreichbar">' + _indizErr.spaeter + ' später</span>');
+      indizMark = '<span style="font-size:0.82em;margin-left:6px;">' + _teile.join('<span style="color:#5a5044;"> · </span>') + '</span>';
+    } else if (_indizErr.hattIndizien) {
+      // Ort hatte Indizien, jetzt alle gefunden -> erledigt-Haken (wie abgeschlossenes Level).
+      indizMark = '<span style="color:#8aa890;font-size:0.82em;margin-left:6px;" title="hier alle Indizien gefunden">✓ erledigt</span>';
     }
     // v7.12.565: Öffnungszeit-Hinweis bei geschlossenem Ort (warum nicht klickbar).
     let zustandZeile = '';
@@ -17993,6 +18039,108 @@ function oeffneNpcMenue(npc, modus) {
 }
 // ===== Ende NPC-Interaktion =====
 
+// v7.12.587 (KONZEPT_SICHERUNG_ENGINE Schritt A1): Sicherung als ECHTE Engine-Aktion statt Regex-Raten.
+// Sobald die Wahrheit erkannt/Verdächtiger überführt ist, erscheinen feste Buttons, die den Schutz HART setzen
+// (clientSecured/evidenceSecured + politicalBeat) - unabhängig davon, was die KI-Prosa schreibt. Nur Ziele, die im
+// Fall-Reisemenü bereisbar sind ODER deren Kontakt am Ort ist (Benjamin: muss bereisbar + klar kommuniziert sein).
+function baueSicherungsButtons(container) {
+  try {
+    if (!container) return 0;
+    // Nur politische Fälle mit Sicherungs-Beats.
+    if (!caseSetup || !Array.isArray(caseSetup.politicalBeats) || !caseSetup.politicalBeats.length) return 0;
+    // Erst ab Durchbruch (Wahrheit erkannt ODER Verdächtiger überführt ODER Stage>=3).
+    const _stage = (caseProgress && typeof caseProgress.stage === 'number') ? caseProgress.stage : 0;
+    const _durchbruch = !!(caseProgress && (caseProgress.wahrheitErkannt || caseProgress.ueberfuehrt)) || _stage >= 3;
+    if (!_durchbruch) return 0;
+    const _hit = (caseProgress && Array.isArray(caseProgress.politicalBeatsHit)) ? caseProgress.politicalBeatsHit : [];
+    const _personGesichert = _hit.indexOf('margarete_gesichert') !== -1;
+    const _aktenGesichert = _hit.indexOf('akten_gesichert') !== -1;
+    if (_personGesichert && _aktenGesichert) return 0; // alles erledigt, keine Buttons mehr nötig
+
+    // Bereisbare Orte des Falls (Namen normalisiert) - für die Erreichbarkeits-Prüfung.
+    let _orte = [];
+    try { _orte = (typeof getCaseLocations === 'function') ? getCaseLocations() : []; } catch (e) { _orte = []; }
+    const _ortVorhanden = (such) => _orte.some(o => o && o.name && normForMatch(o.name).indexOf(normForMatch(such)) !== -1);
+    const _amOrt = (such) => {
+      try { return engineCurrentLocation && engineCurrentLocation.name && normForMatch(engineCurrentLocation.name).indexOf(normForMatch(such)) !== -1; } catch (e) { return false; }
+    };
+    const _klientName = (clientProfile && clientProfile.name) ? clientProfile.name : 'die Klientin';
+    const _klientErreichbar = (typeof _istInParty === 'function' && _istInParty(null, _klientName)) || _amOrt('doc wagner') || _amOrt(_klientName);
+
+    const _buttons = [];
+    // --- PERSON SICHERN (margarete_gesichert) ---
+    if (!_personGesichert) {
+      // Bei Doc Wagner lassen: nur wenn Karl gerade in Doc Wagners Praxis ist (dort kann er sie lassen).
+      if (_amOrt('doc wagner')) {
+        _buttons.push({ label: _klientName + ' hier bei Doc Wagner in Sicherheit lassen', emoji: '🛟',
+          beat: 'margarete_gesichert', securedAt: 'doc_wagner',
+          aktionstext: 'Du bringst ' + _klientName + ' bei Doc Wagner in Sicherheit - hier ist sie vorerst sicher untergebracht, diskret und versorgt.' });
+      }
+      // Zu Helene/Charité bringen: nur wenn Charité als Ort bereisbar ist (sonst nicht anbieten).
+      if (_ortVorhanden('charite') || _ortVorhanden('charité')) {
+        _buttons.push({ label: _klientName + ' zu Schwester Helene in die Charité bringen', emoji: '🛟',
+          beat: 'margarete_gesichert', securedAt: 'helene', reiseZiel: 'Charite',
+          aktionstext: 'Du bringst ' + _klientName + ' zu Schwester Helene in die Charité - dort ist sie unter Helenes Schutz sicher aufgehoben.' });
+      }
+      // Über die Grenze: nur wenn ein Grenz-Ort bereisbar ist.
+      if (_ortVorhanden('friedrichstr') || _ortVorhanden('grenze') || _ortVorhanden('sektoren')) {
+        _buttons.push({ label: _klientName + ' über die Sektorengrenze in den Westen bringen', emoji: '🛟',
+          beat: 'margarete_gesichert', securedAt: 'grenze',
+          aktionstext: 'Du bringst ' + _klientName + ' über die Sektorengrenze in den Westen - außer Reichweite des MfS.' });
+      }
+    }
+    // --- AKTEN/BEWEISE ÜBERGEBEN (akten_gesichert) ---
+    if (!_aktenGesichert) {
+      // An Roth (Volkspolizei-Revier): wenn Revier bereisbar oder Karl dort ist.
+      if (_ortVorhanden('revier') || _ortVorhanden('volkspolizei') || _amOrt('revier')) {
+        _buttons.push({ label: 'Die Akten an Kommissar Roth übergeben', emoji: '📁',
+          beat: 'akten_gesichert', securedAt: 'roth',
+          aktionstext: 'Du übergibst die Akten an Kommissar Roth - in seinen Händen sind die Beweise sicher und können Wirkung entfalten.' });
+      }
+      // An Vera Lindqvist (West-Kontakt/Presse): wenn als NPC/Kontakt im Setup.
+      const _veraImSetup = (caseSetup && Array.isArray(caseSetup.setupCast) && caseSetup.setupCast.some(c => c && /vera|lindqvist/i.test((c.name||''))));
+      if (_veraImSetup) {
+        _buttons.push({ label: 'Die Beweise an Vera Lindqvist (Westpresse) übergeben', emoji: '📁',
+          beat: 'akten_gesichert', securedAt: 'vera',
+          aktionstext: 'Du übergibst die Beweise an Vera Lindqvist - über die schwedische Korrespondentin erreichen sie die Westpresse.' });
+      }
+    }
+    if (!_buttons.length) return 0;
+
+    // Trenner + Buttons rendern.
+    const sep = document.createElement('div');
+    sep.className = 'system-button-separator';
+    sep.textContent = '· In Sicherheit bringen ·';
+    container.appendChild(sep);
+    let _gebaut = 0;
+    _buttons.forEach(b => {
+      const btn = document.createElement('button');
+      btn.className = 'option-btn option-btn-system option-btn-sicherung';
+      btn.innerHTML = '<span class="option-id">' + b.emoji + '</span><span class="option-text-wrap"><span>'
+        + escapeHtml(b.label) + '</span><span class="option-marker option-marker-defensiv">SICHERN</span></span>';
+      attachSafeTap(btn, () => {
+        if (typeof chooseOptionInFlight !== 'undefined' && chooseOptionInFlight) return;
+        // HART setzen - kein Regex, keine Prosa-Bestätigung nötig.
+        try {
+          if (!Array.isArray(caseProgress.politicalBeatsHit)) caseProgress.politicalBeatsHit = [];
+          if (caseProgress.politicalBeatsHit.indexOf(b.beat) === -1) caseProgress.politicalBeatsHit.push(b.beat);
+          if (b.beat === 'margarete_gesichert') { caseProgress.clientSecured = true; caseProgress.clientSecuredAt = b.securedAt; }
+          if (b.beat === 'akten_gesichert') { caseProgress.evidenceSecured = true; caseProgress.evidenceSecuredAt = b.securedAt; }
+          caseProgress.pendingSecurityIntent = null;
+          if (typeof diag === 'function') diag('progress', '✦ SICHERUNG (Engine-Button, HART): ' + b.beat + ' -> ' + b.securedAt + ' (' + caseProgress.politicalBeatsHit.length + ' Beats)');
+          if (typeof showProgressToast === 'function') { try { showProgressToast('In Sicherheit', b.label, 'success', 'sicherung-' + b.beat); } catch(e){} }
+        } catch (e) {}
+        // Die KI erzählt die Folge (Beat steht schon fest).
+        if (typeof chooseOption === 'function') {
+          chooseOption({ id: 'SICHERUNG_' + b.beat, text: b.aktionstext, kategorie: 'DEFENSIV', _kategorie: 'DEFENSIV', _priority: 26, _isSystemButton: true, _sicherung: b.beat });
+        }
+      });
+      container.appendChild(btn);
+      _gebaut++;
+    });
+    return _gebaut;
+  } catch (e) { if (typeof diag === 'function') diag('drift', 'baueSicherungsButtons-Fehler: ' + e.message); return 0; }
+}
 function renderOptions(scene) {
   const list = document.getElementById('options-list');
   const optionsContainer = document.getElementById('options');
@@ -19627,6 +19775,14 @@ function renderOptions(scene) {
     list.insertBefore(resolveSep, list.firstChild);
     list.insertBefore(resolveBtn, list.firstChild);
   }
+
+  // v7.12.587 (A1): Sicherungs-Buttons GANZ OBEN (über dem Resolve-Button) - erst sichern, dann lösen. In einen
+  // eigenen Container, der vor list.firstChild eingefügt wird, damit die Reihenfolge Sicherung -> Resolve stimmt.
+  try {
+    const _sichWrap = document.createElement('div');
+    const _nSich = (typeof baueSicherungsButtons === 'function') ? baueSicherungsButtons(_sichWrap) : 0;
+    if (_nSich > 0) list.insertBefore(_sichWrap, list.firstChild);
+  } catch (e) { if (typeof diag === 'function') diag('drift', 'Sicherungs-Button-Render-Fehler: ' + e.message); }
 
   document.getElementById('options').classList.remove('hidden');
   // v7.12.580 (UI-B3b): Personen INNERHALB der zwei Kategorien rendern - unter "Übergang" mit Szenen-Verben
