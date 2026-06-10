@@ -3191,7 +3191,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.602</div>
+    <div class="start-version">Schatten v7.12.605</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.602</span>
+    <span>Schatten v7.12.605</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6733,6 +6733,8 @@ function classifyEvidenceAction() {
     const personRe = /(sprich|spreche|rede|frag|befrag|verhör|verhoer|konfrontier|bestech|bestich|ueberzeug|überzeug|durchsuch\w*\s+(ihn|sie|wahler|mertens|lemke|margarete|vera|kummer|mann|den mann|den schläger|den gangster))/;
     const umgebungRe = /(durchsuch|durchwühl|wühl|kramst?|absuch|untersuch|erkund|prüf|pruef|schau|sieh dich um|akten|schublade|schreibtisch|raum|zimmer|gleis|gelände|gelaende|umgebung|beobacht|spähe|spaehe)/;
     if (personRe.test(txt)) return 'person';
+    // v7.12.604: Freitext ohne explizites Ermittlungs-Verb ist NICHT indiz-fähig (Kategorie ist nur Heuristik).
+    if (a.istFreitext && !umgebungRe.test(txt)) return null;
     if (kat === 'BEOBACHTEN') return 'umgebung';
     if (umgebungRe.test(txt)) return 'umgebung';
     if (kat === 'ERKUNDEN') return 'umgebung';
@@ -6762,6 +6764,9 @@ function getEvidenceActionKey() {
     if (/akten|frachtliste|dienstplan|lies|lese|dokument|zettel|papiere/.test(txt)) return 'AKTEN_LESEN';
     if (/beobacht|spähe|spaehe|späh/.test(txt)) return 'BEOBACHTEN';
     if (/erkund|untersuch|sieh dich um|schau dich um|umsehen/.test(txt)) return 'ERKUNDEN';
+    // v7.12.604 (ChatGPT P1, Run 2130): Freitext OHNE explizites Ermittlungs-Verb (oben) bekommt KEINEN Key über
+    // die heuristische Kategorie - sonst zählt "furze so heftig..." als Beobachtung der Schmuggel-Übergabe.
+    if (a.istFreitext) return null;
     if (kat === 'BEOBACHTEN') return 'BEOBACHTEN';
     if (kat === 'ERKUNDEN') return 'ERKUNDEN';
     return null;
@@ -7036,7 +7041,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.602';
+window.SCHATTEN_VERSION = 'v7.12.605';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -7225,8 +7230,31 @@ function _istSchutzNpcDerGesichertenKlientin(npcName) {
     return !!(n && w && (n.indexOf(w) !== -1 || w.indexOf(n) !== -1));
   } catch (e) { return false; }
 }
+// v7.12.605 (W4c, Benjamin-Wunsch "Willi ist Wirt, müsste normalerweise ablehnen" + ChatGPT: Vera kein AutoJoin):
+// Ortsgebundene/eigenständige NPCs LEHNEN die Mitnahme AB - menschlich, mit Grund (Toast), statt stillschweigend
+// als JRPG-Party-Figur durch halb Berlin zu ziehen. Liefert den Ablehnungs-Grund oder null (= darf mit).
+function _npcLehntMitnahmeAb(npcName, npcTag) {
+  try {
+    if ((npcTag || '').toUpperCase() === 'KONTAKT') return 'arbeitet allein und trifft Karl nur an vereinbarten Orten';
+    let _rolle = '';
+    if (caseSetup && Array.isArray(caseSetup.setupCast)) {
+      const ce = caseSetup.setupCast.find(c => c && c.name && normForMatch(c.name) === normForMatch(npcName || ''));
+      if (ce) _rolle = ((ce.rolle || '') + ' ' + (ce.tag || ''));
+    }
+    if (/wirt|wirtin|imbissbesitzer|imbiss-besitzer|kioskbesitzer|barkeeper|kellner/i.test(_rolle)) return 'kann den Laden nicht einfach verlassen';
+    if (/korrespondent|journalist|reporter|presse/i.test(_rolle)) return 'arbeitet allein und trifft Karl nur an vereinbarten Orten';
+    return null;
+  } catch (e) { return null; }
+}
 function _partyAdd(npc) {
-  if (!npc || !npc.id) return;
+  // v7.12.603 (Benjamin, Run 2130: Doc im Popup angeklickt, kam nicht in die Party): _partyAdd brach STILL ab,
+  // wenn npc.id fehlte - Cast-Figuren haben oft nur name/rolle. Jetzt: id aus dem Namen ableiten; nur wenn
+  // beides fehlt, abbrechen - und das LAUT (diag).
+  if (!npc || (!npc.id && !npc.name)) {
+    if (typeof diag === 'function') diag('drift', '⚠ PARTY-ADD verweigert: weder id noch name vorhanden');
+    return;
+  }
+  if (!npc.id) npc.id = 'npc_' + normForMatch(npc.name).replace(/\s+/g, '_');
   if (_istInParty(npc.id, npc.name)) return;
   _party.push({ id: npc.id, name: npc.name || npc.id, tag: npc.tag || '', sinceScene: (typeof sceneCounter === 'number' ? sceneCounter : 0) });
   if (typeof diag === 'function') diag('state', '✦ PARTY +: ' + (npc.name || npc.id) + ' [' + (npc.tag||'?') + '] -> Party (' + _party.length + ')');
@@ -17780,9 +17808,28 @@ function zeigeMitnehmenPopup(npcs, weiterAktion) {
   mitBtn.textContent = '✦ Mitnehmen & weiter';
   const _schliessen = () => { try { overlay.remove(); } catch(e){} _mitnehmenPopupOffen = false; };
   attachSafeTap(mitBtn, () => {
-    let n = 0;
-    npcs.forEach(npc => { const key = npc.id || npc.name; if (gewaehlt[key] && typeof _partyAdd === 'function') { _partyAdd({ id: npc.id, name: npc.name, tag: npc.tag }); n++; } });
+    // v7.12.603 (Benjamin): Popup-Klicks LOGGEN + Erfolg ehrlich zählen (vorher zählte n nur den Aufruf - der
+    // Toast "Begleitung" kam auch, wenn _partyAdd intern abbrach).
+    const _gewaehltNamen = npcs.filter(npc => gewaehlt[npc.id || npc.name]).map(npc => npc.name);
+    const _vorherLen = (typeof _party !== 'undefined' && Array.isArray(_party)) ? _party.length : 0;
+    const _abgelehnt = [];
+    npcs.forEach(npc => {
+      const key = npc.id || npc.name;
+      if (!gewaehlt[key] || typeof _partyAdd !== 'function') return;
+      // v7.12.605 (W4c): ortsgebundene/eigenständige NPCs lehnen ab - mit Grund statt stillem Mitziehen.
+      const _grund = (typeof _npcLehntMitnahmeAb === 'function') ? _npcLehntMitnahmeAb(npc.name, npc.tag) : null;
+      if (_grund) {
+        _abgelehnt.push(npc.name);
+        if (typeof showProgressToast === 'function') { try { showProgressToast(npc.name + ' lehnt ab', npc.name.split(' ')[0] + ' ' + _grund + '.', 'caution', 'party-ablehnung-' + key); } catch (e) {} }
+        if (typeof diag === 'function') diag('state', 'MITNAHME ABGELEHNT (W4c): ' + npc.name + ' - ' + _grund);
+        return;
+      }
+      _partyAdd({ id: npc.id, name: npc.name, tag: npc.tag });
+    });
+    const n = ((typeof _party !== 'undefined' && Array.isArray(_party)) ? _party.length : 0) - _vorherLen;
+    if (typeof diag === 'function') diag('state', '✦ MITNEHMEN-POPUP: gewählt=[' + _gewaehltNamen.join(', ') + '] -> übernommen=' + n + (_abgelehnt.length ? ' · abgelehnt=[' + _abgelehnt.join(', ') + ']' : '') + ' (Party jetzt ' + ((typeof _party !== 'undefined' && Array.isArray(_party)) ? _party.length : '?') + ')');
     if (n > 0 && typeof showProgressToast === 'function') { try { showProgressToast(n === 1 ? 'Begleitung' : n + ' kommen mit', 'In Karls Begleitung aufgenommen.', 'info', 'party-multiadd'); } catch(e){} }
+    if (n === 0 && _gewaehltNamen.length > 0 && _abgelehnt.length === 0 && typeof showProgressToast === 'function') { try { showProgressToast('Mitnahme nicht möglich', _gewaehltNamen.join(', ') + ' konnte nicht aufgenommen werden.', 'warn', 'party-addfail'); } catch(e){} }
     _schliessen();
     if (typeof weiterAktion === 'function') weiterAktion();
   });
@@ -17790,7 +17837,10 @@ function zeigeMitnehmenPopup(npcs, weiterAktion) {
   alleinBtn.type = 'button';
   alleinBtn.style.cssText = 'display:block;width:100%;margin-top:6px;padding:9px 12px;background:transparent;border:1px solid #403930;border-radius:5px;color:#867868;cursor:pointer;font-family:inherit;font-size:calc(11px * var(--reading-scale));';
   alleinBtn.textContent = _hatBegleitung ? 'Mit bestehender Gruppe weiter' : 'Allein weiter';
-  attachSafeTap(alleinBtn, () => { _schliessen(); if (typeof weiterAktion === 'function') weiterAktion(); });
+  attachSafeTap(alleinBtn, () => {
+    if (typeof diag === 'function') diag('state', 'MITNEHMEN-POPUP: ohne neue Mitnahme weiter (' + (_hatBegleitung ? 'mit bestehender Gruppe' : 'allein') + ')');
+    _schliessen(); if (typeof weiterAktion === 'function') weiterAktion();
+  });
   panel.appendChild(mitBtn);
   panel.appendChild(alleinBtn);
   overlay.appendChild(panel);
@@ -18302,8 +18352,15 @@ function oeffneNpcMenue(npc, modus) {
       // v7.12.547: Party-Verwaltung (Mitnehmen/Hier lassen) - KEINE KI-Szene, nur Zustand ändern + Anzeige refresh.
       if (verb._partyAction) {
         if (verb._partyAction === 'add' && typeof _partyAdd === 'function') {
+          // v7.12.605 (W4c): ortsgebundene/eigenständige NPCs lehnen ab (Wirt, Kontakt/Presse).
+          const _ablehnGrund = (typeof _npcLehntMitnahmeAb === 'function') ? _npcLehntMitnahmeAb(npc.name, npc.tag) : null;
+          if (_ablehnGrund) {
+            if (typeof showProgressToast === 'function') { try { showProgressToast(npc.name + ' lehnt ab', npc.name.split(' ')[0] + ' ' + _ablehnGrund + '.', 'caution', 'party-ablehnung-verb'); } catch(e){} }
+            if (typeof diag === 'function') diag('state', 'MITNAHME ABGELEHNT (W4c, Verb): ' + npc.name + ' - ' + _ablehnGrund);
+          } else {
           _partyAdd({ id: npc.id, name: npc.name, tag: npc.tag });
           if (typeof showProgressToast === 'function') { try { showProgressToast(npc.name + ' kommt mit', 'Ist jetzt in Karls Begleitung.', 'info', 'party-add'); } catch(e){} }
+          }
         } else if (verb._partyAction === 'remove' && typeof _partyRemove === 'function') {
           _partyRemove(npc.id, npc.name);
           if (typeof showProgressToast === 'function') { try { showProgressToast(npc.name + ' bleibt hier', 'Verlässt Karls Begleitung.', 'info', 'party-remove'); } catch(e){} }
@@ -20659,9 +20716,26 @@ async function requestSceneFromModel(userMessage, conversationHistory, compactMo
     // (W2b). Ausnahme: aktive Flucht (dort folgt W3 mit transientem Ort).
     try {
       const _aktOrt = window._letzteAktion || {};
-      const _istFluchtAktion = /FLUCHT|NOTFLUCHT/.test((_aktOrt.kategorie || '').toUpperCase());
+      // v7.12.604 (W3): nur NOTFLUCHT (Custody-Ausbruch, Würfel offen) bleibt ohne Ort-Regel. Aktive FLUCHT hat
+      // jetzt den transienten Ort schon gesetzt -> der Unterwegs-Zweig unten übernimmt.
+      const _istFluchtAktion = /NOTFLUCHT/.test((_aktOrt.kategorie || '').toUpperCase()) || (_aktOrt.text || '').indexOf('Notflucht') === 0;
       if (typeof engineCurrentLocation !== 'undefined' && engineCurrentLocation && engineCurrentLocation.name && !_istFluchtAktion) {
+        if (engineCurrentLocation.transient) {
+          // v7.12.604 (W3): transienter Flucht-Ort hat eine eigene Welt-Regel.
+          recap += 'HARTER WELTZUSTAND - ORT (PFLICHT): Karl ist UNTERWEGS, auf der Flucht' + (engineCurrentLocation.vorherOrt ? ' (kommend von: ' + engineCurrentLocation.vorherOrt + ')' : '') + '. Die Szene spielt unterwegs - Straßen, Hinterhöfe, der Opel, Schatten von Hauseingängen. Sie spielt NICHT mehr am verlassenen Ort, und es gibt KEINE Aktionen in dessen Räumen. Karl kommt erst an, wenn der Spieler ein Reiseziel wählt.\n\n';
+        } else {
         recap += 'HARTER WELTZUSTAND - ORT (PFLICHT): Die Szene spielt an genau diesem Ort: "' + engineCurrentLocation.name + '"' + (engineCurrentLocation.sektor ? ' (' + engineCurrentLocation.sektor + ')' : '') + '. Die Szene wechselt NICHT an einen anderen Ort - nicht in ein Atelier, eine Wohnung, ein Büro oder eine Gasse anderswo. Andere Orte dürfen nur ERWÄHNT werden (im Gespräch, in Gedanken). Einen Ortswechsel macht ausschließlich der Spieler über die Reise-Aktion. Auch Übernachtung/Romantik findet AN DIESEM ORT statt (Hinterzimmer, Lager, Stube - was zum Ort passt).\n\n';
+        // v7.12.605 (W4b, ChatGPT-Lektorate: "Stell Wahler zur Rede" bei Doc, obwohl Wahler nicht da): Die
+        // Optionen dürfen nur PHYSISCH ANWESENDE direkt adressieren. Liste aus Engine-Sicht (Orts-NPCs + Party).
+        try {
+          let _anw = [];
+          try { _anw = ((typeof getNpcsAtCurrentLocation === 'function') ? (getNpcsAtCurrentLocation() || []) : []).map(n => n && n.name).filter(Boolean); } catch (e) {}
+          try { if (typeof _party !== 'undefined' && Array.isArray(_party)) _party.forEach(p => { if (p && p.name && _anw.indexOf(p.name) === -1) _anw.push(p.name); }); } catch (e) {}
+          if (_anw.length) {
+            recap += 'ANWESENHEITS-REGEL (PFLICHT): Physisch anwesend sind JETZT nur: ' + _anw.join(', ') + '. Szene und Handlungsoptionen dürfen NUR diese Personen direkt adressieren (ansprechen, packen, zur Rede stellen, konfrontieren). Alle anderen Figuren sind NICHT hier - sie dürfen nur erwähnt oder per "zu X fahren / X aufsuchen" angesteuert werden, niemals als wären sie im Raum.\n\n';
+          }
+        } catch (e) {}
+        }
       }
     } catch (e) {}
     try {
@@ -22061,9 +22135,19 @@ KEINE anderen Themen mehr - kein neuer Tatort, keine neuen Verdaechtigen, keine 
             recap += `\n\nSTASI KNAPP ENTKOMMEN (Tension jetzt ${stasiTension}/5): Karl hat sich dem Zugriff durch kluges Ausweichen/Flucht entzogen. Die naechste Szene zeigt EINE konkrete Folge der Beinahe-Festnahme (ein verbrannter Kontakt, ein Wagen der abdreht, ein knapp verpasster Zugriff, eine Atempause an einem sicheren Ort) - dann laesst der unmittelbare Druck spuerbar nach. KEINE erneute "Festnahme unausweichlich"-Drohung in dieser Szene.`;
           } else {
             // Karl blieb stur -> echte Custody forcieren.
+            // v7.12.604 (ChatGPT P1, Run 2130 Sz36): KEIN Pflicht-Zugriff mehr, wenn der Fall im Abschluss ist
+            // (Klientin gesichert + Akten-Beat) - die Stasi bleibt Bedrohung im Nachklang, aber nicht als
+            // mechanische Pflicht-Festnahme direkt neben dem Fall-lösen-Button.
+            const _abschlussNah = !!(caseProgress && caseProgress.clientSecured
+              && Array.isArray(caseProgress.politicalBeatsHit) && caseProgress.politicalBeatsHit.indexOf('akten_gesichert') !== -1);
+            if (_abschlussNah) {
+              diag('progress', 'Stasi-Pflichtzugriff UNTERDRÜCKT: Klientin + Beweise gesichert, Fall im Abschluss - Bedrohung nur noch als Nachklang (kein forceCustody)');
+              recap += `\n\nSTASI-NACHKLANG: Die Stasi bleibt im Hintergrund spürbar (ein Wagen, ein Beobachter, ein Blick) - aber KEIN Zugriff mehr: Karl hat die Beweise und die Klientin aus ihrer Reichweite gebracht. Atmosphäre statt Festnahme.`;
+            } else {
             caseProgress.forceCustodyNextScene = true;
             caseProgress.stasiPflichtSeitScene = 0;
             diag('progress', '✦ Stasi-Zugriff droht: 2 Szenen kein Ausweichen -> NAECHSTE Szene erzwingt Festnahme (forceCustodyNextScene gesetzt). Diese Szene ist das letzte Fluchtfenster - flieht Karl jetzt aktiv, wird der Zugriff abgewendet.');
+            }
           }
         } else {
           // Direkt nach dem ersten Push (1 Szene danach): nur knappe Erinnerung, KEIN Spam-Toast.
@@ -26999,8 +27083,26 @@ async function chooseOption(option) {
       npcVerb: (option && (option._npcVerb || (option._npcInteraktion && option._npcInteraktion.verb))) || null,
       // v7.12.595 (ChatGPT P1, Run 1800 Sz2): Reise ist KEINE Ermittlungsaktion - sie darf nie ein Indiz auslösen.
       istReise: !!(option && (option._istReise || option.id === 'REISE')),
+      // v7.12.604 (ChatGPT P1, Run 2130 Sz12: "furze so heftig..." fand uebergabe_beobachtet): Freitext darf nur
+      // über EXPLIZITE Ermittlungs-Verben im Text indiz-fähig sein, nie über die heuristische Kategorie.
+      istFreitext: !!(option && option.id === 'FREITEXT'),
       sicherung: (option && option._sicherung) || null,
     };
+    // v7.12.604 (KONZEPT_WELTWAHRHEIT W3, schlank; ChatGPT P1 Runs 1847/2130): AKTIVE FLUCHT verlässt den Ort
+    // SOFORT - die Engine klebt nicht mehr am alten Ort ("Durchsuch die Wohnung" nach Flucht in den Opel).
+    // Transienter Ort bis zur nächsten Reise/Sicherung. NOTFLUCHT (Custody-Ausbruch) bleibt am Haftort - dort
+    // entscheidet der Würfel.
+    try {
+      const _k = (window._letzteAktion.kategorie || '');
+      if ((option && option.id === 'FLUCHT') || _k === 'FLUCHT') {
+        if (typeof engineCurrentLocation !== 'undefined' && engineCurrentLocation && !engineCurrentLocation.transient) {
+          const _vorherOrt = engineCurrentLocation.name || '?';
+          engineCurrentLocation = { name: 'Unterwegs - auf der Flucht', sektor: engineCurrentLocation.sektor || '', transient: true, vorherOrt: _vorherOrt };
+          if (typeof diag === 'function') diag('state', '✦ W3 FLUCHT-ORT: "' + _vorherOrt + '" -> transient "Unterwegs - auf der Flucht" (Engine besitzt Ort; nächste Reise/Sicherung setzt neuen Ort)');
+          if (typeof renderImRaumAnzeige === 'function') { try { renderImRaumAnzeige(); } catch (e) {} }
+        }
+      }
+    } catch (e) {}
   } catch (e) { window._letzteAktion = null; }
   // v7.12.555: Flucht-Flag früh setzen, damit die v552-Orts-Korrektur die Flucht als legitimen Ortswechsel
   // erkennt und NICHT zurückkorrigiert (Flucht darf weg vom Gefahren-Ort). Reset passiert beim Apply-Punkt.
@@ -29364,8 +29466,10 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           let _mNmPre = 'Margarete Stein';
           const _kmPre = (caseSetup && typeof caseSetup.klient === 'string') ? caseSetup.klient.match(/^([A-ZÄÖÜ][a-zäöüß]+(?:\s+[A-ZÄÖÜ][a-zäöüß]+)*)/) : null;
           if (_kmPre && _kmPre[1]) _mNmPre = _kmPre[1].trim();
-          if (!(typeof _istKlient === 'function' && caseProgress && caseProgress.clientState && caseProgress.clientState.status === 'secured' && _istKlient(_mNmPre, null))) _companionLock = { name: _mNmPre, sinceScene: (typeof sceneCounter === 'number' ? sceneCounter : 0), reason: 'mitgenommen' }; // v7.12.602: gesicherte Klientin nie locken
-          if (typeof diag === 'function') diag('detect', '✦ COMPANION-LOCK AN (vor Cast-Clean, Mitnahme): ' + _mNmPre + ' - "' + _umsgMit.slice(0,45).replace(/\s+/g,' ') + '"');
+          if (!(typeof _istKlient === 'function' && caseProgress && caseProgress.clientState && caseProgress.clientState.status === 'secured' && _istKlient(_mNmPre, null))) {
+            _companionLock = { name: _mNmPre, sinceScene: (typeof sceneCounter === 'number' ? sceneCounter : 0), reason: 'mitgenommen' };
+            if (typeof diag === 'function') diag('detect', '✦ COMPANION-LOCK AN (vor Cast-Clean, Mitnahme): ' + _mNmPre + ' - "' + _umsgMit.slice(0,45).replace(/\s+/g,' ') + '"');
+          } else if (typeof diag === 'function') diag('detect', 'COMPANION-LOCK unterdrückt (Klientin secured): ' + _mNmPre); // v7.12.604: diag war AUSSERHALB des Guards -> log log behauptete AN trotz Unterdrückung
         }
       } catch (e) { /* Mitnahme-Pre-Check optional */ }
 
@@ -31593,6 +31697,19 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
               + '|' + p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '[^.]{0,60}(steht (im|auf|in|geschrieben)|im bericht|in der liste|im notizbuch|auf dem (zettel|schuldschein|papier)|in der akte|notiert|aufgeschrieben|eingetragen|als verantwortlich)',
               'i');
             if (_papierRe.test(_stxt)) return true;
+            // v7.12.605 (W4, ChatGPT-Lektorate 1847/2007/2130): TELEFON & DRITT-BERICHT sind KEINE Präsenz.
+            // "Wahler am Apparat", "Anruf von Margarete", "bei Wahler gesehen", "Wahler hat unterschrieben" -
+            // all das beamte den NPC bisher körperlich in den Raum. Gegenprobe: echtes Präsenz-Verb gewinnt.
+            const _fernRe = new RegExp(
+              '(am (apparat|telefon|anderen ende)|anruf (von|aus)|in der leitung|am hoerer|stimme (von|aus dem hoerer))[^.]{0,60}' + pEsc
+              + '|' + pEsc + '[^.]{0,60}(am (apparat|telefon|anderen ende)|in der leitung|am hoerer|ruft an|telefonisch|meldet sich (am|per) telefon)'
+              + '|\\b(bei|von|ueber|über)\\s+' + pEsc + '[^.]{0,40}(gesehen|gehoert|gehört|erzaehlt|erzählt|berichtet|erfahren|gesprochen)'
+              + '|' + pEsc + '[^.]{0,50}\\b(hat[^.]{0,30}(unterschrieben|abgezeichnet|angeordnet|unterzeichnet|veranlasst)|soll angeblich|angeblich|laut aussage)\\b',
+              'i');
+            if (_fernRe.test(_stxt)) {
+              const _praesenzGegen = new RegExp(pEsc + '\\b[^.]{0,25}\\b(tritt (ein|vor|her)|steht (vor|in|am|neben)|sitzt (am|im|neben|vor)|packt|greift|stuermt|betritt|lehnt|kommt (herein|auf dich|naeher))\\b', 'i');
+              if (!_praesenzGegen.test(_stxt)) return true;
+            }
             return false;
           });
           if (_bericht) {
@@ -32036,8 +32153,10 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
               let _mNm = 'Margarete Stein';
               const _kmm = (caseSetup && typeof caseSetup.klient === 'string') ? caseSetup.klient.match(/^([A-ZÄÖÜ][a-zäöüß]+(?:\s+[A-ZÄÖÜ][a-zäöüß]+)*)/) : null;
               if (_kmm && _kmm[1]) _mNm = _kmm[1].trim();
-              if (!(typeof _istKlient === 'function' && caseProgress && caseProgress.clientState && caseProgress.clientState.status === 'secured' && _istKlient(_mNm, null))) _companionLock = { name: _mNm, sinceScene: (typeof sceneCounter === 'number' ? sceneCounter : 0), reason: 'mitgenommen' }; // v7.12.602
-              if (typeof diag === 'function') diag('detect', '✦ COMPANION-LOCK AN (Mitnahme erkannt, kein Beat): ' + _mNm + ' - "' + _aktion.slice(0,45).replace(/\s+/g,' ') + '"');
+              if (!(typeof _istKlient === 'function' && caseProgress && caseProgress.clientState && caseProgress.clientState.status === 'secured' && _istKlient(_mNm, null))) {
+                _companionLock = { name: _mNm, sinceScene: (typeof sceneCounter === 'number' ? sceneCounter : 0), reason: 'mitgenommen' };
+                if (typeof diag === 'function') diag('detect', '✦ COMPANION-LOCK AN (Mitnahme erkannt, kein Beat): ' + _mNm + ' - "' + _aktion.slice(0,45).replace(/\s+/g,' ') + '"');
+              } else if (typeof diag === 'function') diag('detect', 'COMPANION-LOCK unterdrückt (Klientin secured): ' + _mNm); // v7.12.604
             }
           } catch (e) { /* Mitnahme-Erkennung optional */ }
           const _sv = istSicherungsVollzug(_aktion);
@@ -32068,8 +32187,10 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
                 if (_km && _km[1]) _mName = _km[1].trim();
               } catch (e) {}
               if (!_companionLock) {
-                if (!(typeof _istKlient === 'function' && caseProgress && caseProgress.clientState && caseProgress.clientState.status === 'secured' && _istKlient(_mName, null))) _companionLock = { name: _mName, sinceScene: (typeof sceneCounter === 'number' ? sceneCounter : 0) }; // v7.12.602
-                if (typeof diag === 'function') diag('detect', '✦ COMPANION-LOCK AN: ' + _mName + ' ist Begleitperson (mitgenommen/geschützt) - wird bei Ortswechseln gehalten bis Fallende');
+                if (!(typeof _istKlient === 'function' && caseProgress && caseProgress.clientState && caseProgress.clientState.status === 'secured' && _istKlient(_mName, null))) {
+                  _companionLock = { name: _mName, sinceScene: (typeof sceneCounter === 'number' ? sceneCounter : 0) };
+                  if (typeof diag === 'function') diag('detect', '✦ COMPANION-LOCK AN: ' + _mName + ' ist Begleitperson (mitgenommen/geschützt) - wird bei Ortswechseln gehalten bis Fallende');
+                } else if (typeof diag === 'function') diag('detect', 'COMPANION-LOCK unterdrückt (Klientin secured): ' + _mName); // v7.12.604: diag war außerhalb des v602-Guards -> Log behauptete AN trotz Unterdrückung (Lektorat-P1 war Diag-Lüge)
               }
             }
             if (_sv.intent && !_sv.vollzug) {
