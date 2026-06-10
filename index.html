@@ -178,20 +178,25 @@
   }
   /* Sticky status bar (visible during play, persists across scroll, tappable) */
   .status-bar {
-    position: sticky;
+    /* v7.12.572 (Schritt A, ChatGPT-bestätigt): FIXED statt sticky. sticky klebte auf iPhone nicht zuverlässig
+       (overflow-Vorfahren/Container) -> Verfassung+Spannung scrollten weg, man musste hochscrollen. fixed am
+       Viewport-Top klebt immer. Spacer (#status-bar-spacer-mobile) fängt den Höhensprung im Layout-Fluss auf.
+       Zweizeilig: Zeile 1 = Werte+Zeit, Zeile 2 = Ort (flex-wrap). */
+    position: fixed;
     top: 0;
-    z-index: 50;
-    background: rgba(10, 10, 15, 0.92);
+    left: 0;
+    right: 0;
+    z-index: 200;
+    background: rgba(10, 10, 15, 0.96);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    border-bottom: 1px solid rgba(200,191,168,0.12);
-    /* v7.12.66: vertikales Padding 10px->14px - die Leiste ist hoeher und damit
-       auf dem Handy leichter zu treffen (User-Befund: schwer anzutippen). */
-    padding: 14px 16px;
-    margin: 0 -20px 16px;
+    border-bottom: 1px solid rgba(200,191,168,0.15);
+    padding: 10px 16px;
+    margin: 0;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 8px;
+    gap: 6px 8px;
     font-size: 10px;
     letter-spacing: 1.5px;
     text-transform: uppercase;
@@ -201,6 +206,17 @@
     -webkit-tap-highlight-color: transparent;
     transition: background 0.2s;
     overflow: hidden;
+  }
+  /* Spacer faengt die nun fehlende Flusshoehe der fixed-Leiste auf. NUR auf Mobile (<761px) - Desktop hat
+     #status-bar-spacer-desktop. Sonst doppelte Hoehe. */
+  #status-bar-spacer-mobile {
+    display: none;
+    height: 64px;
+  }
+  @media (max-width: 760px) {
+    .status-bar:not(.hidden) ~ #status-bar-spacer-mobile {
+      display: block;
+    }
   }
   .status-bar:hover, .status-bar:active {
     background: rgba(20, 18, 25, 0.96);
@@ -228,7 +244,7 @@
        aber NUR wenn die Leiste sichtbar ist (Spiel laeuft). Vor Spielstart (.hidden) kein Platz. */
     #status-bar-spacer-desktop {
       display: none;
-      height: 52px;          /* ~ Leistenhoehe (14px padding *2 + ~24px Inhalt) */
+      height: 64px;          /* v7.12.572: zweizeilig (Werte + Ort-Zeile) */
     }
     .status-bar:not(.hidden) + #status-bar-spacer-desktop {
       display: block;
@@ -2913,9 +2929,18 @@
     <span id="status-tag" class="hidden"></span>
     <span id="status-time" class="hidden"></span>
     <span id="status-loc" class="hidden"></span>
+    <!-- v7.12.572 (Schritt A): sichtbare ORT-Zeile (zweite Zeile durch flex-basis:100%). ChatGPT-P1: der Ort muss
+         permanent sichtbar sein, weil fast alle letzten Bugs Ort/Prosa/Engine-Konflikte waren. + ⓘ-Hinweis, dass
+         die Leiste antippbar ist (Stand/Notizbuch/Inventar). -->
+    <div id="status-ort-zeile" style="flex-basis:100%;display:flex;align-items:center;gap:6px;font-size:9.5px;color:#9a9a9a;letter-spacing:0.08em;margin-top:1px;text-transform:none;">
+      <span id="status-ort-text" style="color:#cbbfa9;">—</span>
+      <span style="margin-left:auto;color:#6a6a6a;font-size:11px;" title="Tippen für Stand, Notizbuch, Inventar">ⓘ</span>
+    </div>
     <!-- v7.12.41: GEWAHRSAM-Badge - erscheint wenn karlInStasiCustody=true -->
     <span id="status-custody-badge" class="hidden" style="font-size:0.65em;color:#ff4444;font-family:var(--font-mono);letter-spacing:0.05em;margin-left:4px;">⚠ GEWAHRSAM</span>
   </div>
+  <!-- v7.12.572 (Schritt A): Spacer faengt die Hoehe der fixed-Statusleiste auf (Mobile + Desktop). -->
+  <div id="status-bar-spacer-mobile" aria-hidden="true"></div>
   <!-- v7.12.430: Platzhalter, der auf dem Desktop die nun fixierte (fixed) Status-Leiste im
        Layout-Fluss ersetzt, damit der Szeneninhalt nicht nach oben springt. Nur sichtbar, wenn
        die Leiste sichtbar ist (Spiel laeuft) - via Geschwister-Selektor an .status-bar gekoppelt. -->
@@ -3042,7 +3067,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.568</div>
+    <div class="start-version">Schatten v7.12.572</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3248,7 +3273,7 @@
   <div id="freitext-block" class="hidden" style="margin-top:10px;padding:8px 10px;border:1px dashed #5a4e42;border-radius:6px;background:rgba(40,34,28,0.25);opacity:0.92;">
     <div id="freitext-label" style="font-size:calc(10px * var(--reading-scale));color:#867868;margin-bottom:5px;letter-spacing:0.03em;line-height:1.4;">Oder sag Karl in eigenen Worten, was er tun soll</div>
     <div class="freitext-row" style="display:flex;gap:6px;">
-      <input id="freitext-input" type="text" autocomplete="off" placeholder="z.B. fahr zu Doc Wagner"
+      <input id="freitext-input" type="text" autocomplete="off" placeholder="z.B. durchsuch den Raum nach Indizien"
         style="flex:1;min-width:0;padding:7px 10px;background:#1a1611;border:1px solid #403930;border-radius:4px;color:#cbbfa9;font-family:inherit;font-size:calc(12px * var(--reading-scale));line-height:1.5;" />
       <button id="freitext-send" type="button"
         style="padding:7px 13px;background:#322a22;border:1px solid #4d4234;border-radius:4px;color:#cbbfa9;cursor:pointer;font-family:inherit;font-size:calc(12px * var(--reading-scale));">Los</button>
@@ -3264,7 +3289,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.568</span>
+    <span>Schatten v7.12.572</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6539,6 +6564,45 @@ function pruefeKernIndizFund(sceneText) {
 }
 // ===== Ende Engine-Ortssystem =====
 
+// v7.12.570 (ChatGPT-P1, Run v568): REQUIRED-LOCATION-CHECK. Nach dem Wahler-Ortsfix (v568) entstand der
+// Gegen-Totlauf: Karl flieht in den Opel, wählt dann "Durchsuch die Wohnung" - die KI erzählt die Wohnung, die
+// Engine biegt den Ort auf Opel zurück, Prosa und Wahrheit laufen auseinander. Lösung: ortsgebundene Aktionen VOR
+// dem Request prüfen. Erkennt am Aktionstext, welcher Ort(styp) nötig ist, und ob Karl dort enginegültig ist.
+// Gibt {ok:true} wenn die Aktion hier möglich ist, sonst {ok:false, grund, zielOrt?}.
+function _ortKeywordGruppen() {
+  // Schlüsselwort-Gruppen -> erforderlicher Orttyp. Bewusst eng gehalten (nur eindeutig ortsgebundene Aktionen),
+  // damit freie Aktionen (reden, schießen, nachdenken) NICHT fälschlich blockiert werden.
+  return [
+    { typ: 'wohnung', re: /(durchsuch|durchwühl|wühl|kramst?)\w*\s+(den |die |das )?(wohnung|zimmer|schlafzimmer|kueche|küche|schreibtisch|schublade|nachttisch|kommode|schrank)|(tuerspion|türspion)|(wohnungstuer|wohnungstür)|verbarrikadier\w*\s+(die |das )?(tuer|tür|wohnung)/ },
+  ];
+}
+// Ist der aktuelle Engine-Ort ein "Raum-Ort" (Wohnung/Büro/Praxis), an dem Durchsuchen etc. Sinn ergibt?
+// Der transiente Opel ist KEIN solcher Ort.
+function _aktuellerOrtIstRaum() {
+  if (!engineCurrentLocation || !engineCurrentLocation.name) return false;
+  const n = normForMatch(engineCurrentLocation.name);
+  if (/opel|olympia|fahrzeug|wagen|unterwegs|transit/.test(n)) return false; // mobiler Ort
+  return true;
+}
+// Prüft, ob eine Aktion am aktuellen Ort möglich ist. Aktuell nur die klarste Klasse: Wohnungs-/Raum-Durchsuchung
+// im mobilen Opel. Bewusst minimal - lieber wenige sichere Blocks als viele Fehlalarme.
+function pruefeAktionAmOrt(aktionText) {
+  try {
+    const txt = normForMatch(aktionText || '');
+    if (!txt) return { ok: true };
+    const gruppen = _ortKeywordGruppen();
+    for (const g of gruppen) {
+      if (g.re.test(txt)) {
+        // Diese Aktion braucht einen Raum-Ort. Ist Karl gerade im mobilen Opel?
+        if (!_aktuellerOrtIstRaum()) {
+          return { ok: false, grund: 'Das geht hier nicht - du bist im ' + (engineCurrentLocation ? engineCurrentLocation.name : 'Wagen') + '. Reise erst zu dem Ort, den du durchsuchen willst (Reisen-Button).' };
+        }
+      }
+    }
+  } catch (e) { /* defensiv - im Zweifel erlauben */ }
+  return { ok: true };
+}
+
 // v7.12.56: ZENTRALE TAGESZEIT-LOGIK. "Ist es Abend oder Nacht?" wurde an 3
 // Stellen mit UNTERSCHIEDLICHEN Schwellwerten definiert (>=4 beim Schlaf-Button,
 // >=3 beim KI-Prompt, >=4 beim Romance-Check). Index 3 ist NACHMITTAG, nicht
@@ -6630,7 +6694,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.568';
+window.SCHATTEN_VERSION = 'v7.12.572';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -10599,9 +10663,17 @@ function formatSetupCard(idx, setup) {
 // ensureSpielAuth() fragt es einmalig ab. Hinweis: Eine reine Frontend-Sperre waere
 // wertlos (Proxys direkt aufrufbar) - der ECHTE Schutz sitzt serverseitig in den Proxys.
 function getSpielAuth() {
-  try { return sessionStorage.getItem('schatten_auth') || ''; } catch (e) { return ''; }
+  // v7.12.569 (Benjamin-Befund): Passwort in localStorage statt sessionStorage. sessionStorage wird beim Schließen
+  // des Browser-Tabs gelöscht -> am nächsten Tag "Zugang verweigert" (auth_403) mitten im laufenden Spiel = Deadlock.
+  // localStorage überlebt den Tab-Neustart. sessionStorage als Fallback für bereits laufende Alt-Sitzungen.
+  try {
+    const ls = localStorage.getItem('schatten_auth');
+    if (ls) return ls;
+    return sessionStorage.getItem('schatten_auth') || '';
+  } catch (e) { return ''; }
 }
 function setSpielAuth(pw) {
+  try { localStorage.setItem('schatten_auth', pw || ''); } catch (e) { /* ignore */ }
   try { sessionStorage.setItem('schatten_auth', pw || ''); } catch (e) { /* ignore */ }
 }
 // Fragt das Passwort EINMAL pro Sitzung ab. Gibt true zurueck, wenn ein Passwort gesetzt
@@ -13917,6 +13989,16 @@ function showHeader(scene) {
     }
   }
   document.getElementById('status-loc').textContent = normalizeLocForDisplay(scene.ort);
+  // v7.12.572 (Schritt A): die sichtbare ORT-Zeile zeigt den ENGINE-Ort (die Wahrheit), nicht scene.ort (KI). ChatGPT:
+  // so erkennt der Spieler sofort Ort/Prosa-Konflikte. Fallback auf scene.ort wenn kein Engine-Ort.
+  try {
+    const _ortEl = document.getElementById('status-ort-text');
+    if (_ortEl) {
+      const _engineOrt = (typeof engineCurrentLocation === 'object' && engineCurrentLocation && engineCurrentLocation.name)
+        ? engineCurrentLocation.name : (scene.ort || '—');
+      _ortEl.textContent = normalizeLocForDisplay(_engineOrt) || '—';
+    }
+  } catch (e) { /* defensiv */ }
   // v7.12.44: currentOrt global aktualisieren - normalisierter Kleinbuchstaben-Ort
   // fuer spätere Ort-Abfragen (isAlreadyHome, Custody-Detect etc.)
   // v7.12.53: Bei fehlendem scene.ort NICHT den alten Wert halten (Geister-Zustand!),
@@ -19259,7 +19341,7 @@ function renderOptions(scene) {
         _ftBlock.style.opacity = '0.6';
       } else {
         if (_ftLabel) _ftLabel.textContent = 'Oder sag Karl in eigenen Worten, was er tun soll';
-        if (_ftInput) { _ftInput.disabled = false; _ftInput.style.opacity = ''; _ftInput.placeholder = 'z.B. fahr zu Doc Wagner'; }
+        if (_ftInput) { _ftInput.disabled = false; _ftInput.style.opacity = ''; _ftInput.placeholder = 'z.B. durchsuch den Raum nach Indizien'; }
         if (_ftBtn) { _ftBtn.disabled = false; _ftBtn.style.opacity = ''; _ftBtn.style.cursor = 'pointer'; }
         _ftBlock.style.opacity = '0.92';
       }
@@ -22707,7 +22789,23 @@ VERBOTEN: Karl wacht woanders auf ohne Erklaerung. Wenn du Pfad B waehlst, MUSST
     // verwerfen, damit beim naechsten Versuch neu gefragt wird. NICHT retrybar - ein
     // erneuter Call mit demselben falschen Passwort wuerde nur wieder 403 liefern.
     if (response.status === 403) {
+      // v7.12.569 (Benjamin-Befund): KEIN Deadlock mehr. Passwort aus beiden Speichern verwerfen und sofort neu
+      // abfragen (ensureSpielAuth). Klappt die Wiedereingabe, wird der Request mit dem neuen Passwort wiederholt -
+      // der Spieler kann weiterspielen, ohne den Lauf zu verlieren. Bricht er ab, bleibt es beim Fehler.
+      try { localStorage.removeItem('schatten_auth'); } catch (e) { /* ignore */ }
       try { sessionStorage.removeItem('schatten_auth'); } catch (e) { /* ignore */ }
+      let reauthOk = false;
+      try {
+        if (typeof ensureSpielAuth === 'function') reauthOk = await ensureSpielAuth();
+      } catch (e) { reauthOk = false; }
+      if (reauthOk && getSpielAuth()) {
+        if (typeof diag === 'function') diag('state', 'AUTH: Passwort nach 403 neu eingegeben - Request wird wiederholt (kein Deadlock).');
+        const errRetry = new Error('Passwort neu eingegeben - bitte Aktion wiederholen.');
+        errRetry.isAuthError = true;
+        errRetry.isRetryable = true; // erlaubt erneuten Versuch mit neuem Passwort
+        errRetry.reauthSucceeded = true;
+        throw errRetry;
+      }
       const err = new Error('Zugang verweigert - falsches oder fehlendes Passwort. Bitte Seite neu laden und Passwort erneut eingeben.');
       err.isAuthError = true;
       err.isRetryable = false;
@@ -25999,6 +26097,23 @@ async function chooseOption(option) {
     return;
   }
   chooseOptionInFlight = true;
+  // v7.12.570 (ChatGPT-P1): REQUIRED-LOCATION-CHECK. Ortsgebundene Aktionen (z.B. "Wohnung durchsuchen") dürfen nicht
+  // ausgeführt werden, wenn Karl gar nicht am passenden Ort ist (z.B. im Opel nach Flucht). Statt die KI eine falsche
+  // Szene erzählen zu lassen, die dann zurückkorrigiert wird: hier hart abfangen, Hinweis zeigen, KEIN Request.
+  try {
+    if (option && option.text && !(option.kategorie === 'REISE' || option._kategorie === 'REISE') && typeof pruefeAktionAmOrt === 'function') {
+      const check = pruefeAktionAmOrt(option.text);
+      if (check && check.ok === false) {
+        chooseOptionInFlight = false; // Lock sofort freigeben
+        if (typeof diag === 'function') diag('drift', 'AKTION AM ORT BLOCKIERT: "' + (option.text || '').slice(0, 50) + '" - ' + check.grund);
+        // Klick aus dem Log entfernen (wurde noch nicht gepusht) + Hinweis als Toast.
+        if (typeof showProgressToast === 'function') {
+          try { showProgressToast('Hier nicht möglich', check.grund, 'caution', 'required-location'); } catch (e) {}
+        }
+        return;
+      }
+    }
+  } catch (e) { /* defensiv */ }
   // v7.12.314: Neuer Spieler-getriebener Lauf -> Epoche hochzaehlen. Ein evtl. noch im
   // Hintergrund haengender alter Lauf wird dadurch "stale" und committet nichts mehr.
   currentRequestEpoch++;
@@ -34640,6 +34755,18 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         performApiCall(userMsg, isStart, optionForRollback, retryCount, rateLimitCount + 1, openingRetryCount, intentRepairCount);
       } else {
         performApiCall(userMsg, isStart, undefined, retryCount, rateLimitCount + 1, openingRetryCount, intentRepairCount);
+      }
+      return;
+    } else if (e.reauthSucceeded && retryCount < MAX_AUTO_RETRIES) {
+      // v7.12.569: Nach erfolgreicher Passwort-Wiedereingabe (auth_403) denselben Request mit demselben Modell
+      // wiederholen - kein Modellwechsel nötig, nur das neue Passwort zählt. So spielt der Spieler nahtlos weiter.
+      hideLoading();
+      showLoading();
+      skipNextThrottle = true;
+      if (optionForRollback) {
+        performApiCall(userMsg, isStart, optionForRollback, retryCount + 1, rateLimitCount, openingRetryCount, intentRepairCount);
+      } else {
+        performApiCall(userMsg, isStart, undefined, retryCount + 1, rateLimitCount, openingRetryCount, intentRepairCount);
       }
       return;
     } else if (e.isRetryable && retryCount < MAX_AUTO_RETRIES) {
