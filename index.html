@@ -3191,7 +3191,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.605</div>
+    <div class="start-version">Schatten v7.12.607</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.605</span>
+    <span>Schatten v7.12.607</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6715,6 +6715,15 @@ function gesamtDefinierteIndizien() {
     return n;
   } catch (e) { return 0; }
 }
+// v7.12.606: alle definierten Indiz-Objekte des Falls (für das Wahrheits-Fundament-Gate).
+function alleDefiniertenIndizien() {
+  try {
+    const locs = (typeof getCaseLocations === 'function') ? getCaseLocations() : [];
+    const out = [];
+    locs.forEach(l => { if (l && Array.isArray(l.indizien)) l.indizien.forEach(ind => { if (ind && ind.id) out.push(ind); }); });
+    return out;
+  } catch (e) { return []; }
+}
 // v7.12.591 (I2b): klassifiziert die gewählte Aktion in 'umgebung' | 'person' | null. Nutzt die gemerkte Kategorie
 // (window._letzteAktion) + Textheuristik. Umgebung = erkunden/durchsuchen/absuchen/Akten lesen/beobachten. Person =
 // ansprechen/befragen/bestechen/überzeugen (NPC-gebunden). Damit bekommt der Spieler das Indiz, wenn die Aktion passt
@@ -6927,8 +6936,10 @@ function _ortKeywordGruppen() {
 // Der transiente Opel ist KEIN solcher Ort.
 function _aktuellerOrtIstRaum() {
   if (!engineCurrentLocation || !engineCurrentLocation.name) return false;
+  // v7.12.607 (ChatGPT-Code-Review P1.2): transient = unterwegs = KEIN Raum-Ort (unabhängig vom Namen).
+  if (engineCurrentLocation.transient) return false;
   const n = normForMatch(engineCurrentLocation.name);
-  if (/opel|olympia|fahrzeug|wagen|unterwegs|transit/.test(n)) return false; // mobiler Ort
+  if (/opel|olympia|fahrzeug|wagen|unterwegs|transit|auf der flucht|hinterhof|gasse/.test(n)) return false; // mobiler Ort
   return true;
 }
 // Prüft, ob eine Aktion am aktuellen Ort möglich ist. Aktuell nur die klarste Klasse: Wohnungs-/Raum-Durchsuchung
@@ -7041,7 +7052,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.605';
+window.SCHATTEN_VERSION = 'v7.12.607';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -7256,6 +7267,17 @@ function _partyAdd(npc) {
   }
   if (!npc.id) npc.id = 'npc_' + normForMatch(npc.name).replace(/\s+/g, '_');
   if (_istInParty(npc.id, npc.name)) return;
+  // v7.12.607 (ChatGPT-Code-Review P1.4): ZENTRALE Wächter direkt in der State-Funktion - damit ist JEDER
+  // Codepfad (UI, Popup, Garantien, künftige Item/Encounter-Systeme) automatisch sicher, nicht nur die Call-Sites.
+  if (caseProgress && caseProgress.clientState && caseProgress.clientState.status === 'secured' && _istKlient(npc.name, npc.id)) {
+    if (typeof diag === 'function') diag('drift', '⚠ PARTY-ADD verweigert (zentral): Klientin ist secured - kommt nicht zurück in die Party');
+    return false;
+  }
+  const _zentralAblehn = (typeof _npcLehntMitnahmeAb === 'function') ? _npcLehntMitnahmeAb(npc.name, npc.tag) : null;
+  if (_zentralAblehn) {
+    if (typeof diag === 'function') diag('state', 'PARTY-ADD verweigert (zentral): ' + (npc.name || npc.id) + ' - ' + _zentralAblehn);
+    return false;
+  }
   _party.push({ id: npc.id, name: npc.name || npc.id, tag: npc.tag || '', sinceScene: (typeof sceneCounter === 'number' ? sceneCounter : 0) });
   if (typeof diag === 'function') diag('state', '✦ PARTY +: ' + (npc.name || npc.id) + ' [' + (npc.tag||'?') + '] -> Party (' + _party.length + ')');
   // v7.12.600 (W1): Klientin in der Party = with_karl (Engine-Ereignis).
@@ -12276,11 +12298,40 @@ function politicalBeatsGateErfuellt(opts) {
     // damit ein gut-ermittelter Run nicht an einem nicht-feuernden Detektor scheitert.
     const _strict = !!(opts && opts.strict);
     const _wahlerOk = has('wahler_verantwortlich') || (!_strict && _wahlerEngineOk);
-    const basisOk = has('schmuggelroute_belegt') && _wahlerOk;
+    const _basisBeatsOk = has('schmuggelroute_belegt') && _wahlerOk;
+    // v7.12.606 (Benjamin-Freigabe, Run 2225: Fall löste in 9 Szenen mit 1 Indiz - KI schenkte wahrheit_erkannt
+    // auf Basis zweier Prosa-Keyword-Beats): WAHRHEITS-FUNDAMENT bei definierten Fällen. Die Wahrheit braucht
+    // mindestens 3 GEFUNDENE definierte Indizien, davon mindestens 1 täterbelastendes (Stage-Floor >= 2:
+    // Lemkes Belastung, Wahlers Unterschrift, Frachtlisten-Stempel, Original-Akten ...). Prosa-Beats allein
+    // erzeugen keinen Durchbruch mehr - das Versprechen "du löst den Fall über die richtigen Beweise" gilt.
+    let _fundamentOk = true;
+    let _fundamentFehlt = null;
+    try {
+      if (typeof caseHasDefinedEvidence === 'function' && caseHasDefinedEvidence()) {
+        const _gefIds = (caseProgress && Array.isArray(caseProgress.gefundeneIndizIds)) ? caseProgress.gefundeneIndizIds : [];
+        let _defAlle = [];
+        try { _defAlle = (typeof alleDefiniertenIndizien === 'function') ? (alleDefiniertenIndizien() || []) : []; } catch (e) {}
+        const _byId = {};
+        _defAlle.forEach(ind => { if (ind && ind.id) _byId[ind.id] = ind; });
+        const _gefDef = _gefIds.filter(id => _byId[id]);
+        const _belastend = _gefDef.filter(id => typeof _byId[id].stage === 'number' && _byId[id].stage >= 2);
+        // v7.12.607 (ChatGPT P2): Schwellen pro Fall konfigurierbar (caseSetup.definedEvidenceGate), Default 3/1 -
+        // kleinere künftige Fälle mit nur 2 harten Kernbeweisen werden nicht blockiert.
+        const _gateCfg = (caseSetup && caseSetup.definedEvidenceGate) || {};
+        const _minFound = (typeof _gateCfg.minFound === 'number') ? _gateCfg.minFound : 3;
+        const _minBurden = (typeof _gateCfg.minBurdening === 'number') ? _gateCfg.minBurdening : 1;
+        if (_gefDef.length < _minFound || _belastend.length < _minBurden) {
+          _fundamentOk = false;
+          _fundamentFehlt = 'Beweis-Fundament: ' + _gefDef.length + '/' + _minFound + ' Indizien' + (_belastend.length < _minBurden ? ', kein täterbelastendes Indiz (z.B. Lemke, Unterschrift, Frachtliste, Original-Akten)' : '');
+        }
+      }
+    } catch (e) {}
+    const basisOk = _basisBeatsOk && _fundamentOk;
     const sicherungOk = has('akten_gesichert') || has('margarete_gesichert');
     const fehlend = [];
     if (!has('schmuggelroute_belegt')) fehlend.push('Schmuggelroute belegen');
     if (!_wahlerOk) fehlend.push('Wahler als Verantwortlichen belegen');
+    if (!_fundamentOk && _fundamentFehlt) fehlend.push(_fundamentFehlt);
     if (!sicherungOk) fehlend.push('Akten sichern ODER Margarete/Beweise in Sicherheit bringen');
     return { aktiv: true, erfuellt: basisOk && sicherungOk, basisOk: basisOk, sicherungOk: sicherungOk, fehlend: fehlend };
   } catch (e) { return { aktiv: false, erfuellt: true, basisOk: true, sicherungOk: true, fehlend: [] }; }
@@ -18438,7 +18489,12 @@ function baueSicherungsButtons(container) {
 
     const _buttons = [];
     // --- PERSON SICHERN (margarete_gesichert) ---
-    if (!_personGesichert) {
+    // v7.12.607 (ChatGPT-Code-Review P1.3): _klientErreichbar wurde berechnet, aber NIE genutzt - "Margarete
+    // zu Helene bringen"-Buttons konnten erscheinen, obwohl sie gar nicht bei Karl war. Jetzt: Personen-Sicherung
+    // nur, wenn die Klientin physisch verfügbar ist (with_karl / in der Party / am Ort).
+    const _klientPhysischDa = _klientErreichbar
+      || !!(caseProgress && caseProgress.clientState && caseProgress.clientState.status === 'with_karl');
+    if (!_personGesichert && _klientPhysischDa) {
       // Bei Doc Wagner lassen: nur wenn Karl gerade in Doc Wagners Praxis ist (dort kann er sie lassen).
       if (_amOrt('doc wagner')) {
         _buttons.push({ label: _klientName + ' hier bei Doc Wagner in Sicherheit lassen', emoji: '🛟',
@@ -29266,8 +29322,14 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       if (_warFlucht && scene && scene.ort) {
         const _fluchtOrt = scene.ort.split(',')[0].trim(); // Hauptort (z.B. "Opel Olympia" / sicherer Ort)
         if (_fluchtOrt && (!_engineOrt || normForMatch(_fluchtOrt) !== normForMatch(_engineOrt.split(',')[0].trim()))) {
-          if (typeof diag === 'function') diag('state', 'FLUCHT-ORTSWECHSEL akzeptiert: Engine-Ort "' + _engineOrt + '" -> "' + _fluchtOrt + '" (Karl ist geflohen, KI-Fluchtort übernommen)');
-          engineCurrentLocation = { name: _fluchtOrt, sektor: (engineCurrentLocation && engineCurrentLocation.sektor) || '' };
+          // v7.12.607 (ChatGPT-Code-Review P1.1): transient NICHT verlieren! Vorher machte dieser Block aus dem
+          // sauberen W3-Fluchtort wieder einen normalen Ort ("Hinterhof") -> alte Raumoptionen kamen zurück.
+          // Der KI-Fluchtort verfeinert nur den ANZEIGENAMEN; Karl bleibt transient unterwegs, bis der Spieler
+          // bewusst reist oder sichert.
+          const _vorherTrans = !!(engineCurrentLocation && engineCurrentLocation.transient);
+          const _vorherOrtMerk = (engineCurrentLocation && engineCurrentLocation.vorherOrt) || _engineOrt || null;
+          if (typeof diag === 'function') diag('state', 'FLUCHT-ORTSWECHSEL akzeptiert: Engine-Ort "' + _engineOrt + '" -> "' + _fluchtOrt + '" (transient bleibt: Karl ist unterwegs, kein fester Ort)');
+          engineCurrentLocation = { name: _fluchtOrt, sektor: (engineCurrentLocation && engineCurrentLocation.sektor) || '', transient: true, vorherOrt: _vorherTrans ? _vorherOrtMerk : (_engineOrt || null) };
         }
       } else if (_engineOrt && scene && scene.ort && !_warReise && !_warHardForce) {
         const _kiMain = normForMatch((scene.ort || '').split(',')[0].trim());
@@ -29276,6 +29338,14 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (_kiMain && _engMain && _kiMain !== _engMain
             && !_kiMain.includes(_engMain) && !_engMain.includes(_kiMain)) {
           if (typeof diag === 'function') diag('drift', 'KI-EIGENMÄCHTIGER ORTSWECHSEL korrigiert: KI-ort "' + scene.ort + '" != Engine-Ort "' + _engineOrt + '" (keine Reise/HARD-FORCE) -> auf Engine-Ort zurückgesetzt');
+          // v7.12.607 (ChatGPT-Code-Review P1.5): Header-Korrektur heilt die PROSA nicht. Ab Stage 2 wird der
+          // Bruch explizit als P1 markiert (Prosa erwähnt den KI-Ort vermutlich weiter) - Messgrundlage für die
+          // Entscheidung, ob W2b (Retry/Lokal-Fallback) gebaut werden muss.
+          try {
+            const _stg = (caseProgress && typeof caseProgress.stage === 'number') ? caseProgress.stage : 0;
+            const _prosaNenntKiOrt = scene.szene && _kiMain && normForMatch(scene.szene).includes(_kiMain.split(/\s+/)[0]) && _kiMain.split(/\s+/)[0].length >= 5;
+            if (_stg >= 2) diag('drift', '⚠ ORT-PROSA-BRUCH (Stage ' + _stg + '): Header korrigiert, aber Prosa spielt vermutlich am KI-Ort' + (_prosaNenntKiOrt ? ' (KI-Ortsname kommt im Szenentext vor)' : '') + ' - W2b-Kandidat');
+          } catch (e) {}
           scene.ort = _engineOrt;
         }
       }
