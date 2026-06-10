@@ -191,12 +191,12 @@
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     border-bottom: 1px solid rgba(200,191,168,0.15);
-    padding: 10px 16px;
+    padding: 8px 16px;
     margin: 0;
+    /* v7.12.581: zwei feste Zeilen (Text / Balken) statt flex-wrap-Chaos. */
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 6px 8px;
+    flex-direction: column;
+    gap: 4px;
     font-size: 10px;
     letter-spacing: 1.5px;
     text-transform: uppercase;
@@ -206,6 +206,33 @@
     -webkit-tap-highlight-color: transparent;
     transition: background 0.2s;
     overflow: hidden;
+  }
+  /* v7.12.581: Zeile 1 = Text (Szene/Datum · Tageszeit · Ort), Zeile 2 = Balken. */
+  .status-zeile-text {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    min-width: 0;
+  }
+  .status-zeile-text .status-date { flex-shrink: 0; }
+  .status-tageszeit { color: #b0a890; flex-shrink: 0; }
+  .status-ort-inline {
+    color: #cbbfa9;
+    text-transform: none;
+    letter-spacing: 0.04em;
+    font-size: 9.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+    flex-shrink: 1;
+  }
+  .status-zeile-balken {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: nowrap;
   }
   /* Spacer faengt die nun fehlende Flusshoehe der fixed-Leiste auf. NUR auf Mobile (<761px) - Desktop hat
      #status-bar-spacer-desktop. Sonst doppelte Hoehe. */
@@ -1798,18 +1825,8 @@
     flex-shrink: 0;
     font-weight: 600;
   }
-  /* v7.12.575 (UI-Schritt B, ChatGPT-bestätigt): ▶ vor szene-auslösenden Buttons - "hier geht die Geschichte weiter".
-     Gilt für alle .option-btn (ABCD, Flucht, Notheilen, Schlafen, Romance, Resolve, NPC-Verben). NICHT für Werkzeuge
-     (.option-btn-reise = Reisen + Notizbuch öffnen nur Menüs/Übersicht, lösen keine Szene aus). ▶ neutral, klein. */
-  .option-btn .option-id::before {
-    content: '▶ ';
-    color: #7a8a6a;
-    font-size: 0.82em;
-    margin-right: 1px;
-  }
-  .option-btn-reise .option-id::before {
-    content: none;
-  }
+  /* v7.12.581: ▶-Einzelmarker (v575) entfernt - die Szene-vs-zeitlos-Trennung ist jetzt strukturell über die zwei
+     Kategorien "Übergang in nächste Szene" / "Bleibt in der Szene". Ein Marker pro Button wäre doppelt erklärt. */
   .option-text-wrap {
     display: flex;
     flex-direction: column;
@@ -1998,6 +2015,23 @@
     text-align: center;
     opacity: 0.8;
   }
+  /* v7.12.581: permanente Party-Anzeige über den Aktions-Kategorien. */
+  .party-anzeige {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px 6px;
+    margin: 0 0 12px;
+    padding: 7px 11px;
+    background: rgba(45,55,48,0.3);
+    border: 1px solid rgba(125,155,138,0.25);
+    border-radius: 6px;
+    font-size: calc(11px * var(--reading-scale));
+    color: #aebaa9;
+  }
+  .party-anzeige .party-symbol { font-size: 1.05em; }
+  .party-anzeige .party-label { color: #7d9b8a; letter-spacing: 0.04em; }
+  .party-anzeige .party-namen { color: #cbbfa9; }
   .ui-kategorien {
     display: flex;
     flex-direction: column;
@@ -2988,38 +3022,38 @@
        Scene-Header (ort-divider) ohnehin stehen. Spart Platz auf iPhone
        sodass die Energie/Verfassung/Fall-Balken nicht mehr ueberlappen. -->
   <div id="status-bar" class="status-bar hidden" role="button" aria-label="Details anzeigen" tabindex="0">
-    <span class="status-date" id="status-date"></span>
-    <span class="status-spacer"></span>
-    <div class="verfassung-dots" id="verfassung-dots" title="Verfassung"></div>
-    <!-- v7.9.11: Fall-Fortschritts-Anzeige. 4 Segmente: Stage 1 (Indizien), Stage 2 (Verdaechtiger), Stage 3 (Ueberfuehrt), Stage 4 (Klient berichtet). -->
-    <div class="case-progress" id="case-progress" title="Fall-Fortschritt">
-      <span class="case-progress-label">Fall</span>
-      <span class="case-progress-segment" data-stage="1"></span>
-      <span class="case-progress-segment" data-stage="2"></span>
-      <span class="case-progress-segment" data-stage="3"></span>
-      <span class="case-progress-segment" data-stage="4"></span>
+    <!-- v7.12.581 (Benjamin-Befund iPhone): Top-Bar in ZWEI feste Zeilen statt wildem flex-wrap. Zeile 1 = Text
+         (Szene/Datum · Tageszeit · Ort), Zeile 2 = Balken (Verfassung/Fall/Spannung). Kein unkontrollierter Umbruch
+         mehr, bei dem mal Balken in Zeile 2 rutschen und "Karl Mauers Büro" umbricht. -->
+    <div id="status-zeile-text" class="status-zeile-text">
+      <span class="status-date" id="status-date"></span>
+      <span id="status-tageszeit" class="status-tageszeit"></span>
+      <span id="status-ort-text" class="status-ort-inline">—</span>
     </div>
-    <div class="romance-dots hidden" id="romance-dots" title="Romantik-Tension (Tippen für Details)">
-      <span class="romance-label">Rm</span>
-      <span class="romance-dot"></span>
-      <span class="romance-dot"></span>
-      <span class="romance-dot"></span>
-      <span class="romance-dot"></span>
-      <span class="romance-dot"></span>
+    <div id="status-zeile-balken" class="status-zeile-balken">
+      <div class="verfassung-dots" id="verfassung-dots" title="Verfassung"></div>
+      <!-- v7.9.11: Fall-Fortschritts-Anzeige. 4 Segmente: Stage 1 (Indizien), Stage 2 (Verdaechtiger), Stage 3 (Ueberfuehrt), Stage 4 (Klient berichtet). -->
+      <div class="case-progress" id="case-progress" title="Fall-Fortschritt">
+        <span class="case-progress-label">Fall</span>
+        <span class="case-progress-segment" data-stage="1"></span>
+        <span class="case-progress-segment" data-stage="2"></span>
+        <span class="case-progress-segment" data-stage="3"></span>
+        <span class="case-progress-segment" data-stage="4"></span>
+      </div>
+      <div class="romance-dots hidden" id="romance-dots" title="Romantik-Tension (Tippen für Details)">
+        <span class="romance-label">Rm</span>
+        <span class="romance-dot"></span>
+        <span class="romance-dot"></span>
+        <span class="romance-dot"></span>
+        <span class="romance-dot"></span>
+        <span class="romance-dot"></span>
+      </div>
+      <div class="status-bars" id="status-bars"></div>
     </div>
-    <div class="status-bars" id="status-bars"></div>
-    <!-- v7.9.57: hidden Spans fuer status-tag/status-time/status-loc damit
-         JS-Code der diese Elemente befuellt nicht crasht. Werden nicht
-         angezeigt. -->
+    <!-- hidden Spans fuer status-tag/status-time/status-loc damit JS-Code der diese Elemente befuellt nicht crasht. -->
     <span id="status-tag" class="hidden"></span>
     <span id="status-time" class="hidden"></span>
     <span id="status-loc" class="hidden"></span>
-    <!-- v7.12.572 (Schritt A): sichtbare ORT-Zeile (zweite Zeile durch flex-basis:100%). ChatGPT-P1: der Ort muss
-         permanent sichtbar sein, weil fast alle letzten Bugs Ort/Prosa/Engine-Konflikte waren. + ⓘ-Hinweis, dass
-         die Leiste antippbar ist (Stand/Notizbuch/Inventar). -->
-    <div id="status-ort-zeile" style="flex-basis:100%;display:flex;align-items:center;gap:6px;font-size:9.5px;color:#9a9a9a;letter-spacing:0.08em;margin-top:1px;text-transform:none;">
-      <span id="status-ort-text" style="color:#cbbfa9;">—</span>
-    </div>
     <!-- v7.12.41: GEWAHRSAM-Badge - erscheint wenn karlInStasiCustody=true -->
     <span id="status-custody-badge" class="hidden" style="font-size:0.65em;color:#ff4444;font-family:var(--font-mono);letter-spacing:0.05em;margin-left:4px;">⚠ GEWAHRSAM</span>
   </div>
@@ -3151,7 +3185,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.580</div>
+    <div class="start-version">Schatten v7.12.581</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3373,7 +3407,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.580</span>
+    <span>Schatten v7.12.581</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6778,7 +6812,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.580';
+window.SCHATTEN_VERSION = 'v7.12.581';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -14082,6 +14116,13 @@ function showHeader(scene) {
         ? engineCurrentLocation.name : (scene.ort || '—');
       _ortEl.textContent = normalizeLocForDisplay(_engineOrt) || '—';
     }
+    // v7.12.581 (Benjamin): Tageszeit in der Top-Bar (Zeile 1), damit man nicht scrollen muss, um zu sehen ob
+    // Nacht/Vormittag etc. ist. Aus _aktTageszeitName (gameTimeIdx).
+    const _tzEl = document.getElementById('status-tageszeit');
+    if (_tzEl) {
+      let _tz = (typeof _aktTageszeitName === 'function') ? _aktTageszeitName() : '';
+      if (_tz) _tzEl.textContent = '· ' + _tz.charAt(0).toUpperCase() + _tz.slice(1);
+    }
   } catch (e) { /* defensiv */ }
   // v7.12.44: currentOrt global aktualisieren - normalisierter Kleinbuchstaben-Ort
   // fuer spätere Ort-Abfragen (isAlreadyHome, Custody-Detect etc.)
@@ -17716,7 +17757,7 @@ function bauePersonenButtons(container, modus) {
     const _marker = (modus === 'verwalten')
       ? (_inParty ? 'in Begleitung' : 'mitnehmen')
       : 'ansprechen';
-    btn.innerHTML = '<span class="option-id">' + (_inParty ? '♦' : '·') + '</span><span class="option-text-wrap"><span>'
+    btn.innerHTML = '<span class="option-id">' + (_inParty ? '🤝' : '·') + '</span><span class="option-text-wrap"><span>'
       + escapeHtml(npc.name) + '</span><span class="option-marker option-marker-system">' + _marker + '</span></span>';
     attachSafeTap(btn, () => { if (typeof oeffneNpcMenue === 'function') { _markPopupOpened(); oeffneNpcMenue(npc, modus); } });
     container.appendChild(btn);
@@ -17989,6 +18030,18 @@ function renderOptions(scene) {
     uebergangBody.appendChild(topActions);
     uiKatWrap.appendChild(uebergangSektion);
     uiKatWrap.appendChild(bleibtSektion);
+    // v7.12.581 (Benjamin-Befund): permanente PARTY-ANZEIGE über den Kategorien - man muss in jeder Szene sehen,
+    // wen man dabei hat (vorher nur Toast beim Aufnehmen, danach unsichtbar). Zeigt die _party-Mitglieder mit
+    // Team-Symbol. Verschwindet, wenn niemand dabei ist.
+    try {
+      if (Array.isArray(_party) && _party.length) {
+        const partyZeile = document.createElement('div');
+        partyZeile.className = 'party-anzeige';
+        const namen = _party.map(p => p.name).filter(Boolean).join(', ');
+        partyZeile.innerHTML = '<span class="party-symbol">🤝</span><span class="party-label">In Begleitung:</span> <span class="party-namen">' + escapeHtml(namen) + '</span>';
+        list.appendChild(partyZeile);
+      }
+    } catch (e) { /* defensiv */ }
     list.appendChild(uiKatWrap);
     // Validation: scene.optionen muss existieren und array sein
     if (!scene || !Array.isArray(scene.optionen) || scene.optionen.length === 0) {
@@ -18199,7 +18252,13 @@ function renderOptions(scene) {
       btn.classList.add('option-btn-aufloesen');
     }
     // 'normal' = kein Marker (KI hat keine Kategorie geliefert - selten)
-    btn.innerHTML = '<span class="option-id">' + opt.id + '</span><span class="option-text-wrap"><span>' + escapeHtml(fixEigennamen(opt.text)) + '</span>' + markerHtml + '</span>';
+    // v7.12.581 (Benjamin): A/B/C/D-Buchstaben passé (Optionen sind nicht mehr nummeriert wahrgenommen). Stattdessen
+    // ein Kategorie-Emoji, das die Art der Aktion zeigt (offensiv/defensiv/erkunden/beobachten). opt.id bleibt intern
+    // erhalten (Logging/Bot), nur die ANZEIGE ändert sich.
+    const _katEmoji = { OFFENSIV: '✊', DEFENSIV: '🛡️', ERKUNDEN: '🔍', BEOBACHTEN: '👁', HEILEN: '✚', FLUCHT: '🏃' };
+    const _optKat = (opt._kategorie || '').toUpperCase();
+    const _idAnzeige = _katEmoji[_optKat] || '·';
+    btn.innerHTML = '<span class="option-id">' + _idAnzeige + '</span><span class="option-text-wrap"><span>' + escapeHtml(fixEigennamen(opt.text)) + '</span>' + markerHtml + '</span>';
     // Tap-Detector: erlaubt Scrolling auch wenn der Finger auf einem Button startet.
     // Click wird nur ausgeloest wenn:
     // - Finger sich um weniger als TAP_MAX_MOVE Pixel bewegt hat
