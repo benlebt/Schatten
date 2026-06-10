@@ -3191,7 +3191,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.618</div>
+    <div class="start-version">Schatten v7.12.620</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.618</span>
+    <span>Schatten v7.12.620</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7056,7 +7056,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.618';
+window.SCHATTEN_VERSION = 'v7.12.620';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -7333,6 +7333,8 @@ function _planAdd(eintrag) {
 function _renderPlanLeiste() {
   try {
     let el = document.getElementById('aktionsPlanLeiste');
+    // v7.12.620: Wenn der Baukasten offen ist, zeigt ER den Plan - keine zweite (überdeckte) Leiste.
+    if (window._baukasten && window._baukasten.offen) { if (el) el.remove(); try { _renderBaukasten(); } catch (e) {} return; }
     if (!window._aktionsPlan.length) { if (el) el.remove(); return; }
     if (!el) {
       el = document.createElement('div');
@@ -7407,6 +7409,20 @@ function _bkChip(label, aktiv, onclick) {
 }
 function _bkSet(feld, wert) { try { window._baukasten[feld] = (window._baukasten[feld] === wert) ? null : wert; _renderBaukasten(); } catch (e) {} }
 function _bkToggle() { try { window._baukasten.offen = !window._baukasten.offen; _renderBaukasten(); } catch (e) {} }
+// v7.12.619 (Benjamin, Desktop-Screenshot): Button + Panel am CONTENT-Bereich (.container, max 760px)
+// ausrichten - nicht am Viewport-Rand und nicht exzessiv breit.
+function _bkAusrichten() {
+  try {
+    const c = document.querySelector('.container');
+    const r = c ? c.getBoundingClientRect() : null;
+    const b = document.getElementById('baukastenToggle');
+    if (b && r) b.style.right = Math.max(10, window.innerWidth - r.right + 10) + 'px';
+    const p = document.getElementById('aktionsBaukasten');
+    if (p && r) { p.style.left = Math.max(10, r.left) + 'px'; p.style.right = 'auto'; p.style.width = Math.min(r.width, 720) + 'px'; }
+    const pl = document.getElementById('aktionsPlanLeiste');
+    if (pl && r) { pl.style.left = (r.left + r.width / 2) + 'px'; }
+  } catch (e) {}
+}
 function _renderBaukastenButton() {
   try {
     if (document.getElementById('baukastenToggle')) return;
@@ -7417,6 +7433,8 @@ function _renderBaukastenButton() {
     b.style.cssText = 'position:fixed;bottom:148px;right:10px;z-index:8999;width:42px;height:42px;border-radius:50%;border:1px solid #8a7a58;background:rgba(12,12,14,0.92);color:#d4b86a;font-size:20px;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,0.5);';
     b.onclick = _bkToggle;
     document.body.appendChild(b);
+    _bkAusrichten();
+    try { window.addEventListener('resize', _bkAusrichten); } catch (e) {}
   } catch (e) {}
 }
 function _renderBaukasten() {
@@ -7430,11 +7448,31 @@ function _renderBaukasten() {
       el.style.cssText = 'position:fixed;bottom:84px;right:10px;left:10px;z-index:8998;background:rgba(12,12,14,0.97);border:1px solid #8a7a58;border-radius:10px;padding:10px 12px;max-height:55vh;overflow-y:auto;box-shadow:0 6px 24px rgba(0,0,0,0.7);color:#e8e0cc;font-size:13px;';
       document.body.appendChild(el);
     }
+    _bkAusrichten();
     const npcsHier = (typeof getNpcsAtCurrentLocation === 'function') ? (getNpcsAtCurrentLocation() || []) : [];
     const akteure = ['Karl'].concat((typeof _party !== 'undefined' && Array.isArray(_party)) ? _party.map(p => p.name).filter(Boolean) : []);
     const itemsK = (typeof _itemsBeiKarl === 'function') ? _itemsBeiKarl() : [];
-    const ziele = npcsHier.map(n => n && n.name).filter(n => n && (!bk.akteur || normForMatch(n) !== normForMatch(bk.akteur)));
+    // v7.12.619 (Benjamin): eigene Leute sind KEINE Ziele - Party-Mitglieder, die Klientin und der Akteur
+    // selbst fliegen aus der Ziel-Liste (man setzt Doc nicht auf Margarete an).
+    const _eigene = {};
+    try { if (typeof _party !== 'undefined' && Array.isArray(_party)) _party.forEach(p => { if (p && p.name) _eigene[normForMatch(p.name)] = true; }); } catch (e) {}
+    try { if (typeof clientProfile !== 'undefined' && clientProfile && clientProfile.name) _eigene[normForMatch(clientProfile.name)] = true; } catch (e) {}
+    _eigene['karl'] = true; _eigene['karl mauer'] = true;
+    const ziele = npcsHier.map(n => n && n.name).filter(n => n && !_eigene[normForMatch(n)] && (!bk.akteur || normForMatch(n) !== normForMatch(bk.akteur)));
     let h = '<div style="font-weight:bold;color:#d4b86a;letter-spacing:0.05em;margin-bottom:4px;">🧩 AKTIONS-BAUKASTEN</div>';
+    // v7.12.620 (Benjamin: "jeder Person eine eigene Aktion zuordnen"): Der PLAN steht jetzt SICHTBAR im
+    // Panel - jede '+ Zum Plan'-Kombination erscheint hier als Zeile (entfernbar), dann nächste bauen.
+    const _plan = window._aktionsPlan || [];
+    if (_plan.length) {
+      h += '<div style="border:1px solid #5a4e36;border-radius:6px;padding:6px 8px;margin-bottom:8px;background:rgba(212,184,106,0.06);">';
+      h += '<div style="color:#d4b86a;font-size:11px;font-weight:bold;margin-bottom:3px;">GEPLANT - wird zusammen in EINER Szene ausgeführt:</div>';
+      _plan.forEach((p, i) => {
+        h += '<div style="display:flex;align-items:center;gap:6px;margin:2px 0;"><span style="flex:1;">' + (i + 1) + '. ' + p.label + '</span><button onclick="window._aktionsPlan.splice(' + i + ',1);_renderBaukasten();" style="background:transparent;border:1px solid #555;color:#9a8a68;border-radius:4px;padding:1px 7px;cursor:pointer;font-size:11px;">✕</button></div>';
+      });
+      h += '<button onclick="window._baukasten.offen=false;_renderBaukasten();_planAusfuehren();" style="margin-top:5px;background:#d4b86a;color:#1a1a1c;border:none;border-radius:6px;padding:6px 14px;font-weight:bold;cursor:pointer;">▶ Alle ' + _plan.length + ' ausführen (eine Szene)</button>';
+      h += '</div>';
+      h += '<div style="color:#9a8a68;font-size:11px;margin-bottom:4px;">Nächste Aktion für eine andere Person bauen:</div>';
+    }
     h += '<div style="color:#9a8a68;font-size:11px;margin-bottom:2px;">1. WER</div><div>' + akteure.map(a => _bkChip(a, bk.akteur === a, "_bkSet('akteur','" + a.replace(/'/g, "\\'") + "')")).join('') + '</div>';
     h += '<div style="color:#9a8a68;font-size:11px;margin:6px 0 2px;">2. ITEM (optional)</div><div>' + (itemsK.length ? itemsK.map(it => _bkChip(it.name, bk.item === it.id, "_bkSet('item','" + it.id + "')")).join('') : '<span style="color:#666;font-size:11px;">Karls Taschen sind leer</span>') + '</div>';
     h += '<div style="color:#9a8a68;font-size:11px;margin:6px 0 2px;">3. AKTION</div><div>' + Object.keys(BAUKASTEN_AKTIONEN).map(k => _bkChip(BAUKASTEN_AKTIONEN[k].label, bk.aktion === k, "_bkSet('aktion','" + k + "')")).join('') + '</div>';
@@ -7463,7 +7501,8 @@ function _bkUebernehmen(sofort) {
     eintrag._wirkung = def.wirkung || null; eintrag._beute = !!def.beute;
     eintrag._itemUebergabe = !!def.itemUebergabe && !!bk.item; eintrag._itemVerlust = !!def.itemVerlust && !!bk.item;
     _planAdd(eintrag);
-    window._baukasten = { offen: !sofort, akteur: null, item: null, aktion: null, ziel: null };
+    window._baukasten.akteur = null; window._baukasten.item = null; window._baukasten.aktion = null; window._baukasten.ziel = null;
+    if (sofort) window._baukasten.offen = false;
     _renderBaukasten();
     if (sofort && typeof _planAusfuehren === 'function') _planAusfuehren();
   } catch (e) {}
