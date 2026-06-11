@@ -14700,3 +14700,29 @@ Karl + echtes Ablenk-Manöver), klappt es. Der v646-Detail-Debug [Karl:2 + Rex:3
 im Export sichtbar.
 LEKTORAT-RESTE (offen, Gameplay/größerer Bau): A2 NPC_sicherheit nur mit hartem Zielort (Flucht != Sicherung),
 A4 Akten als echtes Item bei definierter Akten-Aktion, A6 PLAN_ZUGRIFF-Fehlschlag Vf-Deckel auf min 1.
+
+## v7.12.650 (2026-06-11): Rex-Mitnehmen live + Plan-Zugriff Flucht-Prosa verschärft (Benjamin-Befunde)
+BENJAMIN-BEFUNDE (Screenshots Run v643):
+(1) REX-MITNEHMEN ohne Live-Update: Klick auf "mitnehmen" beim Rex-Eintrag setzte hundInParty, rief aber nur
+renderImRaumAnzeige() - NICHT renderOptions(). Darum blieb Icon 🐕 + Button "mitnehmen" stehen bis zur nächsten
+Szene. FIX: _hundMitnehmen ruft jetzt auch renderOptions() -> Rex bekommt sofort 🤝 + Kommando-Verben.
+(2) PLAN-ZUGRIFF FLUCHT-PROSA: Trotz v646-Ortswechsel-Verbot erzählt die KI nach einem Fessel-Manöver
+reflexhaft einen Abgang ("springt in den Opel", "rennt in die Friedrichstraße"), obwohl der Gegner gerade
+gefesselt wurde - man sollte beim Gefesselten bleiben. Prompt verschärft: explizit KEIN Abgang, KEINE Abfahrt,
+Gruppe BLEIBT beim gefesselten Gegner, Szene endet mit gesicherter Lage HIER. (Test steht aus - Run war v643.)
+node --check OK.
+BEFUND OFFEN (kleiner Fix, noch nicht gebaut): Umsehen-Fund-Toast wurde vom Toast-COOLDOWN verschluckt (Run
+zeigt "🔎 Gefunden" unter 13x cooldown-unterdrückten Toasts) - Item-Fund ist wichtige Rückmeldung und sollte
+cooldown-resistent sein. Button verschwand korrekt (Fund fand statt), aber Spieler bekam keine Rückmeldung.
+
+## KONZEPT festgeschrieben: BAUKASTEN-FIRST (KONZEPT_BAUKASTEN_FIRST.md)
+Benjamin denkt über eine GRUNDLEGENDE Interface-Umstellung nach: die KI-getriebenen Standard-Buttons (OFFENSIV/
+DEFENSIV/ERKUNDEN/BEOBACHTEN) zurückdrängen/ersetzen durch ein einheitliches Baukasten-Interface (Akteur-Verb-
+Ziel), mit Multi-Aktion pro Szene. Begründung: KI-Buttons schlagen oft Unsinn vor ("beobachte im Rückspiegel",
+"Margaretes Reaktion auf Morgennachrichten"), schmuggeln Reise-Orte in Offensiv-Buttons, kosten je Klick einen
+teuren Prompt. Auch redundante NPC-Verben (in-sicherheit-bringen/beschützen/beobachten) sollen geprüft+entfernt
+werden. ALLES in KONZEPT_BAUKASTEN_FIRST.md festgehalten (auf Benjamins Wunsch "du musst das mitloggen").
+NICHTS davon gebaut - das ist die größte Änderung seit Langem, NICHT nebenbei. Empfohlene Reihenfolge: (1)
+redundante NPC-Verben aufräumen, (2) A/B/C/D über Master-Schalter ausblendbar (wie FREITEXT_AKTIV), (3)
+Baukasten um befragen/durchsuchen erweitern + Multi-Akteur verallgemeinern, (4) A/B/C/D standardmäßig aus.
+Wartet auf Benjamins Entscheidung, wo wir anfangen.
