@@ -3191,7 +3191,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.637</div>
+    <div class="start-version">Schatten v7.12.638</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.637</span>
+    <span>Schatten v7.12.638</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7098,7 +7098,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.637';
+window.SCHATTEN_VERSION = 'v7.12.638';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -7551,6 +7551,19 @@ function _planAusfuehren() {
         if (_w === 'gefesselt' && _mitBeute && /stasi|mfs|agent|mertens|mantel/i.test(String(p.ziel)) && typeof _itemAdd === 'function') {
           // v7.12.628 (Benjamin: er wird mit SEINEN Handschellen gefesselt -> sie sind an IHM, keine Beute).
         }
+        // v7.12.638 (Lektorat: Item-Aktionen UI-da, aber nicht Engine-wirksam): Wurf/Angriff-mit setzt NPCZ
+        // aus dem Item-Schaden. Greift NICHT bei Manöver-Fehlschlag auf dieses Ziel (oben übersprungen).
+        if ((p._itemAngriff || p.art === 'werfen_fuesse' || p.art === 'werfen') && p.ziel && p.itemId) {
+          try {
+            const _itO = (typeof _itemsMap === 'function') ? _itemsMap()[p.itemId] : null;
+            const _katO = _itO ? _itemKatalogEintrag(_itO.name) : null;
+            let _zst = null;
+            if (p.art === 'werfen_fuesse') _zst = (_katO && _katO.schaden === 'lacher') ? 'angewidert' : 'abgelenkt';
+            else if (p._itemAngriff || p.art === 'angreifen_mit') _zst = (_katO && _katO.schaden === 'benommen') ? 'benommen' : 'angewidert';
+            else if (p.art === 'werfen') _zst = (_katO && _katO.schaden === 'benommen') ? 'benommen' : 'abgelenkt';
+            if (_zst && typeof _npcZustandSet === 'function') { _npcZustandSet(p.ziel, { status: _zst }); if (typeof diag === 'function') diag('state', 'ITEM-EFFEKT: ' + p.ziel + ' -> ' + _zst + ' (' + p.art + (_katO ? ', ' + _katO.name : '') + ')'); }
+          } catch (e) {}
+        }
         if (p._itemUebergabe && p.itemId && typeof _itemMove === 'function') _itemMove(p.itemId, { status: 'bei_npc', owner: p.ziel || 'npc' });
         if (p._itemVerlust && p.itemId && typeof _itemMove === 'function') _itemMove(p.itemId, { status: 'verloren', owner: '' });
         // v7.12.631 (Benjamin: "eintauschen für Information -> Indiz"): Wenn das Ziel ein definiertes Indiz
@@ -7568,9 +7581,15 @@ function _planAusfuehren() {
                 if (typeof showProgressToast === 'function') showProgressToast('🔑 Hinweis ertauscht', p.ziel + ' rückt mit etwas heraus: ' + (_ind.text || _ind.id), 'success', 'eintausch-indiz');
                 if (typeof diag === 'function') diag('state', '🔄 EINTAUSCH->INDIZ: ' + p.ziel + ' gab "' + _ind.id + '" für Tauschwert ' + _wert + ' (Schwelle ' + _tausch.schwelle + ')');
                 if (_itObj && typeof _itemMove === 'function') _itemMove(p.itemId, { status: 'verloren', owner: p.ziel });
+              } else {
+                // v7.12.638 (Lektorat P2: nicht still): Indiz schon bekannt -> Tausch läuft leer, Item bleibt.
+                if (typeof showProgressToast === 'function') showProgressToast('Kein neuer Hinweis', p.ziel + ' hat dazu nichts Neues mehr zu sagen - du behältst den Gegenstand.', 'info', 'eintausch-leer');
+                if (typeof diag === 'function') diag('state', '🔄 EINTAUSCH leer: ' + p.ziel + ' - Indiz "' + _tausch.indizId + '" schon bekannt, Item bleibt bei Karl');
               }
-            } else if (typeof diag === 'function') {
-              diag('state', '🔄 EINTAUSCH ohne Indiz: Ziel "' + p.ziel + '" ' + (_tausch ? ('kennt Indiz, aber Tauschwert ' + _wert + ' < Schwelle ' + _tausch.schwelle) : 'hat nichts Definiertes zu bieten'));
+            } else {
+              // v7.12.638 (Lektorat P2): Tauschwert zu niedrig ODER NPC weiß nichts -> Item bleibt, Hinweis.
+              if (typeof showProgressToast === 'function') showProgressToast('Tausch abgelehnt', (_tausch ? p.ziel + ' will mehr als das für eine Information.' : p.ziel + ' hat nichts Brauchbares anzubieten.'), 'info', 'eintausch-ablehnung');
+              if (typeof diag === 'function') diag('state', '🔄 EINTAUSCH abgelehnt: Ziel "' + p.ziel + '" ' + (_tausch ? ('Tauschwert ' + _wert + ' < Schwelle ' + _tausch.schwelle + ' - Item bleibt') : 'kennt kein definiertes Indiz - Item bleibt'));
             }
           } catch (e) {}
         }
@@ -7677,7 +7696,9 @@ const BAUKASTEN_AKTIONEN = {
     txt: (a, i, z) => a + ' gibt ' + z + ' ' + (i ? i.name : 'etwas') + '.' },
   werfen:     { label: 'Ins Gesicht werfen', zielNoetig: true, itemNoetig: true, itemVerlust: true,
     txt: (a, i, z) => a + ' wirft ' + (i ? i.name : 'etwas') + ' gezielt ' + z + ' ins Gesicht - ' + z + ' wird getroffen und ist einen Moment benommen.' },
-  trinken:    { label: 'Trinken mit', zielNoetig: true,  itemVerlust: true,
+  anbieten:   { label: 'Anbieten', zielNoetig: true, itemNoetig: true,
+    txt: (a, i, z) => a + ' bietet ' + z + ' ' + (i ? i.name : 'etwas') + ' an - als Geste, nicht als Bestechung; eine kleine Aufmerksamkeit, die Vertrauen schaffen kann.' },
+  trinken:    { label: 'Trinken mit', zielNoetig: true,  itemNoetig: true, itemVerlust: true,
     txt: (a, i, z) => a + ' trinkt mit ' + z + (i ? ' - ' + i.name + ' macht die Runde' : '') + ', lockert die Stimmung und die Zunge.' },
   beschuetzen:{ label: 'Beschützen',  zielNoetig: true,
     txt: (a, i, z) => a + ' bleibt dicht bei ' + z + ' und schirmt die Person gegen jede Bedrohung ab.' },
@@ -31846,12 +31867,17 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
   // wird die Stasi-Spannung gedeckelt (<=2) und Auto-Custody unterdrückt - nur noch Epilog-Druck, kein neuer
   // Jagd-Loop. Der Spieler SOLL jetzt lösen können, nicht endlos fliehen.
   try {
-    const _abschlussreifStasi = !!(caseProgress && caseProgress.wahrheitErkannt
-      && (caseProgress.clientSecured || (caseProgress.clientState && caseProgress.clientState.status && /secured|gesichert/.test(caseProgress.clientState.status)))
-      && Array.isArray(caseProgress.politicalBeatsHit ? caseProgress.politicalBeatsHit : []) );
-    const _aktenGesichertStasi = !!(caseProgress && Array.isArray(caseProgress.politicalBeatsHit) && caseProgress.politicalBeatsHit.indexOf('akten_gesichert') !== -1);
-    if (caseProgress && caseProgress.wahrheitErkannt && (caseProgress.clientSecured || _aktenGesichertStasi)) {
-      if (typeof newSpannung === 'number' && newSpannung > 2) { diag('state', 'STASI-DECKEL (v636): Fall abschlussreif - Spannung ' + newSpannung + ' -> 2, kein Jagd-Loop, nur Epilog-Druck'); newSpannung = 2; }
+    // v7.12.638 (Lektorat: Code/Kommentar liefen auseinander, _abschlussreifStasi war tot): Deckel ans ECHTE
+    // politische Gate koppeln (Single Source) - erfüllt = Basis + Sicherung. Kein zweites, weicheres Kriterium.
+    let _politischAbschlussreif = false;
+    try {
+      if (typeof politicalBeatsGateErfuellt === 'function') {
+        const _pgStasi = politicalBeatsGateErfuellt();
+        _politischAbschlussreif = !!(_pgStasi && _pgStasi.aktiv && _pgStasi.erfuellt);
+      }
+    } catch (e) {}
+    if (caseProgress && caseProgress.wahrheitErkannt && (_politischAbschlussreif || caseProgress._stasiEpilogModus)) {
+      if (typeof newSpannung === 'number' && newSpannung > 2) { diag('state', 'STASI-DECKEL (v638): politisches Gate erfüllt (Basis+Sicherung) - Spannung ' + newSpannung + ' -> 2, kein Jagd-Loop, nur Epilog-Druck'); newSpannung = 2; }
       try { if (typeof stasiTension === 'number' && stasiTension > 2) stasiTension = 2; } catch (e) {}
       try { caseProgress._stasiEpilogModus = true; } catch (e) {}
     }
@@ -32940,6 +32966,11 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             return cn === pmNorm || cn.split(/\s+/)[0] === pmFirst;
           });
           if (!schonImCast) {
+            // Setup-Daten ZUERST holen (v7.12.638: Lektorat fand TDZ-Bug - sc wurde im Zeugen-Check VOR der
+            // let-Deklaration genutzt -> ReferenceError, im catch geschluckt -> Zeugen-Skip lief nie -> August-
+            // Regression blieb. sc muss vor jeder Nutzung stehen.).
+            let sc = null;
+            try { if (caseSetup && Array.isArray(caseSetup.setupCast)) sc = caseSetup.setupCast.find(s => s && s.name && (normForMatch(s.name) === pmNorm || normForMatch(s.name).split(/\s+/)[0] === pmFirst)); } catch(e){}
             // v7.12.636 (Lektorat Run 0633 A3: August Lemke Party-Regression - Zeuge lief bis Bahnhof/Opel mit):
             // Ein ZEUGE wird nach Abschlussreife NICHT mehr per Garantie nachgezogen. Er wird nicht aktiv
             // entfernt (Benjamins Regel: Spieler entscheidet), aber die Engine schleppt ihn nicht künstlich
@@ -32953,9 +32984,6 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
                 continue;
               }
             } catch (e) {}
-            // Setup-Daten anreichern, falls vorhanden.
-            let sc = null;
-            try { if (caseSetup && Array.isArray(caseSetup.setupCast)) sc = caseSetup.setupCast.find(s => s && s.name && (normForMatch(s.name) === pmNorm || normForMatch(s.name).split(/\s+/)[0] === pmFirst)); } catch(e){}
             cast.push({ name: (sc && sc.name) || pm.name, rolle: (sc && sc.rolle) || '', beziehung: (sc && sc.beziehung) || '', fahrzeug: '', tag: (sc && sc.tag) || pm.tag || '', tagExtra: (sc && sc.tagExtra) || '' });
             if (typeof diag === 'function') diag('state', '✦ PARTY-GARANTIE: ' + pm.name + ' fehlte im finalen Cast (Party-Mitglied) - wieder aufgenommen');
             if (typeof _castEvent === 'function') { try { _castEvent('party-garantie-AUFGENOMMEN: ' + pm.name); } catch(e){} }

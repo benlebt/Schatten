@@ -14504,3 +14504,19 @@ Hauptmann=Erfolg). Härte-Erkennung-Bugfix: "Mann im langen Mantel" (Regex statt
 NOCH NICHT (Lektorat): RNG, Mehrgegner-Initiative, Skilltrees, UI-Einschätzung im Baukasten (Debug-only erst).
 ABSCHLUSS-SCHUTZ via v636 Stasi-Deckel (kein Combat-Aufblasen nach Beweiserfolg). NÄCHSTER RUN: Manöver-Check
 im echten Spiel testen - reicht Karl allein? muss man Rex/Roth mitnehmen? Fehlschlag-Erzählung sauber?
+
+## v7.12.638 (2026-06-11): Code-Lektorat-Hotfixes (TDZ-Bug + Item-Aktionen Engine-wirksam + Stasi-Gate)
+CODE-LEKTORAT (lief auf v636, alle Punkte galten noch auf v637-Stand). P1-FIXES:
+1) KRITISCH - TDZ-BUG Party-Garantie: 'sc' wurde im Zeugen-Skip (v636) VOR seiner 'let sc'-Deklaration genutzt
+-> ReferenceError im catch geschluckt -> Zeugen-Skip lief NIE -> August-Regression blieb. sc jetzt ZUERST
+deklariert, dann der Check. (Genau der Bug, der v636 eigentlich beheben sollte.)
+2) ITEM-AKTIONEN ENGINE-WIRKSAM: angreifen_mit/werfen_fuesse/werfen setzen jetzt NPCZ aus Item-Schaden
+(werfen_fuesse->abgelenkt, lacher->angewidert; angreifen_mit benommen->benommen; transient, kein W6-Dauer).
+Vorher nur UI/Prosa, kein Engine-Zustand.
+3) ANBIETEN als Baukasten-Aktion ergänzt (war in Katalog-taugt referenziert, fehlte als Aktion -> konnte nie
+erscheinen). Kein Item-Verlust (Geste). 4) TRINKEN: itemNoetig:true ergänzt (war wählbar ohne Item).
+5) STASI-DECKEL ans ECHTE politische Gate gekoppelt (politicalBeatsGateErfuellt().erfuellt) statt weicherem
+Zweitkriterium; toter _abschlussreifStasi entfernt; Epilog-Modus bleibt als ODER-Fallback (einmal gedeckelt
+bleibt gedeckelt). 6) EINTAUSCH nicht mehr still: Toast bei Ablehnung (Tauschwert zu niedrig / NPC weiß nichts /
+Indiz schon bekannt) - Item bleibt bewusst bei Karl. 6/6 Tests + node --check OK.
+OFFEN (P2): Eintausch-Item-Verbrauch-Politik final; UI-Einschätzung im Baukasten (Stärke-Rechnung sichtbar).
