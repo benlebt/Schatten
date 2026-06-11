@@ -14484,3 +14484,23 @@ künstlichen Nachschleppens - August läuft nicht mehr bis Bahnhof/Opel mit. 7/7
 OFFEN aus Lektorat: A4 Client-State Sz3 (Fensterblick=at_location statt with_karl); A5 ITEM-ACTION-Debug-Spur
 für Eintausch sichtbar machen; Charité-Alias; W2b-Hart-Fallback. NÄCHSTER GROSSER SCHRITT: Party-Stärken- +
 Gegner-Härte-System (Konzept KONZEPT_STAERKEN_HAERTE.md, Benjamin-Freigabe erteilt).
+
+## v7.12.637 (2026-06-11): PARTY-STÄRKEN & GEGNER-HÄRTE - Manöver-Erfolg/Fehlschlag (Lektorat-Freigabe)
+Konzept KONZEPT_STAERKEN_HAERTE.md (+ Lektorat-Korrekturen eingearbeitet). A+B+C+D in einem:
+A) TABELLEN+HELPER: ROLLEN_STAERKE (angriff/ablenkung/einschuechtern 0-3 je Rolle) + NPC_STAERKE_OVERRIDE
+(additiv: margarete ablenkung+1, lemke angriff/einschuechtern-1, roth einschuechtern+1) + HUND_STAERKE
+(fixieren 3) + GEGNER_HAERTE (Mantel 2, Agent/Stasi 3, Oberleutnant 4, Hauptmann 5). _akteurStaerke (Rolle+
+Override), _gegnerHaerte (Basis per Regex spezifisch->generisch + Zustand: abgelenkt/benommen -1, gefesselt/
+ko/fixiert -> 0). _planEintragStaerkeArt (durchsuchen zählt NICHT - Lektorat P1). _fesselMaterial nach Ort.
+B) MANÖVER-CHECK in _planAusfuehren: pro Ziel Summe der Akteur-Stärken (jeder Akteur 1x, stärkster Beitrag)
++ Synergie (>=2 Akteure +1) vs Härte. summe>=haerte = Erfolg, sonst Fehlschlag -> Bezwingungs-Wirkung
+unterdrückt. Debug 'MANÖVER-CHECK: ziel=X haerte=4 eingesetzt=6 -> ERFOLG/FEHLSCHLAG'.
+C) FEHLSCHLAG-PFAD: Prompt erzählt misslungenen Zugriff (kein Tod/Custody/Ortswechsel/K.O.), Verfassung-1,
+Spannung+1 (window._manoeverFehlschlagSpannung).
+D) FESSELMATERIAL nach Ort im Erfolgs-Prompt (Wohnung->Gürtel/Wäscheleine, Büro->Paketschnur/Telefonkabel,
+Bahn->Draht/Lederriemen, Stasi/Polizei->eigene Handschellen). 13 Tests grün (inkl. Lektorat-Beispiele: Karl
+allein vs Mantel=Erfolg, Karl+Margarete vs Mertens=Erfolg, Karl allein vs Hauptmann=Fehlschlag, Karl+Rex vs
+Hauptmann=Erfolg). Härte-Erkennung-Bugfix: "Mann im langen Mantel" (Regex statt Substring). node --check OK.
+NOCH NICHT (Lektorat): RNG, Mehrgegner-Initiative, Skilltrees, UI-Einschätzung im Baukasten (Debug-only erst).
+ABSCHLUSS-SCHUTZ via v636 Stasi-Deckel (kein Combat-Aufblasen nach Beweiserfolg). NÄCHSTER RUN: Manöver-Check
+im echten Spiel testen - reicht Karl allein? muss man Rex/Roth mitnehmen? Fehlschlag-Erzählung sauber?
