@@ -14598,3 +14598,17 @@ fokus=akten + Prosa-Vollzug bewegt Item auf gesichert), fehlend-Text nennt klar 
 sichern - sie sind noch bei Karl". v634-Notausgänge nutzen dasselbe strikte Gate (konsistent). 6 Gate-Tests grün.
 node --check OK. OFFEN (Lektorat): A2 Client-remote_phone-Opening, A4 August wirklich aus _party entfernen,
 A5 Stage-3-Ort-Prosa-Hart-Block, A7 Setup-Cast-Audit. Mertens-Rang (Oberleutnant=4 vs Hauptmann=5) noch offen.
+
+## v7.12.644 (2026-06-11): Rex-Mitnahme & Icons konsistent (Benjamin-Befunde Run v643)
+BENJAMIN-BEFUNDE: (1) Rex-Icon ändert sich nach Mitnahme nicht (sollte 🤝 werden). (2) Kein Hunde-Icon. (3)
+Rex bei Flucht erneut im Popup angeboten, obwohl schon mitgenommen. (4) "In Begleitung" zeigt Rex nie.
+GEMEINSAME URSACHE: Der Hund hat seinen EIGENEN Party-Status (caseProgress.hundInParty), aber die UI prüfte
+überall nur _istInParty/_party - das kennt den Hund nicht. FIXES:
+- _mitnehmbareNpcsAmOrtRoh: HUND-Tag wird bei hundInParty=true NICHT mehr angeboten (kein Popup-Spam mehr).
+- Personen-Button _inParty bezieht caseProgress.hundInParty mit ein -> Rex bekommt 🤝 wenn dabei.
+- Hunde-Icon 🐕 wenn Rex nicht in Party (statt generischem 👤).
+- Mitnehmen-Popup: alle angebotenen NPCs VORAUSGEWÄHLT (vorher musste man erst antippen, dann bestätigen -
+  bei nur einem Hund unintuitiv; "Mitnehmen & weiter" nahm Rex nicht mit, weil nicht angetippt).
+6/6 Tests. node --check OK. Doc-Wagner-"Händedruck-statt-Arzt": KEIN Bug - Doc war ab Sz10 wirklich in der
+Party (Opening-Begleiter), 🤝 war korrekt. RATE-LIMIT im Run = Benjamins Gemini-Prepay-Credits aufgebraucht
+(Billing im AI Studio), KEIN Code-Bug. Lektorat folgt.

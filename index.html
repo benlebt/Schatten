@@ -3191,7 +3191,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.643</div>
+    <div class="start-version">Schatten v7.12.644</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.643</span>
+    <span>Schatten v7.12.644</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7102,7 +7102,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.643';
+window.SCHATTEN_VERSION = 'v7.12.644';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -8014,6 +8014,10 @@ function _mitnehmbareNpcsAmOrtRoh() {
     if (!n || !n.name) return false;
     const t = (n.tag || '').toUpperCase();
     if (GEGNER_TAGS.includes(t)) return false;          // Gegner/Schatten nicht mitnehmbar
+    // v7.12.644 (Benjamin: Rex wurde bei JEDER Reise erneut im Popup angeboten, obwohl schon aufgenommen):
+    // Der Hund hat seinen EIGENEN Party-Status (caseProgress.hundInParty), nicht _party. Ist er schon dabei,
+    // nicht mehr anbieten.
+    if (t === 'HUND') { try { if (caseProgress && caseProgress.hundInParty) return false; } catch (e) {} return true; }
     if (_istInParty(n.id, n.name)) return false;        // schon dabei
     // v7.12.601: gesicherte Klientin + ihr Schutz-NPC (Helene/Doc) nicht mitnehmbar.
     if (typeof _istKlient === 'function' && caseProgress && caseProgress.clientSecured && _istKlient(n.name, n.id)) return false;
@@ -18567,6 +18571,11 @@ function zeigeMitnehmenPopup(npcs, weiterAktion) {
   _mitnehmenPopupOffen = true;
   if (typeof _markPopupOpened === 'function') _markPopupOpened();
   const gewaehlt = {}; // id/name -> true
+  // v7.12.644 (Benjamin: Rex im Popup geklickt -> "Mitnehmen & weiter" -> Rex trotzdem nicht dabei. Ursache:
+  // man musste den Eintrag ERST antippen (Häkchen), dann bestätigen - unintuitiv, gerade bei nur einem NPC).
+  // Jetzt: alle angebotenen NPCs sind VORAUSGEWÄHLT (das Popup zeigt nur Mitnehmbare - "Mitnehmen & weiter"
+  // nimmt sie per Default mit; wer nicht mitsoll, wird abgetippt).
+  try { npcs.forEach(n => { if (n) gewaehlt[n.id || n.name] = true; }); } catch (e) {}
   const overlay = document.createElement('div');
   overlay.id = 'mitnehmen-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;z-index:9100;background:rgba(10,8,6,0.85);display:flex;align-items:center;justify-content:center;padding:18px;';
@@ -18964,7 +18973,11 @@ function bauePersonenButtons(container, modus) {
     }
     const btn = document.createElement('button');
     btn.className = 'option-btn option-btn-person';
-    const _inParty = (typeof _istInParty === 'function') && _istInParty(npc.id, npc.name);
+    // v7.12.644 (Benjamin: Rex-Icon ändert sich nach Mitnahme nicht): Der Hund hat seinen eigenen Party-Status
+    // (caseProgress.hundInParty), nicht _party. Für Icon/Marker mitberücksichtigen.
+    const _istHundNpc = (npc.tag || '').toUpperCase() === 'HUND';
+    const _inParty = (_istHundNpc && typeof caseProgress === 'object' && caseProgress && caseProgress.hundInParty)
+      || ((typeof _istInParty === 'function') && _istInParty(npc.id, npc.name));
     const _marker = (modus === 'verwalten')
       ? (_inParty ? 'in Begleitung' : 'mitnehmen')
       : ((npc.tag || '').toUpperCase() === 'HUND'
@@ -18989,7 +19002,7 @@ function bauePersonenButtons(container, modus) {
       SCHUTZ: '👨‍⚕️', KONTAKT: '🤝', VERBUENDETER: '🤝',
       ANTAGONIST: '😠', SUSPECT: '🎭', GANGSTER: '🕴', STASI: '🕵‍♂️', MYSTERY: '❔',
     };
-    const _npcEmoji = _inParty ? '🤝' : (_npcEmojiMap[_npcTag] || (_istWeiblich ? '👩' : '👤'));
+    const _npcEmoji = _inParty ? '🤝' : (_istHundNpc ? '🐕' : (_npcEmojiMap[_npcTag] || (_istWeiblich ? '👩' : '👤')));
     btn.innerHTML = '<span class="option-id option-id-person">' + _npcEmoji + '</span><span class="option-text-wrap"><span>'
       + escapeHtml(npc.name) + '</span><span class="option-marker option-marker-system">' + _marker + '</span></span>';
     attachSafeTap(btn, () => { if (typeof oeffneNpcMenue === 'function') { _markPopupOpened(); oeffneNpcMenue(npc, modus); } });
