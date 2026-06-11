@@ -15003,3 +15003,20 @@ Floor (braucht Sicherungs-/Auflösungs-Logik). Toast als clue-Variante (kein Coo
 fehlenden Klammer-Fehler beim Bau. 6 Tests grün.
 RANGFOLGE Benjamin (4 Befunde): 1. Umsehen-Stage (DIESE v666) ✓ · 2. Vera Handschlag-aber-kein-Add-Button ·
 3. NPC-Indiz-Vorschau (lohnt sich eintauschen?) · 4. eintauschen-Toast doppeltes Icon + holpriger Text.
+
+## v7.12.667 (2026-06-11): Benjamin-Befunde 2-4 (Vera-Symbol, NPC-Indiz-Vorschau, eintauschen-Toast)
+BEFUND 2 (Vera hat Handschlag-Symbol 🤝 aber keinen Add-Button, lässt sich nicht hinzufügen): WURZEL: 🤝 wurde
+für KONTAKT UND VERBUENDETER gezeigt, aber KONTAKT-NPCs (Vera = Schwedische Korrespondentin/West-Kontakt) lehnen
+Mitnahme ab (_npcLehntMitnahmeAb: "arbeitet allein, trifft Karl nur an vereinbarten Orten"). Symbol versprach
+Teammitglied, das nicht geht. FIX: KONTAKT bekommt eigenes Symbol 📇 (Kontaktkarte) - signalisiert ehrlich
+"Gesprächspartner, kein Begleiter". 🤝 bleibt Verbündeten + Party-Mitgliedern vorbehalten. Vera bleibt über
+"ansprechen" befragbar (West-Übergabekontakt für Akten), nur nicht mitnehmbar - das ist korrekt.
+BEFUND 3 (vorher sehen ob NPC ein Indiz bereithält, ob sich eintauschen/befragen lohnt): Neue Funktion
+_npcHatOffenenHinweis(npcName) - prüft, ob der NPC am aktuellen Ort ein offenes, gerade erreichbares (Zeit-Gate)
+Kern-Indiz mit npc-Bindung bereithält. Personen-Button-Marker zeigt dann gold "● hat einen Hinweis" statt
+"ansprechen". 5 Tests grün.
+BEFUND 4 (eintauschen-Toast doppeltes Icon 📋📋 + holpriger Text "für info"): (a) Toast-Titel war '📋 Geplant'
+- showProgressToast setzt SELBST ein Icon -> doppelt. Icon aus Titel raus, als iconOverride übergeben. (b)
+Plan-Label nutzte def.label.toLowerCase() -> "Eintauschen für Info" wurde "eintauschen für info" (holprig). Jetzt
+def.label ohne toLowerCase -> "Karl [Schachtel West-Zigaretten] → Eintauschen für Info → Vera Lindqvist".
+Alle 4 Benjamin-Befunde (v666 Stage + v667 Befunde 2-4) erledigt. node --check OK.
