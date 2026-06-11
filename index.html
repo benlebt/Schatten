@@ -3191,7 +3191,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.646</div>
+    <div class="start-version">Schatten v7.12.647</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.646</span>
+    <span>Schatten v7.12.647</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6379,6 +6379,15 @@ function getCaseLocations() {
       if (!c.heilort) c.heilort = true;
       if (typeof c.startBekannt === 'undefined') c.startBekannt = true;
       if (!Array.isArray(c.npcs) || !c.npcs.length) c.npcs = [{ id: 'marlene_wagner', immer: true }];
+      // v7.12.647 (Lektorat Run v645 A3, Variante A: Marlene heilt Karl, Helene schützt Margarete): Beim
+      // Margarete-Fall ist Helene die Schutzperson für die Klientin und muss in der Charité präsent sein -
+      // sonst meint der Sicherungs-Button "Margarete zu Helene", aber der Ort hat nur Marlene.
+      try {
+        const _istMargFall = !!(caseSetup && caseSetup.caseType === 'politisch' && /margarete\s+stein/i.test(caseSetup.klient || ''));
+        if (_istMargFall && /charit/i.test(normForMatch(c.name || '')) && !c.npcs.some(n => n && n.id === 'schwester_helene')) {
+          c.npcs.push({ id: 'schwester_helene', immer: true });
+        }
+      } catch (e) {}
     }
   }
   // v7.12.530 (Baustein A): Kommissar-Orte Roth (Ost) + Lindner (West) sicherstellen. Ziel für "Person/Beweise
@@ -7102,7 +7111,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.646';
+window.SCHATTEN_VERSION = 'v7.12.647';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -7418,7 +7427,8 @@ const ROLLEN_STAERKE = {
   informant:  { angriff: 1, ablenkung: 2, einschuechtern: 1 },
   zeuge:      { angriff: 1, ablenkung: 1, einschuechtern: 0 },
   arzt:       { angriff: 1, ablenkung: 1, einschuechtern: 1 },
-  schlaeger:  { angriff: 3, ablenkung: 0, einschuechtern: 2 }
+  schlaeger:  { angriff: 3, ablenkung: 0, einschuechtern: 2 },
+  unbekannt:  { angriff: 1, ablenkung: 1, einschuechtern: 0 }
 };
 // Figurenspezifische Overrides (additiv) - skalierbar UND Persönlichkeit (Lektorat P1).
 const NPC_STAERKE_OVERRIDE = {
@@ -7436,8 +7446,10 @@ function _akteurStaerke(name, rolle, art) {
   try {
     if (typeof HUND_NAME === 'string' && name === HUND_NAME) return (HUND_STAERKE[art] || 0);
     const r = (rolle || '').toLowerCase();
-    let basisKey = 'detektiv';
-    if (normForMatch(name || '') === normForMatch('Karl') || /karl mauer|detektiv/.test(r)) basisKey = 'detektiv';
+    // v7.12.647 (Lektorat Run v645 A6): Default 'unbekannt' statt 'detektiv' - sonst bekam jeder Akteur ohne
+    // erkannte Rolle Karls Stärke (gefährlich bei Cast/Orts-NPCs). Karl wird explizit als detektiv erkannt.
+    let basisKey = 'unbekannt';
+    if (normForMatch(name || '') === normForMatch('Karl') || /karl mauer/.test(normForMatch(name || '')) || /detektiv/.test(r)) basisKey = 'detektiv';
     else if (/kommissar/.test(r)) basisKey = 'kommissar';
     else if (/polizist|polizei|wachtmeister/.test(r)) basisKey = 'polizist';
     else if (/klient|whistleblower/.test(r)) basisKey = 'klient';
@@ -12843,13 +12855,24 @@ function updatePoliticalBeats(text) {
             if (_vollzugProsa && !_negProsa) {
               // v7.12.609 (ChatGPT: "Beat aus Item-State ableiten, nicht parallel pflegen"): Der Vollzug bewegt
               // ZUERST die getragenen Beweis-Items auf 'gesichert' - der Beat ist die Folge desselben Vorgangs.
-              if (beat.id === 'akten_gesichert' && typeof _itemsBeiKarl === 'function' && typeof _itemMove === 'function') {
-                _itemsBeiKarl().filter(it => it.typ === 'beweis_dokument').forEach(it => _itemMove(it.id, { status: 'gesichert', owner: 'sicherer_ort' }));
+              // v7.12.647 (Lektorat Run v645 A2): akten_gesichert nur, wenn Karl wirklich ein Beweis-Dokument hat.
+              let _akZulaessig = true;
+              if (beat.id === 'akten_gesichert') {
+                let _bw = [];
+                try { if (typeof _itemsBeiKarl === 'function') _bw = _itemsBeiKarl().filter(it => it && it.typ === 'beweis_dokument'); } catch (e) {}
+                if (!_bw.length) {
+                  _akZulaessig = false;
+                  if (typeof diag === 'function') diag('drift', 'AKTEN-SICHERUNG BLOCKIERT (Intent-Vollzug): kein Beweis-Dokument bei Karl - Beat nicht gesetzt.');
+                } else if (typeof _itemMove === 'function') {
+                  _bw.forEach(it => _itemMove(it.id, { status: 'gesichert', owner: 'sicherer_ort' }));
+                }
               }
+              if (_akZulaessig) {
               caseProgress.politicalBeatsHit.push(beat.id);
               caseProgress.pendingSecurityIntent = null;
               if (typeof diag === 'function') diag('progress', '✦ POLIT-BEAT ' + beat.id + ' (Intent-Vollzug bestätigt): eingeleitete Sicherung durch Prosa als ABGESCHLOSSEN bestätigt (Empfang/Ankunft) - "' + text.slice(0,50).replace(/\s+/g,' ') + '..."');
               console.log('[Schatten] Polit-Beat Intent-Vollzug:', beat.id);
+              }
             }
           }
           continue;
@@ -13055,27 +13078,41 @@ function politicalBeatsGateErfuellt(opts) {
       }
     } catch (e) {}
     const basisOk = _basisBeatsOk && _fundamentOk;
-    // v7.12.643 (Lektorat Run v640 A1 + Benjamin-Freigabe Variante A): Bei einem politischen Fall SIND die
-    // Original-Akten der Kern - sie müssen physisch raus (übergeben/versteckt/Westpresse), bevor der Fall gelöst
-    // ist. Margarete-Sicherung allein reicht NICHT, solange Akten existieren und noch bei Karl liegen. Sonst:
-    // Karl hält die "Bombe" noch in der Hand, aber der Fall gilt als gelöst - das fühlt sich für den Spieler
-    // falsch an (Engine sagt akten:bei_karl, Finale behauptet "Wahrheit ist sicher").
+    // v7.12.643/647 (Lektorat Run v640+v645 A1): Bei einem politischen Fall SIND die Original-Akten der Kern.
+    // v643 prüfte nur "Akten bei Karl" - zu eng. v645-Lektorat-Wurzel: Auch wenn Akten NIE gefunden wurden, darf
+    // der Fall nicht über Margarete allein lösen. Für den Margarete-Fall (politisch + Klient Margarete Stein):
+    // BEIDE Sicherungen nötig - akten_gesichert UND margarete_gesichert. Sonst: Route bewiesen + Klientin sicher,
+    // aber die politische Bombe (Akten) ist nie aus dem Spiel.
+    let _istMargareteFall = false;
+    try { _istMargareteFall = !!(caseSetup && caseSetup.caseType === 'politisch' && /margarete\s+stein/i.test(caseSetup.klient || '')); } catch (e) {}
     let _aktenNochBeiKarl = false;
     try {
       if (typeof _itemsBeiKarl === 'function') {
         _aktenNochBeiKarl = _itemsBeiKarl().some(it => it && (it.typ === 'beweis_dokument' || /original.?akten|schmuggelakten|frachtakten/i.test(it.name || '')));
       }
     } catch (e) {}
-    // sicherungOk: normalerweise Akten ODER Margarete. ABER wenn Akten noch bei Karl sind, MUSS akten_gesichert
-    // vorliegen (Margarete allein genügt dann nicht).
-    const sicherungOk = _aktenNochBeiKarl
-      ? has('akten_gesichert')
-      : (has('akten_gesichert') || has('margarete_gesichert'));
+    let sicherungOk;
+    if (_istMargareteFall) {
+      // Margarete-Fall: Akten UND Klientin müssen gesichert sein - keine Oder-Abkürzung.
+      sicherungOk = has('akten_gesichert') && (has('margarete_gesichert') || (caseProgress && caseProgress.clientSecured));
+    } else if (_aktenNochBeiKarl) {
+      // Anderer politischer Fall mit Akten bei Karl: Akten müssen raus.
+      sicherungOk = has('akten_gesichert');
+    } else {
+      sicherungOk = has('akten_gesichert') || has('margarete_gesichert');
+    }
     const fehlend = [];
     if (!has('schmuggelroute_belegt')) fehlend.push('Schmuggelroute belegen');
     if (!_wahlerOk) fehlend.push('Wahler als Verantwortlichen belegen');
     if (!_fundamentOk && _fundamentFehlt) fehlend.push(_fundamentFehlt);
-    if (!sicherungOk) fehlend.push(_aktenNochBeiKarl ? 'Die Original-Akten physisch sichern (an Vera/Westpresse übergeben oder verstecken) - sie sind noch bei Karl' : 'Akten sichern ODER Margarete/Beweise in Sicherheit bringen');
+    if (!sicherungOk) {
+      if (_istMargareteFall) {
+        if (!has('akten_gesichert')) fehlend.push('Margaretes Akten physisch sichern (an Vera/Westpresse übergeben oder verstecken)');
+        if (!(has('margarete_gesichert') || (caseProgress && caseProgress.clientSecured))) fehlend.push('Margarete in Sicherheit bringen');
+      } else {
+        fehlend.push(_aktenNochBeiKarl ? 'Die Original-Akten physisch sichern - sie sind noch bei Karl' : 'Akten sichern ODER Margarete/Beweise in Sicherheit bringen');
+      }
+    }
     return { aktiv: true, erfuellt: basisOk && sicherungOk, basisOk: basisOk, sicherungOk: sicherungOk, fehlend: fehlend };
   } catch (e) { return { aktiv: false, erfuellt: true, basisOk: true, sicherungOk: true, fehlend: [] }; }
 }
@@ -33570,8 +33607,18 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
                 // v7.12.624 (Lektorat Run 0032 P1: Übergabe an Vera setzte Beat, Item blieb bei_karl - der
                 // v609-Move saß nur im Intent-Prosa-Pfad): JEDER Akten-Vollzug bewegt ZUERST die getragenen
                 // Beweis-Dokumente auf gesichert - der Beat ist die Folge desselben Vorgangs.
-                try { if (typeof _itemsBeiKarl === 'function' && typeof _itemMove === 'function') _itemsBeiKarl().filter(it => it.typ === 'beweis_dokument').forEach(it => _itemMove(it.id, { status: 'gesichert', owner: 'uebergeben' })); } catch (e) {}
-                _setBeat('akten_gesichert', 'Akten physisch gesichert');
+                // v7.12.647 (Lektorat Run v645 A2): Beat NUR, wenn Karl wirklich ein Beweis-Dokument trägt -
+                // sonst kann "übergib die Akten an Vera" den Beat setzen, obwohl Karl keine Akten hat (leere
+                // Schleife, Beat feuerte trotzdem -> falsche Sicherung).
+                let _beweisItems = [];
+                try { if (typeof _itemsBeiKarl === 'function') _beweisItems = _itemsBeiKarl().filter(it => it && it.typ === 'beweis_dokument'); } catch (e) {}
+                if (!_beweisItems.length) {
+                  if (typeof diag === 'function') diag('drift', 'AKTEN-SICHERUNG BLOCKIERT: Aktion behauptet Akten-Übergabe, aber Karl trägt kein Beweis-Dokument.');
+                  if (typeof showProgressToast === 'function') { try { showProgressToast('Akten fehlen', 'Karl kann keine Akten sichern, die er nicht bei sich hat - erst die Akten beschaffen.', 'warn', 'akten-fehlen'); } catch (e) {} }
+                } else {
+                  try { if (typeof _itemMove === 'function') _beweisItems.forEach(it => _itemMove(it.id, { status: 'gesichert', owner: 'uebergeben' })); } catch (e) {}
+                  _setBeat('akten_gesichert', 'Akten physisch gesichert');
+                }
               }
               else _setBeat('margarete_gesichert', 'Margarete/Beweise in Sicherheit');
               if (caseProgress.pendingSecurityIntent) caseProgress.pendingSecurityIntent = null;

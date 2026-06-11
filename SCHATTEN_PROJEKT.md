@@ -14644,3 +14644,21 @@ HINWEIS Charité-Alias: bereits in v599 gelöst (éèê -> e normalisiert), Lekt
 "Ministerium fuer Staatssicherheit (MfS)"-Lexikonton bewusst NICHT geändert (Prosa-/Gameplay-Frage, braucht
 Benjamins Freigabe). OFFEN: A6 August/Doc nach Zweck aus Party, A7 Helene/Marlene-Rollentrennung (beide brauchen
 Gameplay-Entscheidungen).
+
+## v7.12.647 (2026-06-11): Akten-Gate-Wurzel + Beat-ohne-Item + Stärke-Default + Helene (Code-Lektorat v645)
+CODE-LEKTORAT Run v645 (node --check sauber bestätigt, PLAN_ZUGRIFF-Guard + strict-Gate + Key-Fix + Schläfen-
+Prompt verifiziert). RESTLICHE WURZEL gefixt:
+A1 AKTEN-GATE WURZEL: v643/646 prüften nur "Akten BEI KARL" - zu eng. v645-Lektorat: Auch wenn Akten NIE
+gefunden wurden, darf Margarete-Fall nicht über Klientin allein lösen. JETZT: Beim Margarete-Fall (politisch +
+Klient Margarete Stein) BEIDE Sicherungen nötig - akten_gesichert UND (margarete_gesichert ODER clientSecured).
+Andere politische Fälle: wie gehabt. 5 Gate-Tests grün.
+A2 BEAT-OHNE-ITEM: akten_gesichert feuerte auch, wenn Karl KEIN Beweis-Dokument trug (leere Move-Schleife,
+Beat trotzdem). "Übergib Akten an Vera" ohne Akten = falsche Sicherung. JETZT in BEIDEN Pfaden (Aktions-Vollzug
++ Intent-Vollzug): Beat nur wenn _itemsBeiKarl ein typ='beweis_dokument' enthält, sonst Toast "Akten fehlen".
+A6 STÄRKE-DEFAULT: _akteurStaerke startete mit basisKey='detektiv' -> jeder unerkannte Akteur bekam Karls
+Stärke. JETZT Default 'unbekannt' (angriff/ablenkung 1, einschuechtern 0), Karl explizit detektiv. 2 Tests grün.
+A3 HELENE/MARLENE: Charité-Ort injizierte nur Marlene, aber Sicherungs-Button sagt "Margarete zu Helene"
+(Schutzperson). JETZT beim Margarete-Fall Helene zusätzlich am Charité-Ort präsent (Variante A: Marlene heilt
+Karl, Helene schützt Margarete). node --check OK (Klammer-Bug beim Bau sofort gefangen+gefixt).
+OFFEN (Gameplay-Entscheidungen, brauchen Benjamin): A4 August nach Indiz aktiv aus Party, A5 Doc außerhalb
+Praxis aus Party (beide berühren "Spieler entscheidet wer Party verlässt"). A8 W2b Retry/Fallback (größerer Bau).
