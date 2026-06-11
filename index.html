@@ -3187,7 +3187,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.663</div>
+    <div class="start-version">Schatten v7.12.664</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.663</span>
+    <span>Schatten v7.12.664</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5061,7 +5061,7 @@ const INTRO_VARIANTS = [
           startBekannt: false, freischaltBei: ['goldener anker','willi kummer','informant','alexanderplatz','kummer'], oeffnungszeit: ['abend','nacht'],
           npcs: [{ id: 'willi_kummer', zeit: ['abend','nacht'] }, { id: 'august_lemke', zeit: ['abend','nacht'] }],
           indizien: [
-            { id: 'lemke_belastet_wahler', text: 'August Lemke (Zeuge) belastet Wahler', npc: 'august_lemke', _entlaesstNpc: 'august_lemke', quelle: 'person', actions: ['ANSPRECHEN','BEFRAGEN','UEBERZEUGEN','BESTECHEN'], zeit: ['abend','nacht'], schluessel: ['lemke','zeuge','belastet','wahler geschickt','lemke sagt'], stage: 3 },
+            { id: 'lemke_belastet_wahler', text: 'August Lemke (Zeuge) belastet Wahler', npc: 'august_lemke', quelle: 'person', actions: ['ANSPRECHEN','BEFRAGEN','UEBERZEUGEN','BESTECHEN'], zeit: ['abend','nacht'], schluessel: ['lemke','zeuge','belastet','wahler geschickt','lemke sagt'], stage: 3 },
             { id: 'anker_kontakt_hinweis', text: 'Hinweis auf den IM "Anker" und seine Rolle', npc: 'willi_kummer', quelle: 'person', actions: ['ANSPRECHEN','BEFRAGEN','BESTECHEN'], schluessel: ['im anker','spitzel','informant der stasi','verräter','anker ist'], stage: 3 },
           ] },
         // v7.12.524: Doc Wagner + Charite werden jetzt ZENTRAL in getCaseLocations injiziert (fallübergreifend
@@ -6752,16 +6752,6 @@ function _markiereIndizGefunden(ind) {
   if (ind.itemType && typeof _itemAdd === 'function') {
     _itemAdd({ id: 'item_' + ind.id, name: ind.text || ind.id, typ: ind.itemType, quelle: 'indiz:' + ind.id });
   }
-  // v7.12.662 (ChatGPT-Lektorat A1: August Lemke klebt nach seiner Aussage als Party-Mitglied und reist überall
-  // mit). Generisch: trägt ein Indiz das Feld _entlaesstNpc (NPC-Name/-ID), verlässt dieser Zeuge mit dem Fund
-  // die Party - er hat ausgesagt, seine Rolle ist erfüllt. Er bleibt als NPC am Ort (kein Verschwinden), reist
-  // aber nicht mehr automatisch mit. Spieler kann ihn bewusst wieder ansprechen/mitnehmen.
-  if (ind._entlaesstNpc && typeof _partyRemove === 'function') {
-    try {
-      _partyRemove(ind._entlaesstNpc, null);  // _entlaesstNpc ist eine NPC-ID (z.B. 'august_lemke')
-      if (typeof diag === 'function') diag('state', '🚪 ZEUGE entlassen aus Party nach Aussage: ' + ind._entlaesstNpc + ' (Indiz ' + ind.id + ')');
-    } catch (e) {}
-  }
   return true;
 }
 // Prüft nach einer Szene, ob am aktuellen Ort ein Kern-Indiz freigeschaltet wurde (KI-Prosa-Schlüsselwort ODER
@@ -7121,7 +7111,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.663';
+window.SCHATTEN_VERSION = 'v7.12.664';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -20809,7 +20799,12 @@ function renderOptions(scene) {
             // v7.12.661: Logge, was tatsächlich eingesammelt wurde (Benjamin: "und wie viele und welche ich erhalte").
             if (typeof diag === 'function') diag('state', '🔎 UMSEHEN-KLICK @ ' + engineCurrentLocation.name + ': Items genommen=' + f2.length + ' [' + f2.map(x => x.name).join(', ') + '] · Indizien genommen=' + _ind2.length + ' [' + _ind2.map(x => x.id).join(', ') + '] · Gesamt-Namen=' + _gefundenNamen.length);
             if (_gefundenNamen.length) {
-              if (typeof showProgressToast === 'function') showProgressToast('🔎 Gefunden', 'Karl entdeckt: ' + _gefundenNamen.join(', '), 'success', 'orts-fund');
+              // v7.12.664 (Benjamin: "3 Fundstücke geklickt, kein Toast"). URSACHE: 'success'-Variante fiel in
+              // den 3-Szenen-Variant-Cooldown - die Bestätigung wurde unterdrückt, obwohl die Items/Indizien
+              // tatsächlich eingesammelt wurden. Der Umsehen-Toast ist eine DIREKTE Antwort auf einen Spieler-
+              // Klick (ein Fund-Ereignis wie ein Indiz-Fund) und MUSS immer erscheinen. Variante 'clue' umgeht
+              // den Cooldown (canShowToast: clue gibt immer true zurück).
+              if (typeof showProgressToast === 'function') showProgressToast('🔎 Gefunden', 'Karl entdeckt: ' + _gefundenNamen.join(', '), 'clue', 'orts-fund-' + (typeof sceneCounter === 'number' ? sceneCounter : 0));
             } else {
               // Nichts holbar - aber vielleicht warten zeitgesperrte ORTS-Indizien.
               let _spaeterHier = 0;

@@ -14950,3 +14950,22 @@ A4 (Setup-Cast-Audit zählt Helene als nicht-aktiviert, obwohl sie Margarete üb
 _echtAktiv: NPC ist Ziel einer System-Sicherungsaktion (clientSecuredAt matcht NPC-Namen/Vornamen). Schutzort-NPCs
 (SCHUTZ-Tag) auch über Vornamen-Schlüssel (helene, doc_wagner). Reiner Audit/Lektorat-Fix, keine Spielwirkung.
 4 Tests grün. node --check OK.
+
+## v7.12.664 (2026-06-11): August-Auto-Remove ZURÜCKGENOMMEN (Regelverstoß) + Umsehen-Toast-Cooldown gefixt
+BENJAMIN-BEFUND 1: "Ich hatte August Lemke zur Party hinzugefügt, dann war er in der nächsten Szene wieder
+draußen, dann wieder hinzugefügt." CLAUDE-FEHLER: Mein v662-Fix (_entlaesstNpc) entfernte August automatisch beim
+Indiz-Fund - das VERSTÖSST gegen die eiserne Benjamin-Grundregel "Spieler entscheidet wer die Party verlässt, NIE
+Auto-Entfernung". Lektorat-A1 war gut gemeint, aber die Umsetzung war falsch. KOMPLETT ZURÜCKGENOMMEN: _entlaesstNpc-
+Hook in _markiereIndizGefunden raus, Feld bei lemke_belastet_wahler raus. Verifiziert: _partyAdd wird NUR bei
+Spieler-Aktionen aufgerufen (Z18828 Popup-Klick, Z19587 Begleiter-Befehl) - es gibt KEINE Auto-Aufnahme. August
+ist nur in der Party, wenn Benjamin ihn hinzufügt, und bleibt bis Benjamin ihn rauswirft (Party-Mitglied anklicken
+-> dalassen). Party-Kontrolle vollständig beim Spieler. (0 _entlaesstNpc-Vorkommen verifiziert.)
+BENJAMIN-BEFUND 2: "Szene 2: 3 Fundstücke auf Umsehen geklickt, wieder kein Toast, kein Hinweis welche 3 ich
+bekommen habe." WURZEL GEFUNDEN: Der Erfolgs-Toast lief als variant:'success' mit triggerKey 'orts-fund' - fiel in
+den 3-Szenen-Variant-Cooldown von canShowToast. Die Items/Indizien WURDEN eingesammelt, aber die Bestätigung wurde
+unterdrückt -> wirkt wie stiller Fehlschlag (erklärt auch v660/v661-Befund "kein Toast, keine Items"). FIX: Umsehen-
+Erfolgs-Toast jetzt variant:'clue' - canShowToast gibt für clue IMMER true zurück (kein Cooldown, wie Indiz-Funde).
+Der Umsehen-Toast ist eine direkte Antwort auf einen Spieler-Klick und MUSS immer erscheinen. 3 Tests grün.
+HINWEIS: Der v663-Run (20:52) brach mit API-503 (Google-seitiger Gemini-Ausfall, KEIN Code-Bug) bei Szene 4 ab und
+wurde nicht als Datei hochgeladen - das v661-UMSEHEN-Logging konnte daher noch nicht ausgewertet werden. Beim
+nächsten vollständigen Run zeigen 🔎 UMSEHEN-BUTTON / 🔎 UMSEHEN-KLICK die genauen Zahlen. node --check OK.
