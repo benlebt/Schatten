@@ -3191,7 +3191,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.633</div>
+    <div class="start-version">Schatten v7.12.634</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.633</span>
+    <span>Schatten v7.12.634</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7098,7 +7098,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.633';
+window.SCHATTEN_VERSION = 'v7.12.634';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -20683,6 +20683,23 @@ function renderOptions(scene) {
   // AUFLOESEN-Optionen in ABCD werden in der forEach-Schleife unten
   // (nach classifyOption) zu BEOBACHTEN konvertiert.
   const hasAufloesenOption = false; // immer false jetzt - System-Button entscheidet
+  // v7.12.634 (Dead-Loop-Fix, Render-Pfad): volles politisches Gate erfüllt, aber Stage hängt < 3 (Timing) ->
+  // HIER sofort hochziehen, sonst bleibt "Fall lösen" gesperrt obwohl inhaltlich alles getan ist (Benjamin-
+  // Befund: Akten gesichert, Margarete secured, aber "mal zu wenig Beweise, mal zu hohe Spannung" = Dead-Loop).
+  try {
+    if (caseSetup && caseSetup.caseType === 'politisch' && caseProgress && caseProgress.stage < 3
+        && typeof politicalBeatsGateErfuellt === 'function') {
+      const _pgRender = politicalBeatsGateErfuellt({ strict: true });
+      if (_pgRender && _pgRender.aktiv && _pgRender.erfuellt) {
+        if (caseProgress.stage < 2 && !caseProgress.stage2StartScene) caseProgress.stage2StartScene = sceneCounter;
+        caseProgress.stage = 3;
+        if (!caseProgress.stage3StartScene) caseProgress.stage3StartScene = sceneCounter;
+        if (!caseProgress.wahrheitErkannt) caseProgress.wahrheitErkannt = true;
+        caseProgress.resolveEverReady = true;
+        if (typeof diag === 'function') diag('progress', '✦ AUTO-STAGE 3 (NOTAUSGANG v634, Render-Pfad): volles Gate erfüllt - Lösen sofort freigegeben');
+      }
+    }
+  } catch (e) {}
   const currentStage = (caseProgress && caseProgress.stage) || 0;
   const indizCount = (caseProgress && Array.isArray(caseProgress.indizien))
     ? caseProgress.indizien.length : 0;
@@ -33737,7 +33754,21 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         if (_hatPolBeats && (_ctPol === 'politisch') && caseProgress.stage >= 1 && caseProgress.stage < 3
             && typeof politicalBeatsGateErfuellt === 'function') {
           const _pgS3 = politicalBeatsGateErfuellt({ strict: true });
-          if (_pgS3 && _pgS3.aktiv && _pgS3.basisOk) {
+          // v7.12.634 (Benjamin-Befund Dead-Loop: Fall inhaltlich komplett gelöst - Akten gesichert, Margarete
+          // secured, Wahler belegt - aber Stage hing auf 1, "mal zu wenig Beweise, mal zu hohe Spannung").
+          // NOTAUSGANG: Ist das VOLLE Gate erfüllt (Basis + Sicherung), gibt es keinen Grund mehr zu warten -
+          // Stage 3 SOFORT, ohne _warte-Zählung. Das verhindert das Hängen bei erfülltem, aber nicht
+          // hochgezogenem Zustand.
+          if (_pgS3 && _pgS3.aktiv && _pgS3.erfuellt && caseProgress.stage < 3) {
+            if (caseProgress.stage < 2 && !caseProgress.stage2StartScene) caseProgress.stage2StartScene = sceneCounter;
+            caseProgress.stage = 3;
+            if (!caseProgress.stage3StartScene) caseProgress.stage3StartScene = sceneCounter;
+            if (typeof scenesInStage3 !== 'undefined') scenesInStage3 = 0;
+            if (!caseProgress.wahrheitErkannt) caseProgress.wahrheitErkannt = true;
+            caseProgress.resolveEverReady = true;
+            diag('progress', '✦ AUTO-STAGE 3 (NOTAUSGANG v634: volles politisches Gate erfüllt - Basis + Sicherung - Stage sofort hochgezogen, Dead-Loop verhindert)');
+            if (typeof showProgressToast === 'function') showProgressToast('Fall abschlussreif', 'Wahrheit belegt und gesichert - du kannst den Fall jetzt lösen.', 'success', 'notausgang-s3');
+          } else if (_pgS3 && _pgS3.aktiv && _pgS3.basisOk) {
             if (typeof caseProgress._polBasisSeitSzene !== 'number') caseProgress._polBasisSeitSzene = sceneCounter;
             const _warteP = sceneCounter - caseProgress._polBasisSeitSzene;
             if (_warteP >= 2 && caseProgress.stage < 3) {

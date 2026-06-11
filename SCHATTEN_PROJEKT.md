@@ -14443,3 +14443,20 @@ mehrere Ziele via Mehrfachauswahl), kombinierbar im Plan mit Karl/Begleiter-Akti
 fixiert-Wirkung (fass/fixiere) läuft über bestehende _planAusfuehren-Logik. 2/2 Filter-Tests. node --check OK.
 Personen-Menü-Hund-Befehle (v632) bleiben zusätzlich für Schnellzugriff. OFFEN: anbieten-Cooldown, Item-Instanz-
 Counter, Zurückpfeifen (falls fixiert sich als Soft-Lock erweist).
+
+## v7.12.634 (2026-06-11): DEAD-LOOP-FIX Fall-lösen-Gate (Benjamin-Befund Run v633)
+BENJAMIN-BUG: Fall inhaltlich KOMPLETT gelöst (CLIENT=secured@helene, Akten gesichert@uebergeben, beide Gegner
+uebergeben, Wahler belegt, End-Diag alle ✓) - aber Lösen-Button blieb gesperrt mit wechselndem Grund: "noch
+nicht genug Beweise" / "zu hohe Spannung" / wieder "zu wenig Beweise". URSACHE: caseProgress.stage hing auf 1
+(STAGE-DIAG bis Sz27 durchgehend Stage 1, wahrheitErkannt=false), obwohl 4 Kern-Indizien (Stage-Floor bis 4)
+gefunden + politicalBeats=5/RegOK. Der AUTO-STAGE-3-Hochzug brauchte _warteP>=2 UND strict-basisOk, lief aber
+nie sauber durch -> resolveCoreReady (verlangt Stage>=3) nie erfüllt -> Dead-Loop. Mehrere UND-Sperren
+(truthBeats/politicalGate/Spannung/Beweise) feuerten je nach Spannungswert abwechselnd -> "mal dies, mal das".
+FIX (2 Notausgänge): Wenn das VOLLE politische Gate erfüllt ist (_pgR.erfuellt = basisOk && sicherungOk), wird
+Stage 3 SOFORT hochgezogen (kein _warte) - (1) im Szenen-Commit-Pfad, (2) im Options-Render-Pfad VOR der
+currentStage-Berechnung (damit der Lösen-Button in derselben Szene frei wird, ohne neue Szene). Setzt
+wahrheitErkannt + resolveEverReady. Wenn alles inhaltlich getan ist, gibt es keinen Grund mehr zu warten.
+node --check OK. OFFEN (Benjamin-Designfragen, eigenes Konzept): Party-Stärken-System (wer kann was gut -
+Frau ablenkt, Mann/Roth schlägt, Stasi-Hauptmann nur mit Übermacht+Hund), Fessel-Material kontextuell (nicht
+jeder hat Handschellen - Kabel/Strick/Seil/Krawatte), Erfolgsquoten statt 100%, Gegner-Härtegrade. Custody-
+Provokation ab Sz20 (Benjamin wollte es testen). Realismus VP-Übergabe gefesselter Stasi (Benjamin-Frage).
