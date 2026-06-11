@@ -14746,3 +14746,18 @@ Umgebung/durchsuchen NPC/übergeben) -> v654 Multi-Aktion Light (1 Hauptakteur +
 "Schatten bleibt freies Noir-Abenteuer, aber die Freiheit kommt aus validierten Engine-Aktionen, nicht aus
 zufällig erfundenen KI-Buttons." A2 (Systembuttons bleiben): Reisen/Schlafen/Heilen/Notflucht/Fall lösen/
 Romance/Übernachtung/Notizbuch/Umsehen/Aktueller Stand - alle unverändert.
+
+## v7.12.652 (2026-06-11): Kombi-Label getrennt + How-To auf Baukasten-First (Code-Lektorat v650)
+CODE-LEKTORAT Run/Code v650 (node --check sauber; Freitext aus, Akten-Gate hart, Ghostbusters stabil, Doc-Block
+bestätigt). HINWEIS: Lektorat lief auf v650 - A4 (NPC-Verben bereinigen) war da noch offen, ist aber in v651
+bereits erledigt. Hier die restlichen sicheren Punkte:
+A5 KOMBI-LABEL getrennt: _setBeat('margarete_gesichert', 'Margarete/Beweise in Sicherheit') -> 'Margarete
+physisch gesichert' (vermischte zwei getrennte Weltzustände). Fehlend-Label-Slash "Margarete/Beweise" ->
+"Zielperson in Sicherheit bringen" (Oder-Logik für Nicht-Margarete-Fälle bleibt inhaltlich).
+A6 HOW-TO auf Baukasten-First: Der "✍️ Das Textfeld"-Abschnitt (beschrieb die deaktivierte Freitext-Eingabe als
+"das Beste") komplett ersetzt durch "🧩 Der Aktions-Baukasten" + "🗣️ Personen ansprechen". Beispiele (Kuchen/
+Sahnetorte/Fesseln) als Baukasten-Aktionen erhalten. A/B/C/D als "KI schlägt vor" eingeordnet statt als
+Hauptinterface. Textfeld-Erwähnung bei System-Buttons entfernt. node --check OK.
+BEWUSST NICHT JETZT (= geplante nächste Schritte, eigene getestete Bauten): A1 KI_OPTIONEN_AKTIV-Flag (v653),
+A2 Baukasten immer sichtbar statt nur bei Konflikt (v653), A3 durchsuchen_ort/durchsuchen_npc als Baukasten-
+Verben (v653), A7 GEGNER_HAERTE_BASIS-Tabelle nutzen oder entfernen (optional, Aufräumen).
