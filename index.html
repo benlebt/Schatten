@@ -3191,7 +3191,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.624</div>
+    <div class="start-version">Schatten v7.12.626</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.624</span>
+    <span>Schatten v7.12.626</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6620,6 +6620,23 @@ function getNpcsAtCurrentLocation() {
       out.push({ id: scId, name: sc.name, tag: sc.tag || '' }); seen[scId] = true;
     }
   }
+  // v7.12.625 (Lektorat Run 0048 P1: gefesselter Mantel-Mann spawnte via Threat am Bahnhof): W6 gilt
+  // ZENTRAL - gefesselte/KO-NPCs existieren nur an ihrem Zustands-Ort, übergebene/geflohene nirgends mehr.
+  // Diese Funktion speist Buttons, Baukasten, Anwesenheits-Prompt UND zeigt Threat-Spawns - ein Filter hier
+  // deckt alle Engine-Pfade.
+  try {
+    if (typeof _npcZustandGet === 'function') {
+      const _hierW6 = (typeof engineCurrentLocation !== 'undefined' && engineCurrentLocation && engineCurrentLocation.name) ? normForMatch(engineCurrentLocation.name) : '';
+      return out.filter(n => {
+        if (!n || !n.name) return false;
+        const z = _npcZustandGet(n.name);
+        if (!z || z.status === 'frei') return true;
+        if (z.status === 'uebergeben' || z.status === 'geflohen') { if (typeof diag === 'function') diag('detect', 'W6-BLOCK (Präsenz): ' + n.name + ' ist ' + z.status + ' - existiert hier nicht mehr'); return false; }
+        if ((z.status === 'gefesselt' || z.status === 'ko') && normForMatch(z.ort || '') !== _hierW6) { if (typeof diag === 'function') diag('detect', 'W6-BLOCK (Präsenz): ' + n.name + ' ist ' + z.status + '@' + z.ort + ' - nicht hier'); return false; }
+        return true;
+      });
+    }
+  } catch (e) {}
   return out;
 }
 
@@ -7056,7 +7073,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.624';
+window.SCHATTEN_VERSION = 'v7.12.626';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -13667,7 +13684,18 @@ function buildTranscriptText() {
   if (lastInjury) out += 'Verletzung: ' + lastInjury + '\n';
   out += 'Fahrzeug: ' + (karlVehicle || 'keines (verloren/gestohlen/zerstoert)') + '\n';
   if (inventory && inventory.length > 0) {
-    out += 'Inventar:\n';
+    // v7.12.626 (Lektorat: zwei Inventarsysteme liefen auseinander): Die ENGINE-Items (Weltwahrheit) stehen
+    // jetzt ZUERST im Export - das KI-Inventar darunter ist nur noch erzählerische Ausstattung.
+    try {
+      if (typeof _itemsMap === 'function') {
+        const _alleIt = Object.keys(_itemsMap()).map(k => _itemsMap()[k]);
+        if (_alleIt.length) {
+          out += 'Engine-Items (Weltwahrheit):\n';
+          _alleIt.forEach(it => { out += '  - ' + it.name + ' [' + it.status + (it.owner && it.owner !== 'karl' ? '@' + it.owner : '') + ']\n'; });
+        }
+      }
+    } catch (e) {}
+    out += 'Inventar (erzählerisch, KI-geführt):\n';
     for (const item of inventory) out += '  - ' + item + '\n';
   }
   if (cast && cast.length > 0) {
@@ -21338,6 +21366,13 @@ async function requestSceneFromModel(userMessage, conversationHistory, compactMo
         const _trag = (typeof _itemsBeiKarl === 'function') ? _itemsBeiKarl() : [];
         if (_trag.length) {
           recap += 'HARTER WELTZUSTAND - BESITZ (PFLICHT): Karl trägt bei sich: ' + _trag.map(it => it.name).join('; ') + '. Diese Gegenstände sind NICHT verloren, übergeben oder gesichert, solange die Engine es nicht meldet. Erfinde KEINEN weiteren Besitz - atmosphärisch erwähnte Gegenstände landen NICHT in Karls Taschen, und kein Item verschwindet, wird gestohlen oder zerstört, ohne dass die Engine es vorgibt.\n\n';
+        }
+      } catch (e) {}
+      // v7.12.626 (W2b-light): Nach einem Ort-Prosa-Bruch holt die Folgeszene die Erzählung zurück.
+      try {
+        if (window._ortBruchKorrektur) {
+          recap += 'ORT-RÜCKHOLUNG (PFLICHT): Die letzte Szene ist erzählerisch an einen falschen Ort gedriftet. DIESE Szene spielt eindeutig und ausschließlich am Engine-Ort "' + window._ortBruchKorrektur + '" - beschreibe diesen Ort konkret im ersten Absatz, keine Rückblende, kein Verbleib am falschen Ort.\n\n';
+          window._ortBruchKorrektur = null;
         }
       } catch (e) {}
       // v7.12.610 (W6): NPC-Zustände als Pflicht-Weltzustand.
@@ -29907,7 +29942,10 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           try {
             const _stg = (caseProgress && typeof caseProgress.stage === 'number') ? caseProgress.stage : 0;
             const _prosaNenntKiOrt = scene.szene && _kiMain && normForMatch(scene.szene).includes(_kiMain.split(/\s+/)[0]) && _kiMain.split(/\s+/)[0].length >= 5;
-            if (_stg >= 2) diag('drift', '⚠ ORT-PROSA-BRUCH (Stage ' + _stg + '): Header korrigiert, aber Prosa spielt vermutlich am KI-Ort' + (_prosaNenntKiOrt ? ' (KI-Ortsname kommt im Szenentext vor)' : '') + ' - W2b-Kandidat');
+            if (_stg >= 2) diag('drift', '⚠ ORT-PROSA-BRUCH (Stage ' + _stg + '): Header korrigiert, aber Prosa spielt vermutlich am KI-Ort' + (_prosaNenntKiOrt ? ' (KI-Ortsname kommt im Szenentext vor)' : '') + ' - W2b-Korrektur-Push in Folgeszene');
+            // v7.12.626 (W2b-light, Entscheidung nach Run 0048: 10 Brüche/39 Sz): Kein teurer Retry - die
+            // NÄCHSTE Szene holt die Erzählung an den Engine-Ort zurück (Rückhol-Regel im recap).
+            if (_stg >= 2) window._ortBruchKorrektur = _engineOrt;
           } catch (e) {}
           scene.ort = _engineOrt;
         }
@@ -36036,7 +36074,13 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         const escapeRe = /(entkommst|entkommt|entkommen|reisst dich los|fluchtest|fliehst erfolgreich|lassen von dir ab|laesst von dir ab|schuettelst sie ab|kannst entkommen|wagen schiesst davon.*ohne dich|ohne dich davon|bist du allein|hier drinnen allein|in deinem buero|in dein buero)/;
         const confirmed = (arrestConfirmRe.test(sTxt) || arrestConfirmRe.test(oTxt) || handschellenAnKarlRe.test(sTxt) || handschellenAnKarlRe.test(oTxt) || arrestKarlBezugRe.test(sTxt) || haftOrtMitBezug.test(sTxt) || haftMarkerMitKarlBezug.test(sTxt)) && !karlFesseltRe.test(sTxt);
         const escaped = escapeRe.test(sTxt);
-        if (confirmed && !escaped) {
+        // v7.12.626 (Lektorat Run 0048: Custody-False-Positive in der Grenz-Sicherungs-Szene): Wenn die Szene
+        // eine ERFOLGREICHE Sicherung/Übergabe erzählt und kein direkter Zugriff auf KARL stattfindet, ist
+        // Bedrohungsprosa (Posten, Schatten, Kontrolle) KEINE Festnahme.
+        const _sicherungsKontextRe = /(uebergibst|übergibst|in sicherheit (gebracht|ist)|passiert die (grenze|kontrolle|sperre)|(vera|helene|roth)[^.]{0,30}(nimmt|uebernimmt|übernimmt|in empfang)|grenze (ist )?(passiert|geschafft)|drueben angekommen|drüben angekommen)/i;
+        const _direktZugriffRe = /(wirst (abgefuehrt|abgeführt|ueberwaeltigt|überwältigt|verhaftet|festgenommen)|legt dir handschellen|packt dich|zerren dich|stossen dich in (den|einen) wagen|zelle|verhoerraum|verhörraum)/i;
+        const _sicherungOhneZugriff = _sicherungsKontextRe.test(sTxt) && !_direktZugriffRe.test(sTxt);
+        if (confirmed && !escaped && !_sicherungOhneZugriff) {
           setCustodyState(true, 'text-confirmed-custody');
           caseProgress.pendingCustodyConfirm = false;
           diag('state', 'Custody bestaetigt durch Szenentext - karlInStasiCustody=true (Header zeigt Gewahrsam ab JETZT, synchron zur Story)');
