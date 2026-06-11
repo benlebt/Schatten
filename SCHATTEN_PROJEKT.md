@@ -14348,3 +14348,12 @@ EXPORT-ITEMS: Im Export steht jetzt ZUERST 'Engine-Items (Weltwahrheit)' aus der
 das alte KI-Inventar ist als '(erzählerisch, KI-geführt)' gelabelt - keine zwei konkurrierenden Wahrheiten
 mehr im Report; Lektorate können sauber unterscheiden. node --check OK. DANACH (Benjamin-Freigabe vorhanden):
 Schlüssel-Schloss-Konzept als nächster Schritt, sobald der nächste Run W2b-light + W6-zentral bestätigt.
+
+## v7.12.627 (2026-06-11): Personen vereinheitlicht - einmal gelistet, Popup mit Szene/Begleitung-Sektionen
+BENJAMIN-BEFUND (Screenshots): Margarete erschien DOPPELT - oben unter PERSONEN ('ansprechen', modus szene)
+und unten im initial eingeklappten 'Bleibt in der Szene' ('mitnehmen', modus verwalten) - viele Nutzer sehen
+den unteren Bereich nie. FIX: bauePersonenButtons wird nur noch EINMAL gerufen (oben, modus 'alle' = der
+vorhandene Misch-Zweig). Das Popup zeigt jetzt beide Gruppen klar getrennt: '▸ Aktionen (lösen eine Szene
+aus)' (neuer Mini-Header) -> Szene-Verben, dann der seit v549 vorhandene gestrichelte Trenner '✦ Begleitung
+(löst keine Szene aus)' -> Mitnehmen/Entlassen (gedämpft-grün, gestrichelt). Der verwalten-Aufruf im
+Bleibt-Block ist entfernt. node --check OK.

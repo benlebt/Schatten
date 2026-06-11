@@ -3191,7 +3191,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.626</div>
+    <div class="start-version">Schatten v7.12.627</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.626</span>
+    <span>Schatten v7.12.627</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7073,7 +7073,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.626';
+window.SCHATTEN_VERSION = 'v7.12.627';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -18862,6 +18862,13 @@ function oeffneNpcMenue(npc, modus) {
     if (typeof diag === 'function') diag('detect', 'NPC-MENÜ (' + modus + ') leer für ' + npc.name + ' - nicht geöffnet');
     return;
   }
+  // v7.12.627: Im Misch-Modus bekommt auch der Szene-Teil einen Mini-Header (Gegenstück zum Begleitung-Trenner).
+  if (modus === 'alle' && _szeneVerben.length && _verwaltVerben.length) {
+    const sep1 = document.createElement('div');
+    sep1.style.cssText = 'margin:2px 0 8px;font-family:inherit;color:#9a8a68;font-size:calc(9px * var(--reading-scale));letter-spacing:0.08em;text-transform:uppercase;';
+    sep1.textContent = '▸ Aktionen (lösen eine Szene aus)';
+    panel.appendChild(sep1);
+  }
   _alleVerben.forEach(verb => {
     // Trenner + Label vor dem ersten Verwaltungs-Button (visuelle Grenze zwischen "Szene" und "Party").
     if (verb._partyAction && !_trennerGesetzt) {
@@ -20753,11 +20760,12 @@ function renderOptions(scene) {
           sepP.className = 'person-sektion-label';
           sepP.textContent = '· Personen ·';
           uebergangBody.appendChild(sepP);
-          bauePersonenButtons(uebergangBody, 'szene');
+          // v7.12.627 (Benjamin: Margarete tauchte doppelt auf - oben 'ansprechen', unten eingeklappt
+          // 'mitnehmen'): Personen stehen nur noch EINMAL hier. Das Popup zeigt im Misch-Modus ALLE
+          // Aktionen, sauber getrennt: oben die Szene-Aktionen, darunter der vorhandene Trenner
+          // '✦ Begleitung (löst keine Szene aus)' mit den Verwaltungs-Buttons (gestrichelt, grün).
+          bauePersonenButtons(uebergangBody, 'alle');
         }
-      }
-      if (typeof bleibtActions !== 'undefined' && bleibtActions) {
-        bauePersonenButtons(bleibtActions, 'verwalten');
       }
     }
   } catch (e) { if (typeof diag === 'function') diag('drift', 'Personen-Render-Fehler: ' + e.message); }
