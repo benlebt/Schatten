@@ -14813,3 +14813,14 @@ Ort beenden, KEIN von der KI erzählter Abgang/Ortswechsel/Opel/Sirenen-zur-Fluc
 nächste Handlung. Anti-Folter-Kern bleibt. 8 Tests grün. node --check OK.
 HINWEIS an Benjamin: A/B/C/D-Buttons sind noch sichtbar, weil KI_OPTIONEN_AKTIV=true (default, wie vereinbart).
 Auf false setzen für den reinen Baukasten-Test - das ist Benjamins Entscheidung.
+
+## v7.12.656 (2026-06-11): KI_OPTIONEN_AKTIV = false (Benjamin: reiner Baukasten-Test startet)
+Benjamin will jetzt den Architektur-Test. KI_OPTIONEN_AKTIV von true auf false gesetzt - die A/B/C/D-KI-Optionen
+werden NICHT mehr gerendert. Das Spiel läuft jetzt rein über: Baukasten (🧩), Personen-Buttons (befragen/Gegner-
+Aktionen), Reisen, Umsehen, Notizbuch, Heilen, Schlafen, Fall lösen, Notflucht, Aktueller Stand. WICHTIG: Das
+Flag ist eine CODE-Konstante (Z7242), KEINE In-Game-Einstellung - Benjamin kann es nicht im Spiel umschalten,
+nur Claude im Code. Jederzeit auf true zurückstellbar (eine Zeile).
+TESTFRAGE: "Kann Margarete NUR mit Baukasten+Buttons gelöst werden?" Sicherungs-Wege sollten erreichbar sein:
+"Geben"-Verb (Akten an Vera/Helene), Charité/Auffangstelle als Reiseziele, "Der Volkspolizei übergeben" als
+NPC-Aktion. Falls ein nötiger Schritt NICHT ohne A/B/C/D erreichbar ist = guter Befund, zeigt die Lücke. Benjamin
+testet (sobald Gemini-Credits da), meldet wo es hakt -> gezielt Baukasten/Buttons ergänzen.
