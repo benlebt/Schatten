@@ -3191,7 +3191,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.629</div>
+    <div class="start-version">Schatten v7.12.630</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.629</span>
+    <span>Schatten v7.12.630</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7073,7 +7073,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.629';
+window.SCHATTEN_VERSION = 'v7.12.630';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -7411,6 +7411,26 @@ function _planAusfuehren() {
 // ============ Ende AKTIONS-PLAN ============
 // ============ v7.12.617: AKTIONS-BAUKASTEN (Benjamins Lego-System: Akteur -> Item -> Aktion -> Ziel) ============
 window._baukasten = window._baukasten || { offen: false, akteur: null, item: null, aktion: null, ziele: [] };
+// v7.12.630 (Benjamin: Item-Katalog mit erlaubten Aktionen): jedes Item trägt, wofür es taugt.
+const ITEM_KATALOG = {
+  west_zigaretten: { name: 'Schachtel West-Zigaretten', taugt: ['anbieten','bestechen','eintauschen'], tauschwert: 3 },
+  korn:            { name: 'Flasche Nordhäuser Doppelkorn', taugt: ['trinken','anbieten','werfen','schlagen'], tauschwert: 1, schaden: 'benommen' },
+  bohnenkaffee:    { name: 'Päckchen Bohnenkaffee', taugt: ['anbieten','bestechen','eintauschen'], tauschwert: 3 },
+  westmark:        { name: 'Bündel Westmark', taugt: ['bestechen','eintauschen'], tauschwert: 4 },
+  ziegelstein:    { name: 'Ziegelstein', taugt: ['werfen','schlagen','ablenken'], schaden: 'benommen' },
+  knallkoerper:   { name: 'Knallkörper', taugt: ['werfen','ablenken'] }
+};
+// Erkennt, ob ein getragenes Item einem Katalog-Eintrag entspricht (über Namens-Substring).
+function _itemKatalogEintrag(itemName) {
+  try {
+    const n = normForMatch(itemName || '');
+    for (const k in ITEM_KATALOG) {
+      const kn = normForMatch(ITEM_KATALOG[k].name);
+      if (n.includes(kn) || kn.includes(n)) return ITEM_KATALOG[k];
+    }
+  } catch (e) {}
+  return null;
+}
 const BAUKASTEN_AKTIONEN = {
   angreifen:  { label: 'Angreifen',   zielNoetig: true,  wirkung: 'ko',
     txt: (a, i, z) => a + ' greift ' + z + ' an und schaltet die Person aus - ' + z + ' geht zu Boden und bleibt bewusstlos (K.O.) liegen.' },
@@ -7422,6 +7442,8 @@ const BAUKASTEN_AKTIONEN = {
     txt: (a, i, z) => a + ' befragt ' + z + ' gezielt und hartnäckig' + (i ? ', ' + i.name + ' hilft dabei nach' : '') + '.' },
   bestechen:  { label: 'Bestechen',   zielNoetig: true,  itemUebergabe: true,
     txt: (a, i, z) => a + ' besticht ' + z + (i ? ' mit ' + i.name : ' - bietet Geld oder einen Gefallen') + ', um Informationen oder Kooperation zu bekommen.' },
+  eintauschen:{ label: 'Eintauschen für Info', zielNoetig: true, itemNoetig: true, itemVerlust: true,
+    txt: (a, i, z) => a + ' bietet ' + z + ' ' + (i ? i.name : 'etwas Wertvolles') + ' im Tausch gegen eine konkrete Information an - ' + z + ' überlegt, ob das Angebot gut genug ist, und rückt dann womöglich mit einem brauchbaren Hinweis heraus.' },
   geben:      { label: 'Geben',       zielNoetig: true,  itemNoetig: true, itemUebergabe: true,
     txt: (a, i, z) => a + ' gibt ' + z + ' ' + (i ? i.name : 'etwas') + '.' },
   werfen:     { label: 'Werfen',      zielNoetig: true,  itemNoetig: true, itemVerlust: true,
@@ -7533,7 +7555,19 @@ function _renderBaukasten() {
     }
     h += '<div style="color:#9a8a68;font-size:11px;margin-bottom:2px;">1. WER</div><div>' + akteure.map(a => _bkChip(a, bk.akteur === a, "_bkSet('akteur','" + a.replace(/'/g, "\\'") + "')")).join('') + '</div>';
     h += '<div style="color:#9a8a68;font-size:11px;margin:6px 0 2px;">2. ITEM (optional)</div><div>' + (itemsK.length ? itemsK.map(it => _bkChip(it.name, bk.item === it.id, "_bkSet('item','" + it.id + "')")).join('') : '<span style="color:#666;font-size:11px;">Karls Taschen sind leer</span>') + '</div>';
-    h += '<div style="color:#9a8a68;font-size:11px;margin:6px 0 2px;">3. AKTION</div><div>' + Object.keys(BAUKASTEN_AKTIONEN).map(k => _bkChip(BAUKASTEN_AKTIONEN[k].label, bk.aktion === k, "_bkSet('aktion','" + k + "')")).join('') + '</div>';
+    // v7.12.630: Ist ein Katalog-Item gewählt, zeige NUR dessen erlaubte Aktionen (kein "Stinkbombe trinken").
+    let _aktKeys = Object.keys(BAUKASTEN_AKTIONEN);
+    let _katHint = '';
+    try {
+      if (bk.item && typeof _itemsMap === 'function' && _itemsMap()[bk.item]) {
+        const _kat = _itemKatalogEintrag(_itemsMap()[bk.item].name);
+        if (_kat && Array.isArray(_kat.taugt) && _kat.taugt.length) {
+          _aktKeys = _aktKeys.filter(k => _kat.taugt.indexOf(k) !== -1);
+          _katHint = ' <span style="color:#7d9b8a;">(passend zu ' + escapeHtml(_kat.name) + ')</span>';
+        }
+      }
+    } catch (e) {}
+    h += '<div style="color:#9a8a68;font-size:11px;margin:6px 0 2px;">3. AKTION' + _katHint + '</div><div>' + _aktKeys.map(k => _bkChip(BAUKASTEN_AKTIONEN[k].label, bk.aktion === k, "_bkSet('aktion','" + k + "')")).join('') + '</div>';
     h += '<div style="color:#9a8a68;font-size:11px;margin:6px 0 2px;">4. ZIEL (mehrere möglich)</div><div>' + (ziele.length ? ziele.map(z => _bkChip(z, (Array.isArray(bk.ziele) && bk.ziele.indexOf(z) !== -1), "_bkSet('ziel','" + z.replace(/'/g, "\\'") + "')")).join('') : '<span style="color:#666;font-size:11px;">niemand am Ort</span>') + '</div>';
     const def = bk.aktion ? BAUKASTEN_AKTIONEN[bk.aktion] : null;
     const komplett = bk.akteur && def && (!def.zielNoetig || (Array.isArray(bk.ziele) && bk.ziele.length > 0)) && (!def.itemNoetig || bk.item);
@@ -18683,6 +18717,17 @@ function npcInteraktion(npc, verb) {
       if (typeof showProgressToast === 'function') showProgressToast('ZUGRIFF', npc.name + ' niedergeschlagen und gefesselt zurückgelassen.', 'success', 'manoever-m1');
     } catch (e) {}
   }
+  // v7.12.630 (Benjamin: NPCs nach Fesseln durchsuchen -> Geld/Items abnehmen): deterministische Beute.
+  if (verb._durchsuchBeute) {
+    try {
+      const _probeD = ((npc.tag || '') + ' ' + (npc.rolle || '') + ' ' + (npc.name || '')).toLowerCase();
+      if (typeof _itemAdd === 'function' && typeof _itemsMap === 'function') {
+        if (/stasi|mfs|agent|mantel|spitzel/.test(_probeD) && !_itemsMap()['item_westmark_' + normForMatch(npc.name).replace(/\s+/g, '_')]) {
+          _itemAdd({ id: 'item_westmark_' + normForMatch(npc.name).replace(/\s+/g, '_'), name: 'Bündel Westmark', typ: 'geld', quelle: 'durchsucht:' + npc.name });
+        }
+      }
+    } catch (e) {}
+  }
   // v7.12.611 (M3): Gefesselten der Volkspolizei übergeben - Zustand 'uebergeben', aus dem Spiel.
   if (verb._manoever === 'uebergeben_vp') {
     try {
@@ -18803,7 +18848,7 @@ function oeffneNpcMenue(npc, modus) {
         }
       } else if (_zM.status === 'gefesselt') {
         // v7.12.611: Folgeoptionen am Gefesselten - kein "er greift wieder an"-Unsinn.
-        verben.push({ key: 'gefesselt_durchsuchen', label: 'Durchsuchen (gefesselt)', kategorie: 'ERKUNDEN',
+        verben.push({ key: 'gefesselt_durchsuchen', label: 'Durchsuchen (gefesselt)', kategorie: 'ERKUNDEN', _durchsuchBeute: true,
           aktion: 'Durchsuche den gefesselten {npc} gründlich - Taschen, Mantelfutter, Papiere, Dienstausweis. Die Person ist gefesselt und kann sich nicht wehren.' });
         verben.push({ key: 'gefesselt_uebergeben', label: 'Der Volkspolizei übergeben', kategorie: 'DEFENSIV', _manoever: 'uebergeben_vp',
           aktion: 'Karl meldet den gefesselten {npc} bei Kommissar Roth / der Volkspolizei und übergibt die Person. {npc} wird abgeholt und ist aus dem Spiel.' });

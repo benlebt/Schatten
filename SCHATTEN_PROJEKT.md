@@ -14386,3 +14386,17 @@ Moment-Vorteil (benommen, KEIN W6-Dauerzustand - passt nicht ins Modell). Items 
 damit nutzbar (Werfen/Bestechen/Geben mit getragenem Item gegen Konflikt-Ziele). node --check OK.
 HINWEIS: Müdigkeit/Akten-Item beim NÄCHSTEN Run beobachten; Charité-Alias + Helene/Marlene-Trennung (Lektorat
 P2) als nächstes notiert.
+
+## v7.12.630 (2026-06-11): ITEM-KATALOG + Aktions-Filterung + Durchsuch-Beute (Benjamin Item-Vision, Pilot)
+Konzept KONZEPT_ITEM_KATALOG.md. ITEM_KATALOG (6 Kern-Items: west_zigaretten, korn, bohnenkaffee, westmark,
+ziegelstein, knallkoerper) - jedes mit taugt:[Aktionen] + tauschwert/schaden. _itemKatalogEintrag matcht
+getragene Items per Namens-Substring. BAUKASTEN filtert die Aktionsliste nach item.taugt, sobald ein Item
+gewählt ist (Hint "passend zu X") - kein "Knallkörper trinken"; unbekannte Items (Walther) zeigen alle Aktionen.
+NEUE AKTION 'eintauschen' (Eintauschen für Info): Item-Verlust, Prosa fragt Ziel nach konkreter Information ->
+Indiz-Freischaltung kommt v631 (erst Mechanik). DURCHSUCH-BEUTE: Gefesselten durchsuchen (_durchsuchBeute)
+vergibt bei Stasi/MfS/Agent/Mantel deterministisch 'Bündel Westmark' als echtes _itemAdd (Benjamin: "Geld
+abnehmen wie beim Durchsuchen"). 5/5 Filter-Tests. node --check OK.
+OFFEN/NÄCHSTE SCHRITTE: 'schlagen' als Baukasten-Aktion fehlt noch (in taugt referenziert, Filter ignoriert sie
+sauber); eintauschen->definiertes Indiz freischalten (v631); Orts-Fundlisten (fundItems pro Ort); NPC-Gaben;
+Tauschwert-Gates pro NPC; Charité-Alias + Helene/Marlene (Lektorat-P2). HINWEIS: schlagen/anbieten/trinken als
+Baukasten-Aktionen ggf. ergänzen, damit der Katalog-Filter sie zeigen kann.
