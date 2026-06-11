@@ -3191,7 +3191,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.635</div>
+    <div class="start-version">Schatten v7.12.636</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.635</span>
+    <span>Schatten v7.12.636</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7098,7 +7098,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.635';
+window.SCHATTEN_VERSION = 'v7.12.636';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -22987,8 +22987,8 @@ KEINE anderen Themen mehr - kein neuer Tatort, keine neuen Verdaechtigen, keine 
             // v7.12.604 (ChatGPT P1, Run 2130 Sz36): KEIN Pflicht-Zugriff mehr, wenn der Fall im Abschluss ist
             // (Klientin gesichert + Akten-Beat) - die Stasi bleibt Bedrohung im Nachklang, aber nicht als
             // mechanische Pflicht-Festnahme direkt neben dem Fall-lösen-Button.
-            const _abschlussNah = !!(caseProgress && caseProgress.clientSecured
-              && Array.isArray(caseProgress.politicalBeatsHit) && caseProgress.politicalBeatsHit.indexOf('akten_gesichert') !== -1);
+            const _abschlussNah = !!(caseProgress && (caseProgress._stasiEpilogModus || (caseProgress.clientSecured
+              && Array.isArray(caseProgress.politicalBeatsHit) && caseProgress.politicalBeatsHit.indexOf('akten_gesichert') !== -1)));
             if (_abschlussNah) {
               diag('progress', 'Stasi-Pflichtzugriff UNTERDRÜCKT: Klientin + Beweise gesichert, Fall im Abschluss - Bedrohung nur noch als Nachklang (kein forceCustody)');
               recap += `\n\nSTASI-NACHKLANG: Die Stasi bleibt im Hintergrund spürbar (ein Wagen, ein Beobachter, ein Blick) - aber KEIN Zugriff mehr: Karl hat die Beweise und die Klientin aus ihrer Reichweite gebracht. Atmosphäre statt Festnahme.`;
@@ -31689,7 +31689,22 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         }
       }
     }
-    // v7.12.512 (Run 1314): POST-FLUCHT-CAP als LETZTES Wort - nach Action-Wort-Korrektur UND Stasi-Anhebung.
+    // v7.12.636 (Lektorat Run 0633 A6: Stasi-Druck verdrängte den Abschluss - 7 Szenen Jagd NACH erfüllter
+  // Wahrheit+Sicherung): Ist der Fall abschlussreif (Wahrheit erkannt + Klient gesichert + Akten gesichert),
+  // wird die Stasi-Spannung gedeckelt (<=2) und Auto-Custody unterdrückt - nur noch Epilog-Druck, kein neuer
+  // Jagd-Loop. Der Spieler SOLL jetzt lösen können, nicht endlos fliehen.
+  try {
+    const _abschlussreifStasi = !!(caseProgress && caseProgress.wahrheitErkannt
+      && (caseProgress.clientSecured || (caseProgress.clientState && caseProgress.clientState.status && /secured|gesichert/.test(caseProgress.clientState.status)))
+      && Array.isArray(caseProgress.politicalBeatsHit ? caseProgress.politicalBeatsHit : []) );
+    const _aktenGesichertStasi = !!(caseProgress && Array.isArray(caseProgress.politicalBeatsHit) && caseProgress.politicalBeatsHit.indexOf('akten_gesichert') !== -1);
+    if (caseProgress && caseProgress.wahrheitErkannt && (caseProgress.clientSecured || _aktenGesichertStasi)) {
+      if (typeof newSpannung === 'number' && newSpannung > 2) { diag('state', 'STASI-DECKEL (v636): Fall abschlussreif - Spannung ' + newSpannung + ' -> 2, kein Jagd-Loop, nur Epilog-Druck'); newSpannung = 2; }
+      try { if (typeof stasiTension === 'number' && stasiTension > 2) stasiTension = 2; } catch (e) {}
+      try { caseProgress._stasiEpilogModus = true; } catch (e) {}
+    }
+  } catch (e) {}
+  // v7.12.512 (Run 1314): POST-FLUCHT-CAP als LETZTES Wort - nach Action-Wort-Korrektur UND Stasi-Anhebung.
     // Wenn der Spieler in der Vorszene geflohen ist, ist die unmittelbare Gefahr vorbei -> Spannung hart auf <=2.
     // Sonst zogen computeActionLevel + Stasi-Min-Spannung die Spannung sofort wieder hoch und "Flucht" fuehlte
     // sich wirkungslos an (Run-Befund: Sp blieb 4-5 trotz wiederholter Flucht).
@@ -32765,6 +32780,19 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             return cn === pmNorm || cn.split(/\s+/)[0] === pmFirst;
           });
           if (!schonImCast) {
+            // v7.12.636 (Lektorat Run 0633 A3: August Lemke Party-Regression - Zeuge lief bis Bahnhof/Opel mit):
+            // Ein ZEUGE wird nach Abschlussreife NICHT mehr per Garantie nachgezogen. Er wird nicht aktiv
+            // entfernt (Benjamins Regel: Spieler entscheidet), aber die Engine schleppt ihn nicht künstlich
+            // durch jede Szene. Wer ihn behalten will, hat ihn weiter im Personen-Menü.
+            try {
+              const _rolleG = ((sc && sc.rolle) || pm.tag || '').toLowerCase();
+              const _istZeuge = /zeuge|zeugin|witness/.test(_rolleG) || (pm.tag || '').toUpperCase() === 'WITNESS';
+              const _abschlussreifG = !!(caseProgress && caseProgress.wahrheitErkannt && (caseProgress.clientSecured || caseProgress._stasiEpilogModus));
+              if (_istZeuge && _abschlussreifG) {
+                if (typeof diag === 'function') diag('state', 'PARTY-GARANTIE übersprungen: Zeuge ' + pm.name + ' wird nach Abschlussreife nicht mehr nachgezogen (Lektorat A3)');
+                continue;
+              }
+            } catch (e) {}
             // Setup-Daten anreichern, falls vorhanden.
             let sc = null;
             try { if (caseSetup && Array.isArray(caseSetup.setupCast)) sc = caseSetup.setupCast.find(s => s && s.name && (normForMatch(s.name) === pmNorm || normForMatch(s.name).split(/\s+/)[0] === pmFirst)); } catch(e){}

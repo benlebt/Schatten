@@ -14470,3 +14470,17 @@ Spannung wieder hoch -> erneute Flucht nötig. FIX: Solange das (bereits existie
 MANÖVER), bleibt die Spannung auf <=2 gedeckelt. Wird er offensiv, endet die Ruhe sofort (Fenster=0, Spannung
 darf steigen - er fällt neu auf). GTA-Logik: erfolgreiche Flucht senkt den Fahndungslevel spürbar und HÄLT ihn
 unten, bis man wieder Lärm macht. 4/4 Tests. node --check OK.
+
+## v7.12.636 (2026-06-11): Stasi-Deckel + Zeugen-Party-Ablauf nach Abschlussreife (Lektorat Run 0633 A3+A6)
+LEKTORAT lief auf v633 (VOR v634-Dead-Loop-Fix + v635-Flucht). A1 (Abschluss-Gate) + Stasi-Loop teils schon
+durch v634/v635 adressiert. RESTLICHE P1 gebaut:
+A6 STASI-DECKEL: Ist der Fall abschlussreif (wahrheitErkannt + clientSecured/akten_gesichert), wird die
+Spannung hart auf <=2 gedeckelt, stasiTension <=2, caseProgress._stasiEpilogModus=true gesetzt -> kein
+Jagd-Loop mehr, nur Epilog-Druck. Der bestehende Custody-Force-Schutz greift jetzt auch über _stasiEpilogModus
+(vorher nur clientSecured && akten_gesichert UND-verknüpft - bei secured@helene ohne Flag lief er ins Leere).
+A3 ZEUGEN-PARTY-ABLAUF: Party-Garantie zieht einen ZEUGEN (rolle/tag WITNESS) nach Abschlussreife NICHT mehr
+nach (continue). KEINE aktive Entfernung (Benjamins settled rule "Spieler entscheidet"), nur Ende des
+künstlichen Nachschleppens - August läuft nicht mehr bis Bahnhof/Opel mit. 7/7 Tests. node --check OK.
+OFFEN aus Lektorat: A4 Client-State Sz3 (Fensterblick=at_location statt with_karl); A5 ITEM-ACTION-Debug-Spur
+für Eintausch sichtbar machen; Charité-Alias; W2b-Hart-Fallback. NÄCHSTER GROSSER SCHRITT: Party-Stärken- +
+Gegner-Härte-System (Konzept KONZEPT_STAERKEN_HAERTE.md, Benjamin-Freigabe erteilt).
