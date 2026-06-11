@@ -14990,3 +14990,16 @@ OFFEN (nächste Versionen, klein halten): Vera-Handschlag-aber-kein-Add-Button (
 doppeltes Icon + holpriger Text, NPC-Indiz-Vorschau (lohnt sich eintauschen?), Umsehen-Indizien zählen evtl.
 nicht zum Stage-Progress (Benjamin-Eindruck - muss verifiziert werden). A3/A4 v663 (Schwer-verletzt-Toast nach
 Ursache, Behandlung nur bei echter Heilung). A5 v664 (Stage früher ziehen). Lektorat-Audit-Erweiterung.
+
+## v7.12.666 (2026-06-11): Umsehen-Indizien ziehen Stage sofort hoch (Benjamin Befund 1/4)
+BENJAMIN: "Ich habe den Eindruck, wenn ich Indizien mit Umsehen finde, passiert nichts im Fall-Progress/Stage."
+VERIFIZIERT: _markiereIndizGefunden SETZT den indizStageFloor korrekt, aber die Stage-AUFSTIEGS-Logik (Z34030/
+34269) läuft NUR im Szenen-Verarbeitungspfad (nach einer KI-Szene). Umsehen löst KEINE Szene aus -> Floor gesetzt,
+aber nie angewendet bis zur nächsten Szene -> Stage-Anzeige hängt. FIX: Neue kompakte Funktion _stageFloorAnwenden()
+spiegelt den qualitativen Kern-Indiz-Pfad (Stage0->1 ab Floor>=1 & Sz>=4; 1->2 ab Floor>=2 & Sz>=6; 2->3 ab
+Floor>=3 & Sz>=6). Wird nach jedem Kern-Indiz-Fund aufgerufen -> Umsehen-Funde ziehen die Stage sofort hoch, ohne
+auf die nächste Szene zu warten. Konservativ: hebt nur, senkt nie; idempotent im Szenen-Pfad. Stage 4 NIE über
+Floor (braucht Sicherungs-/Auflösungs-Logik). Toast als clue-Variante (kein Cooldown). node --check fing einen
+fehlenden Klammer-Fehler beim Bau. 6 Tests grün.
+RANGFOLGE Benjamin (4 Befunde): 1. Umsehen-Stage (DIESE v666) ✓ · 2. Vera Handschlag-aber-kein-Add-Button ·
+3. NPC-Indiz-Vorschau (lohnt sich eintauschen?) · 4. eintauschen-Toast doppeltes Icon + holpriger Text.
