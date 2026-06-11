@@ -3191,7 +3191,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.642</div>
+    <div class="start-version">Schatten v7.12.643</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.642</span>
+    <span>Schatten v7.12.643</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7102,7 +7102,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.642';
+window.SCHATTEN_VERSION = 'v7.12.643';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -7473,10 +7473,13 @@ function _gegnerHaerte(name, tag, rolle) {
 // Welche Aktionsart trägt ein Plan-Eintrag zur Bezwingung bei? (durchsuchen NICHT - Lektorat P1)
 function _planEintragStaerkeArt(p) {
   const a = (p && p.art) || '';
-  if (a === 'angriff' || a === 'angreifen_mit' || a === 'hund_fass' || a === 'hund_fixiere') return 'angriff';
-  if (a === 'ablenkung' || a === 'werfen_fuesse' || a === 'werfen' || a === 'hund_belle') return 'ablenkung';
-  if (a === 'fesseln' || a === 'hund_knurre') return 'einschuechtern';
-  return null; // bestechen/geben/eintauschen/durchsuchen etc. zählen nicht gegen Härte
+  // v7.12.643 (Lektorat Run v640: Mertens:ko trotz Fehlschlag): Die ECHTEN Baukasten-Keys heißen 'angreifen'/
+  // 'ablenken'/'fesseln' (nicht 'angriff'/'ablenkung') - mein Check kannte sie nicht, _zielGruppen blieb leer,
+  // der Manöver-Check lief faktisch NIE, die _wirkung:'ko' wurde ungeprüft gesetzt. Jetzt beide Schreibweisen.
+  if (a === 'angreifen' || a === 'angriff' || a === 'angreifen_mit' || a === 'werfen' || a === 'hund_fass' || a === 'hund_fixiere') return 'angriff';
+  if (a === 'ablenken' || a === 'ablenkung' || a === 'werfen_fuesse' || a === 'hund_belle') return 'ablenkung';
+  if (a === 'fesseln' || a === 'einschuechtern' || a === 'hund_knurre') return 'einschuechtern';
+  return null; // bestechen/geben/eintauschen/durchsuchen/befragen/anbieten/trinken etc. zählen nicht gegen Härte
 }
 // Fesselmaterial nach Ort (Lektorat P2, 1953-fest).
 function _fesselMaterial(name, tag, rolle) {
@@ -7540,9 +7543,12 @@ function _planAusfuehren() {
     // 1) ALLE Engine-Wirkungen setzen (Ablenkung/Fesseln -> gefesselt + Beute; Angriff -> ko).
     plan.forEach(p => {
       try {
-        // v7.12.637: Bei misslungenem Zugriff auf dieses Ziel KEINE Bezwingungs-Wirkung setzen.
+        // v7.12.643: Bei misslungenem Zugriff auf dieses Ziel KEINE Bezwingungs-Wirkung setzen. Greift sowohl
+        // bei erkannter Stärke-Art ALS AUCH bei expliziter _wirkung (ko/gefesselt/fixiert/benommen) - sonst
+        // rutscht ein Eintrag mit _wirkung durch, dessen art nicht als Bezwingung erkannt wurde.
         const _zfk = p.ziel ? normForMatch(p.ziel) : '';
-        const _istBezwingung = !!_planEintragStaerkeArt(p);
+        const _wPreview = p._wirkung || (p.art === 'angriff' || p.art === 'angreifen' ? 'ko' : (p.art === 'ablenkung' || p.art === 'ablenken' || p.art === 'fesseln') ? 'gefesselt' : null);
+        const _istBezwingung = !!_planEintragStaerkeArt(p) || /^(ko|gefesselt|fixiert)$/.test(String(_wPreview || ''));
         if (_istBezwingung && _zfk && _zugriffFehlschlag[_zfk]) {
           if (typeof diag === 'function') diag('progress', 'MANÖVER-WIRKUNG unterdrückt (' + p.akteur + ' -> ' + p.ziel + '): Zugriff misslungen, kein Zustandswechsel');
           return; // Wirkung dieses Eintrags überspringen
@@ -13031,12 +13037,27 @@ function politicalBeatsGateErfuellt(opts) {
       }
     } catch (e) {}
     const basisOk = _basisBeatsOk && _fundamentOk;
-    const sicherungOk = has('akten_gesichert') || has('margarete_gesichert');
+    // v7.12.643 (Lektorat Run v640 A1 + Benjamin-Freigabe Variante A): Bei einem politischen Fall SIND die
+    // Original-Akten der Kern - sie müssen physisch raus (übergeben/versteckt/Westpresse), bevor der Fall gelöst
+    // ist. Margarete-Sicherung allein reicht NICHT, solange Akten existieren und noch bei Karl liegen. Sonst:
+    // Karl hält die "Bombe" noch in der Hand, aber der Fall gilt als gelöst - das fühlt sich für den Spieler
+    // falsch an (Engine sagt akten:bei_karl, Finale behauptet "Wahrheit ist sicher").
+    let _aktenNochBeiKarl = false;
+    try {
+      if (typeof _itemsBeiKarl === 'function') {
+        _aktenNochBeiKarl = _itemsBeiKarl().some(it => it && (it.typ === 'beweis_dokument' || /original.?akten|schmuggelakten|frachtakten/i.test(it.name || '')));
+      }
+    } catch (e) {}
+    // sicherungOk: normalerweise Akten ODER Margarete. ABER wenn Akten noch bei Karl sind, MUSS akten_gesichert
+    // vorliegen (Margarete allein genügt dann nicht).
+    const sicherungOk = _aktenNochBeiKarl
+      ? has('akten_gesichert')
+      : (has('akten_gesichert') || has('margarete_gesichert'));
     const fehlend = [];
     if (!has('schmuggelroute_belegt')) fehlend.push('Schmuggelroute belegen');
     if (!_wahlerOk) fehlend.push('Wahler als Verantwortlichen belegen');
     if (!_fundamentOk && _fundamentFehlt) fehlend.push(_fundamentFehlt);
-    if (!sicherungOk) fehlend.push('Akten sichern ODER Margarete/Beweise in Sicherheit bringen');
+    if (!sicherungOk) fehlend.push(_aktenNochBeiKarl ? 'Die Original-Akten physisch sichern (an Vera/Westpresse übergeben oder verstecken) - sie sind noch bei Karl' : 'Akten sichern ODER Margarete/Beweise in Sicherheit bringen');
     return { aktiv: true, erfuellt: basisOk && sicherungOk, basisOk: basisOk, sicherungOk: sicherungOk, fehlend: fehlend };
   } catch (e) { return { aktiv: false, erfuellt: true, basisOk: true, sicherungOk: true, fehlend: [] }; }
 }

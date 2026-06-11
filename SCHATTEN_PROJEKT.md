@@ -14579,3 +14579,22 @@ gesetzt, fehlte er. Mit (3) behoben.
 5/5 Tests. node --check OK. (Nebenbei: fehlerhaftes if(false) das den Cast-Block gekapert hätte, sofort
 korrigiert.) OFFEN: Rex über sein Menü am Ort (nicht nur Reise-Popup) mitnehmbar - nächster Run zeigt, ob der
 v641-Menü-Fix am Anker mit KI-Prosa-"Rex" greift.
+
+## v7.12.643 (2026-06-11): Manöver-Check-Key-Bug + Akten-Gate Variante A (Lektorat Run v640 A1+A3)
+LEKTORAT Run v640 (lief vor v641/v642). ZWEI P1-Weltwahrheitsbrüche gefixt:
+A3 MERTENS:ko TROTZ FEHLSCHLAG (echter Bug): Der Manöver-Check (v637) lief FAKTISCH NIE! URSACHE: Die echten
+Baukasten-Aktion-Keys heißen 'angreifen'/'ablenken'/'fesseln', mein _planEintragStaerkeArt prüfte aber auf
+'angriff'/'ablenkung'. Also gab es für JEDEN Baukasten-Eintrag null zurück -> _zielGruppen blieb leer -> kein
+MANÖVER-CHECK, keine Diag, keine Fehlschlag-Unterdrückung -> die _wirkung:'ko' wurde ungeprüft gesetzt, obwohl
+der Fehlschlag-Prompt "KEIN K.O." sagte. FIX: _planEintragStaerkeArt kennt jetzt beide Schreibweisen
+(angreifen/angriff, ablenken/ablenkung). Zusätzlich: Fehlschlag-Unterdrückung greift jetzt auch bei expliziter
+_wirkung (ko/gefesselt/fixiert), nicht nur bei erkannter Stärke-Art -> doppelt sicher. 5 Key-Tests grün.
+A1 AKTEN-GATE VARIANTE A (Benjamin-Freigabe nach Spielerlogik-Diskussion): Bei politischem Fall MÜSSEN die
+Original-Akten physisch gesichert sein (akten_gesichert), wenn sie noch bei Karl liegen - Margarete-Sicherung
+allein reicht dann NICHT. Begründung: Die Akten SIND der politische Kern; Karl mit Akten in der Tasche = Fall
+nicht gelöst, egal ob Margarete sicher ist. sicherungOk = aktenNochBeiKarl ? has('akten_gesichert') :
+(akten ODER margarete). DEAD-LOOP-SCHUTZ verifiziert: Akten-Sicherung ist erreichbar (pendingSecurityIntent
+fokus=akten + Prosa-Vollzug bewegt Item auf gesichert), fehlend-Text nennt klar "Original-Akten physisch
+sichern - sie sind noch bei Karl". v634-Notausgänge nutzen dasselbe strikte Gate (konsistent). 6 Gate-Tests grün.
+node --check OK. OFFEN (Lektorat): A2 Client-remote_phone-Opening, A4 August wirklich aus _party entfernen,
+A5 Stage-3-Ort-Prosa-Hart-Block, A7 Setup-Cast-Audit. Mertens-Rang (Oberleutnant=4 vs Hauptmann=5) noch offen.
