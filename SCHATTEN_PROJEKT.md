@@ -14562,3 +14562,20 @@ FIX: HUND-Verben in _hundVerbenOverride merken statt returnen; const verben nutz
 Party/Romance-Erweiterungen (hierlassen/mitnehmen/nacht) werden bei gesetztem Override übersprungen (sonst
 bekäme der Hund doppelte Verben). Button-Marker für HUND-Tag: 'mitnehmen' (verfügbar) bzw. 'Kommandos' (in
 Party) statt generischem 'ansprechen'. 5/5 Tests. node --check OK. _schonInParty-Reihenfolge geprüft (kein TDZ).
+
+## v7.12.642 (2026-06-11): 4 Benjamin-Befunde - Rex-Popup, Umsehen-Live, Inventar-Konsistenz
+BENJAMIN-BEFUNDE Run v640:
+(1) UMSEHEN aktualisiert nicht live - nach Sammeln stand weiter "2 Fundstücke", Klick änderte nichts. FIX:
+Umsehen-Klick ruft jetzt renderOptions(currentScene) (nicht nur renderImRaumAnzeige) -> Button verschwindet/
+aktualisiert sofort.
+(2) ITEMS standen im NOTIZBUCH ("In Karls Taschen") UND es gibt "Aktueller Stand -> Dabei" -> Widerspruch.
+FIX: Inventar-Block aus Notizbuch ENTFERNT (Notizbuch = rein Indizien/Erkenntnisse). Gefundene Katalog-Items
+erscheinen jetzt im "Dabei" des Aktueller-Stand-Popups (inventory + _itemsBeiKarl gemerged) - EIN Ort fürs
+Inventar.
+(3) REX im Reise-Popup gewählt -> kam NICHT in Party. URSACHE: Popup rief blind _partyAdd, das den Hund-
+Sonderweg (caseProgress.hundInParty) nicht kennt. FIX: HUND-Tag im Popup über hundInParty-Flag aufnehmen.
+(4) REX fehlte im Baukasten -> Folge von (3): Baukasten fügt Rex nur bei _hundInParty()=true hinzu; da nie
+gesetzt, fehlte er. Mit (3) behoben.
+5/5 Tests. node --check OK. (Nebenbei: fehlerhaftes if(false) das den Cast-Block gekapert hätte, sofort
+korrigiert.) OFFEN: Rex über sein Menü am Ort (nicht nur Reise-Popup) mitnehmbar - nächster Run zeigt, ob der
+v641-Menü-Fix am Anker mit KI-Prosa-"Rex" greift.

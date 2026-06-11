@@ -3191,7 +3191,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.641</div>
+    <div class="start-version">Schatten v7.12.642</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.641</span>
+    <span>Schatten v7.12.642</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7102,7 +7102,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.641';
+window.SCHATTEN_VERSION = 'v7.12.642';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -15386,8 +15386,16 @@ function showStatusDetails() {
   }
   // Inventar
   const invEl = document.getElementById('popup-inventory');
-  if (inventory.length > 0) {
-    invEl.textContent = inventory.map(it => '· ' + it).join('\n');
+  // v7.12.642 (Benjamin: gefundene Items fehlten im "Dabei", standen nur im Notizbuch): Das feste inventory
+  // (Walther/Brieftasche/Notizbuch) UM die getragenen Katalog-Items aus dem Item-System erweitern - so ist das
+  // "Dabei" der EINE Ort fürs Inventar (Fundstücke wie Korn/Zigaretten erscheinen hier).
+  let _dabei = inventory.slice();
+  try {
+    const _trag = (typeof _itemsBeiKarl === 'function') ? _itemsBeiKarl() : [];
+    _trag.forEach(it => { if (it && it.name && _dabei.indexOf(it.name) === -1 && !_dabei.some(x => x.indexOf(it.name) !== -1)) _dabei.push(it.name); });
+  } catch (e) {}
+  if (_dabei.length > 0) {
+    invEl.textContent = _dabei.map(it => '· ' + it).join('\n');
   } else {
     invEl.textContent = 'Nichts dabei.';
   }
@@ -18582,6 +18590,14 @@ function zeigeMitnehmenPopup(npcs, weiterAktion) {
     npcs.forEach(npc => {
       const key = npc.id || npc.name;
       if (!gewaehlt[key] || typeof _partyAdd !== 'function') return;
+      // v7.12.642 (Benjamin: Rex im Reise-Popup gewählt, kam trotzdem nicht in die Party): Der Hund hat einen
+      // EIGENEN Party-Mechanismus (caseProgress.hundInParty), nicht _party. Das Popup rief blind _partyAdd, das
+      // den Hund nicht kennt -> Rex blieb draußen. Jetzt: HUND-Tag über den Hund-Sonderweg aufnehmen.
+      if ((npc.tag || '').toUpperCase() === 'HUND') {
+        if (typeof caseProgress === 'object' && caseProgress) { caseProgress.hundInParty = true; caseProgress.hundEntschieden = 'aufgenommen'; }
+        if (typeof diag === 'function') diag('state', '🐕 HUND aufgenommen (Reise-Popup): ' + npc.name);
+        return;
+      }
       // v7.12.605 (W4c): ortsgebundene/eigenständige NPCs lehnen ab - mit Grund statt stillem Mitziehen.
       const _grund = (typeof _npcLehntMitnahmeAb === 'function') ? _npcLehntMitnahmeAb(npc.name, npc.tag) : null;
       if (_grund) {
@@ -18701,15 +18717,9 @@ function oeffneNotizbuch() {
     }
     html += '</ol>';
   }
-  // v7.12.609: Inventar-Abschnitt (nur getragene Items - kein Spoiler).
-  try {
-    const _trag = (typeof _itemsBeiKarl === 'function') ? _itemsBeiKarl() : [];
-    if (_trag.length) {
-      html += '<div style="font-size:calc(13px * var(--reading-scale));font-weight:bold;color:#3a2e1e;border-bottom:1px solid #9a8a68;padding-bottom:3px;margin:10px 0 6px;">In Karls Taschen</div><ul style="margin:0;padding-left:18px;">';
-      for (const it of _trag) { html += '<li style="margin-bottom:2px;font-size:calc(12px * var(--reading-scale));">' + escapeHtml(String(it.name)) + '</li>'; }
-      html += '</ul>';
-    }
-  } catch (e) {}
+  // v7.12.642 (Benjamin: Inventar im Notizbuch widerspricht dem "Dabei" im Aktuellen Stand): Das Notizbuch
+  // bleibt REIN für Indizien/Erkenntnisse. Getragene Items stehen im "Aktueller Stand"-Popup unter "Dabei" -
+  // ein einziger Ort fürs Inventar, kein Doppel.
   panel.innerHTML = html;
   const abbrechen = document.createElement('button');
   abbrechen.style.cssText = 'display:block;width:100%;margin-top:14px;padding:8px 12px;background:rgba(122,46,38,0.12);border:1px solid #9a7a50;border-radius:4px;color:#5a3a28;cursor:pointer;font-family:inherit;font-size:calc(11px * var(--reading-scale));';
@@ -20535,6 +20545,10 @@ function renderOptions(scene) {
             });
             if (typeof showProgressToast === 'function') showProgressToast('🔎 Gefunden', 'Karl steckt ein: ' + f2.map(x => x.name).join(', '), 'success', 'orts-fund');
             if (typeof diag === 'function') diag('state', '🔎 ORTS-FUND @ ' + engineCurrentLocation.name + ': ' + f2.map(x => x.name).join(', '));
+            // v7.12.642 (Benjamin: "muss sich live updaten" - nach Sammeln stand weiter "2 Fundstücke"):
+            // Options neu rendern, damit der Umsehen-Button verschwindet/aktualisiert (renderImRaumAnzeige allein
+            // baut die Bleibt-Sektion nicht neu).
+            try { if (typeof renderOptions === 'function' && typeof currentScene === 'object' && currentScene) renderOptions(currentScene); } catch (e) {}
             if (typeof renderImRaumAnzeige === 'function') { try { renderImRaumAnzeige(); } catch(e){} }
           } catch (e) {}
         });
