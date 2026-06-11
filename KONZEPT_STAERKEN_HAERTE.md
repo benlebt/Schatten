@@ -8,7 +8,7 @@ Grundlage: Baukasten (v617+), Items (v630+), Manöver/NPCZ (v610+), Begleiter (v
 Party-Member + Items + Hund mitnehmen. Den Hauptmann kriegt man nur mit Übermacht."
 - Jeder AKTEUR kann bestimmte Aktionen GUT / SCHLECHT / GAR NICHT (Stärke pro Aktionsart).
 - Jeder GEGNER hat einen HÄRTEGRAD (wie viel "Stärke" nötig ist, um ihn auszuschalten).
-- KEINE 100%-Erfolgsquote durch bloßes Klicken - die Summe der eingesetzten Stärke muss die Härte übersteigen.
+- KEINE 100%-Erfolgsquote durch bloßes Klicken - die Summe der eingesetzten Stärke muss die Härte ERREICHEN oder übersteigen (>=).
 - Erst DETERMINISTISCH (Summe >= Härte = Erfolg), kein RNG (sonst debuggen wir zu viel gleichzeitig).
 
 ## Akteur-Fähigkeiten (Stärke pro Aktionsart, 0-3)
@@ -31,8 +31,8 @@ const ROLLEN_STAERKE = {
 // HUND (Rex): Sonderfall - sehr stark im Einschüchtern/Fixieren, kein Durchsuchen.
 const HUND_STAERKE = { angriff: 2, ablenkung: 1, einschuechtern: 3, durchsuchen: 0, fixieren: 3 };
 ```
-Werfen (Item): Stärke = Item-Schaden + halbe Akteur-Angriff-Stärke (Frau wirft schwächer, aber nicht "kann
-nicht" - kein Sexismus, nur Charakter). Margarete: angriff 0 -> Wurf wirkt nur über das Item selbst.
+Werfen (Item): Stärke = Item-Wirkung + halbe Akteur-Angriff-Stärke. Nicht kampferprobte NPCs werfen
+schwächer, trainierte stärker. Margarete: angriff 0 -> Wurf wirkt nur über das Item selbst.
 
 ## Gegner-Härte (0-5)
 Wie viel kumulierte Stärke nötig ist, um den Gegner per Manöver (fesseln/ausschalten) sicher zu bezwingen.
@@ -61,7 +61,7 @@ eingesetzteStaerke =
   + Item-Bonus (Ziegelstein/Korn als Schlagwaffe, Knallkörper als Ablenkung)
   + Synergie-Bonus (Ablenkung + gleichzeitiger Angriff = +1, "koordiniert")
 
-erfolg = eingesetzteStaerke >= GEGNER_HAERTE[gegner]
+erfolg = eingesetzteStaerke >= _gegnerHaerte(gegner)  // Helper (Basis+Zustand), NICHT die Tabelle direkt
 ```
 - erfolg=true: Gegner wird fixiert/gefesselt/ausgeschaltet wie bisher (NPCZ).
 - erfolg=false: TEILERFOLG/FEHLSCHLAG - Gegner wehrt sich, Karl/Begleiter nimmt Schaden (Verfassung -1),
@@ -134,3 +134,22 @@ KEINE Fesselung, KEIN K.O. des Gegners. Die Spannung steigt.
 - C: Fehlschlag-Pfad (kein Tod/Custody/Ortswechsel/K.O.; Verfassung-1, Spannung+1).
 - D: Fesselmaterial nach Ort.
 - NICHT in v637: RNG, Mehrgegner-Initiative, Skilltrees, volle Item-Schadensmatrix.
+
+
+## NACHTRAG 2 (Lektorat-Freigabe v637-Konzept): MANOEVER_ARTEN als Anker
+Erfolg ist nicht generisch - je nach Manöver-Art zählen andere Stärkearten und entsteht ein anderer Zustand.
+Im Code (v637) implizit über _planEintragStaerkeArt + _wirkung gelöst; als expliziter Anker für später:
+```js
+const MANOEVER_ARTEN = {
+  fesseln:    { zaehlt: ['angriff','ablenkung','fixieren'],     erfolgsZustand: 'gefesselt' },
+  entwaffnen: { zaehlt: ['angriff','einschuechtern','ablenkung'], erfolgsZustand: 'entwaffnet' },
+  vertreiben: { zaehlt: ['einschuechtern','angriff'],           erfolgsZustand: 'vertrieben' },
+  ablenken:   { zaehlt: ['ablenkung'],                          erfolgsZustand: 'abgelenkt' }
+};
+```
+Erfolgreicher Rex-Zugriff != automatisch K.O.; erfolgreicher Knallkörper != fesseln. Kann v639 explizit werden.
+
+## STATUS: v637 GEBAUT (Tabellen/Helper/Manöver-Check/Fehlschlag/Fesselmaterial), v638 = v636a-Hotfixes drin
+(TDZ-Bug, Item-Effekte Engine-wirksam, anbieten, trinken-itemNoetig, Stasi-Gate, Eintausch-Toasts). Code nutzt
+_gegnerHaerte() korrekt (Lektorat-Punkt 3 im Code bereits richtig). Nächster Schritt: Run-Test des Manöver-
+Checks im echten Spiel, dann ggf. UI-Einschätzung im Baukasten (Lektorat-P2).
