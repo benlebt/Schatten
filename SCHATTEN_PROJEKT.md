@@ -15115,7 +15115,23 @@ im Code (Lektorat-Erfindung), SCHLUSSPHASEN-PRIO greift ohnehin nur vor Stage 3 
 bis Original-Lektorat/Run das Symptom konkret zeigt. Ort-Prosa-Hard-Retry: wartet auf Benjamins
 Entscheidung (kostet einen zusätzlichen API-Call pro Bruch).
 
-**Settled-Entscheidung (Benjamin, v671):** Ort-Prosa-Bruch ab Stage 3 bleibt bei der
-Folge-Szenen-Korrektur (v626, kostenlos). KEIN harter Sofort-Retry bauen — der kostet
-einen zusätzlichen API-Call pro Bruch. Falls ein Lektorat `retryWithHardLocationPrompt()`
-erneut fordert: abgelehnt, nicht neu diskutieren.
+## 🆕 v7.12.672 — How-To an Baukasten-First angepasst (ChatGPT-Lektorat v670, A5)
+
+**Einziger gebauter Punkt aus dem Source-Lektorat.** Die Anleitung versprach "vier Handlungen
+(A–D)" und freies Textfeld, obwohl KI_OPTIONEN_AKTIV=false und FREITEXT_AKTIV=false (Baukasten-
+First-Test). Fix DYNAMISCH: beide Absätze (IDs howto-ki-absatz / howto-freitext-absatz) passen
+sich beim Laden den Flags an — stimmt in jedem Modus, auch wenn die Flags wieder umgestellt
+werden. Reiner Anzeige-Fix.
+
+**Abgelehnt (Regel 1, Spieler entscheidet die Party — 4. Lektorat-Forderung in Folge):**
+A1 (Roth/Behörden hart in _npcLehntMitnahmeAb blocken) und A2–A4 (partyLockedOut für August)
+NICHT gebaut. Benjamin-Regel: Roth/Lindner/August DÜRFEN mitgenommen werden. Zudem falsche
+Diagnose: Roth kam laut Run 2336 NICHT über _partyAdd (NULL PARTY+-Events) — ein Block in
+_npcLehntMitnahmeAb (sitzt in _partyAdd) würde den Drift gar nicht treffen. Der echte
+Schleichpfad wartet auf ein frisches Run-Log mit v670-Logging. `_setNpcLocation`/`_npcFlag`/
+`_hatIndiz` aus den Lektorat-Patches existieren weiterhin nicht.
+
+**Weitere Lektorat-Punkte:** A7 (Ort-Hard-Retry) = settled abgelehnt (Benjamin-Entscheid v671).
+score-"Doppelung" = Fehlalarm (zwei sauber gescopte nested functions in pickBestGermanVoice/
+pickFallbackVoice). A6 (Beschützen/Beobachten aus Baukasten) + KI_OPTIONEN_GENERIEREN-Umbau +
+Resolve-Gate-Zentralisierung = Benjamin-Entscheidungen, offen.

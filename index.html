@@ -3187,7 +3187,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.671</div>
+    <div class="start-version">Schatten v7.12.672</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3218,7 +3218,7 @@
 
     <div class="howto-section">
       <h3>🎯 Wie du spielst</h3>
-      <p>Nach jeder Szene schlägt dir die KI <strong>vier Handlungen (A–D)</strong> vor. Jede ist mit einer Handlungsart markiert, die zeigt dir, <em>welche Art</em> von Zug das ist:</p>
+      <p id="howto-ki-absatz">Nach jeder Szene schlägt dir die KI <strong>vier Handlungen (A–D)</strong> vor. Jede ist mit einer Handlungsart markiert, die zeigt dir, <em>welche Art</em> von Zug das ist:</p>
       <div class="howto-cat"><span class="cat-tag offensiv">Offensiv</span><span>Angreifen, drohen, konfrontieren. Bringt dich schnell voran, aber riskant, du kannst verletzt werden.</span></div>
       <div class="howto-cat"><span class="cat-tag defensiv">Defensiv</span><span>Vorsichtig agieren, in Deckung gehen, deeskalieren. Schützt dich.</span></div>
       <div class="howto-cat"><span class="cat-tag erkunden">Erkunden</span><span>Suchen, nachforschen, Fragen stellen. Der zuverlässigste Weg, an Indizien zu kommen.</span></div>
@@ -3276,7 +3276,7 @@
       <div class="howto-stat"><b>⚡ Notflucht (Ausbruch versuchen):</b> Nur im Stasi-Gewahrsam. Der riskante Ausbruchsversuch, kann gelingen oder übel enden, nur etwa jeder dritte glückt.</div>
       <div class="howto-stat"><b>♥ Näher kommen / Übernachtung:</b> Taucht auf, wenn eine Figur Karl näher kommt. Karl ist ein einsamer Hund, aber kein Kostverächter. Optional, gehört zum Noir-Flair, treibt den Fall aber nicht voran.</div>
       <div class="howto-stat"><b>🎯 Fall lösen, Auftraggeber informieren:</b> Erscheint, sobald du genug zusammen hast. Schließt den Fall ab und informiert den Klienten. In zu gefährlichen Szenen kurz gesperrt.</div>
-      <p style="margin-top:10px;">Für alles andere, das eigentliche Ermitteln, nutzt du die <strong>vier Optionen</strong> oder tippst frei ins <strong>Textfeld</strong> („fahr in dein Büro", „durchsuche den Schreibtisch", „frag Ilse nach dem Brief").</p>
+      <p id="howto-freitext-absatz" style="margin-top:10px;">Für alles andere, das eigentliche Ermitteln, nutzt du die <strong>vier Optionen</strong> oder tippst frei ins <strong>Textfeld</strong> („fahr in dein Büro", „durchsuche den Schreibtisch", „frag Ilse nach dem Brief").</p>
     </div>
 
     <div class="howto-section">
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.671</span>
+    <span>Schatten v7.12.672</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7164,7 +7164,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.671';
+window.SCHATTEN_VERSION = 'v7.12.672';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -11210,6 +11210,30 @@ function selectCurrentSceneAndOptions(event) {
 // Beim Laden der Seite: wenn User vorher Musik an hatte, Button korrekt
 // labeln. NICHT automatisch starten (Autoplay-Policy verbietet das ohne
 // user gesture). User muss Button erneut druecken.
+window.addEventListener('DOMContentLoaded', () => {
+  // v7.12.672 (ChatGPT-Lektorat v670 A5, verifiziert): Die How-To-Seite versprach KI-Optionen
+  // (A-D) und Freitext, obwohl KI_OPTIONEN_AKTIV=false und FREITEXT_AKTIV=false (Baukasten-First-
+  // Test seit v656/v670). Texte jetzt DYNAMISCH an die Flags gekoppelt - stimmt in beiden Modi,
+  // auch wenn die Flags später wieder umgestellt werden. Reiner Anzeige-Fix, keine Spiel-Logik.
+  try {
+    const _kiAus = (typeof KI_OPTIONEN_AKTIV !== 'undefined' && KI_OPTIONEN_AKTIV === false);
+    const _ftAus = (typeof FREITEXT_AKTIV !== 'undefined' && FREITEXT_AKTIV === false);
+    const _pKi = document.getElementById('howto-ki-absatz');
+    if (_pKi && _kiAus) {
+      _pKi.innerHTML = 'Du handelst über die <strong>System-Buttons</strong> (Reisen, Umsehen, Notizbuch), die <strong>Personen im Raum</strong> (antippen zum Befragen) und den <strong>Aktions-Baukasten</strong>. Die KI erzählt die Folgen deiner Aktionen aus. Jede Handlung trägt eine Handlungsart, die zeigt dir, <em>welche Art</em> von Zug das ist:';
+    }
+    const _pFt = document.getElementById('howto-freitext-absatz');
+    if (_pFt && (_kiAus || _ftAus)) {
+      if (_kiAus && _ftAus) {
+        _pFt.innerHTML = 'Für alles andere, das eigentliche Ermitteln, nutzt du die <strong>Personen im Raum</strong>, den <strong>🔎 Umsehen-Button</strong> und den <strong>🧩 Baukasten</strong>. Das freie Textfeld ist derzeit deaktiviert.';
+      } else if (_kiAus) {
+        _pFt.innerHTML = 'Für alles andere, das eigentliche Ermitteln, nutzt du die <strong>Personen im Raum</strong>, den <strong>🔎 Umsehen-Button</strong>, den <strong>🧩 Baukasten</strong> - oder tippst frei ins <strong>Textfeld</strong>.';
+      } else {
+        _pFt.innerHTML = 'Für alles andere, das eigentliche Ermitteln, nutzt du die <strong>vier Optionen</strong>, die <strong>Personen im Raum</strong> und den <strong>🧩 Baukasten</strong>. Das freie Textfeld ist derzeit deaktiviert.';
+      }
+    }
+  } catch (e) { /* Anzeige-Fix darf nie das Spiel brechen */ }
+});
 window.addEventListener('DOMContentLoaded', () => {
   // v7.12.135: gespeicherte Leseschrift-Groesse sofort anwenden (vor erstem Render)
   if (typeof loadReadingScale === 'function') loadReadingScale();
