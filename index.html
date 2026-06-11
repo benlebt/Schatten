@@ -3187,7 +3187,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.662</div>
+    <div class="start-version">Schatten v7.12.663</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.662</span>
+    <span>Schatten v7.12.663</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7121,7 +7121,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.662';
+window.SCHATTEN_VERSION = 'v7.12.663';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -14799,6 +14799,17 @@ function buildTranscriptText() {
           const _ce = (caseSetup.setupCast || []).find(c => c && c.name && normForMatch(c.name) === nN);
           const _istRomance = _ce && ((_ce.tag === 'ROMANCE') || (_ce.tagExtra === 'ROMANCE'));
           if (_istRomance && (peakRomanticTension || 0) >= 2) return true;
+        } catch (e) { /* ignore */ }
+        // v7.12.663 (ChatGPT-Lektorat A4): NPC ist Ziel einer System-Sicherungsaktion (Klientin bei diesem NPC
+        // gesichert) = aktiv bespielt. Befund: Schwester Helene übernimmt Margarete in Szene 9 (clientSecuredAt=
+        // 'helene'), galt aber als "nicht aktiviert", weil sie keinen Kernhinweis gab und nicht im finalen Cast
+        // stand. Eine Systemaktion, die gezielt diesen NPC adressiert, IST Aktivierung.
+        try {
+          const _secAt = normForMatch((caseProgress && caseProgress.clientSecuredAt) || '');
+          if (_secAt && (_secAt === nN || (vn.length >= 3 && (_secAt.includes(vn) || nN.includes(_secAt))))) return true;
+          // Schutzort-NPCs (SCHUTZ-Tag) sind oft als Vorname-Schlüssel gespeichert (helene, doc_wagner).
+          const _ce2 = (caseSetup.setupCast || []).find(c => c && c.name && normForMatch(c.name) === nN);
+          if (_ce2 && (_ce2.tag === 'SCHUTZ' || _ce2.tagExtra === 'SCHUTZ') && _secAt && vn.length >= 3 && _secAt.includes(vn)) return true;
         } catch (e) { /* ignore */ }
         return false;
       };

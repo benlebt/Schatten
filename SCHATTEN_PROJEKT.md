@@ -14940,3 +14940,13 @@ Konsequenzen, Outcome-Varietät) oder unfair. NICHT eigenmächtig geglättet.
 A4 (Setup-Cast-Audit zählt Helene als nicht-aktiviert, obwohl sie auftritt): reiner LEKTORAT/Audit-Bug, kein
 Spielbug. Niedrige Prio.
 node --check OK.
+
+## v7.12.663 (2026-06-11): Lektorat v660 A3 (verifiziert: behalten) + A4 (Audit-Aktivierung)
+A3 (Benjamin-Frage "war der MfS-Wagen Zufall?"): VERIFIZIERT gegen Run - die MfS-Eskalation in Szene 9 war reine
+KI-Dramaturgie, KEIN Pflicht-Stasi-Zugriff-Push (Diagnose zeigt nur AUFLOESUNGS-PUSH + Wahrheitsbeat, keinen
+STASI-FESTNAHME-PFLICHT). Also "mal so, mal so" (KI-Varianz) - passt zur Outcome-Varietät. Benjamin-Entscheidung:
+BEHALTEN, nichts geändert. (Gut, dass verifiziert - sonst hätten wir gewollte Dramaturgie wegoptimiert.)
+A4 (Setup-Cast-Audit zählt Helene als nicht-aktiviert, obwohl sie Margarete übernimmt): Neues 5. Aktiv-Signal in
+_echtAktiv: NPC ist Ziel einer System-Sicherungsaktion (clientSecuredAt matcht NPC-Namen/Vornamen). Schutzort-NPCs
+(SCHUTZ-Tag) auch über Vornamen-Schlüssel (helene, doc_wagner). Reiner Audit/Lektorat-Fix, keine Spielwirkung.
+4 Tests grün. node --check OK.
