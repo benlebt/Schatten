@@ -14894,3 +14894,24 @@ soll. FIX: Button erscheint jetzt solange ÜBERHAUPT etwas am Ort ist (jetzt hol
 ehrlich: gold "X Fundstücke" wenn jetzt holbar, sonst gedämpft "später mehr hier". Klick bei nur-gated zeigt Toast
 "Hier gibt es noch etwas - aber erst zu einer anderen Zeit oder wenn die richtige Person da ist". Button verschwindet
 erst, wenn Ort WIRKLICH leer (keine Items, keine jetzt-, keine später-Indizien). 5 Tests grün. node --check OK.
+
+## v7.12.661 (2026-06-11): Umsehen "4 Fundstücke aber Klick findet nichts" - Wurzel gefixt + Logging
+BENJAMIN-BEFUND (Run v660): "Szene 2: 4 Fundstücke auf dem Umsehen-Button, aber kein Toast, keine Items im
+Aktuellen Stand. Szene 7: erneut Umsehen mit Fundstücken, nichts passiert, kann direkt Fall lösen. Logge mit wie
+viele auf dem Button stehen und wie viele/welche ich erhalte." Run-Analyse: KEINE einzige ORTS-FUND/UMSEHEN-Sammel-
+Diagnose im ganzen Run -> Klick sammelte NIE etwas, obwohl Marker Zahlen zeigte.
+WURZEL (zwei Fehler):
+(1) MARKER vs KLICK DIVERGENZ: Marker zählte über offeneIndizienAmOrtNachErreichbarkeit (alle offenen Indizien),
+Klick sammelte über eine zweite, leicht abweichende Schleife -> Button zeigt 4, Klick nimmt 0. FIX: EINE gemeinsame
+Funktion _ortsFundIndizienErreichbar() liefert die Indiz-Objekte; Marker UND Klick nutzen sie - können nicht mehr
+divergieren.
+(2) FALSCHE INDIZ-KATEGORIE: Die Margarete-Indizien lemke_belastet_wahler + anker_kontakt_hinweis sind
+quelle:'person' (npc-gebunden) - die findet man durch BEFRAGEN, NICHT durch Umsehen. Der Button zählte sie aber
+als "Fundstücke" -> Klick konnte sie nie einsammeln -> stiller Fehlschlag. FIX: Umsehen findet nur quelle:'umgebung'-
+Indizien (Spuren/Akten/Dokumente am Ort, 9 Stück im Margarete-Fall). quelle:'person' ausgeschlossen. umgebung-
+Indizien mit npc-Gate (z.B. frachtliste_stempel braucht Wahler am Ort) bleiben - der NPC muss präsent sein, aber
+das Indiz wird per Umsehen gefunden, nicht per Befragung. Zeit-Gates bleiben.
+LOGGING (Benjamin-Wunsch): diag '🔎 UMSEHEN-BUTTON' beim Rendern (Marker-Zahl + Items[Namen] + Indizien[IDs] +
+später) und '🔎 UMSEHEN-KLICK' beim Klick (Items genommen[Namen] + Indizien genommen[IDs] + Gesamt). So zeigt der
+nächste Run exakt Button-Anzeige vs tatsächliche Funde. 4 Tests mit echten Margarete-Wohnungs-Indizien grün +
+4 Filter-Tests grün. node --check OK.

@@ -3187,7 +3187,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.660</div>
+    <div class="start-version">Schatten v7.12.661</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.660</span>
+    <span>Schatten v7.12.661</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7111,7 +7111,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.660';
+window.SCHATTEN_VERSION = 'v7.12.661';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -7762,6 +7762,39 @@ function _ortsFundItems() {
     const ortKey = normForMatch(engineCurrentLocation.name);
     const schonHier = caseProgress.ortsFundGenommen[ortKey] || [];
     return Array.from(keys).filter(k => schonHier.indexOf(k) === -1 && ITEM_KATALOG[k]).map(k => ({ key: k, name: ITEM_KATALOG[k].name }));
+  } catch (e) { return []; }
+}
+// v7.12.661 (Benjamin: "4 Fundstücke auf dem Button, aber Klick findet nichts"). EINE gemeinsame Quelle für
+// Marker UND Klick - liefert die JETZT erreichbaren Indiz-Objekte am aktuellen Ort (Gates Tageszeit+NPC erfüllt).
+// Vorher zählte der Marker über offeneIndizienAmOrtNachErreichbarkeit, der Klick sammelte über eine zweite,
+// leicht abweichende Schleife -> Marker und Klick konnten divergieren (Button zeigt 4, Klick nimmt 0).
+function _ortsFundIndizienErreichbar() {
+  try {
+    if (!engineCurrentLocation || !engineCurrentLocation.name) return [];
+    const _locs = (typeof getCaseLocations === 'function') ? getCaseLocations() : [];
+    const _loc = _locs.find(l => normForMatch(l.name) === normForMatch(engineCurrentLocation.name)) || null;
+    if (!_loc || !Array.isArray(_loc.indizien)) return [];
+    const _gef = (caseProgress && Array.isArray(caseProgress.gefundeneIndizIds)) ? caseProgress.gefundeneIndizIds : [];
+    const _tz = (typeof _aktTageszeitName === 'function') ? _aktTageszeitName() : '';
+    // NPCs, die laut Setup zur aktuellen Tageszeit an diesem Ort wären (für umgebung-Indizien mit npc-Gate).
+    let _npcIdsAmOrt = [];
+    try {
+      if (Array.isArray(_loc.npcs)) _npcIdsAmOrt = _loc.npcs.filter(n => n && n.id && (n.immer || !Array.isArray(n.zeit) || !n.zeit.length || n.zeit.map(z => normForMatch(z)).includes(_tz))).map(n => normForMatch(n.id));
+    } catch (e) {}
+    return _loc.indizien.filter(ind => {
+      if (!ind || !ind.id || _gef.indexOf(ind.id) !== -1) return false;
+      // v7.12.661 (Run-Befund: "4 Fundstücke, Klick findet nichts"). quelle:'person'-Indizien werden durch
+      // BEFRAGEN gefunden, nicht durch Umsehen - die schließt der Umsehen-Button aus. quelle:'umgebung' sind
+      // die echten Umsehen-Indizien (Spuren/Akten/Dokumente am Ort).
+      if (ind.quelle === 'person') return false;
+      // Tageszeit-Gate (ein Ortsindiz kann nachts/tags unterschiedlich zugänglich sein).
+      if (Array.isArray(ind.zeit) && ind.zeit.length && !ind.zeit.map(z => normForMatch(z)).includes(_tz)) return false;
+      // npc-Gate bei umgebung-Indizien: der NPC muss am Ort sein (z.B. "Wahlers Frachtliste" sieht man, wenn
+      // Wahler da ist) - aber das Indiz wird trotzdem durch Umsehen gefunden, nicht durch Befragen.
+      if (ind.npc && _npcIdsAmOrt.length && _npcIdsAmOrt.indexOf(normForMatch(ind.npc)) === -1) return false;
+      if (ind.npc && !_npcIdsAmOrt.length) return false;
+      return true;
+    });
   } catch (e) { return []; }
 }
 function _itemKatalogEintrag(itemName) {
@@ -20698,18 +20731,33 @@ function renderOptions(scene) {
     // KI-Glücksspiel) - ersetzt das frühere "Umgebung durchsuchen" aus dem Baukasten.
     try {
       const _fund = (typeof _ortsFundItems === 'function') ? _ortsFundItems() : [];
-      // Erreichbare offene Indizien am aktuellen Ort bestimmen.
-      let _locHier = null, _indizErr = { jetzt: 0, spaeter: 0, hattIndizien: false };
+      const _indizErreichbar = (typeof _ortsFundIndizienErreichbar === 'function') ? _ortsFundIndizienErreichbar() : [];
+      // v7.12.661: "später" zählt NUR Orts-Indizien, deren Tageszeit-Gate noch nicht passt (NICHT Person-Indizien,
+      // die kommen über Befragung). So zeigt "später mehr hier" nur, was Umsehen tatsächlich später liefern kann.
+      let _spaeterDa = 0, _locHier = null;
       try {
         const _locs = (typeof getCaseLocations === 'function') ? getCaseLocations() : [];
         _locHier = _locs.find(l => normForMatch(l.name) === normForMatch(engineCurrentLocation.name)) || null;
-        if (_locHier && typeof offeneIndizienAmOrtNachErreichbarkeit === 'function') _indizErr = offeneIndizienAmOrtNachErreichbarkeit(_locHier);
+        if (_locHier && Array.isArray(_locHier.indizien)) {
+          const _gef2 = (caseProgress && Array.isArray(caseProgress.gefundeneIndizIds)) ? caseProgress.gefundeneIndizIds : [];
+          const _tz2 = (typeof _aktTageszeitName === 'function') ? _aktTageszeitName() : '';
+          let _npcAmOrt2 = [];
+          try { if (Array.isArray(_locHier.npcs)) _npcAmOrt2 = _locHier.npcs.filter(n => n && n.id && (n.immer || !Array.isArray(n.zeit) || !n.zeit.length || n.zeit.map(z => normForMatch(z)).includes(_tz2))).map(n => normForMatch(n.id)); } catch (e) {}
+          _spaeterDa = _locHier.indizien.filter(ind => {
+            if (!ind || !ind.id || _gef2.indexOf(ind.id) !== -1) return false;
+            if (ind.quelle === 'person') return false;
+            // gesperrt = Zeit-Gate ODER NPC-Gate aktuell NICHT erfüllt (kommt später)
+            const _zeitGesperrt = Array.isArray(ind.zeit) && ind.zeit.length && !ind.zeit.map(z => normForMatch(z)).includes(_tz2);
+            const _npcGesperrt = ind.npc && (!_npcAmOrt2.length || _npcAmOrt2.indexOf(normForMatch(ind.npc)) === -1);
+            return _zeitGesperrt || _npcGesperrt;
+          }).length;
+        }
       } catch (e) {}
-      const _jetztHolbar = _fund.length + _indizErr.jetzt;   // sofort einsammelbar (Items + erreichbare Indizien)
-      const _spaeterDa = _indizErr.spaeter;                  // gated Indizien (Tageszeit/NPC noch nicht erfüllt)
-      // v7.12.660 (Benjamin: Button darf NICHT verschwinden, wenn noch ein gated Indiz wartet - sonst weiß man
-      // nie, dass man wiederkommen soll). Button erscheint, solange ÜBERHAUPT noch etwas am Ort ist (jetzt ODER
-      // später). Marker ehrlich: gold "X Fundstücke" wenn jetzt holbar, sonst gedämpft "später mehr hier".
+      const _jetztHolbar = _fund.length + _indizErreichbar.length;   // EXAKT was der Klick einsammeln wird
+      // v7.12.661: Logge, was auf dem Button steht (Benjamin: "logge wie viele Items auf dem Button stehen").
+      if (_jetztHolbar > 0 || _spaeterDa > 0) {
+        if (typeof diag === 'function') diag('state', '🔎 UMSEHEN-BUTTON @ ' + engineCurrentLocation.name + ': Marker=' + _jetztHolbar + ' (Items:' + _fund.length + ' [' + _fund.map(x => x.name).join(', ') + '] + Indizien:' + _indizErreichbar.length + ' [' + _indizErreichbar.map(x => x.id).join(', ') + ']) · später=' + _spaeterDa);
+      }
       if ((_jetztHolbar > 0 || _spaeterDa > 0) && !karlInStasiCustody) {
         const umBtn = document.createElement('button');
         umBtn.className = 'option-btn option-btn-system option-btn-reise';
@@ -20719,50 +20767,47 @@ function renderOptions(scene) {
         umBtn.innerHTML = '<span class="option-id">🔎</span><span class="option-text-wrap"><span>Umsehen</span>' + _markerHtml + '</span>';
         attachSafeTap(umBtn, () => {
           try {
-            const f2 = _ortsFundItems();
             const ortKey = normForMatch(engineCurrentLocation.name);
             if (!caseProgress.ortsFundGenommen) caseProgress.ortsFundGenommen = {};
             if (!caseProgress.ortsFundGenommen[ortKey]) caseProgress.ortsFundGenommen[ortKey] = [];
             const _gefundenNamen = [];
-            // Items einsammeln.
+            // Items einsammeln (frisch holen, falls sich was geändert hat).
+            const f2 = (typeof _ortsFundItems === 'function') ? _ortsFundItems() : [];
             f2.forEach(it => {
               if (typeof _itemAdd === 'function') _itemAdd({ id: 'item_' + it.key + '_' + ortKey.replace(/\s+/g, '_'), name: it.name, typ: 'tauschware', quelle: 'ort_gefunden:' + engineCurrentLocation.name });
               caseProgress.ortsFundGenommen[ortKey].push(it.key);
               _gefundenNamen.push(it.name);
             });
-            // Erreichbare Indizien einsammeln (Gates: Tageszeit + NPC - prüft offeneIndizienAmOrtNachErreichbarkeit-Logik nach).
-            try {
-              const _locs2 = (typeof getCaseLocations === 'function') ? getCaseLocations() : [];
-              const _loc2 = _locs2.find(l => normForMatch(l.name) === normForMatch(engineCurrentLocation.name)) || null;
-              if (_loc2 && Array.isArray(_loc2.indizien)) {
-                const _gef = (caseProgress && Array.isArray(caseProgress.gefundeneIndizIds)) ? caseProgress.gefundeneIndizIds : [];
-                const _tz = (typeof _aktTageszeitName === 'function') ? _aktTageszeitName() : '';
-                let _npcIdsAmOrt = [];
-                try {
-                  if (Array.isArray(_loc2.npcs)) _npcIdsAmOrt = _loc2.npcs.filter(n => n && n.id && (n.immer || !Array.isArray(n.zeit) || !n.zeit.length || n.zeit.map(z => normForMatch(z)).includes(_tz))).map(n => normForMatch(n.id));
-                } catch (e) {}
-                _loc2.indizien.forEach(ind => {
-                  if (!ind || !ind.id || _gef.indexOf(ind.id) !== -1) return;
-                  // Gate-Prüfung (identisch zur Erreichbarkeits-Logik).
-                  if (Array.isArray(ind.zeit) && ind.zeit.length && !ind.zeit.map(z => normForMatch(z)).includes(_tz)) return;
-                  if (ind.npc && _npcIdsAmOrt.length && _npcIdsAmOrt.indexOf(normForMatch(ind.npc)) === -1) return;
-                  if (ind.npc && !_npcIdsAmOrt.length) return;
-                  if (typeof _markiereIndizGefunden === 'function' && _markiereIndizGefunden(ind)) {
-                    _gefundenNamen.push(ind.text || ind.id);
-                  }
-                });
+            // Indizien einsammeln - GLEICHE Quelle wie der Marker (frisch holen).
+            const _ind2 = (typeof _ortsFundIndizienErreichbar === 'function') ? _ortsFundIndizienErreichbar() : [];
+            _ind2.forEach(ind => {
+              if (typeof _markiereIndizGefunden === 'function' && _markiereIndizGefunden(ind)) {
+                _gefundenNamen.push(ind.text || ind.id);
               }
-            } catch (e) {}
+            });
+            // v7.12.661: Logge, was tatsächlich eingesammelt wurde (Benjamin: "und wie viele und welche ich erhalte").
+            if (typeof diag === 'function') diag('state', '🔎 UMSEHEN-KLICK @ ' + engineCurrentLocation.name + ': Items genommen=' + f2.length + ' [' + f2.map(x => x.name).join(', ') + '] · Indizien genommen=' + _ind2.length + ' [' + _ind2.map(x => x.id).join(', ') + '] · Gesamt-Namen=' + _gefundenNamen.length);
             if (_gefundenNamen.length) {
               if (typeof showProgressToast === 'function') showProgressToast('🔎 Gefunden', 'Karl entdeckt: ' + _gefundenNamen.join(', '), 'success', 'orts-fund');
-              if (typeof diag === 'function') diag('state', '🔎 UMSEHEN @ ' + engineCurrentLocation.name + ': ' + _gefundenNamen.join(', '));
             } else {
-              // Nichts holbar - aber vielleicht warten gated Indizien (andere Tageszeit/Person nötig).
+              // Nichts holbar - aber vielleicht warten zeitgesperrte ORTS-Indizien.
               let _spaeterHier = 0;
               try {
                 const _l3 = (typeof getCaseLocations === 'function') ? getCaseLocations() : [];
                 const _lh = _l3.find(l => normForMatch(l.name) === normForMatch(engineCurrentLocation.name)) || null;
-                if (_lh && typeof offeneIndizienAmOrtNachErreichbarkeit === 'function') _spaeterHier = offeneIndizienAmOrtNachErreichbarkeit(_lh).spaeter;
+                if (_lh && Array.isArray(_lh.indizien)) {
+                  const _gef3 = (caseProgress && Array.isArray(caseProgress.gefundeneIndizIds)) ? caseProgress.gefundeneIndizIds : [];
+                  const _tz3 = (typeof _aktTageszeitName === 'function') ? _aktTageszeitName() : '';
+                  let _npcAmOrt3 = [];
+                  try { if (Array.isArray(_lh.npcs)) _npcAmOrt3 = _lh.npcs.filter(n => n && n.id && (n.immer || !Array.isArray(n.zeit) || !n.zeit.length || n.zeit.map(z => normForMatch(z)).includes(_tz3))).map(n => normForMatch(n.id)); } catch (e) {}
+                  _spaeterHier = _lh.indizien.filter(ind => {
+                    if (!ind || !ind.id || _gef3.indexOf(ind.id) !== -1) return false;
+                    if (ind.quelle === 'person') return false;
+                    const _zg = Array.isArray(ind.zeit) && ind.zeit.length && !ind.zeit.map(z => normForMatch(z)).includes(_tz3);
+                    const _ng = ind.npc && (!_npcAmOrt3.length || _npcAmOrt3.indexOf(normForMatch(ind.npc)) === -1);
+                    return _zg || _ng;
+                  }).length;
+                }
               } catch (e) {}
               if (typeof showProgressToast === 'function') {
                 if (_spaeterHier > 0) showProgressToast('🔎 Umgesehen', 'Hier gibt es noch etwas - aber erst zu einer anderen Zeit oder wenn die richtige Person da ist.', 'info', 'orts-fund');
