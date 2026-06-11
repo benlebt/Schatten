@@ -3187,7 +3187,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.673</div>
+    <div class="start-version">Schatten v7.12.674</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.673</span>
+    <span>Schatten v7.12.674</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6776,6 +6776,20 @@ function _stageFloorAnwenden() {
   // Stage 4 (gelöst) wird NIE allein über einen Indiz-Floor gesetzt - dafür braucht es die Sicherungs-/
   // Auflösungs-Logik. Der Floor hebt höchstens bis Stage 3 (Verdächtiger/Wahrheit belegt).
   if (caseProgress.stage > vorher) {
+    // v7.12.674 (Run 0031): Floor-Aufstieg MUSS die Start-Szenen-Marker mitsetzen. Ohne sie scheitert
+    // das 5-Szenen-Gate der Überführung (stage3FloorOk rechnet mit stage2StartScene) und die
+    // Eskalations-/Nachlauf-Diagnosen rechnen falsch. Nur setzen, wenn noch unbelegt (Marker = ERSTES
+    // Erreichen der Stufe).
+    try {
+      if (caseProgress.stage >= 2 && !caseProgress.stage2StartScene) {
+        caseProgress.stage2StartScene = sc;
+        caseProgress.stage2StartDay = (typeof gameDay === 'number') ? gameDay : caseProgress.stage2StartDay;
+      }
+      if (caseProgress.stage >= 3 && !caseProgress.stage3StartScene) {
+        caseProgress.stage3StartScene = sc;
+        if (typeof scenesInStage3 !== 'undefined') scenesInStage3 = 0;
+      }
+    } catch (e) { /* Marker-Setzen darf den Floor nie brechen */ }
     if (typeof diag === 'function') diag('progress', '✦ STAGE ' + caseProgress.stage + ' via Indiz-Floor (Umsehen/Fund außerhalb Szene, Floor=' + floor + ', Sz=' + sc + ')');
     try { if (typeof showProgressToast === 'function') showProgressToast('FALL-STUFE ' + caseProgress.stage, 'Neue Erkenntnis bringt den Fall voran.', 'clue', 'stage-floor-' + caseProgress.stage); } catch (e) {}
     // Anzeige (Stage-Dots) aktualisieren, falls eine Render-Funktion existiert.
@@ -7164,7 +7178,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.673';
+window.SCHATTEN_VERSION = 'v7.12.674';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -34281,6 +34295,11 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       // verstreuten caseProgress.stage-Zuweisungen einzeln zu markern wäre fehleranfällig;
       // dieser eine Marker zeigt den Stand JEDER Szene + macht jeden Wechsel explizit (mit
       // stage3-Dauer für die Stage-3-Nachlauf-Analyse: ab wann lösbar vs wann real gelöst).
+      // v7.12.674 (Run 0031, Sz4-Sz11): FLOOR-NACHZUG. _stageFloorAnwenden lief nur im Fund-Moment.
+      // Ein Floor-2-Indiz aus Sz3 (Sz>=6-Bedingung noch nicht erfüllt) hob die Stage danach NIE -
+      // sie hing 8 Szenen auf 1, obwohl der Floor längst trug. Jetzt: einmal pro Szene re-checken
+      // (idempotent, toastet nur bei echtem Aufstieg). Das ist die v666-Intention, korrekt zu Ende gebaut.
+      try { if (typeof _stageFloorAnwenden === 'function' && caseProgress && !caseProgress.istGelöst) _stageFloorAnwenden(); } catch (e) { /* nie die Szene brechen */ }
       try {
         if (typeof diag === 'function' && caseProgress) {
           const _stg = (typeof caseProgress.stage === 'number') ? caseProgress.stage : '?';
@@ -35737,7 +35756,11 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         // Tag 2). Floor: ab 14 Szenen an Tag 1 zählt das wie ein voller erster Ermittlungstag.
         // v7.12.274: zentralisiert (canEnterStage2) - Haupt- und Retry-Pfad identisch.
         const stage2FloorOk = canEnterStage2();
-        if (caseProgress.stage >= 1 && stage2FloorOk) {
+        // v7.12.674 (Run 0031 Sz12, STAGE-REGRESSION): 'stage >= 1' ließ diesen Pfad eine bereits
+        // HÖHERE Stage zurücksetzen - der Indiz-Floor hatte Sz11 auf 3 gehoben, die Verdächtigen-
+        // Erkennung in Sz12 setzte zurück auf 2 (inkl. Reset von stage2StartScene -> verfälschtes
+        // Eskalations-Timing). Stage-Aufstieg ist MONOTON: dieser Pfad hebt nur exakt 1 -> 2.
+        if (caseProgress.stage === 1 && stage2FloorOk) {
           caseProgress.stage = 2;
           caseProgress.stage2StartDay = gameDay; // v6.69: fuer Eskalations-Timing
           caseProgress.stage2StartScene = sceneCounter; // v6.81
@@ -35745,12 +35768,15 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           diag('progress', '✦ STAGE 2 erreicht (Verdaechtiger: ' + caseProgress.tatverdaechtiger + ')');
           // v6.68: Toast bei Verdaechtigen-Identifikation
           showProgressToast('FALL-STUFE 2', 'Verdacht auf ' + caseProgress.tatverdaechtiger + '.');
-        } else if (caseProgress.stage >= 1 && !stage2FloorOk) {
+        } else if (caseProgress.stage === 1 && !stage2FloorOk) {
           // v7.9.10: KI hat Stage 2 versucht, aber zu frueh. Tatverdaechtiger
           // bleibt vorgemerkt, Stage bleibt 1 - der Fall braucht mehr Indizien.
           console.log('[Schatten] Stage 2 zu frueh: Sz=' + sceneCounter + ', Tag=' + gameDay + ', Ind=' + indCount + ' - Tatverdaechtiger vorgemerkt aber Stage bleibt 1');
           diag('filter', 'Stage-2-Floor (Sz>=8, Ind>=8, Tag>=2 PFLICHT) verfehlt: Sz=' + sceneCounter + ', Tag=' + gameDay + ', Ind=' + indCount + ' - Aufstieg geblockt');
           // tatverdaechtiger bleibt gesetzt, kann spaeter Stage 2 ausloesen
+        } else if ((caseProgress.stage || 0) >= 2) {
+          // v7.12.674: Verdächtiger (re)benannt, Stage ist schon >= 2 - nichts zurücksetzen.
+          diag('progress', 'Verdaechtiger benannt bei Stage ' + caseProgress.stage + ' - Stage bleibt (monoton)');
         } else {
           console.log('[Schatten] Tatverdaechtiger genannt, aber zu frueh fuer Stage 2 (erst Indizien sammeln).');
           diag('filter', 'Tatverdaechtiger zu frueh genannt, Stage-Aufstieg blockiert');
@@ -35808,8 +35834,11 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     if (scene.tatverdaechtiger_ueberfuehrt === true && stage3FloorOk && !caseProgress.ueberfuehrt && _mordGateOffen
         && !caseProgress.istGelöst && (caseProgress.stage || 0) < 4) {
       caseProgress.ueberfuehrt = true;
+      // v7.12.674 (Run 0031 Sz17): War die Stage schon 3 (Indiz-Floor), ist "FALL-STUFE 3" als
+      // Toast-Titel ein Duplikat - der Toast unten sagt dann ehrlich "ÜBERFÜHRT".
+      const _stageWarSchon3 = (caseProgress.stage || 0) >= 3;
       caseProgress.stage = 3; // v6.81: Eigener Stage 3 fuer "ueberfuehrt aber noch nicht berichtet"
-      caseProgress.stage3StartScene = sceneCounter; // v6.81: Stage 3 tracken
+      if (!caseProgress.stage3StartScene) caseProgress.stage3StartScene = sceneCounter; // v6.81 Stage 3 tracken; v674: Floor-Marker nicht überschreiben
       // v7.12.221 (Kessler-Run-Bug): Bei beschatten ist das Subjekt IMMER der TARGET (Robert).
       // Wenn tatverdaechtiger auf eine andere Figur gedriftet ist (z.B. Ilse, die Romance-Figur,
       // weil Karl mit ihr interagierte), hier auf den TARGET zuruecksetzen - sonst zeigt Stage 3
@@ -35882,7 +35911,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           // v7.12.446 (Lektorat v445 P1): Titel ehrlich bei offener Wahrheitskette.
           showProgressToast('Verdacht verdichtet', 'Du bist nah dran – noch offen: ' + (_fbk.length ? (_fbk[0].label || 'die Kernfrage') : 'die Kernfrage'), 'info');
         } else {
-          showProgressToast('FALL-STUFE 3', toastText);
+          showProgressToast(_stageWarSchon3 ? 'ÜBERFÜHRT' : 'FALL-STUFE 3', toastText);
         }
       }
     }

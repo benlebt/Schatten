@@ -15143,3 +15143,25 @@ verwässern Baukasten-First (ChatGPT-Lektorat v670 A6, von Benjamin freigegeben)
 Unberührt: das "Beobachten" im Personen-Menü (eigener Pfad, Z~19525) und die
 BEOBACHTEN-Handlungsart/Kategorie. Verifiziert: keine Code-Querverweise auf die
 entfernten Schlüssel.
+
+## 🆕 v7.12.674 — Stage-Regression + Floor-Nachzug (Run 0031, manuell, Fall gelöst)
+
+**Run-Befund (40 Sz, v673, Margarete GELÖST über Vera-Übergabe + Helene-Sicherung):** Kein
+Roth-Drift (null Party-Events). Audit-Fix v671 wirkt (Mann-im-Mantel zählt bespielt; Mertens
+korrekt NICHT bespielt — spawnte als Threat, kam aber nie in Prosa vor). Baukasten-First-
+Architektur-Test faktisch bestanden: manuell ohne KI-Optionen/Freitext sauber gelöst.
+
+**Drei Stage-Bugs aus dem Run gefixt:**
+1. **STAGE-REGRESSION (P1):** Verdächtigen-Pfad ('stage >= 1') setzte die per Indiz-Floor
+   erreichte Stage 3 (Sz11) auf 2 zurück (Sz12) inkl. Marker-Reset. Jetzt monoton: hebt nur
+   exakt 1→2; bei Stage>=2 leiser Diag.
+2. **FLOOR-NACHZUG (P2):** _stageFloorAnwenden lief nur im Fund-Moment — Floor-2-Indiz aus Sz3
+   (Sz>=6 noch nicht erfüllt) hob die Stage danach NIE, sie hing 8 Szenen auf 1. Jetzt 1x pro
+   Szene re-gecheckt (idempotent). Begleiter: Floor-Aufstieg setzt stage2/3StartScene-Marker
+   mit (sonst scheitert das 5-Szenen-Überführungs-Gate nach Floor-Sprung); Überführt-Pfad
+   überschreibt Floor-Marker nicht mehr.
+3. **Toast-Duplikat (P3):** "FALL-STUFE 3" feuerte bei Überführung erneut, obwohl Stage schon 3
+   war (Sz17) — Titel heißt dann jetzt ehrlich "ÜBERFÜHRT".
+
+7 Logik-Tests grün (kompletter Run-0031-Ablauf nachgestellt). Vera-Mitnahme-Frage geklärt:
+KONTAKT lehnt bewusst ab (Übergabe-Ziel, v667-Design) — kein Bug.
