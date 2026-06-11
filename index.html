@@ -3191,7 +3191,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.640</div>
+    <div class="start-version">Schatten v7.12.641</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.640</span>
+    <span>Schatten v7.12.641</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7102,7 +7102,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.640';
+window.SCHATTEN_VERSION = 'v7.12.641';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -18936,7 +18936,9 @@ function bauePersonenButtons(container, modus) {
     const _inParty = (typeof _istInParty === 'function') && _istInParty(npc.id, npc.name);
     const _marker = (modus === 'verwalten')
       ? (_inParty ? 'in Begleitung' : 'mitnehmen')
-      : 'ansprechen';
+      : ((npc.tag || '').toUpperCase() === 'HUND'
+          ? ((typeof _hundInParty === 'function' && _hundInParty()) ? 'Kommandos' : 'mitnehmen')
+          : 'ansprechen');
     // v7.12.582/589 (Benjamin): NPC-Typ-Emoji statt Punkt - zeigt die Rolle. Geschlecht ist am NPC nicht als Feld
     // hinterlegt, aber über den Vornamen ableitbar (femaleVornamen-Heuristik) - so bekommt Margarete ein weibliches
     // Emoji (vorher sah 🙋 männlich aus). In-Party-Mitglieder bekommen das Team-Symbol 🤝.
@@ -19128,10 +19130,13 @@ function oeffneNpcMenue(npc, modus) {
   // an und bedroht ihn nicht; einen Bösewicht beschützt man nicht. tag kommt aus setupCast/ANCHOR_NPCS.
   const tag = (npc.tag || '').toUpperCase();
   // v7.12.632: Der Wachhund hat ein ganz eigenes Verb-Set - kein normaler NPC.
+  // v7.12.641 (Benjamin: Rex anwesend, aber Klick reagiert nicht): Der HUND-Zweig machte 'return verbenHund'
+  // und sprang damit MITTEN aus oeffneNpcMenue raus - das Popup wurde NIE gerendert (das passiert erst weiter
+  // unten). Jetzt: Verben merken, das normale keys-Set leeren und zum Render-Code durchlaufen.
+  let _hundVerbenOverride = null;
   if (tag === 'HUND') {
     const verbenHund = [];
     if (typeof _hundInParty === 'function' && _hundInParty()) {
-      // In der Party: Hunde-Kommandos gegen feindliche Ziele am Ort (landen im Plan, kombinierbar).
       verbenHund.push({ key: 'hund_fixiere', label: 'Fixieren lassen', kategorie: 'OFFENSIV', _hundBefehl: 'fixiere',
         aktion: HUND_NAME + ' stellt sich knurrend und mit gefletschten Zähnen vor {npc} - die Person erstarrt, hebt langsam die Hände und wagt keine Bewegung mehr, aus Angst gebissen zu werden.' });
       verbenHund.push({ key: 'hund_belle', label: 'Anbellen lassen', kategorie: 'OFFENSIV', _hundBefehl: 'belle',
@@ -19141,11 +19146,11 @@ function oeffneNpcMenue(npc, modus) {
       verbenHund.push({ key: 'hund_fass', label: 'Fass! (festsetzen)', kategorie: 'OFFENSIV', _hundBefehl: 'fass',
         aktion: HUND_NAME + ' schnappt zu und hält {npc} eisern fest - nicht verletzend, aber so unnachgiebig und an empfindlicher Stelle, dass die Person sofort jede Information ausspuckt und nur noch darum fleht, den Hund zurückzupfeifen.' });
     } else {
-      // Nicht in Party (am Anker verfügbar): nachfragen + mitnehmen.
+      // Nicht in Party (am Anker verfügbar): mitnehmen.
       verbenHund.push({ key: 'hund_mitnehmen', label: HUND_NAME + ' mitnehmen', kategorie: '_PARTY', _hundMitnehmen: true,
         _hint: 'Den Wachhund in die Party aufnehmen · reist mit · keine Szene' });
     }
-    return verbenHund;
+    _hundVerbenOverride = verbenHund;
   }
   const VERBUENDETE = ['CLIENT','WITNESS','INFORMANT','AUTHORITY','ROMANCE','FAMILY','SCHUTZ','KONTAKT','VERBUENDETER'];
   const GEGNER = ['ANTAGONIST','SUSPECT','GANGSTER','STASI'];
@@ -19181,7 +19186,7 @@ function oeffneNpcMenue(npc, modus) {
     } catch (e) { _bedrohungAktiv = false; }
     keys = (_bedrohungAktiv && !_istGutePerson) ? ['befragen','angreifen','beobachten'] : ['befragen','beobachten'];
   }
-  const verben = keys.map(k => ALLE_VERBEN[k]).filter(Boolean);
+  const verben = _hundVerbenOverride ? _hundVerbenOverride.slice() : keys.map(k => ALLE_VERBEN[k]).filter(Boolean);
   // v7.12.547 (Party-System Schicht 2): "Mitnehmen" / "Hier lassen" für Nicht-Gegner. Verwaltungs-Aktionen -
   // lösen KEINE KI-Szene aus, ändern nur den Party-Zustand. Gegner (STASI/SUSPECT/...) nimmt man NICHT mit.
   // Ist die Person schon in der Party -> "Hier lassen" (entfernen); sonst -> "Mitnehmen" (hinzufügen).
@@ -19238,11 +19243,11 @@ function oeffneNpcMenue(npc, modus) {
         }
       }
     } catch (e) {}
-  if (_schonInParty) {
+  if (!_hundVerbenOverride && _schonInParty) {
     // "Hier lassen" IMMER anbieten wenn die Figur in der Party ist - auch MYSTERY/Gegner, falls sie aus einem
     // früheren Stand noch drin steckt (sonst könnte man sie nicht mehr loswerden).
     verben.push({ key: 'hierlassen', label: 'Hier lassen', kategorie: '_PARTY', _partyAction: 'remove', _hint: 'Bleibt an diesem Ort · verlässt die Party · keine Szene' });
-  } else if (!_istGegnerTag) {
+  } else if (!_hundVerbenOverride && !_istGegnerTag) {
     // v7.12.594: Eine GESICHERTE Klientin ist nicht mehr mitnehmbar - sie wurde bewusst in Sicherheit gebracht
     // (bei Doc/Helene/im Westen). Wieder mitnehmen würde die Sicherung de facto aufheben.
     const _istGesicherteKlientin = !!(caseProgress && caseProgress.clientSecured && clientProfile && clientProfile.name

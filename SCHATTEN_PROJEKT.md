@@ -14552,3 +14552,13 @@ v639/v640): A1 August-Party-Kleben (v639-Mitnahme-Fix + v636-Zeugen-Skip sollten
 A2 Auto-Custody-Stopp (v636/v638 Stasi-Deckel), A3 Finale-Sicherungsort (offen), A4 W2b-Stage2-Retry (offen),
 A5 MANÖVER-CHECK-Debug (ist drin, war im Run nur nicht sichtbar weil kein PLAN_ZUGRIFF mit mehreren), A6 Setup-
 Cast-Audit (offen). Mertens-Rang Oberleutnant vs Hauptmann (P2) offen.
+
+## v7.12.641 (2026-06-11): Rex anklickbar - HUND-Menü öffnet endlich (Benjamin-Befund)
+BENJAMIN: "Rex ist anwesend aber nicht anklickbar" (Screenshot: Rex unter PERSONEN, Klick reagiert nicht).
+URSACHE: Der HUND-Verbzweig in oeffneNpcMenue machte 'return verbenHund' und sprang damit MITTEN aus der
+Funktion raus - der Popup-Render-Code läuft aber erst WEITER UNTEN. Also: Klick rief oeffneNpcMenue, die
+returnte sofort das Verb-Array (das niemand entgegennimmt), KEIN Popup wurde gebaut -> nichts passierte.
+FIX: HUND-Verben in _hundVerbenOverride merken statt returnen; const verben nutzt den Override; die normalen
+Party/Romance-Erweiterungen (hierlassen/mitnehmen/nacht) werden bei gesetztem Override übersprungen (sonst
+bekäme der Hund doppelte Verben). Button-Marker für HUND-Tag: 'mitnehmen' (verfügbar) bzw. 'Kommandos' (in
+Party) statt generischem 'ansprechen'. 5/5 Tests. node --check OK. _schonInParty-Reihenfolge geprüft (kein TDZ).
