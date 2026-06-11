@@ -3187,7 +3187,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.659</div>
+    <div class="start-version">Schatten v7.12.660</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.659</span>
+    <span>Schatten v7.12.660</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7111,7 +7111,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.659';
+window.SCHATTEN_VERSION = 'v7.12.660';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -20705,11 +20705,18 @@ function renderOptions(scene) {
         _locHier = _locs.find(l => normForMatch(l.name) === normForMatch(engineCurrentLocation.name)) || null;
         if (_locHier && typeof offeneIndizienAmOrtNachErreichbarkeit === 'function') _indizErr = offeneIndizienAmOrtNachErreichbarkeit(_locHier);
       } catch (e) {}
-      const _zuHolen = _fund.length + _indizErr.jetzt;  // Items + jetzt erreichbare Indizien
-      if (_zuHolen > 0 && !karlInStasiCustody) {
+      const _jetztHolbar = _fund.length + _indizErr.jetzt;   // sofort einsammelbar (Items + erreichbare Indizien)
+      const _spaeterDa = _indizErr.spaeter;                  // gated Indizien (Tageszeit/NPC noch nicht erfüllt)
+      // v7.12.660 (Benjamin: Button darf NICHT verschwinden, wenn noch ein gated Indiz wartet - sonst weiß man
+      // nie, dass man wiederkommen soll). Button erscheint, solange ÜBERHAUPT noch etwas am Ort ist (jetzt ODER
+      // später). Marker ehrlich: gold "X Fundstücke" wenn jetzt holbar, sonst gedämpft "später mehr hier".
+      if ((_jetztHolbar > 0 || _spaeterDa > 0) && !karlInStasiCustody) {
         const umBtn = document.createElement('button');
         umBtn.className = 'option-btn option-btn-system option-btn-reise';
-        umBtn.innerHTML = '<span class="option-id">🔎</span><span class="option-text-wrap"><span>Umsehen</span><span class="option-marker option-marker-system">' + _zuHolen + ' Fundstück' + (_zuHolen === 1 ? '' : 'e') + '</span></span>';
+        const _markerHtml = (_jetztHolbar > 0)
+          ? '<span class="option-marker option-marker-system">' + _jetztHolbar + ' Fundstück' + (_jetztHolbar === 1 ? '' : 'e') + '</span>'
+          : '<span class="option-marker" style="color:#7a6f5a;" title="zeit-/personengesperrt - später erreichbar">später mehr hier</span>';
+        umBtn.innerHTML = '<span class="option-id">🔎</span><span class="option-text-wrap"><span>Umsehen</span>' + _markerHtml + '</span>';
         attachSafeTap(umBtn, () => {
           try {
             const f2 = _ortsFundItems();
@@ -20750,7 +20757,17 @@ function renderOptions(scene) {
               if (typeof showProgressToast === 'function') showProgressToast('🔎 Gefunden', 'Karl entdeckt: ' + _gefundenNamen.join(', '), 'success', 'orts-fund');
               if (typeof diag === 'function') diag('state', '🔎 UMSEHEN @ ' + engineCurrentLocation.name + ': ' + _gefundenNamen.join(', '));
             } else {
-              if (typeof showProgressToast === 'function') showProgressToast('🔎 Umgesehen', 'Hier ist gerade nichts Neues zu finden.', 'info', 'orts-fund');
+              // Nichts holbar - aber vielleicht warten gated Indizien (andere Tageszeit/Person nötig).
+              let _spaeterHier = 0;
+              try {
+                const _l3 = (typeof getCaseLocations === 'function') ? getCaseLocations() : [];
+                const _lh = _l3.find(l => normForMatch(l.name) === normForMatch(engineCurrentLocation.name)) || null;
+                if (_lh && typeof offeneIndizienAmOrtNachErreichbarkeit === 'function') _spaeterHier = offeneIndizienAmOrtNachErreichbarkeit(_lh).spaeter;
+              } catch (e) {}
+              if (typeof showProgressToast === 'function') {
+                if (_spaeterHier > 0) showProgressToast('🔎 Umgesehen', 'Hier gibt es noch etwas - aber erst zu einer anderen Zeit oder wenn die richtige Person da ist.', 'info', 'orts-fund');
+                else showProgressToast('🔎 Umgesehen', 'Hier ist nichts mehr zu finden.', 'info', 'orts-fund');
+              }
             }
             try { if (typeof renderOptions === 'function' && typeof currentScene === 'object' && currentScene) renderOptions(currentScene); } catch (e) {}
             if (typeof renderImRaumAnzeige === 'function') { try { renderImRaumAnzeige(); } catch(e){} }

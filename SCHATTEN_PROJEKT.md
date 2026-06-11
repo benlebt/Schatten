@@ -14884,3 +14884,13 @@ auch wenn NUR Indizien (keine Items) erreichbar sind. Kein KI-Glücksspiel mehr 
 Engine-Philosophie "Engine besitzt Wahrheit, KI erzählt"). 7 Indiz-Gate-Tests + 5 Baukasten-Filter-Tests grün.
 node --check OK. WICHTIG für Benjamin: Indizien-Finden ist jetzt deterministisch über Umsehen - die KI-Szene als
 Indizien-Quelle entfällt für die Umgebung (NPC-Befragung kann weiter Indizien über Prosa liefern).
+
+## v7.12.660 (2026-06-11): Umsehen-Button verschwindet nicht bei verstecktem gated Indiz (Benjamin)
+BENJAMIN-BEFUND: "nicht dass der Button verschwindet und theoretisch gäbe es noch ein Indiz zu finden... wir
+haben nur ein Item gefunden und dann ist Umsehen wieder weg?" - korrekter Bug. v659-Logik war
+_zuHolen = Items + JETZT-Indizien; gated (spaeter) Indizien ignoriert. Szenario: Ort hat 1 Item + 1 zeit-/
+personengesperrtes Indiz -> Item gesammelt -> _zuHolen 0 -> Button weg -> Spieler erfährt nie, dass er wiederkommen
+soll. FIX: Button erscheint jetzt solange ÜBERHAUPT etwas am Ort ist (jetzt holbar ODER später gated). Marker
+ehrlich: gold "X Fundstücke" wenn jetzt holbar, sonst gedämpft "später mehr hier". Klick bei nur-gated zeigt Toast
+"Hier gibt es noch etwas - aber erst zu einer anderen Zeit oder wenn die richtige Person da ist". Button verschwindet
+erst, wenn Ort WIRKLICH leer (keine Items, keine jetzt-, keine später-Indizien). 5 Tests grün. node --check OK.
