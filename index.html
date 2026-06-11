@@ -3191,7 +3191,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.656</div>
+    <div class="start-version">Schatten v7.12.657</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3417,7 +3417,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.656</span>
+    <span>Schatten v7.12.657</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7115,7 +7115,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.656';
+window.SCHATTEN_VERSION = 'v7.12.657';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -7639,8 +7639,22 @@ function _planAusfuehren() {
     // v7.12.637 C/D: Prompt unterscheidet Erfolg/Fehlschlag pro Ziel; Erfolg trägt Fesselmaterial nach Ort,
     // Fehlschlag erzählt den misslungenen Zugriff + Konsequenzen (Verfassung-1, Spannung+1).
     const _gabFehlschlag = Object.keys(_zugriffFehlschlag).length > 0;
-    let txt = 'KOORDINIERTER ZUGRIFF - alle folgenden Handlungen passieren GLEICHZEITIG in DIESER EINEN Szene, als abgestimmtes Manöver: ';
-    txt += plan.map((p, i) => (i + 1) + ') ' + p.aktionText).join(' ');
+    // v7.12.657 (Benjamin: "befragen über Baukasten ist aggressiver + wir fliehen immer"). URSACHE: JEDER
+    // Baukasten-Plan - auch ein einzelnes friedliches Befragen - wurde als "KOORDINIERTER ZUGRIFF... abgestimmtes
+    // Manöver" gerahmt. Das Wort Zugriff/Manöver treibt die KI in Kampf-/Eskalations-/Flucht-Modus. Lösung: nur
+    // KONFLIKT-Pläne (Angriff/Fesseln/Werfen/Hund-Gewalt) bekommen den Zugriffs-Rahmen. Friedliche Pläne
+    // (befragen/durchsuchen/ansehen/geben/anbieten/trinken) laufen als normale, ruhige Handlung.
+    const _KONFLIKT_ARTEN = ['angreifen','angriff','fesseln','ablenken','ablenkung','angreifen_mit','werfen','werfen_fuesse','hund_fass','hund_fixiere','hund_belle','hund_knurre'];
+    const _istKonfliktPlan = plan.some(p => _KONFLIKT_ARTEN.indexOf(p.art) !== -1);
+    let txt;
+    if (_istKonfliktPlan) {
+      txt = 'KOORDINIERTER ZUGRIFF - alle folgenden Handlungen passieren GLEICHZEITIG in DIESER EINEN Szene, als abgestimmtes Manöver: ';
+      txt += plan.map((p, i) => (i + 1) + ') ' + p.aktionText).join(' ');
+    } else {
+      // Friedlicher Plan: ruhige Handlung, kein Manöver-Rahmen, keine Eskalations-Sprache.
+      txt = (plan.length > 1 ? 'Karl und seine Begleiter handeln in dieser Szene: ' : '') + plan.map((p, i) => (plan.length > 1 ? (i + 1) + ') ' : '') + p.aktionText).join(' ');
+      txt += ' Erzähle das ruhig und ohne Eskalation - dies ist KEINE Konfliktszene, KEIN Kampf, KEINE Flucht. Niemand wird angegriffen, gefesselt oder bedroht. KEIN Ortswechsel, KEINE Abfahrt im Auto - die Szene bleibt am aktuellen Ort. Was als Nächstes geschieht, entscheidet der Spieler.';
+    }
     // Fesselmaterial-Hinweis für erfolgreich gefesselte Ziele.
     try {
       const _fesselZiele = plan.filter(p => (p.art === 'fesseln' || p.art === 'ablenkung') && p.ziel && !_zugriffFehlschlag[normForMatch(p.ziel)]);
@@ -7667,17 +7681,17 @@ function _planAusfuehren() {
       try { if (typeof verfassung === 'number' && verfassung > 1) { verfassung = Math.max(1, verfassung - 1); if (typeof diag === 'function') diag('state', 'MANÖVER-FEHLSCHLAG: Verfassung -> ' + verfassung); } } catch (e) {}
       try { window._manoeverFehlschlagSpannung = true; } catch (e) {}
     }
-    txt += ' Erzähle das als EINE schnelle, koordinierte Aktion.' + (_gabFehlschlag ? '' : ' Die ausgeschalteten/gefesselten Personen bleiben kampfunfähig zurück.') + ' KEIN Gewahrsam für Karl.';
-    // v7.12.646 (Lektorat Run v643 A4: ein Plan-Manöver erzählte eine Flucht zum Opel weg vom Ort -> Ort-Prosa-
-    // Bruch, aus dem fälschlich Sicherungs-Beats entstehen konnten). Ein Zugriff passiert HIER, am aktuellen Ort.
-    txt += ' WICHTIG: Diese Aktion passiert am AKTUELLEN Ort. KEIN Ortswechsel, KEINE Flucht zum Auto, KEINE Fahrt - die Szene bleibt hier, wo Karl gerade ist. Erzähle KEINEN Abgang: Karl und seine Begleiter springen NICHT in den Opel, rennen NICHT weg, verschwinden NICHT in der Nacht. Nach einer Fesselung BLEIBT die Gruppe beim gefesselten Gegner am Ort - die Szene endet mit der gesicherten Lage HIER, nicht mit einer Abfahrt. Was als Nächstes geschieht, entscheidet der Spieler in der nächsten Szene, nicht dein Erzähltext.';
-    if (typeof diag === 'function') diag('state', '📋 PLAN AUSGEFÜHRT: ' + plan.length + ' Aktionen -> ein Prompt' + (_gabFehlschlag ? ' (mit Fehlschlag)' : ''));
-    // v7.12.649 (Benjamin: der lange KI-Prompt wurde dem Spieler 1:1 im Verlauf gezeigt - viel zu ausführlich).
-    // Kurzer, lesbarer Anzeige-Text aus den Plan-Labels; der lange txt geht NUR an die KI.
-    let _anzeigeText = 'Koordinierter Zugriff: ' + plan.map(p => p.label).join('; ');
+    if (_istKonfliktPlan) {
+      txt += ' Erzähle das als EINE schnelle, koordinierte Aktion.' + (_gabFehlschlag ? '' : ' Die ausgeschalteten/gefesselten Personen bleiben kampfunfähig zurück.') + ' KEIN Gewahrsam für Karl.';
+      // v7.12.646 (Lektorat Run v643 A4): Ein Zugriff passiert HIER, am aktuellen Ort - keine Flucht-Prosa.
+      txt += ' WICHTIG: Diese Aktion passiert am AKTUELLEN Ort. KEIN Ortswechsel, KEINE Flucht zum Auto, KEINE Fahrt - die Szene bleibt hier, wo Karl gerade ist. Erzähle KEINEN Abgang: Karl und seine Begleiter springen NICHT in den Opel, rennen NICHT weg, verschwinden NICHT in der Nacht. Nach einer Fesselung BLEIBT die Gruppe beim gefesselten Gegner am Ort - die Szene endet mit der gesicherten Lage HIER, nicht mit einer Abfahrt. Was als Nächstes geschieht, entscheidet der Spieler in der nächsten Szene, nicht dein Erzähltext.';
+    }
+    if (typeof diag === 'function') diag('state', '📋 PLAN AUSGEFÜHRT: ' + plan.length + ' Aktionen -> ein Prompt' + (_istKonfliktPlan ? ' (Konflikt)' : ' (friedlich)') + (_gabFehlschlag ? ' (mit Fehlschlag)' : ''));
+    // v7.12.649: Kurzer Anzeige-Text aus den Plan-Labels; der lange txt geht NUR an die KI.
+    let _anzeigeText = (_istKonfliktPlan ? 'Koordinierter Zugriff: ' : '') + plan.map(p => p.label).join('; ');
     window._aktionsPlan = [];
     _renderPlanLeiste();
-    if (typeof chooseOption === 'function') chooseOption({ id: 'PLAN_ZUGRIFF', text: txt, _anzeigeText: _anzeigeText, kategorie: 'OFFENSIV', _kategorie: 'OFFENSIV', _priority: 18, _isSystemButton: true });
+    if (typeof chooseOption === 'function') chooseOption({ id: 'PLAN_ZUGRIFF', text: txt, _anzeigeText: _anzeigeText, kategorie: (_istKonfliktPlan ? 'OFFENSIV' : 'ERKUNDEN'), _kategorie: (_istKonfliktPlan ? 'OFFENSIV' : 'ERKUNDEN'), _priority: 18, _isSystemButton: true });
   } catch (e) {}
 }
 // ============ Ende AKTIONS-PLAN ============
@@ -7772,7 +7786,7 @@ const BAUKASTEN_AKTIONEN = {
   fesseln:    { label: 'Fesseln',     zielNoetig: true,  wirkung: 'gefesselt', beute: true,
     txt: (a, i, z) => a + ' fesselt ' + z + ' - mit deren EIGENEN Handschellen, falls vorhanden. ' + z + ' bleibt kampfunfähig zurück. KEIN Gewahrsam für Karl.' },
   befragen:   { label: 'Befragen',    zielNoetig: true,
-    txt: (a, i, z) => a + ' befragt ' + z + ' gezielt und hartnäckig' + (i ? ', ' + i.name + ' hilft dabei nach' : '') + '.' },
+    txt: (a, i, z) => a + ' spricht ' + z + ' an und befragt die Person gezielt zum Fall' + (i ? ', ' + i.name + ' hilft dabei' : '') + '.' },
   // v7.12.653 (Baukasten-First Schritt 2): Ermittlungsverben - die Kernaktionen eines Adventures.
   // durchsuchen_ort: Ziel = "Umgebung" (virtuelles Ziel, kein NPC nötig). durchsuchen_npc: Ziel = Person, aber
   // nur sinnvoll bei kampfunfähigem/kooperativem Gegner (Gate folgt in der Plan-Ausführung).

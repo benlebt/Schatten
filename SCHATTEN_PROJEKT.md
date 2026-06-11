@@ -14824,3 +14824,18 @@ TESTFRAGE: "Kann Margarete NUR mit Baukasten+Buttons gelöst werden?" Sicherungs
 "Geben"-Verb (Akten an Vera/Helene), Charité/Auffangstelle als Reiseziele, "Der Volkspolizei übergeben" als
 NPC-Aktion. Falls ein nötiger Schritt NICHT ohne A/B/C/D erreichbar ist = guter Befund, zeigt die Lücke. Benjamin
 testet (sobald Gemini-Credits da), meldet wo es hakt -> gezielt Baukasten/Buttons ergänzen.
+
+## v7.12.657 (2026-06-11): Friedliche Baukasten-Aktionen nicht mehr als Kampf-Zugriff (Benjamin)
+BENJAMIN-BEFUND: "befragen über den Baukasten ist aggressiver" + "wieder fliehe ich direkt". WURZEL (zwei
+Treiber):
+(1) JEDER Baukasten-Plan - auch ein einzelnes friedliches Befragen - wurde in den Rahmen "KOORDINIERTER
+ZUGRIFF... abgestimmtes Manöver" verpackt + als kategorie:'OFFENSIV' verschickt. Das Wort Zugriff/Manöver +
+OFFENSIV trieb die KI in Kampf-/Eskalations-/Flucht-Modus, selbst wenn Karl nur reden wollte. FIX: _istKonfliktPlan
+(enthält angreifen/fesseln/ablenken/werfen/hund-Gewalt?). NUR Konflikt-Pläne bekommen den Zugriffs-Rahmen + die
+Konflikt-Prompt-Zusätze (Fesselmaterial/Wucht/Fehlschlag/KEIN-Gewahrsam/Flucht-Sperre) + OFFENSIV. Friedliche
+Pläne (befragen/durchsuchen/ansehen/geben/anbieten/trinken) laufen als ruhige Handlung, Kategorie ERKUNDEN, mit
+explizitem "KEINE Konfliktszene, KEIN Kampf, KEINE Flucht, KEIN Ortswechsel".
+(2) Baukasten-befragen-Text war "befragt gezielt und HARTNÄCKIG" (vs. NPC-Popup neutral "Sprich an und befrage
+zum Fall"). "Hartnäckig" raus -> "spricht an und befragt gezielt zum Fall". 8 Tests grün. node --check OK.
+Damit sollte Befragen über Baukasten genauso ruhig sein wie der alte direkte NPC-Klick, und das Dauer-Fliehen
+nach friedlichen Aktionen ist behoben (Flucht-Sperre jetzt in BEIDEN Pfaden).
