@@ -3191,7 +3191,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.638</div>
+    <div class="start-version">Schatten v7.12.639</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.638</span>
+    <span>Schatten v7.12.639</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6563,8 +6563,12 @@ function _hundVerfuegbarHier() {
     if (typeof caseProgress !== 'object' || !caseProgress) return false;
     if (caseProgress.hundInParty) return false; // schon dabei
     if (caseProgress.hundEntschieden === 'abgelehnt') return false;
-    // Einmal auswürfeln (60% da), Ergebnis merken.
-    if (typeof caseProgress.hundDaWuerfel !== 'boolean') caseProgress.hundDaWuerfel = (Math.random() < 0.6);
+    // Einmal auswürfeln (75% da), Ergebnis merken. v7.12.639: Diag, damit im Export sichtbar ist, ob gewürfelt
+    // wurde (Benjamin: "Hund war nicht da?" - 40% Pech war nicht nachvollziehbar). Chance 60%->75%.
+    if (typeof caseProgress.hundDaWuerfel !== 'boolean') {
+      caseProgress.hundDaWuerfel = (Math.random() < 0.75);
+      if (typeof diag === 'function') diag('state', '🐕 HUND-WÜRFEL am ' + HUND_HEIMAT + ': ' + (caseProgress.hundDaWuerfel ? 'Rex ist da' : 'Rex ist heute nicht da'));
+    }
     return caseProgress.hundDaWuerfel;
   } catch (e) { return false; }
 }
@@ -7098,7 +7102,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.638';
+window.SCHATTEN_VERSION = 'v7.12.639';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -7878,6 +7882,10 @@ function _npcLehntMitnahmeAb(npcName, npcTag) {
     }
     if (/wirt|wirtin|imbissbesitzer|imbiss-besitzer|kioskbesitzer|barkeeper|kellner/i.test(_rolle)) return 'kann den Laden nicht einfach verlassen';
     if (/korrespondent|journalist|reporter|presse/i.test(_rolle)) return 'arbeitet allein und trifft Karl nur an vereinbarten Orten';
+    // v7.12.639 (Benjamin-Befund: Doc Wagner im Popup mitnehmbar, flog aber beim Ortswechsel als "ortsgebunden"
+    // wieder raus - clean-ortsbindung kannte 'arzt', _npcLehntMitnahmeAb nicht -> zwei Listen liefen auseinander,
+    // Button erschien, Mitnahme verpuffte). JETZT dieselbe Wahrheit: ortsgebundene Rollen lehnen IMMER ab.
+    if (/krankenschwester|krankenpfleger|arzt|aerztin|ärztin|schaffner|pfoertner|pförtner|waechter|wächter|portier|empfangsdame|empfangsschwester|empfangskraft|vorarbeiter|bedienung|sekretaerin|sekretärin|kassierer|kassiererin|verkaeufer|verkäufer|stammgast|barfrau|skatspieler|bauarbeiter|wachtmeister|nachtdienstbeamter/i.test(_rolle)) return 'ist an diesen Ort/Dienst gebunden und kann nicht einfach mitkommen';
     // v7.12.612 (Run 2328: Willi wurde Dauer-Party): Orts-NPCs wie Willi stehen NICHT im setupCast, sondern
     // nur im detail eines Ortes ("Wirt Willi Kummer kennt jeden"). Wer im Orts-detail als Wirt/Service
     // verankert ist, ist ortsgebunden - egal über welchen Codepfad die Mitnahme versucht wird.
@@ -19209,7 +19217,13 @@ function oeffneNpcMenue(npc, modus) {
     const _istSchutzNpc = (typeof _istSchutzNpcDerGesichertenKlientin === 'function') && _istSchutzNpcDerGesichertenKlientin(npc.name);
     if (!_istGesicherteKlientin && !_istSchutzNpc) {
       // "Mitnehmen" nur für erlaubte Begleiter-Tags (nicht Gegner, nicht MYSTERY/Schatten).
-      verben.push({ key: 'mitnehmen', label: 'Mitnehmen', kategorie: '_PARTY', _partyAction: 'add', _hint: 'In die Party aufnehmen · reist mit dir · keine Szene' });
+      // v7.12.639 (Benjamin: Mitnehmen-Button bei Willi/Doc angezeigt, aber Klick verpuffte): Lehnt der NPC die
+      // Mitnahme ab (ortsgebunden: Wirt/Arzt/Korrespondent...), wird der Button GAR NICHT erst gezeigt - kein
+      // klickbarer Button, der still scheitert (Benjamins Prinzip "wenn klickbar, muss es sauber wirken").
+      const _lehntAb = (typeof _npcLehntMitnahmeAb === 'function') ? _npcLehntMitnahmeAb(npc.name, npc.tag) : null;
+      if (!_lehntAb) {
+        verben.push({ key: 'mitnehmen', label: 'Mitnehmen', kategorie: '_PARTY', _partyAction: 'add', _hint: 'In die Party aufnehmen · reist mit dir · keine Szene' });
+      }
     }
   }
   // v7.12.542 (Schritt 2, Benjamin): "Näher kommen"/"Nacht verbringen" auch im NPC-Menü, wenn der angeklickte

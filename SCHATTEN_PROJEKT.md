@@ -14520,3 +14520,18 @@ Zweitkriterium; toter _abschlussreifStasi entfernt; Epilog-Modus bleibt als ODER
 bleibt gedeckelt). 6) EINTAUSCH nicht mehr still: Toast bei Ablehnung (Tauschwert zu niedrig / NPC weiß nichts /
 Indiz schon bekannt) - Item bleibt bewusst bei Karl. 6/6 Tests + node --check OK.
 OFFEN (P2): Eintausch-Item-Verbrauch-Politik final; UI-Einschätzung im Baukasten (Stärke-Rechnung sichtbar).
+
+## v7.12.639 (2026-06-11): Mitnahme-Konsistenz + Hund-Würfel-Diag (Benjamin-Befunde Run v638)
+BENJAMIN-BEFUNDE: (1) Doc Wagner im Mitnehmen-Popup angeklickt -> kam NICHT in Party, flog Sz15 als
+"ortsgebunden" raus. (2) Vera geadded -> nicht in Party. (3) Willi-Mitnehmen-Button da, Klick verpuffte.
+URSACHE: ZWEI Ortsbindungs-Listen liefen auseinander - locationBoundRoles (Cast-Clean, kennt arzt/schaffner/
+etc.) vs _npcLehntMitnahmeAb (nur wirt/presse/kontakt). Popup/Menü filterten über die kürzere Liste -> Button
+erschien, _partyAdd/Cast-Clean warfen aber raus. FIX: _npcLehntMitnahmeAb um die locationBoundRoles erweitert
+(arzt/krankenschwester/schaffner/portier/bedienung/sekretärin/bauarbeiter/wachtmeister... - INFORMANT bewusst
+NICHT, damit Informanten mitkommen können). Mitnehmen-Button im Personen-Menü wird NUR gezeigt, wenn
+_npcLehntMitnahmeAb null gibt (kein toter Button mehr, Benjamins "wenn klickbar, muss es wirken"). 5/5 Tests.
+HUND: keine Hund-Diag im Run -> Würfel fiel auf "nein" (40% Pech, war nicht nachvollziehbar). Diag '🐕 HUND-
+WÜRFEL' ergänzt + Chance 60%->75%. node --check OK.
+HINWEIS Willi: wird jetzt als Wirt konsistent abgelehnt (kein toter Button). Falls Benjamin ihn doch
+mitnehmbar will -> bewusste Ausnahme nötig. OFFEN: ORTSSPRUNG Sz15 (KI wollte Café Kranzler, Engine hielt Doc-
+Praxis -> W2b-Rückholung zog zur Praxis zurück) - Reise-Erkennung, eigener Fix. Lektorat folgt.
