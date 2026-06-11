@@ -3191,7 +3191,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.631</div>
+    <div class="start-version">Schatten v7.12.632</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.631</span>
+    <span>Schatten v7.12.632</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6551,6 +6551,25 @@ function maybeResolveThreatSpawn() {
   try { resolveThreatSpawn(); } catch (e) { _threatAktiveSpawns = []; }
 }
 
+// ============ v7.12.632: WACHHUND (Benjamin: Willi Kummers Hund - Party-NPC mit eigenen Befehlen) ============
+// Der Hund ist optional an seinem Heimat-Ort (Goldener Anker) präsent - einmal pro Spiel ausgewürfelt.
+// Aufnehmbar wie ein Begleiter, danach mit eigenen Manövern (fixieren/anbellen/anknurren/fass).
+const HUND_NAME = 'Rex';
+const HUND_HEIMAT = 'Goldener Anker';
+function _hundVerfuegbarHier() {
+  try {
+    if (!engineCurrentLocation || !engineCurrentLocation.name) return false;
+    if (normForMatch(engineCurrentLocation.name) !== normForMatch(HUND_HEIMAT)) return false;
+    if (typeof caseProgress !== 'object' || !caseProgress) return false;
+    if (caseProgress.hundInParty) return false; // schon dabei
+    if (caseProgress.hundEntschieden === 'abgelehnt') return false;
+    // Einmal auswürfeln (60% da), Ergebnis merken.
+    if (typeof caseProgress.hundDaWuerfel !== 'boolean') caseProgress.hundDaWuerfel = (Math.random() < 0.6);
+    return caseProgress.hundDaWuerfel;
+  } catch (e) { return false; }
+}
+function _hundInParty() { try { return !!(caseProgress && caseProgress.hundInParty); } catch (e) { return false; } }
+// ============ Ende WACHHUND-Helper ============
 function getNpcsAtCurrentLocation() {
   if (!engineCurrentLocation) return [];
   const locs = getCaseLocations();
@@ -6620,9 +6639,15 @@ function getNpcsAtCurrentLocation() {
       out.push({ id: scId, name: sc.name, tag: sc.tag || '' }); seen[scId] = true;
     }
   }
+  // v7.12.632: Der Wachhund - präsent an seiner Heimat (ausgewürfelt) ODER wenn er in der Party ist.
+  try {
+    if ((typeof _hundVerfuegbarHier === 'function' && _hundVerfuegbarHier()) || (typeof _hundInParty === 'function' && _hundInParty())) {
+      if (!seen['hund_rex']) { out.push({ id: 'hund_rex', name: HUND_NAME, tag: 'HUND', rolle: 'Wachhund' }); seen['hund_rex'] = true; }
+    }
+  } catch (e) {}
   // v7.12.625 (Lektorat Run 0048 P1: gefesselter Mantel-Mann spawnte via Threat am Bahnhof): W6 gilt
   // ZENTRAL - gefesselte/KO-NPCs existieren nur an ihrem Zustands-Ort, übergebene/geflohene nirgends mehr.
-  // Diese Funktion speist Buttons, Baukasten, Anwesenheits-Prompt UND zeigt Threat-Spawns - ein Filter hier
+  // Diese Funktion speist Buttons, Baukasten, Anwesenheist-Prompt UND zeigt Threat-Spawns - ein Filter hier
   // deckt alle Engine-Pfade.
   try {
     if (typeof _npcZustandGet === 'function') {
@@ -7073,7 +7098,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.631';
+window.SCHATTEN_VERSION = 'v7.12.632';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -7388,7 +7413,7 @@ function _planAusfuehren() {
       try {
         // v7.12.617: Baukasten-Einträge tragen ihre Wirkung explizit (_wirkung/_beute/_item*); die alten
         // Menü-Befehle (angriff/ablenkung/fesseln) behalten ihr Verhalten.
-        const _w = p._wirkung || (p.art === 'angriff' ? 'ko' : (p.art === 'ablenkung' || p.art === 'fesseln') ? 'gefesselt' : null);
+        const _w = p._wirkung || (p.art === 'angriff' ? 'ko' : (p.art === 'ablenkung' || p.art === 'fesseln') ? 'gefesselt' : (p.art === 'hund_fass' || p.art === 'hund_fixiere') ? 'fixiert' : null);
         if (_w && p.ziel && typeof _npcZustandSet === 'function') _npcZustandSet(p.ziel, { status: _w });
         const _mitBeute = (typeof p._beute === 'boolean') ? p._beute : (_w === 'gefesselt');
         if (_w === 'gefesselt' && _mitBeute && /stasi|mfs|agent|mertens|mantel/i.test(String(p.ziel)) && typeof _itemAdd === 'function') {
@@ -18718,6 +18743,42 @@ function npcInteraktion(npc, verb) {
   if (typeof diag === 'function') diag('state', 'NPC-INTERAKTION: "' + verb.label + '" -> ' + npc.name);
   // v7.12.610 (M1): Manöver = Verb MIT Engine-Wirkung. Gates engine-validiert, Zustand wird VOR der
   // Erzählung gesetzt - die KI erzählt nur noch, was die Engine entschieden hat.
+  // v7.12.632: Hund mitnehmen (Party-Aufnahme, keine Szene).
+  if (verb._hundMitnehmen) {
+    try {
+      if (typeof caseProgress === 'object' && caseProgress) { caseProgress.hundInParty = true; caseProgress.hundEntschieden = 'aufgenommen'; }
+      if (typeof showProgressToast === 'function') showProgressToast(HUND_NAME + ' kommt mit', 'Der Wachhund folgt Karl jetzt aufs Wort.', 'success', 'hund-add');
+      if (typeof diag === 'function') diag('state', '🐕 HUND aufgenommen: ' + HUND_NAME);
+      if (typeof schliesseNpcMenue === 'function') schliesseNpcMenue();
+      if (typeof renderImRaumAnzeige === 'function') { try { renderImRaumAnzeige(); } catch (e) {} }
+    } catch (e) {}
+    return;
+  }
+  // v7.12.632: Hunde-Kommandos landen im Plan (kombinierbar mit anderen Aktionen, ein Zugriff).
+  if (verb._hundBefehl) {
+    try {
+      const _zielH = (verb._zielName) || (npc && npc.name) || '';
+      // Ziel ist NICHT der Hund selbst - der Spieler klickt den Hund, das Ziel kommt aus der Szene. Hier:
+      // Hund-Befehle brauchen ein feindliches Ziel am Ort. Wenn genau eines da ist, nimm es; sonst Plan-Eintrag
+      // generisch (KI wählt den Bedroher).
+      let _ziel = _zielH;
+      try {
+        if (!_ziel || normForMatch(_ziel) === normForMatch(HUND_NAME)) {
+          const _feinde = ((typeof getNpcsAtCurrentLocation === 'function') ? (getNpcsAtCurrentLocation() || []) : []).filter(n => n && n.name && typeof _npcIstFeindlich === 'function' && _npcIstFeindlich(n));
+          _ziel = _feinde.length ? _feinde[0].name : 'den Bedroher';
+        }
+      } catch (e) { _ziel = 'den Bedroher'; }
+      const _wirkungH = (verb._hundBefehl === 'fass' || verb._hundBefehl === 'fixiere') ? 'fixiert' : null;
+      _planAdd({
+        label: HUND_NAME + ' → ' + verb.label.toLowerCase() + ' → ' + _ziel,
+        art: 'hund_' + verb._hundBefehl, akteur: HUND_NAME, ziel: _ziel,
+        aktionText: verb.aktion.replace(/\{npc\}/g, _ziel),
+        _wirkung: _wirkungH
+      });
+      if (typeof schliesseNpcMenue === 'function') schliesseNpcMenue();
+    } catch (e) {}
+    return;
+  }
   // v7.12.616: Kampf-Manöver + Begleiter-Befehle landen im PLAN (kombinierbar), nicht mehr sofort.
   if ((verb._manoever === 'fesseln' || verb._manoever === 'fesseln_ablenkung' || verb._begleiterBefehl) && verb._planDirekt !== true) {
     try {
@@ -18834,6 +18895,26 @@ function oeffneNpcMenue(npc, modus) {
   // v7.12.518 (Benjamin): erlaubte Verben je nach NPC-Typ. Einen Klienten/Zeugen/Verbündeten greift man nicht
   // an und bedroht ihn nicht; einen Bösewicht beschützt man nicht. tag kommt aus setupCast/ANCHOR_NPCS.
   const tag = (npc.tag || '').toUpperCase();
+  // v7.12.632: Der Wachhund hat ein ganz eigenes Verb-Set - kein normaler NPC.
+  if (tag === 'HUND') {
+    const verbenHund = [];
+    if (typeof _hundInParty === 'function' && _hundInParty()) {
+      // In der Party: Hunde-Kommandos gegen feindliche Ziele am Ort (landen im Plan, kombinierbar).
+      verbenHund.push({ key: 'hund_fixiere', label: 'Fixieren lassen', kategorie: 'OFFENSIV', _hundBefehl: 'fixiere',
+        aktion: HUND_NAME + ' stellt sich knurrend und mit gefletschten Zähnen vor {npc} - die Person erstarrt, hebt langsam die Hände und wagt keine Bewegung mehr, aus Angst gebissen zu werden.' });
+      verbenHund.push({ key: 'hund_belle', label: 'Anbellen lassen', kategorie: 'OFFENSIV', _hundBefehl: 'belle',
+        aktion: HUND_NAME + ' bellt {npc} laut und aggressiv an - die Person schreckt zurück, weicht ängstlich aus oder ergreift die Flucht.' });
+      verbenHund.push({ key: 'hund_knurre', label: 'Anknurren lassen', kategorie: 'OFFENSIV', _hundBefehl: 'knurre',
+        aktion: HUND_NAME + ' fixiert {npc} mit tiefem, bedrohlichem Knurren - den meisten jagt das Angst ein und macht sie gefügig; ein abgebrühter Offizier bleibt vielleicht ruhig.' });
+      verbenHund.push({ key: 'hund_fass', label: 'Fass! (festsetzen)', kategorie: 'OFFENSIV', _hundBefehl: 'fass',
+        aktion: HUND_NAME + ' schnappt zu und hält {npc} eisern fest - nicht verletzend, aber so unnachgiebig und an empfindlicher Stelle, dass die Person sofort jede Information ausspuckt und nur noch darum fleht, den Hund zurückzupfeifen.' });
+    } else {
+      // Nicht in Party (am Anker verfügbar): nachfragen + mitnehmen.
+      verbenHund.push({ key: 'hund_mitnehmen', label: HUND_NAME + ' mitnehmen', kategorie: '_PARTY', _hundMitnehmen: true,
+        _hint: 'Den Wachhund in die Party aufnehmen · reist mit · keine Szene' });
+    }
+    return verbenHund;
+  }
   const VERBUENDETE = ['CLIENT','WITNESS','INFORMANT','AUTHORITY','ROMANCE','FAMILY','SCHUTZ','KONTAKT','VERBUENDETER'];
   const GEGNER = ['ANTAGONIST','SUSPECT','GANGSTER','STASI'];
   let keys;
@@ -21509,12 +21590,20 @@ async function requestSceneFromModel(userMessage, conversationHistory, compactMo
           window._ortBruchKorrektur = null;
         }
       } catch (e) {}
+      // v7.12.632: Wachhund-Präsenz in die Szene tragen.
+      try {
+        if (typeof _hundInParty === 'function' && _hundInParty()) {
+          recap += 'BEGLEIT-HUND (PFLICHT): Der Wachhund ' + HUND_NAME + ' ist bei Karl - wachsam, gehorcht aufs Wort. Erwähne ihn passend (trottet mit, knurrt Fremde an), aber er handelt nur auf Karls Kommando.\n\n';
+        } else if (typeof _hundVerfuegbarHier === 'function' && _hundVerfuegbarHier()) {
+          recap += 'ORTS-HUND: Am ' + HUND_HEIMAT + ' liegt Willi Kummers Wachhund ' + HUND_NAME + ' neben dem Tresen - sabbernd, halb dösend, knurrt bei Fremden kurz auf. Karl könnte ihn ansprechen/mitnehmen.\n\n';
+        }
+      } catch (e) {}
       // v7.12.610 (W6): NPC-Zustände als Pflicht-Weltzustand.
       try {
         const _zm = (typeof _npcZustandMap === 'function') ? _npcZustandMap() : {};
         const _zListe = Object.keys(_zm).map(k => _zm[k]).filter(z => z && z.status && z.status !== 'frei');
         if (_zListe.length) {
-          recap += 'HARTER WELTZUSTAND - PERSONEN (PFLICHT): ' + _zListe.map(z => z.name + ' ist ' + (z.status === 'gefesselt' ? 'GEFESSELT und kampfunfähig' : z.status === 'ko' ? 'bewusstlos (K.O.)' : z.status === 'geflohen' ? 'GEFLOHEN und nicht mehr hier' : z.status === 'uebergeben' ? 'der VOLKSPOLIZEI ÜBERGEBEN und endgültig aus dem Spiel' : z.status.toUpperCase()) + ' (' + (z.ort || 'zuletzt bekannter Ort') + ')').join('. ') + '. Diese Personen handeln NICHT, greifen NICHT an, reisen NICHT und tauchen in keiner anderen Szene frei auf, bis die Engine es ändert.\n\n';
+          recap += 'HARTER WELTZUSTAND - PERSONEN (PFLICHT): ' + _zListe.map(z => z.name + ' ist ' + (z.status === 'gefesselt' ? 'GEFESSELT und kampfunfähig' : z.status === 'ko' ? 'bewusstlos (K.O.)' : z.status === 'geflohen' ? 'GEFLOHEN und nicht mehr hier' : z.status === 'fixiert' ? 'vom Wachhund FIXIERT - kampfunfähig, hebt die Hände, sagt alles aus Angst vor dem Hund' : z.status === 'uebergeben' ? 'der VOLKSPOLIZEI ÜBERGEBEN und endgültig aus dem Spiel' : z.status.toUpperCase()) + ' (' + (z.ort || 'zuletzt bekannter Ort') + ')').join('. ') + '. Diese Personen handeln NICHT, greifen NICHT an, reisen NICHT und tauchen in keiner anderen Szene frei auf, bis die Engine es ändert.\n\n';
         }
       } catch (e) {}
     } catch (e) {}

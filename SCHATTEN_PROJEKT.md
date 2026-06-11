@@ -14417,3 +14417,20 @@ Bauteil - Margaretes Akten können nie vertauscht/geworfen werden. 5/5 Tests. no
 HINWEIS: Item-Instanz-IDs noch typ-basiert (Lektorat-P1 Instanz-vs-Typ-Trennung): aktuell unique pro id, für
 mehrfache gleiche Items (2x Korn) später usesLeft/Instanz-Counter. Anbieten-Cooldown (Lektorat-P1 Trust-Farm)
 noch offen -> P2.
+
+## v7.12.632 (2026-06-11): WACHHUND Rex - Party-NPC mit eigenen Kommandos (Benjamin-Wunsch)
+Willi Kummers Wachhund 'Rex' (HUND_NAME/HUND_HEIMAT='Goldener Anker'). PRÄSENZ: einmal pro Spiel ausgewürfelt
+(_hundVerfuegbarHier, 60% am Anker) - liegt laut recap "neben dem Tresen, sabbernd, knurrt bei Fremden". In
+getNpcsAtCurrentLocation als anklickbarer NPC (tag HUND) eingespeist, wenn am Ort verfügbar ODER in Party.
+AUFNAHME: eigenes Verb "Rex mitnehmen" (_hundMitnehmen -> caseProgress.hundInParty, kein normales _partyAdd,
+taucht NICHT im Mitnehmen-Popup auf). KOMMANDOS (in Party, eigener tag-HUND-Verbzweig, landen im Plan -
+kombinierbar): Fixieren lassen + Fass! -> npcZustand 'fixiert' (recap: kampfunfähig, Hände hoch, sagt alles
+aus Angst); Anbellen lassen (Flucht/Zurückschrecken) + Anknurren lassen (Angst, harter Offizier evtl. nicht) -
+narrativ, kein Dauerzustand. recap trägt Hund-Präsenz (Party/Orts-Hund). "Kronjuwelen": die Fass-Aktion lässt
+das Ziel "sofort alles ausspucten und um Zurückpfeifen flehen" - anatomische Ausschmückung überlässt der
+Prompt der KI (spielbar, nicht plump). ZURÜCKPFEIFEN-Aktion: vorerst NICHT nötig - fixiert ist ein
+befragbarer Zustand, kein Soft-Lock. 5/5 Tests. node --check OK.
+HINWEIS: Hund-Befehle nutzen das erste feindliche Ziel am Ort automatisch (oder "den Bedroher" generisch);
+v631-Aktionsvarianten (werfen_fuesse/angreifen_mit/Eintausch->Indiz) waren bereits drin und vom Lektorat
+bestätigt. OFFEN: Hund als Baukasten-Akteur (aktuell nur über Personen-Menü); mehrfach gleiche Items (Instanz-
+Counter); anbieten-Cooldown.
