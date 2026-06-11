@@ -3191,7 +3191,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.657</div>
+    <div class="start-version">Schatten v7.12.658</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3417,7 +3417,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.657</span>
+    <span>Schatten v7.12.658</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7115,7 +7115,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.657';
+window.SCHATTEN_VERSION = 'v7.12.658';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -7648,43 +7648,52 @@ function _planAusfuehren() {
     const _istKonfliktPlan = plan.some(p => _KONFLIKT_ARTEN.indexOf(p.art) !== -1);
     let txt;
     if (_istKonfliktPlan) {
-      txt = 'KOORDINIERTER ZUGRIFF - alle folgenden Handlungen passieren GLEICHZEITIG in DIESER EINEN Szene, als abgestimmtes Manöver: ';
-      txt += plan.map((p, i) => (i + 1) + ') ' + p.aktionText).join(' ');
+      // v7.12.658 (Benjamin: "kein 'koordinierter Zugriff'-Apparat, einfach wie ein Freitext-Satz"). Die
+      // Aktionen werden zu einem natürlichen Satz verbunden - so, wie der Spieler es selbst eingeben würde
+      // ("Margarete lenkt Mertens ab und Karl wirft ihm etwas ins Gesicht"). Die Engine-Hinweise unten sind
+      // knapp und ruhig, kein militärischer Großbuchstaben-Ton.
+      // v7.12.658: Bei einem fehlgeschlagenen Ziel den Aktionstext NICHT als vollendet erzählen (sonst steht
+      // "Karl fesselt X" + danach "der Versuch misslingt" = Widerspruch). Fehlgeschlagene Konflikt-Aktionen
+      // werden als Versuch formuliert.
+      txt = plan.map(p => {
+        const _fehl = p.ziel && _zugriffFehlschlag[normForMatch(p.ziel)];
+        if (_fehl && p.ziel) return p.akteur + ' versucht, ' + p.ziel + ' zu überwältigen.';
+        return p.aktionText;
+      }).join(' ');
+      if (plan.length > 1) txt += ' Das geschieht gleichzeitig, in einer Szene.';
     } else {
-      // Friedlicher Plan: ruhige Handlung, kein Manöver-Rahmen, keine Eskalations-Sprache.
-      txt = (plan.length > 1 ? 'Karl und seine Begleiter handeln in dieser Szene: ' : '') + plan.map((p, i) => (plan.length > 1 ? (i + 1) + ') ' : '') + p.aktionText).join(' ');
-      txt += ' Erzähle das ruhig und ohne Eskalation - dies ist KEINE Konfliktszene, KEIN Kampf, KEINE Flucht. Niemand wird angegriffen, gefesselt oder bedroht. KEIN Ortswechsel, KEINE Abfahrt im Auto - die Szene bleibt am aktuellen Ort. Was als Nächstes geschieht, entscheidet der Spieler.';
+      // Friedlicher Plan: ruhige Handlung, kein Manöver-Rahmen.
+      txt = plan.map(p => p.aktionText).join(' ');
+      txt += ' Erzähle das ruhig - keine Konfliktszene, kein Kampf, keine Flucht, kein Ortswechsel. Was als Nächstes geschieht, entscheidet der Spieler.';
     }
     // Fesselmaterial-Hinweis für erfolgreich gefesselte Ziele.
     try {
       const _fesselZiele = plan.filter(p => (p.art === 'fesseln' || p.art === 'ablenkung') && p.ziel && !_zugriffFehlschlag[normForMatch(p.ziel)]);
       if (_fesselZiele.length) {
         const _mat = _fesselMaterial(_fesselZiele[0].ziel, '', '');
-        txt += ' Wenn jemand gefesselt wird: ' + _mat + ' (kein anachronistisches Material).';
+        txt += ' Zum Fesseln passt: ' + _mat + '.';
       }
     } catch (e) {}
-    // v7.12.645 (Lektorat Run v643 A5: Ziegelstein traf "präzise am Schläfenbein, sackt lautlos zusammen" -
-    // klang tödlich, Engine sagte aber nur "fixiert"). Bei nicht-tödlichen Zielzuständen (fixiert/benommen/
-    // abgelenkt) Schlagzonen am Kopf/Hals verbieten - der Gegner wird kampfunfähig, nicht (fast) getötet.
+    // Wucht-Hinweis: ein Schlag/Wurf macht kampfunfähig, nicht tödlich (ruhig formuliert).
     try {
       const _hatWurfSchlag = plan.some(p => /angreifen_mit|werfen|werfen_fuesse|hund_fass|hund_fixiere|fesseln|ablenk/i.test(p.art || '') && p.ziel && !_zugriffFehlschlag[normForMatch(p.ziel)]);
       if (_hatWurfSchlag) {
-        txt += ' WICHTIG zur Wucht: Die Gegner werden KAMPFUNFÄHIG gemacht (fixiert/benommen/festgesetzt), NICHT getötet oder schwer am Kopf verletzt. Triff NICHT Schläfe, Kopf, Hinterkopf oder Hals. Ein Ziegelstein/harter Gegenstand geht gegen Schulter, Arm, Hand, Rippen, Knie oder als Schreckmoment gegen Türrahmen/Wand - kein "sackt lautlos zusammen", kein Schädelbruch, kein tödlicher Treffer.';
+        txt += ' Der Gegner wird kampfunfähig, nicht getötet oder schwer verletzt - keine Treffer an Kopf/Schläfe/Hals.';
       }
     } catch (e) {}
     if (_gabFehlschlag) {
       const _fehlNamen = Object.keys(_zugriffFehlschlag).map(zk => {
         const _p = plan.find(x => x.ziel && normForMatch(x.ziel) === zk); return _p ? _p.ziel : zk;
       });
-      txt += ' WICHTIG - TEILWEISER FEHLSCHLAG: Der Zugriff auf ' + _fehlNamen.join(' und ') + ' MISSLINGT - diese Gegner sind zu stark oder zu wachsam für die eingesetzten Kräfte. Erzähle, wie sie sich losreißen, zurückschlagen oder ausweichen. Karl und seine Begleiter kommen NICHT unbeschadet davon (ein Treffer, ein Sturz), aber NICHT tödlich. Diese Gegner bleiben FREI und gefährlich. KEINE Fesselung, KEIN K.O. dieser Gegner. Die Lage bleibt brenzlig.';
+      txt += ' Der Versuch, ' + _fehlNamen.join(' und ') + ' zu überwältigen, misslingt - die Person reißt sich los, weicht aus oder schlägt zurück und bleibt frei und gefährlich. Karl kommt nicht ganz unbeschadet davon, aber niemand stirbt.';
       // Konsequenzen setzen.
       try { if (typeof verfassung === 'number' && verfassung > 1) { verfassung = Math.max(1, verfassung - 1); if (typeof diag === 'function') diag('state', 'MANÖVER-FEHLSCHLAG: Verfassung -> ' + verfassung); } } catch (e) {}
       try { window._manoeverFehlschlagSpannung = true; } catch (e) {}
     }
     if (_istKonfliktPlan) {
-      txt += ' Erzähle das als EINE schnelle, koordinierte Aktion.' + (_gabFehlschlag ? '' : ' Die ausgeschalteten/gefesselten Personen bleiben kampfunfähig zurück.') + ' KEIN Gewahrsam für Karl.';
-      // v7.12.646 (Lektorat Run v643 A4): Ein Zugriff passiert HIER, am aktuellen Ort - keine Flucht-Prosa.
-      txt += ' WICHTIG: Diese Aktion passiert am AKTUELLEN Ort. KEIN Ortswechsel, KEINE Flucht zum Auto, KEINE Fahrt - die Szene bleibt hier, wo Karl gerade ist. Erzähle KEINEN Abgang: Karl und seine Begleiter springen NICHT in den Opel, rennen NICHT weg, verschwinden NICHT in der Nacht. Nach einer Fesselung BLEIBT die Gruppe beim gefesselten Gegner am Ort - die Szene endet mit der gesicherten Lage HIER, nicht mit einer Abfahrt. Was als Nächstes geschieht, entscheidet der Spieler in der nächsten Szene, nicht dein Erzähltext.';
+      // Knapp + ruhig: überwältigte Personen bleiben am Ort, Karl nimmt niemanden in Gewahrsam, keine Flucht.
+      if (!_gabFehlschlag) txt += ' Die überwältigten Personen bleiben kampfunfähig am Ort zurück.';
+      txt += ' Die Szene bleibt am aktuellen Ort - kein Ortswechsel, keine Fahrt mit dem Auto, kein Wegrennen am Ende. Karl nimmt niemanden in Gewahrsam. Was als Nächstes geschieht, entscheidet der Spieler.';
     }
     if (typeof diag === 'function') diag('state', '📋 PLAN AUSGEFÜHRT: ' + plan.length + ' Aktionen -> ein Prompt' + (_istKonfliktPlan ? ' (Konflikt)' : ' (friedlich)') + (_gabFehlschlag ? ' (mit Fehlschlag)' : ''));
     // v7.12.649: Kurzer Anzeige-Text aus den Plan-Labels; der lange txt geht NUR an die KI.
@@ -7784,7 +7793,7 @@ const BAUKASTEN_AKTIONEN = {
   ablenken:   { label: 'Ablenken',    zielNoetig: true,
     txt: (a, i, z) => a + ' sorgt für eine laute, glaubwürdige, ortstypische Ablenkung bei ' + z + ' - die Aufmerksamkeit ist gebunden.' },
   fesseln:    { label: 'Fesseln',     zielNoetig: true,  wirkung: 'gefesselt', beute: true,
-    txt: (a, i, z) => a + ' fesselt ' + z + ' - mit deren EIGENEN Handschellen, falls vorhanden. ' + z + ' bleibt kampfunfähig zurück. KEIN Gewahrsam für Karl.' },
+    txt: (a, i, z) => a + ' überwältigt ' + z + ' und fesselt die Person.' },
   befragen:   { label: 'Befragen',    zielNoetig: true,
     txt: (a, i, z) => a + ' spricht ' + z + ' an und befragt die Person gezielt zum Fall' + (i ? ', ' + i.name + ' hilft dabei' : '') + '.' },
   // v7.12.653 (Baukasten-First Schritt 2): Ermittlungsverben - die Kernaktionen eines Adventures.

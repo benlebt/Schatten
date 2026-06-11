@@ -14839,3 +14839,23 @@ explizitem "KEINE Konfliktszene, KEIN Kampf, KEINE Flucht, KEIN Ortswechsel".
 zum Fall"). "Hartnäckig" raus -> "spricht an und befragt gezielt zum Fall". 8 Tests grün. node --check OK.
 Damit sollte Befragen über Baukasten genauso ruhig sein wie der alte direkte NPC-Klick, und das Dauer-Fliehen
 nach friedlichen Aktionen ist behoben (Flucht-Sperre jetzt in BEIDEN Pfaden).
+
+## v7.12.658 (2026-06-11): Konflikt-Prompt radikal vereinfacht - natürlicher Satz statt Kommando-Apparat
+BENJAMIN: "Ich weiß nicht ob du den 'koordinierter Zugriff' brauchst. Wir sollten dasselbe machen wie bei
+Freitext - 'Margarete lenkt Mertens ab und Karl wirft ihm einen Hundehaufen ins Gesicht' - nichts mit
+'koordinierter Zugriff' oder 'die Handschellen des Gegners'. Einfachere Prompts."
+ANALYSE Claude: Der "KOORDINIERTER ZUGRIFF"-Apparat war über Wochen aufgebläht (jeder Bug -> ein neuer
+Großbuchstaben-Befehl: KEIN Gewahrsam, KEIN Ortswechsel, NICHT an die Schläfe, EIGENE Handschellen...). Zusammen
+ergab das einen schreienden, militärischen Ton, der die KI in genau die Eskalation/Flucht trieb, die wir
+vermeiden wollen. UMBAU (Engine-Logik bleibt, nur Prompt-TEXT vereinfacht):
+- Aktionen werden zu einem natürlichen Satz verbunden ("Margarete lenkt ab. Karl wirft..."), KEIN "KOORDINIERTER
+  ZUGRIFF... 1) 2) 3)"-Rahmen mehr.
+- Aktionstext-Bausteine entschlackt: fesseln war "mit deren EIGENEN Handschellen... KEIN Gewahrsam" -> schlicht
+  "überwältigt X und fesselt die Person". Engine-Befehle kommen zentral, nicht in jedem Satz.
+- Alle Engine-Hinweise (Fesselmaterial/Wucht/Fehlschlag/kein-Ortswechsel/kein-Gewahrsam) ruhig + knapp statt
+  Großbuchstaben-Kommandos.
+- FEHLSCHLAG-WIDERSPRUCH gefixt: bei fehlgeschlagenem Ziel wird der Aktionstext als VERSUCH formuliert ("Karl
+  versucht, X zu überwältigen") statt "Karl fesselt X" + "misslingt" (Erfolg-dann-Misserfolg-Widerspruch).
+Beispiel-Prompt jetzt 614 statt ~1200+ Zeichen, liest sich wie eine Freitext-Eingabe. node --check OK (mehrere
+Klammer-Verheddrungen beim Bau von node --check gefangen + gefixt). Engine (Stärke/Härte, Erfolg/Fehlschlag,
+NPCZ-Wirkungen) unverändert - nur der an die KI gehende TEXT ist jetzt natürlich.
