@@ -14371,3 +14371,18 @@ Manöver). (3) Handschellen-Beute-_itemAdd an ALLEN 3 Stellen entfernt (Plan, Ma
 gefesselt heißt: seine Handschellen sind an ihm, kein Item für Karl. 4/4 Feind-Tests grün. node --check OK.
 OFFEN (Benjamin-Diskussion, kein Code): Nacht-Marathon / automatischer Tageswechsel + Müdigkeitsmodell - bewusst
 als Designfrage offen gelassen, Antwort an Benjamin formuliert (siehe Chat). Lektorat Run folgt.
+
+## v7.12.629 (2026-06-11): Klient-Telefon-Status + Akten-Item + Müdigkeitsmodell + Werfen-Item (Lektorat 0626 + Benjamin-Features)
+LEKTORAT Run 0626: bester/kompaktester Run (17 Sz, 11ct), aber 2 Wahrheitslücken. P1-FIXES:
+(1) KLIENT-TELEFON-STATUS: clientState startet 'remote_phone' wenn Fall per Telefon beginnt (clientProfile.
+beziehung/detail enthält 'per telefon') - NICHT bei Karl. recap KLIENTIN-STATUS (PFLICHT): "nur telefonisch,
+nicht im Wagen, muss abgeholt werden". with_karl erst via _partyAdd (echte Abholung).
+(2) AKTEN-ITEM (Variante A): Bringt die Klientin laut Profil Akten mit, wird beim _partyAdd ein echtes
+item_klient_akten (beweis_dokument) gebucht - "Akten gesichert" wird damit ableitbar statt erfunden.
+BENJAMIN-FEATURES: (3) MÜDIGKEITSMODELL (kein Auto-Schlaf, GTA-Prinzip): caseProgress.muedigkeit++ pro NACHT-
+Szene (gameTimeIdx===5), Reset bei Schlaf-Aktion. Ab 6 Toast-Warnung, ab 8 sinkt Verfassung schrittweise
+(min 2, alle 3 Szenen) mit Toast - Anreiz statt Zwang. (4) WERFEN im Baukasten: Item-Verlust + narrativer
+Moment-Vorteil (benommen, KEIN W6-Dauerzustand - passt nicht ins Modell). Items im Baukasten bei Konflikten
+damit nutzbar (Werfen/Bestechen/Geben mit getragenem Item gegen Konflikt-Ziele). node --check OK.
+HINWEIS: Müdigkeit/Akten-Item beim NÄCHSTEN Run beobachten; Charité-Alias + Helene/Marlene-Trennung (Lektorat
+P2) als nächstes notiert.

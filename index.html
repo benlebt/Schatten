@@ -3191,7 +3191,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.628</div>
+    <div class="start-version">Schatten v7.12.629</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.628</span>
+    <span>Schatten v7.12.629</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7073,7 +7073,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.628';
+window.SCHATTEN_VERSION = 'v7.12.629';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -7226,7 +7226,17 @@ function _istKlient(name, id) {
 function setClientState(status, reason, locationId) {
   try {
     if (!caseProgress) return;
-    if (!caseProgress.clientState) caseProgress.clientState = { status: 'unknown', locationId: null, securedAt: null, lastChangeScene: null, lastChangeReason: null };
+    if (!caseProgress.clientState) {
+      // v7.12.629 (Lektorat Run 0626 P1: Margarete teleportierte vom Telefonat direkt in den Opel): Startet
+      // der Fall mit einem Telefon-Auftrag (beziehung enthält 'per Telefon'), beginnt die Klientin als
+      // remote_phone (NICHT bei Karl) - with_karl erst nach echter Abholung (_partyAdd).
+      let _startStatus = 'unknown';
+      try {
+        const _cp = (typeof clientProfile !== 'undefined' && clientProfile) ? clientProfile : null;
+        if (_cp && /per telefon|telefonisch|ruft (karl |dich )?an|am telefon/i.test((_cp.beziehung || '') + ' ' + (_cp.detail || ''))) _startStatus = 'remote_phone';
+      } catch (e) {}
+      caseProgress.clientState = { status: _startStatus, locationId: null, securedAt: null, lastChangeScene: null, lastChangeReason: _startStatus === 'remote_phone' ? 'telefon_auftrag' : null };
+    }
     const cs = caseProgress.clientState;
     const vorher = cs.status || 'unknown';
     // SECURED ist stabil: nur eine explizite Spieler-/Sicherungs-Aktion darf es ändern (nicht left_behind durch
@@ -7415,7 +7425,7 @@ const BAUKASTEN_AKTIONEN = {
   geben:      { label: 'Geben',       zielNoetig: true,  itemNoetig: true, itemUebergabe: true,
     txt: (a, i, z) => a + ' gibt ' + z + ' ' + (i ? i.name : 'etwas') + '.' },
   werfen:     { label: 'Werfen',      zielNoetig: true,  itemNoetig: true, itemVerlust: true,
-    txt: (a, i, z) => a + ' wirft ' + (i ? i.name : 'etwas') + ' gezielt nach ' + z + '.' },
+    txt: (a, i, z) => a + ' wirft ' + (i ? i.name : 'etwas') + ' gezielt nach ' + z + ' - ' + z + ' wird getroffen und ist einen Moment benommen (kurzer Vorteil, kein Dauerzustand).' },
   trinken:    { label: 'Trinken mit', zielNoetig: true,  itemVerlust: true,
     txt: (a, i, z) => a + ' trinkt mit ' + z + (i ? ' - ' + i.name + ' macht die Runde' : '') + ', lockert die Stimmung und die Zunge.' },
   beschuetzen:{ label: 'Beschützen',  zielNoetig: true,
@@ -7615,7 +7625,18 @@ function _partyAdd(npc) {
   _party.push({ id: npc.id, name: npc.name || npc.id, tag: npc.tag || '', sinceScene: (typeof sceneCounter === 'number' ? sceneCounter : 0) });
   if (typeof diag === 'function') diag('state', '✦ PARTY +: ' + (npc.name || npc.id) + ' [' + (npc.tag||'?') + '] -> Party (' + _party.length + ')');
   // v7.12.600 (W1): Klientin in der Party = with_karl (Engine-Ereignis).
-  if (_istKlient(npc.name, npc.id)) setClientState('with_karl', 'party_add');
+  if (_istKlient(npc.name, npc.id)) {
+    setClientState('with_karl', 'party_add');
+    // v7.12.629 (Lektorat P1: Akten-Wahrheit): Bringt die Klientin ihre Akten physisch mit, werden sie beim
+    // Abholen zu einem echten Engine-Item (Variante A) - dann ist "Akten gesichert" ableitbar statt erfunden.
+    try {
+      const _cp = (typeof clientProfile !== 'undefined' && clientProfile) ? clientProfile : null;
+      const _bringtAkten = _cp && /akten (zugespielt|gestohlen|ueber|über|dabei|mitgebracht)|hat .{0,20}akten/i.test((_cp.beziehung || '') + ' ' + (_cp.detail || ''));
+      if (_bringtAkten && typeof _itemAdd === 'function' && typeof _itemsMap === 'function' && !_itemsMap()['item_klient_akten']) {
+        _itemAdd({ id: 'item_klient_akten', name: 'Reichsbahn-Akten (von ' + (_cp.name || 'der Klientin') + ')', typ: 'beweis_dokument', quelle: 'klient_mitgebracht' });
+      }
+    } catch (e) {}
+  }
 }
 // Helper: NPC aus der Party entfernen (per id oder name).
 function _partyRemove(npcId, npcName) {
@@ -21383,6 +21404,12 @@ async function requestSceneFromModel(userMessage, conversationHistory, compactMo
           recap += 'HARTER WELTZUSTAND - BESITZ (PFLICHT): Karl trägt bei sich: ' + _trag.map(it => it.name).join('; ') + '. Diese Gegenstände sind NICHT verloren, übergeben oder gesichert, solange die Engine es nicht meldet. Erfinde KEINEN weiteren Besitz - atmosphärisch erwähnte Gegenstände landen NICHT in Karls Taschen, und kein Item verschwindet, wird gestohlen oder zerstört, ohne dass die Engine es vorgibt.\n\n';
         }
       } catch (e) {}
+      // v7.12.629 (P1): Klientin im Telefon-Status ist NICHT physisch bei Karl - Abhol-Pflicht.
+      try {
+        if (caseProgress && caseProgress.clientState && caseProgress.clientState.status === 'remote_phone' && typeof clientProfile !== 'undefined' && clientProfile && clientProfile.name) {
+          recap += 'KLIENTIN-STATUS (PFLICHT): ' + clientProfile.name + ' hat nur TELEFONISCH Kontakt aufgenommen und ist NICHT bei Karl im Raum/Wagen. Sie sitzt nicht heimlich im Opel, taucht nicht unerklärt auf. Karl muss sie erst an ihrem Aufenthaltsort ABHOLEN - bis dahin ist sie eine Stimme am Telefon, kein anwesender Begleiter.\n\n';
+        }
+      } catch (e) {}
       // v7.12.626 (W2b-light): Nach einem Ort-Prosa-Bruch holt die Folgeszene die Erzählung zurück.
       try {
         if (window._ortBruchKorrektur) {
@@ -30400,6 +30427,30 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     // Hinweis: advanceGameTime() wurde bereits in chooseOption() vor dem API-Call
     // aufgerufen. Hier nicht nochmal, sonst springen Tageszeit/Tag doppelt.
     sceneCounter++;
+
+    // v7.12.629 (Benjamin-Wunsch Müdigkeitsmodell, statt Auto-Schlaf): Müdigkeit steigt in Nacht-Szenen.
+    // Kein Zwang - aber ab einer Schwelle drückt sie die Verfassung (Anreiz zu schlafen, GTA-Prinzip).
+    try {
+      if (typeof caseProgress === 'object' && caseProgress) {
+        if (typeof caseProgress.muedigkeit !== 'number') caseProgress.muedigkeit = 0;
+        const _istNacht = (typeof gameTimeIdx === 'number' && gameTimeIdx === 5); // nur echte NACHT zählt (Abend=4 ist Spielstart)
+        const _schlafJetzt = !!(window._letzteAktion && /schlaf|uebernacht|übernacht|ausruhen|lege dich|leg dich|schlie(ss|ß)e die augen/i.test((window._letzteAktion.text || '') + ' ' + (window._letzteAktion.kategorie || '')));
+        if (_schlafJetzt) {
+          caseProgress.muedigkeit = 0;
+          if (typeof diag === 'function') diag('state', '😴 MÜDIGKEIT zurückgesetzt (geschlafen)');
+        } else if (_istNacht) {
+          caseProgress.muedigkeit++;
+          // Schwellen: ab 6 Nacht-Szenen ohne Schlaf sinkt Verfassung schrittweise (min 2 - Karl wird nicht
+          // bewusstlos, nur erschöpft); Toast/Prosa-Hinweis ab Schwelle.
+          if (caseProgress.muedigkeit === 6 && typeof showProgressToast === 'function') { try { showProgressToast('Müde', 'Karls Augen brennen, die Hand wird unruhig. Eine Mütze Schlaf täte gut.', 'caution', 'muede-warn'); } catch (e) {} }
+          if (caseProgress.muedigkeit >= 8 && typeof verfassung === 'number' && verfassung > 2 && (caseProgress.muedigkeit % 3 === 0)) {
+            verfassung = Math.max(2, verfassung - 1);
+            if (typeof diag === 'function') diag('state', '😴 MÜDIGKEIT senkt Verfassung auf ' + verfassung + ' (Müdigkeit ' + caseProgress.muedigkeit + ')');
+            if (typeof showProgressToast === 'function') { try { showProgressToast('Übermüdet', 'Die durchwachte Nacht zehrt an Karl - er reagiert langsamer. Verfassung sinkt.', 'warn', 'muede-vf'); } catch (e) {} }
+          }
+        }
+      }
+    } catch (e) {}
 
     // v7.12.405: WAHRHEITSLECK-MESSUNG. Direkt nach dem Szenen-Commit, BEVOR das Force-System
     // einen Durchbruch setzen kann - prueft ob die geheime Loesung vorzeitig ausgespielt wurde.
