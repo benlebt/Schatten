@@ -14792,3 +14792,24 @@ BEWUSST NICHT JETZT: Verben in Kategorien gruppieren (lohnt erst bei längerer L
 ohne Daten), A7 GEGNER_HAERTE_BASIS-Tabelle nutzen/entfernen (reines Aufräumen ohne Spielwirkung).
 NÄCHSTER ECHTER MEILENSTEIN: Benjamins Architektur-Test mit KI_OPTIONEN_AKTIV=false - "Kann Margarete nur über
 Baukasten+Buttons gelöst werden?" Das Testergebnis steuert, welche Verben/Buttons noch fehlen.
+
+## v7.12.655 (2026-06-11): Baukasten-Umbau WER->WEN->ITEM->AKTION + Flucht-Prompt entschärft (Benjamin)
+BENJAMIN-BEFUNDE (Screenshot v654 + Run):
+(1) BAUKASTEN-REIHENFOLGE umgebaut: WER -> WEN/WAS -> ITEM -> AKTION (vorher WER->ITEM->AKTION->ZIEL). Die AKTION
+kommt jetzt ZULETZT und wird DYNAMISCH gefiltert nach gewähltem Akteur/Ziel/Item - unsinnige Optionen
+verschwinden: "An mich nehmen"/"Befragen" auf eine Person nur wenn Person gewählt, "Vor die Füße werfen"/
+"Trinken mit"/"Anbieten" (itemNoetig) nur wenn ein Item gewählt ist, "Umgebung durchsuchen" nur bei Ziel
+Umgebung. "Umgebung" ist jetzt ein wählbares Ziel neben den Personen.
+(2) AKTIONEN ALPHABETISCH sortiert (localeCompare 'de').
+(3) "Genauer ansehen" entfernt (Benjamin: unnötig).
+(4) durchsuchen_npc-Gate von Ziel-Filter auf AKTIONS-Filter umgestellt (Reihenfolge geändert): Person durchsuchen
+nur wenn das gewählte Personen-Ziel bezwungen/kooperativ ist.
+(5) komplett-Check + _bkUebernehmen kontextsensitiv: Umgebungs-Verb braucht "Umgebung", Personen-Verb braucht
+echtes Personen-Ziel; "Umgebung" wird bei Personen-Verben aus der Ziel-Liste gefiltert.
+(6) FLUCHT-PROMPT ENTSCHÄRFT (Benjamin: "warum fliehen wir immer sobald ich jemanden fessle?"): Der globale
+Prompt-Abschnitt "wehrloser Gegner am Boden -> biete weglaufen/fliehen/verschwinden, Sirenen, Backup an" war der
+Haupttreiber (überschrieb das PLAN_ZUGRIFF-Bleib-Verbot). Jetzt: nach Bezwingung Szene mit GESICHERTER LAGE am
+Ort beenden, KEIN von der KI erzählter Abgang/Ortswechsel/Opel/Sirenen-zur-Flucht - der SPIELER entscheidet die
+nächste Handlung. Anti-Folter-Kern bleibt. 8 Tests grün. node --check OK.
+HINWEIS an Benjamin: A/B/C/D-Buttons sind noch sichtbar, weil KI_OPTIONEN_AKTIV=true (default, wie vereinbart).
+Auf false setzen für den reinen Baukasten-Test - das ist Benjamins Entscheidung.

@@ -3191,7 +3191,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.654</div>
+    <div class="start-version">Schatten v7.12.655</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3417,7 +3417,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.654</span>
+    <span>Schatten v7.12.655</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4203,7 +4203,7 @@ ERLAUBT (Genre-typisch, Marlowe-Stil):
 
 Verhör eines Wehrlosen: Karl kann jemanden gegen die Wand drücken, ihn anschreien, ihm Konsequenzen mit der Polizei androhen, ihn zappeln lassen. Aber er hängt ihn nicht über Abgründe, hält ihm keine Waffe an den Kopf, droht nicht mit Tod. Das ist der Unterschied zwischen Druck und Folter.
 
-Wenn der Spieler in einer Lage ist, in der ein wehrloser Gegner am Boden liegt, biete stattdessen Optionen wie: weglaufen, den Verletzten in den Wagen ziehen, fliehen ohne Nachsetzen, Informationen aus ihm herausquetschen mit Worten, Beweise nehmen und verschwinden. Auch dramatische Eskalation ohne Ethik-Bruch ist möglich (Backup kommt, Sirenen, neuer Konflikt).
+Wenn der Spieler in einer Lage ist, in der ein wehrloser Gegner am Boden liegt: Beende die Szene mit der GESICHERTEN LAGE am aktuellen Ort (der Gegner ist gefesselt/k.o./fixiert und bleibt da). Erzähle NICHT von Dir aus einen Abgang - KEIN "Karl zieht Margarete zum Hinterausgang", KEIN "ihr erreicht den Opel", KEIN Wegfahren, KEINE Flucht in die Nacht, KEINE Sirenen-die-zur-Flucht-zwingen. Was Karl als Nächstes tut (durchsuchen, befragen, Beweise nehmen, weiterreisen, fliehen), entscheidet der SPIELER in der nächsten Szene über seine Aktion - nicht Dein Erzähltext. Du darfst die Lage anspannen (ein fernes Geräusch, Unruhe), aber Du beendest die Szene NICHT mit einem von Dir erzählten Ortswechsel.
 
 STIL - WAS VERBOTEN IST:
 Klischee-Floskeln meiden:
@@ -7115,7 +7115,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.654';
+window.SCHATTEN_VERSION = 'v7.12.655';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -7780,8 +7780,6 @@ const BAUKASTEN_AKTIONEN = {
     txt: (a) => a + ' durchsucht die Umgebung gründlich nach Spuren, Indizien und brauchbaren Gegenständen.' },
   durchsuchen_npc: { label: 'Person durchsuchen', zielNoetig: true, _ermitteln: true,
     txt: (a, i, z) => a + ' durchsucht ' + z + ' nach Papieren, Schlüsseln oder versteckten Gegenständen.' },
-  ansehen:    { label: 'Genauer ansehen', zielNoetig: true, _ermitteln: true,
-    txt: (a, i, z) => a + ' sieht sich ' + z + ' genauer an und prägt sich jedes Detail ein.' },
   nehmen:     { label: 'An mich nehmen', zielNoetig: true, _ermitteln: true,
     txt: (a, i, z) => a + ' nimmt ' + z + ' an sich.' },
   bestechen:  { label: 'Bestechen',   zielNoetig: true,  itemUebergabe: true,
@@ -7890,21 +7888,6 @@ function _renderBaukasten() {
     try { if (typeof clientProfile !== 'undefined' && clientProfile && clientProfile.name) _eigene[normForMatch(clientProfile.name)] = true; } catch (e) {}
     _eigene['karl'] = true; _eigene['karl mauer'] = true;
     let ziele = npcsHier.map(n => n && n.name).filter(n => n && !_eigene[normForMatch(n)] && (!bk.akteur || normForMatch(n) !== normForMatch(bk.akteur)));
-    // v7.12.654 (Baukasten-First Folge-Gate): Eine Person DURCHSUCHEN geht nur, wenn sie kampfunfähig
-    // (ko/gefesselt/fixiert/benommen) ODER nicht feindlich (kooperativ - Verbündete/Zeugen) ist. Ein freier,
-    // feindlicher Gegner lässt sich nicht einfach durchsuchen - erst überwältigen.
-    try {
-      if (bk.aktion === 'durchsuchen_npc') {
-        const _bezwungen = ['ko','gefesselt','fixiert','benommen','geblendet'];
-        ziele = ziele.filter(nm => {
-          const _z = (typeof _npcZustandGet === 'function') ? _npcZustandGet(nm) : null;
-          if (_z && _bezwungen.indexOf(_z.status) !== -1) return true;         // überwältigt -> durchsuchbar
-          const _npcObj = npcsHier.find(n => n && n.name === nm);
-          if (typeof _npcIstFeindlich === 'function' && !_npcIstFeindlich(_npcObj)) return true; // kooperativ
-          return false;                                                        // freier Gegner -> nicht durchsuchbar
-        });
-      }
-    } catch (e) {}
     let h = '<div style="font-weight:bold;color:#d4b86a;letter-spacing:0.05em;margin-bottom:4px;">🧩 AKTIONS-BAUKASTEN</div>';
     // v7.12.620 (Benjamin: "jeder Person eine eigene Aktion zuordnen"): Der PLAN steht jetzt SICHTBAR im
     // Panel - jede '+ Zum Plan'-Kombination erscheint hier als Zeile (entfernbar), dann nächste bauen.
@@ -7919,19 +7902,53 @@ function _renderBaukasten() {
       h += '</div>';
       h += '<div style="color:#9a8a68;font-size:11px;margin-bottom:4px;">Nächste Aktion für eine andere Person bauen:</div>';
     }
+    // v7.12.655 (Benjamin: Baukasten-Reihenfolge WER -> WEN -> ITEM -> AKTION). Die Aktion kommt ZULETZT und
+    // wird dynamisch gefiltert: nur Verben, die zur gewählten Kombination (Akteur + Ziel + ob Item) passen.
+    // So verschwinden unsinnige Optionen (z.B. "An mich nehmen" auf eine Person, "Vor die Füße werfen" ohne Item).
+    // 1. WER
     h += '<div style="color:#9a8a68;font-size:11px;margin-bottom:2px;">1. WER</div><div>' + akteure.map(a => _bkChip(a, bk.akteur === a, "_bkSet('akteur','" + a.replace(/'/g, "\\'") + "')")).join('') + '</div>';
-    // v7.12.631 (Lektorat P1: "Karl tauscht Margaretes Akten gegen Info" verhindern): Beweis-Items sind
-    // im Baukasten KEINE Tausch-/Wurfware - sie erscheinen hier nicht als wählbares Bauteil.
+    // 2. WEN (Ziel) - Personen am Ort ODER Umgebung. Mehrfachauswahl möglich.
+    const _zielChips = [];
+    _zielChips.push(_bkChip('Umgebung', (Array.isArray(bk.ziele) && bk.ziele.indexOf('Umgebung') !== -1), "_bkSet('ziel','Umgebung')"));
+    ziele.forEach(z => _zielChips.push(_bkChip(z, (Array.isArray(bk.ziele) && bk.ziele.indexOf(z) !== -1), "_bkSet('ziel','" + z.replace(/'/g, "\\'") + "')")));
+    h += '<div style="color:#9a8a68;font-size:11px;margin:6px 0 2px;">2. WEN / WAS (mehrere möglich)</div><div>' + _zielChips.join('') + '</div>';
+    // 3. ITEM (optional) - Beweis-Items nie als Bauteil; Rex nutzt keine Items.
     const _istHundAkteurFuerItem = (typeof HUND_NAME === 'string' && bk.akteur === HUND_NAME);
     const _itemsWaehlbar = itemsK.filter(it => it.typ !== 'beweis_dokument' && it.typ !== 'beweis');
-    // v7.12.633: Rex nutzt keine Items - Item-Stufe für den Hund-Akteur ausblenden.
-    if (!_istHundAkteurFuerItem) h += '<div style="color:#9a8a68;font-size:11px;margin:6px 0 2px;">2. ITEM (optional)</div><div>' + (_itemsWaehlbar.length ? _itemsWaehlbar.map(it => _bkChip(it.name, bk.item === it.id, "_bkSet('item','" + it.id + "')")).join('') : '<span style="color:#666;font-size:11px;">keine nutzbaren Gegenstände</span>') + '</div>';
-    // v7.12.630: Ist ein Katalog-Item gewählt, zeige NUR dessen erlaubte Aktionen (kein "Stinkbombe trinken").
+    if (!_istHundAkteurFuerItem) h += '<div style="color:#9a8a68;font-size:11px;margin:6px 0 2px;">3. ITEM (optional)</div><div>' + (_itemsWaehlbar.length ? _itemsWaehlbar.map(it => _bkChip(it.name, bk.item === it.id, "_bkSet('item','" + it.id + "')")).join('') : '<span style="color:#666;font-size:11px;">keine nutzbaren Gegenstände</span>') + '</div>';
+    // 4. AKTION - DYNAMISCH gefiltert nach Akteur/Ziel/Item, dann alphabetisch sortiert.
     let _aktKeys = Object.keys(BAUKASTEN_AKTIONEN);
     let _katHint = '';
-    // v7.12.633: Rex sieht NUR Hunde-Kommandos; alle anderen Akteure sehen die Hunde-Kommandos NICHT.
     const _istHundAkteur = (typeof HUND_NAME === 'string' && bk.akteur === HUND_NAME);
+    // Rex sieht NUR Hunde-Kommandos; andere Akteure sehen sie NICHT.
     _aktKeys = _aktKeys.filter(k => _istHundAkteur ? !!BAUKASTEN_AKTIONEN[k]._nurHund : !BAUKASTEN_AKTIONEN[k]._nurHund);
+    // Zielkontext: ist "Umgebung" gewählt, ist eine Person gewählt?
+    const _zielHatUmgebung = Array.isArray(bk.ziele) && bk.ziele.indexOf('Umgebung') !== -1;
+    const _zielHatPerson = Array.isArray(bk.ziele) && bk.ziele.some(z => z && z !== 'Umgebung');
+    _aktKeys = _aktKeys.filter(k => {
+      const d = BAUKASTEN_AKTIONEN[k];
+      // itemNoetig-Verben (werfen/trinken/anbieten/...) nur zeigen, wenn ein Item gewählt ist.
+      if (d.itemNoetig && !bk.item) return false;
+      // Umgebungs-Verb (durchsuchen_ort) nur sinnvoll, wenn "Umgebung" Ziel ist (oder noch nichts gewählt).
+      if (d._umgebung) return _zielHatUmgebung || !(_zielHatUmgebung || _zielHatPerson);
+      // Verben mit zielNoetig, die auf eine PERSON zielen: nicht zeigen, wenn nur "Umgebung" gewählt ist.
+      if (d.zielNoetig && _zielHatUmgebung && !_zielHatPerson) return false;
+      // v7.12.654/655: Person durchsuchen nur, wenn das gewählte Personen-Ziel bezwungen (ko/gefesselt/fixiert/
+      // benommen) ODER nicht feindlich (kooperativ) ist. Freier Gegner -> erst überwältigen.
+      if (k === 'durchsuchen_npc' && _zielHatPerson) {
+        const _bezwungen = ['ko','gefesselt','fixiert','benommen','geblendet'];
+        const _allePersZiele = (bk.ziele || []).filter(z => z && z !== 'Umgebung');
+        const _alleDurchsuchbar = _allePersZiele.every(nm => {
+          const _z = (typeof _npcZustandGet === 'function') ? _npcZustandGet(nm) : null;
+          if (_z && _bezwungen.indexOf(_z.status) !== -1) return true;
+          const _npcObj = npcsHier.find(n => n && n.name === nm);
+          return (typeof _npcIstFeindlich === 'function' && !_npcIstFeindlich(_npcObj));
+        });
+        if (!_alleDurchsuchbar) return false;
+      }
+      return true;
+    });
+    // Item-Katalog-Affordances: gewähltes Item -> nur dessen erlaubte Aktionen.
     try {
       if (!_istHundAkteur && bk.item && typeof _itemsMap === 'function' && _itemsMap()[bk.item]) {
         const _kat = _itemKatalogEintrag(_itemsMap()[bk.item].name);
@@ -7941,21 +7958,20 @@ function _renderBaukasten() {
         }
       }
     } catch (e) {}
-    h += '<div style="color:#9a8a68;font-size:11px;margin:6px 0 2px;">3. AKTION' + _katHint + '</div><div>' + _aktKeys.map(k => _bkChip(BAUKASTEN_AKTIONEN[k].label, bk.aktion === k, "_bkSet('aktion','" + k + "')")).join('') + '</div>';
-    // v7.12.653: Bei einem Umgebungs-Verb (durchsuchen_ort) ist das Ziel die UMGEBUNG, nicht eine Person.
-    // Dann zeigen wir "Umgebung" als (vorausgewähltes) Ziel statt der NPC-Liste.
-    const _aktDef = bk.aktion ? BAUKASTEN_AKTIONEN[bk.aktion] : null;
-    const _istUmgebungsAktion = !!(_aktDef && _aktDef._umgebung);
-    if (_istUmgebungsAktion) {
-      h += '<div style="color:#9a8a68;font-size:11px;margin:6px 0 2px;">4. ZIEL</div><div>' + _bkChip('Umgebung', true, "void(0)") + '</div>';
-    } else {
-      const _leerText = (bk.aktion === 'durchsuchen_npc')
-        ? 'Niemand hier lässt sich durchsuchen - überwältige erst einen Gegner (fesseln/ko/fixieren).'
-        : 'niemand am Ort';
-      h += '<div style="color:#9a8a68;font-size:11px;margin:6px 0 2px;">4. ZIEL (mehrere möglich)</div><div>' + (ziele.length ? ziele.map(z => _bkChip(z, (Array.isArray(bk.ziele) && bk.ziele.indexOf(z) !== -1), "_bkSet('ziel','" + z.replace(/'/g, "\\'") + "')")).join('') : '<span style="color:#666;font-size:11px;">' + _leerText + '</span>') + '</div>';
-    }
+    // Alphabetisch nach Label sortieren.
+    _aktKeys.sort((a, b) => (BAUKASTEN_AKTIONEN[a].label || '').localeCompare(BAUKASTEN_AKTIONEN[b].label || '', 'de'));
+    const _aktHtml = _aktKeys.length
+      ? _aktKeys.map(k => _bkChip(BAUKASTEN_AKTIONEN[k].label, bk.aktion === k, "_bkSet('aktion','" + k + "')")).join('')
+      : '<span style="color:#666;font-size:11px;">erst WER und WEN/WAS wählen</span>';
+    h += '<div style="color:#9a8a68;font-size:11px;margin:6px 0 2px;">4. AKTION' + _katHint + '</div><div>' + _aktHtml + '</div>';
     const def = bk.aktion ? BAUKASTEN_AKTIONEN[bk.aktion] : null;
-    const komplett = bk.akteur && def && (!def.zielNoetig || (Array.isArray(bk.ziele) && bk.ziele.length > 0)) && (!def.itemNoetig || bk.item);
+    // v7.12.655: komplett-Prüfung kontextsensitiv. Umgebungs-Verb: braucht "Umgebung" (oder kein zielNoetig).
+    // Personen-Verb mit zielNoetig: braucht mindestens ein echtes Personen-Ziel (nicht nur "Umgebung").
+    let _zielOk;
+    if (!def || !def.zielNoetig) _zielOk = true;
+    else if (def._umgebung) _zielOk = true; // Umgebung ist implizit gesetzt
+    else _zielOk = Array.isArray(bk.ziele) && bk.ziele.some(z => z && z !== 'Umgebung');
+    const komplett = bk.akteur && def && _zielOk && (!def.itemNoetig || bk.item);
     h += '<div style="margin-top:8px;display:flex;gap:8px;">'
       + '<button onclick="_bkUebernehmen(false)" ' + (komplett ? '' : 'disabled') + ' style="background:' + (komplett ? '#8a7a58' : '#333') + ';color:#1a1a1c;border:none;border-radius:6px;padding:6px 12px;font-weight:bold;cursor:pointer;">+ Zum Plan</button>'
       + '<button onclick="_bkUebernehmen(true)" ' + (komplett ? '' : 'disabled') + ' style="background:' + (komplett ? '#d4b86a' : '#333') + ';color:#1a1a1c;border:none;border-radius:6px;padding:6px 12px;font-weight:bold;cursor:pointer;">▶ Sofort ausführen</button>'
@@ -7969,8 +7985,13 @@ function _bkUebernehmen(sofort) {
     const def = BAUKASTEN_AKTIONEN[bk.aktion];
     if (!def || !bk.akteur) return;
     const it = bk.item && typeof _itemsMap === 'function' ? _itemsMap()[bk.item] : null;
+    // v7.12.655: "Umgebung" ist nur für das Umgebungs-Verb ein echtes Ziel; bei Personen-Verben rausfiltern.
+    // Bei einem Umgebungs-Verb wird das Ziel zu '' (die txt-Funktion braucht kein z).
+    let _ziele = (Array.isArray(bk.ziele) ? bk.ziele.slice() : []);
+    if (def._umgebung) { _ziele = ['']; }
+    else { _ziele = _ziele.filter(z => z && z !== 'Umgebung'); }
     // v7.12.623 (Benjamin: "beide fesseln"): pro gewähltem Ziel EIN Plan-Eintrag (Wirkung sauber pro Person).
-    const _zieleListe = (Array.isArray(bk.ziele) && bk.ziele.length) ? bk.ziele : [''];
+    const _zieleListe = _ziele.length ? _ziele : [''];
     _zieleListe.forEach(_z => {
       const eintrag = {
         label: bk.akteur + (it ? ' [' + it.name + ']' : '') + ' \u2192 ' + def.label.toLowerCase() + (_z ? ' \u2192 ' + _z : ''),
