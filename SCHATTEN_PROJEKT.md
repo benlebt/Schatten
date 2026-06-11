@@ -14969,3 +14969,24 @@ Der Umsehen-Toast ist eine direkte Antwort auf einen Spieler-Klick und MUSS imme
 HINWEIS: Der v663-Run (20:52) brach mit API-503 (Google-seitiger Gemini-Ausfall, KEIN Code-Bug) bei Szene 4 ab und
 wurde nicht als Datei hochgeladen - das v661-UMSEHEN-Logging konnte daher noch nicht ausgewertet werden. Beim
 nächsten vollständigen Run zeigen 🔎 UMSEHEN-BUTTON / 🔎 UMSEHEN-KLICK die genauen Zahlen. node --check OK.
+
+## v7.12.665 (2026-06-11): Party-Drift-Wurzel - Behördenkontakte (Roth) nie mitnehmen (Lektorat v663/v664)
+ZWEI LEKTORATE (v663 + v664) verifiziert. KERNEINSICHT: Die Lektorate fordern "Entlassungsstatus stärker als
+Party-Garantie" (harter Auto-Remove von August) - aber das wäre GENAU der Regelverstoß, den v664 zurücknahm
+(Spieler entscheidet Party). Der echte Bug ist nicht fehlendes Entfernen, sondern: Wie kommen August/Roth
+AUTOMATISCH rein? Verifiziert: _partyAdd läuft nur bei Spieler-Klick (Z18828/19587) - ABER es gab einen
+bestehenden Wächter _npcLehntMitnahmeAb (Z8069), der Roth durchließ.
+A2 (Roth wird Party-Mitglied, fährt mit in Karls Büro - v664-Hauptfehler): WURZEL: Roth ist ein anchorNpc
+(wilhelm_roth), steht NICHT im setupCast mit Rolle -> der Rollen-Check in _npcLehntMitnahmeAb fand nichts und
+ließ ihn durch. FIX: (1) Namens-Check ergänzt - /roth|lindner/ + kommissar/volkspolizist werden per NAME
+abgelehnt (Behördenkontakte stehen oft nicht im setupCast). (2) Rollen-Regex um kommissar/volkspolizei/polizist/
+beamter/inspektor erweitert. (3) Party-Garantie entfernt ortsgebundene NPCs jetzt aktiv aus _party (statt sie
+in jeder Szene neu nachzuziehen) - _npcLehntMitnahmeAb-Check VOR dem Nachziehen.
+WICHTIG (Benjamin-Regel gewahrt): August (Zeuge) wird NICHT abgelehnt - der Spieler DARF ihn bewusst mitnehmen.
+Nur die AUTOMATISCHE Nachziehung durch die Garantie greift bei ihm nach Abschlussreife nicht (bestehender
+Zeugen-Skip v636). Behördenkontakte (Roth/Lindner/Arzt/Wirt) werden komplett abgelehnt - sie reisen NIE mit.
+6 Tests grün (Roth/Lindner abgelehnt, August/Margarete erlaubt). node --check OK.
+OFFEN (nächste Versionen, klein halten): Vera-Handschlag-aber-kein-Add-Button (Screenshot), eintauschen-Toast
+doppeltes Icon + holpriger Text, NPC-Indiz-Vorschau (lohnt sich eintauschen?), Umsehen-Indizien zählen evtl.
+nicht zum Stage-Progress (Benjamin-Eindruck - muss verifiziert werden). A3/A4 v663 (Schwer-verletzt-Toast nach
+Ursache, Behandlung nur bei echter Heilung). A5 v664 (Stage früher ziehen). Lektorat-Audit-Erweiterung.
