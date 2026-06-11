@@ -3191,7 +3191,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.630</div>
+    <div class="start-version">Schatten v7.12.631</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.630</span>
+    <span>Schatten v7.12.631</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7073,7 +7073,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.630';
+window.SCHATTEN_VERSION = 'v7.12.631';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -7396,6 +7396,27 @@ function _planAusfuehren() {
         }
         if (p._itemUebergabe && p.itemId && typeof _itemMove === 'function') _itemMove(p.itemId, { status: 'bei_npc', owner: p.ziel || 'npc' });
         if (p._itemVerlust && p.itemId && typeof _itemMove === 'function') _itemMove(p.itemId, { status: 'verloren', owner: '' });
+        // v7.12.631 (Benjamin: "eintauschen für Information -> Indiz"): Wenn das Ziel ein definiertes Indiz
+        // kennt UND der Item-Tauschwert seine Schwelle erreicht, schaltet der Tausch dieses Indiz frei.
+        if (p._eintausch && p.itemId) {
+          try {
+            const _itObj = (typeof _itemsMap === 'function') ? _itemsMap()[p.itemId] : null;
+            const _kat = _itObj ? _itemKatalogEintrag(_itObj.name) : null;
+            const _wert = (_kat && typeof _kat.tauschwert === 'number') ? _kat.tauschwert : 0;
+            const _tausch = (typeof _npcTauschInfo === 'function') ? _npcTauschInfo(p.ziel) : null;
+            if (_tausch && _wert >= (_tausch.schwelle || 99) && _tausch.indizId && typeof getCaseLocations === 'function') {
+              let _ind = null;
+              getCaseLocations().forEach(l => { if (l && Array.isArray(l.indizien)) l.indizien.forEach(x => { if (x && x.id === _tausch.indizId) _ind = x; }); });
+              if (_ind && typeof _markiereIndizGefunden === 'function' && _markiereIndizGefunden(_ind)) {
+                if (typeof showProgressToast === 'function') showProgressToast('🔑 Hinweis ertauscht', p.ziel + ' rückt mit etwas heraus: ' + (_ind.text || _ind.id), 'success', 'eintausch-indiz');
+                if (typeof diag === 'function') diag('state', '🔄 EINTAUSCH->INDIZ: ' + p.ziel + ' gab "' + _ind.id + '" für Tauschwert ' + _wert + ' (Schwelle ' + _tausch.schwelle + ')');
+                if (_itObj && typeof _itemMove === 'function') _itemMove(p.itemId, { status: 'verloren', owner: p.ziel });
+              }
+            } else if (typeof diag === 'function') {
+              diag('state', '🔄 EINTAUSCH ohne Indiz: Ziel "' + p.ziel + '" ' + (_tausch ? ('kennt Indiz, aber Tauschwert ' + _wert + ' < Schwelle ' + _tausch.schwelle) : 'hat nichts Definiertes zu bieten'));
+            }
+          } catch (e) {}
+        }
       } catch (e) {}
     });
     // 2) EIN kombinierter Prompt - alles gleichzeitig, eine Szene.
@@ -7413,13 +7434,30 @@ function _planAusfuehren() {
 window._baukasten = window._baukasten || { offen: false, akteur: null, item: null, aktion: null, ziele: [] };
 // v7.12.630 (Benjamin: Item-Katalog mit erlaubten Aktionen): jedes Item trägt, wofür es taugt.
 const ITEM_KATALOG = {
+  // v7.12.631: taugt = erlaubte Aktionen (Affordances). Aktionen: anbieten/bestechen/eintauschen/trinken/
+  // angreifen_mit (ins Gesicht, Schaden) / werfen_fuesse (vor die Füße, Sturz/Ablenkung) / ablenken.
   west_zigaretten: { name: 'Schachtel West-Zigaretten', taugt: ['anbieten','bestechen','eintauschen'], tauschwert: 3 },
-  korn:            { name: 'Flasche Nordhäuser Doppelkorn', taugt: ['trinken','anbieten','werfen','schlagen'], tauschwert: 1, schaden: 'benommen' },
+  korn:            { name: 'Flasche Nordhäuser Doppelkorn', taugt: ['trinken','anbieten','angreifen_mit','werfen_fuesse'], tauschwert: 1, schaden: 'benommen' },
   bohnenkaffee:    { name: 'Päckchen Bohnenkaffee', taugt: ['anbieten','bestechen','eintauschen'], tauschwert: 3 },
   westmark:        { name: 'Bündel Westmark', taugt: ['bestechen','eintauschen'], tauschwert: 4 },
-  ziegelstein:    { name: 'Ziegelstein', taugt: ['werfen','schlagen','ablenken'], schaden: 'benommen' },
-  knallkoerper:   { name: 'Knallkörper', taugt: ['werfen','ablenken'] }
+  ziegelstein:     { name: 'Ziegelstein', taugt: ['angreifen_mit','werfen_fuesse','ablenken'], schaden: 'benommen' },
+  knallkoerper:    { name: 'Knallkörper', taugt: ['werfen_fuesse','ablenken'] },
+  bananenschale:   { name: 'Bananenschale', taugt: ['werfen_fuesse','angreifen_mit'], schaden: 'lacher' }
 };
+// v7.12.631 (Benjamin: "eintauschen für Information -> Indizien"): pro NPC konfiguriert, welches definierte
+// Indiz er gegen welchen Mindest-Tauschwert herausrückt. Erst Margarete-Fall (Willi kennt den Anker-Hinweis).
+function _npcTauschInfo(npcName) {
+  try {
+    const n = normForMatch(npcName || '');
+    // Tabelle: Name-Substring -> { indizId, schwelle }. Erweiterbar pro Fall.
+    const TAB = [
+      { match: 'willi', indizId: 'anker_kontakt_hinweis', schwelle: 3 },
+      { match: 'lemke', indizId: 'lemke_belastet_wahler', schwelle: 2 }
+    ];
+    for (const e of TAB) { if (n.includes(e.match)) return e; }
+  } catch (e) {}
+  return null;
+}
 // Erkennt, ob ein getragenes Item einem Katalog-Eintrag entspricht (über Namens-Substring).
 function _itemKatalogEintrag(itemName) {
   try {
@@ -7442,12 +7480,17 @@ const BAUKASTEN_AKTIONEN = {
     txt: (a, i, z) => a + ' befragt ' + z + ' gezielt und hartnäckig' + (i ? ', ' + i.name + ' hilft dabei nach' : '') + '.' },
   bestechen:  { label: 'Bestechen',   zielNoetig: true,  itemUebergabe: true,
     txt: (a, i, z) => a + ' besticht ' + z + (i ? ' mit ' + i.name : ' - bietet Geld oder einen Gefallen') + ', um Informationen oder Kooperation zu bekommen.' },
-  eintauschen:{ label: 'Eintauschen für Info', zielNoetig: true, itemNoetig: true, itemVerlust: true,
-    txt: (a, i, z) => a + ' bietet ' + z + ' ' + (i ? i.name : 'etwas Wertvolles') + ' im Tausch gegen eine konkrete Information an - ' + z + ' überlegt, ob das Angebot gut genug ist, und rückt dann womöglich mit einem brauchbaren Hinweis heraus.' },
+  eintauschen:{ label: 'Eintauschen für Info', zielNoetig: true, itemNoetig: true, itemVerlust: true, _eintausch: true,
+    txt: (a, i, z) => a + ' bietet ' + z + ' ' + (i ? i.name : 'etwas Wertvolles') + ' im Tausch gegen eine konkrete Information an.' },
+  // v7.12.631 (Benjamin): zwei Wurf-Varianten + Angriff MIT Item.
+  angreifen_mit:{ label: 'Angreifen mit', zielNoetig: true, itemNoetig: true, _itemAngriff: true,
+    txt: (a, i, z) => a + ' geht mit ' + (i ? i.name : 'dem Gegenstand') + ' auf ' + z + ' los und schlägt zu - je nachdem, wie hart der Gegenstand ist, setzt das ' + z + ' außer Gefecht oder bringt nur einen wütenden Blick ein.' },
+  werfen_fuesse:{ label: 'Vor die Füße werfen', zielNoetig: true, itemNoetig: true, itemVerlust: true,
+    txt: (a, i, z) => a + ' wirft ' + (i ? i.name : 'etwas') + ' direkt vor ' + z + ' auf den Boden - ' + z + ' stolpert, weicht aus oder erschrickt; ein Moment der Ablenkung entsteht.' },
   geben:      { label: 'Geben',       zielNoetig: true,  itemNoetig: true, itemUebergabe: true,
     txt: (a, i, z) => a + ' gibt ' + z + ' ' + (i ? i.name : 'etwas') + '.' },
-  werfen:     { label: 'Werfen',      zielNoetig: true,  itemNoetig: true, itemVerlust: true,
-    txt: (a, i, z) => a + ' wirft ' + (i ? i.name : 'etwas') + ' gezielt nach ' + z + ' - ' + z + ' wird getroffen und ist einen Moment benommen (kurzer Vorteil, kein Dauerzustand).' },
+  werfen:     { label: 'Ins Gesicht werfen', zielNoetig: true, itemNoetig: true, itemVerlust: true,
+    txt: (a, i, z) => a + ' wirft ' + (i ? i.name : 'etwas') + ' gezielt ' + z + ' ins Gesicht - ' + z + ' wird getroffen und ist einen Moment benommen.' },
   trinken:    { label: 'Trinken mit', zielNoetig: true,  itemVerlust: true,
     txt: (a, i, z) => a + ' trinkt mit ' + z + (i ? ' - ' + i.name + ' macht die Runde' : '') + ', lockert die Stimmung und die Zunge.' },
   beschuetzen:{ label: 'Beschützen',  zielNoetig: true,
@@ -7554,7 +7597,10 @@ function _renderBaukasten() {
       h += '<div style="color:#9a8a68;font-size:11px;margin-bottom:4px;">Nächste Aktion für eine andere Person bauen:</div>';
     }
     h += '<div style="color:#9a8a68;font-size:11px;margin-bottom:2px;">1. WER</div><div>' + akteure.map(a => _bkChip(a, bk.akteur === a, "_bkSet('akteur','" + a.replace(/'/g, "\\'") + "')")).join('') + '</div>';
-    h += '<div style="color:#9a8a68;font-size:11px;margin:6px 0 2px;">2. ITEM (optional)</div><div>' + (itemsK.length ? itemsK.map(it => _bkChip(it.name, bk.item === it.id, "_bkSet('item','" + it.id + "')")).join('') : '<span style="color:#666;font-size:11px;">Karls Taschen sind leer</span>') + '</div>';
+    // v7.12.631 (Lektorat P1: "Karl tauscht Margaretes Akten gegen Info" verhindern): Beweis-Items sind
+    // im Baukasten KEINE Tausch-/Wurfware - sie erscheinen hier nicht als wählbares Bauteil.
+    const _itemsWaehlbar = itemsK.filter(it => it.typ !== 'beweis_dokument' && it.typ !== 'beweis');
+    h += '<div style="color:#9a8a68;font-size:11px;margin:6px 0 2px;">2. ITEM (optional)</div><div>' + (_itemsWaehlbar.length ? _itemsWaehlbar.map(it => _bkChip(it.name, bk.item === it.id, "_bkSet('item','" + it.id + "')")).join('') : '<span style="color:#666;font-size:11px;">keine nutzbaren Gegenstände</span>') + '</div>';
     // v7.12.630: Ist ein Katalog-Item gewählt, zeige NUR dessen erlaubte Aktionen (kein "Stinkbombe trinken").
     let _aktKeys = Object.keys(BAUKASTEN_AKTIONEN);
     let _katHint = '';
@@ -7594,6 +7640,7 @@ function _bkUebernehmen(sofort) {
       };
       eintrag._wirkung = def.wirkung || null; eintrag._beute = !!def.beute;
       eintrag._itemUebergabe = !!def.itemUebergabe && !!bk.item; eintrag._itemVerlust = !!def.itemVerlust && !!bk.item;
+      eintrag._eintausch = !!def._eintausch; eintrag._itemAngriff = !!def._itemAngriff;
       _planAdd(eintrag);
     });
     window._baukasten.akteur = null; window._baukasten.item = null; window._baukasten.aktion = null; window._baukasten.ziele = [];

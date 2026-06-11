@@ -14400,3 +14400,20 @@ OFFEN/NÄCHSTE SCHRITTE: 'schlagen' als Baukasten-Aktion fehlt noch (in taugt re
 sauber); eintauschen->definiertes Indiz freischalten (v631); Orts-Fundlisten (fundItems pro Ort); NPC-Gaben;
 Tauschwert-Gates pro NPC; Charité-Alias + Helene/Marlene (Lektorat-P2). HINWEIS: schlagen/anbieten/trinken als
 Baukasten-Aktionen ggf. ergänzen, damit der Katalog-Filter sie zeigen kann.
+
+## v7.12.631 (2026-06-11): Eintausch->Indiz, item-spezifische Aktionen, Beweis-Schutz (Lektorat-Freigabe v630)
+LEKTORAT-ARCHITEKTUR übernommen: Item trägt Affordances (taugt:[...]), Aktion trägt Wirkung zentral.
+NEUE/PRÄZISIERTE AKTIONEN (Benjamin): 'angreifen_mit' (Angreifen mit Item - Schaden je nach Härte, Banane =
+nur böser Blick), 'werfen_fuesse' (Vor die Füße werfen - Sturz/Ablenkung, für Banane/Knallkörper), 'werfen'
+umbenannt -> 'Ins Gesicht werfen'. Katalog +Bananenschale (taugt nur werfen_fuesse/angreifen_mit - KEIN ins
+Gesicht, Benjamins Beispiel). Pro Item exakte taugt-Liste (Knallkörper: werfen_fuesse/ablenken, nicht ins
+Gesicht).
+EINTAUSCH->INDIZ (Benjamins Spielrelevanz): _npcTauschInfo(npc) -> {indizId, schwelle}; im _planAusfuehren
+prüft die Eintausch-Aktion Item-Tauschwert >= NPC-Schwelle -> _markiereIndizGefunden(definiertes Indiz) + Toast
+'🔑 Hinweis ertauscht'. Margarete-Pilot: Willi (Schwelle 3) gibt anker_kontakt_hinweis für West-Zigaretten/
+Bohnenkaffee/Westmark; Lemke (2) gibt lemke_belastet_wahler. Tausch zählt damit aufs Fundament-Gate!
+BEWEIS-SCHUTZ (Lektorat-P1): Items mit typ beweis/beweis_dokument erscheinen NICHT als wählbares Baukasten-
+Bauteil - Margaretes Akten können nie vertauscht/geworfen werden. 5/5 Tests. node --check OK.
+HINWEIS: Item-Instanz-IDs noch typ-basiert (Lektorat-P1 Instanz-vs-Typ-Trennung): aktuell unique pro id, für
+mehrfache gleiche Items (2x Korn) später usesLeft/Instanz-Counter. Anbieten-Cooldown (Lektorat-P1 Trust-Farm)
+noch offen -> P2.
