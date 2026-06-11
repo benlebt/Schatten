@@ -3191,7 +3191,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.647</div>
+    <div class="start-version">Schatten v7.12.648</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.647</span>
+    <span>Schatten v7.12.648</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7111,7 +7111,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.647';
+window.SCHATTEN_VERSION = 'v7.12.648';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -7224,6 +7224,12 @@ let _hintLastShownScene = 0;
 // (A/B/C/D bleiben immer verfügbar). Verhindert den "Flaschengeist"-Missbrauch (mehrfaches Wünschen).
 let _freitextCooldownBisSzene = 0;
 const FREITEXT_COOLDOWN = 3;
+// v7.12.648 (Benjamin, strategische Richtung): Die Freitext-Eingabe ("Oder sag Karl in eigenen Worten...") wird
+// ausgeblendet. Der Baukasten (Verben/Items/Manöver/Hund-Kommandos) ist inzwischen ein vollständiges, engine-
+// validiertes Eingabesystem (Zak-McKracken-artig); Freitext war die unzuverlässigste Eingabe (fast alle KI-
+// Eigenmächtigkeits-Bugs kamen daher). Master-Schalter: false = Feld nie sichtbar + Sende-Pfad inaktiv. Auf true
+// stellen, falls Freitext je wieder gebraucht wird (das Feld + die ganze Verarbeitung bleiben im Code erhalten).
+const FREITEXT_AKTIV = false;
 // v7.12.504 (ChatGPT-Lektorat P1): Begleitperson-Lock. Wenn Karl eine Schutzperson (typ. Margarete im
 // politischen Fall) aktiv mitnimmt, darf sie bei Ortswechseln NICHT per Klient-Cast-Clean entfernt werden
 // ("sitzt zu Hause" ist dann falsch - sie ist bei Karl). Wird gesetzt bei Mitnahme-Aktion, gelöst beim
@@ -21367,7 +21373,7 @@ function renderOptions(scene) {
   try {
     const _ftBlock = document.getElementById('freitext-block') || window._ftBlockRef;
     const _fallVorbei = (typeof caseProgress === 'object' && caseProgress && (caseProgress.istGescheitert || caseProgress.istGelöst));
-    if (_ftBlock && !_fallVorbei) {
+    if (_ftBlock && !_fallVorbei && (typeof FREITEXT_AKTIV === 'undefined' || FREITEXT_AKTIV)) {
       _ftBlock.classList.remove('hidden');
       // v7.12.585: Block aus der geretteten Referenz wieder in die Übergang-Sektion hängen (überlebt jetzt das
       // list.innerHTML='' vom Render-Start, weil er vorher aus dem DOM gelöst + als window._ftBlockRef gehalten wird).
@@ -21390,6 +21396,9 @@ function renderOptions(scene) {
         if (_ftBtn) { _ftBtn.disabled = false; _ftBtn.style.opacity = ''; _ftBtn.style.cursor = 'pointer'; }
         _ftBlock.style.opacity = '0.92';
       }
+    } else if (_ftBlock && (typeof FREITEXT_AKTIV !== 'undefined' && !FREITEXT_AKTIV)) {
+      // v7.12.648: Freitext deaktiviert -> Feld aktiv versteckt halten (falls es vorher sichtbar war).
+      _ftBlock.classList.add('hidden');
     }
   } catch (e) { /* Freitext-Einblenden darf das Rendern nie brechen */ }
   // wie Fall lösen, Notheilen, Doc-Wagner-Heilung, Schlafen, Romanze, Übernachtung,
@@ -40599,6 +40608,8 @@ setInterval(function() {
         const block = document.getElementById('freitext-block') || window._ftBlockRef;
         const optionsBlock = document.getElementById('options');
         if (!block) return;
+        // v7.12.648: Master-Schalter. Freitext deaktiviert -> immer versteckt halten.
+        if (typeof FREITEXT_AKTIV !== 'undefined' && !FREITEXT_AKTIV) { block.classList.add('hidden'); return; }
         // v7.12.305: Freitext IMMER zeigen (nicht mehr nur Admin-Debug), sobald die Optionen
         // sichtbar sind (also Spielphase, kein Setup/Ende).
         // v7.12.585: Nur die hidden-Klasse togglen, NICHT die DOM-Position anfassen (die verwaltet renderOptions).
@@ -40610,6 +40621,8 @@ setInterval(function() {
     }
     function freitextSenden() {
       try {
+        // v7.12.648 (Benjamin): Freitext deaktiviert - keine Reaktion mehr auf Textanweisungen aus dem Feld.
+        if (typeof FREITEXT_AKTIV !== 'undefined' && !FREITEXT_AKTIV) return;
         const input = document.getElementById('freitext-input');
         if (!input) return;
         const txt = (input.value || '').trim();

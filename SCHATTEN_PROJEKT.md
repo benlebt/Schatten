@@ -14662,3 +14662,21 @@ A3 HELENE/MARLENE: Charité-Ort injizierte nur Marlene, aber Sicherungs-Button s
 Karl, Helene schützt Margarete). node --check OK (Klammer-Bug beim Bau sofort gefangen+gefixt).
 OFFEN (Gameplay-Entscheidungen, brauchen Benjamin): A4 August nach Indiz aktiv aus Party, A5 Doc außerhalb
 Praxis aus Party (beide berühren "Spieler entscheidet wer Party verlässt"). A8 W2b Retry/Fallback (größerer Bau).
+
+## v7.12.648 (2026-06-11): Freitext-Eingabe ausgeblendet (strategische Richtung Benjamin)
+BENJAMIN-ENTSCHEIDUNG: Die Freitext-Eingabe ("Oder sag Karl in eigenen Worten, was er tun soll") wird
+ausgeblendet. Begründung: Der Baukasten (Personen-Verben, Items, Manöver-Check, Hund-Kommandos) ist inzwischen
+ein vollständiges, engine-validiertes Eingabesystem (Zak-McKracken-artig). Freitext war die unzuverlässigste
+Eingabe - fast alle KI-Eigenmächtigkeits-Bugs der letzten Runs kamen aus Freitext-Interpretation (August geht
+weg, Mertens KO trotz Fehlschlag, falscher Sicherungs-Beat aus Prosa). Strategische Linie: weg vom Text-Prompt,
+hin zum reinen Baukasten-Adventure.
+UMSETZUNG (Master-Schalter, reversibel): const FREITEXT_AKTIV = false. Drei Eingriffspunkte:
+- Schalter 1 (renderOptions, ~Z21368): blendet Feld nur ein wenn FREITEXT_AKTIV, sonst aktiv versteckt.
+- Schalter 2 (freitextSichtbarMachen-Intervall, ~Z40599): hält Feld versteckt wenn deaktiviert.
+- Sende-Pfad (freitextSenden, ~Z40611): ignoriert Eingaben komplett wenn deaktiviert (Sicherheitsgurt für Enter).
+Das Feld + die ganze Verarbeitung BLEIBEN im Code (auf FREITEXT_AKTIV=true wieder aktivierbar). 4 Tests grün,
+inkl. Reversibilität. node --check OK. Prompt-Hunger-Regel (erwähnt "Freitext-Freiheit") unverändert gelassen -
+sie ist eine Erzähl-Erlaubnis, kein Eingabe-Mechanismus, und greift praktisch nicht mehr (Spieler tippt nichts).
+HINWEIS: System-Prompt (~144k Zeichen, Ton/Noir/Historik/Prosa-Erzeugung) bleibt nötig, solange die KI Prosa
+schreibt - Freitext-EINGABE != System-Prompt. "KI-Prosa ganz abschalten = reines deterministisches Baukasten-
+Adventure" wäre ein fundamentaler Scheideweg (eigene Konzept-Session), NICHT Teil dieser Änderung.
