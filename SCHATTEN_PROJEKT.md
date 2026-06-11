@@ -15037,3 +15037,31 @@ eigentlich nur bei Spieler-Klick (Z18880/19650). DIAGNOSE GEBAUT: _partyAdd logg
 Roth hinzufügt. Erst dann gezielt fixen (regelkonform: nur AUTOMATISCHE Adds unterbinden, bewusstes Mitnehmen NIE).
 LEHRE: Bei Party-Drift NIE den NPC pauschal sperren - immer nur die automatische Aufnahme/Nachziehung treffen,
 das bewusste Mitnehmen durch den Spieler bleibt heilig. node --check OK.
+
+## v7.12.669 (2026-06-11): GATE-FIX - Doppel-Sicherung schlägt Indizien-Minimum (Benjamin + Lektorat P1)
+BENJAMIN (Run 2336, Hauptärgernis): "Es kann nicht sein, dass ich Margarete und Akten abgegeben habe und dann
+nicht auflösen kann - diese Buttons suggerieren ja, dass sie finale Buttons sind. Wenn beide Sicherungen vollzogen
+sind, dann kann ich auch Fall lösen." LEKTORAT v668 P1 bestätigt: Klientin gesichert + Beweise gesichert + Wahrheit
+erkannt, trotzdem "Fall lösen" GESPERRT, Assertion "Fall gelöst nein, Stage 3".
+WURZEL: Zwei Gates gaben widersprüchliche Signale. (1) politicalBeats (beobachtend, 3/5, "wuerde-erfuellen JA" im
+Export) - das sah der Spieler. (2) politicalBeatsGateErfuellt() (hartes Lösen-Gate) verlangt zusätzlich ein
+Beweis-Fundament von 3 GEFUNDENEN definierten Indizien. Im Run nur 1 Kern-Indiz gefunden (margarete_aussage) ->
+_fundamentOk=false -> basisOk=false -> Sperre "politische Wahrheit noch nicht belegt". Der Fall war über SICHERUNG
+gelöst (Margarete zu Helene Sz9, Akten an Roth Sz10), nicht über Indiziensammeln - das Fundament-Minimum maß den
+falschen Weg.
+FIX (Benjamin-Freigabe, Gameplay-Entscheidung): Doppel-Sicherung schlägt das Indizien-Minimum. Wenn beim
+Margarete-Fall BEIDE echten Engine-Sicherungen vollzogen sind (has('akten_gesichert') && (margarete_gesichert ||
+clientSecured)) UND die Schmuggelroute belegt ist, gilt _fundamentOk als erfüllt - das vollzogene physische
+Sichern IST der härtere Beleg als 3 gesammelte Indizien. Bypass greift NUR bei echten Engine-Sicherungen (nicht
+KI-fälschbar) + belegter Route -> der Verschenk-Schutz (KI darf Fall nicht nach 2 Prosa-Sätzen verschenken) bleibt
+für unsichere Runs erhalten. basisOk-Berechnung hinter den Bypass verschoben (basisOk2). 5 Tests grün (T1 Benjamins
+Fall lösbar, T2-T4 Verschenk-Schutz intakt, T5 Normalfall).
+ZUSATZ-FIXES: (a) Item-Toast "siehe Notizbuch" entfernt - das Notizbuch zeigt Indizien, nicht Items (Benjamin:
+"stimmt ja nicht mehr"). (b) FLUCHT-NACH-FESSELN (Benjamin: "wir fliehen immer wenn es eine Gruppenaktion mit
+Aggression ist"): Run 2336 Sz11 fesselten Roth+Karl den Mann im Mantel, KI dichtete Flucht dazu. Der Anti-Flucht-
+Hinweis stand schon im Konflikt-Prompt, aber am ENDE (vergraben). Jetzt ZUSÄTZLICH prominent am ANFANG (Bookending
+wirkt bei LLMs stärker). Reine Prompt-Verstärkung gegen KI-Halluzination, keine Gameplay-Änderung - bewusste Flucht
+bleibt dem FLUCHT-Button vorbehalten. KEINE Garantie (KI-Verhalten), aber stärkste Prompt-Maßnahme. node --check OK.
+OFFEN (Lektorat v668, verifizieren vor Bau): Roth Party-Drift (v668-Origin-Logging beim nächsten Run auswerten),
+Ort-Prosa-Bruch ab Stage 3 hart retry/fallback, Setup-Cast-Audit Alias-Mapping (Mertens zählt nicht), Toast
+"Schwer verletzt" nach Ursache differenzieren, "Genosse Mauer" durch Mertens (KI-Sprachton).
