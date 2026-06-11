@@ -14612,3 +14612,20 @@ GEMEINSAME URSACHE: Der Hund hat seinen EIGENEN Party-Status (caseProgress.hundI
 6/6 Tests. node --check OK. Doc-Wagner-"Händedruck-statt-Arzt": KEIN Bug - Doc war ab Sz10 wirklich in der
 Party (Opening-Begleiter), 🤝 war korrekt. RATE-LIMIT im Run = Benjamins Gemini-Prepay-Credits aufgebraucht
 (Billing im AI Studio), KEIN Code-Bug. Lektorat folgt.
+
+## v7.12.645 (2026-06-11): Falscher Sicherungs-Beat aus PLAN_ZUGRIFF + Lösen-Gate strict (Lektorat Run v643)
+LEKTORAT Run v643. ZENTRALER FEHLER (A1): Ein KAMPFMANÖVER (PLAN_ZUGRIFF mit Ziegelstein gegen Mann im Mantel)
+setzte fälschlich den Sicherungs-Beat 'margarete_gesichert'. URSACHE: Der PLAN_ZUGRIFF-Text enthielt "Margarete"
+(im Manöver erwähnt), istSicherungsVollzug() matchte das als fokus=margarete/vollzug=true. Das hebelte mein
+v643-Akten-Gate aus (sicherungOk = Margarete ODER Akten -> mit falschem Margarete-Beat erfüllt) -> Fall löste
+trotz Akten bei Karl. FIX A1: PLAN_ZUGRIFF/KOORDINIERTER ZUGRIFF setzt NIE einen Sicherungs-Beat (hart vor
+istSicherungsVollzug geblockt). Ein Zugriff ist Kampf, keine Sicherung.
+A2/A3 LÖSEN-GATE STRICT: Der Lösen-Button nutzte politicalBeatsGateErfuellt() OHNE strict - ein Kern-Indiz mit
+Stage-Floor 3 zog die Stage hoch, unabhängig vom Sicherungs-Gate -> Lösen erschien zu früh. Jetzt strict:true
+-> verlangt das volle Gate inkl. Akten-Sicherung. Dead-Loop-Check: Basis-Beats (schmuggelroute/wahler) werden
+real erkannt, Akten-Sicherung ist erreichbar -> kein Loop.
+A5 ZIEGELSTEIN-WUCHT: Bei nicht-tödlichem Zielzustand (fixiert/benommen) verbietet der Manöver-Prompt jetzt
+Schläge an Schläfe/Kopf/Hals ("sackt lautlos zusammen" klang tödlich trotz nur "fixiert") - Treffer gegen
+Schulter/Arm/Rippen/Türrahmen. 5/5 Tests. node --check OK.
+OFFEN (Lektorat): A4 PLAN_ZUGRIFF-Ortswechsel-Prosa (Flucht-Text am Stellwerk), A6 August/Doc nach Zweck aus
+Party, A7 Helene/Marlene-Rollentrennung, A8 MANÖVER-CHECK-Debug (sollte mit v643-Key-Fix jetzt erscheinen).

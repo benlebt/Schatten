@@ -3191,7 +3191,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.644</div>
+    <div class="start-version">Schatten v7.12.645</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.644</span>
+    <span>Schatten v7.12.645</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7102,7 +7102,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.644';
+window.SCHATTEN_VERSION = 'v7.12.645';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -7617,6 +7617,15 @@ function _planAusfuehren() {
       if (_fesselZiele.length) {
         const _mat = _fesselMaterial(_fesselZiele[0].ziel, '', '');
         txt += ' Wenn jemand gefesselt wird: ' + _mat + ' (kein anachronistisches Material).';
+      }
+    } catch (e) {}
+    // v7.12.645 (Lektorat Run v643 A5: Ziegelstein traf "präzise am Schläfenbein, sackt lautlos zusammen" -
+    // klang tödlich, Engine sagte aber nur "fixiert"). Bei nicht-tödlichen Zielzuständen (fixiert/benommen/
+    // abgelenkt) Schlagzonen am Kopf/Hals verbieten - der Gegner wird kampfunfähig, nicht (fast) getötet.
+    try {
+      const _hatWurfSchlag = plan.some(p => /angreifen_mit|werfen|werfen_fuesse|hund_fass|hund_fixiere|fesseln|ablenk/i.test(p.art || '') && p.ziel && !_zugriffFehlschlag[normForMatch(p.ziel)]);
+      if (_hatWurfSchlag) {
+        txt += ' WICHTIG zur Wucht: Die Gegner werden KAMPFUNFÄHIG gemacht (fixiert/benommen/festgesetzt), NICHT getötet oder schwer am Kopf verletzt. Triff NICHT Schläfe, Kopf, Hinterkopf oder Hals. Ein Ziegelstein/harter Gegenstand geht gegen Schulter, Arm, Hand, Rippen, Knie oder als Schreckmoment gegen Türrahmen/Wand - kein "sackt lautlos zusammen", kein Schädelbruch, kein tödlicher Treffer.';
       }
     } catch (e) {}
     if (_gabFehlschlag) {
@@ -21128,7 +21137,10 @@ function renderOptions(scene) {
   let politicalGateFehltFuerResolve = false;
   try {
     if (typeof politicalBeatsGateErfuellt === 'function') {
-      const _pgR = politicalBeatsGateErfuellt();
+      // v7.12.645 (Lektorat A2/A3): strict - der Lösen-Button verlangt das VOLLE politische Gate inkl.
+      // Akten-Sicherung. Sonst kann ein Stage-Floor-3-Kern-Indiz das Lösen freigeben, obwohl die Akten noch
+      // bei Karl liegen.
+      const _pgR = politicalBeatsGateErfuellt({ strict: true });
       politicalGateFehltFuerResolve = !!(_pgR && _pgR.aktiv && !_pgR.erfuellt);
     }
   } catch (e) { politicalGateFehltFuerResolve = false; }
@@ -33505,9 +33517,15 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
               } else if (typeof diag === 'function') diag('detect', 'COMPANION-LOCK unterdrückt (Klientin secured): ' + _mNm); // v7.12.604
             }
           } catch (e) { /* Mitnahme-Erkennung optional */ }
-          const _sv = istSicherungsVollzug(_aktion);
+          // v7.12.645 (Lektorat Run v643 A1: ein KAMPFMANÖVER setzte fälschlich den Sicherungs-Beat - der
+          // PLAN_ZUGRIFF-Text enthielt "Margarete" (sie wurde im Manöver erwähnt), die Sicherungs-Heuristik
+          // matchte das als fokus=margarete/vollzug=true -> Beat gesetzt -> Akten-Gate ausgehebelt, Fall zu früh
+          // gelöst). Ein koordinierter Zugriff ist KEINE Sicherung. Sicherungs-Beats nur aus echten Sicherungs-
+          // Handlungen, nie aus PLAN_ZUGRIFF.
+          const _istPlanZugriff = /^Der Spieler wählt Option PLAN_ZUGRIFF/i.test(_aktion || '') || /KOORDINIERTER ZUGRIFF/i.test(_aktion || '');
+          const _sv = _istPlanZugriff ? { vollzug: false, intent: false, fokus: null } : istSicherungsVollzug(_aktion);
           if (typeof diag === 'function') {
-            diag('progress', 'SICHERUNGS-AKTION-DIAG: _aktion="' + _aktion.slice(0,60).replace(/\s+/g,' ') + '" -> vollzug=' + _sv.vollzug + ' intent=' + _sv.intent + ' fokus=' + _sv.fokus);
+            diag('progress', 'SICHERUNGS-AKTION-DIAG: _aktion="' + _aktion.slice(0,60).replace(/\s+/g,' ') + '" -> vollzug=' + _sv.vollzug + ' intent=' + _sv.intent + ' fokus=' + _sv.fokus + (_istPlanZugriff ? ' (PLAN_ZUGRIFF -> Sicherung gesperrt)' : ''));
           }
           if (_sv.vollzug || _sv.intent) {
             const _setBeat = (id, label) => {
