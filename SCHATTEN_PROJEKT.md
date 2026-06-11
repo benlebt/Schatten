@@ -14780,3 +14780,15 @@ welches Verb/welcher Button fehlt. NICHT als Scheitern werten.
 OFFEN für später: durchsuchen_npc-Gate (nur bei kampfunfähig/kooperativ/eingeschüchtert sinnvoll), Baukasten-
 Verben sauber in Kategorien gruppieren (Ermittlung/Konflikt/Überwachung) wenn die Liste länger wird,
 GEGNER_HAERTE_BASIS-Tabelle nutzen oder entfernen (A7, Aufräumen).
+
+## v7.12.654 (2026-06-11): durchsuchen_npc-Gate (Baukasten-First Folge)
+Das in v653 notierte Gate gebaut: Eine Person DURCHSUCHEN (durchsuchen_npc) geht nur, wenn sie kampfunfähig
+(ko/gefesselt/fixiert/benommen/geblendet) ODER nicht feindlich (kooperativ - Verbündete/Zeugen) ist. Ein freier,
+feindlicher Gegner lässt sich nicht einfach durchsuchen - erst überwältigen (fesseln/ko/fixieren). Im Baukasten
+filtert die Ziel-Liste bei gewähltem durchsuchen_npc entsprechend; ist kein Ziel durchsuchbar, klarer Hinweis
+statt "niemand am Ort": "Niemand hier lässt sich durchsuchen - überwältige erst einen Gegner". "abgelenkt" zählt
+bewusst NICHT als bezwungen (nur kurz unaufmerksam, nicht wehrlos). 6 Tests grün. node --check OK.
+BEWUSST NICHT JETZT: Verben in Kategorien gruppieren (lohnt erst bei längerer Liste + Testfeedback - verfrüht
+ohne Daten), A7 GEGNER_HAERTE_BASIS-Tabelle nutzen/entfernen (reines Aufräumen ohne Spielwirkung).
+NÄCHSTER ECHTER MEILENSTEIN: Benjamins Architektur-Test mit KI_OPTIONEN_AKTIV=false - "Kann Margarete nur über
+Baukasten+Buttons gelöst werden?" Das Testergebnis steuert, welche Verben/Buttons noch fehlen.
