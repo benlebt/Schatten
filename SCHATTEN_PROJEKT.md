@@ -15020,3 +15020,20 @@ BEFUND 4 (eintauschen-Toast doppeltes Icon 📋📋 + holpriger Text "für info"
 Plan-Label nutzte def.label.toLowerCase() -> "Eintauschen für Info" wurde "eintauschen für info" (holprig). Jetzt
 def.label ohne toLowerCase -> "Karl [Schachtel West-Zigaretten] → Eintauschen für Info → Vera Lindqvist".
 Alle 4 Benjamin-Befunde (v666 Stage + v667 Befunde 2-4) erledigt. node --check OK.
+
+## v7.12.668 (2026-06-11): Roth/Lindner-Sperre ZURÜCKGENOMMEN (Regelverstoß) + Party-Origin-Logging
+BENJAMIN-KORREKTUR: "Roth dürfen wir mitnehmen, Roth gehört zu den stärksten Begleiter-NPCs, richtet am meisten
+Schaden an mit Lindner weil beides Polizisten sind. Lindner und Roth dürfen wir in der Party mitnehmen wenn wir
+wollen." CLAUDE-FEHLER: Mein v665-Fix sperrte Roth/Lindner KOMPLETT (Namens-Regex + Polizei-Rolle in
+_npcLehntMitnahmeAb + aktiver Remove in Party-Garantie) - das verstößt gegen DIESELBE Regel wie der August-Fehler:
+Spieler entscheidet die Party. Roth/Lindner sind sogar starke, gewollte Begleiter.
+KOMPLETT ZURÜCKGENOMMEN: (1) Namens-Regex /roth|lindner/ + kommissar/volkspolizist raus aus _npcLehntMitnahmeAb.
+(2) Polizei-Rollen (kommissar/volkspolizei/polizist/beamter/inspektor) raus aus dem Rollen-Regex. (3) Aktiver
+ortsgebundener-Remove aus der Party-Garantie raus. Roth/Lindner wieder voll mitnehmbar.
+OFFEN: Der echte v664-Bug (Roth kam OHNE sichtbaren Klick in die Party - Run zeigt Sz32 PARTY=[August], Sz33
+party-garantie-AUFGENOMMEN: Roth, ohne PARTY +: Event dazwischen) ist noch nicht isoliert. _partyAdd läuft
+eigentlich nur bei Spieler-Klick (Z18880/19650). DIAGNOSE GEBAUT: _partyAdd loggt jetzt den Aufruf-Ursprung
+(Error-Stack Zeile 2, gekürzt) -> '✦ PARTY +: X · via <codepfad>'. Beim nächsten Run sehen wir, ob ein Auto-Pfad
+Roth hinzufügt. Erst dann gezielt fixen (regelkonform: nur AUTOMATISCHE Adds unterbinden, bewusstes Mitnehmen NIE).
+LEHRE: Bei Party-Drift NIE den NPC pauschal sperren - immer nur die automatische Aufnahme/Nachziehung treffen,
+das bewusste Mitnehmen durch den Spieler bleibt heilig. node --check OK.

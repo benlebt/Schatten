@@ -3187,7 +3187,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.667</div>
+    <div class="start-version">Schatten v7.12.668</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.667</span>
+    <span>Schatten v7.12.668</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7163,7 +7163,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.667';
+window.SCHATTEN_VERSION = 'v7.12.668';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -8121,14 +8121,6 @@ try { if (document.readyState !== 'loading') _renderBaukastenButton(); else docu
 function _npcLehntMitnahmeAb(npcName, npcTag) {
   try {
     if ((npcTag || '').toUpperCase() === 'KONTAKT') return 'arbeitet allein und trifft Karl nur an vereinbarten Orten';
-    // v7.12.665 (ChatGPT-Lektorat v664 A2: Kommissar Roth wurde Party-Mitglied und fuhr mit in Karls Büro).
-    // Ortsgebundene Behörden-/Anker-Kontakte (Roth, Lindner, Doc Wagner) stehen NICHT im setupCast mit Rolle,
-    // sondern sind anchorNpcs - der Rollen-Check unten griff bei ihnen nicht. Daher hier zusätzlich per Name:
-    // ein befreundeter Behördenkontakt hilft an SEINEM Ort (Revier/Praxis), reist aber nie als Begleiter mit.
-    const _nN = normForMatch(npcName || '');
-    if (/\b(roth|lindner)\b/.test(_nN) || /kommissar|volkspolizist|polizeikommissar/.test(_nN)) {
-      return 'ist ein ortsgebundener Behördenkontakt - hilft im Revier, reist aber nicht als Begleiter mit';
-    }
     let _rolle = '';
     if (caseSetup && Array.isArray(caseSetup.setupCast)) {
       const ce = caseSetup.setupCast.find(c => c && c.name && normForMatch(c.name) === normForMatch(npcName || ''));
@@ -8139,7 +8131,7 @@ function _npcLehntMitnahmeAb(npcName, npcTag) {
     // v7.12.639 (Benjamin-Befund: Doc Wagner im Popup mitnehmbar, flog aber beim Ortswechsel als "ortsgebunden"
     // wieder raus - clean-ortsbindung kannte 'arzt', _npcLehntMitnahmeAb nicht -> zwei Listen liefen auseinander,
     // Button erschien, Mitnahme verpuffte). JETZT dieselbe Wahrheit: ortsgebundene Rollen lehnen IMMER ab.
-    if (/krankenschwester|krankenpfleger|arzt|aerztin|ärztin|schaffner|pfoertner|pförtner|waechter|wächter|portier|empfangsdame|empfangsschwester|empfangskraft|vorarbeiter|bedienung|sekretaerin|sekretärin|kassierer|kassiererin|verkaeufer|verkäufer|stammgast|barfrau|skatspieler|bauarbeiter|wachtmeister|nachtdienstbeamter|kommissar|volkspolizist|volkspolizei|polizist|polizei|beamter|beamtin|wachmeister|inspektor/i.test(_rolle)) return 'ist an diesen Ort/Dienst gebunden und kann nicht einfach mitkommen';
+    if (/krankenschwester|krankenpfleger|arzt|aerztin|ärztin|schaffner|pfoertner|pförtner|waechter|wächter|portier|empfangsdame|empfangsschwester|empfangskraft|vorarbeiter|bedienung|sekretaerin|sekretärin|kassierer|kassiererin|verkaeufer|verkäufer|stammgast|barfrau|skatspieler|bauarbeiter|wachtmeister|nachtdienstbeamter/i.test(_rolle)) return 'ist an diesen Ort/Dienst gebunden und kann nicht einfach mitkommen';
     // v7.12.612 (Run 2328: Willi wurde Dauer-Party): Orts-NPCs wie Willi stehen NICHT im setupCast, sondern
     // nur im detail eines Ortes ("Wirt Willi Kummer kennt jeden"). Wer im Orts-detail als Wirt/Service
     // verankert ist, ist ortsgebunden - egal über welchen Codepfad die Mitnahme versucht wird.
@@ -8180,7 +8172,11 @@ function _partyAdd(npc) {
     return false;
   }
   _party.push({ id: npc.id, name: npc.name || npc.id, tag: npc.tag || '', sinceScene: (typeof sceneCounter === 'number' ? sceneCounter : 0) });
-  if (typeof diag === 'function') diag('state', '✦ PARTY +: ' + (npc.name || npc.id) + ' [' + (npc.tag||'?') + '] -> Party (' + _party.length + ')');
+  // v7.12.668: Aufruf-Ursprung mitloggen (Benjamin-Befund: Roth kam ohne sichtbaren Klick in die Party). Der
+  // Stack-Hinweis zeigt im Run-Log, welcher Codepfad _partyAdd ausgelöst hat (Spieler-Klick vs. ein Auto-Pfad).
+  let _origin = '';
+  try { _origin = (new Error()).stack.split('\n')[2] || ''; _origin = _origin.replace(/^\s*at\s*/, '').slice(0, 60); } catch (e) {}
+  if (typeof diag === 'function') diag('state', '✦ PARTY +: ' + (npc.name || npc.id) + ' [' + (npc.tag||'?') + '] -> Party (' + _party.length + ')' + (_origin ? ' · via ' + _origin : ''));
   // v7.12.600 (W1): Klientin in der Party = with_karl (Engine-Ereignis).
   if (_istKlient(npc.name, npc.id)) {
     setClientState('with_karl', 'party_add');
@@ -33439,18 +33435,6 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
               const _abschlussreifG = !!(caseProgress && caseProgress.wahrheitErkannt && (caseProgress.clientSecured || caseProgress._stasiEpilogModus));
               if (_istZeuge && _abschlussreifG) {
                 if (typeof diag === 'function') diag('state', 'PARTY-GARANTIE übersprungen: Zeuge ' + pm.name + ' wird nach Abschlussreife nicht mehr nachgezogen (Lektorat A3)');
-                continue;
-              }
-            } catch (e) {}
-            // v7.12.665 (ChatGPT-Lektorat v664 A2: Roth wurde Party-Mitglied trotz Behördenrolle). Ein NPC, den
-            // _npcLehntMitnahmeAb ablehnt (Behördenkontakt/ortsgebunden), darf NIE per Garantie nachgezogen werden
-            // - er hätte gar nicht erst in die Party gedurft. Sicherheitshalber auch aus _party entfernen, damit
-            // die Garantie ihn nicht in jeder Folgeszene erneut zu reaktivieren versucht.
-            try {
-              const _ablehn = (typeof _npcLehntMitnahmeAb === 'function') ? _npcLehntMitnahmeAb(pm.name, pm.tag) : null;
-              if (_ablehn) {
-                if (typeof diag === 'function') diag('state', 'PARTY-GARANTIE übersprungen + entfernt: ' + pm.name + ' ist ortsgebunden (' + _ablehn + ')');
-                try { if (typeof _partyRemove === 'function') _partyRemove(pm.id, pm.name); } catch (e) {}
                 continue;
               }
             } catch (e) {}
