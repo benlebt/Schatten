@@ -14726,3 +14726,23 @@ NICHTS davon gebaut - das ist die größte Änderung seit Langem, NICHT nebenbei
 redundante NPC-Verben aufräumen, (2) A/B/C/D über Master-Schalter ausblendbar (wie FREITEXT_AKTIV), (3)
 Baukasten um befragen/durchsuchen erweitern + Multi-Akteur verallgemeinern, (4) A/B/C/D standardmäßig aus.
 Wartet auf Benjamins Entscheidung, wo wir anfangen.
+
+## v7.12.651 (2026-06-11): NPC-Verben bereinigt (Baukasten-First A1, Benjamin+ChatGPT-Freigabe)
+ERSTER SCHRITT Baukasten-First. ChatGPT-Freigabe für A1 (NPC-Popup-Verben bereinigen). Redundante Personen-
+Verben aus dem NPC-Klick-Menü (lokale ALLE_VERBEN in oeffneNpcMenue) entfernt:
+- "beobachten" (NPC): raus überall. "Was wollen wir sie beobachten? Wir befragen sie." Beobachten ist Umgebung/
+  Situation, nicht NPC-Kernverb. (Später ggf. als "beschatten/folgen" wieder rein - ChatGPT-Vorschlag.)
+- "schuetzen"/Beschützen: raus. Zu weich, kein klares Verb (eher Ergebnis als Handlung).
+- "sicherheit"/In-Sicherheit-bringen: raus. Erzeugte die falschen Margarete-Beats (v647-Wurzel). Sicherung
+  läuft weiter über die konkreten KI-Sicherungs-Optionen (PFLICHT-Recap: "Übergib Vera die Akten", "Bring
+  Margarete zu Helene") - KEIN Lösungsweg geht verloren, solange A/B/C/D noch da sind.
+NEUE NPC-Popup-Verben: Verbündete/Klient/Schutz/Zeuge = nur [befragen]. Gegner = [befragen, bedrohen,
+bestechen, angreifen]. Unbekannt = [befragen] (+angreifen bei aktiver Bedrohung). Konflikt-/Item-Aktionen laufen
+über den Baukasten. Verb-DEFINITIONEN in der Map bleiben (schaden nicht, evtl. Basis für beschatten/folgen).
+6 Tests grün. node --check OK.
+ROADMAP (ChatGPT-Reihenfolge, freigegeben): v651 NPC-Verben ✓ -> v652 KI_OPTIONEN_AKTIV-Flag (A/B/C/D
+ausblendbar, default erst true, Testmodus false) -> v653 Baukasten-Ermittlungsverben (befragen/durchsuchen
+Umgebung/durchsuchen NPC/übergeben) -> v654 Multi-Aktion Light (1 Hauptakteur + 1 Unterstützer). Leitsatz:
+"Schatten bleibt freies Noir-Abenteuer, aber die Freiheit kommt aus validierten Engine-Aktionen, nicht aus
+zufällig erfundenen KI-Buttons." A2 (Systembuttons bleiben): Reisen/Schlafen/Heilen/Notflucht/Fall lösen/
+Romance/Übernachtung/Notizbuch/Umsehen/Aktueller Stand - alle unverändert.
