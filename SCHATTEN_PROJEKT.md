@@ -14761,3 +14761,22 @@ Hauptinterface. Textfeld-Erwähnung bei System-Buttons entfernt. node --check OK
 BEWUSST NICHT JETZT (= geplante nächste Schritte, eigene getestete Bauten): A1 KI_OPTIONEN_AKTIV-Flag (v653),
 A2 Baukasten immer sichtbar statt nur bei Konflikt (v653), A3 durchsuchen_ort/durchsuchen_npc als Baukasten-
 Verben (v653), A7 GEGNER_HAERTE_BASIS-Tabelle nutzen oder entfernen (optional, Aufräumen).
+
+## v7.12.653 (2026-06-11): Baukasten-First - Hauptinterface + Ermittlungsverben + KI-Optionen-Flag
+DER ARCHITEKTUR-SCHRITT (ChatGPT+Benjamin-Freigabe, Reihenfolge exakt eingehalten - Flag NICHT default false):
+SCHRITT 1 - Baukasten immer sichtbar: _renderBaukastenButton zeigt das 🧩 jetzt IMMER im laufenden Spiel (vorher
+nur bei freiem feindlichem NPC = "Konflikt-Werkzeug"). Nach Spielende (gelöst/gescheitert) verschwindet er weiter.
+Der Baukasten ist damit vom Encounter-Tool zum allgemeinen Aktions-Hauptinterface geworden.
+SCHRITT 2 - Ermittlungsverben im Baukasten: durchsuchen_ort (Ziel "Umgebung", virtuelles Ziel, kein NPC nötig,
+_umgebung:true), durchsuchen_npc (Ziel = Person), ansehen, nehmen. Bei einer Umgebungs-Aktion zeigt der
+Baukasten "Umgebung" als vorausgewähltes Ziel statt der NPC-Liste. (geben/übergeben gab es bereits.)
+SCHRITT 3 - KI_OPTIONEN_AKTIV-Flag (default TRUE!): Die A/B/C/D-Render-Schleife (scene.optionen.forEach) ist in
+if(KI_OPTIONEN_AKTIV){...} gekapselt. Systembuttons/Personen-Buttons/Reise/Baukasten NICHT betroffen (separate
+Render-Pfade). false = Testmodus (rein Baukasten+Buttons), aber DEFAULT BLEIBT TRUE - das alte System geht nicht
+verloren, bevor der Test zeigt dass Baukasten-First trägt. 8 Tests grün. node --check OK.
+TESTFRAGE für Benjamin (mit KI_OPTIONEN_AKTIV=false): "Kann Margarete NUR mit Reisen, Personen, Baukasten,
+Items, Umsehen, Notizbuch, Heilen, Schlafen und Fall lösen gespielt werden?" Wenn nein = guter Befund, zeigt
+welches Verb/welcher Button fehlt. NICHT als Scheitern werten.
+OFFEN für später: durchsuchen_npc-Gate (nur bei kampfunfähig/kooperativ/eingeschüchtert sinnvoll), Baukasten-
+Verben sauber in Kategorien gruppieren (Ermittlung/Konflikt/Überwachung) wenn die Liste länger wird,
+GEGNER_HAERTE_BASIS-Tabelle nutzen oder entfernen (A7, Aufräumen).

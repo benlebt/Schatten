@@ -3191,7 +3191,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.652</div>
+    <div class="start-version">Schatten v7.12.653</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3417,7 +3417,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.652</span>
+    <span>Schatten v7.12.653</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7115,7 +7115,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.652';
+window.SCHATTEN_VERSION = 'v7.12.653';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -7234,6 +7234,12 @@ const FREITEXT_COOLDOWN = 3;
 // Eigenmächtigkeits-Bugs kamen daher). Master-Schalter: false = Feld nie sichtbar + Sende-Pfad inaktiv. Auf true
 // stellen, falls Freitext je wieder gebraucht wird (das Feld + die ganze Verarbeitung bleiben im Code erhalten).
 const FREITEXT_AKTIV = false;
+// v7.12.653 (Baukasten-First Schritt 3): Master-Schalter für die KI-getriebenen A/B/C/D-Optionen. default TRUE
+// (alte Bedienung bleibt voll erhalten). Auf false = Testmodus: A/B/C/D werden NICHT gerendert, das Spiel läuft
+// rein über Baukasten + Personen-Buttons + Systembuttons (Reisen/Schlafen/Heilen/Fall lösen/...). So lässt sich
+// objektiv testen, ob Baukasten-First trägt, OHNE das alte System zu verlieren. NICHT dauerhaft false setzen,
+// bevor der Test zeigt, dass der Baukasten den Fall vollständig tragen kann.
+const KI_OPTIONEN_AKTIV = true;
 // v7.12.504 (ChatGPT-Lektorat P1): Begleitperson-Lock. Wenn Karl eine Schutzperson (typ. Margarete im
 // politischen Fall) aktiv mitnimmt, darf sie bei Ortswechseln NICHT per Klient-Cast-Clean entfernt werden
 // ("sitzt zu Hause" ist dann falsch - sie ist bei Karl). Wird gesetzt bei Mitnahme-Aktion, gelöst beim
@@ -7767,6 +7773,17 @@ const BAUKASTEN_AKTIONEN = {
     txt: (a, i, z) => a + ' fesselt ' + z + ' - mit deren EIGENEN Handschellen, falls vorhanden. ' + z + ' bleibt kampfunfähig zurück. KEIN Gewahrsam für Karl.' },
   befragen:   { label: 'Befragen',    zielNoetig: true,
     txt: (a, i, z) => a + ' befragt ' + z + ' gezielt und hartnäckig' + (i ? ', ' + i.name + ' hilft dabei nach' : '') + '.' },
+  // v7.12.653 (Baukasten-First Schritt 2): Ermittlungsverben - die Kernaktionen eines Adventures.
+  // durchsuchen_ort: Ziel = "Umgebung" (virtuelles Ziel, kein NPC nötig). durchsuchen_npc: Ziel = Person, aber
+  // nur sinnvoll bei kampfunfähigem/kooperativem Gegner (Gate folgt in der Plan-Ausführung).
+  durchsuchen_ort: { label: 'Umgebung durchsuchen', zielNoetig: false, _umgebung: true, _ermitteln: true,
+    txt: (a) => a + ' durchsucht die Umgebung gründlich nach Spuren, Indizien und brauchbaren Gegenständen.' },
+  durchsuchen_npc: { label: 'Person durchsuchen', zielNoetig: true, _ermitteln: true,
+    txt: (a, i, z) => a + ' durchsucht ' + z + ' nach Papieren, Schlüsseln oder versteckten Gegenständen.' },
+  ansehen:    { label: 'Genauer ansehen', zielNoetig: true, _ermitteln: true,
+    txt: (a, i, z) => a + ' sieht sich ' + z + ' genauer an und prägt sich jedes Detail ein.' },
+  nehmen:     { label: 'An mich nehmen', zielNoetig: true, _ermitteln: true,
+    txt: (a, i, z) => a + ' nimmt ' + z + ' an sich.' },
   bestechen:  { label: 'Bestechen',   zielNoetig: true,  itemUebergabe: true,
     txt: (a, i, z) => a + ' besticht ' + z + (i ? ' mit ' + i.name : ' - bietet Geld oder einen Gefallen') + ', um Informationen oder Kooperation zu bekommen.' },
   eintauschen:{ label: 'Eintauschen für Info', zielNoetig: true, itemNoetig: true, itemVerlust: true, _eintausch: true,
@@ -7821,22 +7838,17 @@ function _bkAusrichten() {
 }
 function _renderBaukastenButton() {
   try {
-    // v7.12.621 (Benjamin: 🧩 erschien schon im Startbildschirm): Der Baukasten ist ein KONFLIKT-Werkzeug -
-    // sichtbar nur, wenn das Spiel läuft UND mindestens ein freier feindlicher NPC am Ort ist.
-    let _konflikt = false;
+    // v7.12.653 (Baukasten-First Schritt 1): Der Baukasten ist nicht mehr nur KONFLIKT-Werkzeug, sondern das
+    // allgemeine Aktions-Hauptinterface (befragen/durchsuchen/übergeben + Konflikt). Sichtbar IMMER, solange das
+    // Spiel läuft (nicht nur bei freiem feindlichem NPC). Nach Spielende (gelöst/gescheitert) verschwindet er.
+    let _zeigen = false;
     try {
-      // v7.12.649 (Benjamin: das Puzzleteil soll nach Spielende verschwinden). Fall gelöst/gescheitert -> kein Baukasten.
       const _fallVorbei = (typeof caseProgress === 'object' && caseProgress && (caseProgress.istGescheitert || caseProgress.istGelöst));
-      const _spielLaeuft = !_fallVorbei
+      _zeigen = !_fallVorbei
         && (typeof engineCurrentLocation !== 'undefined' && engineCurrentLocation && engineCurrentLocation.name)
         && (typeof sceneCounter === 'number' && sceneCounter > 0);
-      if (_spielLaeuft) {
-        const _npcsB = (typeof getNpcsAtCurrentLocation === 'function') ? (getNpcsAtCurrentLocation() || []) : [];
-        _konflikt = _npcsB.some(n => n && n.name && typeof _npcIstFeindlich === 'function' && _npcIstFeindlich(n)
-          && (!(typeof _npcZustandGet === 'function' && _npcZustandGet(n.name)) || _npcZustandGet(n.name).status === 'frei'));
-      }
     } catch (e) {}
-    if (!_konflikt) {
+    if (!_zeigen) {
       const _alt = document.getElementById('baukastenToggle');
       if (_alt) _alt.remove();
       if (window._baukasten && window._baukasten.offen) { window._baukasten.offen = false; try { _renderBaukasten(); } catch (e) {} }
@@ -7915,7 +7927,15 @@ function _renderBaukasten() {
       }
     } catch (e) {}
     h += '<div style="color:#9a8a68;font-size:11px;margin:6px 0 2px;">3. AKTION' + _katHint + '</div><div>' + _aktKeys.map(k => _bkChip(BAUKASTEN_AKTIONEN[k].label, bk.aktion === k, "_bkSet('aktion','" + k + "')")).join('') + '</div>';
-    h += '<div style="color:#9a8a68;font-size:11px;margin:6px 0 2px;">4. ZIEL (mehrere möglich)</div><div>' + (ziele.length ? ziele.map(z => _bkChip(z, (Array.isArray(bk.ziele) && bk.ziele.indexOf(z) !== -1), "_bkSet('ziel','" + z.replace(/'/g, "\\'") + "')")).join('') : '<span style="color:#666;font-size:11px;">niemand am Ort</span>') + '</div>';
+    // v7.12.653: Bei einem Umgebungs-Verb (durchsuchen_ort) ist das Ziel die UMGEBUNG, nicht eine Person.
+    // Dann zeigen wir "Umgebung" als (vorausgewähltes) Ziel statt der NPC-Liste.
+    const _aktDef = bk.aktion ? BAUKASTEN_AKTIONEN[bk.aktion] : null;
+    const _istUmgebungsAktion = !!(_aktDef && _aktDef._umgebung);
+    if (_istUmgebungsAktion) {
+      h += '<div style="color:#9a8a68;font-size:11px;margin:6px 0 2px;">4. ZIEL</div><div>' + _bkChip('Umgebung', true, "void(0)") + '</div>';
+    } else {
+      h += '<div style="color:#9a8a68;font-size:11px;margin:6px 0 2px;">4. ZIEL (mehrere möglich)</div><div>' + (ziele.length ? ziele.map(z => _bkChip(z, (Array.isArray(bk.ziele) && bk.ziele.indexOf(z) !== -1), "_bkSet('ziel','" + z.replace(/'/g, "\\'") + "')")).join('') : '<span style="color:#666;font-size:11px;">niemand am Ort</span>') + '</div>';
+    }
     const def = bk.aktion ? BAUKASTEN_AKTIONEN[bk.aktion] : null;
     const komplett = bk.akteur && def && (!def.zielNoetig || (Array.isArray(bk.ziele) && bk.ziele.length > 0)) && (!def.itemNoetig || bk.item);
     h += '<div style="margin-top:8px;display:flex;gap:8px;">'
@@ -19859,6 +19879,9 @@ function renderOptions(scene) {
   // Fallback. Drift-Detector aus v7.11.29 nicht mehr noetig - Heuristik liefert
   // nur noch HEILEN/AUFLOESEN, alle anderen 4 Basis-Kategorien kommen direkt
   // via Position.
+  // v7.12.653 (Baukasten-First Schritt 3): A/B/C/D-Optionen nur rendern, wenn KI_OPTIONEN_AKTIV. Systembuttons,
+  // Personen-Buttons, Reise, Baukasten etc. sind davon NICHT betroffen (die kommen weiter unten/anderswo).
+  if (typeof KI_OPTIONEN_AKTIV === 'undefined' || KI_OPTIONEN_AKTIV) {
   scene.optionen.forEach((opt, idx) => {
     const btn = document.createElement('button');
     btn.className = 'option-btn';
@@ -20018,6 +20041,7 @@ function renderOptions(scene) {
 
     uebergangBody.appendChild(btn); // v7.12.577: ABCD = szene-auslösend -> Übergang-Sektion
   });
+  } // v7.12.653: Ende if (KI_OPTIONEN_AKTIV)
 
   // v7.10.9: VERTEILUNGS-SUMMARY ueber alle 4 Story-Optionen.
   // Damit wir sehen: "Diese Szene hatte 3x BEOBACHTEN + 1x OFFENSIV"
