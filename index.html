@@ -3187,7 +3187,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.669</div>
+    <div class="start-version">Schatten v7.12.670</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.669</span>
+    <span>Schatten v7.12.670</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7163,7 +7163,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.669';
+window.SCHATTEN_VERSION = 'v7.12.670';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -21463,6 +21463,7 @@ function renderOptions(scene) {
   // Button. Sonst ist der Button bei Margarete klickbar, obwohl das Gate offen ist - der Spieler/Bot
   // klickt, die KI schreibt Abschluss, die Engine blockt später -> widersprüchlich. Button sperren.
   let politicalGateFehltFuerResolve = false;
+  let _politicalGateFehlend = [];
   try {
     if (typeof politicalBeatsGateErfuellt === 'function') {
       // v7.12.645 (Lektorat A2/A3): strict - der Lösen-Button verlangt das VOLLE politische Gate inkl.
@@ -21470,6 +21471,9 @@ function renderOptions(scene) {
       // bei Karl liegen.
       const _pgR = politicalBeatsGateErfuellt({ strict: true });
       politicalGateFehltFuerResolve = !!(_pgR && _pgR.aktiv && !_pgR.erfuellt);
+      // v7.12.670 (Lektorat v668-Run 2353 P1: "Fall lösen gesperrt, aber UI sagt nicht warum"): die konkreten
+      // fehlenden Punkte aus dem Gate merken, damit der Sperrgrund sie statt eines pauschalen Texts nennt.
+      if (_pgR && Array.isArray(_pgR.fehlend)) _politicalGateFehlend = _pgR.fehlend;
     }
   } catch (e) { politicalGateFehltFuerResolve = false; }
   const resolveCanClick = resolveCoreReady && karlVfOk && currentSp <= 3 && !karlInStasiCustody && !diebstahlGutFehlt && !truthBeatsFehltFuerResolve && !politicalGateFehltFuerResolve;
@@ -21488,9 +21492,18 @@ function renderOptions(scene) {
     else if (diebstahlGutFehlt) resolveLockReason = 'Diebesgut noch nicht zurück';
     else if (truthBeatsFehltFuerResolve) resolveLockReason = 'Wahrheit noch nicht bewiesen';
     else if (politicalGateFehltFuerResolve) {
-      let _pgReason = 'politische Sicherung fehlt';
-      try { const _pgL = politicalBeatsGateErfuellt(); _pgReason = _pgL.basisOk ? 'Akten oder Margarete noch nicht gesichert' : 'politische Wahrheit noch nicht belegt'; } catch (e) {}
-      resolveLockReason = _pgReason;
+      // v7.12.670 (Lektorat P1): konkret sagen, was noch fehlt - der Spieler soll nicht raten. Die Gate-Liste
+      // nennt z.B. "Wahler als Verantwortlichen belegen" oder "Margarete in Sicherheit bringen". Erfüllte
+      // Sicherungen erwähnt der Grund nicht (die sieht der Spieler), nur das, was den Abschluss noch blockiert.
+      if (_politicalGateFehlend && _politicalGateFehlend.length) {
+        // Kürzen auf die ersten 2 offenen Punkte, sonst wird der Button-Text zu lang.
+        const _kurz = _politicalGateFehlend.slice(0, 2).join(' · ');
+        resolveLockReason = 'noch offen: ' + _kurz;
+      } else {
+        let _pgReason = 'politische Sicherung fehlt';
+        try { const _pgL = politicalBeatsGateErfuellt(); _pgReason = _pgL.basisOk ? 'Akten oder Margarete noch nicht gesichert' : 'politische Wahrheit noch nicht belegt'; } catch (e) {}
+        resolveLockReason = _pgReason;
+      }
     }
     else if (currentSp > 3) resolveLockReason = 'zu hohe Spannung';
     else if (!karlVfOk) resolveLockReason = 'zu schwer verletzt';
@@ -33461,7 +33474,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
               }
             } catch (e) {}
             cast.push({ name: (sc && sc.name) || pm.name, rolle: (sc && sc.rolle) || '', beziehung: (sc && sc.beziehung) || '', fahrzeug: '', tag: (sc && sc.tag) || pm.tag || '', tagExtra: (sc && sc.tagExtra) || '' });
-            if (typeof diag === 'function') diag('state', '✦ PARTY-GARANTIE: ' + pm.name + ' fehlte im finalen Cast (Party-Mitglied) - wieder aufgenommen');
+            if (typeof diag === 'function') diag('state', '✦ PARTY-GARANTIE: ' + pm.name + ' fehlte im finalen Cast (Party-Mitglied, sinceScene=' + (pm.sinceScene != null ? pm.sinceScene : '?') + ', tag=' + (pm.tag || '?') + ') - wieder aufgenommen');
             if (typeof _castEvent === 'function') { try { _castEvent('party-garantie-AUFGENOMMEN: ' + pm.name); } catch(e){} }
           }
         }

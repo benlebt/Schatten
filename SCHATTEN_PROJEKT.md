@@ -15065,3 +15065,27 @@ bleibt dem FLUCHT-Button vorbehalten. KEINE Garantie (KI-Verhalten), aber stärk
 OFFEN (Lektorat v668, verifizieren vor Bau): Roth Party-Drift (v668-Origin-Logging beim nächsten Run auswerten),
 Ort-Prosa-Bruch ab Stage 3 hart retry/fallback, Setup-Cast-Audit Alias-Mapping (Mertens zählt nicht), Toast
 "Schwer verletzt" nach Ursache differenzieren, "Genosse Mauer" durch Mertens (KI-Sprachton).
+
+## v7.12.670 (2026-06-11): Lösen-Sperrgrund nennt konkrete Punkte (Lektorat v668-Run 2353 P1) + Roth-Drift-Diagnose
+LEKTORAT (zweiter v668-Run, 23:53 - identisch mit 23:36 bis Sz12, dann weitergespielt bis Sz20): Fall löste am Ende
+(Stage 4), aber erst nach Wahler-Beat (Sz16). VERIFIZIERT gegen Code: Mein v669-Gate-Fix ist KORREKT - der Bypass
+setzt nur _fundamentOk, NICHT _basisBeatsOk. Fehlt der Wahler-Beat, bleibt basisOk2 false -> nicht lösbar. Das ist
+falllogisch richtig (Lektorat bestätigt). WICHTIG: IM "Anker" ist KEIN Pflicht-Beat fürs Gate (politicalBeats sind
+laut Z4947 weiche Führungsachse, KEIN Abschluss-Gate) - das harte Gate ist nur schmuggelroute_belegt +
+wahler_verantwortlich + Sicherung. Das Lektorat interpretierte IM-Anker als nötig, aber der Run nahm ihn nur nebenbei
+mit.
+P1-FIX (Lektorat: "Fall lösen gesperrt, aber UI sagt nicht warum"): Der Sperrgrund war pauschal "politische Wahrheit
+noch nicht belegt". Jetzt nennt er die KONKRET fehlenden Punkte aus der Gate-fehlend-Liste: "GESPERRT · noch offen:
+Wahler als Verantwortlichen belegen". Erste 2 offenen Punkte (sonst Button-Text zu lang). So sieht der Spieler genau,
+was den Abschluss blockiert - kein "fühlt sich wie ein Bug an" mehr. 3 Tests grün.
+ROTH-PARTY-DRIFT - WURZEL EINGEGRENZT (noch nicht gefixt): Run 2336 zeigt NULL "PARTY +:"-Events für Roth - er kam
+NIE über _partyAdd (mit Ablehn-Check) in die Party. Trotzdem behandelt ihn die Garantie als Party-Mitglied
+(party-garantie-AUFGENOMMEN). Auffällig: Cast zeigt Roth DOPPELT ("Wilhelm Roth" | "Kommissar Wilhelm Roth") -
+verschiedene Namen, _istInParty matcht sie nicht (erste Tokens "wilhelm" vs "kommissar"). Roth ist also über einen
+SCHLEICHPFAD in _party (nicht _partyAdd). Snapshot-Restore (Z38186 _party = snap.party) konserviert nur, ist nicht
+Ursprung. OHNE das via-Logging aus einem frischen Run NICHT eindeutig isolierbar - daher KEINE blinde Sperre (die
+würde Benjamins Regel verletzen: Roth darf mitgenommen werden). STATTDESSEN Diagnose geschärft: Party-Garantie loggt
+jetzt sinceScene + tag jedes nachgezogenen Mitglieds. Mit dem v668-Origin-Logging (_partyAdd via <codepfad>) zeigt
+der nächste Run garantiert den Schleichpfad. DANN gezielt nur diesen Auto-Pfad fixen.
+LEHRE ERNEUT: Party-Drift NIE durch pauschale NPC-Sperre lösen (3x vom Lektorat gefordert, würde Mitnahme-Freiheit
+verletzen) - erst die Ursache sehen (Logging), dann chirurgisch nur den Auto-/Schleichpfad treffen. node --check OK.
