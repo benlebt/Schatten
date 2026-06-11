@@ -14915,3 +14915,28 @@ LOGGING (Benjamin-Wunsch): diag '🔎 UMSEHEN-BUTTON' beim Rendern (Marker-Zahl 
 später) und '🔎 UMSEHEN-KLICK' beim Klick (Items genommen[Namen] + Indizien genommen[IDs] + Gesamt). So zeigt der
 nächste Run exakt Button-Anzeige vs tatsächliche Funde. 4 Tests mit echten Margarete-Wohnungs-Indizien grün +
 4 Filter-Tests grün. node --check OK.
+
+## v7.12.662 (2026-06-11): ChatGPT-Lektorat v660 - A1 August-Party + A2 Charité-Whitelist
+MEILENSTEIN: ChatGPT bewertet Run v660 als "bisher sauberster Margarete Run" + ERSTER Beweis, dass der Fall OHNE
+Freitext und OHNE KI-A/B/C/D-Optionen lösbar ist (11 Szenen, Stage 4, kein Gewahrsam, Vf3, 5/5 polit. Beats,
+Akten als Engine-Item, Margarete bei Helene gesichert, 5,85 Cent). Genau das Ziel der Baukasten-First-Umstellung.
+Lektorat verifiziert gegen Code (Regel: Lektorate laufen oft auf altem Stand):
+- A5 (Test mit KI_OPTIONEN_AKTIV=false): SCHON ERLEDIGT (v656, Z7238 = false). Run lief auf v660 als alter
+  Bot-Testlauf. Nächster Run automatisch ohne A/B/C/D. -> A3-Lektorat (A/B/C/D dominant) damit auch erledigt.
+- Lektorat-Funktionsnamen _hatIndiz/_setNpcLocation/setupAllowedLocations.add EXISTIEREN NICHT (erfunden) - echte
+  Wege genutzt.
+GEBAUT:
+A1 (einziger harter Restfehler - August Lemke klebt nach Aussage als Party-Mitglied, reist überall mit):
+Generischer Hook in _markiereIndizGefunden - trägt ein Indiz das Feld _entlaesstNpc (NPC-ID), verlässt dieser
+Zeuge mit dem Fund die Party (Rolle erfüllt), bleibt als NPC am Ort. _entlaesstNpc:'august_lemke' bei
+lemke_belastet_wahler gesetzt. WICHTIG: _entlaesstNpc ist eine ID -> an die id-Position von _partyRemove (nicht
+name - "august_lemke" != "August Lemke" hätte sonst nicht gematcht; Test fing das). 2 Tests grün.
+A2 (Charité als "spontan erfunden" diagnostiziert, obwohl Sicherungs-Button sie als Ziel anbietet): /charit[eé]/
++ /schumannstr/ in GENERIC_LOCATIONS (wie Doc Wagners Praxis - echter fallübergreifender Heil-/Schutzort). 3 Tests
+grün.
+OFFEN für Benjamin-Entscheidung (Ermessensfragen, kein klarer Bug):
+A3 (Szene 9 eskaliert nach Sicherung hart: MfS-Wagen+Kugel, Vf5->3): GAMEPLAY-FEEL. Kann gewollt sein (Noir,
+Konsequenzen, Outcome-Varietät) oder unfair. NICHT eigenmächtig geglättet.
+A4 (Setup-Cast-Audit zählt Helene als nicht-aktiviert, obwohl sie auftritt): reiner LEKTORAT/Audit-Bug, kein
+Spielbug. Niedrige Prio.
+node --check OK.

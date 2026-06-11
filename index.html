@@ -3187,7 +3187,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.661</div>
+    <div class="start-version">Schatten v7.12.662</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.661</span>
+    <span>Schatten v7.12.662</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5061,7 +5061,7 @@ const INTRO_VARIANTS = [
           startBekannt: false, freischaltBei: ['goldener anker','willi kummer','informant','alexanderplatz','kummer'], oeffnungszeit: ['abend','nacht'],
           npcs: [{ id: 'willi_kummer', zeit: ['abend','nacht'] }, { id: 'august_lemke', zeit: ['abend','nacht'] }],
           indizien: [
-            { id: 'lemke_belastet_wahler', text: 'August Lemke (Zeuge) belastet Wahler', npc: 'august_lemke', quelle: 'person', actions: ['ANSPRECHEN','BEFRAGEN','UEBERZEUGEN','BESTECHEN'], zeit: ['abend','nacht'], schluessel: ['lemke','zeuge','belastet','wahler geschickt','lemke sagt'], stage: 3 },
+            { id: 'lemke_belastet_wahler', text: 'August Lemke (Zeuge) belastet Wahler', npc: 'august_lemke', _entlaesstNpc: 'august_lemke', quelle: 'person', actions: ['ANSPRECHEN','BEFRAGEN','UEBERZEUGEN','BESTECHEN'], zeit: ['abend','nacht'], schluessel: ['lemke','zeuge','belastet','wahler geschickt','lemke sagt'], stage: 3 },
             { id: 'anker_kontakt_hinweis', text: 'Hinweis auf den IM "Anker" und seine Rolle', npc: 'willi_kummer', quelle: 'person', actions: ['ANSPRECHEN','BEFRAGEN','BESTECHEN'], schluessel: ['im anker','spitzel','informant der stasi','verräter','anker ist'], stage: 3 },
           ] },
         // v7.12.524: Doc Wagner + Charite werden jetzt ZENTRAL in getCaseLocations injiziert (fallübergreifend
@@ -6752,6 +6752,16 @@ function _markiereIndizGefunden(ind) {
   if (ind.itemType && typeof _itemAdd === 'function') {
     _itemAdd({ id: 'item_' + ind.id, name: ind.text || ind.id, typ: ind.itemType, quelle: 'indiz:' + ind.id });
   }
+  // v7.12.662 (ChatGPT-Lektorat A1: August Lemke klebt nach seiner Aussage als Party-Mitglied und reist überall
+  // mit). Generisch: trägt ein Indiz das Feld _entlaesstNpc (NPC-Name/-ID), verlässt dieser Zeuge mit dem Fund
+  // die Party - er hat ausgesagt, seine Rolle ist erfüllt. Er bleibt als NPC am Ort (kein Verschwinden), reist
+  // aber nicht mehr automatisch mit. Spieler kann ihn bewusst wieder ansprechen/mitnehmen.
+  if (ind._entlaesstNpc && typeof _partyRemove === 'function') {
+    try {
+      _partyRemove(ind._entlaesstNpc, null);  // _entlaesstNpc ist eine NPC-ID (z.B. 'august_lemke')
+      if (typeof diag === 'function') diag('state', '🚪 ZEUGE entlassen aus Party nach Aussage: ' + ind._entlaesstNpc + ' (Indiz ' + ind.id + ')');
+    } catch (e) {}
+  }
   return true;
 }
 // Prüft nach einer Szene, ob am aktuellen Ort ein Kern-Indiz freigeschaltet wurde (KI-Prosa-Schlüsselwort ODER
@@ -7111,7 +7121,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.661';
+window.SCHATTEN_VERSION = 'v7.12.662';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -30807,6 +30817,10 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         // Diskret-Heilort (Schaeferstrasse Schoeneberg, in fast jedem Setup anchorNpc) -
         // global legitim, nicht je Fall als fremd markieren.
         /doc\s+wagner/, /wagners?\s+praxis/, /praxis\s+(?:doc\s+)?wagner/, /sch[aä]ferstr/,
+        // v7.12.662 (ChatGPT-Lektorat A2): Charité ist ein echter, fallübergreifender historischer Ort
+        // (Heil-/Schutzort, Pathologie, Schwester Helene). Wird sogar von Sicherungs-Buttons als Ziel angeboten
+        // ("Margarete zu Schwester Helene in die Charité") - darf nicht als "spontan erfunden" markiert werden.
+        /charit[eé]/, /schumannstr/,
       ];
       if (curMainOrt && caseSetup && Array.isArray(caseSetup.locations) && caseSetup.locations.length > 0) {
         const isSetupWhitelisted = caseSetup.locations.some(loc => {
