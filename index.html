@@ -3191,7 +3191,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.639</div>
+    <div class="start-version">Schatten v7.12.640</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.639</span>
+    <span>Schatten v7.12.640</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7102,7 +7102,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.639';
+window.SCHATTEN_VERSION = 'v7.12.640';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -7659,6 +7659,41 @@ function _npcTauschInfo(npcName) {
   return null;
 }
 // Erkennt, ob ein getragenes Item einem Katalog-Eintrag entspricht (über Namens-Substring).
+// v7.12.640 (Benjamin: "wo waren die Items? ich hab keine gefunden"): Katalog-Items waren nur über das
+// Durchsuchen Gefesselter erreichbar - in Runs ohne Festnahme also UNERREICHBAR. ORTS-FUNDSTÜCKE als
+// häufigster Fundweg: pro Ort-Typ plausible Items, die Karl beim Umsehen findet (einmal pro Ort).
+const ORTS_FUNDSTUECKE = {
+  // Ort-Keyword (im Namen/detail) -> mögliche Katalog-Item-Keys
+  anker:        ['korn', 'west_zigaretten'],        // Kneipe: Schnaps, Schwarzmarkt-Zigaretten
+  kneipe:       ['korn', 'west_zigaretten'],
+  imbiss:       ['korn', 'bohnenkaffee'],
+  trude:        ['bohnenkaffee', 'west_zigaretten'],
+  kranzler:     ['bohnenkaffee', 'west_zigaretten', 'westmark'], // West-Café: Westwaren
+  cafe:         ['bohnenkaffee', 'west_zigaretten'],
+  café:         ['bohnenkaffee', 'west_zigaretten'],
+  auffangstelle:['westmark', 'west_zigaretten'],    // West-Berlin: Westgeld
+  west:         ['westmark', 'west_zigaretten'],
+  bahnhof:      ['ziegelstein', 'knallkoerper'],    // Bahngelände: Wurfobjekte
+  stellwerk:    ['ziegelstein', 'brecheisen'],
+  praxis:       ['korn'],                            // Arztpraxis: Medizinschnaps
+  buero:        ['korn'],
+  'büro':       ['korn'],
+  wohnung:      ['korn', 'ziegelstein']
+};
+// Findet die für den aktuellen Ort plausiblen, noch nicht gefundenen Fund-Items.
+function _ortsFundItems() {
+  try {
+    if (!engineCurrentLocation || !engineCurrentLocation.name) return [];
+    const probe = normForMatch((engineCurrentLocation.name || '') + ' ' + (engineCurrentLocation.detail || ''));
+    const keys = new Set();
+    for (const k in ORTS_FUNDSTUECKE) { if (probe.includes(normForMatch(k))) ORTS_FUNDSTUECKE[k].forEach(x => keys.add(x)); }
+    // Schon an DIESEM Ort gefundene Fund-Items nicht erneut anbieten.
+    if (!caseProgress.ortsFundGenommen) caseProgress.ortsFundGenommen = {};
+    const ortKey = normForMatch(engineCurrentLocation.name);
+    const schonHier = caseProgress.ortsFundGenommen[ortKey] || [];
+    return Array.from(keys).filter(k => schonHier.indexOf(k) === -1 && ITEM_KATALOG[k]).map(k => ({ key: k, name: ITEM_KATALOG[k].name }));
+  } catch (e) { return []; }
+}
 function _itemKatalogEintrag(itemName) {
   try {
     const n = normForMatch(itemName || '');
@@ -20474,6 +20509,33 @@ function renderOptions(scene) {
     nbBtn.innerHTML = '<span class="option-id">📓</span><span class="option-text-wrap"><span>Notizbuch</span><span class="option-marker option-marker-system">' + _nbAnz + ' Notiz' + (_nbAnz === 1 ? '' : 'en') + '</span></span>';
     attachSafeTap(nbBtn, () => { if (typeof oeffneNotizbuch === 'function') oeffneNotizbuch(); });
     bleibtActions.appendChild(nbBtn); // v7.12.577: Notizbuch = zeitlos -> Bleibt-Sektion
+    // v7.12.640 (Benjamin: "wo waren die Items?"): UMSEHEN-Button, wenn es am Ort Fundstücke gibt. Sammelt
+    // plausible Katalog-Items ein (einmal pro Ort), ohne teure Szene - macht den Item-Katalog endlich erreichbar.
+    try {
+      const _fund = (typeof _ortsFundItems === 'function') ? _ortsFundItems() : [];
+      if (_fund.length && !karlInStasiCustody) {
+        const umBtn = document.createElement('button');
+        umBtn.className = 'option-btn option-btn-system option-btn-reise';
+        umBtn.innerHTML = '<span class="option-id">🔎</span><span class="option-text-wrap"><span>Umsehen</span><span class="option-marker option-marker-system">' + _fund.length + ' Fundstück' + (_fund.length === 1 ? '' : 'e') + '</span></span>';
+        attachSafeTap(umBtn, () => {
+          try {
+            const f2 = _ortsFundItems();
+            if (!f2.length) return;
+            const ortKey = normForMatch(engineCurrentLocation.name);
+            if (!caseProgress.ortsFundGenommen) caseProgress.ortsFundGenommen = {};
+            if (!caseProgress.ortsFundGenommen[ortKey]) caseProgress.ortsFundGenommen[ortKey] = [];
+            f2.forEach(it => {
+              if (typeof _itemAdd === 'function') _itemAdd({ id: 'item_' + it.key + '_' + ortKey.replace(/\s+/g, '_'), name: it.name, typ: 'tauschware', quelle: 'ort_gefunden:' + engineCurrentLocation.name });
+              caseProgress.ortsFundGenommen[ortKey].push(it.key);
+            });
+            if (typeof showProgressToast === 'function') showProgressToast('🔎 Gefunden', 'Karl steckt ein: ' + f2.map(x => x.name).join(', '), 'success', 'orts-fund');
+            if (typeof diag === 'function') diag('state', '🔎 ORTS-FUND @ ' + engineCurrentLocation.name + ': ' + f2.map(x => x.name).join(', '));
+            if (typeof renderImRaumAnzeige === 'function') { try { renderImRaumAnzeige(); } catch(e){} }
+          } catch (e) {}
+        });
+        bleibtActions.appendChild(umBtn);
+      }
+    } catch (e) {}
     // v7.12.577: Aktueller-Stand-Button in der Bleibt-Sektion (öffnet dasselbe Popup wie die Topleiste). Gibt dem
     // Spieler einen zweiten, sichtbaren Weg zum Stand, falls er die antippbare Topleiste nicht wahrnimmt.
     const standBtn = document.createElement('button');

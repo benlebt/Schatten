@@ -14535,3 +14535,20 @@ WÜRFEL' ergänzt + Chance 60%->75%. node --check OK.
 HINWEIS Willi: wird jetzt als Wirt konsistent abgelehnt (kein toter Button). Falls Benjamin ihn doch
 mitnehmbar will -> bewusste Ausnahme nötig. OFFEN: ORTSSPRUNG Sz15 (KI wollte Café Kranzler, Engine hielt Doc-
 Praxis -> W2b-Rückholung zog zur Praxis zurück) - Reise-Erkennung, eigener Fix. Lektorat folgt.
+
+## v7.12.640 (2026-06-11): ORTS-FUNDSTÜCKE - Items endlich erreichbar (Benjamin: "wo waren die Items?")
+BENJAMIN-BEFUND: Im v638-Run gab es nur item_original_akten (Beweis). Die Katalog-Items (Zigaretten/Korn/
+Westmark/Knallkörper...) waren NUR über Durchsuchen Gefesselter erreichbar - in Runs ohne Festnahme also
+UNERREICHBAR. Der ganze Eintausch->Indiz/Werfen/Bestechen-Apparat lief leer, weil die Items nicht zu bekommen
+waren. URSACHE: von 3 geplanten Fundwegen (NPC-Gabe, Durchsuchen, am Ort finden) existierte real nur
+Durchsuchen. FIX: ORTS_FUNDSTUECKE-Tabelle (Ort-Keyword -> plausible Katalog-Items: Anker/Kneipe->Korn+
+Zigaretten, Kranzler/West->Kaffee+Westmark, Bahnhof/Stellwerk->Ziegelstein+Knallkörper, Praxis->Korn...).
+_ortsFundItems() liefert die hier noch nicht genommenen. UMSEHEN-Button (🔎) in der Bleibt-Sektion erscheint
+nur, wenn es am Ort was gibt - sammelt die Items als echte _itemAdd ein (einmal pro Ort, keine teure Szene,
+nur Toast). 5/5 Tests. node --check OK.
+HINWEIS: Damit ist der Item-Katalog endlich bespielbar - Karl findet im Anker Korn+Zigaretten, kann sie an
+Willi eintauschen (->Indiz) oder werfen. NPC-Gabe (3. Fundweg) noch offen. Lektorat v638 (lief auf v638, vor
+v639/v640): A1 August-Party-Kleben (v639-Mitnahme-Fix + v636-Zeugen-Skip sollten greifen, nächster Run zeigt's),
+A2 Auto-Custody-Stopp (v636/v638 Stasi-Deckel), A3 Finale-Sicherungsort (offen), A4 W2b-Stage2-Retry (offen),
+A5 MANÖVER-CHECK-Debug (ist drin, war im Run nur nicht sichtbar weil kein PLAN_ZUGRIFF mit mehreren), A6 Setup-
+Cast-Audit (offen). Mertens-Rang Oberleutnant vs Hauptmann (P2) offen.
