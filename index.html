@@ -3187,7 +3187,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.674</div>
+    <div class="start-version">Schatten v7.12.675</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.674</span>
+    <span>Schatten v7.12.675</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7178,7 +7178,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.674';
+window.SCHATTEN_VERSION = 'v7.12.675';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -13929,6 +13929,13 @@ function buildAssertionReport() {
     const row = (mark, text) => L.push('  ' + mark + ' ' + text);
 
     // Fall-Abschluss
+    // v7.12.675: Szenen-Gesamtzahl als erste Zeile - aus logEntries (vollständig), nicht aus dem
+    // auf ~50 gekappten Diagnose-Buffer. Macht Run-Länge sofort sichtbar und Zähl-Diskrepanzen auffällig.
+    try {
+      const _szTotal = (typeof logEntries !== 'undefined' && Array.isArray(logEntries))
+        ? logEntries.filter(e => e && e.type === 'scene').length : 0;
+      if (_szTotal > 0) row('✓', 'Szenen gesamt: ' + _szTotal);
+    } catch (e) { /* Report nie brechen */ }
     row(geloest ? '✓' : '–', 'Fall gelöst: ' + (geloest ? 'JA' : 'nein (Stage ' + (es.stage || 0) + ')'));
     if (geloest) row((es.stage || 0) >= 4 ? '✓' : '⚠', 'Stage 4 erreicht: ' + (es.stage || 0));
 
@@ -13972,14 +13979,20 @@ function buildAssertionReport() {
     // zeigt, dass die Prosa-Rekonstruktion aktiv arbeitet statt nur passiv zu fehlen.
     try {
       let fehlt = 0, total = 0, reintroBlocked = 0, castOverride = 0;
+      // v7.12.675 (Benjamin-Befund Run 0031: "es waren nur 19 Szenen?"): Es wurden DIAG-ZEILEN
+      // gezählt, nicht Szenen - jede Szene loggt aber ~2 personenImRaum-Zeilen (CAST-DIAG +
+      // CAST-SZENE-DIAG). 19 Szenen meldeten so "4/40 Szenen". Jetzt pro FRAME (=Szene): eine
+      // Szene zählt einmal; "fehlt", wenn ihre Zeilen FEHLT melden.
       sceneDiagnosticsBuffer.forEach(f => {
         if (!f || !Array.isArray(f.events)) return;
+        let hatPir = false, fehltPir = false;
         f.events.forEach(ev => {
           const m = (ev && ev.msg) || '';
-          if (/personenImRaum/i.test(m)) { total++; if (/FEHLT|kein Array/i.test(m)) fehlt++; }
+          if (/personenImRaum/i.test(m)) { hatPir = true; if (/FEHLT|kein Array/i.test(m)) fehltPir = true; }
           if (/Reintroduce ÜBERSPRUNGEN|Reintro-übersprungen/i.test(m)) reintroBlocked++;
           if (/Cast-Override|VERWORFEN \(Cast-Override\)|namentlichem Abschied aus Cast/i.test(m)) castOverride++;
         });
+        if (hatPir) { total++; if (fehltPir) fehlt++; }
       });
       if (total > 0) {
         row(fehlt === total ? '⚠' : '✓', 'KI-personenImRaum fehlt: ' + fehlt + '/' + total + ' Szenen');

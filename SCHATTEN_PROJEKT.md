@@ -15165,3 +15165,12 @@ Architektur-Test faktisch bestanden: manuell ohne KI-Optionen/Freitext sauber ge
 
 7 Logik-Tests grün (kompletter Run-0031-Ablauf nachgestellt). Vera-Mitnahme-Frage geklärt:
 KONTAKT lehnt bewusst ab (Übergabe-Ziel, v667-Design) — kein Bug.
+
+## 🆕 v7.12.675 — Assertion-Report zählte Zeilen statt Szenen (Benjamin: "es waren nur 19 Szenen?")
+
+Run 0031 hatte 19 Szenen, der Report meldete "KI-personenImRaum fehlt: 4/40 Szenen". Wurzel:
+gezählt wurden DIAG-ZEILEN, nicht Szenen — jede Szene loggt ~2 personenImRaum-Zeilen (CAST-DIAG
++ CAST-SZENE-DIAG). Wahrheit: 2/19 (nur Sz1+Sz2 ohne KI-Feld). Jetzt pro Frame (=Szene) gezählt;
+Test gegen die Run-0031-Struktur grün. Zusätzlich neue erste Report-Zeile "Szenen gesamt: N"
+(aus logEntries, der vollständigen Quelle — der Diagnose-Buffer ist auf ~50 gekappt), damit
+Run-Länge und Zähl-Diskrepanzen sofort sichtbar sind.
