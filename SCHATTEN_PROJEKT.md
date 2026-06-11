@@ -15089,3 +15089,28 @@ jetzt sinceScene + tag jedes nachgezogenen Mitglieds. Mit dem v668-Origin-Loggin
 der nächste Run garantiert den Schleichpfad. DANN gezielt nur diesen Auto-Pfad fixen.
 LEHRE ERNEUT: Party-Drift NIE durch pauschale NPC-Sperre lösen (3x vom Lektorat gefordert, würde Mitnahme-Freiheit
 verletzen) - erst die Ursache sehen (Logging), dann chirurgisch nur den Auto-/Schleichpfad treffen. node --check OK.
+
+## 🆕 v7.12.671 — Lektorat-Reste v670 abgearbeitet (Audit-Alias, Verletzungs-Toast, Anrede)
+
+**1) Setup-Cast-Audit Alias-Fix (Audit-Bug, kein Spiel-Bug):** Mertens/Roth/Mann-im-Mantel galten
+als "nicht bespielt", obwohl zentral. Wurzel: Titel-Präfixe brachen das Matching ("Kommissar
+Wilhelm Roth" vs "Wilhelm Roth" — erste Tokens verschieden). Jetzt: Titel-Stripping (Kommissar/
+Oberleutnant/Schwester/...), Nachname+Vorname als Schlüssel, generische Wörter (mann/mantel/...)
+nur als Voll-Phrase. Zwei neue Signale gemäß Lektorat: (g) NPC-Zustand getrackt (NPCZ) und
+(h) Name in der Szenen-Prosa (logEntries), beide mit Wortgrenzen-Match ("Roth" trifft NICHT
+"Rothenburger"). 9 Logik-Tests grün. Reines Audit, keine Spiel-Logik betroffen.
+
+**2) Vf=2-Toast nach Ursache differenziert:** "Schwer verletzt" nur noch bei echter Wunde laut
+lastInjury (Schuss/Messer/Bruch/Schnitt); sonst "Kritisch angeschlagen" (Müdigkeit/Blutverlust/
+Erschöpfung — Karl ist nicht zwingend verwundet).
+
+**3) Anrede-Regel im Stasi-Prompt-Block:** Karl ist KEIN Genosse. MfS/VP reden ihn mit "Herr
+Mauer"/"Mauer" an, NIE "Genosse Mauer" (Lektorat: Mertens-Anrede zu dick aufgetragen). "Genosse"
+nur unter DDR-Funktionären untereinander; das spöttische "Tovarisch Mauer" des Sowjet-Offiziers
+bleibt erlaubt.
+
+**Nicht gebaut (mit Begründung):** "verstaubt"→"verstummt" war einmaliger KI-Sprachfehler ohne
+Code-Anker. "Keine PLAN_ZUGRIFF-Vorschläge nach caseReadyToResolve": Konzept existiert so nicht
+im Code (Lektorat-Erfindung), SCHLUSSPHASEN-PRIO greift ohnehin nur vor Stage 3 — zurückgestellt
+bis Original-Lektorat/Run das Symptom konkret zeigt. Ort-Prosa-Hard-Retry: wartet auf Benjamins
+Entscheidung (kostet einen zusätzlichen API-Call pro Bruch).
