@@ -15199,3 +15199,22 @@ Run-Länge und Zähl-Diskrepanzen sofort sichtbar sind.
 **Nicht gebaut:** Schlafen-Ortswahrheit (SCHLAFEN_HEIM-Button vs Engine-Ort Opel, Sz10) und
 NPC-Persönlichkeits-/Bösewicht-Paket = Spielgefühl, warten auf Benjamins Entscheidung.
 August "nicht bespielt" war Spieler-Pfadwahl (Goldener Anker nie besucht), kein Bug.
+
+## 🆕 v7.12.677 — Schlafen am Engine-Ort + NPC-Archetypen (beide Benjamin-Freigaben)
+
+**1) Schlafen schläft am ENGINE-ORT (settled):** Die Standard-Heimfahrt (v253) stammte aus der
+Zeit vor dem Engine-Ortssystem - KI erzählte Heimschlaf, Engine blieb stehen (Run 0031 Sz10:
+Header OPEL, Prosa Schlafzimmer). Jetzt: Schlaf-Button immer heimfahrt=false -> SCHLAFEN-VOR-ORT
+mit hartem Engine-Ortsnamen im Push (im Opel = im Wagen schlafen, Mantel als Decke). Heimschlaf =
+erst heimreisen (Reisen-Button), dann schlafen - Spieler entscheidet die Reise, Engine besitzt
+den Ort. Custody-Zellen-Schlaf unberührt (eigener Zweig). Bot-Schlafwahl hat Fallbacks (geprüft).
+Der HEIMFAHRT-Prompt-Zweig bleibt im Code, ist aber per Default unerreichbar.
+
+**2) NPC-Archetypen (6 Setup-Details angereichert, ChatGPT-Lektorat P2):** Margarete wird bei
+ihrem Fachgebiet praezise-buerokratisch (Zugnummern/Dienstbuecher/Frachtstempel) statt nur
+aengstlich; Wahler = kalte Verwaltungs-Autoritaet (droht mit Akten, nie mit der Pistole);
+Mertens = mueder Routinier (stellt fest statt zu drohen, beherrscht Verfahren); IM Anker =
+aengstlicher Neider (schwitzt, Floskeln, Motiv: Margaretes Befoerderung); August Lemke =
+kleiner anstaendiger Reichsbahner (Dienstmuetze in den Haenden, fachlich praezise bei
+Zugbewegungen); Helene = rauer Charité-Ton ("Ich habe nichts gesehen, Herr Mauer").
+Vera + Mann-im-Mantel waren bereits stark gezeichnet, unveraendert.
