@@ -15174,3 +15174,28 @@ gezählt wurden DIAG-ZEILEN, nicht Szenen — jede Szene loggt ~2 personenImRaum
 Test gegen die Run-0031-Struktur grün. Zusätzlich neue erste Report-Zeile "Szenen gesamt: N"
 (aus logEntries, der vollständigen Quelle — der Diagnose-Buffer ist auf ~50 gekappt), damit
 Run-Länge und Zähl-Diskrepanzen sofort sichtbar sind.
+
+## 🆕 v7.12.676 — ChatGPT-Lektorat Run 0031: 6 verifizierte Fixes
+
+**Gebaut (alle gegen Run/Code verifiziert):**
+1. **Teleport-Guard (P1):** personenImRaum darf NPCs, die DIESE Szene beim harten Ortswechsel
+   zurückgelassen wurden, nicht rematerialisieren (Mantelmann Sz11: Clean + Re-Add im selben
+   Sync). Ausnahmen: aktiver Threat-Spawn (legitimer Verfolger, Token-Mengen-Match wegen
+   'mann_im_mantel' vs "Mann im LANGEN Mantel"), Party, Klient. 8 Logik-Tests grün.
+2. **IM-Anker-Beat geschärft:** bloßes Verb "verrät" feuerte aus Atmosphäre (Sz15: "die
+   Anspannung in ihren Zügen verrät, dass..."). Jetzt nur Nomen (Verräter/Spitzel/Informant/
+   Maulwurf) + wortgebundene Beleg-Gruppe. Hinweis: Beat ist NICHT lösungs-pflichtig (settled) —
+   Lektorat-Einstufung "mechanisch gefährlich" war übertrieben, Schärfung trotzdem richtig.
+3. **Export-Kennzeichnung:** A-D heißen im Debug-Export jetzt "KI-Vorschläge (intern - im UI
+   AUSGEBLENDET, Baukasten-First)" — beendet den Schein-Widerspruch, den jedes Lektorat anmahnt.
+4. **Diktion 1953 (Prompt):** Figurenrede sagt "Staatssicherheit"/"MfS"/"die vom Ministerium";
+   "Stasi" sparsam (moderner Jargon). NIE Behörden-Vollform mit Klammerkürzel im Satz — das
+   "Ministerium für Staatssicherheit (MfS)-Leuten"-Monstrum kam von der KI (0 Code-Treffer).
+5. **Charité** statt "Charite" im sichtbaren Ortsnamen (Matching normalisiert é→e, gefahrlos).
+6. **SPIELER-PAUSE-Label:** slow_phase zwischen renderOptions und requestSceneFromModel ist in
+   manuellen Runs Lese-/Denkzeit des Spielers, keine Pipeline-Zeit. Lektorat-These "Sync frisst
+   Zeit" damit als Fehldeutung entkräftet; Fetch-Spanne mit Zwischenmarker korrekt gelabelt.
+
+**Nicht gebaut:** Schlafen-Ortswahrheit (SCHLAFEN_HEIM-Button vs Engine-Ort Opel, Sz10) und
+NPC-Persönlichkeits-/Bösewicht-Paket = Spielgefühl, warten auf Benjamins Entscheidung.
+August "nicht bespielt" war Spieler-Pfadwahl (Goldener Anker nie besucht), kein Bug.
