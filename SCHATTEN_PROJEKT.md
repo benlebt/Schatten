@@ -14629,3 +14629,18 @@ Schläge an Schläfe/Kopf/Hals ("sackt lautlos zusammen" klang tödlich trotz nu
 Schulter/Arm/Rippen/Türrahmen. 5/5 Tests. node --check OK.
 OFFEN (Lektorat): A4 PLAN_ZUGRIFF-Ortswechsel-Prosa (Flucht-Text am Stellwerk), A6 August/Doc nach Zweck aus
 Party, A7 Helene/Marlene-Rollentrennung, A8 MANÖVER-CHECK-Debug (sollte mit v643-Key-Fix jetzt erscheinen).
+
+## v7.12.646 (2026-06-11): Kleine Optimierungen - PLAN_ZUGRIFF-Ort, Manöver-Debug, Mertens-Rang
+Drei sichere Fixes ohne Run (anstehende offene Punkte):
+A4 PLAN_ZUGRIFF-ORTSWECHSEL: Der Manöver-Prompt verbietet jetzt explizit Ortswechsel/Flucht zum Auto im
+Zugriffs-Text ("passiert am AKTUELLEN Ort, KEIN Ortswechsel, KEINE Flucht zum Auto") - der Stellwerk-Flucht-
+Bruch aus Run v643 (aus dem fälschlich Sicherungs-Beats entstanden) wird so vermieden.
+A8 MANÖVER-CHECK-DEBUG: Diag zeigt jetzt die Rechnung PRO AKTEUR ([Karl:2 + Rex:3 +1 Synergie]) statt nur der
+Summe - volle Nachvollziehbarkeit fürs Ghostbusters-System.
+MERTENS-RANG: War inkonsistent (Name "Oberleutnant Mertens", Rolle "MfS-Hauptmann"). Da _gegnerHaerte per
+Regex 'hauptmann' VOR 'oberleutnant' prüft, bekam Mertens fälschlich Härte 5 (Hauptmann/Endboss) statt 4. Jetzt
+Rolle = "MfS-Oberleutnant" (Lektorat-Empfehlung: hart, aber nicht Endboss). 2 Härte-Tests grün. node --check OK.
+HINWEIS Charité-Alias: bereits in v599 gelöst (éèê -> e normalisiert), Lektorat lief auf älterem Stand.
+"Ministerium fuer Staatssicherheit (MfS)"-Lexikonton bewusst NICHT geändert (Prosa-/Gameplay-Frage, braucht
+Benjamins Freigabe). OFFEN: A6 August/Doc nach Zweck aus Party, A7 Helene/Marlene-Rollentrennung (beide brauchen
+Gameplay-Entscheidungen).
