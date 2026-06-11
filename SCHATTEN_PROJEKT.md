@@ -15135,3 +15135,11 @@ Schleichpfad wartet auf ein frisches Run-Log mit v670-Logging. `_setNpcLocation`
 score-"Doppelung" = Fehlalarm (zwei sauber gescopte nested functions in pickBestGermanVoice/
 pickFallbackVoice). A6 (Beschützen/Beobachten aus Baukasten) + KI_OPTIONEN_GENERIEREN-Umbau +
 Resolve-Gate-Zentralisierung = Benjamin-Entscheidungen, offen.
+
+## 🆕 v7.12.673 — Beschützen + Beobachten aus Baukasten entfernt (A6, Benjamin-Freigabe)
+
+Beide Verben aus BAUKASTEN_AKTIONEN entfernt — zu weich, kein klarer Engine-Zustand,
+verwässern Baukasten-First (ChatGPT-Lektorat v670 A6, von Benjamin freigegeben).
+Unberührt: das "Beobachten" im Personen-Menü (eigener Pfad, Z~19525) und die
+BEOBACHTEN-Handlungsart/Kategorie. Verifiziert: keine Code-Querverweise auf die
+entfernten Schlüssel.
