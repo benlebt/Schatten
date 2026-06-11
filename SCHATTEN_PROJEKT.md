@@ -14357,3 +14357,17 @@ vorhandene Misch-Zweig). Das Popup zeigt jetzt beide Gruppen klar getrennt: '▸
 aus)' (neuer Mini-Header) -> Szene-Verben, dann der seit v549 vorhandene gestrichelte Trenner '✦ Begleitung
 (löst keine Szene aus)' -> Mitnehmen/Entlassen (gedämpft-grün, gestrichelt). Der verwalten-Aufruf im
 Bleibt-Block ist entfernt. node --check OK.
+
+## v7.12.628 (2026-06-11): Willi nicht angreifbar + Handschellen-Logik korrigiert (Benjamin-Screenshots Run 0??)
+BENJAMIN-BEFUNDE: (1) Willi Kummer (Wirt/Informant = guter NPC) hatte "Angreifen" im Menü. Ursache: sein Tag
+wurde nicht als VERBUENDETE/INFORMANT erkannt -> else-Zweig, der bei Spannung>=4 'angreifen' zuließ (Sz11 war
+bedroht). (2) Handschellen-Beute unlogisch: Karl fesselt den Mann mit DESSEN EIGENEN Handschellen -> sie sind
+an IHM, können nicht gleichzeitig in Karls Tasche sein.
+FIXES: (1) else-Zweig erkennt jetzt bekannt-GUTE Rollen über npc.rolle (wirt/informant/zeuge/arzt/barkeeper/
+kontakt/presse/verbuendet/klient/sekretärin/schwester) -> NIE 'angreifen', auch nicht bei Bedrohung; 'angreifen'
+für unbekannte Figuren nur noch bei echter Bedrohungs-PROSA (threatRe), nicht mehr bei bloßer Spannung>=4.
+(2) _npcIstFeindlich gibt für gute Rollen hart false zurück (Schutz vor Tag-Fehlern, deckt Baukasten-Ziele +
+Manöver). (3) Handschellen-Beute-_itemAdd an ALLEN 3 Stellen entfernt (Plan, Manöver-Direkt, Begleiter-Befehl) -
+gefesselt heißt: seine Handschellen sind an ihm, kein Item für Karl. 4/4 Feind-Tests grün. node --check OK.
+OFFEN (Benjamin-Diskussion, kein Code): Nacht-Marathon / automatischer Tageswechsel + Müdigkeitsmodell - bewusst
+als Designfrage offen gelassen, Antwort an Benjamin formuliert (siehe Chat). Lektorat Run folgt.
