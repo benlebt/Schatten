@@ -3191,7 +3191,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.634</div>
+    <div class="start-version">Schatten v7.12.635</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.634</span>
+    <span>Schatten v7.12.635</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7098,7 +7098,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.634';
+window.SCHATTEN_VERSION = 'v7.12.635';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -31698,6 +31698,23 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       newSpannung = _postFluchtSpannungsCap;
     }
     _postFluchtSpannungsCap = 0;
+    // v7.12.635 (Benjamin: "ich muss oft mehrfach fliehen, um aus der Spannung zu kommen"): Eine Flucht soll
+    // ZUVERLÄSSIG beruhigen - nicht nur 1 Szene. Solange das Flucht-Fenster läuft (mehrere Szenen) UND der
+    // Spieler nicht SELBST wieder offensiv wird, bleibt die Spannung gedeckelt (<=2). Wird er offensiv (Angriff/
+    // Manöver/laute Aktion), endet die Ruhe sofort - dann darf die Spannung wieder steigen (er fällt neu auf).
+    try {
+      if (typeof _postFluchtReiseFrei === 'number' && _postFluchtReiseFrei > 0 && newSpannung > 2) {
+        const _kat = ((window._letzteAktion && window._letzteAktion.kategorie) || '').toUpperCase();
+        const _spielerOffensiv = /OFFENSIV|ANGRIFF|MANOEVER|MANÖVER/.test(_kat);
+        if (!_spielerOffensiv) {
+          diag('state', 'POST-FLUCHT-RUHE: Spannung ' + newSpannung + ' -> 2 (Flucht-Fenster läuft noch ' + _postFluchtReiseFrei + ' Sz, Karl bleibt unauffällig)');
+          newSpannung = 2;
+        } else {
+          diag('state', 'POST-FLUCHT-RUHE beendet: Karl wird wieder offensiv (' + _kat + ') - Spannung darf steigen');
+          _postFluchtReiseFrei = 0;
+        }
+      }
+    } catch (e) {}
     // v7.12.554: Reise-Frei-Fenster pro Szene -1 (läuft genau einmal pro echtem Commit, wie der Cap-Verbrauch).
     if (typeof _postFluchtReiseFrei === 'number' && _postFluchtReiseFrei > 0) {
       _postFluchtReiseFrei--;

@@ -14460,3 +14460,13 @@ node --check OK. OFFEN (Benjamin-Designfragen, eigenes Konzept): Party-Stärken-
 Frau ablenkt, Mann/Roth schlägt, Stasi-Hauptmann nur mit Übermacht+Hund), Fessel-Material kontextuell (nicht
 jeder hat Handschellen - Kabel/Strick/Seil/Krawatte), Erfolgsquoten statt 100%, Gegner-Härtegrade. Custody-
 Provokation ab Sz20 (Benjamin wollte es testen). Realismus VP-Übergabe gefesselter Stasi (Benjamin-Frage).
+
+## v7.12.635 (2026-06-11): Flucht beruhigt zuverlässig über mehrere Szenen (Benjamin-Befund)
+BENJAMIN: "Ich muss oft mehrfach fliehen, um aus der Spannung zu kommen - eigentlich erwarte ich: einmal Flucht
+klicken, im Notfall nochmal reisen, dann ist die Spannung unten." URSACHE: POST-FLUCHT-CAP galt nur für GENAU
+1 Folgeszene (_postFluchtSpannungsCap=0 nach Anwendung); in der nächsten Szene zog ein neuer Trigger die
+Spannung wieder hoch -> erneute Flucht nötig. FIX: Solange das (bereits existierende) Flucht-Fenster läuft
+(_postFluchtReiseFrei, 3 Szenen) UND der Spieler nicht SELBST wieder offensiv wird (Kategorie OFFENSIV/ANGRIFF/
+MANÖVER), bleibt die Spannung auf <=2 gedeckelt. Wird er offensiv, endet die Ruhe sofort (Fenster=0, Spannung
+darf steigen - er fällt neu auf). GTA-Logik: erfolgreiche Flucht senkt den Fahndungslevel spürbar und HÄLT ihn
+unten, bis man wieder Lärm macht. 4/4 Tests. node --check OK.
