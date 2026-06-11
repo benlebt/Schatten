@@ -15114,3 +15114,8 @@ Code-Anker. "Keine PLAN_ZUGRIFF-Vorschläge nach caseReadyToResolve": Konzept ex
 im Code (Lektorat-Erfindung), SCHLUSSPHASEN-PRIO greift ohnehin nur vor Stage 3 — zurückgestellt
 bis Original-Lektorat/Run das Symptom konkret zeigt. Ort-Prosa-Hard-Retry: wartet auf Benjamins
 Entscheidung (kostet einen zusätzlichen API-Call pro Bruch).
+
+**Settled-Entscheidung (Benjamin, v671):** Ort-Prosa-Bruch ab Stage 3 bleibt bei der
+Folge-Szenen-Korrektur (v626, kostenlos). KEIN harter Sofort-Retry bauen — der kostet
+einen zusätzlichen API-Call pro Bruch. Falls ein Lektorat `retryWithHardLocationPrompt()`
+erneut fordert: abgelehnt, nicht neu diskutieren.
