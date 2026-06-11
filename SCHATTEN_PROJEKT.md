@@ -14859,3 +14859,28 @@ vermeiden wollen. UMBAU (Engine-Logik bleibt, nur Prompt-TEXT vereinfacht):
 Beispiel-Prompt jetzt 614 statt ~1200+ Zeichen, liest sich wie eine Freitext-Eingabe. node --check OK (mehrere
 Klammer-Verheddrungen beim Bau von node --check gefangen + gefixt). Engine (Stärke/Härte, Erfolg/Fehlschlag,
 NPCZ-Wirkungen) unverändert - nur der an die KI gehende TEXT ist jetzt natürlich.
+
+## v7.12.659 (2026-06-11): UI-Sektionen aufgelöst + Flucht-Bug + Umsehen/Indizien verheiratet (Benjamin)
+Vier zusammenhängende Befunde aus Benjamin-Screenshots (Sz4, Karl verletzt, Mertens gefesselt):
+(1) ÜBERGANG/BLEIBT-SEKTIONEN AUFGELÖST: Die Akkordeon-Header "▶ Übergang in nächste Szene" / "Bleibt in der
+Szene" waren Quatsch -> entfernt. Beide Body-Container bleiben (Buttons hängen dran), aber ohne Header, ohne
+Toggle, immer offen. CSS: Sektions-Rahmen/Rundung weg (keine leeren Kästen), kleiner margin-top trennt die zweite
+Gruppe. Man sieht jetzt nur noch Buttons + Puzzle.
+(2) FLUCHT-NACH-FESSELN endlich an der Wurzel: Es gibt ZWEI Fessel-Pfade - Baukasten-Plan (hatte v658-Schutz) UND
+NPC-Popup "Niederschlagen & fesseln" (lief über _planAdd in denselben Pfad, ABER mit altem Aktionstext "mit
+EIGENEN Handschellen... KEIN Gewahrsam - Karl hat die Oberhand"). Alle drei NPC-Popup-Fesseltexte (Standard +
+2 Ablenkungs-Varianten) auf schlicht "überwältigt X und fesselt die Person" vereinheitlicht. ZUSÄTZLICH der
+eigentliche Treiber: Bei Vf=2 (schwer verletzt) assoziiert die KI "verletzt + Kampf = raus hier". Daher
+Anti-Flucht-Hinweis DIREKT an den VERLETZUNGS-MALUS-Push (Vf=2) gehängt: "Karls Verletzung ist KEIN Grund die
+Szene mit Flucht/Abfahrt zu beenden, kein Taumeln aus dem Hof, kein Opel, kein Ortswechsel - der Spieler
+entscheidet". Das ist die wirksamste Stelle (dort bekommt die KI das verletzt-Signal).
+(3) UMSEHEN-DOPPEL AUFGELÖST (Benjamin-Entscheidung Option A+verheiraten): "Umgebung durchsuchen" RAUS aus dem
+Baukasten (+ "Umgebung" als Ziel entfernt, da kein Verb es mehr braucht; WEN-Label vereinfacht). Der
+deterministische "Umsehen"-Button (🔎) ist jetzt der EINE Weg und findet ITEMS *und* die gerade erreichbaren
+KERN-INDIZIEN in einem Klick - respektiert die Indiz-Gates (Tageszeit + NPC am Ort über
+offeneIndizienAmOrtNachErreichbarkeit-Logik). Indizien mit ungeerfüllten Gates bleiben für später -> Umsehen
+lohnt sich wiederholt (andere Tageszeit/Person = neue Funde). Button zeigt Items+Indizien im Marker; erscheint
+auch wenn NUR Indizien (keine Items) erreichbar sind. Kein KI-Glücksspiel mehr beim Indizien-Finden (passt zur
+Engine-Philosophie "Engine besitzt Wahrheit, KI erzählt"). 7 Indiz-Gate-Tests + 5 Baukasten-Filter-Tests grün.
+node --check OK. WICHTIG für Benjamin: Indizien-Finden ist jetzt deterministisch über Umsehen - die KI-Szene als
+Indizien-Quelle entfällt für die Umgebung (NPC-Befragung kann weiter Indizien über Prosa liefern).
