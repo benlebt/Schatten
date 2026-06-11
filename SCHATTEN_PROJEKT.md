@@ -14434,3 +14434,12 @@ HINWEIS: Hund-Befehle nutzen das erste feindliche Ziel am Ort automatisch (oder 
 v631-Aktionsvarianten (werfen_fuesse/angreifen_mit/Eintausch->Indiz) waren bereits drin und vom Lektorat
 bestätigt. OFFEN: Hund als Baukasten-Akteur (aktuell nur über Personen-Menü); mehrfach gleiche Items (Instanz-
 Counter); anbieten-Cooldown.
+
+## v7.12.633 (2026-06-11): Rex als Baukasten-Akteur (Benjamin: Rex -> Fass -> bestimmtes Ziel)
+Rex ist jetzt wählbarer Baukasten-Akteur (wenn in Party). 4 Hunde-Kommandos als Baukasten-Aktionen
+(hund_fixiere/belle/knurre/fass, _nurHund-Flag). FILTERUNG: Rex sieht NUR Hunde-Kommandos, alle anderen Akteure
+sehen sie NICHT. Item-Stufe für Rex ausgeblendet (Hund nutzt keine Items). Damit: Rex -> Fass -> [Mertens] (oder
+mehrere Ziele via Mehrfachauswahl), kombinierbar im Plan mit Karl/Begleiter-Aktionen = EIN koordinierter Zugriff.
+fixiert-Wirkung (fass/fixiere) läuft über bestehende _planAusfuehren-Logik. 2/2 Filter-Tests. node --check OK.
+Personen-Menü-Hund-Befehle (v632) bleiben zusätzlich für Schnellzugriff. OFFEN: anbieten-Cooldown, Item-Instanz-
+Counter, Zurückpfeifen (falls fixiert sich als Soft-Lock erweist).

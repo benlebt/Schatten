@@ -3191,7 +3191,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.632</div>
+    <div class="start-version">Schatten v7.12.633</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.632</span>
+    <span>Schatten v7.12.633</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7098,7 +7098,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.632';
+window.SCHATTEN_VERSION = 'v7.12.633';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -7495,6 +7495,15 @@ function _itemKatalogEintrag(itemName) {
   return null;
 }
 const BAUKASTEN_AKTIONEN = {
+  // v7.12.633: Hunde-Kommandos (nur wählbar, wenn Akteur = Rex - siehe Akteur-abhängige Filterung).
+  hund_fixiere:{ label: 'Fixieren lassen', zielNoetig: true, _nurHund: true, wirkung: 'fixiert',
+    txt: (a, i, z) => a + ' stellt sich knurrend vor ' + z + ' - die Person erstarrt, hebt die Hände, wagt keine Bewegung.' },
+  hund_belle:  { label: 'Anbellen lassen', zielNoetig: true, _nurHund: true,
+    txt: (a, i, z) => a + ' bellt ' + z + ' laut und aggressiv an - die Person schreckt zurück oder flieht.' },
+  hund_knurre: { label: 'Anknurren lassen', zielNoetig: true, _nurHund: true,
+    txt: (a, i, z) => a + ' fixiert ' + z + ' mit tiefem Knurren - jagt den meisten Angst ein und macht gefügig.' },
+  hund_fass:   { label: 'Fass! (festsetzen)', zielNoetig: true, _nurHund: true, wirkung: 'fixiert',
+    txt: (a, i, z) => a + ' schnappt zu und hält ' + z + ' eisern fest - nicht verletzend, aber so unnachgiebig an empfindlicher Stelle, dass ' + z + ' sofort alles ausspuckt und nur noch fleht, den Hund zurückzupfeifen.' },
   angreifen:  { label: 'Angreifen',   zielNoetig: true,  wirkung: 'ko',
     txt: (a, i, z) => a + ' greift ' + z + ' an und schaltet die Person aus - ' + z + ' geht zu Boden und bleibt bewusstlos (K.O.) liegen.' },
   ablenken:   { label: 'Ablenken',    zielNoetig: true,
@@ -7598,7 +7607,9 @@ function _renderBaukasten() {
     }
     _bkAusrichten();
     const npcsHier = (typeof getNpcsAtCurrentLocation === 'function') ? (getNpcsAtCurrentLocation() || []) : [];
-    const akteure = ['Karl'].concat((typeof _party !== 'undefined' && Array.isArray(_party)) ? _party.map(p => p.name).filter(Boolean) : []);
+    let akteure = ['Karl'].concat((typeof _party !== 'undefined' && Array.isArray(_party)) ? _party.map(p => p.name).filter(Boolean) : []);
+    // v7.12.633: Rex als wählbarer Baukasten-Akteur (Rex -> Fass -> bestimmtes Ziel).
+    try { if (typeof _hundInParty === 'function' && _hundInParty() && akteure.indexOf(HUND_NAME) === -1) akteure.push(HUND_NAME); } catch (e) {}
     const itemsK = (typeof _itemsBeiKarl === 'function') ? _itemsBeiKarl() : [];
     // v7.12.619 (Benjamin): eigene Leute sind KEINE Ziele - Party-Mitglieder, die Klientin und der Akteur
     // selbst fliegen aus der Ziel-Liste (man setzt Doc nicht auf Margarete an).
@@ -7624,13 +7635,18 @@ function _renderBaukasten() {
     h += '<div style="color:#9a8a68;font-size:11px;margin-bottom:2px;">1. WER</div><div>' + akteure.map(a => _bkChip(a, bk.akteur === a, "_bkSet('akteur','" + a.replace(/'/g, "\\'") + "')")).join('') + '</div>';
     // v7.12.631 (Lektorat P1: "Karl tauscht Margaretes Akten gegen Info" verhindern): Beweis-Items sind
     // im Baukasten KEINE Tausch-/Wurfware - sie erscheinen hier nicht als wählbares Bauteil.
+    const _istHundAkteurFuerItem = (typeof HUND_NAME === 'string' && bk.akteur === HUND_NAME);
     const _itemsWaehlbar = itemsK.filter(it => it.typ !== 'beweis_dokument' && it.typ !== 'beweis');
-    h += '<div style="color:#9a8a68;font-size:11px;margin:6px 0 2px;">2. ITEM (optional)</div><div>' + (_itemsWaehlbar.length ? _itemsWaehlbar.map(it => _bkChip(it.name, bk.item === it.id, "_bkSet('item','" + it.id + "')")).join('') : '<span style="color:#666;font-size:11px;">keine nutzbaren Gegenstände</span>') + '</div>';
+    // v7.12.633: Rex nutzt keine Items - Item-Stufe für den Hund-Akteur ausblenden.
+    if (!_istHundAkteurFuerItem) h += '<div style="color:#9a8a68;font-size:11px;margin:6px 0 2px;">2. ITEM (optional)</div><div>' + (_itemsWaehlbar.length ? _itemsWaehlbar.map(it => _bkChip(it.name, bk.item === it.id, "_bkSet('item','" + it.id + "')")).join('') : '<span style="color:#666;font-size:11px;">keine nutzbaren Gegenstände</span>') + '</div>';
     // v7.12.630: Ist ein Katalog-Item gewählt, zeige NUR dessen erlaubte Aktionen (kein "Stinkbombe trinken").
     let _aktKeys = Object.keys(BAUKASTEN_AKTIONEN);
     let _katHint = '';
+    // v7.12.633: Rex sieht NUR Hunde-Kommandos; alle anderen Akteure sehen die Hunde-Kommandos NICHT.
+    const _istHundAkteur = (typeof HUND_NAME === 'string' && bk.akteur === HUND_NAME);
+    _aktKeys = _aktKeys.filter(k => _istHundAkteur ? !!BAUKASTEN_AKTIONEN[k]._nurHund : !BAUKASTEN_AKTIONEN[k]._nurHund);
     try {
-      if (bk.item && typeof _itemsMap === 'function' && _itemsMap()[bk.item]) {
+      if (!_istHundAkteur && bk.item && typeof _itemsMap === 'function' && _itemsMap()[bk.item]) {
         const _kat = _itemKatalogEintrag(_itemsMap()[bk.item].name);
         if (_kat && Array.isArray(_kat.taugt) && _kat.taugt.length) {
           _aktKeys = _aktKeys.filter(k => _kat.taugt.indexOf(k) !== -1);
