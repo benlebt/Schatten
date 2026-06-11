@@ -3191,7 +3191,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.648</div>
+    <div class="start-version">Schatten v7.12.649</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.648</span>
+    <span>Schatten v7.12.649</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7111,7 +7111,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.648';
+window.SCHATTEN_VERSION = 'v7.12.649';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -7662,9 +7662,12 @@ function _planAusfuehren() {
     // Bruch, aus dem fälschlich Sicherungs-Beats entstehen konnten). Ein Zugriff passiert HIER, am aktuellen Ort.
     txt += ' WICHTIG: Diese Aktion passiert am AKTUELLEN Ort. KEIN Ortswechsel, KEINE Flucht zum Auto, KEINE Fahrt - die Szene bleibt hier, wo Karl gerade ist.';
     if (typeof diag === 'function') diag('state', '📋 PLAN AUSGEFÜHRT: ' + plan.length + ' Aktionen -> ein Prompt' + (_gabFehlschlag ? ' (mit Fehlschlag)' : ''));
+    // v7.12.649 (Benjamin: der lange KI-Prompt wurde dem Spieler 1:1 im Verlauf gezeigt - viel zu ausführlich).
+    // Kurzer, lesbarer Anzeige-Text aus den Plan-Labels; der lange txt geht NUR an die KI.
+    let _anzeigeText = 'Koordinierter Zugriff: ' + plan.map(p => p.label).join('; ');
     window._aktionsPlan = [];
     _renderPlanLeiste();
-    if (typeof chooseOption === 'function') chooseOption({ id: 'PLAN_ZUGRIFF', text: txt, kategorie: 'OFFENSIV', _kategorie: 'OFFENSIV', _priority: 18, _isSystemButton: true });
+    if (typeof chooseOption === 'function') chooseOption({ id: 'PLAN_ZUGRIFF', text: txt, _anzeigeText: _anzeigeText, kategorie: 'OFFENSIV', _kategorie: 'OFFENSIV', _priority: 18, _isSystemButton: true });
   } catch (e) {}
 }
 // ============ Ende AKTIONS-PLAN ============
@@ -7818,7 +7821,10 @@ function _renderBaukastenButton() {
     // sichtbar nur, wenn das Spiel läuft UND mindestens ein freier feindlicher NPC am Ort ist.
     let _konflikt = false;
     try {
-      const _spielLaeuft = (typeof engineCurrentLocation !== 'undefined' && engineCurrentLocation && engineCurrentLocation.name)
+      // v7.12.649 (Benjamin: das Puzzleteil soll nach Spielende verschwinden). Fall gelöst/gescheitert -> kein Baukasten.
+      const _fallVorbei = (typeof caseProgress === 'object' && caseProgress && (caseProgress.istGescheitert || caseProgress.istGelöst));
+      const _spielLaeuft = !_fallVorbei
+        && (typeof engineCurrentLocation !== 'undefined' && engineCurrentLocation && engineCurrentLocation.name)
         && (typeof sceneCounter === 'number' && sceneCounter > 0);
       if (_spielLaeuft) {
         const _npcsB = (typeof getNpcsAtCurrentLocation === 'function') ? (getNpcsAtCurrentLocation() || []) : [];
@@ -28429,7 +28435,7 @@ async function chooseOption(option) {
       stopSpeakCurrent();
     }
     showLoading();
-    logEntries.push({ type: 'choice', text: option.text });
+    logEntries.push({ type: 'choice', text: (option && option._anzeigeText) || option.text });
     renderLog(false); // v7.9.47: kein Scroll - User soll seine Wahl + Loader sehen, nicht zum Header gerissen werden
 
     // v7.11.13: Player-vs-Bot-Tracking. Wenn Bot laeuft, log "Bot-Klick";

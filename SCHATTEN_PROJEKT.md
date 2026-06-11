@@ -14680,3 +14680,23 @@ sie ist eine Erzähl-Erlaubnis, kein Eingabe-Mechanismus, und greift praktisch n
 HINWEIS: System-Prompt (~144k Zeichen, Ton/Noir/Historik/Prosa-Erzeugung) bleibt nötig, solange die KI Prosa
 schreibt - Freitext-EINGABE != System-Prompt. "KI-Prosa ganz abschalten = reines deterministisches Baukasten-
 Adventure" wäre ein fundamentaler Scheideweg (eigene Konzept-Session), NICHT Teil dieser Änderung.
+
+## v7.12.649 (2026-06-11): Plan-Anzeige gekürzt + Puzzleteil nach Spielende weg (Benjamin-Befunde)
+BENJAMIN-BEFUNDE aus Run v643 (Negativtest taktischer Zugriff):
+(1) Der lange KI-Prompt eines Plan-Zugriffs ("KOORDINIERTER ZUGRIFF - alle folgenden Handlungen passieren
+GLEICHZEITIG...") wurde dem Spieler 1:1 im Verlauf gezeigt - viel zu ausführlich. FIX: chooseOption bekommt
+ein separates Feld _anzeigeText (kurz, aus den Plan-Labels: "Koordinierter Zugriff: Karl fesselt Mertens; ...").
+Der Verlauf (logEntries) zeigt _anzeigeText, der lange txt geht NUR an die KI. Fallback: ohne _anzeigeText
+normaler text (alle anderen Aktionen unverändert).
+(2) Das Puzzleteil (🧩 Baukasten-Button) blieb nach Spielende sichtbar (prüfte nur sceneCounter>0, nicht
+gelöst/gescheitert). FIX: _renderBaukastenButton prüft jetzt caseProgress.istGelöst/istGescheitert -> nach
+Win/Fail kein Baukasten mehr.
+5 Tests grün. node --check OK.
+MERTENS-FRAGE BEANTWORTET (kein Code-Fix nötig): Mertens ist NICHT immer unbesiegbar. Im v643-Run scheiterte
+der Zugriff, weil Karl auf ZWEI Ziele aufgeteilt war (Mann im Mantel UND Mertens gleichzeitig fesseln) - gegen
+Mertens (Härte 5 in v643, jetzt 4) stand Karl allein (2) statt gebündelt. Das "trinken" war Prosa, kein
+Baukasten-Ablenken, zählte nicht zur Manöver-Summe. Bündelt man Kraft auf Mertens (Karl+Rex = 2+3+1=6, oder
+Karl + echtes Ablenk-Manöver), klappt es. Der v646-Detail-Debug [Karl:2 + Rex:3 +1 Synergie] macht das künftig
+im Export sichtbar.
+LEKTORAT-RESTE (offen, Gameplay/größerer Bau): A2 NPC_sicherheit nur mit hartem Zielort (Flucht != Sicherung),
+A4 Akten als echtes Item bei definierter Akten-Aktion, A6 PLAN_ZUGRIFF-Fehlschlag Vf-Deckel auf min 1.
