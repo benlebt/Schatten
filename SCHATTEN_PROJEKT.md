@@ -15910,3 +15910,14 @@ aus dem Aktionstext erkannt (befragen/trinken/durchsuchen/bestechen/bedrohen/üb
 **5. ⛓ ÜBERWÄLTIGTE GEGNER SICHTBAR ENTSCHÄRFT:** gefesselt/ko/fixiert/benommen ->
 grauer Rahmen + "⛓ gefesselt"-Label statt rot + "⚠ Gegner" (keine Bedrohung mehr).
 **6. Fund-Pop 1100->2600ms** (Funde verschwanden zu schnell, man konnte sie nicht genießen).
+
+## 🆕 v7.12.710 — GEFAHR GEBANNT: gefesselte Gegner = Spannung gedeckelt (Benjamin)
+
+Benjamin-Befund (Run 1929): Mantelmann gefesselt (⛓ korrekt angezeigt), aber Spannung
+blieb 5 -> nur Flucht möglich statt Reisen, obwohl niemand mehr bedroht. NEU:
+_alleGegnerEntschaerft() (mind. 1 Gegner am Ort UND alle gefesselt/ko/fixiert/benommen,
+live geprüft) deckelt die Spannung an ZWEI Stellen: (1) sofort nach erfolgreichem
+Konflikt-Plan (lastSpannung auf 2 + "GEFAHR GEBANNT"-Push an die KI), (2) bei jeder
+Szenen-Übernahme gegen KI-Werte (newSpannung > 2 -> 2, analog zur Post-Flucht-Ruhe).
+Wird der Gefesselte befreit oder ein neuer Gegner taucht auf, greift der Deckel nicht
+mehr. Effekt: Reisen/Schlafen werden nach dem Zugriff wieder frei, Flucht-Zwang entfällt.

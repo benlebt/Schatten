@@ -3277,7 +3277,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.709</div>
+    <div class="start-version">Schatten v7.12.710</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3503,7 +3503,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.709</span>
+    <span>Schatten v7.12.710</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7361,7 +7361,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.709';
+window.SCHATTEN_VERSION = 'v7.12.710';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -8046,6 +8046,16 @@ function _planAusfuehren() {
     // v7.12.694: Konfliktpläne spielen die volle KONFRONTATIONS-SEQUENZ (Schritt für Schritt +
     // Finale aus dem Stärkesystem). fxPlan (Einzelbild) bleibt als Fallback erhalten.
     if (_istKonfliktPlan) { try { if (typeof fxBattle === 'function') { fxBattle(plan, _zugriffFehlschlag); } else { fxPlan(plan, _gabFehlschlag); } } catch (e) {} }
+    // v7.12.710 (Benjamin): Sind nach dem Zugriff ALLE Gegner am Ort überwältigt, ist die
+    // akute Gefahr GEBANNT - Engine kappt die Spannung auf 2 und sagt es der KI, damit
+    // Reisen/Schlafen wieder frei werden statt nur Flucht.
+    try {
+      if (_istKonfliktPlan && typeof _alleGegnerEntschaerft === 'function' && _alleGegnerEntschaerft()) {
+        if (typeof lastSpannung === 'number' && lastSpannung > 2) lastSpannung = 2;
+        if (Array.isArray(pendingCategoryMessages)) pendingCategoryMessages.push('GEFAHR GEBANNT: Alle Gegner am Ort sind überwältigt (gefesselt/außer Gefecht). Die akute Bedrohung ist VORBEI - die Szene beruhigt sich, Spannung maximal 2. Karl kontrolliert die Lage.');
+        if (typeof diag === 'function') diag('progress', '✦ GEFAHR GEBANNT: alle Gegner am Ort überwältigt -> Spannung auf 2 gekappt');
+      }
+    } catch (e) {}
     // v7.12.649: Kurzer Anzeige-Text aus den Plan-Labels; der lange txt geht NUR an die KI.
     let _anzeigeText = (_istKonfliktPlan ? 'Koordinierter Zugriff: ' : '') + plan.map(p => p.label).join('; ');
     window._aktionsPlan = [];
@@ -8239,6 +8249,24 @@ function charVisual(name, tag, istWeiblich) {
     const F = ['👩', '👩‍🦰', '👩‍🦳', '👱‍♀️'];
     return istWeiblich ? F[h % F.length] : M[h % M.length];
   } catch (e) { return '👤'; }
+}
+// v7.12.710 (Benjamin: "ich habe ihn gefesselt, bin nicht mehr in Gefahr - aber Spannung 5
+// und nur Flucht statt Reisen"): Wahr, wenn am aktuellen Ort mindestens ein Gegner steht
+// und ALLE Gegner überwältigt sind (gefesselt/ko/fixiert/benommen) - dann ist die akute
+// Gefahr gebannt und die Spannung wird gedeckelt (siehe Szenen-Übernahme + Manöver-Erfolg).
+function _alleGegnerEntschaerft() {
+  try {
+    const npcs = (typeof getNpcsAtCurrentLocation === 'function') ? (getNpcsAtCurrentLocation() || []) : [];
+    let gegner = 0;
+    for (const n of npcs) {
+      if (!n || !n.name) continue;
+      if (typeof _istGegnerNpc !== 'function' || !_istGegnerNpc(n.name, n.tag, n.rolle)) continue;
+      gegner++;
+      const z = (typeof _npcZustandGet === 'function') ? _npcZustandGet(n.name) : null;
+      if (!z || !/gefesselt|ko|fixiert|benommen/.test(z.status || '')) return false;
+    }
+    return gegner > 0;
+  } catch (e) { return false; }
 }
 // v7.12.703 (Benjamin: "gegnerische NPCs über den befreundeten anzeigen und markieren"):
 // Gegner-Erkennung über Tag, Rolle, Tatverdächtigen- und Showdown-Match.
@@ -34131,6 +34159,16 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       if (actionStreak > 0) actionStreak = Math.max(0, actionStreak - 1);
       if (calmStreak > 0) calmStreak = Math.max(0, calmStreak - 1);
     }
+    // v7.12.710 (Benjamin: Mantelmann gefesselt, aber KI lieferte weiter Spannung 5 -> nur
+    // Flucht statt Reisen): Sind ALLE Gegner am Ort überwältigt, deckelt die Engine die
+    // KI-Spannung auf 2 - ein Gefesselter bedroht niemanden. Wird er befreit / taucht ein
+    // neuer Gegner auf, greift der Deckel nicht mehr (Helfer prüft live).
+    try {
+      if (newSpannung > 2 && typeof _alleGegnerEntschaerft === 'function' && _alleGegnerEntschaerft()) {
+        diag('state', 'GEFAHR-GEBANNT-DECKEL: Spannung ' + newSpannung + ' -> 2 (alle Gegner am Ort überwältigt)');
+        newSpannung = 2;
+      }
+    } catch (e) {}
     lastSpannung = newSpannung;
 
     // Eindringlings-Cooldown: wenn ein Eindringling in dieser Szene aufgetaucht ist,
