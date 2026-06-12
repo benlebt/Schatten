@@ -15476,3 +15476,31 @@ arbeitet: ⏸-Events sichtbar, NPC-Menü-Klicks endlich im Export.
 - P2 notiert (nicht gebaut, Benjamin-Entscheid bzw. Content): SED-Siegel→Reichsbahn-
   Dienstsiegel/Parteiabzeichen (Prompt-Detail); Win-Screen-Nachklang ortsabhängig;
   Margarete kompetenter (weniger Dauerangst); Schlafort-Risikoklassen (Opel = unsicher).
+
+## 🆕 v7.12.689 — FX-SYSTEM: visuelle Belohnung (Benjamin + ChatGPT-Konzept)
+
+**Designregel: Die ENGINE löst Animationen aus, nie die KI-Prosa. Toasts informieren,
+Animationen belohnen.** pointer-events:none, prefers-reduced-motion respektiert (fxEnabled),
+FX_AKTIV-Konstante als Schalter.
+
+1. **Item-Pop (fxItemGain):** Beim Einbuchen in _itemAdd poppt das Item-Emoji mit Namen hoch
+   (🥃 Korn, 🍞 Toaster, 💵 Ostmark, 📄 Akten, 🐟 Fisch, 🧱 Ziegelstein...). 1,1 s, mittig
+   unten, blockiert nichts.
+2. **Konflikt-Animation (fxConflict/fxPlan):** Hook in _planAusfuehren (Fehlschlag-Status
+   liegt dort vor): Akteur-Emoji (🐕 Rex / 🕵️ Karl) ruckt zum Ziel-Emoji (🧥 Mertens,
+   🎩 Wahler, 🕴️ Mantelmann), 💥 Impact (💨 + "daneben!" bei Fehlschlag), Ziel wackelt,
+   Caption ("Rex packt Oberleutnant Mertens"). 1,2 s.
+3. **Toast-Drossel-Fix (ChatGPT P1, verifiziert):** 'item-add' war ein GLOBALER Trigger-Key -
+   mehrere Funde im selben Abschnitt wurden geschluckt. Jetzt per-Item-Key; die Belohnung
+   trägt ohnehin der Pop.
+4. **hund_fass-Text entschärft (ChatGPT P2, verifiziert):** "an empfindlicher Stelle" raus -
+   jetzt Mantelärmel-Packen, klar körperlich, nicht seltsam.
+
+Emoji-Mappings gegen echte Spielnamen getestet (5 Items, 4 NPCs, Captions). 
+**Ausbau-Ideen notiert (nach Stabilitätstest):** Indiz-Puls, AKTE-GESCHLOSSEN-Gold beim
+Lösen, Sicherungs-Wanderung (👩→🏥), Flucht-💨, Schlaf-Blende 🌙, FX-Sounds (an Musik-Modi
+gekoppelt, nicht in "Still"). ChatGPT-P1 "_bkChip inline-onclick härten" als P3 notiert.
+Stage-4-Hard-Fallback weiter SETTLED ABGELEHNT (3. Forderung).
+
+**Workflow-Erinnerung (Benjamin):** gemini.js/mistral.js/groq.js liegen im Repo unter api/ —
+bei JEDER Änderung an den Proxy-Dateien mit committen/pushen (GEMINI_JS_VERSION bumpen).
