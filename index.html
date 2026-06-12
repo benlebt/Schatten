@@ -2860,9 +2860,9 @@
 @keyframes fxItemBounce { 0% { transform: scale(0.4) rotate(-10deg); } 60% { transform: scale(1.22) rotate(6deg); } 100% { transform: scale(1) rotate(0); } }
 /* v7.12.690: Reise-Animation - der Opel rattert quer durchs Bild (Emoji schaut nach links -> Fahrt rechts->links) */
 .fx-travel { position: fixed; left: 0; right: 0; top: 42%; height: 90px; z-index: 9200; pointer-events: none; overflow: hidden; }
-.fx-car { position: absolute; top: 6px; left: 0; font-size: 46px; filter: drop-shadow(0 5px 10px rgba(0,0,0,0.7)); animation: fxDrive 1.8s cubic-bezier(.25,.6,.45,1) forwards; }
+.fx-car { position: absolute; top: 6px; left: 0; font-size: 46px; filter: drop-shadow(0 5px 10px rgba(0,0,0,0.7)); animation: fxDrive 3.2s cubic-bezier(.3,.5,.5,1) forwards; } /* v7.12.693: 1953er Tempo */
 .fx-puff { position: absolute; top: 18px; font-size: 24px; opacity: 0; animation: fxPuff 0.8s ease forwards; }
-.fx-travel-caption { position: absolute; left: 0; right: 0; top: 62px; text-align: center; color: #d4c8a8; font: 12px monospace; letter-spacing: 0.06em; text-shadow: 0 2px 6px rgba(0,0,0,0.8); animation: fxFadeInOut 1.9s ease forwards; }
+.fx-travel-caption { position: absolute; left: 0; right: 0; top: 62px; text-align: center; color: #d4c8a8; font: 12px monospace; letter-spacing: 0.06em; text-shadow: 0 2px 6px rgba(0,0,0,0.8); animation: fxFadeInOut 3.3s ease forwards; }
 @keyframes fxDrive { 0% { transform: translateX(105vw) translateY(0); } 30% { transform: translateX(70vw) translateY(-2px); } 55% { transform: translateX(42vw) translateY(1px); } 80% { transform: translateX(16vw) translateY(-2px); } 100% { transform: translateX(-140px) translateY(0); } }
 @keyframes fxPuff { 0% { opacity: 0; transform: scale(0.4) translateY(0); } 30% { opacity: 0.9; transform: scale(1.15) translateY(-4px); } 100% { opacity: 0; transform: scale(1.5) translateY(-14px); } }
 /* v7.12.692: Party-Beitritt - Gruppe links, Neuer gleitet von rechts heran, ✨-Splash, Gruppe hüpft */
@@ -7999,13 +7999,22 @@ function fxTravel(zielName) {
     if (!fxEnabled()) return;
     const band = document.createElement('div');
     band.className = 'fx-travel';
-    band.innerHTML = '<div class="fx-car">🚗</div>'
-      // v7.12.691 (Korrektur eigener v690-Fehler): Fahrt geht rechts->links, "hinter dem Auto"
-      // ist also RECHTS - Wölkchen-Positionen lagen davor. Jetzt: Auto bei Delay 0.35/0.8/1.2s
-      // ≈ 82/54/30vw, Wölkchen bei 88/60/36vw (rechnerisch verifiziert).
-      + '<div class="fx-puff" style="left:88vw;animation-delay:0.35s;">💨</div>'
-      + '<div class="fx-puff" style="left:60vw;animation-delay:0.8s;">💨</div>'
-      + '<div class="fx-puff" style="left:36vw;animation-delay:1.2s;">💨</div>'
+    // v7.12.693 (Benjamin: "1953 war der Opel Olympia nicht so flott" + "passenderes Auto"):
+    // 3,2 s Fahrtdauer (statt 1,8) und eine selbstgezeichnete Olympia-Silhouette (Ponton-rund,
+    // Gold-Kontur, Noir) statt des modernen 🚗-Emojis - ein passendes Emoji gibt es nicht.
+    // Wölkchen-Delays auf das neue Tempo gerechnet: Auto bei 0.6/1.4/2.1s ≈ 84/56/31vw.
+    const _opelSvg = '<svg width="68" height="32" viewBox="0 0 64 30" xmlns="http://www.w3.org/2000/svg">'
+      + '<path d="M3 21 Q3 16 9 15 L16 14 Q20 7 28 6 L37 6 Q45 7 49 13 L56 15 Q61 16 61 21 L61 23 L55 23 A6 6 0 0 0 43 23 L21 23 A6 6 0 0 0 9 23 L3 23 Z" fill="#23232a" stroke="#d4b86a" stroke-width="1.4"/>'
+      + '<path d="M22 13 Q25 8.5 29 8 L35 8 Q40 8.5 43 12.6 Z" fill="#11131a" stroke="#9b8a5c" stroke-width="0.8"/>'
+      + '<circle cx="15" cy="23" r="5" fill="#15151a" stroke="#d4b86a" stroke-width="1.2"/>'
+      + '<circle cx="49" cy="23" r="5" fill="#15151a" stroke="#d4b86a" stroke-width="1.2"/>'
+      + '<circle cx="15" cy="23" r="1.6" fill="#d4b86a"/><circle cx="49" cy="23" r="1.6" fill="#d4b86a"/>'
+      + '<circle cx="5" cy="17.5" r="1.3" fill="#e8d9a0"/>'
+      + '</svg>';
+    band.innerHTML = '<div class="fx-car">' + _opelSvg + '</div>'
+      + '<div class="fx-puff" style="left:90vw;animation-delay:0.6s;">💨</div>'
+      + '<div class="fx-puff" style="left:62vw;animation-delay:1.4s;">💨</div>'
+      + '<div class="fx-puff" style="left:37vw;animation-delay:2.1s;">💨</div>'
       + '<div class="fx-travel-caption">→ ' + escapeHtml(zielName || 'unterwegs') + '</div>';
     document.body.appendChild(band);
     setTimeout(() => { try { band.remove(); } catch (e) {} }, 1950);
@@ -8175,9 +8184,10 @@ function _ortsFundItems() {
 // ohne Zahlungsmittel ist der Button gesperrt. Indizien sind davon UNBERÜHRT (Ermittlungsfunde
 // bleiben automatisch). Bots sehen kein Popup (würde Bot-Runs einfrieren) - sie nehmen frei
 // Verfügbares automatisch und kaufen, wenn sie zahlen können.
-function _zeigeFundAuswahl(fundItems) {
+function _zeigeFundAuswahl(fundItems, fundIndizien) {
   try {
-    if (!fundItems || !fundItems.length) return;
+    fundItems = fundItems || []; fundIndizien = fundIndizien || [];
+    if (!fundItems.length && !fundIndizien.length) return;
     const ortKey = normForMatch(engineCurrentLocation.name);
     if (!caseProgress.ortsFundGenommen) caseProgress.ortsFundGenommen = {};
     if (!caseProgress.ortsFundGenommen[ortKey]) caseProgress.ortsFundGenommen[ortKey] = [];
@@ -8212,7 +8222,9 @@ function _zeigeFundAuswahl(fundItems) {
       } catch (e) { return []; }
     };
     // Bot-Pfad: kein Popup, automatische Mitnahme (frei immer, Kauf mit billigstem Zahl-Item).
+    // v7.12.693: Bot nimmt auch die Spuren/Indizien automatisch (wie vor dem Popup-Umbau).
     if (typeof botActive !== 'undefined' && botActive) {
+      fundIndizien.forEach(ind => { try { if (typeof _markiereIndizGefunden === 'function') _markiereIndizGefunden(ind); } catch (e) {} });
       fundItems.forEach(it => {
         if (it.preis === 0) { _nimm(it); return; }
         const kand = _zahlKandidaten(it.preis);
@@ -8226,7 +8238,37 @@ function _zeigeFundAuswahl(fundItems) {
     const panel = document.createElement('div');
     panel.style.cssText = 'max-width:440px;width:100%;max-height:80vh;overflow-y:auto;background:#1a1611;border:1px solid #4d4234;border-radius:8px;padding:18px 18px 14px;box-shadow:0 12px 40px rgba(0,0,0,0.6);';
     panel.innerHTML = '<div style="font-family:inherit;color:#cbbfa9;font-size:calc(14px * var(--reading-scale));letter-spacing:0.06em;margin-bottom:4px;">🔎 FUNDSTÜCKE</div>'
-      + '<div style="font-family:inherit;color:#867868;font-size:calc(10px * var(--reading-scale));margin-bottom:14px;line-height:1.4;">Was steckt Karl ein? Ware mit Preis kostet Tauschwert (Ostmark, Westmark, Tauschware).</div>';
+      + '<div style="font-family:inherit;color:#867868;font-size:calc(10px * var(--reading-scale));margin-bottom:14px;line-height:1.4;">Was nimmt Karl an sich? Ware mit Preis kostet Tauschwert (Ostmark, Westmark, Tauschware).</div>';
+    // v7.12.693 (Benjamin: "gezielt aufnehmen wie Items, als zwei Bereiche"): SPUREN-Sektion -
+    // Ermittlungsfunde, golden abgesetzt, pro Klick aufnehmen -> wandern ins Notizbuch.
+    if (fundIndizien.length) {
+      const sh = document.createElement('div');
+      sh.style.cssText = 'color:#d4b86a;font-size:calc(11px * var(--reading-scale));letter-spacing:0.1em;margin:2px 0 4px;';
+      sh.textContent = '· SPUREN ·';
+      panel.appendChild(sh);
+      fundIndizien.forEach(ind => {
+        const b = document.createElement('button');
+        b.className = 'option-btn option-btn-system';
+        b.style.cssText = 'display:block;width:100%;text-align:left;margin:4px 0;border-color:#8a7440;';
+        b.innerHTML = '<span class="option-text-wrap"><span>📁 ' + escapeHtml(ind.text || ind.id) + '</span><span class="option-marker option-marker-system">· Aufnehmen</span></span>';
+        b.onclick = () => {
+          try {
+            if (typeof _markiereIndizGefunden === 'function' && _markiereIndizGefunden(ind)) {
+              b.disabled = true; b.classList.add('locked');
+              const mk = b.querySelector('.option-marker'); if (mk) mk.textContent = '· Im Notizbuch ✓';
+              if (typeof showProgressToast === 'function') showProgressToast('📁 Spur aufgenommen', (ind.text || ind.id), 'clue', 'spur-' + ind.id);
+            }
+          } catch (e) {}
+        };
+        panel.appendChild(b);
+      });
+      if (fundItems.length) {
+        const ih = document.createElement('div');
+        ih.style.cssText = 'color:#9a8a68;font-size:calc(11px * var(--reading-scale));letter-spacing:0.1em;margin:12px 0 4px;';
+        ih.textContent = '· GEGENSTÄNDE ·';
+        panel.appendChild(ih);
+      }
+    }
     fundItems.forEach(it => {
       const reihe = document.createElement('div');
       reihe.style.cssText = 'margin:4px 0;';
@@ -21561,30 +21603,24 @@ function renderOptions(scene) {
             const ortKey = normForMatch(engineCurrentLocation.name);
             if (!caseProgress.ortsFundGenommen) caseProgress.ortsFundGenommen = {};
             if (!caseProgress.ortsFundGenommen[ortKey]) caseProgress.ortsFundGenommen[ortKey] = [];
-            const _gefundenNamen = [];
-            // v7.12.680 (Benjamin): Items werden NICHT mehr automatisch eingesteckt - der Spieler
-            // wählt im Fundauswahl-Popup (Kauf-Items kosten Tauschwert). Indizien bleiben
-            // automatisch (Ermittlungsfunde). Bot-Pfad im Popup-Helper (nimmt automatisch).
+            // v7.12.693 (Benjamin: "das Indiz poppt einfach so von unten auf, ohne dass ich was
+            // geklickt habe - das ist Käse. Die sollen auch im Popup erscheinen, gezielt aufnehmen
+            // wie Items. Es sollte immer weniger 'von selbst passieren'."): Indizien werden NICHT
+            // mehr automatisch markiert - sie erscheinen als eigene SPUREN-Sektion im Fundauswahl-
+            // Popup, getrennt von den Gegenständen. Bot-Pfad nimmt weiter automatisch (im Helper).
             const f2 = (typeof _ortsFundItems === 'function') ? _ortsFundItems() : [];
-            // Indizien einsammeln - GLEICHE Quelle wie der Marker (frisch holen).
             const _ind2 = (typeof _ortsFundIndizienErreichbar === 'function') ? _ortsFundIndizienErreichbar() : [];
-            _ind2.forEach(ind => {
-              if (typeof _markiereIndizGefunden === 'function' && _markiereIndizGefunden(ind)) {
-                _gefundenNamen.push(ind.text || ind.id);
-              }
-            });
-            if (f2.length && typeof _zeigeFundAuswahl === 'function') _zeigeFundAuswahl(f2);
-            // v7.12.661: Logge, was tatsächlich eingesammelt wurde (Benjamin: "und wie viele und welche ich erhalte").
-            if (typeof diag === 'function') diag('state', '🔎 UMSEHEN-KLICK @ ' + engineCurrentLocation.name + ': Items zur Auswahl=' + f2.length + ' [' + f2.map(x => x.name + (x.preis ? ' (Preis ' + x.preis + ')' : '')).join(', ') + '] · Indizien genommen=' + _ind2.length + ' [' + _ind2.map(x => x.id).join(', ') + ']');
-            if (_gefundenNamen.length) {
+            if ((f2.length || _ind2.length) && typeof _zeigeFundAuswahl === 'function') _zeigeFundAuswahl(f2, _ind2);
+            if (typeof diag === 'function') diag('state', '🔎 UMSEHEN-KLICK @ ' + engineCurrentLocation.name + ': Items zur Auswahl=' + f2.length + ' [' + f2.map(x => x.name + (x.preis ? ' (Preis ' + x.preis + ')' : '')).join(', ') + '] · Indizien zur Auswahl=' + _ind2.length + ' [' + _ind2.map(x => x.id).join(', ') + ']');
+            if (false) { // v7.12.693: Sammel-Toast obsolet - Feedback kommt pro Klick im Popup
               // v7.12.664 (Benjamin: "3 Fundstücke geklickt, kein Toast"). URSACHE: 'success'-Variante fiel in
               // den 3-Szenen-Variant-Cooldown - die Bestätigung wurde unterdrückt, obwohl die Items/Indizien
               // tatsächlich eingesammelt wurden. Der Umsehen-Toast ist eine DIREKTE Antwort auf einen Spieler-
               // Klick (ein Fund-Ereignis wie ein Indiz-Fund) und MUSS immer erscheinen. Variante 'clue' umgeht
               // den Cooldown (canShowToast: clue gibt immer true zurück).
-              if (typeof showProgressToast === 'function') showProgressToast('🔎 Gefunden', 'Karl entdeckt: ' + _gefundenNamen.join(', '), 'clue', 'orts-fund-' + (typeof sceneCounter === 'number' ? sceneCounter : 0));
-            } else if (f2.length) {
-              // v7.12.680: Items im Auswahl-Popup, keine Indizien - kein Leer-Toast nötig.
+              // v7.12.693: Sammel-Toast entfernt - Feedback kommt pro Spur-Klick im Popup.
+            } else if (f2.length || _ind2.length) {
+              // v7.12.693: Popup zeigt Gegenstände UND Spuren - kein Leer-Toast nötig.
             } else {
               // Nichts holbar - aber vielleicht warten zeitgesperrte ORTS-Indizien.
               let _spaeterHier = 0;

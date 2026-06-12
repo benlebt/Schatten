@@ -15539,3 +15539,23 @@ Zeilen, ab 55vh scrollt das Panel vertikal.
 Rest-Risiko gefixt: Ein EINZELNER überlanger KI-Name wird als inline-Block so breit wie sein
 Text und könnte allein den Rand sprengen -> Chips jetzt max-width:100% + white-space:normal
 (Label bricht IM Chip um), Panel zusätzlich overflow-x:hidden.
+
+## 🆕 v7.12.693 — Spuren ins Fund-Popup ("weniger von selbst") + Opel-Tempo 1953 + Olympia-Silhouette
+
+**1. Indizien werden gezielt aufgenommen (Benjamin: "das Indiz poppt einfach so auf, ohne
+dass ich was geklickt habe - das ist Käse"):** Umsehen markiert Indizien NICHT mehr
+automatisch. Das Fundauswahl-Popup hat jetzt zwei getrennte Bereiche: "· SPUREN ·" (golden
+abgesetzt, 📁, Klick = "Aufnehmen" -> _markiereIndizGefunden + Spur-Toast + "Im Notizbuch ✓")
+und "· GEGENSTÄNDE ·" (wie gehabt mit Kauf-Zweischritt). Popup öffnet auch bei nur-Spuren-
+Funden. Designprinzip festgehalten: **es soll immer weniger "von selbst passieren"** -
+der Spieler nimmt bewusst auf. Bot-Pfad nimmt weiterhin alles automatisch (Indizien + Items).
+Sammel-Toast "Karl entdeckt: ..." entfernt (Feedback pro Klick). Toter Code mitgesäubert.
+
+**2. Opel-Tempo (Benjamin: "1953 war der Opel Olympia nicht so flott :D"):** Fahrtdauer
+1,8 s -> 3,2 s, Wölkchen-Delays neu gerechnet (0.6/1.4/2.1 s bei 90/62/37vw - alle drei
+hinter dem Auto, rechnerisch verifiziert ✓), Caption + Einblenddauer angepasst (3,3 s).
+
+**3. Olympia-Silhouette statt 🚗:** Ein passendes 50er-Jahre-Emoji existiert nicht -
+stattdessen selbstgezeichnetes Inline-SVG: Ponton-runde Limousinen-Silhouette in Noir-Optik
+(dunkler Korpus, Gold-Kontur, Gold-Radkappen, warmer Scheinwerfer vorn), 68px, fährt nach
+links (Front links gezeichnet).
