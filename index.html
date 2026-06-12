@@ -3187,7 +3187,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.677</div>
+    <div class="start-version">Schatten v7.12.678</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.677</span>
+    <span>Schatten v7.12.678</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7183,7 +7183,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.677';
+window.SCHATTEN_VERSION = 'v7.12.678';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -13988,7 +13988,7 @@ function buildAssertionReport() {
     // zählen daher zusätzlich, wie oft die Engine einen Ghost-/Fehl-Reintro geblockt hat - das
     // zeigt, dass die Prosa-Rekonstruktion aktiv arbeitet statt nur passiv zu fehlen.
     try {
-      let fehlt = 0, total = 0, reintroBlocked = 0, castOverride = 0;
+      let fehlt = 0, total = 0, reintroBlocked = 0, castOverride = 0, ortBrueche = 0, teleportBlocks = 0;
       // v7.12.675 (Benjamin-Befund Run 0031: "es waren nur 19 Szenen?"): Es wurden DIAG-ZEILEN
       // gezählt, nicht Szenen - jede Szene loggt aber ~2 personenImRaum-Zeilen (CAST-DIAG +
       // CAST-SZENE-DIAG). 19 Szenen meldeten so "4/40 Szenen". Jetzt pro FRAME (=Szene): eine
@@ -14001,6 +14001,9 @@ function buildAssertionReport() {
           if (/personenImRaum/i.test(m)) { hatPir = true; if (/FEHLT|kein Array/i.test(m)) fehltPir = true; }
           if (/Reintroduce ÜBERSPRUNGEN|Reintro-übersprungen/i.test(m)) reintroBlocked++;
           if (/Cast-Override|VERWORFEN \(Cast-Override\)|namentlichem Abschied aus Cast/i.test(m)) castOverride++;
+          // v7.12.678 (Backlog P2, Tageszeit/Ort-Assertions): Ort-Wahrheit messen.
+          if (/ORT-PROSA-BRUCH/i.test(m)) ortBrueche++;
+          if (/personenImRaum-TELEPORT geblockt/i.test(m)) teleportBlocks++;
         });
         if (hatPir) { total++; if (fehltPir) fehlt++; }
       });
@@ -14010,6 +14013,24 @@ function buildAssertionReport() {
           row('✓', 'Engine-Cast rekonstruiert: ja (Prosa-Heuristik) | Reintro/Ghost-Cast geblockt: ' + reintroBlocked + ' | Cast-Override: ' + castOverride);
         }
       }
+      // v7.12.678: Ort-Wahrheits-Zeilen. Brüche ab Stage 2 sind der W2b-Befund (Run 0048: 10/39);
+      // Teleport-Blocks zeigen den v676-Guard bei der Arbeit (Block = Guard FUNKTIONIERT, daher ✓).
+      row(ortBrueche === 0 ? '✓' : '⚠', 'Ort-Prosa-Brüche (Stage>=2): ' + ortBrueche);
+      if (teleportBlocks > 0) row('✓', 'personenImRaum-Teleports geblockt: ' + teleportBlocks);
+      // v7.12.678: Kern-Indiz-Quote - Messgrundlage für die Verteilungs-Iteration (Run 0031:
+      // nur 2/13 gefunden bei gelöstem Fall, musste mühsam aus dem Log gegraben werden).
+      try {
+        if (caseSetup && Array.isArray(caseSetup.locations)) {
+          let kernGesamt = 0, kernGefunden = 0;
+          const _gefIds = (caseProgress && Array.isArray(caseProgress.gefundeneIndizIds)) ? caseProgress.gefundeneIndizIds : [];
+          caseSetup.locations.forEach(o => {
+            if (o && Array.isArray(o.indizien)) o.indizien.forEach(ind => {
+              if (ind && ind.id) { kernGesamt++; if (_gefIds.indexOf(ind.id) !== -1) kernGefunden++; }
+            });
+          });
+          if (kernGesamt > 0) row('✓', 'Kern-Indizien gefunden: ' + kernGefunden + '/' + kernGesamt);
+        }
+      } catch (e) { /* optional */ }
     } catch (e) { /* optional */ }
 
     if (L.length === 0) return '';

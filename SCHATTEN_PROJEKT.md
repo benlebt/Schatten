@@ -15218,3 +15218,20 @@ aengstlicher Neider (schwitzt, Floskeln, Motiv: Margaretes Befoerderung); August
 kleiner anstaendiger Reichsbahner (Dienstmuetze in den Haenden, fachlich praezise bei
 Zugbewegungen); Helene = rauer Charité-Ton ("Ich habe nichts gesehen, Herr Mauer").
 Vera + Mann-im-Mantel waren bereits stark gezeichnet, unveraendert.
+
+## 🆕 v7.12.678 — Mess-Infrastruktur: 3 neue Assertion-Zeilen (Backlog P2 abgearbeitet)
+
+Neue Report-Zeilen: (1) "Kern-Indizien gefunden: X/Y" — Messgrundlage für die Verteilungs-
+Iteration (Run 0031: nur 2/13 bei gelöstem Fall, 6/14 Orte besucht; Bewertung braucht mehr
+Runs, jetzt steht die Quote in jedem Export). (2) "Ort-Prosa-Brüche (Stage>=2): N" — der
+W2b-Befund als Dauer-Messung (✓ bei 0, ⚠ sonst). (3) "personenImRaum-Teleports geblockt: N" —
+zeigt den v676-Guard bei der Arbeit. Damit ist der P2-Backlog-Punkt "Tageszeit/Ort-Assertions
+im Bot-Assertion-Report" umgesetzt (Ort-Teil; Tageszeit liefert bereits die Öffnungszeiten-
+Gate-Logik + Toast-Verlauf).
+
+**Backlog-Stand nach dieser Session:** Offen bleiben (a) Roth-Party-Drift (wartet auf Run mit
+Drift, geschärftes Logging steht), (b) KI_OPTIONEN_GENERIEREN-Umbau (Prompt verlangt keine A-D
+mehr — spart Output-Tokens, ändert JSON-Format, Benjamin-Entscheid), (c) Kern-Indizien-
+Architektur auf Kessler/Krause/Wegener/Achterberg/Brandt ausweiten (nächster großer Meilenstein,
+Benjamin-Entscheid), (d) tote Bot-Zweige aufräumen (P3, geringer Nutzen, Risiko im Bot-Code),
+(e) Resolve-Gate-Zentralisierung (P3, Refactor ohne Run-Anlass).
