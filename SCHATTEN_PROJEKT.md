@@ -15504,3 +15504,11 @@ Stage-4-Hard-Fallback weiter SETTLED ABGELEHNT (3. Forderung).
 
 **Workflow-Erinnerung (Benjamin):** gemini.js/mistral.js/groq.js liegen im Repo unter api/ —
 bei JEDER Änderung an den Proxy-Dateien mit committen/pushen (GEMINI_JS_VERSION bumpen).
+
+## 🆕 v7.12.690 — Reise-Animation: der Opel fährt durchs Bild (Benjamin)
+
+fxTravel im _reiseKern-Hook (genau beim Engine-Ortswechsel, läuft während die Szene lädt):
+🚗 rattert quer durchs Bild (rechts→links, Emoji-Blickrichtung, leichtes Hoppeln), drei
+💨-Auspuff-Wölkchen poppen zeitlich passend HINTER dem Auto auf (Timing rechnerisch
+verifiziert), darunter "→ Zielname". 1,9 s, pointer-events:none, prefers-reduced-motion
+respektiert. Ausbau notiert: Flucht-Variante (schnellerer Opel + mehr 💨).

@@ -2858,6 +2858,13 @@
 @keyframes fxFadeInOut { 0% { opacity: 0; transform: translateY(8px); } 12% { opacity: 1; transform: translateY(0); } 82% { opacity: 1; } 100% { opacity: 0; transform: translateY(-6px); } }
 @keyframes fxItemPop { 0% { opacity: 0; transform: translateX(-50%) translateY(20px) scale(0.75); } 18% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1.08); } 42% { transform: translateX(-50%) translateY(-8px) scale(1); } 82% { opacity: 1; } 100% { opacity: 0; transform: translateX(-50%) translateY(-28px) scale(0.92); } }
 @keyframes fxItemBounce { 0% { transform: scale(0.4) rotate(-10deg); } 60% { transform: scale(1.22) rotate(6deg); } 100% { transform: scale(1) rotate(0); } }
+/* v7.12.690: Reise-Animation - der Opel rattert quer durchs Bild (Emoji schaut nach links -> Fahrt rechts->links) */
+.fx-travel { position: fixed; left: 0; right: 0; top: 42%; height: 90px; z-index: 9200; pointer-events: none; overflow: hidden; }
+.fx-car { position: absolute; top: 6px; left: 0; font-size: 46px; filter: drop-shadow(0 5px 10px rgba(0,0,0,0.7)); animation: fxDrive 1.8s cubic-bezier(.25,.6,.45,1) forwards; }
+.fx-puff { position: absolute; top: 18px; font-size: 24px; opacity: 0; animation: fxPuff 0.8s ease forwards; }
+.fx-travel-caption { position: absolute; left: 0; right: 0; top: 62px; text-align: center; color: #d4c8a8; font: 12px monospace; letter-spacing: 0.06em; text-shadow: 0 2px 6px rgba(0,0,0,0.8); animation: fxFadeInOut 1.9s ease forwards; }
+@keyframes fxDrive { 0% { transform: translateX(105vw) translateY(0); } 30% { transform: translateX(70vw) translateY(-2px); } 55% { transform: translateX(42vw) translateY(1px); } 80% { transform: translateX(16vw) translateY(-2px); } 100% { transform: translateX(-140px) translateY(0); } }
+@keyframes fxPuff { 0% { opacity: 0; transform: scale(0.4) translateY(0); } 30% { opacity: 0.9; transform: scale(1.15) translateY(-4px); } 100% { opacity: 0; transform: scale(1.5) translateY(-14px); } }
 </style>
 </head>
 <body>
@@ -3204,7 +3211,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.689</div>
+    <div class="start-version">Schatten v7.12.690</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3430,7 +3437,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.689</span>
+    <span>Schatten v7.12.690</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7272,7 +7279,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.689';
+window.SCHATTEN_VERSION = 'v7.12.690';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -7972,6 +7979,23 @@ function fxConflict(actorName, targetName, art, success) {
       + '<div class="fx-caption">' + escapeHtml((actorName || 'Karl') + ' ' + (VERB[art] || 'gegen') + ' ' + targetName + (success ? '' : ' - daneben!')) + '</div>';
     layer.appendChild(box);
     setTimeout(() => { try { box.remove(); } catch (e) {} }, 1250);
+  } catch (e) {}
+}
+// v7.12.690 (Benjamin: "beim Reisen das Auto kurz animieren, mit nem Puff quer durchs Bild"):
+// Der Opel fährt quer durchs Bild (rechts->links, Emoji-Blickrichtung), drei Auspuff-Wölkchen
+// poppen hinter ihm auf, darunter das Ziel. Läuft während die Szene im Hintergrund lädt.
+function fxTravel(zielName) {
+  try {
+    if (!fxEnabled()) return;
+    const band = document.createElement('div');
+    band.className = 'fx-travel';
+    band.innerHTML = '<div class="fx-car">🚗</div>'
+      + '<div class="fx-puff" style="left:72vw;animation-delay:0.35s;">💨</div>'
+      + '<div class="fx-puff" style="left:46vw;animation-delay:0.8s;">💨</div>'
+      + '<div class="fx-puff" style="left:20vw;animation-delay:1.2s;">💨</div>'
+      + '<div class="fx-travel-caption">→ ' + escapeHtml(zielName || 'unterwegs') + '</div>';
+    document.body.appendChild(band);
+    setTimeout(() => { try { band.remove(); } catch (e) {} }, 1950);
   } catch (e) {}
 }
 // Plan-Hook: nimmt die markanteste Konflikt-Aktion des Plans (Rex zuerst) und animiert sie.
@@ -19546,6 +19570,7 @@ function reiseZuOrt(loc) {
     _aktuelleAktionIstReise = true; // v7.12.527: für mechCtx (kein Indiz-Zwang bei Reise)
     _threatLetzterWuerfelOrt = ''; _threatAktiveSpawns = []; // v7.12.532: am Zielort frisch würfeln (beim Szene-Commit)
     if (typeof diag === 'function') diag('state', 'REISE (Engine besitzt Ort, löst Szene aus): "' + vorher + '" -> "' + loc.name + '"');
+    try { if (typeof fxTravel === 'function') fxTravel(loc.name); } catch (e) {} // v7.12.690: Opel-Animation während die Szene lädt
     if (typeof saveGameState === 'function') { try { saveGameState(); } catch (e) {} }
     try { renderImRaumAnzeige(); } catch (e) {}
     const reiseOpt = {
