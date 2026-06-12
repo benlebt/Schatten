@@ -3277,7 +3277,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.704</div>
+    <div class="start-version">Schatten v7.12.705</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3503,7 +3503,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.704</span>
+    <span>Schatten v7.12.705</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7348,7 +7348,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.704';
+window.SCHATTEN_VERSION = 'v7.12.705';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -9087,7 +9087,8 @@ function _bkChip(label, aktiv, onclick) {
   // v7.12.693 (Benjamin, Mobile-Breite): Chips brechen als inline-Elemente ohnehin zeilenweise um -
   // aber ein EINZELNER überlanger KI-Name (Item/NPC) wird als inline-Block so breit wie sein Text und
   // könnte allein den Rand sprengen. max-width + white-space:normal lässt das Label IM Chip umbrechen.
-  return '<button onclick="' + onclick + '" style="margin:2px;padding:5px 10px;border-radius:14px;border:1px solid ' + (aktiv ? '#d4b86a' : '#555') + ';background:' + (aktiv ? '#d4b86a' : 'transparent') + ';color:' + (aktiv ? '#1a1a1c' : '#cfc6ae') + ';font-size:12px;cursor:pointer;max-width:100%;white-space:normal;word-break:break-word;text-align:left;vertical-align:top;">' + label + '</button>';
+  // v7.12.705: eckigere Chips, gedeckte Goldränder - Akten-Optik statt Bonbon-Pillen.
+  return '<button onclick="' + onclick + '" style="margin:2px;padding:4px 9px;border-radius:3px;border:1px solid ' + (aktiv ? '#d4b86a' : '#5a4e36') + ';background:' + (aktiv ? 'rgba(212,184,106,0.92)' : 'transparent') + ';color:' + (aktiv ? '#1a1a1c' : '#cfc6ae') + ';font-size:12px;cursor:pointer;max-width:100%;white-space:normal;word-break:break-word;text-align:left;vertical-align:top;">' + label + '</button>';
 }
 function _bkSet(feld, wert) {
   try {
@@ -9117,47 +9118,35 @@ function _bkAusrichten() {
   } catch (e) {}
 }
 function _renderBaukastenButton() {
+  // v7.12.705 (Benjamin: "das Überlagern ist ganz schlecht"): Der schwebende Puzzle-Knopf ist
+  // ABGESCHAFFT. Der Baukasten lebt jetzt INLINE im Options-Fluss, direkt unter den
+  // Gegner-Buttons (siehe bauePersonenButtons), und erscheint nur, wenn Gegner da sind.
+  // Diese Funktion bleibt als No-op + Aufräumer (sie wird an vielen Stellen gerufen) -
+  // das löst nebenbei den Bug, dass der Knopf nach Spielende kleben blieb.
   try {
-    // v7.12.653 (Baukasten-First Schritt 1): Der Baukasten ist nicht mehr nur KONFLIKT-Werkzeug, sondern das
-    // allgemeine Aktions-Hauptinterface (befragen/durchsuchen/übergeben + Konflikt). Sichtbar IMMER, solange das
-    // Spiel läuft (nicht nur bei freiem feindlichem NPC). Nach Spielende (gelöst/gescheitert) verschwindet er.
-    let _zeigen = false;
-    try {
-      const _fallVorbei = (typeof caseProgress === 'object' && caseProgress && (caseProgress.istGescheitert || caseProgress.istGelöst));
-      _zeigen = !_fallVorbei
-        && (typeof engineCurrentLocation !== 'undefined' && engineCurrentLocation && engineCurrentLocation.name)
-        && (typeof sceneCounter === 'number' && sceneCounter > 0);
-    } catch (e) {}
-    if (!_zeigen) {
-      const _alt = document.getElementById('baukastenToggle');
-      if (_alt) _alt.remove();
-      if (window._baukasten && window._baukasten.offen) { window._baukasten.offen = false; try { _renderBaukasten(); } catch (e) {} }
-      return;
-    }
-    if (document.getElementById('baukastenToggle')) return;
-    const b = document.createElement('button');
-    b.id = 'baukastenToggle';
-    b.innerHTML = '🧩';
-    b.title = 'Aktions-Baukasten';
-    b.style.cssText = 'position:fixed;bottom:148px;right:10px;z-index:8999;width:42px;height:42px;border-radius:50%;border:1px solid #8a7a58;background:rgba(12,12,14,0.92);color:#d4b86a;font-size:20px;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,0.5);';
-    b.onclick = _bkToggle;
-    document.body.appendChild(b);
-    _bkAusrichten();
-    try { window.addEventListener('resize', _bkAusrichten); } catch (e) {}
+    const _alt = document.getElementById('baukastenToggle');
+    if (_alt) _alt.remove();
   } catch (e) {}
 }
 function _renderBaukasten() {
   try {
+    // v7.12.705 (Benjamin): KEIN Overlay mehr - der Baukasten rendert in den Inline-Slot,
+    // den bauePersonenButtons direkt unter den Gegner-Buttons anlegt. Kein Slot (keine
+    // Gegner / Fall vorbei) -> kein Baukasten. Alte fixed-Reste werden weggeräumt.
     let el = document.getElementById('aktionsBaukasten');
+    if (el && (!el.parentElement || el.parentElement.id !== 'baukasten-slot')) { el.remove(); el = null; }
+    const slot = document.getElementById('baukasten-slot');
+    if (!slot) { if (el) el.remove(); return; }
     const bk = window._baukasten;
-    if (!bk.offen) { if (el) el.remove(); return; }
+    bk.offen = true; // inline gibt es kein Auf/Zu mehr - sichtbar = Gegner da
     if (!el) {
       el = document.createElement('div');
       el.id = 'aktionsBaukasten';
-      el.style.cssText = 'position:fixed;bottom:84px;right:10px;left:10px;z-index:8998;background:rgba(12,12,14,0.97);border:1px solid #8a7a58;border-radius:10px;padding:10px 12px;max-height:55vh;overflow-y:auto;overflow-x:hidden;box-shadow:0 6px 24px rgba(0,0,0,0.7);color:#e8e0cc;font-size:13px;';
-      document.body.appendChild(el);
+      // Noir-Dossier statt Tech-Panel: schmale Goldlinien, ROTER Innenbalken links - dieselbe
+      // Sprache wie die Gegner-Buttons darüber (der Baukasten gehört zu den Gegnern).
+      el.style.cssText = 'margin:6px 0 10px;padding:10px 12px;border:1px solid rgba(138,122,88,0.4);border-radius:8px;box-shadow:inset 3px 0 0 rgba(190,62,52,0.55);background:linear-gradient(180deg, rgba(212,184,106,0.05), rgba(0,0,0,0));color:#e8e0cc;font-size:12px;';
+      slot.appendChild(el);
     }
-    _bkAusrichten();
     const npcsHier = (typeof getNpcsAtCurrentLocation === 'function') ? (getNpcsAtCurrentLocation() || []) : [];
     let akteure = ['Karl'].concat((typeof _party !== 'undefined' && Array.isArray(_party)) ? _party.map(p => p.name).filter(Boolean) : []);
     // v7.12.633: Rex als wählbarer Baukasten-Akteur (Rex -> Fass -> bestimmtes Ziel).
@@ -9170,7 +9159,7 @@ function _renderBaukasten() {
     try { if (typeof clientProfile !== 'undefined' && clientProfile && clientProfile.name) _eigene[normForMatch(clientProfile.name)] = true; } catch (e) {}
     _eigene['karl'] = true; _eigene['karl mauer'] = true;
     let ziele = npcsHier.map(n => n && n.name).filter(n => n && !_eigene[normForMatch(n)] && (!bk.akteur || normForMatch(n) !== normForMatch(bk.akteur)));
-    let h = '<div style="font-weight:bold;color:#d4b86a;letter-spacing:0.05em;margin-bottom:4px;">🧩 AKTIONS-BAUKASTEN</div>';
+    let h = '<div style="text-align:center;color:#9a8a68;font-size:10px;letter-spacing:0.35em;margin-bottom:8px;">· KOORDINIERTER ZUGRIFF ·</div>';
     // v7.12.620 (Benjamin: "jeder Person eine eigene Aktion zuordnen"): Der PLAN steht jetzt SICHTBAR im
     // Panel - jede '+ Zum Plan'-Kombination erscheint hier als Zeile (entfernbar), dann nächste bauen.
     const _plan = window._aktionsPlan || [];
@@ -9180,7 +9169,7 @@ function _renderBaukasten() {
       _plan.forEach((p, i) => {
         h += '<div style="display:flex;align-items:center;gap:6px;margin:2px 0;"><span style="flex:1;">' + (i + 1) + '. ' + p.label + '</span><button onclick="window._aktionsPlan.splice(' + i + ',1);_renderBaukasten();" style="background:transparent;border:1px solid #555;color:#9a8a68;border-radius:4px;padding:1px 7px;cursor:pointer;font-size:11px;">✕</button></div>';
       });
-      h += '<button onclick="window._baukasten.offen=false;_renderBaukasten();_planAusfuehren();" style="margin-top:5px;background:#d4b86a;color:#1a1a1c;border:none;border-radius:6px;padding:6px 14px;font-weight:bold;cursor:pointer;">▶ Alle ' + _plan.length + ' ausführen (eine Szene)</button>';
+      h += '<button onclick="_planAusfuehren();" style="margin-top:5px;background:#d4b86a;color:#1a1a1c;border:none;border-radius:4px;padding:5px 12px;font-size:12px;font-weight:bold;cursor:pointer;">▶ Alle ' + _plan.length + ' ausführen (eine Szene)</button>';
       h += '</div>';
       h += '<div style="color:#9a8a68;font-size:11px;margin-bottom:4px;">Nächste Aktion für eine andere Person bauen:</div>';
     }
@@ -9188,12 +9177,12 @@ function _renderBaukasten() {
     // wird dynamisch gefiltert: nur Verben, die zur gewählten Kombination (Akteur + Ziel + ob Item) passen.
     // So verschwinden unsinnige Optionen (z.B. "An mich nehmen" auf eine Person, "Vor die Füße werfen" ohne Item).
     // 1. WER
-    h += '<div style="color:#9a8a68;font-size:11px;margin-bottom:2px;">1. WER</div><div>' + akteure.map(a => _bkChip(a, bk.akteur === a, "_bkSet('akteur','" + a.replace(/'/g, "\\'") + "')")).join('') + '</div>';
+    h += '<div style="color:#8a7a58;font-size:10px;letter-spacing:0.18em;margin-bottom:3px;">1. WER</div><div>' + akteure.map(a => _bkChip(a, bk.akteur === a, "_bkSet('akteur','" + a.replace(/'/g, "\\'") + "')")).join('') + '</div>';
     // 2. WEN (Ziel) - Personen am Ort. Mehrfachauswahl möglich. (Umgebung-Ziel entfiel mit durchsuchen_ort.)
     const _zielChips = [];
     ziele.forEach(z => _zielChips.push(_bkChip(z, (Array.isArray(bk.ziele) && bk.ziele.indexOf(z) !== -1), "_bkSet('ziel','" + z.replace(/'/g, "\\'") + "')")));
     const _zielHtml = _zielChips.length ? _zielChips.join('') : '<span style="color:#666;font-size:11px;">niemand am Ort</span>';
-    h += '<div style="color:#9a8a68;font-size:11px;margin:6px 0 2px;">2. WEN (mehrere möglich)</div><div>' + _zielHtml + '</div>';
+    h += '<div style="color:#8a7a58;font-size:10px;letter-spacing:0.18em;margin:8px 0 3px;">2. WEN (mehrere möglich)</div><div>' + _zielHtml + '</div>';
     // 3. ITEM (optional) - Beweis-Items nie als Bauteil; Rex nutzt keine Items.
     const _istHundAkteurFuerItem = (typeof HUND_NAME === 'string' && bk.akteur === HUND_NAME);
     const _itemsWaehlbar = itemsK.filter(it => it.typ !== 'beweis_dokument' && it.typ !== 'beweis');
@@ -9208,7 +9197,7 @@ function _renderBaukasten() {
       _gruppenIdx[gn] = _itemGruppen.length;
       _itemGruppen.push({ id: it.id, name: it.name, anzahl: 1 });
     });
-    if (!_istHundAkteurFuerItem) h += '<div style="color:#9a8a68;font-size:11px;margin:6px 0 2px;">3. ITEM (optional)</div><div>' + (_itemGruppen.length ? _itemGruppen.map(g => _bkChip(g.name + (g.anzahl > 1 ? ' ×' + g.anzahl : ''), bk.item === g.id || _itemsWaehlbar.some(it => it.id === bk.item && normForMatch(it.name) === normForMatch(g.name)), "_bkSet('item','" + g.id + "')")).join('') : '<span style="color:#666;font-size:11px;">keine nutzbaren Gegenstände</span>') + '</div>';
+    if (!_istHundAkteurFuerItem) h += '<div style="color:#8a7a58;font-size:10px;letter-spacing:0.18em;margin:8px 0 3px;">3. ITEM (optional)</div><div>' + (_itemGruppen.length ? _itemGruppen.map(g => _bkChip(g.name + (g.anzahl > 1 ? ' ×' + g.anzahl : ''), bk.item === g.id || _itemsWaehlbar.some(it => it.id === bk.item && normForMatch(it.name) === normForMatch(g.name)), "_bkSet('item','" + g.id + "')")).join('') : '<span style="color:#666;font-size:11px;">keine nutzbaren Gegenstände</span>') + '</div>';
     // 4. AKTION - DYNAMISCH gefiltert nach Akteur/Ziel/Item, dann alphabetisch sortiert.
     let _aktKeys = Object.keys(BAUKASTEN_AKTIONEN);
     let _katHint = '';
@@ -9273,7 +9262,7 @@ function _renderBaukasten() {
           return _bkChip(_lab, bk.aktion === k, "_bkSet('aktion','" + k + "')");
         }).join('')
       : '<span style="color:#666;font-size:11px;">erst WER und WEN/WAS wählen</span>';
-    h += '<div style="color:#9a8a68;font-size:11px;margin:6px 0 2px;">4. AKTION' + _katHint + '</div><div>' + _aktHtml + '</div>';
+    h += '<div style="color:#8a7a58;font-size:10px;letter-spacing:0.18em;margin:8px 0 3px;">4. AKTION' + _katHint + '</div><div>' + _aktHtml + '</div>';
     const def = bk.aktion ? BAUKASTEN_AKTIONEN[bk.aktion] : null;
     // v7.12.655: komplett-Prüfung kontextsensitiv. Umgebungs-Verb: braucht "Umgebung" (oder kein zielNoetig).
     // Personen-Verb mit zielNoetig: braucht mindestens ein echtes Personen-Ziel (nicht nur "Umgebung").
@@ -9283,9 +9272,8 @@ function _renderBaukasten() {
     else _zielOk = Array.isArray(bk.ziele) && bk.ziele.some(z => z && z !== 'Umgebung');
     const komplett = bk.akteur && def && _zielOk && (!def.itemNoetig || bk.item);
     h += '<div style="margin-top:8px;display:flex;gap:8px;">'
-      + '<button onclick="_bkUebernehmen(false)" ' + (komplett ? '' : 'disabled') + ' style="background:' + (komplett ? '#8a7a58' : '#333') + ';color:#1a1a1c;border:none;border-radius:6px;padding:6px 12px;font-weight:bold;cursor:pointer;">+ Zum Plan</button>'
-      + '<button onclick="_bkUebernehmen(true)" ' + (komplett ? '' : 'disabled') + ' style="background:' + (komplett ? '#d4b86a' : '#333') + ';color:#1a1a1c;border:none;border-radius:6px;padding:6px 12px;font-weight:bold;cursor:pointer;">▶ Sofort ausführen</button>'
-      + '<button onclick="_bkToggle()" style="background:transparent;color:#9a8a68;border:1px solid #555;border-radius:6px;padding:6px 10px;cursor:pointer;">✕</button></div>';
+      + '<button onclick="_bkUebernehmen(false)" ' + (komplett ? '' : 'disabled') + ' style="background:' + (komplett ? '#8a7a58' : '#333') + ';color:#1a1a1c;border:none;border-radius:4px;padding:5px 10px;font-size:12px;font-weight:bold;cursor:pointer;">+ Zum Plan</button>'
+      + '<button onclick="_bkUebernehmen(true)" ' + (komplett ? '' : 'disabled') + ' style="background:' + (komplett ? '#d4b86a' : '#333') + ';color:#1a1a1c;border:none;border-radius:4px;padding:5px 10px;font-size:12px;font-weight:bold;cursor:pointer;">▶ Sofort ausführen</button></div>';
     el.innerHTML = h;
   } catch (e) {}
 }
@@ -20628,6 +20616,21 @@ function bauePersonenButtons(container, modus) {
       return ga - gb;
     });
   } catch (e) { _npcsSortiert = npcs; }
+  // v7.12.705 (Benjamin: "der Baukasten taucht direkt unter den gegnerischen NPCs auf, wie
+  // die nächste Tabellenzeile - kein Popup, kein Überlagern"): Slot-Verwaltung. Der Slot
+  // entsteht NACH dem letzten Gegner-Button (Gegner sind seit v703 vorsortiert) und nur im
+  // Szenen-Modus, wenn mindestens ein Gegner da ist und der Fall noch läuft.
+  let _gegnerGebaut = 0, _slotGesetzt = false;
+  const _slotErlaubt = (modus === 'szene') && !(typeof caseProgress === 'object' && caseProgress && (caseProgress.istGescheitert || caseProgress.istGelöst));
+  const _altSlot = document.getElementById('baukasten-slot');
+  if (_altSlot) _altSlot.remove();
+  const _setzeSlot = () => {
+    if (_slotGesetzt || !_slotErlaubt || !_gegnerGebaut) return;
+    const s = document.createElement('div');
+    s.id = 'baukasten-slot';
+    container.appendChild(s);
+    _slotGesetzt = true;
+  };
   _npcsSortiert.forEach(npc => {
     // v7.12.595: gesicherte Klientin überspringen (eingelockt, offstage).
     if (_gesicherterKlientNorm && normForMatch(npc.name || '') === _gesicherterKlientNorm) return;
@@ -20691,13 +20694,18 @@ function bauePersonenButtons(container, modus) {
     // v7.12.703: Gegner sichtbar machen - dunkelroter Rahmen + Label, der Blick erkennt sofort
     // Freund und Feind (✦ gold = in Begleitung, ⚠ rot = Gegner).
     const _istGegner = (typeof _istGegnerNpc === 'function') && _istGegnerNpc(npc.name, npc.tag, npc.rolle);
-    if (_istGegner) { btn.style.border = '1px solid rgba(190,62,52,0.6)'; btn.style.boxShadow = 'inset 3px 0 0 rgba(190,62,52,0.75)'; }
+    if (_istGegner) { btn.style.border = '1px solid rgba(190,62,52,0.6)'; btn.style.boxShadow = 'inset 3px 0 0 rgba(190,62,52,0.75)'; _gegnerGebaut++; }
+    else _setzeSlot(); // v7.12.705: erster Nicht-Gegner nach Gegnern -> Slot dazwischen
     btn.innerHTML = '<span class="option-id option-id-person">' + _npcEmoji + '</span><span class="option-text-wrap"><span>'
       + escapeHtml(npc.name) + (_inParty ? ' <span style="color:#c8a84a;font-size:11px;">✦ in Begleitung</span>' : '') + (_istGegner ? ' <span style="color:#c85a4a;font-size:11px;">⚠ Gegner</span>' : '') + '</span><span class="' + _markerKlasse + '"' + _markerStyle + '>' + _markerFinal + '</span></span>';
     attachSafeTap(btn, () => { if (typeof oeffneNpcMenue === 'function') { _markPopupOpened(); oeffneNpcMenue(npc, modus); } });
+    if (_istGegner && _slotGesetzt) { try { container.insertBefore(btn, document.getElementById('baukasten-slot')); } catch (e) { container.appendChild(btn); } gebaut++; return; }
     container.appendChild(btn);
     gebaut++;
   });
+  // v7.12.705: Waren NUR Gegner da, kommt der Slot ans Ende; danach den Baukasten rendern.
+  _setzeSlot();
+  if (_slotGesetzt) { try { if (typeof _renderBaukasten === 'function') _renderBaukasten(); } catch (e) {} }
   return gebaut;
 }
 function npcInteraktion(npc, verb) {

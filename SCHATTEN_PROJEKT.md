@@ -15803,3 +15803,20 @@ fxKategorie (Sicherheitsnetz) nutzt FX_ZEIT.dialog und wird automatisch länger.
 **ANGEKÜNDIGT:** v705 = Baukasten-Inline (zwischen Personen und Notizbuch, kein Overlay
 mehr, FAB weg - löst auch den Win-Screen-FAB-Bug). v706 = synthetische WebAudio-Sounds
 (Bellen, Zugriff, Fesseln - an Musik-Modi gekoppelt, nie im Still-Modus).
+
+## 🆕 v7.12.705 — BAUKASTEN INLINE: kein Overlay, kein Puzzle-Knopf mehr (Benjamin)
+
+**Das Überlagerungs-Problem ist strukturell gelöst:** Der Aktions-Baukasten ist kein
+schwebendes Panel mehr, sondern eine ZEILE IM OPTIONS-FLUSS - direkt unter den roten
+Gegner-Buttons (wie die nächste Tabellenzeile, scrollt mit). Kein Daneben-Tippen mehr
+möglich, weil nichts mehr überlagert. Er existiert NUR, wenn mindestens ein Gegner in der
+Szene ist und der Fall läuft - damit ist auch optisch klar: der Baukasten gehört zu den
+Gegnern (roter Innenbalken links, dieselbe Sprache wie die Gegner-Rahmen).
+**Der Puzzle-FAB ist abgeschafft** (_renderBaukastenButton = No-op + Aufräumer an allen
+Aufrufstellen) - das löst nebenbei den Bug, dass der Knopf nach Spielende kleben blieb.
+**Noir-Politur:** Kopfzeile "· KOORDINIERTER ZUGRIFF ·" im Stil der Sektions-Header statt
+"🧩 AKTIONS-BAUKASTEN"; Schritt-Labels kleiner mit Versalien-Spationierung; Chips eckig
+(3px-Radius) mit gedeckten Goldrändern (Akten-Optik statt Bonbon-Pillen); Ausführen-Buttons
+auf 12px verkleinert; ✕-Knopf entfernt (inline gibt es kein Zuklappen).
+Slot-Logik: stabil nach dem letzten Gegner (Gegner seit v703 vorsortiert), Schutz falls
+ein Gegner nach Slot-Setzung käme, Slot ans Ende wenn NUR Gegner da sind.
