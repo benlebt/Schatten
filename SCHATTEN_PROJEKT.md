@@ -15529,3 +15529,13 @@ Abklatsch-Moment). Caption "✦ August Lemke ist jetzt in Begleitung". 1,75 s.
 Hooks: _partyAdd (am PARTY+-Punkt, feuert für JEDEN Beitritts-Pfad) + beide Rex-Aufnahme-
 Stellen (Reise-Popup + NPC-Menü). Doppel-Rex-Schutz getestet (Rex erscheint beim eigenen
 Beitritt nicht zusätzlich in der Gruppe).
+
+## 🆕 v7.12.693 — Baukasten-Mobile-Breite abgesichert (Benjamin-Frage)
+
+Befund: Überlauf nach rechts kann strukturell NICHT passieren - Panel klemmt fest an beiden
+Rändern (left:10px/right:10px), Chips sind inline-Buttons und brechen zeilenweise um
+(Screenshot bestätigt: 2 Item-Zeilen, 3 Aktions-Zeilen). Mehr Mitglieder/NPCs/Items = mehr
+Zeilen, ab 55vh scrollt das Panel vertikal.
+Rest-Risiko gefixt: Ein EINZELNER überlanger KI-Name wird als inline-Block so breit wie sein
+Text und könnte allein den Rand sprengen -> Chips jetzt max-width:100% + white-space:normal
+(Label bricht IM Chip um), Panel zusätzlich overflow-x:hidden.
