@@ -3277,7 +3277,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.722</div>
+    <div class="start-version">Schatten v7.12.723</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3503,7 +3503,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.722</span>
+    <span>Schatten v7.12.723</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7364,7 +7364,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.722';
+window.SCHATTEN_VERSION = 'v7.12.723';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -8355,9 +8355,108 @@ function fxItemGain(item) {
   } catch (e) {}
 }
 // Konflikt-Animation: Akteur ruckt zum Ziel, Impact, Ziel wackelt. 1.2s, nicht blockierend.
+// ============ v7.12.723 SFX (Benjamin: "kannst du Sounds einbauen?") ============
+// Keine Sound-DATEIEN - alle Effekte werden synthetisch per WebAudio erzeugt (passt zur
+// Ein-Datei-Architektur, null Ladezeit). Regel (Benjamin-Zusage v714-Backlog): SFX spielen
+// NUR, wenn der Spielmodus nicht 'still' ist. Lautstärke bewusst dezent unter der Musik.
+let _sfxCtx = null;
+function sfxOn() {
+  try { return (typeof getPlayMode === 'function') && getPlayMode() !== 'still'; } catch (e) { return false; }
+}
+function _sfx() {
+  try {
+    if (!sfxOn()) return null;
+    if (!_sfxCtx) _sfxCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (_sfxCtx.state === 'suspended') _sfxCtx.resume();
+    return _sfxCtx;
+  } catch (e) { return null; }
+}
+function _sfxTon(freqStart, freqEnd, dauer, typ, vol, delay, ctx) {
+  try {
+    const c = ctx || _sfx(); if (!c) return;
+    const t0 = c.currentTime + (delay || 0);
+    const o = c.createOscillator(); const g = c.createGain();
+    o.type = typ || 'sine';
+    o.frequency.setValueAtTime(freqStart, t0);
+    if (freqEnd && freqEnd !== freqStart) o.frequency.exponentialRampToValueAtTime(Math.max(20, freqEnd), t0 + dauer);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(vol || 0.15, t0 + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dauer);
+    o.connect(g); g.connect(c.destination);
+    o.start(t0); o.stop(t0 + dauer + 0.05);
+  } catch (e) {}
+}
+function _sfxNoise(dauer, vol, delay, filterFreq) {
+  try {
+    const c = _sfx(); if (!c) return;
+    const t0 = c.currentTime + (delay || 0);
+    const len = Math.max(1, Math.floor(c.sampleRate * dauer));
+    const buf = c.createBuffer(1, len, c.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+    const src = c.createBufferSource(); src.buffer = buf;
+    const g = c.createGain(); g.gain.value = vol || 0.12;
+    const f = c.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = filterFreq || 1800; f.Q.value = 0.8;
+    src.connect(f); f.connect(g); g.connect(c.destination);
+    src.start(t0);
+  } catch (e) {}
+}
+// Rex bellt: zwei kurze raue Bursts mit Pitch-Fall ("wuff wuff").
+function sfxBellen() {
+  if (!sfxOn()) return;
+  _sfxTon(420, 160, 0.12, 'sawtooth', 0.14, 0);
+  _sfxNoise(0.08, 0.06, 0.01, 900);
+  _sfxTon(380, 150, 0.13, 'sawtooth', 0.14, 0.22);
+  _sfxNoise(0.08, 0.06, 0.23, 900);
+}
+// Handschellen: zwei metallische Klicks (Noise-Snap + heller Ping).
+function sfxHandschellen() {
+  if (!sfxOn()) return;
+  _sfxNoise(0.03, 0.16, 0, 3200); _sfxTon(2600, 2100, 0.07, 'square', 0.05, 0.005);
+  _sfxNoise(0.03, 0.16, 0.13, 3400); _sfxTon(2900, 2300, 0.07, 'square', 0.05, 0.135);
+}
+// Schlag/Zugriff: dumpfer Thump (tiefer Sinus-Fall + kurzer Noise-Schlag).
+function sfxSchlag() {
+  if (!sfxOn()) return;
+  _sfxTon(150, 45, 0.18, 'sine', 0.3, 0);
+  _sfxNoise(0.06, 0.12, 0, 600);
+}
+// Opel: tiefes 1953er-Knattern, schwillt an und verklingt mit der Fahrt.
+function sfxMotor() {
+  try {
+    const c = _sfx(); if (!c) return;
+    const t0 = c.currentTime;
+    const o = c.createOscillator(); o.type = 'sawtooth'; o.frequency.value = 52;
+    const lfo = c.createOscillator(); lfo.type = 'square'; lfo.frequency.value = 13;
+    const lfoG = c.createGain(); lfoG.gain.value = 9;
+    lfo.connect(lfoG); lfoG.connect(o.frequency);
+    const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 320;
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(0.11, t0 + 0.5);
+    g.gain.setValueAtTime(0.11, t0 + 1.9);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 3.0);
+    o.connect(f); f.connect(g); g.connect(c.destination);
+    o.start(t0); lfo.start(t0); o.stop(t0 + 3.1); lfo.stop(t0 + 3.1);
+  } catch (e) {}
+}
+// Party-Sting: zwei helle, freundliche Töne aufwärts (Abklatschen).
+function sfxSting() {
+  if (!sfxOn()) return;
+  _sfxTon(523, 523, 0.14, 'triangle', 0.12, 0);
+  _sfxTon(784, 784, 0.2, 'triangle', 0.12, 0.14);
+}
+// Schlaf: zwei weiche absteigende Töne (zur Ruhe).
+function sfxSchlafTon() {
+  if (!sfxOn()) return;
+  _sfxTon(440, 440, 0.35, 'sine', 0.08, 0);
+  _sfxTon(330, 330, 0.5, 'sine', 0.08, 0.4);
+}
+// ============ Ende SFX ============
 function fxConflict(actorName, targetName, art, success) {
   try {
     if (!fxEnabled() || !targetName) return;
+    try { if (/^hund/.test(String(art || ''))) sfxBellen(); else sfxSchlag(); } catch (e) {} // v7.12.723
     window._fxLastT = Date.now(); // v7.12.700
     const VERB = { hund_fass: 'packt', hund_fixiere: 'stellt', angreifen: 'greift an:', angreifen_mit: 'schlägt zu:', werfen: 'wirft auf', werfen_fuesse: 'wirft vor', fesseln: 'fesselt' };
     const layer = fxLayer();
@@ -8398,6 +8497,7 @@ function _anhaengerLadung() {
 function fxTravel(zielName) {
   try {
     if (!fxEnabled()) return;
+    try { sfxMotor(); } catch (e) {} // v7.12.723
     window._fxLastT = Date.now(); // v7.12.700
     const band = document.createElement('div');
     band.className = 'fx-travel';
@@ -8459,6 +8559,7 @@ function fxTravel(zielName) {
 function fxPartyJoin(neuName) {
   try {
     if (!fxEnabled() || !neuName) return;
+    try { sfxSting(); } catch (e) {} // v7.12.723
     const gruppe = [_npcVisual('Karl', 38)];
     try {
       if (Array.isArray(_party)) _party.forEach(m => {
@@ -8530,6 +8631,7 @@ function fxDialog(npcName, verbKey, dauerMs) {
 function fxSchlaf() {
   try {
     if (!fxEnabled()) return;
+    try { sfxSchlafTon(); } catch (e) {} // v7.12.723
     window._fxLastT = Date.now();
     const layer = fxLayer();
     const box = document.createElement('div');
@@ -8584,7 +8686,7 @@ function fxVerhaftung(name) {
     // 1) Vopo gleitet von rechts heran
     setTimeout(() => { try { vopo.style.transition = 'transform 0.9s cubic-bezier(.2,.8,.4,1), opacity 0.4s'; vopo.style.transform = 'translateX(0)'; vopo.style.opacity = '1'; } catch (e) {} }, 250);
     // 2) Handschellen klicken + Mundwinkel runter
-    setTimeout(() => { try { kette.style.transition = 'transform 0.4s cubic-bezier(.3,1.6,.5,1)'; kette.style.transform = 'translateX(-50%) scale(1.25)'; } catch (e) {} }, 1450);
+    setTimeout(() => { try { kette.style.transition = 'transform 0.4s cubic-bezier(.3,1.6,.5,1)'; kette.style.transform = 'translateX(-50%) scale(1.25)'; } catch (e) {} try { sfxHandschellen(); } catch (e) {} }, 1450); // v7.12.723: Klick-Sound synchron zur Kette
     setTimeout(() => { try { npcEl.firstChild.nodeValue = ''; npcEl.insertBefore(document.createTextNode('😞'), kette); } catch (e) {} }, 1800);
     // 3) Vopo führt ihn nach rechts ab
     setTimeout(() => { try { grp.style.transition = 'transform 1.6s ease-in, opacity 1.4s ease-in'; grp.style.transform = 'translateX(70vw)'; grp.style.opacity = '0'; } catch (e) {} }, dauer - 2100);

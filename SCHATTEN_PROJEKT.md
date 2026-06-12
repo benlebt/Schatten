@@ -16065,3 +16065,17 @@ strikt auf den vollen Namen - nennt die KI ihn im Cast nur "Mertens", fand der W
 keinen Eintrag -> 'frei' -> volles Kampfmenü. Fuzzy-Fallback (Nachnamen-Vergleich über
 Wortgrenzen, wie beim Showdown-Check) in _npcZustandGet, mit Diag bei Fuzzy-Treffer.
 Node-getestet: "Mertens"->uebergeben ✓, keine Falsch-Treffer (Trude/Mann) ✓.
+
+## 🆕 v7.12.723 — SFX: synthetische 1953-Sounds via WebAudio (Benjamin)
+
+Keine Sound-DATEIEN - alle Effekte werden zur Laufzeit per WebAudio synthetisiert (passt
+zur Ein-Datei-Architektur, null Ladezeit, null Assets). Regel: SFX spielen NUR außerhalb
+des 'still'-Modus (sfxOn() prüft getPlayMode), Lautstärke dezent unter der Musik. Sechs
+Sounds an sechs Stellen:
+- 🐕 sfxBellen (zwei raue Sägezahn-Bursts) - bei Rex-Konflikt-FX (art hund_*)
+- ⛓ sfxHandschellen (metallischer Doppel-Klick) - synchron zum Ketten-Pop der Verhaftung
+- 💥 sfxSchlag (dumpfer Bass-Thump + Noise) - bei Kampf-/Zugriffs-FX
+- 🚗 sfxMotor (52Hz-Sägezahn mit Knatter-LFO, 3s an-/abschwellend) - bei der Opel-Fahrt
+- ✦ sfxSting (zwei helle Töne aufwärts) - beim Party-Abklatschen
+- 🌙 sfxSchlafTon (zwei weiche absteigende Töne) - beim Truppen-Schlaf
+AudioContext lazy beim ersten Sound (iOS-Geste durch den auslösenden Tap gegeben).
