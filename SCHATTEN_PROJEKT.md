@@ -16141,3 +16141,17 @@ zentrale Wahl (fesseln klingt jetzt auch solo nach Handschellen).
 
 **3. Ziegelstein:** taugt = werfen (ins Gesicht) / werfen_fuesse / ablenken (woanders
 hinwerfen, Ziel schaut hin) - angreifen_mit raus ("einen Ziegelstein wirft man").
+
+## 🆕 v7.12.729 — Route-Knistern, Anlasser raus, "An mich nehmen"-Filter (Benjamin)
+
+**1. Dauer-Knacken nach der Fahrt:** Das SFX-Route-<audio> (v728, Stummschalter-Fix) lief
+nach dem letzten Ton einfach weiter und knisterte im Leerlauf. Jetzt: jeder Sound verlängert
+ein 4,5s-Busy-Fenster, ein 1,2s-Wächter pausiert das Element danach; der nächste Sound
+startet es wieder.
+
+**2. Motor:** Anlasser raus ("noch komisch - das Brummen danach ist super, im Notfall reicht
+nur das Brummen") - der Motor brummt jetzt sofort los, Drehzahl-Kurve + Tuckern bleiben.
+
+**3. "An mich nehmen"** verschwindet bei Personen-Zielen aus der Aktions-Liste - Personen
+nimmt man nicht an sich, das Verb gilt Gegenständen. (Der Filter-Kommentar versprach das
+seit v655, der konkrete Check fehlte.)

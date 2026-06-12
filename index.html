@@ -3277,7 +3277,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.728</div>
+    <div class="start-version">Schatten v7.12.729</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3503,7 +3503,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.728</span>
+    <span>Schatten v7.12.729</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7364,7 +7364,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.728';
+window.SCHATTEN_VERSION = 'v7.12.729';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -8394,8 +8394,20 @@ function _sfxOut(c) {
       el.srcObject = _sfxDest.stream;
       el.style.display = 'none';
       document.body.appendChild(el);
-      el.play().catch(() => {});
+      // v7.12.729 (Benjamin: "nach der Fahrt blieb der Sound stehen - dauerhaftes Knacken"):
+      // Das Route-<audio> lief nach dem letzten Ton einfach weiter und knisterte im Leerlauf.
+      // Jetzt: jeder Sound verlängert ein Busy-Fenster; ein Wächter pausiert das Element,
+      // sobald 4,5s lang nichts mehr gespielt hat. Der nächste Sound startet es wieder.
+      window._sfxWaechter = setInterval(() => {
+        try {
+          const e2 = document.getElementById('sfx-route');
+          if (e2 && !e2.paused && Date.now() > (window._sfxBusyBis || 0)) e2.pause();
+        } catch (e) {}
+      }, 1200);
     }
+    window._sfxBusyBis = Date.now() + 4500;
+    const el2 = document.getElementById('sfx-route');
+    if (el2 && el2.paused) el2.play().catch(() => {});
     return _sfxDest;
   } catch (e) { return c.destination; }
 }
@@ -8458,11 +8470,9 @@ function sfxMotor() {
   try {
     const c = _sfx(); if (!c) return;
     const t0 = c.currentTime;
-    // (1) Anlasser: wrr-wrr-wrr
-    _sfxTon(95, 62, 0.13, 'sawtooth', 0.1, 0, c);
-    _sfxTon(92, 60, 0.13, 'sawtooth', 0.1, 0.19, c);
-    _sfxTon(98, 64, 0.12, 'sawtooth', 0.11, 0.38, c);
-    const tM = t0 + 0.58; // Motor springt an
+    // v7.12.729 (Benjamin: "der Anlasser ist noch komisch, das Brummen danach ist super -
+    // im Notfall reicht nur das Brummen"): Anlasser raus, der Motor brummt sofort los.
+    const tM = t0 + 0.05;
     // (2) Hauptmotor mit Drehzahl-Kurve
     const o = c.createOscillator(); o.type = 'sawtooth';
     o.frequency.setValueAtTime(46, tM);
@@ -9707,6 +9717,9 @@ function _renderBaukasten() {
       if (d._umgebung) return _zielHatUmgebung || !(_zielHatUmgebung || _zielHatPerson);
       // Verben mit zielNoetig, die auf eine PERSON zielen: nicht zeigen, wenn nur "Umgebung" gewählt ist.
       if (d.zielNoetig && _zielHatUmgebung && !_zielHatPerson) return false;
+      // v7.12.729 (Benjamin: "An mich nehmen bei zwei gewählten NPCs ist falsch"): Personen
+      // nimmt man nicht an sich - das Verb gilt Gegenständen. Bei Personen-Ziel raus.
+      if (k === 'nehmen' && _zielHatPerson) return false;
       // v7.12.685 (Benjamin: "Party-NPCs sollen sich nicht gegenseitig attackieren - Margarete auf
       // den Rex?"): Ist ein gewähltes Ziel Party-Mitglied, Rex oder die Klientin, fliegen die
       // feindseligen Verben raus (angreifen/fesseln/werfen/durchsuchen). Befragen/Geben/Trinken bleiben.
