@@ -16122,3 +16122,22 @@ im fahrenden Opel; der Einstieg IST die Animation. Technik: Zeitfenster-Flag
 window._partyFxStummBis (15s) statt einfachem Bool, weil Rex' Tauschzahlung asynchron
 dazwischenliegt; Gates in _partyAdd und an der Rex-Reise-Popup-Stelle, Diag "steigt direkt
 in den Opel". Aufnahmen über das NPC-Menü behalten ihr Abklatschen unverändert.
+
+## 🆕 v7.12.728 — Kombi-Zugriff klingt + iOS-Stummschalter-Fix + Ziegelstein (Benjamin)
+
+**1. "Es kam gar kein Sound" - wahrscheinliche Wurzel iOS:** Reines WebAudio wird vom
+HARDWARE-Stummschalter gemutet, die MP3-Musik (audio-Element) nicht. Fix: WebAudio läuft
+jetzt über MediaStreamDestination + verstecktes <audio id="sfx-route"> - zählt als
+Medienwiedergabe wie die Musik und ignoriert den Schalter. Alle 5 SFX-Ausgänge umgeroutet.
+
+**2. Kombi-Zugriff = Sound-SEQUENZ:** Jeder fxBattle-Schritt klingt synchron zu seiner
+Animation über die neue zentrale Wahl sfxFuerAktion(art, item): hund_knurre->Knurren (NEU:
+Grollen mit Lautstärke-Flattern), hund_belle->Bellen, fass/fixiere->Bellen+Schlag,
+fesseln->Handschellen, Knallkörper->Knall (NEU: heller Burst + Boom), Fisch/Banane->Flatsch,
+Flasche->Klirren, Wurf/Angriff->Schlag, ablenken->Pfiff, einschüchtern->tiefes Brummen.
+Finale: Sieg->sfxUeberwaeltigt (NEU: zwei dunkle Schläge), Fehlschlag->sfxHohn (NEU: drei
+fiese absteigende Hä-hä-hä-Stöße - der Gegner freut sich hörbar). fxConflict nutzt dieselbe
+zentrale Wahl (fesseln klingt jetzt auch solo nach Handschellen).
+
+**3. Ziegelstein:** taugt = werfen (ins Gesicht) / werfen_fuesse / ablenken (woanders
+hinwerfen, Ziel schaut hin) - angreifen_mit raus ("einen Ziegelstein wirft man").
