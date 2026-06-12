@@ -15349,3 +15349,9 @@ mit dem Baukasten-Dedupe aus v680. Test grün.
    was über den Tresen geht; erneuter Klick auf Kaufen klappt wieder zu. Nach dem Kauf steht
    am Button "Eingesteckt ✓ (gezahlt: X)". Keine stille Auto-Abbuchung mehr.
    Bot-Pfad unverändert automatisch (billigstes Zahl-Item).
+
+## 🆕 v7.12.684 — Rex im Begleitung-Banner (Benjamin)
+
+Rex läuft über das eigene hundInParty-Flag, nicht über _party — das v581-Banner las nur
+_party und unterschlug ihn (Herz-Symbol in der Personenliste stimmte, Banner nicht).
+Jetzt einbezogen; Banner erscheint auch, wenn NUR Rex dabei ist. 4 Tests grün.
