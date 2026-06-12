@@ -16195,3 +16195,9 @@ jetzt ein Wrapper mit Cache (window._cvCache) um _charVisualCore. Die Tag-basier
 Auflösung prägt den Cache; tag-lose Aufrufer (fxBattle, fxDialog, Insassen, Banner)
 bekommen danach exakt dasselbe Gesicht. Löst die ganze Inkonsistenz-Klasse, nicht nur
 diesen einen NPC.
+
+## 🆕 v7.12.734 — Zustands-Icons: benommen ist nicht gefesselt (Benjamin)
+
+Die Personen-Liste zeigte für ALLE entschärften Zustände die Ketten (⛓) - auch für
+"benommen" ohne jede Fesselung. Jetzt status-spezifisch: gefesselt ⛓, ko 💫,
+benommen 😵‍💫, fixiert 🐾 (Rex hält ihn), geblendet 🙈. Der Status-Text daneben bleibt.
