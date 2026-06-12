@@ -3277,7 +3277,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.702</div>
+    <div class="start-version">Schatten v7.12.703</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3503,7 +3503,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.702</span>
+    <span>Schatten v7.12.703</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7348,7 +7348,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.702';
+window.SCHATTEN_VERSION = 'v7.12.703';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -8185,14 +8185,14 @@ function charVisual(name, tag, istWeiblich) {
     if (/doc|wagner|arzt|aerztin|ärztin/.test(n)) return '👨‍⚕️';
     if (/roth|lindner|kommissar|wachtmeister|volkspolizei|polizist/.test(n)) return '👮';
     if (/mertens|oberleutnant|hauptmann|stasi|mfs/.test(n)) return '👨‍✈️';
-    if (/wahler|direktor/.test(n)) return '🎩';
+    if (/wahler|direktor/.test(n)) return '👨‍💼'; // v7.12.703 (Benjamin): Reichsbahn-Direktor = Verwaltungsbürokrat im Anzug; Zylinder war 1953 nur noch Festtracht
     if (/anker|spitzel|^im\b/.test(n)) return '🫥';
     if (/mantel|schatten|beschatter|verfolger/.test(n)) return '🕴️';
     if (/willi|kummer|wirt\b|wirtin|barkeeper/.test(n)) return '🧔';
     const T = (tag || '').toUpperCase();
     if (T === 'STASI') return '👨‍✈️';
     if (/AUTHORITY|POLIZEI/.test(T)) return '👮';
-    if (T === 'SUSPECT') return '🎩';
+    if (T === 'SUSPECT') return '👨‍💼';
     if (T === 'MYSTERY') return '🕴️';
     if (T === 'CLIENT' && istWeiblich) return '🙍‍♀️';
     // Hash-stabiler Fallback: gleicher Name -> immer dasselbe Gesicht (Persönlichkeit statt 👤).
@@ -8201,6 +8201,22 @@ function charVisual(name, tag, istWeiblich) {
     const F = ['👩', '👩‍🦰', '👩‍🦳', '🧕'];
     return istWeiblich ? F[h % F.length] : M[h % M.length];
   } catch (e) { return '👤'; }
+}
+// v7.12.703 (Benjamin: "gegnerische NPCs über den befreundeten anzeigen und markieren"):
+// Gegner-Erkennung über Tag, Rolle, Tatverdächtigen- und Showdown-Match.
+function _istGegnerNpc(name, tag, rolle) {
+  try {
+    const T = (tag || '').toUpperCase();
+    if (/SUSPECT|STASI|GANGSTER|ANTAGONIST|MYSTERY/.test(T)) return true;
+    const _qn = (s) => normForMatch((s || '').replace(/["'„""»«]/g, ''));
+    const nN = _qn(name);
+    if (/suspect|verdächtig|verdaechtig|täter|taeter|schläger|schlaeger|gangster|halbwelt/i.test(rolle || '')) return true;
+    for (const feld of ['tatverdaechtiger', 'showdownGegner']) {
+      const v = _qn((caseProgress && caseProgress[feld]) || '');
+      if (v && nN && (v === nN || v.includes(nN) || nN.includes(v.split(/\s+/).pop()))) return true;
+    }
+    return false;
+  } catch (e) { return false; }
 }
 // Einheitlicher Visual-Zugriff der FX: jetzt charVisual (v696). Die Gold-SVG-Porträts
 // (pickNpcSvg) sind DEAKTIVIERT - Benjamins Urteil: "keine Farbe, kein Leben, Emojis haben
@@ -20586,7 +20602,17 @@ function bauePersonenButtons(container, modus) {
   const _gesicherterKlientNorm = (caseProgress && caseProgress.clientSecured && clientProfile && clientProfile.name)
     ? normForMatch(clientProfile.name) : null;
   let gebaut = 0;
-  npcs.forEach(npc => {
+  // v7.12.703 (Benjamin): GEGNER ZUERST - der Bösewicht steht über den Freunden (stabile
+  // Sortierung: Reihenfolge innerhalb der Gruppen bleibt erhalten).
+  let _npcsSortiert = npcs;
+  try {
+    _npcsSortiert = npcs.slice().sort((a, b) => {
+      const ga = (typeof _istGegnerNpc === 'function' && _istGegnerNpc(a && a.name, a && a.tag, a && a.rolle)) ? 0 : 1;
+      const gb = (typeof _istGegnerNpc === 'function' && _istGegnerNpc(b && b.name, b && b.tag, b && b.rolle)) ? 0 : 1;
+      return ga - gb;
+    });
+  } catch (e) { _npcsSortiert = npcs; }
+  _npcsSortiert.forEach(npc => {
     // v7.12.595: gesicherte Klientin überspringen (eingelockt, offstage).
     if (_gesicherterKlientNorm && normForMatch(npc.name || '') === _gesicherterKlientNorm) return;
     // Im 'verwalten'-Modus nur Personen zeigen, für die es überhaupt eine Verwalten-Aktion gibt (Nicht-Gegner /
@@ -20646,8 +20672,12 @@ function bauePersonenButtons(container, modus) {
     const _npcEmoji = _istHundNpc ? '🐕' : (typeof charVisual === 'function' ? charVisual(npc.name, _npcTag, _istWeiblich) : (_npcEmojiMap[_npcTag] || '👤'));
     const _markerKlasse = (_markerFinal.indexOf('●') === 0) ? 'option-marker' : 'option-marker option-marker-system';
     const _markerStyle = (_markerFinal.indexOf('●') === 0) ? ' style="color:#c8a84a;"' : '';
+    // v7.12.703: Gegner sichtbar machen - dunkelroter Rahmen + Label, der Blick erkennt sofort
+    // Freund und Feind (✦ gold = in Begleitung, ⚠ rot = Gegner).
+    const _istGegner = (typeof _istGegnerNpc === 'function') && _istGegnerNpc(npc.name, npc.tag, npc.rolle);
+    if (_istGegner) { btn.style.border = '1px solid rgba(190,62,52,0.6)'; btn.style.boxShadow = 'inset 3px 0 0 rgba(190,62,52,0.75)'; }
     btn.innerHTML = '<span class="option-id option-id-person">' + _npcEmoji + '</span><span class="option-text-wrap"><span>'
-      + escapeHtml(npc.name) + (_inParty ? ' <span style="color:#c8a84a;font-size:11px;">✦ in Begleitung</span>' : '') + '</span><span class="' + _markerKlasse + '"' + _markerStyle + '>' + _markerFinal + '</span></span>';
+      + escapeHtml(npc.name) + (_inParty ? ' <span style="color:#c8a84a;font-size:11px;">✦ in Begleitung</span>' : '') + (_istGegner ? ' <span style="color:#c85a4a;font-size:11px;">⚠ Gegner</span>' : '') + '</span><span class="' + _markerKlasse + '"' + _markerStyle + '>' + _markerFinal + '</span></span>';
     attachSafeTap(btn, () => { if (typeof oeffneNpcMenue === 'function') { _markPopupOpened(); oeffneNpcMenue(npc, modus); } });
     container.appendChild(btn);
     gebaut++;

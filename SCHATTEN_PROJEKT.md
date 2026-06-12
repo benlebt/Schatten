@@ -15763,3 +15763,16 @@ UND danach noch ein "🎒 Eingesteckt"-Toast - wegen des Variant-Cooldowns sogar
 EINES von zwei Items (redundant UND inkonsequent). Entscheid Benjamin: Toast an dieser
 Stelle ABSCHALTEN. Der Item-Pop (fxItemGain) trägt Belohnung und Information allein -
 "Toasts informieren, Animationen belohnen", hier tut die Animation beides.
+
+## 🆕 v7.12.703 — Gegner zuerst + ⚠-Markierung + Wahler im Anzug (Benjamin)
+
+**1. Personen-Liste: GEGNER STEHEN OBEN.** _istGegnerNpc (Tag SUSPECT/STASI/GANGSTER/
+ANTAGONIST/MYSTERY, Rollen-Probe, Tatverdächtigen- und Showdown-Match) + stabile Sortierung
+in bauePersonenButtons: Bösewichte über den Freunden, Reihenfolge innerhalb der Gruppen
+bleibt.
+**2. Gegner-Markierung:** dunkelroter Rahmen + roter Innenbalken links + Label "⚠ Gegner"
+am Namen - das Auge trennt sofort Freund (✦ gold, in Begleitung) und Feind (⚠ rot).
+**3. Wahler: 👨‍💼 statt 🎩** (Benjamins Frage "was ist er für ein Direktor?"): Reichsbahn-
+Direktor = Verwaltungsbürokrat im Anzug. Der Zylinder war 1953 nur noch Festtracht
+(Hochzeiten, Staatsakte) - historisch unpassend für den Dienstalltag. SUSPECT-Fallback
+ebenfalls auf 👨‍💼.
