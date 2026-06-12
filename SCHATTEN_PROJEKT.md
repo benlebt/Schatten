@@ -15331,3 +15331,9 @@ Trude selbst ist in 3 Fällen als Ort definiert, u.a. Margarete).
 
 Bleibt-Sektion neu sortiert: Reisen → Umsehen (Fundstücke) → Notizbuch → Aktueller Stand.
 Notizbuch-Append wird aufgeschoben und erst nach dem Umsehen-Block angehängt.
+
+## 🆕 v7.12.682 — "Dabei" zählt gleichnamige Items (Benjamin: 2 Korn, nur 1 angezeigt)
+
+Der v642-Filter im Aktueller-Stand-Popup verschluckte gleichnamige Duplikate stumm. Jetzt
+wird pro Name gezählt und "×N" angezeigt ("Flasche Nordhäuser Doppelkorn ×2") — konsistent
+mit dem Baukasten-Dedupe aus v680. Test grün.

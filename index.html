@@ -3187,7 +3187,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.681</div>
+    <div class="start-version">Schatten v7.12.682</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.681</span>
+    <span>Schatten v7.12.682</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7183,7 +7183,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.681';
+window.SCHATTEN_VERSION = 'v7.12.682';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -15957,7 +15957,15 @@ function showStatusDetails() {
   let _dabei = inventory.slice();
   try {
     const _trag = (typeof _itemsBeiKarl === 'function') ? _itemsBeiKarl() : [];
-    _trag.forEach(it => { if (it && it.name && _dabei.indexOf(it.name) === -1 && !_dabei.some(x => x.indexOf(it.name) !== -1)) _dabei.push(it.name); });
+    // v7.12.682 (Benjamin: "habe 2 Doppelkorn, im Stand steht nur einer"): Der v642-Filter
+    // verschluckte gleichnamige Duplikate stumm. Jetzt pro Name zählen und "×N" anzeigen -
+    // konsistent mit dem Baukasten-Dedupe (v680).
+    const _zaehl = {};
+    _trag.forEach(it => { if (it && it.name) _zaehl[it.name] = (_zaehl[it.name] || 0) + 1; });
+    Object.keys(_zaehl).forEach(nm => {
+      if (_dabei.indexOf(nm) !== -1 || _dabei.some(x => x.indexOf(nm) !== -1)) return; // im festen Inventar
+      _dabei.push(nm + (_zaehl[nm] > 1 ? ' ×' + _zaehl[nm] : ''));
+    });
   } catch (e) {}
   if (_dabei.length > 0) {
     invEl.textContent = _dabei.map(it => '· ' + it).join('\n');
