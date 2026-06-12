@@ -15921,3 +15921,13 @@ Konflikt-Plan (lastSpannung auf 2 + "GEFAHR GEBANNT"-Push an die KI), (2) bei je
 Szenen-Übernahme gegen KI-Werte (newSpannung > 2 -> 2, analog zur Post-Flucht-Ruhe).
 Wird der Gefesselte befreit oder ein neuer Gegner taucht auf, greift der Deckel nicht
 mehr. Effekt: Reisen/Schlafen werden nach dem Zugriff wieder frei, Flucht-Zwang entfällt.
+
+## 🆕 v7.12.711 — Deckel-KORREKTUR: scene.spannung wird mitgekappt (Claude-Fehler in v710)
+
+Benjamin-Befund (Run 1944): Trotz v710-Deckel weiter Spannung 5 sichtbar, Reisen gesperrt.
+WURZEL (Claude-Fehler, eingestanden): Der Deckel kappte NUR die interne Variable
+lastSpannung - aber Header-Dots (showHeader), Reise-/Schlaf-Gates und Resolve lesen alle
+direkt scene.spannung aus dem SZENEN-OBJEKT. Der Deckel war für UI und Gates wirkungslos.
+FIX: Im Gefahr-gebannt-Zweig wird jetzt zusätzlich scene.spannung = 2 gesetzt. Verifiziert:
+showHeader(scene) läuft NACH der Kappung (Z39168 vs Z34168), gleiche Objekt-Referenz -
+Anzeige und alle Gates sehen denselben gekappten Wert.
