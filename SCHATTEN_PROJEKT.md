@@ -15994,3 +15994,12 @@ und Anhänger gemeinsam; transform ist von fxDrive belegt).
 Showdown-Gegner ausgenommen. Hinweis: Dass er in Run 2011 am Bahnhof noch gefesselt LAG, war
 korrekte Welt-Konsistenz (dort gefesselt zurückgelassen, nie übergeben) - unplausibel war nur
 die Dauer.
+
+## 🆕 v7.12.716 — Lazy-Verfall: Gefesselt hält keinen Tageswechsel durch (Benjamin)
+
+Der v715-Nacht-Verfall griff nur beim NÄCHSTEN Schlafen - der Mantelmann aus Tag 2 lag also
+auch nach dem Update noch verschnürt am Bahnhof. Jetzt prüft _npcZustandGet den Verfall LAZY
+bei jeder Abfrage: gefesselt/ko/fixiert/benommen + Tageswechsel vorbei (seitTag < heute;
+Alt-Einträge ohne seitTag: >=8 Szenen) -> 'geflohen'. Wirkt sofort, auch auf Alt-Spielstände
+und alle Abfragepfade (W6-Präsenz, Personen-Liste, Verben). _npcZustandSet speichert seitTag
+mit. Showdown-Gegner ausgenommen.

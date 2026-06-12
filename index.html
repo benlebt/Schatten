@@ -3277,7 +3277,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.715</div>
+    <div class="start-version">Schatten v7.12.716</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3503,7 +3503,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.715</span>
+    <span>Schatten v7.12.716</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7364,7 +7364,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.715';
+window.SCHATTEN_VERSION = 'v7.12.716';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -7690,14 +7690,32 @@ function _npcZustandSet(name, zustand) {
     if (!name) return false;
     const k = normForMatch(name);
     const m = _npcZustandMap();
-    m[k] = { name: name, status: (zustand && zustand.status) || 'frei', ort: (zustand && zustand.ort) || ((typeof engineCurrentLocation !== 'undefined' && engineCurrentLocation) ? engineCurrentLocation.name : ''), seitSzene: (typeof sceneCounter === 'number') ? sceneCounter : 0 };
+    m[k] = { name: name, status: (zustand && zustand.status) || 'frei', ort: (zustand && zustand.ort) || ((typeof engineCurrentLocation !== 'undefined' && engineCurrentLocation) ? engineCurrentLocation.name : ''), seitSzene: (typeof sceneCounter === 'number') ? sceneCounter : 0, seitTag: (typeof gameDay === 'number') ? gameDay : 0 }; // v7.12.716: seitTag für den Lazy-Verfall
     if (typeof diag === 'function') diag('state', '🔗 NPC-ZUSTAND: ' + name + ' -> ' + m[k].status + '@' + m[k].ort);
     try { if (typeof _showdownPruefeBestanden === 'function') _showdownPruefeBestanden(name, m[k].status, 'zustand'); } catch (e) {} // v7.12.697
     return true;
   } catch (e) { return false; }
 }
 function _npcZustandGet(name) {
-  try { return _npcZustandMap()[normForMatch(name || '')] || null; } catch (e) { return null; }
+  try {
+    const k = normForMatch(name || '');
+    const z = _npcZustandMap()[k] || null;
+    // v7.12.716 (Benjamin: Mantelmann lag auch nach Refresh noch gefesselt - der v715-Verfall
+    // griff nur beim NÄCHSTEN Tageswechsel, nicht rückwirkend): Lazy-Verfall direkt bei der
+    // Abfrage. Gefesselt/KO hält keinen Tageswechsel durch; bei Alt-Einträgen ohne seitTag
+    // gilt eine Szenen-Heuristik (>=8 Szenen). Showdown-Gegner ausgenommen.
+    if (z && (z.status === 'gefesselt' || z.status === 'ko' || z.status === 'fixiert' || z.status === 'benommen')) {
+      const _sgL = (typeof caseProgress === 'object' && caseProgress && caseProgress.showdownGegner) ? normForMatch(caseProgress.showdownGegner) : '';
+      const _tagJetzt = (typeof gameDay === 'number') ? gameDay : 0;
+      const _szJetzt = (typeof sceneCounter === 'number') ? sceneCounter : 0;
+      const _abgelaufen = (typeof z.seitTag === 'number') ? (z.seitTag < _tagJetzt) : ((_szJetzt - (z.seitSzene || 0)) >= 8);
+      if (_abgelaufen && k !== _sgL) {
+        z.status = 'geflohen';
+        if (typeof diag === 'function') diag('state', '🌅 LAZY-VERFALL: ' + (z.name || k) + ' hat sich längst befreit und ist verschwunden');
+      }
+    }
+    return z;
+  } catch (e) { return null; }
 }
 function _npcIstFeindlich(npc) {
   try {
