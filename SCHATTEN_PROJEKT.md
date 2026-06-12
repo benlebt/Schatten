@@ -15931,3 +15931,11 @@ direkt scene.spannung aus dem SZENEN-OBJEKT. Der Deckel war für UI und Gates wi
 FIX: Im Gefahr-gebannt-Zweig wird jetzt zusätzlich scene.spannung = 2 gesetzt. Verifiziert:
 showHeader(scene) läuft NACH der Kappung (Z39168 vs Z34168), gleiche Objekt-Referenz -
 Anzeige und alle Gates sehen denselben gekappten Wert.
+
+## 🆕 v7.12.712 — Mantelmann: verhülltes Gesicht statt Zwerg (Benjamin)
+
+🕴️ ist ein GANZKÖRPER-Emoji und wirkte neben den Gesichts-Emojis winzig ("wie ein Zwerg
+neben Karl"). Neu: 😶‍🌫️ (Gesicht im Nebel) für /mantel|schatten|beschatter|verfolger/ und
+den MYSTERY-Tag-Fallback - gleiche Größe wie alle Charaktere, und erzählt den gesichtslosen
+Beschatter sogar besser. Eigenes SVG bewusst NICHT (Gold-Porträts in v696 als leblos
+verworfen; ein Einzel-SVG zwischen Emoji-Gesichtern fiele aus der Reihe).
