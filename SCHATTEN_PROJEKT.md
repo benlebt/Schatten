@@ -15878,3 +15878,15 @@ NICHT umgesetzt - kollidiert mit eiserner Regel "der Spieler entscheidet die Par
 Empfehlung Claude: Freiheit behalten; der Showdown-Crash + Injekt lösen das eigentliche
 Problem (Romance-Drift). Mildere Alternative wäre Prosa-Zögern dieser NPCs. (2) Sichern-
 Sektion 2 Buttons mit Unterauswahl -> v708.
+
+## 🆕 v7.12.708 — Sichern: 2 Buttons mit Weg-Auswahl statt 4 (Benjamin)
+
+Die Sicherungs-Sektion ist nach Beat GRUPPIERT: EIN Button "{Klientin} in Sicherheit
+bringen" (🛟) und EINER "Die gesammelten Beweise übergeben" (📁), Marker zeigt "SICHERN ·
+2 Wege". Der Klick öffnet bei mehreren Varianten eine kleine Auswahl im NPC-Menü-Stil
+("Welchen Weg wählst du?" - Helene/Westen bzw. Roth/Vera); bei nur einer Variante wird
+direkt ausgeführt. Die harte Engine-Ausführung (_sichernAusfuehren: Beat, clientSecured,
+Party-Remove, Ortswechsel, fxSecure) ist unverändert gekapselt. Gefahren-Sperre (Sp>=4)
+bleibt. Der "In Sicherheit"-Toast ist raus (Toast-Regel: fxSecure trägt die Info).
+fxSchlaf + Showdown-Antwort waren bereits in v707 (Injekt: Mertens findet Karl - stärker
+als der ursprünglich geplante ⚔-Reisemarker).

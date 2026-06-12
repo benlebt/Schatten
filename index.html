@@ -3277,7 +3277,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.707</div>
+    <div class="start-version">Schatten v7.12.708</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3503,7 +3503,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.707</span>
+    <span>Schatten v7.12.708</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7361,7 +7361,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.707';
+window.SCHATTEN_VERSION = 'v7.12.708';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -21370,64 +21370,90 @@ function baueSicherungsButtons(container) {
     }
     if (!_buttons.length) return 0;
 
-    // Trenner + Buttons rendern.
+    // v7.12.708 (Benjamin: "vier Buttons sind nervig - EIN Button pro Ziel, die Variante
+    // wählt man danach"): Die Sicherungen sind nach Beat GRUPPIERT: ein Button
+    // "{Klientin} in Sicherheit bringen" und einer "Beweise übergeben". Hat eine Gruppe
+    // mehrere Wege (Helene/Westen bzw. Roth/Vera), öffnet der Klick eine kleine Auswahl
+    // im NPC-Menü-Stil. Die Ausführung ist unverändert hart (Engine setzt Beat, Ort, Party).
     const sep = document.createElement('div');
     sep.className = 'system-button-separator';
     sep.textContent = '· In Sicherheit bringen ·';
     container.appendChild(sep);
-    let _gebaut = 0;
-    // v7.12.688 (Benjamin: "inkonsistent, dass ich nur flüchten kann, aber die Sichern-Buttons
-    // drücken darf"): Sichern-Aktionen sind sinngemäß REISEN (zur Charité fahren, zum Kranzler) -
-    // in einer akuten Gefahrenszene (Sp>=4, Flucht-Button aktiv) erst aus der Gefahr lösen,
-    // dann sichern. Buttons bleiben sichtbar, aber gesperrt mit Grund.
     const _sichernGefahr = (typeof lastSpannung === 'number' && lastSpannung >= 4 && !karlInStasiCustody);
+    const _sichernAusfuehren = (b) => {
+      if (typeof chooseOptionInFlight !== 'undefined' && chooseOptionInFlight) return;
+      try { if (typeof fxSecureFuerButton === 'function') fxSecureFuerButton(b); } catch (e) {} // v7.12.699
+      // HART setzen - kein Regex, keine Prosa-Bestätigung nötig.
+      try {
+        if (!Array.isArray(caseProgress.politicalBeatsHit)) caseProgress.politicalBeatsHit = [];
+        if (caseProgress.politicalBeatsHit.indexOf(b.beat) === -1) caseProgress.politicalBeatsHit.push(b.beat);
+        if (b.beat === 'margarete_gesichert') {
+          // v7.12.600 (W1): secured VOR dem Party-Remove setzen (Engine-Ereignis security_action) - der
+          // secured-Schutz verhindert, dass das Remove den Zustand auf left_behind zieht.
+          caseProgress.clientSecured = true;
+          caseProgress.clientSecuredAt = b.securedAt;
+          if (typeof setClientState === 'function') setClientState('secured', 'security_action', b.securedAt);
+          // v7.12.594 (Benjamin-Run 1800): Gesicherte Person verlässt AUTOMATISCH die Party - sonst "zieht man
+          // sie wieder mit" und die Sicherung ist erzählerisch sofort wieder aufgehoben.
+          try { if (typeof _partyRemove === 'function') _partyRemove(null, _klientName); } catch (e) {}
+        }
+        if (b.beat === 'akten_gesichert') { caseProgress.evidenceSecured = true; caseProgress.evidenceSecuredAt = b.securedAt; }
+        caseProgress.pendingSecurityIntent = null;
+        // v7.12.595 (ChatGPT P1, Run 1800 Sz19/20): Sicherungs-Aktionen mit Zielort (zu Helene/Roth/über die
+        // Grenze bringen) sind ECHTE Ortswechsel - der Engine-Ort wird HART aufs Ziel gesetzt (analog reiseZuOrt),
+        // sonst erzählt die KI die Charité, während der Header bei Doc Wagner klebt (Ortsbruch).
+        try {
+          if (b.zielOrtSuche) {
+            const _zielLoc = _orte.find(o => o && o.name && normForMatch(o.name).indexOf(normForMatch(b.zielOrtSuche)) !== -1);
+            if (_zielLoc && (!engineCurrentLocation || normForMatch(engineCurrentLocation.name) !== normForMatch(_zielLoc.name))) {
+              const _vorherOrt = engineCurrentLocation ? engineCurrentLocation.name : '?';
+              engineCurrentLocation = { name: _zielLoc.name, sektor: _zielLoc.sektor || '' };
+              if (typeof _reiseGeradeErfolgt !== 'undefined') _reiseGeradeErfolgt = { name: _zielLoc.name, sektor: _zielLoc.sektor || '', detail: _zielLoc.detail || '' };
+              if (typeof diag === 'function') diag('state', 'SICHERUNG mit Ortswechsel (Engine besitzt Ort): "' + _vorherOrt + '" -> "' + _zielLoc.name + '"');
+              if (typeof renderImRaumAnzeige === 'function') { try { renderImRaumAnzeige(); } catch (e) {} }
+            }
+          }
+        } catch (e) {}
+        if (typeof diag === 'function') diag('progress', '✦ SICHERUNG (Engine-Button, HART): ' + b.beat + ' -> ' + b.securedAt + ' (' + caseProgress.politicalBeatsHit.length + ' Beats)');
+        // v7.12.708 (Toast-Regel): Der "In Sicherheit"-Toast ist raus - die Sicherungs-Animation
+        // (fxSecure) trägt die Information, der Toast war Doppelmeldung fürs eigene Handeln.
+      } catch (e) {}
+      // Die KI erzählt die Folge (Beat steht schon fest).
+      if (typeof chooseOption === 'function') {
+        chooseOption({ id: 'SICHERUNG_' + b.beat, text: b.aktionstext, kategorie: 'DEFENSIV', _kategorie: 'DEFENSIV', _priority: 26, _isSystemButton: true, _sicherung: b.beat });
+      }
+    };
+    const _gruppen = [], _gIdx = {};
     _buttons.forEach(b => {
+      if (!(b.beat in _gIdx)) { _gIdx[b.beat] = _gruppen.length; _gruppen.push({ beat: b.beat, emoji: b.emoji, varianten: [] }); }
+      _gruppen[_gIdx[b.beat]].varianten.push(b);
+    });
+    let _gebaut = 0;
+    _gruppen.forEach(g => {
+      const _gLabel = (g.beat === 'margarete_gesichert') ? (_klientName + ' in Sicherheit bringen') : 'Die gesammelten Beweise übergeben';
       const btn = document.createElement('button');
       btn.className = 'option-btn option-btn-system option-btn-sicherung';
-      btn.innerHTML = '<span class="option-id">' + b.emoji + '</span><span class="option-text-wrap"><span>'
-        + escapeHtml(b.label) + '</span><span class="option-marker option-marker-defensiv">' + (_sichernGefahr ? 'GESPERRT · erst aus der Gefahr lösen (Flucht)' : 'SICHERN') + '</span></span>';
+      btn.innerHTML = '<span class="option-id">' + g.emoji + '</span><span class="option-text-wrap"><span>'
+        + escapeHtml(_gLabel) + '</span><span class="option-marker option-marker-defensiv">' + (_sichernGefahr ? 'GESPERRT · erst aus der Gefahr lösen (Flucht)' : (g.varianten.length > 1 ? 'SICHERN · ' + g.varianten.length + ' Wege' : 'SICHERN')) + '</span></span>';
       if (_sichernGefahr) { btn.disabled = true; btn.classList.add('locked'); container.appendChild(btn); _gebaut++; return; }
       attachSafeTap(btn, () => {
         if (typeof chooseOptionInFlight !== 'undefined' && chooseOptionInFlight) return;
-        try { if (typeof fxSecureFuerButton === 'function') fxSecureFuerButton(b); } catch (e) {} // v7.12.699
-        // HART setzen - kein Regex, keine Prosa-Bestätigung nötig.
+        if (g.varianten.length === 1) { _sichernAusfuehren(g.varianten[0]); return; }
+        // Unterauswahl: Welcher Weg? (NPC-Menü-Stil, wie die Rex-Zielwahl)
         try {
-          if (!Array.isArray(caseProgress.politicalBeatsHit)) caseProgress.politicalBeatsHit = [];
-          if (caseProgress.politicalBeatsHit.indexOf(b.beat) === -1) caseProgress.politicalBeatsHit.push(b.beat);
-          if (b.beat === 'margarete_gesichert') {
-            caseProgress.clientSecured = true;
-            caseProgress.clientSecuredAt = b.securedAt;
-            // v7.12.600 (W1): secured VOR dem Party-Remove setzen (Engine-Ereignis security_action) - der
-            // secured-Schutz verhindert, dass das Remove den Zustand auf left_behind zieht.
-            if (typeof setClientState === 'function') setClientState('secured', 'security_action', b.securedAt);
-            // v7.12.594 (Benjamin-Run 1800): Gesicherte Person verlässt AUTOMATISCH die Party - sonst "zieht man
-            // sie wieder mit" und die Sicherung ist erzählerisch sofort wieder aufgehoben.
-            try { if (typeof _partyRemove === 'function') _partyRemove(null, _klientName); } catch (e) {}
-          }
-          if (b.beat === 'akten_gesichert') { caseProgress.evidenceSecured = true; caseProgress.evidenceSecuredAt = b.securedAt; }
-          caseProgress.pendingSecurityIntent = null;
-          // v7.12.595 (ChatGPT P1, Run 1800 Sz19/20): Sicherungs-Aktionen mit Zielort (zu Helene/Roth/über die
-          // Grenze bringen) sind ECHTE Ortswechsel - der Engine-Ort wird HART aufs Ziel gesetzt (analog reiseZuOrt),
-          // sonst erzählt die KI die Charité, während der Header bei Doc Wagner klebt (Ortsbruch).
-          try {
-            if (b.zielOrtSuche) {
-              const _zielLoc = _orte.find(o => o && o.name && normForMatch(o.name).indexOf(normForMatch(b.zielOrtSuche)) !== -1);
-              if (_zielLoc && (!engineCurrentLocation || normForMatch(engineCurrentLocation.name) !== normForMatch(_zielLoc.name))) {
-                const _vorherOrt = engineCurrentLocation ? engineCurrentLocation.name : '?';
-                engineCurrentLocation = { name: _zielLoc.name, sektor: _zielLoc.sektor || '' };
-                if (typeof _reiseGeradeErfolgt !== 'undefined') _reiseGeradeErfolgt = { name: _zielLoc.name, sektor: _zielLoc.sektor || '', detail: _zielLoc.detail || '' };
-                if (typeof diag === 'function') diag('state', 'SICHERUNG mit Ortswechsel (Engine besitzt Ort): "' + _vorherOrt + '" -> "' + _zielLoc.name + '"');
-                if (typeof renderImRaumAnzeige === 'function') { try { renderImRaumAnzeige(); } catch (e) {} }
-              }
-            }
-          } catch (e) {}
-          if (typeof diag === 'function') diag('progress', '✦ SICHERUNG (Engine-Button, HART): ' + b.beat + ' -> ' + b.securedAt + ' (' + caseProgress.politicalBeatsHit.length + ' Beats)');
-          if (typeof showProgressToast === 'function') { try { showProgressToast('In Sicherheit', b.label, 'success', 'sicherung-' + b.beat); } catch(e){} }
+          const _altOv = document.getElementById('npc-overlay'); if (_altOv) _altOv.remove();
+          const ov = document.createElement('div');
+          ov.id = 'npc-overlay'; ov.className = 'npc-overlay';
+          let bts = '';
+          g.varianten.forEach((v, i) => { bts += '<button class="npc-verb-btn" data-sx="' + i + '">' + v.emoji + ' ' + escapeHtml(v.label) + '</button>'; });
+          ov.innerHTML = '<div class="npc-menue"><div class="npc-menue-titel">' + g.emoji + ' ' + escapeHtml(_gLabel.toUpperCase()) + '</div>'
+            + '<div class="npc-menue-frage">Welchen Weg wählst du?</div>' + bts
+            + '<button class="npc-verb-btn npc-verb-abbruch">Abbrechen</button></div>';
+          document.body.appendChild(ov);
+          ov.querySelectorAll('[data-sx]').forEach(x => attachSafeTap(x, () => { try { ov.remove(); } catch (e) {} _sichernAusfuehren(g.varianten[parseInt(x.getAttribute('data-sx'), 10)]); }));
+          const ab = ov.querySelector('.npc-verb-abbruch');
+          if (ab) attachSafeTap(ab, () => { try { ov.remove(); } catch (e) {} });
         } catch (e) {}
-        // Die KI erzählt die Folge (Beat steht schon fest).
-        if (typeof chooseOption === 'function') {
-          chooseOption({ id: 'SICHERUNG_' + b.beat, text: b.aktionstext, kategorie: 'DEFENSIV', _kategorie: 'DEFENSIV', _priority: 26, _isSystemButton: true, _sicherung: b.beat });
-        }
       });
       container.appendChild(btn);
       _gebaut++;
