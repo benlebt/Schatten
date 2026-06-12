@@ -15721,3 +15721,25 @@ knallt der goldene Stempel schräg auf die 📁-Akte (Doppelrahmen, Gold-Glühen
 darunter "Karl Mauer · Privatdetektiv · Berlin 1953". Überbrückt die Ladezeit der
 Finalszene. WICHTIG ENTDECKT: Auf dem iPhone feuert der Resolve-Button über TOUCHEND
 (nicht click, rTouchHandled blockt den click-Pfad) - der Hook sitzt in BEIDEN Pfaden.
+
+## 🆕 v7.12.700 — FX-SICHERHEITSNETZ: keine Szene ohne Animation (Benjamin)
+
+**Architektur-Antwort auf "es soll keine szene-auslösende Aktion ohne Animation geben":**
+Statt jeden Button einzeln zu jagen, sitzt das Netz an der EINEN Stelle, durch die jede
+Szene entsteht: chooseOption. Hat in den letzten 1,5 s keine spezifische FX gefeuert
+(fxDialog/fxConflict/fxBattle/fxTravel/fxFlucht/fxSecure/fxFallGeloest setzen jetzt alle
+die Marke window._fxLastT), zeigt fxKategorie die Kategorie-Animation: Karl + pulsendes
+Symbol (🔍 Erkunden, 🌙 Schlafen, 🩹 Heilen, 👁️ Beobachten, 🛡️ Defensiv, 💥 Offensiv,
+🌹 Romantik, 🎯 Auflösen) + gekürzter Aktionstext. Damit sind AUTOMATISCH abgedeckt:
+Schlafen, Doc-Wagner/Marlene/Notheilen, Umsehen-Szenen, friedliche Baukasten-Pläne,
+Freitext, Telefonate - und jeder künftige Button, ohne neuen Hook.
+Ausnahmen sauber geregelt: FLUCHT/NOTFLUCHT (fxFlucht in der Mechanik, NOTFLUCHT-Hook NEU)
+und Reisen (_istReise) feuern nicht doppelt.
+
+**Verb-Lücken geschlossen:** Durchsuchen 🔍/📄, Befehl-Ablenkung ❗/😵‍💫 (vorher Fallback 💬).
+
+**Kombiknöpfe-Entscheid (Benjamins Frage "können wir die entfernen, macht doch der
+Baukasten?"):** EMPFEHLUNG BEHALTEN - "Ablenkung & Zugriff (Helfer)" / "Niederschlagen &
+fesseln" sind kuratierte Ein-Tap-Manöver; im Baukasten wären es 4+ Taps auf dem iPhone.
+Sie sind engine-validiert (Manöver-System) und haben jetzt die Konflikt-Animation
+(/manoever/-Regex griff bereits). Entfernen nur auf Benjamins explizites Go.

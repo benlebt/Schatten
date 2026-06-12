@@ -3273,7 +3273,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.699</div>
+    <div class="start-version">Schatten v7.12.700</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3499,7 +3499,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.699</span>
+    <span>Schatten v7.12.700</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7344,7 +7344,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.699';
+window.SCHATTEN_VERSION = 'v7.12.700';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -8219,6 +8219,7 @@ function fxItemGain(item) {
 function fxConflict(actorName, targetName, art, success) {
   try {
     if (!fxEnabled() || !targetName) return;
+    window._fxLastT = Date.now(); // v7.12.700
     const VERB = { hund_fass: 'packt', hund_fixiere: 'stellt', angreifen: 'greift an:', angreifen_mit: 'schlägt zu:', werfen: 'wirft auf', werfen_fuesse: 'wirft vor', fesseln: 'fesselt' };
     const layer = fxLayer();
     const box = document.createElement('div');
@@ -8238,6 +8239,7 @@ function fxConflict(actorName, targetName, art, success) {
 function fxTravel(zielName) {
   try {
     if (!fxEnabled()) return;
+    window._fxLastT = Date.now(); // v7.12.700
     const band = document.createElement('div');
     band.className = 'fx-travel';
     // v7.12.693 (Benjamin: "1953 war der Opel Olympia nicht so flott" + "passenderes Auto"):
@@ -8305,16 +8307,18 @@ function fxPartyJoin(neuName) {
 function fxDialog(npcName, verbKey) {
   try {
     if (!fxEnabled() || !npcName) return;
+    window._fxLastT = Date.now(); // v7.12.700: Marke fürs Sicherheitsnetz
     // Symbol-Paar je Verb: [über Karl, über dem Gegenüber]
     const SYMB = {
       befragen: ['💬', '💬'], ansprechen: ['💬', '💬'],
       bedrohen: ['🗯️', '😨'], einschuechtern: ['🗯️', '😨'],
       bestechen: ['💵', '🤫'], konfrontieren: ['❗', '😠'],
       naeher: ['🌹', '❤️'], nacht: ['🌹', '❤️'],
-      gefesselt_uebergeben: ['👮', '⛓️']
+      gefesselt_uebergeben: ['👮', '⛓️'],
+      durchsuchen: ['🔍', '📄'], ablenken_cmd: ['❗', '😵‍💫']
     };
     const sy = SYMB[verbKey] || ['💬', '💬'];
-    const VERBTXT = { befragen: 'befragt', ansprechen: 'spricht mit', bedrohen: 'bedroht', einschuechtern: 'schüchtert ein:', bestechen: 'besticht', konfrontieren: 'konfrontiert', naeher: 'kommt näher:', nacht: 'bleibt bei', gefesselt_uebergeben: 'übergibt' };
+    const VERBTXT = { befragen: 'befragt', ansprechen: 'spricht mit', bedrohen: 'bedroht', einschuechtern: 'schüchtert ein:', bestechen: 'besticht', konfrontieren: 'konfrontiert', naeher: 'kommt näher:', nacht: 'bleibt bei', gefesselt_uebergeben: 'übergibt', durchsuchen: 'durchsucht', ablenken_cmd: 'lässt ablenken:' };
     const layer = fxLayer();
     const box = document.createElement('div');
     box.className = 'fx-dialog';
@@ -8328,12 +8332,38 @@ function fxDialog(npcName, verbKey) {
     setTimeout(() => { try { box.remove(); } catch (e) {} }, FX_ZEIT.dialog);
   } catch (e) {}
 }
+// v7.12.700 (Benjamin: "es soll KEINE szene-auslösende Aktion mehr geben ohne passende
+// Animation"): fxKategorie ist das SICHERHEITSNETZ. Es feuert zentral in chooseOption für
+// jede Aktion, die nicht schon eine spezifische Animation hatte (Marke window._fxLastT):
+// Schlafen 🌙, Heilen 🩹, Umsehen/Erkunden 🔍, Beobachten 👁️, friedliche Baukasten-Pläne,
+// Freitext... Karl links, das Kategorie-Symbol pulst, darunter der Aktionstext.
+function fxKategorie(kategorie, aktionsText) {
+  try {
+    if (!fxEnabled()) return;
+    window._fxLastT = Date.now();
+    const ICON = { ERKUNDEN: '🔍', OFFENSIV: '💥', DEFENSIV: '🛡️', BEOBACHTEN: '👁️', HEILEN: '🩹', NOTHEILEN: '🩹', AUFLOESEN: '🎯', SCHLAFEN: '🌙', UEBERNACHTUNG: '🌙', ROMANTIK: '🌹' };
+    const icon = ICON[(kategorie || '').toUpperCase()] || '🕵️';
+    let txt = String(aktionsText || '').replace(/\s+/g, ' ').trim();
+    if (txt.length > 52) txt = txt.slice(0, 50) + '…';
+    const layer = fxLayer();
+    const box = document.createElement('div');
+    box.className = 'fx-dialog';
+    box.innerHTML = '<div class="fx-d-left">' + charVisual('Karl') + '</div>'
+      + '<div class="fx-d-right" style="font-size:38px;">' + icon + '</div>'
+      + '<div class="fx-d-bubble fx-d-bubble-l">' + icon + '</div>'
+      + '<div class="fx-caption">' + escapeHtml(txt || 'Karl handelt') + '</div>';
+    layer.appendChild(box);
+    setTimeout(() => { try { box.style.opacity = '0'; } catch (e) {} }, FX_ZEIT.dialog - 500);
+    setTimeout(() => { try { box.remove(); } catch (e) {} }, FX_ZEIT.dialog - 100);
+  } catch (e) {}
+}
 // v7.12.699 (Benjamin: "die Buttons am Ende brauchen passende Animationen - Margarete in
 // Sicherheit, Akten an Roth oder Vera übergeben, Fall lösen"): SICHERUNGS-Animation -
 // die Person (oder die 📁-Akte) wandert von links zum passenden Empfänger, ✨ beim Ankommen.
 function fxSecureFuerButton(b) {
   try {
     if (!fxEnabled() || !b || !b.beat) return;
+    window._fxLastT = Date.now(); // v7.12.700
     let mover = '', ziel = '', zielName = '';
     if (b.beat === 'margarete_gesichert') {
       mover = charVisual((typeof clientProfile === 'object' && clientProfile && clientProfile.name) || 'Margarete');
@@ -8362,6 +8392,7 @@ function fxSecureFuerButton(b) {
 function fxFallGeloest() {
   try {
     if (!fxEnabled()) return;
+    window._fxLastT = Date.now(); // v7.12.700
     const layer = fxLayer();
     const box = document.createElement('div');
     box.className = 'fx-case-closed';
@@ -8386,6 +8417,7 @@ function fxFlucht() {
     // Läufen. Zeit-Guard: innerhalb von 10 s nur eine Flucht-Animation.
     if (Date.now() - (window._fxFleeT || 0) < 10000) return;
     window._fxFleeT = Date.now();
+    window._fxLastT = Date.now(); // v7.12.700
     const gruppe = [charVisual('Karl')];
     try { if (Array.isArray(_party)) _party.forEach(m => { if (m && m.name) gruppe.push(charVisual(m.name)); }); } catch (e) {}
     try { if (typeof _hundInParty === 'function' && _hundInParty()) gruppe.push('🐕'); } catch (e) {}
@@ -8420,6 +8452,7 @@ function fxBattle(plan, fehlschlagMap) {
     const hzN = Object.keys(zc).sort((a, b) => zc[b] - zc[a])[0];
     const hz = (steps.find(p => normForMatch(p.ziel) === hzN) || {}).ziel || '';
     const sieg = !(fehlschlagMap && fehlschlagMap[hzN]);
+    window._fxLastT = Date.now(); // v7.12.700
     const layer = fxLayer();
     const box = document.createElement('div');
     box.className = 'fx-battle';
@@ -19698,6 +19731,8 @@ function applyCategoryMechanics(kategorie, ctx) {
       break;
 
     case 'NOTFLUCHT':
+      // v7.12.700: Ausbruchsversuch - die Flucht-Animation läuft auch hier (10s-Guard schützt).
+      try { if (typeof fxFlucht === 'function') fxFlucht(); } catch (e) {}
       // v7.11.13: Custody-Ausbruch. 30% Erfolg.
       // Erfolg: Karl frei, Vf-3 (Verletzung beim Ausbruch), Sp-1, Stasi-Tension hoch
       // Misserfolg: Vf-1 (Schlag), Custody bleibt, Folter-Wuerfel
@@ -20586,7 +20621,9 @@ function npcInteraktion(npc, verb) {
   try {
     const _vk = String(verb.key || '');
     if (/angreif|fessel|manoever|befehl_angriff/.test(_vk)) { if (typeof fxConflict === 'function') fxConflict('Karl', npc.name, 'angreifen', true); }
-    else if (!/durchsuch/.test(_vk) && typeof fxDialog === 'function') { fxDialog(npc.name, _vk); }
+    else if (/durchsuch/.test(_vk)) { if (typeof fxDialog === 'function') fxDialog(npc.name, 'durchsuchen'); } // v7.12.700: 🔍/📄
+    else if (/befehl_ablenkung/.test(_vk)) { if (typeof fxDialog === 'function') fxDialog(npc.name, 'ablenken_cmd'); } // v7.12.700: ❗/😵‍💫
+    else if (typeof fxDialog === 'function') { fxDialog(npc.name, _vk); }
   } catch (e) {}
   // v7.12.610 (M1): Manöver = Verb MIT Engine-Wirkung. Gates engine-validiert, Zustand wird VOR der
   // Erzählung gesetzt - die KI erzählt nur noch, was die Engine entschieden hat.
@@ -29956,6 +29993,17 @@ let recentSceneTypes = [];
 async function chooseOption(option) {
   // v7.12.618: 🧩-Baukasten-Button robust sicherstellen (idempotent) - falls der DOM-Load-Hook ihn verpasste.
   try { if (typeof _renderBaukastenButton === 'function') _renderBaukastenButton(); } catch (e) {}
+  // v7.12.700 FX-SICHERHEITSNETZ (Benjamin: "keine Szene ohne Animation"): Hat in den letzten
+  // 1,5 s KEINE spezifische FX gefeuert (Dialog/Kampf/Reise/Flucht/Sicherung/Stempel setzen
+  // die Marke), zeigt das Netz die Kategorie-Animation. Ausgenommen: FLUCHT/NOTFLUCHT (deren
+  // FX feuert gleich in der Kategorie-Mechanik) und Reisen (_istReise, fxTravel lief schon).
+  try {
+    const _kat = ((option && (option.kategorie || option._kategorie)) || '').toString().toUpperCase();
+    if (typeof fxKategorie === 'function' && !/^(FLUCHT|NOTFLUCHT)$/.test(_kat) && !(option && option._istReise)
+        && Date.now() - (window._fxLastT || 0) > 1500) {
+      fxKategorie(_kat, (option && (option._anzeigeText || option.text)) || '');
+    }
+  } catch (e) {}
   // v7.12.591 (I2b): Die gewählte Aktion global merken (Kategorie + Text), damit die deterministische Indiz-Vergabe
   // (pruefeKernIndizFund) klassifizieren kann, ob es eine Umgebungs- (erkunden/durchsuchen) oder Personen-Aktion
   // (ansprechen/befragen/bestechen) war. Ersetzt das reine Schlüsselwort-Raten für Fälle mit definierten Indizien.
