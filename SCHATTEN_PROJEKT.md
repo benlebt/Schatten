@@ -16003,3 +16003,10 @@ bei jeder Abfrage: gefesselt/ko/fixiert/benommen + Tageswechsel vorbei (seitTag 
 Alt-Einträge ohne seitTag: >=8 Szenen) -> 'geflohen'. Wirkt sofort, auch auf Alt-Spielstände
 und alle Abfragepfade (W6-Präsenz, Personen-Liste, Verben). _npcZustandSet speichert seitTag
 mit. Showdown-Gegner ausgenommen.
+
+## 🆕 v7.12.717 — Rex-Kommandos sind Imperative (Benjamin)
+
+"Anbellen lassen"/"Anknurren lassen"/"Fixieren lassen" -> "Anbellen"/"Anknurren"/"Fixieren"
+(Baukasten-Aktionen UND Rex-Kommando-Menü). Kommandos an einen Hund sind Befehle, kein
+"lassen" - das Label stammte aus der Karl-Perspektive und wirkte überall schief, besonders
+im Baukasten, wo Rex selbst der Akteur ist. "Fass! (festsetzen)" bleibt.
