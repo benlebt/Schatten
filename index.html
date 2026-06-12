@@ -3277,7 +3277,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.717</div>
+    <div class="start-version">Schatten v7.12.718</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3503,7 +3503,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.717</span>
+    <span>Schatten v7.12.718</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7364,7 +7364,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.717';
+window.SCHATTEN_VERSION = 'v7.12.718';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -7740,6 +7740,16 @@ function _npcIstFeindlich(npc) {
 window._aktionsPlan = window._aktionsPlan || [];
 function _planAdd(eintrag) {
   try {
+    // v7.12.718 (Benjamin: "man gibt einem Hund EIN Kommando - und der Kommissar kann auch
+    // nur EINE Aktion machen"): Ein Akteur darf nur EINMAL im Plan stehen. Zentraler Wächter
+    // hier deckt ALLE Pfade ab (Baukasten, Rex-Kommandos, Begleiter-Befehle aus dem NPC-Menü).
+    if (eintrag && eintrag.akteur) {
+      const _aktN = normForMatch(eintrag.akteur);
+      if ((window._aktionsPlan || []).some(p => p && p.akteur && normForMatch(p.akteur) === _aktN)) {
+        if (typeof diag === 'function') diag('state', '📋 PLAN abgewiesen: ' + eintrag.akteur + ' hat bereits eine geplante Aktion');
+        return false;
+      }
+    }
     window._aktionsPlan.push(eintrag);
     if (typeof diag === 'function') diag('state', '📋 PLAN +: ' + eintrag.label + ' (' + window._aktionsPlan.length + ' geplant)');
     // v7.12.706 (Benjamins Toast-Regel: "Toasts nur für Dinge, die NICHT mein direktes Handeln
@@ -9197,7 +9207,12 @@ const BAUKASTEN_AKTIONEN = {
   // aus dem Baukasten ENTFERNT - zu weiche Verben ohne klaren Engine-Zustand, verwässern
   // Baukasten-First. Das 'Beobachten' im Personen-Menü (Z~19525, eigener Pfad) bleibt erhalten.
 };
-function _bkChip(label, aktiv, onclick) {
+function _bkChip(label, aktiv, onclick, disabled) {
+  // v7.12.718: disabled-Chip für bereits eingeplante Akteure - ausgegraut, kein Klick,
+  // Zusatz "eingeplant". Wird wieder frei, sobald der Plan-Eintrag (✕) entfernt ist.
+  if (disabled) {
+    return '<button disabled style="margin:2px;padding:4px 9px;border-radius:3px;border:1px dashed #4d4234;background:transparent;color:#6b5f4c;font-size:12px;cursor:default;max-width:100%;white-space:normal;word-break:break-word;text-align:left;vertical-align:top;opacity:0.6;">' + label + ' <span style="font-size:9px;letter-spacing:0.06em;">· eingeplant</span></button>';
+  }
   // v7.12.693 (Benjamin, Mobile-Breite): Chips brechen als inline-Elemente ohnehin zeilenweise um -
   // aber ein EINZELNER überlanger KI-Name (Item/NPC) wird als inline-Block so breit wie sein Text und
   // könnte allein den Rand sprengen. max-width + white-space:normal lässt das Label IM Chip umbrechen.
@@ -9263,6 +9278,10 @@ function _renderBaukasten() {
     }
     const npcsHier = (typeof getNpcsAtCurrentLocation === 'function') ? (getNpcsAtCurrentLocation() || []) : [];
     let akteure = ['Karl'].concat((typeof _party !== 'undefined' && Array.isArray(_party)) ? _party.map(p => p.name).filter(Boolean) : []);
+    // v7.12.718: Akteure mit geplanter Aktion sind gesperrt, bis ihr Eintrag entfernt wird.
+    const _planBelegt = {};
+    try { (window._aktionsPlan || []).forEach(p => { if (p && p.akteur) _planBelegt[normForMatch(p.akteur)] = true; }); } catch (e) {}
+    if (bk.akteur && _planBelegt[normForMatch(bk.akteur)]) bk.akteur = null;
     // v7.12.633: Rex als wählbarer Baukasten-Akteur (Rex -> Fass -> bestimmtes Ziel).
     try { if (typeof _hundInParty === 'function' && _hundInParty() && akteure.indexOf(HUND_NAME) === -1) akteure.push(HUND_NAME); } catch (e) {}
     const itemsK = (typeof _itemsBeiKarl === 'function') ? _itemsBeiKarl() : [];
@@ -9294,7 +9313,7 @@ function _renderBaukasten() {
     // wird dynamisch gefiltert: nur Verben, die zur gewählten Kombination (Akteur + Ziel + ob Item) passen.
     // So verschwinden unsinnige Optionen (z.B. "An mich nehmen" auf eine Person, "Vor die Füße werfen" ohne Item).
     // 1. WER
-    h += '<div style="color:#8a7a58;font-size:10px;letter-spacing:0.18em;margin-bottom:3px;">1. WER</div><div>' + akteure.map(a => _bkChip(a, bk.akteur === a, "_bkSet('akteur','" + a.replace(/'/g, "\\'") + "')")).join('') + '</div>';
+    h += '<div style="color:#8a7a58;font-size:10px;letter-spacing:0.18em;margin-bottom:3px;">1. WER</div><div>' + akteure.map(a => _bkChip(a, bk.akteur === a, "_bkSet('akteur','" + a.replace(/'/g, "\\'") + "')", _planBelegt[normForMatch(a)])).join('') + '</div>';
     // 2. WEN (Ziel) - Personen am Ort. Mehrfachauswahl möglich. (Umgebung-Ziel entfiel mit durchsuchen_ort.)
     const _zielChips = [];
     ziele.forEach(z => _zielChips.push(_bkChip(z, (Array.isArray(bk.ziele) && bk.ziele.indexOf(z) !== -1), "_bkSet('ziel','" + z.replace(/'/g, "\\'") + "')")));

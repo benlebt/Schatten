@@ -16010,3 +16010,13 @@ mit. Showdown-Gegner ausgenommen.
 (Baukasten-Aktionen UND Rex-Kommando-Menü). Kommandos an einen Hund sind Befehle, kein
 "lassen" - das Label stammte aus der Karl-Perspektive und wirkte überall schief, besonders
 im Baukasten, wo Rex selbst der Akteur ist. "Fass! (festsetzen)" bleibt.
+
+## 🆕 v7.12.718 — Ein Akteur, eine Aktion (Benjamin)
+
+"Man gibt einem Hund EIN Kommando - und der Kommissar kann auch nur eine Aktion machen":
+Ein Akteur darf nur einmal im Aktions-Plan stehen. Zwei Ebenen: (1) Zentraler Wächter in
+_planAdd weist doppelte Akteure ab - deckt Baukasten, Rex-Kommando-Menü und Begleiter-Befehle
+gleichermaßen ab (P1.4-Prinzip: Wächter in der State-Funktion). (2) Sichtbar im Baukasten:
+WER-Chips bereits eingeplanter Akteure sind ausgegraut/inaktiv mit Zusatz "· eingeplant";
+eine ggf. aktive Auswahl wird zurückgesetzt. Mit dem ✕ am Plan-Eintrag wird der Akteur
+wieder frei.
