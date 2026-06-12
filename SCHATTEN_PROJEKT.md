@@ -16027,3 +16027,9 @@ wieder frei.
 längere Button-Texte auf): beide jetzt explizit 11px + text-size-adjust:none. "Sofort
 ausführen" mit margin-left:auto rechts abgesetzt (Container ist Flex) - räumlicher Abstand
 gegen versehentliches Sofort-Ausführen beim Plan-Bauen.
+
+## 🆕 v7.12.720 — Der alte Fisch darf ins Gesicht (Benjamin)
+
+Die Aktion "Ins Gesicht werfen" (werfen) existierte längst - der Fisch-Katalogeintrag
+erlaubte sie nur nicht (taugt-Whitelist). Jetzt freigeschaltet; Schadenstyp bleibt 'lacher'.
+"Ins Gesicht schlagen" läuft weiterhin über "Angreifen mit" (hatte der Fisch schon).
