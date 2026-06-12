@@ -15355,3 +15355,45 @@ mit dem Baukasten-Dedupe aus v680. Test grün.
 Rex läuft über das eigene hundInParty-Flag, nicht über _party — das v581-Banner las nur
 _party und unterschlug ihn (Herz-Symbol in der Personenliste stimmte, Banner nicht).
 Jetzt einbezogen; Banner erscheint auch, wenn NUR Rex dabei ist. 4 Tests grün.
+
+## 🆕 v7.12.685 — Run-1226-Paket: Blindfleck, Resolve-Gate, Friendly-Fire, Toaster-Physik, Hinweis-Sichtbarkeit, Bedrohung
+
+**🔍 GROSSE AUFKLÄRUNG — der "Roth/August-Party-Drift" war sehr wahrscheinlich nie ein Drift:**
+`diag()` verwarf STILL alle Events zwischen Szenen (nach diagCommit ist der Frame null) — also
+ALLE Popup-Klicks: Mitnehmen, Kaufen, Umsehen, NPC-Menü. Run 1226 beweist es: 0× NPC-MENÜ,
+0× GEKAUFT im Export trotz nachweislicher Klicks (Ostmark/Toaster im Inventar!), und
+PARTY=[August Lemke] ohne eine einzige PARTY+-Zeile. Der Mitnehmen-Klick war real, nur
+unsichtbar. **Fix:** Zwischen-Szenen-Puffer (window._pendingDiagEvents), Events erscheinen
+im nächsten Frame mit Präfix "⏸ [zwischen Szenen]". Nächster Run liefert den Origin-Beweis.
+ChatGPT-Forderung "August partyLockedOut" bleibt ABGELEHNT (Regel: Spieler entscheidet Party).
+
+**P1-Fixes:**
+1. **Resolve-Gate** (Fall blieb trotz Wahler-Belegen gesperrt): (a) wahler_verantwortlich-
+   Keywords um die konkreten Beweis-Begriffe erweitert (unterschrift/frachtbrief/frachtliste/
+   dienstplan/belastet/nachtschicht — "Wahlers Unterschrift auf dem Frachtbrief" matchte NICHT);
+   (b) gefundene Kern-Indizien füttern jetzt updatePoliticalBeats (lief nur über Prosa);
+   (c) Retro-Sweep pro Szene über bereits gefundene Indizien — heilt Benjamins laufenden Run.
+   Sicherungs-Beats bleiben durch den v485-Aktions-Guard geschützt. 4 Regex-Tests grün.
+2. **Teleport-Guard gehärtet** (feuerte in Sz11 nicht): strikter Szenen-Vergleich → Toleranz
+   <=1 (sceneCounter inkrementiert zwischen Clean und Ergänzung); NEU: physisch gebundene
+   NPCs (gefesselt/ko/fixiert/uebergeben) blocken IMMER, auch als Threat-Spawn (gefesselter
+   Mertens stand kurz in der Charité).
+
+**Benjamin-Features:**
+3. **Party-Friendly-Fire-Filter:** Ziel = Party-Mitglied/Rex/Klientin → feindselige Verben
+   (angreifen/fesseln/werfen/durchsuchen) fliegen aus dem Baukasten. Margarete kann Rex nicht
+   mehr attackieren.
+4. **Toaster ins Gesicht (Spider Noir):** 'werfen' fehlte in toaster/korn-taugt — ergänzt.
+   NEU Härte-Physik: leichter Gegner (Härte<=2) geht KO vom Toaster; harter Gegner (>=3) wird
+   nur benommen, rotes Gesicht, KI-Push erlaubt trockenen Spott ("Ernsthaft, Frau Stein??").
+5. **Hinweis-Sichtbarkeit:** Personen-Badge zeigt jetzt die AKTION ("● Hinweis: Befragen");
+   NPC-Popup bekommt goldene Hinweiszeile; "Person durchsuchen"-Chip trägt ●, wenn am Ort ein
+   offenes DURCHSUCHEN-Indiz wartet (Mertens/Original-Akten-Fall).
+6. **Bedrohlichkeit** (Benjamin: "Fall zu unbedrohlich"): SCHLÄGER-ARCHETYPEN-Promptblock
+   (stumpfer Schläger / nervöser Junger / kalter Profi / opportunistischer IM / müder
+   Routinier; MfS droht BÜROKRATISCH statt blutig — adressiert auch "Mertens zu passiv");
+   alle 8 Bedrohungs-Spawns: chance +15 (cap 85), globalCooldown -2 (min 4).
+
+**Bewusst NICHT gebaut:** Tageszeit-Müdigkeits-Druck ab Sz8 (ChatGPT P2 — Gameplay-Feel,
+braucht Benjamins Entscheid); Inventar-Sync übergebener Akten im KI-Erzähltext (P2, Fundort
+noch unklar — nächste Session).
