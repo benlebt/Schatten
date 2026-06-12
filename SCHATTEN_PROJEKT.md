@@ -16186,3 +16186,12 @@ wurden bisher nur einfache Quotes. Fix zentral in _bkChip: onclick wird HTML-esc
 ("->&quot;), Label läuft durch escapeHtml. Betrifft alle WER/WEN/ITEM/AKTION-Chips mit
 Sonderzeichen-Namen. Margarete kann den IM jetzt angreifen/ablenken - ihre Wirksamkeit
 regelt wie gehabt das Härte-System.
+
+## 🆕 v7.12.733 — Gesichts-Gedächtnis: ein Charakter, überall dasselbe Bild (Benjamin)
+
+IM "Anker" war in der Personen-Liste der Offizier (charVisual MIT Tag -> STASI-Regel),
+im Kampf-Popup aber ein blonder Pool-Mann (FX rufen nur mit Namen). Fix: charVisual ist
+jetzt ein Wrapper mit Cache (window._cvCache) um _charVisualCore. Die Tag-basierte
+Auflösung prägt den Cache; tag-lose Aufrufer (fxBattle, fxDialog, Insassen, Banner)
+bekommen danach exakt dasselbe Gesicht. Löst die ganze Inkonsistenz-Klasse, nicht nur
+diesen einen NPC.
