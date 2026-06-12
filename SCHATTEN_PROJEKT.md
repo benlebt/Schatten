@@ -15519,3 +15519,13 @@ Eigener Fehler, vom eigenen Timing-Test entdeckt, aber erst NACH dem Push gelese
 Rechts-nach-links-Fahrt ist "hinter dem Auto" rechts — die Wölkchen lagen LINKS (vor dem
 Auto). Positionen 72/46/20vw → 88/60/36vw, jetzt rechnerisch verifiziert (Auto bei den
 Delays ≈ 82/54/30vw, alle drei Wölkchen erscheinen hinter ihm ✓).
+
+## 🆕 v7.12.692 — Party-Beitritt-Animation: das Abklatschen (Benjamin)
+
+fxPartyJoin: Die aktuelle Truppe steht links (🕵️ Karl voran + Party-Emojis + 🐕 Rex, max 5
+gezeigt), der Neue gleitet von rechts in die Reihe (leichtes Überschwingen), beim Kontakt
+poppt der ✨-Splash und die GANZE Gruppe hüpft kurz freudig (fxGroupHop, 0.6s versetzt =
+Abklatsch-Moment). Caption "✦ August Lemke ist jetzt in Begleitung". 1,75 s.
+Hooks: _partyAdd (am PARTY+-Punkt, feuert für JEDEN Beitritts-Pfad) + beide Rex-Aufnahme-
+Stellen (Reise-Popup + NPC-Menü). Doppel-Rex-Schutz getestet (Rex erscheint beim eigenen
+Beitritt nicht zusätzlich in der Gruppe).
