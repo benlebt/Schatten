@@ -15559,3 +15559,26 @@ hinter dem Auto, rechnerisch verifiziert ✓), Caption + Einblenddauer angepasst
 stattdessen selbstgezeichnetes Inline-SVG: Ponton-runde Limousinen-Silhouette in Noir-Optik
 (dunkler Korpus, Gold-Kontur, Gold-Radkappen, warmer Scheinwerfer vorn), 68px, fährt nach
 links (Front links gezeichnet).
+
+## 🆕 v7.12.694 — KONFRONTATIONS-SEQUENZ: Baukasten-Zugriffe laufen bildlich ab (Benjamin)
+
+**Das große FX-Stück: fxBattle.** Bei jedem Konfliktplan aus dem Baukasten spielt eine
+mehrstufige Sequenz (Hook in _planAusfuehren, ersetzt dort das v689-Einzelbild fxPlan):
+
+- **Bühne:** Gegner rechts (statisch, pickNpcEmoji), unsere Reihe sammelt sich links
+  (jeder Akteur erscheint beim ersten Einsatz: 🕵️ Karl, 🐕 Rex, 👩 Margarete...).
+- **Pro Plan-Schritt (1,1 s, nacheinander):** Der Akteur läuft zum Ziel - bei WURF fliegt
+  stattdessen das ITEM rotierend (🥃 Flasche, 🧱 Ziegelstein, 🍞 Toaster). Aktions-
+  spezifischer Einschlag: 💥 Angriff/Hund, 🪢 Fesseln, ❗ Ablenken, 💵 Bestechen,
+  🗯️ Einschüchtern, 💫 Bananenwurf. Ziel wackelt, Caption nennt den Zug ("Rex packt
+  Oberleutnant Mertens", "Margarete Stein wirft auf ... (Flasche Nordhäuser Doppelkorn)").
+- **FINALE = ENGINE-WAHRHEIT** (_zugriffFehlschlag aus Stärkesumme+Synergie vs. Härte,
+  KEINE eigene FX-Logik): **Sieg** -> Gegner kippt comichaft um (82°-Rotation), unsere
+  Reihe hüpft gestaffelt, 🎉. **Niederlage** (z.B. Ablenken+Fesseln reicht nicht gegen
+  Härte 4) -> unsere Reihe kippt um, der Gegner wächst, goldener SIEGER-HALO pulst um ihn,
+  💪 hebt sich - wie im Ring: der Sieger bleibt stehen.
+- Timing: 3 Schritte ≈ 5,2 s Gesamtdauer - deckt die Szenen-Ladezeit. Sanftes Ausblenden.
+
+Sequenz-Logik gegen Benjamins Beispiel getestet (Rex fasst + Margarete wirft + Karl fesselt,
+beide Ausgänge). **Lizenz geklärt:** Emojis rendert das OS aus Systemschriften (wir liefern
+nur Unicode-Zeichen, keine Grafiken) - unbedenklich; das Opel-SVG ist selbst gezeichnet.
