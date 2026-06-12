@@ -15701,3 +15701,23 @@ gestaffelt nach RECHTS aus dem Bild - zu Fuß, mit Lauf-Hopser und 💨-Staub, C
 **4. Opel-INSASSEN:** Das Auto ist größer (96px) und Karl, die Party-Mitglieder und Rex
 sitzen sichtbar in der Fensterzone (kleine Köpfe, Rex hinten). Wer mitreist, fährt
 sichtbar mit.
+
+## 🆕 v7.12.699 — Flucht-Doppel-Fix + Sicherungs-Animationen + AKTE GESCHLOSSEN (Benjamin)
+
+**1. Flucht-Animation kam ZWEIMAL (Benjamin-Befund, Ursache gefunden):**
+applyCategoryMechanics läuft pro Aktion zweimal - als PREVIEW beim Klick (Z~30228) und beim
+COMMIT nach der KI-Antwort (Z~33057). Der fxFlucht-Hook im FLUCHT-Case feuerte in beiden
+Läufen. Fix: 10-s-Zeit-Guard in fxFlucht. (Der Showdown-Flucht-Hook im selben Case ist
+durch das bestanden-Flag von selbst doppellauf-sicher.) MERKE für künftige Hooks:
+Kategorie-Mechanik-Cases laufen 2x - FX-Hooks dort brauchen IMMER einen Guard.
+
+**2. Sicherungs-Animationen (fxSecureFuerButton):** Jeder "In Sicherheit bringen"-Button
+spielt beim Klick die passende Wanderung: Margarete 👩‍💼 gleitet zu 👩‍⚕️ Helene (Charité)
+oder zur 🌉 Sektorengrenze; die 📁-Akte wandert zu 👮 Roth oder 👱‍♀️ Vera (Westpresse) -
+✨ beim Ankommen, Caption nennt das Ziel. charVisual-konsistent.
+
+**3. AKTE GESCHLOSSEN (die seit v689 notierte Krönung):** Beim Klick auf "Fall lösen"
+knallt der goldene Stempel schräg auf die 📁-Akte (Doppelrahmen, Gold-Glühen, Funken),
+darunter "Karl Mauer · Privatdetektiv · Berlin 1953". Überbrückt die Ladezeit der
+Finalszene. WICHTIG ENTDECKT: Auf dem iPhone feuert der Resolve-Button über TOUCHEND
+(nicht click, rTouchHandled blockt den click-Pfad) - der Hook sitzt in BEIDEN Pfaden.
