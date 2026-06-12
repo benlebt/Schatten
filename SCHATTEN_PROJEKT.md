@@ -16020,3 +16020,10 @@ gleichermaßen ab (P1.4-Prinzip: Wächter in der State-Funktion). (2) Sichtbar i
 WER-Chips bereits eingeplanter Akteure sind ausgegraut/inaktiv mit Zusatz "· eingeplant";
 eine ggf. aktive Auswahl wird zurückgesetzt. Mit dem ✕ am Plan-Eintrag wird der Akteur
 wieder frei.
+
+## 🆕 v7.12.719 — Baukasten-Buttons: gleiche Schrift, Sofort nach rechts (Benjamin)
+
+"Sofort ausführen" wirkte auf dem iPhone größer als "+ Zum Plan" (iOS text-size-adjust bläst
+längere Button-Texte auf): beide jetzt explizit 11px + text-size-adjust:none. "Sofort
+ausführen" mit margin-left:auto rechts abgesetzt (Container ist Flex) - räumlicher Abstand
+gegen versehentliches Sofort-Ausführen beim Plan-Bauen.
