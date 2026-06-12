@@ -15776,3 +15776,30 @@ am Namen - das Auge trennt sofort Freund (✦ gold, in Begleitung) und Feind (�
 Direktor = Verwaltungsbürokrat im Anzug. Der Zylinder war 1953 nur noch Festtracht
 (Hochzeiten, Staatsakte) - historisch unpassend für den Dienstalltag. SUSPECT-Fallback
 ebenfalls auf 👨‍💼.
+
+## 🆕 v7.12.704 — Run-1746-Paket: Feindlich-Wurzelfix, Rex-Zielwahl, Flucht-Guard-Negation, FX×2
+
+**1. DOPPEL-WURZEL GEFUNDEN (Run 1746):** _npcIstFeindlich erkannte Wahler [SUSPECT] NICHT
+als Feind. Folge A (Sz11): Rex-Kommando fand keinen Gegner und fasste das Phantom "den
+Bedroher". Folge B (Sz12): Im Wahler-Menü fehlte der komplette Fesseln/Gefesselt-Verb-Block
+- obwohl die Engine ihn nach dem erfolgreichen Manöver (8 vs Härte 3) korrekt auf
+'gefesselt' gesetzt hatte; "Durchsuchen (gefesselt)" blieb unsichtbar. FIX: Die v703-
+Gegner-Erkennung (_istGegnerNpc) ist jetzt zusätzliche Quelle von _npcIstFeindlich -
+EINE Wahrheit für Personen-Liste, Verb-Menü und Kommandos.
+**2. REX-ZIELWAHL (Benjamin):** Wirkungs-Kommandos (Fass!/Fixieren) brauchen einen ECHTEN
+Gegner: genau einer -> wird genommen; mehrere -> Auswahl-Popup "Wen soll Rex sich
+vornehmen?"; NULL -> geblockt mit Toast "Kein Ziel". Der Phantom-Platzhalter ist für
+Wirkungs-Kommandos eliminiert. Anbellen/Anknurren bleiben locker (in die Runde erlaubt).
+**3. FLUCHT-GUARD-NEGATION (P1, Sz11/12):** Der Guard feuerte auf "Diese Szene endet NICHT
+mit einer Flucht" - die Verneinung kippte den Detektor, der Prompt befahl der KI "Karl
+FLIEHT" + "NPCs bleiben zurück" -> falsche Flucht-Prosa, obwohl der Spieler fesseln wollte.
+FIX: Negation im Umfeld des Flucht-Worts -> kein Flucht-Intent; Kategorie FLUCHT/NOTFLUCHT
+ist die harte Wahrheit (immer Flucht). Gegen alle 4 Log-Texte getestet.
+**4. FX-ZEITEN ×2 (Benjamin):** dialog 2600->5200, flucht 2600->5200, CSS fxFleeRun
+1.7s->3.4s, Flucht-Caption 2.5s->5s. fxDialog füllt die längere Standzeit mit einer
+ZWEITEN Bubble-Runde (~2,8s) - das Gespräch geht hin und her statt einzufrieren.
+fxKategorie (Sicherheitsnetz) nutzt FX_ZEIT.dialog und wird automatisch länger.
+
+**ANGEKÜNDIGT:** v705 = Baukasten-Inline (zwischen Personen und Notizbuch, kein Overlay
+mehr, FAB weg - löst auch den Win-Screen-FAB-Bug). v706 = synthetische WebAudio-Sounds
+(Bellen, Zugriff, Fesseln - an Musik-Modi gekoppelt, nie im Still-Modus).
