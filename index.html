@@ -3187,7 +3187,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.682</div>
+    <div class="start-version">Schatten v7.12.683</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.682</span>
+    <span>Schatten v7.12.683</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7183,7 +7183,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.682';
+window.SCHATTEN_VERSION = 'v7.12.683';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -7924,20 +7924,43 @@ function _zeigeFundAuswahl(fundItems) {
     const ortKey = normForMatch(engineCurrentLocation.name);
     if (!caseProgress.ortsFundGenommen) caseProgress.ortsFundGenommen = {};
     if (!caseProgress.ortsFundGenommen[ortKey]) caseProgress.ortsFundGenommen[ortKey] = [];
-    const _nimm = (it) => {
+    const _nimm = (it, zahlId, zahlName, zahlTw) => {
       if (it.preis > 0) {
-        const zahl = _zahleTauschwertItem(it.preis);
-        if (!zahl) return false;
-        if (typeof _itemMove === 'function') _itemMove(zahl.id, { status: 'bei_npc', owner: 'bezahlt@' + ortKey });
-        if (typeof diag === 'function') diag('state', '💰 GEKAUFT: ' + it.name + ' für ' + zahl.name + ' (Tauschwert ' + zahl.tw + ' >= Preis ' + it.preis + ') @ ' + engineCurrentLocation.name);
+        if (!zahlId) return false;
+        if (typeof _itemMove === 'function') _itemMove(zahlId, { status: 'bei_npc', owner: 'bezahlt@' + ortKey });
+        if (typeof diag === 'function') diag('state', '💰 GEKAUFT: ' + it.name + ' für ' + zahlName + ' (Tauschwert ' + zahlTw + ' >= Preis ' + it.preis + ') @ ' + engineCurrentLocation.name);
       }
       if (typeof _itemAdd === 'function') _itemAdd({ id: 'item_' + it.key + '_' + ortKey.replace(/\s+/g, '_'), name: it.name, typ: 'tauschware', quelle: (it.preis > 0 ? 'gekauft:' : 'ort_gefunden:') + engineCurrentLocation.name });
       caseProgress.ortsFundGenommen[ortKey].push(it.key);
       return true;
     };
-    // Bot-Pfad: kein Popup, automatische Mitnahme (frei immer, Kauf wenn zahlbar).
+    // v7.12.683 (Benjamin: "ich will wissen UND wählen, was ich eintausche"): alle eigenen
+    // Zahl-Items ab Tauschwert >= preis, nach Namen gruppiert (×N), billigste zuerst.
+    const _zahlKandidaten = (preis) => {
+      try {
+        const m = (typeof _itemsMap === 'function') ? _itemsMap() : {};
+        const gruppen = [], idx = {};
+        for (const id in m) {
+          const it = m[id];
+          if (!it || it.status !== 'bei_karl') continue;
+          const kat = (typeof _itemKatalogEintrag === 'function') ? _itemKatalogEintrag(it.name) : null;
+          if (!kat || typeof kat.tauschwert !== 'number' || kat.tauschwert < preis) continue;
+          const gn = normForMatch(it.name || '');
+          if (gn in idx) { gruppen[idx[gn]].anzahl++; continue; }
+          idx[gn] = gruppen.length;
+          gruppen.push({ id: id, name: it.name, tw: kat.tauschwert, anzahl: 1 });
+        }
+        gruppen.sort((a, b) => a.tw - b.tw);
+        return gruppen;
+      } catch (e) { return []; }
+    };
+    // Bot-Pfad: kein Popup, automatische Mitnahme (frei immer, Kauf mit billigstem Zahl-Item).
     if (typeof botActive !== 'undefined' && botActive) {
-      fundItems.forEach(it => { if (it.preis === 0 || _zahleTauschwertItem(it.preis)) _nimm(it); });
+      fundItems.forEach(it => {
+        if (it.preis === 0) { _nimm(it); return; }
+        const kand = _zahlKandidaten(it.preis);
+        if (kand.length) _nimm(it, kand[0].id, kand[0].name, kand[0].tw);
+      });
       return;
     }
     const overlay = document.createElement('div');
@@ -7948,18 +7971,48 @@ function _zeigeFundAuswahl(fundItems) {
     panel.innerHTML = '<div style="font-family:inherit;color:#cbbfa9;font-size:calc(14px * var(--reading-scale));letter-spacing:0.06em;margin-bottom:4px;">🔎 FUNDSTÜCKE</div>'
       + '<div style="font-family:inherit;color:#867868;font-size:calc(10px * var(--reading-scale));margin-bottom:14px;line-height:1.4;">Was steckt Karl ein? Ware mit Preis kostet Tauschwert (Ostmark, Westmark, Tauschware).</div>';
     fundItems.forEach(it => {
+      const reihe = document.createElement('div');
+      reihe.style.cssText = 'margin:4px 0;';
       const b = document.createElement('button');
       b.className = 'option-btn option-btn-system';
-      b.style.cssText = 'display:block;width:100%;margin:4px 0;text-align:left;';
-      const zahlbar = it.preis === 0 || !!_zahleTauschwertItem(it.preis);
+      b.style.cssText = 'display:block;width:100%;text-align:left;';
+      const kand0 = it.preis > 0 ? _zahlKandidaten(it.preis) : [];
+      const zahlbar = it.preis === 0 || kand0.length > 0;
       const preisTxt = it.preis > 0 ? ' · Kaufen (Tauschwert ' + it.preis + ')' : ' · Einstecken';
       b.innerHTML = '<span class="option-text-wrap"><span>' + it.name + '</span><span class="option-marker option-marker-system">' + (zahlbar ? preisTxt : '· Karl kann nicht zahlen (Tauschwert ' + it.preis + ' nötig)') + '</span></span>';
       if (!zahlbar) { b.disabled = true; b.classList.add('locked'); }
       b.onclick = () => {
-        if (_nimm(it)) { b.disabled = true; b.classList.add('locked'); b.querySelector('.option-marker').textContent = '· Eingesteckt ✓'; }
-        else { b.disabled = true; b.classList.add('locked'); b.querySelector('.option-marker').textContent = '· Karl kann nicht zahlen'; }
+        if (it.preis === 0) {
+          // Freies Item: direkt einstecken.
+          if (_nimm(it)) { b.disabled = true; b.classList.add('locked'); b.querySelector('.option-marker').textContent = '· Eingesteckt ✓'; }
+          return;
+        }
+        // v7.12.683: Kauf = ZWEISCHRITT. Erst sehen und wählen, was über den Tresen geht.
+        const kand = _zahlKandidaten(it.preis);
+        if (!kand.length) { b.disabled = true; b.classList.add('locked'); b.querySelector('.option-marker').textContent = '· Karl kann nicht zahlen'; return; }
+        let zahlZeile = reihe.querySelector('.fund-zahl-zeile');
+        if (zahlZeile) { zahlZeile.remove(); return; } // zweiter Klick klappt wieder zu
+        zahlZeile = document.createElement('div');
+        zahlZeile.className = 'fund-zahl-zeile';
+        zahlZeile.style.cssText = 'margin:4px 0 2px 10px;display:flex;flex-wrap:wrap;gap:4px;align-items:center;';
+        zahlZeile.innerHTML = '<span style="color:#9a8a68;font-size:11px;margin-right:4px;">Zahlen mit:</span>';
+        kand.forEach(z => {
+          const zb = document.createElement('button');
+          zb.style.cssText = 'padding:5px 10px;border-radius:14px;border:1px solid #d4b86a;background:transparent;color:#cfc6ae;font-size:12px;cursor:pointer;';
+          zb.textContent = z.name + (z.anzahl > 1 ? ' ×' + z.anzahl : '') + ' · Tw ' + z.tw + (z.tw > it.preis ? ' (kein Wechselgeld!)' : '');
+          zb.onclick = () => {
+            if (_nimm(it, z.id, z.name, z.tw)) {
+              zahlZeile.remove();
+              b.disabled = true; b.classList.add('locked');
+              b.querySelector('.option-marker').textContent = '· Eingesteckt ✓ (gezahlt: ' + z.name + ')';
+            }
+          };
+          zahlZeile.appendChild(zb);
+        });
+        reihe.appendChild(zahlZeile);
       };
-      panel.appendChild(b);
+      reihe.appendChild(b);
+      panel.appendChild(reihe);
     });
     const fertig = document.createElement('button');
     fertig.className = 'option-btn';
@@ -15964,7 +16017,14 @@ function showStatusDetails() {
     _trag.forEach(it => { if (it && it.name) _zaehl[it.name] = (_zaehl[it.name] || 0) + 1; });
     Object.keys(_zaehl).forEach(nm => {
       if (_dabei.indexOf(nm) !== -1 || _dabei.some(x => x.indexOf(nm) !== -1)) return; // im festen Inventar
-      _dabei.push(nm + (_zaehl[nm] > 1 ? ' ×' + _zaehl[nm] : ''));
+      // v7.12.683 (Benjamin: "welchen Tauschwert haben meine Items?"): Tauschwert aus dem
+      // Katalog mit anzeigen - nur bei Items, die einen haben (Zahl-/Tauschware).
+      let _twTxt = '';
+      try {
+        const _kat = (typeof _itemKatalogEintrag === 'function') ? _itemKatalogEintrag(nm) : null;
+        if (_kat && typeof _kat.tauschwert === 'number') _twTxt = ' (Tauschwert ' + _kat.tauschwert + ')';
+      } catch (e) {}
+      _dabei.push(nm + (_zaehl[nm] > 1 ? ' ×' + _zaehl[nm] : '') + _twTxt);
     });
   } catch (e) {}
   if (_dabei.length > 0) {

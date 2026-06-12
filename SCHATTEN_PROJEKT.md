@@ -15337,3 +15337,15 @@ Notizbuch-Append wird aufgeschoben und erst nach dem Umsehen-Block angehängt.
 Der v642-Filter im Aktueller-Stand-Popup verschluckte gleichnamige Duplikate stumm. Jetzt
 wird pro Name gezählt und "×N" angezeigt ("Flasche Nordhäuser Doppelkorn ×2") — konsistent
 mit dem Baukasten-Dedupe aus v680. Test grün.
+
+## 🆕 v7.12.683 — Tauschwert sichtbar + Zahlungsmittel-Wahl beim Kauf (Benjamin)
+
+1. **"Dabei"-Liste zeigt Tauschwerte:** Katalog-Items mit Tauschwert tragen ihn jetzt im
+   Aktuellen Stand ("Ein paar Ostmark-Scheine (Tauschwert 1)") — der Spieler sieht, womit
+   er zahlen kann.
+2. **Kauf = Zweischritt mit Wahl:** Klick auf "Kaufen (Tauschwert N)" klappt "Zahlen mit:"-
+   Chips auf — alle eigenen Zahl-Items ab Schwelle, gruppiert (×N), billigste zuerst, mit
+   Tauschwert und Warnung "(kein Wechselgeld!)" bei Überzahlung. Der Spieler wählt explizit,
+   was über den Tresen geht; erneuter Klick auf Kaufen klappt wieder zu. Nach dem Kauf steht
+   am Button "Eingesteckt ✓ (gezahlt: X)". Keine stille Auto-Abbuchung mehr.
+   Bot-Pfad unverändert automatisch (billigstes Zahl-Item).
