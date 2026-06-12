@@ -15890,3 +15890,23 @@ Party-Remove, Ortswechsel, fxSecure) ist unverändert gekapselt. Gefahren-Sperre
 bleibt. Der "In Sicherheit"-Toast ist raus (Toast-Regel: fxSecure trägt die Info).
 fxSchlaf + Showdown-Antwort waren bereits in v707 (Injekt: Mertens findet Karl - stärker
 als der ursprünglich geplante ⚔-Reisemarker).
+
+## 🆕 v7.12.709 — Verwirr-Buttons raus, Rex sofort, Paar-Bild für Pläne, ⛓-Status
+
+**1. NPC-Popup nur noch DIREKTE Verben (Benjamin, Run 1929):** "Niederschlagen & fesseln"
+und "Ablenkung & Zugriff" erzeugten still einen Plan-Eintrag statt einer Szene - so
+verwirrend, dass Benjamins Doppel-Tap einen doppelten Plan-Eintrag erzeugte. Beide Verben
+sind aus dem Popup ENTFERNT; Fesseln/Kombinieren läuft über den immer sichtbaren
+Koordinierten Zugriff. (Revidiert die v700-Behalten-Empfehlung - damals führten sie noch
+sofort aus, seit v616 landen sie im Plan = Zwei-Schritt-Verwirrung.)
+**2. REX-KOMMANDOS FÜHREN SOFORT AUS,** wenn der Befehl allein im Plan steht (eine Szene).
+Nur wenn bereits ein Plan gebaut wird, reiht Rex sich ein (Plan-Leiste zeigt es).
+**3. PAAR-BILD STATT GROSSER LUPE:** Friedliche Ein-Ziel-Pläne ("Trinken mit X",
+"Befragen X") reichen das Ziel als _npcName durch - das Sicherheitsnetz zeigt Karl +
+Gesicht + passendes Symbolpaar (NEU: trinken 🥃/🥃) statt der Kategorie-Lupe. Verb wird
+aus dem Aktionstext erkannt (befragen/trinken/durchsuchen/bestechen/bedrohen/übergeben).
+**4. ICON-KONSISTENZ:** Alle verbliebenen pickNpcEmoji-Aufrufer auf charVisual umgestellt
+- EINE Gesichter-Quelle überall (Mantelmann ist immer 🕴️, nie Lupe/👤).
+**5. ⛓ ÜBERWÄLTIGTE GEGNER SICHTBAR ENTSCHÄRFT:** gefesselt/ko/fixiert/benommen ->
+grauer Rahmen + "⛓ gefesselt"-Label statt rot + "⚠ Gegner" (keine Bedrohung mehr).
+**6. Fund-Pop 1100->2600ms** (Funde verschwanden zu schnell, man konnte sie nicht genießen).

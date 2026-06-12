@@ -3277,7 +3277,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.708</div>
+    <div class="start-version">Schatten v7.12.709</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3503,7 +3503,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.708</span>
+    <span>Schatten v7.12.709</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7361,7 +7361,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.708';
+window.SCHATTEN_VERSION = 'v7.12.709';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -8050,7 +8050,11 @@ function _planAusfuehren() {
     let _anzeigeText = (_istKonfliktPlan ? 'Koordinierter Zugriff: ' : '') + plan.map(p => p.label).join('; ');
     window._aktionsPlan = [];
     _renderPlanLeiste();
-    if (typeof chooseOption === 'function') chooseOption({ id: 'PLAN_ZUGRIFF', text: txt, _anzeigeText: _anzeigeText, kategorie: (_istKonfliktPlan ? 'OFFENSIV' : 'ERKUNDEN'), _kategorie: (_istKonfliktPlan ? 'OFFENSIV' : 'ERKUNDEN'), _priority: 18, _isSystemButton: true });
+    // v7.12.709 (Benjamin: "Trinken mit dem Mantelmann zeigte eine GROSSE LUPE"): Friedliche
+    // Ein-Ziel-Pläne reichen das Ziel als _npcName durch - das FX-Sicherheitsnetz zeigt dann
+    // das echte Paar-Bild (Karl + Gesicht + passende Symbole) statt der Kategorie-Lupe.
+    const _planNpcZiel = (!_istKonfliktPlan && plan.length && plan[0] && plan[0].ziel && !/anwesenden/i.test(plan[0].ziel)) ? plan[0].ziel : null;
+    if (typeof chooseOption === 'function') chooseOption({ id: 'PLAN_ZUGRIFF', text: txt, _anzeigeText: _anzeigeText, _npcName: _planNpcZiel, kategorie: (_istKonfliktPlan ? 'OFFENSIV' : 'ERKUNDEN'), _kategorie: (_istKonfliktPlan ? 'OFFENSIV' : 'ERKUNDEN'), _priority: 18, _isSystemButton: true });
   } catch (e) {}
 }
 // ============ Ende AKTIONS-PLAN ============
@@ -8066,7 +8070,7 @@ const FX_AKTIV = true;
 // ACHTUNG: Die Reise-Fahrdauer steht zusätzlich im CSS (fxDrive 3.2s / Caption 3.5s) -
 // bei Änderung von 'reise' dort mitziehen.
 const FX_ZEIT = {
-  item: 1100,            // Item-Pop
+  item: 2600,            // Item-Pop - v7.12.709 (Benjamin: Funde verschwanden zu schnell)
   party: 3500, // v7.12.706 (Benjamin): Abklatschen war zu kurz           // Abklatschen
   dialog: 5200, // v7.12.704 (Benjamin): Standard-Animationen doppelt so lang
   secure: 3400,          // Sicherungs-Beat (Benjamin: Tick kürzer als Dialog)          // Gespräch/Bedrohen/Bestechen/Romantik (Benjamin: ~2-3 s)
@@ -8412,10 +8416,11 @@ function fxDialog(npcName, verbKey, dauerMs) {
       bestechen: ['💵', '🤫'], konfrontieren: ['❗', '😠'],
       naeher: ['🌹', '❤️'], nacht: ['🌹', '❤️'],
       gefesselt_uebergeben: ['👮', '⛓️'],
-      durchsuchen: ['🔍', '📄'], ablenken_cmd: ['❗', '😵‍💫']
+      durchsuchen: ['🔍', '📄'], ablenken_cmd: ['❗', '😵‍💫'],
+      trinken: ['🥃', '🥃']
     };
     const sy = SYMB[verbKey] || ['💬', '💬'];
-    const VERBTXT = { befragen: 'befragt', ansprechen: 'spricht mit', bedrohen: 'bedroht', einschuechtern: 'schüchtert ein:', bestechen: 'besticht', konfrontieren: 'konfrontiert', naeher: 'kommt näher:', nacht: 'bleibt bei', gefesselt_uebergeben: 'übergibt', durchsuchen: 'durchsucht', ablenken_cmd: 'lässt ablenken:' };
+    const VERBTXT = { befragen: 'befragt', ansprechen: 'spricht mit', bedrohen: 'bedroht', einschuechtern: 'schüchtert ein:', bestechen: 'besticht', konfrontieren: 'konfrontiert', naeher: 'kommt näher:', nacht: 'bleibt bei', gefesselt_uebergeben: 'übergibt', durchsuchen: 'durchsucht', ablenken_cmd: 'lässt ablenken:', trinken: 'trinkt mit' };
     const layer = fxLayer();
     const box = document.createElement('div');
     box.className = 'fx-dialog';
@@ -20777,10 +20782,17 @@ function bauePersonenButtons(container, modus) {
     // v7.12.703: Gegner sichtbar machen - dunkelroter Rahmen + Label, der Blick erkennt sofort
     // Freund und Feind (✦ gold = in Begleitung, ⚠ rot = Gegner).
     const _istGegner = (typeof _istGegnerNpc === 'function') && _istGegnerNpc(npc.name, npc.tag, npc.rolle);
-    if (_istGegner) { btn.style.border = '1px solid rgba(190,62,52,0.6)'; btn.style.boxShadow = 'inset 3px 0 0 rgba(190,62,52,0.75)'; _gegnerGebaut++; }
+    // v7.12.709 (Benjamin: "wenn jemand gefesselt ist, soll man das SEHEN - dann ist er auch
+    // nicht mehr bedrohlich"): überwältigte Gegner (gefesselt/ko/fixiert/benommen) werden
+    // grau-entschärft markiert (⛓) statt rot-bedrohlich (⚠).
+    let _zustandG = '';
+    try { const _zPL = (typeof _npcZustandGet === 'function') ? _npcZustandGet(npc.name) : null; if (_zPL && _zPL.status && _zPL.status !== 'frei') _zustandG = _zPL.status; } catch (e) {}
+    const _entschaerft = /gefesselt|ko|fixiert|benommen/.test(_zustandG);
+    if (_istGegner && _entschaerft) { btn.style.border = '1px solid rgba(150,140,120,0.45)'; btn.style.boxShadow = 'inset 3px 0 0 rgba(150,140,120,0.55)'; _gegnerGebaut++; }
+    else if (_istGegner) { btn.style.border = '1px solid rgba(190,62,52,0.6)'; btn.style.boxShadow = 'inset 3px 0 0 rgba(190,62,52,0.75)'; _gegnerGebaut++; }
     else _setzeSlot(); // v7.12.705: erster Nicht-Gegner nach Gegnern -> Slot dazwischen
     btn.innerHTML = '<span class="option-id option-id-person">' + _npcEmoji + '</span><span class="option-text-wrap"><span>'
-      + escapeHtml(npc.name) + (_inParty ? ' <span style="color:#c8a84a;font-size:11px;">✦ in Begleitung</span>' : '') + (_istGegner ? ' <span style="color:#c85a4a;font-size:11px;">⚠ Gegner</span>' : '') + '</span><span class="' + _markerKlasse + '"' + _markerStyle + '>' + _markerFinal + '</span></span>';
+      + escapeHtml(npc.name) + (_inParty ? ' <span style="color:#c8a84a;font-size:11px;">✦ in Begleitung</span>' : '') + (_istGegner ? (_entschaerft ? ' <span style="color:#a89878;font-size:11px;">⛓ ' + escapeHtml(_zustandG) + '</span>' : ' <span style="color:#c85a4a;font-size:11px;">⚠ Gegner</span>') : '') + '</span><span class="' + _markerKlasse + '"' + _markerStyle + '>' + _markerFinal + '</span></span>';
     attachSafeTap(btn, () => { if (typeof oeffneNpcMenue === 'function') { _markPopupOpened(); oeffneNpcMenue(npc, modus); } });
     if (_istGegner && _slotGesetzt) { try { container.insertBefore(btn, document.getElementById('baukasten-slot')); } catch (e) { container.appendChild(btn); } gebaut++; return; }
     container.appendChild(btn);
@@ -20850,6 +20862,10 @@ function npcInteraktion(npc, verb) {
           _wirkung: _wirkungH
         });
         if (typeof schliesseNpcMenue === 'function') schliesseNpcMenue();
+        // v7.12.709 (Benjamin: "Klick ohne direkte Handlung ist verwirrend"): Steht der
+        // Hunde-Befehl ALLEIN im Plan, wird er SOFORT ausgeführt (eine Szene). Nur wenn der
+        // Spieler bereits einen Plan baut, reiht Rex sich ein (Plan-Leiste zeigt es).
+        try { if ((window._aktionsPlan || []).length === 1 && typeof _planAusfuehren === 'function') _planAusfuehren(); } catch (e) {}
       };
       let _ziel = (verb._zielName) || '';
       if (_ziel && normForMatch(_ziel) === normForMatch(HUND_NAME)) _ziel = '';
@@ -21070,15 +21086,12 @@ function oeffneNpcMenue(npc, modus) {
     if (typeof _npcIstFeindlich === 'function' && _npcIstFeindlich(npc)) {
       const _zM = (typeof _npcZustandGet === 'function') ? _npcZustandGet(npc.name) : null;
       if (!_zM || _zM.status === 'frei') {
-        verben.push({ key: 'manoever_fesseln', label: 'Niederschlagen & fesseln', kategorie: 'OFFENSIV', _manoever: 'fesseln',
-          aktion: 'Karl überwältigt {npc} und fesselt die Person.' });
-        // v7.12.611 (M2): Party-Synergie - der Begleiter macht den Lärm, Karl greift zu. Umgeht das
-        // Mehrere-Gegner-Gate (genau dafür ist die Ablenkung da).
-        if (typeof _party !== 'undefined' && Array.isArray(_party) && _party.length > 0) {
-          const _helferName = (_party[0] && _party[0].name) || 'Der Begleiter';
-          verben.push({ key: 'manoever_ablenkung', label: 'Ablenkung & Zugriff (' + _helferName + ')', kategorie: 'OFFENSIV', _manoever: 'fesseln_ablenkung', _helfer: _helferName,
-            aktion: _helferName + ' sorgt für eine laute, glaubwürdige Ablenkung - und während alle hinsehen, überwältigt Karl {npc} und fesselt die Person.' });
-        }
+        // v7.12.709 (Benjamin, Run 1929: "Klick -> kurze Animation -> NICHTS passiert, nur ein
+        // Plan-Eintrag entsteht - sehr verwirrend", Beleg: doppelter Plan-Eintrag durch
+        // Doppel-Tap): Die Plan-erzeugenden Manöver-Verben (Niederschlagen & fesseln /
+        // Ablenkung & Zugriff) sind AUS dem NPC-Popup ENTFERNT. Das Popup enthält nur noch
+        // Verben, die SOFORT eine Szene auslösen. Fürs Fesseln und Kombinieren ist der
+        // Koordinierte Zugriff da - bei Gegnern immer sichtbar, direkt darunter.
       } else if (_zM.status === 'gefesselt') {
         // v7.12.611: Folgeoptionen am Gefesselten - kein "er greift wieder an"-Unsinn.
         verben.push({ key: 'gefesselt_durchsuchen', label: 'Durchsuchen (gefesselt)', kategorie: 'ERKUNDEN', _durchsuchBeute: true,
@@ -30244,6 +30257,18 @@ async function chooseOption(option) {
         fxSchlaf(); // v7.12.707: ganze Truppe + 🌙
       } else if (/^(ROMANTIK|UEBERNACHTUNG)$/.test(_kat) && _romNpc && typeof fxDialog === 'function') {
         fxDialog(_romNpc, _kat === 'UEBERNACHTUNG' ? 'nacht' : 'naeher', 3800);
+      } else if (option && option._npcName && typeof fxDialog === 'function') {
+        // v7.12.709: Aktion mit klarem Ziel-NPC (z.B. friedlicher Plan "Trinken mit X",
+        // "Befragen X") -> Paar-Bild mit passendem Verb statt Kategorie-Symbol.
+        const _txtV = ((option._anzeigeText || option.text) || '').toLowerCase();
+        const _vk = /befrag|verhör|verhoer/.test(_txtV) ? 'befragen'
+          : /trink|anstoß|anstoss|korn|schnaps|flasche/.test(_txtV) ? 'trinken'
+          : /durchsuch/.test(_txtV) ? 'durchsuchen'
+          : /bestech|schmier/.test(_txtV) ? 'bestechen'
+          : /bedroh|einschüchter|einschuechter/.test(_txtV) ? 'bedrohen'
+          : /übergeb|uebergeb/.test(_txtV) ? 'gefesselt_uebergeben'
+          : /ablenk/.test(_txtV) ? 'ablenken_cmd' : 'ansprechen';
+        fxDialog(option._npcName, _vk);
       } else {
         fxKategorie(_kat, (option && (option._anzeigeText || option.text)) || '');
       }
