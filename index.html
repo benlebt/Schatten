@@ -3277,7 +3277,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.706</div>
+    <div class="start-version">Schatten v7.12.707</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3503,7 +3503,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.706</span>
+    <span>Schatten v7.12.707</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6780,6 +6780,19 @@ function getNpcsAtCurrentLocation() {
       });
     }
   } catch (e) {}
+  // v7.12.707 (Lektorat A1 + Benjamin: "wo finde ich Mertens?"): Bei aktivem Showdown ist
+  // der Gegner ENGINE-SEITIG anwesend - er findet Karl, nicht umgekehrt. Damit existiert er
+  // für Personen-Liste (rot, ganz oben), Baukasten-Ziele, Rex-Zielwahl und Fesseln-Manöver,
+  // unabhängig davon, ob die KI-Prosa ihn erwähnt. Der ⚔-Push erzählt ihn zusätzlich herbei.
+  try {
+    if (typeof caseProgress === 'object' && caseProgress && caseProgress.showdownAktiv && !caseProgress.showdownBestanden && caseProgress.showdownGegner) {
+      const _sgN = normForMatch(caseProgress.showdownGegner);
+      if (_sgN && !out.some(n => n && normForMatch(n.name || '') === _sgN)) {
+        const _sgTag = /mertens|oberleutnant|hauptmann|stasi|mfs/.test(_sgN) ? 'STASI' : 'SUSPECT';
+        out.push({ name: caseProgress.showdownGegner, tag: _sgTag, rolle: 'Showdown-Gegner - stellt sich Karl in den Weg', _showdownInjekt: true });
+      }
+    }
+  } catch (e) {}
   return out;
 }
 
@@ -7348,7 +7361,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.706';
+window.SCHATTEN_VERSION = 'v7.12.707';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -8423,6 +8436,28 @@ function fxDialog(npcName, verbKey, dauerMs) {
     }, Math.min(2800, _D - 1800));
     setTimeout(() => { try { box.style.opacity = '0'; } catch (e) {} }, _D - 400);
     setTimeout(() => { try { box.remove(); } catch (e) {} }, _D);
+  } catch (e) {}
+}
+// v7.12.707 (Benjamin: "beim Schlafen brauchen wir auch eine Animation, mit allen
+// Party-NPCs"): Mond oben, die Truppe reiht sich auf, über jedem Kopf ein 💤.
+function fxSchlaf() {
+  try {
+    if (!fxEnabled()) return;
+    window._fxLastT = Date.now();
+    const layer = fxLayer();
+    const box = document.createElement('div');
+    box.className = 'fx-dialog';
+    let koepfe = [charVisual('Karl')];
+    try { if (typeof _party !== 'undefined' && Array.isArray(_party)) _party.slice(0, 3).forEach(p => { if (p && p.name) koepfe.push(charVisual(p.name)); }); } catch (e) {}
+    let h = '<div style="position:absolute;top:-14px;right:18%;font-size:26px;">🌙</div><div style="display:flex;justify-content:center;gap:14px;align-items:flex-end;padding-top:14px;">';
+    koepfe.forEach((k, i) => {
+      h += '<span style="position:relative;font-size:34px;"><span style="position:absolute;top:-16px;right:-8px;font-size:14px;opacity:0;animation: fxBPop 0.6s ease ' + (0.5 + i * 0.45) + 's forwards;">💤</span>' + k + '</span>';
+    });
+    h += '</div><div class="fx-caption">Die Truppe schläft - weiter am Morgen</div>';
+    box.innerHTML = h;
+    layer.appendChild(box);
+    setTimeout(() => { try { box.style.opacity = '0'; } catch (e) {} }, FX_ZEIT.dialog - 400);
+    setTimeout(() => { try { box.remove(); } catch (e) {} }, FX_ZEIT.dialog);
   } catch (e) {}
 }
 // v7.12.700 (Benjamin: "es soll KEINE szene-auslösende Aktion mehr geben ohne passende
@@ -17837,21 +17872,25 @@ function advanceGameTime() {
   // wird hier erzählt, dass die Erschöpfung Karl übermannt, sobald der Moment es zulässt (nicht mitten im Schuss).
   const _hartesNachtLimit = _mued >= 26 && !pendingSleepChoice && !karlInStasiCustody;
   if (_einschlafLimit || _hartesNachtLimit) {
-    pendingSleepChoice = true;
-    if (typeof pendingHeimfahrt !== 'undefined') pendingHeimfahrt = false; // vor Ort, nicht Heimfahrt
-    timeAdvanceTokens = Math.max(timeAdvanceTokens, 1); // Tagwechsel-Schwelle sicher erreichen (sonst haelt 0.5 die Nacht)
+    // v7.12.707 (Lektorat A1909-A3 + Benjamins Linie "es soll immer weniger von selbst
+    // passieren"; REVIDIERT die v512-Freigabe für den Zwangsschlaf): Karl schläft NIE mehr
+    // automatisch. Müdigkeit DRÜCKT stattdessen: spürbare Erschöpfungs-Prosa, Warn-Toast,
+    // und ab dem harten Limit (>=26) ein Verfassungs-Malus (einmal pro Müdigkeitsstand).
+    // Schlafen gibt es ausschließlich über den Button - Zeit und Konsequenz statt Kontrollverlust.
     if (Array.isArray(pendingCategoryMessages)) {
-      if (_hartesNachtLimit && !_einschlafLimit) {
-        // Hohe Spannung: Erschöpfung übermannt Karl, sobald der akute Moment vorbei ist.
-        pendingCategoryMessages.push('ERZWUNGENER EINSCHLAF (Erschöpfungs-Limit): Karl ist seit ' + _mued + ' Szenen ohne Schlaf - der Körper macht JETZT schlapp, egal wie aufgeladen die Lage ist. Lass den akuten Moment kurz auslaufen (die unmittelbare Gefahr ebbt ab, Karl kommt für einen Atemzug zur Ruhe) und beschreibe dann, wie ihn die Erschöpfung übermannt - die Glieder werden bleiern, die Augen fallen zu, er sackt weg, GENAU DORT wo er ist. Dann der UEBERGANG (~8 Stunden später, zum ' + ((typeof _schlafAufwachZiel === 'function') ? _schlafAufwachZiel(gameTimeIdx).name : 'MORGEN') + ') am SELBEN Ort (steife Glieder, jemand weckt ihn). KEIN Teleport. Karl hatte keine Wahl mehr - die Übermüdung hat ihn eingeholt.');
-      } else {
-        pendingCategoryMessages.push('ERZWUNGENER EINSCHLAF: Karl hat zu lange durchgemacht und kann die Augen nicht mehr offenhalten - er nickt JETZT unwillkuerlich ein, GENAU DORT wo er gerade ist (im Opel am Strassenrand, auf einer Kneipenbank, in einem Hauseingang, am Schreibtisch - was zum aktuellen Ort passt). Beschreibe in 1-2 Saetzen wie ihm die Augen zufallen, dann den UEBERGANG (~8 Stunden später, zum ' + ((typeof _schlafAufwachZiel === 'function') ? _schlafAufwachZiel(gameTimeIdx).name : 'MORGEN') + ') am SELBEN Ort (steife Glieder, ein Passant/Polizist der ihn weckt). KEIN Teleport zu Buero/Wohnung/einem NPC-Ort. Karl wacht GENAU DORT auf, wo er eingeschlafen ist. Er hatte keine Wahl - die Erschoepfung hat gewonnen.');
-      }
+      pendingCategoryMessages.push('ÜBERMÜDUNG (Müdigkeit ' + _mued + '): Karl ist viel zu lange wach - bleierne Glieder, brennende Augen, die Gedanken werden langsam, kleine Konzentrationsfehler schleichen sich ein. Beschreibe die Erschöpfung spürbar in der Prosa. ABER: Karl schläft NICHT automatisch ein und die Szene macht KEINEN Zeitsprung - er hält sich mit Willenskraft, Kaffee und Zigaretten wach, bis der Spieler selbst entscheidet zu schlafen.');
     }
-    diag('detect', 'ERZWUNGENER EINSCHLAF: Müdigkeit ' + _mued + ' (Sp ' + lastSpannung + ', ' + (_hartesNachtLimit && !_einschlafLimit ? 'HARTES Limit >=26 trotz Action' : 'ruhig >=22') + ') -> Karl nickt vor Ort ein (~8 Std)');
-    if (typeof showProgressToast === 'function') {
-      const _canShow = (typeof canShowToast !== 'function') || canShowToast('info', 'einschlaf-zwang');
-      if (_canShow) showProgressToast('Übermannt vom Schlaf', 'Karl nickt ein, wo er gerade ist.', 'info', 'einschlaf-zwang');
+    if (_hartesNachtLimit && typeof verfassung === 'number' && verfassung > 1 && window._muedVfMalusBei !== _mued) {
+      window._muedVfMalusBei = _mued;
+      verfassung -= 1;
+      diag('detect', 'ÜBERMÜDUNGS-MALUS: Müdigkeit ' + _mued + ' >= 26 -> Verfassung -1 (jetzt ' + verfassung + ') - kein Auto-Schlaf');
+      if (typeof showProgressToast === 'function') { try { showProgressToast('Am Limit', 'Die Übermüdung zehrt an Karls Substanz - Verfassung sinkt. Er braucht dringend Schlaf.', 'warn', 'muede-malus-' + _mued); } catch (e) {} }
+    } else {
+      diag('detect', 'ÜBERMÜDUNGS-WARNUNG: Müdigkeit ' + _mued + ' - Karl ist am Limit, schläft aber NUR per Button (kein Zwangsschlaf mehr seit v707)');
+      if (typeof showProgressToast === 'function') {
+        const _canShow = (typeof canShowToast !== 'function') || canShowToast('warn', 'einschlaf-warnung');
+        if (_canShow) showProgressToast('Übermüdet', 'Karl ist am Ende seiner Kräfte - Schlafen ist dringend empfohlen.', 'warn', 'einschlaf-warnung');
+      }
     }
   } else if (_mued >= 12 && !pendingSleepChoice && lastSpannung <= 3) {
     const nightStages = (_mued >= 16 && lastSpannung <= 2) ? 'HARD' : 'SOFT';
@@ -19605,6 +19644,15 @@ function applyCategoryMechanics(kategorie, ctx) {
       break;
 
     case 'ROMANTIK':
+      // v7.12.707 (Lektorat A5, GTA-konform gelöst): Romance bleibt WÄHLBAR (Spielerfreiheit!),
+      // aber bei aktivem Showdown kippt der Moment - der Gegner platzt herein. Keine Warteschleife
+      // möglich, ohne dass die Engine Buttons versteckt.
+      try {
+        if (caseProgress && caseProgress.showdownAktiv && !caseProgress.showdownBestanden && caseProgress.showdownGegner) {
+          result.pushMessages.push('SHOWDOWN UNTERBRICHT DIE ROMANTIK: Der Moment der Nähe wird JÄH gestört - ' + caseProgress.showdownGegner + ' platzt herein / hämmert gegen die Tür / steht plötzlich im Raum. Die Romantik kippt SOFORT in Gefahr (Spannung 4). ' + caseProgress.showdownGegner + ' stellt Karl JETZT.');
+          result.spannungDelta = Math.max(result.spannungDelta || 0, 2);
+        }
+      } catch (e) {}
       // v7.10.1: System-Aktion. Erscheint nur wenn ROMANCE-NPC anwesend.
       // Romance-Tension +1, KI erzaehlt intimen Moment am aktuellen Ort.
       result.vfDelta = 0;
@@ -19615,6 +19663,22 @@ function applyCategoryMechanics(kategorie, ctx) {
       break;
 
     case 'UEBERNACHTUNG':
+      // v7.12.707: Bei aktivem Showdown gibt es keine ungestörte Nacht - der Gegner wartet
+      // am Morgen vor der Tür (Tagwechsel bleibt, aber die Bedrohung schläft nicht).
+      try {
+        if (caseProgress && caseProgress.showdownAktiv && !caseProgress.showdownBestanden && caseProgress.showdownGegner) {
+          result.pushMessages.push('SHOWDOWN WARTET: Die Nacht mag ruhig sein - aber am MORGEN DANACH steht ' + caseProgress.showdownGegner + ' bereits vor der Tür / am Wagen und stellt Karl SOFORT (Spannung 4). Kein gemütlicher Morgen.');
+        }
+      } catch (e) {}
+      // v7.12.707 (Ort-Prosa-Brüche, Wurzel statt Hard-Retry): Die Nacht findet am AKTUELLEN
+      // Engine-Ort statt - der Push nennt ihn jetzt NAMENTLICH, damit die KI nicht in ein
+      // erfundenes Atelier / eine erfundene Wohnung abwandert (8 Brüche im Run 1909, alle in
+      // der Romance-Phase).
+      try {
+        if (typeof engineCurrentLocation !== 'undefined' && engineCurrentLocation && engineCurrentLocation.name) {
+          result.pushMessages.push('ORT-ANKER (PFLICHT): Diese Nacht und der Morgen danach spielen an GENAU DIESEM Ort: "' + engineCurrentLocation.name + '". KEIN Wechsel in ihr Atelier, ihre Wohnung oder einen anderen Ort - wenn ihr Zuhause woanders wäre, bleiben beide trotzdem HIER. Der Ortsname muss zur Prosa passen.');
+        }
+      } catch (e) {}
       // v7.11.7: Romantik-Climax mit Tagwechsel.
       // v7.11.11: Heilung-Werte angepasst:
       // - Nicht verletzt: voll erholt
@@ -23045,7 +23109,7 @@ function renderOptions(scene) {
         resolveLockReason = _pgReason;
       }
     }
-    else if (showdownFehltFuerResolve) resolveLockReason = 'Showdown steht aus: ' + ((caseProgress && caseProgress.showdownGegner) || 'der Gegenspieler') + ' ist Karl auf den Fersen';
+    else if (showdownFehltFuerResolve) resolveLockReason = 'Showdown: ' + ((caseProgress && caseProgress.showdownGegner) || 'der Gegenspieler') + ' ist HIER - stell dich ihm (Zugriff, Flucht oder Handel)'; // v7.12.707: er steht in der Personen-Liste, der Spieler muss nicht suchen
     else if (currentSp > 3) resolveLockReason = 'zu hohe Spannung';
     else if (!karlVfOk) resolveLockReason = 'zu schwer verletzt';
     else if (!resolveCoreReady) {
@@ -30150,7 +30214,9 @@ async function chooseOption(option) {
       // (Karl + Gesicht + 🌹/❤️), einen Tick kürzer als Standard.
       const _romNpc = (option && (option._romanceNpc || option._npcName)) ||
         (((option && option.text) || '').match(/mit\s+([A-ZÄÖÜ][\wäöüß.\-]*(?:\s+[A-ZÄÖÜ][\wäöüß.\-]*)?)/) || [])[1] || '';
-      if (/^(ROMANTIK|UEBERNACHTUNG)$/.test(_kat) && _romNpc && typeof fxDialog === 'function') {
+      if (_kat === 'SCHLAFEN' && typeof fxSchlaf === 'function') {
+        fxSchlaf(); // v7.12.707: ganze Truppe + 🌙
+      } else if (/^(ROMANTIK|UEBERNACHTUNG)$/.test(_kat) && _romNpc && typeof fxDialog === 'function') {
         fxDialog(_romNpc, _kat === 'UEBERNACHTUNG' ? 'nacht' : 'naeher', 3800);
       } else {
         fxKategorie(_kat, (option && (option._anzeigeText || option.text)) || '');

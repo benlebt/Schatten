@@ -15849,3 +15849,32 @@ eigener Takt 3400 (Tick kürzer als Dialog); fxDialog mit optionalem Dauer-Param
 
 **ANGEKÜNDIGT v707:** fxSchlaf mit ganzer Party; Sichern-Sektion auf 2 Buttons mit
 Unterauswahl (Ort / Empfänger); Showdown-Gegner-ORT im Reise-Menü + Lösen-Hinweis.
+
+## 🆕 v7.12.707 — Lektorats-Paket Run 1909: Showdown spielbar, Auto-Schlaf raus, fxSchlaf
+
+**VERIFIKATION (Run 1909, v705):** Auto-Schlaf bestätigt (Sz vor 18, Müdigkeit 22);
+Showdown Sz18 AKTIVIERT, ⚔-Push feuerte pro Szene, aber Mertens trat NIE in den Cast;
+8 Ort-Prosa-Brüche Stage 3, gehäuft in der Margot-Romance-Phase (KI wanderte in ein
+ERFUNDENES Atelier ab - der Ort existiert gar nicht als Engine-Ort).
+
+**A1 SHOWDOWN IST JETZT SPIELBAR:** Bei aktivem Showdown injiziert getNpcsAtCurrentLocation
+den Gegner ENGINE-SEITIG in die Personen-Liste ("er findet Karl, nicht umgekehrt") - rot
+markiert ganz oben, als Baukasten-Ziel, Rex-Ziel und Fesseln-Manöver verfügbar, egal ob
+die KI-Prosa ihn erwähnt. Beantwortet Benjamins Frage "wo finde ich Mertens?". Lösen-
+Sperrtext sagt jetzt: "ist HIER - stell dich ihm (Zugriff, Flucht oder Handel)".
+**A3 AUTO-SCHLAF ENDGÜLTIG RAUS** (revidiert die v512-Freigabe, im Einklang mit "es soll
+immer weniger von selbst passieren"): Müdigkeit drückt jetzt über Erschöpfungs-Prosa-Push,
+warn-Toast und ab >=26 Verfassung -1 (einmal pro Müdigkeitsstand). Schlaf NUR per Button.
+**A5 GTA-KONFORM statt Button-Verbot:** Romance bleibt bei aktivem Showdown WÄHLBAR -
+aber der Gegner CRASHT den Moment (platzt herein, Spannung 4) bzw. wartet nach der
+Übernachtung am Morgen vor der Tür. Keine Warteschleife möglich, keine Freiheit genommen.
+**ORT-BRÜCHE, Wurzel statt Hard-Retry (Hard-Retry bleibt SETTLED ABGELEHNT):**
+UEBERNACHTUNG bekommt einen ORT-ANKER-Push, der den Engine-Ort NAMENTLICH nennt und das
+Abwandern in erfundene Ateliers/Wohnungen verbietet.
+**fxSchlaf:** Mond + ganze Truppe + gestaffelte 💤 (5,2s) - Hook im FX-Sicherheitsnetz.
+
+**OFFENE BENJAMIN-ENTSCHEIDE:** (1) Lektorat A4 Party-Locks (Margot/Marlene/Doc blocken)
+NICHT umgesetzt - kollidiert mit eiserner Regel "der Spieler entscheidet die Party".
+Empfehlung Claude: Freiheit behalten; der Showdown-Crash + Injekt lösen das eigentliche
+Problem (Romance-Drift). Mildere Alternative wäre Prosa-Zögern dieser NPCs. (2) Sichern-
+Sektion 2 Buttons mit Unterauswahl -> v708.
