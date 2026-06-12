@@ -15326,3 +15326,8 @@ Trude selbst ist in 3 Fällen als Ort definiert, u.a. Margarete).
 - P3: STASI-Befragen als "Konfrontieren/Hinhalten" labeln (klein, nie gebaut).
 - P3 geparkt: tote Bot-Zweige aufräumen; Resolve-Gate-Zentralisierung (beide ohne Run-Anlass
   bewusst nicht angefasst).
+
+## 🆕 v7.12.681 — Button-Reihenfolge (Benjamin)
+
+Bleibt-Sektion neu sortiert: Reisen → Umsehen (Fundstücke) → Notizbuch → Aktueller Stand.
+Notizbuch-Append wird aufgeschoben und erst nach dem Umsehen-Block angehängt.
