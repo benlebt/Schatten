@@ -15960,3 +15960,10 @@ Neu: ab Müdigkeit 12 (Warnschwelle) ist der Button tageszeitunabhängig da (Spa
 Unterwegs-Sperren bleiben).
 
 **4.** PartyJoin-Animation 3500→5200ms (Benjamin: immer noch zu kurz; jetzt Dialog-Niveau).
+
+## 🆕 v7.12.714 — Kommissar Roth ist ein Mann (Benjamin)
+
+Das geschlechtsneutrale 👮 rendert auf iOS als Polizistin. Alle männlichen Polizei-Pfade
+(Roth/Lindner/Kommissar/Wachtmeister-Namensregeln, AUTHORITY/POLIZEI-Tag-Fallback,
+gefesselt_uebergeben-FX) explizit auf 👮‍♂️. Das bewusst weibliche AUTHORITY-Mapping für
+erkannte Frauen (Z20836) bleibt unverändert.
