@@ -16168,3 +16168,11 @@ unbetonte Silben im 3er-Rhythmus.
 (C7+E7) mit zweitem leiserem Anschlag und Nachklang. Andockstellen: fxItemGain (jedes
 eingesammelte Item) UND showProgressToast variant 'clue' am sicheren Render-Punkt (jeder
 Indiz-Fund, Spur, Stage-Up) - "jedes Mal wie Geld bekommen".
+
+## 🆕 v7.12.731 — IM "Anker": gewöhnliches Gesicht statt 🫥 (Benjamin)
+
+Die alte Spitzel-Regel (/anker|spitzel|^im\b/ -> 🫥) renderte auf iOS als gestrichelter
+Kreis - sah aus wie ein kaputtes Icon. Regel gestrichen: Ein IM ist gerade UNAUFFÄLLIG,
+er bekommt jetzt ein gewöhnliches, stabiles Gesicht aus dem Hash-Pool (v725) - wie jeder
+Mensch in der Menge. Genau das macht einen Inoffiziellen Mitarbeiter aus. (Willi Kummer
+und der Mantelmann haben eigene, frühere Regeln und bleiben unberührt.)
