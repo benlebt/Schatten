@@ -3277,7 +3277,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.724</div>
+    <div class="start-version">Schatten v7.12.725</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3503,7 +3503,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.724</span>
+    <span>Schatten v7.12.725</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7364,7 +7364,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.724';
+window.SCHATTEN_VERSION = 'v7.12.725';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -8298,6 +8298,13 @@ function charVisual(name, tag, istWeiblich) {
     }
     const M = ['👨', '🧔', '👨‍🦳', '👨‍🦱', '🧑'];
     const F = ['👩', '👩‍🦰', '👩‍🦳', '👱‍♀️'];
+    // v7.12.725 (Benjamin: "August Lemke hat einen komischen blauen Avatar"): Die Variable
+    // h war NIE definiert - der Pool warf seit jeher einen ReferenceError, der catch lieferte
+    // 👤. JEDER unbekannte NPC war blau. node --check fängt ReferenceErrors nicht (bekannte
+    // Lücke). Jetzt: stabiler Namens-Hash, gleicher Name -> immer dasselbe Gesicht.
+    let h = 0;
+    for (let i = 0; i < n.length; i++) h = ((h << 5) - h + n.charCodeAt(i)) | 0;
+    h = Math.abs(h);
     return istWeiblich ? F[h % F.length] : M[h % M.length];
   } catch (e) { return '👤'; }
 }
@@ -8496,6 +8503,23 @@ function sfxSeufzer() {
     o.start(t0); vib.start(t0); o.stop(t0 + 0.7); vib.stop(t0 + 0.7);
   } catch (e) {}
 }
+// v7.12.725 (Benjamin: "beim Befragen ein lustiges, comicartiges Genuschel"): Brabbel-
+// Silben wie in alten Adventure-Spielen - 6-9 kurze Sägezahn-Bursts mit zufälliger Tonhöhe
+// um einen Grundton, unregelmäßige Pausen. grundton ~150 = Karl, tiefer = Gegenüber.
+function sfxBlabla(grundton, delay) {
+  try {
+    const c = _sfx(); if (!c) return;
+    const g0 = grundton || 150;
+    let tAkk = delay || 0;
+    const silben = 6 + Math.floor(Math.random() * 4);
+    for (let i = 0; i < silben; i++) {
+      const f = g0 * (0.82 + Math.random() * 0.5);
+      const d = 0.055 + Math.random() * 0.05;
+      _sfxTon(f, f * (0.88 + Math.random() * 0.18), d, 'sawtooth', 0.05, tAkk, c);
+      tAkk += d + 0.018 + Math.random() * 0.05;
+    }
+  } catch (e) {}
+}
 // ============ Ende SFX ============
 function fxConflict(actorName, targetName, art, success, itemName) {
   try {
@@ -8645,7 +8669,13 @@ function fxDialog(npcName, verbKey, dauerMs) {
     window._fxLastT = Date.now(); // v7.12.700: Marke fürs Sicherheitsnetz
     const _D = dauerMs || FX_ZEIT.dialog; // v7.12.706: optionale Dauer (Romantik etwas kürzer)
     // v7.12.724 (Benjamin): Anstoßen beim Trinken, sanfter Seufzer bei der Romantik.
-    try { if (verbKey === 'trinken') sfxProst(); else if (verbKey === 'naeher' || verbKey === 'nacht') sfxSeufzer(); } catch (e) {}
+    // v7.12.725: Comic-Genuschel beim Befragen - Karl brabbelt (~150Hz), das Gegenüber
+    // antwortet eine Lage tiefer (~110Hz) versetzt; zweite kurze Runde beim Bubble-Nachschub.
+    try {
+      if (verbKey === 'trinken') sfxProst();
+      else if (verbKey === 'naeher' || verbKey === 'nacht') sfxSeufzer();
+      else if (verbKey === 'befragen' || verbKey === 'ansprechen') { sfxBlabla(150, 0.1); sfxBlabla(110, 1.15); }
+    } catch (e) {}
     // Symbol-Paar je Verb: [über Karl, über dem Gegenüber]
     const SYMB = {
       befragen: ['💬', '💬'], ansprechen: ['💬', '💬'],
@@ -8674,6 +8704,7 @@ function fxDialog(npcName, verbKey, dauerMs) {
         box.insertAdjacentHTML('beforeend',
           '<div class="fx-d-bubble fx-d-bubble-l" style="animation: fxBPop 0.55s ease 0s forwards, fxDBubbleOut 0.4s ease 1.2s forwards;">' + sy[0] + '</div>'
           + '<div class="fx-d-bubble fx-d-bubble-r" style="animation: fxBPop 0.55s ease 1s forwards;">' + sy[1] + '</div>');
+        if (verbKey === 'befragen' || verbKey === 'ansprechen') { try { sfxBlabla(150, 0); sfxBlabla(110, 1.0); } catch (e) {} } // v7.12.725
       } catch (e) {}
     }, Math.min(2800, _D - 1800));
     setTimeout(() => { try { box.style.opacity = '0'; } catch (e) {} }, _D - 400);

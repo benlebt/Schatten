@@ -16090,3 +16090,17 @@ Verkabelung: fxConflict bekommt optionalen itemName-Param (fxPlan reicht das Pla
 durch) und wählt den Treffer-Sound item-spezifisch; fxDialog triggert Prost/Seufzer am
 verbKey. Benjamins "Stöhnen"-Wunsch bewusst als dezenter Seufzer umgesetzt - mehr gibt die
 Oszillator-Synthese geschmackvoll nicht her.
+
+## 🆕 v7.12.725 — Blauer-Avatar-Wurzel (h war NIE definiert) + Befragen-Genuschel (Benjamin)
+
+**1. "August Lemke hat einen komischen blauen Avatar":** Größer als gedacht - der
+Hash-Gesichter-Pool in charVisual ("Persönlichkeit statt 👤") referenzierte eine Variable h,
+die NIRGENDS definiert war. ReferenceError -> catch -> 👤: JEDER NPC ohne Spezialregel war
+seit Einführung des Pools blau. node --check fängt ReferenceErrors nicht (bekannte Lücke).
+Fix: stabiler Namens-Hash ((h<<5)-h+charCode), gleicher Name -> immer dasselbe Gesicht.
+Node-verifiziert: August Lemke -> 👨‍🦱.
+
+**2. sfxBlabla - Comic-Genuschel beim Befragen:** 6-9 kurze Sägezahn-Silben mit zufälliger
+Tonhöhe um einen Grundton, unregelmäßige Pausen (Adventure-Spiel-Gebrabbel). Karl brabbelt
+bei ~150Hz, das Gegenüber antwortet versetzt eine Lage tiefer (~110Hz); bei der zweiten
+Bubble-Runde der Dialog-Animation eine kurze Nachrunde. Greift bei befragen/ansprechen.
