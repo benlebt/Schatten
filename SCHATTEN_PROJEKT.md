@@ -15426,3 +15426,16 @@ Szenen statt nie.
 **Offen/Beobachten:** Startzeiten der Nacht-Start-Fälle ggf. auf ABEND drehen (war Teil der
 Empfehlung, mit neuem Modell evtl. unnötig — erst Run abwarten); Müdigkeits-Anzeige im
 "Aktuellen Stand" (Zeile fehlt noch); Morgen-Vorschau am Schlaf-Button (welche Orte öffnen).
+
+## 🆕 v7.12.687 — Zeitdramaturgie-Quick-Win: Späte Nacht & Morgengrauen (Benjamin-Freigabe)
+
+Prompt-only, keine Mechanik (ChatGPT-Lektorat "die Welt atmet", von Benjamin bestätigt):
+1. **SPÄTE NACHT:** Ab 2+ Szenen in der Nacht bekommt die Prosa Leere-Farbe (letzte
+   Straßenbahn, Wirt stapelt Stühle, nur noch Gestalten mit Grund unterwegs).
+2. **MORGENGRAUEN:** Der seit v686 mögliche schlaflose Nacht→Morgen-Wrap erzählt jetzt
+   explizit ein Durchgemacht-Morgengrauen (graues Licht, Kohlegeruch, Frühschicht,
+   Zeitungsjungen) — mit hartem Verbot, ein Aufwachen/Einschlafen zu erfinden.
+**Entscheidung bestätigt:** Zwangs-Einschlaf 22/26 bleibt als physisches Sicherheitsnetz
+(Benjamins v512/528-Linie; ChatGPT-Forderung "nie erzwingen" abgelehnt — Müdigkeit kann
+nie töten, Verfassungs-Boden 2). Gewichtete Zeitkosten (Weltzeit-Punkte) = Stufe 2,
+erst nach Testlauf von v686/687.
