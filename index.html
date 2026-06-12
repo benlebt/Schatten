@@ -3019,6 +3019,9 @@
        localStorage.schatten-admin === 'true'. Set via ?admin=PASSWORT URL. -->
   <div id="admin-autoplay-section" class="hidden">
     <div class="settings-divider"></div>
+    <div class="settings-info">Sound-Studio (alle Effekte anhören, ohne API-Kosten)</div>
+    <div id="sound-studio" style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px;"></div>
+    <div class="settings-divider"></div>
     <div class="settings-info">Test-Modus</div>
     <div class="autoplay-row">
       <label class="autoplay-label">Züge:</label>
@@ -3277,7 +3280,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.737</div>
+    <div class="start-version">Schatten v7.12.738</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3503,7 +3506,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.737</span>
+    <span>Schatten v7.12.738</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7378,7 +7381,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.737';
+window.SCHATTEN_VERSION = 'v7.12.738';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -8688,6 +8691,18 @@ function sfxKasse() {
   _sfxTon(2093, 2090, 0.4, 'sine', 0.06, 0.16);      // zweiter Anschlag, leiser
   _sfxTon(2637, 2632, 0.35, 'sine', 0.04, 0.165);
 }
+// v7.12.738 (Benjamin: "wenn die Akte geschlossen wird, brauchen wir einen Sound"):
+// Kein Zellentür-Metall (klingt nach Gefängnis, nicht nach Triumph) - stattdessen der
+// STEMPEL selbst: satter dumpfer Wumm aufs Papier, kurzes Papier-Rascheln, dann ein
+// dunkler, feierlicher Noir-Schlussakkord (tiefe Quinte, kleiner Glanz oben drauf).
+function sfxAkte() {
+  if (!sfxOn()) return;
+  _sfxTon(82, 46, 0.16, 'sine', 0.32, 0);          // Stempel-Wumm
+  _sfxNoise(0.1, 0.12, 0.02, 1200);                // Papier
+  _sfxTon(98, 98, 0.9, 'triangle', 0.14, 0.3);     // Schlussakkord: G2
+  _sfxTon(147, 147, 0.9, 'triangle', 0.11, 0.3);   // D3 (Quinte)
+  _sfxTon(587, 583, 0.7, 'sine', 0.05, 0.42);      // Glanz: D5, leicht verstimmt
+}
 // Zentrale Sound-Wahl für eine Plan-/Kampf-Aktion (art + Item-Name).
 function sfxFuerAktion(art, itemName) {
   try {
@@ -9031,10 +9046,12 @@ function fxFallGeloest() {
     box.className = 'fx-case-closed';
     box.innerHTML = '<div class="fx-cc-akte">📁</div>'
       + '<div class="fx-cc-stempel">AKTE GESCHLOSSEN</div>'
+      /* v7.12.738: Sound synchron zum Stempel-Aufprall (Animation: 0.7s Delay + 0.3s bis 60%-Knall) */
       + '<div class="fx-cc-funken" style="left:18%;">✨</div>'
       + '<div class="fx-cc-funken" style="right:18%;animation-delay:1.3s;">✨</div>'
       + '<div class="fx-caption">Karl Mauer · Privatdetektiv · Berlin 1953</div>';
     layer.appendChild(box);
+    setTimeout(() => { try { if (typeof sfxAkte === 'function') sfxAkte(); } catch (e) {} }, 980); // v7.12.738: Wumm beim Aufprall
     setTimeout(() => { try { box.style.opacity = '0'; } catch (e) {} }, 3100);
     setTimeout(() => { try { box.remove(); } catch (e) {} }, 3600);
   } catch (e) {}
@@ -11504,8 +11521,45 @@ function toggleSettings(event) {
     if (typeof loadReadingScale === 'function') loadReadingScale();
     // v7.12.373: Spielmodus-Dropdown auf aktuellen Modus setzen
     if (typeof syncPlayModeUI === 'function') syncPlayModeUI();
+    // v7.12.738 (Benjamin: "ich brauche eine Möglichkeit, die Sounds zu reviewen, ohne zu
+    // spielen - jedes Spielen kostet Geld"): Sound-Studio im Admin-Bereich. Ein Button pro
+    // Effekt, spielt über DIESELBE Engine + iOS-Route wie im Spiel - was hier klingt,
+    // klingt im Spiel exakt gleich.
+    try { if (typeof buildSoundStudio === 'function') buildSoundStudio(); } catch (e) {}
   }
   menu.classList.toggle('hidden');
+}
+function buildSoundStudio() {
+  const host = document.getElementById('sound-studio');
+  if (!host || host.childElementCount) return; // einmal bauen reicht
+  const SOUNDS = [
+    ['🐕 Bellen', () => sfxBellen()],
+    ['🐕 Knurren', () => sfxKnurren()],
+    ['⛓ Handschellen', () => sfxHandschellen()],
+    ['👊 Schlag', () => sfxSchlag()],
+    ['🧨 Knall', () => sfxKnall()],
+    ['🐟 Flatsch', () => sfxFlatsch()],
+    ['🍾 Klirren', () => sfxKlirren()],
+    ['🍻 Prost', () => sfxProst()],
+    ['💋 Seufzer', () => sfxSeufzer()],
+    ['🗣 Genuschel', () => { sfxBlabla(150, 0); setTimeout(() => sfxBlabla(110, 0), 1300); }],
+    ['🚗 Motor', () => sfxMotor()],
+    ['✨ Sting', () => sfxSting()],
+    ['🌙 Schlaf', () => sfxSchlafTon()],
+    ['💰 Kasse', () => sfxKasse()],
+    ['🏆 Überwältigt', () => sfxUeberwaeltigt()],
+    ['😏 Häme', () => sfxHohn()],
+    ['📁 Akte zu', () => sfxAkte()],
+    ['🎯 Pfiff (ablenken)', () => _sfxTon(1250, 1850, 0.18, 'sine', 0.09, 0)],
+    ['😤 Brummen (einschüchtern)', () => _sfxTon(115, 82, 0.32, 'sawtooth', 0.11, 0)]
+  ];
+  SOUNDS.forEach(([label, fn]) => {
+    const b = document.createElement('button');
+    b.textContent = label;
+    b.style.cssText = 'font:11px monospace;color:#cbbfa9;background:#241f18;border:1px solid #4d4234;border-radius:5px;padding:6px 9px;cursor:pointer;';
+    b.onclick = (ev) => { try { ev.stopPropagation(); fn(); } catch (e) {} };
+    host.appendChild(b);
+  });
 }
 
 // v7.12.9: Gemini-Exklusiv-Schalter ENTFERNT. geminiOnlyMode ist jetzt fest AN -

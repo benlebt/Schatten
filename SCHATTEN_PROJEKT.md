@@ -16246,3 +16246,15 @@ keine Aktivierung, kein Toast.
 **2. Injekt:** Prüft vor dem Einspielen den Zustand. Bezwungen/übergeben -> kein Injekt,
 showdownBestanden=true + Save (SELBSTHEILUNG: Benjamins laufender Run 2226 repariert sich
 beim nächsten Szenenwechsel selbst, der Abschluss wird frei).
+
+## 🆕 v7.12.738 — Akte-geschlossen-Sound + Sound-Studio im Debug-Modus (Benjamin)
+
+**1. sfxAkte:** Kein Zellentür-Metall (klingt nach Gefängnis statt Triumph) - der STEMPEL
+selbst: satter Wumm (82->46Hz Sinus) + Papier-Rascheln + dunkler Noir-Schlussakkord
+(G2+D3-Quinte, D5-Glanz oben drauf). Synchron zum Stempel-Aufprall der
+AKTE-GESCHLOSSEN-Animation (980ms) angedockt.
+
+**2. Sound-Studio:** In den Settings, Admin-Bereich (?debug=hardenberg17): 19 Buttons,
+einer pro Effekt - spielt über DIESELBE Engine und iOS-Route wie im Spiel. Benjamin kann
+jeden Sound reviewen, ohne API-Kosten. (Bewusst KEIN Chat-Artefakt: das wäre eine Kopie,
+die driften kann und anders klingt als das iPhone.)
