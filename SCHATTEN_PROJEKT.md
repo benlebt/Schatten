@@ -15397,3 +15397,32 @@ ChatGPT-Forderung "August partyLockedOut" bleibt ABGELEHNT (Regel: Spieler entsc
 **Bewusst NICHT gebaut:** Tageszeit-Müdigkeits-Druck ab Sz8 (ChatGPT P2 — Gameplay-Feel,
 braucht Benjamins Entscheid); Inventar-Sync übergebener Akten im KI-Erzähltext (P2, Fundort
 noch unklar — nächste Session).
+
+## 🆕 v7.12.686 — ZEITMODELL-UMBAU: "Zeit läuft immer, Schlaf ist Regeneration" (Benjamin-Architektur-Entscheid)
+
+**Das Problem (Diskussion mit Benjamin):** Extrem viel spielte nachts, weil der Tag schnell
+durchläuft (2-3 Sz/Phase) und die Nacht ein Schwarzes Loch war (kein Auto-Wechsel, Ausstieg
+nur per Schlafen-Klick oder Zwangs-Limits 14/20). Dazu starten 3 von 10 Fällen direkt in
+der NACHT (u.a. Margarete) — Run 1226 sah den Tag nie.
+
+**Der Umbau (kehrt v7.11.12 bewusst um):**
+1. **Nacht läuft automatisch durch** wie jede Phase (NACHT→MORGEN = Tag+1, Story-Beat via
+   pendingDayTransition). Force-Push/Hard-Override gelten jetzt auch nachts.
+2. **Schlaf = Regeneration gegen Zeitverlust:** ~8 Stunden per Aufwach-Tabelle
+   (MORGEN→NACHMITTAG, VORMITTAG→ABEND, MITTAG→ABEND, NACHMITTAG→NACHT, ABEND/NACHT→
+   MORGEN Tag+1). Wer vormittags schläft, wacht abends auf — genau Benjamins Beispiel.
+   Heilung (voll auf Vf 5) bleibt; Müdigkeit → 0. Schlaf-Button zeigt das echte Ziel
+   ("Schlafen (~8 Std.) → ABEND · Tag +1"); Toast und alle Schlaf-Pushes dynamisch.
+3. **Müdigkeit zählt jetzt JEDE wache Szene** (v629-Modell, vorher nur Nacht-Szenen — die
+   gibt es jetzt nur noch 2-3 am Stück): Toast "müde" ab 12, Verfassung -1 alle 3 Szenen
+   ab 16 (Boden 2), erzwungener Einschlaf vor Ort ab 22 (ruhig) bzw. 26 (Action). Alle
+   alten NACHT-Szenenzähler-Trigger und Texte umgestellt ("X Szenen ohne Schlaf").
+   muedigkeit lebt in caseProgress → Snapshot-sicher.
+
+**Tests grün:** Aufwach-Tabelle (4 Fälle inkl. Benjamins Beispiel), Müdigkeits-Simulation
+(Toast Sz12, VF 18/21, Zwang Sz22), Nacht-Start Margarete erreicht Tag 2 jetzt nach ~2-3
+Szenen statt nie.
+
+**Offen/Beobachten:** Startzeiten der Nacht-Start-Fälle ggf. auf ABEND drehen (war Teil der
+Empfehlung, mit neuem Modell evtl. unnötig — erst Run abwarten); Müdigkeits-Anzeige im
+"Aktuellen Stand" (Zeile fehlt noch); Morgen-Vorschau am Schlaf-Button (welche Orte öffnen).

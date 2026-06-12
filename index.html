@@ -3187,7 +3187,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.685</div>
+    <div class="start-version">Schatten v7.12.686</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.685</span>
+    <span>Schatten v7.12.686</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7238,10 +7238,18 @@ const CUSTODY_KEYWORDS = 'verhoer|verhoertisch|vernehmer|vernehmung|fesseln|hand
 
 // Time-of-day progression (each new scene advances time by 1, day advances every ~5-7 scenes)
 const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'NACHT'];
+// v7.12.686 (Benjamin: "Schlaf ist Regeneration gegen Zeitverlust, nicht mehr der einzige
+// Tageswechsel"): Aufwach-Phase nach ~8 Stunden ab Einschlaf-Phase. Wer vormittags schläft,
+// wacht abends auf; ABEND/NACHT wrappen in den nächsten MORGEN (Tag+1).
+function _schlafAufwachZiel(idx) {
+  const T = [3, 4, 4, 5, 0, 0]; // MORGEN→NACHMITTAG, VORMITTAG→ABEND, MITTAG→ABEND, NACHMITTAG→NACHT, ABEND→MORGEN+1, NACHT→MORGEN+1
+  const i = (typeof idx === 'number' && idx >= 0 && idx <= 5) ? idx : 5;
+  return { idx: T[i], tagPlus: (i >= 4) ? 1 : 0, name: TIMES_OF_DAY[T[i]] };
+}
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.685';
+window.SCHATTEN_VERSION = 'v7.12.686';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -16865,7 +16873,7 @@ function advanceGameTime() {
   // v7.12.408 (Benjamin: ~16 Sz/Tag): Cap von 3 auf 5 angehoben. Mit den gesenkten Tokens
   // (~0.37/Szene) wechselt eine Phase normal nach ~2-3 Szenen; der Force-Push ist nur noch
   // das Sicherheitsnetz, falls die Tokens (durch Zufall/Rundung) lange unter 1 bleiben.
-  if (!isNacht && scenesInCurrentTime >= 5 && timeAdvanceTokens < 1) {
+  if (scenesInCurrentTime >= 5 && timeAdvanceTokens < 1) { // v7.12.686: gilt auch NACHTS (Nacht = normale Phase)
     console.log('[Schatten] Tageszeit-Force-Push nach', scenesInCurrentTime, 'Szenen in derselben Phase.');
     diag('detect', 'Tageszeit-Force-Push: ' + scenesInCurrentTime + ' Szenen in ' + (TIMES_OF_DAY[gameTimeIdx] || '?'));
     timeAdvanceTokens = 1;
@@ -16891,7 +16899,11 @@ function advanceGameTime() {
   // GAR keiner (Achterberg: 20 Nachtszenen ohne ein Wort über Müdigkeit). Eindeutig + Spieler
   // entscheidet: nie ein Zwang, nur ein deutlich werdender Hinweis + Toast. Tagwechsel weiter NUR
   // via aktivem SCHLAFEN-Klick (kein Auto-Zeitsprung, kein Sonderzustand).
-  const _langeActionNacht = isNacht && scenesInCurrentTime >= 12 && lastSpannung >= 4 && !pendingSleepChoice;
+  // v7.12.686: Alle Müdigkeits-Trigger laufen jetzt über caseProgress.muedigkeit (wache Szenen
+  // seit letztem Schlaf, phasenübergreifend) - die alten NACHT-Szenenzähler greifen nicht mehr,
+  // weil die Nacht seit v686 automatisch durchläuft (2-3 Szenen wie jede Phase).
+  const _mued = (typeof caseProgress === 'object' && caseProgress && typeof caseProgress.muedigkeit === 'number') ? caseProgress.muedigkeit : 0;
+  const _langeActionNacht = _mued >= 16 && lastSpannung >= 4 && !pendingSleepChoice;
   // v7.12.512 (Run 1314, Nacht-Marathon 102 Szenen T1 NACHT; Benjamin-Freigabe): ERZWUNGENER EINSCHLAF an Ort
   // und Stelle. Bisher hielt die Nacht ewig an, wenn der Spieler nie SCHLAFEN klickte (Tagwechsel war NUR via
   // Button). Jetzt: nach genug Vorwarnung (>=6 Nacht-Szenen gab Hinweise, >=14 ist das harte Limit) UND nur bei
@@ -16900,12 +16912,12 @@ function advanceGameTime() {
   // abgesicherten SCHLAFEN-VOR-ORT-Pfad (pendingSleepChoice=true + pendingHeimfahrt=false). Der Tagwechsel-
   // Mechanismus weiter unten wertet pendingSleepChoice aus. KEIN Ort-Wissen der Engine noetig - die KI
   // beschreibt das Einnicken am aktuellen Ort, die Engine steuert nur Tag+1 / Heilung.
-  const _einschlafLimit = isNacht && scenesInCurrentTime >= 14 && lastSpannung <= 2 && !pendingSleepChoice && !karlInStasiCustody;
+  const _einschlafLimit = _mued >= 22 && lastSpannung <= 2 && !pendingSleepChoice && !karlInStasiCustody;
   // v7.12.528 (Benjamin, Run 1543: 90 Nacht-Szenen, Sp fast durchgehend >=4 -> normaler Einschlaf griff nie):
   // HARTES Action-Limit. Ab 20 Nacht-Szenen am Stück nickt Karl AUCH bei hoher Spannung ein - der Körper hat ein
   // physisches Limit, das selbst Adrenalin nicht ewig überbrückt. Anders als der ruhige Einschlaf (>=14, Sp<=2)
   // wird hier erzählt, dass die Erschöpfung Karl übermannt, sobald der Moment es zulässt (nicht mitten im Schuss).
-  const _hartesNachtLimit = isNacht && scenesInCurrentTime >= 20 && !pendingSleepChoice && !karlInStasiCustody;
+  const _hartesNachtLimit = _mued >= 26 && !pendingSleepChoice && !karlInStasiCustody;
   if (_einschlafLimit || _hartesNachtLimit) {
     pendingSleepChoice = true;
     if (typeof pendingHeimfahrt !== 'undefined') pendingHeimfahrt = false; // vor Ort, nicht Heimfahrt
@@ -16913,26 +16925,26 @@ function advanceGameTime() {
     if (Array.isArray(pendingCategoryMessages)) {
       if (_hartesNachtLimit && !_einschlafLimit) {
         // Hohe Spannung: Erschöpfung übermannt Karl, sobald der akute Moment vorbei ist.
-        pendingCategoryMessages.push('ERZWUNGENER EINSCHLAF (Erschöpfungs-Limit): Karl ist seit ' + scenesInCurrentTime + ' Szenen ohne Schlaf durch die Nacht - der Körper macht JETZT schlapp, egal wie aufgeladen die Lage ist. Lass den akuten Moment kurz auslaufen (die unmittelbare Gefahr ebbt ab, Karl kommt für einen Atemzug zur Ruhe) und beschreibe dann, wie ihn die Erschöpfung übermannt - die Glieder werden bleiern, die Augen fallen zu, er sackt weg, GENAU DORT wo er ist. Dann der UEBERGANG zum nächsten Morgen am SELBEN Ort (steife Glieder, fahles Licht, jemand weckt ihn). KEIN Teleport. Karl hatte keine Wahl mehr - die durchwachte Nacht hat ihn eingeholt.');
+        pendingCategoryMessages.push('ERZWUNGENER EINSCHLAF (Erschöpfungs-Limit): Karl ist seit ' + _mued + ' Szenen ohne Schlaf - der Körper macht JETZT schlapp, egal wie aufgeladen die Lage ist. Lass den akuten Moment kurz auslaufen (die unmittelbare Gefahr ebbt ab, Karl kommt für einen Atemzug zur Ruhe) und beschreibe dann, wie ihn die Erschöpfung übermannt - die Glieder werden bleiern, die Augen fallen zu, er sackt weg, GENAU DORT wo er ist. Dann der UEBERGANG (~8 Stunden später, zum ' + ((typeof _schlafAufwachZiel === 'function') ? _schlafAufwachZiel(gameTimeIdx).name : 'MORGEN') + ') am SELBEN Ort (steife Glieder, jemand weckt ihn). KEIN Teleport. Karl hatte keine Wahl mehr - die Übermüdung hat ihn eingeholt.');
       } else {
-        pendingCategoryMessages.push('ERZWUNGENER EINSCHLAF: Karl hat zu lange durchgemacht und kann die Augen nicht mehr offenhalten - er nickt JETZT unwillkuerlich ein, GENAU DORT wo er gerade ist (im Opel am Strassenrand, auf einer Kneipenbank, in einem Hauseingang, am Schreibtisch - was zum aktuellen Ort passt). Beschreibe in 1-2 Saetzen wie ihm die Augen zufallen, dann den UEBERGANG zum naechsten Morgen am SELBEN Ort (steife Glieder, kalter Tau, ein Passant/Polizist der ihn weckt, fahles Morgenlicht). KEIN Teleport zu Buero/Wohnung/einem NPC-Ort. Karl wacht GENAU DORT auf, wo er eingeschlafen ist. Er hatte keine Wahl - die Erschoepfung hat gewonnen.');
+        pendingCategoryMessages.push('ERZWUNGENER EINSCHLAF: Karl hat zu lange durchgemacht und kann die Augen nicht mehr offenhalten - er nickt JETZT unwillkuerlich ein, GENAU DORT wo er gerade ist (im Opel am Strassenrand, auf einer Kneipenbank, in einem Hauseingang, am Schreibtisch - was zum aktuellen Ort passt). Beschreibe in 1-2 Saetzen wie ihm die Augen zufallen, dann den UEBERGANG (~8 Stunden später, zum ' + ((typeof _schlafAufwachZiel === 'function') ? _schlafAufwachZiel(gameTimeIdx).name : 'MORGEN') + ') am SELBEN Ort (steife Glieder, ein Passant/Polizist der ihn weckt). KEIN Teleport zu Buero/Wohnung/einem NPC-Ort. Karl wacht GENAU DORT auf, wo er eingeschlafen ist. Er hatte keine Wahl - die Erschoepfung hat gewonnen.');
       }
     }
-    diag('detect', 'ERZWUNGENER EINSCHLAF: ' + scenesInCurrentTime + ' Szenen NACHT (Sp ' + lastSpannung + ', ' + (_hartesNachtLimit && !_einschlafLimit ? 'HARTES Limit >=20 trotz Action' : 'ruhig <=2') + ') -> Karl nickt vor Ort ein, Tagwechsel erzwungen');
+    diag('detect', 'ERZWUNGENER EINSCHLAF: Müdigkeit ' + _mued + ' (Sp ' + lastSpannung + ', ' + (_hartesNachtLimit && !_einschlafLimit ? 'HARTES Limit >=26 trotz Action' : 'ruhig >=22') + ') -> Karl nickt vor Ort ein (~8 Std)');
     if (typeof showProgressToast === 'function') {
       const _canShow = (typeof canShowToast !== 'function') || canShowToast('info', 'einschlaf-zwang');
       if (_canShow) showProgressToast('Übermannt vom Schlaf', 'Karl nickt ein, wo er gerade ist.', 'info', 'einschlaf-zwang');
     }
-  } else if (isNacht && scenesInCurrentTime >= 6 && !pendingSleepChoice && lastSpannung <= 3) {
-    const nightStages = (scenesInCurrentTime >= 10 && lastSpannung <= 2) ? 'HARD' : 'SOFT';
+  } else if (_mued >= 12 && !pendingSleepChoice && lastSpannung <= 3) {
+    const nightStages = (_mued >= 16 && lastSpannung <= 2) ? 'HARD' : 'SOFT';
     if (nightStages === 'HARD') {
       if (Array.isArray(pendingCategoryMessages)) {
-        pendingCategoryMessages.push('LANGE NACHT (HART): Karl ist nach ' + scenesInCurrentTime + ' Szenen in der Nacht am absoluten Limit - beschreibe das DRASTISCH: bleischwere Glieder, brennende Augen, er nickt fast im Stehen weg, die Gedanken franst aus. Der SCHLAFEN-Button ist aktiv und soll als bewusste Spieler-Entscheidung deutlich praesent bleiben (z.B. eine Option, die explizit Schlaf/Schutz anbietet). Die vier A/B/C/D bleiben aber ECHTE Ermittlungsoptionen - KEIN erzwungener Schlaf, KEIN automatischer Tageswechsel. Karl KANN sich noch zwingen weiterzumachen, der Preis dafuer wird nur spuerbar.');
+        pendingCategoryMessages.push('ÜBERMÜDUNG (HART): Karl ist nach ' + _mued + ' Szenen ohne Schlaf am absoluten Limit - beschreibe das DRASTISCH: bleischwere Glieder, brennende Augen, er nickt fast im Stehen weg, die Gedanken franst aus. Der SCHLAFEN-Button ist aktiv und soll als bewusste Spieler-Entscheidung deutlich praesent bleiben (z.B. eine Option, die explizit Schlaf/Schutz anbietet). Die vier A/B/C/D bleiben aber ECHTE Ermittlungsoptionen - KEIN erzwungener Schlaf, KEIN automatischer Tageswechsel. Karl KANN sich noch zwingen weiterzumachen, der Preis dafuer wird nur spuerbar.');
       }
-      diag('detect', 'LANGE NACHT (HART): ' + scenesInCurrentTime + ' Szenen in NACHT (Sp ' + lastSpannung + '<=2) - drastischer Muedigkeitshinweis, KEIN Schlafzwang (4 echte Optionen)');
+      diag('detect', 'ÜBERMÜDUNG (HART): ' + _mued + ' Szenen ohne Schlaf (Sp ' + lastSpannung + '<=2) - drastischer Muedigkeitshinweis, KEIN Schlafzwang (4 echte Optionen)');
     } else {
       if (Array.isArray(pendingCategoryMessages)) {
-        pendingCategoryMessages.push('NACHT-MUEDIGKEIT: Karl ermittelt seit ' + scenesInCurrentTime + ' Szenen ohne Pause in der Nacht. Beschreibe spuerbar: schwere Glieder, Konzentrationsprobleme, der Wunsch nach einem Bett. Mindestens eine der 4 Optionen soll explizit SCHLAFEN anbieten (z.B. "Fahr nach Hause und schlaf"). SCHLAFEN-Button ist aktiv.');
+        pendingCategoryMessages.push('MUEDIGKEIT: Karl ist seit ' + _mued + ' Szenen ohne Schlaf auf den Beinen. Beschreibe spuerbar: schwere Glieder, Konzentrationsprobleme, der Wunsch nach einem Bett. Mindestens eine der 4 Optionen soll explizit SCHLAFEN anbieten (z.B. "Fahr nach Hause und schlaf"). SCHLAFEN-Button ist aktiv.');
       }
       diag('detect', 'NACHT-MUEDIGKEIT-PUSH: ' + scenesInCurrentTime + ' Szenen in NACHT (Sp ' + lastSpannung + '<=3)');
     }
@@ -16968,7 +16980,7 @@ function advanceGameTime() {
   // v7.11.32: NUR fuer NICHT-NACHT-Phasen. Bei NACHT muss Spieler aktiv SCHLAFEN.
   // Hintergrund: Eine MORGEN-Phase von 16 Szenen waere unrealistisch -
   // bei Tag muss die Zeit voran. NACHT bleibt aber stehen.
-  if (!isNacht && scenesInCurrentTime >= 8) {
+  if (scenesInCurrentTime >= 8) { // v7.12.686: gilt auch NACHTS
     console.log('[Schatten] HARD-Tageszeit-Override nach', scenesInCurrentTime, 'Szenen.');
     diag('detect', 'HARD-Tageszeit-Override: ' + scenesInCurrentTime + ' Szenen am Stueck - Wechsel ERZWUNGEN');
     timeAdvanceTokens = Math.max(timeAdvanceTokens, 1);
@@ -16985,19 +16997,13 @@ function advanceGameTime() {
     // bis der Spieler aktiv "Schlafen" klickt.
     // Hintergrund: User-Beobachtung dass automatische Tagwechsel willkuerlich
     // wirken (Goerke/Vogt-Runs 1111 hatten Tagwechsel mitten in Action).
-    const wuerdeWechselnZuMorgen = (gameTimeIdx >= TIMES_OF_DAY.length - 1)
-      && !pendingSleepChoice;
-    if (wuerdeWechselnZuMorgen) {
-      // Karl bleibt in der Nacht - keine Auto-Tagwechsel mehr (Tagwechsel NUR via SCHLAFEN).
-      timeAdvanceTokens = 0.5; // halten, aber Push-Schwelle erreicht damit
-                                 // SCHLAFEN-Push-Message in der naechsten Szene kommt
-      console.log('[Schatten v7.11.12] Auto-Tagwechsel BLOCKIERT - Karl muss SCHLAFEN-Button klicken (Nacht haelt an)');
-      diag('detect', 'Tagwechsel-Block: Karl ist in der Nacht und muss aktiv SCHLAFEN waehlen (kein Auto-Wechsel mehr)');
-      if (Array.isArray(pendingCategoryMessages)) {
-        pendingCategoryMessages.push('NACHT-HALT: Es ist tief in der Nacht. Karl ist erschoepft. Beschreibe sensorisch die Muedigkeit - schwere Augenlider, Gaehnen, der Wunsch nach Bett. Spieler hat einen SCHLAFEN-Button um den Tag zu wechseln. Treibe NICHT die Zeit weiter, die Szene spielt weiter in der NACHT.');
-      }
-      // NICHT gameTimeIdx hochzaehlen / NICHT gameDay++
-    } else {
+    // v7.12.686 (Benjamin-ARCHITEKTUR-ENTSCHEID, kehrt v7.11.12 bewusst um): Die Nacht läuft
+    // wie jede Phase automatisch weiter (NACHT → MORGEN = Tag+1). Schlaf ist NICHT mehr der
+    // einzige Tageswechsel, sondern Regeneration (Verfassung hoch, Müdigkeit weg) gegen
+    // Zeitverlust (~8 Std). Wer durchmacht, zahlt über das Müdigkeitsmodell (v629, jetzt
+    // phasenübergreifend) mit Verfassung. Damit verschwindet das "Schwarze Loch Nacht"
+    // (Run 1226: 12 Szenen T1 NACHT) von selbst.
+    {
       gameTimeIdx++;
       // v7.12.232: normaler Zeitfortschritt (z.B. früher Morgen -> Mittag) hebt das Notbremse-
       // Nachholschlaf-Fenster auf - der Schlaf-Button verschwindet dann wieder bis zum Abend.
@@ -18670,7 +18676,7 @@ function applyCategoryMechanics(kategorie, ctx) {
         } else {
           // v7.12.677: Engine-Ortsname HART in den Push - die KI weiß damit exakt, WO Karl schläft.
           const _schlafOrtName = (typeof engineCurrentLocation !== 'undefined' && engineCurrentLocation && engineCurrentLocation.name) ? engineCurrentLocation.name : 'dem aktuellen Ort';
-          result.pushMessages.push('SCHLAFEN-VOR-ORT: Karl schlaeft AM AKTUELLEN ORT ein: "' + _schlafOrtName + '" (Park, Hauseingang, Hotel, Buero, Strassenecke, Auto, was auch immer dieser Ort ist - im Opel heisst das: im Wagen schlafen, Mantel als Decke). Beschreibe kurz wie er einnickt (1-2 Saetze) und dann den UEBERGANG zum naechsten Morgen am SELBEN ORT. KEIN Teleport zu Buero/Wohnung/Doc Wagner. Die neue Szene MUSS am gleichen Ort spielen oder unmittelbar daneben (z.B. Karl wacht im Park auf einer Bank auf, oder im Hauseingang an die Wand gelehnt). Erzaehle die Spuren der Nacht - kalter Tau, steife Glieder, fremde Blicke, ein Polizist der ihn weckt, etc. - aber bleib am ORT. KRITISCH: Karl wacht GENAU DORT auf, wo er eingeschlafen ist - NICHT bei einem NPC, NICHT in einer Pension/Herberge/einem Taxi-Hof/Gaestezimmer, NICHT "in Heinz Wernickes Hof" oder bei einer anderen Setup-Figur. Verlege den Schlafplatz NICHT zu einem benannten NPC-Ort. Der aktuelle Ort ist der Schlafplatz, sonst nichts. ' + (verfassung <= 3 ? 'WICHTIG: Karl ist verletzt - Schlaf hilft nur leicht (+1 Vf). Beschreibe dass die Wunden noch schmerzen am Morgen, Karl braucht weitere Versorgung. Aber er ist nicht in akuter Lebensgefahr - das Schlafen hat zumindest die Erschoepfung beseitigt.' : ''));
+          result.pushMessages.push('SCHLAFEN-VOR-ORT: Karl schlaeft AM AKTUELLEN ORT ein: "' + _schlafOrtName + '" (Park, Hauseingang, Hotel, Buero, Strassenecke, Auto, was auch immer dieser Ort ist - im Opel heisst das: im Wagen schlafen, Mantel als Decke). Beschreibe kurz wie er einnickt (1-2 Saetze) und dann den UEBERGANG (~8 Stunden spaeter, Aufwachen am ' + ((typeof _schlafAufwachZiel === 'function') ? _schlafAufwachZiel(gameTimeIdx).name : 'MORGEN') + ') am SELBEN ORT. KEIN Teleport zu Buero/Wohnung/Doc Wagner. Die neue Szene MUSS am gleichen Ort spielen oder unmittelbar daneben (z.B. Karl wacht im Park auf einer Bank auf, oder im Hauseingang an die Wand gelehnt). Erzaehle die Spuren der Nacht - kalter Tau, steife Glieder, fremde Blicke, ein Polizist der ihn weckt, etc. - aber bleib am ORT. KRITISCH: Karl wacht GENAU DORT auf, wo er eingeschlafen ist - NICHT bei einem NPC, NICHT in einer Pension/Herberge/einem Taxi-Hof/Gaestezimmer, NICHT "in Heinz Wernickes Hof" oder bei einer anderen Setup-Figur. Verlege den Schlafplatz NICHT zu einem benannten NPC-Ort. Der aktuelle Ort ist der Schlafplatz, sonst nichts. ' + (verfassung <= 3 ? 'WICHTIG: Karl ist verletzt - Schlaf hilft nur leicht (+1 Vf). Beschreibe dass die Wunden noch schmerzen am Morgen, Karl braucht weitere Versorgung. Aber er ist nicht in akuter Lebensgefahr - das Schlafen hat zumindest die Erschoepfung beseitigt.' : ''));
         }
       }
       break;
@@ -21558,7 +21564,9 @@ function renderOptions(scene) {
     // Ortsbruch). Jetzt: heimfahrt=false immer -> SCHLAFEN-VOR-ORT-Push (im Opel = im Wagen
     // schlafen, Noir pur). Wer daheim schlafen will, reist erst heim (Reisen-Button) - Spieler
     // entscheidet die Reise, Engine besitzt den Ort. Custody-Pfad unberührt (eigener Zweig).
-    uebergangBody.appendChild(buildSleepButton('Schlafen', '→ MORGEN', false, sleepBlockedBySpannung)); // v7.12.577: Schlafen = Übergang; v677: immer vor Ort
+    // v7.12.686: Marker zeigt die echte Aufwach-Phase (~8 Std ab jetzt) statt fix "MORGEN".
+    const _schlafZielM = (typeof _schlafAufwachZiel === 'function') ? _schlafAufwachZiel(gameTimeIdx) : { name: 'MORGEN', tagPlus: 1 };
+    uebergangBody.appendChild(buildSleepButton('Schlafen (~8 Std.)', '→ ' + _schlafZielM.name + (_schlafZielM.tagPlus ? ' · Tag +1' : ''), false, sleepBlockedBySpannung)); // v7.12.577/677/686
   }
 
   // ROMANTIK-Button
@@ -29698,19 +29706,22 @@ async function chooseOption(option) {
       console.log('[Schatten] Tageswechsel schon durch vorige Szene (KI-Schlaf/ZWANGS-EINNICKEN) - kein Doppel-Inkrement');
       diag('detect', 'Schlaf-Option uebersprungen: vorige Szene hat schon Tag gewechselt');
     } else {
-      // Springe direkt zum naechsten Morgen
-      gameTimeIdx = 0; // MORGEN
-      gameDay++;
+      // v7.12.686: ~8 Stunden Schlaf ab der aktuellen Phase (Tabelle) statt fix "nächster Morgen".
+      const _aufwach = (typeof _schlafAufwachZiel === 'function') ? _schlafAufwachZiel(gameTimeIdx) : { idx: 0, tagPlus: 1, name: 'MORGEN' };
+      gameTimeIdx = _aufwach.idx;
+      if (_aufwach.tagPlus) gameDay++;
       recalcGameCurrentDate();
       timeAdvanceTokens = 0;
-      pendingDayTransition = true;
+      pendingDayTransition = !!_aufwach.tagPlus;
+      try { if (caseProgress) caseProgress.muedigkeit = 0; } catch (e) {}
+      diag('detect', '😴 SCHLAF (~8 Std): Aufwachen am ' + _aufwach.name + (_aufwach.tagPlus ? ' (Tag ' + gameDay + ')' : '') + ' - Müdigkeit 0');
       // v7.11.53: Toast fuer Tagwechsel. User-Run Vogt 2127: Tag wechselte
       // ohne dass der Spieler es bemerkt hatte (Option-Text enthielt
       // "(Option zum Schlafen)" -> als SCHLAFEN klassifiziert). Selbst wenn
       // bewusst geklickt: Tagwechsel-Hinweis ist hilfreich.
       if (typeof showProgressToast === 'function') {
-        const dayLabel = 'Tag ' + gameDay;
-        showProgressToast('NEUER TAG', 'Karl schläft. Am nächsten Morgen geht es weiter (' + dayLabel + ').', 'success', 'tagwechsel-' + gameDay, '🌅');
+        const _phasenLabel = (TIMES_OF_DAY[gameTimeIdx] || 'MORGEN').charAt(0) + (TIMES_OF_DAY[gameTimeIdx] || 'MORGEN').slice(1).toLowerCase();
+        showProgressToast(_aufwach.tagPlus ? 'NEUER TAG' : 'AUSGESCHLAFEN', 'Karl schläft ~8 Stunden - weiter am ' + _phasenLabel + (_aufwach.tagPlus ? ' (Tag ' + gameDay + ')' : '') + '.', 'success', 'tagwechsel-' + gameDay + '-' + gameTimeIdx, '🌅');
       }
     }
     pendingSleepChoice = false; // Tag verbrauchen
@@ -31801,17 +31812,17 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     try {
       if (typeof caseProgress === 'object' && caseProgress) {
         if (typeof caseProgress.muedigkeit !== 'number') caseProgress.muedigkeit = 0;
-        const _istNacht = (typeof gameTimeIdx === 'number' && gameTimeIdx === 5); // nur echte NACHT zählt (Abend=4 ist Spielstart)
+        // v7.12.686 (Benjamin): Müdigkeit zählt jetzt JEDE wache Szene (nicht nur Nacht) - denn
+        // die Nacht läuft seit v686 automatisch durch und dauert nur noch 2-3 Szenen. Ein voller
+        // Tag sind ~15 Szenen: müde ab 12, Verfassungs-Verlust ab 16 (alle 3, Boden 2 bleibt).
         const _schlafJetzt = !!(window._letzteAktion && /schlaf|uebernacht|übernacht|ausruhen|lege dich|leg dich|schlie(ss|ß)e die augen/i.test((window._letzteAktion.text || '') + ' ' + (window._letzteAktion.kategorie || '')));
         if (_schlafJetzt) {
           caseProgress.muedigkeit = 0;
           if (typeof diag === 'function') diag('state', '😴 MÜDIGKEIT zurückgesetzt (geschlafen)');
-        } else if (_istNacht) {
+        } else {
           caseProgress.muedigkeit++;
-          // Schwellen: ab 6 Nacht-Szenen ohne Schlaf sinkt Verfassung schrittweise (min 2 - Karl wird nicht
-          // bewusstlos, nur erschöpft); Toast/Prosa-Hinweis ab Schwelle.
-          if (caseProgress.muedigkeit === 6 && typeof showProgressToast === 'function') { try { showProgressToast('Müde', 'Karls Augen brennen, die Hand wird unruhig. Eine Mütze Schlaf täte gut.', 'caution', 'muede-warn'); } catch (e) {} }
-          if (caseProgress.muedigkeit >= 8 && typeof verfassung === 'number' && verfassung > 2 && (caseProgress.muedigkeit % 3 === 0)) {
+          if (caseProgress.muedigkeit === 12 && typeof showProgressToast === 'function') { try { showProgressToast('Müde', 'Karls Augen brennen, die Hand wird unruhig. Eine Mütze Schlaf täte gut.', 'caution', 'muede-warn'); } catch (e) {} }
+          if (caseProgress.muedigkeit >= 16 && typeof verfassung === 'number' && verfassung > 2 && (caseProgress.muedigkeit % 3 === 0)) {
             verfassung = Math.max(2, verfassung - 1);
             if (typeof diag === 'function') diag('state', '😴 MÜDIGKEIT senkt Verfassung auf ' + verfassung + ' (Müdigkeit ' + caseProgress.muedigkeit + ')');
             if (typeof showProgressToast === 'function') { try { showProgressToast('Übermüdet', 'Die durchwachte Nacht zehrt an Karl - er reagiert langsamer. Verfassung sinkt.', 'warn', 'muede-vf'); } catch (e) {} }
