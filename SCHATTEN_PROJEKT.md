@@ -16033,3 +16033,15 @@ gegen versehentliches Sofort-Ausführen beim Plan-Bauen.
 Die Aktion "Ins Gesicht werfen" (werfen) existierte längst - der Fisch-Katalogeintrag
 erlaubte sie nur nicht (taugt-Whitelist). Jetzt freigeschaltet; Schadenstyp bleibt 'lacher'.
 "Ins Gesicht schlagen" läuft weiterhin über "Angreifen mit" (hatte der Fisch schon).
+
+## 🆕 v7.12.721 — Bezwungene Gegner: nur Befragen/Durchsuchen/Übergeben (Benjamin)
+
+Benjamins Frage "bringt Angreifen/Bedrohen am Gefesselten überhaupt etwas?" - Engine-Antwort:
+NEIN. Bedrohen ist reiner Prompt-Text ohne Mechanik (Indizien laufen über Befragen/Durchsuchen),
+Angreifen am Wehrlosen gewinnt keinen Status (Showdown gilt mit 'gefesselt' als bestanden) -
+reines Gore-Fest mit Spannungs-Risiko. Daher: (1) GEGNER-Verbset reduziert sich bei
+gefesselt/fixiert/benommen auf 'Befragen' (Bewusstlose: gar kein Gesprächsverb); Bestechen
+fliegt mit raus - ein Gefesselter ist keine Verhandlungspartei. (2) Der Folgeoptionen-Block
+(Durchsuchen/Übergeben) griff bisher NUR bei 'gefesselt' - ein KO-Gegner hatte gar keine
+Folgeoptionen; jetzt für alle bezwungenen Status, Label zeigt den Zustand. Damit ist auch die
+Inkonsistenz Mantelmann (korrekt reduziert) vs. Mertens (volles Kampfmenü) behoben.

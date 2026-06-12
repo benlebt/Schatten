@@ -3277,7 +3277,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.720</div>
+    <div class="start-version">Schatten v7.12.721</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3503,7 +3503,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.720</span>
+    <span>Schatten v7.12.721</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7364,7 +7364,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.720';
+window.SCHATTEN_VERSION = 'v7.12.721';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -21166,6 +21166,17 @@ function oeffneNpcMenue(npc, modus) {
   } else if (GEGNER.includes(tag)) {
     // Gegner: hartes Repertoire (einziger Typ mit Bestechung). "beobachten" raus (siehe oben).
     keys = ['befragen','bedrohen','bestechen','angreifen'];
+    // v7.12.721 (Benjamin: "wenn jemand gefesselt ist, muss ich ihn nicht nochmal angreifen -
+    // und Bedrohen bringt mechanisch nichts, Indizien kommen über Befragen"): Bezwungene Gegner
+    // verlieren die Kampf-/Druckverben. Bedrohen hat KEINE Engine-Wirkung (reiner Prompt-Text),
+    // Angreifen am Wehrlosen gewinnt keinen Status mehr (Showdown gilt mit 'gefesselt' als
+    // bestanden) - übrig bleibt Befragen; Durchsuchen/Übergeben ergänzt der Zustands-Block
+    // darunter. Bewusstlose (ko) kann man nicht mal befragen.
+    try {
+      const _zG = (typeof _npcZustandGet === 'function') ? _npcZustandGet(npc.name) : null;
+      if (_zG && ['gefesselt','fixiert','benommen'].indexOf(_zG.status) !== -1) keys = ['befragen'];
+      else if (_zG && _zG.status === 'ko') keys = [];
+    } catch (e) {}
   } else {
     // Unbekannter/neutraler Typ (MYSTERY, leer): vorsichtiger Standard - nur befragen/beobachten (kein
     // Angriff, keine Bestechung, solange die Rolle nicht feststeht).
@@ -21208,9 +21219,11 @@ function oeffneNpcMenue(npc, modus) {
         // Ablenkung & Zugriff) sind AUS dem NPC-Popup ENTFERNT. Das Popup enthält nur noch
         // Verben, die SOFORT eine Szene auslösen. Fürs Fesseln und Kombinieren ist der
         // Koordinierte Zugriff da - bei Gegnern immer sichtbar, direkt darunter.
-      } else if (_zM.status === 'gefesselt') {
-        // v7.12.611: Folgeoptionen am Gefesselten - kein "er greift wieder an"-Unsinn.
-        verben.push({ key: 'gefesselt_durchsuchen', label: 'Durchsuchen (gefesselt)', kategorie: 'ERKUNDEN', _durchsuchBeute: true,
+      } else if (['gefesselt','ko','fixiert','benommen'].indexOf(_zM.status) !== -1) {
+        // v7.12.611: Folgeoptionen am Bezwungenen - kein "er greift wieder an"-Unsinn.
+        // v7.12.721: gilt für ALLE bezwungenen Status (vorher nur 'gefesselt' - ein KO-Gegner
+        // hatte gar keine Folgeoptionen).
+        verben.push({ key: 'gefesselt_durchsuchen', label: 'Durchsuchen (' + _zM.status + ')', kategorie: 'ERKUNDEN', _durchsuchBeute: true,
           aktion: 'Durchsuche den gefesselten {npc} gründlich - Taschen, Mantelfutter, Papiere, Dienstausweis. Die Person ist gefesselt und kann sich nicht wehren.' });
         verben.push({ key: 'gefesselt_uebergeben', label: 'Der Volkspolizei übergeben', kategorie: 'DEFENSIV', _manoever: 'uebergeben_vp',
           aktion: 'Karl meldet den gefesselten {npc} bei Kommissar Roth / der Volkspolizei und übergibt die Person. {npc} wird abgeholt und ist aus dem Spiel.' });
