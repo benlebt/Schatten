@@ -16267,3 +16267,21 @@ endloses Knattern, wenn der Stop nicht griff. Fix: klassisches Tremolo über sep
 GainNode (Basis 0.5 ± 0.5 -> schwingt 0..1, nie negativ) + Not-Trennung per disconnect nach
 1s, selbst wenn ein Stop versagt. Lehre für alle künftigen Sounds: AM NIE direkt auf das
 Haupt-Gain, immer eigener Tremolo-Knoten. (Erster Fang des neuen Sound-Studios!)
+
+## 🆕 v7.12.740 — Noise-Hygiene (Flatsch-Knattern), Mario-Fanfare, Verlier-Sounds (Benjamin)
+
+**1. Flatsch-Endlos-Knattern WURZEL:** _sfxNoise hatte KEIN stop und KEIN disconnect -
+jede abgelaufene Noise-Quelle blieb tot am MediaStream-Ausgang hängen; angesammelte
+Leichen knistern auf iOS. Jetzt: expliziter src.stop + Not-Trennung (disconnect) der
+ganzen Kette in _sfxNoise UND _sfxTon. Damit sind ALLE Sounds abgesichert, nicht nur
+Flatsch. (Zweiter Fang des Sound-Studios.)
+
+**2. sfxAkte v2 - die Mario-Fanfare:** Stempel-Wumm als Auftakt, dann Chiptune-Hymne:
+Dur-Arpeggio C5-E5-G5-C6 (Triangle+Square-Mix für Retro), Ta-daaa als liegender
+G5+C6+E6-Dreiklang mit Glitzer (C7) oben drauf.
+
+**3. Verlier-Sounds:** sfxGescheitert = Trauer-Posaune (4 absteigende Töne, der letzte
+sackt durch). sfxTod = drei verlangsamende Herzschläge + langer Abgang in die Tiefe.
+Andockung zentral in showCaseFailed (Trichter ALLER Verlier-Enden): Tod-Texte
+(stirbt/Zelle/Hohenschönhausen) -> sfxTod, sonst sfxGescheitert. Beide + Fanfare im
+Sound-Studio.

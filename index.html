@@ -3280,7 +3280,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.739</div>
+    <div class="start-version">Schatten v7.12.740</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3506,7 +3506,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.739</span>
+    <span>Schatten v7.12.740</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7381,7 +7381,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.739';
+window.SCHATTEN_VERSION = 'v7.12.740';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -8459,6 +8459,7 @@ function _sfxTon(freqStart, freqEnd, dauer, typ, vol, delay, ctx) {
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + dauer);
     o.connect(g); g.connect(_sfxOut(c) || c.destination);
     o.start(t0); o.stop(t0 + dauer + 0.05);
+    setTimeout(() => { try { g.disconnect(); o.disconnect(); } catch (e) {} }, ((delay || 0) + dauer) * 1000 + 250); // v7.12.740: Kette aufräumen
   } catch (e) {}
 }
 function _sfxNoise(dauer, vol, delay, filterFreq) {
@@ -8474,6 +8475,12 @@ function _sfxNoise(dauer, vol, delay, filterFreq) {
     const f = c.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = filterFreq || 1800; f.Q.value = 0.8;
     src.connect(f); f.connect(g); g.connect(_sfxOut(c) || c.destination);
     src.start(t0);
+    // v7.12.740 (Benjamin: "Flatsch bleibt in endlosem Knacken hängen"): Noise-Quellen
+    // hatten KEIN stop und KEIN disconnect - jede abgelaufene Quelle blieb tot am
+    // MediaStream-Ausgang hängen, und angesammelte Leichen knistern auf iOS. Jetzt:
+    // expliziter Stop + Not-Trennung der ganzen Kette.
+    try { src.stop(t0 + dauer + 0.05); } catch (e) {}
+    setTimeout(() => { try { g.disconnect(); f.disconnect(); src.disconnect(); } catch (e) {} }, ((delay || 0) + dauer) * 1000 + 250);
   } catch (e) {}
 }
 // Rex bellt: zwei kurze raue Bursts mit Pitch-Fall ("wuff wuff").
@@ -8702,13 +8709,39 @@ function sfxKasse() {
 // Kein Zellentür-Metall (klingt nach Gefängnis, nicht nach Triumph) - stattdessen der
 // STEMPEL selbst: satter dumpfer Wumm aufs Papier, kurzes Papier-Rascheln, dann ein
 // dunkler, feierlicher Noir-Schlussakkord (tiefe Quinte, kleiner Glanz oben drauf).
+// v7.12.740 (Benjamin: "da muss was Fröhliches kommen, wie wenn Super Mario ein Level
+// gelöst hat - eine kleine kurze Hymne mit tataaaa"): Stempel-Wumm als Auftakt, dann
+// Chiptune-Fanfare: schnelles Dur-Arpeggio aufwärts (C-E-G-C) und das Ta-daa als
+// liegender Dreiklang mit Glanz oben. Triangle+Square-Mix für den Retro-Charakter.
 function sfxAkte() {
   if (!sfxOn()) return;
-  _sfxTon(82, 46, 0.16, 'sine', 0.32, 0);          // Stempel-Wumm
-  _sfxNoise(0.1, 0.12, 0.02, 1200);                // Papier
-  _sfxTon(98, 98, 0.9, 'triangle', 0.14, 0.3);     // Schlussakkord: G2
-  _sfxTon(147, 147, 0.9, 'triangle', 0.11, 0.3);   // D3 (Quinte)
-  _sfxTon(587, 583, 0.7, 'sine', 0.05, 0.42);      // Glanz: D5, leicht verstimmt
+  _sfxTon(82, 46, 0.14, 'sine', 0.3, 0);             // Stempel-Wumm
+  _sfxNoise(0.08, 0.1, 0.02, 1200);                  // Papier
+  const A = [[523, 0.30], [659, 0.39], [784, 0.48], [1047, 0.57]]; // C5 E5 G5 C6
+  A.forEach(([f, d]) => { _sfxTon(f, f, 0.1, 'triangle', 0.13, d); _sfxTon(f, f, 0.08, 'square', 0.03, d); });
+  // Ta-daaa: G5 + C6 + E6, liegend
+  _sfxTon(784, 782, 0.75, 'triangle', 0.11, 0.74);
+  _sfxTon(1047, 1045, 0.75, 'triangle', 0.1, 0.74);
+  _sfxTon(1319, 1315, 0.75, 'triangle', 0.08, 0.76);
+  _sfxTon(2093, 2080, 0.5, 'sine', 0.04, 0.8);       // Glitzer ganz oben
+}
+// v7.12.740 (Benjamin): Fall verloren/entzogen - die klassische Trauer-Posaune,
+// vier absteigende Töne, der letzte sackt durch und bekommt ein müdes Vibrato.
+function sfxGescheitert() {
+  if (!sfxOn()) return;
+  _sfxTon(330, 326, 0.3, 'sawtooth', 0.09, 0);
+  _sfxTon(311, 307, 0.3, 'sawtooth', 0.09, 0.34);
+  _sfxTon(294, 290, 0.3, 'sawtooth', 0.09, 0.68);
+  _sfxTon(277, 240, 0.85, 'sawtooth', 0.1, 1.02);   // sackt durch
+  _sfxTon(247, 243, 0.5, 'sine', 0.04, 1.25);       // müder Untergrund
+}
+// Karl stirbt: zwei verlangsamende Herzschläge, dann ein tiefer Abgang in die Stille.
+function sfxTod() {
+  if (!sfxOn()) return;
+  _sfxTon(58, 50, 0.14, 'sine', 0.3, 0);            // Herzschlag 1
+  _sfxTon(58, 50, 0.14, 'sine', 0.26, 0.55);        // Herzschlag 2, später
+  _sfxTon(56, 48, 0.13, 'sine', 0.18, 1.35);        // Herzschlag 3, leiser, noch später
+  _sfxTon(196, 60, 2.2, 'triangle', 0.08, 1.7);     // langer Abgang in die Tiefe
 }
 // Zentrale Sound-Wahl für eine Plan-/Kampf-Aktion (art + Item-Name).
 function sfxFuerAktion(art, itemName) {
@@ -11556,7 +11589,9 @@ function buildSoundStudio() {
     ['💰 Kasse', () => sfxKasse()],
     ['🏆 Überwältigt', () => sfxUeberwaeltigt()],
     ['😏 Häme', () => sfxHohn()],
-    ['📁 Akte zu', () => sfxAkte()],
+    ['📁 Akte zu (Fanfare)', () => sfxAkte()],
+    ['😔 Fall verloren', () => sfxGescheitert()],
+    ['💀 Karl stirbt', () => sfxTod()],
     ['🎯 Pfiff (ablenken)', () => _sfxTon(1250, 1850, 0.18, 'sine', 0.09, 0)],
     ['😤 Brummen (einschüchtern)', () => _sfxTon(115, 82, 0.32, 'sawtooth', 0.11, 0)]
   ];
@@ -15561,6 +15596,12 @@ function showCaseSolved() {
 
 // Lose-Screen: gefeuert (Vertrauensverlust)
 function showCaseFailed(reason) {
+  // v7.12.740 (Benjamin): Verlier-Sound. Tod-Enden (stirbt/Zelle/Hohenschönhausen) bekommen
+  // den Herzschlag-Abgang, alle anderen die Trauer-Posaune.
+  try {
+    if (/stirbt|\btot\b|\btod\b|zelle|hohenschönhausen|hohenschoenhausen/i.test(String(reason || ''))) { if (typeof sfxTod === 'function') sfxTod(); }
+    else if (typeof sfxGescheitert === 'function') sfxGescheitert();
+  } catch (e) {}
   // v7.12.138 (Code-Review): nullsichere Hides (vereinheitlicht mit showLoading).
   ['options','error','wait-box','loading'].forEach(id => {
     const el = document.getElementById(id); if (el) el.classList.add('hidden');
