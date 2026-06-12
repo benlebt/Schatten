@@ -16231,3 +16231,18 @@ System: deterministische Summe (Karl=2, Begleiter=1-2, +1 Synergie) >= Härte. B
 zweit erreicht man fast immer 4 -> alles bis Härte 4 (auch Showdown-Gegner Mertens) ist ein
 GARANTIERTER Sieg. Nur Hauptmann (5) erfordert mehr. Empfehlung notiert: Gleichstand = Risiko
 (summe == haerte -> 50%-Wurf), Showdown-Gegner +1 Härte. Wartet auf Benjamins Entscheid.
+
+## 🆕 v7.12.737 — Showdown respektiert bezwungene Gegner (Benjamin, Run 2226)
+
+Run 2226 in Zeitlupe: Sz24 Mertens überwältigt+gefesselt -> Sz24/25 Showdown AKTIVIERT sich
+erst JETZT und wählt den bereits Gefesselten als Pflicht-Gegner -> Sz25 an Vopo übergeben
+(Zustand uebergeben, W6-Block filtert korrekt) -> Sz26 holt der SHOWDOWN-INJEKT (v715) ihn
+zurück ("reintro-AUFGENOMMEN"), weil showdownBestanden nie gesetzt wurde. Zwei Wächter:
+
+**1. Aktivierung:** Ist der designierte Gegner beim Aktivieren bereits
+gefesselt/ko/fixiert/uebergeben, hat Karl den Showdown VORWEGGENOMMEN - sofort bestanden,
+keine Aktivierung, kein Toast.
+
+**2. Injekt:** Prüft vor dem Einspielen den Zustand. Bezwungen/übergeben -> kein Injekt,
+showdownBestanden=true + Save (SELBSTHEILUNG: Benjamins laufender Run 2226 repariert sich
+beim nächsten Szenenwechsel selbst, der Abschluss wird frei).

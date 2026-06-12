@@ -3277,7 +3277,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.736</div>
+    <div class="start-version">Schatten v7.12.737</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3503,7 +3503,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.736</span>
+    <span>Schatten v7.12.737</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6789,6 +6789,20 @@ function getNpcsAtCurrentLocation() {
   try {
     if (typeof caseProgress === 'object' && caseProgress && caseProgress.showdownAktiv && !caseProgress.showdownBestanden && caseProgress.showdownGegner) {
       const _sgN = normForMatch(caseProgress.showdownGegner);
+      // v7.12.737 (Benjamin, Run 2226: Mertens gefesselt -> an Vopo übergeben -> Sz26 vom
+      // Injekt WIEDER eingespielt): Der Injekt holte sogar Übergebene zurück, weil
+      // showdownBestanden nie gesetzt wurde - der Showdown hatte sich erst NACH der
+      // Überwältigung aktiviert. Ein bezwungener/übergebener Showdown-Gegner IST der
+      // bestandene Showdown - Karl hat ihn ja ausgeschaltet. Selbstheilung für laufende Runs.
+      try {
+        const _sgZ = (typeof _npcZustandGet === 'function') ? _npcZustandGet(caseProgress.showdownGegner) : null;
+        if (_sgZ && /^(gefesselt|ko|fixiert|uebergeben)$/.test(_sgZ.status || '')) {
+          caseProgress.showdownBestanden = true;
+          if (typeof diag === 'function') diag('progress', '⚔ SHOWDOWN BESTANDEN (nachträglich): ' + caseProgress.showdownGegner + ' ist bereits ' + _sgZ.status + ' - kein Injekt, Abschluss frei');
+          if (typeof saveGameState === 'function') { try { saveGameState(); } catch (e) {} }
+          return out;
+        }
+      } catch (e) {}
       if (_sgN && !out.some(n => n && normForMatch(n.name || '') === _sgN)) {
         const _sgTag = /mertens|oberleutnant|hauptmann|stasi|mfs/.test(_sgN) ? 'STASI' : 'SUSPECT';
         out.push({ name: caseProgress.showdownGegner, tag: _sgTag, rolle: 'Showdown-Gegner - stellt sich Karl in den Weg', _showdownInjekt: true });
@@ -7364,7 +7378,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.736';
+window.SCHATTEN_VERSION = 'v7.12.737';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -23697,8 +23711,20 @@ function renderOptions(scene) {
       if (!caseProgress.showdownAktiv) {
         caseProgress.showdownAktiv = true;
         caseProgress.showdownGegner = _showdownGegnerName();
-        if (typeof diag === 'function') diag('progress', '⚔ SHOWDOWN AKTIVIERT: ' + caseProgress.showdownGegner + ' stellt sich vor den Abschluss');
-        if (typeof showProgressToast === 'function') { try { showProgressToast('⚔ Showdown', caseProgress.showdownGegner + ' ist Karl auf den Fersen - daran führt kein Weg zum Abschluss vorbei.', 'caution', 'showdown-aktiv'); } catch (e) {} }
+        // v7.12.737 (Run 2226): Wenn der designierte Gegner BEREITS bezwungen/übergeben ist,
+        // hat Karl den Showdown vorweggenommen - sofort bestanden, keine Aktivierung.
+        try {
+          const _vorZ = (typeof _npcZustandGet === 'function') ? _npcZustandGet(caseProgress.showdownGegner) : null;
+          if (_vorZ && /^(gefesselt|ko|fixiert|uebergeben)$/.test(_vorZ.status || '')) {
+            caseProgress.showdownBestanden = true;
+            showdownFehltFuerResolve = false;
+            if (typeof diag === 'function') diag('progress', '⚔ SHOWDOWN VORWEGGENOMMEN: ' + caseProgress.showdownGegner + ' war beim Aktivieren bereits ' + _vorZ.status + ' - bestanden');
+          }
+        } catch (e) {}
+        if (!caseProgress.showdownBestanden) {
+          if (typeof diag === 'function') diag('progress', '⚔ SHOWDOWN AKTIVIERT: ' + caseProgress.showdownGegner + ' stellt sich vor den Abschluss');
+          if (typeof showProgressToast === 'function') { try { showProgressToast('⚔ Showdown', caseProgress.showdownGegner + ' ist Karl auf den Fersen - daran führt kein Weg zum Abschluss vorbei.', 'caution', 'showdown-aktiv'); } catch (e) {} }
+        }
       }
       // KI-Push pro Szene, bis der Showdown durch ist (Dedupe über Szenen-Merker).
       if (caseProgress._showdownPushSzene !== sceneCounter && typeof pendingCategoryMessages !== 'undefined' && Array.isArray(pendingCategoryMessages)) {
