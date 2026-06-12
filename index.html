@@ -3242,7 +3242,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.696</div>
+    <div class="start-version">Schatten v7.12.697</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3468,7 +3468,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.696</span>
+    <span>Schatten v7.12.697</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5080,9 +5080,9 @@ const INTRO_VARIANTS = [
         { name: 'Reichsbahndirektion Mitte', sektor: 'Ost (Mitte)', detail: 'Am Spreebogen, Margaretes Arbeitsplatz, von dort hat sie die Akten gestohlen',
           startBekannt: false, freischaltBei: ['reichsbahn','schmuggelroute','akten','direktion'], oeffnungszeit: ['vormittag','mittag','nachmittag'], npcs: [{ id: 'wahler', zeit: ['vormittag','mittag','nachmittag'] }],
           indizien: [
-            { id: 'frachtliste_stempel', itemType: 'beweis_dokument', text: 'Frachtliste mit rotem Reichsbahn-Stempel', npc: 'wahler', quelle: 'umgebung', actions: ['ERKUNDEN','DURCHSUCHEN','AKTEN_LESEN'], zeit: ['vormittag','mittag','nachmittag'], schluessel: ['frachtliste','roter stempel','rotem stempel','rote tinte'], stage: 2 },
-            { id: 'dienstplan_wahler', itemType: 'beweis_dokument', text: 'Dienstplan zeigt Wahlers Nachtschichten', quelle: 'umgebung', actions: ['ERKUNDEN','DURCHSUCHEN','AKTEN_LESEN'], schluessel: ['dienstplan','nachtschicht','schichtplan'], stage: 2 },
-            { id: 'hinweis_stellwerk', text: 'Hinweis: die Akten wurden ins Stellwerk Schöneweide verlegt', quelle: 'umgebung', actions: ['ERKUNDEN','DURCHSUCHEN','AKTEN_LESEN'], schluessel: ['stellwerk','schöneweide','schoeneweide','verlegt','weggeschafft'], stage: 3 },
+            { id: 'frachtliste_stempel', itemType: 'beweis_dokument', text: 'Frachtliste mit rotem Reichsbahn-Stempel', npc: 'wahler', quelle: 'umgebung', actions: ['ERKUNDEN','DURCHSUCHEN','AKTEN_LESEN'], zeit: ['vormittag','mittag','nachmittag'], schluessel: ['frachtliste','roter stempel','rotem stempel','rote tinte'], stage: 2, abStage: 1 },
+            { id: 'dienstplan_wahler', itemType: 'beweis_dokument', text: 'Dienstplan zeigt Wahlers Nachtschichten', quelle: 'umgebung', actions: ['ERKUNDEN','DURCHSUCHEN','AKTEN_LESEN'], schluessel: ['dienstplan','nachtschicht','schichtplan'], stage: 2, abStage: 1 },
+            { id: 'hinweis_stellwerk', text: 'Hinweis: die Akten wurden ins Stellwerk Schöneweide verlegt', quelle: 'umgebung', actions: ['ERKUNDEN','DURCHSUCHEN','AKTEN_LESEN'], schluessel: ['stellwerk','schöneweide','schoeneweide','verlegt','weggeschafft'], stage: 3, abStage: 2 },
           ],
           bedrohungen: [
             { id: 'im_anker', chance: 75, ortsAbstand: 12, globalCooldown: 4, zeit: ['vormittag','mittag','nachmittag'] },
@@ -7313,7 +7313,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.696';
+window.SCHATTEN_VERSION = 'v7.12.697';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -7581,6 +7581,57 @@ function _npcZustandMap() {
   if (!caseProgress.npcZustand || typeof caseProgress.npcZustand !== 'object') caseProgress.npcZustand = {};
   return caseProgress.npcZustand;
 }
+// ===== v7.12.697 SHOWDOWN-GATE (Benjamin: "Run zu früh fertig, Ort anfahren + Umsehen =
+// gelöst ist zu leicht. Es braucht einen Bossfight/Spannungsbogen am Ende"): Bevor "Fall
+// lösen" frei wird, stellt sich der Gegenspieler zwingend in den Weg. Bestanden durch:
+// ZUGRIFF (überwältigen, Härte-System + fxBattle), FLUCHT (entkommen) oder VERHANDLUNG
+// (bestechen). NUR für politische/Wahrheits-Fälle mit echtem Antagonisten - die
+// Einsteiger-Fälle (Kessler/Krause/...) bleiben unangetastet. =====
+function _showdownGegnerName() {
+  try {
+    const _qn = (s) => normForMatch((s || '').replace(/["'„""»«]/g, ''));
+    if (caseProgress && caseProgress.showdownGegner) return caseProgress.showdownGegner;
+    if (caseSetup && Array.isArray(caseSetup.setupCast)) {
+      for (const tagWunsch of ['STASI', 'MYSTERY', 'GANGSTER']) {
+        const ce = caseSetup.setupCast.find(c => c && c.name && ((c.tag || '').toUpperCase() === tagWunsch));
+        if (ce) return ce.name;
+      }
+    }
+    if (caseProgress && caseProgress.tatverdaechtiger && _qn(caseProgress.tatverdaechtiger) !== 'unbekannter verdaechtiger') return caseProgress.tatverdaechtiger;
+    return '';
+  } catch (e) { return ''; }
+}
+function _showdownNoetig() {
+  try {
+    return !!(caseSetup && (caseSetup.caseType === 'politisch' || caseSetup.caseType === 'wahrheit') && _showdownGegnerName());
+  } catch (e) { return false; }
+}
+// Zentrale Bestanden-Erkennung: Gegner ausgeschaltet (Zustand) ODER Flucht ODER Bestechung.
+function _showdownPruefeBestanden(name, status, art) {
+  try {
+    if (!caseProgress || !caseProgress.showdownAktiv || caseProgress.showdownBestanden) return;
+    const _qn = (s) => normForMatch((s || '').replace(/["'„""»«]/g, ''));
+    const g = _qn(caseProgress.showdownGegner || '');
+    if (!g) return;
+    const nN = _qn(name || '');
+    const trifft = name && (g === nN || g.includes(nN) || nN.includes(g.split(/\s+/).pop()));
+    let bestandenArt = '';
+    if (trifft && /^(ko|gefesselt|fixiert|benommen)$/.test(String(status || ''))) bestandenArt = 'zugriff';
+    else if (art === 'flucht') bestandenArt = 'flucht';
+    else if (trifft && art === 'bestechen') bestandenArt = 'verhandlung';
+    if (!bestandenArt) return;
+    caseProgress.showdownBestanden = true;
+    caseProgress.showdownArt = bestandenArt;
+    const txt = bestandenArt === 'zugriff' ? (caseProgress.showdownGegner + ' ist ausgeschaltet - der Weg zum Abschluss ist frei.')
+      : bestandenArt === 'flucht' ? ('Karl entkommt dem Zugriff von ' + caseProgress.showdownGegner + ' - der Weg ist frei. Vorerst.')
+      : (caseProgress.showdownGegner + ' lässt sich kaufen und sieht weg - der Weg ist frei.');
+    if (typeof showProgressToast === 'function') { try { showProgressToast('⚔ Showdown bestanden', txt, 'clue', 'showdown-bestanden'); } catch (e) {} }
+    if (typeof diag === 'function') diag('progress', '⚔ SHOWDOWN BESTANDEN (' + bestandenArt + '): ' + caseProgress.showdownGegner);
+    if (typeof pendingCategoryMessages !== 'undefined' && Array.isArray(pendingCategoryMessages)) {
+      pendingCategoryMessages.push('SHOWDOWN BESTANDEN (' + bestandenArt + '): ' + caseProgress.showdownGegner + ' blockiert Karl NICHT mehr. Erzähle die Folge spürbar (' + (bestandenArt === 'flucht' ? 'Karl ist entkommen, aber die Gefahr bleibt im Nacken' : bestandenArt === 'verhandlung' ? 'gekauft ist gekauft - aber solche Deals halten nur so lange wie das Schweigen' : 'der Gegner ist außer Gefecht') + '). Der Abschluss des Falls ist jetzt erreichbar.');
+    }
+  } catch (e) {}
+}
 function _npcZustandSet(name, zustand) {
   try {
     if (!name) return false;
@@ -7588,6 +7639,7 @@ function _npcZustandSet(name, zustand) {
     const m = _npcZustandMap();
     m[k] = { name: name, status: (zustand && zustand.status) || 'frei', ort: (zustand && zustand.ort) || ((typeof engineCurrentLocation !== 'undefined' && engineCurrentLocation) ? engineCurrentLocation.name : ''), seitSzene: (typeof sceneCounter === 'number') ? sceneCounter : 0 };
     if (typeof diag === 'function') diag('state', '🔗 NPC-ZUSTAND: ' + name + ' -> ' + m[k].status + '@' + m[k].ort);
+    try { if (typeof _showdownPruefeBestanden === 'function') _showdownPruefeBestanden(name, m[k].status, 'zustand'); } catch (e) {} // v7.12.697
     return true;
   } catch (e) { return false; }
 }
@@ -7773,6 +7825,8 @@ function _planAusfuehren() {
         if (typeof diag === 'function') diag('progress', 'MANÖVER-CHECK: ziel=' + g.ziel + ' haerte=' + haerte + ' eingesetzt=' + summe + ' [' + _details + '] -> ' + (erfolg ? 'ERFOLG' : 'FEHLSCHLAG'));
       });
     } catch (e) {}
+    // v7.12.697: Bestechung des Showdown-Gegners = Verhandlung, Showdown bestanden.
+    try { plan.forEach(p => { if (p && p.art === 'bestechen' && p.ziel && typeof _showdownPruefeBestanden === 'function') _showdownPruefeBestanden(p.ziel, '', 'bestechen'); }); } catch (e) {}
     // 1) ALLE Engine-Wirkungen setzen (Ablenkung/Fesseln -> gefesselt + Beute; Angriff -> ko).
     plan.forEach(p => {
       try {
@@ -8684,12 +8738,16 @@ function _ortsFundIndizienErreichbar() {
     try {
       if (Array.isArray(_loc.npcs)) _npcIdsAmOrt = _loc.npcs.filter(n => n && n.id && (n.immer || !Array.isArray(n.zeit) || !n.zeit.length || n.zeit.map(z => normForMatch(z)).includes(_tz))).map(n => normForMatch(n.id));
     } catch (e) {}
+    const _stg = (caseProgress && typeof caseProgress.stage === 'number') ? caseProgress.stage : 0;
     return _loc.indizien.filter(ind => {
       if (!ind || !ind.id || _gef.indexOf(ind.id) !== -1) return false;
       // v7.12.661 (Run-Befund: "4 Fundstücke, Klick findet nichts"). quelle:'person'-Indizien werden durch
       // BEFRAGEN gefunden, nicht durch Umsehen - die schließt der Umsehen-Button aus. quelle:'umgebung' sind
       // die echten Umsehen-Indizien (Spuren/Akten/Dokumente am Ort).
       if (ind.quelle === 'person') return false;
+      // v7.12.697 (Benjamin: "Ort anfahren + Umsehen = gelöst ist zu leicht"): abStage-Gate -
+      // Schlüssel-Indizien werden erst auffindbar, wenn die Ermittlung reif genug ist.
+      if (typeof ind.abStage === 'number' && _stg < ind.abStage) return false;
       // Tageszeit-Gate (ein Ortsindiz kann nachts/tags unterschiedlich zugänglich sein).
       if (Array.isArray(ind.zeit) && ind.zeit.length && !ind.zeit.map(z => normForMatch(z)).includes(_tz)) return false;
       // npc-Gate bei umgebung-Indizien: der NPC muss am Ort sein (z.B. "Wahlers Frachtliste" sieht man, wenn
@@ -19444,6 +19502,8 @@ function applyCategoryMechanics(kategorie, ctx) {
       // Karl verlaesst die akute Szene zu einem sicheren Ort (Auto, Buero,
       // Wohnung). Keine Heilung selbst, aber Spannungs-Reset und Vf bleibt.
       // KI improvisiert den Flucht-Weg passend zum Ort.
+      // v7.12.697: Flucht aus der Showdown-Szene = Showdown bestanden (entkommen).
+      try { if (typeof _showdownPruefeBestanden === 'function') _showdownPruefeBestanden('', '', 'flucht'); } catch (e) {}
       result.vfDelta = 0;
       result.spannungDelta = -3;
       result.timeAdvanceBonus = 0.3;
@@ -21955,7 +22015,8 @@ function renderOptions(scene) {
             // gesperrt = Zeit-Gate ODER NPC-Gate aktuell NICHT erfüllt (kommt später)
             const _zeitGesperrt = Array.isArray(ind.zeit) && ind.zeit.length && !ind.zeit.map(z => normForMatch(z)).includes(_tz2);
             const _npcGesperrt = ind.npc && (!_npcAmOrt2.length || _npcAmOrt2.indexOf(normForMatch(ind.npc)) === -1);
-            return _zeitGesperrt || _npcGesperrt;
+            const _stageGesperrt = typeof ind.abStage === 'number' && ((caseProgress && caseProgress.stage) || 0) < ind.abStage; // v7.12.697
+            return _zeitGesperrt || _npcGesperrt || _stageGesperrt;
           }).length;
         }
       } catch (e) {}
@@ -22585,7 +22646,30 @@ function renderOptions(scene) {
       if (_pgR && Array.isArray(_pgR.fehlend)) _politicalGateFehlend = _pgR.fehlend;
     }
   } catch (e) { politicalGateFehltFuerResolve = false; }
-  const resolveCanClick = resolveCoreReady && karlVfOk && currentSp <= 3 && !karlInStasiCustody && !diebstahlGutFehlt && !truthBeatsFehltFuerResolve && !politicalGateFehltFuerResolve;
+  // v7.12.697 SHOWDOWN-GATE: Sind alle inhaltlichen Bedingungen erfüllt, der Showdown aber
+  // noch nicht bestanden, wird er JETZT scharfgeschaltet - der Gegenspieler stellt sich in
+  // den Weg, bevor der Fall abgeschlossen werden kann.
+  let showdownFehltFuerResolve = false;
+  try {
+    if (typeof _showdownNoetig === 'function' && _showdownNoetig()
+        && resolveCoreReady && !truthBeatsFehltFuerResolve && !politicalGateFehltFuerResolve
+        && !(caseProgress && caseProgress.showdownBestanden)) {
+      showdownFehltFuerResolve = true;
+      if (!caseProgress.showdownAktiv) {
+        caseProgress.showdownAktiv = true;
+        caseProgress.showdownGegner = _showdownGegnerName();
+        if (typeof diag === 'function') diag('progress', '⚔ SHOWDOWN AKTIVIERT: ' + caseProgress.showdownGegner + ' stellt sich vor den Abschluss');
+        if (typeof showProgressToast === 'function') { try { showProgressToast('⚔ Showdown', caseProgress.showdownGegner + ' ist Karl auf den Fersen - daran führt kein Weg zum Abschluss vorbei.', 'caution', 'showdown-aktiv'); } catch (e) {} }
+      }
+      // KI-Push pro Szene, bis der Showdown durch ist (Dedupe über Szenen-Merker).
+      if (caseProgress._showdownPushSzene !== sceneCounter && typeof pendingCategoryMessages !== 'undefined' && Array.isArray(pendingCategoryMessages)) {
+        caseProgress._showdownPushSzene = sceneCounter;
+        const _g = caseProgress.showdownGegner;
+        pendingCategoryMessages.push('⚔ SHOWDOWN (Pflicht-Konfrontation vor dem Abschluss): ' + _g + ' stellt sich Karl JETZT in den Weg. ' + _g + ' MUSS in dieser Szene körperlich auftreten und Karl direkt stellen (den Weg verstellen, packen, drohen, einen Zugriff versuchen) - Spannung 4. Karl kommt am Abschluss NICHT vorbei, ohne mit ' + _g + ' fertig zu werden: überwältigen (auch koordiniert mit Begleitern, Rex oder Gegenständen), entkommen (Flucht) oder freikaufen. ' + _g + ' gibt NIEMALS freiwillig auf und lässt Karl NICHT einfach ziehen.');
+      }
+    }
+  } catch (e) { showdownFehltFuerResolve = false; }
+  const resolveCanClick = resolveCoreReady && karlVfOk && currentSp <= 3 && !karlInStasiCustody && !diebstahlGutFehlt && !truthBeatsFehltFuerResolve && !politicalGateFehltFuerResolve && !showdownFehltFuerResolve;
   const showResolveButton = resolveCoreReady || caseProgress.resolveEverReady === true;
   // v7.12.177: Resolve-Status global merken, damit die Bot-Status-Bar live anzeigen kann,
   // ob "Fall lösen" schon klickbar ist (oder noch gesperrt, mit Grund).
@@ -22614,6 +22698,7 @@ function renderOptions(scene) {
         resolveLockReason = _pgReason;
       }
     }
+    else if (showdownFehltFuerResolve) resolveLockReason = 'Showdown steht aus: ' + ((caseProgress && caseProgress.showdownGegner) || 'der Gegenspieler') + ' ist Karl auf den Fersen';
     else if (currentSp > 3) resolveLockReason = 'zu hohe Spannung';
     else if (!karlVfOk) resolveLockReason = 'zu schwer verletzt';
     else if (!resolveCoreReady) {

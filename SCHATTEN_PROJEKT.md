@@ -15645,3 +15645,36 @@ Orten. **Empfehlung (nicht gebaut, Benjamin-Entscheid): SHOWDOWN-GATE Stage 3->4
 spawnen als Pflicht-Konfrontation; Zugriff/Flucht/Verhandlung nötig, nutzt Härte-System +
 das neue fxBattle). Dazu Indizien-Tuning: 2-3 Schlüssel-Indizien hinter Personen/Stage-
 Gates statt ERKUNDEN. Zusammen = Spannungsbogen-Paket.
+
+## 🆕 v7.12.697 — SHOWDOWN-GATE: der Bossfight vor dem Abschluss (Benjamin: "ja")
+
+**Mechanik:** Sind ALLE inhaltlichen Lösen-Bedingungen erfüllt (Stage, Wahrheit, politisches
+Gate inkl. Sicherungen), der Showdown aber noch nicht bestanden, schaltet die Engine ihn
+scharf: caseProgress.showdownAktiv + Gegner-Wahl (_showdownGegnerName: Setup-Tag STASI >
+MYSTERY > GANGSTER > Tatverdächtiger -> bei Margarete: Mertens). Der Lösen-Button bleibt
+GESPERRT mit Grund "Showdown steht aus: Oberleutnant Mertens ist Karl auf den Fersen".
+KI-Push pro Szene (Dedupe): Gegner MUSS auftreten, stellt Karl, Spannung 4, gibt NIE
+freiwillig auf.
+
+**Drei Bestanden-Pfade (Engine-erkannt, alle getestet):**
+- ZUGRIFF: _npcZustandSet-Hook - Gegner geht ko/gefesselt/fixiert/benommen (Härte-System,
+  Baukasten-Manöver, fxBattle ist die Bühne). Teilnamen-Match ('Mertens' trifft
+  'Oberleutnant Mertens'); falscher NPC zählt nicht.
+- FLUCHT: Flucht-Button in der Showdown-Phase = entkommen ("der Weg ist frei. Vorerst.").
+- VERHANDLUNG: bestechen-Plan auf den Gegner (_planAusfuehren-Hook) - Bezahltes ist weg.
+Nach Bestehen: Toast + KI-Push mit artspezifischem Nachklang.
+
+**Scope-Schutz:** NUR caseType 'politisch'/'wahrheit' MIT Antagonist - Einsteiger-Fälle
+(Kessler/Krause/Wegener/Achterberg/Brandt) sind UNBERÜHRT (kein neues Risiko im
+Neuspieler-Pfad).
+
+**Indizien-Tuning gegen "Ort anfahren + Umsehen = gelöst":** Neues abStage-Gate in
+_ortsFundIndizienErreichbar (+ "später mehr hier"-Zähler kennt es). Margarete: frachtliste_
+stempel + dienstplan_wahler abStage 1 (kein Szene-2-Blitzfund; Stage 1 kommt über
+Kategorie-Trigger schnell - deadlock-frei), hinweis_stellwerk abStage 2 (erst Verdacht
+verdichten, dann führt die Spur zum Stellwerk). Stage-Heber bleiben erreichbar
+(Henne-Ei geprüft: abStage je unter dem eigenen stage-Floor).
+
+**Nächster Schritt:** Voller manueller Margarete-Run - erwartetes Bild: Indizien verteilen
+sich über mehr Szenen, am Ende stellt sich Mertens, fxBattle-Zugriff oder Flucht, DANN
+erst Win-Screen. Im Export: ⚔-Zeilen (AKTIVIERT/BESTANDEN) + RESOLVE-DIAG-Sperrgrund.
