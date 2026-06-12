@@ -15820,3 +15820,32 @@ Aufrufstellen) - das löst nebenbei den Bug, dass der Knopf nach Spielende klebe
 auf 12px verkleinert; ✕-Knopf entfernt (inline gibt es kein Zuklappen).
 Slot-Logik: stabil nach dem letzten Gegner (Gegner seit v703 vorsortiert), Schutz falls
 ein Gegner nach Slot-Setzung käme, Slot ans Ende wenn NUR Gegner da sind.
+
+## 🆕 v7.12.706 — Baukasten-Slot-KORREKTUR, Toast-Regel, Gesichter-Fix, FX-Feintuning
+
+**1. BAUKASTEN-FIX (Claude-Fehler in v705, eingestanden):** Das Slot-Gate prüfte
+modus==='szene', die einzige Aufrufstelle übergibt aber 'alle' -> der Slot entstand NIE
+(Benjamins Screenshots: Gegner rot markiert, kein Baukasten). Jetzt zählt: Fall läuft +
+Gegner da (nur 'verwalten' ausgeschlossen).
+**2. TOAST-REGEL (Benjamin, jetzt Designprinzip):** Toasts NUR für Dinge außerhalb des
+direkten Spieler-Handelns (Fall-Fortschritt, Stage, Stasi-Gefahr, Müdigkeit). Direktes
+Handeln zeigt sich unten (Item-Pop) oder in der Mitte (Aktions-FX). RAUS: Geplant-Toast
+(_planAdd), alle Party-Beitritts-Toasts (Abklatschen reicht). Party-VERLASSEN-Toast bleibt
+(hat keine FX).
+**3. 'warn'-TOAST-VARIANTE EXISTIERTE NICHT** - alle warn-Aufrufe (Übermüdet!) fielen
+still auf success (GOLD) zurück und sahen wie Erfolge aus. Neu: gedecktes Amber-Braun, ⚠.
+**4. GESICHTER-FIX (Run: "zwei alte Männer im Opel trotz Margot+Margarete"; Romance mit
+ZWEI Rosen):** (a) Margot Reinig 👩‍🦳 und Marlene 👩‍🦰 als feste Gesichter VOR der
+/wagner/-Doc-Regel (Marlene Wagner rutschte sonst in die Männer-Arzt-Regel). (b) charVisual
+erkennt Vornamen-Geschlecht jetzt SELBST, wenn der Aufrufer (FX/Banner/Insassen)
+istWeiblich nicht mitgibt - Frauen landeten sonst im Männer-Pool. F-Pool: 🧕 raus (1953
+Berlin), 👱‍♀️ rein. (c) Romantik im FX-Sicherheitsnetz läuft jetzt als ECHTES Paar-Bild
+über fxDialog (Karl + Gesicht + 🌹/❤️, 3,8s statt 5,2s) - vorher zeigte fxKategorie die
+Rose doppelt (Icon + Bubble).
+**5. FX-ZEITEN-FEINSCHLIFF:** PartyJoin 1750->3500 (war zu kurz); Einzel-Konflikt
+kampfFinaleHold 2100->4200 (Niederschlagen & fesseln verschwand zu schnell, jetzt ~5s
+einheitlich); Flucht-CAPTION 2,8s (Schrift früher weg, Läufer bleiben 3,4s); fxSecure
+eigener Takt 3400 (Tick kürzer als Dialog); fxDialog mit optionalem Dauer-Parameter.
+
+**ANGEKÜNDIGT v707:** fxSchlaf mit ganzer Party; Sichern-Sektion auf 2 Buttons mit
+Unterauswahl (Ort / Empfänger); Showdown-Gegner-ORT im Reise-Menü + Lösen-Hinweis.
