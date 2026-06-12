@@ -16201,3 +16201,11 @@ diesen einen NPC.
 Die Personen-Liste zeigte für ALLE entschärften Zustände die Ketten (⛓) - auch für
 "benommen" ohne jede Fesselung. Jetzt status-spezifisch: gefesselt ⛓, ko 💫,
 benommen 😵‍💫, fixiert 🐾 (Rex hält ihn), geblendet 🙈. Der Status-Text daneben bleibt.
+
+## 🆕 v7.12.735 — Übergabe-Choreografie: Karl gibt, es wandert, ✨ bei Ankunft (Benjamin)
+
+fxSecureFuerButton zeigte Mover und Ziel nur statisch nebeneinander. Jetzt: Karl steht
+links, das Bewegte (📁 Akten bzw. Margarete) WANDERT in 1,5s von ihm zum Empfänger
+(Roth/Vera/Helene/Westen), und die ✨ poppen erst bei Ankunft über dem Ziel auf - mit
+sfxSting als Klang. Gilt für beide Beats (Klientin sichern UND Beweise übergeben). FX-Dauer
+um ~1,2s verlängert, damit die Wanderung Raum hat.
