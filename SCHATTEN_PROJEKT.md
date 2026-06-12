@@ -15743,3 +15743,15 @@ Baukasten?"):** EMPFEHLUNG BEHALTEN - "Ablenkung & Zugriff (Helfer)" / "Niedersc
 fesseln" sind kuratierte Ein-Tap-Manöver; im Baukasten wären es 4+ Taps auf dem iPhone.
 Sie sind engine-validiert (Manöver-System) und haben jetzt die Konflikt-Animation
 (/manoever/-Regex griff bereits). Entfernen nur auf Benjamins explizites Go.
+
+## 🆕 v7.12.701 — ANHÄNGER: die Tauschware fährt sichtbar mit (Benjamin, "laut gedacht")
+
+Benjamins Idee, als klare Form gebaut: Hat die Truppe Katalog-Items dabei (Tauschware/
+Werfbares: Korn, Toaster, Fisch, Geld...), hängt bei der Reise ein ANHÄNGER hinterm Opel
+(eigenes SVG im Opel-Stil: Kasten, Gold-Kontur, Deichsel zum Heck, ein Rad). Die Ladung
+ragt oben sichtbar raus: EIN Emoji pro Typ + kleine ×N-Goldzahl (3x Korn = 🥃×3, nicht
+drei Flaschen), max 5 Typen, danach "+N". Geld zählt mit (taktisch relevant); BEWEIS-AKTEN
+NICHT (kein Katalog-Eintrag = Story-Material, gehört nicht auf den Hänger - automatisch
+gefiltert). ENTSCHEID: Bei der FLUCHT (zu Fuß) KEIN Gepäck - Panik-Lesbarkeit geht vor;
+wer rennt, schleppt nicht sichtbar Toaster. Gruppierungs-Logik getestet (Dedupe, ×N,
+Akten-Filter, gesicherte Items raus).

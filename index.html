@@ -2915,6 +2915,10 @@
 @keyframes fxFleeRun { 0% { transform: translateX(0) translateY(0); } 20% { transform: translateX(18vw) translateY(-5px); } 40% { transform: translateX(36vw) translateY(0); } 60% { transform: translateX(54vw) translateY(-5px); } 80% { transform: translateX(72vw) translateY(0); } 100% { transform: translateX(95vw) translateY(-3px); } }
 /* v7.12.698: Insassen sitzen im (größeren) Opel - Köpfe in der Fensterzone */
 .fx-car-insasse { position: absolute; top: -1px; font-size: 14px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8)); }
+/* v7.12.701: ANHÄNGER hinter dem Opel - die Tauschware fährt sichtbar mit (ragt oben raus wie offene Ladung) */
+.fx-car-anhaenger { position: absolute; left: 93px; top: 13px; }
+.fx-anh-item { position: absolute; top: -7px; font-size: 12px; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.85)); white-space: nowrap; }
+.fx-anh-n { font-size: 8px; color: #d4b86a; font-family: monospace; vertical-align: top; }
 /* v7.12.699: SICHERUNG - Person/Akte wandert von links zum Ziel, ✨-Haken beim Ankommen */
 .fx-secure { position: relative; width: min(380px, 86vw); height: 140px; background: rgba(12,12,14,0.78); border: 1px solid rgba(212,184,106,0.35); border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.55); animation: fxBIn 0.3s ease; opacity: 1; transition: opacity 0.4s ease; }
 .fx-s-mover { position: absolute; left: 26px; top: 42px; font-size: 40px; filter: drop-shadow(0 4px 9px rgba(0,0,0,0.7)); animation: fxSMove 1.1s cubic-bezier(.25,.7,.4,1) 0.15s forwards; }
@@ -3273,7 +3277,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.700</div>
+    <div class="start-version">Schatten v7.12.701</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3499,7 +3503,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.700</span>
+    <span>Schatten v7.12.701</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7344,7 +7348,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.700';
+window.SCHATTEN_VERSION = 'v7.12.701';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -8233,6 +8237,26 @@ function fxConflict(actorName, targetName, art, success) {
     setTimeout(() => { try { box.remove(); } catch (e) {} }, 1250);
   } catch (e) {}
 }
+// v7.12.701 (Benjamin: "wenn die Party fährt, will ich sehen, wie viele Sachen sie dabei
+// haben - vielleicht ein Anhänger hinterm Auto"): Ladung für den Anhänger - NUR Katalog-
+// Items (Tauschware/Werfbares: Korn, Toaster, Fisch, Geld...), KEINE Beweis-Akten (Story-
+// Material gehört nicht auf den Hänger). Ein Emoji pro Typ + ×N, max 5 Typen, dann +N.
+function _anhaengerLadung() {
+  try {
+    const m = (typeof _itemsMap === 'function') ? _itemsMap() : {};
+    const gruppen = {}, reihenfolge = [];
+    for (const id in m) {
+      const it = m[id];
+      if (!it || it.status !== 'bei_karl') continue;
+      const kat = (typeof _itemKatalogEintrag === 'function') ? _itemKatalogEintrag(it.name) : null;
+      if (!kat) continue; // ohne Katalog-Eintrag (Akten, Beweise) -> nicht auf den Hänger
+      const k = normForMatch(it.name);
+      if (!gruppen[k]) { gruppen[k] = { emoji: pickItemEmoji(it.name), n: 0 }; reihenfolge.push(k); }
+      gruppen[k].n++;
+    }
+    return reihenfolge.map(k => gruppen[k]);
+  } catch (e) { return []; }
+}
 // v7.12.690 (Benjamin: "beim Reisen das Auto kurz animieren, mit nem Puff quer durchs Bild"):
 // Der Opel fährt quer durchs Bild (rechts->links, Emoji-Blickrichtung), drei Auspuff-Wölkchen
 // poppen hinter ihm auf, darunter das Ziel. Läuft während die Szene im Hintergrund lädt.
@@ -8261,7 +8285,27 @@ function fxTravel(zielName) {
     try { if (typeof _hundInParty === 'function' && _hundInParty()) _insassen.push('🐕'); } catch (e) {}
     let _insHtml = '';
     _insassen.slice(0, 4).forEach((g, i) => { _insHtml += '<span class="fx-car-insasse" style="left:' + (30 + i * 16) + 'px;">' + g + '</span>'; });
-    band.innerHTML = '<div class="fx-car">' + _opelSvg.replace('width="68" height="32"', 'width="96" height="45"') + _insHtml + '</div>'
+    // v7.12.701: Hat die Truppe Tauschware dabei, hängt ein ANHÄNGER hinten dran (Auto fährt
+    // nach links, hinten = rechts). Eigenes SVG im Opel-Stil, Ladung ragt oben sichtbar raus.
+    let _anhHtml = '';
+    try {
+      const _ladung = (typeof _anhaengerLadung === 'function') ? _anhaengerLadung() : [];
+      if (_ladung.length) {
+        const _anhSvg = '<svg width="52" height="34" viewBox="0 0 46 30" xmlns="http://www.w3.org/2000/svg">'
+          + '<path d="M0 13 L8 13" stroke="#d4b86a" stroke-width="1.6"/>'
+          + '<rect x="8" y="6" width="34" height="15" rx="2" fill="#23232a" stroke="#d4b86a" stroke-width="1.3"/>'
+          + '<circle cx="25" cy="24" r="4.6" fill="#15151a" stroke="#d4b86a" stroke-width="1.2"/>'
+          + '<circle cx="25" cy="24" r="1.4" fill="#d4b86a"/>'
+          + '</svg>';
+        let _ladHtml = '';
+        _ladung.slice(0, 5).forEach((l, i) => {
+          _ladHtml += '<span class="fx-anh-item" style="left:' + (12 + i * 9) + 'px;">' + l.emoji + (l.n > 1 ? '<span class="fx-anh-n">×' + l.n + '</span>' : '') + '</span>';
+        });
+        if (_ladung.length > 5) _ladHtml += '<span class="fx-anh-item" style="left:' + (12 + 5 * 9) + 'px;"><span class="fx-anh-n">+' + (_ladung.length - 5) + '</span></span>';
+        _anhHtml = '<span class="fx-car-anhaenger">' + _anhSvg + _ladHtml + '</span>';
+      }
+    } catch (e) {}
+    band.innerHTML = '<div class="fx-car">' + _opelSvg.replace('width="68" height="32"', 'width="96" height="45"') + _insHtml + _anhHtml + '</div>'
       + '<div class="fx-puff" style="left:90vw;animation-delay:0.6s;">💨</div>'
       + '<div class="fx-puff" style="left:62vw;animation-delay:1.4s;">💨</div>'
       + '<div class="fx-puff" style="left:37vw;animation-delay:2.1s;">💨</div>'
