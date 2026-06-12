@@ -15512,3 +15512,10 @@ fxTravel im _reiseKern-Hook (genau beim Engine-Ortswechsel, läuft während die 
 💨-Auspuff-Wölkchen poppen zeitlich passend HINTER dem Auto auf (Timing rechnerisch
 verifiziert), darunter "→ Zielname". 1,9 s, pointer-events:none, prefers-reduced-motion
 respektiert. Ausbau notiert: Flucht-Variante (schnellerer Opel + mehr 💨).
+
+## 🆕 v7.12.691 — Puff-Timing-Korrektur (Claude-Fehler in v690)
+
+Eigener Fehler, vom eigenen Timing-Test entdeckt, aber erst NACH dem Push gelesen: Bei
+Rechts-nach-links-Fahrt ist "hinter dem Auto" rechts — die Wölkchen lagen LINKS (vor dem
+Auto). Positionen 72/46/20vw → 88/60/36vw, jetzt rechnerisch verifiziert (Auto bei den
+Delays ≈ 82/54/30vw, alle drei Wölkchen erscheinen hinter ihm ✓).
