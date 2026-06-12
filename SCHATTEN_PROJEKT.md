@@ -16045,3 +16045,23 @@ fliegt mit raus - ein Gefesselter ist keine Verhandlungspartei. (2) Der Folgeopt
 (Durchsuchen/Übergeben) griff bisher NUR bei 'gefesselt' - ein KO-Gegner hatte gar keine
 Folgeoptionen; jetzt für alle bezwungenen Status, Label zeigt den Zustand. Damit ist auch die
 Inkonsistenz Mantelmann (korrekt reduziert) vs. Mertens (volles Kampfmenü) behoben.
+
+## 🆕 v7.12.722 — Verhaftungs-Animation + "Karl greift an"-Wurzel + Mertens-Rückkehr (Benjamin)
+
+**1. "Karl greift an" bei Durchsuchen/Übergeben:** Die FX-Weiche testete den Verb-Key auf
+/fessel/ - beide Keys beginnen mit "gefesselt_" und matchten. Jetzt: gefesselt_* ist KEIN
+Angriff; Durchsuchen läuft übers ERKUNDEN-Netz (Lupe, Dialog-Dauer).
+
+**2. NEU fxVerhaftung (Benjamins Choreografie):** Karl links, der Verhaftete in der Mitte,
+der Volkspolizist 👮‍♂️ gleitet von rechts heran, ⛓-Pop am Handgelenk, das Gesicht des
+Verhafteten wechselt zu 😞 (Mundwinkel runter), dann führt ihn der Vopo nach rechts ab.
+Dauer Dialog+1200ms.
+
+**3. fxConflict 1250→2600ms** (war generell zu flüchtig); **FX_ZEIT.dialog 5200→4400**
+(Befragen war "einen Tick zu lang").
+
+**4. Mertens kehrte nach Übergeben als frischer Gegner zurück:** Der Zustands-Store matchte
+strikt auf den vollen Namen - nennt die KI ihn im Cast nur "Mertens", fand der W6-Filter
+keinen Eintrag -> 'frei' -> volles Kampfmenü. Fuzzy-Fallback (Nachnamen-Vergleich über
+Wortgrenzen, wie beim Showdown-Check) in _npcZustandGet, mit Diag bei Fuzzy-Treffer.
+Node-getestet: "Mertens"->uebergeben ✓, keine Falsch-Treffer (Trude/Mann) ✓.
