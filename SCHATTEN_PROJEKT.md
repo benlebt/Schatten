@@ -15286,3 +15286,43 @@ Trude selbst ist in 3 Fällen als Ort definiert, u.a. Margarete).
    wenn zahlbar.
 4. **Baukasten-Dedupe:** gleichnamige Items = EIN Chip ("Doppelkorn ×3"), Auswahl nutzt das
    erste Exemplar, Verbrauch zählt runter.
+
+## 🧹 BACKLOG-INVENTUR (12.06.2026, nach v680) — Stand bereinigt
+
+**✅ ERLEDIGT / ABGEHAKT (Beleg in Klammern):**
+1. Setup-Cast-Audit Alias-Mapping — gebaut v671, Wirkung in Run 0031 bestätigt (Mann-im-Mantel zählt).
+2. Toast "Schwer verletzt" nach Ursache — gebaut v671.
+3. "Genosse Mauer"-Anrede — gebaut v671 (+ Diktion 1953 in v676).
+4. "verstaubt"→"verstummt" — kein Thema (einmaliger KI-Sprachfehler, kein Code-Anker).
+5. How-To-Widerspruch zu Baukasten-First — gebaut v672 (dynamisch an Flags gekoppelt).
+6. Beschützen/Beobachten im Baukasten — entfernt v673 (Benjamin-Entscheid).
+7. Ort-Prosa-Hard-Retry — SETTLED ABGELEHNT (Benjamin v671); W2b-light (Folge-Szene) bleibt,
+   Messzeile "Ort-Prosa-Brüche" seit v678 im Report.
+8. Architektur-Test KI_OPTIONEN_AKTIV=false — BESTANDEN durch Run 0031 (manuell, Baukasten-First,
+   Fall in 19 Sz gelöst). Der wiederholt geforderte Beweis ist erbracht.
+9. Tageszeit/Ort-Assertions im Report — gebaut v678 (Ort-Brüche, Teleport-Blocks, Kern-Indiz-Quote;
+   Tageszeit deckt der Toast-Verlauf + Öffnungszeiten-Gates ab).
+10. Item-Stack für gleiche Flavor-Items — gebaut v680 (Baukasten-Dedupe "×N").
+11. Actionlastigkeit nach Sicherung dämpfen (maxSpannung≤4) — WAR SCHON GEBAUT, sogar härter:
+    Deckel ≤2 + Auto-Custody-Unterdrückung nach Sicherung (Z~32652). Run 0031 bestätigt
+    (Stasi-Peak 4 → Ende 1). Abgehakt.
+12. Restziel-Anzeige prominenter — v670-Sperrgrund-Text reicht (Run-0031-Screenshot zeigt ihn
+    funktionierend); kein neuer Bedarf gemeldet. Abgehakt, reopen bei Bedarf.
+13. Tageszeit-Kopplung von Orten — längst gebaut (Öffnungszeiten v565+), abgehakt in v679.
+14. PLAN_ZUGRIFF nach "caseReadyToResolve" — KEIN THEMA: Konzept existiert im Code nicht
+    (Lektorat-Erfindung), SCHLUSSPHASEN-PRIO greift nur vor Stage 3. Reopen nur mit Run-Beleg.
+
+**🔴 WEITER OFFEN (priorisiert):**
+- **P1 Roth-Party-Drift** — wartet auf Run, in dem er auftritt (0031: kein Drift; geschärftes
+  v670-Logging steht bereit).
+- **Prüfauftrag Flucht-nach-Fesseln (v669)** — 0031 hatte keinen Fesseln-Konflikt; wartet auf Run.
+- **Meilenstein: Kern-Indizien auf Einsteiger-Fälle** (Kessler→Krause→Wegener→Achterberg→Brandt) —
+  Benjamin-Entscheid, größte offene Arbeit.
+- **KI_OPTIONEN_GENERIEREN-Umbau** (Prompt verlangt keine A-D mehr) — Benjamin-Entscheid,
+  ändert JSON-Format.
+- **Bildungsachsen/Arbeitswelt Reichsbahn** (Papierstaat: Dienstsiegel/Frachtstempel/Hausbuch) —
+  Content, vom ChatGPT-Lektorat (Run 0031) erneut angemahnt.
+- **Indizien-Verteilung Margarete iterieren** — Messzeile (v678) steht, braucht 2-3 weitere Runs.
+- P3: STASI-Befragen als "Konfrontieren/Hinhalten" labeln (klein, nie gebaut).
+- P3 geparkt: tote Bot-Zweige aufräumen; Resolve-Gate-Zentralisierung (beide ohne Run-Anlass
+  bewusst nicht angefasst).
