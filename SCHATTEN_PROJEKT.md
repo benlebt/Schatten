@@ -16176,3 +16176,13 @@ Kreis - sah aus wie ein kaputtes Icon. Regel gestrichen: Ein IM ist gerade UNAUF
 er bekommt jetzt ein gewöhnliches, stabiles Gesicht aus dem Hash-Pool (v725) - wie jeder
 Mensch in der Menge. Genau das macht einen Inoffiziellen Mitarbeiter aus. (Willi Kummer
 und der Mantelmann haben eigene, frühere Regeln und bleiben unberührt.)
+
+## 🆕 v7.12.732 — Baukasten-Chips mit Anführungszeichen im Namen (Benjamin)
+
+'IM "Anker"' ließ sich als WEN-Ziel nicht anklicken: Die Chip-onclick-Handler werden als
+HTML-Attribut gebaut (onclick="_bkSet('ziel','IM "Anker"')") - die DOPPELTEN
+Anführungszeichen im Namen beendeten das Attribut vorzeitig, der Klick war tot. Escaped
+wurden bisher nur einfache Quotes. Fix zentral in _bkChip: onclick wird HTML-escaped
+("->&quot;), Label läuft durch escapeHtml. Betrifft alle WER/WEN/ITEM/AKTION-Chips mit
+Sonderzeichen-Namen. Margarete kann den IM jetzt angreifen/ablenken - ihre Wirksamkeit
+regelt wie gehabt das Härte-System.
