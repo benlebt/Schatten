@@ -15755,3 +15755,11 @@ NICHT (kein Katalog-Eintrag = Story-Material, gehört nicht auf den Hänger - au
 gefiltert). ENTSCHEID: Bei der FLUCHT (zu Fuß) KEIN Gepäck - Panik-Lesbarkeit geht vor;
 wer rennt, schleppt nicht sichtbar Toaster. Gruppierungs-Logik getestet (Dedupe, ×N,
 Akten-Filter, gesicherte Items raus).
+
+## 🆕 v7.12.702 — "Eingesteckt"-Toast abgeschaltet (Benjamin)
+
+Benjamin-Befund (Screenshot Sz1): Beim Einsammeln über das Umsehen-Popup kam der Item-Pop
+UND danach noch ein "🎒 Eingesteckt"-Toast - wegen des Variant-Cooldowns sogar nur für
+EINES von zwei Items (redundant UND inkonsequent). Entscheid Benjamin: Toast an dieser
+Stelle ABSCHALTEN. Der Item-Pop (fxItemGain) trägt Belohnung und Information allein -
+"Toasts informieren, Animationen belohnen", hier tut die Animation beides.
