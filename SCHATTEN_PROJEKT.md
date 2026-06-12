@@ -16258,3 +16258,12 @@ AKTE-GESCHLOSSEN-Animation (980ms) angedockt.
 einer pro Effekt - spielt über DIESELBE Engine und iOS-Route wie im Spiel. Benjamin kann
 jeden Sound reviewen, ohne API-Kosten. (Bewusst KEIN Chat-Artefakt: das wäre eine Kopie,
 die driften kann und anders klingt als das iPhone.)
+
+## 🆕 v7.12.739 — Knurren-Endlos-Knattern behoben (Benjamin, via Sound-Studio)
+
+Das Knurr-Flattern (AM 27Hz) modulierte g.gain DIREKT - am Knurr-Ende (Basis ~0.0001)
+drückte die Modulation (±0.08) den Regler ins NEGATIVE = Phasen-Invertierung im 27Hz-Takt =
+endloses Knattern, wenn der Stop nicht griff. Fix: klassisches Tremolo über separaten
+GainNode (Basis 0.5 ± 0.5 -> schwingt 0..1, nie negativ) + Not-Trennung per disconnect nach
+1s, selbst wenn ein Stop versagt. Lehre für alle künftigen Sounds: AM NIE direkt auf das
+Haupt-Gain, immer eigener Tremolo-Knoten. (Erster Fang des neuen Sound-Studios!)

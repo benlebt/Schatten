@@ -3280,7 +3280,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.738</div>
+    <div class="start-version">Schatten v7.12.739</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3506,7 +3506,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.738</span>
+    <span>Schatten v7.12.739</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7381,7 +7381,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.738';
+window.SCHATTEN_VERSION = 'v7.12.739';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -8653,11 +8653,18 @@ function sfxKnurren() {
     g.gain.setValueAtTime(0.0001, t0);
     g.gain.exponentialRampToValueAtTime(0.16, t0 + 0.3);
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.75);
+    // v7.12.739 (Benjamin: "Knurren bleibt in endlosem Knacken hängen"): Das Flattern
+    // modulierte g.gain DIREKT - am Knurr-Ende (Basis ~0) drückte es den Regler ins
+    // NEGATIVE = Phasen-Invertierung im 27Hz-Takt = das Knattern. Jetzt klassisches
+    // Tremolo: eigener Knoten, schwingt zwischen 0 und 1, kann nie negativ werden.
+    const trem = c.createGain(); trem.gain.value = 0.5;
     const am = c.createOscillator(); am.type = 'sine'; am.frequency.value = 27;
-    const amG = c.createGain(); amG.gain.value = 0.08;
-    am.connect(amG); amG.connect(g.gain);
-    o.connect(f); f.connect(g); g.connect(_sfxOut(c) || c.destination);
+    const amG = c.createGain(); amG.gain.value = 0.5;
+    am.connect(amG); amG.connect(trem.gain);
+    o.connect(f); f.connect(g); g.connect(trem); trem.connect(_sfxOut(c) || c.destination);
     o.start(t0); am.start(t0); o.stop(t0 + 0.8); am.stop(t0 + 0.8);
+    // Not-Trennung: selbst wenn ein Stop versagt, hängt nach 1s nichts mehr am Ausgang.
+    setTimeout(() => { try { trem.disconnect(); o.disconnect(); am.disconnect(); } catch (e) {} }, 1000);
   } catch (e) {}
 }
 // Knallkörper: scharfer Knall (heller Burst + tiefer Boom).
