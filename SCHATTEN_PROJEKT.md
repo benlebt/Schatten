@@ -16104,3 +16104,11 @@ Node-verifiziert: August Lemke -> 👨‍🦱.
 Tonhöhe um einen Grundton, unregelmäßige Pausen (Adventure-Spiel-Gebrabbel). Karl brabbelt
 bei ~150Hz, das Gegenüber antwortet versetzt eine Lage tiefer (~110Hz); bei der zweiten
 Bubble-Runde der Dialog-Animation eine kurze Nachrunde. Greift bei befragen/ansprechen.
+
+## 🆕 v7.12.726 — Motor v2: Anlasser, Anfahren, Zünd-Tuckern (Benjamin)
+
+"Das tiefe Brummen erkennt man nicht als Auto" - drei Auto-Signaturen statt Dauerton:
+(1) ANLASSER: drei orgelnde wrr-wrr-wrr-Bursts vorm Start. (2) ANFAHREN: Drehzahl-Kurve
+46→86Hz hoch, zum Wegfahren auf 64Hz absinkend. (3) ZÜND-TUCKERN: 16→26Hz-Amplituden-Puls
+auf dem Gain (knattert wie ein alter Vierzylinder, Tuckern beschleunigt mit der Drehzahl).
+Dazu leises 240Hz-Auspuffrauschen unterm Motor. Timing (~3,2s) passt zur fxDrive-Fahrt.
