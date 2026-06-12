@@ -2896,6 +2896,25 @@
 @keyframes fxBPop { 0% { transform: scale(0); opacity: 0; } 55% { transform: scale(1.35); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
 @keyframes fxHaloPulse { 0% { opacity: 0; transform: scale(0.6); } 45% { opacity: 1; transform: scale(1.08); } 100% { opacity: 0.75; transform: scale(1); } }
 @keyframes fxBIn { 0% { opacity: 0; transform: translateY(10px); } 100% { opacity: 1; transform: translateY(0); } }
+/* v7.12.698: GESPRÄCHS-Animation - beide nähern sich zur Mitte, Sprechblasen wechseln */
+.fx-dialog { position: relative; width: min(380px, 86vw); height: 140px; background: rgba(12,12,14,0.78); border: 1px solid rgba(212,184,106,0.35); border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.55); animation: fxBIn 0.3s ease; opacity: 1; transition: opacity 0.4s ease; }
+.fx-d-left, .fx-d-right { position: absolute; top: 42px; font-size: 42px; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.7)); }
+.fx-d-left { left: 30px; animation: fxDApproachL 0.7s cubic-bezier(.2,.8,.4,1) forwards; }
+.fx-d-right { right: 30px; animation: fxDApproachR 0.7s cubic-bezier(.2,.8,.4,1) forwards; }
+.fx-d-bubble { position: absolute; top: 16px; font-size: 24px; transform: scale(0); filter: drop-shadow(0 3px 7px rgba(0,0,0,0.7)); }
+.fx-d-bubble-l { left: 36%; animation: fxBPop 0.55s ease 0.8s forwards, fxDBubbleOut 0.4s ease 1.7s forwards; }
+.fx-d-bubble-r { right: 36%; animation: fxBPop 0.55s ease 1.7s forwards; }
+@keyframes fxDApproachL { 0% { transform: translateX(-40px); opacity: 0.4; } 100% { transform: translateX(46px); opacity: 1; } }
+@keyframes fxDApproachR { 0% { transform: translateX(40px); opacity: 0.4; } 100% { transform: translateX(-46px); opacity: 1; } }
+@keyframes fxDBubbleOut { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(0.6); opacity: 0; } }
+/* v7.12.698: FLUCHT - die ganze Party rennt gestaffelt nach RECHTS aus dem Bild (zu Fuß) */
+.fx-flee { position: fixed; left: 0; right: 0; top: 44%; height: 80px; z-index: 9200; pointer-events: none; overflow: hidden; }
+.fx-flee-member { position: absolute; top: 4px; left: 32vw; font-size: 38px; filter: drop-shadow(0 4px 9px rgba(0,0,0,0.7)); animation: fxFleeRun 1.7s cubic-bezier(.4,.1,.7,1) forwards; }
+.fx-flee-puff { position: absolute; top: 22px; left: 28vw; font-size: 22px; opacity: 0; animation: fxPuff 0.9s ease forwards; }
+.fx-flee-caption { position: absolute; left: 0; right: 0; top: 52px; text-align: center; color: #d4c8a8; font: 12px monospace; letter-spacing: 0.06em; text-shadow: 0 2px 6px rgba(0,0,0,0.8); animation: fxFadeInOut 2.5s ease forwards; }
+@keyframes fxFleeRun { 0% { transform: translateX(0) translateY(0); } 20% { transform: translateX(18vw) translateY(-5px); } 40% { transform: translateX(36vw) translateY(0); } 60% { transform: translateX(54vw) translateY(-5px); } 80% { transform: translateX(72vw) translateY(0); } 100% { transform: translateX(95vw) translateY(-3px); } }
+/* v7.12.698: Insassen sitzen im (größeren) Opel - Köpfe in der Fensterzone */
+.fx-car-insasse { position: absolute; top: -1px; font-size: 14px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8)); }
 </style>
 </head>
 <body>
@@ -3242,7 +3261,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.697</div>
+    <div class="start-version">Schatten v7.12.698</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3468,7 +3487,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.697</span>
+    <span>Schatten v7.12.698</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7313,7 +7332,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.697';
+window.SCHATTEN_VERSION = 'v7.12.698';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -8002,6 +8021,19 @@ window._baukasten = window._baukasten || { offen: false, akteur: null, item: nul
 // Designregel: Die ENGINE löst Animationen aus (Engine-Wahrheit), nie die KI-Prosa.
 // Toasts informieren, Animationen belohnen. pointer-events:none - blockiert nie einen Klick.
 const FX_AKTIV = true;
+// v7.12.698 (Benjamin: "einheitliche, einstellbare Zeiten - alles überbrückt dieselbe
+// Ladezeit, aber Kämpfe dürfen länger"): EIN Konfigblock für alle FX-Dauern (Millisekunden).
+// ACHTUNG: Die Reise-Fahrdauer steht zusätzlich im CSS (fxDrive 3.2s / Caption 3.5s) -
+// bei Änderung von 'reise' dort mitziehen.
+const FX_ZEIT = {
+  item: 1100,            // Item-Pop
+  party: 1750,           // Abklatschen
+  dialog: 2600,          // Gespräch/Bedrohen/Bestechen/Romantik (Benjamin: ~2-3 s)
+  kampfSchritt: 1100,    // pro Plan-Schritt in der Konfrontation
+  kampfFinaleHold: 2100, // Standzeit des Sieger-Bilds nach dem letzten Schritt
+  reiseEntfernen: 4500,  // Opel-Band-Lebensdauer (Fahrt 3,2 s + iPhone-Puffer)
+  flucht: 2600           // Party rennt aus dem Bild
+};
 function fxEnabled() {
   try {
     if (!FX_AKTIV) return false;
@@ -8168,7 +8200,7 @@ function fxItemGain(item) {
     el.innerHTML = '<div class="fx-item-emoji">' + pickItemEmoji(item.name || item.id) + '</div>'
       + '<div class="fx-item-label">' + escapeHtml(item.name || 'Gegenstand') + '</div>';
     document.body.appendChild(el);
-    setTimeout(() => { try { el.remove(); } catch (e) {} }, 1100);
+    setTimeout(() => { try { el.remove(); } catch (e) {} }, FX_ZEIT.item);
   } catch (e) {}
 }
 // Konflikt-Animation: Akteur ruckt zum Ziel, Impact, Ziel wackelt. 1.2s, nicht blockierend.
@@ -8208,7 +8240,14 @@ function fxTravel(zielName) {
       + '<circle cx="15" cy="23" r="1.6" fill="#d4b86a"/><circle cx="49" cy="23" r="1.6" fill="#d4b86a"/>'
       + '<circle cx="5" cy="17.5" r="1.3" fill="#e8d9a0"/>'
       + '</svg>';
-    band.innerHTML = '<div class="fx-car">' + _opelSvg + '</div>'
+    // v7.12.698 (Benjamin: "wenn das Auto fährt, sieht man, wer mitfährt - Karl, die Party
+    // und Rex sitzen IM Auto"): Opel größer (96px) und die Köpfe sitzen in der Fensterzone.
+    const _insassen = [charVisual('Karl')];
+    try { if (Array.isArray(_party)) _party.forEach(m => { if (m && m.name) _insassen.push(charVisual(m.name)); }); } catch (e) {}
+    try { if (typeof _hundInParty === 'function' && _hundInParty()) _insassen.push('🐕'); } catch (e) {}
+    let _insHtml = '';
+    _insassen.slice(0, 4).forEach((g, i) => { _insHtml += '<span class="fx-car-insasse" style="left:' + (30 + i * 16) + 'px;">' + g + '</span>'; });
+    band.innerHTML = '<div class="fx-car">' + _opelSvg.replace('width="68" height="32"', 'width="96" height="45"') + _insHtml + '</div>'
       + '<div class="fx-puff" style="left:90vw;animation-delay:0.6s;">💨</div>'
       + '<div class="fx-puff" style="left:62vw;animation-delay:1.4s;">💨</div>'
       + '<div class="fx-puff" style="left:37vw;animation-delay:2.1s;">💨</div>'
@@ -8218,7 +8257,7 @@ function fxTravel(zielName) {
     // v693: Fahrtdauer wurde auf 3,2 s verlängert, aber dieser Lösch-Timer blieb unbemerkt
     // bei 1950 ms -> das Auto wurde bei ~50vw mitten in der Fahrt gelöscht): jetzt 4,5 s,
     // großzügiger Puffer auch für verzögerten Animationsstart auf dem iPhone.
-    setTimeout(() => { try { band.remove(); } catch (e) {} }, 4500);
+    setTimeout(() => { try { band.remove(); } catch (e) {} }, FX_ZEIT.reiseEntfernen);
   } catch (e) {}
 }
 // v7.12.692 (Benjamin: "Abklatschen beim Party-Beitritt, die ganze Truppe steht da und der
@@ -8244,7 +8283,59 @@ function fxPartyJoin(neuName) {
       + '</div>'
       + '<div class="fx-party-caption">✦ ' + escapeHtml(neuName) + ' ist jetzt in Begleitung</div>';
     layer.appendChild(box);
-    setTimeout(() => { try { box.remove(); } catch (e) {} }, 1750);
+    setTimeout(() => { try { box.remove(); } catch (e) {} }, FX_ZEIT.party);
+  } catch (e) {}
+}
+// v7.12.698 (Benjamin: "wenn ich eine Person befrage, sollen sich beide Bilder annähern und
+// kurz sprechen - alle szene-auslösenden Buttons brauchen eine Animation, auch Bedrohen,
+// Bestechen, Näherkommen"): GESPRÄCHS-Animation. Karl links, Gegenüber rechts, beide gleiten
+// zur Mitte, dann wechseln die Symbole (erst über Karl, dann über dem Gegenüber).
+function fxDialog(npcName, verbKey) {
+  try {
+    if (!fxEnabled() || !npcName) return;
+    // Symbol-Paar je Verb: [über Karl, über dem Gegenüber]
+    const SYMB = {
+      befragen: ['💬', '💬'], ansprechen: ['💬', '💬'],
+      bedrohen: ['🗯️', '😨'], einschuechtern: ['🗯️', '😨'],
+      bestechen: ['💵', '🤫'], konfrontieren: ['❗', '😠'],
+      naeher: ['🌹', '❤️'], nacht: ['🌹', '❤️'],
+      gefesselt_uebergeben: ['👮', '⛓️']
+    };
+    const sy = SYMB[verbKey] || ['💬', '💬'];
+    const VERBTXT = { befragen: 'befragt', ansprechen: 'spricht mit', bedrohen: 'bedroht', einschuechtern: 'schüchtert ein:', bestechen: 'besticht', konfrontieren: 'konfrontiert', naeher: 'kommt näher:', nacht: 'bleibt bei', gefesselt_uebergeben: 'übergibt' };
+    const layer = fxLayer();
+    const box = document.createElement('div');
+    box.className = 'fx-dialog';
+    box.innerHTML = '<div class="fx-d-left">' + charVisual('Karl') + '</div>'
+      + '<div class="fx-d-right">' + charVisual(npcName) + '</div>'
+      + '<div class="fx-d-bubble fx-d-bubble-l">' + sy[0] + '</div>'
+      + '<div class="fx-d-bubble fx-d-bubble-r">' + sy[1] + '</div>'
+      + '<div class="fx-caption">Karl ' + (VERBTXT[verbKey] || 'und') + ' ' + escapeHtml(npcName) + '</div>';
+    layer.appendChild(box);
+    setTimeout(() => { try { box.style.opacity = '0'; } catch (e) {} }, FX_ZEIT.dialog - 400);
+    setTimeout(() => { try { box.remove(); } catch (e) {} }, FX_ZEIT.dialog);
+  } catch (e) {}
+}
+// v7.12.698 (Benjamin: "bei der Flucht rennt die ganze Party aus dem Bild - zu Fuß, nach
+// rechts"): gestaffelte Flucht-Animation mit Staub hinterher.
+function fxFlucht() {
+  try {
+    if (!fxEnabled()) return;
+    const gruppe = [charVisual('Karl')];
+    try { if (Array.isArray(_party)) _party.forEach(m => { if (m && m.name) gruppe.push(charVisual(m.name)); }); } catch (e) {}
+    try { if (typeof _hundInParty === 'function' && _hundInParty()) gruppe.push('🐕'); } catch (e) {}
+    const band = document.createElement('div');
+    band.className = 'fx-flee';
+    let h = '';
+    gruppe.slice(0, 5).forEach((g, i) => {
+      h += '<div class="fx-flee-member" style="left:' + (30 - i * 7) + 'vw;animation-delay:' + (i * 0.12) + 's;">' + g + '</div>';
+    });
+    h += '<div class="fx-flee-puff" style="animation-delay:0.25s;">💨</div>'
+      + '<div class="fx-flee-puff" style="left:20vw;animation-delay:0.55s;">💨</div>'
+      + '<div class="fx-flee-caption">Nichts wie weg!</div>';
+    band.innerHTML = h;
+    document.body.appendChild(band);
+    setTimeout(() => { try { band.remove(); } catch (e) {} }, FX_ZEIT.flucht);
   } catch (e) {}
 }
 // v7.12.694 (Benjamin: "in Konfrontationen sollen die Baukasten-Aktionen bildlich ablaufen -
@@ -8279,7 +8370,7 @@ function fxBattle(plan, fehlschlagMap) {
     const IMPACT = { fesseln: '🪢', ablenken: '❗', ablenkung: '❗', bestechen: '💵', einschuechtern: '🗯️', werfen_fuesse: '💫' };
     const VERB2 = { hund_fass: 'packt', hund_fixiere: 'stellt', angreifen: 'greift an:', angriff: 'greift an:', angreifen_mit: 'schlägt zu auf', werfen: 'wirft auf', werfen_fuesse: 'wirft vor die Füße von', fesseln: 'fesselt', ablenken: 'lenkt ab:', ablenkung: 'lenkt ab:', bestechen: 'besticht', einschuechtern: 'schüchtert ein:' };
     const seen = {};
-    const STEP_MS = 1100;
+    const STEP_MS = FX_ZEIT.kampfSchritt;
     const _akteurEmoji = (n) => _npcVisual(!n ? 'Karl' : n, 36);
     steps.forEach((p, i) => {
       setTimeout(() => {
@@ -8328,8 +8419,8 @@ function fxBattle(plan, fehlschlagMap) {
         }
       } catch (e) {}
     }, steps.length * STEP_MS + 250);
-    setTimeout(() => { try { box.style.opacity = '0'; } catch (e) {} }, steps.length * STEP_MS + 2100);
-    setTimeout(() => { try { box.remove(); } catch (e) {} }, steps.length * STEP_MS + 2550);
+    setTimeout(() => { try { box.style.opacity = '0'; } catch (e) {} }, steps.length * STEP_MS + FX_ZEIT.kampfFinaleHold);
+    setTimeout(() => { try { box.remove(); } catch (e) {} }, steps.length * STEP_MS + FX_ZEIT.kampfFinaleHold + 450);
   } catch (e) {}
 }
 // Plan-Hook: nimmt die markanteste Konflikt-Aktion des Plans (Rex zuerst) und animiert sie.
@@ -19504,6 +19595,8 @@ function applyCategoryMechanics(kategorie, ctx) {
       // KI improvisiert den Flucht-Weg passend zum Ort.
       // v7.12.697: Flucht aus der Showdown-Szene = Showdown bestanden (entkommen).
       try { if (typeof _showdownPruefeBestanden === 'function') _showdownPruefeBestanden('', '', 'flucht'); } catch (e) {}
+      // v7.12.698: Die ganze Party rennt sichtbar aus dem Bild.
+      try { if (typeof fxFlucht === 'function') fxFlucht(); } catch (e) {}
       result.vfDelta = 0;
       result.spannungDelta = -3;
       result.timeAdvanceBonus = 0.3;
@@ -20423,6 +20516,13 @@ function npcInteraktion(npc, verb) {
     return;
   }
   if (typeof diag === 'function') diag('state', 'NPC-INTERAKTION: "' + verb.label + '" -> ' + npc.name);
+  // v7.12.698: Jede szene-auslösende Personen-Aktion bekommt ihre Animation (überbrückt die
+  // Ladezeit): Kampf-Verben -> Konflikt-Bild, alles andere -> Gesprächs-Animation.
+  try {
+    const _vk = String(verb.key || '');
+    if (/angreif|fessel|manoever|befehl_angriff/.test(_vk)) { if (typeof fxConflict === 'function') fxConflict('Karl', npc.name, 'angreifen', true); }
+    else if (!/durchsuch/.test(_vk) && typeof fxDialog === 'function') { fxDialog(npc.name, _vk); }
+  } catch (e) {}
   // v7.12.610 (M1): Manöver = Verb MIT Engine-Wirkung. Gates engine-validiert, Zustand wird VOR der
   // Erzählung gesetzt - die KI erzählt nur noch, was die Engine entschieden hat.
   // v7.12.632: Hund mitnehmen (Party-Aufnahme, keine Szene).

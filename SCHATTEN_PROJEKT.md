@@ -15678,3 +15678,26 @@ verdichten, dann führt die Spur zum Stellwerk). Stage-Heber bleiben erreichbar
 **Nächster Schritt:** Voller manueller Margarete-Run - erwartetes Bild: Indizien verteilen
 sich über mehr Szenen, am Ende stellt sich Mertens, fxBattle-Zugriff oder Flucht, DANN
 erst Win-Screen. Im Export: ⚔-Zeilen (AKTIVIERT/BESTANDEN) + RESOLVE-DIAG-Sperrgrund.
+
+## 🆕 v7.12.698 — FX_ZEIT-Konfig + Gesprächs-Animation + Party-Flucht + Opel-Insassen (Benjamin)
+
+**1. FX_ZEIT = EIN zentraler Konfigblock für alle Animations-Dauern** (Benjamin:
+"einheitliche, einstellbare Zeiten - Kämpfe dürfen länger"): item 1,1s · party 1,75s ·
+dialog 2,6s · kampfSchritt 1,1s · kampfFinaleHold 2,1s · reiseEntfernen 4,5s · flucht 2,6s.
+Alle bestehenden FX-Timeouts umgestellt. HINWEIS: Reise-Fahrdauer steht zusätzlich im CSS
+(fxDrive 3.2s) - bei Änderung mitziehen (im Block dokumentiert).
+
+**2. GESPRÄCHS-Animation (fxDialog):** Bei JEDEM szene-auslösenden Personen-Verb gleiten
+Karl (links) und das Gegenüber (rechts) zur Mitte, dann wechseln die Symbole - erst über
+Karl, dann über dem Gegenüber: Befragen 💬/💬, Bedrohen 🗯️/😨, Bestechen 💵/🤫,
+Konfrontieren ❗/😠, Näherkommen/Nacht 🌹/❤️, VP-Übergabe 👮/⛓️. Kampf-Verben
+(angreifen/fesseln/Manöver/Befehl-Angriff) zeigen stattdessen das Konflikt-Bild;
+Durchsuchen bleibt ohne FX. Hook zentral in npcInteraktion.
+
+**3. FLUCHT-Animation (fxFlucht):** Die ganze Party (Karl voran, Mitglieder, Rex) rennt
+gestaffelt nach RECHTS aus dem Bild - zu Fuß, mit Lauf-Hopser und 💨-Staub, Caption
+"Nichts wie weg!". Hook im FLUCHT-Case neben dem Showdown-Haken.
+
+**4. Opel-INSASSEN:** Das Auto ist größer (96px) und Karl, die Party-Mitglieder und Rex
+sitzen sichtbar in der Fensterzone (kleine Köpfe, Rex hinten). Wer mitreist, fährt
+sichtbar mit.
