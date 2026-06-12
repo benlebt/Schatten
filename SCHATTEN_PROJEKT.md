@@ -15613,3 +15613,35 @@ mitnehmbar machen?** Kollidiert mit Dienst-/Tageszeit-Logik - bewusst nicht geba
 (will niemand), aber Wurf-Tauglichkeit (schaden 'lacher'). Sie liegen hinter Chance-Würfen
 (Fisch: 50% Imbiss / 40% Bahnhof; Toaster 35% Wohnungen) - deshalb noch nicht gesehen.
 Mehr Item-Vielfalt = Content-Entscheid Benjamin (notiert).
+
+## 🆕 v7.12.696 — Einheitliche Charakter-Visuals (charVisual) + Doc-Wagner-🤝-Fix + Opel-Auslauf
+
+**1. charVisual = die EINE Quelle für Charakter-Bilder (Benjamin):** Feste, lebendige
+Emoji-Zuordnung pro Figur, ÜBERALL identisch (Personen-Buttons, Party-Abklatschen, Kampf):
+Karl 🕵️, Margarete 👩‍💼, Helene 👩‍⚕️, Vera 👱‍♀️ (blond/schwedisch), Trude 👵, Doc Wagner 👨‍⚕️,
+Roth/Polizei 👮, Mertens/Stasi 👨‍✈️ (Uniform), Wahler 🎩, IM/Spitzel 🫥 (das graue, verblasste
+Gesicht!), Mantelmann 🕴️, Willi 🧔, Rex 🐕. Unbekannte Namen: HASH-STABILES Gesicht aus
+Varianten-Pool (gleicher Name = immer dasselbe Emoji, verschiedene NPCs sehen verschieden
+aus). **Die Gold-SVG-Porträts sind deaktiviert** (Benjamins Urteil: "keine Farbe, kein
+Leben - Emojis haben mehr Persönlichkeit"); pickNpcSvg bleibt EINE Version als Basis für
+evtl. farbige Porträts, kein Revival bis v700 -> löschen. Opel-SVG bleibt (gefällt).
+
+**2. Doc-Wagner-🤝-Verwirrung gefixt:** 🤝 war das VERBUENDETER-Tag-Symbol UND das Party-
+Symbol - ununterscheidbar. Jetzt: Icon ist immer das Charakter-Visual; Party-Status steht
+als goldener "✦ in Begleitung"-Marker am Namen.
+
+**3. Opel-Auslauf (CLAUDE-FEHLER eingestanden):** v693 verlängerte die Fahrt auf 3,2 s,
+aber der Lösch-Timer blieb unbemerkt bei 1950 ms (Edit verfehlte sein Ziel, weil v692-Code
+dazwischengerutscht war; "9/9" gemeldet ohne die fehlende Position zu prüfen) -> das Auto
+wurde bei ~50vw MITTEN in der Fahrt gelöscht = Benjamins "verschwindet in der Bildmitte".
+Jetzt: Endpunkt -240px (ganz links raus), Remove 4,5 s mit iPhone-Puffer. LEKTION: Bei
+Batch-Edits die ok-Liste gegen die Soll-Liste prüfen, nicht nur zählen.
+
+**4. Run-Tempo-Analyse (Benjamin: "übertrieben früh fertig - Ort anfahren + Umsehen =
+gelöst, das ist zu leicht. Zufall?"):** KEIN Zufall - ERKUNDEN-Indizien sind per Umsehen
+deterministisch einsammelbar, und die Margarete-Verteilung bündelt mehrere an wenigen
+Orten. **Empfehlung (nicht gebaut, Benjamin-Entscheid): SHOWDOWN-GATE Stage 3->4** - bevor
+"Fall lösen" frei wird, stellt sich der Gegenspieler in den Weg (Mertens/Wahlers Schergen
+spawnen als Pflicht-Konfrontation; Zugriff/Flucht/Verhandlung nötig, nutzt Härte-System +
+das neue fxBattle). Dazu Indizien-Tuning: 2-3 Schlüssel-Indizien hinter Personen/Stage-
+Gates statt ERKUNDEN. Zusammen = Spannungsbogen-Paket.

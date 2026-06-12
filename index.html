@@ -2862,8 +2862,8 @@
 .fx-travel { position: fixed; left: 0; right: 0; top: 42%; height: 90px; z-index: 9200; pointer-events: none; overflow: hidden; }
 .fx-car { position: absolute; top: 6px; left: 0; font-size: 46px; filter: drop-shadow(0 5px 10px rgba(0,0,0,0.7)); animation: fxDrive 3.2s cubic-bezier(.3,.5,.5,1) forwards; } /* v7.12.693: 1953er Tempo */
 .fx-puff { position: absolute; top: 18px; font-size: 24px; opacity: 0; animation: fxPuff 0.8s ease forwards; }
-.fx-travel-caption { position: absolute; left: 0; right: 0; top: 62px; text-align: center; color: #d4c8a8; font: 12px monospace; letter-spacing: 0.06em; text-shadow: 0 2px 6px rgba(0,0,0,0.8); animation: fxFadeInOut 3.3s ease forwards; }
-@keyframes fxDrive { 0% { transform: translateX(105vw) translateY(0); } 30% { transform: translateX(70vw) translateY(-2px); } 55% { transform: translateX(42vw) translateY(1px); } 80% { transform: translateX(16vw) translateY(-2px); } 100% { transform: translateX(-140px) translateY(0); } }
+.fx-travel-caption { position: absolute; left: 0; right: 0; top: 62px; text-align: center; color: #d4c8a8; font: 12px monospace; letter-spacing: 0.06em; text-shadow: 0 2px 6px rgba(0,0,0,0.8); animation: fxFadeInOut 3.5s ease forwards; }
+@keyframes fxDrive { 0% { transform: translateX(105vw) translateY(0); } 30% { transform: translateX(70vw) translateY(-2px); } 55% { transform: translateX(42vw) translateY(1px); } 80% { transform: translateX(16vw) translateY(-2px); } 100% { transform: translateX(-240px) translateY(0); } } /* v7.12.696: bis GANZ links raus */
 @keyframes fxPuff { 0% { opacity: 0; transform: scale(0.4) translateY(0); } 30% { opacity: 0.9; transform: scale(1.15) translateY(-4px); } 100% { opacity: 0; transform: scale(1.5) translateY(-14px); } }
 /* v7.12.692: Party-Beitritt - Gruppe links, Neuer gleitet von rechts heran, ✨-Splash, Gruppe hüpft */
 .fx-party { position: relative; width: min(380px, 86vw); height: 130px; background: rgba(12,12,14,0.78); border: 1px solid rgba(212,184,106,0.35); border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.55); animation: fxFadeInOut 1.7s ease forwards; }
@@ -3242,7 +3242,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.695</div>
+    <div class="start-version">Schatten v7.12.696</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3468,7 +3468,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.695</span>
+    <span>Schatten v7.12.696</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7313,7 +7313,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.695';
+window.SCHATTEN_VERSION = 'v7.12.696';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -8064,10 +8064,46 @@ function pickNpcSvg(name, h) {
       + '<path d="M7.5 16.5 Q19 13 30.5 16.5 L30.5 18.5 Q19 15 7.5 18.5 Z" fill="' + K + '" stroke="' + G + '" stroke-width="1.2"/></svg>';
   } catch (e) { return ''; }
 }
-// Einheitlicher Visual-Zugriff: Porträt-SVG, Fallback Emoji (falls SVG-Bau je scheitert).
+// v7.12.696 (Benjamin: "Icons vereinheitlichen - Margarete muss ÜBERALL als Margarete
+// erkennbar sein: im Personen-Button, in der Party, im Kampf. Und die Gold-SVGs hatten
+// keine Farbe, kein Leben - Emojis haben mehr Persönlichkeit"): charVisual ist die EINE
+// Quelle für Charakter-Bilder. Feste Zuordnung pro Figur, farbig, lebendig. Unbekannte
+// Namen bekommen ein HASH-STABILES Gesicht (gleicher Name = immer dasselbe Emoji).
+function charVisual(name, tag, istWeiblich) {
+  try {
+    const n = normForMatch(name || '');
+    if (/^rex$|^hund\b/.test(n)) return '🐕';
+    if (/^karl\b|karl mauer|^detektiv/.test(n)) return '🕵️';
+    if (/margarete/.test(n)) return '👩‍💼';
+    if (/helene/.test(n)) return '👩‍⚕️';
+    if (/vera|lindqvist/.test(n)) return '👱‍♀️';
+    if (/trude/.test(n)) return '👵';
+    if (/doc|wagner|arzt|aerztin|ärztin/.test(n)) return '👨‍⚕️';
+    if (/roth|lindner|kommissar|wachtmeister|volkspolizei|polizist/.test(n)) return '👮';
+    if (/mertens|oberleutnant|hauptmann|stasi|mfs/.test(n)) return '👨‍✈️';
+    if (/wahler|direktor/.test(n)) return '🎩';
+    if (/anker|spitzel|^im\b/.test(n)) return '🫥';
+    if (/mantel|schatten|beschatter|verfolger/.test(n)) return '🕴️';
+    if (/willi|kummer|wirt\b|wirtin|barkeeper/.test(n)) return '🧔';
+    const T = (tag || '').toUpperCase();
+    if (T === 'STASI') return '👨‍✈️';
+    if (/AUTHORITY|POLIZEI/.test(T)) return '👮';
+    if (T === 'SUSPECT') return '🎩';
+    if (T === 'MYSTERY') return '🕴️';
+    if (T === 'CLIENT' && istWeiblich) return '🙍‍♀️';
+    // Hash-stabiler Fallback: gleicher Name -> immer dasselbe Gesicht (Persönlichkeit statt 👤).
+    let h = 0; for (let i = 0; i < n.length; i++) h = (h * 31 + n.charCodeAt(i)) % 997;
+    const M = ['👨', '🧔', '👨‍🦳', '👨‍🦱', '🧑'];
+    const F = ['👩', '👩‍🦰', '👩‍🦳', '🧕'];
+    return istWeiblich ? F[h % F.length] : M[h % M.length];
+  } catch (e) { return '👤'; }
+}
+// Einheitlicher Visual-Zugriff der FX: jetzt charVisual (v696). Die Gold-SVG-Porträts
+// (pickNpcSvg) sind DEAKTIVIERT - Benjamins Urteil: "keine Farbe, kein Leben, Emojis haben
+// mehr Persönlichkeit". Funktion bleibt eine Version als Basis für evtl. farbige Porträts;
+// kein Revival bis v700 -> löschen.
 function _npcVisual(name, h) {
-  try { const s = pickNpcSvg(name, h); if (s) return s; } catch (e) {}
-  return pickNpcEmoji(name);
+  return charVisual(name);
 }
 // Item-Pop: poppt beim Einbuchen (Engine-Wahrheit aus _itemAdd) kurz hoch.
 function fxItemGain(item) {
@@ -8124,7 +8160,11 @@ function fxTravel(zielName) {
       + '<div class="fx-puff" style="left:37vw;animation-delay:2.1s;">💨</div>'
       + '<div class="fx-travel-caption">→ ' + escapeHtml(zielName || 'unterwegs') + '</div>';
     document.body.appendChild(band);
-    setTimeout(() => { try { band.remove(); } catch (e) {} }, 1950);
+    // v7.12.696 (Benjamin, iPhone: "Auto verschwindet in der Bildmitte" - CLAUDE-FEHLER aus
+    // v693: Fahrtdauer wurde auf 3,2 s verlängert, aber dieser Lösch-Timer blieb unbemerkt
+    // bei 1950 ms -> das Auto wurde bei ~50vw mitten in der Fahrt gelöscht): jetzt 4,5 s,
+    // großzügiger Puffer auch für verzögerten Animationsstart auf dem iPhone.
+    setTimeout(() => { try { band.remove(); } catch (e) {} }, 4500);
   } catch (e) {}
 }
 // v7.12.692 (Benjamin: "Abklatschen beim Party-Beitritt, die ganze Truppe steht da und der
@@ -20300,11 +20340,15 @@ function bauePersonenButtons(container, modus) {
       SCHUTZ: '👨‍⚕️', KONTAKT: '📇', VERBUENDETER: '🤝',
       ANTAGONIST: '😠', SUSPECT: '🎭', GANGSTER: '🕴', STASI: '🕵‍♂️', MYSTERY: '❔',
     };
-    const _npcEmoji = _inParty ? '🤝' : (_istHundNpc ? '🐕' : (_npcEmojiMap[_npcTag] || (_istWeiblich ? '👩' : '👤')));
+    // v7.12.696 (Benjamin: Doc Wagner zeigte 🤝, obwohl NICHT in der Party - das 🤝 war das
+    // VERBUENDETER-Tag-Symbol und kollidierte mit dem Party-Banner-Symbol): Das Icon ist jetzt
+    // IMMER das feste Charakter-Visual (charVisual, überall identisch). Party-Status wird als
+    // ✦-Marker am Namen gezeigt, nicht mehr als verwechselbares Symbol.
+    const _npcEmoji = _istHundNpc ? '🐕' : (typeof charVisual === 'function' ? charVisual(npc.name, _npcTag, _istWeiblich) : (_npcEmojiMap[_npcTag] || '👤'));
     const _markerKlasse = (_markerFinal.indexOf('●') === 0) ? 'option-marker' : 'option-marker option-marker-system';
     const _markerStyle = (_markerFinal.indexOf('●') === 0) ? ' style="color:#c8a84a;"' : '';
     btn.innerHTML = '<span class="option-id option-id-person">' + _npcEmoji + '</span><span class="option-text-wrap"><span>'
-      + escapeHtml(npc.name) + '</span><span class="' + _markerKlasse + '"' + _markerStyle + '>' + _markerFinal + '</span></span>';
+      + escapeHtml(npc.name) + (_inParty ? ' <span style="color:#c8a84a;font-size:11px;">✦ in Begleitung</span>' : '') + '</span><span class="' + _markerKlasse + '"' + _markerStyle + '>' + _markerFinal + '</span></span>';
     attachSafeTap(btn, () => { if (typeof oeffneNpcMenue === 'function') { _markPopupOpened(); oeffneNpcMenue(npc, modus); } });
     container.appendChild(btn);
     gebaut++;
