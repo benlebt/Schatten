@@ -15967,3 +15967,30 @@ Das geschlechtsneutrale 👮 rendert auf iOS als Polizistin. Alle männlichen Po
 (Roth/Lindner/Kommissar/Wachtmeister-Namensregeln, AUTHORITY/POLIZEI-Tag-Fallback,
 gefesselt_uebergeben-FX) explizit auf 👮‍♂️. Das bewusst weibliche AUTHORITY-Mapping für
 erkannte Frauen (Z20836) bleibt unverändert.
+
+## 🆕 v7.12.715 — Run-2011-Paket: Showdown spielbar, PartyJoin-Wurzel, Nacht-Verfall (Benjamin)
+
+**1. Mertens erschien NIE (Showdown unspielbar):** Der v707-Injekt war TOTER CODE - der
+W6-Präsenz-Filter davor machte `return out.filter(...)` und verließ die Funktion, bevor der
+Injekt-Block je lief. Jetzt Zuweisung statt return; der Showdown-Gegner steht damit wirklich
+in Personen-Liste, Baukasten-Zielen und Rex-Zielwahl (+ Diag '⚔ SHOWDOWN-INJEKT' im Export).
+
+**2. PartyJoin "immer noch zu kurz" (3. Anlauf):** Die Wurzel war NIE der JS-Timeout - die
+CSS-Klasse .fx-party hat eine fest verdrahtete 1,7s-fxFadeInOut-Animation; die Box war
+längst unsichtbar, als der Timeout (5200) sie entfernte. Dauer jetzt am Element an
+FX_ZEIT.party gekoppelt.
+
+**3. fxSchlaf:** Mond und 💤 ragten über den Rahmen (Mond jetzt in der Box, Köpfe-Reihe mit
+padding-top 30px); Rex schläft mit (🐕, Hund-Flag statt _party).
+
+**4. Baukasten:** Rex flog bei Begleitung aus der WEN-Ziel-Liste - Verbündete sind keine Ziele
+(gleiche Hund-läuft-nicht-über-_party-Wurzel wie v713).
+
+**5. Opel-Reise-Animation** auf iPhone zu klein: zoom 1.3 auf .fx-car (skaliert SVG, Insassen
+und Anhänger gemeinsam; transform ist von fxDrive belegt).
+
+**6. Nacht-Verfall:** Gefesselte/KO-NPCs befreien sich beim Tageswechsel und verschwinden
+('geflohen', W6 blendet sie aus) - der Mantelmann lag sonst zwei Tage verschnürt am Bahnhof.
+Showdown-Gegner ausgenommen. Hinweis: Dass er in Run 2011 am Bahnhof noch gefesselt LAG, war
+korrekte Welt-Konsistenz (dort gefesselt zurückgelassen, nie übergeben) - unplausibel war nur
+die Dauer.
