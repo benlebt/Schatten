@@ -16112,3 +16112,13 @@ Bubble-Runde der Dialog-Animation eine kurze Nachrunde. Greift bei befragen/ansp
 46→86Hz hoch, zum Wegfahren auf 64Hz absinkend. (3) ZÜND-TUCKERN: 16→26Hz-Amplituden-Puls
 auf dem Gain (knattert wie ein alter Vierzylinder, Tuckern beschleunigt mit der Drehzahl).
 Dazu leises 240Hz-Auspuffrauschen unterm Motor. Timing (~3,2s) passt zur fxDrive-Fahrt.
+
+## 🆕 v7.12.727 — Reise-Popup-Mitnahme: kein Abklatschen, Einstieg in den Opel (Benjamin)
+
+Beim Mitnehmen übers Reise-Popup überlagerten sich Abklatsch- und Fahrt-Animation. Benjamins
+Lösung umgesetzt: In diesem Pfad entfällt fxPartyJoin komplett - die Aufnahme läuft VOR der
+Reise, die Insassen-Logik liest die Party live, der Neue (auch Rex als 🐕) sitzt also sichtbar
+im fahrenden Opel; der Einstieg IST die Animation. Technik: Zeitfenster-Flag
+window._partyFxStummBis (15s) statt einfachem Bool, weil Rex' Tauschzahlung asynchron
+dazwischenliegt; Gates in _partyAdd und an der Rex-Reise-Popup-Stelle, Diag "steigt direkt
+in den Opel". Aufnahmen über das NPC-Menü behalten ihr Abklatschen unverändert.
