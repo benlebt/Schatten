@@ -3187,7 +3187,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.687</div>
+    <div class="start-version">Schatten v7.12.688</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.687</span>
+    <span>Schatten v7.12.688</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6838,6 +6838,7 @@ function _npcHatOffenenHinweis(npcName) {
     const vn = nN.split(/\s+/)[0];
     return loc.indizien.some(ind => {
       if (!ind || !ind.id || !ind.npc || gef.indexOf(ind.id) !== -1) return false;
+      if (ind.quelle !== 'person') return false; // v7.12.688: Personen-Badge nur für Person-Indizien (s. _npcOffeneHinweisAktionen)
       const indNpc = normForMatch(ind.npc);
       // npc-Feld ist oft eine ID (august_lemke); gegen Name UND Vorname matchen.
       const matcht = indNpc === nN || indNpc.replace(/_/g, ' ') === nN || (vn.length >= 3 && indNpc.includes(vn));
@@ -6865,6 +6866,11 @@ function _npcOffeneHinweisAktionen(npcName) {
     const out = [];
     loc.indizien.forEach(ind => {
       if (!ind || !ind.id || !ind.npc || gef.indexOf(ind.id) !== -1) return;
+      // v7.12.688 (Benjamin, Run 1421: Wahler-Badge "Umsehen/Durchsuchen" 3 Szenen lang verwirrend):
+      // Das PERSONEN-Badge zeigt nur noch quelle:'person'-Indizien (Befragen/Bestechen-artig).
+      // Umgebungs-Indizien mit NPC-Gate (Frachtliste bei Wahler) werden vom UMSEHEN-Button-Marker
+      // beworben - dort gehört der Klick hin, nicht auf die Person.
+      if (ind.quelle !== 'person') return;
       const indNpc = normForMatch(ind.npc);
       const matcht = indNpc === nN || indNpc.replace(/_/g, ' ') === nN || (vn.length >= 3 && indNpc.includes(vn));
       if (!matcht) return;
@@ -7249,7 +7255,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.687';
+window.SCHATTEN_VERSION = 'v7.12.688';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -8435,11 +8441,23 @@ try { if (document.readyState !== 'loading') _renderBaukastenButton(); else docu
 function _npcLehntMitnahmeAb(npcName, npcTag) {
   try {
     if ((npcTag || '').toUpperCase() === 'KONTAKT') return 'arbeitet allein und trifft Karl nur an vereinbarten Orten';
+    // v7.12.688 (Run 1421: Wahler [Typ ?] bekam "Mitnehmen"): (a) Der Verdächtige/Täter kommt
+    // NIE freiwillig mit - Festsetzen läuft über Fesseln/Überwältigen, nicht über die Party.
+    // (b) Setup-Match jetzt mit Teilnamen + Anführungszeichen-Strip ('Wahler' muss 'Direktor
+    // Bernhard Wahler' treffen, 'IM "Anker"' muss matchen).
+    const _qn = (s) => normForMatch((s || '').replace(/["'„""»«]/g, ''));
+    const _npcN = _qn(npcName);
+    if ((npcTag || '').toUpperCase() === 'SUSPECT' || /suspect|verdächtig|verdaechtig|täter|taeter/i.test(npcTag || '')) return 'ist der Verdächtige - er kommt nicht freiwillig mit (Festsetzen geht über Überwältigen/Fesseln)';
+    try {
+      const _tv = _qn((caseProgress && caseProgress.tatverdaechtiger) || '');
+      if (_tv && _npcN && (_tv === _npcN || _tv.includes(_npcN) || _npcN.includes(_tv.split(/\s+/).pop()))) return 'ist der Verdächtige - er kommt nicht freiwillig mit (Festsetzen geht über Überwältigen/Fesseln)';
+    } catch (e) {}
     let _rolle = '';
     if (caseSetup && Array.isArray(caseSetup.setupCast)) {
-      const ce = caseSetup.setupCast.find(c => c && c.name && normForMatch(c.name) === normForMatch(npcName || ''));
+      const ce = caseSetup.setupCast.find(c => c && c.name && (_qn(c.name) === _npcN || (_npcN.length >= 4 && (_qn(c.name).includes(_npcN) || _npcN.includes(_qn(c.name).split(/\s+/).pop())))));
       if (ce) _rolle = ((ce.rolle || '') + ' ' + (ce.tag || ''));
     }
+    if (/suspect|verdächtig|verdaechtig|täter|taeter/i.test(_rolle)) return 'ist der Verdächtige - er kommt nicht freiwillig mit (Festsetzen geht über Überwältigen/Fesseln)';
     if (/wirt|wirtin|imbissbesitzer|imbiss-besitzer|kioskbesitzer|barkeeper|kellner/i.test(_rolle)) return 'kann den Laden nicht einfach verlassen';
     if (/korrespondent|journalist|reporter|presse/i.test(_rolle)) return 'arbeitet allein und trifft Karl nur an vereinbarten Orten';
     // v7.12.639 (Benjamin-Befund: Doc Wagner im Popup mitnehmbar, flog aber beim Ortswechsel als "ortsgebunden"
@@ -15258,8 +15276,13 @@ function buildTranscriptText() {
       };
       const _echtAktiv = (name) => {
         if (!name) return false;
-        const nN = normForMatch(name);
-        const vn = nN.split(/\s+/)[0];
+        // v7.12.688 (Run 1421, P1: IM "Anker" galt als "nicht bespielt", stand aber Sz11-13 im Cast):
+        // (a) Anführungszeichen strippen ('im "anker"' matchte 'im anker' nie); (b) vn = das LÄNGSTE
+        // Wort statt des ersten ('IM' hat nur 2 Zeichen und fiel unter die >=3-Schwelle - alle
+        // Teilnamen-Checks waren tot).
+        const nN = normForMatch((name || '').replace(/["'„""»«]/g, ''));
+        const _worte = nN.split(/\s+/).filter(Boolean);
+        const vn = _worte.reduce((a, b) => (b.length > a.length ? b : a), _worte[0] || '');
         // (a) Kernhinweis-Memory (Schlüssel sind NPC-Namen)
         for (const k in _npcMem) {
           if (Array.isArray(_npcMem[k]) && _npcMem[k].length) {
@@ -17022,7 +17045,7 @@ function advanceGameTime() {
         // v7.12.687 (Benjamin/ChatGPT "die Welt atmet"): Dieser Wrap passiert OHNE Schlaf -
         // Karl hat durchgemacht. Die KI soll ein MORGENGRAUEN erzählen, KEINEN Schlaf.
         if (Array.isArray(pendingCategoryMessages)) {
-          pendingCategoryMessages.push('MORGENGRAUEN (Karl hat DURCHGEMACHT - er hat NICHT geschlafen!): Die Nacht ist über der Ermittlung vergangen. Beschreibe den Übergang atmosphärisch: graues Licht sickert über die Dächer, Kohlegeruch aus den ersten Öfen, feuchter Asphalt, die ersten Arbeiter mit Henkelmann zur Frühschicht, Zeitungsjungen, Lieferwagen vor der HO, irgendwo klappern Mülltonnen. Karl ist WACH und übermüdet - brennende Augen, schaler Geschmack, kalte Glieder. ERZÄHLE KEIN AUFWACHEN und KEIN EINSCHLAFEN - er war die ganze Zeit auf den Beinen. Die Müdigkeit bleibt, nur das Licht hat gewechselt.');
+          pendingCategoryMessages.push('MORGENGRAUEN (Karl hat DURCHGEMACHT - er hat NICHT geschlafen!): BEGINNE die Szene MIT diesem Übergang - der ERSTE Absatz erzählt, wie die Nacht kippt (nicht beiläufig in der Mitte erwähnen). Die Nacht ist über der Ermittlung vergangen. Beschreibe den Übergang atmosphärisch: graues Licht sickert über die Dächer, Kohlegeruch aus den ersten Öfen, feuchter Asphalt, die ersten Arbeiter mit Henkelmann zur Frühschicht, Zeitungsjungen, Lieferwagen vor der HO, irgendwo klappern Mülltonnen. Karl ist WACH und übermüdet - brennende Augen, schaler Geschmack, kalte Glieder. ERZÄHLE KEIN AUFWACHEN und KEIN EINSCHLAFEN - er war die ganze Zeit auf den Beinen. Die Müdigkeit bleibt, nur das Licht hat gewechselt.');
         }
         // v7.12.410: Energie/Hunger-Mechanik ausgebaut - kein Reset mehr noetig.
       // v7.12.21: AUTOMATISCHE TAGESGENESUNG ABGESCHALTET (User-Entscheidung).
@@ -20292,11 +20315,17 @@ function baueSicherungsButtons(container) {
     sep.textContent = '· In Sicherheit bringen ·';
     container.appendChild(sep);
     let _gebaut = 0;
+    // v7.12.688 (Benjamin: "inkonsistent, dass ich nur flüchten kann, aber die Sichern-Buttons
+    // drücken darf"): Sichern-Aktionen sind sinngemäß REISEN (zur Charité fahren, zum Kranzler) -
+    // in einer akuten Gefahrenszene (Sp>=4, Flucht-Button aktiv) erst aus der Gefahr lösen,
+    // dann sichern. Buttons bleiben sichtbar, aber gesperrt mit Grund.
+    const _sichernGefahr = (typeof lastSpannung === 'number' && lastSpannung >= 4 && !karlInStasiCustody);
     _buttons.forEach(b => {
       const btn = document.createElement('button');
       btn.className = 'option-btn option-btn-system option-btn-sicherung';
       btn.innerHTML = '<span class="option-id">' + b.emoji + '</span><span class="option-text-wrap"><span>'
-        + escapeHtml(b.label) + '</span><span class="option-marker option-marker-defensiv">SICHERN</span></span>';
+        + escapeHtml(b.label) + '</span><span class="option-marker option-marker-defensiv">' + (_sichernGefahr ? 'GESPERRT · erst aus der Gefahr lösen (Flucht)' : 'SICHERN') + '</span></span>';
+      if (_sichernGefahr) { btn.disabled = true; btn.classList.add('locked'); container.appendChild(btn); _gebaut++; return; }
       attachSafeTap(btn, () => {
         if (typeof chooseOptionInFlight !== 'undefined' && chooseOptionInFlight) return;
         // HART setzen - kein Regex, keine Prosa-Bestätigung nötig.
@@ -24952,6 +24981,9 @@ Wenn Karl waehlt: Schnitt zur naechsten Szene am Morgen, Kaffee zu zweit, keine 
       for (const msg of pendingCategoryMessages) {
         timeContext += '\n' + msg;
       }
+      // v7.12.688 (Run 1421: Pushes waren im Export UNSICHTBAR - "MORGENGRAUEN gefeuert?" war
+      // nicht prüfbar, Lektorate raten ins Blaue): jeden verbrauchten Push als Kopfzeile loggen.
+      try { if (typeof diag === 'function') diag('state', '📨 PUSHES an KI (' + pendingCategoryMessages.length + '): ' + pendingCategoryMessages.map(m => String(m).split(':')[0]).join(' | ')); } catch (e) {}
       // verbraucht
       pendingCategoryMessages = [];
     }

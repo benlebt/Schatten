@@ -15439,3 +15439,40 @@ Prompt-only, keine Mechanik (ChatGPT-Lektorat "die Welt atmet", von Benjamin bes
 (Benjamins v512/528-Linie; ChatGPT-Forderung "nie erzwingen" abgelehnt — Müdigkeit kann
 nie töten, Verfassungs-Boden 2). Gewichtete Zeitkosten (Weltzeit-Punkte) = Stufe 2,
 erst nach Testlauf von v686/687.
+
+## 🆕 v7.12.688 — Run-1421-Paket: Verdächtigen-Mitnahme, Badge-Semantik, Audit-Fix, Sichern-Sperre, Push-Transparenz
+
+**Run 1421 (v687) = MEILENSTEIN:** Fall GELÖST, Stage 4, Win-Screen, 3 Tage/18 Szenen —
+Resolve-Gate-Fix (v685) und Zeitmodell (v686) beide auf Anhieb bestätigt. Blindfleck-Fix
+arbeitet: ⏸-Events sichtbar, NPC-Menü-Klicks endlich im Export.
+
+**Benjamins 3 Befunde, alle verifiziert + gefixt:**
+1. **Wahler "Mitnehmen" (Bug):** Wahler lief mit [Typ ?] ins Popup (Name 'Wahler' matchte
+   Setup 'Direktor Bernhard Wahler' nicht) → Standard-Verbset inkl. Mitnehmen. Fix:
+   _npcLehntMitnahmeAb mit Teilnamen+Quote-Strip-Match UND zentraler Regel: SUSPECT/Täter
+   (Tag, Rolle oder tatverdaechtiger-Match) kommt NIE freiwillig mit — Festsetzen läuft
+   über Überwältigen/Fesseln. 3 Tests grün.
+2. **Wahler-Badge 3 Szenen (korrekt, aber irreführend):** Das Indiz (Frachtliste, npc-gated,
+   quelle 'umgebung') war offen und per UMSEHEN greifbar — der Ort-Button zeigte 3 Szenen
+   lang "3 Fundstücke", wurde aber nie geklickt, weil das PERSONEN-Badge zur Person lenkte.
+   Fix: Personen-Badge nur noch für quelle:'person'-Indizien; Umgebungs-Indizien bewirbt
+   der Umsehen-Marker.
+3. **Flucht vs. Sichern-Buttons (Inkonsistenz bestätigt):** Sichern = sinngemäß Reisen.
+   Bei akuter Gefahr (Sp>=4, Flucht aktiv) jetzt gesperrt mit Grund "erst aus der Gefahr
+   lösen (Flucht)" — sichtbar, aber nicht klickbar.
+
+**ChatGPT-Lektorat verifiziert:**
+- **Audit-Bug BESTÄTIGT + gefixt (P1):** IM "Anker" stand Sz11-13 im Cast, galt als "nicht
+  bespielt". Doppelwurzel: Anführungszeichen ('im "anker"' ≠ 'im anker') UND vn nahm das
+  ERSTE Wort ('IM', 2 Zeichen < Schwelle 3 → alle Teilnamen-Checks tot). Fix: Quote-Strip +
+  längstes Wort. Tests grün.
+- **"Tageswechsel nicht erzählt" (P1) = nicht beweisbar:** Pushes waren im Export UNSICHTBAR
+  (auch SCHLAFEN-VOR-ORT fehlt, obwohl Karl nachweislich im Opel schlief). Die v687-Pushes
+  feuerten sehr wahrscheinlich; die KI setzte sie schwach um. Doppel-Fix: 📨-PUSH-Logzeile
+  bei jedem Prompt-Bau (Lektorate sehen künftig, was die KI angewiesen wurde) + MORGENGRAUEN-
+  Push verschärft (Übergang muss die Szene ERÖFFNEN, erster Absatz).
+- **Stage-4-Ort-Prosa-Bruch (1×, "vor dem Revier"):** Hard-Retry bleibt SETTLED ABGELEHNT
+  (Benjamin v671); Messzeile zählt weiter. Reopen nur durch Benjamin.
+- P2 notiert (nicht gebaut, Benjamin-Entscheid bzw. Content): SED-Siegel→Reichsbahn-
+  Dienstsiegel/Parteiabzeichen (Prompt-Detail); Win-Screen-Nachklang ortsabhängig;
+  Margarete kompetenter (weniger Dauerangst); Schlafort-Risikoklassen (Opel = unsicher).
