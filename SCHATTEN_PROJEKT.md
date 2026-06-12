@@ -15235,3 +15235,27 @@ mehr — spart Output-Tokens, ändert JSON-Format, Benjamin-Entscheid), (c) Kern
 Architektur auf Kessler/Krause/Wegener/Achterberg/Brandt ausweiten (nächster großer Meilenstein,
 Benjamin-Entscheid), (d) tote Bot-Zweige aufräumen (P3, geringer Nutzen, Risiko im Bot-Code),
 (e) Resolve-Gate-Zentralisierung (P3, Refactor ohne Run-Anlass).
+
+## 🆕 v7.12.679 — Toaster, alter Fisch, Fragil-Verbrauch (Benjamin-Item-Paket Teil 1)
+
+**Verifikations-Antworten (Benjamin-Fragen):**
+- **Ruf-System funktioniert in Baukasten-First** — bewiesen durch Run 0031 (RUF-DIAG Sz15:
+  Gewalt=0/Befragung=5/neutral=6, Tendenz=behutsam; RUF-HINT-Zeilen im Log). Es zählt
+  AUSGEFÜHRTE Aktionen (isPhysical-Analyse), nicht die A-D-Buttons. Bringt weiter was.
+- **Tageszeit-Kopplung von Orten: ABGEHAKT** (gebaut als Öffnungszeiten v565+, istOrtGeoeffnet,
+  Reisemenü graut aus, jetzt/später-Indizien v588).
+- **Werfen existiert schon** ('Ins Gesicht werfen' + 'Vor die Füße werfen', beide mit
+  itemVerlust). **Bananenschale existiert schon** (schaden 'lacher').
+- **Verbrauch:** werfen/eintauschen/trinken -> 'verloren' ✓; bestechen/geben -> 'bei_npc' ✓
+  (weg aus Karls Inventar). Lücke war angreifen_mit -> jetzt geschlossen (s.u.).
+
+**Gebaut:**
+1. **Toaster** (AEG-Vorkriegsmodell) als seltenes Wohnungs-Item: chance:35, fragil. NEU:
+   ORTS_FUNDSTUECKE-Einträge können { key, chance } sein - pro Ort wird EINMAL gewürfelt,
+   Ergebnis persistiert in caseProgress.ortsFundWuerfe (Re-Klick würfelt nicht neu).
+2. **Alter Fisch** (Müll-Item, schaden 'lacher') bei Imbiss (50%) und Bahnhof (40%).
+3. **Fragil-Verbrauch:** Flasche Doppelkorn + Toaster zerbrechen bei angreifen_mit und sind
+   weg (vorher: unendlich oft verwendbar = Cheat-Lücke). Ziegelstein/Werkzeug bleibt.
+
+**Offen (Benjamin-Entscheidung, Teil 2):** Umsehen-Fundauswahl-Popup + Baukasten-Dedupe;
+Item-Ökonomie (Empfehlung: KEIN Zahlen-Budget, stattdessen Quellen-Logik).

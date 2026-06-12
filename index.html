@@ -3187,7 +3187,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.678</div>
+    <div class="start-version">Schatten v7.12.679</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3413,7 +3413,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.678</span>
+    <span>Schatten v7.12.679</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7183,7 +7183,7 @@ const TIMES_OF_DAY = ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'N
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.678';
+window.SCHATTEN_VERSION = 'v7.12.679';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -7670,6 +7670,14 @@ function _planAusfuehren() {
             else if (p._itemAngriff || p.art === 'angreifen_mit') _zst = (_katO && _katO.schaden === 'benommen') ? 'benommen' : 'angewidert';
             else if (p.art === 'werfen') _zst = (_katO && _katO.schaden === 'benommen') ? 'benommen' : 'abgelenkt';
             if (_zst && typeof _npcZustandSet === 'function') { _npcZustandSet(p.ziel, { status: _zst }); if (typeof diag === 'function') diag('state', 'ITEM-EFFEKT: ' + p.ziel + ' -> ' + _zst + ' (' + p.art + (_katO ? ', ' + _katO.name : '') + ')'); }
+            // v7.12.679 (Benjamin: "ist der Doppelkorn nach dem Angriff weg?"): angreifen_mit hatte
+            // KEIN itemVerlust - die Flasche überlebte unendlich viele Schläge (Cheat-Lücke). Jetzt:
+            // fragile Items (Flasche, Toaster) zerbrechen beim Zuschlagen und sind weg; Werkzeug
+            // (Ziegelstein, Schlagstock) bleibt. Wurf-Verben hatten itemVerlust schon immer.
+            if ((p._itemAngriff || p.art === 'angreifen_mit') && _katO && _katO.fragil && p.itemId && typeof _itemMove === 'function') {
+              _itemMove(p.itemId, { status: 'verloren', owner: '' });
+              if (typeof diag === 'function') diag('state', 'ITEM-ZERBROCHEN: ' + _katO.name + ' beim Angriff zerstört (fragil) - aus dem Inventar entfernt');
+            }
           } catch (e) {}
         }
         if (p._itemUebergabe && p.itemId && typeof _itemMove === 'function') _itemMove(p.itemId, { status: 'bei_npc', owner: p.ziel || 'npc' });
@@ -7786,7 +7794,12 @@ const ITEM_KATALOG = {
   // v7.12.631: taugt = erlaubte Aktionen (Affordances). Aktionen: anbieten/bestechen/eintauschen/trinken/
   // angreifen_mit (ins Gesicht, Schaden) / werfen_fuesse (vor die Füße, Sturz/Ablenkung) / ablenken.
   west_zigaretten: { name: 'Schachtel West-Zigaretten', taugt: ['anbieten','bestechen','eintauschen'], tauschwert: 3 },
-  korn:            { name: 'Flasche Nordhäuser Doppelkorn', taugt: ['trinken','anbieten','angreifen_mit','werfen_fuesse'], tauschwert: 1, schaden: 'benommen' },
+  korn:            { name: 'Flasche Nordhäuser Doppelkorn', taugt: ['trinken','anbieten','angreifen_mit','werfen_fuesse'], tauschwert: 1, schaden: 'benommen', fragil: true },
+  // v7.12.679 (Benjamin): Toaster - seltenes Wohnungs-Item (chance-basiert, liegt NICHT immer rum).
+  // Zerbricht beim Zuschlagen (fragil). 1953 plausibel: AEG/Siemens-Klapptoaster, Vorkriegsware.
+  toaster:         { name: 'Toaster (AEG, Vorkriegsmodell)', taugt: ['angreifen_mit','werfen_fuesse','eintauschen'], tauschwert: 1, schaden: 'benommen', fragil: true },
+  // v7.12.679 (Benjamin): Müll-Item - liegt eher rum als eine volle Flasche auf der Straße.
+  alter_fisch:     { name: 'Alter Fisch (aus dem Müll)', taugt: ['werfen_fuesse','angreifen_mit','ablenken'], schaden: 'lacher' },
   bohnenkaffee:    { name: 'Päckchen Bohnenkaffee', taugt: ['anbieten','bestechen','eintauschen'], tauschwert: 3 },
   westmark:        { name: 'Bündel Westmark', taugt: ['bestechen','eintauschen'], tauschwert: 4 },
   ziegelstein:     { name: 'Ziegelstein', taugt: ['angreifen_mit','werfen_fuesse','ablenken'], schaden: 'benommen' },
@@ -7815,19 +7828,19 @@ const ORTS_FUNDSTUECKE = {
   // Ort-Keyword (im Namen/detail) -> mögliche Katalog-Item-Keys
   anker:        ['korn', 'west_zigaretten'],        // Kneipe: Schnaps, Schwarzmarkt-Zigaretten
   kneipe:       ['korn', 'west_zigaretten'],
-  imbiss:       ['korn', 'bohnenkaffee'],
+  imbiss:       ['korn', 'bohnenkaffee', { key: 'alter_fisch', chance: 50 }],
   trude:        ['bohnenkaffee', 'west_zigaretten'],
   kranzler:     ['bohnenkaffee', 'west_zigaretten', 'westmark'], // West-Café: Westwaren
   cafe:         ['bohnenkaffee', 'west_zigaretten'],
   café:         ['bohnenkaffee', 'west_zigaretten'],
   auffangstelle:['westmark', 'west_zigaretten'],    // West-Berlin: Westgeld
   west:         ['westmark', 'west_zigaretten'],
-  bahnhof:      ['ziegelstein', 'knallkoerper'],    // Bahngelände: Wurfobjekte
+  bahnhof:      ['ziegelstein', 'knallkoerper', { key: 'alter_fisch', chance: 40 }],    // Bahngelände: Wurfobjekte + Müll
   stellwerk:    ['ziegelstein', 'brecheisen'],
   praxis:       ['korn'],                            // Arztpraxis: Medizinschnaps
   buero:        ['korn'],
   'büro':       ['korn'],
-  wohnung:      ['korn', 'ziegelstein']
+  wohnung:      ['korn', 'ziegelstein', { key: 'toaster', chance: 35 }]
 };
 // Findet die für den aktuellen Ort plausiblen, noch nicht gefundenen Fund-Items.
 function _ortsFundItems() {
@@ -7835,7 +7848,23 @@ function _ortsFundItems() {
     if (!engineCurrentLocation || !engineCurrentLocation.name) return [];
     const probe = normForMatch((engineCurrentLocation.name || '') + ' ' + (engineCurrentLocation.detail || ''));
     const keys = new Set();
-    for (const k in ORTS_FUNDSTUECKE) { if (probe.includes(normForMatch(k))) ORTS_FUNDSTUECKE[k].forEach(x => keys.add(x)); }
+    // v7.12.679 (Benjamin: "Toaster soll NICHT immer rumliegen"): Einträge können jetzt
+    // { key, chance } sein. Pro Ort wird EINMAL gewürfelt und das Ergebnis persistiert -
+    // erneutes Umsehen würfelt nicht neu (sonst erscheint das Item beim 3. Klick doch).
+    if (!caseProgress.ortsFundWuerfe) caseProgress.ortsFundWuerfe = {};
+    const _ortWurfKey = normForMatch(engineCurrentLocation.name);
+    for (const k in ORTS_FUNDSTUECKE) {
+      if (!probe.includes(normForMatch(k))) continue;
+      ORTS_FUNDSTUECKE[k].forEach(x => {
+        if (typeof x === 'string') { keys.add(x); return; }
+        if (!x || !x.key) return;
+        const wk = _ortWurfKey + '::' + x.key;
+        if (!(wk in caseProgress.ortsFundWuerfe)) {
+          caseProgress.ortsFundWuerfe[wk] = (Math.random() * 100) < (typeof x.chance === 'number' ? x.chance : 100);
+        }
+        if (caseProgress.ortsFundWuerfe[wk]) keys.add(x.key);
+      });
+    }
     // Schon an DIESEM Ort gefundene Fund-Items nicht erneut anbieten.
     if (!caseProgress.ortsFundGenommen) caseProgress.ortsFundGenommen = {};
     const ortKey = normForMatch(engineCurrentLocation.name);
