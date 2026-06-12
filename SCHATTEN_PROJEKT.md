@@ -16155,3 +16155,16 @@ nur das Brummen") - der Motor brummt jetzt sofort los, Drehzahl-Kurve + Tuckern 
 **3. "An mich nehmen"** verschwindet bei Personen-Zielen aus der Aktions-Liste - Personen
 nimmt man nicht an sich, das Verb gilt Gegenständen. (Der Filter-Kommentar versprach das
 seit v655, der konkrete Check fehlte.)
+
+## 🆕 v7.12.730 — Genuschel v2 (Sprachmelodie) + Registrierkassen-Klingel (Benjamin)
+
+**1. Befragen-Genuschel "klingt wie Morsecode":** v2 mit drei Sprach-Zutaten, die Morse von
+Sprache trennen: Melodiebogen IN jeder Silbe (Pitch steigt zum Kern, fällt ab), weiche
+Attack/Release statt harter Kanten, und ein Satz-Bogen (Tonhöhe sinkt über die Äußerung wie
+bei einer Aussage). Dazu 850Hz-Lowpass für Stimm-Wärme und betonte (längere, lautere) vs.
+unbetonte Silben im 3er-Rhythmus.
+
+**2. sfxKasse - Cha-Ching beim Einsammeln:** mechanischer Klick + Glocken-Doppelklang
+(C7+E7) mit zweitem leiserem Anschlag und Nachklang. Andockstellen: fxItemGain (jedes
+eingesammelte Item) UND showProgressToast variant 'clue' am sicheren Render-Punkt (jeder
+Indiz-Fund, Spur, Stage-Up) - "jedes Mal wie Geld bekommen".

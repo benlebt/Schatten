@@ -3277,7 +3277,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.729</div>
+    <div class="start-version">Schatten v7.12.730</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3503,7 +3503,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.729</span>
+    <span>Schatten v7.12.730</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7364,7 +7364,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.729';
+window.SCHATTEN_VERSION = 'v7.12.730';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -8351,6 +8351,7 @@ function _npcVisual(name, h) {
 }
 // Item-Pop: poppt beim Einbuchen (Engine-Wahrheit aus _itemAdd) kurz hoch.
 function fxItemGain(item) {
+  try { if (typeof sfxKasse === 'function') sfxKasse(); } catch (e) {} // v7.12.730: Cha-Ching beim Einsammeln
   try {
     if (!fxEnabled() || !item) return;
     const el = document.createElement('div');
@@ -8569,17 +8570,38 @@ function sfxSeufzer() {
 // v7.12.725 (Benjamin: "beim Befragen ein lustiges, comicartiges Genuschel"): Brabbel-
 // Silben wie in alten Adventure-Spielen - 6-9 kurze Sägezahn-Bursts mit zufälliger Tonhöhe
 // um einen Grundton, unregelmäßige Pausen. grundton ~150 = Karl, tiefer = Gegenüber.
+// v7.12.730 (Benjamin: "klingt wie Morsecode"): v2 mit Sprach-Charakter. Drei Zutaten,
+// die Morse von Sprache trennen: (1) Melodiebogen IN der Silbe (Pitch steigt zum Kern und
+// fällt ab), (2) weiche Attack/Release statt harter Kanten, (3) ein Satz-Bogen - die
+// Tonhöhe sinkt über die Äußerung wie bei einer Aussage. Dazu Lowpass für Stimm-Wärme
+// und betonte (längere, lautere) vs. unbetonte Silben.
 function sfxBlabla(grundton, delay) {
   try {
     const c = _sfx(); if (!c) return;
     const g0 = grundton || 150;
-    let tAkk = delay || 0;
+    let tAkk = (c.currentTime) + (delay || 0);
     const silben = 6 + Math.floor(Math.random() * 4);
     for (let i = 0; i < silben; i++) {
-      const f = g0 * (0.82 + Math.random() * 0.5);
-      const d = 0.055 + Math.random() * 0.05;
-      _sfxTon(f, f * (0.88 + Math.random() * 0.18), d, 'sawtooth', 0.05, tAkk, c);
-      tAkk += d + 0.018 + Math.random() * 0.05;
+      const betont = (i % 3 === 0);
+      const satzFall = 1 - (i / silben) * 0.18; // Aussage: zum Ende hin tiefer
+      const basis = g0 * satzFall * (0.92 + Math.random() * 0.22);
+      const peak = basis * (1.12 + Math.random() * 0.14);
+      const ende = basis * (0.86 + Math.random() * 0.08);
+      const d = (betont ? 0.13 : 0.085) + Math.random() * 0.045;
+      const o = c.createOscillator(); o.type = 'sawtooth';
+      o.frequency.setValueAtTime(basis, tAkk);
+      o.frequency.linearRampToValueAtTime(peak, tAkk + d * 0.35);
+      o.frequency.linearRampToValueAtTime(ende, tAkk + d);
+      const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 850; f.Q.value = 1.1;
+      const g = c.createGain();
+      const vol = betont ? 0.065 : 0.045;
+      g.gain.setValueAtTime(0.0001, tAkk);
+      g.gain.linearRampToValueAtTime(vol, tAkk + 0.025);
+      g.gain.setValueAtTime(vol, tAkk + d - 0.04);
+      g.gain.linearRampToValueAtTime(0.0001, tAkk + d);
+      o.connect(f); f.connect(g); g.connect(_sfxOut(c) || c.destination);
+      o.start(tAkk); o.stop(tAkk + d + 0.02);
+      tAkk += d + 0.012 + Math.random() * 0.03;
     }
   } catch (e) {}
 }
@@ -8624,6 +8646,16 @@ function sfxHohn() {
   _sfxTon(300, 270, 0.12, 'sawtooth', 0.09, 0);
   _sfxTon(260, 232, 0.12, 'sawtooth', 0.09, 0.18);
   _sfxTon(220, 188, 0.16, 'sawtooth', 0.1, 0.36);
+}
+// v7.12.730 (Benjamin: "wie eine Registrierkasse - jedes Mal wie Geld bekommen"):
+// Cha-Ching beim Einsammeln. Mechanischer Klick + heller Glocken-Doppelklang mit Nachklang.
+function sfxKasse() {
+  if (!sfxOn()) return;
+  _sfxNoise(0.025, 0.1, 0, 2600);                    // das mechanische "Ka"
+  _sfxTon(2093, 2088, 0.55, 'sine', 0.12, 0.04);     // Glocke (C7)
+  _sfxTon(2637, 2630, 0.45, 'sine', 0.07, 0.045);    // Oberton (E7)
+  _sfxTon(2093, 2090, 0.4, 'sine', 0.06, 0.16);      // zweiter Anschlag, leiser
+  _sfxTon(2637, 2632, 0.35, 'sine', 0.04, 0.165);
 }
 // Zentrale Sound-Wahl für eine Plan-/Kampf-Aktion (art + Item-Name).
 function sfxFuerAktion(art, itemName) {
@@ -42854,6 +42886,9 @@ function showProgressToast(title, subtitle, variant, triggerKey, iconOverride) {
     const last = caseProgress.toastLog && caseProgress.toastLog[caseProgress.toastLog.length - 1];
     if (last) last.shown = true;
   } catch (e) { /* ignore */ }
+  // v7.12.730 (Benjamin): Indiz-/Fortschritts-Funde klingeln wie eine Registrierkasse -
+  // "jedes Mal wie Geld bekommen". Genau hier, weil der Toast ab hier sicher erscheint.
+  try { if (variant === 'clue' && typeof sfxKasse === 'function') sfxKasse(); } catch (e) {}
   if (typeof diag === 'function') diag('detect', 'TOAST [' + variant + '] "' + title + '" angezeigt' + (subtitle ? ' - ' + String(subtitle).slice(0, 60) : ''));
   if (isCriticalToast) {
     toastHistory.criticalThisScene = sceneCounter;
