@@ -15939,3 +15939,24 @@ neben Karl"). Neu: 😶‍🌫️ (Gesicht im Nebel) für /mantel|schatten|besch
 den MYSTERY-Tag-Fallback - gleiche Größe wie alle Charaktere, und erzählt den gesichtslosen
 Beschatter sogar besser. Eigenes SVG bewusst NICHT (Gold-Porträts in v696 als leblos
 verworfen; ein Einzel-SVG zwischen Emoji-Gesichtern fiele aus der Reihe).
+
+## 🆕 v7.12.713 — Drei Run-1953-Wurzeln: Save-Loch, unsichtbare Popups, Tag-Schlaf (Benjamin)
+
+**1. Rex nach Reload verschwunden (wirkte wie "Status ändert sich nicht"):** Die Aufnahme
+setzte caseProgress.hundInParty korrekt (Log Z505: Kommando-Verben da ✓), aber KEIN Save -
+saveGameState läuft nur an Szenen-Grenzen. Safari-Reload (Restore Z1254) → Flag weg → der
+HUND-WÜRFEL würfelte Rex am Goldenen Anker neu als Orts-NPC (Z2348), Badge wieder
+"mitnehmen". Fix: Sofort-Save an beiden Rex-Aufnahme-Stellen UND zentral in _partyAdd
+(gleiche Verlustklasse für menschliche Begleiter).
+
+**2. Sichern-Klick "tat nichts":** Die CSS-Klasse .npc-overlay EXISTIERT NICHT - das echte
+NPC-Menü baut sein Overlay mit Inline-Styles. Rex-Zielwahl (v704) und Sichern-Auswahl (v708)
+hingen unsichtbar im DOM. Neu: gemeinsamer Helfer zeigeMiniAuswahl(titel, frage, einträge)
+exakt im Stil von oeffneNpcMenue (Inline-cssText, Panel, Abbrechen); beide Popups umgestellt.
+
+**3. Übermüdet am Morgen, aber kein Schlaf möglich:** Seit der Auto-Schlaf raus ist (v707)
+war der Schlaf-Button weiter an Abend/Nacht gebunden - Erschöpfungs-Sackgasse bis zum Abend.
+Neu: ab Müdigkeit 12 (Warnschwelle) ist der Button tageszeitunabhängig da (Spannungs- und
+Unterwegs-Sperren bleiben).
+
+**4.** PartyJoin-Animation 3500→5200ms (Benjamin: immer noch zu kurz; jetzt Dialog-Niveau).

@@ -3277,7 +3277,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.712</div>
+    <div class="start-version">Schatten v7.12.713</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3503,7 +3503,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.712</span>
+    <span>Schatten v7.12.713</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7361,7 +7361,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.712';
+window.SCHATTEN_VERSION = 'v7.12.713';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -8081,7 +8081,7 @@ const FX_AKTIV = true;
 // bei Änderung von 'reise' dort mitziehen.
 const FX_ZEIT = {
   item: 2600,            // Item-Pop - v7.12.709 (Benjamin: Funde verschwanden zu schnell)
-  party: 3500, // v7.12.706 (Benjamin): Abklatschen war zu kurz           // Abklatschen
+  party: 5200, // v7.12.713 (Benjamin, 2. Anlauf): einheitlich mit den Dialog-Animationen           // Abklatschen
   dialog: 5200, // v7.12.704 (Benjamin): Standard-Animationen doppelt so lang
   secure: 3400,          // Sicherungs-Beat (Benjamin: Tick kürzer als Dialog)          // Gespräch/Bedrohen/Bestechen/Romantik (Benjamin: ~2-3 s)
   kampfSchritt: 1100,    // pro Plan-Schritt in der Konfrontation
@@ -9464,6 +9464,9 @@ function _partyAdd(npc) {
     return false;
   }
   _party.push({ id: npc.id, name: npc.name || npc.id, tag: npc.tag || '', sinceScene: (typeof sceneCounter === 'number' ? sceneCounter : 0) });
+  // v7.12.713 (Run 1953, gleiche Klasse wie Rex): Party-Änderungen passieren oft ZWISCHEN
+  // Szenen - ohne Sofort-Save verliert ein Safari-Reload das Mitglied bis zum nächsten Szenen-Save.
+  try { if (typeof saveGameState === 'function') saveGameState(); } catch (e) {}
   // v7.12.668: Aufruf-Ursprung mitloggen (Benjamin-Befund: Roth kam ohne sichtbaren Klick in die Party). Der
   // Stack-Hinweis zeigt im Run-Log, welcher Codepfad _partyAdd ausgelöst hat (Spieler-Klick vs. ein Auto-Pfad).
   let _origin = '';
@@ -20381,6 +20384,9 @@ function zeigeMitnehmenPopup(npcs, weiterAktion) {
         // v7.12.695: Rex kostet Tauschwert 3 bei Willi Kummer - erst zahlen, dann Hund.
         const _rexAuf = () => {
           if (typeof caseProgress === 'object' && caseProgress) { caseProgress.hundInParty = true; caseProgress.hundEntschieden = 'aufgenommen'; }
+          // v7.12.713 (Run 1953): SOFORT speichern - die Aufnahme passiert ZWISCHEN Szenen,
+          // und ohne Save war Rex nach einem Safari-Reload wieder weg (Flag nie im Spielstand).
+          try { if (typeof saveGameState === 'function') saveGameState(); } catch (e) {}
           if (typeof diag === 'function') diag('state', '🐕 HUND aufgenommen (Reise-Popup): ' + npc.name);
           try { if (typeof fxPartyJoin === 'function') fxPartyJoin(typeof HUND_NAME === 'string' ? HUND_NAME : 'Rex'); } catch (e) {} // v7.12.692
         };
@@ -20703,6 +20709,38 @@ function _unused_renderImRaumAnzeige_alt() {
 // Klick auf einen NPC im Raum öffnet ein Verb-Menü. Jedes Verb löst eine Szene aus (wie der Reise-Button),
 // mit passendem KI-Kontext. Die Verben sind IMMER verfügbar (Befragen/Bedrohen/Bestechen/Angreifen) - die
 // item-/booster-abhängigen Mehrschritt-Aktionen (bestechen MIT Whiskey) kommen erst mit dem Item-System (Stufe 3).
+// v7.12.713 (Benjamin: Sichern-Klick "passiert nichts" - WURZEL: die Klasse .npc-overlay
+// existiert im CSS GAR NICHT, das echte Menü baut sein Overlay mit Inline-Styles. Die
+// Rex-Zielwahl (v704) und die Sichern-Auswahl (v708) hingen daher UNSICHTBAR im DOM):
+// EIN gemeinsamer Mini-Auswahl-Helfer, gebaut exakt wie oeffneNpcMenue (inline cssText).
+function zeigeMiniAuswahl(titel, frage, eintraege) {
+  try {
+    const alt = document.getElementById('npc-overlay'); if (alt) alt.remove();
+    const overlay = document.createElement('div');
+    overlay.id = 'npc-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9000;background:rgba(10,8,6,0.82);display:flex;align-items:center;justify-content:center;padding:18px;';
+    const panel = document.createElement('div');
+    panel.style.cssText = 'max-width:440px;width:100%;max-height:80vh;overflow-y:auto;background:#1a1611;border:1px solid #4d4234;border-radius:8px;padding:18px 18px 14px;box-shadow:0 12px 40px rgba(0,0,0,0.6);';
+    panel.innerHTML = '<div style="font-family:inherit;color:#cbbfa9;font-size:calc(14px * var(--reading-scale));letter-spacing:0.06em;margin-bottom:4px;">' + escapeHtml((titel || '').toUpperCase()) + '</div>'
+      + '<div style="font-family:inherit;color:#7d7461;font-size:calc(11px * var(--reading-scale));margin-bottom:12px;">' + escapeHtml(frage || 'Was wählst du?') + '</div>';
+    (eintraege || []).forEach(e => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.style.cssText = 'display:block;width:100%;text-align:left;margin-bottom:8px;padding:10px 12px;background:#322a22;border:1px solid #5a4e36;border-radius:5px;color:#d8cdb6;cursor:pointer;font-family:inherit;font-size:calc(12px * var(--reading-scale));line-height:1.3;';
+      b.textContent = e.label;
+      attachSafeTap(b, () => { try { overlay.remove(); } catch (x) {} try { if (e.cb) e.cb(); } catch (x) {} });
+      panel.appendChild(b);
+    });
+    const ab = document.createElement('button');
+    ab.type = 'button';
+    ab.style.cssText = 'display:block;width:100%;text-align:center;margin-top:4px;padding:9px 12px;background:transparent;border:1px solid #4d4234;border-radius:5px;color:#9a8a68;cursor:pointer;font-family:inherit;font-size:calc(12px * var(--reading-scale));';
+    ab.textContent = 'Abbrechen';
+    attachSafeTap(ab, () => { try { overlay.remove(); } catch (x) {} });
+    panel.appendChild(ab);
+    overlay.appendChild(panel);
+    document.body.appendChild(overlay);
+  } catch (e) {}
+}
 function schliesseNpcMenue() {
   const ov = document.getElementById('npc-overlay');
   if (ov) ov.remove();
@@ -20859,6 +20897,8 @@ function npcInteraktion(npc, verb) {
       // v7.12.695: Rex kostet Tauschwert 3 bei Willi Kummer - erst zahlen, dann Hund.
       const _rexAuf2 = () => {
         if (typeof caseProgress === 'object' && caseProgress) { caseProgress.hundInParty = true; caseProgress.hundEntschieden = 'aufgenommen'; }
+        // v7.12.713 (Run 1953): SOFORT speichern (siehe Reise-Popup-Stelle - Reload-Verlust).
+        try { if (typeof saveGameState === 'function') saveGameState(); } catch (e) {}
         if (typeof showProgressToast === 'function') showProgressToast(HUND_NAME + ' kommt mit', 'Der Wachhund folgt Karl jetzt aufs Wort.', 'success', 'hund-add');
         if (typeof diag === 'function') diag('state', '🐕 HUND aufgenommen: ' + HUND_NAME);
         try { if (typeof fxPartyJoin === 'function') fxPartyJoin(HUND_NAME); } catch (e) {} // v7.12.692: Abklatsch-Animation
@@ -20910,22 +20950,13 @@ function npcInteraktion(npc, verb) {
         }
         _hundPlan(''); return; // bellen/knurren in die Runde
       }
-      // Mehrere Gegner: der Spieler sagt, WEN Rex fassen/fixieren/anbellen soll.
-      try {
-        if (typeof schliesseNpcMenue === 'function') schliesseNpcMenue();
-        const ov = document.createElement('div');
-        ov.id = 'npc-overlay';
-        ov.className = 'npc-overlay';
-        let bts = '';
-        _feinde.forEach((f, i) => { bts += '<button class="npc-verb-btn" data-hz="' + i + '">' + ((typeof charVisual === 'function') ? charVisual(f.name, f.tag) : '👤') + ' ' + escapeHtml(f.name) + '</button>'; });
-        ov.innerHTML = '<div class="npc-menue"><div class="npc-menue-titel">' + HUND_NAME.toUpperCase() + ': ' + escapeHtml(verb.label) + '</div>'
-          + '<div class="npc-menue-frage">Wen soll ' + HUND_NAME + ' sich vornehmen?</div>' + bts
-          + '<button class="npc-verb-btn npc-verb-abbruch">Abbrechen</button></div>';
-        document.body.appendChild(ov);
-        ov.querySelectorAll('[data-hz]').forEach(b => attachSafeTap(b, () => { try { ov.remove(); } catch (e) {} _hundPlan(_feinde[parseInt(b.getAttribute('data-hz'), 10)].name); }));
-        const ab = ov.querySelector('.npc-verb-abbruch');
-        if (ab) attachSafeTap(ab, () => { try { ov.remove(); } catch (e) {} });
-      } catch (e) {}
+      // Mehrere Gegner: der Spieler sagt, WEN Rex sich vornehmen soll.
+      // v7.12.713: über den gemeinsamen Mini-Auswahl-Helfer (gleiche unsichtbare-Klasse-Wurzel wie Sichern).
+      if (typeof schliesseNpcMenue === 'function') schliesseNpcMenue();
+      if (typeof zeigeMiniAuswahl === 'function') {
+        zeigeMiniAuswahl(HUND_NAME + ': ' + verb.label, 'Wen soll ' + HUND_NAME + ' sich vornehmen?',
+          _feinde.map(f => ({ label: ((typeof charVisual === 'function') ? charVisual(f.name, f.tag) : '👤') + ' ' + f.name, cb: () => _hundPlan(f.name) })));
+      }
     } catch (e) {}
     return;
   }
@@ -21483,21 +21514,12 @@ function baueSicherungsButtons(container) {
       attachSafeTap(btn, () => {
         if (typeof chooseOptionInFlight !== 'undefined' && chooseOptionInFlight) return;
         if (g.varianten.length === 1) { _sichernAusfuehren(g.varianten[0]); return; }
-        // Unterauswahl: Welcher Weg? (NPC-Menü-Stil, wie die Rex-Zielwahl)
-        try {
-          const _altOv = document.getElementById('npc-overlay'); if (_altOv) _altOv.remove();
-          const ov = document.createElement('div');
-          ov.id = 'npc-overlay'; ov.className = 'npc-overlay';
-          let bts = '';
-          g.varianten.forEach((v, i) => { bts += '<button class="npc-verb-btn" data-sx="' + i + '">' + v.emoji + ' ' + escapeHtml(v.label) + '</button>'; });
-          ov.innerHTML = '<div class="npc-menue"><div class="npc-menue-titel">' + g.emoji + ' ' + escapeHtml(_gLabel.toUpperCase()) + '</div>'
-            + '<div class="npc-menue-frage">Welchen Weg wählst du?</div>' + bts
-            + '<button class="npc-verb-btn npc-verb-abbruch">Abbrechen</button></div>';
-          document.body.appendChild(ov);
-          ov.querySelectorAll('[data-sx]').forEach(x => attachSafeTap(x, () => { try { ov.remove(); } catch (e) {} _sichernAusfuehren(g.varianten[parseInt(x.getAttribute('data-sx'), 10)]); }));
-          const ab = ov.querySelector('.npc-verb-abbruch');
-          if (ab) attachSafeTap(ab, () => { try { ov.remove(); } catch (e) {} });
-        } catch (e) {}
+        // v7.12.713: über den gemeinsamen Mini-Auswahl-Helfer (das v708-Overlay nutzte eine
+        // CSS-Klasse, die nicht existiert, und war unsichtbar - Klick "tat nichts").
+        if (typeof zeigeMiniAuswahl === 'function') {
+          zeigeMiniAuswahl(g.emoji + ' ' + _gLabel, 'Welchen Weg wählst du?',
+            g.varianten.map(v => ({ label: v.emoji + ' ' + v.label, cb: () => _sichernAusfuehren(v) })));
+        }
       });
       container.appendChild(btn);
       _gebaut++;
@@ -21945,7 +21967,12 @@ function renderOptions(scene) {
   // Entscheidung mit allen Konsequenzen. Schlaf jetzt NUR bei akut hoher Spannung gesperrt.
   const _akuteGefahr = _schlafSpannung >= 4;
   const _unsichereLageFuerSchlaf = _akuteGefahr && !karlInStasiCustody;
-  const showSleepButton = ((isAbendOderNacht && sleepSceneOk && !isOnTheRoad && !_unsichereLageFuerSchlaf) || canSleepInCustody);
+  // v7.12.713 (Benjamin: "übermüdet am Morgen, aber keine Möglichkeit zu schlafen"): Seit
+  // der Auto-Schlaf raus ist (v707), MUSS der Button bei Übermüdung auch TAGSÜBER da sein -
+  // sonst sitzt Karl bis zum Abend in der Erschöpfungs-Sackgasse. Ab Müdigkeit 12
+  // (Warnschwelle) ist Schlafen tageszeitunabhängig möglich.
+  const _muedFuerSchlaf = (typeof caseProgress === 'object' && caseProgress && typeof caseProgress.muedigkeit === 'number') ? caseProgress.muedigkeit : 0;
+  const showSleepButton = (((isAbendOderNacht || _muedFuerSchlaf >= 12) && sleepSceneOk && !isOnTheRoad && !_unsichereLageFuerSchlaf) || canSleepInCustody);
   if (isAbendOderNacht && sleepSceneOk && !isOnTheRoad && _unsichereLageFuerSchlaf && !canSleepInCustody && typeof diag === 'function') {
     diag('detect', 'SCHLAFEN-Button gesperrt: akute Gefahr Sp' + _schlafSpannung);
   }
