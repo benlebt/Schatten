@@ -16079,3 +16079,14 @@ Sounds an sechs Stellen:
 - ✦ sfxSting (zwei helle Töne aufwärts) - beim Party-Abklatschen
 - 🌙 sfxSchlafTon (zwei weiche absteigende Töne) - beim Truppen-Schlaf
 AudioContext lazy beim ersten Sound (iOS-Geste durch den auslösenden Tap gegeben).
+
+## 🆕 v7.12.724 — SFX-Runde 2: Flatsch, Klirren, Prost, Seufzer (Benjamin)
+
+Vier neue synthetische Sounds: 🐟 sfxFlatsch (nasser Noise-Doppelburst) wenn Fisch oder
+Bananenschale treffen; 🍾 sfxKlirren (heller Burst + gestaffelte Splitter-Pings) wenn eine
+Flasche zerschellt; 🥃 sfxProst (zwei Glas-Pings mit Nachklang) beim Trinken; 🌹 sfxSeufzer
+(weiches "Ahh": Sinus-Glide 660→415Hz mit 5,5Hz-Vibrato) bei naeher/nacht-Romantik.
+Verkabelung: fxConflict bekommt optionalen itemName-Param (fxPlan reicht das Plan-Item
+durch) und wählt den Treffer-Sound item-spezifisch; fxDialog triggert Prost/Seufzer am
+verbKey. Benjamins "Stöhnen"-Wunsch bewusst als dezenter Seufzer umgesetzt - mehr gibt die
+Oszillator-Synthese geschmackvoll nicht her.
