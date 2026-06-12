@@ -15259,3 +15259,30 @@ Benjamin-Entscheid), (d) tote Bot-Zweige aufräumen (P3, geringer Nutzen, Risiko
 
 **Offen (Benjamin-Entscheidung, Teil 2):** Umsehen-Fundauswahl-Popup + Baukasten-Dedupe;
 Item-Ökonomie (Empfehlung: KEIN Zahlen-Budget, stattdessen Quellen-Logik).
+
+## 🆕 v7.12.680 — Item-Ökonomie Teil 2: Fundauswahl, Kaufen, Dedupe (Benjamin-Freigabe)
+
+**Historische Prüfung (Benjamins Frage "ist das 1953 adäquat?"):** JA, mit Differenzierung.
+Korn/Bier ÜBER DEN TRESEN beim Wirt kaufen = normale Gassenschank-Praxis; Zigaretten hinterm
+Tresen üblich. Spirituosen/Tabak waren in der DDR ab ~1950 entrationiert (HO-Preise, teuer);
+Lebensmittelkarten (bis 1958) betrafen Grundnahrung. WESTware (West-Zigaretten, Bohnenkaffee,
+Westmark) = Schwarzmarkt/unterm Tresen — darum teurer bepreist. Reiner Tauschhandel
+(Zigarettenwährung) war seit der Währungsreform 1948 vorbei — KAUFEN gegen Ostmark ist die
+historisch korrekte Standard-Transaktion, Tausch bleibt der Kanal für Schwarzware. Trudes
+Imbiss ist als Quelle dabei (keyword-basiert: wirkt in jedem Fall mit Kneipe/Imbiss-Ort;
+Trude selbst ist in 3 Fällen als Ort definiert, u.a. Margarete).
+
+**Gebaut:**
+1. **Quellen-Logik:** ORTS_FUNDSTUECKE-Einträge können { key, preis } sein. Wirt/Kneipe:
+   Korn (1), West-Zigaretten (3); Trude/Imbiss: Korn (1), Bohnenkaffee (3); West-Café: beides
+   (2). Müll/Wurfzeug (Ziegelstein, Knallkörper, alter Fisch, Toaster-Chance) bleibt frei.
+   Westmark liegt NIRGENDS mehr frei (war absurd) — nur via Durchsuchen/Story. Karls eigener
+   Vorrat (Büro: Korn + NEU Ostmark-Geldschublade) bleibt frei.
+2. **Ostmark-Item** (tauschwert 1) als Karls Arbeitsgeld. Zahl-Logik: billigstes ausreichendes
+   Zahl-Item, Ostmark vor Westmark; kein Wechselgeld (Preis steht vorher dran).
+3. **Fundauswahl-Popup** (NPC-Popup-Stil): Spieler wählt, was er einsteckt; Kauf-Buttons zeigen
+   Preis und sperren ohne Zahlungsmittel; "Fertig / liegen lassen". Indizien bleiben AUTOMATISCH
+   (Ermittlungsfunde). Bots sehen kein Popup (würde Runs einfrieren) — nehmen frei + kaufen
+   wenn zahlbar.
+4. **Baukasten-Dedupe:** gleichnamige Items = EIN Chip ("Doppelkorn ×3"), Auswahl nutzt das
+   erste Exemplar, Verbrauch zählt runter.
