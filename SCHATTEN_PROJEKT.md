@@ -15582,3 +15582,34 @@ mehrstufige Sequenz (Hook in _planAusfuehren, ersetzt dort das v689-Einzelbild f
 Sequenz-Logik gegen Benjamins Beispiel getestet (Rex fasst + Margarete wirft + Karl fesselt,
 beide Ausgänge). **Lizenz geklärt:** Emojis rendert das OS aus Systemschriften (wir liefern
 nur Unicode-Zeichen, keine Grafiken) - unbedenklich; das Opel-SVG ist selbst gezeichnet.
+
+## 🆕 v7.12.695 — NOIR-PORTRÄTS + Rex kostet Tauschwert 3 + Mitnahme-Preise (Benjamin)
+
+**1. Handgezeichnete Noir-Porträt-SVGs** (statt gelber Emojis; Stil wie das Opel-SVG:
+dunkler Korpus, Gold-Kontur; eigene Zeichnungen, lizenzfrei): KARL (Fedora + Mantelkragen),
+STASI/Mertens (massige Schultern, Hut tief, Gesicht im Schatten, Kragen hoch - bedrohlich),
+KOMMISSAR Roth/Lindner (VP-Tellermütze + Gold-Kokarde + Uniformknöpfe), MARGARETE (Bob +
+Drahtgestellbrille - ihr Markenzeichen), FRAU 1953 (Wellenfrisur, Ohrring, Brosche), WIRT
+Willi/Otto (Schiebermütze + Gold-Schnauzer), MANTELMANN/IM (Gesicht voll im Schatten),
+REX (Schäferhund-Silhouette, spitze Ohren, Gold-Auge, Blick in Laufrichtung), MANN generisch
+(Wahler, Lemke). _npcVisual() mit Emoji-Fallback; alle FX umgestellt (fxBattle, fxPartyJoin,
+fxConflict; textContent->innerHTML wo nötig). Routing gegen 11 echte Namen getestet.
+
+**2. Rex kostet Tauschwert 3 bei Willi Kummer** (Benjamin: "Rex fixiert Gegner direkt, der
+darf nicht geschenkt sein - sonst Cheatcode"): Beide Rex-Aufnahme-Stellen hinter
+_zeigeTauschZahlung gelegt. NEU: **KOMBI-ZAHLUNG** - mehrere Items zusammenlegen (3x Ostmark
+= 3), Chips toggeln, Summe live, "kein Wechselgeld!"-Warnung. Sammeln lohnt sich jetzt.
+Bot zahlt automatisch die billigste Kombination (verheizt nicht den Kaffee, wenn 3x Ostmark
+reicht - getestet); reicht es nicht, gibt es Rex nicht.
+
+**3. Mitnahme-Preise** (_npcMitnahmePreis): Freunde/Klientin/Schutz/Verbündete/Familie/
+Romance + Doc Wagner/Heinz/Trude = gratis. INFORMANTEN/Halbwelt = Tw 2, ZEUGEN (Lemke) =
+Tw 1. Bezahltes ist WEG (Doppelkorn als Bestechung = keine Wurfflasche mehr - Benjamins
+taktische Knappheit). Bestehende Ablehnungen bleiben (Wirt ortsgebunden, Verdächtiger nie,
+Vera/KONTAKT arbeitet allein). **OFFEN (Benjamin-Entscheid): Roth gegen Tauschwert
+mitnehmbar machen?** Kollidiert mit Dienst-/Tageszeit-Logik - bewusst nicht gebaut.
+
+**4. Item-Verifikation:** Alter Fisch + Bananenschale haben korrekt KEINEN Tauschwert
+(will niemand), aber Wurf-Tauglichkeit (schaden 'lacher'). Sie liegen hinter Chance-Würfen
+(Fisch: 50% Imbiss / 40% Bahnhof; Toaster 35% Wohnungen) - deshalb noch nicht gesehen.
+Mehr Item-Vielfalt = Content-Entscheid Benjamin (notiert).
