@@ -16209,3 +16209,25 @@ links, das Bewegte (📁 Akten bzw. Margarete) WANDERT in 1,5s von ihm zum Empf�
 (Roth/Vera/Helene/Westen), und die ✨ poppen erst bei Ankunft über dem Ziel auf - mit
 sfxSting als Klang. Gilt für beide Beats (Klientin sichern UND Beweise übergeben). FX-Dauer
 um ~1,2s verlängert, damit die Wanderung Raum hat.
+
+## 🆕 v7.12.736 — Fall-lösen-Sperre trotz Engine-Durchbruch + Spur-Wegweiser (Benjamin, Run 2137)
+
+**1. WURZEL der "verwirrenden Sperre":** Run 2137 hatte Akten an Vera ✓, Margarete bei
+Helene ✓ und ab Sz13 den HARTEN Engine-Durchbruch ("WAHRHEIT ERKANNT - Wahler ueberfuehrt",
+ab Sz19 sogar Klient-Push "Abschluss bereit") - aber der Fall-lösen-Button blieb 11 Szenen
+GESPERRT mit "Wahler als Verantwortlichen belegen". Zwei Prüfungen widersprachen sich: Der
+Button prüft das politische Gate STRICT, und strict ignorierte den v470-Engine-Sync komplett
+(v481-Schutz gegen bloßen Verdacht). Der Textmuster-Detektor des Beats wahler_verantwortlich
+feuerte nie. FIX: Im strict-Modus zählt der Engine-Sync, wenn ZUSÄTZLICH wahrheitErkannt +
+ueberfuehrt vorliegen (harter Durchbruch). Bloßer Verdacht bleibt strict ungenügend.
+
+**2. Spur-Wegweiser:** Wenn der Sperrtext "noch offen: ..." zeigt, hängt er jetzt die Orte
+mit offenen Kern-Indizien an ("- offene Spuren: Stellwerk Schöneweide, ..."). Das Reisemenü
+zählte sie schon - jetzt wird die Zählung zum konkreten Hinweis, WO weiterzumachen ist.
+
+**Analyse Manöver-Härte (Benjamins Frage, noch KEINE Änderung):** Run 2137 zeigt 4 Checks,
+alle ERFOLG: IM (Härte 3) vs 4, Wahler (3) vs 5, Mantelmann (2) vs 4, Mertens (4) vs 4.
+System: deterministische Summe (Karl=2, Begleiter=1-2, +1 Synergie) >= Härte. Befund: Zu
+zweit erreicht man fast immer 4 -> alles bis Härte 4 (auch Showdown-Gegner Mertens) ist ein
+GARANTIERTER Sieg. Nur Hauptmann (5) erfordert mehr. Empfehlung notiert: Gleichstand = Risiko
+(summe == haerte -> 50%-Wurf), Showdown-Gegner +1 Härte. Wartet auf Benjamins Entscheid.

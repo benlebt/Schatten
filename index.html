@@ -3277,7 +3277,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.735</div>
+    <div class="start-version">Schatten v7.12.736</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3503,7 +3503,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.735</span>
+    <span>Schatten v7.12.736</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7364,7 +7364,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.735';
+window.SCHATTEN_VERSION = 'v7.12.736';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -15069,7 +15069,17 @@ function politicalBeatsGateErfuellt(opts) {
     // bloßer Verdacht nicht das Endgame triggert. Im nachsichtigen Modus (finales Gate) bleibt der Sync,
     // damit ein gut-ermittelter Run nicht an einem nicht-feuernden Detektor scheitert.
     const _strict = !!(opts && opts.strict);
-    const _wahlerOk = has('wahler_verantwortlich') || (!_strict && _wahlerEngineOk);
+    // v7.12.736 (Benjamin, Run 2137: Akten an Vera ✓, Margarete bei Helene ✓, Engine meldet ab
+    // Sz13 "WAHRHEIT ERKANNT - Wahler ueberfuehrt" und pusht ab Sz19 "Abschluss bereit" - aber der
+    // Fall-lösen-Button blieb GESPERRT "Wahler belegen"): Der Button prüft strict, und strict
+    // ignorierte den v470-Engine-Sync KOMPLETT (v481-Schutz gegen bloßen VERDACHT). Der Run hatte
+    // aber keinen Verdacht, sondern den HARTEN Durchbruch (wahrheitErkannt + ueberfuehrt). Der
+    // Textmuster-Detektor des Beats feuerte nie - zwei Prüfungen widersprachen sich 11 Szenen lang.
+    // FIX: Im strict-Modus zählt der Engine-Sync, wenn ZUSÄTZLICH der harte Durchbruch vorliegt.
+    // Bloßer Verdacht (nur tatverdaechtiger gesetzt) bleibt strict weiterhin ungenügend (v481 hält).
+    let _wahlerDurchbruchHart = false;
+    try { _wahlerDurchbruchHart = !!(_wahlerEngineOk && caseProgress && caseProgress.wahrheitErkannt && caseProgress.ueberfuehrt); } catch (e) {}
+    const _wahlerOk = has('wahler_verantwortlich') || (!_strict && _wahlerEngineOk) || (_strict && _wahlerDurchbruchHart);
     const _basisBeatsOk = has('schmuggelroute_belegt') && _wahlerOk;
     // v7.12.606 (Benjamin-Freigabe, Run 2225: Fall löste in 9 Szenen mit 1 Indiz - KI schenkte wahrheit_erkannt
     // auf Basis zweier Prosa-Keyword-Beats): WAHRHEITS-FUNDAMENT bei definierten Fällen. Die Wahrheit braucht
@@ -23721,6 +23731,18 @@ function renderOptions(scene) {
         // Kürzen auf die ersten 2 offenen Punkte, sonst wird der Button-Text zu lang.
         const _kurz = _politicalGateFehlend.slice(0, 2).join(' · ');
         resolveLockReason = 'noch offen: ' + _kurz;
+        // v7.12.736 (Benjamin: "mir wird kein Hinweis gegeben, wo ich hingehen soll"): Wenn der
+        // Beleg fehlt, zeigt der Sperrtext die Orte, an denen noch Kern-Indizien liegen - das
+        // Reisemenü zählt sie ohnehin schon ("● X offen"), hier wird es zum Wegweiser.
+        try {
+          if (typeof offeneIndizienAmOrt === 'function' && typeof getCaseLocations === 'function') {
+            const _spurOrte = [];
+            (getCaseLocations() || []).forEach(l => {
+              try { if (l && offeneIndizienAmOrt(l) > 0) _spurOrte.push(l.name); } catch (e) {}
+            });
+            if (_spurOrte.length) resolveLockReason += ' - offene Spuren: ' + _spurOrte.slice(0, 3).join(', ');
+          }
+        } catch (e) {}
       } else {
         let _pgReason = 'politische Sicherung fehlt';
         try { const _pgL = politicalBeatsGateErfuellt(); _pgReason = _pgL.basisOk ? 'Akten oder Margarete noch nicht gesichert' : 'politische Wahrheit noch nicht belegt'; } catch (e) {}
