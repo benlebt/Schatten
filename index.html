@@ -3280,7 +3280,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.763</div>
+    <div class="start-version">Schatten v7.12.764</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3506,7 +3506,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.763</span>
+    <span>Schatten v7.12.764</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7471,7 +7471,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.763';
+window.SCHATTEN_VERSION = 'v7.12.764';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -21516,6 +21516,20 @@ function mapZeigeOrtPopup(eintrag, zurueckFn){
     try { _echtMobil = engineCurrentLocation && normForMatch(engineCurrentLocation.name) !== normForMatch(eintrag.loc.name); } catch(e){}
     hier.textContent = _echtMobil ? 'Dein Wagen steht hier.' : 'Hier bist du gerade.';
     panel.appendChild(hier);
+    // v7.12.764 (Benjamin-Idee): im Opel-Standort-Popup die aktuellen Insassen zeigen - Karl + live die Party
+    // (wer gerade dabei ist, kann sich in der Szene geändert haben). Köpfe als charVisual, rein informativ.
+    try {
+      var _insKoepfe = [{ k: (typeof charVisual === 'function') ? charVisual('Karl') : '🕵️', n: 'Karl' }];
+      if (typeof _party !== 'undefined' && Array.isArray(_party)) {
+        _party.forEach(function(m){ if (m && m.name) _insKoepfe.push({ k: (typeof charVisual === 'function') ? charVisual(m.name, m.tag) : '👤', n: m.name }); });
+      }
+      var _insBox = document.createElement('div');
+      _insBox.style.cssText = 'text-align:center;margin-top:6px;padding:8px;background:#13100c;border:1px solid #322a22;border-radius:6px;';
+      var _insLabel = (typeof opelMiniSvg === 'function' ? opelMiniSvg(15) : '🚗') + ' <span style="vertical-align:middle;color:#867868;font-size:calc(10.5px * var(--reading-scale));letter-spacing:0.06em;">IM WAGEN</span>';
+      var _insReihe = _insKoepfe.map(function(o){ return '<span style="font-size:20px;" title="' + o.n + '">' + o.k + '</span>'; }).join(' ');
+      _insBox.innerHTML = '<div style="margin-bottom:5px;">' + _insLabel + '</div><div style="line-height:1.4;">' + _insReihe + '</div>';
+      panel.appendChild(_insBox);
+    } catch(e){}
   } else if(eintrag.gesperrt){
     var zu = document.createElement('div');
     zu.style.cssText = 'text-align:center;color:#8a6d4a;font-size:calc(11.5px * var(--reading-scale));padding:10px;border:1px dashed #5a4632;border-radius:6px;';
@@ -21602,11 +21616,19 @@ function mapBaueSvg(orte, cluster){
       var hatSpaeter = e.indiz && e.indiz.spaeter > 0;
       var erledigt = e.indiz && e.indiz.hattIndizien && !hatJetzt && !hatSpaeter;
       var farbe = e.istAktuell ? '#3ad6e0' : (e.gesperrt ? '#6b5f48' : (hatJetzt ? '#e8a23a' : (hatSpaeter ? '#8a6d4a' : (erledigt ? '#8aa890' : '#9a8a68'))));
-      // aktueller Ort: kräftiger Cyan-Doppelring + voller Punkt (Standort-Pin) - klar anders als Spur (orange),
-      // erledigt (grün), später (braun). v7.12.763: weiß war zu nah an gold/spur, jetzt Cyan = eindeutig "ich".
+      // aktueller Ort: Karls Opel Olympia als Standort-Pin (v7.12.764, Benjamin-Idee: "unser Opel zeigt, wo
+      // wir sind - wir fahren ja sowieso immer damit"). Gleiche Silhouette wie die Fahr-Animation, klein und
+      // über dem Ortspunkt zentriert. Cyan-Halo dahinter, damit er sich von den Sektorfarben abhebt.
       if(e.istAktuell){
-        svg += '<circle cx="' + e.pos.x + '" cy="' + e.pos.y + '" r="12.5" fill="none" stroke="#3ad6e0" stroke-width="2" opacity="0.95"/>';
-        svg += '<circle cx="' + e.pos.x + '" cy="' + e.pos.y + '" r="8.5" fill="none" stroke="#3ad6e0" stroke-width="1" opacity="0.5"/>';
+        var _ox = e.pos.x, _oy = e.pos.y;
+        svg += '<circle cx="' + _ox + '" cy="' + _oy + '" r="13" fill="#3ad6e0" opacity="0.16"/>';
+        // Opel-Pfade, skaliert auf ~22px Breite (viewBox 64x30 -> scale 0.34), zentriert: dx=-11, dy=-5
+        svg += '<g transform="translate(' + (_ox - 11) + ',' + (_oy - 5.2) + ') scale(0.345)" pointer-events="none">'
+          + '<path d="M3 21 Q3 16 9 15 L16 14 Q20 7 28 6 L37 6 Q45 7 49 13 L56 15 Q61 16 61 21 L61 23 L55 23 A6 6 0 0 0 43 23 L21 23 A6 6 0 0 0 9 23 L3 23 Z" fill="#23232a" stroke="#3ad6e0" stroke-width="2.2"/>'
+          + '<path d="M22 13 Q25 8.5 29 8 L35 8 Q40 8.5 43 12.6 Z" fill="#11131a" stroke="#7fcad4" stroke-width="1.2"/>'
+          + '<circle cx="15" cy="23" r="5" fill="#15151a" stroke="#3ad6e0" stroke-width="1.8"/>'
+          + '<circle cx="49" cy="23" r="5" fill="#15151a" stroke="#3ad6e0" stroke-width="1.8"/>'
+          + '</g>';
       }
       // geschlossener Ort: hohl/gestrichelt statt gefüllt
       if(e.gesperrt){
@@ -21614,7 +21636,11 @@ function mapBaueSvg(orte, cluster){
         svg += '<circle cx="' + e.pos.x + '" cy="' + e.pos.y + '" r="6" fill="none" stroke="' + farbe + '" stroke-width="1.6" stroke-dasharray="2 2" pointer-events="none"/>';
       } else {
         svg += '<circle class="map-tap" data-idx="' + idx + '" cx="' + e.pos.x + '" cy="' + e.pos.y + '" r="15" fill="#000" opacity="0"/>';
-        svg += '<circle cx="' + e.pos.x + '" cy="' + e.pos.y + '" r="6" fill="' + farbe + '" stroke="#1a1611" stroke-width="1.1" pointer-events="none"/>';
+        // v7.12.764: bei istAktuell zeichnet das Opel-Symbol den Standort - KEIN farbiger Punkt darunter
+        // (sonst guckt ein Cyan-Klecks unter dem Wagen hervor). Klickbereich (map-tap) bleibt.
+        if(!e.istAktuell){
+          svg += '<circle cx="' + e.pos.x + '" cy="' + e.pos.y + '" r="6" fill="' + farbe + '" stroke="#1a1611" stroke-width="1.1" pointer-events="none"/>';
+        }
         // Spur/Indiz jetzt findbar: kräftiger orange-goldener Doppelring (klar anders als der weiße Standort-Ring)
         if(hatJetzt && !e.istAktuell){
           svg += '<circle cx="' + e.pos.x + '" cy="' + e.pos.y + '" r="9.5" fill="none" stroke="#e8a23a" stroke-width="1.4" opacity="0.85" pointer-events="none"/>';
@@ -21635,7 +21661,7 @@ function mapBaueSvg(orte, cluster){
       svg += '<circle class="map-tap" data-idx="' + idx + '" cx="' + c.x + '" cy="' + c.y + '" r="19" fill="#000" opacity="0"/>';
       svg += '<circle cx="' + c.x + '" cy="' + c.y + '" r="11.5" fill="#241f18" stroke="' + cf + '" stroke-width="1.7" pointer-events="none"/>';
       svg += '<circle cx="' + c.x + '" cy="' + c.y + '" r="14.5" fill="none" stroke="' + cf + '" stroke-width="1" opacity="0.55" pointer-events="none"/>';
-      if(hatAktuell){ svg += '<circle cx="' + c.x + '" cy="' + c.y + '" r="17" fill="none" stroke="#f0d878" stroke-width="1.5" opacity="0.8" pointer-events="none"/>'; }
+      if(hatAktuell){ svg += '<circle cx="' + c.x + '" cy="' + c.y + '" r="17" fill="none" stroke="#3ad6e0" stroke-width="1.7" opacity="0.85" pointer-events="none"/>'; }
       svg += '<text x="' + c.x + '" y="' + (c.y + 3.6) + '" text-anchor="middle" font-family="Courier New,monospace" font-size="12" font-weight="bold" fill="' + cf + '" pointer-events="none">' + c.mitglieder.length + '</text>';
     }
   });
@@ -21713,7 +21739,7 @@ function oeffneReiseMenue(){
       + '<div style="display:flex;flex-wrap:wrap;gap:4px 14px;color:#6b6450;">'
       + '<span><span style="color:#e8a23a;">◉</span> Spur hier</span>'
       + '<span><span style="color:#8a6d4a;">⊙</span> später</span>'
-      + '<span><span style="color:#ffffff;">◎</span> du bist hier</span>'
+      + '<span>' + ((typeof opelMiniSvg === 'function') ? opelMiniSvg(13).replace(/#d4b86a/g,'#3ad6e0').replace(/#9b8a5c/g,'#7fcad4') : '<span style="color:#3ad6e0;">◎</span>') + ' du bist hier</span>'
       + '<span><span style="color:#8aa890;">●</span> erledigt</span>'
       + '<span style="color:#8a6d4a;">◌ geschlossen</span>'
       + '<span><span style="color:#c8a84a;border:1px solid #c8a84a;border-radius:50%;padding:0 3px;">2</span> mehrere Orte</span>'
