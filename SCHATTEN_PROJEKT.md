@@ -16320,3 +16320,28 @@ nicht allein, alle St3 erst ab Stage 2. normForMatch macht Cast-Name == snake_ca
 Bindung greift über die neuen loc.npcs-Listen.
 
 **Offen für Test:** 2-3 Kessler-Runs. DANACH erst Doc-Wagner-Heilung (global, nicht mischen).
+
+## 🆕 v7.12.742 — Kessler-Lektorat: abStage in allen Pfaden, Gate gekoppelt, Moabit-Sektor (ChatGPT, verifiziert)
+
+Drei am Code verifizierte Lektorats-Punkte zu v741, vor dem ersten Kessler-Testlauf:
+
+**P1 (abStage griff nicht überall):** Verifiziert - abStage wurde nur im Umsehen-Pfad (Z9660)
+und UI (Z23193) geprüft, NICHT in pickZielIndiz() und pruefeKernIndizFund(). Ein
+stage:3/abStage:2-Indiz konnte per normaler Szenenaktion zu früh vergeben werden. Schranke
+`_stg < ind.abStage` jetzt in beiden Loops (Pick==Vergabe-Konsistenz gewahrt).
+
+**P1b (Gate-Widerspruch):** Das alte Beschattungs-Gate (stage>=2 && indizien>=4) lief parallel
+zum neuen definedEvidenceGate und hätte sich widersprechen können. Jetzt gekoppelt: bei Fällen
+MIT definierten Indizien zählt das Fundament (minFound + mind. EIN Stage-3-Beweis = belastendes
+Affären-Indiz), sonst alter Zähl-Pfad. Verifiziert per Simulation: 4 harmlose Funde ohne
+Stage-3 BLOCKIEREN, Robert+Pohl+Ilse gibt FREI, 2 Funde blockieren.
+Hinweis: damit ist für Beschatten faktisch "mind. 1 Stage-3" Pflicht, schärfer als das reine
+minBurdening:1 (das stage>=2 zählt) - genau ChatGPTs Anliegen, ohne den Gate-Code global umzubauen.
+
+**P2 (Moabit-Sektor falsch):** Verifiziert + historisch korrekt - Moabit gehört zu Tiergarten =
+BRITISCHER Sektor, nicht Französisch (das war Wedding/Reinickendorf). Setup-sektor-Zeile und
+Spedition-Location korrigiert.
+
+NICHT umgesetzt (bewusst): ChatGPTs Vorschlag, Hinterhof in 3 Orte zu splitten (Treppenhaus/
+Ilse-Wohnung) - das ist Gameplay-Struktur, erst nach dem Test entscheiden, ob nötig. abStage
+schützt die Reife auch bei 2 Orten.
