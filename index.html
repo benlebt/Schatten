@@ -3280,7 +3280,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.751</div>
+    <div class="start-version">Schatten v7.12.752</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3506,7 +3506,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.751</span>
+    <span>Schatten v7.12.752</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4806,7 +4806,7 @@ const INTRO_VARIANTS = [
         { name: 'Doc Wagners Praxis', sektor: 'West (Schoeneberg)', detail: 'Schaeferstrasse 12, Hinterhaus mit Hintereingang, Geruch nach Jodtinktur, leere Wartezimmer-Stuehle, Karls Diskret-Doc' },
         { name: 'Hinterhof Spreestrasse', sektor: 'Ost (Koepenick)', detail: 'verwilderte Fliederbuesche, Muellcontainer mit Holzdeckel, schlecht beleuchtet, hier treffen sich Werftarbeiter zum Schwarzhandel' },
         { name: 'Karls Opel Olympia', sektor: 'mobil', detail: 'schwarzer Vorkriegswagen, Sprit knapp wegen Bezugsschein, Handschuhfach mit Notfall-Verbandzeug, klemmt der zweite Gang' },
-        { name: 'S-Bahnhof Konstantinstrasse', sektor: 'Grenze Ost/West', detail: 'noch durchlaessig 1953, MfS-Beobachter in zivil, hier verschwinden Leute' },
+        { name: 'S-Bahnhof Friedrichstrasse', sektor: 'Grenze Ost/West', detail: 'noch durchlaessig 1953, MfS-Beobachter in zivil, hier verschwinden Leute' },
       ],
       anchorNpcs: ['wilhelm_roth', 'gregor_halbe', 'heinz_wernicke', 'doc_wagner'],
     },
@@ -6931,7 +6931,39 @@ function _markiereIndizGefunden(ind) {
   // qualitativen Floor sofort anwenden (zieht Stage hoch, wenn das Indiz eine höhere Stage freigibt + Hard-Floor
   // erfüllt). Deckt den Umsehen-Pfad ab; im Szenen-Pfad ist es idempotent (Stage steigt nur, nie zurück).
   try { if (typeof _stageFloorAnwenden === 'function') _stageFloorAnwenden(); } catch (e) {}
+  // v7.12.752 (ChatGPT-Lektorat P1.2): Beschattungsfälle mit definierten Indizien hart durchbrechen, wenn das
+  // Fundament erspielt ist - sonst hängt "Fall lösen" daran, ob die KI zufällig wahrheit_erkannt setzt.
+  try { _syncBeschattungDefinedEvidenceDurchbruch('kernindiz'); } catch (e) {}
   return true;
+}
+// v7.12.752 (ChatGPT-Lektorat P1.2): Setzt bei Beschattungsfällen mit definierten Kern-Indizien (z.B. Kessler)
+// caseProgress.wahrheitErkannt HART, sobald das Fundament steht (Stage>=3, genug definierte Indizien gefunden,
+// mind. 1 Stage-3-Beweis). Ohne diesen Sync bliebe der Durchbruch davon abhängig, ob die KI in der Szene
+// wahrheit_erkannt:true liefert - der Spieler könnte mechanisch alles erspielt haben, aber "Fall lösen" fehlt.
+function _syncBeschattungDefinedEvidenceDurchbruch(source) {
+  try {
+    if (!caseSetup || caseSetup.caseType !== 'beschatten' || !caseProgress) return false;
+    if (typeof caseHasDefinedEvidence !== 'function' || !caseHasDefinedEvidence()) return false;
+    const def = (typeof alleDefiniertenIndizien === 'function') ? (alleDefiniertenIndizien() || []) : [];
+    const byId = {};
+    def.forEach(ind => { if (ind && ind.id) byId[ind.id] = ind; });
+    const gef = (caseProgress.gefundeneIndizIds || []).filter(id => byId[id]);
+    const gate = caseSetup.definedEvidenceGate || {};
+    const minFound = (typeof gate.minFound === 'number') ? gate.minFound : 3;
+    const stage3 = gef.filter(id => byId[id] && byId[id].stage >= 3).length;
+    if ((caseProgress.stage || 0) < 3) return false;
+    if (gef.length < minFound) return false;
+    if (stage3 < 1) return false;
+    if (!caseProgress.wahrheitErkannt) {
+      caseProgress.wahrheitErkannt = true;
+      const tgt = (caseSetup.setupCast || []).find(c => c && (c.tag || '').toUpperCase() === 'TARGET');
+      if (tgt && tgt.name && !caseProgress.tatverdaechtiger) caseProgress.tatverdaechtiger = tgt.name;
+      caseProgress.resolveEverReady = true;
+      if (typeof diag === 'function') diag('progress', '✦ BESCHATTUNG BEWIESEN via defined evidence (' + source + '): ' + gef.length + ' Indizien, Stage-3-Beweise=' + stage3);
+      return true;
+    }
+  } catch (e) {}
+  return false;
 }
 // v7.12.666: Wendet den qualitativen Indiz-Stage-Floor sofort an (für Funde außerhalb einer KI-Szene, v.a.
 // Umsehen). Zieht caseProgress.stage auf den Floor hoch, sofern die etablierten Hard-Floors (Szenenzahl) erfüllt
@@ -6992,9 +7024,12 @@ function _npcHatOffenenHinweis(npcName) {
     const tz = (typeof _aktTageszeitName === 'function') ? _aktTageszeitName() : '';
     const nN = normForMatch(npcName);
     const vn = nN.split(/\s+/)[0];
+    const _stgNow = (caseProgress && typeof caseProgress.stage === 'number') ? caseProgress.stage : 0;
     return loc.indizien.some(ind => {
       if (!ind || !ind.id || !ind.npc || gef.indexOf(ind.id) !== -1) return false;
       if (ind.quelle !== 'person') return false; // v7.12.688: Personen-Badge nur für Person-Indizien (s. _npcOffeneHinweisAktionen)
+      // v7.12.752 (ChatGPT-Lektorat P1.3): abStage-Gate - kein Personen-Badge für noch stage-gesperrte Indizien.
+      if (typeof ind.abStage === 'number' && _stgNow < ind.abStage) return false;
       const indNpc = normForMatch(ind.npc);
       // npc-Feld ist oft eine ID (august_lemke); gegen Name UND Vorname matchen.
       const matcht = indNpc === nN || indNpc.replace(/_/g, ' ') === nN || (vn.length >= 3 && indNpc.includes(vn));
@@ -7019,9 +7054,12 @@ function _npcOffeneHinweisAktionen(npcName) {
     const nN = normForMatch(npcName);
     const vn = nN.split(/\s+/)[0];
     const LABEL = { ANSPRECHEN: 'Ansprechen', BEFRAGEN: 'Befragen', BESTECHEN: 'Bestechen', UEBERZEUGEN: 'Überzeugen', DURCHSUCHEN: 'Durchsuchen', ERKUNDEN: 'Umsehen', AKTEN_LESEN: 'Akten lesen' };
+    const _stgNow = (caseProgress && typeof caseProgress.stage === 'number') ? caseProgress.stage : 0;
     const out = [];
     loc.indizien.forEach(ind => {
       if (!ind || !ind.id || !ind.npc || gef.indexOf(ind.id) !== -1) return;
+      // v7.12.752 (ChatGPT-Lektorat P1.3): abStage-Gate - keine Aktions-Labels für noch stage-gesperrte Indizien.
+      if (typeof ind.abStage === 'number' && _stgNow < ind.abStage) return;
       // v7.12.688 (Benjamin, Run 1421: Wahler-Badge "Umsehen/Durchsuchen" 3 Szenen lang verwirrend):
       // Das PERSONEN-Badge zeigt nur noch quelle:'person'-Indizien (Befragen/Bestechen-artig).
       // Umgebungs-Indizien mit NPC-Gate (Frachtliste bei Wahler) werden vom UMSEHEN-Button-Marker
@@ -7049,9 +7087,12 @@ function _ortHatOffenesDurchsuchIndiz() {
     if (!loc || !Array.isArray(loc.indizien)) return false;
     const gef = (caseProgress && Array.isArray(caseProgress.gefundeneIndizIds)) ? caseProgress.gefundeneIndizIds : [];
     const tz = (typeof _aktTageszeitName === 'function') ? _aktTageszeitName() : '';
+    const _stgNow = (caseProgress && typeof caseProgress.stage === 'number') ? caseProgress.stage : 0;
     return loc.indizien.some(ind => {
       if (!ind || !ind.id || gef.indexOf(ind.id) !== -1) return false;
       if (!Array.isArray(ind.actions) || ind.actions.indexOf('DURCHSUCHEN') === -1) return false;
+      // v7.12.752 (ChatGPT-Lektorat P1.3): abStage-Gate - kein Durchsuch-Marker für stage-gesperrte Indizien.
+      if (typeof ind.abStage === 'number' && _stgNow < ind.abStage) return false;
       if (Array.isArray(ind.zeit) && ind.zeit.length && !ind.zeit.map(z => normForMatch(z)).includes(tz)) return false;
       return true;
     });
@@ -7419,7 +7460,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.751';
+window.SCHATTEN_VERSION = 'v7.12.752';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -21313,7 +21354,7 @@ function mapSammleOrte(ziele, aktuellNorm){
   var out = [];
   ziele.forEach(function(loc){
     var pos = mapPosFuer(loc);
-    if(!pos) return; // Ort ohne Kartenposition -> wird in der Karte nicht gezeigt (Diagnose unten)
+    if(!pos) return; // wird separat in der Fallback-Liste unter der Karte angezeigt (P1.3)
     var istAktuell = (typeof normForMatch === 'function') && normForMatch(loc.name) === aktuellNorm;
     var offen = (typeof offeneIndizienAmOrt === 'function') ? offeneIndizienAmOrt(loc) : 0;
     var indiz = (typeof offeneIndizienAmOrtNachErreichbarkeit === 'function') ? offeneIndizienAmOrtNachErreichbarkeit(loc) : {jetzt:offen,spaeter:0,hattIndizien:offen>0};
@@ -22539,6 +22580,9 @@ function baueSicherungsButtons(container) {
 function renderOptions(scene) {
   // v7.12.622: Baukasten-Sichtbarkeit nach jedem Optionen-Render prüfen (Szene ist jetzt vollständig da).
   try { if (typeof _renderBaukastenButton === 'function') setTimeout(_renderBaukastenButton, 50); } catch (e) {}
+  // v7.12.752 (ChatGPT-Lektorat P1.2): vor der Resolve-Berechnung Beschattungs-Durchbruch synchronisieren -
+  // damit "Fall lösen" zuverlässig erscheint, sobald das Indizien-Fundament steht (nicht KI-abhängig).
+  try { _syncBeschattungDefinedEvidenceDurchbruch('render'); } catch (e) {}
   const list = document.getElementById('options-list');
   const optionsContainer = document.getElementById('options');
   // v7.11.3: Defensive Wrapping. Wenn irgendetwas im Render schief geht
