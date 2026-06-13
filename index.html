@@ -3280,7 +3280,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.754</div>
+    <div class="start-version">Schatten v7.12.755</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3506,7 +3506,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.754</span>
+    <span>Schatten v7.12.755</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7460,7 +7460,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.754';
+window.SCHATTEN_VERSION = 'v7.12.755';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -9485,9 +9485,9 @@ function _zeigeTauschZahlung(preis, titel, untertitel, onPaid, empfaenger) {
   } catch (e) {}
 }
 // v7.12.695 (Benjamin: "klare Verbündete und Freunde kann man so mitnehmen, aber Informanten
-// und andere wollen was eingetauscht haben"): Mitnahme-Preis nach Beziehung. 0 = gratis.
-// Greift NUR, wenn _npcLehntMitnahmeAb nicht ohnehin ablehnt (Wirt bleibt im Laden, Verdächtiger
-// kommt nie mit - das bleibt). Roth/KONTAKT lehnen weiter ab (Benjamin-Entscheid ausstehend).
+// und andere wollen was eingetauscht haben"). v7.12.755: Werte vereinheitlicht - Informant=1, Polizist=3,
+// Verbündete/Zeugen/Freunde=0. Greift NUR, wenn _npcLehntMitnahmeAb nicht ohnehin ablehnt (Wirt bleibt im
+// Laden, Verdächtiger kommt nie mit). Bezahlung läuft im selben Tausch-Popup wie bei Rex/Lemke.
 function _npcMitnahmePreis(npcName, npcTag) {
   try {
     const tag = (npcTag || '').toUpperCase();
@@ -9498,13 +9498,16 @@ function _npcMitnahmePreis(npcName, npcTag) {
       const nN = _qn(npcName);
       if (caseSetup && Array.isArray(caseSetup.setupCast)) {
         const ce = caseSetup.setupCast.find(c => c && c.name && (_qn(c.name) === nN || (nN.length >= 4 && (_qn(c.name).includes(nN) || nN.includes(_qn(c.name).split(/\s+/).pop())))));
-        if (ce) _rolle = ((ce.rolle || '') + ' ' + (ce.tag || ''));
+        if (ce) _rolle = ((ce.rolle || '') + ' ' + (ce.tag || '') + ' ' + (ce.beziehung || ''));
       }
     } catch (e) {}
     const probe = (tag + ' ' + _rolle + ' ' + (npcName || '')).toLowerCase();
     if (/doc wagner|wagner|heinz|trude|hilde brauer/.test(probe)) return 0; // Karls Freunde
-    if (/informant|froschkoenig|froschkönig|spitzel|schieber|halbwelt|hehler/.test(probe)) return 2;
-    if (/witness|zeuge|zeugin|lemke/.test(probe)) return 1;
+    // Polizist: teurer (3). v7.12.755.
+    if (tag === 'POLIZIST' || /polizist|schutzpolizei|volkspolizei|kommissar|wachtmeister|vopo|kriminalbeamter|polizei/.test(probe)) return 3;
+    // Informant/Halbwelt: günstig (1). v7.12.755 (vorher 2).
+    if (tag === 'INFORMANT' || /informant|froschkoenig|froschkönig|spitzel|schieber|halbwelt|hehler|trinkgeld|loest die zunge|braucht.*druck/.test(probe)) return 1;
+    if (/witness|zeuge|zeugin|lemke/.test(probe)) return 0; // Zeugen, die aussagen wollen: gratis (v7.12.755, vorher 1)
     return 0;
   } catch (e) { return 0; }
 }
@@ -21079,6 +21082,7 @@ function zeigeMitnehmenPopup(npcs, weiterAktion) {
     window._partyFxStummBis = Date.now() + 15000;
     const _vorherLen = (typeof _party !== 'undefined' && Array.isArray(_party)) ? _party.length : 0;
     const _abgelehnt = [];
+    let _tauschGeoeffnet = false; // v7.12.755: ein Tausch-Popup wurde geöffnet -> Fallback-Toast/Schließen unterdrücken
     npcs.forEach(npc => {
       const key = npc.id || npc.name;
       if (!gewaehlt[key] || typeof _partyAdd !== 'function') return;
@@ -21110,12 +21114,36 @@ function zeigeMitnehmenPopup(npcs, weiterAktion) {
         if (typeof diag === 'function') diag('state', 'MITNAHME ABGELEHNT (W4c): ' + npc.name + ' - ' + _grund);
         return;
       }
+      // v7.12.755 (Benjamin: Informanten/Polizisten gehen nur gegen Tauschwert mit - im selben Popup wie Rex/Lemke).
+      const _preis = (typeof _npcMitnahmePreis === 'function') ? _npcMitnahmePreis(npc.name, npc.tag) : 0;
+      if (_preis > 0 && typeof _zeigeTauschZahlung === 'function' && !(typeof botActive !== 'undefined' && botActive)) {
+        const _vn = npc.name.split(' ')[0];
+        const _tagU = (npc.tag || '').toUpperCase();
+        const _ist3 = _preis >= 3;
+        const _titel = _vn + ' will was sehen';
+        const _unter = _ist3
+          ? (_vn + ' steckt die Marke weg, aber nicht umsonst - so ein Beamter lässt sich seinen Dienst was kosten.')
+          : (_vn + ' kommt nicht für umme mit - ein kleines Trinkgeld löst die Zunge und die Beine.');
+        const _auf = () => {
+          _partyAdd({ id: npc.id, name: npc.name, tag: npc.tag });
+          try { if (typeof saveGameState === 'function') saveGameState(); } catch (e) {}
+          if (typeof diag === 'function') diag('state', '✦ MITNAHME GEGEN TAUSCHWERT (' + _preis + '): ' + npc.name + ' in die Party');
+          if (!(window._partyFxStummBis && Date.now() < window._partyFxStummBis)) {
+            try { if (typeof fxPartyJoin === 'function') fxPartyJoin(npc.name); } catch (e) {}
+          }
+        };
+        _zeigeTauschZahlung(_preis, _titel, _unter, _auf, npc.id || npc.name);
+        _tauschGeoeffnet = true;
+        return;
+      }
       _partyAdd({ id: npc.id, name: npc.name, tag: npc.tag });
     });
     const n = ((typeof _party !== 'undefined' && Array.isArray(_party)) ? _party.length : 0) - _vorherLen;
     if (typeof diag === 'function') diag('state', '✦ MITNEHMEN-POPUP: gewählt=[' + _gewaehltNamen.join(', ') + '] -> übernommen=' + n + (_abgelehnt.length ? ' · abgelehnt=[' + _abgelehnt.join(', ') + ']' : '') + ' (Party jetzt ' + ((typeof _party !== 'undefined' && Array.isArray(_party)) ? _party.length : '?') + ')');
     // v7.12.706 (Toast-Regel): Party-Beitritt zeigt die Abklatsch-Animation - der Toast ist raus.
-    if (n === 0 && _gewaehltNamen.length > 0 && _abgelehnt.length === 0 && typeof showProgressToast === 'function') { try { showProgressToast('Mitnahme nicht möglich', _gewaehltNamen.join(', ') + ' konnte nicht aufgenommen werden.', 'warn', 'party-addfail'); } catch(e){} }
+    // v7.12.755: Kein Fehl-Toast/Schließen, wenn ein Tausch-Popup geöffnet wurde (Aufnahme passiert nach Zahlung).
+    if (!_tauschGeoeffnet && n === 0 && _gewaehltNamen.length > 0 && _abgelehnt.length === 0 && typeof showProgressToast === 'function') { try { showProgressToast('Mitnahme nicht möglich', _gewaehltNamen.join(', ') + ' konnte nicht aufgenommen werden.', 'warn', 'party-addfail'); } catch(e){} }
+    if (_tauschGeoeffnet) { return; } // Reise-Popup offen lassen - das Tausch-Popup liegt darüber, nach Zahlung schließt sich alles sauber
     _schliessen();
     if (typeof weiterAktion === 'function') weiterAktion();
   });
@@ -22375,8 +22403,8 @@ function oeffneNpcMenue(npc, modus) {
             if (typeof showProgressToast === 'function') { try { showProgressToast(npc.name + ' lehnt ab', npc.name.split(' ')[0] + ' ' + _ablehnGrund + '.', 'caution', 'party-ablehnung-verb'); } catch(e){} }
             if (typeof diag === 'function') diag('state', 'MITNAHME ABGELEHNT (W4c, Verb): ' + npc.name + ' - ' + _ablehnGrund);
           } else {
-          // v7.12.695 (Benjamin: "nicht jeden kostenlos mitnehmen"): Informanten (Tw 2) und
-          // Zeugen (Tw 1) wollen entschädigt werden - Freunde/Klientin/Schutz bleiben gratis.
+          // v7.12.755 (Benjamin: "Informanten/Polizisten gehen nicht umsonst mit"): _npcMitnahmePreis liefert
+          // Informant=1, Polizist=3, Verbündete/Zeugen=0. Bezahlung läuft im selben Tausch-Popup wie bei Rex/Lemke.
           const _preisM = (typeof _npcMitnahmePreis === 'function') ? _npcMitnahmePreis(npc.name, npc.tag) : 0;
           if (_preisM > 0 && typeof _zeigeTauschZahlung === 'function') {
             _zeigeTauschZahlung(_preisM, npc.name + ' will etwas sehen', npc.name.split(' ')[0] + ' kommt nicht für umme mit.', () => {
