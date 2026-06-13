@@ -3280,7 +3280,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.757</div>
+    <div class="start-version">Schatten v7.12.758</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3506,7 +3506,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.757</span>
+    <span>Schatten v7.12.758</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7460,7 +7460,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.757';
+window.SCHATTEN_VERSION = 'v7.12.758';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -21030,6 +21030,11 @@ function zeigeMitnehmenPopup(npcs, weiterAktion) {
   if (!Array.isArray(npcs) || npcs.length === 0) { if (typeof weiterAktion === 'function') weiterAktion(); return; }
   _mitnehmenPopupOffen = true;
   if (typeof _markPopupOpened === 'function') _markPopupOpened();
+  // v7.12.758 (Benjamin: "Tetzlaff im Reise-Popup grün, Klick tut nichts" - er war schon in der Party, der
+  // Filter rutschte durch). Defensiv NOCHMAL hart filtern: wer bereits in der Party ist, gehört nicht ins
+  // Mitnehmen-Popup. Schützt unabhängig von ID-Form (istInParty matcht id/name/vorname).
+  try { npcs = npcs.filter(n => !(n && typeof _istInParty === 'function' && _istInParty(n.id, n.name))); } catch (e) {}
+  if (!Array.isArray(npcs) || npcs.length === 0) { _mitnehmenPopupOffen = false; if (typeof weiterAktion === 'function') weiterAktion(); return; }
   const gewaehlt = {}; // id/name -> true
   // v7.12.644 (Benjamin: Rex im Popup geklickt -> "Mitnehmen & weiter" -> Rex trotzdem nicht dabei. Ursache:
   // man musste den Eintrag ERST antippen (Häkchen), dann bestätigen - unintuitiv, gerade bei nur einem NPC).
