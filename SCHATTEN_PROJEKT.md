@@ -16285,3 +16285,38 @@ sackt durch). sfxTod = drei verlangsamende Herzschläge + langer Abgang in die T
 Andockung zentral in showCaseFailed (Trichter ALLER Verlier-Enden): Tod-Texte
 (stirbt/Zelle/Hohenschönhausen) -> sfxTod, sonst sfxGescheitert. Beide + Fanfare im
 Sound-Studio.
+
+## 🆕 v7.12.741 — Kessler-Indizien-Projekt: 2. Fall mit definierten Beweisen (Benjamin)
+
+Erster Fall nach Margarete mit echtem Kern-Indizien-Setup. Damit greifen für Kessler jetzt
+Notizbuch-Zähler, Reisemenü-Marker ("● X offen"), NPC-Hinweis-Punkte, Spur-Wegweiser und
+das qualitative Stage-Gate. Lektorat von ChatGPT (2 Runden) eingearbeitet.
+
+**7 Indizien, 3 Orte:**
+- Hinterhof Sybelstraße (startBekannt): tuerschild_hauke (St1, Orientierung - trägt St2 NICHT
+  allein), robert_eintritt_beobachtet (St2), nachbarin_aussage (St2, npc frau_pohl),
+  ilse_aussage (St3/abStage2, npc ilse_hauke), fenster_beobachtung (St3/abStage2)
+- Spedition Moabit (freischaltBei spedition/moabit/...): tetzlaff_aussage (St2, npc
+  norbert_tetzlaff), briefchen_ilse (St3/abStage2, beweis_dokument)
+- Gate: definedEvidenceGate { minFound:3, minBurdening:1 } - 6 belastende verfügbar.
+
+**ChatGPT-Lektorat umgesetzt:**
+- requiredAny/requiresAny/risk NICHT eingebaut (Engine liest sie nicht = tote Felder). Statt-
+  dessen Qualität in die Indiz-TEXTE: jedes Stage-3-Indiz nennt Robert konkret (Brief "an
+  Robert", Ilse "über Robert", Fenster "Robert und Ilse"), trägt also die Wahrheit selbst.
+- tuerschild_hauke auf Stage 1 (Namensschild ist Orientierung, kein Durchbruch).
+- briefchen_ilse: noir-knapp ("Lass den Ring lieber daheim. I."), abStage:2 + nur tagsüber
+  (Arbeitsplatz, kein Einbruchsystem).
+- Frau Lemke -> FRAU POHL (Kollision mit August Lemke aus Margarete vermieden).
+- Ilse: ROMANCE -> WITNESS (+tagExtra AMBIVALENT). Der ROMANCE-Tag triggert den "Näher
+  kommen"-Button - durch WITNESS fällt er mechanisch weg, kein erfundenes Feld nötig.
+
+**Textur (gelesener Prompt-Text, kein totes Feld):** Charakterführungs-Block im Kessler-
+prompt: Ilse ambivalent (gesteht nie platt, Romantik kein Lösungsweg), Frau Pohl redet erst
+nach Druck/Gegenleistung (kein Info-Automat), Robert kleiner Lügner, Edith verletzt aber klug.
+
+**Verifiziert (node):** 7 Indizien (St1:1, St2:3, St3:3), 6 belastend, Türschild trägt St2
+nicht allein, alle St3 erst ab Stage 2. normForMatch macht Cast-Name == snake_case-ID, npc-
+Bindung greift über die neuen loc.npcs-Listen.
+
+**Offen für Test:** 2-3 Kessler-Runs. DANACH erst Doc-Wagner-Heilung (global, nicht mischen).

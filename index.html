@@ -3280,7 +3280,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.740</div>
+    <div class="start-version">Schatten v7.12.741</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3506,7 +3506,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.740</span>
+    <span>Schatten v7.12.741</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5304,6 +5304,7 @@ const INTRO_VARIANTS = [
       caseType: 'beschatten',
       stasiRelevance: 0,  // v7.9.19
       opfer: 'Robert Kessler (Buchhalter, Affaere-Verdacht)',
+      definedEvidenceGate: { minFound: 3, minBurdening: 1 }, // v7.12.741: Kessler-Indizien-Projekt - kleiner Beschattungsfall, gelockertes Fundament (3 belastende verfuegbar: ilse_aussage, fenster_beobachtung, briefchen_ilse - jedes nennt Robert konkret, also traegt minBurdening:1 die Wahrheit)
       tat: 'Was treibt Robert mittwochs - vermutete Affaere herausfinden',
       ortHaupt: 'Sybelstrasse Charlottenburg - Hinterhof, wo Robert eintrat',
       anlass: 'Karl verfolgt Robert seit drei Stunden zu Fuss - Robert verschwindet in einem Hinterhof',
@@ -5319,7 +5320,7 @@ const INTRO_VARIANTS = [
           detail: 'Buchhalter bei Spedition in Moabit, mittwochs angeblich Ueberstunden. Karl folgt ihm seit 3 Stunden, hat ihn bis Sybelstrasse Hinterhof verfolgt.',
           persistent: true, anwesend: true },
         // v7.9.12: Pool-NPCs
-        { name: 'Ilse Hauke', tag: 'ROMANCE', alter: 33, rolle: 'Aktmodell (in der Kunstschule Charlottenburg)',
+        { name: 'Ilse Hauke', tag: 'WITNESS', tagExtra: 'AMBIVALENT', alter: 33, rolle: 'Aktmodell - und Roberts heimliche Mittwochs-Bekanntschaft',
           beziehung: 'unverheiratete junge Frau, wohnt in der Sybelstrasse 24 Hinterhof. Vielleicht die "Affaere" oder vielleicht nur eine Zeugin.',
           detail: 'kupferblondes welliges Haar, leicht aufrechte Haltung, lacht selten aber wenn dann ehrlich. Lebt von Aktmodell-Aufnahmen in der Hochschule, kein hohes Einkommen. Wohnt Hinterhof 3. Stock links.',
           triggerWhen: 'Karl ueberprueft die Sybelstrasse Hinterhof-Wohnungen oder Karl hat niedrige Spannung Abend/Nacht in Charlottenburg',
@@ -5330,9 +5331,9 @@ const INTRO_VARIANTS = [
           triggerWhen: 'plot dreht sich von Affaere zu organisierter Kriminalitaet oder Karl braucht eine Adresse im Kiez',
           persistent: false, anwesend: false },
         // v7.11.13: 2 weitere Pool-NPCs damit Setup-Cast Wegener-Goldstandard (6 NPCs) entspricht
-        { name: 'Frau Lemke', tag: 'WITNESS', alter: 63, rolle: 'Nachbarin Sybelstrasse 24, 2. Stock',
-          beziehung: 'kennt jeden im Haus, sieht Robert seit Monaten mittwochs kommen. Vorsichtig aber gespraechig wenn Karl Vertrauen aufbaut.',
-          detail: 'witwe, grau-meliertes Haar, Kittelschuerze, immer am Kuechenfenster zur Strasse. Spricht ueber alle Hausbewohner mit kennenswerter Praezision. Hat Kaffee fuer Karl wenn der hochkommt.',
+        { name: 'Frau Pohl', tag: 'WITNESS', alter: 63, rolle: 'Nachbarin Sybelstrasse 24, 2. Stock',
+          beziehung: 'kennt jeden im Haus, sieht Robert seit Monaten mittwochs kommen. Neugierig und moralisch, aber misstrauisch - redet erst nach sanftem Druck oder kleiner Gegenleistung (Kaffee, Zigaretten, ein paar Westmark).',
+          detail: 'witwe, grau-meliertes Haar, Kittelschuerze, immer am Kuechenfenster zur Strasse. Spricht ueber alle Hausbewohner mit kennenswerter Praezision - aber NICHT sofort: erst pruefend, dann tropfenweise. Hat Kaffee fuer Karl wenn der hochkommt und ihr gefaellt.',
           triggerWhen: 'Karl klingelt an Sybelstrasse 24 oder befragt Nachbarn',
           persistent: false, anwesend: false },
         { name: 'Norbert Tetzlaff', tag: 'INFORMANT', alter: 47, rolle: 'Robert Kessler\'s Buerokollege bei Spedition Moabit',
@@ -5384,9 +5385,22 @@ const INTRO_VARIANTS = [
         atmosphaere: 'Kuehler Oktobertag, Blaetter rascheln auf nassem Asphalt. Sybelstrasse: alte Buergerhaeuser, Hinterhoefe mit Werkstaetten. Spaeter Nachmittag, Daemmerung setzt ein.',
       },
       locations: [
-        { name: 'Hinterhof Sybelstrasse', sektor: 'West (Charlottenburg)', detail: 'wo Robert eintrat - Hauptschauplatz, mehrere Werkstaetten und Wohnungen' },
+        { name: 'Hinterhof Sybelstrasse', sektor: 'West (Charlottenburg)', detail: 'wo Robert eintrat - Hauptschauplatz, mehrere Werkstaetten und Wohnungen',
+          startBekannt: true, npcs: [{ id: 'frau_pohl', zeit: ['vormittag','mittag','nachmittag','abend'] }, { id: 'ilse_hauke', zeit: ['nachmittag','abend','nacht'] }],
+          indizien: [
+            { id: 'tuerschild_hauke', text: 'Tuerschild im 3. Stock links zeigt nur "Hauke"', quelle: 'umgebung', actions: ['ERKUNDEN','DURCHSUCHEN'], schluessel: ['tuerschild','türschild','hauke','3. stock','dritter stock','namensschild','klingelschild'], stage: 1 },
+            { id: 'robert_eintritt_beobachtet', text: 'Robert Kessler betritt mittwochs gegen 19 Uhr den Hinterhof Sybelstrasse 24 - kein Bueroweg, keine Ueberstunden', quelle: 'umgebung', actions: ['BEOBACHTEN','ERKUNDEN'], zeit: ['nachmittag','abend'], schluessel: ['eintritt','hinterhof','mittwoch','19 uhr','sybelstrasse','sybelstraße','holztuer','holztür','robert geht rein'], stage: 2 },
+            { id: 'nachbarin_aussage', text: 'Frau Pohl: Robert kommt seit Monaten jeden Mittwoch zu der Hauke im dritten Stock', npc: 'frau_pohl', quelle: 'person', actions: ['ANSPRECHEN','BEFRAGEN','BESTECHEN'], schluessel: ['seit monaten','jeden mittwoch','nachbarin','pohl','vom sehen','dritter stock','dritten stock'], stage: 2 },
+            { id: 'ilse_aussage', text: 'Ilse Hauke ueber Robert: er kommt seit Monaten mittwochs, zahle fuer Sitzungen, rede mehr als er posiere - und lasse seinen Ehering in der Manteltasche', npc: 'ilse_hauke', quelle: 'person', actions: ['ANSPRECHEN','BEFRAGEN','UEBERZEUGEN'], schluessel: ['ilse erzählt','ilse sagt','ehering','manteltasche','modell sitzen','seit monaten','mittwochs','robert kommt','vertraut'], stage: 3, abStage: 2 },
+            { id: 'fenster_beobachtung', text: 'Durchs Hinterhof-Fenster: Robert und Ilse in vertrauter Naehe', quelle: 'umgebung', actions: ['BEOBACHTEN'], zeit: ['abend','nacht'], schluessel: ['durchs fenster','am fenster','vertraut','vertraute naehe','vertraute nähe','umarmung','robert und ilse','gesehen'], stage: 3, abStage: 2 },
+          ] },
         { name: 'Kessler-Wohnung Charlottenburg', sektor: 'West (Charlottenburg)', detail: 'Edith zu Hause - Klient wartet hier auf Anruf' },
-        { name: 'Spedition Schmidt Moabit', sektor: 'West (Moabit)', detail: 'Roberts Arbeitsplatz, kleinere Spedition' },
+        { name: 'Spedition Schmidt Moabit', sektor: 'West (Moabit)', detail: 'Roberts Arbeitsplatz, kleinere Spedition',
+          startBekannt: false, freischaltBei: ['spedition','moabit','arbeitsplatz','ueberstunden','überstunden','buero','büro','kollege','tetzlaff'], oeffnungszeit: ['vormittag','mittag','nachmittag'], npcs: [{ id: 'norbert_tetzlaff', zeit: ['vormittag','mittag','nachmittag'] }],
+          indizien: [
+            { id: 'tetzlaff_aussage', text: 'Buerokollege Tetzlaff: von Ueberstunden keine Spur - Robert geht mittwochs frueher', npc: 'norbert_tetzlaff', quelle: 'person', actions: ['ANSPRECHEN','BEFRAGEN','BESTECHEN'], zeit: ['vormittag','mittag','nachmittag'], schluessel: ['tetzlaff','kollege','ueberstunden','überstunden','geht frueher','geht früher','mittwochs frei','kein ueberstunden'], stage: 2 },
+            { id: 'briefchen_ilse', itemType: 'beweis_dokument', text: 'Brief von Ilse an Robert, versteckt in Roberts Schreibtisch: "Mittwoch wieder wie immer. Lass den Ring lieber daheim. I."', quelle: 'umgebung', actions: ['ERKUNDEN','DURCHSUCHEN'], zeit: ['vormittag','mittag','nachmittag'], schluessel: ['briefchen','brief von ilse','brief an robert','schreibtisch','versteckt','schublade','lass den ring','wie immer'], stage: 3, abStage: 2 },
+          ] },
         { name: 'Karl Mauers Büro', sektor: 'Ost (Mitte)', detail: 'Hackescher Markt - aber Karl arbeitet voll im Westen' },
         { name: 'Doc Wagners Praxis', sektor: 'West (Schoeneberg)', detail: 'Schaeferstrasse 12 - wenn Karl im Westen verletzt wird' },
         { name: 'Cafe Wien', sektor: 'West (Charlottenburg)', detail: 'Kurfuerstendamm 26 - moegliche Affaeren-Location' },
@@ -5397,7 +5411,13 @@ const INTRO_VARIANTS = [
       ],
       anchorNpcs: ['heinrich_lindner', 'doc_wagner', 'marlene_wagner', 'walter_bergmann', 'vivian_kerner'],
     },
-    prompt: `Starte das Spiel. ${INTRO_REQUIREMENTS}Später Nachmittag, Oktober 1953. Dein aktueller Fall: Edith Kessler hat dich beauftragt herauszufinden, was ihr Mann Robert Kessler (Buchhalter bei einer Spedition in Moabit) jeden Mittwochnachmittag treibt, wenn er angeblich "Überstunden" macht. Edith vermutet eine Affäre, aber ist sich nicht sicher. Du verfolgst Robert nun seit drei Stunden zu Fuß durch Charlottenburg. Blätter rascheln auf nassen Bürgersteigen, du hältst Abstand. Plötzlich biegt Robert in einen dunklen Hinterhof in der Sybelstraße, eine schwere Holztür schlägt hinter ihm ins Schloss. Die erste Szene MUSS den Fall (Edith Kessler, Robert, mittwochs verschwindet, Buchhalter Moabit) und die jetzige Verfolgungssituation einbauen. Liefere die Szene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.`,
+    prompt: `Starte das Spiel. ${INTRO_REQUIREMENTS}Später Nachmittag, Oktober 1953. Dein aktueller Fall: Edith Kessler hat dich beauftragt herauszufinden, was ihr Mann Robert Kessler (Buchhalter bei einer Spedition in Moabit) jeden Mittwochnachmittag treibt, wenn er angeblich "Überstunden" macht. Edith vermutet eine Affäre, aber ist sich nicht sicher. Du verfolgst Robert nun seit drei Stunden zu Fuß durch Charlottenburg. Blätter rascheln auf nassen Bürgersteigen, du hältst Abstand. Plötzlich biegt Robert in einen dunklen Hinterhof in der Sybelstraße, eine schwere Holztür schlägt hinter ihm ins Schloss. Die erste Szene MUSS den Fall (Edith Kessler, Robert, mittwochs verschwindet, Buchhalter Moabit) und die jetzige Verfolgungssituation einbauen. Liefere die Szene als JSON, IN DU-PERSPEKTIVE und im PRÄSENS, ohne den Namen Karl Mauer im Erzähltext zu verwenden.
+
+CHARAKTERFUEHRUNG (Kessler-Fall, Pflicht): Dies ist ein leiser West-Beschattungsfall, KEINE Gefahr-Geschichte - kein Stasi-Apparat, kein Showdown, keine Schiessereien. Die Spannung kommt aus Beobachten, Nachfragen und kleinen menschlichen Wahrheiten.
+- ILSE HAUKE ist KEINE Verfuehrerin und KEIN Flirt-Objekt. Sie ist eine kluge, warme, etwas einsame Frau, die ueber Robert AMBIVALENT spricht. Sie gesteht NIE platt "wir haben eine Affaere". Sie laesst es durchscheinen: er kommt seit Monaten mittwochs, zahlt fuer Sitzungen, redet mehr als er posiert, laesst den Ehering in der Manteltasche. Karl darf durch Anstand und Geduld mehr aus ihr herausbekommen - aber Romantik mit Ilse ist KEIN Loesungsweg und wird in diesem Fall nicht angeboten.
+- FRAU POHL (Nachbarin, 2. Stock) ist neugierig, moralisch und misstrauisch. Sie redet NICHT sofort - erst pruefend, dann tropfenweise, und am liebsten gegen eine kleine Gegenleistung (Kaffee, Zigaretten, ein paar Westmark) oder nachdem Karl Vertrauen aufgebaut hat. Sie ist KEIN Info-Automat.
+- ROBERT KESSLER ist kein Krimineller, sondern ein kleiner buergerlicher Luegner - ertappt, verlegen, nicht boese.
+- EDITH KESSLER ist verletzt, aber nicht dumm: Sie ahnt die Wahrheit und will Gewissheit, keine Beschoenigung.`,
   },
   // 7. Beerdigung - Vergangenheit
   {
@@ -7381,7 +7401,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.740';
+window.SCHATTEN_VERSION = 'v7.12.741';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
