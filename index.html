@@ -3280,7 +3280,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.753</div>
+    <div class="start-version">Schatten v7.12.754</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3506,7 +3506,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.753</span>
+    <span>Schatten v7.12.754</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7460,7 +7460,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.753';
+window.SCHATTEN_VERSION = 'v7.12.754';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -21489,7 +21489,8 @@ function mapZeigeClusterPopup(cluster){
     var pol = loc.polizeiort ? '<span style="color:#a8b0c8;margin-right:5px;">★</span>' : '';
     var mini = '';
     if(eintrag.indiz.jetzt > 0) mini = '<span style="color:#c8a84a;font-size:0.82em;margin-left:5px;">● ' + eintrag.indiz.jetzt + '</span>';
-    else if(eintrag.indiz.hattIndizien && eintrag.indiz.spaeter===0) mini = '<span style="color:#8aa890;font-size:0.82em;margin-left:5px;">✓</span>';
+    else if(eintrag.indiz.spaeter > 0) mini = '<span style="color:#8a6d4a;font-size:0.82em;margin-left:5px;">⊙ später</span>';
+    else if(eintrag.indiz.hattIndizien) mini = '<span style="color:#8aa890;font-size:0.82em;margin-left:5px;">✓</span>';
     btn.innerHTML = heil + pol + '<span>' + escapeHtml(loc.name) + '</span>' + mini
       + (eintrag.istAktuell ? '<span style="color:#867868;font-size:0.8em;float:right;">hier</span>' : (eintrag.gesperrt ? '<span style="color:#8a6d4a;font-size:0.8em;float:right;">zu</span>' : ''));
     // Tap -> Ort-Popup; Zurück aus Ort-Popup führt in DIESE Cluster-Übersicht
@@ -21551,9 +21552,12 @@ function mapBaueSvg(orte, cluster){
       }
     } else {
       // Cluster-Sammelpunkt: größer, Doppelring, Zahl. Gold wenn irgendwo offene Indizien.
-      var hatIndiz = c.mitglieder.some(function(m){return m.indiz.jetzt > 0;});
+      // v7.12.754 (ChatGPT-Lektorat P2): Cluster-Farbe wie Einzelorte differenzieren - ein Cluster mit nur
+      // später erreichbaren Indizien darf nicht neutral/beige aussehen, sondern bekommt die später-Farbe.
+      var hatIndiz = c.mitglieder.some(function(m){return m.indiz && m.indiz.jetzt > 0;});
+      var hatSpaeterC = c.mitglieder.some(function(m){return m.indiz && m.indiz.spaeter > 0;});
       var hatAktuell = c.mitglieder.some(function(m){return m.istAktuell;});
-      var cf = hatIndiz ? '#c8a84a' : '#9a8a68';
+      var cf = hatIndiz ? '#c8a84a' : (hatSpaeterC ? '#8a6d4a' : '#9a8a68');
       svg += '<circle class="map-tap" data-idx="' + idx + '" cx="' + c.x + '" cy="' + c.y + '" r="19" fill="#000" opacity="0"/>';
       svg += '<circle cx="' + c.x + '" cy="' + c.y + '" r="11.5" fill="#241f18" stroke="' + cf + '" stroke-width="1.7" pointer-events="none"/>';
       svg += '<circle cx="' + c.x + '" cy="' + c.y + '" r="14.5" fill="none" stroke="' + cf + '" stroke-width="1" opacity="0.55" pointer-events="none"/>';
@@ -21620,7 +21624,15 @@ function oeffneReiseMenue(){
       var b = document.createElement('button');
       b.style.cssText = 'display:block;width:100%;text-align:left;margin-bottom:6px;padding:10px 12px;background:#322a22;border:1px solid #4d4234;border-radius:5px;color:#cbbfa9;cursor:pointer;font-family:inherit;font-size:calc(12px * var(--reading-scale));';
       b.textContent = loc.name + (loc.sektor ? ' · ' + loc.sektor : '');
-      attachSafeTap(b, function(){ reiseZuOrt(loc); });
+      // v7.12.754 (ChatGPT-Lektorat P2): Fallback-Liste spiegelt die Öffnungslogik der Karte (Zukunftssicherung,
+      // falls je ein reisbarer Ort ohne MAP_POS dazukommt) - geschlossene Orte nicht direkt anreisbar.
+      var fbGeoeffnet = (typeof istOrtGeoeffnet === 'function') ? istOrtGeoeffnet(loc) : true;
+      if(!fbGeoeffnet){
+        b.style.opacity = '0.55';
+        b.textContent = loc.name + ' · aktuell geschlossen';
+      } else {
+        attachSafeTap(b, function(){ reiseZuOrt(loc); });
+      }
       fbWrap.appendChild(b);
     });
     panel.appendChild(fbWrap);
@@ -21705,6 +21717,9 @@ function renderImRaumAnzeige() {
   // v7.12.580 (UI-B3b): Die anwesenden Personen werden NICHT mehr hier als schwebende Zeile gerendert -
   // sie leben jetzt INNERHALB der zwei Kategorien (Übergang/Bleibt), siehe bauePersonenButtons in renderOptions.
   // Diese Zeile bleibt leer/versteckt (der Ort steht ohnehin in der fixen Top-Statusleiste).
+  // v7.12.754 (ChatGPT-Lektorat P1): el war hier nie definiert -> ReferenceError (bisher von try/catch maskiert).
+  const el = document.getElementById('im-raum-anzeige');
+  if (!el) return;
   el.classList.add('hidden');
   el.innerHTML = '';
   return;
