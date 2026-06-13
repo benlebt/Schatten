@@ -3280,7 +3280,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.742</div>
+    <div class="start-version">Schatten v7.12.743</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3506,7 +3506,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.742</span>
+    <span>Schatten v7.12.743</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7409,7 +7409,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.742';
+window.SCHATTEN_VERSION = 'v7.12.743';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -21184,90 +21184,376 @@ function oeffneNotizbuch() {
   overlay.addEventListener('click', (e) => { if (e.target === overlay) schliesseNotizbuch(); });
   document.body.appendChild(overlay);
 }
-function oeffneReiseMenue() {
-  schliesseReiseMenue(); // doppelte vermeiden
-  if (typeof _markPopupOpened === 'function') _markPopupOpened(); // v7.12.556: Tap-Durchschlag-Schutz
-  const locs = getCaseLocations();
-  const aktuellNorm = engineCurrentLocation ? normForMatch(engineCurrentLocation.name) : '';
-  // Nur freigeschaltete, reisbare Orte; aktueller Ort wird markiert (nicht klickbar).
-  const ziele = locs.filter(l => istReisbarerOrt(l) && unlockedLocations.includes(normForMatch(l.name)));
-  // v7.12.535 (Diagnose): welche Orte standen beim Öffnen zur Auswahl? (Symbol-Markierung für Heil/Polizei)
-  if (typeof diag === 'function') {
-    diag('detect', 'REISE-MENÜ geöffnet (' + ziele.length + ' Ziele): ' + ziele.map(l => l.name
-      + (normForMatch(l.name) === aktuellNorm ? '[hier]' : '')
-      + (l.heilort ? '[✚]' : '') + (l.polizeiort ? '[★]' : '')).join(', '));
+// ====================================================================================
+// v7.12.743 (Benjamin, Karten-Projekt Schritt 1): BERLIN-KARTE als Reisemenue.
+// Ersetzt die Reise-LISTE durch eine schematische Sektorenkarte (Berlin 1953, 4 Sektoren).
+// PRINZIP (ChatGPT-Lektorat, eisern): Karte = Oberflaeche, Engine = Wahrheit.
+//   - MAP_POS speichert NUR feste Koordinaten (Ortsname -> x/y/Sektor). Sonst nichts.
+//   - Welche Orte sichtbar/offen/geschlossen/erledigt/indizienrelevant sind, kommt zur
+//     Laufzeit aus DENSELBEN Quellen wie die alte Liste (ziele, offeneIndizienAmOrtNachErreichbarkeit,
+//     istOrtGeoeffnet, reiseZuOrt). KEINE eigene Falllogik, KEINE eigenen Oeffnungszeiten.
+//   - Geschlossene Orte: exakt wie die Liste sie behandelt (gesperrt = !geoeffnet && !istAktuell).
+// INTERAKTION: Karte -> Tap Einzelort -> Ort-Popup (Name, Beschreibung, Indizien, Oeffnung, Reise-Knopf).
+//              Karte -> Tap Cluster -> Cluster-Uebersicht (nur diese Orte) -> Ort-Popup.
+// ====================================================================================
+var MAP_POS = {
+    'Achterberg-Villa': {x:300,y:62,sek:'SU'},
+    'Achterbergs Garderobe': {x:300,y:150,sek:'SU'},
+    'Albrecht Goerke U-Haft': {x:360,y:124,sek:'SU'},
+    'Anwaltsbuero Baumgarten': {x:64,y:124,sek:'UK'},
+    'Apotheke am Bahnhof Friedrichstrasse': {x:238,y:140,sek:'SU'},
+    'Bahnausbesserungswerk Schoeneweide': {x:316,y:208,sek:'SU'},
+    'Bahnhof Charlottenburg': {x:100,y:116,sek:'UK'},
+    'Bahnhof Friedrichstrasse': {x:240,y:128,sek:'GRENZE'},
+    'Berliner Disconto-Bank (Westsektor)': {x:120,y:122,sek:'UK'},
+    'Bornsteins Antiquitaetenladen': {x:206,y:178,sek:'US'},
+    'Brandt-Familie Wohnung': {x:226,y:186,sek:'US'},
+    'Cafe Kranzler': {x:90,y:150,sek:'UK'},
+    'Cafe Wien': {x:74,y:134,sek:'UK'},
+    'Charite': {x:268,y:88,sek:'SU'},
+    'Detlef Schiffers Wohnung': {x:322,y:68,sek:'SU'},
+    'Deutsche Staatsoper (Admiralspalast)': {x:252,y:142,sek:'SU'},
+    'Die Badewanne': {x:134,y:200,sek:'US'},
+    'Doc Wagners Praxis': {x:120,y:182,sek:'US'},
+    'Dr. Marquardts Praxis (Linienstrasse, Mitte)': {x:258,y:150,sek:'SU'},
+    'Erich Brandts ehemalige Wohnung': {x:126,y:210,sek:'US'},
+    'Friedhof Ploetzensee': {x:150,y:55,sek:'FR'},
+    'Gerichtsarchiv Kreisgericht Mitte': {x:322,y:86,sek:'SU'},
+    'Goldener Anker': {x:312,y:124,sek:'SU'},
+    'HO-Verwaltung Stalinallee': {x:352,y:158,sek:'SU'},
+    'Haus der Ministerien': {x:278,y:148,sek:'SU'},
+    'Hilde Brauer Wohnung Koepenick': {x:366,y:224,sek:'SU'},
+    'Hinterhof Goltzstrasse': {x:108,y:196,sek:'US'},
+    'Hinterhof Spreestrasse': {x:378,y:224,sek:'SU'},
+    'Hinterhof Sybelstrasse': {x:46,y:150,sek:'UK'},
+    'Hohenschoenhausen / Genslerstrasse': {x:362,y:100,sek:'SU'},
+    'Hollenbeck-Villa Wannsee': {x:70,y:222,sek:'US'},
+    'Imbiss Bei Trude': {x:262,y:146,sek:'SU'},
+    'Karl Mauers Buero': {x:276,y:118,sek:'SU'},
+    'Kessler-Wohnung Charlottenburg': {x:58,y:100,sek:'UK'},
+    'Krause-Wohnung': {x:330,y:78,sek:'SU'},
+    'Krauses Antiquitaeten': {x:342,y:88,sek:'SU'},
+    'Kreisgericht Mitte': {x:318,y:98,sek:'SU'},
+    'Liesel Forsthubers Wohnung': {x:286,y:138,sek:'SU'},
+    'Lindenbaum-Wohnung': {x:322,y:174,sek:'SU'},
+    'Manfred Vogts Wohnung West': {x:150,y:178,sek:'US'},
+    'Margarete Steins Wohnung': {x:316,y:158,sek:'SU'},
+    'Marienfelde Notaufnahmelager': {x:178,y:224,sek:'US'},
+    'Martha Brommers Wohnung': {x:348,y:76,sek:'SU'},
+    'Marx-Engels-Platz': {x:290,y:128,sek:'SU'},
+    'Mathilde Goerkes Salon': {x:336,y:96,sek:'SU'},
+    'Olympiastadion-Gegend': {x:30,y:108,sek:'UK'},
+    'Opel Olympia am Tempelhofer Feld': {x:200,y:232,sek:'US'},
+    'Polizei Hardenbergstrasse': {x:116,y:144,sek:'UK'},
+    'Reichsbahn-Lokschuppen Friedrichstrasse': {x:246,y:118,sek:'SU'},
+    'Reichsbahndirektion Mitte': {x:244,y:102,sek:'SU'},
+    'Renate Schiffer Wohnung Tiergarten': {x:150,y:124,sek:'UK'},
+    'Rote Laterne': {x:148,y:190,sek:'US'},
+    'S-Bahnhof Alexanderplatz': {x:318,y:110,sek:'SU'},
+    'S-Bahnhof Koepenick': {x:318,y:232,sek:'SU'},
+    'Sigrid Vogt Wohnung': {x:270,y:150,sek:'SU'},
+    'Spedition Schmidt Moabit': {x:160,y:100,sek:'UK'},
+    'Spielklub Roter Stern': {x:306,y:136,sek:'SU'},
+    'Staatsbibliothek Unter den Linden': {x:264,y:134,sek:'SU'},
+    'Stalinallee Baustelle': {x:338,y:150,sek:'SU'},
+    'Stallschreiberstrasse 12': {x:214,y:196,sek:'US'},
+    'Stellwerk Schoeneweide': {x:334,y:214,sek:'SU'},
+    'Strausberger Platz': {x:330,y:166,sek:'SU'},
+    'Strauss-Geschaeft': {x:205,y:40,sek:'FR'},
+    'Strauss-Wohnung Wedding': {x:222,y:62,sek:'FR'},
+    'Tagesspiegel-Redaktion': {x:174,y:114,sek:'UK'},
+    'Tante Friedas Hehlerei': {x:232,y:176,sek:'US'},
+    'Volkspolizei Marienstrasse': {x:284,y:90,sek:'SU'},
+    'Volkspolizei-Praesidium Keibelstrasse': {x:300,y:98,sek:'SU'},
+    'Volkspolizei-Revier Hackescher Markt': {x:278,y:118,sek:'SU'},
+    'Volkspolizei-Revier Hans-Beimler-Strasse': {x:296,y:112,sek:'SU'},
+    'Vossbergs Wohnung': {x:356,y:84,sek:'SU'},
+    'Waescherei Koepenick': {x:340,y:210,sek:'SU'},
+    'Wegener-Wohnung': {x:366,y:198,sek:'SU'},
+    'Werft VEB Koepenick': {x:350,y:240,sek:'SU'},
+    'Wessel-Wohnung': {x:344,y:170,sek:'SU'},
+    'West-Berliner Auffangstelle': {x:160,y:216,sek:'US'},
+  };
+var MAP_ALIAS = { 'Bahnhof Friedrichstraße':'Bahnhof Friedrichstrasse', 'S-Bahnhof Friedrichstrasse':'Bahnhof Friedrichstrasse', 'Charité':'Charite', 'Charite Notaufnahme':'Charite', 'Pathologie Charite':'Charite', 'Polizeirevier Hardenbergstrasse':'Polizei Hardenbergstrasse', 'Schutzpolizei Hardenbergstrasse':'Polizei Hardenbergstrasse', 'Stellwerk Schöneweide':'Stellwerk Schoeneweide', 'Karl Mauers Büro':'Karl Mauers Buero', 'Café Kranzler':'Cafe Kranzler', 'Eckkneipe Zum Goldenen Anker':'Goldener Anker' };
+// Sektor-Anzeigeinfo (Farbe, Klartext)
+var MAP_SEK = {
+  FR: {name:'Französischer Sektor', farbe:'#5a4a72'},
+  UK: {name:'Britischer Sektor', farbe:'#3d5a44'},
+  US: {name:'Amerikanischer Sektor', farbe:'#2f4a63'},
+  SU: {name:'Sowjetischer Sektor', farbe:'#6e2b28'},
+  GRENZE: {name:'Sektorengrenze', farbe:'#d8c88a'}
+};
+function mapKanon(n){ if(!n) return n; return MAP_ALIAS[n] || n; }
+// Findet die Kartenposition fuer einen Ort (ueber Name oder Alias). null wenn unbekannt.
+function mapPosFuer(loc){
+  if(!loc || !loc.name) return null;
+  var k = mapKanon(loc.name);
+  if(MAP_POS[k]) return MAP_POS[k];
+  // Fallback: normForMatch-Vergleich gegen alle MAP_POS-Keys (fuer leichte Schreibvarianten)
+  if(typeof normForMatch === 'function'){
+    var nn = normForMatch(loc.name);
+    for(var key in MAP_POS){ if(normForMatch(key) === nn) return MAP_POS[key]; }
+    for(var a in MAP_ALIAS){ if(normForMatch(a) === nn) return MAP_POS[MAP_ALIAS[a]] || null; }
   }
-  const overlay = document.createElement('div');
-  overlay.id = 'reise-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:9000;background:rgba(10,8,6,0.82);display:flex;align-items:center;justify-content:center;padding:18px;';
-  const panel = document.createElement('div');
-  panel.style.cssText = 'max-width:440px;width:100%;max-height:80vh;overflow-y:auto;background:#1a1611;border:1px solid #4d4234;border-radius:8px;padding:18px 18px 14px;box-shadow:0 12px 40px rgba(0,0,0,0.6);';
-  let html = '<div style="font-family:inherit;color:#cbbfa9;font-size:calc(14px * var(--reading-scale));letter-spacing:0.08em;margin-bottom:4px;">WOHIN?</div>'
-    + '<div style="font-family:inherit;color:#867868;font-size:calc(10px * var(--reading-scale));margin-bottom:14px;line-height:1.4;">Karl steigt in den Opel. Ziel wählen startet die nächste Szene.</div>';
-  if (!ziele.length) {
-    html += '<div style="color:#867868;font-size:calc(11px * var(--reading-scale));font-style:italic;">Noch keine weiteren Orte bekannt. Ermittle, um neue Orte freizuschalten.</div>';
+  return null;
+}
+// Sammelt fuer das aktuelle Reise-Menue die Ortsdaten EXAKT wie die alte Liste.
+// Gibt Array von {loc, pos, istAktuell, gesperrt, indiz:{jetzt,spaeter,hattIndizien}, geoeffnet} zurueck.
+function mapSammleOrte(ziele, aktuellNorm){
+  var out = [];
+  ziele.forEach(function(loc){
+    var pos = mapPosFuer(loc);
+    if(!pos) return; // Ort ohne Kartenposition -> wird in der Karte nicht gezeigt (Diagnose unten)
+    var istAktuell = (typeof normForMatch === 'function') && normForMatch(loc.name) === aktuellNorm;
+    var offen = (typeof offeneIndizienAmOrt === 'function') ? offeneIndizienAmOrt(loc) : 0;
+    var indiz = (typeof offeneIndizienAmOrtNachErreichbarkeit === 'function') ? offeneIndizienAmOrtNachErreichbarkeit(loc) : {jetzt:offen,spaeter:0,hattIndizien:offen>0};
+    var geoeffnet = (typeof istOrtGeoeffnet === 'function') ? istOrtGeoeffnet(loc) : true;
+    var gesperrt = !geoeffnet && !istAktuell;
+    out.push({loc:loc, pos:pos, istAktuell:istAktuell, gesperrt:gesperrt, indiz:indiz, geoeffnet:geoeffnet});
+  });
+  return out;
+}
+// Cluster-Erkennung: Orte, die naeher als CLUSTER_DIST viewBox-Einheiten beieinander liegen,
+// werden zu einer Gruppe zusammengefasst (verhindert untippbare Punkte auf dem iPhone).
+var MAP_CLUSTER_DIST = 22;
+function mapBildeCluster(orte){
+  var rest = orte.slice();
+  var cluster = [];
+  while(rest.length){
+    var seed = rest.shift();
+    var gruppe = [seed];
+    for(var i = rest.length - 1; i >= 0; i--){
+      // gehoert zur Gruppe, wenn nah an IRGENDEINEM Mitglied der Gruppe
+      var nah = gruppe.some(function(m){
+        var dx = m.pos.x - rest[i].pos.x, dy = m.pos.y - rest[i].pos.y;
+        return Math.sqrt(dx*dx + dy*dy) < MAP_CLUSTER_DIST;
+      });
+      if(nah){ gruppe.push(rest[i]); rest.splice(i,1); }
+    }
+    // Cluster-Schwerpunkt
+    var cx = gruppe.reduce(function(s,m){return s+m.pos.x;},0)/gruppe.length;
+    var cy = gruppe.reduce(function(s,m){return s+m.pos.y;},0)/gruppe.length;
+    cluster.push({mitglieder:gruppe, x:cx, y:cy, einzeln:gruppe.length===1});
   }
+  return cluster;
+}
+
+// --- Indizien/Öffnungs-Text-Helfer (zentral, damit Ort-Popup und Cluster-Liste identisch sind) ---
+function mapIndizHtml(indiz){
+  if(indiz.jetzt > 0 || indiz.spaeter > 0){
+    var teile = [];
+    if(indiz.jetzt > 0) teile.push('<span style="color:#c8a84a;">● ' + indiz.jetzt + ' Indiz' + (indiz.jetzt===1?'':'ien') + ' hier zu finden</span>');
+    if(indiz.spaeter > 0) teile.push('<span style="color:#7a6f5a;">' + indiz.spaeter + ' später erreichbar</span>');
+    return teile.join('<span style="color:#5a5044;"> · </span>');
+  } else if(indiz.hattIndizien){
+    return '<span style="color:#8aa890;">✓ hier alle Indizien gefunden</span>';
+  }
+  return '<span style="color:#6b6450;">keine offenen Spuren bekannt</span>';
+}
+function mapOeffnungHtml(eintrag){
+  var loc = eintrag.loc;
+  if(eintrag.geoeffnet){
+    return '<span style="color:#8aa890;">geöffnet</span>';
+  }
+  var zt = Array.isArray(loc.oeffnungszeit) ? loc.oeffnungszeit.join(' / ') : '';
+  return '<span style="color:#c08a5a;">aktuell geschlossen' + (zt ? ' · öffnet ' + zt : '') + '</span>';
+}
+// --- Schönes Ort-Popup (gemeinsam für Einzelort UND Cluster-Auswahl) ---
+// zurueckFn: was beim "Zurück" passiert (zur Karte oder zur Cluster-Übersicht).
+function mapZeigeOrtPopup(eintrag, zurueckFn){
+  var alt = document.getElementById('map-ort-overlay');
+  if(alt) alt.remove();
+  if(typeof _markPopupOpened === 'function') _markPopupOpened();
+  var loc = eintrag.loc;
+  var sek = MAP_SEK[eintrag.pos.sek] || {name:loc.sektor||'', farbe:'#867868'};
+  var ov = document.createElement('div');
+  ov.id = 'map-ort-overlay';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:9300;background:rgba(8,6,5,0.78);display:flex;align-items:center;justify-content:center;padding:20px;';
+  var panel = document.createElement('div');
+  panel.style.cssText = 'max-width:380px;width:100%;background:#1a1611;border:1px solid #4d4234;border-left:4px solid ' + sek.farbe + ';border-radius:8px;padding:18px 18px 16px;box-shadow:0 14px 44px rgba(0,0,0,0.7);';
+  // Kopf: Name + Sektor
+  var heil = loc.heilort ? '<span style="color:#9ab8a0;margin-right:6px;" title="Heilungsort">✚</span>' : '';
+  var pol = loc.polizeiort ? '<span style="color:#a8b0c8;margin-right:6px;" title="Polizei">★</span>' : '';
+  var html = '<div style="color:#ece3cf;font-size:calc(15px * var(--reading-scale));font-weight:bold;letter-spacing:0.03em;margin-bottom:2px;">' + heil + pol + escapeHtml(loc.name) + '</div>';
+  html += '<div style="color:' + sek.farbe + ';filter:brightness(1.5);font-size:calc(10.5px * var(--reading-scale));margin-bottom:10px;letter-spacing:0.05em;">' + sek.name + (loc.sektor ? ' · ' + escapeHtml(loc.sektor) : '') + '</div>';
+  // Kurzbeschreibung (aus loc.detail, wenn vorhanden)
+  if(loc.detail){
+    html += '<div style="color:#a89a82;font-size:calc(11.5px * var(--reading-scale));line-height:1.5;margin-bottom:12px;font-style:italic;">' + escapeHtml(loc.detail) + '</div>';
+  }
+  // Status-Block: Indizien + Öffnung als eigene Zeilen (luftig, nicht ins Knöpfchen gequetscht)
+  html += '<div style="background:#13100c;border:1px solid #322a22;border-radius:6px;padding:10px 12px;margin-bottom:14px;font-size:calc(11px * var(--reading-scale));line-height:1.7;">';
+  html += '<div>' + mapIndizHtml(eintrag.indiz) + '</div>';
+  html += '<div>' + mapOeffnungHtml(eintrag) + '</div>';
+  html += '</div>';
   panel.innerHTML = html;
-  ziele.forEach(loc => {
-    const istAktuell = normForMatch(loc.name) === aktuellNorm;
-    // v7.12.565 (Indizien-Projekt Schritt 3): Öffnungszeit + offene Indizien anzeigen.
-    const offen = (typeof offeneIndizienAmOrt === 'function') ? offeneIndizienAmOrt(loc) : 0;
-    // v7.12.588 (R1): offene Indizien getrennt nach jetzt/später erreichbar.
-    const _indizErr = (typeof offeneIndizienAmOrtNachErreichbarkeit === 'function') ? offeneIndizienAmOrtNachErreichbarkeit(loc) : { jetzt: offen, spaeter: 0, hattIndizien: offen > 0 };
-    const geoeffnet = (typeof istOrtGeoeffnet === 'function') ? istOrtGeoeffnet(loc) : true;
-    // Geschlossener Ort: ausgegraut + nicht klickbar (außer es ist der aktuelle Ort - da steht man ja schon).
-    const gesperrt = !geoeffnet && !istAktuell;
-    const btn = document.createElement('button');
-    const _txtFarbe = istAktuell ? '#867868' : (gesperrt ? '#5a5044' : '#cbbfa9');
-    btn.style.cssText = 'display:block;width:100%;text-align:left;margin-bottom:8px;padding:10px 12px;background:'
-      + (istAktuell ? 'rgba(60,50,40,0.5)' : (gesperrt ? '#231f19' : '#322a22')) + ';border:1px solid '
-      + (istAktuell ? '#6b5d4a' : (gesperrt ? '#3a3328' : '#4d4234')) + ';border-radius:5px;color:'
-      + _txtFarbe + ';cursor:' + (istAktuell || gesperrt ? 'default' : 'pointer')
-      + ';font-family:inherit;font-size:calc(12px * var(--reading-scale));line-height:1.45;'
-      + (gesperrt ? 'opacity:0.62;' : '');
-    const sektor = loc.sektor ? '<span style="color:#867868;font-size:0.85em;"> · ' + loc.sektor + '</span>' : '';
-    // v7.12.523: Heilorte (Doc Wagner, Charite) mit Kreuz-Symbol markieren.
-    const heilMark = loc.heilort ? '<span style="color:#9ab8a0;font-size:0.9em;margin-right:5px;" title="Heilungsort">✚</span>' : '';
-    // v7.12.530: Polizei-Orte (Roth/Lindner) mit Stern-Symbol markieren.
-    const polizeiMark = loc.polizeiort ? '<span style="color:#a8b0c8;font-size:0.9em;margin-right:5px;" title="Polizei-Dienststelle">★</span>' : '';
-    // v7.12.565: Indizien-Marker - "● X offen" wenn der Ort noch nicht gefundene Kern-Indizien hat. Bleibt auch bei
-    // geschlossenem Ort sichtbar (du weißt: da wartet was, nur noch nicht jetzt).
-    // v7.12.588 (R1+R2): Indizien-Marker getrennt "● X jetzt · Y später" (jetzt=gold erreichbar, später=gedämpft
-    // zeit-/NPC-gesperrt). Erledigte Orte (hatten Indizien, jetzt alle gefunden) bekommen einen Haken ✓ wie ein
-    // abgeschlossenes Level - man KANN noch hin, muss aber nicht.
-    let indizMark = '';
-    if (_indizErr.jetzt > 0 || _indizErr.spaeter > 0) {
-      const _teile = [];
-      if (_indizErr.jetzt > 0) _teile.push('<span style="color:#c8a84a;" title="jetzt erreichbar">● ' + _indizErr.jetzt + ' Indiz' + (_indizErr.jetzt === 1 ? '' : 'ien') + ' hier</span>');
-      if (_indizErr.spaeter > 0) _teile.push('<span style="color:#7a6f5a;" title="zeit-/personengesperrt - später erreichbar">' + _indizErr.spaeter + ' später</span>');
-      indizMark = '<span style="font-size:0.82em;margin-left:6px;">' + _teile.join('<span style="color:#5a5044;"> · </span>') + '</span>';
-    } else if (_indizErr.hattIndizien) {
-      // Ort hatte Indizien, jetzt alle gefunden -> erledigt-Haken (wie abgeschlossenes Level).
-      indizMark = '<span style="color:#8aa890;font-size:0.82em;margin-left:6px;" title="hier alle Indizien gefunden">✓ erledigt</span>';
-    }
-    // v7.12.565: Öffnungszeit-Hinweis bei geschlossenem Ort (warum nicht klickbar).
-    let zustandZeile = '';
-    if (gesperrt) {
-      const zt = Array.isArray(loc.oeffnungszeit) ? loc.oeffnungszeit.join('/') : '';
-      zustandZeile = '<div style="color:#8a6d4a;font-size:0.8em;margin-top:3px;font-style:italic;">geschlossen · öffnet ' + zt + '</div>';
-    }
-    btn.innerHTML = heilMark + polizeiMark + '<span>' + loc.name + '</span>' + sektor + indizMark
-      + (istAktuell ? '<span style="color:#867868;font-size:0.85em;float:right;">du bist hier</span>' : '')
-      + zustandZeile;
-    if (!istAktuell && !gesperrt) {
-      attachSafeTap(btn, () => reiseZuOrt(loc));
-    }
+  // Reise-Knopf (nur wenn nicht aktuell und nicht gesperrt) - ruft AUSSCHLIESSLICH reiseZuOrt(loc)
+  if(eintrag.istAktuell){
+    var hier = document.createElement('div');
+    hier.style.cssText = 'text-align:center;color:#867868;font-size:calc(12px * var(--reading-scale));padding:10px;font-style:italic;';
+    hier.textContent = 'Hier bist du gerade.';
+    panel.appendChild(hier);
+  } else if(eintrag.gesperrt){
+    var zu = document.createElement('div');
+    zu.style.cssText = 'text-align:center;color:#8a6d4a;font-size:calc(11.5px * var(--reading-scale));padding:10px;border:1px dashed #5a4632;border-radius:6px;';
+    zu.textContent = 'Reise derzeit nicht möglich.';
+    panel.appendChild(zu);
+  } else {
+    var reise = document.createElement('button');
+    reise.style.cssText = 'display:block;width:100%;padding:12px;background:#3a5a3e;border:1px solid #5a8060;border-radius:6px;color:#eaf2ea;cursor:pointer;font-family:inherit;font-size:calc(13px * var(--reading-scale));font-weight:bold;letter-spacing:0.04em;';
+    reise.textContent = '🚗 Dorthin reisen';
+    attachSafeTap(reise, function(){ ov.remove(); reiseZuOrt(loc); });
+    panel.appendChild(reise);
+  }
+  // Zurück
+  var zurueck = document.createElement('button');
+  zurueck.style.cssText = 'display:block;width:100%;margin-top:8px;padding:9px;background:transparent;border:1px solid #403930;border-radius:6px;color:#867868;cursor:pointer;font-family:inherit;font-size:calc(11px * var(--reading-scale));';
+  zurueck.textContent = '← Zurück';
+  zurueck.addEventListener('click', function(){ ov.remove(); if(typeof zurueckFn === 'function') zurueckFn(); });
+  panel.appendChild(zurueck);
+  ov.addEventListener('click', function(e){ if(e.target === ov){ ov.remove(); if(typeof zurueckFn === 'function') zurueckFn(); } });
+  ov.appendChild(panel);
+  document.body.appendChild(ov);
+}
+// --- Cluster-Übersicht: kompakte Liste der Orte in einem Cluster (wie altes Reise-Item, nur gefiltert) ---
+function mapZeigeClusterPopup(cluster){
+  var alt = document.getElementById('map-cluster-overlay');
+  if(alt) alt.remove();
+  if(typeof _markPopupOpened === 'function') _markPopupOpened();
+  var ov = document.createElement('div');
+  ov.id = 'map-cluster-overlay';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:9200;background:rgba(8,6,5,0.78);display:flex;align-items:center;justify-content:center;padding:20px;';
+  var panel = document.createElement('div');
+  panel.style.cssText = 'max-width:380px;width:100%;max-height:78vh;overflow-y:auto;background:#1a1611;border:1px solid #4d4234;border-radius:8px;padding:16px 16px 12px;box-shadow:0 14px 44px rgba(0,0,0,0.7);';
+  panel.innerHTML = '<div style="color:#cbbfa9;font-size:calc(13px * var(--reading-scale));letter-spacing:0.06em;margin-bottom:3px;">MEHRERE ORTE HIER</div>'
+    + '<div style="color:#867868;font-size:calc(10px * var(--reading-scale));margin-bottom:12px;">' + cluster.mitglieder.length + ' Orte dicht beieinander - wähle einen aus.</div>';
+  cluster.mitglieder.forEach(function(eintrag){
+    var loc = eintrag.loc;
+    var btn = document.createElement('button');
+    var txtFarbe = eintrag.istAktuell ? '#867868' : (eintrag.gesperrt ? '#5a5044' : '#cbbfa9');
+    btn.style.cssText = 'display:block;width:100%;text-align:left;margin-bottom:7px;padding:10px 12px;background:'
+      + (eintrag.istAktuell ? 'rgba(60,50,40,0.5)' : (eintrag.gesperrt ? '#231f19' : '#322a22')) + ';border:1px solid '
+      + (eintrag.istAktuell ? '#6b5d4a' : (eintrag.gesperrt ? '#3a3328' : '#4d4234')) + ';border-radius:5px;color:' + txtFarbe
+      + ';cursor:pointer;font-family:inherit;font-size:calc(12px * var(--reading-scale));line-height:1.4;' + (eintrag.gesperrt ? 'opacity:0.62;' : '');
+    var heil = loc.heilort ? '<span style="color:#9ab8a0;margin-right:5px;">✚</span>' : '';
+    var pol = loc.polizeiort ? '<span style="color:#a8b0c8;margin-right:5px;">★</span>' : '';
+    var mini = '';
+    if(eintrag.indiz.jetzt > 0) mini = '<span style="color:#c8a84a;font-size:0.82em;margin-left:5px;">● ' + eintrag.indiz.jetzt + '</span>';
+    else if(eintrag.indiz.hattIndizien && eintrag.indiz.spaeter===0) mini = '<span style="color:#8aa890;font-size:0.82em;margin-left:5px;">✓</span>';
+    btn.innerHTML = heil + pol + '<span>' + escapeHtml(loc.name) + '</span>' + mini
+      + (eintrag.istAktuell ? '<span style="color:#867868;font-size:0.8em;float:right;">hier</span>' : (eintrag.gesperrt ? '<span style="color:#8a6d4a;font-size:0.8em;float:right;">zu</span>' : ''));
+    // Tap -> Ort-Popup; Zurück aus Ort-Popup führt in DIESE Cluster-Übersicht
+    attachSafeTap(btn, function(){ ov.remove(); mapZeigeOrtPopup(eintrag, function(){ mapZeigeClusterPopup(cluster); }); });
     panel.appendChild(btn);
   });
-  const abbrechen = document.createElement('button');
-  abbrechen.style.cssText = 'display:block;width:100%;margin-top:6px;padding:9px 12px;background:transparent;border:1px solid #403930;border-radius:5px;color:#867868;cursor:pointer;font-family:inherit;font-size:calc(11px * var(--reading-scale));';
+  var zurueck = document.createElement('button');
+  zurueck.style.cssText = 'display:block;width:100%;margin-top:6px;padding:9px;background:transparent;border:1px solid #403930;border-radius:6px;color:#867868;cursor:pointer;font-family:inherit;font-size:calc(11px * var(--reading-scale));';
+  zurueck.textContent = '← Zurück zur Karte';
+  zurueck.addEventListener('click', function(){ ov.remove(); });
+  panel.appendChild(zurueck);
+  ov.addEventListener('click', function(e){ if(e.target === ov) ov.remove(); });
+  ov.appendChild(panel);
+  document.body.appendChild(ov);
+}
+
+// --- Das neue Reise-Menue: BERLIN-KARTE statt Liste ---
+function mapBaueSvg(orte, cluster){
+  // Statische Sektorflächen + Spree (schematisch, historisch korrekt). viewBox 400x300.
+  var svg = '<svg id="reise-svgmap" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto;touch-action:manipulation;">';
+  svg += '<polygon fill="#5a4a72" stroke="#0d0b08" stroke-width="0.6" points="120,18 250,18 248,82 178,92 128,76"/>';
+  svg += '<polygon fill="#3d5a44" stroke="#0d0b08" stroke-width="0.6" points="18,68 128,76 178,92 198,150 118,168 38,150"/>';
+  svg += '<polygon fill="#2f4a63" stroke="#0d0b08" stroke-width="0.6" points="38,150 118,168 198,150 262,176 252,255 88,255 48,210"/>';
+  svg += '<polygon fill="#6e2b28" stroke="#0d0b08" stroke-width="0.6" points="248,82 178,92 198,150 262,176 252,262 392,262 394,88 300,52"/>';
+  svg += '<path fill="none" stroke="#d8c88a" stroke-width="1.4" stroke-dasharray="5 3" opacity="0.85" d="M248,82 L178,92 L198,150 L262,176 L252,262"/>';
+  svg += '<path fill="none" stroke="#4a6b82" stroke-width="3" opacity="0.6" stroke-linecap="round" d="M388,238 Q310,205 262,182 Q215,165 195,128 Q178,98 150,92"/>';
+  // Punkte/Cluster
+  cluster.forEach(function(c, idx){
+    if(c.einzeln){
+      var e = c.mitglieder[0];
+      var farbe = e.istAktuell ? '#f0d878' : (e.gesperrt ? '#6b5f48' : (e.indiz.jetzt > 0 ? '#c8a84a' : (e.indiz.hattIndizien ? '#8aa890' : '#9a8a68')));
+      // aktueller Ort: großer Ring
+      if(e.istAktuell){
+        svg += '<circle cx="' + e.pos.x + '" cy="' + e.pos.y + '" r="8" fill="none" stroke="#f0d878" stroke-width="1.6" opacity="0.9"/>';
+      }
+      // geschlossener Ort: hohl/gestrichelt statt gefüllt
+      if(e.gesperrt){
+        svg += '<circle class="map-tap" data-idx="' + idx + '" cx="' + e.pos.x + '" cy="' + e.pos.y + '" r="11" fill="#000" opacity="0"/>';
+        svg += '<circle cx="' + e.pos.x + '" cy="' + e.pos.y + '" r="3.4" fill="none" stroke="' + farbe + '" stroke-width="1.1" stroke-dasharray="1.5 1.5" pointer-events="none"/>';
+      } else {
+        svg += '<circle class="map-tap" data-idx="' + idx + '" cx="' + e.pos.x + '" cy="' + e.pos.y + '" r="11" fill="#000" opacity="0"/>';
+        svg += '<circle cx="' + e.pos.x + '" cy="' + e.pos.y + '" r="3.4" fill="' + farbe + '" stroke="#1a1611" stroke-width="0.8" pointer-events="none"/>';
+        // kleiner Indizien-Ring wenn jetzt findbar
+        if(e.indiz.jetzt > 0 && !e.istAktuell){
+          svg += '<circle cx="' + e.pos.x + '" cy="' + e.pos.y + '" r="5.6" fill="none" stroke="#c8a84a" stroke-width="0.8" opacity="0.7" pointer-events="none"/>';
+        }
+      }
+    } else {
+      // Cluster-Sammelpunkt: größer, Doppelring, Zahl. Gold wenn irgendwo offene Indizien.
+      var hatIndiz = c.mitglieder.some(function(m){return m.indiz.jetzt > 0;});
+      var hatAktuell = c.mitglieder.some(function(m){return m.istAktuell;});
+      var cf = hatIndiz ? '#c8a84a' : '#9a8a68';
+      svg += '<circle class="map-tap" data-idx="' + idx + '" cx="' + c.x + '" cy="' + c.y + '" r="13" fill="#000" opacity="0"/>';
+      svg += '<circle cx="' + c.x + '" cy="' + c.y + '" r="7.5" fill="#241f18" stroke="' + cf + '" stroke-width="1.3" pointer-events="none"/>';
+      svg += '<circle cx="' + c.x + '" cy="' + c.y + '" r="9.5" fill="none" stroke="' + cf + '" stroke-width="0.7" opacity="0.55" pointer-events="none"/>';
+      if(hatAktuell){ svg += '<circle cx="' + c.x + '" cy="' + c.y + '" r="11.5" fill="none" stroke="#f0d878" stroke-width="1.2" opacity="0.8" pointer-events="none"/>'; }
+      svg += '<text x="' + c.x + '" y="' + (c.y + 2.6) + '" text-anchor="middle" font-family="Courier New,monospace" font-size="8" font-weight="bold" fill="' + cf + '" pointer-events="none">' + c.mitglieder.length + '</text>';
+    }
+  });
+  svg += '</svg>';
+  return svg;
+}
+function oeffneReiseMenue(){
+  schliesseReiseMenue();
+  if(typeof _markPopupOpened === 'function') _markPopupOpened();
+  var locs = getCaseLocations();
+  var aktuellNorm = engineCurrentLocation ? normForMatch(engineCurrentLocation.name) : '';
+  var ziele = locs.filter(function(l){ return istReisbarerOrt(l) && unlockedLocations.includes(normForMatch(l.name)); });
+  var orte = mapSammleOrte(ziele, aktuellNorm);
+  // Diagnose: Orte ohne Kartenposition (würden sonst lautlos fehlen -> Sackgasse vermeiden)
+  if(typeof diag === 'function'){
+    var ohne = ziele.filter(function(l){ return !mapPosFuer(l); }).map(function(l){return l.name;});
+    diag('detect', 'KARTE geöffnet: ' + orte.length + '/' + ziele.length + ' Orte verortet' + (ohne.length ? ' · OHNE Position: ' + ohne.join(', ') : ''));
+  }
+  var cluster = mapBildeCluster(orte);
+  var overlay = document.createElement('div');
+  overlay.id = 'reise-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9000;background:rgba(10,8,6,0.86);display:flex;align-items:center;justify-content:center;padding:14px;';
+  var panel = document.createElement('div');
+  panel.style.cssText = 'max-width:460px;width:100%;max-height:88vh;overflow-y:auto;background:#14110c;border:1px solid #4d4234;border-radius:8px;padding:14px;box-shadow:0 12px 40px rgba(0,0,0,0.6);';
+  var kopf = '<div style="color:#c8a84a;font-size:calc(13px * var(--reading-scale));letter-spacing:0.1em;margin-bottom:2px;">WOHIN? · BERLIN 1953</div>'
+    + '<div style="color:#867868;font-size:calc(9.5px * var(--reading-scale));margin-bottom:10px;line-height:1.4;">Tippe einen Ort. Gebündelte Punkte (Zahl) zeigen mehrere Orte.</div>';
+  if(!orte.length){
+    panel.innerHTML = kopf + '<div style="color:#867868;font-size:calc(11px * var(--reading-scale));font-style:italic;padding:20px 0;text-align:center;">Noch keine weiteren Orte bekannt. Ermittle, um neue Orte freizuschalten.</div>';
+  } else {
+    panel.innerHTML = kopf + '<div style="border:1px solid #322a22;border-radius:6px;overflow:hidden;background:#0d0b08;">' + mapBaueSvg(orte, cluster) + '</div>';
+  }
+  // Abbrechen
+  var abbrechen = document.createElement('button');
+  abbrechen.style.cssText = 'display:block;width:100%;margin-top:10px;padding:9px 12px;background:transparent;border:1px solid #403930;border-radius:6px;color:#867868;cursor:pointer;font-family:inherit;font-size:calc(11px * var(--reading-scale));';
   abbrechen.textContent = 'Abbrechen';
   abbrechen.addEventListener('click', schliesseReiseMenue);
   panel.appendChild(abbrechen);
   overlay.appendChild(panel);
-  overlay.addEventListener('click', (e) => { if (e.target === overlay) schliesseReiseMenue(); });
+  overlay.addEventListener('click', function(e){ if(e.target === overlay) schliesseReiseMenue(); });
   document.body.appendChild(overlay);
+  // Tap-Handler an die SVG-Hitflächen (nach dem Einfügen ins DOM)
+  var svgEl = document.getElementById('reise-svgmap');
+  if(svgEl){
+    svgEl.querySelectorAll('.map-tap').forEach(function(hit){
+      hit.style.cursor = 'pointer';
+      hit.addEventListener('click', function(){
+        var idx = parseInt(hit.getAttribute('data-idx'), 10);
+        var c = cluster[idx];
+        if(!c) return;
+        if(c.einzeln){
+          mapZeigeOrtPopup(c.mitglieder[0], function(){ /* zurück zur Karte = nichts, Karte liegt darunter */ });
+        } else {
+          mapZeigeClusterPopup(c);
+        }
+      });
+    });
+  }
 }
+
 // Baut die dezente "im Raum: X, Y"-Zeile (wer ist beim aktuellen Engine-Ort, aus Ort+Tageszeit). Wird über
 // den Optionen gezeigt. Leert sich, wenn niemand da ist.
 // v7.12.556 (Benjamin, iPhone-Fehlklick-Schutz): Mit den neuen anklickbaren Elementen (Personen im Raum,
