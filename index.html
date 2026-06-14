@@ -3318,7 +3318,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.840</div>
+    <div class="start-version">Schatten v7.12.841</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3544,7 +3544,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.840</span>
+    <span>Schatten v7.12.841</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5590,7 +5590,7 @@ const INTRO_VARIANTS = [
               'S': { titel: 'Hofeinfahrt', svg: 'hof' },
               'F': { titel: 'Am Erdgeschossfenster', svg: 'fenster', npcs: ['frau_pohl'], hotspots: ['robert_eintritt_beobachtet','fenster_beobachtung'] },
               'H': { titel: 'Hauseingang / Klingelschilder', svg: 'tuer', hotspots: ['tuerschild_hauke'] },
-              'P': { titel: 'Treppenhaus', svg: 'treppe', treppe: true, hochText: 'Karl steigt die ausgetretenen Stufen hinauf. Erster Stock, zweiter... im dritten bleibt er stehen. Hier oben riecht es nach Bohnerwachs und kaltem Rauch.' },
+              'P': { titel: 'Treppenhaus', svg: 'treppe', treppe: true, hochRichtung: 'N', hochText: 'Karl steigt die ausgetretenen Stufen hinauf. Erster Stock, zweiter... im dritten bleibt er stehen. Hier oben riecht es nach Bohnerwachs und kaltem Rauch.', runterText: 'Karl steigt die Treppe wieder hinab, zurück ins Erdgeschoss. Die Stufen knarren unter seinen Schritten.' },
               'T': { titel: '3. Stock - vor Ilses Tür', svg: 'wohnungstuer', abStage: 2, npcs: ['ilse_hauke'], tuer: true },
             }
           },
@@ -7037,9 +7037,14 @@ function _expVorausInfo() {
     const stg = (caseProgress && typeof caseProgress.stage === 'number') ? caseProgress.stage : 0;
     const gesperrt = !!(def && typeof def.abStage === 'number' && stg < def.abStage);
     let typ = 'offen';
-    if (def && def.treppe) typ = 'treppe';
-    else if (def && def.tuer) typ = 'tuer';
-    return { typ: typ, def: def, gesperrt: gesperrt, x: nx, y: ny };
+    let treppeRichtung = null; // 'hoch' | 'runter' - hängt von Blickrichtung ab
+    if (def && def.treppe) {
+      typ = 'treppe';
+      // hochRichtung = die Blickrichtung, in die "hinauf" zeigt. Blickt Karl so -> hoch, sonst runter.
+      const hochR = def.hochRichtung || 'N';
+      treppeRichtung = (p.blick === hochR) ? 'hoch' : 'runter';
+    } else if (def && def.tuer) typ = 'tuer';
+    return { typ: typ, def: def, gesperrt: gesperrt, x: nx, y: ny, treppeRichtung: treppeRichtung };
   } catch (e) { return null; }
 }
 // Aufmerksamkeit
@@ -7209,30 +7214,41 @@ function _expSvgPerspektive(vorne, links, rechts, bodenSvgKey, feature, opts) {
     s += '<rect x="' + (tx + 7) + '" y="' + (ty + 8 + th * 0.46) + '" width="' + (tw - 14) + '" height="' + (th * 0.42) + '" fill="none" stroke="' + dim + '" stroke-width="0.7"/>';
     s += '<circle cx="' + (tx + tw - 9) + '" cy="' + (ty + th / 2) + '" r="2.6" fill="' + stroke + '"/>';
     s += '<line x1="' + tx + '" y1="' + (ty + th - 3) + '" x2="' + (tx + tw) + '" y2="' + (ty + th - 3) + '" stroke="' + pal.licht + '" stroke-width="1.6" opacity="0.85"/>';
-  } else if (vorne === 'treppe') {
-    // v7.12.840: Treppe nach OBEN - Stufen, die zum oberen Fluchtpunkt ansteigen (Vertikalität spürbar machen).
+  } else if (vorne === 'treppe_hoch' || vorne === 'treppe_runter') {
+    // v7.12.841: Treppe - hoch (Stufen steigen zum oberen Fluchtpunkt) oder runter (fallen in die Tiefe).
+    const runter = (vorne === 'treppe_runter');
     s += '<rect x="' + ix1 + '" y="' + iy1 + '" width="' + (ix2 - ix1) + '" height="' + (iy2 - iy1) + '" fill="rgba(0,0,0,0.35)" stroke="' + dim + '" stroke-width="0.8"/>';
     const stufen = 6;
-    const bx1 = ix1 + 8, bx2 = ix2 - 8;     // Stufenbreite unten
-    const topY = iy1 + 14;                    // oberste Stufe (fern/hoch)
-    const botY = iy2 - 4;                     // unterste Stufe (nah)
-    for (let i = 0; i < stufen; i++) {
-      const f0 = i / stufen, f1 = (i + 1) / stufen;
-      // Stufen werden nach oben hin schmaler (Perspektive) und heller (Licht von oben).
-      const yA = botY - (botY - topY) * f0;
-      const yB = botY - (botY - topY) * f1;
-      const inset = 18 * f0;
-      const xL = bx1 + inset, xR = bx2 - inset;
-      const op = 0.25 + 0.5 * f0;
-      // Trittfläche (oben heller)
-      s += '<polygon points="' + xL + ',' + yA + ' ' + xR + ',' + yA + ' ' + (xR - 3) + ',' + (yA - 4) + ' ' + (xL + 3) + ',' + (yA - 4) + '" fill="' + pal.licht + '" opacity="' + (op * 0.4).toFixed(2) + '"/>';
-      // Setzstufe (Front, dunkel)
-      s += '<rect x="' + xL + '" y="' + (yB) + '" width="' + (xR - xL) + '" height="' + Math.max(2, (yA - yB)) + '" fill="rgba(0,0,0,0.4)" stroke="' + dim + '" stroke-width="0.5"/>';
+    const bx1 = ix1 + 8, bx2 = ix2 - 8;
+    if (!runter) {
+      // HOCH: Stufen werden nach oben hin schmaler + heller, Licht oben.
+      const topY = iy1 + 14, botY = iy2 - 4;
+      for (let i = 0; i < stufen; i++) {
+        const f0 = i / stufen, f1 = (i + 1) / stufen;
+        const yA = botY - (botY - topY) * f0, yB = botY - (botY - topY) * f1;
+        const inset = 18 * f0, xL = bx1 + inset, xR = bx2 - inset;
+        const op = 0.25 + 0.5 * f0;
+        s += '<polygon points="' + xL + ',' + yA + ' ' + xR + ',' + yA + ' ' + (xR - 3) + ',' + (yA - 4) + ' ' + (xL + 3) + ',' + (yA - 4) + '" fill="' + pal.licht + '" opacity="' + (op * 0.4).toFixed(2) + '"/>';
+        s += '<rect x="' + xL + '" y="' + yB + '" width="' + (xR - xL) + '" height="' + Math.max(2, (yA - yB)) + '" fill="rgba(0,0,0,0.4)" stroke="' + dim + '" stroke-width="0.5"/>';
+      }
+      s += '<ellipse cx="' + ((ix1 + ix2) / 2) + '" cy="' + topY + '" rx="22" ry="8" fill="' + pal.licht + '" opacity="0.16"/>';
+      s += '<text x="' + ((ix1 + ix2) / 2) + '" y="' + (topY + 2) + '" text-anchor="middle" font-size="13" fill="' + pal.licht + '" opacity="0.7">↑</text>';
+    } else {
+      // RUNTER: Stufen fallen ab, dunkler werdend in die Tiefe (kein Licht von oben, sondern Dunkel unten).
+      const topY = iy1 + 6, botY = iy2 - 16;
+      for (let i = 0; i < stufen; i++) {
+        const f0 = i / stufen, f1 = (i + 1) / stufen;
+        // f0=0 ist nah/oben (breit, hell), nach hinten fällt es ab (schmaler, dunkler)
+        const yA = topY + (botY - topY) * f0, yB = topY + (botY - topY) * f1;
+        const inset = 18 * f0, xL = bx1 + inset, xR = bx2 - inset;
+        const op = 0.5 - 0.4 * f0;
+        s += '<polygon points="' + xL + ',' + yA + ' ' + xR + ',' + yA + ' ' + (xR - 3) + ',' + (yA + 4) + ' ' + (xL + 3) + ',' + (yA + 4) + '" fill="' + pal.licht + '" opacity="' + (op * 0.3).toFixed(2) + '"/>';
+        s += '<rect x="' + xL + '" y="' + yA + '" width="' + (xR - xL) + '" height="' + Math.max(2, (yB - yA)) + '" fill="rgba(0,0,0,0.5)" stroke="' + dim + '" stroke-width="0.5"/>';
+      }
+      // Dunkler Schlund unten
+      s += '<ellipse cx="' + ((ix1 + ix2) / 2) + '" cy="' + (botY + 4) + '" rx="20" ry="7" fill="rgba(0,0,0,0.6)"/>';
+      s += '<text x="' + ((ix1 + ix2) / 2) + '" y="' + (botY + 8) + '" text-anchor="middle" font-size="13" fill="' + pal.licht + '" opacity="0.5">↓</text>';
     }
-    // Lichtschein von oben (man steigt dem Licht entgegen)
-    s += '<ellipse cx="' + ((ix1 + ix2) / 2) + '" cy="' + topY + '" rx="22" ry="8" fill="' + pal.licht + '" opacity="0.16"/>';
-    // Pfeil-Andeutung nach oben
-    s += '<text x="' + ((ix1 + ix2) / 2) + '" y="' + (topY + 2) + '" text-anchor="middle" font-size="13" fill="' + pal.licht + '" opacity="0.7">↑</text>';
   } else {
     const jx1 = 134, jy1 = 84, jx2 = 186, jy2 = 124;
     s += '<line x1="' + ix1 + '" y1="' + iy1 + '" x2="' + jx1 + '" y2="' + jy1 + '" stroke="' + dim + '" stroke-width="0.7"/>';
@@ -7334,7 +7350,12 @@ function _renderExploration(container) {
     const wrap = document.createElement('div');
     wrap.style.cssText = 'margin:4px 0 12px;';
     // SVG-Perspektive aus dem, was vor/links/rechts liegt
-    const vorne = _expNachbar(g, p, 'vorne');
+    let vorne = _expNachbar(g, p, 'vorne');
+    // v7.12.841: Treppe richtungsabhängig - hoch (ansteigend) oder runter (absteigend) je nach Blickrichtung.
+    if (vorne === 'treppe') {
+      const _vi = (typeof _expVorausInfo === 'function') ? _expVorausInfo() : null;
+      vorne = (_vi && _vi.treppeRichtung === 'runter') ? 'treppe_runter' : 'treppe_hoch';
+    }
     const links = _expNachbar(g, p, 'links');
     const rechts = _expNachbar(g, p, 'rechts');
     const zelle = _expZelleAktuell();
@@ -7454,12 +7475,15 @@ function _renderExploration(container) {
         window._expLetzteBewegung = 'vor'; const r = _expVor(); if (r.ok) _reRender();
       }, true));
     } else if (_voraus && _voraus.typ === 'treppe') {
-      navRow.appendChild(mkBtn('↑', 'hinauf', () => {
+      const _runter = (_voraus.treppeRichtung === 'runter');
+      navRow.appendChild(mkBtn('↑', _runter ? 'hinab' : 'hinauf', () => {
         window._expLetzteBewegung = 'vor';
         const r = _expVor();
         if (r.ok) {
-          const _hT = (_voraus.def && _voraus.def.hochText) ? _voraus.def.hochText : 'Karl steigt die Treppe hinauf.';
-          if (typeof showProgressToast === 'function') showProgressToast('Treppe hinauf', _hT, 'info', 'exp-treppe');
+          const _txt = _runter
+            ? ((_voraus.def && _voraus.def.runterText) ? _voraus.def.runterText : 'Karl steigt die Treppe hinab.')
+            : ((_voraus.def && _voraus.def.hochText) ? _voraus.def.hochText : 'Karl steigt die Treppe hinauf.');
+          if (typeof showProgressToast === 'function') showProgressToast(_runter ? 'Treppe hinab' : 'Treppe hinauf', _txt, 'info', 'exp-treppe');
           _reRender();
         }
       }, true));
@@ -8307,7 +8331,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.840';
+window.SCHATTEN_VERSION = 'v7.12.841';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
