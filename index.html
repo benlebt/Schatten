@@ -3293,7 +3293,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.785</div>
+    <div class="start-version">Schatten v7.12.786</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3519,7 +3519,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.785</span>
+    <span>Schatten v7.12.786</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7516,7 +7516,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.785';
+window.SCHATTEN_VERSION = 'v7.12.786';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -20734,7 +20734,7 @@ function applyCategoryMechanics(kategorie, ctx) {
       result.timeAdvanceBonus = 99; // wie SCHLAFEN: erzwingt Tageswechsel
       result.triggerSchlaf = true; // gleicher Mechanismus wie SCHLAFEN
       result.healingApplied = true;  // v7.11.11: immer Cooldown (auch Schlaf bei der Frau ist Erholung)
-      result.pushMessages.push('UEBERNACHTUNG-MIT-ROMANCE: Karl verbringt die Nacht bei der ROMANCE-Person AM AKTUELLEN ORT (Wohnung der Frau, oder wo sie sich gerade befinden). Beschreibe in 2-3 Saetzen wie der Abend stilvoll endet - Marlowe-Stil, elliptisch, NICHT explizit. Tuer schliesst sich, Schnitt. Dann UEBERGANG zum naechsten Morgen: Karl wacht bei ihr auf (Kaffeegeruch, Sonnenlicht, Lippenstift-Rand auf Tasse, ein Gespraech am Fruehstueck oder kurzer Abschied). NEUE Szene ist Morgen-nach-der-Nacht: Karl ist ausgeruht, die Frau ist da oder die Wohnung ist leer und ein Zettel liegt da. Karl macht sich dann auf den Weg zur Ermittlung - keine Verzoegerung mehr im Privaten. WICHTIG: Diese Szene zeigt den Morgen DANACH, nicht den intimen Abend selbst. Romantik-Tension wurde geloest, weitere romantische Annaeherungen an dieselbe Person sind ab jetzt seltener (aber nicht ausgeschlossen).' + (verfassung <= 3 ? ' Karl war verletzt - das warme Bett, die Versorgung durch sie und der Schlaf haben geholfen, er ist morgens stabiler aber noch nicht voll genesen.' : ''));
+      result.pushMessages.push('UEBERNACHTUNG-MIT-ROMANCE: Karl verbringt die Nacht bei der ROMANCE-Person AM AKTUELLEN ORT (Wohnung der Frau, oder wo sie sich gerade befinden). Beschreibe in 2-3 Saetzen wie der Abend stilvoll endet - Marlowe-Stil, elliptisch, NICHT explizit. Tuer schliesst sich, Schnitt. Dann UEBERGANG zum naechsten Morgen: Karl wacht bei ihr auf (Kaffeegeruch, Sonnenlicht, Lippenstift-Rand auf Tasse, ein Gespraech am Fruehstueck oder kurzer Abschied). NEUE Szene ist Morgen-nach-der-Nacht: Karl ist ausgeruht, die Frau ist da oder die Wohnung ist leer und ein Zettel liegt da. Karl macht sich dann auf den Weg zur Ermittlung - keine Verzoegerung mehr im Privaten. WICHTIG: Diese Szene zeigt den Morgen DANACH, nicht den intimen Abend selbst. Romantik-Tension wurde geloest, Diese Nacht bleibt einmalig: weitere romantische Annaeherungen an DIESELBE Person finden in diesem Fall nicht mehr statt - die Begegnung war besonders, kein wiederholbares Ritual. Behandle sie ab jetzt warm, aber ohne erneute Anbahnung.' + (verfassung <= 3 ? ' Karl war verletzt - das warme Bett, die Versorgung durch sie und der Schlaf haben geholfen, er ist morgens stabiler aber noch nicht voll genesen.' : ''));
       break;
 
     case 'AUFLOESEN':
@@ -24423,7 +24423,13 @@ function renderOptions(scene) {
   const romanceBlockedByCustody = !!karlInStasiCustody;
   // v7.12.17: Wenn dieser NPC die Annaeherung schon abgelehnt hat (50/50-Wuerfel
   // ging schief), erscheint KEIN Romance-Button mehr fuer ihn.
-  const romanceNpcRejected = !!(romanceNpcInScene && romanceRejected[romanceNpcInScene]);
+  // v7.12.786 (Benjamin: "mit derselben Romance-NPC nur EINE Nacht pro Run - mehrmals bei derselben Frau nutzt
+  // sich ab und ist unrealistisch. Ein Schürzenjäger darf bei 2 VERSCHIEDENEN Romance-NPCs übernachten, sofern
+  // der Fall zwei hat"). Eine NPC, mit der Karl die Nacht schon verbracht hat (romanceClimaxed), wird ab jetzt
+  // GENAUSO behandelt wie eine abgewiesene: Romance-Button komplett weg - keine zweite Nacht UND kein weiteres
+  // Annähern bei IHR. Eine andere Romance-NPC im selben Fall bleibt davon unberührt (eigener Climax-Eintrag).
+  const romanceNpcAlreadyOvernighted = !!(romanceNpcInScene && typeof romanceClimaxed === 'object' && romanceClimaxed[romanceNpcInScene]);
+  const romanceNpcRejected = !!(romanceNpcInScene && romanceRejected[romanceNpcInScene]) || romanceNpcAlreadyOvernighted;
   // v7.12.439 (Benjamin-Freigabe): KEIN Romance-Button in der ALLERERSTEN Szene (sceneCounter<=1).
   const romanceBlockedFirstScene = (typeof sceneCounter === 'number' && sceneCounter <= 1);
   // "Nacht verbringen" (Climax) hat ab Tension>=4 abends/nachts Vorrang.
