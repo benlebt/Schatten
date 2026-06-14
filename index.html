@@ -3298,7 +3298,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.809</div>
+    <div class="start-version">Schatten v7.12.810</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3524,7 +3524,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.809</span>
+    <span>Schatten v7.12.810</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7666,7 +7666,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.809';
+window.SCHATTEN_VERSION = 'v7.12.810';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -23150,7 +23150,6 @@ function npcInteraktion(npc, verb) {
   if (typeof chooseOption === 'function') chooseOption(npcOpt);
 }
 function oeffneNpcMenue(npc, modus) {
-  try { console.log('🔎 oeffneNpcMenue AUFGERUFEN für:', npc && npc.name, '| id=', npc && npc.id, '| tag=', npc && npc.tag, '| hat sozial=', !!(npc && npc.sozial)); } catch(e){}
   // v7.12.580 (UI-B3a): modus filtert die angezeigten Verben.
   //   'szene'     -> nur szene-auslösende Verben (befragen/bedrohen/beobachten/...). Für die "Übergang"-Sektion.
   //   'verwalten' -> nur Party-/Verwaltungs-Aktionen (mitnehmen/hier lassen). Für die "Bleibt"-Sektion.
@@ -23252,16 +23251,6 @@ function oeffneNpcMenue(npc, modus) {
     if (!_sozNpc && caseSetup && Array.isArray(caseSetup.setupCast)) {
       _sozNpc = (typeof _findSetupCastFuzzy === 'function') ? _findSetupCastFuzzy(npc.name, npc.id) : null;
     }
-    // v7.12.809 DEBUG (Voss-Diagnose): echtes console.log, damit es in der Browser-Konsole sichtbar ist (diag puffert nur intern).
-    try {
-      const _hatHinw = (typeof _npcHatOffenenHinweis === 'function') ? _npcHatOffenenHinweis(npc.name) : '?';
-      console.log('🗣 SOZIAL-DIAG', npc.name, '[id=' + (npc.id||'-') + ' tag=' + tag + ']',
-        '| npc.sozial=' + (npc && npc.sozial ? 'JA' : 'nein'),
-        '| _sozNpc=' + (_sozNpc ? 'gefunden' : 'NULL'),
-        '| tonarten=' + (_sozNpc && _sozNpc.sozial && Array.isArray(_sozNpc.sozial.tonarten) ? _sozNpc.sozial.tonarten.length : '-'),
-        '| GEGNER=' + GEGNER.includes(tag),
-        '| hatOffenenHinweis=' + _hatHinw);
-    } catch (e) { console.log('SOZIAL-DIAG Fehler:', e); }
     if (_sozNpc && _sozNpc.sozial && Array.isArray(_sozNpc.sozial.tonarten) && !_hundVerbenOverride && !GEGNER.includes(tag)) {
       const _istMiss = !!(npcMisstrauisch && npcMisstrauisch[npc.name]);
       const _verbraucht = (npcTonartVerbraucht && Array.isArray(npcTonartVerbraucht[npc.name])) ? npcTonartVerbraucht[npc.name] : [];
@@ -42328,7 +42317,25 @@ function _migriereCaseSetupOrte() {
       });
     }
   });
-  if (ergaenzt > 0 && typeof diag === 'function') diag('state', '🔧 caseSetup-Migration: ' + ergaenzt + ' fehlende Orts-NPCs/Indizien aus aktueller Falldefinition nachgetragen.');
+  // v7.12.810 (Benjamin: "bei Voss kein Puzzle" - Wurzel: caseSetup wird im Spielstand eingefroren; ein Fall, der
+  // VOR den Sozial-Profilen v791/v803/v804 begonnen wurde, trägt die Profile nicht). Cast-Profile nachtragen:
+  // fehlende sozial/gegnerprofil-Felder aus der aktuellen Falldefinition in den gespeicherten setupCast übertragen.
+  try {
+    if (Array.isArray(caseSetup.setupCast) && Array.isArray(quelle.setupCast)) {
+      caseSetup.setupCast.forEach(function(c) {
+        if (!c || !c.name) return;
+        var qc = quelle.setupCast.find(function(q){
+          if (!q || !q.name) return false;
+          if (q.id && c.id && normForMatch(q.id) === normForMatch(c.id)) return true;
+          return normForMatch(q.name) === normForMatch(c.name);
+        });
+        if (!qc) return;
+        if (!c.sozial && qc.sozial) { c.sozial = JSON.parse(JSON.stringify(qc.sozial)); ergaenzt++; }
+        if (!c.gegnerprofil && qc.gegnerprofil) { c.gegnerprofil = JSON.parse(JSON.stringify(qc.gegnerprofil)); ergaenzt++; }
+      });
+    }
+  } catch (e) {}
+  if (ergaenzt > 0 && typeof diag === 'function') diag('state', '🔧 caseSetup-Migration: ' + ergaenzt + ' fehlende Orts-NPCs/Indizien/Cast-Profile aus aktueller Falldefinition nachgetragen.');
   // NPCs neu auflösen, damit ergänzte Orts-NPCs sofort als Personen erscheinen
   try { if (typeof initEngineLocations === 'function' && !engineCurrentLocation) initEngineLocations(); } catch (e) {}
 }
