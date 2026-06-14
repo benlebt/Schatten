@@ -3281,7 +3281,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.773</div>
+    <div class="start-version">Schatten v7.12.774</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3507,7 +3507,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.773</span>
+    <span>Schatten v7.12.774</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7500,7 +7500,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.773';
+window.SCHATTEN_VERSION = 'v7.12.774';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -21740,12 +21740,21 @@ function mapZeigeOrtPopup(eintrag, zurueckFn){
     // v7.12.765: Stehst du im Opel VOR dem Ort (Echt-Ort mobil), kommst du sonst nicht hinein - das
     // istAktuell-Popup zeigt normal keinen Reise-Knopf. Hier brauchst du einen "Aussteigen"-Weg, der zum
     // Park-Ort reist (= Karl betritt den Ort, der Kellner/das Indiz wird erreichbar).
-    if(_echtMobil && !eintrag.gesperrt){
+    // v7.12.774 (Lektorat P1): Beim mobilen Standort (Opel vor dem Ort) NICHT mehr !gesperrt prüfen - der
+    // Standort-Fallback setzt istAktuell=true, was gesperrt fälschlich auf false zieht. Ein geschlossener Ort
+    // ließe sich so per "Aussteigen" umgehen. Daher direkt geoeffnet prüfen: offen -> Aussteigen-Knopf,
+    // geschlossen -> ehrlicher Hinweis statt Knopf.
+    if(_echtMobil && eintrag.geoeffnet){
       var aussteig = document.createElement('button');
       aussteig.style.cssText = 'display:block;width:100%;margin-top:10px;padding:12px;background:#3a5a3e;border:1px solid #5a8060;border-radius:6px;color:#eaf2ea;cursor:pointer;font-family:inherit;font-size:calc(13px * var(--reading-scale));font-weight:bold;letter-spacing:0.04em;';
       aussteig.innerHTML = '↪ <span style="vertical-align:middle;">Aussteigen · ' + escapeHtml(eintrag.loc.name) + ' betreten</span>';
       attachSafeTap(aussteig, function(){ ov.remove(); reiseZuOrt(loc); });
       panel.appendChild(aussteig);
+    } else if(_echtMobil && !eintrag.geoeffnet){
+      var zuMobil = document.createElement('div');
+      zuMobil.style.cssText = 'text-align:center;color:#8a6d4a;font-size:calc(11.5px * var(--reading-scale));padding:10px;margin-top:8px;border:1px dashed #5a4632;border-radius:6px;font-style:italic;';
+      zuMobil.textContent = 'Du stehst davor, aber der Ort ist gerade geschlossen.';
+      panel.appendChild(zuMobil);
     }
   } else if(eintrag.gesperrt){
     var zu = document.createElement('div');
