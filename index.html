@@ -3307,7 +3307,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.825</div>
+    <div class="start-version">Schatten v7.12.826</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3533,7 +3533,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.825</span>
+    <span>Schatten v7.12.826</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5554,33 +5554,24 @@ const INTRO_VARIANTS = [
       locations: [
         { name: 'Hinterhof Sybelstrasse', sektor: 'West (Charlottenburg)', detail: 'wo Robert eintrat - Hauptschauplatz, mehrere Werkstaetten und Wohnungen',
           startBekannt: true, npcs: [{ id: 'frau_pohl', zeit: ['vormittag','mittag','nachmittag','abend'] }, { id: 'ilse_hauke', zeit: ['nachmittag','abend','nacht'] }],
-          // v7.12.821 (Mikro-Orte Stufe 0, Benjamin-Konzept "GTA in Schwarzweiß"): Der Hinterhof zerfällt in Stationen,
-          // zwischen denen sich Karl bewegt. Pohl nur im Hof, Ilse erst im 3. Stock, Türschild im Treppenhaus.
-          // atmo: Variantenpools pro Tageszeit-Bucket (tag/nacht) - engine-only, kein KI-Call beim Bewegen.
-          // erstbesuch: voller inszenierter Pool fürs erste Betreten; danach der knappere atmo-Pool.
-          mikroOrte: [
-            { id: 'hof', name: 'Hof', start: true,
-              npcs: ['frau_pohl'], hotspots: ['robert_eintritt_beobachtet','fenster_beobachtung'], verbindungen: ['treppenhaus'],
-              erstbesuch: ['Du stehst im Hinterhof. Nasses Kopfsteinpflaster, eine umgekippte Mülltonne, über dir kreuz und quer gespannte Wäscheleinen. Hinten führt eine Tür ins Treppenhaus.'],
-              atmo: {
-                tag: ['Im Hof tropft Wasser aus einer rostigen Regenrinne.', 'Hinter einem Erdgeschossfenster bewegt sich kurz eine Gardine.', 'Neben den Mülltonnen weicht feuchtes Zeitungspapier auf.', 'Ein Fahrrad lehnt ohne Vorderrad an der Mauer.', 'Aus einer offenen Küche dringt Radiomusik und Geschirrklappern.'],
-                nacht: ['Der Hof liegt im Dunkeln, nur ein Fenster im zweiten Stock ist erleuchtet.', 'Irgendwo tropft es. Sonst Stille.', 'Eine Katze huscht über das nasse Pflaster und verschwindet.', 'Der Mond steht über den Dächern, das Pflaster glänzt schwarz.'],
-              } },
-            { id: 'treppenhaus', name: 'Treppenhaus',
-              npcs: [], hotspots: ['tuerschild_hauke'], verbindungen: ['hof','dritter_stock'],
-              erstbesuch: ['Du trittst ins Treppenhaus. Kalter Stein, abblätternder Putz, der Geruch von gekochtem Kohl. Eine nackte Glühbirne wirft fahles Licht auf die schiefen Klingelschilder.'],
-              atmo: {
-                tag: ['Auf einer Stufe steht ein vergessener Milchkrug.', 'Hinter einer Wohnungstür streiten zwei gedämpfte Stimmen.', 'Das Geländer ist klebrig von altem Lack.', 'Eine Frau schrubbt weiter oben die Stufen, sieht kurz herab.'],
-                nacht: ['Die Glühbirne flackert, summt leise.', 'Aus dem Keller zieht feuchte Kälte herauf.', 'Irgendwo fällt eine Tür ins Schloss, dann Stille.', 'Auf den Stufen ein Schatten - nur dein eigener.'],
-              } },
-            { id: 'dritter_stock', name: '3. Stock', abStage: 2,
-              npcs: ['ilse_hauke'], hotspots: [], verbindungen: ['treppenhaus'],
-              erstbesuch: ['Der dritte Stock. Links eine Wohnungstür mit einem getippten Namensschild: Hauke. Unter der Tür ein schmaler Lichtstreifen.'],
-              atmo: {
-                tag: ['Hinter Ilses Tür läuft leise ein Radio.', 'Der Treppenabsatz riecht schwach nach Terpentin und Farbe.', 'Eine Fußmatte, abgetreten, ohne Aufschrift.'],
-                nacht: ['Unter Ilses Tür der einzige Lichtstreifen im dunklen Flur.', 'Es ist still hier oben, fast zu still.', 'Von drinnen das Klirren eines Glases, dann nichts mehr.'],
-              } },
-          ],
+          // v7.12.826 (Erkundungs-Modus Stufe 0/1, Benjamin-Konzept "Bard's Tale Noir"): Der Schauplatz ist ein
+          // begehbarer GRAPH (Knoten + Ausgänge, kein Gitter - ChatGPT-Schärfung). Dungeon-Crawler-Gefühl, aber
+          // robuste Graph-Engine. Jeder Knoten: title, svg (Platzhalter-Ansicht), exits[{label,to}], optional
+          // npcs[] (hier ansprechbar), hotspots[] (hier findbar), abStage. start: Einstiegsknoten.
+          // Bilder kommen ERST wenn der Loop trägt (Stufe 3) - jetzt reine SVG-Liniengrafik.
+          explorationGraph: {
+            start: 'hof',
+            nodes: {
+              hof: { title: 'Im Hof', svg: 'hof', npcs: ['frau_pohl'], hotspots: ['robert_eintritt_beobachtet','fenster_beobachtung'],
+                exits: [{ label: 'Zum Hauseingang', to: 'hauseingang' }] },
+              hauseingang: { title: 'Hauseingang', svg: 'tuer',
+                exits: [{ label: 'Ins Treppenhaus', to: 'treppenhaus' }, { label: 'Zurück in den Hof', to: 'hof' }] },
+              treppenhaus: { title: 'Treppenhaus', svg: 'treppe', hotspots: ['tuerschild_hauke'],
+                exits: [{ label: 'Hinauf in den 3. Stock', to: 'dritter_stock' }, { label: 'Hinab zum Hauseingang', to: 'hauseingang' }] },
+              dritter_stock: { title: '3. Stock - vor Ilses Tür', svg: 'wohnungstuer', abStage: 2, npcs: ['ilse_hauke'],
+                exits: [{ label: 'Zurück ins Treppenhaus', to: 'treppenhaus' }] },
+            }
+          },
           indizien: [
             { id: 'tuerschild_hauke', text: 'Wohnung 3. Stock links: Türschild zeigt nur "Hauke" - eine alleinstehende Frau, kein Herr, keine Familie', hotspot: 'Klingelschilder im Treppenhaus prüfen', fundText: 'Im Hausflur hängen die Klingelschilder schief untereinander. Dritter Stock links: ein einzelner Name, mit Schreibmaschine getippt. Hauke. Kein Herr Hauke, keine Familie - nur der Name. Genau die Wohnung, in der Robert verschwindet.', quelle: 'umgebung', actions: ['ERKUNDEN','DURCHSUCHEN'], schluessel: ['tuerschild','türschild','hauke','3. stock','dritter stock','namensschild','klingelschild'], stage: 1 },
             { id: 'robert_eintritt_beobachtet', text: 'Robert Kessler betritt mittwochs gegen 19 Uhr den Hinterhof Sybelstrasse 24 - kein Bueroweg, keine Ueberstunden', hotspot: 'Im Schatten des Hinterhofs warten', fundText: 'Du lehnst dich in den Hauseingang gegenueber und wartest. Gegen sieben kommt er: Robert Kessler, den Mantelkragen hoch, ein kurzer Blick ueber die Schulter. Kein Bueroweg. Er verschwindet im Hinterhaus.', quelle: 'umgebung', actions: ['BEOBACHTEN','ERKUNDEN'], zeit: ['nachmittag','abend'], schluessel: ['eintritt','hinterhof','mittwoch','19 uhr','sybelstrasse','sybelstraße','holztuer','holztür','robert geht rein'], stage: 2 },
@@ -6943,203 +6934,216 @@ function _hundVerfuegbarHier() {
 function _hundInParty() { try { return !!(caseProgress && caseProgress.hundInParty); } catch (e) { return false; } }
 // ============ Ende WACHHUND-Helper ============
 
-// ============ MIKRO-ORTE (v7.12.822, Stufe 1) ============
-// Liefert das Location-Objekt der aktuellen Engine-Location (oder null).
-function _aktLocationObj() {
+// ============ ERKUNDUNGS-MODUS (v7.12.826, Stufe 0/1) ============
+// Begehbarer Schauplatz-Graph im Bard's-Tale-Stil. Graph statt Gitter (ChatGPT-Schärfung): robust, mobil-tauglich.
+// Stufe 1: Bewegung über Ausgänge + SVG-Platzhalter-Ansicht + Aufmerksamkeit + node-gebundene Funde/NPCs.
+// Begegnungen/Arena-Brücke/verschlossene Wege kommen in Stufe 2. Echte Bilder in Stufe 3 (nur wenn der Loop trägt).
+
+// Aktueller Schauplatz hat einen explorationGraph?
+function _hatExploration() {
+  try {
+    const loc = _expLocationObj();
+    return !!(loc && loc.explorationGraph && loc.explorationGraph.nodes);
+  } catch (e) { return false; }
+}
+function _expLocationObj() {
   try {
     if (!engineCurrentLocation || !engineCurrentLocation.name) return null;
     const locs = (typeof getCaseLocations === 'function') ? getCaseLocations() : [];
     return locs.find(l => l && normForMatch(l.name) === normForMatch(engineCurrentLocation.name)) || null;
   } catch (e) { return null; }
 }
-// Liefert die Mikro-Orte der aktuellen Location (Array) oder null, wenn dieser Schauplatz keine hat (flach).
-function _aktMikroOrte() {
-  const loc = _aktLocationObj();
-  return (loc && Array.isArray(loc.mikroOrte) && loc.mikroOrte.length) ? loc.mikroOrte : null;
+function _expGraph() { const loc = _expLocationObj(); return (loc && loc.explorationGraph) ? loc.explorationGraph : null; }
+// Aktueller Knoten-Key (Fallback: Start-Knoten).
+function _expNodeKey() {
+  const g = _expGraph(); if (!g || !g.nodes) return null;
+  let cur = caseProgress && caseProgress.aktuellerExplorationNode;
+  if (cur && g.nodes[cur]) return cur;
+  return g.start && g.nodes[g.start] ? g.start : Object.keys(g.nodes)[0];
 }
-// Hat der aktuelle Schauplatz überhaupt Mikro-Orte?
-function _hatMikroOrte() { return !!_aktMikroOrte(); }
-// Die aktuelle Station-ID. Fehlt sie / passt sie nicht zur Location -> Start-Station (start:true, sonst erste).
-function _aktMikroOrtId() {
-  const mo = _aktMikroOrte();
-  if (!mo) return null;
-  let cur = caseProgress && caseProgress.aktuellerMikroOrt;
-  if (cur && mo.some(m => m.id === cur)) return cur;
-  const start = mo.find(m => m.start) || mo[0];
-  return start ? start.id : null;
-}
-// Das aktuelle Station-Objekt.
-function _aktMikroOrtObj() {
-  const mo = _aktMikroOrte(); if (!mo) return null;
-  const id = _aktMikroOrtId();
-  return mo.find(m => m.id === id) || null;
-}
-// Eine Station ist erreichbar, wenn ihr abStage-Gate erfüllt ist.
-function _mikroOrtErreichbar(station) {
-  if (!station) return false;
-  const stg = (caseProgress && typeof caseProgress.stage === 'number') ? caseProgress.stage : 0;
-  if (typeof station.abStage === 'number' && stg < station.abStage) return false;
-  return true;
-}
-// Zieht einen Atmo-Text der Station: erster Besuch -> erstbesuch-Pool, sonst tageszeit-Pool (tag/nacht),
-// und NICHT direkt denselben wie zuletzt (ChatGPT-Schärfung).
-function _mikroAtmoText(station, istErstbesuch) {
+function _expNode() { const g = _expGraph(); const k = _expNodeKey(); return (g && k) ? g.nodes[k] : null; }
+// Ein Ausgang ist begehbar, wenn der Zielknoten existiert + sein abStage erfüllt ist.
+function _expExitBegehbar(exit) {
   try {
-    if (!station) return '';
-    if (istErstbesuch && Array.isArray(station.erstbesuch) && station.erstbesuch.length) {
-      return station.erstbesuch[Math.floor(Math.random() * station.erstbesuch.length)];
-    }
-    const atmo = station.atmo || {};
-    const tz = (typeof _aktTageszeitName === 'function') ? _aktTageszeitName() : 'nachmittag';
-    const bucket = (normForMatch(tz) === 'nacht') ? 'nacht' : 'tag';
-    let pool = Array.isArray(atmo[bucket]) ? atmo[bucket] : (Array.isArray(atmo.tag) ? atmo.tag : []);
-    if (!pool.length) return '';
-    if (pool.length === 1) return pool[0];
-    if (!caseProgress._mikroAtmoLastIdx) caseProgress._mikroAtmoLastIdx = {};
-    const lastIdx = caseProgress._mikroAtmoLastIdx[station.id];
-    let idx = Math.floor(Math.random() * pool.length);
-    if (idx === lastIdx) idx = (idx + 1) % pool.length; // nicht direkt wiederholen
-    caseProgress._mikroAtmoLastIdx[station.id] = idx;
-    return pool[idx];
-  } catch (e) { return ''; }
-}
-// Wechselt zur Station targetId (wenn verbunden + erreichbar). Gibt {ok, atmo, erstbesuch, name} zurück.
-function _mikroOrtWechseln(targetId) {
-  try {
-    const mo = _aktMikroOrte(); if (!mo) return { ok: false };
-    const ziel = mo.find(m => m.id === targetId);
-    if (!ziel || !_mikroOrtErreichbar(ziel)) return { ok: false };
-    if (!caseProgress.visitedMikroOrte) caseProgress.visitedMikroOrte = {};
-    const locKey = normForMatch(engineCurrentLocation.name) + ':' + targetId;
-    const istErst = !caseProgress.visitedMikroOrte[locKey];
-    caseProgress.visitedMikroOrte[locKey] = true;
-    caseProgress.aktuellerMikroOrt = targetId;
-    // v7.12.824: gemerkten Atmo-Text der Zielstation löschen -> beim Render wird ein frischer gezogen (Wechsel = neue Stimmung).
-    try { if (caseProgress._mikroAtmoAktuell) delete caseProgress._mikroAtmoAktuell[normForMatch(engineCurrentLocation.name) + ':' + targetId]; } catch (e) {}
-    const atmo = _mikroAtmoText(ziel, istErst);
-    return { ok: true, atmo: atmo, erstbesuch: istErst, name: ziel.name };
-  } catch (e) { return { ok: false }; }
-}
-// ============ Ende MIKRO-ORTE ============
-// v7.12.825: Wartet an einer Station eine ANSPRECHBARE Person? (offener Hinweis UND nicht heute verprellt).
-function _mikroPersonWartet(npcId) {
-  try {
-    const _id = _resolveNpcIdentity(npcId);
-    if (!_id || !_id.name) return false;
-    if (typeof _npcHatOffenenHinweis !== 'function' || !_npcHatOffenenHinweis(_id.name)) return false;
-    // heute verprellt? -> spricht nicht mehr, wartet also nicht.
-    const _vTag = (typeof npcVerprelltAmTag === 'object' && npcVerprelltAmTag) ? npcVerprelltAmTag[_id.name] : undefined;
-    if (typeof _vTag === 'number' && typeof gameDay === 'number' && _vTag === gameDay) return false;
+    const g = _expGraph(); if (!g || !exit || !g.nodes[exit.to]) return false;
+    const ziel = g.nodes[exit.to];
+    const stg = (caseProgress && typeof caseProgress.stage === 'number') ? caseProgress.stage : 0;
+    if (typeof ziel.abStage === 'number' && stg < ziel.abStage) return false;
     return true;
   } catch (e) { return false; }
 }
-// v7.12.822 (Mikro-Orte Stufe 1): rendert die Stations-Navigation in den übergebenen Container:
-// aktueller Stationsname + Atmo-Text + Buttons zu den verbundenen, erreichbaren Stationen.
-function _renderMikroOrtNavigation(container) {
+// Aufmerksamkeit erhöhen/senken (0-100). Differenzierte Kosten (ChatGPT): Erkunden darf nicht bestraft werden.
+function _aufmerksamkeitAendern(delta) {
   try {
-    if (!container) return;
-    const mo = (typeof _aktMikroOrte === 'function') ? _aktMikroOrte() : null;
-    if (!mo) return; // Schauplatz ohne Mikro-Orte -> nichts rendern (flacher Modus)
-    const aktId = _aktMikroOrtId();
-    const akt = mo.find(m => m.id === aktId);
-    if (!akt) return;
-    // Beim allerersten Render dieser Station den Besuch registrieren (für visited/Atmo).
-    if (!caseProgress.visitedMikroOrte) caseProgress.visitedMikroOrte = {};
-    const locKey = normForMatch(engineCurrentLocation.name) + ':' + aktId;
-    const istErst = !caseProgress.visitedMikroOrte[locKey];
-    if (istErst) caseProgress.visitedMikroOrte[locKey] = true;
-    if (caseProgress.aktuellerMikroOrt !== aktId) caseProgress.aktuellerMikroOrt = aktId;
+    if (!caseProgress) return;
+    let a = (typeof caseProgress.aufmerksamkeit === 'number') ? caseProgress.aufmerksamkeit : 0;
+    a = Math.max(0, Math.min(100, a + delta));
+    caseProgress.aufmerksamkeit = a;
+  } catch (e) {}
+}
+// Atmosphärische Aufmerksamkeits-Stufe (ChatGPT: keine Zahl zeigen).
+function _aufmerksamkeitStufe() {
+  const a = (caseProgress && typeof caseProgress.aufmerksamkeit === 'number') ? caseProgress.aufmerksamkeit : 0;
+  if (a >= 85) return { label: 'Gefahr', farbe: '#c0392b', icon: '⚠' };
+  if (a >= 60) return { label: 'Jemand hat etwas gehört', farbe: '#d35400', icon: '◔' };
+  if (a >= 38) return { label: 'Angespannt', farbe: '#c8923a', icon: '◑' };
+  if (a >= 18) return { label: 'Unbehagen', farbe: '#9a8a5a', icon: '◕' };
+  return { label: 'Ruhe', farbe: '#6f8a5a', icon: '○' };
+}
+// Wechselt zum Zielknoten (Bewegung). Erhöht Aufmerksamkeit (nachts +1 extra). Gibt {ok} zurück.
+function _expBewege(toKey) {
+  try {
+    const g = _expGraph(); if (!g || !g.nodes[toKey]) return { ok: false };
+    const ziel = g.nodes[toKey];
+    const stg = (caseProgress && typeof caseProgress.stage === 'number') ? caseProgress.stage : 0;
+    if (typeof ziel.abStage === 'number' && stg < ziel.abStage) return { ok: false };
+    caseProgress.aktuellerExplorationNode = toKey;
+    if (!caseProgress.besuchteExplorationNodes) caseProgress.besuchteExplorationNodes = {};
+    const nodeKey = normForMatch(engineCurrentLocation.name) + ':' + toKey;
+    caseProgress.besuchteExplorationNodes[nodeKey] = true;
+    // Bewegung kostet wenig Aufmerksamkeit (+1), nachts +1 extra.
+    let kosten = 1;
+    try { const tz = (typeof _aktTageszeitName === 'function') ? normForMatch(_aktTageszeitName()) : ''; if (tz === 'nacht') kosten += 1; } catch (e) {}
+    _aufmerksamkeitAendern(kosten);
+    return { ok: true };
+  } catch (e) { return { ok: false }; }
+}
+// SVG-Platzhalter-Ansichten (Schwarzweiß-Liniengrafik). Werden in Stufe 3 durch echte Noir-Bilder ersetzt.
+function _expSvgAnsicht(svgKey) {
+  const stroke = '#b3a47e';
+  const dim = '#6f6650';
+  const bg = 'rgba(20,16,10,0.55)';
+  const head = '<svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;border:1px solid rgba(138,122,88,0.3);border-radius:6px;background:' + bg + ';">';
+  const foot = '</svg>';
+  let body = '';
+  if (svgKey === 'hof') {
+    // Hinterhof: Mauern, Mülltonnen, Wäscheleine, Pflaster-Andeutung
+    body =
+      '<rect x="0" y="0" width="320" height="120" fill="none"/>' +
+      '<line x1="0" y1="120" x2="320" y2="120" stroke="' + stroke + '" stroke-width="1.5"/>' +
+      '<line x1="40" y1="20" x2="40" y2="120" stroke="' + dim + '" stroke-width="1"/>' +
+      '<line x1="280" y1="20" x2="280" y2="120" stroke="' + dim + '" stroke-width="1"/>' +
+      '<line x1="0" y1="135" x2="320" y2="135" stroke="' + dim + '" stroke-width="0.5"/>' +
+      '<line x1="0" y1="155" x2="320" y2="155" stroke="' + dim + '" stroke-width="0.5"/>' +
+      // Wäscheleine
+      '<line x1="60" y1="35" x2="260" y2="48" stroke="' + dim + '" stroke-width="0.8" stroke-dasharray="3,4"/>' +
+      // Mülltonnen
+      '<rect x="120" y="92" width="24" height="28" rx="2" fill="none" stroke="' + stroke + '" stroke-width="1.3"/>' +
+      '<rect x="150" y="96" width="22" height="24" rx="2" fill="none" stroke="' + stroke + '" stroke-width="1.3"/>' +
+      // Fenster Erdgeschoss
+      '<rect x="200" y="60" width="30" height="34" fill="none" stroke="' + dim + '" stroke-width="1"/>' +
+      '<line x1="215" y1="60" x2="215" y2="94" stroke="' + dim + '" stroke-width="0.6"/>';
+  } else if (svgKey === 'tuer') {
+    body =
+      '<line x1="0" y1="150" x2="320" y2="150" stroke="' + stroke + '" stroke-width="1.5"/>' +
+      '<rect x="120" y="40" width="80" height="110" rx="3" fill="none" stroke="' + stroke + '" stroke-width="1.6"/>' +
+      '<line x1="160" y1="40" x2="160" y2="150" stroke="' + dim + '" stroke-width="0.8"/>' +
+      '<circle cx="150" cy="100" r="2.5" fill="' + stroke + '"/>' +
+      '<circle cx="170" cy="100" r="2.5" fill="' + stroke + '"/>' +
+      // Stufen davor
+      '<line x1="100" y1="150" x2="220" y2="150" stroke="' + dim + '" stroke-width="1"/>' +
+      '<line x1="92" y1="160" x2="228" y2="160" stroke="' + dim + '" stroke-width="1"/>';
+  } else if (svgKey === 'treppe') {
+    // Treppenhaus: aufsteigende Stufen + Glühbirne
+    body =
+      '<circle cx="160" cy="22" r="5" fill="none" stroke="' + stroke + '" stroke-width="1"/>' +
+      '<line x1="160" y1="0" x2="160" y2="17" stroke="' + dim + '" stroke-width="0.8"/>' +
+      // perspektivische Stufen
+      '<polygon points="70,150 250,150 215,128 105,128" fill="none" stroke="' + stroke + '" stroke-width="1.2"/>' +
+      '<polygon points="105,128 215,128 192,108 128,108" fill="none" stroke="' + stroke + '" stroke-width="1.1"/>' +
+      '<polygon points="128,108 192,108 178,92 142,92" fill="none" stroke="' + dim + '" stroke-width="1"/>' +
+      '<polygon points="142,92 178,92 170,80 150,80" fill="none" stroke="' + dim + '" stroke-width="0.9"/>' +
+      // Geländer
+      '<line x1="70" y1="150" x2="150" y2="80" stroke="' + dim + '" stroke-width="0.8"/>' +
+      '<line x1="250" y1="150" x2="170" y2="80" stroke="' + dim + '" stroke-width="0.8"/>';
+  } else if (svgKey === 'wohnungstuer') {
+    body =
+      '<line x1="0" y1="155" x2="320" y2="155" stroke="' + stroke + '" stroke-width="1.5"/>' +
+      '<rect x="110" y="30" width="100" height="125" rx="2" fill="none" stroke="' + stroke + '" stroke-width="1.8"/>' +
+      // Türfüllungen
+      '<rect x="122" y="44" width="76" height="42" fill="none" stroke="' + dim + '" stroke-width="0.8"/>' +
+      '<rect x="122" y="96" width="76" height="48" fill="none" stroke="' + dim + '" stroke-width="0.8"/>' +
+      '<circle cx="195" cy="100" r="3" fill="' + stroke + '"/>' +
+      // Türschild
+      '<rect x="135" y="22" width="50" height="12" fill="none" stroke="' + stroke + '" stroke-width="1"/>' +
+      '<line x1="142" y1="28" x2="178" y2="28" stroke="' + dim + '" stroke-width="0.8"/>' +
+      // Lichtstreifen unter der Tür
+      '<line x1="112" y1="153" x2="208" y2="153" stroke="#d8c98a" stroke-width="1.4" opacity="0.7"/>';
+  } else {
+    body = '<rect x="60" y="50" width="200" height="80" fill="none" stroke="' + stroke + '" stroke-width="1" stroke-dasharray="4,4"/>' +
+      '<text x="160" y="95" text-anchor="middle" fill="' + dim + '" font-size="12" font-family="serif">Ansicht</text>';
+  }
+  return head + body + foot;
+}
+// ============ Ende ERKUNDUNGS-MODUS ============
+// v7.12.826: rendert die Erkundungs-Ansicht (SVG-Platzhalter + Aufmerksamkeit + Ausgänge) in den Container.
+function _renderExploration(container) {
+  try {
+    if (!container || !_hatExploration()) return;
+    const g = _expGraph();
+    const nodeKey = _expNodeKey();
+    const node = g.nodes[nodeKey];
+    if (!node) return;
+    // Besuch registrieren
+    if (!caseProgress.besuchteExplorationNodes) caseProgress.besuchteExplorationNodes = {};
+    caseProgress.besuchteExplorationNodes[normForMatch(engineCurrentLocation.name) + ':' + nodeKey] = true;
+    if (caseProgress.aktuellerExplorationNode !== nodeKey) caseProgress.aktuellerExplorationNode = nodeKey;
 
     const wrap = document.createElement('div');
-    wrap.style.cssText = 'margin:4px 0 10px;padding:10px 12px;border:1px solid rgba(138,122,88,0.35);border-radius:8px;background:linear-gradient(180deg,rgba(40,34,24,0.5),rgba(0,0,0,0));';
-    // Stationsname
-    const titel = document.createElement('div');
-    titel.style.cssText = 'color:#cbbfa9;font-size:calc(11px * var(--reading-scale));letter-spacing:0.12em;text-transform:uppercase;margin-bottom:5px;';
-    titel.textContent = '◈ ' + akt.name;
-    wrap.appendChild(titel);
-    // Atmo-Text (engine-only, kein KI-Call).
-    // v7.12.824 (Benjamin: "Text wechselt bei jedem Umsehen-Klick"): Der Atmo-Text darf NICHT bei jedem Render neu
-    // gezogen werden - sonst wechselt er bei jeder Aktion (Umsehen etc.), obwohl Karl die Station nicht verlassen hat.
-    // Wir merken den aktuell gezeigten Text pro Station; neu gezogen wird nur beim ersten Betreten / Wechsel.
-    if (!caseProgress._mikroAtmoAktuell) caseProgress._mikroAtmoAktuell = {};
-    const _atmoKey = normForMatch(engineCurrentLocation.name) + ':' + aktId;
-    let atmoTxt = caseProgress._mikroAtmoAktuell[_atmoKey];
-    if (istErst || typeof atmoTxt !== 'string') {
-      atmoTxt = _mikroAtmoText(akt, istErst);
-      caseProgress._mikroAtmoAktuell[_atmoKey] = atmoTxt;
-    }
-    if (atmoTxt) {
-      const at = document.createElement('div');
-      at.style.cssText = 'color:#b3a888;font-size:calc(12px * var(--reading-scale));font-style:italic;line-height:1.5;margin-bottom:9px;';
-      at.textContent = atmoTxt;
-      wrap.appendChild(at);
-    }
-    // Bewegungs-Buttons zu verbundenen, erreichbaren Stationen
-    const verb = Array.isArray(akt.verbindungen) ? akt.verbindungen : [];
-    let _hatWeg = false;
-    // v7.12.823: Hat die AKTUELLE Station noch etwas (Person mit Hinweis / offener Hotspot)? Sonst kleiner Hinweis.
-    let _hierWasZuTun = false;
-    try {
-      const _gefH = (caseProgress && Array.isArray(caseProgress.gefundeneIndizIds)) ? caseProgress.gefundeneIndizIds : [];
-      const _stgH = (caseProgress && typeof caseProgress.stage === 'number') ? caseProgress.stage : 0;
-      const _locH = _aktLocationObj();
-      if (_locH && Array.isArray(_locH.indizien) && Array.isArray(akt.hotspots)) {
-        _hierWasZuTun = akt.hotspots.some(hid => { const ind = _locH.indizien.find(i => i && i.id === hid); if (!ind || _gefH.indexOf(ind.id) !== -1) return false; if (typeof ind.abStage === 'number' && _stgH < ind.abStage) return false; return true; });
-      }
-      if (!_hierWasZuTun && Array.isArray(akt.npcs)) {
-        _hierWasZuTun = akt.npcs.some(nid => _mikroPersonWartet(nid));
-      }
-    } catch (e) {}
-    if (!_hierWasZuTun) {
-      const leer = document.createElement('div');
-      leer.style.cssText = 'color:#8a7c64;font-size:calc(11px * var(--reading-scale));font-style:italic;margin-bottom:8px;';
-      leer.textContent = 'Hier ist für den Moment nichts mehr zu holen.';
-      wrap.appendChild(leer);
-    }
-    verb.forEach(zielId => {
-      const ziel = mo.find(m => m.id === zielId);
-      if (!ziel || !_mikroOrtErreichbar(ziel)) return;
-      _hatWeg = true;
+    wrap.style.cssText = 'margin:4px 0 12px;';
+    // SVG-Ansicht
+    const view = document.createElement('div');
+    view.style.cssText = 'margin-bottom:6px;';
+    view.innerHTML = _expSvgAnsicht(node.svg);
+    wrap.appendChild(view);
+    // Kopfzeile: Knotenname + Aufmerksamkeit (atmosphärisch)
+    const stufe = _aufmerksamkeitStufe();
+    const kopf = document.createElement('div');
+    kopf.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding:0 2px;';
+    kopf.innerHTML = '<span style="color:#cbbfa9;font-size:calc(12px * var(--reading-scale));letter-spacing:0.08em;text-transform:uppercase;">◈ ' + escapeHtml(node.title || '') + '</span>'
+      + '<span style="color:' + stufe.farbe + ';font-size:calc(11px * var(--reading-scale));">' + stufe.icon + ' ' + stufe.label + '</span>';
+    wrap.appendChild(kopf);
+    // Bewegungs-Ausgänge
+    const exits = Array.isArray(node.exits) ? node.exits : [];
+    exits.forEach(ex => {
+      if (!_expExitBegehbar(ex)) return;
       const btn = document.createElement('button');
       btn.className = 'option-btn option-btn-system';
       btn.style.cssText = 'display:block;width:100%;text-align:left;margin:3px 0;';
-      // v7.12.823 (Benjamin: "dreht sich im Kreis, nichts passiert"): Orientierung - zeigen, ob an der Zielstation
-      // etwas wartet. Hat die Station eine anwesende, noch nicht ausgequetschte Person ODER einen offenen Hotspot?
-      let _marker = '· hingehen';
+      // wartet-Marker: hat der Zielknoten einen offenen Fund / eine ansprechbare Person?
+      let _marker = '· gehen';
       try {
-        const _gef = (caseProgress && Array.isArray(caseProgress.gefundeneIndizIds)) ? caseProgress.gefundeneIndizIds : [];
-        const _stgN = (caseProgress && typeof caseProgress.stage === 'number') ? caseProgress.stage : 0;
-        const _loc = _aktLocationObj();
-        let _wartet = false;
-        // offener Hotspot an der Zielstation (nicht gefunden, stage/zeit erfüllt)?
-        if (_loc && Array.isArray(_loc.indizien) && Array.isArray(ziel.hotspots)) {
-          _wartet = ziel.hotspots.some(hid => {
-            const ind = _loc.indizien.find(i => i && i.id === hid);
-            if (!ind || _gef.indexOf(ind.id) !== -1) return false;
-            if (typeof ind.abStage === 'number' && _stgN < ind.abStage) return false;
-            return true;
-          });
-        }
-        // Person an der Zielstation, die noch einen offenen Hinweis hat?
-        if (!_wartet && Array.isArray(ziel.npcs)) {
-          _wartet = ziel.npcs.some(nid => {
-            return _mikroPersonWartet(nid);
-          });
-        }
-        if (_wartet) _marker = '· ● etwas wartet';
+        const ziel = g.nodes[ex.to];
+        if (_expNodeHatWas(ziel)) _marker = '· ● etwas dort';
       } catch (e) {}
-      btn.innerHTML = '<span class="option-text-wrap"><span>→ ' + escapeHtml(ziel.name) + '</span><span class="option-marker option-marker-system" style="' + (_marker.indexOf('●') !== -1 ? 'color:#d4b86a;' : '') + '">' + _marker + '</span></span>';
+      btn.innerHTML = '<span class="option-text-wrap"><span>→ ' + escapeHtml(ex.label) + '</span><span class="option-marker option-marker-system" style="' + (_marker.indexOf('●') !== -1 ? 'color:#d4b86a;' : '') + '">' + _marker + '</span></span>';
       const _go = () => {
-        const r = _mikroOrtWechseln(zielId);
-        if (r && r.ok && typeof renderOptions === 'function' && typeof currentScene === 'object' && currentScene) {
-          renderOptions(currentScene); // neu rendern: neue Station, neue Personen/Hotspots/Atmo
-        }
+        const r = _expBewege(ex.to);
+        if (r && r.ok && typeof renderOptions === 'function' && typeof currentScene === 'object' && currentScene) renderOptions(currentScene);
       };
       if (typeof attachSafeTap === 'function') attachSafeTap(btn, _go); else btn.onclick = _go;
       wrap.appendChild(btn);
     });
     container.appendChild(wrap);
-  } catch (e) { if (typeof diag === 'function') diag('drift', 'Mikro-Ort-Navigation-Render-Fehler: ' + e.message); }
+  } catch (e) { if (typeof diag === 'function') diag('drift', 'Exploration-Render-Fehler: ' + e.message); }
+}
+// Hat ein Knoten gerade etwas Relevantes (offener Fund jetzt erreichbar / ansprechbare Person)?
+function _expNodeHatWas(node) {
+  try {
+    if (!node) return false;
+    const _gef = (caseProgress && Array.isArray(caseProgress.gefundeneIndizIds)) ? caseProgress.gefundeneIndizIds : [];
+    const _stg = (caseProgress && typeof caseProgress.stage === 'number') ? caseProgress.stage : 0;
+    const loc = _expLocationObj();
+    if (loc && Array.isArray(loc.indizien) && Array.isArray(node.hotspots)) {
+      const hat = node.hotspots.some(hid => { const ind = loc.indizien.find(i => i && i.id === hid); if (!ind || _gef.indexOf(ind.id) !== -1) return false; if (typeof ind.abStage === 'number' && _stg < ind.abStage) return false; return true; });
+      if (hat) return true;
+    }
+    if (Array.isArray(node.npcs)) {
+      const hat = node.npcs.some(nid => { try { const _id = _resolveNpcIdentity(nid); return _id && _id.name && typeof _npcHatOffenenHinweis === 'function' && _npcHatOffenenHinweis(_id.name); } catch (e) { return false; } });
+      if (hat) return true;
+    }
+    return false;
+  } catch (e) { return false; }
 }
 function getNpcsAtCurrentLocation() {
   if (!engineCurrentLocation) return [];
@@ -7154,15 +7158,14 @@ function getNpcsAtCurrentLocation() {
   const out = [];
   const seen = {};
   // Feste/garantierte NPCs (immer/zeit) - nur wenn der Ort definiert ist.
-  // v7.12.822 (Mikro-Orte Stufe 1): Hat der Schauplatz Mikro-Orte, sind NPCs an ihre Station gebunden -
-  // nur die NPCs der AKTUELLEN Station erscheinen (Pohl nur im Hof, Ilse nur im 3. Stock).
-  const _moAkt = (typeof _aktMikroOrtObj === 'function') ? _aktMikroOrtObj() : null;
-  const _moNpcFilter = _moAkt && Array.isArray(_moAkt.npcs) ? _moAkt.npcs.map(n => normForMatch(n)) : null;
+  // v7.12.826 (Erkundungs-Modus): Hat der Schauplatz einen Graphen, sind NPCs an ihren Knoten gebunden -
+  // nur die NPCs des AKTUELLEN Knotens erscheinen (Pohl im Hof, Ilse vor ihrer Tür im 3. Stock).
+  const _expN = (typeof _hatExploration === 'function' && _hatExploration()) ? _expNode() : null;
+  const _expNpcFilter = _expN && Array.isArray(_expN.npcs) ? _expN.npcs.map(n => normForMatch(n)) : (_expN ? [] : null);
   if (loc && Array.isArray(loc.npcs)) {
     for (const entry of loc.npcs) {
       if (!entry || !entry.id) continue;
-      // Mikro-Ort-Gate: gehört dieser NPC zur aktuellen Station?
-      if (_moNpcFilter && _moNpcFilter.indexOf(normForMatch(entry.id)) === -1) continue;
+      if (_expNpcFilter && _expNpcFilter.indexOf(normForMatch(entry.id)) === -1) continue;
       let daZeit = true;
       if (!entry.immer && Array.isArray(entry.zeit)) {
         daZeit = entry.zeit.map(z => normForMatch(z)).includes(tzName);
@@ -7213,9 +7216,8 @@ function getNpcsAtCurrentLocation() {
       if (!sc) continue; // anonymer Statist ohne Setup-Eintrag -> nicht anklickbar
       const scId = sc.id || normForMatch(sc.name).replace(/\s+/g, '_');
       if (seen[scId]) continue;
-      // v7.12.825 (Benjamin: "Pohl erscheint im Treppenhaus"): Auch die KI-Cast-Quelle muss den Mikro-Ort-Filter
-      // respektieren - ein NPC, der nicht zur aktuellen Station gehört, erscheint nicht (auch wenn er im cast steht).
-      if (_moNpcFilter && _moNpcFilter.indexOf(normForMatch(scId)) === -1 && _moNpcFilter.indexOf(normForMatch(sc.name)) === -1) continue;
+      // v7.12.826: Erkundungs-Knoten-Filter auch hier (NPC nur am richtigen Knoten anklickbar).
+      if (_expNpcFilter && _expNpcFilter.indexOf(normForMatch(scId)) === -1 && _expNpcFilter.indexOf(normForMatch(sc.name)) === -1) continue;
       // v7.12.808 (Benjamin: Voss zeigte nur "Befragen"): Diese zweite NPC-Quelle (KI-Cast) baute das Objekt
       // OHNE Profil-Felder - dann fehlten sozial/gegnerprofil und das Puzzle griff nicht. Profile mitgeben.
       const _ident = { id: scId, name: sc.name, tag: sc.tag || '' };
@@ -7968,7 +7970,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.825';
+window.SCHATTEN_VERSION = 'v7.12.826';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -10533,14 +10535,13 @@ function _ortsFundIndizienErreichbar() {
       if (Array.isArray(_loc.npcs)) _npcIdsAmOrt = _loc.npcs.filter(n => n && n.id && (n.immer || !Array.isArray(n.zeit) || !n.zeit.length || n.zeit.map(z => normForMatch(z)).includes(_tz))).map(n => normForMatch(n.id));
     } catch (e) {}
     const _stg = (caseProgress && typeof caseProgress.stage === 'number') ? caseProgress.stage : 0;
-    // v7.12.822 (Mikro-Orte Stufe 1): Hat der Schauplatz Mikro-Orte, sind Hotspots an ihre Station gebunden -
-    // nur die Indizien der AKTUELLEN Station auffindbar (Türschild nur im Treppenhaus).
-    const _moAkt2 = (typeof _aktMikroOrtObj === 'function') ? _aktMikroOrtObj() : null;
-    const _moHotspotFilter = _moAkt2 && Array.isArray(_moAkt2.hotspots) ? _moAkt2.hotspots.map(h => normForMatch(h)) : null;
+    // v7.12.826 (Erkundungs-Modus): Hat der Schauplatz einen Graphen, sind Funde an ihren Knoten gebunden -
+    // nur die Indizien des AKTUELLEN Knotens auffindbar (Türschild nur im Treppenhaus).
+    const _expNode2 = (typeof _hatExploration === 'function' && _hatExploration()) ? _expNode() : null;
+    const _expHotspotFilter = _expNode2 && Array.isArray(_expNode2.hotspots) ? _expNode2.hotspots.map(h => normForMatch(h)) : (_expNode2 ? [] : null);
     return _loc.indizien.filter(ind => {
       if (!ind || !ind.id || _gef.indexOf(ind.id) !== -1) return false;
-      // Mikro-Ort-Gate: gehört dieses Indiz zur aktuellen Station?
-      if (_moHotspotFilter && _moHotspotFilter.indexOf(normForMatch(ind.id)) === -1) return false;
+      if (_expHotspotFilter && _expHotspotFilter.indexOf(normForMatch(ind.id)) === -1) return false;
       // v7.12.661 (Run-Befund: "4 Fundstücke, Klick findet nichts"). quelle:'person'-Indizien werden durch
       // BEFRAGEN gefunden, nicht durch Umsehen - die schließt der Umsehen-Button aus. quelle:'umgebung' sind
       // die echten Umsehen-Indizien (Spuren/Akten/Dokumente am Ort).
@@ -11884,13 +11885,11 @@ function createInitialCaseProgress() {
     encounterEnemies: [],        // v7.12.798: Liste der Gegner-Namen (mehrere am Ort -> alle in der Arena)
     encounterRound: 0,           // Rundenzähler (Cap aus Gegnerprofil.kampf.rundenLimit, sonst 3)
     encounterStartedAtLocation: '', // für Konsistenz-Check (Ortwechsel bricht ab)
-    // v7.12.821 (Mikro-Orte Stufe 0): aktuelle Station innerhalb eines Schauplatzes (null = Schauplatz hat keine
-    // Mikro-Orte / noch nicht betreten -> Start-Station beim Betreten). visitedMikroOrte: erster vs. wiederholter
-    // Besuch. _mikroAtmoLastIdx: zuletzt gezeigter Atmo-Index pro Station (nicht direkt wiederholen).
-    aktuellerMikroOrt: null,
-    visitedMikroOrte: {},
-    _mikroAtmoLastIdx: {},
-    _mikroAtmoAktuell: {},
+    // v7.12.826 (Erkundungs-Modus): aktueller Knoten im explorationGraph (null = Modus nicht aktiv / Start-Knoten
+    // beim Betreten). besuchteExplorationNodes: für Erstbesuch-Atmo + Bot. aufmerksamkeit: 0-100, Motor des Risikos.
+    aktuellerExplorationNode: null,
+    besuchteExplorationNodes: {},
+    aufmerksamkeit: 0,
   };
 }
 let caseProgress = createInitialCaseProgress();
@@ -22317,8 +22316,8 @@ function reiseZuOrt(loc) {
   const _reiseKern = () => {
     const vorher = engineCurrentLocation ? engineCurrentLocation.name : '?';
     engineCurrentLocation = { name: loc.name, sektor: loc.sektor || '' };
-    // v7.12.822 (Mikro-Orte): neuer Schauplatz -> Station zurücksetzen (sonst klebt die alte Station-ID).
-    try { if (caseProgress) caseProgress.aktuellerMikroOrt = null; } catch (e) {}
+    // v7.12.826 (Erkundungs-Modus): neuer Schauplatz -> Knoten + Aufmerksamkeit zurücksetzen.
+    try { if (caseProgress) { caseProgress.aktuellerExplorationNode = null; caseProgress.aufmerksamkeit = 0; } } catch (e) {}
     _reiseGeradeErfolgt = { name: loc.name, sektor: loc.sektor || '', detail: loc.detail || '' };
     _aktuelleAktionIstReise = true; // v7.12.527: für mechCtx (kein Indiz-Zwang bei Reise)
     _threatLetzterWuerfelOrt = ''; _threatAktiveSpawns = []; // v7.12.532: am Zielort frisch würfeln (beim Szene-Commit)
@@ -23456,12 +23455,9 @@ function npcInteraktion(npc, verb) {
     } catch (e) {}
   }
   // Verb-spezifischer Aktionstext + Kategorie. Die KI bekommt eine klare, gezielte Anweisung.
-  // v7.12.823 (Benjamin: "der Prompt-Text ist sichtbar"): Bei Sozial-Tonarten ist verb.aktion der lange KI-PUSH -
-  // den darf der Spieler NICHT sehen. _anzeigeText = das kurze Label (sichtbar in Bubble/Log), text = push (nur KI).
   const npcOpt = {
     id: 'NPC_' + verb.key,
     text: verb.aktion.replace('{npc}', npc.name),
-    _anzeigeText: verb._sozialTonart ? ('Karl: ' + verb.label) : undefined,
     kategorie: verb.kategorie,
     _kategorie: verb.kategorie,
     _priority: 18,
@@ -24124,7 +24120,7 @@ function baueSicherungsButtons(container) {
             if (_zielLoc && (!engineCurrentLocation || normForMatch(engineCurrentLocation.name) !== normForMatch(_zielLoc.name))) {
               const _vorherOrt = engineCurrentLocation ? engineCurrentLocation.name : '?';
               engineCurrentLocation = { name: _zielLoc.name, sektor: _zielLoc.sektor || '' };
-              try { if (caseProgress) caseProgress.aktuellerMikroOrt = null; } catch (e) {}
+              try { if (caseProgress) { caseProgress.aktuellerExplorationNode = null; caseProgress.aufmerksamkeit = 0; } } catch (e) {}
               if (typeof _reiseGeradeErfolgt !== 'undefined') _reiseGeradeErfolgt = { name: _zielLoc.name, sektor: _zielLoc.sektor || '', detail: _zielLoc.detail || '' };
               if (typeof diag === 'function') diag('state', 'SICHERUNG mit Ortswechsel (Engine besitzt Ort): "' + _vorherOrt + '" -> "' + _zielLoc.name + '"');
               if (typeof renderImRaumAnzeige === 'function') { try { renderImRaumAnzeige(); } catch (e) {} }
@@ -26034,9 +26030,9 @@ function renderOptions(scene) {
         // (Gegner -> Party -> Baukasten als EIN Block). Die normalen Personen-"ansprechen"-Buttons entfallen dann -
         // gehandelt wird im Kampf nur über den Baukasten. Außerhalb des Kampfs: alles wie gehabt.
         const _imKampf = (typeof _encounterAktiv === 'function') && _encounterAktiv();
-        // v7.12.822 (Mikro-Orte Stufe 1): Stations-Navigation (Atmo + Wege) VOR den Personen, außerhalb des Kampfs.
-        if (!_imKampf && typeof _renderMikroOrtNavigation === 'function') {
-          try { _renderMikroOrtNavigation(uebergangBody); } catch (e) {}
+        // v7.12.826 (Erkundungs-Modus): SVG-Ansicht + Aufmerksamkeit + Ausgänge VOR den Personen, außerhalb des Kampfs.
+        if (!_imKampf && typeof _renderExploration === 'function') {
+          try { _renderExploration(uebergangBody); } catch (e) {}
         }
         const _np = getNpcsAtCurrentLocation ? getNpcsAtCurrentLocation() : [];
         if (!_imKampf && _np.length) {
@@ -28840,30 +28836,20 @@ Wenn Karl waehlt: Schnitt zur naechsten Szene am Morgen, Kaffee zu zweit, keine 
         }
       }
     } catch (e) { /* Gegner-Präsenz-Block optional, darf Prompt nie brechen */ }
-    // v7.12.822 (Mikro-Orte Stufe 1, ChatGPT-Schärfung): Steht Karl an einer Mikro-Ort-Station, MUSS die KI das
-    // wissen - sonst Prosa-Drift ("Pohl steht neben Ilse"). Aktuelle Station + wer hier sichtbar ist + wer NICHT.
+    // v7.12.826 (Erkundungs-Modus, ChatGPT-Schärfung "berichtet≠präsent"): Steht Karl an einem Erkundungs-Knoten,
+    // MUSS die KI das wissen - nur wer HIER ist, gehört in die Szene. Verhindert "Pohl steht neben Ilse"-Drift.
     try {
-      if (typeof _aktMikroOrtObj === 'function') {
-        const _moK = _aktMikroOrtObj();
-        if (_moK) {
+      if (typeof _hatExploration === 'function' && _hatExploration()) {
+        const _eN = _expNode();
+        if (_eN) {
           const _hier = (typeof getNpcsAtCurrentLocation === 'function') ? getNpcsAtCurrentLocation().map(n => n.name).filter(Boolean) : [];
-          // andere Stationen + deren NPCs, die NICHT hier sind
-          const _alleMo = (typeof _aktMikroOrte === 'function') ? (_aktMikroOrte() || []) : [];
-          const _nichtHier = [];
-          _alleMo.forEach(function(st) {
-            if (!st || st.id === _moK.id || !Array.isArray(st.npcs)) return;
-            st.npcs.forEach(function(nid) {
-              try { const _id = _resolveNpcIdentity(nid); if (_id && _id.name && _hier.indexOf(_id.name) === -1) _nichtHier.push(_id.name + ' (' + st.name + ')'); } catch (e) {}
-            });
-          });
-          timeContext += '\n\n=== AKTUELLE STATION (PFLICHT, v7.12.822) ===\n'
-            + 'Karl befindet sich an einem bestimmten Punkt des Schauplatzes "' + engineCurrentLocation.name + '": ' + _moK.name + '.'
+          timeContext += '\n\n=== AKTUELLE STELLE (PFLICHT, v7.12.826) ===\n'
+            + 'Karl befindet sich an einer bestimmten Stelle von "' + engineCurrentLocation.name + '": ' + (_eN.title || '') + '.'
             + (_hier.length ? ' Hier präsent: ' + _hier.join(', ') + '.' : ' Hier ist gerade niemand außer Karl.')
-            + (_nichtHier.length ? ' NICHT hier (an anderen Stellen des Schauplatzes, also NICHT in dieser Szene zeigen): ' + _nichtHier.join(', ') + '.' : '')
-            + ' Schreibe die Szene NUR an dieser Station. Bringe keine Person ins Bild, die woanders im Gebäude ist.';
+            + ' Schreibe die Szene NUR an dieser Stelle. Bringe keine Person ins Bild, die woanders im Gebäude/Ort ist.';
         }
       }
-    } catch (e) { /* Mikro-Ort-Kontext optional */ }
+    } catch (e) { /* Erkundungs-Kontext optional */ }
     // v7.10: KATEGORIE-MECHANIK PUSH-HINTS. Wenn der Spieler eine Option mit
     // Kategorie geklickt hat, pushen wir die passenden Hints an die KI.
     // Diese werden in chooseOption gefuellt und hier in den Prompt eingefuegt.
