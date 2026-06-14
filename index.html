@@ -3298,7 +3298,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.804</div>
+    <div class="start-version">Schatten v7.12.805</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3524,7 +3524,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.804</span>
+    <span>Schatten v7.12.805</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7653,7 +7653,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.804';
+window.SCHATTEN_VERSION = 'v7.12.805';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -8048,11 +8048,32 @@ function _npcIstFeindlich(npc) {
 function _encounterAktiv() {
   try { return !!(caseProgress && caseProgress.encounterState === 'kampf'); } catch (e) { return false; }
 }
+// v7.12.805: Fuzzy-Finder für Setup-Cast-Einträge - fängt KI-Namenskürzungen ab ("Voss" -> "Oberkellner Voss",
+// "Hellbach" -> "Wachtmeister Eugen Hellbach"). Match über exakten Namen, id, Namens-Endung oder gleichen Nachnamen.
+function _findSetupCastFuzzy(name, id) {
+  try {
+    if (!caseSetup || !Array.isArray(caseSetup.setupCast)) return null;
+    const _nN = normForMatch(name || '');
+    const _nId = normForMatch(id || '');
+    const _nLast = _nN.split(/\s+/).pop();
+    return caseSetup.setupCast.find(c => {
+      if (!c) return false;
+      const _cN = normForMatch(c.name || '');
+      const _cId = normForMatch(c.id || '');
+      if (_cN && _nN && _cN === _nN) return true;
+      if (_nId && _cId && _cId === _nId) return true;
+      if (_cN && _nN && (_cN.endsWith(' ' + _nN) || _nN.endsWith(' ' + _cN))) return true;
+      const _cLast = _cN.split(/\s+/).pop();
+      if (_nLast && _cLast && _nLast.length >= 3 && _nLast === _cLast) return true;
+      return false;
+    }) || null;
+  } catch (e) { return null; }
+}
 // Gegnerprofil eines NPCs aus dem Setup holen (oder null).
 function _gegnerProfilVon(name) {
   try {
-    if (!name || !caseSetup || !Array.isArray(caseSetup.setupCast)) return null;
-    const ce = caseSetup.setupCast.find(c => c && c.name && normForMatch(c.name) === normForMatch(name));
+    if (!name) return null;
+    const ce = _findSetupCastFuzzy(name, '');
     return (ce && ce.gegnerprofil) ? ce.gegnerprofil : null;
   } catch (e) { return null; }
 }
@@ -23210,7 +23231,8 @@ function oeffneNpcMenue(npc, modus) {
   try {
     let _sozNpc = null;
     if (caseSetup && Array.isArray(caseSetup.setupCast)) {
-      _sozNpc = caseSetup.setupCast.find(c => c && c.name && normForMatch(c.name) === normForMatch(npc.name)) || null;
+      // v7.12.805 (Benjamin: "bei Voss kommt kein Puzzle"): fuzzy, fängt KI-Namenskürzung ab ("Voss" -> "Oberkellner Voss").
+      _sozNpc = (typeof _findSetupCastFuzzy === 'function') ? _findSetupCastFuzzy(npc.name, npc.id) : null;
     }
     if (_sozNpc && _sozNpc.sozial && Array.isArray(_sozNpc.sozial.tonarten) && !_hundVerbenOverride && !GEGNER.includes(tag)) {
       const _istMiss = !!(npcMisstrauisch && npcMisstrauisch[npc.name]);
@@ -23258,7 +23280,7 @@ function oeffneNpcMenue(npc, modus) {
   try {
     let _gegNpc = null;
     if (caseSetup && Array.isArray(caseSetup.setupCast)) {
-      _gegNpc = caseSetup.setupCast.find(c => c && c.name && normForMatch(c.name) === normForMatch(npc.name)) || null;
+      _gegNpc = (typeof _findSetupCastFuzzy === 'function') ? _findSetupCastFuzzy(npc.name, npc.id) : null;
     }
     // Nur freier Gegner (kein bezwungener Zustand), mit Profil, GEGNER-Tag, kein Hund-Override.
     let _zfrei = true;
