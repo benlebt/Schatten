@@ -3318,7 +3318,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.845</div>
+    <div class="start-version">Schatten v7.12.846</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3544,7 +3544,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.845</span>
+    <span>Schatten v7.12.846</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5582,12 +5582,15 @@ const INTRO_VARIANTS = [
               '##.##',
               '##F##',
               '##S##',
+              '##O##',
             ],
             start: { x: 2, y: 6, blick: 'N' },
             // Linearer Weg von unten (Hof) nach oben: Hof -> Fenster(Pohl) -> Klingelschilder(Türschild) ->
             // TREPPE hoch -> 3. Stock -> Ilses Tür(ab Stage 2). P=Treppe (zeigt ansteigende Stufen + Rückmeldung).
+            // O=Opel südlich vom Start: dreht man sich am Eingang um, steht da der Wagen -> "vor" öffnet die Reisekarte.
             zellen: {
               'S': { titel: 'Hofeinfahrt', svg: 'hof' },
+              'O': { titel: 'Am Opel', svg: 'opel', opel: true },
               'F': { titel: 'Am Erdgeschossfenster', svg: 'fenster', npcs: ['frau_pohl'], hotspots: ['robert_eintritt_beobachtet','fenster_beobachtung'] },
               'H': { titel: 'Hauseingang / Klingelschilder', svg: 'tuer', hotspots: ['tuerschild_hauke'] },
               'P': { titel: 'Treppenhaus', svg: 'treppe', treppe: true, hochRichtung: 'N', hochText: 'Karl steigt die ausgetretenen Stufen hinauf. Erster Stock, zweiter... im dritten bleibt er stehen. Hier oben riecht es nach Bohnerwachs und kaltem Rauch.', runterText: 'Karl steigt die Treppe wieder hinab, zurück ins Erdgeschoss. Die Stufen knarren unter seinen Schritten.' },
@@ -7020,6 +7023,7 @@ function _expNachbar(g, p, richtung) {
   const z = _expZeichenAt(g, nx, ny);
   if (z === '#' || z === ' ') return 'wand';
   const def = g.zellen && g.zellen[z];
+  if (def && def.opel) return 'opel';
   if (def && def.treppe) return 'treppe';
   if (def && def.tuer) return 'tuer';
   return 'offen';
@@ -7038,7 +7042,8 @@ function _expVorausInfo() {
     const gesperrt = !!(def && typeof def.abStage === 'number' && stg < def.abStage);
     let typ = 'offen';
     let treppeRichtung = null; // 'hoch' | 'runter' - hängt von Blickrichtung ab
-    if (def && def.treppe) {
+    if (def && def.opel) typ = 'opel';
+    else if (def && def.treppe) {
       typ = 'treppe';
       // hochRichtung = die Blickrichtung, in die "hinauf" zeigt. Blickt Karl so -> hoch, sonst runter.
       const hochR = def.hochRichtung || 'N';
@@ -7214,7 +7219,30 @@ function _expSvgPerspektive(vorne, links, rechts, bodenSvgKey, feature, opts) {
     if (rechts === 'tuer') s += '<rect x="' + (W - 60) + '" y="' + (iy1 + 10) + '" width="42" height="' + (iy2 - iy1 - 20) + '" rx="2" fill="rgba(0,0,0,0.5)" stroke="' + stroke + '" stroke-width="1.4"/>';
   }
   // Voraus
-  if (vorne === 'wand') {
+  if (vorne === 'opel') {
+    // v7.12.846: Der Opel am Hofeingang - ein altes Auto, frontal/schräg im Korridor. Ausgang zur Reisekarte.
+    const cxm = (ix1 + ix2) / 2, gy = iy2 - 6;
+    // Boden-Schatten
+    s += '<ellipse cx="' + cxm + '" cy="' + (gy + 4) + '" rx="62" ry="9" fill="rgba(0,0,0,0.45)"/>';
+    // Karosserie (Limousine der 50er, gedrungen)
+    s += '<path d="M' + (cxm - 58) + ',' + gy + ' '
+      + 'C' + (cxm - 60) + ',' + (gy - 14) + ' ' + (cxm - 50) + ',' + (gy - 16) + ' ' + (cxm - 42) + ',' + (gy - 17) + ' '
+      + 'C' + (cxm - 32) + ',' + (gy - 34) + ' ' + (cxm + 32) + ',' + (gy - 34) + ' ' + (cxm + 42) + ',' + (gy - 17) + ' '
+      + 'C' + (cxm + 50) + ',' + (gy - 16) + ' ' + (cxm + 60) + ',' + (gy - 14) + ' ' + (cxm + 58) + ',' + gy + ' Z" '
+      + 'fill="#1a160f" stroke="' + stroke + '" stroke-width="1.4"/>';
+    // Dach/Fenster
+    s += '<path d="M' + (cxm - 28) + ',' + (gy - 18) + ' C' + (cxm - 22) + ',' + (gy - 31) + ' ' + (cxm + 22) + ',' + (gy - 31) + ' ' + (cxm + 28) + ',' + (gy - 18) + ' Z" fill="rgba(0,0,0,0.5)" stroke="' + dim + '" stroke-width="0.8"/>';
+    s += '<line x1="' + cxm + '" y1="' + (gy - 30) + '" x2="' + cxm + '" y2="' + (gy - 18) + '" stroke="' + dim + '" stroke-width="0.7"/>';
+    // Kühlergrill + Scheinwerfer (leuchten im Akzentton)
+    s += '<rect x="' + (cxm - 8) + '" y="' + (gy - 14) + '" width="16" height="9" rx="1" fill="rgba(0,0,0,0.4)" stroke="' + dim + '" stroke-width="0.6"/>';
+    s += '<circle cx="' + (cxm - 34) + '" cy="' + (gy - 9) + '" r="4" fill="' + pal.akzent + '" opacity="0.55"/>';
+    s += '<circle cx="' + (cxm + 34) + '" cy="' + (gy - 9) + '" r="4" fill="' + pal.akzent + '" opacity="0.55"/>';
+    s += '<circle cx="' + (cxm - 34) + '" cy="' + (gy - 9) + '" r="9" fill="' + pal.akzent + '" opacity="0.12"/>';
+    s += '<circle cx="' + (cxm + 34) + '" cy="' + (gy - 9) + '" r="9" fill="' + pal.akzent + '" opacity="0.12"/>';
+    // Räder
+    s += '<ellipse cx="' + (cxm - 38) + '" cy="' + (gy + 1) + '" rx="9" ry="6" fill="#0d0a06" stroke="' + dim + '" stroke-width="0.8"/>';
+    s += '<ellipse cx="' + (cxm + 38) + '" cy="' + (gy + 1) + '" rx="9" ry="6" fill="#0d0a06" stroke="' + dim + '" stroke-width="0.8"/>';
+  } else if (vorne === 'wand') {
     s += '<rect x="' + ix1 + '" y="' + iy1 + '" width="' + (ix2 - ix1) + '" height="' + (iy2 - iy1) + '" fill="url(#ziegel)"/>';
     s += '<rect x="' + ix1 + '" y="' + iy1 + '" width="' + (ix2 - ix1) + '" height="' + (iy2 - iy1) + '" fill="rgba(0,0,0,0.25)" stroke="' + stroke + '" stroke-width="1.4"/>';
     // v7.12.835: Wand-Detail je nach Position (deterministisch) - Abwechslung beim Geradeauslaufen.
@@ -7429,7 +7457,14 @@ function _renderExploration(container) {
       // v7.12.842: Steht voraus eine (verschlossene) Tür und sonst nichts -> Tür-Feature mit Schild, im Bild anklickbar.
       if (!_feature) {
         const _vi = (typeof _expVorausInfo === 'function') ? _expVorausInfo() : null;
-        if (_vi && _vi.typ === 'tuer') {
+        if (_vi && _vi.typ === 'opel') {
+          // v7.12.846: Opel voraus -> im Bild anklickbar, öffnet die Reisekarte.
+          _feature = { typ: 'opel' };
+          _featureAktion = () => {
+            if (typeof showProgressToast === 'function') showProgressToast('Zum Opel', 'Karl steigt in den Opel. Wohin als Nächstes?', 'info');
+            if (typeof oeffneReiseMenue === 'function') oeffneReiseMenue();
+          };
+        } else if (_vi && _vi.typ === 'tuer') {
           const _schild = (_vi.def && _vi.def.tuerSchild) ? _vi.def.tuerSchild : 'Hauke';
           _feature = { typ: 'tuer', tuerSchild: _schild };
           _featureAktion = () => {
@@ -7475,6 +7510,9 @@ function _renderExploration(container) {
     } else if (_feature && _feature.typ === 'tuer' && _featureAktion) {
       // Tür im Bild anklickbar (mittig, wo die Tür gezeichnet ist).
       _machZone('34%', '32%', 'An die Tür', _featureAktion, '🚪 an die Tür');
+    } else if (_feature && _feature.typ === 'opel' && _featureAktion) {
+      // Opel im Bild anklickbar (breit, das Auto füllt die Bildmitte) -> Reisekarte.
+      _machZone('22%', '56%', 'In den Opel', _featureAktion, '🚗 in den Opel');
     }
     // Zusätzlicher Fund neben der Person (links im Bild, wo der Glanz sitzt).
     if (_fundDa && _fundAktion) {
@@ -7521,8 +7559,13 @@ function _renderExploration(container) {
     const _reRender = () => { if (typeof renderOptions === 'function' && currentScene) renderOptions(currentScene); };
     const _voraus = _expVorausInfo();
     navRow.appendChild(mkBtn('↰', 'drehen', () => { window._expLetzteBewegung = 'links'; _expDrehe('links'); _reRender(); }, true));
-    // Vor-Button: bei einer Tür voraus heißt er "an die Tür", bei einer Treppe "hinauf".
-    if (_voraus && _voraus.typ === 'tuer') {
+    // Vor-Button: Opel -> einsteigen+Reisekarte, Tür -> an die Tür, Treppe -> hoch/runter, sonst -> vor.
+    if (_voraus && _voraus.typ === 'opel') {
+      navRow.appendChild(mkBtn('🚗', 'einsteigen', () => {
+        if (typeof showProgressToast === 'function') showProgressToast('Zum Opel', 'Karl steigt in den Opel. Wohin als Nächstes?', 'info');
+        if (typeof oeffneReiseMenue === 'function') oeffneReiseMenue();
+      }, true));
+    } else if (_voraus && _voraus.typ === 'tuer') {
       const _tuerKlick = () => {
         if (_voraus.gesperrt) {
           // Kein triggerKey -> kein Cooldown, die Meldung kommt bei JEDEM Klick (bewusste Nutzer-Aktion).
@@ -8389,7 +8432,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.845';
+window.SCHATTEN_VERSION = 'v7.12.846';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
