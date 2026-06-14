@@ -3280,7 +3280,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.766</div>
+    <div class="start-version">Schatten v7.12.767</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3506,7 +3506,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.766</span>
+    <span>Schatten v7.12.767</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7471,7 +7471,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.766';
+window.SCHATTEN_VERSION = 'v7.12.767';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -41232,6 +41232,54 @@ function clearSavedGame() {
   try { localStorage.removeItem(SCHATTEN_SAVE_KEY); } catch (e) {}
 }
 
+// v7.12.767: Trägt einem (möglicherweise alten) caseSetup fehlende Orts-NPCs und -Indizien aus der AKTUELLEN
+// Falldefinition (INTRO_VARIANTS) nach. Findet den passenden Quell-Fall über caseType + opfer/tat-Abgleich.
+// Konservativ: ergänzt nur FEHLENDES (per id), überschreibt nichts Bestehendes, verliert keinen Fortschritt.
+function _migriereCaseSetupOrte() {
+  if (!caseSetup || !Array.isArray(caseSetup.locations)) return;
+  if (typeof INTRO_VARIANTS === 'undefined' || !Array.isArray(INTRO_VARIANTS)) return;
+  // Quell-Fall finden: caseType + (opfer ODER tat) müssen übereinstimmen.
+  var ct = normForMatch(caseSetup.caseType || '');
+  var opf = normForMatch(caseSetup.opfer || '');
+  var tat = normForMatch(caseSetup.tat || '');
+  var quelle = null;
+  for (var i = 0; i < INTRO_VARIANTS.length; i++) {
+    var s = INTRO_VARIANTS[i] && INTRO_VARIANTS[i].setup;
+    if (!s || !Array.isArray(s.locations)) continue;
+    if (normForMatch(s.caseType || '') !== ct) continue;
+    var so = normForMatch(s.opfer || ''), st = normForMatch(s.tat || '');
+    if ((opf && so === opf) || (tat && st === tat)) { quelle = s; break; }
+  }
+  if (!quelle) return;
+  var ergaenzt = 0;
+  caseSetup.locations.forEach(function(loc) {
+    if (!loc || !loc.name) return;
+    var qLoc = quelle.locations.find(function(q){ return q && normForMatch(q.name) === normForMatch(loc.name); });
+    if (!qLoc) return;
+    // fehlende NPCs nachtragen
+    if (Array.isArray(qLoc.npcs) && qLoc.npcs.length) {
+      if (!Array.isArray(loc.npcs)) loc.npcs = [];
+      qLoc.npcs.forEach(function(qn){
+        if (!qn || !qn.id) return;
+        var da = loc.npcs.some(function(n){ return n && normForMatch(n.id) === normForMatch(qn.id); });
+        if (!da) { loc.npcs.push(JSON.parse(JSON.stringify(qn))); ergaenzt++; }
+      });
+    }
+    // fehlende Indizien nachtragen + bestehende um npc-Bindung ergänzen, falls die fehlte
+    if (Array.isArray(qLoc.indizien) && qLoc.indizien.length) {
+      if (!Array.isArray(loc.indizien)) loc.indizien = [];
+      qLoc.indizien.forEach(function(qi){
+        if (!qi || !qi.id) return;
+        var vorhanden = loc.indizien.find(function(ind){ return ind && normForMatch(ind.id) === normForMatch(qi.id); });
+        if (!vorhanden) { loc.indizien.push(JSON.parse(JSON.stringify(qi))); ergaenzt++; }
+        else if (!vorhanden.npc && qi.npc) { vorhanden.npc = qi.npc; ergaenzt++; } // nachträgliche NPC-Bindung
+      });
+    }
+  });
+  if (ergaenzt > 0 && typeof diag === 'function') diag('state', '🔧 caseSetup-Migration: ' + ergaenzt + ' fehlende Orts-NPCs/Indizien aus aktueller Falldefinition nachgetragen.');
+  // NPCs neu auflösen, damit ergänzte Orts-NPCs sofort als Personen erscheinen
+  try { if (typeof initEngineLocations === 'function' && !engineCurrentLocation) initEngineLocations(); } catch (e) {}
+}
 function restoreGameState() {
   try {
     const raw = localStorage.getItem(SCHATTEN_SAVE_KEY);
@@ -41273,6 +41321,12 @@ function restoreGameState() {
     recentTexts = snap.recentTexts || [];
     caseProgress = normalizeCaseProgress(snap.caseProgress);
     caseSetup = snap.caseSetup || null;
+    // v7.12.767 (Benjamin: "Cafe Wien zeigt Indiz, aber kein Kellner" - Szene 10, alter Spielstand): Der
+    // caseSetup wird beim Fallstart eingefroren. Wurde der Fall VOR v761/v766 begonnen, fehlen die später
+    // ergänzten Orts-NPCs (Oberkellner Voss, Edith am Ort) und Indiz-Bindungen. Folge: tote Orte. Migration
+    // gleicht die gespeicherten Orts-Definitionen mit der AKTUELLEN Falldefinition (INTRO_VARIANTS) ab und
+    // trägt fehlende npcs/indizien nach - repariert laufende Stände, ohne den Fortschritt zu verlieren.
+    try { if (typeof _migriereCaseSetupOrte === 'function') _migriereCaseSetupOrte(); } catch (e) {}
     storyFacts = snap.storyFacts || {};
     // v7.12.158 (Code-Review Punkt 1): inventory + cast wiederherstellen (vorher gingen
     // sie bei Reload verloren -> Default-Inventar trotz "Etui bei Karl" im caseProgress).
