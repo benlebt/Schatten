@@ -76,6 +76,17 @@
     0%, 100% { transform: scale(1); filter: drop-shadow(0 0 8px rgba(212,184,106,0.45)); }
     50% { transform: scale(1.08); filter: drop-shadow(0 0 16px rgba(212,184,106,0.7)); }
   }
+  /* v7.12.838: Erkundungs-Bewegungs-Animationen (Bard's-Tale-Gefühl: Schritt/Drehung spürbar machen). */
+  @keyframes expVor { 0% { transform: scale(0.82); opacity: 0.3; } 100% { transform: scale(1); opacity: 1; } }
+  @keyframes expZurueck { 0% { transform: scale(1.18); opacity: 0.3; } 100% { transform: scale(1); opacity: 1; } }
+  @keyframes expDreheL { 0% { transform: translateX(40%) skewX(-6deg); opacity: 0.15; } 100% { transform: translateX(0) skewX(0); opacity: 1; } }
+  @keyframes expDreheR { 0% { transform: translateX(-40%) skewX(6deg); opacity: 0.15; } 100% { transform: translateX(0) skewX(0); opacity: 1; } }
+  @keyframes expUm { 0% { transform: scaleX(-1); opacity: 0.2; } 100% { transform: scaleX(1); opacity: 1; } }
+  .exp-anim-vor { animation: expVor 0.26s ease-out; }
+  .exp-anim-zurueck { animation: expZurueck 0.26s ease-out; }
+  .exp-anim-links { animation: expDreheL 0.28s ease-out; }
+  .exp-anim-rechts { animation: expDreheR 0.28s ease-out; }
+  .exp-anim-um { animation: expUm 0.3s ease-out; }
   /* v7.12.374: Mobile-Fix - horizontales Scrollen/Verschieben komplett unterbinden.
      User-Befund iPhone: Seite liess sich seitlich verschieben, Text+Menue rutschten
      aus dem lesbaren Bereich. html UND body brauchen overflow-x:hidden + width-Begrenzung;
@@ -3307,7 +3318,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.837</div>
+    <div class="start-version">Schatten v7.12.838</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3533,7 +3544,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.837</span>
+    <span>Schatten v7.12.838</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7212,15 +7223,15 @@ function _expSvgPerspektive(vorne, links, rechts, bodenSvgKey, feature, opts) {
       s += '<ellipse cx="' + px + '" cy="' + (baseY - 2) + '" rx="26" ry="6" fill="rgba(0,0,0,0.4)"/>'; // Schatten
       s += '<path d="M' + px + ',' + (baseY - 70) + ' c-9,0 -15,7 -15,16 c0,6 3,10 6,13 c-10,4 -16,13 -16,27 l0,16 l50,0 l0,-16 c0,-14 -6,-23 -16,-27 c3,-3 6,-7 6,-13 c0,-9 -6,-16 -15,-16 z" fill="#241d14" stroke="' + stroke + '" stroke-width="1.2"/>';
       s += '</g>';
-      // Emoji als Gesicht/Identität (konsistent mit Button/Party/Gespräch)
+      // Emoji als Gesicht/Identität (konsistent mit Button/Party/Gespräch) - sitzt IM Silhouetten-Kopf.
       if (feature.emoji) {
-        s += '<text x="' + px + '" y="' + (baseY - 54) + '" text-anchor="middle" font-size="26" opacity="' + op + '">' + feature.emoji + '</text>';
+        s += '<text x="' + px + '" y="' + (baseY - 49) + '" text-anchor="middle" font-size="20" opacity="' + op + '">' + feature.emoji + '</text>';
       } else {
-        s += '<ellipse cx="' + px + '" cy="' + (baseY - 60) + '" rx="8" ry="9" fill="#2c2418" stroke="' + stroke + '" stroke-width="0.8"/>';
+        s += '<ellipse cx="' + px + '" cy="' + (baseY - 58) + '" rx="8" ry="9" fill="#2c2418" stroke="' + stroke + '" stroke-width="0.8"/>';
       }
-      // Stimmungs-Icon ("Mundwinkel runter" über den Emoji-Weg) - klein über dem Kopf.
+      // Stimmungs-Icon ("Mundwinkel runter" über den Emoji-Weg) - klein neben dem Kopf.
       if (feature.stimmungEmoji) {
-        s += '<text x="' + (px + 16) + '" y="' + (baseY - 64) + '" text-anchor="middle" font-size="15">' + feature.stimmungEmoji + '</text>';
+        s += '<text x="' + (px + 18) + '" y="' + (baseY - 56) + '" text-anchor="middle" font-size="14">' + feature.stimmungEmoji + '</text>';
       }
     } else {
       // Fund: leuchtender Punkt / Glanz auf dem Boden oder an der Wand
@@ -7329,6 +7340,11 @@ function _renderExploration(container) {
       }
     } catch (e) {}
     const view = document.createElement('div'); view.style.cssText = 'margin-bottom:6px;position:relative;';
+    // v7.12.838: Bewegungs-Animation - die Ansicht reagiert auf die letzte Bewegung (vor/drehen/um).
+    try {
+      const _bew = window._expLetzteBewegung;
+      if (_bew) { view.className = 'exp-anim-' + _bew; window._expLetzteBewegung = null; }
+    } catch (e) {}
     view.innerHTML = _expSvgPerspektive(vorne, links, rechts, zelle ? zelle.svg : '', _feature, { tz: (typeof _aktTageszeitName === 'function' ? _aktTageszeitName() : ''), seed: (p.x * 31 + p.y * 17 + (p.blick.charCodeAt(0) || 0)), fundDa: _fundDa });
     // Klick-Overlay über der Bildmitte (Feature), wenn vorhanden
     if (_feature && _featureAktion) {
@@ -7395,7 +7411,7 @@ function _renderExploration(container) {
     };
     const _reRender = () => { if (typeof renderOptions === 'function' && currentScene) renderOptions(currentScene); };
     const _voraus = _expVorausInfo();
-    navRow.appendChild(mkBtn('↰', 'drehen', () => { _expDrehe('links'); _reRender(); }, true));
+    navRow.appendChild(mkBtn('↰', 'drehen', () => { window._expLetzteBewegung = 'links'; _expDrehe('links'); _reRender(); }, true));
     // Vor-Button: bei einer Tür voraus heißt er "an die Tür" und reagiert passend.
     if (_voraus && _voraus.typ === 'tuer') {
       navRow.appendChild(mkBtn('🚪', 'zur Tür', () => {
@@ -7403,19 +7419,19 @@ function _renderExploration(container) {
           if (typeof showProgressToast === 'function') showProgressToast('Verschlossen', 'Die Tür ist zu. Karl hat hier noch nichts zu suchen - erst wenn er mehr über den Fall weiß, lohnt sich der Weg nach oben.', 'info', 'exp-tuer-zu');
           return;
         }
-        const r = _expVor(); if (r.ok) _reRender();
+        window._expLetzteBewegung = 'vor'; const r = _expVor(); if (r.ok) _reRender();
       }, true));
     } else {
-      navRow.appendChild(mkBtn('↑', 'vor', () => { const r = _expVor(); if (r.ok) _reRender(); else { if (typeof showProgressToast === 'function') showProgressToast('Kein Weg', 'Da ist eine Wand. Karl kann nicht weiter in diese Richtung.', 'info', 'exp-wand'); } }, vorne !== 'wand'));
+      navRow.appendChild(mkBtn('↑', 'vor', () => { window._expLetzteBewegung = 'vor'; const r = _expVor(); if (r.ok) _reRender(); else { if (typeof showProgressToast === 'function') showProgressToast('Kein Weg', 'Da ist eine Wand. Karl kann nicht weiter in diese Richtung.', 'info', 'exp-wand'); } }, vorne !== 'wand'));
     }
-    navRow.appendChild(mkBtn('↱', 'drehen', () => { _expDrehe('rechts'); _reRender(); }, true));
+    navRow.appendChild(mkBtn('↱', 'drehen', () => { window._expLetzteBewegung = 'rechts'; _expDrehe('rechts'); _reRender(); }, true));
     wrap.appendChild(navRow);
     // Umdrehen
     const umBtn = document.createElement('button');
     umBtn.className = 'option-btn option-btn-system';
     umBtn.style.cssText = 'display:block;width:100%;text-align:center;padding:7px;font-size:calc(11px * var(--reading-scale));color:#9a8c6e;';
     umBtn.innerHTML = '↓ umdrehen';
-    const _um = () => { _expDrehe('rechts'); _expDrehe('rechts'); _reRender(); };
+    const _um = () => { window._expLetzteBewegung = 'um'; _expDrehe('rechts'); _expDrehe('rechts'); _reRender(); };
     if (typeof attachSafeTap === 'function') attachSafeTap(umBtn, _um); else umBtn.onclick = _um;
     wrap.appendChild(umBtn);
     container.appendChild(wrap);
@@ -8246,7 +8262,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.837';
+window.SCHATTEN_VERSION = 'v7.12.838';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
