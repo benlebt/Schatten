@@ -3298,7 +3298,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.808</div>
+    <div class="start-version">Schatten v7.12.809</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3524,7 +3524,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.808</span>
+    <span>Schatten v7.12.809</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7666,7 +7666,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.808';
+window.SCHATTEN_VERSION = 'v7.12.809';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -23150,6 +23150,7 @@ function npcInteraktion(npc, verb) {
   if (typeof chooseOption === 'function') chooseOption(npcOpt);
 }
 function oeffneNpcMenue(npc, modus) {
+  try { console.log('🔎 oeffneNpcMenue AUFGERUFEN für:', npc && npc.name, '| id=', npc && npc.id, '| tag=', npc && npc.tag, '| hat sozial=', !!(npc && npc.sozial)); } catch(e){}
   // v7.12.580 (UI-B3a): modus filtert die angezeigten Verben.
   //   'szene'     -> nur szene-auslösende Verben (befragen/bedrohen/beobachten/...). Für die "Übergang"-Sektion.
   //   'verwalten' -> nur Party-/Verwaltungs-Aktionen (mitnehmen/hier lassen). Für die "Bleibt"-Sektion.
@@ -23251,13 +23252,16 @@ function oeffneNpcMenue(npc, modus) {
     if (!_sozNpc && caseSetup && Array.isArray(caseSetup.setupCast)) {
       _sozNpc = (typeof _findSetupCastFuzzy === 'function') ? _findSetupCastFuzzy(npc.name, npc.id) : null;
     }
-    // v7.12.808 DEBUG (Voss-Diagnose): zeigt, ob ein Sozial-Profil gefunden wurde und warum es evtl. nicht greift.
-    if (typeof diag === 'function') {
-      try {
-        const _hatHinw = (typeof _npcHatOffenenHinweis === 'function') ? _npcHatOffenenHinweis(npc.name) : '?';
-        diag('detect', '🗣 SOZIAL-DIAG ' + npc.name + ' [id=' + (npc.id||'-') + ' tag=' + tag + ']: npc.sozial=' + (npc && npc.sozial ? 'JA' : 'nein') + ' · _sozNpc=' + (_sozNpc ? 'gefunden' : 'NULL') + ' · tonarten=' + (_sozNpc && _sozNpc.sozial && Array.isArray(_sozNpc.sozial.tonarten) ? _sozNpc.sozial.tonarten.length : '-') + ' · GEGNER=' + GEGNER.includes(tag) + ' · hatOffenenHinweis=' + _hatHinw);
-      } catch (e) {}
-    }
+    // v7.12.809 DEBUG (Voss-Diagnose): echtes console.log, damit es in der Browser-Konsole sichtbar ist (diag puffert nur intern).
+    try {
+      const _hatHinw = (typeof _npcHatOffenenHinweis === 'function') ? _npcHatOffenenHinweis(npc.name) : '?';
+      console.log('🗣 SOZIAL-DIAG', npc.name, '[id=' + (npc.id||'-') + ' tag=' + tag + ']',
+        '| npc.sozial=' + (npc && npc.sozial ? 'JA' : 'nein'),
+        '| _sozNpc=' + (_sozNpc ? 'gefunden' : 'NULL'),
+        '| tonarten=' + (_sozNpc && _sozNpc.sozial && Array.isArray(_sozNpc.sozial.tonarten) ? _sozNpc.sozial.tonarten.length : '-'),
+        '| GEGNER=' + GEGNER.includes(tag),
+        '| hatOffenenHinweis=' + _hatHinw);
+    } catch (e) { console.log('SOZIAL-DIAG Fehler:', e); }
     if (_sozNpc && _sozNpc.sozial && Array.isArray(_sozNpc.sozial.tonarten) && !_hundVerbenOverride && !GEGNER.includes(tag)) {
       const _istMiss = !!(npcMisstrauisch && npcMisstrauisch[npc.name]);
       const _verbraucht = (npcTonartVerbraucht && Array.isArray(npcTonartVerbraucht[npc.name])) ? npcTonartVerbraucht[npc.name] : [];
