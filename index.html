@@ -3332,7 +3332,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.859</div>
+    <div class="start-version">Schatten v7.12.860</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3558,7 +3558,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.859</span>
+    <span>Schatten v7.12.860</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -8785,7 +8785,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.859';
+window.SCHATTEN_VERSION = 'v7.12.860';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -26179,6 +26179,23 @@ function renderOptions(scene) {
         _isSystemButton: true,
         _heimfahrt: heimfahrt,
       };
+      // v7.12.860 (Benjamin: Schlaf-Button sitzt überm Café-Bild, versehentliche Klicks): Inline-Rückfrage
+      // statt sofortigem Schlaf. Erster Klick verwandelt den Button in "Wirklich schlafen? Ja / Abbrechen".
+      const _origHTML = btn.innerHTML;
+      let _bestaetigt = false, _rueckResetTimer = null;
+      const _ausloesen = () => {
+        if (blocked) return;
+        if (!_bestaetigt) {
+          _bestaetigt = true;
+          btn.innerHTML = '<span class="option-id">💤</span><span class="option-text-wrap"><span>Wirklich schlafen? Tag endet.</span><span class="option-marker option-marker-system" style="color:#d4b86a;">→ tippen zum Bestätigen</span></span>';
+          // nach 4s zurücksetzen, falls der Spieler es sich anders überlegt
+          if (_rueckResetTimer) clearTimeout(_rueckResetTimer);
+          _rueckResetTimer = setTimeout(() => { _bestaetigt = false; try { btn.innerHTML = _origHTML; } catch (e) {} }, 4000);
+          return;
+        }
+        if (_rueckResetTimer) clearTimeout(_rueckResetTimer);
+        chooseOption(opt);
+      };
       let tsX = 0, tsY = 0, tsT = 0, tCancel = false, tHandled = false;
       const TMM = 12, TMD = 800;
       btn.addEventListener('touchstart', (e) => {
@@ -26194,11 +26211,11 @@ function renderOptions(scene) {
       btn.addEventListener('touchend', (e) => {
         if (tCancel) { e.preventDefault(); return; }
         if (Date.now() - tsT > TMD) { e.preventDefault(); return; }
-        e.preventDefault(); tHandled = true; chooseOption(opt);
+        e.preventDefault(); tHandled = true; _ausloesen();
       });
       btn.addEventListener('click', () => {
         if (tHandled) { tHandled = false; return; }
-        chooseOption(opt);
+        _ausloesen();
       });
       return btn;
     };
