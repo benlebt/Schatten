@@ -3293,7 +3293,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.784</div>
+    <div class="start-version">Schatten v7.12.785</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3519,7 +3519,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.784</span>
+    <span>Schatten v7.12.785</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5316,6 +5316,7 @@ const INTRO_VARIANTS = [
       klient: 'Edith Kessler (Ehefrau)',
       caseType: 'beschatten',
       stasiRelevance: 0,  // v7.9.19
+      romanceFrei: true,  // v7.12.785 (Lektorat: "Romance-Funke bei Ilse" + Benjamin-Design): Kessler ist der leise alleinige Einstiegsfall - keine Romance-Expansion mit Fallzeugen
       opfer: 'Robert Kessler (Buchhalter, Affaere-Verdacht)',
       definedEvidenceGate: { minFound: 3, minBurdening: 1 }, // v7.12.741: Kessler-Indizien-Projekt - kleiner Beschattungsfall, gelockertes Fundament (3 belastende verfuegbar: ilse_aussage, fenster_beobachtung, briefchen_ilse - jedes nennt Robert konkret, also traegt minBurdening:1 die Wahrheit)
       tat: 'Was treibt Robert mittwochs - vermutete Affaere herausfinden',
@@ -7515,7 +7516,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.784';
+window.SCHATTEN_VERSION = 'v7.12.785';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -31641,6 +31642,16 @@ function updateRomanticTension(scene) {
   // v7.12.210: Eingangswert merken, um einen Tension-ANSTIEG in dieser Szene zu erkennen
   // (für Grace-Schonfrist gegen sofortiges Abkühlen).
   const _rtAtEntry = (typeof romanticTension === 'number') ? romanticTension : 0;
+  // v7.12.785 (Lektorat + Benjamin-Design): Fälle mit setup.romanceFrei (z.B. Kessler, der leise Einstiegsfall)
+  // bauen GAR KEINE Romantik-Tension auf - egal welche Frau präsent ist. Hält die Tension hart auf 0 und kühlt
+  // einen evtl. Restwert ab. So kann kein Funke über Fallzeuginnen (Ilse) entstehen.
+  try {
+    if (caseSetup && caseSetup.romanceFrei) {
+      if (romanticTension > 0) romanticTension = 0;
+      pendingRomanceChoice = false;
+      return;
+    }
+  } catch (e) { /* nie blockieren */ }
   // v7.9.53: TAG-BASIERTER PFAD. Wenn der Spieler eine als 'romance' getaggte
   // Option geklickt hat, garantieren wir Romantik-Tension +1 (sofern < 5).
   // Anlass: User-Feedback "wenn ich romantik klicke, dann folgt auch eine
