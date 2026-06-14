@@ -3280,7 +3280,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.767</div>
+    <div class="start-version">Schatten v7.12.768</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3506,7 +3506,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.767</span>
+    <span>Schatten v7.12.768</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7471,7 +7471,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.767';
+window.SCHATTEN_VERSION = 'v7.12.768';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -8462,13 +8462,19 @@ function _alleGegnerEntschaerft() {
 function _istGegnerNpc(name, tag, rolle) {
   try {
     const T = (tag || '').toUpperCase();
+    // v7.12.768 (Benjamin: "Edith Kessler ist als Gegner markiert, aber sie ist meine Klientin"): Ein CLIENT
+    // (Auftraggeber/Opfer-Angehörige) ist NIE ein Gegner - egal welchen Nachnamen er mit dem Verdächtigen teilt.
+    if (/CLIENT|VICTIM|OPFER|AUFTRAG/.test(T)) return false;
     if (/SUSPECT|STASI|GANGSTER|ANTAGONIST|MYSTERY/.test(T)) return true;
     const _qn = (s) => normForMatch((s || '').replace(/["'„""»«]/g, ''));
     const nN = _qn(name);
     if (/suspect|verdächtig|verdaechtig|täter|taeter|schläger|schlaeger|gangster|halbwelt/i.test(rolle || '')) return true;
     for (const feld of ['tatverdaechtiger', 'showdownGegner']) {
       const v = _qn((caseProgress && caseProgress[feld]) || '');
-      if (v && nN && (v === nN || v.includes(nN) || nN.includes(v.split(/\s+/).pop()))) return true;
+      // v7.12.768: NUR exakter Voll-Name-Match (oder eindeutige Inklusion des kompletten Namens) - NICHT mehr
+      // der bloße Nachnamen-Vergleich. Sonst wurde "Edith Kessler" zum Gegner, weil "Robert Kessler" verdächtig
+      // ist (gleicher Nachname). Der Nachname allein reicht nicht - ein Fall heißt oft nach einer Familie.
+      if (v && nN && (v === nN || (v.includes(nN) && nN.split(/\s+/).length >= 2) || (nN.includes(v) && v.split(/\s+/).length >= 2))) return true;
     }
     return false;
   } catch (e) { return false; }
