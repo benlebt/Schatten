@@ -3307,7 +3307,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.816</div>
+    <div class="start-version">Schatten v7.12.817</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3533,7 +3533,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.816</span>
+    <span>Schatten v7.12.817</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6776,6 +6776,27 @@ function checkLocationUnlocks(signalText) {
 // Bestimmt, WER aktuell am gegebenen Ort ist - rein aus Engine-Daten (Ort + Tageszeit), KEINE KI.
 // Liefert Array von Anzeigenamen. zeit-Feld: Liste erlaubter Tageszeiten (morgen/vormittag/.../nacht); fehlt es
 // oder ist immer:true, ist der NPC immer da.
+// v7.12.817 (Benjamin: "Frau Pohl" wurde zu "Frau"): natürliche Kurzanrede für Toasts/Hinweise. Bei einer
+// Anrede ohne Vornamen ("Frau Pohl", "Oberkellner Voss") NICHT auf die Anrede/den Titel allein kürzen, sondern
+// den eigentlichen Namen liefern: "Frau Pohl" -> "Frau Pohl", "Oberkellner Voss" -> "Voss", "Norbert Tetzlaff" -> "Norbert".
+function _npcRedeName(name) {
+  try {
+    if (!name || typeof name !== 'string') return name || '';
+    const teile = name.trim().split(/\s+/);
+    if (teile.length <= 1) return name;
+    const ersteLow = teile[0].toLowerCase().replace(/[.,]/g, '');
+    // Höfliche Anrede + Nachname (Frau/Herr/Fräulein...) -> Anrede + Name zusammen behalten.
+    if (/^(frau|herr|fräulein|fraeulein|schwester|witwe|dr|doktor|prof|professor)$/.test(ersteLow)) {
+      return teile.slice(0, 2).join(' ');
+    }
+    // Titel/Rolle vorangestellt (Oberkellner/Wachtmeister/Kommissar...) -> den Nachnamen nehmen.
+    if (/^(oberkellner|kellner|wachtmeister|kommissar|oberleutnant|hauptmann|leutnant|direktor|vize-direktor|wirt|wirtin|ober)$/.test(ersteLow)) {
+      return teile[teile.length - 1];
+    }
+    // Sonst: Vorname.
+    return teile[0];
+  } catch (e) { return name || ''; }
+}
 // v7.12.532 (B2): NPC-ID -> {id, name, tag} auflösen (aus ANCHOR_NPCS oder setupCast). Vorher in
 // getNpcsAtCurrentLocation inline, jetzt Helper (auch von den getakteten Spawns genutzt).
 function _resolveNpcIdentity(npcId) {
@@ -7691,7 +7712,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.816';
+window.SCHATTEN_VERSION = 'v7.12.817';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -22972,7 +22993,7 @@ function bauePersonenButtons(container, modus) {
       btn.innerHTML = '<span class="option-id option-id-person">' + _npcEmoji + '</span><span class="option-text-wrap"><span>'
         + escapeHtml(npc.name) + '</span><span class="' + _markerKlasse + '" style="color:#9a7a6a;">spricht heute nicht mehr mit dir</span></span>';
       attachSafeTap(btn, () => {
-        if (typeof showProgressToast === 'function') { try { showProgressToast(npc.name.split(' ')[0] + ' verstummt', 'Nach Karls Auftreten verschließt sich ' + npc.name + ' - heute ist kein Wort mehr zu holen. Vielleicht morgen wieder.', 'caution', 'verprellt-' + normForMatch(npc.name)); } catch (e) {} }
+        if (typeof showProgressToast === 'function') { try { showProgressToast((typeof _npcRedeName==='function'?_npcRedeName(npc.name):npc.name) + ' verstummt', 'Nach Karls Auftreten verschließt sich ' + npc.name + ' - heute ist kein Wort mehr zu holen. Vielleicht morgen wieder.', 'caution', 'verprellt-' + normForMatch(npc.name)); } catch (e) {} }
       });
       container.appendChild(btn);
       gebaut++;
@@ -23611,7 +23632,7 @@ function oeffneNpcMenue(npc, modus) {
       }
       // v7.12.802: "schon ausgequetscht" - kein Befragen mehr, nur ein Hinweis.
       if (verb._sozialErledigt) {
-        if (typeof showProgressToast === 'function') { try { showProgressToast(npc.name.split(' ')[0] + ' weiß nichts mehr', 'Karl hat alles aus ' + npc.name + ' herausgeholt, was sie zum Fall beitragen kann.', 'info', 'sozial-ausgequetscht-' + normForMatch(npc.name)); } catch (e) {} }
+        if (typeof showProgressToast === 'function') { try { showProgressToast((typeof _npcRedeName==='function'?_npcRedeName(npc.name):npc.name) + ' weiß nichts mehr', 'Karl hat alles aus ' + npc.name + ' herausgeholt, was sie zum Fall beitragen kann.', 'info', 'sozial-ausgequetscht-' + normForMatch(npc.name)); } catch (e) {} }
         if (typeof schliesseNpcMenue === 'function') schliesseNpcMenue();
         return;
       }
@@ -23636,7 +23657,7 @@ function oeffneNpcMenue(npc, modus) {
           if (typeof npcMisstrauisch !== 'object' || !npcMisstrauisch) window.npcMisstrauisch = {};
           const _warSchonMisstrauisch = !!npcMisstrauisch[npc.name];
           npcMisstrauisch[npc.name] = true;
-          const _vn = (npc.name || '').split(' ')[0];
+          const _vn = (typeof _npcRedeName === 'function') ? _npcRedeName(npc.name) : (npc.name || '').split(' ')[0];
           // Schwer ODER von der Figur hochgestuft ODER schon vorher misstrauisch -> jetzt komplett verprellt.
           const _sofortZu = (verb._sozialSchwere === 'schwer') || verb._sozialEmpfindlich || _warSchonMisstrauisch;
           if (_sofortZu) {
