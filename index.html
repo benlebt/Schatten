@@ -3280,7 +3280,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.768</div>
+    <div class="start-version">Schatten v7.12.769</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3506,7 +3506,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.768</span>
+    <span>Schatten v7.12.769</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6857,6 +6857,22 @@ function _aktTageszeitName() {
   const idx = (typeof gameTimeIdx === 'number') ? gameTimeIdx : 5;
   return normForMatch((typeof TIMES_OF_DAY !== 'undefined' && TIMES_OF_DAY[idx]) || 'nacht');
 }
+// v7.12.769 (Benjamin: "Morgen soll nicht so dunkel aussehen wie Nacht - Karte und Spiel vereinheitlichen"):
+// Zentrale Tageszeit-Palette. Jede Tageszeit hat einen Akzent (fürs Header-Label) und eine Karten-Lichtstimmung
+// (Himmel-Overlay + Sektor-Sättigung + Laternen ja/nein). EIN Ort der Wahrheit für Interface UND Karte.
+function tageszeitPalette(tzName) {
+  const tz = normForMatch(tzName || _aktTageszeitName());
+  // akzent = Header-Textfarbe; sky = Overlay-Farbe über der Karte; skyOp = dessen Deckkraft; lampen = Laternen
+  const P = {
+    'morgen':     { akzent: '#e9b98a', sky: '#ffd9a0', skyOp: 0.10, lampen: false }, // warmes Frühlicht, rosig
+    'vormittag':  { akzent: '#e8d29a', sky: '#fff2c8', skyOp: 0.06, lampen: false }, // heller klarer Tag
+    'mittag':     { akzent: '#f0e6b0', sky: '#ffffff', skyOp: 0.04, lampen: false }, // hellste Stunde
+    'nachmittag': { akzent: '#e8c98a', sky: '#ffdfa6', skyOp: 0.08, lampen: false }, // goldenes Nachmittagslicht
+    'abend':      { akzent: '#d98a6a', sky: '#7a4a6a', skyOp: 0.26, lampen: true },  // Dämmerung violett-orange, Laternen an
+    'nacht':      { akzent: '#7a8ab0', sky: '#0e1430', skyOp: 0.42, lampen: true }   // tiefblaue Nacht, Laternen an
+  };
+  return P[tz] || P['nacht'];
+}
 // Hat ein Ort gerade geöffnet? (oeffnungszeit-Feld; fehlt -> immer offen)
 function istOrtGeoeffnet(loc) {
   if (!loc || !Array.isArray(loc.oeffnungszeit) || !loc.oeffnungszeit.length) return true;
@@ -7471,7 +7487,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.768';
+window.SCHATTEN_VERSION = 'v7.12.769';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -17649,7 +17665,11 @@ function showHeader(scene) {
     const _tzEl = document.getElementById('status-tageszeit');
     if (_tzEl) {
       let _tz = (typeof _aktTageszeitName === 'function') ? _aktTageszeitName() : '';
-      if (_tz) _tzEl.textContent = '· ' + _tz.charAt(0).toUpperCase() + _tz.slice(1);
+      if (_tz) {
+        _tzEl.textContent = '· ' + _tz.charAt(0).toUpperCase() + _tz.slice(1);
+        // v7.12.769: Tageszeit farblich tragen - Morgen warm-rosig, Mittag hell, Abend orange, Nacht blau.
+        try { const _pal = tageszeitPalette(_tz); if (_pal) _tzEl.style.color = _pal.akzent; } catch (e) {}
+      }
     }
   } catch (e) { /* defensiv */ }
   // v7.12.44: currentOrt global aktualisieren - normalisierter Kleinbuchstaben-Ort
@@ -21631,6 +21651,15 @@ function mapBaueSvg(orte, cluster){
   svg += '<polygon fill="#6e2b28" stroke="#0d0b08" stroke-width="0.6" points="248,82 178,92 198,150 262,176 252,262 392,262 394,88 300,52"/>';
   svg += '<path fill="none" stroke="#d8c88a" stroke-width="1.4" stroke-dasharray="5 3" opacity="0.85" d="M248,82 L178,92 L198,150 L262,176 L252,262"/>';
   svg += '<path fill="none" stroke="#4a6b82" stroke-width="3" opacity="0.6" stroke-linecap="round" d="M388,238 Q310,205 262,182 Q215,165 195,128 Q178,98 150,92"/>';
+  // v7.12.769: Tageszeit-Lichtstimmung. Ein halbtransparentes Overlay über die Sektoren färbt die ganze Karte
+  // in die Stimmung der Uhrzeit - Morgen warm-rosig, Mittag fast klar, Abend violette Dämmerung, Nacht tiefblau.
+  // Die Sektorfarben/Punkte bleiben durch die Transparenz lesbar. So sieht Morgen NICHT mehr wie Nacht aus.
+  try {
+    var _tzPal = (typeof tageszeitPalette === 'function') ? tageszeitPalette() : null;
+    if (_tzPal && _tzPal.skyOp > 0) {
+      svg += '<rect x="12" y="14" width="384" height="252" fill="' + _tzPal.sky + '" opacity="' + _tzPal.skyOp + '" pointer-events="none"/>';
+    }
+  } catch (e) {}
   // Punkte/Cluster
   cluster.forEach(function(c, idx){
     if(c.einzeln){
@@ -21692,6 +21721,18 @@ function mapBaueSvg(orte, cluster){
       svg += '<text x="' + c.x + '" y="' + (c.y + 3.6) + '" text-anchor="middle" font-family="Courier New,monospace" font-size="12" font-weight="bold" fill="' + cf + '" pointer-events="none">' + c.mitglieder.length + '</text>';
     }
   });
+  // v7.12.769: Straßenlaternen bei Abend/Nacht - kleine warme Lichthöfe, rein atmosphärisch (pointer-events:none).
+  // Feste, über die Karte verteilte Positionen; bei Tag aus. Gibt der dunklen Karte Berlin-bei-Nacht-Stimmung.
+  try {
+    var _tzL = (typeof tageszeitPalette === 'function') ? tageszeitPalette() : null;
+    if (_tzL && _tzL.lampen) {
+      var _laternen = [[70,120],[150,200],[230,110],[300,170],[340,90],[110,240],[260,230],[195,60]];
+      _laternen.forEach(function(p){
+        svg += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="6" fill="#ffd98a" opacity="0.12" pointer-events="none"/>';
+        svg += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="1.6" fill="#ffe7b0" opacity="0.7" pointer-events="none"/>';
+      });
+    }
+  } catch (e) {}
   svg += '</svg>';
   return svg;
 }
