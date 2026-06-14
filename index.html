@@ -3293,7 +3293,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.782</div>
+    <div class="start-version">Schatten v7.12.783</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3519,7 +3519,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.782</span>
+    <span>Schatten v7.12.783</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7515,7 +7515,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.782';
+window.SCHATTEN_VERSION = 'v7.12.783';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -13605,6 +13605,34 @@ document.addEventListener('click', (e) => {
   if (menu.contains(e.target)) return;
   closeSettings();
 });
+
+// v7.12.783 (Benjamin: "Musik war an, nach Reload ist sie aus - sollte sie nicht weiterlaufen?"): Browser
+// erlauben kein Autoplay nach Reload ohne Nutzer-Geste. Daher: beim ERSTEN Tap/Klick nach dem Laden die Musik
+// fortsetzen, WENN der gespeicherte Modus Musik will und sie nicht ohnehin läuft. Danach entfernt sich der
+// Handler selbst (einmalig). So muss man nicht den Musik-Knopf suchen - ein beliebiger Tap genügt.
+(function _musikNachReloadFortsetzen() {
+  function _starteMusikBeiGeste() {
+    try {
+      var audio = document.getElementById('bg-music');
+      var willMusik = (typeof playModeWantsMusic === 'function') && playModeWantsMusic();
+      var warAn = false;
+      try { warAn = localStorage.getItem('schatten-music-on') === '1'; } catch (e) {}
+      if (audio && willMusik && warAn && audio.paused) {
+        if ((!musicPlaylist || !musicPlaylist.length) && typeof buildMusicPlaylist === 'function') buildMusicPlaylist();
+        if (typeof playMusicTrack === 'function') {
+          playMusicTrack(audio).then(function(){
+            try { if (typeof syncMusicButtonText === 'function') syncMusicButtonText(); } catch (e) {}
+          }).catch(function(){ /* falls noch blockiert, greift der nächste Tap nicht mehr - aber meist klappt es */ });
+        }
+      }
+    } catch (e) { /* Musik darf nie blockieren */ }
+    // einmalig: nach dem ersten Versuch wieder abmelden
+    document.removeEventListener('click', _starteMusikBeiGeste, true);
+    document.removeEventListener('touchstart', _starteMusikBeiGeste, true);
+  }
+  document.addEventListener('click', _starteMusikBeiGeste, true);
+  document.addEventListener('touchstart', _starteMusikBeiGeste, true);
+})();
 
 // --- UI ---
 function showStart() {
