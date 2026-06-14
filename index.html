@@ -3298,7 +3298,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.797</div>
+    <div class="start-version">Schatten v7.12.798</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3524,7 +3524,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.797</span>
+    <span>Schatten v7.12.798</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7603,7 +7603,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.797';
+window.SCHATTEN_VERSION = 'v7.12.798';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -8006,16 +8006,76 @@ function _gegnerProfilVon(name) {
     return (ce && ce.gegnerprofil) ? ce.gegnerprofil : null;
   } catch (e) { return null; }
 }
-// Kampf STARTEN: aus einer eskalierten Verhandlung oder bewusstem Angriff. Idempotent (doppelter Aufruf schadet nicht).
+// v7.12.798: alle FREIEN feindseligen Gegner am aktuellen Ort (für Mehr-Gegner-Kampf).
+function _freieFeindeAmOrt() {
+  try {
+    const npcs = (typeof getNpcsAtCurrentLocation === 'function') ? (getNpcsAtCurrentLocation() || []) : [];
+    return npcs.filter(n => n && n.name && typeof _npcIstFeindlich === 'function' && _npcIstFeindlich(n)
+      && (!(typeof _npcZustandGet === 'function' && _npcZustandGet(n.name)) || _npcZustandGet(n.name).status === 'frei'));
+  } catch (e) { return []; }
+}
+// v7.12.798: PARTY-STÄRKE. Karl = 1. Rex (Hund) = 1. Menschliche Begleiter je 1, aber Schutzbedürftige
+// (Klient/Romance/Familie) zählen NICHT als Kampfkraft. Verfassung skaliert Karls Beitrag leicht.
+function _partyStaerke() {
+  try {
+    let s = 1; // Karl
+    const _vf = (typeof verfassung === 'number') ? verfassung : 5;
+    if (_vf <= 2) s -= 0.5; // angeschlagener Karl ist schwächer
+    if (typeof _hundInParty === 'function' && _hundInParty()) s += 1; // Rex
+    if (Array.isArray(_party)) {
+      _party.forEach(p => {
+        const _t = ((p && p.tag) || '').toUpperCase();
+        // Schutzbedürftige tragen nicht zum Kampf bei.
+        if (['CLIENT','ROMANCE','FAMILY'].indexOf(_t) !== -1) return;
+        // Polizist/Verbündeter/Informant = vollwertige Kampfkraft.
+        s += 1;
+      });
+    }
+    return s;
+  } catch (e) { return 1; }
+}
+// v7.12.798: Gefahr-Summe der freien Feinde am Ort (aus gegnerprofil.kampf.gefahr, Default 1 pro Gegner).
+function _gegnerGefahrSumme(feinde) {
+  try {
+    const liste = Array.isArray(feinde) ? feinde : _freieFeindeAmOrt();
+    let g = 0;
+    liste.forEach(f => {
+      const prof = _gegnerProfilVon(f && f.name);
+      const gef = (prof && prof.kampf && typeof prof.kampf.gefahr === 'number') ? prof.kampf.gefahr : 1;
+      g += gef;
+    });
+    return g;
+  } catch (e) { return 1; }
+}
+// v7.12.798: ist ein Angriff aussichtslos? (Party-Stärke deutlich unter Gegner-Gefahr). Dann "Angreifen" gesperrt.
+function _kampfChancenlos() {
+  try {
+    const feinde = _freieFeindeAmOrt();
+    if (!feinde.length) return false;
+    const staerke = _partyStaerke();
+    const gefahr = _gegnerGefahrSumme(feinde);
+    // Chancenlos, wenn die Gegner-Gefahr die Party-Stärke um mehr als 1 übersteigt.
+    return gefahr > staerke + 1;
+  } catch (e) { return false; }
+}
+// Kampf STARTEN: nimmt ALLE freien Feinde am Ort auf. Idempotent.
 function _encounterStartKampf(enemyName) {
   try {
     if (!caseProgress) return false;
-    if (caseProgress.encounterState === 'kampf' && normForMatch(caseProgress.encounterEnemy || '') === normForMatch(enemyName || '')) return true; // schon im Kampf gegen denselben
+    // Alle freien Feinde am Ort sammeln (Mehr-Gegner). Der Auslöser-Gegner ist sicher dabei.
+    let feinde = _freieFeindeAmOrt().map(f => f.name);
+    if (enemyName && feinde.indexOf(enemyName) === -1) feinde.push(enemyName);
+    if (!feinde.length && enemyName) feinde = [enemyName];
+    if (caseProgress.encounterState === 'kampf') {
+      // Schon im Kampf - evtl. neue Feinde dazunehmen.
+      feinde.forEach(n => { if (caseProgress.encounterEnemies.indexOf(n) === -1) caseProgress.encounterEnemies.push(n); });
+      return true;
+    }
     caseProgress.encounterState = 'kampf';
-    caseProgress.encounterEnemy = enemyName || '';
+    caseProgress.encounterEnemies = feinde;
     caseProgress.encounterRound = 0;
     caseProgress.encounterStartedAtLocation = (typeof engineCurrentLocation === 'object' && engineCurrentLocation && engineCurrentLocation.name) ? engineCurrentLocation.name : '';
-    if (typeof diag === 'function') diag('state', '⚔ ENCOUNTER START: Kampf gegen ' + enemyName + ' @ ' + caseProgress.encounterStartedAtLocation);
+    if (typeof diag === 'function') diag('state', '⚔ ENCOUNTER START: Kampf gegen [' + feinde.join(', ') + '] @ ' + caseProgress.encounterStartedAtLocation);
     return true;
   } catch (e) { return false; }
 }
@@ -8024,50 +8084,134 @@ function _encounterEnde(grund) {
   try {
     if (!caseProgress) return;
     const _g = (['bezwungen','geflohen','abgebrochen'].indexOf(grund) !== -1) ? grund : 'abgebrochen';
-    if (typeof diag === 'function') diag('state', '⚔ ENCOUNTER ENDE (' + _g + '): ' + (caseProgress.encounterEnemy || '?'));
-    // Erst den End-Grund kurz halten (für evtl. Anzeige), dann ALLE Felder leeren.
+    if (typeof diag === 'function') diag('state', '⚔ ENCOUNTER ENDE (' + _g + '): [' + ((caseProgress.encounterEnemies || []).join(', ')) + ']');
     caseProgress.encounterState = null;
-    caseProgress.encounterEnemy = null;
+    caseProgress.encounterEnemies = [];
     caseProgress.encounterRound = 0;
     caseProgress.encounterStartedAtLocation = '';
-    // Banner aus dem DOM entfernen, falls vorhanden.
     try { const b = document.getElementById('encounter-banner'); if (b) b.remove(); } catch (e) {}
+    try { const a = document.getElementById('encounter-arena'); if (a) a.remove(); } catch (e) {}
   } catch (e) {}
 }
-// Sicherheitsnetz: Ist der Gegner nicht mehr da / besiegt / Ort gewechselt -> Kampf sauber beenden.
+// Ist ein bestimmter Gegner bezwungen (ko/gefesselt/fixiert/benommen/geflohen/übergeben)?
+function _gegnerBezwungen(name) {
+  try {
+    const _z = (typeof _npcZustandGet === 'function') ? _npcZustandGet(name) : null;
+    return !!(_z && ['ko','gefesselt','fixiert','benommen','geflohen','uebergeben'].indexOf(_z.status) !== -1);
+  } catch (e) { return false; }
+}
+// Sicherheitsnetz: ALLE Gegner bezwungen / Ort gewechselt / Fall vorbei -> Kampf sauber beenden.
 function _encounterKonsistenzCheck() {
   try {
     if (!caseProgress || caseProgress.encounterState !== 'kampf') return;
-    const _enemy = caseProgress.encounterEnemy || '';
-    // Gegner bezwungen? -> Kampf vorbei.
-    const _z = (typeof _npcZustandGet === 'function') ? _npcZustandGet(_enemy) : null;
-    if (_z && ['ko','gefesselt','fixiert','benommen'].indexOf(_z.status) !== -1) { _encounterEnde('bezwungen'); return; }
-    if (_z && ['geflohen','uebergeben'].indexOf(_z.status) !== -1) { _encounterEnde('geflohen'); return; }
-    // Ort gewechselt? -> Begegnung abgebrochen (Gegner zurückgelassen).
+    // Ort gewechselt? -> abgebrochen.
     const _ort = (typeof engineCurrentLocation === 'object' && engineCurrentLocation && engineCurrentLocation.name) ? engineCurrentLocation.name : '';
     if (caseProgress.encounterStartedAtLocation && _ort && normForMatch(_ort) !== normForMatch(caseProgress.encounterStartedAtLocation)) { _encounterEnde('abgebrochen'); return; }
-    // Fall vorbei? -> sauber raus.
+    // Fall vorbei? -> raus.
     if (caseProgress.istGelöst || caseProgress.istGescheitert) { _encounterEnde('abgebrochen'); return; }
+    // ALLE Gegner bezwungen? -> bezwungen. (Mehr-Gegner: erst wenn der letzte liegt.)
+    const _enemies = Array.isArray(caseProgress.encounterEnemies) ? caseProgress.encounterEnemies : [];
+    if (!_enemies.length) { _encounterEnde('abgebrochen'); return; }
+    const _alleAus = _enemies.every(n => _gegnerBezwungen(n));
+    if (_alleAus) {
+      // Sind alle geflohen/übergeben (keiner ko/gefesselt am Ort)? -> geflohen, sonst bezwungen.
+      const _einerNiedergerungen = _enemies.some(n => {
+        const _z = (typeof _npcZustandGet === 'function') ? _npcZustandGet(n) : null;
+        return _z && ['ko','gefesselt','fixiert','benommen'].indexOf(_z.status) !== -1;
+      });
+      _encounterEnde(_einerNiedergerungen ? 'bezwungen' : 'geflohen');
+      return;
+    }
   } catch (e) {}
 }
-// Minimaler sichtbarer Banner (Stufe 2a - die echte Arena kommt in 2b). Zeigt: Kampf + Gegner + Zustand in Worten.
+// v7.12.798: Sichtbare ARENA (Stufe 2b). Alle Gegner oben (Zustand in Worten), Karls Party unten.
 function _encounterBannerRender(container) {
   try {
     if (!container) return;
-    const alt = document.getElementById('encounter-banner'); if (alt) alt.remove();
+    const alt = document.getElementById('encounter-arena'); if (alt) alt.remove();
+    const altB = document.getElementById('encounter-banner'); if (altB) altB.remove();
     if (!caseProgress || caseProgress.encounterState !== 'kampf') return;
-    const _enemy = caseProgress.encounterEnemy || 'Der Gegner';
-    let _zustand = 'wachsam';
-    try { const _z = (typeof _npcZustandGet === 'function') ? _npcZustandGet(_enemy) : null; if (_z && _z.status && _z.status !== 'frei') _zustand = _z.status; } catch (e) {}
+    const _enemies = Array.isArray(caseProgress.encounterEnemies) ? caseProgress.encounterEnemies : [];
+    if (!_enemies.length) return;
+
+    const _zustandWort = (name) => {
+      try { const _z = (typeof _npcZustandGet === 'function') ? _npcZustandGet(name) : null;
+        if (_z && _z.status && _z.status !== 'frei') {
+          return ({ ko: 'k.o.', gefesselt: 'gefesselt', fixiert: 'fixiert', benommen: 'benommen', geflohen: 'geflohen', uebergeben: 'abgeführt' })[_z.status] || _z.status;
+        }
+      } catch (e) {}
+      return 'wachsam';
+    };
+    const _zustandFarbe = (w) => (/k\.o\.|gefesselt|fixiert|benommen|geflohen|abgeführt/.test(w)) ? '#a89878' : '#e0a090';
+
+    const arena = document.createElement('div');
+    arena.id = 'encounter-arena';
+    arena.style.cssText = 'margin:8px 0;padding:12px;border:1px solid #6b4a42;border-radius:6px;background:linear-gradient(180deg,rgba(60,30,28,0.5),rgba(30,22,20,0.5));font-family:inherit;';
+
+    // Kopfzeile
+    const kopf = document.createElement('div');
+    kopf.style.cssText = 'font-weight:bold;letter-spacing:0.08em;color:#e88a7a;font-size:calc(12px * var(--reading-scale));margin-bottom:8px;';
+    kopf.textContent = '⚔ KAMPF · Runde ' + ((caseProgress.encounterRound || 0) + 1);
+    arena.appendChild(kopf);
+
+    // Gegner-Reihe (oben)
+    const gegnerReihe = document.createElement('div');
+    gegnerReihe.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;';
+    _enemies.forEach(name => {
+      const w = _zustandWort(name);
+      const prof = _gegnerProfilVon(name);
+      const _waffe = (prof && prof.kampf && prof.kampf.waffe) ? (' · ' + prof.kampf.waffe) : '';
+      const chip = document.createElement('div');
+      chip.style.cssText = 'flex:1;min-width:120px;padding:7px 10px;border:1px solid rgba(190,62,52,0.5);border-radius:5px;background:rgba(50,25,23,0.6);color:#e0c4b8;font-size:calc(11px * var(--reading-scale));line-height:1.4;';
+      chip.innerHTML = '<span style="font-size:14px;">😠</span> <strong>' + escapeHtml(name) + '</strong>'
+        + '<div style="margin-top:2px;color:' + _zustandFarbe(w) + ';">' + escapeHtml(w + _waffe) + '</div>';
+      gegnerReihe.appendChild(chip);
+    });
+    arena.appendChild(gegnerReihe);
+
+    // Trennlinie "vs"
+    const vs = document.createElement('div');
+    vs.style.cssText = 'text-align:center;color:#8a7058;font-size:calc(10px * var(--reading-scale));letter-spacing:0.1em;margin:2px 0 8px;';
+    vs.textContent = '— gegen —';
+    arena.appendChild(vs);
+
+    // Party-Reihe (unten): Karl + Begleiter
+    const partyReihe = document.createElement('div');
+    partyReihe.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;';
     const _vf = (typeof verfassung === 'number') ? verfassung : 5;
     const _vfWort = _vf >= 4 ? 'in Form' : _vf === 3 ? 'angeschlagen' : _vf === 2 ? 'schwer angeschlagen' : 'am Limit';
-    const b = document.createElement('div');
-    b.id = 'encounter-banner';
-    b.style.cssText = 'margin:8px 0;padding:10px 12px;border:1px solid #6b4a42;border-left:4px solid #b43e34;border-radius:5px;background:rgba(60,30,28,0.45);font-family:inherit;color:#e0c4b8;font-size:calc(12px * var(--reading-scale));line-height:1.5;';
-    b.innerHTML = '<div style="font-weight:bold;letter-spacing:0.06em;color:#e88a7a;">⚔ KAMPF</div>'
-      + '<div style="margin-top:3px;">' + escapeHtml(_enemy) + ': <span style="color:#e0a090;">' + escapeHtml(_zustand) + '</span></div>'
-      + '<div style="margin-top:2px;color:#a89878;font-size:calc(10.5px * var(--reading-scale));">Karl: ' + _vfWort + ' · Runde ' + ((caseProgress.encounterRound || 0) + 1) + '</div>';
-    container.appendChild(b);
+    const _vfFarbe = _vf >= 4 ? '#a8c49a' : _vf === 3 ? '#d0b070' : '#d88a6a';
+    const karlChip = document.createElement('div');
+    karlChip.style.cssText = 'flex:1;min-width:120px;padding:7px 10px;border:1px solid rgba(120,150,120,0.45);border-radius:5px;background:rgba(28,34,28,0.6);color:#cbd8c0;font-size:calc(11px * var(--reading-scale));line-height:1.4;';
+    karlChip.innerHTML = '<span style="font-size:14px;">🕵️</span> <strong>Karl</strong><div style="margin-top:2px;color:' + _vfFarbe + ';">' + _vfWort + '</div>';
+    partyReihe.appendChild(karlChip);
+    // Rex
+    if (typeof _hundInParty === 'function' && _hundInParty()) {
+      const rexChip = document.createElement('div');
+      rexChip.style.cssText = 'flex:1;min-width:90px;padding:7px 10px;border:1px solid rgba(120,150,120,0.35);border-radius:5px;background:rgba(28,34,28,0.5);color:#b8c4ad;font-size:calc(11px * var(--reading-scale));';
+      rexChip.innerHTML = '<span style="font-size:14px;">🐕</span> <strong>' + escapeHtml((typeof HUND_NAME !== 'undefined' && HUND_NAME) || 'Rex') + '</strong>';
+      partyReihe.appendChild(rexChip);
+    }
+    // Menschliche Begleiter (keine Schutzbedürftigen)
+    if (Array.isArray(_party)) {
+      _party.forEach(p => {
+        const _t = ((p && p.tag) || '').toUpperCase();
+        if (['CLIENT','ROMANCE','FAMILY'].indexOf(_t) !== -1) return;
+        const cChip = document.createElement('div');
+        cChip.style.cssText = 'flex:1;min-width:90px;padding:7px 10px;border:1px solid rgba(120,150,120,0.35);border-radius:5px;background:rgba(28,34,28,0.5);color:#b8c4ad;font-size:calc(11px * var(--reading-scale));';
+        cChip.innerHTML = '<span style="font-size:14px;">🤝</span> <strong>' + escapeHtml((p.name || '').split(' ').pop()) + '</strong>';
+        partyReihe.appendChild(cChip);
+      });
+    }
+    arena.appendChild(partyReihe);
+
+    // Hinweiszeile: kampf-fokussierter Baukasten darunter
+    const hint = document.createElement('div');
+    hint.style.cssText = 'margin-top:9px;padding-top:8px;border-top:1px dashed #5a4034;color:#9a8472;font-size:calc(10px * var(--reading-scale));';
+    hint.textContent = 'Greif an, fessle den Bezwungenen, wirf einen Gegenstand — oder brich aus (Reisen).';
+    arena.appendChild(hint);
+
+    container.appendChild(arena);
   } catch (e) {}
 }
 // ============ v7.12.616: AKTIONS-PLAN (Benjamin: "mehrere Aktionen kombinieren wie Strg-Auswahl im Explorer") ============
@@ -11322,11 +11466,11 @@ function createInitialCaseProgress() {
     stage2Marker: '',
     stage2StartScene: 0,
     stage3StartScene: 0,
-    // v7.12.797 (Kampfmodus Stufe 2a): Encounter-State-Machine. encounterState:
+    // v7.12.797 (Kampfmodus Stufe 2a/2b): Encounter-State-Machine. encounterState:
     // null | 'verhandlung' | 'kampf' | 'bezwungen' | 'geflohen' | 'abgebrochen'.
     // Steuert den sichtbaren Kampfmodus. Beim Verlassen IMMER alle Felder zurück auf den Ruhezustand.
     encounterState: null,
-    encounterEnemy: null,        // Name des Gegners
+    encounterEnemies: [],        // v7.12.798: Liste der Gegner-Namen (mehrere am Ort -> alle in der Arena)
     encounterRound: 0,           // Rundenzähler (Cap aus Gegnerprofil.kampf.rundenLimit, sonst 3)
     encounterStartedAtLocation: '', // für Konsistenz-Check (Ortwechsel bricht ab)
   };
@@ -11356,7 +11500,7 @@ function normalizeCaseProgress(raw) {
   // halb aus einem Save wiederhergestellt (das Konzept lässt das offen - Reset ist die robustere Wahl: kein
   // Hängenbleiben in einem toten Kampf-UI). Wer beim Speichern im Kampf war, steht beim Laden wieder frei davor.
   merged.encounterState = null;
-  merged.encounterEnemy = null;
+  merged.encounterEnemies = [];
   merged.encounterRound = 0;
   merged.encounterStartedAtLocation = '';
   // v7.12.152: targetItemState-Struktur absichern (alte Saves haben es nicht).
@@ -23060,9 +23204,15 @@ function oeffneNpcMenue(npc, modus) {
         });
       });
       // Feste Option: bewusst angreifen -> Kampf. Klar gekennzeichnet.
+      // v7.12.798 (Stärke-Gate): Ist die Party gegen die Übermacht chancenlos, wird Angreifen GESPERRT
+      // (ausgegraut, Klick erklärt nur). Verhandeln/Fliehen bleiben - man muss erst Unterstützung holen.
+      const _chancenlos = (typeof _kampfChancenlos === 'function') && _kampfChancenlos();
       verben.push({
-        key: 'gverhandlung_angreifen', label: 'Angreifen (→ Kampf)', kategorie: 'OFFENSIV',
-        _gegnerLoestKampf: true,
+        key: 'gverhandlung_angreifen',
+        label: _chancenlos ? 'Angreifen (aussichtslos – zu starke Übermacht)' : 'Angreifen (→ Kampf)',
+        kategorie: 'OFFENSIV',
+        _gegnerLoestKampf: !_chancenlos,
+        _kampfChancenlos: _chancenlos,
         aktion: 'Karl greift ' + npc.name + ' direkt körperlich an. Es kommt zur offenen Konfrontation - ' + npc.name + ' ist bewaffnet und wehrt sich.',
       });
     }
@@ -23321,6 +23471,12 @@ function oeffneNpcMenue(npc, modus) {
           npcVerprelltAmTag[npc.name] = (typeof gameDay === 'number') ? gameDay : 1;
           if (typeof diag === 'function') diag('state', '🗣 SOZIAL-PUZZLE: falsche Tonart "' + (verb._sozialTonart || '?') + '" bei ' + npc.name + ' -> misstrauisch + Tonart verbraucht + heute (Tag ' + npcVerprelltAmTag[npc.name] + ') verschlossen (fail forward)');
         } catch (e) {}
+      }
+      // v7.12.798 (Stärke-Gate): chancenloser Angriff -> kein Kampf, nur ein erklärender Hinweis.
+      if (verb._kampfChancenlos) {
+        if (typeof showProgressToast === 'function') { try { showProgressToast('Aussichtslos', 'Gegen diese Übermacht hat Karl allein keine Chance. Er braucht Unterstützung (z.B. Rex oder einen Verbündeten) - oder muss es mit Reden versuchen.', 'caution', 'kampf-chancenlos'); } catch (e) {} }
+        if (typeof schliesseNpcMenue === 'function') schliesseNpcMenue();
+        return;
       }
       // v7.12.797 (Kampfmodus Stufe 2a): eskalierende Verhandlung / bewusstes Angreifen -> Encounter-State auf 'kampf'.
       // Der Banner erscheint dann beim nächsten Szenen-Render; die KI-Szene (npcInteraktion) erzählt den Einstieg.
