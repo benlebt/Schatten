@@ -3307,7 +3307,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.830</div>
+    <div class="start-version">Schatten v7.12.831</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3533,7 +3533,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.830</span>
+    <span>Schatten v7.12.831</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7009,6 +7009,21 @@ function _expNachbar(g, p, richtung) {
   if (def && def.tuer) return 'tuer';
   return 'offen';
 }
+// v7.12.831: Die Zelle direkt VOR Karl (in Blickrichtung) + ihr Status. Für den "durch die Tür"-Knopf.
+function _expVorausInfo() {
+  try {
+    const g = _expGrid(); if (!g) return null;
+    const p = _expPos(); if (!p) return null;
+    const v = _EXP_DIR[p.blick];
+    const nx = p.x + v.dx, ny = p.y + v.dy;
+    const z = _expZeichenAt(g, nx, ny);
+    if (z === '#' || z === ' ') return { typ: 'wand' };
+    const def = (g.zellen && g.zellen[z]) ? g.zellen[z] : null;
+    const stg = (caseProgress && typeof caseProgress.stage === 'number') ? caseProgress.stage : 0;
+    const gesperrt = !!(def && typeof def.abStage === 'number' && stg < def.abStage);
+    return { typ: (def && def.tuer) ? 'tuer' : 'offen', def: def, gesperrt: gesperrt, x: nx, y: ny };
+  } catch (e) { return null; }
+}
 // Aufmerksamkeit
 function _aufmerksamkeitAendern(delta) {
   try { if (!caseProgress) return; let a = (typeof caseProgress.aufmerksamkeit === 'number') ? caseProgress.aufmerksamkeit : 0; caseProgress.aufmerksamkeit = Math.max(0, Math.min(100, a + delta)); } catch (e) {}
@@ -7164,8 +7179,20 @@ function _renderExploration(container) {
       return b;
     };
     const _reRender = () => { if (typeof renderOptions === 'function' && currentScene) renderOptions(currentScene); };
+    const _voraus = _expVorausInfo();
     navRow.appendChild(mkBtn('↰', 'drehen', () => { _expDrehe('links'); _reRender(); }, true));
-    navRow.appendChild(mkBtn('↑', 'vor', () => { const r = _expVor(); if (r.ok) _reRender(); else { if (typeof showProgressToast === 'function') showProgressToast('Kein Weg', 'Da ist eine Wand. Karl kann nicht weiter in diese Richtung.', 'info', 'exp-wand'); } }, vorne !== 'wand'));
+    // Vor-Button: bei einer Tür voraus heißt er "an die Tür" und reagiert passend.
+    if (_voraus && _voraus.typ === 'tuer') {
+      navRow.appendChild(mkBtn('🚪', 'zur Tür', () => {
+        if (_voraus.gesperrt) {
+          if (typeof showProgressToast === 'function') showProgressToast('Verschlossen', 'Die Tür ist zu. Karl hat hier noch nichts zu suchen - erst wenn er mehr über den Fall weiß, lohnt sich der Weg nach oben.', 'info', 'exp-tuer-zu');
+          return;
+        }
+        const r = _expVor(); if (r.ok) _reRender();
+      }, true));
+    } else {
+      navRow.appendChild(mkBtn('↑', 'vor', () => { const r = _expVor(); if (r.ok) _reRender(); else { if (typeof showProgressToast === 'function') showProgressToast('Kein Weg', 'Da ist eine Wand. Karl kann nicht weiter in diese Richtung.', 'info', 'exp-wand'); } }, vorne !== 'wand'));
+    }
     navRow.appendChild(mkBtn('↱', 'drehen', () => { _expDrehe('rechts'); _reRender(); }, true));
     wrap.appendChild(navRow);
     // Umdrehen
@@ -8004,7 +8031,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.830';
+window.SCHATTEN_VERSION = 'v7.12.831';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
