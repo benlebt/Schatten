@@ -3307,7 +3307,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.819</div>
+    <div class="start-version">Schatten v7.12.820</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3533,7 +3533,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.819</span>
+    <span>Schatten v7.12.820</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7290,6 +7290,27 @@ function _npcHatOffenenHinweis(npcName) {
     });
   } catch (e) { return false; }
 }
+// v7.12.820 (Benjamin: "Ilse zeigt 'ausgequetscht', obwohl ich nie mit ihr sprach"): Prüft, ob ein NPC GRUNDSÄTZLICH
+// noch ein ungefundenes, ihm zugeordnetes Indiz hat - OHNE Stage-/Zeit-Gate. Für die "ausgequetscht"-Entscheidung:
+// eine Person mit einem noch stage-gesperrten Indiz ist NICHT ausgequetscht (sie hat etwas, nur noch nicht jetzt).
+function _npcHatUngefundeneIndizien(npcName) {
+  try {
+    if (!npcName || !engineCurrentLocation || !engineCurrentLocation.name) return false;
+    const locs = (typeof getCaseLocations === 'function') ? getCaseLocations() : [];
+    const loc = locs.find(l => normForMatch(l.name) === normForMatch(engineCurrentLocation.name));
+    if (!loc || !Array.isArray(loc.indizien)) return false;
+    const gef = (caseProgress && Array.isArray(caseProgress.gefundeneIndizIds)) ? caseProgress.gefundeneIndizIds : [];
+    const nN = normForMatch(npcName);
+    const vn = nN.split(/\s+/)[0];
+    return loc.indizien.some(ind => {
+      if (!ind || !ind.id || !ind.npc || gef.indexOf(ind.id) !== -1) return false;
+      if (ind.quelle !== 'person') return false;
+      const indNpc = normForMatch(ind.npc);
+      // KEIN abStage-/zeit-Gate hier - es geht nur darum, ob die Person überhaupt noch etwas zu geben hat.
+      return indNpc === nN || indNpc.replace(/_/g, ' ') === nN || (vn.length >= 3 && indNpc.includes(vn));
+    });
+  } catch (e) { return false; }
+}
 // v7.12.685 (Benjamin: "man soll sehen, WELCHER Button den Hinweis bringt"): liefert die
 // lesbaren Aktions-Labels aller offenen, npc-gebundenen, gerade erreichbaren Kern-Indizien
 // dieses NPCs (z.B. ['Befragen','Bestechen']). Gleiche Match-Logik wie _npcHatOffenenHinweis.
@@ -7712,7 +7733,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.819';
+window.SCHATTEN_VERSION = 'v7.12.820';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -23306,15 +23327,30 @@ function oeffneNpcMenue(npc, modus) {
       // v7.12.802 (Benjamin: "wenn alle Indizien rausgequetscht sind, ist sie fertig"): Hat die Person KEINEN
       // offenen (npc-gebundenen, erreichbaren) Hinweis mehr, ist sie ausgequetscht - KEINE Tonarten mehr, auch
       // nicht die aggressiven (die jetzt sinnlos wären). Stattdessen ein deaktiviertes "schon ausgequetscht".
-      const _hatNochHinweis = (typeof _npcHatOffenenHinweis === 'function') ? _npcHatOffenenHinweis(npc.name) : true;
-      if (!_hatNochHinweis) {
+      // v7.12.820 (Benjamin): DREI Zustände statt zwei.
+      // (a) hat ein JETZT erreichbares Indiz -> normale Tonarten.
+      // (b) hat ein Indiz, aber noch stage-gesperrt -> "will gerade noch nicht reden" (kein Menü, kommt später).
+      // (c) hat KEIN ungefundenes Indiz mehr -> "schon ausgequetscht".
+      const _hatJetztErreichbar = (typeof _npcHatOffenenHinweis === 'function') ? _npcHatOffenenHinweis(npc.name) : true;
+      const _hatUeberhauptNoch = (typeof _npcHatUngefundeneIndizien === 'function') ? _npcHatUngefundeneIndizien(npc.name) : true;
+      if (!_hatUeberhauptNoch) {
+        // (c) ausgequetscht
         verben.unshift({
           key: 'sozial_ausgequetscht',
           label: 'Schon ausgequetscht – weiß nichts mehr',
           kategorie: 'ERKUNDEN',
           _sozialErledigt: true,
         });
+      } else if (!_hatJetztErreichbar) {
+        // (b) hat etwas, aber noch nicht jetzt - will/kann gerade nicht reden.
+        verben.unshift({
+          key: 'sozial_nochnicht',
+          label: 'Wirkt verschlossen – jetzt ist kein guter Moment',
+          kategorie: 'ERKUNDEN',
+          _sozialNochNicht: true,
+        });
       } else {
+        // (a) normale Tonarten
         _sozNpc.sozial.tonarten.forEach(t => {
           if (!t || !t.key) return;
           // v7.12.792/801 (Benjamin: "eine Option ist nur einmal klickbar"): Jede bereits gewählte Tonart
@@ -23633,6 +23669,12 @@ function oeffneNpcMenue(npc, modus) {
       // v7.12.802: "schon ausgequetscht" - kein Befragen mehr, nur ein Hinweis.
       if (verb._sozialErledigt) {
         if (typeof showProgressToast === 'function') { try { showProgressToast((typeof _npcRedeName==='function'?_npcRedeName(npc.name):npc.name) + ' weiß nichts mehr', 'Karl hat alles aus ' + npc.name + ' herausgeholt, was sie zum Fall beitragen kann.', 'info', 'sozial-ausgequetscht-' + normForMatch(npc.name)); } catch (e) {} }
+        if (typeof schliesseNpcMenue === 'function') schliesseNpcMenue();
+        return;
+      }
+      // v7.12.820: Person hat etwas, ist aber (stage-bedingt) noch nicht bereit zu reden - nur ein Hinweis, keine Szene.
+      if (verb._sozialNochNicht) {
+        if (typeof showProgressToast === 'function') { try { showProgressToast((typeof _npcRedeName==='function'?_npcRedeName(npc.name):npc.name) + ' bleibt verschlossen', 'Karl spürt, dass hier noch etwas zu holen ist - aber nicht jetzt. Erst wenn er mehr über den Fall weiß, öffnet sich diese Tür.', 'info', 'sozial-nochnicht-' + normForMatch(npc.name)); } catch (e) {} }
         if (typeof schliesseNpcMenue === 'function') schliesseNpcMenue();
         return;
       }
