@@ -3307,7 +3307,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.828</div>
+    <div class="start-version">Schatten v7.12.829</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3533,7 +3533,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.828</span>
+    <span>Schatten v7.12.829</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7997,7 +7997,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.828';
+window.SCHATTEN_VERSION = 'v7.12.829';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -10566,6 +10566,7 @@ function _ortsFundIndizienErreichbar() {
     // nur die Indizien des AKTUELLEN Knotens auffindbar (Türschild nur im Treppenhaus).
     const _expNode2 = (typeof _hatExploration === 'function' && _hatExploration()) ? _expNode() : null;
     const _expHotspotFilter = _expNode2 && Array.isArray(_expNode2.hotspots) ? _expNode2.hotspots.map(h => normForMatch(h)) : (_expNode2 ? [] : null);
+    if (_expNode2 && typeof diag === 'function') diag('state', '🔎 ORTSFUND-FILTER @ Knoten "' + (_expNode2.title || '?') + '": hotspots=[' + (_expNode2.hotspots || []).join(',') + ']');
     return _loc.indizien.filter(ind => {
       if (!ind || !ind.id || _gef.indexOf(ind.id) !== -1) return false;
       if (_expHotspotFilter && _expHotspotFilter.indexOf(normForMatch(ind.id)) === -1) return false;
@@ -42724,9 +42725,10 @@ function _migriereCaseSetupOrte() {
         else if (!vorhanden.npc && qi.npc) { vorhanden.npc = qi.npc; ergaenzt++; } // nachträgliche NPC-Bindung
       });
     }
-    // v7.12.827 (Benjamin: "Hinterhof zeigt keine Erkundung" - Wurzel: caseSetup eingefroren, Graph fehlt in altem
-    // Stand). explorationGraph aus der aktuellen Falldefinition nachtragen, falls er im gespeicherten Ort fehlt.
-    if (qLoc.explorationGraph && !loc.explorationGraph) { loc.explorationGraph = JSON.parse(JSON.stringify(qLoc.explorationGraph)); ergaenzt++; }
+    // v7.12.827/829 (Benjamin: "Hinterhof zeigt keine Erkundung"): explorationGraph ist STATISCHE Falldefinition
+    // (kein Spielfortschritt) - daher bei der Migration IMMER aus der Quelle übernehmen, damit auch ein in einem
+    // alten Stand eingefrorener oder veralteter Graph auf den aktuellen Stand kommt.
+    if (qLoc.explorationGraph) { loc.explorationGraph = JSON.parse(JSON.stringify(qLoc.explorationGraph)); ergaenzt++; }
   });
   // v7.12.810 (Benjamin: "bei Voss kein Puzzle" - Wurzel: caseSetup wird im Spielstand eingefroren; ein Fall, der
   // VOR den Sozial-Profilen v791/v803/v804 begonnen wurde, trägt die Profile nicht). Cast-Profile nachtragen:
