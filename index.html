@@ -3298,7 +3298,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.790</div>
+    <div class="start-version">Schatten v7.12.791</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3524,7 +3524,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.790</span>
+    <span>Schatten v7.12.791</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5400,6 +5400,22 @@ const INTRO_VARIANTS = [
           persistent: false, anwesend: false },
         // v7.11.13: 2 weitere Pool-NPCs damit Setup-Cast Wegener-Goldstandard (6 NPCs) entspricht
         { name: 'Frau Pohl', tag: 'WITNESS', alter: 63, rolle: 'Nachbarin Sybelstrasse 24, 2. Stock',
+          // v7.12.791 (Benjamin: "Befragung muss zur Herausforderung werden"): Sozial-Profil - Prototyp.
+          // Frau Pohl ist moralisch + misstrauisch: empfänglich für Offenheit und kleine Gegenleistung,
+          // verschließt sich bei Druck/Autoritäts-Behauptung. Falsche Tonart -> sie wird misstrauisch (fail forward).
+          sozial: {
+            tonarten: [
+              { key: 'ehrlich',     label: 'Offen sagen, dass Karl Privatdetektiv ist', erfolg: true,
+                push: 'Karl gibt sich ehrlich als Privatdetektiv zu erkennen und bittet höflich um Hilfe. Frau Pohl ist moralisch und schätzt Offenheit - sie taut auf und gibt tröpfchenweise preis, was sie über Roberts Mittwochsbesuche weiß.' },
+              { key: 'gegenleistung', label: 'Eine kleine Gegenleistung anbieten (Kaffee, Zigaretten)', erfolg: true, brauchtGegenwert: true,
+                push: 'Karl bietet Frau Pohl eine kleine Gegenleistung an (Zigaretten, Kaffee, ein paar Westmark). Sie nimmt es als Geste der Höflichkeit, nicht als Bestechung, und wird gesprächig - sie erzählt von Roberts regelmäßigen Mittwochsbesuchen.' },
+              { key: 'druck',       label: 'Sie unter Druck setzen', erfolg: false, machtMisstrauisch: true,
+                push: 'Karl setzt Frau Pohl unter Druck. Das ist FALSCH bei ihr - sie ist misstrauisch und moralisch, Druck lässt sie zumachen. Sie wird abweisend, verschränkt die Arme, sagt nichts Konkretes über die Hausbewohner und deutet an, dass solche Methoden bei ihr nicht ziehen. KEIN Fall-Indiz preisgeben.' },
+              { key: 'polizei',     label: 'Behaupten, von der Polizei zu sein', erfolg: false, machtMisstrauisch: true,
+                push: 'Karl behauptet, von der Polizei zu sein. Frau Pohl wird sofort vorsichtig und misstrauisch - in diesen Zeiten redet man nicht leichtfertig mit der Obrigkeit. Sie zieht sich zurück, gibt nichts preis und wird argwöhnisch. KEIN Fall-Indiz preisgeben.' },
+            ],
+            misstrauischPush: 'WICHTIG: Frau Pohl ist von Karls vorherigem Auftreten bereits misstrauisch geworden. Sie ist jetzt zurückhaltender und zickiger - selbst die richtige Tonart braucht mehr Geduld, und eine Gegenleistung muss diesmal echt sein (ein konkretes Mitbringsel), bloße Worte reichen nicht mehr.',
+          },
           beziehung: 'kennt jeden im Haus, sieht Robert seit Monaten mittwochs kommen. Neugierig und moralisch, aber misstrauisch - redet erst nach sanftem Druck oder kleiner Gegenleistung (Kaffee, Zigaretten, ein paar Westmark).',
           detail: 'witwe, grau-meliertes Haar, Kittelschuerze, immer am Kuechenfenster zur Strasse. Spricht ueber alle Hausbewohner mit kennenswerter Praezision - aber NICHT sofort: erst pruefend, dann tropfenweise. Hat Kaffee fuer Karl wenn der hochkommt und ihr gefaellt.',
           triggerWhen: 'Karl klingelt an Sybelstrasse 24 oder befragt Nachbarn',
@@ -7570,7 +7586,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.790';
+window.SCHATTEN_VERSION = 'v7.12.791';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -11552,6 +11568,7 @@ let romanceReceptive = {};   // npcName -> true (offen) | false (abgewiesen)
 let romanceNpcLastSeenScene = -99;  // v7.12.266: Szene-Nr, in der die Romance-Figur zuletzt präsent war (für "nicht hier"-Hinweis-Gating)
 let romanceRejected = {};    // npcName -> true wenn abgewiesen (Button dauerhaft weg)
 let romanceClimaxed = {};    // v7.12.28: npcName -> true wenn die Nacht mit dieser Person verbracht wurde - Folge-Annaeherungen wuerfeln neu
+let npcMisstrauisch = {};    // v7.12.791: npcName -> true wenn eine falsche Befragungs-Tonart die Person misstrauisch gemacht hat (Sozial-Puzzle fail forward)
 
 // Story-appropriate wait texts, chosen by current tension level.
 // Each pool has 6+ entries to avoid repetition.
@@ -22817,6 +22834,36 @@ function oeffneNpcMenue(npc, modus) {
     keys = (_bedrohungAktiv && !_istGutePerson) ? ['befragen','angreifen'] : ['befragen'];
   }
   const verben = _hundVerbenOverride ? _hundVerbenOverride.slice() : keys.map(k => ALLE_VERBEN[k]).filter(Boolean);
+  // v7.12.791 (Benjamin: "Befragung muss zur Herausforderung werden") - SOZIAL-PUZZLE (Prototyp Frau Pohl):
+  // Hat der NPC ein sozial-Profil im Setup, ersetzen wir das simple "Befragen" durch TONART-Optionen. Der Spieler
+  // wählt WIE Karl herangeht; die gewählte Tonart steuert per Prompt-Push, ob die Person nachgibt oder zumacht.
+  // Falsche Tonart -> npcMisstrauisch (fail forward: danach zickiger). Es bleibt EINE KI-Szene, nur mit Entscheidung.
+  try {
+    let _sozNpc = null;
+    if (caseSetup && Array.isArray(caseSetup.setupCast)) {
+      _sozNpc = caseSetup.setupCast.find(c => c && c.name && normForMatch(c.name) === normForMatch(npc.name)) || null;
+    }
+    if (_sozNpc && _sozNpc.sozial && Array.isArray(_sozNpc.sozial.tonarten) && !_hundVerbenOverride && !GEGNER.includes(tag)) {
+      const _istMiss = !!(npcMisstrauisch && npcMisstrauisch[npc.name]);
+      // "Befragen" rauswerfen - die Tonart-Optionen treten an seine Stelle.
+      for (let i = verben.length - 1; i >= 0; i--) { if (verben[i] && verben[i].key === 'befragen') verben.splice(i, 1); }
+      _sozNpc.sozial.tonarten.forEach(t => {
+        if (!t || !t.key) return;
+        let _label = t.label;
+        if (_istMiss && t.erfolg) _label += ' (sie ist misstrauisch)';
+        verben.unshift({
+          key: 'sozial_' + t.key,
+          label: _label,
+          kategorie: t.erfolg ? 'ERKUNDEN' : 'OFFENSIV',
+          _sozialTonart: t.key,
+          _sozialErfolg: !!t.erfolg,
+          _sozialMachtMisstrauisch: !!t.machtMisstrauisch,
+          // Der Prompt-Push für die KI: wie reagiert die Person? Bei Misstrauen den Zusatz-Push anhängen.
+          aktion: t.push + (_istMiss && t.erfolg && _sozNpc.sozial.misstrauischPush ? ' ' + _sozNpc.sozial.misstrauischPush : '')
+        });
+      });
+    }
+  } catch (e) { /* Sozial-Puzzle darf das Menü nie brechen */ }
   // v7.12.547 (Party-System Schicht 2): "Mitnehmen" / "Hier lassen" für Nicht-Gegner. Verwaltungs-Aktionen -
   // lösen KEINE KI-Szene aus, ändern nur den Party-Zustand. Gegner (STASI/SUSPECT/...) nimmt man NICHT mit.
   // Ist die Person schon in der Party -> "Hier lassen" (entfernen); sonst -> "Mitnehmen" (hinzufügen).
@@ -23056,6 +23103,14 @@ function oeffneNpcMenue(npc, modus) {
         };
         if (typeof chooseOption === 'function') chooseOption(_romOpt);
         return;
+      }
+      // v7.12.791 Sozial-Puzzle: falsche Tonart macht die Person misstrauisch (fail forward - danach zickiger).
+      if (verb._sozialMachtMisstrauisch) {
+        try {
+          if (typeof npcMisstrauisch !== 'object' || !npcMisstrauisch) window.npcMisstrauisch = {};
+          npcMisstrauisch[npc.name] = true;
+          if (typeof diag === 'function') diag('state', '🗣 SOZIAL-PUZZLE: falsche Tonart bei ' + npc.name + ' -> jetzt misstrauisch (fail forward)');
+        } catch (e) {}
       }
       npcInteraktion(npc, verb);
     });
@@ -29767,6 +29822,7 @@ async function startGame() {
   romanceRejected = {};
   nachtMitFrau = '';       // v7.12.282: Nacht-mit-Frau-Tracking zuruecksetzen
   romanceClimaxed = {};    // v7.12.28: Climax-Tracking zuruecksetzen
+  npcMisstrauisch = {};    // v7.12.791: Sozial-Misstrauen zuruecksetzen
   // Reset Historische Anker (v6.56 -> v6.57)
   historicalAnchorCount = 0;
   historicalAnchorsUsed = [];
@@ -41577,6 +41633,7 @@ function saveGameState() {
       romanceNpcLastSeenScene: (typeof romanceNpcLastSeenScene === 'number') ? romanceNpcLastSeenScene : -99,
       romanceRejected: (typeof romanceRejected === 'object' && romanceRejected) ? romanceRejected : {},
       romanceClimaxed: (typeof romanceClimaxed === 'object' && romanceClimaxed) ? romanceClimaxed : {},
+      npcMisstrauisch: (typeof npcMisstrauisch === 'object' && npcMisstrauisch) ? npcMisstrauisch : {},
       stasiTension: stasiTension,
       stasiCapForCase: stasiCapForCase,
       karlInStasiCustody: karlInStasiCustody,
@@ -41842,6 +41899,7 @@ function restoreGameState() {
     romanceNpcLastSeenScene = (typeof snap.romanceNpcLastSeenScene === 'number') ? snap.romanceNpcLastSeenScene : -99;
     romanceRejected = (snap.romanceRejected && typeof snap.romanceRejected === 'object') ? snap.romanceRejected : {};
     romanceClimaxed = (snap.romanceClimaxed && typeof snap.romanceClimaxed === 'object') ? snap.romanceClimaxed : {};
+    npcMisstrauisch = (snap.npcMisstrauisch && typeof snap.npcMisstrauisch === 'object') ? snap.npcMisstrauisch : {};
     stasiTension = snap.stasiTension || 0;
     stasiCapForCase = (typeof snap.stasiCapForCase === 'number') ? snap.stasiCapForCase : 5;
     karlInStasiCustody = !!snap.karlInStasiCustody;
