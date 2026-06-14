@@ -3281,7 +3281,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.779</div>
+    <div class="start-version">Schatten v7.12.780</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3507,7 +3507,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.779</span>
+    <span>Schatten v7.12.780</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7503,7 +7503,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.779';
+window.SCHATTEN_VERSION = 'v7.12.780';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -8834,11 +8834,13 @@ function sfxHohn() {
 // Cha-Ching beim Einsammeln. Mechanischer Klick + heller Glocken-Doppelklang mit Nachklang.
 function sfxKasse() {
   if (!sfxOn()) return;
-  _sfxNoise(0.025, 0.1, 0, 2600);                    // das mechanische "Ka"
-  _sfxTon(2093, 2088, 0.55, 'sine', 0.12, 0.04);     // Glocke (C7)
-  _sfxTon(2637, 2630, 0.45, 'sine', 0.07, 0.045);    // Oberton (E7)
-  _sfxTon(2093, 2090, 0.4, 'sine', 0.06, 0.16);      // zweiter Anschlag, leiser
-  _sfxTon(2637, 2632, 0.35, 'sine', 0.04, 0.165);
+  // v7.12.780 (Benjamin: "Einsammel-Geräusch ist zu laut und zu hochfrequent"): eine Oktave runter (C7/E7 -> C6/E6,
+  // nimmt die Schärfe) und die Lautstärken etwa halbiert - bleibt ein Cha-Ching, aber weicher und leiser als die Musik.
+  _sfxNoise(0.018, 0.1, 0, 1800);                    // das mechanische "Ka" (dumpfer, leiser)
+  _sfxTon(1047, 1044, 0.55, 'sine', 0.06, 0.04);     // Glocke (C6 statt C7)
+  _sfxTon(1319, 1315, 0.45, 'sine', 0.035, 0.045);   // Oberton (E6 statt E7)
+  _sfxTon(1047, 1045, 0.4, 'sine', 0.03, 0.16);      // zweiter Anschlag, leiser
+  _sfxTon(1319, 1316, 0.35, 'sine', 0.02, 0.165);
 }
 // v7.12.738 (Benjamin: "wenn die Akte geschlossen wird, brauchen wir einen Sound"):
 // Kein Zellentür-Metall (klingt nach Gefängnis, nicht nach Triumph) - stattdessen der
@@ -9749,10 +9751,17 @@ function _zeigeFundAuswahl(fundItems, fundIndizien) {
     fertig.className = 'option-btn';
     fertig.style.cssText = 'display:block;width:100%;margin:12px 0 0;text-align:center;';
     fertig.innerHTML = '<span>Fertig / liegen lassen</span>';
-    fertig.onclick = () => { try { overlay.remove(); } catch (e) {} };
+    // v7.12.780 (Benjamin: "Umsehen-Button zeigt noch '2 Fundstücke', obwohl alles eingesammelt - erst beim
+    // erneuten Klick aktualisiert er sich"). Beim Schließen die Optionen neu rendern -> Button zeigt sofort den
+    // aktuellen Stand (Fundzahl runter oder "später mehr hier").
+    var _fundSchliessen = function() {
+      try { overlay.remove(); } catch (e) {}
+      try { if (typeof renderOptions === 'function' && typeof currentScene === 'object' && currentScene) renderOptions(currentScene); } catch (e) {}
+    };
+    fertig.onclick = _fundSchliessen;
     panel.appendChild(fertig);
     overlay.appendChild(panel);
-    overlay.onclick = (e) => { if (e.target === overlay) { try { overlay.remove(); } catch (e2) {} } };
+    overlay.onclick = (e) => { if (e.target === overlay) _fundSchliessen(); };
     document.body.appendChild(overlay);
   } catch (e) { /* Fund-UI darf nie das Spiel brechen */ }
 }
@@ -21957,15 +21966,16 @@ function mapBaueSvg(orte, cluster){
       svg += '<text x="' + c.x + '" y="' + (c.y + 3.6) + '" text-anchor="middle" font-family="Courier New,monospace" font-size="12" font-weight="bold" fill="' + cf + '" pointer-events="none">' + c.mitglieder.length + '</text>';
     }
   });
-  // v7.12.769: Straßenlaternen bei Abend/Nacht - kleine warme Lichthöfe, rein atmosphärisch (pointer-events:none).
-  // Feste, über die Karte verteilte Positionen; bei Tag aus. Gibt der dunklen Karte Berlin-bei-Nacht-Stimmung.
+  // v7.12.780 (Benjamin: "die Stern-Punkte verwirren - sehen aus wie Orte, sind aber Laternen"): Laternen NUR
+  // bei tiefer Nacht, am Kartenrand (nicht zwischen den Orten) und als diffuser Schimmer OHNE hellen Kernpunkt -
+  // so kann man sie nicht mehr mit anklickbaren Orten verwechseln. Bei Abend ganz aus.
   try {
-    var _tzL = (typeof tageszeitPalette === 'function') ? tageszeitPalette() : null;
-    if (_tzL && _tzL.lampen) {
-      var _laternen = [[70,120],[150,200],[230,110],[300,170],[340,90],[110,240],[260,230],[195,60]];
+    var _tzNacht = (typeof _aktTageszeitName === 'function') ? (_aktTageszeitName() === 'nacht') : false;
+    if (_tzNacht) {
+      // Positionen am äußeren Rand der viewBox (12 14 384 252 -> x 12..396, y 14..266), weg von den Ortspunkten
+      var _laternen = [[26,30],[380,28],[24,250],[384,252],[200,20],[28,140],[384,150]];
       _laternen.forEach(function(p){
-        svg += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="6" fill="#ffd98a" opacity="0.12" pointer-events="none"/>';
-        svg += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="1.6" fill="#ffe7b0" opacity="0.7" pointer-events="none"/>';
+        svg += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="8" fill="#ffd98a" opacity="0.07" pointer-events="none"/>';
       });
     }
   } catch (e) {}
@@ -22023,7 +22033,13 @@ function oeffneReiseMenue(){
   overlay.style.cssText = 'position:fixed;inset:0;z-index:9000;background:rgba(10,8,6,0.92);display:flex;align-items:center;justify-content:center;padding:6px;';
   var panel = document.createElement('div');
   panel.style.cssText = 'max-width:620px;width:100%;max-height:94vh;overflow-y:auto;background:#14110c;border:1px solid #4d4234;border-radius:8px;padding:12px 10px 10px;box-shadow:0 12px 40px rgba(0,0,0,0.6);';
-  var kopf = '<div style="color:#c8a84a;font-size:calc(13px * var(--reading-scale));letter-spacing:0.1em;margin-bottom:2px;padding:0 4px;">BERLIN 1953</div>'
+  // v7.12.780 (Benjamin: "rechts neben BERLIN 1953 die Tageszeit anzeigen"): Tageszeit-Label mit Akzentfarbe.
+  var _kTz = (typeof _aktTageszeitName === 'function') ? _aktTageszeitName() : '';
+  var _kTzLabel = _kTz ? (_kTz.charAt(0).toUpperCase() + _kTz.slice(1)) : '';
+  var _kTzFarbe = '#a89a82';
+  try { var _kpal = (typeof tageszeitPalette === 'function') ? tageszeitPalette(_kTz) : null; if (_kpal) _kTzFarbe = _kpal.akzent; } catch (e) {}
+  var _kTzSpan = _kTzLabel ? '<span style="color:' + _kTzFarbe + ';font-size:calc(11px * var(--reading-scale));letter-spacing:0.06em;font-weight:normal;">☾ ' + _kTzLabel + '</span>' : '';
+  var kopf = '<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:2px;padding:0 4px;"><span style="color:#c8a84a;font-size:calc(13px * var(--reading-scale));letter-spacing:0.1em;">BERLIN 1953</span>' + _kTzSpan + '</div>'
     + '<div style="color:#a89a82;font-size:calc(11px * var(--reading-scale));letter-spacing:0.03em;margin-bottom:8px;padding:0 4px;">Wohin soll die Reise gehen?</div>';
   if(!orte.length){
     panel.innerHTML = kopf + '<div style="color:#867868;font-size:calc(11px * var(--reading-scale));font-style:italic;padding:20px 0;text-align:center;">Noch keine weiteren Orte bekannt. Ermittle, um neue Orte freizuschalten.</div>';
