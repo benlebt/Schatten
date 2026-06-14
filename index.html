@@ -3293,7 +3293,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.781</div>
+    <div class="start-version">Schatten v7.12.782</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3519,7 +3519,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.781</span>
+    <span>Schatten v7.12.782</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7515,7 +7515,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.781';
+window.SCHATTEN_VERSION = 'v7.12.782';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -21978,17 +21978,32 @@ function mapBaueSvg(orte, cluster){
       svg += '<text x="' + c.x + '" y="' + (c.y + 3.6) + '" text-anchor="middle" font-family="Courier New,monospace" font-size="12" font-weight="bold" fill="' + cf + '" pointer-events="none">' + c.mitglieder.length + '</text>';
     }
   });
-  // v7.12.780 (Benjamin: "die Stern-Punkte verwirren - sehen aus wie Orte, sind aber Laternen"): Laternen NUR
-  // bei tiefer Nacht, am Kartenrand (nicht zwischen den Orten) und als diffuser Schimmer OHNE hellen Kernpunkt -
-  // so kann man sie nicht mehr mit anklickbaren Orten verwechseln. Bei Abend ganz aus.
+  // v7.12.782 (Benjamin: "eine große angedeutete Straßenlaterne rechts oben, die einen Lichtkegel auf die Karte
+  // wirft - wie wenn da in 3D eine Laterne stünde"): EINE Lichtquelle statt verstreuter Punkte. Straßenlaterne
+  // oben rechts im schwarzen Bereich, breiter weicher Lichtkegel schräg nach unten-links. Nur bei tiefer Nacht.
   try {
     var _tzNacht = (typeof _aktTageszeitName === 'function') ? (_aktTageszeitName() === 'nacht') : false;
     if (_tzNacht) {
-      // Positionen am äußeren Rand der viewBox (12 14 384 252 -> x 12..396, y 14..266), weg von den Ortspunkten
-      var _laternen = [[26,30],[380,28],[24,250],[384,252],[200,20],[28,140],[384,150]];
-      _laternen.forEach(function(p){
-        svg += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="8" fill="#ffd98a" opacity="0.07" pointer-events="none"/>';
-      });
+      // Gradient für den Lichtkegel: warm/hell an der Lampe (oben rechts), sanft ausfadend zur Karte hin
+      svg += '<defs><radialGradient id="laternenLicht" cx="0.85" cy="0.12" r="0.9">'
+        + '<stop offset="0%" stop-color="#ffe7b0" stop-opacity="0.30"/>'
+        + '<stop offset="35%" stop-color="#ffd98a" stop-opacity="0.13"/>'
+        + '<stop offset="70%" stop-color="#ffd98a" stop-opacity="0.04"/>'
+        + '<stop offset="100%" stop-color="#ffd98a" stop-opacity="0"/>'
+        + '</radialGradient></defs>';
+      // Lichtkegel: breites Dreieck/Keil von der Laterne (oben rechts) schräg über die Karte nach unten-links
+      svg += '<polygon points="372,22 408,40 300,266 150,266" fill="url(#laternenLicht)" pointer-events="none"/>';
+      // Die Straßenlaterne selbst, oben rechts im dunklen Bereich (angedeutet, schlicht): Mast + gebogener Arm + Kopf
+      svg += '<g pointer-events="none" opacity="0.9">'
+        // Mast (senkrecht, vom oberen Rand nach unten kurz)
+        + '<line x1="388" y1="16" x2="388" y2="62" stroke="#5a5246" stroke-width="2.2" stroke-linecap="round"/>'
+        // gebogener Arm nach links zur Lampe
+        + '<path d="M388 22 Q370 16 366 26" fill="none" stroke="#5a5246" stroke-width="2" stroke-linecap="round"/>'
+        // Lampenkopf (kleines Gehäuse) + heller Leuchtpunkt
+        + '<path d="M362 24 L370 24 L368 32 L364 32 Z" fill="#3a352c" stroke="#6a6052" stroke-width="0.6"/>'
+        + '<circle cx="366" cy="29" r="2.4" fill="#ffe7b0" opacity="0.95"/>'
+        + '<circle cx="366" cy="29" r="5" fill="#ffe7b0" opacity="0.25"/>'
+        + '</g>';
     }
   } catch (e) {}
   svg += '</svg>';
