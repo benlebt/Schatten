@@ -3307,7 +3307,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.829</div>
+    <div class="start-version">Schatten v7.12.830</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3533,7 +3533,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.829</span>
+    <span>Schatten v7.12.830</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5559,17 +5559,25 @@ const INTRO_VARIANTS = [
           // robuste Graph-Engine. Jeder Knoten: title, svg (Platzhalter-Ansicht), exits[{label,to}], optional
           // npcs[] (hier ansprechbar), hotspots[] (hier findbar), abStage. start: Einstiegsknoten.
           // Bilder kommen ERST wenn der Loop trägt (Stufe 3) - jetzt reine SVG-Liniengrafik.
-          explorationGraph: {
-            start: 'hof',
-            nodes: {
-              hof: { title: 'Im Hof', svg: 'hof', npcs: ['frau_pohl'], hotspots: ['robert_eintritt_beobachtet','fenster_beobachtung'],
-                exits: [{ label: 'Zum Hauseingang', to: 'hauseingang' }] },
-              hauseingang: { title: 'Hauseingang', svg: 'tuer',
-                exits: [{ label: 'Ins Treppenhaus', to: 'treppenhaus' }, { label: 'Zurück in den Hof', to: 'hof' }] },
-              treppenhaus: { title: 'Treppenhaus', svg: 'treppe', hotspots: ['tuerschild_hauke'],
-                exits: [{ label: 'Hinauf in den 3. Stock', to: 'dritter_stock' }, { label: 'Hinab zum Hauseingang', to: 'hauseingang' }] },
-              dritter_stock: { title: '3. Stock - vor Ilses Tür', svg: 'wohnungstuer', abStage: 2, npcs: ['ilse_hauke'],
-                exits: [{ label: 'Zurück ins Treppenhaus', to: 'treppenhaus' }] },
+          // v7.12.830 (Erkundungs-Modus Gitter, Benjamin: "echte Bard's-Tale-Bewegung"): Ego-Perspektive im
+          // Gitter. grid: Zeilen von oben(Norden) nach unten(Süden); '#'=Wand, '.'=begehbar, Buchstaben=besondere
+          // Zellen (in zellen[] definiert). start: {x,y,blick} (blick: N/O/S/W). Karl bewegt sich vor/dreht.
+          explorationGrid: {
+            grid: [
+              '##T##',
+              '#...#',
+              '##.##',
+              '#H..#',
+              '#..F#',
+              '#.S.#',
+            ],
+            start: { x: 2, y: 5, blick: 'N' },
+            // Besondere Zellen: Symbol -> was dort ist. npc/hotspots greifen wie bisher; tuer/abStage gaten.
+            zellen: {
+              'S': { titel: 'Hofeinfahrt', svg: 'hof' },
+              'F': { titel: 'Am Erdgeschossfenster', svg: 'fenster', npcs: ['frau_pohl'], hotspots: ['robert_eintritt_beobachtet','fenster_beobachtung'] },
+              'H': { titel: 'Hauseingang / Klingelschilder', svg: 'tuer', hotspots: ['tuerschild_hauke'] },
+              'T': { titel: '3. Stock - vor Ilses Tür', svg: 'wohnungstuer', abStage: 2, npcs: ['ilse_hauke'], tuer: true },
             }
           },
           indizien: [
@@ -6934,18 +6942,11 @@ function _hundVerfuegbarHier() {
 function _hundInParty() { try { return !!(caseProgress && caseProgress.hundInParty); } catch (e) { return false; } }
 // ============ Ende WACHHUND-Helper ============
 
-// ============ ERKUNDUNGS-MODUS (v7.12.826, Stufe 0/1) ============
-// Begehbarer Schauplatz-Graph im Bard's-Tale-Stil. Graph statt Gitter (ChatGPT-Schärfung): robust, mobil-tauglich.
-// Stufe 1: Bewegung über Ausgänge + SVG-Platzhalter-Ansicht + Aufmerksamkeit + node-gebundene Funde/NPCs.
-// Begegnungen/Arena-Brücke/verschlossene Wege kommen in Stufe 2. Echte Bilder in Stufe 3 (nur wenn der Loop trägt).
+// ============ ERKUNDUNGS-MODUS GITTER (v7.12.830, Bard's-Tale-Stil) ============
+// Ego-Perspektive im Gitter. Karl hat Position (x,y) + Blickrichtung (N/O/S/W). Bewegung: vor/zurück/drehen.
+// Darstellung: prozedurale SVG-Korridor-Perspektive aus dem, was vor Karl liegt (Wand/offen/Tür je Richtung).
+// Spiel-Logik (NPCs/Hotspots/Aufmerksamkeit/Funde) wie bisher, nur an die Zelle statt an einen Knoten gebunden.
 
-// Aktueller Schauplatz hat einen explorationGraph?
-function _hatExploration() {
-  try {
-    const loc = _expLocationObj();
-    return !!(loc && loc.explorationGraph && loc.explorationGraph.nodes);
-  } catch (e) { return false; }
-}
 function _expLocationObj() {
   try {
     if (!engineCurrentLocation || !engineCurrentLocation.name) return null;
@@ -6953,35 +6954,65 @@ function _expLocationObj() {
     return locs.find(l => l && normForMatch(l.name) === normForMatch(engineCurrentLocation.name)) || null;
   } catch (e) { return null; }
 }
-function _expGraph() { const loc = _expLocationObj(); return (loc && loc.explorationGraph) ? loc.explorationGraph : null; }
-// Aktueller Knoten-Key (Fallback: Start-Knoten).
-function _expNodeKey() {
-  const g = _expGraph(); if (!g || !g.nodes) return null;
-  let cur = caseProgress && caseProgress.aktuellerExplorationNode;
-  if (cur && g.nodes[cur]) return cur;
-  return g.start && g.nodes[g.start] ? g.start : Object.keys(g.nodes)[0];
+function _expGrid() { const loc = _expLocationObj(); return (loc && loc.explorationGrid && Array.isArray(loc.explorationGrid.grid)) ? loc.explorationGrid : null; }
+function _hatExploration() { return !!_expGrid(); }
+// Aktuelle Position/Blick (Fallback: start).
+function _expPos() {
+  const g = _expGrid(); if (!g) return null;
+  let p = caseProgress && caseProgress.explorationPos;
+  if (p && typeof p.x === 'number' && typeof p.y === 'number' && p.blick) return p;
+  const s = g.start || { x: 0, y: 0, blick: 'N' };
+  return { x: s.x, y: s.y, blick: s.blick || 'N' };
 }
-function _expNode() { const g = _expGraph(); const k = _expNodeKey(); return (g && k) ? g.nodes[k] : null; }
-// Ein Ausgang ist begehbar, wenn der Zielknoten existiert + sein abStage erfüllt ist.
-function _expExitBegehbar(exit) {
+// Zeichen an Gitter-Zelle (x,y). Außerhalb / Wand -> '#'.
+function _expZeichenAt(g, x, y) {
   try {
-    const g = _expGraph(); if (!g || !exit || !g.nodes[exit.to]) return false;
-    const ziel = g.nodes[exit.to];
+    if (!g || y < 0 || y >= g.grid.length) return '#';
+    const row = g.grid[y];
+    if (x < 0 || x >= row.length) return '#';
+    return row[x];
+  } catch (e) { return '#'; }
+}
+// Ist die Zelle (x,y) begehbar? Wand '#' nicht; Tür-Zellen nur wenn abStage erfüllt.
+function _expBegehbar(g, x, y) {
+  const z = _expZeichenAt(g, x, y);
+  if (z === '#' || z === ' ') return false;
+  // besondere Zelle mit abStage?
+  const def = g.zellen && g.zellen[z];
+  if (def && typeof def.abStage === 'number') {
     const stg = (caseProgress && typeof caseProgress.stage === 'number') ? caseProgress.stage : 0;
-    if (typeof ziel.abStage === 'number' && stg < ziel.abStage) return false;
-    return true;
-  } catch (e) { return false; }
+    if (stg < def.abStage) return false;
+  }
+  return true;
 }
-// Aufmerksamkeit erhöhen/senken (0-100). Differenzierte Kosten (ChatGPT): Erkunden darf nicht bestraft werden.
+// Zell-Definition an der aktuellen Position (oder null).
+function _expZelleAktuell() {
+  const g = _expGrid(); if (!g) return null;
+  const p = _expPos(); if (!p) return null;
+  const z = _expZeichenAt(g, p.x, p.y);
+  return (g.zellen && g.zellen[z]) ? g.zellen[z] : null;
+}
+// Richtungs-Vektoren + Drehen
+const _EXP_DIR = { N: { dx: 0, dy: -1 }, O: { dx: 1, dy: 0 }, S: { dx: 0, dy: 1 }, W: { dx: -1, dy: 0 } };
+const _EXP_LINKS = { N: 'W', W: 'S', S: 'O', O: 'N' };
+const _EXP_RECHTS = { N: 'O', O: 'S', S: 'W', W: 'N' };
+// Was liegt relativ zu Blickrichtung voraus/links/rechts? -> 'wand' | 'offen' | 'tuer'
+function _expNachbar(g, p, richtung) {
+  let blick = p.blick;
+  if (richtung === 'links') blick = _EXP_LINKS[blick];
+  else if (richtung === 'rechts') blick = _EXP_RECHTS[blick];
+  const v = _EXP_DIR[blick];
+  const nx = p.x + v.dx, ny = p.y + v.dy;
+  const z = _expZeichenAt(g, nx, ny);
+  if (z === '#' || z === ' ') return 'wand';
+  const def = g.zellen && g.zellen[z];
+  if (def && def.tuer) return 'tuer';
+  return 'offen';
+}
+// Aufmerksamkeit
 function _aufmerksamkeitAendern(delta) {
-  try {
-    if (!caseProgress) return;
-    let a = (typeof caseProgress.aufmerksamkeit === 'number') ? caseProgress.aufmerksamkeit : 0;
-    a = Math.max(0, Math.min(100, a + delta));
-    caseProgress.aufmerksamkeit = a;
-  } catch (e) {}
+  try { if (!caseProgress) return; let a = (typeof caseProgress.aufmerksamkeit === 'number') ? caseProgress.aufmerksamkeit : 0; caseProgress.aufmerksamkeit = Math.max(0, Math.min(100, a + delta)); } catch (e) {}
 }
-// Atmosphärische Aufmerksamkeits-Stufe (ChatGPT: keine Zahl zeigen).
 function _aufmerksamkeitStufe() {
   const a = (caseProgress && typeof caseProgress.aufmerksamkeit === 'number') ? caseProgress.aufmerksamkeit : 0;
   if (a >= 85) return { label: 'Gefahr', farbe: '#c0392b', icon: '⚠' };
@@ -6990,187 +7021,163 @@ function _aufmerksamkeitStufe() {
   if (a >= 18) return { label: 'Unbehagen', farbe: '#9a8a5a', icon: '◕' };
   return { label: 'Ruhe', farbe: '#6f8a5a', icon: '○' };
 }
-// Wechselt zum Zielknoten (Bewegung). Erhöht Aufmerksamkeit (nachts +1 extra). Gibt {ok} zurück.
-function _expBewege(toKey) {
-  try {
-    const g = _expGraph(); if (!g || !g.nodes[toKey]) return { ok: false };
-    const ziel = g.nodes[toKey];
-    const stg = (caseProgress && typeof caseProgress.stage === 'number') ? caseProgress.stage : 0;
-    if (typeof ziel.abStage === 'number' && stg < ziel.abStage) return { ok: false };
-    caseProgress.aktuellerExplorationNode = toKey;
-    if (!caseProgress.besuchteExplorationNodes) caseProgress.besuchteExplorationNodes = {};
-    const nodeKey = normForMatch(engineCurrentLocation.name) + ':' + toKey;
-    caseProgress.besuchteExplorationNodes[nodeKey] = true;
-    // Bewegung kostet wenig Aufmerksamkeit (+1), nachts +1 extra.
-    let kosten = 1;
-    try { const tz = (typeof _aktTageszeitName === 'function') ? normForMatch(_aktTageszeitName()) : ''; if (tz === 'nacht') kosten += 1; } catch (e) {}
-    _aufmerksamkeitAendern(kosten);
-    return { ok: true };
-  } catch (e) { return { ok: false }; }
+// Bewegung vorwärts (in Blickrichtung), wenn begehbar. Erhöht Aufmerksamkeit.
+function _expVor() {
+  const g = _expGrid(); if (!g) return { ok: false };
+  const p = _expPos();
+  const v = _EXP_DIR[p.blick];
+  const nx = p.x + v.dx, ny = p.y + v.dy;
+  if (!_expBegehbar(g, nx, ny)) return { ok: false, wand: true };
+  caseProgress.explorationPos = { x: nx, y: ny, blick: p.blick };
+  if (!caseProgress.besuchteExplorationNodes) caseProgress.besuchteExplorationNodes = {};
+  caseProgress.besuchteExplorationNodes[normForMatch(engineCurrentLocation.name) + ':' + nx + ',' + ny] = true;
+  let kosten = 1;
+  try { const tz = (typeof _aktTageszeitName === 'function') ? normForMatch(_aktTageszeitName()) : ''; if (tz === 'nacht') kosten += 1; } catch (e) {}
+  _aufmerksamkeitAendern(kosten);
+  return { ok: true };
 }
-// SVG-Platzhalter-Ansichten (Schwarzweiß-Liniengrafik). Werden in Stufe 3 durch echte Noir-Bilder ersetzt.
-function _expSvgAnsicht(svgKey) {
-  const stroke = '#b3a47e';
-  const dim = '#6f6650';
-  const bg = 'rgba(20,16,10,0.55)';
-  const head = '<svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;border:1px solid rgba(138,122,88,0.3);border-radius:6px;background:' + bg + ';">';
-  const foot = '</svg>';
-  let body = '';
-  if (svgKey === 'hof') {
-    // Hinterhof: Mauern, Mülltonnen, Wäscheleine, Pflaster-Andeutung
-    body =
-      '<rect x="0" y="0" width="320" height="120" fill="none"/>' +
-      '<line x1="0" y1="120" x2="320" y2="120" stroke="' + stroke + '" stroke-width="1.5"/>' +
-      '<line x1="40" y1="20" x2="40" y2="120" stroke="' + dim + '" stroke-width="1"/>' +
-      '<line x1="280" y1="20" x2="280" y2="120" stroke="' + dim + '" stroke-width="1"/>' +
-      '<line x1="0" y1="135" x2="320" y2="135" stroke="' + dim + '" stroke-width="0.5"/>' +
-      '<line x1="0" y1="155" x2="320" y2="155" stroke="' + dim + '" stroke-width="0.5"/>' +
-      // Wäscheleine
-      '<line x1="60" y1="35" x2="260" y2="48" stroke="' + dim + '" stroke-width="0.8" stroke-dasharray="3,4"/>' +
-      // Mülltonnen
-      '<rect x="120" y="92" width="24" height="28" rx="2" fill="none" stroke="' + stroke + '" stroke-width="1.3"/>' +
-      '<rect x="150" y="96" width="22" height="24" rx="2" fill="none" stroke="' + stroke + '" stroke-width="1.3"/>' +
-      // Fenster Erdgeschoss
-      '<rect x="200" y="60" width="30" height="34" fill="none" stroke="' + dim + '" stroke-width="1"/>' +
-      '<line x1="215" y1="60" x2="215" y2="94" stroke="' + dim + '" stroke-width="0.6"/>';
-  } else if (svgKey === 'tuer') {
-    body =
-      '<line x1="0" y1="150" x2="320" y2="150" stroke="' + stroke + '" stroke-width="1.5"/>' +
-      '<rect x="120" y="40" width="80" height="110" rx="3" fill="none" stroke="' + stroke + '" stroke-width="1.6"/>' +
-      '<line x1="160" y1="40" x2="160" y2="150" stroke="' + dim + '" stroke-width="0.8"/>' +
-      '<circle cx="150" cy="100" r="2.5" fill="' + stroke + '"/>' +
-      '<circle cx="170" cy="100" r="2.5" fill="' + stroke + '"/>' +
-      // Stufen davor
-      '<line x1="100" y1="150" x2="220" y2="150" stroke="' + dim + '" stroke-width="1"/>' +
-      '<line x1="92" y1="160" x2="228" y2="160" stroke="' + dim + '" stroke-width="1"/>';
-  } else if (svgKey === 'treppe') {
-    // Treppenhaus: aufsteigende Stufen + Glühbirne
-    body =
-      '<circle cx="160" cy="22" r="5" fill="none" stroke="' + stroke + '" stroke-width="1"/>' +
-      '<line x1="160" y1="0" x2="160" y2="17" stroke="' + dim + '" stroke-width="0.8"/>' +
-      // perspektivische Stufen
-      '<polygon points="70,150 250,150 215,128 105,128" fill="none" stroke="' + stroke + '" stroke-width="1.2"/>' +
-      '<polygon points="105,128 215,128 192,108 128,108" fill="none" stroke="' + stroke + '" stroke-width="1.1"/>' +
-      '<polygon points="128,108 192,108 178,92 142,92" fill="none" stroke="' + dim + '" stroke-width="1"/>' +
-      '<polygon points="142,92 178,92 170,80 150,80" fill="none" stroke="' + dim + '" stroke-width="0.9"/>' +
-      // Geländer
-      '<line x1="70" y1="150" x2="150" y2="80" stroke="' + dim + '" stroke-width="0.8"/>' +
-      '<line x1="250" y1="150" x2="170" y2="80" stroke="' + dim + '" stroke-width="0.8"/>';
-  } else if (svgKey === 'wohnungstuer') {
-    body =
-      '<line x1="0" y1="155" x2="320" y2="155" stroke="' + stroke + '" stroke-width="1.5"/>' +
-      '<rect x="110" y="30" width="100" height="125" rx="2" fill="none" stroke="' + stroke + '" stroke-width="1.8"/>' +
-      // Türfüllungen
-      '<rect x="122" y="44" width="76" height="42" fill="none" stroke="' + dim + '" stroke-width="0.8"/>' +
-      '<rect x="122" y="96" width="76" height="48" fill="none" stroke="' + dim + '" stroke-width="0.8"/>' +
-      '<circle cx="195" cy="100" r="3" fill="' + stroke + '"/>' +
-      // Türschild
-      '<rect x="135" y="22" width="50" height="12" fill="none" stroke="' + stroke + '" stroke-width="1"/>' +
-      '<line x1="142" y1="28" x2="178" y2="28" stroke="' + dim + '" stroke-width="0.8"/>' +
-      // Lichtstreifen unter der Tür
-      '<line x1="112" y1="153" x2="208" y2="153" stroke="#d8c98a" stroke-width="1.4" opacity="0.7"/>';
+// Rückwärts (ohne Drehen, ein Feld zurück).
+function _expZurueck() {
+  const g = _expGrid(); if (!g) return { ok: false };
+  const p = _expPos();
+  const v = _EXP_DIR[p.blick];
+  const nx = p.x - v.dx, ny = p.y - v.dy;
+  if (!_expBegehbar(g, nx, ny)) return { ok: false, wand: true };
+  caseProgress.explorationPos = { x: nx, y: ny, blick: p.blick };
+  _aufmerksamkeitAendern(1);
+  return { ok: true };
+}
+// Drehen
+function _expDrehe(richtung) {
+  const p = _expPos(); if (!p) return;
+  const neu = (richtung === 'links') ? _EXP_LINKS[p.blick] : _EXP_RECHTS[p.blick];
+  caseProgress.explorationPos = { x: p.x, y: p.y, blick: neu };
+}
+// Prozedurale SVG-Korridor-Perspektive: zeichnet aus voraus/links/rechts (wand/offen/tuer) eine Ego-Ansicht.
+function _expSvgPerspektive(vorne, links, rechts, bodenSvgKey) {
+  const stroke = '#b3a47e', dim = '#6f6650', tief = '#4a4334';
+  const bg = 'rgba(14,11,7,0.6)';
+  const W = 320, H = 200;
+  // Fluchtpunkt-Rahmen: äußerer Rand = nah, innerer Rahmen = fern.
+  const ix1 = 96, iy1 = 58, ix2 = 224, iy2 = 150; // innerer Rahmen (ferne Wand / offener Gang)
+  let s = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;border:1px solid rgba(138,122,88,0.3);border-radius:6px;background:' + bg + ';">';
+  // Boden + Decke (immer)
+  s += '<line x1="0" y1="0" x2="' + ix1 + '" y2="' + iy1 + '" stroke="' + dim + '" stroke-width="1"/>';
+  s += '<line x1="' + W + '" y1="0" x2="' + ix2 + '" y2="' + iy1 + '" stroke="' + dim + '" stroke-width="1"/>';
+  s += '<line x1="0" y1="' + H + '" x2="' + ix1 + '" y2="' + iy2 + '" stroke="' + dim + '" stroke-width="1"/>';
+  s += '<line x1="' + W + '" y1="' + H + '" x2="' + ix2 + '" y2="' + iy2 + '" stroke="' + dim + '" stroke-width="1"/>';
+  // Linke Wand oder offener Seitengang
+  if (links === 'wand') {
+    s += '<line x1="' + ix1 + '" y1="' + iy1 + '" x2="' + ix1 + '" y2="' + iy2 + '" stroke="' + stroke + '" stroke-width="1.3"/>';
   } else {
-    body = '<rect x="60" y="50" width="200" height="80" fill="none" stroke="' + stroke + '" stroke-width="1" stroke-dasharray="4,4"/>' +
-      '<text x="160" y="95" text-anchor="middle" fill="' + dim + '" font-size="12" font-family="serif">Ansicht</text>';
+    // offener Seitengang links: dunkle Lücke
+    s += '<rect x="0" y="' + iy1 + '" width="' + ix1 + '" height="' + (iy2 - iy1) + '" fill="rgba(0,0,0,0.25)"/>';
+    s += '<line x1="' + ix1 + '" y1="' + iy1 + '" x2="' + ix1 + '" y2="' + iy2 + '" stroke="' + dim + '" stroke-width="0.7" stroke-dasharray="3,3"/>';
+    if (links === 'tuer') s += '<rect x="20" y="' + (iy1 + 12) + '" width="40" height="' + (iy2 - iy1 - 24) + '" fill="none" stroke="' + stroke + '" stroke-width="1.4"/>';
   }
-  return head + body + foot;
+  // Rechte Wand oder offener Seitengang
+  if (rechts === 'wand') {
+    s += '<line x1="' + ix2 + '" y1="' + iy1 + '" x2="' + ix2 + '" y2="' + iy2 + '" stroke="' + stroke + '" stroke-width="1.3"/>';
+  } else {
+    s += '<rect x="' + ix2 + '" y="' + iy1 + '" width="' + (W - ix2) + '" height="' + (iy2 - iy1) + '" fill="rgba(0,0,0,0.25)"/>';
+    s += '<line x1="' + ix2 + '" y1="' + iy1 + '" x2="' + ix2 + '" y2="' + iy2 + '" stroke="' + dim + '" stroke-width="0.7" stroke-dasharray="3,3"/>';
+    if (rechts === 'tuer') s += '<rect x="' + (W - 60) + '" y="' + (iy1 + 12) + '" width="40" height="' + (iy2 - iy1 - 24) + '" fill="none" stroke="' + stroke + '" stroke-width="1.4"/>';
+  }
+  // Voraus: Wand (geschlossen), offener Gang (Tiefe), oder Tür
+  if (vorne === 'wand') {
+    s += '<rect x="' + ix1 + '" y="' + iy1 + '" width="' + (ix2 - ix1) + '" height="' + (iy2 - iy1) + '" fill="rgba(0,0,0,0.15)" stroke="' + stroke + '" stroke-width="1.4"/>';
+    // angedeutete Mauerstruktur
+    s += '<line x1="' + ix1 + '" y1="' + ((iy1 + iy2) / 2) + '" x2="' + ix2 + '" y2="' + ((iy1 + iy2) / 2) + '" stroke="' + dim + '" stroke-width="0.6"/>';
+  } else if (vorne === 'tuer') {
+    s += '<rect x="' + ix1 + '" y="' + iy1 + '" width="' + (ix2 - ix1) + '" height="' + (iy2 - iy1) + '" fill="rgba(0,0,0,0.15)" stroke="' + dim + '" stroke-width="0.8"/>';
+    const tw = 46, tx = (W - tw) / 2;
+    s += '<rect x="' + tx + '" y="' + (iy1 + 8) + '" width="' + tw + '" height="' + (iy2 - iy1 - 12) + '" fill="rgba(0,0,0,0.3)" stroke="' + stroke + '" stroke-width="1.6"/>';
+    s += '<circle cx="' + (tx + tw - 8) + '" cy="' + ((iy1 + iy2) / 2) + '" r="2.5" fill="' + stroke + '"/>';
+    s += '<line x1="' + tx + '" y1="' + (iy2 - 5) + '" x2="' + (tx + tw) + '" y2="' + (iy2 - 5) + '" stroke="#d8c98a" stroke-width="1.2" opacity="0.6"/>';
+  } else {
+    // offener Gang: weitere Tiefe (zweiter, kleinerer Rahmen)
+    const jx1 = 134, jy1 = 84, jx2 = 186, jy2 = 124;
+    s += '<line x1="' + ix1 + '" y1="' + iy1 + '" x2="' + jx1 + '" y2="' + jy1 + '" stroke="' + dim + '" stroke-width="0.7"/>';
+    s += '<line x1="' + ix2 + '" y1="' + iy1 + '" x2="' + jx2 + '" y2="' + jy1 + '" stroke="' + dim + '" stroke-width="0.7"/>';
+    s += '<line x1="' + ix1 + '" y1="' + iy2 + '" x2="' + jx1 + '" y2="' + jy2 + '" stroke="' + dim + '" stroke-width="0.7"/>';
+    s += '<line x1="' + ix2 + '" y1="' + iy2 + '" x2="' + jx2 + '" y2="' + jy2 + '" stroke="' + dim + '" stroke-width="0.7"/>';
+    s += '<rect x="' + jx1 + '" y="' + jy1 + '" width="' + (jx2 - jx1) + '" height="' + (jy2 - jy1) + '" fill="rgba(0,0,0,0.4)" stroke="' + tief + '" stroke-width="0.8"/>';
+  }
+  s += '</svg>';
+  return s;
 }
-// ============ Ende ERKUNDUNGS-MODUS ============
-// v7.12.826: rendert die Erkundungs-Ansicht (SVG-Platzhalter + Aufmerksamkeit + Ausgänge) in den Container.
+// ============ Ende ERKUNDUNGS-MODUS GITTER ============
+// v7.12.830: rendert die Ego-Ansicht (SVG-Perspektive + Aufmerksamkeit) + Bewegungs-Buttons (drehen/vor).
 function _renderExploration(container) {
   try {
     if (!container || !_hatExploration()) return;
-    if (typeof diag === 'function') diag('state', '🧭 EXPLORATION-RENDER: ' + (engineCurrentLocation ? engineCurrentLocation.name : '?') + ' @ Knoten ' + _expNodeKey());
-    const g = _expGraph();
-    // v7.12.827 (Benjamin: bewusster Eintritt): Noch nicht betreten -> Eintritts-Ansicht (Stimmung + "betreten"-Knopf).
+    const g = _expGrid();
+    const p = _expPos();
+    if (!p) return;
+    // Eintritts-Ansicht (bewusster Start)
     if (!caseProgress._explorationBetreten) {
       const eingang = document.createElement('div');
       eingang.style.cssText = 'margin:4px 0 12px;padding:14px;border:1px solid rgba(138,122,88,0.35);border-radius:8px;background:linear-gradient(180deg,rgba(40,34,24,0.5),rgba(0,0,0,0));text-align:center;';
-      const startNode = g.nodes[g.start] || g.nodes[Object.keys(g.nodes)[0]];
-      const svgKey = startNode ? startNode.svg : '';
-      const sv = document.createElement('div'); sv.style.cssText = 'margin-bottom:10px;opacity:0.85;'; sv.innerHTML = _expSvgAnsicht(svgKey);
+      const sv = document.createElement('div'); sv.style.cssText = 'margin-bottom:10px;opacity:0.85;'; sv.innerHTML = _expSvgPerspektive('offen', 'wand', 'wand', '');
       eingang.appendChild(sv);
       const txt = document.createElement('div');
       txt.style.cssText = 'color:#b3a888;font-size:calc(13px * var(--reading-scale));font-style:italic;line-height:1.5;margin-bottom:12px;';
-      txt.textContent = 'Vor dir liegt der ' + (engineCurrentLocation ? engineCurrentLocation.name : 'Schauplatz') + '. Du kannst ihn Schritt für Schritt absuchen - aber je länger du dich aufhältst, desto eher fällt es auf.';
+      txt.textContent = 'Vor dir liegt der ' + (engineCurrentLocation ? engineCurrentLocation.name : 'Schauplatz') + '. Du kannst ihn Schritt für Schritt durchstreifen - aber je länger du dich aufhältst, desto eher fällt es auf.';
       eingang.appendChild(txt);
       const btn = document.createElement('button');
       btn.className = 'option-btn option-btn-system';
       btn.style.cssText = 'display:block;width:100%;text-align:left;';
-      btn.innerHTML = '<span class="option-text-wrap"><span>🚪 ' + escapeHtml((engineCurrentLocation ? engineCurrentLocation.name.split(' ')[0] : 'Den Ort') ) + ' betreten und absuchen</span><span class="option-marker option-marker-system">· los</span></span>';
-      const _enter = () => {
-        caseProgress._explorationBetreten = true;
-        if (!caseProgress.aktuellerExplorationNode) caseProgress.aktuellerExplorationNode = g.start;
-        if (typeof renderOptions === 'function' && typeof currentScene === 'object' && currentScene) renderOptions(currentScene);
-      };
+      btn.innerHTML = '<span class="option-text-wrap"><span>🚪 ' + escapeHtml((engineCurrentLocation ? engineCurrentLocation.name.split(' ')[0] : 'Den Ort')) + ' betreten</span><span class="option-marker option-marker-system">· los</span></span>';
+      const _enter = () => { caseProgress._explorationBetreten = true; if (typeof renderOptions === 'function' && currentScene) renderOptions(currentScene); };
       if (typeof attachSafeTap === 'function') attachSafeTap(btn, _enter); else btn.onclick = _enter;
       eingang.appendChild(btn);
       container.appendChild(eingang);
-      return; // noch nicht die begehbare Ansicht zeigen
+      return;
     }
-    const nodeKey = _expNodeKey();
-    const node = g.nodes[nodeKey];
-    if (!node) return;
-    // Besuch registrieren
-    if (!caseProgress.besuchteExplorationNodes) caseProgress.besuchteExplorationNodes = {};
-    caseProgress.besuchteExplorationNodes[normForMatch(engineCurrentLocation.name) + ':' + nodeKey] = true;
-    if (caseProgress.aktuellerExplorationNode !== nodeKey) caseProgress.aktuellerExplorationNode = nodeKey;
-
     const wrap = document.createElement('div');
     wrap.style.cssText = 'margin:4px 0 12px;';
-    // SVG-Ansicht
-    const view = document.createElement('div');
-    view.style.cssText = 'margin-bottom:6px;';
-    view.innerHTML = _expSvgAnsicht(node.svg);
+    // SVG-Perspektive aus dem, was vor/links/rechts liegt
+    const vorne = _expNachbar(g, p, 'vorne');
+    const links = _expNachbar(g, p, 'links');
+    const rechts = _expNachbar(g, p, 'rechts');
+    const zelle = _expZelleAktuell();
+    const view = document.createElement('div'); view.style.cssText = 'margin-bottom:6px;position:relative;';
+    view.innerHTML = _expSvgPerspektive(vorne, links, rechts, zelle ? zelle.svg : '');
     wrap.appendChild(view);
-    // Kopfzeile: Knotenname + Aufmerksamkeit (atmosphärisch)
+    // Kopfzeile: Ort/Zelle + Aufmerksamkeit
     const stufe = _aufmerksamkeitStufe();
+    const himmelsR = { N: 'Norden', O: 'Osten', S: 'Süden', W: 'Westen' };
     const kopf = document.createElement('div');
     kopf.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding:0 2px;';
-    kopf.innerHTML = '<span style="color:#cbbfa9;font-size:calc(12px * var(--reading-scale));letter-spacing:0.08em;text-transform:uppercase;">◈ ' + escapeHtml(node.title || '') + '</span>'
+    kopf.innerHTML = '<span style="color:#cbbfa9;font-size:calc(12px * var(--reading-scale));letter-spacing:0.06em;">◈ ' + escapeHtml(zelle && zelle.titel ? zelle.titel : 'Blick nach ' + himmelsR[p.blick]) + '</span>'
       + '<span style="color:' + stufe.farbe + ';font-size:calc(11px * var(--reading-scale));">' + stufe.icon + ' ' + stufe.label + '</span>';
     wrap.appendChild(kopf);
-    // Bewegungs-Ausgänge
-    const exits = Array.isArray(node.exits) ? node.exits : [];
-    exits.forEach(ex => {
-      if (!_expExitBegehbar(ex)) return;
-      const btn = document.createElement('button');
-      btn.className = 'option-btn option-btn-system';
-      btn.style.cssText = 'display:block;width:100%;text-align:left;margin:3px 0;';
-      // wartet-Marker: hat der Zielknoten einen offenen Fund / eine ansprechbare Person?
-      let _marker = '· gehen';
-      try {
-        const ziel = g.nodes[ex.to];
-        if (_expNodeHatWas(ziel)) _marker = '· ● etwas dort';
-      } catch (e) {}
-      btn.innerHTML = '<span class="option-text-wrap"><span>→ ' + escapeHtml(ex.label) + '</span><span class="option-marker option-marker-system" style="' + (_marker.indexOf('●') !== -1 ? 'color:#d4b86a;' : '') + '">' + _marker + '</span></span>';
-      const _go = () => {
-        const r = _expBewege(ex.to);
-        if (r && r.ok && typeof renderOptions === 'function' && typeof currentScene === 'object' && currentScene) renderOptions(currentScene);
-      };
-      if (typeof attachSafeTap === 'function') attachSafeTap(btn, _go); else btn.onclick = _go;
-      wrap.appendChild(btn);
-    });
+    // Bewegungs-Buttons: ↰ links | ↑ vor | ↱ rechts  (+ ↓ umdrehen darunter)
+    const navRow = document.createElement('div');
+    navRow.style.cssText = 'display:flex;gap:6px;margin-bottom:4px;';
+    const mkBtn = (label, title, fn, enabled) => {
+      const b = document.createElement('button');
+      b.className = 'option-btn option-btn-system';
+      b.style.cssText = 'flex:1;text-align:center;padding:12px 4px;font-size:calc(18px * var(--reading-scale));' + (enabled ? '' : 'opacity:0.32;');
+      b.innerHTML = '<span style="display:block;">' + label + '</span><span style="font-size:calc(9px * var(--reading-scale));letter-spacing:0.05em;color:#9a8c6e;">' + title + '</span>';
+      if (enabled) { if (typeof attachSafeTap === 'function') attachSafeTap(b, fn); else b.onclick = fn; }
+      return b;
+    };
+    const _reRender = () => { if (typeof renderOptions === 'function' && currentScene) renderOptions(currentScene); };
+    navRow.appendChild(mkBtn('↰', 'drehen', () => { _expDrehe('links'); _reRender(); }, true));
+    navRow.appendChild(mkBtn('↑', 'vor', () => { const r = _expVor(); if (r.ok) _reRender(); else { if (typeof showProgressToast === 'function') showProgressToast('Kein Weg', 'Da ist eine Wand. Karl kann nicht weiter in diese Richtung.', 'info', 'exp-wand'); } }, vorne !== 'wand'));
+    navRow.appendChild(mkBtn('↱', 'drehen', () => { _expDrehe('rechts'); _reRender(); }, true));
+    wrap.appendChild(navRow);
+    // Umdrehen
+    const umBtn = document.createElement('button');
+    umBtn.className = 'option-btn option-btn-system';
+    umBtn.style.cssText = 'display:block;width:100%;text-align:center;padding:7px;font-size:calc(11px * var(--reading-scale));color:#9a8c6e;';
+    umBtn.innerHTML = '↓ umdrehen';
+    const _um = () => { _expDrehe('rechts'); _expDrehe('rechts'); _reRender(); };
+    if (typeof attachSafeTap === 'function') attachSafeTap(umBtn, _um); else umBtn.onclick = _um;
+    wrap.appendChild(umBtn);
     container.appendChild(wrap);
-  } catch (e) { if (typeof diag === 'function') diag('drift', 'Exploration-Render-Fehler: ' + e.message); }
-}
-// Hat ein Knoten gerade etwas Relevantes (offener Fund jetzt erreichbar / ansprechbare Person)?
-function _expNodeHatWas(node) {
-  try {
-    if (!node) return false;
-    const _gef = (caseProgress && Array.isArray(caseProgress.gefundeneIndizIds)) ? caseProgress.gefundeneIndizIds : [];
-    const _stg = (caseProgress && typeof caseProgress.stage === 'number') ? caseProgress.stage : 0;
-    const loc = _expLocationObj();
-    if (loc && Array.isArray(loc.indizien) && Array.isArray(node.hotspots)) {
-      const hat = node.hotspots.some(hid => { const ind = loc.indizien.find(i => i && i.id === hid); if (!ind || _gef.indexOf(ind.id) !== -1) return false; if (typeof ind.abStage === 'number' && _stg < ind.abStage) return false; return true; });
-      if (hat) return true;
-    }
-    if (Array.isArray(node.npcs)) {
-      const hat = node.npcs.some(nid => { try { const _id = _resolveNpcIdentity(nid); return _id && _id.name && typeof _npcHatOffenenHinweis === 'function' && _npcHatOffenenHinweis(_id.name); } catch (e) { return false; } });
-      if (hat) return true;
-    }
-    return false;
-  } catch (e) { return false; }
+  } catch (e) { if (typeof diag === 'function') diag('drift', 'Exploration-Gitter-Render-Fehler: ' + e.message); }
 }
 function getNpcsAtCurrentLocation() {
   if (!engineCurrentLocation) return [];
@@ -7187,7 +7194,7 @@ function getNpcsAtCurrentLocation() {
   // Feste/garantierte NPCs (immer/zeit) - nur wenn der Ort definiert ist.
   // v7.12.826 (Erkundungs-Modus): Hat der Schauplatz einen Graphen, sind NPCs an ihren Knoten gebunden -
   // nur die NPCs des AKTUELLEN Knotens erscheinen (Pohl im Hof, Ilse vor ihrer Tür im 3. Stock).
-  const _expN = (typeof _hatExploration === 'function' && _hatExploration()) ? _expNode() : null;
+  const _expN = (typeof _hatExploration === 'function' && _hatExploration() && caseProgress && caseProgress._explorationBetreten) ? _expZelleAktuell() : null;
   const _expNpcFilter = _expN && Array.isArray(_expN.npcs) ? _expN.npcs.map(n => normForMatch(n)) : (_expN ? [] : null);
   if (loc && Array.isArray(loc.npcs)) {
     for (const entry of loc.npcs) {
@@ -7997,7 +8004,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.829';
+window.SCHATTEN_VERSION = 'v7.12.830';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -10564,9 +10571,9 @@ function _ortsFundIndizienErreichbar() {
     const _stg = (caseProgress && typeof caseProgress.stage === 'number') ? caseProgress.stage : 0;
     // v7.12.826 (Erkundungs-Modus): Hat der Schauplatz einen Graphen, sind Funde an ihren Knoten gebunden -
     // nur die Indizien des AKTUELLEN Knotens auffindbar (Türschild nur im Treppenhaus).
-    const _expNode2 = (typeof _hatExploration === 'function' && _hatExploration()) ? _expNode() : null;
+    const _expNode2 = (typeof _hatExploration === 'function' && _hatExploration() && caseProgress && caseProgress._explorationBetreten) ? _expZelleAktuell() : null;
     const _expHotspotFilter = _expNode2 && Array.isArray(_expNode2.hotspots) ? _expNode2.hotspots.map(h => normForMatch(h)) : (_expNode2 ? [] : null);
-    if (_expNode2 && typeof diag === 'function') diag('state', '🔎 ORTSFUND-FILTER @ Knoten "' + (_expNode2.title || '?') + '": hotspots=[' + (_expNode2.hotspots || []).join(',') + ']');
+    if (_expNode2 && typeof diag === 'function') diag('state', '🔎 ORTSFUND-FILTER @ Zelle "' + (_expNode2.titel || '?') + '": hotspots=[' + (_expNode2.hotspots || []).join(',') + ']');
     return _loc.indizien.filter(ind => {
       if (!ind || !ind.id || _gef.indexOf(ind.id) !== -1) return false;
       if (_expHotspotFilter && _expHotspotFilter.indexOf(normForMatch(ind.id)) === -1) return false;
@@ -11913,9 +11920,9 @@ function createInitialCaseProgress() {
     encounterEnemies: [],        // v7.12.798: Liste der Gegner-Namen (mehrere am Ort -> alle in der Arena)
     encounterRound: 0,           // Rundenzähler (Cap aus Gegnerprofil.kampf.rundenLimit, sonst 3)
     encounterStartedAtLocation: '', // für Konsistenz-Check (Ortwechsel bricht ab)
-    // v7.12.826 (Erkundungs-Modus): aktueller Knoten im explorationGraph (null = Modus nicht aktiv / Start-Knoten
+    // v7.12.830 (Erkundungs-Modus Gitter): Position {x,y,blick} im explorationGrid (null = noch nicht betreten /
     // beim Betreten). besuchteExplorationNodes: für Erstbesuch-Atmo + Bot. aufmerksamkeit: 0-100, Motor des Risikos.
-    aktuellerExplorationNode: null,
+    explorationPos: null,
     besuchteExplorationNodes: {},
     aufmerksamkeit: 0,
     _explorationBetreten: false, // v7.12.827: erst nach bewusstem "betreten"-Klick erscheint die begehbare Ansicht
@@ -22346,7 +22353,7 @@ function reiseZuOrt(loc) {
     const vorher = engineCurrentLocation ? engineCurrentLocation.name : '?';
     engineCurrentLocation = { name: loc.name, sektor: loc.sektor || '' };
     // v7.12.826 (Erkundungs-Modus): neuer Schauplatz -> Knoten + Aufmerksamkeit zurücksetzen.
-    try { if (caseProgress) { caseProgress.aktuellerExplorationNode = null; caseProgress.aufmerksamkeit = 0; caseProgress._explorationBetreten = false; } } catch (e) {}
+    try { if (caseProgress) { caseProgress.explorationPos = null; caseProgress.aufmerksamkeit = 0; caseProgress._explorationBetreten = false; } } catch (e) {}
     _reiseGeradeErfolgt = { name: loc.name, sektor: loc.sektor || '', detail: loc.detail || '' };
     _aktuelleAktionIstReise = true; // v7.12.527: für mechCtx (kein Indiz-Zwang bei Reise)
     _threatLetzterWuerfelOrt = ''; _threatAktiveSpawns = []; // v7.12.532: am Zielort frisch würfeln (beim Szene-Commit)
@@ -24149,7 +24156,7 @@ function baueSicherungsButtons(container) {
             if (_zielLoc && (!engineCurrentLocation || normForMatch(engineCurrentLocation.name) !== normForMatch(_zielLoc.name))) {
               const _vorherOrt = engineCurrentLocation ? engineCurrentLocation.name : '?';
               engineCurrentLocation = { name: _zielLoc.name, sektor: _zielLoc.sektor || '' };
-              try { if (caseProgress) { caseProgress.aktuellerExplorationNode = null; caseProgress.aufmerksamkeit = 0; caseProgress._explorationBetreten = false; } } catch (e) {}
+              try { if (caseProgress) { caseProgress.explorationPos = null; caseProgress.aufmerksamkeit = 0; caseProgress._explorationBetreten = false; } } catch (e) {}
               if (typeof _reiseGeradeErfolgt !== 'undefined') _reiseGeradeErfolgt = { name: _zielLoc.name, sektor: _zielLoc.sektor || '', detail: _zielLoc.detail || '' };
               if (typeof diag === 'function') diag('state', 'SICHERUNG mit Ortswechsel (Engine besitzt Ort): "' + _vorherOrt + '" -> "' + _zielLoc.name + '"');
               if (typeof renderImRaumAnzeige === 'function') { try { renderImRaumAnzeige(); } catch (e) {} }
@@ -28869,11 +28876,11 @@ Wenn Karl waehlt: Schnitt zur naechsten Szene am Morgen, Kaffee zu zweit, keine 
     // MUSS die KI das wissen - nur wer HIER ist, gehört in die Szene. Verhindert "Pohl steht neben Ilse"-Drift.
     try {
       if (typeof _hatExploration === 'function' && _hatExploration()) {
-        const _eN = _expNode();
+        const _eN = _expZelleAktuell();
         if (_eN) {
           const _hier = (typeof getNpcsAtCurrentLocation === 'function') ? getNpcsAtCurrentLocation().map(n => n.name).filter(Boolean) : [];
           timeContext += '\n\n=== AKTUELLE STELLE (PFLICHT, v7.12.826) ===\n'
-            + 'Karl befindet sich an einer bestimmten Stelle von "' + engineCurrentLocation.name + '": ' + (_eN.title || '') + '.'
+            + 'Karl befindet sich an einer bestimmten Stelle von "' + engineCurrentLocation.name + '": ' + (_eN.titel || '') + '.'
             + (_hier.length ? ' Hier präsent: ' + _hier.join(', ') + '.' : ' Hier ist gerade niemand außer Karl.')
             + ' Schreibe die Szene NUR an dieser Stelle. Bringe keine Person ins Bild, die woanders im Gebäude/Ort ist.';
         }
@@ -42725,10 +42732,10 @@ function _migriereCaseSetupOrte() {
         else if (!vorhanden.npc && qi.npc) { vorhanden.npc = qi.npc; ergaenzt++; } // nachträgliche NPC-Bindung
       });
     }
-    // v7.12.827/829 (Benjamin: "Hinterhof zeigt keine Erkundung"): explorationGraph ist STATISCHE Falldefinition
+    // v7.12.827/830 (Benjamin: "Hinterhof zeigt keine Erkundung"): explorationGrid ist STATISCHE Falldefinition
     // (kein Spielfortschritt) - daher bei der Migration IMMER aus der Quelle übernehmen, damit auch ein in einem
     // alten Stand eingefrorener oder veralteter Graph auf den aktuellen Stand kommt.
-    if (qLoc.explorationGraph) { loc.explorationGraph = JSON.parse(JSON.stringify(qLoc.explorationGraph)); ergaenzt++; }
+    if (qLoc.explorationGrid) { loc.explorationGrid = JSON.parse(JSON.stringify(qLoc.explorationGrid)); ergaenzt++; }
   });
   // v7.12.810 (Benjamin: "bei Voss kein Puzzle" - Wurzel: caseSetup wird im Spielstand eingefroren; ein Fall, der
   // VOR den Sozial-Profilen v791/v803/v804 begonnen wurde, trägt die Profile nicht). Cast-Profile nachtragen:
