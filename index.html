@@ -3318,7 +3318,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.838</div>
+    <div class="start-version">Schatten v7.12.839</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3544,7 +3544,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.838</span>
+    <span>Schatten v7.12.839</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7346,32 +7346,35 @@ function _renderExploration(container) {
       if (_bew) { view.className = 'exp-anim-' + _bew; window._expLetzteBewegung = null; }
     } catch (e) {}
     view.innerHTML = _expSvgPerspektive(vorne, links, rechts, zelle ? zelle.svg : '', _feature, { tz: (typeof _aktTageszeitName === 'function' ? _aktTageszeitName() : ''), seed: (p.x * 31 + p.y * 17 + (p.blick.charCodeAt(0) || 0)), fundDa: _fundDa });
-    // Klick-Overlay über der Bildmitte (Feature), wenn vorhanden
-    if (_feature && _featureAktion) {
-      const overlay = document.createElement('button');
-      overlay.setAttribute('aria-label', _feature.typ === 'person' ? 'Person ansprechen' : 'Fund untersuchen');
-      overlay.style.cssText = 'position:absolute;left:34%;top:34%;width:32%;height:55%;background:transparent;border:none;cursor:pointer;border-radius:8px;';
-      overlay.onmouseenter = () => { overlay.style.background = 'rgba(212,184,106,0.10)'; };
-      overlay.onmouseleave = () => { overlay.style.background = 'transparent'; };
-      if (typeof attachSafeTap === 'function') attachSafeTap(overlay, _featureAktion); else overlay.onclick = _featureAktion;
-      view.appendChild(overlay);
-      // kleiner Hinweis-Tooltip unten im Bild
-      const hint = document.createElement('div');
-      hint.style.cssText = 'position:absolute;left:0;right:0;bottom:6px;text-align:center;color:#e8d9a8;font-size:calc(10px * var(--reading-scale));pointer-events:none;text-shadow:0 1px 3px #000;';
-      hint.textContent = _feature.typ === 'person' ? '↑ antippen zum Ansprechen' : '↑ antippen zum Untersuchen';
-      view.appendChild(hint);
+    // v7.12.839: Klickzonen DIREKT im Bild - Person (mittig/seitlich) und Fund (eigene Zone). Keine Buttons unten mehr.
+    const _machZone = (links, breite, label, fn, tip) => {
+      const z = document.createElement('button');
+      z.setAttribute('aria-label', label);
+      z.style.cssText = 'position:absolute;left:' + links + ';top:30%;width:' + breite + ';height:62%;background:transparent;border:none;cursor:pointer;border-radius:8px;';
+      z.onmouseenter = () => { z.style.background = 'rgba(212,184,106,0.10)'; };
+      z.onmouseleave = () => { z.style.background = 'transparent'; };
+      if (typeof attachSafeTap === 'function') attachSafeTap(z, fn); else z.onclick = fn;
+      view.appendChild(z);
+      if (tip) {
+        const h = document.createElement('div');
+        h.style.cssText = 'position:absolute;left:' + links + ';width:' + breite + ';bottom:5px;text-align:center;color:#e8d9a8;font-size:calc(9px * var(--reading-scale));pointer-events:none;text-shadow:0 1px 3px #000;';
+        h.textContent = tip;
+        view.appendChild(h);
+      }
+    };
+    // Person: mittig wenn ansprechbar, seitlich (rechts) wenn zur Seite getreten.
+    if (_feature && _feature.typ === 'person' && _featureAktion) {
+      if (_feature.seite) _machZone('62%', '34%', 'Person ansprechen', _featureAktion, '· antippen');
+      else _machZone('34%', '32%', 'Person ansprechen', _featureAktion, '↑ ansprechen');
+    } else if (_feature && _feature.typ === 'fund' && _featureAktion) {
+      // Fund als Hauptfeature (keine Person hier) - mittige Zone.
+      _machZone('34%', '32%', 'Fund untersuchen', _featureAktion, '↑ untersuchen');
+    }
+    // Zusätzlicher Fund neben der Person (links im Bild, wo der Glanz sitzt).
+    if (_fundDa && _fundAktion) {
+      _machZone('8%', '28%', 'Fund untersuchen', _fundAktion, '🔍 untersuchen');
     }
     wrap.appendChild(view);
-    // v7.12.835: Liegt zusätzlich zur Person ein Fund hier, ein eigener, klar sichtbarer Untersuchen-Knopf
-    // (sonst wäre der Fund nur über den leicht übersehbaren Umsehen-Button unten erreichbar).
-    if (_fundDa && _fundAktion) {
-      const fundBtn = document.createElement('button');
-      fundBtn.className = 'option-btn option-btn-system';
-      fundBtn.style.cssText = 'display:block;width:100%;text-align:left;margin:0 0 6px;border-color:rgba(212,184,106,0.5);';
-      fundBtn.innerHTML = '<span class="option-text-wrap"><span>🔍 Hier umsehen</span><span class="option-marker option-marker-system" style="color:#d4b86a;">· ● Fund</span></span>';
-      if (typeof attachSafeTap === 'function') attachSafeTap(fundBtn, _fundAktion); else fundBtn.onclick = _fundAktion;
-      wrap.appendChild(fundBtn);
-    }
     // Kopfzeile: Ort/Zelle + Aufmerksamkeit
     const stufe = _aufmerksamkeitStufe();
     const himmelsR = { N: 'Norden', O: 'Osten', S: 'Süden', W: 'Westen' };
@@ -7379,8 +7382,9 @@ function _renderExploration(container) {
     kopf.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding:0 2px;';
     kopf.innerHTML = '<span style="color:#cbbfa9;font-size:calc(12px * var(--reading-scale));letter-spacing:0.06em;">◈ ' + escapeHtml(zelle && zelle.titel ? zelle.titel : 'Blick nach ' + himmelsR[p.blick]) + '</span>'
       + '<span style="color:' + stufe.farbe + ';font-size:calc(11px * var(--reading-scale));">' + stufe.icon + ' ' + stufe.label + '</span>';
-    wrap.appendChild(kopf);
-    // v7.12.832: Steht Karl auf einem Feld mit Person/Fund, deutlicher Hinweis (sonst läuft man vorbei).
+    // (kopf wird NACH der navRow angehängt, damit die Bewegungs-Buttons direkt an der Map kleben)
+    // v7.12.832/839: Hinweis wird NACH der navRow angehängt (Buttons kleben an der Map).
+    let _hinweisEl = null;
     try {
       const _hierHinweise = [];
       if (zelle && Array.isArray(zelle.npcs) && zelle.npcs.length) {
@@ -7392,10 +7396,9 @@ function _renderExploration(container) {
         if (_ind.length) _hierHinweise.push('🔎 Hier gibt es etwas zu untersuchen');
       }
       if (_hierHinweise.length) {
-        const hw = document.createElement('div');
-        hw.style.cssText = 'margin:0 2px 8px;padding:6px 9px;border-left:2px solid #d4b86a;background:rgba(212,184,106,0.08);color:#d8cdb4;font-size:calc(11px * var(--reading-scale));line-height:1.5;';
-        hw.innerHTML = _hierHinweise.map(escapeHtml).join('<br>');
-        wrap.appendChild(hw);
+        _hinweisEl = document.createElement('div');
+        _hinweisEl.style.cssText = 'margin:6px 2px 0;padding:6px 9px;border-left:2px solid #d4b86a;background:rgba(212,184,106,0.08);color:#d8cdb4;font-size:calc(11px * var(--reading-scale));line-height:1.5;';
+        _hinweisEl.innerHTML = _hierHinweise.map(escapeHtml).join('<br>');
       }
     } catch (e) {}
     // Bewegungs-Buttons: ↰ links | ↑ vor | ↱ rechts  (+ ↓ umdrehen darunter)
@@ -7426,6 +7429,9 @@ function _renderExploration(container) {
     }
     navRow.appendChild(mkBtn('↱', 'drehen', () => { window._expLetzteBewegung = 'rechts'; _expDrehe('rechts'); _reRender(); }, true));
     wrap.appendChild(navRow);
+    // jetzt erst Kopfzeile + Hinweis (unter den Bewegungs-Buttons, damit diese fest an der Map sitzen)
+    wrap.appendChild(kopf);
+    if (_hinweisEl) wrap.appendChild(_hinweisEl);
     // Umdrehen
     const umBtn = document.createElement('button');
     umBtn.className = 'option-btn option-btn-system';
@@ -8262,7 +8268,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.838';
+window.SCHATTEN_VERSION = 'v7.12.839';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -25469,7 +25475,9 @@ function renderOptions(scene) {
       if (_jetztHolbar > 0 || _spaeterDa > 0) {
         if (typeof diag === 'function') diag('state', '🔎 UMSEHEN-BUTTON @ ' + engineCurrentLocation.name + ': Marker=' + _jetztHolbar + ' (Items:' + _fund.length + ' [' + _fund.map(x => x.name).join(', ') + '] + Indizien:' + _indizErreichbar.length + ' [' + _indizErreichbar.map(x => x.id).join(', ') + ']) · später=' + _spaeterDa);
       }
-      if ((_jetztHolbar > 0 || _spaeterDa > 0) && !karlInStasiCustody) {
+      // v7.12.839: Im betretenen Erkundungs-Modus wird der Fund DIREKT IM BILD angeklickt -> kein Umsehen-Button unten.
+      const _imExpl = (typeof _hatExploration === 'function' && _hatExploration() && caseProgress && caseProgress._explorationBetreten);
+      if ((_jetztHolbar > 0 || _spaeterDa > 0) && !karlInStasiCustody && !_imExpl) {
         const umBtn = document.createElement('button');
         umBtn.className = 'option-btn option-btn-system option-btn-reise';
         const _markerHtml = (_jetztHolbar > 0)
@@ -26330,7 +26338,9 @@ function renderOptions(scene) {
           try { _renderExploration(uebergangBody); } catch (e) {}
         }
         const _np = getNpcsAtCurrentLocation ? getNpcsAtCurrentLocation() : [];
-        if (!_imKampf && _np.length) {
+        // v7.12.839: Im betretenen Erkundungs-Modus werden Personen DIREKT IM BILD angeklickt -> keine Buttons unten.
+        const _imExploration = (typeof _hatExploration === 'function' && _hatExploration() && caseProgress && caseProgress._explorationBetreten);
+        if (!_imKampf && !_imExploration && _np.length) {
           const sepP = document.createElement('div');
           sepP.className = 'person-sektion-label';
           sepP.textContent = '· Personen ·';
