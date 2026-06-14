@@ -2934,6 +2934,7 @@
 </style>
 </head>
 <body>
+<div id="tageszeit-overlay" style="position:fixed;inset:0;pointer-events:none;z-index:1;opacity:0;transition:background 1.2s ease, opacity 1.2s ease;mix-blend-mode:soft-light;"></div>
 <!-- v7.9.6: Boot-Indicator. Direkt nach <body> damit der Browser ihn sofort
      beim ersten Render zeigt, BEVOR die 845KB index.html durchgeparst sind.
      Verhindert den minutenlangen schwarzen Screen den User vorher hatten.
@@ -3280,7 +3281,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.769</div>
+    <div class="start-version">Schatten v7.12.770</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3506,7 +3507,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.769</span>
+    <span>Schatten v7.12.770</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6864,14 +6865,26 @@ function tageszeitPalette(tzName) {
   const tz = normForMatch(tzName || _aktTageszeitName());
   // akzent = Header-Textfarbe; sky = Overlay-Farbe über der Karte; skyOp = dessen Deckkraft; lampen = Laternen
   const P = {
-    'morgen':     { akzent: '#e9b98a', sky: '#ffd9a0', skyOp: 0.10, lampen: false }, // warmes Frühlicht, rosig
-    'vormittag':  { akzent: '#e8d29a', sky: '#fff2c8', skyOp: 0.06, lampen: false }, // heller klarer Tag
-    'mittag':     { akzent: '#f0e6b0', sky: '#ffffff', skyOp: 0.04, lampen: false }, // hellste Stunde
-    'nachmittag': { akzent: '#e8c98a', sky: '#ffdfa6', skyOp: 0.08, lampen: false }, // goldenes Nachmittagslicht
-    'abend':      { akzent: '#d98a6a', sky: '#7a4a6a', skyOp: 0.26, lampen: true },  // Dämmerung violett-orange, Laternen an
-    'nacht':      { akzent: '#7a8ab0', sky: '#0e1430', skyOp: 0.42, lampen: true }   // tiefblaue Nacht, Laternen an
+    'morgen':     { akzent: '#e9b98a', sky: '#ffd9a0', skyOp: 0.10, lampen: false, tint: '#ffcaa0', tintOp: 0.16 }, // warmes Frühlicht, rosig
+    'vormittag':  { akzent: '#e8d29a', sky: '#fff2c8', skyOp: 0.06, lampen: false, tint: '#fff0c8', tintOp: 0.10 }, // heller klarer Tag
+    'mittag':     { akzent: '#f0e6b0', sky: '#ffffff', skyOp: 0.04, lampen: false, tint: '#fffbe8', tintOp: 0.07 }, // hellste Stunde
+    'nachmittag': { akzent: '#e8c98a', sky: '#ffdfa6', skyOp: 0.08, lampen: false, tint: '#ffd9a0', tintOp: 0.14 }, // goldenes Nachmittagslicht
+    'abend':      { akzent: '#d98a6a', sky: '#7a4a6a', skyOp: 0.26, lampen: true,  tint: '#8a4a78', tintOp: 0.30 }, // Dämmerung violett-orange, Laternen an
+    'nacht':      { akzent: '#7a8ab0', sky: '#0e1430', skyOp: 0.42, lampen: true,  tint: '#10306a', tintOp: 0.34 }  // tiefblaue Nacht, Laternen an
   };
   return P[tz] || P['nacht'];
+}
+// v7.12.770: Wendet die Tageszeit-Stimmung auf das ganze Interface an (bildschirmweites Overlay). Sehr dezent,
+// damit der Lesetext klar bleibt. Wird bei jedem Szenenwechsel gerufen.
+function _tageszeitInterfaceAnwenden() {
+  try {
+    var ov = document.getElementById('tageszeit-overlay');
+    if (!ov) return;
+    var pal = tageszeitPalette();
+    if (!pal) { ov.style.opacity = '0'; return; }
+    ov.style.background = 'radial-gradient(ellipse at 50% 0%, ' + pal.tint + ' 0%, transparent 70%)';
+    ov.style.opacity = String(pal.tintOp || 0);
+  } catch (e) {}
 }
 // Hat ein Ort gerade geöffnet? (oeffnungszeit-Feld; fehlt -> immer offen)
 function istOrtGeoeffnet(loc) {
@@ -7487,7 +7500,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.769';
+window.SCHATTEN_VERSION = 'v7.12.770';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -17671,6 +17684,8 @@ function showHeader(scene) {
         try { const _pal = tageszeitPalette(_tz); if (_pal) _tzEl.style.color = _pal.akzent; } catch (e) {}
       }
     }
+    // v7.12.770: ganzes Interface in die Tageszeit-Stimmung tauchen (bildschirmweites Overlay).
+    try { if (typeof _tageszeitInterfaceAnwenden === 'function') _tageszeitInterfaceAnwenden(); } catch (e) {}
   } catch (e) { /* defensiv */ }
   // v7.12.44: currentOrt global aktualisieren - normalisierter Kleinbuchstaben-Ort
   // fuer spätere Ort-Abfragen (isAlreadyHome, Custody-Detect etc.)
