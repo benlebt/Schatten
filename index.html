@@ -3298,7 +3298,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.801</div>
+    <div class="start-version">Schatten v7.12.802</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3524,7 +3524,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.801</span>
+    <span>Schatten v7.12.802</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7604,7 +7604,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.801';
+window.SCHATTEN_VERSION = 'v7.12.802';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -23168,24 +23168,37 @@ function oeffneNpcMenue(npc, modus) {
       const _verbraucht = (npcTonartVerbraucht && Array.isArray(npcTonartVerbraucht[npc.name])) ? npcTonartVerbraucht[npc.name] : [];
       // "Befragen" rauswerfen - die Tonart-Optionen treten an seine Stelle.
       for (let i = verben.length - 1; i >= 0; i--) { if (verben[i] && verben[i].key === 'befragen') verben.splice(i, 1); }
-      _sozNpc.sozial.tonarten.forEach(t => {
-        if (!t || !t.key) return;
-        // v7.12.792/801 (Benjamin: "eine Option ist nur einmal klickbar"): Jede bereits gewählte Tonart
-        // verschwindet - egal ob Erfolg oder Fehlschlag. Man kann nicht zweimal dasselbe Manöver fahren.
-        if (_verbraucht.indexOf(t.key) !== -1) return;
-        let _label = t.label;
-        if (_istMiss && t.erfolg) _label += ' (sie ist misstrauisch)';
+      // v7.12.802 (Benjamin: "wenn alle Indizien rausgequetscht sind, ist sie fertig"): Hat die Person KEINEN
+      // offenen (npc-gebundenen, erreichbaren) Hinweis mehr, ist sie ausgequetscht - KEINE Tonarten mehr, auch
+      // nicht die aggressiven (die jetzt sinnlos wären). Stattdessen ein deaktiviertes "schon ausgequetscht".
+      const _hatNochHinweis = (typeof _npcHatOffenenHinweis === 'function') ? _npcHatOffenenHinweis(npc.name) : true;
+      if (!_hatNochHinweis) {
         verben.unshift({
-          key: 'sozial_' + t.key,
-          label: _label,
-          kategorie: t.erfolg ? 'ERKUNDEN' : 'OFFENSIV',
-          _sozialTonart: t.key,
-          _sozialErfolg: !!t.erfolg,
-          _sozialMachtMisstrauisch: !!t.machtMisstrauisch,
-          // Der Prompt-Push für die KI: wie reagiert die Person? Bei Misstrauen den Zusatz-Push anhängen.
-          aktion: t.push + (_istMiss && t.erfolg && _sozNpc.sozial.misstrauischPush ? ' ' + _sozNpc.sozial.misstrauischPush : '')
+          key: 'sozial_ausgequetscht',
+          label: 'Schon ausgequetscht – weiß nichts mehr',
+          kategorie: 'ERKUNDEN',
+          _sozialErledigt: true,
         });
-      });
+      } else {
+        _sozNpc.sozial.tonarten.forEach(t => {
+          if (!t || !t.key) return;
+          // v7.12.792/801 (Benjamin: "eine Option ist nur einmal klickbar"): Jede bereits gewählte Tonart
+          // verschwindet - egal ob Erfolg oder Fehlschlag. Man kann nicht zweimal dasselbe Manöver fahren.
+          if (_verbraucht.indexOf(t.key) !== -1) return;
+          let _label = t.label;
+          if (_istMiss && t.erfolg) _label += ' (sie ist misstrauisch)';
+          verben.unshift({
+            key: 'sozial_' + t.key,
+            label: _label,
+            kategorie: t.erfolg ? 'ERKUNDEN' : 'OFFENSIV',
+            _sozialTonart: t.key,
+            _sozialErfolg: !!t.erfolg,
+            _sozialMachtMisstrauisch: !!t.machtMisstrauisch,
+            // Der Prompt-Push für die KI: wie reagiert die Person? Bei Misstrauen den Zusatz-Push anhängen.
+            aktion: t.push + (_istMiss && t.erfolg && _sozNpc.sozial.misstrauischPush ? ' ' + _sozNpc.sozial.misstrauischPush : '')
+          });
+        });
+      }
     }
   } catch (e) { /* Sozial-Puzzle darf das Menü nie brechen */ }
   // v7.12.796 (Kampfmodus-Konzept Stufe 1, Prototyp Hellbach): GEGNER-VERHANDLUNG. Hat ein FREIER feindseliger
@@ -23475,6 +23488,12 @@ function oeffneNpcMenue(npc, modus) {
           _romanceNpc: npc.name,
         };
         if (typeof chooseOption === 'function') chooseOption(_romOpt);
+        return;
+      }
+      // v7.12.802: "schon ausgequetscht" - kein Befragen mehr, nur ein Hinweis.
+      if (verb._sozialErledigt) {
+        if (typeof showProgressToast === 'function') { try { showProgressToast(npc.name.split(' ')[0] + ' weiß nichts mehr', 'Karl hat alles aus ' + npc.name + ' herausgeholt, was sie zum Fall beitragen kann.', 'info', 'sozial-ausgequetscht-' + normForMatch(npc.name)); } catch (e) {} }
+        if (typeof schliesseNpcMenue === 'function') schliesseNpcMenue();
         return;
       }
       // v7.12.801 (Benjamin: "eine Option ist nur einmal klickbar"): JEDE gewählte Sozial-Tonart als verbraucht
