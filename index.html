@@ -3307,7 +3307,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.823</div>
+    <div class="start-version">Schatten v7.12.824</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3533,7 +3533,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.823</span>
+    <span>Schatten v7.12.824</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7014,6 +7014,8 @@ function _mikroOrtWechseln(targetId) {
     const istErst = !caseProgress.visitedMikroOrte[locKey];
     caseProgress.visitedMikroOrte[locKey] = true;
     caseProgress.aktuellerMikroOrt = targetId;
+    // v7.12.824: gemerkten Atmo-Text der Zielstation löschen -> beim Render wird ein frischer gezogen (Wechsel = neue Stimmung).
+    try { if (caseProgress._mikroAtmoAktuell) delete caseProgress._mikroAtmoAktuell[normForMatch(engineCurrentLocation.name) + ':' + targetId]; } catch (e) {}
     const atmo = _mikroAtmoText(ziel, istErst);
     return { ok: true, atmo: atmo, erstbesuch: istErst, name: ziel.name };
   } catch (e) { return { ok: false }; }
@@ -7043,8 +7045,17 @@ function _renderMikroOrtNavigation(container) {
     titel.style.cssText = 'color:#cbbfa9;font-size:calc(11px * var(--reading-scale));letter-spacing:0.12em;text-transform:uppercase;margin-bottom:5px;';
     titel.textContent = '◈ ' + akt.name;
     wrap.appendChild(titel);
-    // Atmo-Text (engine-only, kein KI-Call)
-    const atmoTxt = _mikroAtmoText(akt, istErst);
+    // Atmo-Text (engine-only, kein KI-Call).
+    // v7.12.824 (Benjamin: "Text wechselt bei jedem Umsehen-Klick"): Der Atmo-Text darf NICHT bei jedem Render neu
+    // gezogen werden - sonst wechselt er bei jeder Aktion (Umsehen etc.), obwohl Karl die Station nicht verlassen hat.
+    // Wir merken den aktuell gezeigten Text pro Station; neu gezogen wird nur beim ersten Betreten / Wechsel.
+    if (!caseProgress._mikroAtmoAktuell) caseProgress._mikroAtmoAktuell = {};
+    const _atmoKey = normForMatch(engineCurrentLocation.name) + ':' + aktId;
+    let atmoTxt = caseProgress._mikroAtmoAktuell[_atmoKey];
+    if (istErst || typeof atmoTxt !== 'string') {
+      atmoTxt = _mikroAtmoText(akt, istErst);
+      caseProgress._mikroAtmoAktuell[_atmoKey] = atmoTxt;
+    }
     if (atmoTxt) {
       const at = document.createElement('div');
       at.style.cssText = 'color:#b3a888;font-size:calc(12px * var(--reading-scale));font-style:italic;line-height:1.5;margin-bottom:9px;';
@@ -7942,7 +7953,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.823';
+window.SCHATTEN_VERSION = 'v7.12.824';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -11864,6 +11875,7 @@ function createInitialCaseProgress() {
     aktuellerMikroOrt: null,
     visitedMikroOrte: {},
     _mikroAtmoLastIdx: {},
+    _mikroAtmoAktuell: {},
   };
 }
 let caseProgress = createInitialCaseProgress();
