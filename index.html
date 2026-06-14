@@ -3298,7 +3298,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.799</div>
+    <div class="start-version">Schatten v7.12.800</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3524,7 +3524,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.799</span>
+    <span>Schatten v7.12.800</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7604,7 +7604,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.799';
+window.SCHATTEN_VERSION = 'v7.12.800';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -8215,13 +8215,19 @@ function _encounterBannerRender(container) {
     }
     arena.appendChild(partyReihe);
 
-    // Hinweiszeile: kampf-fokussierter Baukasten darunter
-    const hint = document.createElement('div');
-    hint.style.cssText = 'margin-top:9px;padding-top:8px;border-top:1px dashed #5a4034;color:#9a8472;font-size:calc(10px * var(--reading-scale));';
-    hint.textContent = 'Greif an, fessle den Bezwungenen, wirf einen Gegenstand — oder brich aus (Reisen).';
-    arena.appendChild(hint);
+    // v7.12.800 (Benjamin): Der Baukasten IST das Kampfsystem - er rendert direkt in die Arena, unter der Party.
+    // Wir legen den baukasten-slot hier an (statt in bauePersonenButtons) und rufen _renderBaukasten() auf.
+    const trenner = document.createElement('div');
+    trenner.style.cssText = 'margin-top:9px;padding-top:8px;border-top:1px dashed #5a4034;color:#9a8472;font-size:calc(10px * var(--reading-scale));margin-bottom:2px;';
+    trenner.textContent = '↓ Dein Zug (Aktions-Baukasten):';
+    arena.appendChild(trenner);
+    const bkSlot = document.createElement('div');
+    bkSlot.id = 'baukasten-slot';
+    arena.appendChild(bkSlot);
 
     container.appendChild(arena);
+    // Baukasten in den Arena-Slot rendern (nach dem Anhängen, damit der Slot im DOM ist).
+    try { if (typeof _renderBaukasten === 'function') _renderBaukasten(); } catch (e) {}
   } catch (e) {}
 }
 // ============ v7.12.616: AKTIONS-PLAN (Benjamin: "mehrere Aktionen kombinieren wie Strg-Auswahl im Explorer") ============
@@ -25538,20 +25544,19 @@ function renderOptions(scene) {
     if (typeof bauePersonenButtons === 'function') {
       if (typeof uebergangBody !== 'undefined' && uebergangBody) {
         // v7.12.797 (Kampfmodus Stufe 2a): Erst Konsistenz-Check (Gegner besiegt/weg/Ortwechsel -> Kampf sauber
-        // beenden), dann den minimalen Kampf-Banner rendern (die echte Arena kommt in 2b).
+        // beenden), dann die Arena rendern.
         try { if (typeof _encounterKonsistenzCheck === 'function') _encounterKonsistenzCheck(); } catch (e) {}
         try { if (typeof _encounterBannerRender === 'function') _encounterBannerRender(uebergangBody); } catch (e) {}
-        // Personen-Trenner in Übergang (optisch von A/B/C/D abgesetzt), nur wenn Personen da sind.
+        // v7.12.800 (Benjamin: "der Baukasten IST das Kampfsystem"): Im KAMPF übernimmt die Arena den Baukasten
+        // (Gegner -> Party -> Baukasten als EIN Block). Die normalen Personen-"ansprechen"-Buttons entfallen dann -
+        // gehandelt wird im Kampf nur über den Baukasten. Außerhalb des Kampfs: alles wie gehabt.
+        const _imKampf = (typeof _encounterAktiv === 'function') && _encounterAktiv();
         const _np = getNpcsAtCurrentLocation ? getNpcsAtCurrentLocation() : [];
-        if (_np.length) {
+        if (!_imKampf && _np.length) {
           const sepP = document.createElement('div');
           sepP.className = 'person-sektion-label';
           sepP.textContent = '· Personen ·';
           uebergangBody.appendChild(sepP);
-          // v7.12.627 (Benjamin: Margarete tauchte doppelt auf - oben 'ansprechen', unten eingeklappt
-          // 'mitnehmen'): Personen stehen nur noch EINMAL hier. Das Popup zeigt im Misch-Modus ALLE
-          // Aktionen, sauber getrennt: oben die Szene-Aktionen, darunter der vorhandene Trenner
-          // '✦ Begleitung (löst keine Szene aus)' mit den Verwaltungs-Buttons (gestrichelt, grün).
           bauePersonenButtons(uebergangBody, 'alle');
         }
       }
