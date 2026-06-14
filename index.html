@@ -3298,7 +3298,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.795</div>
+    <div class="start-version">Schatten v7.12.796</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3524,7 +3524,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.795</span>
+    <span>Schatten v7.12.796</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5397,6 +5397,23 @@ const INTRO_VARIANTS = [
           beziehung: 'kennt die Sybelstrasse, hat Schwarzhandel-Verbindungen, koennte involviert sein wenn Robert nicht "ehebricht" sondern in Schmuggel verwickelt ist',
           detail: 'breite Gestalt, grauer Schnauzbart, raucht Reval. Wohnt selbst Charlottenburg, kennt jeden in der Strasse. Ehrlich-korrupt: nimmt Geld, aber liefert auch Informationen.',
           triggerWhen: 'plot dreht sich von Affaere zu organisierter Kriminalitaet oder Karl braucht eine Adresse im Kiez',
+          // v7.12.796 (Kampfmodus-Konzept Stufe 1, Prototyp): Gegner-VERHANDLUNG. Hellbach ist "ehrlich-korrupt" -
+          // ein nervöser Mitläufer MIT friedlicher Lösung: Bestechen wirkt, Aushorchen teilweise, Einschüchtern
+          // reizt ihn (-> Kampf), plumpes Bluffen durchschaut er. Jede Tonart löst eine KI-Szene mit Profil-Push aus.
+          // _loestKampf: true -> diese Tonart führt in die Konfrontation (Stufe 1: bestehende Konfrontation; Stufe 2: Kampfmodus-UI).
+          gegnerprofil: {
+            typ: 'nervoeser_mitlaeufer', friedlicheLoesung: true,
+            tonarten: [
+              { key: 'bestechen', label: 'Bestechen (Geld/Ware für Informationen)', erfolg: true,
+                push: 'Karl bietet Hellbach Geld oder Ware für Informationen. Hellbach ist ehrlich-korrupt - er nimmt das Angebot an und liefert brauchbare Hinweise (z.B. über Roberts Schwarzhandel-Verbindungen oder eine Adresse im Kiez). Er bleibt ruppig, aber kooperativ.' },
+              { key: 'aushorchen', label: 'Vorsichtig aushorchen', erfolg: true,
+                push: 'Karl horcht Hellbach vorsichtig aus, ohne ihn zu bedrängen. Hellbach lässt sich etwas entlocken - nicht alles, aber genug für einen Hinweis. Er bleibt wachsam und gibt nur tröpfchenweise preis.' },
+              { key: 'einschuechtern', label: 'Einschüchtern / Druck machen', erfolg: false, _loestKampf: true,
+                push: 'Karl versucht Hellbach einzuschüchtern. FALSCH bei diesem Mann - ein West-Polizist mit Nebengeschäft lässt sich nicht von Karl bedrohen. Hellbach wird wütend, geht in Verteidigungshaltung und es eskaliert zur Konfrontation. Er ist bewaffnet und wehrt sich.' },
+              { key: 'bluffen', label: 'Bluffen (mehr wissen vortäuschen)', erfolg: false,
+                push: 'Karl blufft und tut so, als wüsste er mehr, als er weiß. Hellbach ist ein erfahrener Polizist und durchschaut den Bluff - er lacht kurz, lässt sich nichts entlocken und bleibt verschlossen. Kein Hinweis. Aber er eskaliert nicht, er wartet einfach ab.' },
+            ],
+          },
           persistent: false, anwesend: false },
         // v7.11.13: 2 weitere Pool-NPCs damit Setup-Cast Wegener-Goldstandard (6 NPCs) entspricht
         { name: 'Frau Pohl', tag: 'WITNESS', alter: 63, rolle: 'Nachbarin Sybelstrasse 24, 2. Stock',
@@ -7586,7 +7603,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.795';
+window.SCHATTEN_VERSION = 'v7.12.796';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -22622,6 +22639,7 @@ function npcInteraktion(npc, verb) {
     // matchten /fessel/): gefesselt_uebergeben bekommt die eigene Verhaftungs-Animation,
     // gefesselt_durchsuchen läuft übers Sicherheitsnetz (ERKUNDEN-Lupe, Dialog-Dauer).
     if (_vk === 'gefesselt_uebergeben') { if (typeof fxVerhaftung === 'function') fxVerhaftung(npc.name); }
+    else if (verb._gegnerLoestKampf) { if (typeof fxConflict === 'function') fxConflict('Karl', npc.name, 'angreifen', true); } // v7.12.796: eskalierende Verhandlung -> Konflikt-Animation
     else if (!/^gefesselt_/.test(_vk) && /angreif|fessel|manoever|befehl_angriff/.test(_vk)) { if (typeof fxConflict === 'function') fxConflict('Karl', npc.name, 'angreifen', true); }
     else if (/durchsuch/.test(_vk)) { if (typeof fxDialog === 'function') fxDialog(npc.name, 'durchsuchen'); } // v7.12.700: 🔍/📄
     else if (/befehl_ablenkung/.test(_vk)) { if (typeof fxDialog === 'function') fxDialog(npc.name, 'ablenken_cmd'); } // v7.12.700: ❗/😵‍💫
@@ -22916,6 +22934,45 @@ function oeffneNpcMenue(npc, modus) {
       });
     }
   } catch (e) { /* Sozial-Puzzle darf das Menü nie brechen */ }
+  // v7.12.796 (Kampfmodus-Konzept Stufe 1, Prototyp Hellbach): GEGNER-VERHANDLUNG. Hat ein FREIER feindseliger
+  // Gegner ein gegnerprofil mit Tonarten, ersetzen wir die harten Verben (bedrohen/bestechen/angreifen) durch
+  // Verhandlungs-Tonarten (Aushorchen/Bluffen/Einschüchtern/Bestechen) + feste Optionen Angreifen (-> Kampf) und
+  // Fliehen. Jede Tonart löst eine KI-Szene mit Profil-Push aus (wie beim Zeugen-Sozial-Puzzle). Bei BEZWUNGENEN
+  // Gegnern (gefesselt/ko/benommen) greift das NICHT - dann ist Befragen frei (Block oben). Engine-only Kampf-UI = Stufe 2.
+  try {
+    let _gegNpc = null;
+    if (caseSetup && Array.isArray(caseSetup.setupCast)) {
+      _gegNpc = caseSetup.setupCast.find(c => c && c.name && normForMatch(c.name) === normForMatch(npc.name)) || null;
+    }
+    // Nur freier Gegner (kein bezwungener Zustand), mit Profil, GEGNER-Tag, kein Hund-Override.
+    let _zfrei = true;
+    try { const _zg = (typeof _npcZustandGet === 'function') ? _npcZustandGet(npc.name) : null; _zfrei = !(_zg && ['gefesselt','fixiert','benommen','ko'].indexOf(_zg.status) !== -1); } catch (e) {}
+    if (_gegNpc && _gegNpc.gegnerprofil && Array.isArray(_gegNpc.gegnerprofil.tonarten) && !_hundVerbenOverride && GEGNER.includes(tag) && _zfrei) {
+      // Harte Direkt-Verben raus - die Verhandlung tritt an ihre Stelle (Angreifen kommt als eigene Option zurück).
+      for (let i = verben.length - 1; i >= 0; i--) {
+        const _k = verben[i] && verben[i].key;
+        if (_k === 'bedrohen' || _k === 'bestechen' || _k === 'angreifen' || _k === 'befragen') verben.splice(i, 1);
+      }
+      // Verhandlungs-Tonarten aus dem Profil (in Profil-Reihenfolge oben einfügen).
+      _gegNpc.gegnerprofil.tonarten.slice().reverse().forEach(t => {
+        if (!t || !t.key) return;
+        verben.unshift({
+          key: 'gverhandlung_' + t.key,
+          label: t.label + (t._loestKampf ? ' (kann eskalieren)' : ''),
+          kategorie: t._loestKampf ? 'OFFENSIV' : 'ERKUNDEN',
+          _gegnerTonart: t.key,
+          _gegnerLoestKampf: !!t._loestKampf,
+          aktion: t.push,
+        });
+      });
+      // Feste Option: bewusst angreifen -> Kampf. Klar gekennzeichnet.
+      verben.push({
+        key: 'gverhandlung_angreifen', label: 'Angreifen (→ Kampf)', kategorie: 'OFFENSIV',
+        _gegnerLoestKampf: true,
+        aktion: 'Karl greift ' + npc.name + ' direkt körperlich an. Es kommt zur offenen Konfrontation - ' + npc.name + ' ist bewaffnet und wehrt sich.',
+      });
+    }
+  } catch (e) { /* Gegner-Verhandlung darf das Menü nie brechen */ }
   // v7.12.547 (Party-System Schicht 2): "Mitnehmen" / "Hier lassen" für Nicht-Gegner. Verwaltungs-Aktionen -
   // lösen KEINE KI-Szene aus, ändern nur den Party-Zustand. Gegner (STASI/SUSPECT/...) nimmt man NICHT mit.
   // Ist die Person schon in der Party -> "Hier lassen" (entfernen); sonst -> "Mitnehmen" (hinzufügen).
