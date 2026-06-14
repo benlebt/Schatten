@@ -3298,7 +3298,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.806</div>
+    <div class="start-version">Schatten v7.12.807</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3524,7 +3524,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.806</span>
+    <span>Schatten v7.12.807</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6770,6 +6770,7 @@ function checkLocationUnlocks(signalText) {
 function _resolveNpcIdentity(npcId) {
   let nm = npcId;
   let tag = '';
+  let _profilFelder = {};
   if (typeof ANCHOR_NPCS !== 'undefined' && ANCHOR_NPCS[npcId]) {
     nm = ANCHOR_NPCS[npcId].canonicalName;
     tag = 'VERBUENDETER'; // Karls Netzwerk ist auf seiner Seite
@@ -6777,12 +6778,19 @@ function _resolveNpcIdentity(npcId) {
     // v7.12.533: erst expliziten id-Match (robust, falls Name Sonderzeichen hat wie IM "Anker"), dann Name-Match.
     let sc = caseSetup.setupCast.find(c => c && c.id && normForMatch(c.id) === normForMatch(npcId));
     if (!sc) sc = caseSetup.setupCast.find(c => c && normForMatch((c.name||'').replace(/\s+/g,'_')) === normForMatch(npcId));
-    if (sc) { nm = sc.name; tag = sc.tag || ''; }
+    if (sc) {
+      nm = sc.name; tag = sc.tag || '';
+      // v7.12.807 (Benjamin: "du stellst den NPC doch selbst dar - du musst keinen Namen matchen"):
+      // Die Profil-Felder DIREKT mitgeben. So trägt das NPC-Objekt im Menü sozial/gegnerprofil bei sich,
+      // und das Sozial-/Gegner-Puzzle braucht KEINE Namens-Rücksuche mehr (die bei "Voss" vs "Oberkellner Voss" scheiterte).
+      if (sc.sozial) _profilFelder.sozial = sc.sozial;
+      if (sc.gegnerprofil) _profilFelder.gegnerprofil = sc.gegnerprofil;
+    }
   }
   if (nm === npcId) {
     nm = npcId.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
   }
-  return { id: npcId, name: nm, tag: tag };
+  return Object.assign({ id: npcId, name: nm, tag: tag }, _profilFelder);
 }
 
 // v7.12.532 (Baustein B2): Würfelt bei Ankunft an einem Ort die GETAKTETEN Gegner (loc.bedrohungen) durch.
@@ -7653,7 +7661,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.806';
+window.SCHATTEN_VERSION = 'v7.12.807';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -23232,9 +23240,10 @@ function oeffneNpcMenue(npc, modus) {
   // wählt WIE Karl herangeht; die gewählte Tonart steuert per Prompt-Push, ob die Person nachgibt oder zumacht.
   // Falsche Tonart -> npcMisstrauisch (fail forward: danach zickiger). Es bleibt EINE KI-Szene, nur mit Entscheidung.
   try {
-    let _sozNpc = null;
-    if (caseSetup && Array.isArray(caseSetup.setupCast)) {
-      // v7.12.805 (Benjamin: "bei Voss kommt kein Puzzle"): fuzzy, fängt KI-Namenskürzung ab ("Voss" -> "Oberkellner Voss").
+    // v7.12.807: Das NPC-Objekt trägt sein Profil jetzt direkt (aus _resolveNpcIdentity) - kein Namens-Matching nötig.
+    // Fallback auf Fuzzy-Suche nur, falls der NPC ausnahmsweise ohne Profil-Feld kam.
+    let _sozNpc = (npc && npc.sozial) ? npc : null;
+    if (!_sozNpc && caseSetup && Array.isArray(caseSetup.setupCast)) {
       _sozNpc = (typeof _findSetupCastFuzzy === 'function') ? _findSetupCastFuzzy(npc.name, npc.id) : null;
     }
     if (_sozNpc && _sozNpc.sozial && Array.isArray(_sozNpc.sozial.tonarten) && !_hundVerbenOverride && !GEGNER.includes(tag)) {
@@ -23281,8 +23290,9 @@ function oeffneNpcMenue(npc, modus) {
   // Fliehen. Jede Tonart löst eine KI-Szene mit Profil-Push aus (wie beim Zeugen-Sozial-Puzzle). Bei BEZWUNGENEN
   // Gegnern (gefesselt/ko/benommen) greift das NICHT - dann ist Befragen frei (Block oben). Engine-only Kampf-UI = Stufe 2.
   try {
-    let _gegNpc = null;
-    if (caseSetup && Array.isArray(caseSetup.setupCast)) {
+    // v7.12.807: Profil direkt am NPC-Objekt (aus _resolveNpcIdentity), Fuzzy nur als Fallback.
+    let _gegNpc = (npc && npc.gegnerprofil) ? npc : null;
+    if (!_gegNpc && caseSetup && Array.isArray(caseSetup.setupCast)) {
       _gegNpc = (typeof _findSetupCastFuzzy === 'function') ? _findSetupCastFuzzy(npc.name, npc.id) : null;
     }
     // Nur freier Gegner (kein bezwungener Zustand), mit Profil, GEGNER-Tag, kein Hund-Override.
