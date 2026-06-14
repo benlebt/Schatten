@@ -3298,7 +3298,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.794</div>
+    <div class="start-version">Schatten v7.12.795</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3524,7 +3524,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.794</span>
+    <span>Schatten v7.12.795</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7586,7 +7586,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.794';
+window.SCHATTEN_VERSION = 'v7.12.795';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -16339,7 +16339,7 @@ function buildAssertionReport() {
       const _tage = (typeof getFallFristTage === 'function') ? getFallFristTage() : 0;
       const _tzN = (typeof _aktTageszeitName === 'function') ? _aktTageszeitName() : '?';
       const _d = (typeof gameDay === 'number') ? gameDay : 1;
-      row('·', 'WORLD-TIME (shadow): Unit ' + _wtu + '/' + _dl + ' · Tag ' + _d + ' ' + String(_tzN).toUpperCase() + ' · Frist ' + _tage + ' Tage · Stufe 0 ohne Wirkung');
+      row('·', 'WORLD-TIME (shadow): Unit ' + _wtu + '/' + _dl + ' · Tag ' + _d + '/' + _tage + ' ' + String(_tzN).toUpperCase() + ' · Frist ' + _tage + ' Tage · Stufe 1: Frist sichtbar, Entzug noch via Szenen-Cap');
     } catch (e) { /* Report nie brechen */ }
     row(geloest ? '✓' : '–', 'Fall gelöst: ' + (geloest ? 'JA' : 'nein (Stage ' + (es.stage || 0) + ')'));
     if (geloest) row((es.stage || 0) >= 4 ? '✓' : '⚠', 'Stage 4 erreicht: ' + (es.stage || 0));
@@ -18030,11 +18030,38 @@ function showHeader(scene) {
     if (_tzEl) {
       let _tz = (typeof _aktTageszeitName === 'function') ? _aktTageszeitName() : '';
       if (_tz) {
-        _tzEl.textContent = '· ' + _tz.charAt(0).toUpperCase() + _tz.slice(1);
+        // v7.12.795 (Zeitsystem Stufe 1): Fall-Frist in Tagen ANZEIGEN (Tag X/Y). Rein informativ -
+        // der echte Entzug läuft weiter über den Szenen-Cap (Stufe 1 schaltet NICHTS scharf).
+        let _fristTxt = '';
+        try {
+          const _tage = (typeof getFallFristTage === 'function') ? getFallFristTage() : 0;
+          const _d = (typeof gameDay === 'number' && gameDay > 0) ? gameDay : 1;
+          if (_tage > 0 && !(caseProgress && (caseProgress.istGelöst || caseProgress.istGescheitert))) {
+            _fristTxt = '  · Tag ' + Math.min(_d, _tage) + '/' + _tage;
+          }
+        } catch (e) {}
+        _tzEl.textContent = '· ' + _tz.charAt(0).toUpperCase() + _tz.slice(1) + _fristTxt;
         // v7.12.769: Tageszeit farblich tragen - Morgen warm-rosig, Mittag hell, Abend orange, Nacht blau.
         try { const _pal = tageszeitPalette(_tz); if (_pal) _tzEl.style.color = _pal.akzent; } catch (e) {}
       }
     }
+    // v7.12.795 (Zeitsystem Stufe 1): Tages-Frist-Warnungen (rein informativ, KEIN Entzug - der läuft über
+    // den Szenen-Cap). Einmal pro Fall via caseProgress-Flags. "letzter Tag" / "noch 1 Tag".
+    try {
+      const _tageF = (typeof getFallFristTage === 'function') ? getFallFristTage() : 0;
+      const _dF = (typeof gameDay === 'number' && gameDay > 0) ? gameDay : 1;
+      const _fallLaeuft = !(caseProgress && (caseProgress.istGelöst || caseProgress.istGescheitert)) && (caseProgress && (caseProgress.stage || 0) < 4);
+      if (_tageF > 0 && _fallLaeuft && typeof showProgressToast === 'function' && caseProgress) {
+        const _restTage = _tageF - _dF;
+        if (_restTage <= 0 && !caseProgress.fristWarnLetzterShown) {
+          caseProgress.fristWarnLetzterShown = true;
+          showProgressToast('Letzter Tag', 'Edith erwartet bald ein Ergebnis - der ' + _tageF + '. Tag ist angebrochen. Karl sollte den Fall heute zum Abschluss bringen.', 'danger', 'frist-letzter-tag', '📅');
+        } else if (_restTage === 1 && !caseProgress.fristWarn1TagShown) {
+          caseProgress.fristWarn1TagShown = true;
+          showProgressToast('Noch ein Tag', 'Die Frist für den Fall läuft - nach morgen wird die Geduld dünn. Langsam zum Ergebnis kommen.', 'info', 'frist-1-tag', '⏳');
+        }
+      }
+    } catch (e) {}
     // v7.12.770: ganzes Interface in die Tageszeit-Stimmung tauchen (bildschirmweites Overlay).
     try { if (typeof _tageszeitInterfaceAnwenden === 'function') _tageszeitInterfaceAnwenden(); } catch (e) {}
   } catch (e) { /* defensiv */ }
