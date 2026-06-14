@@ -67,6 +67,15 @@
     0%, 100% { opacity: 0.4; }
     50% { opacity: 1; }
   }
+  /* v7.12.813: Indiz-Belohnungs-Popup ("Fund-Feier") */
+  @keyframes indizRewardIn {
+    0% { opacity: 0; transform: translateY(14px) scale(0.96); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes indizIconPulse {
+    0%, 100% { transform: scale(1); filter: drop-shadow(0 0 8px rgba(212,184,106,0.45)); }
+    50% { transform: scale(1.08); filter: drop-shadow(0 0 16px rgba(212,184,106,0.7)); }
+  }
   /* v7.12.374: Mobile-Fix - horizontales Scrollen/Verschieben komplett unterbinden.
      User-Befund iPhone: Seite liess sich seitlich verschieben, Text+Menue rutschten
      aus dem lesbaren Bereich. html UND body brauchen overflow-x:hidden + width-Begrenzung;
@@ -3298,7 +3307,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.812</div>
+    <div class="start-version">Schatten v7.12.813</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3524,7 +3533,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.812</span>
+    <span>Schatten v7.12.813</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7201,7 +7210,7 @@ function _stageFloorAnwenden() {
       }
     } catch (e) { /* Marker-Setzen darf den Floor nie brechen */ }
     if (typeof diag === 'function') diag('progress', '✦ STAGE ' + caseProgress.stage + ' via Indiz-Floor (Umsehen/Fund außerhalb Szene, Floor=' + floor + ', Sz=' + sc + ')');
-    try { if (typeof showProgressToast === 'function') showProgressToast('FALL-STUFE ' + caseProgress.stage, 'Neue Erkenntnis bringt den Fall voran.', 'clue', 'stage-floor-' + caseProgress.stage); } catch (e) {}
+    try { if (typeof showProgressToast === 'function' && !window._stageWirdImRewardGefeiert) showProgressToast('FALL-STUFE ' + caseProgress.stage, 'Neue Erkenntnis bringt den Fall voran.', 'clue', 'stage-floor-' + caseProgress.stage); } catch (e) {}
     // Anzeige (Stage-Dots) aktualisieren, falls eine Render-Funktion existiert.
     try { if (typeof renderOptions === 'function' && typeof currentScene === 'object' && currentScene) renderOptions(currentScene); } catch (e) {}
   }
@@ -7666,7 +7675,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.812';
+window.SCHATTEN_VERSION = 'v7.12.813';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -38145,6 +38154,11 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     {
       const _nurDefinierteIndizien = (typeof caseHasDefinedEvidence === 'function') && caseHasDefinedEvidence();
       const newlyFoundIndizien = [];
+      // v7.12.813: Stage VOR der Indiz-Verarbeitung merken - so wissen wir, ob ein Fund die Stage anhob (Kombi-Popup).
+      const _stageVorIndiz = (caseProgress && typeof caseProgress.stage === 'number') ? caseProgress.stage : 0;
+      // Flag: ein Stage-Aufstieg, der JETZT durch einen Indiz-Fund passiert, wird im Belohnungs-Popup mitgefeiert -
+      // also den separaten Stage-Floor-Toast unterdrücken (sonst Doppel-Signal). Wird am Block-Ende zurückgesetzt.
+      window._stageWirdImRewardGefeiert = true;
       if (_nurDefinierteIndizien && Array.isArray(scene.indiz_neu) && scene.indiz_neu.length > 0) {
         if (typeof diag === 'function') diag('filter', 'KI-indiz_neu IGNORIERT (' + scene.indiz_neu.length + ' Stk, Fall nutzt NUR definierte Indizien): [' + scene.indiz_neu.map(i => typeof i === 'string' ? i : '?').join(' | ').slice(0, 150) + ']');
         scene.indiz_neu = [];
@@ -38252,21 +38266,15 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       // (User-Feedback: "Fortschritt passiert im Hintergrund, ich krieg's nicht
       // mit"). Mehrere Indizien -> ein Toast mit Aufzaehlung, nicht mehrere
       // hintereinander (das nervt). Sz 1-3 ausgenommen (Briefing-Phase).
-      if (newlyFoundIndizien.length > 0 && sceneCounter >= 3 && typeof showProgressToast === 'function') {
-        const count = newlyFoundIndizien.length;
-        const title = count === 1 ? 'Neues Indiz' : count + ' neue Indizien';
-        // Kurz halten: bei 1 Indiz den Text zeigen, bei mehreren als Liste.
-        let body;
-        if (count === 1) {
-          body = newlyFoundIndizien[0];
-        } else {
-          body = newlyFoundIndizien.map(i => '• ' + i).join('\n');
-        }
-        // v7.11.90: Passendes Emoji zum Indiztext (bei mehreren: zum ersten Fund).
-        const indizEmoji = (typeof pickIndizEmoji === 'function')
-          ? pickIndizEmoji(newlyFoundIndizien[0]) : '🔍';
-        showProgressToast(title, body, 'clue', 'indiz-' + sceneCounter, indizEmoji);
+      if (newlyFoundIndizien.length > 0 && sceneCounter >= 3) {
+        // v7.12.813 (Benjamin-Konzept "Fund-Feier"): Indizien werden nicht mehr als flüchtiger Toast gezeigt,
+        // sondern in einem stehenbleibenden Belohnungs-Popup gefeiert. Ein gleichzeitiger Stage-Aufstieg wird
+        // im selben Popup mitgefeiert (kombiniert). Läuft NACH dem Szenenrender (dieser Block ist post-render).
+        const _stageNachIndiz = (caseProgress && typeof caseProgress.stage === 'number') ? caseProgress.stage : 0;
+        const _stageInfo = (_stageNachIndiz > _stageVorIndiz) ? { oldStage: _stageVorIndiz, newStage: _stageNachIndiz } : null;
+        if (typeof _zeigeIndizBelohnung === 'function') _zeigeIndizBelohnung(newlyFoundIndizien, _stageInfo);
       }
+      window._stageWirdImRewardGefeiert = false;
       // v7.12.82 (Krause-Run 17:42 Bug): DIEBSTAHL-DURCHBRUCH wirklich stage-unabhaengig.
       // Befund: Der v7.12.78-Block sass faelschlich INNERHALB von "if (stage===1 &&
       // !tatverdaechtiger)" - er lief also nur solange kein Verdaechtiger feststand.
@@ -44758,6 +44766,65 @@ function logMilestone(typ, text) {
     typ: typ,
     text: text,
   });
+}
+
+// v7.12.813 (Benjamin-Konzept "Fund-Feier", Stufe 1): Ein Indiz ist die Fortschrittswährung des Spiels und darf
+// nicht in flüchtigen, sich überlagernden Toasts untergehen. Ein gefundenes Indiz (+ ggf. ein gleichzeitiger
+// Stage-Aufstieg) wird in EINEM Belohnungs-Popup gefeiert, das stehenbleibt bis "OK". Toasts bleiben nur noch
+// für Status-Meldungen. indizListe: Array von Indiz-Texten. stageInfo: {oldStage,newStage} oder null.
+function _zeigeIndizBelohnung(indizListe, stageInfo) {
+  try {
+    indizListe = Array.isArray(indizListe) ? indizListe.filter(Boolean) : [];
+    if (!indizListe.length && !stageInfo) return;
+    // Bot-Modus: kein Modal (würde den Lauf an "OK" hängen) - nur ins Log.
+    if (typeof botActive !== 'undefined' && botActive) {
+      if (typeof diag === 'function') diag('state', 'REWARD-SUPPRESSED-BOT: ' + indizListe.length + ' Indiz(e)' + (stageInfo ? ' + Stage ' + stageInfo.newStage : '') + ': ' + indizListe.join(' | '));
+      return;
+    }
+    // Doppel-Popup vermeiden: läuft schon eins, nicht zweites stapeln (Stufe 2 sammelt sauber).
+    if (document.getElementById('indiz-belohnung-overlay')) return;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'indiz-belohnung-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9500;background:rgba(8,6,4,0.78);display:flex;align-items:center;justify-content:center;padding:20px;';
+
+    const icon = (indizListe.length && typeof pickIndizEmoji === 'function') ? pickIndizEmoji(indizListe[0]) : '🔑';
+
+    const panel = document.createElement('div');
+    panel.style.cssText = 'max-width:420px;width:100%;background:linear-gradient(180deg,#1f1a12,#171309);border:1px solid #6b5a32;border-radius:12px;padding:22px 22px 18px;text-align:center;box-shadow:0 0 0 1px rgba(212,184,106,0.18),0 0 38px rgba(190,160,80,0.32),0 16px 50px rgba(0,0,0,0.7);animation:indizRewardIn 0.32s ease-out;';
+
+    // großes Icon mit sanftem Glow-Puls
+    let h = '<div style="font-size:calc(46px * var(--reading-scale));line-height:1;margin-bottom:6px;filter:drop-shadow(0 0 10px rgba(212,184,106,0.55));animation:indizIconPulse 1.6s ease-in-out infinite;">' + icon + '</div>';
+    const titel = indizListe.length > 1 ? (indizListe.length + ' Spuren gesichert') : 'Spur gesichert';
+    h += '<div style="font-family:inherit;color:#e9d9a8;font-size:calc(16px * var(--reading-scale));letter-spacing:0.08em;text-transform:uppercase;margin-bottom:12px;">' + titel + '</div>';
+    // Indiz-Text(e)
+    indizListe.forEach(function(t) {
+      h += '<div style="color:#d8cdb4;font-size:calc(13px * var(--reading-scale));line-height:1.5;margin:0 4px 10px;">' + escapeHtml(t) + '</div>';
+    });
+    // Karl freut sich
+    h += '<div style="display:flex;align-items:flex-start;gap:8px;justify-content:center;margin:14px 6px 4px;padding-top:12px;border-top:1px solid rgba(107,90,50,0.45);">'
+       + '<span style="font-size:calc(22px * var(--reading-scale));">🕵️</span>'
+       + '<span style="color:#b8a888;font-size:calc(12px * var(--reading-scale));font-style:italic;line-height:1.4;text-align:left;">„Das bringt den Fall voran."</span></div>';
+    // Stage-Aufstieg im selben Popup mitfeiern
+    if (stageInfo && stageInfo.newStage) {
+      h += '<div style="margin:14px 0 4px;padding:10px 12px;border:1px solid rgba(212,184,106,0.4);border-radius:8px;background:rgba(212,184,106,0.07);box-shadow:inset 3px 0 0 rgba(212,184,106,0.55);">'
+         + '<div style="color:#e9d9a8;font-size:calc(13px * var(--reading-scale));letter-spacing:0.05em;margin-bottom:3px;">✦ Fall-Stufe ' + stageInfo.newStage + ' erreicht</div>'
+         + '<div style="color:#b8a888;font-size:calc(11px * var(--reading-scale));line-height:1.4;">Der Fall hat eine belastbare neue Richtung.</div></div>';
+    }
+    h += '<button id="indiz-belohnung-ok" style="margin-top:16px;background:linear-gradient(180deg,#3a3120,#2a2316);border:1px solid #6b5a32;color:#e9d9a8;border-radius:8px;padding:9px 30px;cursor:pointer;font-size:calc(13px * var(--reading-scale));letter-spacing:0.08em;">OK</button>';
+    panel.innerHTML = h;
+    overlay.appendChild(panel);
+    document.body.appendChild(overlay);
+
+    const schliessen = function() { try { overlay.remove(); } catch (e) {} };
+    const okBtn = panel.querySelector('#indiz-belohnung-ok');
+    if (okBtn && typeof attachSafeTap === 'function') attachSafeTap(okBtn, schliessen);
+    else if (okBtn) okBtn.addEventListener('click', schliessen);
+    // Tap außerhalb schließt ebenfalls.
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) schliessen(); });
+    // kleiner Erfolgs-Sound (wie clue-Toast), falls vorhanden.
+    try { if (typeof sfxKasse === 'function') sfxKasse(); } catch (e) {}
+  } catch (e) { if (typeof diag === 'function') diag('drift', 'Belohnungs-Popup-Fehler: ' + e.message); }
 }
 
 function showProgressToast(title, subtitle, variant, triggerKey, iconOverride) {
