@@ -3307,7 +3307,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.822</div>
+    <div class="start-version">Schatten v7.12.823</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3533,7 +3533,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.822</span>
+    <span>Schatten v7.12.823</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7054,6 +7054,25 @@ function _renderMikroOrtNavigation(container) {
     // Bewegungs-Buttons zu verbundenen, erreichbaren Stationen
     const verb = Array.isArray(akt.verbindungen) ? akt.verbindungen : [];
     let _hatWeg = false;
+    // v7.12.823: Hat die AKTUELLE Station noch etwas (Person mit Hinweis / offener Hotspot)? Sonst kleiner Hinweis.
+    let _hierWasZuTun = false;
+    try {
+      const _gefH = (caseProgress && Array.isArray(caseProgress.gefundeneIndizIds)) ? caseProgress.gefundeneIndizIds : [];
+      const _stgH = (caseProgress && typeof caseProgress.stage === 'number') ? caseProgress.stage : 0;
+      const _locH = _aktLocationObj();
+      if (_locH && Array.isArray(_locH.indizien) && Array.isArray(akt.hotspots)) {
+        _hierWasZuTun = akt.hotspots.some(hid => { const ind = _locH.indizien.find(i => i && i.id === hid); if (!ind || _gefH.indexOf(ind.id) !== -1) return false; if (typeof ind.abStage === 'number' && _stgH < ind.abStage) return false; return true; });
+      }
+      if (!_hierWasZuTun && Array.isArray(akt.npcs)) {
+        _hierWasZuTun = akt.npcs.some(nid => { try { const _id = _resolveNpcIdentity(nid); return _id && _id.name && typeof _npcHatOffenenHinweis === 'function' && _npcHatOffenenHinweis(_id.name); } catch (e) { return false; } });
+      }
+    } catch (e) {}
+    if (!_hierWasZuTun) {
+      const leer = document.createElement('div');
+      leer.style.cssText = 'color:#8a7c64;font-size:calc(11px * var(--reading-scale));font-style:italic;margin-bottom:8px;';
+      leer.textContent = 'Hier ist für den Moment nichts mehr zu holen.';
+      wrap.appendChild(leer);
+    }
     verb.forEach(zielId => {
       const ziel = mo.find(m => m.id === zielId);
       if (!ziel || !_mikroOrtErreichbar(ziel)) return;
@@ -7061,7 +7080,32 @@ function _renderMikroOrtNavigation(container) {
       const btn = document.createElement('button');
       btn.className = 'option-btn option-btn-system';
       btn.style.cssText = 'display:block;width:100%;text-align:left;margin:3px 0;';
-      btn.innerHTML = '<span class="option-text-wrap"><span>→ ' + escapeHtml(ziel.name) + '</span><span class="option-marker option-marker-system">· hingehen</span></span>';
+      // v7.12.823 (Benjamin: "dreht sich im Kreis, nichts passiert"): Orientierung - zeigen, ob an der Zielstation
+      // etwas wartet. Hat die Station eine anwesende, noch nicht ausgequetschte Person ODER einen offenen Hotspot?
+      let _marker = '· hingehen';
+      try {
+        const _gef = (caseProgress && Array.isArray(caseProgress.gefundeneIndizIds)) ? caseProgress.gefundeneIndizIds : [];
+        const _stgN = (caseProgress && typeof caseProgress.stage === 'number') ? caseProgress.stage : 0;
+        const _loc = _aktLocationObj();
+        let _wartet = false;
+        // offener Hotspot an der Zielstation (nicht gefunden, stage/zeit erfüllt)?
+        if (_loc && Array.isArray(_loc.indizien) && Array.isArray(ziel.hotspots)) {
+          _wartet = ziel.hotspots.some(hid => {
+            const ind = _loc.indizien.find(i => i && i.id === hid);
+            if (!ind || _gef.indexOf(ind.id) !== -1) return false;
+            if (typeof ind.abStage === 'number' && _stgN < ind.abStage) return false;
+            return true;
+          });
+        }
+        // Person an der Zielstation, die noch einen offenen Hinweis hat?
+        if (!_wartet && Array.isArray(ziel.npcs)) {
+          _wartet = ziel.npcs.some(nid => {
+            try { const _id = _resolveNpcIdentity(nid); return _id && _id.name && typeof _npcHatOffenenHinweis === 'function' && _npcHatOffenenHinweis(_id.name); } catch (e) { return false; }
+          });
+        }
+        if (_wartet) _marker = '· ● etwas wartet';
+      } catch (e) {}
+      btn.innerHTML = '<span class="option-text-wrap"><span>→ ' + escapeHtml(ziel.name) + '</span><span class="option-marker option-marker-system" style="' + (_marker.indexOf('●') !== -1 ? 'color:#d4b86a;' : '') + '">' + _marker + '</span></span>';
       const _go = () => {
         const r = _mikroOrtWechseln(zielId);
         if (r && r.ok && typeof renderOptions === 'function' && typeof currentScene === 'object' && currentScene) {
@@ -7898,7 +7942,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.822';
+window.SCHATTEN_VERSION = 'v7.12.823';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -23385,9 +23429,12 @@ function npcInteraktion(npc, verb) {
     } catch (e) {}
   }
   // Verb-spezifischer Aktionstext + Kategorie. Die KI bekommt eine klare, gezielte Anweisung.
+  // v7.12.823 (Benjamin: "der Prompt-Text ist sichtbar"): Bei Sozial-Tonarten ist verb.aktion der lange KI-PUSH -
+  // den darf der Spieler NICHT sehen. _anzeigeText = das kurze Label (sichtbar in Bubble/Log), text = push (nur KI).
   const npcOpt = {
     id: 'NPC_' + verb.key,
     text: verb.aktion.replace('{npc}', npc.name),
+    _anzeigeText: verb._sozialTonart ? ('Karl: ' + verb.label) : undefined,
     kategorie: verb.kategorie,
     _kategorie: verb.kategorie,
     _priority: 18,
