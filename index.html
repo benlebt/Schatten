@@ -3281,7 +3281,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.777</div>
+    <div class="start-version">Schatten v7.12.778</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3507,7 +3507,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.777</span>
+    <span>Schatten v7.12.778</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7500,7 +7500,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.777';
+window.SCHATTEN_VERSION = 'v7.12.778';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -14334,6 +14334,38 @@ async function ensureSpielAuth() {
   return false;
 }
 
+// v7.12.778 (Benjamin): Bestätigungs-Popup vor dem Fallstart - verhindert, dass ein versehentlicher Tap beim
+// Scrollen sofort einen Fall startet. Zeigt den Namen des gewählten Falls und verlangt eine zweite Bestätigung.
+function _zeigeFallStartBestaetigung(idx, titel) {
+  var alt = document.getElementById('fallstart-overlay');
+  if (alt) alt.remove();
+  var ov = document.createElement('div');
+  ov.id = 'fallstart-overlay';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:9400;background:rgba(8,6,5,0.82);display:flex;align-items:center;justify-content:center;padding:24px;';
+  var panel = document.createElement('div');
+  panel.style.cssText = 'max-width:360px;width:100%;background:#1a1611;border:1px solid #4d4234;border-radius:10px;padding:22px 20px 18px;box-shadow:0 16px 50px rgba(0,0,0,0.75);';
+  var laeuft = (typeof hasSavedGame === 'function') && hasSavedGame();
+  var html = '<div style="color:#ece3cf;font-size:calc(15px * var(--reading-scale));font-weight:bold;letter-spacing:0.03em;margin-bottom:10px;">Fall starten?</div>';
+  html += '<div style="color:#c8bfa8;font-size:calc(12.5px * var(--reading-scale));line-height:1.55;margin-bottom:' + (laeuft ? '8px' : '16px') + ';">Möchtest du den Fall <span style="color:#e8c98a;font-weight:bold;">' + escapeHtml((typeof asciiToUmlaut === 'function' ? asciiToUmlaut(titel) : titel) || 'diesen Fall') + '</span> beginnen?</div>';
+  if (laeuft) {
+    html += '<div style="color:#d98a6a;font-size:calc(11px * var(--reading-scale));line-height:1.5;margin-bottom:16px;font-style:italic;">Ein laufender Fall wird dabei beendet.</div>';
+  }
+  panel.innerHTML = html;
+  var btnStart = document.createElement('button');
+  btnStart.style.cssText = 'display:block;width:100%;margin-bottom:9px;padding:13px;background:#3a5a3e;border:1px solid #5a8060;border-radius:7px;color:#eaf2ea;cursor:pointer;font-family:inherit;font-size:calc(13.5px * var(--reading-scale));font-weight:bold;letter-spacing:0.04em;';
+  btnStart.textContent = '▶ Fall starten';
+  attachSafeTap(btnStart, function() { ov.remove(); selectedSetupIdx = idx; startGame(); });
+  panel.appendChild(btnStart);
+  var btnAbbr = document.createElement('button');
+  btnAbbr.style.cssText = 'display:block;width:100%;padding:12px;background:#2a241d;border:1px solid #4d4234;border-radius:7px;color:#a89a82;cursor:pointer;font-family:inherit;font-size:calc(12.5px * var(--reading-scale));letter-spacing:0.03em;';
+  btnAbbr.textContent = 'Abbrechen';
+  attachSafeTap(btnAbbr, function() { ov.remove(); });
+  panel.appendChild(btnAbbr);
+  ov.appendChild(panel);
+  // Tap auf den dunklen Hintergrund schließt ebenfalls (kein versehentlicher Start)
+  attachSafeTap(ov, function(e) { if (e && e.target === ov) ov.remove(); });
+  document.body.appendChild(ov);
+}
 async function showSetupSelector() {
   // v7.12.161: Zugangspasswort einmalig erfassen, bevor ein Fall (und damit Tokens) startet.
   // v7.12.250: Rückgabewert AUSWERTEN. Bei Abbruch (kein Passwort eingegeben) NICHT in die
@@ -14387,12 +14419,12 @@ async function showSetupSelector() {
         '<div class="setup-card-meta">' + escapeHtml(fmt.meta) + '</div>' +
         '<div class="setup-card-desc">' + escapeHtml(fmt.desc) + '</div>' +
         (fmt.histContext ? '<div class="setup-card-history">🕰 ' + escapeHtml(fmt.histContext) + '</div>' : '');
-      card.onclick = (function(idx) {
+      card.onclick = (function(idx, titel) {
         return function() {
-          selectedSetupIdx = idx;
-          startGame();
+          // v7.12.778 (Benjamin: "versehentlicher Tap beim Scrollen startet sofort den Fall"): erst nachfragen.
+          _zeigeFallStartBestaetigung(idx, titel);
         };
-      })(i);
+      })(i, fmt.title);
     } else {
       // Gesperrte Karte: nur Position + Schloss-Hinweis, keine Story-Details
       // (Spoiler-Schutz - der Spieler soll den Fall erst entdecken wenn er
