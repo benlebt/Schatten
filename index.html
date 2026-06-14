@@ -3307,7 +3307,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.827</div>
+    <div class="start-version">Schatten v7.12.828</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3533,7 +3533,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.827</span>
+    <span>Schatten v7.12.828</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7082,6 +7082,32 @@ function _renderExploration(container) {
     if (!container || !_hatExploration()) return;
     if (typeof diag === 'function') diag('state', '🧭 EXPLORATION-RENDER: ' + (engineCurrentLocation ? engineCurrentLocation.name : '?') + ' @ Knoten ' + _expNodeKey());
     const g = _expGraph();
+    // v7.12.827 (Benjamin: bewusster Eintritt): Noch nicht betreten -> Eintritts-Ansicht (Stimmung + "betreten"-Knopf).
+    if (!caseProgress._explorationBetreten) {
+      const eingang = document.createElement('div');
+      eingang.style.cssText = 'margin:4px 0 12px;padding:14px;border:1px solid rgba(138,122,88,0.35);border-radius:8px;background:linear-gradient(180deg,rgba(40,34,24,0.5),rgba(0,0,0,0));text-align:center;';
+      const startNode = g.nodes[g.start] || g.nodes[Object.keys(g.nodes)[0]];
+      const svgKey = startNode ? startNode.svg : '';
+      const sv = document.createElement('div'); sv.style.cssText = 'margin-bottom:10px;opacity:0.85;'; sv.innerHTML = _expSvgAnsicht(svgKey);
+      eingang.appendChild(sv);
+      const txt = document.createElement('div');
+      txt.style.cssText = 'color:#b3a888;font-size:calc(13px * var(--reading-scale));font-style:italic;line-height:1.5;margin-bottom:12px;';
+      txt.textContent = 'Vor dir liegt der ' + (engineCurrentLocation ? engineCurrentLocation.name : 'Schauplatz') + '. Du kannst ihn Schritt für Schritt absuchen - aber je länger du dich aufhältst, desto eher fällt es auf.';
+      eingang.appendChild(txt);
+      const btn = document.createElement('button');
+      btn.className = 'option-btn option-btn-system';
+      btn.style.cssText = 'display:block;width:100%;text-align:left;';
+      btn.innerHTML = '<span class="option-text-wrap"><span>🚪 ' + escapeHtml((engineCurrentLocation ? engineCurrentLocation.name.split(' ')[0] : 'Den Ort') ) + ' betreten und absuchen</span><span class="option-marker option-marker-system">· los</span></span>';
+      const _enter = () => {
+        caseProgress._explorationBetreten = true;
+        if (!caseProgress.aktuellerExplorationNode) caseProgress.aktuellerExplorationNode = g.start;
+        if (typeof renderOptions === 'function' && typeof currentScene === 'object' && currentScene) renderOptions(currentScene);
+      };
+      if (typeof attachSafeTap === 'function') attachSafeTap(btn, _enter); else btn.onclick = _enter;
+      eingang.appendChild(btn);
+      container.appendChild(eingang);
+      return; // noch nicht die begehbare Ansicht zeigen
+    }
     const nodeKey = _expNodeKey();
     const node = g.nodes[nodeKey];
     if (!node) return;
@@ -7971,7 +7997,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.827';
+window.SCHATTEN_VERSION = 'v7.12.828';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -11891,6 +11917,7 @@ function createInitialCaseProgress() {
     aktuellerExplorationNode: null,
     besuchteExplorationNodes: {},
     aufmerksamkeit: 0,
+    _explorationBetreten: false, // v7.12.827: erst nach bewusstem "betreten"-Klick erscheint die begehbare Ansicht
   };
 }
 let caseProgress = createInitialCaseProgress();
@@ -22318,7 +22345,7 @@ function reiseZuOrt(loc) {
     const vorher = engineCurrentLocation ? engineCurrentLocation.name : '?';
     engineCurrentLocation = { name: loc.name, sektor: loc.sektor || '' };
     // v7.12.826 (Erkundungs-Modus): neuer Schauplatz -> Knoten + Aufmerksamkeit zurücksetzen.
-    try { if (caseProgress) { caseProgress.aktuellerExplorationNode = null; caseProgress.aufmerksamkeit = 0; } } catch (e) {}
+    try { if (caseProgress) { caseProgress.aktuellerExplorationNode = null; caseProgress.aufmerksamkeit = 0; caseProgress._explorationBetreten = false; } } catch (e) {}
     _reiseGeradeErfolgt = { name: loc.name, sektor: loc.sektor || '', detail: loc.detail || '' };
     _aktuelleAktionIstReise = true; // v7.12.527: für mechCtx (kein Indiz-Zwang bei Reise)
     _threatLetzterWuerfelOrt = ''; _threatAktiveSpawns = []; // v7.12.532: am Zielort frisch würfeln (beim Szene-Commit)
@@ -24121,7 +24148,7 @@ function baueSicherungsButtons(container) {
             if (_zielLoc && (!engineCurrentLocation || normForMatch(engineCurrentLocation.name) !== normForMatch(_zielLoc.name))) {
               const _vorherOrt = engineCurrentLocation ? engineCurrentLocation.name : '?';
               engineCurrentLocation = { name: _zielLoc.name, sektor: _zielLoc.sektor || '' };
-              try { if (caseProgress) { caseProgress.aktuellerExplorationNode = null; caseProgress.aufmerksamkeit = 0; } } catch (e) {}
+              try { if (caseProgress) { caseProgress.aktuellerExplorationNode = null; caseProgress.aufmerksamkeit = 0; caseProgress._explorationBetreten = false; } } catch (e) {}
               if (typeof _reiseGeradeErfolgt !== 'undefined') _reiseGeradeErfolgt = { name: _zielLoc.name, sektor: _zielLoc.sektor || '', detail: _zielLoc.detail || '' };
               if (typeof diag === 'function') diag('state', 'SICHERUNG mit Ortswechsel (Engine besitzt Ort): "' + _vorherOrt + '" -> "' + _zielLoc.name + '"');
               if (typeof renderImRaumAnzeige === 'function') { try { renderImRaumAnzeige(); } catch (e) {} }
@@ -42697,6 +42724,9 @@ function _migriereCaseSetupOrte() {
         else if (!vorhanden.npc && qi.npc) { vorhanden.npc = qi.npc; ergaenzt++; } // nachträgliche NPC-Bindung
       });
     }
+    // v7.12.827 (Benjamin: "Hinterhof zeigt keine Erkundung" - Wurzel: caseSetup eingefroren, Graph fehlt in altem
+    // Stand). explorationGraph aus der aktuellen Falldefinition nachtragen, falls er im gespeicherten Ort fehlt.
+    if (qLoc.explorationGraph && !loc.explorationGraph) { loc.explorationGraph = JSON.parse(JSON.stringify(qLoc.explorationGraph)); ergaenzt++; }
   });
   // v7.12.810 (Benjamin: "bei Voss kein Puzzle" - Wurzel: caseSetup wird im Spielstand eingefroren; ein Fall, der
   // VOR den Sozial-Profilen v791/v803/v804 begonnen wurde, trägt die Profile nicht). Cast-Profile nachtragen:
