@@ -3298,7 +3298,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.791</div>
+    <div class="start-version">Schatten v7.12.792</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3524,7 +3524,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.791</span>
+    <span>Schatten v7.12.792</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7586,7 +7586,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.791';
+window.SCHATTEN_VERSION = 'v7.12.792';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -11569,6 +11569,7 @@ let romanceNpcLastSeenScene = -99;  // v7.12.266: Szene-Nr, in der die Romance-F
 let romanceRejected = {};    // npcName -> true wenn abgewiesen (Button dauerhaft weg)
 let romanceClimaxed = {};    // v7.12.28: npcName -> true wenn die Nacht mit dieser Person verbracht wurde - Folge-Annaeherungen wuerfeln neu
 let npcMisstrauisch = {};    // v7.12.791: npcName -> true wenn eine falsche Befragungs-Tonart die Person misstrauisch gemacht hat (Sozial-Puzzle fail forward)
+let npcTonartVerbraucht = {}; // v7.12.792: npcName -> [tonartKey,...] bereits gewählte Fehlschlag-Tonarten (verschwinden danach)
 
 // Story-appropriate wait texts, chosen by current tension level.
 // Each pool has 6+ entries to avoid repetition.
@@ -22845,10 +22846,14 @@ function oeffneNpcMenue(npc, modus) {
     }
     if (_sozNpc && _sozNpc.sozial && Array.isArray(_sozNpc.sozial.tonarten) && !_hundVerbenOverride && !GEGNER.includes(tag)) {
       const _istMiss = !!(npcMisstrauisch && npcMisstrauisch[npc.name]);
+      const _verbraucht = (npcTonartVerbraucht && Array.isArray(npcTonartVerbraucht[npc.name])) ? npcTonartVerbraucht[npc.name] : [];
       // "Befragen" rauswerfen - die Tonart-Optionen treten an seine Stelle.
       for (let i = verben.length - 1; i >= 0; i--) { if (verben[i] && verben[i].key === 'befragen') verben.splice(i, 1); }
       _sozNpc.sozial.tonarten.forEach(t => {
         if (!t || !t.key) return;
+        // v7.12.792 (Benjamin: "dieselbe falsche Tonart darf man nicht zweimal wählen"): bereits verbrauchte
+        // Fehlschlag-Tonarten verschwinden - sie ist schon misstrauisch geworden, dieselbe Masche zieht nicht nochmal.
+        if (!t.erfolg && _verbraucht.indexOf(t.key) !== -1) return;
         let _label = t.label;
         if (_istMiss && t.erfolg) _label += ' (sie ist misstrauisch)';
         verben.unshift({
@@ -23109,7 +23114,11 @@ function oeffneNpcMenue(npc, modus) {
         try {
           if (typeof npcMisstrauisch !== 'object' || !npcMisstrauisch) window.npcMisstrauisch = {};
           npcMisstrauisch[npc.name] = true;
-          if (typeof diag === 'function') diag('state', '🗣 SOZIAL-PUZZLE: falsche Tonart bei ' + npc.name + ' -> jetzt misstrauisch (fail forward)');
+          // v7.12.792: diese Fehlschlag-Tonart als verbraucht merken - sie verschwindet danach aus dem Menü.
+          if (typeof npcTonartVerbraucht !== 'object' || !npcTonartVerbraucht) window.npcTonartVerbraucht = {};
+          if (!Array.isArray(npcTonartVerbraucht[npc.name])) npcTonartVerbraucht[npc.name] = [];
+          if (verb._sozialTonart && npcTonartVerbraucht[npc.name].indexOf(verb._sozialTonart) === -1) npcTonartVerbraucht[npc.name].push(verb._sozialTonart);
+          if (typeof diag === 'function') diag('state', '🗣 SOZIAL-PUZZLE: falsche Tonart "' + (verb._sozialTonart || '?') + '" bei ' + npc.name + ' -> misstrauisch + Tonart verbraucht (fail forward)');
         } catch (e) {}
       }
       npcInteraktion(npc, verb);
@@ -29823,6 +29832,7 @@ async function startGame() {
   nachtMitFrau = '';       // v7.12.282: Nacht-mit-Frau-Tracking zuruecksetzen
   romanceClimaxed = {};    // v7.12.28: Climax-Tracking zuruecksetzen
   npcMisstrauisch = {};    // v7.12.791: Sozial-Misstrauen zuruecksetzen
+  npcTonartVerbraucht = {}; // v7.12.792: verbrauchte Tonarten zuruecksetzen
   // Reset Historische Anker (v6.56 -> v6.57)
   historicalAnchorCount = 0;
   historicalAnchorsUsed = [];
@@ -41634,6 +41644,7 @@ function saveGameState() {
       romanceRejected: (typeof romanceRejected === 'object' && romanceRejected) ? romanceRejected : {},
       romanceClimaxed: (typeof romanceClimaxed === 'object' && romanceClimaxed) ? romanceClimaxed : {},
       npcMisstrauisch: (typeof npcMisstrauisch === 'object' && npcMisstrauisch) ? npcMisstrauisch : {},
+      npcTonartVerbraucht: (typeof npcTonartVerbraucht === 'object' && npcTonartVerbraucht) ? npcTonartVerbraucht : {},
       stasiTension: stasiTension,
       stasiCapForCase: stasiCapForCase,
       karlInStasiCustody: karlInStasiCustody,
@@ -41900,6 +41911,7 @@ function restoreGameState() {
     romanceRejected = (snap.romanceRejected && typeof snap.romanceRejected === 'object') ? snap.romanceRejected : {};
     romanceClimaxed = (snap.romanceClimaxed && typeof snap.romanceClimaxed === 'object') ? snap.romanceClimaxed : {};
     npcMisstrauisch = (snap.npcMisstrauisch && typeof snap.npcMisstrauisch === 'object') ? snap.npcMisstrauisch : {};
+    npcTonartVerbraucht = (snap.npcTonartVerbraucht && typeof snap.npcTonartVerbraucht === 'object') ? snap.npcTonartVerbraucht : {};
     stasiTension = snap.stasiTension || 0;
     stasiCapForCase = (typeof snap.stasiCapForCase === 'number') ? snap.stasiCapForCase : 5;
     karlInStasiCustody = !!snap.karlInStasiCustody;
