@@ -3332,7 +3332,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.857</div>
+    <div class="start-version">Schatten v7.12.858</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3558,7 +3558,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.857</span>
+    <span>Schatten v7.12.858</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7611,6 +7611,119 @@ function _expAusgangHinweis() {
     return (rel[p.blick] && rel[p.blick][ziel]) ? rel[p.blick][ziel] : null;
   } catch (e) { return null; }
 }
+// v7.12.858 (Weg 2): Für öffentliche Orte (Café) KEIN Tunnel, sondern EIN festes Saal-Stimmungsbild von
+// schräg oben. Anklickbare Stationen direkt im Bild (Tresen/Voss, Ecktisch, Ausgang). Kein Verirren, kein Schlauch.
+function _renderCafeSaal(container) {
+  try {
+    const loc = _expLocationObj(); if (!loc) return;
+    const tz = (typeof _aktTageszeitName === 'function') ? normForMatch(_aktTageszeitName()) : 'nachmittag';
+    const istNacht = (tz === 'nacht' || tz === 'abend');
+    const pal = istNacht
+      ? { bg1: '#1a1d26', bg2: '#0d1016', wand: '#2a3038', stroke: '#8a96a8', akzent: '#6fa8d4', licht: '#cfe0f0', marmor: '#3a4250' }
+      : { bg1: '#2a2418', bg2: '#15110b', wand: '#3c3528', stroke: '#b3a47e', akzent: '#d4b86a', licht: '#e8d9a8', marmor: '#4a4234' };
+    const W = 320, H = 210;
+    const wrap = document.createElement('div'); wrap.style.cssText = 'margin:4px 0 12px;';
+    const view = document.createElement('div'); view.style.cssText = 'position:relative;margin-bottom:8px;';
+
+    // Welche Stationen sind aktiv? (Voss am Tresen, Robert-Tisch-Spur, Ausgang immer)
+    const _np = (typeof getNpcsAtCurrentLocation === 'function') ? getNpcsAtCurrentLocation() : [];
+    const vossDa = _np.find(n => n && /voss/i.test(n.name || ''));
+    const _indErr = (typeof _ortsFundIndizienErreichbar === 'function') ? _ortsFundIndizienErreichbar() : [];
+    const tischSpurDa = _indErr.some(i => /tisch/i.test(i.id || ''));
+    const vossStimmung = vossDa ? ((typeof _expNpcStimmung === 'function') ? _expNpcStimmung(vossDa.name) : 'offen') : 'offen';
+    const vossEmoji = vossDa ? ((typeof charVisual === 'function') ? charVisual(vossDa.name, vossDa.tag) : '🤵') : null;
+
+    let s = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;border:1px solid rgba(138,122,88,0.35);border-radius:8px;background:' + pal.bg2 + ';">';
+    s += '<defs><radialGradient id="csaalvig" cx="50%" cy="42%" r="75%"><stop offset="50%" stop-color="rgba(0,0,0,0)"/><stop offset="100%" stop-color="rgba(0,0,0,0.5)"/></radialGradient></defs>';
+    // Boden (Perspektive von schräg oben - heller Marmor in der Tiefe)
+    s += '<polygon points="0,' + H + ' ' + W + ',' + H + ' 250,70 70,70" fill="' + pal.marmor + '" opacity="0.55"/>';
+    // Marmor-Schachbrett angedeutet (Fluchtlinien)
+    for (let i = 1; i < 6; i++) { const fx = 70 + i * 30; s += '<line x1="' + fx + '" y1="70" x2="' + (fx * 2.5 - 110) + '" y2="' + H + '" stroke="' + pal.stroke + '" stroke-width="0.4" opacity="0.25"/>'; }
+    for (let j = 1; j < 4; j++) { const fy = 70 + j * 35; s += '<line x1="' + (70 - j * 8) + '" y1="' + fy + '" x2="' + (250 + j * 8) + '" y2="' + fy + '" stroke="' + pal.stroke + '" stroke-width="0.4" opacity="0.2"/>'; }
+    // Rückwand mit Vertäfelung + Spiegeln
+    s += '<rect x="0" y="0" width="' + W + '" height="72" fill="' + pal.wand + '" opacity="0.5"/>';
+    for (let v = 0; v < 8; v++) { s += '<line x1="' + (v * 42) + '" y1="6" x2="' + (v * 42) + '" y2="66" stroke="' + pal.stroke + '" stroke-width="0.5" opacity="0.4"/>'; }
+    // zwei Wandspiegel
+    s += '<rect x="36" y="14" width="34" height="44" rx="2" fill="' + pal.licht + '" opacity="0.05" stroke="' + pal.akzent + '" stroke-width="0.8"/>';
+    s += '<rect x="250" y="14" width="34" height="44" rx="2" fill="' + pal.licht + '" opacity="0.05" stroke="' + pal.akzent + '" stroke-width="0.8"/>';
+    // Kronleuchter
+    s += '<line x1="160" y1="0" x2="160" y2="12" stroke="' + pal.stroke + '" stroke-width="0.8"/>';
+    s += '<ellipse cx="160" cy="16" rx="14" ry="5" fill="' + pal.akzent + '" opacity="0.18"/>';
+    s += '<circle cx="160" cy="16" r="3" fill="' + pal.akzent + '" opacity="0.6"/>';
+
+    // Stumme Gast-Tische als Kulisse (gestaffelt in die Tiefe - DAS macht den Saal voll)
+    const gaesteTische = [ {x:60,y:120,r:0.9}, {x:250,y:120,r:0.85}, {x:40,y:170,r:1.1}, {x:280,y:170,r:1.05}, {x:120,y:150,r:0.95} ];
+    gaesteTische.forEach((t, idx) => {
+      const r = t.r;
+      // Tisch
+      s += '<ellipse cx="' + t.x + '" cy="' + t.y + '" rx="' + (16 * r) + '" ry="' + (6 * r) + '" fill="' + pal.licht + '" opacity="0.10" stroke="' + pal.stroke + '" stroke-width="0.6"/>';
+      // ein bis zwei stille Gäste (Kulisse, nicht anklickbar)
+      s += '<g opacity="0.5"><ellipse cx="' + (t.x - 10 * r) + '" cy="' + (t.y - 14 * r) + '" rx="' + (5 * r) + '" ry="' + (6 * r) + '" fill="#15110b"/>';
+      s += '<path d="M' + (t.x - 16 * r) + ',' + (t.y - 2) + ' q' + (6 * r) + ',' + (-14 * r) + ' ' + (12 * r) + ',0 z" fill="#15110b"/></g>';
+      if (idx % 2 === 0) { s += '<g opacity="0.45"><ellipse cx="' + (t.x + 10 * r) + '" cy="' + (t.y - 13 * r) + '" rx="' + (5 * r) + '" ry="' + (6 * r) + '" fill="#1a160f"/>';
+        s += '<path d="M' + (t.x + 4 * r) + ',' + (t.y - 2) + ' q' + (6 * r) + ',' + (-13 * r) + ' ' + (12 * r) + ',0 z" fill="#1a160f"/></g>'; }
+    });
+
+    // === Anklickbare Stationen ===
+    // 1. Marmortresen mit Voss (oben mittig-links)
+    s += '<rect x="96" y="60" width="128" height="16" rx="3" fill="' + pal.licht + '" opacity="0.16" stroke="' + pal.stroke + '" stroke-width="1.2"/>';
+    s += '<line x1="100" y1="64" x2="220" y2="64" stroke="' + pal.licht + '" stroke-width="0.6" opacity="0.4"/>';
+    if (vossDa) {
+      s += '<g><ellipse cx="160" cy="44" rx="8" ry="9" fill="#241d14" stroke="' + pal.stroke + '" stroke-width="1"/>';
+      s += '<text x="160" y="49" text-anchor="middle" font-size="15">' + vossEmoji + '</text>';
+      const vse = (typeof _expStimmungsEmoji === 'function') ? _expStimmungsEmoji(vossStimmung) : null;
+      if (vse) s += '<text x="174" y="40" text-anchor="middle" font-size="12">' + vse + '</text>';
+      s += '</g>';
+    }
+    // 2. Roberts stiller Ecktisch (vorne rechts, hervorgehoben wenn Spur da)
+    const rtX = 232, rtY = 150;
+    s += '<ellipse cx="' + rtX + '" cy="' + rtY + '" rx="22" ry="9" fill="' + (tischSpurDa ? pal.akzent : pal.licht) + '" opacity="' + (tischSpurDa ? '0.18' : '0.1') + '" stroke="' + (tischSpurDa ? pal.akzent : pal.stroke) + '" stroke-width="1.2"/>';
+    s += '<rect x="' + (rtX - 2) + '" y="' + rtY + '" width="4" height="20" fill="rgba(0,0,0,0.4)"/>';
+    if (tischSpurDa) { s += '<circle cx="' + rtX + '" cy="' + (rtY - 16) + '" r="7" fill="' + pal.akzent + '" opacity="0.14"/>'; s += '<text x="' + rtX + '" y="' + (rtY - 12) + '" text-anchor="middle" font-size="10" fill="' + pal.licht + '">?</text>'; }
+    // 3. Ausgang (unten mittig)
+    s += '<rect x="138" y="' + (H - 16) + '" width="44" height="16" rx="2" fill="rgba(0,0,0,0.4)" stroke="' + pal.stroke + '" stroke-width="0.8"/>';
+    s += '<text x="160" y="' + (H - 5) + '" text-anchor="middle" font-size="8" fill="' + pal.licht + '" opacity="0.7" letter-spacing="1">AUSGANG</text>';
+
+    s += '<rect x="0" y="0" width="' + W + '" height="' + H + '" fill="url(#csaalvig)"/>';
+    s += '</svg>';
+    view.innerHTML = s;
+
+    // Klickzonen über die Stationen (Prozent-positioniert auf dem View)
+    const _zone = (left, top, w, h, label, fn) => {
+      const z = document.createElement('button');
+      z.setAttribute('aria-label', label);
+      z.style.cssText = 'position:absolute;left:' + left + ';top:' + top + ';width:' + w + ';height:' + h + ';background:transparent;border:none;cursor:pointer;border-radius:6px;';
+      z.onmouseenter = () => { z.style.background = 'rgba(212,184,106,0.12)'; };
+      z.onmouseleave = () => { z.style.background = 'transparent'; };
+      if (typeof attachSafeTap === 'function') attachSafeTap(z, fn); else z.onclick = fn;
+      view.appendChild(z);
+      return z;
+    };
+    const _label = (left, top, txt, farbe) => {
+      const l = document.createElement('div');
+      l.style.cssText = 'position:absolute;left:' + left + ';top:' + top + ';transform:translateX(-50%);color:' + (farbe || '#e8d9a8') + ';font-size:calc(9px * var(--reading-scale));pointer-events:none;text-shadow:0 1px 3px #000;white-space:nowrap;';
+      l.textContent = txt;
+      view.appendChild(l);
+    };
+    if (vossDa) {
+      _zone('40%', '14%', '20%', '26%', 'Voss ansprechen', () => { try { if (typeof oeffneNpcMenue === 'function') oeffneNpcMenue(vossDa); } catch (e) {} });
+      _label('50%', '2%', '👤 Voss ansprechen');
+    }
+    if (tischSpurDa) {
+      _zone('64%', '60%', '24%', '24%', 'Platz nehmen und beobachten', () => { try { const f2 = (typeof _ortsFundItems === 'function') ? _ortsFundItems() : []; const i2 = _indErr; if ((f2.length || i2.length) && typeof _zeigeFundAuswahl === 'function') _zeigeFundAuswahl(f2, i2); } catch (e) {} });
+      _label('76%', '90%', '🔍 Platz nehmen', '#d4b86a');
+    }
+    _zone('41%', '90%', '18%', '10%', 'Cafe verlassen', () => { if (typeof showProgressToast === 'function') showProgressToast('Zum Opel', 'Karl verlässt das Cafe. Wohin als Nächstes?', 'info'); if (typeof oeffneReiseMenue === 'function') oeffneReiseMenue(); });
+
+    wrap.appendChild(view);
+    // Kopfzeile (Ort) - kein Aufmerksamkeits-/Bewegungs-Kram, da kein Tunnel
+    const kopf = document.createElement('div');
+    kopf.style.cssText = 'color:#cbbfa9;font-size:calc(12px * var(--reading-scale));letter-spacing:0.06em;margin-bottom:6px;padding:0 2px;';
+    kopf.textContent = '◈ Cafe Wien - tippe eine Station im Saal an';
+    wrap.appendChild(kopf);
+    container.appendChild(wrap);
+  } catch (e) { if (typeof diag === 'function') diag('drift', 'Cafe-Saal-Render-Fehler: ' + e.message); }
+}
 function _renderExploration(container) {
   try {
     if (!container || !_hatExploration()) return;
@@ -7625,7 +7738,10 @@ function _renderExploration(container) {
       eingang.appendChild(sv);
       const txt = document.createElement('div');
       txt.style.cssText = 'color:#b3a888;font-size:calc(13px * var(--reading-scale));font-style:italic;line-height:1.5;margin-bottom:12px;';
-      txt.textContent = 'Vor dir liegt der ' + (engineCurrentLocation ? engineCurrentLocation.name : 'Schauplatz') + '. Du kannst ihn Schritt für Schritt durchstreifen - aber je länger du dich aufhältst, desto eher fällt es auf.';
+      const _istOeff = (typeof _expProfil === 'function') && _expProfil() === 'oeffentlich';
+      txt.textContent = _istOeff
+        ? ('Du betrittst das ' + (engineCurrentLocation ? engineCurrentLocation.name : 'Lokal') + '. Ein voller Gastraum - du musst dich unauffällig verhalten und im richtigen Moment das Richtige tun.')
+        : ('Vor dir liegt der ' + (engineCurrentLocation ? engineCurrentLocation.name : 'Schauplatz') + '. Du kannst ihn Schritt für Schritt durchstreifen - aber je länger du dich aufhältst, desto eher fällt es auf.');
       eingang.appendChild(txt);
       const btn = document.createElement('button');
       btn.className = 'option-btn option-btn-system';
@@ -7635,6 +7751,11 @@ function _renderExploration(container) {
       if (typeof attachSafeTap === 'function') attachSafeTap(btn, _enter); else btn.onclick = _enter;
       eingang.appendChild(btn);
       container.appendChild(eingang);
+      return;
+    }
+    // v7.12.858 (Weg 2): Öffentliche Orte (Café) -> festes Saal-Stimmungsbild statt drehbarem Tunnel.
+    if ((typeof _expProfil === 'function') && _expProfil() === 'oeffentlich') {
+      _renderCafeSaal(container);
       return;
     }
     const wrap = document.createElement('div');
@@ -8665,7 +8786,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.857';
+window.SCHATTEN_VERSION = 'v7.12.858';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
