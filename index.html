@@ -3327,7 +3327,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.853</div>
+    <div class="start-version">Schatten v7.12.854</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3553,7 +3553,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.853</span>
+    <span>Schatten v7.12.854</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7164,6 +7164,9 @@ function _expSvgPerspektive(vorne, links, rechts, bodenSvgKey, feature, opts) {
   const _vigInner = Math.round(55 - 22 * _aufmF);         // 55% -> 33% (Dunkel rückt nach innen)
   // v7.12.853: ein seltenes Lebenszeichen für diese Ansicht (flacker/staub/husch/none).
   const _leben = (typeof _expLebenszeichen === 'function') ? _expLebenszeichen(seed, _aufm, istNacht) : 'none';
+  // v7.12.854: Wand-Optik nach Ortsprofil - Café/öffentlich = Vertäfelung, sonst Mietshaus-Ziegel.
+  const _oeffentlich = (opts.profil === 'oeffentlich');
+  const wandPattern = _oeffentlich ? 'vertaefel' : 'ziegel';
   const W = 320, H = 200;
   const ix1 = 96, iy1 = 58, ix2 = 224, iy2 = 150;
   let defs = '<defs>'
@@ -7174,6 +7177,12 @@ function _expSvgPerspektive(vorne, links, rechts, bodenSvgKey, feature, opts) {
     + '<line x1="0" y1="6" x2="22" y2="6" stroke="' + dim + '" stroke-width="0.5"/>'
     + '<line x1="0" y1="0" x2="0" y2="6" stroke="' + dim + '" stroke-width="0.5"/>'
     + '<line x1="11" y1="6" x2="11" y2="12" stroke="' + dim + '" stroke-width="0.5"/>'
+    + '</pattern>'
+    // v7.12.854: Café/öffentlich - Wandvertäfelung mit senkrechten Paneelen statt Mietshaus-Ziegel.
+    + '<pattern id="vertaefel" width="20" height="40" patternUnits="userSpaceOnUse">'
+    + '<rect width="20" height="40" fill="none"/>'
+    + '<line x1="0" y1="0" x2="0" y2="40" stroke="' + dim + '" stroke-width="0.6"/>'
+    + '<line x1="2" y1="4" x2="2" y2="36" stroke="' + dim + '" stroke-width="0.3" opacity="0.5"/>'
     + '</pattern>'
     // Vignette (Noir-Dunkelung zu den Rändern). v7.12.852: Stärke + Enge wachsen mit der Aufmerksamkeit
     // (ChatGPT Punkt 2: "ich halte mich zu lange hier auf" wird sichtbar). Nur Werte, kein neuer Layer.
@@ -7209,8 +7218,26 @@ function _expSvgPerspektive(vorne, links, rechts, bodenSvgKey, feature, opts) {
   s += '<circle cx="' + (W / 2) + '" cy="18" r="9" fill="' + pal.akzent + '" opacity="0.12"/>';
   // Linke Seite
   if (links === 'wand') {
-    s += '<polygon points="0,0 ' + ix1 + ',' + iy1 + ' ' + ix1 + ',' + iy2 + ' 0,' + H + '" fill="url(#ziegel)" opacity="0.5"/>';
+    s += '<polygon points="0,0 ' + ix1 + ',' + iy1 + ' ' + ix1 + ',' + iy2 + ' 0,' + H + '" fill="url(#' + wandPattern + ')" opacity="0.5"/>';
     s += '<line x1="' + ix1 + '" y1="' + iy1 + '" x2="' + ix1 + '" y2="' + iy2 + '" stroke="' + stroke + '" stroke-width="1.3"/>';
+    // v7.12.854: Im Café (öffentlich) andere Seitenwand - Spiegel, Wandleuchter, sitzender Gast (Leben!).
+    if (_oeffentlich) {
+      const _cl = Math.floor(_rnd(3) * 4);
+      if (_cl === 0) { // hoher Spiegel mit Rahmen
+        s += '<rect x="28" y="66" width="40" height="60" rx="2" fill="' + pal.licht + '" opacity="0.06" stroke="' + pal.akzent + '" stroke-width="1"/>';
+        s += '<rect x="32" y="70" width="32" height="52" fill="' + pal.licht + '" opacity="0.04"/>';
+      } else if (_cl === 1) { // Wandleuchter (Café-Beleuchtung)
+        s += '<rect x="44" y="74" width="6" height="4" fill="rgba(0,0,0,0.4)" stroke="' + dim + '" stroke-width="0.6"/>';
+        s += '<ellipse cx="47" cy="82" rx="16" ry="12" fill="' + pal.akzent + '" opacity="0.14"/>';
+        s += '<circle cx="47" cy="78" r="2.5" fill="' + pal.akzent + '" opacity="0.7"/>';
+      } else if (_cl === 2) { // sitzender Gast an einem Wandtisch (Silhouette, Kulisse)
+        s += '<g opacity="0.55"><ellipse cx="46" cy="96" rx="7" ry="8" fill="#1a160f" stroke="' + dim + '" stroke-width="0.6"/>';
+        s += '<path d="M36,124 q10,-18 20,0 z" fill="#1a160f"/>';
+        s += '<ellipse cx="46" cy="126" rx="14" ry="4" fill="' + pal.licht + '" opacity="0.1"/></g>'; // Tisch davor
+      } else { // gerahmtes Bild
+        s += '<rect x="34" y="78" width="28" height="22" rx="1" fill="rgba(0,0,0,0.3)" stroke="' + pal.akzent + '" stroke-width="0.8"/>';
+      }
+    } else {
     // v7.12.837/842: Detail auf der linken Wand (perspektivisch verzerrt). Mehr Varianten für Abwechslung.
     const _dl = Math.floor(_rnd(3) * 8);
     if (_dl === 0) { // Fenster (Trapez perspektivisch)
@@ -7241,6 +7268,7 @@ function _expSvgPerspektive(vorne, links, rechts, bodenSvgKey, feature, opts) {
     } else if (_dl === 7) { // Mauernische (dunkle Vertiefung)
       s += '<polygon points="38,82 64,79 64,120 38,124" fill="rgba(0,0,0,0.55)" stroke="' + dim + '" stroke-width="0.7"/>';
     }
+    } // Ende _oeffentlich-Verzweigung (Café vs Mietshaus)
   } else {
     s += '<polygon points="0,' + iy1 + ' ' + ix1 + ',' + iy1 + ' ' + ix1 + ',' + iy2 + ' 0,' + iy2 + '" fill="rgba(0,0,0,0.45)"/>';
     s += '<line x1="' + ix1 + '" y1="' + iy1 + '" x2="' + ix1 + '" y2="' + iy2 + '" stroke="' + dim + '" stroke-width="0.7" stroke-dasharray="3,3"/>';
@@ -7248,8 +7276,26 @@ function _expSvgPerspektive(vorne, links, rechts, bodenSvgKey, feature, opts) {
   }
   // Rechte Seite
   if (rechts === 'wand') {
-    s += '<polygon points="' + W + ',0 ' + ix2 + ',' + iy1 + ' ' + ix2 + ',' + iy2 + ' ' + W + ',' + H + '" fill="url(#ziegel)" opacity="0.5"/>';
+    s += '<polygon points="' + W + ',0 ' + ix2 + ',' + iy1 + ' ' + ix2 + ',' + iy2 + ' ' + W + ',' + H + '" fill="url(#' + wandPattern + ')" opacity="0.5"/>';
     s += '<line x1="' + ix2 + '" y1="' + iy1 + '" x2="' + ix2 + '" y2="' + iy2 + '" stroke="' + stroke + '" stroke-width="1.3"/>';
+    // v7.12.854: Café-Variante rechts (Spiegel, Leuchter, sitzender Gast).
+    if (_oeffentlich) {
+      const _cr = Math.floor(_rnd(7) * 4);
+      if (_cr === 0) {
+        s += '<rect x="' + (W - 68) + '" y="66" width="40" height="60" rx="2" fill="' + pal.licht + '" opacity="0.06" stroke="' + pal.akzent + '" stroke-width="1"/>';
+        s += '<rect x="' + (W - 64) + '" y="70" width="32" height="52" fill="' + pal.licht + '" opacity="0.04"/>';
+      } else if (_cr === 1) {
+        s += '<rect x="' + (W - 50) + '" y="74" width="6" height="4" fill="rgba(0,0,0,0.4)" stroke="' + dim + '" stroke-width="0.6"/>';
+        s += '<ellipse cx="' + (W - 47) + '" cy="82" rx="16" ry="12" fill="' + pal.akzent + '" opacity="0.14"/>';
+        s += '<circle cx="' + (W - 47) + '" cy="78" r="2.5" fill="' + pal.akzent + '" opacity="0.7"/>';
+      } else if (_cr === 2) {
+        s += '<g opacity="0.55"><ellipse cx="' + (W - 46) + '" cy="96" rx="7" ry="8" fill="#1a160f" stroke="' + dim + '" stroke-width="0.6"/>';
+        s += '<path d="M' + (W - 56) + ',124 q10,-18 20,0 z" fill="#1a160f"/>';
+        s += '<ellipse cx="' + (W - 46) + '" cy="126" rx="14" ry="4" fill="' + pal.licht + '" opacity="0.1"/></g>';
+      } else {
+        s += '<rect x="' + (W - 62) + '" y="78" width="28" height="22" rx="1" fill="rgba(0,0,0,0.3)" stroke="' + pal.akzent + '" stroke-width="0.8"/>';
+      }
+    } else {
     // v7.12.837/842: Detail auf der rechten Wand (gespiegelt, eigener Seed-Offset). Mehr Varianten.
     const _dr = Math.floor(_rnd(7) * 8);
     if (_dr === 0) {
@@ -7276,6 +7322,7 @@ function _expSvgPerspektive(vorne, links, rechts, bodenSvgKey, feature, opts) {
     } else if (_dr === 7) { // Nische
       s += '<polygon points="' + (W - 64) + ',79 ' + (W - 38) + ',82 ' + (W - 38) + ',124 ' + (W - 64) + ',120" fill="rgba(0,0,0,0.55)" stroke="' + dim + '" stroke-width="0.7"/>';
     }
+    } // Ende _oeffentlich-Verzweigung rechts
   } else {
     s += '<polygon points="' + ix2 + ',' + iy1 + ' ' + W + ',' + iy1 + ' ' + W + ',' + iy2 + ' ' + ix2 + ',' + iy2 + '" fill="rgba(0,0,0,0.45)"/>';
     s += '<line x1="' + ix2 + '" y1="' + iy1 + '" x2="' + ix2 + '" y2="' + iy2 + '" stroke="' + dim + '" stroke-width="0.7" stroke-dasharray="3,3"/>';
@@ -7331,7 +7378,7 @@ function _expSvgPerspektive(vorne, links, rechts, bodenSvgKey, feature, opts) {
       s += '<path d="M' + (tmx - 9) + ',' + (tmy - 4) + ' q11,-14 22,0 z" fill="#1a160f" stroke="' + dim + '" stroke-width="0.7"/></g>';
     }
   } else if (vorne === 'wand') {
-    s += '<rect x="' + ix1 + '" y="' + iy1 + '" width="' + (ix2 - ix1) + '" height="' + (iy2 - iy1) + '" fill="url(#ziegel)"/>';
+    s += '<rect x="' + ix1 + '" y="' + iy1 + '" width="' + (ix2 - ix1) + '" height="' + (iy2 - iy1) + '" fill="url(#' + wandPattern + ')"/>';
     s += '<rect x="' + ix1 + '" y="' + iy1 + '" width="' + (ix2 - ix1) + '" height="' + (iy2 - iy1) + '" fill="rgba(0,0,0,0.25)" stroke="' + stroke + '" stroke-width="1.4"/>';
     // v7.12.835: Wand-Detail je nach Position (deterministisch) - Abwechslung beim Geradeauslaufen.
     const _detail = Math.floor(_rnd(1) * 5);
@@ -7644,7 +7691,7 @@ function _renderExploration(container) {
       const _bew = window._expLetzteBewegung;
       if (_bew) { view.className = 'exp-anim-' + _bew; window._expLetzteBewegung = null; }
     } catch (e) {}
-    view.innerHTML = _expSvgPerspektive(vorne, links, rechts, zelle ? zelle.svg : '', _feature, { tz: (typeof _aktTageszeitName === 'function' ? _aktTageszeitName() : ''), seed: (p.x * 31 + p.y * 17 + (p.blick.charCodeAt(0) || 0)), fundDa: _fundDa, aufm: (caseProgress && typeof caseProgress.aufmerksamkeit === 'number') ? caseProgress.aufmerksamkeit : 0 });
+    view.innerHTML = _expSvgPerspektive(vorne, links, rechts, zelle ? zelle.svg : '', _feature, { tz: (typeof _aktTageszeitName === 'function' ? _aktTageszeitName() : ''), seed: (p.x * 31 + p.y * 17 + (p.blick.charCodeAt(0) || 0)), fundDa: _fundDa, aufm: (caseProgress && typeof caseProgress.aufmerksamkeit === 'number') ? caseProgress.aufmerksamkeit : 0, profil: (typeof _expProfil === 'function') ? _expProfil() : 'privat' });
     // v7.12.839: Klickzonen DIREKT im Bild - Person (mittig/seitlich) und Fund (eigene Zone). Keine Buttons unten mehr.
     const _machZone = (links, breite, label, fn, tip) => {
       const z = document.createElement('button');
@@ -8593,7 +8640,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.853';
+window.SCHATTEN_VERSION = 'v7.12.854';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
