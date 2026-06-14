@@ -3298,7 +3298,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.810</div>
+    <div class="start-version">Schatten v7.12.811</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3524,7 +3524,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.810</span>
+    <span>Schatten v7.12.811</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7666,7 +7666,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.810';
+window.SCHATTEN_VERSION = 'v7.12.811';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -22944,9 +22944,9 @@ function bauePersonenButtons(container, modus) {
       btn.style.opacity = '0.5';
       btn.style.cursor = 'not-allowed';
       btn.innerHTML = '<span class="option-id option-id-person">' + _npcEmoji + '</span><span class="option-text-wrap"><span>'
-        + escapeHtml(npc.name) + '</span><span class="' + _markerKlasse + '" style="color:#9a7a6a;">macht heute nicht mehr auf</span></span>';
+        + escapeHtml(npc.name) + '</span><span class="' + _markerKlasse + '" style="color:#9a7a6a;">spricht heute nicht mehr mit dir</span></span>';
       attachSafeTap(btn, () => {
-        if (typeof showProgressToast === 'function') { try { showProgressToast(npc.name.split(' ')[0] + ' bleibt heute zu', 'Nach Karls Auftreten lässt ' + npc.name + ' niemanden mehr herein. Vielleicht morgen wieder.', 'caution', 'verprellt-' + normForMatch(npc.name)); } catch (e) {} }
+        if (typeof showProgressToast === 'function') { try { showProgressToast(npc.name.split(' ')[0] + ' verstummt', 'Nach Karls Auftreten verschließt sich ' + npc.name + ' - heute ist kein Wort mehr zu holen. Vielleicht morgen wieder.', 'caution', 'verprellt-' + normForMatch(npc.name)); } catch (e) {} }
       });
       container.appendChild(btn);
       gebaut++;
@@ -23594,16 +23594,23 @@ function oeffneNpcMenue(npc, modus) {
           if (npcTonartVerbraucht[npc.name].indexOf(verb._sozialTonart) === -1) npcTonartVerbraucht[npc.name].push(verb._sozialTonart);
         } catch (e) {}
       }
-      // v7.12.791 Sozial-Puzzle: falsche Tonart macht die Person misstrauisch (fail forward - danach zickiger).
+      // v7.12.791/811 Sozial-Puzzle: falsche Tonart macht misstrauisch (fail forward).
+      // v7.12.811 (Benjamin, Option 3): Der ERSTE Fehler ist verzeihlich - nur misstrauisch, weiterprobieren erlaubt.
+      // Erst der ZWEITE Fehler (Person ist schon misstrauisch) sperrt sie für heute ("spricht heute nicht mehr mit dir").
       if (verb._sozialMachtMisstrauisch) {
         try {
           if (typeof npcMisstrauisch !== 'object' || !npcMisstrauisch) window.npcMisstrauisch = {};
+          const _warSchonMisstrauisch = !!npcMisstrauisch[npc.name];
           npcMisstrauisch[npc.name] = true;
           // (Tonart-Verbrauch passiert jetzt zentral oben für JEDE Tonart - v7.12.801.)
-          // v7.12.793 (Benjamin: "nach Abblitzen heute nicht mehr ansprechbar, erst morgen"): Tag merken.
-          if (typeof npcVerprelltAmTag !== 'object' || !npcVerprelltAmTag) window.npcVerprelltAmTag = {};
-          npcVerprelltAmTag[npc.name] = (typeof gameDay === 'number') ? gameDay : 1;
-          if (typeof diag === 'function') diag('state', '🗣 SOZIAL-PUZZLE: falsche Tonart "' + (verb._sozialTonart || '?') + '" bei ' + npc.name + ' -> misstrauisch + Tonart verbraucht + heute (Tag ' + npcVerprelltAmTag[npc.name] + ') verschlossen (fail forward)');
+          if (_warSchonMisstrauisch) {
+            // Zweiter Patzer -> für heute verschlossen (erst morgen wieder).
+            if (typeof npcVerprelltAmTag !== 'object' || !npcVerprelltAmTag) window.npcVerprelltAmTag = {};
+            npcVerprelltAmTag[npc.name] = (typeof gameDay === 'number') ? gameDay : 1;
+            if (typeof diag === 'function') diag('state', '🗣 SOZIAL-PUZZLE: ZWEITE falsche Tonart "' + (verb._sozialTonart || '?') + '" bei ' + npc.name + ' -> heute (Tag ' + npcVerprelltAmTag[npc.name] + ') verschlossen (Option 3)');
+          } else {
+            if (typeof diag === 'function') diag('state', '🗣 SOZIAL-PUZZLE: erste falsche Tonart "' + (verb._sozialTonart || '?') + '" bei ' + npc.name + ' -> misstrauisch (verzeihlich, weiterprobieren erlaubt)');
+          }
         } catch (e) {}
       }
       // v7.12.798 (Stärke-Gate): chancenloser Angriff -> kein Kampf, nur ein erklärender Hinweis.
