@@ -3307,7 +3307,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.821</div>
+    <div class="start-version">Schatten v7.12.822</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3533,7 +3533,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.821</span>
+    <span>Schatten v7.12.822</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6942,6 +6942,138 @@ function _hundVerfuegbarHier() {
 }
 function _hundInParty() { try { return !!(caseProgress && caseProgress.hundInParty); } catch (e) { return false; } }
 // ============ Ende WACHHUND-Helper ============
+
+// ============ MIKRO-ORTE (v7.12.822, Stufe 1) ============
+// Liefert das Location-Objekt der aktuellen Engine-Location (oder null).
+function _aktLocationObj() {
+  try {
+    if (!engineCurrentLocation || !engineCurrentLocation.name) return null;
+    const locs = (typeof getCaseLocations === 'function') ? getCaseLocations() : [];
+    return locs.find(l => l && normForMatch(l.name) === normForMatch(engineCurrentLocation.name)) || null;
+  } catch (e) { return null; }
+}
+// Liefert die Mikro-Orte der aktuellen Location (Array) oder null, wenn dieser Schauplatz keine hat (flach).
+function _aktMikroOrte() {
+  const loc = _aktLocationObj();
+  return (loc && Array.isArray(loc.mikroOrte) && loc.mikroOrte.length) ? loc.mikroOrte : null;
+}
+// Hat der aktuelle Schauplatz überhaupt Mikro-Orte?
+function _hatMikroOrte() { return !!_aktMikroOrte(); }
+// Die aktuelle Station-ID. Fehlt sie / passt sie nicht zur Location -> Start-Station (start:true, sonst erste).
+function _aktMikroOrtId() {
+  const mo = _aktMikroOrte();
+  if (!mo) return null;
+  let cur = caseProgress && caseProgress.aktuellerMikroOrt;
+  if (cur && mo.some(m => m.id === cur)) return cur;
+  const start = mo.find(m => m.start) || mo[0];
+  return start ? start.id : null;
+}
+// Das aktuelle Station-Objekt.
+function _aktMikroOrtObj() {
+  const mo = _aktMikroOrte(); if (!mo) return null;
+  const id = _aktMikroOrtId();
+  return mo.find(m => m.id === id) || null;
+}
+// Eine Station ist erreichbar, wenn ihr abStage-Gate erfüllt ist.
+function _mikroOrtErreichbar(station) {
+  if (!station) return false;
+  const stg = (caseProgress && typeof caseProgress.stage === 'number') ? caseProgress.stage : 0;
+  if (typeof station.abStage === 'number' && stg < station.abStage) return false;
+  return true;
+}
+// Zieht einen Atmo-Text der Station: erster Besuch -> erstbesuch-Pool, sonst tageszeit-Pool (tag/nacht),
+// und NICHT direkt denselben wie zuletzt (ChatGPT-Schärfung).
+function _mikroAtmoText(station, istErstbesuch) {
+  try {
+    if (!station) return '';
+    if (istErstbesuch && Array.isArray(station.erstbesuch) && station.erstbesuch.length) {
+      return station.erstbesuch[Math.floor(Math.random() * station.erstbesuch.length)];
+    }
+    const atmo = station.atmo || {};
+    const tz = (typeof _aktTageszeitName === 'function') ? _aktTageszeitName() : 'nachmittag';
+    const bucket = (normForMatch(tz) === 'nacht') ? 'nacht' : 'tag';
+    let pool = Array.isArray(atmo[bucket]) ? atmo[bucket] : (Array.isArray(atmo.tag) ? atmo.tag : []);
+    if (!pool.length) return '';
+    if (pool.length === 1) return pool[0];
+    if (!caseProgress._mikroAtmoLastIdx) caseProgress._mikroAtmoLastIdx = {};
+    const lastIdx = caseProgress._mikroAtmoLastIdx[station.id];
+    let idx = Math.floor(Math.random() * pool.length);
+    if (idx === lastIdx) idx = (idx + 1) % pool.length; // nicht direkt wiederholen
+    caseProgress._mikroAtmoLastIdx[station.id] = idx;
+    return pool[idx];
+  } catch (e) { return ''; }
+}
+// Wechselt zur Station targetId (wenn verbunden + erreichbar). Gibt {ok, atmo, erstbesuch, name} zurück.
+function _mikroOrtWechseln(targetId) {
+  try {
+    const mo = _aktMikroOrte(); if (!mo) return { ok: false };
+    const ziel = mo.find(m => m.id === targetId);
+    if (!ziel || !_mikroOrtErreichbar(ziel)) return { ok: false };
+    if (!caseProgress.visitedMikroOrte) caseProgress.visitedMikroOrte = {};
+    const locKey = normForMatch(engineCurrentLocation.name) + ':' + targetId;
+    const istErst = !caseProgress.visitedMikroOrte[locKey];
+    caseProgress.visitedMikroOrte[locKey] = true;
+    caseProgress.aktuellerMikroOrt = targetId;
+    const atmo = _mikroAtmoText(ziel, istErst);
+    return { ok: true, atmo: atmo, erstbesuch: istErst, name: ziel.name };
+  } catch (e) { return { ok: false }; }
+}
+// ============ Ende MIKRO-ORTE ============
+// v7.12.822 (Mikro-Orte Stufe 1): rendert die Stations-Navigation in den übergebenen Container:
+// aktueller Stationsname + Atmo-Text + Buttons zu den verbundenen, erreichbaren Stationen.
+function _renderMikroOrtNavigation(container) {
+  try {
+    if (!container) return;
+    const mo = (typeof _aktMikroOrte === 'function') ? _aktMikroOrte() : null;
+    if (!mo) return; // Schauplatz ohne Mikro-Orte -> nichts rendern (flacher Modus)
+    const aktId = _aktMikroOrtId();
+    const akt = mo.find(m => m.id === aktId);
+    if (!akt) return;
+    // Beim allerersten Render dieser Station den Besuch registrieren (für visited/Atmo).
+    if (!caseProgress.visitedMikroOrte) caseProgress.visitedMikroOrte = {};
+    const locKey = normForMatch(engineCurrentLocation.name) + ':' + aktId;
+    const istErst = !caseProgress.visitedMikroOrte[locKey];
+    if (istErst) caseProgress.visitedMikroOrte[locKey] = true;
+    if (caseProgress.aktuellerMikroOrt !== aktId) caseProgress.aktuellerMikroOrt = aktId;
+
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'margin:4px 0 10px;padding:10px 12px;border:1px solid rgba(138,122,88,0.35);border-radius:8px;background:linear-gradient(180deg,rgba(40,34,24,0.5),rgba(0,0,0,0));';
+    // Stationsname
+    const titel = document.createElement('div');
+    titel.style.cssText = 'color:#cbbfa9;font-size:calc(11px * var(--reading-scale));letter-spacing:0.12em;text-transform:uppercase;margin-bottom:5px;';
+    titel.textContent = '◈ ' + akt.name;
+    wrap.appendChild(titel);
+    // Atmo-Text (engine-only, kein KI-Call)
+    const atmoTxt = _mikroAtmoText(akt, istErst);
+    if (atmoTxt) {
+      const at = document.createElement('div');
+      at.style.cssText = 'color:#b3a888;font-size:calc(12px * var(--reading-scale));font-style:italic;line-height:1.5;margin-bottom:9px;';
+      at.textContent = atmoTxt;
+      wrap.appendChild(at);
+    }
+    // Bewegungs-Buttons zu verbundenen, erreichbaren Stationen
+    const verb = Array.isArray(akt.verbindungen) ? akt.verbindungen : [];
+    let _hatWeg = false;
+    verb.forEach(zielId => {
+      const ziel = mo.find(m => m.id === zielId);
+      if (!ziel || !_mikroOrtErreichbar(ziel)) return;
+      _hatWeg = true;
+      const btn = document.createElement('button');
+      btn.className = 'option-btn option-btn-system';
+      btn.style.cssText = 'display:block;width:100%;text-align:left;margin:3px 0;';
+      btn.innerHTML = '<span class="option-text-wrap"><span>→ ' + escapeHtml(ziel.name) + '</span><span class="option-marker option-marker-system">· hingehen</span></span>';
+      const _go = () => {
+        const r = _mikroOrtWechseln(zielId);
+        if (r && r.ok && typeof renderOptions === 'function' && typeof currentScene === 'object' && currentScene) {
+          renderOptions(currentScene); // neu rendern: neue Station, neue Personen/Hotspots/Atmo
+        }
+      };
+      if (typeof attachSafeTap === 'function') attachSafeTap(btn, _go); else btn.onclick = _go;
+      wrap.appendChild(btn);
+    });
+    container.appendChild(wrap);
+  } catch (e) { if (typeof diag === 'function') diag('drift', 'Mikro-Ort-Navigation-Render-Fehler: ' + e.message); }
+}
 function getNpcsAtCurrentLocation() {
   if (!engineCurrentLocation) return [];
   const locs = getCaseLocations();
@@ -6955,9 +7087,15 @@ function getNpcsAtCurrentLocation() {
   const out = [];
   const seen = {};
   // Feste/garantierte NPCs (immer/zeit) - nur wenn der Ort definiert ist.
+  // v7.12.822 (Mikro-Orte Stufe 1): Hat der Schauplatz Mikro-Orte, sind NPCs an ihre Station gebunden -
+  // nur die NPCs der AKTUELLEN Station erscheinen (Pohl nur im Hof, Ilse nur im 3. Stock).
+  const _moAkt = (typeof _aktMikroOrtObj === 'function') ? _aktMikroOrtObj() : null;
+  const _moNpcFilter = _moAkt && Array.isArray(_moAkt.npcs) ? _moAkt.npcs.map(n => normForMatch(n)) : null;
   if (loc && Array.isArray(loc.npcs)) {
     for (const entry of loc.npcs) {
       if (!entry || !entry.id) continue;
+      // Mikro-Ort-Gate: gehört dieser NPC zur aktuellen Station?
+      if (_moNpcFilter && _moNpcFilter.indexOf(normForMatch(entry.id)) === -1) continue;
       let daZeit = true;
       if (!entry.immer && Array.isArray(entry.zeit)) {
         daZeit = entry.zeit.map(z => normForMatch(z)).includes(tzName);
@@ -7760,7 +7898,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.821';
+window.SCHATTEN_VERSION = 'v7.12.822';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -10325,8 +10463,14 @@ function _ortsFundIndizienErreichbar() {
       if (Array.isArray(_loc.npcs)) _npcIdsAmOrt = _loc.npcs.filter(n => n && n.id && (n.immer || !Array.isArray(n.zeit) || !n.zeit.length || n.zeit.map(z => normForMatch(z)).includes(_tz))).map(n => normForMatch(n.id));
     } catch (e) {}
     const _stg = (caseProgress && typeof caseProgress.stage === 'number') ? caseProgress.stage : 0;
+    // v7.12.822 (Mikro-Orte Stufe 1): Hat der Schauplatz Mikro-Orte, sind Hotspots an ihre Station gebunden -
+    // nur die Indizien der AKTUELLEN Station auffindbar (Türschild nur im Treppenhaus).
+    const _moAkt2 = (typeof _aktMikroOrtObj === 'function') ? _aktMikroOrtObj() : null;
+    const _moHotspotFilter = _moAkt2 && Array.isArray(_moAkt2.hotspots) ? _moAkt2.hotspots.map(h => normForMatch(h)) : null;
     return _loc.indizien.filter(ind => {
       if (!ind || !ind.id || _gef.indexOf(ind.id) !== -1) return false;
+      // Mikro-Ort-Gate: gehört dieses Indiz zur aktuellen Station?
+      if (_moHotspotFilter && _moHotspotFilter.indexOf(normForMatch(ind.id)) === -1) return false;
       // v7.12.661 (Run-Befund: "4 Fundstücke, Klick findet nichts"). quelle:'person'-Indizien werden durch
       // BEFRAGEN gefunden, nicht durch Umsehen - die schließt der Umsehen-Button aus. quelle:'umgebung' sind
       // die echten Umsehen-Indizien (Spuren/Akten/Dokumente am Ort).
@@ -22102,6 +22246,8 @@ function reiseZuOrt(loc) {
   const _reiseKern = () => {
     const vorher = engineCurrentLocation ? engineCurrentLocation.name : '?';
     engineCurrentLocation = { name: loc.name, sektor: loc.sektor || '' };
+    // v7.12.822 (Mikro-Orte): neuer Schauplatz -> Station zurücksetzen (sonst klebt die alte Station-ID).
+    try { if (caseProgress) caseProgress.aktuellerMikroOrt = null; } catch (e) {}
     _reiseGeradeErfolgt = { name: loc.name, sektor: loc.sektor || '', detail: loc.detail || '' };
     _aktuelleAktionIstReise = true; // v7.12.527: für mechCtx (kein Indiz-Zwang bei Reise)
     _threatLetzterWuerfelOrt = ''; _threatAktiveSpawns = []; // v7.12.532: am Zielort frisch würfeln (beim Szene-Commit)
@@ -23904,6 +24050,7 @@ function baueSicherungsButtons(container) {
             if (_zielLoc && (!engineCurrentLocation || normForMatch(engineCurrentLocation.name) !== normForMatch(_zielLoc.name))) {
               const _vorherOrt = engineCurrentLocation ? engineCurrentLocation.name : '?';
               engineCurrentLocation = { name: _zielLoc.name, sektor: _zielLoc.sektor || '' };
+              try { if (caseProgress) caseProgress.aktuellerMikroOrt = null; } catch (e) {}
               if (typeof _reiseGeradeErfolgt !== 'undefined') _reiseGeradeErfolgt = { name: _zielLoc.name, sektor: _zielLoc.sektor || '', detail: _zielLoc.detail || '' };
               if (typeof diag === 'function') diag('state', 'SICHERUNG mit Ortswechsel (Engine besitzt Ort): "' + _vorherOrt + '" -> "' + _zielLoc.name + '"');
               if (typeof renderImRaumAnzeige === 'function') { try { renderImRaumAnzeige(); } catch (e) {} }
@@ -25813,6 +25960,10 @@ function renderOptions(scene) {
         // (Gegner -> Party -> Baukasten als EIN Block). Die normalen Personen-"ansprechen"-Buttons entfallen dann -
         // gehandelt wird im Kampf nur über den Baukasten. Außerhalb des Kampfs: alles wie gehabt.
         const _imKampf = (typeof _encounterAktiv === 'function') && _encounterAktiv();
+        // v7.12.822 (Mikro-Orte Stufe 1): Stations-Navigation (Atmo + Wege) VOR den Personen, außerhalb des Kampfs.
+        if (!_imKampf && typeof _renderMikroOrtNavigation === 'function') {
+          try { _renderMikroOrtNavigation(uebergangBody); } catch (e) {}
+        }
         const _np = getNpcsAtCurrentLocation ? getNpcsAtCurrentLocation() : [];
         if (!_imKampf && _np.length) {
           const sepP = document.createElement('div');
@@ -28615,6 +28766,30 @@ Wenn Karl waehlt: Schnitt zur naechsten Szene am Morgen, Kaffee zu zweit, keine 
         }
       }
     } catch (e) { /* Gegner-Präsenz-Block optional, darf Prompt nie brechen */ }
+    // v7.12.822 (Mikro-Orte Stufe 1, ChatGPT-Schärfung): Steht Karl an einer Mikro-Ort-Station, MUSS die KI das
+    // wissen - sonst Prosa-Drift ("Pohl steht neben Ilse"). Aktuelle Station + wer hier sichtbar ist + wer NICHT.
+    try {
+      if (typeof _aktMikroOrtObj === 'function') {
+        const _moK = _aktMikroOrtObj();
+        if (_moK) {
+          const _hier = (typeof getNpcsAtCurrentLocation === 'function') ? getNpcsAtCurrentLocation().map(n => n.name).filter(Boolean) : [];
+          // andere Stationen + deren NPCs, die NICHT hier sind
+          const _alleMo = (typeof _aktMikroOrte === 'function') ? (_aktMikroOrte() || []) : [];
+          const _nichtHier = [];
+          _alleMo.forEach(function(st) {
+            if (!st || st.id === _moK.id || !Array.isArray(st.npcs)) return;
+            st.npcs.forEach(function(nid) {
+              try { const _id = _resolveNpcIdentity(nid); if (_id && _id.name && _hier.indexOf(_id.name) === -1) _nichtHier.push(_id.name + ' (' + st.name + ')'); } catch (e) {}
+            });
+          });
+          timeContext += '\n\n=== AKTUELLE STATION (PFLICHT, v7.12.822) ===\n'
+            + 'Karl befindet sich an einem bestimmten Punkt des Schauplatzes "' + engineCurrentLocation.name + '": ' + _moK.name + '.'
+            + (_hier.length ? ' Hier präsent: ' + _hier.join(', ') + '.' : ' Hier ist gerade niemand außer Karl.')
+            + (_nichtHier.length ? ' NICHT hier (an anderen Stellen des Schauplatzes, also NICHT in dieser Szene zeigen): ' + _nichtHier.join(', ') + '.' : '')
+            + ' Schreibe die Szene NUR an dieser Station. Bringe keine Person ins Bild, die woanders im Gebäude ist.';
+        }
+      }
+    } catch (e) { /* Mikro-Ort-Kontext optional */ }
     // v7.10: KATEGORIE-MECHANIK PUSH-HINTS. Wenn der Spieler eine Option mit
     // Kategorie geklickt hat, pushen wir die passenden Hints an die KI.
     // Diese werden in chooseOption gefuellt und hier in den Prompt eingefuegt.
