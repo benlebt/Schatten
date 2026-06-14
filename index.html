@@ -3307,7 +3307,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.815</div>
+    <div class="start-version">Schatten v7.12.816</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3533,7 +3533,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.815</span>
+    <span>Schatten v7.12.816</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7464,6 +7464,8 @@ function pruefeKernIndizFund(sceneText) {
   const found = [];
   try {
     if (!engineCurrentLocation || !caseProgress) return found;
+    // v7.12.816: Eine fehlgeschlagene Sozial-Tonart vergibt KEIN Indiz (Person hat ja zugemacht).
+    if (window._sozialFehlschlagKeinIndiz) { if (typeof diag === 'function') diag('state', '🚫 Kein Indiz-Fund: Sozial-Tonart war ein Fehlschlag (Person verschloss sich)'); return found; }
     const locs = getCaseLocations();
     const loc = locs.find(l => normForMatch(l.name) === normForMatch(engineCurrentLocation.name));
     if (!loc || !Array.isArray(loc.indizien) || !loc.indizien.length) return found;
@@ -7689,7 +7691,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.815';
+window.SCHATTEN_VERSION = 'v7.12.816';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -23663,6 +23665,10 @@ function oeffneNpcMenue(npc, modus) {
       if (verb._gegnerLoestKampf) {
         try { if (typeof _encounterStartKampf === 'function') _encounterStartKampf(npc.name); } catch (e) {}
       }
+      // v7.12.816 (Benjamin: "Druck-Fehlschlag, aber trotzdem Indiz-Popup"): Eine FEHLGESCHLAGENE Sozial-Tonart
+      // darf KEIN Indiz vergeben - auch nicht über die deterministische Findbarkeits-Garantie. Flag setzen, das
+      // pruefeKernIndizFund + der KI-Indiz-Pfad respektieren. Gilt nur für echte Sozial-Tonarten (haben _sozialTonart).
+      window._sozialFehlschlagKeinIndiz = !!(verb._sozialTonart && verb._sozialErfolg === false);
       npcInteraktion(npc, verb);
     });
     panel.appendChild(btn);
@@ -38207,6 +38213,8 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       // gebuendelten Toast. (v7.12.592: Deklaration nach oben gezogen - der Toast läuft jetzt auch ohne KI-indiz_neu.)
       for (const ind of scene.indiz_neu) {
         if (typeof ind !== 'string' || !ind.trim()) continue;
+        // v7.12.816: fehlgeschlagene Sozial-Tonart -> die KI mag das Indiz im Text streifen, aber es wird NICHT gebucht.
+        if (window._sozialFehlschlagKeinIndiz) continue;
         const newInd = ind.trim();
         // v7.12.366 (Lektorat Karl-Mauer-Extremtest P2): Essens-/Freitext-Zustände sind KEINE
         // Ermittlungsindizien. Befund: "Ein Hamburger mit extra Zwiebeln ist jetzt Teil deines
@@ -38296,6 +38304,8 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         // (Indiz-Fund-Logik; das Popup kommt zentral über den Reward-Flush unten.)
       }
       window._stageWirdImRewardGefeiert = false;
+      // v7.12.816: Sozial-Fehlschlag-Sperre nach dieser Szene wieder lösen (gilt nur für die gerade verarbeitete Aktion).
+      window._sozialFehlschlagKeinIndiz = false;
       // v7.12.814: Reward-Puffer flushen - zeigt das Belohnungs-Popup für ALLE in dieser Verarbeitung gefundenen
       // Indizien (egal über welchen Pfad sie in _markiereIndizGefunden landeten). NACH dem Szenenrender.
       try { if (typeof _flushIndizRewards === 'function') _flushIndizRewards(); } catch (e) {}
