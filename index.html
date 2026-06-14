@@ -3307,7 +3307,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.824</div>
+    <div class="start-version">Schatten v7.12.825</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3533,7 +3533,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.824</span>
+    <span>Schatten v7.12.825</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7021,6 +7021,18 @@ function _mikroOrtWechseln(targetId) {
   } catch (e) { return { ok: false }; }
 }
 // ============ Ende MIKRO-ORTE ============
+// v7.12.825: Wartet an einer Station eine ANSPRECHBARE Person? (offener Hinweis UND nicht heute verprellt).
+function _mikroPersonWartet(npcId) {
+  try {
+    const _id = _resolveNpcIdentity(npcId);
+    if (!_id || !_id.name) return false;
+    if (typeof _npcHatOffenenHinweis !== 'function' || !_npcHatOffenenHinweis(_id.name)) return false;
+    // heute verprellt? -> spricht nicht mehr, wartet also nicht.
+    const _vTag = (typeof npcVerprelltAmTag === 'object' && npcVerprelltAmTag) ? npcVerprelltAmTag[_id.name] : undefined;
+    if (typeof _vTag === 'number' && typeof gameDay === 'number' && _vTag === gameDay) return false;
+    return true;
+  } catch (e) { return false; }
+}
 // v7.12.822 (Mikro-Orte Stufe 1): rendert die Stations-Navigation in den übergebenen Container:
 // aktueller Stationsname + Atmo-Text + Buttons zu den verbundenen, erreichbaren Stationen.
 function _renderMikroOrtNavigation(container) {
@@ -7075,7 +7087,7 @@ function _renderMikroOrtNavigation(container) {
         _hierWasZuTun = akt.hotspots.some(hid => { const ind = _locH.indizien.find(i => i && i.id === hid); if (!ind || _gefH.indexOf(ind.id) !== -1) return false; if (typeof ind.abStage === 'number' && _stgH < ind.abStage) return false; return true; });
       }
       if (!_hierWasZuTun && Array.isArray(akt.npcs)) {
-        _hierWasZuTun = akt.npcs.some(nid => { try { const _id = _resolveNpcIdentity(nid); return _id && _id.name && typeof _npcHatOffenenHinweis === 'function' && _npcHatOffenenHinweis(_id.name); } catch (e) { return false; } });
+        _hierWasZuTun = akt.npcs.some(nid => _mikroPersonWartet(nid));
       }
     } catch (e) {}
     if (!_hierWasZuTun) {
@@ -7111,7 +7123,7 @@ function _renderMikroOrtNavigation(container) {
         // Person an der Zielstation, die noch einen offenen Hinweis hat?
         if (!_wartet && Array.isArray(ziel.npcs)) {
           _wartet = ziel.npcs.some(nid => {
-            try { const _id = _resolveNpcIdentity(nid); return _id && _id.name && typeof _npcHatOffenenHinweis === 'function' && _npcHatOffenenHinweis(_id.name); } catch (e) { return false; }
+            return _mikroPersonWartet(nid);
           });
         }
         if (_wartet) _marker = '· ● etwas wartet';
@@ -7201,6 +7213,9 @@ function getNpcsAtCurrentLocation() {
       if (!sc) continue; // anonymer Statist ohne Setup-Eintrag -> nicht anklickbar
       const scId = sc.id || normForMatch(sc.name).replace(/\s+/g, '_');
       if (seen[scId]) continue;
+      // v7.12.825 (Benjamin: "Pohl erscheint im Treppenhaus"): Auch die KI-Cast-Quelle muss den Mikro-Ort-Filter
+      // respektieren - ein NPC, der nicht zur aktuellen Station gehört, erscheint nicht (auch wenn er im cast steht).
+      if (_moNpcFilter && _moNpcFilter.indexOf(normForMatch(scId)) === -1 && _moNpcFilter.indexOf(normForMatch(sc.name)) === -1) continue;
       // v7.12.808 (Benjamin: Voss zeigte nur "Befragen"): Diese zweite NPC-Quelle (KI-Cast) baute das Objekt
       // OHNE Profil-Felder - dann fehlten sozial/gegnerprofil und das Puzzle griff nicht. Profile mitgeben.
       const _ident = { id: scId, name: sc.name, tag: sc.tag || '' };
@@ -7953,7 +7968,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.824';
+window.SCHATTEN_VERSION = 'v7.12.825';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
