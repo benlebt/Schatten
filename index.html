@@ -3293,7 +3293,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.783</div>
+    <div class="start-version">Schatten v7.12.784</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3519,7 +3519,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.783</span>
+    <span>Schatten v7.12.784</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7515,7 +7515,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.783';
+window.SCHATTEN_VERSION = 'v7.12.784';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -22012,15 +22012,20 @@ function mapBaueSvg(orte, cluster){
   try {
     var _tzNacht = (typeof _aktTageszeitName === 'function') ? (_aktTageszeitName() === 'nacht') : false;
     if (_tzNacht) {
-      // Gradient für den Lichtkegel: warm/hell an der Lampe (oben rechts), sanft ausfadend zur Karte hin
-      svg += '<defs><radialGradient id="laternenLicht" cx="0.85" cy="0.12" r="0.9">'
-        + '<stop offset="0%" stop-color="#ffe7b0" stop-opacity="0.30"/>'
-        + '<stop offset="35%" stop-color="#ffd98a" stop-opacity="0.13"/>'
-        + '<stop offset="70%" stop-color="#ffd98a" stop-opacity="0.04"/>'
-        + '<stop offset="100%" stop-color="#ffd98a" stop-opacity="0"/>'
-        + '</radialGradient></defs>';
-      // Lichtkegel: breites Dreieck/Keil von der Laterne (oben rechts) schräg über die Karte nach unten-links
-      svg += '<polygon points="372,22 408,40 300,266 150,266" fill="url(#laternenLicht)" pointer-events="none"/>';
+      // v7.12.784 (Benjamin: "Kegel breiter, intensiver, mehr in die untere linke Ecke - und spitz an der
+      // Glühbirne beginnen, weil er aus einem kleinen Punkt kommt"): linearer Gradient ENTLANG der Strahlrichtung
+      // (von der Birne oben rechts zur unteren linken Ecke), damit es ein echter Strahl ist, der an der Birne
+      // hell/spitz startet und zur Karte hin breit ausfadet. Birne sitzt bei (366,29).
+      svg += '<defs><linearGradient id="laternenLicht" x1="366" y1="29" x2="40" y2="266" gradientUnits="userSpaceOnUse">'
+        + '<stop offset="0%" stop-color="#ffe7b0" stop-opacity="0.42"/>'
+        + '<stop offset="25%" stop-color="#ffdf9a" stop-opacity="0.26"/>'
+        + '<stop offset="60%" stop-color="#ffd98a" stop-opacity="0.12"/>'
+        + '<stop offset="100%" stop-color="#ffd98a" stop-opacity="0.02"/>'
+        + '</linearGradient></defs>';
+      // Kegel: SPITZE an der Glühbirne (366,29), weit aufgehende Basis an der UNTEREN LINKEN Ecke.
+      // Zwei nah beieinander liegende Spitzenpunkte = scharfer Ursprung; die Basis spannt von ganz links
+      // unten bis weit in die Mitte unten - deutlich breiter als vorher und klar nach links unten gerichtet.
+      svg += '<polygon points="364,27 369,31 60,266 -40,210" fill="url(#laternenLicht)" pointer-events="none"/>';
       // Die Straßenlaterne selbst, oben rechts im dunklen Bereich (angedeutet, schlicht): Mast + gebogener Arm + Kopf
       svg += '<g pointer-events="none" opacity="0.9">'
         // Mast (senkrecht, vom oberen Rand nach unten kurz)
