@@ -3298,7 +3298,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.796</div>
+    <div class="start-version">Schatten v7.12.797</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3524,7 +3524,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.796</span>
+    <span>Schatten v7.12.797</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7603,7 +7603,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.796';
+window.SCHATTEN_VERSION = 'v7.12.797';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -7932,6 +7932,7 @@ function _npcZustandSet(name, zustand) {
     m[k] = { name: name, status: (zustand && zustand.status) || 'frei', ort: (zustand && zustand.ort) || ((typeof engineCurrentLocation !== 'undefined' && engineCurrentLocation) ? engineCurrentLocation.name : ''), seitSzene: (typeof sceneCounter === 'number') ? sceneCounter : 0, seitTag: (typeof gameDay === 'number') ? gameDay : 0 }; // v7.12.716: seitTag für den Lazy-Verfall
     if (typeof diag === 'function') diag('state', '🔗 NPC-ZUSTAND: ' + name + ' -> ' + m[k].status + '@' + m[k].ort);
     try { if (typeof _showdownPruefeBestanden === 'function') _showdownPruefeBestanden(name, m[k].status, 'zustand'); } catch (e) {} // v7.12.697
+    try { if (typeof _encounterKonsistenzCheck === 'function') _encounterKonsistenzCheck(); } catch (e) {} // v7.12.797: Gegner bezwungen -> Kampf sauber beenden
     return true;
   } catch (e) { return false; }
 }
@@ -7990,6 +7991,85 @@ function _npcIstFeindlich(npc) {
   } catch (e) { return false; }
 }
 // ============ Ende NPC-ZUSTAND ============
+// ============ v7.12.797: ENCOUNTER-STATE-MACHINE (Kampfmodus Stufe 2a) ============
+// Steuert den sichtbaren Kampfmodus sauber rein/raus. Der heikelste Punkt (Lektorat): kein Hängenbleiben,
+// kein Doppelzustand, kein State-Leck. Alle Felder leben in caseProgress (-> automatisch in Snapshot/Laden/Reset).
+// Übergänge: null -> verhandlung/kampf ; kampf -> bezwungen/geflohen/abgebrochen ; alles -> null (sauber geleert).
+function _encounterAktiv() {
+  try { return !!(caseProgress && caseProgress.encounterState === 'kampf'); } catch (e) { return false; }
+}
+// Gegnerprofil eines NPCs aus dem Setup holen (oder null).
+function _gegnerProfilVon(name) {
+  try {
+    if (!name || !caseSetup || !Array.isArray(caseSetup.setupCast)) return null;
+    const ce = caseSetup.setupCast.find(c => c && c.name && normForMatch(c.name) === normForMatch(name));
+    return (ce && ce.gegnerprofil) ? ce.gegnerprofil : null;
+  } catch (e) { return null; }
+}
+// Kampf STARTEN: aus einer eskalierten Verhandlung oder bewusstem Angriff. Idempotent (doppelter Aufruf schadet nicht).
+function _encounterStartKampf(enemyName) {
+  try {
+    if (!caseProgress) return false;
+    if (caseProgress.encounterState === 'kampf' && normForMatch(caseProgress.encounterEnemy || '') === normForMatch(enemyName || '')) return true; // schon im Kampf gegen denselben
+    caseProgress.encounterState = 'kampf';
+    caseProgress.encounterEnemy = enemyName || '';
+    caseProgress.encounterRound = 0;
+    caseProgress.encounterStartedAtLocation = (typeof engineCurrentLocation === 'object' && engineCurrentLocation && engineCurrentLocation.name) ? engineCurrentLocation.name : '';
+    if (typeof diag === 'function') diag('state', '⚔ ENCOUNTER START: Kampf gegen ' + enemyName + ' @ ' + caseProgress.encounterStartedAtLocation);
+    return true;
+  } catch (e) { return false; }
+}
+// Kampf BEENDEN: bezwungen | geflohen | abgebrochen. Setzt den State sauber auf den Ruhezustand zurück.
+function _encounterEnde(grund) {
+  try {
+    if (!caseProgress) return;
+    const _g = (['bezwungen','geflohen','abgebrochen'].indexOf(grund) !== -1) ? grund : 'abgebrochen';
+    if (typeof diag === 'function') diag('state', '⚔ ENCOUNTER ENDE (' + _g + '): ' + (caseProgress.encounterEnemy || '?'));
+    // Erst den End-Grund kurz halten (für evtl. Anzeige), dann ALLE Felder leeren.
+    caseProgress.encounterState = null;
+    caseProgress.encounterEnemy = null;
+    caseProgress.encounterRound = 0;
+    caseProgress.encounterStartedAtLocation = '';
+    // Banner aus dem DOM entfernen, falls vorhanden.
+    try { const b = document.getElementById('encounter-banner'); if (b) b.remove(); } catch (e) {}
+  } catch (e) {}
+}
+// Sicherheitsnetz: Ist der Gegner nicht mehr da / besiegt / Ort gewechselt -> Kampf sauber beenden.
+function _encounterKonsistenzCheck() {
+  try {
+    if (!caseProgress || caseProgress.encounterState !== 'kampf') return;
+    const _enemy = caseProgress.encounterEnemy || '';
+    // Gegner bezwungen? -> Kampf vorbei.
+    const _z = (typeof _npcZustandGet === 'function') ? _npcZustandGet(_enemy) : null;
+    if (_z && ['ko','gefesselt','fixiert','benommen'].indexOf(_z.status) !== -1) { _encounterEnde('bezwungen'); return; }
+    if (_z && ['geflohen','uebergeben'].indexOf(_z.status) !== -1) { _encounterEnde('geflohen'); return; }
+    // Ort gewechselt? -> Begegnung abgebrochen (Gegner zurückgelassen).
+    const _ort = (typeof engineCurrentLocation === 'object' && engineCurrentLocation && engineCurrentLocation.name) ? engineCurrentLocation.name : '';
+    if (caseProgress.encounterStartedAtLocation && _ort && normForMatch(_ort) !== normForMatch(caseProgress.encounterStartedAtLocation)) { _encounterEnde('abgebrochen'); return; }
+    // Fall vorbei? -> sauber raus.
+    if (caseProgress.istGelöst || caseProgress.istGescheitert) { _encounterEnde('abgebrochen'); return; }
+  } catch (e) {}
+}
+// Minimaler sichtbarer Banner (Stufe 2a - die echte Arena kommt in 2b). Zeigt: Kampf + Gegner + Zustand in Worten.
+function _encounterBannerRender(container) {
+  try {
+    if (!container) return;
+    const alt = document.getElementById('encounter-banner'); if (alt) alt.remove();
+    if (!caseProgress || caseProgress.encounterState !== 'kampf') return;
+    const _enemy = caseProgress.encounterEnemy || 'Der Gegner';
+    let _zustand = 'wachsam';
+    try { const _z = (typeof _npcZustandGet === 'function') ? _npcZustandGet(_enemy) : null; if (_z && _z.status && _z.status !== 'frei') _zustand = _z.status; } catch (e) {}
+    const _vf = (typeof verfassung === 'number') ? verfassung : 5;
+    const _vfWort = _vf >= 4 ? 'in Form' : _vf === 3 ? 'angeschlagen' : _vf === 2 ? 'schwer angeschlagen' : 'am Limit';
+    const b = document.createElement('div');
+    b.id = 'encounter-banner';
+    b.style.cssText = 'margin:8px 0;padding:10px 12px;border:1px solid #6b4a42;border-left:4px solid #b43e34;border-radius:5px;background:rgba(60,30,28,0.45);font-family:inherit;color:#e0c4b8;font-size:calc(12px * var(--reading-scale));line-height:1.5;';
+    b.innerHTML = '<div style="font-weight:bold;letter-spacing:0.06em;color:#e88a7a;">⚔ KAMPF</div>'
+      + '<div style="margin-top:3px;">' + escapeHtml(_enemy) + ': <span style="color:#e0a090;">' + escapeHtml(_zustand) + '</span></div>'
+      + '<div style="margin-top:2px;color:#a89878;font-size:calc(10.5px * var(--reading-scale));">Karl: ' + _vfWort + ' · Runde ' + ((caseProgress.encounterRound || 0) + 1) + '</div>';
+    container.appendChild(b);
+  } catch (e) {}
+}
 // ============ v7.12.616: AKTIONS-PLAN (Benjamin: "mehrere Aktionen kombinieren wie Strg-Auswahl im Explorer") ============
 // Manöver- und Begleiter-Befehle landen erst im PLAN. Die Plan-Leiste zeigt alle gesammelten Befehle;
 // "Ausführen" setzt ALLE Engine-Wirkungen und schickt EINEN koordinierten Prompt (eine Szene, ein Request).
@@ -11242,6 +11322,13 @@ function createInitialCaseProgress() {
     stage2Marker: '',
     stage2StartScene: 0,
     stage3StartScene: 0,
+    // v7.12.797 (Kampfmodus Stufe 2a): Encounter-State-Machine. encounterState:
+    // null | 'verhandlung' | 'kampf' | 'bezwungen' | 'geflohen' | 'abgebrochen'.
+    // Steuert den sichtbaren Kampfmodus. Beim Verlassen IMMER alle Felder zurück auf den Ruhezustand.
+    encounterState: null,
+    encounterEnemy: null,        // Name des Gegners
+    encounterRound: 0,           // Rundenzähler (Cap aus Gegnerprofil.kampf.rundenLimit, sonst 3)
+    encounterStartedAtLocation: '', // für Konsistenz-Check (Ortwechsel bricht ab)
   };
 }
 let caseProgress = createInitialCaseProgress();
@@ -11265,6 +11352,13 @@ function normalizeCaseProgress(raw) {
   if (!Array.isArray(merged.toastLog)) merged.toastLog = [];
   if (!Array.isArray(merged.verknuepfungen)) merged.verknuepfungen = [];
   if (!merged.npcMemory || typeof merged.npcMemory !== 'object') merged.npcMemory = {};
+  // v7.12.797 (Kampfmodus Stufe 2a): Encounter-State beim Laden IMMER auf Ruhezustand. Ein Kampf wird nicht
+  // halb aus einem Save wiederhergestellt (das Konzept lässt das offen - Reset ist die robustere Wahl: kein
+  // Hängenbleiben in einem toten Kampf-UI). Wer beim Speichern im Kampf war, steht beim Laden wieder frei davor.
+  merged.encounterState = null;
+  merged.encounterEnemy = null;
+  merged.encounterRound = 0;
+  merged.encounterStartedAtLocation = '';
   // v7.12.152: targetItemState-Struktur absichern (alte Saves haben es nicht).
   if (!merged.targetItemState || typeof merged.targetItemState !== 'object') {
     merged.targetItemState = { name: '', status: 'unknown', holder: '', scene: 0 };
@@ -23228,6 +23322,11 @@ function oeffneNpcMenue(npc, modus) {
           if (typeof diag === 'function') diag('state', '🗣 SOZIAL-PUZZLE: falsche Tonart "' + (verb._sozialTonart || '?') + '" bei ' + npc.name + ' -> misstrauisch + Tonart verbraucht + heute (Tag ' + npcVerprelltAmTag[npc.name] + ') verschlossen (fail forward)');
         } catch (e) {}
       }
+      // v7.12.797 (Kampfmodus Stufe 2a): eskalierende Verhandlung / bewusstes Angreifen -> Encounter-State auf 'kampf'.
+      // Der Banner erscheint dann beim nächsten Szenen-Render; die KI-Szene (npcInteraktion) erzählt den Einstieg.
+      if (verb._gegnerLoestKampf) {
+        try { if (typeof _encounterStartKampf === 'function') _encounterStartKampf(npc.name); } catch (e) {}
+      }
       npcInteraktion(npc, verb);
     });
     panel.appendChild(btn);
@@ -25268,6 +25367,10 @@ function renderOptions(scene) {
   try {
     if (typeof bauePersonenButtons === 'function') {
       if (typeof uebergangBody !== 'undefined' && uebergangBody) {
+        // v7.12.797 (Kampfmodus Stufe 2a): Erst Konsistenz-Check (Gegner besiegt/weg/Ortwechsel -> Kampf sauber
+        // beenden), dann den minimalen Kampf-Banner rendern (die echte Arena kommt in 2b).
+        try { if (typeof _encounterKonsistenzCheck === 'function') _encounterKonsistenzCheck(); } catch (e) {}
+        try { if (typeof _encounterBannerRender === 'function') _encounterBannerRender(uebergangBody); } catch (e) {}
         // Personen-Trenner in Übergang (optisch von A/B/C/D abgesetzt), nur wenn Personen da sind.
         const _np = getNpcsAtCurrentLocation ? getNpcsAtCurrentLocation() : [];
         if (_np.length) {
