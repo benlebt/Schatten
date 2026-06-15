@@ -3332,7 +3332,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.862</div>
+    <div class="start-version">Schatten v7.12.863</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3558,7 +3558,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.862</span>
+    <span>Schatten v7.12.863</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7631,21 +7631,30 @@ function _renderCafeSaal(container) {
     const _indErr = (typeof _ortsFundIndizienErreichbar === 'function') ? _ortsFundIndizienErreichbar() : [];
     const tischSpurDa = _indErr.some(i => /tisch/i.test(i.id || ''));
     const vossStimmung = vossDa ? ((typeof _expNpcStimmung === 'function') ? _expNpcStimmung(vossDa.name) : 'offen') : 'offen';
-    const vossEmoji = vossDa ? ((typeof charVisual === 'function') ? charVisual(vossDa.name, vossDa.tag) : '🤵') : null;
 
     let s = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;border:1px solid rgba(138,122,88,0.35);border-radius:8px;background:' + pal.bg2 + ';">';
     s += '<defs><radialGradient id="csaalvig" cx="50%" cy="42%" r="75%"><stop offset="50%" stop-color="rgba(0,0,0,0)"/><stop offset="100%" stop-color="rgba(0,0,0,0.5)"/></radialGradient></defs>';
     // Boden (Perspektive von schräg oben - heller Marmor in der Tiefe)
     s += '<polygon points="0,' + H + ' ' + W + ',' + H + ' 250,70 70,70" fill="' + pal.marmor + '" opacity="0.55"/>';
-    // Marmor-Schachbrett angedeutet (Fluchtlinien)
-    for (let i = 1; i < 6; i++) { const fx = 70 + i * 30; s += '<line x1="' + fx + '" y1="70" x2="' + (fx * 2.5 - 110) + '" y2="' + H + '" stroke="' + pal.stroke + '" stroke-width="0.4" opacity="0.25"/>'; }
-    for (let j = 1; j < 4; j++) { const fy = 70 + j * 35; s += '<line x1="' + (70 - j * 8) + '" y1="' + fy + '" x2="' + (250 + j * 8) + '" y2="' + fy + '" stroke="' + pal.stroke + '" stroke-width="0.4" opacity="0.2"/>'; }
+    // Dezente Bodenfluchtlinien - laufen sauber zum Fluchtpunkt (160,70), stark reduziert
+    const _fp = 160; // Fluchtpunkt-x (Bildmitte)
+    [40, 110, 210, 280].forEach(bx => {
+      // vom Bodenrand unten zum Fluchtpunkt oben - aber nur bis kurz vor den Fluchtpunkt
+      const tx = _fp + (bx - _fp) * 0.45; // Tiefe-Ende näher zur Mitte
+      s += '<line x1="' + bx + '" y1="' + H + '" x2="' + tx + '" y2="76" stroke="' + pal.stroke + '" stroke-width="0.4" opacity="0.12"/>';
+    });
+    // zwei sanfte Querbänder (Lichtzonen statt Gitter)
+    s += '<line x1="36" y1="118" x2="284" y2="118" stroke="' + pal.stroke + '" stroke-width="0.4" opacity="0.08"/>';
+    s += '<line x1="20" y1="168" x2="300" y2="168" stroke="' + pal.stroke + '" stroke-width="0.4" opacity="0.07"/>';
     // Rückwand mit Vertäfelung + Spiegeln
     s += '<rect x="0" y="0" width="' + W + '" height="72" fill="' + pal.wand + '" opacity="0.5"/>';
     for (let v = 0; v < 8; v++) { s += '<line x1="' + (v * 42) + '" y1="6" x2="' + (v * 42) + '" y2="66" stroke="' + pal.stroke + '" stroke-width="0.5" opacity="0.4"/>'; }
-    // zwei Wandspiegel
-    s += '<rect x="36" y="14" width="34" height="44" rx="2" fill="' + pal.licht + '" opacity="0.05" stroke="' + pal.akzent + '" stroke-width="0.8"/>';
-    s += '<rect x="250" y="14" width="34" height="44" rx="2" fill="' + pal.licht + '" opacity="0.05" stroke="' + pal.akzent + '" stroke-width="0.8"/>';
+    // zwei Wandspiegel (gerahmt, mit Glasfläche + Lichtreflex - klar als Möbel lesbar)
+    [36, 250].forEach(mx => {
+      s += '<rect x="' + (mx - 2) + '" y="12" width="38" height="48" rx="3" fill="' + pal.wand + '" stroke="' + pal.stroke + '" stroke-width="1.4" opacity="0.95"/>'; // Rahmen
+      s += '<rect x="' + (mx + 2) + '" y="16" width="30" height="40" rx="1" fill="' + pal.marmor + '" opacity="0.4"/>'; // Glasfläche (dunkel reflektierend)
+      s += '<path d="M' + (mx + 4) + ',54 L' + (mx + 22) + ',18 L' + (mx + 28) + ',18 L' + (mx + 10) + ',54 Z" fill="' + pal.licht + '" opacity="0.07"/>'; // diagonaler Lichtreflex
+    });
     // Hängelampe (klar als Deckenlampe erkennbar: Kette + Schirm, kompakt)
     s += '<line x1="160" y1="0" x2="160" y2="10" stroke="' + pal.stroke + '" stroke-width="0.8"/>';
     s += '<path d="M150,20 Q160,8 170,20 Z" fill="' + pal.wand + '" stroke="' + pal.stroke + '" stroke-width="0.7" opacity="0.9"/>'; // Lampenschirm
@@ -7676,10 +7685,21 @@ function _renderCafeSaal(container) {
     s += '<line x1="134" y1="58" x2="128" y2="74" stroke="' + pal.stroke + '" stroke-width="0.4" opacity="0.4"/>';
     s += '<line x1="186" y1="58" x2="192" y2="74" stroke="' + pal.stroke + '" stroke-width="0.4" opacity="0.4"/>';
     if (vossDa) {
-      s += '<g><ellipse cx="160" cy="44" rx="8" ry="9" fill="#241d14" stroke="' + pal.stroke + '" stroke-width="1"/>';
-      s += '<text x="160" y="49" text-anchor="middle" font-size="15">' + vossEmoji + '</text>';
+      // Voss als reduzierte Kellner-Silhouette hinter dem Tresen (Oberkörper, weißes Hemd, schwarze Weste, Fliege)
+      const vx = 160, vy = 40;
+      s += '<g>';
+      // Oberkörper / Weste (schwarz)
+      s += '<path d="M' + (vx - 11) + ',58 Q' + (vx - 11) + ',44 ' + vx + ',43 Q' + (vx + 11) + ',44 ' + (vx + 11) + ',58 Z" fill="#161310" stroke="' + pal.stroke + '" stroke-width="0.6"/>';
+      // Hemd-Dreieck (hell)
+      s += '<path d="M' + (vx - 4) + ',46 L' + (vx + 4) + ',46 L' + vx + ',58 Z" fill="' + pal.licht + '" opacity="0.55"/>';
+      // Fliege
+      s += '<path d="M' + (vx - 3) + ',46 L' + vx + ',48 L' + (vx - 3) + ',50 Z M' + (vx + 3) + ',46 L' + vx + ',48 L' + (vx + 3) + ',50 Z" fill="#0d0b08"/>';
+      // Kopf (reduziert, dunkel)
+      s += '<ellipse cx="' + vx + '" cy="' + (vy - 5) + '" rx="5.5" ry="6.5" fill="#241d14" stroke="' + pal.stroke + '" stroke-width="0.8"/>';
+      // Haar-Andeutung
+      s += '<path d="M' + (vx - 5) + ',' + (vy - 8) + ' Q' + vx + ',' + (vy - 13) + ' ' + (vx + 5) + ',' + (vy - 8) + '" fill="none" stroke="#0d0b08" stroke-width="1.4" opacity="0.7"/>';
       const vse = (typeof _expStimmungsEmoji === 'function') ? _expStimmungsEmoji(vossStimmung) : null;
-      if (vse) s += '<text x="174" y="40" text-anchor="middle" font-size="12">' + vse + '</text>';
+      if (vse) s += '<text x="' + (vx + 13) + '" y="' + (vy - 6) + '" text-anchor="middle" font-size="10" opacity="0.85">' + vse + '</text>';
       s += '</g>';
     }
     // 2. Roberts stiller Ecktisch (vorne rechts, hervorgehoben wenn Spur da)
@@ -7688,7 +7708,15 @@ function _renderCafeSaal(container) {
     s += '<ellipse cx="' + rtX + '" cy="' + (rtY + 12 * rtR) + '" rx="' + (8 * rtR) + '" ry="' + (2.2 * rtR) + '" fill="rgba(0,0,0,0.4)"/>'; // Fußteller
     s += '<rect x="' + (rtX - 1.6 * rtR) + '" y="' + rtY + '" width="' + (3.2 * rtR) + '" height="' + (12 * rtR) + '" fill="' + pal.wand + '" stroke="' + pal.stroke + '" stroke-width="0.5" opacity="0.9"/>'; // Säule
     s += '<ellipse cx="' + rtX + '" cy="' + rtY + '" rx="' + (16 * rtR) + '" ry="' + (6 * rtR) + '" fill="' + (tischSpurDa ? pal.akzent : pal.licht) + '" opacity="' + (tischSpurDa ? '0.18' : '0.1') + '" stroke="' + (tischSpurDa ? pal.akzent : pal.stroke) + '" stroke-width="1.2"/>';
-    if (tischSpurDa) { s += '<circle cx="' + rtX + '" cy="' + (rtY - 18) + '" r="7" fill="' + pal.akzent + '" opacity="0.14"/>'; s += '<text x="' + rtX + '" y="' + (rtY - 14) + '" text-anchor="middle" font-size="10" fill="' + pal.licht + '">?</text>'; }
+    if (tischSpurDa) {
+      // Warmer Lichtkegel von oben (signalisiert "besonderer Platz" ohne Spielbrett-Symbol)
+      s += '<ellipse cx="' + rtX + '" cy="' + (rtY - 4) + '" rx="' + (22 * rtR) + '" ry="' + (11 * rtR) + '" fill="' + pal.akzent + '" opacity="0.07"/>';
+      // Requisite auf der Platte: Aschenbecher + Glasrand
+      s += '<ellipse cx="' + (rtX - 6) + '" cy="' + (rtY - 1) + '" rx="3.5" ry="1.6" fill="' + pal.wand + '" stroke="' + pal.stroke + '" stroke-width="0.5" opacity="0.9"/>'; // Aschenbecher
+      s += '<ellipse cx="' + (rtX + 7) + '" cy="' + (rtY - 1.5) + '" rx="2.6" ry="1.2" fill="none" stroke="' + pal.licht + '" stroke-width="0.7" opacity="0.55"/>'; // Glasrand
+      // leicht zurückgezogener Stuhl (Rückenlehne als Andeutung)
+      s += '<path d="M' + (rtX - 8) + ',' + (rtY + 13) + ' q8,5 16,0" fill="none" stroke="' + pal.stroke + '" stroke-width="1" opacity="0.5"/>';
+    }
     // v7.12.859: Ausgang-Schild im Bild ENTFERNT - man verlässt das Cafe über den normalen "Reisen"-Button
     // unter der Szene (der Bild-Ausgang wurde versehentlich geklickt und war doppelt).
 
@@ -7985,7 +8013,7 @@ function getNpcsAtCurrentLocation() {
   // v7.12.826 (Erkundungs-Modus): Hat der Schauplatz einen Graphen, sind NPCs an ihren Knoten gebunden -
   // nur die NPCs des AKTUELLEN Knotens erscheinen (Pohl im Hof, Ilse vor ihrer Tür im 3. Stock).
   const _expN = (typeof _hatExploration === 'function' && _hatExploration() && caseProgress && caseProgress._explorationBetreten) ? _expZelleAktuell() : null;
-  // v7.12.862: Bei öffentlichen Orten (Café-Saal, Weg 2) gibt es KEINE Knoten-Bewegung - alle Orts-NPCs
+  // v7.12.863: Bei öffentlichen Orten (Café-Saal, Weg 2) gibt es KEINE Knoten-Bewegung - alle Orts-NPCs
   // sind verfügbar (man klickt sie direkt im Saalbild an). Der knotengebundene Filter darf dort nicht greifen,
   // sonst wird Voss (an Tresen-Zelle gebunden) weggefiltert, weil Karl auf der Startzelle steht.
   const _istOeffSaal = (typeof _expProfil === 'function') && _expProfil() === 'oeffentlich';
@@ -8798,7 +8826,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.862';
+window.SCHATTEN_VERSION = 'v7.12.863';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -11366,7 +11394,7 @@ function _ortsFundIndizienErreichbar() {
     // v7.12.826 (Erkundungs-Modus): Hat der Schauplatz einen Graphen, sind Funde an ihren Knoten gebunden -
     // nur die Indizien des AKTUELLEN Knotens auffindbar (Türschild nur im Treppenhaus).
     const _expNode2 = (typeof _hatExploration === 'function' && _hatExploration() && caseProgress && caseProgress._explorationBetreten) ? _expZelleAktuell() : null;
-    // v7.12.862: Café-Saal (öffentlich) hat keine Knoten-Bewegung - alle Orts-Hotspots verfügbar (im Bild anklickbar).
+    // v7.12.863: Café-Saal (öffentlich) hat keine Knoten-Bewegung - alle Orts-Hotspots verfügbar (im Bild anklickbar).
     const _istOeffSaal2 = (typeof _expProfil === 'function') && _expProfil() === 'oeffentlich';
     const _expHotspotFilter = _istOeffSaal2 ? null : (_expNode2 && Array.isArray(_expNode2.hotspots) ? _expNode2.hotspots.map(h => normForMatch(h)) : (_expNode2 ? [] : null));
     if (_expNode2 && typeof diag === 'function') diag('state', '🔎 ORTSFUND-FILTER @ Zelle "' + (_expNode2.titel || '?') + '": hotspots=[' + (_expNode2.hotspots || []).join(',') + ']');
