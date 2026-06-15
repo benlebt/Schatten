@@ -7906,8 +7906,6 @@ function _renderSybelHofAussen(container) {
 
     // Eindeutige ID-Basis, damit mehrere Renders sich nicht stören
     const _uid = 'hof' + Math.floor(Math.random() * 1e6);
-    // Klick-Handler global ablegen, damit das SVG-onclick sie findet (wird nach innerHTML verdrahtet).
-    const _handlers = {};
 
     let s = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;border:1px solid rgba(138,122,88,0.35);border-radius:8px;background:' + pal.bg + ';">';
     s += '<defs>';
@@ -7942,44 +7940,43 @@ function _renderSybelHofAussen(container) {
     s += '<ellipse cx="180" cy="' + (H - 16) + '" rx="54" ry="10" fill="' + pal.licht + '" opacity="0.045"/>';
 
     // ===================================================================
-    // STATIONEN - großzügig verteilt, jede mit eigener transparenter Klickfläche (SVG-intern!)
-    // Klickfläche = <rect class="hofhit"> mit data-act; nach innerHTML per JS verdrahtet.
+    // STATIONEN - erst nur die SICHTBAREN Elemente zeichnen. Die Klickflächen kommen GANZ AM ENDE
+    // (nach der Vignette), damit nichts sie überdeckt. Hit-Flächen werden in _hitDefs gesammelt.
     // ===================================================================
-    const _hit = (x, y, w, h, key) => '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="6" fill="transparent" style="cursor:pointer;pointer-events:all;" class="' + _uid + 'hit" data-act="' + key + '"/>';
+    const _hitDefs = [];
     const _txt = (x, y, t, farbe) => '<text x="' + x + '" y="' + y + '" text-anchor="middle" font-size="11" fill="' + (farbe || pal.licht) + '" style="pointer-events:none;" font-family="monospace">' + t + '</text>';
 
-    // 1. ERDGESCHOSSFENSTER (Pohl) - LINKS, klar abgesetzt am linken Flügel
+    // 1. ERDGESCHOSSFENSTER (Pohl) - LINKS am linken Flügel
     const _fX = 64, _fY = 150;
     s += '<rect x="' + _fX + '" y="' + _fY + '" width="40" height="46" fill="rgba(0,0,0,0.5)" stroke="' + pal.stroke + '" stroke-width="1.3"/>';
     s += '<line x1="' + (_fX + 20) + '" y1="' + _fY + '" x2="' + (_fX + 20) + '" y2="' + (_fY + 46) + '" stroke="' + pal.dim + '" stroke-width="0.8"/>';
     s += '<line x1="' + _fX + '" y1="' + (_fY + 23) + '" x2="' + (_fX + 40) + '" y2="' + (_fY + 23) + '" stroke="' + pal.dim + '" stroke-width="0.8"/>';
-    s += '<rect x="' + (_fX + 3) + '" y="' + (_fY + 3) + '" width="16" height="40" fill="' + lampWarm + '" opacity="0.10"/>'; // Licht hinter Glas
-    s += '<rect x="' + (_fX - 3) + '" y="' + (_fY + 46) + '" width="46" height="4" fill="rgba(0,0,0,0.4)" stroke="' + pal.dim + '" stroke-width="0.5"/>'; // Sims
+    s += '<rect x="' + (_fX + 3) + '" y="' + (_fY + 3) + '" width="16" height="40" fill="' + lampWarm + '" opacity="0.10"/>';
+    s += '<rect x="' + (_fX - 3) + '" y="' + (_fY + 46) + '" width="46" height="4" fill="rgba(0,0,0,0.4)" stroke="' + pal.dim + '" stroke-width="0.5"/>';
     if (pohlDa) { s += '<ellipse cx="' + (_fX + 10) + '" cy="' + (_fY + 15) + '" rx="5" ry="6" fill="#1a160f" opacity="0.75"/>'; s += '<path d="M' + (_fX + 2) + ',' + (_fY + 38) + ' q8,-15 16,0 z" fill="#1a160f" opacity="0.75"/>'; }
     s += _txt(_fX + 20, _fY - 6, '👁 Fenster' + (pohlDa ? ' ·' : ''), lampWarm);
-    s += _hit(_fX - 6, _fY - 18, 52, 72, 'F');
+    _hitDefs.push({ x: _fX - 6, y: _fY - 18, w: 52, h: 72, key: 'F' });
 
-    // 2. HAUSEINGANG / KLINGELSCHILDER - MITTE der Fassade
+    // 2. HAUSEINGANG / KLINGELSCHILDER - MITTE
     const _hX = 150, _hY = 120;
-    s += '<rect x="' + _hX + '" y="' + _hY + '" width="34" height="68" fill="rgba(0,0,0,0.55)" stroke="' + pal.stroke + '" stroke-width="1.3"/>'; // Eingangsnische
-    s += '<rect x="' + (_hX + 5) + '" y="' + (_hY + 8) + '" width="24" height="60" rx="1" fill="rgba(0,0,0,0.62)" stroke="' + pal.dim + '" stroke-width="0.7"/>'; // Tür
-    s += '<circle cx="' + (_hX + 25) + '" cy="' + (_hY + 40) + '" r="1.8" fill="' + pal.stroke + '"/>'; // Klinke
-    // Klingelbrett LINKS neben der Tür (zur Hofmitte, gut sichtbar)
+    s += '<rect x="' + _hX + '" y="' + _hY + '" width="34" height="68" fill="rgba(0,0,0,0.55)" stroke="' + pal.stroke + '" stroke-width="1.3"/>';
+    s += '<rect x="' + (_hX + 5) + '" y="' + (_hY + 8) + '" width="24" height="60" rx="1" fill="rgba(0,0,0,0.62)" stroke="' + pal.dim + '" stroke-width="0.7"/>';
+    s += '<circle cx="' + (_hX + 25) + '" cy="' + (_hY + 40) + '" r="1.8" fill="' + pal.stroke + '"/>';
     s += '<rect x="' + (_hX - 12) + '" y="' + (_hY + 14) + '" width="10" height="26" rx="1" fill="rgba(0,0,0,0.5)" stroke="' + pal.dim + '" stroke-width="0.7"/>';
     for (let kr = 0; kr < 4; kr++) { s += '<rect x="' + (_hX - 11) + '" y="' + (_hY + 16 + kr * 6) + '" width="8" height="4" fill="rgba(0,0,0,0.4)" stroke="' + pal.dim + '" stroke-width="0.3"/>'; s += '<circle cx="' + (_hX - 1.5) + '" cy="' + (_hY + 18 + kr * 6) + '" r="0.8" fill="' + lampWarm + '" opacity="0.6"/>'; }
     s += _txt(_hX + 6, _hY + 84, '🔍 Klingeln', '#d4b86a');
-    s += _hit(_hX - 16, _hY - 4, 52, 78, 'H');
+    _hitDefs.push({ x: _hX - 16, y: _hY - 4, w: 36, h: 78, key: 'H' }); // nur bis Türmitte, überlappt NICHT die Treppe
 
-    // 3. TREPPENHAUS - RECHTS an der Fassade, klar getrennt vom Eingang
+    // 3. TREPPENHAUS - RECHTS, klar getrennt
     const _tX = 200, _tY = 120;
     s += '<rect x="' + _tX + '" y="' + _tY + '" width="20" height="68" fill="rgba(0,0,0,0.62)" stroke="' + pal.stroke + '" stroke-width="1.1"/>';
     s += '<polygon points="' + (_tX + 2) + ',' + (_tY + 60) + ' ' + (_tX + 18) + ',' + (_tY + 60) + ' ' + (_tX + 15) + ',' + (_tY + 50) + ' ' + (_tX + 5) + ',' + (_tY + 50) + '" fill="rgba(0,0,0,0.5)"/>';
     s += '<polygon points="' + (_tX + 5) + ',' + (_tY + 48) + ' ' + (_tX + 15) + ',' + (_tY + 48) + ' ' + (_tX + 13) + ',' + (_tY + 40) + ' ' + (_tX + 7) + ',' + (_tY + 40) + '" fill="rgba(0,0,0,0.4)"/>';
     s += _txt(_tX + 10, _tY + 84, '↑ Treppe', stg >= 2 ? lampWarm : pal.licht);
     if (stg >= 2) s += _txt(_tX + 10, _tY - 6, '· 3. Stock', lampWarm);
-    s += _hit(_tX - 4, _tY - 4, 28, 78, 'P');
+    _hitDefs.push({ x: _tX - 2, y: _tY - 4, w: 24, h: 78, key: 'P' });
 
-    // 4. OPEL - unten links im Vordergrund, vollständig im Bild (ragt nicht raus)
+    // 4. OPEL - unten links, vollständig im Bild
     const _oX = 70, _oY = H - 30;
     s += '<g>';
     s += '<ellipse cx="' + _oX + '" cy="' + (_oY + 14) + '" rx="40" ry="7" fill="rgba(0,0,0,0.45)"/>';
@@ -7990,9 +7987,14 @@ function _renderSybelHofAussen(container) {
     if (istNacht) s += '<ellipse cx="' + (_oX - 34) + '" cy="' + (_oY) + '" rx="7" ry="3" fill="' + lampWarm + '" opacity="0.3"/>';
     s += '</g>';
     s += _txt(_oX, _oY - 18, '🚗 Hof verlassen', pal.licht);
-    s += _hit(_oX - 40, _oY - 26, 80, 46, 'O');
+    _hitDefs.push({ x: _oX - 40, y: _oY - 26, w: 80, h: 46, key: 'O' });
 
+    // Vignette (fängt keine Klicks)
     s += '<rect x="0" y="0" width="' + W + '" height="' + H + '" fill="url(#' + _uid + 'vig)" style="pointer-events:none;"/>';
+    // GANZ ZULETZT: die transparenten Klickflächen - liegen über allem, nichts überdeckt sie.
+    _hitDefs.forEach(hd => {
+      s += '<rect x="' + hd.x + '" y="' + hd.y + '" width="' + hd.w + '" height="' + hd.h + '" rx="6" fill="transparent" class="' + _uid + 'hit" data-act="' + hd.key + '" style="cursor:pointer;"/>';
+    });
     s += '</svg>';
     view.innerHTML = s;
 
@@ -8021,19 +8023,18 @@ function _renderSybelHofAussen(container) {
       caseProgress.explorationPos = { x: k.x, y: k.y, blick: blick || 'N' };
       if (typeof renderOptions === 'function' && currentScene) renderOptions(currentScene);
     };
-    _handlers['F'] = () => _stationKlick('F');
-    _handlers['H'] = () => _stationKlick('H');
-    _handlers['P'] = () => _geheZuZelle('P');
-    _handlers['O'] = () => _geheZuZelle('O', 'S');
-    // Klickflächen im SVG mit den Handlern verbinden
+    const _handlers = { 'F': () => _stationKlick('F'), 'H': () => _stationKlick('H'), 'P': () => _geheZuZelle('P'), 'O': () => _geheZuZelle('O', 'S') };
+    // Direkter, robuster Handler (click + touchend) - attachSafeTap ist für <button>, nicht für SVG-<rect>.
     const _hits = view.querySelectorAll('.' + _uid + 'hit');
     _hits.forEach(hit => {
-      const act = hit.getAttribute('data-act');
-      const fn = _handlers[act];
+      const fn = _handlers[hit.getAttribute('data-act')];
       if (!fn) return;
-      hit.addEventListener('mouseenter', () => { hit.setAttribute('fill', 'rgba(214,173,100,0.12)'); });
+      let _tStart = 0;
+      hit.addEventListener('mouseenter', () => { hit.setAttribute('fill', 'rgba(214,173,100,0.14)'); });
       hit.addEventListener('mouseleave', () => { hit.setAttribute('fill', 'transparent'); });
-      if (typeof attachSafeTap === 'function') attachSafeTap(hit, fn); else hit.addEventListener('click', fn);
+      hit.addEventListener('click', (e) => { e.preventDefault(); fn(); });
+      hit.addEventListener('touchstart', () => { _tStart = Date.now(); }, { passive: true });
+      hit.addEventListener('touchend', (e) => { if (Date.now() - _tStart < 600) { e.preventDefault(); fn(); } });
     });
 
     wrap.appendChild(view);
