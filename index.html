@@ -3332,7 +3332,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.861</div>
+    <div class="start-version">Schatten v7.12.862</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3558,7 +3558,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.861</span>
+    <span>Schatten v7.12.862</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7656,13 +7656,17 @@ function _renderCafeSaal(container) {
     const gaesteTische = [ {x:60,y:120,r:0.9}, {x:250,y:120,r:0.85}, {x:40,y:170,r:1.1}, {x:280,y:170,r:1.05}, {x:120,y:150,r:0.95} ];
     gaesteTische.forEach((t, idx) => {
       const r = t.r;
-      // Tisch
-      s += '<ellipse cx="' + t.x + '" cy="' + t.y + '" rx="' + (16 * r) + '" ry="' + (6 * r) + '" fill="' + pal.licht + '" opacity="0.10" stroke="' + pal.stroke + '" stroke-width="0.6"/>';
-      // ein bis zwei stille Gäste (Kulisse, nicht anklickbar)
-      s += '<g opacity="0.5"><ellipse cx="' + (t.x - 10 * r) + '" cy="' + (t.y - 14 * r) + '" rx="' + (5 * r) + '" ry="' + (6 * r) + '" fill="#15110b"/>';
-      s += '<path d="M' + (t.x - 16 * r) + ',' + (t.y - 2) + ' q' + (6 * r) + ',' + (-14 * r) + ' ' + (12 * r) + ',0 z" fill="#15110b"/></g>';
-      if (idx % 2 === 0) { s += '<g opacity="0.45"><ellipse cx="' + (t.x + 10 * r) + '" cy="' + (t.y - 13 * r) + '" rx="' + (5 * r) + '" ry="' + (6 * r) + '" fill="#1a160f"/>';
-        s += '<path d="M' + (t.x + 4 * r) + ',' + (t.y - 2) + ' q' + (6 * r) + ',' + (-13 * r) + ' ' + (12 * r) + ',0 z" fill="#1a160f"/></g>'; }
+      // Stille Gäste ZUERST (hinter dem Tisch sitzend, weiter oben + kleiner -> Platte im Vordergrund)
+      const gOff = 22 * r; // sitzen deutlich hinter/über der Platte
+      s += '<g opacity="0.5"><ellipse cx="' + (t.x - 9 * r) + '" cy="' + (t.y - gOff) + '" rx="' + (4 * r) + '" ry="' + (4.5 * r) + '" fill="#15110b"/>'; // Kopf
+      s += '<path d="M' + (t.x - 14 * r) + ',' + (t.y - gOff + 11 * r) + ' q' + (5 * r) + ',' + (-12 * r) + ' ' + (10 * r) + ',0 z" fill="#15110b"/></g>'; // Schultern/Oberkörper
+      if (idx % 2 === 0) { s += '<g opacity="0.45"><ellipse cx="' + (t.x + 9 * r) + '" cy="' + (t.y - gOff + 1) + '" rx="' + (4 * r) + '" ry="' + (4.5 * r) + '" fill="#1a160f"/>';
+        s += '<path d="M' + (t.x + 4 * r) + ',' + (t.y - gOff + 12 * r) + ' q' + (5 * r) + ',' + (-11 * r) + ' ' + (10 * r) + ',0 z" fill="#1a160f"/></g>'; }
+      // Bistro-Tisch DANACH (im Vordergrund): Mittelfuß + Säule + runde Platte von schräg oben
+      s += '<ellipse cx="' + t.x + '" cy="' + (t.y + 11 * r) + '" rx="' + (7 * r) + '" ry="' + (2 * r) + '" fill="rgba(0,0,0,0.35)"/>'; // Fußteller
+      s += '<rect x="' + (t.x - 1.4 * r) + '" y="' + t.y + '" width="' + (2.8 * r) + '" height="' + (11 * r) + '" fill="' + pal.wand + '" stroke="' + pal.stroke + '" stroke-width="0.4" opacity="0.85"/>'; // Säule
+      s += '<ellipse cx="' + t.x + '" cy="' + t.y + '" rx="' + (15 * r) + '" ry="' + (5.5 * r) + '" fill="' + pal.licht + '" opacity="0.12" stroke="' + pal.stroke + '" stroke-width="0.7"/>'; // Platte
+      s += '<ellipse cx="' + t.x + '" cy="' + (t.y - 0.6) + '" rx="' + (15 * r) + '" ry="' + (5.5 * r) + '" fill="none" stroke="' + pal.licht + '" stroke-width="0.4" opacity="0.18"/>'; // Plattenglanz
     });
 
     // === Anklickbare Stationen ===
@@ -7680,9 +7684,11 @@ function _renderCafeSaal(container) {
     }
     // 2. Roberts stiller Ecktisch (vorne rechts, hervorgehoben wenn Spur da)
     const rtX = 232, rtY = 150;
-    s += '<ellipse cx="' + rtX + '" cy="' + rtY + '" rx="22" ry="9" fill="' + (tischSpurDa ? pal.akzent : pal.licht) + '" opacity="' + (tischSpurDa ? '0.18' : '0.1') + '" stroke="' + (tischSpurDa ? pal.akzent : pal.stroke) + '" stroke-width="1.2"/>';
-    s += '<rect x="' + (rtX - 2) + '" y="' + rtY + '" width="4" height="20" fill="rgba(0,0,0,0.4)"/>';
-    if (tischSpurDa) { s += '<circle cx="' + rtX + '" cy="' + (rtY - 16) + '" r="7" fill="' + pal.akzent + '" opacity="0.14"/>'; s += '<text x="' + rtX + '" y="' + (rtY - 12) + '" text-anchor="middle" font-size="10" fill="' + pal.licht + '">?</text>'; }
+    const rtR = 1.35; // etwas größer als Kulissen-Tische (Vordergrund + Fokus)
+    s += '<ellipse cx="' + rtX + '" cy="' + (rtY + 12 * rtR) + '" rx="' + (8 * rtR) + '" ry="' + (2.2 * rtR) + '" fill="rgba(0,0,0,0.4)"/>'; // Fußteller
+    s += '<rect x="' + (rtX - 1.6 * rtR) + '" y="' + rtY + '" width="' + (3.2 * rtR) + '" height="' + (12 * rtR) + '" fill="' + pal.wand + '" stroke="' + pal.stroke + '" stroke-width="0.5" opacity="0.9"/>'; // Säule
+    s += '<ellipse cx="' + rtX + '" cy="' + rtY + '" rx="' + (16 * rtR) + '" ry="' + (6 * rtR) + '" fill="' + (tischSpurDa ? pal.akzent : pal.licht) + '" opacity="' + (tischSpurDa ? '0.18' : '0.1') + '" stroke="' + (tischSpurDa ? pal.akzent : pal.stroke) + '" stroke-width="1.2"/>';
+    if (tischSpurDa) { s += '<circle cx="' + rtX + '" cy="' + (rtY - 18) + '" r="7" fill="' + pal.akzent + '" opacity="0.14"/>'; s += '<text x="' + rtX + '" y="' + (rtY - 14) + '" text-anchor="middle" font-size="10" fill="' + pal.licht + '">?</text>'; }
     // v7.12.859: Ausgang-Schild im Bild ENTFERNT - man verlässt das Cafe über den normalen "Reisen"-Button
     // unter der Szene (der Bild-Ausgang wurde versehentlich geklickt und war doppelt).
 
@@ -7979,7 +7985,7 @@ function getNpcsAtCurrentLocation() {
   // v7.12.826 (Erkundungs-Modus): Hat der Schauplatz einen Graphen, sind NPCs an ihren Knoten gebunden -
   // nur die NPCs des AKTUELLEN Knotens erscheinen (Pohl im Hof, Ilse vor ihrer Tür im 3. Stock).
   const _expN = (typeof _hatExploration === 'function' && _hatExploration() && caseProgress && caseProgress._explorationBetreten) ? _expZelleAktuell() : null;
-  // v7.12.861: Bei öffentlichen Orten (Café-Saal, Weg 2) gibt es KEINE Knoten-Bewegung - alle Orts-NPCs
+  // v7.12.862: Bei öffentlichen Orten (Café-Saal, Weg 2) gibt es KEINE Knoten-Bewegung - alle Orts-NPCs
   // sind verfügbar (man klickt sie direkt im Saalbild an). Der knotengebundene Filter darf dort nicht greifen,
   // sonst wird Voss (an Tresen-Zelle gebunden) weggefiltert, weil Karl auf der Startzelle steht.
   const _istOeffSaal = (typeof _expProfil === 'function') && _expProfil() === 'oeffentlich';
@@ -8792,7 +8798,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.861';
+window.SCHATTEN_VERSION = 'v7.12.862';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -11360,7 +11366,7 @@ function _ortsFundIndizienErreichbar() {
     // v7.12.826 (Erkundungs-Modus): Hat der Schauplatz einen Graphen, sind Funde an ihren Knoten gebunden -
     // nur die Indizien des AKTUELLEN Knotens auffindbar (Türschild nur im Treppenhaus).
     const _expNode2 = (typeof _hatExploration === 'function' && _hatExploration() && caseProgress && caseProgress._explorationBetreten) ? _expZelleAktuell() : null;
-    // v7.12.861: Café-Saal (öffentlich) hat keine Knoten-Bewegung - alle Orts-Hotspots verfügbar (im Bild anklickbar).
+    // v7.12.862: Café-Saal (öffentlich) hat keine Knoten-Bewegung - alle Orts-Hotspots verfügbar (im Bild anklickbar).
     const _istOeffSaal2 = (typeof _expProfil === 'function') && _expProfil() === 'oeffentlich';
     const _expHotspotFilter = _istOeffSaal2 ? null : (_expNode2 && Array.isArray(_expNode2.hotspots) ? _expNode2.hotspots.map(h => normForMatch(h)) : (_expNode2 ? [] : null));
     if (_expNode2 && typeof diag === 'function') diag('state', '🔎 ORTSFUND-FILTER @ Zelle "' + (_expNode2.titel || '?') + '": hotspots=[' + (_expNode2.hotspots || []).join(',') + ']');
