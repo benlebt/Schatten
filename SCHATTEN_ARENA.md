@@ -19,6 +19,73 @@ Code verifiziert — Funktionsnamen/Zeilen sind reale Anker, keine Erfindung.
 4. **Party-Begleiter im Krause-Fall:** menschlicher Verbündeter einbauen (anwerbbar), damit Karl
    nicht allein gegen Frieda+Kalle+Jochen steht.
 
+## Lektorat-Schärfungen (ChatGPT, nach v938 — in die Umsetzung übernommen)
+
+**SCHRITT 0 (vor Code, Kampfbedeutung):** Die Arena darf nicht nur ein Banner über dem alten
+Sofort-K.O.-Baukasten sein. Kernregel:
+
+> Sobald `encounterState === 'kampf'`, werden Sofortwirkungen wie `wirkung:'ko'` NICHT mehr 1:1
+> als sofortiges K.O. angewendet, sondern in Kampfeffekte übersetzt:
+> - **angreifen** = Schaden / Benommenheit (nicht sofort ko)
+> - **fesseln** = nur bei ko/benommen/fixiert oder mit Hilfe
+> - **durchsuchen** = nur bei kampfunfähigem Gegner
+> - **bestechen / einschüchtern** = kann Flucht, Aufgabe oder Info auslösen
+
+- **Minimale Gegner-HP** (2–4) statt Binär-K.O. Normaler Angriff 1 Schaden, guter Angriff 2,
+  Hund/Verbündeter Bonus. Erst bei 0 HP → ko/gefesselt/geflohen. AUSSERHALB der Arena bleibt
+  `angreifen → ko` (Prosa-Aktion). NUR innerhalb der Arena wird es Schaden/Stagger.
+- **benommen-Trennung:** `_gegnerBezwungen` (ko/gefesselt/fixiert/geflohen/uebergeben = wirklich
+  aus) vs. ein kurzer Stun. Ein kurzer Stun darf NICHT „besiegt → durchsuchbar → Arena endet"
+  auslösen. Entweder eigener Helfer `_gegnerKampfUnfaehig` ODER bewusst festlegen, dass benommen
+  in Schatten „kampfunfähig genug" heißt. (Entscheidung beim Bau treffen, dokumentieren.)
+
+**Indiz-Sicherung — eigenes Datenmodell (statt Gesprächs-Indizien umzudeuten):**
+- Explizites Feld am Gegner-NPC oder Indiz: `combatLoot: ['id']` bzw.
+  `defeatIndizien:[{id, mode:'search_or_drop'}]`.
+- **Grant-once-Schutz:** `if (!gefundeneIndizIds.includes(id)) grantIndiz(id)` — sonst Doppel-
+  vergabe (einmal Gespräch, einmal Durchsuchen).
+- **Auto-Drop NUR bei Gegner-Flucht/Niederlage/Panik** (NPC-Status wird zu 'geflohen' DURCH den
+  Gegner). NICHT wenn Karl flieht, Ort wechselt oder Encounter abgebrochen wird — sonst looted
+  man durch eigene Flucht.
+
+**Gegnerzug engine-lokal, nicht KI-generiert:** Schaden/Zustände lokal berechnen (kurzer Engine-
+Toast/-Prosa: „Kalle schlägt nach dir. Vf −1."). KI erzählt erst wieder bei Arena-Ende, Flucht,
+großem Zustandswechsel oder Nachkampf-Zusammenfassung. Zwei Wahrheitsquellen (Engine + KI) dürfen
+nicht kollidieren (sonst Doppelschaden/erfundene K.O.s).
+
+**Normale Optionen im Kampf raus:** Bei `encounterState==='kampf'` keine normalen A/B/C/D-Story-
+Optionen, kein Reisen/Schlafen/Plaudern/Romantik. Nur: Arena-UI, Party-Aktionen, Gegnerwahl,
+Flucht, ggf. Item. Nach Kampfende kommen normale Optionen zurück.
+
+**Durchsuchen nach Sieg sichtbar anbieten:** Nach Arena-Sieg klare UI: „Frieda durchsuchen / Kalle
+durchsuchen / Lager durchsuchen / Etui sichern". Der Spieler darf den Loot-Weg nicht erraten müssen.
+
+**Kampfrollen (Krause):**
+- **Kalle:** Tank/Bruiser — viel HP (~4), hoher Schaden, kaum Flucht, blockiert Zugang.
+- **Jochen:** schnell/nervös — wenig HP (~2), Messer, hohe Fluchtchance, droppt unter Druck Indiz.
+- **Frieda:** Boss/Fluchtfigur — kämpft nicht primär, verhandelt/flieht/schickt andere vor (~2 HP).
+
+**rundenLimit als Eskalationsdruck, nicht harter Timer:** Nach Runde 3 Schritte draußen, Runde 5
+„jemand ruft nach der Polizei", Runde 6 Frieda flieht / Lager wird riskant. Noirig statt abruptes Ende.
+
+**Begleiter-Kandidat (P2):** NICHT Roth (Polizei/Politik), NICHT Krause (Auftraggeber/Opfer), NICHT
+Bornstein (Informant, prügelt nicht). Besser neuer kleiner Ally aus Bornsteins Umfeld, z.B.
+**Max Riedel** (Ex-Boxer, Gelegenheits-Türsteher, schuldet Bornstein Geld; anwerbbar über Geld/
+Bornsteins Namen; Stärke +1, blockt Kalle). Fall ohne Begleiter NICHT unmöglich, aber mit fairer.
+
+**Bot-Modi: NACH menschlicher Spielbarkeit** (Schritt 6+), nicht in 1–5. Später simple Heuristik:
+Vf≤2 → fliehen/defensiv; Gegner low HP → angreifen; gefesselt/ko mit Loot → durchsuchen.
+
+## Umsortierte Schritte (nach Lektorat)
+0. Kampfbedeutung definieren (HP, benommen-Frage) — Design, kein Code.
+1. Arena startet bei Angriff + rendert. ✓ (v937/v938 — Auslöser steht, beide Pfade)
+2. Eine echte Runde: Karl-Aktion → Gegnerzug (engine-lokal) → Round++.
+3. Sieg/Ende: alle kampfunfähig → Arena endet sauber, Gegner bleiben durchsuchbar.
+4. Indiz-Sicherung: combatLoot, search-or-drop, grant-once, Auto-Drop nur bei Gegner-Flucht.
+5. Party-Begleiter (Max Riedel) — erst wenn Solo-Kampf läuft.
+6. Bot-Heuristik.
+
+
 ## Bestehende Infrastruktur (verifiziert — NICHT neu erfinden)
 
 - `_encounterStartKampf(enemyName)` (Z11257): setzt `caseProgress.encounterState='kampf'`,
