@@ -1,8 +1,18 @@
 # Schatten — Indizienketten-Analyse & Plan
 
-**Stand:** v7.12.924 · 15. Juni 2026
+**Stand:** v7.12.928 · 15. Juni 2026
 **Zweck:** Grundlage, um mit ChatGPT pro Fall eine optimale Indizienkette (Stage 1→4) zu bauen.
 **Methode:** Alle Angaben unten sind aus dem echten Code verifiziert (nicht aus dem Gedächtnis).
+
+> **BAUSTAND Krause (v928): Kette KOMPLETT gebaut.**
+> - Stage 1 (Tatort): einbruch_fenster, etui_letzter_ort, nachbarin_aussage ✓ (vorhanden)
+> - Stage 2: bornstein_hehler_tipp (abStage:1) ✓ NEU
+> - Stage 3: frieda_ausweichend (abStage:2) + lager_hinterhof (abStage:3) ✓ NEU
+> - Stage 4: etui_im_lager (abStage:3) ✓ NEU
+> - NPC-IDs gesetzt: bornstein, tante_frieda, kalle, jochen, erika_kalewski
+> - **Entscheidung Bornstein/Frieda: VARIANTE B.** Frieda bleibt im Startauftrag bekannt (glaubwürdig: Krause kennt die Szene). Bornstein ist NICHT Pflichtbrücke, sondern wertvoller Insider: bestätigt Frieda, warnt vor Kalle & Jochen, kennt das Lager. Wer zu ihm geht, ist besser vorbereitet — wer direkt zu Frieda stürmt, läuft eher in die Arena. (Spielerlogik > erzwungene Reihenfolge.)
+> - Karten-"später"-Ring bewusst BELASSEN: bei Variante B ist ein früher gedämpfter Bornstein-Ring sinnvolle Vorausschau, kein Spoiler.
+> - NOCH OFFEN: Erika (stage:1-Bonus, kein fester Ort) · frieda_verkaufsbeleg (Mindestabschluss-Fallback) · kalle_jochen_transport (optional) · Live-Test T1-T9 · Arena-Anbindung Kalle&Jochen in Stage 3/4.
 
 ---
 
