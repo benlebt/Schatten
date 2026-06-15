@@ -3332,7 +3332,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.860</div>
+    <div class="start-version">Schatten v7.12.861</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3558,7 +3558,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.860</span>
+    <span>Schatten v7.12.861</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7646,10 +7646,11 @@ function _renderCafeSaal(container) {
     // zwei Wandspiegel
     s += '<rect x="36" y="14" width="34" height="44" rx="2" fill="' + pal.licht + '" opacity="0.05" stroke="' + pal.akzent + '" stroke-width="0.8"/>';
     s += '<rect x="250" y="14" width="34" height="44" rx="2" fill="' + pal.licht + '" opacity="0.05" stroke="' + pal.akzent + '" stroke-width="0.8"/>';
-    // Kronleuchter
-    s += '<line x1="160" y1="0" x2="160" y2="12" stroke="' + pal.stroke + '" stroke-width="0.8"/>';
-    s += '<ellipse cx="160" cy="16" rx="14" ry="5" fill="' + pal.akzent + '" opacity="0.18"/>';
-    s += '<circle cx="160" cy="16" r="3" fill="' + pal.akzent + '" opacity="0.6"/>';
+    // Hängelampe (klar als Deckenlampe erkennbar: Kette + Schirm, kompakt)
+    s += '<line x1="160" y1="0" x2="160" y2="10" stroke="' + pal.stroke + '" stroke-width="0.8"/>';
+    s += '<path d="M150,20 Q160,8 170,20 Z" fill="' + pal.wand + '" stroke="' + pal.stroke + '" stroke-width="0.7" opacity="0.9"/>'; // Lampenschirm
+    s += '<ellipse cx="160" cy="22" rx="9" ry="2" fill="' + pal.akzent + '" opacity="0.5"/>'; // Lichtaustritt unten
+    s += '<ellipse cx="160" cy="30" rx="16" ry="6" fill="' + pal.akzent + '" opacity="0.10"/>'; // Lichtschein
 
     // Stumme Gast-Tische als Kulisse (gestaffelt in die Tiefe - DAS macht den Saal voll)
     const gaesteTische = [ {x:60,y:120,r:0.9}, {x:250,y:120,r:0.85}, {x:40,y:170,r:1.1}, {x:280,y:170,r:1.05}, {x:120,y:150,r:0.95} ];
@@ -7665,9 +7666,11 @@ function _renderCafeSaal(container) {
     });
 
     // === Anklickbare Stationen ===
-    // 1. Marmortresen mit Voss (oben mittig-links)
-    s += '<rect x="96" y="60" width="128" height="16" rx="3" fill="' + pal.licht + '" opacity="0.16" stroke="' + pal.stroke + '" stroke-width="1.2"/>';
-    s += '<line x1="100" y1="64" x2="220" y2="64" stroke="' + pal.licht + '" stroke-width="0.6" opacity="0.4"/>';
+    // 1. Marmortresen mit Voss (oben mittig) - als Theke mit Front/Tiefe, klar als Möbel erkennbar
+    s += '<polygon points="108,58 212,58 220,74 100,74" fill="' + pal.marmor + '" opacity="0.85" stroke="' + pal.stroke + '" stroke-width="1.2"/>'; // Front (Trapez = Tiefe)
+    s += '<rect x="108" y="54" width="104" height="5" rx="2" fill="' + pal.licht + '" opacity="0.3" stroke="' + pal.stroke + '" stroke-width="0.8"/>'; // Marmorplatte oben
+    s += '<line x1="134" y1="58" x2="128" y2="74" stroke="' + pal.stroke + '" stroke-width="0.4" opacity="0.4"/>';
+    s += '<line x1="186" y1="58" x2="192" y2="74" stroke="' + pal.stroke + '" stroke-width="0.4" opacity="0.4"/>';
     if (vossDa) {
       s += '<g><ellipse cx="160" cy="44" rx="8" ry="9" fill="#241d14" stroke="' + pal.stroke + '" stroke-width="1"/>';
       s += '<text x="160" y="49" text-anchor="middle" font-size="15">' + vossEmoji + '</text>';
@@ -7976,7 +7979,11 @@ function getNpcsAtCurrentLocation() {
   // v7.12.826 (Erkundungs-Modus): Hat der Schauplatz einen Graphen, sind NPCs an ihren Knoten gebunden -
   // nur die NPCs des AKTUELLEN Knotens erscheinen (Pohl im Hof, Ilse vor ihrer Tür im 3. Stock).
   const _expN = (typeof _hatExploration === 'function' && _hatExploration() && caseProgress && caseProgress._explorationBetreten) ? _expZelleAktuell() : null;
-  const _expNpcFilter = _expN && Array.isArray(_expN.npcs) ? _expN.npcs.map(n => normForMatch(n)) : (_expN ? [] : null);
+  // v7.12.861: Bei öffentlichen Orten (Café-Saal, Weg 2) gibt es KEINE Knoten-Bewegung - alle Orts-NPCs
+  // sind verfügbar (man klickt sie direkt im Saalbild an). Der knotengebundene Filter darf dort nicht greifen,
+  // sonst wird Voss (an Tresen-Zelle gebunden) weggefiltert, weil Karl auf der Startzelle steht.
+  const _istOeffSaal = (typeof _expProfil === 'function') && _expProfil() === 'oeffentlich';
+  const _expNpcFilter = (_istOeffSaal ? null : (_expN && Array.isArray(_expN.npcs) ? _expN.npcs.map(n => normForMatch(n)) : (_expN ? [] : null)));
   if (loc && Array.isArray(loc.npcs)) {
     for (const entry of loc.npcs) {
       if (!entry || !entry.id) continue;
@@ -8785,7 +8792,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.860';
+window.SCHATTEN_VERSION = 'v7.12.861';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -11353,7 +11360,9 @@ function _ortsFundIndizienErreichbar() {
     // v7.12.826 (Erkundungs-Modus): Hat der Schauplatz einen Graphen, sind Funde an ihren Knoten gebunden -
     // nur die Indizien des AKTUELLEN Knotens auffindbar (Türschild nur im Treppenhaus).
     const _expNode2 = (typeof _hatExploration === 'function' && _hatExploration() && caseProgress && caseProgress._explorationBetreten) ? _expZelleAktuell() : null;
-    const _expHotspotFilter = _expNode2 && Array.isArray(_expNode2.hotspots) ? _expNode2.hotspots.map(h => normForMatch(h)) : (_expNode2 ? [] : null);
+    // v7.12.861: Café-Saal (öffentlich) hat keine Knoten-Bewegung - alle Orts-Hotspots verfügbar (im Bild anklickbar).
+    const _istOeffSaal2 = (typeof _expProfil === 'function') && _expProfil() === 'oeffentlich';
+    const _expHotspotFilter = _istOeffSaal2 ? null : (_expNode2 && Array.isArray(_expNode2.hotspots) ? _expNode2.hotspots.map(h => normForMatch(h)) : (_expNode2 ? [] : null));
     if (_expNode2 && typeof diag === 'function') diag('state', '🔎 ORTSFUND-FILTER @ Zelle "' + (_expNode2.titel || '?') + '": hotspots=[' + (_expNode2.hotspots || []).join(',') + ']');
     return _loc.indizien.filter(ind => {
       if (!ind || !ind.id || _gef.indexOf(ind.id) !== -1) return false;
