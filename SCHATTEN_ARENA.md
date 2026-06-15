@@ -79,7 +79,9 @@ Vf≤2 → fliehen/defensiv; Gegner low HP → angreifen; gefesselt/ko mit Loot 
 ## Umsortierte Schritte (nach Lektorat)
 0. Kampfbedeutung definieren (HP, benommen-Frage) — Design, kein Code.
 1. Arena startet bei Angriff + rendert. ✓ (v937/v938 — Auslöser steht, beide Pfade)
-2. Eine echte Runde: Karl-Aktion → Gegnerzug (engine-lokal) → Round++.
+2. Eine echte Runde: Karl-Aktion → Gegnerzug (engine-lokal) → Round++. ✓ (v941 — HP statt Sofort-KO,
+   engine-lokaler Gegnerzug mit Vf-Schaden, benommen-Trennung, HP-Leiste in der Arena, Eskalationsdruck
+   nach Runde 3/5)
 3. Sieg/Ende: alle kampfunfähig → Arena endet sauber, Gegner bleiben durchsuchbar.
 4. Indiz-Sicherung: combatLoot, search-or-drop, grant-once, Auto-Drop nur bei Gegner-Flucht.
 5. Party-Begleiter (Max Riedel) — erst wenn Solo-Kampf läuft.
