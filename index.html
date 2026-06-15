@@ -101,7 +101,7 @@
   @keyframes expKellner { 0% { transform: translateX(-40px); opacity: 0; } 15%,80% { opacity: 0.6; } 100% { transform: translateX(60px); opacity: 0; } }
   .exp-gast { animation: expGast 5s ease-in-out infinite; transform-origin: bottom center; }
   .exp-kellner { animation: expKellner 9s ease-in-out infinite; }
-  /* v7.12.864: Café-Licht-Atmung - sehr langsam, fast unmerklich (NICHT pulsierend). Nur warmer Lichtpool atmet. */
+  /* v7.12.865: Café-Licht-Atmung - sehr langsam, fast unmerklich (NICHT pulsierend). Nur warmer Lichtpool atmet. */
   @keyframes csaalLichtAtem { 0%,100% { opacity: var(--laO,0.10); } 50% { opacity: calc(var(--laO,0.10) * 1.5); } }
   .csaal-licht-atem { animation: csaalLichtAtem 6.5s ease-in-out infinite; }
   /* v7.12.374: Mobile-Fix - horizontales Scrollen/Verschieben komplett unterbinden.
@@ -3335,7 +3335,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.864</div>
+    <div class="start-version">Schatten v7.12.865</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3561,7 +3561,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.864</span>
+    <span>Schatten v7.12.865</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7153,6 +7153,20 @@ function _expDrehe(richtung) {
   caseProgress.explorationPos = { x: p.x, y: p.y, blick: neu };
 }
 // Prozedurale SVG-Korridor-Perspektive: zeichnet aus voraus/links/rechts (wand/offen/tuer) eine Ego-Ansicht.
+// v7.12.865 (Hinterhof-Regie): Pro-Station-Profil steuert Asymmetrie, Licht, Boden - damit derselbe
+// Tunnel-Renderer NICHT immer wie derselbe Kasten wirkt. Kein neuer Renderer, nur Regie je bodenSvgKey.
+function _expVisualProfile(bodenSvgKey, oeffentlich) {
+  if (oeffentlich) return { asym: 'none', light: 'birne', floor: 'flur', lampX: 0.5 };
+  switch (bodenSvgKey) {
+    case 'hof':         return { asym: 'rechts', light: 'strasse',     floor: 'pflaster',    lampX: 0.42 };
+    case 'fenster':     return { asym: 'links',  light: 'fenster_warm', floor: 'fussspuren',  lampX: 0.58 };
+    case 'tuer':        return { asym: 'links',  light: 'klingel',     floor: 'matte',       lampX: 0.5  };
+    case 'wohnungstuer':return { asym: 'rechts', light: 'tuer_spalt',  floor: 'schwelle',    lampX: 0.62 };
+    case 'treppe':      return { asym: 'links',  light: 'oben',        floor: 'stufen',      lampX: 0.38 };
+    case 'opel':        return { asym: 'rechts', light: 'strasse',     floor: 'pflaster',    lampX: 0.5  };
+    default:            return { asym: 'none',   light: 'birne',       floor: 'dunkel',      lampX: 0.5  };
+  }
+}
 function _expSvgPerspektive(vorne, links, rechts, bodenSvgKey, feature, opts) {
   opts = opts || {};
   // v7.12.835: Tageszeit-Farbstimmung (dezent, bricht den SW-Noir nicht) + farbige Akzente (Sin-City).
@@ -7175,6 +7189,8 @@ function _expSvgPerspektive(vorne, links, rechts, bodenSvgKey, feature, opts) {
   // v7.12.854: Wand-Optik nach Ortsprofil - Café/öffentlich = Vertäfelung, sonst Mietshaus-Ziegel.
   const _oeffentlich = (opts.profil === 'oeffentlich');
   const wandPattern = _oeffentlich ? 'vertaefel' : 'ziegel';
+  // v7.12.865: Stations-Regie (Asymmetrie/Licht/Boden) - bricht die Tunnel-Gleichförmigkeit.
+  const _vp = _expVisualProfile(bodenSvgKey, _oeffentlich);
   const W = 320, H = 200;
   const ix1 = 96, iy1 = 58, ix2 = 224, iy2 = 150;
   let defs = '<defs>'
@@ -7213,17 +7229,58 @@ function _expSvgPerspektive(vorne, links, rechts, bodenSvgKey, feature, opts) {
   s += '<line x1="' + W + '" y1="' + H + '" x2="' + ix2 + '" y2="' + iy2 + '" stroke="' + dim + '" stroke-width="1"/>';
   s += '<line x1="0" y1="0" x2="' + ix1 + '" y2="' + iy1 + '" stroke="' + dim + '" stroke-width="0.8"/>';
   s += '<line x1="' + W + '" y1="0" x2="' + ix2 + '" y2="' + iy1 + '" stroke="' + dim + '" stroke-width="0.8"/>';
+  // v7.12.865: Boden erzählt je Station etwas (Pflaster/Spuren/Stufen statt schwarzer Fläche).
+  {
+    const _bcy = H - 18, _bcx = 160;
+    if (_vp.floor === 'pflaster') {
+      // nasses Kopfsteinpflaster: leichte Bögen + ein Glanzstreifen (Pfütze)
+      for (let pr = 0; pr < 3; pr++) { const py = _bcy - pr * 14; const pw = 90 - pr * 22; for (let pc = -2; pc <= 2; pc++) s += '<path d="M' + (_bcx + pc * (pw / 3) - 8) + ',' + py + ' q8,-3 16,0" fill="none" stroke="' + dim + '" stroke-width="0.5" opacity="0.35"/>'; }
+      s += '<ellipse cx="' + (_bcx - 30) + '" cy="' + (_bcy + 2) + '" rx="26" ry="5" fill="' + pal.licht + '" opacity="0.08"/>'; // Pfützenreflex
+    } else if (_vp.floor === 'fussspuren') {
+      s += '<ellipse cx="' + (_bcx - 18) + '" cy="' + _bcy + '" rx="4" ry="2" fill="rgba(0,0,0,0.4)"/>'; s += '<ellipse cx="' + (_bcx - 4) + '" cy="' + (_bcy - 8) + '" rx="3.5" ry="1.8" fill="rgba(0,0,0,0.35)"/>'; s += '<ellipse cx="' + (_bcx + 12) + '" cy="' + (_bcy - 15) + '" rx="3" ry="1.5" fill="rgba(0,0,0,0.3)"/>'; // verlaufende Fußspuren
+      s += '<rect x="' + (ix1) + '" y="' + (iy2 - 4) + '" width="' + (ix2 - ix1) + '" height="4" fill="rgba(0,0,0,0.3)"/>'; // Dreckkante an der Wand
+    } else if (_vp.floor === 'matte') {
+      s += '<rect x="' + (_bcx - 26) + '" y="' + (_bcy - 5) + '" width="52" height="12" rx="2" fill="rgba(0,0,0,0.45)" stroke="' + dim + '" stroke-width="0.6"/>'; // Schmutzmatte
+      for (let mr = 0; mr < 5; mr++) s += '<line x1="' + (_bcx - 22 + mr * 11) + '" y1="' + (_bcy - 4) + '" x2="' + (_bcx - 22 + mr * 11) + '" y2="' + (_bcy + 6) + '" stroke="' + dim + '" stroke-width="0.4" opacity="0.5"/>';
+    } else if (_vp.floor === 'schwelle') {
+      s += '<rect x="' + (_bcx - 30) + '" y="' + (_bcy - 2) + '" width="60" height="6" fill="rgba(0,0,0,0.4)" stroke="' + dim + '" stroke-width="0.7"/>'; // abgenutzte Schwelle
+      s += '<rect x="' + (_bcx - 30) + '" y="' + (_bcy - 2) + '" width="60" height="2" fill="' + pal.licht + '" opacity="0.1"/>'; // abgewetzter Glanz
+    } else if (_vp.floor === 'stufen') {
+      for (let st = 0; st < 4; st++) { const sy = _bcy - st * 9; const sw = 70 - st * 12; s += '<rect x="' + (_bcx - sw / 2) + '" y="' + sy + '" width="' + sw + '" height="3" fill="rgba(0,0,0,0.5)"/>'; s += '<rect x="' + (_bcx - sw / 2) + '" y="' + (sy - 2) + '" width="' + sw + '" height="2" fill="' + pal.licht + '" opacity="0.06"/>'; } // Treppenstufen mit Schatten
+    } else if (_vp.floor === 'dunkel') {
+      s += '<ellipse cx="' + _bcx + '" cy="' + _bcy + '" rx="50" ry="8" fill="#000" opacity="0.3"/>'; // nur eine dunkle Bodenzone
+    }
+  }
   // v7.12.837: Decke füllen - perspektivische Querbalken/Latten + (nachts) eine Hängelampe. Macht den oberen
   // Bereich lebendig statt leer-schwarz.
   // Querbalken: drei waagerechte Linien, die zur Bildmitte schmaler/höher werden (perspektivisch).
   s += '<line x1="34" y1="20" x2="' + (W - 34) + '" y2="20" stroke="' + dim + '" stroke-width="0.8"/>';
   s += '<line x1="62" y1="38" x2="' + (W - 62) + '" y2="38" stroke="' + dim + '" stroke-width="0.7"/>';
   s += '<line x1="' + (ix1 + 4) + '" y1="' + (iy1 - 4) + '" x2="' + (ix2 - 4) + '" y2="' + (iy1 - 4) + '" stroke="' + dim + '" stroke-width="0.6"/>';
-  // Eine Hängelampe in der Mitte (Glühbirne) - leuchtet im Akzentton; flackert gelegentlich nachts.
-  s += '<line x1="' + (W / 2) + '" y1="0" x2="' + (W / 2) + '" y2="14" stroke="' + dim + '" stroke-width="0.8"/>';
-  const _lampClass = '';
-  s += '<circle cx="' + (W / 2) + '" cy="18" r="4.5" fill="' + pal.akzent + '" opacity="0.5"' + _lampClass + '/>';
-  s += '<circle cx="' + (W / 2) + '" cy="18" r="9" fill="' + pal.akzent + '" opacity="0.12"/>';
+  // v7.12.865: Lichtregie je Station - nicht mehr immer die zentrale Glühbirne mittig.
+  const _lampPx = Math.round(W * _vp.lampX);
+  if (_vp.light === 'birne' || _vp.light === 'oben') {
+    // nackte Glühbirne (bei 'oben' höher + härterer Schein nach unten)
+    s += '<line x1="' + _lampPx + '" y1="0" x2="' + _lampPx + '" y2="14" stroke="' + dim + '" stroke-width="0.8"/>';
+    s += '<circle cx="' + _lampPx + '" cy="18" r="4.5" fill="' + pal.akzent + '" opacity="0.5"/>';
+    s += '<circle cx="' + _lampPx + '" cy="18" r="9" fill="' + pal.akzent + '" opacity="0.12"/>';
+    if (_vp.light === 'oben') s += '<polygon points="' + (_lampPx - 5) + ',22 ' + (_lampPx + 5) + ',22 ' + (_lampPx + 26) + ',' + iy2 + ' ' + (_lampPx - 26) + ',' + iy2 + '" fill="' + pal.akzent + '" opacity="0.06"/>'; // Lichtkegel nach unten
+  } else if (_vp.light === 'strasse') {
+    // Straßenlicht von hinten durch die Toröffnung (heller Fluchtpunkt, kein Deckenlicht)
+    s += '<rect x="' + (ix1 + 6) + '" y="' + (iy1 + 4) + '" width="' + (ix2 - ix1 - 12) + '" height="' + (iy2 - iy1 - 8) + '" fill="' + pal.licht + '" opacity="0.10"/>';
+    s += '<ellipse cx="160" cy="' + ((iy1 + iy2) / 2) + '" rx="40" ry="36" fill="' + pal.licht + '" opacity="0.06"/>';
+  } else if (_vp.light === 'fenster_warm') {
+    // warmes Fensterlicht von der Seite (kein zentrales Deckenlicht)
+    const _fwx = (_vp.asym === 'links') ? (ix1 + 24) : (ix2 - 24);
+    s += '<ellipse cx="' + _fwx + '" cy="' + (iy1 + 34) + '" rx="34" ry="40" fill="' + pal.akzent + '" opacity="0.07"/>';
+  } else if (_vp.light === 'klingel') {
+    // schwache Birne + kleine Lichtinsel am Klingelbrett (wird unten gesetzt)
+    s += '<circle cx="' + _lampPx + '" cy="18" r="3.5" fill="' + pal.akzent + '" opacity="0.35"/>';
+    s += '<circle cx="' + _lampPx + '" cy="18" r="7" fill="' + pal.akzent + '" opacity="0.08"/>';
+  } else if (_vp.light === 'tuer_spalt') {
+    // Licht aus dem Türspalt vorne (warmer Keil), sonst dunkel
+    s += '<polygon points="' + (160 - 3) + ',' + (iy1 + 12) + ' ' + (160 + 3) + ',' + (iy1 + 12) + ' ' + (160 + 8) + ',' + iy2 + ' ' + (160 - 8) + ',' + iy2 + '" fill="' + pal.akzent + '" opacity="0.10"/>';
+  }
   // Linke Seite
   if (links === 'wand') {
     s += '<polygon points="0,0 ' + ix1 + ',' + iy1 + ' ' + ix1 + ',' + iy2 + ' 0,' + H + '" fill="url(#' + wandPattern + ')" opacity="0.5"/>';
@@ -8055,7 +8112,7 @@ function getNpcsAtCurrentLocation() {
   // v7.12.826 (Erkundungs-Modus): Hat der Schauplatz einen Graphen, sind NPCs an ihren Knoten gebunden -
   // nur die NPCs des AKTUELLEN Knotens erscheinen (Pohl im Hof, Ilse vor ihrer Tür im 3. Stock).
   const _expN = (typeof _hatExploration === 'function' && _hatExploration() && caseProgress && caseProgress._explorationBetreten) ? _expZelleAktuell() : null;
-  // v7.12.864: Bei öffentlichen Orten (Café-Saal, Weg 2) gibt es KEINE Knoten-Bewegung - alle Orts-NPCs
+  // v7.12.865: Bei öffentlichen Orten (Café-Saal, Weg 2) gibt es KEINE Knoten-Bewegung - alle Orts-NPCs
   // sind verfügbar (man klickt sie direkt im Saalbild an). Der knotengebundene Filter darf dort nicht greifen,
   // sonst wird Voss (an Tresen-Zelle gebunden) weggefiltert, weil Karl auf der Startzelle steht.
   const _istOeffSaal = (typeof _expProfil === 'function') && _expProfil() === 'oeffentlich';
@@ -8868,7 +8925,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.864';
+window.SCHATTEN_VERSION = 'v7.12.865';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -11436,7 +11493,7 @@ function _ortsFundIndizienErreichbar() {
     // v7.12.826 (Erkundungs-Modus): Hat der Schauplatz einen Graphen, sind Funde an ihren Knoten gebunden -
     // nur die Indizien des AKTUELLEN Knotens auffindbar (Türschild nur im Treppenhaus).
     const _expNode2 = (typeof _hatExploration === 'function' && _hatExploration() && caseProgress && caseProgress._explorationBetreten) ? _expZelleAktuell() : null;
-    // v7.12.864: Café-Saal (öffentlich) hat keine Knoten-Bewegung - alle Orts-Hotspots verfügbar (im Bild anklickbar).
+    // v7.12.865: Café-Saal (öffentlich) hat keine Knoten-Bewegung - alle Orts-Hotspots verfügbar (im Bild anklickbar).
     const _istOeffSaal2 = (typeof _expProfil === 'function') && _expProfil() === 'oeffentlich';
     const _expHotspotFilter = _istOeffSaal2 ? null : (_expNode2 && Array.isArray(_expNode2.hotspots) ? _expNode2.hotspots.map(h => normForMatch(h)) : (_expNode2 ? [] : null));
     if (_expNode2 && typeof diag === 'function') diag('state', '🔎 ORTSFUND-FILTER @ Zelle "' + (_expNode2.titel || '?') + '": hotspots=[' + (_expNode2.hotspots || []).join(',') + ']');
