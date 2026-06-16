@@ -44,10 +44,10 @@ sind reale Anker, keine Erfindung. Struktur nach ChatGPT-Lektorat (Doku-Aufräum
 - **Max Riedel / Party-Begleiter** (Krause): Ex-Boxer aus Bornsteins Umfeld, anwerbbar nach
   `bornstein_hehler_tipp`. Als BLOCKER bauen (Stärke +1, bindet Kalle, senkt Gegnerschaden/Runde, macht
   selten selbst K.O.) — nicht als zweiter Karl. Fall ohne ihn lösbar, mit ihm fairer.
-- **Freitext-Regelung im Kampf:** Bei `encounterState==='kampf'` Freitext nur als Kampfhandlung
-  interpretieren (kein Reisen/Schlafen/Resolve/Romance/Erkundung). Für ersten stabilen Build evtl. ganz aus.
-- **Normale Optionen im Kampf raus:** A/B/C/D-Story-Optionen, Schlafen, Reisen, Romance ausblenden, solange
-  Kampf läuft. (Noch zu prüfen, wie weit das schon greift.)
+- **Freitext-Regelung im Kampf:** ✓ (v948) Im Kampf gesperrt (UI + Backend-Gate), Hinweis auf den Baukasten.
+  (Erster Build: deaktiviert statt als Kampfkommando geparst — kann später zu Parsing erweitert werden.)
+- **Normale Optionen im Kampf raus:** ✓ (v948) Reisen/Schlafen/Resolve/A-B-C-D-Story-Optionen unterdrückt,
+  solange Kampf läuft. Flucht + Heilen bleiben (kampfrelevant). Personen-Buttons/Exploration schon vorher aus.
 - **Gegnerzug-Balance:** max. 1 echter Schadensangriff pro Runde, weitere Gegner machen Druck/blocken/Flucht.
   3-gegen-1 darf Karl nicht in 2 Runden zermahlen. (Aktuell senkt der Gegnerzug Vf summiert — verfeinern.)
 - **Fesseln-Regel:** benommen allein = fesselbar mit Risiko; benommen+Helfer/Rex = leicht; ko/gefesselt/fixiert
@@ -78,7 +78,7 @@ Gesprächs-Actions → Kampf konnte eine Spur unerreichbar machen. **All das ist
 - T8: Karls Flucht vergibt KEINEN Gegner-Loot.
 - T9: Frieda bleibt über Gespräch erreichbar (NICHT combat-only).
 - T10: Kalle gibt `kalle_transportzettel` NICHT beim normalen Befragen (nur Kampf/Durchsuchen).
-- T11 (offen): Normale Optionen/Schlafen/Reisen/Romance im Kampf nicht verfügbar.
+- T11: ✓ (v948) Normale Optionen/Schlafen/Reisen/Resolve/Freitext im Kampf nicht verfügbar (Flucht/Heilen bleiben).
 - T12 (offen): Max Riedel in Party-Reihe, gibt Bonus; Fall ohne ihn lösbar, aber schwerer.
 
 ---
