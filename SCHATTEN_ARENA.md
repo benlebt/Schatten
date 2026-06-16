@@ -47,6 +47,9 @@ sind reale Anker, keine Erfindung. Struktur nach ChatGPT-Lektorat (Doku-Aufräum
 - **Zentrale Arena-Schadensfunktion** ✓ (v950, Lektorat P1). `_arenaSchadenAnGegner(ziel, schaden, akteur)` - EINE
   Stelle für Arena-HP-Schaden. Karls Angriff UND Begleiter-Angriff laufen hierdurch. Kein direkter status:'ko'-Bypass
   mehr (vorher umging der Begleiter-Befehl die HP-Arena - hätte Max Riedel zur K.O.-Maschine gemacht).
+- **Begleiter-Ablenkung arena-aware** ✓ (v957, Lektorat P1 verifiziert). In der Arena setzt Ablenkung nicht mehr
+  direkt 'gefesselt' (wäre derselbe Bypass), sondern 'benommen' - Karl muss im Folgezug zugreifen. Außerhalb der
+  Arena (Zugriff auf einen Überraschten) bleibt direktes Fesseln. Damit sind ALLE Begleiter-Pfade arena-dicht.
 
 ---
 
