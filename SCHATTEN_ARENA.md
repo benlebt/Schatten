@@ -28,22 +28,32 @@ sind reale Anker, keine Erfindung. Struktur nach ChatGPT-Lektorat (Doku-Aufräum
   (sonst beendet ein Treffer den Kampf). Wirklich aus: ko/gefesselt/fixiert/geflohen/uebergeben oder HP≤0.
 - **Engine-lokaler Gegnerzug** ✓ (v941). Nach Karls Zug: aktive Gegner senken Karls Vf (Engine berechnet,
   KI erzählt nur). `encounterRound++`. Eskalationsdruck Runde 3/5. HP-Leiste im Arena-Banner.
-- **Combat-Loot / Indiz-Sicherung** ✓ (v945/v946). `_gegnerCombatLootIds` (Bindung über combatLoot-Feld
-  ODER npc-Feld), `_gegnerCombatLootVergeben`, `_findeIndizById`, Grant-once via `_markiereIndizGefunden`.
-  - **ko/gefesselt/fixiert:** macht NUR lootbar (Gegner bleibt am Ort sichtbar, W6 Z10313). Vergabe erst
-    beim aktiven DURCHSUCHEN (`_durchsuchBeute`-Handler). KEINE Auto-Vergabe (v946-Korrektur, Lektorat P1).
-  - **geflohen:** Auto-Drop in `_npcZustandSet` (nur bei Gegner-Flucht in der Arena, nicht bei Karls Flucht).
-  - `_indizNurUeberKampf` sperrt reine Kampf-Drops (searchAfterDefeat) im normalen Fund-/Befrage-/Badge-Pfad,
-    bis der Gegner bezwungen ist. Frieda (`frieda_ausweichend`, KEIN searchAfterDefeat) = Dual-Path
-    (Gespräch ODER Kampf). Kalle (`kalle_transportzettel`) + Jochen (`jochen_lagerschluessel`) = Combat-only.
+- **Combat-Loot / Indiz-Sicherung** ✓ (v945/v946/v950). `_gegnerCombatLootIds`, `_gegnerCombatLootVergeben`,
+  `_findeIndizById`, Grant-once via `_markiereIndizGefunden`.
+  - **ko/gefesselt/fixiert:** macht NUR lootbar (Gegner bleibt am Ort sichtbar, W6 Z10313). Vergabe erst beim
+    aktiven DURCHSUCHEN (`_durchsuchBeute`-Handler). KEINE Auto-Vergabe.
+  - **geflohen:** Auto-Drop in `_npcZustandSet`, aber NUR bei `reason:'enemy_flee'` (v950, Lektorat P2) - Lazy-
+    Verfall über Nacht dropt nichts.
+  - **OFFENER BEFUND (v950):** Es gibt aktuell KEINEN Engine-Pfad, der einen Arena-Gegner auf `geflohen` mit
+    `reason:'enemy_flee'` setzt. Der Eskalationsdruck (Runde 5+) ist nur eine KI-Erzähl-Anweisung. -> Der Auto-Drop
+    feuert real noch nie. Wenn die KI "Frieda flieht" erzählt, bleibt ihr Engine-Status frei/benommen, die Spur
+    wird NICHT automatisch gesichert. TODO: echten Gegner-Fluchtauslöser bauen (Engine setzt geflohen+enemy_flee).
+  - `_indizNurUeberKampf` sperrt searchAfterDefeat-Indizien im normalen Fund-Pfad. Frieda = Dual-Path, Kalle/Jochen
+    = Combat-only.
+- **Zentrale Arena-Schadensfunktion** ✓ (v950, Lektorat P1). `_arenaSchadenAnGegner(ziel, schaden, akteur)` - EINE
+  Stelle für Arena-HP-Schaden. Karls Angriff UND Begleiter-Angriff laufen hierdurch. Kein direkter status:'ko'-Bypass
+  mehr (vorher umging der Begleiter-Befehl die HP-Arena - hätte Max Riedel zur K.O.-Maschine gemacht).
 
 ---
 
 ## 3. Noch offen
 
+- **Gegner-Fluchtpfad (Engine):** Einen echten Auslöser bauen, der eine Fluchtfigur (Frieda) in der Arena auf
+  `geflohen` + `reason:'enemy_flee'` setzt - dann greift der Auto-Drop. Aktuell nur KI-Erzählung, kein Engine-State.
 - **Max Riedel / Party-Begleiter** (Krause): Ex-Boxer aus Bornsteins Umfeld, anwerbbar nach
   `bornstein_hehler_tipp`. Als BLOCKER bauen (Stärke +1, bindet Kalle, senkt Gegnerschaden/Runde, macht
-  selten selbst K.O.) — nicht als zweiter Karl. Fall ohne ihn lösbar, mit ihm fairer.
+  selten selbst K.O.) — NICHT als Damage-Maschine (Begleiter-Angriff läuft jetzt über `_arenaSchadenAnGegner`,
+  also kein Sofort-K.O. mehr - aber Max soll primär blocken, nicht angreifen). Fall ohne ihn lösbar.
 - **Normale Optionen im Kampf raus:** ✓ (v948) Reisen/Schlafen/Resolve werden unterdrückt, solange Kampf läuft.
   (A/B/C/D-Optionen + Freitext sind im aktuellen Baukasten-First-Modus ohnehin global deaktiviert:
   `KI_OPTIONEN_AKTIV=false`, `FREITEXT_AKTIV=false` — gehandelt wird über System-Buttons + Personen + Baukasten.
