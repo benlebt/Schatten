@@ -1,6 +1,6 @@
 # SCHATTEN — Arena / Rundenbasierter Party-Kampf (Spec)
 
-Aktueller Stand: **nach v946**. Diese Spec ist gegen den echten Code verifiziert — Funktionsnamen
+Aktueller Stand: **nach v951** (Code-Stand v951; historische Basis v946 + v948/v950/v951). Diese Spec ist gegen den echten Code verifiziert — Funktionsnamen
 sind reale Anker, keine Erfindung. Struktur nach ChatGPT-Lektorat (Doku-Aufräumung).
 
 ---
@@ -32,14 +32,18 @@ sind reale Anker, keine Erfindung. Struktur nach ChatGPT-Lektorat (Doku-Aufräum
   `_findeIndizById`, Grant-once via `_markiereIndizGefunden`.
   - **ko/gefesselt/fixiert:** macht NUR lootbar (Gegner bleibt am Ort sichtbar, W6 Z10313). Vergabe erst beim
     aktiven DURCHSUCHEN (`_durchsuchBeute`-Handler). KEINE Auto-Vergabe.
-  - **geflohen:** Auto-Drop in `_npcZustandSet`, aber NUR bei `reason:'enemy_flee'` (v950, Lektorat P2) - Lazy-
-    Verfall über Nacht dropt nichts.
-  - **OFFENER BEFUND (v950):** Es gibt aktuell KEINEN Engine-Pfad, der einen Arena-Gegner auf `geflohen` mit
-    `reason:'enemy_flee'` setzt. Der Eskalationsdruck (Runde 5+) ist nur eine KI-Erzähl-Anweisung. -> Der Auto-Drop
-    feuert real noch nie. Wenn die KI "Frieda flieht" erzählt, bleibt ihr Engine-Status frei/benommen, die Spur
-    wird NICHT automatisch gesichert. TODO: echten Gegner-Fluchtauslöser bauen (Engine setzt geflohen+enemy_flee).
+  - **geflohen:** Auto-Drop in `_npcZustandSet`, nur bei `reason:'enemy_flee'` (v950, Lektorat P2).
+  - **Gegner-Fluchtpfad ANGESCHLOSSEN** ✓ (v951, Lektorat P1): Ab Kampf-Runde 5 flieht eine aktive Fluchtfigur
+    (Frieda) per Engine-State (`geflohen`+`enemy_flee`) - schaltet den Auto-Drop scharf, ihre Spur wird beim
+    Fliehen gesichert. Nur Fluchtfiguren, nur eine pro Runde, nur wenn nicht schon bezwungen.
   - `_indizNurUeberKampf` sperrt searchAfterDefeat-Indizien im normalen Fund-Pfad. Frieda = Dual-Path, Kalle/Jochen
     = Combat-only.
+- **benommen-Cleanup bei Kampfende** ✓ (v951, Lektorat P1): Ein nur 'benommen'-Gegner mit Rest-HP wird bei
+  `_encounterEnde` auf 'frei' zurückgesetzt (sonst gälte er außerhalb der Arena fälschlich als bezwungen/lootbar).
+- **Fesseln-Regel in der Arena** ✓ (v951, Lektorat P1): Gegner mit voller HP nicht direkt fesselbar (HP-Bypass
+  verhindert) - erst benommen/ko/fixiert oder mit Helfer/Party. Außerhalb der Arena unverändert.
+- **Durchsuchen im laufenden Kampf** ✓ (v951, Lektorat P1): In der Arena erscheint "Durchsuchen" NICHT bei einem
+  nur benommenen Gegner mit Rest-HP - erst bei ko/gefesselt/fixiert. Kein Durchsuchen, während daneben gekämpft wird.
 - **Zentrale Arena-Schadensfunktion** ✓ (v950, Lektorat P1). `_arenaSchadenAnGegner(ziel, schaden, akteur)` - EINE
   Stelle für Arena-HP-Schaden. Karls Angriff UND Begleiter-Angriff laufen hierdurch. Kein direkter status:'ko'-Bypass
   mehr (vorher umging der Begleiter-Befehl die HP-Arena - hätte Max Riedel zur K.O.-Maschine gemacht).
@@ -48,12 +52,11 @@ sind reale Anker, keine Erfindung. Struktur nach ChatGPT-Lektorat (Doku-Aufräum
 
 ## 3. Noch offen
 
-- **Gegner-Fluchtpfad (Engine):** Einen echten Auslöser bauen, der eine Fluchtfigur (Frieda) in der Arena auf
-  `geflohen` + `reason:'enemy_flee'` setzt - dann greift der Auto-Drop. Aktuell nur KI-Erzählung, kein Engine-State.
 - **Max Riedel / Party-Begleiter** (Krause): Ex-Boxer aus Bornsteins Umfeld, anwerbbar nach
-  `bornstein_hehler_tipp`. Als BLOCKER bauen (Stärke +1, bindet Kalle, senkt Gegnerschaden/Runde, macht
-  selten selbst K.O.) — NICHT als Damage-Maschine (Begleiter-Angriff läuft jetzt über `_arenaSchadenAnGegner`,
-  also kein Sofort-K.O. mehr - aber Max soll primär blocken, nicht angreifen). Fall ohne ihn lösbar.
+  `bornstein_hehler_tipp`. Als BLOCKER bauen (Lektorat: nicht nur Stärke +1, sondern GEGNERZUG-MODIFIKATOR -
+  bindet Kalle, sodass der Hauptschaden der Runde wegfällt oder stark sinkt; macht selten selbst K.O.). Fall ohne
+  ihn lösbar. WICHTIG: Begleiter-Angriff läuft seit v950 über `_arenaSchadenAnGegner` (kein Sofort-K.O.) - Max soll
+  primär blocken, nicht angreifen.
 - **Normale Optionen im Kampf raus:** ✓ (v948) Reisen/Schlafen/Resolve werden unterdrückt, solange Kampf läuft.
   (A/B/C/D-Optionen + Freitext sind im aktuellen Baukasten-First-Modus ohnehin global deaktiviert:
   `KI_OPTIONEN_AKTIV=false`, `FREITEXT_AKTIV=false` — gehandelt wird über System-Buttons + Personen + Baukasten.
@@ -84,12 +87,15 @@ Gesprächs-Actions → Kampf konnte eine Spur unerreichbar machen. **All das ist
 - T4: benommen (Rest-HP) beendet die Arena NICHT.
 - T5: ko-Gegner bleibt im Raum sichtbar und zeigt „Durchsuchen".
 - T6: Durchsuchen vergibt Combat-Loot GENAU EINMAL (grant-once).
-- T7: Geflohener Gegner droppt Loot automatisch.
+- T7: ✓ (v951) Geflohener Gegner (Frieda ab Runde 5, enemy_flee) droppt Loot automatisch.
 - T8: Karls Flucht vergibt KEINEN Gegner-Loot.
 - T9: Frieda bleibt über Gespräch erreichbar (NICHT combat-only).
 - T10: Kalle gibt `kalle_transportzettel` NICHT beim normalen Befragen (nur Kampf/Durchsuchen).
 - T11: ✓ (v948) Reisen/Schlafen/Resolve im Kampf nicht verfügbar. (ABCD/Freitext im aktuellen Modus ohnehin global aus.)
-- T12 (offen): Max Riedel in Party-Reihe, gibt Bonus; Fall ohne ihn lösbar, aber schwerer.
+- T12 (offen): Max Riedel in Party-Reihe, bindet Kalle, schwächt Gegnerzug; Fall ohne ihn lösbar.
+- T13: ✓ (v951) Kalle mit voller HP nicht sofort fesselbar; benommen/ko oder mit Helfer schon.
+- T14: ✓ (v951) Durchsuchen im Kampf nur bei echt bezwungenem Gegner (ko/gefesselt/fixiert), nicht bei benommen.
+- T15 (offen): Ohne Max macht Kalle den Hauptdruck; mit Max wird Kalle gebunden, Gegnerzug schwächer.
 
 ---
 
