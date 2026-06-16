@@ -82,8 +82,11 @@ Vf≤2 → fliehen/defensiv; Gegner low HP → angreifen; gefesselt/ko mit Loot 
 2. Eine echte Runde: Karl-Aktion → Gegnerzug (engine-lokal) → Round++. ✓ (v941 — HP statt Sofort-KO,
    engine-lokaler Gegnerzug mit Vf-Schaden, benommen-Trennung, HP-Leiste in der Arena, Eskalationsdruck
    nach Runde 3/5)
-3. Sieg/Ende: alle kampfunfähig → Arena endet sauber, Gegner bleiben durchsuchbar.
-4. Indiz-Sicherung: combatLoot, search-or-drop, grant-once, Auto-Drop nur bei Gegner-Flucht.
+3. Sieg/Ende: alle kampfunfähig → Arena endet sauber, Gegner bleiben durchsuchbar. ✓ (v945 — Combat-Loot
+   bei ko/gefesselt/geflohen)
+4. Indiz-Sicherung: combatLoot, search-or-drop, grant-once, Auto-Drop nur bei Gegner-Flucht. ✓ (v945 —
+   _gegnerCombatLootVergeben in _npcZustandSet; ko/gefesselt=durchsucht, geflohen=drop; _indizNurUeberKampf
+   sperrt Combat-Loot im normalen Fund-Pfad; Kalle/Jochen mit eigenen Drop-Indizien)
 5. Party-Begleiter (Max Riedel) — erst wenn Solo-Kampf läuft.
 6. Bot-Heuristik.
 
