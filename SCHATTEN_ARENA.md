@@ -44,10 +44,10 @@ sind reale Anker, keine Erfindung. Struktur nach ChatGPT-Lektorat (Doku-Aufräum
 - **Max Riedel / Party-Begleiter** (Krause): Ex-Boxer aus Bornsteins Umfeld, anwerbbar nach
   `bornstein_hehler_tipp`. Als BLOCKER bauen (Stärke +1, bindet Kalle, senkt Gegnerschaden/Runde, macht
   selten selbst K.O.) — nicht als zweiter Karl. Fall ohne ihn lösbar, mit ihm fairer.
-- **Freitext-Regelung im Kampf:** ✓ (v948) Im Kampf gesperrt (UI + Backend-Gate), Hinweis auf den Baukasten.
-  (Erster Build: deaktiviert statt als Kampfkommando geparst — kann später zu Parsing erweitert werden.)
-- **Normale Optionen im Kampf raus:** ✓ (v948) Reisen/Schlafen/Resolve/A-B-C-D-Story-Optionen unterdrückt,
-  solange Kampf läuft. Flucht + Heilen bleiben (kampfrelevant). Personen-Buttons/Exploration schon vorher aus.
+- **Normale Optionen im Kampf raus:** ✓ (v948) Reisen/Schlafen/Resolve werden unterdrückt, solange Kampf läuft.
+  (A/B/C/D-Optionen + Freitext sind im aktuellen Baukasten-First-Modus ohnehin global deaktiviert:
+  `KI_OPTIONEN_AKTIV=false`, `FREITEXT_AKTIV=false` — gehandelt wird über System-Buttons + Personen + Baukasten.
+  Daher kein Kampf-Filter dafür nötig.) Personen-Buttons/Exploration im Kampf schon vorher aus.
 - **Gegnerzug-Balance:** max. 1 echter Schadensangriff pro Runde, weitere Gegner machen Druck/blocken/Flucht.
   3-gegen-1 darf Karl nicht in 2 Runden zermahlen. (Aktuell senkt der Gegnerzug Vf summiert — verfeinern.)
 - **Fesseln-Regel:** benommen allein = fesselbar mit Risiko; benommen+Helfer/Rex = leicht; ko/gefesselt/fixiert
@@ -78,7 +78,7 @@ Gesprächs-Actions → Kampf konnte eine Spur unerreichbar machen. **All das ist
 - T8: Karls Flucht vergibt KEINEN Gegner-Loot.
 - T9: Frieda bleibt über Gespräch erreichbar (NICHT combat-only).
 - T10: Kalle gibt `kalle_transportzettel` NICHT beim normalen Befragen (nur Kampf/Durchsuchen).
-- T11: ✓ (v948) Normale Optionen/Schlafen/Reisen/Resolve/Freitext im Kampf nicht verfügbar (Flucht/Heilen bleiben).
+- T11: ✓ (v948) Reisen/Schlafen/Resolve im Kampf nicht verfügbar. (ABCD/Freitext im aktuellen Modus ohnehin global aus.)
 - T12 (offen): Max Riedel in Party-Reihe, gibt Bonus; Fall ohne ihn lösbar, aber schwerer.
 
 ---
