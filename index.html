@@ -3411,7 +3411,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1022</div>
+    <div class="start-version">Schatten v7.12.1023</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3635,7 +3635,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1022</span>
+    <span>Schatten v7.12.1023</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -10593,7 +10593,12 @@ function _naechsterErmittlungsschritt() {
           if (normForMatch(loc.name) === normForMatch(_hierName)) {
             // Am aktuellen Ort wartet ein jetzt erreichbares Indiz -> hier dranbleiben.
             const _offInd = loc.indizien.find(ind => ind && ind.id && _gef.indexOf(ind.id) === -1);
-            _hierOffen = { ort: loc.name, npc: (_offInd && _offInd.npc) || '' };
+            _hierOffen = {
+              ort: loc.name,
+              npc: (_offInd && _offInd.npc) || '',
+              quelle: (_offInd && _offInd.quelle) || '',
+              actions: (_offInd && Array.isArray(_offInd.actions)) ? _offInd.actions : []
+            };
             break;
           } else if (!_andersOrt) {
             _andersOrt = { ort: loc.name };
@@ -10601,8 +10606,20 @@ function _naechsterErmittlungsschritt() {
         }
       }
       if (_hierOffen) {
-        const _wer = _hierOffen.npc ? (' Die Spur führt über ' + _hierOffen.npc + ' bzw. das Durchsuchen hier.') : ' Eine Spur ist hier am Ort zu holen (Durchsuchen, genau hinsehen, die richtige Person bedrängen oder befragen).';
-        return { art: 'indiz_hier', ziel: 'Spur am Ort verfolgen', hinweis: 'Am aktuellen Ort ("' + _hierOffen.ort + '") ist ein Indiz zu holen.' + _wer + ' ALLE vier Optionen sollen auf diese Spur hinführen - offensiv (hart zugreifen/durchwühlen/bedrängen) bis zurückhaltend (geduldig beobachten, behutsam fragen). Jede Option bringt den Spieler der Spur näher, nur Härte und Preis unterscheiden sich.' };
+        // v7.12.1023: Aktionsart aus dem offenen Indiz ableiten und der KI als PFLICHT vorgeben,
+        // damit mindestens eine Option die richtige Spur-Handlung trifft (sonst greift das Indiz-Gate nie).
+        let _spur;
+        const _istPerson = _hierOffen.quelle === 'person' || (_hierOffen.npc && _hierOffen.quelle !== 'umgebung');
+        if (_istPerson && _hierOffen.npc) {
+          _spur = ' Die Spur führt über eine AUSSAGE von ' + _hierOffen.npc + '.'
+            + ' PFLICHT: Mindestens eine Option (idealerweise B oder C) muss ' + _hierOffen.npc + ' GEZIELT und RUHIG befragen/ansprechen (nach dem, was sie gesehen/gehört hat) - NICHT bedrängen oder grob anfassen, sonst verschließt sich die Person.'
+            + ' Die offensive Option darf hart sein, aber die Aussage kommt nur über behutsames Fragen.';
+        } else {
+          // Umgebungs-Fund: am Ort untersuchen
+          _spur = ' Die Spur ist ein FUND AM ORT (Tatort-Spuren: Fenster, Hinterhof, Vitrine, Boden, Hinterlassenschaften).'
+            + ' PFLICHT: Mindestens eine Option (idealerweise C) muss den Ort/Tatort KONKRET UNTERSUCHEN oder DURCHSUCHEN (genau hinsehen, Spuren sichern) - eine reine Personen-Befragung findet diese Spur NICHT.';
+        }
+        return { art: 'indiz_hier', ziel: 'Spur am Ort verfolgen', hinweis: 'Am aktuellen Ort ("' + _hierOffen.ort + '") ist ein Indiz zu holen.' + _spur + ' Die anderen Optionen dürfen unterschiedlich hart sein (offensiv bis zurückhaltend), aber sie sollen alle zur Spur passen, nur Härte und Preis unterscheiden sich.' };
       }
       if (_andersOrt) {
         // v7.12.1021 (Weg 1): Reiseziel(e) global merken, damit der Options-Abfang echte Reise-Optionen
@@ -11460,7 +11477,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1022';
+window.SCHATTEN_VERSION = 'v7.12.1023';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
