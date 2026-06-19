@@ -3411,7 +3411,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1023</div>
+    <div class="start-version">Schatten v7.12.1024</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3635,7 +3635,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1023</span>
+    <span>Schatten v7.12.1024</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7262,7 +7262,12 @@ function _expGrid() {
   if (!loc && engineCurrentLocation && _istKarlsBueroName(engineCurrentLocation.name)) return DEFAULT_KARLS_BUERO_GRID;
   return null;
 }
-function _hatExploration() { return !!_expGrid(); }
+function _hatExploration() {
+  // v7.12.1024 (Benjamin): Wimmelbilder/Grid-Erkundung komplett deaktiviert - jeder Ort ist ein normaler
+  // Listen-Ort (Personen-Buttons + A/B/C/D). Kampf-Arena (encounterState) bleibt davon unberührt.
+  return false;
+}
+function _hatExploration_DEAKTIVIERT_v1024() { return !!_expGrid(); }
 // Aktuelle Position/Blick (Fallback: start).
 function _expPos() {
   const g = _expGrid(); if (!g) return null;
@@ -11477,7 +11482,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1023';
+window.SCHATTEN_VERSION = 'v7.12.1024';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -30202,11 +30207,11 @@ function renderOptions(scene) {
           } catch (e) {}
         });
         umBtn.classList.add('werkzeug-btn');
-        _werkzeugBtns.push(umBtn);
+        // v7.12.1024 (Benjamin: "Umsehen weg"): Umsehen-Button entfernt - nicht mehr anhängen. Die Fund-/Indiz-Berechnung oben bleibt unberührt (Bot-Pfad nutzt sie weiter).
       }
     } catch (e) {}
     nbBtn.classList.add('werkzeug-btn');
-    _werkzeugBtns.push(nbBtn); // v7.12.681: Notizbuch NACH Umsehen, VOR Aktueller Stand (Benjamin-Reihenfolge)
+    // v7.12.1024 (Benjamin: "Notizbuch weg"): Notizbuch-Button entfernt - nicht mehr anhängen. Fund-/Indiz-Mechanik bleibt unberührt.
     // v7.12.577: Aktueller-Stand-Button in der Bleibt-Sektion (öffnet dasselbe Popup wie die Topleiste). Gibt dem
     // Spieler einen zweiten, sichtbaren Weg zum Stand, falls er die antippbare Topleiste nicht wahrnimmt.
     const standBtn = document.createElement('button');
@@ -38214,18 +38219,26 @@ async function chooseOption(option) {
         const _txtG = ((option && (option._anzeigeText || option.text)) || '').toLowerCase();
         const _istGespraech = /\b(frag|frage|befrag|sprich|spreche|rede|verhör|verhoer|erkundige|dräng|draeng|press|bedroh|einschüchter|einschuechter|bestech|schmier|überzeug|ueberzeug)\b/.test(_txtG);
         if (_istGespraech) {
-          // Ziel-NPC finden: zuerst per Name im Optionstext, sonst die (einzige) anwesende Person im Cast.
+          // Ziel-NPC finden. v1023b: ECHTE Anwesende am Ort bevorzugen (getNpcsAtCurrentLocation),
+          // nicht das volle cast-Array - dort hängen oft Karteileichen (z.B. der längst entfernte Klient),
+          // die "Frag sie" fälschlich auf die falsche Person ziehen oder das einzige-Person-Kriterium sprengen.
           let _zielNpc = '';
           try {
-            const _anwesend = (typeof cast !== 'undefined' && Array.isArray(cast)) ? cast.filter(c => c && c.name) : [];
-            // Name (oder Vorname) im Optionstext?
+            let _anwesend = [];
+            if (typeof getNpcsAtCurrentLocation === 'function') {
+              _anwesend = (getNpcsAtCurrentLocation() || []).filter(c => c && c.name);
+            }
+            if (!_anwesend.length && typeof cast !== 'undefined' && Array.isArray(cast)) {
+              _anwesend = cast.filter(c => c && c.name);
+            }
+            // 1) Name (oder Vorname >=3 Zeichen) im Optionstext?
             for (const c of _anwesend) {
               const _voll = (c.name || '').toLowerCase();
               const _vor = _voll.split(/\s+/)[0];
               if (_voll && _txtG.includes(_voll)) { _zielNpc = c.name; break; }
               if (_vor && _vor.length >= 3 && _txtG.includes(_vor)) { _zielNpc = c.name; break; }
             }
-            // sonst: genau eine Person anwesend -> die ist gemeint
+            // 2) Pronomen (sie/ihn/ihm/ihr/dich) ODER kein Name -> einzige Person am Ort
             if (!_zielNpc && _anwesend.length === 1) _zielNpc = _anwesend[0].name;
           } catch (e) {}
           if (_zielNpc && typeof fxDialog === 'function') {
