@@ -3411,7 +3411,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1018</div>
+    <div class="start-version">Schatten v7.12.1019</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3635,7 +3635,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1018</span>
+    <span>Schatten v7.12.1019</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11447,7 +11447,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1018';
+window.SCHATTEN_VERSION = 'v7.12.1019';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -38328,6 +38328,21 @@ async function chooseOption(option) {
   if (typeof diag === 'function') {
     diag('detect', 'Spieler-Wahl Kategorie: ' + chosenKategorie + ' - Engine wendet Mechanik an');
   }
+
+  // v7.12.1019 (KERN-UMBAU): ERSTGESPRÄCH auch über A/B/C/D abschließen. Bisher setzte nur das Personen-Antippen
+  // das Flag klientGesprochen - wer den Klienten über die A/B/C/D-Optionen befragte, blieb durch das Reise-Gate
+  // ("Erstgespräch steht aus") im indizfreien Büro gefangen. Jetzt: ist der Klient anwesend und das Erstgespräch
+  // offen, gilt es als geführt, sobald der Spieler eine inhaltliche Option wählt (nicht bei reiner Flucht).
+  try {
+    if (caseProgress && !caseProgress.klientGesprochen && chosenKategorie !== 'FLUCHT'
+        && typeof clientProfile === 'object' && clientProfile && clientProfile.name && !clientProfile.eigenAuftrag) {
+      const _klientDa = Array.isArray(cast) && cast.some(c => c && typeof _istKlient === 'function' && _istKlient(c.name, c.id));
+      if (_klientDa) {
+        caseProgress.klientGesprochen = true;
+        if (typeof diag === 'function') diag('state', '✦ KLIENT GESPROCHEN (via A/B/C/D-Option) - Erstgespräch abgeschlossen, Reisen freigeschaltet');
+      }
+    }
+  } catch (e) {}
 
   // v7.10.1: SCHLAFEN setzt pendingSleepChoice damit der Tageswechsel-Code
   // in chooseOption (Z. ~14165) den Tag voranschreiten laesst. KI bekommt
