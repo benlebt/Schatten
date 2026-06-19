@@ -3411,7 +3411,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1024</div>
+    <div class="start-version">Schatten v7.12.1025</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3635,7 +3635,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1024</span>
+    <span>Schatten v7.12.1025</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11482,7 +11482,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1024';
+window.SCHATTEN_VERSION = 'v7.12.1025';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -12510,6 +12510,15 @@ function _arenaBuehne(theme) {
 
 // v7.12.798: Sichtbare ARENA (Stufe 2b). Alle Gegner oben (Zustand in Worten), Karls Party unten.
 function _encounterBannerRender(container) {
+  // v7.12.1025 (Benjamin): Arena/Banner komplett deaktiviert - Kampf läuft sichtbar nur noch über
+  // Szenentext + A/B/C/D. Vorhandene Arena-DOM-Reste sicherheitshalber entfernen, sonst nichts zeichnen.
+  try {
+    const alt = document.getElementById('encounter-arena'); if (alt) alt.remove();
+    const altB = document.getElementById('encounter-banner'); if (altB) altB.remove();
+  } catch (e) {}
+  return;
+}
+function _encounterBannerRender_DEAKTIVIERT_v1025(container) {
   try {
     if (!container) return;
     const alt = document.getElementById('encounter-arena'); if (alt) alt.remove();
@@ -31093,7 +31102,7 @@ function renderOptions(scene) {
             + ' · imExploration=' + _imExploration + ' (hatExplOrt=' + _hatExplOrt + ')'
             + ' -> Buttons=' + (!_imKampf && !_imExploration && _np.length ? 'JA' : 'NEIN'));
         }
-        if (!_imKampf && !_imExploration && _np.length) {
+        if (!_imExploration && _np.length) {
           const sepP = document.createElement('div');
           sepP.className = 'person-sektion-label';
           sepP.textContent = '· Personen ·';
@@ -35177,12 +35186,9 @@ VERBOTEN: Karl wacht woanders auf ohne Erklaerung. Wenn du Pfad B waehlst, MUSST
             if (_ziele.length && typeof getCaseLocations === 'function') {
               const _tNorm = normForMatch(t);
               const _orte = getCaseLocations() || [];
-              // bevorzugt einen vom Dirigenten empfohlenen Zielort, der im Optionstext vorkommt
+              // v1025: NUR der präzise Match - der vom Dirigenten empfohlene Zielort, dessen Name im Optionstext steht.
+              // Die früheren schwachen Fallbacks (irgendein Ortsname / einfach erster Zielort) lenkten zu oft weg.
               let _zielLoc = _orte.find(L => L && L.name && _ziele.some(z => normForMatch(z) === normForMatch(L.name)) && _tNorm.includes(normForMatch(L.name).split(/\s+/)[0]));
-              // sonst irgendein Fall-Ort, dessen Name im Text steht
-              if (!_zielLoc) _zielLoc = _orte.find(L => L && L.name && _tNorm.includes(normForMatch(L.name).split(/\s+/).slice(0,2).join(' ')));
-              // sonst der erste empfohlene Zielort (auch wenn der Text ihn nur umschreibt)
-              if (!_zielLoc && _ziele.length) _zielLoc = _orte.find(L => L && L.name && normForMatch(L.name) === normForMatch(_ziele[0]));
               if (_zielLoc) {
                 opt._reiseZielLoc = { name: _zielLoc.name, sektor: _zielLoc.sektor || '', detail: _zielLoc.detail || '' };
                 opt._istReise = true;
