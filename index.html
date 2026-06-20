@@ -3411,7 +3411,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1026</div>
+    <div class="start-version">Schatten v7.12.1027</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3635,7 +3635,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1026</span>
+    <span>Schatten v7.12.1027</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6938,6 +6938,10 @@ const _GLOBALE_HEILORTE = [
   { name: 'Doc Wagners Praxis', sektor: 'West (Schoeneberg)', detail: 'Schaeferstrasse, Hinterhof-Praxis, Karls Diskret-Arzt verarztet ohne Aktennotiz - hier kann Karl sich behandeln lassen (+2 Verfassung)', startBekannt: true, heilort: true, npcs: [{ id: 'doc_wagner', immer: true }] },
   { name: 'Charité', sektor: 'Ost (Mitte)', detail: 'Schumannstrasse, Universitaetsklinik. Schwester Marlene Wagner versorgt Karl unter der Hand, diskret und ohne Aufnahme (+2 Verfassung)', startBekannt: true, heilort: true, npcs: [{ id: 'marlene_wagner', immer: true }] },
 ];
+// v7.12.1027 (Benjamin: "Trudes Imbiss muss immer verfügbar sein"): Trudes Stamm-Imbiss als fallübergreifender
+// Ort - warmes Essen, offenes Ohr, Trude weiss vieles. Kein Heilort, aber immer reisbar (eigene Sicherstellung unten).
+const _GLOBALE_TRUDE = { name: 'Imbiss Bei Trude', sektor: 'Ost (Mitte)', detail: 'Hackescher Markt, Karls Stamm-Imbiss. Trude (60, Witwe) verkauft Schrippen, Bouletten, Bockwurst, gibt manchmal anschreiben und weiss vieles aus dem Kiez.', startBekannt: true, npcs: [{ id: 'trude', immer: true }] };
+function _istTrudeOrt(loc) { return loc && /\b(trude|imbiss\s+bei\s+trude)/i.test(normForMatch(loc.name || '')); }
 // v7.12.530 (Baustein A der Begleiter-Vision): Die beiden Kommissare sind fallübergreifende Orte (Polizei-
 // Dienststellen), zu denen Karl immer fahren kann - Ziel für "Margarete/Verdächtigen zur Polizei bringen".
 // Roth = Volkspolizei Ost (Karls alter Freund), Lindner = Schutzpolizei West. Gleiche zentrale Injektion wie
@@ -6986,8 +6990,17 @@ function getCaseLocations() {
       } catch (e) {}
     }
   }
-  // v7.12.530 (Baustein A): Kommissar-Orte Roth (Ost) + Lindner (West) sicherstellen. Ziel für "Person/Beweise
-  // zur Polizei bringen". Dedup wie bei Wagner/Charite: vorhandenen Polizei-Ort anheben statt Dublette.
+  // v7.12.1027 (Benjamin: "Trudes Imbiss immer verfügbar"): Trude sicherstellen wie Wagner/Charité - vorhandenen
+  // Trude-Ort anheben (startBekannt + NPC) oder den globalen Imbiss hinzufügen. Immer reisbar in jedem Fall.
+  const trudeIdx = base.findIndex(_istTrudeOrt);
+  if (trudeIdx === -1) {
+    base.push(_GLOBALE_TRUDE);
+  } else {
+    const t = base[trudeIdx];
+    if (typeof t.startBekannt === 'undefined') t.startBekannt = true;
+    if (!Array.isArray(t.npcs) || !t.npcs.length) t.npcs = [{ id: 'trude', immer: true }];
+  }
+  // v7.12.530 (Baustein A): Kommissar-Orte Roth (Ost) + Lindner (West) sicherstellen.
   const rothIdx = base.findIndex(_istRothOrt);
   if (rothIdx === -1) {
     base.push(_GLOBALE_POLIZEIORTE[0]);
@@ -11513,7 +11526,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1026';
+window.SCHATTEN_VERSION = 'v7.12.1027';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -38254,7 +38267,7 @@ async function chooseOption(option) {
         // dieser Person aufrufen -> echtes Gesicht (charVisual) rechts statt Kategorie-Icon. Sonst (kein NPC
         // zuzuordnen) GAR KEINE Animation - nie ein irreführendes Symbol als "Gesicht".
         const _txtG = ((option && (option._anzeigeText || option.text)) || '').toLowerCase();
-        const _istGespraech = /\b(frag|frage|befrag|sprich|spreche|rede|verhör|verhoer|erkundige|dräng|draeng|press|bedroh|einschüchter|einschuechter|bestech|schmier|überzeug|ueberzeug)\b/.test(_txtG);
+        const _istGespraech = /\b(frag|frage|befrag|sprich|spreche|rede|verhör|verhoer|erkundige|dräng|draeng|press|bedroh|einschüchter|einschuechter|bestech|schmier|überzeug|ueberzeug|pack|schüttel|schuettel|zwing|stoß|stoss|drück|drueck|würg|wuerg|greif|schnapp|reiß|reiss|schlag|droh|am kragen)\b/.test(_txtG);
         if (_istGespraech) {
           // Ziel-NPC finden. v1023b: ECHTE Anwesende am Ort bevorzugen (getNpcsAtCurrentLocation),
           // nicht das volle cast-Array - dort hängen oft Karteileichen (z.B. der längst entfernte Klient),
@@ -38279,16 +38292,16 @@ async function chooseOption(option) {
             if (!_zielNpc && _anwesend.length === 1) _zielNpc = _anwesend[0].name;
           } catch (e) {}
           if (_zielNpc && typeof fxDialog === 'function') {
-            const _vk2 = /bedroh|einschüchter|einschuechter|dräng|draeng|press/.test(_txtG) ? 'bedrohen'
+            const _vk2 = /bedroh|einschüchter|einschuechter|dräng|draeng|press|pack|schüttel|schuettel|zwing|stoß|stoss|drück|drueck|würg|wuerg|greif|schnapp|reiß|reiss|schlag|droh|am kragen/.test(_txtG) ? 'bedrohen'
               : /bestech|schmier/.test(_txtG) ? 'bestechen'
               : /überzeug|ueberzeug/.test(_txtG) ? 'ueberzeugen'
               : 'befragen';
             fxDialog(_zielNpc, _vk2);
           }
           // kein NPC zuzuordnen -> bewusst KEINE Animation (lieber nichts als ein falsches "Gesicht")
-        } else {
-          fxKategorie(_kat, (option && (option._anzeigeText || option.text)) || '');
         }
+        // v7.12.1027 (Benjamin: "die Kategorie-Lupe/Icon-Overlays raus"): KEIN fxKategorie-Sicherheitsnetz mehr
+        // für Umgebungs-Aktionen. Reine Erkunden-/Durchsuchen-Aktionen laufen ohne Overlay - der Szenentext trägt sie.
       }
     }
   } catch (e) {}
