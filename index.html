@@ -3411,7 +3411,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1025</div>
+    <div class="start-version">Schatten v7.12.1026</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3635,7 +3635,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1025</span>
+    <span>Schatten v7.12.1026</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11075,6 +11075,15 @@ function classifyEvidenceAction() {
     const personRe = /(sprich|spreche|rede|frag|befrag|verhör|verhoer|konfrontier|bestech|bestich|ueberzeug|überzeug|dräng|drang|bedräng|bedrang|press|schüttel|schuettel|pack|zwing|droh|nimm.*am kragen|am kragen|durchsuch\w*\s+(ihn|sie|wahler|mertens|lemke|margarete|vera|kummer|mann|den mann|den schläger|den gangster))/;
     const umgebungRe = /(durchsuch|durchwühl|wühl|kramst?|absuch|untersuch|erkund|prüf|pruef|schau|sieh dich um|akten|schublade|schreibtisch|raum|zimmer|gleis|gelände|gelaende|umgebung|beobacht|spähe|spaehe|greif|schnapp)/;
     if (personRe.test(txt)) return 'person';
+    // v7.12.1026 (Benjamin: Gewalt gegen anwesende Person zählt): Steht ein NPC am Ort und die Aktion trägt
+    // Druck-/Gewalt-/Frage-Verben, ist es eine Personen-Aktion - auch wenn umgebungRe (durchsuch/greif/pack)
+    // zusätzlich matcht. Sonst "gewinnt" das Umgebungs-Muster und das Personen-Indiz fällt am quelle!=fundModus-Gate.
+    try {
+      const _npcsHier = (typeof getNpcsAtCurrentLocation === 'function')
+        ? getNpcsAtCurrentLocation().filter(n => n && (n.id || n.name)) : [];
+      const _hartGegenPerson = /(pack|zwing|dräng|drang|press|schüttel|schuettel|stoß|stoss|drück|drueck|würg|wuerg|greif|schnapp|reiß|reiss|schlag|frag|befrag|verhör|verhoer|konfrontier|droh|bedroh)/.test(txt);
+      if (_npcsHier.length && _hartGegenPerson) return 'person';
+    } catch (e) {}
     // v7.12.604: Freitext ohne explizites Ermittlungs-Verb ist NICHT indiz-fähig (Kategorie ist nur Heuristik).
     if (a.istFreitext && !umgebungRe.test(txt)) return null;
     if (kat === 'BEOBACHTEN') return 'umgebung';
@@ -11152,6 +11161,19 @@ function _aktionsZielNpcPasst(ind) {
       if (targetName && indTeile.some(t => targetName.includes(t))) return true;
       return false;
     }
+    // v7.12.1026: Wenn der an das Indiz gebundene NPC die EINZIGE Person am Ort ist, ist die Aktion
+    // eindeutig auf ihn gerichtet - auch ohne Namen im Text ("Drück fester zu", "Greif durch").
+    // So lösen harte Aktionen gegen den klar gemeinten NPC seine Aussage aus (Benjamin: Gewalt zählt auch).
+    try {
+      const npcsHier = (typeof getNpcsAtCurrentLocation === 'function')
+        ? getNpcsAtCurrentLocation().filter(n => n && (n.id || n.name)) : [];
+      if (npcsHier.length === 1) {
+        const only = normForMatch(npcsHier[0].id || npcsHier[0].name || '');
+        if (only && (only === indNorm || indTeile.some(t => only.includes(t)) || (typeof _indizGehoertZuNpc === 'function' && _indizGehoertZuNpc(ind.npc, only, only)))) {
+          return true;
+        }
+      }
+    } catch (e) {}
     const txt = normForMatch(a.text || '');
     if (!txt) return false;
     return indTeile.some(t => txt.includes(t));
@@ -11268,11 +11290,19 @@ function pruefeKernIndizFund(sceneText) {
             const _istInformant = _idnt && /INFORMANT/i.test(_idnt.tag || '');
             if (_istInformant) {
               const _akJetzt = (typeof getEvidenceActionKey === 'function') ? getEvidenceActionKey() : null;
-              if (_akJetzt !== 'BESTECHEN') {
+              // v7.12.1026 (Benjamin Stufe 1): Gewalt (BEDROHEN) gegen den Informanten löst den Tipp AUCH aus -
+              // der harte Weg statt Bezahlung. Preis dafür ist der steigende Härte-Ruf (getrackt, speist Stufe 2:
+              // spätere Informanten werden dann vorsichtiger/teurer/fluchtbereit). Geld bleibt der saubere Weg.
+              const _gewaltWeg = (_akJetzt === 'BEDROHEN');
+              if (_akJetzt !== 'BESTECHEN' && !_gewaltWeg) {
                 caseProgress._informantWillBezahlung = { npc: _idnt.name || ind.npc, preis: (typeof _informantPreis === 'function' ? _informantPreis(ind.npc, _idnt.name) : 15) };
-                _gateLog('INFORMANT "' + (_idnt.name || ind.npc) + '" will Bezahlung - Aktion war ' + _akJetzt + ', nicht BESTECHEN');
+                _gateLog('INFORMANT "' + (_idnt.name || ind.npc) + '" will Bezahlung oder Gewalt - Aktion war ' + _akJetzt);
                 continue;
               }
+              if (_gewaltWeg) {
+                try { delete caseProgress._informantWillBezahlung; } catch (e) {}
+                if (typeof diag === 'function') diag('state', '💢 INFORMANT unter Druck (BEDROHEN statt Geld): ' + (_idnt.name || ind.npc) + ' -> Tipp "' + ind.id + '" erzwungen (Härte-Ruf steigt)');
+              } else {
               const _bez = (typeof _informantBezahle === 'function') ? _informantBezahle(ind.npc, _idnt.name) : { ok: true };
               if (!_bez.ok) {
                 caseProgress._informantWillBezahlung = { npc: _idnt.name || ind.npc, preis: _bez.preis };
@@ -11293,6 +11323,7 @@ function pruefeKernIndizFund(sceneText) {
                   }
                 }
               } catch (e) {}
+              }
             }
           }
         } catch (e) {}
@@ -11482,7 +11513,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1025';
+window.SCHATTEN_VERSION = 'v7.12.1026';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
