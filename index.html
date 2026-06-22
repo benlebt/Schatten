@@ -3411,7 +3411,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1038</div>
+    <div class="start-version">Schatten v7.12.1039</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3635,7 +3635,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1038</span>
+    <span>Schatten v7.12.1039</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11578,7 +11578,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1038';
+window.SCHATTEN_VERSION = 'v7.12.1039';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -35476,10 +35476,15 @@ VERBOTEN: Karl wacht woanders auf ohne Erklaerung. Wenn du Pfad B waehlst, MUSST
         BEOBACHTEN: ['Halt dich zurück und beobachte, was als Nächstes passiert.', 'Bleib unauffällig und sieh genau hin.', 'Warte ab und lies die Lage, bevor du handelst.'],
       };
       const _pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+      // v7.12.1039 (Benjamin: "kein Reisen auf A/B/C/D - sonst driften Prosa und Engine jedes Mal"): Aufbruch-/Weg-
+      // Phrasen, die _reiseRe oft mit eingeschobenem Adverb ("mach dich SOFORT auf den Weg nach X") durchrutschten,
+      // plus reine "auf den Weg nach/zu/zur X". Faengt JEDE Bewegung an einen anderen Ort - auch zu Bezirken/Strassen,
+      // die NICHT als benannter Ort in der Reiseliste stehen (genau die Faelle, die bisher durchkamen).
+      const _wegRe = /\b(auf den weg|auf dem weg|mach(?:e|t)?\s+(?:dich|euch)[^.!?]{0,25}\bauf\b|brich[^.!?]{0,12}\bauf\b|aufzubrechen|aufbrechen|aufbruch)\b[^.!?]*\b(nach|zu|zur|zum|richtung|in die|in den)\s+([^.,;!?]{3,})/i;
       parsed.optionen.forEach((opt, i) => {
         if (!opt || !opt.text) return;
         const t = opt.text;
-        if (_reiseRe.test(t) && !_lokalRe.test(t)) {
+        if ((_reiseRe.test(t) || _wegRe.test(t)) && !_lokalRe.test(t)) {
           const _kat = (opt.kategorie || opt._kategorie || ['OFFENSIV','DEFENSIV','ERKUNDEN','BEOBACHTEN'][i] || 'ERKUNDEN').toUpperCase();
           // v7.12.1028 (Benjamin: Reise NUR per Reisen-Button): JEDE Reise-Option wird zur Ortsaktion umgeschrieben.
           // Der frühere v1021-Durchlass (Reise-Option durchlassen, wenn Dirigent wegleitet) ist entfernt - er
@@ -35493,6 +35498,31 @@ VERBOTEN: Karl wacht woanders auf ohne Erklaerung. Wenn du Pfad B waehlst, MUSST
       });
     }
   } catch (e) { /* Guard darf nie den Parse brechen */ }
+
+  // v7.12.1039 (Benjamin: Kategorie-Vielfalt erzwingen, Finding #2): Doppelte Grund-Kategorien unter den 4 Optionen
+  // sanft auf eine fehlende Kategorie umlegen. NIE OFFENSIV erzeugen/entfernen (wuerde die Mechanik einer passiven
+  // Option aggressiv kippen). Behebt v.a. den haeufigen Fall 2x BEOBACHTEN ohne ERKUNDEN.
+  try {
+    if (Array.isArray(parsed.optionen) && parsed.optionen.length === 4) {
+      const _KANON = ['OFFENSIV','DEFENSIV','ERKUNDEN','BEOBACHTEN'];
+      const _catOf = (o) => ((o && (o.kategorie || o._kategorie)) || '').toUpperCase();
+      const _cats = parsed.optionen.map(_catOf);
+      const _seen = {};
+      const _fehlt = _KANON.filter(k => _cats.indexOf(k) === -1 && k !== 'OFFENSIV');
+      let _fi = 0;
+      parsed.optionen.forEach((o, idx) => {
+        let c = _cats[idx];
+        if (_KANON.indexOf(c) === -1) c = null;
+        if (c && !_seen[c]) { _seen[c] = true; return; }
+        if (c === 'OFFENSIV') { _seen.OFFENSIV = true; return; } // OFFENSIV nie umlegen
+        const _neu = _fehlt[_fi++];
+        if (_neu) {
+          o.kategorie = _neu; o._kategorie = _neu; _seen[_neu] = true;
+          if (typeof diag === 'function') diag('drift', 'KATEGORIE-VIELFALT: Opt ' + (o.id || idx) + ' ' + (c || '?') + ' -> ' + _neu + ' (Duplikat aufgeloest)');
+        } else if (c) { _seen[c] = true; }
+      });
+    }
+  } catch (e) {}
 
   // v7.11.7: OUTPUT-CAP + PHRASEN-REPEAT-DETEKTOR fuer Optionen.
   // Anlass: 0926-Run Sz 1+8 mit Gemini 2.5 Flash - Optionen A+B hatten je
