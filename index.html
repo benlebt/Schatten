@@ -3411,7 +3411,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1035</div>
+    <div class="start-version">Schatten v7.12.1036</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3635,7 +3635,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1035</span>
+    <span>Schatten v7.12.1036</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11568,7 +11568,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1035';
+window.SCHATTEN_VERSION = 'v7.12.1036';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -32035,6 +32035,20 @@ async function requestSceneFromModel(userMessage, conversationHistory, compactMo
         }
         if (_ortsfremde.length) {
           recap += 'ORTSBINDUNG (PFLICHT): Diese Figuren sind an EINEN festen Ort gebunden und sind hier am aktuellen Schauplatz NICHT physisch anwesend: ' + _ortsfremde.join(', ') + '. Du darfst sie höchstens als BERICHT/ERINNERUNG erwähnen ("Voss hatte im Café gesagt..."), aber NIEMALS als körperlich anwesend erzählen ("X steht hier", "X folgt Karl", "X lehnt an der Mauer"). Sie sind nicht hier - sie bleiben an ihrem Ort.\n\n';
+          // v7.12.1036 (Benjamin-Testspiel: "Krause taucht plötzlich am Tatort auf"): Heisst der aktuelle Ort nach
+          // einer dieser ABWESENDEN Figuren (z.B. "Krauses Antiquitäten"), primt der Ortsname die KI stark, die Person
+          // dorthin zu setzen - genau dort hat Flash-Lite den ORTSBINDUNG-Hinweis ignoriert. Gegensteuern mit einem
+          // geschaerften, ortsspezifischen Hinweis.
+          try {
+            var _locNm = normForMatch((engineCurrentLocation && engineCurrentLocation.name) || '');
+            var _benannt = _ortsfremde.filter(function(nm){
+              var teile = normForMatch(nm).split(/\s+/).filter(function(t){ return t.length >= 4; });
+              return teile.some(function(t){ return _locNm.indexOf(t) !== -1; });
+            });
+            if (_benannt.length) {
+              recap += 'BESONDERS WICHTIG (Ortsname-Falle): Der aktuelle Ort "' + ((engineCurrentLocation && engineCurrentLocation.name) || '') + '" trägt zwar den Namen von ' + _benannt.join(', ') + ', aber diese Person ist hier NICHT anwesend - der Ort heisst nur so. Erzähle ' + _benannt.join(', ') + ' auf KEINEN Fall als körperlich hier ("steht/wartet/starrt/drängt sich hier"). Nur die tatsächlich anwesenden Figuren sind da.\n\n';
+            }
+          } catch (e) {}
         }
       } catch (e) {}
     } catch (e) {}
