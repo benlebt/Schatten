@@ -3326,6 +3326,10 @@
         <span class="status-popup-label">Stasi</span>
         <span class="status-popup-value" id="popup-stasi">k. A.</span>
       </div>
+      <div class="status-popup-row" id="popup-ruf-row" style="display:none;">
+        <span class="status-popup-label">Ruf</span>
+        <span class="status-popup-value" id="popup-ruf">k. A.</span>
+      </div>
       <div class="status-popup-row" id="popup-injury-row" style="display:none;">
         <span class="status-popup-label">Verletzung</span>
         <span class="status-popup-value" id="popup-injury">k. A.</span>
@@ -3411,7 +3415,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1051</div>
+    <div class="start-version">Schatten v7.12.1052</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3635,7 +3639,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1051</span>
+    <span>Schatten v7.12.1052</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11580,7 +11584,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1051';
+window.SCHATTEN_VERSION = 'v7.12.1052';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -23592,6 +23596,19 @@ function showStatusDetails() {
     stasiRow.style.display = 'none';
   }
 
+  // v7.12.1052 (Benjamin Idee 4): RUF auf der Strasse sichtbar (gefuerchtet <-> fair) - vorher nur im Prompt.
+  const rufRow = document.getElementById('popup-ruf-row');
+  const rufEl = document.getElementById('popup-ruf');
+  if (rufRow && rufEl && typeof computeKarlReputation === 'function') {
+    const _rep = computeKarlReputation();
+    if (_rep && _rep.key && _rep.key !== 'neutral') {
+      const _rufLabel = { hart: 'Gef\u00fcrchtet', eher_hart: 'Eher gef\u00fcrchtet', eher_behutsam: 'Eher fair', behutsam: 'Fair / ermittelnd' }[_rep.key] || _rep.label || '';
+      rufEl.textContent = _rufLabel + ' (' + _rep.hartAnteil + '% hart, ' + _rep.interakt + ' Begegnungen)';
+      rufEl.style.color = (_rep.key === 'hart') ? '#ff6644' : (_rep.key === 'eher_hart') ? '#f0a050' : '';
+      rufRow.style.display = '';
+    } else { rufRow.style.display = 'none'; }
+  }
+
   // Verletzung (nur anzeigen wenn vorhanden)
   const injuryRow = document.getElementById('popup-injury-row');
   if (info.injury) {
@@ -24215,6 +24232,9 @@ function showSceneStatusPopup(entry, sceneIdx) {
       stasiRow.style.display = 'none';
     }
   }
+  // v7.12.1052: Ruf wird nicht pro Szene gespeichert -> im historischen Popup ausblenden.
+  const _rufRowHist = document.getElementById('popup-ruf-row');
+  if (_rufRowHist) _rufRowHist.style.display = 'none';
   // v7.9.13: Fall-Fortschritt im Popup. Wurde bisher nur in der globalen Bar
   // angezeigt - jetzt auch im historischen Popup pro Szene damit der Spieler
   // immer sieht wie weit er war. Stage-Labels analog zum Live-Popup.
