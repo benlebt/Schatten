@@ -3411,7 +3411,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1043</div>
+    <div class="start-version">Schatten v7.12.1044</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3635,7 +3635,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1043</span>
+    <span>Schatten v7.12.1044</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11578,7 +11578,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1043';
+window.SCHATTEN_VERSION = 'v7.12.1044';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -35536,6 +35536,29 @@ VERBOTEN: Karl wacht woanders auf ohne Erklaerung. Wenn du Pfad B waehlst, MUSST
           o.kategorie = _neu; o._kategorie = _neu; _seen[_neu] = true;
           if (typeof diag === 'function') diag('drift', 'KATEGORIE-VIELFALT: Opt ' + (o.id || idx) + ' ' + (c || '?') + ' -> ' + _neu + ' (Duplikat aufgeloest)');
         } else if (c) { _seen[c] = true; }
+      });
+    }
+  } catch (e) {}
+
+  // v7.12.1044 (Benjamin: "der OFFENSIV-Knopf sagt staendig 'am Kragen packen'"): Flash-Lite ignoriert die Prompt-
+  // Bitte um Varianz. Deterministischer Softener - faengt die wiederholte "X am Kragen/Revers packen"-Geste am
+  // OPTIONS-ANFANG ab und ersetzt NUR die Eroeffnungs-Geste durch eine rotierende, frische offensive Variante; das
+  // ZIEL der Option (der Teil danach) bleibt erhalten. Per Text-Hash gewaehlt (stabil, aber variiert).
+  try {
+    if (Array.isArray(parsed.optionen)) {
+      const _kragenRe = /^(\s*)(pack|packe|schnapp|schnappe|greif|greife)\s+(?:dir\s+|euch\s+)?([A-Za-zÄÖÜäöüß][\wÄÖÜäöüß-]*(?:\s+[A-Za-zÄÖÜäöüß][\wÄÖÜäöüß-]*)?)\s+(?:am|beim)\s+(kragen|revers|wickel|schlafittchen)\b/i;
+      const _opener = ['Bau dich vor $N auf', 'Geh hart auf $N zu', 'Setz $N massiv unter Druck', 'Stell $N zur Rede', 'Tritt dicht an $N heran', 'Fahr $N hart an'];
+      parsed.optionen.forEach((opt) => {
+        if (!opt || !opt.text) return;
+        const m = _kragenRe.exec(opt.text);
+        if (m) {
+          const _name = m[3];
+          const _h = (typeof _strHash === 'function') ? _strHash(opt.text) : ((opt.text && opt.text.length) || 0);
+          const _neuOpener = _opener[_h % _opener.length].replace('$N', _name);
+          const _rest = opt.text.slice(m[0].length);
+          opt.text = (m[1] || '') + _neuOpener + _rest;
+          if (typeof diag === 'function') diag('drift', 'OFFENSIV-VARIANZ: "am Kragen"-Geste ersetzt -> "' + _neuOpener + '"');
+        }
       });
     }
   } catch (e) {}
