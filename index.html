@@ -3411,7 +3411,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1034</div>
+    <div class="start-version">Schatten v7.12.1035</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3635,7 +3635,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1034</span>
+    <span>Schatten v7.12.1035</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11246,6 +11246,34 @@ function pickZielIndiz() {
     return null;
   } catch (e) { return null; }
 }
+// v7.12.1035 (Benjamin-Testspiel, Bug "Popup meldet Hannelore, Prosa zeigt den Einbrecher"): Pruefen, ob die an ein
+// Personen-Indiz GEBUNDENE Figur AUCH im tatsaechlichen Szenen-Cast steht (KI personenImRaum / Prosa). getNpcsAt-
+// CurrentLocation() liefert nur die ORTS-definierten NPCs - die KI kann aber eine andere Figur in die Szene stellen
+// (dynamischer Dieb statt der definierten Hannelore). Dann darf NICHT Hannelores Aussage vergeben werden. Fail-open,
+// wenn gar keine Cast-/Textinfo vorliegt (Findbarkeit nicht unnoetig blockieren).
+function _npcWirklichInSzene(npcId, txtNorm) {
+  try {
+    var nrm = normForMatch(npcId || '');
+    if (!nrm) return true;
+    var teile = nrm.split(/[_\s]+/).filter(function(t){ return t.length >= 4; });
+    var cand = [];
+    try { if (typeof currentScene === 'object' && currentScene && Array.isArray(currentScene.personenImRaum)) cand = cand.concat(currentScene.personenImRaum); } catch(e){}
+    try { if (typeof cast !== 'undefined' && Array.isArray(cast)) cand = cand.concat(cast); } catch(e){}
+    for (var i=0;i<cand.length;i++){
+      var c = cand[i];
+      var cn = normForMatch(typeof c === 'string' ? c : (c && (c.name || c.id)) || '');
+      if (!cn) continue;
+      if (cn === nrm) return true;
+      if (typeof _indizGehoertZuNpc === 'function' && _indizGehoertZuNpc(npcId, cn, cn)) return true;
+      if (teile.length && teile.some(function(t){ return cn.indexOf(t) !== -1; })) return true;
+    }
+    // Fallback: Name der Figur taucht im Szenentext auf?
+    if (txtNorm && teile.length && teile.some(function(t){ return txtNorm.indexOf(t) !== -1; })) return true;
+    // Keine verwertbare Cast-Info UND kein Text -> nicht blockieren.
+    if (!cand.length && !txtNorm) return true;
+    return false;
+  } catch(e) { return true; }
+}
 function pruefeKernIndizFund(sceneText) {
   const found = [];
   try {
@@ -11285,6 +11313,10 @@ function pruefeKernIndizFund(sceneText) {
         // NPC-Gate (Personen-Indiz braucht den NPC am Ort)
         if (ind.npc && npcsHier.length && npcsHier.indexOf(normForMatch(ind.npc)) === -1) { _gateLog('NPC "' + ind.npc + '" nicht in npcsHier'); continue; }
         if (ind.npc && !npcsHier.length) { _gateLog('NPC "' + ind.npc + '" verlangt, aber npcsHier leer'); continue; }
+        // v7.12.1035: Personen-Indiz NUR, wenn die gebundene Figur auch im AKTUELLEN Szenen-Cast steht (KI
+        // personenImRaum/Prosa). Verhindert, dass eine Befragung einer von der KI improvisierten Figur (z.B. ein
+        // Dieb) faelschlich die Aussage der ortsdefinierten Person (Hannelore) vergibt -> Popup/Prosa-Mismatch.
+        if (ind.npc && (ind.quelle === 'person') && !_npcWirklichInSzene(ind.npc, txt)) { _gateLog('NPC "' + ind.npc + '" NICHT im aktuellen Szenen-Cast (KI zeigt andere Figur) - Personen-Indiz nicht vergeben'); continue; }
         // Quelle muss zum Fund-Modus passen (umgebung/person). Fehlt quelle -> beide erlauben (Altdaten).
         const _q = ind.quelle || null;
         if (_q && _q !== _fundModus) { _gateLog('quelle "' + _q + '" != fundModus "' + _fundModus + '"'); continue; }
@@ -11536,7 +11568,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1034';
+window.SCHATTEN_VERSION = 'v7.12.1035';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
