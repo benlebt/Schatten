@@ -3411,7 +3411,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1036</div>
+    <div class="start-version">Schatten v7.12.1037</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3635,7 +3635,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1036</span>
+    <span>Schatten v7.12.1037</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11143,7 +11143,12 @@ function getEvidenceActionKey() {
     if (vbase === 'ueberzeugen' || vbase === 'überzeugen') return 'UEBERZEUGEN';
     const txt = normForMatch(a.text || '');
     const kat = (a.kategorie || '').toUpperCase();
-    if (/bestech|bestich|biete\w*\s+geld|geld f(ü|ue)r info/.test(txt)) return 'BESTECHEN';
+    // v7.12.1037 (Benjamin-Testspiel, Sackgassen-Bug "Bornstein nimmt das Geld, aber Tipp wird nicht vergeben"):
+    // BESTECHEN-Erkennung war zu eng (nur 'bestech/biete geld'). Die KI formuliert Bestechung oft als GELD-GESTE
+    // ("Leg einen Zehnmarkschein auf den Tresen und frag..."), was wegen "frag" faelschlich als BEFRAGEN durchrutschte
+    // -> Informanten-Bezahlschranke blockierte den Tipp -> Indiz unfindbar -> Sackgasse. Jetzt: Geld-Gesten zaehlen
+    // als BESTECHEN (vor dem BEFRAGEN-Check), egal ob zusaetzlich gefragt wird.
+    if (/bestech|bestich|schmiergeld|bestechungsgeld|geldschein|markschein|geldb(ue|ü)ndel|banknote|zehnmark|f(ue|ü)nfmark|zwanzigmark|hundertmark|biete\w*\s+(geld|scheine?|mark)|geld f(ü|ue)r info|(leg|lege|schieb|schiebe|dr(ü|ue)ck|steck|stecke|z(ä|ae)hl|reich|gib|gebe|wirf|halt)\w*[\s\S]{0,30}(geld|schein|scheine|ostmark|m(ü|ue)nz|note|trinkgeld|mark\b)/.test(txt)) return 'BESTECHEN';
     if (/ueberzeug|überzeug/.test(txt)) return 'UEBERZEUGEN';
     // v7.12.1018 (KERN-UMBAU): aggressive Druck-Verben einer OFFENSIV-Option zählen als BEDROHEN (viele Indizien
     // erlauben BEDROHEN in actions[]) - so kann der harte Weg dasselbe Indiz auslösen wie das Befragen.
@@ -11568,7 +11573,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1036';
+window.SCHATTEN_VERSION = 'v7.12.1037';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
