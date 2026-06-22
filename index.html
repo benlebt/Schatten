@@ -3411,7 +3411,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1047</div>
+    <div class="start-version">Schatten v7.12.1048</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3635,7 +3635,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1047</span>
+    <span>Schatten v7.12.1048</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11580,7 +11580,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1047';
+window.SCHATTEN_VERSION = 'v7.12.1048';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -38584,10 +38584,12 @@ async function chooseOption(option) {
         // tatsaechlichen Szenen-Person (charVisual), nie ein falsches und nie ein Kategorie-Icon.
         const _txtG = ((option && (option._anzeigeText || option.text)) || '').toLowerCase();
         // "Starke" Verben sind eindeutig zwischenmenschlich -> duerfen auch ueber die einzige Anwesende feuern.
-        const _starkVerb = /\b(frag|befrag|verhör|verhoer|sprich|rede|sag|erzähl|erzaehl|erkundig|konfrontier|beruhig|nick|bedank|bitt|zeig|überzeug|ueberzeug|dräng|draeng|press|bedroh|einschüchter|einschuechter|bestech|bestich|schmier|pack|schüttel|schuettel|zwing|stoß|stoss|drück|drueck|würg|wuerg|greif|schnapp|reiß|reiss|schlag|droh|am kragen|am revers|unter druck|zur rede|bau dich vor|hart an)/.test(_txtG);
+        const _starkVerb = /\b(frag|befrag|verhör|verhoer|sprich|rede|sag|erzähl|erzaehl|erkundig|konfrontier|beruhig|nick|bedank|bitt|zeig|überzeug|ueberzeug|dräng|draeng|press|bedroh|einschüchter|einschuechter|bestech|bestich|schmier|pack|schüttel|schuettel|zwing|stoß|stoss|drück|drueck|würg|wuerg|greif|schnapp|reiß|reiss|schlag|droh|am kragen|am revers|unter druck|zur rede|bau dich vor|hart an|hart auf|tritt dicht an|heran)/.test(_txtG);
         // "Schwache" Verben koennen Person ODER Objekt meinen -> nur mit klarem Personenbezug (Name/Pronomen) feuern.
         const _schwachVerb = /\b(beobacht|schweig|zuseh|muster|taxier|studier|lausch|hör|zuhör|zuhoer)/.test(_txtG);
         const _personBezug = /\b(ihn|ihm|ihr|ihnen|sein|seine|seinen|seinem|seiner|ihren|ihrem|ihres)\b/.test(_txtG);
+        // OFFENSIV ist per Definition personen-gerichtet (Druck/Kragen/Bedrohen) -> Gesichts-FX auch ohne erkanntes Verb-Wort.
+        const _offensiv = (_kat === 'OFFENSIV');
         let _zielNpc = '';
         try {
           let _anwesend = [];
@@ -38605,7 +38607,7 @@ async function chooseOption(option) {
             if (_vor && _vor.length >= 3 && _txtG.includes(_vor)) { _zielNpc = c.name; break; }
           }
           // 2) Kein Name: einzige wirklich Anwesende - starkes Verb genuegt, schwaches Verb nur mit Personenbezug.
-          if (!_zielNpc && _anwesend.length === 1 && (_starkVerb || (_schwachVerb && _personBezug))) {
+          if (!_zielNpc && _anwesend.length === 1 && (_starkVerb || _offensiv || (_schwachVerb && _personBezug))) {
             const _only = _anwesend[0];
             if (typeof _npcWirklichInSzene !== 'function' || _npcWirklichInSzene(_only.id || _only.name, _txtG)) {
               _zielNpc = _only.name;
@@ -38613,10 +38615,10 @@ async function chooseOption(option) {
           }
         } catch (e) {}
         // Feuern nur, wenn ein Aktions-Verb (stark ODER schwach) vorliegt - sonst reine Umgebungs-/Ambient-Aktion.
-        if (_zielNpc && (_starkVerb || _schwachVerb) && typeof fxDialog === 'function') {
-          const _vk2 = /bedroh|einschüchter|einschuechter|dräng|draeng|press|pack|schüttel|schuettel|zwing|stoß|stoss|drück|drueck|würg|wuerg|greif|schnapp|reiß|reiss|schlag|droh|am kragen|am revers|unter druck|hart an|zur rede|bau dich vor/.test(_txtG) ? 'bedrohen'
-            : /bestech|bestich|schmier|\bgeld\b|geldschein|\bschein\b|\bmark\b|zigaretten|reval/.test(_txtG) ? 'bestechen'
+        if (_zielNpc && (_starkVerb || _schwachVerb || _offensiv) && typeof fxDialog === 'function') {
+          const _vk2 = /bestech|bestich|schmier|\bgeld\b|geldschein|\bschein\b|\bmark\b|zigaretten|reval/.test(_txtG) ? 'bestechen'
             : /überzeug|ueberzeug/.test(_txtG) ? 'ueberzeugen'
+            : (/bedroh|einschüchter|einschuechter|dräng|draeng|press|pack|schüttel|schuettel|zwing|stoß|stoss|drück|drueck|würg|wuerg|greif|schnapp|reiß|reiss|schlag|droh|am kragen|am revers|unter druck|hart an|hart auf|zur rede|bau dich vor|tritt dicht an|heran/.test(_txtG) || _offensiv) ? 'bedrohen'
             : /beobacht|schweig|zuseh|muster|taxier|studier|lausch/.test(_txtG) ? 'beobachten'
             : /\b(sag|erzähl|erzaehl|hör|zuhör|zuhoer|nick|bedank|beruhig)/.test(_txtG) ? 'ansprechen'
             : 'befragen';
