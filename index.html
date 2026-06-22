@@ -3411,7 +3411,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1049</div>
+    <div class="start-version">Schatten v7.12.1050</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3635,7 +3635,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1049</span>
+    <span>Schatten v7.12.1050</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11580,7 +11580,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1049';
+window.SCHATTEN_VERSION = 'v7.12.1050';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -24828,6 +24828,37 @@ function _begegnungsFakten() {
   return res;
 }
 
+// v7.12.1050 (Benjamin "lebendige Welt", Idee 2): SIGNATUR-METHODE. Zeichnet sich Karls Handschrift klar ab
+// (ueberwiegend hart / ueberwiegend Spuren-statt-Leute / ueberwiegend ruhig), benennt die Welt das GENAU EINMAL
+// pro Signatur-Typ - "die Story merkt, WIE du spielst". Cooldown: caseProgress._signaturGenutzt.
+function buildSignaturMethodeHint() {
+  try {
+    if (!caseProgress) return '';
+    const gewalt = (typeof _rufGewaltAktionen === 'number') ? _rufGewaltAktionen : 0;
+    const befrag = (typeof _rufBefragungen === 'number') ? _rufBefragungen : 0;
+    const neutral = (typeof _rufNeutralAktionen === 'number') ? _rufNeutralAktionen : 0;
+    const interakt = gewalt + befrag;
+    const gesamt = gewalt + befrag + neutral;
+    if (gesamt < 6) return ''; // noch keine erkennbare Handschrift
+    const hartAnteil = interakt > 0 ? Math.round(100 * gewalt / interakt) : 0;
+    let typ = '';
+    if (interakt >= 4 && hartAnteil >= 70) typ = 'schlaeger';
+    else if (neutral >= 6 && neutral >= interakt * 2) typ = 'aktenmensch';
+    else if (interakt >= 4 && hartAnteil <= 15) typ = 'sanft';
+    if (!typ) return '';
+    if (!caseProgress._signaturGenutzt) caseProgress._signaturGenutzt = {};
+    if (caseProgress._signaturGenutzt[typ]) return '';
+    caseProgress._signaturGenutzt[typ] = (typeof sceneCounter === 'number') ? sceneCounter : 1;
+    const kern = {
+      schlaeger: 'Karl geht auffallend oft mit koerperlicher Haerte vor - er packt, draengt, bedroht, statt zu fragen. Lass das GENAU EINMAL eine anwesende Figur ODER die Erzaehlung beilaeufig benennen, als Ruf der ihm vorauseilt (z.B. halb bewundernd, halb aengstlich: "Man sagt, bei Ihnen klebt der Mann schon an der Wand, bevor die erste Frage faellt, Mauer.").',
+      aktenmensch: 'Karl arbeitet auffallend ueber Spuren, Akten und Beobachtung statt ueber Konfrontation mit Menschen. Lass das GENAU EINMAL eine Figur ODER die Erzaehlung benennen (z.B. "Sie sind ein Aktenmensch, Mauer - Sie lesen die Dinge, nicht die Leute.").',
+      sanft: 'Karl ermittelt auffallend ruhig und ohne Gewalt - er redet, hoert zu, packt nie zu. Lass das GENAU EINMAL eine Figur ODER die Erzaehlung benennen (z.B. "Sie sind keiner von den Schlaegern, Mauer - das spricht sich rum, im Guten wie im Schlechten.").'
+    }[typ];
+    return 'SIGNATUR-METHODE (Karls Handschrift wird erkannt - nur EIN Satz, kein Monolog, keine Wiederholung, keine moralische Belehrung): ' + kern
+      + ' Es soll sich anfuehlen, als haette die Welt gemerkt, WIE Karl vorgeht.';
+  } catch (e) { return ''; }
+}
+
 // Baut den "Welt hat Ohren"-Push, wenn ein Gangster-Boss/Stasi anwesend ist und genug Vorgeschichte existiert.
 // Feuert pro solchem NPC nur EINMAL (Cooldown in caseProgress._weltOhrenGenutzt) - Ton je nach Figur.
 function buildWeltHatOhrenHint(presentNpcs) {
@@ -34370,6 +34401,14 @@ Wenn Karl waehlt: Schnitt zur naechsten Szene am Morgen, Kaffee zu zweit, keine 
       if (_rufHint) {
         timeContext += '\n\n=== KARLS RUF (v7.12.418) ===\n' + _rufHint;
         if (typeof diag === 'function') diag('detect', 'RUF-HINT gesetzt: ' + _rufHint.slice(0, 60) + '...');
+      }
+    }
+    // v7.12.1050 (Idee 2): SIGNATUR-METHODE - die Welt benennt Karls Handschrift einmal pro Typ.
+    if (!karlInStasiCustody && !pendingDayTransition && !pendingSleepChoice && typeof buildSignaturMethodeHint === 'function') {
+      const _sigHint = buildSignaturMethodeHint();
+      if (_sigHint) {
+        timeContext += '\n\n=== SIGNATUR-METHODE (v7.12.1050) ===\n' + _sigHint;
+        if (typeof diag === 'function') diag('detect', 'SIGNATUR-HINT gesetzt: ' + _sigHint.slice(0, 70).replace(/\s+/g, ' ') + '...');
       }
     }
     // v7.12.1034 (Benjamin "die Welt hat Ohren"): Wenn ein Gangster-Boss oder Stasi-Agent am Ort anwesend ist, einen
