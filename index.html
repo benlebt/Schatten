@@ -3411,7 +3411,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1050</div>
+    <div class="start-version">Schatten v7.12.1051</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3635,7 +3635,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1050</span>
+    <span>Schatten v7.12.1051</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11580,7 +11580,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1050';
+window.SCHATTEN_VERSION = 'v7.12.1051';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -24859,6 +24859,50 @@ function buildSignaturMethodeHint() {
   } catch (e) { return ''; }
 }
 
+// v7.12.1051 (Benjamin "lebendige Welt", Idee 1): NPC-GEDAECHTNIS. Trifft Karl einen NPC erneut, mit dem er
+// frueher schon interagiert hat (anderer Ort ODER >=2 Szenen Abstand - kein laufendes Gespraech), bezieht sich
+// dessen ERSTE Replik auf die letzte Begegnung: misstrauisch/eingeschuechtert wenn hart, zugewandter wenn fair.
+// Einmal pro NPC (Cooldown caseProgress._wiedersehenGenutzt).
+function buildWiedersehenHint(presentNpcs) {
+  try {
+    if (!caseProgress) return '';
+    const log = Array.isArray(caseProgress._begegnungen) ? caseProgress._begegnungen : [];
+    if (!log.length) return '';
+    const npcs = Array.isArray(presentNpcs) ? presentNpcs : [];
+    if (!npcs.length) return '';
+    if (!caseProgress._wiedersehenGenutzt) caseProgress._wiedersehenGenutzt = {};
+    const nowScene = (typeof sceneCounter === 'number') ? sceneCounter : 0;
+    const nowOrt = (typeof engineCurrentLocation !== 'undefined' && engineCurrentLocation) ? normForMatch(engineCurrentLocation.name || '') : '';
+    for (const n of npcs) {
+      if (!n || !n.name) continue;
+      const key = normForMatch(n.id || n.name || '');
+      if (caseProgress._wiedersehenGenutzt[key]) continue;
+      const nk = normForMatch(n.name);
+      const prior = log.filter(e => e && e.name && normForMatch(e.name) === nk);
+      if (!prior.length) continue;
+      const last = prior[prior.length - 1];
+      const anderswo = last.ort && normForMatch(last.ort) !== nowOrt;
+      const mitAbstand = (nowScene - (last.scene || 0)) >= 2;
+      if (!anderswo && !mitAbstand) continue; // sonst ist es dasselbe laufende Gespraech
+      caseProgress._wiedersehenGenutzt[key] = nowScene;
+      const artTxt = {
+        angegriffen: 'die Person taetlich angegangen (Schlag/Stoss)',
+        gepackt: 'die Person gepackt und bedraengt',
+        bedroht: 'die Person hart unter Druck gesetzt',
+        befragt: 'die Person ruhig und anstaendig befragt'
+      }[last.art] || (last.hart ? 'die Person hart angefasst' : 'die Person befragt');
+      const ortTxt = last.ort ? (' (damals bei: ' + last.ort + ')') : '';
+      const reaktion = last.hart
+        ? 'misstrauisch, eingeschuechtert oder trotzig-feindselig - die alte Begegnung sitzt ("Sie schon wieder...")'
+        : 'etwas zugewandter und kooperativer, weil Karl beim letzten Mal anstaendig war';
+      return 'WIEDERSEHEN MIT ' + n.name + ': Karl ist dieser Person schon einmal begegnet - er hat ' + artTxt + ortTxt + '. '
+        + 'Lass ' + n.name + 's ERSTE Reaktion JETZT genau darauf Bezug nehmen: ' + reaktion + '. '
+        + 'EIN Satz mit konkretem Rueckbezug auf das letzte Mal, keine Litanei, kein Steckbrief.';
+    }
+    return '';
+  } catch (e) { return ''; }
+}
+
 // Baut den "Welt hat Ohren"-Push, wenn ein Gangster-Boss/Stasi anwesend ist und genug Vorgeschichte existiert.
 // Feuert pro solchem NPC nur EINMAL (Cooldown in caseProgress._weltOhrenGenutzt) - Ton je nach Figur.
 function buildWeltHatOhrenHint(presentNpcs) {
@@ -34421,6 +34465,17 @@ Wenn Karl waehlt: Schnitt zur naechsten Szene am Morgen, Kaffee zu zweit, keine 
         if (_ohrenHint) {
           timeContext += '\n\n=== DIE WELT HAT OHREN (v7.12.1034) ===\n' + _ohrenHint;
           if (typeof diag === 'function') diag('detect', 'WELT-HAT-OHREN-HINT gesetzt: ' + _ohrenHint.slice(0, 70).replace(/\s+/g, ' ') + '...');
+        }
+      } catch (e) {}
+    }
+    // v7.12.1051 (Idee 1): NPC-GEDAECHTNIS - beim Wiedersehen nimmt die erste Replik Bezug auf die letzte Begegnung.
+    if (!karlInStasiCustody && !pendingDayTransition && !pendingSleepChoice && typeof buildWiedersehenHint === 'function') {
+      try {
+        const _wsNpcs = (typeof getNpcsAtCurrentLocation === 'function') ? getNpcsAtCurrentLocation() : [];
+        const _wsHint = buildWiedersehenHint(_wsNpcs);
+        if (_wsHint) {
+          timeContext += '\n\n=== WIEDERSEHEN (v7.12.1051) ===\n' + _wsHint;
+          if (typeof diag === 'function') diag('detect', 'WIEDERSEHEN-HINT gesetzt: ' + _wsHint.slice(0, 70).replace(/\s+/g, ' ') + '...');
         }
       } catch (e) {}
     }
