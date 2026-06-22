@@ -3411,7 +3411,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1033</div>
+    <div class="start-version">Schatten v7.12.1034</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3635,7 +3635,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1033</span>
+    <span>Schatten v7.12.1034</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11536,7 +11536,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1033';
+window.SCHATTEN_VERSION = 'v7.12.1034';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -24741,6 +24741,87 @@ function buildKarlReputationHint(ctx) {
     + ' Lass das in der Reaktion der Figuren MITSCHWINGEN (nicht ausbuchstabieren) - nur wenn eine Figur Karl schon kennt oder von ihm gehoert haben koennte.';
 }
 
+// v7.12.1034 (Benjamin: "die Welt hat Ohren" - Gangster-Bosse und Stasi sollen merken, WIE Karl vorgeht und WEN er
+// wie hart angegangen ist, und das beim Konfrontieren beilaeufig einflechten). _weltOhrenTyp klassifiziert einen
+// anwesenden NPC als 'gangster' (vernetzte Unterwelt-Figur/Hehler, KEIN bloesser Schlaeger) oder 'stasi' (MfS/IM) -
+// oder null. Quelle: setupCast (tag + tagExtra + rolle), da das NPC-Ident nur den Primaer-tag traegt.
+function _weltOhrenTyp(npc) {
+  try {
+    if (!npc) return null;
+    let sc = null;
+    if (caseSetup && Array.isArray(caseSetup.setupCast)) {
+      sc = caseSetup.setupCast.find(c => c && c.id && normForMatch(c.id) === normForMatch(npc.id || ''))
+        || caseSetup.setupCast.find(c => c && c.name && normForMatch(c.name) === normForMatch(npc.name || ''));
+    }
+    const tags = [];
+    if (sc) { if (sc.tag) tags.push(String(sc.tag).toUpperCase()); if (sc.tagExtra) tags.push(String(sc.tagExtra).toUpperCase()); }
+    if (npc.tag) tags.push(String(npc.tag).toUpperCase());
+    const rolleL = ((sc && sc.rolle) || npc.rolle || '').toLowerCase();
+    if (tags.indexOf('STASI') !== -1 || /\bstasi\b|mfs|staatssicherheit|inoffizieller mitarbeiter/.test(rolleL)) return 'stasi';
+    const _istSchlaeger = /schl\u00e4ger|schlaeger|\bwache\b|messer-mann|messermann|laufbursche|handlanger|leibw\u00e4chter|leibwaechter/.test(rolleL);
+    if (tags.indexOf('GANGSTER') !== -1 && !_istSchlaeger) return 'gangster';
+    return null;
+  } catch (e) { return null; }
+}
+
+// Fasst Karls Begegnungs-Logbuch zu konkreten Fakten zusammen (wen hart angefasst, wen nur befragt, wo gewesen).
+function _begegnungsFakten() {
+  const res = { hart: [], befragt: [], orte: [] };
+  try {
+    const log = (caseProgress && Array.isArray(caseProgress._begegnungen)) ? caseProgress._begegnungen : [];
+    const hartSet = {}, weichSet = {}, ortSet = {};
+    for (const e of log) {
+      if (!e || !e.name) continue;
+      const k = normForMatch(e.name);
+      if (e.hart) hartSet[k] = e.name; else weichSet[k] = e.name;
+      if (e.ort) ortSet[normForMatch(e.ort)] = e.ort;
+    }
+    res.hart = Object.keys(hartSet).map(k => hartSet[k]);
+    res.befragt = Object.keys(weichSet).filter(k => !hartSet[k]).map(k => weichSet[k]); // wer hart angefasst wurde, zaehlt als hart
+    res.orte = Object.keys(ortSet).map(k => ortSet[k]);
+  } catch (e) {}
+  return res;
+}
+
+// Baut den "Welt hat Ohren"-Push, wenn ein Gangster-Boss/Stasi anwesend ist und genug Vorgeschichte existiert.
+// Feuert pro solchem NPC nur EINMAL (Cooldown in caseProgress._weltOhrenGenutzt) - Ton je nach Figur.
+function buildWeltHatOhrenHint(presentNpcs) {
+  try {
+    if (!caseProgress) return '';
+    const log = Array.isArray(caseProgress._begegnungen) ? caseProgress._begegnungen : [];
+    if (log.length < 2) return ''; // noch keine erzaehlbare Vorgeschichte
+    const npcs = Array.isArray(presentNpcs) ? presentNpcs : [];
+    if (!caseProgress._weltOhrenGenutzt) caseProgress._weltOhrenGenutzt = {};
+    let ziel = null, typ = null;
+    for (const n of npcs) {
+      const t = _weltOhrenTyp(n);
+      if (t) {
+        const key = normForMatch(n.id || n.name || '');
+        if (!caseProgress._weltOhrenGenutzt[key]) { ziel = n; typ = t; break; }
+      }
+    }
+    if (!ziel || !typ) return '';
+    const fakten = _begegnungsFakten();
+    if (!fakten.hart.length && !fakten.befragt.length) return '';
+    const rep = (typeof computeKarlReputation === 'function') ? computeKarlReputation() : { label: '' };
+    const _bossName = ziel.name || 'die Figur';
+    const _hartTxt = fakten.hart.length ? ('hart angefasst: ' + fakten.hart.slice(0, 3).join(', ')) : '';
+    const _befragtTxt = fakten.befragt.length ? ('befragt: ' + fakten.befragt.slice(0, 3).join(', ')) : '';
+    const _ortTxt = fakten.orte.length ? ('war zuletzt u.a. bei: ' + fakten.orte.slice(-3).join(', ')) : '';
+    const _faktenZeile = [_hartTxt, _befragtTxt, _ortTxt].filter(Boolean).join(' | ');
+    caseProgress._weltOhrenGenutzt[normForMatch(ziel.id || ziel.name || '')] = (typeof sceneCounter === 'number') ? sceneCounter : 0;
+    if (typ === 'stasi') {
+      return 'DIE STASI HAT OHREN: ' + _bossName + ' ist MfS und ueberwacht Karl. Karls bisheriger Weg ist aktenkundig (' + _faktenZeile + '). '
+        + 'Lass ' + _bossName + ' das GENAU EINMAL, kuehl und beilaeufig-allwissend andeuten - EINE konkrete Beobachtung (ein Ort ODER eine Person aus den Fakten), die zeigt: "Wir wissen, wo Sie waren, Herr Mauer." '
+        + 'Kein Prahlen, keine Liste, nur ein praeziser, stiller Stich, der Karl spueren laesst, dass er beobachtet wird.';
+    }
+    return 'DIE UNTERWELT HAT OHREN: ' + _bossName + ' ist eine vernetzte Halbwelt-Figur und hat aus dem Milieu gehoert, wie Karl bei diesem Fall vorgeht (' + _faktenZeile + '). '
+      + 'Lass ' + _bossName + ' das GENAU EINMAL beilaeufig und unterschwellig drohend einflechten - EINE konkrete Anspielung auf EINE dieser Personen/Orte '
+      + '(z.B. "Man erzaehlt sich, bei <Name> waren Sie nicht gerade zimperlich, Herr Mauer."), passend zu Karls Ruf (' + (rep.label || 'noch unklar') + '). '
+      + 'Keine ganze Liste, nur ein gezielter Stich, der zeigt: die Halbwelt redet ueber Karl.';
+  } catch (e) { return ''; }
+}
+
 let lastNpcTextureKey = '';
 // v7.12.448 (Lektorat v446/447 P2, Benjamin James-Bond/GTA-Noir-Linie): NPC-TEXTUR-PERSISTENZ.
 // Befund: buildNpcTextureHint würfelt jede Szene neu (Math.random) -> derselbe namenlose Gegner
@@ -34216,6 +34297,19 @@ Wenn Karl waehlt: Schnitt zur naechsten Szene am Morgen, Kaffee zu zweit, keine 
         if (typeof diag === 'function') diag('detect', 'RUF-HINT gesetzt: ' + _rufHint.slice(0, 60) + '...');
       }
     }
+    // v7.12.1034 (Benjamin "die Welt hat Ohren"): Wenn ein Gangster-Boss oder Stasi-Agent am Ort anwesend ist, einen
+    // Push bauen, der Karls konkretes Vorgehen (wen er hart anging, wen befragte, wo er war) zurueckspielt - Ton je
+    // nach Figur (Stasi kuehl-allwissend, Gangster beilaeufig-drohend). Feuert pro Figur nur einmal.
+    if (!karlInStasiCustody && !pendingDayTransition && !pendingSleepChoice && typeof buildWeltHatOhrenHint === 'function') {
+      try {
+        const _ohrenNpcs = (typeof getNpcsAtCurrentLocation === 'function') ? getNpcsAtCurrentLocation() : [];
+        const _ohrenHint = buildWeltHatOhrenHint(_ohrenNpcs);
+        if (_ohrenHint) {
+          timeContext += '\n\n=== DIE WELT HAT OHREN (v7.12.1034) ===\n' + _ohrenHint;
+          if (typeof diag === 'function') diag('detect', 'WELT-HAT-OHREN-HINT gesetzt: ' + _ohrenHint.slice(0, 70).replace(/\s+/g, ' ') + '...');
+        }
+      } catch (e) {}
+    }
     // Expliziter Tageswechsel-Flag (gesetzt von advanceGameTime nach einem Roll-Over)
     if (pendingDayTransition) {
       // Schlafplatz bestimmen: je nach Spielzustand andere Wahrscheinlichkeit.
@@ -38992,6 +39086,34 @@ async function chooseOption(option) {
       }
     }
   } catch (e) { option._intent = null; }
+  // v7.12.1034 (Benjamin "die Welt hat Ohren"): Begegnungs-Logbuch fuellen - wer wurde wie angegangen (hart vs nur
+  // befragt) und wo. Quelle fuer den Welt-hat-Ohren-Push (Bosse/Stasi spielen Karls Vorgehen spaeter zurueck).
+  try {
+    if (caseProgress && (isPhysical || isBefragung)) {
+      let _zielName = '';
+      const _tgt = (option._intent && (option._intent.target || option._intent.object)) ? normForMatch(option._intent.target || option._intent.object) : '';
+      const _castArr = (typeof cast !== 'undefined' && Array.isArray(cast)) ? cast : [];
+      const _castNames = _castArr.map(c => (typeof c === 'string') ? c : (c && c.name) || '').filter(Boolean);
+      if (_tgt) {
+        for (const cn of _castNames) { const ncn = normForMatch(cn); if (ncn.indexOf(_tgt) !== -1 || _tgt.indexOf(ncn) !== -1) { _zielName = cn; break; } }
+        if (!_zielName && option._intent && option._intent.target && /^[a-zA-Z\u00e4\u00f6\u00fc\u00c4\u00d6\u00dc\u00df .-]{2,}$/.test(option._intent.target)) _zielName = option._intent.target;
+      }
+      if (!_zielName && _castNames.length === 1) _zielName = _castNames[0];
+      if (_zielName) {
+        const _txtL = (option.text || '').toLowerCase();
+        let _art;
+        if (isPhysical) {
+          if (/w\u00fcrg|wuerg|schlag|tret|stoss|sto\u00df|pr\u00fcgel|pruegel|angreif|angriff|niederschlag/.test(_txtL)) _art = 'angegriffen';
+          else if (/pack|kragen|revers|sch\u00fcttel|schuettel|greif|schnapp/.test(_txtL)) _art = 'gepackt';
+          else _art = 'bedroht';
+        } else { _art = 'befragt'; }
+        if (!Array.isArray(caseProgress._begegnungen)) caseProgress._begegnungen = [];
+        caseProgress._begegnungen.push({ name: _zielName, hart: !!isPhysical, art: _art, ort: (engineCurrentLocation && engineCurrentLocation.name) || '', scene: (typeof sceneCounter === 'number') ? sceneCounter : 0 });
+        if (caseProgress._begegnungen.length > 40) caseProgress._begegnungen = caseProgress._begegnungen.slice(-40);
+        if (typeof diag === 'function') diag('state', '📓 BEGEGNUNG geloggt: ' + _zielName + ' -> ' + _art + ' @ ' + ((engineCurrentLocation && engineCurrentLocation.name) || '?'));
+      }
+    }
+  } catch (e) { /* Logbuch darf nie brechen */ }
   // gameDay/gameTimeIdx VOR advanceGameTime merken, damit wir bei explizitem Schlaf
   // nicht versehentlich doppelt inkrementieren falls der graduelle Wechsel
   // schon getriggert hat (Token-Roll-Over).
