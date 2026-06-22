@@ -3411,7 +3411,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1032</div>
+    <div class="start-version">Schatten v7.12.1033</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3635,7 +3635,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1032</span>
+    <span>Schatten v7.12.1033</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11536,7 +11536,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1032';
+window.SCHATTEN_VERSION = 'v7.12.1033';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -29352,6 +29352,20 @@ function renderOptions(scene) {
       }
     }
   } catch (e) { _ortLeerAusgeschoepft = false; _ortIndizienAusgeschoepft = false; }
+  // v7.12.1033 (Benjamin: "wenn es da wirklich nichts mehr zu holen gibt, klarer kommunizieren - aber ohne em dashes"):
+  // Eine ruhige Hinweiszeile ueber den A/B/C/D-Optionen, wenn der Ort ausgeschoepft ist, aber noch eine Person dasitzt
+  // (dann bleiben A/B/C/D, also kommt KEIN voller Banner - aber der Spieler soll verstehen, warum Reisen leuchtet).
+  if (_ortIndizienAusgeschoepft && !_ortLeerAusgeschoepft) {
+    try {
+      const _zH = (window._dirigentReiseZiele && window._dirigentReiseZiele[0]) ? window._dirigentReiseZiele[0] : '';
+      const _zielSatz = _zH ? ('Die Spur führt nach <strong>' + escapeHtml(_zH) + '</strong>.') : 'Die Spur führt weiter an einen anderen Ort.';
+      const _hint = document.createElement('div');
+      _hint.className = 'ort-ausgeschoepft-hinweis';
+      _hint.style.cssText = 'margin:2px 0 12px 0; padding:8px 12px; border-left:2px solid rgba(150,190,255,0.5); color:rgba(190,205,230,0.85); font-size:0.82em; line-height:1.5;';
+      _hint.innerHTML = '🗺️ Hier gibt es nichts mehr zu ermitteln. ' + _zielSatz + ' Nutze <strong>Reisen</strong>, um weiterzuziehen.';
+      if (typeof uebergangBody !== 'undefined' && uebergangBody) uebergangBody.appendChild(_hint);
+    } catch (e) { if (typeof diag === 'function') diag('drift', 'ORT-AUSGESCHÖPFT-Hinweis-Fehler: ' + (e && e.message ? e.message : e)); }
+  }
   // v7.12.653 (Baukasten-First Schritt 3): A/B/C/D-Optionen nur rendern, wenn KI_OPTIONEN_AKTIV. Systembuttons,
   // Personen-Buttons, Reise, Baukasten etc. sind davon NICHT betroffen (die kommen weiter unten/anderswo).
   if ((typeof KI_OPTIONEN_AKTIV === 'undefined' || KI_OPTIONEN_AKTIV) && !_ortLeerAusgeschoepft) {
@@ -29523,7 +29537,7 @@ function renderOptions(scene) {
     try {
       const _ziele = (window._dirigentReiseZiele && window._dirigentReiseZiele.length) ? window._dirigentReiseZiele.slice(0, 2) : [];
       const _zielTxt = _ziele.length
-        ? ' Die Spur führt weiter — etwa ' + _ziele.map(z => '<strong>' + escapeHtml(z) + '</strong>').join(' oder ') + '.'
+        ? ' Die Spur führt weiter, etwa ' + _ziele.map(z => '<strong>' + escapeHtml(z) + '</strong>').join(' oder ') + '.'
         : ' Die Spur führt weiter an einen anderen Ort.';
       const _leerBanner = document.createElement('div');
       _leerBanner.className = 'ort-leer-hinweis';
