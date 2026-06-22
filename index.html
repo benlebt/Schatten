@@ -3411,7 +3411,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1031</div>
+    <div class="start-version">Schatten v7.12.1032</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3635,7 +3635,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1031</span>
+    <span>Schatten v7.12.1032</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11536,7 +11536,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1031';
+window.SCHATTEN_VERSION = 'v7.12.1032';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -29326,7 +29326,14 @@ function renderOptions(scene) {
   // Dann: A/B/C/D AUSBLENDEN und stattdessen einen klaren Reise-Hinweis zeigen. Schlafen/Heilen/Umsehen/Karte bleiben.
   // Bedingung bewusst eng: Dirigent sagt indiz_anderswo (Spur woanders), KEINE Person im Raum, kein Kampf, keine
   // Exploration, Fall laeuft noch UND Spannung <=3 (sonst ist Reisen ohnehin gesperrt -> kein Stranden des Spielers).
+  // v7.12.1032 (Benjamin-Run v1031, 10 Szenen im Buero): Der Klient bleibt sitzen, also griff der Leer-Modus (v1030)
+  // nie - obwohl der Dirigent ab Szene 2 'indiz_anderswo' meldete (hier nichts mehr zu holen). Jetzt zwei Stufen:
+  //  _ortIndizienAusgeschoepft = am Ort ist nichts mehr zu holen (UNABHAENGIG davon, ob noch jemand im Raum sitzt)
+  //                              -> Reisen-Button wird hervorgehoben (Benjamins Wunsch: "Reisen hervorheben, wenn
+  //                                 es am Ort nichts mehr an Indizien gibt"). A/B/C/D bleiben (Klient ist ja noch da).
+  //  _ortLeerAusgeschoepft     = zusaetzlich KEINE Person mehr da -> A/B/C/D ganz ausblenden + Reise-Banner (v1030).
   let _ortLeerAusgeschoepft = false;
+  let _ortIndizienAusgeschoepft = false;
   try {
     if (typeof KI_OPTIONEN_AKTIV === 'undefined' || KI_OPTIONEN_AKTIV) {
       const _dirR = (typeof _naechsterErmittlungsschritt === 'function') ? _naechsterErmittlungsschritt() : null;
@@ -29335,13 +29342,16 @@ function renderOptions(scene) {
       const _imExplR = (typeof _hatExploration === 'function') && _hatExploration();
       const _fallVorbeiR = !!(caseProgress && (caseProgress.istGescheitert || caseProgress.istGelöst));
       const _spR = (typeof lastSpannung === 'number') ? lastSpannung : lastSp;
-      if (_dirR && _dirR.art === 'indiz_anderswo' && Array.isArray(_npR) && _npR.length === 0
-          && !_imKampfR && !_imExplR && !_fallVorbeiR && _spR <= 3) {
-        _ortLeerAusgeschoepft = true;
-        if (typeof diag === 'function') diag('detect', '🗺️ ORT-LEER-MODUS aktiv: Dirigent=indiz_anderswo, keine Person im Raum, Sp=' + _spR + ' -> A/B/C/D ausgeblendet, Reise-Hinweis statt Fuell-Optionen (Reiseziele: ' + ((window._dirigentReiseZiele||[]).join(', ') || '-') + ')');
+      const _ortErschoepft = _dirR && _dirR.art === 'indiz_anderswo' && !_imKampfR && !_imExplR && !_fallVorbeiR && _spR <= 3;
+      if (_ortErschoepft) {
+        _ortIndizienAusgeschoepft = true; // Reisen hervorheben - auch wenn der Klient noch im Raum sitzt
+        if (Array.isArray(_npR) && _npR.length === 0) {
+          _ortLeerAusgeschoepft = true; // niemand mehr da -> A/B/C/D ausblenden + Reise-Banner
+        }
+        if (typeof diag === 'function') diag('detect', '🗺️ ORT-AUSGESCHÖPFT: indiz_anderswo, Sp=' + _spR + ', Personen=' + ((_npR && _npR.length) || 0) + ' -> Reisen hervorheben' + (_ortLeerAusgeschoepft ? ' + A/B/C/D ausblenden (leer)' : ' (Person noch da -> A/B/C/D bleiben)') + ' (Reiseziele: ' + ((window._dirigentReiseZiele||[]).join(', ') || '-') + ')');
       }
     }
-  } catch (e) { _ortLeerAusgeschoepft = false; }
+  } catch (e) { _ortLeerAusgeschoepft = false; _ortIndizienAusgeschoepft = false; }
   // v7.12.653 (Baukasten-First Schritt 3): A/B/C/D-Optionen nur rendern, wenn KI_OPTIONEN_AKTIV. Systembuttons,
   // Personen-Buttons, Reise, Baukasten etc. sind davon NICHT betroffen (die kommen weiter unten/anderswo).
   if ((typeof KI_OPTIONEN_AKTIV === 'undefined' || KI_OPTIONEN_AKTIV) && !_ortLeerAusgeschoepft) {
@@ -30181,10 +30191,13 @@ function renderOptions(scene) {
     const reiseBtn = document.createElement('button');
     reiseBtn.className = 'option-btn option-btn-system option-btn-reise';
     reiseBtn.dataset.kategorie = 'REISE';
-    // v7.12.1030 (Benjamin "Weg eins"): Am leeren, ausgeschoepften Ort ist Reisen der naheliegende naechste Schritt -
-    // Button optisch hervorheben, damit der Spieler ihn statt der (jetzt ausgeblendeten) A/B/C/D-Optionen nutzt.
-    if (typeof _ortLeerAusgeschoepft !== 'undefined' && _ortLeerAusgeschoepft) {
-      reiseBtn.style.cssText = 'border:1px solid rgba(150,190,255,0.7); background:rgba(55,80,125,0.40); box-shadow:0 0 10px rgba(120,160,230,0.30);';
+    // v7.12.1030/1032 (Benjamin "Weg eins" + "Reisen hervorheben, wenn am Ort nichts mehr zu holen ist"): Sobald die
+    // Engine weiss, dass am Ort keine Indizien mehr warten (auch wenn der Klient noch dasitzt), ist Reisen der naechste
+    // sinnvolle Schritt - Button optisch hervorheben (Glow). Marker-Anpassung passiert weiter unten, NACH dem Aufbau
+    // von _reiseLabel/_reiseMarker (die hier oben noch nicht deklariert sind -> TDZ).
+    const _reiseHervorheben = (typeof _ortIndizienAusgeschoepft !== 'undefined' && _ortIndizienAusgeschoepft);
+    if (_reiseHervorheben) {
+      reiseBtn.style.cssText = 'border:1px solid rgba(150,190,255,0.75); background:rgba(55,80,125,0.42); box-shadow:0 0 12px rgba(120,160,230,0.35);';
     }
     // v7.12.1014 (UI-Ordnung): Reise-Button kontextuell benennen - im Raum ist der Spieler mental NICHT im
     // Reisesystem, sondern im Ort. "Reisen (Ort wechseln) → OPEL" ist zu technisch/meta. Logik bleibt 1:1.
@@ -30199,6 +30212,15 @@ function renderOptions(scene) {
       else if (_istOeff) { _reiseLabel = 'Ort verlassen'; _reiseMarker = '→ Opel'; }
     } catch (e) {}
     reiseBtn.innerHTML = '<span class="option-id">' + ((typeof opelMiniSvg === 'function') ? opelMiniSvg(18) : '🚗') + '</span><span class="option-text-wrap"><span>' + _reiseLabel + '</span><span class="option-marker option-marker-system">' + _reiseMarker + '</span></span>';
+    // v7.12.1032: Im ausgeschoepften Ort den Reise-Marker zum naechsten Spur-Ziel umbenennen (Nudge, nachdem
+    // _reiseLabel/_reiseMarker oben gebaut wurden - hier sind sie sicher im Scope).
+    if (_reiseHervorheben) {
+      try {
+        const _zN = (window._dirigentReiseZiele && window._dirigentReiseZiele[0]) ? window._dirigentReiseZiele[0] : '';
+        const _mark = _zN ? ('→ ' + _zN) : '→ weiter zur Spur';
+        reiseBtn.innerHTML = '<span class="option-id">' + ((typeof opelMiniSvg === 'function') ? opelMiniSvg(18) : '🚗') + '</span><span class="option-text-wrap"><span>' + _reiseLabel + '</span><span class="option-marker option-marker-system">' + escapeHtml(_mark) + '</span></span>';
+      } catch (e) {}
+    }
     // v7.12.557 (Benjamin-Befund): Reise-Button hatte nacktes touchend OHNE Bewegungsprüfung -> beim Scrollen
     // löste der Finger beim Loslassen das Reise-Popup aus. Jetzt attachSafeTap: bricht bei Fingerbewegung
     // (Scroll) ab, Mindest-Kontaktzeit, Popup-Guard. Scrollen über den Button öffnet kein Popup mehr.
