@@ -3411,7 +3411,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1042</div>
+    <div class="start-version">Schatten v7.12.1043</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3635,7 +3635,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1042</span>
+    <span>Schatten v7.12.1043</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4645,7 +4645,7 @@ NIEMALS Optionen OHNE "kategorie"-Feld liefern - das ist KEIN optionales Feld.
 Der "text" enthaelt NUR den natursprachlichen Optionstext. Schreibe NIEMALS "(KATEGORIE)" oder "Kategorie: X" in den Text - das macht die UI haesslich, der Spieler sieht den Marker schon farbig.
 
 OPTIONEN-KATEGORIEN (was bedeutet was):
-- OFFENSIV: Karl draengt vor, eskaliert, riskiert. Angriff, Konfrontation, Tuer eintreten, schiessen, schlagen, jemanden zur Rede stellen, Forderung gegen Klient. (Romantische Avancen NICHT hier - dafuer gibts einen separaten System-Button.)
+- OFFENSIV: Karl draengt vor, eskaliert, riskiert. Angriff, Konfrontation, Tuer eintreten, schiessen, schlagen, jemanden zur Rede stellen, Forderung gegen Klient. (Romantische Avancen NICHT hier - dafuer gibts einen separaten System-Button.) WICHTIG - VARIIERE die offensive Geste STARK und greife NICHT staendig zu "am Kragen/Revers packen". Offensiv kann sein: laut anbruellen, die Waffe ziehen oder demonstrativ zeigen, mit der Faust auf Tisch/Tresen schlagen, die Tuer/den Fluchtweg versperren, etwas zerschlagen, ein belastendes Beweisstueck vorhalten und Druck machen, eine konkrete Drohung aussprechen ("Soll ich die Volkspolizei rufen?"), jemanden gegen die Wand draengen, am Arm packen, den Schreibtisch durchwuehlen waehrend man die Person fixiert, ein Ultimatum setzen. Waehle je nach Figur, Ort und Lage eine PASSENDE, FRISCHE offensive Aktion - "am Kragen packen" hoechstens selten und nur wenn es wirklich sitzt.
 - DEFENSIV: Karl zieht sich zurueck, deeskaliert, schuetzt sich. Decken, ausweichen, Thema wechseln, fliehen, schweigen, Glas nachschenken statt Thema zu vertiefen, Schritt zurueck, atme tief durch, bleib sitzen.
 - ERKUNDEN: Karl bewegt sich aktiv oder sucht. Untersuchen, durchsuchen, zu einem Ort fahren/gehen, Briefkasten oeffnen, Akten waelzen, Schreibtisch durchsuchen, Personalakte lesen, Hinterhof absuchen, Pistole aus Handschuhfach nehmen + pruefen, Spuren im Schlamm suchen. AUCH: Karl VERLAESST einen Ort um anderswohin zu fahren (z.B. Praxis verlassen, zum Klient fahren) - SOFERN es NICHT der finale Klient-Bericht ist.
 - BEOBACHTEN: Karl bleibt und sammelt Information. Lauschen, beschatten, befragen, Zeugen aushorchen, vom Fenster aus schauen, jemanden taxieren, ihn reden lassen. AUCH: Karl FRAGT eine Person (auch wenn die Person zufaellig ein Arzt/Doc ist - solange das Gespraech kein Verarzten ist).
@@ -11578,7 +11578,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1042';
+window.SCHATTEN_VERSION = 'v7.12.1043';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -28022,7 +28022,12 @@ function bauePersonenButtons(container, modus) {
   // Aufrufstelle übergibt aber 'alle'. Folge: der Slot entstand NIE, kein Baukasten trotz Gegner
   // (Benjamins Screenshots Mantelmann / Wahler+IM). Jetzt: nur der 'verwalten'-Modus ist
   // ausgeschlossen, sonst zählt allein: Fall läuft + Gegner da.
-  const _slotErlaubt = (modus !== 'verwalten') && !(typeof caseProgress === 'object' && caseProgress && (caseProgress.istGescheitert || caseProgress.istGelöst));
+  // v7.12.1043 (Benjamin: "Baukasten/Koordinierter Zugriff vorerst raus - macht nur mit Party Sinn"): Der Slot
+  // entsteht nur noch, wenn Karl Begleiter (Party/Hund) hat ODER ein aktiver Kampf laeuft. Solo (nur Karl) reicht
+  // A/B/C/D + Personen-Button - kein "Koordinierter Zugriff"-Panel mehr.
+  const _hatBegleiterSlot = ((typeof _party !== 'undefined' && Array.isArray(_party) && _party.length > 0) || (typeof _hundInParty === 'function' && _hundInParty()));
+  const _imKampfSlot = !!(typeof caseProgress === 'object' && caseProgress && caseProgress.encounterState === 'kampf');
+  const _slotErlaubt = (modus !== 'verwalten') && !(typeof caseProgress === 'object' && caseProgress && (caseProgress.istGescheitert || caseProgress.istGelöst)) && (_hatBegleiterSlot || _imKampfSlot);
   const _altSlot = document.getElementById('baukasten-slot');
   if (_altSlot) _altSlot.remove();
   const _setzeSlot = () => {
