@@ -3411,7 +3411,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1037</div>
+    <div class="start-version">Schatten v7.12.1038</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3635,7 +3635,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1037</span>
+    <span>Schatten v7.12.1038</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11244,6 +11244,7 @@ function pickZielIndiz() {
         const _gespr = ['ANSPRECHEN', 'BEFRAGEN', 'UEBERZEUGEN'];
         const _akz = ind.actions.slice();
         if (ind.actions.some(a => _gespr.indexOf(a) !== -1)) { _gespr.forEach(g => { if (_akz.indexOf(g) === -1) _akz.push(g); }); }
+        try { if (ind.npc && typeof _resolveNpcIdentity === 'function') { var _idntB = _resolveNpcIdentity(ind.npc); if (_idntB && /INFORMANT/i.test(_idntB.tag || '') && _akz.indexOf('BEDROHEN') === -1) _akz.push('BEDROHEN'); } } catch (e) {} // v7.12.1038: Haerte-Fallback (siehe Vergabe-Gate)
         if (!_ak || _akz.indexOf(_ak) === -1) continue;
       }
       return ind; // erstes passendes = das, das die Vergabe nachher auch wählt
@@ -11338,6 +11339,10 @@ function pruefeKernIndizFund(sceneText) {
           if (ind.actions.some(a => _gespraech.indexOf(a) !== -1)) {
             _gespraech.forEach(g => { if (_akzeptiert.indexOf(g) === -1) _akzeptiert.push(g); });
           }
+          // v7.12.1038 (Benjamin "Haerte-Fallback gegen Sackgasse"): Bei INFORMANTEN ist BEDROHEN ein gleichwertiger
+          // Zugang - der Tipp laesst sich erzwingen (kostet Haerte-Ruf statt Geld; die Druck-Logik unten greift dann).
+          // Sonst blockt dieser actions-Gate den Gewalt-Weg, bevor er vergeben kann -> Sackgasse, wenn Karl nicht zahlt.
+          try { if (ind.npc && typeof _resolveNpcIdentity === 'function') { var _idntA = _resolveNpcIdentity(ind.npc); if (_idntA && /INFORMANT/i.test(_idntA.tag || '') && _akzeptiert.indexOf('BEDROHEN') === -1) _akzeptiert.push('BEDROHEN'); } } catch (e) {}
           if (!_ak || _akzeptiert.indexOf(_ak) === -1) { _gateLog('actions: Key "' + _ak + '" nicht in [' + _akzeptiert.join(',') + ']'); continue; }
         }
         // v7.12.1014 (Benjamin: "Informanten sollen nicht gratis alles sagen"): Kommt das Indiz von einem INFORMANT,
@@ -11573,7 +11578,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1037';
+window.SCHATTEN_VERSION = 'v7.12.1038';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
