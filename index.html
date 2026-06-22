@@ -3411,7 +3411,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1040</div>
+    <div class="start-version">Schatten v7.12.1041</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3635,7 +3635,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1040</span>
+    <span>Schatten v7.12.1041</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11578,7 +11578,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1040';
+window.SCHATTEN_VERSION = 'v7.12.1041';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -30639,7 +30639,13 @@ function renderOptions(scene) {
         if (blocked) return;
         if (!_bestaetigt) {
           _bestaetigt = true;
-          btn.innerHTML = '<span class="option-id">💤</span><span class="option-text-wrap"><span>Wirklich schlafen? Tag endet.</span><span class="option-marker option-marker-system" style="color:#d4b86a;">→ tippen zum Bestätigen</span></span>';
+          // v7.12.1041 (Benjamin: '"Tag endet" ist tagsueber falsch - Schlaf rueckt nur ~8 Std vor'): Bestaetigungstext
+          // nach der ECHTEN Aufwach-Zeit. Nur abends/nachts endet wirklich der Tag (bis morgen frueh); tagsueber
+          // schlaeft Karl ~8 Std und wacht z.B. am Nachmittag/Abend auf (gleicher Tag).
+          var _wzC = (typeof _schlafAufwachZiel === 'function') ? _schlafAufwachZiel(gameTimeIdx) : { name: 'MORGEN', tagPlus: 1 };
+          var _wzNameC = (_wzC && _wzC.name) ? (_wzC.name.charAt(0) + _wzC.name.slice(1).toLowerCase()) : 'Morgen';
+          var _confirmFrage = (_wzC && _wzC.tagPlus) ? 'Wirklich schlafen? Der Tag endet (weiter morgen früh).' : ('Wirklich schlafen? ~8 Std, weiter am ' + _wzNameC + '.');
+          btn.innerHTML = '<span class="option-id">💤</span><span class="option-text-wrap"><span>' + _confirmFrage + '</span><span class="option-marker option-marker-system" style="color:#d4b86a;">→ tippen zum Bestätigen</span></span>';
           // nach 4s zurücksetzen, falls der Spieler es sich anders überlegt
           if (_rueckResetTimer) clearTimeout(_rueckResetTimer);
           _rueckResetTimer = setTimeout(() => { _bestaetigt = false; try { btn.innerHTML = _origHTML; } catch (e) {} }, 4000);
