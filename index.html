@@ -3411,7 +3411,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1028</div>
+    <div class="start-version">Schatten v7.12.1029</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3635,7 +3635,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1028</span>
+    <span>Schatten v7.12.1029</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -10660,7 +10660,8 @@ function _naechsterErmittlungsschritt() {
           // den Reisen-Button mit Karte - die KI baut KEINE Reise-Option mehr in A/B/C/D. Stattdessen ein leiser
           // Gedanke, wohin es als Nächstes gehen sollte, damit der Spieler nicht endlos am Ort hängt.
           + ' WICHTIG: Baue KEINE Reise-Option in A/B/C/D (das Reisen macht der Spieler über den Reisen-Button/die Karte). Die A/B/C/D-Optionen bleiben Handlungen AM aktuellen Ort.'
-          + ' DEZENTER PROSA-HINWEIS (PFLICHT, aber subtil): Webe GANZ BEILÄUFIG - in EINEM kurzen Gedanken Karls - die Erinnerung ein, dass es am aktuellen Ort nichts mehr zu holen gibt und die Spur ihn weiterzieht' + (window._dirigentReiseZiele && window._dirigentReiseZiele[0] ? ' (z.B. Richtung "' + window._dirigentReiseZiele[0] + '")' : '') + '. Kein erhobener Zeigefinger, nur ein leiser innerer Impuls ("Hier war nichts mehr zu finden - Karl wusste, sein Weg führte ihn ' + (window._dirigentReiseZiele && window._dirigentReiseZiele[0] ? 'zu ' + window._dirigentReiseZiele[0] : 'weiter') + '..." o.ä.). So merkt der Spieler, dass er den Reisen-Button nutzen sollte.' };
+          + ' KRITISCH: Karl bleibt in dieser Szene PHYSISCH am aktuellen Ort. Die Szene darf NICHT damit enden, dass Karl aufbricht, ins Auto steigt, losfährt oder den Ort verlässt - das entscheidet ALLEIN der Spieler über den Reisen-Button. Beschreibe NUR einen GEDANKEN/Impuls, KEINE tatsächliche Abreise.'
+          + ' DEZENTER PROSA-HINWEIS (PFLICHT, aber subtil): Webe GANZ BEILÄUFIG - in EINEM kurzen Gedanken Karls - die Erinnerung ein, dass es am aktuellen Ort nichts mehr zu holen gibt und die Spur ihn weiterzieht' + (window._dirigentReiseZiele && window._dirigentReiseZiele[0] ? ' (z.B. Richtung "' + window._dirigentReiseZiele[0] + '")' : '') + '. Kein erhobener Zeigefinger, nur ein leiser innerer Impuls ("Hier war nichts mehr zu finden - Karl überlegte, ob er nicht besser ' + (window._dirigentReiseZiele && window._dirigentReiseZiele[0] ? 'zu ' + window._dirigentReiseZiele[0] + ' fahren sollte' : 'weiterziehen sollte') + '..." o.ä.) - als ÜBERLEGUNG, nicht als vollzogene Handlung. So merkt der Spieler, dass er den Reisen-Button nutzen sollte.' };
       }
       window._dirigentReiseZiele = [];
       window._dirigentGrund = 'definierte Kette, aber 0 jetzt erreichbar (jetzt=' + _sumJetzt + ', später=' + _sumSpaeter + ') - Indizien noch stage-/zeit-/NPC-gesperrt';
@@ -11535,7 +11536,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1028';
+window.SCHATTEN_VERSION = 'v7.12.1029';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -38853,6 +38854,14 @@ async function chooseOption(option) {
   // alles danach Inhalt der Frage ("frag Robert, ob er flieht") - der Flucht-Detektor darf dann
   // NICHT auf ein eingebettetes Wort wie "flieht" anspringen. Befragung hat Vorrang.
   let isFlucht = isFlucht0 && !_beginntMitFrage;
+  // v7.12.1029 (Benjamin-Run Sz6): "Fluchtrichtung/Fluchtweg/Fluchtwagen" beschreiben die FLUCHT DER TÄTER,
+  // nicht Karls Aufbruch. Solche Substantive dürfen den Flucht-Detektor NICHT auslösen. ("Frag nach der
+  // Fluchtrichtung der Einbrecher" ist eine Befragung am Ort, keine Flucht Karls.)
+  if (isFlucht && /\bflucht(richtung|weg|wagen|auto|route|fahrzeug|plan)\b/i.test(option.text || '')) isFlucht = false;
+  // v7.12.1029: Eine klar erkannte Befragung ist NIE eine eigene Flucht Karls. Befragung überstimmt den
+  // Flucht-Detektor (analog zum _beginntMitFrage-Schutz, aber auch wenn das Frage-Verb nicht am Anfang steht,
+  // z.B. "Beruhige ihn und frag, ob...").
+  if (isFlucht && isBefragung) isFlucht = false;
   // v7.12.704 (Run 1746 Sz11/12, P1): Der Guard feuerte auf "Diese Szene endet NICHT mit
   // einer Flucht" - die VERNEINUNG kippt den Detektor. Folge: der Prompt befahl der KI
   // "Karl FLIEHT" + "NPCs bleiben zurück", obwohl der Spieler fesseln wollte (falsche
