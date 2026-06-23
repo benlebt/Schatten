@@ -3415,7 +3415,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1082</div>
+    <div class="start-version">Schatten v7.12.1083</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3639,7 +3639,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1082</span>
+    <span>Schatten v7.12.1083</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11782,7 +11782,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1082';
+window.SCHATTEN_VERSION = 'v7.12.1083';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -33998,7 +33998,14 @@ Marlowe-Stil: stilvoll, elliptisch, NICHT explizit. Tuer schliesst sich, Schnitt
         // romanceSpannungSchwelle: politisch=5, normal=4 (>= schwelle blockiert). Die NPC-
         // Einführung feuert also bei lastSpannung < schwelle -> politisch bis Sp4, normal Sp3.
         const _einfuehrSchwelle = (typeof caseIsPolitical !== 'undefined' && caseIsPolitical) ? 5 : 4;
-        const _spOk = (typeof lastSpannung !== 'number') || (lastSpannung < _einfuehrSchwelle);
+        // v7.12.1083 (Benjamin, Live-Befund Brandt): Der Code war STRENGER als die dokumentierte Absicht
+        // (Kommentar oben: 'feuert auch bei MODERATER Spannung <=4, nur Sp5-Lebensgefahr blockt'). Mit
+        // _einfuehrSchwelle=4 und '< 4' feuerte der Push nur bis Sp3 - die KI dramatisiert ruhige Faelle aber
+        // routinemaessig auf Sp4, sodass der Push NIE kam (Brandt-Run: Sp4 ab Sz5, push blieb 0). Das blosse
+        // ERSCHEINEN der Figur (als Kontaktperson/Mitwisserin, nicht erzwungene Romantik) ist bei Sp4 voellig
+        // unkritisch - nur akute Lebensgefahr (Sp5) blockt. Die romantische ESKALATION ('Naeher kommen') bleibt
+        // davon unberuehrt an Sp<4 gebunden (showRomanceButton). So erscheint Lola, ohne Romantik in Gefahr zu zwingen.
+        const _spOk = (typeof lastSpannung !== 'number') || (lastSpannung < 5);
         // v7.12.131 (beide Reviews, Stein-Run Sz7->Sz19): COOLDOWN verschaerft.
         // v7.12.130 hatte 10 Sz - der Stein-Run zeigte Sz7->Sz19 (12 Sz Abstand) noch
         // als aufdringlich (Helene 2x gepusht, Romantik blieb 0/5 = Spieler ignoriert).
