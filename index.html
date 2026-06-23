@@ -3419,7 +3419,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1104</div>
+    <div class="start-version">Schatten v7.12.1105</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3653,7 +3653,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1104</span>
+    <span>Schatten v7.12.1105</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -10896,6 +10896,36 @@ function _naechsterErmittlungsschritt() {
         } catch (e) {}
         return { art: 'indiz_hier', ziel: 'Spur am Ort verfolgen', hinweis: 'Am aktuellen Ort ("' + _hierOffen.ort + '") ist ein Indiz zu holen.' + _spur + ' Die anderen Optionen dürfen unterschiedlich hart sein (offensiv bis zurückhaltend), aber sie sollen alle zur Spur passen, nur Härte und Preis unterscheiden sich.' };
       }
+      // v7.12.1105 (Benjamin-Befund: "nichts mehr zu holen / folg ihm" feuerte 2 Szenen lang, obwohl die ANWESENDE
+      // Ilse den entscheidenden Hinweis (ilse_aussage/Ehering) noch hatte - er war NUR abStage-gegated und schaltet
+      // durchs Weiterspielen HIER frei). FIX: Traegt der AKTUELLE Ort einen ungefundenen Hinweis einer ANWESENDEN
+      // Person, der NUR durch abStage gesperrt ist (Zeit/NPC sind erfuellt), ist der Ort NICHT ausgeschoepft.
+      // Dann KEIN indiz_anderswo/Reise-/Folg-ihm-Nudge, sondern an der Person dranbleiben - der Durchbruch steht
+      // unmittelbar bevor. Verhindert das Wegschicken kurz vor dem Schluss-Indiz (inkonsistent + Sackgassen-Risiko).
+      try {
+        const _curLoc = _orte.find(l => l && normForMatch(l.name) === normForMatch(_hierName));
+        if (_curLoc && Array.isArray(_curLoc.indizien)) {
+          const _tzNow = (typeof _aktTageszeitName === 'function') ? _aktTageszeitName() : '';
+          const _presentIds = (typeof getNpcsAtCurrentLocation === 'function')
+            ? (getNpcsAtCurrentLocation() || []).map(n => normForMatch((n && (n.id || n.name)) || '')).filter(Boolean) : [];
+          const _stg = (caseProgress && typeof caseProgress.stage === 'number') ? caseProgress.stage : 0;
+          const _stageGatedHier = _curLoc.indizien.find(ind => {
+            if (!ind || !ind.id || _gef.indexOf(ind.id) !== -1) return false;
+            if (!(typeof ind.abStage === 'number' && _stg < ind.abStage)) return false; // nur abStage-Faelle
+            if (Array.isArray(ind.zeit) && ind.zeit.length && !ind.zeit.map(z => normForMatch(z)).includes(_tzNow)) return false; // Zeit muss JETZT passen
+            if (typeof _indizNurUeberKampf === 'function' && _indizNurUeberKampf(ind)) return false; // Kampf-Loot zaehlt nicht
+            if (ind.npc && _presentIds.indexOf(normForMatch(ind.npc)) === -1) return false; // Person muss JETZT hier sein
+            return true;
+          });
+          if (_stageGatedHier) {
+            window._dirigentReiseZiele = [];
+            window._dirigentGrund = 'Stage-gegateter Hinweis am aktuellen Ort (anwesende Person) -> NICHT ausgeschoepft, dranbleiben statt reisen';
+            const _npcName = _stageGatedHier.npc ? ((typeof _resolveNpcIdentity === 'function' && _resolveNpcIdentity(_stageGatedHier.npc).name) || _stageGatedHier.npc) : '';
+            const _wer = _npcName || 'die anwesende Person';
+            return { art: 'indiz_hier', ziel: 'An der Person dranbleiben', hinweis: 'Am aktuellen Ort ist NOCH NICHT alles gesagt: ' + _wer + ' verbirgt noch etwas Entscheidendes, das unmittelbar bevorsteht. KEIN "hier ist nichts mehr zu holen", KEIN Wegschicken an einen anderen Ort. PFLICHT-FÜHRUNG: Die MEHRHEIT der vier Optionen richtet sich an ' + _wer + ' - in unterschiedlicher Härte (ruhig nachhaken / Vertrauen aufbauen / Druck erhöhen / sie reden lassen), alle auf SIE bezogen. Lass ' + _wer + ' in dieser Szene sichtbar näher an einer Preisgabe sein (nervöser, eine erste Andeutung) - der Durchbruch steht kurz bevor. KEINE Reise-Option in A/B/C/D.' };
+          }
+        }
+      } catch (e) {}
       if (_andersOrt) {
         // v7.12.1021 (Weg 1): Reiseziel(e) global merken, damit der Options-Abfang echte Reise-Optionen
         // durchlässt (statt sie zu Büro-Aktionen umzuschreiben). Die Optionen sollen jetzt aktiv HINführen.
@@ -11860,7 +11890,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1104';
+window.SCHATTEN_VERSION = 'v7.12.1105';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
