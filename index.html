@@ -3419,7 +3419,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1093</div>
+    <div class="start-version">Schatten v7.12.1094</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3643,7 +3643,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1093</span>
+    <span>Schatten v7.12.1094</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11800,7 +11800,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1093';
+window.SCHATTEN_VERSION = 'v7.12.1094';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -12138,10 +12138,19 @@ function _karlAkteUpdateRockBottom() {
 function _caseHasMoralFork() {
   try {
     if (!caseProgress || caseProgress.moralWahl) return false; // schon gewaehlt -> kein erneutes Overlay
+    // v7.12.1094 (Codex P2): NUR wenn ein Taeter wirklich ueberfuehrt/gestellt ist (sonst greift die Gabel bei
+    // Objekt-/Such-/Sicherungs-/Platzhalter-Zustaenden zu breit). Beschattung hat keinen Taeter.
+    if (!caseProgress.ueberfuehrt) return false;
     const ct = (caseSetup && caseSetup.caseType) || '';
-    if (!/mord|diebstahl|vermisst|wahrheit|politisch/.test(ct)) return false; // beschatten hat keinen Taeter zum Laufenlassen
-    const taeter = (caseProgress.tatverdaechtiger || caseProgress.responsible || '');
-    return !!(taeter && ('' + taeter).trim());
+    if (ct === 'beschatten') return false;
+    const taeter = ('' + (caseProgress.tatverdaechtiger || caseProgress.responsible || '')).trim();
+    if (!taeter) return false;
+    // Keine Institution / Apparat - man kann keine Behoerde "laufen lassen" oder "bestechen".
+    if (/\bmfs\b|stasi|staatssicherheit|volkspolizei|\bvp\b|apparat|institution|beh(ö|oe)rde|\bsed\b|partei/i.test(taeter)) return false;
+    // Konkrete, plausible Person (kein generischer Platzhalter wie "der Taeter").
+    if (typeof isGenericPersonName === 'function' && isGenericPersonName(taeter)) return false;
+    if (typeof isPlausibleResponsibleName === 'function' && !isPlausibleResponsibleName(taeter, ct)) return false;
+    return true;
   } catch (e) { return false; }
 }
 function _moralBribeBetrag() { try { return 220 + ((typeof sceneCounter === 'number' ? sceneCounter : 0) % 4) * 20; } catch (e) { return 240; } }
@@ -12195,6 +12204,9 @@ function zeigeMoralWahl(resolveOpt) {
 }
 // Resolve-Klick: bei moralischer Gabel erst das Overlay, sonst direkt aufloesen (FX feuert dann im jeweiligen Pfad).
 function _resolveOderMoral(resolveOpt) {
+  // v7.12.1094 (Codex P1a): Im Bot-Modus KEIN Overlay (Bot wartet sonst ewig auf .option-btn) - deterministisch
+  // aufloesen (moralWahl bleibt null -> showCaseSolved behandelt es wie 'uebergeben').
+  try { if (typeof botActive !== 'undefined' && botActive) { if (typeof fxFallGeloest === 'function') fxFallGeloest(); chooseOption(resolveOpt); return; } } catch (e) {}
   try {
     if (typeof _caseHasMoralFork === 'function' && _caseHasMoralFork()) { zeigeMoralWahl(resolveOpt); return; }
   } catch (e) {}
@@ -22007,6 +22019,9 @@ function showCaseSolved() {
 
 // Lose-Screen: gefeuert (Vertrauensverlust)
 function showCaseFailed(reason) {
+  // v7.12.1094 (Codex P1b): Endzustand frueh markieren, damit der direkt folgende saveGameState() den Fall als
+  // gescheitert speichert (Reason fuer den Restore-Screen). VOR allem anderen, vor der Akte-Verbuchung.
+  try { if (typeof caseProgress === 'object' && caseProgress) { caseProgress.istGescheitert = true; caseProgress.failReason = reason || ''; } } catch (e) {}
   // v7.12.740 (Benjamin): Verlier-Sound. Tod-Enden (stirbt/Zelle/Hohenschönhausen) bekommen
   // den Herzschlag-Abgang, alle anderen die Trauer-Posaune.
   try {
@@ -33597,15 +33612,24 @@ Es ist NICHT realistisch, dass eine Trauergesellschaft 18 Stunden an einem Grab 
     // v7.12.1092 (#2 echte Wendungen, Benjamin): generische Twist-Beats, je einmal pro Fall (Flags auf caseProgress,
     // ueberleben den Save). Sie faerben die Erzaehlung dramatischer, OHNE die deterministisch belegte Wahrheit
     // (Indizienkette) zu verfaelschen - der Anker bleibt, die Wendung ist Inszenierung/Umdeutung drumherum.
+    // v7.12.1094 (Codex P2b): Beats erst nach ERFOLGREICHEM Render committen (Pending-Pattern). Der Flag wurde vorher
+    // beim Prompt-Bauen gesetzt - bei Timeout/Retry oder wenn die KI den Beat ignorierte, war der einmalige Twist weg.
+    // Jetzt: pending = Szene, in der injiziert wurde; Done erst, wenn diese Szene gerendert ist (sceneCounter danach).
     try {
-      // (a) Roter Hering frueh: eine plausible, aber moeglicherweise falsche erste Spur.
-      if ((caseProgress.stage | 0) <= 1 && Array.isArray(caseProgress.indizien) && caseProgress.indizien.length >= 1 && !caseProgress._redHerringDone) {
-        caseProgress._redHerringDone = true;
+      const _sc = (typeof sceneCounter === 'number') ? sceneCounter : 0;
+      // Commit, sobald die Beat-Szene tatsaechlich gerendert wurde (Szene vorangeschritten).
+      if (caseProgress._redHerringPending != null && _sc > caseProgress._redHerringPending) { caseProgress._redHerringDone = true; caseProgress._redHerringPending = null; }
+      if (caseProgress._twistBeatPending != null && _sc > caseProgress._twistBeatPending) { caseProgress._twistBeatDone = true; caseProgress._twistBeatPending = null; }
+      // (a) Roter Hering frueh: injizieren bis erfolgreich gerendert (Retry re-injiziert dieselbe Szene).
+      if ((caseProgress.stage | 0) <= 1 && Array.isArray(caseProgress.indizien) && caseProgress.indizien.length >= 1
+          && !caseProgress._redHerringDone && (caseProgress._redHerringPending == null || caseProgress._redHerringPending === _sc)) {
+        caseProgress._redHerringPending = _sc;
         recap += `\n\nROTER HERING (einbauen, dezent): Lass in dieser oder der naechsten Szene eine plausible erste Verdaechtigung/Faehrte aufkommen, die naheliegt, sich aber spaeter als Irrtum, Ablenkung oder Zufall erweisen KANN (ein zwielichtiger Nachbar, ein vermeintliches Motiv, ein falscher Name). Karl (und der Spieler) soll sie kurz fuer heiss halten. NICHT aufloesen - nur die Faehrte legen.`;
       }
-      // (b) Wendung beim Verdichten (Stufe 2 -> bevor der Verdaechtige fixiert wird): eine Ueberraschung, die neu rahmt.
-      if ((caseProgress.stage | 0) === 2 && !caseProgress._twistBeatDone) {
-        caseProgress._twistBeatDone = true;
+      // (b) Wendung beim Verdichten (Stufe 2): injizieren bis erfolgreich gerendert.
+      if ((caseProgress.stage | 0) === 2 && !caseProgress._twistBeatDone
+          && (caseProgress._twistBeatPending == null || caseProgress._twistBeatPending === _sc)) {
+        caseProgress._twistBeatPending = _sc;
         recap += `\n\nWENDUNG (PFLICHT, EINMALIG): Bevor sich der Verdacht endgueltig verhaertet, taucht EIN Detail auf, das die naheliegende Annahme erschuettert - der Offensichtliche wird teilweise entlastet, ein bisher Uebersehener rueckt in den Blick, oder ein Indiz bekommt eine voellig andere Bedeutung. Inszeniere diesen Aha-/Umdeutungs-Moment deutlich (Karls Stirnrunzeln, ein 'Moment mal...'). WICHTIG: Verfaelsche NICHT die letztlich belegte Wahrheit - die Indizienkette bleibt der Anker. Die Wendung ist die ueberraschende ROUTE dorthin, nicht ein anderer Taeter.`;
       }
     } catch (e) {}
@@ -49104,7 +49128,13 @@ function saveGameState() {
       (caseProgress.istGelöst === true || (caseProgress.stage || 0) >= 4));
     const _gameOverEl = (typeof document !== 'undefined') ? document.getElementById('game-over') : null;
     const _gameOverVisible = _gameOverEl && !_gameOverEl.classList.contains('hidden');
-    const _isEndState = (_geloest || _gameOverVisible);
+    // v7.12.1094 (Codex P1b): gescheiterte Faelle (showCaseFailed: Frist/Gewahrsam/Niederlage) als Endzustand
+    // erfassen - sonst restauriert ein Reload eine spielbare, aber tote Szene (chooseOption ignoriert Klicks wg.
+    // istGescheitert). Quelle: caseProgress.istGescheitert ODER sichtbarer #case-failed-Screen.
+    const _gescheitert = !!(typeof caseProgress === 'object' && caseProgress && caseProgress.istGescheitert);
+    const _failEl = (typeof document !== 'undefined') ? document.getElementById('case-failed') : null;
+    const _failVisible = _failEl && !_failEl.classList.contains('hidden');
+    const _isEndState = (_geloest || _gameOverVisible || _gescheitert || _failVisible);
     const snap = {
       _v: SCHATTEN_SAVE_VERSION,
       _ts: Date.now(),
@@ -49113,7 +49143,8 @@ function saveGameState() {
       // Beim Restore wird dann der Endscreen gezeigt statt eine spielbare Szene.
       _ended: _isEndState,
       _solved: _geloest,
-      _failed: (!_geloest && _gameOverVisible),
+      _failed: (!_geloest && (_gameOverVisible || _gescheitert || _failVisible)),
+      _failReason: (typeof caseProgress === 'object' && caseProgress && caseProgress.failReason) ? caseProgress.failReason : '',
       logEntries: logEntries,
       // v7.12.366 (Lektorat Karl-Mauer-Extremtest P1): sceneDiagnosticsBuffer MIT speichern.
       // Befund: Debug-Blöcke rutschten nach Save-Restore an falsche Szenen (Furz-Diagnose unter
