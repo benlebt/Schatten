@@ -3419,7 +3419,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1097</div>
+    <div class="start-version">Schatten v7.12.1098</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3653,7 +3653,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1097</span>
+    <span>Schatten v7.12.1098</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11841,7 +11841,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1097';
+window.SCHATTEN_VERSION = 'v7.12.1098';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -12131,7 +12131,7 @@ function _geldText() {
 const KARL_AKTE_KEY = 'schatten-karl-akte';
 const BUERO_MIETE_PRO_FALL = 20;
 function _karlAkteDefault() {
-  return { v: 1, kasse: { ost: 30, west: 0 }, mieteOffen: 0, ruf: { haerte: 0, renommee: 0 }, historie: [], bekannte: {}, faelleGesamt: 0, rockBottom: false, mfsVisier: false };
+  return { v: 1, kasse: { ost: 30, west: 0 }, mieteOffen: 0, ruf: { haerte: 0, renommee: 0 }, historie: [], bekannte: {}, faelleGesamt: 0, rockBottom: false, mfsVisier: false, mfsDruck: 0 };
 }
 function _karlAkteLoad() {
   try {
@@ -12148,7 +12148,8 @@ function _karlAkteLoad() {
       bekannte: (o.bekannte && typeof o.bekannte === 'object') ? o.bekannte : {},
       faelleGesamt: (typeof o.faelleGesamt === 'number') ? o.faelleGesamt : (Array.isArray(o.historie) ? o.historie.length : 0),
       rockBottom: !!o.rockBottom,
-      mfsVisier: !!o.mfsVisier
+      mfsVisier: !!o.mfsVisier,
+      mfsDruck: (typeof o.mfsDruck === 'number') ? o.mfsDruck : 0
     };
   } catch (e) { return _karlAkteDefault(); }
 }
@@ -12326,7 +12327,14 @@ function _buildProfilRecap() {
           const _bk = ('' + ce.name).toLowerCase().trim();
           const b = karlAkte.bekannte[_bk];
           if (b) {
-            const _wie = (b.status === 'romanze') ? 'hatte mit Karl eine gemeinsame Nacht' : (b.status === 'verprellt' ? 'wurde von Karl hart angefasst' : (b.status === 'schuldet') ? 'schuldet Karl noch einen Gefallen (er hat ' + (b.name||'sie') + ' damals laufen lassen)' : (b.status === 'kontakt') ? 'ist ein alter Bekannter aus Karls Kontaktnetz' + ((b.treffen | 0) > 1 ? ' (' + (b.treffen | 0) + ' Begegnungen)' : '') : 'wurde von Karl schon einmal aus der Klemme geholfen');
+            let _wie;
+            if (b.status === 'nemesis') {
+              // v7.12.1098: eskalierender Nemesis-Faden (Bogen Richtung 17. Juni) - Intensitaet nach Begegnungszahl.
+              const _t = (b.treffen | 0);
+              _wie = (_t >= 3) ? 'ist Karls persoenlicher Schatten bei der Stasi - sie sind sich schon ' + _t + ' Mal begegnet, und Vollmer macht keinen Hehl mehr daraus, dass er nur auf Karls einen Fehler wartet; das Netz zieht sich zu' : (_t === 2) ? 'hat Karl inzwischen offen im Visier - das zweite Zusammentreffen war kein Zufall mehr' : 'hat bei einem frueheren Fall Notiz von Karl genommen und ihn seither nicht vergessen';
+            } else {
+              _wie = (b.status === 'romanze') ? 'hatte mit Karl eine gemeinsame Nacht' : (b.status === 'verprellt' ? 'wurde von Karl hart angefasst' : (b.status === 'schuldet') ? 'schuldet Karl noch einen Gefallen (er hat ' + (b.name||'sie') + ' damals laufen lassen)' : (b.status === 'kontakt') ? 'ist ein alter Bekannter aus Karls Kontaktnetz' + ((b.treffen | 0) > 1 ? ' (' + (b.treffen | 0) + ' Begegnungen)' : '') : 'wurde von Karl schon einmal aus der Klemme geholfen');
+            }
             teile.push(ce.name + ' kennt Karl bereits - ' + _wie + ' (Fall "' + (b.fall || '?') + '"). Die Begegnung knuepft daran an.');
             break;
           }
@@ -12338,7 +12346,11 @@ function _buildProfilRecap() {
       if (window._aktiveStammfigur && window._aktiveStammfigur.name) {
         const f = window._aktiveStammfigur; const fk = ('' + f.name).toLowerCase().trim();
         if (!(karlAkte.bekannte && karlAkte.bekannte[fk])) {
-          teile.push('An einem passenden Ort (Kneipe, Bahnhof, Imbiss) kann ' + f.name + ' auftauchen - ' + f.rolle + ', kennt Karl fluechtig. Nur wenn es szenisch passt, nicht erzwingen.');
+          if (f.id === 'stamm_mfs') {
+            teile.push('Im Hintergrund kann ' + f.name + ' auftauchen - ' + f.rolle + '. Er draengt sich NICHT auf: ein beilaeufiger Blick zu viel, ein zu gut informierter Satz, ein Mantel, der zweimal an derselben Ecke steht. Der Spieler soll spueren, dass die Stasi auf Karl aufmerksam wird. Nur wenn es szenisch passt, nie erzwingen.');
+          } else {
+            teile.push('An einem passenden Ort (Kneipe, Bahnhof, Imbiss) kann ' + f.name + ' auftauchen - ' + f.rolle + ', kennt Karl fluechtig. Nur wenn es szenisch passt, nicht erzwingen.');
+          }
         }
       }
     } catch (e) {}
@@ -12359,11 +12371,21 @@ const STAMMFIGUREN = [
     fits: function (cs) { return true; } },
   { id: 'stamm_rosa', name: 'Wirtin Rosa', tag: 'WITNESS', rolle: 'Wirtin einer Eckkneipe, kennt das halbe Viertel',
     detail: 'resolute Frau Ende vierzig, rote Schuerze, raue Stimme; schenkt Karl manchmal einen aus, weiss wer wo verkehrt und haelt fuer ihn ein Ohr offen',
-    fits: function (cs) { try { return /kneipe|anker|laterne|\bbar\b|wirtshaus|schank|kaschemme/.test(JSON.stringify(cs || {}).toLowerCase()); } catch (e) { return false; } } }
+    fits: function (cs) { try { return /kneipe|anker|laterne|\bbar\b|wirtshaus|schank|kaschemme/.test(JSON.stringify(cs || {}).toLowerCase()); } catch (e) { return false; } } },
+  // v7.12.1098 (Roadmap #5: uebergreifender Bogen / wiederkehrende MfS-Nemesis - Benjamin "das Spiel lebendiger"):
+  // Hauptmann Vollmer ist Karls persoenlicher Schatten bei der Staatssicherheit. Taucht in politischen Faellen /
+  // bei aktivem MfS-Visier auf, erinnert sich ueber Faelle hinweg an Karl (bekannte-Zaehler) und zieht das Netz mit
+  // jeder Begegnung enger - der rote Faden Richtung 17. Juni. Erscheint nur im passenden Kontext (fits), nie erzwungen.
+  { id: 'stamm_mfs', name: 'Hauptmann Vollmer', tag: 'STASI', rolle: 'Hauptmann der Staatssicherheit, der Karl beobachtet',
+    detail: 'glattrasiert, grauer Mantel, hoefliche kalte Stimme; merkt sich Gesichter und Namen, taucht scheinbar zufaellig auf, wo Karl ermittelt; nie laut, immer eine Spur zu gut informiert - ein Mann, der Geduld als Waffe benutzt',
+    fits: function (cs) { try { const ct = (cs && cs.caseType) || ''; if (/politisch/.test(ct)) return true; if (typeof karlAkte === 'object' && karlAkte && karlAkte.mfsVisier) return true; return /staatssicherheit|\bmfs\b|\bstasi\b|stasi-|volkspolizei.*politisch/.test(JSON.stringify(cs || {}).toLowerCase()); } catch (e) { return false; } } }
 ];
 // Waehlt die passende Stammfigur fuer den Fall: Rosa, wenn eine Kneipe im Fall ist (Abwechslung), sonst Lenz.
 function _waehleStammfigur(cs) {
   try {
+    // v7.12.1098: Im Stasi-Kontext (politischer Fall / MfS-Visier aktiv) hat die Nemesis Vorrang - sie traegt den Bogen.
+    const mfs = STAMMFIGUREN.find(f => f.id === 'stamm_mfs');
+    if (mfs && mfs.fits(cs)) return mfs;
     const rosa = STAMMFIGUREN.find(f => f.id === 'stamm_rosa');
     if (rosa && rosa.fits(cs)) return rosa;
     const lenz = STAMMFIGUREN.find(f => f.id === 'stamm_lenz');
@@ -21985,7 +22007,9 @@ function showCaseSolved() {
             if (window._aktiveStammfigur && window._aktiveStammfigur.name) {
               const f = window._aktiveStammfigur; const fk = ('' + f.name).toLowerCase().trim();
               const prev = karlAkte.bekannte[fk];
-              karlAkte.bekannte[fk] = { name: f.name, status: 'kontakt', rolle: f.rolle, fall: _titel, tag: (typeof gameDay === 'number' ? gameDay : 0), treffen: ((prev && prev.treffen) | 0) + 1 };
+              const _nem = (f.id === 'stamm_mfs');
+              if (_nem) karlAkte.mfsDruck = (karlAkte.mfsDruck | 0) + 1; // v7.12.1098: Nemesis-Druck waechst je Begegnung
+              karlAkte.bekannte[fk] = { name: f.name, status: _nem ? 'nemesis' : 'kontakt', rolle: f.rolle, fall: _titel, tag: (typeof gameDay === 'number' ? gameDay : 0), treffen: ((prev && prev.treffen) | 0) + 1 };
             }
           } catch (e) {}
           const _bk = Object.keys(karlAkte.bekannte);
@@ -22136,7 +22160,9 @@ function showCaseFailed(reason) {
             const f = window._aktiveStammfigur; const fk = ('' + f.name).toLowerCase().trim();
             if (!karlAkte.bekannte || typeof karlAkte.bekannte !== 'object') karlAkte.bekannte = {};
             const prev = karlAkte.bekannte[fk];
-            karlAkte.bekannte[fk] = { name: f.name, status: 'kontakt', rolle: f.rolle, fall: _ft, tag: (typeof gameDay === 'number' ? gameDay : 0), treffen: ((prev && prev.treffen) | 0) + 1 };
+            const _nem = (f.id === 'stamm_mfs');
+            if (_nem) karlAkte.mfsDruck = (karlAkte.mfsDruck | 0) + 1; // v7.12.1098: Nemesis-Druck waechst je Begegnung
+            karlAkte.bekannte[fk] = { name: f.name, status: _nem ? 'nemesis' : 'kontakt', rolle: f.rolle, fall: _ft, tag: (typeof gameDay === 'number' ? gameDay : 0), treffen: ((prev && prev.treffen) | 0) + 1 };
           }
         } catch (e) {}
         if (typeof _karlAkteUpdateRockBottom === 'function') _karlAkteUpdateRockBottom();
