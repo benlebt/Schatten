@@ -3419,7 +3419,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1100</div>
+    <div class="start-version">Schatten v7.12.1101</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3653,7 +3653,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1100</span>
+    <span>Schatten v7.12.1101</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11841,7 +11841,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1100';
+window.SCHATTEN_VERSION = 'v7.12.1101';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -35259,6 +35259,39 @@ Wenn Karl waehlt: Schnitt zur naechsten Szene am Morgen, Kaffee zu zweit, keine 
           timeContext += ' BEGLEITUNG: Karl ist NICHT allein gekommen - diese Person(en) sind mit ihm gefahren und JETZT mit ihm am Zielort: ' + _party.map(p => p.name).join(', ') + '. Zeige sie als anwesend (sie steigen mit aus, stehen bei Karl), sie reisen mit ihm.';
         }
       } catch (e) {}
+      // v7.12.1101 (Benjamin #1-Hebel "Reise-Payoff"): Ankunft soll die am Zielort VERANKERTEN NPCs ins Spiel
+      // bringen (Voss im Cafe, Tetzlaff in der Spedition) - sonst kommt Karl an einem leeren Ort an, obwohl die
+      // Engine dort eine Figur fuehrt (Befund: bei Cafe Wien ist _hatExploration()=false, der "Hier praesent"-
+      // Block feuerte nicht, der REISE-Block nannte keine NPCs -> KI wusste beim Ankommen nichts von Voss).
+      // Nur wenn KEIN Erkundungs-Knotengraph aktiv ist (sonst uebernimmt der "AKTUELLE STELLE"-Block die Praesenz).
+      try {
+        var _hatExpl = (typeof _hatExploration === 'function') && _hatExploration();
+        if (!_hatExpl && typeof getNpcsAtCurrentLocation === 'function') {
+          var _partyNorm = (Array.isArray(_party) ? _party : []).map(function(p){ return normForMatch((p && p.name) || ''); });
+          var _spawnIds = Array.isArray(_threatAktiveSpawns) ? _threatAktiveSpawns : [];
+          var _ortNpcs = getNpcsAtCurrentLocation().filter(function(n){
+            return n && n.name
+              && _partyNorm.indexOf(normForMatch(n.name)) === -1
+              && _spawnIds.indexOf(n.id) === -1;
+          });
+          if (_ortNpcs.length) {
+            var _infos = _ortNpcs.map(function(n){
+              var _det = '';
+              try {
+                if (caseSetup && Array.isArray(caseSetup.setupCast)) {
+                  var _sc = caseSetup.setupCast.find(function(c){ return c && ((c.id && normForMatch(c.id) === normForMatch(n.id || '')) || normForMatch(c.name || '') === normForMatch(n.name)); });
+                  if (_sc && _sc.rolle) _det = _sc.rolle;
+                }
+              } catch (e) {}
+              return '- ' + n.name + (_det ? ' (' + _det + ')' : '');
+            });
+            timeContext += '\n\n=== AM ZIELORT ANZUTREFFEN (Reise-Payoff, v7.12.1101) ===\n'
+              + 'An diesem Ort ist/sind zur aktuellen Tageszeit folgende Person(en) praesent - die Engine fuehrt sie hier, du hast sie nicht erfunden:\n'
+              + _infos.join('\n')
+              + '\nFuehre die anwesende(n) Person(en) in der Ankunftsszene NATUERLICH ein, passend zu Ort und Rolle (z.B. der Oberkellner am Tresen, der Bueromitarbeiter am Schreibtisch, die Nachbarin im Treppenhaus) - so dass Karl sie ansprechen kann und die Reise sich lohnt. KEIN Zwang zur Konfrontation, KEINE erfundenen Zusatzfiguren ueber die genannten hinaus.';
+          }
+        }
+      } catch (e) { /* Reise-NPC-Praesenz optional, darf den Prompt nie brechen */ }
       _reiseGeradeErfolgt = null; // verbraucht
     }
     // v7.12.534 (Baustein B4): Aktive Engine-Gegner (durchs ThreatBeat-Würfeln erschienen) als HARTE Anwesenheit
