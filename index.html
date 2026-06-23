@@ -3419,7 +3419,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1107</div>
+    <div class="start-version">Schatten v7.12.1108</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3653,7 +3653,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1107</span>
+    <span>Schatten v7.12.1108</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -10816,12 +10816,21 @@ function _naechsterErmittlungsschritt() {
     const _hatDefiniert = (typeof caseHasDefinedEvidence === 'function' && caseHasDefinedEvidence());
     // v7.12.1102 (Benjamin #1-Hebel "folg ihm"): Beschattung soll den Reise-Nudge als FOLGEN DES ZIELS rahmen
     // (nicht nur "Spur woanders"). Zielobjekt = TARGET-Figur im Setup. Greift in beiden Reise-Zweigen unten.
-    let _istBeschatten = false, _zielName = '';
+    let _istBeschatten = false, _zielName = '', _zielId = '', _zielAnwesend = false;
     try {
       _istBeschatten = !!(typeof caseSetup === 'object' && caseSetup && caseSetup.caseType === 'beschatten');
       if (_istBeschatten && Array.isArray(caseSetup.setupCast)) {
         const _t = caseSetup.setupCast.find(c => c && c.tag === 'TARGET');
-        if (_t && _t.name) _zielName = _t.name;
+        if (_t && _t.name) { _zielName = _t.name; _zielId = _t.id || ''; }
+      }
+      // v7.12.1108 (Benjamin-Befund: "Kessler folgen", obwohl Kessler direkt da steht): Folg-Rahmung NUR wenn das
+      // Ziel gerade NICHT anwesend ist. Steht es vor Karl, ist "folg ihm woandershin" sinnlos -> generische Rahmung.
+      if (_zielName) {
+        const _zn = normForMatch(_zielName), _zf = _zn.split(/\s+/)[0];
+        const _live = (typeof getNpcsAtCurrentLocation === 'function') ? (getNpcsAtCurrentLocation() || []) : [];
+        const _castL = (typeof cast !== 'undefined' && Array.isArray(cast)) ? cast : [];
+        const _inList = (arr) => arr.some(n => { const nm = normForMatch((n && (n.name || n)) || ''); const id = normForMatch((n && (n.id)) || ''); return nm === _zn || (nm && nm.split(/\s+/)[0] === _zf) || (_zielId && id === normForMatch(_zielId)); });
+        _zielAnwesend = _inList(_live) || _inList(_castL);
       }
     } catch (e) {}
     if (_hatDefiniert) {
@@ -10884,8 +10893,8 @@ function _naechsterErmittlungsschritt() {
               if ((_e2.jetzt || 0) > 0) { _tease = loc2.name; break; }
             }
             if (_tease) {
-              if (_istBeschatten && _zielName) {
-                // v7.12.1102: Bei Beschattung ist der Koeder das ZIELOBJEKT selbst - Karl folgt ihm.
+              if (_istBeschatten && _zielName && !_zielAnwesend) {
+                // v7.12.1102: Bei Beschattung ist der Koeder das ZIELOBJEKT selbst - Karl folgt ihm. (v1108: nur wenn das Ziel nicht da ist.)
                 window._dirigentReiseZiele = [_tease];
                 _spur += ' FOLG DEM ZIEL (Beschattung, ab Stufe 2): ' + _zielName + ' haelt sich nicht ewig hier auf. Lass in EINEM Satz spuerbar werden, dass die Spur ' + _zielName + ' selbst ist und ihn an einen anderen Schauplatz ("' + _tease + '") zieht - dass er dort verkehrt / gesehen wurde / als Naechstes hin will ("mittwochs ist er immer im ' + _tease + '", "der Kollege sagt, er faehrt gleich zur ' + _tease + '"). So merkt der Spieler, dass er ' + _zielName + ' ueber den Reisen-Button dorthin FOLGEN sollte. KEINE Reise-Option in A/B/C/D bauen (das Reisen macht der Spieler ueber die Karte).';
               } else {
@@ -10947,7 +10956,7 @@ function _naechsterErmittlungsschritt() {
           + ' ERZAEHLERISCHER WEGWEISER (PFLICHT, deutlich spuerbar - der Spieler soll klar geleitet werden, nicht ratlos am toten Ort haengen): Webe in EIN, ZWEI Saetzen einen klaren Gedanken Karls ein, dass es am aktuellen Ort nichts mehr zu holen gibt und die Spur ihn weiterzieht' + (window._dirigentReiseZiele && window._dirigentReiseZiele[0] ? ' (z.B. Richtung "' + window._dirigentReiseZiele[0] + '")' : '') + '. Klar erkennbar, aber im 1953-Noir-Ton statt Tutorial-Ton ("Hier war die Luft raus - Karl überlegte, ob er nicht besser ' + (window._dirigentReiseZiele && window._dirigentReiseZiele[0] ? 'zu ' + window._dirigentReiseZiele[0] + ' fahren sollte' : 'weiterziehen sollte') + '..." o.ä.) - als ÜBERLEGUNG, nicht als vollzogene Handlung. So merkt der Spieler, dass er den Reisen-Button nutzen sollte.'
           // v7.12.1102 (Benjamin #1-Hebel "folg ihm"): Bei Beschattung den Wegweiser als FOLGEN des Zielobjekts rahmen -
           // die Spur ist die Person, nicht der Ort. Macht aus dem "Ort ausgeschoepft"-Nudge ein aktives "folg ihm".
-          + (_istBeschatten && _zielName ? ' BESCHATTUNG - DIE SPUR IST ' + _zielName.toUpperCase() + ': Rahme den Wegweiser als Karl, der seinem Zielobjekt ' + _zielName + ' hinterherzieht (nicht nur "anderer Ort"). ' + _zielName + ' ist laengst weiter - Karls Gedanke gilt der Frage, wohin ' + _zielName + ' als Naechstes gegangen ist und dass er ihm folgen muss' + (window._dirigentReiseZiele && window._dirigentReiseZiele[0] ? ' (Richtung "' + window._dirigentReiseZiele[0] + '")' : '') + ', bevor er ihn verliert.' : '') };
+          + (_istBeschatten && _zielName && !_zielAnwesend ? ' BESCHATTUNG - DIE SPUR IST ' + _zielName.toUpperCase() + ': Rahme den Wegweiser als Karl, der seinem Zielobjekt ' + _zielName + ' hinterherzieht (nicht nur "anderer Ort"). ' + _zielName + ' ist laengst weiter - Karls Gedanke gilt der Frage, wohin ' + _zielName + ' als Naechstes gegangen ist und dass er ihm folgen muss' + (window._dirigentReiseZiele && window._dirigentReiseZiele[0] ? ' (Richtung "' + window._dirigentReiseZiele[0] + '")' : '') + ', bevor er ihn verliert.' : '') };
       }
       window._dirigentReiseZiele = [];
       window._dirigentGrund = 'definierte Kette, aber 0 jetzt erreichbar (jetzt=' + _sumJetzt + ', später=' + _sumSpaeter + ') - Indizien noch stage-/zeit-/NPC-gesperrt';
@@ -11402,7 +11411,7 @@ function classifyEvidenceAction() {
     try {
       const _npcsHier = (typeof getNpcsAtCurrentLocation === 'function')
         ? getNpcsAtCurrentLocation().filter(n => n && (n.id || n.name)) : [];
-      const _hartGegenPerson = /(pack|zwing|dräng|drang|press|schüttel|schuettel|stoß|stoss|drück|drueck|würg|wuerg|greif|schnapp|reiß|reiss|schlag|frag|befrag|verhör|verhoer|konfrontier|droh|bedroh)/.test(txt);
+      const _hartGegenPerson = /(pack|zwing|dräng|drang|press|schüttel|schuettel|stoß|stoss|drück|drueck|würg|wuerg|greif|schnapp|reiß|reiss|(?<!vor)schlag(?!e?\s*vor)|frag|befrag|verhör|verhoer|konfrontier|droh|bedroh)/.test(txt);
       if (_npcsHier.length && _hartGegenPerson) return 'person';
     } catch (e) {}
     // v7.12.604: Freitext ohne explizites Ermittlungs-Verb ist NICHT indiz-fähig (Kategorie ist nur Heuristik).
@@ -11890,7 +11899,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1107';
+window.SCHATTEN_VERSION = 'v7.12.1108';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -31394,9 +31403,21 @@ function renderOptions(scene) {
           if (typeof caseSetup === 'object' && caseSetup && caseSetup.caseType === 'beschatten' && Array.isArray(caseSetup.setupCast)) {
             const _tgt = caseSetup.setupCast.find(c => c && c.tag === 'TARGET');
             if (_tgt && _tgt.name) {
-              const _kurz = _tgt.name.split(/\s+/).slice(-1)[0] || _tgt.name; // "Robert Kessler" -> "Kessler"
-              _labelH = _kurz + ' folgen';
-              _mark = _zN ? ('→ ' + _zN) : '→ ihm hinterher';
+              // v7.12.1108 (Benjamin-Befund: "Kessler folgen", obwohl Kessler direkt da steht): "folgen"-Label NUR,
+              // wenn das Ziel gerade NICHT anwesend ist. Steht es vor Karl, bleibt das generische Reise-Label.
+              let _tgtDa = false;
+              try {
+                const _tn = normForMatch(_tgt.name), _tf = _tn.split(/\s+/)[0], _ti = normForMatch(_tgt.id || '');
+                const _liveT = (typeof getNpcsAtCurrentLocation === 'function') ? (getNpcsAtCurrentLocation() || []) : [];
+                const _castT = (typeof cast !== 'undefined' && Array.isArray(cast)) ? cast : [];
+                const _hit = (arr) => arr.some(n => { const nm = normForMatch((n && (n.name || n)) || ''); const id = normForMatch((n && n.id) || ''); return nm === _tn || (nm && nm.split(/\s+/)[0] === _tf) || (_ti && id === _ti); });
+                _tgtDa = _hit(_liveT) || _hit(_castT);
+              } catch (e) {}
+              if (!_tgtDa) {
+                const _kurz = _tgt.name.split(/\s+/).slice(-1)[0] || _tgt.name; // "Robert Kessler" -> "Kessler"
+                _labelH = _kurz + ' folgen';
+                _mark = _zN ? ('→ ' + _zN) : '→ ihm hinterher';
+              }
             }
           }
         } catch (e) {}
@@ -39797,7 +39818,7 @@ async function chooseOption(option) {
         // tatsaechlichen Szenen-Person (charVisual), nie ein falsches und nie ein Kategorie-Icon.
         const _txtG = ((option && (option._anzeigeText || option.text)) || '').toLowerCase();
         // "Starke" Verben sind eindeutig zwischenmenschlich -> duerfen auch ueber die einzige Anwesende feuern.
-        const _starkVerb = /\b(frag|befrag|verhör|verhoer|sprich|rede|sag|erzähl|erzaehl|erkundig|konfrontier|beruhig|nick|bedank|bitt|zeig|überzeug|ueberzeug|dräng|draeng|press|bedroh|einschüchter|einschuechter|bestech|bestich|schmier|pack|schüttel|schuettel|zwing|stoß|stoss|drück|drueck|würg|wuerg|greif|schnapp|reiß|reiss|schlag|droh|am kragen|am revers|unter druck|zur rede|bau dich vor|hart an|hart auf|tritt dicht an|heran)/.test(_txtG);
+        const _starkVerb = /\b(frag|befrag|verhör|verhoer|sprich|rede|sag|erzähl|erzaehl|erkundig|konfrontier|beruhig|nick|bedank|bitt|zeig|überzeug|ueberzeug|dräng|draeng|press|bedroh|einschüchter|einschuechter|bestech|bestich|schmier|pack|schüttel|schuettel|zwing|stoß|stoss|drück|drueck|würg|wuerg|greif|schnapp|reiß|reiss|(?<!vor)schlag(?!e?\s*vor)|droh|am kragen|am revers|unter druck|zur rede|bau dich vor|hart an|hart auf|tritt dicht an|heran)/.test(_txtG);
         // "Schwache" Verben koennen Person ODER Objekt meinen -> nur mit klarem Personenbezug (Name/Pronomen) feuern.
         const _schwachVerb = /\b(beobacht|schweig|zuseh|muster|taxier|studier|lausch|hör|zuhör|zuhoer)/.test(_txtG);
         const _personBezug = /\b(ihn|ihm|ihr|ihre|ihrer|ihnen|sein|seine|seines|seinen|seinem|seiner|ihren|ihrem|ihres)\b/.test(_txtG);
@@ -39844,7 +39865,7 @@ async function chooseOption(option) {
         if (_zielNpc && (_starkVerb || _schwachVerb || _offensiv) && typeof fxDialog === 'function') {
           const _vk2 = /bestech|bestich|schmier|\bgeld\b|geldschein|\bschein\b|\bmark\b|zigaretten|reval/.test(_txtG) ? 'bestechen'
             : /überzeug|ueberzeug/.test(_txtG) ? 'ueberzeugen'
-            : (/bedroh|einschüchter|einschuechter|dräng|draeng|press|pack|schüttel|schuettel|zwing|stoß|stoss|drück|drueck|würg|wuerg|greif|schnapp|reiß|reiss|schlag|droh|am kragen|am revers|unter druck|hart an|hart auf|zur rede|bau dich vor|tritt dicht an|heran/.test(_txtG) || _offensiv) ? 'bedrohen'
+            : (/bedroh|einschüchter|einschuechter|dräng|draeng|press|pack|schüttel|schuettel|zwing|stoß|stoss|drück|drueck|würg|wuerg|greif|schnapp|reiß|reiss|(?<!vor)schlag(?!e?\s*vor)|droh|am kragen|am revers|unter druck|hart an|hart auf|zur rede|bau dich vor|tritt dicht an|heran/.test(_txtG) || _offensiv) ? 'bedrohen'
             : /beobacht|schweig|zuseh|muster|taxier|studier|lausch/.test(_txtG) ? 'beobachten'
             : /\b(sag|erzähl|erzaehl|hör|zuhör|zuhoer|nick|bedank|beruhig)/.test(_txtG) ? 'ansprechen'
             : 'befragen';
