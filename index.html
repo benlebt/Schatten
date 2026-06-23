@@ -3419,7 +3419,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1103</div>
+    <div class="start-version">Schatten v7.12.1104</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3653,7 +3653,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1103</span>
+    <span>Schatten v7.12.1104</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11860,7 +11860,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1103';
+window.SCHATTEN_VERSION = 'v7.12.1104';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -41284,7 +41284,15 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       // Gesuchter, Verdacht/Auftragstyp) weglaesst oder zu Anspielungen
       // verkuerzt ("Ediths Verdacht treibt dich an" statt explizit), wird
       // ein einmaliger Retry mit konkreten Hinweisen ausgeloest.
-      if (isStart && openingRetryCount < MAX_OPENING_RETRIES && caseSetup) {
+      // v7.12.1104 (Benjamin: "langsames Modell soll den Fallstart nicht blockieren"): War der Opening-Call
+      // schon langsam (slow_phase / Failover-Kette), ueberspringen wir den Quali-Retry - ein zweiter langsamer
+      // Call wuerde den Spieler beim Start 30-90s zusaetzlich warten lassen. Lieber ein leicht weiches Opening
+      // akzeptieren als haengen. Bei schnellem Call (Normalfall) bleibt der Nachbesserungs-Retry voll erhalten.
+      const _openingSlow = (typeof apiCallDuration === 'number' && apiCallDuration > 12000);
+      if (isStart && _openingSlow && openingRetryCount < MAX_OPENING_RETRIES && caseSetup && typeof diag === 'function') {
+        diag('detect', 'Opening-Retry uebersprungen: langsamer Call (' + apiCallDuration + 'ms > 12s) - Fallstart nicht weiter verzoegern');
+      }
+      if (isStart && openingRetryCount < MAX_OPENING_RETRIES && caseSetup && !_openingSlow) {
         const required = getOpeningRequiredKeywords(caseSetup);
         const check = validateOpening(scene.szene, required);
         // v7.9.10: ZUSAETZLICH Cast-Purity pruefen - keine NPCs aus anderen Setups
