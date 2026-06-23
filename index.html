@@ -3415,7 +3415,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1069</div>
+    <div class="start-version">Schatten v7.12.1070</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3639,7 +3639,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1069</span>
+    <span>Schatten v7.12.1070</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11770,7 +11770,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1069';
+window.SCHATTEN_VERSION = 'v7.12.1070';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -47297,11 +47297,35 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       _custodyForcedThisScene = true;
       kiSignalHandled = true; // KI-Signal/Text-Fallback NICHT mehr anwenden - die Engine hat entschieden
       if (!karlInStasiCustody && typeof setCustodyState === 'function') {
-        setCustodyState(true, 'force-custody-hybrid', { resetScenesSince: true });
+        setCustodyState(true, 'force-custody-entry', { resetScenesSince: true });
       }
-      // Haft-Ort deterministisch setzen, damit Status-Strip/Reise den Gewahrsam spiegeln (auch wenn die KI ortHaupt nicht sauber setzt)
-      try { engineCurrentLocation = { name: 'MfS-Untersuchungshaftanstalt Hohenschoenhausen', sektor: 'Ost (Hohenschoenhausen)' }; } catch (e) {}
-      if (typeof diag === 'function') diag('detect', '\u2726 CUSTODY-HYBRID: Festnahme engine-deterministisch gesetzt (KI-Erzaehlung egal) - Karl ist in MfS-Gewahrsam, Verhoer/Notflucht aktiv');
+      // v7.12.1070 (Custody-Engine-Entry, Benjamin "A"): Die Festnahme-EINSTIEGSSZENE wird jetzt ENGINE-GESCHRIEBEN.
+      // Grund: der Hybrid (v1069) setzte zwar Flag+Ort, aber die KI brach narrativ aus (Erzaehl-Momentum: "Karl frei")
+      // -> Desync, kein Notflucht-Button. Jetzt ueberschreibt die Engine das geparste scene-Objekt deterministisch:
+      // fester Verhaftungs-Text (mit Custody-Keywords -> sceneShowsCustody=true -> Notflucht-Button erscheint),
+      // Verhoer-Optionen, Haft-Ort, gewahrsam=true. Das gilt NUR fuer diese eine Einstiegsszene; ab der naechsten
+      // Szene erzaehlt die KI wieder frei weiter, jetzt fest in der Zelle verankert (auch in der History/dem Log).
+      try {
+        engineCurrentLocation = { name: 'MfS-Untersuchungshaftanstalt Hohenschoenhausen', sektor: 'Ost (Hohenschoenhausen)' };
+      } catch (e) {}
+      try {
+        scene.szene = 'Es geht schneller, als du reagieren kannst. Zwei Maenner in Lodenmaenteln treten aus dem Schatten, einer presst dir den Lauf einer Makarow in die Rippen. \u00ab Mitkommen. Kein Wort. \u00bb Die Walther wird dir aus dem Mantel gezogen, Handschellen schnappen zu, kalt um die Gelenke. Man drueckt dich auf den Ruecksitz eines schwarzen EMW 340, links und rechts ein Mann, die Gesichter ausdruckslos. Die Fahrt geht schweigend durch die Nacht nach Lichtenberg. Stahltor, Scheinwerfer, ein Hof. In der Genslerstrasse nehmen sie dir Geld, Notizbuch und Schluessel ab, druecken dir graue Haeftlingskleidung in die Hand und stossen dich in eine fensterlose Zelle. Die Pritsche ist hart, die Gluehbirne brennt ohne Unterlass. Schritte im Flur, das Klappern einer Zellentuer. Du bist in der Hand der Staatssicherheit.';
+        scene.ort = 'MfS-Untersuchungshaftanstalt Hohenschoenhausen, Zelle 14';
+        scene.gewahrsam = true;
+        scene.optionen = [
+          { text: 'Schweig eisern - kein einziges Wort zum Vernehmer.', kategorie: 'DEFENSIV' },
+          { text: 'Gib dich kooperativ und fuettere sie mit harmlosen Halbwahrheiten.', kategorie: 'DEFENSIV' },
+          { text: 'Versuch, den Waechter mit Westgeld fuer eine Nachricht an Kommissar Roth zu bestechen.', kategorie: 'OFFENSIV' },
+          { text: 'Hammer gegen die Zellentuer und verlange lautstark einen Anwalt.', kategorie: 'OFFENSIV' }
+        ];
+        // KI-Gedaechtnis (Kontinuitaet fuer die naechste Szene) auf die Verhaftung ankern - sonst zieht die naechste
+        // Szene den ueberschriebenen "Karl frei"-Originaltext der KI weiter (lastFullScene/recentTexts/storySummaries
+        // wurden weiter oben mit dem KI-Original gefuellt; hier korrigiert).
+        if (typeof lastFullScene !== 'undefined') lastFullScene = scene.szene;
+        if (typeof recentTexts !== 'undefined' && Array.isArray(recentTexts) && recentTexts.length) recentTexts[recentTexts.length - 1] = scene.szene;
+        if (typeof storySummaries !== 'undefined' && Array.isArray(storySummaries) && storySummaries.length) storySummaries[storySummaries.length - 1] = 'Karl wurde von zwei MfS-Maennern verhaftet, ihm wurde die Walther abgenommen, und er sitzt jetzt in einer fensterlosen Zelle der MfS-Untersuchungshaftanstalt Hohenschoenhausen (Genslerstrasse). Das Verhoer steht bevor.';
+      } catch (e) {}
+      if (typeof diag === 'function') diag('detect', '\u2726 CUSTODY-ENGINE-ENTRY: Festnahme-Einstiegsszene engine-geschrieben (Text+Optionen+Ort+gewahrsam ueberschrieben) - Karl ist in MfS-Gewahrsam, Notflucht/Verhoer aktiv');
     }
     if (!_custodyForcedThisScene && kiGewahrsamSignal !== null) {
       // v7.12.108 (Fix B+C): KI-Signal + Textanalyse als TEAM, nicht KI allein. Gemini
