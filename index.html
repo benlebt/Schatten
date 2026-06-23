@@ -3419,7 +3419,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1108</div>
+    <div class="start-version">Schatten v7.12.1109</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3653,7 +3653,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1108</span>
+    <span>Schatten v7.12.1109</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11899,7 +11899,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1108';
+window.SCHATTEN_VERSION = 'v7.12.1109';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -15722,6 +15722,32 @@ function _ortsFundIndizienErreichbar() {
     });
   } catch (e) { return []; }
 }
+// v7.12.1109 (Haupt-UI Stufe 1): VEREINHEITLICHTES ZIEL-MODELL fuer den neuen Baukasten/Haupt-UI. Liefert pro
+// Szene die anklickbaren Ziele in einer Struktur: personen (mit Hinweis-Flag), objekte (erreichbare Umgebungs-
+// Hotspots mit Untersuchungs-Label + erlaubten Aktionen), items (Inventar). REIN LESEND/ADDITIV - noch nicht ans
+// UI verdrahtet. Nutzt die bestehenden Erreichbarkeits-Helfer, also dieselbe Wahrheit wie Umsehen + Personen-Buttons.
+function _baukastenZiele() {
+  const out = { personen: [], objekte: [], items: [] };
+  try {
+    const _np = (typeof getNpcsAtCurrentLocation === 'function') ? (getNpcsAtCurrentLocation() || []) : [];
+    out.personen = _np.filter(n => n && n.name).map(n => ({
+      id: n.id || null, name: n.name, tag: n.tag || '',
+      hinweis: (typeof _npcHatOffenenHinweis === 'function') ? !!_npcHatOffenenHinweis(n.name, n.id) : false,
+      typ: 'person'
+    }));
+    const _hs = (typeof _ortsFundIndizienErreichbar === 'function') ? (_ortsFundIndizienErreichbar() || []) : [];
+    out.objekte = _hs.map(ind => ({
+      id: ind.id,
+      name: ind.hotspot || ind.text || ind.id,
+      actions: Array.isArray(ind.actions) ? ind.actions.slice() : ['ERKUNDEN'],
+      spur: true, typ: 'objekt'
+    }));
+    const _it = (typeof _itemsBeiKarl === 'function') ? (_itemsBeiKarl() || []) : [];
+    out.items = _it.filter(it => it && it.name).map(it => ({ id: it.id, name: it.name, itemTyp: it.typ || it.itemType || '', typ: 'item' }));
+  } catch (e) { if (typeof diag === 'function') diag('drift', 'BAUKASTEN-ZIELE-Fehler: ' + (e && e.message ? e.message : e)); }
+  return out;
+}
+try { window._baukastenZiele = _baukastenZiele; window.bkZiele = function(){ return _baukastenZiele(); }; } catch (e) {}
 // v7.12.1014: Prüft positionsunabhängig, ob an einer bestimmten Erkundungs-Zelle (Buchstabe) gerade ein noch
 // nicht gefundenes, gate-freies Umgebungs-Indiz wartet. Für sichtbare Fund-Marker im Wimmelbild (goldener Glanz),
 // damit der Spieler sieht WO etwas zu holen ist - statt es hinter dem leicht übersehbaren Umsehen-Button zu verstecken.
