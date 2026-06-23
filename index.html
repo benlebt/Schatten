@@ -3419,7 +3419,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1096</div>
+    <div class="start-version">Schatten v7.12.1097</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3653,7 +3653,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1096</span>
+    <span>Schatten v7.12.1097</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -10859,6 +10859,25 @@ function _naechsterErmittlungsschritt() {
             + ' PFLICHT: Mindestens eine Option (idealerweise C) muss den Ort/Tatort KONKRET UNTERSUCHEN oder DURCHSUCHEN (genau hinsehen, Spuren sichern) - eine reine Personen-Befragung findet diese Spur NICHT.'
             + ' ERZÄHLERISCHER HINWEIS (PFLICHT, klar spürbar): Lass Karl in EINEM deutlichen Gedanken erkennen, dass hier am Ort noch etwas Konkretes zu finden ist und es sich lohnt, genauer hinzusehen oder zu durchsuchen - ein klarer Wegweiser, kein beilaeufiges Wort.';
         }
+        // v7.12.1097 (Codex P2.3 / "Stadtermittlung statt Ein-Ort-Szene"): ab Stufe 2 die WEITERE WELT spuerbar
+        // machen - traegt ein ANDERER, noch nicht besuchter Schauplatz erreichbare Spuren, einen konkreten Koeder
+        // dorthin legen. Reise laeuft ueber den Reisen-Button (kein A/B/C/D-Reiseschritt) - hier nur der Appetit.
+        try {
+          if ((caseProgress.stage | 0) >= 2) {
+            const _vis = (typeof everVisitedLocations !== 'undefined' && Array.isArray(everVisitedLocations)) ? everVisitedLocations.map(o => normForMatch(o)) : [];
+            let _tease = null;
+            for (const loc2 of _orte) {
+              if (!loc2 || !Array.isArray(loc2.indizien)) continue;
+              if (normForMatch(loc2.name) === normForMatch(_hierName)) continue;
+              if (_vis.indexOf(normForMatch(loc2.name)) !== -1) continue; // schon besucht -> kein Koeder
+              const _e2 = (typeof offeneIndizienAmOrtNachErreichbarkeit === 'function') ? offeneIndizienAmOrtNachErreichbarkeit(loc2) : { jetzt: 0 };
+              if ((_e2.jetzt || 0) > 0) { _tease = loc2.name; break; }
+            }
+            if (_tease) {
+              _spur += ' WEITERE WELT (ab Stufe 2, beilaeufig - macht den Fall zur Stadtermittlung): Lass in EINEM Satz einen konkreten Koeder fallen, der Karl zu einem ANDEREN Schauplatz ("' + _tease + '") zieht - ein Name, eine Adresse, ein aufgeschnappter Gespraechsfetzen ("dort soll er Stammgast sein", "der Kollege weiss mehr"). KEINE Reise-Option in A/B/C/D bauen (das Reisen macht der Spieler ueber die Karte); nur spuerbar machen, dass die Spur AUCH woanders weiterfuehrt.';
+            }
+          }
+        } catch (e) {}
         return { art: 'indiz_hier', ziel: 'Spur am Ort verfolgen', hinweis: 'Am aktuellen Ort ("' + _hierOffen.ort + '") ist ein Indiz zu holen.' + _spur + ' Die anderen Optionen dürfen unterschiedlich hart sein (offensiv bis zurückhaltend), aber sie sollen alle zur Spur passen, nur Härte und Preis unterscheiden sich.' };
       }
       if (_andersOrt) {
@@ -11822,7 +11841,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1096';
+window.SCHATTEN_VERSION = 'v7.12.1097';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -20188,6 +20207,33 @@ function getHistoricalContext(startDate) {
   return 'Herbst 1953. Der "Neue Kurs" soll die Bevoelkerung beruhigen, doch die Narben des 17. Juni sitzen tief. Die Stasi baut ihr Netz aus Informanten weiter aus, waehrend die Verhaftungswelle langsam abebbt. Eine truegerische Ruhe.';
 }
 
+// v7.12.1097 (Roadmap #5: uebergreifender Bogen Richtung 17. Juni 1953): Der reiche datums-basierte
+// getHistoricalContext lief bisher NUR auf der Fall-Auswahlkarte - nie im Spiel-Prompt. Hier wird der grosse
+// Bogen waehrend des Spiels spuerbar: jeder Fall ist ueber sein Datum am zentralen Ereignis (17. Juni) verankert -
+// davor der aufziehende Sturm, danach sein Schatten. Atmosphaerisch, periodisch (nicht jede Szene), kein Vortrag.
+function buildZeitgeschehenHint() {
+  try {
+    if (!caseProgress) return '';
+    const sd = (typeof caseSetup === 'object' && caseSetup && caseSetup.startDate) ? caseSetup.startDate
+      : (typeof gameStartDate !== 'undefined' ? gameStartDate : '');
+    const base = (typeof getHistoricalContext === 'function') ? getHistoricalContext(sd) : '';
+    if (!base) return '';
+    let bezug = '';
+    const m = /^1953-(\d{2})-(\d{2})/.exec(sd || '');
+    if (m) {
+      const ord = parseInt(m[1], 10) * 100 + parseInt(m[2], 10);
+      if (ord < 617) bezug = ' DIESER FALL SPIELT VOR DEM 17. JUNI 1953: lass im Hintergrund spuerbar werden, dass sich etwas zusammenbraut (Aerger ueber die Normerhoehung, Streikgerede an Bauzaeunen der Stalinallee, nervoese Funktionaere, RIAS-Meldungen) - ein Sturm, der noch kommt.';
+      else if (ord <= 630) bezug = ' DIESER FALL SPIELT UM DEN 17. JUNI 1953: der Aufstand und die sowjetischen Panzer sind allgegenwaertig - Standrecht, Verhaftungen, Schuesse, Angst auf den Strassen.';
+      else bezug = ' DIESER FALL SPIELT NACH DEM 17. JUNI 1953: der niedergeschlagene Aufstand wirft seinen Schatten - Misstrauen, Verhaftungswelle, der "Neue Kurs" als duenne Beruhigung ueber tiefen Narben.';
+    }
+    const verstrickt = (typeof karlAkte === 'object' && karlAkte && (karlAkte.faelleGesamt | 0) >= 3)
+      ? ' Karl steckt nach so vielen Faellen tiefer in den Verwerfungen dieser Stadt, als ihm lieb ist.' : '';
+    return 'ZEITGESCHEHEN 1953 (grosser Bogen, NUR atmosphaerische Kulisse - EIN beilaeufiges Hintergrund-Detail, KEIN Vortrag, KEINE Geschichtsstunde, lenkt NICHT vom Fall ab): '
+      + base + bezug + verstrickt
+      + ' Webe es als Kulisse ein (eine Schlagzeile am Kiosk, ein Plakat, ein Gespraechsfetzen, die Stimmung auf der Strasse, eine Streife), die den Fall GROESSER fuehlen laesst, ohne ihn aufzuhalten.';
+  } catch (e) { return ''; }
+}
+
 function formatSetupCard(idx, setup) {
   const s = setup.setup || {};
   // Datum schoen formatieren
@@ -25637,6 +25683,48 @@ function buildWiedersehenHint(presentNpcs) {
         + 'EIN Satz mit konkretem Rueckbezug auf das letzte Mal, keine Litanei, kein Steckbrief.';
     }
     return '';
+  } catch (e) { return ''; }
+}
+
+// v7.12.1097 (Benjamin "das Spiel lebendiger - Handeln soll von Szene zu Szene Bedeutung haben"): FRISCHE FOLGE.
+// Anders als WIEDERSEHEN (feuert nur beim Wieder-Treffen nach Ortswechsel/Pause, einmal pro NPC) haelt dieser Faden
+// die UNMITTELBARE Folge einer harten Tat ueber 2-3 Szenen am selben Ort lebendig: wer gerade gepackt/bedroht/
+// angegriffen wurde, traegt das koerperlich weiter (reibt das Handgelenk, haelt Abstand, Stimme trotzig). So merkt
+// der Spieler Szene fuer Szene, dass seine letzte Handlung NICHT vergessen ist. Pro (NPC,Tat,Szene) nur einmal.
+function buildFrischeFolgeHint(presentNpcs) {
+  try {
+    if (!caseProgress) return '';
+    const log = Array.isArray(caseProgress._begegnungen) ? caseProgress._begegnungen : [];
+    if (!log.length) return '';
+    const npcs = Array.isArray(presentNpcs) ? presentNpcs : [];
+    if (!npcs.length) return '';
+    const nowScene = (typeof sceneCounter === 'number') ? sceneCounter : 0;
+    if (!caseProgress._frischeFolgeGenutzt) caseProgress._frischeFolgeGenutzt = {};
+    // Wenn diese Szene schon ein WIEDERSEHEN fuer einen NPC gesetzt hat, ueberlassen wir DEM den Rueckbezug.
+    let best = null;
+    for (const n of npcs) {
+      if (!n || !n.name) continue;
+      const nk = normForMatch(n.name);
+      const prior = log.filter(e => e && e.name && normForMatch(e.name) === nk && e.hart);
+      if (!prior.length) continue;
+      const last = prior[prior.length - 1];
+      const alter = nowScene - (last.scene || 0);
+      if (alter < 1 || alter > 3) continue; // 0 = dieselbe Szene (Folge kommt ohnehin direkt), >3 = zu kalt
+      if (!best || (last.scene || 0) > (best.last.scene || 0)) best = { npc: n, last: last };
+    }
+    if (!best) return '';
+    const sig = normForMatch(best.npc.name) + ':' + (best.last.scene || 0) + ':' + nowScene;
+    if (caseProgress._frischeFolgeGenutzt[sig]) return '';
+    caseProgress._frischeFolgeGenutzt[sig] = true;
+    const artTxt = {
+      angegriffen: 'du sie/ihn vor Kurzem koerperlich angegriffen hast (Schlag/Stoss)',
+      gepackt: 'du sie/ihn vor Kurzem gepackt und bedraengt hast',
+      bedroht: 'du sie/ihn vor Kurzem hart unter Druck gesetzt hast'
+    }[best.last.art] || 'du vor Kurzem hart mit ihr/ihm umgegangen bist';
+    return 'FRISCHE FOLGE (Handeln wirkt nach - knapp und koerperlich, KEIN Vortrag, keine Moral): ' + best.npc.name
+      + ' traegt noch sichtbar, dass ' + artTxt + '. Lass das in DIESER Szene koerperlich nachklingen - EIN konkretes Detail '
+      + '(reibt das Handgelenk, haelt Abstand, Stimme zittert oder wird trotzig, weicht dem Blick aus, Tuer bleibt nur einen Spalt offen). '
+      + 'Der Spieler soll spueren: die letzte Szene ist nicht vergessen.';
   } catch (e) { return ''; }
 }
 
@@ -35276,6 +35364,29 @@ Wenn Karl waehlt: Schnitt zur naechsten Szene am Morgen, Kaffee zu zweit, keine 
         if (_wsHint) {
           timeContext += '\n\n=== WIEDERSEHEN (v7.12.1051) ===\n' + _wsHint;
           if (typeof diag === 'function') diag('detect', 'WIEDERSEHEN-HINT gesetzt: ' + _wsHint.slice(0, 70).replace(/\s+/g, ' ') + '...');
+        }
+      } catch (e) {}
+    }
+    // v7.12.1097 (Idee: Handeln wirkt nach): FRISCHE FOLGE - haelt die juengste harte Tat 2-3 Szenen koerperlich lebendig.
+    if (!karlInStasiCustody && !pendingDayTransition && !pendingSleepChoice && typeof buildFrischeFolgeHint === 'function') {
+      try {
+        const _ffNpcs = (typeof getNpcsAtCurrentLocation === 'function') ? getNpcsAtCurrentLocation() : [];
+        const _ffHint = buildFrischeFolgeHint(_ffNpcs);
+        if (_ffHint) {
+          timeContext += '\n\n=== FRISCHE FOLGE (v7.12.1097) ===\n' + _ffHint;
+          if (typeof diag === 'function') diag('detect', 'FRISCHE-FOLGE-HINT gesetzt: ' + _ffHint.slice(0, 70).replace(/\s+/g, ' ') + '...');
+        }
+      } catch (e) {}
+    }
+    // v7.12.1097 (Roadmap #5): ZEITGESCHEHEN - der grosse 1953-Bogen (Richtung/Schatten 17. Juni) periodisch in die
+    // Szene, nicht jede Szene (sonst Geschichtsstunde). Jede 4. Szene, nicht in Custody/Uebergang.
+    if (!karlInStasiCustody && !pendingDayTransition && !pendingSleepChoice && typeof sceneCounter === 'number'
+        && sceneCounter > 0 && sceneCounter % 4 === 0 && typeof buildZeitgeschehenHint === 'function') {
+      try {
+        const _zgHint = buildZeitgeschehenHint();
+        if (_zgHint) {
+          timeContext += '\n\n=== ZEITGESCHEHEN 1953 (v7.12.1097) ===\n' + _zgHint;
+          if (typeof diag === 'function') diag('detect', 'ZEITGESCHEHEN-HINT gesetzt: ' + _zgHint.slice(0, 70).replace(/\s+/g, ' ') + '...');
         }
       } catch (e) {}
     }
