@@ -3415,7 +3415,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1067</div>
+    <div class="start-version">Schatten v7.12.1068</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3639,7 +3639,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1067</span>
+    <span>Schatten v7.12.1068</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11770,7 +11770,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1067';
+window.SCHATTEN_VERSION = 'v7.12.1068';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -39505,14 +39505,23 @@ async function chooseOption(option) {
   // NIE Festnahme (canForceStasiCustody bleibt bei !caseIsPolitical false). Politischer Fall -> kann Richtung
   // Custody eskalieren. So wird harter Spielstil im Osten zum spuerbaren Risiko, ohne die Skala zu sprengen.
   try {
-    if (isPhysical && typeof raiseStasiTension === 'function' && !karlInStasiCustody) {
+    // v7.12.1068 (Wessel-Live-Test, Benjamin "Eskalation responsiver"): Stasi-Aufmerksamkeit staerker an harten
+    // Spielstil koppeln. Vorher hob nur die enge physische Verbliste (pack/schlag/tritt...) die Tension -> verbal-
+    // aggressive OFFENSIV-Optionen ("fordere/verlange/stell zur Rede") zaehlten nicht, und der 3-Szenen-Cooldown
+    // erodierte den +1 sofort wieder (Live-Diag: 2->3 Gewalt, direkt 3->2 Abkuehlung). Jetzt: JEDE OFFENSIV-Aktion
+    // (oder physische) im Ostsektor hebt die Tension UND setzt die Abkuehl-Uhr zurueck, damit anhaltend harter
+    // Spielstil sich aufstaut. Anti-Frueharrest bleibt voll erhalten: canForceStasiCustody (Szene>=6, Indizien>=2,
+    // Tension 5) + getEffectiveStasiCap (Cap 3 bei Stage0/<2 Indizien, 4 bei Stage<=1/<4, voll erst Stage2+).
+    const _aggressiv = (isPhysical || (typeof chosenKategorie === 'string' && chosenKategorie === 'OFFENSIV'));
+    if (_aggressiv && typeof raiseStasiTension === 'function' && !karlInStasiCustody) {
       const _sekt = (typeof engineCurrentLocation !== 'undefined' && engineCurrentLocation && engineCurrentLocation.sektor) ? String(engineCurrentLocation.sektor).toLowerCase() : '';
       const _imOsten = /sowjet|ost/.test(_sekt) && !/west/.test(_sekt);
       if (_imOsten) {
         const _vorST = (typeof stasiTension === 'number') ? stasiTension : 0;
-        raiseStasiTension(1, 'laute Gewalt im Ostsektor (Spielstil, Idee 7)');
+        raiseStasiTension(1, isPhysical ? 'laute Gewalt im Ostsektor (Spielstil)' : 'aggressives Auftreten im Ostsektor (Spielstil)');
+        if (typeof stasiCooldownCounter !== 'undefined') stasiCooldownCounter = 0;
         if (typeof stasiTension === 'number' && stasiTension > _vorST && typeof diag === 'function') {
-          diag('state', '\u{1F441} STASI-AUFMERKSAMKEIT (Spielstil): koerperliche Aktion im Ostsektor -> Tension ' + _vorST + '->' + stasiTension);
+          diag('state', '\u{1F441} STASI-AUFMERKSAMKEIT (Spielstil): aggressive Aktion im Ostsektor -> Tension ' + _vorST + '->' + stasiTension);
         }
       }
     }
