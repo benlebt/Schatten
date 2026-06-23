@@ -3338,6 +3338,10 @@
         <span class="status-popup-label">Bargeld</span>
         <span class="status-popup-value" id="popup-geld">k. A.</span>
       </div>
+      <div class="status-popup-row" id="popup-miete-row" style="display:none;">
+        <span class="status-popup-label">Miete offen</span>
+        <span class="status-popup-value" id="popup-miete">k. A.</span>
+      </div>
       <div class="status-popup-row status-popup-row-block">
         <span class="status-popup-label">Dabei</span>
         <span class="status-popup-value" id="popup-inventory">k. A.</span>
@@ -3415,7 +3419,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1086</div>
+    <div class="start-version">Schatten v7.12.1087</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3639,7 +3643,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1086</span>
+    <span>Schatten v7.12.1087</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11796,7 +11800,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1086';
+window.SCHATTEN_VERSION = 'v7.12.1087';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -12077,6 +12081,90 @@ function _geldText() {
     return teile.length ? teile.join(' · ') : '0 Mark';
   } catch (e) { return '0 Mark'; }
 }
+// ============ v7.12.1087: KARL-AKTE (Persistenz light, Scheibe 1 - Benjamin) ============
+// Fallübergreifende Karriere-Akte: Kasse, Büromiete, Ruf, Fall-Historie. Eigener localStorage-Key,
+// von resetGame NICHT geleert (nur _karlAkteNeueKarriere leert sie). Die Engine besitzt die Akte; die KI
+// bleibt zustandslos und bekommt am Fall-Start nur einen kurzen Recap-Text zur Atmosphäre-Färbung.
+// Realismus 1953 (belegt): DDR-Schnittlohn ~378 Mark/Monat, Kaltmiete ~30-120 Mark/Monat (Altbau auf 1936
+// eingefroren). Büro Hackescher Markt ~80 Ostmark/Monat -> ~20 Ostmark Miete je Fall (grob 1 Woche).
+const KARL_AKTE_KEY = 'schatten-karl-akte';
+const BUERO_MIETE_PRO_FALL = 20;
+function _karlAkteDefault() {
+  return { v: 1, kasse: { ost: 30, west: 0 }, mieteOffen: 0, ruf: { haerte: 0, renommee: 0 }, historie: [], bekannte: {}, faelleGesamt: 0 };
+}
+function _karlAkteLoad() {
+  try {
+    const raw = localStorage.getItem(KARL_AKTE_KEY);
+    if (!raw) return _karlAkteDefault();
+    const o = JSON.parse(raw) || {};
+    const d = _karlAkteDefault();
+    return {
+      v: 1,
+      kasse: { ost: (o.kasse && +o.kasse.ost) || 0, west: (o.kasse && +o.kasse.west) || 0 },
+      mieteOffen: (typeof o.mieteOffen === 'number') ? o.mieteOffen : d.mieteOffen,
+      ruf: { haerte: (o.ruf && +o.ruf.haerte) || 0, renommee: (o.ruf && +o.ruf.renommee) || 0 },
+      historie: Array.isArray(o.historie) ? o.historie.slice(-30) : [],
+      bekannte: (o.bekannte && typeof o.bekannte === 'object') ? o.bekannte : {},
+      faelleGesamt: (typeof o.faelleGesamt === 'number') ? o.faelleGesamt : (Array.isArray(o.historie) ? o.historie.length : 0)
+    };
+  } catch (e) { return _karlAkteDefault(); }
+}
+let karlAkte = _karlAkteLoad();
+function _karlAkteSave() { try { localStorage.setItem(KARL_AKTE_KEY, JSON.stringify(karlAkte)); } catch (e) {} }
+function _karlAkteNeueKarriere() { karlAkte = _karlAkteDefault(); _karlAkteSave(); }
+// v7.12.1087 Debug-Inspektor (Konsole, nur Diagnose): Akte lesen/setzen/Fall-Ende simulieren - macht Scheibe 1
+// in Sekunden prüfbar, ohne einen ganzen Fall zu spielen.
+try {
+  window.akteShow = function () { try { return JSON.parse(JSON.stringify(karlAkte)); } catch (e) { return 'err ' + e.message; } };
+  window.akteSet = function (patch) { try { Object.assign(karlAkte, patch || {}); _karlAkteSave(); return window.akteShow(); } catch (e) { return 'err ' + e.message; } };
+  window.akteReset = function () { _karlAkteNeueKarriere(); return window.akteShow(); };
+  window.akteSimEnde = function (honorar, ausgang) {
+    try {
+      honorar = (typeof honorar === 'number') ? honorar : ((typeof _fallHonorar === 'function') ? _fallHonorar() : 200);
+      const restOst = (caseProgress && caseProgress.geld && (caseProgress.geld.ost | 0)) || 0;
+      const restWest = (caseProgress && caseProgress.geld && (caseProgress.geld.west | 0)) || 0;
+      karlAkte.kasse = { ost: restOst + honorar, west: restWest };
+      karlAkte.faelleGesamt = (karlAkte.faelleGesamt | 0) + 1;
+      if (ausgang !== 'teilweise') karlAkte.ruf.renommee = (karlAkte.ruf.renommee | 0) + 1;
+      if (!Array.isArray(karlAkte.historie)) karlAkte.historie = [];
+      karlAkte.historie.push({ titel: 'SIM-Fall', ausgang: ausgang || 'geloest', tag: (typeof gameDay === 'number' ? gameDay : 0), honorar: honorar });
+      _karlAkteSave();
+      return window.akteShow();
+    } catch (e) { return 'err ' + e.message; }
+  };
+} catch (e) {}
+// Honorar je Fall (Ostmark). Setups nennen Beträge nur in Prosa - daher Typ-Tabelle, grob an 1953 kalibriert
+// (ein Fall ~ein halber Monatslohn). Sauberer Abschluss gibt einen kleinen Bonus.
+function _fallHonorar() {
+  try {
+    const ct = (caseSetup && caseSetup.caseType) || '';
+    const base = { diebstahl: 150, beschatten: 150, vermisst: 220, mord: 240, wahrheit: 200, politisch: 300 };
+    let h = (ct in base) ? base[ct] : 200;
+    const sauber = !!(caseProgress && (caseProgress.ueberfuehrt || caseProgress.wahrheitErkannt || caseProgress.diebesgutZurueck || caseProgress.zielpersonGefunden));
+    if (sauber) h += 50;
+    return h;
+  } catch (e) { return 200; }
+}
+// Kurzer Kontinuitäts-Recap für die Eröffnungsszene (nur Atmosphäre, ändert den Fall NICHT).
+function _buildProfilRecap() {
+  try {
+    if (typeof karlAkte !== 'object' || !karlAkte) return '';
+    const teile = [];
+    const offen = karlAkte.mieteOffen | 0;
+    const ost = (karlAkte.kasse && karlAkte.kasse.ost) | 0;
+    if (offen > 0) teile.push('Die Bueromiete am Hackeschen Markt ist ' + offen + ' Ostmark ueberfaellig - der Hausverwalter macht Druck' + (ost < 20 ? ', und Karls Kasse ist fast leer (' + ost + ' Ostmark)' : '') + '.');
+    else if (ost < 15) teile.push('Karls Kasse ist knapp (' + ost + ' Ostmark) - er braucht diesen Auftrag.');
+    if ((karlAkte.faelleGesamt | 0) >= 1 && Array.isArray(karlAkte.historie) && karlAkte.historie.length) {
+      const letzte = karlAkte.historie[karlAkte.historie.length - 1];
+      if (letzte && letzte.titel) teile.push('Karl hat zuletzt den Fall "' + letzte.titel + '" ' + (letzte.ausgang === 'geloest' ? 'erfolgreich abgeschlossen' : 'nur teilweise abschliessen koennen') + '.');
+    }
+    if (karlAkte.ruf && (karlAkte.ruf.haerte | 0) >= 3) teile.push('Karls Ruf, hart und notfalls mit Gewalt zuzufassen, eilt ihm in den Milieus voraus - Informanten sind vorsichtiger geworden.');
+    else if (karlAkte.ruf && (karlAkte.ruf.renommee | 0) >= 3) teile.push('Karl hat sich einen Ruf als zuverlaessiger, diskreter Ermittler erarbeitet.');
+    if (!teile.length) return '';
+    return '\n\n[KARL-AKTE / KONTINUITAET - NUR als kurze Atmosphaere-Faerbung in die Eroeffnung einweben (ein, zwei Saetze/Gedanken Karls), den eigentlichen Fall NICHT veraendern]: ' + teile.join(' ');
+  } catch (e) { return ''; }
+}
+
 // v7.12.1014 (Geld-System Stufe 1): Übersetzt den abstrakten Tauschwert (1-4) eines Fundstücks in einen
 // Ostmark-Preis. Historisch grob kalibriert (1953 Ost-Berlin, HO/Schwarzmarkt): Korn übern Tresen ein paar Mark,
 // Schwarzware/Bohnenkaffee/West-Zigaretten deutlich teurer. Faktor 5 + kleiner Sockel -> Tw1≈5, Tw3≈15, Tw4≈20.
@@ -21556,6 +21644,35 @@ function showCaseSolved() {
       const _kr = ((caseSetup && caseSetup.klientRolle) || '') + ' ' + ((caseSetup && caseSetup.klient) || '');
       _istEigenauftrag = /eigen-?auftrag|eigener klient|aus eigenem antrieb/i.test(_kr);
     } catch (e) { _istEigenauftrag = false; }
+    // v7.12.1087 (Persistenz light, Scheibe 1): Fall-Ende in die Karl-Akte schreiben - Honorar gutschreiben,
+    // Fall in die Historie, renommee bei sauberem Abschluss. Pro Fall genau EINMAL (Win-Screen kann re-rendern).
+    let _honorarGezahlt = 0;
+    try {
+      if (typeof karlAkte === 'object' && karlAkte && !window._akteFallVerbucht) {
+        window._akteFallVerbucht = true;
+        const _restOst = (caseProgress && caseProgress.geld && (caseProgress.geld.ost | 0)) || 0;
+        const _restWest = (caseProgress && caseProgress.geld && (caseProgress.geld.west | 0)) || 0;
+        if (_istEigenauftrag) {
+          _honorarGezahlt = 0; // Eigen-Auftrag: kein zahlender Klient
+        } else {
+          _honorarGezahlt = (typeof _fallHonorar === 'function') ? _fallHonorar() : 200;
+          if (earlyAbort) _honorarGezahlt = Math.round(_honorarGezahlt * 0.4); // Teil-Honorar bei fruehem Abbruch
+        }
+        karlAkte.kasse = { ost: _restOst + _honorarGezahlt, west: _restWest };
+        karlAkte.faelleGesamt = (karlAkte.faelleGesamt | 0) + 1;
+        if (!earlyAbort && !_istEigenauftrag) karlAkte.ruf.renommee = (karlAkte.ruf.renommee | 0) + 1;
+        let _titel = (caseSetup && (caseSetup.opfer || caseSetup.klient || caseSetup.caseType)) || 'Fall';
+        _titel = ('' + _titel).replace(/\s*\(.*$/, '').slice(0, 40); // Klammerzusatz/Rolle kappen
+        if (!Array.isArray(karlAkte.historie)) karlAkte.historie = [];
+        karlAkte.historie.push({ titel: _titel, ausgang: earlyAbort ? 'teilweise' : 'geloest', tag: (typeof gameDay === 'number' ? gameDay : 0), honorar: _honorarGezahlt });
+        if (karlAkte.historie.length > 30) karlAkte.historie = karlAkte.historie.slice(-30);
+        _karlAkteSave();
+        try {
+          if (_honorarGezahlt > 0 && typeof showProgressToast === 'function')
+            showProgressToast('+' + _honorarGezahlt + ' Ostmark', 'Honorar fuer den Fall. Kasse: ' + karlAkte.kasse.ost + ' Ostmark' + (karlAkte.mieteOffen > 0 ? ' (Miete ' + karlAkte.mieteOffen + ' offen)' : '') + '.', 'success', 'akte-honorar', '💰');
+        } catch (e) {}
+      }
+    } catch (e) {}
     const closingText = earlyAbort
       ? 'Was Karl nicht weiß, wird er nicht mehr finden. Der Korn hilft auch heute.'
       : (_istEigenauftrag
@@ -21581,6 +21698,18 @@ function showCaseSolved() {
       'Der Korn schmeckt nach nichts. Aber er wärmt.'
     ];
     const _flavor = _flavorPool[Math.floor(Math.random() * _flavorPool.length)];
+    // v7.12.1087 (Persistenz light): Kasse/Honorar im Abschluss-Screen sichtbar machen.
+    let _kasseZeile = '';
+    try {
+      if (typeof karlAkte === 'object' && karlAkte) {
+        const _k = karlAkte.kasse || { ost: 0, west: 0 };
+        const _kt = [];
+        if (typeof _honorarGezahlt === 'number' && _honorarGezahlt > 0) _kt.push('Honorar +' + _honorarGezahlt + ' Ostmark');
+        _kt.push('Kasse: ' + (_k.ost | 0) + ' Ostmark' + ((_k.west | 0) > 0 ? ' · ' + (_k.west | 0) + ' Westmark' : ''));
+        if ((karlAkte.mieteOffen | 0) > 0) _kt.push('Miete offen: ' + (karlAkte.mieteOffen | 0) + ' Ostmark');
+        _kasseZeile = '<div class="solved-text-small" style="margin-top:6px;opacity:0.92;">' + _kt.join(' · ') + '</div>';
+      }
+    } catch (e) {}
     // v7.12.267: Bericht-Absatz aus Fakten (Rettung wenn die KI-Abschluss-Szene wegen
     // Hänger/Timeout nie ausgespielt wurde). Bei earlyAbort weggelassen - da gibt es
     // keinen Abschluss zu berichten.
@@ -21611,6 +21740,7 @@ function showCaseSolved() {
       ${_berichtZeile}
       <div class="solved-text-small">Tag ${gameDay}, Tageszeit: ${TIMES_OF_DAY[gameTimeIdx]}<br>
       ${typeof escapeHtml === 'function' ? escapeHtml(_flavor) : _flavor}</div>
+      ${_kasseZeile}
       <button class="solved-button" onclick="resetGame(true)">Neue Ermittlung</button>
     `;
   }
@@ -23768,7 +23898,19 @@ function showStatusDetails() {
   const dateEl = document.getElementById('popup-date');
   if (dateEl) dateEl.textContent = info.date || 'k. A.';
   document.getElementById('popup-time').textContent = info.time;
-  try { const _gEl = document.getElementById('popup-geld'); if (_gEl) _gEl.textContent = (typeof _geldText === 'function') ? _geldText() : 'k. A.'; } catch (e) {}
+  // v7.12.1087 (Persistenz light): Bargeld IMMER einblenden (Row war bisher dauerhaft hidden -> Geld nie sichtbar)
+  // + Bueromiete-Zeile aus der Karl-Akte.
+  try {
+    const _gEl = document.getElementById('popup-geld'); const _gRow = document.getElementById('popup-geld-row');
+    if (_gEl) { _gEl.textContent = (typeof _geldText === 'function') ? _geldText() : 'k. A.'; if (_gRow) _gRow.style.display = ''; }
+    const _mRow = document.getElementById('popup-miete-row'); const _mEl = document.getElementById('popup-miete');
+    if (_mRow && _mEl) {
+      const _mo = (typeof karlAkte === 'object' && karlAkte) ? (karlAkte.mieteOffen | 0) : 0;
+      if (_mo > 0) { _mEl.textContent = _mo + ' Ostmark'; _mEl.style.color = (_mo >= 40) ? '#ff6644' : '#f0a050'; }
+      else { _mEl.textContent = 'beglichen'; _mEl.style.color = ''; }
+      _mRow.style.display = '';
+    }
+  } catch (e) {}
   document.getElementById('popup-loc').textContent = info.loc;
   // Version-Footer im Popup
   const verEl = document.getElementById('popup-version');
@@ -36543,6 +36685,25 @@ async function startGame() {
   // Reset Fall-Fortschritt (v7.12.120: zentraler Initializer - vorher fehlten hier
   // zielpersonGefunden/wahrheitErkannt/suspectConfronted)
   caseProgress = createInitialCaseProgress();
+  // v7.12.1087 (Persistenz light, Scheibe 1): Kasse aus der Karl-Akte uebernehmen (statt fix 30) und die
+  // Bueromiete faellig stellen. Begleicht so viel wie moeglich aus der Kasse, Rest bleibt offen (= Druck).
+  try {
+    if (typeof karlAkte === 'object' && karlAkte) {
+      karlAkte.kasse = { ost: (karlAkte.kasse.ost | 0), west: (karlAkte.kasse.west | 0) };
+      caseProgress.geld = { ost: karlAkte.kasse.ost, west: karlAkte.kasse.west };
+      karlAkte.mieteOffen = (karlAkte.mieteOffen | 0) + BUERO_MIETE_PRO_FALL;
+      const _zahlbar = Math.min(caseProgress.geld.ost, karlAkte.mieteOffen);
+      caseProgress.geld.ost -= _zahlbar;
+      karlAkte.mieteOffen -= _zahlbar;
+      karlAkte.kasse = { ost: caseProgress.geld.ost, west: caseProgress.geld.west };
+      _karlAkteSave();
+      window._akteFallVerbucht = false;
+      try {
+        const _mt = (_zahlbar > 0 ? 'Miete -' + _zahlbar + ' Ostmark gezahlt' : 'Miete faellig') + (karlAkte.mieteOffen > 0 ? ' (' + karlAkte.mieteOffen + ' noch offen)' : '') + '. Kasse: ' + caseProgress.geld.ost + ' Ostmark.';
+        if (typeof showProgressToast === 'function') showProgressToast(_zahlbar > 0 ? '-' + _zahlbar + ' Ostmark Miete' : 'Miete faellig', _mt, 'caution', 'akte-miete-start', '🏠');
+      } catch (e) {}
+    }
+  } catch (e) {}
   // v7.10: Kategorie-Tracking ebenfalls reset
   pendingCategoryChoice = null;
   pendingCategoryMessages = [];
@@ -36902,9 +37063,12 @@ async function startGame() {
       }
     }
   }
-  lastUserMessage = intro.prompt;
+  // v7.12.1087 (Persistenz light): Kontinuitaets-Recap aus der Karl-Akte an die Eroeffnung anhaengen.
+  const _profilRecap = (typeof _buildProfilRecap === 'function') ? _buildProfilRecap() : '';
+  const _introMitRecap = intro.prompt + _profilRecap;
+  lastUserMessage = _introMitRecap;
 
-  await performApiCall(intro.prompt, /*isStart*/true);
+  await performApiCall(_introMitRecap, /*isStart*/true);
 }
 
 // Erkennt direkte physische Konfliktaktionen, die NICHT mit einem Time-Skip
