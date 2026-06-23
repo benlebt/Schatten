@@ -3419,7 +3419,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1110</div>
+    <div class="start-version">Schatten v7.12.1111</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3653,7 +3653,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1110</span>
+    <span>Schatten v7.12.1111</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11899,7 +11899,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1110';
+window.SCHATTEN_VERSION = 'v7.12.1111';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -15748,6 +15748,55 @@ function _baukastenZiele() {
   return out;
 }
 try { window._baukastenZiele = _baukastenZiele; window.bkZiele = function(){ return _baukastenZiele(); }; } catch (e) {}
+// v7.12.1111 (Haupt-UI Stufe 2a): RENDER-PANEL im Maniac-Mansion-Look, gespeist aus _baukastenZiele(). Additiv +
+// nur per bkUI() abrufbar (Debug) - greift NICHT in den normalen Szenen-Render ein. Read-only: Klick baut den Satz,
+// 'Ausfuehren' loggt nur (noch keine Engine-Verdrahtung = Stufe 3). Verben kontextuell: Person=Verhoer-Taktik,
+// Objekt=physisch (aus .actions), Item=benutzen/geben/zeigen.
+var _BK_TAKTIK = [
+  {v:'Ruhig befragen',cost:'frei'},{v:'Vertrauen gewinnen',cost:'frei'},{v:'Etwas anbieten',cost:'Item'},
+  {v:'Bestechen',cost:'Geld'},{v:'Bluffen',cost:'frei'},{v:'Unter Druck setzen',cost:'Ruf -'},{v:'Drohen / erpressen',cost:'Ruf --'}
+];
+var _BK_ACTLABEL = { ERKUNDEN:'Durchsuchen', DURCHSUCHEN:'Durchsuchen', BEOBACHTEN:'Beobachten', BEFRAGEN:'Befragen', ANSPRECHEN:'Ansprechen' };
+window.__bkSel = null; window.__bkVerb = null;
+function _renderBaukastenUI() {
+  try {
+    var z = _baukastenZiele();
+    var ov = document.getElementById('bkui-overlay');
+    if (!ov) { ov = document.createElement('div'); ov.id='bkui-overlay';
+      ov.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(5,4,3,.86);display:flex;align-items:center;justify-content:center;padding:14px;font-family:"Courier New",monospace';
+      document.body.appendChild(ov); ov.onclick=function(e){ if(e.target===ov) ov.remove(); }; }
+    var sel=window.__bkSel, verb=window.__bkVerb;
+    function actsFor(t){ if(!t) return []; if(t.typ==='person') return _BK_TAKTIK.map(function(x){return {v:x.v,cost:x.cost};});
+      if(t.typ==='objekt') return (t.actions||['ERKUNDEN']).map(function(a){return {v:_BK_ACTLABEL[a]||a,cost:'frei'};}).concat([{v:'Ansehen',cost:'frei'}]);
+      return [{v:'Benutzen',cost:'frei'},{v:'Geben',cost:'an Person'},{v:'Zeigen',cost:'frei'}]; }
+    function tile(t,grp){ var s=(sel&&sel.name===t.name)?'border-color:#c8a84a;background:rgba(200,168,74,.14);box-shadow:inset 3px 0 0 #c8a84a':'';
+      var tag=t.hinweis?'<span style="margin-left:auto;font-size:9.5px;color:#1a150b;background:#c8a84a;padding:1px 7px;border-radius:3px">● Hinweis</span>':'<span style="margin-left:auto;font-size:9px;color:#9a8a68">'+(t.typ==='person'?'Person':t.typ==='objekt'?'Spur':'Item')+'</span>';
+      return '<div class="bkt" data-k="'+grp+'" data-n="'+encodeURIComponent(t.name)+'" style="display:flex;align-items:center;gap:9px;background:#15110a;border:1px solid #4d4234;border-radius:5px;padding:7px 10px;cursor:pointer;'+s+'"><span style="font-size:13px;color:#e8e0cc">'+t.name+'</span>'+tag+'</div>'; }
+    var perH=z.personen.map(function(t){return tile(t,'person');}).join('')||'<div style="color:#6b6150;font-size:11px">niemand hier</div>';
+    var objH=z.objekte.map(function(t){return tile(t,'objekt');}).join('')||'<div style="color:#6b6150;font-size:11px">nichts zu untersuchen</div>';
+    var itH=z.items.length?z.items.map(function(t){return tile(t,'item');}).join(''):'<div style="color:#6b6150;font-size:11px">nichts dabei</div>';
+    var acts=actsFor(sel);
+    var actsH=sel?acts.map(function(a){var on=verb===a.v; return '<div class="bka" data-v="'+encodeURIComponent(a.v)+'" style="display:flex;align-items:center;gap:8px;border:1px solid #4d4234;border-radius:5px;padding:8px 11px;cursor:pointer;background:'+(on?'#c8a84a':'linear-gradient(180deg,#221c12,#171209)')+';color:'+(on?'#161009':'#d4b86a')+'"><span style="font-size:13px">'+a.v+'</span><span style="margin-left:auto;font-size:9px;opacity:.8">'+a.cost+'</span></div>';}).join(''):'<div style="color:#6b6150;font-size:12px;padding:12px;text-align:center;border:1px dashed #4d4234;border-radius:6px">Erst ein Ziel rechts waehlen</div>';
+    var satz = (verb||'…')+' · '+(sel?sel.name:'Ziel');
+    var ready=sel&&verb;
+    ov.innerHTML='<div style="max-width:720px;width:100%;max-height:92vh;overflow:auto;background:#0e0c08;border:1px solid #4d4234;border-radius:8px;padding:14px 16px">'
+      +'<div style="color:#c8a84a;letter-spacing:.14em;font-size:12px;text-align:center;margin-bottom:10px">BAUKASTEN · '+(engineCurrentLocation&&engineCurrentLocation.name||'')+' <span style="float:right;color:#6b6150;cursor:pointer" onclick="document.getElementById(\'bkui-overlay\').remove()">✕</span></div>'
+      +'<div style="border:1px solid #c8a84a;border-radius:6px;background:rgba(200,168,74,.08);padding:10px 14px;font-size:16px;color:'+(ready?'#e8e0cc':'#9a8a68')+';margin-bottom:6px">'+satz+'</div>'
+      +'<button id="bkexec" style="width:100%;padding:11px;border:none;border-radius:6px;font-family:inherit;font-size:14px;font-weight:bold;margin-bottom:12px;cursor:'+(ready?'pointer':'not-allowed')+';background:'+(ready?'#c8a84a':'#2a2418')+';color:'+(ready?'#161009':'#6b6150')+'">'+(ready?('▶ '+verb+' · '+sel.name):'Ziel + Aktion waehlen')+'</button>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">'
+        +'<div><div style="color:#9a8a68;font-size:10px;letter-spacing:.22em;margin-bottom:6px">'+(sel&&sel.typ==='person'?'VERHOER-TAKTIK':'AKTION')+'</div><div style="display:flex;flex-direction:column;gap:6px">'+actsH+'</div></div>'
+        +'<div><div style="color:#9a8a68;font-size:10px;letter-spacing:.22em;margin:0 0 6px">PERSONEN</div><div style="display:flex;flex-direction:column;gap:6px">'+perH+'</div>'
+          +'<div style="color:#9a8a68;font-size:10px;letter-spacing:.22em;margin:10px 0 6px">HIER UNTERSUCHEN</div><div style="display:flex;flex-direction:column;gap:6px">'+objH+'</div>'
+          +'<div style="color:#9a8a68;font-size:10px;letter-spacing:.22em;margin:10px 0 6px">DABEI</div><div style="display:flex;flex-direction:column;gap:6px">'+itH+'</div></div>'
+      +'</div></div>';
+    ov.querySelectorAll('.bkt').forEach(function(el){ el.onclick=function(){ var grp=el.dataset.k, nm=decodeURIComponent(el.dataset.n);
+      var arr=grp==='person'?z.personen:grp==='objekt'?z.objekte:z.items; var t=arr.find(function(x){return x.name===nm;});
+      if(window.__bkSel&&window.__bkSel.name===nm){window.__bkSel=null;window.__bkVerb=null;}else{window.__bkSel=t;window.__bkVerb=(t.typ==='objekt'&&t.actions&&t.actions.length===1?(_BK_ACTLABEL[t.actions[0]]||t.actions[0]):null);} _renderBaukastenUI(); }; });
+    ov.querySelectorAll('.bka').forEach(function(el){ el.onclick=function(){ var v=decodeURIComponent(el.dataset.v); window.__bkVerb=(window.__bkVerb===v?null:v); _renderBaukastenUI(); }; });
+    var ex=document.getElementById('bkexec'); if(ex&&ready) ex.onclick=function(){ if(typeof diag==='function') diag('detect','🧩 BAUKASTEN-UI (Stufe 2a, ungewired): "'+verb+' · '+sel.name+'"'); ex.textContent='▶ '+verb+' · '+sel.name+'  (Stufe 3: Engine-Verdrahtung folgt)'; };
+  } catch (e) { if (typeof diag==='function') diag('drift','BAUKASTEN-UI-Fehler: '+(e&&e.message?e.message:e)); }
+}
+try { window.bkUI = function(){ window.__bkSel=null; window.__bkVerb=null; _renderBaukastenUI(); }; } catch (e) {}
 // v7.12.1014: Prüft positionsunabhängig, ob an einer bestimmten Erkundungs-Zelle (Buchstabe) gerade ein noch
 // nicht gefundenes, gate-freies Umgebungs-Indiz wartet. Für sichtbare Fund-Marker im Wimmelbild (goldener Glanz),
 // damit der Spieler sieht WO etwas zu holen ist - statt es hinter dem leicht übersehbaren Umsehen-Button zu verstecken.
