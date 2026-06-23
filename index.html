@@ -3419,7 +3419,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1098</div>
+    <div class="start-version">Schatten v7.12.1099</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3653,7 +3653,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1098</span>
+    <span>Schatten v7.12.1099</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11841,7 +11841,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1098';
+window.SCHATTEN_VERSION = 'v7.12.1099';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -12220,6 +12220,7 @@ function zeigeMoralWahl(resolveOpt) {
       b.addEventListener('click', function () {
         try {
           caseProgress.moralWahl = o.wahl;
+          if (o.wahl === 'schweigegeld') caseProgress.moralBetrag = bribe; // v7.12.1099 (Codex P2): Betrag beim Klick fixieren, nicht spaeter neu rechnen
           // Narration fuer die Aufloesungs-Szene anhaengen
           const narr = {
             uebergeben: ' MORAL-AUSGANG: Karl uebergibt ' + taeter + ' den Behoerden (Volkspolizei) - korrekt und sauber. Erzaehle den Abschluss entsprechend.',
@@ -21962,7 +21963,7 @@ function showCaseSolved() {
         const _mw = (caseProgress && caseProgress.moralWahl) || 'uebergeben';
         let _renommeeBonus = (!earlyAbort && !_istEigenauftrag) ? 1 : 0;
         if (_mw === 'laufen') { _honorarGezahlt = Math.round(_honorarGezahlt * 0.5); _renommeeBonus = -1; }
-        else if (_mw === 'schweigegeld') { _honorarGezahlt = (typeof _moralBribeBetrag === 'function') ? _moralBribeBetrag() : 240; _renommeeBonus = -2; }
+        else if (_mw === 'schweigegeld') { _honorarGezahlt = (caseProgress && typeof caseProgress.moralBetrag === 'number' && caseProgress.moralBetrag > 0) ? caseProgress.moralBetrag : ((typeof _moralBribeBetrag === 'function') ? _moralBribeBetrag() : 240); _renommeeBonus = -2; }
         karlAkte.kasse = { ost: _restOst + _honorarGezahlt, west: _restWest };
         karlAkte.faelleGesamt = (karlAkte.faelleGesamt | 0) + 1;
         if (!karlAkte.ruf || typeof karlAkte.ruf !== 'object') karlAkte.ruf = { haerte: 0, renommee: 0 };
@@ -21998,7 +21999,7 @@ function showCaseSolved() {
               if (romanceClimaxed[nm] && nm) { const k = ('' + nm).toLowerCase().trim(); if (k) { karlAkte.bekannte[k] = { name: nm, status: 'romanze', fall: _titel, tag: (typeof gameDay === 'number' ? gameDay : 0) }; karlAkte._romanzeRecapPending = nm; } }
             }
           }
-          if (!earlyAbort && !_istEigenauftrag && typeof clientProfile === 'object' && clientProfile && clientProfile.name) {
+          if (!earlyAbort && !_istEigenauftrag && (caseProgress.moralWahl !== 'schweigegeld') && typeof clientProfile === 'object' && clientProfile && clientProfile.name) {
             const ck = ('' + clientProfile.name).toLowerCase().trim();
             if (ck && !karlAkte.bekannte[ck]) karlAkte.bekannte[ck] = { name: clientProfile.name, status: 'geholfen', fall: _titel, tag: (typeof gameDay === 'number' ? gameDay : 0) };
           }
@@ -22023,15 +22024,20 @@ function showCaseSolved() {
         } catch (e) {}
       }
     } catch (e) {}
+    // v7.12.1099 (Codex P2): Schweigegeld bedeutet - KEIN Bericht an den Klienten. Endscreen darf dann nicht
+    // "Klient ist informiert" sagen. outcomeSentence (Kopfzeile) ueberschreiben + eigener Schlusssatz.
+    try { if (caseProgress && caseProgress.moralWahl === 'schweigegeld') outcomeSentence = 'Karl kassiert und schweigt. Der Klient erfaehrt die Wahrheit nie.'; } catch (e) {}
     const closingText = earlyAbort
       ? 'Was Karl nicht weiß, wird er nicht mehr finden. Der Korn hilft auch heute.'
-      : (_istEigenauftrag
-          ? 'Kein Klient, kein Honorar. Aber die Wahrheit steht - und die alte Schuld wiegt heute etwas leichter.'
-          : (_diebGesichertInformiert
-              // v7.12.428 (Benjamin): outcomeSentence sagt schon "Klient informiert, das Honorar ist
-              // fällig" - hier NICHT wiederholen, sonst doppelt. Neutraler Noir-Schlusssatz.
-              ? 'Der Fall ist abgeschlossen.'
-              : 'Der Klient ist informiert, das Honorar ist fällig.'));
+      : ((caseProgress && caseProgress.moralWahl === 'schweigegeld')
+          ? 'Das Geld wiegt schwer in der Tasche. Den Bericht an den Klienten bleibt Karl schuldig.'
+          : (_istEigenauftrag
+              ? 'Kein Klient, kein Honorar. Aber die Wahrheit steht - und die alte Schuld wiegt heute etwas leichter.'
+              : (_diebGesichertInformiert
+                  // v7.12.428 (Benjamin): outcomeSentence sagt schon "Klient informiert, das Honorar ist
+                  // fällig" - hier NICHT wiederholen, sonst doppelt. Neutraler Noir-Schlusssatz.
+                  ? 'Der Fall ist abgeschlossen.'
+                  : 'Der Klient ist informiert, das Honorar ist fällig.')));
     // v7.12.144 (User-Wunsch: Abwechslung): zufaelliger Noir-Schlusssatz statt
     // immer "Karl goennt sich einen ehrlichen Schluck Doppelkorn". Tageszeit-/
     // Stimmungs-neutral, passt zu jedem Fallausgang.
@@ -34880,8 +34886,18 @@ Marlowe-Stil: stilvoll, elliptisch, NICHT explizit. Tuer schliesst sich, Schnitt
         // v7.12.385: WOHNEN/MANGEL - macht die Zeit koerperlich spuerbar.
         'Wohnen im Mangel: Bad auf dem Flur, Wachstuchdecke, Emailletasse, ausgebesserte Schuhe, ein geflickter Mantel, die Schneiderin statt Kaufhaus',
       ];
+      // v7.12.1099 (Codex P2): Versorgungs-Anker sektor-korrekt. Lebensmittelkarte/HO/Rationierung gehoeren NUR
+      // in den Osten; West-Berlin war ab 1950 rationierungsfrei. Im West-Sektor diese Anker aus dem Pool nehmen
+      // und durch einen West-Versorgungs-Anker ersetzen.
+      const _sekTxt = (((typeof engineCurrentLocation === 'object' && engineCurrentLocation && engineCurrentLocation.sektor) || (caseSetup && caseSetup.sektor) || '') + ' ' + ((typeof engineCurrentLocation === 'object' && engineCurrentLocation && engineCurrentLocation.name) || '')).toLowerCase();
+      const _istWestSek = /west|charlottenburg|kurf|ku.?damm|schoeneberg|sch\u00f6neberg|wilmersdorf|zehlendorf|tempelhof|wannsee|tiergarten|hardenberg|marienfelde|kreuzberg|neukoelln|neuk\u00f6lln|moabit|spandau|reinickendorf|steglitz/.test(_sekTxt);
+      let _genAnchors = generalAnchors;
+      if (_istWestSek) {
+        _genAnchors = generalAnchors.filter(a => !/lebensmittelkarte|lebensmittelmarke|ho-gaststaette|ho-laden|bezugsschein|rationierung|konsum-/i.test(a));
+        _genAnchors = _genAnchors.concat(['der freie Westhandel: volle Schaufenster (Apfelsinen, Persil-Reklame), Zahlung in West-Mark, Care-Paket-Reste - KEINE Lebensmittelkarten, KEINE HO (West-Rationierung endete 1950)']);
+      }
       const pickedDateAnker = ankerHints.slice(0, 2).join('; ');
-      const pickedGeneral = generalAnchors[Math.floor(Math.random() * generalAnchors.length)];
+      const pickedGeneral = _genAnchors[Math.floor(Math.random() * _genAnchors.length)];
       // v7.12.255: FALLSPEZIFISCHE Anker aus dem Setup (histHints). Diese passen thematisch
       // zum Fall (z.B. Achterberg: Berliner Ensemble/Brecht, Charite-Obduktion, Devisenkontrolle)
       // und sind reicher als die rein datumsbasierten Hinweise. Befund: Achterberg historisch nur
@@ -34916,7 +34932,7 @@ Marlowe-Stil: stilvoll, elliptisch, NICHT explizit. Tuer schliesst sich, Schnitt
           kommunikation: 'KOMMUNIKATION: ein Anruf uebers Fernamt ("Fraeulein, geben Sie mir..."), eine Telefonzelle mit Muenzschlitz, RIAS leise im Hinterzimmer',
           sektorpolitik: 'SEKTOR/POLITIK: Schwarzmarktkurse West-Mark/Ost-Mark, ein Geldschieber, eine Volkspolizei-Streife, eine MfS-Beobachtung',
           mobilitaet: 'MOBILITAET: eine Pappfahrkarte fuer die S-Bahn, der nervoese Sektorenuebergang an der Friedrichstrasse (ohne Mauer!), eine Strassenbahn',
-          versorgung: 'VERSORGUNG: eine Lebensmittelkarte/Bezugsschein ueber den Tresen, ein HO-Geschaeft, ein CARE-Paket, Rationierung',
+          versorgung: 'VERSORGUNG (sektor-abhaengig!): im OSTEN eine Lebensmittelkarte/Bezugsschein, ein HO-Geschaeft, Rationierung; im WESTEN freier Handel, volle Schaufenster, West-Mark, CARE-Paket-Reste',
           wohnenMangel: 'WOHNEN/MANGEL: ein Kohlenkeller mit Briketts, Bad auf dem Flur, eine Emailletasse, ein geflickter Mantel, die Schneiderin',
           getraenkeAlltag: 'GETRAENKE: Molle und Korn in der Kneipe, Muckefuck/Malzkaffee statt teurem Bohnenkaffee, eine Berliner Weisse',
         };
@@ -34930,7 +34946,7 @@ Marlowe-Stil: stilvoll, elliptisch, NICHT explizit. Tuer schliesst sich, Schnitt
           eduHint = ` ALLTAGSGESCHICHTE (wichtig fuer dokumentarischen Wert): Dieser Run hat bisher erst ${_eduCount} von 8 Alltagsdimensionen spuerbar gemacht. Webe in DIESER Szene EIN konkretes Detail aus dieser Domaene organisch ein (nicht aufgesetzt, kein Vortrag): ${_eduVorschlaege[_fehlend[0]]}.`;
         }
       }
-      recap += `\n\nHISTORISCHE ANREICHERUNG (PFLICHT): Dieser Run hat bisher ${historicalAnchorCount} konkrete historische Bezuege in ${historicalAnchorCategories.length} Kategorien - ${needMoreAnchors ? 'zu wenig' : 'wenig Vielfalt'}. Ein Schatten-Run soll dokumentarischen Wert haben (Geschichtsabitur-Niveau). In DIESER Szene MUSST du EINEN konkreten historischen Bezug einbauen, nicht aufgesetzt sondern organisch in Beobachtung, Beilaeufigem, Hintergrund.${fallAnker ? ` ZUM FALL PASSEND (bevorzugt): ${fallAnker}.` : ''} Weitere Vorschlaege passend zum Spieldatum (${formatGameDate(gameCurrentDate)}): ${pickedDateAnker}. Oder ein Alltags-Anker: ${pickedGeneral}.${varietyHint} Beispiele wie das aussieht: A"Aus dem Sachsenwerk-Radio im Hinterzimmer dringt eine RIAS-Stimme: Reuter-Trauerfeier morgen am Schoeneberger Rathaus." ODER "Die Frau am Tresen drueckt eine Turf aus, schiebt ihre Lebensmittelkarte ueber den Tresen." ODER "Draussen rollt ein schwarzer EMW 340 vorbei, KVP-Beifahrer mit Maschinenpistole auf dem Schoss." WICHTIG fuer Fahrzeug-Marken in 1953: KEIN Trabant (erst 1957), KEIN Wartburg-Auto (Serie erst 1956), KEIN Sachsenring P240 (erst 1956), KEIN Barkas (erst 1961). KORREKT: EMW 340 (Eisenach), GAZ M20 Pobeda (Sowjet), IFA F9, BMW-Vorkrieg, Opel Olympia, fuer Karl Opel Olympia oder EMW 340. Nutze EINEN Bezug, nicht alle drei - sonst wird es Wikipedia. KEIN expliziter Geschichts-Vortrag, NUR beilaeufige Beobachtung.${eduHint}`;
+      recap += `\n\nHISTORISCHE ANREICHERUNG (PFLICHT): Dieser Run hat bisher ${historicalAnchorCount} konkrete historische Bezuege in ${historicalAnchorCategories.length} Kategorien - ${needMoreAnchors ? 'zu wenig' : 'wenig Vielfalt'}. Ein Schatten-Run soll dokumentarischen Wert haben (Geschichtsabitur-Niveau). In DIESER Szene MUSST du EINEN konkreten historischen Bezug einbauen, nicht aufgesetzt sondern organisch in Beobachtung, Beilaeufigem, Hintergrund.${fallAnker ? ` ZUM FALL PASSEND (bevorzugt): ${fallAnker}.` : ''} Weitere Vorschlaege passend zum Spieldatum (${formatGameDate(gameCurrentDate)}): ${pickedDateAnker}. Oder ein Alltags-Anker: ${pickedGeneral}.${varietyHint} Beispiele wie das aussieht: A"Aus dem Sachsenwerk-Radio im Hinterzimmer dringt eine RIAS-Stimme: Reuter-Trauerfeier morgen am Schoeneberger Rathaus." ODER ${_istWestSek ? '"Im Schaufenster stapeln sich Apfelsinen und Persil-Pakete; die Kundin zahlt mit West-Mark."' : '"Die Frau am Tresen drueckt eine Turf aus, schiebt ihre Lebensmittelkarte ueber den Tresen."'} ODER "Draussen rollt ein schwarzer EMW 340 vorbei, KVP-Beifahrer mit Maschinenpistole auf dem Schoss." WICHTIG fuer Fahrzeug-Marken in 1953: KEIN Trabant (erst 1957), KEIN Wartburg-Auto (Serie erst 1956), KEIN Sachsenring P240 (erst 1956), KEIN Barkas (erst 1961). KORREKT: EMW 340 (Eisenach), GAZ M20 Pobeda (Sowjet), IFA F9, BMW-Vorkrieg, Opel Olympia, fuer Karl Opel Olympia oder EMW 340. Nutze EINEN Bezug, nicht alle drei - sonst wird es Wikipedia. KEIN expliziter Geschichts-Vortrag, NUR beilaeufige Beobachtung. SEKTOR-PFLICHT (haeufiger Fehler vermeiden): Diese Szene spielt im ${_istWestSek ? 'WEST-Sektor - hier gibt es KEINE Lebensmittelkarten/HO/Bezugsscheine/Rationierung (im Westen seit 1950 abgeschafft); stattdessen freier Handel, volle Schaufenster, West-Mark, Persil, Care-Paket-Reste' : 'OST-Sektor - hier sind Lebensmittelkarten, HO-Laden, Konsum, Bezugsscheine und Rationierung stimmig'}.${eduHint}`;
     }
 
     // v7.9.18: Vf 1 / 0 (lebensgefaehrlich) - Karl kann nicht mehr aktiv handeln.
@@ -49962,6 +49978,37 @@ function botRngChoice(arr) {
 //   5. Bei rotating: pro Subturn andere Strategie
 //
 // Fallback: erste Option wenn keine Kategorie matched.
+// v7.12.1099 (Codex P1: Bot-Runs konnten nicht reisen - Reise ist ein System-Button mit dataset.kategorie='REISE',
+// den botGetCurrentOptions wegfiltert. Folge: Bot klebte am Ein-Ort, der Reise-Payoff wurde nie getestet).
+// Loesung: direkte Bot-Reise. Ist der AKTUELLE Ort ausgeschoepft (keine erreichbare Spur mehr) und ein anderer Ort
+// traegt eine erreichbare Spur (bevorzugt die Dirigent-Reiseziele), faehrt der Bot per reiseZuOrt dorthin.
+function botMaybeReisen() {
+  try {
+    if (typeof getCaseLocations !== 'function' || typeof reiseZuOrt !== 'function' || typeof offeneIndizienAmOrtNachErreichbarkeit !== 'function' || typeof normForMatch !== 'function') return false;
+    if (typeof karlInStasiCustody !== 'undefined' && karlInStasiCustody) return false; // in Haft nicht reisen
+    if (typeof caseProgress === 'object' && caseProgress && (caseProgress.istGelöst || caseProgress.istGescheitert)) return false;
+    const curName = (typeof engineCurrentLocation === 'object' && engineCurrentLocation && engineCurrentLocation.name) ? engineCurrentLocation.name : '';
+    const locs = getCaseLocations() || [];
+    // (1) Hat der aktuelle Ort noch eine erreichbare Spur? Dann NICHT weglaufen.
+    const cur = locs.find(l => l && normForMatch(l.name) === normForMatch(curName));
+    if (cur) { const e0 = offeneIndizienAmOrtNachErreichbarkeit(cur); if ((e0.jetzt | 0) > 0) return false; }
+    // (2) Reiseziel mit erreichbarer Spur suchen: erst die Dirigent-Ziele, dann beliebiger anderer Ort.
+    const prefer = Array.isArray(window._dirigentReiseZiele) ? window._dirigentReiseZiele.slice() : [];
+    const kandidaten = prefer.map(n => locs.find(l => l && normForMatch(l.name) === normForMatch(n))).filter(Boolean)
+      .concat(locs.filter(l => l && normForMatch(l.name) !== normForMatch(curName)));
+    for (const loc of kandidaten) {
+      if (!loc || normForMatch(loc.name) === normForMatch(curName)) continue;
+      if (typeof istOrtGeoeffnet === 'function' && !istOrtGeoeffnet(loc)) continue;
+      const e = offeneIndizienAmOrtNachErreichbarkeit(loc);
+      if ((e.jetzt | 0) > 0) {
+        if (typeof diag === 'function') diag('bot', '\ud83e\udd16 BOT-REISE zu "' + loc.name + '" (Ort ausgeschoepft, Spur woanders erreichbar)');
+        reiseZuOrt(loc);
+        return true;
+      }
+    }
+  } catch (e) {}
+  return false;
+}
 function botChooseByStrategy(options) {
   if (!options || options.length === 0) return null;
   // Auflist-by-Kategorie
@@ -51433,6 +51480,16 @@ async function botRunMainLoop() {
         console.warn('[Bot] WARNUNG: Optionen-Hash nach 5 Versuchen unveraendert - fahre fort (evtl. echte Wiederholung der Szene).');
       }
 
+      // v7.12.1099 (Codex P1): Wenn der Ort ausgeschoepft ist, reist der Bot zur naechsten offenen Spur (statt am
+      // leeren Ort zu kleben) - so testen Bot-Runs den Reise-Payoff. Danach auf die neue Szene warten + weiter.
+      try {
+        if (typeof botMaybeReisen === 'function' && botMaybeReisen()) {
+          botLastOptionsHash = freshHash;
+          try { await botWaitForOptionsReady(); } catch (e) {}
+          botCurrentTurn = (typeof botCurrentTurn === 'number' ? botCurrentTurn : 0) + 1;
+          continue;
+        }
+      } catch (e) {}
       const chosen = botChooseByStrategy(options);
       if (!chosen || !chosen.element) {
         throw new Error('Bot konnte keine Option auswaehlen');
