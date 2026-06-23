@@ -3419,7 +3419,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1099</div>
+    <div class="start-version">Schatten v7.12.1100</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3653,7 +3653,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1099</span>
+    <span>Schatten v7.12.1100</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11841,7 +11841,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1099';
+window.SCHATTEN_VERSION = 'v7.12.1100';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -30611,24 +30611,12 @@ function renderOptions(scene) {
   });
   } // v7.12.653: Ende if (KI_OPTIONEN_AKTIV)
 
-  // v7.12.1030 (Benjamin "Weg eins"): Statt der ausgeblendeten A/B/C/D-Optionen ein klarer Reise-Hinweis. Der
-  // Reisen-Button (Karte) sowie Heilen/Schlafen/Umsehen rendern unveraendert weiter unten - der Spieler behaelt
-  // seine Freiheit, wird aber nicht mehr mit sinnlosen Orts-Optionen am leeren Schauplatz festgehalten.
-  if (_ortLeerAusgeschoepft) {
-    try {
-      const _ziele = (window._dirigentReiseZiele && window._dirigentReiseZiele.length) ? window._dirigentReiseZiele.slice(0, 2) : [];
-      const _zielTxt = _ziele.length
-        ? ' Die Spur führt weiter, etwa ' + _ziele.map(z => '<strong>' + escapeHtml(z) + '</strong>').join(' oder ') + '.'
-        : ' Die Spur führt weiter an einen anderen Ort.';
-      const _leerBanner = document.createElement('div');
-      _leerBanner.className = 'ort-leer-hinweis';
-      _leerBanner.style.cssText = 'padding:14px 18px; margin:4px 0 14px 0; border:1px solid rgba(150,170,210,0.38); background:rgba(40,55,85,0.30); border-radius:6px; color:#bcd; font-size:0.9em; line-height:1.55;';
-      _leerBanner.innerHTML = '🗺️ <strong>Hier ist nichts mehr zu holen.</strong>' + _zielTxt
-        + ' Nutze den <strong>Reisen</strong>-Button (Karte), um zum nächsten Schauplatz zu fahren.'
-        + ' <span style="opacity:0.8;">Heilen, Schlafen oder ein letzter Blick per Umsehen bleiben dir natürlich.</span>';
-      uebergangBody.appendChild(_leerBanner);
-    } catch (e) { if (typeof diag === 'function') diag('drift', 'ORT-LEER-Banner-Fehler: ' + (e && e.message ? e.message : e)); }
-  }
+  // v7.12.1030 (Benjamin "Weg eins"): Statt der ausgeblendeten A/B/C/D-Optionen ein klarer Reise-Hinweis.
+  // v7.12.1100 (Benjamin-Befund: Banner versprach "Heilen, Schlafen oder ein letzter Blick per Umsehen bleiben dir
+  // natürlich", obwohl im transienten Opel KEINE dieser Aktionen verfügbar war -> falsches Versprechen). FIX:
+  // Der ORT-LEER-Banner wird jetzt WEITER UNTEN gerendert (nach den System-Button-Gates), damit der
+  // Aktions-Satz konditional aus den echten Flags (showSleepButton / Heal-Buttons / transient) gebaut werden kann.
+  // Hier nur noch die A/B/C/D-Ausblendung (oben via !_ortLeerAusgeschoepft); das Banner folgt nach den Gates.
 
   // v7.10.9: VERTEILUNGS-SUMMARY ueber alle 4 Story-Optionen.
   // Damit wir sehen: "Diese Szene hatte 3x BEOBACHTEN + 1x OFFENSIV"
@@ -30908,6 +30896,43 @@ function renderOptions(scene) {
   // NUR diese beiden Faelle; in allen anderen Situationen bleibt Notheilen unveraendert verfuegbar.
   if (showWagnerHealButton || showMarleneHealButton) {
     showNotheilenButton = false;
+  }
+
+  // v7.12.1100 (Benjamin-Befund): ORT-LEER-Banner ("Hier ist nichts mehr zu holen") - jetzt HIER gerendert, nachdem
+  // die System-Button-Gates feststehen. Der Aktions-Satz nennt NUR Aktionen, die im aktuellen Zustand wirklich
+  // verfügbar sind. Frueher (bis v1099) war der Satz hart verdrahtet -> im transienten Opel (kein Umsehen, kein
+  // Schlafen am Nachmittag, kein Arzt erreichbar) versprach das Banner drei Aktionen, von denen keine da war.
+  if (_ortLeerAusgeschoepft) {
+    try {
+      const _ziele = (window._dirigentReiseZiele && window._dirigentReiseZiele.length) ? window._dirigentReiseZiele.slice(0, 2) : [];
+      const _zielTxt = _ziele.length
+        ? ' Die Spur führt weiter, etwa ' + _ziele.map(z => '<strong>' + escapeHtml(z) + '</strong>').join(' oder ') + '.'
+        : ' Die Spur führt weiter an einen anderen Ort.';
+      // Nur real verfügbare Aktionen nennen (sonst luegt das Banner, Benjamin-Befund v1100).
+      const _heilenDa = showWagnerHealButton || showMarleneHealButton || showNotheilenButton;
+      const _ortTransient = (typeof engineCurrentLocation !== 'undefined' && engineCurrentLocation && engineCurrentLocation.transient);
+      const _umsehenDa = !isOnTheRoad && !_ortTransient; // im fahrenden Wagen/unterwegs gibt es kein Umsehen
+      const _aktionen = [];
+      if (_heilenDa) _aktionen.push('Heilen');
+      if (showSleepButton) _aktionen.push('Schlafen');
+      if (_umsehenDa) _aktionen.push('ein letzter Blick per Umsehen');
+      let _aktionenSatz = '';
+      if (_aktionen.length) {
+        const _liste = (_aktionen.length === 1)
+          ? _aktionen[0]
+          : _aktionen.slice(0, -1).join(', ') + ' oder ' + _aktionen[_aktionen.length - 1];
+        const _verb = (_aktionen.length === 1) ? ' bleibt dir natürlich.' : ' bleiben dir natürlich.';
+        const _listeCap = _liste.charAt(0).toUpperCase() + _liste.slice(1);
+        _aktionenSatz = ' <span style="opacity:0.8;">' + _listeCap + _verb + '</span>';
+      }
+      const _leerBanner = document.createElement('div');
+      _leerBanner.className = 'ort-leer-hinweis';
+      _leerBanner.style.cssText = 'padding:14px 18px; margin:4px 0 14px 0; border:1px solid rgba(150,170,210,0.38); background:rgba(40,55,85,0.30); border-radius:6px; color:#bcd; font-size:0.9em; line-height:1.55;';
+      _leerBanner.innerHTML = '🗺️ <strong>Hier ist nichts mehr zu holen.</strong>' + _zielTxt
+        + ' Nutze den <strong>Reisen</strong>-Button (Karte), um zum nächsten Schauplatz zu fahren.'
+        + _aktionenSatz;
+      uebergangBody.appendChild(_leerBanner);
+    } catch (e) { if (typeof diag === 'function') diag('drift', 'ORT-LEER-Banner-Fehler: ' + (e && e.message ? e.message : e)); }
   }
 
   // v7.12.38: SYSTEM-BUTTON-LOGGING fuer Debug-Export.
