@@ -3419,7 +3419,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1109</div>
+    <div class="start-version">Schatten v7.12.1110</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3653,7 +3653,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1109</span>
+    <span>Schatten v7.12.1110</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11899,7 +11899,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1109';
+window.SCHATTEN_VERSION = 'v7.12.1110';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -28196,10 +28196,10 @@ function reiseZuOrt(loc) {
     };
     if (typeof chooseOption === 'function') chooseOption(reiseOpt);
   };
-  if (_mitnehmbar.length > 0 && typeof zeigeMitnehmenPopup === 'function') {
+  if (_mitnehmbar.length > 0 && typeof zeigeMitnehmenPopup === 'function' && !window._botReiseAllein) {
     zeigeMitnehmenPopup(_mitnehmbar, _reiseKern);
   } else {
-    _reiseKern();
+    _reiseKern(); // v7.12.1110: im Botlauf (_botReiseAllein) ohne Mitnehmen-Popup direkt weiter - kein Haenger
   }
 }
 function schliesseReiseMenue() {
@@ -50175,6 +50175,8 @@ function botMaybeReisen() {
     if (typeof getCaseLocations !== 'function' || typeof reiseZuOrt !== 'function' || typeof offeneIndizienAmOrtNachErreichbarkeit !== 'function' || typeof normForMatch !== 'function') return false;
     if (typeof karlInStasiCustody !== 'undefined' && karlInStasiCustody) return false; // in Haft nicht reisen
     if (typeof caseProgress === 'object' && caseProgress && (caseProgress.istGelöst || caseProgress.istGescheitert)) return false;
+    // v7.12.1110 (Codex P2): bei akuter Gefahr NICHT reisen (gleiche Schwelle wie der Spieler-Reisebutton, der bei Sp>=4 gesperrt ist).
+    try { const _spB = (typeof lastSpannung === 'number') ? lastSpannung : 0; if (_spB >= 4) return false; } catch (e) {}
     const curName = (typeof engineCurrentLocation === 'object' && engineCurrentLocation && engineCurrentLocation.name) ? engineCurrentLocation.name : '';
     const locs = getCaseLocations() || [];
     // (1) Hat der aktuelle Ort noch eine erreichbare Spur? Dann NICHT weglaufen.
@@ -50190,7 +50192,9 @@ function botMaybeReisen() {
       const e = offeneIndizienAmOrtNachErreichbarkeit(loc);
       if ((e.jetzt | 0) > 0) {
         if (typeof diag === 'function') diag('bot', '\ud83e\udd16 BOT-REISE zu "' + loc.name + '" (Ort ausgeschoepft, Spur woanders erreichbar)');
+        try { window._botReiseAllein = true; } catch (e) {} // v7.12.1110 (Codex P2): kein Mitnehmen-Popup im Botlauf -> haengt nicht
         reiseZuOrt(loc);
+        try { window._botReiseAllein = false; } catch (e) {}
         return true;
       }
     }
@@ -51660,6 +51664,17 @@ async function botRunMainLoop() {
         await new Promise(r => setTimeout(r, 500));
       }
       if (options.length === 0) {
+        // v7.12.1110 (Codex P1): Leerer/ausgeschoepfter Ort (A/B/C/D ausgeblendet) -> NICHT sofort abbrechen.
+        // Erst die Reise-Rettung versuchen; nur wenn auch das nicht greift, aufgeben. Vorher warf der Bot HIER,
+        // bevor botMaybeReisen() drankam -> der Reise-only-Stall (Hinterhof leer, kein Button) blieb moeglich.
+        let _gereist0 = false;
+        try { if (typeof botMaybeReisen === 'function' && botMaybeReisen()) _gereist0 = true; } catch (e) {}
+        if (_gereist0) {
+          botLastOptionsHash = freshHash;
+          try { await botWaitForOptionsReady(); } catch (e) {}
+          botCurrentTurn = (typeof botCurrentTurn === 'number' ? botCurrentTurn : 0) + 1;
+          continue;
+        }
         throw new Error('Keine Optionen gefunden (nach Frische-Verifikation)');
       }
       // Falls nach 5 Versuchen der Hash immer noch identisch ist: weitermachen, aber
