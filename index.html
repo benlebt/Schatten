@@ -3415,7 +3415,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1084</div>
+    <div class="start-version">Schatten v7.12.1085</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3639,7 +3639,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1084</span>
+    <span>Schatten v7.12.1085</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11396,12 +11396,20 @@ function _aktionsZielNpcPasst(ind) {
     // v7.12.1026: Wenn der an das Indiz gebundene NPC die EINZIGE Person am Ort ist, ist die Aktion
     // eindeutig auf ihn gerichtet - auch ohne Namen im Text ("Drück fester zu", "Greif durch").
     // So lösen harte Aktionen gegen den klar gemeinten NPC seine Aussage aus (Benjamin: Gewalt zählt auch).
+    // v7.12.1085 (Benjamin Live-Befund Krause Sz17: Sackgasse). Hier kommen wir nur an, wenn KEIN expliziter
+    // NPC-Chip-Klick erfolgte (targetId/targetName leer) - also eine normale A/B/C/D-Aktion. Frueher zaehlte
+    // nur der Sonderfall "genau 1 Person am Ort". Bei mehreren Anwesenden (Frieda + ihre Schlaeger Kalle/Jochen)
+    // und einer Option, die die gebundene NPC nur per PRONOMEN anspricht ("Frag SIE, ob Kalle...") schlug die
+    // Ziel-Erkennung fehl -> personengebundenes Indiz unerreichbar -> Fall haengt bei Stage 2. Fix: Ist die
+    // gebundene NPC PHYSISCH ANWESEND, gilt die Gespraechs-/Konfront-Aktion als auf sie gerichtet (egal wie viele
+    // andere - Kampf-NPCs konkurrieren nicht ums Gespraech). actions[]- und quelle-Gate bleiben separat scharf,
+    // und pro Szene wird ohnehin max. 1 Indiz vergeben (Reihenfolge/Ziel-Indiz steuert die Prioritaet).
     try {
       const npcsHier = (typeof getNpcsAtCurrentLocation === 'function')
         ? getNpcsAtCurrentLocation().filter(n => n && (n.id || n.name)) : [];
-      if (npcsHier.length === 1) {
-        const only = normForMatch(npcsHier[0].id || npcsHier[0].name || '');
-        if (only && (only === indNorm || indTeile.some(t => only.includes(t)) || (typeof _indizGehoertZuNpc === 'function' && _indizGehoertZuNpc(ind.npc, only, only)))) {
+      for (const nh of npcsHier) {
+        const cand = normForMatch(nh.id || nh.name || '');
+        if (cand && (cand === indNorm || indTeile.some(t => cand.includes(t)) || (typeof _indizGehoertZuNpc === 'function' && _indizGehoertZuNpc(ind.npc, cand, cand)))) {
           return true;
         }
       }
@@ -11782,7 +11790,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1084';
+window.SCHATTEN_VERSION = 'v7.12.1085';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
