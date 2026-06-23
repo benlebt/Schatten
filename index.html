@@ -3419,7 +3419,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1091</div>
+    <div class="start-version">Schatten v7.12.1092</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3643,7 +3643,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1091</span>
+    <span>Schatten v7.12.1092</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11800,7 +11800,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1091';
+window.SCHATTEN_VERSION = 'v7.12.1092';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -12131,6 +12131,76 @@ function _karlAkteUpdateRockBottom() {
     return karlAkte.rockBottom !== warRockBottom; // true = Statuswechsel
   } catch (e) { return false; }
 }
+// ============ v7.12.1093: MORAL-FORK bei der Aufloesung (#4 Entscheidungen mit Outcome - Benjamin) ============
+// Hat der Fall einen greifbaren Schuldigen/Verantwortlichen in Karls Hand, bietet die Aufloesung eine echte
+// moralische Gabel mit akte-wirksamen Folgen (Graue Noir-Moral, inkl. Schattenseiten). Engine-kontrollierte
+// Buttons -> Erkennung zuverlaessig, Folge deterministisch (in showCaseSolved ueber caseProgress.moralWahl).
+function _caseHasMoralFork() {
+  try {
+    if (!caseProgress || caseProgress.moralWahl) return false; // schon gewaehlt -> kein erneutes Overlay
+    const ct = (caseSetup && caseSetup.caseType) || '';
+    if (!/mord|diebstahl|vermisst|wahrheit|politisch/.test(ct)) return false; // beschatten hat keinen Taeter zum Laufenlassen
+    const taeter = (caseProgress.tatverdaechtiger || caseProgress.responsible || '');
+    return !!(taeter && ('' + taeter).trim());
+  } catch (e) { return false; }
+}
+function _moralBribeBetrag() { try { return 220 + ((typeof sceneCounter === 'number' ? sceneCounter : 0) % 4) * 20; } catch (e) { return 240; } }
+function zeigeMoralWahl(resolveOpt) {
+  try {
+    if (document.getElementById('moral-overlay')) return;
+    const taeter = ('' + (caseProgress.tatverdaechtiger || caseProgress.responsible || 'den Schuldigen')).replace(/\s*\(.*$/, '').trim() || 'den Schuldigen';
+    const bribe = _moralBribeBetrag();
+    const ov = document.createElement('div');
+    ov.id = 'moral-overlay';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:9200;background:rgba(10,8,6,0.86);display:flex;align-items:center;justify-content:center;padding:18px;';
+    const panel = document.createElement('div');
+    panel.style.cssText = 'max-width:460px;width:100%;max-height:84vh;overflow-y:auto;background:#1a1611;border:1px solid #6d5a34;border-radius:8px;padding:18px;box-shadow:0 12px 40px rgba(0,0,0,0.6);';
+    panel.innerHTML = '<div style="font-family:inherit;color:#e8c074;font-size:calc(15px * var(--reading-scale,1));letter-spacing:0.06em;margin-bottom:4px;">DER MOMENT DER ENTSCHEIDUNG</div>'
+      + '<div style="font-family:inherit;color:#9b8e78;font-size:calc(11px * var(--reading-scale,1));margin-bottom:14px;line-height:1.45;">Karl hat ' + escapeHtml(taeter) + ' in der Hand. Was jetzt? Die Entscheidung bleibt an Karl haengen - lange.</div>';
+    const opts = [
+      { wahl: 'uebergeben', label: 'Der Polizei uebergeben', sub: 'Sauber, korrekt. Der Klient ist zufrieden, Karls Ruf als verlaesslicher Ermittler waechst.', col: '#7fb3d5' },
+      { wahl: 'laufen', label: taeter + ' laufen lassen', sub: 'Karl drueckt ein Auge zu. Weniger Honorar, der Ruf leidet - aber ' + escapeHtml(taeter) + ' schuldet ihm einen Gefallen, und der harte Ruf weicht etwas.', col: '#c0a060' },
+      { wahl: 'schweigegeld', label: 'Schweigegeld nehmen (~' + bribe + ' Ostmark)', sub: 'Karl kassiert und schweigt. Volle Kasse jetzt - aber der Ruf nimmt schweren Schaden, und so etwas spricht sich herum.', col: '#c97a5a' }
+    ];
+    opts.forEach(o => {
+      const b = document.createElement('button');
+      b.style.cssText = 'display:block;width:100%;text-align:left;margin:0 0 9px;padding:11px 13px;background:#241f17;border:1px solid #4d4234;border-left:3px solid ' + o.col + ';border-radius:6px;color:#d8cbb3;font-family:inherit;cursor:pointer;';
+      b.innerHTML = '<div style="font-size:calc(13px * var(--reading-scale,1));color:#efe2c8;">' + escapeHtml(o.label) + '</div><div style="font-size:calc(10.5px * var(--reading-scale,1));color:#9b8e78;margin-top:3px;line-height:1.4;">' + o.sub + '</div>';
+      b.addEventListener('click', function () {
+        try {
+          caseProgress.moralWahl = o.wahl;
+          // Narration fuer die Aufloesungs-Szene anhaengen
+          const narr = {
+            uebergeben: ' MORAL-AUSGANG: Karl uebergibt ' + taeter + ' den Behoerden (Volkspolizei) - korrekt und sauber. Erzaehle den Abschluss entsprechend.',
+            laufen: ' MORAL-AUSGANG: Karl laesst ' + taeter + ' laufen / deckt ' + taeter + ' - aus Mitgefuehl, Berechnung oder Noir-Muedigkeit. Kein Triumph, ein Schulterzucken im Regen; ' + taeter + ' schuldet Karl jetzt etwas. Erzaehle den Abschluss entsprechend, KEINE Festnahme.',
+            schweigegeld: ' MORAL-AUSGANG: Karl nimmt Schweigegeld von ' + taeter + ' und laesst die Sache fallen - er steckt das Geld ein und schweigt. Bitter, kompromittiert, sehr Noir. KEINE Festnahme, KEIN Bericht der Wahrheit an den Klienten. Erzaehle den Abschluss entsprechend.'
+          }[o.wahl] || '';
+          if (resolveOpt && typeof resolveOpt.text === 'string') resolveOpt.text += narr;
+        } catch (e) {}
+        try { ov.remove(); } catch (e) {}
+        try { if (typeof fxFallGeloest === 'function') fxFallGeloest(); } catch (e) {}
+        chooseOption(resolveOpt);
+      });
+      panel.appendChild(b);
+    });
+    const abbr = document.createElement('button');
+    abbr.style.cssText = 'display:block;width:100%;text-align:center;margin-top:4px;padding:8px;background:transparent;border:none;color:#776a58;font-family:inherit;font-size:calc(11px * var(--reading-scale,1));cursor:pointer;';
+    abbr.textContent = 'Noch nicht - weiter ermitteln';
+    abbr.addEventListener('click', function () { try { ov.remove(); } catch (e) {} });
+    panel.appendChild(abbr);
+    ov.appendChild(panel);
+    ov.addEventListener('click', function (e) { if (e.target === ov) ov.remove(); });
+    document.body.appendChild(ov);
+  } catch (e) { try { chooseOption(resolveOpt); } catch (e2) {} }
+}
+// Resolve-Klick: bei moralischer Gabel erst das Overlay, sonst direkt aufloesen (FX feuert dann im jeweiligen Pfad).
+function _resolveOderMoral(resolveOpt) {
+  try {
+    if (typeof _caseHasMoralFork === 'function' && _caseHasMoralFork()) { zeigeMoralWahl(resolveOpt); return; }
+  } catch (e) {}
+  try { if (typeof fxFallGeloest === 'function') fxFallGeloest(); } catch (e) {}
+  chooseOption(resolveOpt);
+}
 // v7.12.1087 Debug-Inspektor (Konsole, nur Diagnose): Akte lesen/setzen/Fall-Ende simulieren - macht Scheibe 1
 // in Sekunden prüfbar, ohne einen ganzen Fall zu spielen.
 try {
@@ -12203,7 +12273,7 @@ function _buildProfilRecap() {
           const _bk = ('' + ce.name).toLowerCase().trim();
           const b = karlAkte.bekannte[_bk];
           if (b) {
-            const _wie = (b.status === 'romanze') ? 'hatte mit Karl eine gemeinsame Nacht' : (b.status === 'verprellt' ? 'wurde von Karl hart angefasst' : (b.status === 'kontakt') ? 'ist ein alter Bekannter aus Karls Kontaktnetz' + ((b.treffen | 0) > 1 ? ' (' + (b.treffen | 0) + ' Begegnungen)' : '') : 'wurde von Karl schon einmal aus der Klemme geholfen');
+            const _wie = (b.status === 'romanze') ? 'hatte mit Karl eine gemeinsame Nacht' : (b.status === 'verprellt' ? 'wurde von Karl hart angefasst' : (b.status === 'schuldet') ? 'schuldet Karl noch einen Gefallen (er hat ' + (b.name||'sie') + ' damals laufen lassen)' : (b.status === 'kontakt') ? 'ist ein alter Bekannter aus Karls Kontaktnetz' + ((b.treffen | 0) > 1 ? ' (' + (b.treffen | 0) + ' Begegnungen)' : '') : 'wurde von Karl schon einmal aus der Klemme geholfen');
             teile.push(ce.name + ' kennt Karl bereits - ' + _wie + ' (Fall "' + (b.fall || '?') + '"). Die Begegnung knuepft daran an.');
             break;
           }
@@ -21786,13 +21856,19 @@ function showCaseSolved() {
           _honorarGezahlt = (typeof _fallHonorar === 'function') ? _fallHonorar() : 200;
           if (earlyAbort) _honorarGezahlt = Math.round(_honorarGezahlt * 0.4); // Teil-Honorar bei fruehem Abbruch
         }
+        // v7.12.1093 (#4): Moral-Wahl moduliert Honorar + Ruf-Bonus (Schattenseiten).
+        const _mw = (caseProgress && caseProgress.moralWahl) || 'uebergeben';
+        let _renommeeBonus = (!earlyAbort && !_istEigenauftrag) ? 1 : 0;
+        if (_mw === 'laufen') { _honorarGezahlt = Math.round(_honorarGezahlt * 0.5); _renommeeBonus = -1; }
+        else if (_mw === 'schweigegeld') { _honorarGezahlt = (typeof _moralBribeBetrag === 'function') ? _moralBribeBetrag() : 240; _renommeeBonus = -2; }
         karlAkte.kasse = { ost: _restOst + _honorarGezahlt, west: _restWest };
         karlAkte.faelleGesamt = (karlAkte.faelleGesamt | 0) + 1;
-        if (!earlyAbort && !_istEigenauftrag) karlAkte.ruf.renommee = (karlAkte.ruf.renommee | 0) + 1;
+        if (!karlAkte.ruf || typeof karlAkte.ruf !== 'object') karlAkte.ruf = { haerte: 0, renommee: 0 };
+        karlAkte.ruf.renommee = Math.max(-5, (karlAkte.ruf.renommee | 0) + _renommeeBonus);
         let _titel = (caseSetup && (caseSetup.opfer || caseSetup.klient || caseSetup.caseType)) || 'Fall';
         _titel = ('' + _titel).replace(/\s*\(.*$/, '').slice(0, 40); // Klammerzusatz/Rolle kappen
         if (!Array.isArray(karlAkte.historie)) karlAkte.historie = [];
-        karlAkte.historie.push({ titel: _titel, ausgang: earlyAbort ? 'teilweise' : 'geloest', tag: (typeof gameDay === 'number' ? gameDay : 0), honorar: _honorarGezahlt });
+        karlAkte.historie.push({ titel: _titel, ausgang: earlyAbort ? 'teilweise' : 'geloest', art: _mw, tag: (typeof gameDay === 'number' ? gameDay : 0), honorar: _honorarGezahlt });
         if (karlAkte.historie.length > 30) karlAkte.historie = karlAkte.historie.slice(-30);
         // v7.12.1089 (Persistenz Scheibe 2): Ruf-Haerte aus dem Fall-Verhalten in die Akte falten (akkumuliert
         // ueber Faelle; speist Profil-Recap + Reputations-Hint + Informanten-Aufschlag im naechsten Fall).
@@ -21802,6 +21878,14 @@ function showCaseSolved() {
           if (_rep.key === 'hart') karlAkte.ruf.haerte = Math.min(5, (karlAkte.ruf.haerte | 0) + 2);
           else if (_rep.key === 'eher_hart') karlAkte.ruf.haerte = Math.min(5, (karlAkte.ruf.haerte | 0) + 1);
           else if (_rep.key === 'behutsam') karlAkte.ruf.haerte = Math.max(0, (karlAkte.ruf.haerte | 0) - 1);
+          // v7.12.1093 (#4): "laufen lassen" - Gnade senkt den Haerte-Ruf zusaetzlich, und der Verschonte schuldet Karl was.
+          if (_mw === 'laufen') {
+            karlAkte.ruf.haerte = Math.max(0, (karlAkte.ruf.haerte | 0) - 1);
+            try {
+              const _tn = ('' + (caseProgress.tatverdaechtiger || caseProgress.responsible || '')).replace(/\s*\(.*$/, '').trim();
+              if (_tn) { if (!karlAkte.bekannte || typeof karlAkte.bekannte !== 'object') karlAkte.bekannte = {}; karlAkte.bekannte[_tn.toLowerCase()] = { name: _tn, status: 'schuldet', fall: _titel, tag: (typeof gameDay === 'number' ? gameDay : 0) }; }
+            } catch (e) {}
+          }
         } catch (e) {}
         // v7.12.1089: Bekannte registrieren - Romanzen (Bindung) + der zufriedene Klient (geholfen). Fundament
         // fuer wiederkehrende Figuren; speist die Kontinuitaets-Faerbung der naechsten Eroeffnung.
@@ -21866,7 +21950,10 @@ function showCaseSolved() {
       if (typeof karlAkte === 'object' && karlAkte) {
         const _k = karlAkte.kasse || { ost: 0, west: 0 };
         const _kt = [];
-        if (typeof _honorarGezahlt === 'number' && _honorarGezahlt > 0) _kt.push('Honorar +' + _honorarGezahlt + ' Ostmark');
+        if (typeof _honorarGezahlt === 'number' && _honorarGezahlt > 0) {
+          const _hLabel = (caseProgress && caseProgress.moralWahl === 'schweigegeld') ? 'Schweigegeld +' : (caseProgress && caseProgress.moralWahl === 'laufen') ? 'Honorar (gekuerzt) +' : 'Honorar +';
+          _kt.push(_hLabel + _honorarGezahlt + ' Ostmark');
+        }
         _kt.push('Kasse: ' + (_k.ost | 0) + ' Ostmark' + ((_k.west | 0) > 0 ? ' · ' + (_k.west | 0) + ' Westmark' : ''));
         if ((karlAkte.mieteOffen | 0) > 0) _kt.push('Miete offen: ' + (karlAkte.mieteOffen | 0) + ' Ostmark');
         _kasseZeile = '<div class="solved-text-small" style="margin-top:6px;opacity:0.92;">' + _kt.join(' · ') + '</div>';
@@ -31990,14 +32077,12 @@ function renderOptions(scene) {
       e.preventDefault();
       rTouchHandled = true;
       if (!resolveCanClick) return;
-      try { if (typeof fxFallGeloest === 'function') fxFallGeloest(); } catch (e2) {} // v7.12.699: iPhone löst über touchend aus, nicht click
-      chooseOption(resolveOpt);
+      _resolveOderMoral(resolveOpt); // v7.12.1093 (#4): Moral-Gabel vor der Aufloesung (sonst direkt)
     });
     resolveBtn.addEventListener('click', () => {
       if (rTouchHandled) { rTouchHandled = false; return; }
       if (!resolveCanClick) return;
-      try { if (typeof fxFallGeloest === 'function') fxFallGeloest(); } catch (e) {} // v7.12.699: goldener Stempel
-      chooseOption(resolveOpt);
+      _resolveOderMoral(resolveOpt); // v7.12.1093 (#4): Moral-Gabel vor der Aufloesung (sonst direkt)
     });
     // v7.12.17: Fall-loesen-Button GANZ NACH OBEN, ueber Option A, mit eigenem
     // Separator darunter. User-Wunsch: Casual-Spieler sollen ihn nicht uebersehen
@@ -33509,6 +33594,21 @@ Es ist NICHT realistisch, dass eine Trauergesellschaft 18 Stunden an einem Grab 
     // Fall-Fortschritt mitschicken
     const stageNames = ['Aufbau / Erste Spuren', 'Indizien gesammelt', 'Verdaechtiger identifiziert', 'Verdaechtiger ueberfuehrt'];
     recap += `\n\nFALL-FORTSCHRITT: Stufe ${caseProgress.stage} (${stageNames[caseProgress.stage] || '?'}).`;
+    // v7.12.1092 (#2 echte Wendungen, Benjamin): generische Twist-Beats, je einmal pro Fall (Flags auf caseProgress,
+    // ueberleben den Save). Sie faerben die Erzaehlung dramatischer, OHNE die deterministisch belegte Wahrheit
+    // (Indizienkette) zu verfaelschen - der Anker bleibt, die Wendung ist Inszenierung/Umdeutung drumherum.
+    try {
+      // (a) Roter Hering frueh: eine plausible, aber moeglicherweise falsche erste Spur.
+      if ((caseProgress.stage | 0) <= 1 && Array.isArray(caseProgress.indizien) && caseProgress.indizien.length >= 1 && !caseProgress._redHerringDone) {
+        caseProgress._redHerringDone = true;
+        recap += `\n\nROTER HERING (einbauen, dezent): Lass in dieser oder der naechsten Szene eine plausible erste Verdaechtigung/Faehrte aufkommen, die naheliegt, sich aber spaeter als Irrtum, Ablenkung oder Zufall erweisen KANN (ein zwielichtiger Nachbar, ein vermeintliches Motiv, ein falscher Name). Karl (und der Spieler) soll sie kurz fuer heiss halten. NICHT aufloesen - nur die Faehrte legen.`;
+      }
+      // (b) Wendung beim Verdichten (Stufe 2 -> bevor der Verdaechtige fixiert wird): eine Ueberraschung, die neu rahmt.
+      if ((caseProgress.stage | 0) === 2 && !caseProgress._twistBeatDone) {
+        caseProgress._twistBeatDone = true;
+        recap += `\n\nWENDUNG (PFLICHT, EINMALIG): Bevor sich der Verdacht endgueltig verhaertet, taucht EIN Detail auf, das die naheliegende Annahme erschuettert - der Offensichtliche wird teilweise entlastet, ein bisher Uebersehener rueckt in den Blick, oder ein Indiz bekommt eine voellig andere Bedeutung. Inszeniere diesen Aha-/Umdeutungs-Moment deutlich (Karls Stirnrunzeln, ein 'Moment mal...'). WICHTIG: Verfaelsche NICHT die letztlich belegte Wahrheit - die Indizienkette bleibt der Anker. Die Wendung ist die ueberraschende ROUTE dorthin, nicht ein anderer Taeter.`;
+      }
+    } catch (e) {}
     if (caseProgress.indizien.length > 0) {
       recap += `\nGesammelte Indizien (${caseProgress.indizien.length}):`;
       for (let i = 0; i < caseProgress.indizien.length; i++) {
