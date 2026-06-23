@@ -3419,7 +3419,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1102</div>
+    <div class="start-version">Schatten v7.12.1103</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3653,7 +3653,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1102</span>
+    <span>Schatten v7.12.1103</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11860,7 +11860,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1102';
+window.SCHATTEN_VERSION = 'v7.12.1103';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -31356,8 +31356,21 @@ function renderOptions(scene) {
     if (_reiseHervorheben) {
       try {
         const _zN = (window._dirigentReiseZiele && window._dirigentReiseZiele[0]) ? window._dirigentReiseZiele[0] : '';
-        const _mark = _zN ? ('→ ' + _zN) : '→ weiter zur Spur';
-        reiseBtn.innerHTML = '<span class="option-id">' + ((typeof opelMiniSvg === 'function') ? opelMiniSvg(18) : '🚗') + '</span><span class="option-text-wrap"><span>' + _reiseLabel + '</span><span class="option-marker option-marker-system">' + escapeHtml(_mark) + '</span></span>';
+        let _mark = _zN ? ('→ ' + _zN) : '→ weiter zur Spur';
+        let _labelH = _reiseLabel;
+        // v7.12.1103 (Benjamin #1-Hebel "folg ihm"): Bei Beschattung den hervorgehobenen Reisen-Button explizit als
+        // FOLGEN des Zielobjekts beschriften - "<Ziel> folgen → <Ort>" statt nur "→ <Ort>". Tangibler "folg ihm"-Cue.
+        try {
+          if (typeof caseSetup === 'object' && caseSetup && caseSetup.caseType === 'beschatten' && Array.isArray(caseSetup.setupCast)) {
+            const _tgt = caseSetup.setupCast.find(c => c && c.tag === 'TARGET');
+            if (_tgt && _tgt.name) {
+              const _kurz = _tgt.name.split(/\s+/).slice(-1)[0] || _tgt.name; // "Robert Kessler" -> "Kessler"
+              _labelH = _kurz + ' folgen';
+              _mark = _zN ? ('→ ' + _zN) : '→ ihm hinterher';
+            }
+          }
+        } catch (e) {}
+        reiseBtn.innerHTML = '<span class="option-id">' + ((typeof opelMiniSvg === 'function') ? opelMiniSvg(18) : '🚗') + '</span><span class="option-text-wrap"><span>' + escapeHtml(_labelH) + '</span><span class="option-marker option-marker-system">' + escapeHtml(_mark) + '</span></span>';
       } catch (e) {}
     }
     // v7.12.557 (Benjamin-Befund): Reise-Button hatte nacktes touchend OHNE Bewegungsprüfung -> beim Scrollen
