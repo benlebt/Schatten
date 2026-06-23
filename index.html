@@ -3419,7 +3419,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1090</div>
+    <div class="start-version">Schatten v7.12.1091</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3643,7 +3643,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1090</span>
+    <span>Schatten v7.12.1091</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11800,7 +11800,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1090';
+window.SCHATTEN_VERSION = 'v7.12.1091';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -12090,7 +12090,7 @@ function _geldText() {
 const KARL_AKTE_KEY = 'schatten-karl-akte';
 const BUERO_MIETE_PRO_FALL = 20;
 function _karlAkteDefault() {
-  return { v: 1, kasse: { ost: 30, west: 0 }, mieteOffen: 0, ruf: { haerte: 0, renommee: 0 }, historie: [], bekannte: {}, faelleGesamt: 0 };
+  return { v: 1, kasse: { ost: 30, west: 0 }, mieteOffen: 0, ruf: { haerte: 0, renommee: 0 }, historie: [], bekannte: {}, faelleGesamt: 0, rockBottom: false, mfsVisier: false };
 }
 function _karlAkteLoad() {
   try {
@@ -12105,13 +12105,32 @@ function _karlAkteLoad() {
       ruf: { haerte: (o.ruf && +o.ruf.haerte) || 0, renommee: (o.ruf && +o.ruf.renommee) || 0 },
       historie: Array.isArray(o.historie) ? o.historie.slice(-30) : [],
       bekannte: (o.bekannte && typeof o.bekannte === 'object') ? o.bekannte : {},
-      faelleGesamt: (typeof o.faelleGesamt === 'number') ? o.faelleGesamt : (Array.isArray(o.historie) ? o.historie.length : 0)
+      faelleGesamt: (typeof o.faelleGesamt === 'number') ? o.faelleGesamt : (Array.isArray(o.historie) ? o.historie.length : 0),
+      rockBottom: !!o.rockBottom,
+      mfsVisier: !!o.mfsVisier
     };
   } catch (e) { return _karlAkteDefault(); }
 }
 let karlAkte = _karlAkteLoad();
 function _karlAkteSave() { try { localStorage.setItem(KARL_AKTE_KEY, JSON.stringify(karlAkte)); } catch (e) {} }
 function _karlAkteNeueKarriere() { karlAkte = _karlAkteDefault(); _karlAkteSave(); }
+// v7.12.1091 (#6 Schulden-Spirale): Schulden = aufgelaufene Bueromiete (karlAkte.mieteOffen). Ab ROCK_BOTTOM_AB
+// fliegt Karl aus dem Buero und haust im Hinterzimmer einer Kneipe (Rosa). Erst wenn die Schuld wieder unter
+// ROCK_BOTTOM_RAUS sinkt, kommt er zurueck (recoverable, KEIN Game-Over). Schwellen grob an die Mietlogik
+// gekoppelt (~80/Monat, ~20/Fall): 100 = ~5 unbezahlte Faelle -> Raeumung; 40 = Rueckkehr moeglich.
+const ROCK_BOTTOM_AB = 100;
+const ROCK_BOTTOM_RAUS = 40;
+function _karlAkteUpdateRockBottom() {
+  try {
+    if (typeof karlAkte !== 'object' || !karlAkte) return false;
+    const schuld = karlAkte.mieteOffen | 0;
+    const warRockBottom = !!karlAkte.rockBottom;
+    if (!warRockBottom && schuld >= ROCK_BOTTOM_AB) karlAkte.rockBottom = true;       // Raeumung
+    else if (warRockBottom && schuld <= ROCK_BOTTOM_RAUS) karlAkte.rockBottom = false; // Rueckkehr ins Buero
+    if (!!karlAkte.rockBottom !== warRockBottom) _karlAkteSave();
+    return karlAkte.rockBottom !== warRockBottom; // true = Statuswechsel
+  } catch (e) { return false; }
+}
 // v7.12.1087 Debug-Inspektor (Konsole, nur Diagnose): Akte lesen/setzen/Fall-Ende simulieren - macht Scheibe 1
 // in Sekunden prüfbar, ohne einen ganzen Fall zu spielen.
 try {
@@ -12152,11 +12171,19 @@ function _buildProfilRecap() {
     const teile = [];
     const offen = karlAkte.mieteOffen | 0;
     const ost = (karlAkte.kasse && karlAkte.kasse.ost) | 0;
-    if (offen > 0) teile.push('Die Bueromiete am Hackeschen Markt ist ' + offen + ' Ostmark ueberfaellig - der Hausverwalter macht Druck' + (ost < 20 ? ', und Karls Kasse ist fast leer (' + ost + ' Ostmark)' : '') + '.');
+    if (karlAkte.rockBottom) {
+      teile.push('Karl ist aus seinem Buero geflogen - er haust und arbeitet jetzt im stickigen Hinterzimmer einer Eckkneipe, ' + (offen | 0) + ' Ostmark Schulden im Nacken. Schaebige Verhaeltnisse, jeder Auftrag zaehlt doppelt.');
+    } else if (offen > 0) {
+      teile.push('Die Bueromiete am Hackeschen Markt ist ' + offen + ' Ostmark ueberfaellig - der Hausverwalter macht Druck' + (ost < 20 ? ', und Karls Kasse ist fast leer (' + ost + ' Ostmark)' : '') + '.');
+    }
+    if (window._mfsVisierAktiv) teile.push('Seit seinem letzten Zusammenstoss mit dem MfS hat die Staatssicherheit Karl auf dem Schirm - er spuert die Beobachtung, die Luft ist von Beginn an duenner.');
     else if (ost < 15) teile.push('Karls Kasse ist knapp (' + ost + ' Ostmark) - er braucht diesen Auftrag.');
     if ((karlAkte.faelleGesamt | 0) >= 1 && Array.isArray(karlAkte.historie) && karlAkte.historie.length) {
       const letzte = karlAkte.historie[karlAkte.historie.length - 1];
-      if (letzte && letzte.titel) teile.push('Karl hat zuletzt den Fall "' + letzte.titel + '" ' + (letzte.ausgang === 'geloest' ? 'erfolgreich abgeschlossen' : 'nur teilweise abschliessen koennen') + '.');
+      if (letzte && letzte.titel) {
+        const _ausg = { geloest: 'erfolgreich abgeschlossen', teilweise: 'nur teilweise abschliessen koennen', gescheitert: 'in den Sand gesetzt', 'ueberlebt-knapp': 'fast mit dem Leben bezahlt' }[letzte.ausgang] || 'hinter sich gebracht';
+        teile.push('Karl hat seinen letzten Fall ("' + letzte.titel + '") ' + _ausg + '.');
+      }
     }
     // v7.12.1089 (Persistenz Scheibe 2): letzte Romanze EINMAL als Karl-Gedanke (sichtbare Kontinuitaet, auch
     // wenn die Person nicht wieder auftaucht). Wird nach der Nennung konsumiert.
@@ -12283,6 +12310,9 @@ function _informantPreis(npcId, npcName) {
     try {
       const _h = (typeof karlAkte === 'object' && karlAkte && karlAkte.ruf) ? (karlAkte.ruf.haerte | 0) : 0;
       if (_h > 2) _basis += (_h - 2) * 4;
+      // v7.12.1091 (#6): Schulden machen Karl verzweifelt/erpressbar -> Informanten langen staerker zu. +2 je 40 Schuld, max +10.
+      const _schuld = (typeof karlAkte === 'object' && karlAkte) ? (karlAkte.mieteOffen | 0) : 0;
+      if (_schuld >= 40) _basis += Math.min(10, ((_schuld / 40) | 0) * 2);
     } catch (e) {}
     return _basis;
   } catch (e) { return 15; }
@@ -20310,14 +20340,48 @@ async function showSetupSelector() {
   }
 }
 function showGameOver() {
-  // v7.12.145 (Code-Review): nullsichere Hides, konsistent mit showCaseSolved/Failed.
   ['options','error','wait-box','loading','daily-limit'].forEach(id => {
     const el = document.getElementById(id); if (el) el.classList.add('hidden');
   });
+  // v7.12.1091 (#6, Benjamin): Vf=0 ist KEIN Permadeath - ein ueberlebbarer schwerer Rueckschlag. Karl landet in
+  // der Charite, die Behandlung frisst die Kasse, der Ruf leidet hart, die Schuld waechst - aber die Karriere (Akte)
+  // bleibt. Recoverable. Folgen einmal pro Fall (Guard).
+  let _ueberlebenInfo = '';
+  try {
+    if (typeof karlAkte === 'object' && karlAkte && caseProgress && !caseProgress.akteVerbucht) {
+      caseProgress.akteVerbucht = true;
+      const _restOst = (caseProgress.geld && (caseProgress.geld.ost | 0)) || 0;
+      const _charite = Math.min(_restOst, 30 + ((_restOst / 2) | 0)); // Behandlung frisst den Loewenanteil
+      karlAkte.kasse = { ost: Math.max(0, _restOst - _charite), west: (caseProgress.geld && (caseProgress.geld.west | 0)) || 0 };
+      karlAkte.mieteOffen = (karlAkte.mieteOffen | 0) + 20; // weitere Miete, waehrend Karl flachliegt
+      karlAkte.faelleGesamt = (karlAkte.faelleGesamt | 0) + 1;
+      if (!karlAkte.ruf || typeof karlAkte.ruf !== 'object') karlAkte.ruf = { haerte: 0, renommee: 0 };
+      karlAkte.ruf.renommee = Math.max(-5, (karlAkte.ruf.renommee | 0) - 2);
+      let _t = (caseSetup && (caseSetup.opfer || caseSetup.klient || caseSetup.caseType)) || 'Fall';
+      _t = ('' + _t).replace(/\s*\(.*$/, '').slice(0, 40);
+      if (!Array.isArray(karlAkte.historie)) karlAkte.historie = [];
+      karlAkte.historie.push({ titel: _t, ausgang: 'ueberlebt-knapp', art: 'tod', tag: (typeof gameDay === 'number' ? gameDay : 0), honorar: 0 });
+      if (karlAkte.historie.length > 30) karlAkte.historie = karlAkte.historie.slice(-30);
+      if (typeof _karlAkteUpdateRockBottom === 'function') _karlAkteUpdateRockBottom();
+      _karlAkteSave();
+      _ueberlebenInfo = 'Kasse: ' + (karlAkte.kasse.ost | 0) + ' Ostmark · Schulden: ' + (karlAkte.mieteOffen | 0) + ' Ostmark'
+        + (karlAkte.rockBottom ? '<br><span style="color:#f0a050;">Die Behandlung hat alles gefressen - das Buero ist weg. Karl haust jetzt im Hinterzimmer einer Kneipe.</span>' : '');
+    }
+  } catch (e) {}
+  const _goPool = [
+    'Dann Dunkelheit. Doch es ist nicht das Ende - Karl wacht Tage spaeter in der Charite auf, verbunden, von den Kosten ausgeraubt, aber am Leben.',
+    'Karl geht zu Boden. Als er wieder zu sich kommt, riecht es nach Karbol - Charite, ein steifes Glied, eine Rechnung, die er nicht zahlen kann. Aber er atmet.',
+    'Das Letzte, was Karl hoert, sind die eigenen Schritte im Hall. Dann nichts. Spaeter: ein Krankenbett, ein brummender Schaedel, und die bittere Gewissheit, nochmal davongekommen zu sein.'
+  ];
+  const _go = _goPool[(typeof sceneCounter === 'number' ? sceneCounter : 0) % _goPool.length];
   const gameOver = document.getElementById('game-over');
-  if (gameOver) gameOver.classList.remove('hidden');
-  // v7.12.36: Save loeschen bei Tod - wie bei Win/Fail. Verhindert dass der
-  // naechste Besuch in einen toten Spielstand restored.
+  if (gameOver) {
+    gameOver.innerHTML = '<div class="game-over-title">KNAPP \u00dcBERLEBT</div>'
+      + '<div class="game-over-subtitle">' + _go + (_ueberlebenInfo ? '<br><br>' + _ueberlebenInfo : '') + '</div>'
+      + '<button class="btn-primary" onclick="resetGame(true)">Neuer Fall, neues Gl\u00fcck</button>';
+    gameOver.classList.remove('hidden');
+  }
+  // Run-Save loeschen (der zusammengebrochene Fall soll nicht restauriert werden) - die Akte bleibt erhalten.
   if (typeof clearSavedGame === 'function') clearSavedGame();
 }
 
@@ -21877,6 +21941,37 @@ function showCaseFailed(reason) {
   }
   {
     const reasonText = reason || 'Der Klient hat das Vertrauen verloren.';
+    // v7.12.1091 (#6 interessantes Scheitern): Scheiter-Folgen in die Karl-Akte - einmal pro Fall (Guard wie beim Sieg).
+    // KEIN Honorar -> die aufgelaufene Miete bleibt als Schuld stehen (Spirale). Ruf-Schaden; Gewahrsam haerter + MfS-Visier.
+    let _failKind = 'frist';
+    try {
+      const _r = ('' + (reason || '')).toLowerCase();
+      if (/zelle|hohensch|gewahrsam|verhaft|\bmfs\b|u-haft|haftanstalt|untersuchungshaft/.test(_r)) _failKind = 'gewahrsam';
+      if (typeof karlAkte === 'object' && karlAkte && caseProgress && !caseProgress.akteVerbucht) {
+        caseProgress.akteVerbucht = true;
+        karlAkte.kasse = { ost: (caseProgress.geld && (caseProgress.geld.ost | 0)) || 0, west: (caseProgress.geld && (caseProgress.geld.west | 0)) || 0 };
+        karlAkte.faelleGesamt = (karlAkte.faelleGesamt | 0) + 1;
+        if (!karlAkte.ruf || typeof karlAkte.ruf !== 'object') karlAkte.ruf = { haerte: 0, renommee: 0 };
+        karlAkte.ruf.renommee = Math.max(-5, (karlAkte.ruf.renommee | 0) - (_failKind === 'gewahrsam' ? 2 : 1));
+        if (_failKind === 'gewahrsam') karlAkte.mfsVisier = true;
+        let _ft = (caseSetup && (caseSetup.opfer || caseSetup.klient || caseSetup.caseType)) || 'Fall';
+        _ft = ('' + _ft).replace(/\s*\(.*$/, '').slice(0, 40);
+        if (!Array.isArray(karlAkte.historie)) karlAkte.historie = [];
+        karlAkte.historie.push({ titel: _ft, ausgang: 'gescheitert', art: _failKind, tag: (typeof gameDay === 'number' ? gameDay : 0), honorar: 0 });
+        if (karlAkte.historie.length > 30) karlAkte.historie = karlAkte.historie.slice(-30);
+        try {
+          if (window._aktiveStammfigur && window._aktiveStammfigur.name) {
+            const f = window._aktiveStammfigur; const fk = ('' + f.name).toLowerCase().trim();
+            if (!karlAkte.bekannte || typeof karlAkte.bekannte !== 'object') karlAkte.bekannte = {};
+            const prev = karlAkte.bekannte[fk];
+            karlAkte.bekannte[fk] = { name: f.name, status: 'kontakt', rolle: f.rolle, fall: _ft, tag: (typeof gameDay === 'number' ? gameDay : 0), treffen: ((prev && prev.treffen) | 0) + 1 };
+          }
+        } catch (e) {}
+        if (typeof _karlAkteUpdateRockBottom === 'function') _karlAkteUpdateRockBottom();
+        _karlAkteSave();
+        try { if (typeof saveGameState === 'function') saveGameState(); } catch (e) {}
+      }
+    } catch (e) {}
     // v7.12.282: ROMANCE-FAIL-SPITZE. Hat Karl unterwegs eine Nacht mit einer Frau verbracht,
     // greift der Klient das im Fail-Screen auf - bitter, namentlich, sehr Noir. NUR im Fail
     // (diese Funktion läuft nie bei gelöstem Fall) und NUR wenn die Nacht wirklich stattfand.
@@ -21892,12 +21987,41 @@ function showCaseFailed(reason) {
       const _idx = (typeof sceneCounter === 'number' ? sceneCounter : 0) % _varianten.length;
       romanceSpitze = `<br><br><span style="font-style:italic;opacity:0.92">${_varianten[_idx]}</span>`;
     }
+    // v7.12.1091 (#6): typ-spezifischer Scheiter-Screen + Kasse/Schulden + Rock-Bottom-/Recovery-Hook.
+    const _failTitel = (_failKind === 'gewahrsam') ? 'IM GEWAHRSAM DES MfS' : 'AUFTRAG ENTZOGEN';
+    const _failFraming = {
+      gewahrsam: [
+        'Sie haben Karl. Die Tuer der Verhoerzelle faellt zu, der Fall ist verloren - und sein Name steht jetzt in einer Akte, die er nie zu Gesicht bekommt.',
+        'Hohenschoenhausen verschluckt Karl diesmal nur fuer ein paar Tage. Aber das MfS vergisst nichts, und der Fall bleibt liegen.'
+      ],
+      frist: [
+        'Karl Mauer steht ohne Klient da. Wieder mal.',
+        'Die Spur ist kalt geworden, der Klient hat genug. Karl bleibt auf den Spesen sitzen.',
+        'Zu lange gebraucht. Der Klient hat sich einen anderen gesucht - oder die Hoffnung aufgegeben.'
+      ]
+    };
+    const _ffPool = _failFraming[_failKind] || _failFraming.frist;
+    const _ff = _ffPool[(typeof sceneCounter === 'number' ? sceneCounter : 0) % _ffPool.length];
+    let _failKasse = '';
+    try {
+      if (typeof karlAkte === 'object' && karlAkte) {
+        const _ko = (karlAkte.kasse && (karlAkte.kasse.ost | 0)) || 0;
+        const _sch = karlAkte.mieteOffen | 0;
+        const _parts = ['Kasse: ' + _ko + ' Ostmark'];
+        if (_sch > 0) _parts.push('Schulden: ' + _sch + ' Ostmark');
+        _failKasse = _parts.join(' · ');
+        if (karlAkte.rockBottom) _failKasse += '<br><span style="color:#f0a050;">Aus dem Buero geflogen - Karl haust jetzt im Hinterzimmer einer Kneipe.</span>';
+      }
+    } catch (e) {}
+    const _failHook = (typeof karlAkte === 'object' && karlAkte && (karlAkte.mieteOffen | 0) > 0)
+      ? 'Karl hat eine Rechnung offen. Der naechste Fall muss es bringen.'
+      : 'Es bleibt die alte Frage: Wie zahle ich die Miete diesen Monat?';
     failEl.innerHTML = `
-      <div class="failed-title">AUFTRAG ENTZOGEN</div>
+      <div class="failed-title">${_failTitel}</div>
       <div class="failed-text">${typeof escapeHtml === 'function' ? escapeHtml(reasonText) : reasonText}<br>
-      Karl Mauer steht ohne Klient da. Wieder mal.${romanceSpitze}</div>
-      <div class="failed-text-small">Tag ${gameDay}<br>
-      Es bleibt die alte Frage: Wie zahle ich die Miete diesen Monat?</div>
+      ${_ff}${romanceSpitze}</div>
+      <div class="failed-text-small">Tag ${gameDay}${_failKasse ? '<br>' + _failKasse : ''}<br>
+      ${_failHook}</div>
       <button class="failed-button" onclick="resetGame(true)">Neue Ermittlung</button>
     `;
   }
@@ -27290,7 +27414,7 @@ function checkProgressTriggers(kategorie, ctx) {
   // Conclusion-Trigger: TOD
   if (verfassung === 0) {
     result.conclusionType = 'tod';
-    result.pushMessages.push('TODES-SZENE: Karl ist tot (Vf=0). Schreibe das Ende - knapp, ohne Pathos. Letzte Gedanken, dann Dunkel. KEINE Optionen.');
+    result.pushMessages.push('ZUSAMMENBRUCH-SZENE: Karl ist voellig am Ende (Vf=0) und bricht zusammen - er verliert das Bewusstsein. Schreibe es knapp, ohne Pathos: letzte verschwommene Eindruecke, dann Dunkel. WICHTIG: Karl STIRBT NICHT - er wird gefunden und kommt in die Charite (das erzaehlt der Abschluss-Screen). KEINE Optionen.');
   }
   // Conclusion-Trigger: NIEDERLAGE
   if (gameDay >= 7 && stage < 3 && result.newStage !== 3) {
@@ -36804,6 +36928,7 @@ async function startGame() {
       karlAkte.kasse = { ost: caseProgress.geld.ost, west: caseProgress.geld.west };
       _karlAkteSave();
       caseProgress.akteVerbucht = false; // v7.12.1088: Fall-Ende-Verbuchung pro Fall genau einmal (Guard reset)
+      if (typeof _karlAkteUpdateRockBottom === 'function') _karlAkteUpdateRockBottom(); // v7.12.1091 (#6): Raeumung/Rueckkehr nach Schuldenstand
       try {
         const _mt = (_zahlbar > 0 ? 'Miete -' + _zahlbar + ' Ostmark gezahlt' : 'Miete faellig') + (karlAkte.mieteOffen > 0 ? ' (' + karlAkte.mieteOffen + ' noch offen)' : '') + '. Kasse: ' + caseProgress.geld.ost + ' Ostmark.';
         if (typeof showProgressToast === 'function') showProgressToast(_zahlbar > 0 ? '-' + _zahlbar + ' Ostmark Miete' : 'Miete faellig', _mt, 'caution', 'akte-miete-start', '🏠');
@@ -36949,6 +37074,16 @@ async function startGame() {
   } else {
     stasiCapForCase = 2;  // Unpolitische Setups: max Tension 2 (Atmo erlaubt, kein Vollalarm)
   }
+  // v7.12.1091 (#6, Benjamin): Nach einem Gewahrsam-Scheitern hat das MfS Karl auf dem Schirm -> im naechsten Fall
+  // erhoehte Grund-Stasi-Spannung (Cap mind. 3, Start-Tension 1) + Recap-Hinweis. Einmalig (konsumiert).
+  try {
+    if (typeof karlAkte === 'object' && karlAkte && karlAkte.mfsVisier) {
+      stasiCapForCase = Math.max(stasiCapForCase, 3);
+      stasiTension = Math.max(stasiTension | 0, 1);
+      window._mfsVisierAktiv = true;
+      karlAkte.mfsVisier = false; _karlAkteSave();
+    } else { window._mfsVisierAktiv = false; }
+  } catch (e) { window._mfsVisierAktiv = false; }
   // v6.75: STRUKTURIERTER SETUP-CAST. Wenn das Setup ein setupCast[]-Feld hat,
   // werden alle Eintraege direkt in storyFacts eingefroren mit klaren tags
   // (CLIENT, TARGET, INFORMANT, SUSPECT, etc.) - das verhindert Setup-Drift
