@@ -3415,7 +3415,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1072</div>
+    <div class="start-version">Schatten v7.12.1073</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3639,7 +3639,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1072</span>
+    <span>Schatten v7.12.1073</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11770,7 +11770,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1072';
+window.SCHATTEN_VERSION = 'v7.12.1073';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -16938,6 +16938,7 @@ let stasiTension = 0;
 // 3+ Szenen passiert OHNE dass Karl tatsaechlich verhaftet wurde, erzwingt das
 // System die Custody - sonst staut sich UNAUSWEICHLICH-Tension endlos auf.
 let stasiHighTensionStreak = 0;
+let eskalationsHitze = 0; // v7.12.1073 (Slapstick-Ventil): zaehlt aufeinanderfolgende harte/offensive Aktionen (cholerisches Auf-die-Spitze-Treiben) - ab Schwelle darf die KI gelegentlich komisch scheitern lassen
 let stasiMaxTensionStreak = 0;  // v7.11.98: zaehlt Szenen bei Tension===5 (Option-2-Festnahme)
 // v6.74: Counter fuer ruhige Szenen zwischen Stasi-Erwaehnungen. Tension sinkt
 // erst nach 3 ruhigen Szenen um 1, damit kein Pingpong-Bug entsteht.
@@ -34438,6 +34439,15 @@ Wenn Karl waehlt: Schnitt zur naechsten Szene am Morgen, Kaffee zu zweit, keine 
       }
     } catch (e) { if (typeof diag === 'function') diag('state', '🎯 DIRIGENT FEHLER: ' + (e && e.message ? e.message : e)); }
 
+    // v7.12.1073 (Slapstick-Ventil, Benjamin "uebertriebene Eskalation darf moeglich sein"): Wenn Karl die Konfrontation
+    // cholerisch auf die Spitze treibt (mehrere harte Aktionen am Stueck), DARF die KI den Versuch GELEGENTLICH komisch
+    // scheitern lassen - Schwarzweiss-Slapstick statt nur grimmiger Konsequenz. Bewusst optional (Varianz), nie in echter Gefahr.
+    try {
+      if (typeof eskalationsHitze === 'number' && eskalationsHitze >= 3 && !karlInStasiCustody && (typeof lastSpannung !== 'number' || lastSpannung < 5)) {
+        recap += '\n\nSLAPSTICK-VENTIL (OPTIONAL, fuer Varianz - NICHT erzwingen, nur manchmal): Karl treibt die Sache gerade cholerisch auf die Spitze (mehrere harte/offensive Aktionen am Stueck, er macht ueberall Theater). Du DARFST diesen Versuch GELEGENTLICH komisch scheitern lassen - im Stil eines Schwarzweiss-Slapsticks (Berlin 1953): die grosse Geste verpufft peinlich, Karl greift daneben und reisst eine Waescheleine herunter, ein Marktstand kippt, ein VoPo rutscht auf dem nassen Kopfsteinpflaster aus, sein Gebruell bringt nur Gelaechter der Umstehenden, der Verdaechtige entwischt im Tumult. Die Folge ist eher BLAMABEL und TEUER (Ruf-Verlust, Zeitverlust, eine Beule, eine zerstoerte Sache, ein verbrannter Kontakt) als toedlich - KEIN Spielende durch Slapstick. Mit Augenmass und nur manchmal, damit es ueberraschend bleibt. NIEMALS in echter Lebensgefahr (Schusswechsel, Stasi-Zugriff, hohe Spannung) - da bleibt es ernst.';
+        if (typeof diag === 'function') diag('state', '\uD83C\uDFAD SLAPSTICK-VENTIL offen (Eskalations-Hitze ' + eskalationsHitze + ') - KI darf Gewalt-Versuch komisch scheitern lassen');
+      }
+    } catch (e) {}
     messages.push({ role: 'user', content: recap });
     messages.push({ role: 'assistant', content: 'Verstanden. Ich knüpfe nahtlos und räumlich konsistent an die letzte Szene an, bleibe im Präsens und in der Du-Perspektive.' });
   }
@@ -36519,6 +36529,7 @@ async function startGame() {
   custodySwitchCount = 0;  // v7.11.44: Switch-Counter Reset
   lastTrackedCustodyState = false;  // v7.11.44: Tracker Reset
   custodyLocked = false;  // v7.11.44: Lock-Flag Reset
+  eskalationsHitze = 0;  // v7.12.1073: Slapstick-Hitze pro Run zuruecksetzen
   stasiRiskCounter = 0;  // v7.11.13: Meta-Custody-Risk-Counter Reset
   metaCustodyGracePeriod = 0;  // v7.11.16: Meta-Custody-Grace-Period Reset
   pendingCustodyResolveReady = false;  // v7.11.23
@@ -39500,6 +39511,13 @@ async function chooseOption(option) {
     else if (isFlucht) _rufFluchtAktionen++;
     else _rufNeutralAktionen++;
   } catch (e) { /* Diagnose darf nie brechen */ }
+  // v7.12.1073 (Slapstick-Ventil, Benjamin): Eskalations-Hitze tracken. Harte/offensive Aktionen am Stueck heizen auf,
+  // ruhigere Aktionen kuehlen ab. Ab Schwelle 3 darf die KI den naechsten Gewalt-Versuch GELEGENTLICH komisch scheitern lassen.
+  try {
+    const _heiss = isPhysical || (typeof chosenKategorie === 'string' && chosenKategorie === 'OFFENSIV');
+    if (_heiss) eskalationsHitze = Math.min(6, (eskalationsHitze || 0) + 1);
+    else eskalationsHitze = Math.max(0, (eskalationsHitze || 0) - 1);
+  } catch (e) { /* darf Szene nie brechen */ }
   // v7.12.1053 (Benjamin "lebendige Welt", Idee 7): STASI-AUFMERKSAMKEIT an den Spielstil koppeln. Laute,
   // koerperliche Gewalt im OSTSEKTOR erhoeht die Stasi-Tension - aber NUR ueber raiseStasiTension, das den
   // effektiven Fall-Cap (getEffectiveStasiCap) respektiert. Reiner Privatfall (Cap 0/2) -> hoechstens Atmosphaere,
