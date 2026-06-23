@@ -3415,7 +3415,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1079</div>
+    <div class="start-version">Schatten v7.12.1080</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3639,7 +3639,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1079</span>
+    <span>Schatten v7.12.1080</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -10786,6 +10786,18 @@ function _naechsterErmittlungsschritt() {
     if (caseProgress.tatverdaechtiger && caseProgress.suspectConfronted && !caseProgress.istGelöst) {
       return { art: 'abschluss', ziel: 'Fall abschließen', hinweis: 'Der Täter ist gestellt. ALLE vier Optionen führen Richtung Fall-Abschluss (zum Klienten berichten / die Festnahme klarmachen) - offensiv: macht sofort Nägel mit Köpfen; zurückhaltend: sichert erst ab, dann Abschluss.' };
     }
+    // v7.12.1080 (Benjamin-Befund: Stasi-Standoff an Margaretes Wohnung loopte Sz3-5 ohne Aufloesung): Wenn der Spieler
+    // in einer HOCHGESPANNTEN Konfrontation festhaengt (Spannung>=4) und seit mehreren Szenen NICHT vorankommt, hat das
+    // AUFLOESEN dieser Pattsituation Vorrang vor der normalen Indizien-Fuehrung. Sonst dreht sich ein Standoff im Kreis,
+    // waehrend der Dirigent stur "befrage X" sagt, das im bewaffneten Patt aber gar nicht moeglich ist.
+    try {
+      const _stuckP = (typeof sceneCounter === 'number' && typeof _hintLastProgressScene === 'number') ? (sceneCounter - _hintLastProgressScene) : 0;
+      const _spP = (typeof lastSpannung === 'number') ? lastSpannung : 0;
+      if (_stuckP >= 3 && _spP >= 4 && !karlInStasiCustody) {
+        window._dirigentGrund = 'Patt/Standoff seit ' + _stuckP + ' Szenen bei Spannung ' + _spP + ' - Aufloesung erzwingen';
+        return { art: 'konfrontation_aufloesen', ziel: 'Pattsituation aufloesen', hinweis: 'Diese hochgespannte Konfrontation dreht sich seit mehreren Szenen im Kreis (Patt/Standoff, kein Fortschritt) - sie MUSS sich JETZT veraendern, kein weiteres Verharren in derselben Lage. Diese Szene MUSS eine klare WENDUNG bringen: ENTWEDER eskaliert sie zu einer echten Konsequenz (bei der Stasi und passender Lage: Zugriff/Gewahrsam; sonst ein Kampf, eine Verletzung, eine erzwungene Flucht) ODER die Gegenseite zieht ab / gibt nach / verplappert sich, sodass Karl danach wieder frei weiterermitteln kann. Die vier Optionen muessen WEGE AUS DEM PATT sein (entschlossen durchgreifen / einen Deal abschliessen / das Risiko der Flucht wagen / die Lage clever kippen) - NICHT noch eine Variante des gleichen Aushaltens/Abwartens. KEINE weitere reine Standoff-Szene ohne Veraenderung.' };
+      }
+    } catch (e) {}
     // (2) INDIZIEN-FÜHRUNG. Was ist das nächste erreichbare offene Indiz - am aktuellen Ort oder anderswo?
     const _hatDefiniert = (typeof caseHasDefinedEvidence === 'function' && caseHasDefinedEvidence());
     if (_hatDefiniert) {
@@ -11770,7 +11782,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1079';
+window.SCHATTEN_VERSION = 'v7.12.1080';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
