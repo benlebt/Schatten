@@ -3419,7 +3419,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1088</div>
+    <div class="start-version">Schatten v7.12.1089</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3643,7 +3643,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1088</span>
+    <span>Schatten v7.12.1089</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11800,7 +11800,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1088';
+window.SCHATTEN_VERSION = 'v7.12.1089';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -12158,6 +12158,31 @@ function _buildProfilRecap() {
       const letzte = karlAkte.historie[karlAkte.historie.length - 1];
       if (letzte && letzte.titel) teile.push('Karl hat zuletzt den Fall "' + letzte.titel + '" ' + (letzte.ausgang === 'geloest' ? 'erfolgreich abgeschlossen' : 'nur teilweise abschliessen koennen') + '.');
     }
+    // v7.12.1089 (Persistenz Scheibe 2): letzte Romanze EINMAL als Karl-Gedanke (sichtbare Kontinuitaet, auch
+    // wenn die Person nicht wieder auftaucht). Wird nach der Nennung konsumiert.
+    try {
+      if (karlAkte._romanzeRecapPending) {
+        teile.push('Die Nacht mit ' + karlAkte._romanzeRecapPending + ' aus dem letzten Fall geht Karl noch nach.');
+        delete karlAkte._romanzeRecapPending;
+        if (typeof _karlAkteSave === 'function') _karlAkteSave();
+      }
+    } catch (e) {}
+    // v7.12.1089: Wiederkehr - kennt eine Figur im aktuellen Cast Karl schon? (Fundament fuer Stammfiguren/#3;
+    // feuert automatisch, sobald ein NPC-Name ueber Faelle hinweg wiederkehrt.)
+    try {
+      if (caseSetup && Array.isArray(caseSetup.setupCast) && karlAkte.bekannte) {
+        for (const ce of caseSetup.setupCast) {
+          if (!ce || !ce.name) continue;
+          const _bk = ('' + ce.name).toLowerCase().trim();
+          const b = karlAkte.bekannte[_bk];
+          if (b) {
+            const _wie = (b.status === 'romanze') ? 'hatte mit Karl eine gemeinsame Nacht' : (b.status === 'verprellt' ? 'wurde von Karl hart angefasst' : 'wurde von Karl schon einmal aus der Klemme geholfen');
+            teile.push(ce.name + ' kennt Karl bereits - ' + _wie + ' (Fall "' + (b.fall || '?') + '"). Die Begegnung knuepft daran an.');
+            break;
+          }
+        }
+      }
+    } catch (e) {}
     if (karlAkte.ruf && (karlAkte.ruf.haerte | 0) >= 3) teile.push('Karls Ruf, hart und notfalls mit Gewalt zuzufassen, eilt ihm in den Milieus voraus - Informanten sind vorsichtiger geworden.');
     else if (karlAkte.ruf && (karlAkte.ruf.renommee | 0) >= 3) teile.push('Karl hat sich einen Ruf als zuverlaessiger, diskreter Ermittler erarbeitet.');
     if (!teile.length) return '';
@@ -12219,8 +12244,15 @@ function _informantPreis(npcId, npcName) {
       { match: 'willi',     ost: 15 },
       { match: 'lemke',     ost: 20 }
     ];
-    for (const e of TAB) { if (n.includes(e.match)) return e.ost; }
-    return 15; // Default für sonstige Informanten
+    let _basis = 15;
+    for (const e of TAB) { if (n.includes(e.match)) { _basis = e.ost; break; } }
+    // v7.12.1089 (Persistenz Scheibe 2): Ein harter Ruf macht Informanten vorsichtiger -> teurer. +4 Ostmark je
+    // Haerte-Punkt ueber 2 (also haerte 3 -> +4, 4 -> +8, 5 -> +12). Gewalt hat ihren Preis im naechsten Fall.
+    try {
+      const _h = (typeof karlAkte === 'object' && karlAkte && karlAkte.ruf) ? (karlAkte.ruf.haerte | 0) : 0;
+      if (_h > 2) _basis += (_h - 2) * 4;
+    } catch (e) {}
+    return _basis;
   } catch (e) { return 15; }
 }
 // Prüft, ob Karl den Informanten bezahlen kann, und BUCHT bei Erfolg ab (Geld vom Konto ODER passende Tauschware).
@@ -21666,6 +21698,31 @@ function showCaseSolved() {
         if (!Array.isArray(karlAkte.historie)) karlAkte.historie = [];
         karlAkte.historie.push({ titel: _titel, ausgang: earlyAbort ? 'teilweise' : 'geloest', tag: (typeof gameDay === 'number' ? gameDay : 0), honorar: _honorarGezahlt });
         if (karlAkte.historie.length > 30) karlAkte.historie = karlAkte.historie.slice(-30);
+        // v7.12.1089 (Persistenz Scheibe 2): Ruf-Haerte aus dem Fall-Verhalten in die Akte falten (akkumuliert
+        // ueber Faelle; speist Profil-Recap + Reputations-Hint + Informanten-Aufschlag im naechsten Fall).
+        try {
+          if (!karlAkte.ruf || typeof karlAkte.ruf !== 'object') karlAkte.ruf = { haerte: 0, renommee: 0 };
+          const _rep = (typeof computeKarlReputation === 'function') ? computeKarlReputation() : { key: 'neutral' };
+          if (_rep.key === 'hart') karlAkte.ruf.haerte = Math.min(5, (karlAkte.ruf.haerte | 0) + 2);
+          else if (_rep.key === 'eher_hart') karlAkte.ruf.haerte = Math.min(5, (karlAkte.ruf.haerte | 0) + 1);
+          else if (_rep.key === 'behutsam') karlAkte.ruf.haerte = Math.max(0, (karlAkte.ruf.haerte | 0) - 1);
+        } catch (e) {}
+        // v7.12.1089: Bekannte registrieren - Romanzen (Bindung) + der zufriedene Klient (geholfen). Fundament
+        // fuer wiederkehrende Figuren; speist die Kontinuitaets-Faerbung der naechsten Eroeffnung.
+        try {
+          if (!karlAkte.bekannte || typeof karlAkte.bekannte !== 'object') karlAkte.bekannte = {};
+          if (typeof romanceClimaxed === 'object' && romanceClimaxed) {
+            for (const nm in romanceClimaxed) {
+              if (romanceClimaxed[nm] && nm) { const k = ('' + nm).toLowerCase().trim(); if (k) { karlAkte.bekannte[k] = { name: nm, status: 'romanze', fall: _titel, tag: (typeof gameDay === 'number' ? gameDay : 0) }; karlAkte._romanzeRecapPending = nm; } }
+            }
+          }
+          if (!earlyAbort && !_istEigenauftrag && typeof clientProfile === 'object' && clientProfile && clientProfile.name) {
+            const ck = ('' + clientProfile.name).toLowerCase().trim();
+            if (ck && !karlAkte.bekannte[ck]) karlAkte.bekannte[ck] = { name: clientProfile.name, status: 'geholfen', fall: _titel, tag: (typeof gameDay === 'number' ? gameDay : 0) };
+          }
+          const _bk = Object.keys(karlAkte.bekannte);
+          if (_bk.length > 40) _bk.slice(0, _bk.length - 40).forEach(k => delete karlAkte.bekannte[k]);
+        } catch (e) {}
         _karlAkteSave();
         try { if (typeof saveGameState === 'function') saveGameState(); } catch (e) {} // v7.12.1088: akteVerbucht-Flag mitspeichern
         try {
@@ -25157,7 +25214,15 @@ function buildKarlReputationHint(ctx) {
   // Bei Karl zu Hause / beim Arzt reagiert kein fremder NPC auf seinen Ruf.
   if (ortType === 'HOME' || ortType === 'WAGNER' || ortType === 'CHARITE') return '';
   const rep = computeKarlReputation();
-  if (rep.key === 'neutral') return ''; // noch kein Ruf etabliert
+  // v7.12.1089 (Persistenz Scheibe 2): Ein in frueheren Faellen erworbener Haerte-Ruf eilt Karl voraus -
+  // auch wenn er in DIESEM Fall noch niemanden hart angefasst hat (per-Fall-Ruf noch neutral).
+  const _persHaerte = (typeof karlAkte === 'object' && karlAkte && karlAkte.ruf) ? (karlAkte.ruf.haerte | 0) : 0;
+  if (rep.key === 'neutral') {
+    if (_persHaerte >= 3) {
+      return 'KARLS RUF (aus frueheren Faellen): Karl hat sich in den Berliner Milieus den Ruf erarbeitet, hart und notfalls mit Gewalt zuzufassen. Wer ihn kennt oder von ihm gehoert hat, ist auf der Hut - kleine Ganoven werden nervoes, Informanten vorsichtiger und teurer. Lass das in den Reaktionen MITSCHWINGEN (nicht ausbuchstabieren), nur bei Figuren die ihn kennen koennten.';
+    }
+    return ''; // noch kein Ruf etabliert
+  }
   const reaktion = {
     hart: 'Kleine Ganoven und Zeugen sind nervoes, manche aggressiv oder eingeschuechtert; Profis nehmen ihn sehr ernst und sind auf der Hut. Wer Angst vor Schlaegern hat, knickt schneller ein - wer stolz ist, geht in Abwehrhaltung.',
     eher_hart: 'Kleine Ganoven werden nervoeser, Zeugen etwas vorsichtiger; Profis nehmen ihn ernst. Sein Ruf als jemand, der auch mal zupackt, ist spuerbar.',
