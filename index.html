@@ -3419,7 +3419,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1087</div>
+    <div class="start-version">Schatten v7.12.1088</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3643,7 +3643,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1087</span>
+    <span>Schatten v7.12.1088</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11800,7 +11800,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1087';
+window.SCHATTEN_VERSION = 'v7.12.1088';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -21648,8 +21648,8 @@ function showCaseSolved() {
     // Fall in die Historie, renommee bei sauberem Abschluss. Pro Fall genau EINMAL (Win-Screen kann re-rendern).
     let _honorarGezahlt = 0;
     try {
-      if (typeof karlAkte === 'object' && karlAkte && !window._akteFallVerbucht) {
-        window._akteFallVerbucht = true;
+      if (typeof karlAkte === 'object' && karlAkte && caseProgress && !caseProgress.akteVerbucht) {
+        caseProgress.akteVerbucht = true; // v7.12.1088: Guard in caseProgress (ueberlebt Reload) statt window - sonst re-credit bei restauriertem Solved-Case
         const _restOst = (caseProgress && caseProgress.geld && (caseProgress.geld.ost | 0)) || 0;
         const _restWest = (caseProgress && caseProgress.geld && (caseProgress.geld.west | 0)) || 0;
         if (_istEigenauftrag) {
@@ -21667,6 +21667,7 @@ function showCaseSolved() {
         karlAkte.historie.push({ titel: _titel, ausgang: earlyAbort ? 'teilweise' : 'geloest', tag: (typeof gameDay === 'number' ? gameDay : 0), honorar: _honorarGezahlt });
         if (karlAkte.historie.length > 30) karlAkte.historie = karlAkte.historie.slice(-30);
         _karlAkteSave();
+        try { if (typeof saveGameState === 'function') saveGameState(); } catch (e) {} // v7.12.1088: akteVerbucht-Flag mitspeichern
         try {
           if (_honorarGezahlt > 0 && typeof showProgressToast === 'function')
             showProgressToast('+' + _honorarGezahlt + ' Ostmark', 'Honorar fuer den Fall. Kasse: ' + karlAkte.kasse.ost + ' Ostmark' + (karlAkte.mieteOffen > 0 ? ' (Miete ' + karlAkte.mieteOffen + ' offen)' : '') + '.', 'success', 'akte-honorar', '💰');
@@ -36697,7 +36698,7 @@ async function startGame() {
       karlAkte.mieteOffen -= _zahlbar;
       karlAkte.kasse = { ost: caseProgress.geld.ost, west: caseProgress.geld.west };
       _karlAkteSave();
-      window._akteFallVerbucht = false;
+      caseProgress.akteVerbucht = false; // v7.12.1088: Fall-Ende-Verbuchung pro Fall genau einmal (Guard reset)
       try {
         const _mt = (_zahlbar > 0 ? 'Miete -' + _zahlbar + ' Ostmark gezahlt' : 'Miete faellig') + (karlAkte.mieteOffen > 0 ? ' (' + karlAkte.mieteOffen + ' noch offen)' : '') + '. Kasse: ' + caseProgress.geld.ost + ' Ostmark.';
         if (typeof showProgressToast === 'function') showProgressToast(_zahlbar > 0 ? '-' + _zahlbar + ' Ostmark Miete' : 'Miete faellig', _mt, 'caution', 'akte-miete-start', '🏠');
