@@ -3415,7 +3415,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1068</div>
+    <div class="start-version">Schatten v7.12.1069</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3639,7 +3639,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1068</span>
+    <span>Schatten v7.12.1069</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11770,7 +11770,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1068';
+window.SCHATTEN_VERSION = 'v7.12.1069';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -33682,8 +33682,9 @@ KEINE anderen Themen mehr - kein neuer Tatort, keine neuen Verdaechtigen, keine 
       // ist, MUSS in der naechsten Szene die Festnahme passieren. Kein Spielraum
       // fuer "vielleicht entkommt Karl noch".
       if (caseProgress.forceCustodyNextScene) {
-        recap += `\n\nFESTNAHME-FORCE (UNUMGAENGLICH): Karl ist seit mehreren Szenen unter hoechster Stasi-Beobachtung (Tension ${stasiTension}/5) UND hat sich nicht entzogen. Das System forciert jetzt die Festnahme - es gibt KEINEN Ausweg mehr. Diese Szene MUSS damit beginnen oder enden dass MfS-Maenner Karl direkt zugreifen: zwei zivile MfS-Maenner umringen ihn, Walther wird ihm abgenommen, Handschellen, EMW 340 ab nach Hohenschoenhausen. KEINE Option "noch entkommen" - die Optionen sind: "Schweig und lass es geschehen", "Wehre dich und werde geschlagen", "Versuche zu fluechten und stirb beim Versuch", "Akzeptiere die Festnahme und nimm dir vor, ruhig zu bleiben". ortHaupt der naechsten Szene = "Hohenschoenhausen Genslerstrasse oder MfS-Verhoerraum". Setze caseProgress.forceCustodyNextScene zurueck wenn Festnahme passiert ist.`;
+        recap += `\n\nFESTNAHME-FORCE (UNUMGAENGLICH): Karl ist seit mehreren Szenen unter hoechster Stasi-Beobachtung (Tension ${stasiTension}/5) UND hat sich nicht entzogen. Das System forciert jetzt die Festnahme - es gibt KEINEN Ausweg mehr. KEINE Schiesserei, KEIN Duell, KEIN Entkommen - Karl ist ueberwaeltigt und in MfS-Hand. Diese Szene MUSS damit beginnen oder enden dass MfS-Maenner Karl direkt zugreifen: zwei zivile MfS-Maenner umringen ihn, Walther wird ihm abgenommen, Handschellen, EMW 340 ab nach Hohenschoenhausen. KEINE Option "noch entkommen" - die Optionen sind: "Schweig und lass es geschehen", "Wehre dich und werde geschlagen", "Versuche zu fluechten und stirb beim Versuch", "Akzeptiere die Festnahme und nimm dir vor, ruhig zu bleiben". ortHaupt der naechsten Szene = "Hohenschoenhausen Genslerstrasse oder MfS-Verhoerraum". Setze caseProgress.forceCustodyNextScene zurueck wenn Festnahme passiert ist.`;
         caseProgress.forceCustodyNextScene = false; // Verbraucht, einmal pro Festnahme
+        caseProgress.custodyForcedEntry = true; // v7.12.1069 (Custody-Hybrid): Engine erzwingt den Custody-STATE in der Nachverarbeitung - unabhaengig davon ob die KI die Festnahme sauber erzaehlt (KI schmueckt nur den Einstiegstext aus)
         caseProgress.lastStasiScene = sceneCounter;
       } else {
       // Tracking: wieviele Szenen seit letzter Stasi-Erwaehnung
@@ -47286,7 +47287,23 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       }
     } catch (e) {}
     let kiSignalHandled = false;
-    if (kiGewahrsamSignal !== null) {
+    // v7.12.1069 (Custody-Hybrid, Benjamin): Wenn die Engine die Festnahme erzwungen hat (forceCustodyNextScene -> custodyForcedEntry),
+    // wird der Custody-STATE jetzt DETERMINISTISCH gesetzt - egal ob die KI die Festnahme sauber erzaehlt hat. Damit ist die
+    // Custody-/Notflucht-Schleife zuverlaessig erreichbar (vorher nahm der META-CUSTODY-Waechter den erzwungenen Gewahrsam zurueck,
+    // wenn die KI stattdessen Schusswechsel/Entkommen erzaehlte). Die KI darf nur den Einstiegstext ausschmuecken; der Zustand ist gesetzt.
+    let _custodyForcedThisScene = false;
+    if (caseProgress && caseProgress.custodyForcedEntry) {
+      caseProgress.custodyForcedEntry = false;
+      _custodyForcedThisScene = true;
+      kiSignalHandled = true; // KI-Signal/Text-Fallback NICHT mehr anwenden - die Engine hat entschieden
+      if (!karlInStasiCustody && typeof setCustodyState === 'function') {
+        setCustodyState(true, 'force-custody-hybrid', { resetScenesSince: true });
+      }
+      // Haft-Ort deterministisch setzen, damit Status-Strip/Reise den Gewahrsam spiegeln (auch wenn die KI ortHaupt nicht sauber setzt)
+      try { engineCurrentLocation = { name: 'MfS-Untersuchungshaftanstalt Hohenschoenhausen', sektor: 'Ost (Hohenschoenhausen)' }; } catch (e) {}
+      if (typeof diag === 'function') diag('detect', '\u2726 CUSTODY-HYBRID: Festnahme engine-deterministisch gesetzt (KI-Erzaehlung egal) - Karl ist in MfS-Gewahrsam, Verhoer/Notflucht aktiv');
+    }
+    if (!_custodyForcedThisScene && kiGewahrsamSignal !== null) {
       // v7.12.108 (Fix B+C): KI-Signal + Textanalyse als TEAM, nicht KI allein. Gemini
       // Flash-Lite liefert das Feld nur ~30% der Zeit UND teils FALSCH (Run 1035 Sz47/49/50:
       // KI sagte gewahrsam=true obwohl Karl im Buero/auf der Flucht = frei war -> falsches
