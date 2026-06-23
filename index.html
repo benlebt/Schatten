@@ -3415,7 +3415,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1081</div>
+    <div class="start-version">Schatten v7.12.1082</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3639,7 +3639,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1081</span>
+    <span>Schatten v7.12.1082</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11782,7 +11782,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1081';
+window.SCHATTEN_VERSION = 'v7.12.1082';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -34007,7 +34007,7 @@ Marlowe-Stil: stilvoll, elliptisch, NICHT explizit. Tuer schliesst sich, Schnitt
         // nach 2 Pushes, wenn die Romantik nie zustande kam (romanticTension==0) -
         // dann ignoriert der Spieler die Figur bewusst, weitere Pushes waeren Stalking.
         const _rt = (typeof romanticTension === 'number') ? romanticTension : 0;
-        const _pushCooldownOk = (sceneCounter - (typeof lastRomancePushScene === 'number' ? lastRomancePushScene : -99)) >= 15;
+        const _pushCooldownOk = (sceneCounter - (typeof lastRomancePushScene === 'number' ? lastRomancePushScene : -99)) >= 8; // v7.12.1082 (Benjamin): 15->8, ein verpasster Push (Sp/Cast-Zufall) kann frueher erneut greifen
         const _pushBudgetOk = !(romancePushCount >= 2 && _rt === 0); // Spieler ignoriert konsequent -> Stopp
         // v7.12.285 (Lektorat Stein-Run): KEIN Romance-Push bei akutem Stasi-Zugriff (Tension>=4).
         // Im Run wurde Helene bei Tension 4-5 herangezogen - das wirkt aufgepfropft, sie ist dann
@@ -34018,9 +34018,14 @@ Marlowe-Stil: stilvoll, elliptisch, NICHT explizit. Tuer schliesst sich, Schnitt
         // Diebstahl hat das Holen des Guts Vorrang - Romance erst, wenn das Gut gesichert ist.
         const _ctRom = (caseSetup && caseSetup.caseType) ? normForMatch(caseSetup.caseType) : '';
         const _tisRom = (caseProgress && caseProgress.targetItemState && caseProgress.targetItemState.status) || 'unknown';
+        // v7.12.1082 (Benjamin: Diebstahl-Romance zu spaet erreichbar): Die Holpflicht sperrt Romance nur noch
+        // in der FRUEHEN Phase (stage < 2 = vor 'Indizien gesammelt'). Ab Stage 2 darf die Romance-Figur auch
+        // dann auftauchen, wenn das Gut noch nicht zurueck ist - sonst oeffnet Romance bei Diebstahl erst am
+        // Fallende und ist praktisch nie erreichbar (Live-Befund Krause Sz16: Erika kam nie).
         const _gutHolPflichtAktiv = (_ctRom === 'diebstahl')
           && !caseProgress.diebesgutZurueck
-          && _tisRom !== 'inKarlInventory' && _tisRom !== 'returnedToClient';
+          && _tisRom !== 'inKarlInventory' && _tisRom !== 'returnedToClient'
+          && ((caseProgress && caseProgress.stage) || 0) < 2;
         // v7.12.426 (Lektorat v425 P2): KEIN zweiter Romance-Push, wenn bereits eine Romance-fähige
         // Figur aktiv im Cast ist ODER eine Romanze schon laeuft (romanticTension>=2). Befund: im
         // Jazzkeller war Vivian aktiv, trotzdem zog der Setup-Push Erika zusaetzlich rein (Zielwechsel,
@@ -34045,8 +34050,14 @@ Marlowe-Stil: stilvoll, elliptisch, NICHT explizit. Tuer schliesst sich, Schnitt
         const _fallAbschlussreif = !!(caseProgress && caseProgress.wahrheitErkannt
           && (caseProgress.clientSecured || (Array.isArray(caseProgress.politicalBeatsHit) && caseProgress.politicalBeatsHit.indexOf('akten_gesichert') !== -1)));
         if (_fallAbschlussreif && typeof diag === 'function') diag('state', 'ROMANCE-PUSH unterdrückt: Fall abschlussreif (Wahrheit + Sicherung) - Romance nur noch als freie Spielerwahl');
-        if (!_fallAbschlussreif && !_romInCast && !_aktiveRomanceImCast && !_romanzeLaeuft && _romNichtAufgegeben && sceneCounter >= 5 && _scenesSinceRom >= 6 && _pushCooldownOk && _pushBudgetOk &&
-            _spOk && _stasiRuhigOk && !_gutHolPflichtAktiv && !karlInStasiCustody && sceneCounter % 6 === 0) {
+        // v7.12.1082 (Benjamin: Romance organisch kaum erreichbar - Push feuerte in 2 Live-Laeufen 0x): Gate gelockert.
+        // (a) frueher: sceneCounter>=3 statt >=5. (b) haeufiger: %3 statt %6 (mit Cooldown 8 kein Spam). (c) fragilen
+        // Rollenwort-Blocker _aktiveRomanceImCast entfernt - er sperrte den Push, sobald eine 'Taenzerin'-Rolle im
+        // KUMULATIVEN Cast hing (Lola), obwohl die Figur gar nicht praesent war (romanceNpcInScene blieb null,
+        // Tension blieb 0 = Henne-Ei). Echte Doppel-Push-Vermeidung deckt _romInCast (Figur wirklich im Cast) +
+        // _romanzeLaeuft (Tension>=2) bereits ab.
+        if (!_fallAbschlussreif && !_romInCast && !_romanzeLaeuft && _romNichtAufgegeben && sceneCounter >= 3 && _scenesSinceRom >= 6 && _pushCooldownOk && _pushBudgetOk &&
+            _spOk && _stasiRuhigOk && !_gutHolPflichtAktiv && !karlInStasiCustody && sceneCounter % 3 === 0) {
           const _rn = _romNames[0];
           lastRomancePushScene = sceneCounter;
           romancePushCount++;
