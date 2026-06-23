@@ -3419,7 +3419,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1106</div>
+    <div class="start-version">Schatten v7.12.1107</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3653,7 +3653,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1106</span>
+    <span>Schatten v7.12.1107</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11890,7 +11890,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1106';
+window.SCHATTEN_VERSION = 'v7.12.1107';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -39818,14 +39818,19 @@ async function chooseOption(option) {
           // stand - Roberts Name kam als FRAGEINHALT vor und gewann ueber die eigentlich ANGESPROCHENE Ilse (Reihenfolge
           // im Cast: Pohl, Robert, Ilse). FIX: unter allen genannten anwesenden Personen die nehmen, deren Name am
           // FRUEHESTEN im Text steht - die angesprochene Person wird typisch zuerst genannt ("Frag ILSE ... ueber Robert").
+          // v7.12.1107: auch den NACHNAMEN matchen (Optionen sagen oft nur "Kessler", nicht "Robert"). Pro Person die
+          // frueheste Fundstelle aus Vollname/Vorname/Nachname; dann die global zuerst genannte Person als Adressat.
           let _bestPos = Infinity;
           for (const c of _anwesend) {
             const _voll = (c.name || '').toLowerCase();
-            const _vor = _voll.split(/\s+/)[0];
-            let _pos = -1;
-            if (_voll && _txtG.includes(_voll)) _pos = _txtG.indexOf(_voll);
-            else if (_vor && _vor.length >= 3 && _txtG.includes(_vor)) _pos = _txtG.indexOf(_vor);
-            if (_pos >= 0 && _pos < _bestPos) { _bestPos = _pos; _zielNpc = c.name; }
+            const _toks = _voll.split(/\s+/);
+            const _vor = _toks[0];
+            const _nach = _toks.length > 1 ? _toks[_toks.length - 1] : '';
+            const _cands = [];
+            if (_voll && _txtG.includes(_voll)) _cands.push(_txtG.indexOf(_voll));
+            if (_vor && _vor.length >= 3 && _txtG.includes(_vor)) _cands.push(_txtG.indexOf(_vor));
+            if (_nach && _nach.length >= 3 && _txtG.includes(_nach)) _cands.push(_txtG.indexOf(_nach));
+            if (_cands.length) { const _pos = Math.min.apply(null, _cands); if (_pos < _bestPos) { _bestPos = _pos; _zielNpc = c.name; } }
           }
           // 2) Kein Name: einzige wirklich Anwesende - starkes Verb genuegt, schwaches Verb nur mit Personenbezug.
           if (!_zielNpc && _anwesend.length === 1 && (_starkVerb || _offensiv || (_schwachVerb && _personBezug))) {
