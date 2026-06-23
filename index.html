@@ -3419,7 +3419,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1092</div>
+    <div class="start-version">Schatten v7.12.1093</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3643,7 +3643,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1092</span>
+    <span>Schatten v7.12.1093</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11800,7 +11800,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1092';
+window.SCHATTEN_VERSION = 'v7.12.1093';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -37021,18 +37021,19 @@ async function startGame() {
     if (typeof karlAkte === 'object' && karlAkte) {
       karlAkte.kasse = { ost: (karlAkte.kasse.ost | 0), west: (karlAkte.kasse.west | 0) };
       caseProgress.geld = { ost: karlAkte.kasse.ost, west: karlAkte.kasse.west };
-      karlAkte.mieteOffen = (karlAkte.mieteOffen | 0) + BUERO_MIETE_PRO_FALL;
-      const _zahlbar = Math.min(caseProgress.geld.ost, karlAkte.mieteOffen);
-      caseProgress.geld.ost -= _zahlbar;
-      karlAkte.mieteOffen -= _zahlbar;
-      karlAkte.kasse = { ost: caseProgress.geld.ost, west: caseProgress.geld.west };
+      // v7.12.1093 (Benjamin: Start-Miet-Toast wirkt weird): Miete erst AB dem 2. Fall (faelleGesamt>0) -
+      // der allererste Fall startet mietfrei (frischer Detektiv). Und KEIN Start-Toast mehr - die Miete ist
+      // im "Aktueller Stand", im Eroeffnungs-Recap (wenn ueberfaellig) und auf den End-Screens sichtbar.
+      if ((karlAkte.faelleGesamt | 0) > 0) {
+        karlAkte.mieteOffen = (karlAkte.mieteOffen | 0) + BUERO_MIETE_PRO_FALL;
+        const _zahlbar = Math.min(caseProgress.geld.ost, karlAkte.mieteOffen);
+        caseProgress.geld.ost -= _zahlbar;
+        karlAkte.mieteOffen -= _zahlbar;
+        karlAkte.kasse = { ost: caseProgress.geld.ost, west: caseProgress.geld.west };
+      }
       _karlAkteSave();
       caseProgress.akteVerbucht = false; // v7.12.1088: Fall-Ende-Verbuchung pro Fall genau einmal (Guard reset)
       if (typeof _karlAkteUpdateRockBottom === 'function') _karlAkteUpdateRockBottom(); // v7.12.1091 (#6): Raeumung/Rueckkehr nach Schuldenstand
-      try {
-        const _mt = (_zahlbar > 0 ? 'Miete -' + _zahlbar + ' Ostmark gezahlt' : 'Miete faellig') + (karlAkte.mieteOffen > 0 ? ' (' + karlAkte.mieteOffen + ' noch offen)' : '') + '. Kasse: ' + caseProgress.geld.ost + ' Ostmark.';
-        if (typeof showProgressToast === 'function') showProgressToast(_zahlbar > 0 ? '-' + _zahlbar + ' Ostmark Miete' : 'Miete faellig', _mt, 'caution', 'akte-miete-start', '🏠');
-      } catch (e) {}
     }
   } catch (e) {}
   // v7.10: Kategorie-Tracking ebenfalls reset
