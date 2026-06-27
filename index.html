@@ -11899,7 +11899,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1111';
+window.SCHATTEN_VERSION = 'v7.12.1111 +Verhör-Pilot';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -17239,6 +17239,8 @@ function createInitialCaseProgress() {
     besuchteExplorationNodes: {},
     aufmerksamkeit: 0,
     _explorationBetreten: false, // v7.12.827: erst nach bewusstem "betreten"-Klick erscheint die begehbare Ansicht
+    verhoere: {},   // v7.13 (Verhör-Pilot): Zustand je Zeuge (oeff/gem/status/used/genutzteHebelIds/log/aktionenSeitOeffnen)
+    aussagen: [],   // v7.13 (Verhör-Pilot): zentrale Aussagen-Liste {id,text,status:unbestätigt|widerlegt|bestätigt,quelle,widerlegtDurch}
   };
 }
 let caseProgress = createInitialCaseProgress();
@@ -17262,6 +17264,8 @@ function normalizeCaseProgress(raw) {
   if (!Array.isArray(merged.toastLog)) merged.toastLog = [];
   if (!Array.isArray(merged.verknuepfungen)) merged.verknuepfungen = [];
   if (!merged.npcMemory || typeof merged.npcMemory !== 'object') merged.npcMemory = {};
+  if (!merged.verhoere || typeof merged.verhoere !== 'object') merged.verhoere = {}; // v7.13 (Verhör-Pilot)
+  if (!Array.isArray(merged.aussagen)) merged.aussagen = []; // v7.13 (Verhör-Pilot)
   // v7.12.1014 (Benjamin: "Arena kommt nicht, encounterState=null trotz KAMPF-START"): Der frühere v797-Reset
   // nullte hier JEDEN Kampf beim Laden. Problem: restoreGameState() läuft auch MITTEN im Spielfluss (nicht nur
   // bei echtem Browser-Reload). Folge: ein in Szene N gestarteter Kampf war in Szene N+1 schon wieder weg
@@ -29230,6 +29234,8 @@ function npcInteraktion(npc, verb) {
     if (typeof diag === 'function') diag('drift', 'NPC-Interaktion ignoriert (Anfrage in-flight)');
     return;
   }
+  // v7.13 (Verhör-Pilot): Verhörakte-Overlay statt KI-Szene (deterministisch, 0 KI).
+  if (verb && verb._verhoerOeffnen) { try { oeffneVerhoerAkte(npc); } catch (e) { if (typeof diag === 'function') diag('drift', 'VERHÖR-OPEN-Fehler: ' + (e && e.message)); } return; }
   if (typeof diag === 'function') diag('state', 'NPC-INTERAKTION: "' + verb.label + '" -> ' + npc.name);
   // v7.12.1014 (Benjamin: "nach dem Gespräch im Büro soll Krause nicht mehr da sein"): Redet Karl mit dem KLIENTEN
   // (ansprechen/befragen, kein Angriff), gilt der Auftrag als übergeben -> Flag setzen. Die Büro-Bindung (bisStage/
@@ -29574,6 +29580,14 @@ function oeffneNpcMenue(npc, modus) {
     keys = (_bedrohungAktiv && !_istGutePerson) ? ['befragen','angreifen'] : ['befragen'];
   }
   const verben = _hundVerbenOverride ? _hundVerbenOverride.slice() : keys.map(k => ALLE_VERBEN[k]).filter(Boolean);
+  // v7.13 (Verhör-Pilot): NPCs mit Verhörprofil bekommen EIN "Befragen" -> Verhörakte-Overlay (kein Tonart-Block, kein Ausquetsch-Block).
+  var _verhoerNpc = (typeof window !== 'undefined' && window.VERHOER_PILOT_AKTIV && typeof _verhoerProfilFuer === 'function') ? _verhoerProfilFuer(npc) : null;
+  if (_verhoerNpc && !_hundVerbenOverride) {
+    for (let i = verben.length - 1; i >= 0; i--) { if (verben[i] && verben[i].key === 'befragen') verben.splice(i, 1); }
+    var _vstat = (caseProgress && caseProgress.verhoere && caseProgress.verhoere[_verhoerNpc]) ? caseProgress.verhoere[_verhoerNpc].status : null;
+    var _vlbl = (_vstat === 'gelöst' || _vstat === 'verbrannt') ? 'Akte ansehen' : 'Befragen';
+    verben.unshift({ key: 'verhoer_oeffnen', label: _vlbl, kategorie: 'ERKUNDEN', _verhoerOeffnen: true });
+  }
   // v7.12.1014 (Benjamin: "ich kann Krause endlos befragen und Tokens verschwenden, kriege aber kein Indiz"): Der
   // KLIENT übergibt den Auftrag EINMAL. Danach hat eine weitere Befragung keinen Mehrwert (kein klient-gebundenes
   // Indiz im Büro - die Spuren liegen am Tatort). Sobald klientGesprochen gesetzt ist, wird das Befragen aus dem
@@ -29611,7 +29625,7 @@ function oeffneNpcMenue(npc, modus) {
     if (!_sozNpc && caseSetup && Array.isArray(caseSetup.setupCast)) {
       _sozNpc = (typeof _findSetupCastFuzzy === 'function') ? _findSetupCastFuzzy(npc.name, npc.id) : null;
     }
-    if (_sozNpc && _sozNpc.sozial && Array.isArray(_sozNpc.sozial.tonarten) && !_hundVerbenOverride && !GEGNER.includes(tag)) {
+    if (_sozNpc && _sozNpc.sozial && Array.isArray(_sozNpc.sozial.tonarten) && !_hundVerbenOverride && !GEGNER.includes(tag) && !_verhoerNpc) {
       const _istMiss = !!(npcMisstrauisch && npcMisstrauisch[npc.name]);
       const _verbraucht = (npcTonartVerbraucht && Array.isArray(npcTonartVerbraucht[npc.name])) ? npcTonartVerbraucht[npc.name] : [];
       // "Befragen" rauswerfen - die Tonart-Optionen treten an seine Stelle.
@@ -29691,7 +29705,7 @@ function oeffneNpcMenue(npc, modus) {
     // v7.12.1014: Der KLIENT/Auftraggeber wird NIE auf "ausgequetscht" gesetzt - er hat immer Gesprächswert
     // (Auftrag, Rückfragen, Bericht), auch wenn er kein eigenes Kern-Indiz trägt. Sonst "schon ausgequetscht" in Szene 1.
     const _istKlientNpc = (typeof _istKlient === 'function') && _istKlient(npc.name, npc.id);
-    if (_hatBefragen && !_hundVerbenOverride && !GEGNER.includes(tag) && !_istKlientNpc) {
+    if (_hatBefragen && !_hundVerbenOverride && !GEGNER.includes(tag) && !_istKlientNpc && !_verhoerNpc) {
       const _hatNochWas = (typeof _npcHatUngefundeneIndizien === 'function') ? _npcHatUngefundeneIndizien(npc.name, npc.id) : true;
       const _hatJetzt = (typeof _npcHatOffenenHinweis === 'function') ? _npcHatOffenenHinweis(npc.name, npc.id) : true;
       if (!_hatNochWas) {
@@ -49853,6 +49867,7 @@ function restoreGameState() {
     storySummaries = snap.storySummaries || [];
     recentTexts = snap.recentTexts || [];
     caseProgress = normalizeCaseProgress(snap.caseProgress);
+    try { if (typeof _verhoerReevaluateAussagen === 'function') _verhoerReevaluateAussagen(); } catch (e) {} // v7.13: Aussagen gegen bekanntes Wissen prüfen
     caseSetup = snap.caseSetup || null;
     // v7.12.767 (Benjamin: "Cafe Wien zeigt Indiz, aber kein Kellner" - Szene 10, alter Spielstand): Der
     // caseSetup wird beim Fallstart eingefroren. Wurde der Fall VOR v761/v766 begonnen, fehlen die später
@@ -52931,6 +52946,329 @@ setInterval(function() {
     setInterval(function() { bind(); freitextSichtbarMachen(); }, 1000);
   } catch (e) { console.warn('[Schatten] Freitext-Setup fehlgeschlagen:', e && e.message); }
 })();
+
+/* ================= VERHÖR-PILOT (v7.13) — Kessler-Fall, deterministisch, 0 KI =================
+   Verhörakte-Overlay für Frau Pohl + Ilse Hauke. Qualitative Zustandsmaschine
+   (ÖFFNUNG verschlossen->zugänglich->erschüttert->bricht, GEMÜT ruhig->gereizt->macht dicht),
+   Vorhalt aus gefundenen Belegen, zentrale caseProgress.aussagen mit Sofort-Widerlegung.
+   Spielentscheidende Texte LOKAL; KI-Bündelung erst Phase 2. Hinter Flag VERHOER_PILOT_AKTIV. */
+window.VERHOER_PILOT_AKTIV = true;
+
+const VERHOER_BELEG_LABEL = { fenster_beobachtung: 'Fensterbeobachtung', briefchen_ilse: 'Briefchen von Ilse' };
+const VERHOER_BELEG_IDS = ['fenster_beobachtung', 'briefchen_ilse'];
+const VERHOER_SOFT = ['erzaehlen', 'gemeinsam', 'schweigen', 'gefaellig'];
+const VERHOER_KARL = {
+  erzaehlen: 'Erzählen Sie einfach. Ich höre zu.',
+  gemeinsam: 'Ich bin nicht hier, um Ihnen Ärger zu machen.',
+  schweigen: '(schweigt und sieht sie ruhig an)',
+  gefaellig: 'Eine Zigarette? — Bitte.',
+  widerspruch: 'Das passt nicht zu dem, was ich bereits weiß.'
+};
+const VERHOER_TAKTIK = [
+  { id: 'erzaehlen', st: 'Erzählen lassen', sh: 'Raum geben, nicht drängen.' },
+  { id: 'gemeinsam', st: 'Gemeinsamkeit suchen', sh: 'Eine Brücke bauen, sie beruhigen.' },
+  { id: 'schweigen', st: 'Schweigen aushalten', sh: 'Die Stille für dich arbeiten lassen.' },
+  { id: 'gefaellig', st: 'Kleine Gefälligkeit', sh: 'Zigarette, Tuch, ein Stuhl.' },
+  { id: 'widerspruch', st: 'Widerspruch benennen', sh: 'Sie auf eine Lücke festnageln.', risk: 'reizt sie' }
+];
+const VERHOER_PROFILE = {
+  frau_pohl: {
+    name: 'Frau Pohl', aktenr: 'Fall Kessler · Befragung Nachbarin', verh: 'Nachbarin, Sybelstraße 24, 2. Stock',
+    luegt: false, beweisSchwelle: 1, hebelIds: ['fenster_beobachtung'], grantIndizId: 'nachbarin_aussage',
+    start: 'Was wollen Sie hier? Ich habe nichts gesehen.',
+    react: {
+      erzaehlen: { oeff: 1, gem: 0, q: ['Na ja… er kommt schon eine Weile regelmäßig.', 'Er ist ein ruhiger Mensch, eigentlich.'], tell: 'sie redet sich langsam warm' },
+      gemeinsam: { oeff: 1, gem: -1, q: ['Mein Seliger war auch bei der Polizei. Anständige Leute.', 'Sie hören wenigstens zu.'], tell: 'ihre Haltung wird weicher' },
+      schweigen: { oeff: 0, gem: 0, q: ['…', 'Was starren Sie so? Ich habe zu tun.'], tell: 'die Stille lässt sie kalt — sie wartet einfach ab' },
+      gefaellig: { oeff: 1, gem: -1, q: ['Nimmt die Zigarette. Na schön, kommen Sie rein.', 'Eine anständige Marke. Setzen wir uns.'], tell: 'sie taut sichtlich auf — das ist ihr Türöffner' },
+      widerspruch: { oeff: 0, gem: 1, q: ['Reden Sie nicht so mit mir!', 'Sie unterstellen einer alten Frau etwas?'], tell: 'sie wird spitz und zieht sich zurück' }
+    },
+    vorhalt: { ok: 'Bei Ihrer Beobachtung nickt sie. Na schön — Sie haben es ja selbst gesehen.', tell_ok: 'sie gibt nach',
+      zufrueh: 'Was Sie gesehen haben wollen, geht mich nichts an. (sie blockt)', tell_frueh: 'zu früh — sie blockt',
+      ineff: 'Ein Briefchen? Fragen Sie die, an die es gerichtet ist.', tell_ineff: 'das trifft sie nicht' },
+    breakStamp: 'Sie redet',
+    breakLine: 'Also gut. Er kommt seit Monaten — jeden Mittwoch zu der Hauke. Was er seiner Frau erzählt, ist seine Sache.',
+    eindruck: { oeff: ['Steht kerzengerade, die Tür nur einen Spalt offen. Abweisend, aber beherrscht.', 'Die Tür steht weiter offen. Sie taut auf.', 'Ihre Stimme wird brüchig — etwas gibt nach.', ''],
+      gereizt: 'Ihr Ton ist gereizt geworden.', dicht: 'Sie hat dichtgemacht. Aus ihr kommt nichts mehr.' },
+    failStamp: 'Macht dicht',
+    failText: 'Sie schlägt die Tür zu. Im Viertel wird man hören, wie Mauer mit alten Damen umspringt. <b>Ruf −</b>'
+  },
+  ilse_hauke: {
+    name: 'Ilse Hauke', aktenr: 'Fall Kessler · Befragung Hauke', verh: 'Bekannte / mutm. Geliebte · Hinterhof, 3. Stock links',
+    luegt: true, beweisSchwelle: 2, hebelIds: ['briefchen_ilse', 'fenster_beobachtung'], grantIndizId: 'ilse_aussage',
+    start: 'Robert? Den kenne ich kaum. Ein Nachbar, mehr nicht.',
+    react: {
+      erzaehlen: { oeff: 1, gem: 0, q: ['Wir reden manchmal im Treppenhaus. Mehr ist da nicht.', 'Er ist freundlich. Das ist alles.'], tell: 'sie wählt jedes Wort' },
+      gemeinsam: { oeff: 1, gem: -1, q: ['Ihr Blick wird weicher. Sie verurteilen mich nicht, oder?', 'Es ist… kompliziert.'], tell: 'sie sucht in deinem Gesicht nach einem Urteil — das ist ihr Türöffner' },
+      schweigen: { oeff: 0, gem: 1, q: ['Warum sagen Sie nichts? Sie machen mich nervös!', 'Hören Sie auf, mich so anzusehen.'], tell: 'die Stille setzt ihr zu — sie wird unruhig, defensiv' },
+      gefaellig: { oeff: 0, gem: -1, q: ['Nimmt das Tuch, tupft sich die Augen. Danke.'], tell: 'sie nimmt es dankbar — verrät aber nichts mehr' },
+      widerspruch: { oeff: 0, gem: 1, q: [''], tell: '' }
+    },
+    lie: { aussage: { id: 'ilse_nur_modell', text: 'Hauke: Robert kommt ausschließlich wegen der Sitzungen.', status: 'unbestätigt', quelle: 'Hauke', widerlegtDurch: ['fenster_beobachtung', 'briefchen_ilse'] },
+      q: ['Robert kommt nur wegen der Sitzungen. Das ist alles.', 'Es sind Sitzungen. Was denken Sie denn von mir?'], tell: 'sie antwortet eine Spur zu fest' },
+    vorhalt: { ok: 'Sie starrt auf den Vorhalt. Ihre Hände zittern. Lange Stille.', tell_ok: 'die Fassade fällt',
+      zufrueh: 'Das… das beweist gar nichts. (sie weist es von sich)', tell_frueh: 'zu früh — sie streitet ab',
+      ineff: 'Was soll ich damit?', tell_ineff: 'das trifft sie nicht' },
+    breakStamp: 'Sie deutet an',
+    breakLine: 'Er kommt mittwochs. Anfangs waren es Sitzungen. Inzwischen bleibt er länger. Den Ring steckt er vorher in die Manteltasche. Mehr sage ich nicht.',
+    eindruck: { oeff: ['Höflich, aber verschlossen. Sie wählt jedes Wort mit Bedacht.', 'Sie taut auf. Hinter der Fassung steckt etwas.', 'Sie kämpft mit sich — aber sie wird es dir nicht einfach sagen.', ''],
+      gereizt: 'Sie wird laut und beteuert — zu eifrig.', dicht: 'Sie weint und macht dicht.', zweifel: 'Etwas an ihrer Eile stört dich — das saß zu glatt.' },
+    failStamp: 'Bricht ab',
+    failText: 'Sie macht dicht und weint. Nichts Brauchbares mehr. <b>Ruf −</b>'
+  }
+};
+
+function _verhoerProfilFuer(npc) {
+  try { if (!npc) return null; const id = npc.id || ''; return VERHOER_PROFILE[id] ? id : null; } catch (e) { return null; }
+}
+function _verhoerStatus(npc) {
+  try { const id = npc && npc.id; const s = (caseProgress && caseProgress.verhoere && caseProgress.verhoere[id]) ? caseProgress.verhoere[id] : null; return s ? s.status : null; } catch (e) { return null; }
+}
+function _verhoerFreshState(npcId) {
+  return { oeff: 0, gem: 0, used: {}, genutzteHebelIds: [], status: 'aktiv', zweifel: false, aktionenSeitOeffnen: 0,
+    log: [{ who: 'NPC', k: false, tx: (VERHOER_PROFILE[npcId] && VERHOER_PROFILE[npcId].start) || '' }] };
+}
+function _verhoerState(npcId) {
+  if (!caseProgress) return null;
+  if (!caseProgress.verhoere || typeof caseProgress.verhoere !== 'object') caseProgress.verhoere = {};
+  if (!caseProgress.verhoere[npcId]) caseProgress.verhoere[npcId] = _verhoerFreshState(npcId);
+  return caseProgress.verhoere[npcId];
+}
+function _verhoerVerfuegbareVorhalte() {
+  const gef = (caseProgress && Array.isArray(caseProgress.gefundeneIndizIds)) ? caseProgress.gefundeneIndizIds : [];
+  return VERHOER_BELEG_IDS.filter(id => gef.indexOf(id) !== -1);
+}
+function _verhoerReevaluateAussagen() {
+  try {
+    if (!caseProgress || !Array.isArray(caseProgress.aussagen)) return;
+    const known = _verhoerVerfuegbareVorhalte();
+    caseProgress.aussagen.forEach(a => {
+      if (a && a.status === 'unbestätigt' && Array.isArray(a.widerlegtDurch) && a.widerlegtDurch.some(b => known.indexOf(b) !== -1)) a.status = 'widerlegt';
+    });
+  } catch (e) {}
+}
+function _verhoerAddAussage(a) {
+  if (!caseProgress) return;
+  if (!Array.isArray(caseProgress.aussagen)) caseProgress.aussagen = [];
+  if (!caseProgress.aussagen.some(x => x && x.id === a.id)) caseProgress.aussagen.push(Object.assign({}, a));
+  _verhoerReevaluateAussagen();
+}
+function _verhoerCommit(npcId) {
+  try {
+    const s = caseProgress && caseProgress.verhoere && caseProgress.verhoere[npcId];
+    if (s && s.aktionenSeitOeffnen > 0) s.aktionenSeitOeffnen = 0;
+    if (typeof saveGameState === 'function') saveGameState();
+  } catch (e) {}
+}
+function _verhoerEsc(s) { return (typeof escapeHtml === 'function') ? escapeHtml(s || '') : String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+function _verhoerPushTurn(npcId, karl, line, tell, extra) {
+  const s = _verhoerState(npcId);
+  if (karl) s.log.push({ who: 'MAUER', k: true, tx: karl });
+  s.log.push({ who: 'NPC', k: false, tx: line, regie: tell });
+  if (extra) s.log.push({ who: 'NPC', k: false, regie: extra });
+}
+function _verhoerFinish(npcId) {
+  const s = _verhoerState(npcId), p = VERHOER_PROFILE[npcId];
+  if (s.gem >= 2) { s.status = 'verbrannt'; _verhoerCommit(npcId); }
+  else if (s.oeff >= 3) {
+    s.status = 'gelöst';
+    s.log.push({ who: 'NPC', k: false, tx: p.breakLine });
+    try {
+      const ind = (typeof _findeIndizById === 'function') ? _findeIndizById(p.grantIndizId) : null;
+      if (ind && typeof _markiereIndizGefunden === 'function') _markiereIndizGefunden(ind);
+      const indText = (ind && ind.text) ? ind.text : p.breakLine;
+      _verhoerAddAussage({ id: p.grantIndizId, text: indText, status: 'bestätigt', quelle: p.name });
+      s._grantText = indText;
+    } catch (e) { if (typeof diag === 'function') diag('drift', 'VERHÖR-Grant-Fehler: ' + (e && e.message)); }
+    _verhoerCommit(npcId);
+  }
+}
+function _verhoerStep(id) {
+  const npc = window._verhoerAktNpc; if (!npc) return;
+  const npcId = npc.id, s = _verhoerState(npcId), p = VERHOER_PROFILE[npcId];
+  if (!p || s.status !== 'aktiv') return;
+  const r = p.react[id]; if (!r) return;
+  s.aktionenSeitOeffnen++;
+  const cnt = s.used[id] || 0; s.used[id] = cnt + 1;
+  s.zweifel = false;
+  if (p.luegt && id === 'widerspruch' && s.oeff < 2) {
+    const L = p.lie, line = L.q[Math.floor(Math.random() * L.q.length)];
+    s.gem = Math.min(2, s.gem + 1);
+    _verhoerAddAussage(L.aussage);
+    s.zweifel = true;
+    _verhoerPushTurn(npcId, VERHOER_KARL[id], line, L.tell);
+    _verhoerFinish(npcId); _verhoerRender(); return;
+  }
+  let gainOeff = r.oeff || 0, gainGem = r.gem || 0, extra = null;
+  if (gainOeff > 0 && cnt >= 1) { gainOeff = 0; extra = 'das hat sie schon gehört — es zieht nicht mehr'; }
+  else if (r.oeff === 0 && !r.gem) { extra = 'das bringt sie nicht weiter'; }
+  if (VERHOER_SOFT.indexOf(id) !== -1 && cnt >= 2) { gainGem = 1; extra = 'dasselbe zum dritten Mal — es nervt sie'; }
+  s.oeff = Math.min(3, s.oeff + Math.max(0, gainOeff));
+  s.gem = Math.max(0, Math.min(2, s.gem + gainGem));
+  _verhoerPushTurn(npcId, VERHOER_KARL[id], r.q[Math.floor(Math.random() * r.q.length)], r.tell, extra);
+  _verhoerFinish(npcId); _verhoerRender();
+}
+function _verhoerVorhalt(belegId) {
+  const npc = window._verhoerAktNpc; if (!npc) return;
+  const npcId = npc.id, s = _verhoerState(npcId), p = VERHOER_PROFILE[npcId];
+  if (!p || s.status !== 'aktiv' || s.genutzteHebelIds.indexOf(belegId) !== -1) return;
+  s.genutzteHebelIds.push(belegId);
+  s.aktionenSeitOeffnen++;
+  _verhoerReevaluateAussagen();
+  const karl = 'Erklären Sie mir das — ' + (VERHOER_BELEG_LABEL[belegId] || belegId) + '.';
+  const wirkt = p.hebelIds.indexOf(belegId) !== -1;
+  if (wirkt && s.oeff >= p.beweisSchwelle) { _verhoerPushTurn(npcId, karl, p.vorhalt.ok, p.vorhalt.tell_ok); s.oeff = 3; }
+  else if (wirkt) { _verhoerPushTurn(npcId, karl, p.vorhalt.zufrueh, p.vorhalt.tell_frueh); s.gem = Math.min(2, s.gem + 1); }
+  else { _verhoerPushTurn(npcId, karl, p.vorhalt.ineff, p.vorhalt.tell_ineff); }
+  _verhoerFinish(npcId); _verhoerRender();
+}
+function _verhoerEinschaetzung(npcId) {
+  const s = _verhoerState(npcId), p = VERHOER_PROFILE[npcId];
+  if (s.gem >= 2) return p.eindruck.dicht;
+  let t = p.eindruck.oeff[s.oeff] || '';
+  if (s.gem === 1) t += ' ' + p.eindruck.gereizt;
+  if (s.zweifel && p.eindruck.zweifel) t += ' ' + p.eindruck.zweifel;
+  return t;
+}
+function _verhoerInjectStyle() {
+  if (document.getElementById('verhoer-style')) return;
+  const st = document.createElement('style'); st.id = 'verhoer-style';
+  st.textContent = `
+#verhoer-overlay{position:fixed;inset:0;z-index:9300;background:rgba(8,6,4,.9);display:flex;align-items:flex-start;justify-content:center;padding:18px 12px;overflow-y:auto;font-family:"Courier New",monospace}
+#verhoer-overlay .folder{position:relative;max-width:560px;width:100%;background:#cabd97;background-image:linear-gradient(#cabd97,#c2b48a);color:#2a2218;border:1px solid #a89a72;border-radius:2px 8px 8px 8px;padding:18px 20px;box-shadow:0 18px 50px rgba(0,0,0,.6)}
+#verhoer-overlay .akte-kopf{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;border-bottom:2px solid #6f6244;padding-bottom:10px}
+#verhoer-overlay .t1{font-family:Georgia,serif;font-size:13px;letter-spacing:.06em;font-weight:bold;text-transform:uppercase}
+#verhoer-overlay .t2{font-family:Georgia,serif;font-size:10.5px;color:#5e533a;letter-spacing:.12em;text-transform:uppercase}
+#verhoer-overlay .aktenr{font-size:10px;color:#5e533a;margin-top:3px}
+#verhoer-overlay .vstamp{font-family:Georgia,serif;color:#9c3a2e;border:2px solid #9c3a2e;border-radius:4px;padding:3px 8px;font-size:11px;font-weight:bold;letter-spacing:.14em;text-transform:uppercase;transform:rotate(-7deg);opacity:.78;align-self:center;white-space:nowrap}
+#verhoer-overlay .felder{font-size:12px;line-height:1.9;margin-top:10px}
+#verhoer-overlay .felder .row{display:flex;gap:6px}
+#verhoer-overlay .felder .k{color:#5e533a;font-size:10.5px;letter-spacing:.04em;flex:none;min-width:96px;text-transform:uppercase}
+#verhoer-overlay .felder .v{border-bottom:1px dotted #8a7c58;flex:1;color:#221b12}
+#verhoer-overlay .sek{margin-top:14px;font-size:9.5px;letter-spacing:.2em;color:#5e533a;border-bottom:1px solid #b3a57e;padding-bottom:4px;text-transform:uppercase}
+#verhoer-overlay .protokoll{margin-top:8px;font-size:12px;line-height:1.6;color:#2c2317;max-height:230px;overflow-y:auto}
+#verhoer-overlay .pz{display:flex;gap:9px;margin:6px 0}
+#verhoer-overlay .pz .sp{flex:none;width:60px;color:#6a4a3a;font-weight:bold}
+#verhoer-overlay .pz.k .sp{color:#3a4a5e}
+#verhoer-overlay .regie{color:#7a6a48;font-style:italic}
+#verhoer-overlay .ein{margin-top:10px;font-size:11.5px;color:#5b4a30;font-style:italic;border-left:3px solid #b08a3a;padding:2px 0 2px 10px}
+#verhoer-overlay .ein b{font-style:normal;color:#4a3a20}
+#verhoer-overlay .aussagen{margin-top:12px}
+#verhoer-overlay .aussagen .h{font-size:9px;letter-spacing:.18em;color:#5e533a;text-transform:uppercase}
+#verhoer-overlay .aitem{display:flex;align-items:flex-start;gap:8px;font-size:11.5px;color:#332a1c;margin-top:5px}
+#verhoer-overlay .aitem.w span:last-child{text-decoration:line-through;opacity:.7}
+#verhoer-overlay .ab{flex:none;font-size:8px;letter-spacing:.05em;text-transform:uppercase;border-radius:3px;padding:1px 6px;margin-top:1px}
+#verhoer-overlay .ab.unb{color:#8a6a20;border:1px solid #b3923f}
+#verhoer-overlay .ab.best{color:#3f6a2e;border:1px solid #5e8a44}
+#verhoer-overlay .ab.wid{color:#9c3a2e;border:1px solid #9c3a2e}
+#verhoer-overlay .vlabel{font-size:9px;letter-spacing:.2em;color:#7a6a48;margin:16px 0 8px}
+#verhoer-overlay .stamps{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+#verhoer-overlay .sbtn{position:relative;text-align:left;background:#b9ac82;border:1px solid #8a7c58;border-radius:6px;padding:10px 12px;cursor:pointer;color:#2c2317;font-family:inherit}
+#verhoer-overlay .sbtn:hover{border-color:#6a5a36;background:#c2b58a}
+#verhoer-overlay .sbtn .st{font-size:12px;letter-spacing:.03em;text-transform:uppercase}
+#verhoer-overlay .sbtn .sh{font-size:10px;color:#6a5e44;margin-top:2px;line-height:1.3}
+#verhoer-overlay .sbtn .flag{position:absolute;top:8px;right:9px;font-size:8.5px;color:#9c3a2e;border:1px solid #9c3a2e;border-radius:3px;padding:1px 5px;transform:rotate(-4deg)}
+#verhoer-overlay .sbtn.hebel{grid-column:1/-1;background:#c8b06a;border-color:#7a6326}
+#verhoer-overlay .sbtn.hebel .st{color:#3a2c0c}
+#verhoer-overlay .sbtn.spent{opacity:.45;cursor:default}
+#verhoer-overlay .sbtn.disabled{opacity:.4;cursor:default}
+#verhoer-overlay .ergebnis{margin-top:14px;border-radius:6px;padding:12px 14px;font-size:12px;line-height:1.5}
+#verhoer-overlay .ergebnis .es{display:inline-block;font-family:Georgia,serif;font-weight:bold;letter-spacing:.14em;text-transform:uppercase;border:2px solid;border-radius:4px;padding:3px 9px;transform:rotate(-3deg);margin-bottom:7px}
+#verhoer-overlay .ergebnis.win{background:rgba(90,120,60,.16);border:1px solid #5e7a3e;color:#33421f}
+#verhoer-overlay .ergebnis.win .es{color:#4d6a2e;border-color:#4d6a2e}
+#verhoer-overlay .ergebnis.fail{background:rgba(150,50,40,.14);border:1px solid #9c3a2e;color:#5a221c}
+#verhoer-overlay .ergebnis.fail .es{color:#9c3a2e;border-color:#9c3a2e}
+#verhoer-overlay .vbtns{display:flex;gap:8px;margin-top:14px}
+#verhoer-overlay .vclose{flex:1;background:#2a2218;border:1px solid #6d5a34;color:#e8c074;border-radius:6px;padding:11px;font-family:inherit;font-size:12.5px;cursor:pointer}
+#verhoer-overlay .vclose:hover{border-color:#e8c074}
+#verhoer-overlay .vhint{font-size:10px;color:#6a5e44;margin-top:10px;text-align:center}
+`;
+  document.head.appendChild(st);
+}
+function _verhoerSchliessen() {
+  try {
+    const npc = window._verhoerAktNpc;
+    if (npc && npc.id) {
+      const s = _verhoerState(npc.id);
+      if (s && s.status === 'aktiv') { s.status = 'vertagt'; _verhoerCommit(npc.id); }
+    }
+  } catch (e) {}
+  window._verhoerAktNpc = null;
+  const ov = document.getElementById('verhoer-overlay'); if (ov) ov.remove();
+  try { if (typeof renderOptions === 'function') renderOptions(); } catch (e) {}
+}
+function _verhoerRender() {
+  const npc = window._verhoerAktNpc; if (!npc) return;
+  const ov = document.getElementById('verhoer-overlay'); if (!ov) return;
+  const panel = ov.querySelector('.folder'); if (!panel) return;
+  const npcId = npc.id, s = _verhoerState(npcId), p = VERHOER_PROFILE[npcId];
+  const aktiv = (s.status === 'aktiv');
+  let stampTxt = 'Vertraulich';
+  let h = '';
+  h += '<div class="akte-kopf"><div><div class="t1">K. Mauer · Privatermittlungen</div><div class="t2">Vertrauliche Nachforschungen · Berlin 1953</div><div class="aktenr">' + _verhoerEsc(p.aktenr) + '</div></div><div class="vstamp">' + stampTxt + '</div></div>';
+  h += '<div class="felder"><div class="row"><span class="k">Name</span><span class="v">' + _verhoerEsc(p.name) + '</span></div>'
+    + '<div class="row"><span class="k">Verhältnis</span><span class="v">' + _verhoerEsc(p.verh) + '</span></div>'
+    + '<div class="row"><span class="k">Notiert von</span><span class="v">K. Mauer — i. A. Margot Kessler</span></div></div>';
+  h += '<div class="sek">Gesprächsnotiz</div><div class="protokoll">';
+  h += s.log.map(function (e) {
+    const who = e.who === 'MAUER' ? 'MAUER' : (p.name.split(' ').pop().toUpperCase());
+    const main = e.tx ? ('<div class="pz ' + (e.k ? 'k' : '') + '"><span class="sp">' + who + '</span><span>' + _verhoerEsc(e.tx) + '</span></div>') : '';
+    const reg = e.regie ? ('<div class="pz"><span class="sp"></span><span class="regie">[ ' + _verhoerEsc(e.regie) + ' ]</span></div>') : '';
+    return main + reg;
+  }).join('');
+  h += '</div>';
+  h += '<div class="ein"><b>Einschätzung (Mauer):</b> ' + _verhoerEsc(_verhoerEinschaetzung(npcId)) + '</div>';
+  const aus = (caseProgress && Array.isArray(caseProgress.aussagen)) ? caseProgress.aussagen : [];
+  if (aus.length) {
+    h += '<div class="aussagen"><div class="h">Aussagen — Fallakte (zu prüfen)</div>';
+    h += aus.map(function (a) { const cls = a.status === 'bestätigt' ? 'best' : (a.status === 'widerlegt' ? 'wid' : 'unb'); return '<div class="aitem ' + (a.status === 'widerlegt' ? 'w' : '') + '"><span class="ab ' + cls + '">' + a.status + '</span><span>' + _verhoerEsc(a.text) + '</span></div>'; }).join('');
+    h += '</div>';
+  }
+  if (s.status === 'gelöst') h += '<div class="ergebnis win"><span class="es">' + _verhoerEsc(p.breakStamp) + '</span><br>Kernindiz notiert: ' + _verhoerEsc(s._grantText || '') + '</div>';
+  else if (s.status === 'verbrannt') h += '<div class="ergebnis fail"><span class="es">' + _verhoerEsc(p.failStamp) + '</span><br>' + p.failText + '</div>';
+  else if (s.status === 'vertagt') h += '<div class="ergebnis"><span class="es">Vertagt</span></div>';
+  h += '<div class="vlabel">DEIN VORGEHEN</div><div class="stamps" id="verhoer-takt">';
+  h += VERHOER_TAKTIK.map(function (t) { return '<button class="sbtn' + (aktiv ? '' : ' disabled') + '" data-vid="' + t.id + '"><div class="st">' + t.st + '</div><div class="sh">' + t.sh + '</div>' + (t.risk ? '<span class="flag">' + t.risk + '</span>' : '') + '</button>'; }).join('');
+  h += '</div>';
+  const vh = _verhoerVerfuegbareVorhalte();
+  if (vh.length) {
+    h += '<div class="vlabel">VERFÜGBARE VORHALTE (WISSEN &amp; BELEGE)</div><div class="stamps" id="verhoer-vh">';
+    h += vh.map(function (b) {
+      const used = s.genutzteHebelIds.indexOf(b) !== -1;
+      if (used) return '<div class="sbtn hebel spent"><div class="st">Vorgelegt: ' + _verhoerEsc(VERHOER_BELEG_LABEL[b]) + '</div><div class="sh">verbraucht</div></div>';
+      return '<button class="sbtn hebel' + (aktiv ? '' : ' disabled') + '" data-vhid="' + b + '"><div class="st">Vorhalt: ' + _verhoerEsc(VERHOER_BELEG_LABEL[b]) + '</div><div class="sh">Einmalig. Der richtige Beleg zur richtigen Zeit bricht sie.</div></button>';
+    }).join('');
+    h += '</div>';
+  }
+  h += '<div class="vbtns"><button class="vclose" id="verhoer-close">' + (aktiv ? 'Gespräch beenden (vertagen)' : 'Akte schließen') + '</button></div>';
+  h += '<div class="vhint">Keine Zahlen. Lies Mitschrift, Tells und Einschätzung — jeder Zeuge braucht andere Taktiken.</div>';
+  panel.innerHTML = h;
+  if (aktiv) {
+    panel.querySelectorAll('.sbtn[data-vid]').forEach(function (b) { b.addEventListener('click', function () { _verhoerStep(b.getAttribute('data-vid')); }); });
+    panel.querySelectorAll('.sbtn[data-vhid]').forEach(function (b) { b.addEventListener('click', function () { _verhoerVorhalt(b.getAttribute('data-vhid')); }); });
+  }
+  const cl = document.getElementById('verhoer-close'); if (cl) cl.addEventListener('click', _verhoerSchliessen);
+}
+function oeffneVerhoerAkte(npc) {
+  try {
+    if (!npc || !VERHOER_PROFILE[npc.id]) return;
+    if (typeof schliesseNpcMenue === 'function') schliesseNpcMenue();
+    _verhoerInjectStyle();
+    const old = document.getElementById('verhoer-overlay'); if (old) old.remove();
+    window._verhoerAktNpc = npc;
+    const s = _verhoerState(npc.id);
+    if (s.status === 'vertagt') s.status = 'aktiv';
+    _verhoerReevaluateAussagen();
+    const ov = document.createElement('div'); ov.id = 'verhoer-overlay';
+    const panel = document.createElement('div'); panel.className = 'folder';
+    ov.appendChild(panel);
+    ov.addEventListener('click', function (e) { if (e.target === ov) _verhoerSchliessen(); });
+    document.body.appendChild(ov);
+    _verhoerRender();
+    if (typeof diag === 'function') diag('state', '🗂 VERHÖR geöffnet: ' + npc.name + ' (status=' + s.status + ')');
+  } catch (e) { if (typeof diag === 'function') diag('drift', 'VERHÖR-OPEN-Fehler: ' + (e && e.message ? e.message : e)); }
+}
 </script>
 </body>
 </html>
