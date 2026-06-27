@@ -30596,7 +30596,7 @@ function renderOptions(scene) {
   }
   // v7.12.653 (Baukasten-First Schritt 3): A/B/C/D-Optionen nur rendern, wenn KI_OPTIONEN_AKTIV. Systembuttons,
   // Personen-Buttons, Reise, Baukasten etc. sind davon NICHT betroffen (die kommen weiter unten/anderswo).
-  if ((typeof KI_OPTIONEN_AKTIV === 'undefined' || KI_OPTIONEN_AKTIV) && !_ortLeerAusgeschoepft) {
+  if ((typeof KI_OPTIONEN_AKTIV === 'undefined' || KI_OPTIONEN_AKTIV) && !_ortLeerAusgeschoepft && !window.HAUPTUI_AKTIV) {
   scene.optionen.forEach((opt, idx) => {
     const btn = document.createElement('button');
     btn.className = 'option-btn';
@@ -30757,6 +30757,8 @@ function renderOptions(scene) {
     uebergangBody.appendChild(btn); // v7.12.577: ABCD = szene-auslösend -> Übergang-Sektion
   });
   } // v7.12.653: Ende if (KI_OPTIONEN_AKTIV)
+  // v7.13 (Haupt-UI): bei aktivem Engine-Menü ersetzt eine deterministische Garantie-Aktion die A/B/C/D-Optionen.
+  if (window.HAUPTUI_AKTIV && !_ortLeerAusgeschoepft) { try { _renderEngineMenu(uebergangBody, scene); } catch (e) {} }
 
   // v7.12.1030 (Benjamin "Weg eins"): Statt der ausgeblendeten A/B/C/D-Optionen ein klarer Reise-Hinweis.
   // v7.12.1100 (Benjamin-Befund: Banner versprach "Heilen, Schlafen oder ein letzter Blick per Umsehen bleiben dir
@@ -53268,6 +53270,47 @@ function oeffneVerhoerAkte(npc) {
     _verhoerRender();
     if (typeof diag === 'function') diag('state', '🗂 VERHÖR geöffnet: ' + npc.name + ' (status=' + s.status + ')');
   } catch (e) { if (typeof diag === 'function') diag('drift', 'VERHÖR-OPEN-Fehler: ' + (e && e.message ? e.message : e)); }
+}
+
+/* ================= HAUPT-UI (Engine-Menü statt A/B/C/D) — Iteration 1 =================
+   Ziel: KI-erfundene A/B/C/D-Optionen raus; die deterministischen Kanäle (Personen/Umsehen/
+   Reise/Baukasten/System/Freitext) tragen das Spiel. Garantie: nie eine leere Szene (WARTEN-Aktion).
+   Sicher testbar via ?hauptui=1 oder localStorage 'hauptui'=1, bis global geschaltet wird. */
+window.HAUPTUI_AKTIV = (function () {
+  try { return localStorage.getItem('hauptui') === '1' || /[?&]hauptui=1/.test(location.search || ''); } catch (e) { return false; }
+})();
+
+// Zentrale Modus-Ableitung (liest nur Engine-Wahrheiten) — Grundlage für spätere Provider-Gating.
+function deriveInteractionMode() {
+  try {
+    if (typeof chooseOptionInFlight !== 'undefined' && chooseOptionInFlight) return 'locked';
+    if (caseProgress && (caseProgress.istGelöst || caseProgress.istGescheitert)) return 'resolution';
+    if (caseProgress && caseProgress.encounterState === 'kampf') return 'combat';
+    var _ort = (typeof engineCurrentLocation !== 'undefined') ? engineCurrentLocation : null;
+    if (_ort && (_ort.transient || /auf der flucht/i.test(_ort.name || ''))) return 'escape';
+    if (typeof window !== 'undefined' && window._verhoerAktNpc) return 'conversation';
+    if (typeof karlInStasiCustody !== 'undefined' && karlInStasiCustody) return 'custody';
+    if (caseProgress && caseProgress._explorationBetreten && typeof _hatExploration === 'function' && _hatExploration()) return 'exploration';
+    return 'normal';
+  } catch (e) { return 'normal'; }
+}
+
+// Iteration 1: Engine-Menü = Garantie-Aktion(en), damit ohne A/B/C/D nie eine tote Szene entsteht.
+// Die übrigen Aktionen kommen weiter aus den bestehenden Kanälen (Personen/Umsehen/Reise/Baukasten/System).
+function _renderEngineMenu(container, scene) {
+  try {
+    if (!container) return;
+    var mode = deriveInteractionMode();
+    if (mode === 'combat' || mode === 'escape' || mode === 'custody' || mode === 'resolution' || mode === 'locked') return;
+    var btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.dataset.kategorie = 'WARTEN';
+    btn.innerHTML = '<span class="option-id">⏳</span><span class="option-text-wrap"><span>Abwarten und die Lage sondieren</span><span class="option-marker option-marker-beobachten">WARTEN</span></span>';
+    btn.addEventListener('click', function () {
+      if (typeof chooseOption === 'function') chooseOption({ id: 'ENGINE_WARTEN', text: 'Karl bleibt unauffällig stehen, sondiert die Lage und wartet einen Moment ab.', _kategorie: 'WARTEN', _engine: true });
+    });
+    container.appendChild(btn);
+  } catch (e) { if (typeof diag === 'function') diag('drift', 'ENGINE-MENU-Fehler: ' + (e && e.message ? e.message : e)); }
 }
 </script>
 </body>
