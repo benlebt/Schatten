@@ -53277,8 +53277,27 @@ function oeffneVerhoerAkte(npc) {
    Reise/Baukasten/System/Freitext) tragen das Spiel. Garantie: nie eine leere Szene (WARTEN-Aktion).
    Sicher testbar via ?hauptui=1 oder localStorage 'hauptui'=1, bis global geschaltet wird. */
 window.HAUPTUI_AKTIV = (function () {
-  try { return localStorage.getItem('hauptui') === '1' || /[?&]hauptui=1/.test(location.search || ''); } catch (e) { return false; }
+  try {
+    var _p = location.search || '';
+    if (/[?&]hauptui=(0|off|false)/i.test(_p)) { try { localStorage.removeItem('hauptui'); } catch (e) {} return false; }
+    if (/[?&]hauptui=(1|on|true)/i.test(_p)) { try { localStorage.setItem('hauptui', '1'); } catch (e) {} return true; } // einmal setzen -> bleibt im Browser
+    return localStorage.getItem('hauptui') === '1';
+  } catch (e) { return false; }
 })();
+// Sichtbarer Hinweis, sobald die Haupt-UI aktiv ist (damit klar ist, dass A/B/C/D bewusst aus sind).
+try {
+  if (window.HAUPTUI_AKTIV) {
+    var _hauptuiToast = function () {
+      try {
+        var t = document.createElement('div');
+        t.style.cssText = 'position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:99999;background:rgba(38,42,62,0.96);color:#cdd6f0;border:1px solid rgba(150,170,255,0.5);padding:8px 16px;font:12px monospace;border-radius:5px;letter-spacing:.4px;box-shadow:0 4px 16px rgba(0,0,0,.5);';
+        t.textContent = '\ud83e\udde9 Haupt-UI aktiv \u00b7 A/B/C/D aus \u00b7 ?hauptui=0 zum Abschalten';
+        document.body.appendChild(t); setTimeout(function () { t.remove(); }, 6000);
+      } catch (e) {}
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _hauptuiToast); else setTimeout(_hauptuiToast, 600);
+  }
+} catch (e) {}
 
 // Zentrale Modus-Ableitung (liest nur Engine-Wahrheiten) — Grundlage für spätere Provider-Gating.
 function deriveInteractionMode() {
