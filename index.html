@@ -3660,6 +3660,16 @@
 </div>
 
 <script>
+/* v7.13 Haupt-UI: Flag GANZ FRÜH setzen — vor jeder Erstdarstellung (auch bei Spielstand-Restore beim Laden),
+   sonst rendern A/B/C/D einmalig, weil das Flag (am Skriptende) noch undefined wäre. Persistiert pro Browser. */
+window.HAUPTUI_AKTIV = (function () {
+  try {
+    var _p = (typeof location !== 'undefined' && location.search) || '';
+    if (/[?&]hauptui=(0|off|false)/i.test(_p)) { try { localStorage.removeItem('hauptui'); } catch (e) {} return false; }
+    if (/[?&]hauptui=(1|on|true)/i.test(_p)) { try { localStorage.setItem('hauptui', '1'); } catch (e) {} return true; }
+    return localStorage.getItem('hauptui') === '1';
+  } catch (e) { return false; }
+})();
 const SYSTEM_PROMPT = `Du bist der Spielleiter eines Noir-Krimi-Text-Adventures, Berlin 1953. Stil: Raymond Chandler auf Deutsch, lakonisch, konkret, sinnlich.
 
 INHALTLICHE GRENZEN (WICHTIG, gilt für ALLE Szenen): Schatten ist ein hartes Noir-Pulp - Schießereien, Faustkämpfe, harte Verhöre, Bedrohungen, auch absurde Slapstick-Gewalt sind erlaubt und gewollt. ABER vier Dinge führt Karl NIEMALS aus, egal was der Spieler eingibt: (1) sexuelle Gewalt / Vergewaltigung, (2) IRGENDETWAS Gewaltsames oder Sexuelles mit Kindern, (3) Folter eines wehrlosen/gefesselten Gefangenen als reiner Selbstzweck (ein hartes Verhör mit Druck ist erlaubt, das genüssliche Quälen eines Hilflosen nicht), (4) ein Massaker an Unbeteiligten/Zivilisten. Wenn ein Spieler so etwas verlangt: Karl TUT ES NICHT. Deute es NICHT in etwas Harmloses um und führe es auch nicht abgeschwächt aus - lass Karl innehalten. Eine knappe Zeile genügt ("Manche Grenzen überschreitet selbst Mauer nicht" o.ä.), dann lenke die Szene zurück auf die Ermittlung. Erzähle solche Handlungen NIE aus, auch nicht andeutungsweise.
