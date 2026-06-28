@@ -1699,6 +1699,53 @@
   .scene-entry.current .scene-text {
     color: #d4c9b0;
   }
+  /* Kessler-Bildbuehne: kanonischer Engine-Ort -> festes Szenenbild. */
+  .kessler-scene-visual {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    margin: 14px 0 18px;
+    overflow: hidden;
+    border: 1px solid rgba(133,174,193,0.42);
+    border-bottom: 2px solid rgba(212,184,106,0.72);
+    border-radius: 4px;
+    background: #0b1014;
+    box-shadow: 0 10px 28px rgba(0,0,0,0.32);
+  }
+  .kessler-scene-visual img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+  }
+  .kessler-scene-visual::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(to bottom, transparent 68%, rgba(5,8,10,0.78) 100%);
+  }
+  .kessler-scene-caption {
+    position: absolute;
+    z-index: 1;
+    left: 12px;
+    right: 12px;
+    bottom: 9px;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    color: #e8dcc0;
+    font-size: calc(10px * var(--reading-scale));
+    line-height: 1.35;
+    text-shadow: 0 2px 3px #000;
+  }
+  .kessler-scene-caption .scene-place { color: #e0b45f; }
+  .kessler-scene-caption .scene-time { color: #9db7c4; white-space: nowrap; }
+  @media (max-width: 520px) {
+    .kessler-scene-visual { margin-inline: -8px; width: calc(100% + 16px); }
+    .kessler-scene-caption { left: 9px; right: 9px; bottom: 7px; }
+  }
   .choice-entry {
     display: flex;
     align-items: flex-start;
@@ -3419,7 +3466,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1111</div>
+    <div class="start-version">Schatten v7.12.1112</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3626,6 +3673,13 @@
   </div>
 
   <!-- Options -->
+  <section id="kessler-scene-visual" class="kessler-scene-visual hidden" aria-label="Szenenbild zum aktuellen Ort">
+    <img id="kessler-scene-image" src="" alt="" decoding="async" />
+    <div class="kessler-scene-caption">
+      <span id="kessler-scene-place" class="scene-place"></span>
+      <span id="kessler-scene-time" class="scene-time"></span>
+    </div>
+  </section>
   <div id="options" class="options-block hidden">
     <div id="im-raum-anzeige" class="hidden" style="font-family:inherit;font-size:calc(11px * var(--reading-scale));letter-spacing:0.02em;line-height:1.5;margin-bottom:8px;padding:6px 10px;border-left:2px solid #4d4234;background:rgba(40,34,28,0.3);"></div>
     <div id="options-label" class="options-label" aria-label="Was tust du?">Was tust du?</div>
@@ -3653,7 +3707,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1111</span>
+    <span>Schatten v7.12.1112</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11909,7 +11963,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1111 +Verhör-Pilot';
+window.SCHATTEN_VERSION = 'v7.12.1112 +Verhör-Pilot +Kessler-Szenenbilder';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -30360,6 +30414,7 @@ function renderOptions(scene) {
   try { _syncBeschattungDefinedEvidenceDurchbruch('render'); } catch (e) {}
   const list = document.getElementById('options-list');
   const optionsContainer = document.getElementById('options');
+  try { if (typeof _renderKesslerSceneVisual === 'function') _renderKesslerSceneVisual(scene); } catch (e) {}
   // v7.11.3: Defensive Wrapping. Wenn irgendetwas im Render schief geht
   // (forEach-Fehler, undefined-Property-Access, etc.), MUSS am Ende
   // #options trotzdem sichtbar werden - sonst sieht der Spieler garnichts
@@ -53322,6 +53377,86 @@ function deriveInteractionMode() {
     if (caseProgress && caseProgress._explorationBetreten && typeof _hatExploration === 'function' && _hatExploration()) return 'exploration';
     return 'normal';
   } catch (e) { return 'normal'; }
+}
+
+const KESSLER_SCENE_IMAGES = [
+  { test: /friedrichstrasse/, file: 'sbahnhof-friedrichstrasse.png', place: 'S-Bahnhof Friedrichstrasse' },
+  { test: /bahnhof charlottenburg/, file: 'bahnhof-charlottenburg.png', place: 'Bahnhof Charlottenburg' },
+  { test: /opel olympia|karls opel|am opel/, file: 'opel-olympia.png', place: 'Karls Opel Olympia' },
+  { test: /hardenbergstrasse|schutzpolizei hardenberg|polizei hardenberg/, file: 'polizei-hardenbergstrasse.png', place: 'Polizei Hardenbergstrasse' },
+  { test: /doc wagner|wagners praxis|schaferstrasse|schaeferstrasse/, file: 'doc-wagners-praxis.png', place: 'Doc Wagners Praxis' },
+  { test: /cafe wien/, file: 'cafe-wien.png', place: 'Cafe Wien' },
+  { test: /spedition schmidt|spedition.*moabit|roberts arbeitsplatz/, file: 'spedition-schmidt-moabit.png', place: 'Spedition Schmidt, Moabit' },
+  { test: /kessler.?wohnung|wohnung charlottenburg/, file: 'kessler-wohnung-charlottenburg.png', place: 'Kessler-Wohnung, Charlottenburg' },
+  { test: /karl mauers? (buero|buro)|buero.*hackescher markt/, file: 'karl-mauers-buero.png', place: 'Karl Mauers Buero' },
+  { test: /sybelstrasse|hinterhof sybel/, file: 'hinterhof-sybelstrasse.png', place: 'Hinterhof Sybelstrasse' },
+];
+
+function _kesslerSceneNorm(value) {
+  return String(value || '')
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/ß/g, 'ss').replace(/ä/g, 'a').replace(/ö/g, 'o').replace(/ü/g, 'u')
+    .replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+function _istKesslerFallFuerBild() {
+  try {
+    if (!caseSetup) return false;
+    return /kessler/i.test(String(caseSetup.klient || '') + ' ' + String(caseSetup.opfer || ''));
+  } catch (e) { return false; }
+}
+
+function _renderKesslerSceneVisual(scene) {
+  const visual = document.getElementById('kessler-scene-visual');
+  const image = document.getElementById('kessler-scene-image');
+  const place = document.getElementById('kessler-scene-place');
+  const time = document.getElementById('kessler-scene-time');
+  if (!visual || !image || !place || !time) return;
+
+  if (!window.HAUPTUI_AKTIV || !_istKesslerFallFuerBild()) {
+    visual.classList.add('hidden');
+    return;
+  }
+
+  const candidates = [];
+  try {
+    if (typeof engineCurrentLocation !== 'undefined' && engineCurrentLocation && engineCurrentLocation.name) candidates.push(engineCurrentLocation.name);
+  } catch (e) {}
+  try { if (typeof currentOrt === 'string' && currentOrt) candidates.push(currentOrt); } catch (e) {}
+  if (scene && typeof scene === 'object') {
+    ['ortHaupt', 'ort', 'location', 'ortName'].forEach(function (key) {
+      if (scene[key]) candidates.push(scene[key]);
+    });
+  }
+  try { if (typeof lastLocation === 'string' && lastLocation) candidates.push(lastLocation); } catch (e) {}
+
+  let spec = null;
+  for (const candidate of candidates) {
+    const normalized = _kesslerSceneNorm(candidate);
+    spec = KESSLER_SCENE_IMAGES.find(function (entry) { return entry.test.test(normalized); });
+    if (spec) break;
+  }
+  if (!spec) {
+    visual.classList.add('hidden');
+    return;
+  }
+
+  const src = 'assets/scenes/kessler/' + spec.file;
+  image.onerror = function () {
+    visual.classList.add('hidden');
+    if (typeof diag === 'function') diag('drift', 'KESSLER-SZENENBILD fehlt: ' + src);
+  };
+  image.onload = function () { visual.classList.remove('hidden'); };
+  if (image.getAttribute('src') !== src) image.setAttribute('src', src);
+  image.alt = 'Szenenbild: ' + spec.place + ', Karl Mauer von hinten';
+  place.textContent = spec.place;
+  try {
+    const tz = (typeof _aktTageszeitName === 'function') ? _aktTageszeitName() : '';
+    const tzLabel = tz ? tz.charAt(0).toUpperCase() + tz.slice(1).toLowerCase() : '';
+    time.textContent = (typeof gameDay === 'number' ? 'Tag ' + gameDay : '') + (tzLabel ? ' · ' + tzLabel : '');
+  } catch (e) { time.textContent = ''; }
+  visual.classList.remove('hidden');
 }
 
 // Iteration 1: Engine-Menü = Garantie-Aktion(en), damit ohne A/B/C/D nie eine tote Szene entsteht.
