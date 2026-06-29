@@ -42,6 +42,12 @@ assert(rawImages, 'Kessler scene image map missing');
 const images = Function('return ' + rawImages[1])();
 const image = images.find((entry) => entry.file === 'spedition-schmidt-moabit.png');
 assert(image && image.innen === true, 'Spedition image must be declared as interior');
+assert.strictEqual(image.dayFile, 'spedition-schmidt-moabit-day.png', 'Spedition must expose a daylight variant');
+assert(images.every((entry) => entry.dayFile), 'every Kessler scene image must expose a daylight variant');
+for (const entry of images) {
+  assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'kessler', entry.file)), 'dark scene asset missing: ' + entry.file);
+  assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'kessler', entry.dayFile)), 'daylight scene asset missing: ' + entry.dayFile);
+}
 
 const textHelperStart = html.indexOf('function _kesslerInnenraumTextPasst');
 const textHelperEnd = html.indexOf('function _renderKesslerSceneVisual', textHelperStart);
@@ -58,5 +64,8 @@ assert(html.includes('=== BILD-RAUMWAHRHEIT (PFLICHT) ==='), 'restored scenes mu
 assert(html.includes('_ortHatJetztErreichbareSpur'), 'empty-location banner must check live evidence reachability');
 assert(html.includes('vorhandenNpc.zeit = qn.zeit.slice()'), 'save migration must update NPC schedules');
 assert(html.includes('vorhanden.zeit = qi.zeit.slice()'), 'save migration must update evidence schedules');
+assert(html.includes('setTimeout(function bootRestoreOrStart()'), 'boot restore must wait until Haupt-UI and image tables are initialized');
+assert(html.indexOf('setTimeout(function bootRestoreOrStart()') < html.indexOf('const KESSLER_SCENE_IMAGES'), 'deferred restore regression guard must cover the late image table');
+assert(html.includes("return /abend|nacht/.test(_kesslerSceneNorm(tz));"), 'scene image selection must distinguish daylight from darkness');
 
 console.log('KESSLER_SPEDITION_ARRIVAL_OK');

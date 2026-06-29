@@ -3665,7 +3665,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1120</div>
+    <div class="start-version">Schatten v7.12.1121</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3906,7 +3906,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1120</span>
+    <span>Schatten v7.12.1121</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -12162,7 +12162,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1120 +Verhör-Pilot +Einheitliche-Werkzeugleiste';
+window.SCHATTEN_VERSION = 'v7.12.1121 +Restore-Fix +Tag-Nacht-Szenenbilder';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -53067,28 +53067,33 @@ applyAdminVisibility(); // sofort initial (falls schon localStorage gesetzt)
 // stellen, sodass der Screen aussieht wie vor dem Hintergrund-Wechsel. Sonst:
 // normaler Start-Screen. Der Restore wird in try/catch gekapselt - schlaegt er
 // fehl, faellt das Spiel sauber auf den Start-Screen zurueck.
-(function bootRestoreOrStart() {
-  let restored = false;
-  try {
-    if (hasSavedGame()) {
-      restored = restoreGameState();
+(function scheduleBootRestoreOrStart() {
+  // v7.12.1121: Restore erst nach Auswertung des gesamten Scripts starten. Die
+  // Haupt-UI- und Bildtabellen stehen weiter unten und waren beim synchronen
+  // Boot-Restore noch in ihrer TDZ: Text kam zurueck, Bild und Menue nicht.
+  setTimeout(function bootRestoreOrStart() {
+    let restored = false;
+    try {
+      if (hasSavedGame()) {
+        restored = restoreGameState();
+      }
+    } catch (e) {
+      console.warn('[Schatten] Boot-Restore fehlgeschlagen:', e && e.message);
+      restored = false;
     }
-  } catch (e) {
-    console.warn('[Schatten] Boot-Restore fehlgeschlagen:', e && e.message);
-    restored = false;
-  }
-  if (restored) {
-    // Dezenter Hinweis dass wiederhergestellt wurde (verschwindet von selbst).
-    setTimeout(() => {
-      try {
-        if (typeof showProgressToast === 'function') {
-          showProgressToast('Spielstand wiederhergestellt', 'Weiter geht\'s, wo du aufgehört hast.', 'info', 'restore-' + Date.now());
-        }
-      } catch (e) {}
-    }, 600);
-  } else {
-    showStart();
-  }
+    if (restored) {
+      // Dezenter Hinweis dass wiederhergestellt wurde (verschwindet von selbst).
+      setTimeout(() => {
+        try {
+          if (typeof showProgressToast === 'function') {
+            showProgressToast('Spielstand wiederhergestellt', 'Weiter geht\'s, wo du aufgehört hast.', 'info', 'restore-' + Date.now());
+          }
+        } catch (e) {}
+      }, 600);
+    } else {
+      showStart();
+    }
+  }, 0);
 })();
 
 // v7.11.92: Zusaetzliche Save-Trigger fuer iOS. visibilitychange feuert wenn der
@@ -53667,16 +53672,16 @@ function deriveInteractionMode() {
 }
 
 const KESSLER_SCENE_IMAGES = [
-  { test: /friedrichstrasse/, file: 'sbahnhof-friedrichstrasse.png', place: 'S-Bahnhof Friedrichstrasse', innen: false },
-  { test: /bahnhof charlottenburg/, file: 'bahnhof-charlottenburg.png', place: 'Bahnhof Charlottenburg', innen: false },
-  { test: /opel olympia|karls opel|am opel/, file: 'opel-olympia.png', place: 'Karls Opel Olympia', innen: false },
-  { test: /hardenbergstrasse|schutzpolizei hardenberg|polizei hardenberg/, file: 'polizei-hardenbergstrasse.png', place: 'Polizei Hardenbergstrasse', innen: true },
-  { test: /doc wagner|wagners praxis|schaferstrasse|schaeferstrasse/, file: 'doc-wagners-praxis.png', place: 'Doc Wagners Praxis', innen: true },
-  { test: /cafe wien/, file: 'cafe-wien.png', place: 'Cafe Wien', innen: true },
-  { test: /spedition schmidt|spedition.*moabit|roberts arbeitsplatz/, file: 'spedition-schmidt-moabit.png', place: 'Spedition Schmidt, Moabit', innen: true },
-  { test: /kessler.?wohnung|wohnung charlottenburg/, file: 'kessler-wohnung-charlottenburg.png', place: 'Kessler-Wohnung, Charlottenburg', innen: true },
-  { test: /karl mauers? (buero|buro)|buero.*hackescher markt/, file: 'karl-mauers-buero.png', place: 'Karl Mauers Buero', innen: true },
-  { test: /sybelstrasse|hinterhof sybel/, file: 'hinterhof-sybelstrasse.png', place: 'Hinterhof Sybelstrasse', innen: false },
+  { test: /friedrichstrasse/, file: 'sbahnhof-friedrichstrasse.png', dayFile: 'sbahnhof-friedrichstrasse-day.png', place: 'S-Bahnhof Friedrichstrasse', innen: false },
+  { test: /bahnhof charlottenburg/, file: 'bahnhof-charlottenburg.png', dayFile: 'bahnhof-charlottenburg-day.png', place: 'Bahnhof Charlottenburg', innen: false },
+  { test: /opel olympia|karls opel|am opel/, file: 'opel-olympia.png', dayFile: 'opel-olympia-day.png', place: 'Karls Opel Olympia', innen: false },
+  { test: /hardenbergstrasse|schutzpolizei hardenberg|polizei hardenberg/, file: 'polizei-hardenbergstrasse.png', dayFile: 'polizei-hardenbergstrasse-day.png', place: 'Polizei Hardenbergstrasse', innen: true },
+  { test: /doc wagner|wagners praxis|schaferstrasse|schaeferstrasse/, file: 'doc-wagners-praxis.png', dayFile: 'doc-wagners-praxis-day.png', place: 'Doc Wagners Praxis', innen: true },
+  { test: /cafe wien/, file: 'cafe-wien.png', dayFile: 'cafe-wien-day.png', place: 'Cafe Wien', innen: true },
+  { test: /spedition schmidt|spedition.*moabit|roberts arbeitsplatz/, file: 'spedition-schmidt-moabit.png', dayFile: 'spedition-schmidt-moabit-day.png', place: 'Spedition Schmidt, Moabit', innen: true },
+  { test: /kessler.?wohnung|wohnung charlottenburg/, file: 'kessler-wohnung-charlottenburg.png', dayFile: 'kessler-wohnung-charlottenburg-day.png', place: 'Kessler-Wohnung, Charlottenburg', innen: true },
+  { test: /karl mauers? (buero|buro)|buero.*hackescher markt/, file: 'karl-mauers-buero.png', dayFile: 'karl-mauers-buero-day.png', place: 'Karl Mauers Buero', innen: true },
+  { test: /sybelstrasse|hinterhof sybel/, file: 'hinterhof-sybelstrasse.png', dayFile: 'hinterhof-sybelstrasse-day.png', place: 'Hinterhof Sybelstrasse', innen: false },
 ];
 
 function _kesslerSceneNorm(value) {
@@ -53710,6 +53715,13 @@ function _kesslerInnenraumTextPasst(sceneText) {
     const drinnen = /\b(im buro|im inneren|drinnen|am schreibtisch|hinter dem tresen|im wartezimmer|im behandlungsraum|im wachzimmer|in der wohnung|im cafe)\b/.test(text);
     return !draussen || drinnen;
   } catch (e) { return true; }
+}
+
+function _kesslerTageszeitIstDunkel() {
+  try {
+    const tz = (typeof _aktTageszeitName === 'function') ? _aktTageszeitName() : '';
+    return /abend|nacht/.test(_kesslerSceneNorm(tz));
+  } catch (e) { return false; }
 }
 
 function _renderKesslerSceneVisual(scene) {
@@ -53754,14 +53766,21 @@ function _renderKesslerSceneVisual(scene) {
     return;
   }
 
-  const src = 'assets/scenes/kessler/' + spec.file;
+  const dunkel = _kesslerTageszeitIstDunkel();
+  const selectedFile = dunkel ? spec.file : (spec.dayFile || spec.file);
+  const src = 'assets/scenes/kessler/' + selectedFile;
+  const fallbackSrc = 'assets/scenes/kessler/' + spec.file;
   image.onerror = function () {
+    if (image.getAttribute('src') !== fallbackSrc) {
+      image.setAttribute('src', fallbackSrc);
+      return;
+    }
     visual.classList.add('hidden');
     if (typeof diag === 'function') diag('drift', 'KESSLER-SZENENBILD fehlt: ' + src);
   };
   image.onload = function () { visual.classList.remove('hidden'); };
   if (image.getAttribute('src') !== src) image.setAttribute('src', src);
-  image.alt = 'Szenenbild: ' + spec.place + ', Karl Mauer von hinten';
+  image.alt = 'Szenenbild: ' + spec.place + ', ' + (dunkel ? 'Abend oder Nacht' : 'Tageslicht') + ', Karl Mauer von hinten';
   place.textContent = spec.place;
   try {
     const tz = (typeof _aktTageszeitName === 'function') ? _aktTageszeitName() : '';
