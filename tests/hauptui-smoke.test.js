@@ -157,6 +157,14 @@ for (const location of clueLocations) {
   context._renderEngineMenu(container, {});
   assert(container.querySelector('.hauptui-action-menu'), location.place + ' must render its menu during the final locked render');
   for (const target of location.expected) assert(byText(container, target), location.place + ' is missing target ' + target);
+  assert(!byText(container, location.place), location.place + ' must be implicit instead of a repeated target button');
+  const personButton = byText(container, location.people[0].name);
+  personButton.onTap();
+  assert(byText(container, 'Rede mit'), location.place + ' person mode must offer conversation');
+  assert(byText(container, 'Schau an'), location.place + ' person mode must offer observation');
+  assert(!byText(container, 'Warte'), location.place + ' person mode must not offer targetless waiting');
+  assert(!byText(container, 'Versteck dich'), location.place + ' person mode must not offer targetless hiding');
+  assert(!byText(container, 'Gib'), location.place + ' person mode must not offer giving without an item');
 }
 
 context._baukastenZiele = () => ({ personen: [], objekte: [], items: [] });
@@ -184,11 +192,15 @@ for (const place of kesslerPlaces) {
   context.engineCurrentLocation = { name: place };
   context.window.__hauptuiActionState = { verb: null, targetKey: null };
   context._renderEngineMenu(container, {});
-  const placeButton = byText(container, place);
-  assert(placeButton, place + ' must be rendered as an actionable location target');
-  placeButton.onTap();
+  assert(!byText(container, place), place + ' must not repeat as a visible target');
+  assert(byText(container, 'Umsehen'), place + ' must expose the implicit location actions immediately');
+  assert(byText(container, 'Durchsuche'), place + ' must remain searchable through the implicit location');
+  assert(byText(container, 'Versteck dich'), place + ' must expose hiding only in location mode');
+  assert(byText(container, 'Warte'), place + ' must expose waiting only in location mode');
+  byText(container, 'Durchsuche').onTap();
   execute = all(container).find((element) => element.className === 'hauptui-execute');
-  assert(execute && !execute.disabled, place + ' must offer an executable location action');
+  assert(execute && !execute.disabled, place + ' must offer an executable implicit location action');
+  assert(!visibleText(execute).includes(place), place + ' must not repeat in the execute label');
 }
 
 const targetsStart = html.indexOf('function _baukastenZiele()');

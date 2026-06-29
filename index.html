@@ -1765,6 +1765,9 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 5px;
   }
+  .hauptui-verbs.count-1 { grid-template-columns: minmax(0, 1fr); }
+  .hauptui-verbs.count-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hauptui-verbs.count-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .hauptui-target-column { margin-top: 7px; }
   .hauptui-verb,
   .hauptui-target,
@@ -1853,7 +1856,9 @@
     .hauptui-target-list { grid-template-columns: 1fr; }
   }
   @media (max-width: 420px) {
-    .hauptui-verbs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .hauptui-verbs,
+    .hauptui-verbs.count-3,
+    .hauptui-verbs.count-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
   .choice-entry {
     display: flex;
@@ -3665,7 +3670,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1121</div>
+    <div class="start-version">Schatten v7.12.1122</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3906,7 +3911,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1121</span>
+    <span>Schatten v7.12.1122</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -12162,7 +12167,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1121 +Restore-Fix +Tag-Nacht-Szenenbilder';
+window.SCHATTEN_VERSION = 'v7.12.1122 +Impliziter-Ortskontext +Kontextverben';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -53820,7 +53825,7 @@ function _hauptuiObjektVerben(target) {
 
 function _hauptuiEmpfohleneAktion(target) {
   if (!target) return null;
-  if (target.typ === 'ort') return 'anschauen';
+  if (target.typ === 'ort') return 'umsehen';
   if (target.typ === 'person') return 'reden';
   if (target.typ === 'item') return 'benutzen';
   if (target.typ === 'objekt') {
@@ -54018,11 +54023,13 @@ function _renderEngineMenu(container, scene) {
         objects.push({ id: item.id, name: item.name, typ: 'objekt', fundTyp: 'item', actions: ['NEHMEN'], spur: true });
       }
     });
+    // v7.12.1122: Der aktuelle Ort ist der unsichtbare Standardkontext. Er steht
+    // bereits in Header und Bildunterschrift und darf nicht als dritter identischer
+    // Button im Aktionsmenue erscheinen.
     const currentPlace = (typeof engineCurrentLocation !== 'undefined' && engineCurrentLocation && engineCurrentLocation.name)
-      ? [{ id: 'aktueller_ort', name: engineCurrentLocation.name, typ: 'ort' }]
-      : [];
+      ? { id: 'aktueller_ort', name: engineCurrentLocation.name, typ: 'ort' }
+      : null;
     const groups = [
-      { key: 'ort', label: 'Am aktuellen Ort', tag: 'Ort', targets: currentPlace },
       { key: 'personen', label: 'Personen', tag: 'Person', targets: data.personen || [] },
       { key: 'objekte', label: 'Hier untersuchen', tag: 'Spur', targets: objects },
       { key: 'items', label: 'Dabei', tag: 'Inventar', targets: data.items || [] },
@@ -54031,17 +54038,19 @@ function _renderEngineMenu(container, scene) {
     const state = window.__hauptuiActionState;
     let selected = targets.find(function (target) { return _hauptuiTargetKey(target) === state.targetKey; }) || null;
     if (!selected) state.targetKey = null;
+    const selectedIsImplicitPlace = !selected && !!currentPlace;
+    if (selectedIsImplicitPlace) selected = currentPlace;
 
     const contextual = selected && selected.typ === 'ort'
-      ? [{ key: 'anschauen', label: 'Schau an' }, { key: 'durchsuchen', label: 'Durchsuche' }]
+      ? [{ key: 'umsehen', label: 'Umsehen' }, { key: 'durchsuchen', label: 'Durchsuche' }, { key: 'verstecken', label: 'Versteck dich' }, { key: 'warten', label: 'Warte' }]
       : selected && selected.typ === 'person'
-      ? [{ key: 'reden', label: 'Rede mit' }, { key: 'anschauen', label: 'Schau an' }, { key: 'geben', label: 'Gib' }]
+      ? [{ key: 'reden', label: 'Rede mit' }, { key: 'anschauen', label: 'Schau an' }].concat((data.items || []).length ? [{ key: 'geben', label: 'Gib' }] : [])
       : selected && selected.typ === 'objekt'
         ? _hauptuiObjektVerben(selected)
-        : selected && selected.typ === 'item'
+      : selected && selected.typ === 'item'
           ? [{ key: 'benutzen', label: 'Benutze' }, { key: 'geben', label: 'Gib' }, { key: 'anschauen', label: 'Schau an' }]
           : [];
-    const verbs = contextual.concat([{ key: 'umsehen', label: 'Umsehen' }, { key: 'verstecken', label: 'Versteck dich' }, { key: 'warten', label: 'Warte' }]);
+    const verbs = contextual;
     if (!verbs.some(function (verb) { return verb.key === state.verb; })) state.verb = null;
     const selectedVerb = verbs.find(function (verb) { return verb.key === state.verb; }) || null;
     const targetRequired = selectedVerb && ['umsehen', 'verstecken', 'warten'].indexOf(selectedVerb.key) === -1;
@@ -54058,7 +54067,7 @@ function _renderEngineMenu(container, scene) {
     leftLabel.textContent = 'Was tust du?';
     left.appendChild(leftLabel);
     const verbGrid = document.createElement('div');
-    verbGrid.className = 'hauptui-verbs';
+    verbGrid.className = 'hauptui-verbs count-' + Math.min(verbs.length, 4);
     verbs.forEach(function (verb) {
       const button = document.createElement('button');
       button.type = 'button';
@@ -54118,7 +54127,7 @@ function _renderEngineMenu(container, scene) {
       const execute = document.createElement('button');
       execute.type = 'button';
       execute.className = 'hauptui-execute';
-      execute.textContent = 'Ausführen: ' + selectedVerb.label + (targetRequired && selected ? ' · ' + selected.name : '');
+      execute.textContent = 'Ausführen: ' + selectedVerb.label + (targetRequired && selected && !selectedIsImplicitPlace ? ' · ' + selected.name : '');
       _hauptuiBind(execute, function () { _hauptuiExecute(selectedVerb.key, selected); });
       root.appendChild(execute);
     }
