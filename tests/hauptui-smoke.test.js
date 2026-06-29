@@ -71,8 +71,8 @@ const context = {
   deriveInteractionMode: () => 'normal',
   attachSafeTap: (button, handler) => { button.onTap = handler; },
   _baukastenZiele: () => ({
-    personen: [{ id: voss.id, name: voss.name, typ: 'person', hinweis: true }],
-    objekte: [{ id: clue.id, name: 'Roberts Ecktisch', typ: 'objekt', actions: ['DURCHSUCHEN'], spur: true }],
+    personen: [{ id: voss.id, name: voss.name, typ: 'person', hinweis: true, hinweisAktionen: ['Befragen', 'Bestechen'] }],
+    objekte: [{ id: clue.id, name: 'Roberts Ecktisch', typ: 'objekt', actions: ['BEOBACHTEN', 'ERKUNDEN'], spur: true }],
     items: [{ id: 'notizbuch', name: 'Notizbuch', typ: 'item' }],
   }),
   _ortsFundItems: () => [],
@@ -98,6 +98,7 @@ assert(container.querySelector('.hauptui-action-menu'), 'menu must render');
 
 const vossButton = byText(container, voss.name);
 assert(vossButton, 'Voss target missing; buttons=' + all(container).filter((element) => element.tagName === 'button').map(visibleText).join(' | '));
+assert(visibleText(vossButton).includes('Hinweis: Befragen/Bestechen'), 'person target must name the clue actions');
 vossButton.onTap();
 let execute = all(container).find((element) => element.className === 'hauptui-execute');
 assert(execute && !execute.disabled, 'person command must be executable');
@@ -107,6 +108,7 @@ assert.strictEqual(calls.npc, 1, 'person command must open the real NPC menu');
 byText(container, 'Roberts Ecktisch').onTap();
 execute = all(container).find((element) => element.className === 'hauptui-execute');
 assert(execute && !execute.disabled, 'clue command must be executable');
+assert(visibleText(execute).includes('Schau an'), 'clue command must recommend the configured BEOBACHTEN action');
 execute.onTap();
 assert.strictEqual(calls.fund, 1, 'clue command must open the real find dialog');
 assert.strictEqual(calls.fundClues.map((entry) => entry.id).join(','), clue.id);

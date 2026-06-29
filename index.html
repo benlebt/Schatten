@@ -1830,9 +1830,12 @@
   .hauptui-target-name { min-width: 0; flex: 1; overflow-wrap: anywhere; }
   .hauptui-target-tag {
     flex: 0 0 auto;
+    max-width: 48%;
     color: #8fa8b5;
     font-size: calc(8px * var(--reading-scale));
+    text-align: right;
     text-transform: uppercase;
+    overflow-wrap: anywhere;
   }
   .hauptui-target.has-clue .hauptui-target-tag { color: #d3ab42; }
   .hauptui-empty {
@@ -3585,7 +3588,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1114</div>
+    <div class="start-version">Schatten v7.12.1115</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3826,7 +3829,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1114</span>
+    <span>Schatten v7.12.1115</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -12082,7 +12085,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1114 +Verhör-Pilot +Hauptaktionsmenü';
+window.SCHATTEN_VERSION = 'v7.12.1115 +Verhör-Pilot +Aktionshinweise';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -15916,6 +15919,7 @@ function _baukastenZiele() {
     out.personen = _np.filter(n => n && n.name).map(n => ({
       id: n.id || null, name: n.name, tag: n.tag || '',
       hinweis: (typeof _npcHatOffenenHinweis === 'function') ? !!_npcHatOffenenHinweis(n.name, n.id) : false,
+      hinweisAktionen: (typeof _npcOffeneHinweisAktionen === 'function') ? _npcOffeneHinweisAktionen(n.name) : [],
       typ: 'person'
     }));
     const _hs = (typeof _ortsFundIndizienErreichbar === 'function') ? (_ortsFundIndizienErreichbar() || []) : [];
@@ -53395,7 +53399,7 @@ function _verhoerRender() {
   h += '<div class="akte-kopf"><div><div class="t1">K. Mauer · Privatermittlungen</div><div class="t2">Vertrauliche Nachforschungen · Berlin 1953</div><div class="aktenr">' + _verhoerEsc(p.aktenr) + '</div></div><div class="vstamp">' + stampTxt + '</div></div>';
   h += '<div class="felder"><div class="row"><span class="k">Name</span><span class="v">' + _verhoerEsc(p.name) + '</span></div>'
     + '<div class="row"><span class="k">Verhältnis</span><span class="v">' + _verhoerEsc(p.verh) + '</span></div>'
-    + '<div class="row"><span class="k">Notiert von</span><span class="v">K. Mauer — i. A. Margot Kessler</span></div></div>';
+    + '<div class="row"><span class="k">Notiert von</span><span class="v">K. Mauer — i. A. Edith Kessler</span></div></div>';
   h += '<div class="sek">Gesprächsnotiz</div><div class="protokoll">';
   h += s.log.map(function (e) {
     const who = e.who === 'MAUER' ? 'MAUER' : (p.name.split(' ').pop().toUpperCase());
@@ -53584,6 +53588,53 @@ function _hauptuiTargetKey(target) {
   return target ? (target.typ + ':' + String(target.id || target.name || '')) : '';
 }
 
+function _hauptuiObjektVerben(target) {
+  const actions = (target && Array.isArray(target.actions)) ? target.actions : [];
+  const verbs = [];
+  const add = function (key, label) {
+    if (!verbs.some(function (verb) { return verb.key === key; })) verbs.push({ key: key, label: label });
+  };
+  if (target && target.fundTyp === 'item') {
+    add('nehmen', 'Nimm');
+    add('anschauen', 'Schau an');
+    return verbs;
+  }
+  actions.forEach(function (action) {
+    if (/BEOBACHTEN/i.test(action)) add('anschauen', 'Schau an');
+    else if (/ERKUNDEN|DURCHSUCHEN|AKTEN_LESEN/i.test(action)) add('durchsuchen', /AKTEN_LESEN/i.test(action) ? 'Akten lesen' : 'Durchsuche');
+    else if (/NEHMEN/i.test(action)) add('nehmen', 'Nimm');
+    else if (/DRUECKEN|DRÜCKEN/i.test(action)) add('druecken', 'Drücke');
+    else if (/OEFFNEN|ÖFFNEN/i.test(action)) add('oeffnen', 'Öffne');
+  });
+  if (!verbs.length) add('durchsuchen', 'Durchsuche');
+  return verbs;
+}
+
+function _hauptuiEmpfohleneAktion(target) {
+  if (!target) return null;
+  if (target.typ === 'ort') return 'anschauen';
+  if (target.typ === 'person') return 'reden';
+  if (target.typ === 'item') return 'benutzen';
+  if (target.typ === 'objekt') {
+    const verbs = _hauptuiObjektVerben(target);
+    return verbs.length ? verbs[0].key : 'durchsuchen';
+  }
+  return null;
+}
+
+function _hauptuiZielHinweis(target, fallback) {
+  if (!target) return fallback;
+  if (target.hinweis) {
+    const actions = Array.isArray(target.hinweisAktionen) ? target.hinweisAktionen.slice(0, 2) : [];
+    return actions.length ? ('Hinweis: ' + actions.join('/')) : 'Hinweis';
+  }
+  if (target.typ === 'objekt') {
+    const verbs = _hauptuiObjektVerben(target);
+    return verbs.length ? ('Spur: ' + verbs[0].label) : 'Spur';
+  }
+  return fallback;
+}
+
 function _hauptuiBind(button, handler) {
   if (!button || typeof handler !== 'function') return;
   if (typeof attachSafeTap === 'function') attachSafeTap(button, handler);
@@ -53770,7 +53821,7 @@ function _renderEngineMenu(container, scene) {
       : selected && selected.typ === 'person'
       ? [{ key: 'reden', label: 'Rede mit' }, { key: 'anschauen', label: 'Schau an' }, { key: 'geben', label: 'Gib' }]
       : selected && selected.typ === 'objekt'
-        ? [{ key: 'anschauen', label: 'Schau an' }, { key: 'oeffnen', label: 'Öffne' }, { key: 'durchsuchen', label: 'Durchsuche' }, { key: 'nehmen', label: 'Nimm' }].concat((selected.actions || []).some(function (action) { return /DRUECKEN|DRÜCKEN/i.test(action); }) ? [{ key: 'druecken', label: 'Drücke' }] : [])
+        ? _hauptuiObjektVerben(selected)
         : selected && selected.typ === 'item'
           ? [{ key: 'benutzen', label: 'Benutze' }, { key: 'geben', label: 'Gib' }, { key: 'anschauen', label: 'Schau an' }]
           : [];
@@ -53843,14 +53894,14 @@ function _renderEngineMenu(container, scene) {
         name.textContent = target.name;
         const tag = document.createElement('span');
         tag.className = 'hauptui-target-tag';
-        tag.textContent = target.hinweis ? 'Hinweis' : group.tag;
+        tag.textContent = _hauptuiZielHinweis(target, group.tag);
         button.appendChild(name);
         button.appendChild(tag);
         _hauptuiBind(button, function () {
           if (state.targetKey === key) { state.targetKey = null; state.verb = null; }
           else {
             state.targetKey = key;
-            state.verb = target.typ === 'ort' ? 'anschauen' : (target.typ === 'person' ? 'reden' : (target.typ === 'objekt' ? 'durchsuchen' : 'benutzen'));
+            state.verb = _hauptuiEmpfohleneAktion(target);
           }
           _renderEngineMenu(container, scene);
         });
