@@ -59,6 +59,8 @@ assert(html.includes('showSleepButton && !_imKampfNow && !window.HAUPTUI_AKTIV')
 assert(!html.includes("commandText.textContent = selectedVerb ?"), 'permanent command prompt must be removed');
 assert(html.includes("groups.filter(function (group) { return group.targets.length > 0; })"), 'empty target groups must be omitted');
 assert(html.includes("if (ready) {\n      const execute"), 'execute button must only render for a complete command');
+assert(html.includes('.hauptui-kategorien .werkzeug-row .werkzeug-btn {'), 'compact Haupt-UI tool button override missing');
+assert(html.includes('flex: 0 1 auto;\n    width: auto;'), 'tool buttons must keep their natural width');
 const start = html.indexOf('window.__hauptuiActionState');
 const end = html.indexOf('</script>', start);
 assert(start > -1 && end > start, 'Haupt-UI source block not found');
