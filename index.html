@@ -3588,7 +3588,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1116</div>
+    <div class="start-version">Schatten v7.12.1117</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3829,7 +3829,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1116</span>
+    <span>Schatten v7.12.1117</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -12085,7 +12085,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1116 +Verhör-Pilot +Ortsbild-Konsistenz';
+window.SCHATTEN_VERSION = 'v7.12.1117 +Verhör-Pilot +Aktionsmenü-Lockfix';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -15915,7 +15915,27 @@ function _ortsFundIndizienErreichbar() {
 function _baukastenZiele() {
   const out = { personen: [], objekte: [], items: [] };
   try {
-    const _np = (typeof getNpcsAtCurrentLocation === 'function') ? (getNpcsAtCurrentLocation() || []) : [];
+    let _np = (typeof getNpcsAtCurrentLocation === 'function') ? (getNpcsAtCurrentLocation() || []) : [];
+    // v7.12.1117: Die Reisekarte bewertet Hinweise auf ORTSEBENE. Alte Erkundungsgitter filterten Personen
+    // dagegen auf den aktuellen Unterknoten. Dadurch zeigte die Karte z.B. Edith/Pohl als "Spur jetzt", waehrend
+    // das Hauptmenue die Person nicht anbot. Im Hauptmodus deshalb alle JETZT erreichbaren Hinweisgeber des Orts
+    // ergaenzen; stage-/zeitgesperrte Personen bleiben durch _npcHatOffenenHinweis weiterhin verborgen.
+    if (window.HAUPTUI_AKTIV && engineCurrentLocation && engineCurrentLocation.name && typeof getCaseLocations === 'function') {
+      try {
+        const _loc = (getCaseLocations() || []).find(l => l && normForMatch(l.name) === normForMatch(engineCurrentLocation.name));
+        const _tz = (typeof _aktTageszeitName === 'function') ? _aktTageszeitName() : '';
+        if (_loc && Array.isArray(_loc.npcs)) {
+          _loc.npcs.forEach(function(entry) {
+            if (!entry || !entry.id) return;
+            if (!entry.immer && Array.isArray(entry.zeit) && entry.zeit.length && !entry.zeit.map(z => normForMatch(z)).includes(_tz)) return;
+            const ident = (typeof _resolveNpcIdentity === 'function') ? _resolveNpcIdentity(entry.id) : { id: entry.id, name: entry.id };
+            if (!ident || !ident.name || typeof _npcHatOffenenHinweis !== 'function' || !_npcHatOffenenHinweis(ident.name, entry.id)) return;
+            const exists = _np.some(n => n && ((n.id && normForMatch(n.id) === normForMatch(entry.id)) || normForMatch(n.name || '') === normForMatch(ident.name)));
+            if (!exists) _np.push(ident);
+          });
+        }
+      } catch (e) {}
+    }
     out.personen = _np.filter(n => n && n.name).map(n => ({
       id: n.id || null, name: n.name, tag: n.tag || '',
       hinweis: (typeof _npcHatOffenenHinweis === 'function') ? !!_npcHatOffenenHinweis(n.name, n.id) : false,
@@ -53871,7 +53891,10 @@ function _renderEngineMenu(container, scene) {
     const previous = container.querySelector(':scope > .hauptui-action-menu');
     if (previous) previous.remove();
     const mode = deriveInteractionMode();
-    if (mode === 'combat' || mode === 'escape' || mode === 'custody' || mode === 'resolution' || mode === 'locked' || mode === 'conversation') return;
+    // v7.12.1117: renderOptions laeuft noch innerhalb des API-Locks; der Lock wird erst NACH dem Render geloest.
+    // Deshalb darf "locked" das Menue nicht unterdruecken. Klicks bleiben durch _hauptuiExecute/chooseOption
+    // geschuetzt, aber die fertige Szene besitzt sofort ihre Aktionen statt dauerhaft leer zu bleiben.
+    if (mode === 'combat' || mode === 'escape' || mode === 'custody' || mode === 'resolution' || mode === 'conversation') return;
 
     const data = (typeof _baukastenZiele === 'function') ? _baukastenZiele() : { personen: [], objekte: [], items: [] };
     const looseItems = (typeof _ortsFundItems === 'function') ? (_ortsFundItems() || []) : [];

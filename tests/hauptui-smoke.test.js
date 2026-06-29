@@ -113,6 +113,43 @@ execute.onTap();
 assert.strictEqual(calls.fund, 1, 'clue command must open the real find dialog');
 assert.strictEqual(calls.fundClues.map((entry) => entry.id).join(','), clue.id);
 
+const clueLocations = [
+  {
+    place: 'Hinterhof Sybelstrasse',
+    people: [{ id: 'frau_pohl', name: 'Frau Pohl', typ: 'person', hinweis: true, hinweisAktionen: ['Befragen'] }],
+    objects: [{ id: 'tuerschild_hauke', name: 'Klingelschilder prüfen', typ: 'objekt', actions: ['ERKUNDEN', 'DURCHSUCHEN'] }],
+    expected: ['Frau Pohl', 'Klingelschilder prüfen'],
+  },
+  {
+    place: 'Kessler-Wohnung Charlottenburg',
+    people: [{ id: 'edith_kessler', name: 'Edith Kessler', typ: 'person', hinweis: true, hinweisAktionen: ['Ansprechen', 'Befragen'] }],
+    objects: [],
+    expected: ['Edith Kessler'],
+  },
+  {
+    place: 'Spedition Schmidt Moabit',
+    people: [{ id: 'norbert_tetzlaff', name: 'Norbert Tetzlaff', typ: 'person', hinweis: true, hinweisAktionen: ['Befragen', 'Bestechen'] }],
+    objects: [{ id: 'briefchen_ilse', name: 'Roberts Schreibtisch durchsuchen', typ: 'objekt', actions: ['ERKUNDEN', 'DURCHSUCHEN'] }],
+    expected: ['Norbert Tetzlaff', 'Roberts Schreibtisch durchsuchen'],
+  },
+  {
+    place: 'Cafe Wien',
+    people: [{ id: 'oberkellner_voss', name: 'Oberkellner Voss', typ: 'person', hinweis: true, hinweisAktionen: ['Ansprechen', 'Befragen'] }],
+    objects: [{ id: 'robert_tisch_beobachtet', name: 'Vom Ecktisch aus beobachten', typ: 'objekt', actions: ['BEOBACHTEN', 'ERKUNDEN'] }],
+    expected: ['Oberkellner Voss', 'Vom Ecktisch aus beobachten'],
+  },
+];
+context.deriveInteractionMode = () => 'locked';
+for (const location of clueLocations) {
+  context.engineCurrentLocation = { name: location.place };
+  context.window.__hauptuiActionState = { verb: null, targetKey: null };
+  context._baukastenZiele = () => ({ personen: location.people, objekte: location.objects, items: [] });
+  context._ortsFundIndizienErreichbar = () => location.objects.map((object) => ({ id: object.id, text: object.name }));
+  context._renderEngineMenu(container, {});
+  assert(container.querySelector('.hauptui-action-menu'), location.place + ' must render its menu during the final locked render');
+  for (const target of location.expected) assert(byText(container, target), location.place + ' is missing target ' + target);
+}
+
 context._baukastenZiele = () => ({ personen: [], objekte: [], items: [] });
 context._ortsFundIndizienErreichbar = () => [];
 context._renderEngineMenu(container, {});
@@ -144,5 +181,26 @@ for (const place of kesslerPlaces) {
   execute = all(container).find((element) => element.className === 'hauptui-execute');
   assert(execute && !execute.disabled, place + ' must offer an executable location action');
 }
+
+const targetsStart = html.indexOf('function _baukastenZiele()');
+const targetsEnd = html.indexOf('try { window._baukastenZiele', targetsStart);
+const targetContext = {
+  window: { HAUPTUI_AKTIV: true },
+  engineCurrentLocation: { name: 'Kessler-Wohnung Charlottenburg' },
+  normForMatch: (value) => String(value || '').toLowerCase(),
+  getNpcsAtCurrentLocation: () => [],
+  getCaseLocations: () => [{ name: 'Kessler-Wohnung Charlottenburg', npcs: [{ id: 'edith_kessler', immer: true }] }],
+  _aktTageszeitName: () => 'abend',
+  _resolveNpcIdentity: () => ({ id: 'edith_kessler', name: 'Edith Kessler', tag: 'CLIENT' }),
+  _npcHatOffenenHinweis: () => true,
+  _npcOffeneHinweisAktionen: () => ['Ansprechen', 'Befragen'],
+  _ortsFundIndizienErreichbar: () => [],
+  _itemsBeiKarl: () => [],
+  diag: () => {},
+};
+vm.createContext(targetContext);
+vm.runInContext(html.slice(targetsStart, targetsEnd), targetContext);
+const restoredTargets = targetContext._baukastenZiele();
+assert.strictEqual(restoredTargets.personen.map((person) => person.name).join(','), 'Edith Kessler', 'location-wide map clue must restore Edith even when the exploration subnode returns no NPC');
 
 console.log('HAUPTUI_KESSLER_10_ORTE_OK');
