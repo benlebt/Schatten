@@ -3670,7 +3670,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1123</div>
+    <div class="start-version">Schatten v7.12.1124</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3911,7 +3911,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1123</span>
+    <span>Schatten v7.12.1124</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -12167,7 +12167,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1123 +KI-Ermittlungsszenen +Deterministischer-Fund';
+window.SCHATTEN_VERSION = 'v7.12.1124 +Szenenbild-Reset';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -20036,6 +20036,7 @@ document.addEventListener('click', (e) => {
 
 // --- UI ---
 function showStart() {
+  try { if (typeof _clearKesslerSceneVisual === 'function') _clearKesslerSceneVisual(); } catch (e) {}
   document.getElementById('start').classList.remove('hidden');
   // v7.9.10: Musik-Button-Text passend zum aktuellen Audio-State setzen
   if (typeof syncMusicButtonText === 'function') syncMusicButtonText();
@@ -20109,13 +20110,14 @@ function hideAll() {
   // v7.12.315 (Source-Lektorat v314 P1): freitext-block ergaenzt - sonst blieb das Freitext-Feld
   // beim Screen-Wechsel (Win/Fail/Fehler/Start) bis zu 1s sichtbar (UI-Geist), weil nur das
   // 1s-Intervall es nachfuehrte. Jetzt wird es direkt mitversteckt.
-  ['setup','start','loading','error','options','freitext-block','wait-box','daily-limit','status-popup','char-detail-popup','game-over','setup-selector','howto'].forEach(id => {
+  ['setup','start','loading','error','options','kessler-scene-visual','freitext-block','wait-box','daily-limit','status-popup','char-detail-popup','game-over','setup-selector','howto'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.add('hidden');
   });
   // v7.12.316 (Source-Lektorat v315 P2): settings-menu separat schliessen (steht nicht in der Liste
   // oben, kann sonst beim Reset/Start ueber einem frischen Screen offen bleiben).
   try { const _sm = document.getElementById('settings-menu'); if (_sm) _sm.classList.add('hidden'); } catch(e){}
+  try { if (typeof _clearKesslerSceneVisual === 'function') _clearKesslerSceneVisual(); } catch (e) {}
 }
 
 // v6.77: Setup-Auswahl-Screen Funktionen.
@@ -53789,6 +53791,22 @@ function _renderKesslerSceneVisual(scene) {
     time.textContent = (typeof gameDay === 'number' ? 'Tag ' + gameDay : '') + (tzLabel ? ' · ' + tzLabel : '');
   } catch (e) { time.textContent = ''; }
   visual.classList.remove('hidden');
+}
+
+function _clearKesslerSceneVisual() {
+  const visual = document.getElementById('kessler-scene-visual');
+  const image = document.getElementById('kessler-scene-image');
+  const place = document.getElementById('kessler-scene-place');
+  const time = document.getElementById('kessler-scene-time');
+  if (visual) visual.classList.add('hidden');
+  if (image) {
+    image.onload = null;
+    image.onerror = null;
+    image.removeAttribute('src');
+    image.alt = '';
+  }
+  if (place) place.textContent = '';
+  if (time) time.textContent = '';
 }
 
 window.__hauptuiActionState = window.__hauptuiActionState || { verb: null, targetKey: null };

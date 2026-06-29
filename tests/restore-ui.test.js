@@ -4,6 +4,10 @@ const path = require('path');
 const vm = require('vm');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+assert(html.includes("'options','kessler-scene-visual','freitext-block'"), 'hideAll must hide the standalone scene visual');
+assert(html.includes('function _clearKesslerSceneVisual()'), 'scene visual reset helper missing');
+assert(html.includes("image.removeAttribute('src')"), 'scene visual reset must clear the stale image source');
+assert(html.includes("function showStart() {\n  try { if (typeof _clearKesslerSceneVisual"), 'start screen must clear the previous scene visual');
 const start = html.indexOf('(function scheduleBootRestoreOrStart()');
 const end = html.indexOf('// v7.11.92: Zusaetzliche Save-Trigger', start);
 assert(start > -1 && end > start, 'deferred boot restore block missing');
