@@ -3585,7 +3585,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1113</div>
+    <div class="start-version">Schatten v7.12.1114</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3826,7 +3826,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1113</span>
+    <span>Schatten v7.12.1114</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -12082,7 +12082,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1113 +Verhör-Pilot +Hauptaktionsmenü';
+window.SCHATTEN_VERSION = 'v7.12.1114 +Verhör-Pilot +Hauptaktionsmenü';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -53674,6 +53674,19 @@ function _hauptuiExecute(verb, target) {
   }
   if (!target) return;
 
+  if (target.typ === 'ort') {
+    if (verb === 'durchsuchen') { _hauptuiUmsehen(); return; }
+    _hauptuiChoose({
+      id: 'HAUPTUI_ORT_ANSCHAUEN',
+      text: 'Karl betrachtet ' + target.name + ' aufmerksam, prüft Zugänge, Blickachsen und auffällige Einzelheiten.',
+      _anzeigeText: 'Schau an · ' + target.name,
+      kategorie: 'BEOBACHTEN',
+      _kategorie: 'BEOBACHTEN',
+      _engine: true,
+    });
+    return;
+  }
+
   if (target.typ === 'person') {
     const npc = _hauptuiNpc(target);
     if (!npc) return;
@@ -53738,7 +53751,11 @@ function _renderEngineMenu(container, scene) {
         objects.push({ id: item.id, name: item.name, typ: 'objekt', fundTyp: 'item', actions: ['NEHMEN'], spur: true });
       }
     });
+    const currentPlace = (typeof engineCurrentLocation !== 'undefined' && engineCurrentLocation && engineCurrentLocation.name)
+      ? [{ id: 'aktueller_ort', name: engineCurrentLocation.name, typ: 'ort' }]
+      : [];
     const groups = [
+      { key: 'ort', label: 'Am aktuellen Ort', tag: 'Ort', targets: currentPlace },
       { key: 'personen', label: 'Personen', tag: 'Person', targets: data.personen || [] },
       { key: 'objekte', label: 'Hier untersuchen', tag: 'Spur', targets: objects },
       { key: 'items', label: 'Dabei', tag: 'Inventar', targets: data.items || [] },
@@ -53748,7 +53765,9 @@ function _renderEngineMenu(container, scene) {
     let selected = targets.find(function (target) { return _hauptuiTargetKey(target) === state.targetKey; }) || null;
     if (!selected) state.targetKey = null;
 
-    const contextual = selected && selected.typ === 'person'
+    const contextual = selected && selected.typ === 'ort'
+      ? [{ key: 'anschauen', label: 'Schau an' }, { key: 'durchsuchen', label: 'Durchsuche' }]
+      : selected && selected.typ === 'person'
       ? [{ key: 'reden', label: 'Rede mit' }, { key: 'anschauen', label: 'Schau an' }, { key: 'geben', label: 'Gib' }]
       : selected && selected.typ === 'objekt'
         ? [{ key: 'anschauen', label: 'Schau an' }, { key: 'oeffnen', label: 'Öffne' }, { key: 'durchsuchen', label: 'Durchsuche' }, { key: 'nehmen', label: 'Nimm' }].concat((selected.actions || []).some(function (action) { return /DRUECKEN|DRÜCKEN/i.test(action); }) ? [{ key: 'druecken', label: 'Drücke' }] : [])
@@ -53831,7 +53850,7 @@ function _renderEngineMenu(container, scene) {
           if (state.targetKey === key) { state.targetKey = null; state.verb = null; }
           else {
             state.targetKey = key;
-            state.verb = target.typ === 'person' ? 'reden' : (target.typ === 'objekt' ? 'durchsuchen' : 'benutzen');
+            state.verb = target.typ === 'ort' ? 'anschauen' : (target.typ === 'person' ? 'reden' : (target.typ === 'objekt' ? 'durchsuchen' : 'benutzen'));
           }
           _renderEngineMenu(container, scene);
         });

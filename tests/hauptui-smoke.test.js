@@ -67,6 +67,7 @@ const context = {
   String,
   Array,
   Date,
+  engineCurrentLocation: { name: 'Cafe Wien' },
   deriveInteractionMode: () => 'normal',
   attachSafeTap: (button, handler) => { button.onTap = handler; },
   _baukastenZiele: () => ({
@@ -119,4 +120,27 @@ lookButton.onTap();
 execute = all(container).find((element) => element.className === 'hauptui-execute');
 assert(execute && !execute.disabled, 'Umsehen must stay executable without targets');
 
-console.log('HAUPTUI_CAFE_WIEN_OK');
+const kesslerPlaces = [
+  'Hinterhof Sybelstrasse',
+  'Kessler-Wohnung Charlottenburg',
+  'Spedition Schmidt Moabit',
+  'Karl Mauers Büro',
+  'Doc Wagners Praxis',
+  'Cafe Wien',
+  'Polizei Hardenbergstrasse',
+  'Bahnhof Charlottenburg',
+  'Karls Opel Olympia',
+  'S-Bahnhof Friedrichstrasse',
+];
+for (const place of kesslerPlaces) {
+  context.engineCurrentLocation = { name: place };
+  context.window.__hauptuiActionState = { verb: null, targetKey: null };
+  context._renderEngineMenu(container, {});
+  const placeButton = byText(container, place);
+  assert(placeButton, place + ' must be rendered as an actionable location target');
+  placeButton.onTap();
+  execute = all(container).find((element) => element.className === 'hauptui-execute');
+  assert(execute && !execute.disabled, place + ' must offer an executable location action');
+}
+
+console.log('HAUPTUI_KESSLER_10_ORTE_OK');
