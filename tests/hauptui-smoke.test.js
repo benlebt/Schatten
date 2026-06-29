@@ -56,6 +56,9 @@ assert(html.includes("hauptuiQuickActions.className = 'hauptui-quick-actions'"),
 assert(html.includes("? hauptuiQuickActions\n      : (typeof topActions"), 'travel action must use compact Haupt-UI container');
 assert(html.includes("? hauptuiQuickActions : uebergangBody).appendChild(_sleepBtn)"), 'sleep action must use compact Haupt-UI container');
 assert(html.includes('showSleepButton && !_imKampfNow && !window.HAUPTUI_AKTIV'), 'redundant special-action separator must stay hidden in Haupt-UI');
+assert(!html.includes("commandText.textContent = selectedVerb ?"), 'permanent command prompt must be removed');
+assert(html.includes("groups.filter(function (group) { return group.targets.length > 0; })"), 'empty target groups must be omitted');
+assert(html.includes("if (ready) {\n      const execute"), 'execute button must only render for a complete command');
 const start = html.indexOf('window.__hauptuiActionState');
 const end = html.indexOf('</script>', start);
 assert(start > -1 && end > start, 'Haupt-UI source block not found');
