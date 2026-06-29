@@ -52,6 +52,10 @@ function byText(root, text) {
 }
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+assert(html.includes("hauptuiQuickActions.className = 'hauptui-quick-actions'"), 'compact quick-action container missing');
+assert(html.includes("? hauptuiQuickActions\n      : (typeof topActions"), 'travel action must use compact Haupt-UI container');
+assert(html.includes("? hauptuiQuickActions : uebergangBody).appendChild(_sleepBtn)"), 'sleep action must use compact Haupt-UI container');
+assert(html.includes('showSleepButton && !_imKampfNow && !window.HAUPTUI_AKTIV'), 'redundant special-action separator must stay hidden in Haupt-UI');
 const start = html.indexOf('window.__hauptuiActionState');
 const end = html.indexOf('</script>', start);
 assert(start > -1 && end > start, 'Haupt-UI source block not found');
