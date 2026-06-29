@@ -3670,7 +3670,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1122</div>
+    <div class="start-version">Schatten v7.12.1123</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3911,7 +3911,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1122</span>
+    <span>Schatten v7.12.1123</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -12167,7 +12167,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1122 +Impliziter-Ortskontext +Kontextverben';
+window.SCHATTEN_VERSION = 'v7.12.1123 +KI-Ermittlungsszenen +Deterministischer-Fund';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -15834,20 +15834,11 @@ function _zeigeFundAuswahl(fundItems, fundIndizien) {
                       : /durchsuch|gründlich|gruendlich/i.test(ind.hotspot || '') ? 'mikro_gruendlich' : 'mikro_leicht';
               _shadowZeitLog(_zt, ind.hotspot);
             }
-            // Hotspot: erst den atmosphärischen Fund-Text als kleine Zeile einblenden, dann buchen.
-            if (_hatHotspot && ind.fundText && !b.dataset.aufgedeckt) {
-              b.dataset.aufgedeckt = '1';
-              const ft = document.createElement('div');
-              ft.style.cssText = 'margin:2px 0 8px 6px;padding:6px 10px;border-left:2px solid #8a7440;color:#cfc6ae;font-size:calc(12px * var(--reading-scale));font-style:italic;line-height:1.45;';
-              ft.textContent = ind.fundText;
-              b.insertAdjacentElement('afterend', ft);
-            }
-            if (typeof _markiereIndizGefunden === 'function' && _markiereIndizGefunden(ind)) {
-              b.disabled = true; b.classList.add('locked');
-              const mk = b.querySelector('.option-marker'); if (mk) mk.textContent = '· Im Notizbuch ✓';
-              // v7.12.814: statt flüchtigem Toast das Belohnungs-Popup (zentral aus dem Reward-Puffer).
-              if (typeof _flushIndizRewards === 'function') _flushIndizRewards();
-            }
+            // v7.12.1123: Kein Klick-Sammeln mehr. Der Griff startet eine echte
+            // KI-Mikroszene; erst nach erfolgreicher Antwort bucht die Engine das
+            // reservierte Indiz deterministisch ins Notizbuch.
+            try { overlay.remove(); } catch (e) {}
+            if (typeof _hauptuiStarteIndizSzene === 'function') _hauptuiStarteIndizSzene(ind, _hatHotspot ? ind.hotspot : _label);
           } catch (e) {}
         };
         panel.appendChild(b);
@@ -17555,6 +17546,7 @@ function normalizeCaseProgress(raw) {
   if (!merged.npcMemory || typeof merged.npcMemory !== 'object') merged.npcMemory = {};
   if (!merged.verhoere || typeof merged.verhoere !== 'object') merged.verhoere = {}; // v7.13 (Verhör-Pilot)
   if (!Array.isArray(merged.aussagen)) merged.aussagen = []; // v7.13 (Verhör-Pilot)
+  if (!merged.pendingHauptuiIndiz || typeof merged.pendingHauptuiIndiz !== 'object') merged.pendingHauptuiIndiz = null; // v7.12.1123
   // v7.12.1014 (Benjamin: "Arena kommt nicht, encounterState=null trotz KAMPF-START"): Der frühere v797-Reset
   // nullte hier JEDEN Kampf beim Laden. Problem: restoreGameState() läuft auch MITTEN im Spielfluss (nicht nur
   // bei echtem Browser-Reload). Folge: ein in Szene N gestarteter Kampf war in Szene N+1 schon wieder weg
@@ -49371,6 +49363,10 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
     // erschöpft bleiben. Pro Hänger sollen aber wieder 2 Auto-Versuche zur Verfügung stehen.
     try { window.__watchdogAutoRetries = 0; } catch(e){}
     document.getElementById('error').classList.add('hidden');
+    // v7.12.1123: Eine per Haupt-UI gestartete Indiz-Untersuchung wird erst
+    // nach einer gueltigen, akzeptierten KI-Szene eingelöst. Der Payoff bleibt
+    // dadurch narrativ variabel, der Fortschritt aber deterministisch.
+    try { if (typeof _hauptuiPendingIndizEinloesen === 'function') _hauptuiPendingIndizEinloesen(scene); } catch (e) {}
     try { markPhase('vor-showHeader@Sz' + (typeof sceneCounter === 'number' ? sceneCounter : '?')); } catch(e){}
     showHeader(scene);
     renderLog();
@@ -53858,7 +53854,56 @@ function _hauptuiChoose(option) {
   if (typeof chooseOption === 'function') chooseOption(option);
 }
 
-function _hauptuiFundAuswahl(target) {
+function _hauptuiStarteIndizSzene(ind, griff) {
+  if (!ind || !ind.id || !caseProgress) return false;
+  if (typeof chooseOptionInFlight !== 'undefined' && chooseOptionInFlight) return false;
+  const ort = (typeof engineCurrentLocation !== 'undefined' && engineCurrentLocation && engineCurrentLocation.name) ? engineCurrentLocation.name : 'am aktuellen Ort';
+  const hotspot = griff || ind.hotspot || ind.text || ind.id;
+  const payoff = ind.fundText || ind.text || ('Karl entdeckt eine belastbare Spur: ' + ind.id + '.');
+  caseProgress.pendingHauptuiIndiz = {
+    id: ind.id,
+    hotspot: hotspot,
+    ort: ort,
+    startedScene: (typeof sceneCounter === 'number') ? sceneCounter : 0,
+  };
+  try { if (typeof saveGameState === 'function') saveGameState(); } catch (e) {}
+  _hauptuiChoose({
+    id: 'HAUPTUI_INDRAMATISIERUNG_' + ind.id,
+    text: 'Karl untersucht jetzt gezielt: "' + hotspot + '" in ' + ort + '. '
+      + 'Spiele die Untersuchung als kurze, konkrete Mikroszene in 2 bis 4 Absätzen aus. '
+      + 'Zeige einen Ablauf statt das Ergebnis sofort hinzuschreiben: Annäherung, genaue Handlung und eine kleine situationsgebundene Reibung '
+      + '(zum Beispiel ein Geräusch, ein kurzer Zeitdruck, ein vorbeikommender Mensch, ein schwer zugängliches Detail oder eine zunächst falsche Lesart). '
+      + 'Variiere Sinneseindrücke und Reihenfolge passend zur laufenden Szene. Keine neue Kernspur erfinden, Ort und Tageszeit nicht wechseln. '
+      + 'Der belastbare Pflicht-Payoff am Ende lautet inhaltlich: ' + payoff,
+    _anzeigeText: 'Untersuche · ' + hotspot,
+    kategorie: 'ERKUNDEN',
+    _kategorie: 'ERKUNDEN',
+    _engine: true,
+    _pendingIndizId: ind.id,
+  });
+  return true;
+}
+
+function _hauptuiPendingIndizEinloesen(scene) {
+  try {
+    const pending = caseProgress && caseProgress.pendingHauptuiIndiz;
+    if (!pending || !pending.id) return false;
+    const ind = (typeof _findeIndizById === 'function') ? _findeIndizById(pending.id) : null;
+    if (!ind) return false;
+    const schonGefunden = Array.isArray(caseProgress.gefundeneIndizIds) && caseProgress.gefundeneIndizIds.indexOf(pending.id) !== -1;
+    const neu = !schonGefunden && typeof _markiereIndizGefunden === 'function' ? _markiereIndizGefunden(ind) : false;
+    caseProgress.pendingHauptuiIndiz = null;
+    if (scene && typeof scene === 'object') scene._hauptuiIndizEinloesung = pending.id;
+    if (typeof diag === 'function') diag('progress', '🔎 KI-ERMITTLUNG abgeschlossen: ' + pending.id + (neu ? ' deterministisch gebucht' : ' bereits durch Szenenscan gebucht'));
+    if (typeof _flushIndizRewards === 'function') _flushIndizRewards();
+    return neu || schonGefunden;
+  } catch (e) {
+    if (typeof diag === 'function') diag('drift', 'KI-ERMITTLUNG Einloesefehler: ' + (e && e.message ? e.message : e));
+    return false;
+  }
+}
+
+function _hauptuiFundAuswahl(target, griff) {
   try {
     const items = (typeof _ortsFundItems === 'function') ? (_ortsFundItems() || []) : [];
     const clues = (typeof _ortsFundIndizienErreichbar === 'function') ? (_ortsFundIndizienErreichbar() || []) : [];
@@ -53870,7 +53915,10 @@ function _hauptuiFundAuswahl(target) {
       : null;
     const selectedItems = item ? [item] : [];
     const selectedClues = clue ? [clue] : [];
-    if ((selectedItems.length || selectedClues.length) && typeof _zeigeFundAuswahl === 'function') {
+    if (selectedClues.length && typeof _hauptuiStarteIndizSzene === 'function') {
+      return _hauptuiStarteIndizSzene(selectedClues[0], griff || target.name);
+    }
+    if (selectedItems.length && typeof _zeigeFundAuswahl === 'function') {
       _zeigeFundAuswahl(selectedItems, selectedClues);
       return true;
     }
@@ -53972,7 +54020,7 @@ function _hauptuiExecute(verb, target) {
   }
 
   if (target.typ === 'objekt') {
-    if (_hauptuiFundAuswahl(target)) return;
+    if (_hauptuiFundAuswahl(target, target.name)) return;
     const labels = { anschauen: 'untersucht', oeffnen: 'öffnet', durchsuchen: 'durchsucht', nehmen: 'nimmt an sich', druecken: 'betätigt' };
     _hauptuiChoose({ id: 'HAUPTUI_OBJEKT_' + verb.toUpperCase(), text: 'Karl ' + (labels[verb] || 'untersucht') + ' ' + target.name + ' sorgfältig.', _anzeigeText: verb + ' · ' + target.name, kategorie: 'ERKUNDEN', _kategorie: 'ERKUNDEN', _engine: true });
     return;

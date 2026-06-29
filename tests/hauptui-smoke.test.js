@@ -65,7 +65,7 @@ const start = html.indexOf('window.__hauptuiActionState');
 const end = html.indexOf('</script>', start);
 assert(start > -1 && end > start, 'Haupt-UI source block not found');
 
-const calls = { npc: 0, fund: 0, options: [] };
+const calls = { npc: 0, fund: 0, options: [], marks: 0, flushes: 0, saves: 0 };
 const clue = { id: 'kessler_brief', text: 'Roberts gefaltetes Briefchen' };
 const voss = { id: 'voss', name: 'Oberkellner Voss', tag: 'WITNESS' };
 const context = {
@@ -76,6 +76,8 @@ const context = {
   String,
   Array,
   Date,
+  sceneCounter: 3,
+  caseProgress: { gefundeneIndizIds: [] },
   engineCurrentLocation: { name: 'Cafe Wien' },
   deriveInteractionMode: () => 'normal',
   attachSafeTap: (button, handler) => { button.onTap = handler; },
@@ -92,6 +94,10 @@ const context = {
   _markPopupOpened: () => {},
   _zeigeFundAuswahl: (items, clues) => { calls.fund += 1; calls.fundItems = items; calls.fundClues = clues; },
   chooseOption: (option) => calls.options.push(option),
+  saveGameState: () => { calls.saves += 1; },
+  _findeIndizById: (id) => id === clue.id ? clue : null,
+  _markiereIndizGefunden: (indiz) => { calls.marks += 1; context.caseProgress.gefundeneIndizIds.push(indiz.id); return true; },
+  _flushIndizRewards: () => { calls.flushes += 1; },
   showProgressToast: () => {},
   zeigeMiniAuswahl: () => {},
   npcInteraktion: () => {},
@@ -119,8 +125,14 @@ execute = all(container).find((element) => element.className === 'hauptui-execut
 assert(execute && !execute.disabled, 'clue command must be executable');
 assert(visibleText(execute).includes('Schau an'), 'clue command must recommend the configured BEOBACHTEN action');
 execute.onTap();
-assert.strictEqual(calls.fund, 1, 'clue command must open the real find dialog');
-assert.strictEqual(calls.fundClues.map((entry) => entry.id).join(','), clue.id);
+assert.strictEqual(calls.fund, 0, 'specific clue command must not open a click-collect dialog');
+assert.strictEqual(calls.options[calls.options.length - 1]._pendingIndizId, clue.id, 'clue command must start an AI investigation scene');
+assert.strictEqual(context.caseProgress.pendingHauptuiIndiz.id, clue.id, 'clue must remain pending until the AI scene commits');
+assert.strictEqual(calls.marks, 0, 'clue must not be booked on the initial click');
+context._hauptuiPendingIndizEinloesen({ szene: 'Mikroszene' });
+assert.strictEqual(calls.marks, 1, 'accepted AI scene must deterministically book the clue');
+assert.strictEqual(calls.flushes, 1, 'accepted AI scene must show the clue reward');
+assert.strictEqual(context.caseProgress.pendingHauptuiIndiz, null, 'pending clue must clear after commit');
 
 const clueLocations = [
   {
