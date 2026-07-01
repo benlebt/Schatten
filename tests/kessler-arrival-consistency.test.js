@@ -37,9 +37,13 @@ status = context.offeneIndizienAmOrtNachErreichbarkeit(spedition);
 assert.strictEqual(status.jetzt, 2, 'at stage 2 both Spedition clues must be reachable in the evening');
 assert.strictEqual(status.spaeter, 0);
 
-const rawImages = html.match(/const KESSLER_SCENE_IMAGES = (\[[\s\S]*?\n\]);/);
-assert(rawImages, 'Kessler scene image map missing');
-const images = Function('return ' + rawImages[1])();
+const imageTableStart = html.indexOf('const SHARED_SCENE_IMAGES');
+const imageTableEnd = html.indexOf('function _kesslerSceneNorm', imageTableStart);
+assert(imageTableStart > -1 && imageTableEnd > imageTableStart, 'scene image registry missing');
+const imageContext = {};
+vm.createContext(imageContext);
+vm.runInContext(html.slice(imageTableStart, imageTableEnd) + ';globalThis.images=SHARED_SCENE_IMAGES;', imageContext);
+const images = imageContext.images;
 const image = images.find((entry) => entry.file === 'spedition-schmidt-moabit.png');
 assert(image && image.innen === true, 'Spedition image must be declared as interior');
 assert.strictEqual(image.dayFile, 'spedition-schmidt-moabit-day.png', 'Spedition must expose a daylight variant');
@@ -65,7 +69,7 @@ assert(html.includes('_ortHatJetztErreichbareSpur'), 'empty-location banner must
 assert(html.includes('vorhandenNpc.zeit = qn.zeit.slice()'), 'save migration must update NPC schedules');
 assert(html.includes('vorhanden.zeit = qi.zeit.slice()'), 'save migration must update evidence schedules');
 assert(html.includes('setTimeout(function bootRestoreOrStart()'), 'boot restore must wait until Haupt-UI and image tables are initialized');
-assert(html.indexOf('setTimeout(function bootRestoreOrStart()') < html.indexOf('const KESSLER_SCENE_IMAGES'), 'deferred restore regression guard must cover the late image table');
+assert(html.indexOf('setTimeout(function bootRestoreOrStart()') < html.indexOf('const SHARED_SCENE_IMAGES'), 'deferred restore regression guard must cover the late image table');
 assert(html.includes("return /abend|nacht/.test(_kesslerSceneNorm(tz));"), 'scene image selection must distinguish daylight from darkness');
 
 console.log('KESSLER_SPEDITION_ARRIVAL_OK');

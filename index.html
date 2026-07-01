@@ -2445,8 +2445,15 @@
   }
   /* iPhone: bei wenig Platz untereinander, aber als zusammenhängende Gruppe */
   @media (max-width: 520px) {
-    .hauptui-quick-actions { justify-content: stretch; }
-    .hauptui-quick-actions .option-btn { flex: 1 1 auto; }
+    .hauptui-quick-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      justify-content: start;
+    }
+    .hauptui-quick-actions .option-btn {
+      width: 100%;
+      min-height: 36px;
+    }
     .werkzeug-row {
       gap: 6px;
     }
@@ -3670,7 +3677,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1130</div>
+    <div class="start-version">Schatten v7.12.1131</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3911,7 +3918,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1130</span>
+    <span>Schatten v7.12.1131</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -12167,7 +12174,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1130 +Alle-Faelle-Szenenbilder';
+window.SCHATTEN_VERSION = 'v7.12.1131 +Kompakte-Aktionsnavigation';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -54065,7 +54072,7 @@ function _hauptuiObjektVerben(target) {
 
 function _hauptuiEmpfohleneAktion(target) {
   if (!target) return null;
-  if (target.typ === 'ort') return 'umsehen';
+  if (target.typ === 'ort') return 'durchsuchen';
   if (target.typ === 'person') return 'reden';
   if (target.typ === 'item') return 'benutzen';
   if (target.typ === 'objekt') {
@@ -54175,7 +54182,15 @@ function _hauptuiUmsehen() {
     const items = (typeof _ortsFundItems === 'function') ? (_ortsFundItems() || []) : [];
     const clues = (typeof _ortsFundIndizienErreichbar === 'function') ? (_ortsFundIndizienErreichbar() || []) : [];
     const canTrade = (typeof _istVerkaufsort === 'function' && _istVerkaufsort() && typeof _verkaufbareItems === 'function' && _verkaufbareItems().length > 0);
-    if ((items.length || clues.length || canTrade) && typeof _zeigeFundAuswahl === 'function') {
+    // Der Orts-Standard "Durchsuche" soll ohne ein zweites Auswahl-Popup direkt
+    // in die naechste belastbare Spur fuehren. Wer eine bestimmte Spur bearbeiten
+    // will, waehlt sie weiterhin rechts unter "Hier untersuchen" gezielt aus.
+    if (clues.length && typeof _hauptuiStarteIndizSzene === 'function') {
+      const clue = clues[0];
+      _hauptuiStarteIndizSzene(clue, clue.hotspot || clue.text || clue.id);
+      return;
+    }
+    if ((items.length || canTrade) && typeof _zeigeFundAuswahl === 'function') {
       _zeigeFundAuswahl(items, clues);
       return;
     }
@@ -54226,6 +54241,14 @@ function _hauptuiExecute(verb, target) {
   }
   if (verb === 'warten') {
     _hauptuiChoose({ id: 'HAUPTUI_WARTEN', text: 'Karl bleibt unauffällig stehen, sondiert die Lage und wartet einen Moment ab.', _anzeigeText: 'Warte ab', kategorie: 'WARTEN', _kategorie: 'WARTEN', _engine: true });
+    return;
+  }
+  if (verb === 'beobachten') {
+    _hauptuiChoose({ id: 'HAUPTUI_BEOBACHTEN', text: 'Karl bleibt in Bewegung und beobachtet den aktuellen Ort aufmerksam: Wege, Routinen, Blicke und Veraenderungen.', _anzeigeText: 'Beobachte', kategorie: 'BEOBACHTEN', _kategorie: 'BEOBACHTEN', _engine: true });
+    return;
+  }
+  if (verb === 'lauschen') {
+    _hauptuiChoose({ id: 'HAUPTUI_LAUSCHEN', text: 'Karl haelt sich unauffaellig zurueck und lauscht gezielt auf Gespraeche, Geraeusche und Hinweise aus der Umgebung.', _anzeigeText: 'Lausche', kategorie: 'BEOBACHTEN', _kategorie: 'BEOBACHTEN', _engine: true });
     return;
   }
   if (!target) return;
@@ -54334,7 +54357,7 @@ function _renderEngineMenu(container, scene) {
     if (selectedIsImplicitPlace) selected = currentPlace;
 
     const contextual = selected && selected.typ === 'ort'
-      ? [{ key: 'umsehen', label: 'Umsehen' }, { key: 'durchsuchen', label: 'Durchsuche' }, { key: 'verstecken', label: 'Versteck dich' }, { key: 'warten', label: 'Warte' }]
+      ? [{ key: 'durchsuchen', label: 'Durchsuche' }, { key: 'beobachten', label: 'Beobachte' }, { key: 'lauschen', label: 'Lausche' }]
       : selected && selected.typ === 'person'
       ? [{ key: 'reden', label: 'Rede mit' }, { key: 'anschauen', label: 'Schau an' }].concat((data.items || []).length ? [{ key: 'geben', label: 'Gib' }] : [])
       : selected && selected.typ === 'objekt'
@@ -54345,7 +54368,7 @@ function _renderEngineMenu(container, scene) {
     const verbs = contextual;
     if (!verbs.some(function (verb) { return verb.key === state.verb; })) state.verb = null;
     const selectedVerb = verbs.find(function (verb) { return verb.key === state.verb; }) || null;
-    const targetRequired = selectedVerb && ['umsehen', 'verstecken', 'warten'].indexOf(selectedVerb.key) === -1;
+    const targetRequired = selectedVerb && ['umsehen', 'verstecken', 'warten', 'beobachten', 'lauschen'].indexOf(selectedVerb.key) === -1;
     const ready = !!selectedVerb && (!targetRequired || !!selected);
 
     const root = document.createElement('section');
@@ -54420,7 +54443,16 @@ function _renderEngineMenu(container, scene) {
       execute.type = 'button';
       execute.className = 'hauptui-execute';
       execute.textContent = 'Ausführen: ' + selectedVerb.label + (targetRequired && selected && !selectedIsImplicitPlace ? ' · ' + selected.name : '');
-      _hauptuiBind(execute, function () { _hauptuiExecute(selectedVerb.key, selected); });
+      _hauptuiBind(execute, function () {
+        const verbKey = selectedVerb.key;
+        const actionTarget = selected;
+        // Keine gelbe Alt-Auswahl in der naechsten Szene und auch nicht hinter
+        // einem Fund-/NPC-Popup stehen lassen. Jede Aktion beginnt neutral.
+        state.verb = null;
+        state.targetKey = null;
+        _renderEngineMenu(container, scene);
+        _hauptuiExecute(verbKey, actionTarget);
+      });
       root.appendChild(execute);
     }
     container.appendChild(root);

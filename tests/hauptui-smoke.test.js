@@ -119,6 +119,7 @@ let execute = all(container).find((element) => element.className === 'hauptui-ex
 assert(execute && !execute.disabled, 'person command must be executable');
 execute.onTap();
 assert.strictEqual(calls.npc, 1, 'person command must open the real NPC menu');
+assert(!all(container).some((element) => element.className.split(' ').includes('is-selected')), 'executed commands must clear their yellow selection state');
 
 byText(container, 'Roberts Ecktisch').onTap();
 execute = all(container).find((element) => element.className === 'hauptui-execute');
@@ -182,11 +183,16 @@ for (const location of clueLocations) {
 context._baukastenZiele = () => ({ personen: [], objekte: [], items: [] });
 context._ortsFundIndizienErreichbar = () => [];
 context._renderEngineMenu(container, {});
-const lookButton = byText(container, 'Umsehen');
-assert(lookButton, 'empty locations must still offer Umsehen');
-lookButton.onTap();
+const searchButton = byText(container, 'Durchsuche');
+assert(searchButton, 'empty locations must still offer Durchsuche');
+assert(byText(container, 'Beobachte'), 'empty locations must offer active observation');
+assert(byText(container, 'Lausche'), 'empty locations must offer listening');
+assert(!byText(container, 'Umsehen'), 'redundant Umsehen action must stay removed');
+assert(!byText(container, 'Versteck dich'), 'generic hiding must stay out of normal location mode');
+assert(!byText(container, 'Warte'), 'generic waiting must stay out of normal location mode');
+searchButton.onTap();
 execute = all(container).find((element) => element.className === 'hauptui-execute');
-assert(execute && !execute.disabled, 'Umsehen must stay executable without targets');
+assert(execute && !execute.disabled, 'Durchsuche must stay executable without targets');
 
 const kesslerPlaces = [
   'Hinterhof Sybelstrasse',
@@ -205,10 +211,12 @@ for (const place of kesslerPlaces) {
   context.window.__hauptuiActionState = { verb: null, targetKey: null };
   context._renderEngineMenu(container, {});
   assert(!byText(container, place), place + ' must not repeat as a visible target');
-  assert(byText(container, 'Umsehen'), place + ' must expose the implicit location actions immediately');
-  assert(byText(container, 'Durchsuche'), place + ' must remain searchable through the implicit location');
-  assert(byText(container, 'Versteck dich'), place + ' must expose hiding only in location mode');
-  assert(byText(container, 'Warte'), place + ' must expose waiting only in location mode');
+  assert(byText(container, 'Durchsuche'), place + ' must expose searching through the implicit location');
+  assert(byText(container, 'Beobachte'), place + ' must expose active observation');
+  assert(byText(container, 'Lausche'), place + ' must expose listening');
+  assert(!byText(container, 'Umsehen'), place + ' must not expose redundant Umsehen');
+  assert(!byText(container, 'Versteck dich'), place + ' must not expose generic hiding');
+  assert(!byText(container, 'Warte'), place + ' must not expose generic waiting');
   byText(container, 'Durchsuche').onTap();
   execute = all(container).find((element) => element.className === 'hauptui-execute');
   assert(execute && !execute.disabled, place + ' must offer an executable implicit location action');
