@@ -62,6 +62,9 @@ function byText(root, text) {
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 assert(html.includes("hauptuiQuickActions.className = 'hauptui-quick-actions'"), 'compact quick-action container missing');
 assert(html.includes("? hauptuiQuickActions\n      : (typeof topActions"), 'travel action must use compact Haupt-UI container');
+assert(html.includes("_kampfAktiv || _showdownAktiv || _feindAmOrt"), 'flight must require a mechanically confirmed danger instead of tension alone');
+assert(html.includes("typeof hauptuiQuickActions !== 'undefined' ? hauptuiQuickActions"), 'flight must use the compact Haupt-UI quick-action row');
+assert(html.includes('<span>Fliehen</span><span class="option-marker option-marker-system">Sicherer Ort</span>'), 'flight typography must match the normal action language');
 assert(html.includes("? hauptuiQuickActions : uebergangBody).appendChild(_sleepBtn)"), 'sleep action must use compact Haupt-UI container');
 assert(html.includes('showSleepButton && !_imKampfNow && !window.HAUPTUI_AKTIV'), 'redundant special-action separator must stay hidden in Haupt-UI');
 assert(!html.includes("commandText.textContent = selectedVerb ?"), 'permanent command prompt must be removed');

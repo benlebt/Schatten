@@ -3693,7 +3693,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1136</div>
+    <div class="start-version">Schatten v7.12.1137</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3934,7 +3934,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1136</span>
+    <span>Schatten v7.12.1137</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -12191,7 +12191,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1136 +Korrekte-NPC-Gespraechsstaende';
+window.SCHATTEN_VERSION = 'v7.12.1137 +Flucht-nur-bei-echter-Gefahr';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -31321,7 +31321,20 @@ function renderOptions(scene) {
   // v7.12.516 (Run 1400): Flucht-Button NICHT in Szene 1 (Fallstart - noch keine etablierte Bedrohung, ein
   // "raus aus der Szene" direkt am Anfang wirkt absurd). Ab Szene 2 + hohe Spannung wie bisher.
   const _sceneNr = (typeof sceneCounter === 'number') ? sceneCounter : 99;
-  const showFluchtButton = _sceneNr >= 2 && currentSpannung >= 4 && !karlInStasiCustody;
+  let _aktiveFluchtGefahr = false;
+  try {
+    const _kampfAktiv = !!(caseProgress && caseProgress.encounterState === 'kampf');
+    const _showdownAktiv = !!(caseProgress && caseProgress.showdownAktiv && !caseProgress.showdownBestanden);
+    const _feindAmOrt = ((typeof getNpcsAtCurrentLocation === 'function') ? (getNpcsAtCurrentLocation() || []) : []).some(function (n) {
+      if (!n || !n.name) return false;
+      const _tag = String(n.tag || '').toUpperCase();
+      if (!/STASI|GANGSTER|ANTAGONIST|GEGNER/.test(_tag)) return false;
+      const _zustand = (typeof _npcZustandGet === 'function') ? _npcZustandGet(n.name) : null;
+      return !_zustand || !/gefesselt|ko|fixiert|benommen|uebergeben|geflohen/.test(String(_zustand.status || ''));
+    });
+    _aktiveFluchtGefahr = _kampfAktiv || _showdownAktiv || _feindAmOrt;
+  } catch (e) {}
+  const showFluchtButton = _sceneNr >= 2 && currentSpannung >= 4 && _aktiveFluchtGefahr && !karlInStasiCustody;
 
   // v7.11.12: NOTHEILEN-Verfuegbarkeit:
   // - Vf <= 2 (Karl ist schwer verletzt)
@@ -31756,7 +31769,7 @@ function renderOptions(scene) {
     const flBtn = document.createElement('button');
     flBtn.className = 'option-btn option-btn-system option-btn-flucht';
     flBtn.dataset.kategorie = 'FLUCHT';
-    flBtn.innerHTML = '<span class="option-id">🏃</span><span class="option-text-wrap"><span>Flucht (raus aus der Szene)</span><span class="option-marker option-marker-system">→ SICHER</span></span>';
+    flBtn.innerHTML = '<span class="option-id">🏃</span><span class="option-text-wrap"><span>Fliehen</span><span class="option-marker option-marker-system">Sicherer Ort</span></span>';
     const flOpt = {
       id: 'FLUCHT',
       text: 'Flucht (raus aus der Szene)',
@@ -31776,7 +31789,7 @@ function renderOptions(scene) {
       }
     };
     attachSafeTap(flBtn, _starteFlucht);
-    (typeof topActions !== 'undefined' ? topActions : list).appendChild(flBtn);
+    (window.HAUPTUI_AKTIV && typeof hauptuiQuickActions !== 'undefined' ? hauptuiQuickActions : (typeof topActions !== 'undefined' ? topActions : list)).appendChild(flBtn);
   }
 
   // v7.12.515 (Umbau Stufe 1): REISE-Button. Immer verfügbar (außer in Custody - dann kann Karl nicht reisen),
