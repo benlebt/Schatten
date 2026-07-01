@@ -146,12 +146,22 @@ const quickActions = new FakeElement('div');
 quickActions.className = 'hauptui-quick-actions';
 container.appendChild(quickActions);
 
+const observeOnce = byText(container, 'Beobachte');
+assert(observeOnce, 'generic observation must initially be available');
+observeOnce.onTap();
+let execute = all(container).find((element) => element.className === 'hauptui-execute');
+assert(execute && !execute.disabled, 'generic observation must be executable once');
+execute.onTap();
+context._renderEngineMenu(container, {});
+assert(!byText(container.querySelector('.hauptui-action-menu'), 'Beobachte'), 'generic observation must disappear after use in an unchanged location state');
+assert(context.caseProgress.hauptuiVerbraucht, 'generic action exhaustion must persist in case progress');
+
 const vossButton = byText(container, voss.name);
 assert(vossButton, 'Voss target missing; buttons=' + all(container).filter((element) => element.tagName === 'button').map(visibleText).join(' | '));
 assert(visibleText(vossButton).includes('Hinweis: Befragen/Bestechen'), 'person target must name the clue actions');
 vossButton.onTap();
 assert(container.children.indexOf(container.querySelector('.hauptui-action-menu')) < container.children.indexOf(quickActions), 're-rendered menu must remain above travel and sleep actions');
-let execute = all(container).find((element) => element.className === 'hauptui-execute');
+execute = all(container).find((element) => element.className === 'hauptui-execute');
 assert(execute && !execute.disabled, 'person command must be executable');
 execute.onTap();
 assert.strictEqual(calls.npc, 1, 'person command must open the real NPC menu');
@@ -172,6 +182,8 @@ context._hauptuiPendingIndizEinloesen({ szene: 'Mikroszene' });
 assert.strictEqual(calls.marks, 1, 'accepted AI scene must deterministically book the clue');
 assert.strictEqual(calls.flushes, 1, 'accepted AI scene must show the clue reward');
 assert.strictEqual(context.caseProgress.pendingHauptuiIndiz, null, 'pending clue must clear after commit');
+context._renderEngineMenu(container, {});
+assert(byText(container.querySelector('.hauptui-action-menu'), 'Beobachte'), 'newly found evidence must reopen generic observation for the changed investigation state');
 
 const clueLocations = [
   {
