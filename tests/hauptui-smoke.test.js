@@ -60,9 +60,14 @@ assert(!html.includes("commandText.textContent = selectedVerb ?"), 'permanent co
 assert(html.includes("groups.filter(function (group) { return group.targets.length > 0; })"), 'empty target groups must be omitted');
 assert(html.includes("if (ready) {\n      const execute"), 'execute button must only render for a complete command');
 assert(html.includes('.hauptui-kategorien .werkzeug-row .werkzeug-btn {'), 'compact Haupt-UI tool button override missing');
-assert(html.includes('flex: 0 1 auto;\n    width: auto;'), 'tool buttons must keep their natural width');
+assert(html.includes('grid-template-columns: repeat(3, minmax(0, 1fr));'), 'desktop controls must use a stable LucasArts-style grid');
+assert(html.includes('.hauptui-quick-actions .option-btn-reise .option-id {'), 'travel icon must reserve enough width for the Opel SVG');
+assert(html.includes("var ww = Math.round(hh * 64 / 30);"), 'Opel SVG must declare a real width instead of overlapping its label');
 assert(html.includes("oeffneNpcMenue(npc, 'szene', true)"), 'Rede mit must request direct unambiguous conversation');
-assert(html.includes("_direktVerb.key === 'befragen' || _direktVerb._verhoerOeffnen"), 'single conversation actions must bypass the redundant NPC popup');
+const npcMenuSource = html.slice(html.indexOf('function oeffneNpcMenue'), html.indexOf('// ===== Ende NPC-Interaktion ====='));
+assert(npcMenuSource.includes("_direktVerb.key === 'befragen' || _direktVerb._verhoerOeffnen"), 'single conversation actions must bypass the redundant NPC popup inside the NPC menu');
+const sceneVisualSource = html.slice(html.indexOf('function _renderKesslerSceneVisual'), html.indexOf('function _clearKesslerSceneVisual'));
+assert(!sceneVisualSource.includes('direktWennEindeutig'), 'NPC direct-action code must never leak into scene-image rendering');
 const start = html.indexOf('window.__hauptuiActionState');
 const end = html.indexOf('</script>', start);
 assert(start > -1 && end > start, 'Haupt-UI source block not found');

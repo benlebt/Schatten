@@ -2342,9 +2342,8 @@
   /* Haupt-UI: haeufige Nebenaktionen bleiben als schmale Werkzeugleiste direkt
      unter dem Szenenbild sichtbar, statt zwei vollbreite Karten zu belegen. */
   .hauptui-quick-actions {
-    display: flex;
-    justify-content: flex-end;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 5px;
     margin: 4px 0 2px;
     padding-top: 4px;
@@ -2352,9 +2351,8 @@
   }
   .hauptui-quick-actions:empty { display: none; }
   .hauptui-quick-actions .option-btn {
-    flex: 0 1 auto;
-    width: auto;
-    min-height: 30px;
+    width: 100%;
+    min-height: 36px;
     margin: 0 !important;
     padding: 3px 7px;
     gap: 5px;
@@ -2367,6 +2365,15 @@
     width: 18px;
     min-width: 18px;
     font-size: calc(10px * var(--reading-scale));
+  }
+  .hauptui-quick-actions .option-btn-reise .option-id {
+    flex-basis: 40px;
+    width: 40px;
+    min-width: 40px;
+  }
+  .hauptui-quick-actions .option-btn-reise .option-id svg {
+    display: block;
+    max-width: 40px;
   }
   .hauptui-quick-actions .option-text-wrap {
     min-width: 0;
@@ -2410,12 +2417,12 @@
     padding-top: 7px;
   }
   .hauptui-kategorien .werkzeug-row {
-    justify-content: flex-end;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 5px;
   }
   .hauptui-kategorien .werkzeug-row .werkzeug-btn {
-    flex: 0 1 auto;
-    width: auto;
+    width: 100%;
     min-width: 0;
     min-height: 30px;
     padding: 3px 7px;
@@ -2462,9 +2469,9 @@
       min-width: 0;
     }
     .hauptui-kategorien .werkzeug-row .werkzeug-btn {
-      flex: 0 1 auto;
-      width: auto;
+      width: 100%;
     }
+    .hauptui-kategorien .werkzeug-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
   /* Abschluss-Trenner unter den besonderen Aktionen ("oder"), leitet zu den
      normalen Story-Optionen ueber. */
@@ -3677,7 +3684,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1132</div>
+    <div class="start-version">Schatten v7.12.1133</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3918,7 +3925,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1132</span>
+    <span>Schatten v7.12.1133</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -12174,7 +12181,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1132 +Direkte-Gespraeche';
+window.SCHATTEN_VERSION = 'v7.12.1133 +Szenenbild-und-Buttonraster';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -29068,7 +29075,8 @@ function mapBaueSvg(orte, cluster){
 // der Olympia-Silhouette aus fxTravel - gleiche Form/Gold-Kontur, klein genug für Buttons. Ersetzt das 🚗-Emoji.
 function opelMiniSvg(h){
   var hh = h || 18;
-  return '<svg height="' + hh + '" viewBox="0 0 64 30" style="vertical-align:middle;" xmlns="http://www.w3.org/2000/svg">'
+  var ww = Math.round(hh * 64 / 30);
+  return '<svg width="' + ww + '" height="' + hh + '" viewBox="0 0 64 30" style="display:block;vertical-align:middle;" xmlns="http://www.w3.org/2000/svg">'
     + '<path d="M3 21 Q3 16 9 15 L16 14 Q20 7 28 6 L37 6 Q45 7 49 13 L56 15 Q61 16 61 21 L61 23 L55 23 A6 6 0 0 0 43 23 L21 23 A6 6 0 0 0 9 23 L3 23 Z" fill="#23232a" stroke="#d4b86a" stroke-width="1.6"/>'
     + '<path d="M22 13 Q25 8.5 29 8 L35 8 Q40 8.5 43 12.6 Z" fill="#11131a" stroke="#9b8a5c" stroke-width="0.9"/>'
     + '<circle cx="15" cy="23" r="5" fill="#15151a" stroke="#d4b86a" stroke-width="1.3"/>'
@@ -30239,6 +30247,18 @@ function oeffneNpcMenue(npc, modus, direktWennEindeutig) {
   if (!_alleVerben.length) {
     if (typeof diag === 'function') diag('detect', 'NPC-MENÜ (' + modus + ') leer für ' + npc.name + ' - nicht geöffnet');
     return;
+  }
+  // Haupt-UI: "Rede mit" ist bereits die Entscheidung fuer ein Gespraech.
+  // Gibt es danach nur genau EIN schlichtes Gespraech bzw. die Verhoerakte,
+  // fuehren wir es direkt aus statt ein redundantes Ein-Button-Popup zu zeigen.
+  // Echte Strategieauswahl (Tonarten, Bestechen, Bedrohen, Kampf usw.) bleibt im Menue.
+  if (direktWennEindeutig && _alleVerben.length === 1) {
+    const _direktVerb = _alleVerben[0];
+    if (_direktVerb && (_direktVerb.key === 'befragen' || _direktVerb._verhoerOeffnen)) {
+      if (typeof diag === 'function') diag('detect', 'NPC-DIREKT: ' + npc.name + ' -> ' + _direktVerb.label);
+      npcInteraktion(npc, _direktVerb);
+      return;
+    }
   }
   // v7.12.627: Im Misch-Modus bekommt auch der Szene-Teil einen Mini-Header (Gegenstück zum Begleitung-Trenner).
   if (modus === 'alle' && _szeneVerben.length && _verwaltVerben.length) {
@@ -53968,19 +53988,6 @@ function _renderKesslerSceneVisual(scene) {
     visual.classList.add('hidden');
     return;
   }
-  // Haupt-UI: "Rede mit" ist bereits die Entscheidung fuer ein Gespraech.
-  // Gibt es danach nur noch genau EIN schlichtes Gespraech bzw. die Verhoerakte,
-  // fuehren wir es direkt aus statt ein redundantes Ein-Button-Popup zu zeigen.
-  // Echte Strategieauswahl (Tonarten, Bestechen, Bedrohen, Kampf usw.) bleibt im Menue.
-  if (direktWennEindeutig && _alleVerben.length === 1) {
-    const _direktVerb = _alleVerben[0];
-    if (_direktVerb && (_direktVerb.key === 'befragen' || _direktVerb._verhoerOeffnen)) {
-      if (typeof diag === 'function') diag('detect', 'NPC-DIREKT: ' + npc.name + ' -> ' + _direktVerb.label);
-      npcInteraktion(npc, _direktVerb);
-      return;
-    }
-  }
-
   const candidates = [];
   try {
     if (typeof engineCurrentLocation !== 'undefined' && engineCurrentLocation && engineCurrentLocation.name) candidates.push(engineCurrentLocation.name);

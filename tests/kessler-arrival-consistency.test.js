@@ -53,6 +53,35 @@ for (const entry of images) {
   assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'kessler', entry.dayFile)), 'daylight scene asset missing: ' + entry.dayFile);
 }
 
+const visualClasses = new Set(['hidden']);
+const visualElements = {
+  'kessler-scene-visual': { classList: { add: (name) => visualClasses.add(name), remove: (name) => visualClasses.delete(name) } },
+  'kessler-scene-image': {
+    attrs: {}, alt: '', onload: null, onerror: null,
+    getAttribute(name) { return this.attrs[name] || null; },
+    setAttribute(name, value) { this.attrs[name] = value; },
+  },
+  'kessler-scene-place': { textContent: '' },
+  'kessler-scene-time': { textContent: '' },
+};
+Object.assign(imageContext, {
+  window: { HAUPTUI_AKTIV: true },
+  document: { getElementById: (id) => visualElements[id] || null },
+  caseSetup: { klient: 'Edith Kessler', opfer: 'Robert Kessler', tat: 'Beschattung' },
+  engineCurrentLocation: { name: 'Hinterhof Sybelstrasse' },
+  currentOrt: '',
+  lastLocation: '',
+  gameDay: 1,
+  _aktTageszeitName: () => 'nachmittag',
+  diag: () => {},
+});
+const visualFnStart = html.indexOf('function _kesslerSceneNorm');
+const visualFnEnd = html.indexOf('function _clearKesslerSceneVisual', visualFnStart);
+vm.runInContext(html.slice(visualFnStart, visualFnEnd), imageContext);
+imageContext._renderKesslerSceneVisual({ szene: 'Robert verschwindet im Hinterhof.' });
+assert.strictEqual(visualClasses.has('hidden'), false, 'initial Kessler scene must reveal its scene image');
+assert.strictEqual(visualElements['kessler-scene-image'].attrs.src, 'assets/scenes/kessler/hinterhof-sybelstrasse-day.png', 'initial Kessler scene must select the daylight courtyard asset');
+
 const textHelperStart = html.indexOf('function _kesslerInnenraumTextPasst');
 const textHelperEnd = html.indexOf('function _renderKesslerSceneVisual', textHelperStart);
 const textContext = {
