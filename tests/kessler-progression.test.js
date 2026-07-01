@@ -35,7 +35,9 @@ assert(/ilse_hauke:\s*\{[\s\S]{0,400}?grantIndizId:\s*'ilse_aussage'/.test(html)
 assert(!html.includes('Margot Kessler'), 'interrogation file must name client Edith Kessler');
 
 assert(/function _hauptuiFundAuswahl[\s\S]{0,1000}?_zeigeFundAuswahl\(selectedItems, selectedClues\)/.test(html), 'scene targets must use the deterministic find dialog');
-assert(/function _verhoerFinish[\s\S]{0,900}?_markiereIndizGefunden\(ind\)/.test(html), 'solved interrogations must book their defined evidence');
+assert(/function _verhoerFinish[\s\S]{0,900}?_markiereIndizGefunden\(ind, \{ reward: false \}\)/.test(html), 'solved interrogations must book evidence without leaking a delayed global reward popup');
+assert(html.includes("if (document.getElementById('indiz-belohnung-overlay')) return;"), 'reward flush must preserve queued clues while another reward popup is open');
+assert(html.includes("setTimeout(function () { try { if (typeof _flushIndizRewards === 'function') _flushIndizRewards();"), 'closing a reward popup must continue with queued clue rewards');
 assert(/robert_kessler:\s*\{[\s\S]{0,500}?grantIndizId:\s*'robert_aussage'/.test(html), 'Robert Kessler must use the interrogation dossier instead of the legacy AI dialogue');
 assert(/id:\s*'robert_aussage'[\s\S]{0,300}?npc:\s*'robert_kessler'/.test(html), 'Robert interrogation must grant a defined Kessler clue');
 assert((html.match(/themen:\s*\[/g) || []).length >= 3, 'all three Kessler dossiers need character-specific question trees');
