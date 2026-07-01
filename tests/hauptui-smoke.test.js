@@ -20,6 +20,14 @@ class FakeElement {
     return child;
   }
 
+  insertBefore(child, reference) {
+    child.parentNode = this;
+    const index = this.children.indexOf(reference);
+    if (index < 0) return this.appendChild(child);
+    this.children.splice(index, 0, child);
+    return child;
+  }
+
   remove() {
     if (!this.parentNode) return;
     this.parentNode.children = this.parentNode.children.filter((child) => child !== this);
@@ -124,11 +132,15 @@ vm.runInContext(html.slice(start, end), context);
 const container = new FakeElement('div');
 context._renderEngineMenu(container, {});
 assert(container.querySelector('.hauptui-action-menu'), 'menu must render');
+const quickActions = new FakeElement('div');
+quickActions.className = 'hauptui-quick-actions';
+container.appendChild(quickActions);
 
 const vossButton = byText(container, voss.name);
 assert(vossButton, 'Voss target missing; buttons=' + all(container).filter((element) => element.tagName === 'button').map(visibleText).join(' | '));
 assert(visibleText(vossButton).includes('Hinweis: Befragen/Bestechen'), 'person target must name the clue actions');
 vossButton.onTap();
+assert(container.children.indexOf(container.querySelector('.hauptui-action-menu')) < container.children.indexOf(quickActions), 're-rendered menu must remain above travel and sleep actions');
 let execute = all(container).find((element) => element.className === 'hauptui-execute');
 assert(execute && !execute.disabled, 'person command must be executable');
 execute.onTap();
