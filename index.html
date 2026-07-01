@@ -3693,7 +3693,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1135</div>
+    <div class="start-version">Schatten v7.12.1136</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3934,7 +3934,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1135</span>
+    <span>Schatten v7.12.1136</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -8384,7 +8384,8 @@ function _expNpcStimmung(npcName) {
       const _miss = (typeof npcMisstrauisch === 'object' && npcMisstrauisch) ? npcMisstrauisch[npcName] : undefined;
       return _miss ? 'misstrauisch' : 'offen';
     }
-    if (typeof _npcHatUngefundeneIndizien === 'function' && !_npcHatUngefundeneIndizien(npcName)) return 'ausgequetscht';
+    if (typeof _npcWurdeSchonAngesprochen === 'function' && _npcWurdeSchonAngesprochen(npcName)
+        && typeof _npcHatUngefundeneIndizien === 'function' && !_npcHatUngefundeneIndizien(npcName)) return 'ausgequetscht';
     const _miss = (typeof npcMisstrauisch === 'object' && npcMisstrauisch) ? npcMisstrauisch[npcName] : undefined;
     if (_miss) return 'misstrauisch';
     return 'offen';
@@ -12190,7 +12191,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1135 +Stabile-Aktionsreihenfolge';
+window.SCHATTEN_VERSION = 'v7.12.1136 +Korrekte-NPC-Gespraechsstaende';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -17918,6 +17919,23 @@ let romanceRejected = {};    // npcName -> true wenn abgewiesen (Button dauerhaf
 let romanceClimaxed = {};    // v7.12.28: npcName -> true wenn die Nacht mit dieser Person verbracht wurde - Folge-Annaeherungen wuerfeln neu
 let npcMisstrauisch = {};    // v7.12.791: npcName -> true wenn eine falsche Befragungs-Tonart die Person misstrauisch gemacht hat (Sozial-Puzzle fail forward)
 let npcTonartVerbraucht = {}; // v7.12.792: npcName -> [tonartKey,...] bereits gewählte Fehlschlag-Tonarten (verschwinden danach)
+function _npcGespraechKey(npcName, npcId) {
+  return normForMatch(npcId || npcName || '').replace(/\s+/g, '_');
+}
+function _npcWurdeSchonAngesprochen(npcName, npcId) {
+  try {
+    const key = _npcGespraechKey(npcName, npcId);
+    return !!(key && caseProgress && caseProgress._npcGesprochen && caseProgress._npcGesprochen[key]);
+  } catch (e) { return false; }
+}
+function _npcAlsAngesprochenMarkieren(npcName, npcId) {
+  try {
+    if (!caseProgress) return;
+    if (!caseProgress._npcGesprochen || typeof caseProgress._npcGesprochen !== 'object') caseProgress._npcGesprochen = {};
+    const key = _npcGespraechKey(npcName, npcId);
+    if (key) caseProgress._npcGesprochen[key] = true;
+  } catch (e) {}
+}
 let npcVerprelltAmTag = {};  // v7.12.793: npcName -> gameDay an dem eine falsche Tonart abblitzte (heute nicht mehr ansprechbar, erst morgen wieder)
 
 // Story-appropriate wait texts, chosen by current tension level.
@@ -29769,6 +29787,14 @@ function npcInteraktion(npc, verb) {
     } catch (e) {}
   }
   // Verb-spezifischer Aktionstext + Kategorie. Die KI bekommt eine klare, gezielte Anweisung.
+  try {
+    const _gespraechKey = String((verb && verb.key) || '');
+    const _istEchtesGespraech = /befragen|^sozial_|^gverhandlung_/.test(_gespraechKey);
+    if (_istEchtesGespraech && !verb._sozialErledigt && !verb._sozialNochNicht
+        && typeof _npcAlsAngesprochenMarkieren === 'function') {
+      _npcAlsAngesprochenMarkieren(npc.name, npc.id);
+    }
+  } catch (e) {}
   const npcOpt = {
     id: 'NPC_' + verb.key,
     text: verb.aktion.replace('{npc}', npc.name),
@@ -29948,7 +29974,8 @@ function oeffneNpcMenue(npc, modus, direktWennEindeutig) {
       const _hatUeberhauptNoch = (typeof _npcHatUngefundeneIndizien === 'function') ? _npcHatUngefundeneIndizien(npc.name, npc.id) : true;
       // v7.12.1014: Klient nie "ausgequetscht" (immer Gesprächswert).
       const _klientHier = (typeof _istKlient === 'function') && _istKlient(npc.name, npc.id);
-      if (!_hatUeberhauptNoch && !_klientHier) {
+      const _schonGesprochen = (typeof _npcWurdeSchonAngesprochen === 'function') && _npcWurdeSchonAngesprochen(npc.name, npc.id);
+      if (!_hatUeberhauptNoch && !_klientHier && _schonGesprochen) {
         // (c) ausgequetscht
         verben.unshift({
           key: 'sozial_ausgequetscht',
@@ -29956,7 +29983,7 @@ function oeffneNpcMenue(npc, modus, direktWennEindeutig) {
           kategorie: 'ERKUNDEN',
           _sozialErledigt: true,
         });
-      } else if (!_hatJetztErreichbar) {
+      } else if (_hatUeberhauptNoch && !_hatJetztErreichbar) {
         // (b) hat etwas, aber noch nicht jetzt - will/kann gerade nicht reden.
         verben.unshift({
           key: 'sozial_nochnicht',
@@ -30015,10 +30042,11 @@ function oeffneNpcMenue(npc, modus, direktWennEindeutig) {
     if (_hatBefragen && !_hundVerbenOverride && !GEGNER.includes(tag) && !_istKlientNpc && !_verhoerNpc) {
       const _hatNochWas = (typeof _npcHatUngefundeneIndizien === 'function') ? _npcHatUngefundeneIndizien(npc.name, npc.id) : true;
       const _hatJetzt = (typeof _npcHatOffenenHinweis === 'function') ? _npcHatOffenenHinweis(npc.name, npc.id) : true;
-      if (!_hatNochWas) {
+      const _schonGesprochen = (typeof _npcWurdeSchonAngesprochen === 'function') && _npcWurdeSchonAngesprochen(npc.name, npc.id);
+      if (!_hatNochWas && _schonGesprochen) {
         for (let i = verben.length - 1; i >= 0; i--) { if (verben[i] && verben[i].key === 'befragen') verben.splice(i, 1); }
         verben.unshift({ key: 'befragen_ausgequetscht', label: 'Schon ausgequetscht – weiß nichts mehr', kategorie: 'ERKUNDEN', _sozialErledigt: true });
-      } else if (!_hatJetzt) {
+      } else if (_hatNochWas && !_hatJetzt) {
         for (let i = verben.length - 1; i >= 0; i--) { if (verben[i] && verben[i].key === 'befragen') verben.splice(i, 1); }
         verben.unshift({ key: 'befragen_nochnicht', label: 'Wirkt verschlossen – jetzt ist kein guter Moment', kategorie: 'ERKUNDEN', _sozialNochNicht: true });
       }
@@ -30266,6 +30294,23 @@ function oeffneNpcMenue(npc, modus, direktWennEindeutig) {
     if (_direktVerb && (_direktVerb.key === 'befragen' || _direktVerb._verhoerOeffnen)) {
       if (typeof diag === 'function') diag('detect', 'NPC-DIREKT: ' + npc.name + ' -> ' + _direktVerb.label);
       npcInteraktion(npc, _direktVerb);
+      return;
+    }
+    if (_direktVerb && _direktVerb._sozialErledigt) {
+      const _spaeter = _direktVerb.key === 'sozial_erschoepft';
+      if (typeof showProgressToast === 'function') {
+        showProgressToast(
+          _spaeter ? 'Heute genug geredet' : 'Nichts mehr herauszuholen',
+          _spaeter ? (npc.name + ' blockt weitere Fragen fuer heute ab.') : (npc.name + ' hat dir bereits alles gesagt, was hier zu erfahren ist.'),
+          'info', 'npc-gespraech-erledigt'
+        );
+      }
+      return;
+    }
+    if (_direktVerb && _direktVerb._sozialNochNicht) {
+      if (typeof showProgressToast === 'function') {
+        showProgressToast('Noch nicht', npc.name + ' bleibt im Moment verschlossen. Eine weitere Spur oder ein spaeterer Zeitpunkt kann das aendern.', 'info', 'npc-gespraech-nochnicht');
+      }
       return;
     }
   }

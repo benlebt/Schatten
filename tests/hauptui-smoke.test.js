@@ -76,6 +76,13 @@ assert(html.includes('.hauptui-kategorien .werkzeug-row .option-marker {\n    al
 assert(html.includes("oeffneNpcMenue(npc, 'szene', true)"), 'Rede mit must request direct unambiguous conversation');
 const npcMenuSource = html.slice(html.indexOf('function oeffneNpcMenue'), html.indexOf('// ===== Ende NPC-Interaktion ====='));
 assert(npcMenuSource.includes("_direktVerb.key === 'befragen' || _direktVerb._verhoerOeffnen"), 'single conversation actions must bypass the redundant NPC popup inside the NPC menu');
+assert(npcMenuSource.includes('_direktVerb._sozialErledigt'), 'finished conversations must bypass the redundant one-button popup');
+assert(npcMenuSource.includes('_direktVerb._sozialNochNicht'), 'temporarily locked conversations must bypass the redundant one-button popup');
+assert(npcMenuSource.includes('!_hatUeberhauptNoch && !_klientHier && _schonGesprochen'), 'NPCs without bound clues must not appear exhausted before their first conversation');
+assert(npcMenuSource.includes('!_hatNochWas && _schonGesprochen'), 'simple NPC conversations must remain available until the NPC was actually spoken to');
+assert(npcMenuSource.includes('_hatUeberhauptNoch && !_hatJetztErreichbar'), 'NPCs without any bound clue must not be mistaken for stage-locked conversations');
+assert(npcMenuSource.includes('_hatNochWas && !_hatJetzt'), 'simple NPCs without any bound clue must still allow their first conversation');
+assert(html.includes('_npcAlsAngesprochenMarkieren(npc.name, npc.id)'), 'real conversations must persist their per-NPC spoken state');
 const sceneVisualSource = html.slice(html.indexOf('function _renderKesslerSceneVisual'), html.indexOf('function _clearKesslerSceneVisual'));
 assert(!sceneVisualSource.includes('direktWennEindeutig'), 'NPC direct-action code must never leak into scene-image rendering');
 const start = html.indexOf('window.__hauptuiActionState');
