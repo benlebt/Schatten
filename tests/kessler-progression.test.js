@@ -36,5 +36,7 @@ assert(!html.includes('Margot Kessler'), 'interrogation file must name client Ed
 
 assert(/function _hauptuiFundAuswahl[\s\S]{0,1000}?_zeigeFundAuswahl\(selectedItems, selectedClues\)/.test(html), 'scene targets must use the deterministic find dialog');
 assert(/function _verhoerFinish[\s\S]{0,900}?_markiereIndizGefunden\(ind\)/.test(html), 'solved interrogations must book their defined evidence');
+assert(/robert_kessler:\s*\{[\s\S]{0,500}?grantIndizId:\s*'robert_aussage'/.test(html), 'Robert Kessler must use the interrogation dossier instead of the legacy AI dialogue');
+assert(/id:\s*'robert_aussage'[\s\S]{0,300}?npc:\s*'robert_kessler'/.test(html), 'Robert interrogation must grant a defined Kessler clue');
 
 console.log('KESSLER_PROGRESSION_AND_VERHOER_OK');

@@ -3693,7 +3693,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1137</div>
+    <div class="start-version">Schatten v7.12.1138</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3934,7 +3934,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1137</span>
+    <span>Schatten v7.12.1138</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6043,6 +6043,7 @@ const INTRO_VARIANTS = [
             { id: 'robert_eintritt_beobachtet', text: 'Robert Kessler betritt mittwochs gegen 19 Uhr den Hinterhof Sybelstrasse 24 - kein Büroweg, keine Überstunden', hotspot: 'Im Schatten des Hinterhofs warten', fundText: 'Du lehnst dich in den Hauseingang gegenüber und wartest. Gegen sieben kommt er: Robert Kessler, den Mantelkragen hoch, ein kurzer Blick über die Schulter. Kein Büroweg. Er verschwindet im Hinterhaus.', quelle: 'umgebung', actions: ['BEOBACHTEN','ERKUNDEN'], zeit: ['nachmittag','abend'], schluessel: ['eintritt','hinterhof','mittwoch','19 uhr','sybelstrasse','sybelstraße','holztuer','holztür','robert geht rein'], stage: 2 },
             { id: 'nachbarin_aussage', text: 'Frau Pohl: Robert kommt seit Monaten jeden Mittwoch zu der Hauke im dritten Stock', npc: 'frau_pohl', quelle: 'person', actions: ['ANSPRECHEN','BEFRAGEN','BESTECHEN'], schluessel: ['seit monaten','jeden mittwoch','nachbarin','pohl','vom sehen','dritter stock','dritten stock'], stage: 2 },
             { id: 'ilse_aussage', text: 'Ilse Hauke über Robert: er kommt seit Monaten mittwochs, zahle für Sitzungen, rede mehr als er posiere - und lasse seinen Ehering in der Manteltasche', npc: 'ilse_hauke', quelle: 'person', actions: ['ANSPRECHEN','BEFRAGEN','UEBERZEUGEN'], schluessel: ['ilse','erzählt','sagt','ehering','manteltasche','modell','seit monaten','mittwochs','robert','vertraut','affäre','affaere'], stage: 3, abStage: 2 },
+            { id: 'robert_aussage', text: 'Robert Kessler räumt ein, dass seine angeblichen Mittwochs-Überstunden Besuche bei Ilse Hauke waren und er Edith darüber belogen hat', npc: 'robert_kessler', quelle: 'person', actions: ['ANSPRECHEN','BEFRAGEN','KONFRONTIEREN'], schluessel: ['robert','gesteht','räumt ein','raeumt ein','überstunden','ueberstunden','ilse','edith belogen','mittwochs'], stage: 3, abStage: 2 },
             { id: 'fenster_beobachtung', text: 'Durchs Hinterhof-Fenster: Robert und Ilse in vertrauter Nähe', hotspot: 'Durchs Hinterhoffenster spähen', fundText: 'Im dritten Stock brennt Licht. Hinter der halb zugezogenen Gardine zwei Schatten, dicht beieinander. Sie lacht, er legt ihr eine Hand auf die Schulter. Keine Sitzung, kein Modellstehen. Das ist etwas anderes.', quelle: 'umgebung', actions: ['BEOBACHTEN'], zeit: ['abend','nacht'], schluessel: ['durchs fenster','am fenster','vertraut','vertraute naehe','vertraute nähe','umarmung','robert und ilse','gesehen'], stage: 3, abStage: 2 },
           ] },
         { name: 'Kessler-Wohnung Charlottenburg', sektor: 'West (Charlottenburg)', detail: 'Edith zu Hause - Klient wartet hier auf Anruf',
@@ -12191,7 +12192,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1137 +Flucht-nur-bei-echter-Gefahr';
+window.SCHATTEN_VERSION = 'v7.12.1138 +Robert-in-Verhoerakte';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -53404,7 +53405,7 @@ setInterval(function() {
 })();
 
 /* ================= VERHÖR-PILOT (v7.13) — Kessler-Fall, deterministisch, 0 KI =================
-   Verhörakte-Overlay für Frau Pohl + Ilse Hauke. Qualitative Zustandsmaschine
+   Verhörakte-Overlay für Frau Pohl, Ilse Hauke und Robert Kessler. Qualitative Zustandsmaschine
    (ÖFFNUNG verschlossen->zugänglich->erschüttert->bricht, GEMÜT ruhig->gereizt->macht dicht),
    Vorhalt aus gefundenen Belegen, zentrale caseProgress.aussagen mit Sofort-Widerlegung.
    Spielentscheidende Texte LOKAL; KI-Bündelung erst Phase 2. Hinter Flag VERHOER_PILOT_AKTIV. */
@@ -53471,6 +53472,29 @@ const VERHOER_PROFILE = {
       gereizt: 'Sie wird laut und beteuert — zu eifrig.', dicht: 'Sie weint und macht dicht.', zweifel: 'Etwas an ihrer Eile stört dich — das saß zu glatt.' },
     failStamp: 'Bricht ab',
     failText: 'Sie macht dicht und weint. Nichts Brauchbares mehr. <b>Ruf −</b>'
+  },
+  robert_kessler: {
+    name: 'Robert Kessler', aktenr: 'Fall Kessler · Befragung Zielperson', verh: 'Ehemann der Auftraggeberin · Ziel der Beschattung',
+    luegt: true, beweisSchwelle: 2, hebelIds: ['robert_eintritt_beobachtet', 'fenster_beobachtung', 'briefchen_ilse'], grantIndizId: 'robert_aussage',
+    start: 'Sie haben mich verfolgt? Ich war bei einer privaten Sitzung. Das geht meine Frau nichts an.',
+    react: {
+      erzaehlen: { oeff: 1, gem: 0, q: ['Es fing tatsächlich mit Sitzungen an. Ich brauchte einen Ort, an dem niemand etwas von mir wollte.', 'Mittwochs konnte ich früher aus der Spedition. Edith hätte das nicht verstanden.'], tell: 'er spricht schneller, sobald er sich rechtfertigt' },
+      gemeinsam: { oeff: 1, gem: -1, q: ['Sie wissen doch, wie eine Ehe still werden kann. Ich wollte niemanden verletzen.', 'Ich bin kein Verbrecher. Nur ein Feigling, wahrscheinlich.'], tell: 'die Empörung weicht sichtbarer Scham' },
+      schweigen: { oeff: 1, gem: 0, q: ['Was soll ich denn noch sagen?', 'Er hält deinen Blick nicht aus und sieht zur Haustür.'], tell: 'die Stille lässt seine vorbereitete Erklärung bröckeln' },
+      gefaellig: { oeff: 0, gem: -1, q: ['Er nimmt die Zigarette mit zitternden Fingern. Danke.', 'Er raucht hastig und sammelt sich.'], tell: 'er beruhigt sich, verrät aber noch nichts' },
+      widerspruch: { oeff: 0, gem: 1, q: ['Sie wissen überhaupt nichts!', 'Lassen Sie Edith da raus.'], tell: 'ertappt fährt er zu heftig auf' }
+    },
+    lie: { aussage: { id: 'robert_nur_sitzungen', text: 'Robert: Die Treffen mit Ilse waren ausschließlich bezahlte Modellsitzungen.', status: 'unbestätigt', quelle: 'Robert Kessler', widerlegtDurch: ['fenster_beobachtung', 'briefchen_ilse'] },
+      q: ['Es waren nur Sitzungen. Nichts Persönliches.', 'Ilse war mein Modell, weiter nichts.'], tell: 'die Erklärung klingt auswendig gelernt' },
+    vorhalt: { ok: 'Er betrachtet den Beleg lange. Dann nickt er, ohne dich anzusehen.', tell_ok: 'seine Ausrede hält nicht mehr',
+      zufrueh: 'Das beweist nicht, was Sie daraus machen wollen.', tell_frueh: 'noch klammert er sich an seine Version',
+      ineff: 'Damit können Sie mir gar nichts nachweisen.', tell_ineff: 'der Vorhalt trifft nicht den wunden Punkt' },
+    breakStamp: 'Er räumt es ein',
+    breakLine: 'Also gut. Die Überstunden waren gelogen. Ich war mittwochs bei Ilse. Sagen Sie Edith, dass ich zu feige war, ihr selbst die Wahrheit zu sagen.',
+    eindruck: { oeff: ['Er gibt sich empört, doch seine Hände verraten ihn.', 'Die Rechtfertigung bekommt Risse.', 'Er sucht nur noch nach einer Formulierung, die weniger schuldig klingt.', ''],
+      gereizt: 'Er wird laut und flüchtet sich in Empörung.', dicht: 'Er verweigert jedes weitere Wort.', zweifel: 'Seine Erklärung klingt zu sauber.' },
+    failStamp: 'Macht dicht',
+    failText: 'Robert wendet sich ab und verweigert jedes weitere Wort. <b>Ruf −</b>'
   }
 };
 
