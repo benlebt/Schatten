@@ -3677,7 +3677,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1131</div>
+    <div class="start-version">Schatten v7.12.1132</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3918,7 +3918,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1131</span>
+    <span>Schatten v7.12.1132</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -12174,7 +12174,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1131 +Kompakte-Aktionsnavigation';
+window.SCHATTEN_VERSION = 'v7.12.1132 +Direkte-Gespraeche';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -29779,7 +29779,7 @@ function npcInteraktion(npc, verb) {
   } catch (e) {}
   if (typeof chooseOption === 'function') chooseOption(npcOpt);
 }
-function oeffneNpcMenue(npc, modus) {
+function oeffneNpcMenue(npc, modus, direktWennEindeutig) {
   // v7.12.580 (UI-B3a): modus filtert die angezeigten Verben.
   //   'szene'     -> nur szene-auslösende Verben (befragen/bedrohen/beobachten/...). Für die "Übergang"-Sektion.
   //   'verwalten' -> nur Party-/Verwaltungs-Aktionen (mitnehmen/hier lassen). Für die "Bleibt"-Sektion.
@@ -53968,6 +53968,18 @@ function _renderKesslerSceneVisual(scene) {
     visual.classList.add('hidden');
     return;
   }
+  // Haupt-UI: "Rede mit" ist bereits die Entscheidung fuer ein Gespraech.
+  // Gibt es danach nur noch genau EIN schlichtes Gespraech bzw. die Verhoerakte,
+  // fuehren wir es direkt aus statt ein redundantes Ein-Button-Popup zu zeigen.
+  // Echte Strategieauswahl (Tonarten, Bestechen, Bedrohen, Kampf usw.) bleibt im Menue.
+  if (direktWennEindeutig && _alleVerben.length === 1) {
+    const _direktVerb = _alleVerben[0];
+    if (_direktVerb && (_direktVerb.key === 'befragen' || _direktVerb._verhoerOeffnen)) {
+      if (typeof diag === 'function') diag('detect', 'NPC-DIREKT: ' + npc.name + ' -> ' + _direktVerb.label);
+      npcInteraktion(npc, _direktVerb);
+      return;
+    }
+  }
 
   const candidates = [];
   try {
@@ -54270,7 +54282,10 @@ function _hauptuiExecute(verb, target) {
     const npc = _hauptuiNpc(target);
     if (!npc) return;
     if (verb === 'reden') {
-      if (typeof oeffneNpcMenue === 'function') { if (typeof _markPopupOpened === 'function') _markPopupOpened(); oeffneNpcMenue(npc, 'alle'); }
+      if (typeof oeffneNpcMenue === 'function') {
+        if (typeof _markPopupOpened === 'function') _markPopupOpened();
+        oeffneNpcMenue(npc, 'szene', true);
+      }
       return;
     }
     if (verb === 'anschauen' && typeof npcInteraktion === 'function') {

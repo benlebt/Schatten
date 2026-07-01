@@ -61,6 +61,8 @@ assert(html.includes("groups.filter(function (group) { return group.targets.leng
 assert(html.includes("if (ready) {\n      const execute"), 'execute button must only render for a complete command');
 assert(html.includes('.hauptui-kategorien .werkzeug-row .werkzeug-btn {'), 'compact Haupt-UI tool button override missing');
 assert(html.includes('flex: 0 1 auto;\n    width: auto;'), 'tool buttons must keep their natural width');
+assert(html.includes("oeffneNpcMenue(npc, 'szene', true)"), 'Rede mit must request direct unambiguous conversation');
+assert(html.includes("_direktVerb.key === 'befragen' || _direktVerb._verhoerOeffnen"), 'single conversation actions must bypass the redundant NPC popup');
 const start = html.indexOf('window.__hauptuiActionState');
 const end = html.indexOf('</script>', start);
 assert(start > -1 && end > start, 'Haupt-UI source block not found');
@@ -90,7 +92,12 @@ const context = {
   _ortsFundIndizienErreichbar: () => [clue],
   _itemsBeiKarl: () => [{ id: 'notizbuch', name: 'Notizbuch' }],
   getNpcsAtCurrentLocation: () => [voss],
-  oeffneNpcMenue: (npc) => { assert.strictEqual(npc.id, voss.id); calls.npc += 1; },
+  oeffneNpcMenue: (npc, modus, direkt) => {
+    assert.strictEqual(npc.id, voss.id);
+    calls.npc += 1;
+    calls.npcModus = modus;
+    calls.npcDirekt = direkt;
+  },
   _markPopupOpened: () => {},
   _zeigeFundAuswahl: (items, clues) => { calls.fund += 1; calls.fundItems = items; calls.fundClues = clues; },
   chooseOption: (option) => calls.options.push(option),
@@ -119,6 +126,8 @@ let execute = all(container).find((element) => element.className === 'hauptui-ex
 assert(execute && !execute.disabled, 'person command must be executable');
 execute.onTap();
 assert.strictEqual(calls.npc, 1, 'person command must open the real NPC menu');
+assert.strictEqual(calls.npcModus, 'szene', 'Rede mit must exclude party-management actions');
+assert.strictEqual(calls.npcDirekt, true, 'Rede mit must directly execute an unambiguous conversation');
 assert(!all(container).some((element) => element.className.split(' ').includes('is-selected')), 'executed commands must clear their yellow selection state');
 
 byText(container, 'Roberts Ecktisch').onTap();
