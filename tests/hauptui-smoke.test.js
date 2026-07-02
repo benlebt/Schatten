@@ -82,7 +82,8 @@ assert(html.includes("marker = 'Gesperrt · Spannung';"), 'sleep tension lock ma
 assert(html.includes("<span>Wirklich schlafen?</span>"), 'sleep confirmation must use a compact title');
 assert(html.includes('grid-template-columns: 40px minmax(0, auto) minmax(0, 1fr);'), 'travel quick action needs stable icon, title and destination columns');
 assert(html.includes('.hauptui-quick-actions .option-text-wrap {\n    display: contents;'), 'desktop quick actions must place title and marker in separate grid columns');
-assert(/function fxDialog[\s\S]{0,500}?window\.HAUPTUI_AKTIV[\s\S]{0,120}?window\._fxLastT = Date\.now\(\);[\s\S]{0,40}?return;/.test(html), 'legacy emoji dialogue cards must stay hidden in the scene-image Haupt-UI');
+assert(html.includes('const FX_DIALOG_OVERLAYS_AKTIV = false;'), 'legacy emoji dialogue cards must stay globally disabled in the scene-image style');
+assert(/function fxDialog[\s\S]{0,220}?window\._fxLastT = Date\.now\(\);[\s\S]{0,80}?if \(!FX_DIALOG_OVERLAYS_AKTIV\) return;/.test(html), 'fxDialog must mark handled and return before rendering emoji dialogue cards');
 assert(html.includes('.hauptui-kategorien .werkzeug-row .option-marker {\n    align-self: center;\n    margin-top: 0;\n    padding: 2px 6px;\n    letter-spacing: 0;'), 'tool marker typography must match the travel marker');
 assert(html.includes("oeffneNpcMenue(npc, 'szene', true)"), 'Rede mit must request direct unambiguous conversation');
 assert(html.includes('UI-KLICKVERLAUF (chronologisch)'), 'debug export must include the chronological UI click audit');
