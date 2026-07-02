@@ -90,6 +90,8 @@ assert(html.includes('Sichtbare UI-Zustaende ('), 'debug export must include off
 assert(html.includes("_uiAudit('FADEN', faden.frage, faden.ort)"), 'open investigation threads must be logged when clicked');
 assert(html.includes('&& !_ortHatJetztErreichbareSpur && !_offenerFadenHier;'), 'an open thread at the current location must suppress the exhausted-location banner');
 assert(html.includes('function _hauptuiHatOffenenFadenAmOrt(ortName)'), 'Haupt-UI needs a shared current-location thread check');
+assert(html.includes("showProgressToast('Gleich bereit'"), 'execute must explain transient API locks instead of silently doing nothing');
+assert(html.includes("showProgressToast('Nicht erreichbar'"), 'execute must explain stale person targets instead of silently doing nothing');
 const npcMenuSource = html.slice(html.indexOf('function oeffneNpcMenue'), html.indexOf('// ===== Ende NPC-Interaktion ====='));
 assert(npcMenuSource.includes("_direktVerb.key === 'befragen' || _direktVerb._verhoerOeffnen"), 'single conversation actions must bypass the redundant NPC popup inside the NPC menu');
 assert(npcMenuSource.includes('_direktVerb._sozialErledigt'), 'finished conversations must bypass the redundant one-button popup');
@@ -108,6 +110,7 @@ assert(start > -1 && end > start, 'Haupt-UI source block not found');
 const calls = { npc: 0, fund: 0, options: [], marks: 0, flushes: 0, saves: 0 };
 const clue = { id: 'kessler_brief', text: 'Roberts gefaltetes Briefchen' };
 const voss = { id: 'voss', name: 'Oberkellner Voss', tag: 'WITNESS' };
+let expectedNpcId = voss.id;
 const context = {
   console,
   window: {},
@@ -133,7 +136,7 @@ const context = {
   _itemsBeiKarl: () => [{ id: 'notizbuch', name: 'Notizbuch' }],
   getNpcsAtCurrentLocation: () => [voss],
   oeffneNpcMenue: (npc, modus, direkt) => {
-    assert.strictEqual(npc.id, voss.id);
+    assert.strictEqual(npc.id, expectedNpcId);
     calls.npc += 1;
     calls.npcModus = modus;
     calls.npcDirekt = direkt;
@@ -169,8 +172,37 @@ assert.strictEqual(context._hauptuiHatOffenenFadenAmOrt('Spedition Schmidt Moabi
 context.caseProgress.gefundeneIndizIds.push('robert_aussage');
 faeden = context._hauptuiKesslerFaeden();
 assert.strictEqual(faeden[0].id, 'bericht', 'Robert statement must lead back to Edith');
+
+const tetzlaff = { id: 'norbert_tetzlaff', name: 'Norbert Tetzlaff', tag: 'INFORMANT', typ: 'person', hinweis: true, hinweisAktionen: ['Befragen', 'Bestechen'] };
+context.caseProgress.gefundeneIndizIds = ['robert_eintritt_beobachtet', 'tuerschild_hauke', 'ilse_aussage'];
+context.engineCurrentLocation = { name: 'Spedition Schmidt, Moabit' };
+context.window.__hauptuiActionState = { verb: null, targetKey: null };
+context._baukastenZiele = () => ({ personen: [tetzlaff], objekte: [], items: [] });
+context.getNpcsAtCurrentLocation = () => [tetzlaff];
+expectedNpcId = tetzlaff.id;
+const threadContainer = new FakeElement('div');
+context._renderEngineMenu(threadContainer, {});
+const speditionThread = byText(threadContainer, 'Stimmen Roberts angebliche Überstunden?');
+assert(speditionThread, 'Spedition thread must be visible at the Spedition');
+speditionThread.onTap();
+const threadExecute = all(threadContainer).find((element) => element.className === 'hauptui-execute');
+assert(threadExecute && visibleText(threadExecute).includes('Rede mit · Norbert Tetzlaff'), 'Spedition thread must prepare an executable Tetzlaff conversation');
+const npcCallsBeforeThread = calls.npc;
+threadExecute.onTap();
+assert.strictEqual(calls.npc, npcCallsBeforeThread + 1, 'executing the Spedition thread must open Tetzlaff conversation');
+
 context._istKesslerFallFuerBild = () => false;
 context.caseProgress.gefundeneIndizIds = [];
+context.engineCurrentLocation = { name: 'Cafe Wien' };
+context.window.__hauptuiActionState = { verb: null, targetKey: null };
+context._baukastenZiele = () => ({
+  personen: [{ id: voss.id, name: voss.name, typ: 'person', hinweis: true, hinweisAktionen: ['Befragen', 'Bestechen'] }],
+  objekte: [{ id: clue.id, name: 'Roberts Ecktisch', typ: 'objekt', actions: ['BEOBACHTEN', 'ERKUNDEN'], spur: true }],
+  items: [{ id: 'notizbuch', name: 'Notizbuch', typ: 'item' }],
+});
+context.getNpcsAtCurrentLocation = () => [voss];
+expectedNpcId = voss.id;
+calls.npc = 0;
 
 const container = new FakeElement('div');
 context._renderEngineMenu(container, {});
