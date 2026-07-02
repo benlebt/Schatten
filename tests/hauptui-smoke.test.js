@@ -82,6 +82,8 @@ assert(html.includes("marker = 'Gesperrt · Spannung';"), 'sleep tension lock ma
 assert(html.includes("<span>Wirklich schlafen?</span>"), 'sleep confirmation must use a compact title');
 assert(html.includes('grid-template-columns: 40px minmax(0, auto) minmax(0, 1fr);'), 'travel quick action needs stable icon, title and destination columns');
 assert(html.includes('.hauptui-quick-actions .option-text-wrap {\n    display: contents;'), 'desktop quick actions must place title and marker in separate grid columns');
+assert(html.includes('.hauptui-quick-actions .option-text-wrap,\n    .hauptui-quick-actions .option-btn-sleep .option-text-wrap {\n      display: grid;\n      grid-template-columns: auto minmax(0, 1fr);'), 'narrow quick actions must keep title and marker in one stable row');
+assert(html.includes('.hauptui-quick-actions .option-text-wrap > span:first-child,\n    .hauptui-quick-actions .option-btn-sleep .option-text-wrap > span:first-child {\n      min-width: 0;\n      max-width: 100%;\n      overflow: hidden;\n      text-overflow: ellipsis;\n      white-space: nowrap;'), 'narrow quick-action titles must not wrap over travel markers');
 assert(html.includes('const FX_DIALOG_OVERLAYS_AKTIV = false;'), 'legacy emoji dialogue cards must stay globally disabled in the scene-image style');
 assert(/function fxDialog[\s\S]{0,220}?window\._fxLastT = Date\.now\(\);[\s\S]{0,80}?if \(!FX_DIALOG_OVERLAYS_AKTIV\) return;/.test(html), 'fxDialog must mark handled and return before rendering emoji dialogue cards');
 assert(html.includes('.hauptui-kategorien .werkzeug-row .option-marker {\n    align-self: center;\n    margin-top: 0;\n    padding: 2px 6px;\n    letter-spacing: 0;'), 'tool marker typography must match the travel marker');
