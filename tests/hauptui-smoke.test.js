@@ -146,22 +146,12 @@ const quickActions = new FakeElement('div');
 quickActions.className = 'hauptui-quick-actions';
 container.appendChild(quickActions);
 
-const observeOnce = byText(container, 'Beobachte');
-assert(observeOnce, 'generic observation must initially be available');
-observeOnce.onTap();
-let execute = all(container).find((element) => element.className === 'hauptui-execute');
-assert(execute && !execute.disabled, 'generic observation must be executable once');
-execute.onTap();
-context._renderEngineMenu(container, {});
-assert(!byText(container.querySelector('.hauptui-action-menu'), 'Beobachte'), 'generic observation must disappear after use in an unchanged location state');
-assert(context.caseProgress.hauptuiVerbraucht, 'generic action exhaustion must persist in case progress');
-
 const vossButton = byText(container, voss.name);
 assert(vossButton, 'Voss target missing; buttons=' + all(container).filter((element) => element.tagName === 'button').map(visibleText).join(' | '));
 assert(visibleText(vossButton).includes('Hinweis: Befragen/Bestechen'), 'person target must name the clue actions');
 vossButton.onTap();
 assert(container.children.indexOf(container.querySelector('.hauptui-action-menu')) < container.children.indexOf(quickActions), 're-rendered menu must remain above travel and sleep actions');
-execute = all(container).find((element) => element.className === 'hauptui-execute');
+let execute = all(container).find((element) => element.className === 'hauptui-execute');
 assert(execute && !execute.disabled, 'person command must be executable');
 execute.onTap();
 assert.strictEqual(calls.npc, 1, 'person command must open the real NPC menu');
@@ -184,9 +174,6 @@ assert.strictEqual(calls.flushes, 1, 'accepted AI scene must show the clue rewar
 assert.strictEqual(context.caseProgress.pendingHauptuiIndiz, null, 'pending clue must clear after commit');
 context._renderEngineMenu(container, {});
 assert(!byText(container.querySelector('.hauptui-action-menu'), 'Beobachte'), 'new evidence alone must not reopen generic observation loops at the same stage');
-context.caseProgress.stage = 1;
-context._renderEngineMenu(container, {});
-assert(byText(container.querySelector('.hauptui-action-menu'), 'Beobachte'), 'a new case stage must reopen generic observation once');
 
 const clueLocations = [
   {
@@ -238,8 +225,8 @@ context._ortsFundIndizienErreichbar = () => [];
 context._renderEngineMenu(container, {});
 const searchButton = byText(container, 'Durchsuche');
 assert(searchButton, 'empty locations must still offer Durchsuche');
-assert(byText(container, 'Beobachte'), 'empty locations must offer active observation');
-assert(byText(container, 'Lausche'), 'empty locations must offer listening');
+assert(!byText(container, 'Beobachte'), 'empty locations must not offer random generic observation scenes');
+assert(!byText(container, 'Lausche'), 'empty locations must not offer random generic listening scenes');
 assert(!byText(container, 'Umsehen'), 'redundant Umsehen action must stay removed');
 assert(!byText(container, 'Versteck dich'), 'generic hiding must stay out of normal location mode');
 assert(!byText(container, 'Warte'), 'generic waiting must stay out of normal location mode');
@@ -265,8 +252,8 @@ for (const place of kesslerPlaces) {
   context._renderEngineMenu(container, {});
   assert(!byText(container, place), place + ' must not repeat as a visible target');
   assert(byText(container, 'Durchsuche'), place + ' must expose searching through the implicit location');
-  assert(byText(container, 'Beobachte'), place + ' must expose active observation');
-  assert(byText(container, 'Lausche'), place + ' must expose listening');
+  assert(!byText(container, 'Beobachte'), place + ' must not expose random generic observation');
+  assert(!byText(container, 'Lausche'), place + ' must not expose random generic listening');
   assert(!byText(container, 'Umsehen'), place + ' must not expose redundant Umsehen');
   assert(!byText(container, 'Versteck dich'), place + ' must not expose generic hiding');
   assert(!byText(container, 'Warte'), place + ' must not expose generic waiting');
