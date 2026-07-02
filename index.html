@@ -3768,7 +3768,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1148</div>
+    <div class="start-version">Schatten v7.12.1149</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -4009,7 +4009,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1148</span>
+    <span>Schatten v7.12.1149</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -12275,7 +12275,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1148 +Szenenbild-Dialoge-und-Quickactions';
+window.SCHATTEN_VERSION = 'v7.12.1149 +Faden-konsistente-Ortsmeldung';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -31081,9 +31081,17 @@ function renderOptions(scene) {
           ? offeneIndizienAmOrtNachErreichbarkeit(_locLive) : null;
         _ortHatJetztErreichbareSpur = !!(_liveReach && (_liveReach.jetzt | 0) > 0);
       } catch (e) { _ortHatJetztErreichbareSpur = false; }
+      // v7.12.1149: Die Haupt-UI kann einen konkreten offenen Ermittlungsfaden
+      // am aktuellen Ort zeigen, auch wenn der alte Dirigent bereits
+      // "indiz_anderswo" meldet. Dann darf der Ort nicht zugleich als leer
+      // bezeichnet werden.
+      const _offenerFadenHier = !!(window.HAUPTUI_AKTIV
+        && typeof _hauptuiHatOffenenFadenAmOrt === 'function'
+        && _hauptuiHatOffenenFadenAmOrt(engineCurrentLocation && engineCurrentLocation.name));
       if (_personMitHinweis && _dirR && _dirR.art === 'indiz_anderswo' && typeof diag === 'function') diag('drift', '⚠ KONSISTENZ: Dirigent meldete indiz_anderswo, aber eine anwesende Person hat noch einen offenen Hinweis -> Banner unterdrueckt (kein "nichts mehr zu ermitteln")');
       if (_ortHatJetztErreichbareSpur && _dirR && _dirR.art === 'indiz_anderswo' && typeof diag === 'function') diag('drift', '⚠ KONSISTENZ: Dirigent meldete indiz_anderswo, aber Live-Erreichbarkeit meldet Spur am aktuellen Ort -> Leer-Banner unterdrueckt');
-      const _ortErschoepft = _dirR && _dirR.art === 'indiz_anderswo' && !_imKampfR && !_imExplR && !_fallVorbeiR && _spR <= 3 && !_personMitHinweis && !_ortHatJetztErreichbareSpur;
+      if (_offenerFadenHier && _dirR && _dirR.art === 'indiz_anderswo' && typeof diag === 'function') diag('drift', '⚠ KONSISTENZ: Dirigent meldete indiz_anderswo, aber Offene Fäden zeigen Arbeit am aktuellen Ort -> Leer-Banner unterdrueckt');
+      const _ortErschoepft = _dirR && _dirR.art === 'indiz_anderswo' && !_imKampfR && !_imExplR && !_fallVorbeiR && _spR <= 3 && !_personMitHinweis && !_ortHatJetztErreichbareSpur && !_offenerFadenHier;
       if (_ortErschoepft) {
         _ortIndizienAusgeschoepft = true; // Reisen hervorheben - auch wenn der Klient noch im Raum sitzt
         if (Array.isArray(_npR) && _npR.length === 0) {
@@ -54888,6 +54896,17 @@ function _hauptuiKesslerFaeden() {
     if ((hat('robert_aussage') || caseProgress.wahrheitErkannt) && !caseProgress.istGelöst) faeden.push({ id: 'bericht', frage: 'Welche Wahrheit soll Edith erfahren?', ort: 'Kessler-Wohnung Charlottenburg', targetIds: ['edith_kessler'] });
     return faeden.slice(0, 3);
   } catch (e) { return []; }
+}
+
+function _hauptuiHatOffenenFadenAmOrt(ortName) {
+  try {
+    if (!ortName || typeof _hauptuiKesslerFaeden !== 'function') return false;
+    const ortJetzt = normForMatch(ortName);
+    return _hauptuiKesslerFaeden().some(function (faden) {
+      const ortZiel = normForMatch(faden && faden.ort);
+      return !!ortZiel && (ortJetzt === ortZiel || ortJetzt.indexOf(ortZiel) !== -1 || ortZiel.indexOf(ortJetzt) !== -1);
+    });
+  } catch (e) { return false; }
 }
 
 // Haupt-UI: echter Verb-Ziel-Baukasten. Die sichtbaren Ziele stammen aus denselben Engine-Quellen wie

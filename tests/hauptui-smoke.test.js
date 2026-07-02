@@ -88,6 +88,8 @@ assert(html.includes("oeffneNpcMenue(npc, 'szene', true)"), 'Rede mit must reque
 assert(html.includes('UI-KLICKVERLAUF (chronologisch)'), 'debug export must include the chronological UI click audit');
 assert(html.includes('Sichtbare UI-Zustaende ('), 'debug export must include offered Haupt-UI and dossier states');
 assert(html.includes("_uiAudit('FADEN', faden.frage, faden.ort)"), 'open investigation threads must be logged when clicked');
+assert(html.includes('&& !_ortHatJetztErreichbareSpur && !_offenerFadenHier;'), 'an open thread at the current location must suppress the exhausted-location banner');
+assert(html.includes('function _hauptuiHatOffenenFadenAmOrt(ortName)'), 'Haupt-UI needs a shared current-location thread check');
 const npcMenuSource = html.slice(html.indexOf('function oeffneNpcMenue'), html.indexOf('// ===== Ende NPC-Interaktion ====='));
 assert(npcMenuSource.includes("_direktVerb.key === 'befragen' || _direktVerb._verhoerOeffnen"), 'single conversation actions must bypass the redundant NPC popup inside the NPC menu');
 assert(npcMenuSource.includes('_direktVerb._sozialErledigt'), 'finished conversations must bypass the redundant one-button popup');
@@ -114,6 +116,7 @@ const context = {
   String,
   Array,
   Date,
+  normForMatch: (value) => String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(),
   sceneCounter: 3,
   logEntries: [{ type: 'scene', sceneNr: 3 }],
   caseProgress: { gefundeneIndizIds: [] },
@@ -157,9 +160,12 @@ assert.deepStrictEqual(Array.from(faeden, (f) => f.id), ['robert_weg', 'wohnung'
 context.caseProgress.gefundeneIndizIds = ['robert_eintritt_beobachtet', 'tuerschild_hauke', 'ilse_aussage'];
 faeden = context._hauptuiKesslerFaeden();
 assert.deepStrictEqual(Array.from(faeden, (f) => f.id), ['spedition', 'cafe', 'edith'], 'Ilse statement must open independent investigation locations');
+assert.strictEqual(context._hauptuiHatOffenenFadenAmOrt('Spedition Schmidt, Moabit'), true, 'Spedition thread must count as local despite punctuation differences');
+assert.strictEqual(context._hauptuiHatOffenenFadenAmOrt('Hinterhof Sybelstrasse'), false, 'a thread at another location must not suppress a genuinely exhausted place');
 context.caseProgress.gefundeneIndizIds.push('tetzlaff_aussage');
 faeden = context._hauptuiKesslerFaeden();
 assert.strictEqual(faeden[0].id, 'robert', 'independent evidence must open Robert confrontation');
+assert.strictEqual(context._hauptuiHatOffenenFadenAmOrt('Spedition Schmidt Moabit'), false, 'resolved Spedition thread must stop keeping the location open');
 context.caseProgress.gefundeneIndizIds.push('robert_aussage');
 faeden = context._hauptuiKesslerFaeden();
 assert.strictEqual(faeden[0].id, 'bericht', 'Robert statement must lead back to Edith');
