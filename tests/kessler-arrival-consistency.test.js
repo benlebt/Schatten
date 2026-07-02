@@ -87,6 +87,20 @@ imageContext._renderKesslerSceneVisual({ szene: 'Du stellst den Motor ab, steigs
 assert.strictEqual(visualClasses.has('hidden'), false, 'Kessler apartment night scene must reveal its scene image');
 assert.strictEqual(visualElements['kessler-scene-image'].attrs.src, 'assets/scenes/kessler/kessler-wohnung-charlottenburg.png', 'Kessler apartment at night must select the dark apartment asset');
 assert.strictEqual(visualElements['kessler-scene-place'].textContent, 'Kessler-Wohnung, Charlottenburg', 'Kessler apartment caption must be set');
+imageContext.engineCurrentLocation = { name: 'Cafe Wien' };
+imageContext._aktTageszeitName = () => 'nacht';
+imageContext._renderKesslerSceneVisual({ szene: 'Du laesst das Cafe Wien hinter dir. Draussen auf dem Kurfuerstendamm beisst der Wind.' });
+assert.strictEqual(visualClasses.has('hidden'), false, 'transitional cafe prose must keep the best matching scene image visible');
+assert.strictEqual(visualElements['kessler-scene-image'].attrs.src, 'assets/scenes/kessler/cafe-wien.png', 'Cafe Wien at night must keep the dark cafe asset even during transitional prose');
+visualClasses.add('hidden');
+visualElements['kessler-scene-image'].attrs = {};
+visualElements['kessler-scene-place'].textContent = '';
+imageContext.engineCurrentLocation = null;
+imageContext.currentOrt = '';
+imageContext.lastLocation = '';
+imageContext._renderKesslerSceneVisual({ szene: 'Im Cafe Wien verstummt der Oberkellner, bevor Karl wieder auf den Kurfuerstendamm tritt.' });
+assert.strictEqual(visualClasses.has('hidden'), false, 'scene prose must be enough to recover the Cafe Wien scene image when the engine location is briefly empty');
+assert.strictEqual(visualElements['kessler-scene-image'].attrs.src, 'assets/scenes/kessler/cafe-wien.png', 'Cafe Wien text fallback must select the dark cafe asset');
 
 const textHelperStart = html.indexOf('function _kesslerInnenraumTextPasst');
 const textHelperEnd = html.indexOf('function _renderKesslerSceneVisual', textHelperStart);
@@ -95,7 +109,7 @@ const textContext = {
 };
 vm.createContext(textContext);
 vm.runInContext(html.slice(textHelperStart, textHelperEnd), textContext);
-assert.strictEqual(textContext._kesslerInnenraumTextPasst('Karl steht auf dem Hof vor dem Tor. In einem Büro brennt Licht.'), false, 'outside arrival must not show the interior image');
+assert.strictEqual(textContext._kesslerInnenraumTextPasst('Karl steht auf dem Hof vor dem Tor. In einem Büro brennt Licht.'), false, 'outside/interior mismatch may be diagnosed but must no longer blank the scene image');
 assert.strictEqual(textContext._kesslerInnenraumTextPasst('Karl tritt in das Büro. Tetzlaff sitzt am Schreibtisch.'), true, 'interior scene must show the interior image');
 assert.strictEqual(textContext._kesslerInnenraumTextPasst('Du stellst den Motor ab und gehst in die Wohnung. Edith wartet.'), true, 'apartment arrival from the Opel must still show the apartment image');
 
