@@ -3768,7 +3768,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1150</div>
+    <div class="start-version">Schatten v7.12.1151</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -4009,7 +4009,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1150</span>
+    <span>Schatten v7.12.1151</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -12275,7 +12275,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1150 +Robustes-Faden-Ausfuehren';
+window.SCHATTEN_VERSION = 'v7.12.1151 +Narrativer-Faden-Kompass';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -36476,6 +36476,15 @@ VERBOTEN: Karl wacht woanders auf ohne Erklaerung. Wenn du Pfad B waehlst, MUSST
       timeContext += `\n\nSPIELER-ORTSWECHSEL DURCHSETZEN (KRITISCH): Die soeben gewaehlte Aktion war eine klare REISE ${_zielText}. Die naechste Szene MUSS Karl auf dem Weg dorthin oder bereits am Zielort zeigen - der "ort"-Eintrag MUSS sich entsprechend aendern. Bleibe NICHT am vorigen Ort (z.B. Buero), erfinde KEINE neue Person die an die Tuer klopft, KEINEN Anruf der Karl aufhaelt, KEINE Mikroszene die die Reise verzoegert. Karl bricht auf und kommt an. Der Ortswechsel passiert zu Beginn der Szene.`;
       if (typeof diag === 'function') diag('drift', 'SPIELER-ORTSWECHSEL-PUSH aktiv (Reise ' + (_spielerReiseZiel || 'angesagt') + ' - praeventiver Push VOR KI-Antwort, scenesAtSameLocation=' + scenesAtSameLocation + ')');
     }
+    try {
+      const _fadenPush = (typeof _hauptuiNarrativerFadenPrompt === 'function')
+        ? _hauptuiNarrativerFadenPrompt(engineCurrentLocation && engineCurrentLocation.name, scenesAtSameLocation)
+        : '';
+      if (_fadenPush) {
+        timeContext += '\n\n' + _fadenPush;
+        if (typeof diag === 'function') diag('info', 'Narrativer Faden-Kompass aktiv: ' + _fadenPush.replace(/\s+/g, ' ').slice(0, 180));
+      }
+    } catch (e) {}
     // v7.12.67: Ortswechsel-Pflicht NEU justiert. Die v7.12.66-Verschaerfung (6 Sz
     // hart + HARD-FORCE bei 2 ignoriert) war zu aggressiv - der 13:22-Run hatte 8
     // HARD-FORCE-Wechsel ("Zwangs-Rotation / ungeduldige Diashow"). Jetzt: Pflicht
@@ -54907,6 +54916,33 @@ function _hauptuiHatOffenenFadenAmOrt(ortName) {
       return !!ortZiel && (ortJetzt === ortZiel || ortJetzt.indexOf(ortZiel) !== -1 || ortZiel.indexOf(ortJetzt) !== -1);
     });
   } catch (e) { return false; }
+}
+
+function _hauptuiNarrativerFadenPrompt(ortName, scenesHere) {
+  try {
+    if (typeof _hauptuiKesslerFaeden !== 'function') return '';
+    const faeden = _hauptuiKesslerFaeden();
+    if (!faeden.length) return '';
+    const ortJetzt = normForMatch(ortName || '');
+    const istHier = function (faden) {
+      const ortZiel = normForMatch(faden && faden.ort);
+      return !!ortJetzt && !!ortZiel && (ortJetzt === ortZiel || ortJetzt.indexOf(ortZiel) !== -1 || ortZiel.indexOf(ortJetzt) !== -1);
+    };
+    const lokalerFaden = faeden.find(istHier);
+    const zielFaden = lokalerFaden || faeden[0];
+    const liste = faeden.slice(0, 3).map(function (faden) {
+      return '- ' + faden.frage + ' -> ' + faden.ort;
+    }).join('\n');
+    if (lokalerFaden) {
+      return 'NARRATIVER FADEN-KOMPASS (Kessler, aktueller Ort): Die UI zeigt hier einen offenen Ermittlungsfaden: "'
+        + lokalerFaden.frage + '". Die Szene soll Karl subtil, aber spuerbar auf genau diese Spur fuehren. Wenn er am Ort sucht oder mit einer Person spricht, darf die Prosa diese Frage als Gedanken, Widerspruch oder Erinnerung aufnehmen. KEIN Questlog-Satz, KEIN "der Spieler sollte...", KEIN Ortswechsel aus eigener Macht. Beispielton: "Die Sache mit Roberts Ueberstunden bleibt schief; Tetzlaff sitzt direkt vor dir." Offene Fäden:\n' + liste;
+    }
+    const haengt = (typeof scenesHere === 'number' && scenesHere >= 2);
+    return 'NARRATIVER FADEN-KOMPASS (Kessler, naechste Spur): Falls die aktuelle Szene keinen neuen konkreten Fortschritt am Ort bringt'
+      + (haengt ? ' oder Karl hier festzustecken beginnt' : '')
+      + ', soll die Prosa dezent in Richtung der naechsten offenen Spur zeigen: "' + zielFaden.frage + '" bei ' + zielFaden.ort
+      + '. Das ist ein innerer Ermittler-Impuls, keine Teleportation: Karl darf denken, sich erinnern oder einen Widerspruch bemerken, aber der Ortswechsel bleibt Sache des Reise-Buttons. Schreibe also z.B. sinngemaess "Die angeblichen Ueberstunden fuehren zur Spedition in Moabit", nicht als UI-Anweisung. Offene Fäden:\n' + liste;
+  } catch (e) { return ''; }
 }
 
 // Haupt-UI: echter Verb-Ziel-Baukasten. Die sichtbaren Ziele stammen aus denselben Engine-Quellen wie
