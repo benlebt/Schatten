@@ -3731,7 +3731,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1145</div>
+    <div class="start-version">Schatten v7.12.1146</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3972,7 +3972,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1145</span>
+    <span>Schatten v7.12.1146</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -12238,7 +12238,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1145 +Vollstaendiges-UI-Audit';
+window.SCHATTEN_VERSION = 'v7.12.1146 +Dynamische-Verhoere-mit-Risiko';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -17558,6 +17558,7 @@ function createInitialCaseProgress() {
     meilensteine: [],
     toastLog: [],
     uiAuditLog: [],
+    verhoerFehlschlaege: [],
     resolveEverReady: false,
     pendingCustodyConfirm: false,
     forceCustodyNextScene: false,
@@ -17621,6 +17622,7 @@ function normalizeCaseProgress(raw) {
   if (!merged.pendingHauptuiIndiz || typeof merged.pendingHauptuiIndiz !== 'object') merged.pendingHauptuiIndiz = null; // v7.12.1123
   if (!merged.hauptuiVerbraucht || typeof merged.hauptuiVerbraucht !== 'object') merged.hauptuiVerbraucht = {};
   if (!Array.isArray(merged.uiAuditLog)) merged.uiAuditLog = [];
+  if (!Array.isArray(merged.verhoerFehlschlaege)) merged.verhoerFehlschlaege = [];
   // v7.12.1014 (Benjamin: "Arena kommt nicht, encounterState=null trotz KAMPF-START"): Der frühere v797-Reset
   // nullte hier JEDEN Kampf beim Laden. Problem: restoreGameState() läuft auch MITTEN im Spielfluss (nicht nur
   // bei echtem Browser-Reload). Folge: ein in Szene N gestarteter Kampf war in Szene N+1 schon wieder weg
@@ -53523,6 +53525,7 @@ const VERHOER_PROFILE = {
   frau_pohl: {
     name: 'Frau Pohl', aktenr: 'Fall Kessler · Befragung Nachbarin', verh: 'Nachbarin, Sybelstraße 24, 2. Stock',
     luegt: false, beweisSchwelle: 1, hebelIds: ['fenster_beobachtung'], grantIndizId: 'nachbarin_aussage',
+    frageLimit: 4,
     requiredTopics: ['robert', 'mittwoch', 'hauke'],
     start: 'Was wollen Sie hier? Ich habe nichts gesehen.',
     themen: [
@@ -53552,6 +53555,7 @@ const VERHOER_PROFILE = {
   ilse_hauke: {
     name: 'Ilse Hauke', aktenr: 'Fall Kessler · Befragung Hauke', verh: 'Bekannte / mutm. Geliebte · Hinterhof, 3. Stock links',
     luegt: true, beweisSchwelle: 2, hebelIds: ['briefchen_ilse', 'fenster_beobachtung'], grantIndizId: 'ilse_aussage',
+    frageLimit: 4,
     unlockEvidenceAny: ['tuerschild_hauke', 'robert_eintritt_beobachtet'],
     requiredTopics: ['sitzungen', 'robert', 'ring'],
     start: 'Robert? Den kenne ich kaum. Ein Nachbar, mehr nicht.',
@@ -53584,6 +53588,7 @@ const VERHOER_PROFILE = {
   robert_kessler: {
     name: 'Robert Kessler', aktenr: 'Fall Kessler · Befragung Zielperson', verh: 'Ehemann der Auftraggeberin · Ziel der Beschattung',
     luegt: true, beweisSchwelle: 2, hebelIds: ['robert_eintritt_beobachtet', 'fenster_beobachtung', 'briefchen_ilse'], grantIndizId: 'robert_aussage',
+    frageLimit: 4,
     unlockEvidenceAny: ['ilse_aussage', 'fenster_beobachtung', 'briefchen_ilse', 'tetzlaff_aussage', 'kellner_beobachtung'],
     requiredTopics: ['spedition', 'ilse', 'edith'],
     requiredEvidenceAny: ['edith_verdacht', 'tetzlaff_aussage', 'briefchen_ilse', 'kellner_beobachtung', 'robert_tisch_beobachtet'],
@@ -53616,6 +53621,105 @@ const VERHOER_PROFILE = {
   }
 };
 
+// Pro neuem Fall wird je Verhoer eine stabile Sprachvariante gezogen. Die Fakten,
+// Freischaltungen und Folgen bleiben deterministisch; nur die konkrete Prosa wechselt.
+const VERHOER_VARIANTEN = {
+  frau_pohl: {
+    start: ['Sie schon wieder? Reden Sie leise. Hier tragen die Wände jedes Wort weiter.', 'Wenn Sie wegen Kessler kommen: Ich mische mich nicht in fremde Ehen ein.'],
+    robert: [
+      { karl: 'Sie beobachten diesen Hof seit Jahren. Was ist bei Kessler anders?', q: 'Er wartet nie vor der Tür. Er prüft erst die Fenster, dann geht er hinein. Jeden Mittwoch dasselbe Theater.', tell: 'ihr Blick wandert automatisch zum Fenster über dem Hof' },
+      { karl: 'Wenn Robert Kessler hier auftaucht: Woran erkennen Sie ihn schon von weitem?', q: 'Am Schritt. Zu schnell für einen Besucher, zu langsam für einen, der nichts zu verbergen hat.', tell: 'sie sagt es mit der Sicherheit langer Nachmittage hinter Gardinen' }
+    ],
+    haus: [
+      { karl: 'In diesem Haus bleibt kaum etwas unbeobachtet. Wer kennt den Hof besser als Sie?', q: 'Endlich fragt einer richtig. Ich weiß, wer spät heimkommt und wer nur so tut, als gehöre er hierher.', tell: 'der Stolz richtet ihre Schultern auf' },
+      { karl: 'Die Leute hier halten Sie für aufmerksam.', q: 'Aufmerksam? Ohne mich könnte man das halbe Haus ausräumen, bevor jemand den Mund aufmacht.', tell: 'sie fühlt sich endlich ernst genommen' }
+    ],
+    mittwoch: [
+      { karl: 'Sie sagen: jeden Mittwoch. Wie genau ist dieses Muster?', q: 'Sechs Uhr fünfundfünfzig, manchmal drei Minuten später. Aber nie nach sieben.', tell: 'sie zählt die Zeiten an den Fingern ab' },
+      { karl: 'Was macht den Mittwoch so sicher?', q: 'Der Kohlenmann kommt dienstags, die Wäsche donnerstags. Mittwochs höre ich nur Kesslers Schuhe im Hof.', tell: 'aus Klatsch wird eine erstaunlich genaue Beobachtung' }
+    ],
+    hauke: [
+      { karl: 'Welche Tür fällt hinter ihm ins Schloss?', q: 'Oben links, bei Hauke. Er kennt sogar die Stelle, an der die dritte Stufe knarrt.', tell: 'sie beugt sich vor und wird plötzlich leise' },
+      { karl: 'Im Hof endet sein Weg nicht. Wo geht er hin?', q: 'Dritter Stock. Frau Hauke öffnet, bevor er klopft. Das sagt Ihnen wohl genug.', tell: 'sie lässt den Satz zwischen euch stehen' }
+    ],
+    klatsch: [
+      { karl: 'Sie glauben also, Kessler betrügt seine Frau.', q: 'Glauben ist Ihre Arbeit, nicht meine. Noch eine solche Unterstellung und Sie stehen wieder im Hof.', tell: 'ihre Hand bleibt fest an der Türklinke' },
+      { karl: 'Nennen wir es beim Namen: eine Affäre.', q: 'Sie nennen gar nichts in meinem Treppenhaus. Raus mit solchen Reden.', tell: 'die Tür schließt sich bereits um eine Handbreit' }
+    ],
+    breakLine: ['Gut. Schreiben Sie: mittwochs, kurz vor sieben, dritter Stock links bei Hauke. Mehr bekommen Sie von mir nicht.', 'Seit Monaten geht er mittwochs zu Frau Hauke. Immer heimlich, immer dieselbe Tür. Nun lassen Sie mich in Ruhe.'],
+    failText: ['Die Tür fällt ins Schloss. Von drinnen schiebt Frau Pohl den Riegel vor. <b>Das Verhör ist gescheitert. Ruf -1.</b>', 'Frau Pohl ruft so laut durchs Treppenhaus, dass zwei Türen aufgehen. Danach sagt sie kein Wort mehr. <b>Das Verhör ist gescheitert. Ruf -1.</b>']
+  },
+  ilse_hauke: {
+    start: ['Robert hat Sie geschickt? Nein? Dann weiß ich nicht, was wir zu besprechen hätten.', 'Bitte machen Sie es kurz. Die Nachbarn brauchen nur einen halben Satz für eine ganze Geschichte.'],
+    sitzungen: [
+      { karl: 'Was geschieht während dieser Sitzungen wirklich?', q: 'Er sitzt Modell. Zumindest begann es so. Später redeten wir mehr, als ich zeichnete.', tell: 'beim Wort später blickt sie zur geschlossenen Wohnungstür' },
+      { karl: 'Beschreiben Sie einen gewöhnlichen Mittwoch mit Robert.', q: 'Mantel ab, Tee, eine Stunde stillsitzen. So war die Abmachung. Gewöhnlich ist es lange nicht mehr.', tell: 'sie streicht eine Falte aus dem Tischtuch, die nicht da ist' }
+    ],
+    robert: [
+      { karl: 'Wer ist Kessler hier, wenn niemand aus seiner Ehe zusieht?', q: 'Einer, der endlich nicht Buchhalter, Ehemann oder guter Nachbar spielen muss.', tell: 'die Antwort kommt zu schnell, um gleichgültig zu sein' },
+      { karl: 'Was sucht Robert bei Ihnen?', q: 'Ruhe. Vielleicht auch jemanden, der nicht schon weiß, welchen Satz er als Nächstes sagen soll.', tell: 'ihre Stimme wird wärmer und sie merkt es selbst' }
+    ],
+    mittwoch: [
+      { karl: 'Warum treffen Sie sich ausgerechnet zur Wochenmitte?', q: 'Weil die Spedition ihn dann früher gehen lässt. Edith glaubt das Gegenteil.', tell: 'sie erschrickt über die eigene Offenheit' },
+      { karl: 'Wer hat den Mittwoch festgelegt?', q: 'Robert. An diesem Abend, sagte er, fragt zu Hause niemand nach der Uhr.', tell: 'danach schaut sie lange auf ihre Hände' }
+    ],
+    ring: [
+      { karl: 'Was tut er mit dem Ring, bevor er eintritt?', q: 'Er zieht ihn im Treppenhaus ab. Nicht für mich, sagt er. Als ob das einen Unterschied machte.', tell: 'das Taschentuch knistert in ihrer Faust' },
+      { karl: 'Kommt Robert als verheirateter Mann durch Ihre Tür?', q: 'Der Ring verschwindet vorher in seiner Manteltasche. Seine Ehe verschwindet dadurch natürlich nicht.', tell: 'zum ersten Mal klingt sie bitter statt vorsichtig' }
+    ],
+    edith: [
+      { karl: 'Edith lebt mit einer Geschichte, von der Sie wissen, dass sie falsch ist.', q: 'Sprechen Sie ihren Namen nicht aus, um mich gefügig zu machen.', tell: 'die eben gewonnene Nähe ist sofort fort' },
+      { karl: 'Wie lange soll Edith noch an Überstunden glauben?', q: 'Sie wollen Wahrheit? Dann holen Sie sie bei Robert. Ich lasse mich nicht gegen seine Frau ausspielen.', tell: 'sie stellt die Tasse so hart ab, dass Tee überschwappt' }
+    ],
+    breakLine: ['Anfangs saß er Modell. Jetzt kommt er zum Reden und bleibt zu lange. Den Ring steckt er vorher ein. Das ist alles.', 'Mittwochs ist er hier, nicht in der Spedition. Er nimmt den Ring ab und lässt mich glauben, das mache die Sache kleiner.'],
+    failText: ['Ilse öffnet die Wohnungstür und wartet schweigend, bis du gehst. <b>Das Verhör ist gescheitert. Ruf -1.</b>', 'Ihre Fassung bricht, aber nicht ihre Geschichte. Sie verweigert jede weitere Antwort. <b>Das Verhör ist gescheitert. Ruf -1.</b>']
+  },
+  robert_kessler: {
+    start: ['Wenn Edith Sie bezahlt, haben Sie Ihre Antwort doch längst beschlossen.', 'Sie folgen mir durch halb Berlin und nennen das Arbeit? Fragen Sie, bevor ich gehe.'],
+    spedition: [
+      { karl: 'Tetzlaff kennt keine regelmäßigen Mittwochs-Überstunden. Wie erklären Sie das?', q: 'Weil es keine gibt. Ich gehe früher und habe Edith das Gegenteil gesagt.', tell: 'das Geständnis rutscht ihm heraus, bevor er eine neue Ausrede findet' },
+      { karl: 'Ihre Arbeitszeit endet mittwochs früher, nicht später.', q: 'Ja. Ich habe die Spedition benutzt, weil Edith dort niemals nachfragen würde.', tell: 'er schaut zum Tor, als könne dort eine bessere Antwort stehen' }
+    ],
+    verfolgung: [
+      { karl: 'Warum prüfen Sie im Hof jedes Fenster?', q: 'Weil Frau Pohl aus jedem Besuch einen Skandal macht. Und weil ich wusste, dass irgendwann jemand wie Sie wartet.', tell: 'er versucht Empörung, aber seine Stimme bleibt zu leise' },
+      { karl: 'Ein unschuldiger Besucher geht geradeaus. Sie sehen sich zweimal um.', q: 'Ich schützte Ilse vor Gerede. Mich vielleicht auch.', tell: 'bei dem letzten Wort sinkt sein Blick' }
+    ],
+    ilse: [
+      { karl: 'Was blieb von den Modellsitzungen übrig?', q: 'Das Modell war irgendwann nur noch ein Vorwand. Wir redeten. Dann blieb ich länger.', tell: 'er gibt jedes Wort einzeln frei' },
+      { karl: 'Ist Ilse Ihr Modell oder Ihre Geliebte?', q: 'Sie ist der Mensch, bei dem ich nicht erklären muss, warum ich schweige. Reicht Ihnen das?', tell: 'die Gegenfrage klingt mutiger als sein Blick' }
+    ],
+    edith: [
+      { karl: 'Warum belügen Sie Edith Woche für Woche?', q: 'Weil die erste Lüge klein war. Danach hätte die Wahrheit jeden Mittwoch mit erklären müssen.', tell: 'er dreht den Ehering, bis der Finger weiß wird' },
+      { karl: 'Was fürchten Sie mehr: Ediths Schmerz oder ihr Urteil über Sie?', q: 'Dass sie erkennt, wie lange ich sie für bequem genug hielt, mir zu glauben.', tell: 'seine Wut fällt in sich zusammen' }
+    ],
+    feigheit: [
+      { karl: 'Sie verstecken Feigheit hinter Rücksicht.', q: 'Und Sie verstecken Neugier hinter einem Gewerbeschein.', tell: 'er wendet sich halb zur Haustür' },
+      { karl: 'Nicht Ilse ist Ihr Problem. Sie haben nur Angst vor den Folgen.', q: 'Noch ein Urteil von Ihnen und dieses Gespräch ist vorbei.', tell: 'seine Hand liegt bereits auf der Klinke' }
+    ],
+    breakLine: ['Die Überstunden waren gelogen. Mittwochs war ich bei Ilse. Sagen Sie Edith, dass ich nicht den Mut hatte, es selbst zu tun.', 'Ich war bei Ilse, jede Woche. Die Spedition war nur meine Ausrede. Edith hat die Wahrheit verdient, auch wenn sie von Ihnen kommt.'],
+    failText: ['Robert geht, ohne sich noch einmal umzudrehen. Kein Rufen hält ihn auf. <b>Das Verhör ist gescheitert. Ruf -1.</b>', 'Er zieht die Haustür hinter sich zu und verweigert fortan jedes Gespräch. <b>Das Verhör ist gescheitert. Ruf -1.</b>']
+  }
+};
+
+function _verhoerHash(text) {
+  let h = 2166136261;
+  const s = String(text || '');
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+
+function _verhoerPick(pool, seed, key) {
+  const values = Array.isArray(pool) ? pool.filter(Boolean) : [pool].filter(Boolean);
+  if (!values.length) return '';
+  return values[(_verhoerHash(String(seed || 0) + '|' + String(key || '')) % values.length)];
+}
+
+function _verhoerTopicTurn(npcId, topic, state) {
+  const variants = VERHOER_VARIANTEN[npcId] && VERHOER_VARIANTEN[npcId][topic.id];
+  const pool = [{ karl: topic.karl, q: topic.q, tell: topic.tell }].concat(Array.isArray(variants) ? variants : []);
+  return _verhoerPick(pool, state && state.variationSeed, 'topic:' + topic.id) || pool[0];
+}
+
 function _verhoerProfilFuer(npc) {
   try { if (!npc) return null; const id = npc.id || ''; return VERHOER_PROFILE[id] ? id : null; } catch (e) { return null; }
 }
@@ -53634,14 +53738,22 @@ function _verhoerStatus(npc) {
   try { const id = npc && npc.id; const s = (caseProgress && caseProgress.verhoere && caseProgress.verhoere[id]) ? caseProgress.verhoere[id] : null; return s ? s.status : null; } catch (e) { return null; }
 }
 function _verhoerFreshState(npcId) {
+  const variationSeed = Math.floor(Math.random() * 2147483647);
+  const p = VERHOER_PROFILE[npcId] || {};
+  const v = VERHOER_VARIANTEN[npcId] || {};
+  const start = _verhoerPick([p.start].concat(v.start || []), variationSeed, 'start');
   return { oeff: 0, gem: 0, used: {}, themenUsed: {}, genutzteHebelIds: [], status: 'aktiv', zweifel: false, aktionenSeitOeffnen: 0,
-    log: [{ who: 'NPC', k: false, tx: (VERHOER_PROFILE[npcId] && VERHOER_PROFILE[npcId].start) || '' }] };
+    fragenGestellt: 0,
+    variationSeed: variationSeed, failApplied: false, log: [{ who: 'NPC', k: false, tx: start || p.start || '' }] };
 }
 function _verhoerState(npcId) {
   if (!caseProgress) return null;
   if (!caseProgress.verhoere || typeof caseProgress.verhoere !== 'object') caseProgress.verhoere = {};
   if (!caseProgress.verhoere[npcId]) caseProgress.verhoere[npcId] = _verhoerFreshState(npcId);
   if (!caseProgress.verhoere[npcId].themenUsed || typeof caseProgress.verhoere[npcId].themenUsed !== 'object') caseProgress.verhoere[npcId].themenUsed = {};
+  if (typeof caseProgress.verhoere[npcId].fragenGestellt !== 'number') caseProgress.verhoere[npcId].fragenGestellt = Object.keys(caseProgress.verhoere[npcId].themenUsed).length;
+  if (typeof caseProgress.verhoere[npcId].variationSeed !== 'number') caseProgress.verhoere[npcId].variationSeed = Math.floor(Math.random() * 2147483647);
+  if (typeof caseProgress.verhoere[npcId].failApplied !== 'boolean') caseProgress.verhoere[npcId].failApplied = false;
   return caseProgress.verhoere[npcId];
 }
 function _verhoerVerfuegbareVorhalte() {
@@ -53680,12 +53792,14 @@ function _verhoerPushTurn(npcId, karl, line, tell, extra) {
 }
 function _verhoerFinish(npcId) {
   const s = _verhoerState(npcId), p = VERHOER_PROFILE[npcId];
+  if (!s || !p || s.status !== 'aktiv') return;
   const themenOk = !Array.isArray(p.requiredTopics) || p.requiredTopics.every(function (id) { return !!s.themenUsed[id]; });
   const belegeOk = _verhoerHatEines(p.requiredEvidenceAny);
-  if (s.gem >= 2) { s.status = 'verbrannt'; _verhoerCommit(npcId); }
+  if (s.gem >= 2) { s.status = 'verbrannt'; _verhoerScheitern(npcId); _verhoerCommit(npcId); }
   else if (s.oeff >= 3 && themenOk && belegeOk) {
     s.status = 'gelöst';
-    s.log.push({ who: 'NPC', k: false, tx: p.breakLine });
+    const v = VERHOER_VARIANTEN[npcId] || {};
+    s.log.push({ who: 'NPC', k: false, tx: _verhoerPick([p.breakLine].concat(v.breakLine || []), s.variationSeed, 'break') || p.breakLine });
     try {
       const ind = (typeof _findeIndizById === 'function') ? _findeIndizById(p.grantIndizId) : null;
       if (ind && typeof _markiereIndizGefunden === 'function') _markiereIndizGefunden(ind, { reward: false });
@@ -53693,6 +53807,12 @@ function _verhoerFinish(npcId) {
       _verhoerAddAussage({ id: p.grantIndizId, text: indText, status: 'bestätigt', quelle: p.name });
       s._grantText = indText;
     } catch (e) { if (typeof diag === 'function') diag('drift', 'VERHÖR-Grant-Fehler: ' + (e && e.message)); }
+    _verhoerCommit(npcId);
+  }
+  else if (p.frageLimit && s.fragenGestellt >= p.frageLimit) {
+    s.status = 'verbrannt';
+    _verhoerPushTurn(npcId, '', 'Das reicht jetzt. Sie haben Ihre Fragen gestellt.', 'die Geduld ist aufgebraucht; das Gespräch endet ohne verwertbare Aussage');
+    _verhoerScheitern(npcId);
     _verhoerCommit(npcId);
   }
 }
@@ -53730,12 +53850,14 @@ function _verhoerThema(id) {
   if (!t || s.themenUsed[id] || s.oeff < (t.abOeff || 0)) return;
   if (typeof _uiAudit === 'function') _uiAudit('AKTENFRAGE', t.st || id, npc.name || npcId);
   s.themenUsed[id] = true;
+  s.fragenGestellt = (s.fragenGestellt || 0) + 1;
   s.aktionenSeitOeffnen++;
   s.zweifel = false;
   s.oeff = Math.min(3, s.oeff + Math.max(0, t.oeff || 0));
   s.gem = Math.max(0, Math.min(2, s.gem + (t.gem || 0)));
   if (t.aussage) { _verhoerAddAussage(t.aussage); s.zweifel = true; }
-  _verhoerPushTurn(npcId, t.karl, t.q, t.tell);
+  const turn = _verhoerTopicTurn(npcId, t, s);
+  _verhoerPushTurn(npcId, turn.karl, turn.q, turn.tell);
   _verhoerFinish(npcId);
   _verhoerRender();
 }
@@ -53858,6 +53980,13 @@ function _verhoerRender() {
   }).join('');
   h += '</div>';
   h += '<div class="ein"><b>Einschätzung (Mauer):</b> ' + _verhoerEsc(_verhoerEinschaetzung(npcId)) + '</div>';
+  const druckText = s.gem >= 2 ? 'Abgebrochen' : (s.gem === 1 ? 'Angespannt - eine weitere riskante Frage kann das Verhör beenden.' : 'Stabil');
+  h += '<div class="ein"><b>Gesprächslage:</b> ' + _verhoerEsc(druckText) + '</div>';
+  if (aktiv && p.frageLimit) {
+    const rest = Math.max(0, p.frageLimit - (s.fragenGestellt || 0));
+    const raumText = rest === 1 ? 'Nur noch eine Frage, bevor die Geduld aufgebraucht ist.' : (rest + ' Fragen verbleiben, bevor die Person das Gespräch beendet.');
+    h += '<div class="ein"><b>Gesprächsspielraum:</b> ' + _verhoerEsc(raumText) + '</div>';
+  }
   const aus = (caseProgress && Array.isArray(caseProgress.aussagen)) ? caseProgress.aussagen : [];
   if (aus.length) {
     h += '<div class="aussagen"><div class="h">Aussagen — Fallakte (zu prüfen)</div>';
@@ -53865,7 +53994,11 @@ function _verhoerRender() {
     h += '</div>';
   }
   if (s.status === 'gelöst') h += '<div class="ergebnis win"><span class="es">' + _verhoerEsc(p.breakStamp) + '</span><br>Kernindiz notiert: ' + _verhoerEsc(s._grantText || '') + '</div>';
-  else if (s.status === 'verbrannt') h += '<div class="ergebnis fail"><span class="es">' + _verhoerEsc(p.failStamp) + '</span><br>' + p.failText + '</div>';
+  else if (s.status === 'verbrannt') {
+    const vv = VERHOER_VARIANTEN[npcId] || {};
+    const failText = _verhoerPick([p.failText].concat(vv.failText || []), s.variationSeed, 'fail') || p.failText;
+    h += '<div class="ergebnis fail"><span class="es">' + _verhoerEsc(p.failStamp) + '</span><br>' + failText + '</div>';
+  }
   else if (s.status === 'vertagt') h += '<div class="ergebnis"><span class="es">Vertagt</span></div>';
   h += '<div class="vlabel">OFFENE FRAGEN</div><div class="stamps" id="verhoer-themen">';
   h += (p.themen || []).map(function (t) {
@@ -53897,6 +54030,7 @@ function _verhoerRender() {
         return (t.st || t.id) + ' [' + status + ']';
       }),
       vorhalte: vh.map(function (b) { return (VERHOER_BELEG_LABEL[b] || b) + (s.genutzteHebelIds.indexOf(b) !== -1 ? ' [verbraucht]' : ' [klickbar]'); }),
+      gespraechsspielraum: p.frageLimit ? Math.max(0, p.frageLimit - (s.fragenGestellt || 0)) : null,
     });
   }
   if (aktiv) {
@@ -54356,6 +54490,23 @@ function _hauptuiGenerischMarkieren(verb) {
     if (!caseProgress.hauptuiVerbraucht || typeof caseProgress.hauptuiVerbraucht !== 'object') caseProgress.hauptuiVerbraucht = {};
     caseProgress.hauptuiVerbraucht[_hauptuiGenerischKey(verb)] = _hauptuiErmittlungsSignatur();
     if (typeof saveGameState === 'function') saveGameState();
+  } catch (e) {}
+}
+
+function _verhoerScheitern(npcId) {
+  try {
+    const s = _verhoerState(npcId), p = VERHOER_PROFILE[npcId];
+    if (!s || s.failApplied) return;
+    s.failApplied = true;
+    if (!Array.isArray(caseProgress.verhoerFehlschlaege)) caseProgress.verhoerFehlschlaege = [];
+    if (caseProgress.verhoerFehlschlaege.indexOf(npcId) === -1) caseProgress.verhoerFehlschlaege.push(npcId);
+    if (typeof karlAkte === 'object' && karlAkte) {
+      if (!karlAkte.ruf || typeof karlAkte.ruf !== 'object') karlAkte.ruf = { haerte: 0, renommee: 0 };
+      karlAkte.ruf.renommee = Math.max(-5, (karlAkte.ruf.renommee | 0) - 1);
+      if (typeof _karlAkteSave === 'function') _karlAkteSave();
+    }
+    if (typeof showProgressToast === 'function') showProgressToast('Verhoer gescheitert', (p && p.name ? p.name : 'Die Auskunftsperson') + ' verweigert weitere Aussagen. Karls Renommee sinkt.', 'danger', 'verhoer-gescheitert-' + npcId);
+    if (typeof diag === 'function') diag('progress', 'VERHOER GESCHEITERT: ' + npcId + ' | Renommee -1');
   } catch (e) {}
 }
 

@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 const caseStart = html.indexOf("klient: 'Edith Kessler (Ehefrau)'");
@@ -51,5 +52,66 @@ assert(/robert_kessler:[\s\S]{0,700}?requiredEvidenceAny:/.test(html), 'Robert c
 assert(/definedEvidenceGate:[\s\S]{0,300}?requiredAny:/.test(html), 'Kessler resolution must require evidence from another location');
 assert(html.includes("leadTitle.textContent = 'Offene Fäden'"), 'Kessler UI must expose the active investigation questions');
 assert(html.includes("oeffneReiseMenue();"), 'external investigation threads must open the travel map');
+assert((html.match(/frageLimit:\s*4/g) || []).length >= 3, 'each Kessler interrogation needs a finite question window');
+assert(html.includes('Gesprächsspielraum:'), 'the dossier must warn the player about the remaining question window');
+assert(/function _verhoerScheitern[\s\S]{0,900}?karlAkte\.ruf\.renommee\s*=\s*Math\.max\(-5,[\s\S]{0,120}?-\s*1\)/.test(html), 'failed interrogations must have a real reputation consequence');
+
+const interrogationStart = html.indexOf('const VERHOER_BELEG_LABEL');
+const interrogationEnd = html.indexOf('function _verhoerInjectStyle', interrogationStart);
+assert(interrogationStart > -1 && interrogationEnd > interrogationStart, 'interrogation state machine block not found');
+
+let failedNpc = null;
+const context = {
+  console,
+  window: {},
+  caseProgress: { verhoere: {}, aussagen: [], gefundeneIndizIds: [], verhoerFehlschlaege: [] },
+  saveGameState: function () {},
+  _verhoerScheitern: function (npcId) { failedNpc = npcId; },
+  _findeIndizById: function (id) { return { id, text: 'Testindiz ' + id }; },
+  _markiereIndizGefunden: function () {},
+  diag: function () {},
+  _uiAudit: function () {},
+  _verhoerRender: function () {},
+  escapeHtml: function (value) { return String(value || ''); },
+};
+vm.createContext(context);
+vm.runInContext(
+  html.slice(interrogationStart, interrogationEnd)
+    + '\nthis.__verhoerTest = { profile: VERHOER_PROFILE, fresh: _verhoerFreshState, topicTurn: _verhoerTopicTurn, thema: _verhoerThema };',
+  context
+);
+
+const variants = new Set();
+const pohlTopic = context.__verhoerTest.profile.frau_pohl.themen.find((topic) => topic.id === 'robert');
+for (let seed = 1; seed <= 50; seed++) {
+  variants.add(context.__verhoerTest.topicTurn('frau_pohl', pohlTopic, { variationSeed: seed }).q);
+}
+assert(variants.size >= 2, 'interrogation prose must vary between new runs');
+
+function startPohl() {
+  failedNpc = null;
+  context.caseProgress.verhoere = {};
+  context.caseProgress.aussagen = [];
+  context.caseProgress.gefundeneIndizIds = [];
+  context.window._verhoerAktNpc = { id: 'frau_pohl', name: 'Frau Pohl' };
+  context.caseProgress.verhoere.frau_pohl = context.__verhoerTest.fresh('frau_pohl');
+  context.caseProgress.verhoere.frau_pohl.variationSeed = 7;
+  return context.caseProgress.verhoere.frau_pohl;
+}
+
+let state = startPohl();
+context.__verhoerTest.thema('robert');
+context.__verhoerTest.thema('mittwoch');
+context.__verhoerTest.thema('hauke');
+assert.strictEqual(state.status, 'gelöst', 'the concise, relevant question chain must succeed');
+assert.strictEqual(failedNpc, null, 'the correct question chain must not trigger failure');
+
+state = startPohl();
+context.__verhoerTest.thema('haus');
+context.__verhoerTest.thema('klatsch');
+context.__verhoerTest.thema('robert');
+context.__verhoerTest.thema('mittwoch');
+assert.strictEqual(state.status, 'verbrannt', 'too many detours must end the interrogation without success');
+assert.strictEqual(failedNpc, 'frau_pohl', 'question-window failure must use the real failure path');
 
 console.log('KESSLER_PROGRESSION_AND_VERHOER_OK');
