@@ -338,6 +338,53 @@ for (const place of kesslerPlaces) {
   assert(!visibleText(execute).includes(place), place + ' must not repeat in the execute label');
 }
 
+assert(html.includes('function _hauptuiItemVerben(target)'), 'inventory must expose contextual Haupt-UI verbs');
+assert(html.includes('function _hauptuiPlanDirekt(aktionKey, zielName, item)'), 'inventory escalation must reuse the existing plan/combat path');
+assert(!html.includes("if (mode === 'combat' || mode === 'escape'"), 'combat mode must not hide the Haupt-UI while the old arena is disabled');
+calls.plan = [];
+calls.planExecuted = 0;
+const hostile = { id: 'mantelmann', name: 'Mann im grauen Mantel', tag: 'STASI', rolle: 'Agent', typ: 'person' };
+const toaster = { id: 'toaster1', name: 'Toaster (AEG, Vorkriegsmodell)', typ: 'item' };
+context.deriveInteractionMode = () => 'combat';
+context.engineCurrentLocation = { name: 'Hinterhof Sybelstrasse' };
+context.window.__hauptuiActionState = { verb: null, targetKey: null };
+context._baukastenZiele = () => ({ personen: [hostile], objekte: [], items: [toaster] });
+context.getNpcsAtCurrentLocation = () => [hostile];
+context._itemsBeiKarl = () => [toaster];
+context._npcIstFeindlich = (npc) => npc && npc.name === hostile.name;
+context._freieFeindeAmOrt = () => [hostile];
+context._npcZustandGet = () => null;
+context._itemKatalogEintrag = () => ({ name: toaster.name, taugt: ['angreifen_mit', 'werfen', 'werfen_fuesse'], schaden: 'benommen', fragil: true });
+context.BAUKASTEN_AKTIONEN = {
+  werfen: { label: 'Ins Gesicht werfen', zielNoetig: true, itemNoetig: true, itemVerlust: true, txt: (a, i, z) => a + ' wirft ' + i.name + ' auf ' + z + '.' },
+  angreifen_mit: { label: 'Angreifen mit', zielNoetig: true, itemNoetig: true, _itemAngriff: true, txt: (a, i, z) => a + ' schlaegt mit ' + i.name + ' auf ' + z + '.' },
+  werfen_fuesse: { label: 'Vor die Fuesse werfen', zielNoetig: true, itemNoetig: true, itemVerlust: true, txt: (a, i, z) => a + ' wirft ' + i.name + ' vor ' + z + '.' },
+  angreifen: { label: 'Angreifen', zielNoetig: true, wirkung: 'ko', txt: (a, i, z) => a + ' greift ' + z + ' an.' },
+};
+context._planAdd = (entry) => { calls.plan.push(entry); return true; };
+context._planAusfuehren = () => { calls.planExecuted += 1; };
+context._renderEngineMenu(container, {});
+assert(container.querySelector('.hauptui-action-menu'), 'combat mode must still render the Haupt-UI menu');
+const hostileButton = byText(container, hostile.name);
+assert(hostileButton, 'hostile target must be visible in combat');
+hostileButton.onTap();
+assert(byText(container, 'Drohe'), 'hostile person mode must expose pressure/escalation');
+assert(byText(container, 'Greife an'), 'hostile person mode must expose direct attack');
+const toasterButton = byText(container, toaster.name);
+assert(toasterButton, 'inventory item must be visible in combat');
+toasterButton.onTap();
+assert(byText(container, 'Wirf'), 'throwable inventory must expose Wirf when a hostile target is present');
+assert(byText(container, 'Lenk ab'), 'throwable inventory must expose an actual distraction verb');
+assert(byText(container, 'Schlag zu'), 'weapon-like inventory must expose item attack');
+byText(container, 'Wirf').onTap();
+execute = all(container).find((element) => element.className === 'hauptui-execute');
+assert(execute && !execute.disabled && visibleText(execute).includes('Wirf'), 'inventory throw command must be executable');
+execute.onTap();
+assert.strictEqual(calls.planExecuted, 1, 'inventory throw must execute through the plan/combat path');
+assert.strictEqual(calls.plan[0].art, 'werfen', 'inventory throw must use the existing werfen action');
+assert.strictEqual(calls.plan[0].ziel, hostile.name, 'inventory throw must auto-target the present hostile NPC');
+assert.strictEqual(calls.plan[0].itemId, toaster.id, 'inventory throw must carry the selected item id for item loss/effects');
+
 const targetsStart = html.indexOf('function _baukastenZiele()');
 const targetsEnd = html.indexOf('try { window._baukastenZiele', targetsStart);
 const targetContext = {

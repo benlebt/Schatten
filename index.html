@@ -3768,7 +3768,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1154</div>
+    <div class="start-version">Schatten v7.12.1155</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -4009,7 +4009,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1154</span>
+    <span>Schatten v7.12.1155</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -12279,7 +12279,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1154 +Dialog-FX-aus';
+window.SCHATTEN_VERSION = 'v7.12.1155 +Inventar-Eskalation';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -14102,6 +14102,8 @@ function _planAusfuehren() {
           if (!zielName) return false;
           const _z = _npcsHier.find(n => n && n.name && normForMatch(n.name) === normForMatch(zielName));
           if (!_z) return false;
+          if (typeof _npcIstFeindlich === 'function' && _npcIstFeindlich(_z)) return true;
+          if (typeof _istGegnerNpc === 'function' && _istGegnerNpc(_z.name, _z.tag, _z.rolle)) return true;
           const _t = ((_z.tag || '')).toUpperCase();
           return _gegnerTags.indexOf(_t) !== -1;
         };
@@ -16133,7 +16135,7 @@ function _baukastenZiele() {
       } catch (e) {}
     }
     out.personen = _np.filter(n => n && n.name).map(n => ({
-      id: n.id || null, name: n.name, tag: n.tag || '',
+      id: n.id || null, name: n.name, tag: n.tag || '', rolle: n.rolle || '',
       hinweis: (typeof _npcHatOffenenHinweis === 'function') ? !!_npcHatOffenenHinweis(n.name, n.id) : false,
       hinweisAktionen: (typeof _npcOffeneHinweisAktionen === 'function') ? _npcOffeneHinweisAktionen(n.name) : [],
       typ: 'person'
@@ -54838,7 +54840,127 @@ function _hauptuiItemMitPerson(item, titel, textBuilder) {
   }));
 }
 
-function _hauptuiExecute(verb, target) {
+function _hauptuiItemKatalog(item) {
+  try { return item && typeof _itemKatalogEintrag === 'function' ? _itemKatalogEintrag(item.name) : null; } catch (e) { return null; }
+}
+
+function _hauptuiItemTaugt(item, aktion) {
+  try {
+    const kat = _hauptuiItemKatalog(item);
+    if (!kat || !Array.isArray(kat.taugt) || !kat.taugt.length) return ['benutzen', 'anschauen'].indexOf(aktion) !== -1;
+    return kat.taugt.indexOf(aktion) !== -1;
+  } catch (e) { return false; }
+}
+
+function _hauptuiPersonIstFeind(target) {
+  try {
+    const npc = (target && target.name) ? (_hauptuiNpc(target) || target) : target;
+    if (!npc || !npc.name) return false;
+    if (typeof _npcIstFeindlich === 'function' && _npcIstFeindlich(npc)) return true;
+    if (typeof _istGegnerNpc === 'function' && _istGegnerNpc(npc.name, npc.tag, npc.rolle)) return true;
+  } catch (e) {}
+  return false;
+}
+
+function _hauptuiNpcBezwungen(target) {
+  try {
+    const name = target && target.name;
+    const z = name && typeof _npcZustandGet === 'function' ? _npcZustandGet(name) : null;
+    return !!(z && ['ko', 'gefesselt', 'fixiert', 'benommen', 'geblendet'].indexOf(z.status) !== -1);
+  } catch (e) { return false; }
+}
+
+function _hauptuiFreieFeinde() {
+  try {
+    if (typeof _freieFeindeAmOrt === 'function') return _freieFeindeAmOrt() || [];
+    const npcs = (typeof getNpcsAtCurrentLocation === 'function') ? (getNpcsAtCurrentLocation() || []) : [];
+    return npcs.filter(function (npc) { return _hauptuiPersonIstFeind(npc) && !_hauptuiNpcBezwungen(npc); });
+  } catch (e) { return []; }
+}
+
+function _hauptuiErstesNpcZiel(preferFeind) {
+  try {
+    const feinde = _hauptuiFreieFeinde();
+    if (preferFeind && feinde.length) return feinde[0];
+    const npcs = (typeof getNpcsAtCurrentLocation === 'function') ? (getNpcsAtCurrentLocation() || []) : [];
+    const friedlich = npcs.find(function (npc) { return npc && npc.name && !_hauptuiPersonIstFeind(npc); });
+    return friedlich || feinde[0] || null;
+  } catch (e) { return null; }
+}
+
+function _hauptuiPlanDirekt(aktionKey, zielName, item) {
+  try {
+    const def = (typeof BAUKASTEN_AKTIONEN !== 'undefined') ? BAUKASTEN_AKTIONEN[aktionKey] : null;
+    if (!def) return false;
+    const itemId = item && item.id ? item.id : null;
+    window._aktionsPlan = [];
+    const eintrag = {
+      label: 'Karl' + (item ? ' [' + item.name + ']' : '') + ' \u2192 ' + def.label + (zielName ? ' \u2192 ' + zielName : ''),
+      art: aktionKey,
+      akteur: 'Karl',
+      ziel: zielName || '',
+      itemId: itemId,
+      aktionText: def.txt('Karl', item || null, zielName || '')
+    };
+    eintrag._wirkung = def.wirkung || null;
+    eintrag._beute = !!def.beute;
+    eintrag._itemUebergabe = !!def.itemUebergabe && !!itemId;
+    eintrag._itemVerlust = !!def.itemVerlust && !!itemId;
+    eintrag._eintausch = !!def._eintausch;
+    eintrag._itemAngriff = !!def._itemAngriff;
+    if (typeof _planAdd !== 'function' || _planAdd(eintrag) === false) return false;
+    if (typeof _uiAudit === 'function') _uiAudit('PLAN-DIREKT', def.label, (item ? item.name + ' -> ' : '') + (zielName || ''));
+    if (typeof _planAusfuehren === 'function') _planAusfuehren();
+    return true;
+  } catch (e) {
+    if (typeof diag === 'function') diag('drift', 'HAUPTUI-PLAN-DIREKT-Fehler: ' + (e && e.message ? e.message : e));
+    return false;
+  }
+}
+
+function _hauptuiPersonVerben(target, data) {
+  const verbs = [];
+  const add = function (key, label) {
+    if (!verbs.some(function (verb) { return verb.key === key; })) verbs.push({ key: key, label: label });
+  };
+  const feind = _hauptuiPersonIstFeind(target);
+  const bezwungen = _hauptuiNpcBezwungen(target);
+  if (bezwungen) {
+    add('durchsuchen_npc', 'Durchsuche');
+    if (target && target.name && typeof _npcZustandGet === 'function') {
+      const z = _npcZustandGet(target.name);
+      if (!z || z.status !== 'gefesselt') add('fesseln', 'Fessle');
+    }
+    add('anschauen', 'Schau an');
+    return verbs;
+  }
+  add('reden', 'Rede mit');
+  add('anschauen', 'Schau an');
+  if (feind) {
+    add('bedrohen', 'Drohe');
+    add('angreifen', 'Greife an');
+  }
+  return verbs;
+}
+
+function _hauptuiItemVerben(target) {
+  const item = _hauptuiItem(target) || target;
+  const verbs = [];
+  const add = function (key, label) {
+    if (!verbs.some(function (verb) { return verb.key === key; })) verbs.push({ key: key, label: label });
+  };
+  const feinde = _hauptuiFreieFeinde();
+  if (_hauptuiItemTaugt(item, 'trinken')) add('trinken', 'Trinke');
+  if (_hauptuiItemTaugt(item, 'anbieten')) add('anbieten', 'Biete an');
+  if (feinde.length && _hauptuiItemTaugt(item, 'werfen')) add('werfen', 'Wirf');
+  if (feinde.length && _hauptuiItemTaugt(item, 'werfen_fuesse')) add('werfen_fuesse', 'Lenk ab');
+  if (feinde.length && _hauptuiItemTaugt(item, 'angreifen_mit')) add('angreifen_mit', 'Schlag zu');
+  add('benutzen', 'Benutze');
+  add('anschauen', 'Schau an');
+  return verbs;
+}
+
+function _hauptuiExecuteLegacyVor1155(verb, target) {
   if (typeof chooseOptionInFlight !== 'undefined' && chooseOptionInFlight) return;
   if (verb === 'umsehen') { _hauptuiUmsehen(); return; }
   if (verb === 'verstecken') {
@@ -54925,6 +55047,123 @@ function _hauptuiExecute(verb, target) {
   }
 }
 
+// v7.12.1155: Laufzeit-Override fuer die Haupt-UI. Inventar-Aktionen laufen ohne
+// Mini-Auswahl-Popups direkt ueber den bestehenden Plan/Kampfpfad.
+function _hauptuiExecute(verb, target) {
+  if (typeof chooseOptionInFlight !== 'undefined' && chooseOptionInFlight) {
+    if (typeof showProgressToast === 'function') showProgressToast('Gleich bereit', 'Karl ist noch mitten in der letzten Handlung.', 'info', 'hauptui-lock');
+    return;
+  }
+  if (verb === 'umsehen') { _hauptuiUmsehen(); return; }
+  if (verb === 'verstecken') {
+    _hauptuiGenerischMarkieren(verb);
+    _hauptuiChoose({ id: 'HAUPTUI_VERSTECKEN', text: 'Karl sucht unauffaellig Deckung und beobachtet die Lage aus dem Verborgenen.', _anzeigeText: 'Versteck dich', kategorie: 'DEFENSIV', _kategorie: 'DEFENSIV', _engine: true });
+    return;
+  }
+  if (verb === 'warten') {
+    _hauptuiGenerischMarkieren(verb);
+    _hauptuiChoose({ id: 'HAUPTUI_WARTEN', text: 'Karl bleibt unauffaellig stehen, sondiert die Lage und wartet einen Moment ab.', _anzeigeText: 'Warte ab', kategorie: 'WARTEN', _kategorie: 'WARTEN', _engine: true });
+    return;
+  }
+  if (verb === 'beobachten') {
+    _hauptuiGenerischMarkieren(verb);
+    _hauptuiChoose({ id: 'HAUPTUI_BEOBACHTEN', text: 'Karl bleibt in Bewegung und beobachtet den aktuellen Ort aufmerksam: Wege, Routinen, Blicke und Veraenderungen.', _anzeigeText: 'Beobachte', kategorie: 'BEOBACHTEN', _kategorie: 'BEOBACHTEN', _engine: true });
+    return;
+  }
+  if (verb === 'lauschen') {
+    _hauptuiGenerischMarkieren(verb);
+    _hauptuiChoose({ id: 'HAUPTUI_LAUSCHEN', text: 'Karl haelt sich unauffaellig zurueck und lauscht gezielt auf Gespraeche, Geraeusche und Hinweise aus der Umgebung.', _anzeigeText: 'Lausche', kategorie: 'BEOBACHTEN', _kategorie: 'BEOBACHTEN', _engine: true });
+    return;
+  }
+  if (!target) return;
+
+  if (target.typ === 'ort') {
+    if (verb === 'durchsuchen') { _hauptuiUmsehen(); return; }
+    _hauptuiChoose({
+      id: 'HAUPTUI_ORT_ANSCHAUEN',
+      text: 'Karl betrachtet ' + target.name + ' aufmerksam, prueft Zugaenge, Blickachsen und auffaellige Einzelheiten.',
+      _anzeigeText: 'Schau an - ' + target.name,
+      kategorie: 'BEOBACHTEN',
+      _kategorie: 'BEOBACHTEN',
+      _engine: true,
+    });
+    return;
+  }
+
+  if (target.typ === 'person') {
+    const npc = _hauptuiNpc(target);
+    if (!npc) {
+      if (typeof showProgressToast === 'function') showProgressToast('Nicht erreichbar', target.name + ' ist hier gerade nicht greifbar.', 'info', 'hauptui-person-stale');
+      return;
+    }
+    if (verb === 'reden') {
+      if (typeof oeffneNpcMenue === 'function') {
+        if (typeof _markPopupOpened === 'function') _markPopupOpened();
+        oeffneNpcMenue(npc, 'szene', true);
+      }
+      return;
+    }
+    if (verb === 'anschauen' && typeof npcInteraktion === 'function') {
+      npcInteraktion(npc, { key: 'beobachten', label: 'Beobachten', kategorie: 'BEOBACHTEN', aktion: 'Beobachte {npc} unauffaellig, ohne die Person anzusprechen.' });
+      return;
+    }
+    if (verb === 'bedrohen' && typeof npcInteraktion === 'function') {
+      npcInteraktion(npc, { key: 'bedrohen', label: 'Bedrohen', kategorie: 'OFFENSIV', aktion: 'Bedrohe {npc} - setz die Person unter Druck, aber riskiere Eskalation.' });
+      return;
+    }
+    if (verb === 'angreifen') {
+      if (!_hauptuiPlanDirekt('angreifen', npc.name, null) && typeof npcInteraktion === 'function') npcInteraktion(npc, { key: 'angreifen', label: 'Angreifen', kategorie: 'OFFENSIV', aktion: 'Greife {npc} an.' });
+      return;
+    }
+    if (verb === 'fesseln') {
+      if (!_hauptuiPlanDirekt('fesseln', npc.name, null) && typeof npcInteraktion === 'function') npcInteraktion(npc, { key: 'fesseln', label: 'Fesseln', kategorie: 'OFFENSIV', aktion: 'Fessle {npc}.' });
+      return;
+    }
+    if (verb === 'durchsuchen_npc') {
+      if (!_hauptuiPlanDirekt('durchsuchen_npc', npc.name, null)) {
+        _hauptuiChoose({ id: 'HAUPTUI_NPC_DURCHSUCHEN', text: 'Karl durchsucht ' + npc.name + ' nach Papieren, Schluesseln oder versteckten Gegenstaenden.', _anzeigeText: 'Durchsuche - ' + npc.name, kategorie: 'ERKUNDEN', _kategorie: 'ERKUNDEN', _engine: true, _npcName: npc.name });
+      }
+      return;
+    }
+  }
+
+  if (target.typ === 'objekt') {
+    if (_hauptuiFundAuswahl(target, target.name)) return;
+    const labels = { anschauen: 'untersucht', oeffnen: 'oeffnet', durchsuchen: 'durchsucht', nehmen: 'nimmt an sich', druecken: 'betaetigt' };
+    _hauptuiChoose({ id: 'HAUPTUI_OBJEKT_' + verb.toUpperCase(), text: 'Karl ' + (labels[verb] || 'untersucht') + ' ' + target.name + ' sorgfaeltig.', _anzeigeText: verb + ' - ' + target.name, kategorie: 'ERKUNDEN', _kategorie: 'ERKUNDEN', _engine: true });
+    return;
+  }
+
+  if (target.typ === 'item') {
+    const item = _hauptuiItem(target);
+    if (!item) return;
+    if (verb === 'anschauen') {
+      const info = (typeof _itemKatalogEintrag === 'function') ? _itemKatalogEintrag(item.name) : null;
+      const detail = (info && (info.beschreibung || info.detail)) || ('Karl prueft ' + item.name + '.');
+      if (typeof showProgressToast === 'function') showProgressToast(item.name, detail, 'info', 'hauptui-item');
+      return;
+    }
+    if (verb === 'werfen' || verb === 'werfen_fuesse' || verb === 'angreifen_mit') {
+      const feind = _hauptuiErstesNpcZiel(true);
+      if (!feind) {
+        if (typeof showProgressToast === 'function') showProgressToast('Kein Ziel', item.name + ' ist bereit, aber hier steht Karl kein Gegner gegenueber.', 'info', 'hauptui-kein-feind');
+        return;
+      }
+      if (_hauptuiPlanDirekt(verb, feind.name, item)) return;
+    }
+    if (verb === 'anbieten' || verb === 'trinken') {
+      const npc = _hauptuiErstesNpcZiel(false);
+      if (npc && _hauptuiPlanDirekt(verb, npc.name, item)) return;
+      if (typeof showProgressToast === 'function') showProgressToast('Kein Gegenueber', 'Karl kann ' + item.name + ' gerade niemandem sinnvoll anbieten.', 'info', 'hauptui-kein-npc');
+      return;
+    }
+    if (verb === 'benutzen') {
+      _hauptuiChoose({ id: 'HAUPTUI_ITEM_BENUTZEN', text: 'Karl setzt ' + item.name + ' am aktuellen Ort ein. Spiele konkret aus, ob der Gegenstand hier einen Nutzen hat; falls nicht, zeige knapp, warum nicht, ohne eine neue Kernspur zu erfinden.', _anzeigeText: 'Benutze - ' + item.name, kategorie: 'ERKUNDEN', _kategorie: 'ERKUNDEN', _engine: true });
+      return;
+    }
+  }
+}
+
 function _hauptuiKesslerFaeden() {
   try {
     if (typeof _istKesslerFallFuerBild !== 'function' || !_istKesslerFallFuerBild() || !caseProgress) return [];
@@ -54999,7 +55238,7 @@ function _renderEngineMenu(container, scene) {
     // Deshalb darf "locked" das Menue nicht unterdruecken. Klicks bleiben durch _hauptuiExecute/chooseOption
     // geschuetzt, aber die fertige Szene besitzt sofort ihre Aktionen statt dauerhaft leer zu bleiben.
     const outerLabel = (typeof document.getElementById === 'function') ? document.getElementById('options-label') : null;
-    if (mode === 'combat' || mode === 'escape' || mode === 'custody' || mode === 'resolution' || mode === 'conversation') {
+    if (mode === 'escape' || mode === 'custody' || mode === 'resolution' || mode === 'conversation') {
       if (outerLabel && outerLabel.classList) outerLabel.classList.remove('hauptui-label-hidden');
       return;
     }
@@ -55034,11 +55273,11 @@ function _renderEngineMenu(container, scene) {
     const contextual = selected && selected.typ === 'ort'
       ? [{ key: 'durchsuchen', label: 'Durchsuche' }]
       : selected && selected.typ === 'person'
-      ? [{ key: 'reden', label: 'Rede mit' }, { key: 'anschauen', label: 'Schau an' }].concat((data.items || []).length ? [{ key: 'geben', label: 'Gib' }] : [])
+      ? _hauptuiPersonVerben(selected, data)
       : selected && selected.typ === 'objekt'
         ? _hauptuiObjektVerben(selected)
       : selected && selected.typ === 'item'
-          ? [{ key: 'benutzen', label: 'Benutze' }, { key: 'geben', label: 'Gib' }, { key: 'anschauen', label: 'Schau an' }]
+          ? _hauptuiItemVerben(selected)
           : [];
     const generischeVerben = ['verstecken', 'warten', 'beobachten', 'lauschen'];
     const verbs = selectedIsImplicitPlace
