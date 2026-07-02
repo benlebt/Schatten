@@ -49,5 +49,7 @@ assert(/frau_pohl:[\s\S]{0,500}?requiredTopics:\s*\['robert', 'mittwoch', 'hauke
 assert(/ilse_hauke:[\s\S]{0,500}?unlockEvidenceAny:\s*\['tuerschild_hauke', 'robert_eintritt_beobachtet'\]/.test(html), 'Ilse dossier must require a concrete lead first');
 assert(/robert_kessler:[\s\S]{0,700}?requiredEvidenceAny:/.test(html), 'Robert confession must require an independent external clue');
 assert(/definedEvidenceGate:[\s\S]{0,300}?requiredAny:/.test(html), 'Kessler resolution must require evidence from another location');
+assert(html.includes("leadTitle.textContent = 'Offene Fäden'"), 'Kessler UI must expose the active investigation questions');
+assert(html.includes("oeffneReiseMenue();"), 'external investigation threads must open the travel map');
 
 console.log('KESSLER_PROGRESSION_AND_VERHOER_OK');

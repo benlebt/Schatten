@@ -139,6 +139,21 @@ const context = {
 vm.createContext(context);
 vm.runInContext(html.slice(start, end), context);
 
+context._istKesslerFallFuerBild = () => true;
+let faeden = context._hauptuiKesslerFaeden();
+assert.deepStrictEqual(Array.from(faeden, (f) => f.id), ['robert_weg', 'wohnung'], 'Kessler must begin with two concrete courtyard questions');
+context.caseProgress.gefundeneIndizIds = ['robert_eintritt_beobachtet', 'tuerschild_hauke', 'ilse_aussage'];
+faeden = context._hauptuiKesslerFaeden();
+assert.deepStrictEqual(Array.from(faeden, (f) => f.id), ['spedition', 'cafe', 'edith'], 'Ilse statement must open independent investigation locations');
+context.caseProgress.gefundeneIndizIds.push('tetzlaff_aussage');
+faeden = context._hauptuiKesslerFaeden();
+assert.strictEqual(faeden[0].id, 'robert', 'independent evidence must open Robert confrontation');
+context.caseProgress.gefundeneIndizIds.push('robert_aussage');
+faeden = context._hauptuiKesslerFaeden();
+assert.strictEqual(faeden[0].id, 'bericht', 'Robert statement must lead back to Edith');
+context._istKesslerFallFuerBild = () => false;
+context.caseProgress.gefundeneIndizIds = [];
+
 const container = new FakeElement('div');
 context._renderEngineMenu(container, {});
 assert(container.querySelector('.hauptui-action-menu'), 'menu must render');
