@@ -99,6 +99,11 @@ assert(html.includes("showProgressToast('Gleich bereit'"), 'execute must explain
 assert(html.includes("showProgressToast('Nicht erreichbar'"), 'execute must explain stale person targets instead of silently doing nothing');
 assert(html.includes('function _hauptuiNarrativerFadenPrompt(ortName, scenesHere)'), 'open threads must feed the narrative prompt compass');
 assert(html.includes('NARRATIVER FADEN-KOMPASS'), 'prompt compass must be explicit enough to steer prose');
+assert(html.includes('function _verhoerAutoScroll()'), 'Verhoerakte must keep the protocol scrolled to the latest exchange');
+assert(html.includes("const prot = ov.querySelector('.protokoll');"), 'Verhoerakte auto-scroll must target only the protocol area');
+assert(html.includes('prot.scrollTop = prot.scrollHeight;'), 'Verhoerakte protocol must jump to the newest text after render');
+assert(html.includes('requestAnimationFrame(function ()'), 'Verhoerakte auto-scroll must repeat after layout settles');
+assert(html.includes('panel.innerHTML = h;\n  _verhoerAutoScroll();'), 'Verhoerakte render must trigger protocol auto-scroll immediately');
 const npcMenuSource = html.slice(html.indexOf('function oeffneNpcMenue'), html.indexOf('// ===== Ende NPC-Interaktion ====='));
 assert(npcMenuSource.includes("_direktVerb.key === 'befragen' || _direktVerb._verhoerOeffnen"), 'single conversation actions must bypass the redundant NPC popup inside the NPC menu');
 assert(npcMenuSource.includes('_direktVerb._sozialErledigt'), 'finished conversations must bypass the redundant one-button popup');

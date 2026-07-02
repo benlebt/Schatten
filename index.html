@@ -3796,7 +3796,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1157</div>
+    <div class="start-version">Schatten v7.12.1158</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -4037,7 +4037,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1157</span>
+    <span>Schatten v7.12.1158</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -12307,7 +12307,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1157 +Quickaction-Marker';
+window.SCHATTEN_VERSION = 'v7.12.1158 +Verhoer-Autoscroll';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -54058,6 +54058,20 @@ function _verhoerSchliessen() {
   const ov = document.getElementById('verhoer-overlay'); if (ov) ov.remove();
   try { if (typeof renderOptions === 'function') renderOptions(); } catch (e) {}
 }
+function _verhoerAutoScroll() {
+  try {
+    const ov = document.getElementById('verhoer-overlay');
+    if (!ov) return;
+    const prot = ov.querySelector('.protokoll');
+    if (!prot) return;
+    prot.scrollTop = prot.scrollHeight;
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(function () {
+        try { prot.scrollTop = prot.scrollHeight; } catch (e) {}
+      });
+    }
+  } catch (e) {}
+}
 function _verhoerRender() {
   const npc = window._verhoerAktNpc; if (!npc) return;
   const ov = document.getElementById('verhoer-overlay'); if (!ov) return;
@@ -54121,6 +54135,7 @@ function _verhoerRender() {
   h += '<div class="vbtns"><button class="vclose" id="verhoer-close">' + (aktiv ? 'Gespräch beenden (vertagen)' : 'Akte schließen') + '</button></div>';
   h += '<div class="vhint">Folge Aussagen, nicht Zahlen. Neue Fragen entstehen aus dem, was dein Gegenüber preisgibt.</div>';
   panel.innerHTML = h;
+  _verhoerAutoScroll();
   if (typeof _uiSnapshot === 'function') {
     _uiSnapshot({
       kontext: 'Verhoerakte ' + (npc.name || npcId),
