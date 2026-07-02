@@ -75,6 +75,10 @@ assert(html.includes('grid-template-columns: repeat(3, minmax(0, 1fr));'), 'desk
 assert(html.includes('.hauptui-quick-actions .option-btn-reise .option-id {'), 'travel icon must reserve enough width for the Opel SVG');
 assert(html.includes("var ww = Math.round(hh * 64 / 30);"), 'Opel SVG must declare a real width instead of overlapping its label');
 assert(html.includes('.hauptui-quick-actions .option-marker {\n    flex: 0 0 auto;\n    align-self: center;\n    margin-top: 0;\n    letter-spacing: 0;'), 'travel marker must be vertically centered with normal letter spacing');
+assert(html.includes(".hauptui-quick-actions .option-btn-sleep .option-text-wrap > span:first-child"), 'sleep title needs a stable no-wrap layout');
+assert(html.includes("const _schlafLabel = 'Schlafen';"), 'sleep quick action must use a compact title');
+assert(html.includes("marker = 'Gesperrt · Spannung';"), 'sleep tension lock marker must stay compact');
+assert(html.includes("<span>Wirklich schlafen?</span>"), 'sleep confirmation must use a compact title');
 assert(html.includes('.hauptui-kategorien .werkzeug-row .option-marker {\n    align-self: center;\n    margin-top: 0;\n    padding: 2px 6px;\n    letter-spacing: 0;'), 'tool marker typography must match the travel marker');
 assert(html.includes("oeffneNpcMenue(npc, 'szene', true)"), 'Rede mit must request direct unambiguous conversation');
 assert(html.includes('UI-KLICKVERLAUF (chronologisch)'), 'debug export must include the chronological UI click audit');
