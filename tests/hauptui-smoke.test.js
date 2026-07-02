@@ -183,7 +183,10 @@ assert.strictEqual(calls.marks, 1, 'accepted AI scene must deterministically boo
 assert.strictEqual(calls.flushes, 1, 'accepted AI scene must show the clue reward');
 assert.strictEqual(context.caseProgress.pendingHauptuiIndiz, null, 'pending clue must clear after commit');
 context._renderEngineMenu(container, {});
-assert(byText(container.querySelector('.hauptui-action-menu'), 'Beobachte'), 'newly found evidence must reopen generic observation for the changed investigation state');
+assert(!byText(container.querySelector('.hauptui-action-menu'), 'Beobachte'), 'new evidence alone must not reopen generic observation loops at the same stage');
+context.caseProgress.stage = 1;
+context._renderEngineMenu(container, {});
+assert(byText(container.querySelector('.hauptui-action-menu'), 'Beobachte'), 'a new case stage must reopen generic observation once');
 
 const clueLocations = [
   {

@@ -3699,7 +3699,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1141</div>
+    <div class="start-version">Schatten v7.12.1142</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3940,7 +3940,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1141</span>
+    <span>Schatten v7.12.1142</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -5839,7 +5839,11 @@ const INTRO_VARIANTS = [
       stasiRelevance: 0,  // v7.9.19
       romanceFrei: true,  // v7.12.785 (Lektorat: "Romance-Funke bei Ilse" + Benjamin-Design): Kessler ist der leise alleinige Einstiegsfall - keine Romance-Expansion mit Fallzeugen
       opfer: 'Robert Kessler (Buchhalter, Affaere-Verdacht)',
-      definedEvidenceGate: { minFound: 3, minBurdening: 1 }, // v7.12.741: Kessler-Indizien-Projekt - kleiner Beschattungsfall, gelockertes Fundament (3 belastende verfuegbar: ilse_aussage, fenster_beobachtung, briefchen_ilse - jedes nennt Robert konkret, also traegt minBurdening:1 die Wahrheit)
+      definedEvidenceGate: {
+        minFound: 4,
+        minBurdening: 1,
+        requiredAny: ['edith_verdacht', 'tetzlaff_aussage', 'briefchen_ilse', 'kellner_beobachtung', 'robert_tisch_beobachtet']
+      }, // Kessler: mindestens eine unabhaengige Spur ausserhalb des Hinterhofs verhindert den Ein-Ort-Schnelldurchlauf.
       tat: 'Was treibt Robert mittwochs - vermutete Affaere herausfinden',
       ortHaupt: 'Sybelstrasse Charlottenburg - Hinterhof, wo Robert eintrat',
       anlass: 'Karl verfolgt Robert seit drei Stunden zu Fuss - Robert verschwindet in einem Hinterhof',
@@ -11468,9 +11472,11 @@ function _syncBeschattungDefinedEvidenceDurchbruch(source) {
     const gate = caseSetup.definedEvidenceGate || {};
     const minFound = (typeof gate.minFound === 'number') ? gate.minFound : 3;
     const stage3 = gef.filter(id => byId[id] && byId[id].stage >= 3).length;
+    const requiredAny = Array.isArray(gate.requiredAny) ? gate.requiredAny : [];
     if ((caseProgress.stage || 0) < 3) return false;
     if (gef.length < minFound) return false;
     if (stage3 < 1) return false;
+    if (requiredAny.length && !requiredAny.some(id => gef.indexOf(id) !== -1)) return false;
     if (!caseProgress.wahrheitErkannt) {
       caseProgress.wahrheitErkannt = true;
       const tgt = (caseSetup.setupCast || []).find(c => c && (c.tag || '').toUpperCase() === 'TARGET');
@@ -12200,7 +12206,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1141 +Erschoepfte-Ortsaktionen';
+window.SCHATTEN_VERSION = 'v7.12.1142 +Gefuehrte-Ermittlungsprogression';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -22104,9 +22110,11 @@ function politicalBeatsGateErfuellt(opts) {
         const _gateCfg = (caseSetup && caseSetup.definedEvidenceGate) || {};
         const _minFound = (typeof _gateCfg.minFound === 'number') ? _gateCfg.minFound : 3;
         const _minBurden = (typeof _gateCfg.minBurdening === 'number') ? _gateCfg.minBurdening : 1;
-        if (_gefDef.length < _minFound || _belastend.length < _minBurden) {
+        const _requiredAny = Array.isArray(_gateCfg.requiredAny) ? _gateCfg.requiredAny : [];
+        const _requiredAnyOk = !_requiredAny.length || _requiredAny.some(id => _gefDef.indexOf(id) !== -1);
+        if (_gefDef.length < _minFound || _belastend.length < _minBurden || !_requiredAnyOk) {
           _fundamentOk = false;
-          _fundamentFehlt = 'Beweis-Fundament: ' + _gefDef.length + '/' + _minFound + ' Indizien' + (_belastend.length < _minBurden ? ', kein täterbelastendes Indiz (z.B. Lemke, Unterschrift, Frachtliste, Original-Akten)' : '');
+          _fundamentFehlt = 'Beweis-Fundament: ' + _gefDef.length + '/' + _minFound + ' Indizien' + (_belastend.length < _minBurden ? ', kein täterbelastendes Indiz (z.B. Lemke, Unterschrift, Frachtliste, Original-Akten)' : '') + (!_requiredAnyOk ? ', unabhängige Spur an einem weiteren Schauplatz fehlt' : '');
         }
       }
     } catch (e) {}
@@ -29927,9 +29935,14 @@ function oeffneNpcMenue(npc, modus, direktWennEindeutig) {
   var _verhoerNpc = (typeof window !== 'undefined' && window.VERHOER_PILOT_AKTIV && typeof _verhoerProfilFuer === 'function') ? _verhoerProfilFuer(npc) : null;
   if (_verhoerNpc && !_hundVerbenOverride) {
     for (let i = verben.length - 1; i >= 0; i--) { if (verben[i] && verben[i].key === 'befragen') verben.splice(i, 1); }
-    var _vstat = (caseProgress && caseProgress.verhoere && caseProgress.verhoere[_verhoerNpc]) ? caseProgress.verhoere[_verhoerNpc].status : null;
-    var _vlbl = (_vstat === 'gelöst' || _vstat === 'verbrannt') ? 'Akte ansehen' : 'Befragen';
-    verben.unshift({ key: 'verhoer_oeffnen', label: _vlbl, kategorie: 'ERKUNDEN', _verhoerOeffnen: true });
+    var _vfrei = (typeof _verhoerIstFreigeschaltet === 'function') ? _verhoerIstFreigeschaltet(_verhoerNpc) : true;
+    if (!_vfrei) {
+      verben.unshift({ key: 'verhoer_gesperrt', label: 'Noch kein konkreter Gesprächsansatz', kategorie: 'ERKUNDEN', _sozialNochNicht: true });
+    } else {
+      var _vstat = (caseProgress && caseProgress.verhoere && caseProgress.verhoere[_verhoerNpc]) ? caseProgress.verhoere[_verhoerNpc].status : null;
+      var _vlbl = (_vstat === 'gelöst' || _vstat === 'verbrannt') ? 'Akte ansehen' : 'Befragen';
+      verben.unshift({ key: 'verhoer_oeffnen', label: _vlbl, kategorie: 'ERKUNDEN', _verhoerOeffnen: true });
+    }
   }
   // v7.12.1014 (Benjamin: "ich kann Krause endlos befragen und Tokens verschwenden, kriege aber kein Indiz"): Der
   // KLIENT übergibt den Auftrag EINMAL. Danach hat eine weitere Befragung keinen Mehrwert (kein klient-gebundenes
@@ -53447,6 +53460,7 @@ const VERHOER_PROFILE = {
   frau_pohl: {
     name: 'Frau Pohl', aktenr: 'Fall Kessler · Befragung Nachbarin', verh: 'Nachbarin, Sybelstraße 24, 2. Stock',
     luegt: false, beweisSchwelle: 1, hebelIds: ['fenster_beobachtung'], grantIndizId: 'nachbarin_aussage',
+    requiredTopics: ['robert', 'mittwoch', 'hauke'],
     start: 'Was wollen Sie hier? Ich habe nichts gesehen.',
     themen: [
       { id: 'robert', st: 'Robert im Haus', sh: 'Was fällt ihr an seinen Besuchen auf?', abOeff: 0, oeff: 1, gem: 0, karl: 'Sie kennen Robert Kessler vom Sehen. Was fällt Ihnen an ihm auf?', q: 'Ein Mann, der nicht gesehen werden will, schaut anders über die Schulter. Ihrer tut das jeden Mittwoch.', tell: 'sie zieht die Gardine einen Fingerbreit zurück und prüft den Hof' },
@@ -53475,6 +53489,8 @@ const VERHOER_PROFILE = {
   ilse_hauke: {
     name: 'Ilse Hauke', aktenr: 'Fall Kessler · Befragung Hauke', verh: 'Bekannte / mutm. Geliebte · Hinterhof, 3. Stock links',
     luegt: true, beweisSchwelle: 2, hebelIds: ['briefchen_ilse', 'fenster_beobachtung'], grantIndizId: 'ilse_aussage',
+    unlockEvidenceAny: ['tuerschild_hauke', 'robert_eintritt_beobachtet'],
+    requiredTopics: ['sitzungen', 'robert', 'ring'],
     start: 'Robert? Den kenne ich kaum. Ein Nachbar, mehr nicht.',
     themen: [
       { id: 'sitzungen', st: 'Die angeblichen Sitzungen', sh: 'Was geschieht mittwochs in ihrer Wohnung?', abOeff: 0, oeff: 1, gem: 0, karl: 'Was für Sitzungen sind das, zu denen Robert jeden Mittwoch kommt?', q: 'Modellsitzungen. Anfangs jedenfalls. Er saß steif auf dem Stuhl und wusste nie, wohin mit den Händen.', tell: 'bei „anfangs“ hält sie kurz inne', aussage: { id: 'ilse_nur_modell', text: 'Hauke: Robert kommt ausschließlich wegen der Sitzungen.', status: 'unbestätigt', quelle: 'Hauke', widerlegtDurch: ['fenster_beobachtung', 'briefchen_ilse'] } },
@@ -53505,6 +53521,9 @@ const VERHOER_PROFILE = {
   robert_kessler: {
     name: 'Robert Kessler', aktenr: 'Fall Kessler · Befragung Zielperson', verh: 'Ehemann der Auftraggeberin · Ziel der Beschattung',
     luegt: true, beweisSchwelle: 2, hebelIds: ['robert_eintritt_beobachtet', 'fenster_beobachtung', 'briefchen_ilse'], grantIndizId: 'robert_aussage',
+    unlockEvidenceAny: ['ilse_aussage', 'fenster_beobachtung', 'briefchen_ilse', 'tetzlaff_aussage', 'kellner_beobachtung'],
+    requiredTopics: ['spedition', 'ilse', 'edith'],
+    requiredEvidenceAny: ['edith_verdacht', 'tetzlaff_aussage', 'briefchen_ilse', 'kellner_beobachtung', 'robert_tisch_beobachtet'],
     start: 'Sie haben mich verfolgt? Ich war bei einer privaten Sitzung. Das geht meine Frau nichts an.',
     themen: [
       { id: 'spedition', st: 'Die Überstunden', sh: 'Seine überprüfbare Ausrede festhalten.', abOeff: 0, oeff: 1, gem: 0, karl: 'Beginnen wir bei der Spedition. Welche Überstunden dauern jeden Mittwoch gleich lang?', q: 'Mittwochs ist weniger Betrieb. Ich gehe manchmal früher. Edith glaubt, ich arbeite länger.', tell: 'er korrigiert sich mitten im Satz und merkt es selbst' },
@@ -53536,6 +53555,17 @@ const VERHOER_PROFILE = {
 
 function _verhoerProfilFuer(npc) {
   try { if (!npc) return null; const id = npc.id || ''; return VERHOER_PROFILE[id] ? id : null; } catch (e) { return null; }
+}
+function _verhoerHatEines(ids) {
+  try {
+    if (!Array.isArray(ids) || !ids.length) return true;
+    const gefunden = (caseProgress && Array.isArray(caseProgress.gefundeneIndizIds)) ? caseProgress.gefundeneIndizIds : [];
+    return ids.some(function (id) { return gefunden.indexOf(id) !== -1; });
+  } catch (e) { return false; }
+}
+function _verhoerIstFreigeschaltet(npcId) {
+  const p = VERHOER_PROFILE[npcId];
+  return !!p && _verhoerHatEines(p.unlockEvidenceAny);
 }
 function _verhoerStatus(npc) {
   try { const id = npc && npc.id; const s = (caseProgress && caseProgress.verhoere && caseProgress.verhoere[id]) ? caseProgress.verhoere[id] : null; return s ? s.status : null; } catch (e) { return null; }
@@ -53587,8 +53617,10 @@ function _verhoerPushTurn(npcId, karl, line, tell, extra) {
 }
 function _verhoerFinish(npcId) {
   const s = _verhoerState(npcId), p = VERHOER_PROFILE[npcId];
+  const themenOk = !Array.isArray(p.requiredTopics) || p.requiredTopics.every(function (id) { return !!s.themenUsed[id]; });
+  const belegeOk = _verhoerHatEines(p.requiredEvidenceAny);
   if (s.gem >= 2) { s.status = 'verbrannt'; _verhoerCommit(npcId); }
-  else if (s.oeff >= 3) {
+  else if (s.oeff >= 3 && themenOk && belegeOk) {
     s.status = 'gelöst';
     s.log.push({ who: 'NPC', k: false, tx: p.breakLine });
     try {
@@ -53659,6 +53691,8 @@ function _verhoerVorhalt(belegId) {
 function _verhoerEinschaetzung(npcId) {
   const s = _verhoerState(npcId), p = VERHOER_PROFILE[npcId];
   if (s.gem >= 2) return p.eindruck.dicht;
+  if (s.oeff >= 3 && Array.isArray(p.requiredTopics) && !p.requiredTopics.every(function (id) { return !!s.themenUsed[id]; })) return 'Die Fassade wankt, aber eine entscheidende Frage ist noch offen.';
+  if (s.oeff >= 3 && !_verhoerHatEines(p.requiredEvidenceAny)) return 'Die Geschichte wankt. Ohne einen unabhängigen Beleg von einem anderen Schauplatz bleibt es Aussage gegen Aussage.';
   let t = p.eindruck.oeff[s.oeff] || '';
   if (s.gem === 1) t += ' ' + p.eindruck.gereizt;
   if (s.zweifel && p.eindruck.zweifel) t += ' ' + p.eindruck.zweifel;
@@ -54222,11 +54256,8 @@ window.__hauptuiActionState = window.__hauptuiActionState || { verb: null, targe
 function _hauptuiErmittlungsSignatur() {
   try {
     const stage = (caseProgress && typeof caseProgress.stage === 'number') ? caseProgress.stage : 0;
-    const indizien = (caseProgress && Array.isArray(caseProgress.gefundeneIndizIds)) ? caseProgress.gefundeneIndizIds.slice().sort() : [];
-    const npcs = (typeof getNpcsAtCurrentLocation === 'function' ? (getNpcsAtCurrentLocation() || []) : [])
-      .map(function (npc) { return String((npc && (npc.id || npc.name)) || ''); }).filter(Boolean).sort();
-    return stage + '|' + indizien.join(',') + '|' + npcs.join(',');
-  } catch (e) { return '0||'; }
+    return 'stage:' + stage;
+  } catch (e) { return 'stage:0'; }
 }
 
 function _hauptuiGenerischKey(verb) {
@@ -54611,7 +54642,7 @@ function _renderEngineMenu(container, scene) {
     if (selectedIsImplicitPlace && contextual.length > verbs.length) {
       const erschoepft = document.createElement('div');
       erschoepft.className = 'hauptui-exhausted-note';
-      erschoepft.textContent = 'Bereits geprüft. Neue Spuren oder Personen können weitere Beobachtungen ermöglichen.';
+      erschoepft.textContent = 'Für diese Fallstufe bereits geprüft. Verfolge konkrete Spuren oder wechsle den Schauplatz.';
       left.appendChild(erschoepft);
     }
 

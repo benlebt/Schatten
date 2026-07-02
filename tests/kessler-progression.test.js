@@ -8,7 +8,7 @@ const caseEnd = html.indexOf('anchorNpcs:', caseStart);
 assert(caseStart > -1 && caseEnd > caseStart, 'Kessler setup not found');
 const kessler = html.slice(caseStart, caseEnd);
 
-assert(/definedEvidenceGate:\s*\{\s*minFound:\s*3,\s*minBurdening:\s*1\s*\}/.test(kessler), 'Kessler evidence gate changed');
+assert(/definedEvidenceGate:\s*\{[\s\S]{0,180}?minFound:\s*4,[\s\S]{0,80}?minBurdening:\s*1,[\s\S]{0,180}?requiredAny:/.test(kessler), 'Kessler evidence gate must require four clues including an independent location');
 
 const earlyEvidence = [
   'tuerschild_hauke',
@@ -45,5 +45,9 @@ assert(html.includes('function _verhoerThema(id)'), 'dossier topics need their o
 assert(html.includes('data-vthema='), 'dossier UI must render topic-driven questions');
 assert(!html.includes('<div class="vlabel">DEIN VORGEHEN</div>'), 'generic interrogation tactics must no longer be the primary dossier UI');
 assert(html.includes('Ergibt sich aus dem Gespräch'), 'deeper questions must visibly unlock from prior answers');
+assert(/frau_pohl:[\s\S]{0,500}?requiredTopics:\s*\['robert', 'mittwoch', 'hauke'\]/.test(html), 'Pohl must require her decisive topic chain instead of any three clicks');
+assert(/ilse_hauke:[\s\S]{0,500}?unlockEvidenceAny:\s*\['tuerschild_hauke', 'robert_eintritt_beobachtet'\]/.test(html), 'Ilse dossier must require a concrete lead first');
+assert(/robert_kessler:[\s\S]{0,700}?requiredEvidenceAny:/.test(html), 'Robert confession must require an independent external clue');
+assert(/definedEvidenceGate:[\s\S]{0,300}?requiredAny:/.test(html), 'Kessler resolution must require evidence from another location');
 
 console.log('KESSLER_PROGRESSION_AND_VERHOER_OK');
