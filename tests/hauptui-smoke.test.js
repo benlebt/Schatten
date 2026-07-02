@@ -74,7 +74,7 @@ assert(html.includes('.hauptui-kategorien .werkzeug-row .werkzeug-btn {'), 'comp
 assert(html.includes('grid-template-columns: repeat(3, minmax(0, 1fr));'), 'desktop controls must use a stable LucasArts-style grid');
 assert(html.includes('.hauptui-quick-actions .option-btn-reise .option-id {'), 'travel icon must reserve enough width for the Opel SVG');
 assert(html.includes("var ww = Math.round(hh * 64 / 30);"), 'Opel SVG must declare a real width instead of overlapping its label');
-assert(html.includes('.hauptui-quick-actions .option-marker {\n    min-width: 0;\n    margin-top: 0;\n    letter-spacing: 0;'), 'quick-action markers need a shrinkable grid column with normal letter spacing');
+assert(html.includes('.hauptui-quick-actions .option-marker {') && html.includes('min-width: 0;\n    margin-top: 0;') && html.includes('letter-spacing: 0;'), 'quick-action markers need a shrinkable grid column with normal letter spacing');
 assert(html.includes('text-overflow: ellipsis;\n    text-align: right;'), 'long travel destinations must truncate cleanly instead of colliding with the title');
 assert(html.includes(".hauptui-quick-actions .option-btn-sleep .option-text-wrap > span:first-child"), 'sleep title needs a stable no-wrap layout');
 assert(html.includes("const _schlafLabel = 'Schlafen';"), 'sleep quick action must use a compact title');
@@ -82,6 +82,8 @@ assert(html.includes("marker = 'Gesperrt · Spannung';"), 'sleep tension lock ma
 assert(html.includes("<span>Wirklich schlafen?</span>"), 'sleep confirmation must use a compact title');
 assert(html.includes('grid-template-columns: 40px minmax(0, auto) minmax(0, 1fr);'), 'travel quick action needs stable icon, title and destination columns');
 assert(html.includes('.hauptui-quick-actions .option-text-wrap {\n    display: contents;'), 'desktop quick actions must place title and marker in separate grid columns');
+assert(html.includes('.hauptui-quick-actions .option-marker {\n    display: flex;\n    align-items: center;\n    justify-content: flex-end;\n    align-self: stretch;'), 'quick-action markers must be vertically centered text, not top-aligned badges');
+assert(html.includes('padding: 0;\n    border: 0;\n    background: transparent;\n    border-radius: 0;'), 'quick-action markers must not render as nested mini-buttons');
 assert(html.includes('.hauptui-quick-actions .option-text-wrap,\n    .hauptui-quick-actions .option-btn-sleep .option-text-wrap {\n      display: grid;\n      grid-template-columns: auto minmax(0, 1fr);'), 'narrow quick actions must keep title and marker in one stable row');
 assert(html.includes('.hauptui-quick-actions .option-text-wrap > span:first-child,\n    .hauptui-quick-actions .option-btn-sleep .option-text-wrap > span:first-child {\n      min-width: 0;\n      max-width: 100%;\n      overflow: hidden;\n      text-overflow: ellipsis;\n      white-space: nowrap;'), 'narrow quick-action titles must not wrap over travel markers');
 assert(html.includes('const FX_DIALOG_OVERLAYS_AKTIV = false;'), 'legacy emoji dialogue cards must stay globally disabled in the scene-image style');
