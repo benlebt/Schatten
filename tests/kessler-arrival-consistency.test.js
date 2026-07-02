@@ -81,6 +81,12 @@ vm.runInContext(html.slice(visualFnStart, visualFnEnd), imageContext);
 imageContext._renderKesslerSceneVisual({ szene: 'Robert verschwindet im Hinterhof.' });
 assert.strictEqual(visualClasses.has('hidden'), false, 'initial Kessler scene must reveal its scene image');
 assert.strictEqual(visualElements['kessler-scene-image'].attrs.src, 'assets/scenes/kessler/hinterhof-sybelstrasse-day.png', 'initial Kessler scene must select the daylight courtyard asset');
+imageContext.engineCurrentLocation = { name: 'Kessler-Wohnung Charlottenburg' };
+imageContext._aktTageszeitName = () => 'nacht';
+imageContext._renderKesslerSceneVisual({ szene: 'Du stellst den Motor ab, steigst aus und gehst schnellen Schrittes in die Wohnung. Edith Kessler öffnet dir.' });
+assert.strictEqual(visualClasses.has('hidden'), false, 'Kessler apartment night scene must reveal its scene image');
+assert.strictEqual(visualElements['kessler-scene-image'].attrs.src, 'assets/scenes/kessler/kessler-wohnung-charlottenburg.png', 'Kessler apartment at night must select the dark apartment asset');
+assert.strictEqual(visualElements['kessler-scene-place'].textContent, 'Kessler-Wohnung, Charlottenburg', 'Kessler apartment caption must be set');
 
 const textHelperStart = html.indexOf('function _kesslerInnenraumTextPasst');
 const textHelperEnd = html.indexOf('function _renderKesslerSceneVisual', textHelperStart);
@@ -91,6 +97,7 @@ vm.createContext(textContext);
 vm.runInContext(html.slice(textHelperStart, textHelperEnd), textContext);
 assert.strictEqual(textContext._kesslerInnenraumTextPasst('Karl steht auf dem Hof vor dem Tor. In einem Büro brennt Licht.'), false, 'outside arrival must not show the interior image');
 assert.strictEqual(textContext._kesslerInnenraumTextPasst('Karl tritt in das Büro. Tetzlaff sitzt am Schreibtisch.'), true, 'interior scene must show the interior image');
+assert.strictEqual(textContext._kesslerInnenraumTextPasst('Du stellst den Motor ab und gehst in die Wohnung. Edith wartet.'), true, 'apartment arrival from the Opel must still show the apartment image');
 
 assert(html.includes('=== FESTES INNENRAUMBILD (PFLICHT) ==='), 'travel prompt must align prose with interior images');
 assert(html.includes('=== BILD-RAUMWAHRHEIT (PFLICHT) ==='), 'restored scenes must return to the canonical interior');
