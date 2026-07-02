@@ -2389,6 +2389,8 @@
   }
   .hauptui-quick-actions:empty { display: none; }
   .hauptui-quick-actions .option-btn {
+    display: grid;
+    grid-template-columns: 18px minmax(0, auto) minmax(0, 1fr);
     align-items: center;
     width: 100%;
     min-height: 36px;
@@ -2411,24 +2413,32 @@
     width: 40px;
     min-width: 40px;
   }
+  .hauptui-quick-actions .option-btn-reise {
+    grid-template-columns: 40px minmax(0, auto) minmax(0, 1fr);
+  }
   .hauptui-quick-actions .option-btn-reise .option-id svg {
     display: block;
     max-width: 40px;
   }
   .hauptui-quick-actions .option-text-wrap {
+    display: contents;
     min-width: 0;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    gap: 6px;
     line-height: 1.2;
   }
+  .hauptui-quick-actions .option-text-wrap > span:first-child {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   .hauptui-quick-actions .option-marker {
-    flex: 0 0 auto;
-    align-self: center;
+    min-width: 0;
     margin-top: 0;
     letter-spacing: 0;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: right;
   }
   .hauptui-quick-actions .option-btn-sleep .option-text-wrap > span:first-child {
     flex: 0 0 auto;
@@ -2514,18 +2524,26 @@
       justify-content: start;
     }
     .hauptui-quick-actions .option-btn {
+      grid-template-columns: 32px minmax(0, 1fr);
       width: 100%;
       min-height: 36px;
     }
+    .hauptui-quick-actions .option-btn-reise {
+      grid-template-columns: 40px minmax(0, 1fr);
+    }
+    .hauptui-quick-actions .option-text-wrap,
     .hauptui-quick-actions .option-btn-sleep .option-text-wrap {
+      display: flex;
       flex-direction: column;
       align-items: flex-start;
       justify-content: center;
       gap: 1px;
     }
+    .hauptui-quick-actions .option-marker,
     .hauptui-quick-actions .option-btn-sleep .option-marker {
       max-width: 100%;
       font-size: calc(7px * var(--reading-scale));
+      text-align: left;
     }
     .werkzeug-row {
       gap: 6px;
@@ -3750,7 +3768,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1147</div>
+    <div class="start-version">Schatten v7.12.1148</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -3991,7 +4009,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1147</span>
+    <span>Schatten v7.12.1148</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -12257,7 +12275,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1147 +Kompakter-Schlafbutton';
+window.SCHATTEN_VERSION = 'v7.12.1148 +Szenenbild-Dialoge-und-Quickactions';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -15238,6 +15256,13 @@ function fxPartyJoin(neuName) {
 function fxDialog(npcName, verbKey, dauerMs) {
   try {
     if (!fxEnabled() || !npcName) return;
+    // Haupt-UI mit Szenenbildern: Die alte Emoji-Dialogkarte verdeckt Bild und
+    // Erzähltext und widerspricht dem neuen visuellen Stil. Das Gespräch läuft
+    // direkt in der Szene weiter; die Marke verhindert eine Ersatzanimation.
+    if (typeof window !== 'undefined' && window.HAUPTUI_AKTIV) {
+      window._fxLastT = Date.now();
+      return;
+    }
     window._fxLastT = Date.now(); // v7.12.700: Marke fürs Sicherheitsnetz
     const _D = dauerMs || FX_ZEIT.dialog; // v7.12.706: optionale Dauer (Romantik etwas kürzer)
     // v7.12.724 (Benjamin): Anstoßen beim Trinken, sanfter Seufzer bei der Romantik.
@@ -32014,6 +32039,7 @@ function renderOptions(scene) {
           }
         } catch (e) {}
         reiseBtn.innerHTML = '<span class="option-id">' + ((typeof opelMiniSvg === 'function') ? opelMiniSvg(18) : '🚗') + '</span><span class="option-text-wrap"><span>' + escapeHtml(_labelH) + '</span><span class="option-marker option-marker-system">' + escapeHtml(_mark) + '</span></span>';
+        reiseBtn.title = _labelH + ' · ' + _mark.replace(/^→\s*/, '');
       } catch (e) {}
     }
     // v7.12.557 (Benjamin-Befund): Reise-Button hatte nacktes touchend OHNE Bewegungsprüfung -> beim Scrollen

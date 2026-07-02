@@ -74,11 +74,15 @@ assert(html.includes('.hauptui-kategorien .werkzeug-row .werkzeug-btn {'), 'comp
 assert(html.includes('grid-template-columns: repeat(3, minmax(0, 1fr));'), 'desktop controls must use a stable LucasArts-style grid');
 assert(html.includes('.hauptui-quick-actions .option-btn-reise .option-id {'), 'travel icon must reserve enough width for the Opel SVG');
 assert(html.includes("var ww = Math.round(hh * 64 / 30);"), 'Opel SVG must declare a real width instead of overlapping its label');
-assert(html.includes('.hauptui-quick-actions .option-marker {\n    flex: 0 0 auto;\n    align-self: center;\n    margin-top: 0;\n    letter-spacing: 0;'), 'travel marker must be vertically centered with normal letter spacing');
+assert(html.includes('.hauptui-quick-actions .option-marker {\n    min-width: 0;\n    margin-top: 0;\n    letter-spacing: 0;'), 'quick-action markers need a shrinkable grid column with normal letter spacing');
+assert(html.includes('text-overflow: ellipsis;\n    text-align: right;'), 'long travel destinations must truncate cleanly instead of colliding with the title');
 assert(html.includes(".hauptui-quick-actions .option-btn-sleep .option-text-wrap > span:first-child"), 'sleep title needs a stable no-wrap layout');
 assert(html.includes("const _schlafLabel = 'Schlafen';"), 'sleep quick action must use a compact title');
 assert(html.includes("marker = 'Gesperrt · Spannung';"), 'sleep tension lock marker must stay compact');
 assert(html.includes("<span>Wirklich schlafen?</span>"), 'sleep confirmation must use a compact title');
+assert(html.includes('grid-template-columns: 40px minmax(0, auto) minmax(0, 1fr);'), 'travel quick action needs stable icon, title and destination columns');
+assert(html.includes('.hauptui-quick-actions .option-text-wrap {\n    display: contents;'), 'desktop quick actions must place title and marker in separate grid columns');
+assert(/function fxDialog[\s\S]{0,500}?window\.HAUPTUI_AKTIV[\s\S]{0,120}?window\._fxLastT = Date\.now\(\);[\s\S]{0,40}?return;/.test(html), 'legacy emoji dialogue cards must stay hidden in the scene-image Haupt-UI');
 assert(html.includes('.hauptui-kategorien .werkzeug-row .option-marker {\n    align-self: center;\n    margin-top: 0;\n    padding: 2px 6px;\n    letter-spacing: 0;'), 'tool marker typography must match the travel marker');
 assert(html.includes("oeffneNpcMenue(npc, 'szene', true)"), 'Rede mit must request direct unambiguous conversation');
 assert(html.includes('UI-KLICKVERLAUF (chronologisch)'), 'debug export must include the chronological UI click audit');
