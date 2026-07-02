@@ -77,6 +77,9 @@ assert(html.includes("var ww = Math.round(hh * 64 / 30);"), 'Opel SVG must decla
 assert(html.includes('.hauptui-quick-actions .option-marker {\n    flex: 0 0 auto;\n    align-self: center;\n    margin-top: 0;\n    letter-spacing: 0;'), 'travel marker must be vertically centered with normal letter spacing');
 assert(html.includes('.hauptui-kategorien .werkzeug-row .option-marker {\n    align-self: center;\n    margin-top: 0;\n    padding: 2px 6px;\n    letter-spacing: 0;'), 'tool marker typography must match the travel marker');
 assert(html.includes("oeffneNpcMenue(npc, 'szene', true)"), 'Rede mit must request direct unambiguous conversation');
+assert(html.includes('UI-KLICKVERLAUF (chronologisch)'), 'debug export must include the chronological UI click audit');
+assert(html.includes('Sichtbare UI-Zustaende ('), 'debug export must include offered Haupt-UI and dossier states');
+assert(html.includes("_uiAudit('FADEN', faden.frage, faden.ort)"), 'open investigation threads must be logged when clicked');
 const npcMenuSource = html.slice(html.indexOf('function oeffneNpcMenue'), html.indexOf('// ===== Ende NPC-Interaktion ====='));
 assert(npcMenuSource.includes("_direktVerb.key === 'befragen' || _direktVerb._verhoerOeffnen"), 'single conversation actions must bypass the redundant NPC popup inside the NPC menu');
 assert(npcMenuSource.includes('_direktVerb._sozialErledigt'), 'finished conversations must bypass the redundant one-button popup');
@@ -104,6 +107,7 @@ const context = {
   Array,
   Date,
   sceneCounter: 3,
+  logEntries: [{ type: 'scene', sceneNr: 3 }],
   caseProgress: { gefundeneIndizIds: [] },
   engineCurrentLocation: { name: 'Cafe Wien' },
   deriveInteractionMode: () => 'normal',
@@ -165,10 +169,13 @@ const vossButton = byText(container, voss.name);
 assert(vossButton, 'Voss target missing; buttons=' + all(container).filter((element) => element.tagName === 'button').map(visibleText).join(' | '));
 assert(visibleText(vossButton).includes('Hinweis: Befragen/Bestechen'), 'person target must name the clue actions');
 vossButton.onTap();
+assert(context.caseProgress.uiAuditLog.some((event) => event.kind === 'ZIEL AUSGEWAEHLT' && event.label === voss.name), 'target clicks must enter the UI audit');
+assert(context.logEntries[0].uiSnapshots.some((snapshot) => snapshot.kontext === 'Haupt-UI'), 'visible Haupt-UI state must attach to the current scene');
 assert(container.children.indexOf(container.querySelector('.hauptui-action-menu')) < container.children.indexOf(quickActions), 're-rendered menu must remain above travel and sleep actions');
 let execute = all(container).find((element) => element.className === 'hauptui-execute');
 assert(execute && !execute.disabled, 'person command must be executable');
 execute.onTap();
+assert(context.caseProgress.uiAuditLog.some((event) => event.kind === 'AUSFUEHREN-BUTTON' && event.label === 'Rede mit'), 'execute clicks must enter the UI audit');
 assert.strictEqual(calls.npc, 1, 'person command must open the real NPC menu');
 assert.strictEqual(calls.npcModus, 'szene', 'Rede mit must exclude party-management actions');
 assert.strictEqual(calls.npcDirekt, true, 'Rede mit must directly execute an unambiguous conversation');
