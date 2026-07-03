@@ -106,6 +106,10 @@ assert(html.includes("showProgressToast('Gleich bereit'"), 'execute must explain
 assert(html.includes("showProgressToast('Nicht erreichbar'"), 'execute must explain stale person targets instead of silently doing nothing');
 assert(html.includes('function _hauptuiNarrativerFadenPrompt(ortName, scenesHere)'), 'open threads must feed the narrative prompt compass');
 assert(html.includes('NARRATIVER FADEN-KOMPASS'), 'prompt compass must be explicit enough to steer prose');
+assert(html.includes('GEFAHR-AUSZAHLUNG (KRITISCH)'), 'engine-spawned danger must be forced to pay off in prose instead of disappearing offscreen');
+assert(html.includes('=== AKTIVE KONFRONTATION (PFLICHT, v7.12.1171) ==='), 'active confrontation state must be explicit in the scene prompt');
+assert(html.includes('OFFSCREEN-VERLETZUNGEN VERBOTEN'), 'injury prose must not invent unseen causes retroactively');
+assert(html.includes('ORTSWECHSEL-SCHABLONEN'), 'repeated travel openings need an explicit anti-template rule');
 assert(html.includes('let _reiseFreiDurchOrtsausgang = false;'), 'public investigation locations need an exit override so high tension cannot hide travel completely');
 assert(html.includes('const _reiseGesperrtRoh = (!window.HAUPTUI_AKTIV) && (currentSpannung >= 4)'), 'Haupt-UI travel must not disappear because of tension alone');
 assert(html.includes('const _reiseDurchBildErsetzt = _ausgangImBild && !window.HAUPTUI_AKTIV;'), 'scene image exits must not replace the visible Haupt-UI travel button');
