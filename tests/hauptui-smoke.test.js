@@ -123,7 +123,10 @@ assert(npcMenuSource.includes('!_hatUeberhauptNoch && !_klientHier && _schonGesp
 assert(npcMenuSource.includes('!_hatNochWas && _schonGesprochen'), 'simple NPC conversations must remain available until the NPC was actually spoken to');
 assert(npcMenuSource.includes('_hatUeberhauptNoch && !_hatJetztErreichbar'), 'NPCs without any bound clue must not be mistaken for stage-locked conversations');
 assert(npcMenuSource.includes('_hatNochWas && !_hatJetzt'), 'simple NPCs without any bound clue must still allow their first conversation');
+assert(npcMenuSource.includes('_klientHatOffenenHinweis'), 'client lockout must explicitly exempt currently open client-bound clues');
+assert(npcMenuSource.includes('&& !_klientHatOffenenHinweis'), 'client lockout must not hide a reachable clue at the client location');
 assert(html.includes('_npcAlsAngesprochenMarkieren(npc.name, npc.id)'), 'real conversations must persist their per-NPC spoken state');
+assert(/function _hauptuiZielHinweis[\s\S]{0,120}?return 'Hinweis';/.test(html), 'person clue badges must stay short and not expose clipped raw action labels');
 const sceneVisualSource = html.slice(html.indexOf('function _renderKesslerSceneVisual'), html.indexOf('function _clearKesslerSceneVisual'));
 assert(!sceneVisualSource.includes('direktWennEindeutig'), 'NPC direct-action code must never leak into scene-image rendering');
 const start = html.indexOf('window.__hauptuiActionState');
@@ -263,7 +266,8 @@ container.appendChild(quickActions);
 
 const vossButton = byText(container, voss.name);
 assert(vossButton, 'Voss target missing; buttons=' + all(container).filter((element) => element.tagName === 'button').map(visibleText).join(' | '));
-assert(visibleText(vossButton).includes('Hinweis: Befragen/Bestechen'), 'person target must name the clue actions');
+assert(visibleText(vossButton).includes('Hinweis'), 'person target must mark reachable clue');
+assert(!visibleText(vossButton).includes('Befragen/Bestechen'), 'person target must not expose clipped raw clue actions');
 vossButton.onTap();
 assert(context.caseProgress.uiAuditLog.some((event) => event.kind === 'ZIEL AUSGEWAEHLT' && event.label === voss.name), 'target clicks must enter the UI audit');
 assert(context.logEntries[0].uiSnapshots.some((snapshot) => snapshot.kontext === 'Haupt-UI'), 'visible Haupt-UI state must attach to the current scene');
