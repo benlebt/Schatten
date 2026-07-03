@@ -375,6 +375,8 @@ assert(html.includes("{ key: 'items', label: 'Inventar', tag: 'Inventar', target
 assert(html.includes("button.dataset.targetKind = kind;"), 'target buttons must expose semantic kind for styling and audits');
 assert(html.includes('.hauptui-target.type-person') && html.includes('.hauptui-target.type-loot') && html.includes('.hauptui-target.type-item'), 'target roles must render with distinct visual classes');
 assert(!html.includes("if (mode === 'combat' || mode === 'escape'"), 'combat mode must not hide the Haupt-UI while the old arena is disabled');
+assert(/if \(showRomanceButton\)[\s\S]{0,2600}?window\.HAUPTUI_AKTIV && typeof hauptuiQuickActions !== 'undefined'[\s\S]{0,160}?appendChild\(romBtn\)/.test(html), 'romance must render as a compact Haupt-UI quick action');
+assert(/if \(showOvernightButton\)[\s\S]{0,2600}?window\.HAUPTUI_AKTIV && typeof hauptuiQuickActions !== 'undefined'[\s\S]{0,160}?appendChild\(overnightBtn\)/.test(html), 'overnight romance must render as a compact Haupt-UI quick action');
 calls.plan = [];
 calls.planExecuted = 0;
 const hostile = { id: 'mantelmann', name: 'Mann im grauen Mantel', tag: 'STASI', rolle: 'Agent', typ: 'person' };
