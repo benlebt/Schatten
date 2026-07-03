@@ -90,6 +90,9 @@ assert(html.includes('.hauptui-quick-actions .option-marker {\n    display: flex
 assert(html.includes('padding: 0;\n    border: 0;\n    background: transparent;\n    border-radius: 0;'), 'quick-action markers must not render as nested mini-buttons');
 assert(html.includes('@media (max-width: 520px)') && html.includes('grid-template-columns: 1fr;'), 'narrow quick actions must stack into stable full-width rows');
 assert(html.includes('.hauptui-quick-actions .option-text-wrap > span:first-child,\n    .hauptui-quick-actions .option-btn-sleep .option-text-wrap > span:first-child {\n      min-width: 0;\n      max-width: 100%;\n      overflow: hidden;\n      text-overflow: ellipsis;\n      white-space: nowrap;'), 'narrow quick-action titles must not wrap over travel markers');
+assert(html.includes('.hauptui-lead-question { font-size: calc(11px * var(--reading-scale));'), 'open investigation threads must stay readable');
+assert(html.includes('.hauptui-lead-place { color: #91a9b4; font-size: calc(9.5px * var(--reading-scale));'), 'open thread destination labels must stay readable');
+assert(html.includes('max-width: 22ch;\n    color: #8fa8b5;\n    font-size: calc(9px * var(--reading-scale));'), 'hint tags must not collapse into tiny unreadable labels');
 assert(html.includes('const FX_DIALOG_OVERLAYS_AKTIV = false;'), 'legacy emoji dialogue cards must stay globally disabled in the scene-image style');
 assert(/function fxDialog[\s\S]{0,220}?window\._fxLastT = Date\.now\(\);[\s\S]{0,80}?if \(!FX_DIALOG_OVERLAYS_AKTIV\) return;/.test(html), 'fxDialog must mark handled and return before rendering emoji dialogue cards');
 assert(html.includes('.hauptui-kategorien .werkzeug-row .option-marker {\n    align-self: center;\n    margin-top: 0;\n    padding: 2px 6px;\n    letter-spacing: 0;'), 'tool marker typography must match the travel marker');
@@ -197,6 +200,18 @@ context.caseProgress.verhoerFehlschlaege = ['ilse_hauke'];
 faeden = context._hauptuiKesslerFaeden();
 assert.deepStrictEqual(Array.from(faeden, (f) => f.id), ['spedition', 'cafe', 'edith'], 'burned Ilse interrogation must not keep the player stuck in the courtyard');
 assert.strictEqual(context._hauptuiHatOffenenFadenAmOrt('Hinterhof Sybelstrasse'), false, 'burned local interrogation must not keep the courtyard marked as the next active thread');
+context.caseProgress.verhoere = { ilse_hauke: { status: 'gelöst', _grantText: 'Ilse hat alles gesagt.' } };
+context.caseProgress.verhoerFehlschlaege = [];
+context.caseProgress.gefundeneIndizIds = ['robert_eintritt_beobachtet', 'tuerschild_hauke'];
+context.engineCurrentLocation = { name: 'Hinterhof Sybelstrasse' };
+context.getCaseLocations = () => [{
+  name: 'Hinterhof Sybelstrasse',
+  indizien: [{ id: 'ilse_aussage', npc: 'ilse_hauke', quelle: 'person', actions: ['BEFRAGEN'] }],
+}];
+context._aktTageszeitName = () => 'nachmittag';
+faeden = context._hauptuiKesslerFaeden();
+assert(!faeden.some((f) => f.id === 'ilse'), 'solved but legacy-unbooked Ilse dossier must not remain an open thread');
+assert.strictEqual(context._indizDurchVerhoerNichtMehrOffen({ id: 'ilse_aussage', npc: 'ilse_hauke', quelle: 'person' }), true, 'solved but legacy-unbooked Ilse dossier must be treated as no longer open');
 context.caseProgress.verhoere = {};
 context.caseProgress.verhoerFehlschlaege = [];
 context.caseProgress.gefundeneIndizIds = ['robert_eintritt_beobachtet', 'tuerschild_hauke', 'ilse_aussage'];

@@ -1757,7 +1757,7 @@
   .hauptui-column-label {
     margin: 0 0 5px;
     color: #92866f;
-    font-size: calc(9px * var(--reading-scale));
+    font-size: calc(10px * var(--reading-scale));
     text-transform: uppercase;
   }
   .hauptui-verbs {
@@ -1807,7 +1807,7 @@
   }
   .hauptui-leads-title {
     color: #9a8a68;
-    font-size: calc(8.5px * var(--reading-scale));
+    font-size: calc(10px * var(--reading-scale));
     text-transform: uppercase;
     letter-spacing: 0.12em;
     margin-bottom: 3px;
@@ -1822,14 +1822,14 @@
     border-top: 1px dotted #342e24;
     background: transparent;
     color: #cfc3a3;
-    padding: 5px 2px;
+    padding: 6px 2px;
     text-align: left;
     font-family: inherit;
     cursor: pointer;
   }
   .hauptui-lead:first-of-type { border-top: 0; }
-  .hauptui-lead-question { font-size: calc(9.5px * var(--reading-scale)); line-height: 1.25; }
-  .hauptui-lead-place { color: #91a9b4; font-size: calc(8px * var(--reading-scale)); white-space: nowrap; }
+  .hauptui-lead-question { font-size: calc(11px * var(--reading-scale)); line-height: 1.25; }
+  .hauptui-lead-place { color: #91a9b4; font-size: calc(9.5px * var(--reading-scale)); white-space: nowrap; }
   .hauptui-lead:hover .hauptui-lead-question { color: #e1bd57; }
   .hauptui-target-group + .hauptui-target-group { margin-top: 7px; }
   .hauptui-target-list {
@@ -1854,7 +1854,7 @@
     background: #15120d;
     color: #e4dac4;
     text-align: left;
-    font-size: calc(11px * var(--reading-scale));
+    font-size: calc(12px * var(--reading-scale));
   }
   .hauptui-target::before {
     content: "?";
@@ -1882,9 +1882,9 @@
   }
   .hauptui-target-tag {
     min-width: 0;
-    max-width: 18ch;
+    max-width: 22ch;
     color: #8fa8b5;
-    font-size: calc(8px * var(--reading-scale));
+    font-size: calc(9px * var(--reading-scale));
     text-align: right;
     text-transform: uppercase;
     overflow: hidden;
@@ -3870,7 +3870,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1164</div>
+    <div class="start-version">Schatten v7.12.1165</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -4111,7 +4111,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1164</span>
+    <span>Schatten v7.12.1165</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11466,7 +11466,7 @@ function _naechsterErmittlungsschritt() {
 function offeneIndizienAmOrt(loc) {
   if (!loc || !Array.isArray(loc.indizien) || !loc.indizien.length) return 0;
   const gef = (caseProgress && Array.isArray(caseProgress.gefundeneIndizIds)) ? caseProgress.gefundeneIndizIds : [];
-  return loc.indizien.filter(ind => ind && ind.id && gef.indexOf(ind.id) === -1 && !(typeof _indizDurchVerbranntesVerhoerGesperrt === 'function' && _indizDurchVerbranntesVerhoerGesperrt(ind))).length;
+  return loc.indizien.filter(ind => ind && ind.id && gef.indexOf(ind.id) === -1 && !(typeof _indizDurchVerhoerNichtMehrOffen === 'function' && _indizDurchVerhoerNichtMehrOffen(ind))).length;
 }
 // v7.12.588 (KONZEPT_REISE_WEGWEISER R1): offene Indizien getrennt nach Erreichbarkeit. "jetzt" = Gates (Tageszeit +
 // NPC am Ort) sind AKTUELL erfüllt; "spaeter" = zeit-/personengesperrt. So sieht der Spieler, wo er JETZT hinkann und
@@ -11505,7 +11505,7 @@ function offeneIndizienAmOrtNachErreichbarkeit(loc) {
   const _stgNow = (caseProgress && typeof caseProgress.stage === 'number') ? caseProgress.stage : 0;
   for (const ind of loc.indizien) {
     if (!ind || !ind.id || gef.indexOf(ind.id) !== -1) continue; // gefunden -> raus
-    if (typeof _indizDurchVerbranntesVerhoerGesperrt === 'function' && _indizDurchVerbranntesVerhoerGesperrt(ind)) continue;
+    if (typeof _indizDurchVerhoerNichtMehrOffen === 'function' && _indizDurchVerhoerNichtMehrOffen(ind)) continue;
     let erreichbar = true;
     // v7.12.751 (ChatGPT-Lektorat P1.1): abStage-Gate. Indizien mit abStage über aktueller Stage sind noch
     // gesperrt -> "später", nicht "jetzt findbar". Sonst zeigt die Karte z.B. Kessler-Stage-3-Belege zu früh.
@@ -11765,17 +11765,14 @@ function _npcHatOffenenHinweis(npcName, npcId) {
     if (!loc || !Array.isArray(loc.indizien)) return false;
     const gef = (caseProgress && Array.isArray(caseProgress.gefundeneIndizIds)) ? caseProgress.gefundeneIndizIds : [];
     const tz = (typeof _aktTageszeitName === 'function') ? _aktTageszeitName() : '';
-    const nN = normForMatch(npcName);
-    const vn = nN.split(/\s+/)[0];
     const _stgNow = (caseProgress && typeof caseProgress.stage === 'number') ? caseProgress.stage : 0;
     return loc.indizien.some(ind => {
       if (!ind || !ind.id || !ind.npc || gef.indexOf(ind.id) !== -1) return false;
-      if (typeof _indizDurchVerbranntesVerhoerGesperrt === 'function' && _indizDurchVerbranntesVerhoerGesperrt(ind)) return false;
+      if (typeof _indizDurchVerhoerNichtMehrOffen === 'function' && _indizDurchVerhoerNichtMehrOffen(ind)) return false;
       if (ind.quelle !== 'person') return false; // v7.12.688: Personen-Badge nur für Person-Indizien (s. _npcOffeneHinweisAktionen)
       if (typeof _indizNurUeberKampf === 'function' && _indizNurUeberKampf(ind)) return false; // v7.12.1014: Combat-Loot nicht als normaler Hinweis-Badge
       // v7.12.752 (ChatGPT-Lektorat P1.3): abStage-Gate - kein Personen-Badge für noch stage-gesperrte Indizien.
       if (typeof ind.abStage === 'number' && _stgNow < ind.abStage) return false;
-      const indNpc = normForMatch(ind.npc);
       // v7.12.1014: robuster Match (Vor- UND Nachname + ID) statt nur Vorname.
       const matcht = _indizGehoertZuNpc(ind.npc, npcName, npcId);
       if (!matcht) return false;
@@ -11797,7 +11794,7 @@ function _npcHatUngefundeneIndizien(npcName, npcId) {
     const gef = (caseProgress && Array.isArray(caseProgress.gefundeneIndizIds)) ? caseProgress.gefundeneIndizIds : [];
     return loc.indizien.some(ind => {
       if (!ind || !ind.id || !ind.npc || gef.indexOf(ind.id) !== -1) return false;
-      if (typeof _indizDurchVerbranntesVerhoerGesperrt === 'function' && _indizDurchVerbranntesVerhoerGesperrt(ind)) return false;
+      if (typeof _indizDurchVerhoerNichtMehrOffen === 'function' && _indizDurchVerhoerNichtMehrOffen(ind)) return false;
       if (ind.quelle !== 'person') return false;
       // v7.12.1014: robuster Match (Vor- UND Nachname + ID) - KEIN abStage-/zeit-Gate hier.
       return _indizGehoertZuNpc(ind.npc, npcName, npcId);
@@ -11815,14 +11812,12 @@ function _npcOffeneHinweisAktionen(npcName) {
     if (!loc || !Array.isArray(loc.indizien)) return [];
     const gef = (caseProgress && Array.isArray(caseProgress.gefundeneIndizIds)) ? caseProgress.gefundeneIndizIds : [];
     const tz = (typeof _aktTageszeitName === 'function') ? _aktTageszeitName() : '';
-    const nN = normForMatch(npcName);
-    const vn = nN.split(/\s+/)[0];
     const LABEL = { ANSPRECHEN: 'Ansprechen', BEFRAGEN: 'Befragen', BESTECHEN: 'Bestechen', UEBERZEUGEN: 'Überzeugen', DURCHSUCHEN: 'Durchsuchen', ERKUNDEN: 'Umsehen', AKTEN_LESEN: 'Akten lesen' };
     const _stgNow = (caseProgress && typeof caseProgress.stage === 'number') ? caseProgress.stage : 0;
     const out = [];
     loc.indizien.forEach(ind => {
       if (!ind || !ind.id || !ind.npc || gef.indexOf(ind.id) !== -1) return;
-      if (typeof _indizDurchVerbranntesVerhoerGesperrt === 'function' && _indizDurchVerbranntesVerhoerGesperrt(ind)) return;
+      if (typeof _indizDurchVerhoerNichtMehrOffen === 'function' && _indizDurchVerhoerNichtMehrOffen(ind)) return;
       // v7.12.752 (ChatGPT-Lektorat P1.3): abStage-Gate - keine Aktions-Labels für noch stage-gesperrte Indizien.
       if (typeof ind.abStage === 'number' && _stgNow < ind.abStage) return;
       if (typeof _indizNurUeberKampf === 'function' && _indizNurUeberKampf(ind)) return; // v7.12.1014: Combat-Loot nicht als Aktions-Label
@@ -11831,8 +11826,7 @@ function _npcOffeneHinweisAktionen(npcName) {
       // Umgebungs-Indizien mit NPC-Gate (Frachtliste bei Wahler) werden vom UMSEHEN-Button-Marker
       // beworben - dort gehört der Klick hin, nicht auf die Person.
       if (ind.quelle !== 'person') return;
-      const indNpc = normForMatch(ind.npc);
-      const matcht = indNpc === nN || indNpc.replace(/_/g, ' ') === nN || (vn.length >= 3 && indNpc.includes(vn));
+      const matcht = _indizGehoertZuNpc(ind.npc, npcName, null);
       if (!matcht) return;
       if (Array.isArray(ind.zeit) && ind.zeit.length && !ind.zeit.map(z => normForMatch(z)).includes(tz)) return;
       (Array.isArray(ind.actions) ? ind.actions : []).forEach(a => {
@@ -12044,7 +12038,7 @@ function pickZielIndiz() {
     for (const ind of loc.indizien) {
       if (!ind || !ind.id) continue;
       if (caseProgress.gefundeneIndizIds && caseProgress.gefundeneIndizIds.indexOf(ind.id) !== -1) continue;
-      if (typeof _indizDurchVerbranntesVerhoerGesperrt === 'function' && _indizDurchVerbranntesVerhoerGesperrt(ind)) continue;
+      if (typeof _indizDurchVerhoerNichtMehrOffen === 'function' && _indizDurchVerhoerNichtMehrOffen(ind)) continue;
       // v7.12.742 (ChatGPT-Lektorat v741 P1, verifiziert): abStage galt nur im Umsehen- und UI-Pfad, NICHT
       // im Szenen-Pick. Ein stage:3/abStage:2-Indiz (ilse_aussage, fenster_beobachtung, briefchen_ilse)
       // konnte so per normaler Szenenaktion zu früh gewählt werden. Jetzt überall dieselbe Reife-Schranke.
@@ -12134,7 +12128,7 @@ function pruefeKernIndizFund(sceneText) {
         const _gateLog = (grund) => { try { if (typeof diag === 'function') diag('detect', '🔒 INDIZ-GATE "' + ind.id + '" blockiert: ' + grund + ' (fundModus=' + _fundModus + ', stage=' + _stgNow2 + ', npcsHier=[' + npcsHier.join(',') + '])'); } catch (e) {} };
         // v7.12.742 (ChatGPT-Lektorat v741 P1): abStage-Reifeschranke auch bei der Vergabe (Pick==Vergabe-Konsistenz).
         if (typeof ind.abStage === 'number' && _stgNow2 < ind.abStage) { _gateLog('abStage ' + ind.abStage + ' > Stage ' + _stgNow2); continue; }
-        if (typeof _indizDurchVerbranntesVerhoerGesperrt === 'function' && _indizDurchVerbranntesVerhoerGesperrt(ind)) { _gateLog('Verhoerquelle "' + ind.npc + '" ist verbrannt'); continue; }
+        if (typeof _indizDurchVerhoerNichtMehrOffen === 'function' && _indizDurchVerhoerNichtMehrOffen(ind)) { _gateLog('Verhoerquelle "' + ind.npc + '" ist nicht mehr offen'); continue; }
         // Tageszeit-Gate
         if (Array.isArray(ind.zeit) && ind.zeit.length && !ind.zeit.map(z => normForMatch(z)).includes(tz)) { _gateLog('Tageszeit (' + tz + ' nicht in [' + ind.zeit.join(',') + '])'); continue; }
         // NPC-Gate (Personen-Indiz braucht den NPC am Ort)
@@ -12240,7 +12234,7 @@ function pruefeKernIndizFund(sceneText) {
       for (const ind of loc.indizien) {
         if (!ind || !ind.id) continue;
         if (caseProgress.gefundeneIndizIds && caseProgress.gefundeneIndizIds.indexOf(ind.id) !== -1) continue;
-        if (typeof _indizDurchVerbranntesVerhoerGesperrt === 'function' && _indizDurchVerbranntesVerhoerGesperrt(ind)) continue;
+        if (typeof _indizDurchVerhoerNichtMehrOffen === 'function' && _indizDurchVerhoerNichtMehrOffen(ind)) continue;
         if (Array.isArray(ind.zeit) && ind.zeit.length && !ind.zeit.map(z => normForMatch(z)).includes(tz)) continue;
         if (ind.npc && npcsHier.length && npcsHier.indexOf(normForMatch(ind.npc)) === -1) continue;
         if (Array.isArray(ind.schluessel) && ind.schluessel.some(k => txt.includes(normForMatch(k)))) {
@@ -12400,7 +12394,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1164 +Optionale-Konfrontationen-Romance-Quickactions';
+window.SCHATTEN_VERSION = 'v7.12.1165 +Geschlossene-Akten-keine-Falschen-Hinweise';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -16209,7 +16203,7 @@ function _ortsFundIndizienErreichbar() {
     if (_expNode2 && typeof diag === 'function') diag('state', '🔎 ORTSFUND-FILTER @ Zelle "' + (_expNode2.titel || '?') + '": hotspots=[' + (_expNode2.hotspots || []).join(',') + ']');
     return _loc.indizien.filter(ind => {
       if (!ind || !ind.id || _gef.indexOf(ind.id) !== -1) return false;
-      if (typeof _indizDurchVerbranntesVerhoerGesperrt === 'function' && _indizDurchVerbranntesVerhoerGesperrt(ind)) return false;
+      if (typeof _indizDurchVerhoerNichtMehrOffen === 'function' && _indizDurchVerhoerNichtMehrOffen(ind)) return false;
       if (_expHotspotFilter && _expHotspotFilter.indexOf(normForMatch(ind.id)) === -1) return false;
       // v7.12.661 (Run-Befund: "4 Fundstücke, Klick findet nichts"). quelle:'person'-Indizien werden durch
       // BEFRAGEN gefunden, nicht durch Umsehen - die schließt der Umsehen-Button aus. quelle:'umgebung' sind
@@ -55418,8 +55412,37 @@ function _indizDurchVerbranntesVerhoerGesperrt(ind) {
     if (!ind || !ind.npc || ind.quelle !== 'person' || !caseProgress) return false;
     const npcId = String(ind.npc || '');
     const s = caseProgress.verhoere && caseProgress.verhoere[npcId] ? caseProgress.verhoere[npcId] : null;
-    if (s && s.status === 'verbrannt') return true;
+    const status = normForMatch((s && s.status) || '');
+    if (status === 'verbrannt') return true;
     return Array.isArray(caseProgress.verhoerFehlschlaege) && caseProgress.verhoerFehlschlaege.indexOf(npcId) !== -1;
+  } catch (e) { return false; }
+}
+
+// v7.12.1165: Eine Personenquelle kann nicht nur "verbrannt", sondern auch bereits
+// erledigt sein. Alte Saves koennen eine geloeste Akte enthalten, ohne dass das
+// grantIndizId sauber in gefundeneIndizIds steht. Dann darf Karte/Haupt-UI nicht
+// weiter einen angeblich offenen Hinweis bei dieser Person bewerben.
+function _indizDurchVerhoerNichtMehrOffen(ind) {
+  try {
+    if (!ind || !ind.npc || ind.quelle !== 'person' || !caseProgress) return false;
+    if (typeof _indizDurchVerbranntesVerhoerGesperrt === 'function' && _indizDurchVerbranntesVerhoerGesperrt(ind)) return true;
+    const npcId = String(ind.npc || '');
+    const s = caseProgress.verhoere && caseProgress.verhoere[npcId] ? caseProgress.verhoere[npcId] : null;
+    if (!s) return false;
+    const p = (typeof VERHOER_PROFILE !== 'undefined' && VERHOER_PROFILE && VERHOER_PROFILE[npcId]) ? VERHOER_PROFILE[npcId] : null;
+    const fallbackGrant = {
+      frau_pohl: 'nachbarin_aussage',
+      ilse_hauke: 'ilse_aussage',
+      edith_kessler: 'edith_verdacht',
+      norbert_tetzlaff: 'tetzlaff_aussage',
+      oberkellner_voss: 'kellner_beobachtung',
+      robert_kessler: 'robert_aussage'
+    };
+    const grantId = (p && p.grantIndizId) || fallbackGrant[npcId] || '';
+    if (grantId !== ind.id) return false;
+    const status = normForMatch(s.status || '');
+    const geloest = status.indexOf('gel') === 0 || status === 'abgeschlossen' || status === 'geschlossen';
+    return !!(geloest || s._grantText);
   } catch (e) { return false; }
 }
 
@@ -55431,19 +55454,24 @@ function _hauptuiKesslerFaeden() {
     const hatEines = function (ids) { return ids.some(hat); };
     const verbrannt = function (npcId) { return (typeof _indizDurchVerbranntesVerhoerGesperrt === 'function') && _indizDurchVerbranntesVerhoerGesperrt({ id: 'faden_' + npcId, npc: npcId, quelle: 'person' }); };
     const nichtVerbrannt = function (npcId) { return !verbrannt(npcId); };
+    const personIndizOffen = function (indizId, npcId) {
+      if (hat(indizId)) return false;
+      if (typeof _indizDurchVerhoerNichtMehrOffen === 'function' && _indizDurchVerhoerNichtMehrOffen({ id: indizId, npc: npcId, quelle: 'person' })) return false;
+      return true;
+    };
     const faeden = [];
     if (!hat('robert_eintritt_beobachtet')) faeden.push({ id: 'robert_weg', frage: 'Wohin verschwindet Robert am Mittwoch?', ort: 'Hinterhof Sybelstrasse', targetIds: ['robert_eintritt_beobachtet'] });
     if (!hat('tuerschild_hauke')) faeden.push({ id: 'wohnung', frage: 'Welche Wohnung sucht Robert im Hinterhaus auf?', ort: 'Hinterhof Sybelstrasse', targetIds: ['tuerschild_hauke'] });
-    if (hatEines(['robert_eintritt_beobachtet', 'tuerschild_hauke']) && !hat('ilse_aussage') && nichtVerbrannt('ilse_hauke')) faeden.push({ id: 'ilse', frage: 'Was verbindet Ilse Hauke mit Robert?', ort: 'Hinterhof Sybelstrasse', targetIds: ['ilse_hauke'] });
+    if (hatEines(['robert_eintritt_beobachtet', 'tuerschild_hauke']) && personIndizOffen('ilse_aussage', 'ilse_hauke')) faeden.push({ id: 'ilse', frage: 'Was verbindet Ilse Hauke mit Robert?', ort: 'Hinterhof Sybelstrasse', targetIds: ['ilse_hauke'] });
 
     const externeIds = ['edith_verdacht', 'tetzlaff_aussage', 'briefchen_ilse', 'kellner_beobachtung', 'robert_tisch_beobachtet'];
     const externBelegt = hatEines(externeIds);
     if (hatEines(['robert_eintritt_beobachtet', 'ilse_aussage']) && !externBelegt) {
       faeden.push({ id: 'spedition', frage: 'Stimmen Roberts angebliche Überstunden?', ort: 'Spedition Schmidt Moabit', targetIds: ['norbert_tetzlaff', 'briefchen_ilse'] });
-      if (nichtVerbrannt('oberkellner_voss')) faeden.push({ id: 'cafe', frage: 'Wer kennt Roberts frühere Mittwochswege?', ort: 'Cafe Wien', targetIds: ['oberkellner_voss', 'robert_tisch_beobachtet'] });
-      if (nichtVerbrannt('edith_kessler')) faeden.push({ id: 'edith', frage: 'Was beobachtet Edith an den Mittwochabenden?', ort: 'Kessler-Wohnung Charlottenburg', targetIds: ['edith_kessler'] });
+      if (!hat('robert_tisch_beobachtet') || personIndizOffen('kellner_beobachtung', 'oberkellner_voss')) faeden.push({ id: 'cafe', frage: 'Wer kennt Roberts frühere Mittwochswege?', ort: 'Cafe Wien', targetIds: ['oberkellner_voss', 'robert_tisch_beobachtet'] });
+      if (personIndizOffen('edith_verdacht', 'edith_kessler')) faeden.push({ id: 'edith', frage: 'Was beobachtet Edith an den Mittwochabenden?', ort: 'Kessler-Wohnung Charlottenburg', targetIds: ['edith_kessler'] });
     }
-    if (externBelegt && !hat('robert_aussage') && nichtVerbrannt('robert_kessler')) faeden.push({ id: 'robert', frage: 'Wie erklärt Robert die Widersprüche?', ort: 'Hinterhof Sybelstrasse', targetIds: ['robert_kessler'] });
+    if (externBelegt && personIndizOffen('robert_aussage', 'robert_kessler')) faeden.push({ id: 'robert', frage: 'Wie erklärt Robert die Widersprüche?', ort: 'Hinterhof Sybelstrasse', targetIds: ['robert_kessler'] });
     if ((hat('robert_aussage') || caseProgress.wahrheitErkannt) && !caseProgress.istGelöst && nichtVerbrannt('edith_kessler')) faeden.push({ id: 'bericht', frage: 'Welche Wahrheit soll Edith erfahren?', ort: 'Kessler-Wohnung Charlottenburg', targetIds: ['edith_kessler'] });
     return faeden.slice(0, 3);
   } catch (e) { return []; }

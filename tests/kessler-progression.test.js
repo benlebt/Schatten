@@ -60,9 +60,10 @@ assert((html.match(/frageLimit:\s*4/g) || []).length >= 3, 'each Kessler interro
 assert(html.includes('Gesprächsspielraum:'), 'the dossier must warn the player about the remaining question window');
 assert(/function _verhoerScheitern[\s\S]{0,900}?karlAkte\.ruf\.renommee\s*=\s*Math\.max\(-5,[\s\S]{0,120}?-\s*1\)/.test(html), 'failed interrogations must have a real reputation consequence');
 assert(html.includes('function _indizDurchVerbranntesVerhoerGesperrt(ind)'), 'burned interrogations need a shared clue reachability guard');
-assert(/function offeneIndizienAmOrtNachErreichbarkeit[\s\S]{0,2600}?_indizDurchVerbranntesVerhoerGesperrt\(ind\)/.test(html), 'travel map must not advertise clues locked behind burned interrogations');
-assert(/function _npcHatOffenenHinweis[\s\S]{0,1200}?_indizDurchVerbranntesVerhoerGesperrt\(ind\)/.test(html), 'NPC hint badges must hide burned interrogation clues');
-assert(/function pickZielIndiz[\s\S]{0,1200}?_indizDurchVerbranntesVerhoerGesperrt\(ind\)/.test(html), 'AI target clue picker must skip burned interrogation clues');
+assert(html.includes('function _indizDurchVerhoerNichtMehrOffen(ind)'), 'closed interrogations need a shared clue reachability guard');
+assert(/function offeneIndizienAmOrtNachErreichbarkeit[\s\S]{0,2600}?_indizDurchVerhoerNichtMehrOffen\(ind\)/.test(html), 'travel map must not advertise clues locked behind burned or closed interrogations');
+assert(/function _npcHatOffenenHinweis[\s\S]{0,1200}?_indizDurchVerhoerNichtMehrOffen\(ind\)/.test(html), 'NPC hint badges must hide burned or closed interrogation clues');
+assert(/function pickZielIndiz[\s\S]{0,1200}?_indizDurchVerhoerNichtMehrOffen\(ind\)/.test(html), 'AI target clue picker must skip burned or closed interrogation clues');
 
 const interrogationStart = html.indexOf('const VERHOER_BELEG_LABEL');
 const interrogationEnd = html.indexOf('function _verhoerInjectStyle', interrogationStart);
