@@ -108,6 +108,13 @@ assert(html.includes('function _hauptuiNarrativerFadenPrompt(ortName, scenesHere
 assert(html.includes('NARRATIVER FADEN-KOMPASS'), 'prompt compass must be explicit enough to steer prose');
 assert(html.includes('GEFAHR-AUSZAHLUNG (KRITISCH)'), 'engine-spawned danger must be forced to pay off in prose instead of disappearing offscreen');
 assert(html.includes('=== AKTIVE KONFRONTATION (PFLICHT, v7.12.1171) ==='), 'active confrontation state must be explicit in the scene prompt');
+assert(html.includes('const ITEM_TAKTIK_DEFAULTS = {'), 'items need tactical tags for confrontation choices');
+assert(html.includes('function _konfrontationTaktikProfil(npc, threat)'), 'confrontations need tactical enemy profiles');
+assert(html.includes('function _hauptuiKonfrontationItemPlan(item, verb, takt)'), 'confrontation inventory must be scored against enemy weaknesses');
+assert(html.includes('requiresItemAny') && html.includes('requiresItemAll'), 'threat spawns must support item-gated ambushes');
+assert(html.includes('TAKTISCHE LAGE'), 'active confrontation prompt must expose tactical constraints');
+assert(html.includes('Diese Konfrontation ist runden-/entscheidungsbasiert, NICHT Tempo/Reflex'), 'combat prompt must frame tactical decisions instead of speed');
+assert(html.includes('massiver_schlaeger') && html.includes('nervoeser_messer_mann'), 'Krause thugs need distinct tactical profiles');
 assert(html.includes('OFFSCREEN-VERLETZUNGEN VERBOTEN'), 'injury prose must not invent unseen causes retroactively');
 assert(html.includes('ORTSWECHSEL-SCHABLONEN'), 'repeated travel openings need an explicit anti-template rule');
 assert(html.includes('let _reiseFreiDurchOrtsausgang = false;'), 'public investigation locations need an exit override so high tension cannot hide travel completely');

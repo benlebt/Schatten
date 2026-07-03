@@ -1908,6 +1908,13 @@
   .hauptui-threat-button.primary { background: rgba(200,168,61,0.94); color: #120d05; font-weight: 700; }
   .hauptui-threat-button.danger { border-color: rgba(210,78,55,0.75); color: #f0b39f; }
   .hauptui-threat-button.item { border-color: rgba(125,155,185,0.78); color: #c9d8e6; }
+  .hauptui-threat-button.is-best { border-color: rgba(212,184,106,0.95); box-shadow: inset 3px 0 0 rgba(212,184,106,0.9); }
+  .hauptui-threat-button.is-risky { border-color: rgba(210,78,55,0.65); color: #d7aaa0; }
+  .hauptui-threat-button .mini { display:block; margin-top:3px; color: rgba(198,205,210,0.64); font-size: calc(9px * var(--reading-scale)); letter-spacing: 0; line-height: 1.2; }
+  .hauptui-threat-note { margin-top: 8px; color: #b7ad98; font-size: calc(11px * var(--reading-scale)); line-height: 1.35; }
+  .hauptui-threat-chips { display:flex; flex-wrap:wrap; gap:5px; margin-top:8px; }
+  .hauptui-threat-chip { border:1px solid rgba(212,184,106,0.3); background:rgba(212,184,106,0.08); color:#d4c18a; padding:3px 7px; border-radius:4px; font-size:calc(9px * var(--reading-scale)); letter-spacing:0; }
+  .hauptui-threat-chip.bad { border-color:rgba(210,78,55,0.38); background:rgba(120,38,30,0.12); color:#d6a092; }
   .hauptui-threat-empty {
     margin-top: 7px;
     color: #7d715e;
@@ -3996,7 +4003,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1171</div>
+    <div class="start-version">Schatten v7.12.1172</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -4237,7 +4244,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1171</span>
+    <span>Schatten v7.12.1172</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6783,11 +6790,33 @@ CHARAKTERFUEHRUNG (Kessler-Fall, Pflicht): Dies ist ein leiser West-Beschattungs
           beziehung: 'Schlaeger von Tante Frieda, bewacht das Lager hinter der Hehlerei',
           detail: 'bullig, breite Schultern, Schlapphut, verblasstes Anker-Tattoo am rechten Unterarm, traegt einen Schlagring. Ruhiger und gefaehrlicher als Jochen, redet wenig.',
           triggerWhen: 'Karl naehert sich Tante Friedas Hehlerei in der Stallschreiberstrasse oder dem Lager dahinter',
+          gegnerprofil: {
+            typ: 'massiver_schlaeger',
+            taktik: {
+              ziel: 'Kalle nicht frontal nehmen; seinen Stand brechen oder ihn mit Laerm aus dem Takt bringen.',
+              warnung: 'Kalle blockiert Wege und arbeitet mit Schlagring. Frontaler Nahkampf kostet Verfassung.',
+              schwaechen: ['sturz', 'wucht', 'laut'],
+              guteItems: ['toaster', 'ziegelstein', 'korn', 'knallkoerper'],
+              riskant: ['frontaler Angriff', 'leere Haende']
+            },
+            kampf: { gefahr: 2, waffe: 'Schlagring', rundenLimit: 3, fluchtMoeglich: true }
+          },
           persistent: false, anwesend: false },
         { name: 'Jochen', id: 'jochen', tag: 'GANGSTER', alter: 33, rolle: 'Friedas hagerer Messer-Mann',
           beziehung: 'zweiter Schlaeger von Tante Frieda, oft zusammen mit Kalle',
           detail: 'hager, Lederjacke, langes Messer im Stiefelschaft. Nervoeser und schneller gereizt als Kalle, redet zu viel wenn er unter Druck steht.',
           triggerWhen: 'wie Kalle, meist gemeinsam mit ihm bei Friedas Hehlerei',
+          gegnerprofil: {
+            typ: 'nervoeser_messer_mann',
+            taktik: {
+              ziel: 'Distanz halten; Jochen ueberreagiert auf Blendung, Laerm und alles, was ihn aus dem Gleichgewicht bringt.',
+              warnung: 'Jochen ist schneller als Kalle und sucht den kurzen Messerweg.',
+              schwaechen: ['blendend', 'laut', 'schreck', 'ablenkung', 'sturz'],
+              guteItems: ['korn', 'knallkoerper', 'alter_fisch', 'bananenschale', 'toaster'],
+              riskant: ['nahkampf', 'lange Diskussion']
+            },
+            kampf: { gefahr: 2, waffe: 'Messer', rundenLimit: 3, fluchtMoeglich: true }
+          },
           persistent: false, anwesend: false },
       ],
       // v7.9.25: KEY-CLUES. Diebstahl-Fall: das Etui zurueckholen.
@@ -6844,6 +6873,24 @@ CHARAKTERFUEHRUNG (Kessler-Fall, Pflicht): Dies ist ein leiser West-Beschattungs
           ] },
         { name: 'Stallschreiberstrasse 12', sektor: 'West (Kreuzberg)', detail: 'Hinterhof von Tante Friedas Hehlerei, Lagerzugang, hier halten sich Kalle und Jochen auf',
           npcs: [{ id: 'kalle', zeit: ['vormittag','mittag','nachmittag','abend','nacht'] }, { id: 'jochen', zeit: ['vormittag','mittag','nachmittag','abend','nacht'] }],
+          bedrohungen: [
+            { id: 'kalle', chance: 100, abStage: 3, konfrontation: true, unausweichlich: true,
+              taktik: {
+                ziel: 'Kalle blockiert den Weg zum Lager. Karl muss seinen Stand brechen oder ihn aus dem Takt bringen.',
+                warnung: 'Schlagring, kurze Distanz, breite Schultern. Frontal reingehen ist genau sein Spiel.',
+                schwaechen: ['sturz', 'wucht', 'laut'],
+                guteItems: ['toaster', 'ziegelstein', 'korn', 'knallkoerper'],
+                riskant: ['frontaler Angriff', 'leere Haende']
+              } },
+            { id: 'jochen', chance: 100, abStage: 3, konfrontation: true, unausweichlich: true,
+              taktik: {
+                ziel: 'Jochen schneidet den Rueckweg ab. Karl braucht Abstand, Blendung oder Ablenkung.',
+                warnung: 'Das Messer kommt schnell, wenn Karl zu lange diskutiert.',
+                schwaechen: ['blendend', 'laut', 'schreck', 'ablenkung', 'sturz'],
+                guteItems: ['korn', 'knallkoerper', 'alter_fisch', 'bananenschale', 'toaster'],
+                riskant: ['nahkampf', 'lange Diskussion']
+              } },
+          ],
           indizien: [
             // v7.12.980 (Stage 3): das Lager beweist Transport/Versteck - NICHT das Etui selbst. abStage:3, damit Frieda
             // (Stage 2->3) nicht uebersprungen wird (Engine kann nur abStage, kein abIndiz - verifiziert).
@@ -8003,6 +8050,22 @@ function _resolveNpcIdentity(npcId) {
   return Object.assign({ id: npcId, name: nm, tag: tag }, _profilFelder);
 }
 
+function _inventarHatItemKey(key) {
+  try {
+    if (!key) return false;
+    const ziel = (typeof ITEM_KATALOG !== 'undefined' && ITEM_KATALOG && ITEM_KATALOG[key])
+      ? normForMatch(ITEM_KATALOG[key].name || key)
+      : normForMatch(key);
+    const items = (typeof _itemsBeiKarl === 'function') ? (_itemsBeiKarl() || []) : [];
+    return items.some(function (item) {
+      if (!item) return false;
+      if (String(item.id || '') === String(key) || String(item.key || '') === String(key)) return true;
+      const name = normForMatch(item.name || '');
+      return !!name && !!ziel && (name === ziel || name.indexOf(ziel) !== -1 || ziel.indexOf(name) !== -1);
+    });
+  } catch (e) { return false; }
+}
+
 // v7.12.532 (Baustein B2): Würfelt bei Ankunft an einem Ort die GETAKTETEN Gegner (loc.bedrohungen) durch.
 // Garantierte NPCs (loc.npcs mit immer/zeit) laufen NICHT hier durch - die sind über getNpcsAtCurrentLocation
 // fest präsent. Hier nur die Bedrohungs-NPCs mit chance<100 + ortsAbstand + globalem Cooldown.
@@ -8029,6 +8092,17 @@ function resolveThreatSpawn() {
     // Tageszeit-Filter
     if (Array.isArray(b.zeit) && b.zeit.length) {
       if (!b.zeit.map(z => normForMatch(z)).includes(tzName)) continue;
+    }
+    // v7.12.1172: Manche Konfrontationen sollen erst zuschnappen, wenn Karl ein
+    // konkretes Gegenmittel/Lockmittel bei sich hat. Das macht Item-Funde zu
+    // echten taktischen Vorbereitungen statt nur Sammelkram.
+    if (Array.isArray(b.requiresItemAny) && b.requiresItemAny.length && !b.requiresItemAny.some(function (key) { return _inventarHatItemKey(key); })) {
+      if (typeof diag === 'function') diag('detect', 'THREAT-GATE: ' + b.id + ' @ ' + ortNorm + ' wartet auf Item [' + b.requiresItemAny.join(', ') + ']');
+      continue;
+    }
+    if (Array.isArray(b.requiresItemAll) && b.requiresItemAll.length && !b.requiresItemAll.every(function (key) { return _inventarHatItemKey(key); })) {
+      if (typeof diag === 'function') diag('detect', 'THREAT-GATE: ' + b.id + ' @ ' + ortNorm + ' wartet auf Items [' + b.requiresItemAll.join(', ') + ']');
+      continue;
     }
     const chance = (typeof b.chance === 'number') ? b.chance : 100;
     // GARANTIE: chance>=100 -> immer da (kein Cooldown/Abstand-Block). Fall-relevante Gegner nie weggewürfelt.
@@ -8120,6 +8194,54 @@ function _konfrontationCooldownAktiv(npcId) {
   } catch (e) { return false; }
 }
 
+function _konfrontationTaktikProfil(npc, threat) {
+  try {
+    const prof = (npc && npc.gegnerprofil) || (typeof _gegnerProfilVon === 'function' ? _gegnerProfilVon(npc && npc.name) : null) || {};
+    const explicit = (threat && threat.taktik) || prof.taktik || {};
+    const tag = ((npc && npc.tag) || '').toUpperCase();
+    const rolle = ((npc && npc.rolle) || '').toLowerCase();
+    const kampf = prof.kampf || {};
+    const out = {
+      ziel: explicit.ziel || 'Aus der Enge kommen, ohne blind in Gewalt zu laufen.',
+      warnung: explicit.warnung || '',
+      schwaechen: Array.isArray(explicit.schwaechen) ? explicit.schwaechen.slice() : [],
+      guteItems: Array.isArray(explicit.guteItems) ? explicit.guteItems.slice() : [],
+      riskant: Array.isArray(explicit.riskant) ? explicit.riskant.slice() : [],
+      taktiken: Array.isArray(explicit.taktiken) ? explicit.taktiken.slice() : []
+    };
+    if (!out.warnung) out.warnung = 'Die Lage zwingt Karl zu einer Entscheidung; Abwarten macht sie schlechter.';
+    if (!out.schwaechen.length) {
+      if (tag === 'STASI' || /stasi|mfs|hauptmann|leutnant|apparat|polizist|wachtmeister/.test(rolle)) {
+        out.ziel = 'Ruhig bleiben, Amtsdruck spiegeln, eine Luecke in der Drohung finden.';
+        out.schwaechen = ['aktenlogik', 'bluff', 'ablenkung', 'rauch'];
+        out.guteItems = ['west_zigaretten', 'bohnenkaffee', 'westmark'];
+        out.riskant = ['frontaler Angriff'];
+      } else if (tag === 'GANGSTER' || /schlaeger|hehler|messer|schlagring|halbwelt/.test(rolle)) {
+        out.ziel = 'Distanz schaffen und den Stand brechen, bevor der erste Schlag sitzt.';
+        out.schwaechen = ['sturz', 'wucht', 'laut', 'blendend'];
+        out.guteItems = ['toaster', 'ziegelstein', 'korn', 'knallkoerper', 'bananenschale'];
+        out.riskant = ['leere Haende', 'lange Verhandlung'];
+      } else {
+        out.schwaechen = ['widerspruch', 'beleg', 'bluff'];
+        out.guteItems = ['west_zigaretten', 'bohnenkaffee', 'westmark'];
+        out.riskant = ['Druck ohne Beleg'];
+      }
+    }
+    if (kampf && kampf.waffe && out.warnung.indexOf(kampf.waffe) === -1) out.warnung += ' Gegnerischer Vorteil: ' + kampf.waffe + '.';
+    return out;
+  } catch (e) {
+    return { ziel: 'Die Lage lesen und eine riskante Entscheidung treffen.', warnung: 'Direkter Druck kann kippen.', schwaechen: ['ablenkung', 'bluff'], guteItems: [], riskant: ['blind angreifen'], taktiken: [] };
+  }
+}
+
+function _konfrontationTaktikAktiv(enemy) {
+  try {
+    const k = caseProgress && caseProgress.activeConfrontation;
+    if (k && k.taktik) return k.taktik;
+    return _konfrontationTaktikProfil(enemy || _konfrontationEnemy(), null);
+  } catch (e) { return null; }
+}
+
 function _konfrontationStart(npcId, trigger, opt) {
   try {
     if (!caseProgress || !npcId || _konfrontationAktiv() || caseProgress.encounterState === 'kampf') return false;
@@ -8129,6 +8251,7 @@ function _konfrontationStart(npcId, trigger, opt) {
     if (typeof _npcIstFeindlich === 'function' && !_npcIstFeindlich(npc)) return false;
     if (typeof _gegnerBezwungen === 'function' && _gegnerBezwungen(npc.name)) return false;
     if (Array.isArray(_threatAktiveSpawns) && _threatAktiveSpawns.indexOf(npcId) === -1) _threatAktiveSpawns.push(npcId);
+    const taktik = (typeof _konfrontationTaktikProfil === 'function') ? _konfrontationTaktikProfil(npc, opt && opt.threat) : null;
     caseProgress.activeConfrontation = {
       id: 'konfrontation-' + ((typeof sceneCounter === 'number') ? sceneCounter : 0) + '-' + String(npcId),
       npcId: npcId,
@@ -8137,6 +8260,7 @@ function _konfrontationStart(npcId, trigger, opt) {
       trigger: trigger || 'druck',
       forced: !!(opt && opt.forced),
       intensity: (opt && opt.intensity) || ((typeof currentSpannung === 'number' && currentSpannung >= 4) ? 'hoch' : 'mittel'),
+      taktik: taktik,
       startedScene: (typeof sceneCounter === 'number') ? sceneCounter : 0
     };
     if (typeof diag === 'function') diag('state', 'KONFRONTATION START: ' + npc.name + ' @ ' + caseProgress.activeConfrontation.ort + ' (' + caseProgress.activeConfrontation.intensity + ')');
@@ -8159,7 +8283,7 @@ function _konfrontationPruefen(loc, spawns, grund) {
       const mobilerVerfolger = chance < 100;
       const druckReif = spannung >= 4 || stage >= 3;
       if (forced || mobilerVerfolger || druckReif) {
-        return _konfrontationStart(npcId, grund || 'spawn', { forced: forced || mobilerVerfolger || spannung >= 4, intensity: spannung >= 4 ? 'hoch' : 'mittel' });
+        return _konfrontationStart(npcId, grund || 'spawn', { forced: forced || mobilerVerfolger || spannung >= 4, intensity: spannung >= 4 ? 'hoch' : 'mittel', threat: b });
       }
     }
     return false;
@@ -12716,7 +12840,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1171 +Gefahr-Auszahlung-Prosa';
+window.SCHATTEN_VERSION = 'v7.12.1172 +Taktische-Konfrontationen';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -16101,10 +16225,26 @@ function fxPlan(plan, gabFehlschlag) {
     fxConflict(p.akteur || 'Karl', p.ziel, p.art, !gabFehlschlag, _itNm); // v7.12.724: Item für den Treffer-Sound
   } catch (e) {}
 }
+// v7.12.1172: Taktik-Tags fuer Konfrontationen. Bewusst separat vom alten
+// Katalog gehalten, weil dort historisch kaputte Umlautbytes stecken. Der
+// Kampf-Layer kann so falluebergreifend verstehen, warum ein Item nuetzt:
+// Toaster/Ziegelstein = Wucht/Sturz, Korn = Glas/Blendung, Ware = Bestechung.
+const ITEM_TAKTIK_DEFAULTS = {
+  west_zigaretten: ['ware','bestechung','sozial','rauch'],
+  korn: ['glas','blendend','sturz','laut','fragil'],
+  toaster: ['schwer','wucht','sturz','laut','fragil'],
+  alter_fisch: ['ekel','ablenkung','demuetigung'],
+  bohnenkaffee: ['ware','bestechung','sozial'],
+  westmark: ['geld','bestechung','sozial'],
+  ostmark: ['geld','bestechung','sozial'],
+  ziegelstein: ['schwer','wucht','sturz','laut'],
+  knallkoerper: ['laut','schreck','ablenkung'],
+  bananenschale: ['sturz','slapstick','ablenkung']
+};
 const ITEM_KATALOG = {
   // v7.12.631: taugt = erlaubte Aktionen (Affordances). Aktionen: anbieten/bestechen/eintauschen/trinken/
   // angreifen_mit (ins Gesicht, Schaden) / werfen_fuesse (vor die Füße, Sturz/Ablenkung) / ablenken.
-  west_zigaretten: { name: 'Schachtel West-Zigaretten', taugt: ['anbieten','bestechen','eintauschen'], tauschwert: 3 },
+  west_zigaretten: { name: 'Schachtel West-Zigaretten', taugt: ['anbieten','bestechen','eintauschen'], tauschwert: 3, taktik: ['ware','bestechung','sozial','rauch'] },
   korn:            { name: 'Flasche Nordhäuser Doppelkorn', taugt: ['trinken','anbieten','angreifen_mit','werfen','werfen_fuesse'], tauschwert: 1, schaden: 'benommen', fragil: true },
   // v7.12.679 (Benjamin): Toaster - seltenes Wohnungs-Item (chance-basiert, liegt NICHT immer rum).
   // Zerbricht beim Zuschlagen (fragil). 1953 plausibel: AEG/Siemens-Klapptoaster, Vorkriegsware.
@@ -36602,15 +36742,17 @@ Wenn Karl waehlt: Schnitt zur naechsten Szene am Morgen, Kaffee zu zweit, keine 
         }
       }
     } catch (e) { /* Gegner-Präsenz-Block optional, darf Prompt nie brechen */ }
-    try {
-      if (typeof _konfrontationAktiv === 'function' && _konfrontationAktiv() && caseProgress && caseProgress.activeConfrontation) {
-        const _k = caseProgress.activeConfrontation;
-        timeContext += '\n\n=== AKTIVE KONFRONTATION (PFLICHT, v7.12.1171) ===\n'
-          + (_k.enemyName || 'Ein Gegner') + ' hat Karl hier konkret gestellt. Diese Lage ist JETZT aktiv und muss in der Szene ausgespielt werden. '
-          + 'Schreibe keine normale Ermittlungsszene und keine Offscreen-Aufloesung. Die Szene braucht eine sichtbare Gegenbewegung: Karl redet, blufft, greift an, setzt ein Inventar ein, weicht aus oder die Gegenseite verschiebt den Druck. '
-          + 'Die Bedrohung darf erst verschwinden, wenn die Spieleraktion sie glaubhaft beendet oder die Engine sie als beendet markiert.';
-      }
-    } catch (e) { /* Konfrontations-Prompt optional */ }
+      try {
+        if (typeof _konfrontationAktiv === 'function' && _konfrontationAktiv() && caseProgress && caseProgress.activeConfrontation) {
+          const _k = caseProgress.activeConfrontation;
+          const _t = _k.taktik || null;
+          timeContext += '\n\n=== AKTIVE KONFRONTATION (PFLICHT, v7.12.1171) ===\n'
+            + (_k.enemyName || 'Ein Gegner') + ' hat Karl hier konkret gestellt. Diese Lage ist JETZT aktiv und muss in der Szene ausgespielt werden. '
+            + 'Schreibe keine normale Ermittlungsszene und keine Offscreen-Aufloesung. Die Szene braucht eine sichtbare Gegenbewegung: Karl redet, blufft, greift an, setzt ein Inventar ein, weicht aus oder die Gegenseite verschiebt den Druck. '
+            + 'Die Bedrohung darf erst verschwinden, wenn die Spieleraktion sie glaubhaft beendet oder die Engine sie als beendet markiert.'
+            + (_t ? '\nTAKTISCHE LAGE: Ziel: ' + (_t.ziel || '-') + ' Warnung: ' + (_t.warnung || '-') + ' Schwaechen/Loesungsansaetze: ' + ((_t.schwaechen || []).join(', ') || '-') + ' Gute Gegenmittel: ' + ((_t.guteItems || []).join(', ') || '-') + '. Diese Konfrontation ist runden-/entscheidungsbasiert, NICHT Tempo/Reflex. Beschreibe ein klares taktisches Dilemma, bei dem ein passendes Item oder ein sauberer Bluff spuerbar besser ist als blindes Draufgehen.' : '');
+        }
+      } catch (e) { /* Konfrontations-Prompt optional */ }
     // v7.12.826 (Erkundungs-Modus, ChatGPT-Schärfung "berichtet≠präsent"): Steht Karl an einem Erkundungs-Knoten,
     // MUSS die KI das wissen - nur wer HIER ist, gehört in die Szene. Verhindert "Pohl steht neben Ilse"-Drift.
     try {
@@ -55512,6 +55654,49 @@ function _hauptuiItemTaugt(item, aktion) {
   } catch (e) { return false; }
 }
 
+function _itemKatalogKey(item) {
+  try {
+    const name = normForMatch((item && item.name) || '');
+    if (!name || typeof ITEM_KATALOG === 'undefined' || !ITEM_KATALOG) return '';
+    for (const key in ITEM_KATALOG) {
+      const katName = normForMatch(ITEM_KATALOG[key].name || '');
+      if (katName && (name.indexOf(katName) !== -1 || katName.indexOf(name) !== -1)) return key;
+    }
+  } catch (e) {}
+  return '';
+}
+
+function _itemTaktikTags(item) {
+  try {
+    const key = _itemKatalogKey(item);
+    const kat = (typeof _hauptuiItemKatalog === 'function') ? _hauptuiItemKatalog(item) : null;
+    if (kat && Array.isArray(kat.taktik) && kat.taktik.length) return kat.taktik.slice();
+    if (typeof ITEM_TAKTIK_DEFAULTS !== 'undefined' && ITEM_TAKTIK_DEFAULTS && ITEM_TAKTIK_DEFAULTS[key]) return ITEM_TAKTIK_DEFAULTS[key].slice();
+  } catch (e) {}
+  return [];
+}
+
+function _hauptuiKonfrontationItemPlan(item, verb, takt) {
+  try {
+    const tags = _itemTaktikTags(item);
+    const key = _itemKatalogKey(item);
+    const schwaechen = (takt && Array.isArray(takt.schwaechen)) ? takt.schwaechen : [];
+    const guteItems = (takt && Array.isArray(takt.guteItems)) ? takt.guteItems : [];
+    let score = guteItems.indexOf(key) !== -1 ? 3 : 0;
+    tags.forEach(function (tag) { if (schwaechen.indexOf(tag) !== -1) score += 2; });
+    if (verb === 'werfen_fuesse' && (schwaechen.indexOf('sturz') !== -1 || tags.indexOf('sturz') !== -1)) score += 1;
+    if (verb === 'werfen' && (schwaechen.indexOf('blendend') !== -1 || tags.indexOf('glas') !== -1 || tags.indexOf('laut') !== -1)) score += 1;
+    if (verb === 'angreifen_mit' && tags.indexOf('schwer') !== -1) score += 1;
+    const trefferTags = tags.filter(function (tag) { return schwaechen.indexOf(tag) !== -1; }).slice(0, 2);
+    return {
+      score: score,
+      marker: score >= 4 ? 'passt sehr gut' : (score >= 2 ? 'guter Hebel' : 'riskant'),
+      hint: score >= 2 && trefferTags.length ? 'nutzt ' + trefferTags.join(' / ') : 'kann eskalieren',
+      tags: tags
+    };
+  } catch (e) { return { score: 0, marker: 'riskant', hint: 'unklar', tags: [] }; }
+}
+
 function _hauptuiPersonIstFeind(target) {
   try {
     const npc = (target && target.name) ? (_hauptuiNpc(target) || target) : target;
@@ -56038,13 +56223,20 @@ function _hauptuiKonfrontationItems() {
   try {
     const data = (typeof _baukastenZiele === 'function') ? _baukastenZiele() : { items: [] };
     const out = [];
+    const enemy = typeof _konfrontationEnemy === 'function' ? _konfrontationEnemy() : null;
+    const takt = typeof _konfrontationTaktikAktiv === 'function' ? _konfrontationTaktikAktiv(enemy) : null;
+    function add(item, verb, label) {
+      const plan = (typeof _hauptuiKonfrontationItemPlan === 'function') ? _hauptuiKonfrontationItemPlan(item, verb, takt) : { score: 0, marker: '', hint: '' };
+      out.push({ verb: verb, label: label + item.name, item: item, score: plan.score || 0, marker: plan.marker || '', hint: plan.hint || '' });
+    }
     (data.items || []).forEach(function (target) {
       const item = (typeof _hauptuiItem === 'function') ? (_hauptuiItem(target) || target) : target;
       if (!item || !item.name) return;
-      if (typeof _hauptuiItemTaugt === 'function' && _hauptuiItemTaugt(item, 'werfen')) out.push({ verb: 'werfen', label: 'Wirf ' + item.name, item: item });
-      if (typeof _hauptuiItemTaugt === 'function' && _hauptuiItemTaugt(item, 'werfen_fuesse')) out.push({ verb: 'werfen_fuesse', label: 'Lenk ab mit ' + item.name, item: item });
-      if (typeof _hauptuiItemTaugt === 'function' && _hauptuiItemTaugt(item, 'angreifen_mit')) out.push({ verb: 'angreifen_mit', label: 'Schlag zu mit ' + item.name, item: item });
+      if (typeof _hauptuiItemTaugt === 'function' && _hauptuiItemTaugt(item, 'werfen')) add(item, 'werfen', 'Wirf ');
+      if (typeof _hauptuiItemTaugt === 'function' && _hauptuiItemTaugt(item, 'werfen_fuesse')) add(item, 'werfen_fuesse', 'Lenk ab mit ');
+      if (typeof _hauptuiItemTaugt === 'function' && _hauptuiItemTaugt(item, 'angreifen_mit')) add(item, 'angreifen_mit', 'Schlag zu mit ');
     });
+    out.sort(function (a, b) { return (b.score || 0) - (a.score || 0) || String(a.label).localeCompare(String(b.label)); });
     return out.slice(0, 6);
   } catch (e) { return []; }
 }
@@ -56094,6 +56286,7 @@ function _renderKonfrontationMenu(container, scene) {
     if (!container) return;
     const enemy = (typeof _konfrontationEnemy === 'function') ? _konfrontationEnemy() : null;
     if (!enemy || !enemy.name) return;
+    const takt = typeof _konfrontationTaktikAktiv === 'function' ? _konfrontationTaktikAktiv(enemy) : null;
     const root = document.createElement('section');
     root.className = 'hauptui-action-menu hauptui-confrontation';
     root.setAttribute('aria-label', 'Konfrontation');
@@ -56110,10 +56303,33 @@ function _renderKonfrontationMenu(container, scene) {
     const copy = document.createElement('div');
     copy.className = 'hauptui-threat-copy';
     const ort = (typeof engineCurrentLocation !== 'undefined' && engineCurrentLocation && engineCurrentLocation.name) ? engineCurrentLocation.name : 'diesem Ort';
-    copy.textContent = 'Die Lage ist nicht mehr nur Ermittlung. ' + enemy.name + ' stellt Karl in ' + ort + ' - reagieren, ausspielen, oder die Kontrolle verlieren.';
+    copy.textContent = 'Die Lage ist nicht mehr nur Ermittlung. ' + enemy.name + ' stellt Karl in ' + ort + '. ' + ((takt && takt.ziel) || 'Reagieren, ausspielen, oder die Kontrolle verlieren.');
     copyWrap.appendChild(kicker);
     copyWrap.appendChild(title);
     copyWrap.appendChild(copy);
+    if (takt && takt.warnung) {
+      const note = document.createElement('div');
+      note.className = 'hauptui-threat-note';
+      note.textContent = takt.warnung;
+      copyWrap.appendChild(note);
+    }
+    if (takt && ((takt.schwaechen || []).length || (takt.riskant || []).length)) {
+      const chips = document.createElement('div');
+      chips.className = 'hauptui-threat-chips';
+      (takt.schwaechen || []).slice(0, 4).forEach(function (txt) {
+        const chip = document.createElement('span');
+        chip.className = 'hauptui-threat-chip';
+        chip.textContent = txt;
+        chips.appendChild(chip);
+      });
+      (takt.riskant || []).slice(0, 2).forEach(function (txt) {
+        const chip = document.createElement('span');
+        chip.className = 'hauptui-threat-chip bad';
+        chip.textContent = 'riskant: ' + txt;
+        chips.appendChild(chip);
+      });
+      copyWrap.appendChild(chips);
+    }
     card.appendChild(copyWrap);
     root.appendChild(card);
 
@@ -56128,6 +56344,7 @@ function _renderKonfrontationMenu(container, scene) {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'hauptui-threat-button ' + act.cls;
+      if (act.key === 'angreifen' && takt && (takt.riskant || []).length) btn.className += ' is-risky';
       btn.textContent = act.label;
       _hauptuiBind(btn, function () { _hauptuiKonfrontationAktion(act.key, enemy, null); });
       actions.appendChild(btn);
@@ -56145,8 +56362,8 @@ function _renderKonfrontationMenu(container, scene) {
       itemActions.forEach(function (act) {
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'hauptui-threat-button item';
-        btn.textContent = act.label;
+        btn.className = 'hauptui-threat-button item' + ((act.score || 0) >= 4 ? ' is-best' : ((act.score || 0) < 2 ? ' is-risky' : ''));
+        btn.innerHTML = '<span>' + escapeHtml(act.label) + '</span><span class="mini">' + escapeHtml((act.marker || '') + (act.hint ? ' - ' + act.hint : '')) + '</span>';
         _hauptuiBind(btn, function () { _hauptuiKonfrontationAktion(act.verb, enemy, act.item); });
         inv.appendChild(btn);
       });
