@@ -88,6 +88,8 @@ assert(html.includes('height: 42px;\n    min-height: 42px;'), 'quick actions nee
 assert(html.includes('.hauptui-quick-actions .option-text-wrap {\n    display: contents;'), 'desktop quick actions must place title and marker in separate grid columns');
 assert(html.includes('.hauptui-quick-actions .option-marker {\n    display: flex;\n    align-items: center;\n    justify-content: flex-end;\n    align-self: stretch;'), 'quick-action markers must be vertically centered text, not top-aligned badges');
 assert(html.includes('padding: 0;\n    border: 0;\n    background: transparent;\n    border-radius: 0;'), 'quick-action markers must not render as nested mini-buttons');
+assert(html.includes("reise.style.cssText = 'display:flex;width:100%;min-height:44px;padding:8px 14px;"), 'map detail travel button must be compact flex-aligned');
+assert(html.includes("opelMiniSvg(16)") && html.includes('Dorthin reisen</span>'), 'map detail travel button must wrap Opel icon and text in aligned spans');
 assert(html.includes('@media (max-width: 520px)') && html.includes('grid-template-columns: 1fr;'), 'narrow quick actions must stack into stable full-width rows');
 assert(html.includes('.hauptui-quick-actions .option-text-wrap > span:first-child,\n    .hauptui-quick-actions .option-btn-sleep .option-text-wrap > span:first-child {\n      min-width: 0;\n      max-width: 100%;\n      overflow: hidden;\n      text-overflow: ellipsis;\n      white-space: nowrap;'), 'narrow quick-action titles must not wrap over travel markers');
 assert(html.includes('.hauptui-lead-question { font-size: calc(11px * var(--reading-scale));'), 'open investigation threads must stay readable');
