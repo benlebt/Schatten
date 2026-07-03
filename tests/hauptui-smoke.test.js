@@ -103,6 +103,8 @@ assert(html.includes("showProgressToast('Gleich bereit'"), 'execute must explain
 assert(html.includes("showProgressToast('Nicht erreichbar'"), 'execute must explain stale person targets instead of silently doing nothing');
 assert(html.includes('function _hauptuiNarrativerFadenPrompt(ortName, scenesHere)'), 'open threads must feed the narrative prompt compass');
 assert(html.includes('NARRATIVER FADEN-KOMPASS'), 'prompt compass must be explicit enough to steer prose');
+assert(html.includes('let _reiseFreiDurchOrtsausgang = false;'), 'public investigation locations need an exit override so high tension cannot hide travel completely');
+assert(html.includes("const _reiseGesperrt = (_reiseGesperrtRoh || _klientGateAktiv) && !_reiseFreiDurchFlucht && !_reiseFreiDurchOrtsausgang;"), 'travel gating must keep public location exits available unless combat/custody blocks them');
 assert(html.includes('function _verhoerAutoScroll()'), 'Verhoerakte must keep the protocol scrolled to the latest exchange');
 assert(html.includes("const prot = ov.querySelector('.protokoll');"), 'Verhoerakte auto-scroll must target only the protocol area');
 assert(html.includes('prot.scrollTop = prot.scrollHeight;'), 'Verhoerakte protocol must jump to the newest text after render');

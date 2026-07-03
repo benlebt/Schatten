@@ -12381,7 +12381,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1160 +Hauptui-Zielrollen';
+window.SCHATTEN_VERSION = 'v7.12.1161 +Reisen-und-Voss-Akte';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -32066,6 +32066,15 @@ function renderOptions(scene) {
   // damit der Spieler zuverlässig wegkommt (sichern bei Roth etc.). Sonst säße er fest: Freitext-Reise gibt es
   // seit v553 nicht mehr, und bei hoher Spannung wäre der Button sonst gesperrt.
   const _reiseFreiDurchFlucht = (typeof _postFluchtReiseFrei !== 'undefined' && _postFluchtReiseFrei > 0);
+  // v7.12.1161 (Benjamin: Cafe Wien zeigte Spuren, aber kein Wegfahren): Oeffentliche Ermittlungsorte ohne
+  // Bild-Ausgang duerfen durch hohe Spannung nicht komplett verriegeln. Sonst sitzt Karl in Cafe/Spedition fest,
+  // obwohl die offene Spur klar zum naechsten Ort zeigt. Kampf/Custody bleiben weiter echte Sperren.
+  let _reiseFreiDurchOrtsausgang = false;
+  try {
+    const _ortNExit = engineCurrentLocation && engineCurrentLocation.name ? String(engineCurrentLocation.name).toLowerCase() : '';
+    const _profilExit = (typeof _expProfil === 'function') ? _expProfil() : '';
+    _reiseFreiDurchOrtsausgang = (_profilExit === 'oeffentlich') || /caf|cafe|café|wien|spedition|lokal|bar|kneipe|restaurant/.test(_ortNExit);
+  } catch (e) {}
   // v7.12.1014 (Benjamin: "Klient gibt nur den Auftrag - aber wir muessen erst mit ihm reden, bevor wir gehen"):
   // Solange der Klient am Ort anwesend ist UND das Erstgespraech (klientGesprochen) noch aussteht, ist Reisen
   // gesperrt. Sobald Karl mit dem Klienten gesprochen hat, bleibt das Flag dauerhaft true -> nie wieder gesperrt,
@@ -32077,13 +32086,14 @@ function renderOptions(scene) {
       _klientGateAktiv = _npHier.some(n => n && _istKlient(n.name, n.id));
     }
   } catch (e) {}
-  const _reiseGesperrt = (_reiseGesperrtRoh || _klientGateAktiv) && !_reiseFreiDurchFlucht;
+  const _reiseGesperrt = (_reiseGesperrtRoh || _klientGateAktiv) && !_reiseFreiDurchFlucht && !_reiseFreiDurchOrtsausgang;
   if (_klientGateAktiv && typeof diag === 'function') diag('detect', '🔒 REISE-GATE: Klient anwesend, Erstgespräch steht aus -> Reisen gesperrt bis Karl mit dem Klienten gesprochen hat');
   // v7.12.537 (Diagnose Reise-Button-Bug): alle Bedingungen loggen.
   if (typeof diag === 'function') {
     diag('detect', 'REISE-BUTTON-CHECK: engineLoc=' + (engineCurrentLocation ? '"'+engineCurrentLocation.name+'"' : 'NULL')
       + ' custody=' + (!!karlInStasiCustody) + ' Sp=' + currentSpannung + ' choices=' + _choiceCount + ' actionStreak=' + _aStreak
       + ' fluchtFenster=' + (typeof _postFluchtReiseFrei !== 'undefined' ? _postFluchtReiseFrei : 0)
+      + ' ortsausgangFrei=' + (!!_reiseFreiDurchOrtsausgang)
       + ' -> gesperrt=' + _reiseGesperrt + ' -> Button=' + (engineCurrentLocation && !karlInStasiCustody && !_reiseGesperrt ? 'JA' : 'NEIN'));
   }
   // v7.12.1014: Wenn ein betretenes Kartenbild bereits einen Ausgang/Opel im Bild klickbar hat, ist der globale
@@ -53792,6 +53802,36 @@ const VERHOER_PROFILE = {
       gereizt: 'Er wird laut und flüchtet sich in Empörung.', dicht: 'Er verweigert jedes weitere Wort.', zweifel: 'Seine Erklärung klingt zu sauber.' },
     failStamp: 'Macht dicht',
     failText: 'Robert wendet sich ab und verweigert jedes weitere Wort. <b>Ruf −</b>'
+  },
+  oberkellner_voss: {
+    name: 'Oberkellner Voss', aktenr: 'Fall Kessler · Befragung Cafe Wien', verh: 'Oberkellner im Cafe Wien · Kurfuerstendamm',
+    luegt: false, beweisSchwelle: 1, hebelIds: ['schachtel_west_zigaretten'], grantIndizId: 'kellner_beobachtung',
+    frageLimit: 4,
+    requiredTopics: ['stammgast', 'mittwoch', 'begleitung'],
+    start: 'Wenn es um die Herrschaften am Fenster geht: Ich habe zahlende Gaeste, keine Geschichten.',
+    themen: [
+      { id: 'stammgast', st: 'Kessler als Stammgast', sh: 'Den Kellner ueber seine Beobachtungsroutine ernst nehmen.', abOeff: 0, oeff: 1, gem: 0, karl: 'Sie merken sich Gesichter, Herr Voss. Wie oft war Robert Kessler hier?', q: 'Oft genug, dass ich sein Glas Wasser bringe, bevor er bestellt. Mittwochs, fast immer vor dem Abendgeschaeft.', tell: 'er poliert weiter, aber langsamer' },
+      { id: 'mittwoch', st: 'Der Mittwoch', sh: 'Aus Service-Gedaechtnis wird ein Muster.', abOeff: 1, oeff: 1, gem: 0, karl: 'Warum bleibt Ihnen ausgerechnet der Mittwoch im Kopf?', q: 'Weil er dann nicht nach Arbeit aussieht. Kein Aktenkoffer, keine Eile zur Spedition, nur dieser Platz hinter der Saeule.', tell: 'sein Blick wandert unwillkuerlich zum Separee' },
+      { id: 'begleitung', st: 'Die junge Frau', sh: 'Nicht Affaere sagen, sondern Beobachtung absichern.', abOeff: 2, oeff: 1, gem: 0, karl: 'War Kessler allein?', q: 'Nie lange. Eine junge Dame, dunkelhaarig, sehr still. Sie tranken Tee. Er zahlte immer, aber sie bestimmte, wann sie gingen.', tell: 'jetzt ist aus Andeutung eine belastbare Aussage geworden' },
+      { id: 'diskretion', st: 'Diskretion des Hauses', sh: 'Seine Berufsehre nutzen, ohne ihn zu beleidigen.', abOeff: 0, oeff: 1, gem: -1, karl: 'Ein gutes Cafe lebt von Diskretion. Ich frage nicht nach Klatsch, nur nach Zeiten.', q: 'Dann verstehen Sie das Handwerk. Namen fallen hier nicht lauter als Loeffel auf Untertassen.', tell: 'er nimmt dich zum ersten Mal als Profi ernst' },
+      { id: 'drohen', st: 'Mit Polizei drohen', sh: 'Zu grob fuer einen stolzen Kellner.', abOeff: 1, oeff: 0, gem: 1, karl: 'Wenn Sie mauern, frage ich mit Polizei im Ruecken noch einmal.', q: 'Dann fragen Sie dort. In meinem Cafe werden Gaeste nicht fuer fremde Ehen vorgefuehrt.', tell: 'sein Gesicht wird so glatt wie der Marmortresen', risk: 'reizt ihn' }
+    ],
+    react: {
+      erzaehlen: { oeff: 1, gem: 0, q: ['Ein Kellner hoert mehr, als ihm lieb ist.', 'Man merkt sich, wer immer denselben Tisch nimmt.'], tell: 'er bleibt vorsichtig, aber gespraechsbereit' },
+      gemeinsam: { oeff: 1, gem: -1, q: ['Diskretion ist kein Schweigen. Es ist Auswahl.', 'Sie fragen wenigstens nicht wie ein Schutzmann.'], tell: 'Berufsstolz oeffnet mehr als Druck' },
+      schweigen: { oeff: 0, gem: 0, q: ['Sind wir fertig?', 'Der Kaffee wird kalt, Herr Mauer.'], tell: 'die Stille stoert ihn wenig' },
+      gefaellig: { oeff: 1, gem: -1, q: ['Er laesst die West-Zigarette in der Tasche verschwinden. Fuer gute Kunden merkt man sich Kleinigkeiten.', 'Eine Westmarke im richtigen Moment wirkt besser als ein Ausweis.'], tell: 'er fuehlt sich respektiert, nicht gekauft' },
+      widerspruch: { oeff: 0, gem: 1, q: ['Sie verdrehen Service zu Gestapo-Arbeit.', 'Ich habe gesagt, was ich gesehen habe.'], tell: 'er zieht sich in Haltung zurueck' }
+    },
+    vorhalt: { ok: 'Er betrachtet die Schachtel West-Zigaretten. Dann nickt er knapp. So eine lag auch auf dem Ecktisch.', tell_ok: 'der kleine Luxus loest sein Gedaechtnis',
+      zufrueh: 'Eine Zigarette ist noch keine Aussage, Herr Mauer.', tell_frueh: 'zu frueh - er laesst sich nicht kaufen',
+      ineff: 'Das mag anderswo Eindruck machen. Hier nicht.', tell_ineff: 'das trifft ihn nicht' },
+    breakStamp: 'Er bestaetigt',
+    breakLine: 'Kessler war mittwochs hier, mehrfach, nie wirklich allein. Eine dunkelhaarige junge Frau kam zu ihm an den Tisch hinter der Saeule.',
+    eindruck: { oeff: ['Hoeflich, aber glatt wie poliertes Messing.', 'Sein Berufsstolz arbeitet fuer dich.', 'Er trennt Klatsch von Beobachtung - und das ist belastbar.', ''],
+      gereizt: 'Seine Hoefflichkeit wird eisig.', dicht: 'Er serviert nur noch Schweigen.' },
+    failStamp: 'Bleibt diskret',
+    failText: 'Voss richtet die Manschetten und kehrt zum Tresen zurueck. Kein Wort mehr, kein Blick. <b>Ruf -</b>'
   }
 };
 
@@ -53872,6 +53912,31 @@ const VERHOER_VARIANTEN = {
     ],
     breakLine: ['Die Überstunden waren gelogen. Mittwochs war ich bei Ilse. Sagen Sie Edith, dass ich nicht den Mut hatte, es selbst zu tun.', 'Ich war bei Ilse, jede Woche. Die Spedition war nur meine Ausrede. Edith hat die Wahrheit verdient, auch wenn sie von Ihnen kommt.'],
     failText: ['Robert geht, ohne sich noch einmal umzudrehen. Kein Rufen hält ihn auf. <b>Das Verhör ist gescheitert. Ruf -1.</b>', 'Er zieht die Haustür hinter sich zu und verweigert fortan jedes Gespräch. <b>Das Verhör ist gescheitert. Ruf -1.</b>']
+  },
+  oberkellner_voss: {
+    start: ['Ich habe zahlende Gaeste, Herr Mauer, keine Beichten.', 'Im Cafe Wien servieren wir Kaffee. Geschichten behalten die Gaeste fuer sich.'],
+    stammgast: [
+      { karl: 'Sie kennen die Stammgaeste besser als deren Familien. Wo steht Kessler in dieser Ordnung?', q: 'Nicht Stammgast. Gewohnheit. Das ist feiner. Er kam oft genug, dass ich ihm den Fenstertisch nicht mehr anbieten musste.', tell: 'er spricht wie ueber eine Tischreservierung, aber merkt jedes Detail' },
+      { karl: 'Wie sicher sind Sie, dass es Robert Kessler war?', q: 'Ein Kellner lebt von sicheren Gesichtern. Er sass hier oft genug, um keine Verwechslung mehr zu sein.', tell: 'sein Blick streift die Tische, als laegen dort Karteikarten' }
+    ],
+    mittwoch: [
+      { karl: 'Gab es einen Wochentag, an dem er besonders oft kam?', q: 'Mittwoch. Zwischen Spaetnachmittag und Abend. Zu frueh fuer Theater, zu spaet fuer ein Geschaeftsessen.', tell: 'der Satz klingt abgewogen, nicht erfunden' },
+      { karl: 'Was macht Sie beim Mittwoch so sicher?', q: 'Mittwochs wechselt die Patisserie frueher aus. Er nahm dann nie Kuchen, immer Tee. Kleine Dinge bleiben haften.', tell: 'seine Pedanterie wird ploetzlich nuetzlich' }
+    ],
+    begleitung: [
+      { karl: 'Und wer sass bei ihm?', q: 'Eine junge Frau, dunkelhaarig. Keine Zufallsbekanntschaft. Man erkennt, ob zwei Menschen zum ersten Mal schweigen oder schon lange.', tell: 'er senkt die Stimme, weil Diskretion noch in seinen Knochen sitzt' },
+      { karl: 'War Kessler allein, als Sie ihn bedienten?', q: 'Allein kam er. Allein blieb er selten. Die Dame traf spaeter ein, und danach waren beide sehr vorsichtig mit ihren Worten.', tell: 'damit ist der Cafe-Weg endlich belastbar' }
+    ],
+    diskretion: [
+      { karl: 'Ich will keine Namen in die Zeitung tragen. Ich brauche nur die Uhrzeit.', q: 'Gut. Dann sprechen wir wie zwei Maenner, die wissen, wann Schweigen Arbeit ist.', tell: 'Voss akzeptiert die gemeinsame Regel' },
+      { karl: 'Diskretion schuetzt Gaeste. Sie kann aber auch eine Luege schuetzen.', q: 'Ein sauber formulierter Satz, Herr Mauer. Ich hoere ihn mir an.', tell: 'zum ersten Mal wirkt er interessiert' }
+    ],
+    drohen: [
+      { karl: 'Ich kann die Polizei fragen lassen.', q: 'Dann wird Ihnen die Polizei erklaeren, dass ein Oberkellner ein Gedaechtnis und keine Vorladung ist.', tell: 'seine Hoeflichkeit schneidet wie Glas' },
+      { karl: 'Machen Sie es sich nicht schwerer als noetig.', q: 'Ich mache nur Kaffee schwerer als noetig, wenn der Gast es verdient.', tell: 'der falsche Ton schliesst ihn sofort' }
+    ],
+    breakLine: ['Kessler sass mittwochs mehrfach hier, nicht allein. Die junge dunkelhaarige Frau traf ihn am Tisch hinter der Saeule.', 'Schreiben Sie: Mittwoch, Cafe Wien, Tisch hinter der Saeule. Kessler und dieselbe junge Frau, wiederholt. Mehr ist kein Service mehr, sondern Ihr Fall.'],
+    failText: ['Voss richtet den Blick auf die Tassen und behandelt dich fortan wie leere Luft. <b>Das Verhoer ist gescheitert. Ruf -1.</b>', 'Die Auskunft versiegt so ordentlich wie ein zugedrehter Hahn. Voss laesst dich am Tresen stehen. <b>Das Verhoer ist gescheitert. Ruf -1.</b>']
   }
 };
 

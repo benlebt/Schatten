@@ -33,6 +33,7 @@ for (const id of stageThreeEvidence) {
 assert(/window\.VERHOER_PILOT_AKTIV\s*=\s*true/.test(html), 'interrogation pilot must be enabled');
 assert(/frau_pohl:\s*\{[\s\S]{0,400}?grantIndizId:\s*'nachbarin_aussage'/.test(html), 'Frau Pohl interrogation grant missing');
 assert(/ilse_hauke:\s*\{[\s\S]{0,400}?grantIndizId:\s*'ilse_aussage'/.test(html), 'Ilse interrogation grant missing');
+assert(/oberkellner_voss:\s*\{[\s\S]{0,500}?grantIndizId:\s*'kellner_beobachtung'/.test(html), 'Oberkellner Voss must use the Kessler interrogation dossier');
 assert(!html.includes('Margot Kessler'), 'interrogation file must name client Edith Kessler');
 
 assert(/function _hauptuiFundAuswahl[\s\S]{0,1000}?_zeigeFundAuswahl\(selectedItems, selectedClues\)/.test(html), 'scene targets must use the deterministic find dialog');
@@ -41,7 +42,7 @@ assert(html.includes("if (document.getElementById('indiz-belohnung-overlay')) re
 assert(html.includes("setTimeout(function () { try { if (typeof _flushIndizRewards === 'function') _flushIndizRewards();"), 'closing a reward popup must continue with queued clue rewards');
 assert(/robert_kessler:\s*\{[\s\S]{0,500}?grantIndizId:\s*'robert_aussage'/.test(html), 'Robert Kessler must use the interrogation dossier instead of the legacy AI dialogue');
 assert(/id:\s*'robert_aussage'[\s\S]{0,300}?npc:\s*'robert_kessler'/.test(html), 'Robert interrogation must grant a defined Kessler clue');
-assert((html.match(/themen:\s*\[/g) || []).length >= 3, 'all three Kessler dossiers need character-specific question trees');
+assert((html.match(/themen:\s*\[/g) || []).length >= 4, 'all Kessler witness dossiers need character-specific question trees');
 assert(html.includes('function _verhoerThema(id)'), 'dossier topics need their own deterministic interaction path');
 assert(html.includes('data-vthema='), 'dossier UI must render topic-driven questions');
 assert(!html.includes('<div class="vlabel">DEIN VORGEHEN</div>'), 'generic interrogation tactics must no longer be the primary dossier UI');
