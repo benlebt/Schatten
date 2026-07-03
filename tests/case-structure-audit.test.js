@@ -37,6 +37,18 @@ function imageSetFor(setup) {
   return imageSets.find((set) => set.caseTest.test(fallText));
 }
 
+function hostileIdSet(setup) {
+  const hostileTags = new Set(['ANTAGONIST', 'SUSPECT', 'GANGSTER', 'STASI']);
+  const ids = new Set();
+  for (const npc of setup.setupCast || []) {
+    if (!npc || !npc.id) continue;
+    const tag = String(npc.tag || '').toUpperCase();
+    const tagExtra = String(npc.tagExtra || '').toUpperCase();
+    if (hostileTags.has(tag) || hostileTags.has(tagExtra)) ids.add(npc.id);
+  }
+  return ids;
+}
+
 for (const imageSet of imageSets) {
   assert(imageSet.root && imageSet.root.startsWith('assets/scenes/'), 'image set root missing');
   assert(Array.isArray(imageSet.images) && imageSet.images.length > 0, 'image set without images');
@@ -56,6 +68,8 @@ for (const [caseIndex, variant] of cases.entries()) {
   assert(imageSet, 'case has no matching image set: ' + setup.klient);
 
   const castIds = new Set((setup.setupCast || []).map((npc) => npc && npc.id).filter(Boolean));
+  const hostileIds = hostileIdSet(setup);
+  const hostilePresentIds = new Set();
   const clueIds = new Set();
   for (const loc of setup.locations || []) {
     const locName = loc && loc.name;
@@ -65,6 +79,14 @@ for (const [caseIndex, variant] of cases.entries()) {
     assert(imageSpec, 'location has no scene image mapping: ' + setup.klient + ' -> ' + locName);
 
     const locNpcIds = new Set((loc.npcs || []).map((npc) => npc && npc.id).filter(Boolean));
+    for (const threat of loc.bedrohungen || []) {
+      assert(threat.id, 'threat without id: ' + setup.klient + ' -> ' + locName);
+      assert(castIds.has(threat.id), 'threat references NPC missing from setupCast: ' + setup.klient + ' -> ' + locName + ' -> ' + threat.id);
+      if (hostileIds.has(threat.id)) hostilePresentIds.add(threat.id);
+    }
+    for (const npc of loc.npcs || []) {
+      if (npc && hostileIds.has(npc.id)) hostilePresentIds.add(npc.id);
+    }
     for (const clue of loc.indizien || []) {
       assert(clue.id, 'clue without id at ' + setup.klient + ' -> ' + locName);
       assert(!clueIds.has(clue.id), 'duplicate clue id in case ' + setup.klient + ': ' + clue.id);
@@ -75,6 +97,9 @@ for (const [caseIndex, variant] of cases.entries()) {
         assert(locNpcIds.has(clue.npc), 'clue references NPC not present at its location: ' + setup.klient + ' -> ' + locName + ' -> ' + clue.id + ' -> ' + clue.npc);
       }
     }
+  }
+  if (hostileIds.size > 0) {
+    assert(hostilePresentIds.size > 0, 'case has hostile setupCast but no reachable hostile encounter: ' + setup.klient);
   }
 }
 
