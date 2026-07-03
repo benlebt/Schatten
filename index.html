@@ -12388,7 +12388,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1162 +Verbrannte-Spuren-ausblenden';
+window.SCHATTEN_VERSION = 'v7.12.1163 +Hauptui-Reisen-bleibt-sichtbar';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -32069,7 +32069,11 @@ function renderOptions(scene) {
   // gewählt UND actionStreak>=1 (laufende Konfrontation).
   let _choiceCount = 0;
   try { if (Array.isArray(logEntries)) _choiceCount = logEntries.filter(e => e && e.type === 'choice').length; } catch (e) {}
-  const _reiseGesperrtRoh = (currentSpannung >= 4) && (_choiceCount >= 1) && (_aStreak >= 1);
+  // v7.12.1163: In der Haupt-UI ist Reisen ein permanentes Lucas-Arts-Werkzeug.
+  // Reine Spannungswerte duerfen es nicht verstecken; echte Gefahr sperrt bereits
+  // ueber _imKampfNow. Sonst bleiben Spieler nach misslungenen/angespannten
+  // Ermittlungen ohne sichtbaren Wegfahren-Button haengen.
+  const _reiseGesperrtRoh = (!window.HAUPTUI_AKTIV) && (currentSpannung >= 4) && (_choiceCount >= 1) && (_aStreak >= 1);
   // v7.12.554: nach einer Flucht ist die Reise für _POST_FLUCHT_REISE_FENSTER Szenen frei (trotz Spannung),
   // damit der Spieler zuverlässig wegkommt (sichern bei Roth etc.). Sonst säße er fest: Freitext-Reise gibt es
   // seit v553 nicht mehr, und bei hoher Spannung wäre der Button sonst gesperrt.
@@ -32101,6 +32105,7 @@ function renderOptions(scene) {
     diag('detect', 'REISE-BUTTON-CHECK: engineLoc=' + (engineCurrentLocation ? '"'+engineCurrentLocation.name+'"' : 'NULL')
       + ' custody=' + (!!karlInStasiCustody) + ' Sp=' + currentSpannung + ' choices=' + _choiceCount + ' actionStreak=' + _aStreak
       + ' fluchtFenster=' + (typeof _postFluchtReiseFrei !== 'undefined' ? _postFluchtReiseFrei : 0)
+      + ' hauptui=' + (!!window.HAUPTUI_AKTIV)
       + ' ortsausgangFrei=' + (!!_reiseFreiDurchOrtsausgang)
       + ' -> gesperrt=' + _reiseGesperrt + ' -> Button=' + (engineCurrentLocation && !karlInStasiCustody && !_reiseGesperrt ? 'JA' : 'NEIN'));
   }
@@ -32120,7 +32125,11 @@ function renderOptions(scene) {
     // bewusst keinen Ausgang im Bild, der Reisebutton ist der einzige Weg raus (sonst säße man fest).
     _ausgangImBild = !!(_betreten && (_istHofOrt || _istSpedOrt || _istKWOrt || _istKLOrt || _istBueroOrt));
   } catch (e) {}
-  if (typeof engineCurrentLocation !== 'undefined' && engineCurrentLocation && !karlInStasiCustody && !_reiseGesperrt && !_ausgangImBild && !_imKampfNow) {
+  // v7.12.1163: Bild-Hotspots ersetzen in der Haupt-UI NICHT mehr den Reisebutton.
+  // Der alte Ausgang-im-Bild-Shortcut ist unsichtbar/uneinheitlich geworden; das
+  // neue Menue braucht immer denselben sichtbaren "Zum Opel/Reisen"-Anker.
+  const _reiseDurchBildErsetzt = _ausgangImBild && !window.HAUPTUI_AKTIV;
+  if (typeof engineCurrentLocation !== 'undefined' && engineCurrentLocation && !karlInStasiCustody && !_reiseGesperrt && !_reiseDurchBildErsetzt && !_imKampfNow) {
     const reiseBtn = document.createElement('button');
     reiseBtn.className = 'option-btn option-btn-system option-btn-reise';
     reiseBtn.dataset.kategorie = 'REISE';
