@@ -71,6 +71,7 @@ for (const [caseIndex, variant] of cases.entries()) {
   const hostileIds = hostileIdSet(setup);
   const hostilePresentIds = new Set();
   const clueIds = new Set();
+  const requiredClueRefs = [];
   for (const loc of setup.locations || []) {
     const locName = loc && loc.name;
     assert(locName, 'case ' + setup.klient + ' contains a location without name');
@@ -92,11 +93,22 @@ for (const [caseIndex, variant] of cases.entries()) {
       assert(!clueIds.has(clue.id), 'duplicate clue id in case ' + setup.klient + ': ' + clue.id);
       clueIds.add(clue.id);
       assert(Array.isArray(clue.actions) && clue.actions.length > 0, 'clue without actions: ' + setup.klient + ' -> ' + clue.id);
+      for (const evidenceKey of ['requiresEvidenceAll', 'requiresEvidenceAny']) {
+        if (clue[evidenceKey] === undefined) continue;
+        assert(Array.isArray(clue[evidenceKey]), evidenceKey + ' must be an array: ' + setup.klient + ' -> ' + clue.id);
+        for (const requiredId of clue[evidenceKey]) {
+          assert(requiredId && typeof requiredId === 'string', evidenceKey + ' contains invalid clue id: ' + setup.klient + ' -> ' + clue.id);
+          requiredClueRefs.push({ clueId: clue.id, requiredId, evidenceKey, locName });
+        }
+      }
       if (clue.npc) {
         assert(castIds.has(clue.npc), 'clue references NPC missing from setupCast: ' + setup.klient + ' -> ' + clue.id + ' -> ' + clue.npc);
         assert(locNpcIds.has(clue.npc), 'clue references NPC not present at its location: ' + setup.klient + ' -> ' + locName + ' -> ' + clue.id + ' -> ' + clue.npc);
       }
     }
+  }
+  for (const ref of requiredClueRefs) {
+    assert(clueIds.has(ref.requiredId), 'clue proof gate references missing evidence: ' + setup.klient + ' -> ' + ref.clueId + ' -> ' + ref.evidenceKey + ' -> ' + ref.requiredId);
   }
   if (hostileIds.size > 0) {
     assert(hostilePresentIds.size > 0, 'case has hostile setupCast but no reachable hostile encounter: ' + setup.klient);
