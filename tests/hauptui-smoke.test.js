@@ -140,7 +140,7 @@ const context = {
   normForMatch: (value) => String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(),
   sceneCounter: 3,
   logEntries: [{ type: 'scene', sceneNr: 3 }],
-  caseProgress: { gefundeneIndizIds: [] },
+  caseProgress: { gefundeneIndizIds: [], verhoere: {}, verhoerFehlschlaege: [] },
   engineCurrentLocation: { name: 'Cafe Wien' },
   deriveInteractionMode: () => 'normal',
   attachSafeTap: (button, handler) => { button.onTap = handler; },
@@ -179,6 +179,8 @@ context._istKesslerFallFuerBild = () => true;
 let faeden = context._hauptuiKesslerFaeden();
 assert.deepStrictEqual(Array.from(faeden, (f) => f.id), ['robert_weg', 'wohnung'], 'Kessler must begin with two concrete courtyard questions');
 context.caseProgress.gefundeneIndizIds = ['robert_eintritt_beobachtet', 'tuerschild_hauke', 'ilse_aussage'];
+context.caseProgress.verhoere = {};
+context.caseProgress.verhoerFehlschlaege = [];
 faeden = context._hauptuiKesslerFaeden();
 assert.deepStrictEqual(Array.from(faeden, (f) => f.id), ['spedition', 'cafe', 'edith'], 'Ilse statement must open independent investigation locations');
 assert.strictEqual(context._hauptuiHatOffenenFadenAmOrt('Spedition Schmidt, Moabit'), true, 'Spedition thread must count as local despite punctuation differences');
@@ -187,6 +189,15 @@ let fadenPrompt = context._hauptuiNarrativerFadenPrompt('Spedition Schmidt, Moab
 assert(fadenPrompt.includes('aktueller Ort') && fadenPrompt.includes('Stimmen Roberts angebliche'), 'local thread prompt must steer the current scene toward the visible open thread');
 fadenPrompt = context._hauptuiNarrativerFadenPrompt('Hinterhof Sybelstrasse', 3);
 assert(fadenPrompt.includes('naechste Spur') && fadenPrompt.includes('Spedition Schmidt Moabit') && fadenPrompt.includes('Reise-Button'), 'remote thread prompt must nudge toward travel without teleporting Karl');
+context.caseProgress.gefundeneIndizIds = ['robert_eintritt_beobachtet', 'tuerschild_hauke'];
+context.caseProgress.verhoere = { ilse_hauke: { status: 'verbrannt' } };
+context.caseProgress.verhoerFehlschlaege = ['ilse_hauke'];
+faeden = context._hauptuiKesslerFaeden();
+assert.deepStrictEqual(Array.from(faeden, (f) => f.id), ['spedition', 'cafe', 'edith'], 'burned Ilse interrogation must not keep the player stuck in the courtyard');
+assert.strictEqual(context._hauptuiHatOffenenFadenAmOrt('Hinterhof Sybelstrasse'), false, 'burned local interrogation must not keep the courtyard marked as the next active thread');
+context.caseProgress.verhoere = {};
+context.caseProgress.verhoerFehlschlaege = [];
+context.caseProgress.gefundeneIndizIds = ['robert_eintritt_beobachtet', 'tuerschild_hauke', 'ilse_aussage'];
 context.caseProgress.gefundeneIndizIds.push('tetzlaff_aussage');
 faeden = context._hauptuiKesslerFaeden();
 assert.strictEqual(faeden[0].id, 'robert', 'independent evidence must open Robert confrontation');
