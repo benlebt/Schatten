@@ -128,6 +128,12 @@ assert(html.includes("const prot = ov.querySelector('.protokoll');"), 'Verhoerak
 assert(html.includes('prot.scrollTop = prot.scrollHeight;'), 'Verhoerakte protocol must jump to the newest text after render');
 assert(html.includes('requestAnimationFrame(function ()'), 'Verhoerakte auto-scroll must repeat after layout settles');
 assert(html.includes('panel.innerHTML = h;\n  _verhoerAutoScroll();'), 'Verhoerakte render must trigger protocol auto-scroll immediately');
+assert(html.includes('function _verhoerDisplayText(s)'), 'Verhoerakte must normalize display text through one central helper');
+assert(html.includes("return (typeof asciiToUmlaut === 'function') ? asciiToUmlaut(raw) : raw;"), 'Verhoerakte display helper must reuse the curated umlaut normalizer');
+assert(html.includes('"<span class=\\"ab \' + cls + \'\\">\' + _verhoerEsc(a.status)') || html.includes('"><span class="ab \' + cls + \'">\' + _verhoerEsc(a.status)'), 'Verhoerakte assertion badges must not bypass umlaut normalization');
+assert(html.includes("_verhoerRichEsc(failText)"), 'Verhoerakte fail text must normalize umlauts while preserving allowed dossier markup');
+assert(html.includes("[/\\bKurfuerstendamm\\b/g, 'Kurfürstendamm']"), 'Verhoerakte cafe dossier needs Kurfuerstendamm displayed with umlaut');
+assert(html.includes("[/\\bGedaechtnis\\b/g, 'Gedächtnis']"), 'Verhoerakte cafe dossier needs Gedaechtnis displayed with umlaut');
 const npcMenuSource = html.slice(html.indexOf('function oeffneNpcMenue'), html.indexOf('// ===== Ende NPC-Interaktion ====='));
 assert(npcMenuSource.includes("_direktVerb.key === 'befragen' || _direktVerb._verhoerOeffnen"), 'single conversation actions must bypass the redundant NPC popup inside the NPC menu');
 assert(npcMenuSource.includes('_direktVerb._sozialErledigt'), 'finished conversations must bypass the redundant one-button popup');

@@ -4003,7 +4003,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1173</div>
+    <div class="start-version">Schatten v7.12.1174</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -4244,7 +4244,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1173</span>
+    <span>Schatten v7.12.1174</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -12840,7 +12840,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1173 +Reisekartenbutton-Alignment';
+window.SCHATTEN_VERSION = 'v7.12.1174 +Verhoer-Umlaute';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -21199,6 +21199,19 @@ function asciiToUmlaut(s) {
     [/\bBuehne\b/g, 'Bühne'],
     [/\bUniversitaetsklinik\b/g, 'Universitätsklinik'],
     [/\bBuerstenschnitt\b/g, 'Bürstenschnitt'],
+    [/\bCafe\b/g, 'Café'],
+    [/\bKurfuerstendamm\b/g, 'Kurfürstendamm'],
+    [/\bGaeste\b/g, 'Gäste'],
+    [/\bGast\b/g, 'Gast'],
+    [/\bLuege\b/g, 'Lüge'], [/\bLuegen\b/g, 'Lügen'],
+    [/\bschuetzt\b/g, 'schützt'], [/\bschuetzen\b/g, 'schützen'],
+    [/\bschuetzte\b/g, 'schützte'],
+    [/\blaegen\b/g, 'lägen'], [/\blaesst\b/g, 'lässt'],
+    [/\bGedaechtnis\b/g, 'Gedächtnis'],
+    [/\bhoere\b/g, 'höre'], [/\bhoert\b/g, 'hört'],
+    [/\bHoeflich\b/g, 'Höflich'], [/\bHoeflichkeit\b/g, 'Höflichkeit'],
+    [/\bGespraech\b/g, 'Gespräch'], [/\bGespraechsnotiz\b/g, 'Gesprächsnotiz'],
+    [/\bGespraechslage\b/g, 'Gesprächslage'], [/\bGespraechsspielraum\b/g, 'Gesprächsspielraum'],
     [/\bschlaegt\b/g, 'schlägt'],
   ];
   let out = s;
@@ -54590,7 +54603,17 @@ function _verhoerCommit(npcId) {
     if (typeof saveGameState === 'function') saveGameState();
   } catch (e) {}
 }
-function _verhoerEsc(s) { return (typeof escapeHtml === 'function') ? escapeHtml(s || '') : String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function _verhoerDisplayText(s) {
+  const raw = String(s == null ? '' : s);
+  return (typeof asciiToUmlaut === 'function') ? asciiToUmlaut(raw) : raw;
+}
+function _verhoerEsc(s) {
+  const clean = _verhoerDisplayText(s);
+  return (typeof escapeHtml === 'function') ? escapeHtml(clean) : String(clean).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function _verhoerRichEsc(s) {
+  return _verhoerEsc(s).replace(/&lt;b&gt;/g, '<b>').replace(/&lt;\/b&gt;/g, '</b>');
+}
 
 function _verhoerPushTurn(npcId, karl, line, tell, extra) {
   const s = _verhoerState(npcId);
@@ -54789,14 +54812,14 @@ function _verhoerRender() {
   const aktiv = (s.status === 'aktiv');
   let stampTxt = 'Vertraulich';
   let h = '';
-  h += '<div class="akte-kopf"><div><div class="t1">K. Mauer · Privatermittlungen</div><div class="t2">Vertrauliche Nachforschungen · Berlin 1953</div><div class="aktenr">' + _verhoerEsc(p.aktenr) + '</div></div><div class="vstamp">' + stampTxt + '</div></div>';
+  h += '<div class="akte-kopf"><div><div class="t1">K. Mauer · Privatermittlungen</div><div class="t2">Vertrauliche Nachforschungen · Berlin 1953</div><div class="aktenr">' + _verhoerEsc(p.aktenr) + '</div></div><div class="vstamp">' + _verhoerEsc(stampTxt) + '</div></div>';
   h += '<div class="felder"><div class="row"><span class="k">Name</span><span class="v">' + _verhoerEsc(p.name) + '</span></div>'
     + '<div class="row"><span class="k">Verhältnis</span><span class="v">' + _verhoerEsc(p.verh) + '</span></div>'
     + '<div class="row"><span class="k">Notiert von</span><span class="v">K. Mauer — i. A. Edith Kessler</span></div></div>';
   h += '<div class="sek">Gesprächsnotiz</div><div class="protokoll">';
   h += s.log.map(function (e) {
     const who = e.who === 'MAUER' ? 'MAUER' : (p.name.split(' ').pop().toUpperCase());
-    const main = e.tx ? ('<div class="pz ' + (e.k ? 'k' : '') + '"><span class="sp">' + who + '</span><span>' + _verhoerEsc(e.tx) + '</span></div>') : '';
+    const main = e.tx ? ('<div class="pz ' + (e.k ? 'k' : '') + '"><span class="sp">' + _verhoerEsc(who) + '</span><span>' + _verhoerEsc(e.tx) + '</span></div>') : '';
     const reg = e.regie ? ('<div class="pz"><span class="sp"></span><span class="regie">[ ' + _verhoerEsc(e.regie) + ' ]</span></div>') : '';
     return main + reg;
   }).join('');
@@ -54812,14 +54835,14 @@ function _verhoerRender() {
   const aus = (caseProgress && Array.isArray(caseProgress.aussagen)) ? caseProgress.aussagen : [];
   if (aus.length) {
     h += '<div class="aussagen"><div class="h">Aussagen — Fallakte (zu prüfen)</div>';
-    h += aus.map(function (a) { const cls = a.status === 'bestätigt' ? 'best' : (a.status === 'widerlegt' ? 'wid' : 'unb'); return '<div class="aitem ' + (a.status === 'widerlegt' ? 'w' : '') + '"><span class="ab ' + cls + '">' + a.status + '</span><span>' + _verhoerEsc(a.text) + '</span></div>'; }).join('');
+    h += aus.map(function (a) { const cls = a.status === 'bestätigt' ? 'best' : (a.status === 'widerlegt' ? 'wid' : 'unb'); return '<div class="aitem ' + (a.status === 'widerlegt' ? 'w' : '') + '"><span class="ab ' + cls + '">' + _verhoerEsc(a.status) + '</span><span>' + _verhoerEsc(a.text) + '</span></div>'; }).join('');
     h += '</div>';
   }
   if (s.status === 'gelöst') h += '<div class="ergebnis win"><span class="es">' + _verhoerEsc(p.breakStamp) + '</span><br>Kernindiz notiert: ' + _verhoerEsc(s._grantText || '') + '</div>';
   else if (s.status === 'verbrannt') {
     const vv = VERHOER_VARIANTEN[npcId] || {};
     const failText = _verhoerPick([p.failText].concat(vv.failText || []), s.variationSeed, 'fail') || p.failText;
-    h += '<div class="ergebnis fail"><span class="es">' + _verhoerEsc(p.failStamp) + '</span><br>' + failText + '</div>';
+    h += '<div class="ergebnis fail"><span class="es">' + _verhoerEsc(p.failStamp) + '</span><br>' + _verhoerRichEsc(failText) + '</div>';
   }
   else if (s.status === 'vertagt') h += '<div class="ergebnis"><span class="es">Vertagt</span></div>';
   h += '<div class="vlabel">OFFENE FRAGEN</div><div class="stamps" id="verhoer-themen">';
