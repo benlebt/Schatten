@@ -353,6 +353,12 @@ for (const place of kesslerPlaces) {
 
 assert(html.includes('function _hauptuiItemVerben(target)'), 'inventory must expose contextual Haupt-UI verbs');
 assert(html.includes('function _hauptuiPlanDirekt(aktionKey, zielName, item)'), 'inventory escalation must reuse the existing plan/combat path');
+assert(html.includes("const pickupObjects = objects.filter(function (target) { return target.fundTyp === 'item'; });"), 'loose pickups must be split from investigation clues');
+assert(html.includes("{ key: 'fundstuecke', label: 'Fundstücke am Ort', tag: 'Nimm', targets: pickupObjects }"), 'pickups need their own visible target group');
+assert(html.includes('.hauptui-target-list > :only-child { grid-column: auto; }'), 'single targets must not stretch into full-width bars');
+assert(html.includes("{ key: 'items', label: 'Inventar', tag: 'Inventar', targets: data.items || [] }"), 'inventory needs a distinct visible target group');
+assert(html.includes("button.dataset.targetKind = kind;"), 'target buttons must expose semantic kind for styling and audits');
+assert(html.includes('.hauptui-target.type-person') && html.includes('.hauptui-target.type-loot') && html.includes('.hauptui-target.type-item'), 'target roles must render with distinct visual classes');
 assert(!html.includes("if (mode === 'combat' || mode === 'escape'"), 'combat mode must not hide the Haupt-UI while the old arena is disabled');
 calls.plan = [];
 calls.planExecuted = 0;
@@ -385,6 +391,7 @@ assert(byText(container, 'Drohe'), 'hostile person mode must expose pressure/esc
 assert(byText(container, 'Greife an'), 'hostile person mode must expose direct attack');
 const toasterButton = byText(container, toaster.name);
 assert(toasterButton, 'inventory item must be visible in combat');
+assert.strictEqual(toasterButton.dataset.targetKind, 'item', 'inventory target must be marked as inventory, not a generic button');
 toasterButton.onTap();
 assert(byText(container, 'Wirf'), 'throwable inventory must expose Wirf when a hostile target is present');
 assert(byText(container, 'Lenk ab'), 'throwable inventory must expose an actual distraction verb');
