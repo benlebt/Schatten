@@ -1949,6 +1949,8 @@
   .hauptui-lead:first-of-type { border-top: 0; }
   .hauptui-lead-question { font-size: calc(11px * var(--reading-scale)); line-height: 1.25; }
   .hauptui-lead-place { color: #91a9b4; font-size: calc(9.5px * var(--reading-scale)); white-space: nowrap; }
+  .hauptui-lead.status-braucht_beleg .hauptui-lead-question { color: #d1bd80; }
+  .hauptui-lead.status-braucht_beleg .hauptui-lead-place { color: #c0ad78; white-space: normal; text-align: right; }
   .hauptui-lead:hover .hauptui-lead-question { color: #e1bd57; }
   .hauptui-target-group + .hauptui-target-group { margin-top: 7px; }
   .hauptui-target-list {
@@ -2011,6 +2013,11 @@
     white-space: nowrap;
   }
   .hauptui-target.has-clue .hauptui-target-tag { color: #d3ab42; }
+  .hauptui-target.needs-proof {
+    border-left-color: #9a8750;
+    background: linear-gradient(90deg, rgba(80,66,29,0.24), #15120d 45%);
+  }
+  .hauptui-target.needs-proof .hauptui-target-tag { color: #c7b06a; }
   .hauptui-target.type-person {
     border-left: 3px solid #6f92a3;
     background: linear-gradient(90deg, rgba(43,57,65,0.34), #15120d 45%);
@@ -3989,7 +3996,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1168</div>
+    <div class="start-version">Schatten v7.12.1169</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -4230,7 +4237,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1168</span>
+    <span>Schatten v7.12.1169</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -12657,7 +12664,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1168 +Edith-Hinweisroute';
+window.SCHATTEN_VERSION = 'v7.12.1169 +Belegbedarf-Faeden';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -16558,12 +16565,16 @@ function _baukastenZiele() {
         }
       } catch (e) {}
     }
-    out.personen = _np.filter(n => n && n.name).map(n => ({
-      id: n.id || null, name: n.name, tag: n.tag || '', rolle: n.rolle || '',
-      hinweis: (typeof _npcHatOffenenHinweis === 'function') ? !!_npcHatOffenenHinweis(n.name, n.id) : false,
-      hinweisAktionen: (typeof _npcOffeneHinweisAktionen === 'function') ? _npcOffeneHinweisAktionen(n.name) : [],
-      typ: 'person'
-    }));
+    out.personen = _np.filter(n => n && n.name).map(n => {
+      const target = {
+        id: n.id || null, name: n.name, tag: n.tag || '', rolle: n.rolle || '',
+        hinweis: (typeof _npcHatOffenenHinweis === 'function') ? !!_npcHatOffenenHinweis(n.name, n.id) : false,
+        hinweisAktionen: (typeof _npcOffeneHinweisAktionen === 'function') ? _npcOffeneHinweisAktionen(n.name) : [],
+        typ: 'person'
+      };
+      if (typeof _hauptuiKesslerZielBrauchtBeleg === 'function') target.belegBedarf = _hauptuiKesslerZielBrauchtBeleg(target);
+      return target;
+    });
     const _hs = (typeof _ortsFundIndizienErreichbar === 'function') ? (_ortsFundIndizienErreichbar() || []) : [];
     out.objekte = _hs.map(ind => ({
       id: ind.id,
@@ -55234,6 +55245,9 @@ function _hauptuiEmpfohleneAktion(target) {
 
 function _hauptuiZielHinweis(target, fallback) {
   if (!target) return fallback;
+  if (target.belegBedarf && target.belegBedarf.label) {
+    return target.belegBedarf.label;
+  }
   if (target.hinweis) {
     return 'Hinweis';
   }
@@ -55812,9 +55826,43 @@ function _hauptuiKesslerFaeden() {
       if (personIndizOffen('edith_verdacht', 'edith_kessler')) faeden.push({ id: 'edith', frage: 'Was beobachtet Edith an den Mittwochabenden?', ort: 'Kessler-Wohnung Charlottenburg', targetIds: ['edith_kessler'] });
     }
     if (externBelegt && personIndizOffen('robert_aussage', 'robert_kessler')) faeden.push({ id: 'robert', frage: 'Wie erklärt Robert die Widersprüche?', ort: 'Hinterhof Sybelstrasse', targetIds: ['robert_kessler'] });
-    if ((hat('robert_aussage') || caseProgress.wahrheitErkannt) && !caseProgress.istGelöst && nichtVerbrannt('edith_kessler')) faeden.push({ id: 'bericht', frage: 'Welche Wahrheit soll Edith erfahren?', ort: 'Kessler-Wohnung Charlottenburg', targetIds: ['edith_kessler'] });
+    const fallGeloest = !!(caseProgress.istGeloest || caseProgress.istGelöst);
+    if ((hat('robert_aussage') || caseProgress.wahrheitErkannt) && !fallGeloest && nichtVerbrannt('edith_kessler')) {
+      if (!hat('briefchen_ilse')) {
+        faeden.push({
+          id: 'edith_beleg',
+          frage: 'Welcher Beleg kann Edith die Wahrheit zeigen?',
+          ort: 'Spedition Schmidt Moabit',
+          targetIds: ['briefchen_ilse'],
+          status: 'braucht_beleg',
+          bedarf: 'Erst einen unabhängigen Beleg sichern',
+          fehlt: ['briefchen_ilse'],
+          zielOrtDanach: 'Kessler-Wohnung Charlottenburg'
+        });
+      } else {
+        faeden.push({ id: 'bericht', frage: 'Welche Wahrheit soll Edith erfahren?', ort: 'Kessler-Wohnung Charlottenburg', targetIds: ['edith_kessler'], status: 'bereit' });
+      }
+    }
     return faeden.slice(0, 3);
   } catch (e) { return []; }
+}
+
+function _hauptuiKesslerZielBrauchtBeleg(target) {
+  try {
+    if (!target || typeof _istKesslerFallFuerBild !== 'function' || !_istKesslerFallFuerBild() || !caseProgress) return null;
+    const id = normForMatch(target.id || target.name || '');
+    if (id !== 'edith_kessler' && id !== 'edith kessler') return null;
+    const gefunden = Array.isArray(caseProgress.gefundeneIndizIds) ? caseProgress.gefundeneIndizIds : [];
+    const hat = function (x) { return gefunden.indexOf(x) !== -1; };
+    const abschlussNahe = !!(hat('robert_aussage') || caseProgress.wahrheitErkannt);
+    const fallGeloest = !!(caseProgress.istGeloest || caseProgress.istGelöst);
+    if (!abschlussNahe || fallGeloest || hat('briefchen_ilse')) return null;
+    return {
+      label: 'Beleg fehlt',
+      toastTitel: 'Noch kein Hebel',
+      toastText: 'Edith wird erst aufbrechen, wenn Karl ihr einen unabhängigen Beleg vorlegen kann. Suche Roberts Schreibtisch in der Spedition.'
+    };
+  } catch (e) { return null; }
 }
 
 function _hauptuiHatOffenenFadenAmOrt(ortName) {
@@ -55841,11 +55889,13 @@ function _hauptuiNarrativerFadenPrompt(ortName, scenesHere) {
     const lokalerFaden = faeden.find(istHier);
     const zielFaden = lokalerFaden || faeden[0];
     const liste = faeden.slice(0, 3).map(function (faden) {
-      return '- ' + faden.frage + ' -> ' + faden.ort;
+      return '- ' + faden.frage + (faden.bedarf ? ' (' + faden.bedarf + ')' : '') + ' -> ' + faden.ort;
     }).join('\n');
     if (lokalerFaden) {
       return 'NARRATIVER FADEN-KOMPASS (Kessler, aktueller Ort): Die UI zeigt hier einen offenen Ermittlungsfaden: "'
-        + lokalerFaden.frage + '". Die Szene soll Karl subtil, aber spuerbar auf genau diese Spur fuehren. Wenn er am Ort sucht oder mit einer Person spricht, darf die Prosa diese Frage als Gedanken, Widerspruch oder Erinnerung aufnehmen. KEIN Questlog-Satz, KEIN "der Spieler sollte...", KEIN Ortswechsel aus eigener Macht. Beispielton: "Die Sache mit Roberts Ueberstunden bleibt schief; Tetzlaff sitzt direkt vor dir." Offene Fäden:\n' + liste;
+        + lokalerFaden.frage + '". Die Szene soll Karl subtil, aber spuerbar auf genau diese Spur fuehren. Wenn er am Ort sucht oder mit einer Person spricht, darf die Prosa diese Frage als Gedanken, Widerspruch oder Erinnerung aufnehmen.'
+        + (lokalerFaden.bedarf ? ' Wichtig: Dieser Faden braucht erst einen Beleg; die Szene soll klar fuehlbar machen, welcher Beleg fehlt, statt die Person als sofort ausquetschbar zu spielen.' : '')
+        + ' KEIN Questlog-Satz, KEIN "der Spieler sollte...", KEIN Ortswechsel aus eigener Macht. Beispielton: "Die Sache mit Roberts Ueberstunden bleibt schief; Tetzlaff sitzt direkt vor dir." Offene Fäden:\n' + liste;
     }
     const haengt = (typeof scenesHere === 'number' && scenesHere >= 2);
     return 'NARRATIVER FADEN-KOMPASS (Kessler, naechste Spur): Falls die aktuelle Szene keinen neuen konkreten Fortschritt am Ort bringt'
@@ -56071,13 +56121,13 @@ function _renderEngineMenu(container, scene) {
       offeneFaeden.forEach(function (faden) {
         const leadBtn = document.createElement('button');
         leadBtn.type = 'button';
-        leadBtn.className = 'hauptui-lead';
+        leadBtn.className = 'hauptui-lead' + (faden.status ? ' status-' + faden.status : '');
         const q = document.createElement('span');
         q.className = 'hauptui-lead-question';
         q.textContent = faden.frage;
         const p = document.createElement('span');
         p.className = 'hauptui-lead-place';
-        p.textContent = faden.ort + ' ›';
+        p.textContent = (faden.bedarf ? faden.bedarf + ' · ' : '') + faden.ort + ' ›';
         leadBtn.appendChild(q);
         leadBtn.appendChild(p);
         _hauptuiBind(leadBtn, function () {
@@ -56149,7 +56199,9 @@ function _renderEngineMenu(container, scene) {
         button.type = 'button';
         const key = _hauptuiTargetKey(target);
         const kind = _hauptuiTargetKind(target);
-        button.className = 'hauptui-target type-' + kind + (key === state.targetKey ? ' is-selected' : '') + (target.hinweis ? ' has-clue' : '');
+        button.className = 'hauptui-target type-' + kind
+          + (key === state.targetKey ? ' is-selected' : '')
+          + (target.belegBedarf ? ' needs-proof' : (target.hinweis ? ' has-clue' : ''));
         button.dataset.targetKind = kind;
         const name = document.createElement('span');
         name.className = 'hauptui-target-name';
@@ -56161,6 +56213,9 @@ function _renderEngineMenu(container, scene) {
         button.appendChild(tag);
         _hauptuiBind(button, function () {
           if (typeof _uiAudit === 'function') _uiAudit('ZIEL AUSGEWAEHLT', target.name || key, group.label);
+          if (target.belegBedarf) {
+            if (typeof showProgressToast === 'function') showProgressToast(target.belegBedarf.toastTitel || 'Beleg fehlt', target.belegBedarf.toastText || 'Karl braucht erst einen unabhängigen Beleg.', 'info', 'hauptui-beleg-fehlt-' + key);
+          }
           if (state.targetKey === key) { state.targetKey = null; state.verb = null; }
           else {
             state.targetKey = key;
@@ -56185,6 +56240,10 @@ function _renderEngineMenu(container, scene) {
       _hauptuiBind(execute, function () {
         if (typeof chooseOptionInFlight !== 'undefined' && chooseOptionInFlight) {
           if (typeof showProgressToast === 'function') showProgressToast('Gleich bereit', 'Die aktuelle Szene wird noch abgeschlossen. Versuch es gleich noch einmal.', 'info', 'hauptui-ausfuehren-gesperrt');
+          return;
+        }
+        if (targetRequired && selected && selected.belegBedarf) {
+          if (typeof showProgressToast === 'function') showProgressToast(selected.belegBedarf.toastTitel || 'Beleg fehlt', selected.belegBedarf.toastText || 'Karl braucht erst einen unabhängigen Beleg.', 'info', 'hauptui-ausfuehren-beleg-fehlt');
           return;
         }
         if (targetRequired && selected && selected.typ === 'person' && !_hauptuiNpc(selected)) {
@@ -56212,7 +56271,7 @@ function _renderEngineMenu(container, scene) {
     if (typeof _uiSnapshot === 'function') {
       _uiSnapshot({
         kontext: 'Haupt-UI',
-        faeden: offeneFaeden.map(function (f) { return { frage: f.frage, ort: f.ort }; }),
+        faeden: offeneFaeden.map(function (f) { return { frage: f.frage, ort: f.ort, status: f.status || '', bedarf: f.bedarf || '' }; }),
         verben: verbs.map(function (v) { return v.label + (state.verb === v.key ? ' [gewaehlt]' : ''); }),
         ziele: groups.reduce(function (all, group) {
           return all.concat(group.targets.map(function (target) {

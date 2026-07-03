@@ -126,7 +126,11 @@ assert(npcMenuSource.includes('_hatNochWas && !_hatJetzt'), 'simple NPCs without
 assert(npcMenuSource.includes('_klientHatOffenenHinweis'), 'client lockout must explicitly exempt currently open client-bound clues');
 assert(npcMenuSource.includes('&& !_klientHatOffenenHinweis'), 'client lockout must not hide a reachable clue at the client location');
 assert(html.includes('_npcAlsAngesprochenMarkieren(npc.name, npc.id)'), 'real conversations must persist their per-NPC spoken state');
-assert(/function _hauptuiZielHinweis[\s\S]{0,120}?return 'Hinweis';/.test(html), 'person clue badges must stay short and not expose clipped raw action labels');
+const zielHinweisStart = html.indexOf('function _hauptuiZielHinweis');
+const zielHinweisEnd = html.indexOf('function _hauptuiBind', zielHinweisStart);
+const zielHinweisSource = html.slice(zielHinweisStart, zielHinweisEnd);
+assert(zielHinweisSource.includes("return 'Hinweis';"), 'person clue badges must stay short and not expose clipped raw action labels');
+assert(zielHinweisSource.includes('target.belegBedarf'), 'proof-gated clues must show Beleg fehlt instead of a misleading direct hint');
 const sceneVisualSource = html.slice(html.indexOf('function _renderKesslerSceneVisual'), html.indexOf('function _clearKesslerSceneVisual'));
 assert(!sceneVisualSource.includes('direktWennEindeutig'), 'NPC direct-action code must never leak into scene-image rendering');
 const start = html.indexOf('window.__hauptuiActionState');
@@ -223,6 +227,11 @@ faeden = context._hauptuiKesslerFaeden();
 assert.strictEqual(faeden[0].id, 'robert', 'independent evidence must open Robert confrontation');
 assert.strictEqual(context._hauptuiHatOffenenFadenAmOrt('Spedition Schmidt Moabit'), false, 'resolved Spedition thread must stop keeping the location open');
 context.caseProgress.gefundeneIndizIds.push('robert_aussage');
+faeden = context._hauptuiKesslerFaeden();
+assert.strictEqual(faeden[0].id, 'edith_beleg', 'Robert statement without the letter must point to the missing independent proof');
+assert.strictEqual(faeden[0].ort, 'Spedition Schmidt Moabit', 'missing proof thread must send Karl to the Spedition');
+assert.strictEqual(faeden[0].status, 'braucht_beleg', 'missing proof thread must be marked as proof-gated');
+context.caseProgress.gefundeneIndizIds.push('briefchen_ilse');
 faeden = context._hauptuiKesslerFaeden();
 assert.strictEqual(faeden[0].id, 'bericht', 'Robert statement must lead back to Edith');
 
