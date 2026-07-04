@@ -4003,7 +4003,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1174</div>
+    <div class="start-version">Schatten v7.12.1175</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -4244,7 +4244,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1174</span>
+    <span>Schatten v7.12.1175</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -12840,7 +12840,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1174 +Verhoer-Umlaute';
+window.SCHATTEN_VERSION = 'v7.12.1175 +Direkte-Fundstuecke';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -16477,6 +16477,45 @@ function _ortsFundItems() {
     return Array.from(keys).filter(k => schonHier.indexOf(k) === -1 && ITEM_KATALOG[k]).map(k => ({ key: k, name: ITEM_KATALOG[k].name, preis: _preisMap[k] || 0 }));
   } catch (e) { return []; }
 }
+function _fundOrtKeyAktuell() {
+  try { return normForMatch(engineCurrentLocation && engineCurrentLocation.name ? engineCurrentLocation.name : 'ort'); }
+  catch (e) { return 'ort'; }
+}
+function _fundGuthabenAktualisieren(root) {
+  try {
+    const scope = root || document;
+    const gh = scope.querySelector ? scope.querySelector('.fund-guthaben') : null;
+    if (gh && typeof _geldText === 'function') gh.textContent = 'Du hast: ' + _geldText();
+  } catch (e) {}
+}
+function _fundItemAufnehmenDirekt(it, opts) {
+  try {
+    opts = opts || {};
+    if (!it || !it.key || !it.name) return false;
+    const ortKey = _fundOrtKeyAktuell();
+    if (!caseProgress.ortsFundGenommen) caseProgress.ortsFundGenommen = {};
+    if (!caseProgress.ortsFundGenommen[ortKey]) caseProgress.ortsFundGenommen[ortKey] = [];
+    if (caseProgress.ortsFundGenommen[ortKey].indexOf(it.key) !== -1) return false;
+    const preis = it.preis > 0 ? ((typeof _preisInOstmark === 'function') ? _preisInOstmark(it.preis) : it.preis * 5) : 0;
+    if (preis > 0) {
+      if (typeof _geldZahle !== 'function' || !_geldZahle(preis, 'ost', 'gekauft: ' + it.name + ' @ ' + (engineCurrentLocation && engineCurrentLocation.name || 'Ort'))) {
+        if (opts.toast !== false && typeof showProgressToast === 'function') showProgressToast('Zu wenig Ostmark', it.name + ' kostet ' + preis + ' Ostmark.', 'caution', 'fund-zu-wenig-' + normForMatch(it.name));
+        return false;
+      }
+      if (typeof diag === 'function') diag('state', 'GEKAUFT: ' + it.name + ' fuer ' + preis + ' Ostmark @ ' + (engineCurrentLocation && engineCurrentLocation.name || '?'));
+    }
+    if (typeof _itemAdd === 'function') _itemAdd({ id: 'item_' + it.key + '_' + ortKey.replace(/\s+/g, '_'), name: it.name, typ: 'tauschware', quelle: (preis > 0 ? 'gekauft:' : 'ort_gefunden:') + (engineCurrentLocation && engineCurrentLocation.name || 'Ort') });
+    caseProgress.ortsFundGenommen[ortKey].push(it.key);
+    if (opts.toast !== false && typeof showProgressToast === 'function') {
+      showProgressToast(preis > 0 ? 'Gekauft' : 'Eingesteckt', it.name + (preis > 0 ? ' fuer ' + preis + ' Ostmark.' : ' ist jetzt dabei.'), 'success', 'fund-nimm-' + normForMatch(it.name));
+    }
+    try { if (typeof fxItemGain === 'function') fxItemGain({ name: it.name, typ: 'tauschware' }); } catch (e) {}
+    return true;
+  } catch (e) {
+    if (typeof diag === 'function') diag('drift', 'FUND-DIREKT-Fehler: ' + (e && e.message ? e.message : e));
+    return false;
+  }
+}
 // v7.12.661 (Benjamin: "4 Fundstücke auf dem Button, aber Klick findet nichts"). EINE gemeinsame Quelle für
 // Marker UND Klick - liefert die JETZT erreichbaren Indiz-Objekte am aktuellen Ort (Gates Tageszeit+NPC erfüllt).
 // Vorher zählte der Marker über offeneIndizienAmOrtNachErreichbarkeit, der Klick sammelte über eine zweite,
@@ -16494,23 +16533,10 @@ function _zeigeFundAuswahl(fundItems, fundIndizien) {
     // (Wirt/Händler) verkäufliche Ware dabei hat - sonst käme man nie zum Verkaufen.
     const _kannVerkaufen = (typeof _istVerkaufsort === 'function' && _istVerkaufsort() && typeof _verkaufbareItems === 'function' && _verkaufbareItems().length > 0);
     if (!fundItems.length && !fundIndizien.length && !_kannVerkaufen) return;
-    const ortKey = normForMatch(engineCurrentLocation.name);
+    const ortKey = _fundOrtKeyAktuell();
     if (!caseProgress.ortsFundGenommen) caseProgress.ortsFundGenommen = {};
     if (!caseProgress.ortsFundGenommen[ortKey]) caseProgress.ortsFundGenommen[ortKey] = [];
-    const _nimm = (it) => {
-      // v7.12.1014 (Geld-System Stufe 1): bepreiste Ware wird vom Bargeld-KONTO bezahlt (Ostmark), nicht mehr
-      // mit einem Geld-Item. Preis = Tauschwert in Ostmark übersetzt. Reicht das Konto nicht, kein Kauf.
-      if (it.preis > 0) {
-        const _kosten = (typeof _preisInOstmark === 'function') ? _preisInOstmark(it.preis) : it.preis * 5;
-        if (typeof _geldZahle !== 'function' || !_geldZahle(_kosten, 'ost', 'gekauft: ' + it.name + ' @ ' + engineCurrentLocation.name)) {
-          return false; // nicht genug Ostmark
-        }
-        if (typeof diag === 'function') diag('state', '💰 GEKAUFT: ' + it.name + ' für ' + _kosten + ' Ostmark @ ' + engineCurrentLocation.name);
-      }
-      if (typeof _itemAdd === 'function') _itemAdd({ id: 'item_' + it.key + '_' + ortKey.replace(/\s+/g, '_'), name: it.name, typ: 'tauschware', quelle: (it.preis > 0 ? 'gekauft:' : 'ort_gefunden:') + engineCurrentLocation.name });
-      caseProgress.ortsFundGenommen[ortKey].push(it.key);
-      return true;
-    };
+    const _nimm = (it) => _fundItemAufnehmenDirekt(it, { toast: false });
     // v7.12.683 (Benjamin: "ich will wissen UND wählen, was ich eintausche"): alle eigenen
     // Zahl-Items ab Tauschwert >= preis, nach Namen gruppiert (×N), billigste zuerst.
     const _zahlKandidaten = (preis) => {
@@ -16597,6 +16623,7 @@ function _zeigeFundAuswahl(fundItems, fundIndizien) {
         panel.appendChild(ih);
       }
     }
+    let _baueVerkauf = null;
     fundItems.forEach(it => {
       const reihe = document.createElement('div');
       reihe.style.cssText = 'margin:4px 0;';
@@ -16610,13 +16637,19 @@ function _zeigeFundAuswahl(fundItems, fundIndizien) {
       if (!zahlbar) { b.disabled = true; b.classList.add('locked'); }
       b.onclick = () => {
         if (it.preis === 0) {
-          if (_nimm(it)) { b.disabled = true; b.classList.add('locked'); b.querySelector('.option-marker').textContent = '· Eingesteckt ✓'; }
+          if (_nimm(it)) {
+            b.disabled = true; b.classList.add('locked'); b.querySelector('.option-marker').textContent = '· Eingesteckt ✓';
+            _fundGuthabenAktualisieren(panel);
+            try { if (typeof _baueVerkauf === 'function') _baueVerkauf(); } catch (e) {}
+          }
           return;
         }
         // Kauf: direkt vom Konto zahlen (Ostmark). Reicht es nicht, bleibt der Button gesperrt.
         if (_nimm(it)) {
           b.disabled = true; b.classList.add('locked');
           b.querySelector('.option-marker').textContent = '· Gekauft ✓ (' + _kosten0 + ' Ostmark)';
+          _fundGuthabenAktualisieren(panel);
+          try { if (typeof _baueVerkauf === 'function') _baueVerkauf(); } catch (e) {}
         } else {
           b.querySelector('.option-marker').textContent = '· Zu wenig Ostmark';
         }
@@ -16629,7 +16662,7 @@ function _zeigeFundAuswahl(fundItems, fundIndizien) {
     if (_kannVerkaufen) {
       const verkaufBox = document.createElement('div');
       verkaufBox.className = 'fund-verkauf-box';
-      const _baueVerkauf = () => {
+      _baueVerkauf = () => {
         verkaufBox.innerHTML = '';
         const items = (typeof _verkaufbareItems === 'function') ? _verkaufbareItems() : [];
         if (!items.length) {
@@ -16656,7 +16689,7 @@ function _zeigeFundAuswahl(fundItems, fundIndizien) {
               if (typeof _geldGutschrift === 'function') _geldGutschrift(wert, 'ost', 'verkauft: ' + grp.name + ' @ ' + engineCurrentLocation.name);
               if (typeof diag === 'function') diag('state', '💰 VERKAUFT: ' + grp.name + ' für ' + wert + ' Ostmark @ ' + engineCurrentLocation.name);
               // Guthaben-Anzeige oben aktualisieren + Liste neu aufbauen
-              try { const gh = panel.querySelector('.fund-guthaben'); if (gh && typeof _geldText === 'function') gh.textContent = 'Du hast: ' + _geldText(); } catch (e) {}
+              _fundGuthabenAktualisieren(panel);
               _baueVerkauf();
             } catch (e) {}
           };
@@ -55602,9 +55635,13 @@ function _hauptuiFundAuswahl(target, griff) {
     if (selectedClues.length && typeof _hauptuiStarteIndizSzene === 'function') {
       return _hauptuiStarteIndizSzene(selectedClues[0], griff || target.name);
     }
-    if (selectedItems.length && typeof _zeigeFundAuswahl === 'function') {
-      _zeigeFundAuswahl(selectedItems, selectedClues);
-      return true;
+    if (selectedItems.length) {
+      const ok = (typeof _fundItemAufnehmenDirekt === 'function') ? _fundItemAufnehmenDirekt(selectedItems[0], { toast: true }) : false;
+      if (ok) {
+        try { if (typeof renderOptions === 'function' && typeof currentScene === 'object' && currentScene) renderOptions(currentScene); } catch (e) {}
+        return true;
+      }
+      return false;
     }
   } catch (e) {}
   return false;
@@ -55890,7 +55927,8 @@ function _hauptuiExecuteLegacyVor1155(verb, target) {
   }
 
   if (target.typ === 'objekt') {
-    if (_hauptuiFundAuswahl(target, target.name)) return;
+    if (target.fundTyp === 'item' && verb === 'nehmen') { _hauptuiFundAuswahl(target, target.name); return; }
+    if (target.fundTyp !== 'item' && _hauptuiFundAuswahl(target, target.name)) return;
     const labels = { anschauen: 'untersucht', oeffnen: 'öffnet', durchsuchen: 'durchsucht', nehmen: 'nimmt an sich', druecken: 'betätigt' };
     _hauptuiChoose({ id: 'HAUPTUI_OBJEKT_' + verb.toUpperCase(), text: 'Karl ' + (labels[verb] || 'untersucht') + ' ' + target.name + ' sorgfältig.', _anzeigeText: verb + ' · ' + target.name, kategorie: 'ERKUNDEN', _kategorie: 'ERKUNDEN', _engine: true });
     return;
@@ -55996,7 +56034,8 @@ function _hauptuiExecute(verb, target) {
   }
 
   if (target.typ === 'objekt') {
-    if (_hauptuiFundAuswahl(target, target.name)) return;
+    if (target.fundTyp === 'item' && verb === 'nehmen') { _hauptuiFundAuswahl(target, target.name); return; }
+    if (target.fundTyp !== 'item' && _hauptuiFundAuswahl(target, target.name)) return;
     const labels = { anschauen: 'untersucht', oeffnen: 'oeffnet', durchsuchen: 'durchsucht', nehmen: 'nimmt an sich', druecken: 'betaetigt' };
     _hauptuiChoose({ id: 'HAUPTUI_OBJEKT_' + verb.toUpperCase(), text: 'Karl ' + (labels[verb] || 'untersucht') + ' ' + target.name + ' sorgfaeltig.', _anzeigeText: verb + ' - ' + target.name, kategorie: 'ERKUNDEN', _kategorie: 'ERKUNDEN', _engine: true });
     return;

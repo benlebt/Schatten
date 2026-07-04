@@ -36,7 +36,7 @@ assert(/ilse_hauke:\s*\{[\s\S]{0,400}?grantIndizId:\s*'ilse_aussage'/.test(html)
 assert(/oberkellner_voss:\s*\{[\s\S]{0,500}?grantIndizId:\s*'kellner_beobachtung'/.test(html), 'Oberkellner Voss must use the Kessler interrogation dossier');
 assert(!html.includes('Margot Kessler'), 'interrogation file must name client Edith Kessler');
 
-assert(/function _hauptuiFundAuswahl[\s\S]{0,1000}?_zeigeFundAuswahl\(selectedItems, selectedClues\)/.test(html), 'scene targets must use the deterministic find dialog');
+assert(/function _hauptuiFundAuswahl[\s\S]{0,1200}?_fundItemAufnehmenDirekt\(selectedItems\[0\]/.test(html), 'concrete scene item targets must use the deterministic direct acquire path');
 assert(/function _verhoerFinish[\s\S]{0,900}?_markiereIndizGefunden\(ind, \{ reward: false \}\)/.test(html), 'solved interrogations must book evidence without leaking a delayed global reward popup');
 assert(html.includes("if (document.getElementById('indiz-belohnung-overlay')) return;"), 'reward flush must preserve queued clues while another reward popup is open');
 assert(html.includes("setTimeout(function () { try { if (typeof _flushIndizRewards === 'function') _flushIndizRewards();"), 'closing a reward popup must continue with queued clue rewards');

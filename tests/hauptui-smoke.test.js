@@ -424,6 +424,9 @@ assert(html.includes('.hauptui-target.type-person') && html.includes('.hauptui-t
 assert(!html.includes("if (mode === 'combat' || mode === 'escape'"), 'combat mode must not hide the Haupt-UI while the old arena is disabled');
 assert(/if \(showRomanceButton\)[\s\S]{0,2600}?window\.HAUPTUI_AKTIV && typeof hauptuiQuickActions !== 'undefined'[\s\S]{0,160}?appendChild\(romBtn\)/.test(html), 'romance must render as a compact Haupt-UI quick action');
 assert(/if \(showOvernightButton\)[\s\S]{0,2600}?window\.HAUPTUI_AKTIV && typeof hauptuiQuickActions !== 'undefined'[\s\S]{0,160}?appendChild\(overnightBtn\)/.test(html), 'overnight romance must render as a compact Haupt-UI quick action');
+assert(html.includes('function _fundItemAufnehmenDirekt(it, opts)'), 'loose pickups need a direct one-click acquire path');
+assert(html.includes("if (target.fundTyp === 'item' && verb === 'nehmen') { _hauptuiFundAuswahl(target, target.name); return; }"), 'Nimm on a concrete loose pickup must not open a second choice popup');
+assert(html.includes('function _fundGuthabenAktualisieren(root)'), 'fund popup needs a live cash refresh helper');
 calls.plan = [];
 calls.planExecuted = 0;
 const hostile = { id: 'mantelmann', name: 'Mann im grauen Mantel', tag: 'STASI', rolle: 'Agent', typ: 'person' };
