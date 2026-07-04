@@ -4036,7 +4036,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1179</div>
+    <div class="start-version">Schatten v7.12.1180</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -4277,7 +4277,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1179</span>
+    <span>Schatten v7.12.1180</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -12888,7 +12888,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1179 +Anleitung-Gefahr-Heilorte';
+window.SCHATTEN_VERSION = 'v7.12.1180 +Rufwirkung-Verhoere';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -13402,8 +13402,9 @@ function _buildProfilRecap() {
         }
       }
     } catch (e) {}
-    if (karlAkte.ruf && (karlAkte.ruf.haerte | 0) >= 3) teile.push('Karls Ruf, hart und notfalls mit Gewalt zuzufassen, eilt ihm in den Milieus voraus - Informanten sind vorsichtiger geworden.');
-    else if (karlAkte.ruf && (karlAkte.ruf.renommee | 0) >= 3) teile.push('Karl hat sich einen Ruf als zuverlaessiger, diskreter Ermittler erarbeitet.');
+    if (karlAkte.ruf && (karlAkte.ruf.haerte | 0) >= 3) teile.push('Karls Ruf, hart und notfalls mit Gewalt zuzufassen, eilt ihm in den Milieus voraus - Informanten sind vorsichtiger geworden, harte Gegner nehmen ihn aber ernster.');
+    else if (karlAkte.ruf && (karlAkte.ruf.renommee | 0) >= 3) teile.push('Karl hat sich einen Ruf als zuverlaessiger, diskreter Ermittler erarbeitet - anstaendige Zeugen geben ihm eher eine Chance.');
+    else if (karlAkte.ruf && (karlAkte.ruf.renommee | 0) <= -3) teile.push('Karls Ruf hat gelitten: Tueren gehen langsamer auf, Zeugen waegen jedes Wort, alte Fehler koennen ihm im Gespraech nachhaengen.');
     if (!teile.length) return '';
     return '\n\n[KARL-AKTE / KONTINUITAET - NUR als kurze Atmosphaere-Faerbung in die Eroeffnung einweben (ein, zwei Saetze/Gedanken Karls), den eigentlichen Fall NICHT veraendern]: ' + teile.join(' ');
   } catch (e) { return ''; }
@@ -54770,6 +54771,54 @@ function _verhoerIstFreigeschaltet(npcId) {
   const p = VERHOER_PROFILE[npcId];
   return !!p && _verhoerHatEines(p.unlockEvidenceAny);
 }
+function _verhoerRufWert(kind) {
+  try {
+    if (typeof karlAkte !== 'object' || !karlAkte || !karlAkte.ruf) return 0;
+    return karlAkte.ruf[kind] | 0;
+  } catch (e) { return 0; }
+}
+function _verhoerRufKategorie(npcId) {
+  if (npcId === 'robert_kessler' || npcId === 'norbert_tetzlaff') return 'hartes_gegenueber';
+  if (npcId === 'oberkellner_voss') return 'stolzer_zeuge';
+  return 'ziviler_zeuge';
+}
+function _verhoerRufMod(npcId) {
+  const renommee = _verhoerRufWert('renommee');
+  const haerte = _verhoerRufWert('haerte');
+  const kat = _verhoerRufKategorie(npcId);
+  const mod = { oeffStart: 0, gemStart: 0, frageBonus: 0, note: '' };
+  if (renommee >= 3) {
+    mod.oeffStart += 1;
+    mod.frageBonus += 1;
+    mod.note = 'Guter Ruf: Man gibt Karl eher eine Chance; dieses Gespraech startet offener.';
+  } else if (renommee <= -3) {
+    mod.gemStart += 1;
+    mod.frageBonus -= 1;
+    mod.note = 'Angeschlagener Ruf: Karls Name macht die Auskunftsperson vorsichtig; weniger Spielraum.';
+  }
+  if (haerte >= 3) {
+    if (kat === 'hartes_gegenueber') {
+      mod.oeffStart += 1;
+      mod.gemStart += 1;
+      mod.note = mod.note || 'Harter Ruf: Dieses Gegenueber nimmt Karl ernst, ist aber sofort auf Abwehr.';
+    } else {
+      mod.gemStart += 1;
+      mod.frageBonus -= 1;
+      mod.note = mod.note || 'Harter Ruf: Zeugen sind nervoes; Karl muss behutsamer fragen.';
+    }
+  }
+  mod.oeffStart = Math.max(0, Math.min(2, mod.oeffStart | 0));
+  mod.gemStart = Math.max(0, Math.min(1, mod.gemStart | 0));
+  mod.frageBonus = Math.max(-1, Math.min(1, mod.frageBonus | 0));
+  return mod;
+}
+function _verhoerFrageLimit(npcId, state) {
+  const p = VERHOER_PROFILE[npcId] || {};
+  if (!p.frageLimit) return null;
+  if (state && typeof state.frageLimitEffektiv === 'number') return Math.max(2, Math.min(6, state.frageLimitEffektiv | 0));
+  const mod = (state && state.rufMod) ? state.rufMod : _verhoerRufMod(npcId);
+  return Math.max(2, Math.min(6, (p.frageLimit | 0) + ((mod && mod.frageBonus) | 0)));
+}
 function _verhoerStatus(npc) {
   try { const id = npc && npc.id; const s = (caseProgress && caseProgress.verhoere && caseProgress.verhoere[id]) ? caseProgress.verhoere[id] : null; return s ? s.status : null; } catch (e) { return null; }
 }
@@ -54778,7 +54827,10 @@ function _verhoerFreshState(npcId) {
   const p = VERHOER_PROFILE[npcId] || {};
   const v = VERHOER_VARIANTEN[npcId] || {};
   const start = _verhoerPick([p.start].concat(v.start || []), variationSeed, 'start');
-  return { oeff: 0, gem: 0, used: {}, themenUsed: {}, genutzteHebelIds: [], status: 'aktiv', zweifel: false, aktionenSeitOeffnen: 0,
+  const rufMod = _verhoerRufMod(npcId);
+  return { oeff: rufMod.oeffStart || 0, gem: rufMod.gemStart || 0, rufMod: rufMod,
+    frageLimitEffektiv: _verhoerFrageLimit(npcId, { rufMod: rufMod }),
+    used: {}, themenUsed: {}, genutzteHebelIds: [], status: 'aktiv', zweifel: false, aktionenSeitOeffnen: 0,
     fragenGestellt: 0,
     variationSeed: variationSeed, failApplied: false, log: [{ who: 'NPC', k: false, tx: start || p.start || '' }] };
 }
@@ -54790,6 +54842,8 @@ function _verhoerState(npcId) {
   if (typeof caseProgress.verhoere[npcId].fragenGestellt !== 'number') caseProgress.verhoere[npcId].fragenGestellt = Object.keys(caseProgress.verhoere[npcId].themenUsed).length;
   if (typeof caseProgress.verhoere[npcId].variationSeed !== 'number') caseProgress.verhoere[npcId].variationSeed = Math.floor(Math.random() * 2147483647);
   if (typeof caseProgress.verhoere[npcId].failApplied !== 'boolean') caseProgress.verhoere[npcId].failApplied = false;
+  if (!caseProgress.verhoere[npcId].rufMod || typeof caseProgress.verhoere[npcId].rufMod !== 'object') caseProgress.verhoere[npcId].rufMod = _verhoerRufMod(npcId);
+  if (typeof caseProgress.verhoere[npcId].frageLimitEffektiv !== 'number') caseProgress.verhoere[npcId].frageLimitEffektiv = _verhoerFrageLimit(npcId, caseProgress.verhoere[npcId]);
   return caseProgress.verhoere[npcId];
 }
 function _verhoerVerfuegbareVorhalte() {
@@ -54839,6 +54893,7 @@ function _verhoerPushTurn(npcId, karl, line, tell, extra) {
 function _verhoerFinish(npcId) {
   const s = _verhoerState(npcId), p = VERHOER_PROFILE[npcId];
   if (!s || !p || s.status !== 'aktiv') return;
+  const frageLimit = _verhoerFrageLimit(npcId, s);
   const themenOk = !Array.isArray(p.requiredTopics) || p.requiredTopics.every(function (id) { return !!s.themenUsed[id]; });
   const belegeOk = _verhoerHatEines(p.requiredEvidenceAny);
   if (s.gem >= 2) { s.status = 'verbrannt'; _verhoerScheitern(npcId); _verhoerCommit(npcId); }
@@ -54855,7 +54910,7 @@ function _verhoerFinish(npcId) {
     } catch (e) { if (typeof diag === 'function') diag('drift', 'VERHÖR-Grant-Fehler: ' + (e && e.message)); }
     _verhoerCommit(npcId);
   }
-  else if (p.frageLimit && s.fragenGestellt >= p.frageLimit) {
+  else if (frageLimit && s.fragenGestellt >= frageLimit) {
     s.status = 'verbrannt';
     _verhoerPushTurn(npcId, '', 'Das reicht jetzt. Sie haben Ihre Fragen gestellt.', 'die Geduld ist aufgebraucht; das Gespräch endet ohne verwertbare Aussage');
     _verhoerScheitern(npcId);
@@ -55040,10 +55095,13 @@ function _verhoerRender() {
   }).join('');
   h += '</div>';
   h += '<div class="ein"><b>Einschätzung (Mauer):</b> ' + _verhoerEsc(_verhoerEinschaetzung(npcId)) + '</div>';
+  const rufMod = s.rufMod || _verhoerRufMod(npcId);
+  if (rufMod && rufMod.note) h += '<div class="ein"><b>Rufwirkung:</b> ' + _verhoerEsc(rufMod.note) + '</div>';
   const druckText = s.gem >= 2 ? 'Abgebrochen' : (s.gem === 1 ? 'Angespannt - eine weitere riskante Frage kann das Verhör beenden.' : 'Stabil');
   h += '<div class="ein"><b>Gesprächslage:</b> ' + _verhoerEsc(druckText) + '</div>';
-  if (aktiv && p.frageLimit) {
-    const rest = Math.max(0, p.frageLimit - (s.fragenGestellt || 0));
+  const frageLimit = _verhoerFrageLimit(npcId, s);
+  if (aktiv && frageLimit) {
+    const rest = Math.max(0, frageLimit - (s.fragenGestellt || 0));
     const raumText = rest === 1 ? 'Nur noch eine Frage, bevor die Geduld aufgebraucht ist.' : (rest + ' Fragen verbleiben, bevor die Person das Gespräch beendet.');
     h += '<div class="ein"><b>Gesprächsspielraum:</b> ' + _verhoerEsc(raumText) + '</div>';
   }
@@ -55091,7 +55149,8 @@ function _verhoerRender() {
         return (t.st || t.id) + ' [' + status + ']';
       }),
       vorhalte: vh.map(function (b) { return (VERHOER_BELEG_LABEL[b] || b) + (s.genutzteHebelIds.indexOf(b) !== -1 ? ' [verbraucht]' : ' [klickbar]'); }),
-      gespraechsspielraum: p.frageLimit ? Math.max(0, p.frageLimit - (s.fragenGestellt || 0)) : null,
+      rufwirkung: (rufMod && rufMod.note) ? rufMod.note : '',
+      gespraechsspielraum: frageLimit ? Math.max(0, frageLimit - (s.fragenGestellt || 0)) : null,
     });
   }
   if (aktiv) {

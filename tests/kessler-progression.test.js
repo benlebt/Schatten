@@ -62,6 +62,9 @@ assert(html.includes("oeffneReiseMenue();"), 'external investigation threads mus
 assert((html.match(/frageLimit:\s*4/g) || []).length >= 3, 'each Kessler interrogation needs a finite question window');
 assert(html.includes('Gesprächsspielraum:'), 'the dossier must warn the player about the remaining question window');
 assert(/function _verhoerScheitern[\s\S]{0,900}?karlAkte\.ruf\.renommee\s*=\s*Math\.max\(-5,[\s\S]{0,120}?-\s*1\)/.test(html), 'failed interrogations must have a real reputation consequence');
+assert(html.includes('function _verhoerRufMod(npcId)'), 'interrogations must translate Karl reputation into concrete NPC behavior');
+assert(html.includes('function _verhoerFrageLimit(npcId, state)'), 'interrogation question windows must be reputation-adjusted');
+assert(html.includes('<b>Rufwirkung:</b>'), 'the dossier must visibly explain reputation effects to the player');
 assert(html.includes('function _indizDurchVerbranntesVerhoerGesperrt(ind)'), 'burned interrogations need a shared clue reachability guard');
 assert(html.includes('function _indizDurchVerhoerNichtMehrOffen(ind)'), 'closed interrogations need a shared clue reachability guard');
 assert(/function offeneIndizienAmOrtNachErreichbarkeit[\s\S]{0,2600}?_indizDurchVerhoerNichtMehrOffen\(ind\)/.test(html), 'travel map must not advertise clues locked behind burned or closed interrogations');
@@ -85,13 +88,32 @@ const context = {
   _uiAudit: function () {},
   _verhoerRender: function () {},
   escapeHtml: function (value) { return String(value || ''); },
+  karlAkte: { ruf: { haerte: 0, renommee: 0 } },
 };
 vm.createContext(context);
 vm.runInContext(
   html.slice(interrogationStart, interrogationEnd)
-    + '\nthis.__verhoerTest = { profile: VERHOER_PROFILE, fresh: _verhoerFreshState, topicTurn: _verhoerTopicTurn, thema: _verhoerThema };',
+    + '\nthis.__verhoerTest = { profile: VERHOER_PROFILE, fresh: _verhoerFreshState, topicTurn: _verhoerTopicTurn, thema: _verhoerThema, rufMod: _verhoerRufMod, frageLimit: _verhoerFrageLimit };',
   context
 );
+
+context.karlAkte = { ruf: { haerte: 0, renommee: 3 } };
+let goodRep = context.__verhoerTest.fresh('frau_pohl');
+assert(goodRep.oeff >= 1, 'good reputation must make normal witnesses start more open');
+assert.strictEqual(context.__verhoerTest.frageLimit('frau_pohl', goodRep), 5, 'good reputation must add interrogation room');
+
+context.karlAkte = { ruf: { haerte: 0, renommee: -3 } };
+let badRep = context.__verhoerTest.fresh('frau_pohl');
+assert(badRep.gem >= 1, 'bad reputation must make witnesses start more tense');
+assert.strictEqual(context.__verhoerTest.frageLimit('frau_pohl', badRep), 3, 'bad reputation must reduce interrogation room without hard-blocking');
+
+context.karlAkte = { ruf: { haerte: 3, renommee: 0 } };
+let hardRobert = context.__verhoerTest.fresh('robert_kessler');
+assert(hardRobert.oeff >= 1 && hardRobert.gem >= 1, 'a hard reputation must make hard targets take Karl seriously but guarded');
+let hardPohl = context.__verhoerTest.fresh('frau_pohl');
+assert(hardPohl.gem >= 1, 'a hard reputation must make civilian witnesses nervous');
+assert.strictEqual(context.__verhoerTest.frageLimit('frau_pohl', hardPohl), 3, 'a hard reputation must reduce civilian witness patience');
+context.karlAkte = { ruf: { haerte: 0, renommee: 0 } };
 
 const variants = new Set();
 const pohlTopic = context.__verhoerTest.profile.frau_pohl.themen.find((topic) => topic.id === 'robert');
@@ -105,6 +127,7 @@ assert(tetzlaffTopic, 'Tetzlaff needs a Dienstplan topic in the dossier');
 
 function startPohl() {
   failedNpc = null;
+  context.karlAkte = { ruf: { haerte: 0, renommee: 0 } };
   context.caseProgress.verhoere = {};
   context.caseProgress.aussagen = [];
   context.caseProgress.gefundeneIndizIds = [];
