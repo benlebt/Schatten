@@ -4,6 +4,10 @@ const path = require('path');
 const vm = require('vm');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+assert(html.includes('function _schlafHeimfahrtOrtSetzen(reason)'), 'home sleep must set the engine location before scene generation');
+assert(html.includes("if (pendingHeimfahrt) _schlafHeimfahrtOrtSetzen('option');"), 'home sleep must synchronize location immediately when selected');
+assert(html.includes("engineCurrentLocation = { name: heimLoc.name, sektor: heimLoc.sektor || '' };"), 'home sleep must update the canonical engine location');
+assert(html.includes("currentOrtType = 'HOME';"), 'home sleep must mark the current location as home');
 
 const functionStart = html.indexOf('function offeneIndizienAmOrtNachErreichbarkeit');
 const functionEnd = html.indexOf('// Markiert ein Indiz als gefunden', functionStart);

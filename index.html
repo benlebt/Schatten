@@ -4040,7 +4040,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1183</div>
+    <div class="start-version">Schatten v7.12.1184</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -4281,7 +4281,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1183</span>
+    <span>Schatten v7.12.1184</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -12905,7 +12905,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1183 +Indizketten-Gefahr-Ruf';
+window.SCHATTEN_VERSION = 'v7.12.1184 +Schlafort-Gefesselt-Verhoer';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -26957,6 +26957,25 @@ let pendingRomanceChoice = false;
 // dass advanceGameTime() in der Folge-Szene den Tageswechsel garantiert ausloest.
 let pendingSleepChoice = false;
 let pendingHeimfahrt = false;  // v7.11.87: Spieler waehlte "Schlafen (zu Hause)"
+
+function _schlafHeimfahrtOrtSetzen(reason) {
+  try {
+    if (karlInStasiCustody) return false;
+    const locs = (typeof getCaseLocations === 'function') ? (getCaseLocations() || []) : [];
+    const heimLoc = locs.find(function (l) { return l && /mauers/.test(normForMatch(l.name || '')); })
+      || { name: 'Karl Mauers Büro', sektor: 'Ost (Mitte)' };
+    engineCurrentLocation = { name: heimLoc.name, sektor: heimLoc.sektor || '' };
+    currentOrtType = 'HOME';
+    cast = [];
+    if (typeof diag === 'function') {
+      diag('state', 'SCHLAFEN-HEIMFAHRT: Engine-Ort auf Zuhause gesetzt (' + heimLoc.name + ', ' + (reason || 'sleep') + ') - Bild/Header/Prosa bleiben synchron.');
+    }
+    return true;
+  } catch (e) {
+    if (typeof diag === 'function') diag('drift', 'SCHLAFEN-HEIMFAHRT-Ortswechsel fehlgeschlagen: ' + (e && e.message ? e.message : e));
+  }
+  return false;
+}
 
 // v7.9.62: Wird gesetzt wenn eine HEISSE-SPUR-Option geklickt wurde. Die naechste
 // Szene-Verarbeitung pusht die KI explizit: liefere ZWINGEND ein neues Indiz oder
@@ -41765,6 +41784,10 @@ async function chooseOption(option) {
     // ausgewertet wird - das ist der verlaessliche Kanal (pendingCategoryMessages
     // wird in der API-Phase teils ueberschrieben, das Flag nicht).
     pendingHeimfahrt = !!(option && option._heimfahrt);
+    // v7.12.1184: Heim-Schlaf ist nicht nur Prompt-Flavor. Der echte Engine-Ort
+    // muss vor dem naechsten Modellaufruf auf Karls Zuhause springen, sonst
+    // erzaehlt die KI vom Bett, waehrend Header/Bild weiter Cafe/Spedition zeigen.
+    if (pendingHeimfahrt) _schlafHeimfahrtOrtSetzen('option');
   }
   // v7.11.7: UEBERNACHTUNG nutzt denselben Mechanismus wie SCHLAFEN - Tagwechsel
   // ist garantiert. Unterschied: Karl wacht bei der ROMANCE-Person auf.
@@ -44849,12 +44872,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       // kein Schlaf-Ort-Drift ("schlief bei fremdem NPC") und keine Geister-NPCs/Optionen fuer weggeschickte Figuren.
       try {
         if (categoryMechanicsResult && categoryMechanicsResult.triggerSchlaf && pendingHeimfahrt && !karlInStasiCustody) {
-          const _heimLocS = (typeof getCaseLocations === 'function' ? (getCaseLocations() || []) : []).find(l => l && /mauers/.test(normForMatch(l.name || '')));
-          if (_heimLocS) {
-            engineCurrentLocation = { name: _heimLocS.name, sektor: _heimLocS.sektor || '' };
-            cast = [];
-            if (typeof diag === 'function') diag('state', '🏠 SCHLAFEN-HEIMFAHRT: Engine versetzt Karl nach Hause (' + _heimLocS.name + '), Cast geleert - kein Schlaf-Ort-/Cast-Drift.');
-          }
+          _schlafHeimfahrtOrtSetzen('category-mechanics');
         }
       } catch (e) {}
       console.log('[Schatten] Kategorie-Mechanik (' + pendingCategoryChoice + '):', categoryMechanicsResult);
@@ -56183,6 +56201,16 @@ function _hauptuiNpcBezwungen(target) {
   } catch (e) { return false; }
 }
 
+function _hauptuiVerhoerNpc(target) {
+  try {
+    const npc = target && target.typ === 'person' ? (_hauptuiNpc(target) || target) : target;
+    if (!npc) return null;
+    const id = (typeof _verhoerProfilFuer === 'function') ? _verhoerProfilFuer(npc) : null;
+    if (!id) return null;
+    return Object.assign({}, npc, { id: id });
+  } catch (e) { return null; }
+}
+
 function _hauptuiFreieFeinde() {
   try {
     if (typeof _freieFeindeAmOrt === 'function') return _freieFeindeAmOrt() || [];
@@ -56239,11 +56267,11 @@ function _hauptuiPersonVerben(target, data) {
   const feind = _hauptuiPersonIstFeind(target);
   const bezwungen = _hauptuiNpcBezwungen(target);
   if (bezwungen) {
+    const z = (target && target.name && typeof _npcZustandGet === 'function') ? _npcZustandGet(target.name) : null;
+    const verhoerNpc = _hauptuiVerhoerNpc(target);
+    if (verhoerNpc && (!z || ['gefesselt', 'fixiert', 'benommen'].indexOf(z.status) !== -1)) add('reden', 'Rede mit');
     add('durchsuchen_npc', 'Durchsuche');
-    if (target && target.name && typeof _npcZustandGet === 'function') {
-      const z = _npcZustandGet(target.name);
-      if (!z || z.status !== 'gefesselt') add('fesseln', 'Fessle');
-    }
+    if (!z || z.status !== 'gefesselt') add('fesseln', 'Fessle');
     add('anschauen', 'Schau an');
     return verbs;
   }
@@ -56315,6 +56343,17 @@ function _hauptuiExecuteLegacyVor1155(verb, target) {
     const npc = _hauptuiNpc(target);
     if (!npc) return;
     if (verb === 'reden') {
+      const verhoerNpc = _hauptuiVerhoerNpc(npc);
+      if (verhoerNpc && window.VERHOER_PILOT_AKTIV && typeof oeffneVerhoerAkte === 'function') {
+        const frei = (typeof _verhoerIstFreigeschaltet === 'function') ? _verhoerIstFreigeschaltet(verhoerNpc.id) : true;
+        if (!frei) {
+          if (typeof showProgressToast === 'function') showProgressToast('Noch kein Ansatz', npc.name + ' laesst sich erst mit einem konkreten Anhaltspunkt sinnvoll befragen.', 'info', 'hauptui-verhoer-gesperrt');
+          return;
+        }
+        if (typeof _markPopupOpened === 'function') _markPopupOpened();
+        oeffneVerhoerAkte(verhoerNpc);
+        return;
+      }
       if (typeof oeffneNpcMenue === 'function') {
         if (typeof _markPopupOpened === 'function') _markPopupOpened();
         oeffneNpcMenue(npc, 'szene', true);
@@ -56412,6 +56451,17 @@ function _hauptuiExecute(verb, target) {
       return;
     }
     if (verb === 'reden') {
+      const verhoerNpc = _hauptuiVerhoerNpc(npc);
+      if (verhoerNpc && window.VERHOER_PILOT_AKTIV && typeof oeffneVerhoerAkte === 'function') {
+        const frei = (typeof _verhoerIstFreigeschaltet === 'function') ? _verhoerIstFreigeschaltet(verhoerNpc.id) : true;
+        if (!frei) {
+          if (typeof showProgressToast === 'function') showProgressToast('Noch kein Ansatz', npc.name + ' laesst sich erst mit einem konkreten Anhaltspunkt sinnvoll befragen.', 'info', 'hauptui-verhoer-gesperrt');
+          return;
+        }
+        if (typeof _markPopupOpened === 'function') _markPopupOpened();
+        oeffneVerhoerAkte(verhoerNpc);
+        return;
+      }
       if (typeof oeffneNpcMenue === 'function') {
         if (typeof _markPopupOpened === 'function') _markPopupOpened();
         oeffneNpcMenue(npc, 'szene', true);

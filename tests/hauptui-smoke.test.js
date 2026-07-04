@@ -83,6 +83,9 @@ assert(html.includes('const _schlafMarkerKurz ='), 'sleep quick action must use 
 assert(!html.includes("_schlafZielM.tagPlus ? ' · Tag +1'"), 'sleep quick action marker must not carry the verbose day-plus suffix');
 assert(html.includes("marker = 'Gesperrt · Spannung';"), 'sleep tension lock marker must stay compact');
 assert(html.includes("<span>Wirklich schlafen?</span>"), 'sleep confirmation must use a compact title');
+assert(html.includes('function _hauptuiVerhoerNpc(target)'), 'Haupt-UI needs a direct dossier profile resolver');
+assert(html.includes("if (verhoerNpc && (!z || ['gefesselt', 'fixiert', 'benommen'].indexOf(z.status) !== -1)) add('reden', 'Rede mit');"), 'bound/fixed profile NPCs must remain interrogatable');
+assert(html.includes('oeffneVerhoerAkte(verhoerNpc);'), 'Rede mit must open the dossier directly for profile NPCs');
 assert(html.includes('grid-template-columns: 40px minmax(0, 1fr) minmax(72px, max-content);'), 'travel quick action needs stable icon, title and destination columns');
 assert(html.includes('height: 42px;\n    min-height: 42px;'), 'quick actions need fixed height so Opel and sleep align consistently');
 assert(html.includes('.hauptui-quick-actions .option-text-wrap {\n    display: contents;'), 'desktop quick actions must place title and marker in separate grid columns');
