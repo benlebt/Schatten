@@ -108,6 +108,10 @@ assert(html.includes("showProgressToast('Gleich bereit'"), 'execute must explain
 assert(html.includes("showProgressToast('Nicht erreichbar'"), 'execute must explain stale person targets instead of silently doing nothing');
 assert(html.includes('function _hauptuiNarrativerFadenPrompt(ortName, scenesHere)'), 'open threads must feed the narrative prompt compass');
 assert(html.includes('NARRATIVER FADEN-KOMPASS'), 'prompt compass must be explicit enough to steer prose');
+assert(html.includes('function _hauptuiKesslerRobertAbpassenNoetig()'), 'Kessler Robert thread needs a deterministic abpassen bridge when Robert is absent');
+assert(html.includes("id: 'robert_abpassen'"), 'Kessler courtyard must expose a concrete Robert abpassen target instead of a dead thread');
+assert(html.includes("targetIds: ['robert_kessler', 'robert_abpassen']"), 'Robert contradiction thread must target either Robert or the abpassen bridge');
+assert(html.includes("_np.push(Object.assign({}, ident, { id: 'robert_kessler'"), 'Robert abpassen must force Robert back into the Haupt-UI person list');
 assert(html.includes('GEFAHR-AUSZAHLUNG (KRITISCH)'), 'engine-spawned danger must be forced to pay off in prose instead of disappearing offscreen');
 assert(html.includes('=== AKTIVE KONFRONTATION (PFLICHT, v7.12.1171) ==='), 'active confrontation state must be explicit in the scene prompt');
 assert(html.includes('const ITEM_TAKTIK_DEFAULTS = {'), 'items need tactical tags for confrontation choices');
@@ -245,6 +249,28 @@ context.caseProgress.gefundeneIndizIds.push('tetzlaff_aussage');
 faeden = context._hauptuiKesslerFaeden();
 assert.strictEqual(faeden[0].id, 'robert', 'independent evidence must open Robert confrontation');
 assert.strictEqual(context._hauptuiHatOffenenFadenAmOrt('Spedition Schmidt Moabit'), false, 'resolved Spedition thread must stop keeping the location open');
+context.caseProgress.gefundeneIndizIds = ['robert_eintritt_beobachtet', 'tuerschild_hauke', 'ilse_aussage', 'kellner_beobachtung'];
+context.engineCurrentLocation = { name: 'Hinterhof Sybelstrasse' };
+context.getNpcsAtCurrentLocation = () => [];
+context.getCaseLocations = () => [{
+  name: 'Hinterhof Sybelstrasse',
+  indizien: [{ id: 'robert_aussage', npc: 'robert_kessler', quelle: 'person', actions: ['ANSPRECHEN', 'BEFRAGEN'], abStage: 2 }],
+}];
+context._aktTageszeitName = () => 'morgen';
+context._ortsFundIndizienErreichbar = () => [];
+context._ortsFundItems = () => [];
+faeden = context._hauptuiKesslerFaeden();
+assert.strictEqual(faeden[0].id, 'robert', 'external contradiction proof must keep the Robert thread open');
+assert(faeden[0].targetIds.includes('robert_abpassen'), 'Robert thread must expose the abpassen fallback target');
+assert.strictEqual(context._hauptuiKesslerRobertAbpassenNoetig(), true, 'morning courtyard without Robert must require the abpassen bridge');
+const optionsBeforeAbpassen = calls.options.length;
+context._hauptuiUmsehen();
+assert.strictEqual(calls.options.length, optionsBeforeAbpassen + 1, 'empty Durchsuche must start Robert abpassen instead of doing nothing');
+assert.strictEqual(calls.options[calls.options.length - 1].id, 'HAUPTUI_ROBERT_ABPASSEN', 'Robert abpassen must use the deterministic scene bridge');
+assert.strictEqual(context.caseProgress.kesslerRobertAbpassenAktiv, true, 'Robert abpassen must persist a forced availability flag');
+assert.strictEqual(context._hauptuiNpc({ id: 'robert_kessler', name: 'Robert Kessler', typ: 'person' }).name, 'Robert Kessler', 'forced Robert target must execute even if the normal time schedule omits him');
+context._ortsFundIndizienErreichbar = () => [clue];
+context._ortsFundItems = () => [];
 context.caseProgress.gefundeneIndizIds.push('robert_aussage');
 faeden = context._hauptuiKesslerFaeden();
 assert.strictEqual(faeden[0].id, 'edith_beleg', 'Robert statement without the letter must point to the missing independent proof');

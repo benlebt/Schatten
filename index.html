@@ -4003,7 +4003,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1175</div>
+    <div class="start-version">Schatten v7.12.1176</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -4244,7 +4244,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1175</span>
+    <span>Schatten v7.12.1176</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -12840,7 +12840,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1175 +Direkte-Fundstuecke';
+window.SCHATTEN_VERSION = 'v7.12.1176 +Robert-Abpassen';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -16791,11 +16791,16 @@ function _baukastenZiele() {
         }
       } catch (e) {}
     }
+    if (typeof _hauptuiKesslerRobertAbpassenAktiv === 'function' && _hauptuiKesslerRobertAbpassenAktiv()) {
+      const ident = (typeof _resolveNpcIdentity === 'function') ? _resolveNpcIdentity('robert_kessler') : { id: 'robert_kessler', name: 'Robert Kessler' };
+      const exists = _np.some(n => n && ((n.id && normForMatch(n.id) === 'robert kessler') || (n.id && normForMatch(n.id) === 'robert_kessler') || normForMatch(n.name || '') === 'robert kessler'));
+      if (!exists) _np.push(Object.assign({}, ident, { id: 'robert_kessler', name: (ident && ident.name) || 'Robert Kessler', _hauptuiForceHint: true }));
+    }
     out.personen = _np.filter(n => n && n.name).map(n => {
       const target = {
         id: n.id || null, name: n.name, tag: n.tag || '', rolle: n.rolle || '',
-        hinweis: (typeof _npcHatOffenenHinweis === 'function') ? !!_npcHatOffenenHinweis(n.name, n.id) : false,
-        hinweisAktionen: (typeof _npcOffeneHinweisAktionen === 'function') ? _npcOffeneHinweisAktionen(n.name) : [],
+        hinweis: n._hauptuiForceHint || ((typeof _npcHatOffenenHinweis === 'function') ? !!_npcHatOffenenHinweis(n.name, n.id) : false),
+        hinweisAktionen: n._hauptuiForceHint ? ['Ansprechen', 'Befragen'] : ((typeof _npcOffeneHinweisAktionen === 'function') ? _npcOffeneHinweisAktionen(n.name) : []),
         typ: 'person'
       };
       let _bedarf = null;
@@ -16811,6 +16816,16 @@ function _baukastenZiele() {
       actions: Array.isArray(ind.actions) ? ind.actions.slice() : ['ERKUNDEN'],
       spur: true, typ: 'objekt'
     }));
+    if (typeof _hauptuiKesslerRobertAbpassenNoetig === 'function' && _hauptuiKesslerRobertAbpassenNoetig()) {
+      out.objekte.unshift({
+        id: 'robert_abpassen',
+        name: 'Robert im Hinterhof abpassen',
+        actions: ['ABPASSEN'],
+        spur: true,
+        typ: 'objekt',
+        sonderAktion: 'robert_abpassen'
+      });
+    }
     const _it = (typeof _itemsBeiKarl === 'function') ? (_itemsBeiKarl() || []) : [];
     out.items = _it.filter(it => it && it.name).map(it => ({ id: it.id, name: it.name, itemTyp: it.typ || it.itemType || '', typ: 'item' }));
   } catch (e) { if (typeof diag === 'function') diag('drift', 'BAUKASTEN-ZIELE-Fehler: ' + (e && e.message ? e.message : e)); }
@@ -55479,6 +55494,10 @@ function _hauptuiObjektVerben(target) {
   const add = function (key, label) {
     if (!verbs.some(function (verb) { return verb.key === key; })) verbs.push({ key: key, label: label });
   };
+  if (target && target.sonderAktion === 'robert_abpassen') {
+    add('robert_abpassen', 'Passe ab');
+    return verbs;
+  }
   if (target && target.fundTyp === 'item') {
     add('nehmen', 'Nimm');
     add('anschauen', 'Schau an');
@@ -55664,6 +55683,10 @@ function _hauptuiUmsehen() {
       _zeigeFundAuswahl(items, clues);
       return;
     }
+    if (typeof _hauptuiKesslerRobertAbpassenNoetig === 'function' && _hauptuiKesslerRobertAbpassenNoetig()) {
+      _hauptuiKesslerRobertAbpassen();
+      return;
+    }
     if (typeof showProgressToast === 'function') showProgressToast('Umgesehen', 'Hier ist im Augenblick nichts mehr zu finden.', 'info', 'hauptui-umsehen');
   } catch (e) {
     if (typeof diag === 'function') diag('drift', 'HAUPTUI-UMSEHEN-Fehler: ' + (e && e.message ? e.message : e));
@@ -55673,9 +55696,14 @@ function _hauptuiUmsehen() {
 function _hauptuiNpc(target) {
   try {
     const npcs = (typeof getNpcsAtCurrentLocation === 'function') ? (getNpcsAtCurrentLocation() || []) : [];
-    return npcs.find(function (npc) {
+    const found = npcs.find(function (npc) {
       return (target.id && String(npc.id || '') === String(target.id)) || String(npc.name || '') === String(target.name || '');
     }) || null;
+    if (found) return found;
+    if (target && (target.id === 'robert_kessler' || target.name === 'Robert Kessler') && typeof _hauptuiKesslerRobertAbpassenAktiv === 'function' && _hauptuiKesslerRobertAbpassenAktiv()) {
+      return (typeof _resolveNpcIdentity === 'function') ? _resolveNpcIdentity('robert_kessler') : { id: 'robert_kessler', name: 'Robert Kessler' };
+    }
+    return null;
   } catch (e) { return null; }
 }
 
@@ -55927,6 +55955,7 @@ function _hauptuiExecuteLegacyVor1155(verb, target) {
   }
 
   if (target.typ === 'objekt') {
+    if (target.sonderAktion === 'robert_abpassen') { _hauptuiKesslerRobertAbpassen(); return; }
     if (target.fundTyp === 'item' && verb === 'nehmen') { _hauptuiFundAuswahl(target, target.name); return; }
     if (target.fundTyp !== 'item' && _hauptuiFundAuswahl(target, target.name)) return;
     const labels = { anschauen: 'untersucht', oeffnen: 'öffnet', durchsuchen: 'durchsucht', nehmen: 'nimmt an sich', druecken: 'betätigt' };
@@ -56034,6 +56063,7 @@ function _hauptuiExecute(verb, target) {
   }
 
   if (target.typ === 'objekt') {
+    if (target.sonderAktion === 'robert_abpassen') { _hauptuiKesslerRobertAbpassen(); return; }
     if (target.fundTyp === 'item' && verb === 'nehmen') { _hauptuiFundAuswahl(target, target.name); return; }
     if (target.fundTyp !== 'item' && _hauptuiFundAuswahl(target, target.name)) return;
     const labels = { anschauen: 'untersucht', oeffnen: 'oeffnet', durchsuchen: 'durchsucht', nehmen: 'nimmt an sich', druecken: 'betaetigt' };
@@ -56113,6 +56143,67 @@ function _indizDurchVerhoerNichtMehrOffen(ind) {
   } catch (e) { return false; }
 }
 
+function _hauptuiKesslerRobertAussageOffen() {
+  try {
+    if (typeof _istKesslerFallFuerBild !== 'function' || !_istKesslerFallFuerBild() || !caseProgress) return false;
+    const gefunden = Array.isArray(caseProgress.gefundeneIndizIds) ? caseProgress.gefundeneIndizIds : [];
+    const hat = function (id) { return gefunden.indexOf(id) !== -1; };
+    if (hat('robert_aussage')) return false;
+    if (typeof _indizDurchVerhoerNichtMehrOffen === 'function' && _indizDurchVerhoerNichtMehrOffen({ id: 'robert_aussage', npc: 'robert_kessler', quelle: 'person' })) return false;
+    return ['edith_verdacht', 'tetzlaff_aussage', 'briefchen_ilse', 'kellner_beobachtung', 'robert_tisch_beobachtet'].some(hat);
+  } catch (e) { return false; }
+}
+
+function _hauptuiKesslerAmHinterhof() {
+  try {
+    const ort = (typeof engineCurrentLocation !== 'undefined' && engineCurrentLocation && engineCurrentLocation.name) ? engineCurrentLocation.name : '';
+    return normForMatch(ort).indexOf('hinterhof sybelstrasse') !== -1;
+  } catch (e) { return false; }
+}
+
+function _hauptuiKesslerRobertAmAktuellenOrt() {
+  try {
+    const npcs = (typeof getNpcsAtCurrentLocation === 'function') ? (getNpcsAtCurrentLocation() || []) : [];
+    return npcs.some(function (npc) {
+      const id = normForMatch(npc && npc.id || '');
+      const name = normForMatch(npc && npc.name || '');
+      return id === 'robert kessler' || id === 'robert_kessler' || name === 'robert kessler';
+    });
+  } catch (e) { return false; }
+}
+
+function _hauptuiKesslerRobertAbpassenAktiv() {
+  try {
+    return !!(caseProgress && caseProgress.kesslerRobertAbpassenAktiv && _hauptuiKesslerAmHinterhof() && _hauptuiKesslerRobertAussageOffen());
+  } catch (e) { return false; }
+}
+
+function _hauptuiKesslerRobertAbpassenNoetig() {
+  try {
+    return !!(_hauptuiKesslerAmHinterhof() && _hauptuiKesslerRobertAussageOffen() && !_hauptuiKesslerRobertAmAktuellenOrt() && !_hauptuiKesslerRobertAbpassenAktiv());
+  } catch (e) { return false; }
+}
+
+function _hauptuiKesslerRobertAbpassen() {
+  try {
+    if (!caseProgress || (typeof chooseOptionInFlight !== 'undefined' && chooseOptionInFlight)) return false;
+    caseProgress.kesslerRobertAbpassenAktiv = true;
+    try { if (typeof saveGameState === 'function') saveGameState(); } catch (e) {}
+    _hauptuiChoose({
+      id: 'HAUPTUI_ROBERT_ABPASSEN',
+      text: 'Karl bleibt gezielt im Hinterhof Sybelstrasse und passt Robert Kessler ab. Pflicht: Die naechste Szene spielt weiterhin im Hinterhof; falls Zeit vergeht, springe hoechstens zum Abend desselben Tages. Robert Kessler MUSS physisch auftauchen, im Ort greifbar bleiben und danach als ansprechbare Person verfuegbar sein. Spiele das Abpassen als konkrete Spannungs-Mikroszene: Warten, ein falscher Alarm, dann Roberts Auftauchen. Keine neue Kernspur erfinden, kein Ortswechsel. Ziel ist die direkte Konfrontation mit den Widerspruechen seiner angeblichen Ueberstunden.',
+      _anzeigeText: 'Robert im Hinterhof abpassen',
+      kategorie: 'BEOBACHTEN',
+      _kategorie: 'BEOBACHTEN',
+      _engine: true,
+    });
+    return true;
+  } catch (e) {
+    if (typeof diag === 'function') diag('drift', 'ROBERT-ABPASSEN-Fehler: ' + (e && e.message ? e.message : e));
+  }
+  return false;
+}
+
 function _hauptuiKesslerFaeden() {
   try {
     if (typeof _istKesslerFallFuerBild !== 'function' || !_istKesslerFallFuerBild() || !caseProgress) return [];
@@ -56138,7 +56229,13 @@ function _hauptuiKesslerFaeden() {
       if (!hat('robert_tisch_beobachtet') || personIndizOffen('kellner_beobachtung', 'oberkellner_voss')) faeden.push({ id: 'cafe', frage: 'Wer kennt Roberts frühere Mittwochswege?', ort: 'Cafe Wien', targetIds: ['oberkellner_voss', 'robert_tisch_beobachtet'] });
       if (personIndizOffen('edith_verdacht', 'edith_kessler')) faeden.push({ id: 'edith', frage: 'Was beobachtet Edith an den Mittwochabenden?', ort: 'Kessler-Wohnung Charlottenburg', targetIds: ['edith_kessler'] });
     }
-    if (externBelegt && personIndizOffen('robert_aussage', 'robert_kessler')) faeden.push({ id: 'robert', frage: 'Wie erklärt Robert die Widersprüche?', ort: 'Hinterhof Sybelstrasse', targetIds: ['robert_kessler'] });
+    if (externBelegt && personIndizOffen('robert_aussage', 'robert_kessler')) faeden.push({
+      id: 'robert',
+      frage: 'Wie erklärt Robert die Widersprüche?',
+      ort: 'Hinterhof Sybelstrasse',
+      targetIds: ['robert_kessler', 'robert_abpassen'],
+      bedarf: (typeof _hauptuiKesslerRobertAbpassenNoetig === 'function' && _hauptuiKesslerRobertAbpassenNoetig()) ? 'Robert erst abpassen' : ''
+    });
     const fallGeloest = !!(caseProgress.istGeloest || caseProgress.istGelöst);
     if ((hat('robert_aussage') || caseProgress.wahrheitErkannt) && !fallGeloest && nichtVerbrannt('edith_kessler')) {
       if (!hat('briefchen_ilse')) {
