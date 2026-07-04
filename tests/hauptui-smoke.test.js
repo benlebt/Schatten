@@ -120,6 +120,9 @@ assert(html.includes('=== AKTIVE KONFRONTATION (PFLICHT, v7.12.1171) ==='), 'act
 assert(html.includes('const ITEM_TAKTIK_DEFAULTS = {'), 'items need tactical tags for confrontation choices');
 assert(html.includes('function _konfrontationTaktikProfil(npc, threat)'), 'confrontations need tactical enemy profiles');
 assert(html.includes('function _hauptuiKonfrontationItemPlan(item, verb, takt)'), 'confrontation inventory must be scored against enemy weaknesses');
+assert(/bohnenkaffee:\s*\['ware','bestechung','sozial','ablenkung','blendend','kleiner vorteil'\]/.test(html), 'Bohnenkaffee must be tagged as tactical distraction/blinding item');
+assert(/bohnenkaffee:\s*\{ name: 'Päckchen Bohnenkaffee', taugt: \[[^\]]*'werfen'[^\]]*'werfen_fuesse'/.test(html), 'Bohnenkaffee must be offered as a throwable confrontation item');
+assert(html.includes("tags.indexOf('blendend') !== -1"), 'confrontation scoring must recognize blinding item tags');
 assert(html.includes('requiresItemAny') && html.includes('requiresItemAll'), 'threat spawns must support item-gated ambushes');
 assert(html.includes('TAKTISCHE LAGE'), 'active confrontation prompt must expose tactical constraints');
 assert(html.includes('Diese Konfrontation ist runden-/entscheidungsbasiert, NICHT Tempo/Reflex'), 'combat prompt must frame tactical decisions instead of speed');
