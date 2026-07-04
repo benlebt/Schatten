@@ -33,6 +33,7 @@ for (const id of stageThreeEvidence) {
 assert(/window\.VERHOER_PILOT_AKTIV\s*=\s*true/.test(html), 'interrogation pilot must be enabled');
 assert(/frau_pohl:\s*\{[\s\S]{0,400}?grantIndizId:\s*'nachbarin_aussage'/.test(html), 'Frau Pohl interrogation grant missing');
 assert(/ilse_hauke:\s*\{[\s\S]{0,400}?grantIndizId:\s*'ilse_aussage'/.test(html), 'Ilse interrogation grant missing');
+assert(/norbert_tetzlaff:\s*\{[\s\S]{0,500}?grantIndizId:\s*'tetzlaff_aussage'/.test(html), 'Norbert Tetzlaff must use the Kessler interrogation dossier');
 assert(/oberkellner_voss:\s*\{[\s\S]{0,500}?grantIndizId:\s*'kellner_beobachtung'/.test(html), 'Oberkellner Voss must use the Kessler interrogation dossier');
 assert(!html.includes('Margot Kessler'), 'interrogation file must name client Edith Kessler');
 
@@ -45,7 +46,7 @@ assert(/id:\s*'robert_aussage'[\s\S]{0,300}?npc:\s*'robert_kessler'/.test(html),
 assert(/name:\s*'Wachtmeister Eugen Hellbach', id:\s*'wachtmeister_eugen_hellbach'/.test(kessler), 'Hellbach must have a stable id so optional threat spawns can resolve him');
 assert(/name:\s*'Hinterhof Sybelstrasse'[\s\S]{0,900}?bedrohungen:\s*\[[\s\S]{0,400}?id:\s*'wachtmeister_eugen_hellbach'[\s\S]{0,220}?abStage:\s*2/.test(kessler), 'Kessler needs an optional gated Hellbach confrontation after the first observations');
 assert(/function resolveThreatSpawn[\s\S]{0,900}?const stage =[\s\S]{0,700}?abStage[\s\S]{0,180}?bisStage/.test(html), 'threat spawns must support stage gates for optional confrontations');
-assert((html.match(/themen:\s*\[/g) || []).length >= 4, 'all Kessler witness dossiers need character-specific question trees');
+assert((html.match(/themen:\s*\[/g) || []).length >= 5, 'all Kessler witness dossiers need character-specific question trees');
 assert(html.includes('function _verhoerThema(id)'), 'dossier topics need their own deterministic interaction path');
 assert(html.includes('data-vthema='), 'dossier UI must render topic-driven questions');
 assert(!html.includes('<div class="vlabel">DEIN VORGEHEN</div>'), 'generic interrogation tactics must no longer be the primary dossier UI');
@@ -96,6 +97,9 @@ for (let seed = 1; seed <= 50; seed++) {
   variants.add(context.__verhoerTest.topicTurn('frau_pohl', pohlTopic, { variationSeed: seed }).q);
 }
 assert(variants.size >= 2, 'interrogation prose must vary between new runs');
+
+const tetzlaffTopic = context.__verhoerTest.profile.norbert_tetzlaff.themen.find((topic) => topic.id === 'dienstplan');
+assert(tetzlaffTopic, 'Tetzlaff needs a Dienstplan topic in the dossier');
 
 function startPohl() {
   failedNpc = null;
