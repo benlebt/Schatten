@@ -4036,7 +4036,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1178</div>
+    <div class="start-version">Schatten v7.12.1179</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -4277,7 +4277,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1178</span>
+    <span>Schatten v7.12.1179</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -6380,7 +6380,7 @@ const INTRO_VARIANTS = [
             // v7.12.1164: Kessler bleibt ein leiser Einstiegsfall, aber nicht zahnlos.
             // Hellbach ist ein optionaler, kleiner Kiez-Druckmoment nach den ersten Beobachtungen:
             // verhandelbar, bestechen/aushorchen moeglich, Einschuechtern kann zur Konfrontation kippen.
-            { id: 'wachtmeister_eugen_hellbach', zeit: ['nachmittag','abend','nacht'], chance: 38, abStage: 2, bisStage: 3, ortsAbstand: 3, globalCooldown: 7 }
+            { id: 'wachtmeister_eugen_hellbach', zeit: ['nachmittag','abend','nacht'], chance: 100, einmalig: true, abStage: 2, bisStage: 3, ortsAbstand: 3, globalCooldown: 7 }
           ],
           // v7.12.826 (Erkundungs-Modus Stufe 0/1, Benjamin-Konzept "Bard's Tale Noir"): Der Schauplatz ist ein
           // begehbarer GRAPH (Knoten + Ausgänge, kein Gitter - ChatGPT-Schärfung). Dungeon-Crawler-Gefühl, aber
@@ -8117,6 +8117,10 @@ function resolveThreatSpawn() {
   const erschienen = [];
   for (const b of loc.bedrohungen) {
     if (!b || !b.id) continue;
+    if (b.einmalig && caseProgress && caseProgress._threatEinmalig && caseProgress._threatEinmalig[b.id]) {
+      if (typeof diag === 'function') diag('detect', 'THREAT: ' + b.id + ' @ ' + ortNorm + ' - einmalige Konfrontation bereits verbraucht');
+      continue;
+    }
     // v7.12.1164: Manche Konfrontationen sind dramaturgisch getaktet. Ein
     // Einstiegsschurke soll nicht vor den ersten Spuren auftauchen, spaete
     // Showdowns koennen dagegen wieder eigene Regeln bekommen.
@@ -8139,7 +8143,14 @@ function resolveThreatSpawn() {
     }
     const chance = (typeof b.chance === 'number') ? b.chance : 100;
     // GARANTIE: chance>=100 -> immer da (kein Cooldown/Abstand-Block). Fall-relevante Gegner nie weggewürfelt.
-    if (chance >= 100) { erschienen.push(b.id); continue; }
+    if (chance >= 100) {
+      erschienen.push(b.id);
+      if (b.einmalig && caseProgress) {
+        if (!caseProgress._threatEinmalig || typeof caseProgress._threatEinmalig !== 'object') caseProgress._threatEinmalig = {};
+        caseProgress._threatEinmalig[b.id] = true;
+      }
+      continue;
+    }
     // GLOBALER COOLDOWN: war der NPC kürzlich woanders? Dann hier nicht.
     const gcd = _threatGlobalCooldown[b.id] || 0;
     if (sc < gcd) {
@@ -8159,6 +8170,10 @@ function resolveThreatSpawn() {
     const wurf = Math.random() * 100;
     if (wurf < chance) {
       erschienen.push(b.id);
+      if (b.einmalig && caseProgress) {
+        if (!caseProgress._threatEinmalig || typeof caseProgress._threatEinmalig !== 'object') caseProgress._threatEinmalig = {};
+        caseProgress._threatEinmalig[b.id] = true;
+      }
       _threatGlobalCooldown[b.id] = sc + ((typeof b.globalCooldown === 'number') ? b.globalCooldown : _THREAT_GLOBAL_COOLDOWN_DEFAULT);
       if (typeof diag === 'function') diag('detect', '✦ THREAT-SPAWN: ' + b.id + ' @ ' + ortNorm + ' (Wurf ' + Math.round(wurf) + ' < ' + chance + '%) - globaler Cooldown bis Sz' + _threatGlobalCooldown[b.id]);
     } else {
@@ -12873,7 +12888,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1178 +Tetzlaff-Verhoerakte';
+window.SCHATTEN_VERSION = 'v7.12.1179 +Anleitung-Gefahr-Heilorte';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -20993,9 +21008,76 @@ function backToStart() {
   document.getElementById('start').classList.remove('hidden');
 }
 
+// v7.12.1179: Anleitung wird beim Oeffnen aus dem aktuellen Haupt-UI-Konzept
+// gerendert. Die alte statische A/B/C/D-Erklaerung bleibt als Fallback im DOM,
+// wird aber fuer Spieler nicht mehr angezeigt.
+function renderHowToAktuell() {
+  const el = document.getElementById('howto');
+  if (!el || el.dataset.aktuell === '1') return;
+  el.dataset.aktuell = '1';
+  el.innerHTML = `
+    <div class="howto-top-back">
+      <button class="btn-howto-top" onclick="hideHowTo()">‹ Zurück</button>
+    </div>
+    <h2>SO FUNKTIONIERT'S</h2>
+    <div class="howto-sub">Karl Mauer · Private Ermittlungen · Berlin 1953</div>
+
+    <div class="howto-section">
+      <h3>Worum es geht</h3>
+      <p>Du spielst keinen Zahlen-Detektiv, sondern eine Noir-Ermittlung. Lies die Szene, achte auf Orte, Personen und Widersprüche, und folge den <strong>offenen Fäden</strong>. Das Spiel zeigt dir nicht die Lösung, aber es schiebt dich immer wieder in Richtung der nächsten sinnvollen Spur.</p>
+    </div>
+
+    <div class="howto-section">
+      <h3>Haupt-UI</h3>
+      <p>Unter dem Szenenbild wählst du zuerst eine <strong>Aktion</strong> und dann ein <strong>Ziel</strong>. Erst der goldene <strong>Ausführen</strong>-Knopf löst die Handlung aus. So bleibt klar, ob Karl jemanden befragt, eine Spur untersucht, ein Fundstück nimmt oder ein Inventarobjekt benutzt.</p>
+      <div class="howto-stat"><b>Aktionen:</b> Die Verben wechseln je nach Lage. Typisch sind Reden, Durchsuchen, Beobachten, Lauschen, Nimm, Benutze oder in Gefahr taktische Reaktionen.</div>
+      <div class="howto-stat"><b>Ziele:</b> Personen, Spuren, Fundstücke und Inventar sind getrennt markiert. Ein gelber Hinweis bedeutet: Hier kann gerade ein Faden weitergehen.</div>
+    </div>
+
+    <div class="howto-section">
+      <h3>Offene Fäden</h3>
+      <p>Offene Fäden sind Karls aktuelle Ermittlungsfragen. Rechts steht der Ort, an dem der nächste Ansatz vermutet wird. Wenn ein Faden an einen Ort zeigt, dort aber nichts direkt passiert, fehlt oft noch ein <strong>Beleg</strong>: ein Brief, eine Aussage, ein Gegenstand oder eine andere Spur, die du vorher finden musst.</p>
+    </div>
+
+    <div class="howto-section">
+      <h3>Verhörakte</h3>
+      <p>Wichtige Gespräche laufen über die Akte. Folge Aussagen, nicht einfach Knöpfen: Manche Fragen öffnen neue Themen, manche bestätigen oder widerlegen frühere Aussagen. Zu grobe oder falsche Fragen können ein Gespräch verbrennen.</p>
+      <div class="howto-stat"><b>Beleg-Gates:</b> Einige Aussagen bekommst du erst, wenn Karl das passende Indiz vorlegen kann. Genau diese Indizketten sind der Kern der Detektivmechanik.</div>
+      <div class="howto-stat"><b>Dynamik:</b> Fakten und Erfolg sind engine-seitig stabil; Formulierungen variieren pro Lauf innerhalb der Aktenprofile.</div>
+    </div>
+
+    <div class="howto-section">
+      <h3>Reisen, Schlafen, Heilen</h3>
+      <div class="howto-stat"><b>Ort verlassen / Zum Opel:</b> Öffnet die Reisekarte. Orte mit Spuren werden markiert; globale Orte wie Doc Wagners Praxis, Charité, Trude und Polizeidienststellen bleiben wichtige Anker.</div>
+      <div class="howto-stat"><b>Schlafen:</b> Bringt Karl zum nächsten Morgen, heilt in ruhigen Lagen, ist aber bei hoher Spannung oder akuter Gefahr gesperrt.</div>
+      <div class="howto-stat"><b>Doc Wagner / Charité:</b> Wenn Karl verletzt ist, kann er sich bei Doc Wagner oder Marlene in der Charité behandeln lassen. Diese Orte machen vor allem nach Konfrontationen Sinn.</div>
+    </div>
+
+    <div class="howto-section">
+      <h3>Gefahr</h3>
+      <p>Nicht jeder Fall ist ein Kampf. Aber wenn Gegner Karl stellen, wird aus Ermittlung eine taktische Konfrontation: reden, ablenken, fliehen, sichern oder ein passendes Inventarobjekt einsetzen. Es geht nicht um Reflexe, sondern um kluge Entscheidungen.</p>
+    </div>
+
+    <div class="howto-section">
+      <h3>Geld, Ruf, Zeit</h3>
+      <p>Bestechung, Käufe, schlechte Verhöre, Verletzungen und verlorene Tage haben Folgen. Der <strong>Aktuelle Stand</strong> zeigt, was Karl weiß, welche Indizien gesichert sind und welche Fäden noch offen bleiben.</p>
+    </div>
+
+    <div class="howto-section">
+      <h3>Tipp</h3>
+      <p>Wenn du festhängst: Schau auf offene Fäden, prüfe die Reisekarte, lies die Akte und frage dich, welcher Beleg einer Person noch fehlen könnte. Die spannendsten Fortschritte entstehen, wenn ein Indiz in ein Gespräch greift.</p>
+    </div>
+
+    <div class="howto-back">
+      <button class="btn-primary" onclick="hideHowTo()">Verstanden, los geht's</button>
+    </div>
+  `;
+}
+
 // v7.11.67: Anleitungs-Seite ein-/ausblenden
 function showHowTo() {
   hideAll();
+  renderHowToAktuell();
   const el = document.getElementById('howto');
   if (el) {
     el.classList.remove('hidden');
@@ -42627,19 +42709,16 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
   const MAX_RATE_LIMIT_WAIT = 35; // seconds; if Groq asks for more, abort
 
   // v7.9.38: LOADING-GARANTIE. Am Anfang jedes Aufrufs (auch Retries und Failover)
-  // showLoading() mit Model-Label sicherstellen, damit kein Frame "leer" ist.
+  // showLoading() sicherstellen, damit kein Frame "leer" ist.
+  // v7.12.1179: Im Spieltext/Loading kein Modell-Label mehr zeigen. Das Modell
+  // bleibt im Footer/Debug sichtbar, aber "Karl denkt nach" bleibt atmosphaerisch.
   // Vorher konnte es passieren, dass bei Modell-Switches die Loading-Anzeige
   // kurz fehlte und der User dachte "App ist tot". Defensiv mit try/catch
   // damit ein Helper-Fehler nie den API-Call blockiert.
   try {
-    let activeLabel = '';
-    if (typeof getActiveModel === 'function') {
-      const m = getActiveModel();
-      activeLabel = (m && m.label) ? m.label : '';
-    }
     const loadingText = retryCount > 0
       ? 'Karl sammelt sich (Versuch ' + (retryCount + 1) + ')'
-      : (activeLabel ? 'Karl denkt nach (' + activeLabel + ')' : 'Karl denkt nach');
+      : 'Karl denkt nach';
     showLoading(loadingText);
   } catch (e) {
     // Fallback ohne Label - showLoading ohne Text nutzt Default

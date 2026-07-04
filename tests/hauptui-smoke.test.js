@@ -138,6 +138,12 @@ assert(html.includes('"<span class=\\"ab \' + cls + \'\\">\' + _verhoerEsc(a.sta
 assert(html.includes("_verhoerRichEsc(failText)"), 'Verhoerakte fail text must normalize umlauts while preserving allowed dossier markup');
 assert(html.includes("[/\\bKurfuerstendamm\\b/g, 'Kurfürstendamm']"), 'Verhoerakte cafe dossier needs Kurfuerstendamm displayed with umlaut');
 assert(html.includes("[/\\bGedaechtnis\\b/g, 'Gedächtnis']"), 'Verhoerakte cafe dossier needs Gedaechtnis displayed with umlaut');
+assert(!html.includes("Karl denkt nach (' + activeLabel"), 'gameplay loading text must not expose the active model label');
+assert(html.includes('function renderHowToAktuell()'), 'how-to page must be rendered from the current Haupt-UI concept');
+assert(html.includes('<h3>Offene Fäden</h3>'), 'how-to page must explain open investigation threads');
+assert(html.includes('<h3>Verhörakte</h3>'), 'how-to page must explain dossier interrogations');
+assert(html.includes('<h3>Reisen, Schlafen, Heilen</h3>'), 'how-to page must explain fixed travel and healing places');
+assert(html.includes('<h3>Gefahr</h3>'), 'how-to page must explain tactical confrontations');
 const npcMenuSource = html.slice(html.indexOf('function oeffneNpcMenue'), html.indexOf('// ===== Ende NPC-Interaktion ====='));
 assert(npcMenuSource.includes("_direktVerb.key === 'befragen' || _direktVerb._verhoerOeffnen"), 'single conversation actions must bypass the redundant NPC popup inside the NPC menu');
 assert(npcMenuSource.includes('_direktVerb._sozialErledigt'), 'finished conversations must bypass the redundant one-button popup');
