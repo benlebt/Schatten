@@ -65,6 +65,12 @@ assert(/function _verhoerScheitern[\s\S]{0,900}?karlAkte\.ruf\.renommee\s*=\s*Ma
 assert(html.includes('function _verhoerRufMod(npcId)'), 'interrogations must translate Karl reputation into concrete NPC behavior');
 assert(html.includes('function _verhoerFrageLimit(npcId, state)'), 'interrogation question windows must be reputation-adjusted');
 assert(html.includes('<b>Rufwirkung:</b>'), 'the dossier must visibly explain reputation effects to the player');
+assert(html.includes('function _exportVerhoerVerlaeufe()'), 'transcript export must include interrogation histories');
+assert(/function buildTranscriptText[\s\S]{0,5000}?_exportVerhoerVerlaeufe\(\)/.test(html), 'buildTranscriptText must append interrogation histories to exported runs');
+assert(html.includes('Genutzte Themen:') && html.includes('Noch offen:'), 'interrogation export must show used and missing required topics');
+assert(html.includes('Genutzte Vorhalte:') && html.includes('Gescheiterte Verhöre:'), 'interrogation export must show evidence confrontations and failed dossiers');
+assert(html.includes('function zeigeFallLoesenBestaetigung(resolveOpt)'), 'case resolve must show an explicit confirmation overlay');
+assert(/function _resolveOderMoral[\s\S]{0,450}?botActive[\s\S]{0,180}?_resolveBestaetigt\(resolveOpt\)[\s\S]{0,180}?zeigeFallLoesenBestaetigung\(resolveOpt\)/.test(html), 'human resolve clicks must ask for confirmation while bot runs bypass it');
 assert(html.includes('function _indizDurchVerbranntesVerhoerGesperrt(ind)'), 'burned interrogations need a shared clue reachability guard');
 assert(html.includes('function _indizDurchVerhoerNichtMehrOffen(ind)'), 'closed interrogations need a shared clue reachability guard');
 assert(/function offeneIndizienAmOrtNachErreichbarkeit[\s\S]{0,2600}?_indizDurchVerhoerNichtMehrOffen\(ind\)/.test(html), 'travel map must not advertise clues locked behind burned or closed interrogations');

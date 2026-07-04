@@ -4036,7 +4036,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1180</div>
+    <div class="start-version">Schatten v7.12.1181</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -4277,7 +4277,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1180</span>
+    <span>Schatten v7.12.1181</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -12888,7 +12888,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1180 +Rufwirkung-Verhoere';
+window.SCHATTEN_VERSION = 'v7.12.1181 +Verhoerexport-ResolveConfirm';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -13292,16 +13292,47 @@ function zeigeMoralWahl(resolveOpt) {
     document.body.appendChild(ov);
   } catch (e) { try { chooseOption(resolveOpt); } catch (e2) {} }
 }
-// Resolve-Klick: bei moralischer Gabel erst das Overlay, sonst direkt aufloesen (FX feuert dann im jeweiligen Pfad).
-function _resolveOderMoral(resolveOpt) {
-  // v7.12.1094 (Codex P1a): Im Bot-Modus KEIN Overlay (Bot wartet sonst ewig auf .option-btn) - deterministisch
-  // aufloesen (moralWahl bleibt null -> showCaseSolved behandelt es wie 'uebergeben').
-  try { if (typeof botActive !== 'undefined' && botActive) { if (typeof fxFallGeloest === 'function') fxFallGeloest(); chooseOption(resolveOpt); return; } } catch (e) {}
+function zeigeFallLoesenBestaetigung(resolveOpt) {
+  try {
+    if (document.getElementById('resolve-confirm-overlay')) return;
+    const ov = document.createElement('div');
+    ov.id = 'resolve-confirm-overlay';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:9190;background:rgba(10,8,6,0.86);display:flex;align-items:center;justify-content:center;padding:18px;';
+    const panel = document.createElement('div');
+    panel.style.cssText = 'max-width:420px;width:100%;background:#1a1611;border:1px solid #6d5a34;border-radius:8px;padding:18px;box-shadow:0 12px 40px rgba(0,0,0,0.6);font-family:inherit;';
+    panel.innerHTML = '<div style="color:#e8c074;font-size:calc(15px * var(--reading-scale,1));letter-spacing:0.06em;margin-bottom:6px;text-transform:uppercase;">Fall wirklich abschließen?</div>'
+      + '<div style="color:#9b8e78;font-size:calc(11px * var(--reading-scale,1));line-height:1.45;margin-bottom:14px;">Karl legt sich jetzt fest. Danach wird der Auftrag abgeschlossen und der Bericht geht an den Auftraggeber.</div>';
+    const yes = document.createElement('button');
+    yes.style.cssText = 'display:block;width:100%;text-align:center;margin:0 0 9px;padding:12px 13px;background:#2b2417;border:1px solid #c49a3b;border-radius:6px;color:#f0cf7a;font-family:inherit;font-weight:bold;cursor:pointer;';
+    yes.textContent = 'Ja, Fall lösen';
+    yes.addEventListener('click', function () {
+      try { ov.remove(); } catch (e) {}
+      _resolveBestaetigt(resolveOpt);
+    });
+    const no = document.createElement('button');
+    no.style.cssText = 'display:block;width:100%;text-align:center;padding:10px 13px;background:#18130f;border:1px solid #4d4234;border-radius:6px;color:#b7aa90;font-family:inherit;cursor:pointer;';
+    no.textContent = 'Noch nicht';
+    no.addEventListener('click', function () { try { ov.remove(); } catch (e) {} });
+    panel.appendChild(yes);
+    panel.appendChild(no);
+    ov.appendChild(panel);
+    ov.addEventListener('click', function (e) { if (e.target === ov) ov.remove(); });
+    document.body.appendChild(ov);
+  } catch (e) { try { _resolveBestaetigt(resolveOpt); } catch (e2) {} }
+}
+function _resolveBestaetigt(resolveOpt) {
   try {
     if (typeof _caseHasMoralFork === 'function' && _caseHasMoralFork()) { zeigeMoralWahl(resolveOpt); return; }
   } catch (e) {}
   try { if (typeof fxFallGeloest === 'function') fxFallGeloest(); } catch (e) {}
   chooseOption(resolveOpt);
+}
+// Resolve-Klick: bei moralischer Gabel erst das Overlay, sonst direkt aufloesen (FX feuert dann im jeweiligen Pfad).
+function _resolveOderMoral(resolveOpt) {
+  // v7.12.1094 (Codex P1a): Im Bot-Modus KEIN Overlay (Bot wartet sonst ewig auf .option-btn) - deterministisch
+  // aufloesen (moralWahl bleibt null -> showCaseSolved behandelt es wie 'uebergeben').
+  try { if (typeof botActive !== 'undefined' && botActive) { _resolveBestaetigt(resolveOpt); return; } } catch (e) {}
+  zeigeFallLoesenBestaetigung(resolveOpt);
 }
 // v7.12.1087 Debug-Inspektor (Konsole, nur Diagnose): Akte lesen/setzen/Fall-Ende simulieren - macht Scheibe 1
 // in Sekunden prüfbar, ohne einen ganzen Fall zu spielen.
@@ -23941,6 +23972,77 @@ function buildAssertionReport() {
   }
 }
 
+function _exportDisplayText(s) {
+  try {
+    const raw = String(s == null ? '' : s);
+    return (typeof asciiToUmlaut === 'function') ? asciiToUmlaut(raw) : raw;
+  } catch (e) { return String(s == null ? '' : s); }
+}
+
+function _exportVerhoerTopicLabel(npcId, topicId) {
+  try {
+    const p = (typeof VERHOER_PROFILE !== 'undefined' && VERHOER_PROFILE && VERHOER_PROFILE[npcId]) ? VERHOER_PROFILE[npcId] : null;
+    const t = p && Array.isArray(p.themen) ? p.themen.find(function (x) { return x && x.id === topicId; }) : null;
+    return _exportDisplayText((t && t.st) || topicId);
+  } catch (e) { return _exportDisplayText(topicId); }
+}
+
+function _exportVerhoerVerlaeufe() {
+  try {
+    if (!caseProgress || !caseProgress.verhoere || typeof caseProgress.verhoere !== 'object') return '';
+    const ids = Object.keys(caseProgress.verhoere).filter(function (id) { return !!caseProgress.verhoere[id]; });
+    if (!ids.length) return '';
+    let out = 'VERHÖRAKTEN / GESPRÄCHSVERLÄUFE:\n';
+    ids.sort(function (a, b) {
+      const pa = (typeof VERHOER_PROFILE !== 'undefined' && VERHOER_PROFILE && VERHOER_PROFILE[a]) ? VERHOER_PROFILE[a] : {};
+      const pb = (typeof VERHOER_PROFILE !== 'undefined' && VERHOER_PROFILE && VERHOER_PROFILE[b]) ? VERHOER_PROFILE[b] : {};
+      return String(pa.name || a).localeCompare(String(pb.name || b), 'de');
+    });
+    ids.forEach(function (npcId) {
+      const s = caseProgress.verhoere[npcId] || {};
+      const p = (typeof VERHOER_PROFILE !== 'undefined' && VERHOER_PROFILE && VERHOER_PROFILE[npcId]) ? VERHOER_PROFILE[npcId] : {};
+      const name = _exportDisplayText(p.name || npcId);
+      const status = _exportDisplayText(s.status || 'unbekannt');
+      const fragen = (typeof s.fragenGestellt === 'number') ? s.fragenGestellt : Object.keys(s.themenUsed || {}).length;
+      const limit = (typeof s.frageLimitEffektiv === 'number') ? s.frageLimitEffektiv : ((typeof _verhoerFrageLimit === 'function') ? _verhoerFrageLimit(npcId, s) : '?');
+      out += '\n--- ' + name + ' (' + npcId + ') ---\n';
+      out += 'Status: ' + status + ' | Fragen: ' + fragen + '/' + limit + ' | Öffnung: ' + (s.oeff || 0) + ' | Gereiztheit: ' + (s.gem || 0) + '\n';
+      if (s.rufMod && s.rufMod.note) out += 'Rufwirkung: ' + _exportDisplayText(s.rufMod.note) + '\n';
+      const usedTopics = Object.keys(s.themenUsed || {}).filter(function (id) { return !!s.themenUsed[id]; });
+      if (usedTopics.length) out += 'Genutzte Themen: ' + usedTopics.map(function (id) { return _exportVerhoerTopicLabel(npcId, id); }).join(' | ') + '\n';
+      if (Array.isArray(p.requiredTopics) && p.requiredTopics.length) {
+        const missing = p.requiredTopics.filter(function (id) { return !s.themenUsed || !s.themenUsed[id]; });
+        out += 'Pflichtthemen: ' + p.requiredTopics.map(function (id) { return _exportVerhoerTopicLabel(npcId, id); }).join(' | ') + '\n';
+        if (missing.length) out += 'Noch offen: ' + missing.map(function (id) { return _exportVerhoerTopicLabel(npcId, id); }).join(' | ') + '\n';
+      }
+      if (Array.isArray(s.genutzteHebelIds) && s.genutzteHebelIds.length) {
+        out += 'Genutzte Vorhalte: ' + s.genutzteHebelIds.map(function (id) {
+          return _exportDisplayText((typeof VERHOER_BELEG_LABEL !== 'undefined' && VERHOER_BELEG_LABEL && VERHOER_BELEG_LABEL[id]) || id);
+        }).join(' | ') + '\n';
+      }
+      if (s._grantText) out += 'Gebuchtes Kernindiz: ' + _exportDisplayText(s._grantText) + '\n';
+      if (Array.isArray(s.log) && s.log.length) {
+        out += 'Protokoll:\n';
+        s.log.forEach(function (entry) {
+          if (!entry) return;
+          const who = entry.who === 'MAUER' ? 'MAUER' : name.toUpperCase();
+          if (entry.tx) out += '  ' + who + ': ' + _exportDisplayText(entry.tx) + '\n';
+          if (entry.regie) out += '    [' + _exportDisplayText(entry.regie) + ']\n';
+        });
+      }
+    });
+    if (Array.isArray(caseProgress.verhoerFehlschlaege) && caseProgress.verhoerFehlschlaege.length) {
+      out += '\nGescheiterte Verhöre: ' + caseProgress.verhoerFehlschlaege.map(function (npcId) {
+        const p = (typeof VERHOER_PROFILE !== 'undefined' && VERHOER_PROFILE && VERHOER_PROFILE[npcId]) ? VERHOER_PROFILE[npcId] : {};
+        return _exportDisplayText(p.name || npcId);
+      }).join(', ') + '\n';
+    }
+    return out + '\n' + '='.repeat(60) + '\n\n';
+  } catch (e) {
+    return 'VERHÖRAKTEN / GESPRÄCHSVERLÄUFE: Fehler beim Export (' + (e && e.message ? e.message : e) + ')\n' + '='.repeat(60) + '\n\n';
+  }
+}
+
 function buildTranscriptText() {
   // v7.12.1014 (Benjamin: "bei Verlauf kopieren fehlt die letzte Szene"): Die GERADE laufende Szene liegt in
   // currentSceneDiagnostics und wird erst beim Start der NÄCHSTEN Szene per diagCommit() in den Buffer geschoben.
@@ -24009,6 +24111,10 @@ function buildTranscriptText() {
     });
     out += '\n' + '='.repeat(60) + '\n\n';
   }
+
+  // v7.12.1181: Verhoerakten immer in den Verlauf schreiben. So sieht man bei Tests nicht nur,
+  // dass ein Zeuge "dichtgemacht" hat, sondern welche Themen, Vorhalte und Rufmodifikatoren dazu gefuehrt haben.
+  out += _exportVerhoerVerlaeufe();
 
   // v7.12.128: Run-Kosten-Schaetzung (NUR Debug-Export, nicht oeffentlich sichtbar).
   // Zeigt Requests, Token-Summen und eine grobe EUR-Schaetzung fuer diesen Run.
