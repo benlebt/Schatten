@@ -4047,7 +4047,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1187</div>
+    <div class="start-version">Schatten v7.12.1188</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -4288,7 +4288,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1187</span>
+    <span>Schatten v7.12.1188</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -4370,6 +4370,7 @@ REGELN FÜR SEKTOREN-KONSISTENZ:
 - Politisch heikle Anspielungen ("sowjetische Zone", "die da drüben") sind passend, aber Karl reagiert mit professioneller Reserve. Er trinkt im Osten wie im Westen.
 - Stasi (MfS) gibt es seit 1950. Wenn Karl sie zu nahe kommt, ist das echte Lebensgefahr. NICHT in jedem Fall einbauen.
 - Halt Karl in EINEM Sektor wenn die Geschichte es zulässt. Plötzliche Sektoren-Sprünge ohne erzählerische Brücke wirken willkürlich.
+- Historische Ortsdetails müssen ZEITLICH UND RÄUMLICH stimmen. Ein korrekt datierter Ost-Ort ist trotzdem falsch, wenn Karl ihn von einem West-Ort aus direkt hört/sieht. Marx-Engels-Platz/S-Bahnhof Marx-Engels-Platz ist NUR für Karls Basis am Hackeschen Markt, Mitte, Friedrichstraße oder eine erzählte S-Bahn-Fahrt im Osten passend - NICHT als Straßenbahn-/Geräuschkulisse von Charlottenburg, Kurfürstendamm, Sybelstraße, Café Wien oder Moabit. In West-Szenen nimm lokale Marker wie Kurfürstendamm, Bahnhof Zoo, Hardenbergstraße, Moabit, Spreebogen, Funkturm oder Schutzpolizei.
 
 SCHATTEN-UNIVERSUM - WIEDERKEHRENDE ORTE (verwende diese statt frei zu erfinden):
 
@@ -12912,7 +12913,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1187 +Vorleser-Kassenpause';
+window.SCHATTEN_VERSION = 'v7.12.1188 +Geo-Abschluss-Faeden';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -22062,6 +22063,30 @@ function restoreEssentialsAtSolve() {
   }
 }
 
+// v7.12.1188: Wenn der Spieler einen NPC gefesselt/fixiert/K.O. zurücklässt,
+// darf der Abschluss nicht elegant zu Telefon/Client schneiden. Das ist kein
+// Scheitern, aber ein sichtbarer Weltzustand, der im Finale aufgelöst werden muss.
+function _abschlussOffeneGebundenePersonenText() {
+  try {
+    if (typeof _npcZustandMap !== 'function') return '';
+    const map = _npcZustandMap() || {};
+    const offen = Object.keys(map).map(k => map[k]).filter(z => {
+      if (!z || !z.name) return false;
+      const st = String(z.status || '').toLowerCase();
+      return ['gefesselt', 'fixiert', 'ko', 'benommen'].indexOf(st) !== -1;
+    });
+    if (!offen.length) return '';
+    const namen = offen.slice(0, 3).map(z => z.name).join(', ') + (offen.length > 3 ? ' und weitere' : '');
+    const ort = String((offen[0] && offen[0].ort) || ((typeof engineCurrentLocation === 'object' && engineCurrentLocation && engineCurrentLocation.name) ? engineCurrentLocation.name : '') || '');
+    const west = /charlottenburg|wilmersdorf|moabit|tiergarten|kurf|cafe|café|sybel|spedition/i.test(ort);
+    const ost = /hackescher|mitte|friedrich|alexander|stalinallee|prenzlauer|pankow|lichtenberg/i.test(ort);
+    const polizei = west ? 'Schutzpolizei' : (ost ? 'Volkspolizei' : 'zuständige Polizei');
+    return 'Bevor Karl die Akte schließt, klärt er die Lage am Tatort: ' + namen + ' bleibt nicht einfach zurück; die ' + polizei + ' bekommt Meldung, Übergabe und Verantwortung.';
+  } catch (e) {
+    return '';
+  }
+}
+
 // v7.12.183 (BLOCK 1 - Abschluss-Architektur): Zentrale Bestimmung des Endzustands.
 // Statt verstreuter if/else-Texte im Win-Screen gibt es EINE Funktion, die aus dem
 // vorhandenen State den passenden von 5 SICHTBAREN Abschluss-Typen ableitet. Intern sind
@@ -23527,12 +23552,19 @@ function showCaseSolved() {
         if (_bp) _berichtZeile = '<div class="solved-text" style="margin-top:10px;opacity:0.92;">' + _bp + '</div>';
       }
     }
+    const _offeneLageText = (typeof _abschlussOffeneGebundenePersonenText === 'function')
+      ? _abschlussOffeneGebundenePersonenText()
+      : '';
+    const _offeneLageZeile = _offeneLageText
+      ? '<div class="solved-text-small" style="margin-top:8px;opacity:0.9;">' + (typeof escapeHtml === 'function' ? escapeHtml(_offeneLageText) : _offeneLageText) + '</div>'
+      : '';
     solvedEl.innerHTML = `
       <div class="solved-title">${titleText}</div>
       <div class="solved-text">${mainText}<br>
       ${typeof escapeHtml === 'function' ? escapeHtml(outcomeSentence) : outcomeSentence}<br>
       ${closingText}</div>
       ${_berichtZeile}
+      ${_offeneLageZeile}
       <div class="solved-text-small">Tag ${gameDay}, Tageszeit: ${TIMES_OF_DAY[gameTimeIdx]}<br>
       ${typeof escapeHtml === 'function' ? escapeHtml(_flavor) : _flavor}</div>
       ${_kasseZeile}
@@ -28994,7 +29026,19 @@ function applyCategoryMechanics(kategorie, ctx) {
           _beweisListe = ' HARTE BEWEISLAGE: Karl hat nur lose Eindrücke, keine handfesten Beweisstücke - erfinde KEINE Fotos/Dokumente/Tonbänder. Der Bericht beruht auf Beobachtung und Gesprächen.';
         }
       } catch (e) {}
-      result.pushMessages.push('AUFLOESEN: Karl loest den Fall ab JETZT auf. Beschreibe wie Karl dem Auftraggeber (Klient/Klientin - richte dich nach dem tatsaechlichen Geschlecht des Klienten im Setup) alle gesammelten Beweise / Erkenntnisse uebergibt. Die FORM passt zum aktuellen Ort: wenn Karl beim Auftraggeber ist -> persoenlicher Bericht; wenn an einem Telefon (Praxis, Buero, Kneipe) -> Anruf; wenn unterwegs -> Telegramm via naechster Post oder Bote. Setze "klient_berichtet": true im JSON. Diese Szene ist der ABSCHLIESSENDE Akt - keine neuen Indizien, keine neue Gefahr.' + _beweisListe + _resolveOrtHint + _sicherAbschlussHint + _beatEhrlichkeit + ergebnisHint + _diebstahlAbschlussHint + ' Halte es ruhig und stilvoll - Film noir Ende, keine Action.');
+      let _gebundeneAbschlussHint = '';
+      try {
+        const _zmap = (typeof _npcZustandMap === 'function') ? _npcZustandMap() : {};
+        const _offenGebunden = Object.keys(_zmap || {}).map(k => _zmap[k]).filter(z => {
+          if (!z || !z.name) return false;
+          const _st = String(z.status || '').toLowerCase();
+          return ['gefesselt', 'fixiert', 'ko', 'benommen'].indexOf(_st) !== -1;
+        }).map(z => z.name);
+        if (_offenGebunden.length) {
+          _gebundeneAbschlussHint = ' OFFENE GEBUNDENE PERSONEN VOR ABSCHLUSS (PFLICHT): Im Weltzustand ist noch markiert: ' + _offenGebunden.join(', ') + '. Der Abschluss darf NICHT einfach zu Telefon/Client schneiden. Erzaehle knapp und konkret, was mit diesen Personen geschieht: losbinden, an Polizei/Zeugen uebergeben, Aerzte rufen oder eine bewusst harte Konsequenz benennen. Niemand bleibt unerklaert gefesselt oder K.O. am Tatort liegen.';
+        }
+      } catch (e) {}
+      result.pushMessages.push('AUFLOESEN: Karl loest den Fall ab JETZT auf. Beschreibe wie Karl dem Auftraggeber (Klient/Klientin - richte dich nach dem tatsaechlichen Geschlecht des Klienten im Setup) alle gesammelten Beweise / Erkenntnisse uebergibt. Die FORM passt zum aktuellen Ort: wenn Karl beim Auftraggeber ist -> persoenlicher Bericht; wenn an einem Telefon (Praxis, Buero, Kneipe) -> Anruf; wenn unterwegs -> Telegramm via naechster Post oder Bote. Setze "klient_berichtet": true im JSON. Diese Szene ist der ABSCHLIESSENDE Akt - keine neuen Indizien, keine neue Gefahr.' + _beweisListe + _resolveOrtHint + _sicherAbschlussHint + _beatEhrlichkeit + ergebnisHint + _diebstahlAbschlussHint + _gebundeneAbschlussHint + ' Halte es ruhig und stilvoll - Film noir Ende, keine Action.');
       break;
 
     case 'FLUCHT':

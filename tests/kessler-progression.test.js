@@ -46,6 +46,7 @@ assert(/id:\s*'robert_aussage'[\s\S]{0,300}?npc:\s*'robert_kessler'/.test(html),
 assert(/name:\s*'Wachtmeister Eugen Hellbach', id:\s*'wachtmeister_eugen_hellbach'/.test(kessler), 'Hellbach must have a stable id so optional threat spawns can resolve him');
 assert(/name:\s*'Hinterhof Sybelstrasse'[\s\S]{0,900}?bedrohungen:\s*\[[\s\S]{0,400}?id:\s*'wachtmeister_eugen_hellbach'[\s\S]{0,220}?abStage:\s*2/.test(kessler), 'Kessler needs an optional gated Hellbach confrontation after the first observations');
 assert(/id:\s*'wachtmeister_eugen_hellbach'[\s\S]{0,180}?chance:\s*100,[\s\S]{0,80}?einmalig:\s*true/.test(kessler), 'Kessler tutorial threat should reliably fire once instead of feeling absent');
+assert(html.includes('Niemand bleibt unerklaert gefesselt oder K.O. am Tatort liegen.'), 'Kessler-style physical confrontations must resolve bound NPCs before the finale cuts away');
 assert(/function resolveThreatSpawn[\s\S]{0,900}?const stage =[\s\S]{0,700}?abStage[\s\S]{0,180}?bisStage/.test(html), 'threat spawns must support stage gates for optional confrontations');
 assert(/function resolveThreatSpawn[\s\S]{0,1200}?_threatEinmalig[\s\S]{0,1600}?einmalige Konfrontation bereits verbraucht/.test(html), 'one-shot threats must be remembered after they fire');
 assert((html.match(/themen:\s*\[/g) || []).length >= 5, 'all Kessler witness dossiers need character-specific question trees');

@@ -133,6 +133,11 @@ assert(html.includes('Diese Konfrontation ist runden-/entscheidungsbasiert, NICH
 assert(html.includes('massiver_schlaeger') && html.includes('nervoeser_messer_mann'), 'Krause thugs need distinct tactical profiles');
 assert(html.includes('OFFSCREEN-VERLETZUNGEN VERBOTEN'), 'injury prose must not invent unseen causes retroactively');
 assert(html.includes('ORTSWECHSEL-SCHABLONEN'), 'repeated travel openings need an explicit anti-template rule');
+assert(html.includes('Historische Ortsdetails müssen ZEITLICH UND RÄUMLICH stimmen'), 'historical texture must also be spatially plausible, not just dated correctly');
+assert(html.includes('Marx-Engels-Platz/S-Bahnhof Marx-Engels-Platz ist NUR'), 'Marx-Engels-Platz must be limited to plausible east/base or transit contexts');
+assert(html.includes('function _abschlussOffeneGebundenePersonenText()'), 'resolved cases need a fallback for still-bound or knocked-out NPCs');
+assert(html.includes('OFFENE GEBUNDENE PERSONEN VOR ABSCHLUSS'), 'the resolve prompt must force dangling bound NPCs to be paid off in the finale');
+assert(html.includes('${_offeneLageZeile}'), 'the solved screen must surface unresolved bound-person cleanup if the AI skips it');
 assert(html.includes('let _reiseFreiDurchOrtsausgang = false;'), 'public investigation locations need an exit override so high tension cannot hide travel completely');
 assert(html.includes('const _reiseGesperrtRoh = (!window.HAUPTUI_AKTIV) && (currentSpannung >= 4)'), 'Haupt-UI travel must not disappear because of tension alone');
 assert(html.includes('const _reiseDurchBildErsetzt = _ausgangImBild && !window.HAUPTUI_AKTIV;'), 'scene image exits must not replace the visible Haupt-UI travel button');
