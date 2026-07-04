@@ -444,6 +444,10 @@ assert(html.includes('function _hauptuiPlanDirekt(aktionKey, zielName, item)'), 
 assert(html.includes("const pickupObjects = objects.filter(function (target) { return target.fundTyp === 'item'; });"), 'loose pickups must be split from investigation clues');
 assert(html.includes("{ key: 'fundstuecke', label: 'Fundstücke am Ort', tag: 'Nimm', targets: pickupObjects }"), 'pickups need their own visible target group');
 assert(html.includes('.hauptui-target-list > :only-child { grid-column: auto; }'), 'single targets must not stretch into full-width bars');
+assert(html.includes("const visibleGroups = groups.filter(function (group) { return group.targets.length > 0; });"), 'target groups need a shared visible group list for stable headings');
+assert(html.includes("rightHeading.className = 'hauptui-target-heading';"), 'target section needs one compact inline heading');
+assert(html.includes("if (groupIndex > 0)"), 'first target group label must be folded into the main heading instead of wasting a line');
+assert(html.includes("executeRow.className = 'hauptui-execute-row';"), 'execute must sit in its own visually separated confirmation row');
 assert(html.includes("{ key: 'items', label: 'Inventar', tag: 'Inventar', targets: data.items || [] }"), 'inventory needs a distinct visible target group');
 assert(html.includes("button.dataset.targetKind = kind;"), 'target buttons must expose semantic kind for styling and audits');
 assert(html.includes('.hauptui-target.type-person') && html.includes('.hauptui-target.type-loot') && html.includes('.hauptui-target.type-item'), 'target roles must render with distinct visual classes');

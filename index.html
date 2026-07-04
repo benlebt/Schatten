@@ -1806,6 +1806,29 @@
     font-size: calc(10px * var(--reading-scale));
     text-transform: uppercase;
   }
+  .hauptui-target-heading {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin: 2px 0 8px;
+    color: #92866f;
+    min-width: 0;
+  }
+  .hauptui-target-heading .hauptui-column-label { margin: 0; }
+  .hauptui-target-heading-detail {
+    color: #a59678;
+    font-size: calc(10px * var(--reading-scale));
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .hauptui-target-heading-detail::before {
+    content: "·";
+    margin-right: 8px;
+    color: #5d5446;
+  }
   .hauptui-verbs {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1814,7 +1837,10 @@
   .hauptui-verbs.count-1 { grid-template-columns: minmax(0, 1fr); }
   .hauptui-verbs.count-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .hauptui-verbs.count-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .hauptui-target-column { margin-top: 7px; }
+  .hauptui-target-column {
+    margin-top: 12px;
+    padding-top: 2px;
+  }
   .hauptui-verb,
   .hauptui-target,
   .hauptui-execute {
@@ -1959,7 +1985,7 @@
   .hauptui-lead.status-braucht_beleg .hauptui-lead-question { color: #d1bd80; }
   .hauptui-lead.status-braucht_beleg .hauptui-lead-place { color: #c0ad78; white-space: normal; text-align: right; }
   .hauptui-lead:hover .hauptui-lead-question { color: #e1bd57; }
-  .hauptui-target-group + .hauptui-target-group { margin-top: 7px; }
+  .hauptui-target-group + .hauptui-target-group { margin-top: 11px; }
   .hauptui-target-list {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2075,16 +2101,23 @@
     color: #706756;
     font-size: calc(10px * var(--reading-scale));
   }
+  .hauptui-execute-row {
+    margin-top: 14px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(90,78,66,0.72);
+  }
   .hauptui-execute {
     width: 100%;
-    min-height: 38px;
-    margin-top: 6px;
-    padding: 6px 10px;
-    border: 1px solid #d3ab42;
+    min-height: 42px;
+    margin-top: 0;
+    padding: 8px 12px;
+    border: 1px solid #d8b34b;
     background: #d3ab42;
     color: #18130a;
     font-size: calc(11px * var(--reading-scale));
     font-weight: bold;
+    text-align: center;
+    box-shadow: 0 8px 18px rgba(0,0,0,0.26), inset 0 -2px 0 rgba(76,50,12,0.16);
   }
   .hauptui-execute:disabled {
     border-color: #3e382d;
@@ -4003,7 +4036,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1176</div>
+    <div class="start-version">Schatten v7.12.1177</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -4244,7 +4277,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1176</span>
+    <span>Schatten v7.12.1177</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -12840,7 +12873,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1176 +Robert-Abpassen';
+window.SCHATTEN_VERSION = 'v7.12.1177 +Aufgeraeumte-HauptUI';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -56684,17 +56717,29 @@ function _renderEngineMenu(container, scene) {
 
     const right = document.createElement('div');
     right.className = 'hauptui-target-column';
+    const visibleGroups = groups.filter(function (group) { return group.targets.length > 0; });
+    const rightHeading = document.createElement('div');
+    rightHeading.className = 'hauptui-target-heading';
     const rightLabel = document.createElement('div');
     rightLabel.className = 'hauptui-column-label';
     rightLabel.textContent = 'Woran / mit wem?';
-    right.appendChild(rightLabel);
-    groups.filter(function (group) { return group.targets.length > 0; }).forEach(function (group) {
+    rightHeading.appendChild(rightLabel);
+    if (visibleGroups.length) {
+      const detail = document.createElement('span');
+      detail.className = 'hauptui-target-heading-detail';
+      detail.textContent = visibleGroups[0].label;
+      rightHeading.appendChild(detail);
+    }
+    right.appendChild(rightHeading);
+    visibleGroups.forEach(function (group, groupIndex) {
       const groupEl = document.createElement('div');
       groupEl.className = 'hauptui-target-group hauptui-target-group-' + group.key;
-      const label = document.createElement('div');
-      label.className = 'hauptui-column-label';
-      label.textContent = group.label;
-      groupEl.appendChild(label);
+      if (groupIndex > 0) {
+        const label = document.createElement('div');
+        label.className = 'hauptui-column-label';
+        label.textContent = group.label;
+        groupEl.appendChild(label);
+      }
       const list = document.createElement('div');
       list.className = 'hauptui-target-list';
       group.targets.forEach(function (target) {
@@ -56764,7 +56809,10 @@ function _renderEngineMenu(container, scene) {
         _renderEngineMenu(container, scene);
         _hauptuiExecute(verbKey, actionTarget);
       });
-      root.appendChild(execute);
+      const executeRow = document.createElement('div');
+      executeRow.className = 'hauptui-execute-row';
+      executeRow.appendChild(execute);
+      root.appendChild(executeRow);
     }
     // Auswahlklicks rendern dieses Menue neu. Die bereits vorhandene Reise-/
     // Schlafleiste darf dadurch niemals vor das Hauptmenue springen.
