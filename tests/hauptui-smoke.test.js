@@ -123,6 +123,10 @@ assert(html.includes('function _hauptuiKonfrontationItemPlan(item, verb, takt)')
 assert(/bohnenkaffee:\s*\['ware','bestechung','sozial','ablenkung','blendend','kleiner vorteil'\]/.test(html), 'Bohnenkaffee must be tagged as tactical distraction/blinding item');
 assert(/bohnenkaffee:\s*\{ name: 'Päckchen Bohnenkaffee', taugt: \[[^\]]*'werfen'[^\]]*'werfen_fuesse'/.test(html), 'Bohnenkaffee must be offered as a throwable confrontation item');
 assert(html.includes("tags.indexOf('blendend') !== -1"), 'confrontation scoring must recognize blinding item tags');
+assert(html.includes('window.__hauptuiKonfrontationState'), 'confrontations must use the same select-then-execute rhythm as the main UI');
+assert(html.includes('AUSFUEHREN-KONFRONTATION'), 'confrontation choices must be confirmed through an execute button');
+assert(!html.includes('_hauptuiBind(btn, function () { _hauptuiKonfrontationAktion(act.key, enemy, null);'), 'confrontation base actions must not fire directly on first click');
+assert(!html.includes('_hauptuiBind(btn, function () { _hauptuiKonfrontationAktion(act.verb, enemy, act.item);'), 'confrontation item actions must not fire directly on first click');
 assert(html.includes('requiresItemAny') && html.includes('requiresItemAll'), 'threat spawns must support item-gated ambushes');
 assert(html.includes('TAKTISCHE LAGE'), 'active confrontation prompt must expose tactical constraints');
 assert(html.includes('Diese Konfrontation ist runden-/entscheidungsbasiert, NICHT Tempo/Reflex'), 'combat prompt must frame tactical decisions instead of speed');
