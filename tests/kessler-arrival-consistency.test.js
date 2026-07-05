@@ -57,6 +57,9 @@ assert.strictEqual(rothRevierImage.root, 'assets/scenes/wegener/', 'Roth police 
 const chariteImage = images.find((entry) => entry.place === 'Charite Notaufnahme');
 assert(chariteImage, 'Charite image must be registered for Kessler/shared healing locations');
 assert.strictEqual(chariteImage.root, 'assets/scenes/wessel/', 'Charite healing location must reuse the Wessel Charite asset root');
+const trudeImage = images.find((entry) => entry.place === 'Imbiss Bei Trude');
+assert(trudeImage, 'Trude image must be registered for Kessler/shared anchor locations');
+assert.strictEqual(trudeImage.root, 'assets/scenes/wegener/', 'Trude global location must reuse the Wegener Imbiss asset root');
 assert(images.every((entry) => entry.dayFile), 'every Kessler scene image must expose a daylight variant');
 for (const entry of images) {
   const nightFile = entry.nightFile || entry.file.replace(/(\.[a-z0-9]+)$/i, '-night$1');
@@ -143,6 +146,15 @@ imageContext._renderKesslerSceneVisual({ szene: 'Vor dem Revier denkt Karl an de
 assert.strictEqual(visualClasses.has('hidden'), false, 'Charite healing scene must reveal a Charite image');
 assert.strictEqual(visualElements['kessler-scene-image'].attrs.src, 'assets/scenes/wessel/charite-notaufnahme-day.png', 'explicit Charite location must beat stale Opel/Revier anchors and prose references');
 assert.strictEqual(visualElements['kessler-scene-place'].textContent, 'Charite Notaufnahme', 'Charite healing scene caption must be set');
+imageContext.engineCurrentLocation = { name: 'Imbiss Bei Trude' };
+imageContext.currentOrt = 'Karls Opel Olympia';
+imageContext.lastLocation = 'Charite';
+imageContext.gameDay = 2;
+imageContext._aktTageszeitName = () => 'abend';
+imageContext._renderKesslerSceneVisual({ szene: 'Der Opel Olympia nagelt muede, als du am Hackeschen Markt abstellst. Trude steht hinter dem Tresen.' });
+assert.strictEqual(visualClasses.has('hidden'), false, 'Trude scene must reveal a Trude image');
+assert.strictEqual(visualElements['kessler-scene-image'].attrs.src, 'assets/scenes/wegener/imbiss-bei-trude.png', 'explicit Trude location must beat stale Opel/Charite anchors and Opel prose');
+assert.strictEqual(visualElements['kessler-scene-place'].textContent, 'Imbiss Bei Trude', 'Trude scene caption must be set');
 imageContext.engineCurrentLocation = { name: 'Hinterhof Sybelstrasse' };
 imageContext.currentOrt = '';
 imageContext.lastLocation = '';
