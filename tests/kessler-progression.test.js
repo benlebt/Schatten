@@ -71,7 +71,12 @@ assert(/function buildTranscriptText[\s\S]{0,5000}?_exportVerhoerVerlaeufe\(\)/.
 assert(html.includes('Genutzte Themen:') && html.includes('Noch offen:'), 'interrogation export must show used and missing required topics');
 assert(html.includes('Genutzte Vorhalte:') && html.includes('Gescheiterte Verhöre:'), 'interrogation export must show evidence confrontations and failed dossiers');
 assert(html.includes('function zeigeFallLoesenBestaetigung(resolveOpt)'), 'case resolve must show an explicit confirmation overlay');
-assert(/function _resolveOderMoral[\s\S]{0,450}?botActive[\s\S]{0,180}?_resolveBestaetigt\(resolveOpt\)[\s\S]{0,180}?zeigeFallLoesenBestaetigung\(resolveOpt\)/.test(html), 'human resolve clicks must ask for confirmation while bot runs bypass it');
+assert(html.includes('function _caseResolveTruthChoices()'), 'truth/observation cases need a dedicated resolution choice builder');
+assert(html.includes('function zeigeAbschlussWahrheitswahl(resolveOpt)'), 'Kessler-style truth cases need a final truth-choice overlay');
+assert(html.includes('caseProgress.abschlussWahl = o.wahl'), 'the chosen truth ending must persist in case progress');
+assert(/function _caseResolveTruthChoices[\s\S]{0,1600}?briefchen_ilse[\s\S]{0,1800}?brief_offenlegen/.test(html), 'Ilse letter must unlock a distinct Kessler ending');
+assert(/function _resolveBestaetigt[\s\S]{0,650}?botActive[\s\S]{0,900}?_caseHasTruthFork[\s\S]{0,240}?zeigeAbschlussWahrheitswahl\(resolveOpt\)/.test(html), 'manual resolve must route truth forks to the final choice without trapping the bot');
+assert(/function _resolveOderMoral[\s\S]{0,900}?botActive[\s\S]{0,220}?_resolveBestaetigt\(resolveOpt\)[\s\S]{0,650}?zeigeFallLoesenBestaetigung\(resolveOpt\)/.test(html), 'plain human resolve clicks must ask for confirmation while bot runs bypass it');
 assert(html.includes('function _indizDurchVerbranntesVerhoerGesperrt(ind)'), 'burned interrogations need a shared clue reachability guard');
 assert(html.includes('function _indizDurchVerhoerNichtMehrOffen(ind)'), 'closed interrogations need a shared clue reachability guard');
 assert(/function offeneIndizienAmOrtNachErreichbarkeit[\s\S]{0,2600}?_indizDurchVerhoerNichtMehrOffen\(ind\)/.test(html), 'travel map must not advertise clues locked behind burned or closed interrogations');
