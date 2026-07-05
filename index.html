@@ -4210,7 +4210,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1194</div>
+    <div class="start-version">Schatten v7.12.1195</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -4452,7 +4452,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1194</span>
+    <span>Schatten v7.12.1195</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -13078,7 +13078,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1194 +Dynamische-Verhoerlabels';
+window.SCHATTEN_VERSION = 'v7.12.1195 +Fundpreise-HauptUI';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -56581,6 +56581,23 @@ function _hauptuiTargetKind(target) {
   return 'clue';
 }
 
+function _hauptuiFundTargetMatch(entry, target) {
+  try {
+    if (!entry || !target) return false;
+    const norm = (typeof normForMatch === 'function')
+      ? normForMatch
+      : function (value) { return String(value || '').toLowerCase().trim(); };
+    const entryKey = String(entry.key || entry.id || '').trim();
+    const targetKey = String(target.key || target.id || '').trim();
+    if (entryKey && targetKey && norm(entryKey) === norm(targetKey)) return true;
+    const entryName = String(entry.name || '').trim();
+    const targetName = String(target.name || '').trim();
+    return !!entryName && !!targetName && norm(entryName) === norm(targetName);
+  } catch (e) {
+    return false;
+  }
+}
+
 function _hauptuiObjektVerben(target) {
   const actions = (target && Array.isArray(target.actions)) ? target.actions : [];
   const verbs = [];
@@ -56737,7 +56754,12 @@ function _hauptuiFundAuswahl(target, griff) {
     const items = (typeof _ortsFundItems === 'function') ? (_ortsFundItems() || []) : [];
     const clues = (typeof _ortsFundIndizienErreichbar === 'function') ? (_ortsFundIndizienErreichbar() || []) : [];
     const item = target && target.fundTyp === 'item'
-      ? items.find(function (entry) { return String(entry.id || entry.name) === String(target.id || target.name); })
+      ? (items.find(function (entry) { return _hauptuiFundTargetMatch(entry, target); })
+        || ((target.key || target.id) ? {
+          key: target.key || target.id,
+          name: target.name,
+          preis: (typeof target.preis === 'number') ? target.preis : 0
+        } : null))
       : null;
     const clue = target && target.fundTyp !== 'item'
       ? clues.find(function (entry) { return String(entry.id || entry.text) === String(target.id || target.name); })
@@ -57756,8 +57778,21 @@ function _renderEngineMenu(container, scene) {
     const looseItems = (typeof _ortsFundItems === 'function') ? (_ortsFundItems() || []) : [];
     const objects = (data.objekte || []).map(function (target) { return Object.assign({ fundTyp: 'indiz' }, target); });
     looseItems.forEach(function (item) {
-      if (!objects.some(function (target) { return String(target.id || target.name) === String(item.id || item.name); })) {
-        objects.push({ id: item.id, name: item.name, typ: 'objekt', fundTyp: 'item', actions: ['NEHMEN'], spur: true });
+      const pickupData = {
+        id: item.key || item.id || item.name,
+        key: item.key || item.id || item.name,
+        name: item.name,
+        typ: 'objekt',
+        fundTyp: 'item',
+        preis: (typeof item.preis === 'number') ? item.preis : 0,
+        actions: ['NEHMEN'],
+        spur: true
+      };
+      const existing = objects.find(function (target) { return _hauptuiFundTargetMatch(item, target); });
+      if (existing) {
+        Object.assign(existing, pickupData);
+      } else {
+        objects.push(pickupData);
       }
     });
     const clueObjects = objects.filter(function (target) { return target.fundTyp !== 'item'; });

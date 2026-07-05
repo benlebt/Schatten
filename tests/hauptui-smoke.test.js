@@ -235,6 +235,14 @@ const context = {
 vm.createContext(context);
 vm.runInContext(html.slice(start, end), context);
 
+let acquiredFundItem = null;
+context._fundItemAufnehmenDirekt = (item) => { acquiredFundItem = item; return true; };
+context._ortsFundItems = () => [{ key: 'west_zigaretten', name: 'Schachtel West-Zigaretten', preis: 2 }];
+context._hauptuiFundAuswahl({ fundTyp: 'item', id: 'west_zigaretten', name: 'Schachtel West-Zigaretten' }, 'Schachtel West-Zigaretten');
+assert(acquiredFundItem && acquiredFundItem.key === 'west_zigaretten', 'Haupt-UI direct pickup must resolve by stable item key');
+assert.strictEqual(acquiredFundItem.preis, 2, 'Haupt-UI direct pickup must keep the cafe price for West cigarettes');
+context._ortsFundItems = () => [];
+
 context._istKesslerFallFuerBild = () => true;
 let faeden = context._hauptuiKesslerFaeden();
 assert.deepStrictEqual(Array.from(faeden, (f) => f.id), ['robert_weg', 'wohnung'], 'Kessler must begin with two concrete courtyard questions');
@@ -480,6 +488,10 @@ assert(!html.includes("if (mode === 'combat' || mode === 'escape'"), 'combat mod
 assert(/if \(showRomanceButton\)[\s\S]{0,2600}?window\.HAUPTUI_AKTIV && typeof hauptuiQuickActions !== 'undefined'[\s\S]{0,160}?appendChild\(romBtn\)/.test(html), 'romance must render as a compact Haupt-UI quick action');
 assert(/if \(showOvernightButton\)[\s\S]{0,2600}?window\.HAUPTUI_AKTIV && typeof hauptuiQuickActions !== 'undefined'[\s\S]{0,160}?appendChild\(overnightBtn\)/.test(html), 'overnight romance must render as a compact Haupt-UI quick action');
 assert(html.includes('function _fundItemAufnehmenDirekt(it, opts)'), 'loose pickups need a direct one-click acquire path');
+assert(html.includes('function _hauptuiFundTargetMatch(entry, target)'), 'loose pickup matching must compare stable item keys');
+assert(html.includes("key: item.key || item.id || item.name"), 'Haupt-UI pickup targets must preserve the item key');
+assert(html.includes("preis: (typeof item.preis === 'number') ? item.preis : 0"), 'Haupt-UI pickup targets must preserve the item price');
+assert(html.includes('Object.assign(existing, pickupData);'), 'existing scene object duplicates must be upgraded with pickup price data');
 assert(html.includes("if (target.fundTyp === 'item' && verb === 'nehmen') { _hauptuiFundAuswahl(target, target.name); return; }"), 'Nimm on a concrete loose pickup must not open a second choice popup');
 assert(html.includes('function _fundGuthabenAktualisieren(root)'), 'fund popup needs a live cash refresh helper');
 calls.plan = [];
