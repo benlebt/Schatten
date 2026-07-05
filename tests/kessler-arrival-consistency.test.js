@@ -54,6 +54,9 @@ assert.strictEqual(image.dayFile, 'spedition-schmidt-moabit-day.png', 'Spedition
 const rothRevierImage = images.find((entry) => entry.place === 'Volkspolizei-Revier Hackescher Markt');
 assert(rothRevierImage, 'Roth police station image must be registered for Kessler/shared locations');
 assert.strictEqual(rothRevierImage.root, 'assets/scenes/wegener/', 'Roth police station must reuse the Volkspolizei scene asset root');
+const chariteImage = images.find((entry) => entry.place === 'Charite Notaufnahme');
+assert(chariteImage, 'Charite image must be registered for Kessler/shared healing locations');
+assert.strictEqual(chariteImage.root, 'assets/scenes/wessel/', 'Charite healing location must reuse the Wessel Charite asset root');
 assert(images.every((entry) => entry.dayFile), 'every Kessler scene image must expose a daylight variant');
 for (const entry of images) {
   const nightFile = entry.nightFile || entry.file.replace(/(\.[a-z0-9]+)$/i, '-night$1');
@@ -131,6 +134,15 @@ imageContext._renderKesslerSceneVisual({ szene: 'Roth nennt die Spedition Schmid
 assert.strictEqual(visualClasses.has('hidden'), false, 'Roth police station scene must reveal a police station image');
 assert.strictEqual(visualElements['kessler-scene-image'].attrs.src, 'assets/scenes/wegener/volkspolizei-hans-beimler-day.png', 'explicit Roth police station location must beat Spedition prose mentions');
 assert.strictEqual(visualElements['kessler-scene-place'].textContent, 'Volkspolizei-Revier Hackescher Markt', 'Roth police station caption must be set');
+imageContext.engineCurrentLocation = { name: 'Charité' };
+imageContext.currentOrt = 'Karls Opel Olympia';
+imageContext.lastLocation = 'Volkspolizei-Revier Hackescher Markt';
+imageContext.gameDay = 2;
+imageContext._aktTageszeitName = () => 'nachmittag';
+imageContext._renderKesslerSceneVisual({ szene: 'Vor dem Revier denkt Karl an den Opel, aber Marlene Wagner erwartet ihn in der Charité.' });
+assert.strictEqual(visualClasses.has('hidden'), false, 'Charite healing scene must reveal a Charite image');
+assert.strictEqual(visualElements['kessler-scene-image'].attrs.src, 'assets/scenes/wessel/charite-notaufnahme-day.png', 'explicit Charite location must beat stale Opel/Revier anchors and prose references');
+assert.strictEqual(visualElements['kessler-scene-place'].textContent, 'Charite Notaufnahme', 'Charite healing scene caption must be set');
 imageContext.engineCurrentLocation = { name: 'Hinterhof Sybelstrasse' };
 imageContext.currentOrt = '';
 imageContext.lastLocation = '';
