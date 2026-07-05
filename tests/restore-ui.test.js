@@ -8,6 +8,9 @@ assert(html.includes("'options','kessler-scene-visual','freitext-block'"), 'hide
 assert(html.includes('function _clearKesslerSceneVisual()'), 'scene visual reset helper missing');
 assert(html.includes("image.removeAttribute('src')"), 'scene visual reset must clear the stale image source');
 assert(html.includes("function showStart() {\n  try { if (typeof _clearKesslerSceneVisual"), 'start screen must clear the previous scene visual');
+assert(html.includes("showCaseSolved({ suppressAutoSpeak: true })"), 'restored solved cases must not auto-speak again after refresh');
+assert(html.includes("if (!opts.suppressAutoSpeak && typeof autoSpeakIfEnabled === 'function')"), 'case solved render must allow restore to suppress auto-speak');
+assert(html.includes("if (currentScene && typeof _renderKesslerSceneVisual === 'function') {"), 'restore must render the current scene visual before the ended branch');
 const start = html.indexOf('(function scheduleBootRestoreOrStart()');
 const end = html.indexOf('// v7.11.92: Zusaetzliche Save-Trigger', start);
 assert(start > -1 && end > start, 'deferred boot restore block missing');

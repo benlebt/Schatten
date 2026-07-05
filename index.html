@@ -4091,7 +4091,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1191</div>
+    <div class="start-version">Schatten v7.12.1192</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -4333,7 +4333,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1191</span>
+    <span>Schatten v7.12.1192</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -12959,7 +12959,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1191 +Szenenbild-Zeit-Sync';
+window.SCHATTEN_VERSION = 'v7.12.1192 +Restore-Voice-Bildsync';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -19762,6 +19762,9 @@ function buildSpeakText(includeOptions) {
   // v7.12.373: includeOptions steuert, ob Handlungsoptionen mitgelesen werden.
   // Default true (manuelles Vorlesen + Hörbuch Plus). Hörbuch-Modus ruft mit false auf.
   if (typeof includeOptions === 'undefined') includeOptions = true;
+  // v7.12.1192: In der neuen Haupt-UI liest der Button direkt an der Szene nur
+  // den Erzaehltext. Die sichtbaren Befehle sind Auswahl-UI, keine A/B/C/D-Prosa.
+  if (typeof window !== 'undefined' && window.HAUPTUI_AKTIV) includeOptions = false;
   const blocks = [];
   // Aktuelle Szene: das letzte .scene-entry.current
   const currentScene = document.querySelector('.scene-entry.current');
@@ -23396,7 +23399,8 @@ function determineConclusionKind() {
   return { kind: 'wahrheit_bewiesen', label: 'wahrheit' };
 }
 
-function showCaseSolved() {
+function showCaseSolved(opts) {
+  opts = opts || {};
   // v7.12.189 (ChatGPT-Lektorat P1): mord_offen darf NIEMALS als Sieg gerendert werden.
   // Falls ein Pfad showCaseSolved bei ungeklaertem Mord aufruft -> auf Failure umleiten.
   try {
@@ -23731,7 +23735,7 @@ function showCaseSolved() {
   // Trigger nur am Live-Pfad, daher wurde bei AUFLOESEN-Abschluss (User-Befund Krause-Run) nicht
   // vorgelesen. buildSpeakText liest #case-solved mit. setTimeout: DOM-Update abwarten.
   try {
-    if (typeof autoSpeakIfEnabled === 'function') {
+    if (!opts.suppressAutoSpeak && typeof autoSpeakIfEnabled === 'function') {
       setTimeout(() => { try { autoSpeakIfEnabled(); } catch (e) {} }, 60);
     }
   } catch (e) { /* Vorlesen darf nie blockieren */ }
@@ -51837,6 +51841,11 @@ function restoreGameState() {
     // Header + Status-Bar (Tag, Verfassung, Fall-Balken) aus der aktuellen Szene.
     if (currentScene && typeof showHeader === 'function') { try { showHeader(currentScene); } catch (e) {} }
     if (typeof renderLog === 'function') renderLog(true);
+    // v7.12.1192: Auch ein bereits geloester Fall braucht nach Refresh wieder
+    // das letzte Szenenbild, bevor der Endscreen den spielbaren UI-Pfad ersetzt.
+    if (currentScene && typeof _renderKesslerSceneVisual === 'function') {
+      try { _renderKesslerSceneVisual(currentScene); } catch (e) {}
+    }
 
     // v7.12.197: Abgeschlossener Fall -> Endscreen zeigen (Win oder Fail), KEINE spielbaren
     // Optionen. Der Verlauf ist via renderLog schon da, der Export-Button funktioniert. Der
@@ -51846,7 +51855,7 @@ function restoreGameState() {
         if (_restoreFailed && typeof showCaseFailed === 'function') {
           showCaseFailed((caseProgress && caseProgress.failReason) || '');
         } else if (typeof showCaseSolved === 'function') {
-          showCaseSolved();
+          showCaseSolved({ suppressAutoSpeak: true });
         }
       } catch (e) {
         console.warn('[Schatten] Endscreen-Restore fehlgeschlagen:', e && e.message);
