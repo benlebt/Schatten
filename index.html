@@ -4226,7 +4226,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1197</div>
+    <div class="start-version">Schatten v7.12.1198</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -4468,7 +4468,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1197</span>
+    <span>Schatten v7.12.1198</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -13094,7 +13094,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1197 +Szenenbild-Ortsprioritaet';
+window.SCHATTEN_VERSION = 'v7.12.1198 +Verhoer-Vorhalt-Klarheit';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -54513,6 +54513,12 @@ function _zeigeIndizBelohnung(indizListe, stageInfo) {
     panel.innerHTML = h;
     overlay.appendChild(panel);
     document.body.appendChild(overlay);
+    try {
+      document.querySelectorAll('.schatten-toast').forEach(function (t) {
+        if (!t.dataset || t.dataset.variant !== 'danger') t.remove();
+      });
+      if (typeof repositionToastStack === 'function') repositionToastStack();
+    } catch (e) {}
 
     const schliessen = function() {
       try { overlay.remove(); } catch (e) {}
@@ -54614,6 +54620,22 @@ function showProgressToast(title, subtitle, variant, triggerKey, iconOverride) {
       return;
     }
   }
+  // Wenn gerade ein echtes Modal offen ist (Indiz-Fund, Fundstuecke, Verhoer),
+  // keine normalen Toasts dahinter stapeln. Sonst sieht der Spieler nur einen
+  // unlesbaren Rest im Hintergrund, der verschwindet, bevor das Modal zu ist.
+  const blockingToastModal = (typeof document !== 'undefined') && (
+    document.getElementById('indiz-belohnung-overlay')
+    || document.getElementById('fund-overlay')
+    || document.getElementById('verhoer-overlay')
+  );
+  if (blockingToastModal && !isCriticalToast && variant !== 'danger') {
+    try {
+      const last = caseProgress.toastLog && caseProgress.toastLog[caseProgress.toastLog.length - 1];
+      if (last) last.suppressed = 'modal-active';
+    } catch (e) { /* ignore */ }
+    if (typeof diag === 'function') diag('detect', 'TOAST [' + variant + '] "' + title + '" UNTERDRUECKT (Modal aktiv)');
+    return;
+  }
   // v7.9.22 v2: hier ankommen heisst Toast wird wirklich angezeigt
   try {
     const last = caseProgress.toastLog && caseProgress.toastLog[caseProgress.toastLog.length - 1];
@@ -54671,6 +54693,8 @@ function showProgressToast(title, subtitle, variant, triggerKey, iconOverride) {
   });
   const toast = document.createElement('div');
   toast.className = 'schatten-toast';
+  toast.dataset.variant = variant;
+  toast.dataset.title = title || '';
   // v7.11.82: Dezentere Optik. User-Feedback: Toasts zu gross/fett, verdecken
   // halben Text, passen farblich/grafisch nicht ideal rein. Jetzt: kleineres
   // Padding, kleinere Schrift, duennerer 1px-Rand, weicherer Schatten.
@@ -55707,6 +55731,17 @@ function _verhoerVerfuegbareVorhalte() {
   const gef = (caseProgress && Array.isArray(caseProgress.gefundeneIndizIds)) ? caseProgress.gefundeneIndizIds : [];
   return VERHOER_BELEG_IDS.filter(id => gef.indexOf(id) !== -1);
 }
+function _verhoerVorhaltWirkt(npcId, belegId) {
+  const p = VERHOER_PROFILE[npcId] || {};
+  return !!(Array.isArray(p.hebelIds) && p.hebelIds.indexOf(belegId) !== -1);
+}
+function _verhoerVorhaltBereit(npcId, belegId) {
+  const s = _verhoerState(npcId), p = VERHOER_PROFILE[npcId] || {};
+  if (!s || s.status !== 'aktiv') return false;
+  if (Array.isArray(s.genutzteHebelIds) && s.genutzteHebelIds.indexOf(belegId) !== -1) return false;
+  if (!_verhoerVorhaltWirkt(npcId, belegId)) return true;
+  return s.oeff >= (p.beweisSchwelle || 1);
+}
 function _verhoerReevaluateAussagen() {
   try {
     if (!caseProgress || !Array.isArray(caseProgress.aussagen)) return;
@@ -55825,13 +55860,19 @@ function _verhoerVorhalt(belegId) {
   const npcId = npc.id, s = _verhoerState(npcId), p = VERHOER_PROFILE[npcId];
   if (!p || s.status !== 'aktiv' || s.genutzteHebelIds.indexOf(belegId) !== -1) return;
   if (typeof _uiAudit === 'function') _uiAudit('VORHALT', VERHOER_BELEG_LABEL[belegId] || belegId, npc.name || npcId);
+  const wirkt = _verhoerVorhaltWirkt(npcId, belegId);
+  if (wirkt && !_verhoerVorhaltBereit(npcId, belegId)) {
+    if (typeof diag === 'function') diag('detect', 'VERHOER-VORHALT noch nicht bereit: ' + npcId + ' / ' + belegId);
+    _verhoerRender();
+    return;
+  }
   s.genutzteHebelIds.push(belegId);
   s.aktionenSeitOeffnen++;
   _verhoerReevaluateAussagen();
   const karl = 'Erklären Sie mir das — ' + (VERHOER_BELEG_LABEL[belegId] || belegId) + '.';
-  const wirkt = p.hebelIds.indexOf(belegId) !== -1;
-  if (wirkt && s.oeff >= p.beweisSchwelle) {
+  if (wirkt && s.oeff >= (p.beweisSchwelle || 1)) {
     if (npcId === 'norbert_tetzlaff' && belegId === 'briefchen_ilse') {
+      s.themenUsed.dienstplan = true;
       s.themenUsed.robert = true;
       s.themenUsed.mittwoch = true;
     }
@@ -55848,7 +55889,8 @@ function _verhoerEinschaetzung(npcId) {
     const bereit = _verhoerVerfuegbareVorhalte().filter(function (id) {
       return p.hebelIds.indexOf(id) !== -1 && s.genutzteHebelIds.indexOf(id) === -1;
     });
-    if (bereit.length && s.oeff >= (p.beweisSchwelle || 1)) return 'Jetzt liegt ein passender Vorhalt bereit. Nicht weiter im Nebel fragen - den Beleg auf den Tisch legen.';
+    if (bereit.length && s.oeff >= (p.beweisSchwelle || 1)) return 'Jetzt den Schlüsselvorhalt unten benutzen: den Beleg auf den Tisch legen, nicht weiter im Nebel fragen.';
+    if (bereit.length) return 'Der passende Beleg ist da. Erst die Ausrede oder den Widerspruch herausarbeiten, dann den Vorhalt legen.';
   }
   if (s.oeff >= 3 && Array.isArray(p.requiredTopics) && !p.requiredTopics.every(function (id) { return !!s.themenUsed[id]; })) return 'Die Fassade wankt, aber eine entscheidende Frage ist noch offen.';
   if (s.oeff >= 3 && !_verhoerHatEines(p.requiredEvidenceAny)) return 'Die Geschichte wankt. Ohne einen unabhängigen Beleg von einem anderen Schauplatz bleibt es Aussage gegen Aussage.';
@@ -55897,6 +55939,7 @@ function _verhoerInjectStyle() {
 #verhoer-overlay .sbtn .flag{position:absolute;top:8px;right:9px;font-size:8.5px;color:#9c3a2e;border:1px solid #9c3a2e;border-radius:3px;padding:1px 5px;transform:rotate(-4deg)}
 #verhoer-overlay .sbtn.hebel{grid-column:1/-1;background:#c8b06a;border-color:#7a6326}
 #verhoer-overlay .sbtn.hebel.key{background:#d4bd74;border-color:#7f5e17;box-shadow:inset 0 0 0 1px rgba(90,60,10,.22),0 0 0 1px rgba(90,60,10,.08)}
+#verhoer-overlay .sbtn.hebel.locked{opacity:.62;cursor:default;background:#b7aa82;border-style:dashed;box-shadow:none}
 #verhoer-overlay .sbtn.hebel .st{color:#3a2c0c}
 #verhoer-overlay .sbtn.spent{opacity:.45;cursor:default}
 #verhoer-overlay .sbtn.disabled{opacity:.4;cursor:default}
@@ -55904,7 +55947,7 @@ function _verhoerInjectStyle() {
 #verhoer-overlay .sbtn.topic .st{text-transform:none;font-size:12.5px;font-weight:bold;color:#302617}
 #verhoer-overlay .sbtn.topic.spent{background:transparent;border-style:dashed;min-height:0;padding:7px 10px}
 #verhoer-overlay .sbtn.topic.locked{opacity:.48;cursor:default;background:#b3a780}
-#verhoer-overlay .sbtn.topic .unlock{display:block;margin-top:4px;font-size:9px;color:#7b5e2b;text-transform:uppercase;letter-spacing:.06em}
+#verhoer-overlay .sbtn .unlock{display:block;margin-top:4px;font-size:9px;color:#7b5e2b;text-transform:uppercase;letter-spacing:.06em}
 #verhoer-overlay .ergebnis{margin-top:14px;border-radius:6px;padding:12px 14px;font-size:12px;line-height:1.5}
 #verhoer-overlay .ergebnis .es{display:inline-block;font-family:Georgia,serif;font-weight:bold;letter-spacing:.14em;text-transform:uppercase;border:2px solid;border-radius:4px;padding:3px 9px;transform:rotate(-3deg);margin-bottom:7px}
 #verhoer-overlay .ergebnis.win{background:rgba(90,120,60,.16);border:1px solid #5e7a3e;color:#33421f}
@@ -55999,18 +56042,28 @@ function _verhoerRender() {
     return '<button class="sbtn topic' + (aktiv ? '' : ' disabled') + '" data-vthema="' + t.id + '"><div class="st">' + _verhoerEsc(label.st) + '</div><div class="sh">' + _verhoerEsc(label.sh) + '</div>' + (t.risk ? '<span class="flag">' + _verhoerEsc(t.risk) + '</span>' : '') + '</button>';
   }).join('');
   h += '</div>';
-  const vh = _verhoerVerfuegbareVorhalte();
+  const vhAlle = _verhoerVerfuegbareVorhalte();
+  const vh = aktiv ? vhAlle : vhAlle.filter(function (b) { return s.genutzteHebelIds.indexOf(b) !== -1; });
   if (vh.length) {
     h += '<div class="vlabel">VERFÜGBARE VORHALTE (WISSEN &amp; BELEGE)</div><div class="stamps" id="verhoer-vh">';
     h += vh.map(function (b) {
       const used = s.genutzteHebelIds.indexOf(b) !== -1;
-      const key = Array.isArray(p.hebelIds) && p.hebelIds.indexOf(b) !== -1;
+      const key = _verhoerVorhaltWirkt(npcId, b);
+      const bereit = _verhoerVorhaltBereit(npcId, b);
       const label = (key ? 'Schlüsselvorhalt: ' : 'Vorhalt: ') + (VERHOER_BELEG_LABEL[b] || b);
       const hint = key ? 'Passt zu dieser Person. Wenn ihre Ausrede auf dem Tisch liegt, ist das dein Hebel.' : 'Einmalig. Setze den Beleg erst ein, wenn die passende Ausrede auf dem Tisch liegt.';
       if (used) return '<div class="sbtn hebel spent"><div class="st">Vorgelegt: ' + _verhoerEsc(VERHOER_BELEG_LABEL[b]) + '</div><div class="sh">verbraucht</div></div>';
+      if (!bereit) return '<div class="sbtn hebel locked' + (key ? ' key' : '') + '"><div class="st">' + _verhoerEsc(label) + '</div><div class="sh">' + _verhoerEsc('Noch nicht einsetzen: erst die passende Aussage oder Ausrede herausarbeiten.') + '</div><span class="unlock">noch nicht bereit</span></div>';
       return '<button class="sbtn hebel' + (key ? ' key' : '') + (aktiv ? '' : ' disabled') + '" data-vhid="' + b + '"><div class="st">' + _verhoerEsc(label) + '</div><div class="sh">' + _verhoerEsc(hint) + '</div></button>';
     }).join('');
     h += '</div>';
+  }
+  const vhOffenNachEnde = (!aktiv && vhAlle.length) ? vhAlle.filter(function (b) { return s.genutzteHebelIds.indexOf(b) === -1 && _verhoerVorhaltWirkt(npcId, b); }) : [];
+  if (vhOffenNachEnde.length) {
+    const endeText = s.status === 'verbrannt'
+      ? 'Der Beleg passt, aber dieses Gespräch ist verbrannt. Suche einen anderen Weg oder lebe mit der Lücke.'
+      : 'Der Beleg passt, ist aber nach dieser Aktenlage nicht mehr nötig.';
+    h += '<div class="ein"><b>Ungenutzter Vorhalt:</b> ' + _verhoerEsc(endeText) + '</div>';
   }
   h += '<div class="vbtns"><button class="vclose" id="verhoer-close">' + (aktiv ? 'Gespräch beenden (vertagen)' : 'Akte schließen') + '</button></div>';
   h += '<div class="vhint">Folge Aussagen, nicht Zahlen. Neue Fragen entstehen aus dem, was dein Gegenüber preisgibt.</div>';
@@ -56024,7 +56077,10 @@ function _verhoerRender() {
         const label = _verhoerTopicLabel(npcId, t, s);
         return (label.st || t.st || t.id) + ' [' + status + ']';
       }),
-      vorhalte: vh.map(function (b) { return (VERHOER_BELEG_LABEL[b] || b) + (s.genutzteHebelIds.indexOf(b) !== -1 ? ' [verbraucht]' : ' [klickbar]'); }),
+      vorhalte: vhAlle.map(function (b) {
+        const status = s.genutzteHebelIds.indexOf(b) !== -1 ? 'verbraucht' : (!aktiv ? 'nicht aktiv' : (_verhoerVorhaltBereit(npcId, b) ? 'klickbar' : 'noch nicht bereit'));
+        return (VERHOER_BELEG_LABEL[b] || b) + ' [' + status + ']';
+      }),
       rufwirkung: (rufMod && rufMod.note) ? rufMod.note : '',
       gespraechsspielraum: frageLimit ? Math.max(0, frageLimit - (s.fragenGestellt || 0)) : null,
     });

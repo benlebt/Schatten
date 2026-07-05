@@ -41,6 +41,8 @@ assert(/function _hauptuiFundAuswahl[\s\S]{0,1200}?_fundItemAufnehmenDirekt\(sel
 assert(/function _verhoerFinish[\s\S]{0,900}?_markiereIndizGefunden\(ind, \{ reward: false \}\)/.test(html), 'solved interrogations must book evidence without leaking a delayed global reward popup');
 assert(html.includes("if (document.getElementById('indiz-belohnung-overlay')) return;"), 'reward flush must preserve queued clues while another reward popup is open');
 assert(html.includes("setTimeout(function () { try { if (typeof _flushIndizRewards === 'function') _flushIndizRewards();"), 'closing a reward popup must continue with queued clue rewards');
+assert(html.includes("last.suppressed = 'modal-active'"), 'normal toasts must be suppressed behind blocking modals');
+assert(html.includes("document.querySelectorAll('.schatten-toast').forEach"), 'reward popups must clear stale background toasts');
 assert(/robert_kessler:\s*\{[\s\S]{0,500}?grantIndizId:\s*'robert_aussage'/.test(html), 'Robert Kessler must use the interrogation dossier instead of the legacy AI dialogue');
 assert(/id:\s*'robert_aussage'[\s\S]{0,300}?npc:\s*'robert_kessler'/.test(html), 'Robert interrogation must grant a defined Kessler clue');
 assert(/name:\s*'Wachtmeister Eugen Hellbach', id:\s*'wachtmeister_eugen_hellbach'/.test(kessler), 'Hellbach must have a stable id so optional threat spawns can resolve him');
@@ -70,6 +72,9 @@ assert(html.includes('function _exportVerhoerVerlaeufe()'), 'transcript export m
 assert(/function buildTranscriptText[\s\S]{0,5000}?_exportVerhoerVerlaeufe\(\)/.test(html), 'buildTranscriptText must append interrogation histories to exported runs');
 assert(html.includes('Genutzte Themen:') && html.includes('Noch offen:'), 'interrogation export must show used and missing required topics');
 assert(html.includes('Genutzte Vorhalte:') && html.includes('Gescheiterte Verhöre:'), 'interrogation export must show evidence confrontations and failed dossiers');
+assert(html.includes('function _verhoerVorhaltBereit(npcId, belegId)'), 'interrogation evidence prompts need an explicit readiness guard');
+assert(html.includes("s.themenUsed.dienstplan = true;"), 'Tetzlaff letter prompt must also satisfy the Dienstplan contradiction');
+assert(html.includes('const vhAlle = _verhoerVerfuegbareVorhalte();'), 'interrogation UI must distinguish all evidence from currently clickable evidence');
 assert(html.includes('function zeigeFallLoesenBestaetigung(resolveOpt)'), 'case resolve must show an explicit confirmation overlay');
 assert(html.includes('function _caseResolveTruthChoices()'), 'truth/observation cases need a dedicated resolution choice builder');
 assert(html.includes('function zeigeAbschlussWahrheitswahl(resolveOpt)'), 'Kessler-style truth cases need a final truth-choice overlay');
@@ -105,7 +110,7 @@ const context = {
 vm.createContext(context);
 vm.runInContext(
   html.slice(interrogationStart, interrogationEnd)
-    + '\nthis.__verhoerTest = { profile: VERHOER_PROFILE, fresh: _verhoerFreshState, topicTurn: _verhoerTopicTurn, thema: _verhoerThema, rufMod: _verhoerRufMod, frageLimit: _verhoerFrageLimit };',
+    + '\nthis.__verhoerTest = { profile: VERHOER_PROFILE, fresh: _verhoerFreshState, topicTurn: _verhoerTopicTurn, thema: _verhoerThema, vorhalt: _verhoerVorhalt, vorhaltBereit: _verhoerVorhaltBereit, rufMod: _verhoerRufMod, frageLimit: _verhoerFrageLimit };',
   context
 );
 
@@ -149,6 +154,18 @@ function startPohl() {
   return context.caseProgress.verhoere.frau_pohl;
 }
 
+function startTetzlaffWithLetter() {
+  failedNpc = null;
+  context.karlAkte = { ruf: { haerte: 0, renommee: 0 } };
+  context.caseProgress.verhoere = {};
+  context.caseProgress.aussagen = [];
+  context.caseProgress.gefundeneIndizIds = ['briefchen_ilse'];
+  context.window._verhoerAktNpc = { id: 'norbert_tetzlaff', name: 'Norbert Tetzlaff' };
+  context.caseProgress.verhoere.norbert_tetzlaff = context.__verhoerTest.fresh('norbert_tetzlaff');
+  context.caseProgress.verhoere.norbert_tetzlaff.variationSeed = 11;
+  return context.caseProgress.verhoere.norbert_tetzlaff;
+}
+
 let state = startPohl();
 context.__verhoerTest.thema('robert');
 context.__verhoerTest.thema('mittwoch');
@@ -163,5 +180,17 @@ context.__verhoerTest.thema('robert');
 context.__verhoerTest.thema('mittwoch');
 assert.strictEqual(state.status, 'verbrannt', 'too many detours must end the interrogation without success');
 assert.strictEqual(failedNpc, 'frau_pohl', 'question-window failure must use the real failure path');
+
+state = startTetzlaffWithLetter();
+assert.strictEqual(context.__verhoerTest.vorhaltBereit('norbert_tetzlaff', 'briefchen_ilse'), false, 'Tetzlaff letter must not be clickable before his contradiction is on the table');
+context.__verhoerTest.vorhalt('briefchen_ilse');
+assert.strictEqual(state.genutzteHebelIds.length, 0, 'locked Tetzlaff letter prompt must not be consumed by a premature click');
+state.oeff = 1;
+assert.strictEqual(context.__verhoerTest.vorhaltBereit('norbert_tetzlaff', 'briefchen_ilse'), true, 'Tetzlaff letter must become ready after the interrogation opens up');
+context.__verhoerTest.vorhalt('briefchen_ilse');
+assert(state.genutzteHebelIds.includes('briefchen_ilse'), 'ready Tetzlaff letter prompt must be consumed exactly when used');
+assert(state.themenUsed.dienstplan && state.themenUsed.mittwoch, 'ready Tetzlaff letter prompt must satisfy the real contradiction topics');
+assert.strictEqual(state.status, 'gelöst', 'ready Tetzlaff letter prompt must resolve the dossier');
+assert.strictEqual(failedNpc, null, 'ready Tetzlaff letter prompt must not trigger failure');
 
 console.log('KESSLER_PROGRESSION_AND_VERHOER_OK');
