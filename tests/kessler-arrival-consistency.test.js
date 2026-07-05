@@ -105,6 +105,19 @@ imageContext.lastLocation = '';
 imageContext._renderKesslerSceneVisual({ szene: 'Im Cafe Wien verstummt der Oberkellner, bevor Karl wieder auf den Kurfuerstendamm tritt.' });
 assert.strictEqual(visualClasses.has('hidden'), false, 'scene prose must be enough to recover the Cafe Wien scene image when the engine location is briefly empty');
 assert.strictEqual(visualElements['kessler-scene-image'].attrs.src, 'assets/scenes/kessler/cafe-wien.png', 'Cafe Wien text fallback must select the dark cafe asset');
+imageContext.engineCurrentLocation = { name: 'Hinterhof Sybelstrasse' };
+imageContext.currentOrt = '';
+imageContext.lastLocation = '';
+imageContext.gameDay = 2;
+imageContext._aktTageszeitName = () => 'nacht';
+imageContext._renderKesslerSceneVisual({ szene: 'Karl bleibt im Hinterhof der Sybelstrasse.' });
+assert.strictEqual(visualElements['kessler-scene-image'].attrs.src, 'assets/scenes/kessler/hinterhof-sybelstrasse.png', 'courtyard night scene must select the dark asset');
+assert.strictEqual(visualElements['kessler-scene-time'].textContent, 'Tag 2 · Nacht', 'courtyard night caption must reflect the live day and time');
+imageContext.gameDay = 3;
+imageContext._aktTageszeitName = () => 'morgen';
+imageContext._renderKesslerSceneVisual({ szene: 'Du findest im Flur des Mietshauses einen Muenzfernsprecher.' });
+assert.strictEqual(visualElements['kessler-scene-image'].attrs.src, 'assets/scenes/kessler/hinterhof-sybelstrasse-day.png', 'same-location morning scene must replace the stale night asset');
+assert.strictEqual(visualElements['kessler-scene-time'].textContent, 'Tag 3 · Morgen', 'same-location morning scene must refresh the stale caption');
 
 const textHelperStart = html.indexOf('function _kesslerInnenraumTextPasst');
 const textHelperEnd = html.indexOf('function _renderKesslerSceneVisual', textHelperStart);
@@ -125,5 +138,6 @@ assert(html.includes('vorhanden.zeit = qi.zeit.slice()'), 'save migration must u
 assert(html.includes('setTimeout(function bootRestoreOrStart()'), 'boot restore must wait until Haupt-UI and image tables are initialized');
 assert(html.indexOf('setTimeout(function bootRestoreOrStart()') < html.indexOf('const SHARED_SCENE_IMAGES'), 'deferred restore regression guard must cover the late image table');
 assert(html.includes("return /abend|nacht/.test(_kesslerSceneNorm(tz));"), 'scene image selection must distinguish daylight from darkness');
+assert(/showHeader\(scene\);\s*renderLog\(\);\s*try \{ if \(typeof _renderKesslerSceneVisual === 'function'\) _renderKesslerSceneVisual\(scene\); \} catch \(e\) \{\}/.test(html), 'scene visual must sync before solved/failed branches skip renderOptions');
 
 console.log('KESSLER_SPEDITION_ARRIVAL_OK');
