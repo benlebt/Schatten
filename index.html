@@ -3320,6 +3320,54 @@
     background: rgba(255,80,80,0.08);
     color: #ff8080;
   }
+  .settings-career-panel {
+    margin: 4px 4px 8px;
+    padding: 10px;
+    border: 1px solid rgba(212, 174, 78, 0.28);
+    background:
+      linear-gradient(135deg, rgba(212, 174, 78, 0.08), rgba(120, 155, 190, 0.045)),
+      rgba(13, 12, 10, 0.88);
+    box-shadow: inset 3px 0 0 rgba(212, 174, 78, 0.34);
+  }
+  .settings-career-title {
+    color: var(--fg-bright);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .settings-career-stat {
+    color: rgba(231, 222, 197, 0.9);
+    font-size: 12px;
+    line-height: 1.45;
+    letter-spacing: 0.2px;
+    text-transform: none;
+    margin: 4px 0;
+  }
+  .settings-career-note {
+    color: rgba(200, 191, 168, 0.62);
+    font-size: 10px;
+    line-height: 1.35;
+    letter-spacing: 0.2px;
+    text-transform: none;
+    margin: 8px 0 2px;
+  }
+  .settings-career-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 4px;
+    margin-top: 8px;
+  }
+  .settings-menu .settings-career-actions button {
+    border: 1px solid rgba(200,191,168,0.22);
+    background: rgba(18, 16, 13, 0.72);
+    padding: 8px 10px;
+    font-size: 11px;
+    letter-spacing: 0.7px;
+  }
+  .settings-menu .settings-career-actions button:hover {
+    border-color: rgba(212, 174, 78, 0.48);
+  }
   .settings-divider {
     height: 1px;
     background: rgba(200,191,168,0.28);
@@ -3775,7 +3823,20 @@
   <button onclick="shareTranscript(event)">📤 Verlauf teilen</button>
   <button onclick="downloadTranscript(event)">💾 Verlauf als Datei</button>
   <button onclick="showVoicePicker(event)">🔊 Sound-Einstellungen</button>
-  <button onclick="resetGame()">↻ Spiel neu starten</button>
+  <button onclick="resetGame()">↻ Neue Ermittlung</button>
+
+  <div class="settings-divider"></div>
+  <div class="settings-career-panel" id="settings-career-panel">
+    <div class="settings-career-title">Karriere</div>
+    <div class="settings-career-stat" id="settings-career-ruf">Ruf: lade...</div>
+    <div class="settings-career-stat" id="settings-career-kasse">Kasse: lade...</div>
+    <div class="settings-career-stat" id="settings-career-meta">Fälle: lade...</div>
+    <div class="settings-career-note">Neue Ermittlungen behalten Ruf, Kasse, Miete und bekannte Personen.</div>
+    <div class="settings-career-actions">
+      <button type="button" onclick="freshCaseTestFromSettings(event)">Fall frisch testen</button>
+      <button type="button" class="danger" onclick="resetCareerFromSettings(event)">Neue Karriere / alles zurücksetzen</button>
+    </div>
+  </div>
 
   <div class="settings-divider"></div>
 
@@ -13274,6 +13335,96 @@ function _karlAkteLoad() {
 let karlAkte = _karlAkteLoad();
 function _karlAkteSave() { try { localStorage.setItem(KARL_AKTE_KEY, JSON.stringify(karlAkte)); } catch (e) {} }
 function _karlAkteNeueKarriere() { karlAkte = _karlAkteDefault(); _karlAkteSave(); }
+function _signedRufWert(n) {
+  n = (typeof n === 'number') ? n : (n | 0);
+  return (n > 0 ? '+' : '') + n;
+}
+function _karriereRufLabel() {
+  try {
+    const r = (karlAkte && karlAkte.ruf) ? karlAkte.ruf : {};
+    const renommee = r.renommee | 0;
+    const haerte = r.haerte | 0;
+    const renLabel = renommee >= 3 ? 'angesehen'
+      : renommee >= 1 ? 'solide'
+      : renommee <= -3 ? 'verbrannt'
+      : renommee <= -1 ? 'angeschlagen'
+      : 'neutral';
+    const haerteLabel = haerte >= 4 ? 'berüchtigt hart'
+      : haerte >= 2 ? 'hart bekannt'
+      : haerte <= -1 ? 'auffällig sanft'
+      : 'unauffällig';
+    return 'Renommee ' + _signedRufWert(renommee) + ' (' + renLabel + ') · Härte ' + _signedRufWert(haerte) + ' (' + haerteLabel + ')';
+  } catch (e) {
+    return 'Renommee 0 (neutral) · Härte 0 (unauffällig)';
+  }
+}
+function _karriereKasseLabel() {
+  try {
+    const k = (karlAkte && karlAkte.kasse) ? karlAkte.kasse : { ost: 0, west: 0 };
+    const teile = [];
+    teile.push((k.ost | 0) + ' Ostmark');
+    if ((k.west | 0) > 0) teile.push((k.west | 0) + ' Westmark');
+    const miete = karlAkte ? (karlAkte.mieteOffen | 0) : 0;
+    return 'Kasse: ' + teile.join(' · ') + ' · Miete: ' + (miete > 0 ? (miete + ' Ostmark offen') : 'beglichen');
+  } catch (e) {
+    return 'Kasse: k. A.';
+  }
+}
+function _karriereMetaLabel() {
+  try {
+    const faelle = karlAkte ? (karlAkte.faelleGesamt | 0) : 0;
+    const bekannte = (karlAkte && karlAkte.bekannte && typeof karlAkte.bekannte === 'object') ? Object.keys(karlAkte.bekannte).length : 0;
+    const status = (karlAkte && karlAkte.rockBottom) ? 'ohne Büro' : 'Büro aktiv';
+    return 'Fälle: ' + faelle + ' · Bekannte: ' + bekannte + ' · ' + status;
+  } catch (e) {
+    return 'Fälle: k. A.';
+  }
+}
+function updateSettingsCareerPanel() {
+  try {
+    const ruf = document.getElementById('settings-career-ruf');
+    const kasse = document.getElementById('settings-career-kasse');
+    const meta = document.getElementById('settings-career-meta');
+    if (ruf) ruf.textContent = 'Ruf: ' + _karriereRufLabel();
+    if (kasse) kasse.textContent = _karriereKasseLabel();
+    if (meta) meta.textContent = _karriereMetaLabel();
+  } catch (e) {}
+}
+function _currentSetupIndexForRestart() {
+  try {
+    if (typeof selectedSetupIdx === 'number' && selectedSetupIdx >= 0 && selectedSetupIdx < INTRO_VARIANTS.length) return selectedSetupIdx;
+    if (typeof caseSetup !== 'undefined' && caseSetup && caseSetup.klient && Array.isArray(INTRO_VARIANTS)) {
+      const currentKlient = caseSetup.klient;
+      for (let i = 0; i < INTRO_VARIANTS.length; i++) {
+        if (INTRO_VARIANTS[i] && INTRO_VARIANTS[i].setup && INTRO_VARIANTS[i].setup.klient === currentKlient) return i;
+      }
+    }
+  } catch (e) {}
+  return undefined;
+}
+function resetCareerFromSettings(event) {
+  if (event) event.stopPropagation();
+  if (!confirm('Neue Karriere wirklich starten? Ruf, Kasse, Miete, bekannte Personen und Karriere-Historie werden zurückgesetzt. Der aktuelle Fallfortschritt geht verloren.')) return;
+  try { _karlAkteNeueKarriere(); } catch (e) {}
+  try { if (typeof showProgressToast === 'function') showProgressToast('Neue Karriere', 'Ruf, Kasse und Geschichte wurden zurückgesetzt.', 'info', 'karriere-reset'); } catch (e) {}
+  try { resetGame(true); } catch (e) {}
+  try { updateSettingsCareerPanel(); } catch (e) {}
+}
+function freshCaseTestFromSettings(event) {
+  if (event) event.stopPropagation();
+  const idx = _currentSetupIndexForRestart();
+  const sameFallText = (typeof idx === 'number') ? ' Derselbe Fall wird sofort neu gestartet.' : ' Danach wählst du den Fall neu aus.';
+  if (!confirm('Fall frisch testen? Karriere wird für diesen Test auf neutral gesetzt: Ruf 0, Startkasse, keine Historie.' + sameFallText)) return;
+  try { _karlAkteNeueKarriere(); } catch (e) {}
+  try { if (typeof clearSavedGame === 'function') clearSavedGame(); } catch (e) {}
+  try { if (typeof closeSettings === 'function') closeSettings(); } catch (e) {}
+  if (typeof idx === 'number') {
+    selectedSetupIdx = idx;
+    try { startGame(); } catch (e) { console.warn('[Schatten] Fall frisch testen fehlgeschlagen:', e); resetGame(true); }
+  } else {
+    try { resetGame(true); } catch (e) {}
+  }
+}
 // v7.12.1091 (#6 Schulden-Spirale): Schulden = aufgelaufene Bueromiete (karlAkte.mieteOffen). Ab ROCK_BOTTOM_AB
 // fliegt Karl aus dem Buero und haust im Hinterzimmer einer Kneipe (Rosa). Erst wenn die Schuld wieder unter
 // ROCK_BOTTOM_RAUS sinkt, kommt er zurueck (recoverable, KEIN Game-Over). Schwellen grob an die Mietlogik
@@ -19256,6 +19407,7 @@ function toggleSettings(event) {
     if (typeof syncDebugModelSelect === 'function') syncDebugModelSelect();
     // v7.12.135: aktiven Schriftgroessen-Button markieren
     if (typeof loadReadingScale === 'function') loadReadingScale();
+    if (typeof updateSettingsCareerPanel === 'function') updateSettingsCareerPanel();
     // v7.12.373: Spielmodus-Dropdown auf aktuellen Modus setzen
     if (typeof syncPlayModeUI === 'function') syncPlayModeUI();
     // v7.12.738 (Benjamin: "ich brauche eine Möglichkeit, die Sounds zu reviewen, ohne zu
@@ -26110,14 +26262,26 @@ function showStatusDetails() {
   // v7.12.1052 (Benjamin Idee 4): RUF auf der Strasse sichtbar (gefuerchtet <-> fair) - vorher nur im Prompt.
   const rufRow = document.getElementById('popup-ruf-row');
   const rufEl = document.getElementById('popup-ruf');
-  if (rufRow && rufEl && typeof computeKarlReputation === 'function') {
-    const _rep = computeKarlReputation();
-    if (_rep && _rep.key && _rep.key !== 'neutral') {
-      const _rufLabel = { hart: 'Gef\u00fcrchtet', eher_hart: 'Eher gef\u00fcrchtet', eher_behutsam: 'Eher fair', behutsam: 'Fair / ermittelnd' }[_rep.key] || _rep.label || '';
-      rufEl.textContent = _rufLabel + ' (' + _rep.hartAnteil + '% hart, ' + _rep.interakt + ' Begegnungen)';
-      rufEl.style.color = (_rep.key === 'hart') ? '#ff6644' : (_rep.key === 'eher_hart') ? '#f0a050' : '';
-      rufRow.style.display = '';
-    } else { rufRow.style.display = 'none'; }
+  if (rufRow && rufEl) {
+    const _karriereRuf = (typeof _karriereRufLabel === 'function') ? _karriereRufLabel() : 'Renommee 0 (neutral) · Härte 0 (unauffällig)';
+    let _fallRuf = '';
+    try {
+      if (typeof computeKarlReputation === 'function') {
+        const _rep = computeKarlReputation();
+        if (_rep && _rep.key && _rep.key !== 'neutral') {
+          const _rufLabel = { hart: 'gefürchtet', eher_hart: 'eher hart', eher_behutsam: 'eher fair', behutsam: 'fair / ermittelnd' }[_rep.key] || _rep.label || '';
+          _fallRuf = ' · dieser Fall: ' + _rufLabel + ' (' + _rep.hartAnteil + '% hart)';
+        }
+      }
+    } catch (e) {}
+    rufEl.textContent = _karriereRuf + _fallRuf;
+    try {
+      const _r = (typeof karlAkte === 'object' && karlAkte && karlAkte.ruf) ? karlAkte.ruf : {};
+      const _ren = _r.renommee | 0;
+      const _hart = _r.haerte | 0;
+      rufEl.style.color = (_ren <= -3 || _hart >= 4) ? '#ff8068' : (_ren <= -1 || _hart >= 2) ? '#f0a050' : '';
+    } catch (e) { rufEl.style.color = ''; }
+    rufRow.style.display = '';
   }
 
   // Verletzung (nur anzeigen wenn vorhanden)
@@ -51901,7 +52065,7 @@ function resetGame(skipConfirm) {
   // Dort gibt es nichts mehr zu verlieren - der Spieler will einfach weitermachen.
   // Die Rueckfrage bleibt nur fuer "Spiel neu starten" aus den Settings
   // (mitten in einem laufenden Fall).
-  if (!skipConfirm && !confirm('Spiel wirklich neu starten? Aktueller Fortschritt geht verloren.')) return;
+  if (!skipConfirm && !confirm('Neue Ermittlung starten? Aktueller Fallfortschritt geht verloren. Karriere, Kasse, Miete und Ruf bleiben erhalten.')) return;
   // v7.12.315 (Source-Lektorat v314 P0): Epoche hochzaehlen + Lock/pendingRetry freigeben, damit
   // ein noch laufender alter fetch nach dem Reset nicht den frischen Stand verschmutzt (Stale-Guard).
   try { currentRequestEpoch++; } catch(e){}
