@@ -4210,7 +4210,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1193</div>
+    <div class="start-version">Schatten v7.12.1194</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -4452,7 +4452,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1193</span>
+    <span>Schatten v7.12.1194</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -13078,7 +13078,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1193 +Debug-Ruf-Settings';
+window.SCHATTEN_VERSION = 'v7.12.1194 +Dynamische-Verhoerlabels';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -24473,7 +24473,9 @@ function _exportVerhoerTopicLabel(npcId, topicId) {
   try {
     const p = (typeof VERHOER_PROFILE !== 'undefined' && VERHOER_PROFILE && VERHOER_PROFILE[npcId]) ? VERHOER_PROFILE[npcId] : null;
     const t = p && Array.isArray(p.themen) ? p.themen.find(function (x) { return x && x.id === topicId; }) : null;
-    return _exportDisplayText((t && t.st) || topicId);
+    const s = (caseProgress && caseProgress.verhoere && caseProgress.verhoere[npcId]) ? caseProgress.verhoere[npcId] : null;
+    const label = (t && typeof _verhoerTopicLabel === 'function') ? _verhoerTopicLabel(npcId, t, s) : null;
+    return _exportDisplayText((label && label.st) || (t && t.st) || topicId);
   } catch (e) { return _exportDisplayText(topicId); }
 }
 
@@ -55390,6 +55392,171 @@ const VERHOER_VARIANTEN = {
   }
 };
 
+// Sichtbare Aktenkarten variieren pro Verhoer-Seed. Die Topic-IDs bleiben stabil,
+// damit Saves, Indiz-Gates, Tests und Exportauswertung nicht auseinanderlaufen.
+const VERHOER_TOPIC_LABEL_VARIANTEN = {
+  frau_pohl: {
+    robert: [
+      { st: 'Kesslers Weg durchs Haus', sh: 'Seine Routine im Treppenhaus nachzeichnen.' },
+      { st: 'Der Mann im Hof', sh: 'Was an seinem Auftauchen auffällt.' },
+      { st: 'Seine Mittwochsroute', sh: 'Den wiederkehrenden Besuch fassen.' },
+      { st: 'Wenn Robert kommt', sh: 'Die Nachbarin nach ihrem Muster fragen.' }
+    ],
+    haus: [
+      { st: 'Der Blick hinter der Gardine', sh: 'Ihre Beobachterrolle ernst nehmen.' },
+      { st: 'Was der Hof verrät', sh: 'Aus Hausklatsch brauchbare Zeiten machen.' },
+      { st: 'Die Augen des Hauses', sh: 'Pohls Stellung im Mietshaus nutzen.' },
+      { st: 'Wer alles mitbekommt', sh: 'Ihre Neugier in Aussage verwandeln.' }
+    ],
+    mittwoch: [
+      { st: 'Jeden Mittwoch', sh: 'Aus Wiederholung wird ein Muster.' },
+      { st: 'Der feste Wochentag', sh: 'Zeit und Rhythmus sichern.' },
+      { st: 'Kurz vor sieben', sh: 'Die genaue Beobachtung abklopfen.' },
+      { st: 'Das Wochenmuster', sh: 'Den Zufall vom Ritual trennen.' }
+    ],
+    hauke: [
+      { st: 'Die Tür im dritten Stock', sh: 'Den Namen Hauke vorsichtig einsetzen.' },
+      { st: 'Dritter Stock links', sh: 'Roberts Ziel im Haus festnageln.' },
+      { st: 'Wo Roberts Weg endet', sh: 'Vom Hof zur Wohnung kommen.' },
+      { st: 'Haukes Wohnung', sh: 'Den Namen nur so weit treiben, wie sie mitgeht.' }
+    ],
+    klatsch: [
+      { st: 'Die Affäre aussprechen', sh: 'Direkt, aber riskant.' },
+      { st: 'Fremde Ehe, fremder Hof', sh: 'Eine harte Unterstellung wagen.' },
+      { st: 'Pohl beim Wort nehmen', sh: 'Druck kann öffnen oder alles schließen.' },
+      { st: 'Das böse Wort', sh: 'Affäre sagen und die Reaktion riskieren.' }
+    ]
+  },
+  ilse_hauke: {
+    sitzungen: [
+      { st: 'Die Sitzungen', sh: 'Was mittwochs wirklich in der Wohnung passiert.' },
+      { st: 'Anfangs Modell', sh: 'Wann aus Pose Nähe wurde.' },
+      { st: 'Der Vorwand', sh: 'Die Modellsitzungen auf ihren Kern prüfen.' },
+      { st: 'Mittwoch in der Wohnung', sh: 'Ihre Version des Treffens festhalten.' }
+    ],
+    robert: [
+      { st: 'Robert ohne Edith', sh: 'Nicht Schuld, sondern Nähe suchen.' },
+      { st: 'Wer Robert hier ist', sh: 'Die Person hinter der Ausrede erkennen.' },
+      { st: 'Ein stiller Besucher', sh: 'Was er bei Ilse findet.' },
+      { st: 'Mehr als ein Modell', sh: 'Ihre Wärme vorsichtig berühren.' }
+    ],
+    mittwoch: [
+      { st: 'Der Termin', sh: 'Warum Nähe einen Kalender hat.' },
+      { st: 'Roberts freier Abend', sh: 'Den Wochentag aus ihrer Sicht prüfen.' },
+      { st: 'Immer zur Wochenmitte', sh: 'Die Spedition als Ausrede testen.' },
+      { st: 'Der Mittwoch bei Ilse', sh: 'Aus Gewohnheit wird Belastung.' }
+    ],
+    ring: [
+      { st: 'Der Ehering', sh: 'Ein kleines Detail, das alles verändert.' },
+      { st: 'Vor der Tür abgelegt', sh: 'Was Robert versteckt, bevor er eintritt.' },
+      { st: 'Die Manteltasche', sh: 'Den verschwundenen Ring ansprechen.' },
+      { st: 'Ein verheirateter Mann', sh: 'Das Symbol seiner Ehe auf den Tisch legen.' }
+    ],
+    edith: [
+      { st: 'Ediths Wahrheit', sh: 'Moralischer Druck, hohes Risiko.' },
+      { st: 'Die Frau zu Hause', sh: 'Nicht als Waffe benutzen, aber nicht verschweigen.' },
+      { st: 'Was Edith wissen darf', sh: 'Die Grenze zwischen Wahrheit und Angriff testen.' },
+      { st: 'Ilse und Edith', sh: 'Der heikle Name kann alles kippen.' }
+    ]
+  },
+  robert_kessler: {
+    spedition: [
+      { st: 'Die Überstunden', sh: 'Seine überprüfbare Ausrede festhalten.' },
+      { st: 'Moabit als Alibi', sh: 'Die Spedition gegen seine Geschichte stellen.' },
+      { st: 'Roberts Arbeitsabend', sh: 'Prüfen, wo seine Zeit wirklich endet.' },
+      { st: 'Die falsche Schicht', sh: 'Den Dienstplan in seine Ehe lügen lassen.' }
+    ],
+    verfolgung: [
+      { st: 'Der Blick über die Schulter', sh: 'Warum ein Unschuldiger sich versteckt.' },
+      { st: 'Im Hof erwischt', sh: 'Sein Verhalten vor der Haustür prüfen.' },
+      { st: 'Warum er sich umsieht', sh: 'Die Angst hinter der Empörung suchen.' },
+      { st: 'Roberts Vorsicht', sh: 'Aus Nervosität eine Frage machen.' }
+    ],
+    ilse: [
+      { st: 'Was Ilse für ihn ist', sh: 'Die Sitzungs-Geschichte prüfen.' },
+      { st: 'Mehr als Sitzungen', sh: 'Den Vorwand von der Beziehung trennen.' },
+      { st: 'Seine Zeit bei Ilse', sh: 'Nicht Klatsch, sondern Wahrheit verlangen.' },
+      { st: 'Modell oder Geliebte', sh: 'Die vorbereitete Antwort testen.' }
+    ],
+    edith: [
+      { st: 'Die Lüge gegenüber Edith', sh: 'Nicht die Affäre, sondern seine Entscheidung angreifen.' },
+      { st: 'Warum Edith nichts weiß', sh: 'Aus Heimlichkeit Verantwortung machen.' },
+      { st: 'Die Wahrheit zu Hause', sh: 'Seine Feigheit vor der Ehe prüfen.' },
+      { st: 'Jede neue Lüge', sh: 'Die Kette hinter dem ersten Mittwoch zeigen.' }
+    ],
+    feigheit: [
+      { st: 'Ihn Feigling nennen', sh: 'Kann Scham lösen oder alles schließen.' },
+      { st: 'Der harte Vorwurf', sh: 'Direkter Druck, sehr riskant.' },
+      { st: 'Scham statt Liebe', sh: 'Provokation kann die Tür zuschlagen.' },
+      { st: 'Rücksicht oder Feigheit', sh: 'Seine Rechtfertigung frontal angreifen.' }
+    ]
+  },
+  norbert_tetzlaff: {
+    dienstplan: [
+      { st: 'Der Dienstplan', sh: 'Seine Routine als Kollege ernst nehmen.' },
+      { st: 'Kesslers leerer Stuhl', sh: 'Die Bürozeiten aus Moabit sichern.' },
+      { st: 'Mittwoch im Büro', sh: 'Den Plan gegen die Ausrede halten.' },
+      { st: 'Spedition statt Ehe', sh: 'Erst Arbeitszeiten, dann Verdacht.' }
+    ],
+    kollegen: [
+      { st: 'Kollegen unter sich', sh: 'Nicht Verrat, sondern Alltag abfragen.' },
+      { st: 'Der Ton der Arbeiter', sh: 'Über Stolz statt Bestechung gehen.' },
+      { st: 'Keine Moral, nur Uhrzeit', sh: 'Tetzlaff als Kollegen ernst nehmen.' },
+      { st: 'Was hier jeder weiß', sh: 'Aus Büroalltag eine Aussage machen.' }
+    ],
+    mittwoch: [
+      { st: 'Der feste Mittwoch', sh: 'Aus Gerede wird ein belastbares Muster.' },
+      { st: 'Immer vor der letzten Fuhre', sh: 'Den Wochentag festnageln.' },
+      { st: 'Seit Monaten dasselbe', sh: 'Ob Zufall oder Gewohnheit klären.' },
+      { st: 'Kesslers früher Feierabend', sh: 'Aus Wiederholung wird Beweisnähe.' }
+    ],
+    robert: [
+      { st: 'Roberts Ausrede', sh: 'Die Überstunden-Geschichte direkt prüfen.' },
+      { st: 'Moabit glaubt ihm nicht', sh: 'Seine Ehe-Lüge mit Arbeitslogik brechen.' },
+      { st: 'Keine Überstunden', sh: 'Die Spedition als Alibi kippen.' },
+      { st: 'Was Edith hören soll', sh: 'Tetzlaffs Aussage auf den Kern bringen.' }
+    ],
+    bestechen: [
+      { st: 'Für die Auskunft zahlen', sh: 'Riskant: Geld hilft hier erst mit Beleg.' },
+      { st: 'Eine klare Erinnerung kaufen', sh: 'Kann Stolz verletzen statt Türen öffnen.' },
+      { st: 'Geld auf den Tisch', sh: 'Nur sinnvoll, wenn der Beleg bereits sitzt.' },
+      { st: 'Der falsche Schlüssel', sh: 'Bestechung wirkt hier schneller als Beleidigung.' }
+    ]
+  },
+  oberkellner_voss: {
+    stammgast: [
+      { st: 'Kessler als Stammgast', sh: 'Den Kellner über seine Beobachtungsroutine ernst nehmen.' },
+      { st: 'Der Fenstertisch', sh: 'Voss über Service-Gedächtnis öffnen.' },
+      { st: 'Ein bekanntes Gesicht', sh: 'Aus Routine wird Wiedererkennung.' },
+      { st: 'Was der Kellner weiß', sh: 'Nicht Klatsch, sondern Tischordnung.' }
+    ],
+    mittwoch: [
+      { st: 'Der Mittwoch', sh: 'Aus Service-Gedächtnis wird ein Muster.' },
+      { st: 'Tee zur Wochenmitte', sh: 'Kleine Details sichern den Wochentag.' },
+      { st: 'Vor dem Abendgeschäft', sh: 'Die Uhrzeit des Cafés nutzen.' },
+      { st: 'Kesslers Café-Rhythmus', sh: 'Wann er nicht in Moabit war.' }
+    ],
+    begleitung: [
+      { st: 'Die junge Frau', sh: 'Nicht Affäre sagen, sondern Beobachtung absichern.' },
+      { st: 'Nicht allein am Tisch', sh: 'Die Begleitung über Voss prüfen.' },
+      { st: 'Der Tisch hinter der Säule', sh: 'Wo Kessler sich sicher fühlte.' },
+      { st: 'Wer bei ihm saß', sh: 'Eine Beobachtung statt Gerücht verlangen.' }
+    ],
+    diskretion: [
+      { st: 'Diskretion des Hauses', sh: 'Seine Berufsehre nutzen, ohne ihn zu beleidigen.' },
+      { st: 'Service und Schweigen', sh: 'Voss als Profi ansprechen.' },
+      { st: 'Was ein Café bewahrt', sh: 'Diskretion gegen Ausrede abwägen.' },
+      { st: 'Zwischen Tassen und Wahrheit', sh: 'Seine Haltung öffnen, nicht brechen.' }
+    ],
+    drohen: [
+      { st: 'Mit Polizei drohen', sh: 'Zu grob für einen stolzen Kellner.' },
+      { st: 'Der falsche Druck', sh: 'Kann seine Höflichkeit einfrieren.' },
+      { st: 'Voss unter Zwang', sh: 'Riskant: Stolz schlägt Auskunft.' },
+      { st: 'Mit Gewalt fragen', sh: 'Ein schlechter Ton für ein gutes Café.' }
+    ]
+  }
+};
+
 function _verhoerHash(text) {
   let h = 2166136261;
   const s = String(text || '');
@@ -55401,6 +55568,20 @@ function _verhoerPick(pool, seed, key) {
   const values = Array.isArray(pool) ? pool.filter(Boolean) : [pool].filter(Boolean);
   if (!values.length) return '';
   return values[(_verhoerHash(String(seed || 0) + '|' + String(key || '')) % values.length)];
+}
+
+function _verhoerTopicLabel(npcId, topic, state) {
+  try {
+    const fallback = { st: topic && topic.st ? topic.st : (topic && topic.id ? topic.id : ''), sh: topic && topic.sh ? topic.sh : '' };
+    const variants = VERHOER_TOPIC_LABEL_VARIANTEN[npcId] && topic ? VERHOER_TOPIC_LABEL_VARIANTEN[npcId][topic.id] : null;
+    const picked = Array.isArray(variants) && variants.length ? _verhoerPick(variants, state && state.variationSeed, 'label:' + topic.id) : fallback;
+    return {
+      st: (picked && picked.st) || fallback.st,
+      sh: (picked && picked.sh) || fallback.sh
+    };
+  } catch (e) {
+    return { st: topic && topic.st ? topic.st : (topic && topic.id ? topic.id : ''), sh: topic && topic.sh ? topic.sh : '' };
+  }
 }
 
 function _verhoerTopicTurn(npcId, topic, state) {
@@ -55609,7 +55790,8 @@ function _verhoerThema(id) {
   if (!p || s.status !== 'aktiv' || !Array.isArray(p.themen)) return;
   const t = p.themen.find(function (x) { return x && x.id === id; });
   if (!t || s.themenUsed[id] || s.oeff < (t.abOeff || 0)) return;
-  if (typeof _uiAudit === 'function') _uiAudit('AKTENFRAGE', t.st || id, npc.name || npcId);
+  const label = _verhoerTopicLabel(npcId, t, s);
+  if (typeof _uiAudit === 'function') _uiAudit('AKTENFRAGE', label.st || t.st || id, npc.name || npcId);
   s.themenUsed[id] = true;
   s.fragenGestellt = (s.fragenGestellt || 0) + 1;
   s.aktionenSeitOeffnen++;
@@ -55795,9 +55977,10 @@ function _verhoerRender() {
   h += (p.themen || []).map(function (t) {
     const used = !!s.themenUsed[t.id];
     const locked = s.oeff < (t.abOeff || 0);
-    if (used) return '<div class="sbtn topic spent"><div class="st">✓ ' + _verhoerEsc(t.st) + '</div></div>';
-    if (locked) return '<div class="sbtn topic locked"><div class="st">' + _verhoerEsc(t.st) + '</div><div class="sh">' + _verhoerEsc(t.sh) + '</div><span class="unlock">Ergibt sich aus dem Gespräch</span></div>';
-    return '<button class="sbtn topic' + (aktiv ? '' : ' disabled') + '" data-vthema="' + t.id + '"><div class="st">' + _verhoerEsc(t.st) + '</div><div class="sh">' + _verhoerEsc(t.sh) + '</div>' + (t.risk ? '<span class="flag">' + _verhoerEsc(t.risk) + '</span>' : '') + '</button>';
+    const label = _verhoerTopicLabel(npcId, t, s);
+    if (used) return '<div class="sbtn topic spent"><div class="st">✓ ' + _verhoerEsc(label.st) + '</div></div>';
+    if (locked) return '<div class="sbtn topic locked"><div class="st">' + _verhoerEsc(label.st) + '</div><div class="sh">' + _verhoerEsc(label.sh) + '</div><span class="unlock">Ergibt sich aus dem Gespräch</span></div>';
+    return '<button class="sbtn topic' + (aktiv ? '' : ' disabled') + '" data-vthema="' + t.id + '"><div class="st">' + _verhoerEsc(label.st) + '</div><div class="sh">' + _verhoerEsc(label.sh) + '</div>' + (t.risk ? '<span class="flag">' + _verhoerEsc(t.risk) + '</span>' : '') + '</button>';
   }).join('');
   h += '</div>';
   const vh = _verhoerVerfuegbareVorhalte();
@@ -55822,7 +56005,8 @@ function _verhoerRender() {
       kontext: 'Verhoerakte ' + (npc.name || npcId),
       aktenThemen: (p.themen || []).map(function (t) {
         const status = s.themenUsed[t.id] ? 'erledigt' : (s.oeff < (t.abOeff || 0) ? 'gesperrt' : 'klickbar');
-        return (t.st || t.id) + ' [' + status + ']';
+        const label = _verhoerTopicLabel(npcId, t, s);
+        return (label.st || t.st || t.id) + ' [' + status + ']';
       }),
       vorhalte: vh.map(function (b) { return (VERHOER_BELEG_LABEL[b] || b) + (s.genutzteHebelIds.indexOf(b) !== -1 ? ' [verbraucht]' : ' [klickbar]'); }),
       rufwirkung: (rufMod && rufMod.note) ? rufMod.note : '',
