@@ -3368,6 +3368,45 @@
   .settings-menu .settings-career-actions button:hover {
     border-color: rgba(212, 174, 78, 0.48);
   }
+  .settings-career-debug {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(120, 155, 190, 0.24);
+  }
+  .settings-career-debug-title {
+    color: rgba(148, 190, 230, 0.92);
+    margin-bottom: 6px;
+  }
+  .settings-ruf-editor {
+    display: grid;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .settings-ruf-row {
+    display: grid;
+    grid-template-columns: 82px minmax(90px, 1fr) 46px;
+    align-items: center;
+    gap: 8px;
+    color: rgba(231, 222, 197, 0.86);
+    font-size: 11px;
+    letter-spacing: 0.2px;
+    text-transform: none;
+  }
+  .settings-ruf-row input[type="range"] {
+    width: 100%;
+    accent-color: #d4ae4e;
+  }
+  .settings-ruf-row input[type="number"] {
+    width: 46px;
+    min-width: 0;
+    border: 1px solid rgba(200,191,168,0.28);
+    background: rgba(8, 7, 6, 0.72);
+    color: var(--fg-bright);
+    padding: 4px 5px;
+    font-family: inherit;
+    font-size: 11px;
+    text-align: center;
+  }
   .settings-divider {
     height: 1px;
     background: rgba(200,191,168,0.28);
@@ -3833,8 +3872,27 @@
     <div class="settings-career-stat" id="settings-career-meta">Fälle: lade...</div>
     <div class="settings-career-note">Neue Ermittlungen behalten Ruf, Kasse, Miete und bekannte Personen.</div>
     <div class="settings-career-actions">
-      <button type="button" onclick="freshCaseTestFromSettings(event)">Fall frisch testen</button>
       <button type="button" class="danger" onclick="resetCareerFromSettings(event)">Neue Karriere / alles zurücksetzen</button>
+    </div>
+    <div class="settings-career-debug hidden" id="settings-career-debug">
+      <div class="settings-career-title settings-career-debug-title">Debug-Testwerte</div>
+      <div class="settings-career-note">Nur im Debug-Modus: Ruf gezielt setzen oder denselben Fall neutral neu starten.</div>
+      <div class="settings-ruf-editor">
+        <label class="settings-ruf-row" for="settings-ruf-renommee">
+          <span>Renommee</span>
+          <input id="settings-ruf-renommee" type="range" min="-5" max="5" step="1" value="0" oninput="setDebugRufFromSettings('renommee', this.value)">
+          <input id="settings-ruf-renommee-num" type="number" min="-5" max="5" step="1" value="0" oninput="setDebugRufFromSettings('renommee', this.value)">
+        </label>
+        <label class="settings-ruf-row" for="settings-ruf-haerte">
+          <span>Härte</span>
+          <input id="settings-ruf-haerte" type="range" min="-5" max="5" step="1" value="0" oninput="setDebugRufFromSettings('haerte', this.value)">
+          <input id="settings-ruf-haerte-num" type="number" min="-5" max="5" step="1" value="0" oninput="setDebugRufFromSettings('haerte', this.value)">
+        </label>
+      </div>
+      <div class="settings-career-actions">
+        <button type="button" onclick="resetDebugRufFromSettings(event)">Ruf auf 0 setzen</button>
+        <button type="button" onclick="freshCaseTestFromSettings(event)">Fall frisch testen</button>
+      </div>
     </div>
   </div>
 
@@ -4152,7 +4210,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1192</div>
+    <div class="start-version">Schatten v7.12.1193</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -4394,7 +4452,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1192</span>
+    <span>Schatten v7.12.1193</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -13020,7 +13078,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1192 +Restore-Voice-Bildsync';
+window.SCHATTEN_VERSION = 'v7.12.1193 +Debug-Ruf-Settings';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -13380,14 +13438,74 @@ function _karriereMetaLabel() {
     return 'Fälle: k. A.';
   }
 }
+function _settingsDebugRufAllowed() {
+  try { return (typeof isAdminUnlocked === 'function' && isAdminUnlocked()); } catch (e) { return false; }
+}
+function _ensureSettingsRuf() {
+  try {
+    if (!karlAkte || typeof karlAkte !== 'object') karlAkte = _karlAkteDefault();
+    if (!karlAkte.ruf || typeof karlAkte.ruf !== 'object') karlAkte.ruf = { haerte: 0, renommee: 0 };
+    karlAkte.ruf.renommee = karlAkte.ruf.renommee | 0;
+    karlAkte.ruf.haerte = karlAkte.ruf.haerte | 0;
+    return karlAkte.ruf;
+  } catch (e) {
+    return { haerte: 0, renommee: 0 };
+  }
+}
+function _clampSettingsRufValue(value) {
+  const n = parseInt(value, 10);
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(-5, Math.min(5, n));
+}
+function syncDebugRufControls() {
+  try {
+    const r = _ensureSettingsRuf();
+    const values = {
+      renommee: _clampSettingsRufValue(r.renommee),
+      haerte: _clampSettingsRufValue(r.haerte)
+    };
+    ['renommee', 'haerte'].forEach((kind) => {
+      const range = document.getElementById('settings-ruf-' + kind);
+      const num = document.getElementById('settings-ruf-' + kind + '-num');
+      if (range) range.value = String(values[kind]);
+      if (num) num.value = String(values[kind]);
+    });
+  } catch (e) {}
+}
 function updateSettingsCareerPanel() {
   try {
     const ruf = document.getElementById('settings-career-ruf');
     const kasse = document.getElementById('settings-career-kasse');
     const meta = document.getElementById('settings-career-meta');
+    const debug = document.getElementById('settings-career-debug');
+    const debugOn = _settingsDebugRufAllowed();
     if (ruf) ruf.textContent = 'Ruf: ' + _karriereRufLabel();
     if (kasse) kasse.textContent = _karriereKasseLabel();
     if (meta) meta.textContent = _karriereMetaLabel();
+    if (debug) debug.classList.toggle('hidden', !debugOn);
+    if (debugOn) syncDebugRufControls();
+  } catch (e) {}
+}
+function setDebugRufFromSettings(kind, value) {
+  if (!_settingsDebugRufAllowed()) return;
+  if (kind !== 'renommee' && kind !== 'haerte') return;
+  try {
+    const r = _ensureSettingsRuf();
+    r[kind] = _clampSettingsRufValue(value);
+    _karlAkteSave();
+    updateSettingsCareerPanel();
+  } catch (e) {}
+}
+function resetDebugRufFromSettings(event) {
+  if (event) event.stopPropagation();
+  if (!_settingsDebugRufAllowed()) return;
+  try {
+    const r = _ensureSettingsRuf();
+    r.renommee = 0;
+    r.haerte = 0;
+    _karlAkteSave();
+    updateSettingsCareerPanel();
+    if (typeof showProgressToast === 'function') showProgressToast('Debug-Ruf', 'Renommee und Härte stehen wieder auf 0.', 'info', 'debug-ruf-reset');
   } catch (e) {}
 }
 function _currentSetupIndexForRestart() {
@@ -13412,6 +13530,10 @@ function resetCareerFromSettings(event) {
 }
 function freshCaseTestFromSettings(event) {
   if (event) event.stopPropagation();
+  if (!_settingsDebugRufAllowed()) {
+    try { if (typeof showProgressToast === 'function') showProgressToast('Nur Debug-Modus', 'Fall frisch testen ist nur für Testläufe freigeschaltet.', 'info', 'fresh-case-debug-only'); } catch (e) {}
+    return;
+  }
   const idx = _currentSetupIndexForRestart();
   const sameFallText = (typeof idx === 'number') ? ' Derselbe Fall wird sofort neu gestartet.' : ' Danach wählst du den Fall neu aus.';
   if (!confirm('Fall frisch testen? Karriere wird für diesen Test auf neutral gesetzt: Ruf 0, Startkasse, keine Historie.' + sameFallText)) return;
@@ -54603,6 +54725,7 @@ function applyAdminVisibility() {
   const _depOn = (typeof DEPLOY_UI_ENABLED !== 'undefined' && DEPLOY_UI_ENABLED) && isAdminUnlocked();
   if (_depBtn) _depBtn.style.display = _depOn ? '' : 'none';
   if (_depLbl) _depLbl.style.display = _depOn ? '' : 'none';
+  try { if (typeof updateSettingsCareerPanel === 'function') updateSettingsCareerPanel(); } catch {}
   // Live-Log neu rendern, damit die Diagnose-Panels sichtbar bzw. unsichtbar werden
   if (typeof renderLog === 'function' && Array.isArray(logEntries) && logEntries.length > 0) {
     try { renderLog(); } catch {}
