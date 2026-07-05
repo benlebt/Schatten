@@ -105,6 +105,7 @@ Object.assign(imageContext, {
 const visualFnStart = html.indexOf('function _kesslerSceneNorm');
 const visualFnEnd = html.indexOf('function _clearKesslerSceneVisual', visualFnStart);
 vm.runInContext(html.slice(visualFnStart, visualFnEnd), imageContext);
+assert.strictEqual(imageContext._kesslerSceneIstStarkerOrtsanker('Imbiss Bei Trude'), true, 'Trude/Imbiss must be treated as a strong explicit location anchor');
 imageContext._renderKesslerSceneVisual({ szene: 'Robert verschwindet im Hinterhof.' });
 assert.strictEqual(visualClasses.has('hidden'), false, 'initial Kessler scene must reveal its scene image');
 assert.strictEqual(visualElements['kessler-scene-image'].attrs.src, 'assets/scenes/kessler/hinterhof-sybelstrasse-day.png', 'initial Kessler scene must select the daylight courtyard asset');
@@ -155,6 +156,11 @@ imageContext._renderKesslerSceneVisual({ szene: 'Der Opel Olympia nagelt muede, 
 assert.strictEqual(visualClasses.has('hidden'), false, 'Trude scene must reveal a Trude image');
 assert.strictEqual(visualElements['kessler-scene-image'].attrs.src, 'assets/scenes/wegener/imbiss-bei-trude.png', 'explicit Trude location must beat stale Opel/Charite anchors and Opel prose');
 assert.strictEqual(visualElements['kessler-scene-place'].textContent, 'Imbiss Bei Trude', 'Trude scene caption must be set');
+imageContext.currentOrt = 'Hinterhof Sybelstrasse';
+imageContext.lastLocation = 'Hinterhof Sybelstrasse';
+imageContext._renderKesslerSceneVisual({ szene: 'Trude sagt: Die Frau in der Sybelstrasse, die Hauke, war letzte Woche hier.' });
+assert.strictEqual(visualElements['kessler-scene-image'].attrs.src, 'assets/scenes/wegener/imbiss-bei-trude.png', 'explicit Trude location must beat Sybelstrasse clue prose and stale courtyard anchors');
+assert.strictEqual(visualElements['kessler-scene-place'].textContent, 'Imbiss Bei Trude', 'Trude caption must survive Sybelstrasse clue prose');
 imageContext.engineCurrentLocation = { name: 'Hinterhof Sybelstrasse' };
 imageContext.currentOrt = '';
 imageContext.lastLocation = '';
