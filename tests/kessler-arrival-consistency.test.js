@@ -51,12 +51,16 @@ const images = imageContext.images;
 const image = images.find((entry) => entry.file === 'spedition-schmidt-moabit.png');
 assert(image && image.innen === true, 'Spedition image must be declared as interior');
 assert.strictEqual(image.dayFile, 'spedition-schmidt-moabit-day.png', 'Spedition must expose a daylight variant');
+const rothRevierImage = images.find((entry) => entry.place === 'Volkspolizei-Revier Hackescher Markt');
+assert(rothRevierImage, 'Roth police station image must be registered for Kessler/shared locations');
+assert.strictEqual(rothRevierImage.root, 'assets/scenes/wegener/', 'Roth police station must reuse the Volkspolizei scene asset root');
 assert(images.every((entry) => entry.dayFile), 'every Kessler scene image must expose a daylight variant');
 for (const entry of images) {
   const nightFile = entry.nightFile || entry.file.replace(/(\.[a-z0-9]+)$/i, '-night$1');
-  assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'kessler', entry.file)), 'dark scene asset missing: ' + entry.file);
-  assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'kessler', entry.dayFile)), 'daylight scene asset missing: ' + entry.dayFile);
-  assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'kessler', nightFile)), 'night scene asset missing: ' + nightFile);
+  const root = entry.root || 'assets/scenes/kessler/';
+  assert(fs.existsSync(path.join(__dirname, '..', root, entry.file)), 'dark scene asset missing: ' + root + entry.file);
+  assert(fs.existsSync(path.join(__dirname, '..', root, entry.dayFile)), 'daylight scene asset missing: ' + root + entry.dayFile);
+  assert(fs.existsSync(path.join(__dirname, '..', root, nightFile)), 'night scene asset missing: ' + root + nightFile);
 }
 
 const visualClasses = new Set(['hidden']);
@@ -118,6 +122,15 @@ imageContext.lastLocation = '';
 imageContext._renderKesslerSceneVisual({ szene: 'Im Cafe Wien verstummt der Oberkellner, bevor Karl wieder auf den Kurfuerstendamm tritt.' });
 assert.strictEqual(visualClasses.has('hidden'), false, 'scene prose must be enough to recover the Cafe Wien scene image when the engine location is briefly empty');
 assert.strictEqual(visualElements['kessler-scene-image'].attrs.src, 'assets/scenes/kessler/cafe-wien-night.png', 'Cafe Wien text fallback must select the true night cafe asset');
+imageContext.engineCurrentLocation = { name: 'Volkspolizei-Revier Hackescher Markt' };
+imageContext.currentOrt = '';
+imageContext.lastLocation = '';
+imageContext.gameDay = 2;
+imageContext._aktTageszeitName = () => 'vormittag';
+imageContext._renderKesslerSceneVisual({ szene: 'Roth nennt die Spedition Schmidt in Moabit und Tetzlaffs Frachtpapiere.' });
+assert.strictEqual(visualClasses.has('hidden'), false, 'Roth police station scene must reveal a police station image');
+assert.strictEqual(visualElements['kessler-scene-image'].attrs.src, 'assets/scenes/wegener/volkspolizei-hans-beimler-day.png', 'explicit Roth police station location must beat Spedition prose mentions');
+assert.strictEqual(visualElements['kessler-scene-place'].textContent, 'Volkspolizei-Revier Hackescher Markt', 'Roth police station caption must be set');
 imageContext.engineCurrentLocation = { name: 'Hinterhof Sybelstrasse' };
 imageContext.currentOrt = '';
 imageContext.lastLocation = '';

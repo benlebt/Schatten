@@ -4226,7 +4226,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1196</div>
+    <div class="start-version">Schatten v7.12.1197</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -4468,7 +4468,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1196</span>
+    <span>Schatten v7.12.1197</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -13094,7 +13094,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1196 +Echte-Nachtbilder';
+window.SCHATTEN_VERSION = 'v7.12.1197 +Szenenbild-Ortsprioritaet';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -56105,6 +56105,7 @@ const SHARED_SCENE_IMAGES = [
   { test: /bahnhof charlottenburg/, file: 'bahnhof-charlottenburg.png', dayFile: 'bahnhof-charlottenburg-day.png', place: 'Bahnhof Charlottenburg', innen: false },
   { test: /opel olympia|karls opel|am opel/, file: 'opel-olympia.png', dayFile: 'opel-olympia-day.png', place: 'Karls Opel Olympia', innen: false },
   { test: /hardenbergstrasse|schutzpolizei hardenberg|polizei hardenberg/, file: 'polizei-hardenbergstrasse.png', dayFile: 'polizei-hardenbergstrasse-day.png', place: 'Polizei Hardenbergstrasse', innen: true },
+  { test: /volkspolizei.*revier.*hackescher markt|polizei.*revier.*hackescher markt|revier.*hackescher markt|hackescher markt.*revier/, file: 'volkspolizei-hans-beimler.png', dayFile: 'volkspolizei-hans-beimler-day.png', place: 'Volkspolizei-Revier Hackescher Markt', innen: true, root: 'assets/scenes/wegener/' },
   { test: /doc wagner|wagners praxis|schaferstrasse|schaeferstrasse/, file: 'doc-wagners-praxis.png', dayFile: 'doc-wagners-praxis-day.png', place: 'Doc Wagners Praxis', innen: true },
   { test: /cafe wien/, file: 'cafe-wien.png', dayFile: 'cafe-wien-day.png', place: 'Cafe Wien', innen: true },
   { test: /spedition schmidt|spedition.*moabit|roberts arbeitsplatz/, file: 'spedition-schmidt-moabit.png', dayFile: 'spedition-schmidt-moabit-day.png', place: 'Spedition Schmidt, Moabit', innen: true },
@@ -56392,6 +56393,26 @@ function _kesslerSceneNightFile(file) {
   } catch (e) { return ''; }
 }
 
+function _kesslerSceneFindSpec(set, candidates) {
+  try {
+    if (!set || !Array.isArray(set.images)) return null;
+    for (const candidate of candidates || []) {
+      const normalized = _kesslerSceneNorm(candidate);
+      if (!normalized) continue;
+      const spec = set.images.find(function (entry) { return entry.test.test(normalized); });
+      if (spec) return spec;
+    }
+  } catch (e) {}
+  return null;
+}
+
+function _kesslerSceneIstStarkerOrtsanker(value) {
+  try {
+    const normalized = _kesslerSceneNorm(value);
+    return /\b(volkspolizei|polizei|revier|hackescher markt|hardenbergstrasse|cafe|spedition|wohnung|bahnhof|hinterhof|sybelstrasse|buero|buro|praxis|charite|gericht|werft|friedhof|apotheke|staatsbibliothek|ministerien|stalinallee|platz|lokschuppen|waescherei|hehlerei|antiquitaeten|spielklub|notaufnahmelager)\b/.test(normalized);
+  } catch (e) { return false; }
+}
+
 const _SZENENBILD_PRELOAD_CACHE = new Set();
 function _preloadSzenenbild(src) {
   try {
@@ -56459,34 +56480,44 @@ function _renderKesslerSceneVisual(scene) {
     return;
   }
   _preloadSzenenbildSatz(set);
-  const candidates = [];
+  const ortCandidates = [];
+  const fallbackCandidates = [];
+  const proseCandidates = [];
   try {
-    if (typeof engineCurrentLocation !== 'undefined' && engineCurrentLocation && engineCurrentLocation.name) candidates.push(engineCurrentLocation.name);
+    if (typeof engineCurrentLocation !== 'undefined' && engineCurrentLocation && engineCurrentLocation.name) ortCandidates.push(engineCurrentLocation.name);
   } catch (e) {}
-  try { if (typeof currentOrt === 'string' && currentOrt) candidates.push(currentOrt); } catch (e) {}
+  try { if (typeof currentOrt === 'string' && currentOrt) ortCandidates.push(currentOrt); } catch (e) {}
   if (scene && typeof scene === 'object') {
     ['ortHaupt', 'ort', 'location', 'ortName'].forEach(function (key) {
-      if (scene[key]) candidates.push(scene[key]);
+      if (scene[key]) ortCandidates.push(scene[key]);
     });
-    if (scene.szene) candidates.push(scene.szene);
+    if (scene.szene) proseCandidates.push(scene.szene);
   }
-  try { if (typeof lastLocation === 'string' && lastLocation) candidates.push(lastLocation); } catch (e) {}
   try {
     const statusOrt = document.getElementById('status-ort-text');
-    if (statusOrt && statusOrt.textContent) candidates.push(statusOrt.textContent);
+    if (statusOrt && statusOrt.textContent) ortCandidates.push(statusOrt.textContent);
   } catch (e) {}
   try {
     const statusLoc = document.getElementById('status-loc');
-    if (statusLoc && statusLoc.textContent) candidates.push(statusLoc.textContent);
+    if (statusLoc && statusLoc.textContent) ortCandidates.push(statusLoc.textContent);
   } catch (e) {}
+  try { if (typeof lastLocation === 'string' && lastLocation) fallbackCandidates.push(lastLocation); } catch (e) {}
 
-  let spec = null;
-  for (const candidate of candidates) {
-    const normalized = _kesslerSceneNorm(candidate);
-    spec = set && set.images.find(function (entry) { return entry.test.test(normalized); });
-    if (spec) break;
-  }
+  const hatStarkenOrtsanker = ortCandidates.some(_kesslerSceneIstStarkerOrtsanker);
+  let spec = _kesslerSceneFindSpec(set, ortCandidates);
+  if (!spec && !hatStarkenOrtsanker) spec = _kesslerSceneFindSpec(set, proseCandidates);
+  if (!spec) spec = _kesslerSceneFindSpec(set, fallbackCandidates);
   if (!spec) {
+    if (hatStarkenOrtsanker) {
+      image.removeAttribute('src');
+      image.alt = '';
+      place.textContent = '';
+      time.textContent = '';
+      visual.classList.add('hidden');
+      _syncKesslerDangerVisual(visual);
+      if (typeof diag === 'function') diag('drift', 'SZENENBILD ausgeblendet: aktueller Ort ohne Bildtreffer, Prosa-Ort ignoriert');
+      return;
+    }
     if (image.getAttribute('src') && place.textContent) {
       visual.classList.remove('hidden');
       _syncKesslerDangerVisual(visual);
