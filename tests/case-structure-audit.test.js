@@ -55,9 +55,11 @@ for (const imageSet of imageSets) {
   for (const spec of imageSet.images) {
     const root = spec.root || imageSet.root;
     assert(spec.file, 'scene image spec without dark file');
+    const nightFile = spec.nightFile || spec.file.replace(/(\.[a-z0-9]+)$/i, '-night$1');
     assert(spec.dayFile, 'scene image spec without day file for ' + spec.file);
     assert(fs.existsSync(path.join(repoRoot, root, spec.file)), 'dark scene asset missing: ' + root + spec.file);
     assert(fs.existsSync(path.join(repoRoot, root, spec.dayFile)), 'day scene asset missing: ' + root + spec.dayFile);
+    assert(fs.existsSync(path.join(repoRoot, root, nightFile)), 'night scene asset missing: ' + root + nightFile);
   }
 }
 

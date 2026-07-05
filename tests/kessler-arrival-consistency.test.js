@@ -53,13 +53,26 @@ assert(image && image.innen === true, 'Spedition image must be declared as inter
 assert.strictEqual(image.dayFile, 'spedition-schmidt-moabit-day.png', 'Spedition must expose a daylight variant');
 assert(images.every((entry) => entry.dayFile), 'every Kessler scene image must expose a daylight variant');
 for (const entry of images) {
+  const nightFile = entry.nightFile || entry.file.replace(/(\.[a-z0-9]+)$/i, '-night$1');
   assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'kessler', entry.file)), 'dark scene asset missing: ' + entry.file);
   assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'kessler', entry.dayFile)), 'daylight scene asset missing: ' + entry.dayFile);
+  assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'kessler', nightFile)), 'night scene asset missing: ' + nightFile);
 }
 
 const visualClasses = new Set(['hidden']);
 const visualElements = {
-  'kessler-scene-visual': { classList: { add: (name) => visualClasses.add(name), remove: (name) => visualClasses.delete(name) } },
+  'kessler-scene-visual': {
+    classList: {
+      add: (name) => visualClasses.add(name),
+      remove: (...names) => names.forEach((name) => visualClasses.delete(name)),
+      toggle: (name, force) => {
+        if (force) visualClasses.add(name);
+        else visualClasses.delete(name);
+      },
+    },
+    querySelector: () => null,
+    appendChild: () => {},
+  },
   'kessler-scene-image': {
     attrs: {}, alt: '', onload: null, onerror: null,
     getAttribute(name) { return this.attrs[name] || null; },
@@ -89,13 +102,13 @@ imageContext.engineCurrentLocation = { name: 'Kessler-Wohnung Charlottenburg' };
 imageContext._aktTageszeitName = () => 'nacht';
 imageContext._renderKesslerSceneVisual({ szene: 'Du stellst den Motor ab, steigst aus und gehst schnellen Schrittes in die Wohnung. Edith Kessler öffnet dir.' });
 assert.strictEqual(visualClasses.has('hidden'), false, 'Kessler apartment night scene must reveal its scene image');
-assert.strictEqual(visualElements['kessler-scene-image'].attrs.src, 'assets/scenes/kessler/kessler-wohnung-charlottenburg.png', 'Kessler apartment at night must select the dark apartment asset');
+assert.strictEqual(visualElements['kessler-scene-image'].attrs.src, 'assets/scenes/kessler/kessler-wohnung-charlottenburg-night.png', 'Kessler apartment at night must select the true night apartment asset');
 assert.strictEqual(visualElements['kessler-scene-place'].textContent, 'Kessler-Wohnung, Charlottenburg', 'Kessler apartment caption must be set');
 imageContext.engineCurrentLocation = { name: 'Cafe Wien' };
 imageContext._aktTageszeitName = () => 'nacht';
 imageContext._renderKesslerSceneVisual({ szene: 'Du laesst das Cafe Wien hinter dir. Draussen auf dem Kurfuerstendamm beisst der Wind.' });
 assert.strictEqual(visualClasses.has('hidden'), false, 'transitional cafe prose must keep the best matching scene image visible');
-assert.strictEqual(visualElements['kessler-scene-image'].attrs.src, 'assets/scenes/kessler/cafe-wien.png', 'Cafe Wien at night must keep the dark cafe asset even during transitional prose');
+assert.strictEqual(visualElements['kessler-scene-image'].attrs.src, 'assets/scenes/kessler/cafe-wien-night.png', 'Cafe Wien at night must keep the true night cafe asset even during transitional prose');
 visualClasses.add('hidden');
 visualElements['kessler-scene-image'].attrs = {};
 visualElements['kessler-scene-place'].textContent = '';
@@ -104,14 +117,14 @@ imageContext.currentOrt = '';
 imageContext.lastLocation = '';
 imageContext._renderKesslerSceneVisual({ szene: 'Im Cafe Wien verstummt der Oberkellner, bevor Karl wieder auf den Kurfuerstendamm tritt.' });
 assert.strictEqual(visualClasses.has('hidden'), false, 'scene prose must be enough to recover the Cafe Wien scene image when the engine location is briefly empty');
-assert.strictEqual(visualElements['kessler-scene-image'].attrs.src, 'assets/scenes/kessler/cafe-wien.png', 'Cafe Wien text fallback must select the dark cafe asset');
+assert.strictEqual(visualElements['kessler-scene-image'].attrs.src, 'assets/scenes/kessler/cafe-wien-night.png', 'Cafe Wien text fallback must select the true night cafe asset');
 imageContext.engineCurrentLocation = { name: 'Hinterhof Sybelstrasse' };
 imageContext.currentOrt = '';
 imageContext.lastLocation = '';
 imageContext.gameDay = 2;
 imageContext._aktTageszeitName = () => 'nacht';
 imageContext._renderKesslerSceneVisual({ szene: 'Karl bleibt im Hinterhof der Sybelstrasse.' });
-assert.strictEqual(visualElements['kessler-scene-image'].attrs.src, 'assets/scenes/kessler/hinterhof-sybelstrasse.png', 'courtyard night scene must select the dark asset');
+assert.strictEqual(visualElements['kessler-scene-image'].attrs.src, 'assets/scenes/kessler/hinterhof-sybelstrasse-night.png', 'courtyard night scene must select the true night asset');
 assert.strictEqual(visualElements['kessler-scene-time'].textContent, 'Tag 2 · Nacht', 'courtyard night caption must reflect the live day and time');
 imageContext.gameDay = 3;
 imageContext._aktTageszeitName = () => 'morgen';
@@ -137,7 +150,8 @@ assert(html.includes('vorhandenNpc.zeit = qn.zeit.slice()'), 'save migration mus
 assert(html.includes('vorhanden.zeit = qi.zeit.slice()'), 'save migration must update evidence schedules');
 assert(html.includes('setTimeout(function bootRestoreOrStart()'), 'boot restore must wait until Haupt-UI and image tables are initialized');
 assert(html.indexOf('setTimeout(function bootRestoreOrStart()') < html.indexOf('const SHARED_SCENE_IMAGES'), 'deferred restore regression guard must cover the late image table');
-assert(html.includes("return /abend|nacht/.test(_kesslerSceneNorm(tz));"), 'scene image selection must distinguish daylight from darkness');
+assert(html.includes("if (/nacht/.test(norm)) return 'nacht';"), 'scene image selection must distinguish night from evening');
+assert(html.includes("zeitBucket === 'abend' ? spec.file"), 'scene image selection must keep evening on the original dark asset');
 assert(/showHeader\(scene\);\s*renderLog\(\);\s*try \{ if \(typeof _renderKesslerSceneVisual === 'function'\) _renderKesslerSceneVisual\(scene\); \} catch \(e\) \{\}/.test(html), 'scene visual must sync before solved/failed branches skip renderOptions');
 
 console.log('KESSLER_SPEDITION_ARRIVAL_OK');

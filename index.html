@@ -1719,12 +1719,28 @@
     object-fit: cover;
     object-position: center;
   }
+  .kessler-scene-visual.is-evening img {
+    filter: saturate(0.96) contrast(1.04) brightness(0.98);
+  }
+  .kessler-scene-visual.is-night {
+    border-color: rgba(83,118,150,0.62);
+    border-bottom-color: rgba(176,155,92,0.78);
+    box-shadow: 0 14px 34px rgba(0,0,0,0.46), inset 0 0 70px rgba(7,18,38,0.22);
+  }
+  .kessler-scene-visual.is-night img {
+    filter: saturate(0.9) contrast(1.1) brightness(0.92);
+  }
   .kessler-scene-visual::after {
     content: '';
     position: absolute;
     inset: 0;
     pointer-events: none;
     background: linear-gradient(to bottom, transparent 68%, rgba(5,8,10,0.78) 100%);
+  }
+  .kessler-scene-visual.is-night::after {
+    background:
+      radial-gradient(circle at 50% 38%, transparent 34%, rgba(1,5,14,0.22) 76%, rgba(0,0,0,0.64) 100%),
+      linear-gradient(to bottom, rgba(2,8,22,0.08) 0%, transparent 42%, rgba(2,7,13,0.86) 100%);
   }
   .kessler-scene-visual.is-danger {
     border-color: rgba(215,76,58,0.72);
@@ -4210,7 +4226,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1195</div>
+    <div class="start-version">Schatten v7.12.1196</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -4452,7 +4468,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1195</span>
+    <span>Schatten v7.12.1196</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -13078,7 +13094,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1195 +Fundpreise-HauptUI';
+window.SCHATTEN_VERSION = 'v7.12.1196 +Echte-Nachtbilder';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -56355,9 +56371,25 @@ function _kesslerInnenraumTextPasst(sceneText) {
 
 function _kesslerTageszeitIstDunkel() {
   try {
-    const tz = (typeof _aktTageszeitName === 'function') ? _aktTageszeitName() : '';
-    return /abend|nacht/.test(_kesslerSceneNorm(tz));
+    return /abend|nacht/.test(_kesslerTageszeitBucket());
   } catch (e) { return false; }
+}
+
+function _kesslerTageszeitBucket() {
+  try {
+    const tz = (typeof _aktTageszeitName === 'function') ? _aktTageszeitName() : '';
+    const norm = _kesslerSceneNorm(tz);
+    if (/nacht/.test(norm)) return 'nacht';
+    if (/abend/.test(norm)) return 'abend';
+    return 'tag';
+  } catch (e) { return 'tag'; }
+}
+
+function _kesslerSceneNightFile(file) {
+  try {
+    const value = String(file || '');
+    return value ? value.replace(/(\.[a-z0-9]+)$/i, '-night$1') : '';
+  } catch (e) { return ''; }
 }
 
 const _SZENENBILD_PRELOAD_CACHE = new Set();
@@ -56381,6 +56413,8 @@ function _preloadSzenenbildSatz(set) {
       const root = spec.root || set.root || 'assets/scenes/kessler/';
       _preloadSzenenbild(root + spec.file);
       if (spec.dayFile) _preloadSzenenbild(root + spec.dayFile);
+      const nightFile = spec.nightFile || _kesslerSceneNightFile(spec.file);
+      if (nightFile && nightFile !== spec.file) _preloadSzenenbild(root + nightFile);
     });
   } catch (e) {}
 }
@@ -56469,11 +56503,15 @@ function _renderKesslerSceneVisual(scene) {
     if (typeof diag === 'function') diag('drift', 'SZENENBILD bleibt sichtbar trotz Uebergangstext: ' + spec.place);
   }
 
-  const dunkel = _kesslerTageszeitIstDunkel();
-  const selectedFile = dunkel ? spec.file : (spec.dayFile || spec.file);
+  const zeitBucket = _kesslerTageszeitBucket();
+  const nightFile = spec.nightFile || _kesslerSceneNightFile(spec.file);
+  const selectedFile = zeitBucket === 'nacht'
+    ? (nightFile || spec.file)
+    : (zeitBucket === 'abend' ? spec.file : (spec.dayFile || spec.file));
   const root = spec.root || (set && set.root) || 'assets/scenes/kessler/';
   const src = root + selectedFile;
-  const fallbackSrc = root + spec.file;
+  const fallbackFile = zeitBucket === 'tag' ? (spec.dayFile || spec.file) : spec.file;
+  const fallbackSrc = root + fallbackFile;
   _preloadSzenenbild(src);
   if (fallbackSrc !== src) _preloadSzenenbild(fallbackSrc);
   image.onerror = function () {
@@ -56489,7 +56527,9 @@ function _renderKesslerSceneVisual(scene) {
   image.decoding = 'async';
   try { image.fetchPriority = 'high'; } catch (e) {}
   if (image.getAttribute('src') !== src) image.setAttribute('src', src);
-  image.alt = 'Szenenbild: ' + spec.place + ', ' + (dunkel ? 'Abend oder Nacht' : 'Tageslicht') + ', Karl Mauer von hinten';
+  visual.classList.toggle('is-night', zeitBucket === 'nacht');
+  visual.classList.toggle('is-evening', zeitBucket === 'abend');
+  image.alt = 'Szenenbild: ' + spec.place + ', ' + (zeitBucket === 'nacht' ? 'Nacht' : (zeitBucket === 'abend' ? 'Abend' : 'Tageslicht')) + ', Karl Mauer von hinten';
   place.textContent = spec.place;
   try {
     const tz = (typeof _aktTageszeitName === 'function') ? _aktTageszeitName() : '';
@@ -56505,7 +56545,10 @@ function _clearKesslerSceneVisual() {
   const image = document.getElementById('kessler-scene-image');
   const place = document.getElementById('kessler-scene-place');
   const time = document.getElementById('kessler-scene-time');
-  if (visual) visual.classList.add('hidden');
+  if (visual) {
+    visual.classList.add('hidden');
+    visual.classList.remove('is-night', 'is-evening');
+  }
   if (image) {
     image.onload = null;
     image.onerror = null;
