@@ -4239,7 +4239,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1200</div>
+    <div class="start-version">Schatten v7.12.1201</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -4481,7 +4481,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1200</span>
+    <span>Schatten v7.12.1201</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -57935,6 +57935,74 @@ function _hauptuiKonfrontationItems() {
   } catch (e) { return []; }
 }
 
+function _hauptuiKonfrontationChooseNarration(option, afterSuccess) {
+  try {
+    if (typeof chooseOptionInFlight !== 'undefined' && chooseOptionInFlight) {
+      if (typeof showProgressToast === 'function') showProgressToast('Gleich bereit', 'Karl ist noch mitten in der letzten Handlung.', 'info', 'konfrontation-lock');
+      return false;
+    }
+    _hauptuiChoose(option);
+    try {
+      if (typeof afterSuccess === 'function') afterSuccess();
+    } catch (afterErr) {
+      if (typeof diag === 'function') diag('drift', 'KONFRONTATION-NACHLAUF-Fehler: ' + (afterErr && afterErr.message ? afterErr.message : afterErr));
+    }
+    return true;
+  } catch (e) {
+    if (typeof diag === 'function') diag('drift', 'KONFRONTATION-START-Fehler: ' + (e && e.message ? e.message : e));
+    if (typeof showProgressToast === 'function') showProgressToast('Aktion nicht gestartet', 'Die Konfrontation bleibt aktiv. Versuch es gleich noch einmal.', 'warn', 'konfrontation-start-fehler');
+    return false;
+  }
+}
+
+function _hauptuiKonfrontationLetztenAusgangSpeichern(enemy, item, outcome) {
+  try {
+    if (typeof caseProgress !== 'undefined' && caseProgress && caseProgress.activeConfrontation) {
+      caseProgress.activeConfrontation.lastOutcome = (outcome && outcome.art) || 'offen';
+      caseProgress.activeConfrontation.lastItem = (item && item.name) || '';
+      caseProgress.activeConfrontation.lastEnemy = (enemy && enemy.name) || '';
+      if (typeof saveGame === 'function') saveGame();
+      else if (typeof saveGameState === 'function') saveGameState();
+    }
+  } catch (e) {}
+}
+
+function _hauptuiKonfrontationAbschliessen(enemy, name, status, grund, item, outcome) {
+  try {
+    if (typeof _konfrontationClear === 'function') _konfrontationClear(grund || 'narration');
+    if (status && typeof _npcZustandSet === 'function') {
+      _npcZustandSet(name, {
+        status: status,
+        reason: 'hauptui_konfrontation_narration',
+        item: (item && item.name) || '',
+        art: (outcome && outcome.art) || ''
+      });
+    }
+    if (status && typeof _konfrontationLootHinweis === 'function') _konfrontationLootHinweis(name, status);
+    try {
+      if (typeof saveGameState === 'function') saveGameState();
+      else if (typeof saveGame === 'function') saveGame();
+    } catch (e) {}
+  } catch (e) {
+    if (typeof diag === 'function') diag('drift', 'KONFRONTATION-ABSCHLUSS-Fehler: ' + (e && e.message ? e.message : e));
+  }
+}
+
+function _konfrontationUnbewaffnetPlan() {
+  return {
+    score: -1,
+    wirkung: {
+      label: 'Leere Haende',
+      kraft: 1,
+      irritation: 0,
+      schwaechung: 0,
+      status: 'benommen',
+      tags: [],
+      detail: 'Ohne Gegenstand hat Karl kaum Hebel. Das ist nur gegen schwache oder ueberraschte Gegner sinnvoll.'
+    }
+  };
+}
+
 function _hauptuiKonfrontationAktion(aktion, enemy, item) {
   try {
     if (typeof chooseOptionInFlight !== 'undefined' && chooseOptionInFlight) {
@@ -57946,43 +58014,42 @@ function _hauptuiKonfrontationAktion(aktion, enemy, item) {
     if (typeof _uiAudit === 'function') _uiAudit('KONFRONTATION', aktion, (item ? item.name + ' -> ' : '') + name);
     const noFx = { _noDialogFx: true, _konfrontationNoFx: true };
     if (aktion === 'angreifen') {
-      _konfrontationClear('angriff');
-      _hauptuiChoose(Object.assign({ id: 'KONFRONTATION_ANGRIFF', text: 'KONFRONTATION-NARRATION (kein Emoji-Popup, keine Arcade-Anzeige): Karl greift ' + name + ' ohne klaren Hebel an. Erzaehle die Folge als harte, kurze Noir-Szene. Wenn der Gegner stark ist, soll die Gewalt Karl spuerbar etwas kosten; wenn der Gegner schwach ist, darf Karl die Oberhand gewinnen. Keine UI-Worte.', _anzeigeText: 'Greife an - ' + name, kategorie: 'OFFENSIV', _kategorie: 'OFFENSIV', _engine: true }, noFx));
+      const takt = typeof _konfrontationTaktikAktiv === 'function' ? _konfrontationTaktikAktiv(enemy) : null;
+      const plan = _konfrontationUnbewaffnetPlan();
+      const outcome = _konfrontationWuerfleAusgang(enemy, { name: 'leere Haende' }, 'angreifen', plan, takt);
+      outcome.prompt = 'KONFRONTATION-NARRATION (kein Emoji-Popup, keine Arcade-Anzeige): Schreibe eine kompakte, filmische Noir-Szene in 5-8 Saetzen. Karl greift ' + name + ' mit leeren Haenden an. Wirkung: kaum Hebel, hohe Eigengefahr. Gegnerstaerke: ' + outcome.staerke + '. Zufallsausgang: ' + outcome.art + '. Wenn der Angriff misslingt, bleibt die Konfrontation spuerbar offen und gefaehrlich; wenn er gelingt, gewinnt Karl kurz die Oberhand. Keine UI-Worte, keine Auswahloptionen, kein Questlog.';
+      _hauptuiKonfrontationChooseNarration(Object.assign({ id: 'KONFRONTATION_ANGRIFF', text: outcome.prompt, _anzeigeText: 'Greife an - ' + name, kategorie: 'OFFENSIV', _kategorie: 'OFFENSIV', _engine: true }, noFx), function () {
+        if (outcome.status) _hauptuiKonfrontationAbschliessen(enemy, name, outcome.status, 'angriff-' + outcome.art, { name: 'leere Haende' }, outcome);
+        else _hauptuiKonfrontationLetztenAusgangSpeichern(enemy, { name: 'leere Haende' }, outcome);
+      });
       return;
     }
     if (aktion === 'werfen' || aktion === 'werfen_fuesse' || aktion === 'angreifen_mit') {
       const takt = typeof _konfrontationTaktikAktiv === 'function' ? _konfrontationTaktikAktiv(enemy) : null;
       const plan = (typeof _hauptuiKonfrontationItemPlan === 'function') ? _hauptuiKonfrontationItemPlan(item || {}, aktion, takt) : { score: 0 };
       const outcome = _konfrontationWuerfleAusgang(enemy, item || {}, aktion, plan, takt);
-      _konfrontationItemVerbrauchen(item, aktion);
-      if (outcome.status) {
-        _konfrontationClear('item-' + aktion + '-' + outcome.art);
-        if (typeof _npcZustandSet === 'function') _npcZustandSet(name, { status: outcome.status, reason: 'hauptui_konfrontation_item', item: (item && item.name) || 'Gegenstand', art: outcome.art });
-        _konfrontationLootHinweis(name, outcome.status);
-      } else {
-        try {
-          if (typeof caseProgress !== 'undefined' && caseProgress && caseProgress.activeConfrontation) {
-            caseProgress.activeConfrontation.lastOutcome = outcome.art;
-            caseProgress.activeConfrontation.lastItem = (item && item.name) || '';
-            if (typeof saveGame === 'function') saveGame();
-          }
-        } catch (e) {}
-      }
-      _hauptuiChoose(Object.assign({ id: 'KONFRONTATION_ITEM_' + aktion.toUpperCase(), text: outcome.prompt, _anzeigeText: ((item && item.name) || 'Gegenstand') + ' - ' + name, kategorie: 'OFFENSIV', _kategorie: 'OFFENSIV', _engine: true }, noFx));
+      _hauptuiKonfrontationChooseNarration(Object.assign({ id: 'KONFRONTATION_ITEM_' + aktion.toUpperCase(), text: outcome.prompt, _anzeigeText: ((item && item.name) || 'Gegenstand') + ' - ' + name, kategorie: 'OFFENSIV', _kategorie: 'OFFENSIV', _engine: true }, noFx), function () {
+        _konfrontationItemVerbrauchen(item, aktion);
+        if (outcome.status) _hauptuiKonfrontationAbschliessen(enemy, name, outcome.status, 'item-' + aktion + '-' + outcome.art, item, outcome);
+        else _hauptuiKonfrontationLetztenAusgangSpeichern(enemy, item, outcome);
+      });
       return;
     }
     if (aktion === 'fliehen') {
-      _konfrontationClear('flucht');
-      _hauptuiChoose(Object.assign({ id: 'KONFRONTATION_FLUCHT', text: 'Karl nutzt den kleinsten Fehler von ' + name + ', loest sich aus der Enge und bringt Abstand zwischen sich und die Gefahr.', _anzeigeText: 'Ausweichen - ' + name, kategorie: 'FLUCHT', _kategorie: 'FLUCHT', _engine: true }, noFx));
+      _hauptuiKonfrontationChooseNarration(Object.assign({ id: 'KONFRONTATION_FLUCHT', text: 'KONFRONTATION-NARRATION (kein Emoji-Popup, keine Arcade-Anzeige): Karl nutzt den kleinsten Fehler von ' + name + ', loest sich aus der Enge und bringt Abstand zwischen sich und die Gefahr. Erzaehle die Flucht knapp, koerperlich und ohne UI-Worte.', _anzeigeText: 'Ausweichen - ' + name, kategorie: 'FLUCHT', _kategorie: 'FLUCHT', _engine: true }, noFx), function () {
+        _hauptuiKonfrontationAbschliessen(enemy, name, '', 'flucht', null, null);
+      });
       return;
     }
     if (aktion === 'bluffen') {
-      _konfrontationClear('bluff');
-      _hauptuiChoose(Object.assign({ id: 'KONFRONTATION_BLUFF', text: 'Karl tut so, als wuesste er bereits mehr, als in seinem Notizbuch steht. Er gibt ' + name + ' eine Luecke, in die die Person hineinreden kann.', _anzeigeText: 'Bluffe - ' + name, kategorie: 'BEOBACHTEN', _kategorie: 'BEOBACHTEN', _engine: true }, noFx));
+      _hauptuiKonfrontationChooseNarration(Object.assign({ id: 'KONFRONTATION_BLUFF', text: 'KONFRONTATION-NARRATION (kein Emoji-Popup, keine Arcade-Anzeige): Karl tut so, als wuesste er bereits mehr, als in seinem Notizbuch steht. Er gibt ' + name + ' eine Luecke, in die die Person hineinreden kann. Erzaehle, ob der Bluff Druck herausnimmt oder die Lage gefaehrlicher macht. Keine UI-Worte.', _anzeigeText: 'Bluffe - ' + name, kategorie: 'BEOBACHTEN', _kategorie: 'BEOBACHTEN', _engine: true }, noFx), function () {
+        _hauptuiKonfrontationAbschliessen(enemy, name, '', 'bluff', null, null);
+      });
       return;
     }
-    _konfrontationClear('deeskalation');
-    _hauptuiChoose(Object.assign({ id: 'KONFRONTATION_DEESKALIEREN', text: 'Karl bleibt ruhig, nimmt die Haende sichtbar weg vom Mantel und zwingt ' + name + ' in ein Gespraech statt in eine Pruegelei.', _anzeigeText: 'Beruhigen - ' + name, kategorie: 'DEFENSIV', _kategorie: 'DEFENSIV', _engine: true }, noFx));
+    _hauptuiKonfrontationChooseNarration(Object.assign({ id: 'KONFRONTATION_DEESKALIEREN', text: 'KONFRONTATION-NARRATION (kein Emoji-Popup, keine Arcade-Anzeige): Karl bleibt ruhig, nimmt die Haende sichtbar weg vom Mantel und zwingt ' + name + ' in ein Gespraech statt in eine Pruegelei. Erzaehle eine kurze Noir-Szene, in der die Spannung sichtbar sinkt oder nur knapp gehalten wird. Keine UI-Worte.', _anzeigeText: 'Beruhigen - ' + name, kategorie: 'DEFENSIV', _kategorie: 'DEFENSIV', _engine: true }, noFx), function () {
+      _hauptuiKonfrontationAbschliessen(enemy, name, '', 'deeskalation', null, null);
+    });
   } catch (e) {
     if (typeof diag === 'function') diag('drift', 'KONFRONTATION-AKTION-Fehler: ' + (e && e.message ? e.message : e));
   }
