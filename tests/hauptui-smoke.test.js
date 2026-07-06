@@ -481,6 +481,10 @@ assert(html.includes("const visibleGroups = groups.filter(function (group) { ret
 assert(html.includes("rightHeading.className = 'hauptui-target-heading';"), 'target section needs one compact inline heading');
 assert(html.includes("if (groupIndex > 0)"), 'first target group label must be folded into the main heading instead of wasting a line');
 assert(html.includes("executeRow.className = 'hauptui-execute-row';"), 'execute must sit in its own visually separated confirmation row');
+assert(html.includes('--hauptui-target-grid: repeat(auto-fit, minmax(min(100%, 220px), 1fr));'), 'target grids must not force fixed-width columns on phones');
+assert(html.includes('--hauptui-slot-grid: repeat(auto-fit, minmax(min(100%, 240px), 1fr));'), 'pickup/inventory grids must not overflow narrow screens');
+assert(html.includes('.hauptui-target-group-fundstuecke .hauptui-target-list,\n    .hauptui-target-group-items .hauptui-target-list {\n      grid-template-columns: minmax(0, 1fr);'), 'pickup and inventory grids must collapse to one phone-safe column');
+assert(html.includes('.options-block.hauptui-options,\n    .ui-kategorien.hauptui-kategorien {\n      margin-left: -8px;\n      margin-right: -8px;'), 'phone Haupt-UI surface should reclaim a little side width');
 assert(html.includes("{ key: 'items', label: 'Inventar', tag: 'Inventar', targets: data.items || [] }"), 'inventory needs a distinct visible target group');
 assert(html.includes("button.dataset.targetKind = kind;"), 'target buttons must expose semantic kind for styling and audits');
 assert(html.includes('.hauptui-target.type-person') && html.includes('.hauptui-target.type-loot') && html.includes('.hauptui-target.type-item'), 'target roles must render with distinct visual classes');
