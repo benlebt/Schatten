@@ -1951,8 +1951,17 @@
     gap: 6px;
     margin-top: 7px;
   }
+  .hauptui-confrontation .hauptui-threat-actions {
+    margin-bottom: 13px;
+  }
+  .hauptui-confrontation .hauptui-column-label {
+    margin-top: 12px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(110,90,62,0.38);
+  }
   .hauptui-threat-inventory {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-top: 9px;
   }
   .hauptui-threat-button {
     min-height: 42px;
@@ -1988,6 +1997,10 @@
   .hauptui-threat-chips { display:flex; flex-wrap:wrap; gap:5px; margin-top:8px; }
   .hauptui-threat-chip { border:1px solid rgba(212,184,106,0.3); background:rgba(212,184,106,0.08); color:#d4c18a; padding:3px 7px; border-radius:4px; font-size:calc(9px * var(--reading-scale)); letter-spacing:0; }
   .hauptui-threat-chip.bad { border-color:rgba(210,78,55,0.38); background:rgba(120,38,30,0.12); color:#d6a092; }
+  .hauptui-threat-chip[title],
+  .hauptui-threat-button[title] {
+    cursor: help;
+  }
   .hauptui-threat-empty {
     margin-top: 7px;
     color: #7d715e;
@@ -4226,7 +4239,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1199</div>
+    <div class="start-version">Schatten v7.12.1200</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -4468,7 +4481,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1199</span>
+    <span>Schatten v7.12.1200</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -41990,7 +42003,8 @@ async function chooseOption(option) {
   // FX feuert gleich in der Kategorie-Mechanik) und Reisen (_istReise, fxTravel lief schon).
   try {
     const _kat = ((option && (option.kategorie || option._kategorie)) || '').toString().toUpperCase();
-    if (typeof fxKategorie === 'function' && !/^(FLUCHT|NOTFLUCHT)$/.test(_kat) && !(option && option._istReise)
+    const _skipNarrativeFx = !!(option && (option._noDialogFx || option._konfrontationNoFx));
+    if (!_skipNarrativeFx && typeof fxKategorie === 'function' && !/^(FLUCHT|NOTFLUCHT)$/.test(_kat) && !(option && option._istReise)
         && Date.now() - (window._fxLastT || 0) > 1500) {
       // v7.12.706 (Benjamin: "bei 'Näher kommen' waren da ZWEI Rosen - rechts gehört das
       // GESICHT der Person hin"): Romantik läuft als echtes Paar-Bild über fxDialog
@@ -57011,10 +57025,226 @@ function _itemTaktikTags(item) {
   return [];
 }
 
+const KONFRONTATION_TAG_TOOLTIPS = {
+  aktenlogik: 'Der Gegner respektiert belegte Aussagen und Widersprüche mehr als rohe Gewalt.',
+  rauch: 'Rauch, Dunst oder Qualm nimmt kurz Sicht und Reaktion.',
+  ablenkung: 'Etwas zieht den Blick weg oder zwingt den Gegner, die Haltung zu wechseln.',
+  blendend: 'Staub, Flüssigkeit oder Licht trifft Augen und Gesicht; der Gegner verliert kurz Orientierung.',
+  sturz: 'Zielt auf Füße, Gleichgewicht oder rutschigen Boden.',
+  wucht: 'Ein schwerer Treffer. Stark gegen schwache Gegner, riskant gegen harte Brocken.',
+  glas: 'Glas kann splittern, schneiden und brennende Flüssigkeit verteilen.',
+  laut: 'Lärm stört den Gegner, kann aber auch Aufmerksamkeit ziehen.',
+  schwer: 'Massiver Gegenstand mit echter Schlagkraft.',
+  bluff: 'Verbale Finte; gut, wenn der Gegner Status oder Kontrolle verteidigen muss.',
+  dienstmarke: 'Amtspersonen eskalieren schneller, wenn Karl die Marke frontal herausfordert.',
+  frontal: 'Direkte Konfrontation gegen einen starken Gegner kostet Kontrolle.',
+  blind: 'Blinder Angriff ohne Hebel ist gefährlich.',
+  lange: 'Zu lange verhandeln gibt dem Gegner Zeit.',
+  leere: 'Ohne Gegenstand oder Beleg bleibt Karl im Nachteil.',
+  druck: 'Druck kann wirken, verschlechtert aber Ruf und Lage, wenn er kippt.'
+};
+
+function _konfrontationTagTooltip(txt) {
+  try {
+    const raw = String(txt || '').replace(/^riskant:\s*/i, '').trim();
+    const key = normForMatch(raw).replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+    if (KONFRONTATION_TAG_TOOLTIPS[key]) return KONFRONTATION_TAG_TOOLTIPS[key];
+    if (/dienstmarke/.test(key)) return KONFRONTATION_TAG_TOOLTIPS.dienstmarke;
+    if (/blind/.test(key)) return KONFRONTATION_TAG_TOOLTIPS.blind;
+    if (/frontal/.test(key)) return KONFRONTATION_TAG_TOOLTIPS.frontal;
+    if (/lange|verhandlung/.test(key)) return KONFRONTATION_TAG_TOOLTIPS.lange;
+    if (/leer|ohne/.test(key)) return KONFRONTATION_TAG_TOOLTIPS.leere;
+    return 'Taktischer Hinweis: ' + raw + '.';
+  } catch (e) { return String(txt || 'Taktischer Hinweis'); }
+}
+
+function _konfrontationClamp(n, min, max) {
+  n = Number(n);
+  if (!isFinite(n)) n = min;
+  return Math.max(min, Math.min(max, n));
+}
+
+function _konfrontationItemWirkung(item, verb) {
+  try {
+    const key = _itemKatalogKey(item);
+    const name = normForMatch((item && item.name) || '');
+    const tags = _itemTaktikTags(item);
+    const base = {
+      label: 'Improvisiert',
+      kraft: 1,
+      irritation: 0,
+      schwaechung: 0,
+      status: 'benommen',
+      tags: tags,
+      detail: 'Improvisierter Einsatz. Wirkung hängt stark von Gegner, Raum und Timing ab.'
+    };
+    if (/bohnenkaffee|kaffee/.test(key + ' ' + name)) {
+      return Object.assign(base, {
+        label: 'Kaffee-Staub',
+        kraft: 1,
+        irritation: 1,
+        schwaechung: 0,
+        status: 'geblendet',
+        detail: 'Kaffee reizt Augen und Nase kurz. Gut zum Irritieren, aber kein harter Treffer.'
+      });
+    }
+    if (/doppelkorn|korn|flasche/.test(key + ' ' + name)) {
+      return Object.assign(base, {
+        label: 'Glas und Korn',
+        kraft: verb === 'angreifen_mit' ? 4 : 3,
+        irritation: 2,
+        schwaechung: 2,
+        status: 'benommen',
+        detail: 'Glas, Scherben und brennender Korn im Gesicht. Deutlich härter und gefährlicher als Kaffee.'
+      });
+    }
+    if (/toaster|aeg/.test(key + ' ' + name)) {
+      return Object.assign(base, {
+        label: 'AEG-Wucht',
+        kraft: 4,
+        irritation: 0,
+        schwaechung: 3,
+        status: 'ko',
+        detail: 'Ein schwerer Toaster kann schwache Gegner komplett umwerfen; starke Gegner werden eher wütend.'
+      });
+    }
+    if (/ziegel|stein|backstein/.test(key + ' ' + name)) {
+      return Object.assign(base, {
+        label: 'Backstein-Wucht',
+        kraft: 3,
+        irritation: 0,
+        schwaechung: 2,
+        status: 'benommen',
+        detail: 'Hart, direkt und laut. Gut gegen Körper, schlecht für Karls Ruf.'
+      });
+    }
+    if (/knall|boeller|feuerwerk/.test(key + ' ' + name)) {
+      return Object.assign(base, {
+        label: 'Knall und Licht',
+        kraft: 2,
+        irritation: 2,
+        schwaechung: 0,
+        status: 'geblendet',
+        detail: 'Lärm und Licht reißen für einen Augenblick die Kontrolle auf.'
+      });
+    }
+    if (/banane|schale/.test(key + ' ' + name)) {
+      return Object.assign(base, {
+        label: 'Sturzfalle',
+        kraft: 2,
+        irritation: 0,
+        schwaechung: 1,
+        status: 'benommen',
+        detail: 'Nur stark, wenn der Gegner in Bewegung ist oder auf glattem Boden steht.'
+      });
+    }
+    if (/zigarette|reval|west/.test(key + ' ' + name)) {
+      return Object.assign(base, {
+        label: 'Rauch',
+        kraft: 1,
+        irritation: 1,
+        schwaechung: 0,
+        status: 'abgelenkt',
+        detail: 'Rauch und Geste lenken ab, aber lösen keine harte Konfrontation.'
+      });
+    }
+    if (/fisch/.test(key + ' ' + name)) {
+      return Object.assign(base, {
+        label: 'Gestank',
+        kraft: 1,
+        irritation: 2,
+        schwaechung: 0,
+        status: 'abgelenkt',
+        detail: 'Ekel kann erstaunlich stark sein, bleibt aber ein schmutziger Trick.'
+      });
+    }
+    return base;
+  } catch (e) {
+    return { label: 'Improvisiert', kraft: 1, irritation: 0, schwaechung: 0, status: 'benommen', tags: [], detail: 'Improvisierter Einsatz.' };
+  }
+}
+
+function _konfrontationGegnerStaerke(enemy, takt) {
+  try {
+    let s = (typeof _gegnerHaerte === 'function') ? _gegnerHaerte(enemy && enemy.name, enemy && enemy.tag, enemy && enemy.rolle) : 3;
+    const warn = String((takt && takt.warnung) || '').toLowerCase();
+    const risk = ((takt && takt.riskant) || []).join(' ').toLowerCase();
+    if (/dienstknueppel|marke|wachtmeister|polizei/.test(warn + ' ' + risk)) s += 1;
+    if (/stolz|front/.test(warn + ' ' + risk)) s += 1;
+    return _konfrontationClamp(s, 1, 6);
+  } catch (e) { return 3; }
+}
+
+function _konfrontationOutcomePrompt(enemy, item, verb, plan, outcome) {
+  try {
+    const name = (enemy && enemy.name) || 'der Gegner';
+    const itemName = (item && item.name) || 'einen Gegenstand';
+    const wirkung = outcome.wirkung || (plan && plan.wirkung) || _konfrontationItemWirkung(item, verb);
+    const art = outcome.art || 'treffer';
+    const ziel = art === 'volltreffer'
+      ? 'Karl gewinnt die Oberhand; der Gegner ist danach kurz ausgeschaltet, benommen oder durchsuchbar.'
+      : (art === 'treffer'
+        ? 'Karl reisst einen klaren Vorteil heraus; der Gegner verliert kurz Orientierung.'
+        : 'Die Aktion geht schief oder reicht nicht; der Gegner behaelt Druck und wird gefaehrlicher.');
+    return 'KONFRONTATION-NARRATION (kein Emoji-Popup, keine Arcade-Anzeige): Schreibe eine kompakte, filmische Noir-Szene in 5-8 Saetzen. Karl setzt "' + itemName + '" gegen ' + name + ' ein. Wirkung des Gegenstands: ' + wirkung.label + ' (Kraft ' + wirkung.kraft + ', Irritation +' + wirkung.irritation + ', Schwaechung +' + (wirkung.schwaechung || 0) + '). Gegnerstaerke: ' + outcome.staerke + '. Zufallsausgang: ' + art + '. ' + ziel + ' Erzaehle konkret, koerperlich und mit leichter absurder/slapstickhafter Ueberzeichnung, wenn es passt. Kaffee darf nur kurz irritieren; Doppelkorn darf mit Glas, Scherben und brennender Fluessigkeit deutlich haerter wirken; ein Toaster kann schwache Gegner umhauen, an harten Gegnern aber auch furchtbar zurueckkommen. Keine UI-Worte, keine Auswahloptionen, kein Questlog.';
+  } catch (e) {
+    return 'Karl setzt einen Gegenstand in der Konfrontation ein. Erzaehle die Folge als kompakte Noir-Szene ohne UI-Worte.';
+  }
+}
+
+function _konfrontationWuerfleAusgang(enemy, item, verb, plan, takt) {
+  try {
+    const wirkung = (plan && plan.wirkung) || _konfrontationItemWirkung(item, verb);
+    const staerke = _konfrontationGegnerStaerke(enemy, takt);
+    const wurf = Math.floor(Math.random() * 6) + 1;
+    const passBonus = _konfrontationClamp(Math.floor(((plan && plan.score) || 0) / 2), 0, 3);
+    const gesamt = wurf + (wirkung.kraft || 1) + Math.floor((wirkung.schwaechung || 0) / 2) + passBonus - staerke;
+    let art = 'misslingt';
+    let status = '';
+    let summary = ((enemy && enemy.name) || 'Der Gegner') + ' behaelt die Oberhand.';
+    if (gesamt >= 6) {
+      art = 'volltreffer';
+      status = (wirkung.kraft >= 4) ? 'ko' : (wirkung.status || 'benommen');
+      summary = 'Karl gewinnt die Oberhand.';
+    } else if (gesamt >= 3) {
+      art = 'treffer';
+      status = (wirkung.irritation >= 1) ? 'geblendet' : (wirkung.status || 'benommen');
+      summary = 'Karl reisst einen Vorteil heraus.';
+    }
+    const outcome = { art: art, status: status, summary: summary, wirkung: wirkung, wurf: wurf, gesamt: gesamt, staerke: staerke };
+    outcome.prompt = _konfrontationOutcomePrompt(enemy, item, verb, plan, outcome);
+    return outcome;
+  } catch (e) {
+    const fallback = { art: 'treffer', status: 'benommen', summary: 'Karl improvisiert.', wirkung: _konfrontationItemWirkung(item, verb), wurf: 3, gesamt: 3, staerke: 3 };
+    fallback.prompt = _konfrontationOutcomePrompt(enemy, item, verb, plan, fallback);
+    return fallback;
+  }
+}
+
+function _konfrontationItemVerbrauchen(item, verb) {
+  try {
+    if (!item || !item.id) return;
+    if (['werfen', 'werfen_fuesse', 'angreifen_mit'].indexOf(verb) === -1) return;
+    if (typeof _itemMove === 'function') {
+      _itemMove(item.id, { status: 'verloren', owner: 'konfrontation', locationId: 'konfrontation' });
+    }
+  } catch (e) {}
+}
+
+function _konfrontationLootHinweis(name, status) {
+  try {
+    if (!status || ['ko', 'gefesselt', 'fixiert', 'benommen', 'geblendet'].indexOf(status) === -1) return;
+    if (typeof _pendingMessagePush === 'function') {
+      _pendingMessagePush('GEGNER DURCHSUCHBAR: ' + name + ' hat die Oberhand verloren. Durchsuchen kann Geld, Tauschware oder eine Fallspur bringen.');
+    }
+  } catch (e) {}
+}
+
 function _hauptuiKonfrontationItemPlan(item, verb, takt) {
   try {
     const tags = _itemTaktikTags(item);
     const key = _itemKatalogKey(item);
+    const wirkung = _konfrontationItemWirkung(item, verb);
     const schwaechen = (takt && Array.isArray(takt.schwaechen)) ? takt.schwaechen : [];
     const guteItems = (takt && Array.isArray(takt.guteItems)) ? takt.guteItems : [];
     let score = guteItems.indexOf(key) !== -1 ? 3 : 0;
@@ -57022,14 +57252,22 @@ function _hauptuiKonfrontationItemPlan(item, verb, takt) {
     if (verb === 'werfen_fuesse' && (schwaechen.indexOf('sturz') !== -1 || tags.indexOf('sturz') !== -1)) score += 1;
     if (verb === 'werfen' && (schwaechen.indexOf('blendend') !== -1 || tags.indexOf('blendend') !== -1 || tags.indexOf('glas') !== -1 || tags.indexOf('laut') !== -1)) score += 1;
     if (verb === 'angreifen_mit' && tags.indexOf('schwer') !== -1) score += 1;
+    if ((wirkung.irritation || 0) >= 2 && schwaechen.indexOf('blendend') !== -1) score += 1;
+    if ((wirkung.schwaechung || 0) >= 2 && (schwaechen.indexOf('wucht') !== -1 || schwaechen.indexOf('frontal') !== -1)) score += 1;
+    if ((wirkung.kraft || 0) >= 3 && (schwaechen.indexOf('wucht') !== -1 || schwaechen.indexOf('sturz') !== -1)) score += 1;
     const trefferTags = tags.filter(function (tag) { return schwaechen.indexOf(tag) !== -1; }).slice(0, 2);
+    const effekt = wirkung.label + ' · Kraft ' + wirkung.kraft + (wirkung.irritation ? ' · Irritation +' + wirkung.irritation : '') + (wirkung.schwaechung ? ' · Schwächung +' + wirkung.schwaechung : '');
+    const marker = score >= 4 ? 'passt sehr gut' : (score >= 2 ? 'guter Hebel' : 'riskant');
+    const hint = score >= 2 && trefferTags.length ? 'nutzt ' + trefferTags.join(' / ') : effekt;
     return {
       score: score,
-      marker: score >= 4 ? 'passt sehr gut' : (score >= 2 ? 'guter Hebel' : 'riskant'),
-      hint: score >= 2 && trefferTags.length ? 'nutzt ' + trefferTags.join(' / ') : 'kann eskalieren',
-      tags: tags
+      marker: marker,
+      hint: hint,
+      tags: tags,
+      wirkung: wirkung,
+      tooltip: wirkung.detail + ' ' + effekt + '. ' + (marker === 'riskant' ? 'Kann eskalieren.' : 'Taktisch brauchbar.')
     };
-  } catch (e) { return { score: 0, marker: 'riskant', hint: 'unklar', tags: [] }; }
+  } catch (e) { return { score: 0, marker: 'riskant', hint: 'unklar', tags: [], wirkung: null, tooltip: 'Unklarer Einsatz.' }; }
 }
 
 function _hauptuiPersonIstFeind(target) {
@@ -57683,7 +57921,7 @@ function _hauptuiKonfrontationItems() {
     const takt = typeof _konfrontationTaktikAktiv === 'function' ? _konfrontationTaktikAktiv(enemy) : null;
     function add(item, verb, label) {
       const plan = (typeof _hauptuiKonfrontationItemPlan === 'function') ? _hauptuiKonfrontationItemPlan(item, verb, takt) : { score: 0, marker: '', hint: '' };
-      out.push({ verb: verb, label: label + item.name, item: item, score: plan.score || 0, marker: plan.marker || '', hint: plan.hint || '' });
+      out.push({ verb: verb, label: label + item.name, item: item, score: plan.score || 0, marker: plan.marker || '', hint: plan.hint || '', tags: plan.tags || [], wirkung: plan.wirkung || null, tooltip: plan.tooltip || '' });
     }
     (data.items || []).forEach(function (target) {
       const item = (typeof _hauptuiItem === 'function') ? (_hauptuiItem(target) || target) : target;
@@ -57706,33 +57944,45 @@ function _hauptuiKonfrontationAktion(aktion, enemy, item) {
     const name = (enemy && enemy.name) || 'den Gegner';
     try { if (window.__hauptuiKonfrontationState) window.__hauptuiKonfrontationState.moveKey = null; } catch (e) {}
     if (typeof _uiAudit === 'function') _uiAudit('KONFRONTATION', aktion, (item ? item.name + ' -> ' : '') + name);
+    const noFx = { _noDialogFx: true, _konfrontationNoFx: true };
     if (aktion === 'angreifen') {
       _konfrontationClear('angriff');
-      if (!_hauptuiPlanDirekt('angreifen', name, null)) {
-        if (typeof _encounterStartKampf === 'function') _encounterStartKampf(name);
-        _hauptuiChoose({ id: 'KONFRONTATION_ANGRIFF', text: 'Karl geht auf ' + name + ' los. Die Lage kippt in offene Gewalt.', _anzeigeText: 'Greife an - ' + name, kategorie: 'OFFENSIV', _kategorie: 'OFFENSIV', _engine: true });
-      }
+      _hauptuiChoose(Object.assign({ id: 'KONFRONTATION_ANGRIFF', text: 'KONFRONTATION-NARRATION (kein Emoji-Popup, keine Arcade-Anzeige): Karl greift ' + name + ' ohne klaren Hebel an. Erzaehle die Folge als harte, kurze Noir-Szene. Wenn der Gegner stark ist, soll die Gewalt Karl spuerbar etwas kosten; wenn der Gegner schwach ist, darf Karl die Oberhand gewinnen. Keine UI-Worte.', _anzeigeText: 'Greife an - ' + name, kategorie: 'OFFENSIV', _kategorie: 'OFFENSIV', _engine: true }, noFx));
       return;
     }
     if (aktion === 'werfen' || aktion === 'werfen_fuesse' || aktion === 'angreifen_mit') {
-      _konfrontationClear('item-' + aktion);
-      if (!_hauptuiPlanDirekt(aktion, name, item || null)) {
-        _hauptuiChoose({ id: 'KONFRONTATION_ITEM_' + aktion.toUpperCase(), text: 'Karl setzt ' + ((item && item.name) || 'einen Gegenstand') + ' gegen ' + name + ' ein.', _anzeigeText: (item && item.name ? item.name : 'Gegenstand') + ' - ' + name, kategorie: 'OFFENSIV', _kategorie: 'OFFENSIV', _engine: true });
+      const takt = typeof _konfrontationTaktikAktiv === 'function' ? _konfrontationTaktikAktiv(enemy) : null;
+      const plan = (typeof _hauptuiKonfrontationItemPlan === 'function') ? _hauptuiKonfrontationItemPlan(item || {}, aktion, takt) : { score: 0 };
+      const outcome = _konfrontationWuerfleAusgang(enemy, item || {}, aktion, plan, takt);
+      _konfrontationItemVerbrauchen(item, aktion);
+      if (outcome.status) {
+        _konfrontationClear('item-' + aktion + '-' + outcome.art);
+        if (typeof _npcZustandSet === 'function') _npcZustandSet(name, { status: outcome.status, reason: 'hauptui_konfrontation_item', item: (item && item.name) || 'Gegenstand', art: outcome.art });
+        _konfrontationLootHinweis(name, outcome.status);
+      } else {
+        try {
+          if (typeof caseProgress !== 'undefined' && caseProgress && caseProgress.activeConfrontation) {
+            caseProgress.activeConfrontation.lastOutcome = outcome.art;
+            caseProgress.activeConfrontation.lastItem = (item && item.name) || '';
+            if (typeof saveGame === 'function') saveGame();
+          }
+        } catch (e) {}
       }
+      _hauptuiChoose(Object.assign({ id: 'KONFRONTATION_ITEM_' + aktion.toUpperCase(), text: outcome.prompt, _anzeigeText: ((item && item.name) || 'Gegenstand') + ' - ' + name, kategorie: 'OFFENSIV', _kategorie: 'OFFENSIV', _engine: true }, noFx));
       return;
     }
     if (aktion === 'fliehen') {
       _konfrontationClear('flucht');
-      _hauptuiChoose({ id: 'KONFRONTATION_FLUCHT', text: 'Karl nutzt den kleinsten Fehler von ' + name + ', loest sich aus der Enge und bringt Abstand zwischen sich und die Gefahr.', _anzeigeText: 'Ausweichen - ' + name, kategorie: 'FLUCHT', _kategorie: 'FLUCHT', _engine: true });
+      _hauptuiChoose(Object.assign({ id: 'KONFRONTATION_FLUCHT', text: 'Karl nutzt den kleinsten Fehler von ' + name + ', loest sich aus der Enge und bringt Abstand zwischen sich und die Gefahr.', _anzeigeText: 'Ausweichen - ' + name, kategorie: 'FLUCHT', _kategorie: 'FLUCHT', _engine: true }, noFx));
       return;
     }
     if (aktion === 'bluffen') {
       _konfrontationClear('bluff');
-      _hauptuiChoose({ id: 'KONFRONTATION_BLUFF', text: 'Karl tut so, als wuesste er bereits mehr, als in seinem Notizbuch steht. Er gibt ' + name + ' eine Luecke, in die die Person hineinreden kann.', _anzeigeText: 'Bluffe - ' + name, kategorie: 'BEOBACHTEN', _kategorie: 'BEOBACHTEN', _engine: true });
+      _hauptuiChoose(Object.assign({ id: 'KONFRONTATION_BLUFF', text: 'Karl tut so, als wuesste er bereits mehr, als in seinem Notizbuch steht. Er gibt ' + name + ' eine Luecke, in die die Person hineinreden kann.', _anzeigeText: 'Bluffe - ' + name, kategorie: 'BEOBACHTEN', _kategorie: 'BEOBACHTEN', _engine: true }, noFx));
       return;
     }
     _konfrontationClear('deeskalation');
-    _hauptuiChoose({ id: 'KONFRONTATION_DEESKALIEREN', text: 'Karl bleibt ruhig, nimmt die Haende sichtbar weg vom Mantel und zwingt ' + name + ' in ein Gespraech statt in eine Pruegelei.', _anzeigeText: 'Beruhigen - ' + name, kategorie: 'DEFENSIV', _kategorie: 'DEFENSIV', _engine: true });
+    _hauptuiChoose(Object.assign({ id: 'KONFRONTATION_DEESKALIEREN', text: 'Karl bleibt ruhig, nimmt die Haende sichtbar weg vom Mantel und zwingt ' + name + ' in ein Gespraech statt in eine Pruegelei.', _anzeigeText: 'Beruhigen - ' + name, kategorie: 'DEFENSIV', _kategorie: 'DEFENSIV', _engine: true }, noFx));
   } catch (e) {
     if (typeof diag === 'function') diag('drift', 'KONFRONTATION-AKTION-Fehler: ' + (e && e.message ? e.message : e));
   }
@@ -57777,12 +58027,16 @@ function _renderKonfrontationMenu(container, scene) {
         const chip = document.createElement('span');
         chip.className = 'hauptui-threat-chip';
         chip.textContent = txt;
+        chip.title = _konfrontationTagTooltip(txt);
+        chip.setAttribute('aria-label', txt + ': ' + _konfrontationTagTooltip(txt));
         chips.appendChild(chip);
       });
       (takt.riskant || []).slice(0, 2).forEach(function (txt) {
         const chip = document.createElement('span');
         chip.className = 'hauptui-threat-chip bad';
         chip.textContent = 'riskant: ' + txt;
+        chip.title = _konfrontationTagTooltip(txt);
+        chip.setAttribute('aria-label', 'riskant: ' + txt + ': ' + _konfrontationTagTooltip(txt));
         chips.appendChild(chip);
       });
       copyWrap.appendChild(chips);
@@ -57791,10 +58045,10 @@ function _renderKonfrontationMenu(container, scene) {
     root.appendChild(card);
 
     const actionDefs = [
-      { key: 'deeskalieren', label: 'Beruhigen', cls: 'primary' },
-      { key: 'bluffen', label: 'Bluffen', cls: '' },
-      { key: 'angreifen', label: 'Greife an', cls: 'danger' },
-      { key: 'fliehen', label: 'Ausweichen', cls: '' }
+      { key: 'deeskalieren', label: 'Beruhigen', cls: '', tip: 'Deeskaliert die Lage. Besonders nuetzlich, wenn der Gegner auf Status, Dienstmarke oder Kontrolle setzt.' },
+      { key: 'bluffen', label: 'Bluffen', cls: '', tip: 'Karl spielt Wissen vor. Gut, wenn der Gegner Angst vor Akten, Zeugen oder Folgen hat.' },
+      { key: 'angreifen', label: 'Greife an', cls: 'danger', tip: 'Direkte Gewalt. Schnell, aber riskant; Verletzung, Rufverlust und Gegenwehr sind wahrscheinlich.' },
+      { key: 'fliehen', label: 'Ausweichen', cls: '', tip: 'Abstand gewinnen, ohne die Sache sofort zu klaeren. Kann Zeit retten, aber Spuren kosten.' }
     ];
     const itemActions = _hauptuiKonfrontationItems();
     const kState = window.__hauptuiKonfrontationState || (window.__hauptuiKonfrontationState = { moveKey: null });
@@ -57823,10 +58077,12 @@ function _renderKonfrontationMenu(container, scene) {
     actionDefs.forEach(function (act) {
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'hauptui-threat-button ' + act.cls;
+      btn.className = 'hauptui-threat-button' + (act.cls ? ' ' + act.cls : '');
       if (_hauptuiKonfrontationMoveKey(act.key, null) === kState.moveKey) btn.className += ' is-selected';
       if (act.key === 'angreifen' && takt && (takt.riskant || []).length) btn.className += ' is-risky';
       btn.textContent = act.label;
+      btn.title = act.tip || '';
+      btn.setAttribute('aria-label', act.label + (act.tip ? ': ' + act.tip : ''));
       _hauptuiBind(btn, function () { chooseMove(act.key, act.label, null); });
       actions.appendChild(btn);
     });
@@ -57844,7 +58100,10 @@ function _renderKonfrontationMenu(container, scene) {
         btn.type = 'button';
         btn.className = 'hauptui-threat-button item' + ((act.score || 0) >= 4 ? ' is-best' : ((act.score || 0) < 2 ? ' is-risky' : ''));
         if (_hauptuiKonfrontationMoveKey(act.verb, act.item) === kState.moveKey) btn.className += ' is-selected';
-        btn.innerHTML = '<span>' + escapeHtml(act.label) + '</span><span class="mini">' + escapeHtml((act.marker || '') + (act.hint ? ' - ' + act.hint : '')) + '</span>';
+        btn.title = act.tooltip || ((act.marker || '') + (act.hint ? ' - ' + act.hint : ''));
+        btn.setAttribute('aria-label', act.label + (btn.title ? ': ' + btn.title : ''));
+        const wirk = act.wirkung ? (act.wirkung.label + ' · Kraft ' + act.wirkung.kraft + (act.wirkung.irritation ? ' · Irritation +' + act.wirkung.irritation : '') + (act.wirkung.schwaechung ? ' · Schwächung +' + act.wirkung.schwaechung : '')) : '';
+        btn.innerHTML = '<span>' + escapeHtml(act.label) + '</span><span class="mini">' + escapeHtml((act.marker || '') + (wirk ? ' - ' + wirk : (act.hint ? ' - ' + act.hint : ''))) + '</span>';
         _hauptuiBind(btn, function () { chooseMove(act.verb, act.label, act.item); });
         inv.appendChild(btn);
       });
