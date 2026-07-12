@@ -70,6 +70,9 @@ assert(html.includes('_schlafenVorOrt: _schlaeftAlkEin'), 'severe intoxication s
 assert(html.includes('NOTFLUCHT-PROSA korrigiert'), 'contradictory emergency escape prose should be corrected');
 assert(html.includes('const _festnahmeVarianten = ['), 'custody entry should use multiple arrest variants');
 assert(html.includes('const _festnahmeZeit ='), 'custody entry should respect time of day');
+assert(html.includes("else if (romance.canApproach) add('naeher', 'Naeher kommen')"), 'Haupt-UI should expose romance directly beside person actions');
+assert(html.includes("if (verb === 'naeher' || verb === 'nacht')"), 'Haupt-UI should execute romance without opening the NPC submenu');
+assert(html.includes('if (showRomanceButton && !window.HAUPTUI_AKTIV)'), 'legacy romance button must not duplicate the Haupt-UI action');
 
 assert(html.includes('function _nachtHatErreichbareErmittlung()'), 'night guidance should inspect whether evidence is currently reachable');
 assert(html.includes('NACHT OHNE ERREICHBARE SPUR'), 'AI recap should narratively guide Karl toward sleep when the city offers no reachable clue');
@@ -544,8 +547,9 @@ assert(html.includes("{ key: 'items', label: 'Inventar', tag: 'Inventar', target
 assert(html.includes("button.dataset.targetKind = kind;"), 'target buttons must expose semantic kind for styling and audits');
 assert(html.includes('.hauptui-target.type-person') && html.includes('.hauptui-target.type-loot') && html.includes('.hauptui-target.type-item'), 'target roles must render with distinct visual classes');
 assert(!html.includes("if (mode === 'combat' || mode === 'escape'"), 'combat mode must not hide the Haupt-UI while the old arena is disabled');
-assert(/if \(showRomanceButton\)[\s\S]{0,2600}?window\.HAUPTUI_AKTIV && typeof hauptuiQuickActions !== 'undefined'[\s\S]{0,160}?appendChild\(romBtn\)/.test(html), 'romance must render as a compact Haupt-UI quick action');
-assert(/if \(showOvernightButton\)[\s\S]{0,2600}?window\.HAUPTUI_AKTIV && typeof hauptuiQuickActions !== 'undefined'[\s\S]{0,160}?appendChild\(overnightBtn\)/.test(html), 'overnight romance must render as a compact Haupt-UI quick action');
+assert(html.includes("if (showRomanceButton && !window.HAUPTUI_AKTIV)"), 'romance must not render as a duplicate quick action below the Haupt-UI');
+assert(html.includes("if (showOvernightButton && !window.HAUPTUI_AKTIV)"), 'overnight romance must not render as a duplicate quick action below the Haupt-UI');
+assert(html.includes("try { _renderEngineMenu(uebergangBody, scene); }"), 'Haupt-UI must refresh as soon as romance availability is known');
 assert(html.includes('function _fundItemAufnehmenDirekt(it, opts)'), 'loose pickups need a direct one-click acquire path');
 assert(html.includes('function _hauptuiFundTargetMatch(entry, target)'), 'loose pickup matching must compare stable item keys');
 assert(html.includes("key: item.key || item.id || item.name"), 'Haupt-UI pickup targets must preserve the item key');
