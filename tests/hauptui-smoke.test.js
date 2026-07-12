@@ -247,6 +247,10 @@ const context = {
 vm.createContext(context);
 vm.runInContext(html.slice(start, end), context);
 
+const finishedWitness = { id: 'hertha_wessel', name: 'Hertha Wessel', typ: 'person', tag: 'FAMILY', erledigt: true };
+assert.deepStrictEqual(Array.from(context._hauptuiPersonVerben(finishedWitness, {})), [], 'a fully exhausted witness must expose no repeat conversation action');
+assert.strictEqual(context._hauptuiZielHinweis(finishedWitness, 'Person'), 'Ausgesprochen', 'a fully exhausted witness must remain visibly marked as completed');
+
 let acquiredFundItem = null;
 context._fundItemAufnehmenDirekt = (item) => { acquiredFundItem = item; return true; };
 context._ortsFundItems = () => [{ key: 'west_zigaretten', name: 'Schachtel West-Zigaretten', preis: 2 }];
@@ -491,6 +495,9 @@ for (const place of kesslerPlaces) {
 }
 
 assert(html.includes('function _hauptuiItemVerben(target)'), 'inventory must expose contextual Haupt-UI verbs');
+assert(html.includes("if (target.erledigt) return 'Ausgesprochen';"), 'finished conversation targets must show a visible completed state');
+assert(html.includes('if (target && target.erledigt && !bezwungen) return verbs;'), 'finished peaceful conversations must not keep offering Rede mit');
+assert(html.includes("button.disabled = true;\n          button.title = target.name + ' hat bereits alles gesagt, was hier zu erfahren ist.';"), 'finished conversation targets must remain visible but disabled');
 assert(html.includes("if (npcDa && _hauptuiItemTaugt(item, 'anbieten')) add('anbieten', 'Biete an');"), 'offering an item must require a present NPC');
 assert(html.includes('function _hauptuiKarlTrinkt(item)'), 'drinking must create a persistent player state instead of requiring an NPC');
 assert(html.includes("caseProgress.alkohol = danach;"), 'drinking must persist Karl alcohol level');

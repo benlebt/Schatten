@@ -4263,7 +4263,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1214</div>
+    <div class="start-version">Schatten v7.12.1215</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -4505,7 +4505,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1214</span>
+    <span>Schatten v7.12.1215</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -13184,7 +13184,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1214 +Falltreue-Bilder';
+window.SCHATTEN_VERSION = 'v7.12.1215 +Gespraechsabschluss';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -17438,11 +17438,14 @@ function _baukastenZiele() {
       if (!exists) _np.push(Object.assign({}, ident, { id: 'robert_kessler', name: (ident && ident.name) || 'Robert Kessler', _hauptuiForceHint: true }));
     }
     out.personen = _np.filter(n => n && n.name).map(n => {
+      const _schonGesprochen = (typeof _npcWurdeSchonAngesprochen === 'function') && _npcWurdeSchonAngesprochen(n.name, n.id);
+      const _hatNochHinweis = (typeof _npcHatUngefundeneIndizien === 'function') ? _npcHatUngefundeneIndizien(n.name, n.id) : true;
       const target = {
         id: n.id || null, name: n.name, tag: n.tag || '', rolle: n.rolle || '',
         hinweis: n._hauptuiForceHint || ((typeof _npcHatOffenenHinweis === 'function') ? !!_npcHatOffenenHinweis(n.name, n.id) : false),
         hinweisAktionen: n._hauptuiForceHint ? ['Ansprechen', 'Befragen'] : ((typeof _npcOffeneHinweisAktionen === 'function') ? _npcOffeneHinweisAktionen(n.name) : []),
-        typ: 'person'
+        typ: 'person',
+        erledigt: !!(_schonGesprochen && !_hatNochHinweis)
       };
       let _bedarf = null;
       if (typeof _hauptuiKesslerZielBrauchtBeleg === 'function') _bedarf = _hauptuiKesslerZielBrauchtBeleg(target);
@@ -57010,7 +57013,7 @@ function _hauptuiObjektVerben(target) {
 function _hauptuiEmpfohleneAktion(target) {
   if (!target) return null;
   if (target.typ === 'ort') return 'durchsuchen';
-  if (target.typ === 'person') return 'reden';
+  if (target.typ === 'person') return target.erledigt ? null : 'reden';
   if (target.typ === 'item') return 'benutzen';
   if (target.typ === 'objekt') {
     const verbs = _hauptuiObjektVerben(target);
@@ -57021,6 +57024,7 @@ function _hauptuiEmpfohleneAktion(target) {
 
 function _hauptuiZielHinweis(target, fallback) {
   if (!target) return fallback;
+  if (target.erledigt) return 'Ausgesprochen';
   if (target.belegBedarf && target.belegBedarf.label) {
     return target.belegBedarf.label;
   }
@@ -57634,6 +57638,7 @@ function _hauptuiPersonVerben(target, data) {
   };
   const feind = _hauptuiPersonIstFeind(target);
   const bezwungen = _hauptuiNpcBezwungen(target);
+  if (target && target.erledigt && !bezwungen) return verbs;
   if (bezwungen) {
     const z = (target && target.name && typeof _npcZustandGet === 'function') ? _npcZustandGet(target.name) : null;
     const verhoerNpc = _hauptuiVerhoerNpc(target);
@@ -58695,6 +58700,10 @@ function _renderEngineMenu(container, scene) {
           + (key === state.targetKey ? ' is-selected' : '')
           + (target.belegBedarf ? ' needs-proof' : (target.hinweis ? ' has-clue' : ''));
         button.dataset.targetKind = kind;
+        if (target.erledigt) {
+          button.disabled = true;
+          button.title = target.name + ' hat bereits alles gesagt, was hier zu erfahren ist.';
+        }
         const name = document.createElement('span');
         name.className = 'hauptui-target-name';
         name.textContent = target.name + (target.anzahl > 1 ? ' ×' + target.anzahl : '');
@@ -58703,7 +58712,7 @@ function _renderEngineMenu(container, scene) {
         tag.textContent = _hauptuiZielHinweis(target, group.tag);
         button.appendChild(name);
         button.appendChild(tag);
-        _hauptuiBind(button, function () {
+        if (!target.erledigt) _hauptuiBind(button, function () {
           if (typeof _uiAudit === 'function') _uiAudit('ZIEL AUSGEWAEHLT', target.name || key, group.label);
           if (target.belegBedarf) {
             if (typeof showProgressToast === 'function') showProgressToast(target.belegBedarf.toastTitel || 'Beleg fehlt', target.belegBedarf.toastText || 'Karl braucht erst einen unabhängigen Beleg.', 'info', 'hauptui-beleg-fehlt-' + key);
