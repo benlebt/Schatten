@@ -570,4 +570,15 @@ vm.runInContext(html.slice(targetsStart, targetsEnd), targetContext);
 const restoredTargets = targetContext._baukastenZiele();
 assert.strictEqual(restoredTargets.personen.map((person) => person.name).join(','), 'Edith Kessler', 'location-wide map clue must restore Edith even when the exploration subnode returns no NPC');
 
+targetContext._itemsBeiKarl = () => [
+  { id: 'korn_1', name: 'Flasche Nordhäuser Doppelkorn', typ: 'korn' },
+  { id: 'korn_2', name: 'Flasche Nordhäuser Doppelkorn', typ: 'korn' },
+  { id: 'ziegel_1', name: 'Ziegelstein', typ: 'wurfobjekt' },
+];
+const groupedInventory = targetContext._baukastenZiele().items;
+assert.strictEqual(groupedInventory.length, 2, 'identical inventory items must render as one target');
+assert.strictEqual(groupedInventory[0].anzahl, 2, 'grouped inventory target must expose its quantity');
+assert.deepStrictEqual(Array.from(groupedInventory[0].itemIds), ['korn_1', 'korn_2'], 'grouped inventory target must retain all real item ids');
+assert(html.includes("target.name + (target.anzahl > 1 ? ' ×' + target.anzahl : '')"), 'inventory target label must show the grouped quantity');
+
 console.log('HAUPTUI_KESSLER_10_ORTE_OK');

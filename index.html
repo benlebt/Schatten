@@ -4263,7 +4263,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1205</div>
+    <div class="start-version">Schatten v7.12.1206</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -4505,7 +4505,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1205</span>
+    <span>Schatten v7.12.1206</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -13179,7 +13179,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1205 +Nacht-Erzaehlfuehrung';
+window.SCHATTEN_VERSION = 'v7.12.1206 +Inventar-Mengen';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -17461,7 +17461,17 @@ function _baukastenZiele() {
       });
     }
     const _it = (typeof _itemsBeiKarl === 'function') ? (_itemsBeiKarl() || []) : [];
-    out.items = _it.filter(it => it && it.name).map(it => ({ id: it.id, name: it.name, itemTyp: it.typ || it.itemType || '', typ: 'item' }));
+    const _itemGruppen = {};
+    _it.filter(it => it && it.name).forEach(function (it) {
+      const itemTyp = it.typ || it.itemType || '';
+      const key = normForMatch(it.name) + '|' + normForMatch(itemTyp);
+      if (!_itemGruppen[key]) {
+        _itemGruppen[key] = { id: it.id, itemIds: [], name: it.name, itemTyp: itemTyp, typ: 'item', anzahl: 0 };
+      }
+      _itemGruppen[key].itemIds.push(it.id);
+      _itemGruppen[key].anzahl += 1;
+    });
+    out.items = Object.keys(_itemGruppen).map(key => _itemGruppen[key]);
   } catch (e) { if (typeof diag === 'function') diag('drift', 'BAUKASTEN-ZIELE-Fehler: ' + (e && e.message ? e.message : e)); }
   return out;
 }
@@ -17489,7 +17499,8 @@ function _renderBaukastenUI() {
       return [{v:'Benutzen',cost:'frei'},{v:'Geben',cost:'an Person'},{v:'Zeigen',cost:'frei'}]; }
     function tile(t,grp){ var s=(sel&&sel.name===t.name)?'border-color:#c8a84a;background:rgba(200,168,74,.14);box-shadow:inset 3px 0 0 #c8a84a':'';
       var tag=t.hinweis?'<span style="margin-left:auto;font-size:9.5px;color:#1a150b;background:#c8a84a;padding:1px 7px;border-radius:3px">● Hinweis</span>':'<span style="margin-left:auto;font-size:9px;color:#9a8a68">'+(t.typ==='person'?'Person':t.typ==='objekt'?'Spur':'Item')+'</span>';
-      return '<div class="bkt" data-k="'+grp+'" data-n="'+encodeURIComponent(t.name)+'" style="display:flex;align-items:center;gap:9px;background:#15110a;border:1px solid #4d4234;border-radius:5px;padding:7px 10px;cursor:pointer;'+s+'"><span style="font-size:13px;color:#e8e0cc">'+t.name+'</span>'+tag+'</div>'; }
+      var displayName=t.name+(t.anzahl>1?' ×'+t.anzahl:'');
+      return '<div class="bkt" data-k="'+grp+'" data-n="'+encodeURIComponent(t.name)+'" style="display:flex;align-items:center;gap:9px;background:#15110a;border:1px solid #4d4234;border-radius:5px;padding:7px 10px;cursor:pointer;'+s+'"><span style="font-size:13px;color:#e8e0cc">'+displayName+'</span>'+tag+'</div>'; }
     var perH=z.personen.map(function(t){return tile(t,'person');}).join('')||'<div style="color:#6b6150;font-size:11px">niemand hier</div>';
     var objH=z.objekte.map(function(t){return tile(t,'objekt');}).join('')||'<div style="color:#6b6150;font-size:11px">nichts zu untersuchen</div>';
     var itH=z.items.length?z.items.map(function(t){return tile(t,'item');}).join(''):'<div style="color:#6b6150;font-size:11px">nichts dabei</div>';
@@ -58518,7 +58529,7 @@ function _renderEngineMenu(container, scene) {
         button.dataset.targetKind = kind;
         const name = document.createElement('span');
         name.className = 'hauptui-target-name';
-        name.textContent = target.name;
+        name.textContent = target.name + (target.anzahl > 1 ? ' ×' + target.anzahl : '');
         const tag = document.createElement('span');
         tag.className = 'hauptui-target-tag';
         tag.textContent = _hauptuiZielHinweis(target, group.tag);
