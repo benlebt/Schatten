@@ -197,7 +197,7 @@ const start = html.indexOf('window.__hauptuiActionState');
 const end = html.indexOf('</script>', start);
 assert(start > -1 && end > start, 'Haupt-UI source block not found');
 
-const calls = { npc: 0, fund: 0, options: [], marks: 0, flushes: 0, saves: 0 };
+const calls = { npc: 0, fund: 0, options: [], marks: 0, flushes: 0, saves: 0, toasts: [] };
 const clue = { id: 'kessler_brief', text: 'Roberts gefaltetes Briefchen' };
 const voss = { id: 'voss', name: 'Oberkellner Voss', tag: 'WITNESS' };
 let expectedNpcId = voss.id;
@@ -238,7 +238,7 @@ const context = {
   _findeIndizById: (id) => id === clue.id ? clue : null,
   _markiereIndizGefunden: (indiz) => { calls.marks += 1; context.caseProgress.gefundeneIndizIds.push(indiz.id); return true; },
   _flushIndizRewards: () => { calls.flushes += 1; },
-  showProgressToast: () => {},
+  showProgressToast: (...args) => calls.toasts.push(args),
   zeigeMiniAuswahl: () => {},
   npcInteraktion: () => {},
   _itemKatalogEintrag: () => null,
@@ -531,6 +531,16 @@ assert(byText(container, 'Trinke'), 'Korn in an empty office must remain drinkab
 assert(!byText(container, 'Biete an'), 'Korn in an empty office must not be offered to nobody');
 assert(!byText(container, 'Benutze'), 'Korn must not expose a context-free generic use');
 assert(!byText(container, 'Schau an'), 'ordinary inventory must not expose redundant inspection');
+let consumedKorn = null;
+context._itemMove = (id, change) => { consumedKorn = { id, change }; return true; };
+context.caseProgress.alkohol = 0;
+calls.options.length = 0;
+calls.toasts.length = 0;
+context._hauptuiExecute('trinken', korn);
+assert.strictEqual(context.caseProgress.alkohol, 2, 'executing Trinke must raise Karl alcohol state');
+assert(consumedKorn && consumedKorn.id === korn.id && consumedKorn.change.status === 'verbraucht', 'executing Trinke must consume the selected bottle');
+assert.strictEqual(calls.options[calls.options.length - 1].id, 'HAUPTUI_ITEM_TRINKEN', 'executing Trinke must request the drinking scene');
+assert(!calls.toasts.some((toast) => toast[0] === 'Kein Gegenueber'), 'executing Trinke must never require or offer to another person');
 calls.plan = [];
 calls.planExecuted = 0;
 const hostile = { id: 'mantelmann', name: 'Mann im grauen Mantel', tag: 'STASI', rolle: 'Agent', typ: 'person' };
