@@ -630,6 +630,11 @@ assert.strictEqual(groupedInventory[0].anzahl, 2, 'grouped inventory target must
 assert.deepStrictEqual(Array.from(groupedInventory[0].itemIds), ['korn_1', 'korn_2'], 'grouped inventory target must retain all real item ids');
 assert(html.includes("target.name + (target.anzahl > 1 ? ' ×' + target.anzahl : '')"), 'inventory target label must show the grouped quantity');
 assert(html.includes('function _hauptuiAngreifbarePersonen()'), 'items must be usable against an engine-marked suspect or target, not only generic enemies');
+assert(!html.includes("wohnung:      ['korn', 'ziegelstein'"), 'apartments must not repeat the old fixed Korn-and-brick loot');
+assert(html.includes("const pool = ['sahnetorte', 'nudelholz', 'teekanne', 'toaster', 'korn'];"), 'apartments need a varied household-item pool');
+assert(html.includes('caseProgress.ortsFundPoolVerwendet'), 'apartment loot choices must avoid repetition within a case');
+assert(html.includes("sahnetorte:      { name: 'Kleine Sahnetorte im Pappkarton'"), 'cake must be a real usable inventory item');
+assert(html.includes("hinterhof:    [{ key: 'alter_fisch'"), 'rotten fish must be discoverable in plausible outdoor rubbish locations');
 assert(html.includes('klientIstAmWohnort = klientEntry.homePresence !== false;'), 'clients explicitly absent from their family home must leave the cast after travel');
 assert(html.includes("add('uebergeben_vp', 'Der Polizei übergeben')"), 'secured hostile or corrupt actors need a police handover action');
 assert(html.includes("if (!z || z.status !== 'gefesselt') add('fesseln', 'Fessle');\n    if (feind && z"), 'secured opponents must move from restraint directly to useful follow-up actions');

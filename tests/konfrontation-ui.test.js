@@ -4,7 +4,7 @@ const path = require('path');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 
-assert(html.includes('Schatten v7.12.1215'), 'version badge should be bumped');
+assert(html.includes('Schatten v7.12.1216'), 'version badge should be bumped');
 assert(html.includes('KONFRONTATION_TAG_TOOLTIPS'), 'missing confrontation tooltip registry');
 assert(html.includes('function _konfrontationWuerfleAusgang'), 'missing randomized confrontation outcome helper');
 assert(html.includes("const alkoholMalus = Math.min(3, Math.max(0, Number(caseProgress && caseProgress.alkohol) || 0));"), 'alcohol must reduce confrontation reliability');
@@ -46,6 +46,8 @@ assert(html.includes('Leere Haende'), 'bare-handed attacks need an explicit risk
 assert(html.includes('Kaffee-Staub'), 'coffee needs distinct mild effect copy');
 assert(html.includes('Glas und Korn'), 'Doppelkorn needs distinct stronger effect copy');
 assert(html.includes('AEG-Wucht'), 'toaster needs heavy effect copy');
+assert(html.includes('Sahne und Klebrigkeit'), 'cake needs a distinct blinding distraction effect');
+assert(html.includes('Schwere Haushaltswucht'), 'household weapons need a distinct heavy effect');
 assert(html.includes('Irritation +'), 'item cards should expose irritation strength');
 assert(html.includes('Schwächung +'), 'item cards should expose weakening strength');
 assert(html.includes('Gegnerstaerke'), 'outcome prompt should include enemy strength');
