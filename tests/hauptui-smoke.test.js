@@ -580,5 +580,10 @@ assert.strictEqual(groupedInventory.length, 2, 'identical inventory items must r
 assert.strictEqual(groupedInventory[0].anzahl, 2, 'grouped inventory target must expose its quantity');
 assert.deepStrictEqual(Array.from(groupedInventory[0].itemIds), ['korn_1', 'korn_2'], 'grouped inventory target must retain all real item ids');
 assert(html.includes("target.name + (target.anzahl > 1 ? ' ×' + target.anzahl : '')"), 'inventory target label must show the grouped quantity');
+assert(html.includes('function _hauptuiAngreifbarePersonen()'), 'items must be usable against an engine-marked suspect or target, not only generic enemies');
+assert(html.includes("add('uebergeben_vp', 'Der Polizei übergeben')"), 'secured hostile or corrupt actors need a police handover action');
+assert(html.includes("if (!z || z.status !== 'gefesselt') add('fesseln', 'Fessle');\n    if (feind && z"), 'secured opponents must move from restraint directly to useful follow-up actions');
+assert(html.includes('UEBERMUEDUNGS-FAHRTABBRUCH'), 'hard fatigue must stop unsafe driving in engine state');
+assert(html.includes('Vor dem KI-Request wuerfeln'), 'travel threats must exist before arrival prose is requested');
 
 console.log('HAUPTUI_KESSLER_10_ORTE_OK');

@@ -4263,7 +4263,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1206</div>
+    <div class="start-version">Schatten v7.12.1207</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -4505,7 +4505,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1206</span>
+    <span>Schatten v7.12.1207</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -13179,7 +13179,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1206 +Inventar-Mengen';
+window.SCHATTEN_VERSION = 'v7.12.1207 +Taktische-Kontinuitaet';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -27351,13 +27351,8 @@ function advanceGameTime() {
       window._muedVfMalusBei = _mued;
       verfassung -= 1;
       diag('detect', 'ÜBERMÜDUNGS-MALUS: Müdigkeit ' + _mued + ' >= 26 -> Verfassung -1 (jetzt ' + verfassung + ') - kein Auto-Schlaf');
-      if (typeof showProgressToast === 'function') { try { showProgressToast('Am Limit', 'Die Übermüdung zehrt an Karls Substanz - Verfassung sinkt. Er braucht dringend Schlaf.', 'warn', 'muede-malus-' + _mued); } catch (e) {} }
     } else {
       diag('detect', 'ÜBERMÜDUNGS-WARNUNG: Müdigkeit ' + _mued + ' - Karl ist am Limit, schläft aber NUR per Button (kein Zwangsschlaf mehr seit v707)');
-      if (typeof showProgressToast === 'function') {
-        const _canShow = (typeof canShowToast !== 'function') || canShowToast('warn', 'einschlaf-warnung');
-        if (_canShow) showProgressToast('Übermüdet', 'Karl ist am Ende seiner Kräfte - Schlafen ist dringend empfohlen.', 'warn', 'einschlaf-warnung');
-      }
     }
   } else if (_mued >= 12 && !pendingSleepChoice && lastSpannung <= 3) {
     const nightStages = (_mued >= 16 && lastSpannung <= 2) ? 'HARD' : 'SOFT';
@@ -27372,20 +27367,7 @@ function advanceGameTime() {
       }
       diag('detect', 'NACHT-MUEDIGKEIT-PUSH: ' + scenesInCurrentTime + ' Szenen in NACHT (Sp ' + lastSpannung + '<=3)');
     }
-    // v7.12.67: SICHTBARER Muedigkeits-Toast (User-Befund: bisher gab es nur eine
-    // KI-Anweisung + Log, aber NIE einen Toast - der Spieler sah nie einen Hinweis,
-    // dass er schlafen sollte). info-Variante, triggerKey gibt 1x/Tag-Cooldown.
-    if (typeof showProgressToast === 'function') {
-      const _muedeTitel = (nightStages === 'HARD') ? 'Karl ist am Limit' : 'Müde Knochen';
-      const _muedeText = (nightStages === 'HARD')
-        ? 'Du musst dringend einen Schlafplatz suchen.'
-        : 'Eine lange Nacht. Zeit, an Schlaf zu denken.';
-      const _canShow = (typeof canShowToast !== 'function') || canShowToast('info', 'muede-nacht');
-      if (_canShow) showProgressToast(_muedeTitel, _muedeText, 'info', 'muede-nacht');
-      // v7.12.112: Müdigkeits-Signal fuer den Bot setzen. Das Toast-Logging selbst passiert
-      // jetzt zentral in showProgressToast (v7.12.113, loggt JEDEN Toast).
-      karlMuedeSignalScene = (typeof sceneCounter === 'number') ? sceneCounter : -99;
-    }
+    karlMuedeSignalScene = (typeof sceneCounter === 'number') ? sceneCounter : -99;
   } else if (_langeActionNacht) {
     // Lange Action-Nacht: deutlicher Hinweis, aber KEIN Zwang (Karl kann mitten in der Konfrontation
     // nicht einfach schlafen). Wir erinnern den Spieler nur klar, dass die Nacht extrem lang wird.
@@ -30221,6 +30203,29 @@ function reiseZuOrt(loc) {
     if (typeof diag === 'function') diag('state', 'REISE blockiert: Ort geschlossen - ' + (loc.name || '?') + ' / ' + tz);
     return;
   }
+  // Am harten Muedigkeitslimit ist eine sichere Fahrt nicht mehr moeglich. Die Engine setzt den
+  // tatsaechlichen Ort auf den Opel am Strassenrand und nutzt den regulaeren Schlaf-/Tageswechselpfad.
+  try {
+    const _muedFahrt = (caseProgress && typeof caseProgress.muedigkeit === 'number') ? caseProgress.muedigkeit : 0;
+    if (_muedFahrt >= 22 && !karlInStasiCustody && typeof chooseOption === 'function') {
+      const _vorherFahrt = engineCurrentLocation ? engineCurrentLocation.name : '';
+      schliesseReiseMenue();
+      engineCurrentLocation = { name: 'Karls Opel Olympia', sektor: 'Mobil', transient: true, vorherOrt: _vorherFahrt };
+      _reiseGeradeErfolgt = { name: 'Karls Opel Olympia', sektor: 'Mobil', detail: 'Am Strassenrand. Karl musste die Fahrt wegen Uebermuedung abbrechen.' };
+      _aktuelleAktionIstReise = true;
+      _threatLetzterWuerfelOrt = '';
+      _threatAktiveSpawns = [];
+      if (caseProgress) caseProgress.activeConfrontation = null;
+      if (typeof diag === 'function') diag('state', 'UEBERMUEDUNGS-FAHRTABBRUCH: Ziel "' + (loc.name || '?') + '" nicht erreicht, Karl schlaeft im Opel am Strassenrand');
+      chooseOption({
+        id: 'UEBERMUEDUNG_FAHRSTopp',
+        text: 'Karl versucht mit dem Opel nach ' + (loc.name || 'weiter') + ' zu fahren, reagiert wegen extremer Uebermuedung zu spaet und muss am Strassenrand anhalten. Er schlaeft im Wagen ein und wacht dort am naechsten Morgen auf.',
+        kategorie: 'SCHLAFEN', _kategorie: 'SCHLAFEN', _priority: 100,
+        _isSystemButton: true, _istReise: true, _schlafenVorOrt: true
+      });
+      return;
+    }
+  } catch (e) {}
   // v7.12.516: Popup SOFORT schließen (vor allem anderen), damit ein versehentlicher Zweit-Tap nicht
   // ein zweites Mal feuert. Zusätzlich greift der chooseOptionInFlight-Lock in chooseOption.
   schliesseReiseMenue();
@@ -30264,8 +30269,10 @@ function reiseZuOrt(loc) {
     try { if (caseProgress) { caseProgress.explorationPos = null; caseProgress.aufmerksamkeit = 0; caseProgress._explorationBetreten = false; } } catch (e) {}
     _reiseGeradeErfolgt = { name: loc.name, sektor: loc.sektor || '', detail: loc.detail || '' };
     _aktuelleAktionIstReise = true; // v7.12.527: für mechCtx (kein Indiz-Zwang bei Reise)
-    _threatLetzterWuerfelOrt = ''; _threatAktiveSpawns = []; // v7.12.532: am Zielort frisch würfeln (beim Szene-Commit)
+    _threatLetzterWuerfelOrt = ''; _threatAktiveSpawns = [];
     try { if (caseProgress) caseProgress.activeConfrontation = null; } catch (e) {}
+    // Vor dem KI-Request wuerfeln, damit ein auftauchender Gegner bereits in der Ankunftsprosa vorkommt.
+    try { if (typeof maybeResolveThreatSpawn === 'function') maybeResolveThreatSpawn(); } catch (e) {}
     if (typeof diag === 'function') diag('state', 'REISE (Engine besitzt Ort, löst Szene aus): "' + vorher + '" -> "' + loc.name + '"');
     try { if (typeof fxTravel === 'function') fxTravel(loc.name); } catch (e) {} // v7.12.690: Opel-Animation während die Szene lädt
     if (typeof saveGameState === 'function') { try { saveGameState(); } catch (e) {} }
@@ -33418,7 +33425,7 @@ function renderOptions(scene) {
       if (dwTouchHandled) { dwTouchHandled = false; return; }
       chooseOption(dwOpt);
     });
-    (typeof topActions !== 'undefined' ? topActions : list).appendChild(dwBtn);
+    (window.HAUPTUI_AKTIV && typeof hauptuiQuickActions !== 'undefined' ? hauptuiQuickActions : (typeof topActions !== 'undefined' ? topActions : list)).appendChild(dwBtn);
   }
 
   // v7.12.559 (Benjamin): UNTERWEGS-HEILEN durch Doc Wagner/Marlene IN DER PARTY (ortsunabhängig). Anders als die
@@ -33487,7 +33494,7 @@ function renderOptions(scene) {
     mlBtn.addEventListener('click', () => {
       if (mlTouchHandled) { mlTouchHandled = false; return; } chooseOption(mlOpt);
     });
-    (typeof topActions !== 'undefined' ? topActions : list).appendChild(mlBtn);
+    (window.HAUPTUI_AKTIV && typeof hauptuiQuickActions !== 'undefined' ? hauptuiQuickActions : (typeof topActions !== 'undefined' ? topActions : list)).appendChild(mlBtn);
   }
 
   // v7.11.12: FLUCHT-Button - Sp>=3 + nicht in Custody
@@ -37561,6 +37568,12 @@ Wenn Karl waehlt: Schnitt zur naechsten Szene am Morgen, Kaffee zu zweit, keine 
     recalcGameCurrentDate();
     const dateLong = formatGameDate(gameCurrentDate); // "Dienstag, 10. November 1953"
     let timeContext = `KONTEXT: Es ist ${dateLong}, ${currentTime} (Spieltag TAG ${gameDay}). Lichtstimmung: ${LICHT_HINWEIS[currentTime]}. WICHTIG: Die Lichtbeschreibung MUSS zur Tageszeit passen. KEINE Tageszeit-Drift innerhalb einer Aktionssequenz - wenn die letzte Szene "Morgensonne" hatte und nur Minuten vergangen sind, darf die naechste Szene nicht "Mondlicht" oder "Nachmittagshitze" haben.${(currentTime === 'NACHT') ? ' Aktuell ist NACHT: schreibe NICHT "Morgen", "Oktobermorgen", "Morgensonne", "Vormittag", "Mittagslicht" oder "Nachmittag" - sondern "Nacht", "im Dunkeln", "die nasse Oktobernacht", "Mondlicht", "Laternenlicht". AUSNAHME: ein klar markierter Tageswechsel ("Als der Morgen graut...") nach einer Schlaf-/Nachtruhe-Szene ist erlaubt.' : ''} DAS DATUM IST HISTORISCH ECHT: alle politischen Anspielungen, Wetter-Erwaehnungen und Tag-spezifische Details muessen zu diesem konkreten Datum 1953 passen (z.B. nach Stalin-Tod 5. Maerz 1953, nach 17. Juni 1953 Aufstand, Lebensmittelmarken im Osten, etc.).`;
+    try {
+      const _muedPrompt = (caseProgress && typeof caseProgress.muedigkeit === 'number') ? caseProgress.muedigkeit : 0;
+      if (_muedPrompt >= 16) {
+        timeContext += '\n\n=== UEBERMUEDUNG ALS WELTZUSTAND (PFLICHT) ===\nKarl ist seit ' + _muedPrompt + ' Szenen ohne Schlaf. Zeige das in der Prosa statt in einem Hinweisfenster: brennende Augen, verspaetete Reaktionen, unsichere Handgriffe und Gedankenluecken. Falls Karl faehrt oder jemanden im Opel verfolgt, ist er NICHT mehr verlaesslich fahrtuechtig: Spurhalten, Bremsen und Reaktion werden sichtbar schlechter. Er kann keine makellose Verfolgungsjagd fahren. Ab dem harten Limit stoppt die Engine die Fahrt und laesst ihn im Opel am Strassenrand einschlafen; widersprich diesem Zustand nicht.';
+      }
+    } catch (e) {}
 
     // v7.12.383 (historische Erweiterung): DATE-GATING. Manche echten Orte/Institutionen
     // existierten erst ab einem bestimmten Datum 1953. Wenn das Spieldatum DAVOR liegt, sind
@@ -45064,11 +45077,9 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
           if (typeof diag === 'function') diag('state', '😴 MÜDIGKEIT zurückgesetzt (geschlafen)');
         } else {
           caseProgress.muedigkeit++;
-          if (caseProgress.muedigkeit === 12 && typeof showProgressToast === 'function') { try { showProgressToast('Müde', 'Karls Augen brennen, die Hand wird unruhig. Eine Mütze Schlaf täte gut.', 'caution', 'muede-warn'); } catch (e) {} }
           if (caseProgress.muedigkeit >= 16 && typeof verfassung === 'number' && verfassung > 2 && (caseProgress.muedigkeit % 3 === 0)) {
             verfassung = Math.max(2, verfassung - 1);
             if (typeof diag === 'function') diag('state', '😴 MÜDIGKEIT senkt Verfassung auf ' + verfassung + ' (Müdigkeit ' + caseProgress.muedigkeit + ')');
-            if (typeof showProgressToast === 'function') { try { showProgressToast('Übermüdet', 'Die durchwachte Nacht zehrt an Karl - er reagiert langsamer. Verfassung sinkt.', 'warn', 'muede-vf'); } catch (e) {} }
           }
         }
       }
@@ -57313,7 +57324,7 @@ function _konfrontationOutcomePrompt(enemy, item, verb, plan, outcome) {
       : (art === 'treffer'
         ? 'Karl reisst einen klaren Vorteil heraus; der Gegner verliert kurz Orientierung.'
         : 'Die Aktion geht schief oder reicht nicht; der Gegner behaelt Druck und wird gefaehrlicher.');
-    return 'KONFRONTATION-NARRATION (kein Emoji-Popup, keine Arcade-Anzeige): Schreibe eine kompakte, filmische Noir-Szene in 5-8 Saetzen. Karl setzt "' + itemName + '" gegen ' + name + ' ein. Wirkung des Gegenstands: ' + wirkung.label + ' (Kraft ' + wirkung.kraft + ', Irritation +' + wirkung.irritation + ', Schwaechung +' + (wirkung.schwaechung || 0) + '). Gegnerstaerke: ' + outcome.staerke + '. Zufallsausgang: ' + art + '. ' + ziel + ' Erzaehle konkret, koerperlich und mit leichter absurder/slapstickhafter Ueberzeichnung, wenn es passt. Kaffee darf nur kurz irritieren; Doppelkorn darf mit Glas, Scherben und brennender Fluessigkeit deutlich haerter wirken; ein Toaster kann schwache Gegner umhauen, an harten Gegnern aber auch furchtbar zurueckkommen. Keine UI-Worte, keine Auswahloptionen, kein Questlog.';
+    return 'KONFRONTATION-NARRATION (kein Emoji-Popup, keine Arcade-Anzeige): Schreibe eine kompakte, filmische Noir-Szene in 5-8 Saetzen. Karl setzt "' + itemName + '" gegen ' + name + ' ein. Wirkung des Gegenstands: ' + wirkung.label + ' (Kraft ' + wirkung.kraft + ', Irritation +' + wirkung.irritation + ', Schwaechung +' + (wirkung.schwaechung || 0) + '). Gegnerstaerke: ' + outcome.staerke + '. Zufallsausgang: ' + art + '. ' + ziel + ' Erzaehle konkret und koerperlich. Kaffee darf nur kurz irritieren; Doppelkorn darf mit Glas, Scherben und brennender Fluessigkeit deutlich haerter wirken; ein Toaster kann schwache Gegner umhauen, an harten Gegnern aber auch furchtbar zurueckkommen. TAKTISCHE KONTROLLE (ABSOLUT): Erzaehle NUR die gewaehlte Aktion und ihre unmittelbare Wirkung. Karl bleibt danach am aktuellen Ort. KEIN Weglaufen, keine Flucht, kein Opel, kein Losfahren, keine Verfolgungsjagd, kein automatisches Fesseln, Verhoeren, Durchsuchen oder Uebergeben. Die naechste Entscheidung gehoert dem Spieler. Nur eine ausdruecklich gewaehlte FLUCHT-Aktion darf den Ort verlassen. Keine UI-Worte, keine Auswahloptionen, kein Questlog.';
   } catch (e) {
     return 'Karl setzt einen Gegenstand in der Konfrontation ein. Erzaehle die Folge als kompakte Noir-Szene ohne UI-Worte.';
   }
@@ -57433,10 +57444,25 @@ function _hauptuiFreieFeinde() {
   } catch (e) { return []; }
 }
 
+function _hauptuiAngreifbarePersonen() {
+  try {
+    const npcs = (typeof getNpcsAtCurrentLocation === 'function') ? (getNpcsAtCurrentLocation() || []) : [];
+    return npcs.filter(function (npc) {
+      if (!npc || !npc.name || _hauptuiNpcBezwungen(npc)) return false;
+      if (_hauptuiPersonIstFeind(npc)) return true;
+      const tag = String(npc.tag || '').toUpperCase();
+      return ['TARGET', 'SUSPECT', 'GANGSTER', 'STASI', 'MYSTERY'].indexOf(tag) !== -1;
+    });
+  } catch (e) { return []; }
+}
+
 function _hauptuiErstesNpcZiel(preferFeind) {
   try {
     const feinde = _hauptuiFreieFeinde();
-    if (preferFeind && feinde.length) return feinde[0];
+    if (preferFeind) {
+      const angreifbar = _hauptuiAngreifbarePersonen();
+      return feinde[0] || angreifbar[0] || null;
+    }
     const npcs = (typeof getNpcsAtCurrentLocation === 'function') ? (getNpcsAtCurrentLocation() || []) : [];
     const friedlich = npcs.find(function (npc) { return npc && npc.name && !_hauptuiPersonIstFeind(npc); });
     return friedlich || feinde[0] || null;
@@ -57486,7 +57512,7 @@ function _hauptuiPersonVerben(target, data) {
     if (verhoerNpc && (!z || ['gefesselt', 'fixiert', 'benommen'].indexOf(z.status) !== -1)) add('reden', 'Rede mit');
     add('durchsuchen_npc', 'Durchsuche');
     if (!z || z.status !== 'gefesselt') add('fesseln', 'Fessle');
-    add('anschauen', 'Schau an');
+    if (feind && z && ['gefesselt', 'fixiert', 'ko'].indexOf(z.status) !== -1) add('uebergeben_vp', 'Der Polizei übergeben');
     return verbs;
   }
   add('reden', 'Rede mit');
@@ -57504,7 +57530,7 @@ function _hauptuiItemVerben(target) {
   const add = function (key, label) {
     if (!verbs.some(function (verb) { return verb.key === key; })) verbs.push({ key: key, label: label });
   };
-  const feinde = _hauptuiFreieFeinde();
+  const feinde = _hauptuiAngreifbarePersonen();
   if (_hauptuiItemTaugt(item, 'trinken')) add('trinken', 'Trinke');
   if (_hauptuiItemTaugt(item, 'anbieten')) add('anbieten', 'Biete an');
   if (feinde.length && _hauptuiItemTaugt(item, 'werfen')) add('werfen', 'Wirf');
@@ -57702,6 +57728,12 @@ function _hauptuiExecute(verb, target) {
       if (!_hauptuiPlanDirekt('durchsuchen_npc', npc.name, null)) {
         _hauptuiChoose({ id: 'HAUPTUI_NPC_DURCHSUCHEN', text: 'Karl durchsucht ' + npc.name + ' nach Papieren, Schluesseln oder versteckten Gegenstaenden.', _anzeigeText: 'Durchsuche - ' + npc.name, kategorie: 'ERKUNDEN', _kategorie: 'ERKUNDEN', _engine: true, _npcName: npc.name });
       }
+      return;
+    }
+    if (verb === 'uebergeben_vp' && _hauptuiPersonIstFeind(npc)) {
+      if (typeof _npcZustandSet === 'function') _npcZustandSet(npc.name, { status: 'uebergeben', reason: 'hauptui_vp_uebergabe' });
+      try { if (typeof _konfrontationClear === 'function') _konfrontationClear('vp-uebergabe'); } catch (e) {}
+      _hauptuiChoose({ id: 'HAUPTUI_VP_UEBERGABE', text: 'Karl uebergibt ' + npc.name + ' mit den gesicherten Umstaenden an die fuer diesen Berliner Sektor zustaendige Polizei. Die Person wird abgeholt und vom Ort weggebracht.', _anzeigeText: 'Der Polizei übergeben - ' + npc.name, kategorie: 'DEFENSIV', _kategorie: 'DEFENSIV', _engine: true, _npcName: npc.name });
       return;
     }
   }
@@ -58048,10 +58080,12 @@ function _hauptuiKonfrontationItems() {
     const takt = typeof _konfrontationTaktikAktiv === 'function' ? _konfrontationTaktikAktiv(enemy) : null;
     function add(item, verb, label) {
       const plan = (typeof _hauptuiKonfrontationItemPlan === 'function') ? _hauptuiKonfrontationItemPlan(item, verb, takt) : { score: 0, marker: '', hint: '' };
-      out.push({ verb: verb, label: label + item.name, item: item, score: plan.score || 0, marker: plan.marker || '', hint: plan.hint || '', tags: plan.tags || [], wirkung: plan.wirkung || null, tooltip: plan.tooltip || '' });
+      const menge = item.anzahl > 1 ? ' ×' + item.anzahl : '';
+      out.push({ verb: verb, label: label + item.name + menge, item: item, score: plan.score || 0, marker: plan.marker || '', hint: plan.hint || '', tags: plan.tags || [], wirkung: plan.wirkung || null, tooltip: plan.tooltip || '' });
     }
     (data.items || []).forEach(function (target) {
-      const item = (typeof _hauptuiItem === 'function') ? (_hauptuiItem(target) || target) : target;
+      const echt = (typeof _hauptuiItem === 'function') ? _hauptuiItem(target) : null;
+      const item = echt ? Object.assign({}, echt, { anzahl: target.anzahl || 1, itemIds: target.itemIds || [echt.id] }) : target;
       if (!item || !item.name) return;
       if (typeof _hauptuiItemTaugt === 'function' && _hauptuiItemTaugt(item, 'werfen')) add(item, 'werfen', 'Wirf ');
       if (typeof _hauptuiItemTaugt === 'function' && _hauptuiItemTaugt(item, 'werfen_fuesse')) add(item, 'werfen_fuesse', 'Lenk ab mit ');
@@ -58144,7 +58178,7 @@ function _hauptuiKonfrontationAktion(aktion, enemy, item) {
       const takt = typeof _konfrontationTaktikAktiv === 'function' ? _konfrontationTaktikAktiv(enemy) : null;
       const plan = _konfrontationUnbewaffnetPlan();
       const outcome = _konfrontationWuerfleAusgang(enemy, { name: 'leere Haende' }, 'angreifen', plan, takt);
-      outcome.prompt = 'KONFRONTATION-NARRATION (kein Emoji-Popup, keine Arcade-Anzeige): Schreibe eine kompakte, filmische Noir-Szene in 5-8 Saetzen. Karl greift ' + name + ' mit leeren Haenden an. Wirkung: kaum Hebel, hohe Eigengefahr. Gegnerstaerke: ' + outcome.staerke + '. Zufallsausgang: ' + outcome.art + '. Wenn der Angriff misslingt, bleibt die Konfrontation spuerbar offen und gefaehrlich; wenn er gelingt, gewinnt Karl kurz die Oberhand. Keine UI-Worte, keine Auswahloptionen, kein Questlog.';
+      outcome.prompt = 'KONFRONTATION-NARRATION (kein Emoji-Popup, keine Arcade-Anzeige): Schreibe eine kompakte, filmische Noir-Szene in 5-8 Saetzen. Karl greift ' + name + ' mit leeren Haenden an. Wirkung: kaum Hebel, hohe Eigengefahr. Gegnerstaerke: ' + outcome.staerke + '. Zufallsausgang: ' + outcome.art + '. Wenn der Angriff misslingt, bleibt die Konfrontation spuerbar offen und gefaehrlich; wenn er gelingt, gewinnt Karl kurz die Oberhand. Erzaehle NUR Angriff und unmittelbare Wirkung. Karl und ' + name + ' bleiben am aktuellen Ort. KEINE Flucht, kein Opel, kein Ortswechsel und keine automatische Folgehandlung. Die naechste taktische Entscheidung trifft der Spieler. Keine UI-Worte, keine Auswahloptionen, kein Questlog.';
       _hauptuiKonfrontationChooseNarration(Object.assign({ id: 'KONFRONTATION_ANGRIFF', text: outcome.prompt, _anzeigeText: 'Greife an - ' + name, kategorie: 'OFFENSIV', _kategorie: 'OFFENSIV', _engine: true }, noFx), function () {
         if (outcome.status) _hauptuiKonfrontationAbschliessen(enemy, name, outcome.status, 'angriff-' + outcome.art, { name: 'leere Haende' }, outcome);
         else _hauptuiKonfrontationLetztenAusgangSpeichern(enemy, { name: 'leere Haende' }, outcome);

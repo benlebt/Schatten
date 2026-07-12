@@ -4,10 +4,12 @@ const path = require('path');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 
-assert(html.includes('Schatten v7.12.1206'), 'version badge should be bumped');
+assert(html.includes('Schatten v7.12.1207'), 'version badge should be bumped');
 assert(html.includes('KONFRONTATION_TAG_TOOLTIPS'), 'missing confrontation tooltip registry');
 assert(html.includes('function _konfrontationWuerfleAusgang'), 'missing randomized confrontation outcome helper');
 assert(html.includes('KONFRONTATION-NARRATION'), 'confrontation actions must route into narrative scene prose');
+assert(html.includes('Die naechste Entscheidung gehoert dem Spieler'), 'item confrontation prose must not invent a flight or follow-up action');
+assert(html.includes("const menge = item.anzahl > 1 ? ' ×' + item.anzahl : ''"), 'confrontation inventory must group duplicate item quantities');
 assert(html.includes('_konfrontationNoFx: true'), 'confrontation narrative choices must suppress old combat/dialog FX');
 assert(html.includes('_noDialogFx: true'), 'confrontation narrative choices must suppress dialog FX');
 assert(html.includes('const _skipNarrativeFx'), 'chooseOption must honor the narrative FX skip flag');
