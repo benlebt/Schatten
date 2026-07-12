@@ -114,6 +114,13 @@ assert(html.includes('Sichtbare UI-Zustaende ('), 'debug export must include off
 assert(html.includes("_uiAudit('FADEN', faden.frage, faden.ort)"), 'open investigation threads must be logged when clicked');
 assert(html.includes('&& !_ortHatJetztErreichbareSpur && !_offenerFadenHier;'), 'an open thread at the current location must suppress the exhausted-location banner');
 assert(html.includes('function _hauptuiHatOffenenFadenAmOrt(ortName)'), 'Haupt-UI needs a shared current-location thread check');
+assert(html.includes('function _renderCustodyMenu(container)'), 'custody must retain deterministic Haupt-UI actions');
+assert(html.includes("if (mode === 'custody')"), 'custody must render its menu instead of hiding every main action');
+assert(html.includes('caseProgress.getrennteBegleiter = getrennt;'), 'custody must separate companions from Karl instead of teleporting them into his cell');
+assert(html.includes('GEWAHRSAM trennt Begleiter'), 'custody companion separation needs diagnostics');
+assert(html.includes("if (/lilo brenner/i.test(npcName || '')) return 1;"), 'Lilo must require a small exchange before joining a dangerous trip');
+assert(!html.includes("showProgressToast('Lange Nacht'"), 'fatigue guidance must stay in scene prose instead of a separate sleep toast');
+assert(html.includes('ZUSAMMENGEBROCHEN - FALL OFFEN'), 'zero-health ending must state clearly that the case remains unsolved');
 assert(html.includes("showProgressToast('Gleich bereit'"), 'execute must explain transient API locks instead of silently doing nothing');
 assert(html.includes("showProgressToast('Nicht erreichbar'"), 'execute must explain stale person targets instead of silently doing nothing');
 assert(html.includes('function _hauptuiNarrativerFadenPrompt(ortName, scenesHere)'), 'open threads must feed the narrative prompt compass');

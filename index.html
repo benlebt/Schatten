@@ -4263,7 +4263,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1217</div>
+    <div class="start-version">Schatten v7.12.1218</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -4505,7 +4505,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1217</span>
+    <span>Schatten v7.12.1218</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -13184,7 +13184,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1217 +Sinnvolle-Itemaktionen';
+window.SCHATTEN_VERSION = 'v7.12.1218 +Begleiterkontinuitaet';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -17075,6 +17075,7 @@ function _zeigeTauschZahlung(preis, titel, untertitel, onPaid, empfaenger) {
 function _npcMitnahmePreis(npcName, npcTag) {
   try {
     const tag = (npcTag || '').toUpperCase();
+    if (/lilo brenner/i.test(npcName || '')) return 1; // Fluchthelferin: riskante Begleitung kostet eine Gegenleistung
     if (/CLIENT|SCHUTZ|VERBUENDETER|FAMILY|ROMANCE/.test(tag)) return 0;
     let _rolle = '';
     try {
@@ -19282,6 +19283,27 @@ function setCustodyState(newState, source, opts) {
   const resetStreak = (opts.resetStreak !== undefined) ? opts.resetStreak : true;
   const resetScenesSince = (opts.resetScenesSince !== undefined) ? opts.resetScenesSince : !newState;
   karlInStasiCustody = newState;
+  // Eine Festnahme nimmt nur Karl in Gewahrsam. Begleiter duerfen nicht ohne
+  // Erzaehlung in seiner Zelle weiterreisen oder dort als Gespraechsziel stehen.
+  if (!wasState && newState) {
+    try {
+      const getrennt = Array.isArray(_party) ? _party.slice() : [];
+      const rexGetrennt = !!(caseProgress && caseProgress.hundInParty);
+      if (caseProgress && (getrennt.length || rexGetrennt)) {
+        caseProgress.getrennteBegleiter = getrennt;
+        caseProgress.rexBeiFestnahmeGetrennt = rexGetrennt;
+        caseProgress.begleiterTrennungGrund = source || 'gewahrsam';
+      }
+      if (Array.isArray(_party)) _party = [];
+      if (caseProgress && rexGetrennt) caseProgress.hundInParty = false;
+      if ((getrennt.length || rexGetrennt) && typeof diag === 'function') {
+        diag('state', 'GEWAHRSAM trennt Begleiter: ' + getrennt.map(function (p) { return p.name; }).concat(rexGetrennt ? ['Rex'] : []).join(', '));
+      }
+      if ((getrennt.length || rexGetrennt) && Array.isArray(pendingCategoryMessages)) {
+        pendingCategoryMessages.push('BEGLEITER BEI FESTNAHME GETRENNT (WELTWAHRHEIT): ' + getrennt.map(function (p) { return p.name; }).concat(rexGetrennt ? ['Rex'] : []).join(', ') + ' ist NICHT mit Karl in der Zelle. Erzaehle die Trennung beim Zugriff oder erwaehne glaubwuerdig, dass Karl nicht weiss, wohin der Begleiter gebracht wurde. Keine Begleiterdialoge im Gewahrsam.');
+      }
+    } catch (e) {}
+  }
   if (resetFolter && typeof folterSceneCount !== 'undefined') folterSceneCount = 0;
   if (resetStreak && typeof stasiHighTensionStreak !== 'undefined') stasiHighTensionStreak = 0;
   if (resetScenesSince && typeof stasiCustodyScenesSince !== 'undefined') stasiCustodyScenesSince = 0;
@@ -22564,7 +22586,7 @@ function showGameOver() {
   const _go = _goPool[(typeof sceneCounter === 'number' ? sceneCounter : 0) % _goPool.length];
   const gameOver = document.getElementById('game-over');
   if (gameOver) {
-    gameOver.innerHTML = '<div class="game-over-title">KNAPP \u00dcBERLEBT</div>'
+    gameOver.innerHTML = '<div class="game-over-title">ZUSAMMENGEBROCHEN - FALL OFFEN</div>'
       + '<div class="game-over-subtitle">' + _go + (_ueberlebenInfo ? '<br><br>' + _ueberlebenInfo : '') + '</div>'
       + '<button class="btn-primary" onclick="resetGame(true)">Neuer Fall, neues Gl\u00fcck</button>';
     gameOver.classList.remove('hidden');
@@ -27415,11 +27437,9 @@ function advanceGameTime() {
       pendingCategoryMessages.push('LANGE NACHT (Hinweis, kein Zwang): Karl ist seit ' + scenesInCurrentTime + ' Szenen ohne Schlaf in der Nacht unterwegs - das zehrt sichtbar. Wenn die aktuelle Anspannung es zulaesst, lass die Erschoepfung durchscheinen (brennende Augen, Zittern, der Gedanke "ich muss bald raus hier und schlafen"). Wenn gerade eine ruhigere Gelegenheit entsteht, biete eine SCHLAFEN-Option an. KEIN Zwang mitten in Action - nur ein spuerbarer werdender Druck zur Rast.');
     }
     diag('detect', 'LANGE-ACTION-NACHT-HINWEIS: ' + scenesInCurrentTime + ' Szenen NACHT bei Sp ' + lastSpannung + ' (Hinweis ohne Zwang)');
-    if (typeof showProgressToast === 'function') {
-      const _canShow = (typeof canShowToast !== 'function') || canShowToast('info', 'muede-nacht');
-      if (_canShow) showProgressToast('Lange Nacht', 'Karl ist erschöpft. Sobald es ruhiger wird, sollte er schlafen.', 'info', 'muede-nacht');
-      karlMuedeSignalScene = (typeof sceneCounter === 'number') ? sceneCounter : -99;
-    }
+    // Kein separater Schlaf-Toast: Der bereits gesetzte KI-Hinweis traegt die
+    // Erschoepfung in die naechste Prosa, wo sie zur Geschichte gehoert.
+    karlMuedeSignalScene = (typeof sceneCounter === 'number') ? sceneCounter : -99;
   }
 
   // HARD-Override bei extrem langen Marathons (Action-Streak).
@@ -50709,7 +50729,9 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         engineCurrentLocation = { name: 'MfS-Untersuchungshaftanstalt Hohenschoenhausen', sektor: 'Ost (Hohenschoenhausen)' };
       } catch (e) {}
       try {
-        scene.szene = 'Es geht schneller, als du reagieren kannst. Zwei Maenner in Lodenmaenteln treten aus dem Schatten, einer presst dir den Lauf einer Makarow in die Rippen. \u00ab Mitkommen. Kein Wort. \u00bb Die Walther wird dir aus dem Mantel gezogen, Handschellen schnappen zu, kalt um die Gelenke. Man drueckt dich auf den Ruecksitz eines schwarzen EMW 340, links und rechts ein Mann, die Gesichter ausdruckslos. Die Fahrt geht schweigend durch die Nacht nach Lichtenberg. Stahltor, Scheinwerfer, ein Hof. In der Genslerstrasse nehmen sie dir Geld, Notizbuch und Schluessel ab, druecken dir graue Haeftlingskleidung in die Hand und stossen dich in eine fensterlose Zelle. Die Pritsche ist hart, die Gluehbirne brennt ohne Unterlass. Schritte im Flur, das Klappern einer Zellentuer. Du bist in der Hand der Staatssicherheit.';
+        const _getrennt = (caseProgress && Array.isArray(caseProgress.getrennteBegleiter)) ? caseProgress.getrennteBegleiter.map(function (p) { return p.name; }).filter(Boolean) : [];
+        const _trennung = _getrennt.length ? (' ' + _getrennt.join(' und ') + ' wird im Zugriff von dir getrennt; du siehst nicht, wohin man ' + (_getrennt.length > 1 ? 'sie' : 'die Person') + ' bringt.') : '';
+        scene.szene = 'Es geht schneller, als du reagieren kannst. Zwei Maenner in Lodenmaenteln treten aus dem Schatten, einer presst dir den Lauf einer Makarow in die Rippen.' + _trennung + ' \u00ab Mitkommen. Kein Wort. \u00bb Die Walther wird dir aus dem Mantel gezogen, Handschellen schnappen zu, kalt um die Gelenke. Man drueckt dich auf den Ruecksitz eines schwarzen EMW 340, links und rechts ein Mann, die Gesichter ausdruckslos. Die Fahrt geht schweigend durch die Nacht nach Lichtenberg. Stahltor, Scheinwerfer, ein Hof. In der Genslerstrasse nehmen sie dir Geld, Notizbuch und Schluessel ab, druecken dir graue Haeftlingskleidung in die Hand und stossen dich in eine fensterlose Zelle. Die Pritsche ist hart, die Gluehbirne brennt ohne Unterlass. Schritte im Flur, das Klappern einer Zellentuer. Du bist in der Hand der Staatssicherheit.';
         scene.ort = 'MfS-Untersuchungshaftanstalt Hohenschoenhausen, Zelle 14';
         scene.gewahrsam = true;
         scene.optionen = [
@@ -58382,7 +58404,28 @@ function _konfrontationUnbewaffnetPlan() {
   };
 }
 
-function _hauptuiKonfrontationAktion(aktion, enemy, item) {
+function _konfrontationBegleiterAktionen() {
+  try {
+    const mitglieder = Array.isArray(_party) ? _party.filter(function (p) { return p && p.name; }) : [];
+    const out = [];
+    mitglieder.forEach(function (p) {
+      out.push({ key: normForMatch(p.name) + ':ablenken', name: p.name, art: 'ablenken', label: p.name + ': Ablenken', bonus: 2, prompt: p.name + ' bindet mit einem gezielten Zuruf oder einer Finte die Aufmerksamkeit des Gegners.' });
+      out.push({ key: normForMatch(p.name) + ':festhalten', name: p.name, art: 'festhalten', label: p.name + ': Festhalten', bonus: 2, prompt: p.name + ' greift im richtigen Moment ein und versucht den Gegner kurz festzuhalten.' });
+      out.push({ key: normForMatch(p.name) + ':deckung', name: p.name, art: 'deckung', label: p.name + ': Deckung geben', bonus: 1, prompt: p.name + ' deckt Karl und haelt dem Gegner einen Ausweg oder Gegenangriff zu.' });
+    });
+    if (typeof _hundInParty === 'function' && _hundInParty()) {
+      out.push({ key: 'rex:fixieren', name: 'Rex', art: 'fixieren', label: 'Rex: Fixieren', bonus: 3, prompt: 'Rex springt knurrend in den Weg und fixiert den Gegner, ohne ihn aus eigenem Antrieb schwer zu verletzen.' });
+      out.push({ key: 'rex:ablenken', name: 'Rex', art: 'ablenken', label: 'Rex: Ablenken', bonus: 2, prompt: 'Rex bellt scharf und zwingt den Gegner, den Blick von Karl zu nehmen.' });
+    }
+    return out;
+  } catch (e) { return []; }
+}
+
+function _konfrontationAssistText(assist) {
+  return assist ? (' TEAMAKTION (PFLICHT): ' + assist.prompt + ' Karl und ' + assist.name + ' handeln zeitlich abgestimmt; beide muessen in der Prosa konkret vorkommen. Die Hilfe gibt Karl einen taktischen Bonus von +' + assist.bonus + '.') : '';
+}
+
+function _hauptuiKonfrontationAktion(aktion, enemy, item, assist) {
   try {
     if (typeof chooseOptionInFlight !== 'undefined' && chooseOptionInFlight) {
       if (typeof showProgressToast === 'function') showProgressToast('Gleich bereit', 'Karl ist noch mitten in der letzten Handlung.', 'info', 'konfrontation-lock');
@@ -58395,8 +58438,9 @@ function _hauptuiKonfrontationAktion(aktion, enemy, item) {
     if (aktion === 'angreifen') {
       const takt = typeof _konfrontationTaktikAktiv === 'function' ? _konfrontationTaktikAktiv(enemy) : null;
       const plan = _konfrontationUnbewaffnetPlan();
+      if (assist) plan.score = (plan.score || 0) + (assist.bonus || 0);
       const outcome = _konfrontationWuerfleAusgang(enemy, { name: 'leere Haende' }, 'angreifen', plan, takt);
-      outcome.prompt = 'KONFRONTATION-NARRATION (kein Emoji-Popup, keine Arcade-Anzeige): Schreibe eine kompakte, filmische Noir-Szene in 5-8 Saetzen. Karl greift ' + name + ' mit leeren Haenden an. Wirkung: kaum Hebel, hohe Eigengefahr. Gegnerstaerke: ' + outcome.staerke + '. Zufallsausgang: ' + outcome.art + '. Wenn der Angriff misslingt, bleibt die Konfrontation spuerbar offen und gefaehrlich; wenn er gelingt, gewinnt Karl kurz die Oberhand. Erzaehle NUR Angriff und unmittelbare Wirkung. Karl und ' + name + ' bleiben am aktuellen Ort. KEINE Flucht, kein Opel, kein Ortswechsel und keine automatische Folgehandlung. Die naechste taktische Entscheidung trifft der Spieler. Keine UI-Worte, keine Auswahloptionen, kein Questlog.';
+      outcome.prompt = 'KONFRONTATION-NARRATION (kein Emoji-Popup, keine Arcade-Anzeige): Schreibe eine kompakte, filmische Noir-Szene in 5-8 Saetzen. Karl greift ' + name + ' mit leeren Haenden an. Wirkung: kaum Hebel, hohe Eigengefahr. Gegnerstaerke: ' + outcome.staerke + '. Zufallsausgang: ' + outcome.art + '.' + _konfrontationAssistText(assist) + ' Wenn der Angriff misslingt, bleibt die Konfrontation spuerbar offen und gefaehrlich; wenn er gelingt, gewinnt Karl kurz die Oberhand. Erzaehle NUR Angriff und unmittelbare Wirkung. Karl und ' + name + ' bleiben am aktuellen Ort. KEINE Flucht, kein Opel, kein Ortswechsel und keine automatische Folgehandlung. Die naechste taktische Entscheidung trifft der Spieler. Keine UI-Worte, keine Auswahloptionen, kein Questlog.';
       _hauptuiKonfrontationChooseNarration(Object.assign({ id: 'KONFRONTATION_ANGRIFF', text: outcome.prompt, _anzeigeText: 'Greife an - ' + name, kategorie: 'OFFENSIV', _kategorie: 'OFFENSIV', _engine: true }, noFx), function () {
         if (outcome.status) _hauptuiKonfrontationAbschliessen(enemy, name, outcome.status, 'angriff-' + outcome.art, { name: 'leere Haende' }, outcome);
         else _hauptuiKonfrontationLetztenAusgangSpeichern(enemy, { name: 'leere Haende' }, outcome);
@@ -58406,7 +58450,9 @@ function _hauptuiKonfrontationAktion(aktion, enemy, item) {
     if (aktion === 'werfen' || aktion === 'werfen_fuesse' || aktion === 'angreifen_mit') {
       const takt = typeof _konfrontationTaktikAktiv === 'function' ? _konfrontationTaktikAktiv(enemy) : null;
       const plan = (typeof _hauptuiKonfrontationItemPlan === 'function') ? _hauptuiKonfrontationItemPlan(item || {}, aktion, takt) : { score: 0 };
+      if (assist) plan.score = (plan.score || 0) + (assist.bonus || 0);
       const outcome = _konfrontationWuerfleAusgang(enemy, item || {}, aktion, plan, takt);
+      outcome.prompt += _konfrontationAssistText(assist);
       _hauptuiKonfrontationChooseNarration(Object.assign({ id: 'KONFRONTATION_ITEM_' + aktion.toUpperCase(), text: outcome.prompt, _anzeigeText: ((item && item.name) || 'Gegenstand') + ' - ' + name, kategorie: 'OFFENSIV', _kategorie: 'OFFENSIV', _engine: true }, noFx), function () {
         _konfrontationItemVerbrauchen(item, aktion);
         if (outcome.status) _hauptuiKonfrontationAbschliessen(enemy, name, outcome.status, 'item-' + aktion + '-' + outcome.art, item, outcome);
@@ -58415,18 +58461,18 @@ function _hauptuiKonfrontationAktion(aktion, enemy, item) {
       return;
     }
     if (aktion === 'fliehen') {
-      _hauptuiKonfrontationChooseNarration(Object.assign({ id: 'KONFRONTATION_FLUCHT', text: 'KONFRONTATION-NARRATION (kein Emoji-Popup, keine Arcade-Anzeige): Karl nutzt den kleinsten Fehler von ' + name + ', loest sich aus der Enge und bringt Abstand zwischen sich und die Gefahr. Erzaehle die Flucht knapp, koerperlich und ohne UI-Worte.', _anzeigeText: 'Ausweichen - ' + name, kategorie: 'FLUCHT', _kategorie: 'FLUCHT', _engine: true }, noFx), function () {
+      _hauptuiKonfrontationChooseNarration(Object.assign({ id: 'KONFRONTATION_FLUCHT', text: 'KONFRONTATION-NARRATION (kein Emoji-Popup, keine Arcade-Anzeige): Karl nutzt den kleinsten Fehler von ' + name + ', loest sich aus der Enge und bringt Abstand zwischen sich und die Gefahr.' + _konfrontationAssistText(assist) + ' Erzaehle die Flucht knapp, koerperlich und ohne UI-Worte.', _anzeigeText: 'Ausweichen - ' + name, kategorie: 'FLUCHT', _kategorie: 'FLUCHT', _engine: true }, noFx), function () {
         _hauptuiKonfrontationAbschliessen(enemy, name, '', 'flucht', null, null);
       });
       return;
     }
     if (aktion === 'bluffen') {
-      _hauptuiKonfrontationChooseNarration(Object.assign({ id: 'KONFRONTATION_BLUFF', text: 'KONFRONTATION-NARRATION (kein Emoji-Popup, keine Arcade-Anzeige): Karl tut so, als wuesste er bereits mehr, als in seinem Notizbuch steht. Er gibt ' + name + ' eine Luecke, in die die Person hineinreden kann. Erzaehle, ob der Bluff Druck herausnimmt oder die Lage gefaehrlicher macht. Keine UI-Worte.', _anzeigeText: 'Bluffe - ' + name, kategorie: 'BEOBACHTEN', _kategorie: 'BEOBACHTEN', _engine: true }, noFx), function () {
+      _hauptuiKonfrontationChooseNarration(Object.assign({ id: 'KONFRONTATION_BLUFF', text: 'KONFRONTATION-NARRATION (kein Emoji-Popup, keine Arcade-Anzeige): Karl tut so, als wuesste er bereits mehr, als in seinem Notizbuch steht. Er gibt ' + name + ' eine Luecke, in die die Person hineinreden kann.' + _konfrontationAssistText(assist) + ' Erzaehle, ob der Bluff Druck herausnimmt oder die Lage gefaehrlicher macht. Keine UI-Worte.', _anzeigeText: 'Bluffe - ' + name, kategorie: 'BEOBACHTEN', _kategorie: 'BEOBACHTEN', _engine: true }, noFx), function () {
         _hauptuiKonfrontationAbschliessen(enemy, name, '', 'bluff', null, null);
       });
       return;
     }
-    _hauptuiKonfrontationChooseNarration(Object.assign({ id: 'KONFRONTATION_DEESKALIEREN', text: 'KONFRONTATION-NARRATION (kein Emoji-Popup, keine Arcade-Anzeige): Karl bleibt ruhig, nimmt die Haende sichtbar weg vom Mantel und zwingt ' + name + ' in ein Gespraech statt in eine Pruegelei. Erzaehle eine kurze Noir-Szene, in der die Spannung sichtbar sinkt oder nur knapp gehalten wird. Keine UI-Worte.', _anzeigeText: 'Beruhigen - ' + name, kategorie: 'DEFENSIV', _kategorie: 'DEFENSIV', _engine: true }, noFx), function () {
+    _hauptuiKonfrontationChooseNarration(Object.assign({ id: 'KONFRONTATION_DEESKALIEREN', text: 'KONFRONTATION-NARRATION (kein Emoji-Popup, keine Arcade-Anzeige): Karl bleibt ruhig, nimmt die Haende sichtbar weg vom Mantel und zwingt ' + name + ' in ein Gespraech statt in eine Pruegelei.' + _konfrontationAssistText(assist) + ' Erzaehle eine kurze Noir-Szene, in der die Spannung sichtbar sinkt oder nur knapp gehalten wird. Keine UI-Worte.', _anzeigeText: 'Beruhigen - ' + name, kategorie: 'DEFENSIV', _kategorie: 'DEFENSIV', _engine: true }, noFx), function () {
       _hauptuiKonfrontationAbschliessen(enemy, name, '', 'deeskalation', null, null);
     });
   } catch (e) {
@@ -58497,7 +58543,8 @@ function _renderKonfrontationMenu(container, scene) {
       { key: 'fliehen', label: 'Ausweichen', cls: '', tip: 'Abstand gewinnen, ohne die Sache sofort zu klaeren. Kann Zeit retten, aber Spuren kosten.' }
     ];
     const itemActions = _hauptuiKonfrontationItems();
-    const kState = window.__hauptuiKonfrontationState || (window.__hauptuiKonfrontationState = { moveKey: null });
+    const companionActions = _konfrontationBegleiterAktionen();
+    const kState = window.__hauptuiKonfrontationState || (window.__hauptuiKonfrontationState = { moveKey: null, assistKey: null });
     let selectedMove = null;
     const findMove = function () {
       for (let i = 0; i < actionDefs.length; i++) {
@@ -58512,6 +58559,8 @@ function _renderKonfrontationMenu(container, scene) {
     };
     selectedMove = findMove();
     if (!selectedMove) kState.moveKey = null;
+    const selectedAssist = companionActions.find(function (act) { return act.key === kState.assistKey; }) || null;
+    if (!selectedAssist) kState.assistKey = null;
     const chooseMove = function (aktion, label, item) {
       kState.moveKey = _hauptuiKonfrontationMoveKey(aktion, item || null);
       if (typeof _uiAudit === 'function') _uiAudit('KONFRONTATION AUSGEWAEHLT', label, (item && item.name) || enemy.name);
@@ -58561,11 +58610,34 @@ function _renderKonfrontationMenu(container, scene) {
       root.appendChild(empty);
     }
 
-    if (selectedMove) {
+    if (companionActions.length) {
+      const assistLabel = document.createElement('div');
+      assistLabel.className = 'hauptui-column-label';
+      assistLabel.textContent = 'Begleiteraktion';
+      root.appendChild(assistLabel);
+      const assistGrid = document.createElement('div');
+      assistGrid.className = 'hauptui-threat-inventory hauptui-companion-actions';
+      companionActions.forEach(function (act) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'hauptui-threat-button item' + (act.key === kState.assistKey ? ' is-selected' : '');
+        btn.textContent = act.label;
+        btn.title = act.prompt + ' Taktischer Bonus +' + act.bonus + '.';
+        _hauptuiBind(btn, function () {
+          kState.assistKey = kState.assistKey === act.key ? null : act.key;
+          if (typeof _uiAudit === 'function') _uiAudit('BEGLEITERAKTION AUSGEWAEHLT', act.label, enemy.name);
+          _renderEngineMenu(container, scene);
+        });
+        assistGrid.appendChild(btn);
+      });
+      root.appendChild(assistGrid);
+    }
+
+    if (selectedMove && (!companionActions.length || selectedAssist)) {
       const execute = document.createElement('button');
       execute.type = 'button';
       execute.className = 'hauptui-execute';
-      execute.textContent = 'Ausführen: ' + selectedMove.label + ' · ' + enemy.name;
+      execute.textContent = 'Ausführen: ' + selectedMove.label + (selectedAssist ? ' + ' + selectedAssist.label : '') + ' · ' + enemy.name;
       _hauptuiBind(execute, function () {
         if (typeof chooseOptionInFlight !== 'undefined' && chooseOptionInFlight) {
           if (typeof showProgressToast === 'function') showProgressToast('Gleich bereit', 'Karl ist noch mitten in der letzten Handlung.', 'info', 'konfrontation-ausfuehren-gesperrt');
@@ -58573,8 +58645,9 @@ function _renderKonfrontationMenu(container, scene) {
         }
         if (typeof _uiAudit === 'function') _uiAudit('AUSFUEHREN-KONFRONTATION', selectedMove.label, (selectedMove.item && selectedMove.item.name ? selectedMove.item.name + ' -> ' : '') + enemy.name);
         kState.moveKey = null;
+        kState.assistKey = null;
         _renderEngineMenu(container, scene);
-        _hauptuiKonfrontationAktion(selectedMove.aktion, enemy, selectedMove.item || null);
+        _hauptuiKonfrontationAktion(selectedMove.aktion, enemy, selectedMove.item || null, selectedAssist);
       });
       const executeRow = document.createElement('div');
       executeRow.className = 'hauptui-execute-row';
@@ -58591,6 +58664,38 @@ function _renderKonfrontationMenu(container, scene) {
   } catch (e) { if (typeof diag === 'function') diag('drift', 'KONFRONTATION-MENU-Fehler: ' + (e && e.message ? e.message : e)); }
 }
 
+function _renderCustodyMenu(container) {
+  try {
+    const root = document.createElement('section');
+    root.className = 'hauptui-action-menu hauptui-custody';
+    root.setAttribute('aria-label', 'Handlungen im Gewahrsam');
+    const label = document.createElement('div');
+    label.className = 'hauptui-column-label';
+    label.textContent = 'Im Gewahrsam';
+    root.appendChild(label);
+    const actions = [
+      { id: 'SCHWEIGEN', label: 'Schweige', kat: 'DEFENSIV', text: 'Karl schweigt im Verhoer eisern. Er beobachtet den Vernehmer, den Raum und jede Reaktion, ohne freiwillig etwas preiszugeben.' },
+      { id: 'HALBWAHRHEIT', label: 'Gib Halbwahrheiten', kat: 'BEOBACHTEN', text: 'Karl gibt sich kooperativ, liefert aber nur harmlose Halbwahrheiten. Er versucht Zeit zu gewinnen und eine Luecke im Verhoer zu erkennen.' },
+      { id: 'PROTOKOLL', label: 'Verlange ein Protokoll', kat: 'OFFENSIV', text: 'Karl verlangt Namen, Dienstgrad und ein ordentliches Vernehmungsprotokoll. Er weiss, dass ihn das MfS nicht freilassen muss, zwingt den Vernehmer aber zu einer sichtbaren Reaktion.' },
+      { id: 'LAUSCHEN', label: 'Lausche am Gang', kat: 'ERKUNDEN', text: 'Karl lauscht an Tuer und Heizungsrohren nach Schritten, Wachwechseln, Stimmen und einem brauchbaren Fluchtfenster. Er bleibt in Gewahrsam.' }
+    ];
+    const grid = document.createElement('div');
+    grid.className = 'hauptui-threat-actions';
+    actions.forEach(function (act) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'hauptui-threat-button';
+      btn.textContent = act.label;
+      _hauptuiBind(btn, function () {
+        _hauptuiChoose({ id: 'HAUPTUI_CUSTODY_' + act.id, text: act.text + ' Erzaehle die unmittelbare Reaktion konkret. Karl bleibt in Gewahrsam; keine automatische Freilassung oder Flucht.', _anzeigeText: act.label, kategorie: act.kat, _kategorie: act.kat, _engine: true, _noDialogFx: true });
+      });
+      grid.appendChild(btn);
+    });
+    root.appendChild(grid);
+    container.appendChild(root);
+  } catch (e) { if (typeof diag === 'function') diag('drift', 'CUSTODY-MENU-Fehler: ' + (e && e.message ? e.message : e)); }
+}
+
 function _renderEngineMenu(container, scene) {
   try {
     if (!container) return;
@@ -58601,7 +58706,12 @@ function _renderEngineMenu(container, scene) {
     // Deshalb darf "locked" das Menue nicht unterdruecken. Klicks bleiben durch _hauptuiExecute/chooseOption
     // geschuetzt, aber die fertige Szene besitzt sofort ihre Aktionen statt dauerhaft leer zu bleiben.
     const outerLabel = (typeof document.getElementById === 'function') ? document.getElementById('options-label') : null;
-    if (mode === 'escape' || mode === 'custody' || mode === 'resolution' || mode === 'conversation') {
+    if (mode === 'custody') {
+      if (outerLabel && outerLabel.classList) outerLabel.classList.add('hauptui-label-hidden');
+      _renderCustodyMenu(container);
+      return;
+    }
+    if (mode === 'escape' || mode === 'resolution' || mode === 'conversation') {
       if (outerLabel && outerLabel.classList) outerLabel.classList.remove('hauptui-label-hidden');
       return;
     }

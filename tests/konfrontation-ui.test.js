@@ -4,7 +4,7 @@ const path = require('path');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 
-assert(html.includes('Schatten v7.12.1217'), 'version badge should be bumped');
+assert(html.includes('Schatten v7.12.1218'), 'version badge should be bumped');
 assert(html.includes('KONFRONTATION_TAG_TOOLTIPS'), 'missing confrontation tooltip registry');
 assert(html.includes('function _konfrontationWuerfleAusgang'), 'missing randomized confrontation outcome helper');
 assert(html.includes("const alkoholMalus = Math.min(3, Math.max(0, Number(caseProgress && caseProgress.alkohol) || 0));"), 'alcohol must reduce confrontation reliability');
@@ -23,7 +23,7 @@ assert(html.includes('function _hauptuiKonfrontationChooseNarration'), 'confront
 assert(html.includes('window.__hauptuiKonfrontationState'), 'confrontation moves need the same select-then-execute buffer as normal actions');
 assert(html.includes('chooseMove(act.key, act.label, null)'), 'base confrontation actions must select first, not execute immediately');
 assert(html.includes('chooseMove(act.verb, act.label, act.item)'), 'item confrontation actions must select first, not execute immediately');
-assert(html.includes('_hauptuiKonfrontationAktion(selectedMove.aktion, enemy, selectedMove.item || null)'), 'execute button must be the only confrontation action handoff');
+assert(html.includes('_hauptuiKonfrontationAktion(selectedMove.aktion, enemy, selectedMove.item || null, selectedAssist)'), 'execute button must be the only confrontation action handoff');
 assert(!html.includes('_hauptuiKonfrontationAktion(act.key'), 'base confrontation buttons must not execute directly');
 assert(!html.includes('_hauptuiKonfrontationAktion(act.verb'), 'item confrontation buttons must not execute directly');
 
@@ -42,6 +42,12 @@ assert(actionBody.includes('_hauptuiKonfrontationAbschliessen'), 'defeated enemi
 assert(html.includes('_konfrontationLootHinweis'), 'defeated enemies should become explicitly searchable');
 assert(actionBody.includes("id: 'KONFRONTATION_ITEM_'"), 'item actions must create a narrative engine scene');
 assert(html.includes('Leere Haende'), 'bare-handed attacks need an explicit risky fallback plan');
+assert(html.includes('function _konfrontationBegleiterAktionen()'), 'active companions need actions in the current confrontation UI');
+assert(html.includes("assistLabel.textContent = 'Begleiteraktion';"), 'companion moves need a distinct confrontation section');
+assert(html.includes("kState.assistKey = kState.assistKey === act.key ? null : act.key;"), 'companion moves must use select-then-execute interaction');
+assert(html.includes('_hauptuiKonfrontationAktion(selectedMove.aktion, enemy, selectedMove.item || null, selectedAssist)'), 'Karl and companion moves must execute as one tactical command');
+assert(html.includes('TEAMAKTION (PFLICHT)'), 'combined moves must force both actors into narrative prose');
+assert(html.includes("label: 'Rex: Fixieren'"), 'Rex must be transferable into the current confrontation UI');
 
 assert(html.includes('Kaffee-Staub'), 'coffee needs distinct mild effect copy');
 assert(html.includes('Glas und Korn'), 'Doppelkorn needs distinct stronger effect copy');
