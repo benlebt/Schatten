@@ -60,6 +60,9 @@ function byText(root, text) {
 }
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+
+assert(html.includes('function _nachtHatErreichbareErmittlung()'), 'night guidance should inspect whether evidence is currently reachable');
+assert(html.includes('NACHT OHNE ERREICHBARE SPUR'), 'AI recap should narratively guide Karl toward sleep when the city offers no reachable clue');
 assert(html.includes("return localStorage.getItem('hauptui') !== '0'; // Default: neue Haupt-UI"), 'Haupt-UI must be the default without ?hauptui=1');
 assert(html.includes("abc=(1|on|true)") && html.includes("localStorage.setItem('hauptui', '0')"), 'old A/B/C/D UI must remain available only as an explicit backup switch');
 assert(html.includes("window.HAUPTUI_AKTIV && window.__hauptuiExplicitParam"), 'Haupt-UI activation toast must not appear on normal default starts');

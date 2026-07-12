@@ -4263,7 +4263,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1204</div>
+    <div class="start-version">Schatten v7.12.1205</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -4505,7 +4505,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1204</span>
+    <span>Schatten v7.12.1205</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -11985,6 +11985,26 @@ function istOrtGeoeffnet(loc) {
   } catch (e) {}
   return loc.oeffnungszeit.map(z => normForMatch(z)).includes(tz);
 }
+// Meldet, ob die strukturierte Indizienkette zur aktuellen Uhrzeit noch echte Ermittlungsarbeit anbietet.
+// Globale Versorgungsorte zaehlen nicht als Alibi-Ziele; eine dort liegende Fallspur dagegen schon.
+function _nachtHatErreichbareErmittlung() {
+  try {
+    if (_aktTageszeitName() !== 'nacht') return true;
+    if (typeof caseHasDefinedEvidence !== 'function' || !caseHasDefinedEvidence()) return true;
+    const locs = (typeof getCaseLocations === 'function') ? getCaseLocations() : [];
+    for (const loc of locs) {
+      if (!loc || (typeof istReisbarerOrt === 'function' && !istReisbarerOrt(loc))) continue;
+      if (Array.isArray(unlockedLocations) && !unlockedLocations.includes(normForMatch(loc.name || ''))) continue;
+      if (!istOrtGeoeffnet(loc)) continue;
+      const erreichbar = (typeof offeneIndizienAmOrtNachErreichbarkeit === 'function')
+        ? offeneIndizienAmOrtNachErreichbarkeit(loc) : { jetzt: 0 };
+      if ((erreichbar.jetzt || 0) > 0) return true;
+    }
+    return false;
+  } catch (e) {
+    return true;
+  }
+}
 // v7.12.1015 (KERN-UMBAU Baustein 1): DIRIGENT. Bestimmt das EINE nächste Ziel, auf das die vier A/B/C/D-Optionen
 // hinführen sollen - aus Indizienkette, Karls Zustand und der Taktung (Anti-Festfressen). Engine setzt das WOHIN,
 // die KI gestaltet daraus vier Wege unterschiedlicher Härte. Reine Lese-Logik (kein State-Wechsel).
@@ -13159,7 +13179,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1204 +Zeitfenster-Verhoer-Tausch';
+window.SCHATTEN_VERSION = 'v7.12.1205 +Nacht-Erzaehlfuehrung';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -36857,7 +36877,12 @@ KEINE anderen Themen mehr - kein neuer Tatort, keine neuen Verdaechtigen, keine 
     // schlafen" - der Spieler entscheidet arcade-maessig selbst. Abends/nachts bei
     // niedriger Spannung wird EINE Schlaf-Option angeboten (nicht aufgedraengt).
     if (isAbendOderNacht && isLowTension) {
-      recap += `\n\nNACHT-OPTION (${currentTime}): Es ist Abend/Nacht und die Lage ist ruhig. EINE der 4 Optionen DARF ein Tageswechsel sein (zurueck zum Hackeschen Markt und ins Bett, oder ein anderer plausibler Schlafplatz wenn jemand in der Naehe ist), mit dem Wort "schlafen" oder "Bett" oder "die Nacht verbringen". Kein Zwang - du kannst es anbieten oder auch nicht, je nachdem was dramaturgisch passt. Die anderen Optionen bleiben aktive Ermittlungsschritte.` + formalHint;
+      const _nachtOhneSpur = currentTime === 'nacht' && typeof _nachtHatErreichbareErmittlung === 'function' && !_nachtHatErreichbareErmittlung();
+      if (_nachtOhneSpur) {
+        recap += `\n\nNACHT OHNE ERREICHBARE SPUR (${currentTime}, PFLICHT-FUEHRUNG IN DER PROSA): Die strukturierte Falllage bietet jetzt weder am aktuellen Ort noch an einem geoeffneten Reiseziel ein erreichbares Indiz. Fuehre den Spieler INNERHALB DER ERZAEHLUNG: Lass Karl in ein bis zwei natuerlichen Noir-Saetzen wahrnehmen, dass die brauchbaren Adressen dunkel sind, die Leute schlafen und er morgen mit offenen Tueren und wachen Zeugen weiterkommt. Es soll wie Karls Schluss aus der Stadt und der Lage klingen, NICHT wie ein Tutorial, Toast, Questlog oder Popup. Taeusche keine kuenstlich offene Ermittlung vor und erfinde keinen Nachtbetrieb. Der Schlafen-Systembutton ist der sinnvolle naechste Schritt; Karl darf aber nicht automatisch schlafen, bevor der Spieler ihn ausloest.` + formalHint;
+      } else {
+        recap += `\n\nNACHT-OPTION (${currentTime}): Es ist Abend/Nacht und die Lage ist ruhig. EINE der 4 Optionen DARF ein Tageswechsel sein (zurueck zum Hackeschen Markt und ins Bett, oder ein anderer plausibler Schlafplatz wenn jemand in der Naehe ist), mit dem Wort "schlafen" oder "Bett" oder "die Nacht verbringen". Kein Zwang - du kannst es anbieten oder auch nicht, je nachdem was dramaturgisch passt. Die anderen Optionen bleiben aktive Ermittlungsschritte.` + formalHint;
+      }
     }
 
     // v6.83: KEINE-SCHLAF-OPTIONEN-PFLICHT wenn es MORGEN/Tag ist.
