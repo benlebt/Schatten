@@ -6,6 +6,7 @@ const vm = require('vm');
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 assert(html.includes('Robert hat den Hof noch NICHT betreten.'), 'Kessler opening must leave Robert outside until the courtyard observation clue introduces his arrival');
 assert(html.includes("Robert hat den Hof zu Spielbeginn noch NICHT betreten"), 'Kessler target setup must agree with the later courtyard arrival');
+assert(html.includes('ein anderer Ort als der Hinterhof Sybelstrasse'), 'Edith apartment and Robert courtyard must remain distinct locations');
 assert(html.includes('function _schlafHeimfahrtOrtSetzen(reason)'), 'home sleep must set the engine location before scene generation');
 assert(html.includes("if (pendingHeimfahrt) _schlafHeimfahrtOrtSetzen('option');"), 'home sleep must synchronize location immediately when selected');
 assert(html.includes("engineCurrentLocation = { name: heimLoc.name, sektor: heimLoc.sektor || '' };"), 'home sleep must update the canonical engine location');
