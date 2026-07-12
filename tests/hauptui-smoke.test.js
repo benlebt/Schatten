@@ -255,9 +255,14 @@ assert(acquiredFundItem && acquiredFundItem.key === 'west_zigaretten', 'Haupt-UI
 assert.strictEqual(acquiredFundItem.preis, 2, 'Haupt-UI direct pickup must keep the cafe price for West cigarettes');
 context._ortsFundItems = () => [];
 
+context.caseSetup = { klient: 'Edith Kessler', opfer: 'Robert Kessler', tat: 'Beschattung' };
 context._istKesslerFallFuerBild = () => true;
+context._istKesslerFall = () => /edith kessler|robert kessler/i.test(String(context.caseSetup.klient || '') + ' ' + String(context.caseSetup.opfer || ''));
 let faeden = context._hauptuiKesslerFaeden();
 assert.deepStrictEqual(Array.from(faeden, (f) => f.id), ['robert_weg', 'wohnung'], 'Kessler must begin with two concrete courtyard questions');
+context.caseSetup = { klient: 'Bruno Wessel', opfer: 'Werner Wessel', tat: 'Vermisstenfall' };
+assert.deepStrictEqual(Array.from(context._hauptuiKesslerFaeden()), [], 'Wessel must never inherit Kessler investigation threads merely because it has a scene image set');
+context.caseSetup = { klient: 'Edith Kessler', opfer: 'Robert Kessler', tat: 'Beschattung' };
 context.caseProgress.gefundeneIndizIds = ['robert_eintritt_beobachtet', 'tuerschild_hauke', 'ilse_aussage'];
 context.caseProgress.verhoere = {};
 context.caseProgress.verhoerFehlschlaege = [];
@@ -618,6 +623,7 @@ assert.strictEqual(groupedInventory[0].anzahl, 2, 'grouped inventory target must
 assert.deepStrictEqual(Array.from(groupedInventory[0].itemIds), ['korn_1', 'korn_2'], 'grouped inventory target must retain all real item ids');
 assert(html.includes("target.name + (target.anzahl > 1 ? ' ×' + target.anzahl : '')"), 'inventory target label must show the grouped quantity');
 assert(html.includes('function _hauptuiAngreifbarePersonen()'), 'items must be usable against an engine-marked suspect or target, not only generic enemies');
+assert(html.includes('klientIstAmWohnort = klientEntry.homePresence !== false;'), 'clients explicitly absent from their family home must leave the cast after travel');
 assert(html.includes("add('uebergeben_vp', 'Der Polizei übergeben')"), 'secured hostile or corrupt actors need a police handover action');
 assert(html.includes("if (!z || z.status !== 'gefesselt') add('fesseln', 'Fessle');\n    if (feind && z"), 'secured opponents must move from restraint directly to useful follow-up actions');
 assert(html.includes('UEBERMUEDUNGS-FAHRTABBRUCH'), 'hard fatigue must stop unsafe driving in engine state');

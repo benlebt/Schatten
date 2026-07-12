@@ -4,7 +4,7 @@ const path = require('path');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 
-assert(html.includes('Schatten v7.12.1213'), 'version badge should be bumped');
+assert(html.includes('Schatten v7.12.1214'), 'version badge should be bumped');
 assert(html.includes('KONFRONTATION_TAG_TOOLTIPS'), 'missing confrontation tooltip registry');
 assert(html.includes('function _konfrontationWuerfleAusgang'), 'missing randomized confrontation outcome helper');
 assert(html.includes("const alkoholMalus = Math.min(3, Math.max(0, Number(caseProgress && caseProgress.alkohol) || 0));"), 'alcohol must reduce confrontation reliability');

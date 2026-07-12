@@ -4263,7 +4263,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1213</div>
+    <div class="start-version">Schatten v7.12.1214</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -4505,7 +4505,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1213</span>
+    <span>Schatten v7.12.1214</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -7675,7 +7675,9 @@ KONTINUITAET (Kessler-Fall, Pflicht): Robert Kessler ist ab Szene 1 etabliert. I
         { name: 'Bruno Wessel', id: 'bruno_wessel', tag: 'CLIENT', alter: 48, rolle: 'Klient (Bauarbeiter, Vater)',
           beziehung: 'Vater des verschwundenen Werner, beauftragt Karl heimlich',
           detail: 'Bauarbeiter an der Stalinallee, kraeftig, Haende wie Schaufeln, raucht filterlose Carré, Augen rot vom Weinen, legt 800 Mark Erspartes auf den Tisch. Verheiratet, hat ausser Werner noch eine Tochter Christel (16).',
-          persistent: true, anwesend: true },
+          // Bruno erteilt den Auftrag im Buero, ist danach aber auf der Baustelle.
+          // Die Wessel-Wohnung ist Herthas Gespraechsort, nicht Brunos Dauerstandort.
+          homePresence: false, persistent: true, anwesend: true },
         { name: 'Werner Wessel', id: 'werner_wessel', tag: 'TARGET', alter: 22, rolle: 'Vermisster (Sohn)',
           beziehung: 'Brunos Sohn, gestern beim 17.-Juni-Aufstand verschwunden',
           detail: 'Lehrling bei der Reichsbahn, blond, schlank, war gestern in der Demonstration in der Friedrichstrasse, hat einen Pflasterstein auf einen Sowjetpanzer geworfen. Status: verhaftet (vermutlich Hohenschoenhausen) oder tot oder in den Westen gefluechtet.',
@@ -13182,7 +13184,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1213 +Trinken-Direktpfad';
+window.SCHATTEN_VERSION = 'v7.12.1214 +Falltreue-Bilder';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -44833,6 +44835,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
       let klientNameLower = '';
       let klientFirstName = '';
       let klientLastName = '';
+      let klientIstAmWohnort = true;
       try {
         if (caseSetup && Array.isArray(caseSetup.setupCast)) {
           const klientEntry = caseSetup.setupCast.find(c => c && c.tag === 'CLIENT');
@@ -44840,6 +44843,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
             klientNameLower = normForMatch(klientEntry.name);
             klientFirstName = klientNameLower.split(' ')[0];
             klientLastName = klientNameLower.split(' ').slice(-1)[0];
+            klientIstAmWohnort = klientEntry.homePresence !== false;
           }
         }
       } catch (e) { /* ignore */ }
@@ -44859,7 +44863,7 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
 
       // Pruefe ob aktueller Ort die Klient-Wohnung ist
       const ortLowerForCast = normForMatch((scene && scene.ort) || '');
-      const ortIsKlientHome = klientLastName && (
+      const ortIsKlientHome = klientIstAmWohnort && klientLastName && (
         ortLowerForCast.includes(klientLastName) ||
         ortLowerForCast.includes(klientFirstName + '-wohnung') ||
         ortLowerForCast.includes(klientLastName + '-wohnung')
@@ -56649,6 +56653,14 @@ function _istKesslerFallFuerBild() {
   return !!_aktuellerSzenenbildSatz();
 }
 
+function _istKesslerFall() {
+  try {
+    if (!caseSetup) return false;
+    const fallText = String(caseSetup.klient || '') + ' ' + String(caseSetup.opfer || '') + ' ' + String(caseSetup.tat || '');
+    return /edith kessler|robert kessler/i.test(fallText);
+  } catch (e) { return false; }
+}
+
 function _kesslerBildIstInnenraum(locationName) {
   try {
     const normalized = _kesslerSceneNorm(locationName);
@@ -57943,7 +57955,7 @@ function _indizDurchVerhoerNichtMehrOffen(ind) {
 
 function _hauptuiKesslerRobertAussageOffen() {
   try {
-    if (typeof _istKesslerFallFuerBild !== 'function' || !_istKesslerFallFuerBild() || !caseProgress) return false;
+    if (typeof _istKesslerFall !== 'function' || !_istKesslerFall() || !caseProgress) return false;
     const gefunden = Array.isArray(caseProgress.gefundeneIndizIds) ? caseProgress.gefundeneIndizIds : [];
     const hat = function (id) { return gefunden.indexOf(id) !== -1; };
     if (hat('robert_aussage')) return false;
@@ -58004,7 +58016,7 @@ function _hauptuiKesslerRobertAbpassen() {
 
 function _hauptuiKesslerFaeden() {
   try {
-    if (typeof _istKesslerFallFuerBild !== 'function' || !_istKesslerFallFuerBild() || !caseProgress) return [];
+    if (typeof _istKesslerFall !== 'function' || !_istKesslerFall() || !caseProgress) return [];
     const gefunden = Array.isArray(caseProgress.gefundeneIndizIds) ? caseProgress.gefundeneIndizIds : [];
     const hat = function (id) { return gefunden.indexOf(id) !== -1; };
     const hatEines = function (ids) { return ids.some(hat); };
@@ -58075,7 +58087,7 @@ function _hauptuiKesslerFaeden() {
 
 function _hauptuiKesslerZielBrauchtBeleg(target) {
   try {
-    if (!target || typeof _istKesslerFallFuerBild !== 'function' || !_istKesslerFallFuerBild() || !caseProgress) return null;
+    if (!target || typeof _istKesslerFall !== 'function' || !_istKesslerFall() || !caseProgress) return null;
     const id = normForMatch(target.id || target.name || '');
     if (id !== 'edith_kessler' && id !== 'edith kessler') return null;
     const gefunden = Array.isArray(caseProgress.gefundeneIndizIds) ? caseProgress.gefundeneIndizIds : [];
