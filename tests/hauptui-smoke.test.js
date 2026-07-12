@@ -147,7 +147,7 @@ assert(html.includes("targetIds: ['robert_kessler', 'robert_abpassen']"), 'Rober
 assert(html.includes("_np.push(Object.assign({}, ident, { id: 'robert_kessler'"), 'Robert abpassen must force Robert back into the Haupt-UI person list');
 assert(html.includes('GEFAHR-AUSZAHLUNG (KRITISCH)'), 'engine-spawned danger must be forced to pay off in prose instead of disappearing offscreen');
 assert(html.includes('function _konfrontationAusProsa(scene, cast)'), 'clear prose-only attacks must create a playable confrontation');
-assert(html.includes("trigger: 'prosa-angriff'"), 'prose aggressors need a distinct confrontation trigger');
+assert(html.includes("trigger: bewaffneteGruppe ? 'prosa-drohung' : 'prosa-angriff'"), 'armed blockers must become playable before they strike');
 assert(html.includes('window._healerMenuState = { doc: !!showWagnerHealButton, marlene: !!showMarleneHealButton }'), 'healer availability must be shared with the Haupt-UI');
 assert(html.includes('if (showWagnerHealButton && !window.HAUPTUI_AKTIV)'), 'Doc healing must not remain as a duplicate quick action in Haupt-UI');
 assert(html.includes('if (showMarleneHealButton && !window.HAUPTUI_AKTIV)'), 'Marlene healing must not remain as a duplicate quick action in Haupt-UI');
