@@ -164,9 +164,14 @@ assert(html.includes("[/\\bKurfuerstendamm\\b/g, 'Kurfürstendamm']"), 'Verhoera
 assert(html.includes("[/\\bGedaechtnis\\b/g, 'Gedächtnis']"), 'Verhoerakte cafe dossier needs Gedaechtnis displayed with umlaut');
 assert(!html.includes("Karl denkt nach (' + activeLabel"), 'gameplay loading text must not expose the active model label');
 assert(html.includes('function renderHowToAktuell()'), 'how-to page must be rendered from the current Haupt-UI concept');
+assert(html.includes('<h2>WIE DU SPIELST</h2>'), 'how-to page must use player-facing language');
+assert(!html.includes('So funktioniert\'s (bitte einmal lesen)'), 'start screen must not present the optional help as required reading');
+assert(!html.includes('<h3>Haupt-UI</h3>'), 'how-to page must not expose internal UI terminology');
+assert(!html.includes('Erst der goldene <strong>Ausführen</strong>-Knopf'), 'how-to page must not explain actions through a changeable button color');
+assert(!html.includes('Beleg-Gates:'), 'how-to page must not expose engine terminology');
 assert(html.includes('<h3>Offene Fäden</h3>'), 'how-to page must explain open investigation threads');
 assert(html.includes('<h3>Verhörakte</h3>'), 'how-to page must explain dossier interrogations');
-assert(html.includes('<h3>Reisen, Schlafen, Heilen</h3>'), 'how-to page must explain fixed travel and healing places');
+assert(html.includes('<h3>Unterwegs</h3>'), 'how-to page must explain travel, sleep, and healing in player-facing language');
 assert(html.includes('<h3>Gefahr</h3>'), 'how-to page must explain tactical confrontations');
 const npcMenuSource = html.slice(html.indexOf('function oeffneNpcMenue'), html.indexOf('// ===== Ende NPC-Interaktion ====='));
 assert(npcMenuSource.includes("_direktVerb.key === 'befragen' || _direktVerb._verhoerOeffnen"), 'single conversation actions must bypass the redundant NPC popup inside the NPC menu');
