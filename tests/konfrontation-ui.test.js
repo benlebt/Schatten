@@ -9,6 +9,7 @@ assert(html.includes('KONFRONTATION_TAG_TOOLTIPS'), 'missing confrontation toolt
 assert(html.includes('function _konfrontationWuerfleAusgang'), 'missing randomized confrontation outcome helper');
 assert(html.includes('KONFRONTATION-NARRATION'), 'confrontation actions must route into narrative scene prose');
 assert(html.includes('Die naechste Entscheidung gehoert dem Spieler'), 'item confrontation prose must not invent a flight or follow-up action');
+assert(html.includes('Karl fesselt, durchsucht, verhört oder übergibt niemanden automatisch'), 'general combat plans must preserve the next tactical decision too');
 assert(html.includes("const menge = item.anzahl > 1 ? ' ×' + item.anzahl : ''"), 'confrontation inventory must group duplicate item quantities');
 assert(html.includes('_konfrontationNoFx: true'), 'confrontation narrative choices must suppress old combat/dialog FX');
 assert(html.includes('_noDialogFx: true'), 'confrontation narrative choices must suppress dialog FX');
