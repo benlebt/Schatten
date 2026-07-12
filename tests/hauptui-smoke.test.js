@@ -70,7 +70,7 @@ assert(html.includes('_schlafenVorOrt: _schlaeftAlkEin'), 'severe intoxication s
 assert(html.includes('NOTFLUCHT-PROSA korrigiert'), 'contradictory emergency escape prose should be corrected');
 assert(html.includes('const _festnahmeVarianten = ['), 'custody entry should use multiple arrest variants');
 assert(html.includes('const _festnahmeZeit ='), 'custody entry should respect time of day');
-assert(html.includes("if (romance.canApproach) return { key: 'naeher', label: 'Naeher kommen' }"), 'Haupt-UI should expose romance directly beside person actions');
+assert(html.includes("if (romance.canApproach) return { key: 'naeher', label: 'Näher kommen' }"), 'Haupt-UI should expose romance directly beside person actions');
 assert(html.includes("if (verb === 'naeher' || verb === 'nacht')"), 'Haupt-UI should execute romance without opening the NPC submenu');
 assert(html.includes('if (showRomanceButton && !window.HAUPTUI_AKTIV)'), 'legacy romance button must not duplicate the Haupt-UI action');
 
@@ -277,7 +277,7 @@ const finishedRomance = { id: 'liesel_test', name: 'Liesel Test', typ: 'person',
 context.window._romanceMenuState = { npc: 'Liesel Test', canApproach: true, canOvernight: false };
 assert.deepStrictEqual(Array.from(context._hauptuiPersonVerben(finishedRomance, {})).map((verb) => verb.key), ['naeher'], 'an exhausted romance NPC must remain selectable for direct approach');
 assert.strictEqual(context._hauptuiEmpfohleneAktion(finishedRomance), 'naeher', 'selecting an exhausted romance NPC should preselect approach');
-assert.strictEqual(context._hauptuiZielHinweis(finishedRomance, 'Person'), 'Naehe moeglich', 'an exhausted romance NPC must not look disabled');
+assert.strictEqual(context._hauptuiZielHinweis(finishedRomance, 'Person'), 'Nähe möglich', 'an exhausted romance NPC must not look disabled');
 context.window._romanceMenuState = null;
 
 let acquiredFundItem = null;
@@ -524,7 +524,7 @@ for (const place of kesslerPlaces) {
 }
 
 assert(html.includes('function _hauptuiItemVerben(target)'), 'inventory must expose contextual Haupt-UI verbs');
-assert(html.includes("if (target.erledigt) return _hauptuiRomanceAktion(target) ? 'Naehe moeglich' : 'Ausgesprochen';"), 'finished romance targets must visibly remain actionable');
+assert(html.includes("if (target.erledigt) return _hauptuiRomanceAktion(target) ? 'Nähe möglich' : 'Ausgesprochen';"), 'finished romance targets must visibly remain actionable');
 assert(html.includes('if (target && target.erledigt && !bezwungen) {'), 'finished peaceful conversations need a dedicated action gate');
 assert(html.includes('if (romanceAktion) add(romanceAktion.key, romanceAktion.label);'), 'finished romance NPCs must retain romance without another conversation action');
 assert(html.includes('const _erledigtOhneRomance = target.erledigt && !_hauptuiRomanceAktion(target);'), 'only finished targets without open romance may be disabled');
@@ -533,6 +533,11 @@ assert(html.includes("'lilo brenner': { name: 'Lilo Brenners Wohnung in West-Ber
 assert(html.includes('caseProgress.romanceOvernight = {'), 'overnight location must persist as engine state');
 assert(html.includes("root: 'assets/scenes/romance/'"), 'romance mornings must use dedicated scene images');
 assert(html.includes('if (caseProgress) caseProgress.romanceOvernight = null;'), 'travel must end the romance morning location state');
+assert(html.includes('.choice-overlay {'), 'trade and companion dialogs need a shared visual surface');
+assert(html.includes("panel.className = 'choice-panel';"), 'trade and companion dialogs must use the shared panel style');
+assert(html.includes("actions.className = 'choice-actions';"), 'trade dialog actions need a stable responsive layout');
+assert(!html.includes("try { if (typeof fxPartyJoin === 'function') fxPartyJoin(npc.name); } catch (e) {}\n          }\n          // v7.12.756"), 'paid travel companion must not trigger a second party animation');
+assert(html.includes("label: 'Näher kommen'"), 'romance action must use the correct umlaut in visible UI');
 ['rita', 'margot reinig', 'margit hollenbeck', 'annegret vogt-bauer', 'carla winter', 'erika kalewski', 'sonja krell', 'martha brommer', 'greta schliemann', 'dr. ruth kellner', 'lilo brenner', 'eva werder', 'liesel forsthuber'].forEach((name) => {
   assert(html.includes("'" + name + "': { name:"), 'missing deterministic overnight location for ' + name);
 });
