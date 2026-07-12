@@ -61,6 +61,13 @@ function byText(root, text) {
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 
+assert(html.includes('function _fahrtStrandungsOrt(startName, zielLoc)'), 'roadside stops should resolve to a mapped location');
+assert(html.includes('function _fahrtAmKartenortStranden(startName, zielLoc, grund)'), 'roadside stop state helper should exist');
+assert(html.includes('caseProgress.strandungsOrt = {'), 'roadside stop should persist its mapped location');
+assert(!html.includes("engineCurrentLocation = { name: 'Karls Opel Olympia', sektor: 'Mobil', transient: true, vorherOrt: _vorherAlk };"), 'alcohol stop must not create a phantom Opel location');
+assert(!html.includes("engineCurrentLocation = { name: 'Karls Opel Olympia', sektor: 'Mobil', transient: true, vorherOrt: _vorherFahrt };"), 'fatigue stop must not create a phantom Opel location');
+assert(html.includes('_schlafenVorOrt: _schlaeftAlkEin'), 'severe intoxication should sleep at the mapped roadside location');
+
 assert(html.includes('function _nachtHatErreichbareErmittlung()'), 'night guidance should inspect whether evidence is currently reachable');
 assert(html.includes('NACHT OHNE ERREICHBARE SPUR'), 'AI recap should narratively guide Karl toward sleep when the city offers no reachable clue');
 assert(html.includes("return localStorage.getItem('hauptui') !== '0'; // Default: neue Haupt-UI"), 'Haupt-UI must be the default without ?hauptui=1');
