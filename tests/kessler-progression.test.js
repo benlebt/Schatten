@@ -120,6 +120,9 @@ assert(goodRep.oeff >= 1, 'good reputation must make normal witnesses start more
 assert.strictEqual(context.__verhoerTest.frageLimit('frau_pohl', goodRep), 5, 'good reputation must add interrogation room');
 
 context.karlAkte = { ruf: { haerte: 0, renommee: -3 } };
+let badFirst = context.__verhoerTest.fresh('frau_pohl');
+assert.strictEqual(context.__verhoerTest.frageLimit('frau_pohl', badFirst), 4, 'bad reputation must not shorten the first interrogation of a fresh case');
+context.caseProgress.verhoere = { bereits_begonnen: { status: 'vertagt' } };
 let badRep = context.__verhoerTest.fresh('frau_pohl');
 assert(badRep.gem >= 1, 'bad reputation must make witnesses start more tense');
 assert.strictEqual(context.__verhoerTest.frageLimit('frau_pohl', badRep), 3, 'bad reputation must reduce interrogation room without hard-blocking');

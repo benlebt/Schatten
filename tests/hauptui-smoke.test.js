@@ -585,5 +585,10 @@ assert(html.includes("add('uebergeben_vp', 'Der Polizei übergeben')"), 'secured
 assert(html.includes("if (!z || z.status !== 'gefesselt') add('fesseln', 'Fessle');\n    if (feind && z"), 'secured opponents must move from restraint directly to useful follow-up actions');
 assert(html.includes('UEBERMUEDUNGS-FAHRTABBRUCH'), 'hard fatigue must stop unsafe driving in engine state');
 assert(html.includes('Vor dem KI-Request wuerfeln'), 'travel threats must exist before arrival prose is requested');
+assert(html.includes('=== GEBUNDENE PERSONEN AM ORT (WELTWAHRHEIT, PFLICHT) ==='), 'restrained people must remain present in narrative context');
+assert(html.includes('WELTREAKTION JETZT:'), 'a restrained police officer left before witnesses must trigger a world reaction');
+assert(html.includes('=== KEIN SCHLAF, KEIN AUFWACHEN (PFLICHT) ==='), 'morning prose must not invent sleep without a sleep action');
+assert(html.includes('◆ Aktenkern'), 'required interrogation topics must be visibly marked');
+assert(/polizist\|polizei\|wachtmeister\|dienstknueppel/.test(html), 'trained police opponents must use the stronger hardness tier');
 
 console.log('HAUPTUI_KESSLER_10_ORTE_OK');

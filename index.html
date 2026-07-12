@@ -4263,7 +4263,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1207</div>
+    <div class="start-version">Schatten v7.12.1208</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -4505,7 +4505,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1207</span>
+    <span>Schatten v7.12.1208</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -13179,7 +13179,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1207 +Taktische-Kontinuitaet';
+window.SCHATTEN_VERSION = 'v7.12.1208 +Weltreaktion-Verhoer';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -15242,8 +15242,10 @@ function _gegnerHaerte(name, tag, rolle) {
     // v7.12.637: Reihenfolge spezifisch -> generisch; Regex statt Substring (fängt "Mann im langen Mantel").
     if (/hauptmann/.test(probe)) h = 5;
     else if (/oberleutnant|oberstleutnant/.test(probe)) h = 4;
+    else if (/polizist|polizei|wachtmeister|dienstknueppel/.test(probe)) h = 4;
     else if (/agent|stasi|mfs|gangster|spitzel/.test(probe)) h = 3;
     else if (/mantel|schatten|posten|wachmann|verfolger|beschatter/.test(probe)) h = 2;
+    else if (/buchhalter|sekretaer|sekretaerin|zivilist|aktmodell/.test(probe)) h = 1;
     if (typeof _npcZustandGet === 'function') {
       const z = _npcZustandGet(name);
       if (z && (z.status === 'benommen' || z.status === 'geblendet' || z.status === 'abgelenkt')) h -= 1;
@@ -37575,6 +37577,38 @@ Wenn Karl waehlt: Schnitt zur naechsten Szene am Morgen, Kaffee zu zweit, keine 
       }
     } catch (e) {}
 
+    try {
+      const _letzteTxt = (window._letzteAktion && ((window._letzteAktion.text || '') + ' ' + (window._letzteAktion.kategorie || ''))) || '';
+      const _hatGeschlafen = /schlaf|uebernacht|übernacht|ins bett|hingelegt|nacht verbringen/i.test(_letzteTxt);
+      if (currentTime === 'MORGEN' && sceneCounter > 1 && !_hatGeschlafen) {
+        timeContext += '\n\n=== KEIN SCHLAF, KEIN AUFWACHEN (PFLICHT) ===\nKarl hat seit der vorigen Szene NICHT geschlafen. Schreibe NICHT "du erwachst", "in deinem Bett", "ausgeruht" oder einen erfundenen Nacht-Schlaf. Wenn die Uhr auf Morgen gesprungen ist, hat Karl durchgemacht: Das Licht wird grau, aber er war die ganze Zeit wach und bleibt muede.';
+      }
+      timeContext += '\n\nTAGESZEIT-AUTORITAET: Der Engine-Wert ' + currentTime + ' ist fuer JEDE Licht-, Strassen- und Fahrtbeschreibung verbindlich. Uebernimm keine Nachtlaternen, Dunkelheit oder "naechtliches Charlottenburg" aus der vorigen Szene, wenn jetzt Morgen/Vormittag/Mittag/Nachmittag ist.';
+    } catch (e) {}
+
+    try {
+      const _zust = (typeof _npcZustandMap === 'function') ? (_npcZustandMap() || {}) : {};
+      const _ortJetztGeb = normForMatch((engineCurrentLocation && engineCurrentLocation.name) || '');
+      const _gebunden = Object.keys(_zust).map(function (k) { return _zust[k]; }).filter(function (z) {
+        return z && ['gefesselt', 'fixiert', 'ko', 'benommen'].indexOf(z.status) !== -1 && normForMatch(z.ort || '') === _ortJetztGeb;
+      });
+      if (_gebunden.length) {
+        timeContext += '\n\n=== GEBUNDENE PERSONEN AM ORT (WELTWAHRHEIT, PFLICHT) ===\n' + _gebunden.map(function (z) { return '- ' + z.name + ': ' + z.status + ', seit Szene ' + z.seitSzene; }).join('\n')
+          + '\nDiese Personen sind sichtbar am aktuellen Ort und duerfen in der Prosa NICHT verschwinden. Erwaehne ihre Lage organisch. Karl muss sich entscheiden: befragen, durchsuchen, fesseln, der Polizei uebergeben oder bewusst zuruecklassen. Keine stille Entsorgung zwischen Szenen.';
+        if (!caseProgress._gebundenerBeamterAlarm || typeof caseProgress._gebundenerBeamterAlarm !== 'object') caseProgress._gebundenerBeamterAlarm = {};
+        _gebunden.forEach(function (z) {
+          const setup = (typeof _findSetupCastFuzzy === 'function') ? _findSetupCastFuzzy(z.name, '') : null;
+          const polizei = /polizist|polizei|wachtmeister|schutzpolizei|volkspolizei/i.test(((setup && setup.rolle) || '') + ' ' + z.name);
+          const alt = sceneCounter - (z.seitSzene || sceneCounter);
+          if (polizei && alt >= 2 && !caseProgress._gebundenerBeamterAlarm[normForMatch(z.name)]) {
+            caseProgress._gebundenerBeamterAlarm[normForMatch(z.name)] = true;
+            if (typeof lastSpannung === 'number') lastSpannung = Math.max(lastSpannung, 4);
+            timeContext += '\nWELTREAKTION JETZT: ' + z.name + ' ist ein gebundener Beamter und lag vor Zeugen lange genug hier. Jemand hat die zustaendige Sektorpolizei alarmiert. Schritte, Stimmen oder ein Wagen naehern sich. Das ist eine echte Konsequenz und muss diese Szene unter Druck setzen; Karl darf den Vorfall nicht folgenlos ignorieren.';
+          }
+        });
+      }
+    } catch (e) {}
+
     // v7.12.383 (historische Erweiterung): DATE-GATING. Manche echten Orte/Institutionen
     // existierten erst ab einem bestimmten Datum 1953. Wenn das Spieldatum DAVOR liegt, sind
     // sie ein Anachronismus (subtil - genau das, was historische Genauigkeit ausmacht). Wir
@@ -55822,6 +55856,14 @@ function _verhoerRufMod(npcId) {
       mod.note = mod.note || 'Harter Ruf: Zeugen sind nervoes; Karl muss behutsamer fragen.';
     }
   }
+  try {
+    const bisher = (caseProgress && caseProgress.verhoere && typeof caseProgress.verhoere === 'object')
+      ? Object.keys(caseProgress.verhoere).filter(function (id) { return !!caseProgress.verhoere[id]; }).length : 0;
+    if (bisher === 0 && mod.frageBonus < 0) {
+      mod.frageBonus = 0;
+      mod.note += ' Zu Beginn des neuen Falls bekommt Karl dennoch den vollen Gespraechsspielraum.';
+    }
+  } catch (e) {}
   mod.oeffStart = Math.max(0, Math.min(2, mod.oeffStart | 0));
   mod.gemStart = Math.max(0, Math.min(1, mod.gemStart | 0));
   mod.frageBonus = Math.max(-1, Math.min(1, mod.frageBonus | 0));
@@ -56189,9 +56231,11 @@ function _verhoerRender() {
     const used = !!s.themenUsed[t.id];
     const locked = s.oeff < (t.abOeff || 0);
     const label = _verhoerTopicLabel(npcId, t, s);
-    if (used) return '<div class="sbtn topic spent"><div class="st">✓ ' + _verhoerEsc(label.st) + '</div></div>';
-    if (locked) return '<div class="sbtn topic locked"><div class="st">' + _verhoerEsc(label.st) + '</div><div class="sh">' + _verhoerEsc(label.sh) + '</div><span class="unlock">Ergibt sich aus dem Gespräch</span></div>';
-    return '<button class="sbtn topic' + (aktiv ? '' : ' disabled') + '" data-vthema="' + t.id + '"><div class="st">' + _verhoerEsc(label.st) + '</div><div class="sh">' + _verhoerEsc(label.sh) + '</div>' + (t.risk ? '<span class="flag">' + _verhoerEsc(t.risk) + '</span>' : '') + '</button>';
+    const istKern = Array.isArray(p.requiredTopics) && p.requiredTopics.indexOf(t.id) !== -1;
+    const kernFlag = istKern ? '<span class="flag">◆ Aktenkern</span>' : '';
+    if (used) return '<div class="sbtn topic spent"><div class="st">✓ ' + _verhoerEsc(label.st) + '</div>' + kernFlag + '</div>';
+    if (locked) return '<div class="sbtn topic locked"><div class="st">' + _verhoerEsc(label.st) + '</div><div class="sh">' + _verhoerEsc(label.sh) + '</div>' + kernFlag + '<span class="unlock">Ergibt sich aus dem Gespräch</span></div>';
+    return '<button class="sbtn topic' + (aktiv ? '' : ' disabled') + '" data-vthema="' + t.id + '"><div class="st">' + _verhoerEsc(label.st) + '</div><div class="sh">' + _verhoerEsc(label.sh) + '</div>' + kernFlag + (t.risk ? '<span class="flag">' + _verhoerEsc(t.risk) + '</span>' : '') + '</button>';
   }).join('');
   h += '</div>';
   const vhAlle = _verhoerVerfuegbareVorhalte();
