@@ -528,6 +528,17 @@ assert(html.includes("if (target.erledigt) return _hauptuiRomanceAktion(target) 
 assert(html.includes('if (target && target.erledigt && !bezwungen) {'), 'finished peaceful conversations need a dedicated action gate');
 assert(html.includes('if (romanceAktion) add(romanceAktion.key, romanceAktion.label);'), 'finished romance NPCs must retain romance without another conversation action');
 assert(html.includes('const _erledigtOhneRomance = target.erledigt && !_hauptuiRomanceAktion(target);'), 'only finished targets without open romance may be disabled');
+assert(html.includes('const ROMANCE_OVERNIGHT_LOCATIONS = {'), 'romance NPCs need deterministic overnight locations');
+assert(html.includes("'lilo brenner': { name: 'Lilo Brenners Wohnung in West-Berlin'"), 'Lilo needs a fixed morning location and image');
+assert(html.includes('caseProgress.romanceOvernight = {'), 'overnight location must persist as engine state');
+assert(html.includes("root: 'assets/scenes/romance/'"), 'romance mornings must use dedicated scene images');
+assert(html.includes('if (caseProgress) caseProgress.romanceOvernight = null;'), 'travel must end the romance morning location state');
+['rita', 'margot reinig', 'margit hollenbeck', 'annegret vogt-bauer', 'carla winter', 'erika kalewski', 'sonja krell', 'martha brommer', 'greta schliemann', 'dr. ruth kellner', 'lilo brenner', 'eva werder', 'liesel forsthuber'].forEach((name) => {
+  assert(html.includes("'" + name + "': { name:"), 'missing deterministic overnight location for ' + name);
+});
+['morgen-wohnung-ost.png', 'morgen-wohnung-boheme.png', 'morgen-wohnung-west.png'].forEach((file) => {
+  assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'romance', file)), 'missing romance morning image ' + file);
+});
 assert(html.includes("if (angebotPersonen.length && _hauptuiItemTaugt(item, 'anbieten')) add('anbieten', 'Biete an');"), 'offering an item must require a present peaceful NPC');
 assert(html.includes('function _hauptuiAngebotPersonen()'), 'item offers need an explicit eligible-recipient list');
 assert(html.includes("zeigeMiniAuswahl('Biete an: ' + item.name, 'Wem?'"), 'multiple possible recipients must be chosen by the player');
