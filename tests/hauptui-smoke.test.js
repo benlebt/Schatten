@@ -173,6 +173,8 @@ assert(html.includes('<h3>Offene Fäden</h3>'), 'how-to page must explain open i
 assert(html.includes('<h3>Verhörakte</h3>'), 'how-to page must explain dossier interrogations');
 assert(html.includes('<h3>Unterwegs</h3>'), 'how-to page must explain travel, sleep, and healing in player-facing language');
 assert(html.includes('<h3>Gefahr</h3>'), 'how-to page must explain tactical confrontations');
+assert(html.includes('NARRATIVE NACHT-FUEHRUNG:'), 'night scenes must narratively suggest sleep when no urgent night lead remains');
+assert(html.includes('KEINE brechend volle Halle'), 'night stations must not default to daytime crowd density');
 const npcMenuSource = html.slice(html.indexOf('function oeffneNpcMenue'), html.indexOf('// ===== Ende NPC-Interaktion ====='));
 assert(npcMenuSource.includes("_direktVerb.key === 'befragen' || _direktVerb._verhoerOeffnen"), 'single conversation actions must bypass the redundant NPC popup inside the NPC menu');
 assert(npcMenuSource.includes('_direktVerb._sozialErledigt'), 'finished conversations must bypass the redundant one-button popup');
@@ -433,7 +435,7 @@ for (const location of clueLocations) {
   const personButton = byText(container, location.people[0].name);
   personButton.onTap();
   assert(byText(container, 'Rede mit'), location.place + ' person mode must offer conversation');
-  assert(byText(container, 'Schau an'), location.place + ' person mode must offer observation');
+  assert(!byText(container, 'Schau an'), location.place + ' person mode must not offer a generic observation with no defined progress');
   assert(!byText(container, 'Warte'), location.place + ' person mode must not offer targetless waiting');
   assert(!byText(container, 'Versteck dich'), location.place + ' person mode must not offer targetless hiding');
   assert(!byText(container, 'Gib'), location.place + ' person mode must not offer giving without an item');
