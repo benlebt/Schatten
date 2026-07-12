@@ -4263,7 +4263,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1216</div>
+    <div class="start-version">Schatten v7.12.1217</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -4505,7 +4505,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1216</span>
+    <span>Schatten v7.12.1217</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -13184,7 +13184,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1216 +Fundvariation';
+window.SCHATTEN_VERSION = 'v7.12.1217 +Sinnvolle-Itemaktionen';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -57273,7 +57273,9 @@ function _hauptuiItemKatalog(item) {
 function _hauptuiItemTaugt(item, aktion) {
   try {
     const kat = _hauptuiItemKatalog(item);
-    if (!kat || !Array.isArray(kat.taugt) || !kat.taugt.length) return ['benutzen', 'anschauen'].indexOf(aktion) !== -1;
+    // Unbekannte Items bekommen keine erfundene Universalaktion. Ohne eine
+    // konkrete Katalog-Affordance darf die UI keinen wirkungslosen Knopf bauen.
+    if (!kat || !Array.isArray(kat.taugt) || !kat.taugt.length) return false;
     return kat.taugt.indexOf(aktion) !== -1;
   } catch (e) { return false; }
 }
@@ -57655,6 +57657,15 @@ function _hauptuiErstesNpcZiel(preferFeind) {
   } catch (e) { return null; }
 }
 
+function _hauptuiAngebotPersonen() {
+  try {
+    const npcs = (typeof getNpcsAtCurrentLocation === 'function') ? (getNpcsAtCurrentLocation() || []) : [];
+    return npcs.filter(function (npc) {
+      return !!(npc && npc.name && !_hauptuiPersonIstFeind(npc) && !_hauptuiNpcBezwungen(npc));
+    });
+  } catch (e) { return []; }
+}
+
 function _hauptuiPlanDirekt(aktionKey, zielName, item) {
   try {
     const def = (typeof BAUKASTEN_AKTIONEN !== 'undefined') ? BAUKASTEN_AKTIONEN[aktionKey] : null;
@@ -57717,13 +57728,12 @@ function _hauptuiItemVerben(target) {
     if (!verbs.some(function (verb) { return verb.key === key; })) verbs.push({ key: key, label: label });
   };
   const feinde = _hauptuiAngreifbarePersonen();
-  const npcDa = !!_hauptuiErstesNpcZiel(false);
+  const angebotPersonen = _hauptuiAngebotPersonen();
   if (_hauptuiItemTaugt(item, 'trinken')) add('trinken', 'Trinke');
-  if (npcDa && _hauptuiItemTaugt(item, 'anbieten')) add('anbieten', 'Biete an');
+  if (angebotPersonen.length && _hauptuiItemTaugt(item, 'anbieten')) add('anbieten', 'Biete an');
   if (feinde.length && _hauptuiItemTaugt(item, 'werfen')) add('werfen', 'Wirf');
   if (feinde.length && _hauptuiItemTaugt(item, 'werfen_fuesse')) add('werfen_fuesse', 'Lenk ab');
   if (feinde.length && _hauptuiItemTaugt(item, 'angreifen_mit')) add('angreifen_mit', 'Schlag zu');
-  if (_hauptuiItemTaugt(item, 'benutzen')) add('benutzen', 'Benutze');
   return verbs;
 }
 
@@ -57958,13 +57968,28 @@ function _hauptuiExecute(verb, target) {
       if (_hauptuiPlanDirekt(verb, feind.name, item)) return;
     }
     if (verb === 'anbieten') {
-      const npc = _hauptuiErstesNpcZiel(false);
-      if (npc && _hauptuiPlanDirekt(verb, npc.name, item)) return;
-      if (typeof showProgressToast === 'function') showProgressToast('Kein Gegenueber', 'Karl kann ' + item.name + ' gerade niemandem sinnvoll anbieten.', 'info', 'hauptui-kein-npc');
-      return;
-    }
-    if (verb === 'benutzen') {
-      _hauptuiChoose({ id: 'HAUPTUI_ITEM_BENUTZEN', text: 'Karl setzt ' + item.name + ' am aktuellen Ort ein. Spiele konkret aus, ob der Gegenstand hier einen Nutzen hat; falls nicht, zeige knapp, warum nicht, ohne eine neue Kernspur zu erfinden.', _anzeigeText: 'Benutze - ' + item.name, kategorie: 'ERKUNDEN', _kategorie: 'ERKUNDEN', _engine: true });
+      const personen = _hauptuiAngebotPersonen();
+      const anbieten = function (npc) {
+        if (!npc || !npc.name) return;
+        if (_hauptuiPlanDirekt(verb, npc.name, item)) return;
+        _hauptuiChoose({
+          id: 'HAUPTUI_ITEM_ANBIETEN',
+          text: 'Karl bietet ' + npc.name + ' ' + item.name + ' als konkrete Geste an. Zeige unmittelbar, ob die Person annimmt oder ablehnt und wie sich das auf Stimmung oder Gespraech auswirkt. Der Gegenstand wechselt nur bei Annahme den Besitzer. Keine wirkungslose Leerhandlung.',
+          _anzeigeText: 'Biete an - ' + item.name + ' - ' + npc.name,
+          kategorie: 'SOZIAL',
+          _kategorie: 'SOZIAL',
+          _engine: true,
+          _npcName: npc.name
+        });
+      };
+      if (personen.length === 1) { anbieten(personen[0]); return; }
+      if (personen.length > 1 && typeof zeigeMiniAuswahl === 'function') {
+        zeigeMiniAuswahl('Biete an: ' + item.name, 'Wem?', personen.map(function (npc) {
+          return { label: npc.name, cb: function () { anbieten(npc); } };
+        }));
+        return;
+      }
+      if (typeof showProgressToast === 'function') showProgressToast('Niemand da', 'Hier ist niemand, dem Karl ' + item.name + ' anbieten kann.', 'info', 'hauptui-kein-npc');
       return;
     }
   }

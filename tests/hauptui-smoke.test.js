@@ -498,7 +498,10 @@ assert(html.includes('function _hauptuiItemVerben(target)'), 'inventory must exp
 assert(html.includes("if (target.erledigt) return 'Ausgesprochen';"), 'finished conversation targets must show a visible completed state');
 assert(html.includes('if (target && target.erledigt && !bezwungen) return verbs;'), 'finished peaceful conversations must not keep offering Rede mit');
 assert(html.includes("button.disabled = true;\n          button.title = target.name + ' hat bereits alles gesagt, was hier zu erfahren ist.';"), 'finished conversation targets must remain visible but disabled');
-assert(html.includes("if (npcDa && _hauptuiItemTaugt(item, 'anbieten')) add('anbieten', 'Biete an');"), 'offering an item must require a present NPC');
+assert(html.includes("if (angebotPersonen.length && _hauptuiItemTaugt(item, 'anbieten')) add('anbieten', 'Biete an');"), 'offering an item must require a present peaceful NPC');
+assert(html.includes('function _hauptuiAngebotPersonen()'), 'item offers need an explicit eligible-recipient list');
+assert(html.includes("zeigeMiniAuswahl('Biete an: ' + item.name, 'Wem?'"), 'multiple possible recipients must be chosen by the player');
+assert(html.includes("id: 'HAUPTUI_ITEM_ANBIETEN'"), 'a failed plan handoff must still produce a concrete narrated offer');
 assert(html.includes('function _hauptuiKarlTrinkt(item)'), 'drinking must create a persistent player state instead of requiring an NPC');
 assert(html.includes("caseProgress.alkohol = danach;"), 'drinking must persist Karl alcohol level');
 assert(html.includes('=== ALKOHOL ALS WELTZUSTAND (PFLICHT) ==='), 'scene prose must react to Karl alcohol state');
@@ -543,6 +546,12 @@ assert(byText(container, 'Trinke'), 'Korn in an empty office must remain drinkab
 assert(!byText(container, 'Biete an'), 'Korn in an empty office must not be offered to nobody');
 assert(!byText(container, 'Benutze'), 'Korn must not expose a context-free generic use');
 assert(!byText(container, 'Schau an'), 'ordinary inventory must not expose redundant inspection');
+context._itemKatalogEintrag = () => null;
+context.window.__hauptuiActionState = { verb: null, targetKey: null };
+context._renderEngineMenu(container, {});
+byText(container, korn.name).onTap();
+assert(!byText(container, 'Benutze') && !byText(container, 'Schau an'), 'unknown inventory must not fall back to effectless universal actions');
+context._itemKatalogEintrag = () => ({ name: korn.name, taugt: ['trinken', 'anbieten', 'angreifen_mit', 'werfen', 'werfen_fuesse'] });
 let consumedKorn = null;
 context._itemMove = (id, change) => { consumedKorn = { id, change }; return true; };
 context.caseProgress.alkohol = 0;
