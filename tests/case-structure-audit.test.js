@@ -27,10 +27,12 @@ assert.strictEqual(imageSets.length, 14, 'every fixed case needs a scene image s
 function norm(value) {
   return String(value || '')
     .toLowerCase()
+    .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/ß/g, 'ss').replace(/ä/g, 'a').replace(/ö/g, 'o').replace(/ü/g, 'u')
     .replace(/[^a-z0-9]+/g, ' ').trim();
 }
+
+assert.strictEqual(norm('Werft VEB Köpenick'), 'werft veb koepenick', 'umlaut locations must normalize to ae/oe/ue scene anchors');
 
 function imageSetFor(setup) {
   const fallText = String(setup.klient || '') + ' ' + String(setup.opfer || '') + ' ' + String(setup.tat || '');

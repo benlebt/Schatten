@@ -153,7 +153,9 @@ assert(html.includes('requestAnimationFrame(function ()'), 'Verhoerakte auto-scr
 assert(html.includes('panel.innerHTML = h;\n  _verhoerAutoScroll();'), 'Verhoerakte render must trigger protocol auto-scroll immediately');
 assert(html.includes('function _verhoerDisplayText(s)'), 'Verhoerakte must normalize display text through one central helper');
 assert(html.includes("return (typeof asciiToUmlaut === 'function') ? asciiToUmlaut(raw) : raw;"), 'Verhoerakte display helper must reuse the curated umlaut normalizer');
-assert(html.includes('"<span class=\\"ab \' + cls + \'\\">\' + _verhoerEsc(a.status)') || html.includes('"><span class="ab \' + cls + \'">\' + _verhoerEsc(a.status)'), 'Verhoerakte assertion badges must not bypass umlaut normalization');
+assert(html.includes('function _verhoerAussageStatusKey(status)'), 'Verhoerakte must normalize stored assertion status values');
+assert(html.includes("_verhoerAussageStatusText(a && a.status)"), 'Verhoerakte assertion badges must display canonical umlaut status text');
+assert(html.includes("_verhoerThemenSortiert(npcId, s).map"), 'Verhoerakte topic order must not keep risky options predictably last');
 assert(html.includes("_verhoerRichEsc(failText)"), 'Verhoerakte fail text must normalize umlauts while preserving allowed dossier markup');
 assert(html.includes("[/\\bKurfuerstendamm\\b/g, 'Kurfürstendamm']"), 'Verhoerakte cafe dossier needs Kurfuerstendamm displayed with umlaut');
 assert(html.includes("[/\\bGedaechtnis\\b/g, 'Gedächtnis']"), 'Verhoerakte cafe dossier needs Gedaechtnis displayed with umlaut');
@@ -454,6 +456,7 @@ const kesslerPlaces = [
   'Bahnhof Charlottenburg',
   'Karls Opel Olympia',
   'S-Bahnhof Friedrichstrasse',
+  'Goldener Anker',
 ];
 for (const place of kesslerPlaces) {
   context.engineCurrentLocation = { name: place };
