@@ -121,6 +121,9 @@ assert(html.includes('GEWAHRSAM trennt Begleiter'), 'custody companion separatio
 assert(html.includes("if (/lilo brenner/i.test(npcName || '')) return 1;"), 'Lilo must require a small exchange before joining a dangerous trip');
 assert(!html.includes("showProgressToast('Lange Nacht'"), 'fatigue guidance must stay in scene prose instead of a separate sleep toast');
 assert(html.includes('ZUSAMMENGEBROCHEN - FALL OFFEN'), 'zero-health ending must state clearly that the case remains unsolved');
+assert(html.includes('const CUSTODY_SCENE_IMAGE = {'), 'custody needs a dedicated interior scene image');
+assert(html.includes("file: 'hohenschoenhausen-zelle.png'"), 'custody scene must use the cell asset instead of the exterior gate');
+assert(html.includes('let spec = istGewahrsam ? CUSTODY_SCENE_IMAGE'), 'custody state must override ordinary location image matching');
 assert(html.includes("showProgressToast('Gleich bereit'"), 'execute must explain transient API locks instead of silently doing nothing');
 assert(html.includes("showProgressToast('Nicht erreichbar'"), 'execute must explain stale person targets instead of silently doing nothing');
 assert(html.includes('function _hauptuiNarrativerFadenPrompt(ortName, scenesHere)'), 'open threads must feed the narrative prompt compass');
