@@ -70,7 +70,7 @@ assert(html.includes('_schlafenVorOrt: _schlaeftAlkEin'), 'severe intoxication s
 assert(html.includes('NOTFLUCHT-PROSA korrigiert'), 'contradictory emergency escape prose should be corrected');
 assert(html.includes('const _festnahmeVarianten = ['), 'custody entry should use multiple arrest variants');
 assert(html.includes('const _festnahmeZeit ='), 'custody entry should respect time of day');
-assert(html.includes("else if (romance.canApproach) add('naeher', 'Naeher kommen')"), 'Haupt-UI should expose romance directly beside person actions');
+assert(html.includes("if (romance.canApproach) return { key: 'naeher', label: 'Naeher kommen' }"), 'Haupt-UI should expose romance directly beside person actions');
 assert(html.includes("if (verb === 'naeher' || verb === 'nacht')"), 'Haupt-UI should execute romance without opening the NPC submenu');
 assert(html.includes('if (showRomanceButton && !window.HAUPTUI_AKTIV)'), 'legacy romance button must not duplicate the Haupt-UI action');
 
@@ -273,6 +273,12 @@ vm.runInContext(html.slice(start, end), context);
 const finishedWitness = { id: 'hertha_wessel', name: 'Hertha Wessel', typ: 'person', tag: 'FAMILY', erledigt: true };
 assert.deepStrictEqual(Array.from(context._hauptuiPersonVerben(finishedWitness, {})), [], 'a fully exhausted witness must expose no repeat conversation action');
 assert.strictEqual(context._hauptuiZielHinweis(finishedWitness, 'Person'), 'Ausgesprochen', 'a fully exhausted witness must remain visibly marked as completed');
+const finishedRomance = { id: 'liesel_test', name: 'Liesel Test', typ: 'person', tag: 'ROMANCE', erledigt: true };
+context.window._romanceMenuState = { npc: 'Liesel Test', canApproach: true, canOvernight: false };
+assert.deepStrictEqual(Array.from(context._hauptuiPersonVerben(finishedRomance, {})).map((verb) => verb.key), ['naeher'], 'an exhausted romance NPC must remain selectable for direct approach');
+assert.strictEqual(context._hauptuiEmpfohleneAktion(finishedRomance), 'naeher', 'selecting an exhausted romance NPC should preselect approach');
+assert.strictEqual(context._hauptuiZielHinweis(finishedRomance, 'Person'), 'Naehe moeglich', 'an exhausted romance NPC must not look disabled');
+context.window._romanceMenuState = null;
 
 let acquiredFundItem = null;
 context._fundItemAufnehmenDirekt = (item) => { acquiredFundItem = item; return true; };
@@ -518,9 +524,10 @@ for (const place of kesslerPlaces) {
 }
 
 assert(html.includes('function _hauptuiItemVerben(target)'), 'inventory must expose contextual Haupt-UI verbs');
-assert(html.includes("if (target.erledigt) return 'Ausgesprochen';"), 'finished conversation targets must show a visible completed state');
-assert(html.includes('if (target && target.erledigt && !bezwungen) return verbs;'), 'finished peaceful conversations must not keep offering Rede mit');
-assert(html.includes("button.disabled = true;\n          button.title = target.name + ' hat bereits alles gesagt, was hier zu erfahren ist.';"), 'finished conversation targets must remain visible but disabled');
+assert(html.includes("if (target.erledigt) return _hauptuiRomanceAktion(target) ? 'Naehe moeglich' : 'Ausgesprochen';"), 'finished romance targets must visibly remain actionable');
+assert(html.includes('if (target && target.erledigt && !bezwungen) {'), 'finished peaceful conversations need a dedicated action gate');
+assert(html.includes('if (romanceAktion) add(romanceAktion.key, romanceAktion.label);'), 'finished romance NPCs must retain romance without another conversation action');
+assert(html.includes('const _erledigtOhneRomance = target.erledigt && !_hauptuiRomanceAktion(target);'), 'only finished targets without open romance may be disabled');
 assert(html.includes("if (angebotPersonen.length && _hauptuiItemTaugt(item, 'anbieten')) add('anbieten', 'Biete an');"), 'offering an item must require a present peaceful NPC');
 assert(html.includes('function _hauptuiAngebotPersonen()'), 'item offers need an explicit eligible-recipient list');
 assert(html.includes("zeigeMiniAuswahl('Biete an: ' + item.name, 'Wem?'"), 'multiple possible recipients must be chosen by the player');
