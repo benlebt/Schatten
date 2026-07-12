@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 
-const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8').replace(/\r\n/g, '\n');
 assert(html.includes("'options','kessler-scene-visual','freitext-block'"), 'hideAll must hide the standalone scene visual');
 assert(html.includes('function _clearKesslerSceneVisual()'), 'scene visual reset helper missing');
 assert(html.includes("image.removeAttribute('src')"), 'scene visual reset must clear the stale image source');

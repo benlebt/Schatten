@@ -59,7 +59,7 @@ function byText(root, text) {
   return all(root).find((element) => element.tagName === 'button' && visibleText(element).startsWith(text));
 }
 
-const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8').replace(/\r\n/g, '\n');
 
 assert(html.includes('function _fahrtStrandungsOrt(startName, zielLoc)'), 'roadside stops should resolve to a mapped location');
 assert(html.includes('function _fahrtAmKartenortStranden(startName, zielLoc, grund)'), 'roadside stop state helper should exist');
@@ -146,6 +146,11 @@ assert(html.includes("id: 'robert_abpassen'"), 'Kessler courtyard must expose a 
 assert(html.includes("targetIds: ['robert_kessler', 'robert_abpassen']"), 'Robert contradiction thread must target either Robert or the abpassen bridge');
 assert(html.includes("_np.push(Object.assign({}, ident, { id: 'robert_kessler'"), 'Robert abpassen must force Robert back into the Haupt-UI person list');
 assert(html.includes('GEFAHR-AUSZAHLUNG (KRITISCH)'), 'engine-spawned danger must be forced to pay off in prose instead of disappearing offscreen');
+assert(html.includes('function _konfrontationAusProsa(scene, cast)'), 'clear prose-only attacks must create a playable confrontation');
+assert(html.includes("trigger: 'prosa-angriff'"), 'prose aggressors need a distinct confrontation trigger');
+assert(html.includes('window._healerMenuState = { doc: !!showWagnerHealButton, marlene: !!showMarleneHealButton }'), 'healer availability must be shared with the Haupt-UI');
+assert(html.includes('if (showWagnerHealButton && !window.HAUPTUI_AKTIV)'), 'Doc healing must not remain as a duplicate quick action in Haupt-UI');
+assert(html.includes('if (showMarleneHealButton && !window.HAUPTUI_AKTIV)'), 'Marlene healing must not remain as a duplicate quick action in Haupt-UI');
 assert(html.includes('=== AKTIVE KONFRONTATION (PFLICHT, v7.12.1171) ==='), 'active confrontation state must be explicit in the scene prompt');
 assert(html.includes('const ITEM_TAKTIK_DEFAULTS = {'), 'items need tactical tags for confrontation choices');
 assert(html.includes('function _konfrontationTaktikProfil(npc, threat)'), 'confrontations need tactical enemy profiles');
@@ -279,6 +284,14 @@ assert.deepStrictEqual(Array.from(context._hauptuiPersonVerben(finishedRomance, 
 assert.strictEqual(context._hauptuiEmpfohleneAktion(finishedRomance), 'naeher', 'selecting an exhausted romance NPC should preselect approach');
 assert.strictEqual(context._hauptuiZielHinweis(finishedRomance, 'Person'), 'Nähe möglich', 'an exhausted romance NPC must not look disabled');
 context.window._romanceMenuState = null;
+const finishedMarlene = { id: 'marlene_wagner', name: 'Marlene Wagner', typ: 'person', erledigt: true };
+context.window._healerMenuState = { doc: false, marlene: true };
+assert.deepStrictEqual(Array.from(context._hauptuiPersonVerben(finishedMarlene, {})).map((verb) => verb.key), ['heilen_marlene'], 'an exhausted Marlene must remain selectable for treatment');
+assert.strictEqual(context._hauptuiEmpfohleneAktion(finishedMarlene), 'heilen_marlene', 'selecting exhausted Marlene should preselect treatment');
+assert.strictEqual(context._hauptuiZielHinweis(finishedMarlene, 'Person'), 'Behandlung möglich', 'available healing must replace the exhausted badge');
+context.window._healerMenuState = { doc: true, marlene: false };
+assert.deepStrictEqual(Array.from(context._hauptuiPersonVerben({ id: 'doc_wagner', name: 'Doc Wagner', typ: 'person' }, {})).map((verb) => verb.key), ['reden', 'heilen_doc'], 'Doc Wagner must expose conversation and treatment together');
+context.window._healerMenuState = null;
 
 let acquiredFundItem = null;
 context._fundItemAufnehmenDirekt = (item) => { acquiredFundItem = item; return true; };
@@ -524,10 +537,10 @@ for (const place of kesslerPlaces) {
 }
 
 assert(html.includes('function _hauptuiItemVerben(target)'), 'inventory must expose contextual Haupt-UI verbs');
-assert(html.includes("if (target.erledigt) return _hauptuiRomanceAktion(target) ? 'Nähe möglich' : 'Ausgesprochen';"), 'finished romance targets must visibly remain actionable');
+assert(html.includes("_hauptuiHeilerAktion(target) ? 'Behandlung möglich' : 'Ausgesprochen'"), 'finished romance and healer targets must visibly remain actionable');
 assert(html.includes('if (target && target.erledigt && !bezwungen) {'), 'finished peaceful conversations need a dedicated action gate');
 assert(html.includes('if (romanceAktion) add(romanceAktion.key, romanceAktion.label);'), 'finished romance NPCs must retain romance without another conversation action');
-assert(html.includes('const _erledigtOhneRomance = target.erledigt && !_hauptuiRomanceAktion(target);'), 'only finished targets without open romance may be disabled');
+assert(html.includes('const _erledigtOhneSonderaktion = target.erledigt && !_hauptuiRomanceAktion(target) && !_hauptuiHeilerAktion(target);'), 'only finished targets without romance or treatment may be disabled');
 assert(html.includes('const ROMANCE_OVERNIGHT_LOCATIONS = {'), 'romance NPCs need deterministic overnight locations');
 assert(html.includes("'lilo brenner': { name: 'Lilo Brenners Wohnung in West-Berlin'"), 'Lilo needs a fixed morning location and image');
 assert(html.includes('caseProgress.romanceOvernight = {'), 'overnight location must persist as engine state');
