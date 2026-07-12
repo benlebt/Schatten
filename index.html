@@ -4263,7 +4263,7 @@
       </div>
       <div class="playmode-voicehint">Tipp fürs Hörbuch: In den Einstellungen (Zahnrad oben, „🔊 Sound-Einstellungen") kannst du die Vorlesestimme wechseln. Je nach Browser und Betriebssystem stehen unterschiedliche Stimmen bereit. In Google Chrome unter Windows gibt es z.B. die Stimme „Google Deutsch", die sehr natürlich klingt. Probier aus, welche dir am besten gefällt.</div>
     </div>
-    <div class="start-version">Schatten v7.12.1211</div>
+    <div class="start-version">Schatten v7.12.1212</div>
   </div>
 
   <!-- v7.11.67: Anleitungs-Seite "So funktioniert's" -->
@@ -4505,7 +4505,7 @@
 
   <!-- Footer -->
   <div id="footer" class="footer hidden">
-    <span>Schatten v7.12.1211</span>
+    <span>Schatten v7.12.1212</span>
     <span id="footer-model" style="opacity:0.7;"></span>
   </div>
 
@@ -13182,7 +13182,7 @@ function _schlafAufwachZiel(idx) {
 
 let conversationHistory = []; // v7.12.120: umbenannt (war 'history' - kollidierte mit window.history)
 // Globale Version, von exportTranscript() und Debug-Dumps verwendet
-window.SCHATTEN_VERSION = 'v7.12.1211 +Klare-Fundaktionen';
+window.SCHATTEN_VERSION = 'v7.12.1212 +Rauschzustand';
 // v7.12.163 (Sicherheit): Deploy-UI-Schalter. false = Deploy-Button versteckt + Funktion
 // gesperrt. Der /api/deploy-Endpoint ist zusaetzlich serverseitig per DEPLOY_ENABLED-Env
 // gesperrt (Kill-Switch). Zum Reaktivieren beides setzen.
@@ -30204,6 +30204,28 @@ function reiseZuOrt(loc) {
     if (typeof diag === 'function') diag('state', 'REISE blockiert: Ort geschlossen - ' + (loc.name || '?') + ' / ' + tz);
     return;
   }
+  // Alkohol macht die Fahrt zu einer echten Risikoentscheidung. Das Ziel wird
+  // bei einem Patzer nicht still erreicht; Karl muss am Strassenrand stoppen.
+  try {
+    const _alkFahrt = Math.max(0, Math.min(4, Number(caseProgress && caseProgress.alkohol) || 0));
+    const _alkRisiko = _alkFahrt >= 4 ? 0.60 : (_alkFahrt >= 3 ? 0.40 : (_alkFahrt >= 2 ? 0.20 : 0));
+    if (_alkRisiko > 0 && Math.random() < _alkRisiko && !karlInStasiCustody && typeof chooseOption === 'function') {
+      const _vorherAlk = engineCurrentLocation ? engineCurrentLocation.name : '';
+      schliesseReiseMenue();
+      engineCurrentLocation = { name: 'Karls Opel Olympia', sektor: 'Mobil', transient: true, vorherOrt: _vorherAlk };
+      _reiseGeradeErfolgt = { name: 'Karls Opel Olympia', sektor: 'Mobil', detail: 'Am Strassenrand. Karl musste die Fahrt wegen seines Alkoholzustands abbrechen.' };
+      _aktuelleAktionIstReise = true;
+      if (typeof verfassung === 'number' && verfassung > 1 && _alkFahrt >= 4) verfassung--;
+      if (typeof diag === 'function') diag('state', 'ALKOHOL-FAHRTPATZER: Ziel "' + (loc.name || '?') + '" nicht erreicht (Stufe ' + _alkFahrt + ')');
+      chooseOption({
+        id: 'ALKOHOL_FAHRTPATZER',
+        text: 'Karl versucht trotz Alkohol mit dem Opel nach ' + (loc.name || 'weiter') + ' zu fahren. Seine Reaktion ist zu langsam, der Wagen geraet aus der Spur und er muss am Strassenrand anhalten. Das Ziel wird NICHT erreicht. Er bleibt beim Opel und muss entscheiden, wie es weitergeht.',
+        kategorie: 'DEFENSIV', _kategorie: 'DEFENSIV', _priority: 100,
+        _isSystemButton: true, _istReise: true
+      });
+      return;
+    }
+  } catch (e) {}
   // Am harten Muedigkeitslimit ist eine sichere Fahrt nicht mehr moeglich. Die Engine setzt den
   // tatsaechlichen Ort auf den Opel am Strassenrand und nutzt den regulaeren Schlaf-/Tageswechselpfad.
   try {
@@ -37575,6 +37597,13 @@ Wenn Karl waehlt: Schnitt zur naechsten Szene am Morgen, Kaffee zu zweit, keine 
         timeContext += '\n\n=== UEBERMUEDUNG ALS WELTZUSTAND (PFLICHT) ===\nKarl ist seit ' + _muedPrompt + ' Szenen ohne Schlaf. Zeige das in der Prosa statt in einem Hinweisfenster: brennende Augen, verspaetete Reaktionen, unsichere Handgriffe und Gedankenluecken. Falls Karl faehrt oder jemanden im Opel verfolgt, ist er NICHT mehr verlaesslich fahrtuechtig: Spurhalten, Bremsen und Reaktion werden sichtbar schlechter. Er kann keine makellose Verfolgungsjagd fahren. Ab dem harten Limit stoppt die Engine die Fahrt und laesst ihn im Opel am Strassenrand einschlafen; widersprich diesem Zustand nicht.';
       }
     } catch (e) {}
+    try {
+      const _alkPrompt = Math.max(0, Math.min(4, Number(caseProgress && caseProgress.alkohol) || 0));
+      if (_alkPrompt > 0) {
+        const _alkLage = _alkPrompt >= 4 ? 'schwer betrunken' : (_alkPrompt >= 3 ? 'betrunken' : 'angetrunken');
+        timeContext += '\n\n=== ALKOHOL ALS WELTZUSTAND (PFLICHT) ===\nKarl ist ' + _alkLage + ' (Stufe ' + _alkPrompt + '/4). Dieser Zustand MUSS organisch in Prosa und Reaktionen vorkommen: Alkoholgeruch, lockerere oder unkontrollierte Worte, schlechteres Urteilsvermoegen, unsichere Feinmotorik und je nach Stufe schwankender Gang. Gespraechspartner duerfen ihn weniger ernst nehmen, misstrauisch werden oder seine Offenheit ausnutzen. In Konfrontationen sind Timing, Gleichgewicht und Zielgenauigkeit schlechter. Beim Autofahren reagiert Karl verspaetet und haelt die Spur nicht verlaesslich; er darf keine makellose Fahrt oder Verfolgungsjagd absolvieren. Er bleibt handlungsfaehig, aber die Geschichte darf seinen Rausch NIEMALS ignorieren oder spontan wegheilen.';
+      }
+    } catch (e) {}
 
     try {
       const _letzteTxt = (window._letzteAktion && ((window._letzteAktion.text || '') + ' ' + (window._letzteAktion.kategorie || ''))) || '';
@@ -42978,7 +43007,13 @@ async function chooseOption(option) {
       recalcGameCurrentDate();
       timeAdvanceTokens = 0;
       pendingDayTransition = !!_aufwach.tagPlus;
-      try { if (caseProgress) caseProgress.muedigkeit = 0; } catch (e) {}
+      try {
+        if (caseProgress) {
+          caseProgress.muedigkeit = 0;
+          caseProgress.alkohol = 0;
+          caseProgress.alkoholSzenen = 0;
+        }
+      } catch (e) {}
       diag('detect', '😴 SCHLAF (~8 Std): Aufwachen am ' + _aufwach.name + (_aufwach.tagPlus ? ' (Tag ' + gameDay + ')' : '') + ' - Müdigkeit 0');
       // v7.11.53: Toast fuer Tagwechsel. User-Run Vogt 2127: Tag wechselte
       // ohne dass der Spieler es bemerkt hatte (Option-Text enthielt
@@ -45107,9 +45142,19 @@ async function performApiCall(userMsg, isStart, optionForRollback, retryCount, r
         const _schlafJetzt = !!(window._letzteAktion && /schlaf|uebernacht|übernacht|ausruhen|lege dich|leg dich|schlie(ss|ß)e die augen/i.test((window._letzteAktion.text || '') + ' ' + (window._letzteAktion.kategorie || '')));
         if (_schlafJetzt) {
           caseProgress.muedigkeit = 0;
+          caseProgress.alkohol = 0;
+          caseProgress.alkoholSzenen = 0;
           if (typeof diag === 'function') diag('state', '😴 MÜDIGKEIT zurückgesetzt (geschlafen)');
         } else {
           caseProgress.muedigkeit++;
+          if ((Number(caseProgress.alkohol) || 0) > 0) {
+            caseProgress.alkoholSzenen = (Number(caseProgress.alkoholSzenen) || 0) + 1;
+            if (caseProgress.alkoholSzenen >= 3) {
+              caseProgress.alkohol = Math.max(0, (Number(caseProgress.alkohol) || 0) - 1);
+              caseProgress.alkoholSzenen = 0;
+              if (typeof diag === 'function') diag('state', 'ALKOHOL klingt ab -> Stufe ' + caseProgress.alkohol);
+            }
+          }
           if (caseProgress.muedigkeit >= 16 && typeof verfassung === 'number' && verfassung > 2 && (caseProgress.muedigkeit % 3 === 0)) {
             verfassung = Math.max(2, verfassung - 1);
             if (typeof diag === 'function') diag('state', '😴 MÜDIGKEIT senkt Verfassung auf ' + verfassung + ' (Müdigkeit ' + caseProgress.muedigkeit + ')');
@@ -57183,6 +57228,34 @@ function _hauptuiItemTaugt(item, aktion) {
   } catch (e) { return false; }
 }
 
+function _hauptuiKarlTrinkt(item) {
+  try {
+    if (!item || !caseProgress) return false;
+    const vorher = Math.max(0, Math.min(4, Number(caseProgress.alkohol) || 0));
+    const danach = Math.min(4, vorher + 2);
+    caseProgress.alkohol = danach;
+    caseProgress.alkoholSzenen = 0;
+    if (item.id && typeof _itemMove === 'function') {
+      _itemMove(item.id, { status: 'verbraucht', owner: 'karl' });
+    }
+    const zustand = danach >= 4 ? 'schwer betrunken' : (danach >= 3 ? 'betrunken' : 'angetrunken');
+    if (typeof diag === 'function') diag('state', 'ALKOHOL: ' + vorher + ' -> ' + danach + ' (' + zustand + '), ' + item.name + ' verbraucht');
+    _hauptuiChoose({
+      id: 'HAUPTUI_ITEM_TRINKEN',
+      text: 'Karl trinkt mehrere kraeftige Schluecke aus ' + item.name + '. Danach ist er ' + zustand + '. Er bleibt am aktuellen Ort. Erzaehle die unmittelbare Wirkung glaubwuerdig und knapp; keine automatische Flucht, kein Schlaf und kein Ortswechsel.',
+      _anzeigeText: 'Trinke - ' + item.name,
+      kategorie: 'BEOBACHTEN',
+      _kategorie: 'BEOBACHTEN',
+      _engine: true,
+      _alkohol: danach
+    });
+    return true;
+  } catch (e) {
+    if (typeof diag === 'function') diag('drift', 'TRINKEN fehlgeschlagen: ' + (e && e.message ? e.message : e));
+    return false;
+  }
+}
+
 function _itemKatalogKey(item) {
   try {
     const name = normForMatch((item && item.name) || '');
@@ -57366,7 +57439,7 @@ function _konfrontationOutcomePrompt(enemy, item, verb, plan, outcome) {
       : (art === 'treffer'
         ? 'Karl reisst einen klaren Vorteil heraus; der Gegner verliert kurz Orientierung.'
         : 'Die Aktion geht schief oder reicht nicht; der Gegner behaelt Druck und wird gefaehrlicher.');
-    return 'KONFRONTATION-NARRATION (kein Emoji-Popup, keine Arcade-Anzeige): Schreibe eine kompakte, filmische Noir-Szene in 5-8 Saetzen. Karl setzt "' + itemName + '" gegen ' + name + ' ein. Wirkung des Gegenstands: ' + wirkung.label + ' (Kraft ' + wirkung.kraft + ', Irritation +' + wirkung.irritation + ', Schwaechung +' + (wirkung.schwaechung || 0) + '). Gegnerstaerke: ' + outcome.staerke + '. Zufallsausgang: ' + art + '. ' + ziel + ' Erzaehle konkret und koerperlich. Kaffee darf nur kurz irritieren; Doppelkorn darf mit Glas, Scherben und brennender Fluessigkeit deutlich haerter wirken; ein Toaster kann schwache Gegner umhauen, an harten Gegnern aber auch furchtbar zurueckkommen. TAKTISCHE KONTROLLE (ABSOLUT): Erzaehle NUR die gewaehlte Aktion und ihre unmittelbare Wirkung. Karl bleibt danach am aktuellen Ort. KEIN Weglaufen, keine Flucht, kein Opel, kein Losfahren, keine Verfolgungsjagd, kein automatisches Fesseln, Verhoeren, Durchsuchen oder Uebergeben. Die naechste Entscheidung gehoert dem Spieler. Nur eine ausdruecklich gewaehlte FLUCHT-Aktion darf den Ort verlassen. Keine UI-Worte, keine Auswahloptionen, kein Questlog.';
+    return 'KONFRONTATION-NARRATION (kein Emoji-Popup, keine Arcade-Anzeige): Schreibe eine kompakte, filmische Noir-Szene in 5-8 Saetzen. Karl setzt "' + itemName + '" gegen ' + name + ' ein. Wirkung des Gegenstands: ' + wirkung.label + ' (Kraft ' + wirkung.kraft + ', Irritation +' + wirkung.irritation + ', Schwaechung +' + (wirkung.schwaechung || 0) + '). Gegnerstaerke: ' + outcome.staerke + '. Alkohol-Malus: ' + (outcome.alkoholMalus || 0) + '. Zufallsausgang: ' + art + '. ' + ziel + ((outcome.alkoholMalus || 0) > 0 ? ' Karl ist angetrunken oder betrunken: Gleichgewicht, Timing und Distanzgefuehl sind sichtbar schlechter; beschreibe das als Ursache, nicht als abstrakten Wert.' : '') + ' Erzaehle konkret und koerperlich. Kaffee darf nur kurz irritieren; Doppelkorn darf mit Glas, Scherben und brennender Fluessigkeit deutlich haerter wirken; ein Toaster kann schwache Gegner umhauen, an harten Gegnern aber auch furchtbar zurueckkommen. TAKTISCHE KONTROLLE (ABSOLUT): Erzaehle NUR die gewaehlte Aktion und ihre unmittelbare Wirkung. Karl bleibt danach am aktuellen Ort. KEIN Weglaufen, keine Flucht, kein Opel, kein Losfahren, keine Verfolgungsjagd, kein automatisches Fesseln, Verhoeren, Durchsuchen oder Uebergeben. Die naechste Entscheidung gehoert dem Spieler. Nur eine ausdruecklich gewaehlte FLUCHT-Aktion darf den Ort verlassen. Keine UI-Worte, keine Auswahloptionen, kein Questlog.';
   } catch (e) {
     return 'Karl setzt einen Gegenstand in der Konfrontation ein. Erzaehle die Folge als kompakte Noir-Szene ohne UI-Worte.';
   }
@@ -57378,7 +57451,8 @@ function _konfrontationWuerfleAusgang(enemy, item, verb, plan, takt) {
     const staerke = _konfrontationGegnerStaerke(enemy, takt);
     const wurf = Math.floor(Math.random() * 6) + 1;
     const passBonus = _konfrontationClamp(Math.floor(((plan && plan.score) || 0) / 2), 0, 3);
-    const gesamt = wurf + (wirkung.kraft || 1) + Math.floor((wirkung.schwaechung || 0) / 2) + passBonus - staerke;
+    const alkoholMalus = Math.min(3, Math.max(0, Number(caseProgress && caseProgress.alkohol) || 0));
+    const gesamt = wurf + (wirkung.kraft || 1) + Math.floor((wirkung.schwaechung || 0) / 2) + passBonus - staerke - alkoholMalus;
     let art = 'misslingt';
     let status = '';
     let summary = ((enemy && enemy.name) || 'Der Gegner') + ' behaelt die Oberhand.';
@@ -57391,7 +57465,7 @@ function _konfrontationWuerfleAusgang(enemy, item, verb, plan, takt) {
       status = (wirkung.irritation >= 1) ? 'geblendet' : (wirkung.status || 'benommen');
       summary = 'Karl reisst einen Vorteil heraus.';
     }
-    const outcome = { art: art, status: status, summary: summary, wirkung: wirkung, wurf: wurf, gesamt: gesamt, staerke: staerke };
+    const outcome = { art: art, status: status, summary: summary, wirkung: wirkung, wurf: wurf, gesamt: gesamt, staerke: staerke, alkoholMalus: alkoholMalus };
     outcome.prompt = _konfrontationOutcomePrompt(enemy, item, verb, plan, outcome);
     return outcome;
   } catch (e) {
@@ -57572,13 +57646,13 @@ function _hauptuiItemVerben(target) {
     if (!verbs.some(function (verb) { return verb.key === key; })) verbs.push({ key: key, label: label });
   };
   const feinde = _hauptuiAngreifbarePersonen();
+  const npcDa = !!_hauptuiErstesNpcZiel(false);
   if (_hauptuiItemTaugt(item, 'trinken')) add('trinken', 'Trinke');
-  if (_hauptuiItemTaugt(item, 'anbieten')) add('anbieten', 'Biete an');
+  if (npcDa && _hauptuiItemTaugt(item, 'anbieten')) add('anbieten', 'Biete an');
   if (feinde.length && _hauptuiItemTaugt(item, 'werfen')) add('werfen', 'Wirf');
   if (feinde.length && _hauptuiItemTaugt(item, 'werfen_fuesse')) add('werfen_fuesse', 'Lenk ab');
   if (feinde.length && _hauptuiItemTaugt(item, 'angreifen_mit')) add('angreifen_mit', 'Schlag zu');
-  add('benutzen', 'Benutze');
-  add('anschauen', 'Schau an');
+  if (_hauptuiItemTaugt(item, 'benutzen')) add('benutzen', 'Benutze');
   return verbs;
 }
 
@@ -57805,7 +57879,11 @@ function _hauptuiExecute(verb, target) {
       }
       if (_hauptuiPlanDirekt(verb, feind.name, item)) return;
     }
-    if (verb === 'anbieten' || verb === 'trinken') {
+    if (verb === 'trinken') {
+      _hauptuiKarlTrinkt(item);
+      return;
+    }
+    if (verb === 'anbieten') {
       const npc = _hauptuiErstesNpcZiel(false);
       if (npc && _hauptuiPlanDirekt(verb, npc.name, item)) return;
       if (typeof showProgressToast === 'function') showProgressToast('Kein Gegenueber', 'Karl kann ' + item.name + ' gerade niemandem sinnvoll anbieten.', 'info', 'hauptui-kein-npc');

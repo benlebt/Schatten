@@ -486,6 +486,12 @@ for (const place of kesslerPlaces) {
 }
 
 assert(html.includes('function _hauptuiItemVerben(target)'), 'inventory must expose contextual Haupt-UI verbs');
+assert(html.includes("if (npcDa && _hauptuiItemTaugt(item, 'anbieten')) add('anbieten', 'Biete an');"), 'offering an item must require a present NPC');
+assert(html.includes('function _hauptuiKarlTrinkt(item)'), 'drinking must create a persistent player state instead of requiring an NPC');
+assert(html.includes("caseProgress.alkohol = danach;"), 'drinking must persist Karl alcohol level');
+assert(html.includes('=== ALKOHOL ALS WELTZUSTAND (PFLICHT) ==='), 'scene prose must react to Karl alcohol state');
+assert(html.includes('ALKOHOL-FAHRTPATZER:'), 'drunk driving must be able to prevent reaching the destination');
+assert(!html.includes("add('benutzen', 'Benutze');\n  add('anschauen', 'Schau an');\n  return verbs;"), 'inventory must not expose generic use and inspection for every item');
 assert(html.includes('function _hauptuiPlanDirekt(aktionKey, zielName, item)'), 'inventory escalation must reuse the existing plan/combat path');
 assert(html.includes("const pickupObjects = objects.filter(function (target) { return target.fundTyp === 'item'; });"), 'loose pickups must be split from investigation clues');
 assert(html.includes("if (target && target.fundTyp === 'item') {\n    add('nehmen', 'Nimm');\n    return verbs;\n  }"), 'loose pickup items must offer only direct pickup');
@@ -512,6 +518,19 @@ assert(html.includes("preis: (typeof item.preis === 'number') ? item.preis : 0")
 assert(html.includes('Object.assign(existing, pickupData);'), 'existing scene object duplicates must be upgraded with pickup price data');
 assert(html.includes("if (target.fundTyp === 'item' && verb === 'nehmen') { _hauptuiFundAuswahl(target, target.name); return; }"), 'Nimm on a concrete loose pickup must not open a second choice popup');
 assert(html.includes('function _fundGuthabenAktualisieren(root)'), 'fund popup needs a live cash refresh helper');
+const korn = { id: 'korn-buero', name: 'Flasche Nordhäuser Doppelkorn', typ: 'item' };
+context.deriveInteractionMode = () => 'locked';
+context.window.__hauptuiActionState = { verb: null, targetKey: null };
+context._baukastenZiele = () => ({ personen: [], objekte: [], items: [korn] });
+context.getNpcsAtCurrentLocation = () => [];
+context._itemsBeiKarl = () => [korn];
+context._itemKatalogEintrag = () => ({ name: korn.name, taugt: ['trinken', 'anbieten', 'angreifen_mit', 'werfen', 'werfen_fuesse'] });
+context._renderEngineMenu(container, {});
+byText(container, korn.name).onTap();
+assert(byText(container, 'Trinke'), 'Korn in an empty office must remain drinkable');
+assert(!byText(container, 'Biete an'), 'Korn in an empty office must not be offered to nobody');
+assert(!byText(container, 'Benutze'), 'Korn must not expose a context-free generic use');
+assert(!byText(container, 'Schau an'), 'ordinary inventory must not expose redundant inspection');
 calls.plan = [];
 calls.planExecuted = 0;
 const hostile = { id: 'mantelmann', name: 'Mann im grauen Mantel', tag: 'STASI', rolle: 'Agent', typ: 'person' };
