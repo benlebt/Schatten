@@ -488,6 +488,7 @@ for (const place of kesslerPlaces) {
 assert(html.includes('function _hauptuiItemVerben(target)'), 'inventory must expose contextual Haupt-UI verbs');
 assert(html.includes('function _hauptuiPlanDirekt(aktionKey, zielName, item)'), 'inventory escalation must reuse the existing plan/combat path');
 assert(html.includes("const pickupObjects = objects.filter(function (target) { return target.fundTyp === 'item'; });"), 'loose pickups must be split from investigation clues');
+assert(html.includes("if (target && target.fundTyp === 'item') {\n    add('nehmen', 'Nimm');\n    return verbs;\n  }"), 'loose pickup items must offer only direct pickup');
 assert(html.includes("{ key: 'fundstuecke', label: 'Fundstücke am Ort', tag: 'Nimm', targets: pickupObjects }"), 'pickups need their own visible target group');
 assert(html.includes('.hauptui-target-list > :only-child { grid-column: auto; }'), 'single targets must not stretch into full-width bars');
 assert(html.includes("const visibleGroups = groups.filter(function (group) { return group.targets.length > 0; });"), 'target groups need a shared visible group list for stable headings');
