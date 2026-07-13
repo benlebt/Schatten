@@ -46,8 +46,7 @@ assert(html.includes("document.querySelectorAll('.schatten-toast').forEach"), 'r
 assert(/robert_kessler:\s*\{[\s\S]{0,500}?grantIndizId:\s*'robert_aussage'/.test(html), 'Robert Kessler must use the interrogation dossier instead of the legacy AI dialogue');
 assert(/id:\s*'robert_aussage'[\s\S]{0,300}?npc:\s*'robert_kessler'/.test(html), 'Robert interrogation must grant a defined Kessler clue');
 assert(/name:\s*'Wachtmeister Eugen Hellbach', id:\s*'wachtmeister_eugen_hellbach'/.test(kessler), 'Hellbach must have a stable id so optional threat spawns can resolve him');
-assert(/name:\s*'Hinterhof Sybelstrasse'[\s\S]{0,900}?bedrohungen:\s*\[[\s\S]{0,400}?id:\s*'wachtmeister_eugen_hellbach'[\s\S]{0,220}?abStage:\s*2/.test(kessler), 'Kessler needs an optional gated Hellbach confrontation after the first observations');
-assert(/id:\s*'wachtmeister_eugen_hellbach'[\s\S]{0,180}?chance:\s*100,[\s\S]{0,80}?einmalig:\s*true/.test(kessler), 'Kessler tutorial threat should reliably fire once instead of feeling absent');
+assert(/name:\s*'Hinterhof Sybelstrasse'[\s\S]{0,900}?bedrohungen:\s*\[[\s\S]{0,400}?id:\s*'wachtmeister_eugen_hellbach'[\s\S]{0,260}?chance:\s*35,[\s\S]{0,100}?einmalig:\s*true,[\s\S]{0,100}?abStage:\s*3,[\s\S]{0,100}?abScene:\s*8/.test(kessler), 'Kessler needs a genuinely optional, late-gated Hellbach confrontation');
 assert(html.includes('Niemand bleibt unerklaert gefesselt oder K.O. am Tatort liegen.'), 'Kessler-style physical confrontations must resolve bound NPCs before the finale cuts away');
 assert(/function resolveThreatSpawn[\s\S]{0,900}?const stage =[\s\S]{0,700}?abStage[\s\S]{0,180}?bisStage/.test(html), 'threat spawns must support stage gates for optional confrontations');
 assert(/function resolveThreatSpawn[\s\S]{0,1200}?_threatEinmalig[\s\S]{0,1600}?einmalige Konfrontation bereits verbraucht/.test(html), 'one-shot threats must be remembered after they fire');

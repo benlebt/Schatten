@@ -4,7 +4,7 @@ const path = require('path');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 
-assert(html.includes('Schatten v7.12.1228'), 'version badge should be bumped');
+assert(html.includes('Schatten v7.12.1229'), 'version badge should be bumped');
 assert(html.includes('KONFRONTATION_TAG_TOOLTIPS'), 'missing confrontation tooltip registry');
 assert(html.includes('function _konfrontationWuerfleAusgang'), 'missing randomized confrontation outcome helper');
 assert(html.includes("const alkoholMalus = Math.min(3, Math.max(0, Number(caseProgress && caseProgress.alkohol) || 0));"), 'alcohol must reduce confrontation reliability');
@@ -58,5 +58,8 @@ assert(html.includes('Irritation +'), 'item cards should expose irritation stren
 assert(html.includes('Schwächung +'), 'item cards should expose weakening strength');
 assert(html.includes('Gegnerstaerke'), 'outcome prompt should include enemy strength');
 assert(html.includes('Zufallsausgang'), 'outcome prompt should include randomized result');
+assert(html.includes('schwarzer, trockener Slapstick'), 'comic confrontation items need an intentionally extreme slapstick register');
+assert(html.includes('harter Grossstadt-Noir'), 'serious confrontations need a distinct rough noir register');
+assert(html.includes('Der Gag bleibt Teil der Welt'), 'slapstick must leave persistent, believable scene consequences');
 
 console.log('KONFRONTATION_UI_OK');

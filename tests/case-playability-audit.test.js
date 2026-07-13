@@ -25,6 +25,10 @@ const { CASES } = extract(
 );
 
 assert.strictEqual(CASES.length, 14, 'expected all 14 case setups');
+assert(!html.includes("getElementById('start-music-btn')"),
+  'removed start music control must not leave dead DOM lookup paths');
+assert(html.includes("localStorage.getItem('schatten-speech-voice-lang')"),
+  'persisted speech language must be used as a voice restoration fallback');
 assert(html.includes("if (typeof e.abStage === 'number' && _stgJetzt < e.abStage) continue;"),
   'NPC availability count must respect abStage');
 assert(html.includes("if (typeof entry.abStage === 'number' && _stgJetzt < entry.abStage) continue;"),
