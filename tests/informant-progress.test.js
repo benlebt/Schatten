@@ -28,9 +28,9 @@ assert.deepStrictEqual(Array.from(schieleClue.actions), ['BESTECHEN', 'BEDROHEN'
 assert(/15 Ostmark/.test(wegener.prompt), 'Wegener prompt must state the real Schiele price');
 assert(!/50 D-Mark/.test(JSON.stringify(wegener)), 'stale Schiele price remains in Wegener setup');
 
-const personStart = html.indexOf('function _hauptuiPersonVerben(');
+const personStart = html.indexOf('function _hauptuiInformantMitOffenemHinweis(');
 const personEnd = html.indexOf('function _hauptuiItemVerben(', personStart);
-assert(personStart >= 0 && personEnd > personStart, '_hauptuiPersonVerben block missing');
+assert(personStart >= 0 && personEnd > personStart, 'Haupt-UI informant action block missing');
 const personContext = {
   _hauptuiPersonIstFeind: () => false,
   _hauptuiNpcBezwungen: () => false,
@@ -51,6 +51,12 @@ assert.deepStrictEqual(schieleVerbs.map((verb) => verb.key), ['bestechen', 'bedr
 assert(/15 Ostmark/.test(schieleVerbs[0].label), 'informant payment action must show the price');
 assert.strictEqual(schieleVerbs.some((verb) => verb.key === 'reden'), false, 'talk must be hidden while paid informant clue is open');
 
+const staleSchiele = { id: 'schiele', name: 'Schiele', tag: 'INFORMANT', typ: 'person', hinweis: true, erledigt: true };
+const staleSchieleVerbs = Array.from(personContext._hauptuiPersonVerben(staleSchiele));
+assert.deepStrictEqual(staleSchieleVerbs.map((verb) => verb.key), ['bestechen', 'bedrohen'], 'old saves must recover Schiele even when the target was marked completed');
+assert.strictEqual(personContext._hauptuiEmpfohleneAktion(staleSchiele), 'bestechen', 'selecting Schiele must preselect the useful payment action');
+assert.strictEqual(personContext._hauptuiZielHinweis(staleSchiele, 'Person'), 'Hinweis gegen Bezahlung', 'stale completed label must not hide the paid clue');
+
 const witnessVerbs = Array.from(personContext._hauptuiPersonVerben({
   id: 'zeuge', name: 'Zeuge', tag: 'WITNESS', typ: 'person', hinweis: true
 }));
@@ -66,5 +72,51 @@ assert(html.includes("if (verb === 'bestechen' && typeof npcInteraktion === 'fun
 assert(html.includes("if (tag === 'INFORMANT')"), 'legacy NPC menu informant branch missing');
 assert(html.includes("keys = (_informantHatHinweis && !_informantHatVerhoer) ? ['bestechen','bedrohen'] : ['befragen'];"), 'legacy informant actions do not match clue gate');
 assert(html.includes("BEDROHEN: 'Unter Druck setzen'"), 'hint action label for pressure missing');
+assert(html.includes("&& !_hauptuiInformantMitOffenemHinweis(target)"), 'completed-target rendering can still disable an open informant clue');
+
+const grantStart = html.indexOf('function pruefeKernIndizFund(');
+const grantEnd = html.indexOf('\n// ===== Ende Engine-Ortssystem =====', grantStart);
+assert(grantStart >= 0 && grantEnd > grantStart, 'deterministic evidence grant function missing');
+const grantSource = html.slice(grantStart, grantEnd);
+let paymentCalls = 0;
+const grantContext = {
+  window: {},
+  engineCurrentLocation: { name: 'Eckkneipe Zum Goldenen Anker' },
+  caseProgress: { stage: 3, gefundeneIndizIds: [] },
+  getCaseLocations: () => [{
+    name: 'Eckkneipe Zum Goldenen Anker',
+    indizien: [{
+      id: 'schiele_streit',
+      text: 'Schiele nennt den Streit.',
+      npc: 'schiele',
+      quelle: 'person',
+      actions: ['BESTECHEN', 'BEDROHEN']
+    }]
+  }],
+  normForMatch: (value) => String(value || '').toLowerCase().trim(),
+  getNpcsAtCurrentLocation: () => [{ id: 'schiele', name: 'Schiele', tag: 'INFORMANT' }],
+  _aktTageszeitName: () => 'nacht',
+  classifyEvidenceAction: () => 'person',
+  getEvidenceActionKey: () => 'BESTECHEN',
+  _npcWirklichInSzene: () => true,
+  _aktionsZielNpcPasst: () => true,
+  _indizGehoertZuNpc: () => true,
+  _resolveNpcIdentity: () => ({ id: 'schiele', name: 'Schiele', tag: 'INFORMANT' }),
+  _informantPreis: () => 15,
+  _informantBezahle: () => { paymentCalls += 1; return { ok: true, art: 'geld', betrag: 15 }; },
+  _markiereIndizGefunden: (clue) => {
+    grantContext.caseProgress.gefundeneIndizIds.push(clue.id);
+    return true;
+  },
+  caseHasDefinedEvidence: () => true,
+  diag: () => {}
+};
+grantContext.window = grantContext;
+vm.createContext(grantContext);
+vm.runInContext(grantSource, grantContext);
+const granted = Array.from(grantContext.pruefeKernIndizFund('Schiele nennt Karl nach der Bezahlung den Streit.'));
+assert.strictEqual(paymentCalls, 1, 'Schiele payment must be booked exactly once');
+assert.deepStrictEqual(Array.from(grantContext.caseProgress.gefundeneIndizIds), ['schiele_streit'], 'successful payment must book Schiele clue');
+assert.deepStrictEqual(granted, ['Schiele nennt den Streit.'], 'successful Schiele interaction must report the granted clue');
 
 console.log('INFORMANT_PROGRESS_OK');

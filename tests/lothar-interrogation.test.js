@@ -30,6 +30,7 @@ const personContext = {
   _hauptuiRomanceAktion: () => null,
   _hauptuiHeilerAktion: () => null,
   _hauptuiVerhoerNpc: () => null,
+  _hauptuiInformantMitOffenemHinweis: () => false,
   _resolveNpcIdentity: () => ({ id: 'lothar_schaefer', name: 'Lothar Schaefer', tag: 'GANGSTER' }),
   _npcHatOffenenHinweis: () => true
 };

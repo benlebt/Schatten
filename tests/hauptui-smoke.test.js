@@ -587,7 +587,7 @@ assert(html.includes('function _hauptuiItemVerben(target)'), 'inventory must exp
 assert(html.includes("_hauptuiHeilerAktion(target) ? 'Behandlung möglich' : 'Ausgesprochen'"), 'finished romance and healer targets must visibly remain actionable');
 assert(html.includes('if (target && target.erledigt && !bezwungen) {'), 'finished peaceful conversations need a dedicated action gate');
 assert(html.includes('if (romanceAktion) add(romanceAktion.key, romanceAktion.label);'), 'finished romance NPCs must retain romance without another conversation action');
-assert(html.includes('const _erledigtOhneSonderaktion = target.erledigt && !_hauptuiRomanceAktion(target) && !_hauptuiHeilerAktion(target);'), 'only finished targets without romance or treatment may be disabled');
+assert(/const _erledigtOhneSonderaktion = target\.erledigt\s*&& !_hauptuiInformantMitOffenemHinweis\(target\)\s*&& !_hauptuiRomanceAktion\(target\)\s*&& !_hauptuiHeilerAktion\(target\);/.test(html), 'only finished targets without romance, treatment, or an open informant clue may be disabled');
 assert(html.includes('const ROMANCE_OVERNIGHT_LOCATIONS = {'), 'romance NPCs need deterministic overnight locations');
 assert(html.includes("'lilo brenner': { name: 'Lilo Brenners Wohnung in West-Berlin'"), 'Lilo needs a fixed morning location and image');
 assert(html.includes('caseProgress.romanceOvernight = {'), 'overnight location must persist as engine state');
