@@ -23,6 +23,21 @@ const cases = context.INTRO_VARIANTS_TEST;
 const imageSets = context.CASE_SCENE_IMAGE_SETS_TEST;
 assert.strictEqual(cases.length, 14, 'the fixed case pool should still contain all 14 cases');
 assert.strictEqual(imageSets.length, 14, 'every fixed case needs a scene image set');
+assert(!html.includes('id="tageszeit-overlay"'), 'night must not darken the complete interface');
+assert(!/\.kessler-scene-visual\.is-night\s+img\s*\{/.test(html), 'night images must not receive an extra darkness filter');
+assert(!/\.kessler-scene-visual\.is-night::after\s*\{/.test(html), 'night images must not receive an extra darkness vignette');
+
+const nativeNightFiles = new Set([
+  'goldener-anker.png',
+  'rote-laterne.png',
+  'spielklub-roter-stern.png',
+  'keller-roter-stern.png',
+  'die-badewanne.png',
+  'charite-notaufnahme.png',
+  'doc-wagners-praxis.png',
+  'sbahnhof-friedrichstrasse.png',
+  'sbahnhof-alexanderplatz.png',
+]);
 
 function norm(value) {
   return String(value || '')
@@ -62,6 +77,9 @@ for (const imageSet of imageSets) {
     assert(fs.existsSync(path.join(repoRoot, root, spec.file)), 'dark scene asset missing: ' + root + spec.file);
     assert(fs.existsSync(path.join(repoRoot, root, spec.dayFile)), 'day scene asset missing: ' + root + spec.dayFile);
     assert(fs.existsSync(path.join(repoRoot, root, nightFile)), 'night scene asset missing: ' + root + nightFile);
+    if (nativeNightFiles.has(spec.file)) {
+      assert.strictEqual(spec.nightFile, spec.file, 'native illuminated night scene must not use a darkened copy: ' + spec.file);
+    }
   }
 }
 
