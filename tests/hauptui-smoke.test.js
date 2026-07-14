@@ -64,13 +64,35 @@ const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8').r
 const itemEmojiStart = html.indexOf('function pickItemEmoji(name)');
 const itemEmojiEnd = html.indexOf('function pickNpcEmoji(name)', itemEmojiStart);
 const itemEmojiContext = {
-  normForMatch: (value) => String(value || '').toLowerCase(),
+  normForMatch: (value) => String(value || '').toLowerCase()
+    .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss'),
 };
 vm.createContext(itemEmojiContext);
 vm.runInContext(html.slice(itemEmojiStart, itemEmojiEnd), itemEmojiContext);
 assert.strictEqual(itemEmojiContext.pickItemEmoji('Schweres Nudelholz'), '🪵', 'rolling pin pickup must not use the generic backpack icon');
 assert.strictEqual(itemEmojiContext.pickItemEmoji('Gebrauchte Handschellen'), '⛓️', 'handcuffs pickup should have a distinct tactical-item icon');
 assert.strictEqual(itemEmojiContext.pickItemEmoji('Kleine Sahnetorte im Pappkarton'), '🍰', 'cake pickup should have a distinct household-item icon');
+assert.strictEqual(itemEmojiContext.pickItemEmoji('Bananenschale'), '🍌', 'banana peel pickup should have a distinct slapstick-item icon');
+assert.strictEqual(itemEmojiContext.pickItemEmoji('Kurzes Brecheisen'), '🔧', 'crowbar pickup should have a distinct tool icon');
+assert.strictEqual(itemEmojiContext.pickItemEmoji('Brechstange'), '🔧', 'crowbar synonym must not fall back to the backpack icon');
+assert.strictEqual(itemEmojiContext.pickItemEmoji('Kuhfuß'), '🔧', 'colloquial crowbar synonym must not fall back to the backpack icon');
+assert.strictEqual(itemEmojiContext.pickItemEmoji('Walther PPK (eigene Pistole)'), '🔫', 'Karl\'s pistol should have a distinct weapon icon');
+assert.strictEqual(itemEmojiContext.pickItemEmoji('Brieftasche mit Detektiv-Lizenz'), '👛', 'Karl\'s wallet should have a distinct wallet icon');
+assert.strictEqual(itemEmojiContext.pickItemEmoji('Notizbuch und Bleistift'), '📓', 'Karl\'s notebook should have a distinct notebook icon');
+
+const itemCatalogStart = html.indexOf('const ITEM_KATALOG = {');
+const itemCatalogEnd = html.indexOf('// v7.12.631 (Benjamin: "eintauschen', itemCatalogStart);
+const catalogNames = Array.from(html.slice(itemCatalogStart, itemCatalogEnd).matchAll(/name:\s*'([^']+)'/g), (match) => match[1]);
+assert(catalogNames.length >= 17, 'item-icon audit must cover the complete tactical item catalog');
+catalogNames.forEach((name) => {
+  assert.notStrictEqual(itemEmojiContext.pickItemEmoji(name), '🎒', 'catalog item must not use generic backpack icon: ' + name);
+});
+
+const physicalEvidenceNames = Array.from(html.matchAll(/itemType:\s*'[^']+'\s*,\s*text:\s*'([^']+)'/g), (match) => match[1]);
+assert(physicalEvidenceNames.length >= 5, 'item-icon audit must cover physical case evidence');
+physicalEvidenceNames.forEach((name) => {
+  assert.notStrictEqual(itemEmojiContext.pickItemEmoji(name), '🎒', 'physical evidence must not use generic backpack icon: ' + name);
+});
 
 assert(html.includes('function _fahrtStrandungsOrt(startName, zielLoc)'), 'roadside stops should resolve to a mapped location');
 assert(html.includes('function _fahrtAmKartenortStranden(startName, zielLoc, grund)'), 'roadside stop state helper should exist');
