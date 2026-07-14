@@ -6,7 +6,7 @@ const vm = require('vm');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1231 +Taktische-Item-Symbole'"), 'version constant is stale');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1232 +Konfrontations-Kontinuitaet'"), 'version constant is stale');
 
 const custodyStart = html.indexOf('function _custodyVerhoerState()');
 const custodyEnd = html.indexOf('// v7.11.44: Custody-Switch-Counter', custodyStart);
@@ -40,6 +40,34 @@ for (const action of ['SCHWEIGEN', 'HALBWAHRHEIT', 'ROTH', 'PROTOKOLL', 'BESTECH
 assert(html.includes('verhoer.runden >= 3 && verhoer.druck >= 3 && verhoer.verweigerung >= 2'), 'custody death must require repeated escalation');
 assert(html.includes("verfassung === 'number' && verfassung <= 2"), 'custody death must require critical health');
 assert(html.includes('Math.min(0.18, chance)'), 'custody death risk must retain a hard cap');
+assert(html.includes("caseProgress.gameOverTodArt = 'stasi-verhoer'"), 'a lethal custody interrogation must persist a true death outcome');
+assert(html.includes("caseProgress.gameOverTodArt = 'mfs-liquidation'"), 'MfS liquidation must persist a true death outcome');
+assert(html.includes("KARL MAUER IST TOT - FALL OFFEN"), 'true death needs a distinct end screen instead of Charite recovery');
+assert(html.includes('Ein normales Vf=0 bleibt der schwere, aber überlebbare Zusammenbruch'), 'ordinary zero health must remain the recoverable collapse path');
+
+const gameOverStart = html.indexOf('function showGameOver()');
+const gameOverEnd = html.indexOf('function buildFallbackAbschlussProsa()', gameOverStart);
+assert(gameOverStart >= 0 && gameOverEnd > gameOverStart, 'cannot isolate game-over renderer');
+const makeEndContext = (deathArt) => {
+  const elements = {};
+  const makeElement = () => ({ innerHTML: '', classList: { add: () => {}, remove: () => {} } });
+  const context = {
+    caseProgress: deathArt ? { gameOverTodArt: deathArt } : {},
+    sceneCounter: 2,
+    document: { getElementById: (id) => (elements[id] || (elements[id] = makeElement())) },
+    clearSavedGame: () => {},
+  };
+  vm.createContext(context);
+  vm.runInContext(html.slice(gameOverStart, gameOverEnd), context);
+  context.showGameOver();
+  return elements['game-over'].innerHTML;
+};
+const lethalEnd = makeEndContext('stasi-verhoer');
+assert(lethalEnd.includes('KARL MAUER IST TOT'), 'lethal interrogation must not wake Karl in the Charite');
+assert(!lethalEnd.includes('ZUSAMMENGEBROCHEN'), 'lethal interrogation must not use the recoverable collapse title');
+const collapseEnd = makeEndContext('');
+assert(collapseEnd.includes('ZUSAMMENGEBROCHEN - FALL OFFEN'), 'ordinary zero health must still use recoverable collapse');
+assert(/am Leben|Aber er atmet|davongekommen/.test(collapseEnd), 'ordinary collapse must still state that Karl survived');
 assert(html.includes('stasiCustodyScenesSince >= 3'), 'routine custody should allow release by the following morning');
 assert(html.includes('caseProgress._custodyCountedScene !== custodySceneMark'), 'custody duration must count distinct scenes, not UI rerenders');
 assert(html.includes('NOTFLUCHT ist der einzige sofortige Ausbruch'), 'custody prompt must distinguish escape from routine morning release');

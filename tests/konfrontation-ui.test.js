@@ -1,10 +1,11 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 
-assert(html.includes('Schatten v7.12.1231'), 'version badge should be bumped');
+assert(html.includes('Schatten v7.12.1232'), 'version badge should be bumped');
 assert(html.includes('KONFRONTATION_TAG_TOOLTIPS'), 'missing confrontation tooltip registry');
 assert(html.includes('function _konfrontationWuerfleAusgang'), 'missing randomized confrontation outcome helper');
 assert(html.includes("const alkoholMalus = Math.min(3, Math.max(0, Number(caseProgress && caseProgress.alkohol) || 0));"), 'alcohol must reduce confrontation reliability');
@@ -39,6 +40,15 @@ assert(!actionBody.includes('_konfrontationClear('), 'confrontation must not be 
 assert(actionBody.includes('_hauptuiKonfrontationChooseNarration'), 'confrontation action function must start a narrative scene');
 assert(actionBody.includes('_konfrontationItemVerbrauchen'), 'thrown/used items should be consumed by the confrontation outcome');
 assert(actionBody.includes('_hauptuiKonfrontationAbschliessen'), 'defeated enemies should be closed only after narrative handoff');
+assert(html.includes('function _konfrontationStatusIstEndgueltig(status)'), 'transient and terminal confrontation states need one shared classifier');
+assert(html.includes("['ko', 'gefesselt', 'fixiert', 'geflohen', 'uebergeben']"), 'only truly secured opponents may end the confrontation');
+assert(html.includes('const bleibtOffen = !!(finalStatus && !_konfrontationStatusIstEndgueltig(finalStatus) && outcome);'), 'a merely staggered opponent must keep the confrontation active');
+assert(html.includes('k.treffer >= 2 && k.kontrollverlust >= 7'), 'successive tactical hits need a real cumulative resolution path');
+assert(html.includes('function _hauptuiKonfrontationAnsichtAktualisieren()'), 'post-narration state changes must refresh the scene visual and action UI immediately');
+assert(html.includes("_renderKesslerSceneVisual(currentScene);"), 'danger styling must update without waiting for another player click');
+assert(html.includes("return !!(z && ['ko', 'gefesselt', 'fixiert'].indexOf(z.status) !== -1);"), 'benommen or blinded opponents must not become searchable aftermath targets');
+assert(html.includes('&& !_taktischeKonfrontationLaeuft'), 'meta custody must not interrupt an unresolved tactical confrontation');
+assert(!html.includes("showProgressToast('Dem Zugriff entgangen'"), 'an invisible rolled-back arrest must not produce a success toast');
 assert(html.includes('_konfrontationLootHinweis'), 'defeated enemies should become explicitly searchable');
 assert(actionBody.includes("id: 'KONFRONTATION_ITEM_'"), 'item actions must create a narrative engine scene');
 assert(html.includes('Leere Haende'), 'bare-handed attacks need an explicit risky fallback plan');
@@ -70,5 +80,47 @@ assert(html.includes('Zufallsausgang'), 'outcome prompt should include randomize
 assert(html.includes('schwarzer, trockener Slapstick'), 'comic confrontation items need an intentionally extreme slapstick register');
 assert(html.includes('harter Grossstadt-Noir'), 'serious confrontations need a distinct rough noir register');
 assert(html.includes('Der Gag bleibt Teil der Welt'), 'slapstick must leave persistent, believable scene consequences');
+
+const outcomeStart = html.indexOf('function _hauptuiKonfrontationLetztenAusgangSpeichern');
+const outcomeEnd = html.indexOf('function _konfrontationUnbewaffnetPlan', outcomeStart);
+assert(outcomeStart >= 0 && outcomeEnd > outcomeStart, 'cannot isolate confrontation state transition helpers');
+const stateWrites = [];
+let visualRefreshes = 0;
+let optionRefreshes = 0;
+const context = {
+  caseProgress: { activeConfrontation: { enemyName: 'Hauptmann Klaus Berner' } },
+  currentScene: { szene: 'Berner taumelt.' },
+  diag: () => {},
+  saveGame: () => {},
+  _npcZustandSet: (name, state) => stateWrites.push([name, state.status]),
+  _konfrontationClear: () => { context.caseProgress.activeConfrontation = null; },
+  _konfrontationLootHinweis: () => {},
+  _renderKesslerSceneVisual: () => { visualRefreshes++; },
+  renderOptions: () => { optionRefreshes++; },
+};
+vm.createContext(context);
+vm.runInContext(html.slice(outcomeStart, outcomeEnd), context);
+context._hauptuiKonfrontationAbschliessen(
+  { name: 'Hauptmann Klaus Berner' },
+  'Hauptmann Klaus Berner',
+  'benommen',
+  'item-werfen-treffer',
+  { name: 'Schweres Nudelholz' },
+  { art: 'treffer', wirkung: { kraft: 3, schwaechung: 2 } }
+);
+assert(context.caseProgress.activeConfrontation, 'a single stagger hit must keep Berner in the active confrontation');
+assert.strictEqual(stateWrites.at(-1)[1], 'benommen', 'the transient hit must remain narratively visible');
+assert.strictEqual(visualRefreshes, 1, 'the danger visual must refresh exactly once after the outcome');
+assert.strictEqual(optionRefreshes, 1, 'the action UI must refresh exactly once after the outcome');
+context._hauptuiKonfrontationAbschliessen(
+  { name: 'Hauptmann Klaus Berner' },
+  'Hauptmann Klaus Berner',
+  'benommen',
+  'item-werfen-treffer',
+  { name: 'Flasche Nordhäuser Doppelkorn' },
+  { art: 'treffer', wirkung: { kraft: 3, schwaechung: 2 } }
+);
+assert.strictEqual(context.caseProgress.activeConfrontation, null, 'a strong cumulative follow-up must end the confrontation');
+assert.strictEqual(stateWrites.at(-1)[1], 'ko', 'the cumulative follow-up must produce a real terminal state');
 
 console.log('KONFRONTATION_UI_OK');
