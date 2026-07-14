@@ -294,6 +294,7 @@ const context = {
     calls.npcDirekt = direkt;
   },
   _markPopupOpened: () => {},
+  _verhoerProfilFuer: (npc) => npc && npc.id === 'norbert_tetzlaff' ? 'norbert_tetzlaff' : null,
   _zeigeFundAuswahl: (items, clues) => { calls.fund += 1; calls.fundItems = items; calls.fundClues = clues; },
   chooseOption: (option) => calls.options.push(option),
   saveGameState: () => { calls.saves += 1; },
