@@ -72,6 +72,7 @@ assert(html.includes('const _festnahmeVarianten = ['), 'custody entry should use
 assert(html.includes('const _festnahmeZeit ='), 'custody entry should respect time of day');
 assert(html.includes("if (romance.canApproach) return { key: 'naeher', label: 'Näher kommen' }"), 'Haupt-UI should expose romance directly beside person actions');
 assert(html.includes("if (verb === 'naeher' || verb === 'nacht')"), 'Haupt-UI should execute romance without opening the NPC submenu');
+assert(!html.includes('function _hauptuiExecuteLegacyVor1155'), 'obsolete Haupt-UI executor must be removed instead of shadowing live actions');
 assert(html.includes('if (showRomanceButton && !window.HAUPTUI_AKTIV)'), 'legacy romance button must not duplicate the Haupt-UI action');
 
 assert(html.includes('function _nachtHatErreichbareErmittlung()'), 'night guidance should inspect whether evidence is currently reachable');
@@ -292,6 +293,18 @@ assert.strictEqual(context._hauptuiZielHinweis(finishedMarlene, 'Person'), 'Beha
 context.window._healerMenuState = { doc: true, marlene: false };
 assert.deepStrictEqual(Array.from(context._hauptuiPersonVerben({ id: 'doc_wagner', name: 'Doc Wagner', typ: 'person' }, {})).map((verb) => verb.key), ['reden', 'heilen_doc'], 'Doc Wagner must expose conversation and treatment together');
 context.window._healerMenuState = null;
+
+const directRomance = { id: 'lilo_brenner', name: 'Lilo Brenner', typ: 'person' };
+context.getNpcsAtCurrentLocation = () => [directRomance];
+context._hauptuiExecute('naeher', directRomance);
+assert.strictEqual(calls.options[calls.options.length - 1].id, 'HAUPTUI_ROMANTIK', 'direct romance must execute through the live Haupt-UI path');
+assert.strictEqual(calls.options[calls.options.length - 1]._romanceNpc, directRomance.name, 'direct romance must preserve the selected NPC');
+const directMarlene = { id: 'marlene_wagner', name: 'Marlene Wagner', typ: 'person' };
+context.getNpcsAtCurrentLocation = () => [directMarlene];
+context._hauptuiExecute('heilen_marlene', directMarlene);
+assert.strictEqual(calls.options[calls.options.length - 1].id, 'MARLENE_HEILEN', 'direct treatment must execute through the live Haupt-UI path');
+assert.strictEqual(calls.options[calls.options.length - 1]._marleneHeal, true, 'Marlene treatment must retain its healing marker');
+context.getNpcsAtCurrentLocation = () => [voss];
 
 let acquiredFundItem = null;
 context._fundItemAufnehmenDirekt = (item) => { acquiredFundItem = item; return true; };
