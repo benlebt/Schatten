@@ -5,7 +5,7 @@ const vm = require('vm');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 
-assert(html.includes('Schatten v7.12.1238'), 'version badge should be bumped');
+assert(html.includes('Schatten v7.12.1239'), 'version badge should be bumped');
 assert(html.includes('KONFRONTATION_TAG_TOOLTIPS'), 'missing confrontation tooltip registry');
 assert(html.includes('function _konfrontationWuerfleAusgang'), 'missing randomized confrontation outcome helper');
 assert(html.includes("const alkoholMalus = Math.min(3, Math.max(0, Number(caseProgress && caseProgress.alkohol) || 0));"), 'alcohol must reduce confrontation reliability');
@@ -39,6 +39,13 @@ assert(!actionBody.includes('_hauptuiChoose('), 'confrontation action function m
 assert(!actionBody.includes('_konfrontationClear('), 'confrontation must not be cleared before narrative handoff succeeds');
 assert(actionBody.includes('_hauptuiKonfrontationChooseNarration'), 'confrontation action function must start a narrative scene');
 assert(actionBody.includes('_konfrontationItemVerbrauchen'), 'thrown/used items should be consumed by the confrontation outcome');
+const itemBranchStart = actionBody.indexOf("if (aktion === 'werfen' || aktion === 'werfen_fuesse'");
+const itemBranchEnd = actionBody.indexOf("if (aktion === 'fliehen')", itemBranchStart);
+assert(itemBranchStart >= 0 && itemBranchEnd > itemBranchStart, 'cannot isolate confrontation item branch');
+const itemBranch = actionBody.slice(itemBranchStart, itemBranchEnd);
+assert(itemBranch.indexOf('_konfrontationItemVerbrauchen') < itemBranch.indexOf('_hauptuiKonfrontationChooseNarration'), 'item must leave inventory before the new narrative scene renders');
+assert(itemBranch.includes('_konfrontationItemVerbrauchRueckgaengig(reservierung)'), 'failed narrative handoff must restore the reserved item');
+assert(itemBranch.includes('_hauptuiKonfrontationAnsichtAktualisieren();'), 'item reservation must refresh confrontation buttons immediately');
 assert(actionBody.includes('_hauptuiKonfrontationAbschliessen'), 'defeated enemies should be closed only after narrative handoff');
 assert(html.includes('function _konfrontationStatusIstEndgueltig(status)'), 'transient and terminal confrontation states need one shared classifier');
 assert(html.includes("['ko', 'gefesselt', 'fixiert', 'geflohen', 'uebergeben']"), 'only truly secured opponents may end the confrontation');
@@ -80,6 +87,30 @@ assert(html.includes('Zufallsausgang'), 'outcome prompt should include randomize
 assert(html.includes('schwarzer, trockener Slapstick'), 'comic confrontation items need an intentionally extreme slapstick register');
 assert(html.includes('harter Grossstadt-Noir'), 'serious confrontations need a distinct rough noir register');
 assert(html.includes('Der Gag bleibt Teil der Welt'), 'slapstick must leave persistent, believable scene consequences');
+
+const consumeStart = html.indexOf('function _konfrontationItemVerbrauchen');
+const consumeEnd = html.indexOf('function _konfrontationLootHinweis', consumeStart);
+assert(consumeStart >= 0 && consumeEnd > consumeStart, 'cannot isolate confrontation item transaction helpers');
+const inventory = {
+  alter_fisch: { id: 'alter_fisch', name: 'Alter Fisch (aus dem Müll)', status: 'bei_karl', owner: 'karl', locationId: null }
+};
+const consumeContext = {
+  _itemKatalogEintrag: () => ({ verbrauchbar: true }),
+  _itemMove: (id, change) => {
+    if (!inventory[id]) return false;
+    Object.assign(inventory[id], change);
+    return true;
+  }
+};
+vm.createContext(consumeContext);
+vm.runInContext(html.slice(consumeStart, consumeEnd), consumeContext);
+const reservation = consumeContext._konfrontationItemVerbrauchen(inventory.alter_fisch, 'werfen');
+assert(reservation, 'throwing a consumable item must create a rollback reservation');
+assert.strictEqual(inventory.alter_fisch.status, 'verloren', 'thrown fish must leave Karl inventory immediately');
+assert.strictEqual(inventory.alter_fisch.owner, 'konfrontation', 'reserved item must belong to the active confrontation');
+assert(consumeContext._konfrontationItemVerbrauchRueckgaengig(reservation), 'failed scene handoff must restore the item transaction');
+assert.strictEqual(inventory.alter_fisch.status, 'bei_karl', 'rollback must return the fish to Karl');
+assert.strictEqual(inventory.alter_fisch.owner, 'karl', 'rollback must restore the original owner');
 
 const outcomeStart = html.indexOf('function _hauptuiKonfrontationLetztenAusgangSpeichern');
 const outcomeEnd = html.indexOf('function _konfrontationUnbewaffnetPlan', outcomeStart);
