@@ -591,6 +591,10 @@ assert(html.includes('const _erledigtOhneSonderaktion = target.erledigt && !_hau
 assert(html.includes('const ROMANCE_OVERNIGHT_LOCATIONS = {'), 'romance NPCs need deterministic overnight locations');
 assert(html.includes("'lilo brenner': { name: 'Lilo Brenners Wohnung in West-Berlin'"), 'Lilo needs a fixed morning location and image');
 assert(html.includes('caseProgress.romanceOvernight = {'), 'overnight location must persist as engine state');
+assert(html.includes('partnerPresent: _morgen.partnerPresent'), 'overnight state must persist whether the romance partner stayed');
+assert(html.includes('morningMode: _morgen.morningMode'), 'overnight state must persist the prose mode');
+assert(html.includes("? (ro.imageGone || 'morgen-wohnung-ost-allein.png')"), 'romance image must follow the stored morning presence');
+assert(html.includes("_romanceMorningPartnerStatus(scId, scName)"), 'temporary romance locations must override normal NPC location binding');
 assert(html.includes("root: 'assets/scenes/romance/'"), 'romance mornings must use dedicated scene images');
 assert(html.includes('if (caseProgress) caseProgress.romanceOvernight = null;'), 'travel must end the romance morning location state');
 assert(html.includes('.choice-overlay {'), 'trade and companion dialogs need a shared visual surface');
@@ -601,7 +605,7 @@ assert(html.includes("label: 'Näher kommen'"), 'romance action must use the cor
 ['rita', 'margot reinig', 'margit hollenbeck', 'annegret vogt-bauer', 'carla winter', 'erika kalewski', 'sonja krell', 'martha brommer', 'greta schliemann', 'dr. ruth kellner', 'lilo brenner', 'eva werder', 'liesel forsthuber'].forEach((name) => {
   assert(html.includes("'" + name + "': { name:"), 'missing deterministic overnight location for ' + name);
 });
-['morgen-wohnung-ost.png', 'morgen-wohnung-boheme.png', 'morgen-wohnung-west.png'].forEach((file) => {
+['morgen-wohnung-ost.png', 'morgen-wohnung-boheme.png', 'morgen-wohnung-west.png', 'morgen-wohnung-ost-allein.png', 'morgen-wohnung-boheme-allein.png', 'morgen-wohnung-west-allein.png'].forEach((file) => {
   assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'romance', file)), 'missing romance morning image ' + file);
 });
 assert(html.includes("if (angebotPersonen.length && _hauptuiItemTaugt(item, 'anbieten')) add('anbieten', 'Biete an');"), 'offering an item must require a present peaceful NPC');
