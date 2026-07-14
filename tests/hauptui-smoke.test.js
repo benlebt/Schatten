@@ -61,6 +61,17 @@ function byText(root, text) {
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8').replace(/\r\n/g, '\n');
 
+const itemEmojiStart = html.indexOf('function pickItemEmoji(name)');
+const itemEmojiEnd = html.indexOf('function pickNpcEmoji(name)', itemEmojiStart);
+const itemEmojiContext = {
+  normForMatch: (value) => String(value || '').toLowerCase(),
+};
+vm.createContext(itemEmojiContext);
+vm.runInContext(html.slice(itemEmojiStart, itemEmojiEnd), itemEmojiContext);
+assert.strictEqual(itemEmojiContext.pickItemEmoji('Schweres Nudelholz'), '🪵', 'rolling pin pickup must not use the generic backpack icon');
+assert.strictEqual(itemEmojiContext.pickItemEmoji('Gebrauchte Handschellen'), '⛓️', 'handcuffs pickup should have a distinct tactical-item icon');
+assert.strictEqual(itemEmojiContext.pickItemEmoji('Kleine Sahnetorte im Pappkarton'), '🍰', 'cake pickup should have a distinct household-item icon');
+
 assert(html.includes('function _fahrtStrandungsOrt(startName, zielLoc)'), 'roadside stops should resolve to a mapped location');
 assert(html.includes('function _fahrtAmKartenortStranden(startName, zielLoc, grund)'), 'roadside stop state helper should exist');
 assert(html.includes('caseProgress.strandungsOrt = {'), 'roadside stop should persist its mapped location');
