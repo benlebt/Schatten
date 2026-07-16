@@ -29,10 +29,10 @@ assert(!html.includes("getElementById('start-music-btn')"),
   'removed start music control must not leave dead DOM lookup paths');
 assert(html.includes("localStorage.getItem('schatten-speech-voice-lang')"),
   'persisted speech language must be used as a voice restoration fallback');
-assert(html.includes("if (typeof e.abStage === 'number' && _stgJetzt < e.abStage) continue;"),
-  'NPC availability count must respect abStage');
-assert(html.includes("if (typeof entry.abStage === 'number' && _stgJetzt < entry.abStage) continue;"),
-  'NPC rendering must respect abStage');
+assert(html.includes("&& !_physischesFallzielNpcFreigeschaltet(e, loc.name)) continue;"),
+  'NPC availability count must respect abStage with a physical-target override');
+assert(html.includes("&& !_physischesFallzielNpcFreigeschaltet(entry, loc.name)) continue;"),
+  'NPC rendering must respect abStage with a physical-target override');
 
 function label(setup, index) {
   return `case ${index + 1} (${setup.klient || setup.opfer || 'unknown'})`;

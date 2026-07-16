@@ -6,7 +6,7 @@ const vm = require('vm');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1241 +Wegener-Kontinuitaetsgedaechtnis'"), 'version constant is stale');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1243 +Schiele-Sperrstunde-Endspiel'"), 'version constant is stale');
 
 const custodyStart = html.indexOf('function _custodyVerhoerState()');
 const custodyEnd = html.indexOf('// v7.11.44: Custody-Switch-Counter', custodyStart);

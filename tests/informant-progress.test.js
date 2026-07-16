@@ -22,6 +22,8 @@ const anker = Array.from(wegener.setup.locations).find((location) =>
   location && /Goldenen Anker/.test(location.name || '')
 );
 assert(anker, 'Goldener Anker location missing');
+assert.deepStrictEqual(Array.from(anker.oeffnungszeit || []), ['abend', 'nacht'], 'Wegener Anker must close after the night');
+assert((anker.npcs || []).every((entry) => !entry.immer && Array.from(entry.zeit || []).join(',') === 'abend,nacht'), 'Schiele and Rita must leave when the Anker closes');
 const schieleClue = Array.from(anker.indizien || []).find((clue) => clue && clue.id === 'schiele_streit');
 assert(schieleClue, 'Schiele clue missing');
 assert.deepStrictEqual(Array.from(schieleClue.actions), ['BESTECHEN', 'BEDROHEN'], 'Schiele clue must use the two accepted informant actions');
@@ -118,5 +120,48 @@ const granted = Array.from(grantContext.pruefeKernIndizFund('Schiele nennt Karl 
 assert.strictEqual(paymentCalls, 1, 'Schiele payment must be booked exactly once');
 assert.deepStrictEqual(Array.from(grantContext.caseProgress.gefundeneIndizIds), ['schiele_streit'], 'successful payment must book Schiele clue');
 assert.deepStrictEqual(granted, ['Schiele nennt den Streit.'], 'successful Schiele interaction must report the granted clue');
+
+const buyStart = html.indexOf('function _hauptuiOffenesInformantenIndiz(');
+const buyEnd = html.indexOf('function _hauptuiEmpfohleneAktion(', buyStart);
+assert(buyStart >= 0 && buyEnd > buyStart, 'deterministic Haupt-UI informant purchase helpers missing');
+let directPayments = 0;
+let directBookings = 0;
+let rewardFlushes = 0;
+const buyContext = {
+  engineCurrentLocation: { name: 'Eckkneipe Zum Goldenen Anker' },
+  caseProgress: { stage: 0, gefundeneIndizIds: [] },
+  sceneCounter: 3,
+  getCaseLocations: () => [{
+    name: 'Eckkneipe Zum Goldenen Anker',
+    indizien: [schieleClue]
+  }],
+  normForMatch: (value) => String(value || '').toLowerCase().trim(),
+  _aktTageszeitName: () => 'nacht',
+  _indizGehoertZuNpc: (clueNpc, npcName, npcId) => clueNpc === npcId || clueNpc === String(npcName || '').toLowerCase(),
+  _indizBelegBedarf: () => null,
+  _indizNurUeberKampf: () => false,
+  _informantBezahle: () => { directPayments += 1; return { ok: true, art: 'geld', betrag: 15 }; },
+  _markiereIndizGefunden: (clue) => {
+    directBookings += 1;
+    buyContext.caseProgress.gefundeneIndizIds.push(clue.id);
+    return true;
+  },
+  _flushIndizRewards: () => { rewardFlushes += 1; },
+  saveGameState: () => {},
+  showProgressToast: () => {}
+};
+vm.createContext(buyContext);
+vm.runInContext(html.slice(buyStart, buyEnd), buyContext);
+
+const directPurchase = buyContext._hauptuiInformantHinweisKaufen({ id: 'schiele', name: 'Schiele', typ: 'person' });
+assert(directPurchase && directPurchase.indiz.id === 'schiele_streit', 'direct Schiele payment must return the booked clue');
+assert.strictEqual(directPayments, 1, 'direct Schiele payment must debit exactly once');
+assert.strictEqual(directBookings, 1, 'direct Schiele payment must book exactly once');
+assert.strictEqual(rewardFlushes, 1, 'direct Schiele payment must make the booked clue visible immediately');
+assert.strictEqual(buyContext.caseProgress._informantBezahlt.indizId, 'schiele_streit', 'payment truth must be persisted with its clue id');
+
+const duplicatePurchase = buyContext._hauptuiInformantHinweisKaufen({ id: 'schiele', name: 'Schiele', typ: 'person' });
+assert.strictEqual(duplicatePurchase, null, 'already booked Schiele clue must not be sold twice');
+assert.strictEqual(directPayments, 1, 'duplicate click must not debit again');
 
 console.log('INFORMANT_PROGRESS_OK');
