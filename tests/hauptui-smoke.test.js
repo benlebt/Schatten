@@ -539,6 +539,8 @@ for (const location of clueLocations) {
   assert(!byText(container, 'Gib'), location.place + ' person mode must not offer giving without an item');
 }
 
+const originalOffeneFaeden = context._hauptuiOffeneFaeden;
+context._hauptuiOffeneFaeden = () => [];
 context._baukastenZiele = () => ({ personen: [], objekte: [], items: [] });
 context._ortsFundIndizienErreichbar = () => [];
 context._renderEngineMenu(container, {});
@@ -552,6 +554,29 @@ assert(!byText(container, 'Warte'), 'generic waiting must stay out of normal loc
 searchButton.onTap();
 execute = all(container).find((element) => element.className === 'hauptui-execute');
 assert(execute && !execute.disabled, 'Durchsuche must stay executable without targets');
+
+context.engineCurrentLocation = { name: 'Werft VEB Koepenick' };
+context.window.__hauptuiActionState = { verb: null, targetKey: null };
+context._baukastenZiele = () => ({
+  personen: [],
+  objekte: [],
+  items: [{ id: 'doppelkorn', name: 'Flasche Nordhäuser Doppelkorn', typ: 'item' }],
+});
+context._hauptuiOffeneFaeden = () => [{
+  id: 'physisches_fallziel_konstantin_wegener',
+  frage: 'Konstantin Wegener finden und befreien',
+  ort: 'Lagerhalle an der Spree',
+  targetIds: ['konstantin_wegener'],
+  status: 'fallziel',
+  bedarf: 'Zielperson vor Ort sichern',
+}];
+context._renderEngineMenu(container, {});
+assert(!byText(container, 'Durchsuche'), 'an exhausted shipyard must not offer a repeatable empty search while the target thread points elsewhere');
+assert(visibleText(container).includes('Hier ist nichts mehr zu holen.'), 'an exhausted location needs a clear narrative travel cue');
+assert(visibleText(container).includes('Karls nächster Ansatz: Lagerhalle an der Spree.'), 'the travel cue must name the open thread destination');
+assert(byText(container, 'Konstantin Wegener finden und befreien'), 'the useful off-site thread must remain directly selectable');
+context._hauptuiOffeneFaeden = () => [];
+context._baukastenZiele = () => ({ personen: [], objekte: [], items: [] });
 
 const kesslerPlaces = [
   'Hinterhof Sybelstrasse',
@@ -582,6 +607,7 @@ for (const place of kesslerPlaces) {
   assert(execute && !execute.disabled, place + ' must offer an executable implicit location action');
   assert(!visibleText(execute).includes(place), place + ' must not repeat in the execute label');
 }
+context._hauptuiOffeneFaeden = originalOffeneFaeden;
 
 assert(html.includes('function _hauptuiItemVerben(target)'), 'inventory must expose contextual Haupt-UI verbs');
 assert(html.includes("_hauptuiHeilerAktion(target) ? 'Behandlung möglich' : 'Ausgesprochen'"), 'finished romance and healer targets must visibly remain actionable');
