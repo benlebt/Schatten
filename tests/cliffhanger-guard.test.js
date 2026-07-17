@@ -35,6 +35,7 @@ const context = {
 };
 vm.createContext(context);
 vm.runInContext([
+  sourceOf('_abschlussOrtOhneFestesTelefon'),
   sourceOf('_bedrohungsCliffhangerErkennen'),
   sourceOf('_bedrohungsCliffhangerAktualisieren'),
   sourceOf('_bedrohungsCliffhangerPrompt'),
@@ -58,6 +59,10 @@ assert.strictEqual(context.caseProgress.pendingThreatCliffhanger, null, 'visible
 
 assert.strictEqual(context._bedrohungsCliffhangerErkennen({ szene: 'Auf dem Bahnhof hörst du Schritte im Gedränge.' }), null, 'ordinary atmosphere must not become a cliffhanger');
 assert(context._bedrohungsCliffhangerErkennen({ szene: 'Ein metallisches Klicken hallt durch den Gang, der Riegel einer Waffe.' }), 'weapon cocking must persist as a threat hook');
+assert(context._bedrohungsCliffhangerErkennen({ szene: 'Unter dem Türspalt liegt plötzlich der Schatten eines Mannes.' }), 'a shadow under the door must persist as a threat hook');
+assert(context._bedrohungsCliffhangerErkennen({ szene: 'Ein schwerer Stiefeltritt nähert sich der Tür.' }), 'an approaching single bootstep must persist as a threat hook');
+assert.strictEqual(context._abschlussOrtOhneFestesTelefon('Lagerhalle an der Spree'), true, 'warehouse finale must not invent a telephone');
+assert.strictEqual(context._abschlussOrtOhneFestesTelefon('Karl Mauers Büro'), false, 'office finale may plausibly use a telephone');
 
 context.caseProgress = {};
 context.sceneCounter = 7;

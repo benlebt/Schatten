@@ -18,7 +18,9 @@ const hof = Array.from(wegener.setup.locations).find((location) => location && /
 assert(hof, 'Hinterhof Spreestrasse missing');
 const clue = Array.from(hof.indizien || []).find((entry) => entry && entry.id === 'lothar_schluessel');
 assert(clue, 'Lothar progression clue missing');
-assert(Array.from(clue.actions).includes('BEFRAGEN'), 'direct questioning must be accepted by Lothar clue gate');
+assert(!Array.from(clue.actions).includes('BEFRAGEN'), 'ordinary questioning must not make the kidnapper reveal his hideout');
+assert.deepStrictEqual(Array.from(clue.actions), ['BEDROHEN'], 'Lothar clue must require visible pressure');
+assert.strictEqual(clue.requiresPressure, true, 'pressure-only clues must opt out of generic talk equivalence');
 assert(Array.from(clue.requiresEvidenceAny || []).includes('lagerhalle_hinweis'), 'Lothar must react to the already secured courtyard lead');
 
 const personStart = html.indexOf('function _hauptuiPersonVerben(');
@@ -44,7 +46,13 @@ const executeStart = html.indexOf('function _hauptuiExecute(');
 const executeEnd = html.indexOf('\nfunction _hauptui', executeStart + 30);
 const executeBody = html.slice(executeStart, executeEnd);
 assert(executeBody.includes("key: 'befragen'"), 'hostile Haupt-UI talk must execute a real BEFRAGEN action');
+assert(executeBody.includes('TAETER-WIDERSTAND (PFLICHT)'), 'ordinary hostile talk must protect self-incriminating knowledge');
+assert(executeBody.includes('_hauptuiHinweisBrauchtDruck(target)'), 'hostile talk must inspect the live clue gate');
 assert(executeBody.includes("_hauptuiKonfrontationAktion('angreifen', enemy, null, [])"), 'hostile attack must enter the current tactical confrontation path');
+
+assert(html.includes('if (!ind.requiresPressure && ind.actions.some'), 'pressure-only clues must not be widened to generic conversation actions');
+assert(html.includes('scene.szene = fixSprache(expandAbbreviations(scene.szene));'), 'generated prose must remove lexical parenthetical abbreviations after expansion');
+assert(!html.includes("a.full + ' (' + a.abbr + ')'"), 'post-processing must never create glossary parentheses in noir prose');
 
 const fxStart = html.indexOf('function fxConflict(');
 const fxEnd = html.indexOf('\nfunction _anhaengerLadung', fxStart);
