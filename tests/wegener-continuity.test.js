@@ -39,6 +39,13 @@ assert(!/vor 6 Tagen/.test(setupText), 'Wegener setup must not freeze a relative
 const greyHat = Array.from(wegener.setup.setupCast).find((npc) => npc && npc.id === 'mann_grauer_hut');
 assert(greyHat, 'grey-hat observer missing');
 assert(!/Tresen/i.test((greyHat.beziehung || '') + ' ' + (greyHat.detail || '')), 'grey-hat profile must not carry bar furniture to other locations');
+assert.strictEqual(wegener.setup.targetResolution.rescueRequired, true, 'Wegener must require an explicit physical rescue');
+assert.strictEqual(wegener.setup.targetResolution.guard, 'lothars_bewacher', 'Wegener rescue must name its blocking guard');
+const warehouse = Array.from(wegener.setup.locations).find((loc) => loc && loc.name === 'Lagerhalle an der Spree');
+assert(warehouse, 'Wegener warehouse finale missing');
+assert(Array.from(warehouse.npcs || []).some((npc) => npc && npc.id === 'lothars_bewacher'), 'warehouse guard NPC missing');
+const guardThreat = Array.from(warehouse.bedrohungen || []).find((threat) => threat && threat.id === 'lothars_bewacher');
+assert(guardThreat && guardThreat.chance === 100 && guardThreat.unausweichlich === true, 'warehouse guard confrontation must be guaranteed');
 
 const normForMatch = (value) => String(value || '').toLowerCase().trim();
 const continuityContext = {

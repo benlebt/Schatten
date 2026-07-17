@@ -15,16 +15,21 @@ const targetContext = {
       mode: 'physical',
       npc: 'konstantin_wegener',
       location: 'Lagerhalle an der Spree',
-      abStage: 4
+      abStage: 4,
+      rescueRequired: true,
+      guard: 'lothars_bewacher'
     }
   },
   caseProgress: {
     stage: 3,
     zielpersonGefunden: false,
+    zielpersonGeborgen: false,
     gefundeneIndizIds: ['lothar_schluessel']
   },
   alleDefiniertenIndizien: () => [{ id: 'lothar_schluessel', stage: 4 }],
   _resolveNpcIdentity: () => ({ id: 'konstantin_wegener', name: 'Konstantin Wegener' }),
+  _gegnerBezwungen: () => false,
+  getNpcsAtCurrentLocation: () => [{ id: 'lothars_bewacher', name: 'Lothars Bewacher' }],
   normForMatch: (value) => String(value || '').toLowerCase().trim()
 };
 vm.createContext(targetContext);
@@ -41,7 +46,16 @@ assert.strictEqual(targetContext._physischesFallzielNpcFreigeschaltet(
 assert.strictEqual(targetContext._physischesFallzielNpcFreigeschaltet(
   { id: 'konstantin_wegener', abStage: 4 }, 'Eckkneipe Zum Goldenen Anker'
 ), false, 'target NPC must not appear at another location');
+targetContext.caseProgress.zielpersonGefunden = true;
+assert(targetContext._physischesFallzielStatus(), 'found target must remain active while physical rescue is open');
+assert.strictEqual(targetContext._physischesFallzielIstGeborgen(), false, 'finding a bound target must not count as rescue');
+assert.strictEqual(targetContext._physischesFallzielBewacherOffen(), true, 'configured guard must block rescue while free');
+targetContext.caseProgress.zielpersonGeborgen = true;
+assert.strictEqual(targetContext._physischesFallzielStatus(), null, 'rescued target must leave the open target state');
+assert.strictEqual(targetContext._physischesFallzielIstGeborgen(), true, 'explicit rescue state must unlock completion');
 
+targetContext.caseProgress.zielpersonGefunden = false;
+targetContext.caseProgress.zielpersonGeborgen = false;
 targetContext.caseProgress.gefundeneIndizIds = [];
 assert.strictEqual(targetContext._physischesFallzielStatus(), null, 'target must remain hidden before its reveal clue');
 
@@ -49,6 +63,9 @@ assert(html.includes("art: 'fallziel_reise'"), 'director must route toward a rev
 assert(html.includes("status: 'fallziel'"), 'main UI must expose a physical target thread');
 assert(html.includes("◆ Fallziel:"), 'map popup must label the physical target');
 assert(html.includes("var fallzielStatus = (typeof _physischesFallzielStatus === 'function')"), 'map data must derive the target marker from engine truth');
+assert(html.includes("add('befreien', 'Befreie')"), 'main UI must expose an explicit rescue action');
+assert(html.includes("id: 'HAUPTUI_ZIELPERSON_BEFREIEN'"), 'rescue action must have a dedicated engine scene');
+assert(html.includes("resolveLockReason = 'Zielperson noch befreien'"), 'case completion must explain an open physical rescue');
 
 const introStart = html.indexOf('const INTRO_VARIANTS = [');
 const introEnd = html.indexOf('\n];', introStart);
