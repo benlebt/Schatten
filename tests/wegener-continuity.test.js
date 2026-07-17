@@ -37,10 +37,17 @@ const setupText = JSON.stringify(wegener.setup);
 assert(/6\. Februar 1953/.test(setupText), 'Wegener disappearance must use a fixed calendar date');
 assert(!/vor 6 Tagen/.test(setupText), 'Wegener setup must not freeze a relative six-day phrase');
 const greyHat = Array.from(wegener.setup.setupCast).find((npc) => npc && npc.id === 'mann_grauer_hut');
-assert(greyHat, 'grey-hat observer missing');
-assert(!/Tresen/i.test((greyHat.beziehung || '') + ' ' + (greyHat.detail || '')), 'grey-hat profile must not carry bar furniture to other locations');
+assert.strictEqual(greyHat, undefined, 'Wegener must not contain a wandering anonymous grey-hat observer');
 assert.strictEqual(wegener.setup.targetResolution.rescueRequired, true, 'Wegener must require an explicit physical rescue');
+assert.strictEqual(wegener.setup.targetResolution.deliveryRequired, true, 'Wegener must require a safe handoff after rescue');
+assert.deepStrictEqual(
+  Array.from(wegener.setup.targetResolution.safeLocations),
+  ['Wegener-Wohnung', 'Volkspolizei-Revier Hans-Beimler-Strasse'],
+  'Wegener must expose both requested handoff routes'
+);
 assert.strictEqual(wegener.setup.targetResolution.guard, 'lothars_bewacher', 'Wegener rescue must name its blocking guard');
+const guard = Array.from(wegener.setup.setupCast).find((npc) => npc && npc.id === 'lothars_bewacher');
+assert(guard && guard.name === 'Erwin Kratz', 'warehouse guard needs one clear, persistent identity');
 const warehouse = Array.from(wegener.setup.locations).find((loc) => loc && loc.name === 'Lagerhalle an der Spree');
 assert(warehouse, 'Wegener warehouse finale missing');
 assert(Array.from(warehouse.npcs || []).some((npc) => npc && npc.id === 'lothars_bewacher'), 'warehouse guard NPC missing');
@@ -51,7 +58,8 @@ const normForMatch = (value) => String(value || '').toLowerCase().trim();
 const continuityContext = {
   caseProgress: {
     npcMemory: {
-      Schiele: [{ hinweis: 'Konstantin stritt am 6. Februar mit Lothar.' }]
+      Schiele: [{ hinweis: 'Konstantin stritt am 6. Februar mit Lothar.' }],
+      'Helga Wegener': [{ hinweis: 'Helga wartet in ihrer Wohnung auf Nachricht.' }]
     }
   },
   caseSetup: wegener.setup,
@@ -72,6 +80,28 @@ assert(continuity.includes('BEREITS ERZAEHLT'), 'remembered Schiele clue must en
 assert(continuity.includes('NIEMALS erneut als neue Enthuellung'), 'remembered clue must be barred from fresh disclosure');
 assert(continuity.includes('OFFENER INFORMANTEN-HINWEIS'), 'paid clue must remain locked before the engine action');
 assert(continuity.includes('Lothar Schaefer ist ko bei Hinterhof Spreestrasse'), 'Lothar physical state and location must persist');
+assert(continuity.includes('Ein "Mann mit grauem Hut" existiert in diesem Fall NICHT'), 'continuity prompt must bar the removed duplicate observer');
+assert(continuity.includes('einzige bewaffnete Bewacher in der Lagerhalle ist Erwin Kratz'), 'continuity prompt must preserve the named guard');
+const konstantinContinuity = continuityContext.buildNpcContinuityHint([
+  { id: 'konstantin_wegener', name: 'Konstantin Wegener', tag: 'ZIELPERSON' }
+]);
+assert(!konstantinContinuity.includes('Helga wartet in ihrer Wohnung'), 'Konstantin must never inherit Helga memory by surname');
+
+const npcStateContext = {
+  caseProgress: {},
+  normForMatch,
+  _npcZustandMap: () => ({
+    'konstantin wegener': { name: 'Konstantin Wegener', status: 'frei', seitTag: 1, seitSzene: 1 },
+    'oberleutnant mertens': { name: 'Oberleutnant Mertens', status: 'gefesselt', seitTag: 1, seitSzene: 1 }
+  }),
+  gameDay: 1,
+  sceneCounter: 1,
+  diag: () => {}
+};
+vm.createContext(npcStateContext);
+vm.runInContext(sourceOf('_npcZustandGet'), npcStateContext);
+assert.strictEqual(npcStateContext._npcZustandGet('Helga Wegener'), null, 'Helga must never inherit Konstantin state by surname');
+assert.strictEqual(npcStateContext._npcZustandGet('Mertens').name, 'Oberleutnant Mertens', 'single-name title aliases must keep working');
 
 const clientContext = {
   caseProgress: { clientGeduldErzaehltLevel: 0 },

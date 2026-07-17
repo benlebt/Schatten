@@ -17,19 +17,25 @@ const targetContext = {
       location: 'Lagerhalle an der Spree',
       abStage: 4,
       rescueRequired: true,
-      guard: 'lothars_bewacher'
+      guard: 'lothars_bewacher',
+      deliveryRequired: true,
+      safeLocation: 'Karls Opel Olympia',
+      safeLocations: ['Wegener-Wohnung', 'Volkspolizei-Revier Hans-Beimler-Strasse']
     }
   },
   caseProgress: {
     stage: 3,
     zielpersonGefunden: false,
     zielpersonGeborgen: false,
+    zielpersonTransportStatus: '',
+    zielpersonInBegleitung: false,
+    zielpersonAnKlientGemeldet: false,
     gefundeneIndizIds: ['lothar_schluessel']
   },
   alleDefiniertenIndizien: () => [{ id: 'lothar_schluessel', stage: 4 }],
   _resolveNpcIdentity: () => ({ id: 'konstantin_wegener', name: 'Konstantin Wegener' }),
   _gegnerBezwungen: () => false,
-  getNpcsAtCurrentLocation: () => [{ id: 'lothars_bewacher', name: 'Lothars Bewacher' }],
+  getNpcsAtCurrentLocation: () => [{ id: 'lothars_bewacher', name: 'Erwin Kratz' }],
   normForMatch: (value) => String(value || '').toLowerCase().trim()
 };
 vm.createContext(targetContext);
@@ -51,11 +57,26 @@ assert(targetContext._physischesFallzielStatus(), 'found target must remain acti
 assert.strictEqual(targetContext._physischesFallzielIstGeborgen(), false, 'finding a bound target must not count as rescue');
 assert.strictEqual(targetContext._physischesFallzielBewacherOffen(), true, 'configured guard must block rescue while free');
 targetContext.caseProgress.zielpersonGeborgen = true;
-assert.strictEqual(targetContext._physischesFallzielStatus(), null, 'rescued target must leave the open target state');
-assert.strictEqual(targetContext._physischesFallzielIstGeborgen(), true, 'explicit rescue state must unlock completion');
+targetContext.caseProgress.zielpersonTransportStatus = 'am_hallenausgang';
+assert(targetContext._physischesFallzielStatus(), 'freed target must remain active until transport starts');
+assert.strictEqual(targetContext._physischesFallzielIstGeborgen(), false, 'freeing alone must not complete a delivery rescue');
+targetContext.caseProgress.zielpersonTransportStatus = 'im_opel';
+targetContext.caseProgress.zielpersonInBegleitung = true;
+const transportStatus = targetContext._physischesFallzielStatus();
+assert(transportStatus && transportStatus.lieferungOffen, 'target in the Opel must expose the open delivery state');
+assert.deepStrictEqual(Array.from(transportStatus.safeLocations), ['Wegener-Wohnung', 'Volkspolizei-Revier Hans-Beimler-Strasse']);
+assert.strictEqual(targetContext._physischesFallzielIstGeborgen(), false, 'target in the Opel is not safely handed over yet');
+targetContext.caseProgress.zielpersonTransportStatus = 'bei_polizei';
+targetContext.caseProgress.zielpersonInBegleitung = false;
+assert.strictEqual(targetContext._physischesFallzielIstGeborgen(), false, 'police handoff needs client notification');
+targetContext.caseProgress.zielpersonAnKlientGemeldet = true;
+assert.strictEqual(targetContext._physischesFallzielStatus(), null, 'completed police handoff must close the target state');
+assert.strictEqual(targetContext._physischesFallzielIstGeborgen(), true, 'safe police handoff plus notification must unlock completion');
 
 targetContext.caseProgress.zielpersonGefunden = false;
 targetContext.caseProgress.zielpersonGeborgen = false;
+targetContext.caseProgress.zielpersonTransportStatus = '';
+targetContext.caseProgress.zielpersonAnKlientGemeldet = false;
 targetContext.caseProgress.gefundeneIndizIds = [];
 assert.strictEqual(targetContext._physischesFallzielStatus(), null, 'target must remain hidden before its reveal clue');
 
@@ -65,7 +86,14 @@ assert(html.includes("◆ Fallziel:"), 'map popup must label the physical target
 assert(html.includes("var fallzielStatus = (typeof _physischesFallzielStatus === 'function')"), 'map data must derive the target marker from engine truth');
 assert(html.includes("add('befreien', 'Befreie')"), 'main UI must expose an explicit rescue action');
 assert(html.includes("id: 'HAUPTUI_ZIELPERSON_BEFREIEN'"), 'rescue action must have a dedicated engine scene');
+assert(html.includes("key: 'ziel_zum_opel', label: 'Zum Opel bringen'"), 'freed target needs an explicit Opel transport action');
+assert(html.includes("key: 'ziel_zu_helga', label: 'Zu Helga bringen'"), 'target needs a direct client handoff');
+assert(html.includes("key: 'ziel_zur_vp', label: 'Bei der Polizei schuetzen'"), 'target needs a police protection route');
 assert(html.includes("resolveLockReason = 'Zielperson noch befreien'"), 'case completion must explain an open physical rescue');
+assert(html.includes("resolveLockReason = 'Zielperson noch zum Opel bringen'"), 'completion lock must explain the transport step');
+assert(html.includes("resolveLockReason = 'Zielperson noch sicher übergeben'"), 'completion lock must explain the handoff step');
+assert(html.includes('◆ Rettungsziel:'), 'map must label both safe handoff destinations');
+assert(html.includes('lagerhalle-spree-gerettet.png'), 'rescued warehouse state needs a dedicated visual');
 
 const introStart = html.indexOf('const INTRO_VARIANTS = [');
 const introEnd = html.indexOf('\n];', introStart);

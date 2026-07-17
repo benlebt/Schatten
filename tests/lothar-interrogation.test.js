@@ -5,6 +5,21 @@ const vm = require('vm');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 
+function sourceOf(name) {
+  const start = html.indexOf('function ' + name + '(');
+  assert(start >= 0, 'missing function ' + name);
+  let depth = 0;
+  let opened = false;
+  for (let i = start; i < html.length; i += 1) {
+    if (html[i] === '{') { depth += 1; opened = true; }
+    else if (html[i] === '}') {
+      depth -= 1;
+      if (opened && depth === 0) return html.slice(start, i + 1);
+    }
+  }
+  throw new Error('unterminated function ' + name);
+}
+
 const introStart = html.indexOf('const INTRO_VARIANTS = [');
 const introEnd = html.indexOf('\n];', introStart);
 assert(introStart >= 0 && introEnd > introStart, 'INTRO_VARIANTS block missing');
@@ -31,6 +46,7 @@ const personContext = {
   _hauptuiNpcBezwungen: () => false,
   _hauptuiRomanceAktion: () => null,
   _hauptuiHeilerAktion: () => null,
+  _hauptuiZielpersonTransportAktion: () => null,
   _hauptuiVerhoerNpc: () => null,
   _hauptuiInformantMitOffenemHinweis: () => false,
   _resolveNpcIdentity: () => ({ id: 'lothar_schaefer', name: 'Lothar Schaefer', tag: 'GANGSTER' }),
@@ -57,7 +73,14 @@ assert(!html.includes("a.full + ' (' + a.abbr + ')'"), 'post-processing must nev
 const fxStart = html.indexOf('function fxConflict(');
 const fxEnd = html.indexOf('\nfunction _anhaengerLadung', fxStart);
 const fxBody = html.slice(fxStart, fxEnd);
-assert(fxBody.includes('window.HAUPTUI_AKTIV) return;'), 'old emoji collision card must be suppressed in the Haupt-UI');
+assert(!fxBody.includes("box.className = 'fx-conflict'"), 'old emoji collision card must be removed for every UI path');
+assert(!fxBody.includes('_npcVisual('), 'conflict feedback must not render emoji character tokens');
+const arenaFxBody = sourceOf('_arenaFxAngriff');
+assert(arenaFxBody.includes('Noir statt Arcade'), 'legacy arena effects need an explicit permanent suppression');
+assert(arenaFxBody.indexOf('return;') < arenaFxBody.indexOf('document.getElementById'), 'arena emoji flight must be unreachable');
+const planBody = sourceOf('_planAusfuehren');
+assert(!planBody.includes('fxBattle(plan'), 'fetter and coordinated actions must not open the legacy emoji battle card');
+assert(planBody.includes('KARLS RUF'), 'conflict prose must receive Karl reputation as narrative context');
 assert(html.includes("aktion: t.push || t.aktion || ('Stelle ' + npc.name + ' gezielt zur Rede.')"), 'legacy fallback must never build a visible empty opponent action');
 
 console.log('LOTHAR_INTERROGATION_OK');
