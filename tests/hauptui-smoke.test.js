@@ -150,12 +150,14 @@ assert(html.includes("opelMiniSvg(16)") && html.includes('Dorthin reisen</span>'
 assert(html.includes('@media (max-width: 520px)') && html.includes('grid-template-columns: 1fr;'), 'narrow quick actions must stack into stable full-width rows');
 assert(html.includes('.hauptui-quick-actions .option-text-wrap > span:first-child,\n    .hauptui-quick-actions .option-btn-sleep .option-text-wrap > span:first-child {\n      min-width: 0;\n      max-width: 100%;\n      overflow: hidden;\n      text-overflow: ellipsis;\n      white-space: nowrap;'), 'narrow quick-action titles must not wrap over travel markers');
 assert(html.includes('.hauptui-lead-question { font-size: calc(11px * var(--reading-scale));'), 'open investigation threads must stay readable');
-assert(html.includes('.hauptui-lead-place { color: #91a9b4; font-size: calc(9.5px * var(--reading-scale));'), 'open thread destination labels must stay readable');
+assert(html.includes('.hauptui-lead {\n    width: 100%;\n    display: grid;\n    grid-template-columns: minmax(0, 1fr);'), 'open investigation threads must use a stable single-column layout');
+assert(html.includes('.hauptui-lead-place {\n    color: #91a9b4;\n    font-size: calc(9.5px * var(--reading-scale));\n    white-space: normal;\n    overflow-wrap: anywhere;'), 'open thread destination labels must wrap readably');
 assert(html.includes('max-width: 22ch;\n    color: #8fa8b5;\n    font-size: calc(9px * var(--reading-scale));'), 'hint tags must not collapse into tiny unreadable labels');
 assert(html.includes('const FX_DIALOG_OVERLAYS_AKTIV = false;'), 'legacy emoji dialogue cards must stay globally disabled in the scene-image style');
 assert(/function fxDialog[\s\S]{0,220}?window\._fxLastT = Date\.now\(\);[\s\S]{0,80}?if \(!FX_DIALOG_OVERLAYS_AKTIV\) return;/.test(html), 'fxDialog must mark handled and return before rendering emoji dialogue cards');
 assert(html.includes('.hauptui-kategorien .werkzeug-row .option-marker {\n    align-self: center;\n    margin-top: 0;\n    padding: 2px 6px;\n    letter-spacing: 0;'), 'tool marker typography must match the travel marker');
-assert(html.includes("oeffneNpcMenue(npc, 'szene', true)"), 'Rede mit must request direct unambiguous conversation');
+assert(html.includes('function _hauptuiFokussierePerson(npc)'), 'legacy NPC entry points must focus the person in the Haupt-UI');
+assert(html.includes("if (modus !== 'verwalten' && _hauptuiFokussierePerson(npc)) return;"), 'ordinary NPC clicks must not open a second conversation popup');
 assert(html.includes('UI-KLICKVERLAUF (chronologisch)'), 'debug export must include the chronological UI click audit');
 assert(html.includes('Sichtbare UI-Zustaende ('), 'debug export must include offered Haupt-UI and dossier states');
 assert(html.includes("_uiAudit('FADEN', faden.frage, faden.ort)"), 'open investigation threads must be logged when clicked');
@@ -255,11 +257,11 @@ assert(zielHinweisSource.includes("return 'Hinweis';"), 'person clue badges must
 assert(zielHinweisSource.includes('target.belegBedarf'), 'proof-gated clues must show Beleg fehlt instead of a misleading direct hint');
 const sceneVisualSource = html.slice(html.indexOf('function _renderKesslerSceneVisual'), html.indexOf('function _clearKesslerSceneVisual'));
 assert(!sceneVisualSource.includes('direktWennEindeutig'), 'NPC direct-action code must never leak into scene-image rendering');
-const start = html.indexOf('window.__hauptuiActionState');
+const start = html.lastIndexOf('window.__hauptuiActionState = window.__hauptuiActionState || { verb: null, targetKey: null };');
 const end = html.indexOf('</script>', start);
 assert(start > -1 && end > start, 'Haupt-UI source block not found');
 
-const calls = { npc: 0, fund: 0, options: [], marks: 0, flushes: 0, saves: 0, toasts: [] };
+const calls = { npc: 0, interactions: 0, fund: 0, options: [], marks: 0, flushes: 0, saves: 0, toasts: [] };
 const clue = { id: 'kessler_brief', text: 'Roberts gefaltetes Briefchen' };
 const voss = { id: 'voss', name: 'Oberkellner Voss', tag: 'WITNESS' };
 let expectedNpcId = voss.id;
@@ -303,7 +305,10 @@ const context = {
   _flushIndizRewards: () => { calls.flushes += 1; },
   showProgressToast: (...args) => calls.toasts.push(args),
   zeigeMiniAuswahl: () => {},
-  npcInteraktion: () => {},
+  npcInteraktion: (npc) => {
+    assert.strictEqual(npc.id, expectedNpcId);
+    calls.interactions += 1;
+  },
   _itemKatalogEintrag: () => null,
   diag: () => {},
 };
@@ -437,9 +442,9 @@ assert(speditionThread, 'Spedition thread must be visible at the Spedition');
 speditionThread.onTap();
 const threadExecute = all(threadContainer).find((element) => element.className === 'hauptui-execute');
 assert(threadExecute && visibleText(threadExecute).includes('Rede mit · Norbert Tetzlaff'), 'Spedition thread must prepare an executable Tetzlaff conversation');
-const npcCallsBeforeThread = calls.npc;
+const interactionsBeforeThread = calls.interactions;
 threadExecute.onTap();
-assert.strictEqual(calls.npc, npcCallsBeforeThread + 1, 'executing the Spedition thread must open Tetzlaff conversation');
+assert.strictEqual(calls.interactions, interactionsBeforeThread + 1, 'executing the Spedition thread must start Tetzlaff conversation directly');
 
 context._istKesslerFallFuerBild = () => false;
 context.caseProgress.gefundeneIndizIds = [];
@@ -453,6 +458,7 @@ context._baukastenZiele = () => ({
 context.getNpcsAtCurrentLocation = () => [voss];
 expectedNpcId = voss.id;
 calls.npc = 0;
+calls.interactions = 0;
 
 const container = new FakeElement('div');
 context._renderEngineMenu(container, {});
@@ -473,9 +479,8 @@ let execute = all(container).find((element) => element.className === 'hauptui-ex
 assert(execute && !execute.disabled, 'person command must be executable');
 execute.onTap();
 assert(context.caseProgress.uiAuditLog.some((event) => event.kind === 'AUSFUEHREN-BUTTON' && event.label === 'Rede mit'), 'execute clicks must enter the UI audit');
-assert.strictEqual(calls.npc, 1, 'person command must open the real NPC menu');
-assert.strictEqual(calls.npcModus, 'szene', 'Rede mit must exclude party-management actions');
-assert.strictEqual(calls.npcDirekt, true, 'Rede mit must directly execute an unambiguous conversation');
+assert.strictEqual(calls.interactions, 1, 'person command must start the real NPC interaction directly');
+assert.strictEqual(calls.npc, 0, 'person command must not reopen the legacy NPC menu');
 assert(!all(container).some((element) => element.className.split(' ').includes('is-selected')), 'executed commands must clear their yellow selection state');
 
 byText(container, 'Roberts Ecktisch').onTap();
@@ -545,15 +550,12 @@ context._baukastenZiele = () => ({ personen: [], objekte: [], items: [] });
 context._ortsFundIndizienErreichbar = () => [];
 context._renderEngineMenu(container, {});
 const searchButton = byText(container, 'Durchsuche');
-assert(searchButton, 'empty locations must still offer Durchsuche');
+assert(!searchButton, 'empty locations must not offer a repeatable no-op search');
 assert(!byText(container, 'Beobachte'), 'empty locations must not offer random generic observation scenes');
 assert(!byText(container, 'Lausche'), 'empty locations must not offer random generic listening scenes');
 assert(!byText(container, 'Umsehen'), 'redundant Umsehen action must stay removed');
 assert(!byText(container, 'Versteck dich'), 'generic hiding must stay out of normal location mode');
 assert(!byText(container, 'Warte'), 'generic waiting must stay out of normal location mode');
-searchButton.onTap();
-execute = all(container).find((element) => element.className === 'hauptui-execute');
-assert(execute && !execute.disabled, 'Durchsuche must stay executable without targets');
 
 context.engineCurrentLocation = { name: 'Werft VEB Koepenick' };
 context.window.__hauptuiActionState = { verb: null, targetKey: null };
@@ -596,16 +598,12 @@ for (const place of kesslerPlaces) {
   context.window.__hauptuiActionState = { verb: null, targetKey: null };
   context._renderEngineMenu(container, {});
   assert(!byText(container, place), place + ' must not repeat as a visible target');
-  assert(byText(container, 'Durchsuche'), place + ' must expose searching through the implicit location');
+  assert(!byText(container, 'Durchsuche'), place + ' must not expose a search without a reachable clue or object');
   assert(!byText(container, 'Beobachte'), place + ' must not expose random generic observation');
   assert(!byText(container, 'Lausche'), place + ' must not expose random generic listening');
   assert(!byText(container, 'Umsehen'), place + ' must not expose redundant Umsehen');
   assert(!byText(container, 'Versteck dich'), place + ' must not expose generic hiding');
   assert(!byText(container, 'Warte'), place + ' must not expose generic waiting');
-  byText(container, 'Durchsuche').onTap();
-  execute = all(container).find((element) => element.className === 'hauptui-execute');
-  assert(execute && !execute.disabled, place + ' must offer an executable implicit location action');
-  assert(!visibleText(execute).includes(place), place + ' must not repeat in the execute label');
 }
 context._hauptuiOffeneFaeden = originalOffeneFaeden;
 
@@ -613,7 +611,7 @@ assert(html.includes('function _hauptuiItemVerben(target)'), 'inventory must exp
 assert(html.includes("_hauptuiHeilerAktion(target) ? 'Behandlung möglich' : 'Ausgesprochen'"), 'finished romance and healer targets must visibly remain actionable');
 assert(html.includes('if (target && target.erledigt && !bezwungen) {'), 'finished peaceful conversations need a dedicated action gate');
 assert(html.includes('if (romanceAktion) add(romanceAktion.key, romanceAktion.label);'), 'finished romance NPCs must retain romance without another conversation action');
-assert(/const _erledigtOhneSonderaktion = target\.erledigt\s*&& !_hauptuiInformantMitOffenemHinweis\(target\)\s*&& !_hauptuiRomanceAktion\(target\)\s*&& !_hauptuiHeilerAktion\(target\);/.test(html), 'only finished targets without romance, treatment, or an open informant clue may be disabled');
+assert(/const _erledigtOhneSonderaktion = target\.erledigt\s*&& !_hauptuiInformantMitOffenemHinweis\(target\)\s*&& !_hauptuiRomanceAktion\(target\)\s*&& !_hauptuiHeilerAktion\(target\)\s*&& !target\.sonderAktion;/.test(html), 'only finished targets without romance, treatment, an open informant clue, or a special action may be disabled');
 assert(html.includes('const ROMANCE_OVERNIGHT_LOCATIONS = {'), 'romance NPCs need deterministic overnight locations');
 assert(html.includes("'lilo brenner': { name: 'Lilo Brenners Wohnung in West-Berlin'"), 'Lilo needs a fixed morning location and image');
 assert(html.includes('caseProgress.romanceOvernight = {'), 'overnight location must persist as engine state');
@@ -645,7 +643,7 @@ assert(html.includes('ALKOHOL-FAHRTPATZER:'), 'drunk driving must be able to pre
 assert(!html.includes("add('benutzen', 'Benutze');\n  add('anschauen', 'Schau an');\n  return verbs;"), 'inventory must not expose generic use and inspection for every item');
 assert(html.includes('function _hauptuiPlanDirekt(aktionKey, zielName, item)'), 'inventory escalation must reuse the existing plan/combat path');
 assert(html.includes("const pickupObjects = objects.filter(function (target) { return target.fundTyp === 'item'; });"), 'loose pickups must be split from investigation clues');
-assert(html.includes("if (target && target.fundTyp === 'item') {\n    add('nehmen', 'Nimm');\n    return verbs;\n  }"), 'loose pickup items must offer only direct pickup');
+assert(html.includes("add('nehmen', preis > 0 ? ('Kaufe · ' + preis + ' Ostmark') : 'Nimm');\n    return verbs;"), 'loose pickup items must offer one direct pickup or visibly priced purchase');
 assert(html.includes("{ key: 'fundstuecke', label: 'Fundstücke am Ort', tag: 'Nimm', targets: pickupObjects }"), 'pickups need their own visible target group');
 assert(html.includes('.hauptui-target-list > :only-child { grid-column: auto; }'), 'single targets must not stretch into full-width bars');
 assert(html.includes("const visibleGroups = groups.filter(function (group) { return group.targets.length > 0; });"), 'target groups need a shared visible group list for stable headings');
@@ -721,6 +719,11 @@ context.BAUKASTEN_AKTIONEN = {
 };
 context._planAdd = (entry) => { calls.plan.push(entry); return true; };
 context._planAusfuehren = () => { calls.planExecuted += 1; };
+let confrontationCall = null;
+context._hauptuiKonfrontationAufZiel = (npc) => npc;
+context._hauptuiKonfrontationAktion = (art, enemy, item, assist) => {
+  confrontationCall = { art, enemy, item, assist };
+};
 context._renderEngineMenu(container, {});
 assert(container.querySelector('.hauptui-action-menu'), 'combat mode must still render the Haupt-UI menu');
 const hostileButton = byText(container, hostile.name);
@@ -732,22 +735,28 @@ const toasterButton = byText(container, toaster.name);
 assert(toasterButton, 'inventory item must be visible in combat');
 assert.strictEqual(toasterButton.dataset.targetKind, 'item', 'inventory target must be marked as inventory, not a generic button');
 toasterButton.onTap();
-assert(byText(container, 'Wirf'), 'throwable inventory must expose Wirf when a hostile target is present');
-assert(byText(container, 'Lenk ab'), 'throwable inventory must expose an actual distraction verb');
-assert(byText(container, 'Schlag zu'), 'weapon-like inventory must expose item attack');
-byText(container, 'Wirf').onTap();
+assert(byText(container, 'Wirf auf ' + hostile.name), 'throwable inventory must expose an explicit targeted throw verb');
+assert(byText(container, 'Lenk ' + hostile.name + ' ab'), 'throwable inventory must expose an explicit targeted distraction verb');
+assert(byText(container, 'Schlag ' + hostile.name), 'weapon-like inventory must expose an explicit targeted item attack');
+byText(container, 'Wirf auf ' + hostile.name).onTap();
 execute = all(container).find((element) => element.className === 'hauptui-execute');
 assert(execute && !execute.disabled && visibleText(execute).includes('Wirf'), 'inventory throw command must be executable');
 execute.onTap();
-assert.strictEqual(calls.planExecuted, 1, 'inventory throw must execute through the plan/combat path');
-assert.strictEqual(calls.plan[0].art, 'werfen', 'inventory throw must use the existing werfen action');
-assert.strictEqual(calls.plan[0].ziel, hostile.name, 'inventory throw must auto-target the present hostile NPC');
-assert.strictEqual(calls.plan[0].itemId, toaster.id, 'inventory throw must carry the selected item id for item loss/effects');
+assert(confrontationCall, 'inventory throw must execute through the confrontation path');
+assert.strictEqual(confrontationCall.art, 'werfen', 'inventory throw must use the existing werfen action');
+assert.strictEqual(confrontationCall.enemy.name, hostile.name, 'inventory throw must preserve the explicitly selected hostile NPC');
+assert.strictEqual(confrontationCall.item.id, toaster.id, 'inventory throw must carry the selected item id for item loss/effects');
 
 const targetsStart = html.indexOf('function _baukastenZiele()');
 const targetsEnd = html.indexOf('try { window._baukastenZiele', targetsStart);
 const targetContext = {
   window: { HAUPTUI_AKTIV: true },
+  caseSetup: { caseType: 'ehebruch' },
+  caseProgress: {
+    gefundeneIndizIds: [],
+    targetItemState: { status: 'unknown' },
+  },
+  sceneCounter: 1,
   engineCurrentLocation: { name: 'Kessler-Wohnung Charlottenburg' },
   normForMatch: (value) => String(value || '').toLowerCase(),
   getNpcsAtCurrentLocation: () => [],

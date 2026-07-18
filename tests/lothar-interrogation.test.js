@@ -50,10 +50,13 @@ const personContext = {
   _hauptuiVerhoerNpc: () => null,
   _hauptuiInformantMitOffenemHinweis: () => false,
   _resolveNpcIdentity: () => ({ id: 'lothar_schaefer', name: 'Lothar Schaefer', tag: 'GANGSTER' }),
-  _npcHatOffenenHinweis: () => true
+  _npcHatOffenenHinweis: () => true,
+  _hauptuiNpc: (target) => target,
+  _findSetupCastFuzzy: () => null,
+  _hauptuiDiebesgutRueckgabeAktion: () => null
 };
 vm.createContext(personContext);
-vm.runInContext(html.slice(personStart, personEnd), personContext);
+vm.runInContext(sourceOf('_hauptuiSozialVerben') + '\n' + html.slice(personStart, personEnd), personContext);
 const verbs = Array.from(personContext._hauptuiPersonVerben({ id: 'lothar_schaefer', name: 'Lothar Schaefer', tag: 'GANGSTER', typ: 'person' }));
 assert.deepStrictEqual(verbs.map((verb) => verb.key), ['reden', 'bedrohen', 'angreifen'], 'Lothar must expose one direct talk route plus pressure and attack');
 assert.strictEqual(verbs[0].label, 'Stelle zur Rede', 'hostile questioning must be explicit instead of opening a second talk menu');
