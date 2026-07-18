@@ -19,9 +19,15 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1249 +Krause-Mehrgegner-Nacht'"), 'Krause release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1250 +Aktionskontinuitaet-Vf0'"), 'Krause release version missing');
 assert(html.includes("file: 'karl-mauers-buero-theodor-day.png'"), 'Krause opening must show Theodor in Karl office');
 assert(html.includes("root: 'assets/scenes/krause/'"), 'Krause opening image must resolve from the case scene directory');
+assert(html.includes('AKTIONS-TREUE (ABSOLUT)'), 'physical and item actions need a strict narration contract');
+assert(html.includes('ZUSTANDS-TREUE (ABSOLUT)'), 'NPC battle states need a strict narration contract');
+assert(html.includes('function _verfassungNullSichern(reason)'), 'zero health needs a central forced ending');
+assert(html.includes('Verwende nie die Formeln "Aktenmensch"'), 'reputation prose must ban the recurring stock phrase');
+assert(html.includes('Krause hat deshalb selbst KEINE Anzeige erstattet'), 'Krause must not contradict his no-police premise');
+assert(html.includes('Bornsteins Antiquitätenladen liegt in der Bergmannstraße'), 'Krause locations need an explicit address truth');
 
 const bornsteinStart = html.indexOf("name: 'Bornsteins Antiquitätenladen'");
 assert(bornsteinStart >= 0, 'Bornstein location missing');
