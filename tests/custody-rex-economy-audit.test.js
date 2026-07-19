@@ -6,7 +6,7 @@ const vm = require('vm');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1253 +MfS-Beobachtung-Haftdruck'"), 'version constant is stale');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1254 +Irreversible-NPC-Uebergabe'"), 'version constant is stale');
 
 const encounterStart = html.indexOf('function _stasiRelevanz()');
 const encounterEnd = html.indexOf('function _custodyVerhoerState()', encounterStart);

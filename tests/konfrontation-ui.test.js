@@ -5,7 +5,7 @@ const vm = require('vm');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 
-assert(html.includes('Schatten v7.12.1253'), 'version badge should be bumped');
+assert(html.includes('Schatten v7.12.1254'), 'version badge should be bumped');
 assert(html.includes('KONFRONTATION_TAG_TOOLTIPS'), 'missing confrontation tooltip registry');
 assert(html.includes('function _konfrontationWuerfleAusgang'), 'missing randomized confrontation outcome helper');
 assert(html.includes("const alkoholMalus = Math.min(3, Math.max(0, Number(caseProgress && caseProgress.alkohol) || 0));"), 'alcohol must reduce confrontation reliability');
@@ -53,7 +53,7 @@ assert(html.includes('const bleibtOffen = !!(finalStatus && !_konfrontationStatu
 assert(html.includes('k.treffer >= 2 && k.kontrollverlust >= 7'), 'successive tactical hits need a real cumulative resolution path');
 assert(html.includes('function _hauptuiKonfrontationAnsichtAktualisieren()'), 'post-narration state changes must refresh the scene visual and action UI immediately');
 assert(html.includes("_renderKesslerSceneVisual(currentScene);"), 'danger styling must update without waiting for another player click');
-assert(html.includes("return !!(z && ['ko', 'gefesselt', 'fixiert'].indexOf(z.status) !== -1);"), 'benommen or blinded opponents must not become searchable aftermath targets');
+assert(html.includes("return !!(z && ['ko', 'gefesselt', 'fixiert', 'uebergeben', 'geflohen'].indexOf(z.status) !== -1);"), 'benommen or blinded opponents must not become searchable aftermath targets');
 assert(html.includes('&& !_taktischeKonfrontationLaeuft'), 'meta custody must not interrupt an unresolved tactical confrontation');
 assert(!html.includes("showProgressToast('Dem Zugriff entgangen'"), 'an invisible rolled-back arrest must not produce a success toast');
 assert(html.includes('_konfrontationLootHinweis'), 'defeated enemies should become explicitly searchable');
