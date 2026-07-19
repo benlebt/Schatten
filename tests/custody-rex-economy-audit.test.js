@@ -6,7 +6,7 @@ const vm = require('vm');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1250 +Aktionskontinuitaet-Vf0'"), 'version constant is stale');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1251 +Abschluss-Umlaute'"), 'version constant is stale');
 
 const custodyStart = html.indexOf('function _custodyVerhoerState()');
 const custodyEnd = html.indexOf('// v7.11.44: Custody-Switch-Counter', custodyStart);
@@ -45,8 +45,11 @@ assert(html.includes("caseProgress.gameOverTodArt = 'mfs-liquidation'"), 'MfS li
 assert(html.includes("KARL MAUER IST TOT - FALL OFFEN"), 'true death needs a distinct end screen instead of Charite recovery');
 assert(html.includes('Ein normales Vf=0 bleibt der schwere, aber überlebbare Zusammenbruch'), 'ordinary zero health must remain the recoverable collapse path');
 
-const gameOverStart = html.indexOf('function showGameOver()');
+const asciiStart = html.indexOf('function asciiToUmlaut(s)');
+const asciiEnd = html.indexOf('\n}', asciiStart) + 2;
+const gameOverStart = html.indexOf('function _abschlussTextMitUmlauten(value)');
 const gameOverEnd = html.indexOf('function buildFallbackAbschlussProsa()', gameOverStart);
+assert(asciiStart >= 0 && asciiEnd > asciiStart, 'cannot isolate ascii-to-umlaut helper');
 assert(gameOverStart >= 0 && gameOverEnd > gameOverStart, 'cannot isolate game-over renderer');
 const makeEndContext = (deathArt) => {
   const elements = {};
@@ -58,7 +61,10 @@ const makeEndContext = (deathArt) => {
     clearSavedGame: () => {},
   };
   vm.createContext(context);
-  vm.runInContext(html.slice(gameOverStart, gameOverEnd), context);
+  vm.runInContext(
+    html.slice(asciiStart, asciiEnd) + '\n' + html.slice(gameOverStart, gameOverEnd),
+    context
+  );
   context.showGameOver();
   return elements['game-over'].innerHTML;
 };
@@ -68,6 +74,10 @@ assert(!lethalEnd.includes('ZUSAMMENGEBROCHEN'), 'lethal interrogation must not 
 const collapseEnd = makeEndContext('');
 assert(collapseEnd.includes('ZUSAMMENGEBROCHEN - FALL OFFEN'), 'ordinary zero health must still use recoverable collapse');
 assert(/am Leben|Aber er atmet|davongekommen/.test(collapseEnd), 'ordinary collapse must still state that Karl survived');
+assert(collapseEnd.includes('hört'), 'recoverable collapse must render "hört" with umlaut');
+assert(collapseEnd.includes('Später'), 'recoverable collapse must render "Später" with umlaut');
+assert(collapseEnd.includes('Schädel'), 'recoverable collapse must render "Schädel" with umlaut');
+assert(!/\b(?:hoert|Spaeter|Schaedel|Buero)\b/.test(collapseEnd), 'visible collapse ending must not leak ASCII umlaut spellings');
 assert(html.includes('stasiCustodyScenesSince >= 3'), 'routine custody should allow release by the following morning');
 assert(html.includes('caseProgress._custodyCountedScene !== custodySceneMark'), 'custody duration must count distinct scenes, not UI rerenders');
 assert(html.includes('NOTFLUCHT ist der einzige sofortige Ausbruch'), 'custody prompt must distinguish escape from routine morning release');

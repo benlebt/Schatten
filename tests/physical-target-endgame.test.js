@@ -117,5 +117,21 @@ for (const match of resetButtons) {
   assert(match[0].includes('onclick="return startNewInvestigation(event,'), 'restart button lacks click-safe handler');
 }
 assert(html.includes('if (now - _newInvestigationTapAt < 800) return false;'), 'restart handler must suppress synthetic mobile double clicks');
+assert(html.includes("function _abschlussTextMitUmlauten(value)"), 'end screens need a shared display normalization helper');
+assert(html.includes("const _goAnzeige = _abschlussTextMitUmlauten(_go);"), 'recoverable game-over copy must normalize umlauts');
+assert(html.includes("const _ueberlebenAnzeige = _abschlussTextMitUmlauten(_ueberlebenInfo);"), 'game-over account copy must normalize umlauts');
+assert(html.includes("[/\\bSpaeter\\b/g, 'Später']"), 'display normalizer must handle capitalized Spaeter');
+const umlautStart = html.indexOf('function asciiToUmlaut(s)');
+const umlautEnd = html.indexOf('\n}', umlautStart) + 2;
+const endingStart = html.indexOf('function _abschlussTextMitUmlauten(value)');
+const endingEnd = html.indexOf('\n}', endingStart) + 2;
+const endingContext = {};
+vm.createContext(endingContext);
+vm.runInContext(html.slice(umlautStart, umlautEnd) + '\n' + html.slice(endingStart, endingEnd), endingContext);
+assert.strictEqual(
+  endingContext._abschlussTextMitUmlauten('Karl hoert spaeter: Spaeter ein brummender Schaedel. Das Buero bleibt zu.'),
+  'Karl hört später: Später ein brummender Schädel. Das Büro bleibt zu.',
+  'game-over display normalization must repair every reported ASCII umlaut'
+);
 
 console.log('PHYSICAL_TARGET_ENDGAME_OK');
