@@ -111,9 +111,12 @@ const clientContext = {
     geduldsstufe2: 4,
     geduldsstufe3: 5
   },
-  gameDay: 3
+  gameDay: 3,
+  getFallFristTage: () => 5,
+  FALLFRIST_TAGE_DEFAULT: 5
 };
 vm.createContext(clientContext);
+vm.runInContext(sourceOf('normalizeClientPatienceToDeadline'), clientContext);
 vm.runInContext(sourceOf('buildClientGeduldHint'), clientContext);
 const reminder = clientContext.buildClientGeduldHint();
 assert(reminder.includes('DIESER Szene'), 'due client reminder must be immediate');

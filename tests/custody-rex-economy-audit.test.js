@@ -6,9 +6,15 @@ const vm = require('vm');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1256 +Regie-Privat-Stasi-Kontext'"), 'version constant is stale');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1257 +Frist-Krause-Handlungskontinuitaet'"), 'version constant is stale');
 assert(html.includes('if (_stasiEncounterPflicht) timeContext += _stasiEncounterPflicht;'),
   'Stasi encounter prompt must be appended to the live scene context');
+assert(html.includes('Falls dies der erste sichtbare Auftritt dieser Figur ist'),
+  'dynamically injected Stasi officers need a mandatory visible introduction');
+assert(html.includes('encounter.introduced !== false'),
+  'a dynamic Stasi officer must remain hidden until the prose introduces the figure');
+assert(html.includes('_stasiEncounterConfirmIntroFromScene(scene);'),
+  'returned scenes must confirm the visible Stasi introduction before the UI can expose it');
 assert(!html.includes('if (_stasiEncounterPflicht) recap += _stasiEncounterPflicht;'),
   'Stasi encounter prompt must not access the history-local recap variable');
 assert(/const _haftIntel = caseProgress\.pendingCustodyIntelNarration;\s*timeContext \+=/.test(html),
@@ -60,7 +66,18 @@ let encounter = politicalEncounter._stasiEncounterForceZugriff('Audit');
 assert(encounter && encounter.name === 'Oberleutnant Mertens', 'political Stasi encounter must use the configured named officer');
 assert.strictEqual(encounter.phase, 'zugriff', 'forced political pressure must become a visible access phase');
 assert.strictEqual(politicalEncounter.engineCurrentLocation.name, 'Reichsbahndirektion', 'Stasi encounter must not teleport Karl before arrest');
-assert.strictEqual(politicalEncounter.caseProgress.activeConfrontation.trigger, 'stasi-encounter', 'Stasi access must create a playable confrontation');
+assert.strictEqual(encounter.introduced, false, 'a newly injected Stasi officer must start outside the visible scene');
+assert.strictEqual(politicalEncounter.caseProgress.activeConfrontation, undefined, 'Stasi access must not become clickable before its prose introduction');
+assert.strictEqual(
+  politicalEncounter._stasiEncounterConfirmIntroFromScene({
+    szene: 'Oberleutnant Mertens tritt sichtbar aus dem Schatten und stellt Karl.',
+    ort: 'Reichsbahndirektion'
+  }),
+  true,
+  'the named prose appearance must confirm the Stasi introduction'
+);
+assert.strictEqual(encounter.introduced, true, 'the encounter must remember its visible introduction');
+assert.strictEqual(politicalEncounter.caseProgress.activeConfrontation.trigger, 'stasi-encounter', 'introduced Stasi access must create a playable confrontation');
 assert.strictEqual(vm.runInContext('karlInStasiCustody', politicalEncounter), false, 'access phase must not silently set custody');
 assert(politicalEncounter._stasiEncounterPrompt().includes('Oberleutnant Mertens'), 'encounter prompt must preserve the same named officer');
 politicalEncounter._stasiEncounterClear('Audit beendet', 3);

@@ -19,7 +19,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1256 +Regie-Privat-Stasi-Kontext'"), 'Krause release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1257 +Frist-Krause-Handlungskontinuitaet'"), 'Krause release version missing');
 assert(html.includes("file: 'karl-mauers-buero-theodor-day.png'"), 'Krause opening must show Theodor in Karl office');
 assert(html.includes("root: 'assets/scenes/krause/'"), 'Krause opening image must resolve from the case scene directory');
 assert(html.includes('AKTIONS-TREUE (ABSOLUT)'), 'physical and item actions need a strict narration contract');
@@ -27,6 +27,10 @@ assert(html.includes('ZUSTANDS-TREUE (ABSOLUT)'), 'NPC battle states need a stri
 assert(html.includes('function _verfassungNullSichern(reason)'), 'zero health needs a central forced ending');
 assert(html.includes('Verwende nie die Formeln "Aktenmensch"'), 'reputation prose must ban the recurring stock phrase');
 assert(html.includes('Krause hat deshalb selbst KEINE Anzeige erstattet'), 'Krause must not contradict his no-police premise');
+assert(html.includes('Nacht vom Dienstag auf Mittwoch, 29./30. September 1953'), 'Krause break-in night must stay exact across witnesses');
+assert(html.includes('Kalle und Jochen sind Friedas Schlaeger und Lagerwachen, keine Verraeter'), 'Krause thugs must keep their actual role');
+assert(html.includes('weisses Haar zu einem festen Knoten gesteckt'), 'Hannelore description must not drift into the Weizenknoten typo');
+assert(html.includes('WAFFEN-KONTINUITAET (PFLICHT)'), 'nonviolent talk actions must forbid invented drawn weapons');
 assert(html.includes('Bornsteins Antiquitätenladen liegt in der Bergmannstraße'), 'Krause locations need an explicit address truth');
 
 const bornsteinStart = html.indexOf("name: 'Bornsteins Antiquitätenladen'");
