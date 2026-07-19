@@ -6,7 +6,7 @@ const vm = require('vm');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1255 +Recap-Scope-Fix'"), 'version constant is stale');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1256 +Regie-Privat-Stasi-Kontext'"), 'version constant is stale');
 assert(html.includes('if (_stasiEncounterPflicht) timeContext += _stasiEncounterPflicht;'),
   'Stasi encounter prompt must be appended to the live scene context');
 assert(!html.includes('if (_stasiEncounterPflicht) recap += _stasiEncounterPflicht;'),
@@ -71,6 +71,18 @@ const privateEncounter = makeEncounterContext(false);
 encounter = privateEncounter._stasiEncounterForceZugriff('Darf nicht passieren');
 assert.strictEqual(encounter, null, 'private cases without MfS cast must not receive spontaneous Stasi access');
 assert.strictEqual(privateEncounter.caseProgress.activeConfrontation, undefined, 'private cases must not create a hidden Stasi confrontation');
+
+const privateStaleCast = makeEncounterContext(false);
+privateStaleCast.caseSetup.setupCast = [{
+  id: 'stamm_mfs',
+  name: 'Hauptmann Vollmer',
+  tag: 'STASI',
+  rolle: 'Hauptmann der Staatssicherheit',
+  _stammfigur: true
+}];
+assert.strictEqual(privateStaleCast._stasiMechanikAktiv(), false, 'an injected recurring officer must not politicize a private case');
+assert.strictEqual(privateStaleCast._stasiEncounterForceZugriff('Darf ebenfalls nicht passieren'), null,
+  'a stale recurring officer must not appear at a private crime scene');
 
 const custodyStart = html.indexOf('function _custodyVerhoerState()');
 const custodyEnd = html.indexOf('// v7.11.44: Custody-Switch-Counter', custodyStart);

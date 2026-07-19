@@ -75,6 +75,10 @@ assert(html.includes("_anzeigeText: 'Für Hinweis zahlen · ' + npc.name"), 'pai
 assert(html.includes("_enginePrompt: 'ENGINE-WAHRHEIT: Karl hat {npc} bereits '"), 'paid hint engine truth must use the private prompt field');
 assert(!html.includes("aktion: 'ENGINE-WAHRHEIT: Karl hat {npc} bereits '"), 'internal paid-hint prompt must never be stored as visible action text');
 assert(html.includes("if (option && option._enginePrompt) userMsg += '\\n\\n' + option._enginePrompt;"), 'private engine prompt is not forwarded to the AI');
+assert(html.includes("aktion: 'Stelle {npc} zur Rede.'"), 'hostile talk action needs a short player-facing line');
+assert(html.includes("aktion: 'Sprich mit {npc}.'"), 'normal talk action needs a short player-facing line');
+assert(!html.includes("aktion: 'Sprich mit {npc} gezielt über den offenen Fallansatz."), 'internal talk direction still leaks into the visible action');
+assert(!html.includes("aktion: brauchtDruck"), 'hostile prompt direction is still stored in the visible action');
 assert(html.includes("if (tag === 'INFORMANT')"), 'legacy NPC menu informant branch missing');
 assert(html.includes("keys = (_informantHatHinweis && !_informantHatVerhoer) ? ['bestechen','bedrohen'] : ['befragen'];"), 'legacy informant actions do not match clue gate');
 assert(html.includes("BEDROHEN: 'Unter Druck setzen'"), 'hint action label for pressure missing');
