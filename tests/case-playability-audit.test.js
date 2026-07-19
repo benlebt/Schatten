@@ -84,6 +84,14 @@ for (const [caseIndex, variant] of CASES.entries()) {
   const cast = setup.setupCast || [];
   const castIds = new Set();
   const hostileIds = new Set();
+  const stasiRelevance = Number(setup.stasiRelevance);
+
+  assert(Number.isInteger(stasiRelevance) && stasiRelevance >= 0 && stasiRelevance <= 5,
+    `${caseLabel}: stasiRelevance must be an integer from 0 to 5`);
+  if (setup.caseType === 'politisch') {
+    assert(stasiRelevance >= 3,
+      `${caseLabel}: a political case must enable meaningful MfS pressure`);
+  }
 
   for (const npc of cast) {
     if (!npc.id) {
@@ -98,6 +106,13 @@ for (const [caseIndex, variant] of CASES.entries()) {
     castIds.add(npc.id);
     const tags = [npc.tag, npc.tagExtra].map((tag) => text(tag).toUpperCase());
     if (tags.some((tag) => HOSTILE_TAGS.has(tag))) hostileIds.add(npc.id);
+  }
+
+  const explicitMfS = cast.some((npc) =>
+    /(?:STASI|MfS|Staatssicherheit)/i.test([npc.tag, npc.tagExtra, npc.rolle].map(text).join(' ')));
+  if (explicitMfS) {
+    assert(stasiRelevance >= 2,
+      `${caseLabel}: configured MfS cast needs enough relevance to become playable`);
   }
 
   const locations = setup.locations || [];

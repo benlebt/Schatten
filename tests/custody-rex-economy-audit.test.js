@@ -6,18 +6,81 @@ const vm = require('vm');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1252 +Fallsetup-Rettungszustaende'"), 'version constant is stale');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1253 +MfS-Beobachtung-Haftdruck'"), 'version constant is stale');
+
+const encounterStart = html.indexOf('function _stasiRelevanz()');
+const encounterEnd = html.indexOf('function _custodyVerhoerState()', encounterStart);
+assert(encounterStart >= 0 && encounterEnd > encounterStart, 'cannot isolate Stasi encounter state machine');
+
+const makeEncounterContext = (political) => {
+  const context = {
+    caseSetup: political ? {
+      id: 'politischer_testfall',
+      stasiRelevance: 5,
+      setupCast: [{
+        id: 'mertens',
+        name: 'Oberleutnant Mertens',
+        tag: 'STASI',
+        rolle: 'MfS-Oberleutnant'
+      }]
+    } : {
+      id: 'privater_testfall',
+      stasiRelevance: 1,
+      setupCast: []
+    },
+    caseIsPolitical: political,
+    caseProgress: {
+      stage: 2,
+      indizien: [{}, {}, {}, {}],
+      stasiEncounterEligibleScenes: 0,
+      stasiEncounterCooldownUntil: 0,
+      stasiEncounterHistory: []
+    },
+    normForMatch: (value) => String(value || '').toLowerCase(),
+    engineCurrentLocation: { name: 'Reichsbahndirektion', sektor: 'Ost' },
+    _konfrontationTaktikProfil: () => ({ ziel: 'Kontrolle' }),
+    _konfrontationAktiv: () => false,
+    sceneCounter: 8,
+    custodyLocked: false,
+    diag: () => {}
+  };
+  vm.createContext(context);
+  vm.runInContext(html.slice(encounterStart, encounterEnd), context);
+  return context;
+};
+
+const politicalEncounter = makeEncounterContext(true);
+let encounter = politicalEncounter._stasiEncounterForceZugriff('Audit');
+assert(encounter && encounter.name === 'Oberleutnant Mertens', 'political Stasi encounter must use the configured named officer');
+assert.strictEqual(encounter.phase, 'zugriff', 'forced political pressure must become a visible access phase');
+assert.strictEqual(politicalEncounter.engineCurrentLocation.name, 'Reichsbahndirektion', 'Stasi encounter must not teleport Karl before arrest');
+assert.strictEqual(politicalEncounter.caseProgress.activeConfrontation.trigger, 'stasi-encounter', 'Stasi access must create a playable confrontation');
+assert.strictEqual(vm.runInContext('karlInStasiCustody', politicalEncounter), false, 'access phase must not silently set custody');
+assert(politicalEncounter._stasiEncounterPrompt().includes('Oberleutnant Mertens'), 'encounter prompt must preserve the same named officer');
+politicalEncounter._stasiEncounterClear('Audit beendet', 3);
+assert.strictEqual(politicalEncounter.caseProgress.stasiEncounter.active, false, 'resolved Stasi encounter must be persisted as inactive');
+assert.strictEqual(politicalEncounter.caseProgress.stasiEncounterCooldownUntil, 11, 'resolved encounter needs a scene cooldown');
+
+const privateEncounter = makeEncounterContext(false);
+encounter = privateEncounter._stasiEncounterForceZugriff('Darf nicht passieren');
+assert.strictEqual(encounter, null, 'private cases without MfS cast must not receive spontaneous Stasi access');
+assert.strictEqual(privateEncounter.caseProgress.activeConfrontation, undefined, 'private cases must not create a hidden Stasi confrontation');
 
 const custodyStart = html.indexOf('function _custodyVerhoerState()');
 const custodyEnd = html.indexOf('// v7.11.44: Custody-Switch-Counter', custodyStart);
 assert(custodyStart >= 0 && custodyEnd > custodyStart, 'cannot isolate custody interrogation state machine');
 
 let paid = 0;
+const custodyClue = { id: 'mfs_transportliste', text: 'MfS-Transportliste nennt den Zielort', stage: 0 };
 const custodyContext = {
   caseProgress: {},
   karlInStasiCustody: true,
   diag: () => {},
   _geldZahle: (amount) => { paid += amount; return true; },
+  alleDefiniertenIndizien: () => [custodyClue],
+  normForMatch: (value) => String(value || '').toLowerCase(),
+  asciiToUmlaut: (value) => String(value || ''),
+  _markiereIndizGefunden: (ind) => ind && ind.id === custodyClue.id,
 };
 vm.createContext(custodyContext);
 vm.runInContext(html.slice(custodyStart, custodyEnd), custodyContext);
@@ -33,6 +96,52 @@ assert.deepStrictEqual([state.runden, state.druck, state.rothHebel], [4, 1, 1], 
 state = custodyContext._custodyVerhoerWahlAnwenden({ _custodyAction: 'BESTECHEN' });
 assert.strictEqual(paid, 10, 'custody bribe must actually spend ten Ostmark');
 assert.deepStrictEqual([state.runden, state.druck, state.kooperation, state.bestechungen], [5, 0, 2, 1], 'successful bribe must soften pressure and remain recorded');
+custodyContext._custodyVerhoerWahlAnwenden({ _custodyAction: 'LAUSCHEN' });
+state = custodyContext._custodyVerhoerWahlAnwenden({ _custodyAction: 'LAUSCHEN' });
+assert.strictEqual(state.intelGefunden, true, 'repeated listening in custody must be able to reveal a case clue');
+assert.strictEqual(Array.from(custodyContext.caseProgress.custodyIntelIds).join(','), custodyClue.id, 'custody clue must be recorded only once');
+assert.strictEqual(custodyContext.caseProgress.pendingCustodyIntelNarration.id, custodyClue.id, 'custody clue needs mandatory narration');
+
+const custodySetterStart = html.indexOf('function setCustodyState(newState, source, opts)');
+const custodySetterEnd = html.indexOf('// v7.11.13: META-CUSTODY-RISIKO-COUNTER', custodySetterStart);
+assert(custodySetterStart >= 0 && custodySetterEnd > custodySetterStart, 'cannot isolate central custody setter');
+let encounterClears = 0;
+const custodySetterContext = {
+  karlInStasiCustody: false,
+  engineCurrentLocation: { name: 'Reichsbahndirektion', sektor: 'Ost' },
+  caseProgress: {},
+  sceneNumber: 12,
+  stasiCustodyScenesSince: 0,
+  folterSceneCount: 0,
+  stasiHighTensionStreak: 0,
+  _party: [],
+  cast: [],
+  pendingCategoryMessages: [],
+  normForMatch: (value) => String(value || '').toLowerCase(),
+  _custodyVerhoerState: () => ({
+    runden: 0,
+    druck: 0,
+    kooperation: 0,
+    verweigerung: 0,
+    rothHebel: 0,
+    bestechungen: 0,
+    lauschen: 0,
+    intelGefunden: false,
+    letzteAktion: ''
+  }),
+  _stasiEncounterClear: () => { encounterClears++; },
+  trackCustodyChange: () => {},
+  diag: () => {}
+};
+vm.createContext(custodySetterContext);
+vm.runInContext(html.slice(custodySetterStart, custodySetterEnd), custodySetterContext);
+custodySetterContext.setCustodyState(true, 'Audit-Festnahme');
+assert(custodySetterContext.engineCurrentLocation.name.includes('Zelle 14'), 'confirmed arrest must move Karl into the real cell location');
+assert.strictEqual(custodySetterContext.caseProgress.custodyEntryFrom.name, 'Reichsbahndirektion', 'custody must remember the arrest location');
+custodySetterContext.setCustodyState(false, 'Audit-Freilassung');
+assert.strictEqual(custodySetterContext.engineCurrentLocation.name, 'Vor der MfS-Untersuchungshaftanstalt Hohenschoenhausen', 'release must use a real exterior location');
+assert.strictEqual(custodySetterContext.caseProgress.custodyReleaseSource, 'Audit-Freilassung', 'release source must remain traceable');
+assert.strictEqual(encounterClears, 1, 'release must close the active Stasi encounter');
 
 for (const action of ['SCHWEIGEN', 'HALBWAHRHEIT', 'ROTH', 'PROTOKOLL', 'BESTECHEN', 'LAUSCHEN']) {
   assert(html.includes("id: '" + action + "'"), 'custody menu misses action ' + action);
@@ -97,6 +206,14 @@ assert(html.includes("['werfen', 'werfen_fuesse', 'angreifen_mit', 'fesseln']"),
 
 const cellPath = path.join(root, 'assets', 'scenes', 'vogt', 'hohenschoenhausen-zelle.png');
 assert(fs.existsSync(cellPath), 'dedicated custody cell image is missing');
+for (const releaseAsset of [
+  'hohenschoenhausen-genslerstrasse.png',
+  'hohenschoenhausen-genslerstrasse-day.png',
+  'hohenschoenhausen-genslerstrasse-night.png',
+]) {
+  assert(fs.existsSync(path.join(root, 'assets', 'scenes', 'vogt', releaseAsset)),
+    'custody release asset is missing: ' + releaseAsset);
+}
 const png = fs.readFileSync(cellPath);
 assert.strictEqual(png.toString('ascii', 1, 4), 'PNG', 'custody cell asset is not a PNG');
 const width = png.readUInt32BE(16);
@@ -105,5 +222,7 @@ assert(width >= 1200 && height >= 650, 'custody cell image is too small for the 
 assert(Math.abs((width / height) - (16 / 9)) < 0.08, 'custody cell image must retain the cinematic 16:9 frame');
 assert(html.includes("place: 'MfS-Gewahrsam Hohenschoenhausen, Zelle 14'"), 'custody image needs a truthful interior location label');
 assert(html.includes('abgewandtem, nicht erkennbarem Gesicht'), 'custody image contract must keep Karl anonymous');
+assert(html.includes("name: 'Vor der MfS-Untersuchungshaftanstalt Hohenschoenhausen'"),
+  'routine release must leave the cell for the real exterior scene');
 
 console.log('CUSTODY_REX_ECONOMY_AUDIT_OK');
