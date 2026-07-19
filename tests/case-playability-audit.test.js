@@ -106,6 +106,7 @@ for (const [caseIndex, variant] of CASES.entries()) {
   const clueIds = new Set();
   const clueById = new Map();
   const references = [];
+  const clueDependencies = new Map();
   const reachableHostiles = new Set();
   const referencedCast = new Set();
   const locationByName = new Map();
@@ -145,6 +146,10 @@ for (const [caseIndex, variant] of CASES.entries()) {
       assert(!clueIds.has(clue.id), `${caseLabel}: duplicate clue id ${clue.id}`);
       clueIds.add(clue.id);
       clueById.set(clue.id, { clue, location });
+      clueDependencies.set(clue.id, [
+        ...(clue.requiresEvidenceAll || []),
+        ...(clue.requiresEvidenceAny || []),
+      ]);
       assert(Array.isArray(clue.actions) && clue.actions.length,
         `${caseLabel} -> ${clue.id}: no playable actions`);
       if (clue.npc) {
@@ -206,6 +211,24 @@ for (const [caseIndex, variant] of CASES.entries()) {
       `${caseLabel} -> ${ref.clue.id}: prerequisite ${ref.requiredId} cannot reach its stage gate`);
   }
 
+  const visiting = new Set();
+  const visited = new Set();
+  function visitClue(clueId, pathIds) {
+    if (visiting.has(clueId)) {
+      const cycleStart = pathIds.indexOf(clueId);
+      const cycle = [...pathIds.slice(cycleStart), clueId].join(' -> ');
+      assert.fail(`${caseLabel}: circular clue dependency: ${cycle}`);
+    }
+    if (visited.has(clueId)) return;
+    visiting.add(clueId);
+    for (const dependencyId of clueDependencies.get(clueId) || []) {
+      visitClue(dependencyId, [...pathIds, clueId]);
+    }
+    visiting.delete(clueId);
+    visited.add(clueId);
+  }
+  for (const clueId of clueIds) visitClue(clueId, []);
+
   for (const hostileId of hostileIds) {
     if (!reachableHostiles.has(hostileId)) {
       unreachableHostiles.push(`${caseLabel}: hostile cast NPC ${hostileId} has no location or threat route`);
@@ -239,6 +262,30 @@ for (const [caseIndex, variant] of CASES.entries()) {
       assert(targetLocation.startBekannt === false && Array.isArray(targetLocation.freischaltBei)
         && targetLocation.freischaltBei.length,
       `${caseLabel}: physical target location must be clue-gated`);
+      if (resolution.rescueRequired) {
+        assert(resolution.guard && castIds.has(resolution.guard),
+          `${caseLabel}: physical rescue guard is missing from setupCast`);
+        assert((targetLocation.npcs || []).some((entry) => entry.id === resolution.guard),
+          `${caseLabel}: physical rescue guard is not guaranteed at ${resolution.location}`);
+        const visual = resolution.visualStates && resolution.visualStates.rescuedAtTarget;
+        assert(visual && visual.file && visual.dayFile && visual.nightFile && visual.root,
+          `${caseLabel}: rescued scene visual is incomplete`);
+      }
+      if (resolution.deliveryRequired) {
+        assert(resolution.rescueRequired,
+          `${caseLabel}: target delivery cannot be required without a rescue step`);
+        assert(resolution.safeLocation,
+          `${caseLabel}: target delivery has no transport staging location`);
+        const safeLocations = new Set(resolution.safeLocations || []);
+        const handoffs = Object.values(resolution.handoffs || {});
+        assert(handoffs.length >= 1, `${caseLabel}: target delivery has no handoff destination`);
+        for (const handoff of handoffs) {
+          assert(handoff && locationByName.has(handoff.location),
+            `${caseLabel}: target handoff references unknown location ${handoff && handoff.location}`);
+          assert(safeLocations.has(handoff.location),
+            `${caseLabel}: target handoff ${handoff.location} is absent from safeLocations`);
+        }
+      }
     }
   }
 
@@ -262,6 +309,14 @@ for (const [caseIndex, variant] of CASES.entries()) {
     weakKeyClues: (setup.keyClues || []).filter((keyClue) =>
       keyClueCoverage(keyClue, [...clueById.values()].map((entry) => entry.clue)) < 2),
   });
+
+  const fixedSceneTags = new Set(['WITNESS', 'AUTHORITY', 'INFORMANT', 'ANTAGONIST', 'SUSPECT', 'GANGSTER', 'STASI']);
+  for (const npc of cast) {
+    if (!npc || !npc.id || referencedCast.has(npc.id) || npc.anwesend || npc.triggerWhen) continue;
+    const tags = [npc.tag, npc.tagExtra].map((tag) => text(tag).toUpperCase());
+    assert(!tags.some((tag) => fixedSceneTags.has(tag)),
+      `${caseLabel}: fixed-scene NPC ${npc.id} has no location, threat, or trigger route`);
+  }
 }
 
 if (process.env.CASE_AUDIT_REPORT === '1') console.log(JSON.stringify(auditRows, null, 2));

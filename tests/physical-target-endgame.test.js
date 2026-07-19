@@ -20,7 +20,29 @@ const targetContext = {
       guard: 'lothars_bewacher',
       deliveryRequired: true,
       safeLocation: 'Karls Opel Olympia',
-      safeLocations: ['Wegener-Wohnung', 'Volkspolizei-Revier Hans-Beimler-Strasse']
+      safeLocations: ['Wegener-Wohnung', 'Volkspolizei-Revier Hans-Beimler-Strasse'],
+      handoffs: {
+        client: {
+          location: 'Wegener-Wohnung',
+          name: 'Helga Wegener',
+          label: 'Zu Helga bringen'
+        },
+        police: {
+          location: 'Volkspolizei-Revier Hans-Beimler-Strasse',
+          name: 'Volkspolizei',
+          label: 'Bei der Polizei schuetzen',
+          notifyClient: 'Helga Wegener'
+        }
+      },
+      visualStates: {
+        rescuedAtTarget: {
+          file: 'lagerhalle-spree-gerettet.png',
+          dayFile: 'lagerhalle-spree-gerettet-day.png',
+          nightFile: 'lagerhalle-spree-gerettet-night.png',
+          root: 'assets/scenes/wegener/',
+          place: 'Lagerhalle an der Spree'
+        }
+      }
     }
   },
   caseProgress: {
@@ -57,7 +79,7 @@ assert(targetContext._physischesFallzielStatus(), 'found target must remain acti
 assert.strictEqual(targetContext._physischesFallzielIstGeborgen(), false, 'finding a bound target must not count as rescue');
 assert.strictEqual(targetContext._physischesFallzielBewacherOffen(), true, 'configured guard must block rescue while free');
 targetContext.caseProgress.zielpersonGeborgen = true;
-targetContext.caseProgress.zielpersonTransportStatus = 'am_hallenausgang';
+targetContext.caseProgress.zielpersonTransportStatus = 'am_ausgang';
 assert(targetContext._physischesFallzielStatus(), 'freed target must remain active until transport starts');
 assert.strictEqual(targetContext._physischesFallzielIstGeborgen(), false, 'freeing alone must not complete a delivery rescue');
 targetContext.caseProgress.zielpersonTransportStatus = 'im_opel';
@@ -65,6 +87,8 @@ targetContext.caseProgress.zielpersonInBegleitung = true;
 const transportStatus = targetContext._physischesFallzielStatus();
 assert(transportStatus && transportStatus.lieferungOffen, 'target in the Opel must expose the open delivery state');
 assert.deepStrictEqual(Array.from(transportStatus.safeLocations), ['Wegener-Wohnung', 'Volkspolizei-Revier Hans-Beimler-Strasse']);
+assert.strictEqual(transportStatus.handoffs.client.location, 'Wegener-Wohnung');
+assert.strictEqual(transportStatus.handoffs.police.location, 'Volkspolizei-Revier Hans-Beimler-Strasse');
 assert.strictEqual(targetContext._physischesFallzielIstGeborgen(), false, 'target in the Opel is not safely handed over yet');
 targetContext.caseProgress.zielpersonTransportStatus = 'bei_polizei';
 targetContext.caseProgress.zielpersonInBegleitung = false;
@@ -87,13 +111,14 @@ assert(html.includes("var fallzielStatus = (typeof _physischesFallzielStatus ===
 assert(html.includes("add('befreien', 'Befreie')"), 'main UI must expose an explicit rescue action');
 assert(html.includes("id: 'HAUPTUI_ZIELPERSON_BEFREIEN'"), 'rescue action must have a dedicated engine scene');
 assert(html.includes("key: 'ziel_zum_opel', label: 'Zum Opel bringen'"), 'freed target needs an explicit Opel transport action');
-assert(html.includes("key: 'ziel_zu_helga', label: 'Zu Helga bringen'"), 'target needs a direct client handoff');
-assert(html.includes("key: 'ziel_zur_vp', label: 'Bei der Polizei schuetzen'"), 'target needs a police protection route');
+assert(html.includes("key: 'ziel_zum_klienten'"), 'target needs a configured client handoff');
+assert(html.includes("key: 'ziel_zur_polizei'"), 'target needs a configured police protection route');
 assert(html.includes("resolveLockReason = 'Zielperson noch befreien'"), 'case completion must explain an open physical rescue');
 assert(html.includes("resolveLockReason = 'Zielperson noch zum Opel bringen'"), 'completion lock must explain the transport step');
 assert(html.includes("resolveLockReason = 'Zielperson noch sicher übergeben'"), 'completion lock must explain the handoff step');
 assert(html.includes('◆ Rettungsziel:'), 'map must label both safe handoff destinations');
-assert(html.includes('lagerhalle-spree-gerettet.png'), 'rescued warehouse state needs a dedicated visual');
+assert(html.includes('resolution.visualStates'), 'rescued scene visuals must come from the active case setup');
+assert(html.includes('rescuedAtTarget'), 'rescued scene visuals need an explicit state key');
 
 const introStart = html.indexOf('const INTRO_VARIANTS = [');
 const introEnd = html.indexOf('\n];', introStart);
@@ -108,7 +133,44 @@ for (const variant of Array.from(setupContext.INTRO_VARIANTS)) {
   const clues = Array.from(setup.locations || []).flatMap((location) => Array.from(location.indizien || []));
   assert(clues.some((clue) => clue && typeof clue.stage === 'number' && clue.stage >= resolution.abStage),
     `${setup.opfer || setup.klient}: physical target has no obtainable reveal clue`);
+  const targetLocation = Array.from(setup.locations || []).find((location) => location.name === resolution.location);
+  assert(targetLocation, `${setup.opfer || setup.klient}: physical target location is missing`);
+  if (resolution.rescueRequired) {
+    const castIds = new Set(Array.from(setup.setupCast || []).map((npc) => npc && npc.id).filter(Boolean));
+    assert(resolution.guard && castIds.has(resolution.guard),
+      `${setup.opfer || setup.klient}: rescue guard is missing from setupCast`);
+    assert(Array.from(targetLocation.npcs || []).some((npc) => npc && npc.id === resolution.guard),
+      `${setup.opfer || setup.klient}: rescue guard is not guaranteed at the target location`);
+    const visual = resolution.visualStates && resolution.visualStates.rescuedAtTarget;
+    assert(visual && visual.file && visual.dayFile && visual.nightFile && visual.root,
+      `${setup.opfer || setup.klient}: rescued scene visual is incomplete`);
+    for (const file of [visual.file, visual.dayFile, visual.nightFile]) {
+      assert(fs.existsSync(path.join(__dirname, '..', visual.root, file)),
+        `${setup.opfer || setup.klient}: rescued scene asset is missing: ${visual.root}${file}`);
+    }
+  }
+  if (resolution.deliveryRequired) {
+    const destinations = Object.values(resolution.handoffs || {});
+    assert(destinations.length >= 1, `${setup.opfer || setup.klient}: delivery target has no handoff`);
+    for (const destination of destinations) {
+      assert(destination && destination.location,
+        `${setup.opfer || setup.klient}: handoff destination has no location`);
+      assert(Array.from(setup.locations || []).some((location) => location.name === destination.location),
+        `${setup.opfer || setup.klient}: handoff location is missing: ${destination.location}`);
+      assert(Array.from(resolution.safeLocations || []).includes(destination.location),
+        `${setup.opfer || setup.klient}: handoff location is absent from safeLocations`);
+    }
+  }
 }
+
+const threadStart = html.indexOf('function _hauptuiGenerischeFaeden()');
+const threadEnd = html.indexOf('\nfunction ', threadStart + 20);
+assert(threadStart >= 0 && threadEnd > threadStart, 'generic thread renderer is missing');
+const threadSource = html.slice(threadStart, threadEnd);
+assert(threadSource.includes('fallziel.handoffs'),
+  'physical-target thread must use case-specific handoff destinations');
+assert(!threadSource.includes('Wegener-Wohnung'),
+  'generic physical-target thread must not hardcode Wegener locations');
 
 const resetButtons = Array.from(html.matchAll(/<button[^>]+>[^<]*(?:Neue Ermittlung|Ermittlung neu beginnen|Neuer Fall, neues Gl)/g));
 assert(resetButtons.length >= 6, 'expected all restart buttons in source');

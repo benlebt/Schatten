@@ -135,6 +135,16 @@ for (const [caseIndex, variant] of cases.entries()) {
   if (hostileIds.size > 0) {
     assert(hostilePresentIds.size > 0, 'case has hostile setupCast but no reachable hostile encounter: ' + setup.klient);
   }
+  const resolution = setup.targetResolution;
+  if (resolution && resolution.mode === 'physical' && resolution.rescueRequired) {
+    const visual = resolution.visualStates && resolution.visualStates.rescuedAtTarget;
+    assert(visual && visual.file && visual.dayFile && visual.nightFile && visual.root,
+      'physical rescue has no complete rescued scene visual: ' + setup.klient);
+    for (const file of [visual.file, visual.dayFile, visual.nightFile]) {
+      assert(fs.existsSync(path.join(repoRoot, visual.root, file)),
+        'rescued scene asset missing: ' + setup.klient + ' -> ' + visual.root + file);
+    }
+  }
 }
 
 assert(html.includes('_preloadSzenenbildSatz(set)'), 'scene image renderer must preload the active case image set');
