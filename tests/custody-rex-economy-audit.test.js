@@ -6,7 +6,13 @@ const vm = require('vm');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1254 +Irreversible-NPC-Uebergabe'"), 'version constant is stale');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1255 +Recap-Scope-Fix'"), 'version constant is stale');
+assert(html.includes('if (_stasiEncounterPflicht) timeContext += _stasiEncounterPflicht;'),
+  'Stasi encounter prompt must be appended to the live scene context');
+assert(!html.includes('if (_stasiEncounterPflicht) recap += _stasiEncounterPflicht;'),
+  'Stasi encounter prompt must not access the history-local recap variable');
+assert(/const _haftIntel = caseProgress\.pendingCustodyIntelNarration;\s*timeContext \+=/.test(html),
+  'custody intel narration must be appended to the live scene context');
 
 const encounterStart = html.indexOf('function _stasiRelevanz()');
 const encounterEnd = html.indexOf('function _custodyVerhoerState()', encounterStart);
