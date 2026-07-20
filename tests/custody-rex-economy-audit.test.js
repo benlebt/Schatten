@@ -6,7 +6,7 @@ const vm = require('vm');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1260 +Rausch-Risiko-Kater-NPC-Reaktionen'"), 'version constant is stale');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1261 +Mitnehmen-Typografie'"), 'version constant is stale');
 assert(html.includes('if (_stasiEncounterPflicht) timeContext += _stasiEncounterPflicht;'),
   'Stasi encounter prompt must be appended to the live scene context');
 assert(html.includes('Falls dies der erste sichtbare Auftritt dieser Figur ist'),

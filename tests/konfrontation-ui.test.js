@@ -5,7 +5,7 @@ const vm = require('vm');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 
-assert(html.includes('Schatten v7.12.1260'), 'version badge should be bumped');
+assert(html.includes('Schatten v7.12.1261'), 'version badge should be bumped');
 assert(html.includes('KONFRONTATION_TAG_TOOLTIPS'), 'missing confrontation tooltip registry');
 assert(html.includes('function _konfrontationWuerfleAusgang'), 'missing randomized confrontation outcome helper');
 assert(html.includes("const alkoholMalus = (typeof _alkoholKampfMalus === 'function')"), 'tiered alcohol penalty must reduce confrontation reliability');

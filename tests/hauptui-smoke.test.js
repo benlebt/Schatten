@@ -623,6 +623,12 @@ assert(html.includes("root: 'assets/scenes/romance/'"), 'romance mornings must u
 assert(html.includes('if (caseProgress) caseProgress.romanceOvernight = null;'), 'travel must end the romance morning location state');
 assert(html.includes('.choice-overlay {'), 'trade and companion dialogs need a shared visual surface');
 assert(html.includes("panel.className = 'choice-panel';"), 'trade and companion dialogs must use the shared panel style');
+assert(html.includes("panel.className = 'choice-panel mitnehmen-panel';"), 'companion dialog needs its typography-specific panel style');
+assert(html.includes("btn.className = 'choice-option';"), 'companion people must use the same option typography as the dialog actions');
+assert(html.includes('.mitnehmen-panel .choice-option,'), 'companion options must match the main UI typography');
+assert(html.includes('.mitnehmen-panel .choice-confirm,'), 'companion confirmation must match the main UI typography');
+assert(html.includes('font-size: calc(11px * var(--reading-scale));\n  font-weight: 400;\n  line-height: 1.25;'), 'companion controls need uniform size, weight and line height');
+assert(!html.includes('WEN MITNEHMEN?</div>\'\n    + \'<div style='), 'companion dialog must not use divergent inline typography');
 assert(html.includes("actions.className = 'choice-actions';"), 'trade dialog actions need a stable responsive layout');
 assert(!html.includes("try { if (typeof fxPartyJoin === 'function') fxPartyJoin(npc.name); } catch (e) {}\n          }\n          // v7.12.756"), 'paid travel companion must not trigger a second party animation');
 assert(html.includes("label: 'Näher kommen'"), 'romance action must use the correct umlaut in visible UI');
