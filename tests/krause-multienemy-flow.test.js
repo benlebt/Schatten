@@ -19,7 +19,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1257 +Frist-Krause-Handlungskontinuitaet'"), 'Krause release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1258 +Krause-Gruppenkampf-Charite-Ortsbindung'"), 'Krause release version missing');
 assert(html.includes("file: 'karl-mauers-buero-theodor-day.png'"), 'Krause opening must show Theodor in Karl office');
 assert(html.includes("root: 'assets/scenes/krause/'"), 'Krause opening image must resolve from the case scene directory');
 assert(html.includes('AKTIONS-TREUE (ABSOLUT)'), 'physical and item actions need a strict narration contract');
@@ -58,6 +58,30 @@ const hostile = sourceOf('_npcIstFeindlich');
 assert(hostile.includes('npc.tagExtra'), 'hostility must include secondary tags such as Frieda gangster metadata');
 const attackable = sourceOf('_hauptuiAngreifbarePersonen');
 assert(attackable.includes('npc.tagExtra'), 'multi-enemy target list must include secondary hostile tags');
+assert(attackable.includes('_konfrontationKrauseGruppenEintraege'), 'Frieda, Kalle and Jochen must remain explicit confrontation targets');
+
+const groupStart = sourceOf('_konfrontationStart');
+assert(groupStart.includes('_konfrontationKrauseGruppenEintraege().filter'), 'Krause confrontation must collect every living group opponent');
+assert(groupStart.includes('_konfrontationGruppenZielSetzen(caseProgress.activeConfrontation, aktuellesZiel)'), 'Krause confrontation must activate its selected living target');
+
+const livingGroup = sourceOf('_konfrontationGruppenLebende');
+assert(livingGroup.includes("'ko', 'gefesselt', 'fixiert', 'geflohen', 'uebergeben'"), 'terminal Krause opponents must not return to the fight');
+
+const groupFinish = sourceOf('_hauptuiKonfrontationAbschliessen');
+assert(groupFinish.includes('_konfrontationGruppenFortschrittSichern(k)'), 'defeated Krause opponents must be saved before the next target');
+assert(groupFinish.includes('_konfrontationGruppenZielSetzen(k, naechstesZiel)'), 'the next living Krause opponent must take over immediately');
+
+const groupPrompt = sourceOf('_konfrontationGruppenPrompt');
+assert(groupPrompt.includes('Frieda fuehrt Kalle und Jochen'), 'group narration must force all active Krause opponents to react');
+assert(groupPrompt.includes('Hauptmann Vollmer'), 'group narration must forbid an unrelated Vollmer intervention');
+
+assert(html.includes("file: 'tante-friedas-hehlerei-confrontation-day.png'"), 'Krause showdown needs a visible daytime escalation image');
+assert(html.includes("nightFile: 'tante-friedas-hehlerei-confrontation-night.png'"), 'Krause showdown needs a visible nighttime escalation image');
+assert(html.includes("if (!istGewahrsam && /charite/.test(engineOrt))"), 'Charite needs an engine-location image fallback');
+
+const stasiPrompt = sourceOf('_stasiEncounterPrompt');
+assert(stasiPrompt.includes('_stasiEncounterOrtStimmt(encounter)'), 'Vollmer narration must stay bound to the encounter location');
+assert(stasiPrompt.includes('_stasiEncounterClear'), 'a stale Vollmer encounter must end after Karl changes location');
 
 const takeItem = sourceOf('_fundItemAufnehmenDirekt');
 assert(takeItem.includes('_geldZahle(preis'), 'Trude merchandise must actually charge its visible price');
