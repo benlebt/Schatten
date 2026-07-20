@@ -5,10 +5,11 @@ const vm = require('vm');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 
-assert(html.includes('Schatten v7.12.1259'), 'version badge should be bumped');
+assert(html.includes('Schatten v7.12.1260'), 'version badge should be bumped');
 assert(html.includes('KONFRONTATION_TAG_TOOLTIPS'), 'missing confrontation tooltip registry');
 assert(html.includes('function _konfrontationWuerfleAusgang'), 'missing randomized confrontation outcome helper');
-assert(html.includes("const alkoholMalus = Math.min(3, Math.max(0, Number(caseProgress && caseProgress.alkohol) || 0));"), 'alcohol must reduce confrontation reliability');
+assert(html.includes("const alkoholMalus = (typeof _alkoholKampfMalus === 'function')"), 'tiered alcohol penalty must reduce confrontation reliability');
+assert(html.includes('function _alkoholKampfMalus()'), 'alcohol combat penalty helper is missing');
 assert(html.includes('KONFRONTATION-NARRATION'), 'confrontation actions must route into narrative scene prose');
 assert(html.includes('Die naechste Entscheidung gehoert dem Spieler'), 'item confrontation prose must not invent a flight or follow-up action');
 assert(html.includes('Karl fesselt, durchsucht, verhört oder übergibt niemanden automatisch'), 'general combat plans must preserve the next tactical decision too');

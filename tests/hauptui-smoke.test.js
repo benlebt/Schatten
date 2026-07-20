@@ -638,7 +638,8 @@ assert(html.includes("zeigeMiniAuswahl('Biete an: ' + item.name, 'Wem?'"), 'mult
 assert(html.includes("id: 'HAUPTUI_ITEM_ANBIETEN'"), 'a failed plan handoff must still produce a concrete narrated offer');
 assert(html.includes('function _hauptuiKarlTrinkt(item)'), 'drinking must create a persistent player state instead of requiring an NPC');
 assert(html.includes("caseProgress.alkohol = danach;"), 'drinking must persist Karl alcohol level');
-assert(html.includes('=== ALKOHOL ALS WELTZUSTAND (PFLICHT) ==='), 'scene prose must react to Karl alcohol state');
+assert(html.includes('=== LEICHTER RAUSCH ALS WELTZUSTAND (PFLICHT) ==='), 'scene prose must react to light intoxication');
+assert(html.includes('=== STARKER RAUSCH ALS WELTZUSTAND (PFLICHT) ==='), 'scene prose must react to strong intoxication');
 assert(html.includes('ALKOHOL-FAHRTPATZER:'), 'drunk driving must be able to prevent reaching the destination');
 assert(!html.includes("add('benutzen', 'Benutze');\n  add('anschauen', 'Schau an');\n  return verbs;"), 'inventory must not expose generic use and inspection for every item');
 assert(html.includes('function _hauptuiPlanDirekt(aktionKey, zielName, item)'), 'inventory escalation must reuse the existing plan/combat path');
