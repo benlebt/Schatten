@@ -5,7 +5,7 @@ const vm = require('vm');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 
-assert(html.includes('Schatten v7.12.1261'), 'version badge should be bumped');
+assert(html.includes('Schatten v7.12.1262'), 'version badge should be bumped');
 assert(html.includes('KONFRONTATION_TAG_TOOLTIPS'), 'missing confrontation tooltip registry');
 assert(html.includes('function _konfrontationWuerfleAusgang'), 'missing randomized confrontation outcome helper');
 assert(html.includes("const alkoholMalus = (typeof _alkoholKampfMalus === 'function')"), 'tiered alcohol penalty must reduce confrontation reliability');
@@ -66,6 +66,8 @@ assert(html.includes("kState.assistKeys[act.name] = act.key;"), 'each companion 
 assert(html.includes('const selectedAssists = companionActions.filter'), 'multiple companion moves must be collected for one tactical command');
 assert(html.includes('_hauptuiKonfrontationAktion(selectedMove.aktion, enemy, selectedMove.item || null, selectedAssists)'), 'Karl and all selected companion moves must execute as one tactical command');
 assert(html.includes('TEAMAKTIONEN (PFLICHT)'), 'combined moves must force every selected actor into narrative prose');
+assert(html.includes('ZUERST werden alle gewählten Begleiteraktionen sichtbar ausgeführt'), 'companion actions must narrate before Karl acts');
+assert(html.includes('ERST DANACH nutzt Karl das dadurch entstandene Zeitfenster'), 'Karl must exploit the opening after companions act');
 assert(html.includes("label: 'Rex: Fixieren'"), 'Rex must be transferable into the current confrontation UI');
 assert(html.includes("label: 'Rex: Verjagen'"), 'Rex needs a fast non-lethal resolution against weak opposition');
 assert(html.includes("label: 'Rex: Tief ansetzen'"), 'Rex needs the requested dark slapstick maneuver');

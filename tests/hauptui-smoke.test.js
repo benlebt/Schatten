@@ -255,6 +255,7 @@ const zielHinweisEnd = html.indexOf('function _hauptuiBind', zielHinweisStart);
 const zielHinweisSource = html.slice(zielHinweisStart, zielHinweisEnd);
 assert(zielHinweisSource.includes("return 'Hinweis';"), 'person clue badges must stay short and not expose clipped raw action labels');
 assert(zielHinweisSource.includes('target.belegBedarf'), 'proof-gated clues must show Beleg fehlt instead of a misleading direct hint');
+assert(zielHinweisSource.includes('_istInParty(target.id, target.name)'), 'active companions need a dedicated target status');
 const sceneVisualSource = html.slice(html.indexOf('function _renderKesslerSceneVisual'), html.indexOf('function _clearKesslerSceneVisual'));
 assert(!sceneVisualSource.includes('direktWennEindeutig'), 'NPC direct-action code must never leak into scene-image rendering');
 const start = html.lastIndexOf('window.__hauptuiActionState = window.__hauptuiActionState || { verb: null, targetKey: null };');
@@ -297,6 +298,7 @@ const context = {
   },
   _markPopupOpened: () => {},
   _verhoerProfilFuer: (npc) => npc && npc.id === 'norbert_tetzlaff' ? 'norbert_tetzlaff' : null,
+  _istInParty: () => false,
   _zeigeFundAuswahl: (items, clues) => { calls.fund += 1; calls.fundItems = items; calls.fundClues = clues; },
   chooseOption: (option) => calls.options.push(option),
   saveGameState: () => { calls.saves += 1; },
@@ -314,6 +316,21 @@ const context = {
 };
 vm.createContext(context);
 vm.runInContext(html.slice(start, end), context);
+
+const activeCompanion = {
+  id: 'liesel_test',
+  name: 'Liesel Forsthuber',
+  typ: 'person',
+  tag: 'ROMANCE',
+  erledigt: true,
+};
+context._istInParty = (id) => id === activeCompanion.id;
+assert.strictEqual(
+  context._hauptuiZielHinweis(activeCompanion, 'Person'),
+  'In Begleitung',
+  'active companions must not be labelled exhausted'
+);
+context._istInParty = () => false;
 
 const finishedWitness = { id: 'hertha_wessel', name: 'Hertha Wessel', typ: 'person', tag: 'FAMILY', erledigt: true };
 assert.deepStrictEqual(Array.from(context._hauptuiPersonVerben(finishedWitness, {})), [], 'a fully exhausted witness must expose no repeat conversation action');

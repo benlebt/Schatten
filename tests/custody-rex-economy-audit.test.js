@@ -6,7 +6,13 @@ const vm = require('vm');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1261 +Mitnehmen-Typografie'"), 'version constant is stale');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1262 +Begleiter-Taktik-Achterberg-Folgen'"), 'version constant is stale');
+assert(html.includes("text: 'Fall abschließen und Auftraggeber informieren.'"), 'resolve button copy must stay player-facing');
+assert(html.includes('_enginePrompt: [_resolveText, _resolveTransitionPrompt]'), 'resolve direction must remain private');
+assert(!html.includes('resolveOpt.text += narr'), 'director narration must not leak into resolve button text');
+assert(html.includes('Roth kuendigt an, Marquardts Rolle getrennt zu pruefen'), 'Achterberg ending must preserve Marquardt consequence');
+assert(html.includes('Dr. Marquardts Praxis in der Linienstrasse (Mitte)'), 'long Marquardt location name must be replaced');
+assert(!html.includes("name: 'Dr. Marquardts Praxis (Linienstrasse, Mitte)'"), 'clipped Marquardt location name must not return');
 assert(html.includes('if (_stasiEncounterPflicht) timeContext += _stasiEncounterPflicht;'),
   'Stasi encounter prompt must be appended to the live scene context');
 assert(html.includes('Falls dies der erste sichtbare Auftritt dieser Figur ist'),
