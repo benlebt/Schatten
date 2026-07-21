@@ -85,6 +85,10 @@ targetContext.caseProgress.zielpersonGeborgen = true;
 targetContext.caseProgress.zielpersonTransportStatus = 'am_ausgang';
 assert(targetContext._physischesFallzielStatus(), 'freed target must remain active until transport starts');
 assert.strictEqual(targetContext._physischesFallzielIstGeborgen(), false, 'freeing alone must not complete a delivery rescue');
+targetContext.caseProgress.zielpersonInBegleitung = true;
+assert.strictEqual(targetContext._physischesFallzielStatus().transportBereit, true,
+  'active accompaniment must count as transport-ready even for an old am_ausgang save state');
+targetContext.caseProgress.zielpersonInBegleitung = false;
 targetContext.caseProgress.zielpersonTransportStatus = 'im_opel';
 targetContext.caseProgress.zielpersonInBegleitung = true;
 const transportStatus = targetContext._physischesFallzielStatus();
