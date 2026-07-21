@@ -117,6 +117,7 @@ const clientContext = {
 };
 vm.createContext(clientContext);
 vm.runInContext(sourceOf('normalizeClientPatienceToDeadline'), clientContext);
+vm.runInContext(sourceOf('getClientGeduldRequirement'), clientContext);
 vm.runInContext(sourceOf('buildClientGeduldHint'), clientContext);
 const reminder = clientContext.buildClientGeduldHint();
 assert(reminder.includes('DIESER Szene'), 'due client reminder must be immediate');
@@ -125,6 +126,17 @@ clientContext.caseProgress.clientGeduldErzaehltLevel = 1;
 assert.strictEqual(clientContext.buildClientGeduldHint(), '', 'acknowledged reminder must not repeat');
 clientContext.gameDay = 4;
 assert(clientContext.buildClientGeduldHint().includes('"klient_kontakt":"warnung"'), 'next patience level must still fire');
+clientContext.gameDay = 5;
+clientContext.caseProgress.clientGeduldErzaehltLevel = 2;
+clientContext.normForMatch = normForMatch;
+clientContext.diag = () => {};
+vm.runInContext(sourceOf('enforceClientGeduldScene'), clientContext);
+const forcedPatienceScene = { szene: 'Karl prüft die Akte.', klient_kontakt: '' };
+const forcedRequirement = clientContext.enforceClientGeduldScene(forcedPatienceScene);
+assert(forcedRequirement && forcedRequirement.level === 3, 'last patience warning must be engine-enforced');
+assert.strictEqual(forcedPatienceScene.klient_kontakt, 'letzte_warnung', 'engine warning must set the structured marker');
+assert(forcedPatienceScene.szene.includes('Helga Wegener'), 'engine warning must visibly name the real client');
+assert(!/Auftrag beendet/.test(forcedPatienceScene.szene), 'last-chance warning must not accidentally match the firing detector');
 
 assert(
   html.includes("['gefesselt', 'ko', 'fixiert', 'benommen'].indexOf(z.status) !== -1 && !_gleicherOrt"),
