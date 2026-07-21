@@ -86,13 +86,14 @@ assert.strictEqual(compatibility._indizDurchVerbranntesVerhoerGesperrt({
 const reputation = {
   karlAkte: { ruf: { renommee: 0, haerte: 0 } },
   caseProgress: {},
+  gameDay: 2,
   normForMatch: (value) => String(value || '').toLowerCase(),
   _karlAkteSave: () => {},
   saveGameState: () => {},
   showProgressToast: () => {},
 };
 vm.createContext(reputation);
-vm.runInContext(sourceOf('_sozialRufAnwenden'), reputation);
+vm.runInContext(sourceOf('_sozialTonartTagKey') + '\n' + sourceOf('_sozialRufAnwenden'), reputation);
 const kragenVerb = {
   _sozialTonart: 'kragen', _sozialRufRenommee: -2, _sozialRufHaerte: 2,
   _sozialRufText: 'Test'
