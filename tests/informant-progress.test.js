@@ -49,7 +49,10 @@ const personContext = {
   _hauptuiVerhoerNpc: () => null,
   _resolveNpcIdentity: (id) => ({ id, name: id === 'schiele' ? 'Schiele' : 'Zeuge', tag: id === 'schiele' ? 'INFORMANT' : 'WITNESS' }),
   _npcHatOffenenHinweis: () => true,
-  _informantPreis: (id) => id === 'norbert_tetzlaff' ? 20 : 15
+  _informantPreis: (id) => id === 'norbert_tetzlaff' ? 20 : 15,
+  normForMatch: (value) => String(value || '').toLowerCase()
+    .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
+    .replace(/[^a-z0-9]+/g, ' ').trim()
 };
 vm.createContext(personContext);
 vm.runInContext(html.slice(personStart, personEnd), personContext);
@@ -57,33 +60,46 @@ vm.runInContext(html.slice(personStart, personEnd), personContext);
 const schieleVerbs = Array.from(personContext._hauptuiPersonVerben({
   id: 'schiele', name: 'Schiele', tag: 'INFORMANT', typ: 'person', hinweis: true
 }));
-assert.deepStrictEqual(schieleVerbs.map((verb) => verb.key), ['bestechen', 'bedrohen'], 'open informant hint must not expose a dead talk loop');
-assert(/15 Ostmark/.test(schieleVerbs[0].label), 'informant payment action must show the price');
+assert.deepStrictEqual(schieleVerbs.map((verb) => verb.key),
+  ['sozial_normal', 'sozial_bestechen', 'sozial_bedrohen', 'sozial_bluffen', 'sozial_kragen'],
+  'an unfamiliar informant must expose all conversation approaches');
+assert(/15 Mark/.test(schieleVerbs[1].label), 'informant payment action must show the price');
 assert.strictEqual(schieleVerbs.some((verb) => verb.key === 'reden'), false, 'talk must be hidden while paid informant clue is open');
 
 const staleSchiele = { id: 'schiele', name: 'Schiele', tag: 'INFORMANT', typ: 'person', hinweis: true, erledigt: true };
 const staleSchieleVerbs = Array.from(personContext._hauptuiPersonVerben(staleSchiele));
-assert.deepStrictEqual(staleSchieleVerbs.map((verb) => verb.key), ['bestechen', 'bedrohen'], 'old saves must recover Schiele even when the target was marked completed');
-assert.strictEqual(personContext._hauptuiEmpfohleneAktion(staleSchiele), 'bestechen', 'selecting Schiele must preselect the useful payment action');
-assert.strictEqual(personContext._hauptuiZielHinweis(staleSchiele, 'Person'), 'Hinweis gegen Bezahlung', 'stale completed label must not hide the paid clue');
+assert.deepStrictEqual(staleSchieleVerbs.map((verb) => verb.key),
+  ['sozial_normal', 'sozial_bestechen', 'sozial_bedrohen', 'sozial_bluffen', 'sozial_kragen'],
+  'old saves must recover Schiele with the full approach choice');
+assert.strictEqual(personContext._hauptuiEmpfohleneAktion(staleSchiele), null, 'the game must not preselect a tone for the player');
+assert.strictEqual(personContext._hauptuiZielHinweis(staleSchiele, 'Person'), 'Gesprächsweg wählen', 'stale completed label must advertise the conversation choice');
 
 const witnessVerbs = Array.from(personContext._hauptuiPersonVerben({
   id: 'zeuge', name: 'Zeuge', tag: 'WITNESS', typ: 'person', hinweis: true
 }));
-assert.strictEqual(witnessVerbs[0].key, 'reden', 'normal witnesses must keep the talk action');
+assert.deepStrictEqual(witnessVerbs.map((verb) => verb.key),
+  ['sozial_normal', 'sozial_bestechen', 'sozial_bedrohen', 'sozial_bluffen', 'sozial_kragen'],
+  'unfamiliar witnesses must expose the four tones and deliberate physical escalation');
+
+const clientVerbs = Array.from(personContext._hauptuiPersonVerben({
+  id: 'theodor_krause', name: 'Theodor Krause', tag: 'CLIENT', typ: 'person', hinweis: true
+}));
+assert.deepStrictEqual(clientVerbs.map((verb) => verb.key), ['reden'], 'clients and trusted office visitors must keep the simple talk action');
 
 personContext._hauptuiVerhoerNpc = () => null;
 const formerDossierInformantVerbs = Array.from(personContext._hauptuiPersonVerben({
   id: 'norbert_tetzlaff', name: 'Norbert Tetzlaff', tag: 'INFORMANT', typ: 'person', hinweis: true, sozial: tetzlaffSetup.sozial
 }));
 assert.deepStrictEqual(formerDossierInformantVerbs.map((verb) => verb.key),
-  ['sozial_bestechen', 'sozial_druck', 'sozial_kragen', 'sozial_hoeflich', 'sozial_kollegial'],
+  ['sozial_hoeflich', 'sozial_kollegial', 'sozial_bestechen', 'sozial_druck', 'sozial_bluffen', 'sozial_kragen'],
   'Tetzlaff must expose his complete direct conversation and escalation choice');
-assert(/20 Ostmark/.test(formerDossierInformantVerbs[0].label), 'Tetzlaff payment choice must show the real engine price');
-assert.strictEqual(formerDossierInformantVerbs[0].option._sozialInformantZahlung, true, 'Tetzlaff payment tone must debit the real informant price');
-assert.strictEqual(formerDossierInformantVerbs[2].option.kategorie, 'OFFENSIV', 'collar escalation must be a real offensive action');
-assert.strictEqual(formerDossierInformantVerbs[2].option._sozialRufHaerte, 2, 'collar escalation must increase hardness');
-assert.strictEqual(formerDossierInformantVerbs[2].option._sozialRufRenommee, -2, 'collar escalation must damage reputation');
+const tetzlaffPayment = formerDossierInformantVerbs.find((verb) => verb.key === 'sozial_bestechen');
+const tetzlaffKragen = formerDossierInformantVerbs.find((verb) => verb.key === 'sozial_kragen');
+assert(/20 Ostmark/.test(tetzlaffPayment.label), 'Tetzlaff payment choice must show the real engine price');
+assert.strictEqual(tetzlaffPayment.option._sozialInformantZahlung, true, 'Tetzlaff payment tone must debit the real informant price');
+assert.strictEqual(tetzlaffKragen.option.kategorie, 'OFFENSIV', 'collar escalation must be a real offensive action');
+assert.strictEqual(tetzlaffKragen.option._sozialRufHaerte, 2, 'collar escalation must increase hardness');
+assert.strictEqual(tetzlaffKragen.option._sozialRufRenommee, -2, 'collar escalation must damage reputation');
 
 const pohlSetup = Array.from(kesslerIntro.setup.setupCast).find((npc) => npc && npc.id === 'frau_pohl');
 assert(pohlSetup && pohlSetup.sozial, 'Frau Pohl social profile missing');
@@ -94,6 +110,22 @@ const pohlKragen = pohlVerbs.find((verb) => verb.key === 'sozial_kragen');
 assert(pohlKragen, 'every developed social NPC must allow deliberate collar escalation');
 assert.strictEqual(pohlKragen.option._sozialErfolg, false, 'absurd escalation against a normal witness must not grant the clue');
 assert.strictEqual(pohlKragen.option._sozialVerprelltDanach, true, 'collar escalation must burn the witness contact for the day');
+const pohlGegenleistung = pohlVerbs.find((verb) => verb.key === 'sozial_gegenleistung');
+assert.strictEqual(pohlGegenleistung.option._sozialZahlung, true, 'a promised witness counter-service must be a real engine payment');
+
+const classifyStart = html.indexOf('function classifyEvidenceAction()');
+const classifyEnd = html.indexOf('// v7.12.593', classifyStart);
+assert(classifyStart >= 0 && classifyEnd > classifyStart, 'evidence action classifier missing');
+const classifyContext = {
+  window: { _letzteAktion: {
+    kategorie: 'ERKUNDEN', text: 'Karl legt ein Trinkgeld auf den Tresen.',
+    npcId: 'oberkellner_voss', npcName: 'Oberkellner Voss', sozialTonart: 'trinkgeld'
+  } },
+  normForMatch: personContext.normForMatch
+};
+vm.createContext(classifyContext);
+vm.runInContext(html.slice(classifyStart, classifyEnd), classifyContext);
+assert.strictEqual(classifyContext.classifyEvidenceAction(), 'person', 'structured social choices must always classify as person actions');
 
 assert(html.includes("if (verb === 'bestechen' && typeof npcInteraktion === 'function')"), 'Haupt-UI execute path for informant payment missing');
 assert(html.includes("_anzeigeText: 'Für Hinweis zahlen · ' + npc.name"), 'paid hint must have a short player-facing action label');
