@@ -86,6 +86,58 @@ problem = context.validateSceneWorldTruth({
 }, { id: 'UNTERSUCHEN' });
 assert.strictEqual(problem, null, 'retrospective mention of a police handoff must remain legal');
 
+context.caseProgress.npcZustand = {
+  kalle: { name: 'Kalle', status: 'geflohen', seitSzene: 29 }
+};
+problem = context.validateSceneWorldTruth({
+  ort: 'Lagerhaus an der Spree',
+  szene: 'Kalle und Frieda sind fort, abgeführt von der Schutzpolizei.',
+  personenImRaum: [],
+  optionen: []
+}, { id: 'UNTERSUCHEN' });
+assert(problem && problem.code === 'npc_fate_mismatch',
+  'a fled NPC must never be rewritten retrospectively as arrested');
+assert(/NICHT festgenommen/.test(context.buildWorldTruthRepairHint(problem)),
+  'fate repair must tell the model the exact stored outcome');
+
+problem = context.validateSceneWorldTruth({
+  ort: 'Lagerhaus an der Spree',
+  szene: 'Kalle hat in den Wirren das Weite gesucht und ist geflohen.',
+  personenImRaum: [],
+  optionen: []
+}, { id: 'UNTERSUCHEN' });
+assert.strictEqual(problem, null, 'the correct retrospective flight must remain legal');
+
+problem = context.validateSceneWorldTruth({
+  ort: 'Lagerhaus an der Spree',
+  szene: 'Die Schutzpolizei führt Frieda ab, während Kalle in den Wirren das Weite gesucht hat.',
+  personenImRaum: [],
+  optionen: []
+}, { id: 'UNTERSUCHEN' });
+assert.strictEqual(problem, null,
+  'a mixed retrospective sentence may correctly distinguish arrest and flight');
+
+context.caseProgress.npcZustand = {
+  frieda: { name: 'Tante Frieda', status: 'uebergeben', seitSzene: 25 }
+};
+problem = context.validateSceneWorldTruth({
+  ort: 'Lagerhaus an der Spree',
+  szene: 'Tante Frieda ist der Polizei entkommen und hat das Weite gesucht.',
+  personenImRaum: [],
+  optionen: []
+}, { id: 'UNTERSUCHEN' });
+assert(problem && problem.code === 'npc_fate_mismatch',
+  'a handed-over NPC must never be rewritten retrospectively as escaped');
+
+context.caseProgress.npcZustand = {
+  mertens: {
+    name: 'Oberleutnant Mertens',
+    status: 'uebergeben',
+    ort: 'Lagerhaus an der Spree',
+    seitSzene: 14
+  }
+};
+
 problem = context.validateSceneWorldTruth({
   ort: 'Lagerhaus an der Spree',
   szene: 'Karl prüft die gesicherten Spuren.',

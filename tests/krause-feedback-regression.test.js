@@ -118,6 +118,21 @@ assert(sourceOf('_hauptuiSozialVerben').includes('schonGesprochen || istInforman
 assert(execute.includes("verb === 'nachhaken_informant'"), 'paid informants need a free follow-up instead of a duplicate purchase');
 assert(execute.includes('Wiederhole den alten Hinweis nicht wortgleich'), 'informant follow-up must explicitly block repeated exposition');
 
+const repeatContext = { normForMatch };
+vm.createContext(repeatContext);
+vm.runInContext(sourceOf('computeSceneSentenceOverlap'), repeatContext);
+vm.runInContext(sourceOf('sceneHasBlockingRepetition'), repeatContext);
+const erikaPrevious = 'Erika lässt ihre Hand nicht sinken. Ihr Blick wird weicher, ein Schatten von Erleichterung huscht über ihr Gesicht, als sie sich ein Stück näher zu dir lehnt. Ihre Fingerspitzen zeichnen beinahe unbewusst den Stoff deines Mantels nach.';
+const erikaRepeated = 'Erika lässt ihre Hand nicht sinken. Ihr Blick wird weicher, ein Schatten von Erleichterung huscht über ihr Gesicht, als sie sich ein Stück näher zu dir lehnt. Ihre Fingerspitzen zeichnen beinahe unbewusst den Stoff deines Mantels nach, dort wo die Wunde pocht.';
+assert.strictEqual(repeatContext.sceneHasBlockingRepetition(erikaRepeated, erikaPrevious).blocking, true,
+  'the exact romance repetition from scenes 28/29 must be rejected before commit');
+assert.strictEqual(repeatContext.sceneHasBlockingRepetition('Erika zieht die Hand zurück und deutet auf die offene Lagertür. Von drinnen schabt eine Kiste über Stein.', erikaPrevious).blocking, false,
+  'a genuinely advancing follow-up scene must remain valid');
+
+assert(html.includes('bietet 200 Ostmark bei Rueckgabe'), 'Krause setup cast must match the engine payout');
+assert(html.includes('Er bietet 200 Ostmark, wenn du das Etui zurückbringst.'), 'Krause opening must promise the actual 200 Ostmark payout');
+assert(!html.includes('Er bietet 500 D-Mark plus Bonus, wenn du das Etui zurückbringst.'), 'stale 500 D-Mark promise must be gone');
+
 const romanceContext = {
   pendingRomancePushScene: 10,
   lastRomanceNpcScene: -99,
@@ -139,7 +154,9 @@ assert(/Erika Kalewski/.test(romanceScene.szene), 'Erika introduction must be vi
 assert.strictEqual(romanceContext.pendingRomancePushScene, -99, 'successful introduction must consume the pending prompt');
 
 assert(html.includes('Laufziel sind mindestens 4 verschiedene Achsen'), 'historical education breadth target must be four axes');
-assert(html.includes('(lastSpannung <= 3 || needMoreEduAxes)'), 'education breadth must still work in action-heavy runs');
+assert(html.includes('(lastSpannung <= 3 || needMoreEduAxes || (sceneCounter >= 14 && needMoreVariety))'), 'historical breadth must still work in action-heavy runs');
+assert(html.includes('(Ziel: >= 4)'), 'historical anchor category target must be four of five');
+assert(html.includes('KATEGORIE-VIELFALT (PFLICHT)'), 'missing historical categories must be requested explicitly');
 assert(html.includes('pacingAtempausePending'), 'long confrontations must schedule a real detective breather');
 
 console.log('KRAUSE_FEEDBACK_REGRESSION_OK');
