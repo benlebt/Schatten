@@ -42,11 +42,15 @@ assert(/function _hauptuiVerhoerNpc[\s\S]{0,180}?if \(!window\.VERHOER_PILOT_AKT
   'Haupt-UI must not resolve dossier profiles while the pilot is disabled');
 assert(/verb && verb\._verhoerOeffnen && window\.VERHOER_PILOT_AKTIV/.test(html),
   'stale dossier commands must not open the overlay');
+assert(/function oeffneVerhoerAkte\(npc\)[\s\S]{0,120}?if \(!window\.VERHOER_PILOT_AKTIV/.test(html),
+  'the retired dossier entry point itself must reject every new open attempt');
 
 for (const copy of [
   'Offen sagen, dass Karl Privatdetektiv ist',
   'Diskretion zusichern',
-  '20 D-Mark anbieten',
+  'Für Hinweis zahlen ({preis} Ostmark / Ware) · Renommee +1',
+  'Eine klare Antwort fordern · Härte +1, Renommee −1',
+  'Am Kragen packen · Härte +2, Renommee −2',
   'Ein großzügiges Trinkgeld geben',
   'Ruhig über seine Mittwoche reden',
   'Mit den Belegen konfrontieren',
@@ -56,6 +60,12 @@ for (const copy of [
 }
 assert(/name: 'Robert Kessler'[\s\S]{0,2200}?sozial:\s*\{[\s\S]{0,120}?tonarten:\s*\[/.test(kessler),
   'Robert must use the same direct conversation-action model as other witnesses');
+assert(/name: 'Norbert Tetzlaff'[\s\S]{0,1400}?direktStattInformant: true/.test(kessler),
+  'Tetzlaff must bypass the coarse informant shortcut and expose his own conversation choices');
+assert(/key: 'kragen'[\s\S]{0,260}?kategorie: 'OFFENSIV'[\s\S]{0,180}?rufHaerte: 2[\s\S]{0,100}?rufRenommee: -2/.test(kessler),
+  'Tetzlaff collar escalation must be allowed and carry the promised reputation price');
+assert(html.includes('function _sozialTonartenMitEskalation(setup)'),
+  'the escalation-freedom rule must also apply to other developed social NPCs');
 assert(/id: 'robert_aussage'[\s\S]{0,320}?actions: \['ANSPRECHEN','BEFRAGEN','KONFRONTIEREN'\]/.test(kessler),
   'normal Robert conversation actions must still be able to grant the confession clue');
 
@@ -72,6 +82,27 @@ vm.runInContext(sourceOf('_indizDurchVerbranntesVerhoerGesperrt'), compatibility
 assert.strictEqual(compatibility._indizDurchVerbranntesVerhoerGesperrt({
   id: 'ilse_aussage', npc: 'ilse_hauke', quelle: 'person',
 }), false, 'retired dossier failures must not burn normal person clues in old saves');
+
+const reputation = {
+  karlAkte: { ruf: { renommee: 0, haerte: 0 } },
+  caseProgress: {},
+  normForMatch: (value) => String(value || '').toLowerCase(),
+  _karlAkteSave: () => {},
+  saveGameState: () => {},
+  showProgressToast: () => {},
+};
+vm.createContext(reputation);
+vm.runInContext(sourceOf('_sozialRufAnwenden'), reputation);
+const kragenVerb = {
+  _sozialTonart: 'kragen', _sozialRufRenommee: -2, _sozialRufHaerte: 2,
+  _sozialRufText: 'Test'
+};
+assert.strictEqual(reputation._sozialRufAnwenden({ id: 'norbert_tetzlaff' }, kragenVerb), true,
+  'collar escalation must apply its engine-owned reputation effect');
+assert.deepStrictEqual(reputation.karlAkte.ruf, { renommee: -2, haerte: 2 },
+  'collar escalation must book Renommee -2 and Härte +2');
+assert.strictEqual(reputation._sozialRufAnwenden({ id: 'norbert_tetzlaff' }, kragenVerb), false,
+  'the same social reputation effect must not be applied twice');
 
 assert(/name: 'Hinterhof Sybelstrasse'[\s\S]{0,1000}?bedrohungen:\s*\[[\s\S]{0,500}?id: 'wachtmeister_eugen_hellbach'/.test(kessler),
   'optional Hellbach pressure must remain part of the Kessler case');

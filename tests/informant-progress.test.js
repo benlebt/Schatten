@@ -30,6 +30,14 @@ assert.deepStrictEqual(Array.from(schieleClue.actions), ['BESTECHEN', 'BEDROHEN'
 assert(/15 Ostmark/.test(wegener.prompt), 'Wegener prompt must state the real Schiele price');
 assert(!/50 D-Mark/.test(JSON.stringify(wegener)), 'stale Schiele price remains in Wegener setup');
 
+const kesslerIntro = Array.from(introContext.INTRO_VARIANTS).find((entry) =>
+  entry && entry.setup && Array.isArray(entry.setup.setupCast)
+    && entry.setup.setupCast.some((npc) => npc && npc.id === 'norbert_tetzlaff')
+);
+assert(kesslerIntro, 'Kessler setup with Tetzlaff missing');
+const tetzlaffSetup = Array.from(kesslerIntro.setup.setupCast).find((npc) => npc && npc.id === 'norbert_tetzlaff');
+assert(tetzlaffSetup && tetzlaffSetup.sozial, 'Tetzlaff direct social profile missing');
+
 const personStart = html.indexOf('function _hauptuiInformantMitOffenemHinweis(');
 const personEnd = html.indexOf('function _hauptuiItemVerben(', personStart);
 assert(personStart >= 0 && personEnd > personStart, 'Haupt-UI informant action block missing');
@@ -41,7 +49,7 @@ const personContext = {
   _hauptuiVerhoerNpc: () => null,
   _resolveNpcIdentity: (id) => ({ id, name: id === 'schiele' ? 'Schiele' : 'Zeuge', tag: id === 'schiele' ? 'INFORMANT' : 'WITNESS' }),
   _npcHatOffenenHinweis: () => true,
-  _informantPreis: () => 15
+  _informantPreis: (id) => id === 'norbert_tetzlaff' ? 20 : 15
 };
 vm.createContext(personContext);
 vm.runInContext(html.slice(personStart, personEnd), personContext);
@@ -66,9 +74,26 @@ assert.strictEqual(witnessVerbs[0].key, 'reden', 'normal witnesses must keep the
 
 personContext._hauptuiVerhoerNpc = () => null;
 const formerDossierInformantVerbs = Array.from(personContext._hauptuiPersonVerben({
-  id: 'norbert_tetzlaff', name: 'Norbert Tetzlaff', tag: 'INFORMANT', typ: 'person', hinweis: true
+  id: 'norbert_tetzlaff', name: 'Norbert Tetzlaff', tag: 'INFORMANT', typ: 'person', hinweis: true, sozial: tetzlaffSetup.sozial
 }));
-assert.deepStrictEqual(formerDossierInformantVerbs.map((verb) => verb.key), ['bestechen', 'bedrohen'], 'former dossier informants must use the normal payment-or-pressure actions');
+assert.deepStrictEqual(formerDossierInformantVerbs.map((verb) => verb.key),
+  ['sozial_bestechen', 'sozial_druck', 'sozial_kragen', 'sozial_hoeflich', 'sozial_kollegial'],
+  'Tetzlaff must expose his complete direct conversation and escalation choice');
+assert(/20 Ostmark/.test(formerDossierInformantVerbs[0].label), 'Tetzlaff payment choice must show the real engine price');
+assert.strictEqual(formerDossierInformantVerbs[0].option._sozialInformantZahlung, true, 'Tetzlaff payment tone must debit the real informant price');
+assert.strictEqual(formerDossierInformantVerbs[2].option.kategorie, 'OFFENSIV', 'collar escalation must be a real offensive action');
+assert.strictEqual(formerDossierInformantVerbs[2].option._sozialRufHaerte, 2, 'collar escalation must increase hardness');
+assert.strictEqual(formerDossierInformantVerbs[2].option._sozialRufRenommee, -2, 'collar escalation must damage reputation');
+
+const pohlSetup = Array.from(kesslerIntro.setup.setupCast).find((npc) => npc && npc.id === 'frau_pohl');
+assert(pohlSetup && pohlSetup.sozial, 'Frau Pohl social profile missing');
+const pohlVerbs = Array.from(personContext._hauptuiPersonVerben({
+  id: 'frau_pohl', name: 'Frau Pohl', tag: 'WITNESS', typ: 'person', hinweis: true, sozial: pohlSetup.sozial
+}));
+const pohlKragen = pohlVerbs.find((verb) => verb.key === 'sozial_kragen');
+assert(pohlKragen, 'every developed social NPC must allow deliberate collar escalation');
+assert.strictEqual(pohlKragen.option._sozialErfolg, false, 'absurd escalation against a normal witness must not grant the clue');
+assert.strictEqual(pohlKragen.option._sozialVerprelltDanach, true, 'collar escalation must burn the witness contact for the day');
 
 assert(html.includes("if (verb === 'bestechen' && typeof npcInteraktion === 'function')"), 'Haupt-UI execute path for informant payment missing');
 assert(html.includes("_anzeigeText: 'Für Hinweis zahlen · ' + npc.name"), 'paid hint must have a short player-facing action label');
@@ -82,6 +107,7 @@ assert(!html.includes("aktion: brauchtDruck"), 'hostile prompt direction is stil
 assert(html.includes("if (tag === 'INFORMANT')"), 'legacy NPC menu informant branch missing');
 assert(html.includes("_informantHatVerhoer = !!(window.VERHOER_PILOT_AKTIV"), 'retired dossier profiles must not suppress legacy informant actions');
 assert(html.includes("keys = (_informantHatHinweis && !_informantHatVerhoer) ? ['bestechen','bedrohen'] : ['befragen'];"), 'legacy informant actions do not match clue gate');
+assert(html.includes("_sozNpc.sozial.direktStattInformant && ['bestechen', 'bedrohen'].indexOf(verben[i].key)"), 'legacy menu must replace coarse Tetzlaff informant buttons with his direct choices');
 assert(html.includes("BEDROHEN: 'Unter Druck setzen'"), 'hint action label for pressure missing');
 assert(html.includes("&& !_hauptuiInformantMitOffenemHinweis(target)"), 'completed-target rendering can still disable an open informant clue');
 
