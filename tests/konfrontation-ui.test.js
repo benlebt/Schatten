@@ -5,7 +5,9 @@ const vm = require('vm');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 
-assert(html.includes('Schatten v7.12.1264'), 'version badge should be bumped');
+assert(!/Schatten v7\.12\.\d+/.test(html), 'visible version badges must not be hard-coded');
+assert.strictEqual((html.match(/data-schatten-version/g) || []).length, 3, 'both badges and their central updater must exist');
+assert(html.includes("el.textContent = 'Schatten ' + window.SCHATTEN_VERSION"), 'visible badges must use the central version constant');
 assert(html.includes('KONFRONTATION_TAG_TOOLTIPS'), 'missing confrontation tooltip registry');
 assert(html.includes('function _konfrontationWuerfleAusgang'), 'missing randomized confrontation outcome helper');
 assert(html.includes("const alkoholMalus = (typeof _alkoholKampfMalus === 'function')"), 'tiered alcohol penalty must reduce confrontation reliability');
