@@ -85,6 +85,33 @@ assert(html.includes("/tante friedas hehlerei|stallschreiberstrasse 12/.test"),
   'Stallschreiberstrasse alias must select the visible Frieda/Kalle/Jochen confrontation image');
 const krauseSet = html.slice(html.indexOf("caseTest: /theodor krause"), html.indexOf("caseTest: /renate schiffer"));
 assert(krauseSet.includes('hardenbergstrasse'), 'Krause case must reuse the existing Hardenbergstrasse police image');
+assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'krause', 'tante-friedas-hehlerei-erika-day.png')),
+  'Erika needs a truthful dedicated Hehlerei image');
+assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'krause', 'tante-friedas-hehlerei-after-day.png')),
+  'the cleared Hehlerei needs a post-custody image without removed NPCs');
+assert(html.includes("file: 'tante-friedas-hehlerei-erika-day.png'"), 'Erika image must be selected from real scene presence');
+assert(html.includes("file: 'tante-friedas-hehlerei-after-day.png'"), 'post-custody image must be selected from terminal NPC state');
+assert(html.includes("ROMANCE: 'Romanze'"), 'travel popup must translate the technical ROMANCE tag');
+assert(!html.includes('escapeHtml(npc.tag.toLowerCase())'), 'raw English NPC tags must not leak into the travel popup');
+
+const visualContext = {
+  normForMatch,
+  caseSetup: { caseType: 'diebstahl', klient: 'Theodor Krause' },
+  engineCurrentLocation: { name: 'Tante Friedas Hehlerei' },
+  _party: [],
+  _npcZustandIstEntfernt: npc => npc && npc.name === 'Tante Frieda'
+};
+vm.createContext(visualContext);
+vm.runInContext(sourceOf('_krauseHehlereiNachherVisual'), visualContext);
+let visualSpec = visualContext._krauseHehlereiNachherVisual({ personenImRaum: ['Erika Kalewski'] });
+assert.strictEqual(visualSpec.file, 'tante-friedas-hehlerei-erika-day.png',
+  'visible Erika must override stale location art with her dedicated scene');
+visualSpec = visualContext._krauseHehlereiNachherVisual({ personenImRaum: [] });
+assert.strictEqual(visualSpec.file, 'tante-friedas-hehlerei-after-day.png',
+  'a handed-over shop NPC must select the cleared post-custody scene');
+visualContext._npcZustandIstEntfernt = () => false;
+assert.strictEqual(visualContext._krauseHehlereiNachherVisual({ personenImRaum: [] }), null,
+  'ordinary pre-custody shop scenes must keep their regular artwork');
 
 assert(sourceOf('_hauptuiSozialVerben').includes('schonGesprochen || istInformant'),
   'an exhausted informant must not sell the same social bribe again');

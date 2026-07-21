@@ -47,8 +47,10 @@ vm.createContext(context);
   '_worldTruthAliases',
   '_worldTruthHasAlias',
   '_worldTruthOrtGleich',
+  'sanitizeSceneTerminalNpcState',
   'validateSceneWorldTruth',
   'buildWorldTruthRepairHint',
+  '_worldTruthNaturalFallbackText',
   'enforceSceneWorldTruthFallback',
   '_schlafHeilZiel'
 ].forEach((name) => vm.runInContext(sourceOf(name), context));
@@ -61,6 +63,20 @@ let problem = context.validateSceneWorldTruth({
 }, { id: 'REDEN' });
 assert(problem && problem.code === 'npc_prose',
   'a handed-over NPC must never return as an acting prose character');
+
+const fallbackScene = {
+  ort: 'Lagerhaus an der Spree',
+  szene: 'Mertens ist bereits abgef\u00fchrt. Diese Tatsache bleibt bindend. Karl ordnet die Lage mit den tats\u00e4chlich anwesenden Personen neu.',
+  personenImRaum: ['Oberleutnant Mertens'],
+  optionen: [{ text: 'Greife Mertens an' }]
+};
+context.enforceSceneWorldTruthFallback(fallbackScene, {
+  code: 'npc_prose', npc: 'Oberleutnant Mertens', status: 'uebergeben', aliases: ['mertens', 'oberleutnant mertens']
+});
+assert(!/bindend|tats\u00e4chlich anwesenden Personen|Engine-Wahrheit/i.test(fallbackScene.szene),
+  'hard fallback must never leak repair instructions into player prose');
+assert(fallbackScene.szene.length > 50, 'hard fallback must produce natural playable prose');
+assert(!fallbackScene.personenImRaum.includes('Oberleutnant Mertens'), 'fallback must remove terminal NPCs from the roster');
 
 problem = context.validateSceneWorldTruth({
   ort: 'Lagerhaus an der Spree',
@@ -78,6 +94,30 @@ problem = context.validateSceneWorldTruth({
 }, { id: 'UNTERSUCHEN' });
 assert(problem && problem.code === 'npc_option',
   'stale buttons must not target a handed-over NPC');
+
+context.caseProgress.npcZustand = {};
+problem = context.validateSceneWorldTruth({
+  ort: 'Lagerhaus an der Spree',
+  szene: 'Diese Tatsache bleibt bindend. Karl ordnet die tats\u00e4chlich anwesenden Personen neu.',
+  personenImRaum: [], optionen: []
+}, { id: 'REDEN' });
+assert(problem && problem.code === 'meta_instruction_leak',
+  'technical repair language must be rejected even if no NPC name remains');
+
+context.caseProgress.npcZustand = {
+  frieda: { name: 'Tante Frieda', status: 'uebergeben' },
+  kalle: { name: 'Kalle', status: 'uebergeben' }
+};
+const multiTerminalScene = {
+  personenImRaum: ['Tante Frieda', 'Kalle', 'Erika Kalewski'],
+  optionen: [{ text: 'Rede mit Kalle' }, { text: 'Sprich mit Erika Kalewski' }],
+  cast_hinzugefuegt: [{ name: 'Tante Frieda' }, { name: 'Erika Kalewski' }]
+};
+context.sanitizeSceneTerminalNpcState(multiTerminalScene);
+assert.deepStrictEqual(Array.from(multiTerminalScene.personenImRaum), ['Erika Kalewski'],
+  'all handed-over NPCs must be removed in one pass while present NPCs remain');
+assert.strictEqual(multiTerminalScene.optionen.length, 1, 'stale terminal NPC actions must be removed in one pass');
+assert.strictEqual(multiTerminalScene.cast_hinzugefuegt.length, 1, 'terminal NPCs must not be re-added through cast metadata');
 
 context.caseProgress.npcZustand = {};
 problem = context.validateSceneWorldTruth({
