@@ -153,7 +153,7 @@ assert(romanceScene.personenImRaum.includes('Erika Kalewski'), 'Erika must becom
 assert(/Erika Kalewski/.test(romanceScene.szene), 'Erika introduction must be visible in prose');
 assert.strictEqual(romanceContext.pendingRomancePushScene, -99, 'successful introduction must consume the pending prompt');
 
-assert(html.includes('Laufziel sind mindestens 4 verschiedene Achsen'), 'historical education breadth target must be four axes');
+assert(html.includes('Laufziel sind mindestens 5 verschiedene Achsen'), 'historical education breadth target must be five axes');
 assert(html.includes('(lastSpannung <= 3 || needMoreEduAxes || (sceneCounter >= 14 && needMoreVariety))'), 'historical breadth must still work in action-heavy runs');
 assert(html.includes('(Ziel: >= 4)'), 'historical anchor category target must be four of five');
 assert(html.includes('KATEGORIE-VIELFALT (PFLICHT)'), 'missing historical categories must be requested explicitly');
