@@ -18,7 +18,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1269 +Szenenwahrheit-Typografie'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1270 +Prosa-Metadaten-Guard'"),
   'Brandt regression release version missing');
 
 for (const bad of [
@@ -93,5 +93,39 @@ assert(html.includes('Laufziel sind mindestens 5 verschiedene Achsen'),
   'historical education breadth target must be five axes');
 assert(html.includes('(sceneCounter >= 18 && _eduCount < 5)'),
   'long runs need a fifth-axis checkpoint');
+
+const romanceIntroContext = {
+  pendingRomancePushScene: 5,
+  caseSetup: { setupCast: [{
+    name: 'Lola Brandt',
+    tag: 'WITNESS',
+    tagExtra: 'ROMANCE',
+    rolle: 'Zeugin / Verlobte des Toten + ROMANCE-Kandidatin',
+  }] },
+  caseProgress: {},
+  lastSpannung: 2,
+  karlInStasiCustody: false,
+  romanceRejected: {},
+  romanceClimaxed: {},
+  normForMatch: (value) => String(value || '').toLowerCase(),
+  lastRomanceNpcScene: -99,
+  sceneCounter: 6,
+  diag: () => {},
+};
+vm.createContext(romanceIntroContext);
+vm.runInContext(sourceOf('enforceRomanceIntroductionScene') + '\n' + sourceOf('sanitizeProsaMetadaten'), romanceIntroContext);
+const introScene = { szene: 'Karl betritt das Café.', spannung: 2, personenImRaum: [] };
+assert(romanceIntroContext.enforceRomanceIntroductionScene(introScene),
+  'romance fallback must introduce the intended person');
+assert(introScene.szene.includes('tritt Lola Brandt an dich heran'),
+  'romance fallback needs natural narrative prose');
+assert(!/ROMANCE|Zeugin\s*\/|laufenden Sache auf/.test(introScene.szene),
+  'romance fallback must not copy role metadata into prose');
+const guardedProse = romanceIntroContext.sanitizeProsaMetadaten(
+  'Lola Brandt, Zeugin + ROMANCE-Kandidatin, wartet am Fenster.');
+assert(!/ROMANCE-Kandidatin/.test(guardedProse),
+  'central prose guard must remove leaked technical role markers');
+assert.strictEqual(guardedProse, 'Lola Brandt wartet am Fenster.',
+  'central prose guard must remove the entire technical role appositive');
 
 console.log('brandt run regression tests passed');
