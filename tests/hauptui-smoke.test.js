@@ -137,9 +137,9 @@ assert(html.includes('const _schlafMarkerKurz ='), 'sleep quick action must use 
 assert(!html.includes("_schlafZielM.tagPlus ? ' · Tag +1'"), 'sleep quick action marker must not carry the verbose day-plus suffix');
 assert(html.includes("marker = 'Gesperrt · Spannung';"), 'sleep tension lock marker must stay compact');
 assert(html.includes("<span>Wirklich schlafen?</span>"), 'sleep confirmation must use a compact title');
-assert(html.includes('function _hauptuiVerhoerNpc(target)'), 'Haupt-UI needs a direct dossier profile resolver');
-assert(html.includes("if (verhoerNpc && (!z || ['gefesselt', 'fixiert', 'benommen'].indexOf(z.status) !== -1)) add('reden', 'Rede mit');"), 'bound/fixed profile NPCs must remain interrogatable');
-assert(html.includes('oeffneVerhoerAkte(verhoerNpc);'), 'Rede mit must open the dossier directly for profile NPCs');
+assert(html.includes('window.VERHOER_PILOT_AKTIV = false;'), 'retired Kessler dossier must remain disabled');
+assert(/function _hauptuiVerhoerNpc[\s\S]{0,180}?if \(!window\.VERHOER_PILOT_AKTIV\) return null;/.test(html), 'Haupt-UI must route former dossier NPCs into normal conversations');
+assert(html.includes("if (verhoerNpc && (!z || ['gefesselt', 'fixiert', 'benommen'].indexOf(z.status) !== -1)) add('reden', 'Rede mit');"), 'legacy-enabled bound profile NPCs must remain interrogatable');
 assert(html.includes('grid-template-columns: 40px minmax(0, 1fr) minmax(72px, max-content);'), 'travel quick action needs stable icon, title and destination columns');
 assert(html.includes('height: 42px;\n    min-height: 42px;'), 'quick actions need fixed height so Opel and sleep align consistently');
 assert(html.includes('.hauptui-quick-actions .option-text-wrap {\n    display: contents;'), 'desktop quick actions must place title and marker in separate grid columns');
@@ -213,19 +213,9 @@ assert(html.includes('let _reiseFreiDurchOrtsausgang = false;'), 'public investi
 assert(html.includes('const _reiseGesperrtRoh = (!window.HAUPTUI_AKTIV) && (currentSpannung >= 4)'), 'Haupt-UI travel must not disappear because of tension alone');
 assert(html.includes('const _reiseDurchBildErsetzt = _ausgangImBild && !window.HAUPTUI_AKTIV;'), 'scene image exits must not replace the visible Haupt-UI travel button');
 assert(html.includes("const _reiseGesperrt = (_reiseGesperrtRoh || _klientGateAktiv) && !_reiseFreiDurchFlucht && !_reiseFreiDurchOrtsausgang;"), 'travel gating must keep usable exits available unless combat/custody/client gate blocks them');
-assert(html.includes('function _verhoerAutoScroll()'), 'Verhoerakte must keep the protocol scrolled to the latest exchange');
-assert(html.includes("const prot = ov.querySelector('.protokoll');"), 'Verhoerakte auto-scroll must target only the protocol area');
-assert(html.includes('prot.scrollTop = prot.scrollHeight;'), 'Verhoerakte protocol must jump to the newest text after render');
-assert(html.includes('requestAnimationFrame(function ()'), 'Verhoerakte auto-scroll must repeat after layout settles');
-assert(html.includes('panel.innerHTML = h;\n  _verhoerAutoScroll();'), 'Verhoerakte render must trigger protocol auto-scroll immediately');
-assert(html.includes('function _verhoerDisplayText(s)'), 'Verhoerakte must normalize display text through one central helper');
-assert(html.includes("return (typeof asciiToUmlaut === 'function') ? asciiToUmlaut(raw) : raw;"), 'Verhoerakte display helper must reuse the curated umlaut normalizer');
-assert(html.includes('function _verhoerAussageStatusKey(status)'), 'Verhoerakte must normalize stored assertion status values');
-assert(html.includes("_verhoerAussageStatusText(a && a.status)"), 'Verhoerakte assertion badges must display canonical umlaut status text');
-assert(html.includes("_verhoerThemenSortiert(npcId, s).map"), 'Verhoerakte topic order must not keep risky options predictably last');
-assert(html.includes("_verhoerRichEsc(failText)"), 'Verhoerakte fail text must normalize umlauts while preserving allowed dossier markup');
-assert(html.includes("[/\\bKurfuerstendamm\\b/g, 'Kurfürstendamm']"), 'Verhoerakte cafe dossier needs Kurfuerstendamm displayed with umlaut');
-assert(html.includes("[/\\bGedaechtnis\\b/g, 'Gedächtnis']"), 'Verhoerakte cafe dossier needs Gedaechtnis displayed with umlaut');
+assert(html.includes('function _hauptuiSozialVerben(target)'), 'unified conversation actions need one Haupt-UI resolver');
+assert(html.includes("if (!window.VERHOER_PILOT_AKTIV) return null;"), 'retired dossier profiles must not suppress social actions');
+assert(html.includes("label: 'Mit den Belegen konfrontieren'"), 'Robert needs a direct evidence-confrontation action');
 assert(!html.includes("Karl denkt nach (' + activeLabel"), 'gameplay loading text must not expose the active model label');
 assert(html.includes('function renderHowToAktuell()'), 'how-to page must be rendered from the current Haupt-UI concept');
 assert(html.includes('<h2>WIE DU SPIELST</h2>'), 'how-to page must use player-facing language');
@@ -234,13 +224,14 @@ assert(!html.includes('<h3>Haupt-UI</h3>'), 'how-to page must not expose interna
 assert(!html.includes('Erst der goldene <strong>Ausführen</strong>-Knopf'), 'how-to page must not explain actions through a changeable button color');
 assert(!html.includes('Beleg-Gates:'), 'how-to page must not expose engine terminology');
 assert(html.includes('<h3>Offene Fäden</h3>'), 'how-to page must explain open investigation threads');
-assert(html.includes('<h3>Verhörakte</h3>'), 'how-to page must explain dossier interrogations');
+assert(html.includes('<h3>Gespräche</h3>'), 'how-to page must explain unified conversation actions');
+assert(!html.includes('<h3>Verhörakte</h3>'), 'how-to page must not advertise retired dossier interrogations');
 assert(html.includes('<h3>Unterwegs</h3>'), 'how-to page must explain travel, sleep, and healing in player-facing language');
 assert(html.includes('<h3>Gefahr</h3>'), 'how-to page must explain tactical confrontations');
 assert(html.includes('NARRATIVE NACHT-FUEHRUNG:'), 'night scenes must narratively suggest sleep when no urgent night lead remains');
 assert(html.includes('KEINE brechend volle Halle'), 'night stations must not default to daytime crowd density');
 const npcMenuSource = html.slice(html.indexOf('function oeffneNpcMenue'), html.indexOf('// ===== Ende NPC-Interaktion ====='));
-assert(npcMenuSource.includes("_direktVerb.key === 'befragen' || _direktVerb._verhoerOeffnen"), 'single conversation actions must bypass the redundant NPC popup inside the NPC menu');
+assert(npcMenuSource.includes("_direktVerb.key === 'befragen'"), 'single conversation actions must bypass the redundant NPC popup inside the NPC menu');
 assert(npcMenuSource.includes('_direktVerb._sozialErledigt'), 'finished conversations must bypass the redundant one-button popup');
 assert(npcMenuSource.includes('_direktVerb._sozialNochNicht'), 'temporarily locked conversations must bypass the redundant one-button popup');
 assert(npcMenuSource.includes('!_hatUeberhauptNoch && !_klientHier && _schonGesprochen'), 'NPCs without bound clues must not appear exhausted before their first conversation');
@@ -268,7 +259,7 @@ const voss = { id: 'voss', name: 'Oberkellner Voss', tag: 'WITNESS' };
 let expectedNpcId = voss.id;
 const context = {
   console,
-  window: {},
+  window: { VERHOER_PILOT_AKTIV: false },
   document: { createElement: (tagName) => new FakeElement(tagName) },
   Object,
   String,
@@ -393,8 +384,8 @@ context.caseProgress.gefundeneIndizIds = ['robert_eintritt_beobachtet', 'tuersch
 context.caseProgress.verhoere = { ilse_hauke: { status: 'verbrannt' } };
 context.caseProgress.verhoerFehlschlaege = ['ilse_hauke'];
 faeden = context._hauptuiKesslerFaeden();
-assert.deepStrictEqual(Array.from(faeden, (f) => f.id), ['spedition', 'cafe', 'edith'], 'burned Ilse interrogation must not keep the player stuck in the courtyard');
-assert.strictEqual(context._hauptuiHatOffenenFadenAmOrt('Hinterhof Sybelstrasse'), false, 'burned local interrogation must not keep the courtyard marked as the next active thread');
+assert.deepStrictEqual(Array.from(faeden, (f) => f.id), ['ilse', 'spedition', 'cafe'], 'retired dossier failures must reopen Ilse through normal conversation');
+assert.strictEqual(context._hauptuiHatOffenenFadenAmOrt('Hinterhof Sybelstrasse'), true, 'reopened normal Ilse conversation must remain visible at the courtyard');
 context.caseProgress.verhoere = { ilse_hauke: { status: 'gelöst', _grantText: 'Ilse hat alles gesagt.' } };
 context.caseProgress.verhoerFehlschlaege = [];
 context.caseProgress.gefundeneIndizIds = ['robert_eintritt_beobachtet', 'tuerschild_hauke'];

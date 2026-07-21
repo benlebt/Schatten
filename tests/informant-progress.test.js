@@ -64,11 +64,11 @@ const witnessVerbs = Array.from(personContext._hauptuiPersonVerben({
 }));
 assert.strictEqual(witnessVerbs[0].key, 'reden', 'normal witnesses must keep the talk action');
 
-personContext._hauptuiVerhoerNpc = () => ({ id: 'norbert_tetzlaff' });
-const dossierInformantVerbs = Array.from(personContext._hauptuiPersonVerben({
+personContext._hauptuiVerhoerNpc = () => null;
+const formerDossierInformantVerbs = Array.from(personContext._hauptuiPersonVerben({
   id: 'norbert_tetzlaff', name: 'Norbert Tetzlaff', tag: 'INFORMANT', typ: 'person', hinweis: true
 }));
-assert.strictEqual(dossierInformantVerbs[0].key, 'reden', 'informants with a real interrogation dossier must keep the talk entry');
+assert.deepStrictEqual(formerDossierInformantVerbs.map((verb) => verb.key), ['bestechen', 'bedrohen'], 'former dossier informants must use the normal payment-or-pressure actions');
 
 assert(html.includes("if (verb === 'bestechen' && typeof npcInteraktion === 'function')"), 'Haupt-UI execute path for informant payment missing');
 assert(html.includes("_anzeigeText: 'Für Hinweis zahlen · ' + npc.name"), 'paid hint must have a short player-facing action label');
@@ -80,6 +80,7 @@ assert(html.includes("aktion: 'Sprich mit {npc}.'"), 'normal talk action needs a
 assert(!html.includes("aktion: 'Sprich mit {npc} gezielt über den offenen Fallansatz."), 'internal talk direction still leaks into the visible action');
 assert(!html.includes("aktion: brauchtDruck"), 'hostile prompt direction is still stored in the visible action');
 assert(html.includes("if (tag === 'INFORMANT')"), 'legacy NPC menu informant branch missing');
+assert(html.includes("_informantHatVerhoer = !!(window.VERHOER_PILOT_AKTIV"), 'retired dossier profiles must not suppress legacy informant actions');
 assert(html.includes("keys = (_informantHatHinweis && !_informantHatVerhoer) ? ['bestechen','bedrohen'] : ['befragen'];"), 'legacy informant actions do not match clue gate');
 assert(html.includes("BEDROHEN: 'Unter Druck setzen'"), 'hint action label for pressure missing');
 assert(html.includes("&& !_hauptuiInformantMitOffenemHinweis(target)"), 'completed-target rendering can still disable an open informant clue');
