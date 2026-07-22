@@ -113,6 +113,36 @@ for (const action of ['deeskalieren', 'bluffen', 'fliehen', 'rausch_bluff', 'anb
 
 assert(html.includes('Kaffee-Staub'), 'coffee needs distinct mild effect copy');
 assert(sourceOf('_hauptuiKonfrontationItems').includes("add(item, 'anbieten', 'Biete friedlich an: ')"), 'the tactical inventory must surface peaceful offers beside attacks');
+const groupedItemContext = {
+  inventory: [],
+  caseProgress: {},
+  normForMatch: value => String(value || '').toLowerCase().trim(),
+  _baukastenZiele: () => ({ items: [
+    { id: 'west_1', name: 'Schachtel West-Zigaretten', itemTyp: 'ware', anzahl: 1, itemIds: ['west_1'] },
+    { id: 'west_2', name: 'Schachtel West-Zigaretten', itemTyp: '', anzahl: 1, itemIds: ['west_2'] },
+    { id: 'toaster_1', name: 'Toaster (AEG, Vorkriegsmodell)', itemTyp: 'schwer', anzahl: 1, itemIds: ['toaster_1'] },
+    { id: 'toaster_2', name: 'Toaster (AEG, Vorkriegsmodell)', itemTyp: '', anzahl: 1, itemIds: ['toaster_2'] }
+  ] }),
+  _hauptuiItem: target => ({ id: target.id, name: target.name, status: 'bei_karl', owner: 'karl' }),
+  _hauptuiItemTaugt: (item, verb) => /zigaretten/i.test(item.name) ? verb === 'anbieten' : verb === 'werfen_fuesse',
+  _hauptuiGegnerAngebotArt: item => /zigaretten/i.test(item.name) ? { key: 'zigarette' } : null,
+  _hauptuiKonfrontationItemPlan: () => ({ score: 3, marker: 'Test', hint: 'Test' })
+};
+vm.createContext(groupedItemContext);
+vm.runInContext(sourceOf('_hauptuiKonfrontationItemGruppen') + '\n' + sourceOf('_hauptuiKonfrontationItems') + '\n' + sourceOf('_hauptuiKonfrontationMoveKey'), groupedItemContext);
+const groupedActions = groupedItemContext._hauptuiKonfrontationItems();
+const cigaretteActions = groupedActions.filter(action => action.verb === 'anbieten');
+const toasterActions = groupedActions.filter(action => action.verb === 'werfen_fuesse');
+assert.strictEqual(cigaretteActions.length, 1, 'duplicate cigarette instances must render as one confrontation action');
+assert.strictEqual(toasterActions.length, 1, 'duplicate toaster instances must render as one confrontation action');
+assert(cigaretteActions[0].label.includes('×2'), 'the grouped cigarette action must expose its quantity');
+assert(toasterActions[0].label.includes('×2'), 'the grouped toaster action must expose its quantity');
+assert.deepStrictEqual(Array.from(cigaretteActions[0].item.itemIds), ['west_1', 'west_2'], 'the grouped action must retain both real item IDs');
+assert.strictEqual(
+  groupedItemContext._hauptuiKonfrontationMoveKey('anbieten', cigaretteActions[0].item),
+  'anbieten|item:schachtel west-zigaretten',
+  'selection state must address the grouped action instead of every same-named raw item'
+);
 assert(html.includes('Glas und Korn'), 'Doppelkorn needs distinct stronger effect copy');
 assert(html.includes('AEG-Wucht'), 'toaster needs heavy effect copy');
 assert(html.includes('Sahne und Klebrigkeit'), 'cake needs a distinct blinding distraction effect');

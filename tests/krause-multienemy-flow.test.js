@@ -19,7 +19,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1301 +Kompakt-Inventar'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1302 +Inventar-Deduplizierung'"), 'release version missing');
 assert(html.includes("file: 'karl-mauers-buero-theodor-day.png'"), 'Krause opening must show Theodor in Karl office');
 assert(html.includes("root: 'assets/scenes/krause/'"), 'Krause opening image must resolve from the case scene directory');
 assert(html.includes('AKTIONS-TREUE (ABSOLUT)'), 'physical and item actions need a strict narration contract');
@@ -114,7 +114,7 @@ const ppkContext = {
   _hauptuiKonfrontationItemPlan: () => ({ score: 3, marker: 'guter Hebel', hint: 'Distanz' }),
 };
 require('vm').createContext(ppkContext);
-require('vm').runInContext(sourceOf('_hauptuiKonfrontationItems'), ppkContext);
+require('vm').runInContext(sourceOf('_hauptuiKonfrontationItemGruppen') + '\n' + sourceOf('_hauptuiKonfrontationItems'), ppkContext);
 const ppkActions = ppkContext._hauptuiKonfrontationItems();
 assert(ppkActions.some(action => action.verb === 'ppk_einsetzen' && /Walther PPK/.test(action.label)),
   'the persistent narrative Walther PPK must become a real confrontation action');
