@@ -118,6 +118,33 @@ assert.strictEqual(appointment.engineCurrentLocation.name, 'Kessler-Wohnung Char
 assert.strictEqual(appointment.pendingCategoryMessages.length, 0,
   'a valid appointment must not emit a false closing-time prompt');
 
+// Reale Regression aus dem Kessler-Run 2308: Der AUFLOESEN-Klick setzt Stage 4,
+// bevor advanceGameTime die Sperrstunde prueft. Damit ist der offene
+// Abschlussfaden bereits verbraucht und kann den Ort nicht mehr als Termin
+// offenhalten. Die laufende Uebergabe selbst muss deshalb den Ortswechsel
+// blockieren.
+appointment._hauptuiAlleOffenenFaeden = () => [];
+appointment.pendingCategoryChoice = 'AUFLOESEN';
+appointment.engineCurrentLocation = {
+  name: 'Kessler-Wohnung Charlottenburg',
+  sektor: 'West (Charlottenburg)'
+};
+appointment.pendingCategoryMessages = [];
+assert.strictEqual(appointment._abschlussTerminAmOrt(kesslerWohnung), false,
+  'the regression fixture must simulate the already consumed Stage-4 report thread');
+assert.strictEqual(appointment._sperrstundeNachZeitwechsel(), false,
+  'a time change during AUFLOESEN must not relocate Karl before the final report scene');
+assert.strictEqual(appointment.engineCurrentLocation.name, 'Kessler-Wohnung Charlottenburg',
+  'the final report must remain with the present client at the selected location');
+assert.strictEqual(appointment.pendingCategoryMessages.length, 0,
+  'the final prompt must not receive a contradictory closing-time relocation');
+
+appointment.pendingCategoryChoice = null;
+assert.strictEqual(appointment._sperrstundeNachZeitwechsel(), true,
+  'the exemption must end with the final action and preserve normal closing-time behavior');
+assert.strictEqual(appointment.engineCurrentLocation.name, 'Karl Mauers BÃ¼ro',
+  'outside a final report, a closed apartment must still relocate Karl normally');
+
 assert(html.includes('Der Engine-Ort bleibt EXAKT'),
   'final report prompts must explicitly preserve the canonical engine location');
 assert(!html.includes("let aufloesenForm = 'persÃ¶nlich, per Telefon, per Telegramm oder per Bote"),

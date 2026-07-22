@@ -1,13 +1,13 @@
 # SCHATTEN – Übergabe an einen neuen Codex-Chat
 
 - Stand: 22.07.2026
-- Spielversion: `v7.12.1314 +Repository-Haertung`
+- Spielversion: `v7.12.1315 +Abschluss-Sperrstunde`
 - Branch: `main`
 - Aktueller Commit: nach dem Klonen mit `git rev-parse --short HEAD` ermitteln
 - Remote: mit `git remote get-url origin` ermitteln
 - Tests: 42/42 grün
 
-Dieses Dokument ist trotz des versionsbezogenen Dateinamens bis zur Repository-Härtung v1314 aktualisiert und der aktuelle Einstieg für einen neuen Codex-Chat ohne Kenntnis des bisherigen Verlaufs. Ältere Übergaben sind nur historische Referenz. Bei Widersprüchen gelten der ausgecheckte Code, die aktuellen Tests und ein aktueller echter Run.
+Dieses Dokument ist trotz des versionsbezogenen Dateinamens bis v1315 aktualisiert und der aktuelle Einstieg für einen neuen Codex-Chat ohne Kenntnis des bisherigen Verlaufs. Ältere Übergaben sind nur historische Referenz. Bei Widersprüchen gelten der ausgecheckte Code, die aktuellen Tests und ein aktueller echter Run.
 
 ## 1. Startprompt für den neuen Chat
 
@@ -35,7 +35,7 @@ Write-Output ('TEST_COUNT=' + $tests.Count)
 Erwartet:
 
 - `main` entspricht `origin/main`.
-- `window.SCHATTEN_VERSION = 'v7.12.1314 +Repository-Haertung';`
+- `window.SCHATTEN_VERSION = 'v7.12.1315 +Abschluss-Sperrstunde';`
 - 42 Testskripte laufen grün.
 - Der normale Arbeitsbaum ist sauber; sichtbar bleiben nur:
   - `.git-broken-20260708-2049/`
@@ -164,14 +164,20 @@ Die folgenden Befunde sind im aktuellen Code bereits repariert und regressionsge
    - Persönliche Rechnerpfade und Projektleitungsnamen wurden aus dem aktuellen Quellstand neutralisiert.
    - `tests/repository-hygiene.test.js` verhindert die Rückkehr starker Secret-Muster und persönlicher Pfade.
 
-Diese Punkte nicht erneut umbauen, nur weil ein Lektorat einen älteren Stand beschreibt. Erst prüfen, ob ein neuer Run auf v1313 den Fehler weiterhin reproduziert.
+10. **Abschlussbericht gegen Sperrstunden-Race gehärtet** (v1315)
+   - Der echte Kessler-Run 23:08 auf v1314 zeigte einen neuen Engine-Konflikt: `AUFLOESEN` bei der anwesenden Edith wechselte gleichzeitig von Abend zu Nacht; die allgemeine Sperrstunde versetzte Karl vor der finalen Anfrage aus ihrer Wohnung ins Büro.
+   - Eine bereits laufende Abschlussübergabe bleibt nun für genau diesen Spielzug am bewusst gewählten Ort. Normale Sperrstunden bleiben unverändert aktiv.
+   - Derselbe Run bestätigt zugleich, dass die alte Café-Wien-Doppelerzählung nicht wieder auftrat und `briefchen_ilse` korrekt als Umgebungs-Kernindiz gebucht wurde.
+   - Test: `tests/anker-closing-time.test.js`.
+
+Diese Punkte nicht erneut umbauen, nur weil ein Lektorat einen älteren Stand beschreibt. Erst prüfen, ob ein neuer Run auf dem aktuellen Versionsstand den Fehler weiterhin reproduziert.
 
 ## 7. Tatsächlich offene Arbeit vor der Alexander-Demo
 
 ### Priorität A: manuelle Referenzläufe
 
 1. **Krause komplett neu spielen.** Die automatischen Krause-Tests sind grün, aber seit den neuesten Gruppen-, Finale- und Ortsfixes fehlt ein echter vollständiger Gegenlauf.
-2. **Kessler sanft spielen.** Der jüngste vollständige Lauf war erzählerisch stabil, endete aber mit 80 % Gewaltanteil und Ruf „hart/gewaltbereit“. Für die Demo einen ruhigeren Referenzlauf erzeugen. Dabei v1313-Abschlusskontinuität gezielt prüfen.
+2. **Kessler-Abschluss auf v1315 kurz gegenprüfen.** Der Run 23:08 war mit 0 % Gewalt und Ruf „behutsam/ermittelnd“ bereits der geeignete sanfte Referenzlauf. Nur der nun reparierte Abend→Nacht-Sperrstundenkonflikt braucht noch einen echten Abschluss-Retest.
 3. **Brave/iPhone real nachtesten.** Settings, Fallauswahl, Behandlungsreise sowie Musik und Soundeffekte nach Hintergrund/Vordergrund prüfen. Die Tests simulieren die Browserereignisse, ersetzen aber keinen echten iOS-Lauf.
 
 ### Priorität B: echter Blind-Test
@@ -294,4 +300,4 @@ rg -n "SCHATTEN_SAVE_KEY|saveGameState|restoreGameState" index.html tests
 
 ## 14. Übergabezustand in einem Satz
 
-`main` steht auf v7.12.1313 mit 42/42 grünen Tests; Brandt-Wahrheitsbeat, kritischer Abschluss, Romance-Abkühlung, Brave-iPhone-Aktionen, Kessler-Heilreise/-Bild, Faden-Kartenvorauswahl, iOS-Audio und Kessler-Abschlusskontinuität sind repariert. Vor der Alexander-Demo bleiben ein kompletter Krause-Gegenlauf, ein sanfter Kessler-Referenzlauf, ein realer iPhone-Brave-Retest und vor allem ein Blind-Test mit einer unbedarften Person.
+`main` steht auf v7.12.1315 mit 42/42 grünen Tests; Brandt-Wahrheitsbeat, kritischer Abschluss, Romance-Abkühlung, Brave-iPhone-Aktionen, Kessler-Heilreise/-Bild, Faden-Kartenvorauswahl, iOS-Audio, Kessler-Abschlusskontinuität und das Abschluss-Sperrstunden-Race sind repariert. Vor der Alexander-Demo bleiben ein kompletter Krause-Gegenlauf, ein kurzer Kessler-Abschluss-Retest auf v1315, ein realer iPhone-Brave-Retest und vor allem ein Blind-Test mit einer unbedarften Person.
