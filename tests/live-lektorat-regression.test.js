@@ -265,6 +265,19 @@ const uncommandedDeparture = worldContext.validateSceneWorldTruth({
 assert.strictEqual(uncommandedDeparture && uncommandedDeparture.code, 'unauthorized_departure',
   'a wait/observe action must reject prose that says Karl leaves the engine location');
 
+const uncommandedCarDeparture = worldContext.validateSceneWorldTruth({
+  ort: 'Hinterhof Sybelstrasse',
+  szene: 'Robert Kessler sackt zusammen. Du drehst dich um und rennst durch den Torbogen zurueck zur Sybelstrasse. Du springst in den Fahrersitz und laesst den Wagen Richtung Kurfuerstendamm davonrollen.',
+  personenImRaum: ['Robert Kessler'],
+  optionen: []
+}, {
+  _zeitUnmittelbar: true,
+  _npcName: 'Robert Kessler',
+  id: 'NPC_bedrohen'
+});
+assert.strictEqual(uncommandedCarDeparture && uncommandedCarDeparture.code, 'unauthorized_departure',
+  'running back to the street and entering the driver seat must not bypass the location gate');
+
 const wrongSocialTarget = worldContext.validateSceneWorldTruth({
   ort: 'Hinterhof Sybelstrasse',
   szene: 'Frau Pohl lockert ihren Griff am Tuerrahmen und antwortet Karl ausweichend.',
@@ -324,5 +337,7 @@ assert(apiSource.includes('MAX_OPENING_ROLE_REPAIRS'),
   'opening role reversal needs bounded hard retries and a fallback');
 assert(apiSource.includes('NPC-KONTINUITAET') && apiSource.includes('sanitizeOpeningRoleTruth'),
   'unauthorized recurring NPCs need a slow-call-proof retry and hard fallback');
+assert(sourceOf('fixSprache').includes(".replace(/\\b([Dd])u wischt\\b/g, '$1u wischst')"),
+  'the observed du wischt conjugation error must be corrected conservatively');
 
 console.log('LIVE_LEKTORAT_REGRESSION_OK');
