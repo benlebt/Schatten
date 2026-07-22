@@ -3,7 +3,7 @@
 - **Stand:** 22.07.2026
 - **Spielversion:** `v7.12.1304 +Clubschluss`
 - **Branch:** `main`
-- **Commit:** `7fcb3b2535c79aafbf62a9ef543284c1dc8c3dc7` (`Fix Brandt club closing continuity`)
+- **Letzter Code-Commit:** `7fcb3b2535c79aafbf62a9ef543284c1dc8c3dc7` (`Fix Brandt club closing continuity`)
 - **Remote:** `https://github.com/benlebt/Schatten.git`
 - **Tests:** 34/34 grün
 
@@ -35,7 +35,7 @@ rg -n "window\.SCHATTEN_VERSION" index.html
 
 Erwarteter Stand:
 
-- `main` zeigt auf `7fcb3b2` und entspricht `origin/main`.
+- `main` enthält `7fcb3b2` als letzten Spielcode-Commit und entspricht `origin/main`; darüber können reine Übergabe-/Dokumentationscommits liegen.
 - `window.SCHATTEN_VERSION = 'v7.12.1304 +Clubschluss';`
 - Der normale Code-Arbeitsbaum ist sauber.
 - Es erscheinen nur diese zwei alten unversionierten Sicherungsverzeichnisse:
