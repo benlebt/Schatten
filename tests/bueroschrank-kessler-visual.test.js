@@ -20,7 +20,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1309 +Kessler-Reisebild'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1310 +Kessler-Reisebild'"), 'release version missing');
 assert(html.includes('BÜROSCHRANK · STARTAUSRÜSTUNG'), 'case start dialog must expose the office wardrobe');
 assert(html.includes('Immer dabei: Walther PPK, Detektiv-Lizenz, Notizbuch und Bleistift.'), 'fixed detective gear must be explained');
 
@@ -126,12 +126,20 @@ const visualContext = {
   getNpcsAtCurrentLocation: () => [{ name: 'Wachtmeister Eugen Hellbach' }],
 };
 vm.createContext(visualContext);
-vm.runInContext(sourceOf('_kesslerHellbachVisual'), visualContext);
+vm.runInContext(sourceOf('_kesslerRobertVisual') + '\n' + sourceOf('_kesslerHellbachVisual'), visualContext);
 let spec = visualContext._kesslerHellbachVisual({ personenImRaum: [] });
 assert.strictEqual(spec.dayFile, 'hinterhof-sybelstrasse-hellbach-confrontation-day.png', 'active Hellbach must use confrontation art');
-visualContext.caseProgress.activeConfrontation = { enemyName: 'Robert Kessler', enemyEntries: [] };
+visualContext.caseProgress.activeConfrontation = {
+  enemyName: 'Robert Kessler',
+  enemyEntries: [{ name: 'Robert Kessler' }, { name: 'Wachtmeister Eugen Hellbach' }],
+};
 assert.strictEqual(visualContext._kesslerHellbachVisual({ personenImRaum: [] }), null,
-  'a Robert Kessler confrontation must not show Hellbach merely because he is also in the courtyard roster');
+  'a Robert Kessler confrontation must not show Hellbach merely because he is also in the roster or enemy group');
+spec = visualContext._kesslerRobertVisual();
+assert.strictEqual(spec.dayFile, 'hinterhof-sybelstrasse-robert-confrontation-day.png',
+  'an active Robert Kessler confrontation must use the dedicated civilian daytime art');
+assert.strictEqual(spec.nightFile, 'hinterhof-sybelstrasse-robert-confrontation-night.png',
+  'an active Robert Kessler confrontation must use the dedicated civilian night art');
 visualContext.caseProgress.activeConfrontation = { enemyName: 'Wachtmeister Eugen Hellbach', enemyEntries: [] };
 hellbachState = { status: 'ko', ort: 'Hinterhof Sybelstrasse' };
 spec = visualContext._kesslerHellbachVisual({ personenImRaum: [] });
@@ -144,6 +152,8 @@ for (const asset of [
   'hinterhof-sybelstrasse-hellbach-confrontation-night.png',
   'hinterhof-sybelstrasse-hellbach-ko-day.png',
   'hinterhof-sybelstrasse-hellbach-ko-night.png',
+  'hinterhof-sybelstrasse-robert-confrontation-day.png',
+  'hinterhof-sybelstrasse-robert-confrontation-night.png',
 ]) {
   assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'kessler', asset)), 'missing Hellbach visual asset: ' + asset);
 }
