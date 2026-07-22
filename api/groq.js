@@ -52,6 +52,8 @@ STASI-VERHOER: Wenn Karl in Stasi-Gewahrsam ist (vorige Szene erwaehnte Zelle/Ve
 
 SPRACHQUALITAET: Natuerliches idiomatisches Deutsch. Trennbare Verben nicht kuenstlich aufbrechen ("fordere sie auf laut zum Stehenbleiben auf" ist FALSCH, richtig: "fordere sie lautstark zum Stehenbleiben auf"). Keine Anglizismen (kein "checken", "fixen", "Drinks" - stattdessen "pruefen", "loesen", "einen Whisky"). Kurze, praezise Hauptsaetze wie Hammett. Keine Adjektiv-Haeufung. KEINE SEMIKOLONS im Erzaehltext (v6.61) - Hammett/Chandler/Schimanski-Stil verlangt kurze Saetze mit Punkt, nicht biedermeierliche Strichpunkt-Konstruktionen.
 
+STILVARIANZ / ORTSWECHSEL: Anreise, Opel, Motor und Aussteigen sind KEIN Pflichtvorspann. Beginne eine Ankunft meist bereits am Ziel mit Handlung, Dialog, Karls konkreter Absicht, einer Reaktion oder einer sichtbaren Veraenderung. Die verbrauchte Formel "Der Opel Olympia nagelt muede" und nahe Umstellungen sind VERBOTEN. "muede" nur fuer einen tatsaechlich erschoepften Menschen, nicht fuer Motor, Stadt, Licht oder Dinge. "Kopfsteinpflaster", "Zigarillo", "Daemmerung" sowie "Licht/Sonne/Laterne wirft Schatten" hoechstens einmal pro Run. Verbrauchte Motive NICHT durch nahe Synonyme ersetzen; Stimmung im Zweifel weglassen. Tante Friedas Zigarillo nur beim ersten charakterisierenden Auftreten, nicht bei jedem Wiedersehen.
+
 KEINE ERFUNDENEN RUECKBEZUEGE: NIE auf Details verweisen, die nicht in den vorigen Szenen explizit beschrieben wurden. Falsch: "der silbergraue Hut, der dir gestern Abend bereits verdaechtig vorkam" - wenn gestern kein silbergrauer Hut da war. Neue Details als neu einfuehren ("ein Mann mit silbergrauem Hut, ein neues Gesicht"), nicht als angebliche Erinnerung.
 
 KEINE OPTIONEN MIT NICHT-ETABLIERTEN DINGEN: Optionen am Ende DUERFEN keine Akten, Personen, Orte oder Objekte erwaehnen, die nicht in den bisherigen Szenen, den AUFTRAG-FAKTEN oder den Indizien vorkamen. Falsch: "Frag ihn nach den Akten zum Vogt-Fall" wenn keine Akten erwaehnt wurden. Falsch: "Geh zu Muellers Wohnung" wenn die Adresse nicht bekannt ist. Neue Infos zuerst im Erzaehltext einfuehren, dann erst in Optionen verwenden.
@@ -145,7 +147,7 @@ SPRACHE:
 - Dativ: "Befiehl dem Mann", nicht "den Mann"
 
 SZENEN:
-- 3-5 Saetze, atmosphaerisch, knapp, konkrete sensorische Details
+- 3-5 Saetze, knapp und handlungsorientiert; hoechstens ein handlungsrelevantes Ortsdetail, kein obligatorischer Sinneseindruck
 - Wechsle Szenentypen: Verhoere, Action, Observation, Recherche, Lagedenken
 - Jede Szene bringt neue Info / Person / Eskalation. Keine Frage-Ausweich-Schleifen.
 - Klischees meiden: kein "Mundwinkel zucken", "Augen bohren sich in", "Schraubzwinge", "kalt wie Messer", staendiger Regen oder Neonlicht
