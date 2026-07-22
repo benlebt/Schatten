@@ -76,10 +76,16 @@ const openingRoleContext = {
   normForMatch: value => String(value || '')
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[\u0300-\u036f]/g, ''),
+  STAMMFIGUREN: [
+    { id: 'stamm_mfs', name: 'Hauptmann Vollmer' },
+    { id: 'stamm_lenz', name: 'Lenz' }
+  ],
+  karlAkte: { bekannte: {} }
 };
 vm.createContext(openingRoleContext);
 vm.runInContext(sourceOf('validateOpeningRoleTruth'), openingRoleContext);
+vm.runInContext(sourceOf('sanitizeOpeningRoleTruth'), openingRoleContext);
 const shadowSetup = {
   caseType: 'beschatten',
   opfer: 'Robert Kessler (Buchhalter)',
@@ -91,6 +97,27 @@ assert.strictEqual(openingRoleContext.validateOpeningRoleTruth(
 assert.strictEqual(openingRoleContext.validateOpeningRoleTruth(
   'Seit drei Stunden folgst du Robert Kessler durch Charlottenburg.', shadowSetup
 ).ok, true, 'opening validation must retain the correct surveillance direction');
+assert.strictEqual(openingRoleContext.validateOpeningRoleTruth(
+  'Hauptmann Vollmer steht an der Ecke. Er hat dich schon seit Tagen im Visier.', shadowSetup
+).code, 'opening_foreign_recurring_npc',
+'an unassigned recurring NPC must never be invented in a fresh case opening');
+const activeVollmerSetup = {
+  caseType: 'politisch',
+  setupCast: [{ name: 'Hauptmann Vollmer', id: 'stamm_mfs', tag: 'STASI', _stammfigur: true }]
+};
+assert.strictEqual(openingRoleContext.validateOpeningRoleTruth(
+  'Hauptmann Vollmer beobachtet dich schon seit Tagen.', activeVollmerSetup
+).code, 'opening_unsupported_prior_encounter',
+'a first recurring-NPC appearance must not invent an earlier relationship');
+const dirtyOpening = {
+  szene: 'Edith Kessler hat dich beauftragt. Hauptmann Vollmer verfolgt dich seit Tagen. Robert biegt in den Hof ein.',
+  personenImRaum: ['Robert Kessler', 'Hauptmann Vollmer'],
+  optionen: [{ text: 'Vollmer zur Rede stellen' }, { text: 'Robert beobachten' }]
+};
+openingRoleContext.sanitizeOpeningRoleTruth(dirtyOpening, { target: 'Hauptmann Vollmer' });
+assert(!dirtyOpening.szene.includes('Vollmer') && !dirtyOpening.personenImRaum.includes('Hauptmann Vollmer')
+  && dirtyOpening.optionen.length === 1,
+'the hard fallback must remove an unauthorized recurring NPC from prose, cast and options');
 
 const wrongNpcScene = {
   ort: 'Hinterhof Sybelstrasse',
@@ -295,5 +322,7 @@ assert(apiSource.indexOf('!_openingRoleTruth.ok') < apiSource.indexOf('if (isSta
   'fundamental opening-role validation must run before the slow-call quality skip');
 assert(apiSource.includes('MAX_OPENING_ROLE_REPAIRS'),
   'opening role reversal needs bounded hard retries and a fallback');
+assert(apiSource.includes('NPC-KONTINUITAET') && apiSource.includes('sanitizeOpeningRoleTruth'),
+  'unauthorized recurring NPCs need a slow-call-proof retry and hard fallback');
 
 console.log('LIVE_LEKTORAT_REGRESSION_OK');
