@@ -59,6 +59,10 @@ assert(api.directive(context.caseProgress.romanceOvernight).includes('bleibt die
 assert(!html.includes('Waehle die Variante anhand IHRES Charakters'), 'the model must no longer choose its own morning reality');
 assert(html.includes("const romanceImage = ro.partnerPresent === false"), 'scene renderer must select by stored presence');
 assert(html.includes("if (_romanceMorningStatus !== null) return _romanceMorningStatus;"), 'NPC location binding must use romance morning truth');
+assert(html.includes('option._romanceRejectedAtOrt ='), 'romance rejection must remember its pre-transition location');
+assert(html.includes('ORTS- UND TAGESWECHSEL (PFLICHT)'), 'a moved rejection scene must require a narrated overnight bridge');
+assert(html.includes('nach Hause fährt, schläft und am nächsten Morgen'), 'the rejection bridge must include home and sleep');
+assert(html.includes('dürfen in personenImRaum am Zielort NICHT erscheinen'), 'rejected NPCs must remain at the departed location');
 
 const imageFiles = [
   'morgen-wohnung-ost.png', 'morgen-wohnung-ost-allein.png',

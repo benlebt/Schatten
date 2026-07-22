@@ -68,6 +68,8 @@ assert(status, 'Wegener target must unlock from its found stage-4 clue while cas
 assert.strictEqual(status.npcName, 'Konstantin Wegener');
 assert.strictEqual(status.location, 'Lagerhalle an der Spree');
 assert.strictEqual(targetContext.caseProgress.stage, 3, 'target unlock must not solve the case prematurely');
+assert.strictEqual(targetContext._physischesFallzielBlockiertAbschluss(), true,
+  'a configured physical target must block completion before Karl has even reached it');
 assert.strictEqual(targetContext._physischesFallzielNpcFreigeschaltet(
   { id: 'konstantin_wegener', abStage: 4 }, 'Lagerhalle an der Spree'
 ), true, 'target NPC must become present at the configured target location');
@@ -103,6 +105,8 @@ assert.strictEqual(targetContext._physischesFallzielIstGeborgen(), false, 'polic
 targetContext.caseProgress.zielpersonAnKlientGemeldet = true;
 assert.strictEqual(targetContext._physischesFallzielStatus(), null, 'completed police handoff must close the target state');
 assert.strictEqual(targetContext._physischesFallzielIstGeborgen(), true, 'safe police handoff plus notification must unlock completion');
+assert.strictEqual(targetContext._physischesFallzielBlockiertAbschluss(), false,
+  'completed rescue and handoff must release the case-completion gate');
 
 targetContext.caseProgress.zielpersonGefunden = false;
 targetContext.caseProgress.zielpersonGeborgen = false;
@@ -120,6 +124,7 @@ assert(html.includes("id: 'HAUPTUI_ZIELPERSON_BEFREIEN'"), 'rescue action must h
 assert(html.includes("key: 'ziel_zum_opel', label: 'Zum Opel bringen'"), 'freed target needs an explicit Opel transport action');
 assert(html.includes("key: 'ziel_zum_klienten'"), 'target needs a configured client handoff');
 assert(html.includes("key: 'ziel_zur_polizei'"), 'target needs a configured police protection route');
+assert(html.includes("'Zielperson noch aufsuchen und befreien'"), 'case completion must explain an unreached physical target');
 assert(html.includes("resolveLockReason = 'Zielperson noch befreien'"), 'case completion must explain an open physical rescue');
 assert(html.includes("resolveLockReason = 'Zielperson noch zum Opel bringen'"), 'completion lock must explain the transport step');
 assert(html.includes("resolveLockReason = 'Zielperson noch sicher übergeben'"), 'completion lock must explain the handoff step');
