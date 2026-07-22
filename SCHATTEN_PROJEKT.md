@@ -16345,3 +16345,21 @@ Spedition-Location korrigiert.
 NICHT umgesetzt (bewusst): ChatGPTs Vorschlag, Hinterhof in 3 Orte zu splitten (Treppenhaus/
 Ilse-Wohnung) - das ist Gameplay-Struktur, erst nach dem Test entscheiden, ob nötig. abStage
 schützt die Reife auch bei 2 Orten.
+
+## 🆕 v7.12.1298 — Playbook: Stilvarianz bestätigt, Behandlungs-Audit gehärtet
+
+**✅ Stilvarianz (erledigt, weiter beobachten):** Wegener-Run 22.07. 19:11 bestätigt den
+v1295-Fix deutlich: "nagelt" nur 1x in 23 Szenen, Kopfsteinpflaster/Zigarillo/Bohnerwachs/
+Dämmerung jeweils 0x, "müde" 1x. Die runweite Motivbremse bleibt aktiv; kein weiterer
+Umbau ohne neuen Gegenbeleg.
+
+**Weiter offen:** Der Ort-Prosa-Abschluss ist bei Kessler und Wegener im echten Run
+bestätigt; für Krause steht die manuelle Run-Regression trotz grünem Code-Test noch aus.
+
+**Verletzungs-Konsistenz — neuer Unterpunkt, in v1298 behoben:** Zwei ausdrückliche
+Marlene-HEILEN-Klicks wurden mechanisch korrekt ausgeführt, aber der Export meldete nur
+Selbst-Notversorgung. Ursache: Der Lektoratsreport ignorierte den vorhandenen Engine-Marker
+und sein Fallback erkannte weder "Charité" noch die konkrete Formulierung "legt einen festen
+Verband an" sicher. Szenen protokollieren jetzt `professionalTreatment`/`selfTreatment`;
+der Report liest zuerst diese Engine-Wahrheit und nutzt Prosa nur für alte Logs. Ein bloßer
+Besuch am Heilort zählt nicht mehr fälschlich als Behandlung. Regressionstest vorhanden.
