@@ -152,6 +152,19 @@ const interiorDrift = worldContext.validateSceneWorldTruth({
 assert.strictEqual(interiorDrift && interiorDrift.code, 'social_interior_drift',
   'an outdoor social scene must reject a silent teleport into the NPC kitchen');
 
+const shortHallwayDrift = worldContext.validateSceneWorldTruth({
+  ort: 'Hinterhof Sybelstrasse',
+  szene: 'Frau Pohl nimmt die Reval und sieht dich pruefend an. Der Rauch der Westware verdraengt den Geruch von Bohnerwachs im Flur.',
+  personenImRaum: ['Frau Pohl'],
+  optionen: []
+}, {
+  _zeitUnmittelbar: true,
+  _npcInteraktion: { npcName: 'Frau Pohl', verb: 'befragen' },
+  id: 'NPC_sozial_gegenleistung'
+});
+assert.strictEqual(shortHallwayDrift && shortHallwayDrift.code, 'social_interior_drift',
+  'the short phrase im Flur must be treated like im Hausflur at an outdoor engine location');
+
 const environmentalInteriorDrift = worldContext.validateSceneWorldTruth({
   ort: 'Hinterhof Sybelstrasse',
   szene: 'Du drueckst die schwere Eichentuer des Hausflurs auf. Hier drinnen steigst du bis in den dritten Stock.',

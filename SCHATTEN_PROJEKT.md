@@ -16426,3 +16426,14 @@ Fluchtverben wie fliehen, rennen und hinausstürmen, nicht die gleichbedeutende 
 Das harte Weltwahrheits-Gate deckt nun zusätzlich `verlaesst` mit konkretem Ortsobjekt sowie
 „macht sich davon“ ab. Der reale K5-Satz ist regressionsgesichert. Beobachten/Warten bleibt
 damit am Engine-Ort, bis der Spieler eine echte Reise oder Flucht wählt.
+
+## 🆕 v7.12.1325 — Manueller Kessler-Lauf K6: Flur-Kurzform geschlossen
+
+Die gegen Gegenleistung ausgespielte Befragung von Frau Pohl blieb mechanisch im
+Hinterhof, erzählte aber, der Zigarettenrauch verdränge den Bohnerwachsgeruch „im Flur“.
+Das Außenort-Gate erkannte „im Hausflur“ und „im Treppenhaus“, nicht die kürzere
+gleichbedeutende Form.
+
+Außenort-Prompt und Hard-Guard nennen bzw. erkennen nun Flur, Hausflur, Treppenflur,
+Eingangsflur und Treppenhaus. Der reale K6-Satz ist als `social_interior_drift`
+regressionsgesichert.
