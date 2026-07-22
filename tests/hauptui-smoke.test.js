@@ -737,6 +737,10 @@ assert(html.includes('--hauptui-slot-grid: repeat(auto-fit, minmax(min(100%, 240
 assert(html.includes('.hauptui-target-group-fundstuecke .hauptui-target-list,\n    .hauptui-target-group-items .hauptui-target-list {\n      grid-template-columns: minmax(0, 1fr);'), 'pickup and inventory grids must collapse to one phone-safe column');
 assert(html.includes('.options-block.hauptui-options,\n    .ui-kategorien.hauptui-kategorien {\n      margin-left: -8px;\n      margin-right: -8px;'), 'phone Haupt-UI surface should reclaim a little side width');
 assert(html.includes("{ key: 'items', label: 'Inventar', tag: 'Inventar', targets: data.items || [] }"), 'inventory needs a distinct visible target group');
+assert(html.includes("toggle.className = 'hauptui-inventory-toggle';"), 'inventory needs a dedicated accessible disclosure control');
+assert(html.includes("toggle.setAttribute('aria-expanded', inventoryOpen ? 'true' : 'false');"), 'inventory disclosure must expose its expanded state');
+assert(html.includes("state.inventoryOpen = false;"), 'inventory must collapse again after choosing a target');
+assert(html.includes('.hauptui-target-group-items.is-collapsed .hauptui-target-list { display: none; }'), 'collapsed inventory must not consume vertical space');
 assert(html.includes("button.dataset.targetKind = kind;"), 'target buttons must expose semantic kind for styling and audits');
 assert(html.includes('.hauptui-target.type-person') && html.includes('.hauptui-target.type-loot') && html.includes('.hauptui-target.type-item'), 'target roles must render with distinct visual classes');
 assert(!html.includes("if (mode === 'combat' || mode === 'escape'"), 'combat mode must not hide the Haupt-UI while the old arena is disabled');
@@ -758,7 +762,28 @@ context.getNpcsAtCurrentLocation = () => [];
 context._itemsBeiKarl = () => [korn];
 context._itemKatalogEintrag = () => ({ name: korn.name, taugt: ['trinken', 'anbieten', 'angreifen_mit', 'werfen', 'werfen_fuesse'] });
 context._renderEngineMenu(container, {});
+let inventoryGroup = all(container).find((element) => element.className.split(' ').includes('hauptui-target-group-items'));
+let inventoryList = inventoryGroup.children.find((element) => element.className === 'hauptui-target-list');
+let inventoryToggle = all(container).find((element) => element.className === 'hauptui-inventory-toggle');
+assert(inventoryGroup.className.includes('is-collapsed') && inventoryList.hidden,
+  'inventory must start collapsed so it cannot push execute far down');
+assert(inventoryToggle && inventoryToggle['aria-expanded'] === 'false',
+  'collapsed inventory toggle must report aria-expanded=false');
+inventoryToggle.onTap();
+inventoryGroup = all(container).find((element) => element.className.split(' ').includes('hauptui-target-group-items'));
+inventoryList = inventoryGroup.children.find((element) => element.className === 'hauptui-target-list');
+inventoryToggle = all(container).find((element) => element.className === 'hauptui-inventory-toggle');
+assert(inventoryGroup.className.includes('is-expanded') && !inventoryList.hidden,
+  'inventory toggle must reveal all carried items');
+assert(inventoryToggle['aria-expanded'] === 'true',
+  'open inventory toggle must report aria-expanded=true');
 byText(container, korn.name).onTap();
+inventoryGroup = all(container).find((element) => element.className.split(' ').includes('hauptui-target-group-items'));
+inventoryToggle = all(container).find((element) => element.className === 'hauptui-inventory-toggle');
+assert(inventoryGroup.className.includes('is-collapsed'),
+  'choosing an inventory target must compact the list again');
+assert(visibleText(inventoryToggle).includes(korn.name) && visibleText(inventoryToggle).includes('1 Gegenstand'),
+  'collapsed inventory head must retain the selected item and item count');
 assert(byText(container, 'Trinke'), 'Korn in an empty office must remain drinkable');
 assert(!byText(container, 'Biete an'), 'Korn in an empty office must not be offered to nobody');
 assert(!byText(container, 'Benutze'), 'Korn must not expose a context-free generic use');
