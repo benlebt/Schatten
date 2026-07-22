@@ -33,6 +33,10 @@ assert(html.includes("&& !_physischesFallzielNpcFreigeschaltet(e, loc.name)) con
   'NPC availability count must respect abStage with a physical-target override');
 assert(html.includes("&& !_physischesFallzielNpcFreigeschaltet(entry, loc.name)) continue;"),
   'NPC rendering must respect abStage with a physical-target override');
+assert(html.includes("String(caseSetup.caseType || '').toLowerCase() === 'politisch'"),
+  'historical education priorities must recognize caseType political');
+assert(!html.includes('den "Neuen Kurs" der SED (leise Liberalisierung im April)'),
+  'historical enrichment must not place the SED New Course in April 1953');
 
 function label(setup, index) {
   return `case ${index + 1} (${setup.klient || setup.opfer || 'unknown'})`;

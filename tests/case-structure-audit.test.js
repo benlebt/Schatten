@@ -83,6 +83,23 @@ for (const imageSet of imageSets) {
   }
 }
 
+const globallyInjectedLocations = [
+  'Doc Wagners Praxis',
+  'Charité',
+  'Imbiss Bei Trude',
+  'Goldener Anker',
+  'Volkspolizei-Revier Hackescher Markt',
+  'Schutzpolizei Hardenbergstrasse',
+];
+for (const imageSet of imageSets) {
+  for (const locationName of globallyInjectedLocations) {
+    const normalizedLocation = norm(locationName);
+    assert(imageSet.images.some((spec) => spec.test.test(normalizedLocation)),
+      'globally injected location has no scene image in case set '
+        + String(imageSet.caseTest) + ': ' + locationName);
+  }
+}
+
 for (const [caseIndex, variant] of cases.entries()) {
   const setup = variant.setup;
   assert(setup && setup.klient, 'case ' + (caseIndex + 1) + ' has no setup');
@@ -149,5 +166,9 @@ for (const [caseIndex, variant] of cases.entries()) {
 
 assert(html.includes('_preloadSzenenbildSatz(set)'), 'scene image renderer must preload the active case image set');
 assert(html.includes('fetchpriority="high"'), 'scene image tag should request high fetch priority');
+assert(html.includes("return _istChariteOrt(loc) && !/pathologie/i.test"),
+  'a pathology location must not replace the globally injected hospital');
+assert(html.includes("/charite/.test(engineOrt) && !/pathologie/.test(engineOrt)"),
+  'the hospital image fallback must not overwrite a pathology scene image');
 
 console.log('CASE_STRUCTURE_AUDIT_OK');

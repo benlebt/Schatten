@@ -19,7 +19,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1275 +Gespraech-Failforward'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1276 +Systemaudit-Bildabdeckung'"), 'release version missing');
 assert(html.includes("file: 'karl-mauers-buero-theodor-day.png'"), 'Krause opening must show Theodor in Karl office');
 assert(html.includes("root: 'assets/scenes/krause/'"), 'Krause opening image must resolve from the case scene directory');
 assert(html.includes('AKTIONS-TREUE (ABSOLUT)'), 'physical and item actions need a strict narration contract');
@@ -77,7 +77,7 @@ assert(groupPrompt.includes('Hauptmann Vollmer'), 'group narration must forbid a
 
 assert(html.includes("file: 'tante-friedas-hehlerei-confrontation-day.png'"), 'Krause showdown needs a visible daytime escalation image');
 assert(html.includes("nightFile: 'tante-friedas-hehlerei-confrontation-night.png'"), 'Krause showdown needs a visible nighttime escalation image');
-assert(html.includes("if (!istGewahrsam && /charite/.test(engineOrt))"), 'Charite needs an engine-location image fallback');
+assert(html.includes("if (!istGewahrsam && /charite/.test(engineOrt) && !/pathologie/.test(engineOrt))"), 'Charite needs an engine-location image fallback without overwriting pathology');
 
 const stasiPrompt = sourceOf('_stasiEncounterPrompt');
 assert(stasiPrompt.includes('_stasiEncounterOrtStimmt(encounter)'), 'Vollmer narration must stay bound to the encounter location');
