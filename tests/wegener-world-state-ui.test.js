@@ -73,6 +73,8 @@ vm.createContext(clueContext);
 [
   '_indizIstWeltzustandOffen',
   'offeneIndizienAmOrt',
+  '_indizNpcIdsAmOrtJetzt',
+  '_indizAmOrtJetztErreichbar',
   'offeneIndizienAmOrtNachErreichbarkeit',
   '_indizGehoertZuNpc',
   '_npcHatOffenenHinweis',

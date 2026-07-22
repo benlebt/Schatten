@@ -412,6 +412,19 @@ context.caseProgress.verhoere = {};
 context.caseProgress.verhoerFehlschlaege = [];
 faeden = context._hauptuiKesslerFaeden();
 assert.deepStrictEqual(Array.from(faeden, (f) => f.id), ['spedition', 'cafe', 'edith'], 'Ilse statement must open independent investigation locations');
+context.getCaseLocations = () => [{
+  name: 'Spedition Schmidt Moabit',
+  indizien: [{ id: 'tetzlaff_aussage', npc: 'norbert_tetzlaff' }],
+}, {
+  name: 'Cafe Wien',
+  indizien: [{ id: 'kellner_beobachtung', npc: 'oberkellner_voss' }],
+}, {
+  name: 'Kessler-Wohnung Charlottenburg',
+  indizien: [{ id: 'edith_verdacht', npc: 'edith_kessler' }],
+}, {
+  name: 'Hinterhof Sybelstrasse',
+  indizien: [{ id: 'ilse_aussage', npc: 'ilse_hauke' }],
+}];
 assert.strictEqual(context._hauptuiHatOffenenFadenAmOrt('Spedition Schmidt, Moabit'), true, 'Spedition thread must count as local despite punctuation differences');
 assert.strictEqual(context._hauptuiHatOffenenFadenAmOrt('Hinterhof Sybelstrasse'), false, 'a thread at another location must not suppress a genuinely exhausted place');
 let fadenPrompt = context._hauptuiNarrativerFadenPrompt('Spedition Schmidt, Moabit', 3);
@@ -422,7 +435,7 @@ context.caseProgress.gefundeneIndizIds = ['robert_eintritt_beobachtet', 'tuersch
 context.caseProgress.verhoere = { ilse_hauke: { status: 'verbrannt' } };
 context.caseProgress.verhoerFehlschlaege = ['ilse_hauke'];
 faeden = context._hauptuiKesslerFaeden();
-assert.deepStrictEqual(Array.from(faeden, (f) => f.id), ['ilse', 'spedition', 'cafe'], 'retired dossier failures must reopen Ilse through normal conversation');
+assert.deepStrictEqual(Array.from(faeden, (f) => f.id), ['ilse', 'spedition', 'cafe', 'edith'], 'retired dossier failures must reopen Ilse through normal conversation before visible threads are reachability-filtered');
 assert.strictEqual(context._hauptuiHatOffenenFadenAmOrt('Hinterhof Sybelstrasse'), true, 'reopened normal Ilse conversation must remain visible at the courtyard');
 context.caseProgress.verhoere = { ilse_hauke: { status: 'gelöst', _grantText: 'Ilse hat alles gesagt.' } };
 context.caseProgress.verhoerFehlschlaege = [];
@@ -480,6 +493,10 @@ context.engineCurrentLocation = { name: 'Spedition Schmidt, Moabit' };
 context.window.__hauptuiActionState = { verb: null, targetKey: null };
 context._baukastenZiele = () => ({ personen: [tetzlaff], objekte: [], items: [] });
 context.getNpcsAtCurrentLocation = () => [tetzlaff];
+context.getCaseLocations = () => [{
+  name: 'Spedition Schmidt Moabit',
+  indizien: [{ id: 'tetzlaff_aussage', npc: 'norbert_tetzlaff' }],
+}];
 expectedNpcId = tetzlaff.id;
 const threadContainer = new FakeElement('div');
 context._renderEngineMenu(threadContainer, {});

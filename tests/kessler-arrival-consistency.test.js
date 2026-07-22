@@ -14,7 +14,7 @@ assert(html.includes("engineCurrentLocation = { name: heimLoc.name, sektor: heim
 assert(html.includes("currentOrtType = 'HOME';"), 'home sleep must mark the current location as home');
 assert(html.includes('ABSCHIED VOR DER HEIMFAHRT (PFLICHT)'), 'home sleep from a closing venue must narrate why Karl had to leave');
 
-const functionStart = html.indexOf('function offeneIndizienAmOrtNachErreichbarkeit');
+const functionStart = html.indexOf('function _indizNpcIdsAmOrtJetzt');
 const functionEnd = html.indexOf('// Markiert ein Indiz als gefunden', functionStart);
 assert(functionStart > -1 && functionEnd > functionStart, 'reachability function not found');
 
