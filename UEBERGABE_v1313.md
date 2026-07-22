@@ -1,7 +1,7 @@
 # SCHATTEN – Übergabe an einen neuen Codex-Chat
 
 - Stand: 22.07.2026
-- Spielversion: `v7.12.1318 +HauptUI-Autoplay`
+- Spielversion: `v7.12.1319 +Sozialort-Gate`
 - Branch: `main`
 - Aktueller Commit: nach dem Klonen mit `git rev-parse --short HEAD` ermitteln
 - Remote: mit `git remote get-url origin` ermitteln
@@ -35,7 +35,7 @@ Write-Output ('TEST_COUNT=' + $tests.Count)
 Erwartet:
 
 - `main` entspricht `origin/main`.
-- `window.SCHATTEN_VERSION = 'v7.12.1318 +HauptUI-Autoplay';`
+- `window.SCHATTEN_VERSION = 'v7.12.1319 +Sozialort-Gate';`
 - 43 Testskripte laufen grün.
 - Der normale Arbeitsbaum ist sauber; sichtbar bleiben nur:
   - `.git-broken-20260708-2049/`
@@ -312,4 +312,4 @@ rg -n "SCHATTEN_SAVE_KEY|saveGameState|restoreGameState" index.html tests
 
 ## 14. Übergabezustand in einem Satz
 
-`main` steht auf v7.12.1318 mit 43/43 grünen Tests; `LEKTORAT.md` ist der autoritative additive Mindeststandard mit sechs Standing-Checkpoints und priorisiertem Fix/Push/Gegenlauf-Zyklus. Alle bisherigen Lektoratsregeln und spezielleren settled decisions gelten daneben unverändert weiter. Zusätzlich zu den bisherigen Reparaturen sind Reise-Kartenvorauswahl, Kesslers morgendlicher Cafe-Zugang, soziale Sperrstunden-Kontinuität, exakte NPC-Zielbindung und Krauses Datumswahrheit gehärtet. Der Autoplay-Bot bedient jetzt außerdem die aktive Haupt-UI über reale Ziel-/Verb-/Ausführen-Klicks und erkennt Szenenfrische auch bei identischen Menüs. Vor der Alexander-Demo bleiben die laufende Kessler-/Krause-Stabilitätsstaffel, ein realer iPhone-Brave-Retest und vor allem ein Blind-Test mit einer unbedarften Person.
+`main` steht auf v7.12.1319 mit 43/43 grünen Tests; `LEKTORAT.md` ist der autoritative additive Mindeststandard mit sechs Standing-Checkpoints und priorisiertem Fix/Push/Gegenlauf-Zyklus. Alle bisherigen Lektoratsregeln und spezielleren settled decisions gelten daneben unverändert weiter. Zusätzlich zu den bisherigen Reparaturen sind Reise-Kartenvorauswahl, Kesslers morgendlicher Cafe-Zugang, soziale Sperrstunden-Kontinuität, exakte NPC-Zielbindung und Krauses Datumswahrheit gehärtet. Das Sozialort-Gate bindet Befragungen jetzt namentlich an den Engine-Ort und verwirft stille Innenraum-Teleports wie Frau Pohls Küchentisch im Hinterhof. Vor der Alexander-Demo bleiben die laufende Kessler-/Krause-Stabilitätsstaffel, ein realer iPhone-Brave-Retest und vor allem ein Blind-Test mit einer unbedarften Person.

@@ -101,4 +101,51 @@ assert.strictEqual(
   'a pronoun answer remains valid when exactly one NPC is present'
 );
 
+const worldContext = {
+  normForMatch: value => String(value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, ''),
+  engineCurrentLocation: { name: 'Hinterhof Sybelstrasse' },
+  caseProgress: { npcZustand: {} },
+  _aktuelleAktionIstReise: false,
+  _aktuelleAktionIstFlucht: false,
+  pendingForcedLocationChange: false
+};
+vm.createContext(worldContext);
+vm.runInContext(sourceOf('_worldTruthAliases'), worldContext);
+vm.runInContext(sourceOf('_worldTruthHasAlias'), worldContext);
+vm.runInContext(sourceOf('_worldTruthOrtGleich'), worldContext);
+vm.runInContext(sourceOf('_worldTruthAbschlussRueckblickErlaubt'), worldContext);
+vm.runInContext(sourceOf('validateSceneWorldTruth'), worldContext);
+
+const interiorDrift = worldContext.validateSceneWorldTruth({
+  ort: 'Hinterhof Sybelstrasse',
+  szene: 'Du legst deine Lizenz auf den Küchentisch. Frau Pohl schiebt eine Tasse Malzkaffee vor dich.',
+  personenImRaum: ['Frau Pohl'],
+  optionen: []
+}, {
+  _zeitUnmittelbar: true,
+  _npcInteraktion: { npcName: 'Frau Pohl' },
+  id: 'HAUPTUI_SOZIAL_OFFEN'
+});
+assert.strictEqual(interiorDrift && interiorDrift.code, 'social_interior_drift',
+  'an outdoor social scene must reject a silent teleport into the NPC kitchen');
+
+assert.strictEqual(worldContext.validateSceneWorldTruth({
+  ort: 'Hinterhof Sybelstrasse',
+  szene: 'Frau Pohl bleibt neben den Mülltonnen stehen und antwortet Karl leise im Hinterhof.',
+  personenImRaum: ['Frau Pohl'],
+  optionen: []
+}, {
+  _zeitUnmittelbar: true,
+  _npcInteraktion: { npcName: 'Frau Pohl' },
+  id: 'HAUPTUI_SOZIAL_OFFEN'
+}), null, 'a social response that stays in the courtyard must remain valid');
+
+assert(html.includes('Die Befragung findet JETZT vollständig am Engine-Ort'),
+  'the question prompt must name the exact engine location');
+assert(html.includes('Dies ist ein AUSSENORT: Verlege das Gespraech NICHT'),
+  'outdoor social prompts must forbid silent residential interior moves');
+
 console.log('LIVE_LEKTORAT_REGRESSION_OK');
