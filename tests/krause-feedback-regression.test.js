@@ -101,6 +101,12 @@ for (const asset of [
 ]) {
   assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'krause', asset)), 'missing Krause state image: ' + asset);
 }
+for (const asset of [
+  'stallschreiberstrasse-12-aftermath-group-day.png',
+  'stallschreiberstrasse-12-aftermath-group-night.png',
+]) {
+  assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'krause', asset)), 'missing Krause group aftermath image: ' + asset);
+}
 assert(html.includes("file: 'tante-friedas-hehlerei-erika-day.png'"), 'Erika image must be selected from real scene presence');
 assert(html.includes("file: 'tante-friedas-hehlerei-after-day.png'"), 'post-custody image must be selected from terminal NPC state');
 assert(html.includes("ROMANCE: 'Romanze'"), 'travel popup must translate the technical ROMANCE tag');
@@ -114,7 +120,8 @@ const visualContext = {
   roster: [],
   states: {},
   getNpcsAtCurrentLocation: () => visualContext.roster,
-  _npcZustandGet: name => visualContext.states[normForMatch(name)] || null
+  _npcZustandGet: name => visualContext.states[normForMatch(name)] || null,
+  _konfrontationGruppenAktiv: fight => !!(fight && Array.isArray(fight.enemyEntries) && fight.enemyEntries.length > 1)
 };
 vm.createContext(visualContext);
 vm.runInContext(sourceOf('_krauseHehlereiNachherVisual'), visualContext);
@@ -142,11 +149,21 @@ visualContext.engineCurrentLocation.name = 'Stallschreiberstrasse 12';
 visualContext.roster = [{ name: 'Tante Frieda' }, { name: 'Kalle' }, { name: 'Jochen' }];
 assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).dayFile, 'stallschreiberstrasse-12-confrontation-day.png',
   'the three-person showdown must remain in the courtyard');
+visualContext.caseProgress.activeConfrontation = { enemyEntries: [{ name: 'Tante Frieda' }, { name: 'Kalle' }, { name: 'Jochen' }] };
+visualContext.states.kalle = { status: 'ko', ort: 'Stallschreiberstrasse 12' };
+assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).dayFile, 'stallschreiberstrasse-12-confrontation-day.png',
+  'an ongoing group confrontation must not fall back to the empty courtyard after the first opponent drops');
+visualContext.caseProgress.activeConfrontation = null;
+visualContext.states.kalle = null;
 visualContext.states['tante frieda'] = { status: 'ko', ort: 'Stallschreiberstrasse 12' };
 visualContext.states.kalle = { status: 'geflohen', ort: 'Stallschreiberstrasse 12' };
 visualContext.states.jochen = { status: 'geflohen', ort: 'Stallschreiberstrasse 12' };
 assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).dayFile, 'stallschreiberstrasse-12-aftermath-day.png',
   'defeated Frieda and escaped henchmen need the truthful courtyard aftermath');
+visualContext.states.kalle = { status: 'ko', ort: 'Stallschreiberstrasse 12' };
+visualContext.states.jochen = { status: 'ko', ort: 'Stallschreiberstrasse 12' };
+assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).dayFile, 'stallschreiberstrasse-12-aftermath-group-day.png',
+  'defeated but still-present Kalle and Jochen must remain visible beside Frieda');
 visualContext.states['tante frieda'] = { status: 'ko', ort: 'Tante Friedas Hehlerei' };
 assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).file, 'stallschreiberstrasse-12-night.png',
   'a Frieda body left in the shop must not teleport into the courtyard image');

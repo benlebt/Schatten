@@ -19,7 +19,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1284 +Krause-Szenenkonsistenz'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1285 +Krause-Konfrontationskontinuitaet'"), 'release version missing');
 assert(html.includes("file: 'karl-mauers-buero-theodor-day.png'"), 'Krause opening must show Theodor in Karl office');
 assert(html.includes("root: 'assets/scenes/krause/'"), 'Krause opening image must resolve from the case scene directory');
 assert(html.includes('AKTIONS-TREUE (ABSOLUT)'), 'physical and item actions need a strict narration contract');
@@ -75,6 +75,41 @@ const groupPrompt = sourceOf('_konfrontationGruppenPrompt');
 assert(groupPrompt.includes('Frieda fuehrt Kalle und Jochen'), 'group narration must force all active Krause opponents to react');
 assert(groupPrompt.includes('Hauptmann Vollmer'), 'group narration must forbid an unrelated Vollmer intervention');
 
+const snapshotContext = {
+  currentScene: { personenImRaum: ['Tante Frieda', 'Kalle', 'Jochen'] },
+  engineCurrentLocation: { name: 'Tante Friedas Hehlerei' },
+  caseProgress: { stage: 3, klientGesprochen: true },
+  gameTimeIdx: 3,
+  TIMES_OF_DAY: ['morgen', 'vormittag', 'mittag', 'nachmittag', 'abend', 'nacht'],
+  normForMatch: value => String(value || '').toLowerCase().replace(/_/g, ' '),
+  _npcZustandIstEntfernt: () => false,
+  getCaseLocations: () => [
+    { name: 'Tante Friedas Hehlerei', npcs: [{ id: 'tante_frieda', bisStage: 2 }] },
+    { name: 'Stallschreiberstrasse 12', npcs: [{ id: 'tante_frieda', abStage: 3, immer: true }] },
+  ],
+};
+require('vm').createContext(snapshotContext);
+require('vm').runInContext(sourceOf('_npcOrtsbindungEintragAktiv') + '\n' + sourceOf('_npcIstImAktuellenSzenenSnapshot') + '\n' + sourceOf('_npcGehoertHierher'), snapshotContext);
+assert.strictEqual(snapshotContext._npcGehoertHierher('tante_frieda', 'Tante Frieda'), true,
+  'Frieda must remain reachable for the scene that visibly contains her even if that scene raised stage 3');
+snapshotContext.currentScene.personenImRaum = [];
+assert.strictEqual(snapshotContext._npcGehoertHierher('tante_frieda', 'Tante Frieda'), false,
+  'the next scene must obey the new stage binding and move Frieda out of the shop');
+
+const ppkContext = {
+  inventory: ['Walther PPK (eigene Pistole)', 'Notizbuch und Bleistift'],
+  normForMatch: value => String(value || '').toLowerCase(),
+  _baukastenZiele: () => ({ items: [] }),
+  _konfrontationEnemy: () => ({ name: 'Kalle' }),
+  _konfrontationTaktikAktiv: () => null,
+  _hauptuiKonfrontationItemPlan: () => ({ score: 3, marker: 'guter Hebel', hint: 'Distanz' }),
+};
+require('vm').createContext(ppkContext);
+require('vm').runInContext(sourceOf('_hauptuiKonfrontationItems'), ppkContext);
+const ppkActions = ppkContext._hauptuiKonfrontationItems();
+assert(ppkActions.some(action => action.verb === 'ppk_einsetzen' && /Walther PPK/.test(action.label)),
+  'the persistent narrative Walther PPK must become a real confrontation action');
+
 assert(html.includes("'stallschreiberstrasse-12-confrontation-day.png'"), 'Krause showdown needs a truthful daytime courtyard image');
 assert(html.includes("'stallschreiberstrasse-12-confrontation-night.png'"), 'Krause showdown needs a truthful nighttime courtyard image');
 assert(html.includes("'stallschreiberstrasse-12-confrontation-rex-day.png'"), 'Krause showdown needs its Rex daytime variant');
@@ -87,7 +122,15 @@ for (const asset of [
 ]) {
   assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'krause', asset)), 'missing Rex confrontation asset: ' + asset);
 }
-assert(html.includes("dayFile: 'stallschreiberstrasse-12-aftermath-day.png'"), 'Krause finale needs a courtyard aftermath without escaped henchmen');
+for (const asset of [
+  'stallschreiberstrasse-12-aftermath-group-day.png',
+  'stallschreiberstrasse-12-aftermath-group-night.png',
+]) {
+  assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'krause', asset)), 'missing group aftermath asset: ' + asset);
+}
+assert(html.includes("dayFile: 'stallschreiberstrasse-12-aftermath-group-day.png'"), 'Krause finale needs a courtyard aftermath with every still-present body');
+assert(sourceOf('_npcGehoertHierher').includes('_npcIstImAktuellenSzenenSnapshot'), 'the visible scene snapshot must survive a same-scene stage change');
+assert(sourceOf('_hauptuiKonfrontationItems').includes("'ppk_einsetzen'"), 'Karls Walther PPK must be selectable in the tactical confrontation');
 assert(html.includes("if (!istGewahrsam && /charite/.test(engineOrt) && !/pathologie/.test(engineOrt))"), 'Charite needs an engine-location image fallback without overwriting pathology');
 
 const stasiPrompt = sourceOf('_stasiEncounterPrompt');
