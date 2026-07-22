@@ -18,7 +18,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1304 +Clubschluss'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1305 +Truthbeat-Härtung'"),
   'Brandt regression release version missing');
 
 for (const bad of [
@@ -55,10 +55,8 @@ assert(html.includes("{ test: /^vor der roten laterne/, hidden: true, place: 'Vo
   'the club exterior must not reuse the unchanged nightclub interior still');
 assert(brandtBlock.includes("{ id: 'lola_brandt', zeit: ['nachmittag','abend','nacht'] }"),
   'Lola must have a work shift instead of permanent presence');
-assert(brandtBlock.includes("requiresEvidenceAll: ['schuldschein','fremde_walther']"),
-  'Kurt confession must require motive and the swapped weapon');
-assert(brandtBlock.includes("requiresEvidenceAny: ['zeuge_walther','zigarillo_asche']"),
-  'Kurt confession must additionally require an independent crime link');
+assert(brandtBlock.includes("requiresEvidenceAll: ['schuldschein','fremde_walther','zeuge_walther']"),
+  'Kurt confession must follow motive, swapped weapon and the concrete witness statement');
 assert(html.includes('_abschlussLocation: _abschlussLocation'),
   'resolve option must carry the engine-owned final location');
 assert(html.includes('function _abschlussOrtVorbereiten(option)'),
@@ -190,6 +188,10 @@ assert(html.includes('ORTS-NPC-KONTINUITÄT (HART)'),
   'the scene prompt must prevent spontaneous exits and invented companions');
 assert(html.includes('isLocationBound && mainLocationChanged'),
   'location-bound NPCs must be removed on a hard move even when prose claims they follow');
+assert(brandtBlock.includes('requiresExplicitConfession: true'),
+  'the mandatory responsibility beat must reject motive-only prose');
+assert(brandtBlock.includes('kombiMinHits: 3'),
+  'responsibility fallback must require name, confession and criminal act together');
 
 const offerEvidenceContext = {
   window: null,
@@ -208,6 +210,36 @@ assert.strictEqual(offerEvidenceContext.classifyEvidenceAction(), null,
   'cake or cigarettes may calm Kurt but must not count as an interrogation');
 assert.strictEqual(offerEvidenceContext.getEvidenceActionKey(), null,
   'peaceful items must not select the terminal confession clue');
+
+const truthbeatContext = {
+  caseSetup: {
+    truthBeats: [
+      {
+        id: 'lange_verantwortlich',
+        label: 'Lange verantwortlich',
+        pflicht: true,
+        requiresExplicitConfession: true,
+        keywords: /\blange\b[\s\S]{0,120}\b(gesteht|kaltblütig)/i,
+      },
+      { id: 'zeugen_aussage', label: 'Zeugenaussage', keywords: /nie-treffen/i },
+    ],
+  },
+  caseProgress: { truthBeatsHit: [] },
+  sceneCounter: 5,
+  diag: () => {},
+  console: { log: () => {} },
+};
+vm.createContext(truthbeatContext);
+vm.runInContext(sourceOf('_truthBeatHatExplizitesGestaendnis') + '\n' + sourceOf('updateTruthBeats'), truthbeatContext);
+truthbeatContext.updateTruthBeats(
+  'Die 800 D-Mark bei Kurt Lange sind das einzige Motiv, das den Selbstmord in ein kaltblütiges Geschäft verwandelt.');
+assert.deepStrictEqual(Array.from(truthbeatContext.caseProgress.truthBeatsHit), [],
+  'motive language must not identify Lange as responsible or manufacture a witness statement');
+truthbeatContext.updateTruthBeats('Kurt Lange gesteht: Ich habe Erich erschossen und den Selbstmord inszeniert.');
+assert(truthbeatContext.caseProgress.truthBeatsHit.includes('lange_verantwortlich'),
+  'an explicit confession must still satisfy the mandatory responsibility beat');
+assert(truthbeatContext.caseProgress.truthBeatsHit.includes('zeugen_aussage'),
+  'only an explicit confession may provide the confession-as-witness multi-proof');
 
 const terminalClue = {
   id: 'lange_gestaendnis',
