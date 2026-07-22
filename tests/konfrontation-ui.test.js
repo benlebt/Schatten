@@ -61,7 +61,7 @@ assert(html.includes('&& !_taktischeKonfrontationLaeuft'), 'meta custody must no
 assert(!html.includes("showProgressToast('Dem Zugriff entgangen'"), 'an invisible rolled-back arrest must not produce a success toast');
 assert(html.includes('_konfrontationLootHinweis'), 'defeated enemies should become explicitly searchable');
 assert(actionBody.includes("id: 'KONFRONTATION_ITEM_'"), 'item actions must create a narrative engine scene');
-assert(html.includes('Leere Haende'), 'bare-handed attacks need an explicit risky fallback plan');
+assert(html.includes('Leere Hände'), 'bare-handed attacks need an explicit risky fallback plan');
 assert(html.includes('function _konfrontationBegleiterAktionen()'), 'active companions need actions in the current confrontation UI');
 assert(html.includes("assistLabel.textContent = 'Begleiteraktion';"), 'companion moves need a distinct confrontation section');
 assert(html.includes("kState.assistKeys[act.name] = act.key;"), 'each companion must have an independently selectable move');

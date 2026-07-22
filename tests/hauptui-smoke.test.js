@@ -463,7 +463,7 @@ context.engineCurrentLocation = { name: 'Cafe Wien' };
 context.window.__hauptuiActionState = { verb: null, targetKey: null };
 context._baukastenZiele = () => ({
   personen: [{ id: voss.id, name: voss.name, typ: 'person', hinweis: true, hinweisAktionen: ['Befragen', 'Bestechen'] }],
-  objekte: [{ id: clue.id, name: 'Roberts Ecktisch', typ: 'objekt', actions: ['BEOBACHTEN', 'ERKUNDEN'], spur: true }],
+  objekte: [{ id: clue.id, name: 'Roberts Ecktisch', typ: 'objekt', actions: ['ERKUNDEN', 'BEOBACHTEN'], spur: true }],
   items: [{ id: 'notizbuch', name: 'Notizbuch', typ: 'item' }],
 });
 context.getNpcsAtCurrentLocation = () => [voss];
@@ -501,6 +501,7 @@ byText(container, 'Roberts Ecktisch').onTap();
 execute = all(container).find((element) => element.className === 'hauptui-execute');
 assert(execute && !execute.disabled, 'clue command must be executable');
 assert(visibleText(execute).includes('Schau an'), 'clue command must recommend the configured BEOBACHTEN action');
+assert(!byText(container, 'Durchsuche'), 'one visual clue must not offer redundant observe and search actions');
 execute.onTap();
 assert.strictEqual(calls.fund, 0, 'specific clue command must not open a click-collect dialog');
 assert.strictEqual(calls.options[calls.options.length - 1]._pendingIndizId, clue.id, 'clue command must start an AI investigation scene');
