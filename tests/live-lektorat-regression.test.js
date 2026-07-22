@@ -132,6 +132,19 @@ const interiorDrift = worldContext.validateSceneWorldTruth({
 assert.strictEqual(interiorDrift && interiorDrift.code, 'social_interior_drift',
   'an outdoor social scene must reject a silent teleport into the NPC kitchen');
 
+const wrongSocialTarget = worldContext.validateSceneWorldTruth({
+  ort: 'Hinterhof Sybelstrasse',
+  szene: 'Frau Pohl lockert ihren Griff am Tuerrahmen und antwortet Karl ausweichend.',
+  personenImRaum: ['Frau Pohl', 'Robert Kessler'],
+  optionen: []
+}, {
+  _zeitUnmittelbar: true,
+  _npcInteraktion: { npcName: 'Robert Kessler' },
+  id: 'NPC_sozial_ruhig'
+});
+assert.strictEqual(wrongSocialTarget && wrongSocialTarget.code, 'social_target_missing',
+  'a direct social scene must reject prose in which another present NPC replaces the clicked target');
+
 assert.strictEqual(worldContext.validateSceneWorldTruth({
   ort: 'Hinterhof Sybelstrasse',
   szene: 'Frau Pohl bleibt neben den Mülltonnen stehen und antwortet Karl leise im Hinterhof.',
@@ -147,5 +160,9 @@ assert(html.includes('Die Befragung findet JETZT vollständig am Engine-Ort'),
   'the question prompt must name the exact engine location');
 assert(html.includes('Dies ist ein AUSSENORT: Verlege das Gespraech NICHT'),
   'outdoor social prompts must forbid silent residential interior moves');
+assert(sourceOf('_sozialVorHinweisAktion').includes('AUSGEWAEHLTES GESPRAECHSZIEL IST'),
+  'early social prompts must name the clicked NPC explicitly');
+assert(!sourceOf('botGetOptionsHash').includes('problem.code'),
+  'the world-truth repair hint must not leak into the autoplay hash helper');
 
 console.log('LIVE_LEKTORAT_REGRESSION_OK');
