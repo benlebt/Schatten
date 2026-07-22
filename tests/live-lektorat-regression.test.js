@@ -278,6 +278,32 @@ const uncommandedCarDeparture = worldContext.validateSceneWorldTruth({
 assert.strictEqual(uncommandedCarDeparture && uncommandedCarDeparture.code, 'unauthorized_departure',
   'running back to the street and entering the driver seat must not bypass the location gate');
 
+const objectBeforeVerbDeparture = worldContext.validateSceneWorldTruth({
+  ort: 'Hinterhof Sybelstrasse',
+  szene: 'Robert Kessler weicht zurueck. Du stoesst ihn beiseite und hechtest in die dunkle Tordurchfahrt. Deine Schritte hallen, als du den Hinterhof ueber die Seitenstrasse verlaesst. Ausser Atem erreichst du die Strassenecke.',
+  personenImRaum: ['Robert Kessler'],
+  optionen: []
+}, {
+  _zeitUnmittelbar: true,
+  _npcName: 'Robert Kessler',
+  id: 'NPC_bedrohen'
+});
+assert.strictEqual(objectBeforeVerbDeparture && objectBeforeVerbDeparture.code, 'unauthorized_departure',
+  'object-before-verb departure and coordinated hechtest wording must be rejected');
+
+const offscreenInjury = worldContext.validateSceneWorldTruth({
+  ort: 'Hinterhof Sybelstrasse',
+  szene: 'Robert Kessler schweigt. Ein stechender Schmerz erinnert dich an den Rempler gegen den Torpfeiler, den du beim Uebersteigen der Mauer kassiert hast.',
+  personenImRaum: ['Robert Kessler'],
+  optionen: []
+}, {
+  _zeitUnmittelbar: true,
+  _npcName: 'Robert Kessler',
+  id: 'NPC_bedrohen'
+});
+assert.strictEqual(offscreenInjury && offscreenInjury.code, 'offscreen_injury',
+  'a retrospective injury cause that was never played must be blocked');
+
 const wrongSocialTarget = worldContext.validateSceneWorldTruth({
   ort: 'Hinterhof Sybelstrasse',
   szene: 'Frau Pohl lockert ihren Griff am Tuerrahmen und antwortet Karl ausweichend.',
@@ -339,5 +365,7 @@ assert(apiSource.includes('NPC-KONTINUITAET') && apiSource.includes('sanitizeOpe
   'unauthorized recurring NPCs need a slow-call-proof retry and hard fallback');
 assert(sourceOf('fixSprache').includes(".replace(/\\b([Dd])u wischt\\b/g, '$1u wischst')"),
   'the observed du wischt conjugation error must be corrected conservatively');
+assert(sourceOf('buildWorldTruthRepairHint').includes('ENGINE-WAHRHEIT VERLETZUNG'),
+  'offscreen injury drift needs a targeted repair prompt');
 
 console.log('LIVE_LEKTORAT_REGRESSION_OK');
