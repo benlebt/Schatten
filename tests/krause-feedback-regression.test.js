@@ -109,6 +109,7 @@ assert(!html.includes('escapeHtml(npc.tag.toLowerCase())'), 'raw English NPC tag
 const visualContext = {
   normForMatch,
   caseSetup: { caseType: 'diebstahl', klient: 'Theodor Krause' },
+  caseProgress: { activeConfrontation: null },
   engineCurrentLocation: { name: 'Tante Friedas Hehlerei' },
   roster: [],
   states: {},
@@ -121,6 +122,12 @@ visualContext.roster = [{ name: 'Erika Kalewski' }];
 let visualSpec = visualContext._krauseHehlereiNachherVisual({});
 assert.strictEqual(visualSpec.file, 'tante-friedas-hehlerei-erika-day.png',
   'visible Erika must override stale location art with her dedicated scene');
+visualContext.roster = [{ name: 'Erika Kalewski' }, { name: 'Kalle' }, { name: 'Jochen' }];
+assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).file, 'tante-friedas-hehlerei-kalle-jochen-night.png',
+  'Erika must not hide the two active henchmen in the scene image');
+visualContext.roster = [{ name: 'Erika Kalewski' }, { name: 'Tante Frieda' }];
+assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).file, 'tante-friedas-hehlerei-frieda-day.png',
+  'Frieda must retain image priority over a calm companion portrait');
 visualContext.roster = [];
 visualSpec = visualContext._krauseHehlereiNachherVisual({});
 assert.strictEqual(visualSpec.file, 'tante-friedas-hehlerei-after-day.png',
@@ -135,11 +142,53 @@ visualContext.engineCurrentLocation.name = 'Stallschreiberstrasse 12';
 visualContext.roster = [{ name: 'Tante Frieda' }, { name: 'Kalle' }, { name: 'Jochen' }];
 assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).dayFile, 'stallschreiberstrasse-12-confrontation-day.png',
   'the three-person showdown must remain in the courtyard');
-visualContext.states['tante frieda'] = { status: 'ko' };
-visualContext.states.kalle = { status: 'geflohen' };
-visualContext.states.jochen = { status: 'geflohen' };
+visualContext.states['tante frieda'] = { status: 'ko', ort: 'Stallschreiberstrasse 12' };
+visualContext.states.kalle = { status: 'geflohen', ort: 'Stallschreiberstrasse 12' };
+visualContext.states.jochen = { status: 'geflohen', ort: 'Stallschreiberstrasse 12' };
 assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).dayFile, 'stallschreiberstrasse-12-aftermath-day.png',
   'defeated Frieda and escaped henchmen need the truthful courtyard aftermath');
+visualContext.states['tante frieda'] = { status: 'ko', ort: 'Tante Friedas Hehlerei' };
+assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).file, 'stallschreiberstrasse-12-night.png',
+  'a Frieda body left in the shop must not teleport into the courtyard image');
+
+const bodyContext = {
+  normForMatch,
+  engineCurrentLocation: { name: 'Tante Friedas Hehlerei' },
+  _npcZustandMap: () => ({ 'tante frieda': { name: 'Tante Frieda', status: 'ko', ort: 'Tante Friedas Hehlerei' } }),
+  _resolveNpcIdentity: name => ({ id: 'tante_frieda', name })
+};
+vm.createContext(bodyContext);
+vm.runInContext(sourceOf('_npcZustandLokaleKoerperErgaenzen'), bodyContext);
+let bodies = bodyContext._npcZustandLokaleKoerperErgaenzen([], {});
+assert.strictEqual(bodies.length, 1, 'a defeated Frieda must remain executable at her exact location');
+bodyContext.engineCurrentLocation.name = 'Stallschreiberstrasse 12';
+bodies = bodyContext._npcZustandLokaleKoerperErgaenzen([], {});
+assert.strictEqual(bodies.length, 0, 'the defeated Frieda must not leak into a different travel destination');
+assert(!html.includes('_W6_SCHWESTERORTE'), 'shop and courtyard must not share terminal NPC bodies');
+
+const partyContext = {
+  normForMatch,
+  _party: [{ id: 'erika_kalewski', name: 'Erika Kalewski' }],
+  _resolveNpcIdentity: () => ({ id: 'erika_kalewski', name: 'Erika Kalewski', tag: 'ROMANCE', rolle: 'Krauses Sammlerin-Bekannte' }),
+  _hundInParty: () => false
+};
+vm.createContext(partyContext);
+vm.runInContext(sourceOf('_konfrontationBegleiterAktionen'), partyContext);
+const erikaMoves = partyContext._konfrontationBegleiterAktionen();
+assert(erikaMoves.some(move => move.art === 'warnen'), 'civilian Erika needs a believable warning action');
+assert(!erikaMoves.some(move => move.art === 'festhalten' || move.art === 'deckung'),
+  'civilian Erika must not become a grappler or tactical bodyguard');
+
+const assistContext = {};
+vm.createContext(assistContext);
+['_konfrontationAssistListe', '_konfrontationAssistBonus', '_konfrontationAssistText']
+  .forEach(name => vm.runInContext(sourceOf(name), assistContext));
+const boundAssist = assistContext._konfrontationAssistText({ name: 'Erika', bonus: 1, prompt: 'Erika warnt Karl.' }, 'Kalle');
+assert(boundAssist.includes('BINDENDES ZIEL') && boundAssist.includes('Kalle'),
+  'companion narration must stay bound to the selected opponent');
+assert(html.includes('_spOk && !_romanceGefahrAmOrt'), 'romance introduction must be blocked by active local danger');
+assert(html.includes("caseIsPolitical) ? lastSpannung < 5 : lastSpannung < 4"),
+  'normal cases must not introduce romance figures at tension four');
 
 const hehlereiBlock = html.slice(html.indexOf("name: 'Tante Friedas Hehlerei'"), html.indexOf("name: 'Stallschreiberstrasse 12'"));
 assert(hehlereiBlock.includes("bisStage: 2"), 'the shop cast must leave once the showdown moves outside');
