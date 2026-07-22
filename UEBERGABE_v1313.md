@@ -1,17 +1,17 @@
 # SCHATTEN – Übergabe an einen neuen Codex-Chat
 
 - Stand: 22.07.2026
-- Spielversion: `v7.12.1316 +Lektoratswaechter`
+- Spielversion: `v7.12.1317 +Lektoratsstandard`
 - Branch: `main`
 - Aktueller Commit: nach dem Klonen mit `git rev-parse --short HEAD` ermitteln
 - Remote: mit `git remote get-url origin` ermitteln
-- Tests: 42/42 grün
+- Tests: 43/43 grün
 
 Dieses Dokument ist trotz des versionsbezogenen Dateinamens bis v1315 aktualisiert und der aktuelle Einstieg für einen neuen Codex-Chat ohne Kenntnis des bisherigen Verlaufs. Ältere Übergaben sind nur historische Referenz. Bei Widersprüchen gelten der ausgecheckte Code, die aktuellen Tests und ein aktueller echter Run.
 
 ## 1. Startprompt für den neuen Chat
 
-> Lies `README.md`, `SECURITY.md` und `UEBERGABE_v1313.md` vollständig und arbeite danach direkt im Stamm des ausgecheckten Repositories weiter. Prüfe zuerst Git-Stand, Version und die komplette Testsuite. Antworte auf Deutsch. Behandle Screenshots, Run-Exporte und Lektorate als konkrete Entwicklungsaufträge: verifiziere jeden Befund am aktuellen Code und am echten Run, repariere die Ursache und ergänze einen Regressionstest. Fertige Entwicklungsänderungen committen und nach `main` pushen. Keinen Vercel-/Deployment-Check ausführen, solange ich ihn nicht ausdrücklich verlange. Lokale Recovery-, Env-, Agenten- und Run-Dateien niemals committen.
+> Lies `README.md`, `SECURITY.md`, `LEKTORAT.md` und `UEBERGABE_v1313.md` vollständig und arbeite danach direkt im Stamm des ausgecheckten Repositories weiter. Prüfe zuerst Git-Stand, Version und die komplette Testsuite. Antworte auf Deutsch. Behandle Screenshots, Run-Exporte und Lektorate als konkrete Entwicklungsaufträge: verifiziere jeden Befund am aktuellen Code und am echten Run, repariere die Ursache und ergänze einen Regressionstest. Fertige Entwicklungsänderungen committen und nach `main` pushen. Keinen Vercel-/Deployment-Check ausführen, solange ich ihn nicht ausdrücklich verlange. Lokale Recovery-, Env-, Agenten- und Run-Dateien niemals committen.
 
 Danach kann Projektleitung direkt den nächsten Run, Screenshot oder Entwicklungswunsch schicken.
 
@@ -35,7 +35,7 @@ Write-Output ('TEST_COUNT=' + $tests.Count)
 Erwartet:
 
 - `main` entspricht `origin/main`.
-- `window.SCHATTEN_VERSION = 'v7.12.1316 +Lektoratswaechter';`
+- `window.SCHATTEN_VERSION = 'v7.12.1317 +Lektoratsstandard';`
 - 43 Testskripte laufen grün.
 - Der normale Arbeitsbaum ist sauber; sichtbar bleiben nur:
   - `.git-broken-20260708-2049/`
@@ -267,6 +267,8 @@ git status --short
 
 ## 11. Run- und Lektoratsanalyse
 
+`LEKTORAT.md` ist die autoritative Checkliste. Ihre sechs Standing-Checkpoints und die dort priorisierten offenen Themen sind bei jedem Run vollständig anzuwenden.
+
 Bei einem neuen Export:
 
 1. Exportversion mit dem aktuellen `window.SCHATTEN_VERSION` vergleichen.
@@ -291,6 +293,7 @@ Ein schöner Endtext macht keinen mechanisch unvollständigen Fall korrekt. Umge
 - `KONZEPT_CUSTODY_ENGINE.md`, `KONZEPT_SICHERUNG_ENGINE.md`, `KONZEPT_STAERKEN_HAERTE.md`: Spezialmechaniken.
 - `SCHATTEN_ARENA.md`, `SCHATTEN_Kampfkonzept_v3.md`: Kampfkontext; immer gegen die Implementierung prüfen.
 - `SCHATTEN_PROJEKT.md`: historische Chronik, nicht als alleinige aktuelle Wahrheit verwenden.
+- `LEKTORAT.md`: autoritativer Run-Lektoratsstandard und priorisierte offene Themen.
 - `UEBERGABE_v1304.md`, `UEBERGABE_v670.md`: veraltete Übergaben.
 
 ## 13. Schnelle Suchkarte
@@ -309,4 +312,4 @@ rg -n "SCHATTEN_SAVE_KEY|saveGameState|restoreGameState" index.html tests
 
 ## 14. Übergabezustand in einem Satz
 
-`main` steht auf v7.12.1316 mit 43/43 grünen Tests; zusätzlich zu den bisherigen Reparaturen sind Reise-Kartenvorauswahl, Kesslers morgendlicher Cafe-Zugang, soziale Sperrstunden-Kontinuität, exakte NPC-Zielbindung und Krauses Datumswahrheit gehärtet. Vor der Alexander-Demo bleiben ein kompletter Krause-Gegenlauf auf dem neuen Deploy, ein kurzer Kessler-Abschluss-Retest auf v1316, ein realer iPhone-Brave-Retest und vor allem ein Blind-Test mit einer unbedarften Person.
+`main` steht auf v7.12.1317 mit 43/43 grünen Tests; `LEKTORAT.md` ist der autoritative Standard mit sechs Standing-Checkpoints und priorisiertem Fix/Push/Gegenlauf-Zyklus. Zusätzlich zu den bisherigen Reparaturen sind Reise-Kartenvorauswahl, Kesslers morgendlicher Cafe-Zugang, soziale Sperrstunden-Kontinuität, exakte NPC-Zielbindung und Krauses Datumswahrheit gehärtet. Vor der Alexander-Demo bleiben die laufende Kessler-/Krause-Stabilitätsstaffel, ein realer iPhone-Brave-Retest und vor allem ein Blind-Test mit einer unbedarften Person.

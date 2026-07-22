@@ -9,6 +9,10 @@ architektonischen Entscheidungen vor. Die mechanische Klick-Arbeit (committen, p
 deployen, Runs starten, Exporte einsammeln) soll automatisiert werden – NICHT die
 Urteilsarbeit.
 
+Der verbindliche inhaltliche Prüfstandard steht in `LEKTORAT.md`. Bei jedem automatischen
+Run müssen alle sechs Standing-Checkpoints und die dort priorisierten offenen Themen
+ausgewertet werden; diese Datei beschreibt nur die technische Orchestrierung.
+
 ---
 
 ## Der Zyklus
@@ -23,6 +27,10 @@ Urteilsarbeit.
 7. Exporte landen in ./test-runs/   -> automatisch
 8. Auswertung (Lektorat)            -> Befunde gegen echten Code+Run verifizieren
 ```
+
+Für Stabilitätsstaffeln gilt: mindestens zehn abwechslungsreiche Runs pro Fall. Bei
+weiteren reproduzierbaren Problemen folgen nach Fix, Push und etwa zwei Minuten
+Deploy-Wartezeit zehn weitere Runs pro Fall. Strategien und Seeds bewusst variieren.
 
 Projektleitungs Wunsch-Ablauf: Er sagt z.B. *„setz das Lektorat um und teste"*, und Schritte
 1–8 laufen, ohne dass er Dateien anfasst. **Aber:** Vor dem Push zeigt der Agent Projektleitung

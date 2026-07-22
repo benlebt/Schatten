@@ -1,0 +1,96 @@
+# Schatten – verbindlicher Run-Lektoratsstandard
+
+Stand: 22.07.2026. Diese Datei ist die autoritative, laufend zu pflegende Checkliste für jeden manuellen und automatischen Run. Bei Widersprüchen mit älteren Abschnitten in `SCHATTEN_PROJEKT.md` gilt diese Datei zusammen mit aktuellem Code, Tests und dem frischen Run-Export.
+
+## Arbeitszyklus
+
+1. Frischen Deploy und Exportversion prüfen.
+2. Fall abwechslungsreich spielen: `natural`, `aggressive` und `random`, unterschiedliche Seeds, Gesprächs-, Such-, Bestechungs-, Droh-, Kampf- und friedliche Pfade.
+3. Sichtbare Szene, Bild, Enginezustand und Exportdiagnose getrennt auswerten.
+4. Jeden Befund am realen Szenensatz und aktuellen Code verifizieren. Diagnosemarker sind Hinweise, keine automatische Wahrheit.
+5. Die Root Cause beheben, den echten Auslöser regressionssichern und die komplette Suite ausführen.
+6. Version erhöhen, committen und nach `main` pushen.
+7. Dem Deploy etwa zwei Minuten geben, danach denselben Fall mit neuem Seed und anderer Spielweise von vorn prüfen.
+8. Nach zehn stabilen Runs pro Fall darf die Staffel enden. Bleibt ein Fall instabil, folgen zehn weitere Runs pro Fall.
+
+## Sechs Standing-Checkpoints
+
+### 1. NPC-Reintroduction, Indizien und Story-Drift
+
+- Tauchen Personen nach Abgang, Flucht, Festnahme, Übergabe, Fesselung oder K. o. unpassend wieder auf?
+- Stimmen Cast, `personenImRaum`, NPC-Zustand, Ort und Tageszeit überein?
+- Sind Indizien korrekt an NPC/Hotspot, Ort, Stage, Aktion und benötigte Vorbelege gebunden?
+- Widersprechen sich Szenen über Rolle, Wissen, Beziehung oder Schicksal einer Figur?
+- Wird jedes mechanisch vergebene Kern-Indiz in derselben Prosa sichtbar dramatisiert?
+- Erzeugt ein nachträglich per Fallback eingefügtes Geständnis eine redundante zweite Geständnisszene?
+- Bleibt eine Figur, die den Ort ausdrücklich verlässt, in der Folgeszene ohne erklärte Rückkehr verschwunden?
+- `W6-BLOCK`, NPC-Terminalzustände und `ORT-PROSA-BRUCH` immer gegen den echten Szenentext verifizieren.
+
+### 2. Historische Fakten: Korrektheit und Interessantheit
+
+- Jeden behaupteten Wochentag gegen das Datum prüfen, bevorzugt reproduzierbar per Datumsfunktion/Skript.
+- Namen von Straßen, Plätzen, Bahnhöfen, Behörden, Marken, Fahrzeugen, Gesetzen, Medien und Personen auf den Stand des konkreten Run-Datums prüfen.
+- Bei Unsicherheit recherchieren; technische oder historische Behauptungen nur mit belastbarer Quelle korrigieren.
+- Sektorlogik beachten: Ost/West, Währung, Polizei, Versorgung, Öffnungszeiten und Verkehrswege.
+- Exportblock `Historische Anker (Lektorat)` auswerten. Ein stabiler Run enthält mindestens einen spezifischen, überraschenden und handlungsrelevanten Fakt; bloßes Namedropping genügt nicht.
+- Vor Freigabe einen gezielten Anachronismus-Schlusscheck ausführen.
+
+### 3. Prosa-Redundanz und Stil-Tics
+
+- Wiederholungen wie `nagelt müde`, `Kopfsteinpflaster`, `Zigarillo`, `Bohnerwachs`, `Dämmerung wirft Schatten` und verwandte Motive runweit zählen.
+- Wiederkehrende Anfahrts-, Motor-, Tür-, Rauch-, Wetter- und Schmerzschablonen markieren.
+- Stil-Tics klar von Logikfehlern trennen.
+- Bewusst wiederholte Indiz-Motive nicht als Pumphrase entfernen, wenn ihre Wiederkehr Beweisfunktion oder Payoff hat.
+- Diagnose-Hardcaps gegen den tatsächlichen Text prüfen: Hat der Filter den richtigen Satz entfernt, oder Bedeutung beschädigt?
+
+### 4. Verletzungs-Konsistenz
+
+- Exportblock zu Verletzung und Behandlung vollständig prüfen.
+- Neue Wunden brauchen eine ausgespielte Ursache und passende mechanische Folge; keine folgenlosen Splitter, Schnitte oder Blutungen.
+- `Fall abschließen` muss auch bei kritischer Verfassung `Vf≤2` anstandslos erreichbar bleiben, sofern kein ausdrückliches finales Todesereignis vorliegt.
+- Behandlungs-Statusfeld, Behandlungs-Logs, tatsächliche Prosa, Verfassungsdelta und offene Arztpflicht müssen übereinstimmen.
+- Schlaf, Notversorgung und professionelle Behandlung nicht verwechseln; keine Wunderheilung und kein endloses Dauerjammern.
+
+### 5. Klassische Mechanik-Diagnostik
+
+- `W6-BLOCK` und terminale NPC-Zustände.
+- `ORT-PROSA-BRUCH`, Engine-Ort, Header, Bild, Cast und tatsächlicher Handlungsort.
+- Klienten-Geduld, Mahnung, Frist, Auftragsentzug und Abschlussbereitschaft.
+- Romantik-Klick-Zähler, Abkühlschritte, Personenwechsel/Reset und tatsächlicher `Rm`-Wert.
+- `personenImRaum`-Teleport, stille Begleitung und unerklärter Ortswechsel.
+- Funktionieren Buttons, Zielbindung, Karten-Vorauswahl, Öffnungszeiten, Reise-, Schlaf-, Heil- und Abschlusswege ohne Sackgasse?
+- Passen Szenenbild, Tageslicht, Ort, Figurenlage und Prosa zusammen?
+
+### 6. Wahrheitsbeat-/Truthbeat-Gate
+
+- Bei `wahrheit`-Fällen sowie jeder `TRUTHBEAT-DIAG`-/`BEAT-DIAG`-Zeile den konkreten Auslösersatz prüfen.
+- Festhalten, ob der Beat durch Spieleraktion, mechanisches Indiz, Geständnis, Zeugenaussage, Gegenstand oder nur durch Regex-Prosa erkannt wurde.
+- Reflexions-, Motiv-, Negations-, Rückblick- und bloße Namensnähe dürfen keinen Pflicht-Beat erfüllen.
+- Ein Beat gilt nur dann als erreicht, wenn die erforderliche Wahrheit mechanisch und narrativ ausgespielt wurde.
+- Frühe Mehrfachtreffer, Fallbacks und nachträglich eingefügte Prosa besonders auf Doppelzählung prüfen.
+
+## Aktuelle offene Themen – Priorität
+
+1. Truthbeat-Regex-Fehltreffer.
+2. Kern-Indiz-Prosa-Mismatch samt Root Cause.
+3. Lola-Präsenz-Widerspruch als generalisierbarer NPC-Kontinuitätsfall.
+4. Ort-Prosa-Bruch-Fix generalisieren; Krause ist noch nicht voll abgedeckt.
+5. Fall-Abschluss-Doppelerzählung aus dem Kessler-Run.
+6. `INDIZ-GATE`-`fundModus`-Rigidität.
+7. Verletzungs-Konsistenz-Gate und Behandlungs-Status-Widerspruch hart durchsetzen.
+8. Romance-Zähler-Reset.
+9. NPC-Zeitkontinuität und Clubschluss-Beobachtung.
+10. Stil-Tic-Besserung durch einen vollständigen Krause-Gegenlauf bestätigen.
+11. Echter Blind-Test vor Alexanders erster Session.
+12. Gezielter Anachronismus-Schlusscheck.
+13. Optional: Stasi-Fall bis zur Vollmer-Konfrontation.
+
+## Mindestprotokoll pro Run
+
+- Fall, Version, Strategie, Seed, Start-/Endzeit, Szenenzahl, Ergebnis und Abbruchgrund.
+- Wochentags-/Datumscheck.
+- Assertion Report und `Historische Anker`.
+- Treffer zu `W6-BLOCK`, `ORT-PROSA-BRUCH`, `TRUTHBEAT-DIAG`, `BEAT-DIAG`, `INDIZ-GATE`, Behandlung, Klientenfrist, Romantik und `personenImRaum`.
+- Gefundene Stil-Tics mit Anzahl und Szenennummern.
+- Befunde nach P0/P1/P2/P3, jeweils mit Originalsatz, Enginezustand und Root Cause.
+- Fixversion, Regressionstest, Commit und Ergebnis des Gegenlaufs.
