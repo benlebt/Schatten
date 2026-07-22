@@ -177,6 +177,55 @@ const environmentalInteriorDrift = worldContext.validateSceneWorldTruth({
 assert.strictEqual(environmentalInteriorDrift && environmentalInteriorDrift.code, 'outdoor_interior_drift',
   'an outdoor evidence action must reject an uncommanded move into a house or stairwell');
 
+const objectBeforeVerbHallwayDrift = worldContext.validateSceneWorldTruth({
+  ort: 'Hinterhof Sybelstrasse',
+  szene: 'Robert verschwindet im Hinterhaus. Als du den Flur erreichst, hoerst du seine Schritte ueber dir.',
+  personenImRaum: ['Robert Kessler'],
+  optionen: []
+}, {
+  id: 'HAUPTUI_INDRAMATISIERUNG_robert_eintritt_beobachtet',
+  kategorie: 'ERKUNDEN'
+});
+assert.strictEqual(objectBeforeVerbHallwayDrift && objectBeforeVerbHallwayDrift.code, 'outdoor_interior_drift',
+  'object-before-verb wording such as den Flur erreichen must not bypass the outdoor location gate');
+
+const exactEvidenceContext = {
+  window: null,
+  caseHasDefinedEvidence: () => true,
+  engineCurrentLocation: { name: 'Hinterhof Sybelstrasse' },
+  caseProgress: {
+    stage: 0,
+    gefundeneIndizIds: [],
+    pendingHauptuiIndiz: { id: 'robert_eintritt_beobachtet' }
+  },
+  classifyEvidenceAction: () => 'umgebung',
+  getCaseLocations: () => [{
+    name: 'Hinterhof Sybelstrasse',
+    indizien: [
+      { id: 'tuerschild_hauke', quelle: 'umgebung', actions: ['ERKUNDEN'] },
+      { id: 'robert_eintritt_beobachtet', quelle: 'umgebung', actions: ['ERKUNDEN'] }
+    ]
+  }],
+  normForMatch: value => String(value || '').toLowerCase(),
+  _aktTageszeitName: () => 'abend',
+  getNpcsAtCurrentLocation: () => [],
+  _indizIstWeltzustandOffen: () => true,
+  _indizDurchVerhoerNichtMehrOffen: () => false,
+  _indizNurUeberKampf: () => false,
+  _aktionsZielNpcPasst: () => true,
+  getEvidenceActionKey: () => 'ERKUNDEN'
+};
+exactEvidenceContext.window = exactEvidenceContext;
+vm.createContext(exactEvidenceContext);
+vm.runInContext(sourceOf('pickZielIndiz'), exactEvidenceContext);
+assert.strictEqual(exactEvidenceContext.pickZielIndiz().id, 'robert_eintritt_beobachtet',
+  'an explicit Haupt-UI hotspot must select its bound clue even when another compatible clue appears first');
+const grantSource = sourceOf('pruefeKernIndizFund');
+assert(grantSource.includes('caseProgress.pendingHauptuiIndiz && caseProgress.pendingHauptuiIndiz.id'),
+  'deterministic evidence granting must preserve the explicit Haupt-UI clue binding');
+assert(grantSource.includes('_expliziteIndizId ? [_z] : [_z].concat'),
+  'an explicit clue may not fall through to a different location clue when a gate blocks it');
+
 const uncommandedDeparture = worldContext.validateSceneWorldTruth({
   ort: 'Hinterhof Sybelstrasse',
   szene: 'Du wartest, bis Robert im Hinterhaus verschwindet. Dann verlaesst du den Hof fluchtartig.',
