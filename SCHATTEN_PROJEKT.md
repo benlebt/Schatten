@@ -16400,3 +16400,17 @@ Karl folgt oder verfolgt. Dieser fundamentale Check läuft ausdrücklich vor und
 vom Slow-Call-Skip, erhält zwei begrenzte Reparaturversuche und setzt danach einen korrekten
 deterministischen Opening-Text ein. Regressionen prüfen den realen K3-Satz, eine korrekte
 „du folgst Robert“-Formulierung und die Reihenfolge vor dem Performance-Skip.
+
+## 🆕 v7.12.1323 — Manueller Kessler-Lauf K4: „Stelle zur Rede“ bleibt verbal
+
+Nach einem sachlichen Klick auf „Stelle zur Rede“ packte Karl Robert am Ärmel, drückte ihn
+gegen die Hofwand und verursachte eine Kopfprellung. Es gab weder einen Angriffsklick noch
+eine Kampfmechanik oder passende Konsequenz. Der erste Weltwahrheits-Retry hatte nur einen
+gleichzeitigen Innenraumdrift entfernt; die verbleibende Gewalt wurde danach akzeptiert.
+
+Direkte Befragungsoptionen sind nun immer zeitunmittelbar und nennen im Prompt ausdrücklich,
+dass Karl nur spricht. `validateSceneWorldTruth()` verwirft Packen, Greifen, Schieben,
+Gegen-die-Wand-Drücken, Schlagen und Verletzungsmarker bei `befragen`/`reden` hart. Da das
+Weltwahrheitsbudget zwei Retries besitzt, kann ein erster Ortsfehler den Gewaltschutz nicht
+mehr verbrauchen; danach greift ein verbaler deterministischer Fallback. Der reale K4-Satz
+ist als Regression enthalten.

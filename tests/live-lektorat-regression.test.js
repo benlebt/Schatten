@@ -177,6 +177,20 @@ const wrongSocialTarget = worldContext.validateSceneWorldTruth({
 assert.strictEqual(wrongSocialTarget && wrongSocialTarget.code, 'social_target_missing',
   'a direct social scene must reject prose in which another present NPC replaces the clicked target');
 
+const verbalBecamePhysical = worldContext.validateSceneWorldTruth({
+  ort: 'Hinterhof Sybelstrasse',
+  szene: 'Du packst den Mann am Aermel und schiebst Robert Kessler gegen die Ziegelwand. Sein Kopf schlaegt gegen den Putz; eine Prellung bleibt zurueck.',
+  personenImRaum: ['Robert Kessler'],
+  optionen: []
+}, {
+  _zeitUnmittelbar: true,
+  _npcName: 'Robert Kessler',
+  _npcInteraktion: { npcName: 'Robert Kessler', verb: 'befragen' },
+  id: 'NPC_befragen'
+});
+assert.strictEqual(verbalBecamePhysical && verbalBecamePhysical.code, 'verbal_action_became_physical',
+  'Stelle zur Rede must never become an unchosen assault or invented injury');
+
 assert.strictEqual(worldContext.validateSceneWorldTruth({
   ort: 'Hinterhof Sybelstrasse',
   szene: 'Frau Pohl bleibt neben den Mülltonnen stehen und antwortet Karl leise im Hinterhof.',
@@ -194,6 +208,8 @@ assert(html.includes('Dies ist ein AUSSENORT: Verlege das Gespraech NICHT'),
   'outdoor social prompts must forbid silent residential interior moves');
 assert(sourceOf('_sozialVorHinweisAktion').includes('AUSGEWAEHLTES GESPRAECHSZIEL IST'),
   'early social prompts must name the clicked NPC explicitly');
+assert(sourceOf('_hauptuiExecute').includes('Koerperliche Gewalt ist ausschliesslich der getrennten Spieleraktion'),
+  'the verbal confrontation prompt must reserve violence for the explicit attack button');
 assert(html.includes("indiz.hotspot = 'Klingelschilder am Hofeingang pruefen'"),
   'the Kessler doorbell clue must remain reachable from the engine courtyard');
 assert(html.includes('Neben der hofseitigen Eingangstuer haengen die Klingelschilder'),
