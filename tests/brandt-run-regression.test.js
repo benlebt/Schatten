@@ -18,7 +18,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1299 +Noir-Waffensymbol'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1300 +Brandt-Endspiel'"),
   'Brandt regression release version missing');
 
 for (const bad of [
@@ -160,5 +160,82 @@ assert(!/ROMANCE-Kandidatin/.test(guardedProse),
   'central prose guard must remove leaked technical role markers');
 assert.strictEqual(guardedProse, 'Lola Brandt wartet am Fenster.',
   'central prose guard must remove the entire technical role appositive');
+
+assert(html.includes("abschlussEffekt: {"),
+  'Brandt terminal evidence needs an explicit configured conclusion effect');
+assert(html.includes("verantwortlicher: 'Kurt Lange'"),
+  'Brandt terminal evidence must identify Kurt Lange deterministically');
+assert(html.includes('ABSCHLUSS-INDIZ (HART)'),
+  'the model prompt must require the terminal clue to be visibly narrated');
+
+const terminalClue = {
+  id: 'lange_gestaendnis',
+  text: 'Kurt Lange überführt: Erichs Selbstmord war inszeniert.',
+  abschlussEffekt: {
+    verantwortlicher: 'Kurt Lange',
+    minStage: 3,
+    suspectConfronted: true,
+    ueberfuehrt: true,
+    wahrheitErkannt: true,
+    truthBeatIds: ['lange_verantwortlich', 'zeugen_aussage'],
+    narrativ: /\b(gesteht|inszeniert)\b/i,
+    fallbackProse: 'Lange gesteht die Inszenierung.'
+  }
+};
+const terminalContext = {
+  caseProgress: {
+    stage: 2,
+    gefundeneIndizIds: ['lange_gestaendnis'],
+    indizien: ['Schuldschein bei Lange', 'Waffenspur am Tatort'],
+    truthBeatsHit: []
+  },
+  sceneCounter: 18,
+  _findeIndizById: (id) => id === terminalClue.id ? terminalClue : null,
+  updateTruthBeats: () => {},
+  syncResolutionFlagsByCaseType: () => {},
+  diag: () => {}
+};
+vm.createContext(terminalContext);
+vm.runInContext(sourceOf('_indizAbschlussProsaSichern') + '\n'
+  + sourceOf('_indizAbschlussEffektAnwenden') + '\n'
+  + sourceOf('_syncDefinierteIndizAbschlussEffekte'), terminalContext);
+assert.strictEqual(terminalContext._syncDefinierteIndizAbschlussEffekte('test'), true,
+  'an already-found terminal clue must heal an old stuck save');
+assert.strictEqual(terminalContext.caseProgress.tatverdaechtiger, 'Kurt Lange',
+  'terminal clue must restore the missing suspect');
+assert.strictEqual(terminalContext.caseProgress.suspectConfronted, true,
+  'terminal clue must restore confrontation state');
+assert.strictEqual(terminalContext.caseProgress.ueberfuehrt, true,
+  'terminal clue must restore the responsible-person conclusion');
+assert.strictEqual(terminalContext.caseProgress.wahrheitErkannt, true,
+  'terminal clue must restore the truth conclusion');
+assert.strictEqual(terminalContext.caseProgress.resolveEverReady, true,
+  'terminal clue must expose the resolve path instead of leaving an empty map');
+assert(terminalContext.caseProgress.truthBeatsHit.includes('lange_verantwortlich'),
+  'terminal clue must satisfy the mandatory Brandt truth beat');
+const evasiveScene = { szene: 'Lange mustert Karl und weicht der Frage aus.' };
+assert.strictEqual(terminalContext._indizAbschlussProsaSichern(terminalClue, evasiveScene), true,
+  'evasive model prose must receive the configured visible payoff');
+assert(evasiveScene.szene.includes('Lange gesteht die Inszenierung.'),
+  'fallback prose must visibly narrate the booked confession');
+assert.strictEqual(terminalContext._indizAbschlussProsaSichern(terminalClue, evasiveScene), false,
+  'terminal fallback prose must remain idempotent');
+
+assert(fs.existsSync(path.join(root, 'assets', 'scenes', 'brandt', 'rote-laterne-kurt-konfrontation.png')),
+  'Kurt confrontation image asset is missing');
+const visualContext = {
+  caseSetup: { klient: 'Anton Brandt', opfer: 'Erich Brandt', tat: 'Tod aufklären' },
+  engineCurrentLocation: { name: 'Rote Laterne' },
+  caseProgress: { activeConfrontation: { enemyName: 'Kurt Lange' } },
+  normForMatch: (value) => String(value || '').toLowerCase().replace(/[_\s]+/g, ' ').trim(),
+  _konfrontationAktiv: () => true,
+  _encounterAktiv: () => false,
+  _konfrontationEnemy: () => ({ name: 'Kurt Lange' })
+};
+vm.createContext(visualContext);
+vm.runInContext(sourceOf('_brandtKurtKonfrontationVisual'), visualContext);
+const kurtVisual = visualContext._brandtKurtKonfrontationVisual();
+assert(kurtVisual && kurtVisual.file === 'rote-laterne-kurt-konfrontation.png',
+  'active Kurt confrontation must override the generic Rote Laterne still');
 
 console.log('brandt run regression tests passed');
