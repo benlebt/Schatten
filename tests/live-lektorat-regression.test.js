@@ -166,6 +166,22 @@ vm.runInContext(sourceOf('_worldTruthOrtGleich'), worldContext);
 vm.runInContext(sourceOf('_worldTruthAbschlussRueckblickErlaubt'), worldContext);
 vm.runInContext(sourceOf('validateSceneWorldTruth'), worldContext);
 
+const curfewContext = {
+  caseProgress: { _letzteSperrstunde: { von: 'Spedition Schmidt Moabit', nach: 'Karl Mauers Buero', tageszeit: 'nacht', scene: 4 } },
+  sceneCounter: 4,
+  engineCurrentLocation: { name: 'Karl Mauers Buero' },
+  normForMatch: value => String(value || '').toLowerCase()
+};
+vm.createContext(curfewContext);
+vm.runInContext(sourceOf('_aktiveSperrstundenReiseUmleitung'), curfewContext);
+const curfewRedirect = curfewContext._aktiveSperrstundenReiseUmleitung({
+  _istReise: true,
+  text: 'Fahr mit dem Opel zu: Spedition Schmidt Moabit'
+});
+assert.deepStrictEqual(JSON.parse(JSON.stringify(curfewRedirect)), {
+  von: 'Spedition Schmidt Moabit', nach: 'Karl Mauers Buero', tageszeit: 'nacht'
+}, 'a travel action that crosses closing time must expose the exact engine redirect');
+
 const interiorDrift = worldContext.validateSceneWorldTruth({
   ort: 'Hinterhof Sybelstrasse',
   szene: 'Du legst deine Lizenz auf den Küchentisch. Frau Pohl schiebt eine Tasse Malzkaffee vor dich.',
@@ -345,6 +361,28 @@ const socialToneBecamePhysical = worldContext.validateSceneWorldTruth({
 });
 assert.strictEqual(socialToneBecamePhysical && socialToneBecamePhysical.code, 'social_tone_became_physical',
   'a verbal public-exposure tone must never become an unchosen physical assault');
+
+const curfewLocationDrift = worldContext.validateSceneWorldTruth({
+  ort: 'Spedition Schmidt Moabit',
+  szene: 'Du lenkst den Opel auf den Hof der Spedition und trittst in das noch beleuchtete Hauptgebaeude.',
+  personenImRaum: ['Norbert Tetzlaff'],
+  optionen: []
+}, {
+  id: 'REISE', _istReise: true,
+  _sperrstundenUmleitung: { von: 'Spedition Schmidt Moabit', nach: 'Karl Mauers Buero', tageszeit: 'nacht' }
+});
+assert.strictEqual(curfewLocationDrift && curfewLocationDrift.code, 'curfew_redirect_drift',
+  'closing-time redirect must reject prose that continues inside the closed travel destination');
+
+assert.strictEqual(worldContext.validateSceneWorldTruth({
+  ort: 'Karl Mauers Buero',
+  szene: 'Die Spedition Schmidt ist bei deiner Ankunft bereits geschlossen. Du wendest den Opel, faehrst zurueck und legst im Buero am Hackeschen Markt deine Notizen auf den Schreibtisch.',
+  personenImRaum: [],
+  optionen: []
+}, {
+  id: 'REISE', _istReise: true,
+  _sperrstundenUmleitung: { von: 'Spedition Schmidt Moabit', nach: 'Karl Mauers Buero', tageszeit: 'nacht' }
+}), null, 'an honestly narrated closing-time return to the engine destination must pass');
 
 const missingPublicThreat = worldContext.validateSceneWorldTruth({
   ort: 'Hinterhof Sybelstrasse',
