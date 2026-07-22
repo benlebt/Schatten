@@ -19,7 +19,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1291 +Krause-Konfrontations-UI'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1292 +Friedliche-Gegnerangebote'"), 'release version missing');
 assert(html.includes("file: 'karl-mauers-buero-theodor-day.png'"), 'Krause opening must show Theodor in Karl office');
 assert(html.includes("root: 'assets/scenes/krause/'"), 'Krause opening image must resolve from the case scene directory');
 assert(html.includes('AKTIONS-TREUE (ABSOLUT)'), 'physical and item actions need a strict narration contract');
@@ -48,6 +48,7 @@ assert(itemVerbs.includes("encodeURIComponent(String(feind.id || feind.name || '
 assert(itemVerbs.includes("'werfen::' + ziel"), 'throw actions must encode the selected enemy');
 assert(itemVerbs.includes("'werfen_fuesse::' + ziel"), 'distraction actions must encode the selected enemy');
 assert(itemVerbs.includes("'angreifen_mit::' + ziel"), 'melee item actions must encode the selected enemy');
+assert(itemVerbs.includes("'anbieten::' + ziel"), 'drinks, cigarettes and cake must encode the selected enemy for a peaceful offer');
 
 const execute = sourceOf('_hauptuiExecute');
 assert(execute.includes('_hauptuiKonfrontationAufZiel(feind)'), 'execution must switch the confrontation to the explicitly selected enemy');

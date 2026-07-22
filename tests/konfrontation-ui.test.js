@@ -57,6 +57,7 @@ assert(!actionBody.includes('_hauptuiChoose('), 'confrontation action function m
 assert(!actionBody.includes('_konfrontationClear('), 'confrontation must not be cleared before narrative handoff succeeds');
 assert(actionBody.includes('_hauptuiKonfrontationChooseNarration'), 'confrontation action function must start a narrative scene');
 assert(actionBody.includes('_hauptuiKonfrontationAktionVerletzungGesperrt(aktion)'), 'stale confrontation handlers need an injury safety guard');
+assert(actionBody.includes("if (aktion === 'anbieten')"), 'active confrontations must accept social item offers as a nonviolent move');
 assert(actionBody.includes('_konfrontationItemVerbrauchen'), 'thrown/used items should be consumed by the confrontation outcome');
 const itemBranchStart = actionBody.indexOf("if (aktion === 'werfen' || aktion === 'werfen_fuesse'");
 const itemBranchEnd = actionBody.indexOf("if (aktion === 'fliehen')", itemBranchStart);
@@ -105,12 +106,13 @@ for (const action of ['angreifen', 'werfen', 'werfen_fuesse', 'angreifen_mit', '
   assert.strictEqual(injuryContext._hauptuiKonfrontationAktionVerletzungGesperrt(action), true,
     action + ' must be visibly blocked by the same critical-injury rule as chooseOption');
 }
-for (const action of ['deeskalieren', 'bluffen', 'fliehen', 'rausch_bluff']) {
+for (const action of ['deeskalieren', 'bluffen', 'fliehen', 'rausch_bluff', 'anbieten']) {
   assert.strictEqual(injuryContext._hauptuiKonfrontationAktionVerletzungGesperrt(action), false,
     action + ' must remain available as a non-offensive exit from the confrontation');
 }
 
 assert(html.includes('Kaffee-Staub'), 'coffee needs distinct mild effect copy');
+assert(sourceOf('_hauptuiKonfrontationItems').includes("add(item, 'anbieten', 'Biete friedlich an: ')"), 'the tactical inventory must surface peaceful offers beside attacks');
 assert(html.includes('Glas und Korn'), 'Doppelkorn needs distinct stronger effect copy');
 assert(html.includes('AEG-Wucht'), 'toaster needs heavy effect copy');
 assert(html.includes('Sahne und Klebrigkeit'), 'cake needs a distinct blinding distraction effect');

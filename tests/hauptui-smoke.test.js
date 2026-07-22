@@ -709,7 +709,9 @@ assert(html.includes("label: 'Näher kommen'"), 'romance action must use the cor
   assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'romance', file)), 'missing romance morning image ' + file);
 });
 assert(html.includes("if (angebotPersonen.length && _hauptuiItemTaugt(item, 'anbieten')) add('anbieten', 'Biete an');"), 'offering an item must require a present peaceful NPC');
+assert(html.includes("add('anbieten::' + ziel, _hauptuiGegnerAngebotLabel(item, feind));"), 'social consumables must also expose a directly targeted peaceful offer to enemies');
 assert(html.includes('function _hauptuiAngebotPersonen()'), 'item offers need an explicit eligible-recipient list');
+assert(html.includes('function _hauptuiGegnerAngebot(npc, item, assist)'), 'enemy offers need a persistent social-resolution path');
 assert(html.includes("zeigeMiniAuswahl('Biete an: ' + item.name, 'Wem?'"), 'multiple possible recipients must be chosen by the player');
 assert(html.includes("id: 'HAUPTUI_ITEM_ANBIETEN'"), 'a failed plan handoff must still produce a concrete narrated offer');
 assert(html.includes('function _hauptuiKarlTrinkt(item)'), 'drinking must create a persistent player state instead of requiring an NPC');
@@ -823,6 +825,48 @@ assert(confrontationCall, 'inventory throw must execute through the confrontatio
 assert.strictEqual(confrontationCall.art, 'werfen', 'inventory throw must use the existing werfen action');
 assert.strictEqual(confrontationCall.enemy.name, hostile.name, 'inventory throw must preserve the explicitly selected hostile NPC');
 assert.strictEqual(confrontationCall.item.id, toaster.id, 'inventory throw must carry the selected item id for item loss/effects');
+
+const kalle = { id: 'kalle', name: 'Kalle', tag: 'GANGSTER', rolle: 'Schlaeger', typ: 'person' };
+context.caseProgress.gegnerAngebote = {};
+context.caseProgress.activeConfrontation = null;
+let angebotAusgang = context._hauptuiGegnerAngebotAusgang(kalle, korn);
+assert(angebotAusgang && angebotAusgang.friedlich, 'a drink offered before blows are exchanged must be able to calm a gangster');
+context.caseProgress.activeConfrontation = { enemyName: kalle.name };
+angebotAusgang = context._hauptuiGegnerAngebotAusgang(kalle, korn);
+assert(angebotAusgang && !angebotAusgang.friedlich && angebotAusgang.offenheit > 0, 'an active fight must need more than one social signal while still becoming more open');
+context.caseProgress.gegnerAngebote.kalle = { offenheit: angebotAusgang.offenheit };
+assert(context._hauptuiGegnerAngebotAusgang(kalle, korn).friedlich, 'a follow-up offer must be able to resolve an active confrontation peacefully');
+
+let offeredItemMove = null;
+let offeredNpcState = null;
+context.caseProgress.activeConfrontation = null;
+context.caseProgress.gegnerAngebote = {};
+context._itemMove = (id, change) => { offeredItemMove = { id, change }; return true; };
+context._npcZustandSet = (name, state) => { offeredNpcState = { name, state }; return true; };
+context._hauptuiKonfrontationChooseNarration = (option, afterSuccess) => { calls.options.push(option); afterSuccess(); return Promise.resolve(true); };
+context._hauptuiKonfrontationAnsichtAktualisieren = () => {};
+assert(context._hauptuiGegnerAngebot(kalle, korn, []), 'the resolved peaceful offer must start a narrated engine action');
+assert(context.caseProgress.gegnerAngebote.kalle.friedlich, 'the accepted offer must persist Kalle as peacefully resolved');
+assert(offeredItemMove && offeredItemMove.id === korn.id, 'an accepted drink must leave Karl inventory');
+assert(offeredNpcState && offeredNpcState.name === kalle.name && offeredNpcState.state.status === 'beruhigt', 'a successful offer must persist a non-hostile NPC state');
+
+let socialOfferCall = null;
+context._hauptuiGegnerAngebot = (npc, item, assist) => { socialOfferCall = { npc, item, assist }; return true; };
+context.window.__hauptuiActionState = { verb: null, targetKey: null };
+context._baukastenZiele = () => ({ personen: [hostile], objekte: [], items: [korn] });
+context.getNpcsAtCurrentLocation = () => [hostile];
+context._itemsBeiKarl = () => [korn];
+context._itemKatalogEintrag = () => ({ name: korn.name, taugt: ['trinken', 'anbieten', 'angreifen_mit', 'werfen', 'werfen_fuesse'] });
+context._renderEngineMenu(container, {});
+byText(container, korn.name).onTap();
+const peacefulOffer = byText(container, 'Biete ' + hostile.name + ' einen Drink an');
+assert(peacefulOffer, 'a carried drink must offer a named nonviolent action against the selected enemy');
+peacefulOffer.onTap();
+execute = all(container).find((element) => element.className === 'hauptui-execute');
+assert(execute && visibleText(execute).includes('Biete ' + hostile.name), 'the enemy offer must use the normal explicit execute step');
+execute.onTap();
+assert(socialOfferCall && socialOfferCall.npc.name === hostile.name, 'executing the offer must preserve the chosen enemy');
+assert.strictEqual(socialOfferCall.item.id, korn.id, 'executing the offer must preserve the chosen social item');
 
 const targetsStart = html.indexOf('function _baukastenZiele()');
 const targetsEnd = html.indexOf('try { window._baukastenZiele', targetsStart);
