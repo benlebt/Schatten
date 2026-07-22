@@ -18,7 +18,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1293 +Abschlussort-Behandlungspflicht'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1294 +Arztpflicht-Prosa'"),
   'Brandt regression release version missing');
 
 for (const bad of [
@@ -115,6 +115,12 @@ assert(html.includes("return !/^(HEILEN|NOTHEILEN|DEFENSIV|FLUCHT|NOTFLUCHT)$/.t
   'ignored critical injuries must eventually block all non-treatment progress');
 assert(html.includes("resolveLockReason = 'erst professionell behandeln lassen'"),
   'the resolve button must expose the professional-treatment lock');
+assert(html.includes('ARZTPFLICHT IN DER PROSA (ABSOLUT, DIEGETISCH)'),
+  'mandatory professional treatment must be communicated in the narrative prompt');
+assert(html.includes('Diese Wunde kann er NICHT mehr selbst, mit einem Verband oder durch Schlaf richtig behandeln'),
+  'the prose prompt must explain why self first aid no longer suffices');
+assert(html.includes('NUR Doc Wagner in seiner Praxis in der Schäferstraße ODER Marlene Wagner in der Charité'),
+  'the prose prompt must name both valid professional treatment routes');
 
 assert(html.includes('Laufziel sind mindestens 5 verschiedene Achsen'),
   'historical education breadth target must be five axes');

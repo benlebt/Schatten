@@ -20,7 +20,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1293 +Abschlussort-Behandlungspflicht'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1294 +Arztpflicht-Prosa'"), 'release version missing');
 assert(html.includes('BÜROSCHRANK · STARTAUSRÜSTUNG'), 'case start dialog must expose the office wardrobe');
 assert(html.includes('Immer dabei: Walther PPK, Detektiv-Lizenz, Notizbuch und Bleistift.'), 'fixed detective gear must be explained');
 
