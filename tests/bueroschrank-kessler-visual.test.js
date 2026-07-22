@@ -20,7 +20,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1308 +iOS-Fallauswahl'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1309 +Kessler-Reisebild'"), 'release version missing');
 assert(html.includes('BÜROSCHRANK · STARTAUSRÜSTUNG'), 'case start dialog must expose the office wardrobe');
 assert(html.includes('Immer dabei: Walther PPK, Detektiv-Lizenz, Notizbuch und Bleistift.'), 'fixed detective gear must be explained');
 
@@ -129,6 +129,10 @@ vm.createContext(visualContext);
 vm.runInContext(sourceOf('_kesslerHellbachVisual'), visualContext);
 let spec = visualContext._kesslerHellbachVisual({ personenImRaum: [] });
 assert.strictEqual(spec.dayFile, 'hinterhof-sybelstrasse-hellbach-confrontation-day.png', 'active Hellbach must use confrontation art');
+visualContext.caseProgress.activeConfrontation = { enemyName: 'Robert Kessler', enemyEntries: [] };
+assert.strictEqual(visualContext._kesslerHellbachVisual({ personenImRaum: [] }), null,
+  'a Robert Kessler confrontation must not show Hellbach merely because he is also in the courtyard roster');
+visualContext.caseProgress.activeConfrontation = { enemyName: 'Wachtmeister Eugen Hellbach', enemyEntries: [] };
 hellbachState = { status: 'ko', ort: 'Hinterhof Sybelstrasse' };
 spec = visualContext._kesslerHellbachVisual({ personenImRaum: [] });
 assert.strictEqual(spec.nightFile, 'hinterhof-sybelstrasse-hellbach-ko-night.png', 'local K.O. Hellbach must use aftermath art');
