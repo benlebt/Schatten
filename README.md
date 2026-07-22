@@ -5,7 +5,7 @@ KI-gestütztes Film-Noir-Detektivspiel im Berlin des Jahres 1953.
 ## Einstieg für Entwicklung und neue Codex-Chats
 
 1. Repository klonen und im Repository-Stamm arbeiten.
-2. `UEBERGABE_v1313.md` und `LEKTORAT.md` vollständig lesen; sie dokumentieren Architektur, Arbeitsregeln, die verbindlichen sechs Lektorats-Checkpoints, aktuelle Regressionen und offene Tests.
+2. `UEBERGABE_v1313.md` und `LEKTORAT.md` vollständig lesen; die sechs Standing-Checkpoints in `LEKTORAT.md` gelten additiv zu sämtlichen bisherigen Lektoratsregeln, dokumentierten Entscheidungen, aktuellen Regressionen und offenen Tests.
 3. Den tatsächlich ausgecheckten Stand prüfen, da Code und Version nach der Übergabe weiterlaufen können:
 
 ```powershell

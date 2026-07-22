@@ -1,6 +1,14 @@
-# Schatten – verbindlicher Run-Lektoratsstandard
+# Schatten – additiver verbindlicher Run-Lektoratsstandard
 
-Stand: 22.07.2026. Diese Datei ist die autoritative, laufend zu pflegende Checkliste für jeden manuellen und automatischen Run. Bei Widersprüchen mit älteren Abschnitten in `SCHATTEN_PROJEKT.md` gilt diese Datei zusammen mit aktuellem Code, Tests und dem frischen Run-Export.
+Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `UEBERGABE_v1313.md`, den Konzeptdokumenten, Tests und bisherigen Lektoratsentscheidungen festgehaltenen Regeln. Die sechs Standing-Checkpoints sind ein zusätzlicher Pflichtfilter und ausdrücklich **nicht exklusiv**: Alle bisherigen Lektoratsvorgaben gelten weiter, sofern sie nicht durch eine spätere ausdrückliche Projektentscheidung, den aktuellen Code oder einen Regressionstest ersetzt wurden. Überschneidungen werden nicht doppelt gezählt, aber vollständig geprüft.
+
+## Geltungsbereich und Hierarchie
+
+- Diese sechs Checkpoints definieren das Mindestprogramm jedes Runs, nicht den gesamten Umfang eines Lektorats.
+- Zusätzlich gelten sämtliche bestehenden fall-, system-, UI-, Prosa-, Historien-, Weltwahrheits-, Sicherheits- und Kontinuitätsregeln aus der Projektdokumentation.
+- Frühere dokumentierte Fehlermuster, bewusste Nicht-Fixes und „settled decisions“ bleiben verbindlicher Prüfhintergrund.
+- Ein neuer Checkpoint bündelt vorhandene Regeln nur dort, wo sie sich überschneiden; er löscht oder verdrängt keine speziellere Vorgabe.
+- Bei echtem Widerspruch gilt: jüngste ausdrückliche Projektentscheidung, dann aktueller Regressionstest und Codezustand, dann die speziellere Dokumentationsregel. Ein frischer Run-Export dient als Beleg, hebt aber keine Regel von selbst auf.
 
 ## Arbeitszyklus
 
@@ -13,7 +21,7 @@ Stand: 22.07.2026. Diese Datei ist die autoritative, laufend zu pflegende Checkl
 7. Dem Deploy etwa zwei Minuten geben, danach denselben Fall mit neuem Seed und anderer Spielweise von vorn prüfen.
 8. Nach zehn stabilen Runs pro Fall darf die Staffel enden. Bleibt ein Fall instabil, folgen zehn weitere Runs pro Fall.
 
-## Sechs Standing-Checkpoints
+## Sechs zusätzliche Standing-Checkpoints
 
 ### 1. NPC-Reintroduction, Indizien und Story-Drift
 

@@ -267,7 +267,7 @@ git status --short
 
 ## 11. Run- und Lektoratsanalyse
 
-`LEKTORAT.md` ist die autoritative Checkliste. Ihre sechs Standing-Checkpoints und die dort priorisierten offenen Themen sind bei jedem Run vollständig anzuwenden.
+`LEKTORAT.md` ist die autoritative additive Mindestcheckliste. Ihre sechs Standing-Checkpoints und die dort priorisierten offenen Themen sind bei jedem Run vollständig anzuwenden, zusätzlich zu allen bisherigen Lektoratsregeln, spezielleren Projektdokumentationen und settled decisions. Sie sind ausdrücklich nicht exklusiv.
 
 Bei einem neuen Export:
 
@@ -293,7 +293,7 @@ Ein schöner Endtext macht keinen mechanisch unvollständigen Fall korrekt. Umge
 - `KONZEPT_CUSTODY_ENGINE.md`, `KONZEPT_SICHERUNG_ENGINE.md`, `KONZEPT_STAERKEN_HAERTE.md`: Spezialmechaniken.
 - `SCHATTEN_ARENA.md`, `SCHATTEN_Kampfkonzept_v3.md`: Kampfkontext; immer gegen die Implementierung prüfen.
 - `SCHATTEN_PROJEKT.md`: historische Chronik, nicht als alleinige aktuelle Wahrheit verwenden.
-- `LEKTORAT.md`: autoritativer Run-Lektoratsstandard und priorisierte offene Themen.
+- `LEKTORAT.md`: autoritativer additiver Mindeststandard; ersetzt keine spezielleren bisherigen Lektoratsregeln.
 - `UEBERGABE_v1304.md`, `UEBERGABE_v670.md`: veraltete Übergaben.
 
 ## 13. Schnelle Suchkarte
@@ -312,4 +312,4 @@ rg -n "SCHATTEN_SAVE_KEY|saveGameState|restoreGameState" index.html tests
 
 ## 14. Übergabezustand in einem Satz
 
-`main` steht auf v7.12.1318 mit 43/43 grünen Tests; `LEKTORAT.md` ist der autoritative Standard mit sechs Standing-Checkpoints und priorisiertem Fix/Push/Gegenlauf-Zyklus. Zusätzlich zu den bisherigen Reparaturen sind Reise-Kartenvorauswahl, Kesslers morgendlicher Cafe-Zugang, soziale Sperrstunden-Kontinuität, exakte NPC-Zielbindung und Krauses Datumswahrheit gehärtet. Der Autoplay-Bot bedient jetzt außerdem die aktive Haupt-UI über reale Ziel-/Verb-/Ausführen-Klicks und erkennt Szenenfrische auch bei identischen Menüs. Vor der Alexander-Demo bleiben die laufende Kessler-/Krause-Stabilitätsstaffel, ein realer iPhone-Brave-Retest und vor allem ein Blind-Test mit einer unbedarften Person.
+`main` steht auf v7.12.1318 mit 43/43 grünen Tests; `LEKTORAT.md` ist der autoritative additive Mindeststandard mit sechs Standing-Checkpoints und priorisiertem Fix/Push/Gegenlauf-Zyklus. Alle bisherigen Lektoratsregeln und spezielleren settled decisions gelten daneben unverändert weiter. Zusätzlich zu den bisherigen Reparaturen sind Reise-Kartenvorauswahl, Kesslers morgendlicher Cafe-Zugang, soziale Sperrstunden-Kontinuität, exakte NPC-Zielbindung und Krauses Datumswahrheit gehärtet. Der Autoplay-Bot bedient jetzt außerdem die aktive Haupt-UI über reale Ziel-/Verb-/Ausführen-Klicks und erkennt Szenenfrische auch bei identischen Menüs. Vor der Alexander-Demo bleiben die laufende Kessler-/Krause-Stabilitätsstaffel, ein realer iPhone-Brave-Retest und vor allem ein Blind-Test mit einer unbedarften Person.

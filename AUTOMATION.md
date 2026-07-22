@@ -9,9 +9,11 @@ architektonischen Entscheidungen vor. Die mechanische Klick-Arbeit (committen, p
 deployen, Runs starten, Exporte einsammeln) soll automatisiert werden – NICHT die
 Urteilsarbeit.
 
-Der verbindliche inhaltliche Prüfstandard steht in `LEKTORAT.md`. Bei jedem automatischen
-Run müssen alle sechs Standing-Checkpoints und die dort priorisierten offenen Themen
-ausgewertet werden; diese Datei beschreibt nur die technische Orchestrierung.
+Der verbindliche additive Prüfstandard steht in `LEKTORAT.md`. Bei jedem Run müssen
+alle sechs Standing-Checkpoints und die dort priorisierten offenen Themen zusätzlich
+zum technischen Assertion Report und zusätzlich zu allen bisherigen Lektoratsregeln
+aus Projektdokumentation, Tests und settled decisions ausgewertet werden. Diese Datei
+beschreibt nur die technische Orchestrierung.
 
 ---
 

@@ -1,6 +1,6 @@
 # Schatten — Projekt-Knowledge
 
-> **Aktueller Lektoratsstandard:** Die verbindlichen sechs Standing-Checkpoints, der Fix/Push/Gegenlauf-Zyklus und die priorisierten offenen Themen stehen in `LEKTORAT.md`. Die vielen Lektoratsabschnitte dieser Datei sind historische Chronik; bei Widersprüchen gilt `LEKTORAT.md` zusammen mit aktuellem Code, Tests und frischem Export.
+> **Aktueller additiver Lektoratsstandard:** Die sechs Standing-Checkpoints, der Fix/Push/Gegenlauf-Zyklus und die priorisierten offenen Themen stehen in `LEKTORAT.md`. Sie ergänzen alle bisherigen Lektoratsregeln und spezielleren Entscheidungen dieser Datei; sie ersetzen sie nicht. Frühere Befunde, bewusste Nicht-Fixes und settled decisions bleiben Prüfhintergrund. Die genaue Hierarchie bei echten Widersprüchen steht in `LEKTORAT.md`.
 
 Stand: 06.06.2026, Version v7.12.433 (index.html) + gemini.js v1.5 (serverseitig)
 
