@@ -18,7 +18,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1303 +Showdown-Ausgang'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1304 +Clubschluss'"),
   'Brandt regression release version missing');
 
 for (const bad of [
@@ -44,6 +44,21 @@ for (const good of [
 
 assert(html.includes("abschlussOrt: 'Anton Brandts Eckkneipe und Wohnung'"),
   'Brandt case needs a deterministic client-report location');
+const brandtStart = html.indexOf("klient: 'Anton Brandt (Vater)'");
+const brandtEnd = html.indexOf('// 4. Nachtanruf', brandtStart);
+const brandtBlock = html.slice(brandtStart, brandtEnd > brandtStart ? brandtEnd : brandtStart + 45000);
+assert(brandtBlock.includes("oeffnungszeit: ['nachmittag','abend','nacht']"),
+  'Rote Laterne must close after the night instead of keeping its cast through the morning');
+assert(brandtBlock.includes("sperrstundenAussen: 'Vor der Roten Laterne am Nollendorfplatz'"),
+  'club closing needs a deterministic exterior destination');
+assert(html.includes("{ test: /^vor der roten laterne/, hidden: true, place: 'Vor der Roten Laterne am Nollendorfplatz', innen: false }"),
+  'the club exterior must not reuse the unchanged nightclub interior still');
+assert(brandtBlock.includes("{ id: 'lola_brandt', zeit: ['nachmittag','abend','nacht'] }"),
+  'Lola must have a work shift instead of permanent presence');
+assert(brandtBlock.includes("requiresEvidenceAll: ['schuldschein','fremde_walther']"),
+  'Kurt confession must require motive and the swapped weapon');
+assert(brandtBlock.includes("requiresEvidenceAny: ['zeuge_walther','zigarillo_asche']"),
+  'Kurt confession must additionally require an independent crime link');
 assert(html.includes('_abschlussLocation: _abschlussLocation'),
   'resolve option must carry the engine-owned final location');
 assert(html.includes('function _abschlussOrtVorbereiten(option)'),
@@ -167,6 +182,32 @@ assert(html.includes("verantwortlicher: 'Kurt Lange'"),
   'Brandt terminal evidence must identify Kurt Lange deterministically');
 assert(html.includes('ABSCHLUSS-INDIZ (HART)'),
   'the model prompt must require the terminal clue to be visibly narrated');
+assert(html.includes('if (a.noEvidence) return null;'),
+  'peaceful offers must be excluded from deterministic evidence');
+assert(html.includes('_noEvidence: true'),
+  'peaceful showdown items must carry the no-evidence marker');
+assert(html.includes('ORTS-NPC-KONTINUITÄT (HART)'),
+  'the scene prompt must prevent spontaneous exits and invented companions');
+assert(html.includes('isLocationBound && mainLocationChanged'),
+  'location-bound NPCs must be removed on a hard move even when prose claims they follow');
+
+const offerEvidenceContext = {
+  window: null,
+  normForMatch: (value) => String(value || '').toLowerCase(),
+};
+offerEvidenceContext.window = offerEvidenceContext;
+offerEvidenceContext._letzteAktion = {
+  kategorie: 'DEFENSIV',
+  text: 'Karl bietet Kurt Lange Kuchen an.',
+  npcName: 'Kurt Lange',
+  noEvidence: true,
+};
+vm.createContext(offerEvidenceContext);
+vm.runInContext(sourceOf('classifyEvidenceAction') + '\n' + sourceOf('getEvidenceActionKey'), offerEvidenceContext);
+assert.strictEqual(offerEvidenceContext.classifyEvidenceAction(), null,
+  'cake or cigarettes may calm Kurt but must not count as an interrogation');
+assert.strictEqual(offerEvidenceContext.getEvidenceActionKey(), null,
+  'peaceful items must not select the terminal confession clue');
 
 const terminalClue = {
   id: 'lange_gestaendnis',

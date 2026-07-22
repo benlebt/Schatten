@@ -70,6 +70,11 @@ for (const imageSet of imageSets) {
   assert(imageSet.root && imageSet.root.startsWith('assets/scenes/'), 'image set root missing');
   assert(Array.isArray(imageSet.images) && imageSet.images.length > 0, 'image set without images');
   for (const spec of imageSet.images) {
+    if (spec.hidden) {
+      assert(spec.test && spec.place, 'hidden scene visual needs a location matcher and label');
+      assert(!spec.file && !spec.dayFile && !spec.nightFile, 'hidden scene visual must not reference assets');
+      continue;
+    }
     const root = spec.root || imageSet.root;
     assert(spec.file, 'scene image spec without dark file');
     const nightFile = spec.nightFile || spec.file.replace(/(\.[a-z0-9]+)$/i, '-night$1');

@@ -55,6 +55,25 @@ assert.strictEqual(context.caseProgress._letzteSperrstunde.tageszeit, 'morgen', 
 assert(context.pendingCategoryMessages.some((message) => /ALLE hinausgeworfen/.test(message)), 'next prose must be told that every guest left');
 assert(html.includes('_sperrstundeNachZeitwechsel();'), 'time advance must enforce closing time after a phase change');
 
+context.engineCurrentLocation = { name: 'Rote Laterne', sektor: 'West (Schoeneberg)' };
+context.caseProgress = {};
+context.pendingCategoryMessages = [];
+context._istAnkerOrt = () => false;
+context.getCaseLocations = () => [{
+  name: 'Rote Laterne',
+  sektor: 'West (Schoeneberg)',
+  oeffnungszeit: ['nachmittag', 'abend', 'nacht'],
+  sperrstundenAussen: 'Vor der Roten Laterne am Nollendorfplatz',
+}];
+assert.strictEqual(context._sperrstundeNachZeitwechsel(), true,
+  'the Rote Laterne must close when morning begins');
+assert.strictEqual(context.engineCurrentLocation.name, 'Vor der Roten Laterne am Nollendorfplatz',
+  'club closing must move Karl outside instead of home-teleporting him');
+assert(context.pendingCategoryMessages.some((message) => /Lola, Kurt, Kellner/.test(message)),
+  'club closing prose must explicitly clear the overnight cast');
+assert(context.pendingCategoryMessages.some((message) => /personenImRaum/.test(message)),
+  'club closing must keep every club NPC out of the exterior roster');
+
 const appointment = {
   engineCurrentLocation: { name: 'Kessler-Wohnung Charlottenburg', sektor: 'West (Charlottenburg)' },
   caseProgress: {},
