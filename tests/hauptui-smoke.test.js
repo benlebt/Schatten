@@ -61,7 +61,7 @@ function byText(root, text) {
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8').replace(/\r\n/g, '\n');
 
-const itemEmojiStart = html.indexOf('function pickItemEmoji(name)');
+const itemEmojiStart = html.indexOf('function noirWeaponIconMarkup()');
 const itemEmojiEnd = html.indexOf('function pickNpcEmoji(name)', itemEmojiStart);
 const itemEmojiContext = {
   normForMatch: (value) => String(value || '').toLowerCase()
@@ -76,7 +76,10 @@ assert.strictEqual(itemEmojiContext.pickItemEmoji('Bananenschale'), '🍌', 'ban
 assert.strictEqual(itemEmojiContext.pickItemEmoji('Kurzes Brecheisen'), '🔧', 'crowbar pickup should have a distinct tool icon');
 assert.strictEqual(itemEmojiContext.pickItemEmoji('Brechstange'), '🔧', 'crowbar synonym must not fall back to the backpack icon');
 assert.strictEqual(itemEmojiContext.pickItemEmoji('Kuhfuß'), '🔧', 'colloquial crowbar synonym must not fall back to the backpack icon');
-assert.strictEqual(itemEmojiContext.pickItemEmoji('Walther PPK (eigene Pistole)'), '🔫', 'Karl\'s pistol should have a distinct weapon icon');
+assert.strictEqual(itemEmojiContext.pickItemEmoji('Walther PPK (eigene Pistole)'), '◆', 'text-only weapon fallback must stay monochrome');
+const weaponMarkup = itemEmojiContext.pickItemIconMarkup('Walther PPK (eigene Pistole)');
+assert(weaponMarkup.includes('class="noir-weapon-icon"'), 'weapon visuals must use the platform-independent Noir SVG');
+assert(!weaponMarkup.includes('🔫'), 'weapon visuals must never use the water-pistol emoji');
 assert.strictEqual(itemEmojiContext.pickItemEmoji('Brieftasche mit Detektiv-Lizenz'), '👛', 'Karl\'s wallet should have a distinct wallet icon');
 assert.strictEqual(itemEmojiContext.pickItemEmoji('Notizbuch und Bleistift'), '📓', 'Karl\'s notebook should have a distinct notebook icon');
 

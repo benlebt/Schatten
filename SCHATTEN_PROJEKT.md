@@ -16363,3 +16363,11 @@ und sein Fallback erkannte weder "Charité" noch die konkrete Formulierung "legt
 Verband an" sicher. Szenen protokollieren jetzt `professionalTreatment`/`selfTreatment`;
 der Report liest zuerst diese Engine-Wahrheit und nutzt Prosa nur für alte Logs. Ein bloßer
 Besuch am Heilort zählt nicht mehr fälschlich als Behandlung. Regressionstest vorhanden.
+
+## 🆕 v7.12.1299 — Plattformfestes Noir-Waffensymbol
+
+Das Unicode-Pistolenemoji erschien auf iOS und anderen modernen Systemen als grellbunte
+Wasserpistole und zerstörte den Noir-Look des Spur-Popups. Es ist vollständig aus dem
+Anwendungscode entfernt. Waffen-Spuren, Gegenstandsfunde, Manöver und Anhänger-Ladung
+verwenden nun dasselbe statische gold-graue SVG; damit ist die Darstellung nicht mehr vom
+Emoji-Satz des Betriebssystems abhängig. Ein Regressionstest verhindert die Rückkehr.
