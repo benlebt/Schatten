@@ -6,7 +6,7 @@ const vm = require('vm');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1277 +Interner-Prueflauf'"), 'version constant is stale');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1279 +Ortswahrheit-Stasi-Probelauf'"), 'version constant is stale');
 assert(html.includes("text: 'Fall abschließen und Auftraggeber informieren.'"), 'resolve button copy must stay player-facing');
 assert(html.includes('_enginePrompt: [_resolveText, _resolveTransitionPrompt]'), 'resolve direction must remain private');
 assert(!html.includes('resolveOpt.text += narr'), 'director narration must not leak into resolve button text');
@@ -31,6 +31,7 @@ const encounterEnd = html.indexOf('function _custodyVerhoerState()', encounterSt
 assert(encounterStart >= 0 && encounterEnd > encounterStart, 'cannot isolate Stasi encounter state machine');
 
 const makeEncounterContext = (political) => {
+  const diagMessages = [];
   const context = {
     caseSetup: political ? {
       id: 'politischer_testfall',
@@ -55,12 +56,14 @@ const makeEncounterContext = (political) => {
       stasiEncounterHistory: []
     },
     normForMatch: (value) => String(value || '').toLowerCase(),
+    getStasiCap: () => 5,
     engineCurrentLocation: { name: 'Reichsbahndirektion', sektor: 'Ost' },
     _konfrontationTaktikProfil: () => ({ ziel: 'Kontrolle' }),
     _konfrontationAktiv: () => false,
     sceneCounter: 8,
     custodyLocked: false,
-    diag: () => {}
+    diag: (...args) => diagMessages.push(args.join(' ')),
+    diagMessages
   };
   vm.createContext(context);
   vm.runInContext(html.slice(encounterStart, encounterEnd), context);
@@ -90,6 +93,33 @@ politicalEncounter._stasiEncounterClear('Audit beendet', 3);
 assert.strictEqual(politicalEncounter.caseProgress.stasiEncounter.active, false, 'resolved Stasi encounter must be persisted as inactive');
 assert.strictEqual(politicalEncounter.caseProgress.stasiEncounterCooldownUntil, 11, 'resolved encounter needs a scene cooldown');
 
+// Vollstaendiger Stein-aehnlicher Pfad: Relevanz 5 startet eine benannte
+// Beobachtung, diese darf verdeckt einen Ortswechsel mitmachen, wird sichtbar
+// eingefuehrt und eskaliert erst danach zur spielbaren Kontrolle/zum Zugriff.
+const steinFlow = makeEncounterContext(true);
+steinFlow.sceneCounter = 3;
+steinFlow._stasiEncounterRoll = () => 0;
+let steinEncounter = null;
+for (let i = 0; i < 6 && !steinEncounter; i += 1) {
+  steinFlow.sceneCounter += 1;
+  steinFlow._stasiEncounterAdvance('ERMITTLUNG');
+  if (steinFlow.caseProgress.stasiEncounter && steinFlow.caseProgress.stasiEncounter.active) {
+    steinEncounter = steinFlow.caseProgress.stasiEncounter;
+  }
+}
+assert(steinEncounter && steinEncounter.phase === 'beobachtung', 'Stein relevance 5 must deterministically reach a named observation');
+assert.strictEqual(steinEncounter.name, 'Oberleutnant Mertens', 'Stein flow must preserve the configured officer identity');
+steinFlow.engineCurrentLocation.name = 'S-Bahnhof Friedrichstrasse';
+const followingPrompt = steinFlow._stasiEncounterPrompt();
+assert(followingPrompt.includes('Oberleutnant Mertens'), 'hidden observation must remain narratable after Karl changes location');
+assert.strictEqual(steinEncounter.location, 'S-Bahnhof Friedrichstrasse', 'hidden observation must rebind to the new location before introduction');
+assert.strictEqual(steinFlow._stasiEncounterConfirmIntroFromScene({ szene: 'Oberleutnant Mertens steht sichtbar am Bahnsteig.', ort: 'S-Bahnhof Friedrichstrasse' }), true,
+  'Stein observer must become visible before becoming clickable');
+steinFlow.sceneCounter += 1;
+steinFlow._stasiEncounterAdvance('OFFENSIV');
+assert.strictEqual(steinEncounter.phase, 'zugriff', 'an open provocation must escalate the introduced observation to access: ' + steinFlow.diagMessages.join(' | '));
+assert.strictEqual(steinFlow.caseProgress.activeConfrontation.trigger, 'stasi-encounter', 'the escalated Stein access must be playable');
+
 const privateEncounter = makeEncounterContext(false);
 encounter = privateEncounter._stasiEncounterForceZugriff('Darf nicht passieren');
 assert.strictEqual(encounter, null, 'private cases without MfS cast must not receive spontaneous Stasi access');
@@ -106,6 +136,8 @@ privateStaleCast.caseSetup.setupCast = [{
 assert.strictEqual(privateStaleCast._stasiMechanikAktiv(), false, 'an injected recurring officer must not politicize a private case');
 assert.strictEqual(privateStaleCast._stasiEncounterForceZugriff('Darf ebenfalls nicht passieren'), null,
   'a stale recurring officer must not appear at a private crime scene');
+assert(html.includes('Bewusst inaktiv (Privatfall, kein MfS-Einsatz erwartet)'),
+  'private-run audits must not misreport dormant recurring MfS figures as failed activations');
 
 const custodyStart = html.indexOf('function _custodyVerhoerState()');
 const custodyEnd = html.indexOf('// v7.11.44: Custody-Switch-Counter', custodyStart);

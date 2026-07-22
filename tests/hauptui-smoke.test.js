@@ -308,6 +308,42 @@ const context = {
 vm.createContext(context);
 vm.runInContext(html.slice(start, end), context);
 
+// Ein stage-/beleg-gesperrter Personenhinweis darf die Tonwahl beim ersten
+// Gespraech nicht mehr auf das grobe "Rede mit" reduzieren. Die Szene bleibt
+// dabei strikt indizlos, bis der eigentliche Hinweis freigegeben ist.
+const earlyRobert = { id: 'robert_kessler', name: 'Robert Kessler', typ: 'person', tag: 'TARGET' };
+const originalNpcsAtLocation = context.getNpcsAtCurrentLocation;
+context.getNpcsAtCurrentLocation = () => [earlyRobert];
+context._findSetupCastFuzzy = () => ({
+  id: earlyRobert.id,
+  name: earlyRobert.name,
+  tag: 'TARGET',
+  sozial: {
+    tonarten: [{
+      key: 'ruhig',
+      label: 'Ruhig ueber seine Mittwoche reden',
+      erfolg: true,
+      push: 'Robert gesteht den offenen Fallhinweis.'
+    }]
+  }
+});
+context._npcHatOffenenHinweis = () => false;
+context._npcHatUngefundeneIndizien = () => true;
+const earlyRobertVerbs = Array.from(context._hauptuiPersonVerben(earlyRobert, {}));
+for (const key of ['sozial_ruhig', 'sozial_bestechen', 'sozial_bedrohen', 'sozial_bluffen']) {
+  assert(earlyRobertVerbs.some((verb) => verb.key === key), 'first Robert conversation must expose approach: ' + key);
+}
+earlyRobertVerbs.forEach((verb) => {
+  assert.strictEqual(verb.option._sozialVorHinweis, true, 'early conversation approach must retain its locked-clue guard');
+  assert.strictEqual(verb.option._sozialErfolg, false, 'early conversation approach must not grant the locked clue');
+  assert(verb.option.aktion.includes('KEINEN neuen Fallhinweis'), 'early conversation prompt must forbid premature evidence');
+  assert(!verb.option.aktion.includes('Robert gesteht'), 'early conversation prompt must replace clue-revealing profile text');
+});
+context.getNpcsAtCurrentLocation = originalNpcsAtLocation;
+delete context._findSetupCastFuzzy;
+delete context._npcHatOffenenHinweis;
+delete context._npcHatUngefundeneIndizien;
+
 const activeCompanion = {
   id: 'liesel_test',
   name: 'Liesel Forsthuber',

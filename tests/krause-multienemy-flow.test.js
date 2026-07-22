@@ -19,7 +19,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1277 +Interner-Prueflauf'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1279 +Ortswahrheit-Stasi-Probelauf'"), 'release version missing');
 assert(html.includes("file: 'karl-mauers-buero-theodor-day.png'"), 'Krause opening must show Theodor in Karl office');
 assert(html.includes("root: 'assets/scenes/krause/'"), 'Krause opening image must resolve from the case scene directory');
 assert(html.includes('AKTIONS-TREUE (ABSOLUT)'), 'physical and item actions need a strict narration contract');
@@ -75,13 +75,15 @@ const groupPrompt = sourceOf('_konfrontationGruppenPrompt');
 assert(groupPrompt.includes('Frieda fuehrt Kalle und Jochen'), 'group narration must force all active Krause opponents to react');
 assert(groupPrompt.includes('Hauptmann Vollmer'), 'group narration must forbid an unrelated Vollmer intervention');
 
-assert(html.includes("file: 'tante-friedas-hehlerei-confrontation-day.png'"), 'Krause showdown needs a visible daytime escalation image');
-assert(html.includes("nightFile: 'tante-friedas-hehlerei-confrontation-night.png'"), 'Krause showdown needs a visible nighttime escalation image');
+assert(html.includes("dayFile: 'stallschreiberstrasse-12-confrontation-day.png'"), 'Krause showdown needs a truthful daytime courtyard image');
+assert(html.includes("nightFile: 'stallschreiberstrasse-12-confrontation-night.png'"), 'Krause showdown needs a truthful nighttime courtyard image');
+assert(html.includes("dayFile: 'stallschreiberstrasse-12-aftermath-day.png'"), 'Krause finale needs a courtyard aftermath without escaped henchmen');
 assert(html.includes("if (!istGewahrsam && /charite/.test(engineOrt) && !/pathologie/.test(engineOrt))"), 'Charite needs an engine-location image fallback without overwriting pathology');
 
 const stasiPrompt = sourceOf('_stasiEncounterPrompt');
 assert(stasiPrompt.includes('_stasiEncounterOrtStimmt(encounter)'), 'Vollmer narration must stay bound to the encounter location');
-assert(stasiPrompt.includes('_stasiEncounterClear'), 'a stale Vollmer encounter must end after Karl changes location');
+assert(stasiPrompt.includes('_stasiEncounterVerdeckteBeobachtungFolgt'), 'a hidden Vollmer observation must survive a plausible location change');
+assert(stasiPrompt.includes('_stasiEncounterClear'), 'an already visible stale Vollmer encounter must end after Karl changes location');
 
 const takeItem = sourceOf('_fundItemAufnehmenDirekt');
 assert(takeItem.includes('_geldZahle(preis'), 'Trude merchandise must actually charge its visible price');

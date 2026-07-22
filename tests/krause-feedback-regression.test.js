@@ -81,14 +81,26 @@ const attackBranch = execute.slice(attackStart, attackEnd);
 assert(!attackBranch.includes("_hauptuiPlanDirekt('angreifen'"), 'direct attack must not disappear in the old plan path');
 assert(attackBranch.includes('_gegnerLoestKampf: true'), 'attack fallback must keep the fight state and produce a scene');
 
-assert(html.includes("/tante friedas hehlerei|stallschreiberstrasse 12/.test"),
-  'Stallschreiberstrasse alias must select the visible Frieda/Kalle/Jochen confrontation image');
+assert(html.includes("engineOrt === 'tante friedas hehlerei' || engineOrt === 'stallschreiberstrasse 12'"),
+  'Krause visuals must recognize both places without treating the courtyard as the shop interior');
+assert(!html.includes("/tante friedas hehlerei|stallschreiberstrasse 12/.test"),
+  'shop and Stallschreiber courtyard must no longer share the old visual alias');
 const krauseSet = html.slice(html.indexOf("caseTest: /theodor krause"), html.indexOf("caseTest: /renate schiffer"));
 assert(krauseSet.includes('hardenbergstrasse'), 'Krause case must reuse the existing Hardenbergstrasse police image');
 assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'krause', 'tante-friedas-hehlerei-erika-day.png')),
   'Erika needs a truthful dedicated Hehlerei image');
 assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'krause', 'tante-friedas-hehlerei-after-day.png')),
   'the cleared Hehlerei needs a post-custody image without removed NPCs');
+for (const asset of [
+  'tante-friedas-hehlerei-frieda-day.png',
+  'tante-friedas-hehlerei-kalle-jochen-night.png',
+  'stallschreiberstrasse-12-confrontation-day.png',
+  'stallschreiberstrasse-12-confrontation-night.png',
+  'stallschreiberstrasse-12-aftermath-day.png',
+  'stallschreiberstrasse-12-aftermath-night.png'
+]) {
+  assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'krause', asset)), 'missing Krause state image: ' + asset);
+}
 assert(html.includes("file: 'tante-friedas-hehlerei-erika-day.png'"), 'Erika image must be selected from real scene presence');
 assert(html.includes("file: 'tante-friedas-hehlerei-after-day.png'"), 'post-custody image must be selected from terminal NPC state');
 assert(html.includes("ROMANCE: 'Romanze'"), 'travel popup must translate the technical ROMANCE tag');
@@ -98,20 +110,45 @@ const visualContext = {
   normForMatch,
   caseSetup: { caseType: 'diebstahl', klient: 'Theodor Krause' },
   engineCurrentLocation: { name: 'Tante Friedas Hehlerei' },
-  _party: [],
-  _npcZustandIstEntfernt: npc => npc && npc.name === 'Tante Frieda'
+  roster: [],
+  states: {},
+  getNpcsAtCurrentLocation: () => visualContext.roster,
+  _npcZustandGet: name => visualContext.states[normForMatch(name)] || null
 };
 vm.createContext(visualContext);
 vm.runInContext(sourceOf('_krauseHehlereiNachherVisual'), visualContext);
-let visualSpec = visualContext._krauseHehlereiNachherVisual({ personenImRaum: ['Erika Kalewski'] });
+visualContext.roster = [{ name: 'Erika Kalewski' }];
+let visualSpec = visualContext._krauseHehlereiNachherVisual({});
 assert.strictEqual(visualSpec.file, 'tante-friedas-hehlerei-erika-day.png',
   'visible Erika must override stale location art with her dedicated scene');
-visualSpec = visualContext._krauseHehlereiNachherVisual({ personenImRaum: [] });
+visualContext.roster = [];
+visualSpec = visualContext._krauseHehlereiNachherVisual({});
 assert.strictEqual(visualSpec.file, 'tante-friedas-hehlerei-after-day.png',
-  'a handed-over shop NPC must select the cleared post-custody scene');
-visualContext._npcZustandIstEntfernt = () => false;
-assert.strictEqual(visualContext._krauseHehlereiNachherVisual({ personenImRaum: [] }), null,
-  'ordinary pre-custody shop scenes must keep their regular artwork');
+  'an actually empty shop must select the cleared scene');
+visualContext.roster = [{ name: 'Tante Frieda' }];
+assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).file, 'tante-friedas-hehlerei-frieda-day.png',
+  'Frieda alone must not display her two absent henchmen');
+visualContext.roster = [{ name: 'Kalle' }, { name: 'Jochen' }];
+assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).file, 'tante-friedas-hehlerei-kalle-jochen-night.png',
+  'night guards must not display absent Frieda');
+visualContext.engineCurrentLocation.name = 'Stallschreiberstrasse 12';
+visualContext.roster = [{ name: 'Tante Frieda' }, { name: 'Kalle' }, { name: 'Jochen' }];
+assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).dayFile, 'stallschreiberstrasse-12-confrontation-day.png',
+  'the three-person showdown must remain in the courtyard');
+visualContext.states['tante frieda'] = { status: 'ko' };
+visualContext.states.kalle = { status: 'geflohen' };
+visualContext.states.jochen = { status: 'geflohen' };
+assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).dayFile, 'stallschreiberstrasse-12-aftermath-day.png',
+  'defeated Frieda and escaped henchmen need the truthful courtyard aftermath');
+
+const hehlereiBlock = html.slice(html.indexOf("name: 'Tante Friedas Hehlerei'"), html.indexOf("name: 'Stallschreiberstrasse 12'"));
+assert(hehlereiBlock.includes("bisStage: 2"), 'the shop cast must leave once the showdown moves outside');
+const stallschreiberBlock = html.slice(html.indexOf("name: 'Stallschreiberstrasse 12'"), html.indexOf("name: 'Bornsteins Antiquit"));
+assert(stallschreiberBlock.includes("id: 'tante_frieda', immer: true, abStage: 3"), 'Frieda must be physically present and clickable in the courtyard finale');
+assert(html.includes('NACHT-GEFAHR-GUARD'), 'active enemies must block the misleading night-to-morning rollover');
+assert(html.includes('Gold: sehr passend') && html.includes('Blau: brauchbarer Hebel') && html.includes('Rot: riskant, hohe Gegenwehr'),
+  'combat item colors need a visible legend');
+assert(html.includes('FAIL-FORWARD (organisch in die Prosa'), 'failed under-equipped Krause combat must point organically toward Trude');
 
 assert(sourceOf('_hauptuiSozialVerben').includes('schonGesprochen || istInformant'),
   'an exhausted informant must not sell the same social bribe again');
