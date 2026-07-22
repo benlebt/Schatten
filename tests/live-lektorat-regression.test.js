@@ -132,6 +132,18 @@ const interiorDrift = worldContext.validateSceneWorldTruth({
 assert.strictEqual(interiorDrift && interiorDrift.code, 'social_interior_drift',
   'an outdoor social scene must reject a silent teleport into the NPC kitchen');
 
+const environmentalInteriorDrift = worldContext.validateSceneWorldTruth({
+  ort: 'Hinterhof Sybelstrasse',
+  szene: 'Du drueckst die schwere Eichentuer des Hausflurs auf. Hier drinnen steigst du bis in den dritten Stock.',
+  personenImRaum: ['Frau Hauke'],
+  optionen: []
+}, {
+  id: 'HAUPTUI_INDRAMATISIERUNG_tuerschild_hauke',
+  kategorie: 'DURCHSUCHEN'
+});
+assert.strictEqual(environmentalInteriorDrift && environmentalInteriorDrift.code, 'outdoor_interior_drift',
+  'an outdoor evidence action must reject an uncommanded move into a house or stairwell');
+
 const wrongSocialTarget = worldContext.validateSceneWorldTruth({
   ort: 'Hinterhof Sybelstrasse',
   szene: 'Frau Pohl lockert ihren Griff am Tuerrahmen und antwortet Karl ausweichend.',
@@ -162,6 +174,10 @@ assert(html.includes('Dies ist ein AUSSENORT: Verlege das Gespraech NICHT'),
   'outdoor social prompts must forbid silent residential interior moves');
 assert(sourceOf('_sozialVorHinweisAktion').includes('AUSGEWAEHLTES GESPRAECHSZIEL IST'),
   'early social prompts must name the clicked NPC explicitly');
+assert(html.includes("indiz.hotspot = 'Klingelschilder am Hofeingang pruefen'"),
+  'the Kessler doorbell clue must remain reachable from the engine courtyard');
+assert(html.includes('Neben der hofseitigen Eingangstuer haengen die Klingelschilder'),
+  'the Kessler clue text must not order prose into a mismatching house interior');
 assert(!sourceOf('botGetOptionsHash').includes('problem.code'),
   'the world-truth repair hint must not leak into the autoplay hash helper');
 

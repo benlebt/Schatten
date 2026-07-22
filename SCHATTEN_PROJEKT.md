@@ -16373,3 +16373,16 @@ Wasserpistole und zerstörte den Noir-Look des Spur-Popups. Es ist vollständig 
 Anwendungscode entfernt. Waffen-Spuren, Gegenstandsfunde, Manöver und Anhänger-Ladung
 verwenden nun dasselbe statische gold-graue SVG; damit ist die Darstellung nicht mehr vom
 Emoji-Satz des Betriebssystems abhängig. Ein Regressionstest verhindert die Rückkehr.
+
+## 🆕 v7.12.1321 — Manueller Kessler-Lauf K2: Außenort-/Innenraum-Drift geschlossen
+
+Der sichtbare Haupt-UI-Klick „Klingelschilder im Treppenhaus prüfen“ spielte die Folgeszene
+im Hausflur bis zum dritten Stock, obwohl Engine-Ort, Header und Bild im Hinterhof
+Sybelstraße blieben. Der Assertion-Report meldete dabei fälschlich null Ort-Prosa-Brüche.
+
+Root Cause war doppelt: Das am Hinterhof gebundene Indiz verlangte in Hotspot und Fundtext
+selbst einen Innenraum, und der Hard-Guard erkannte bislang nur soziale Küchentisch-/
+Wohnungsdrifts. `getCaseLocations()` normalisiert den Fund nun zu den Klingelschildern am
+hofseitigen Eingang. Das Weltwahrheits-Gate blockiert zusätzlich für alle nicht reisenden
+Aktionen starke gegenwärtige Hausflur-, Treppenhaus-, Tür- und Wohnungsmarker an klaren
+Außenorten. Regression: derselbe K2-Satz muss `outdoor_interior_drift` liefern.

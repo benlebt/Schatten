@@ -68,6 +68,7 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 - `personenImRaum`-Teleport, stille Begleitung und unerklärter Ortswechsel.
 - Funktionieren Buttons, Zielbindung, Karten-Vorauswahl, Öffnungszeiten, Reise-, Schlaf-, Heil- und Abschlusswege ohne Sackgasse?
 - Passen Szenenbild, Tageslicht, Ort, Figurenlage und Prosa zusammen?
+- Bei einem Engine-Außenort auch stille Subort-Wechsel prüfen: Haus-/Wohnungstür öffnen, Hausflur, Treppenhaus oder Wohnung in der Prosa sind ein `ORT-PROSA-BRUCH`, solange keine Reise bzw. kein strukturierter Ortswechsel stattfand. Hotspot-Name und Fundtext dürfen einen solchen Wechsel nicht selbst anordnen.
 
 ### 6. Wahrheitsbeat-/Truthbeat-Gate
 
@@ -82,7 +83,7 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 1. Truthbeat-Regex-Fehltreffer.
 2. Kern-Indiz-Prosa-Mismatch samt Root Cause.
 3. Lola-Präsenz-Widerspruch als generalisierbarer NPC-Kontinuitätsfall.
-4. Ort-Prosa-Bruch-Fix generalisieren; Krause ist noch nicht voll abgedeckt.
+4. Ort-Prosa-Bruch-Fix weiter generalisieren: v7.12.1321 deckt nach Kessler K2 auch nichtsoziale Außenort→Innenraum-Teleports ab; der vollständige manuelle Krause-Gegenlauf steht noch aus.
 5. Fall-Abschluss-Doppelerzählung aus dem Kessler-Run.
 6. `INDIZ-GATE`-`fundModus`-Rigidität.
 7. Verletzungs-Konsistenz-Gate und Behandlungs-Status-Widerspruch hart durchsetzen.
