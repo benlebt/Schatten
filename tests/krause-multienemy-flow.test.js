@@ -19,7 +19,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1279 +Ortswahrheit-Stasi-Probelauf'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1280 +Spannungsfuehrung-Rex'"), 'release version missing');
 assert(html.includes("file: 'karl-mauers-buero-theodor-day.png'"), 'Krause opening must show Theodor in Karl office');
 assert(html.includes("root: 'assets/scenes/krause/'"), 'Krause opening image must resolve from the case scene directory');
 assert(html.includes('AKTIONS-TREUE (ABSOLUT)'), 'physical and item actions need a strict narration contract');
@@ -75,8 +75,18 @@ const groupPrompt = sourceOf('_konfrontationGruppenPrompt');
 assert(groupPrompt.includes('Frieda fuehrt Kalle und Jochen'), 'group narration must force all active Krause opponents to react');
 assert(groupPrompt.includes('Hauptmann Vollmer'), 'group narration must forbid an unrelated Vollmer intervention');
 
-assert(html.includes("dayFile: 'stallschreiberstrasse-12-confrontation-day.png'"), 'Krause showdown needs a truthful daytime courtyard image');
-assert(html.includes("nightFile: 'stallschreiberstrasse-12-confrontation-night.png'"), 'Krause showdown needs a truthful nighttime courtyard image');
+assert(html.includes("'stallschreiberstrasse-12-confrontation-day.png'"), 'Krause showdown needs a truthful daytime courtyard image');
+assert(html.includes("'stallschreiberstrasse-12-confrontation-night.png'"), 'Krause showdown needs a truthful nighttime courtyard image');
+assert(html.includes("'stallschreiberstrasse-12-confrontation-rex-day.png'"), 'Krause showdown needs its Rex daytime variant');
+assert(html.includes("'stallschreiberstrasse-12-confrontation-rex-night.png'"), 'Krause showdown needs its Rex nighttime variant');
+for (const asset of [
+  'tante-friedas-hehlerei-confrontation-rex-day.png',
+  'tante-friedas-hehlerei-confrontation-rex-night.png',
+  'stallschreiberstrasse-12-confrontation-rex-day.png',
+  'stallschreiberstrasse-12-confrontation-rex-night.png',
+]) {
+  assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'krause', asset)), 'missing Rex confrontation asset: ' + asset);
+}
 assert(html.includes("dayFile: 'stallschreiberstrasse-12-aftermath-day.png'"), 'Krause finale needs a courtyard aftermath without escaped henchmen');
 assert(html.includes("if (!istGewahrsam && /charite/.test(engineOrt) && !/pathologie/.test(engineOrt))"), 'Charite needs an engine-location image fallback without overwriting pathology');
 

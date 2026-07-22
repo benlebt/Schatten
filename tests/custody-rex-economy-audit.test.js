@@ -6,7 +6,7 @@ const vm = require('vm');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1279 +Ortswahrheit-Stasi-Probelauf'"), 'version constant is stale');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1280 +Spannungsfuehrung-Rex'"), 'version constant is stale');
 assert(html.includes("text: 'Fall abschließen und Auftraggeber informieren.'"), 'resolve button copy must stay player-facing');
 assert(html.includes('_enginePrompt: [_resolveText, _resolveTransitionPrompt]'), 'resolve direction must remain private');
 assert(!html.includes('resolveOpt.text += narr'), 'director narration must not leak into resolve button text');
@@ -267,7 +267,9 @@ assert(html.includes('const resetFolter = (opts.resetFolter !== undefined) ? opt
 
 assert(html.includes("const HUND_PREIS = 3;"), 'Rex must retain exchange value three');
 assert(html.includes("const HUND_HEIMAT = 'Goldener Anker';"), 'Rex must remain tied to the Goldener Anker');
+assert(html.includes("_istAnkerOrt({ name: engineCurrentLocation.name })"), 'Rex must also appear at legacy setup names such as Eckkneipe Zum Goldenen Anker');
 assert(html.includes('caseProgress.hundDaWuerfel = harteLage || (Math.random() < 0.75);'), 'hard cases must guarantee Rex while lighter cases keep variation');
+assert(html.includes('const krauseGruppenfall = !!(caseSetup'), 'the Krause multi-enemy case must guarantee access to Rex as a real alternative to Trude equipment');
 assert(html.includes("bar.textContent = 'Bar zahlen · ' + bargeldPreis + ' Ostmark';"), 'trade overlay needs a real cash alternative');
 assert(html.includes("_geldZahle(bargeldPreis, 'ost', 'Tauschzahlung @ '"), 'cash trade must deduct persistent money');
 

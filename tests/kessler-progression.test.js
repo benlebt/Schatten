@@ -23,6 +23,24 @@ function sourceOf(name) {
 
 assert(/definedEvidenceGate:\s*\{[\s\S]{0,180}?minFound:\s*4,[\s\S]{0,80}?minBurdening:\s*1,[\s\S]{0,180}?requiredAny:/.test(kessler),
   'Kessler evidence gate must still require four clues and an independent source');
+assert(kessler.includes("abschlussOrt: 'Karl Mauers Büro'"),
+  'Kessler resolution must move to a real telephone at the office instead of inventing a booth under the old header');
+
+const nameDisplay = {
+  caseSetup: { caseType: 'beschatten', klient: 'Edith Kessler (Ehefrau)' },
+  caseProgress: { gefundeneIndizIds: ['tuerschild_hauke'] },
+  normForMatch: (value) => String(value || '').toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').trim(),
+  _npcWurdeSchonAngesprochen: () => false,
+};
+vm.createContext(nameDisplay);
+vm.runInContext(sourceOf('_npcAnzeigename'), nameDisplay);
+assert.strictEqual(nameDisplay._npcAnzeigename('Ilse Hauke', 'ilse_hauke'), 'Frau Hauke',
+  'the doorplate must not leak Ilse Hauke\'s first name into the target UI');
+nameDisplay.caseProgress.gefundeneIndizIds.push('ilse_aussage');
+assert.strictEqual(nameDisplay._npcAnzeigename('Ilse Hauke', 'ilse_hauke'), 'Ilse Hauke',
+  'the canonical full name must become visible after Karl actually learns it');
+assert(html.includes("anzeigename: (typeof _npcAnzeigename === 'function'"),
+  'Haupt-UI person targets must carry the guarded display name');
 
 for (const id of [
   'tuerschild_hauke', 'robert_eintritt_beobachtet', 'nachbarin_aussage',
