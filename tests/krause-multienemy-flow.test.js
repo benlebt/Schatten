@@ -19,7 +19,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1285 +Krause-Konfrontationskontinuitaet'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1286 +Krause-Bildzustand-PPK-Balance'"), 'release version missing');
 assert(html.includes("file: 'karl-mauers-buero-theodor-day.png'"), 'Krause opening must show Theodor in Karl office');
 assert(html.includes("root: 'assets/scenes/krause/'"), 'Krause opening image must resolve from the case scene directory');
 assert(html.includes('AKTIONS-TREUE (ABSOLUT)'), 'physical and item actions need a strict narration contract');
@@ -97,6 +97,7 @@ assert.strictEqual(snapshotContext._npcGehoertHierher('tante_frieda', 'Tante Fri
   'the next scene must obey the new stage binding and move Frieda out of the shop');
 
 const ppkContext = {
+  caseProgress: { activeConfrontation: {} },
   inventory: ['Walther PPK (eigene Pistole)', 'Notizbuch und Bleistift'],
   normForMatch: value => String(value || '').toLowerCase(),
   _baukastenZiele: () => ({ items: [] }),
@@ -109,6 +110,30 @@ require('vm').runInContext(sourceOf('_hauptuiKonfrontationItems'), ppkContext);
 const ppkActions = ppkContext._hauptuiKonfrontationItems();
 assert(ppkActions.some(action => action.verb === 'ppk_einsetzen' && /Walther PPK/.test(action.label)),
   'the persistent narrative Walther PPK must become a real confrontation action');
+ppkContext.caseProgress.activeConfrontation.ppkGezogen = true;
+assert(!ppkContext._hauptuiKonfrontationItems().some(action => action.verb === 'ppk_einsetzen'),
+  'the PPK may only be drawn once in the same confrontation');
+
+const ppkRollContext = {
+  caseProgress: { activeConfrontation: {} },
+  Math: Object.create(Math),
+  _konfrontationItemWirkung: () => ({ kraft: 1, irritation: 2, schwaechung: 1, status: 'bedroht' }),
+  _konfrontationGegnerStaerke: () => 2,
+  _konfrontationIstGruppe: () => false,
+  _konfrontationClamp: (value, min, max) => Math.max(min, Math.min(max, value)),
+  _alkoholKampfMalus: () => 0,
+  _konfrontationStatusIstEndgueltig: status => ['ko', 'gefesselt', 'fixiert', 'geflohen', 'uebergeben'].includes(status),
+  _konfrontationOutcomePrompt: () => 'ppk prompt'
+};
+ppkRollContext.Math.random = () => 0.999;
+require('vm').createContext(ppkRollContext);
+require('vm').runInContext(sourceOf('_konfrontationWuerfleAusgang'), ppkRollContext);
+const ppkOutcome = ppkRollContext._konfrontationWuerfleAusgang({ name: 'Kalle' }, { name: 'Walther PPK' }, 'ppk_einsetzen', {
+  score: 2,
+  wirkung: { kraft: 1, irritation: 2, schwaechung: 1, status: 'bedroht' }
+}, null);
+assert.strictEqual(ppkOutcome.status, 'bedroht', 'even the best PPK roll must create pressure, not automatic flight');
+assert(!ppkRollContext._konfrontationStatusIstEndgueltig(ppkOutcome.status), 'drawing the PPK must leave the confrontation open');
 
 assert(html.includes("'stallschreiberstrasse-12-confrontation-day.png'"), 'Krause showdown needs a truthful daytime courtyard image');
 assert(html.includes("'stallschreiberstrasse-12-confrontation-night.png'"), 'Krause showdown needs a truthful nighttime courtyard image');
@@ -128,9 +153,29 @@ for (const asset of [
 ]) {
   assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'krause', asset)), 'missing group aftermath asset: ' + asset);
 }
+for (const asset of [
+  'stallschreiberstrasse-12-frieda-day.png',
+  'stallschreiberstrasse-12-frieda-night.png',
+  'stallschreiberstrasse-12-kalle-day.png',
+  'stallschreiberstrasse-12-kalle-night.png',
+  'stallschreiberstrasse-12-jochen-day.png',
+  'stallschreiberstrasse-12-jochen-night.png',
+  'stallschreiberstrasse-12-frieda-kalle-day.png',
+  'stallschreiberstrasse-12-frieda-kalle-night.png',
+  'stallschreiberstrasse-12-frieda-jochen-day.png',
+  'stallschreiberstrasse-12-frieda-jochen-night.png',
+  'stallschreiberstrasse-12-kalle-jochen-day.png',
+  'stallschreiberstrasse-12-kalle-jochen-night.png',
+]) {
+  assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'krause', asset)), 'missing exact courtyard roster asset: ' + asset);
+}
 assert(html.includes("dayFile: 'stallschreiberstrasse-12-aftermath-group-day.png'"), 'Krause finale needs a courtyard aftermath with every still-present body');
 assert(sourceOf('_npcGehoertHierher').includes('_npcIstImAktuellenSzenenSnapshot'), 'the visible scene snapshot must survive a same-scene stage change');
 assert(sourceOf('_hauptuiKonfrontationItems').includes("'ppk_einsetzen'"), 'Karls Walther PPK must be selectable in the tactical confrontation');
+assert(sourceOf('_hauptuiKonfrontationItems').includes('ppkSchonGezogen'), 'the PPK draw needs an encounter-local one-use guard');
+assert(sourceOf('_hauptuiKonfrontationAbschliessen').includes('!istPpk'), 'PPK pressure must not become a cumulative knockout');
+assert(sourceOf('_hauptuiKonfrontationAktion').includes('PPK GEZOGEN'), 'successful PPK narration must persist the one-use state');
+assert(sourceOf('_konfrontationOutcomePrompt').includes('Niemand flieht, ergibt sich, wird ausgeschaltet oder verschwindet'), 'PPK narration must forbid automatic victory or flight');
 assert(html.includes("if (!istGewahrsam && /charite/.test(engineOrt) && !/pathologie/.test(engineOrt))"), 'Charite needs an engine-location image fallback without overwriting pathology');
 
 const stasiPrompt = sourceOf('_stasiEncounterPrompt');

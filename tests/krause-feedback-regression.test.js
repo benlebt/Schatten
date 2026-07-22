@@ -107,6 +107,22 @@ for (const asset of [
 ]) {
   assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'krause', asset)), 'missing Krause group aftermath image: ' + asset);
 }
+for (const asset of [
+  'stallschreiberstrasse-12-frieda-day.png',
+  'stallschreiberstrasse-12-frieda-night.png',
+  'stallschreiberstrasse-12-kalle-day.png',
+  'stallschreiberstrasse-12-kalle-night.png',
+  'stallschreiberstrasse-12-jochen-day.png',
+  'stallschreiberstrasse-12-jochen-night.png',
+  'stallschreiberstrasse-12-frieda-kalle-day.png',
+  'stallschreiberstrasse-12-frieda-kalle-night.png',
+  'stallschreiberstrasse-12-frieda-jochen-day.png',
+  'stallschreiberstrasse-12-frieda-jochen-night.png',
+  'stallschreiberstrasse-12-kalle-jochen-day.png',
+  'stallschreiberstrasse-12-kalle-jochen-night.png',
+]) {
+  assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'krause', asset)), 'missing exact courtyard roster image: ' + asset);
+}
 assert(html.includes("file: 'tante-friedas-hehlerei-erika-day.png'"), 'Erika image must be selected from real scene presence');
 assert(html.includes("file: 'tante-friedas-hehlerei-after-day.png'"), 'post-custody image must be selected from terminal NPC state');
 assert(html.includes("ROMANCE: 'Romanze'"), 'travel popup must translate the technical ROMANCE tag');
@@ -149,10 +165,35 @@ visualContext.engineCurrentLocation.name = 'Stallschreiberstrasse 12';
 visualContext.roster = [{ name: 'Tante Frieda' }, { name: 'Kalle' }, { name: 'Jochen' }];
 assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).dayFile, 'stallschreiberstrasse-12-confrontation-day.png',
   'the three-person showdown must remain in the courtyard');
+for (const [names, expected] of [
+  [['Tante Frieda', 'Kalle'], 'stallschreiberstrasse-12-frieda-kalle-day.png'],
+  [['Tante Frieda', 'Jochen'], 'stallschreiberstrasse-12-frieda-jochen-day.png'],
+  [['Kalle', 'Jochen'], 'stallschreiberstrasse-12-kalle-jochen-day.png'],
+  [['Tante Frieda'], 'stallschreiberstrasse-12-frieda-day.png'],
+  [['Kalle'], 'stallschreiberstrasse-12-kalle-day.png'],
+  [['Jochen'], 'stallschreiberstrasse-12-jochen-day.png'],
+]) {
+  visualContext.roster = names.map(name => ({ name }));
+  visualContext.states = {};
+  assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).dayFile, expected,
+    'courtyard image must exactly match active roster: ' + names.join(', '));
+}
+visualContext.roster = [{ name: 'Tante Frieda' }, { name: 'Kalle' }, { name: 'Jochen' }];
 visualContext.caseProgress.activeConfrontation = { enemyEntries: [{ name: 'Tante Frieda' }, { name: 'Kalle' }, { name: 'Jochen' }] };
 visualContext.states.kalle = { status: 'ko', ort: 'Stallschreiberstrasse 12' };
-assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).dayFile, 'stallschreiberstrasse-12-confrontation-day.png',
-  'an ongoing group confrontation must not fall back to the empty courtyard after the first opponent drops');
+assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).dayFile, 'stallschreiberstrasse-12-frieda-jochen-day.png',
+  'an ongoing group confrontation must show exactly the two opponents still standing');
+visualContext.caseProgress.activeConfrontation = null;
+visualContext.roster = [{ name: 'Kalle' }, { name: 'Jochen' }];
+visualContext.states['tante frieda'] = { status: 'geflohen', ort: 'Tante Friedas Hehlerei' };
+visualContext.states.kalle = null;
+assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).nightFile, 'stallschreiberstrasse-12-kalle-jochen-night.png',
+  'a previously fled Frieda must not remain in the courtyard picture with Kalle and Jochen');
+visualContext.roster = [{ name: 'Jochen' }];
+visualContext.states.kalle = { status: 'geflohen', ort: 'Stallschreiberstrasse 12' };
+assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).nightFile, 'stallschreiberstrasse-12-jochen-night.png',
+  'Jochen alone in Haupt-UI must also be the only opponent visible in the scene image');
+visualContext.roster = [{ name: 'Tante Frieda' }, { name: 'Kalle' }, { name: 'Jochen' }];
 visualContext.caseProgress.activeConfrontation = null;
 visualContext.states.kalle = null;
 visualContext.states['tante frieda'] = { status: 'ko', ort: 'Stallschreiberstrasse 12' };
