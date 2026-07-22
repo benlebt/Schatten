@@ -30,6 +30,12 @@ const nameDisplay = {
   window: {},
   caseSetup: { caseType: 'beschatten', klient: 'Edith Kessler (Ehefrau)' },
   caseProgress: { stage: 2, gefundeneIndizIds: ['tuerschild_hauke'] },
+  gameDay: 1,
+  npcMisstrauisch: {},
+  npcVerprelltAmTag: {},
+  showProgressToast: (title, text) => nameDisplay.toasts.push({ title, text }),
+  saveGameState: () => {},
+  toasts: [],
   normForMatch: (value) => String(value || '').toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').trim(),
 };
 vm.createContext(nameDisplay);
@@ -43,9 +49,14 @@ vm.runInContext([
   sourceOf('_kesslerMaskPromptMessages'),
   sourceOf('sanitizeSceneKesslerHiddenName'),
   sourceOf('_npcAnzeigename'),
+  sourceOf('_npcRedeName'),
+  sourceOf('_sozialTonartTagKey'),
+  sourceOf('_sozialKonsequenzAnwenden'),
 ].join('\n'), nameDisplay);
 assert.strictEqual(nameDisplay._npcAnzeigename('Ilse Hauke', 'ilse_hauke'), 'Frau Hauke',
   'the doorplate must not leak Ilse Hauke\'s first name into the target UI');
+assert.strictEqual(nameDisplay._npcRedeName('Ilse Hauke'), 'Frau Hauke',
+  'social toasts must use Frau Hauke instead of shortening the hidden canonical name to Ilse');
 nameDisplay.caseProgress.gefundeneIndizIds.push('ilse_aussage');
 nameDisplay.caseProgress.gefundeneIndizIds.push('briefchen_ilse');
 assert.strictEqual(nameDisplay._npcAnzeigename('Ilse Hauke', 'ilse_hauke'), 'Frau Hauke',
@@ -83,6 +94,8 @@ assert.strictEqual(nameDisplay.caseProgress.kesslerIlseVornameBekannt, true,
 nameDisplay.caseProgress.gefundeneIndizIds.push('robert_aussage');
 assert.strictEqual(nameDisplay._npcAnzeigename('Ilse Hauke', 'ilse_hauke'), 'Ilse Hauke',
   'the canonical full name must become visible only after a visible reveal');
+assert.strictEqual(nameDisplay._npcRedeName('Ilse Hauke'), 'Ilse',
+  'social toasts may use Ilse only after the visible reveal has been persisted');
 
 nameDisplay.caseProgress.kesslerIlseVornameBekannt = false;
 nameDisplay.window._letzteAktion = {
@@ -94,6 +107,14 @@ assert(!/\bIlse\b/.test(aggressiveLeak.szene),
   'the internally booked Robert clue must not leak Ilse on a failed aggressive path');
 assert.strictEqual(nameDisplay._npcAnzeigename('Ilse Hauke', 'ilse_hauke'), 'Frau Hauke',
   'a failed aggressive approach must keep the guarded UI name despite robert_aussage');
+nameDisplay._sozialKonsequenzAnwenden({ id: 'ilse_hauke', name: 'Ilse Hauke' }, {
+  _sozialTonart: 'amtlich', _sozialVerprelltDanach: true,
+});
+assert.strictEqual(nameDisplay.toasts.length, 1, 'the aggressive social failure must emit its consequence toast');
+assert(/Frau Hauke wendet sich ab/.test(nameDisplay.toasts[0].title),
+  'the visible consequence toast must retain the reveal-safe surname');
+assert(!/\bIlse\b/.test(nameDisplay.toasts[0].title + ' ' + nameDisplay.toasts[0].text),
+  'the visible consequence toast must not leak Ilse before her name reveal');
 
 nameDisplay.window._letzteAktion = {
   npcId: 'ilse_hauke', sozialErfolg: true, sozialTonart: 'diskretion'
