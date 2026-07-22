@@ -38,9 +38,38 @@ assert(kesslerIntro, 'Kessler setup with Tetzlaff missing');
 const tetzlaffSetup = Array.from(kesslerIntro.setup.setupCast).find((npc) => npc && npc.id === 'norbert_tetzlaff');
 assert(tetzlaffSetup && tetzlaffSetup.sozial, 'Tetzlaff direct social profile missing');
 
+const paymentGateStart = html.indexOf('function _informantKannBezahlen(');
+const paymentGateEnd = html.indexOf('function _informantBezahle(', paymentGateStart);
+assert(paymentGateStart >= 0 && paymentGateEnd > paymentGateStart, 'read-only informant payment gate missing');
+let ostmark = 15;
+let carriedItems = {};
+const paymentGateContext = {
+  _informantPreis: () => 20,
+  _geldHat: (amount, currency) => currency === 'ost' && ostmark >= amount,
+  _itemsMap: () => carriedItems,
+  _itemKatalogEintrag: (name) => name === 'Schachtel West-Zigaretten'
+    ? { tauschwert: 3, taugt: ['bestechen'] }
+    : { tauschwert: 0, taugt: [] }
+};
+vm.createContext(paymentGateContext);
+vm.runInContext(html.slice(paymentGateStart, paymentGateEnd), paymentGateContext);
+assert.strictEqual(paymentGateContext._informantKannBezahlen('norbert_tetzlaff', 'Norbert Tetzlaff'), false,
+  '15 Ostmark plus worthless carried objects must not expose Tetzlaff payment');
+ostmark = 20;
+assert.strictEqual(paymentGateContext._informantKannBezahlen('norbert_tetzlaff', 'Norbert Tetzlaff'), true,
+  'enough cash must expose Tetzlaff payment');
+ostmark = 0;
+carriedItems = { cigs: { name: 'Schachtel West-Zigaretten', status: 'bei_karl' } };
+assert.strictEqual(paymentGateContext._informantKannBezahlen('norbert_tetzlaff', 'Norbert Tetzlaff'), true,
+  'suitable carried barter must expose Tetzlaff payment');
+carriedItems = { fish: { name: 'Alter Fisch (aus dem Müll)', status: 'bei_karl' } };
+assert.strictEqual(paymentGateContext._informantKannBezahlen('norbert_tetzlaff', 'Norbert Tetzlaff'), false,
+  'worthless inventory must not expose Tetzlaff payment');
+
 const personStart = html.indexOf('function _hauptuiInformantMitOffenemHinweis(');
 const personEnd = html.indexOf('function _hauptuiItemVerben(', personStart);
 assert(personStart >= 0 && personEnd > personStart, 'Haupt-UI informant action block missing');
+let paymentAvailable = true;
 const personContext = {
   _hauptuiPersonIstFeind: () => false,
   _hauptuiNpcBezwungen: () => false,
@@ -50,6 +79,7 @@ const personContext = {
   _resolveNpcIdentity: (id) => ({ id, name: id === 'schiele' ? 'Schiele' : 'Zeuge', tag: id === 'schiele' ? 'INFORMANT' : 'WITNESS' }),
   _npcHatOffenenHinweis: () => true,
   _informantPreis: (id) => id === 'norbert_tetzlaff' ? 20 : 15,
+  _informantKannBezahlen: () => paymentAvailable,
   normForMatch: (value) => String(value || '').toLowerCase()
     .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
     .replace(/[^a-z0-9]+/g, ' ').trim()
@@ -100,6 +130,17 @@ assert.strictEqual(tetzlaffPayment.option._sozialInformantZahlung, true, 'Tetzla
 assert.strictEqual(tetzlaffKragen.option.kategorie, 'OFFENSIV', 'collar escalation must be a real offensive action');
 assert.strictEqual(tetzlaffKragen.option._sozialRufHaerte, 2, 'collar escalation must increase hardness');
 assert.strictEqual(tetzlaffKragen.option._sozialRufRenommee, -2, 'collar escalation must damage reputation');
+
+paymentAvailable = false;
+const brokeTetzlaffVerbs = Array.from(personContext._hauptuiPersonVerben({
+  id: 'norbert_tetzlaff', name: 'Norbert Tetzlaff', tag: 'INFORMANT', typ: 'person', hinweis: true, sozial: tetzlaffSetup.sozial
+}));
+assert.strictEqual(brokeTetzlaffVerbs.some((verb) => verb.key === 'sozial_bestechen'), false,
+  'Tetzlaff payment must be absent when neither money nor suitable barter is available');
+assert(brokeTetzlaffVerbs.some((verb) => verb.key === 'sozial_hoeflich')
+  && brokeTetzlaffVerbs.some((verb) => verb.key === 'sozial_druck'),
+  'unaffordable payment must not hide the remaining conversation routes');
+paymentAvailable = true;
 
 const pohlSetup = Array.from(kesslerIntro.setup.setupCast).find((npc) => npc && npc.id === 'frau_pohl');
 assert(pohlSetup && pohlSetup.sozial, 'Frau Pohl social profile missing');
