@@ -5,6 +5,21 @@ const vm = require('vm');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 
+function sourceOf(name) {
+  const start = html.indexOf('function ' + name + '(');
+  assert(start >= 0, 'missing function ' + name);
+  let depth = 0;
+  let opened = false;
+  for (let i = start; i < html.length; i += 1) {
+    if (html[i] === '{') { depth += 1; opened = true; }
+    else if (html[i] === '}') {
+      depth -= 1;
+      if (opened && depth === 0) return html.slice(start, i + 1);
+    }
+  }
+  throw new Error('unterminated function ' + name);
+}
+
 assert(!/Schatten v7\.12\.\d+/.test(html), 'visible version badges must not be hard-coded');
 assert.strictEqual((html.match(/data-schatten-version/g) || []).length, 3, 'both badges and their central updater must exist');
 assert(html.includes("el.textContent = 'Schatten ' + window.SCHATTEN_VERSION"), 'visible badges must use the central version constant');
@@ -41,6 +56,7 @@ assert(!actionBody.includes('_encounterStartKampf'), 'active confrontation actio
 assert(!actionBody.includes('_hauptuiChoose('), 'confrontation action function must hand off through the guarded narrative helper');
 assert(!actionBody.includes('_konfrontationClear('), 'confrontation must not be cleared before narrative handoff succeeds');
 assert(actionBody.includes('_hauptuiKonfrontationChooseNarration'), 'confrontation action function must start a narrative scene');
+assert(actionBody.includes('_hauptuiKonfrontationAktionVerletzungGesperrt(aktion)'), 'stale confrontation handlers need an injury safety guard');
 assert(actionBody.includes('_konfrontationItemVerbrauchen'), 'thrown/used items should be consumed by the confrontation outcome');
 const itemBranchStart = actionBody.indexOf("if (aktion === 'werfen' || aktion === 'werfen_fuesse'");
 const itemBranchEnd = actionBody.indexOf("if (aktion === 'fliehen')", itemBranchStart);
@@ -51,6 +67,8 @@ assert(itemBranch.includes('_konfrontationItemVerbrauchRueckgaengig(reservierung
 assert(itemBranch.includes('_hauptuiKonfrontationAnsichtAktualisieren();'), 'item reservation must refresh confrontation buttons immediately');
 assert(actionBody.includes('_hauptuiKonfrontationAbschliessen'), 'defeated enemies should be closed only after narrative handoff');
 assert(html.includes('function _konfrontationStatusIstEndgueltig(status)'), 'transient and terminal confrontation states need one shared classifier');
+assert(html.includes("injuryNote.className = 'hauptui-threat-note is-injury-warning'"), 'critical injury must be explained directly in the confrontation menu');
+assert(html.includes('btn.disabled = true;'), 'injury-blocked confrontation controls must render disabled');
 assert(html.includes("['ko', 'gefesselt', 'fixiert', 'geflohen', 'uebergeben']"), 'only truly secured opponents may end the confrontation');
 assert(html.includes('const bleibtOffen = !!(finalStatus && !_konfrontationStatusIstEndgueltig(finalStatus) && outcome);'), 'a merely staggered opponent must keep the confrontation active');
 assert(html.includes('k.treffer >= 2 && k.kontrollverlust >= 7'), 'successive tactical hits need a real cumulative resolution path');
@@ -75,6 +93,22 @@ assert(html.includes("label: 'Rex: Verjagen'"), 'Rex needs a fast non-lethal res
 assert(html.includes("label: 'Rex: Tief ansetzen'"), 'Rex needs the requested dark slapstick maneuver');
 assert(html.includes('function _konfrontationIstGruppe'), 'multi-enemy encounters need explicit group handling');
 assert(html.includes('neutralisiert ihren Überzahlvorteil'), 'area items must counter the numerical advantage of groups');
+
+const injuryContext = {
+  verfassung: 1,
+  sceneCounter: 21,
+  caseProgress: { _kritischSeitSzene: 19 },
+};
+vm.createContext(injuryContext);
+vm.runInContext(sourceOf('_kritischeVerletzungBlockiert') + '\n' + sourceOf('_hauptuiKonfrontationAktionVerletzungGesperrt'), injuryContext);
+for (const action of ['angreifen', 'werfen', 'werfen_fuesse', 'angreifen_mit', 'fesseln', 'ppk_einsetzen']) {
+  assert.strictEqual(injuryContext._hauptuiKonfrontationAktionVerletzungGesperrt(action), true,
+    action + ' must be visibly blocked by the same critical-injury rule as chooseOption');
+}
+for (const action of ['deeskalieren', 'bluffen', 'fliehen', 'rausch_bluff']) {
+  assert.strictEqual(injuryContext._hauptuiKonfrontationAktionVerletzungGesperrt(action), false,
+    action + ' must remain available as a non-offensive exit from the confrontation');
+}
 
 assert(html.includes('Kaffee-Staub'), 'coffee needs distinct mild effect copy');
 assert(html.includes('Glas und Korn'), 'Doppelkorn needs distinct stronger effect copy');

@@ -19,7 +19,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1290 +Toast-Namensreveal'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1291 +Krause-Konfrontations-UI'"), 'release version missing');
 assert(html.includes("file: 'karl-mauers-buero-theodor-day.png'"), 'Krause opening must show Theodor in Karl office');
 assert(html.includes("root: 'assets/scenes/krause/'"), 'Krause opening image must resolve from the case scene directory');
 assert(html.includes('AKTIONS-TREUE (ABSOLUT)'), 'physical and item actions need a strict narration contract');
@@ -76,7 +76,10 @@ assert(groupPrompt.includes('Frieda fuehrt Kalle und Jochen'), 'group narration 
 assert(groupPrompt.includes('Hauptmann Vollmer'), 'group narration must forbid an unrelated Vollmer intervention');
 
 const snapshotContext = {
-  currentScene: { personenImRaum: ['Tante Frieda', 'Kalle', 'Jochen'] },
+  currentScene: {
+    szene: 'Frieda hebt die Hand. Kalle macht einen Schritt vor.',
+    optionen: [{ text: 'Beobachte Kalle und Jochen genau, ob sie zur Waffe greifen.' }]
+  },
   engineCurrentLocation: { name: 'Tante Friedas Hehlerei' },
   caseProgress: { stage: 3, klientGesprochen: true },
   gameTimeIdx: 3,
@@ -91,10 +94,14 @@ const snapshotContext = {
 require('vm').createContext(snapshotContext);
 require('vm').runInContext(sourceOf('_npcOrtsbindungEintragAktiv') + '\n' + sourceOf('_npcIstImAktuellenSzenenSnapshot') + '\n' + sourceOf('_npcGehoertHierher'), snapshotContext);
 assert.strictEqual(snapshotContext._npcGehoertHierher('tante_frieda', 'Tante Frieda'), true,
-  'Frieda must remain reachable for the scene that visibly contains her even if that scene raised stage 3');
+  'missing personenImRaum must not hide Frieda from the scene that visibly contains her');
+assert.strictEqual(snapshotContext._npcIstImAktuellenSzenenSnapshot('kalle', 'Kalle'), true,
+  'missing personenImRaum must fall back to visible scene prose');
+assert.strictEqual(snapshotContext._npcIstImAktuellenSzenenSnapshot('jochen', 'Jochen'), true,
+  'missing personenImRaum must fall back to visible scene options');
 snapshotContext.currentScene.personenImRaum = [];
 assert.strictEqual(snapshotContext._npcGehoertHierher('tante_frieda', 'Tante Frieda'), false,
-  'the next scene must obey the new stage binding and move Frieda out of the shop');
+  'an explicitly empty personenImRaum must obey the new stage binding and move Frieda out of the shop');
 
 const ppkContext = {
   caseProgress: { activeConfrontation: {} },
