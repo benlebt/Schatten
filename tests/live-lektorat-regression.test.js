@@ -365,6 +365,14 @@ assert(apiSource.includes('NPC-KONTINUITAET') && apiSource.includes('sanitizeOpe
   'unauthorized recurring NPCs need a slow-call-proof retry and hard fallback');
 assert(sourceOf('fixSprache').includes(".replace(/\\b([Dd])u wischt\\b/g, '$1u wischst')"),
   'the observed du wischt conjugation error must be corrected conservatively');
+const languageContext = {};
+vm.createContext(languageContext);
+vm.runInContext(sourceOf('fixSprache'), languageContext);
+const wrappedNarration = '"Du gehst auf den Eingang zu. ' + 'Die Messingschilder haengen schief und du pruefst jeden Namen sorgfaeltig. '.repeat(3) + 'Robert bleibt im Hof."';
+assert(!languageContext.fixSprache(wrappedNarration).startsWith('"') && !languageContext.fixSprache(wrappedNarration).endsWith('"'),
+  'a fully quote-wrapped narrative paragraph must lose only its accidental outer quotes');
+assert.strictEqual(languageContext.fixSprache('"Was wollen Sie hier?", fragt Robert.'), '"Was wollen Sie hier?", fragt Robert.',
+  'real direct speech must keep its quotation marks');
 assert(sourceOf('buildWorldTruthRepairHint').includes('ENGINE-WAHRHEIT VERLETZUNG'),
   'offscreen injury drift needs a targeted repair prompt');
 
