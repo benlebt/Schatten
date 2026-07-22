@@ -331,6 +331,49 @@ const verbalBecamePhysical = worldContext.validateSceneWorldTruth({
 assert.strictEqual(verbalBecamePhysical && verbalBecamePhysical.code, 'verbal_action_became_physical',
   'Stelle zur Rede must never become an unchosen assault or invented injury');
 
+const socialToneBecamePhysical = worldContext.validateSceneWorldTruth({
+  ort: 'Hinterhof Sybelstrasse',
+  szene: 'Du packst Robert Kessler am Kragen und schiebst ihn gegen die Ziegelwand.',
+  personenImRaum: ['Robert Kessler'],
+  optionen: []
+}, {
+  _zeitUnmittelbar: true,
+  _npcName: 'Robert Kessler',
+  _npcInteraktion: { npcName: 'Robert Kessler' },
+  _sozialTonart: 'blossstellen',
+  id: 'NPC_sozial_blossstellen'
+});
+assert.strictEqual(socialToneBecamePhysical && socialToneBecamePhysical.code, 'social_tone_became_physical',
+  'a verbal public-exposure tone must never become an unchosen physical assault');
+
+const missingPublicThreat = worldContext.validateSceneWorldTruth({
+  ort: 'Hinterhof Sybelstrasse',
+  szene: 'Du setzt Robert Kessler mit scharfer Stimme unter Druck. Er weist dich zurueck.',
+  personenImRaum: ['Robert Kessler'],
+  optionen: []
+}, {
+  _zeitUnmittelbar: true,
+  _npcName: 'Robert Kessler',
+  _npcInteraktion: { npcName: 'Robert Kessler' },
+  _sozialTonart: 'blossstellen',
+  id: 'NPC_sozial_blossstellen'
+});
+assert.strictEqual(missingPublicThreat && missingPublicThreat.code, 'social_tone_missing',
+  'public exposure must be dramatized specifically instead of collapsing into generic pressure');
+
+assert.strictEqual(worldContext.validateSceneWorldTruth({
+  ort: 'Hinterhof Sybelstrasse',
+  szene: 'Du drohst Robert Kessler rein verbal, seine Heimlichkeit vor Edith und allen Nachbarn oeffentlich zu machen. Robert weist die Drohung zurueck.',
+  personenImRaum: ['Robert Kessler'],
+  optionen: []
+}, {
+  _zeitUnmittelbar: true,
+  _npcName: 'Robert Kessler',
+  _npcInteraktion: { npcName: 'Robert Kessler' },
+  _sozialTonart: 'blossstellen',
+  id: 'NPC_sozial_blossstellen'
+}), null, 'an explicit verbal public-exposure threat must pass the world-truth gate');
+
 assert.strictEqual(worldContext.validateSceneWorldTruth({
   ort: 'Hinterhof Sybelstrasse',
   szene: 'Frau Pohl bleibt neben den Mülltonnen stehen und antwortet Karl leise im Hinterhof.',
@@ -348,6 +391,12 @@ assert(html.includes('Dies ist ein AUSSENORT: Verlege das Gespraech NICHT'),
   'outdoor social prompts must forbid silent residential interior moves');
 assert(sourceOf('_sozialVorHinweisAktion').includes('AUSGEWAEHLTES GESPRAECHSZIEL IST'),
   'early social prompts must name the clicked NPC explicitly');
+const earlySocialContext = { _sozialTonartArt: () => 'bedrohen' };
+vm.createContext(earlySocialContext);
+vm.runInContext(sourceOf('_sozialVorHinweisAktion'), earlySocialContext);
+const earlyExposure = earlySocialContext._sozialVorHinweisAktion({ key: 'blossstellen', label: 'Mit oeffentlicher Blossstellung drohen' }, 'Robert Kessler');
+assert(earlyExposure.includes('Mit oeffentlicher Blossstellung drohen') && earlyExposure.includes('Karl beruehrt, packt, schiebt oder schlaegt die Person NICHT'),
+  'the pre-clue prompt must preserve the exact visible social tone and forbid physical substitution');
 assert(sourceOf('_hauptuiExecute').includes('Koerperliche Gewalt ist ausschliesslich der getrennten Spieleraktion'),
   'the verbal confrontation prompt must reserve violence for the explicit attack button');
 assert(html.includes("indiz.hotspot = 'Klingelschilder am Hofeingang pruefen'"),
@@ -367,10 +416,14 @@ assert(sourceOf('fixSprache').includes(".replace(/\\b([Dd])u wischt\\b/g, '$1u w
   'the observed du wischt conjugation error must be corrected conservatively');
 const languageContext = {};
 vm.createContext(languageContext);
+vm.runInContext(sourceOf('stripAccidentalNarrativeQuotes'), languageContext);
 vm.runInContext(sourceOf('fixSprache'), languageContext);
 const wrappedNarration = '"Du gehst auf den Eingang zu. ' + 'Die Messingschilder haengen schief und du pruefst jeden Namen sorgfaeltig. '.repeat(3) + 'Robert bleibt im Hof."';
 assert(!languageContext.fixSprache(wrappedNarration).startsWith('"') && !languageContext.fixSprache(wrappedNarration).endsWith('"'),
   'a fully quote-wrapped narrative paragraph must lose only its accidental outer quotes');
+const wrappedWithDialogue = '"Du gehst auf Robert zu. ' + 'Der Hof bleibt still, waehrend du jeden seiner Schritte beobachtest. '.repeat(3) + '"Was wollen Sie?", fragt Robert."';
+assert(!languageContext.fixSprache(wrappedWithDialogue).startsWith('"') && languageContext.fixSprache(wrappedWithDialogue).includes('"Was wollen Sie?"'),
+  'outer narrative quotes must be removed even when genuine dialogue quotes remain inside');
 assert.strictEqual(languageContext.fixSprache('"Was wollen Sie hier?", fragt Robert.'), '"Was wollen Sie hier?", fragt Robert.',
   'real direct speech must keep its quotation marks');
 assert(sourceOf('buildWorldTruthRepairHint').includes('ENGINE-WAHRHEIT VERLETZUNG'),
