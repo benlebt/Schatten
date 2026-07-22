@@ -28,19 +28,61 @@ assert(kessler.includes("abschlussOrt: 'Karl Mauers Büro'"),
 
 const nameDisplay = {
   caseSetup: { caseType: 'beschatten', klient: 'Edith Kessler (Ehefrau)' },
-  caseProgress: { gefundeneIndizIds: ['tuerschild_hauke'] },
+  caseProgress: { stage: 2, gefundeneIndizIds: ['tuerschild_hauke'] },
   normForMatch: (value) => String(value || '').toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').trim(),
-  _npcWurdeSchonAngesprochen: () => false,
 };
 vm.createContext(nameDisplay);
-vm.runInContext(sourceOf('_npcAnzeigename'), nameDisplay);
+vm.runInContext([
+  sourceOf('_kesslerIstPrivatfall'),
+  sourceOf('_kesslerIlseVornameBekannt'),
+  sourceOf('_kesslerIlseRevealAktion'),
+  sourceOf('_kesslerIlseGestandnisSzene'),
+  sourceOf('_kesslerMaskIlseText'),
+  sourceOf('_kesslerMaskPromptMessages'),
+  sourceOf('sanitizeSceneKesslerHiddenName'),
+  sourceOf('_npcAnzeigename'),
+].join('\n'), nameDisplay);
 assert.strictEqual(nameDisplay._npcAnzeigename('Ilse Hauke', 'ilse_hauke'), 'Frau Hauke',
   'the doorplate must not leak Ilse Hauke\'s first name into the target UI');
 nameDisplay.caseProgress.gefundeneIndizIds.push('ilse_aussage');
+nameDisplay.caseProgress.gefundeneIndizIds.push('briefchen_ilse');
+assert.strictEqual(nameDisplay._npcAnzeigename('Ilse Hauke', 'ilse_hauke'), 'Frau Hauke',
+  'talking to Frau Hauke or finding an I.-signed letter must not reveal her first name');
+
+const promptMessages = [
+  { role: 'user', content: 'Setup-Cast: Ilse Hauke. Robert und Ilse am Fenster. Vor Ilses Tür. Frau Ilse Hauke wartet.' },
+  { role: 'assistant', content: 'Ilse Hauke ist intern bekannt.' },
+];
+assert.strictEqual(nameDisplay._kesslerMaskPromptMessages(promptMessages, 'Durchs Fenster spähen'), true,
+  'ordinary Kessler prompts must be masked before the API call');
+assert(!promptMessages.some((entry) => /\bIlse(?:s|\s+Hauke)?\b/.test(entry.content)),
+  'no prompt channel may retain Ilse before Robert confesses');
+assert(!promptMessages.some((entry) => /Frau Frau Hauke/.test(entry.content)),
+  'masking an already titled model name must not duplicate Frau');
+
+const leakedScene = {
+  szene: 'Das Fenster gehört Ilse Hauke. Ilse tritt näher.',
+  optionen: [{ text: 'Frag Ilse nach Robert.' }],
+  npc_kernhinweis: [{ npc: 'frau_hauke', hinweis: 'Ilse Hauke kennt Robert.' }],
+};
+nameDisplay.sanitizeSceneKesslerHiddenName(leakedScene, 'Durchs Fenster spähen');
+assert(!/\bIlse(?:s|\s+Hauke)?\b/.test(leakedScene.szene + ' ' + leakedScene.optionen[0].text + ' ' + leakedScene.npc_kernhinweis[0].hinweis),
+  'post-output guard must neutralize prose, option, and memory leaks deterministically');
+
+const confession = {
+  szene: 'Robert räumt ein, dass seine Mittwochs-Überstunden Besuche bei Ilse Hauke waren und er Edith belogen hat.',
+  optionen: [],
+};
+nameDisplay.sanitizeSceneKesslerHiddenName(confession, 'Stell Robert Kessler mit den Beweisen zur Rede');
+assert(confession.szene.includes('Ilse Hauke'),
+  'Robert\'s mature evidence confrontation must retain the intended first-name reveal');
+nameDisplay.caseProgress.gefundeneIndizIds.push('robert_aussage');
 assert.strictEqual(nameDisplay._npcAnzeigename('Ilse Hauke', 'ilse_hauke'), 'Ilse Hauke',
-  'the canonical full name must become visible after Karl actually learns it');
+  'the canonical full name must become visible only after Robert\'s confession clue');
 assert(html.includes("anzeigename: (typeof _npcAnzeigename === 'function'"),
   'Haupt-UI person targets must carry the guarded display name');
+assert(kessler.includes('Brief an Robert, mit "I." unterzeichnet'),
+  'the inventory clue itself must not label the signer as Ilse before the reveal');
 
 for (const id of [
   'tuerschild_hauke', 'robert_eintritt_beobachtet', 'nachbarin_aussage',
