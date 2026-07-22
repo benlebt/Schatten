@@ -18,7 +18,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1302 +Inventar-Deduplizierung'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1303 +Showdown-Ausgang'"),
   'Brandt regression release version missing');
 
 for (const bad of [
@@ -220,6 +220,65 @@ assert(evasiveScene.szene.includes('Lange gesteht die Inszenierung.'),
   'fallback prose must visibly narrate the booked confession');
 assert.strictEqual(terminalContext._indizAbschlussProsaSichern(terminalClue, evasiveScene), false,
   'terminal fallback prose must remain idempotent');
+
+const showdownContext = {
+  caseProgress: {
+    showdownAktiv: true,
+    showdownBestanden: false,
+    showdownGegner: 'Kurt Lange'
+  },
+  normForMatch: (value) => String(value || '').toLowerCase().trim(),
+  pendingCategoryMessages: [],
+  diag: () => {}
+};
+vm.createContext(showdownContext);
+vm.runInContext(sourceOf('_showdownPruefeBestanden') + '\n'
+  + sourceOf('_showdownZustandAnrechnen') + '\n'
+  + sourceOf('_showdownAktivenZustandSynchronisieren'), showdownContext);
+assert.strictEqual(showdownContext._showdownZustandAnrechnen('Kurt Lange', {
+  status: 'beruhigt',
+  reason: 'friedliches_itemangebot',
+  item: 'Schachtel West-Zigaretten'
+}), true, 'an accepted peaceful offer must satisfy the showdown trade route');
+assert.strictEqual(showdownContext.caseProgress.showdownBestanden, true,
+  'peacefully resolved Kurt must no longer block case resolution');
+assert.strictEqual(showdownContext.caseProgress.showdownArt, 'verhandlung',
+  'the peaceful item route must be recorded as negotiation');
+assert(showdownContext.pendingCategoryMessages.some(message => message.includes('blockiert Karl NICHT mehr')),
+  'the next prose scene must receive the resolved-showdown truth');
+
+showdownContext.caseProgress = {
+  showdownAktiv: true,
+  showdownBestanden: false,
+  showdownGegner: 'Kurt Lange'
+};
+showdownContext._npcZustandGet = () => ({
+  status: 'beruhigt',
+  reason: 'friedliches_itemangebot',
+  ort: 'Rote Laterne'
+});
+assert.strictEqual(showdownContext._showdownAktivenZustandSynchronisieren(), true,
+  'an old save with calm Kurt must self-heal before rendering the resolve button');
+assert.strictEqual(showdownContext.caseProgress.showdownBestanden, true,
+  'save healing must prevent Kurt from following Karl to office or Charite');
+
+showdownContext.caseProgress = {
+  showdownAktiv: true,
+  showdownBestanden: false,
+  showdownGegner: 'Kurt Lange'
+};
+assert.strictEqual(showdownContext._showdownZustandAnrechnen('Kurt Lange', {
+  status: 'beruhigt',
+  reason: 'unrelated_social_scene'
+}), false, 'an unrelated calm scene must not bypass a mandatory showdown');
+assert.strictEqual(showdownContext.caseProgress.showdownBestanden, false,
+  'only the explicit peaceful trade route may satisfy the showdown');
+assert(sourceOf('renderOptions').includes('_showdownAktivenZustandSynchronisieren'),
+  'the resolve button must heal an old peaceful showdown before calculating its lock');
+assert(sourceOf('getNpcsAtCurrentLocation').includes('_showdownZustandAnrechnen'),
+  'the showdown presence injector must not teleport an already-calmed opponent');
+assert(html.includes("showProgressToast('Konflikt beendet'"),
+  'a stale attack click against a calm opponent must give visible feedback instead of doing nothing');
 
 assert(fs.existsSync(path.join(root, 'assets', 'scenes', 'brandt', 'rote-laterne-kurt-konfrontation.png')),
   'Kurt confrontation image asset is missing');
