@@ -27,6 +27,7 @@ assert(kessler.includes("abschlussOrt: 'Karl Mauers Büro'"),
   'Kessler resolution must move to a real telephone at the office instead of inventing a booth under the old header');
 
 const nameDisplay = {
+  window: {},
   caseSetup: { caseType: 'beschatten', klient: 'Edith Kessler (Ehefrau)' },
   caseProgress: { stage: 2, gefundeneIndizIds: ['tuerschild_hauke'] },
   normForMatch: (value) => String(value || '').toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').trim(),
@@ -35,6 +36,7 @@ vm.createContext(nameDisplay);
 vm.runInContext([
   sourceOf('_kesslerIstPrivatfall'),
   sourceOf('_kesslerIlseVornameBekannt'),
+  sourceOf('_kesslerIlseVertrauensRevealAktion'),
   sourceOf('_kesslerIlseRevealAktion'),
   sourceOf('_kesslerIlseGestandnisSzene'),
   sourceOf('_kesslerMaskIlseText'),
@@ -76,9 +78,35 @@ const confession = {
 nameDisplay.sanitizeSceneKesslerHiddenName(confession, 'Stell Robert Kessler mit den Beweisen zur Rede');
 assert(confession.szene.includes('Ilse Hauke'),
   'Robert\'s mature evidence confrontation must retain the intended first-name reveal');
+assert.strictEqual(nameDisplay.caseProgress.kesslerIlseVornameBekannt, true,
+  'a visibly spoken first name must persist the explicit reveal state');
 nameDisplay.caseProgress.gefundeneIndizIds.push('robert_aussage');
 assert.strictEqual(nameDisplay._npcAnzeigename('Ilse Hauke', 'ilse_hauke'), 'Ilse Hauke',
-  'the canonical full name must become visible only after Robert\'s confession clue');
+  'the canonical full name must become visible only after a visible reveal');
+
+nameDisplay.caseProgress.kesslerIlseVornameBekannt = false;
+nameDisplay.window._letzteAktion = {
+  npcId: 'ilse_hauke', sozialErfolg: false, sozialTonart: 'drohen'
+};
+const aggressiveLeak = { szene: 'Ilse zuckt zusammen und verschließt sich.', optionen: [] };
+nameDisplay.sanitizeSceneKesslerHiddenName(aggressiveLeak, 'Mit dem Auffliegen drohen');
+assert(!/\bIlse\b/.test(aggressiveLeak.szene),
+  'the internally booked Robert clue must not leak Ilse on a failed aggressive path');
+assert.strictEqual(nameDisplay._npcAnzeigename('Ilse Hauke', 'ilse_hauke'), 'Frau Hauke',
+  'a failed aggressive approach must keep the guarded UI name despite robert_aussage');
+
+nameDisplay.window._letzteAktion = {
+  npcId: 'ilse_hauke', sozialErfolg: true, sozialTonart: 'diskretion'
+};
+const trustPrompt = [{ role: 'user', content: 'Karl sichert Frau Hauke Diskretion zu.' }];
+assert.strictEqual(nameDisplay._kesslerMaskPromptMessages(trustPrompt, 'Diskretion zusichern'), false,
+  'the successful trust path must be allowed to earn the first-name reveal');
+assert(trustPrompt[0].content.includes('VERTRAUENS-REVEAL'),
+  'the model must receive an explicit introduction instruction on the trust path');
+const trustScene = { szene: 'Frau Hauke zögert. „Ilse Hauke“, sagt sie schließlich.', optionen: [] };
+nameDisplay.sanitizeSceneKesslerHiddenName(trustScene, 'Diskretion zusichern');
+assert.strictEqual(nameDisplay.caseProgress.kesslerIlseVornameBekannt, true,
+  'Ilse introducing herself on the trust path must persist the reveal');
 assert(html.includes("anzeigename: (typeof _npcAnzeigename === 'function'"),
   'Haupt-UI person targets must carry the guarded display name');
 assert(kessler.includes('Brief an Robert, mit "I." unterzeichnet'),
