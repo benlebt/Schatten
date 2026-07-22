@@ -18,7 +18,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1292 +Friedliche-Gegnerangebote'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1293 +Abschlussort-Behandlungspflicht'"),
   'Brandt regression release version missing');
 
 for (const bad of [
@@ -59,9 +59,10 @@ const context = {
   caseProgress: { _kritischSeitSzene: 10 },
   verfassung: 2,
   sceneCounter: 13,
+  _npcOrtsbindungEintragAktiv: (entry) => !entry.wegWennKlientGesprochen,
 };
 vm.createContext(context);
-vm.runInContext(sourceOf('_abschlussOrtVorbereiten') + '\n' + sourceOf('_kritischeVerletzungBlockiert'), context);
+vm.runInContext(sourceOf('_abschlussZielOrtErmitteln') + '\n' + sourceOf('_abschlussOrtVorbereiten') + '\n' + sourceOf('_kritischeVerletzungsDauer') + '\n' + sourceOf('_professionelleBehandlungFaellig') + '\n' + sourceOf('_kritischeVerletzungBlockiert'), context);
 const resolveOption = { _abschlussLocation: 'Anton Brandts Eckkneipe und Wohnung', _enginePrompt: 'Berichte.' };
 assert.strictEqual(context._abschlussOrtVorbereiten(resolveOption), true, 'Brandt final drive must be executed');
 assert.strictEqual(context.engineCurrentLocation.name, 'Anton Brandts Eckkneipe und Wohnung',
@@ -72,8 +73,32 @@ assert.strictEqual(context._kritischeVerletzungBlockiert({ _kategorie: 'ROMANTIK
   'romance must be blocked at critical health');
 assert.strictEqual(context._kritischeVerletzungBlockiert({ _kategorie: 'OFFENSIV' }), true,
   'continued violence must be blocked after ignored treatment');
-assert.strictEqual(context._kritischeVerletzungBlockiert({ _kategorie: 'ERKUNDEN' }), false,
-  'critical health must not deadlock safe investigation');
+assert.strictEqual(context._professionelleBehandlungFaellig(), true,
+  'third ignored scene at critical health must require professional treatment');
+assert.strictEqual(context._kritischeVerletzungBlockiert({ _kategorie: 'ERKUNDEN' }), true,
+  'long critical injuries must block continued investigation');
+assert.strictEqual(context._kritischeVerletzungBlockiert({ _kategorie: 'NOTHEILEN' }), false,
+  'self first aid must remain available even though it does not count as professional treatment');
+assert.strictEqual(context._kritischeVerletzungBlockiert({ _kategorie: 'HEILEN' }), false,
+  'professional treatment must remain available');
+
+context.caseSetup = { caseType: 'diebstahl' };
+context.clientProfile = { name: 'Theodor Krause', id: 'theodor_krause' };
+context.getCaseLocations = () => [
+  { name: 'Karl Mauers Büro', npcs: [{ id: 'theodor_krause', wegWennKlientGesprochen: true }] },
+  { name: 'Krauses Antiquitäten', sektor: 'Ost (Prenzlauer Berg)' },
+];
+context.caseProgress.klientGesprochen = true;
+assert.strictEqual(context._abschlussZielOrtErmitteln(false, true), 'Krauses Antiquitäten',
+  'physical Krause return must infer the client shop without a case-specific abschlussOrt');
+context.engineCurrentLocation = { name: 'Krauses Antiquitäten', sektor: 'Ost (Prenzlauer Berg)' };
+const localReturn = { _abschlussLocation: 'Krauses Antiquitäten', _abschlussClientExpected: true, _enginePrompt: 'Gib das Etui zurück.' };
+assert.strictEqual(context._abschlussOrtVorbereiten(localReturn), false,
+  'being at the client shop already must not create a fake second journey');
+assert.strictEqual(context.caseProgress._abschlussClientOrt, 'Krauses Antiquitäten',
+  'same-location physical handover must still anchor the client in the final cast');
+assert(localReturn._enginePrompt.includes('bereits am Zielort'),
+  'same-location handover must explicitly forbid another location jump');
 
 assert(html.includes('romanticClicksSinceProgress: (typeof romanticClicksSinceProgress'),
   'romance click progress must be saved');
@@ -86,8 +111,10 @@ assert(html.includes('function _kritischeVerletzungBlockiert(option)'),
   'critical injury needs a click-time safety gate');
 assert(html.includes("/^(ROMANTIK|UEBERNACHTUNG)$/.test(kat)"),
   'critical injury must block implausible romance scenes');
-assert(html.includes("return kat === 'OFFENSIV' && dauer >= 2;"),
-  'ignored critical injuries must eventually block more violence');
+assert(html.includes("return !/^(HEILEN|NOTHEILEN|DEFENSIV|FLUCHT|NOTFLUCHT)$/.test(kat);"),
+  'ignored critical injuries must eventually block all non-treatment progress');
+assert(html.includes("resolveLockReason = 'erst professionell behandeln lassen'"),
+  'the resolve button must expose the professional-treatment lock');
 
 assert(html.includes('Laufziel sind mindestens 5 verschiedene Achsen'),
   'historical education breadth target must be five axes');

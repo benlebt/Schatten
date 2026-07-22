@@ -101,7 +101,7 @@ const injuryContext = {
   caseProgress: { _kritischSeitSzene: 19 },
 };
 vm.createContext(injuryContext);
-vm.runInContext(sourceOf('_kritischeVerletzungBlockiert') + '\n' + sourceOf('_hauptuiKonfrontationAktionVerletzungGesperrt'), injuryContext);
+vm.runInContext(sourceOf('_kritischeVerletzungsDauer') + '\n' + sourceOf('_kritischeVerletzungBlockiert') + '\n' + sourceOf('_hauptuiKonfrontationAktionVerletzungGesperrt'), injuryContext);
 for (const action of ['angreifen', 'werfen', 'werfen_fuesse', 'angreifen_mit', 'fesseln', 'ppk_einsetzen']) {
   assert.strictEqual(injuryContext._hauptuiKonfrontationAktionVerletzungGesperrt(action), true,
     action + ' must be visibly blocked by the same critical-injury rule as chooseOption');
