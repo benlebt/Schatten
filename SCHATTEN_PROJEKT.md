@@ -16386,3 +16386,17 @@ Wohnungsdrifts. `getCaseLocations()` normalisiert den Fund nun zu den Klingelsch
 hofseitigen Eingang. Das Weltwahrheits-Gate blockiert zusätzlich für alle nicht reisenden
 Aktionen starke gegenwärtige Hausflur-, Treppenhaus-, Tür- und Wohnungsmarker an klaren
 Außenorten. Regression: derselbe K2-Satz muss `outdoor_interior_drift` liefern.
+
+## 🆕 v7.12.1322 — Manueller Kessler-Lauf K3: Beschattungsrichtung ist harte Wahrheit
+
+K3 erzeugte in Szene 1 trotz korrekter Namen und Auftragsstichwörter den Satz „Robert
+Kessler ... ist dir ... bis hierher gefolgt“. Damit wurde aus Karls Beschattung eine
+Verfolgung Karls durch Robert. Der vorhandene Opening-Check blieb grün, weil er nur
+Pflichtbegriffe prüfte; zusätzlich war der Call langsam und löste den allgemeinen
+Qualitäts-Retry-Skip aus.
+
+`validateOpeningRoleTruth()` erkennt für `caseType: beschatten` nun, wenn die TARGET-Figur
+Karl folgt oder verfolgt. Dieser fundamentale Check läuft ausdrücklich vor und unabhängig
+vom Slow-Call-Skip, erhält zwei begrenzte Reparaturversuche und setzt danach einen korrekten
+deterministischen Opening-Text ein. Regressionen prüfen den realen K3-Satz, eine korrekte
+„du folgst Robert“-Formulierung und die Reihenfolge vor dem Performance-Skip.

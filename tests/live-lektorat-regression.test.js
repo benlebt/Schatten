@@ -72,6 +72,26 @@ const context = {
 vm.createContext(context);
 vm.runInContext(sourceOf('validateIntentFollowup'), context);
 
+const openingRoleContext = {
+  normForMatch: value => String(value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+};
+vm.createContext(openingRoleContext);
+vm.runInContext(sourceOf('validateOpeningRoleTruth'), openingRoleContext);
+const shadowSetup = {
+  caseType: 'beschatten',
+  opfer: 'Robert Kessler (Buchhalter)',
+  setupCast: [{ name: 'Robert Kessler', tag: 'TARGET' }]
+};
+assert.strictEqual(openingRoleContext.validateOpeningRoleTruth(
+  'Robert Kessler ist dir ueber den Kurfuerstendamm bis hierher gefolgt.', shadowSetup
+).code, 'shadow_direction_reversed', 'opening validation must reject a reversed surveillance direction');
+assert.strictEqual(openingRoleContext.validateOpeningRoleTruth(
+  'Seit drei Stunden folgst du Robert Kessler durch Charlottenburg.', shadowSetup
+).ok, true, 'opening validation must retain the correct surveillance direction');
+
 const wrongNpcScene = {
   ort: 'Hinterhof Sybelstrasse',
   szene: 'Frau Pohl lehnt sich aus dem Fenster. "Kessler?", fragt sie und antwortet ausweichend.'
@@ -180,5 +200,10 @@ assert(html.includes('Neben der hofseitigen Eingangstuer haengen die Klingelschi
   'the Kessler clue text must not order prose into a mismatching house interior');
 assert(!sourceOf('botGetOptionsHash').includes('problem.code'),
   'the world-truth repair hint must not leak into the autoplay hash helper');
+const apiSource = sourceOf('performApiCall');
+assert(apiSource.indexOf('!_openingRoleTruth.ok') < apiSource.indexOf('if (isStart && _openingSlow'),
+  'fundamental opening-role validation must run before the slow-call quality skip');
+assert(apiSource.includes('MAX_OPENING_ROLE_REPAIRS'),
+  'opening role reversal needs bounded hard retries and a fallback');
 
 console.log('LIVE_LEKTORAT_REGRESSION_OK');

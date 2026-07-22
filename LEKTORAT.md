@@ -29,6 +29,7 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 - Stimmen Cast, `personenImRaum`, NPC-Zustand, Ort und Tageszeit überein?
 - Sind Indizien korrekt an NPC/Hotspot, Ort, Stage, Aktion und benötigte Vorbelege gebunden?
 - Widersprechen sich Szenen über Rolle, Wissen, Beziehung oder Schicksal einer Figur?
+- Stimmen Handlungsrichtung und Rollen überein? Bei Beschattung folgt Karl der Zielperson; Formulierungen wie „die Zielperson ist dir gefolgt“ sind fundamentaler Story-Drift, auch wenn alle Pflichtnamen vorkommen. Kritische Rollenchecks dürfen nicht wegen eines langsamen API-Calls übersprungen werden.
 - Wird jedes mechanisch vergebene Kern-Indiz in derselben Prosa sichtbar dramatisiert?
 - Erzeugt ein nachträglich per Fallback eingefügtes Geständnis eine redundante zweite Geständnisszene?
 - Bleibt eine Figur, die den Ort ausdrücklich verlässt, in der Folgeszene ohne erklärte Rückkehr verschwunden?
