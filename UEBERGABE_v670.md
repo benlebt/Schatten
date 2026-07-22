@@ -1,6 +1,6 @@
 # SCHATTEN — Übergabe an neuen Chat (Stand v7.12.670)
 
-Du bist Claude, Engineering-Partner für Benjamins KI-Film-Noir-Detektiv-Textadventure
+Du bist Claude, Engineering-Partner für Projektleitungs KI-Film-Noir-Detektiv-Textadventure
 **"Schatten"** (Berlin 1953, Detektiv Karl Mauer). Dieses Dokument ist deine vollständige
 Arbeitsgrundlage. Lies es zuerst, dann kannst du sofort weiterarbeiten.
 
@@ -10,8 +10,8 @@ Arbeitsgrundlage. Lies es zuerst, dann kannst du sofort weiterarbeiten.
 
 - **Aktueller Stand: v7.12.670** ausgeliefert + gepusht (Commit `4290ff2`)
 - **Echte Quelle**: `/mnt/user-data/outputs/index.html` (NICHT /mnt/project/ — das ist veraltet!)
-- **Repo**: github.com/benlebt/Schatten · Deploy: schatten-dusky.vercel.app · Admin: `?debug=hardenberg17`
-- **Benjamin**: schreibt deutsch (Voice-Messages/Screenshots), einziger Tester, erwartet klare
+- **Repo**: <GITHUB_REPOSITORY> · Deploy: schatten-dusky.vercel.app · Admin: `?debug=on`
+- **Projektleitung**: schreibt deutsch (Voice-Messages/Screenshots), einziger Tester, erwartet klare
   Einzelempfehlungen ("was empfiehlst du?"), ehrliches Eingestehen von Claude-Fehlern, schickt
   ChatGPT/Gemini-Lektorate als Arbeitsaufträge.
 - **Antwortsprache: durchgehend DEUTSCH.**
@@ -54,19 +54,16 @@ io.open('/tmp/extract.js','w',encoding='utf-8').write(big)
 
 ## 🐙 GITHUB AUTO-PUSH (fester Workflow, Turn-Ende)
 
-**Token** (fine-grained, Contents:write auf benlebt/Schatten):
-```
-<TOKEN — steht im outputs-Dokument des Chats, NICHT im Repo aus Sicherheitsgründen>
-```
+Zugangsdaten werden ausschließlich außerhalb des Repositories verwaltet. Niemals Token in Clone-URLs, Dokumente oder Shell-Historien schreiben.
 
 Das Repo ist im aktuellen Container unter `/tmp/schatten-repo` schon geklont MIT Token im Remote.
 **ABER: /tmp wird zwischen Sessions/Containern geleert.** Im neuen Chat ggf. neu klonen:
 
 ```bash
-# Falls /tmp/schatten-repo fehlt — neu klonen:
-cd /tmp && git clone https://x-access-token:<TOKEN — steht im outputs-Dokument des Chats, NICHT im Repo aus Sicherheitsgründen>@github.com/benlebt/Schatten.git schatten-repo
+# Falls /tmp/schatten-repo fehlt — über die konfigurierte origin-URL neu klonen:
+cd /tmp && git clone <ORIGIN_URL> schatten-repo
 cd /tmp/schatten-repo
-git config user.email "claude@schatten.local"
+git config user.email "agent@localhost.invalid"
 git config user.name "Claude (Engineering)"
 ```
 
@@ -103,7 +100,7 @@ Vercel deployt automatisch nach dem Push. Commit-Style: EINE deutsche Zeile, max
 
 ---
 
-## 📜 EISERNE BENJAMIN-REGELN (settled, gelten immer)
+## 📜 EISERNE PROJEKTLEITUNG-REGELN (settled, gelten immer)
 
 1. **SPIELER ENTSCHEIDET DIE PARTY — Eintritt UND Austritt. NIE Auto-Entfernung, NIE pauschale NPC-Sperre.**
    Das ist die wichtigste Regel. Bei Party-Drift NIE den NPC pauschal sperren — immer NUR den
@@ -119,7 +116,7 @@ Vercel deployt automatisch nach dem Push. Commit-Style: EINE deutsche Zeile, max
 4. Nur DEFINIERTE Indizien + Strict Mode. Beweis-Items nie tauschbar/werfbar.
 5. "Wenn ein Button klickbar ist, muss er sauber wirken" — nie still fehlschlagen.
 6. Stärke nicht geschlechtsbasiert. Deterministisch (kein RNG außer dokumentiertem Vf=2-Verletzungs-Malus).
-7. **Gameplay-Feel-Änderungen brauchen Benjamins EXPLIZITE Freigabe** (per ask_user_input_v0 fragen).
+7. **Gameplay-Feel-Änderungen brauchen Projektleitungs EXPLIZITE Freigabe** (per ask_user_input_v0 fragen).
    Reine Technik-/Stabilitäts-Fixes sind Claudes Entscheidung.
 8. **Lektorate gegen echten Code/Run verifizieren** — sie laufen oft auf VERALTETER Version und
    erfinden teils Funktionsnamen (`_hatIndiz`, `_setNpcLocation`, `partyLockedOut` existieren NICHT).
@@ -143,9 +140,9 @@ Vercel deployt automatisch nach dem Push. Commit-Style: EINE deutsche Zeile, max
   nicht mitnehmbar). (3) NPC-Indiz-Vorschau: `_npcHatOffenenHinweis()` → Personen-Button zeigt gold
   "● hat einen Hinweis". (4) eintauschen-Toast: doppeltes Icon 📋📋 raus (iconOverride), Plan-Label ohne
   toLowerCase ("Eintauschen für Info").
-- **v668** (`0f12b6f`): Roth/Lindner-Sperre KOMPLETT ZURÜCKGENOMMEN (Benjamin: dürfen mit, stärkste
+- **v668** (`0f12b6f`): Roth/Lindner-Sperre KOMPLETT ZURÜCKGENOMMEN (Projektleitung: dürfen mit, stärkste
   Begleiter). + Party-Origin-Logging: `_partyAdd` loggt Aufruf-Ursprung (`✦ PARTY +: X · via <codepfad>`).
-- **v669** (`d635bfc`): **GATE-FIX (Benjamin-Freigabe)**: Doppel-Sicherung schlägt Indizien-Minimum.
+- **v669** (`d635bfc`): **GATE-FIX (Projektleitung-Freigabe)**: Doppel-Sicherung schlägt Indizien-Minimum.
   Wenn beim Margarete-Fall BEIDE echten Engine-Sicherungen vollzogen + Route belegt → `_fundamentOk`
   gilt erfüllt (Sicherung IST der Beleg, härter als 3 Indizien). Bypass NUR bei echten Sicherungen
   (nicht KI-fälschbar) → Verschenk-Schutz bleibt. + "siehe Notizbuch" aus Item-Toast raus (Notizbuch
@@ -159,7 +156,7 @@ Vercel deployt automatisch nach dem Push. Commit-Style: EINE deutsche Zeile, max
 
 ## 🔴 OFFENER HAUPT-BUG: ROTH-PARTY-DRIFT (höchste Priorität)
 
-**Symptom**: Roth landet in `_party` und reist mit, obwohl Benjamin ihn nicht per Klick hinzugefügt hat.
+**Symptom**: Roth landet in `_party` und reist mit, obwohl Projektleitung ihn nicht per Klick hinzugefügt hat.
 
 **Was verifiziert ist** (Run 2336):
 - NULL `PARTY +:`-Events für Roth → er kam NIE über `_partyAdd` (mit Ablehn-Check) rein.
@@ -230,7 +227,7 @@ kennt); Item-Stack für gleiche Flavor-Items; STASI-NPC-Befragen als Konfrontier
 ## ⚠️ INFRASTRUKTUR-HINWEISE
 
 - **API-503-Fehler** ("service unavailable", Gemini) = Google-seitiger Ausfall, KEIN Code-Bug.
-- **Credits**: Benjamins Gemini-Prepay-Credits gehen zeitweise aus → Runs brechen ab. Er testet, wenn
+- **Credits**: Projektleitungs Gemini-Prepay-Credits gehen zeitweise aus → Runs brechen ab. Er testet, wenn
   Credits da sind. Billing im Google AI Studio.
 - Umlaut-Handling bei str_replace-Problemen: Python `io.open(..., encoding='utf-8')`.
 - `node --check` fängt KEINE ReferenceErrors/Scope-Fehler — nur Syntax.
@@ -251,6 +248,6 @@ kennt); Item-Stack für gleiche Flavor-Items; STASI-NPC-Befragen als Konfrontier
 
 1. Kopien holen (Datei-Workflow oben), Version mit grep verifizieren (sollte v7.12.670 sein).
 2. `/tmp/schatten-repo` prüfen/neu klonen (GitHub-Block oben).
-3. Benjamins neue Nachricht abwarten. Wenn ein neues Run-Log dabei ist → ZUERST nach Roth-Drift-Origin
+3. Projektleitungs neue Nachricht abwarten. Wenn ein neues Run-Log dabei ist → ZUERST nach Roth-Drift-Origin
    suchen (`grep "PARTY +:.*via"` und `grep "party-garantie.*sinceScene"`), das ist der wichtigste offene Bug.
 4. Lektorate immer gegen echten Code verifizieren, bevor du etwas baust.

@@ -1,9 +1,9 @@
 # KONZEPT: Party-Stärken & Gegner-Härte (Ghostbusters-Taktik)
 
-Status: KONZEPT, Benjamin-Freigabe erteilt. Bau ab v637 geplant, schrittweise.
+Status: KONZEPT, Projektleitung-Freigabe erteilt. Bau ab v637 geplant, schrittweise.
 Grundlage: Baukasten (v617+), Items (v630+), Manöver/NPCZ (v610+), Begleiter (v614+).
 
-## Leitidee (Benjamin)
+## Leitidee (Projektleitung)
 "Es muss schwieriger sein als jeden Gegner wie einen billigen Slimer abzufertigen. Taktik: die richtigen
 Party-Member + Items + Hund mitnehmen. Den Hauptmann kriegt man nur mit Übermacht."
 - Jeder AKTEUR kann bestimmte Aktionen GUT / SCHLECHT / GAR NICHT (Stärke pro Aktionsart).
@@ -73,7 +73,7 @@ erfolg = eingesetzteStaerke >= _gegnerHaerte(gegner)  // Helper (Basis+Zustand),
 - Hauptmann (Härte 5): Karl (2) + Roth-Angriff (3) = 5 -> Erfolg. ODER Karl (2) + Rex-Fixieren (3) = 5.
   Margarete (Ablenkung 2) + Karl (2) = 4 < 5 -> Fehlschlag, Hauptmann wehrt sich. Du brauchst Übermacht.
 
-## Fessel-Material kontextuell (Benjamin)
+## Fessel-Material kontextuell (Projektleitung)
 Nicht jeder hat Handschellen. Bei erfolgreichem Fesseln wählt die Engine das Material nach Gegner-Typ:
 ```js
 function _fesselMaterial(gegner) {

@@ -30,7 +30,7 @@ Wurf/Schlag (benommen=Moment, ko=bewusstlos). epoche = Prosa-Hinweis für Histor
 ## Aktions-Effekte (Baukasten zeigt nur item.taugt)
 - **anbieten**: Geste, Vertrauensaufbau (kein Verlust, narrativ) - Item bleibt.
 - **bestechen**: Item -> bei_npc@Ziel, Ziel kooperiert (ab tauschwert >= Schwelle des Ziels).
-- **eintauschen** (Benjamins Spielrelevanz): Item gegen INFORMATION -> kann ein definiertes Indiz freischalten,
+- **eintauschen** (Projektleitungs Spielrelevanz): Item gegen INFORMATION -> kann ein definiertes Indiz freischalten,
   WENN das Ziel eines kennt und tauschwert reicht. Item -> verbraucht. (Verbindet Items mit dem Fundament-Gate.)
 - **trinken**: Item -> verbraucht, Stimmung/Zunge gelockert (narrativ, evtl. Befragung leichter).
 - **werfen**: Item -> verloren, schaden-Effekt am Ziel (benommen/geblendet/ablenkung - Moment, kein Dauer-W6

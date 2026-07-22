@@ -84,7 +84,7 @@ assert.strictEqual(itemEmojiContext.pickItemEmoji('Brieftasche mit Detektiv-Lize
 assert.strictEqual(itemEmojiContext.pickItemEmoji('Notizbuch und Bleistift'), '📓', 'Karl\'s notebook should have a distinct notebook icon');
 
 const itemCatalogStart = html.indexOf('const ITEM_KATALOG = {');
-const itemCatalogEnd = html.indexOf('// v7.12.631 (Benjamin: "eintauschen', itemCatalogStart);
+const itemCatalogEnd = html.indexOf('// v7.12.631 (Projektleitung: "eintauschen', itemCatalogStart);
 const catalogNames = Array.from(html.slice(itemCatalogStart, itemCatalogEnd).matchAll(/name:\s*'([^']+)'/g), (match) => match[1]);
 assert(catalogNames.length >= 17, 'item-icon audit must cover the complete tactical item catalog');
 catalogNames.forEach((name) => {

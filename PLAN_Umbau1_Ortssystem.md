@@ -104,7 +104,7 @@ jede einzeln verifizieren (grep), umstellen, testen, nächste:
 
 ---
 
-## 4. Designentscheidungen, die VOR dem Bau zu klären sind (Benjamin)
+## 4. Designentscheidungen, die VOR dem Bau zu klären sind (Projektleitung)
 
 Diese bestimmen die Form — bewusst offen gelassen, nicht raten:
 

@@ -4,7 +4,7 @@ Dieses Dokument beschreibt, wie der Test-/Deploy-Zyklus für **Schatten** automa
 wird, und welche **Arbeitsprinzipien** dabei einzuhalten sind. Es ist für Claude Code
 (oder einen anderen Agenten mit Repo-/Terminal-Zugriff) gedacht.
 
-Benjamin ist **Projektleiter/Reviewer**: Er gibt die strategische Richtung und die
+Projektleitung ist **Projektleiter/Reviewer**: Er gibt die strategische Richtung und die
 architektonischen Entscheidungen vor. Die mechanische Klick-Arbeit (committen, pushen,
 deployen, Runs starten, Exporte einsammeln) soll automatisiert werden – NICHT die
 Urteilsarbeit.
@@ -24,8 +24,8 @@ Urteilsarbeit.
 8. Auswertung (Lektorat)            -> Befunde gegen echten Code+Run verifizieren
 ```
 
-Benjamins Wunsch-Ablauf: Er sagt z.B. *„setz das Lektorat um und teste"*, und Schritte
-1–8 laufen, ohne dass er Dateien anfasst. **Aber:** Vor dem Push zeigt der Agent Benjamin
+Projektleitungs Wunsch-Ablauf: Er sagt z.B. *„setz das Lektorat um und teste"*, und Schritte
+1–8 laufen, ohne dass er Dateien anfasst. **Aber:** Vor dem Push zeigt der Agent Projektleitung
 den Diff – die Codebasis darf nicht still driften.
 
 ---
@@ -99,7 +99,7 @@ automatisierten Zyklus:
 2. **Gegen echte Run-Sätze testen**, nicht gegen konstruierte Beispiele. Regex-Fixes
    immer mit einem kleinen node-Test gegen die realen Auslösersätze aus den `Bot_*.txt`
    verifizieren, bevor ausgeliefert wird.
-3. **Spielgefühl/Romance/Narrativ/Gameplay-Gates brauchen Benjamins Freigabe.** Reine
+3. **Spielgefühl/Romance/Narrativ/Gameplay-Gates brauchen Projektleitungs Freigabe.** Reine
    technische Stabilitätsfixes darf der Agent selbst entscheiden.
 4. **Nicht stapeln**: max. 1–2 ungetestete Eingriffsbereiche pro Version. Bei einem
    Einzelbefund erst fragen, ob Ausreißer oder Muster. Weiche Lösung (Prompt-Hinweis)
@@ -113,7 +113,7 @@ automatisierten Zyklus:
 8. **Umlaut-`\b`-Falle**: `\b` matcht NICHT vor/nach Umlauten (ä/ö/ü/ß sind keine
    ASCII-Wortzeichen). Bei Regex mit Umlaut-Initial-Wörtern (übergeb, über) das `\b`
    weglassen. Diese Falle ist mehrfach aufgetreten.
-9. **Vor dem Push: Diff zeigen.** Benjamin reviewt. Keine stille Drift.
+9. **Vor dem Push: Diff zeigen.** Projektleitung reviewt. Keine stille Drift.
 
 ---
 
@@ -128,7 +128,7 @@ automatisierten Zyklus:
 5. node-Test gegen die realen Auslösersätze (TRUE/FALSE wie erwartet?).
 6. Syntax-Check.
 7. Version bumpen.
-8. Diff Benjamin zeigen -> Freigabe.
+8. Diff Projektleitung zeigen -> Freigabe.
 9. Commit + Push.
 10. node run-tests.mjs -> 3 Runs.
 11. Exporte in ./test-runs/ auswerten -> nächstes Lektorat.

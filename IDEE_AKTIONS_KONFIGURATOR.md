@@ -1,6 +1,6 @@
 # Ideenskizze: Aktions-Konfigurator (NPC- & Item-Aktionen kombinieren, ohne Tippen)
 
-Status: NUR IDEE / noch kein Konzept. Benjamin sehr begeistert ("dann wäre es richtig geil"). Kommt nach UI + den
+Status: NUR IDEE / noch kein Konzept. Projektleitung sehr begeistert ("dann wäre es richtig geil"). Kommt nach UI + den
 dringenden Bugs. Verbindet IDEE_ITEM_SYSTEM.md + das bestehende NPC-Verb-Menü zu EINEM System: ein
 "Prompt-Konfigurator" mit standardisierten Aktionen, ohne dass der Spieler tippen muss.
 
@@ -13,7 +13,7 @@ zusammen. Freitext (Szene 25 im Run) war der manuelle Vorläufer - das soll syst
 Aktuell kann man einen NPC anklicken -> befragen/beobachten/bedrohen/angreifen. ERWEITERN um:
 - Party-NPC als HANDELNDEN einsetzen: "Doc Wagner soll die Gegner ablenken / angreifen / bestechen".
 - Gilt für Männer wie Frauen.
-- FEHLT noch: "bestechen" als Verb (Benjamin: "wir brauchen noch bestechen").
+- FEHLT noch: "bestechen" als Verb (Projektleitung: "wir brauchen noch bestechen").
 - Aktion richtet sich auf ein Ziel: alle Gegner ODER ein bestimmter NPC.
 
 ## Baustein 2: Kombinierter Zug (Akteur1 + Akteur2 in EINEM Prompt)
@@ -36,7 +36,7 @@ NPC unterschiedlich (Charakter-Tiefe + taktische Planung):
 - Kommissar Roth: ~2 Züge (fit, profi)
 - Doc Wagner: ~3-4 Züge (älter)
 - Margarete: ~5-6 Züge
-(Werte aus Benjamins Beispiel; final tunebar. Karl selbst hat keinen / eigenen Rhythmus.)
+(Werte aus Projektleitungs Beispiel; final tunebar. Karl selbst hat keinen / eigenen Rhythmus.)
 
 ## UI-Anbindung (passt zur Zwei-Kategorien-Struktur)
 - Der NPC-Aktions-Teil ("Doc soll ablenken") allein löst KEINE Szene aus -> Konfiguration läuft, bis Karls Aktion

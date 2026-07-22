@@ -1,6 +1,6 @@
 # Konzept: Gewahrsam als Engine-Ereignis (statt Texterkennung)
 
-Status: IDEE/KONZEPT, von Benjamin angestoßen (Run 1800: "sollte Gewahrsam weniger texterkennungs- und mehr von
+Status: IDEE/KONZEPT, von Projektleitung angestoßen (Run 1800: "sollte Gewahrsam weniger texterkennungs- und mehr von
 unserer Engine getrieben und entschieden werden?"). ChatGPT-Lektorat unabhängig zum selben Schluss (P1: Gewahrsam
 und Notflucht semantisch falsch gekoppelt). NOCH NICHT GEBAUT - nach Items/NPC-Actions oder bei nächstem Custody-Bug.
 
@@ -32,7 +32,7 @@ Heute verschwimmt das: Notflucht erschien, während Karl frei kämpfte.
 - C3: Text-Regex (text-confirmed-custody) wird zum reinen KONSISTENZ-CHECK degradiert (diag-Warnung bei Widerspruch,
   setzt aber keinen State mehr).
 - C4: Begriffs-Trennung Threat vs Custody in Buttons (Flucht vs Notflucht).
-- C5: Party-Frage (Benjamin: "sind wir alle in einer Zelle?"): Begleiter bei Festnahme -> Engine entscheidet
+- C5: Party-Frage (Projektleitung: "sind wir alle in einer Zelle?"): Begleiter bei Festnahme -> Engine entscheidet
   (zerstreut/ebenfalls festgenommen/entkommen) und sagt es der KI. Dramaturgisch wertvoll.
 
 ## Verhältnis zu v594

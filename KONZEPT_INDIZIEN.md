@@ -5,7 +5,7 @@ Nach 51 Szenen: Stage 1, nur 2 Indizien. Indizien existieren nur als KI-Prosa-Te
 (`caseProgress.indizien` = Array von Strings), ohne Bindung an Orte. Der Spieler weiß nie,
 **wo** noch etwas zu holen ist → frustrierendes Im-Dunkeln-Tappen.
 
-## Die Lösung (Benjamins Vision)
+## Die Lösung (Projektleitungs Vision)
 1. **Vordefinierte Kern-Indizien**, fest an Orten/NPCs hinterlegt, mit Tageszeit-Bindung.
 2. **Alle Orte von Anfang an freigeschaltet** (kein Raten, keine verpassten Orte).
 3. **Reisemenü zeigt pro Ort**: Anzahl offener Indizien + Tageszeit-Hinweis ("Wahler nur vormittags").
@@ -58,7 +58,7 @@ bei Fund eines Kern-Indizes wird sein `text` dort eingetragen UND seine ID in `g
 
 ---
 
-## Tageszeit-Spürbarkeit — ZWEISTUFIG (Benjamins Präzisierung)
+## Tageszeit-Spürbarkeit — ZWEISTUFIG (Projektleitungs Präzisierung)
 Wichtig: Es gibt ZWEI getrennte Zeit-Ebenen, die nicht immer zusammenfallen.
 
 ### Ebene 1 — Öffnungszeit des ORTS (neu: `oeffnungszeit`)
@@ -116,7 +116,7 @@ Jeder Schritt: eigener Versionssprung, node --check, Logik-Test, dann erst der n
 
 ---
 
-## Offene Fragen an Benjamin
+## Offene Fragen an Projektleitung
 - Indizien-Entwurf oben ok, oder andere Verteilung/Anzahl?
 - Schritt 1 (alle Orte offen) zuerst isoliert, oder direkt Schritt 1+2 zusammen?
 - Sollen die Bedrohungs-Orte (Stellwerk, Bahnhof) auch Indizien halten (= dort lauert Gefahr UND Beweis)?

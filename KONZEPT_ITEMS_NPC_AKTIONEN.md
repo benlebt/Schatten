@@ -1,6 +1,6 @@
 # KONZEPT: Items & klickbare NPC-Aktionen ("Manöver")
 
-Status: KONZEPT zur Freigabe (Benjamin). Stand: 2026-06-10, nach v7.12.608.
+Status: KONZEPT zur Freigabe (Projektleitung). Stand: 2026-06-10, nach v7.12.608.
 Quellen: IDEE_ITEM_SYSTEM.md, IDEE_AKTIONS_KONFIGURATOR.md, IDEE_SCHLUESSEL_SCHLOSS.md + Weltwahrheit W1-W5.
 
 ## Leitprinzip (bewährt aus dem Weltwahrheit-Projekt)
@@ -49,7 +49,7 @@ recap-PFLICHT je Zustand: "Der MfS-Agent liegt GEFESSELT in Margaretes Wohnung. 
 Szene auf, bis die Engine ihn bewegt." (= dieselbe Mechanik wie CLIENT-STATE, die nachweislich funktioniert.)
 
 ### Pilot-Manöver (genau 2, im Personen-Menü)
-**M1 "Niederschlagen & fesseln"** (Benjamins Kernszene aus v594):
+**M1 "Niederschlagen & fesseln"** (Projektleitungs Kernszene aus v594):
 - Gate (Engine-validiert): Ziel ist PHYSISCH präsent (W4-Quelle) + feindlich (tag AGENT/STASI/GEGNER oder
   Verfolger-Kontext) + Karl handlungsfähig (Verfassung >= 2, nicht in Custody).
 - Ergebnis (deterministisch im Pilot): npcZustand = gefesselt@ort; ist das Ziel ein Agent → Item
@@ -83,7 +83,7 @@ Kommt nach dem Manöver-Pilot, wenn die Item-Mechanik im Run bewiesen ist.
 - **v610 - NPC-Zustand + M1**: npcZustand-Map + recap-Pflicht + Manöver-Button "Niederschlagen & fesseln"
   mit Gates + Handschellen-Beute + Tests.
 - **v611 - M2 Ablenkung**: Party-Synergie-Manöver + Export NPC-ZUSTAND pro Szene.
-- **dann**: Benjamins Run + Lektorat → Schlüssel-Schloss-Entscheidung.
+- **dann**: Projektleitungs Run + Lektorat → Schlüssel-Schloss-Entscheidung.
 
 ## Empfehlung
 Sofort mit v609 (Inventar-Fundament) starten - es ist der kleinste Schritt, löst nebenbei den offenen

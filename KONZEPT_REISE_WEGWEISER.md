@@ -1,6 +1,6 @@
 # Konzept: Reise-Popup als Wegweiser ("wo ist der nächste sinnvolle Schritt?")
 
-Status: KONZEPT, Benjamin-Kernentscheidung getroffen. Schrittweise Umsetzung. Leitidee (Benjamin): dem Spieler IMMER
+Status: KONZEPT, Projektleitung-Kernentscheidung getroffen. Schrittweise Umsetzung. Leitidee (Projektleitung): dem Spieler IMMER
 visuell klar kommunizieren, wo der nächste sinnvolle Schritt ist. Die Orte im Reise-Popup werden wie "Levels" lesbar.
 
 ## Ist-Zustand (geprüft)
@@ -10,9 +10,9 @@ visuell klar kommunizieren, wo der nächste sinnvolle Schritt ist. Die Orte im R
   - frachtliste_stempel: braucht npc=wahler + zeit=vormittag/mittag/nachmittag
   - uebergabe_beobachtet / notiz_wahler_gleis: zeit=abend/nacht
   -> Nachts zeigt die Reichsbahndirektion "offen", obwohl man tagsüber + mit Wahler hin muss. Der Spieler sieht
-     "da ist was", kommt aber gerade nicht ran. Das ist die Kommunikations-Lücke, die Benjamin bemängelt.
+     "da ist was", kommt aber gerade nicht ran. Das ist die Kommunikations-Lücke, die Projektleitung bemängelt.
 
-## Benjamin-Entscheidung
+## Projektleitung-Entscheidung
 Zähler zeigt BEIDES GETRENNT: "● 1 jetzt · 1 später"
 - "jetzt" = offene Indizien, deren Gates (Tageszeit + NPC) AKTUELL erfüllt sind -> jetzt erreichbar.
 - "später" = offene Indizien, die zeit-/personengesperrt sind -> da wartet was, aber nicht jetzt.
@@ -30,14 +30,14 @@ Zähler zeigt BEIDES GETRENNT: "● 1 jetzt · 1 später"
 - Ein Ort, der MAL Indizien hatte (loc.indizien.length > 0) und an dem jetzt ALLE gefunden sind (offen==0):
   -> Haken ✓ + gedämpfte/grüne Färbung "hier alles gefunden". Klick bleibt möglich (man KANN hin, muss aber nicht).
 - Orte ohne definierte Indizien (reine Reise-/Service-Orte): kein Haken, kein Zähler (neutral).
-- Benjamin: "wie Levels - dort haben wir alle Indizien, müssen nicht mehr hin, können aber. Muss visuell klar sein."
+- Projektleitung: "wie Levels - dort haben wir alle Indizien, müssen nicht mehr hin, können aber. Muss visuell klar sein."
 
 ### R3: Das ZIEL golden markieren (Abschluss-Wegweiser)
 - Wenn die Sicherung ansteht (Wahrheit erkannt + Person/Akten noch nicht gesichert) und ein bestimmter Ort das
   Sicherungsziel ist (z.B. Charité=Helene, Revier=Roth), dann diesen Ort im Reise-Popup GOLDEN umrahmen + strahlen
   lassen - analog zum "Fall lösen"-Button (option-btn-resolve-dominant). Plus Label "→ Margarete hierher bringen" /
   "→ Beweise hierher".
-- Klare Text-Kommunikation an den Spieler, WOHIN (Benjamin: "Margarete muss zu Helene" muss klar kommuniziert werden,
+- Klare Text-Kommunikation an den Spieler, WOHIN (Projektleitung: "Margarete muss zu Helene" muss klar kommuniziert werden,
   und im Reise-Popup ist Helenes Ort golden markiert, weil dort der Abschluss wartet).
 - Voraussetzung: Sicherungs-Buttons (v587 A1) kennen schon die Ziele - das Reise-Popup spiegelt sie golden.
 

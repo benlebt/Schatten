@@ -1,7 +1,7 @@
 # Konzept: Sicherung als echte Engine-Aktion (Thema A)
 
-Status: KONZEPT zur Freigabe durch Benjamin. NACH Freigabe -> schrittweise Code. Ziel: den politischen Fall
-(Margarete) endlich ehrlich ABSCHLIESSBAR machen. Quelle: ChatGPT-Lektorat v585 + Benjamins Spielerlebnis
+Status: KONZEPT zur Freigabe durch Projektleitung. NACH Freigabe -> schrittweise Code. Ziel: den politischen Fall
+(Margarete) endlich ehrlich ABSCHLIESSBAR machen. Quelle: ChatGPT-Lektorat v585 + Projektleitungs Spielerlebnis
 ("Margarete längst bei Doc abgesetzt, Abschluss sagt trotzdem 'nicht in Sicherheit'").
 
 ## Das Problem (Ist-Zustand)
@@ -59,7 +59,7 @@ So sieht der Spieler JEDERZEIT, was noch fehlt - und die zwei festen Buttons sin
   sichert statt per Button) - es wird nur ENTLASTET durch die festen Buttons. Kein Abriss, nur Ergänzung.
 - Andere Fälle (nicht-politisch) sind nicht betroffen (keine politicalBeats).
 
-## Offene Designfragen für Benjamin
+## Offene Designfragen für Projektleitung
 1. Sollen die Sicherungs-Buttons IMMER ab Wahrheit-erkannt sichtbar sein, oder nur am passenden Ort/wenn Kontakt
    erreichbar? (Einfacher: immer ab Wahrheit; sauberer: nur wenn sinnvoll - braucht etwas Thema B.)
 2. "Margarete bei Doc lassen": Reicht das als VOLLE Sicherung (Abschluss möglich), oder nur als Zwischenstatus
@@ -77,12 +77,12 @@ A3. Assertion-Report-Fix: solved = istGelöst && !istGescheitert; stage===4 nur 
 A4. (optional) Hard-Cap-Gnadenfrist: wenn Wahrheit spät + Spieler sichert aktiv, +3-5 Szenen.
 
 ---
-## BENJAMIN-ENTSCHEIDUNGEN (Freigabe erteilt)
+## PROJEKTLEITUNG-ENTSCHEIDUNGEN (Freigabe erteilt)
 1. PERSON SICHERN: "zu Helene/Roth bringen" ist ok, ABER es muss KLAR kommuniziert werden, dass Margarete explizit
    dorthin gebracht werden muss, UND der Zielort muss über das Reise-Popup bereisbar sein. (Doc Wagners Praxis,
    Volkspolizei-Revier=Roth, S-Bhf Friedrichstr=Grenze sind bereisbar. Helene/Charité + Vera: nur anbieten, wenn als
    Ort im Fall-Reisemenü vorhanden - sonst weglassen.) Margarete bei Doc = sicherer Hafen, zählt.
-2. ZWEI ENDEN (Claude-Empfehlung, Benjamin folgt "was macht am meisten Sinn"):
+2. ZWEI ENDEN (Claude-Empfehlung, Projektleitung folgt "was macht am meisten Sinn"):
    - GOOD ENDING: Wahrheit + Wahler + Margarete UND Akten gesichert -> "alles richtig gemacht".
    - PARTIAL ENDING: Wahrheit + Wahler belegt, aber Person/Akten NICHT gesichert -> bittersüßes Noir-Ende, KEIN
      "AUFTRAG ENTZOGEN". Kein Lauf scheitert mehr unfair; der Spieler spürt den Unterschied solide vs. makellos.

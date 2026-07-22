@@ -5,7 +5,7 @@ sind reale Anker, keine Erfindung. Struktur nach ChatGPT-Lektorat (Doku-Aufräum
 
 ---
 
-## 1. Design-Entscheidungen (FIX, von Benjamin)
+## 1. Design-Entscheidungen (FIX, von Projektleitung)
 
 1. **Rundenbasiert wie Final Fantasy.** Karl (+ Party) wählt Aktion → Gegner ziehen → bis K.O./Flucht/Sieg.
 2. **Arena-Start bei Eskalation:** Karl greift an ODER ein Gegner wird gewalttätig → Arena an. Beide

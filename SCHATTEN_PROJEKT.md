@@ -17,19 +17,19 @@ Stand: 06.06.2026, Version v7.12.433 (index.html) + gemini.js v1.5 (serverseitig
 
 **MESSGRUNDLAGE (v7.12.405 eingebaut): `diagWahrheitsleck()` + LECK-DIAG-Marker.** Prueft pro Szene in FRUEHEN Szenen (sceneCounter <= 12, vor Durchbruch), ob der Szenentext geheime Loesungs-Begriffe (Hohenschoenhausen, Genslerstrasse, Untersuchungsgefaengnis, Datscha/Mueggelsee, "Keller des Roten Stern", Lagerhalle Spree) als FAKTUM nennt - und zwar NUR wenn KEIN Bericht-/Geruecht-Kontext (BERICHT_RE) vorliegt (ein Geruecht/Bericht ist erlaubt). Marker landet via diag() im Debug-Export. `LECK-DIAG ⚠` = potenzielles Leck, `LECK-DIAG ok` = als Bericht/Spur erwaehnt (erlaubt).
 
-**NAECHSTER SCHRITT (Benjamin):** Einige Wessel-Runs (und andere Vermisstenfaelle) spielen, exportieren, LECK-DIAG-Marker auswerten. Dann datenbasiert entscheiden:
+**NAECHSTER SCHRITT (Projektleitung):** Einige Wessel-Runs (und andere Vermisstenfaelle) spielen, exportieren, LECK-DIAG-Marker auswerten. Dann datenbasiert entscheiden:
 - Leck selten/nie unter Warnschild -> **Weg A-light** (Recap-Maskierung der SUSPECT-beziehung bei vermisst, eine Stelle ~Z17388) oder gar nichts.
 - Leck haeufig -> **Weg B** (strukturelle Trennung `truthForEngine` / `promptForAI` mit `allowedBeforeProof` pro Setup). Hoher Deckenwert (strukturelle Garantie statt Bitte an KI, skaliert ueber alle Faelle, dramaturgischer Hebel), aber hoher Aufwand (alle 15 Setups + Prompt-Bau-Logik) und Gegen-Risiko: zu aggressives Herausziehen weckt das AELTERE, schlimmere Problem (KI erfindet alternative Taeter / laesst Spur ins Leere laufen, weil sie die Wahrheit zu wenig kennt). NICHT in einem Rutsch, schrittweise + testen.
 
 **WICHTIG fuer Exporte:** Weiterhin alle relevanten Zustaende loggen (LECK-DIAG, FINALE-DIAG, zielpersonGefunden-Pfade, Durchbruch-Flags), damit die Leck-Haeufigkeit analytisch belastbar wird.
 
 
-## 🎬 FEATURE-BACKLOG: Figuren & Welt (Benjamin, Spider-Noir-inspiriert)
+## 🎬 FEATURE-BACKLOG: Figuren & Welt (Projektleitung, Spider-Noir-inspiriert)
 
 > **STATUS-ÜBERSICHT (Stand v433):**
 > - ✅ **Idee 6 (Ruf-System)** — GEBAUT in v415/418 (`computeKarlReputation`/`buildKarlReputationHint`, RUF-HINT/RUF-DIAG-Marker, NPC-Reaktion auf Karls Härte). Läuft.
 > - ✅ **Idee 8 (Diebstahl-Stufen)** — als DIEBSTAHL-Variante umgesetzt (v420/425/428: lokalisiert/gesichert-informiert/zurückgebracht via `targetItemState.status`). Der VERMISST-Teil (targetLocated/Found/Rescued als eigene Spielphase) ist weiter offen/optional.
-> - 🔲 **Offen, brauchen Benjamins Freigabe:** Idee 1 (Sekretärin), 2 (Reporter-Freund), 3 (Zeitungsausschnitt nach Eskalation), 4 (Lokal+Sängerin), 5 (Toaster-Wurf), 7 (Tageszeit-Kopplung von Orten — mit Zeit-Tempo-Zielkonflikt!).
+> - 🔲 **Offen, brauchen Projektleitungs Freigabe:** Idee 1 (Sekretärin), 2 (Reporter-Freund), 3 (Zeitungsausschnitt nach Eskalation), 4 (Lokal+Sängerin), 5 (Toaster-Wurf), 7 (Tageszeit-Kopplung von Orten — mit Zeit-Tempo-Zielkonflikt!).
 > - 🔧 **TECHNISCHE OFFENE PUNKTE (Bot-Lektorate v429-433, kein Feature, eher Wartung):**
 >   - **P1 Wessel-Truth-Leak** (eigener Abschnitt oben) — größter struktureller Umbau (`truthForEngine`/`promptForAI` trennen), erst messen.
 >   - **P2 Bot zögert nach Diebesgut-Sicherung** (bleibt im Hof statt zum Klienten) — Natural-Bot-Verfeinerung, nicht akut.
@@ -39,7 +39,7 @@ Stand: 06.06.2026, Version v7.12.433 (index.html) + gemini.js v1.5 (serverseitig
 >   - **P2/P3 Tageszeit/Ort-Assertions im Report** (NACHT+volles Café, WESTSEKTOR+Volkspolizei) — sinnvolle Erweiterung von `buildAssertionReport`, noch nicht gebaut.
 >   - **P3 Westsektor-Polizei:** Volkspolizei in Kreuzberg sollte Schutzpolizei sein (Sektoren-Polizeilogik).
 
-Vier zusammenhängende Ideen, die Karls Welt lebendiger machen und vor allem die **weibliche Tonalität diversifizieren**. ALLE sind gameplay-/atmosphäre-prägend → brauchen Benjamins explizite Freigabe + Spielgefühl-Entscheidung vor dem Bau. Roter Faden: mehr Figurentiefe, weniger eindimensionale Frauenrollen, eine Berliner Welt mit echten Konsequenzen.
+Vier zusammenhängende Ideen, die Karls Welt lebendiger machen und vor allem die **weibliche Tonalität diversifizieren**. ALLE sind gameplay-/atmosphäre-prägend → brauchen Projektleitungs explizite Freigabe + Spielgefühl-Entscheidung vor dem Bau. Roter Faden: mehr Figurentiefe, weniger eindimensionale Frauenrollen, eine Berliner Welt mit echten Konsequenzen.
 
 **KONTEXT/MOTIVATION (wichtig für den Bau):** Bislang sind fast alle Frauen im Spiel entweder ängstlich (eingeschüchterte Zeuginnen/Klientinnen) oder MfS-Agentinnen - einzige Ausnahme bisher Tante Frieda. Das ist eine tonale Einseitigkeit. Die folgenden Ideen 1 und 4 zielen gezielt darauf, patente/selbstbewusste Frauenfiguren mit eigener Agency einzuführen.
 
@@ -63,9 +63,9 @@ Karl kann (zusätzlich zu Kuchen/Torte/Fisch als improvisierte Wurfgeschosse) au
 **6. RUF-SYSTEM: NPCs reagieren auf Karls Spielweise (HOHE PRIO, datenbasiert bereits vorbereitet)**
 Kern-Idee: Durch das seit v377 funktionierende Aggressions-Logging ist messbar, ob Karl im aktuellen Fall aggressiv oder vorsichtig spielt (Härte-Anteil = Gewalt/Mensch-Interaktion, über alle Szenen getrackt, persistiert). Diese Information soll NPCs unterschiedlich reagieren lassen - "sein Ruf eilt ihm voraus". Das würde jeden Fall persönlicher machen und das bisherige tonale Einerlei aufbrechen.
 
-MOTIVATION (gleiche Stoßrichtung wie Ideen 1+4): Aktuell sind NPCs zu eindimensional - Gangster fast immer böse, Frauen/Zeugen ängstlich, Klienten ängstlich/traurig/verzweifelt. Benjamin will mehr Variation, UND dass diese Variation auf Karls Spielweise reagiert.
+MOTIVATION (gleiche Stoßrichtung wie Ideen 1+4): Aktuell sind NPCs zu eindimensional - Gangster fast immer böse, Frauen/Zeugen ängstlich, Klienten ängstlich/traurig/verzweifelt. Projektleitung will mehr Variation, UND dass diese Variation auf Karls Spielweise reagiert.
 
-BENJAMINS KONKRETE BEISPIELE:
+PROJEKTLEITUNGS KONKRETE BEISPIELE:
 - Wenn Karl in der 1. Nacht ein paar Gangster in die Flucht geschlagen hat, könnten am nächsten Tag neu auftauchende Gangster VORSICHTIGER sein und früher die Flucht ergreifen (sein Ruf ist ihnen vorausgeeilt).
 - Zeugen reagieren je nach Karls Stil: extrem ängstlich/verschlossen wenn er sehr offensiv vorgeht, deutlich entspannter/auskunftsfreudiger wenn er vorsichtig/ermittelnd vorgeht.
 
@@ -73,10 +73,10 @@ MACHBARKEITSEINSCHÄTZUNG (Claude): Ohne großes Risiko machbar, WENN als Prompt
 
 WICHTIGE LEITPLANKEN (aus früherer Ruf-System-Notiz): Reaktion immer als WELT-Reaktion gestalten, NIE als moralische Strafe ("du warst böse, jetzt wirst du bestraft"). Ein harter Detektiv ist eine legitime Spielweise, kein Fehler. Schwelle/Hysterese beachten, damit nicht jede einzelne Aktion sofort den Ton kippt - der Ruf soll sich über mehrere Szenen aufbauen (der Härte-Anteil ist genau dafür gut, weil er kumulativ misst). Offen: ab welchem Härte-Anteil gilt Karl als "hart" (Vorschlag: dieselben Schwellen wie die Live-Metrik, z.B. >45% hart / <30% behutsam / dazwischen gemischt).
 
-UNSICHERHEIT (Benjamin): noch nicht sicher, wie gut das funktionieren kann - daher erstmal Backlog. Empfehlung: klein anfangen mit EINEM NPC-Typ (z.B. nur Zeugen-Offenheit ODER nur Ganoven-Vorsicht) als Prompt-Hint, in einem Run beobachten, ob Flash-Lite es organisch umsetzt, bevor man es breit ausrollt.
+UNSICHERHEIT (Projektleitung): noch nicht sicher, wie gut das funktionieren kann - daher erstmal Backlog. Empfehlung: klein anfangen mit EINEM NPC-Typ (z.B. nur Zeugen-Offenheit ODER nur Ganoven-Vorsicht) als Prompt-Hint, in einem Run beobachten, ob Flash-Lite es organisch umsetzt, bevor man es breit ausrollt.
 
 **7. TAGESZEIT-KOPPLUNG VON ORTEN (Atmosphäre + Realismus, gut machbar)**
-Benjamins Idee: bestimmte Orte/NPCs an Tageszeiten koppeln. Beispiele: morgens ist in der Roten Laterne (Nachtclub) noch niemand, erst abends; nachts ist die Apotheke geschlossen/niemand da; Ämter/Meldestellen nur tagsüber besetzt; Kneipen abends voller; Markt morgens. Würde die Welt glaubwürdiger und lebendiger machen und den Tag-/Nacht-Rhythmus (den der Spieler ja selbst steuert) spürbarer belohnen/bestrafen.
+Projektleitungs Idee: bestimmte Orte/NPCs an Tageszeiten koppeln. Beispiele: morgens ist in der Roten Laterne (Nachtclub) noch niemand, erst abends; nachts ist die Apotheke geschlossen/niemand da; Ämter/Meldestellen nur tagsüber besetzt; Kneipen abends voller; Markt morgens. Würde die Welt glaubwürdiger und lebendiger machen und den Tag-/Nacht-Rhythmus (den der Spieler ja selbst steuert) spürbarer belohnen/bestrafen.
 
 MACHBARKEITSEINSCHÄTZUNG (Claude): GUT MACHBAR, geringes KI-Risiko - die Infrastruktur ist bereits da und bewährt. Es gibt gameTimeIdx (0-5: MORGEN/VORMITTAG/MITTAG/NACHMITTAG/ABEND/NACHT, TIMES_OF_DAY), zuverlässig getrackt. Die Tageszeit wird BEREITS aktiv in den Live-Kontext gegeben (currentTime, ~Z18629) und steuert schon erfolgreich Verhalten: NACHT-MODUS erlaubt Schlafen-Option, TAG-MODUS verbietet sie (~Z18655/18662). Das BEWEIST, dass tageszeit-gekoppelte Prompt-Steuerung mit Flash-Lite funktioniert. Der saubere Weg: einen "Öffnungszeiten/Präsenz"-Hint analog bauen - im Live-Kontext der KI mitteilen, welche Orte zur aktuellen Tageszeit belebt/leer/geschlossen sind. RISIKOARM, weil reine Prompt-Anreicherung (kein State-Umbau), und weil das Muster schon produktiv läuft.
 
@@ -86,7 +86,7 @@ CAVEATS/GRENZEN: (a) Erkennung des Ort-Typs aus Freitext ist die Hauptarbeit - c
 
 FAZIT: Eine der risikoärmeren und atmosphärisch lohnendsten Ideen, weil das Tageszeit-System schon steht und produktiv genutzt wird. Kein KI-Problem zu erwarten, solange es ein weicher Präsenz-Hint bleibt und kein hartes Gating.
 
-⚠️ WICHTIGER ZIELKONFLIKT (Benjamin-Bedenken, vor Bau klären): Die Tageszeit vergeht im Spiel SCHNELL. Echte Mechanik (verifiziert): timeAdvanceTokens sammeln ~0.35-0.95 pro Szene (je nach Aktionstyp/Spannung), Phasenwechsel bei >=1 Token, dazu Force-Push nach 3 Szenen in derselben Phase. Grob also ~1-3 Szenen pro Tageszeit-Phase, ~6-15 Szenen pro Tag (Morgen→Nacht bis Schlafen). Benjamins Zielrahmen: ~16 Szenen/Tag, Spiel soll 3-4 Tage / NICHT 60 Szenen dauern. PROBLEM für Idee 7: Wenn die Rote Laterne nur ABENDS belebt ist, der Spieler die Abend-Phase aber in 2 Szenen durchrauscht, verpasst er das Zeitfenster leicht und es wird frustrierend statt atmosphärisch. LÖSUNGSANSÄTZE falls Idee 7 gebaut wird: (a) nur WENIGE, unkritische Orte koppeln, die nicht fall-essentiell sind (Rote Laterne ok wenn optional, Apotheke heikel wenn Heilung dranhängt); (b) Hint immer WEICH ("normalerweise um diese Zeit leer" - KI darf trotzdem jemanden anwesend sein lassen wenn dramaturgisch nötig); (c) ggf. Tageszeit-Tempo entkoppeln/verlangsamen für gekoppelte Orte; (d) ALTERNATIV die Kopplung NICHT an feste Phasen, sondern an "Tag vs. Nacht" (gröber, verzeiht das schnelle Tempo). EMPFEHLUNG: Vor Idee 7 zuerst klären, ob das aktuelle Zeit-Tempo überhaupt zum Zielrahmen (16 Szenen/Tag) passt - das ist eine eigene Spielgefühl-Frage (Tageszeit-Progression evtl. justieren), die Vorrang vor der Orts-Kopplung haben sollte.
+⚠️ WICHTIGER ZIELKONFLIKT (Projektleitung-Bedenken, vor Bau klären): Die Tageszeit vergeht im Spiel SCHNELL. Echte Mechanik (verifiziert): timeAdvanceTokens sammeln ~0.35-0.95 pro Szene (je nach Aktionstyp/Spannung), Phasenwechsel bei >=1 Token, dazu Force-Push nach 3 Szenen in derselben Phase. Grob also ~1-3 Szenen pro Tageszeit-Phase, ~6-15 Szenen pro Tag (Morgen→Nacht bis Schlafen). Projektleitungs Zielrahmen: ~16 Szenen/Tag, Spiel soll 3-4 Tage / NICHT 60 Szenen dauern. PROBLEM für Idee 7: Wenn die Rote Laterne nur ABENDS belebt ist, der Spieler die Abend-Phase aber in 2 Szenen durchrauscht, verpasst er das Zeitfenster leicht und es wird frustrierend statt atmosphärisch. LÖSUNGSANSÄTZE falls Idee 7 gebaut wird: (a) nur WENIGE, unkritische Orte koppeln, die nicht fall-essentiell sind (Rote Laterne ok wenn optional, Apotheke heikel wenn Heilung dranhängt); (b) Hint immer WEICH ("normalerweise um diese Zeit leer" - KI darf trotzdem jemanden anwesend sein lassen wenn dramaturgisch nötig); (c) ggf. Tageszeit-Tempo entkoppeln/verlangsamen für gekoppelte Orte; (d) ALTERNATIV die Kopplung NICHT an feste Phasen, sondern an "Tag vs. Nacht" (gröber, verzeiht das schnelle Tempo). EMPFEHLUNG: Vor Idee 7 zuerst klären, ob das aktuelle Zeit-Tempo überhaupt zum Zielrahmen (16 Szenen/Tag) passt - das ist eine eigene Spielgefühl-Frage (Tageszeit-Progression evtl. justieren), die Vorrang vor der Orts-Kopplung haben sollte.
 
 **8. VERMISSTENFALL 3-STUFEN-SYSTEM: lokalisiert / gefunden / zurückgebracht (P2, gameplay-prägend)**
 Quelle: Wessel-Run-Lektorate. Aktueller Stand: NUR EINE Stufe - Boolean caseProgress.zielpersonGefunden. Kein "lokalisiert", kein "zurückgebracht". IDEE: targetLocated (Spur) / targetFound (physisch gesehen/Dokument) / targetRescued (frei/beim Klienten). Wäre fallabhängig wie jetzt (caseType==='vermisst', targetName dynamisch - gilt für Werner/Wegener/alle künftigen). RISIKO: MITTEL-HOCH (zielpersonGefunden an 15+ Stellen gelesen; ändert Gewinn-Bedingung = Spielgefühl). NICHT akut: Werner-Bug in v392-v394 mit kleinem Fix auf 3 Ebenen (Prompt + Cast-Schutz + Force-Abschluss-Gate) entschärft. VOLLES SYSTEM lohnt wenn "Zurückbringen" eine echte Spielphase werden soll (Werner/Robert aus Haft holen) - dann Feature mit Spielgefühl-Freigabe. WIN-SCREEN: bei nur lokalisierter Person "LOKALISIERT - Spur gesichert" statt "GEFUNDEN/gelöst" (durch v394-Force-Fix indirekt entschärft). ABWEICHUNG vom Feedback: "glaubwürdiger Zeuge bestätigt Aufenthaltsort" NICHT als Fund (genau die Wessel-Grauzone; Flash-Lite trennt "glaubwürdig" nicht von "behauptet").
@@ -116,7 +116,7 @@ Fortsetzung der Krause-Lektorat-Kette + erste echte Bot-Test-Welle (3 Runs: Krau
 
 **BEWUSSTE NICHT-FIXES (Lektorats-Vorschläge abgelehnt):**
 - "das Stück" als Etui-Synonym: zu generisch (Kuchenstück etc.), mehr Fehlalarme als Nutzen.
-- Schlaf-Button an unsicheren Orten beschränken: BLEIBT (Benjamin-Entscheidung v394: "Schlaf ist Karls Entscheidung mit allen Konsequenzen").
+- Schlaf-Button an unsicheren Orten beschränken: BLEIBT (Projektleitung-Entscheidung v394: "Schlaf ist Karls Entscheidung mit allen Konsequenzen").
 - Grenzfall "Karl legt Etui ab, Krause greift nach der Flasche" → returnedToClient (akzeptabler False-Positive: Karl HAT das Etui beim Klienten abgelegt = Übergabe erfolgt).
 
 **LEHRE (mehrfach bestätigt):** AI-Lektorate prüfen teils einen ALTSTAND (v425/426: behaupteten Version v420 + fehlenden Fix — beides war erledigt). Jeden Claim per grep gegen echten Code verifizieren. UND: gegen ECHTEN Run-Text testen (die isHardClientReturn/Foto-Lücken zeigten sich nur am realen Flash-Lite-Output, nicht an konstruierten Sätzen).
@@ -134,7 +134,7 @@ Lange iterative Lektorat-Kette (mehrere Krause-Runs hintereinander, jeweils gege
 - v425: HARTE RÜCKGABE setzt returnedToClient IMMER (zuerst geprüft, unabhängig von gutBeiKlient). Befund: "Harte Rückgabe via SPIELER-ABSICHT erkannt" stand im Spielertext, gutBeiKlient (aus KI-Text) war false → Status fiel fälschlich auf inKarlInventory. Jetzt + istGelöst/stage4 → Win-Screen sofort, kein doppelter Telefon-Epilog ("erst hinfahren, dann aus der Ferne anrufen" behoben).
 - v426: Ablage-Verben um knallst/knallt/wirfst/pfeffert erweitert. Diebstahl-AUFLOESEN-Text verlangt physische Übergabe wenn Gut bei Karl (Telefon genügt NICHT).
 
-**SETUP (v422, Benjamin-Freigabe):** Kalle (bullig, Schlapphut, Anker-Tattoo, Schlagring) + Jochen (hager, Lederjacke, Messer) als feste GANGSTER-Pool-NPCs ins Krause-Setup (gegen Körper-/Waffen-Drift). Stallschreiberstraße 12 + Bornsteins Antiquitätenladen als Setup-Locations. PRINZIP (Benjamin bestätigt): wichtige wiederkehrende Neben-Gangster gehören in setupCast, nicht in die Prosa — angewendet FALLWEISE, sobald ein Run dort Drift zeigt (Renate hat das längst korrekt).
+**SETUP (v422, Projektleitung-Freigabe):** Kalle (bullig, Schlapphut, Anker-Tattoo, Schlagring) + Jochen (hager, Lederjacke, Messer) als feste GANGSTER-Pool-NPCs ins Krause-Setup (gegen Körper-/Waffen-Drift). Stallschreiberstraße 12 + Bornsteins Antiquitätenladen als Setup-Locations. PRINZIP (Projektleitung bestätigt): wichtige wiederkehrende Neben-Gangster gehören in setupCast, nicht in die Prosa — angewendet FALLWEISE, sobald ein Run dort Drift zeigt (Renate hat das längst korrekt).
 
 **ROMANCE (v419/v426):** Push geblockt solange Diebesgut-Holpflicht aktiv; zweiter Push geblockt wenn schon eine Romance-Figur aktiv (Rolle Sängerin/Tänzerin/Geliebte… oder romanticTension≥2) → kein Vivian→Erika-Zielwechsel.
 
@@ -143,7 +143,7 @@ Lange iterative Lektorat-Kette (mehrere Krause-Runs hintereinander, jeweils gege
 **P3-CLEANUP (v418/v426):** Alle Energie/Hunger CSS/DOM/JS-Reste entfernt; Kommentarreste neutralisiert. "Currywurst-Bude" → "Bockwurstbude" in Prompt-Beispielen (Food-Detektoren behalten "currywurst").
 
 **BEWUSSTE NICHT-FIXES (Lektorats-Vorschläge abgelehnt, damit sie nicht erneut als "offen" hochkommen):**
-- SCHLAF-BUTTON an unsicheren Orten (Jazzkeller/Klientenladen): BLEIBT wie er ist. Benjamin-Entscheidung (konsistent mit v394): "Schlaf ist Karls Entscheidung mit allen Konsequenzen." Schlaf nur bei Spannung≥4 / Fahrt / Custody gesperrt. KEINE Safe-Place-Gates.
+- SCHLAF-BUTTON an unsicheren Orten (Jazzkeller/Klientenladen): BLEIBT wie er ist. Projektleitung-Entscheidung (konsistent mit v394): "Schlaf ist Karls Entscheidung mit allen Konsequenzen." Schlaf nur bei Spannung≥4 / Fahrt / Custody gesperrt. KEINE Safe-Place-Gates.
 - "das Stück" als Etui-Synonym: bewusst NICHT aufgenommen — zu generisch (Kuchenstück etc.), mehr Fehlalarme als Nutzen.
 
 **LEKTION (mehrfach in dieser Serie):** AI-Lektorate prüfen teils einen ALTSTAND und melden längst behobene Bugs als offen (v425/426: Lektorat behauptete SCHATTEN_VERSION='v420' + P1-Fix fehle — beides war erledigt). JEDEN Claim gegen echten Code grep/verifizieren. UND: gegen ECHTEN Run-Text testen, nicht gegen konstruierte Beispielsätze (die isHardClientReturn-Lücken zeigten sich nur am realen Flash-Lite-Output).
@@ -151,12 +151,12 @@ Lange iterative Lektorat-Kette (mehrere Krause-Runs hintereinander, jeweils gege
 
 
 **v409 (Heilung & Orte):**
-- **Doc-Wagner-Tageslimit ENTFERNT (Benjamin-Korrektur):** Die in v403/v408 eingebaute 1x/Tag-Regel war falsch gedacht. Karl darf sich bei Doc Wagner (und Marlene in der Charite) so oft behandeln lassen, wie er will, solange er verletzt ist (Vf < 5) - die einzige Kosten sind Zeit/Szenen, kein kuenstlicher Deckel. lastDocHealingDay bleibt nur als Save-Variable, wird nirgends mehr ausgewertet. Anleitungstexte zurueckgedreht.
+- **Doc-Wagner-Tageslimit ENTFERNT (Projektleitung-Korrektur):** Die in v403/v408 eingebaute 1x/Tag-Regel war falsch gedacht. Karl darf sich bei Doc Wagner (und Marlene in der Charite) so oft behandeln lassen, wie er will, solange er verletzt ist (Vf < 5) - die einzige Kosten sind Zeit/Szenen, kein kuenstlicher Deckel. lastDocHealingDay bleibt nur als Save-Variable, wird nirgends mehr ausgewertet. Anleitungstexte zurueckgedreht.
 - **Notheilen ausblenden bei Doc Wagner ODER Marlene:** Wenn der staerkere/spezifischere Heil-Button sichtbar ist, wird Notheilen ausgeblendet (redundant + versehentliches Fehlklicken nervt). NUR diese beiden Faelle; sonst bleibt Notheilen wie gehabt.
 - **Orte reagieren je nach Uhrzeit (grob tags/nachts):** Neuer Prompt-Block. Apotheke/Geschaeft/Arztpraxis nachts geschlossen -> oeffnet genervt bei dringendem Anliegen. Kneipe vormittags/mittags fast leer (nur Wirt), abends/nachts voll. Cafe in Randzeiten leer -> Gespraechszeit mit Kellner/Geschaeftsfuehrer. Ergaenzt die bestehende Offen/Zu-Logik um die Reaktions-/Atmosphaere-Ebene.
 
-**v410 (ENERGIE/HUNGER KOMPLETT AUSGEBAUT - Benjamin-Entscheidung "Weg B"):**
-Energie war seit v7.12.13 entmachtet (sank nie, immer ~100 = toter Wert), Hunger seit v7.9.x stillgelegt. Beide jetzt VOLLSTAENDIG aus dem Code entfernt - kein mitgeschleppter Toter-Wert mehr, Energie ist fuer Benjamin gleichbedeutend mit Verfassung.
+**v410 (ENERGIE/HUNGER KOMPLETT AUSGEBAUT - Projektleitung-Entscheidung "Weg B"):**
+Energie war seit v7.12.13 entmachtet (sank nie, immer ~100 = toter Wert), Hunger seit v7.9.x stillgelegt. Beide jetzt VOLLSTAENDIG aus dem Code entfernt - kein mitgeschleppter Toter-Wert mehr, Energie ist fuer Projektleitung gleichbedeutend mit Verfassung.
 - Entfernt: globale Variablen karlEnergie/karlHunger/hungerAccumulator (0 Code-Referenzen verifiziert per grep), Funktion getEnergieStufe, der Energie-"drain" in updateEnergyAndHunger (Funktion macht jetzt nur noch Romantik-Reset + checkStatusToasts), Energie-Anwendung nach applyCategoryMechanics, Energie/Hunger aus Save/Restore, Status-Popup, Energie-Dots-Render, Debug-Status-Strings, Endstand-Anzeige.
 - Bot-Schlaf-Logik umgebaut: vorher karlEnergie<=40 (feuerte nie nach Entmachtung), jetzt schlaeft der Bot bei SCHLAFEN-verfuegbar + Abend/Nacht + verletzt.
 - Bewusst belassen: das tote energieDelta-Feld IM applyCategoryMechanics-Result-Objekt (niemand liest es; ~12 Zeilen zu entfernen waere Aufwand ohne Gewinn). CSS-Klassen .energie-dash/.hunger-dash (ungenutzte Styles).
@@ -168,12 +168,12 @@ Energie war seit v7.12.13 entmachtet (sank nie, immer ~100 = toter Wert), Hunger
 **v406:** MUSIC_TRACKS auf music1..12.mp3 erweitert (Shuffle/Playlist dynamisch, music11/12.mp3 muessen ins Repo-Root). **v407:** Wechsel still->Musik-Modus wuerfelt immer neue Reihenfolge (neuer Startsong ohne Reload; Toggle-Buttons bewusst unveraendert).
 
 **v408 (Wessel-Run #3 14:28, bester Lauf bisher - alter Fund-P1 GELOEST, neue Befunde):**
-- **Tempo (Benjamin: ~16 Sz/Tag):** advanceGameTime-Tokens von 0.70-0.95 auf ~0.34-0.46 gesenkt, Force-Push-Cap 3->5. Vorher Nacht nach ~6 Szenen.
+- **Tempo (Projektleitung: ~16 Sz/Tag):** advanceGameTime-Tokens von 0.70-0.95 auf ~0.34-0.46 gesenkt, Force-Push-Cap 3->5. Vorher Nacht nach ~6 Szenen.
 - **P1 Custody-Drift entkoppelt:** Infiltration != Karls Gewahrsam. arrestConfirmRe-Allein-Bestaetiger auf eindeutige Vollzugs-Marker reduziert (handschellen/abgefuehrt/in den Wagen gedraengt); raeumliche Marker (pritsche/zelle/verhoerraum/genslerstrasse) brauchen jetzt Karl-Selbst-Bezug (neuer haftMarkerMitKarlBezug). detectStasiCustody erstes Pattern (stasizelle/verhoerraum allein) ebenfalls Karl-Bezug-pflichtig. Behebt Notflucht-Button beim Schleichen (Sz47/48) + Custody-Flip (Sz53).
 - **P1 Doc-Wagner 1x/Tag wirkt jetzt:** Button traegt _docWagnerHeal-Marker, lastDocHealingDay=gameDay wird beim Kategorie-HEILEN-Pfad gesetzt (vorher nur im uebersprungenen Text-Pfad -> 2x/Tag-Heilung Sz15-17). Marlene/Notheilen bleiben ohne Limit.
 - **P1/P2 Vermisst-Abschluss-Gating:** HEIMBRING-GNADENFRIST - wenn Zielperson gefunden aber Klient noch nicht informiert, Hard-Cap um 5 Szenen verschoben (rettet den Rueckbring-Moment; Sz60-Cap kappte vorher waehrend der Opel-Heimfahrt). Toast differenziert gefunden vs. Spur aufgeklaert.
 - **TTS:** "Neue Ermittlung"-Button wird nicht mehr mitgelesen (buildSpeakText liest gezielt .solved-title/.solved-text statt textContent).
-- **NPC-Tiefe (Benjamin-Fokus):** Neuer Prompt-Block "ANTAGONISTEN MIT GESICHT" - der EINE sprechende Gegenspieler (Waerter/Offizier/Schlaeger) bekommt EIN menschliches Detail (eifrig-jung, mued-routiniert, heimlicher Raucher, Tick, Heimweh), kein Klischee-Sadist. Bei mehreren reicht einer.
+- **NPC-Tiefe (Projektleitung-Fokus):** Neuer Prompt-Block "ANTAGONISTEN MIT GESICHT" - der EINE sprechende Gegenspieler (Waerter/Offizier/Schlaeger) bekommt EIN menschliches Detail (eifrig-jung, mued-routiniert, heimlicher Raucher, Tick, Heimweh), kein Klischee-Sadist. Bei mehreren reicht einer.
 - **P3 Texturhinweise:** Anachronismus-Block um Alltagsdetails erweitert (Eisschrank statt Kuehlschrank, Blechtonnen statt Altmetall-Container, Lauge/Kernseife statt Industriewaschmittel, Hamburger leicht erden). Tippfehler-Wurzel "Bernes"->"Berners" im Berner-Setup gefixt.
 - **Kalle-Befund (analysiert, kein Fix):** Kalle ist KEIN Wessel-Setup-NPC (nur Gangster im Schiffer-Fall), sondern KI-erfunden - taucht in Indizien/npcMemory auf, aber nicht im Cast, weil nur Setup-NPCs in storyFacts eingefroren werden und personenImRaum fast immer fehlt. Haengt mit dem personenImRaum-Thema zusammen.
 
@@ -203,13 +203,13 @@ Energie war seit v7.12.13 entmachtet (sank nie, immer ~100 = toter Wert), Hunger
 
 Reine Prompt-Runde (kein State, risikoarm).
 
-**DOC-WAGNER-BEHANDLUNG zu lang + repetitiv (Benjamin-Befund):** Bei Mehrfachbehandlung (mehrmals zu Doc Wagner bei niedriger Energie) kam fast identischer Szenentext, generell eskalierte er in 4-5 unnötig lange Sätze ("Skalpell kratzt Dreck aus Schnitt, Verband stramm, Schluck Korn..."). Ursache: Die HEILEN-pushMessage (Z14848) hatte zwar schon eine Kürze-Anweisung, aber am ENDE eines langen Absatzes (verwässert) + KEINE Anti-Wiederholungs-Anweisung. FIX: pushMessage überarbeitet - "KÜRZE IST PFLICHT" nach vorne (1-2 Sätze), explizites Verbot des Standard-Texts ("kein Skalpell-kratzt-Dreck", "kein Verband-Korn-Ablauf"), plus VARIATIONS-Anweisung gegen identische Wiederholung bei Mehrfach-Heilung (mal "Wagner flickt dich wortlos zusammen", mal "ein paar Stiche, ein Schluck Korn, weiter", mal nur die Wirkung). Marlene-pushMessage (Z14841) war schon knapp (2-3 Sätze), bleibt.
+**DOC-WAGNER-BEHANDLUNG zu lang + repetitiv (Projektleitung-Befund):** Bei Mehrfachbehandlung (mehrmals zu Doc Wagner bei niedriger Energie) kam fast identischer Szenentext, generell eskalierte er in 4-5 unnötig lange Sätze ("Skalpell kratzt Dreck aus Schnitt, Verband stramm, Schluck Korn..."). Ursache: Die HEILEN-pushMessage (Z14848) hatte zwar schon eine Kürze-Anweisung, aber am ENDE eines langen Absatzes (verwässert) + KEINE Anti-Wiederholungs-Anweisung. FIX: pushMessage überarbeitet - "KÜRZE IST PFLICHT" nach vorne (1-2 Sätze), explizites Verbot des Standard-Texts ("kein Skalpell-kratzt-Dreck", "kein Verband-Korn-Ablauf"), plus VARIATIONS-Anweisung gegen identische Wiederholung bei Mehrfach-Heilung (mal "Wagner flickt dich wortlos zusammen", mal "ein paar Stiche, ein Schluck Korn, weiter", mal nur die Wirkung). Marlene-pushMessage (Z14841) war schon knapp (2-3 Sätze), bleibt.
 
 **NPC-VIELFALT erweitert (Fortsetzung v395):** v395 deckte Schläger/Handlanger + Zeuginnen ab. Jetzt drei weitere namenlose Typen knapp ergänzt (im selben Absatz, nicht als neuer Block - gegen Verwässerung): (1) INFORMANTEN/AUSKUNFTGEBER (nicht alle raunen geheimnisvoll - plaudernd/geldgierig/misstrauisch/wichtigtuerisch/genervt). (2) AMTSPERSONEN/FUNKTIONÄRE (nicht alle stur-bürokratisch - korrekt/heimlich-hilfsbereit/schikanös/faul/ängstlich-überkorrekt/bestechlich). (3) TÜRSTEHER/WACHEN (nicht jeder stummer Muskelberg - gelangweilt/eitel/eisern/bestechlich/einschüchterbar). RISIKOARM (reine Prompt-Anreicherung). Run-Verifikation nötig.
 
 ## 🆕 v7.12.395 — Handlanger- & Zeugen-Vielfalt (gegen den "generischen aggressiven Typen")
 
-Reine Prompt-Erweiterung (kein State/Mechanik, risikoarm), Spielgefühl-Freigabe Benjamin. Beobachtung: namenlose wiederkehrende Nebenfiguren reagieren alle gleich - Schläger/Handlanger (die 2 Männer im Büro, die Typen vor der Lagerhalle, der Kerl mit der Stange am Auto) hauen IMMER aggressiv drauf, Zeuginnen/Nebenfrauen sind IMMER ängstlich.
+Reine Prompt-Erweiterung (kein State/Mechanik, risikoarm), Spielgefühl-Freigabe Projektleitung. Beobachtung: namenlose wiederkehrende Nebenfiguren reagieren alle gleich - Schläger/Handlanger (die 2 Männer im Büro, die Typen vor der Lagerhalle, der Kerl mit der Stange am Auto) hauen IMMER aggressiv drauf, Zeuginnen/Nebenfrauen sind IMMER ängstlich.
 
 URSACHE (analysiert): Es gibt KEIN Persönlichkeits-/Temperament-System für NPCs. Benannte Setup-NPCs (CLIENT/TARGET/SUSPECT/GANGSTER/ROMANCE...) haben reiche rolle+detail-Beschreibungen → reagieren individuell. Aber spontane namenlose Nebenfiguren stehen NICHT im Setup - die KI füllt die Lücke mit dem nächstliegenden Klischee (Schläger→aggressiv, Frau→ängstlich). Der Prompt hatte viele EINSCHRÄNKENDE NPC-Regeln (Antagonisten-Distanz, Sprach-Authentizität), aber KEINE, die aktiv Verhaltens-Vielfalt einfordert. Deckt sich mit Feature-Backlog roter Faden (Idee 1/4/6: weibliche Tonalität diversifizieren).
 
@@ -221,11 +221,11 @@ KONSOLIDIERTE Session (Code-Stand war auf v391 zurückgesetzt - alle v392-Fixes 
 
 **⚠️ DATEI-SYNC-BEFUND (wichtig):** Die Projekt-Dateien (index.html UND SCHATTEN_PROJEKT.md) standen zu Session-Beginn auf v7.12.391, NICHT v392/v393. Von der v392-Runde war nur der Custody-Fix tatsächlich in der Datei - Prompt-Fix + Cast-Schutz FEHLTEN. Das erklärt, warum der v392-Wessel-Run den Werner-Bug noch zeigte (gespielt auf Datei ohne 2 der 3 Fixes). LEHRE: Nach jeder Auslieferung sicherstellen, dass die deployte+ins-Projekt-zurückgespielte Datei wirklich die neueste ist - sonst spielt/testet man auf altem Stand. Alle Fixes in dieser Session verifiziert hergestellt.
 
-**P1 SCHLAF-BUTTON-BUG (Benjamin-Befund):** An Tag 2 nicht mehr schlafbar. Ursache: _laufendeRettung sperrte Schlaf bei JEDEM ungelösten Vermisstenfall (Stage>=2) über Tage. Benjamin-Entscheidung: Schlaf ist Karls Entscheidung mit allen Konsequenzen. _laufendeRettung KOMPLETT ENTFERNT (war nur dafür da + unzuverlässig). Schlaf jetzt NUR bei Spannung>=4 / Fahrt / Custody gesperrt. Gegen reale Run-Szenen simuliert (Sz37/38 ruhig→erlaubt, Sz32 Sp4→gesperrt, Sz36 Fahrt→gesperrt).
+**P1 SCHLAF-BUTTON-BUG (Projektleitung-Befund):** An Tag 2 nicht mehr schlafbar. Ursache: _laufendeRettung sperrte Schlaf bei JEDEM ungelösten Vermisstenfall (Stage>=2) über Tage. Projektleitung-Entscheidung: Schlaf ist Karls Entscheidung mit allen Konsequenzen. _laufendeRettung KOMPLETT ENTFERNT (war nur dafür da + unzuverlässig). Schlaf jetzt NUR bei Spannung>=4 / Fahrt / Custody gesperrt. Gegen reale Run-Szenen simuliert (Sz37/38 ruhig→erlaubt, Sz32 Sp4→gesperrt, Sz36 Fahrt→gesperrt).
 
 **P1 WERNER ZU FRÜH "GEFUNDEN" - 3 Ebenen abgesichert:** (a) Force-Abschluss-Pfad (Z28531) setzte bei vermisst BEDINGUNGSLOS zielpersonGefunden=true - jetzt nur noch wenn vorher echt gefunden, sonst wahrheitErkannt (Spur geklärt). (b) Cast-Präsenz-Schutz: berichtRe-Ausschluss inkl. direktem Bericht an Dritte ("du sagst ihm, dass Werner..."), 'lebt' als mehrdeutiger Indikator entfernt. (c) Prompt: Telefonbericht/Gerücht/Bericht-an-Klient != Fund. Gegen beide echten Wessel-Texte getestet (Sz15 Telefon + Sz40 direkter Bericht blocken; Schiffer/Helga-Funde greifen).
 
-**P2 MAUER-ANACHRONISMUS (Benjamin-Wunsch, Geschichtsspiel-Weltbruch):** Karls Nachname ist "Mauer" - die KI machte Wortspiele mit der (1953 nicht existierenden) Berliner Mauer ("selbst die Mauer ueberschreitet keine Grenze, Mauer", Sz6) + "an der Mauer zur Baustelle" (Sz15). ZWEI Ebenen: (1) Prompt geschärft - WORTSPIEL-FALLE explizit verboten, "die Mauer" als stehender Begriff TABU, aber "eine Mauer"/"Hofmauer"/"Bretterwand" als konkretes Bauwerk erlaubt (bei Baustelle lieber "Bauzaun"/"Bretterwand"). (2) Anachronismus-Detektor 'mauer-wortspiel' - erkennt "die Mauer...Mauer" im selben Satz (Wortspiel), KEINE false-positives auf Karls Namen allein ("Was willst du, Mauer?") oder Hofmauern. Getestet: Sz6-Wortspiel erkannt, 5 legitime Fälle sauber. Baustellen-Grenzfall ("die Mauer zur Baustelle") bewusst NUR dem Prompt überlassen, NICHT dem Detektor (zu nah an legitimem "die Mauer des Hauses" - false-positive-Risiko).
+**P2 MAUER-ANACHRONISMUS (Projektleitung-Wunsch, Geschichtsspiel-Weltbruch):** Karls Nachname ist "Mauer" - die KI machte Wortspiele mit der (1953 nicht existierenden) Berliner Mauer ("selbst die Mauer ueberschreitet keine Grenze, Mauer", Sz6) + "an der Mauer zur Baustelle" (Sz15). ZWEI Ebenen: (1) Prompt geschärft - WORTSPIEL-FALLE explizit verboten, "die Mauer" als stehender Begriff TABU, aber "eine Mauer"/"Hofmauer"/"Bretterwand" als konkretes Bauwerk erlaubt (bei Baustelle lieber "Bauzaun"/"Bretterwand"). (2) Anachronismus-Detektor 'mauer-wortspiel' - erkennt "die Mauer...Mauer" im selben Satz (Wortspiel), KEINE false-positives auf Karls Namen allein ("Was willst du, Mauer?") oder Hofmauern. Getestet: Sz6-Wortspiel erkannt, 5 legitime Fälle sauber. Baustellen-Grenzfall ("die Mauer zur Baustelle") bewusst NUR dem Prompt überlassen, NICHT dem Detektor (zu nah an legitimem "die Mauer des Hauses" - false-positive-Risiko).
 
 **WIEDERHERGESTELLTE v392-Fixes (verifiziert vorhanden):** Custody arrestKarlBezugRe (war da), Prompt Bericht!=Fund (neu), Cast-Schutz berichtRe (neu). Backlog Idee 8 (Vermissten 3-Stufen) auch wiederhergestellt.
 
@@ -235,19 +235,19 @@ KONSOLIDIERTE Session (Code-Stand war auf v391 zurückgesetzt - alle v392-Fixes 
 
 Reine howto-Inhalts-Runde (risikoarm).
 
-**Zeit-Scheitern-Erklärung ergänzt (Benjamin-Wunsch):** Neuer Absatz im Tag/Nacht-Abschnitt - Fall scheitert bei Überschreiten des Hard-Caps. Echte Werte (verifiziert, HARD_CAP_BY_TYPE Z4382): Diebstahl/Beschatten 55, Vermisst/Mord 60, Wahrheit/Politisch 65, Default 60. Im howto als Größenordnung "etwa 50/60/65" formuliert (Zahlen sind laut Code-Kommentar "Justier-Stellen", daher weich genannt). Mechanik: Warnzone ab ~20 Szenen vor Cap (KI pusht auf Abschluss, verschärft bei -15/-5), bei Cap erreicht + stage<4 + nicht gelöst -> istGescheitert. Im Text betont: "Reißleine, kein Richtwert" - die meisten Fälle werden früher gelöst.
+**Zeit-Scheitern-Erklärung ergänzt (Projektleitung-Wunsch):** Neuer Absatz im Tag/Nacht-Abschnitt - Fall scheitert bei Überschreiten des Hard-Caps. Echte Werte (verifiziert, HARD_CAP_BY_TYPE Z4382): Diebstahl/Beschatten 55, Vermisst/Mord 60, Wahrheit/Politisch 65, Default 60. Im howto als Größenordnung "etwa 50/60/65" formuliert (Zahlen sind laut Code-Kommentar "Justier-Stellen", daher weich genannt). Mechanik: Warnzone ab ~20 Szenen vor Cap (KI pusht auf Abschluss, verschärft bei -15/-5), bei Cap erreicht + stage<4 + nicht gelöst -> istGescheitert. Im Text betont: "Reißleine, kein Richtwert" - die meisten Fälle werden früher gelöst.
 
-**Stasi-Mechanik: VERIFIZIERT als bereits vollständig erklärt (Benjamin-Frage).** Der howto-Abschnitt "🚨 Politische Fälle und die Stasi" (Z3160) deckt schon ab: Aufmerksamkeit der Staatssicherheit, Gewahrsam/Verhör, Verhör-Optionen (schweigen/kooperieren/bestechen), Notflucht-Risiko, politische Fälle als gefährlichste. Kein Handlungsbedarf.
+**Stasi-Mechanik: VERIFIZIERT als bereits vollständig erklärt (Projektleitung-Frage).** Der howto-Abschnitt "🚨 Politische Fälle und die Stasi" (Z3160) deckt schon ab: Aufmerksamkeit der Staatssicherheit, Gewahrsam/Verhör, Verhör-Optionen (schweigen/kooperieren/bestechen), Notflucht-Risiko, politische Fälle als gefährlichste. Kein Handlungsbedarf.
 
-**Tempo-Zielkonflikt dokumentiert (Benjamin-Bedenken):** Bei Idee 7 (Tageszeit-Orts-Kopplung) wichtige Warnung ergänzt - die Tageszeit vergeht schnell (verifiziert: ~1-3 Szenen/Phase, ~6-15 Szenen/Tag via timeAdvanceTokens 0.35-0.95/Szene + Force-Push nach 3). Benjamins Zielrahmen ~16 Szenen/Tag, 3-4 Tage, nicht 60 Szenen. Konflikt: schnelle Phasen vs. abend-gekoppelte Orte (Zeitfenster verpassbar). Lösungsansätze + Empfehlung (erst Tempo-Frage klären) im Backlog bei Idee 7 festgehalten.
+**Tempo-Zielkonflikt dokumentiert (Projektleitung-Bedenken):** Bei Idee 7 (Tageszeit-Orts-Kopplung) wichtige Warnung ergänzt - die Tageszeit vergeht schnell (verifiziert: ~1-3 Szenen/Phase, ~6-15 Szenen/Tag via timeAdvanceTokens 0.35-0.95/Szene + Force-Push nach 3). Projektleitungs Zielrahmen ~16 Szenen/Tag, 3-4 Tage, nicht 60 Szenen. Konflikt: schnelle Phasen vs. abend-gekoppelte Orte (Zeitfenster verpassbar). Lösungsansätze + Empfehlung (erst Tempo-Frage klären) im Backlog bei Idee 7 festgehalten.
 
 ## 🆕 v7.12.390 — howto: Heilungs-Werte + Tag/Nacht/Energie-Philosophie erklärt
 
-Reine howto-Inhalts-Runde (keine Spielmechanik, risikoarm). Benjamin: in "So funktioniert's" fehlten Infos zu Schlaf/Heilung. NACHTRAG: Doc-Wagner-Aussage korrigiert (s.u.).
+Reine howto-Inhalts-Runde (keine Spielmechanik, risikoarm). Projektleitung: in "So funktioniert's" fehlten Infos zu Schlaf/Heilung. NACHTRAG: Doc-Wagner-Aussage korrigiert (s.u.).
 
-**Heilungs-Werte präzisiert (alle gegen Code verifiziert):** Die System-Button-Zeilen nennen jetzt konkrete Werte. Notheilen (selbst) = Verfassung +1, jederzeit bei Vf<=2. Marlene/Charité = +1 (NEU als eigene Zeile ergänzt - war im howto gar nicht erwähnt), ohne Tageslimit. WICHTIG/KORREKTUR: Benjamins Annahme war "Marlene auch +2" - tatsächlich nur +1 (Code Z14803/16095 explizit).
+**Heilungs-Werte präzisiert (alle gegen Code verifiziert):** Die System-Button-Zeilen nennen jetzt konkrete Werte. Notheilen (selbst) = Verfassung +1, jederzeit bei Vf<=2. Marlene/Charité = +1 (NEU als eigene Zeile ergänzt - war im howto gar nicht erwähnt), ohne Tageslimit. WICHTIG/KORREKTUR: Projektleitungs Annahme war "Marlene auch +2" - tatsächlich nur +1 (Code Z14803/16095 explizit).
 
-**Doc Wagner = +2 - KORREKTUR meiner ersten Fassung (Benjamin-Befund):** Ich hatte zuerst "einmal pro Tag" geschrieben (aus Code-Kommentar Z6322 "Eine Behandlung pro Tag" + Prüf-Bedingung lastDocHealingDay>=gameDay abgeleitet). FAKTISCH FALSCH: lastDocHealingDay wird NIRGENDS nach einer Behandlung gesetzt (nur Init=0/Reset/Save-Restore, kein "= gameDay"). Die 1x/Tag-Sperre greift also NIE - sie ist toter Legacy-Code aus v7.1, dessen setzender Teil später entfernt wurde (als Heilung auf szenenbasiertes Modell umgestellt wurde), nur Kommentar+tote Bedingung blieben. Benjamins Design ist bewusst: man kann sich beliebig oft bei Doc Wagner heilen, ABER jede Behandlung kostet Zeit (HEILEN timeAdvanceBonus=0.5) - die Taktik ist ZEITLASTIG, nicht energielastig. Wer viel heilt, braucht mehr Szenen und scheitert eher. howto-Zeile + Tag/Nacht-Abschnitt entsprechend korrigiert ("so oft du willst, kostet aber Zeit"). LEHRE: Code-KOMMENTARE beschreiben Absichten, nicht zwingend gelebtes Verhalten - immer prüfen ob der setzende Code existiert, nicht nur die Prüf-Bedingung.
+**Doc Wagner = +2 - KORREKTUR meiner ersten Fassung (Projektleitung-Befund):** Ich hatte zuerst "einmal pro Tag" geschrieben (aus Code-Kommentar Z6322 "Eine Behandlung pro Tag" + Prüf-Bedingung lastDocHealingDay>=gameDay abgeleitet). FAKTISCH FALSCH: lastDocHealingDay wird NIRGENDS nach einer Behandlung gesetzt (nur Init=0/Reset/Save-Restore, kein "= gameDay"). Die 1x/Tag-Sperre greift also NIE - sie ist toter Legacy-Code aus v7.1, dessen setzender Teil später entfernt wurde (als Heilung auf szenenbasiertes Modell umgestellt wurde), nur Kommentar+tote Bedingung blieben. Projektleitungs Design ist bewusst: man kann sich beliebig oft bei Doc Wagner heilen, ABER jede Behandlung kostet Zeit (HEILEN timeAdvanceBonus=0.5) - die Taktik ist ZEITLASTIG, nicht energielastig. Wer viel heilt, braucht mehr Szenen und scheitert eher. howto-Zeile + Tag/Nacht-Abschnitt entsprechend korrigiert ("so oft du willst, kostet aber Zeit"). LEHRE: Code-KOMMENTARE beschreiben Absichten, nicht zwingend gelebtes Verhalten - immer prüfen ob der setzende Code existiert, nicht nur die Prüf-Bedingung.
 
 **Neuer Abschnitt "🌙 Tag, Nacht und Energie, du bestimmst das Tempo":** erklärt drei bisher unsichtbare Mechaniken: (1) Tag läuft mit Aktionen weiter, endet ERST beim Schlafen-Klick - bewusst nachts weiterermitteln möglich (SCHLAFEN timeAdvanceBonus=99 = erzwungener Tagwechsel). (2) Schlafen lädt Energie voll auf (energieDelta=100) - Arcade-Gedanke, jeder Tag ein Neuanfang. (3) Spieler steuert Tag-/Nacht-Rhythmus selbst. Abgrenzung: Energie = Arcade-Reset durch Schlaf; Verfassung/Verletzung = Zeit-Taktik via Doc Wagner/Marlene/Notheilen (kostet Szenen, kein Limit).
 
@@ -361,7 +361,7 @@ Zweites historisches Lektorat (auf v382, kannte v383-Getränke/Date-Gating noch 
 
 ## 🆕 v7.12.383 — Historische Erweiterung: Getränke + Date-Gating + Stasi-Fahrzeug-Vielfalt + Anker-Anreicherung
 
-Ziel (Benjamin): Schatten so historisch korrekt + interessant machen, dass ein Geschichtslehrer es Schülern zum Lernen über Berlin 1953 empfiehlt - jeder Lauf = Bildung. Alle Fakten web-verifiziert vor Einbau.
+Ziel (Projektleitung): Schatten so historisch korrekt + interessant machen, dass ein Geschichtslehrer es Schülern zum Lernen über Berlin 1953 empfiehlt - jeder Lauf = Bildung. Alle Fakten web-verifiziert vor Einbau.
 
 **GETRÄNKE-BLOCK (neu, web-verifiziert):** Bisher fehlten Getränke komplett. Eingebaut nach ZIGARETTEN-Block: Ost-Kneipe "Molle und Korn" (Berliner Institution, echtes Lied von Bully Buhlan 1951), Nordhäuser Doppelkorn (Karls Marke), einfacher Korn, Goldbrand, Schultheiss-Bier (Brauerei seit 1842), Berliner Weiße (säuerlich, Sommer). ALLTAG: echter Bohnenkaffee ist teurer Luxus (oft nur gegen Westgeld) → Normalfall Muckefuck/Malzkaffee (Kaffee-Ersatz aus Zichorie/Gerste, in Gaststätten als "Deutscher Kaffee"), Tee, Selters, Brause. WEST/US: Bourbon/Rye/Gin teuer, Soldaten-/Schwarzmarktware (Karl will Bourbon, kriegt Korn). CAFÉ KRANZLER/WIEN: echter Kaffee+Torte=Statussymbol. STALINALLEE: Thermoskanne Malzkaffee. Lehrsatz: Bohnenkaffee sagt 1953 mehr über eine Figur als jede Beschreibung. Getränke-ANKER im Detektor ergänzt (molle und korn/nordhäuser/goldbrand/muckefuck/malzkaffee/schultheiss/berliner weiße/selters), getestet - generisches "Bier/Kaffee" matcht bewusst NICHT.
 
@@ -509,7 +509,7 @@ HINTERGRUND: Viele Tester wussten nicht, dass Musik + Vorlesen existieren - dahe
 - Liesel Cello-Anker (P2): Cello bleibt Cello, nie Geigenkasten (Item-Drift Sz31->36).
 - Nacht-Marathon: kein Auto-Schlaf, aber stärkerer Müdigkeitsdruck/Schlaf-Button-Markierung.
 - Romance kontextsensibler (nicht pushen wenn Finale bereit).
-- RUF-SYSTEM (Benjamin-Idee, jetzt brandaktuell): NPCs reagieren auf Härte-Profil. RUF-DIAG liefert ab v372 endlich volle Daten.
+- RUF-SYSTEM (Projektleitung-Idee, jetzt brandaktuell): NPCs reagieren auf Härte-Profil. RUF-DIAG liefert ab v372 endlich volle Daten.
 
 ## 🆕 v7.12.371 — Wunde verschwindet bei voller Heilung (User-Wunsch, Doc-Wagner/injury-desync)
 
@@ -547,7 +547,7 @@ Zusätzlich: letzte Karo-Erwähnung in einem Code-Kommentar (Z5862) auf Carré k
 
 ## 🆕 v7.12.368 — RUF-DIAG-Marker (reine Beobachtung, Datenbasis für mögliches Ruf-System)
 
-Benjamin-Idee: NPCs reagieren unterschiedlich, je nachdem ob Karl oft Gewalt anwendet / grob vs. vorsichtig ist. Bewertung: bessere der zwei Feature-Ideen, weil der State teils schon getrackt wird (folterSceneCount/actionStreak/Verfassung/custody) UND es INNERHALB eines Falls testbar ist (kein Cross-Fall-Speicher nötig). Gefahr: Bevormundung - der Ruf darf die Freitext-Freiheit nicht untergraben, NICHT moralisch werten, nur die Welt realistisch reagieren lassen.
+Projektleitung-Idee: NPCs reagieren unterschiedlich, je nachdem ob Karl oft Gewalt anwendet / grob vs. vorsichtig ist. Bewertung: bessere der zwei Feature-Ideen, weil der State teils schon getrackt wird (folterSceneCount/actionStreak/Verfassung/custody) UND es INNERHALB eines Falls testbar ist (kein Cross-Fall-Speicher nötig). Gefahr: Bevormundung - der Ruf darf die Freitext-Freiheit nicht untergraben, NICHT moralisch werten, nur die Welt realistisch reagieren lassen.
 
 Bewährte Methode: erst MESSEN, dann bauen. Gebaut wurde NUR ein reiner Diagnose-Marker, KEINE Spielwirkung:
 - Modulscope-Counter (analog _lastLogged*): _rufGewaltAktionen/_rufBefragungen/_rufNeutralAktionen/_rufFluchtAktionen/_rufCustodyEreignisse, beim Run-Reset genullt.
@@ -556,8 +556,8 @@ Bewährte Methode: erst MESSEN, dann bauen. Gebaut wurde NUR ein reiner Diagnose
 
 NÄCHSTER SCHRITT: ein paar Testruns mit verschiedenen Spielstilen, dann RUF-DIAG-Zeilen auswerten - bildet sich ein klares, stabiles Profil? Erst dann entscheiden, ob ein echtes Ruf-System (NPC-Reaktionen) sich lohnt.
 
-### Backlog-Ergänzung: zwei Feature-Ideen (Benjamin)
-- **Ruf-System (Idee 2, vielversprechend):** → ausführlich ausgearbeitet als Idee 6 in der Sektion "🎬 FEATURE-BACKLOG: Figuren & Welt" ganz oben (mit Benjamins konkreten Beispielen + Machbarkeitseinschätzung). Kurz: RUF-DIAG/Härte-Anteil misst seit v377 zuverlässig - NPCs könnten auf Karls Härte-Profil reagieren (vorsichtigere Ganoven, ängstlichere/offenere Zeugen) als WELT-Reaktion, NIE als moralische Strafe. Innerhalb eines Falls testbar.
+### Backlog-Ergänzung: zwei Feature-Ideen (Projektleitung)
+- **Ruf-System (Idee 2, vielversprechend):** → ausführlich ausgearbeitet als Idee 6 in der Sektion "🎬 FEATURE-BACKLOG: Figuren & Welt" ganz oben (mit Projektleitungs konkreten Beispielen + Machbarkeitseinschätzung). Kurz: RUF-DIAG/Härte-Anteil misst seit v377 zuverlässig - NPCs könnten auf Karls Härte-Profil reagieren (vorsichtigere Ganoven, ängstlichere/offenere Zeugen) als WELT-Reaktion, NIE als moralische Strafe. Innerhalb eines Falls testbar.
 - **Fallübergreifende Erinnerung (Idee 1, ABGERATEN):** "NPCs in Fall 3 erinnern sich an Fall 1". Problem: Fälle nicht in fester Reihenfolge/thematisch unverbunden → Plausibilität wackelt; Cross-Fall-State = dieselbe Bug-Klasse wie der v367-Save-Restore-Abgleich, nur eine Ebene höher, Test-"Hölle". SCHLANKE ALTERNATIVE (falls gewünscht): vage Vergangenheits-Referenzen aus generischem Pool ("Man hört, Sie haben mal einen Bankier am Wannsee gefunden") OHNE echten State - 80% des Gefühls für 10% des Aufwands, Risiko nahe null.
 
 ## 🆕 v7.12.367 — Save-Restore-Abgleich (systematischer blinder Fleck aus v366)
@@ -593,9 +593,9 @@ Bewusst absurder Extremtest (Spider-Man-Netz, Zwiebelgas-Kriegsführung, 41 Szen
 
 **P2 — Hamburger-Indiz GEFIXT.** Indiz-Aufnahme (~Z26907). Essens-/Freitext-Zustände ("Hamburger mit extra Zwiebeln ist Teil deines Zustands", Burgergase) landeten als Beweis in der Fallakte. Filter ergänzt: solche Zustände werden vor der Aufnahme abgelehnt (diag 'filter'). ChatGPTs Idee einer eigenen Kategorie "temporärer Freitext-Zustand" → Backlog.
 
-**Karo-Zigaretten — ANACHRONISMUS + Monokultur GEFIXT (Benjamin-Befund).** Recherche-bestätigt: Die Marke hieß 1953 noch "Carré"; "Karo" kam erst in den 1960ern (Eindeutschung). Damit war "Karo" ein Disqualifikator wie Trabant-vor-1957. Zugleich rauchten im Setup 5 NPCs (Funktionär, Witwe, Schaffner, Bauarbeiter, Eisenbahner) ALLE "Karo" = eintönig + sozial unplausibel. Fix: Markenliste historisch korrigiert (Carré/Turf/Sport filterlos billig, Juwel/Casino besser, Juno/Reval/Lord/Eckstein West) + Vielfalt-/Sozialstand-Hinweis; 5 NPC-Details marken-differenziert (Bauarbeiter/Eisenbahner=Carré, Schaffner=Turf, Witwe/Funktionär=Juwel); 5 Prompt-/Detail-Hinweise + Anker-Detektor auf Carré/Turf/Vielfalt umgestellt (Karo bleibt im Anker-Detektor als Erkennung, falls KI es doch nutzt).
+**Karo-Zigaretten — ANACHRONISMUS + Monokultur GEFIXT (Projektleitung-Befund).** Recherche-bestätigt: Die Marke hieß 1953 noch "Carré"; "Karo" kam erst in den 1960ern (Eindeutschung). Damit war "Karo" ein Disqualifikator wie Trabant-vor-1957. Zugleich rauchten im Setup 5 NPCs (Funktionär, Witwe, Schaffner, Bauarbeiter, Eisenbahner) ALLE "Karo" = eintönig + sozial unplausibel. Fix: Markenliste historisch korrigiert (Carré/Turf/Sport filterlos billig, Juwel/Casino besser, Juno/Reval/Lord/Eckstein West) + Vielfalt-/Sozialstand-Hinweis; 5 NPC-Details marken-differenziert (Bauarbeiter/Eisenbahner=Carré, Schaffner=Turf, Witwe/Funktionär=Juwel); 5 Prompt-/Detail-Hinweise + Anker-Detektor auf Carré/Turf/Vielfalt umgestellt (Karo bleibt im Anker-Detektor als Erkennung, falls KI es doch nutzt).
 
-**Verbose Cast-Diagnostik (Benjamin-Wunsch für Fein-Justierung):** Neuer Sammler `_castDiagEvents` + zusammenfassende **CAST-SZENE-DIAG**-Zeile pro Szene (~Z26584): finaler Cast (Name/Rolle), rohes KI-Feld personenImRaum, und ALLE Cast-Ereignisse der Szene (reise-bereinigt / clean-ortsbindung/klient/hardmove / reintro-übersprungen(abschied/bericht) / reintro-GESPERRT(ghost-cast) / reintro-AUFGENOMMEN). Macht Cast-Bugs nach Testruns fein justierbar.
+**Verbose Cast-Diagnostik (Projektleitung-Wunsch für Fein-Justierung):** Neuer Sammler `_castDiagEvents` + zusammenfassende **CAST-SZENE-DIAG**-Zeile pro Szene (~Z26584): finaler Cast (Name/Rolle), rohes KI-Feld personenImRaum, und ALLE Cast-Ereignisse der Szene (reise-bereinigt / clean-ortsbindung/klient/hardmove / reintro-übersprungen(abschied/bericht) / reintro-GESPERRT(ghost-cast) / reintro-AUFGENOMMEN). Macht Cast-Bugs nach Testruns fein justierbar.
 
 **OFFEN (Backlog):** "temporärer Freitext-Zustand"-Kategorie (nass/betrunken/stinkend/Zwiebelgas als sichtbarer Status statt Indiz); Nacht-Marathon-Diagnosetext (Action- vs. Rede-Nacht); EMW-Indiz-Einlösung.
 
@@ -611,7 +611,7 @@ Schneller, sehr lustiger Vermisstenfall (Renate/Bruno, Hundehaufen-Slapstick, ge
 
 **P2 — FINALE-DIAG False-Positive GEFIXT.** `diagFinaleWahrheitstreue` (~Z9797). Befund: Setup-Ort "Renate Schiffer Wohnung Tiergarten" als "im Finaltext genannt" gewertet, weil Token "renate" (= Klientin) natürlich im Finaltext steht - obwohl kein echter Ortssprung. Fix: Personennamen (Cast/Setup-NPCs) UND generische Ortswörter (wohnung/buero/keller/...) aus den Match-Tokens filtern; nur geografisch diskriminierende Tokens (Tiergarten, Auguststrasse) zählen. Getestet: Schiffer-FP weg, Marienfelde-Drift weiterhin erkannt.
 
-**P2 — Romantik-Funke bei reiner Klientin GEFIXT (Benjamins Vorgabe: jederzeit romantikfähig bleiben).** `updateRomanticTension` (~Z22260). Befund: Renate (Klientin, kein Romance-Tag) löste im Abschluss Tension +2 aus - sie zündet als Cast-Frau (rolle "Klientin") UND über die Vornamensliste. KLIENTIN-AUSNAHME: wenn ALLE präsenten Frauen reine CLIENT-Personen ohne ROMANCE-Tag sind, zündet die Tension NICHT. Ändert NICHTS an jederzeitiger Romantik-Fähigkeit: Zeugin/Bardame/Nachbarin + CLIENT+ROMANCE-Frau bleiben voll romantikfähig; sobald EINE echte Frau präsent ist, läuft alles normal. Getestet: 4 Szenarien (reine Klientin=0, Zeugin>0, CLIENT+ROMANCE>0, gemischt>0).
+**P2 — Romantik-Funke bei reiner Klientin GEFIXT (Projektleitungs Vorgabe: jederzeit romantikfähig bleiben).** `updateRomanticTension` (~Z22260). Befund: Renate (Klientin, kein Romance-Tag) löste im Abschluss Tension +2 aus - sie zündet als Cast-Frau (rolle "Klientin") UND über die Vornamensliste. KLIENTIN-AUSNAHME: wenn ALLE präsenten Frauen reine CLIENT-Personen ohne ROMANCE-Tag sind, zündet die Tension NICHT. Ändert NICHTS an jederzeitiger Romantik-Fähigkeit: Zeugin/Bardame/Nachbarin + CLIENT+ROMANCE-Frau bleiben voll romantikfähig; sobald EINE echte Frau präsent ist, läuft alles normal. Getestet: 4 Szenarien (reine Klientin=0, Zeugin>0, CLIENT+ROMANCE>0, gemischt>0).
 
 **P2 — VEB-Grammatik GEFIXT.** `expandAbbreviations` (~Z21578). Befund: "der VEB Elektrokohle" → "der Volkseigener Betrieb (VEB)" = Kasusfehler (Expansion immer Nominativ). VEB wird nicht mehr expandiert - 1953 geläufige, grammatisch unkritische Form (Prompt-Regel Z3107 erlaubt "der VEB" explizit).
 
@@ -631,7 +631,7 @@ Erster echter Spieler-Run mit den neuen Markern (Kessler/beschatten, gewonnen, s
 
 **P2 — Setup-Cast-Audit „6/6" Diagnosefehler GEFIXT.** Debug-Export (~Z11330). Befund: Audit zählte ALLE Setup-NPCs als „aktiviert", weil alle beim Start in storyFacts eingefroren werden (frozen:true) — auch nie aufgetretene (Frau Lemke, Hellbach). Maß Lektorat zu positiv. „Aktiviert" jetzt an echten Präsenz-Signalen: NPC hat Kernhinweis gegeben (npcMemory) ODER ist/war im rekonstruierten Cast. Neue Export-Zeile „Nur im Setup definiert (NICHT bespielt): [...]" macht die Lücke sichtbar.
 
-**OFFEN — Spielgefühl/Fallsemantik (brauchen Benjamins Freigabe, NICHT gebaut):**
+**OFFEN — Spielgefühl/Fallsemantik (brauchen Projektleitungs Freigabe, NICHT gebaut):**
 - **„Verdacht bestätigt" semantisch falsch (P1/P2):** beschatten gibt IMMER „Verdacht bestätigt" zurück (stage3LabelByCaseType Z9931), auch wenn der ursprüngliche Verdacht (Affäre) WIDERLEGT und durch andere Wahrheit (Schmuggel) ersetzt wurde. Korrekte Differenzierung (bestätigt/widerlegt/anders erklärt) bräuchte ein verlässliches Signal, das die Engine aus der Prosa nicht sicher hat. Fallsemantik-Eingriff → Freigabe nötig.
 
 **OFFEN — #6-Cluster (zusammen mit Finale-Whitelist bauen):**
@@ -685,7 +685,7 @@ Alle Befunde vor dem Bau gegen echten Code per node-Test (Problemfälle + Gegenp
 
 **#3 (P1/P2) — Pronomen-Fallback „frag sie/ihn" auf aktiven Cast.** `extractPersonTarget` (~Z22937). Da `personenImRaum` bei Flash-Lite fast immer fehlt (Architektur §3), Fallback auf rekonstruierten `cast`: steht dort genau EINE Person, ist „frag sie/ihn" eindeutig. Macht direkte Dialoge stabiler.
 
-**#4 (Spielgefühl, Freigabe Benjamin) — Essens-Prompt entschärft.** Z3597. Alter Prompt verbot Essen pauschal im Erzähltext (Hunger-Wert-Altlast) → kollidierte mit der neuen Anleitung (Kuchen/Torte als kreatives Freitext-Feature). Neu: kein Hunger-MANAGEMENT (keine Routine-Imbissszenen/knurrender Magen von KI aus), ABER vom Spieler eingeführte Essensobjekte (Kuchen, Torte, Kaffee, Schnaps) ausdrücklich erlaubt — als Requisite, ins Inventar, übergeben/gegessen/geworfen. GTA-Noir-Freiheit, keine Mechanik.
+**#4 (Spielgefühl, Freigabe Projektleitung) — Essens-Prompt entschärft.** Z3597. Alter Prompt verbot Essen pauschal im Erzähltext (Hunger-Wert-Altlast) → kollidierte mit der neuen Anleitung (Kuchen/Torte als kreatives Freitext-Feature). Neu: kein Hunger-MANAGEMENT (keine Routine-Imbissszenen/knurrender Magen von KI aus), ABER vom Spieler eingeführte Essensobjekte (Kuchen, Torte, Kaffee, Schnaps) ausdrücklich erlaubt — als Requisite, ins Inventar, übergeben/gegessen/geworfen. GTA-Noir-Freiheit, keine Mechanik.
 
 **#7 (P2) — Travel-Ziel bei „und/dann/um…" abschneiden.** „Fahr zur Albrechtstraße und suche nach Spuren" → sauber „albrechtstrasse" statt „albrechtstrasse und suche nach spuren". Schützt Whitelist/ORT-DIAG.
 
@@ -697,7 +697,7 @@ Alle Befunde vor dem Bau gegen echten Code per node-Test (Problemfälle + Gegenp
 ## v7.12.360 — Anleitung ("So funktioniert's") auf Implementierungsstand geprüft + 2 Fehler korrigiert
 
 Vollständiger Faktencheck aller Anleitungs-Behauptungen gegen den Code. Zwei sachlich falsche Stellen gefixt:
-1. **Schlafplatz-Wahl (Benjamin-Befund):** "Worum geht's" sagte "im Büro pennen, im Auto, sogar in einer Stasi-Zelle" - suggeriert wählbare Schlafplätze. Stimmt nicht mehr: Der Schlafen-Button führt IMMER zu SCHLAFEN-ZU-HAUSE (Karl wacht in seiner Wohnung/Büro am Hackeschen Markt auf, Z14116). Andere Schlafplätze (Krankenhaus/Gewahrsam/bei einer Frau) ergeben sich nur aus der Story, nicht aus Spielerwahl. Ersetzt durch wirklich freie Aktionen ("bestechen oder eine Torte ins Gesicht werfen").
+1. **Schlafplatz-Wahl (Projektleitung-Befund):** "Worum geht's" sagte "im Büro pennen, im Auto, sogar in einer Stasi-Zelle" - suggeriert wählbare Schlafplätze. Stimmt nicht mehr: Der Schlafen-Button führt IMMER zu SCHLAFEN-ZU-HAUSE (Karl wacht in seiner Wohnung/Büro am Hackeschen Markt auf, Z14116). Andere Schlafplätze (Krankenhaus/Gewahrsam/bei einer Frau) ergeben sich nur aus der Story, nicht aus Spielerwahl. Ersetzt durch wirklich freie Aktionen ("bestechen oder eine Torte ins Gesicht werfen").
 2. **"Erpressung" als Falltyp:** Sektion Politische Fälle nannte "klassische Kriminalfälle (Vermisste, Morde, Erpressung)". Es gibt KEINEN Erpressungs-caseType (echte Typen: vermisst/mord/diebstahl/beschatten/politisch/wahrheit). Erpressung kommt nur narrativ als Tatmittel vor. → "Diebstähle".
 
 **Verifiziert KORREKT (kein Fix nötig):** A/B/C/D-Kategorien, Notflucht-Quote (30% = "1 von 3", Z13446), Verfassung 1-5 + Tod bei 0 (Z14415), alle 5 Bekannten (Doc Wagner/Schöneberg-West, Heinz Wernicke/Ex-Schutzpolizist, Roth/Volkspolizei-Ost, Lindner/Schutzpolizei-West, Trude/Imbiss Hackescher Markt - alle exakt wie Code Z3219-3222), Hunger+Energie-Werte existieren (karlHunger/karlEnergie), Stasi/Gewahrsam/Notflucht-Mechanik, Welt 1953 (Mauer erst 1961), System-Buttons (Schlafen/Doc Wagner/Notheilen/Flucht/Notflucht/Näher kommen/Fall lösen).
@@ -725,13 +725,13 @@ Vollständiger Faktencheck aller Anleitungs-Behauptungen gegen den Code. Zwei sa
 
 ## v7.12.358 — Musik-Playlist 4 → 10 Tracks
 
-Benjamin hat inzwischen music1-10.mp3 im Repo-Root. MUSIC_TRACKS-Array (Z7338) von 4 auf 10 erweitert (['music1.mp3' .. 'music10.mp3']). Sonst NICHTS geändert: Shuffle (Fisher-Yates), Playlist-Bau (Anti-Doppel: kein Song zweimal direkt hintereinander), advanceMusicTrack (Endlosschleife mit Neu-Würfeln nach jeder Runde) skalieren generisch über MUSIC_TRACKS.length. 3 Kommentar-Stellen "4 Tracks" → "10 Tracks" aktualisiert (Z2617, 7312, 7333). Fehlermeldungstexte "music1.mp3 nicht ladbar" bleiben korrekt (music1 existiert). Mehr Abwechslung im Hintergrund-Loop.
+Projektleitung hat inzwischen music1-10.mp3 im Repo-Root. MUSIC_TRACKS-Array (Z7338) von 4 auf 10 erweitert (['music1.mp3' .. 'music10.mp3']). Sonst NICHTS geändert: Shuffle (Fisher-Yates), Playlist-Bau (Anti-Doppel: kein Song zweimal direkt hintereinander), advanceMusicTrack (Endlosschleife mit Neu-Würfeln nach jeder Runde) skalieren generisch über MUSIC_TRACKS.length. 3 Kommentar-Stellen "4 Tracks" → "10 Tracks" aktualisiert (Z2617, 7312, 7333). Fehlermeldungstexte "music1.mp3 nicht ladbar" bleiben korrekt (music1 existiert). Mehr Abwechslung im Hintergrund-Loop.
 
 ---
 
 ## v7.12.357 — Umlaut-Bereinigung (NPC-Beschreibungen/Stand-Popup) + Em-Dash-Platzhalter raus
 
-**Befund (Benjamin):** Im "Aktueller Stand"-Popup, besonders NPC-Beschreibungen, standen Umlaute als ASCII (ae/oe/ue: "haelt", "koennte", "ueber", "Identitaet", "Antiquitaetenhaendler", "Affaere"...). Quelle: Setup-Cast beziehung/rolle-Strings. Außerdem Em-Dashes (—) als Platzhalter sichtbar.
+**Befund (Projektleitung):** Im "Aktueller Stand"-Popup, besonders NPC-Beschreibungen, standen Umlaute als ASCII (ae/oe/ue: "haelt", "koennte", "ueber", "Identitaet", "Antiquitaetenhaendler", "Affaere"...). Quelle: Setup-Cast beziehung/rolle-Strings. Außerdem Em-Dashes (—) als Platzhalter sichtbar.
 
 **Fix 1 - Umlaut-Whitelist in fixSprache erweitert (~Z9187):** ~55 zweifelsfreie Umlaut-Wörter ergänzt (bisher nur Tänzerin/Sängerin/Ärztin/Sekretärin seit v321). Läuft auf Anzeige-Text (fixEigennamen→fixSprache-Pfad: Char-Detail, Cast, Fall-Block, Optionen, Log), NICHT im Matching (das nutzt normForMatch). KURATIERTE Liste - bewusst NICHT dabei: Mauer/Trauer/Trauerfeier/Steuer/Feuer/neue/Leute/heute/Beute/treu (legitimes ae/oe/ue). Längere/zusammengesetzte VOR kürzeren (Presseüberwachung vor über). Getestet: alle kaputten repariert, alle 10 legitimen Wörter unverändert.
 
@@ -781,9 +781,9 @@ Spieler durchlaufen Fälle in dieser Reihenfolge (Freischalt-System, leicht→sc
 
 ---
 
-## 🆕 v7.12.354 — Bericht-Guard härten: Zeugenbericht im Indikativ (Lektorat Achterberg P1 + Benjamin-Befund)
+## 🆕 v7.12.354 — Bericht-Guard härten: Zeugenbericht im Indikativ (Lektorat Achterberg P1 + Projektleitung-Befund)
 
-**Befund (Benjamin + Lektorat, härtester Cast-Bug):** Im Opel berichtet Liesel "Vossberg hat mich bedroht, flüstert sie. Er wusste, dass..." - ein Zeugenbericht über den ABWESENDEN Vossberg. Der v350-Bericht-Guard fing das nicht (prüfte nur dass-Sätze/Konjunktiv), Vossberg wurde reintroduced und materialisierte eine Szene später auf dem Rücksitz mitten in der Liesel-Romance. Kausalkette bestätigt: falscher Reintroduce → KI lässt Person physisch auftreten.
+**Befund (Projektleitung + Lektorat, härtester Cast-Bug):** Im Opel berichtet Liesel "Vossberg hat mich bedroht, flüstert sie. Er wusste, dass..." - ein Zeugenbericht über den ABWESENDEN Vossberg. Der v350-Bericht-Guard fing das nicht (prüfte nur dass-Sätze/Konjunktiv), Vossberg wurde reintroduced und materialisierte eine Szene später auf dem Rücksitz mitten in der Liesel-Romance. Kausalkette bestätigt: falscher Reintroduce → KI lässt Person physisch auftreten.
 
 **Ursache:** Trigger-Verb war "flüstert" (gehört zu Liesel) in Namensnähe zu "Vossberg" - gleiche Klasse wie Mahlke (v350), aber Indikativ-Bericht statt Konjunktiv.
 
@@ -817,7 +817,7 @@ Spieler durchlaufen Fälle in dieser Reihenfolge (Freischalt-System, leicht→sc
 
 ### VERIFIZIERT, NICHT gefixt (brauchen mehr Sorgfalt / Freigabe):
 - **P1 Finale-Schutz gegen unerspielte Beweise (Marienfelde):** WICHTIGER Befund mit Korrektur am Lektorat: "Marienfelde" ist KEIN reiner Halluzinations-Fremdkörper - das Setup (Z5325) nennt die Marienfelde-Registratur als EINEN vorgesehenen ABSCHLUSS-NACHWEIS. Es gibt bereits ein requiredProof-Gate (v7.12.218, Z10064-10076), das den Engine-OUTCOME-Satz korrekt steuert (Teilerfolg ohne Nachweis). ABER: Der Bug war im KI-ERZÄHLTEXT des Finales (Sz38 erwähnte "Bestätigung aus Marienfelde" in der Prosa), den die Engine inhaltlich nicht kontrolliert. Das ist exakt das "Fließtext ist nicht an Canonical State gekettet"-Problem. FIX-RICHTUNG (Lektorat): Fall-lösen-Prompt explizit die erlaubten Beweise mitgeben (gesammelte Indizien + Inventar + NPC-Kernhinweise + besuchte Orte), Verbot von Setup-Spuren/unbesuchten Orten. = Prompt-Arbeit, Spielgefühl-nah, braucht Sorgfalt + Test über mehrere Runs. NICHT überstürzt einbauen. **Wichtigster offener Architektur-Fix.**
-- **P2 Romance bei aktiver Gefahr (Spielgefühl, braucht Benjamin-Freigabe):** Bei politischen Fällen Sp4 + Waffenlage erscheint Romance noch (Schwelle politisch=5). Brauer: Greta-Romance während Schaffner mit Waffe am Boden. ABER: aktuelle Schwelle ist bewusste Design-Entscheidung (aufgestaute Tension >=3 soll sich auch bei Sp4 entladen). Fix-Vorschlag: zusätzlicher activeDanger-Check (Waffe/Verfolger/Stasi/Flucht im Szenentext + Sp>=4) → blockt. Kollidiert nicht mit bestehender Logik, aber Romance-Mechanik = Spielgefühl.
+- **P2 Romance bei aktiver Gefahr (Spielgefühl, braucht Projektleitung-Freigabe):** Bei politischen Fällen Sp4 + Waffenlage erscheint Romance noch (Schwelle politisch=5). Brauer: Greta-Romance während Schaffner mit Waffe am Boden. ABER: aktuelle Schwelle ist bewusste Design-Entscheidung (aufgestaute Tension >=3 soll sich auch bei Sp4 entladen). Fix-Vorschlag: zusätzlicher activeDanger-Check (Waffe/Verfolger/Stasi/Flucht im Szenentext + Sp>=4) → blockt. Kollidiert nicht mit bestehender Logik, aber Romance-Mechanik = Spielgefühl.
 
 ### P2 offen (klein):
 - Auto-Cast-Reintroduce bei direkter Berichtssprache im Indikativ ("Hilde sagt: Mahlke steht am Bahnhof") - Bericht-Guard fängt Konjunktiv/Vergangenheit, aber nicht Sprechverb+Name im selben Satz. Vorschlag: Sprechverb-Bericht-Regex (sagt/erzählt/meint/berichtet + Name im 80-Zeichen-Fenster) → kein Reintroduce.
@@ -843,7 +843,7 @@ zur-Aufgabe-Travel ✓, den-Lauf-Reiseverb ✓, Abschiedsbrief-Handover ✓, Rei
 4. **ORT-DIAG** (~Z11756): ORT-Marker um Wechsel-Diagnose erweitert (alter→neuer Ort, "WECHSEL von X" / "gleicher Ort"). → unerklärte Ortssprünge (Greta-Drift, zur-Aufgabe) werden sichtbar.
 5. **INDIZ-DIAG** (~Z26228): Indiz-Verwurf zeigt jetzt den INHALT der verworfenen Indizien, nicht nur Anzahl. → hätte den Passierschein-Verlust gezeigt.
 
-Alle Marker sind reines Logging (kein Verhalten geändert), risikolos. Benjamin-Wunsch: so viel Diagnose wie möglich für feines Tracking in der Finetuning-Phase.
+Alle Marker sind reines Logging (kein Verhalten geändert), risikolos. Projektleitung-Wunsch: so viel Diagnose wie möglich für feines Tracking in der Finetuning-Phase.
 
 **Note:** gemini.js ist v1.5 (nicht v1.4 wie früher notiert) - hat personenImRaum-Feld.
 
@@ -853,7 +853,7 @@ Alle Marker sind reines Logging (kein Verhalten geändert), risikolos. Benjamin-
 
 ## 🆕 v7.12.351 — Allgemeine Handover-Logik (Lektorat Brauer P1 #5, risikoarmer Folge-Fix)
 
-**Befund:** Spieler übergibt Abschiedsbrief an Hilde ("du drückst ihr den Brief in die Hand"), Brief bleibt im Inventar → Sz38 "du legst den Brief auf den Tisch" (Doppelung, Immersionsbruch). v349-Logik greift NUR fürs Diebstahl-TARGET. Dieser Moment war Benjamins emotionaler Erwin-Höhepunkt (freier Textprompt: Erwin fliehen lassen, Brief an Hilde) - der Brief-Doppler störte genau diese Magie.
+**Befund:** Spieler übergibt Abschiedsbrief an Hilde ("du drückst ihr den Brief in die Hand"), Brief bleibt im Inventar → Sz38 "du legst den Brief auf den Tisch" (Doppelung, Immersionsbruch). v349-Logik greift NUR fürs Diebstahl-TARGET. Dieser Moment war Projektleitungs emotionaler Erwin-Höhepunkt (freier Textprompt: Erwin fliehen lassen, Brief an Hilde) - der Brief-Doppler störte genau diese Magie.
 
 **Fix - allgemeine Handover-Logik (~Z25460, NACH dem KI-eigenen inventar_entfernt-Block):** Entfernt einen Questgegenstand aus dem Inventar, wenn ALLE drei Bedingungen erfüllt sind:
 1. **Spielertext signalisiert Übergabe:** übergib/gib ihr-ihm/reich/händig/bring ihr-ihm/überreich.
@@ -864,7 +864,7 @@ Alle Marker sind reines Logging (kein Verhalten geändert), risikolos. Benjamin-
 
 **Getestet (1:1 nachgestellt):** RUN Brauer "übergib ihr den abschiedsbrief" + "drückst ihr den Brief in die Hand" → Abschiedsbrief ENTFERNT ✓. "frag sie nach dem brief" → KEIN Handover ✓. "übergib den brief" ohne Szenen-Bestätigung → KEIN Handover ✓. "gib ihr die pistole" → Walther geschützt ✓. Foto/Mappe-Komposita → korrekt erkannt ✓.
 
-**Designnote (Benjamin):** Der freie Textprompt ist die Seele des Spiels - er erzeugt Momente, die Buttons strukturell nicht können (Erwin fliehen lassen statt "zurückbringen"). Genau diese Rand-Momente lösen aber Erdungs-Bugs aus (Brief-Tracking, Ortsdrift). Die offenen P1-Fixes sind daher nicht nur Bugs, sondern Infrastruktur, die diese besonderen Momente verlässlich trägt. Priorität entsprechend.
+**Designnote (Projektleitung):** Der freie Textprompt ist die Seele des Spiels - er erzeugt Momente, die Buttons strukturell nicht können (Erwin fliehen lassen statt "zurückbringen"). Genau diese Rand-Momente lösen aber Erdungs-Bugs aus (Brief-Tracking, Ortsdrift). Die offenen P1-Fixes sind daher nicht nur Bugs, sondern Infrastruktur, die diese besonderen Momente verlässlich trägt. Priorität entsprechend.
 
 ### OFFEN aus Brauer-Lektorat (nach #5 erledigt):
 - #3 Rollenalias-Reintroduce ("der Schaffner" im Cast halten) - mittel
@@ -926,7 +926,7 @@ Alle drei → _hardReturnFinal → setzt returnedToClient + Stage 4 + entfernt G
 
 ---
 
-## 🆕 v7.12.348 — Romance-Button-Lücke geschlossen (Benjamin-Freigabe, Spielgefühl)
+## 🆕 v7.12.348 — Romance-Button-Lücke geschlossen (Projektleitung-Freigabe, Spielgefühl)
 
 **Befund (Krause-Run 10:36 Szene 16):** Bei Romantik-Tension 5 + Tageszeit Nachmittag fiel der Spieler in eine Button-Lücke - "Näher kommen" verschwand (alte Schranke romCurrentTension<5), "Nacht verbringen" war noch nicht da (braucht Abend/Nacht). Szene sprach von Intimität, aber kein passender Button. Abends (Sz17) kam der Button korrekt.
 
@@ -941,15 +941,15 @@ Alle drei → _hardReturnFinal → setzt returnedToClient + Stage 4 + entfernt G
 **Etui-Fix v346 BESTÄTIGT:** Run-Log zeigt die erwartete Kette: gutInInventory=true → targetItemState -> inKarlInventory → DIEBESGUT ZURÜCK → FALL LÖSEN klickbar → korrekter Win-Screen. **Der alte 🟡-Backlog-Punkt "targetItemState/Etui-Kontinuität" ist ERLEDIGT.**
 
 ### GEFIXT (technisch, risikoarm):
-1. **"Tante Frieda überführt" zu stark (Lektorat P2 + Benjamin).** Verifiziert: 6x "Frieda überführt" getoastet, aber Frieda NIE im Cast (nie konfrontiert, nur durch Hinweise belastet). FIX (Z~26930): Diebstahl-Stage-3-Toast von "X überführt" auf "Spur zu X bestätigt" abgeschwächt.
+1. **"Tante Frieda überführt" zu stark (Lektorat P2 + Projektleitung).** Verifiziert: 6x "Frieda überführt" getoastet, aber Frieda NIE im Cast (nie konfrontiert, nur durch Hinweise belastet). FIX (Z~26930): Diebstahl-Stage-3-Toast von "X überführt" auf "Spur zu X bestätigt" abgeschwächt.
 2. **Log-Spam DIEBESGUT ZURÜCK (Lektorat P1/P2).** Seit v346 läuft processTheftTargetState jede Szene → diag/console/Toast feuerten wiederholt (Toast war cooldown-gedrosselt, aber Log laut; nach Stage-4 sogar rückwärts). FIX (Z~6483): Guard caseProgress._itemSecuredAnnounced (pro Status-Stufe) - diag/console/Toast nur einmal je Status. State-Updates davor bleiben (idempotent via setTargetItemState-Rang). Statuswechsel inKarlInventory→returnedToClient darf nochmal ankündigen.
 
 ### VERIFIZIERT echt, NICHT gefixt (Begründung):
 - **P1 tisStatus bleibt inKarlInventory nach echter Rückgabe an Krause:** Verifiziert - nach Szene 13/19 (Etui aus Inventar entfernt, an Krause zurück) blieb Status inKarlInventory statt returnedToClient. URSACHE: isHardClientReturn ist satzgebunden + erkennt mehrsatz/Pronomen-Rückgabe ("Krause nimmt es dir ab und schiebt es in seine Innentasche") nicht. NICHT gefixt: nur State-Kosmetik (Win-Screen + Inventar stimmen, Fall abschließbar), und isHardClientReturn zu lockern birgt Fehlalarm-Risiko. Beobachten.
-- **"Nacht mit Erika"-Button-Lücke (Benjamin-Befund Szene 16):** Verifiziert ECHT - bei Tension=5 + Nachmittag fällt der Spieler in eine Lücke: "Näher kommen" verschwindet (Bedingung romCurrentTension<5), "Nacht verbringen" noch nicht da (braucht isAbendOderNacht). Szene-Text spricht von Intimität, aber kein passender Button. In Szene 17 (Abend) kam der Button korrekt. URSACHE: Obergrenze "Näher kommen" (<5) + Tageszeit-Schranke "Nacht verbringen" lassen bei Tension 5 tagsüber ein Loch. → ROMANCE-MECHANIK = Spielgefühl, braucht Benjamin-Freigabe. Möglicher Fix: "Näher kommen" auch bei Tension 5 zeigen solange nicht Abend/Nacht, ODER bei Tension 5 tagsüber einen "warten bis Abend"-Hinweis.
+- **"Nacht mit Erika"-Button-Lücke (Projektleitung-Befund Szene 16):** Verifiziert ECHT - bei Tension=5 + Nachmittag fällt der Spieler in eine Lücke: "Näher kommen" verschwindet (Bedingung romCurrentTension<5), "Nacht verbringen" noch nicht da (braucht isAbendOderNacht). Szene-Text spricht von Intimität, aber kein passender Button. In Szene 17 (Abend) kam der Button korrekt. URSACHE: Obergrenze "Näher kommen" (<5) + Tageszeit-Schranke "Nacht verbringen" lassen bei Tension 5 tagsüber ein Loch. → ROMANCE-MECHANIK = Spielgefühl, braucht Projektleitung-Freigabe. Möglicher Fix: "Näher kommen" auch bei Tension 5 zeigen solange nicht Abend/Nacht, ODER bei Tension 5 tagsüber einen "warten bis Abend"-Hinweis.
 
-### KI-Erzählfehler (Prompt-Themen, Benjamin-Befunde, nicht gebaut):
-- **Ortsname-Drift "Goldenes Eck" statt "Goldener Anker":** Setup-Anker heißt "Zum Goldenen Anker" (Wirt Otto Kummer), KI nannte ihn 28x "Goldenes Eck", nur 1x korrekt. Anker-Namens-Drift. (Otto Kummer korrekt; Rote Laterne ist anderer Ort mit Wirt Erich Pankow - Benjamin hatte recht.) Prompt-Leitplanke "feste Ortsnamen nicht umbenennen" denkbar.
+### KI-Erzählfehler (Prompt-Themen, Projektleitung-Befunde, nicht gebaut):
+- **Ortsname-Drift "Goldenes Eck" statt "Goldener Anker":** Setup-Anker heißt "Zum Goldenen Anker" (Wirt Otto Kummer), KI nannte ihn 28x "Goldenes Eck", nur 1x korrekt. Anker-Namens-Drift. (Otto Kummer korrekt; Rote Laterne ist anderer Ort mit Wirt Erich Pankow - Projektleitung hatte recht.) Prompt-Leitplanke "feste Ortsnamen nicht umbenennen" denkbar.
 - **Tante-Frieda-Etui-Interesse erfunden (Szene 13):** "Tante Frieda scheint Interesse am Etui zu haben" war nicht Teil der Geschichte - KI-Halluzination, evtl. aus Szene-12-Erzähltext abgeleitet. Modell-Varianz.
 - **Schließfach-Hinweis-Darstellung:** Hinweis IST gespeichert (NPC-Hinweis Otto Z571, steht in "Was du erfahren hast") - kein Bug, nur zwei Listen (nummerierte Indizien vs. "erfahren") wirken unübersichtlich.
 
@@ -959,7 +959,7 @@ Alle drei → _hardReturnFinal → setzt returnedToClient + Stage 4 + entfernt G
 - Whitelist erweitern: Schließfächer Bahnhof Friedrichstraße, Karls Büro Hackescher Markt, Erika Kalewskis Wohnung
 - Run sehr ruhig (Sp2 17/19 Szenen) - Dramaturgie, kein Bug
 
-**Note:** THEFT-DIAG-Marker bleiben drin (Benjamin: Diagnose generell drinlassen für weitere Bugs). Später bereichsweise rausnehmen.
+**Note:** THEFT-DIAG-Marker bleiben drin (Projektleitung: Diagnose generell drinlassen für weitere Bugs). Später bereichsweise rausnehmen.
 
 ---
 
@@ -967,13 +967,13 @@ Alle drei → _hardReturnFinal → setzt returnedToClient + Stage 4 + entfernt G
 
 ## 🆕 v7.12.346 — ETUI-DESYNC ROOT CAUSE GEFUNDEN + GEFIXT (alter Backlog-🟡-Bug, jetzt erledigt)
 
-**Symptom (Benjamin, 2 Krause-Runs reproduziert):** Etui im Inventar + in "Aktueller Stand → Dabei", aber FALL LÖSEN gesperrt ("Diebesgut noch nicht zurück"). Desync zwischen Inventar und Durchbruch-Flag diebesgutZurueck.
+**Symptom (Projektleitung, 2 Krause-Runs reproduziert):** Etui im Inventar + in "Aktueller Stand → Dabei", aber FALL LÖSEN gesperrt ("Diebesgut noch nicht zurück"). Desync zwischen Inventar und Durchbruch-Flag diebesgutZurueck.
 
 **Diagnose (v345 THEFT-DIAG-Marker):** In den frühen Szenen lief processTheftTargetState (THEFT-DIAG sichtbar), aber GENAU in der Etui-Aufnahme-Szene FEHLTE der Marker komplett - die Funktion lief dort nicht. Inventar+Etui kam über den separaten Inventar-Parser, aber processTheftTargetState (das diebesgutZurueck setzt) wurde übersprungen.
 
 **ROOT CAUSE (Klammerzähler-Analyse):** Der processTheftTargetState-Aufruf saß INNERHALB von `if (Array.isArray(scene.indiz_neu) && scene.indiz_neu.length > 0)` - lief also NUR, wenn die Szene ein neues Indiz lieferte. Das Etui-Schnappen ist eine AKTION, kein Indiz → indiz_neu leer → ganzer Block übersprungen → diebesgutZurueck nie gesetzt. (Ironie: der Kommentar am Aufruf behauptete schon "steht auf jede-Szene-Ebene" - stimmte durch eine frühere Verschiebung nicht mehr. Genau die Art versteckter Block-Zugehörigkeit wie beim v337-Hänger.)
 
-**FIX:** processTheftTargetState(scene) VOR den Indiz-Block gezogen (echte jede-Szene-Ebene), alten Aufruf im Block entfernt (sonst doppelt). Genau 1 Aufruf verifiziert. THEFT-DIAG-Marker (v345) noch drin bis Benjamin bestätigt, dass es jetzt greift - dann raus.
+**FIX:** processTheftTargetState(scene) VOR den Indiz-Block gezogen (echte jede-Szene-Ebene), alten Aufruf im Block entfernt (sonst doppelt). Genau 1 Aufruf verifiziert. THEFT-DIAG-Marker (v345) noch drin bis Projektleitung bestätigt, dass es jetzt greift - dann raus.
 
 **Test:** Krause-Run bis Etui-Schnappen. Erwartung: THEFT-DIAG erscheint jetzt AUCH in der Etui-Szene mit gutInInventory=true, diebesgutZurueck wird true, FALL LÖSEN klickbar. → bei Erfolg ist der alte 🟡-Backlog-Punkt "targetItemState/Etui-Kontinuität" ERLEDIGT.
 
@@ -992,13 +992,13 @@ Alle drei → _hardReturnFinal → setzt returnedToClient + Stage 4 + entfernt G
 
 ## 🆕 v7.12.344 — Lautsprecher-Button (speak-fab) fehlte auf Windows-Chrome - GEFIXT
 
-**Befund (Benjamin, Windows-Chrome):** Lautsprecher-Button fehlte komplett. Konsolen-Check: `existiert: false` (Button ganz aus dem DOM), `speechSynthesis: true`. Kein TTS-Problem, sondern der Button selbst verschwand.
+**Befund (Projektleitung, Windows-Chrome):** Lautsprecher-Button fehlte komplett. Konsolen-Check: `existiert: false` (Button ganz aus dem DOM), `speechSynthesis: true`. Kein TTS-Problem, sondern der Button selbst verschwand.
 
 **Ursache:** speak-fab wird per appendChild in die aktuelle Szene INNERHALB von #log verschoben (v7.12.311, sitzt im Erzähltext-Fluss). Beim Neu-Rendern rettet ein Mechanismus ihn vor `logEl.innerHTML=''` - greift der mal nicht, löscht das Leeren den Button endgültig, und updateSpeakFabVisibility stieg bei fehlendem Button nur mit `return` aus → Button kam NIE wieder.
 
 **Fix:** updateSpeakFabVisibility ist jetzt SELBSTHEILEND - fehlt der Button, wird er neu erzeugt. Robust gegen jeden Verlust-Pfad. Long-Press-Setup in wiederverwendbare Funktion attachSpeakFabLongPress ausgelagert (Guard via dataset.lpAttached), damit auch der neu erzeugte Button Long-Press kriegt. Getestet.
 
-## 🔎 Offene Frage Benjamin: "Alle Modell-Sperren löschen"-Button (Z2656 / resetModelBlocks)
+## 🔎 Offene Frage Projektleitung: "Alle Modell-Sperren löschen"-Button (Z2656 / resetModelBlocks)
 Löscht modelCooldowns (temp. Sperren bei Daily-/Rate-Limit in der Failover-Chain). Bei Single-Model-Setup (Gemini, kein Failover) praktisch nutzlos, nie gebraucht. HARMLOS, aber totes Gewicht. EMPFEHLUNG: kann gefahrlos entfernt werden (Button + Funktion). → Entscheidung offen.
 
 ---
@@ -1033,9 +1033,9 @@ Kind-Tabu-Filter sauber (tritt das Kind → blockiert, schlag den jungen Mann �
 2. **P1 Pobeda-Kennzeichen als schwaches Indiz verworfen.** Verifiziert (Run Z967): Stage-3-Dramaturgie-Drossel warf Kennzeichen B-82-41 als "schwaches BEOBACHTEN-Indiz" weg. Ursache: der Schutz istStarkesMordindiz ist MORD-spezifisch (Tatmittel/Motiv) - bei Beschattung/Diebstahl/Vermisst greift er nicht. FIX (Z~25960): neuer fall-typ-unabhängiger Detektor istHarteSpur (Kennzeichen/Fahrzeug/Adresse/Schlüssel/Quittung/namentliche Benennung) + kombiniert mit istStarkesMordindiz zu istSchuetzenswertesIndiz. Drossel nutzt jetzt den kombinierten Schutz. Getestet 6/6: schützt Pobeda/Hellbach-Name/Westhafen-Adresse/Frachtquittung, lässt Slapstick + vage Beobachtung weiter der normalen Drossel.
 
 ### VERIFIZIERT als ECHT, aber NICHT gefixt (Begründung):
-- **P2 Romance-Abkühlung bei anwesender Lola (Z705):** ECHT - Lola im Cast, gibt Hinweis, Karl drängt sie, trotzdem "Tension abgekühlt (Person abwesend)". URSACHE: kein simpler Bug, sondern Design-Mismatch - Tension kann bei JEDER Figur steigen (hier Lola), aber die Abkühl-Logik (Z21778) prüft nur, ob die EINE setup-ROMANCE-getaggte Person (hier Ilse) anwesend ist. Sauberer Fix bräuchte Tracking, bei WELCHER Person die Tension entstand → Romance-Balance-Implikationen → Benjamin-Bereich (Spielgefühl), zurückgestellt.
+- **P2 Romance-Abkühlung bei anwesender Lola (Z705):** ECHT - Lola im Cast, gibt Hinweis, Karl drängt sie, trotzdem "Tension abgekühlt (Person abwesend)". URSACHE: kein simpler Bug, sondern Design-Mismatch - Tension kann bei JEDER Figur steigen (hier Lola), aber die Abkühl-Logik (Z21778) prüft nur, ob die EINE setup-ROMANCE-getaggte Person (hier Ilse) anwesend ist. Sauberer Fix bräuchte Tracking, bei WELCHER Person die Tension entstand → Romance-Balance-Implikationen → Projektleitung-Bereich (Spielgefühl), zurückgestellt.
 
-### Befunde an Benjamin (Spielgefühl/Prompt - nicht gebaut):
+### Befunde an Projektleitung (Spielgefühl/Prompt - nicht gebaut):
 - **P1 Finale zweischichtig** (Affäre erfüllt + Schmuggel/Hellbach als größere Wahrheit benennen). Bestes inhaltliches Feedback des Runs, aber Dramaturgie-Änderung → Freigabe nötig.
 - **P1 Hellbach-Name als eigenes Indiz** speichern (Heinz nennt geschwärzten Akteur). Teils durch istHarteSpur abgedeckt (Name wird jetzt geschützt wenn als Indiz erkannt), aber dass die KI ihn überhaupt als indiz_neu setzt ist Prompt-Sache.
 - **P1 Slapstick als Fallindiz** (Furz-Aktionen landen in Indizliste). Wäre Prompt-Leitplanke "Kampf-/Slapstick-Ereignisse sind kein Fallindiz".
@@ -1057,7 +1057,7 @@ Kind-Tabu-Filter sauber (tritt das Kind → blockiert, schlag den jungen Mann �
 - Google Translate-Vorlesen geht bei ihm - aber das nutzt NICHT die Web-Speech-API, sondern lädt eine Audio-Datei vom Server. Beweist nur: normales Audio geht, Web-Speech-API ist tot.
 - Konsole zeigt `net::ERR_BLOCKED_BY_CLIENT` -> eine Extension/Content-Blocker greift aktiv in seinen Chrome ein.
 
-**Fazit: KEIN Schatten-Bug.** Web-Speech-API ist auf seinem spezifischen Chrome kaputt/blockiert (höchstwahrscheinlich eine Extension, die speechSynthesis kapert). Auf Benjamins Gerät und bei anderen läuft TTS. Finaler Test für den Kollegen: Inkognito (⌘+Shift+N, keine Extensions) -> wenn es da spricht, war's eine Extension (via chrome://extensions einzeln finden).
+**Fazit: KEIN Schatten-Bug.** Web-Speech-API ist auf seinem spezifischen Chrome kaputt/blockiert (höchstwahrscheinlich eine Extension, die speechSynthesis kapert). Auf Projektleitungs Gerät und bei anderen läuft TTS. Finaler Test für den Kollegen: Inkognito (⌘+Shift+N, keine Extensions) -> wenn es da spricht, war's eine Extension (via chrome://extensions einzeln finden).
 
 **PRAKTISCH BESTÄTIGT (Kollege):** v341 - Vorlesen läuft in Safari weiterhin. Der v341-Rückbau (Watchdog/Logs raus) hat den Safari-Erfolg NICHT gebrochen, wie vorab verifiziert: alle Rückbauten lebten im isDesktopBlink-Zweig, den Safari nie betritt; Safari-Codepfad ist über v339=v340=v341 wörtlich identisch. Safari ist die zuverlässige Wahl auf seinem Mac, Chrome bleibt extension-blockiert.
 
@@ -1082,16 +1082,16 @@ Wichtigster offener Architektur-Fix (Lektorat v360 #6). ZWEIGETEILT: **Schicht 1
 Lektorat v360 #5. Gate scharfschalten ist technisch trivial (Funktion existiert, `murderAxesStatus()` Z9927 liefert alles, `murderAxesMinHits:2` Z5676). ABER der Code-Kommentar selbst (Z5660–5663, „Goerke-Lehre") verlangt bewusst, erst einen Achterberg-Run abzuwarten, der zeigt dass die Achsen-Regex (besonders `todesursache`+`zugriff`) sauber greift — sonst blockiert eine ungetestete Regex einen lösbaren Mordfall. BEDINGUNG zum Scharfschalten: nächster Achterberg-Retest, MORD-ACHSE-DIAG bestätigt zuverlässige todesursache+zugriff-Erkennung. Dann bei Giftmord mind. EINE medizinische Achse (todesursache ODER zugriff) verpflichtend + Resolve sperren/warnen wenn fehlt.
 
 ### 🟢 Folter-Grenze wehrloser Gefangener — KEIN EINGRIFF (beobachten)
-"Messer im Bein drehen" beim gefesselten Vossberg wurde EINMAL ausgespielt. Bewertung: Die Grenze ist im Prompt BEREITS zweifach definiert (Z3056 INHALTLICHE GRENZEN Regel 3 + Z3759-3776 Verhör-vs-Folter-Block). Der eine Durchrutscher war Modell-Varianz bei knapp formuliertem Grenzfall, KEIN systematisches Versagen. Beide diskutierten Hebel verworfen: (A) mehr Prompt-Beispiele → Risiko, dass Modell zu breit generalisiert und legitime Noir-Härte/Messerwurf-auf-Fliehenden mit abwürgt; (B) Wehrlosigkeits-Zustandstracking → gleiche Wortlaut-Unschärfe wie ein Filter + false-positive-Risiko auf Kampfszenen. Filter scheidet ohnehin aus: Wehrlosigkeit steht im KONTEXT (gefesselt/eingeklemmt über mehrere Szenen), nicht in der Freitext-Eingabe - ein Wortlaut-Filter sieht das nie. War zudem Benjamins eigener bewusster Input, kein versehentlicher Spieler-Drift. ENTSCHEIDUNG: nichts bauen. NUR aktiv werden, wenn das Muster WIEDERHOLT bei echten Spielern auftritt (mehrere ungewollte Folterszenen). Aufwand wäre niedrig, Risiko für Spielfreiheit aber real.
+"Messer im Bein drehen" beim gefesselten Vossberg wurde EINMAL ausgespielt. Bewertung: Die Grenze ist im Prompt BEREITS zweifach definiert (Z3056 INHALTLICHE GRENZEN Regel 3 + Z3759-3776 Verhör-vs-Folter-Block). Der eine Durchrutscher war Modell-Varianz bei knapp formuliertem Grenzfall, KEIN systematisches Versagen. Beide diskutierten Hebel verworfen: (A) mehr Prompt-Beispiele → Risiko, dass Modell zu breit generalisiert und legitime Noir-Härte/Messerwurf-auf-Fliehenden mit abwürgt; (B) Wehrlosigkeits-Zustandstracking → gleiche Wortlaut-Unschärfe wie ein Filter + false-positive-Risiko auf Kampfszenen. Filter scheidet ohnehin aus: Wehrlosigkeit steht im KONTEXT (gefesselt/eingeklemmt über mehrere Szenen), nicht in der Freitext-Eingabe - ein Wortlaut-Filter sieht das nie. War zudem Projektleitungs eigener bewusster Input, kein versehentlicher Spieler-Drift. ENTSCHEIDUNG: nichts bauen. NUR aktiv werden, wenn das Muster WIEDERHOLT bei echten Spielern auftritt (mehrere ungewollte Folterszenen). Aufwand wäre niedrig, Risiko für Spielfreiheit aber real.
 
-### 🟢 Mordachsen-Finale-Abgleich — NICHT umsetzen (Benjamin "lassen wir so")
+### 🟢 Mordachsen-Finale-Abgleich — NICHT umsetzen (Projektleitung "lassen wir so")
 Finale behauptet teils mehr Beweis-Achsen als getrackt (3/5). Zu tief im Balancing, ohne klares Ziel Risiko neuer Inkonsistenzen.
 
 ### 🟢 Stage-3-Nachlauf — Designentscheidung, KEINE Änderung
 Ab Stage 3 ist FALL-LÖSEN-Button sichtbar+klickbar → Weiterspielen ist bewusste User-Entscheidung. Schatten hat keinen separaten Frei-Erkunden-Modus, der Fall IST der Rahmen. Harter Force würde die Freiheit wegnehmen. (Am Achterberg-Run v338 verifiziert: vermeintlicher "Nachlauf" Sz21-23 war noch Ermittlung VOR Stage 3.) Optionale Kür für später: KI deutet ab Stage 3 gelegentlich "du hast alles was du brauchst" an - sanft, kein Muss.
 
 ### 🟢 Dämon/übernatürliche Pulp-Vision — kein Bug, Modell-Varianz
-Befund (Frage Benjamin): Dämon-Beschwörung wurde im Achterberg-v338-Run NICHT vom Tabu-Filter geblockt (die Wörter hölle/dämon/teufel stehen gar nicht im Filter - der fängt nur die 5 echten Tabus). Die Eingabe ging sauber durch, aber Gemini hat sie diesmal als normale Würgeszene "geerdet" statt als Vision ausgespielt - reine Modell-Varianz (im vorigen Run wurde sie als Pulp-Vision ausgespielt + vom Lektorat gelobt). NICHTS kaputt. Optionaler Hebel falls gewünscht: sanfte Prompt-Leitplanke "absurd-übernatürliche Eingaben dürfen als fiebrige Vision/Halluzination ausgespielt werden, nicht wegerzählen" → erhöht Trefferquote, erzwingt nichts. Benjamin-Entscheidung offen, aber niedrige Prio.
+Befund (Frage Projektleitung): Dämon-Beschwörung wurde im Achterberg-v338-Run NICHT vom Tabu-Filter geblockt (die Wörter hölle/dämon/teufel stehen gar nicht im Filter - der fängt nur die 5 echten Tabus). Die Eingabe ging sauber durch, aber Gemini hat sie diesmal als normale Würgeszene "geerdet" statt als Vision ausgespielt - reine Modell-Varianz (im vorigen Run wurde sie als Pulp-Vision ausgespielt + vom Lektorat gelobt). NICHTS kaputt. Optionaler Hebel falls gewünscht: sanfte Prompt-Leitplanke "absurd-übernatürliche Eingaben dürfen als fiebrige Vision/Halluzination ausgespielt werden, nicht wegerzählen" → erhöht Trefferquote, erzwingt nichts. Projektleitung-Entscheidung offen, aber niedrige Prio.
 
 ### 🟡 targetItemState / Etui-Kontinuität — beobachten, bei Bedarf eigene Runde
 Alter Diebstahl-Bug (gestohlenes Objekt taucht in langen Runs wieder bei Karl auf). Status: Mechanismus seit der Ur-Notiz STARK ausgebaut (31 Code-Vorkommen, Kontinuitäts-Sperren Z17066/23173-23225). Seit der letzten Bearbeitung NICHT erneut beobachtet, aber auch nicht gezielt nachgetestet (keine aktuellen Diebstahl-Runs vorhanden, nur Achterberg/Mord). Aufwand mittel, Risiko niedrig. EMPFEHLUNG: nächster Diebstahl-Run (Krause) als gezielter Test - wenn das Etui sauber bleibt, ist der Punkt erledigt; wenn nicht, eigene fokussierte Runde wert.
@@ -1127,7 +1127,7 @@ Wenn ALLE de-Stimmen localService=false sind, erklärt das den Hänger vollstän
 ## ⏳ Weiter offen
 - TTS-Bestätigung Kollege (v340: geht 🔊 jetzt? + Snippet-Ausgabe)
 - P1 Folter-Grenze wehrloser Gefangener (Freigabe für Umdeutungs-Ansatz steht aus)
-- P6 Mordachsen-Finale-Abgleich: Benjamin-Entscheidung "lassen wir so" - NICHT umsetzen
+- P6 Mordachsen-Finale-Abgleich: Projektleitung-Entscheidung "lassen wir so" - NICHT umsetzen
 - Stage-3-Nachlauf erzählerisch klarer (gameplay, Freigabe)
 
 ---
@@ -1142,15 +1142,15 @@ Wenn ALLE de-Stimmen localService=false sind, erklärt das den Hänger vollstän
 - (a) mentionedInScene prüfte nur cName.split(' ')[0]. Bei "Dr. Theo Marquardt" = "dr." -> nie im Text -> Auto-Cast-Clean entfernte ihn, obwohl die Szene "Marquardt" (Nachname) aktiv nennt. Fix: ALLE aussagekräftigen Namensteile prüfen (Titel dr/prof/herr/... + kurze Tokens raus).
 - (b) NEU: Auto-Cast-Reintroduce nach der cast_hinzugefuegt-Verarbeitung (nach slice -8). Bekannte setupCast-Figur, die im Szenentext mit AKTIV-Verb (stuerzt/packt/wuergt/spricht/sinkt/...) in Namensnähe vorkommt, aber nicht im Cast ist (KI vergaß cast_hinzugefuegt), wird automatisch aufgenommen. Tag-Filter: CLIENT/TARGET/Opfer/Tot/Vermisst NIE. Getestet gegen echte Run-Texte: Vossberg (stürzt sich) + Marquardt (sinkt/beobachtet) REINTRODUCE, Opfer/Klient geblockt, Liesel-nur-erwähnt NICHT.
 
-**P1 4+5 Beweis-Ehrlichkeit (Prompt-Wording, Benjamin-ok):** Neue Leitplanke nach Stufe-3-ÜBERFÜHREN. Erzwungene Unterschrift/Aussage = schmutziger Hebel, kein sauberer Gerichtsbeweis (Karl weiß was sie wert ist). Erzwungene Drittbelastung = "X' Aussage belastet Y", NICHT "Geständnis von X über Ys Mord". NUR Wording (Indiztext/Erzähltext), KEINE Mechanik -> kann den Abschluss-Fluss nicht blockieren (Benjamins Bedingung erfüllt).
+**P1 4+5 Beweis-Ehrlichkeit (Prompt-Wording, Projektleitung-ok):** Neue Leitplanke nach Stufe-3-ÜBERFÜHREN. Erzwungene Unterschrift/Aussage = schmutziger Hebel, kein sauberer Gerichtsbeweis (Karl weiß was sie wert ist). Erzwungene Drittbelastung = "X' Aussage belastet Y", NICHT "Geständnis von X über Ys Mord". NUR Wording (Indiztext/Erzähltext), KEINE Mechanik -> kann den Abschluss-Fluss nicht blockieren (Projektleitungs Bedingung erfüllt).
 
 **TTS macOS-Kollege (läuft noch nicht, "Musik geht"):** Audio-Ausgabe generell ok (Musik spielt), nur Sprachsynthese stumm trotz korrekt laufendem Code (Logs zeigen VORGELESEN 6 Blöcke, Stimme Flo gewählt). Browser-Erkennung verifiziert: macOS-Chrome -> korrekt isDesktopBlink (synchroner Pfad, kein cancel). v330-Modell war also nicht die volle Ursache. ZWEI Maßnahmen: (1) resume()-Guard im Desktop-Pfad (Chrome hält speechSynthesis manchmal paused -> stumm; resume() ist Standard-Blink-Workaround). (2) TTS-DIAG-Logging an der Utterance (onstart/onerror/speak-Aufruf mit speaking/pending/paused-Status), damit der Kollege im nächsten Test sieht ob onstart feuert oder onerror mit Grund kommt. PENDING: Kollege testet erneut, schickt Konsole.
 
 ## ✅ Bewusst NICHT gefixt (Review-Skepsis bestätigt)
 - **P2 Romance-Button bei Erwähnung:** KEIN echter Bug. Geprüft: Button erschien nur wo Liesel physisch präsent war (Sz1 schaut aus dem Graben). In der Bühnenarbeiter-Szene (Liesel nur als Zeugin erwähnt) kam KEIN Romance-Button (nur FLUCHT). Lektorat verwechselte zwei Szenen. rollenwortPhysischPraesent funktioniert.
 - **P7 VP/Stasi-Tension:** KEIN Bug. Log: Tension stieg wegen echter KI-Erwähnung Stasi/MfS (Cap 1), kühlte nach 3 Szenen ab. VP allein triggert nichts.
-- **P3 Beweis-Inventar:** Benjamin-Entscheidung: NICHT umsetzen. Dokumente sind als Indizien getrackt (Beweislogik), Inventar ist für handhabbare Gegenstände. Doku im Inventar bringt mechanisch nichts.
-- **P6 Mordachsen-Finale-Abgleich:** vorerst nicht (zu tief im Balancing, ohne klares Ziel Risiko neuer Inkonsistenzen). Benjamin kann es bei Bedarf nachziehen.
+- **P3 Beweis-Inventar:** Projektleitung-Entscheidung: NICHT umsetzen. Dokumente sind als Indizien getrackt (Beweislogik), Inventar ist für handhabbare Gegenstände. Doku im Inventar bringt mechanisch nichts.
+- **P6 Mordachsen-Finale-Abgleich:** vorerst nicht (zu tief im Balancing, ohne klares Ziel Risiko neuer Inkonsistenzen). Projektleitung kann es bei Bedarf nachziehen.
 
 ## ⏳ Weiter offen
 - P1 Folter-Grenze wehrloser Gefangener (Freigabe für Umdeutungs-Ansatz steht aus)
@@ -1160,7 +1160,7 @@ Wenn ALLE de-Stimmen localService=false sind, erklärt das den Hänger vollstän
 
 ---
 
-## 🆕 v7.12.338 — Strengerer Durchbruch-Floor für Mord/Wahrheit (Balance, Benjamin-Freigabe erteilt)
+## 🆕 v7.12.338 — Strengerer Durchbruch-Floor für Mord/Wahrheit (Balance, Projektleitung-Freigabe erteilt)
 
 **Befund (Folge von v337):** Der wahrheit_erkannt-Durchbruch (TÄTERSPUR, ueberfuehrt=true) hatte den absurd niedrigen Floor `stage>=1 && Sz>=4`. Dadurch war der Täter-DURCHBRUCH leichter zu erreichen als ein simpler Stage-2-Aufstieg (der via canEnterStage2 Sz>=8 + Ind>=8 + Tag verlangt). Run-Beleg: Vossberg galt in Szene 6 als "überführt", TÄTERSPUR-Toast feuerte ab Sz6 bei jeder Szene. Ausgelöst durch Gemini 3.1, das wahrheit_erkannt:true ab Sz5 schickt.
 
@@ -1187,7 +1187,7 @@ wahrheit_erkannt-Block lag inline in performApiCall; die 4 return; verließen di
 
 **Zweites Symptom "keine richtige Abschlussszene" = GELÖST mit:** war die direkte Folge - die Abschluss-Szene wurde nie gerendert, weil performApiCall vorzeitig verlassen wurde.
 
-## ⚠️ FOLGEPUNKT zur Besprechung (Gameplay, braucht Benjamin-Freigabe)
+## ⚠️ FOLGEPUNKT zur Besprechung (Gameplay, braucht Projektleitung-Freigabe)
 **wahrheit_erkannt:true ab Sz5 ist inhaltlich viel zu früh** für einen Mordfall (Vossberg in Szene 5/6 zu "überführen" ist Unsinn). Der wsFloorOk-Floor (stage>=1 && sceneCounter>=4) ist zu niedrig, seit Gemini das Feld so aggressiv setzt. Vorschlag: höherer/strengerer Floor für Mord/Wahrheit (z.B. Mindest-Indizien oder höhere Mindestszene), damit der Täterspur-Durchbruch nicht in der ersten Aktphase feuert. NICHT eigenmächtig geändert - Spielgefühl/Balance.
 
 ## ⏳ Weiter offen
@@ -1208,10 +1208,10 @@ wahrheit_erkannt-Block lag inline in performApiCall; die 4 return; verließen di
 
 **Zweites Symptom "keine richtige Abschlussszene":** sehr wahrscheinlich FOLGE des Hängers - der Abschluss war ab Sz23 bereit ("Täter überführt, FALL LOESEN dominant"), aber der hängende wahrheit-Block verhindert die saubere Abschluss-Szene. Sollte mit dem Hänger-Fix mitverschwinden.
 
-**NÄCHSTER SCHRITT:** Benjamin spielt Mord/Wahrheit bis Hänger (~Sz20+), exportiert Dump. slow_phase-Zeile zwischen welchen diag-wb-X-Markern = exakte teure Zeile -> dann gezielter Fix.
+**NÄCHSTER SCHRITT:** Projektleitung spielt Mord/Wahrheit bis Hänger (~Sz20+), exportiert Dump. slow_phase-Zeile zwischen welchen diag-wb-X-Markern = exakte teure Zeile -> dann gezielter Fix.
 
 ## ⏳ Weiter offen
-- P1 Folter-Grenze wehrloser Gefangener (Benjamin-Freigabe für Umdeutungs-Ansatz steht aus)
+- P1 Folter-Grenze wehrloser Gefangener (Projektleitung-Freigabe für Umdeutungs-Ansatz steht aus)
 - Stage-3-Nachlauf erzählerisch klarer (gameplay, Freigabe)
 
 ---
@@ -1234,7 +1234,7 @@ wahrheit_erkannt-Block lag inline in performApiCall; die 4 return; verließen di
 
 **P9 Story-Fakten-Export roh (diesmal umgesetzt, vorher 5x roh gelassen).** "(der Taeter)" wurde von sanitizeRolleAnzeige NICHT gefangen - die Regex hatte "(taeter)" ohne Artikel. Fix: "(der/die/das )?taeter". Export zeigt jetzt sanitisierte Rolle als Hauptzeile + Rohform als "[roh: ...]" NUR wenn abweichend (Diagnose-Wert bleibt erhalten, Hauptzeile lesbar). Wirkt auch in Charakteranzeige (Wurzel-Fix in sanitizeRolleAnzeige).
 
-**NOCH OFFEN:** Hänger (v334-Diagnose-Marker, wartet auf Benjamins Diagnose-Run); P1 Folter-Grenze wehrloser Gefangener (braucht Benjamin-Freigabe für Ansatz: Umdeutung Karl-hält-inne); P2-Reste Stage-3-Nachlauf (gameplay, Freigabe).
+**NOCH OFFEN:** Hänger (v334-Diagnose-Marker, wartet auf Projektleitungs Diagnose-Run); P1 Folter-Grenze wehrloser Gefangener (braucht Projektleitung-Freigabe für Ansatz: Umdeutung Karl-hält-inne); P2-Reste Stage-3-Nachlauf (gameplay, Freigabe).
 
 ---
 
@@ -1244,17 +1244,17 @@ wahrheit_erkannt-Block lag inline in performApiCall; die 4 return; verließen di
 
 **Befund (Achterberg-Mordfall-Run v333, Dump + API-Event-Log):** Ab Sz31 wiederholte WATCHDOG_TIMEOUTs (60-65s), Fall ab da unspielbar. KRITISCH: Es ist KEIN Netzwerk-Problem - das Log sagt "SYNC-Verarbeitung dauerte 55959ms", also blockierender JS-Code, kein hängendes fetch. Skaliert mit Spiellänge (Sz23=4.8s, Sz27=63s, Sz30=56s). Prompt bei Sz35 = 151.348 Zeichen (System allein 119k). Watchdog meldet IMMER 'nach-zielpersonGefunden@SzN' als letzte Phase -> Hänger sitzt zwischen Marker Z27607 (nach-zielpersonGefunden) und Z27824 (nach-resolutionSignals), ein ~217-Zeilen-Block (wahrheit_erkannt-Verarbeitung). Selber Hänger-Typ wie früher Brandt-Run.
 
-**NICHT spekulativ gefixt** (Benjamin-Entscheidung: erst sicher lokalisieren). Stattdessen 3 feinkörnige Sub-Marker eingestreut:
+**NICHT spekulativ gefixt** (Projektleitung-Entscheidung: erst sicher lokalisieren). Stattdessen 3 feinkörnige Sub-Marker eingestreut:
 - diag-vor-wahrheitBlock (mit Flags we=wahrheit_erkannt, werk=wahrheitErkannt - zeigt ob der Block überhaupt betreten wird)
 - diag-IM-wahrheitBlock-start (falls betreten)
 - diag-nach-wahrheitBlock
 
 Der nächste Run zeigt im API-Event-Log (slow_phase >2500ms) den genauen Teilschritt. Verifiziert: klient_berichtet-Block (danach) hat KEINE teuren Ops; Prompt-Bau-Spanne (vor-requestSceneFromModel -> verarbeitung-start) ist nur ~4s, also NICHT der Prompt-Bau trotz 119k System-Prompt.
 
-**NÄCHSTER SCHRITT:** Benjamin spielt einen Fall bis der Hänger kommt (~Sz30+ bei Mord/Wahrheit), exportiert Debug. Dann zeigt die slow_phase-Zeile zwischen welchen diag-Markern die 55s liegen -> gezielter Fix (vermutlich ReDoS-Regex im wahrheit-Block auf langem Text).
+**NÄCHSTER SCHRITT:** Projektleitung spielt einen Fall bis der Hänger kommt (~Sz30+ bei Mord/Wahrheit), exportiert Debug. Dann zeigt die slow_phase-Zeile zwischen welchen diag-Markern die 55s liegen -> gezielter Fix (vermutlich ReDoS-Regex im wahrheit-Block auf langem Text).
 
 ## ⏳ OFFEN aus Achterberg-Lektorat (v333, NACH Hänger-Fix anzugehen)
-- **P1 Folter-Grenze wehrloser Gefangener** ("Messer im Bein drehen" bei gefesseltem Vossberg wurde ausgespielt). Benjamin-Einschätzung diskutiert: NICHT neue Einschränkung, sondern Durchsetzung der bestehenden v326-Tabu-Regel (4) - per UMDEUTUNG (Karl hält inne), nicht harter Block. Tabu-Filter prüft nur Freitext-Wortlaut, "gefesselt+wehrlos" steht aber im KONTEXT -> rutscht durch. Lösung wäre Prompt-Leitplanke-Verschärfung + ggf. Kontext-aware Check. BENJAMIN-FREIGABE für Ansatz steht noch aus.
+- **P1 Folter-Grenze wehrloser Gefangener** ("Messer im Bein drehen" bei gefesseltem Vossberg wurde ausgespielt). Projektleitung-Einschätzung diskutiert: NICHT neue Einschränkung, sondern Durchsetzung der bestehenden v326-Tabu-Regel (4) - per UMDEUTUNG (Karl hält inne), nicht harter Block. Tabu-Filter prüft nur Freitext-Wortlaut, "gefesselt+wehrlos" steht aber im KONTEXT -> rutscht durch. Lösung wäre Prompt-Leitplanke-Verschärfung + ggf. Kontext-aware Check. PROJEKTLEITUNG-FREIGABE für Ansatz steht noch aus.
 - **P1 Romance-Kontinuität nach Abweisung:** Liesel weist ab (Sz7), Tension eingefroren, aber Sz8 "Liesel verbrachte Nacht nebenan" + Sz9 Kuss bei Cast 0. Braucht Romance-Cooldown nach Abweisung + "körperliche NPC-Interaktion nur bei physischer Anwesenheit".
 - **P1 Cast-Mitnahme über ROLLENbegriffe:** "mit seiner Mitarbeiterin/der Sprechstundenhilfe" rettet die Figur nicht (nur Eigennamen erkannt). npcMitnahmeImSpielertext um Cast-Rollen erweitern.
 - **P1 Liesel-Teleport:** steht bei VPI (Sz19), Befragung springt zur Admiralspalast-Seitenbühne ohne Reise (Sz20).
@@ -1287,7 +1287,7 @@ Der nächste Run zeigt im API-Event-Log (slow_phase >2500ms) den genauen Teilsch
 
 **Bestätigt schon ok (Lektorat unterschätzt):** Vermisstenfall-Status zeigt bereits "Zielperson: Friedrich Wegener gefunden" (v218-Fix wirkt, im Run-Export verifiziert) - nur die sekundäre Zeile "Verdächtige Spur: Spur aufgeklärt" ist blass.
 
-**OFFEN für Benjamin-Entscheidung (Spielgefühl/Prompt, NICHT gebaut):**
+**OFFEN für Projektleitung-Entscheidung (Spielgefühl/Prompt, NICHT gebaut):**
 - Ort bleibt "Lagerhalle" beim "bring Friedrich zum Opel"-Moment (KI setzt scene.ort nicht um - Prompt-Theme, kein Engine-Bug).
 - Verantwortlicher/Motiv im Abschluss-Status benennen ("Bruno verantwortlich, Motiv Schmuggel-Ausstieg") - berührt, wen man bei vermisst als "Täter" führt.
 - Mystery "Mann mit grauem Hut" ohne Payoff (Dramaturgie).
@@ -1304,7 +1304,7 @@ Der nächste Run zeigt im API-Event-Log (slow_phase >2500ms) den genauen Teilsch
 
 **P1 — Post-Cast-Cleanup verlor mitgenommene Figur bei stiller KI-Antwort.** Fall: Spieler "fahr mit Erika ins Büro", KI antwortet nur "Im Büro sitzt Erika neben dir" OHNE Reise-Marker -> _npcGoesAlongHard prüfte nur sceneText -> Erika flog raus, obwohl der Spieler sie ausdrücklich mitnahm. Fix: _npcGoesAlongHard prüft jetzt ZUSÄTZLICH lastUserMessage (Spielerabsicht ist maßgeblich): "mit <Name>", "<Name> mit", "nimm <Name> ... mit". Figurspezifisch (kEsc) - rettet nur die wirklich genannte Figur, Hannelore wird nicht mitgerettet. Getestet.
 
-**BEWUSST NICHT geändert (Benjamin-Linie):** Story-Fakten-Export roh (4. Mal bestätigt). "frag sie nach sexueller Gewalt" wird geblockt - Review sagt selbst "akzeptabel, Filter darf lieber zu vorsichtig sein", Thema fürs Spiel nicht gebraucht.
+**BEWUSST NICHT geändert (Projektleitung-Linie):** Story-Fakten-Export roh (4. Mal bestätigt). "frag sie nach sexueller Gewalt" wird geblockt - Review sagt selbst "akzeptabel, Filter darf lieber zu vorsichtig sein", Thema fürs Spiel nicht gebraucht.
 
 **Review-Gesamturteil v329:** "technisch sauber, als Testversion deploybar". Die zwei P1 jetzt erledigt -> "sehr rund".
 
@@ -1363,7 +1363,7 @@ Der nächste Run zeigt im API-Event-Log (slow_phase >2500ms) den genauen Teilsch
 
 **P2 — Vulgärfilter: "vögeln mit Erika" rutschte durch.** Ergänzt: voegel(n) + mit <Objekt>. Tier-Schutz bleibt (die Vögel zwitschern / füttere die Vögel -> durch, weil kein "mit <Objekt>").
 
-**BEWUSST NICHT geändert (Benjamin-Linie):** Story-Fakten im Export bleiben roh (Diagnose-Wert, 3. Mal so entschieden). A–D Bereichsstriche in der Anleitung (Review: "Geschmack, kein Bug").
+**BEWUSST NICHT geändert (Projektleitung-Linie):** Story-Fakten im Export bleiben roh (Diagnose-Wert, 3. Mal so entschieden). A–D Bereichsstriche in der Anleitung (Review: "Geschmack, kein Bug").
 
 **Review-Gesamturteil v327:** "technisch sauber, klar besser als v324, sehr gute Testversion". Die zwei priorisierten P1 (trittst, fährst-mit) jetzt erledigt.
 
@@ -1371,7 +1371,7 @@ Der nächste Run zeigt im API-Event-Log (slow_phase >2500ms) den genauen Teilsch
 
 ---
 
-## 🆕 v7.12.327 — Vulgärsprache-Filter (5. Tabu-Kategorie, Benjamin-Wunsch)
+## 🆕 v7.12.327 — Vulgärsprache-Filter (5. Tabu-Kategorie, Projektleitung-Wunsch)
 
 **Ergänzung zu v326:** Schatten ist nicht vulgär. Derbe Sex-Verben (fick/vögel/bums/popp/rammel + Beugungen) werden jetzt ebenfalls vor dem KI-Call geblockt - eigener Toast "Etwas weniger derb" (🎩, NICHT "Das tut Karl nicht", weil es Ton ist, keine Gewalt). ZIVILE Formulierung bleibt erlaubt: "hab Sex mit ihr", "schlaf mit Lola", "verbringe die Nacht mit ihr", sogar "hab Sex mit ihr bis sie den Verstand verliert" - alles frei. Nur die vulgäre Wortwahl wird abgefangen.
 
@@ -1385,7 +1385,7 @@ Der nächste Run zeigt im API-Event-Log (slow_phase >2500ms) den genauen Teilsch
 
 ---
 
-## 🆕 v7.12.326 — Tabu-Freitext-Einhegung (Benjamin-Wunsch)
+## 🆕 v7.12.326 — Tabu-Freitext-Einhegung (Projektleitung-Wunsch)
 
 **Ziel:** Verhindern, dass der Freitext-Prompt für Extreme missbraucht wird (sexuelle Gewalt, Kinder, Folter Wehrloser, Massaker), OHNE die Pulp-Kreativität zu beschneiden. Bewusst KEINE GitHub-Wortliste (würde normale Krimi-Gewalt abwürgen + Extreme verfehlen) - stattdessen kategorienbasiert: Aktionsverb + Tabu-Objekt muss zusammenkommen, einzelne Wörter lösen nichts aus.
 
@@ -1395,7 +1395,7 @@ Der nächste Run zeigt im API-Event-Log (slow_phase >2500ms) den genauen Teilsch
 
 **Design-Prinzip "Kreativität bleibt frei":** Aggressiv genug für die Extreme, eng genug für False-Positives. Getestet mit echter Code-Funktion: 12/12 Tabu-Fälle geblockt, 16/16 normale Pulp-Aktionen (Schießerei, Prügelei, Würgen im Verhör, Fesseln, Teerfass, harte Drohung, Kuss) durchgelassen - 0 Fehler. Liste der Block-Begriffe wird NICHT in der Doku/UI ausgeschrieben (nur im Code), um Umgehung nicht zu erleichtern.
 
-**Wichtig bei Erweiterung:** Falls Benjamin später Fehlalarme meldet (normale Aktion geblockt) ODER Durchrutscher (Extrem nicht gefangen) - die Regex in pruefeTabuFreitext gezielt justieren, IMMER mit dem Block/Durch-Doppeltest gegenprüfen (echte Funktion via eval aus dem Code ziehen, nicht neu tippen).
+**Wichtig bei Erweiterung:** Falls Projektleitung später Fehlalarme meldet (normale Aktion geblockt) ODER Durchrutscher (Extrem nicht gefangen) - die Regex in pruefeTabuFreitext gezielt justieren, IMMER mit dem Block/Durch-Doppeltest gegenprüfen (echte Funktion via eval aus dem Code ziehen, nicht neu tippen).
 
 ---
 
@@ -1431,7 +1431,7 @@ Der nächste Run zeigt im API-Event-Log (slow_phase >2500ms) den genauen Teilsch
 
 **P2 — extractPersonTarget stoppt auch bei was/wer/wo/wann/woher/wohin.** "frag hannelore wirth was sie hier will" fraß das "was" in die Zielperson. Jetzt sauber "hannelore wirth".
 
-**BEWUSST NICHT geändert:** Export bleibt roh (Diagnose-Wert, Benjamin-Entscheidung - gilt auch für Story-Fakten-Export). Freitext-Physik (Klaviere) frei. Gedankenstriche in 3 UI-Sätzen (reine Stilpolitur, kein Bug) - aufgeschoben.
+**BEWUSST NICHT geändert:** Export bleibt roh (Diagnose-Wert, Projektleitung-Entscheidung - gilt auch für Story-Fakten-Export). Freitext-Physik (Klaviere) frei. Gedankenstriche in 3 UI-Sätzen (reine Stilpolitur, kein Bug) - aufgeschoben.
 
 ---
 
@@ -1439,7 +1439,7 @@ Der nächste Run zeigt im API-Event-Log (slow_phase >2500ms) den genauen Teilsch
 
 ## 🆕 v7.12.323 — Cross-Case-Indiz-Filter + Cast-Cleanup bei Ortswechsel + Diebstahl-Status (Lektorat Krause-Run v320)
 
-**BEWUSST IGNORIERT (Benjamin-Entscheidung): Freitext-Physik-Begrenzung (Klavierflügel etc.) + Übernatürliches. Benjamin will den Testern maximale Freiheit lassen - die absurden Szenen sind gewollter GTA-Noir-Reiz. NICHT angefasst.**
+**BEWUSST IGNORIERT (Projektleitung-Entscheidung): Freitext-Physik-Begrenzung (Klavierflügel etc.) + Übernatürliches. Projektleitung will den Testern maximale Freiheit lassen - die absurden Szenen sind gewollter GTA-Noir-Reiz. NICHT angefasst.**
 
 **P1 (fast P0) — Cross-Case-Indiz-Injection.** Befund: Spieler brachte per Freitext "Erich Brandt" (Brandt-Fall) in den Krause-Fall, KI machte daraus ein Kernindiz ("Die Diebe kennen den Namen Erich Brandt"). So lässt sich die Fallwahrheit mit fremden Namen verfälschen. Fix: Neuer Filter im Indiz-Annahme-Block (performApiCall ~Z25600). Enthält ein neues Indiz einen distinktiven Fremdfall-Namen (Liste der 18 Vollnamen/Schlüsselfiguren aller Setups), der NICHT im eigenen caseSetup/Cast vorkommt -> Indiz verworfen (Szenentext bleibt, kein Beweis). Getestet: Krause+Erich-Brandt -> verworfen; Brandt+Erich-Brandt -> behalten (eigener Fall); normale Indizien unberührt.
 
@@ -1459,7 +1459,7 @@ Der nächste Run zeigt im API-Event-Log (slow_phase >2500ms) den genauen Teilsch
 
 **P2 — 10 hartcodierte Versionslabels** in console-Aufrufen (z.B. "[Schatten v7.12.313]", "[Schatten v7.12.316]") auf die zentrale SCHATTEN_VERSION-Variable umgestellt: jetzt "[Schatten ' + (typeof SCHATTEN_VERSION!=='undefined'?SCHATTEN_VERSION:'?') + '] ...". Debug-Dumps zeigen damit immer die echte laufende Version statt einer veralteten Nummer. Rein kosmetisch, kein Funktionsfehler.
 
-**P2 — Export bewusst NICHT geändert (Benjamin-Entscheidung):** Der Transcript-Export bleibt ROH (kein fixEigennamen/fixSprache). Begründung: Der Export ist Diagnose-Werkzeug - die rohen KI-Fehler ("hälst", "Taenzerin") sollen sichtbar bleiben, um Prompt-Schwächen zu erkennen. Die korrigierte Spieler-Sicht sieht man ohnehin im Spiel.
+**P2 — Export bewusst NICHT geändert (Projektleitung-Entscheidung):** Der Transcript-Export bleibt ROH (kein fixEigennamen/fixSprache). Begründung: Der Export ist Diagnose-Werkzeug - die rohen KI-Fehler ("hälst", "Taenzerin") sollen sichtbar bleiben, um Prompt-Schwächen zu erkennen. Die korrigierte Spieler-Sicht sieht man ohnehin im Spiel.
 
 **Hinweis (Fehler & Korrektur in dieser Session):** Erster Automatik-Ersatz der Labels brach die Strings falsch auf ('] 'REST statt '] REST') -> Syntaxfehler. Per node --check gefangen, auf v321 zurückgerollt, korrekt neu gemacht (String aufbrechen mit + SVER +, Rest-Text am offenen Literal). Bestätigt die Regel: nach jedem Massen-Replace Syntax-Check.
 
@@ -1475,9 +1475,9 @@ Der nächste Run zeigt im API-Event-Log (slow_phase >2500ms) den genauen Teilsch
 
 **P1 — Charakter-Detail-Popup + Charakterliste durch fixEigennamen.** Vorher direkt sanitizeRolleAnzeige(details.rolle) ohne fixEigennamen -> Inkonsistenz zur Cast-Anzeige. Jetzt _fix-Wrapper davor. ZUSATZ: fixEigennamen korrigiert nur eine FESTE Namensliste (kein generelles ae->ä), daher "Taenzerin" etc. NICHT erfasst. Deshalb eindeutige Umlaut-Rollenwörter (Taenzerin/Saengerin/Aerztin/Sekretaerin) direkt in fixSprache ergänzt - sicher, da nie legitime ae-Wörter.
 
-**P2 (Benjamin-Entscheidung offen):** Export mit fixEigennamen (zeigt korrigiert vs. roh - Debug-Purismus-Abwägung), Console-Versionslabels zentralisieren. Beide kosmetisch.
+**P2 (Projektleitung-Entscheidung offen):** Export mit fixEigennamen (zeigt korrigiert vs. roh - Debug-Purismus-Abwägung), Console-Versionslabels zentralisieren. Beide kosmetisch.
 
-**Vom Review positiv bestätigt:** Sz1-Romance-Bug gefixt, klopf/klingel-Zielerkennung sauber, Schlaf/Nacht/Energie bewusst unangetastet (respektiert Benjamins Entscheidung), fixSprache konservativ korrekt (Dativ "der Roten Laterne" bleibt).
+**Vom Review positiv bestätigt:** Sz1-Romance-Bug gefixt, klopf/klingel-Zielerkennung sauber, Schlaf/Nacht/Energie bewusst unangetastet (respektiert Projektleitungs Entscheidung), fixSprache konservativ korrekt (Dativ "der Roten Laterne" bleibt).
 
 **Review-Skepsis angewandt:** Alle Review-Behauptungen gegen echten Code geprüft (Fallback-Logik, extractRollenwort-Output, normForMatch-Verhalten) - hier stimmten sie, Fixes übernommen. Annahme des Reviews "fixEigennamen korrigiert generell ae->ä" war FALSCH (feste Liste) -> über fixSprache gelöst statt blind zu übernehmen.
 
@@ -1487,7 +1487,7 @@ Der nächste Run zeigt im API-Event-Log (slow_phase >2500ms) den genauen Teilsch
 
 ## 🆕 v7.12.320 — Sprachfixe + zweite Romance-Absicherung (Lektorat v318)
 
-**Aus dem v318-Lektorat umgesetzt. Bewusst NICHT gebaut (Benjamin-Entscheidung): Schlaf-Button-Sperre nach Gewalt (kollidiert mit Arcade-Schlaf-Regel), Nacht-Marathon-Begrenzung (Spielgefühl, Zwangsvariante schon früher abgelehnt), Energie/Müdigkeit-Trennung (nur Label-Widerspruch, mechanisch korrekt - zu viel Aufwand/Risiko).**
+**Aus dem v318-Lektorat umgesetzt. Bewusst NICHT gebaut (Projektleitung-Entscheidung): Schlaf-Button-Sperre nach Gewalt (kollidiert mit Arcade-Schlaf-Regel), Nacht-Marathon-Begrenzung (Spielgefühl, Zwangsvariante schon früher abgelehnt), Energie/Müdigkeit-Trennung (nur Label-Widerspruch, mechanisch korrekt - zu viel Aufwand/Risiko).**
 
 **P0-Nachzieher — zweite Romance-Absicherung.** Der v319-Vergangenheits-Check fängt den Sz1-Bug (Romance-Button am Tempelhofer Feld durch Lola-Erinnerung) schon ab. Zusätzlich gehärtet: Der Romance-FALLBACK (über setupCast, ohne cast-Mitgliedschaft) greift jetzt NUR noch bei echter ROLLENWORT-Präsenz im Text ("die Tänzerin steht vor dir"), nicht mehr bei bloßer Namensnennung. So bleibt der Intim-Button in figurlosen Szenen (Feld, Büro) sicher weg, selbst wenn der Name im Text steht.
 
@@ -1525,7 +1525,7 @@ Bewusst KEINE breiten Regeln (Fehlkorrektur-Risiko) - nur sichere Wortgrenzen-Er
 
 ## 🆕 v7.12.318 — Pflicht-Beat erkennt Geständnis (echter Bug!) + Hänger-Diagnose-Marker
 
-**KORREKTUR zu v317: Der fehlende Pflicht-Beat war DOCH ein Bug, nicht nur Design.** Benjamin lieferte den Beweis (Screenshot Sz45 + Run 15:06): Lange gesteht in Sz39 wörtlich ("Ich musste ein Exempel statuieren... Ich habe es getan."), aber der Beat lange_verantwortlich matchte nicht -> Fall nicht lösbar, obwohl der Täter direkt gestanden hat.
+**KORREKTUR zu v317: Der fehlende Pflicht-Beat war DOCH ein Bug, nicht nur Design.** Projektleitung lieferte den Beweis (Screenshot Sz45 + Run 15:06): Lange gesteht in Sz39 wörtlich ("Ich musste ein Exempel statuieren... Ich habe es getan."), aber der Beat lange_verantwortlich matchte nicht -> Fall nicht lösbar, obwohl der Täter direkt gestanden hat.
 
 **ZWEI Regex-Lücken (beide am Code verifiziert + getestet):**
 1. **Geständnis in direkter Ich-Rede:** Lange sagt "ich habe es getan", nennt aber seinen Namen NICHT im Geständnis-Satz. Alle alten Beat-Pfade verlangten "lange" oder "erich" im 120-Zeichen-Fenster. Neuer Pfad: Ich-Form + Tat/Exempel-Sprache (ich habe ihn/es getötet/erschossen/getan, ich musste ein Exempel statuieren, ich ließ ihn beseitigen) - mit Verneinungs-Schutz (nicht/nie). Getestet: Geständnis matcht, "ich habe es nicht getan"/"nie ermordet" matchen nicht.
@@ -1536,7 +1536,7 @@ Getestet gegen beide echten Texte aus dem Run: matchen jetzt. Harmlose Sätze ("
 **HÄNGER-DIAGNOSE (Brandt-Run Sz45+, Dauer-Watchdog-Timeouts):** Am Log eindeutig analysiert - es ist KEIN Netzwerk-/Modell-Problem:
 - 15 WATCHDOG_TIMEOUT, aber nur 1 echtes 'timeout'-Event, 0 slow_fetch_detail, 0 network_error. Der 35s-AbortController + 38s-Hard-Timer feuern fast nie.
 - Watchdog meldet als letzte Phase IMMER 'vor-resolutionSignals'. Das ist eine SYNCHRONE Verarbeitungsphase NACH dem fetch (der fetch ist also durchgelaufen, sonst stünde dort fetch-gestartet/body-gelesen). -> Der Hänger sitzt in der synchronen Verarbeitung zwischen 'vor-resolutionSignals' und dem nächsten Marker, NICHT im Netzwerk. Verdacht: ReDoS (katastrophales Regex-Backtracking) auf langem Stage-3-Text.
-- FOLGE: Failover (Single-Model seit v248, advanceModel gibt null) hätte NICHTS gebracht - Benjamins Intuition ("andere Modelle haben eh nicht funktioniert") war goldrichtig. Single-Model bleibt.
+- FOLGE: Failover (Single-Model seit v248, advanceModel gibt null) hätte NICHTS gebracht - Projektleitungs Intuition ("andere Modelle haben eh nicht funktioniert") war goldrichtig. Single-Model bleibt.
 - AKTION: DREI Diagnose-Marker eingebaut: nach-zielpersonGefunden + nach-resolutionSignals (Verarbeitungs-Schritte) UND vor-requestSceneFromModel (direkt vor dem fetch). Der nächste Run zeigt EINDEUTIG: zeigt der Watchdog 'vor-requestSceneFromModel' -> Hänger im fetch (Netzwerk); zeigt er 'nach-resolutionSignals' -> Hänger in synchroner Verarbeitung. Dann gezielter Fix (v319).
 - ANTWORTZEIT-BEFUND (Run 15:06): 33 erfolgreiche Antworten, ALLE 3-5s (Median 3,6s, Max 4,9s). Binäres Muster: Gemini antwortet 3-4s ODER fetch hängt komplett tot (60s+). KEIN "langsam wegen großem Prompt" - der 149k-Prompt wird zu ~82% gecached. Prompt-Kürzen würde NICHT helfen.
 - WICHTIG zur Hänger-Natur: Der 150s-SLOW_PHASE-Eintrag bei laufendem Watchdog beweist, dass der JS-Thread NICHT blockiert ist (sonst könnte der 5s-Watchdog nicht feuern) -> KEIN ReDoS/synchroner Endlos-Hänger. Eher toter fetch oder hängendes await im Zyklus.
@@ -1551,7 +1551,7 @@ Getestet gegen beide echten Texte aus dem Run: matchen jetzt. Harmlose Sätze ("
 
 **Vier Punkte aus dem ChatGPT-Lektorat des Brandt-Runs umgesetzt. WICHTIG: Zwei prominente Lektorat-Befunde wurden nach Code-Verifikation als FALSCH zurückgewiesen.**
 
-**P0 — Täterwissen-Leak aus sichtbarer Anzeige entfernt.** Im Cast-Panel/Detail-Popup erschien sichtbar "(Taeter)" + ganze Lösungssätze ("Lange hat den Selbstmord inszeniert um andere Schuldner einzuschüchtern") - der Spieler bekam die Auflösung als Steckbrief gespoilert. sanitizeRolleAnzeige erweitert: entfernt (Taeter)/(Täter) + schneidet ab dem ersten Satz mit Lösungssprache (inszeniert/ermordet/Drahtzieher/in den Tod/liquidiert/hidden) alles ab. Harmloser Kontext ("Erich hatte 800 D-Mark Spielschulden") bleibt. Der Export (Debug, nur für Benjamin) bleibt bewusst roh.
+**P0 — Täterwissen-Leak aus sichtbarer Anzeige entfernt.** Im Cast-Panel/Detail-Popup erschien sichtbar "(Taeter)" + ganze Lösungssätze ("Lange hat den Selbstmord inszeniert um andere Schuldner einzuschüchtern") - der Spieler bekam die Auflösung als Steckbrief gespoilert. sanitizeRolleAnzeige erweitert: entfernt (Taeter)/(Täter) + schneidet ab dem ersten Satz mit Lösungssprache (inszeniert/ermordet/Drahtzieher/in den Tod/liquidiert/hidden) alles ab. Harmloser Kontext ("Erich hatte 800 D-Mark Spielschulden") bleibt. Der Export (Debug, nur für Projektleitung) bleibt bewusst roh.
 
 **P1 — Lola-tot-Filter repariert.** detectDeadOrAbsent filterte Lola Brandt ("Verlobte des verstorbenen Erich Brandt") fälschlich als tote/vermisste Person (Cast 0, Romance-Push wirkungslos), weil "verlobte" nicht in der referenziertAnderePerson-Schutzliste stand -> "verstorbenen" triggerte den Filter. verlobte/verlobter/braeutigam/braut/lebensgefaehrt*/partner/geliebte/verwandte ergänzt. Getestet: lebende Angehörige geschützt, echte Tote ("Verstorbener", "Das Opfer", "Die Leiche") weiter gefiltert.
 
@@ -1561,9 +1561,9 @@ Getestet gegen beide echten Texte aus dem Run: matchen jetzt. Harmlose Sätze ("
 
 **ZURÜCKGEWIESEN nach Code-Verifikation:**
 - **"TruthBeat-Detection kaputt (0/5)":** FALSCH. Die 0/5-Datei (14:50) war ein Snapshot mitten im Watchdog-Hänger, vor dem finalen Beat-Sweep. Der spätere Run (15:00) zeigt 4/5. Die Beat-Regexes matchen die Indizien (schulden_motiv + lange_verbindung selbst getestet = MATCH). Es fehlt nur der Pflicht-Beat lange_verantwortlich - und das ist DESIGN (Lange muss als Verantwortlicher belegt werden, bevor der Fall löst), kein Bug. Regexes NICHT angefasst.
-- **"Übernatürlichen Freitext nicht wörtlich erfüllen":** Benjamin-Entscheidung - der absurde Freitext (Dämonen beschwören, Blitze rufen) ist Teil des GTA-Noir-Charmes und bleibt. Kein Fix.
+- **"Übernatürlichen Freitext nicht wörtlich erfüllen":** Projektleitung-Entscheidung - der absurde Freitext (Dämonen beschwören, Blitze rufen) ist Teil des GTA-Noir-Charmes und bleibt. Kein Fix.
 
-**Weitere Lektorat-Punkte als Politur eingestuft, nicht gebaut (Benjamin-Priorität):** Actionlastigkeit (50% Sp4), Resolve-Button-Timing/Begründung, Setup-Cast-Audit-Wording (6/6 vs real 4/6), Szenenzählung vs interne Requests, schwache Indizien ("verliert die Nerven"), Politikblock greift narrativ nicht.
+**Weitere Lektorat-Punkte als Politur eingestuft, nicht gebaut (Projektleitung-Priorität):** Actionlastigkeit (50% Sp4), Resolve-Button-Timing/Begründung, Setup-Cast-Audit-Wording (6/6 vs real 4/6), Szenenzählung vs interne Requests, schwache Indizien ("verliert die Nerven"), Politikblock greift narrativ nicht.
 
 **KEIN gemini.js-Schema-Update:** alle Änderungen engine-/prompt-/anzeige-seitig.
 
@@ -1573,7 +1573,7 @@ Getestet gegen beide echten Texte aus dem Run: matchen jetzt. Harmlose Sätze ("
 
 ## 🆕 v7.12.316 — Source-Lektorat v315 Nachbesserungen (P1/P2/P3)
 
-**Sechs Punkte aus dem v315-Source-Lektorat, am Code verifiziert. Eine Lektorat-Empfehlung bewusst NICHT übernommen (Benjamin-Entscheidung).**
+**Sechs Punkte aus dem v315-Source-Lektorat, am Code verifiziert. Eine Lektorat-Empfehlung bewusst NICHT übernommen (Projektleitung-Entscheidung).**
 
 **P1 — extractPersonTarget Tür/Artikel/Anrede.** "klopf an der Tür" lieferte "Tür" als Zielperson (-> falscher Repair-Retry), "klopf bei der Nachbarin" -> "der Nachbarin" (Artikel), "klingel bei Frau Lemke" -> "Frau Lemke" (Validator prüft dann nur "frau" = zu schwach). Fix: Artikel + Anrede (Frau/Herr/Fräulein) vorne strippen, Tür/Wohnung/Haus-Objekte als Ziel ausschließen. Getestet: Ilse/Robert Kessler erkannt, Tür->null, "Nachbarin"/"Lemke" sauber.
 
@@ -1583,7 +1583,7 @@ Getestet gegen beide echten Texte aus dem Run: matchen jetzt. Harmlose Sätze ("
 
 **P2/P3 — Sichtbare Satz-Gedankenstriche geglättet.** "— AUFTRAG ENTZOGEN —" -> "AUFTRAG ENTZOGEN", "entkommen — verletzt" -> "entkommen, verletzt", Export-Marker " — GESPERRT/klickbar" -> " | …". Platzhalter-`—` (leere Statuswerte) bleiben (Inhalt, kein Stilverstoß). v314-Console-Logs auf v316 gebumpt.
 
-**NICHT übernommen (Benjamin-Entscheidung):** Lektorat wollte den ROMANCE-Hinweis aus der Rollenanzeige KOMPLETT entfernen. Benjamin: Hinweis bleibt, aber würdevoll. Statt "– und mehr, wenn die Nacht es will" (Gedankenstrich) jetzt "..., an der mehr hängt als ein Verhör" - natürlicher noir-Satzteil, kein Gedankenstrich, deutet an ohne Steckbrief-Spoiler.
+**NICHT übernommen (Projektleitung-Entscheidung):** Lektorat wollte den ROMANCE-Hinweis aus der Rollenanzeige KOMPLETT entfernen. Projektleitung: Hinweis bleibt, aber würdevoll. Statt "– und mehr, wenn die Nacht es will" (Gedankenstrich) jetzt "..., an der mehr hängt als ein Verhör" - natürlicher noir-Satzteil, kein Gedankenstrich, deutet an ohne Steckbrief-Spoiler.
 
 **LOLA-BUG ENDGÜLTIG (Brandt-Run v315, Sz8 IMMER NOCH "nicht hier"):** Der v314-Fix war zu eng (verlangte cast/personenImRaum-Mitgliedschaft), aber die KI ließ den cast-Array komplett leer (Cast 0) und schrieb "Lola zieht die Hand nicht weg / hebt den Blick / flüstert" - keines dieser Verben war in der Präsenz-Whitelist. Whack-a-Mole. ENDGÜLTIGER FIX in istPersonPhysischAnwesend: Wenn der NAME im Text steht UND es KEINE reine Erwähnung ist (der _erwaehnungOnly-Check filtert "über/von/nach X" + "X wohnt/heißt"), IST die Person präsent - ohne endlose Verb-Whitelist. Der Erwähnungs-Filter ist der eigentliche Wächter. Toter Rollenwort-Fallback-Code (war nie korrekt erreichbar) entfernt. Getestet: "Lola zieht/hebt/flüstert/sitzt" + "du fragst Lola" = präsent; "von/über/nach Lola", "Lola wohnt" = nicht.
 
@@ -1593,11 +1593,11 @@ Getestet gegen beide echten Texte aus dem Run: matchen jetzt. Harmlose Sätze ("
 
 ---
 
-## 🆕 v7.12.315 — Source-Lektorat v314 (P0/P1/P2) + Cast-Beschreibungen entrümpelt (Benjamin-Befund)
+## 🆕 v7.12.315 — Source-Lektorat v314 (P0/P1/P2) + Cast-Beschreibungen entrümpelt (Projektleitung-Befund)
 
-**Sieben Punkte aus dem v314-Source-Lektorat + ein eigener Befund von Benjamin, alle am Code verifiziert.**
+**Sieben Punkte aus dem v314-Source-Lektorat + ein eigener Befund von Projektleitung, alle am Code verifiziert.**
 
-**P0a — NACHT-MARATHON-FORCE widersprach der Arcade-Schlaf-Regel.** Der HARD-Pfad (ab 10 Nachtszenen, Sp<=2) zwang "Alle 4 Optionen sollen zum Schlaf führen" - kein automatischer Schlaf, aber faktischer Zwang durch Wegnahme jeder anderen Wahl. Verletzte die Designentscheidung (Schlaf NUR über bewussten Button). Benjamin-Entscheidung: Lektorat-Variante. Jetzt "LANGE NACHT (HART)": drastischer Müdigkeits-Hinweis (bleischwere Glieder, nickt fast weg), SCHLAFEN-Button prominent, aber die vier A/B/C/D bleiben ECHTE Ermittlungsoptionen. Kein Schlafzwang, kein Auto-Tageswechsel.
+**P0a — NACHT-MARATHON-FORCE widersprach der Arcade-Schlaf-Regel.** Der HARD-Pfad (ab 10 Nachtszenen, Sp<=2) zwang "Alle 4 Optionen sollen zum Schlaf führen" - kein automatischer Schlaf, aber faktischer Zwang durch Wegnahme jeder anderen Wahl. Verletzte die Designentscheidung (Schlaf NUR über bewussten Button). Projektleitung-Entscheidung: Lektorat-Variante. Jetzt "LANGE NACHT (HART)": drastischer Müdigkeits-Hinweis (bleischwere Glieder, nickt fast weg), SCHLAFEN-Button prominent, aber die vier A/B/C/D bleiben ECHTE Ermittlungsoptionen. Kein Schlafzwang, kein Auto-Tageswechsel.
 
 **P0b — Epoch-Guard schützte nicht bei startGame/resetGame.** Der v314-Stale-Guard (currentRequestEpoch) wurde nur bei chooseOption + retry() erhöht. Ein noch laufender alter fetch konnte nach Neustart/Reset den frischen Stand verschmutzen. Jetzt: `currentRequestEpoch++` + Lock/pendingRetry-Reset in beiden Funktionen. Lücke geschlossen.
 
@@ -1611,7 +1611,7 @@ Getestet gegen beide echten Texte aus dem Run: matchen jetzt. Harmlose Sätze ("
 
 **P2 — `--font-mono` definiert** (war referenziert beim Gewahrsam-Badge, aber undefiniert -> inherited fallback). Jetzt in :root: 'Courier New', Courier, monospace.
 
-**BENJAMIN-BEFUND — Cast-Beschreibungen im "Aktueller Stand" technisch + redundant + abgeschnitten.** Sichtbar standen Setup-interne Marker ("ROMANCE-Kandidatin", "(Suspect)", "+ GANGSTER-Verbindung"), harte 24-Zeichen-Abbrüche ("Zeugin / Verlobte des T…") und Redundanzen ("Verlobte des Toten … war Erichs Verlobte"). Wirkte billig/entwürdigend statt Noir. Fix: zentrale `sanitizeRolleAnzeige()` entfernt Technik-Marker, ersetzt ROMANCE-Marker stilvoll ("– und mehr, wenn die Nacht es will"), glättet Doppelrollen-Slash zu "und". Angewendet an allen drei Anzeigestellen (Cast-im-Raum, Charakter-Übersicht, Detail-Popup) + Redundanz-Schutz beim Zusammensetzen von rolle/beziehung. Getestet gegen alle Doppelrollen-Setups. (Export-Stellen bewusst noch nicht angefasst - weniger spielersichtbar, ggf. Folge-Fix.)
+**PROJEKTLEITUNG-BEFUND — Cast-Beschreibungen im "Aktueller Stand" technisch + redundant + abgeschnitten.** Sichtbar standen Setup-interne Marker ("ROMANCE-Kandidatin", "(Suspect)", "+ GANGSTER-Verbindung"), harte 24-Zeichen-Abbrüche ("Zeugin / Verlobte des T…") und Redundanzen ("Verlobte des Toten … war Erichs Verlobte"). Wirkte billig/entwürdigend statt Noir. Fix: zentrale `sanitizeRolleAnzeige()` entfernt Technik-Marker, ersetzt ROMANCE-Marker stilvoll ("– und mehr, wenn die Nacht es will"), glättet Doppelrollen-Slash zu "und". Angewendet an allen drei Anzeigestellen (Cast-im-Raum, Charakter-Übersicht, Detail-Popup) + Redundanz-Schutz beim Zusammensetzen von rolle/beziehung. Getestet gegen alle Doppelrollen-Setups. (Export-Stellen bewusst noch nicht angefasst - weniger spielersichtbar, ggf. Folge-Fix.)
 
 **KEIN gemini.js-Schema-Update:** alle Änderungen rein engine-/anzeige-seitig.
 
@@ -1619,7 +1619,7 @@ Getestet gegen beide echten Texte aus dem Run: matchen jetzt. Harmlose Sätze ("
 
 ## 🆕 v7.12.314 — Watchdog-Doppelszene (Epoch-Guard), Lola-Präsenz, Brandt-Resolve-Sackgasse (Brandt-Run v313)
 
-**Drei Bugs aus Benjamins manuellem Brandt-Run (v313), am Code verifiziert.**
+**Drei Bugs aus Projektleitungs manuellem Brandt-Run (v313), am Code verifiziert.**
 
 **BUG 1 — WATCHDOG-DOPPELSZENE (Wurzel, zog Bug 3 mit).** Am Log bewiesen: `slow_phase=41 · watchdog_timeout=12 · watchdog_autoretry=10`, ABER KEIN `timeout`/`network_error`/`slow_fetch_detail` -> KEIN iOS-fetch-Tod (Desktop). Gemini antwortete bei Stage 3 echt langsam (40-55s lebender fetch); der 45s-Watchdog hielt ihn für tot, feuerte retry() -> alter Lauf + Retry committen beide -> ZWEI sceneCounter++ pro Klick (Sz20->23, zerstörte Flags). Fix 1a: Epoch-Guard (currentRequestEpoch, hochgezählt bei chooseOption + retry()) verwirft verspätete Läufe vor jedem State-Commit. Fix 1b: Watchdog 45s->60s.
 
@@ -1629,7 +1629,7 @@ Getestet gegen beide echten Texte aus dem Run: matchen jetzt. Harmlose Sätze ("
 
 ---
 
-Repo: https://github.com/benlebt/Schatten · Production: https://schatten-dusky.vercel.app · Admin: `?debug=hardenberg17`
+Repo: <GITHUB_REPOSITORY> · Production: https://schatten-dusky.vercel.app · Admin: `?debug=on`
 
 ---
 
@@ -1843,7 +1843,7 @@ Mehrere kleinere Lektorat-Punkte in einer Runde. Action-Drift BEWUSST nicht ange
 
 **Effekt:** Rezeptbuch/Digitalis/Handschrift/Devisen/Zeugenaussagen landen jetzt zuverlässig in der Indizliste. Der Win-Screen spiegelt die erzählte Beweislage. Schwache Indizien (Stimmung, Nervosität) werden weiter gedrosselt - die Dramaturgie (spät konfrontieren) bleibt erhalten. KEINE Prompt-Vergrößerung (reiner Code-Fix) - wichtig, weil die Prompt-Größe als NÄCHSTES reduziert werden soll.
 
-**NÄCHSTER SCHRITT (Benjamin bestätigt): PROMPT-GRÖSSE reduzieren.** Der 115k-Zeichen-System-Prompt ist der Haupthebel gegen den fetch-Hänger (v269 diagnostiziert). Spielgefühl-relevant -> sorgfältig, mit Vorher-Nachher-Vergleich.
+**NÄCHSTER SCHRITT (Projektleitung bestätigt): PROMPT-GRÖSSE reduzieren.** Der 115k-Zeichen-System-Prompt ist der Haupthebel gegen den fetch-Hänger (v269 diagnostiziert). Spielgefühl-relevant -> sorgfältig, mit Vorher-Nachher-Vergleich.
 
 **Source-Code-Lektorat (zu v268) - weitere offene P0/P1 (für kommende Runden):**
 - P0 Cross-Case-Repair NACH Opening: validateOpeningCastPurity läuft nur bei isStart. Szene-2-Drift (Goldener Anker + Schiele/Wegener/Köpenick) wird nicht abgefangen. Fix: nach jeder Szene prüfen, bei Fremdfall-Namen (>=1) ODER >=2 Fremdorten Repair-Retry. Goldener Anker ALLEIN nicht blocken (globaler Karl-Ort).
@@ -1870,7 +1870,7 @@ Mehrere kleinere Lektorat-Punkte in einer Runde. Action-Drift BEWUSST nicht ange
 - **Timing-Diagnostik verbessert (markPhase):** misst jetzt AUCH fetch-Phasen, labelt getrennt 'FETCH/Netzwerk' vs 'SYNC-Verarbeitung'. Nächster Run zeigt eindeutig wo Zeit verloren geht.
 - **Fallback-Abschluss-Redundanz behoben (Lektorat v268):** Mein v267-Fallback-Satz erschien AUCH wenn die KI schon einen echten Telefonabschluss geliefert hatte ("etwas doppelt"). Jetzt nur noch wenn !klientGesprochen (echte Abschluss-Szene fehlt). Bleibt Sicherheitsnetz für Hänger-Fall, stört nicht mehr bei sauberem Abschluss.
 
-**WAS DAMIT KLAR IST FÜR DIE ZUKUNFT:** Hänger/Toast-Timing/fehlender Abschluss waren ALLE Symptome des langsamen/hängenden fetch. Der eigentliche Hebel gegen die Wurzel ist die PROMPT-GRÖSSE (115k Zeichen System-Prompt) - aber das ist ein spielgefühl-relevanter Eingriff (Qualität/Drift), braucht Benjamins OK. Alternativen: (a) Prompt verschlanken, (b) Single-Model-Failover-Wunsch des Lektorats neu bewerten (bei totem fetch auf Flash-Lite zurück - aber User will explizit Single-Model), (c) Hart-Timer auf iOS zuverlässiger machen (greift nachweislich nicht immer).
+**WAS DAMIT KLAR IST FÜR DIE ZUKUNFT:** Hänger/Toast-Timing/fehlender Abschluss waren ALLE Symptome des langsamen/hängenden fetch. Der eigentliche Hebel gegen die Wurzel ist die PROMPT-GRÖSSE (115k Zeichen System-Prompt) - aber das ist ein spielgefühl-relevanter Eingriff (Qualität/Drift), braucht Projektleitungs OK. Alternativen: (a) Prompt verschlanken, (b) Single-Model-Failover-Wunsch des Lektorats neu bewerten (bei totem fetch auf Flash-Lite zurück - aber User will explizit Single-Model), (c) Hart-Timer auf iOS zuverlässiger machen (greift nachweislich nicht immer).
 
 **v268-Run-Lektorat (8,0/10) - WEITERE OFFENE PUNKTE (kein Cross-Drift mehr, Abschluss ausgespielt!):**
 - INDIZ-ERKENNUNG zu schwach (größter verbleibender Punkt): Nur 3 Indizien trotz vieler Beweise im Text. Rezeptbuch/Digitalis/Handschrift/Devisen werden nicht als harte Indizien gezählt, dafür 'Vossberg griff Karl an' (eher Gefahrenfakt). Lektorat-Vorschlag: Mordindizien typisieren (Tatmittel/Motiv/Täterbindung/Zeuge zählen, Flucht/Angriff/Panik nicht primär). Spielgefühl-relevant -> eigener Schritt mit OK.
@@ -1917,7 +1917,7 @@ Mehrere kleinere Lektorat-Punkte in einer Runde. Action-Drift BEWUSST nicht ange
 
 **WURZEL (User-Befund + beide Lektorate):** Gemini benennt Romance-Figuren oft über ihren Beruf statt den Vornamen ("die dunkelhaarige Cellistin" statt "Liesel"). Die namensbasierte Präsenzprüfung (istPersonPhysischAnwesend) findet sie dann nicht -> "ist nicht hier" obwohl sie redet, Intim-Button gesperrt. Betrifft potentiell ALLE 15 Romance-NPCs mit prägnanter Rolle (Kellnerin, Krankenschwester, Aktmodell, Sängerin, Ärztin, Cellistin...).
 
-**FIX (generisch, NICHT pro-Figur - Benjamin hat Option 1 gewählt):**
+**FIX (generisch, NICHT pro-Figur - Projektleitung hat Option 1 gewählt):**
 - extractRollenwort(rolle): zieht das markante Rollen-Substantiv aus dem rolle-Feld. Behandelt Bindestrich-Komposita (Solo-Cellistin -> cellistin, Saengerin-Kollegin -> saengerin), bevorzugt Wörter mit echter Rollenendung (-istin/-erin/-schwester/-modell...), verwirft Possessiv-Eigennamen (Manfreds) + zu generische Wörter (witwe/ehefrau/frau). 12/12 Testfälle korrekt.
 - rollenwortIstEindeutig(): Rollenwort zählt NUR, wenn im Setup genau EINE Figur es trägt (keine zwei Cellistinnen). Lektorat-Vorschlag umgesetzt.
 - istPersonPhysischAnwesend(name, scene, rolleHint): neuer 3. Parameter. Wenn Name nicht matcht, aber das eindeutige Rollenwort MIT Präsenzverb im Text steht (gleiche Strenge wie beim Namen, Erwähnungs-Filter aktiv), gilt die Figur als präsent. KONSERVATIV: bloße Erwähnung ("Vossberg erzählt von der Cellistin") -> FALSE (Gegentests bestanden).
@@ -1944,7 +1944,7 @@ Mehrere kleinere Lektorat-Punkte in einer Runde. Action-Drift BEWUSST nicht ange
 - 'Liesel ist nicht hier' obwohl sie in Szene redet (Sz7): istPersonPhysischAnwesend (Z13531) erkennt sie nicht, WEIL Gemini sie als 'dunkelhaarige Cellistin' beschreibt statt 'Liesel'. Namens-basierte Präsenzprüfung findet den Alias nicht. WURZEL = fehlendes Alias-Mapping (Cellistin->Liesel), das Lektorat mehrfach fordert.
 - Intim-Button gesperrt obwohl präsent: Folge desselben Alias-Problems (romanceNpcInScene wird null).
 - Ausgegrauter 'ist gerade nicht hier'-Button bleibt am nächsten Morgen: v7.12.242-Hinweis (Z14618) zeigt dauerhaft einen Hinweis sobald Romance etabliert (romCurrentTension>=2) und kein Romance-Button da. Morgens wenn Liesel WIRKLICH weg ist, erscheint er weiterhin. Kombiniert mit Alias-Bug doppelt falsch.
-- FIX-VORSCHLAG (braucht Benjamins OK): Alias-Mapping bei Achterberg: 'dunkelhaarige/Solo-/Cellistin/Musikerin im Orchester' -> Liesel Forsthuber, WENN keine andere Cellistin im Setup. Würde istPersonPhysischAnwesend + Romance-Detektion + Cast-Pollution (Lektorat) gemeinsam lösen.
+- FIX-VORSCHLAG (braucht Projektleitungs OK): Alias-Mapping bei Achterberg: 'dunkelhaarige/Solo-/Cellistin/Musikerin im Orchester' -> Liesel Forsthuber, WENN keine andere Cellistin im Setup. Würde istPersonPhysischAnwesend + Romance-Detektion + Cast-Pollution (Lektorat) gemeinsam lösen.
 
 **ABSCHLUSS FEHLT WEITER (Lektorat P0):** Symptom des Hängers - die Abschluss-Verarbeitung (klient_berichtet) wird nie erreicht, weil es vorher hängt. Mischzustand 'Wilhelmine in Vossbergs Wohnung' = die KI-Szene + unvollständige State-Updates. Erst Hänger lösen, dann Fallback-Abschlussprosa.
 
@@ -2952,7 +2952,7 @@ BEWUSST NICHT (ChatGPT-Rat gefolgt): kein solutionProfile, kein Stage-3-Eingang-
 
 **Beide Lektorate (ChatGPT + Gemini) v198: Achterberg endet zwar sauber "Vossberg überführt", aber die gesammelten Indizien bewiesen DEVISENVERGEHEN stärker als MORD. 3 von 5 alten keyClues drehten sich um Vossberg/Devisen, nur 2 waren harte Mordbeweise → KI schoss sich auf die Devisen-Schiene ein.**
 
-**Neugewichtung (spielgefühl-relevant, Benjamin-Freigabe): 4 Mordbeweise + 1 Motiv.**
+**Neugewichtung (spielgefühl-relevant, Projektleitung-Freigabe): 4 Mordbeweise + 1 Motiv.**
 - TODESURSACHE: Digitalis-Flasche leer + gerichtsmedizinische Nachfrage (NICHT Charité/Heil-Ort!) → tödliche Digitalis-Konzentration, kein Herzversagen.
 - GELEGENHEIT: Vossberg allein in Garderobe an der Tropfflasche, Tatzeit passt zum Zusammenbruch.
 - ZUGRIFF AUFS GIFT: Apothekenbeleg - Vossberg holte das Digitalis auf Achterbergs Rezept ab.
@@ -3579,7 +3579,7 @@ Namen dynamisch aus caseProgress.tatverdaechtiger + Setup-Cast (SUSPECT/TARGET) 
 
 **Modus-Gewichtung:** Die Prio greift modusübergreifend (vor der Strategie-Verzweigung) mit fester Chance. Bei Nicht-Treffer (25%) übernimmt die modusabhängige Strategie, sodass aggressive/cautious-Charakteristik teilweise erhalten bleibt. Modus-spezifische Chancen (aggressive 95% / cautious 60%) bewusst NICHT gebaut - Overengineering solange der Zweck (Fall kommt zum Abschluss) erfüllt ist (dem User offengelegt).
 
-**NÄCHSTER EMPIRISCHER TEST:** je ein Mord- + Vermissten-Bot-Lauf (v172, ?debug=hardenberg17) zur Diagnose, ob das Konfrontations/Aufsuch-Äquivalent greift. Bei Diebstahl: Gegentest der v170-Gut-Hol-Prio. Die Sekundär-OFFENSIV-Stufe bei mord ist die aggressivste Annahme - im ersten Run am genauesten prüfen.
+**NÄCHSTER EMPIRISCHER TEST:** je ein Mord- + Vermissten-Bot-Lauf (v172, ?debug=on) zur Diagnose, ob das Konfrontations/Aufsuch-Äquivalent greift. Bei Diebstahl: Gegentest der v170-Gut-Hol-Prio. Die Sekundär-OFFENSIV-Stufe bei mord ist die aggressivste Annahme - im ersten Run am genauesten prüfen.
 
 ---
 
@@ -3634,7 +3634,7 @@ Namen dynamisch aus caseProgress.tatverdaechtiger + Setup-Cast (SUSPECT/TARGET) 
 **User-Wunsch: "Verlauf kopieren" nur noch ueber die Settings, nicht mehr im "Aktueller Stand"-Popup.**
 
 - Button + verwaiste CSS-Klasse (.status-popup-export) aus dem Status-Popup entfernt. Popup hat jetzt nur noch "Schließen". Der "📋 Verlauf kopieren"-Button im Settings-Menue bleibt (einziger Export-Einstieg).
-- **WICHTIGE KLARSTELLUNG (Option B war laengst umgesetzt):** isDebugExportEnabled() gibt IMMER true zurueck - der vollstaendige Debug-Export inkl. Push-Diagnose-Block ("AKTIVE PROMPT-PUSHES & DETEKTIONEN") ist in JEDEM Export enthalten, auch OHNE ?debug=hardenberg17. Die Debug-URL steuert nur die sichtbare Admin-UI (Autoplay-Button, Live-Diagnose), nicht den Export-Inhalt. D.h. auch normale Spieler ohne Debug-URL koennen einen manuellen Verlauf mit vollstaendigen Debug-Infos schicken. (Frueher faelschlich behauptet "ohne Debug-Modus wertlos" - korrigiert.)
+- **WICHTIGE KLARSTELLUNG (Option B war laengst umgesetzt):** isDebugExportEnabled() gibt IMMER true zurueck - der vollstaendige Debug-Export inkl. Push-Diagnose-Block ("AKTIVE PROMPT-PUSHES & DETEKTIONEN") ist in JEDEM Export enthalten, auch OHNE ?debug=on. Die Debug-URL steuert nur die sichtbare Admin-UI (Autoplay-Button, Live-Diagnose), nicht den Export-Inhalt. D.h. auch normale Spieler ohne Debug-URL koennen einen manuellen Verlauf mit vollstaendigen Debug-Infos schicken. (Frueher faelschlich behauptet "ohne Debug-Modus wertlos" - korrigiert.)
 - **Fuer "bot natural" wird die Debug-URL trotzdem gebraucht** - nicht wegen des Exports, sondern weil der Autoplay-Button in admin-autoplay-section sitzt (isAdminUnlocked).
 
 ---
@@ -3698,7 +3698,7 @@ Namen dynamisch aus caseProgress.tatverdaechtiger + Setup-Cast (SUSPECT/TARGET) 
 
 **HINWEIS Versionierung:** v7.12.161 war die ZUGANGSSCHUTZ-Runde (Passwort serverseitig in den Proxys + Frontend-Header, siehe eigener Block). v162 baut darauf auf.
 
-**TEST weiter offen:** 2x Krause natural MIT ?debug=hardenberg17. Die Erkennungs-Genauigkeit ist jetzt satzscharf; der eigentliche empirische Test (holt Karl das Etui? schließt der Fall ab?) steht weiter aus.
+**TEST weiter offen:** 2x Krause natural MIT ?debug=on. Die Erkennungs-Genauigkeit ist jetzt satzscharf; der eigentliche empirische Test (holt Karl das Etui? schließt der Fall ab?) steht weiter aus.
 
 ---
 
@@ -3731,7 +3731,7 @@ Namen dynamisch aus caseProgress.tatverdaechtiger + Setup-Cast (SUSPECT/TARGET) 
 ### Bewusst weiter offen
 - **Bot-Force-Resolve (Punkt 5, jedes Review):** unverändert zurückgestellt - ja_a/ja_b zeigten AUFLOESEN wird 0x angeboten wenn Gut fehlt. Erst nach Test relevant, ob v158-Zielkonflikt + v160-Nahfenster dazu führen dass Karl das Gut holt.
 
-**TEST weiter dringend:** 2x Krause natural auf v7.12.160 MIT ?debug=hardenberg17. Mit v158 (Zielkonflikt: Eskalation zum Gut) + v160 (Nahfenster: sauberere Besitz-Erkennung) sollte Karl das Etui jetzt eher holen UND der Besitz sauberer erkannt werden. Push-Block im Export zeigt welche Pushes feuerten.
+**TEST weiter dringend:** 2x Krause natural auf v7.12.160 MIT ?debug=on. Mit v158 (Zielkonflikt: Eskalation zum Gut) + v160 (Nahfenster: sauberere Besitz-Erkennung) sollte Karl das Etui jetzt eher holen UND der Besitz sauberer erkannt werden. Push-Block im Export zeigt welche Pushes feuerten.
 
 ---
 
@@ -3747,7 +3747,7 @@ Namen dynamisch aus caseProgress.tatverdaechtiger + Setup-Cast (SUSPECT/TARGET) 
 - **Bot-Force-Resolve (Punkt 4, jedes Review):** bleibt offen aus belegtem Grund - ja_a/ja_b zeigten AUFLOESEN wurde 0x angeboten (Gut fehlte), Force liefe ins Leere. Erst relevant, wenn der v158-Zielkonflikt-Fix dazu führt, dass Karl das Gut holt + AUFLOESEN angeboten wird. Test entscheidet.
 - **Pronomen-Fallback (Punkt 5):** explizit "kein harter Bug", niedrige Priorität.
 
-**TEST:** weiter dringend 2x Krause natural auf v7.12.159 MIT Debug-Export (?debug=hardenberg17). Zentrale Frage unverändert: Holt Karl das Etui (v158-Zielkonflikt)? Der neue Push-Block im Export zeigt jetzt, welche Pushes pro Szene feuerten.
+**TEST:** weiter dringend 2x Krause natural auf v7.12.159 MIT Debug-Export (?debug=on). Zentrale Frage unverändert: Holt Karl das Etui (v158-Zielkonflikt)? Der neue Push-Block im Export zeigt jetzt, welche Pushes pro Szene feuerten.
 
 ---
 
@@ -3770,9 +3770,9 @@ Namen dynamisch aus caseProgress.tatverdaechtiger + Setup-Cast (SUSPECT/TARGET) 
 
 ### Export-Vollständigkeit (User-Wunsch: "Export soll immer alles zeigen was aktuell passiert")
 - **Befund:** Der Prompt-Recap (GUT-HOL, ACTION/ESKALATION, SEKTOR-KONSISTENZ etc.) wurde im Export GAR NICHT geloggt - der Export filterte nur progress-Events (Toasts), nicht die an die KI gesendeten Pushes (type 'drift'/'detect'). Diagnose von Drift/Nachlauf war dadurch blind (genau das beim ja_a/ja_b-Diagnoseversuch aufgefallen).
-- **Fix:** (a) GUT-HOL-PFLICHT, GUT-BESCHAFFUNG, ESKALATION-AM-GUT, HARTE-ESKALATION, ACTION-PUSH bekommen diag('drift', ...)-Aufrufe (vorher hatten sie keine). (b) Neuer Export-Block "AKTIVE PROMPT-PUSHES & DETEKTIONEN (pro Szene)" listet alle drift/detect-Events pro Szene. Künftig sichtbar, welche Pushes pro Szene aktiv waren (nur im Debug-Export ?debug=hardenberg17).
+- **Fix:** (a) GUT-HOL-PFLICHT, GUT-BESCHAFFUNG, ESKALATION-AM-GUT, HARTE-ESKALATION, ACTION-PUSH bekommen diag('drift', ...)-Aufrufe (vorher hatten sie keine). (b) Neuer Export-Block "AKTIVE PROMPT-PUSHES & DETEKTIONEN (pro Szene)" listet alle drift/detect-Events pro Szene. Künftig sichtbar, welche Pushes pro Szene aktiv waren (nur im Debug-Export ?debug=on).
 
-**TEST DRINGEND:** 2x Krause natural auf v7.12.158 MIT Debug-Export (?debug=hardenberg17), damit der neue Push-Block im Export erscheint. Zentrale Frage: Holt Karl jetzt das Etui (greift ESKALATION-AM-GUT)? Schließt der Fall ab? Falls Karl weiter nicht holt: der Push-Block zeigt jetzt, ob ESKALATION-AM-GUT gefeuert hat und die KI ihn ignoriert (dann ist es ein Flash-Lite-Steuerungslimit, kein Code-Bug).
+**TEST DRINGEND:** 2x Krause natural auf v7.12.158 MIT Debug-Export (?debug=on), damit der neue Push-Block im Export erscheint. Zentrale Frage: Holt Karl jetzt das Etui (greift ESKALATION-AM-GUT)? Schließt der Fall ab? Falls Karl weiter nicht holt: der Push-Block zeigt jetzt, ob ESKALATION-AM-GUT gefeuert hat und die KI ihn ignoriert (dann ist es ein Flash-Lite-Steuerungslimit, kein Code-Bug).
 
 ---
 
@@ -4261,7 +4261,7 @@ Jeder Fakt vorab per web_search verifiziert. Geänderte Stellen:
 - **Offensive bewusst NICHT umgebaut:** Es ist der stumpfe Eskalations-Stresstest (testet Robustheit unter Dauerkonfrontation). Das "schlau offensiv vorgehen" (früh erkunden, spät stellen) IST der natural-Modus. WICHTIG: Indizien-Dramaturgie (v7.12.0) belohnt OFFENSIV in Stage 3 (Indizien kommen voll durch), drosselt ERKUNDEN/BEOBACHTEN dort (max 1, 50% verworfen) — Showdown soll nicht durchrasen.
 
 ### ⚡ KOSTEN-TRACKER (v7.12.128) — nur Debug, NICHT öffentlich
-`runCostTracker` (~Z5991): summiert pro Run Requests + Input(uncached/cached) + Output-Tokens. Reset bei Run-Start. Anzeige NUR im Debug-Export (hinter `?debug=hardenberg17`) am Anfang: Requests, Token (mit Cache-%), Cent-Schätzung. **Bewusst NICHT für Spieler sichtbar** (Steam-Misstrauen gegen "teure Cloud-KI" nicht füttern). Token-Erfassung existierte schon (Gemini `usageMetadata`, gemini.js reicht durch, ~Z15964 las pro Request) — neu ist die Run-Summierung + EUR-Schätzung. Preise verifiziert (gemini-3.1-flash-lite, Mai 2026): **$0,25/M Input (Cache-Miss), $1,50/M Output, Cache-Hit = 10% = $0,025/M.** `estimateRunCostEUR()` USD*0,92.
+`runCostTracker` (~Z5991): summiert pro Run Requests + Input(uncached/cached) + Output-Tokens. Reset bei Run-Start. Anzeige NUR im Debug-Export (hinter `?debug=on`) am Anfang: Requests, Token (mit Cache-%), Cent-Schätzung. **Bewusst NICHT für Spieler sichtbar** (Steam-Misstrauen gegen "teure Cloud-KI" nicht füttern). Token-Erfassung existierte schon (Gemini `usageMetadata`, gemini.js reicht durch, ~Z15964 las pro Request) — neu ist die Run-Summierung + EUR-Schätzung. Preise verifiziert (gemini-3.1-flash-lite, Mai 2026): **$0,25/M Input (Cache-Miss), $1,50/M Output, Cache-Hit = 10% = $0,025/M.** `estimateRunCostEUR()` USD*0,92.
 
 ### ════ STRATEGIE-ENTSCHEIDUNGEN (Steam-Release, kein Code) ════
 - **Gemini bleibt Default.** Caching greift hervorragend (Runs v7.12.127: 72-89% Cache-HIT) → senkt echte Kosten massiv. Größter Hebel bleibt **Prompt-Verschlankung** (113 KB System-Prompt, 35-45k Tokens/Request) — entscheidet, ob IRGENDEIN Modell wirtschaftlich ist.
@@ -8832,9 +8832,9 @@ Müdigkeit Schlaf/Essen priorisieren statt ewig "ermitteln" zu klicken.
 - Wenn passende Option vorhanden → Survival hat Vorrang vor Strategie
 - Nicht bei Action (Spannung ≥4) — kein Schlafen mitten in Schießerei
 - Console-Log: `[Bot] Survival-Override: Karl muss schlafen (En=18)`
-Repo: https://github.com/benlebt/Schatten
+Repo: <GITHUB_REPOSITORY>
 Production: https://schatten-dusky.vercel.app
-Admin-Modus: `?debug=hardenberg17`
+Admin-Modus: `?debug=on`
 
 ---
 
@@ -8866,8 +8866,8 @@ mitnehmen. Geschichts-Abitur-tauglich, Ubisoft-Niveau.
   - groq.js hat einen eigenen `SLIM_SYSTEM_PROMPT` (~25KB / 6.4K Tokens) wegen
     Groq 8K TPM-Limit. **Stand: v6.57-synchron.**
   - deploy.js (ab v6.62): GitHub-Auto-Push aus dem Spiel heraus für M2-Workflow
-- **Vercel:** Projekt `benjamin-sommerfeld-s-projects/schatten`,
-  Project-ID `prj_N8nPYKFQraROH3DQtun9mfD5ODRJ`
+- **Vercel:** Projekt `projektleitung-sommerfeld-s-projects/schatten`,
+  Project-ID `<VERCEL_PROJECT_ID>`
 - **Env vars:** `GEMINI_API_KEY`, `GROQ_API_KEY`, `MISTRAL_API_KEY`, `GITHUB_TOKEN` (für M2)
 
 ---
@@ -8902,7 +8902,7 @@ mitnehmen. Geschichts-Abitur-tauglich, Ubisoft-Niveau.
 
 ## 4. Debug-Modus & Sichtbarkeits-Konventionen (WICHTIG für Updates)
 
-Schatten hat einen Admin-/Debug-Modus, aktiviert per `?debug=hardenberg17`.
+Schatten hat einen Admin-/Debug-Modus, aktiviert per `?debug=on`.
 Das Debug-Flag wird über `localStorage` persistiert und mit
 `isAdminUnlocked()` abgefragt.
 
@@ -10404,7 +10404,7 @@ Ende der Projekt-Knowledge.
 
 # 📦 BACKLOG: Fallideen & Setup-Struktur-Ausbau (ChatGPT-Lektorat v198, für spätere Versionen)
 
-**Status: NOCH NICHT umgesetzt. Notiert für künftige Sessions. Spielgefühl-relevant → braucht Benjamins Freigabe pro Punkt.**
+**Status: NOCH NICHT umgesetzt. Notiert für künftige Sessions. Spielgefühl-relevant → braucht Projektleitungs Freigabe pro Punkt.**
 
 ## Kern-Befund des Lektorats
 Die Engine (v198) ist inzwischen WEITER als viele Fall-Setups. Die Abschlusslogik kann Mord/Wahrheit/Vermisst/Beschatten/Diebstahl/Politisch getrennt behandeln, aber die Setups liefern noch zu wenig EXPLIZITE Zielinformationen - die Engine muss vieles aus caseType/setupCast/keyClues/tat-Text/Rollen-Tags ABLEITEN. Funktioniert oft, aber nicht immer elegant (daher die "Engine-Peitsche" = harte Indizpflicht-Pushes). Der nächste Qualitätssprung kommt durch bessere Fall-Metadaten, nicht durch mehr Schutzlogik.
@@ -10430,7 +10430,7 @@ Die Engine (v198) ist inzwischen WEITER als viele Fall-Setups. Die Abschlusslogi
 
 **Engine-Pass:** Tatwerkzeug = Spur (selbsterklärend, elegant). murderAxes greifen sauber: todesursache (Erdrosseln klar), tatmittel/zugriff (wer kommt an US-Nylon? = Kern-Ermittlung), motiv (Rache/Erpressung/Trieb?), vertuschung (Signatur-Psychologie). Eignet sich als #5-Testfall (Mord-Achsen-Gate analog Würge- statt Gift-Achse). Mehrere Opfer → Opfer-Schutz-Logik mit mehreren Namen sauber tracken (Achtung determineConclusion/Opfer-Verwechslung). Stasi-Relevanz niedrig (früher Mord-Einstiegsfall wie Achterberg, klare Signatur-Spur).
 
-**Offen vor Bau (Benjamins Freigabe, Spielgefühl):** conclusionKind/requiredPerson (Täter im Setup-Cast verankern wie Achterberg=Vossberg), Opfer-Anzahl/-Namen, Romance-Entscheidung (Schmugglerin?), Härtegrad (Serienmord-Thema = Gewaltgrenzen im Prompt beachten).
+**Offen vor Bau (Projektleitungs Freigabe, Spielgefühl):** conclusionKind/requiredPerson (Täter im Setup-Cast verankern wie Achterberg=Vossberg), Opfer-Anzahl/-Namen, Romance-Entscheidung (Schmugglerin?), Härtegrad (Serienmord-Thema = Gewaltgrenzen im Prompt beachten).
 
 ## VORGESCHLAGENE Setup-Struktur-Erweiterung (Ausbaustufe, noch nicht entschieden)
 ChatGPT schlägt ein optionales `solutionProfile` pro Setup vor:
@@ -10477,9 +10477,9 @@ Plus `keyClueGroups` (motive/means/opportunity/coverup) statt flacher keyClue-Li
 
 ---
 
-## 📋 BACKLOG v441 (2026-06-07): "Erst tracken, dann implementieren" (Benjamin-Entscheidung)
+## 📋 BACKLOG v441 (2026-06-07): "Erst tracken, dann implementieren" (Projektleitung-Entscheidung)
 
-Benjamin-Direktive: Diese Punkte NICHT blind bauen. Stattdessen in den kommenden Bot-Test-Runs
+Projektleitung-Direktive: Diese Punkte NICHT blind bauen. Stattdessen in den kommenden Bot-Test-Runs
 die Debug-Log-Daten beobachten, dann nach ein paar Runs gezielt implementieren + entscheiden.
 Alle relevanten Diag-Marker sind ab v439 im Export (diag progress/drift → currentSceneDiagnostics).
 
@@ -10494,7 +10494,7 @@ Alle relevanten Diag-Marker sind ab v439 im Export (diag progress/drift → curr
   `lange_verbindung` auf "Lange persönlich + konkretes Beweisobjekt (Schuldschein/Zigarillo/
   Schlüssel/Anweisung)" härten und `zeugen_aussage` auf echte Aussageverben (sagt/berichtet/
   bezeugt/gesteht/warnt). GEGEN ECHTEN AUSLÖSERSATZ testen, nicht konstruiert. Beat-Gating =
-  Spielgefühl → Benjamin-Freigabe nötig.
+  Spielgefühl → Projektleitung-Freigabe nötig.
 
 ### B) Romance-Push Ortsplausibilität (P1/P2, latent - in echten Runs NICHT reproduziert)
 - **Status:** ChatGPT meldet wiederholt "Liesel in Charité-Pathologie gebeamt". In den echten
@@ -10505,7 +10505,7 @@ Alle relevanten Diag-Marker sind ab v439 im Export (diag progress/drift → curr
 - **Fix wenn belegt:** isRomancePushLocationPlausible(location, ortType). Unplausibel → kein
   physisches Auftauchen, stattdessen Nachricht/Telefon/"sie wartet im Admiralspalast". Plausibel:
   Bühne/Klub/Café/Kneipe/Wohnung der Figur/Karls Büro/etablierter gemeinsamer Fallort.
-  Romance = Spielgefühl → Benjamin-Freigabe nötig.
+  Romance = Spielgefühl → Projektleitung-Freigabe nötig.
 
 ### C) Bot-Romance zu dominant für Regression (P2, Test-Werkzeug, kein Spielererlebnis-Fix)
 - **Befund:** Bot nimmt UEBERNACHTUNG ~100%, ROMANTIK bei romanticTension>0 garantiert; Einstieg
@@ -10523,7 +10523,7 @@ Alle relevanten Diag-Marker sind ab v439 im Export (diag progress/drift → curr
 ### E) Assertion-Report personenImRaum differenzieren (P3, reines Reporting)
 - Aktuell "personenImRaum fehlt: 74/74" klingt wie Totalfehler, obwohl Engine sauber rekonstruiert.
 - Besser: "KI-personenImRaum fehlt: 74/74 | Engine-Cast rekonstruiert: ja | Ghost-Reintro
-  geblockt: X | Bericht/Traum-Reintro geblockt: Y". KEIN teurer Repair-Retry (Benjamin+Konsens).
+  geblockt: X | Bericht/Traum-Reintro geblockt: Y". KEIN teurer Repair-Retry (Projektleitung+Konsens).
 
 ### F) Code-Hygiene (P3, kein Runtime-Effekt)
 - Tote Bot-Modi-Zweige (cautious/explorer/rotating/mixed) - durch v434-Whitelist unerreichbar,
@@ -10578,7 +10578,7 @@ Stage klebte auf 1 -> AUFLOESEN nie reif -> mechanisch unlösbar trotz erreichte
 klares Lange-Geständnis (Sz28 "Lange gesteht, dass der Mord...") setzte nur lange_verantwortlich,
 nicht zeugen_aussage -> blieb 3/5 statt 4/5.
 
-FIXES (Benjamin-Freigabe Weg "Geständnis-Mehrfachbeleg"):
+FIXES (Projektleitung-Freigabe Weg "Geständnis-Mehrfachbeleg"):
 - **Geständnis-Mehrfachbeleg** (updateTruthBeats): Wenn der Pflicht-Beat (Verantwortlicher via
   echtem, bereits streng gefiltertem Geständnis) steht, gilt der zeugen_aussage-Beat mit - ein
   Tätergeständnis IST die härteste Zeugenaussage. KEINE Aufweichung der False-Positive-Härtung.
@@ -10589,7 +10589,7 @@ FIXES (Benjamin-Freigabe Weg "Geständnis-Mehrfachbeleg"):
 - Verifiziert KEIN Achterberg-Regress: Achterberg hat keine truthBeats (nutzt murderAxes/murderGate),
   der Truthbeat-Stage-Pfad greift dort nicht. Mordfall bleibt unberührt.
 
-OFFEN (Bot-Führung, Spielgefühl, Benjamin-Entscheidung - NICHT gebaut): Brandt-Bot hängt im
+OFFEN (Bot-Führung, Spielgefühl, Projektleitung-Entscheidung - NICHT gebaut): Brandt-Bot hängt im
 Gewaltloop mit Lange (Press den Lauf, Schlag ins Gesicht) statt Beweise zu sichern; Beats kommen
 spät. ChatGPT-Vorschläge: Loopbreaker nach 4x OFFENSIV gegen selben NPC ohne neuen Beat; Push auf
 fehlende Beweisrouten (Lola/Pohl/Otto/Schuldschein) ab Stage1+Szene12-15; Tageszeit-Marathon
@@ -10597,7 +10597,7 @@ begrenzen (17 Nacht-Szenen). Das ist Bot-Endgame-Steuerung = Spielgefühl, warte
 Romance-Drosselung im Bot bei Mordfällen ebenfalls offen (Backlog C).
 
 ## v7.12.444 (2026-06-07): Bot wie abschluss-instinktiver Spieler (Loopbreaker + Beat-Prio)
-BENJAMIN-VORGABE: Bot soll sich verhalten wie ein neuer Spieler mit Abschluss-Instinkt - Fälle so
+PROJEKTLEITUNG-VORGABE: Bot soll sich verhalten wie ein neuer Spieler mit Abschluss-Instinkt - Fälle so
 früh/schnell wie möglich abschließen, sobald die Möglichkeit real da ist. Ziel: möglichst viel
 automatisiert testen, Bot = realistischer Test-Spieler. ("Spieler schließen tendenziell frühzeitig
 ab, es sei denn sie sind extrem schnell fertig und wollen sich noch durch die Welt bewegen.")
@@ -10678,10 +10678,10 @@ ERFÜLLT (4/5+Pflicht, truthBeatsErfuellt=JA, Stufe "Wahrheit bewiesen"), Stage 
 klickbar - aber Run endete Sz41 (Turn-Limit), Bot lief vorher in Nebenpfade/Gewalt/Heilen statt
 abzuschließen. Brandt aggressive: nur 2/5 Beats, Stage 1 korrekt (kein Bug, aggressiver Bot findet
 Kernbeweise nicht). STAGE-DIAG-Marker fehlten im Export (Diagnose-Lücke, NICHT der Lösungs-Blocker -
-Achterberg löst ohne sie). Benjamin+ChatGPT deckungsgleich: nicht am fehlenden Marker hängen bleiben.
+Achterberg löst ohne sie). Projektleitung+ChatGPT deckungsgleich: nicht am fehlenden Marker hängen bleiben.
 
 FIXES:
-- **TRUTH-STAGE-DIAG** (Benjamin: "alles Sinnvolle ins Debug-Log"): explizite Diagnose JEDE Szene bei
+- **TRUTH-STAGE-DIAG** (Projektleitung: "alles Sinnvolle ins Debug-Log"): explizite Diagnose JEDE Szene bei
   wahrheit/politisch mit truthBeats - truthBeatsErfuellt, hit/total, stage, stage2ReadyViaTruth,
   resolveShown, resolveCanClick, ind. IMMER im Export (diag progress), kein SLOW_PHASE/optional.
   Beendet das STAGE-DIAG-Rätselraten - nächster Run zeigt exakt, wann/ob die Truth-Kette greift.
@@ -10693,13 +10693,13 @@ FIXES:
   resolveCanClick-Check: bei gesperrtem Button (Gefahr) greift (a) nicht -> kein Abschluss-Zwang in
   Gefahr, aber auch kein Abdriften.
 
-OFFEN: Brandt mit 50 Zügen testen (Benjamin) - klärt, ob der Override + mehr Zeit reicht. Aggressiver
+OFFEN: Brandt mit 50 Zügen testen (Projektleitung) - klärt, ob der Override + mehr Zeit reicht. Aggressiver
 Bot braucht ggf. separaten Beweis-Loopbreaker (findet Kernbeweise nicht zuverlässig). NPC-Mikroprofile
 (P2). Ortsnormalisierung (P3).
 
 ## v7.12.448 (2026-06-07): Aggressiv-Beweiszwang + NPC-Persistenz + Ortsnormalisierung
 KONTEXT: v447 bestätigt - alle 3 Einstiegsfall-Runs lösen (Brandt natural Sz20, Brandt aggressive
-5/5 Sz40, Achterberg Stage 4). Backlog-Punkte 1-3 nacheinander angegangen (Benjamin-Auftrag).
+5/5 Sz40, Achterberg Stage 4). Backlog-Punkte 1-3 nacheinander angegangen (Projektleitung-Auftrag).
 
 ### 1) AGGRESSIVER BOT: BEWEIS-ZWANG ab Sz20 (Bot-Test, kein Mensch-Effekt)
 Befund: Aggressiver Brandt löste in v447, aber knapp (Pflicht-Beat erst Sz39/40) - der aggressive
@@ -10708,7 +10708,7 @@ ab Sz20 muss jede harte Aktion auf einen fehlenden Beat zielen." Fix: im aggress
 Loop-Schwelle 1 statt 2 (schon nach EINER ergebnislosen Konfrontation auf Beweise), UND wenn eine
 Beweis-Option verfügbar ist, proaktiv bevorzugen. natural/random unverändert (Schwelle 2).
 
-### 2) NPC-TEXTUR-PERSISTENT (Benjamin James-Bond/GTA-Noir-Linie)
+### 2) NPC-TEXTUR-PERSISTENT (Projektleitung James-Bond/GTA-Noir-Linie)
 Befund: buildNpcTextureHint würfelt jede Szene neu (Math.random) -> namenloser Gegner wirkt beim
 Wiederauftauchen anders, Varianz bleibt dekorativ. Fix: npcTextureMemory[ortNorm+'|'+poolKey] merkt
 den einmal gewählten Archetyp und verwendet ihn am SELBEN Ort wieder ("der nervöse Wächter" bleibt
@@ -10752,7 +10752,7 @@ BEFUND (Lektorat v449 + eigener Run-Befund, deckungsgleich): Beide Brandt-Runs l
 ABER Achterberg (mord) regressiert: 4/5 Mordachsen, Gate erfüllt ("Täterspur belastbar", Stage 3),
 trotzdem ungelöst - Bot lief in Nacht-Flucht-Schleife, FALL-LÖSEN-Button blieb gesperrt. Ursache:
 Der v447-Abschluss-Override deckte nur wahrheit/politisch ab, NICHT mord. (Cap-Erhöhung durch
-Benjamin nach Spending-Cap-Stillstand - kein Code-Problem.)
+Projektleitung nach Spending-Cap-Stillstand - kein Code-Problem.)
 
 FIXES (alle gegen echten Run/Setup verifiziert):
 1. **MORD-ENDGAME-OVERRIDE** (P1): Der Abschluss-Override (v447) deckt jetzt auch mord ab -
@@ -10897,7 +10897,7 @@ GUT-HOL-VOLLZUG-Push feuerte 34×, Etui Sz22 inKarlInventory (mit Gravur), Sz24 
 Weichere Lösung reichte (kein mechanischer Zwangs-Force nötig). Renate Schiffer + Karl Mauer/Strauss
 lösen auch (alle Stage 4, kein Gewahrsam). KEIN P1 mehr. Lektorat v456: 3 Feinschliff-Punkte.
 
-FIXES (Romance-am-Grab BEWUSST IGNORIERT - Benjamin: Arcade-Noir-Spielgefühl, Spieler-Freiheit):
+FIXES (Romance-am-Grab BEWUSST IGNORIERT - Projektleitung: Arcade-Noir-Spielgefühl, Spieler-Freiheit):
 1. **KRAUSE-PUSH GESPLITTET** (P2): v456-Vollzug-Push feuerte schon bei "Versteck bekannt" (Karl noch
    im Büro) -> "seit X Sz am Versteck" log war falsch. Jetzt zweistufig via currentOrt: Karl NICHT am
    Versteck -> GUT-HINFAHREN-Push (Zähler resettet). Karl AM Versteck (currentOrt enthält lager/
@@ -10980,7 +10980,7 @@ BEWUSST NICHT gebaut: schärferes Sigrid-Finale-Gate für Hohenschönhausen (P2)
 kam aus Pieck-Setup-Cast-Beschreibung, nicht als erspieltes Indiz - subtiler Setup-Leak. ABER
 historisch/falllogisch plausibel (echter MfS-U-Haft-Ort), Win-Screen war vorsichtig. Generischer v459-
 Wahrheitstreue-Hinweis adressiert es bereits. Schärferes Haftort-Gate würde Spielgefühl berühren ->
-erst beobachten ob v459-Hinweis greift, dann ggf. nachziehen (mit Benjamin).
+erst beobachten ob v459-Hinweis greift, dann ggf. nachziehen (mit Projektleitung).
 
 OFFEN: NPC-Mikroprofile personenbasiert (P3, HO-Verwaltung/Wohnhaus/Wäscherei|schlaeger-Restfälle +
 Friedhof - eigenes Vorhaben). Natural-Bot-Endgame bei hoher Sp entschärfen (P2, Auguste actionlastig).
@@ -11006,7 +11006,7 @@ personenbasiert (P3, eigenes Vorhaben). Heinz-Hof + Annegret-Wohnhaus whiteliste
 Stage-Wording "Kranich-Spur" (P3).
 
 ## v7.12.462 (2026-06-07): FINALE-DIAG Block 4 - Setup-Wissens-Leck aus Cast-Details (Diagnose, kein Eingriff)
-KONTEXT: Backlog-Instrumentierung. Frage Benjamin "steht alles Relevante im Debug-Log?". Geprüft:
+KONTEXT: Backlog-Instrumentierung. Frage Projektleitung "steht alles Relevante im Debug-Log?". Geprüft:
 NPC-Textur-Leak (NPC-TEXTUR eingefroren ort|pool ✓), Ortsnormalisierung (Location ausserhalb
 Whitelist ✓), Endgame-Pacing (SCHLUSSPHASEN-PRIO/Loopbreaker/AUTO-STAGE ✓), Romance-Push (vollständig
 ✓). LÜCKE: Sigrid-Finale Hohenschönhausen - FINALE-DIAG feuerte NICHT, weil sie nur caseSetup.locations
@@ -11047,7 +11047,7 @@ BEWUSST NICHT (nicht stapeln, 2 Verhaltensänderungen reichen): Wessel-Hohensch�
 LECK-DIAG feuert bereits - Opening-Prompt entschärfen wäre nächster Schritt). Margarete Natural-Bot
 actionlastig (P2, Sp>=4+Vf<=3 -> erst Flucht/Heilung). NPC-Archetypen personalisieren (P2/P3).
 
-STABILITÄTS-EINSCHÄTZUNG (Benjamin-Frage): Kern 100% Lösungsrate über alle 5 Falltypen, kein P1 seit
+STABILITÄTS-EINSCHÄTZUNG (Projektleitung-Frage): Kern 100% Lösungsrate über alle 5 Falltypen, kein P1 seit
 v456. ABER Lösungs-GESCHWINDIGKEIT schwankt (Hilde 23 vs 60 je nach KI-Trigger-Timing). vermisst+
 politisch waren die Wackelkandidaten beim Pacing - jetzt mit Eskalations-Stopp abgesichert. Empfehlung:
 vermisst/politisch nach v463 nochmal testen (greift der neue Stopp? löst Hilde-artig <30 Sz?).
@@ -11093,7 +11093,7 @@ positivem Verb (sicher/registriert/angekommen/...) im selben Satz. Verifiziert g
 Sätze (1901 + 1937) -> beide gefangen; ehrlicher Teilerfolg/neutrale Sätze/Ort-ohne-Positiv -> nicht
 angefasst.
 
-NEUER BEFUND (noch NICHT gefixt - mit Benjamin besprechen): Hilde 54 Sz lag NICHT am Nebenort-Pendeln,
+NEUER BEFUND (noch NICHT gefixt - mit Projektleitung besprechen): Hilde 54 Sz lag NICHT am Nebenort-Pendeln,
 sondern an FLUCHT-LASTIGKEIT bei Dauerspannung: Bot floh 17x+ (Heinrich sogar 46x!), kam kaum zum
 Ermitteln (nur 9 Indizien/54 Sz), Stage hing auf 1/2. Mein vermisst-Eskalations-Stopp konnte nicht
 greifen (Voraussetzung "3x Zielperson aufsuchen" trat nie ein, Bot war mit Fliehen beschäftigt). Das
@@ -11108,7 +11108,7 @@ BEFUND (Lektorat v463): Muster bestätigt - Setup-Wahrheit leakt ins Finale ohne
 2 Klassen:
 - KLASSE A (Finale-Prosa-Scrub, TECHNISCH = Claudes Call): Hilde (Marienfelde, v465-Guard ✓),
   Heinrich (Müggelsee-Ort ohne Sokolow-Beleg), Margaretes Vera-Behauptung.
-- KLASSE B (Gameplay-Gate, BENJAMINS FREIGABE): Margarete löst trotz politicalBeats 2/5 "würde-
+- KLASSE B (Gameplay-Gate, PROJEKTLEITUNGS FREIGABE): Margarete löst trotz politicalBeats 2/5 "würde-
   erfüllen: nein" - weil politicalBeats BEWUSST "weiche Führungsachse, KEIN Abschluss-Gate" (Z4738).
 
 FIX v466 (nur Klasse A, technisch): Heinrich/Hollenbeck requiredProof hinzugefügt (müggelsee/datscha/
@@ -11118,14 +11118,14 @@ _positivVerbRe um Ort-/Verbleib-Verben erweitert (aufenthaltsort/festgehalten/be
 fängt auch NEGATIVEN Verbleib ("Aufenthaltsort am Müggelsee, wird festgehalten"), nicht nur Sicherheit.
 Verifiziert: Heinrich-1937 hatte 0 Müggelsee/Sokolow-Indizien -> Guard hätte Finale-Satz repariert.
 
-OFFEN - BENJAMIN-ENTSCHEIDUNG (Klasse B, Gameplay): Margarete politicalBeats-Gate scharf schalten?
+OFFEN - PROJEKTLEITUNG-ENTSCHEIDUNG (Klasse B, Gameplay): Margarete politicalBeats-Gate scharf schalten?
 ChatGPT P1. ABER: verändert Spielgefühl politischer Fälle (Abschluss erst ab 3+ Beats + Verantwortung/
 Schutz - blockiert sonst). Fragen: nur Margarete oder alle politischen? Akzeptanz längerer/blockierter
-Runs bis Beats sitzen? -> wartet auf Benjamins Go.
+Runs bis Beats sitzen? -> wartet auf Projektleitungs Go.
 Weitere offen: Natural-Bot Flucht-Schleife bei Dauerspannung (P2). Wessel-Hohenschönhausen Opening (P2).
 NPC-Archetypen konkreter (P3).
 
-## v7.12.467 (2026-06-07): Margarete politisches Abschluss-Gate (A2, ChatGPT+Benjamin-Freigabe)
+## v7.12.467 (2026-06-07): Margarete politisches Abschluss-Gate (A2, ChatGPT+Projektleitung-Freigabe)
 ENTSCHEIDUNG: Nach 3 Diagnose-Runs (2015: 2/5, 2015_1: 3/5, 2015_2: 2/5) klar - hartes 3/5-Gate wäre
 FALSCH (2/3 Runs blockiert = Hilde-Hänger-Rückfall), weil 3 der 5 Beats strukturell schwer erreichbar:
 im_anker_identifiziert (IM wird nie enttarnt, Inhalt fehlt) + margarete_gesichert (Regex KORREKT, aber
@@ -11164,7 +11164,7 @@ FIX: Gate-Prüfung AUCH im AUFLOESEN-Stage-4-Pfad (Z15799). Bei aktivem+unerfül
 KEINE Stage 4, stattdessen Sicherungs-Push (basisOk&&!sicherungOk -> Sicherung; sonst -> Wahrheit).
 Verifiziert: Run3 hätte mit 1/5 (nicht mal Basis) geblockt.
 
-FLUCHT-SCHLEIFEN-ANALYSE (Benjamin-Befund "Flucht raus aus Szene mehrfach geklickt"): Echte Zahlen
+FLUCHT-SCHLEIFEN-ANALYSE (Projektleitung-Befund "Flucht raus aus Szene mehrfach geklickt"): Echte Zahlen
 korrigieren das Bild - NICHT 138 Fluchten (das waren Prosa-Erwähnungen), sondern 12 echte Flucht-KLICKS
 in 34 Sz. Flucht SENKT Stasi-Tension zuverlässig (-2, fluchtStasiAbschuetteln), Tension pendelt sauber
 0<->3 (eskaliert NICHT außer Kontrolle). Bot flieht NUR bei Sp4-5 (proaktiv) = korrektes Verhalten.
@@ -11261,7 +11261,7 @@ Heinrich (46 Sz) + Bruno (47 Sz) lösen sauber, kein Gewahrsam - KEINE Regressio
 MARGARETE v471: alle Vorstufen funktionieren! Stage 3 erreicht (Sz14 über WAHRHEIT ERKANNT),
 Resolve-Button SICHTBAR+GESPERRT ("Fall lösen GESPERRT"), Wahler-Engine-Sync greift (Verd:Wahler ->
 basisOk), Sicherungs-Push feuerte (17 Sicherungs-Hinweise im Log). ABER: Bot floh 20x+ bei Sp4-5 statt
-zu sichern -> hing 85 Sz auf Stage 3, ungelöst. = FLUCHT-SCHLEIFE jetzt vollständig ISOLIERT (Benjamins
+zu sichern -> hing 85 Sz auf Stage 3, ungelöst. = FLUCHT-SCHLEIFE jetzt vollständig ISOLIERT (Projektleitungs
 allererster Befund). Es ist NICHT mehr Gate/Stage/Push - alle drei funktionieren.
 
 WURZEL: proaktive Natural-Flucht (Z33977) greift bedingungslos bei Sp>=4 mit 70% (botRng<0.7) - auch
@@ -11359,7 +11359,7 @@ Kosmetische P2/P3 abgearbeitet. OFFEN nur noch: Heinrich proaktive Flucht am Anf
 weitere NPC-Textur-Verfeinerung (P3), personenImRaum bleibt bewusst Wunschfeld (kein Bug).
 
 ## v7.12.477 (2026-06-07): HISTORY-TEXTURE-SYSTEM (erlebbares Berlin 1953) + MfS-Verfolger-Verfeinerung
-QUALITÄTSBLOCK (Benjamin+ChatGPT, kein Bug - "Welt verdichten" statt "Engine retten"): historische
+QUALITÄTSBLOCK (Projektleitung+ChatGPT, kein Bug - "Welt verdichten" statt "Engine retten"): historische
 Anker waren da, aber als Stichworte (RIAS, EMW), nicht als erlebbare Mini-Situationen.
 
 1. HISTORY-TEXTURE-HINT (neues System, analog NPC-Textur-Hint): buildHistoryTextureHint speist sparsam
@@ -11484,7 +11484,7 @@ History-Verteilung, NPC sichtbar, MPi statt Schmeisser).
 
 ## v7.12.482 (2026-06-08): Sicherungs-Beat-Härtung - keine Sicherung durch Schublade/Zukunft/Schlaf
 RUN-VERIFIKATION v481 (0719): Heinrich+Bruno deutlich besser (20/18 Sz, History+NPC stark, Heinrich keine
-Zelle mehr, Bruno kein Hohenschönhausen-Opening-Leak). ABER Margarete löste in 7 Szenen (Benjamin: "zu
+Zelle mehr, Bruno kein Hohenschönhausen-Opening-Leak). ABER Margarete löste in 7 Szenen (Projektleitung: "zu
 schnell" - Spielgefühl UND Substanz). WURZEL (ChatGPT P1): margarete_gesichert feuerte in einer AUFWACH-
 Szene auf "Die Aktenmappe liegt sicher in der Schublade deiner Underwood" + "Du musst Margarete in
 Sicherheit bringen" (ZUKUNFT, noch nicht geschehen). Das ist die neue Variante des v480-Akten-False-
@@ -11545,7 +11545,7 @@ OFFEN P2 (nach Bestätigung): Heinrich "gefunden"->"Spur", Bruno-Finale-Prosa, W
 noch sichtbarer (Mantelmann-Wiederholung bei 60 Sz).
 
 ## v7.12.485 (2026-06-08): ARCHITEKTUR-SCHNITT - Sicherungs-Beats nur aus Aktion, nie aus Prosa
-EINSTIMMIG (Benjamin+ChatGPT+Claude): nach v481-484 zeichnete sich ab, dass wir kein Einzelbug-, sondern
+EINSTIMMIG (Projektleitung+ChatGPT+Claude): nach v481-484 zeichnete sich ab, dass wir kein Einzelbug-, sondern
 ein ARCHITEKTUR-Problem jagen. KI-Prosa ist kein verlässlicher Beweiszustand - sie behauptet ständig
 "Die Akten sind in Sicherheit"/"Vera steht bereit"/"Als du aufwachst sind die Akten sicher" (Zukunft,
 Wunsch, Behauptung). Jeder Negativ-Guard (Schublade->Schlaf->Zukunft->Negation->"aufwachst") fing nur die
@@ -11572,24 +11572,24 @@ OFFEN P2 (nach Margarete-Bestätigung): politischer Klient-Push "FALL LÖSEN dom
 bei offenem Gate (ChatGPT). Heinrich "gefunden"->"Spur". Bruno-Finale-Prosa. Werner-Messer. MfS-Verfolger sichtbarer.
 
 ## v7.12.486 (2026-06-08): Auto-Export-Hook für Test-Automatisierung
-Benjamin will den manuellen Klick-Zyklus (push -> deploy -> Run starten -> Datei runterladen -> hochladen,
+Projektleitung will den manuellen Klick-Zyklus (push -> deploy -> Run starten -> Datei runterladen -> hochladen,
 ~20x/Tag) automatisieren, bleibt aber Reviewer/Projektleiter (architektonische Entscheidungen + Diff-Review
 vor Push). EHRLICHE EINORDNUNG geklärt: Chat-Claude kann NICHT auf GitHub pushen / Browser fahren / autonom
-auslösen (an Chatfenster gebunden). Claude Code (separate Instanz auf Benjamins Rechner, im Max-Abo
+auslösen (an Chatfenster gebunden). Claude Code (separate Instanz auf Projektleitungs Rechner, im Max-Abo
 enthalten) KANN das: echter Git-/Terminal-/Datei-Zugriff. Kommunikation der beiden über das Repo als Ablage.
 Realismus-Dämpfer gesetzt: kein vollautonomer "Lektorat rein -> Version raus ohne Review" - Prinzipien
-(verifizieren, nicht stapeln) bleiben, Benjamin sieht Diff vor Push.
+(verifizieren, nicht stapeln) bleiben, Projektleitung sieht Diff vor Push.
 
 CODE-ÄNDERUNG (minimal, kein Spielverhalten): Auto-Export-Hook im botRunMainLoop-finally. Bei Run-Ende
 Transcript-Text in window.__botExport + window.__botMeta (turns/strategy/seed/version/timestamp) +
 window.__botDone=true (Fertig-Flag für Playwright). Beim Start zurückgesetzt. Der URL-Autostart
-(?debug=hardenberg17&autoplay=1&strategy=natural&turns=80&seed=) existierte bereits (checkUrlAutoplay).
+(?debug=on&autoplay=1&strategy=natural&turns=80&seed=) existierte bereits (checkUrlAutoplay).
 Damit kann ein Headless-Runner Runs starten UND den Export abgreifen, ohne "Verlauf als Datei"-Klick.
 
 ÜBERGABE-PAKET für Claude Code (NICHT im Spiel-Repo, separat geliefert): run-tests.mjs (Playwright-Runner,
 fährt Runs headless gegen Vercel, sammelt Exporte in ./test-runs/), AUTOMATION.md (Zyklus + alle EISERNEN
 PRINZIPIEN für den Claude-Code-Claude), bot-tests.yml (optionale GitHub Action für Cloud-Runs).
-NÄCHSTER SCHRITT: Benjamin installiert Claude Code (Desktop-App empfohlen, kein Terminal nötig), erste
+NÄCHSTER SCHRITT: Projektleitung installiert Claude Code (Desktop-App empfohlen, kein Terminal nötig), erste
 kleine Testaufgabe (z.B. URL-Auto-Bot + Push), dann schrittweise zum vollen Zyklus. Speicherplatz-Hinweis:
 Repo als Ablage entlastet den Claude-Projektordner; Auswertung im CHAT braucht aber weiter Dateien im
 Kontext (kein zuverlässiger GitHub-Lesezugriff hier) - echte Entlastung erst, wenn Auswertung zu Claude
@@ -11707,9 +11707,9 @@ ENTSCHEIDENDER BEFUND: Manueller Run (1615, NICHT Bot) LÖSTE Margarete - 5/5 Be
 vollzug=true 6x, 65 Szenen. Damit ist BEWIESEN: die Beat-Mechanik (v490 Wurzelfix + v491 FP-Fix) funktioniert
 VOLLSTÄNDIG. Die ganze 0/3-Bot-Serie war der flüchtende Natural-Bot, der nie die klare Übergabe-Option greift -
 NICHT ein kaputtes Gate. Margarete ist für einen Menschen, der weiß was zu tun ist, lösbar.
-ABER Benjamins Schlüsselsatz: "ich wusste irgendwann nicht mehr was ich tun soll" -> SPIELERFÜHRUNGS-Problem.
+ABER Projektleitungs Schlüsselsatz: "ich wusste irgendwann nicht mehr was ich tun soll" -> SPIELERFÜHRUNGS-Problem.
 Wenn der Entwickler das Sicherungs-Gate fast nicht findet, hat ein normaler Spieler keine Chance. Das ist der
-eigentliche Befund - wichtiger als Bot-Runs. NÄCHSTER SCHRITT (Konzept, braucht Benjamins Freigabe da Gameplay-
+eigentliche Befund - wichtiger als Bot-Runs. NÄCHSTER SCHRITT (Konzept, braucht Projektleitungs Freigabe da Gameplay-
 Feel): sichtbare Spielerführung in der Sicherungsphase (basisOk steht, Sicherung fehlt) - Karls innere Stimme/
 Klient-Hinweis "Wahrheit kenne ich, aber Akten+Margarete noch nicht in Sicherheit, muss sie zu Vera/Roth/Helene
 bringen". Löst BEIDES: Mensch weiß was zu tun ist + KI bekommt klarere Vollzugs-Optionen (ChatGPT P1).
@@ -11725,14 +11725,14 @@ in den Opel/zur Charité) als Sicherungs-INTENT anerkennen (nicht Vollzug - Rett
 abgeschlossene Sicherung) - aber NUR wenn Spielerführung allein nicht reicht. (3) Refactoring toter _progressText-
 Beat-Zweig (mit Baseline). (4) P2: Helene-Romance in Sicherungsphase, Margarete/Helene-Cast bei gemeinsamer Flucht.
 
-## v7.12.493 (2026-06-08): "Karls Gedanken"-Hinweissystem (Spielerführung, Benjamin-Freigabe)
+## v7.12.493 (2026-06-08): "Karls Gedanken"-Hinweissystem (Spielerführung, Projektleitung-Freigabe)
 KONTEXT-KORREKTUR: Der manuelle v492-Run (1615) LÖSTE NICHT durch bewussten Spieler-Abschluss, sondern durch
-HARD-CAP (politisch) bei Sz65 - Benjamin war bei Doc Wagner, der Abschluss passierte automatisch. ABER: die
+HARD-CAP (politisch) bei Sz65 - Projektleitung war bei Doc Wagner, der Abschluss passierte automatisch. ABER: die
 Mechanik feuerte korrekt - Sz59 Freitext "bring margarete..." -> margarete_gesichert, Sz60 "Dräng Roth..." ->
 akten_gesichert (beide ECHTE Spieleraktionen, sauber erkannt). Gate öffnete ab Sz59/60 richtig (Push wechselte
-zu FALL-LÖSEN-bereit). Problem war NICHT Mechanik, sondern: Benjamin wusste nicht, dass/wie er abschließen soll
--> SPIELERFÜHRUNG. Genau Benjamins Befund "ich wusste irgendwann nicht mehr was ich tun soll".
-STRATEGIE (Benjamin + Claude einig): nicht mehr dem Bot hinterherbauen, sondern Spielerführung.
+zu FALL-LÖSEN-bereit). Problem war NICHT Mechanik, sondern: Projektleitung wusste nicht, dass/wie er abschließen soll
+-> SPIELERFÜHRUNG. Genau Projektleitungs Befund "ich wusste irgendwann nicht mehr was ich tun soll".
+STRATEGIE (Projektleitung + Claude einig): nicht mehr dem Bot hinterherbauen, sondern Spielerführung.
 FIX: buildStuckHint() - globale Funktion. Erkennt Stagnation (Fortschritts-Signatur aus Stage+Beats+Indizien+
 tatverdaechtiger+wahrheitErkannt; wenn >=3 Szenen unverändert -> Hinweis, max alle 3 Szenen). Liefert recap-
 Zusatz "KARL-STOCKT-HINWEIS" mit fall-/stage-passendem diegetischem Text (innere Stimme, kein Toast):
@@ -11747,19 +11747,19 @@ einen Karl-Gedanken-Satz ein, der zur fehlenden Aktion weist. Prüfen: erscheint
 zu häufig/aufdringlich? Bei politischem Fall: weist er korrekt auf Sicherung bzw. Abschluss?
 
 OFFENES BACKLOG (nach v493-Test):
-- Hard-Cap-Länge für politische/komplexe Fälle (Benjamin: 65 zu knapp?). Claude-Rat: ERST Hinweissystem testen,
+- Hard-Cap-Länge für politische/komplexe Fälle (Projektleitung: 65 zu knapp?). Claude-Rat: ERST Hinweissystem testen,
   ob Cap dann überhaupt noch als Notbremse zuschlägt; Zahl nicht erhöhen solange Führung das Problem kaschiert.
-- Notflucht/Abschluss-Option bei Flucht (Benjamin: konnte Fall-Auflösen nicht klicken trotz offenem Gate).
+- Notflucht/Abschluss-Option bei Flucht (Projektleitung: konnte Fall-Auflösen nicht klicken trotz offenem Gate).
   ChatGPT P5: Flucht MIT Schutzpersonen (Margarete/Helene dabei, Ziel Charité/Westen) als Schutz-Intent werten.
 - Personen-Schutzhandlung als Intent (ChatGPT v491 P1): "über die Mauer/in den Opel/zur Charité" mind. intent=true
   - ABER nur falls Spielerführung allein nicht reicht (Rettungsbewegung != abgeschlossene Sicherung, Frühabschluss-Risiko).
 - Refactoring toter _progressText-Beat-Zweig (mit Baseline über 5 Einstiegsfälle).
 - Helene-Romance in Sicherungsphase deaktivieren (Schutzfigur), Cast-Drift "Helene Stein".
 - Margarete/Helene-Cast bei gemeinsamer Flucht nicht cleanen.
-- "Alles in einer Nacht" (Pacing, Benjamin unsicher ob realistisch) - Gameplay-Feel, nicht angefasst.
+- "Alles in einer Nacht" (Pacing, Projektleitung unsicher ob realistisch) - Gameplay-Feel, nicht angefasst.
 
-## v7.12.494 (2026-06-08): Spieldauer-Sichtbarkeit - Szenen-Anzeige + Warn-Toasts vor Hard-Cap (Benjamin)
-Benjamin-Wunsch: Spieler soll früh wissen, dass die max. Szenenzahl naht, statt vom Auto-Ende überrascht zu
+## v7.12.494 (2026-06-08): Spieldauer-Sichtbarkeit - Szenen-Anzeige + Warn-Toasts vor Hard-Cap (Projektleitung)
+Projektleitung-Wunsch: Spieler soll früh wissen, dass die max. Szenenzahl naht, statt vom Auto-Ende überrascht zu
 werden. Drei Teile:
 (1) PERMANENTE ANZEIGE in der Status-Leiste: "Szene X / max. Y" (statt "Szene Nr. X"), Y = getHardCap()
     (fall-typ-abhängig: diebstahl/beschatten 55, vermisst/mord 60, wahrheit/politisch 65). Färbung: gelb
@@ -11773,12 +11773,12 @@ node --check OK. Ergänzt das v493-Hinweissystem: v493 sagt WAS fehlt, v494 sagt
 NEU TESTEN: Margarete-Run. Prüfen: (a) Status zeigt "Szene X / max. 65" + färbt sich gelb ab 45, rot ab 55?
 (b) Toast bei Szene 45 und 55? (c) Karl-Gedanke wird dringlicher? (d) führt das früh genug zum bewussten
 Abschluss, sodass der Hard-Cap NICHT mehr als Notbremse zuschlägt?
-HARD-CAP-LÄNGE (Benjamin: 65 zu knapp?): ERST mit v493+v494-Hilfen testen. Wenn Spieler TROTZ Warnung+
+HARD-CAP-LÄNGE (Projektleitung: 65 zu knapp?): ERST mit v493+v494-Hilfen testen. Wenn Spieler TROTZ Warnung+
 Abschluss-Hinweis noch in den Cap läuft, politisch auf 70-75 erhöhen. Zahl nicht vorschnell ändern.
 
 ## v7.12.495 (2026-06-08): Hard-Cap löst im manuellen Spiel nicht mehr heimlich (einhelliger Lektorats-Befund)
-ALLE DREI ChatGPT-Lektorate + Benjamin einig (wichtigster Punkt): Der Hard-Cap darf im MANUELLEN Spiel nicht
-automatisch lösen. Benjamins Erlebnis (v492-Run): Fall löste sich bei Sz65 von selbst, während er bei Doc
+ALLE DREI ChatGPT-Lektorate + Projektleitung einig (wichtigster Punkt): Der Hard-Cap darf im MANUELLEN Spiel nicht
+automatisch lösen. Projektleitungs Erlebnis (v492-Run): Fall löste sich bei Sz65 von selbst, während er bei Doc
 Wagner war (Wahrheit erkannt + Sicherung erledigt = Gate offen) -> "Mario-Kart-Automodus", den wir abgeschafft
 hatten. URSACHE: politischer Hard-Cap (Z30439) löste auf wahrheitErkannt||ueberfuehrt, ohne den Spieler bewusst
 abschließen zu lassen.
@@ -11840,7 +11840,7 @@ P2 (Punkt 9): doppelter Plötzensee-Anchor ('plotzensee' Z26137 + 'ploetzensee' 
 node --check OK.
 BEWUSST NICHT gestapelt (eigene Bumps/Design, kein Bugfix):
 - Punkt 3: manueller Cap kein echter Deckel mehr -> GEWOLLT (kein heimliches Lösen). "Nach Cap nur Abschluss/
-  Gnadenfrist" = neue Design-Entscheidung, Benjamin-Freigabe nötig.
+  Gnadenfrist" = neue Design-Entscheidung, Projektleitung-Freigabe nötig.
 - Punkt 4: Fall-Balken "ready" vs. echtes Gate (UI-Eingriff) -> eigener Bump mit Punkt 6.
 - Punkt 6: NPC/History-Texture-Reset zwischen Runs -> "Reset-Hygiene"-Bump.
 - Punkt 8: Bruno/Marienfelde History-Texture datumssicher -> eigener Schritt.
@@ -11850,11 +11850,11 @@ BEWUSST NICHT gestapelt (eigene Bumps/Design, kein Bugfix):
 NEU TESTEN: Bot-Run politisch mit absichtlich unerfüllter Sicherung - bleibt es jetzt GESCHEITERT statt
 faelschlich gelöst? Plus Regression: löst der Bot bei erfülltem Gate weiter sauber?
 
-## v7.12.498 (2026-06-08): Freitext-Cooldown + UI-Hierarchie-Fix (Benjamin)
-PROBLEM (Benjamin): Freitext war permanent verfügbar = "Flaschengeist"-Cheat (alles wünschbar, untergräbt
+## v7.12.498 (2026-06-08): Freitext-Cooldown + UI-Hierarchie-Fix (Projektleitung)
+PROBLEM (Projektleitung): Freitext war permanent verfügbar = "Flaschengeist"-Cheat (alles wünschbar, untergräbt
 Gate/Sicherung/Cap). Zudem visuelle Fehlhierarchie: Freitextfeld wirkte wichtiger als die A/B/C/D-Standard-
 Optionen (größer, prominenter Rahmen, "Was tut Karl?"-Placeholder suggerierte Hauptaktion).
-FIX 1 - COOLDOWN: Nach einer Freitext-Aktion 3 Szenen gesperrt (FREITEXT_COOLDOWN=3, Benjamin-Wahl). A/B/C/D
+FIX 1 - COOLDOWN: Nach einer Freitext-Aktion 3 Szenen gesperrt (FREITEXT_COOLDOWN=3, Projektleitung-Wahl). A/B/C/D
 bleiben IMMER offen (Standard). Gesperrtes Feld zeigt diegetische Noir-Notiz "Keine Zeit zum Grübeln. Karl
 muss aus dem Bauch entscheiden. (noch N Szenen)" + Input/Button disabled + opacity. Block-Versuch während CD
 -> caution-Toast. Cooldown gesetzt nach erfolgreichem chooseOption (sceneCounter+3), Block-Check am Anfang
@@ -11869,11 +11869,11 @@ node --check OK.
 NEU TESTEN: (a) Freitext senden -> Feld 3 Szenen gesperrt mit Noir-Notiz + Countdown? (b) A/B/C/D in der CD-
 Zeit weiter wählbar? (c) nach 3 Szenen Feld wieder frei? (d) wirkt die UI-Hierarchie jetzt richtig (Buttons
 primär, Freitext sekundär)? (e) Cooldown bei neuem Spiel resettet?
-OPTIONAL (falls CD in Action nervt, Benjamin erwähnt): bei Sp 4-5 evtl. auf 2 senken - erst Praxis abwarten.
+OPTIONAL (falls CD in Action nervt, Projektleitung erwähnt): bei Sp 4-5 evtl. auf 2 senken - erst Praxis abwarten.
 
-## v7.12.498 NACHTRAG: Szenen-Anzeige auch im "Aktueller Stand"-Popup (Benjamin-Korrektur)
+## v7.12.498 NACHTRAG: Szenen-Anzeige auch im "Aktueller Stand"-Popup (Projektleitung-Korrektur)
 Befund: v494 baute "Szene X von Y" nur in die KOMPAKTE Statusleiste (status-date), aber NICHT in das
-Detail-Popup "Aktueller Stand" (öffnet beim Antippen). Benjamin wollte es genau dort, unter TAGESZEIT.
+Detail-Popup "Aktueller Stand" (öffnet beim Antippen). Projektleitung wollte es genau dort, unter TAGESZEIT.
 FIX: neue status-popup-row "Szene" direkt nach Tageszeit (id=popup-scene). Befüllung in showStatusDetails
 (Live): "X von Y" via getHardCap(), Warn-Färbung gelb ab -20/rot ab -10 (nicht Stage 4). Auch im History-
 Popup gesetzt (aus entry.sceneNr, sonst k. A.) - verhindert hängenden Live-Wert beim Rückblick. node --check OK.
@@ -11975,7 +11975,7 @@ UND zugleich Sicherungs-/Schutzfiguren. Der Romance-Push (Z20033) injiziert "${n
 Szene physisch anwesend sein" OHNE Orts-Plausibilität -> teleportierte die Schutzfigur an Karls aktuellen Ort
 (Helene Sz49 plötzlich in Doc Wagners Praxis; Vera Sz9 per Reintro reingeholt + "Näher kommen mit Vera"
 Sz10/11/17/18/19). Plus "Nacht bei Helene verbringen" mitten in der Fluchtlage.
-BENJAMIN-ENTSCHEIDUNG (gefragt): James-Bond-Doppelrolle reizvoll, aber zu fehleranfällig für die KI ->
+PROJEKTLEITUNG-ENTSCHEIDUNG (gefragt): James-Bond-Doppelrolle reizvoll, aber zu fehleranfällig für die KI ->
 eindeutige NPC-Rollen. Eine Figur ist ENTWEDER Romanze ODER Sicherungsfigur.
 FIX: beide ROMANCE-Tags entfernt. Vera -> tag:'KONTAKT' (West-Kontakt/Übergabe), Helene -> tag:'SCHUTZ'
 (Versteck/Vertrauen). triggerRomanceWhen/triggerWhen entfernt. beziehung-Texten "KEINE Romanze" ergänzt.
@@ -11996,13 +11996,13 @@ Carré-Filter (P3), Hard-Cap-Toast zwei Zustände (gefährlich vs. klickbar). is
 erweitern (companionLock-Lücke). Mann-im-Mantel präzisere Identität (P3). Nacht-Texturierung (P3).
 
 ## v7.12.506 (2026-06-08): Lektorat-Block (Opel/Carré/Büro/polit. Toast) + Ingrid entkoppelt + Margarete-Romance neu
-DOPPELROLLEN-CHECK (Benjamin-Frage "andere Fälle betroffen?"): Alle ROMANCE-Figuren geprüft. Drei mit
+DOPPELROLLEN-CHECK (Projektleitung-Frage "andere Fälle betroffen?"): Alle ROMANCE-Figuren geprüft. Drei mit
 Doppelrolle gefunden: Lola Brandt (WITNESS+ROMANCE), Leutnant Ingrid Faber (STASI+ROMANCE), Frau mit Schleier
-(MYSTERY+ROMANCE). Benjamin-Entscheidung: NUR Ingrid entkoppeln (MfS-Verfolgerin als Romance = heikelster
+(MYSTERY+ROMANCE). Projektleitung-Entscheidung: NUR Ingrid entkoppeln (MfS-Verfolgerin als Romance = heikelster
 Konflikt, machte im Heinrich-Run Probleme: 5+x gepusht, kam nie, 52 Sz teuer). Lola/Schleier sind erzähle-
 risch saubere Noir-Doppelrollen (geringes mech. Risiko), bleiben. FIX Ingrid: tagExtra:ROMANCE + triggerRomance
 + Romance-Andeutung im detail entfernt -> reine MfS-Antagonistin.
-MARGARETE-ROMANCE NEU (Benjamin-Wunsch, da Helene/Vera in v505 entkoppelt -> Fall hatte keine Romance mehr):
+MARGARETE-ROMANCE NEU (Projektleitung-Wunsch, da Helene/Vera in v505 entkoppelt -> Fall hatte keine Romance mehr):
 neue REINE Romance-Figur 'Margot Reinig' (30, Fotografin/Nachbarin in Karls Haus am Hackeschen Markt).
 ÖRTLICH VERANKERT (verhindert Teleport-Bug - sie ist da wo Karl wohnt), KEINE Lösungs-/Sicherungsfunktion.
 Wessel-Fall hat weiter eigene Romance (Lilo Brenner) - nicht angefasst.
@@ -12018,7 +12018,7 @@ LEKTORAT-BLOCK (4 Punkte, alle Prompt-Fixes ohne Wechselwirkung):
   Sicherung fehlt + Button gesperrt (Sz9-Widerspruch). Neuer politischer Zweig mit Gate-Check: Gate erfüllt ->
   "zum Klienten"; Gate offen -> "Akten/Margarete sichern". (Der Stage-3-Toast Z15677 war schon v470 gefixt.)
 node --check OK.
-ANTWORT auf Benjamin-Fragen: Opel-Husten + Verletzungs-Gelaber sind BEREITS in v503 angegangen (Prompt-Regeln
+ANTWORT auf Projektleitung-Fragen: Opel-Husten + Verletzungs-Gelaber sind BEREITS in v503 angegangen (Prompt-Regeln
 + Recap-Entschärfung) - ob es reicht, zeigt der nächste Run; bei Bedarf nachschärfen. Opel-Viertakt hier
 zusätzlich ergänzt.
 OFFEN (P2/P3, risikoarm, fürs Spielerlebnis): Hard-Cap-Toast zwei Zustände (Gate offen+gefährlich vs.
@@ -12092,7 +12092,7 @@ istSicherungsVollzug umstellen. Grund: andere Semantik (Regex bewertet OPTIONSTE
 istSicherungsVollzug leitet Beat aus GEWÄHLTER Aktion ab) - Eingriff in Bot-Strategie, braucht eigenen Test
 (so eine Umstellung riss schon mal die v495-Bot-Gate-Hintertür auf). Eigener Schritt.
 OFFEN: Companion-Lock-Release bei bestätigtem Absetzen (ChatGPT v510, optional - Ghost-Risiko gering);
-Statusleiste "X/max.Y" dauerhaft oben (Design-Entscheidung Benjamin); Texture-Reset zwischen Runs; Refactoring
+Statusleiste "X/max.Y" dauerhaft oben (Design-Entscheidung Projektleitung); Texture-Reset zwischen Runs; Refactoring
 toter _progressText-Zweig; Mertens/IM bespielen. Opel/Verletzung: v503-Wirkung im Run prüfen.
 
 ## v7.12.510 (2026-06-08): companionLock VOR Cast-Clean (ChatGPT v508-Check P1, KRITISCH)
@@ -12113,7 +12113,7 @@ Absetzen (P3, Ghost-Risiko gering). companionLockSnap im Szenen-Export fürs Lek
 JETZT: Margarete-Run! v504-510 sind alle ausgeliefert, Begleitperson-Kette sollte jetzt vollständig greifen.
 
 ## KONZEPT-NOTIZ (2026-06-08): "Noir-Herausforderungen" + Erweiterungs-Philosophie (NOCH NICHT GEBAUT)
-Lange Design-Diskussion Benjamin + Claude + ChatGPT. Auslöser: Spiel soll mehr ECHTEN Spielereinfluss geben
+Lange Design-Diskussion Projektleitung + Claude + ChatGPT. Auslöser: Spiel soll mehr ECHTEN Spielereinfluss geben
 ("OFFENSIV drücken ist aktuell heimliches KI-Würfeln"), abwechslungsreicher werden. NICHTS davon ist gebaut -
 reine Konzeptphase. Reihenfolge: ERST Margarete-Run (v504-510 ungetestet), DANN das hier.
 
@@ -12126,7 +12126,7 @@ ENTSCHEIDUNGEN (Leitplanken für alle künftigen Features):
 2. GESCHLOSSENER FALL BLEIBT, KEINE OPEN WORLD: Der definierte Endzustand ("Margarete gesichert? Fall gelöst?")
    ist die Voraussetzung für Bot-Testbarkeit. Open World = kein Soll-Zustand = nicht testbar. Open-World-
    GEFÜHL kommt über Progression ZWISCHEN geschlossenen Fällen (wie Serie mit Staffel-Bogen).
-3. QUIZ/CHALLENGE HÄNGT AM BUTTON, NICHT AN KI-PROSA (Benjamins schärfste Erkenntnis): Wir können die KI nicht
+3. QUIZ/CHALLENGE HÄNGT AM BUTTON, NICHT AN KI-PROSA (Projektleitungs schärfste Erkenntnis): Wir können die KI nicht
    zwingen, Stichworte zu liefern (siehe Opel-Zweitakter trotz Verbot). Also triggert die Challenge an einer
    SPIELAKTION (OFFENSIV/VERHÖR/FLUCHT gedrückt = Code, 100% kontrollierbar+testbar), nicht an NPC-Erzählung.
    Frage wird nach SPIELZUSTAND (Ort/Fall/Gegnertyp aus unseren Variablen) gewählt, nicht nach KI-Prosa.
@@ -12144,14 +12144,14 @@ Also: Noir-Herausforderung als Gerüst, Geschichts-Waffe als EINER der Typen dar
 CLAUDE-EHRLICHKEIT: Das ist KEIN Trivialfix, sondern das erste echte neue Spielsystem seit Langem (eigener
 Zustand, eigene UI, Verzahnung mit Aktionsfluss). Gut machbar+testbar, aber Umfang nicht unterschätzen.
 Klein anfangen: EINE Aktion (OFFENSIV), 1-2 Challenge-Typen, enginebasiert. Trigger-Aktionen (offensiv/
-verhör/flucht) entscheidet Benjamin NACH dem ersten Prototyp aus dem Bauch.
+verhör/flucht) entscheidet Projektleitung NACH dem ersten Prototyp aus dem Bauch.
 
 WEITERE IDEEN (Würze-Regel-konform, später): Hund/Bananenschale/Whisky als Konfrontations-Würze (gewählt,
-NICHT zufälliges Glücksrad - Zufall ist das, was Benjamin LOSwerden will); permanente Anschaffungen für
+NICHT zufälliges Glücksrad - Zufall ist das, was Projektleitung LOSwerden will); permanente Anschaffungen für
 Progression (Hund kaufen) - ABER schlanker Besitz-Zustand, jeder Fall muss von Null lösbar bleiben.
 VERWORFEN: Sekretärin-die-Szenen-spart (greift in Szenenzahl/Ablauf = bricht Würze-Regel); zufälliges Mario-
 Kart-Glücksrad (bringt Zufall zurück); 10 Extra-Buttons (überfordert, verwässert A/B/C/D-Klarheit);
-Hintergrundbilder (Benjamin: zerstört Fantasie/bringt Unruhe).
+Hintergrundbilder (Projektleitung: zerstört Fantasie/bringt Unruhe).
 
 ## KONZEPT-NOTIZ NACHTRAG: Challenge-Trigger-Architektur (verfeinert, ChatGPT + Claude)
 ChatGPT-Kernsatz: "Better rare and reliable than frequent and flaky." Challenge = BONUS-System, KEIN Pflicht-
@@ -12188,7 +12188,7 @@ BAUPLAN (kleine Schritte, einzeln testbar): 1A engineCurrentLocation einführen 
 MESSUNG vor Eingriff, Risiko null) -> 1B "Reise zu"-Button (globale Leiste getrennt von A/B/C/D, aus
 vorhandenen locations) -> 1C KI bekommt Ort als Vorgabe, currentOrt aus engineCurrentLocation statt scene.ort
 (der eigentliche Drift-Fix, Risiko hoch, ZULETZT) -> 1D Freitext für Reise entlasten.
-OFFENE DESIGN-FRAGEN (Benjamin, vor Bau): (A) alle Orte sofort sichtbar [Empf.] vs. Freischaltung durch
+OFFENE DESIGN-FRAGEN (Projektleitung, vor Bau): (A) alle Orte sofort sichtbar [Empf.] vs. Freischaltung durch
 Hinweise (=Umbau 2); (B) Opel/mobil aus Reiseliste filtern (Transportmittel, kein Ziel); (C) kostet Reisen
 eine Szene? [Empf. ja, im Run beobachten - Würze-Regel: darf Lösungsweg nicht ändern]; (D) Tageszeit beim
 Reisen (Brücke zu Umbau 2).
@@ -12198,17 +12198,17 @@ REIHENFOLGE: 1. Margarete-Run (sonst Doppel-Debug Ort+companionLock). 2. Run aus
 nach v504-510 überhaupt? 3. Umbau 1 ab Schritt 1A. ChatGPT stimmt zu: "Challenges auf wackligem Ort-State
 wären wieder riskant" -> Ortssystem VOR Challenges.
 
-## RICHTUNGSENTSCHEIDUNG (2026-06-08): Engine-besitzt-Struktur ist der Weg (Benjamin, bekräftigt)
-Benjamins Kern-Argument (entscheidend): "So würde ich meine Software nie entwickeln." Der Regex-nach-Regex-
+## RICHTUNGSENTSCHEIDUNG (2026-06-08): Engine-besitzt-Struktur ist der Weg (Projektleitung, bekräftigt)
+Projektleitungs Kern-Argument (entscheidend): "So würde ich meine Software nie entwickeln." Der Regex-nach-Regex-
 Ansatz (KI-Zustände aus Prosa ERKENNEN) ist nicht "noch nicht fertig", sondern PRINZIPIELL nicht fertigstell-
 bar - unendlich viele KI-Formulierungen, Zielscheibe bewegt sich bei jedem Modell-Update. Stabilität existiert
 in diesem Ansatz gar nicht. Das ist der wahre Grund für die Dauerprobleme (Personen-/Orts-/Indizien-Drift,
 Beamen) - alle haben dieselbe Wurzel: KI entscheidet Struktur, die sie nur beschreiben sollte.
 ENTSCHEIDUNG: Umbau von "Erkennung" zu "VORGABE". Engine besitzt Ort, NPC-Präsenz, Indizien. KI texturiert nur.
-Vorgabe ist deterministisch = testbar. Das ist die EINZIGE Option, die zu Benjamins Qualitätsanspruch passt.
-AUFWAND-AUFLÖSUNG (vorher Claudes Hauptbedenken): "Jeder Fall wird ein Drehbuch" ist tragbar, WEIL Benjamin
-nicht allein ist - Arbeitsteilung: Benjamin liefert Fall-KERN (wer/was/wo/Thema), Claude baut daraus die
-strukturierten Setups (Orte, NPC-Ort-Zeit-Zuordnung, Indizien-Verteilung). Benjamin bleibt Regisseur+Prüfer,
+Vorgabe ist deterministisch = testbar. Das ist die EINZIGE Option, die zu Projektleitungs Qualitätsanspruch passt.
+AUFWAND-AUFLÖSUNG (vorher Claudes Hauptbedenken): "Jeder Fall wird ein Drehbuch" ist tragbar, WEIL Projektleitung
+nicht allein ist - Arbeitsteilung: Projektleitung liefert Fall-KERN (wer/was/wo/Thema), Claude baut daraus die
+strukturierten Setups (Orte, NPC-Ort-Zeit-Zuordnung, Indizien-Verteilung). Projektleitung bleibt Regisseur+Prüfer,
 Claude ist Setzkasten-Assistent. Damit kippt Claudes früheres Zögern ("willst du Fall-Designer werden?") -
 die Warnung war berechtigt für Allein-Arbeit, ist mit Arbeitsteilung ausgeräumt.
 DISZIPLIN (bleibt trotz klarer Richtung): IN ETAPPEN bauen, nicht alles auf einmal. Ort+NPC+Indizien = drei
@@ -12219,7 +12219,7 @@ MARGARETE-RUN = BASELINE-MESSUNG (zusätzlicher Grund): vorher wissen, wie schli
 zu beweisen dass Umbau geholfen hat. Vorher-Aufnahme. Bleibt der allererste Schritt.
 INDIZIEN-BEFUND (verifiziert): kommen aus KI-Feld indiz_neu (Z29573 push), NICHT reine Prosa-Extraktion - ABER
 WAS drinsteht erfindet die KI frei (Prompt sagt nur "trag ein wenn gefunden"). Daher die sinnlosen Indizien.
-Verpackung strukturiert, Inhalt KI-Fantasie. Bestätigt Benjamins Verdacht.
+Verpackung strukturiert, Inhalt KI-Fantasie. Bestätigt Projektleitungs Verdacht.
 
 ## ZIELZUSTAND (2026-06-08): "Migration der Wahrheit von der KI in die Engine" - die zwei Leitsätze
 RAHMUNG (ChatGPT, wichtig): Es ist KEIN Rewrite, sondern eine MIGRATION DER WAHRHEIT aus der KI in die Engine.
@@ -12254,7 +12254,7 @@ RUN-KONTEXT: Manueller Margarete-Run auf v510 (6 Debug-Dumps). WICHTIG: v510 war
    Z27041 catch) crashte jede Szene -> verschlimmerte Personen-Drift/Ghost-Cast. FIX: 3 Deklarationen wieder
    eingesetzt. NB: Crash lag in EIGENEM try, brach NICHT die ganze Szene-Funktion ab -> Beat-Setzung (Z29462,
    anderes try) wurde erreicht -> Abschluss-Beat-Bug (s.u.) ist EIGENSTÄNDIG, kein Crash-Artefakt.
-2. ABSCHLUSS-BEAT (echter Bug, Run Sz55 + Benjamin "nur über Textprompt lösbar"): Akten zu Roth gebracht,
+2. ABSCHLUSS-BEAT (echter Bug, Run Sz55 + Projektleitung "nur über Textprompt lösbar"): Akten zu Roth gebracht,
    ueberfuehrt:true, Beat 4/5, aber Fall NICHT lösbar. Ursache: pendingSecurityIntent wird gesetzt (Reise zum
    Revier=intent), aber die KI-PROSA-Bestätigung "hast die Akten zu Roth gebracht/übergeben" löste den Beat
    nicht - das _vollzugProsa-Muster (Z11019) kannte nur PRÄSENS (nimmt/händigt), nicht PARTIZIPIEN (gebracht/
@@ -12263,7 +12263,7 @@ RUN-KONTEXT: Manueller Margarete-Run auf v510 (6 Debug-Dumps). WICHTIG: v510 war
    abgegeben/...) + erweiterter Negativ-Guard (sollst/willst/planst/bevor...). Gegen 12 echte+Gegen-Sätze
    getestet, alle korrekt. Roth/revier/kommissar waren in _ziel schon drin - Erkennung war ok, nur die
    Bestätigung fehlte.
-3. FLUCHT senkt Spannung nicht (Benjamin + Run): FLUCHT-Mechanik hat spannungDelta=-3, ABER spannungDelta wird
+3. FLUCHT senkt Spannung nicht (Projektleitung + Run): FLUCHT-Mechanik hat spannungDelta=-3, ABER spannungDelta wird
    NIRGENDS auf einen persistenten Wert angewendet (nur geloggt Z27517) - die Szenen-Spannung kommt 100% aus
    KI-Feld scene.spannung (Z24105/24292). fluchtStasiAbschuetteln senkt nur stasiTension (Fahndungslevel), NICHT
    die Spannung. FIX vorerst PROMPT-HEBEL: Flucht-pushMessage zwingt jetzt explizit "Setze spannung auf 1 ODER 2,
@@ -12275,7 +12275,7 @@ WICHTIGE ERKENNTNIS (allgemein, betrifft viele Regex): In JS matcht \b NICHT vor
 \bübergeben\b schlägt fehl. Bei Umlaut-Wörtern führende/folgende \b weglassen oder anders abgrenzen.
 
 ## KONZEPT-ERGÄNZUNG (2026-06-09): KI-loser Aktionspfad - Engine handelt ohne Gemini-Call (Token-Ersparnis)
-BENJAMINS ERKENNTNIS: Wenn die Engine den Zustand BESITZT (Ort/NPCs/Indizien + deren Inhalt), braucht sie für
+PROJEKTLEITUNGS ERKENNTNIS: Wenn die Engine den Zustand BESITZT (Ort/NPCs/Indizien + deren Inhalt), braucht sie für
 reine Zustandsänderungen KEINE KI-Anfrage. Heute löst JEDE Aktion (auch "Akte an dich nehmen") einen Gemini-
 Call aus (~5s, kostet Token, Drift-Risiko). Zielbild: Engine macht Fortschritt OHNE KI, wo nichts Neues
 erfunden werden muss. Dreifacher Gewinn: billiger + schneller + stabiler (kein Drift, weil KI nicht gefragt).
@@ -12284,15 +12284,15 @@ bestätigen lassen. KI nur noch für NEUES/Unvorhersehbares."
 DREI AKTIONS-STUFEN (Designregel):
 1. Reiner Zustandswechsel (nehmen, reisen, Tür auf, Inventar) -> Engine allein, KEIN KI-Call, sofort.
 2. Vorbestimmten Inhalt anzeigen (Indiz lesen, dessen reveals-Feld definiert ist) -> Engine zeigt kuratierten
-   Text, KEIN KI-Call. Benjamins Punkt: oft BESSER als KI-erfundene Beschreibung (präziser, kein Drift, keine
+   Text, KEIN KI-Call. Projektleitungs Punkt: oft BESSER als KI-erfundene Beschreibung (präziser, kein Drift, keine
    erfundenen Details = genau die "sinnlosen Indizien" vermieden).
 3. Neue/unvorhersehbare Reaktion (NPC-Dialog, Konfrontationsausgang, kreative Spieleraktion) -> HIER KI-Call.
 Nur Stufe 3 kostet Token. Stufe 1+2 ohne Gemini. Könnte KI-Calls erheblich senken (viele Szenen sind reine
 nimm/lies/geh-Aktionen).
-NEBENEFFEKT (Benjamins i-Tüpfelchen): Fall-Headup wird reichhaltiger - Engine kann direkt sagen "Du hast die
+NEBENEFFEKT (Projektleitungs i-Tüpfelchen): Fall-Headup wird reichhaltiger - Engine kann direkt sagen "Du hast die
 Frachtlisten, sie belegen Wahlers Route" statt dass der Spieler es aus unzuverlässiger KI-Prosa heraussuchen
 muss. Genau die Klarheit, die im Run fehlte.
-TRENNLINIE (Benjamin selbst erkannt): nehmen vs. verstehen. "Nimm Akte" = Stufe 1. "Sieh Akte an" = Stufe 2
+TRENNLINIE (Projektleitung selbst erkannt): nehmen vs. verstehen. "Nimm Akte" = Stufe 1. "Sieh Akte an" = Stufe 2
 WENN Inhalt vorab bekannt (reveals definiert), sonst Stufe 3.
 REIHENFOLGE-HINWEIS (wichtig): Dieser KI-lose Pfad SETZT die Engine-Indizien (Umbau-Stufe 3) VORAUS - solange
 Indizien KI-erfundene Textfetzen sind (indiz_neu, Inhalt frei erfunden - verifiziert), kann die Engine sie
@@ -12328,15 +12328,15 @@ eine Sache. Objekte/Indizien = Umbau-Stufe 3 (schwerste). Voller KI-loser Lese-P
 ABER Frühgewinn: sobald Engine den ORT besitzt (Stufe 1), wird "Reise zu X" ein template-Move OHNE KI - der
 erste token-sparende Aktionstyp fällt schon bei Stufe 1 ab. Migration belohnt von Anfang an.
 
-## IDEEN-NOTIZ (2026-06-09): Taktik bei Konfrontationen - Party/Gadgets (NICHT entschieden, Benjamins Idee)
-BENJAMINS IDEE: Bei Konfrontationen in einen "Kampf-Modus" wechseln, leichte Rollenspiel-Elemente wie früh
+## IDEEN-NOTIZ (2026-06-09): Taktik bei Konfrontationen - Party/Gadgets (NICHT entschieden, Projektleitungs Idee)
+PROJEKTLEITUNGS IDEE: Bei Konfrontationen in einen "Kampf-Modus" wechseln, leichte Rollenspiel-Elemente wie früh
 Final Fantasy, aber einfach. Mehrere Gegner mit Eigenschaften (grob/ängstlich/schwach), Party-Mitglieder
 (Hund, evtl. Kommissar Roth, Blockwart), taktisch zuweisen wer wen angreift, Gadgets einsetzen. Hund wird zum
 Party-Charakter, den man mitnehmen kann. Verbindet sich mit companionLock + Anwesenheits-Logik (Umbau 2).
 CLAUDE-WARNUNG (wichtig, Spannungspunkt zu bestehenden Entscheidungen): Ein FF-artiges Kampfsystem - auch
 "einfach" - ist KEIN Würze-Feature mehr, sondern ein ZWEITES vollständiges Spielsystem (eigene Regeln, Zustände
 HP/Initiative/Trefferchance, eigene UI, eigene Balance). Bricht die Würze-Regel ("verändert nie den Lösungsweg")
-UND bläht den Testraum wieder auf (Konfrontation × Party × Gadget-Kombi) - genau das, wovor Benjamin Respekt
+UND bläht den Testraum wieder auf (Konfrontation × Party × Gadget-Kombi) - genau das, wovor Projektleitung Respekt
 hatte. Andere Größenordnung als Noir-Herausforderung (die ist EIN Entscheidungsmoment, kein System).
 CLAUDE-EMPFEHLUNG (80% des Gefühls, ohne Kampfsystem): Statt rundenbasiertem Kampf EINE taktische Entscheidung
 pro Konfrontation. Engine zeigt: "Zwei Gegner - grober Schläger + ängstlicher Mitläufer. Du hast den Hund
@@ -12345,10 +12345,10 @@ dabei." Spieler wählt EINMAL ("Hund auf Schläger, du auf den Ängstlichen"). E
 Wahl statt Rundensystem. Testbar, schlank, kein zweites Spiel. Hund bleibt mitnehmbarer Begleiter, aber als
 Option in dieser Wahl, kein Charakter mit HP-Leiste.
 STATUS: NICHT entschieden. Zwei Varianten festgehalten (volles Mini-Kampfsystem vs. eine-taktische-Wahl).
-Benjamins Gameplay-Richtungsentscheidung, kommt ohnehin erst NACH dem Engine-Umbau (braucht Engine-Gegner +
+Projektleitungs Gameplay-Richtungsentscheidung, kommt ohnehin erst NACH dem Engine-Umbau (braucht Engine-Gegner +
 Engine-Party = setzt Umbau 2 voraus). Gadgets noch genauer zu beschreiben.
 
-ENTSCHEIDUNG (2026-06-09, Benjamin): Die SCHLANKE Variante - EINE taktische Wahl, KEIN Kampfsystem. Die
+ENTSCHEIDUNG (2026-06-09, Projektleitung): Die SCHLANKE Variante - EINE taktische Wahl, KEIN Kampfsystem. Die
 taktische Konfrontation IST eine Spielart der Noir-Herausforderung, kein separates System: gleiche Trigger-
 Architektur (challengeEligible-Button, Engine besitzt Gegner/Party/Eigenschaften aus Engine-Zustand, KI nie
 Schiedsrichter). Ablauf: Engine zeigt die Lage (Gegner + Eigenschaften + verfügbare Party/Gadgets) -> Spieler
@@ -12369,15 +12369,15 @@ T1 NACHT. (d) Flucht senkte Spannung nicht trotz v511-Prompt.
    Verarbeitung (Z27540), angewendet als LETZTES Wort in der Spannungs-Berechnung (nach allen Anheb-Mechaniken,
    ~Z28100) -> Post-Flucht-Szene wird hart auf Sp<=2 gekappt. Flucht bedeutet jetzt mechanisch "raus aus der
    heissen Lage". Flag gilt nur 1 Szene, kein Save/Restore nötig.
-2. ERZWUNGENER EINSCHLAF (Benjamin-Freigabe, Spielgefühl-Änderung): Nacht-Marathon-Ursache = Nacht->Morgen war
+2. ERZWUNGENER EINSCHLAF (Projektleitung-Freigabe, Spielgefühl-Änderung): Nacht-Marathon-Ursache = Nacht->Morgen war
    BEWUSST nur via SCHLAFEN-Button (v7.11.12, gegen willkürliche Auto-Tagwechsel). Wer nie schläft -> ewig Nacht.
-   Benjamins Entscheidung: nach Vorwarnung schläft Karl an Ort+Stelle ein. FIX: nutzt den BESTEHENDEN, gegen
+   Projektleitungs Entscheidung: nach Vorwarnung schläft Karl an Ort+Stelle ein. FIX: nutzt den BESTEHENDEN, gegen
    Teleport abgesicherten SCHLAFEN-VOR-ORT-Pfad - bei isNacht && scenesInCurrentTime>=14 && lastSpannung<=2 &&
    !pendingSleepChoice && !custody wird pendingSleepChoice=true + pendingHeimfahrt=false + timeAdvanceTokens=1
-   gesetzt + Einschlaf-Push. ACTION-SCHUTZ: Sp<=2 = nie mitten im Kampf (Benjamins "in der Action passiert das
+   gesetzt + Einschlaf-Push. ACTION-SCHUTZ: Sp<=2 = nie mitten im Kampf (Projektleitungs "in der Action passiert das
    nicht"). Vorwarnung bleibt (SOFT ab 6, HARD ab 10 Nacht-Szenen), Zwang erst ab 14. Engine braucht KEIN Ort-
    Wissen - KI beschreibt Einnicken am aktuellen Ort, Engine steuert nur Tag+1/Heilung. Gegen 8 Zustände
-   getestet (feuert nur bei langer ruhiger Nacht). Benjamins Begründung: jetzt wo Engine mehr kontrolliert,
+   getestet (feuert nur bei langer ruhiger Nacht). Projektleitungs Begründung: jetzt wo Engine mehr kontrolliert,
    ist Schlafen-vor-Ort wieder vertretbar (Button war damals raus wegen KI-Drift).
 node --check OK. Logik-Tests OK. 2 Eingriffe (Flucht-Cap + Einschlaf).
 OFFEN (nur durch Umbau lösbar, NICHT Pflaster): Wahrheit-Drift (Täter Mertens statt Wahler) = Stufe 3;
@@ -12386,7 +12386,7 @@ Reise-/Übergabe-Button (Freitext-Zwang) = Stufe 1. Run beweist Umbau-Notwendigk
 ## v7.12.513 (2026-06-09): UMBAU STUFE 1 - Engine-Ortssystem FUNDAMENT (unsichtbare Hälfte)
 ERSTE echte Zeile des Migrations-Umbaus. Bewusst NUR das Fundament (kein UI) - UI (Reise-Button + "im Raum"-
 Anzeige) kommt v514, damit jede Hälfte einzeln verifizierbar ist.
-DESIGN-ENTSCHEIDUNGEN (Benjamin): Orte erst durch Hinweise freischalten (nur Startort sichtbar); Reisen
+DESIGN-ENTSCHEIDUNGEN (Projektleitung): Orte erst durch Hinweise freischalten (nur Startort sichtbar); Reisen
 KOSTET KEINE Szene (sofortiger Wechsel); NPC-Präsenz fest aus Ort+Tageszeit (kein Zufall).
 CLAUDE-SCHÄRFUNG: Freischaltung NICHT durch KI-Prosa (Sackgassen-Risiko), sondern durch ENGINE-EREIGNISSE -
 loc.freischaltBei: [schluesselwoerter], geprüft gegen gesetzte Indizien+Beats (die die Engine ohnehin besitzt).
@@ -12431,7 +12431,7 @@ Rahmen), nicht neu erfinden. Freitext-Box als Stil-Vorbild.
 1. REISE-BUTTON: in topActions (wie Flucht-Button), 🚗 "Reisen (Ort wechseln)". Öffnet Overlay-Menü
    (oeffneReiseMenue) mit nur den freigeschalteten reisbaren Orten; aktueller Ort markiert "du bist hier"
    (nicht klickbar); Opel/mobil rausgefiltert. Auswahl (reiseZuOrt) wechselt engineCurrentLocation SOFORT -
-   KEINE Szene, KEINE KI, KEINE Tokens (Benjamins Entscheidung) - + Toast "Angekommen" + saveGameState +
+   KEINE Szene, KEINE KI, KEINE Tokens (Projektleitungs Entscheidung) - + Toast "Angekommen" + saveGameState +
    "im Raum" neu. Button nicht in Custody (Karl kann nicht reisen).
 2. "IM RAUM"-ANZEIGE: dezente Zeile (#im-raum-anzeige) über den Optionen, border-left-Akzent. Zeigt
    "Ort: X · im Raum: A, B" aus getNpcsAtCurrentLocation (Ort+Tageszeit). renderImRaumAnzeige() bei jedem
@@ -12450,26 +12450,26 @@ mit Orts-Daten befüllen; (c) Stufe 1C-hard (Lesestellen auf engineCurrentLocati
 
 ## v7.12.516 (2026-06-09): Reise löst Szene aus (Designfehler-Fix) + Flucht/Reise erst ab Szene 2
 RUN 1400 (v515) BEFUNDE: (1) Freischaltung funktioniert (Direktion Sz5, Bahnhof Sz8, Auffangstelle+Kranzler
-Sz9 - korrekt aus Beats/Indizien). (2) DESIGNFEHLER (Benjamin erkannt): Reisen OHNE Szene ließ die A/B/C/D-
+Sz9 - korrekt aus Beats/Indizien). (2) DESIGNFEHLER (Projektleitung erkannt): Reisen OHNE Szene ließ die A/B/C/D-
 Optionen der VORSZENE stehen -> nach Reise unpassende Optionen ("prüf den Schaden am Wagen" an Margaretes
 Wohnung). Strukturell: Optionen hängen an der Szene, ein Ortswechsel ohne neue Szene kann keine passenden
 haben. (3) Flucht-Button schon in Szene 1 (Fallstart) = weird. (4) REISE-Log fehlte im Export (reiseZuOrt
 diag('state') kam nicht durch); ORT-DRIFT-Log griff nicht (Match zu lasch).
-FIX (Benjamins Entscheidung: Reisen MUSS eine Szene kosten, Option 1 = volle KI-Szene):
+FIX (Projektleitungs Entscheidung: Reisen MUSS eine Szene kosten, Option 1 = volle KI-Szene):
 - reiseZuOrt() löst jetzt eine ECHTE Szene via chooseOption aus (reiseOpt {id:REISE, kategorie:ERKUNDEN,
   _isSystemButton, _istReise}). Die KI schreibt Ankunft am Zielort + frische passende A/B/C/D. Der ORTSWECHSEL-
   Kontext (timeContext, _reiseGeradeErfolgt VOR chooseOption gesetzt) zwingt die Szene an den Zielort.
-- POPUP-SCHUTZ (Benjamin-Wunsch): schliesseReiseMenue() wird ZUERST aufgerufen (vor Ortswechsel), + Doppel-
+- POPUP-SCHUTZ (Projektleitung-Wunsch): schliesseReiseMenue() wird ZUERST aufgerufen (vor Ortswechsel), + Doppel-
   klick-Schutz via chooseOptionInFlight-Check -> kein versehentliches 2x-Reisen.
 - FLUCHT-Button: jetzt _sceneNr>=2 && currentSpannung>=4 (war nur Sp>=4). Nicht mehr in Szene 1.
 - REISE-Button: jetzt auch erst ab _sceneNr>=2 (Fallstart: erst ankommen, nicht sofort wegfahren).
 - REISE wird jetzt sauber geloggt (diag state "REISE (Engine besitzt Ort, löst Szene aus): X -> Y") + läuft
-  durch chooseOption -> normales robustes Logging. Beantwortet Benjamins Frage "loggst du den neuen Ort mit?".
+  durch chooseOption -> normales robustes Logging. Beantwortet Projektleitungs Frage "loggst du den neuen Ort mit?".
 OFFEN für nächsten Run: Drift-Verhalten MIT Reise-Szene (sollte verschwinden, da KI jetzt Ortswechsel-Kontext
 bekommt); ob ERKUNDEN-Indizpflicht bei Reise-Szene stört (beobachten). node --check OK.
 
-## VISION (2026-06-09): Interaktive NPCs + Item-Verwendung mit Mehrschritt-Auswahl (Benjamin)
-BENJAMINS ZIELBILD: Die im Raum anwesenden Personen sollen DIREKT bei den Optionen sichtbar + ANKLICKBAR sein
+## VISION (2026-06-09): Interaktive NPCs + Item-Verwendung mit Mehrschritt-Auswahl (Projektleitung)
+PROJEKTLEITUNGS ZIELBILD: Die im Raum anwesenden Personen sollen DIREKT bei den Optionen sichtbar + ANKLICKBAR sein
 (wie aktuell der Reise-Button). Mittelfristig:
 - Klick auf NPC -> Aktionsmenü. Bei einem Bösewicht: Angreifen, Befragen, Bestechen, Bedrohen.
 - In DERSELBEN Liste erscheinen verfügbare Booster/Items (Banane, Whiskey, Hund), sofern vorhanden.
@@ -12495,7 +12495,7 @@ Items). NICHT versuchen, alle Schichten auf einmal - Dach vor Wänden.
 STATUS DER FRAGE "Reise-Button in Szene 1": BEWUSST keiner (Fallstart - erst ankommen). In Szene 2+ da. KEIN Bug.
 
 ## v7.12.517 (2026-06-09): SCHICHT 1 - Anklickbare NPCs mit Verb-Menü
-Erster Schritt von Benjamins Interaktions-Vision. Die NPCs im Raum (aus getNpcsAtCurrentLocation, Ort+Tageszeit)
+Erster Schritt von Projektleitungs Interaktions-Vision. Die NPCs im Raum (aus getNpcsAtCurrentLocation, Ort+Tageszeit)
 sind jetzt ANKLICKBARE Buttons in der "im Raum"-Anzeige, nicht mehr nur Text.
 UMBAU:
 - getNpcsAtCurrentLocation liefert jetzt {id,name}-Objekte statt Name-Strings (für Klick-Handler).
@@ -12515,7 +12515,7 @@ NÄCHSTE SCHICHTEN (später): Schicht 2 = Items als strukturierte Objekte mit Ve
 Stufe 3). Schicht 3 = Mehrschritt "bestechen MIT Whiskey" (braucht 1+2). Hund als Dauer-Begleiter.
 node --check OK, Logik getestet (Objekte, Verb-Ersetzung, Options-Bau).
 
-## v7.12.518 (2026-06-09): NPC-Verb-Filterung nach Typ (Benjamin: Klient nicht angreifen, Gegner nicht beschützen)
+## v7.12.518 (2026-06-09): NPC-Verb-Filterung nach Typ (Projektleitung: Klient nicht angreifen, Gegner nicht beschützen)
 Schicht 1 verfeinert: die erlaubten Interaktions-Verben hängen jetzt vom NPC-TYP ab (vorher alle Verben für alle).
 - getNpcsAtCurrentLocation gibt jetzt auch tag mit: aus setupCast (CLIENT/SUSPECT/WITNESS/STASI/...) oder
   'VERBUENDETER' für ANCHOR_NPCS (Karls Netzwerk Roth/Doc Wagner/Trude/Wernicke - immer auf seiner Seite).
@@ -12529,36 +12529,36 @@ Schicht 1 verfeinert: die erlaubten Interaktions-Verben hängen jetzt vom NPC-TY
 - Neues Verb "Beschützen" (DEFENSIV) für Verbündete. ALLE_VERBEN als Dictionary, keys je Typ gewählt.
 Getestet gegen echte Margarete-NPCs: Margarete(CLIENT)=befragen/beobachten/schützen; Wahler(SUSPECT)=voll;
 Lemke(WITNESS)=befragen/bestechen/beobachten; Roth/Trude(VERBUENDETER)=befragen/beobachten/schützen; Stasi=voll.
-Entspricht Benjamins Regel exakt. node --check OK.
+Entspricht Projektleitungs Regel exakt. node --check OK.
 
-## v7.12.519 (2026-06-09): NPC-Verb-Filterung präzisiert (Benjamin-Regel exakt)
-v518 erlaubte Zeugen/Informanten noch Bestechung - Benjamin: bestechen NUR bei echten Gegnern.
+## v7.12.519 (2026-06-09): NPC-Verb-Filterung präzisiert (Projektleitung-Regel exakt)
+v518 erlaubte Zeugen/Informanten noch Bestechung - Projektleitung: bestechen NUR bei echten Gegnern.
 - CLIENT/FAMILY/ROMANCE/SCHUTZ: befragen/beobachten/beschützen.
 - WITNESS/INFORMANT/AUTHORITY/KONTAKT: nur befragen/beobachten (KEINE Bestechung mehr).
 - GEGNER (ANTAGONIST/SUSPECT/GANGSTER/STASI): befragen/bedrohen/bestechen/angreifen/beobachten (einziger Typ
   mit Bestechung), kein Beschützen.
 - MYSTERY/unbekannt: nur befragen/beobachten (kein Angriff, keine Bestechung solange Rolle unklar).
-Nicht erlaubte Verben werden GANZ AUSGEBLENDET (Benjamin-Entscheidung, sauberer als "Karl weigert sich").
+Nicht erlaubte Verben werden GANZ AUSGEBLENDET (Projektleitung-Entscheidung, sauberer als "Karl weigert sich").
 Getestet: Margarete=befragen/beobachten/schützen; Wahler=voll; Lemke(Zeuge)=befragen/beobachten;
-Stasi=voll; Mystery=befragen/beobachten. Trifft Benjamins Regel exakt. node --check OK.
+Stasi=voll; Mystery=befragen/beobachten. Trifft Projektleitungs Regel exakt. node --check OK.
 
-## v7.12.520 (2026-06-09): Reise-Button schon ab Szene 1 (Benjamin-Korrektur)
-v516 hatte Reise-Button ab Szene 2 gesperrt (Claude-Annahme "erst ankommen"). Benjamin: falsch - beim Fallstart
+## v7.12.520 (2026-06-09): Reise-Button schon ab Szene 1 (Projektleitung-Korrektur)
+v516 hatte Reise-Button ab Szene 2 gesperrt (Claude-Annahme "erst ankommen"). Projektleitung: falsch - beim Fallstart
 (z.B. Margarete in Gefahr -> sofort losfahren) ist Reisen genau gewollt. Sperre für Reise aufgehoben (jetzt ab
 Szene 1). Flucht-Button BLEIBT ab Szene 2 (panische Flucht im ersten Moment weiter unsinnig). node --check OK.
 
 ## RICHTUNGSENTSCHEIDUNG (2026-06-09): Engine besitzt NPC-PRÄSENZ + AUFTRITTE (auch Gegner), KI erfindet keine fall-relevanten Figuren mehr
 ANLASS (Run 1442): Der "Mann im langen Mantel" tauchte bei Margaretes Wohnung auf - KI-erfunden, gesichtslos,
-nicht anklickbar. Benjamin erkannte den Kern: "mal ist eine Person anklickbar, mal nicht" ist nur Symptom. Die
+nicht anklickbar. Projektleitung erkannte den Kern: "mal ist eine Person anklickbar, mal nicht" ist nur Symptom. Die
 Krankheit: die KI darf eigenmächtig Figuren erfinden + auftauchen lassen -> zwei Sorten NPCs (Engine-gesetzt:
 anklickbar/Gesicht/konsistent vs KI-erfunden: gesichtslos/nicht anklickbar/"haut dir auf den Rücken").
-BENJAMINS FRAGE/ENTSCHEIDUNG: "Darf überhaupt ein Bösewicht auftauchen den die KI erfindet? Muss das nicht von
+PROJEKTLEITUNGS FRAGE/ENTSCHEIDUNG: "Darf überhaupt ein Bösewicht auftauchen den die KI erfindet? Muss das nicht von
 unserer Engine gesteuert sein mit Wahrscheinlichkeit/Zufallsgenerator, so dass nur die Engine sagt wann wo ein
 NPC ist/auftaucht, und ihm ein Gesicht gibt? Damit auch diese 'jemand taucht auf und haut dir auf den Rücken'-
 Momente aufhören." -> JA. Die Engine bestimmt Präsenz + Auftritte (auch Gegner, auch Zufall), KI beschreibt nur.
 ENTSCHEIDUNG ZUM ORTSWECHSEL (Run 1442): Die KI bewegte Karl per Story (Büro->Holsteinische Str.), engine
 CurrentLocation blieb auf Büro -> Ort/NPCs/Anklickbarkeit stimmten nicht, Drift-Messung schlug nicht an (zu
-lasch). Benjamin: KI darf Karl NICHT mehr bewegen, Ortswechsel NUR per Reisen-Button (= Stufe 1C-hard).
+lasch). Projektleitung: KI darf Karl NICHT mehr bewegen, Ortswechsel NUR per Reisen-Button (= Stufe 1C-hard).
 
 CLAUDE-EINORDNUNG (Tragweite, wichtig): Das ist die GRÖSSTE KI-Entmachtung bisher. Zwei Wahrheiten:
 - MACHBAR/RICHTIG: Engine besitzt GEPLANTE Gegner-Auftritte. Der "Verfolger" wird ein Engine-NPC mit Gesicht
@@ -12618,13 +12618,13 @@ OFFENE THEMEN (nach diesem Schritt): Doc Wagner/Marlene/Charité als Reiseorte +
 Nacht-Marathon-Einschlaf greift nicht (93 NACHT-Szenen, 0 Einschlaf); Baustein 3 KI-Bösewichte anklickbar.
 
 ## v7.12.523 (2026-06-09): Doc Wagner + Charite als immer-verfügbare Heilorte im Reisemenü
-Benjamin-Befund: Doc Wagner fehlte als Reiseort (nie in Margarete-locations), Marlene/Charite auch. Beide sind
+Projektleitung-Befund: Doc Wagner fehlte als Reiseort (nie in Margarete-locations), Marlene/Charite auch. Beide sind
 fallübergreifende Heilorte und sollen IMMER verfügbar sein, mit Kreuz-Symbol markiert.
 - Margarete-locations: 'Doc Wagners Praxis' (West/Schoeneberg, npc doc_wagner immer) + 'Charite' (Ost/Mitte,
   npc marlene_wagner immer) ergänzt, beide startBekannt:true + heilort:true.
 - marlene_wagner als anchorNpc im Margarete-Fall ergänzt (war nur doc_wagner). Beide in ANCHOR_NPCS definiert.
 - Reisemenü: heilort:true -> grünes Kreuz-Symbol (✚) vor dem Ortsnamen.
-- HEIL-SOFORT-VERFÜGBARKEIT (Benjamins Hauptwunsch, gelöst durch v521): currentOrtType kommt jetzt aus engine
+- HEIL-SOFORT-VERFÜGBARKEIT (Projektleitungs Hauptwunsch, gelöst durch v521): currentOrtType kommt jetzt aus engine
   CurrentLocation -> bei Ankunft "Doc Wagners Praxis"=Typ WAGNER, "Charite"=Typ CHARITE -> Heil-Button SOFORT
   da, kein "extra reingehen" mehr (vorher hing der Button an KI-Prosa "du bist in der Praxis"). Marlene+Doc je
   +2, kein Tageslimit (bestätigt in Code: showWagnerHealButton/showMarleneHealButton, Sp<=2 + Vf<5).
@@ -12632,8 +12632,8 @@ Verifiziert: beide reisbar, startBekannt, heilort-markiert, classify->WAGNER/CHA
 OFFEN: andere 13 Fälle haben Doc Wagner/Charite noch nicht als locations (nur Margarete); Nacht-Marathon-
 Einschlaf greift nicht; Baustein 3 KI-Bösewichte anklickbar.
 
-## v7.12.524 (2026-06-09): Doc Wagner + Charite ZENTRAL in JEDEM Fall (Benjamin: müssen immer verfügbar sein)
-Benjamin-Befund zu v523: die Heilorte dürfen nicht nur bei Margarete sein, sondern müssen in ALLEN 14 Fällen
+## v7.12.524 (2026-06-09): Doc Wagner + Charite ZENTRAL in JEDEM Fall (Projektleitung: müssen immer verfügbar sein)
+Projektleitung-Befund zu v523: die Heilorte dürfen nicht nur bei Margarete sein, sondern müssen in ALLEN 14 Fällen
 verfügbar sein. Befund beim Prüfen: nur Margarete hatte das neue Engine-locations-Format (startBekannt/npcs/
 heilort); die anderen 13 haben locations im ALTEN Format (nur name/sektor/detail).
 LÖSUNG (zentral statt 14x einzeln): getCaseLocations injiziert Doc Wagner + Charite jetzt in JEDEN Fall.
@@ -12666,17 +12666,17 @@ Getestet gegen echte Screenshot-Optionen: A(Bahnhof-Reise)=abgefangen; B/C/D=ble
 
 ## v7.12.526 (2026-06-09): 3 schnelle Fixes - Reise-Spannungssperre + Doc-Wagner-Ortsbindung + Goldener Anker
 RUN 1543 (v524) bestätigte: Engine-Reise FUNKTIONIERT jetzt (Spieler reiste per Button zu Charité/Margarete/Doc
-Wagner, Cast wird reise-bereinigt). Drei Benjamin-Befunde gefixt:
-1. REISE-SPANNUNGSSPERRE (Benjamin-Wunsch, Sp<=3 gewählt): Reise-Button nur bei currentSpannung<=3. Bei echter
+Wagner, Cast wird reise-bereinigt). Drei Projektleitung-Befunde gefixt:
+1. REISE-SPANNUNGSSPERRE (Projektleitung-Wunsch, Sp<=3 gewählt): Reise-Button nur bei currentSpannung<=3. Bei echter
    Action (Sp>=4) kein Reisen - dann nur Flucht-Button. Analog zu Heilen/Schlafen (die strenger bei Sp<=2).
-2. DOC WAGNER NICHT MEHR "AN ZWEI ORTEN" (Benjamin): Heil-Button hing am Prosa-Wort "wagner" -> in der Charité
+2. DOC WAGNER NICHT MEHR "AN ZWEI ORTEN" (Projektleitung): Heil-Button hing am Prosa-Wort "wagner" -> in der Charité
    ("Marlene Wagner") erschien fälschlich der Doc-Wagner-Button. Jetzt: bei bekanntem Engine-Ort bindet sich der
    Doc-Wagner-Button STRIKT an currentOrtType==='WAGNER', Marlene-Button strikt an 'CHARITE'. Prosa nur Fallback
    ohne Engine-Ort. In der Charité heilt jetzt NUR Marlene, in der Praxis NUR Doc Wagner.
 3. GOLDENER ANKER als Reiseort ergänzt (Margarete-locations): Eckkneipe Alexanderplatz, Wirt Willi Kummer,
    freischaltBei goldener anker/willi kummer/informant/alexanderplatz/kummer (kommt per Erspielen, nicht start).
 Getestet: Charité->nur Marlene, Praxis->nur Doc Wagner; Reise Sp1-3 verfügbar, Sp4-5 gesperrt. node --check OK.
-NOCH OFFEN (Benjamin-Liste aus diesem Run, NICHT angefasst): (a) Nacht-Marathon-Einschlaf greift nicht (102
+NOCH OFFEN (Projektleitung-Liste aus diesem Run, NICHT angefasst): (a) Nacht-Marathon-Einschlaf greift nicht (102
 NACHT-Szenen, 0 Einschlaf) - eigener Bug. (b) "Fall lösen gesperrt" aber ABCD-Optionen sagen "verabschiede dich"
 - Sicherungs-Zwang erreicht Optionen nicht. (c) GROSS: NPCs anklickbar (Baustein 3) + NPC-Mitnahme-Vision
 ("fahre mit Margarete+Mertens zu Kommissar Roth") + Kommissare Roth/Lindner als Orte (Polizeidirektion). Das ist
@@ -12694,15 +12694,15 @@ Reise-Text=bewusste Design-Entscheidung). ZWEI berechtigte offene P1 gefixt (geg
   gesetzt). Bei Reise: indizPflicht=false, neutrale ANKUNFT-Push statt Indiz-Zwang. Echte Erkundung unverändert.
 Getestet: Reise->keine Indizpflicht; echte Erkundung->volle Indizpflicht. node --check OK.
 NICHT umgesetzt von ChatGPT-Liste (bewusst, eigene Schritte): P1.3 Engine-NPCs als harte Prompt-Anwesenheit
-(= Baustein 3, Benjamin-Vision); P2 lokale Engine-Aktionen (TAKE_OBJECT); P2 Margarete-Sicherung trennen
+(= Baustein 3, Projektleitung-Vision); P2 lokale Engine-Aktionen (TAKE_OBJECT); P2 Margarete-Sicherung trennen
 (clientSecured/evidenceSecured); P2 Vf<=0 Notzustand. Bleiben auf der Liste.
-OFFEN (Benjamin-Prio): Nacht-Marathon-Einschlaf (greift nicht), Sicherungs-Optionen ("verabschiede dich" trotz
+OFFEN (Projektleitung-Prio): Nacht-Marathon-Einschlaf (greift nicht), Sicherungs-Optionen ("verabschiede dich" trotz
 Gate), Begleiter-/Multi-NPC-Vision + Kommissar-Orte.
 
 ## v7.12.528 (2026-06-09): Hartes Nacht-Action-Limit (Nacht-Marathon-Fix)
 DIAGNOSE (Run 1543): Der erzwungene Einschlaf griff KORREKT nicht - er verlangt lastSpannung<=2, aber die
 Spannung war fast durchgehend >=4 (57 von 90 Szenen Sp4/5). "In der Action schläft man nicht ein." Dadurch hielt
-die Nacht aber ewig (102 Diag-Einträge T1 NACHT, 0 Einschlaf). Benjamin-Entscheidung: bei SEHR langer Nacht
+die Nacht aber ewig (102 Diag-Einträge T1 NACHT, 0 Einschlaf). Projektleitung-Entscheidung: bei SEHR langer Nacht
 (20+) auch bei hoher Spannung Tagwechsel erzwingen.
 FIX: zweite Schwelle _hartesNachtLimit = isNacht && scenesInCurrentTime>=20 (unabhängig von Spannung). Eigener
 Erschöpfungs-Prompt: akuter Moment läuft kurz aus, dann übermannt die Erschöpfung Karl (nicht mitten im Schuss).
@@ -12711,15 +12711,15 @@ KONTROLLFLUSS VERIFIZIERT (war die eigentliche Sorge): der Action-Pfad (Z14378) 
 Limit(6) einen frühen return - ABER bei scenes>=20 ist diese Bedingung false, der Code fällt durch zum
 Override (Z14398) und erreicht den Einschlaf-Code. Getestet: Sp4/20=greift, Sp5/25=greift, Sp4/5=greift nicht
 (kein verfrühter Einschlaf), Sp2/14=normaler Einschlaf. node --check OK.
-NÄCHSTER OFFENER PUNKT (Benjamin-Prio): Sicherungs-Optionen ("verabschiede dich" trotz gesperrtem Fall-lösen-
+NÄCHSTER OFFENER PUNKT (Projektleitung-Prio): Sicherungs-Optionen ("verabschiede dich" trotz gesperrtem Fall-lösen-
 Gate); dann Begleiter-/Multi-NPC-Vision + Kommissar-Orte.
 
 ## v7.12.529 (2026-06-09): Sicherungs-Push schließt das Stage3-Fenster (Optionen lenken zur Sicherung)
-BENJAMIN-BEFUND (Run 1543): "Fall lösen" war gesperrt (Sicherung fehlt), aber die ABCD-Optionen sagten
+PROJEKTLEITUNG-BEFUND (Run 1543): "Fall lösen" war gesperrt (Sicherung fehlt), aber die ABCD-Optionen sagten
 "verabschiede dich" - keine Lenkung zur Sicherung, Spieler musste Freitext nutzen.
 DIAGNOSE (verifiziert am Run): Der Sicherungs-Push (Z21600) feuert nur bei basisOk(strict=true), und strict
 verlangt den ECHTEN Beat wahler_verantwortlich. Im Run: Stage 3 (Wahler überführt) kam Sz38, der Beat aber erst
-Sz41. Im Fenster Sz38-40 war basisOk(strict)=false -> kein Push -> "verabschiede dich". Genau Benjamins Screenshot.
+Sz41. Im Fenster Sz38-40 war basisOk(strict)=false -> kein Push -> "verabschiede dich". Genau Projektleitungs Screenshot.
 FIX: Der proaktive Sicherungs-Push akzeptiert basisOk jetzt AUCH faktisch, wenn die Engine Wahler bereits als
 überführt führt (caseProgress.stage>=3 && tatverdaechtiger~/wahler/). Dann feuert der Push, solange sicherungOk
 offen ist -> JEDE Szene lenkt konkret auf Sicherungs-Handlungen (Akten zu Vera/Roth, Margarete zu Helene/über
@@ -12727,11 +12727,11 @@ die Grenze). Das GATE selbst bleibt unangetastet (Fall erst lösbar wenn wirklic
 greift früher.
 Getestet: Fenster Sz38-40=Push feuert; nach Beat=feuert; nach Sicherung=aus; Stage2/Verdacht=aus (kein verfrühtes
 Endgame). node --check OK.
-NÄCHSTER OFFENER PUNKT (Benjamin-Prio): die GROSSE Begleiter-/Multi-NPC-Vision (NPCs mitnehmen "fahre mit
+NÄCHSTER OFFENER PUNKT (Projektleitung-Prio): die GROSSE Begleiter-/Multi-NPC-Vision (NPCs mitnehmen "fahre mit
 Margarete+Mertens zu Roth", Kommissare Roth/Lindner als Orte, NPC-Auswahl + Verb "fahre mit ... zu ...").
 
-## KONZEPT (2026-06-09): Begleiter-/Multi-NPC-System (Benjamins große Vision, geschichtet)
-ZIEL (Benjamin): NPCs mitnehmen ("fahre mit Margarete UND Mertens zu Kommissar Roth"), Kommissare Roth/Lindner
+## KONZEPT (2026-06-09): Begleiter-/Multi-NPC-System (Projektleitungs große Vision, geschichtet)
+ZIEL (Projektleitung): NPCs mitnehmen ("fahre mit Margarete UND Mertens zu Kommissar Roth"), Kommissare Roth/Lindner
 als Orte (Polizeidirektion), neues Verb "fahre mit ... zu ..." mit NPC-Mehrfachauswahl + Ort-Auswahl.
 DATENLAGE (verifiziert): Roth+Lindner sind ANCHOR_NPCs (Z23757/23762). Es gibt schon _companionLock (EINE
 Schutzperson, FREITEXT-erkannt, bleibt bei Ortswechsel im Cast) + NPC-Orts-Bindungs-Prompt (Z20420) + Mitnahme-
@@ -12761,12 +12761,12 @@ Roth dazu. node --check OK.
 NÄCHSTE BAUSTEINE: B = Bösewichte als anklickbare Engine-NPCs (Mertens/Verfolger, Gesicht+Auftauch-Bedingung);
 dann C+D = Verb "fahre mit ... zu ..." (Multi-NPC-Auswahl + Zielort) + _companionLock von EINER Person auf LISTE.
 
-## KONZEPT (2026-06-09): BAUSTEIN B - Getaktetes Gegner-Auftauch-System (ThreatBeat) - Benjamins Design
+## KONZEPT (2026-06-09): BAUSTEIN B - Getaktetes Gegner-Auftauch-System (ThreatBeat) - Projektleitungs Design
 PROBLEM: Aktuell taucht an praktisch JEDEM Ort ein KI-erfundener Bösewicht auf (inflationär, gesichtslos, nicht
 anklickbar). Lösung: Engine steuert WANN/WO Gegner auftauchen - getaktet, wahrscheinlichkeitsbasiert, orts- und
 tageszeit-spezifisch, mit globalem Cooldown.
 
-ZWEI DATENEBENEN (Benjamins Architektur, sauber getrennt):
+ZWEI DATENEBENEN (Projektleitungs Architektur, sauber getrennt):
 1. NPC-IDENTITÄT (global, pro NPC): Name, Persönlichkeit, Kategorie/Tag (WER er ist). PLUS globaler COOLDOWN:
    wie viele Szenen vergehen müssen, bis der NPC ÜBERHAUPT IRGENDWO wieder auftauchen darf. Verhindert "Anker ->
    Bahnhof -> sofort wieder da". Beispiel "Böser Bruno": groß, bullig, grummig, aggressiv, GANGSTER.
@@ -12800,7 +12800,7 @@ B3: Margarete-Daten befüllen (Mertens/Mann im Mantel/IM Anker mit Orten/Takt/Ch
 B4: KI-Prompt: erscheint ein Engine-Gegner, MUSS die KI ihn mit seinem Gesicht beschreiben; KI erfindet KEINE
     eigenen fall-relevanten Gegner mehr (nur die Engine-gesteuerten + reine Statisten).
 
-## KERNPRINZIP zu Baustein B (Benjamin, kritisch): GARANTIERTE vs GETAKTETE Präsenz
+## KERNPRINZIP zu Baustein B (Projektleitung, kritisch): GARANTIERTE vs GETAKTETE Präsenz
 Das Würfel-System steuert WANN GEFAHR PASSIERT, niemals OB DER FALL LÖSBAR IST. Zwei NPC-Präsenz-Arten:
 - GARANTIERTE PRÄSENZ (fall-relevante NPCs, Indiz-Träger, Lösungs-NPCs): tauchen VERLÄSSLICH auf - über feste/
   zeitgebundene Anwesenheit (immer / zeit, wie Wahler tagsüber Direktion, Lemke Bahnhof) ODER chance:100. Sie
@@ -12853,7 +12853,7 @@ BEDROHUNGS-VERTEILUNG (politischer Fall = relativ kurze Takte):
 - Reichsbahndirektion: im_anker (60%, Abstand 12, tagsüber - sein Arbeitsplatz)
 - Bahnhof Friedrichstrasse: mann_im_mantel (70%, Abstand 8 - sein Revier) + mertens (40%, Abstand 12)
 - West-Auffangstelle: mertens (30%, Abstand 14 - Grenzzone)
-- KARLS BÜRO, Trude, Cafe Kranzler, Goldener Anker: KEINE Gegner (sichere/neutrale Orte - Benjamins Wunsch
+- KARLS BÜRO, Trude, Cafe Kranzler, Goldener Anker: KEINE Gegner (sichere/neutrale Orte - Projektleitungs Wunsch
   "kein Bösewicht in Karls Büro").
 Tags steuern Verb-Menü: STASI=Gegner (voll), MYSTERY (Mann im Mantel)=vorsichtig (nur befragen/beobachten).
 node --check OK. JETZT IM RUN TESTBAR: erscheinen Gegner getaktet (nicht an jedem Ort)? globaler Cooldown? sind
@@ -12881,7 +12881,7 @@ mit Symbol (v524/530), Sicherungs-Push (v529), Nacht-Limit (v528).
 DANACH: BAUSTEIN C+D (Begleiter-Mitnahme "fahre mit X zu Y" + _companionLock auf Liste).
 
 ## v7.12.535 (2026-06-09): Diagnose-Vervollständigung für den ThreatBeat-Test
-Benjamin-Frage: wird alles Neue getrackt? Ehrliche Prüfung gegen echten Code ergab: Klicks (Reise/NPC) + Threat-
+Projektleitung-Frage: wird alles Neue getrackt? Ehrliche Prüfung gegen echten Code ergab: Klicks (Reise/NPC) + Threat-
 Spawns + Optionen-Klassifikation waren schon geloggt, aber 3 Lücken offen. Geschlossen:
 - REISE-MENÜ öffnen: loggt jetzt alle verfügbaren Ziele + [hier]/[✚ Heil]/[★ Polizei]-Markierung.
 - NPC-MENÜ öffnen: loggt NPC + Typ-Tag + angebotene Verben (zeigt ob Verb-Filterung nach Typ stimmt).
@@ -12893,10 +12893,10 @@ Schon vorher geloggt (bleibt): REISE-Klick (Z16947), NPC-INTERAKTION-Klick (Z170
 node --check OK. JETZT voller Margarete-Testlauf mit voller Diagnose-Abdeckung.
 
 ## v7.12.536 (2026-06-09): Reise-Button-Sperre präziser (fehlte in Szene 1)
-BENJAMIN-BEFUND (Run): Reise-Button fehlte in Margarete Szene 1. URSACHE: die v526-Spannungs-Sperre
+PROJEKTLEITUNG-BEFUND (Run): Reise-Button fehlte in Margarete Szene 1. URSACHE: die v526-Spannungs-Sperre
 (currentSpannung<=3) war zu grob - Margaretes Auftakt hat Sp4 (dramatischer Anruf), das ist aber kein
 Schusswechsel sondern Dringlichkeit, bei der Losfahren genau die natürliche Reaktion ist.
-FIX (Benjamin-Wahl): Sperre nur bei ECHTER Action = Sp>=4 UND sceneCounter>=1 (nicht Szene 1) UND actionStreak>=1
+FIX (Projektleitung-Wahl): Sperre nur bei ECHTER Action = Sp>=4 UND sceneCounter>=1 (nicht Szene 1) UND actionStreak>=1
 (es lief schon eine Konfrontation). _reiseGesperrt-Bedingung. So bleibt Fallstart + jede ruhige/dringliche Lage
 frei, nur laufende Action sperrt.
 Getestet: Szene1/Sp4/Streak0=DA; Sp4/Streak3=gesperrt; Sp4/Streak0(Dringlichkeit)=DA; Sp2=DA; Sp5/Streak2=
@@ -12908,7 +12908,7 @@ gesperrt. node --check OK.
    currentSpannung-Def und Reise-Block; beide in renderOptions; v536-Logik korrekt in ausgelieferter Datei).
    _reiseGesperrt MÜSSTE in Sz1 false sein (sceneCounter=0). Da statisch nicht auffindbar -> harte Diagnose
    eingebaut: "REISE-BUTTON-CHECK: engineLoc=.. custody=.. Sp=.. sceneCounter=.. actionStreak=.. -> gesperrt=..
-   -> Button=JA/NEIN" direkt vor dem Block. Nächster Run mit ?debug=hardenberg17 zeigt die echten Werte.
+   -> Button=JA/NEIN" direkt vor dem Block. Nächster Run mit ?debug=on zeigt die echten Werte.
    VERDACHT: gezeigter Screenshot evtl. noch gecachte v535, ODER actionStreak/Sp unerwartet. Diagnose klärt es.
 2) ORT-UMLAUTE: "Karl Mauers Buero"->"Büro" (alle 14 Fälle), "Bahnhof Friedrichstrasse"->"Friedrichstraße",
    "Cafe Kranzler"->"Café Kranzler". SICHER: normForMatch normalisiert ü->ue etc., alle Match-Vergleiche
@@ -12932,11 +12932,11 @@ v537-Diagnose-Zeile REISE-BUTTON-CHECK bleibt drin (zeigt jetzt choices statt sc
 sichtbar zur Bestätigung.
 
 ## v7.12.539 (2026-06-09): Engine-Figuren-Trennung + Cast-NPCs anklickbar (2 Befunde aus dem Run)
-BEFUND (Benjamin, Run Sz2): KI baute "Mann im langen Mantel" ein und gab ihm Mertens-Merkmale (Drahtbrille, F6)
+BEFUND (Projektleitung, Run Sz2): KI baute "Mann im langen Mantel" ein und gab ihm Mertens-Merkmale (Drahtbrille, F6)
 - weil sein setupCast-detail GENAU das anwies ("Verbindung: Mertens Mann?"). Das verschmilzt zwei getrennte
 Engine-Figuren (MYSTERY-Schatten vs STASI-Mertens) -> Engine verliert die Kontrolle, wer da steht. ZUDEM war
 der Mann zwar im Cast (KI-Prosa), aber NICHT anklickbar (nur location.npcs + ThreatBeat-Spawns waren es).
-BENJAMIN-ENTSCHEIDUNG: TRENNEN. Mann im Mantel bleibt anonymer MYSTERY-Schatten, Mertens ist eigene Figur.
+PROJEKTLEITUNG-ENTSCHEIDUNG: TRENNEN. Mann im Mantel bleibt anonymer MYSTERY-Schatten, Mertens ist eigene Figur.
 FIX 1 (detail umgeschrieben): die "gib ihm Name/Mertens-Verbindung/Merkmale"-Anweisung RAUS. Neu: bleibt
 ANONYM, bekommt KEINEN Namen, ist ausdrücklich NICHT Mertens/Wahler, KEINE fremden Merkmale (nicht Mertens F6/
 Haar). Eigenes Detail (Narbe/Gang) ok, aber namenlos. Wer er ist, entscheidet die Engine.
@@ -12949,7 +12949,7 @@ eine Figur, die der Spieler in der Story sieht, auch interagierbar.
 Getestet: Mann im Mantel->anklickbar MYSTERY; Statist->nicht anklickbar. node --check OK.
 
 ## v7.12.540 (2026-06-09): MYSTERY-NPC wehrhaft bei Bedrohung (Karl nicht wehrlos)
-BENJAMIN-PRÄZISIERUNG: MYSTERY-Filterung (nur befragen/beobachten) ist RICHTIG, solange die Figur nur dasteht.
+PROJEKTLEITUNG-PRÄZISIERUNG: MYSTERY-Filterung (nur befragen/beobachten) ist RICHTIG, solange die Figur nur dasteht.
 ABER wenn sie Karl ANGREIFT/BEDROHT, muss Karl sich wehren können - sonst steht er wehrlos da. Es geht NICHT um
 generelles Aufweichen, sondern um Bedrohungs-Symmetrie.
 FIX: im MYSTERY/unbekannt-Zweig der Verb-Filterung wird "angreifen" freigeschaltet, wenn aktive Bedrohung
@@ -12957,11 +12957,11 @@ erkannt wird: Szenentext matcht threatRe (packt dich/greift an/zielt auf dich/st
 >=4. Friedlicher Schatten = befragen/beobachten; angreifender Schatten = +angreifen. Bestechen/bedrohen bleiben
 MYSTERY verwehrt (Rolle unklar).
 Getestet: steht nur da/Sp2=befragen/beobachten; greift an=+angreifen; Sp4=+angreifen. node --check OK.
-NICHT GEBAUT (bewusst, kein Stapeln): Benjamins Wunsch-Verben "feuern" (mit Walther) + "werfen" (mit Wurfobjekt,
+NICHT GEBAUT (bewusst, kein Stapeln): Projektleitungs Wunsch-Verben "feuern" (mit Walther) + "werfen" (mit Wurfobjekt,
 inventarabhängig) - eigenes Paket (neue Verben + Inventar-Logik + Schuss-Eskalations-Regeln). Auf der Liste.
 
 ## v7.12.541 (2026-06-09): NPC-Menü "In Sicherheit bringen" (Run-Befund Punkt 2)
-BENJAMIN: beim Anklicken von Margarete (oder Wegener) will man sie "in Sicherheit bringen" können, nicht nur
+PROJEKTLEITUNG: beim Anklicken von Margarete (oder Wegener) will man sie "in Sicherheit bringen" können, nicht nur
 über ABCD. Das alte "Beschützen"-Verb sagte zwar "in Sicherheit bringen ODER verteidigen" - vermischte aber zwei
 Dinge. Jetzt getrennt:
 - schuetzen (Beschützen): hier verteidigen, bei der Person bleiben.
@@ -12972,11 +12972,11 @@ befragen/beobachten) und NICHT für Gegner.
 Getestet: Margarete/Helene/Margot=+sicherheit; Lemke(Zeuge)/Mertens(Gegner)=nicht. node --check OK.
 HINWEIS: volle Companion-Mitnahme (_companionLock-Auslösung beim "In Sicherheit bringen") ist Baustein C/D -
 aktuell geht die Aktion als klar formulierter Prompt an die KI, die Szene erzählt das Wegbringen.
-NÄCHST (Benjamin-Reihenfolge): Punkt 1 = "Näher kommen" im NPC-Menü mit Intim-Logik (ROMANTIK->UEBERNACHTUNG,
+NÄCHST (Projektleitung-Reihenfolge): Punkt 1 = "Näher kommen" im NPC-Menü mit Intim-Logik (ROMANTIK->UEBERNACHTUNG,
 romanticClicksSinceProgress); dann Punkt 3 = Doppel-NPC-Bug (KI erfindet 2. Mann neben Mertens).
 
 ## v7.12.542 (2026-06-09): NPC-Menü "Näher kommen"/"Nacht verbringen" (Run-Befund Punkt 1)
-BENJAMIN: beim Anklicken einer Romance-Person (Margot) soll "Näher kommen" auch im NPC-Menü stehen, mit DERSELBEN
+PROJEKTLEITUNG: beim Anklicken einer Romance-Person (Margot) soll "Näher kommen" auch im NPC-Menü stehen, mit DERSELBEN
 Logik wie der ♥-Button oben (verschwindet bei Misserfolg, eskaliert zu "Nacht verbringen", dann nur noch der).
 LÖSUNG ohne Duplikat (Prinzip 11: eine Quelle): renderOptions berechnet showRomanceButton/showOvernightButton
 ohnehin -> Status in window._romanceMenuState = {npc, canApproach, canOvernight} gespeichert. oeffneNpcMenue
@@ -12986,7 +12986,7 @@ _romanceNpc aus (gleicher Pfad wie ♥-Button) statt npcInteraktion. Teilt sich 
 Eskalations-Mechanik automatisch.
 Getestet: canApproach->Näher kommen; canOvernight->Nacht verbringen (exklusiv); abgewiesen->nichts; falsche
 Person->nichts. node --check OK.
-NÄCHST (Benjamin-Reihenfolge): Punkt 3 = Doppel-NPC-Bug (KI erfindet 2. Mann neben Mertens - Prompt-Schärfung).
+NÄCHST (Projektleitung-Reihenfolge): Punkt 3 = Doppel-NPC-Bug (KI erfindet 2. Mann neben Mertens - Prompt-Schärfung).
 OFFEN (später): Punkt 4 erfundener Zielort (Stellwerk Schöneweide existiert nur im Goerke-Fall, im Margarete-
 Fall von KI erfunden); Wunsch-Verben feuern/werfen; volle Companion-Mitnahme (C/D) für "In Sicherheit bringen".
 
@@ -13007,7 +13007,7 @@ ABGEARBEITET (Run-Befunde): Punkt 1 (Näher kommen NPC-Menü v542), Punkt 2 (In 
 (Gegner-Vervielfachung v543). OFFEN: Punkt 4 (erfundener Zielort Stellwerk - kniffligstes, später).
 
 ## v7.12.544 (2026-06-09): TEIL A - KI darf keine anreisbaren Orte mehr erfinden (Run-Befund Punkt 4)
-BENJAMIN-LINIE: KI soll gar keine eigenen Orte erfinden; besondere Orte (wie Mertens' "Stellwerk Schöneweide")
+PROJEKTLEITUNG-LINIE: KI soll gar keine eigenen Orte erfinden; besondere Orte (wie Mertens' "Stellwerk Schöneweide")
 gehören konfiguriert. Erst Teil A (generelles Verbot, schützt alle Fälle), dann Teil B (Stellwerk bauen).
 URSACHE: Mertens nannte "Stellwerk Schöneweide" - existiert aber nur im Goerke-Fall, im Margarete-Fall von KI
 erfunden -> nicht anreisbar. Die alte Prompt-Stelle (Z19529) ERMUTIGTE sogar "wähle andere Berlin-Adressen wenn
@@ -13025,7 +13025,7 @@ EHRLICHE EINORDNUNG: primär Prompt-Hebel, ABER harte Absicherung dahinter - sel
 anreisbar (Reisemenü kennt nur konfigurierte Orte). Schlimmstenfalls Prosa-Sackgasse, kein kaputter Zustand.
 node --check OK.
 NÄCHST: TEIL B - Stellwerk Schöneweide (o.ä.) als location im Margarete-Fall konfigurieren, mit freischaltBei +
-zeit-/NPC-gebundenem Auftauchen (Wahlers Leute 20-24 Uhr) per ThreatBeat - Benjamins Idee.
+zeit-/NPC-gebundenem Auftauchen (Wahlers Leute 20-24 Uhr) per ThreatBeat - Projektleitungs Idee.
 
 ## v7.12.545 (2026-06-09): TEIL B - Stellwerk Schöneweide als echter Ort (Run-Befund Punkt 4 abgeschlossen)
 Aus dem erfundenen Sackgassen-Ort (Mertens nannte ihn, Karl konnte nicht hin) wird ein echtes konfiguriertes
@@ -13033,7 +13033,7 @@ Reise-Ziel. Margarete-Fall location "Stellwerk Schöneweide" (Ost/Schöneweide):
 - startBekannt:false, freischaltBei: ['stellwerk','schoeneweide','schöneweide','akten verlegt','akten
   weggeschafft','ausbesserungswerk'] -> erscheint im Reisemenü, sobald die KI den Hinweis als indiz_neu einträgt
   (checkLocationUnlocks matcht gegen Indizien, NICHT KI-Prosa - sauberer Engine-Weg).
-- bedrohungen (Benjamins "20-24 Uhr"-Idee = abend/nacht): oberleutnant_mertens (60%, abend/nacht - jagt die
+- bedrohungen (Projektleitungs "20-24 Uhr"-Idee = abend/nacht): oberleutnant_mertens (60%, abend/nacht - jagt die
   Akten selbst) + mann_im_mantel (50%, abend/nacht - Wachposten). Tagsüber ruhig. Keine neuen Figuren nötig
   (beide existieren als Engine-Gegner mit Gesicht).
 KETTE komplett: Mertens nennt Stellwerk -> KI->indiz_neu -> Ort freigeschaltet -> Karl reist hin -> Wahlers
@@ -13044,11 +13044,11 @@ gezielten Push (wie bei anderen Schlüssel-Hinweisen) ergänzen.
 === RUN-BEFUNDE PUNKT 1-4 ALLE ABGEARBEITET (v541 Sicherheit, v542 Näher-kommen, v543 Vervielfachung, v544+545
 Orte). Offen aus früheren Runs: Wunsch-Verben feuern/werfen; volle Companion-Mitnahme (Baustein C/D). ===
 
-## v7.12.546 (2026-06-09): PARTY-SYSTEM Schicht 1 - Fundament (Baustein C/D, Benjamins große Vision)
-BENJAMIN-VISION (voll): NPCs bewusst mitnehmen ("nimm Margot UND den Mann im Mantel mit zu Doc Wagner"),
+## v7.12.546 (2026-06-09): PARTY-SYSTEM Schicht 1 - Fundament (Baustein C/D, Projektleitungs große Vision)
+PROJEKTLEITUNG-VISION (voll): NPCs bewusst mitnehmen ("nimm Margot UND den Mann im Mantel mit zu Doc Wagner"),
 dynamische Party zusammenstellen (jeder Typ: Romance/Klient/Mystery/Informant/Polizist). Wer in der Party ist:
 reist mit, ist an jedem Ort per Aktion benutzbar (befragen/intim/beschützen + neue Aktion "Ablenken"), kann
-gezielt "hier gelassen" werden (Margarete bei Doc Wagner/Roth absetzen). Reihenfolge (Benjamin): 1 Fundament,
+gezielt "hier gelassen" werden (Margarete bei Doc Wagner/Roth absetzen). Reihenfolge (Projektleitung): 1 Fundament,
 2 Mitnehmen/Hier-lassen-Buttons, 3 Party reist mit + im Raum, 4 Ablenken. Erst alles für Margarete, dann
 verallgemeinern.
 SCHICHT 1 (diese Version, reines Fundament - KEIN Verhalten): _party = [] Liste { id, name, tag, sinceScene }.
@@ -13091,7 +13091,7 @@ Wachen ab -> Karl schleicht vorbei). TEST dringend: Reist Party sichtbar mit? Am
 setzt ab? Beschreibt KI Begleiter beim Ankommen?
 
 ## v7.12.549 (2026-06-09): NPC-Menü UX - Szene-Buttons vs Verwaltungs-Buttons visuell trennen
-BENJAMIN-BEFUND: alle NPC-Menü-Buttons sahen gleich aus, aber manche lösen eine KI-Szene aus (Zug verbraucht),
+PROJEKTLEITUNG-BEFUND: alle NPC-Menü-Buttons sahen gleich aus, aber manche lösen eine KI-Szene aus (Zug verbraucht),
 manche nicht (Mitnehmen/Hier lassen = reine Party-Verwaltung). Muss visuell + per Beschriftung klar sein.
 FIX:
 - Verben sortiert: erst Szene-Aktionen, dann Verwaltungs-Aktionen (_partyAction). Räumlich getrennt.
@@ -13139,7 +13139,7 @@ BEFUND (Run Sz16): KI setzte scene.ort auf "Bahnhof Friedrichstraße", während 
 (keine Reise) -> der Stagnations-Tracking-Block (lastMainLocation) folgte dem KI-Ort -> Karl "teleportierte".
 URSACHE: alter Hybrid-Tracking-Block (Z27685) basiert auf scene.ort (KI-geliefert); seit Engine-Architektur ist
 aber engineCurrentLocation die Wahrheit - die zwei konnten auseinanderlaufen.
-FIX (Benjamin: harte Korrektur): VOR dem Tracking-Block - weicht scene.ort-Hauptort vom engineCurrentLocation-
+FIX (Projektleitung: harte Korrektur): VOR dem Tracking-Block - weicht scene.ort-Hauptort vom engineCurrentLocation-
 Hauptort ab, UND es war KEINE Reise (_aktuelleAktionIstReise) UND KEIN HARD-FORCE (pendingForcedLocationChange),
 dann scene.ort hart auf den Engine-Ort zurücksetzen + diag('drift'). Sub-Variationen am selben Ort (kiMain
 includes/included engMain) bleiben unangetastet. Reise + HARD-FORCE als legitime Ausnahmen erkannt.
@@ -13152,10 +13152,10 @@ BEFUND 5 / ChatGPT-Lektorat P1.1: "Such Doc Wagner in der Schäferstraße auf" (
 Option statt als Reise -> KI brachte Karl erzählerisch zu Wagner, Engine blieb im Büro -> Karl übergab Wagner
 das Logbuch obwohl nie dort. URSACHE: Reise-Verb-Regex (Z21731) kannte "such X auf" / "bring X zu Y" / nacktes
 "zu <NPC>" nicht (nur fahr/geh/lauf + "zur/zum/nach"). v552 korrigiert danach den ORT, aber die AKTION lief.
-FIX (Benjamin: alle Orts-/NPC-Reisen abfangen): _reiseVerbRe um such/besuch/bring/schaff/begleite erweitert;
+FIX (Projektleitung: alle Orts-/NPC-Reisen abfangen): _reiseVerbRe um such/besuch/bring/schaff/begleite erweitert;
 _suchAuf ("such ... auf"); _zuZielNackt (nacktes "zu <Großbuchstabe-Name>" bei Reise-Verb). Abstrakta-Ausschluss
 _abstraktesZiel ("zum Reden/Gestehen/Aussage/Vernunft/..." sind Redewendungen, KEINE Reise) auf _hatZiel-Ebene
-(fängt auch _zielRe-Treffer wie "zum Reden"). KONSEQUENZ (Benjamin bewusst): "bring Margarete zu Roth" wird jetzt
+(fängt auch _zielRe-Treffer wie "zum Reden"). KONSEQUENZ (Projektleitung bewusst): "bring Margarete zu Roth" wird jetzt
 als Reise abgefangen - Sicherung läuft über Reise-Button zum Ziel + dortige Aktion (Party reist mit).
 Getestet 10/10: such Wagner auf/bring Logbuch zu Wagner/bring Margarete zu Roth/geh zu Mertens/fahr zur Praxis =
 Reise; durchsuch Akten/bring ihn zum Reden/zum Gestehen/zur Aussage/frag im Stellwerk = lokal.
@@ -13163,8 +13163,8 @@ WICHTIG: node --check fing doppelte _hatZiel-Deklaration (Crash vermieden, Prinz
 NÄCHST (Lektorat-Reihenfolge): P1.4 Finale-Prosa an Beweisflags; P2 Sicherungs-Buttons; P2 Custody Engine>KI;
 P2 Kabelbinder/F6.
 
-## v7.12.554 (2026-06-09): Reise-Frei-Fenster nach Flucht (Benjamin-Folgefix zu v553)
-BENJAMIN-EINSICHT: seit v553 läuft Reise NUR noch über den Button (Freitext-Reise weg). Der Button ist aber bei
+## v7.12.554 (2026-06-09): Reise-Frei-Fenster nach Flucht (Projektleitung-Folgefix zu v553)
+PROJEKTLEITUNG-EINSICHT: seit v553 läuft Reise NUR noch über den Button (Freitext-Reise weg). Der Button ist aber bei
 hoher Spannung gesperrt - und in der Sicherungslage (Stasi jagt Margarete) ist Sp meist hoch. Also: Flucht muss
 zuverlässig funktionieren, damit man danach reisen kann (z.B. zu Roth, um zu sichern). Befund: POST-FLUCHT-CAP
 deckelt die Spannung nur 1 Szene -> Reise nur 1 Szene frei. Tut der Spieler in der Szene was anderes und die KI
@@ -13186,16 +13186,16 @@ Steins Wohnung". Folge-Kaskade: Karl kam nie weg -> Spannung sank nicht nachhalt
 5). Spieler floh 7x (Sz6,28-32,34), Reise-Frei-Fenster wurde nur 1x ausgelöst weil Flucht nicht "durchging".
 URSACHE: Flucht setzt engineCurrentLocation NICHT (anders als Reise) - sie senkt nur Spannung + Prompt "sicherer
 Ort". Der Engine-Ort blieb der Gefahren-Ort, v552 sah KI-Fluchtort != Engine-Ort -> korrigierte zurück.
-FIX (Benjamin Weg A): (1) _aktuelleAktionIstFlucht-Flag, in chooseOption gesetzt wenn Option-Kat FLUCHT/NOTFLUCHT,
+FIX (Projektleitung Weg A): (1) _aktuelleAktionIstFlucht-Flag, in chooseOption gesetzt wenn Option-Kat FLUCHT/NOTFLUCHT,
 am Apply-Punkt zurückgesetzt (neben Reise-Flag). (2) v552-Block: bei _warFlucht NICHT zurückkorrigieren, sondern
 KI-Fluchtort (Hauptort vor Komma, z.B. "Opel Olympia") als neuen engineCurrentLocation ÜBERNEHMEN. Nicht-Flucht-
 Ortswechsel werden weiter korrigiert (v552 intakt).
 Getestet: Flucht->Engine-Ort wechselt auf Fluchtort; normaler KI-Wechsel->weiter zurückkorrigiert. node --check OK.
-Damit Wurzel von Befund 3+4+5 behoben. NÄCHST (Benjamin-Reihenfolge): Befund 2 (Bote nicht anklickbar), Befund 1
+Damit Wurzel von Befund 3+4+5 behoben. NÄCHST (Projektleitung-Reihenfolge): Befund 2 (Bote nicht anklickbar), Befund 1
 (Party-Reise-Beschreibung mit Witz + Hund), Party-Maximum (4 Menschen + 1 Hund im Opel).
 
-## v7.12.556 (2026-06-09): iPhone-Fehlklick-Schutz für neue klickbare Elemente (Benjamin Prio A)
-BENJAMIN: mit den neuen klickbaren Elementen (Personen im Raum, Reise-Ziele, NPC-Verb-Menü) ist die Versehentlich-
+## v7.12.556 (2026-06-09): iPhone-Fehlklick-Schutz für neue klickbare Elemente (Projektleitung Prio A)
+PROJEKTLEITUNG: mit den neuen klickbaren Elementen (Personen im Raum, Reise-Ziele, NPC-Verb-Menü) ist die Versehentlich-
 Tipp-Gefahr stark gestiegen - v.a. der "Tap-Durchschlag" auf iPhone: Person antippen -> Popup öffnet -> 2. Tap
 landet versehentlich auf Verb-Option -> teure Szene ausgelöst. Befund verifiziert: NPC-Buttons (Z17130), Reise-
 Ziele (Z17090), NPC-Verb-Menü (Z17328) hatten NUR click, KEINEN Touch-Schutz (anders als A/B/C/D/Flucht).
@@ -13207,17 +13207,17 @@ Angewandt: NPC-Personen-Button (+_markPopupOpened), Reise-Ziel-Buttons, NPC-Verb
 + oeffneNpcMenue (Guard beim Öffnen).
 Getestet: normaler Tap=feuert; Streiftipper(20ms)/Swipe(40px)/langer Druck(1200ms)/Durchschlag(100ms nach Popup)=
 blockiert; Tap 400ms nach Popup=feuert wieder. node --check OK.
-NICHT gebaut (Benjamin Prio B, "zur Frage gestellt"): Rückfrage vor Szene-Aktionen. EMPFEHLUNG: NICHT generell -
+NICHT gebaut (Projektleitung Prio B, "zur Frage gestellt"): Rückfrage vor Szene-Aktionen. EMPFEHLUNG: NICHT generell -
 würde jeden Zug verdoppeln/nerven. Der Tap-Schutz + Reise-Bestätigung wäre gezielter. Bei Bedarf NUR für Reise.
 NÄCHST (Lektorat, nach Test): transienter Flucht-Ort; A/B/C/D-Ersatztexte konkret; Margot-Bindung.
 
-## v7.12.557 (2026-06-09): Reise-Button-Scroll-Bug + Party-Verlust am Run-Ende (2 Benjamin-Befunde)
+## v7.12.557 (2026-06-09): Reise-Button-Scroll-Bug + Party-Verlust am Run-Ende (2 Projektleitung-Befunde)
 BUG 1 (dringend, Scroll löst Reise-Popup): Reise-Button (Z18243) hatte nacktes touchend OHNE Bewegungsprüfung ->
 beim Scrollen löste der Finger beim Loslassen über dem Button das Reise-Popup aus ("kann nicht mehr scrollen ohne
 dass Popup aufgeht"). FIX: auf attachSafeTap umgestellt (v556-Helper) - bricht bei Fingerbewegung/Scroll ab,
 Mindest-Kontaktzeit, Popup-Guard. oeffneReiseMenue ruft schon _markPopupOpened (v556). node --check OK.
 
-BUG 2 (Party-Verlust WIRKLICH, erst am Ende): Benjamin nahm Margarete + Mann im Mantel + Margot mit; am Ende waren
+BUG 2 (Party-Verlust WIRKLICH, erst am Ende): Projektleitung nahm Margarete + Mann im Mantel + Margot mit; am Ende waren
 sie WIRKLICH weg (nicht anklickbar/reisten nicht mit), Spiel "kaputt". Run 2058: Log zeigte Party intern bis Sz31
 korrekt gehalten, ABER Sz32: "PARTY hält Margot" geloggt UND "finaler Cast=[]" - Cast kollabierte trotz Party.
 WURZEL: Party wurde nur beim ORTSWECHSEL geschützt (haeltImCast ~Z28095, läuft nur bei mainLocationChanged). In
@@ -13226,7 +13226,7 @@ dem Cast, kein zentraler Schutz danach. FIX: Party-Garantie als LETZTES Wort vor
 jedes _party-Mitglied MUSS im finalen Cast sein, egal welcher Pfad lief (Ortswechsel oder nicht). Dedup über
 normForMatch (Vorname-Match). Setup-Daten angereichert wenn vorhanden. Eine Quelle, deckt alle Pfade ab.
 Getestet: Cast=[] + 3 Party -> alle 3 wieder da; kein Duplikat wenn schon drin. node --check OK.
-ANTWORT an Benjamin zu Mann im Mantel raus/rein: NICHT durch _partyRemove (kein PARTY- -Event im Log) - er fiel
+ANTWORT an Projektleitung zu Mann im Mantel raus/rein: NICHT durch _partyRemove (kein PARTY- -Event im Log) - er fiel
 durch genau diesen Cast-Kollaps raus und kam per Auto-Cast-Reintroduce (aktiv im Text) zurück. Mit v557 stabil.
 NÄCHST (Lektorat, nach Test): transienter Flucht-Ort; A/B/C/D-Ersatztexte konkret; Margot-Ortsbindung.
 
@@ -13236,7 +13236,7 @@ zeigte den Konflikt in EINER Szene: "reintro-übersprungen(abschied): Mann im la
 griff korrekt, nahm ihn NICHT wieder auf) GEFOLGT VON "party-garantie-AUFGENOMMEN: Mann im langen Mantel" (v557-
 Garantie holte ihn sofort zurück, weil noch in _party). WURZEL: Abschieds-Erkennung entfernte aus cast, aber NICHT
 aus _party -> Garantie überstimmte. (Der Mann war nie bewusst mitgenommen - kam per Auto-Cast-Reintroduce rein.)
-BENJAMIN-ENTSCHEID: flieht/verabschiedet sich ein Party-Mitglied -> es verlässt die Party (Garantie holt nicht
+PROJEKTLEITUNG-ENTSCHEID: flieht/verabschiedet sich ein Party-Mitglied -> es verlässt die Party (Garantie holt nicht
 zurück, kann später neu mitgenommen werden).
 FIX: Abschieds-Block erweitert: (1) zusätzlich klare FLUCHT-Verben (X flieht/rennt weg/verschwindet/entkommt/
 setzt sich ab/ist plötzlich weg) - beide Wortstellungen (Name-vor-Verb UND Inversion "rennt der Mann weg"). (2) Bei
@@ -13247,11 +13247,11 @@ Arbeit" / Doc Wagner spricht = NICHT (konservativ, kein Fehlauslöser). node --c
 NEBENBEFUND (offen, P2.7): Margot Romance-Push feuerte Sz13 trotz politischem Fall (Sp<5). NICHT in dieser Version.
 NICHT geändert (Prinzip 5): Auto-Reintro-in-Party-Frage offen gelassen bis Test zeigt ob es nach v558 noch stört.
 
-## v7.12.558 NACHTRAG (2026-06-09): MYSTERY/Schatten-Figuren nicht mitnehmbar (Benjamin-Entscheid)
+## v7.12.558 NACHTRAG (2026-06-09): MYSTERY/Schatten-Figuren nicht mitnehmbar (Projektleitung-Entscheid)
 Befund (ChatGPT v557-Lektorat + Run 2130): "Mann im langen Mantel kommt mit / in Karls Begleitung" - semantisch
 falsch für eine anonyme Verfolger-Figur. URSACHE verifiziert: Mann im Mantel hat tag:'MYSTERY', MYSTERY ist NICHT
 in GEGNER=['ANTAGONIST','SUSPECT','GANGSTER','STASI'] -> Mitnehmen-Button erschien.
-BENJAMIN-ENTSCHEID: MYSTERY/Schatten gar nicht mitnehmbar (wie Gegner), bewusst trotz Freiheitsverlust.
+PROJEKTLEITUNG-ENTSCHEID: MYSTERY/Schatten gar nicht mitnehmbar (wie Gegner), bewusst trotz Freiheitsverlust.
 FIX: _istGegnerTag = GEGNER.includes(tag) || tag==='MYSTERY'. Block umstrukturiert: "Hier lassen" erscheint IMMER
 wenn Figur in Party (auch MYSTERY/Gegner aus altem Stand -> bereinigbar), "Mitnehmen" nur für erlaubte Tags.
 Getestet: MYSTERY nicht-in-Party=kein Mitnehmen; MYSTERY in-Party=Hier lassen; CLIENT/ROMANCE=Mitnehmen; STASI=
@@ -13262,10 +13262,10 @@ isGameOver -> showGameOver vor normalen Optionen). Ohne v557-Run nicht gegen ech
 OFFEN (großes Projekt, von 3 Run-Lektoraten bestätigt): Engine-Objekte/Indizien (Lederbuch/Akten collect/inspect,
 Indizienkette enginehart), Sicherungs-Buttons nach "Wahrheit erkannt", clientStatus für Margarete. ERST PLANEN.
 
-## v7.12.559 (2026-06-09): Auto-Mitnehmen-Popup beim Reisen/Flüchten (Benjamin-Wunsch)
+## v7.12.559 (2026-06-09): Auto-Mitnehmen-Popup beim Reisen/Flüchten (Projektleitung-Wunsch)
 WICHTIG: /mnt/project/ war diesen Turn auf Sessionstart-Stand (v545) zurückgesetzt (read-only per turn). Echter
 Stand v558 lag in /mnt/user-data/outputs/. Ab diesem Turn auf Output-Kopie (/tmp) gearbeitet. KEIN Code verloren.
-BEFUND (Benjamin, Run 2220): Marlene war in Sz11 am Ort, aber man musste sie umständlich übers NPC-Menü in die
+BEFUND (Projektleitung, Run 2220): Marlene war in Sz11 am Ort, aber man musste sie umständlich übers NPC-Menü in die
 Party holen, sonst blieb sie beim Reisen zurück. Wunsch: beim Reisen/Flüchten automatisch fragen "wen mitnehmen?".
 ENTSCHEIDUNGEN: Popup nur wenn mitnehmbare Nicht-Party-NPCs am Ort (sonst direkt weiter). Auch bei Flucht.
 MYSTERY/Schatten NICHT im Popup (konsistent v558).
@@ -13275,13 +13275,13 @@ nicht schon in Party. (2) zeigeMitnehmenPopup(npcs, weiterAktion) - Mehrfachausw
 (3) reiseZuOrt: NPCs am AKTUELLEN Ort VOR dem Ortswechsel ermitteln, Reise-Kern in weiterAktion. (4) Flucht-Button
 auf attachSafeTap umgestellt (war noch alter Touch-Stil) + Popup davor.
 Getestet: Filter liefert Doc Wagner+Marlene, NICHT Margarete(Party)/Mann(MYSTERY)/Mertens(STASI). node --check OK.
-KLARSTELLUNG Run 2220: Doc Wagner war durchgehend in Party (auch Sz15), Marlene NIE drin - Benjamins Eindruck war
+KLARSTELLUNG Run 2220: Doc Wagner war durchgehend in Party (auch Sz15), Marlene NIE drin - Projektleitungs Eindruck war
 umgekehrt, vermutl. Anzeige-Verwirrung. ChatGPT-v558-Lektorat bestätigt: Margarete/Wagner-Begleiter funktionieren.
 OFFEN (großes Projekt, 4 Run-Lektorate): Engine-Objekte/Indizien, clientStatus, Vf=0-Notzustand, Sicherungs-Buttons.
 OFFEN klein: Opel-Husten/Atmo-Prosa kürzen (Prompt). NICHT getestet: ganzer Stapel v555-v559 (v557/558 teilbestätigt).
 
-## v7.12.559 NACHTRAG: Unterwegs-Heilung durch Doc/Marlene in Party (ChatGPT-v558-P2 + Benjamin)
-ChatGPT-v558-Lektorat lobte Doc Wagner als Begleiter, warnte aber vor "Allzweck-Heiler". Benjamin-Wunsch: Doc/
+## v7.12.559 NACHTRAG: Unterwegs-Heilung durch Doc/Marlene in Party (ChatGPT-v558-P2 + Projektleitung)
+ChatGPT-v558-Lektorat lobte Doc Wagner als Begleiter, warnte aber vor "Allzweck-Heiler". Projektleitung-Wunsch: Doc/
 Marlene in Party = Medical Support, heilen unterwegs wenn Karl verletzt - ABER begrenzt (kein Cheat-Code).
 ENTSCHEIDUNGEN: volle Heilung (+2) unterwegs, begrenzt durch Verbandszeug-Vorrat = 2 Anwendungen, dann erschöpft
 bis zur Auffüllung am Heilort (Praxis/Charité). Ein Button auch wenn beide dabei.
@@ -13292,10 +13292,10 @@ _unterwegsHeal: +2 Vf, setzt result.unterwegsHealApplied. (4) Apply-Punkt: Vorra
 CRASH VERMIEDEN (node --check): beim Einfügen war versehentlich "if(showMarleneHealButton){" verschluckt worden ->
 try der Render-Funktion ohne catch. Gefunden + behoben vor Auslieferung.
 Getestet: Button nur mit Medic+verletzt+ruhig+Vorrat+nicht-Heilort; Verbrauch 2->1->0->0. node --check OK.
-MITTELFRISTIG offen (Benjamin-Idee): Party-Mitglieder können sterben/fliehen/heimgeschickt werden (Balance, damit
+MITTELFRISTIG offen (Projektleitung-Idee): Party-Mitglieder können sterben/fliehen/heimgeschickt werden (Balance, damit
 Doc nicht permanent dabei). Noch NICHT gebaut - braucht eigenes Konzept (Party-Verfassung, Risiko).
 
-## v7.12.560 (2026-06-09): Party-Mitglieder IMMER in "im Raum"-Anzeige (Benjamin-Befund Run 2246)
+## v7.12.560 (2026-06-09): Party-Mitglieder IMMER in "im Raum"-Anzeige (Projektleitung-Befund Run 2246)
 BEFUND: Doc Wagner in Party aufgenommen, zur Reichsbahndirektion gereist - dort NICHT in "im Raum" angezeigt (nur
 Margarete). Heal-Button funktionierte aber (Sz17) -> Doc WAR in der Party, nur die Anzeige zeigte ihn nicht. Das
 bestätigt die früher vermutete "Anzeige-Verwirrung" als echten Bug. Log Sz16-18: finaler Cast[3] enthielt Doc
@@ -13308,9 +13308,9 @@ FIX: Party-Mitglieder IMMER in getNpcsAtCurrentLocation aufnehmen (direkt nach O
 sind garantiert anwesend (Party-Garantie v557), gehören also immer in die Anzeige - unabhängig von Ort-Definition
 und KI-personenImRaum. Setup-Identität via _resolveNpcIdentity wenn id vorhanden, sonst Party-Daten.
 Getestet: Party {Margarete, Doc Wagner} -> beide in Anzeige, auch ohne Ort-NPC/KI-cast. node --check OK.
-Damit lösen sich Benjamins wiederkehrende "X nicht angezeigt obwohl dabei"-Befunde an der Wurzel.
+Damit lösen sich Projektleitungs wiederkehrende "X nicht angezeigt obwohl dabei"-Befunde an der Wurzel.
 
-## v7.12.561 (2026-06-09): Reise-Ersatztexte ortsbezogen + bessere generische (Benjamin + ChatGPT P1.3)
+## v7.12.561 (2026-06-09): Reise-Ersatztexte ortsbezogen + bessere generische (Projektleitung + ChatGPT P1.3)
 BEFUND: Abgefangene Reise-Option (A) wurde durch EINEN abstrakten Satz ersetzt: "Geh hart auf die Sache zu - greif
 hier und jetzt durch, statt erst loszufahren." Wirkte weird (der Halbsatz "statt loszufahren" verriet die
 abgefangene Reise) und tauchte zu oft auf, während B/C/D szenenbasiert/klar waren. = ChatGPT-Lektorat P1.3.
@@ -13340,14 +13340,14 @@ HINWEIS: In diesem Run waren 4 Party-Mitglieder (Margarete/Vera/Doc/Margot) - te
 Größen-Limit (Opel: 4 Menschen?) + Party-Mitglieder-Sterben/Fliehen bleiben offene mittelfristige Themen.
 
 ## ════ INDIZIEN-/ORIENTIERUNGS-PROJEKT (ab v563) ════
-ANLASS: Run-Befund + ChatGPT v562-Lektorat: nach 51 Szenen Stage 1, nur 2 Indizien. Benjamin frustriert: "ich weiß
+ANLASS: Run-Befund + ChatGPT v562-Lektorat: nach 51 Szenen Stage 1, nur 2 Indizien. Projektleitung frustriert: "ich weiß
 nicht wo ich hin muss weil ich nicht weiß wo ich ein Indiz finde... fühlt sich nicht kontrollierbar an". Indizien
 existieren nur als KI-Prosa (caseProgress.indizien = String-Array), nicht an Orte gebunden.
 KONZEPT (KONZEPT_INDIZIEN.md): vordefinierte Kern-Indizien an Orten/NPCs mit Tageszeit; alle Orte von Anfang an
 offen; Reisemenü zeigt offene Indizien pro Ort + Öffnungszeit; Service-Orte (Doc Wagner/Charité/Imbiss) ohne Indiz.
-ZWEISTUFIGE ZEIT (Benjamin): (1) oeffnungszeit des ORTS (Kneipe nur abends, Café nur tags) - geschlossen = ausgegraut
+ZWEISTUFIGE ZEIT (Projektleitung): (1) oeffnungszeit des ORTS (Kneipe nur abends, Café nur tags) - geschlossen = ausgegraut
 + nicht klickbar; (2) zeit des NPCs (Lemke nur wenn Anker offen, Vera nur wenn Café offen). HYBRID: Kern-Indizien
-zählen für Stage, KI-Atmo-Funde zählen nicht. Benjamin: Indizien-Verteilung erstmal ok, später optimierbar.
+zählen für Stage, KI-Atmo-Funde zählen nicht. Projektleitung: Indizien-Verteilung erstmal ok, später optimierbar.
 BAU-REIHENFOLGE (je einzeln getestet + ausgeliefert): 1=alle Orte offen, 2=Indizien-Datenstruktur+Fund-Logik,
 3=Reisemenü-Anzeige (offen-Zähler + ausgegraut wenn geschlossen), 4=Stage-Gates qualitativ, 5=Party-Regeln
 (Doc Wagner kein Begleiter, Margot-Sperre - ChatGPT-P1).
@@ -13407,7 +13407,7 @@ NÄCHSTER SCHRITT 5: Party-Regeln (canJoinParty Doc Wagner=false, Margot-Sperre 
 DANACH: vollständiger Testlauf des ganzen Indizien-Systems (Schritte 1-5) - jetzt dringend sinnvoll.
 
 ## v7.12.567 (2026-06-10): SCHRITT 3b - Notizbuch (gefundene Indizien einsehbar)
-BEFUND (Benjamin, Run 0051): Header zeigt "4 Indizien" als ZAHL, aber nicht WELCHE. Spieler kann gefundene Indizien
+BEFUND (Projektleitung, Run 0051): Header zeigt "4 Indizien" als ZAHL, aber nicht WELCHE. Spieler kann gefundene Indizien
 nirgends einsehen. (Run bestätigt: Kern-Indizien-System läuft - akten_kopie_wohnung + margarete_aussage gefunden,
 beide Stage-Floor 2, Fall hatte 6 Indizien. Schritte 1-4 greifen.)
 WUNSCH: Notizbuch-Button, Popup im Notizbuch-Look (liniert), NUR gefundene Indizien (kein Spoiler auf offene).
@@ -13434,7 +13434,7 @@ WEITERE ChatGPT-P1 OFFEN: Hard-Location-Repair (KI-Prosa erzählt falschen Ort),
 Sicherungsbeat trennen (clientSecured/evidenceSecured/securityChannel). P2: Orte-Freischaltung-Log leiser, F6 ersetzen.
 OFFEN: Schritt 5 Party-Regeln + vollständiger Testlauf.
 
-## v7.12.569 (2026-06-10): Passwort-Deadlock behoben (Benjamin: gestern gespielt, heute ausgesperrt)
+## v7.12.569 (2026-06-10): Passwort-Deadlock behoben (Projektleitung: gestern gespielt, heute ausgesperrt)
 BEFUND: Abends im Browser gespielt, morgens weiterspielen -> "Zugang verweigert" (auth_403), kein Weg weiter =
 Deadlock, Lauf verloren. WURZEL: getSpielAuth/setSpielAuth nutzten sessionStorage - wird beim Tab-Schließen gelöscht.
 FIX (2 Ebenen): (1) localStorage statt sessionStorage (überlebt Tab-Neustart); sessionStorage als Fallback für
@@ -13443,7 +13443,7 @@ localStorage+sessionStorage leeren + ensureSpielAuth() neu aufrufen (Passwort-Wi
 mit reauthSucceeded=true -> neuer Retry-Zweig wiederholt den Request mit demselben Modell + neuem Passwort. Bricht
 der Spieler ab, bleibt es beim Fehler. Kein Lauf-Verlust mehr.
 Getestet: node --check OK. (Reauth-Flow nur live testbar - Logik geradeaus.)
-NÄCHSTER (laut Benjamin-Reihenfolge): iPhone-Statusleiste permanent sichtbar, dann Indizien-Findung reparieren.
+NÄCHSTER (laut Projektleitung-Reihenfolge): iPhone-Statusleiste permanent sichtbar, dann Indizien-Findung reparieren.
 
 ## v7.12.570 (2026-06-10): Required-Location-Check (ChatGPT-P1 v568-Regression)
 LEKTORAT v568: Wahler-Ortsfix (v568) korrekt, ABER Gegen-Totlauf: Karl flieht in Opel, wählt "Durchsuch die Wohnung"
@@ -13460,9 +13460,9 @@ WEITERE ChatGPT-P1 OFFEN (nächste Schritte): ungültige Optionen nach Flucht en
 koppeln (Beat "Wahler verantwortlich" -> Indiz/Stage); Indizien-Findung (Schlüsselwörter treffen KI-Text nicht:
 "Siegel" statt "roter Stempel", Lemke am Bahnhof statt Anker). DANN UI-Projekt (KONZEPT_UI.md).
 
-## v7.12.571 (2026-06-10): Freitext-Platzhalter zeigt kreative Aktion statt Reise (Benjamin)
+## v7.12.571 (2026-06-10): Freitext-Platzhalter zeigt kreative Aktion statt Reise (Projektleitung)
 BEFUND: Freitext-Platzhalter sagte "z.B. fahr zu Doc Wagner" - aber Reisen läuft über den Reise-Button, nicht
-Freitext. Der Platzhalter schlug also genau eine Aktion vor, die in die Engine verlagert wurde. Benjamin: "was können
+Freitext. Der Platzhalter schlug also genau eine Aktion vor, die in die Engine verlagert wurde. Projektleitung: "was können
 wir im Text-Prompt überhaupt als Beispiel zeigen, was er sonst nicht machen kann?"
 ANTWORT: Der Freitext ist für KREATIVE, situative Aktionen, die kein Button vorsieht (GTA-Noir-Freiheit) - nicht für
 Reisen/Flucht/Schlafen/Heilen/NPC-Verben (alles Buttons/Engine). System-Prompt ist schon konsistent (Z4084 verbietet
@@ -13473,7 +13473,7 @@ FIX: Beide Vorkommen (statischer HTML-Platzhalter Z3251 + JS-Reset Z19309) "z.B.
 IDEE (später, UI-Projekt): rotierende Beispiele (Manteltaschen / Wirt bestechen / mit Akte bluffen) für mehr Bandbreite.
 
 ## ════ UI-PROJEKT (ab v572) - KONZEPT_UI.md ════
-ANLASS: Benjamin (UI stört massiv beim Testen) + ChatGPT-Lektorat. Kernsatz ChatGPT: "Die UI zeigt nicht mehr nur
+ANLASS: Projektleitung (UI stört massiv beim Testen) + ChatGPT-Lektorat. Kernsatz ChatGPT: "Die UI zeigt nicht mehr nur
 Optionen, sie zeigt Engine-Wahrheit. Alles was unten als Handlung erscheint, muss am aktuellen Engine-Ort möglich sein."
 REIHENFOLGE (ChatGPT-präzisiert): A=fixe Statusbar oben (Vf/Sp/Zeit/ORT), B=▶-Marker für szene-auslösende Buttons
 (Tools ohne ▶), C=Notizbuch raus aus Aktionszone (zu Status/oben), D=NPC-Chips, E=Required-Location (schon v570),
@@ -13488,12 +13488,12 @@ FIX: .status-bar von sticky -> position:fixed (top:0, left/right:0, z-index 200)
 - ChatGPT: Ort/Prosa-Konflikte sofort sichtbar) + ⓘ-Hinweis (antippbar für Stand/Notizbuch/Inventar). Befüllung bei
 Z13988 (neben status-loc). Neuer #status-bar-spacer-mobile (64px, nur <761px) fängt Höhensprung; Desktop-Spacer auf
 64px erhöht (zweizeilig). Desktop-Media-Query (760px zentriert) bleibt und überschreibt left/right:0.
-NUR AM GERÄT FINAL BEURTEILBAR (CSS-Layout): node --check kann das nicht testen - Benjamin muss am iPhone prüfen, ob
+NUR AM GERÄT FINAL BEURTEILBAR (CSS-Layout): node --check kann das nicht testen - Projektleitung muss am iPhone prüfen, ob
 die Leiste gut klebt + zwei Zeilen gut aussehen. node --check OK (JS-Teil: Ort-Befüllung).
 NÄCHSTER: Schritt B (▶-Marker szene-auslösende Buttons).
 
 ## v7.12.573 (2026-06-10): UI-Schritt A Nachbesserung - ⓘ weg + Zahnrad bei offenem Popup ausblenden
-BEFUND (Benjamin, 2 iPhone-Screenshots): (1) Das neue ⓘ neben dem Zahnrad ist überflüssig (Stand öffnet eh durch
+BEFUND (Projektleitung, 2 iPhone-Screenshots): (1) Das neue ⓘ neben dem Zahnrad ist überflüssig (Stand öffnet eh durch
 Tippen auf die Leiste UND übers Zahnrad-Menü) + zu klein/zu nah am Zahnrad zum Treffen. (2) Bei offenem "Aktueller
 Stand"-Popup schwebt das Settings-Zahnrad obendrüber -> man tippt drauf (denkt: schließt das Popup), öffnet aber
 ZUSÄTZLICH das Settings-Menü -> doppeltes Overlay, Verwirrung, unklar wie schließen.
@@ -13501,10 +13501,10 @@ FIX: (1) ⓘ-Span aus #status-ort-zeile entfernt. (2) CSS: body:has(#status-popu
 none} - Zahnrad verschwindet, solange der Stand offen ist (:has von iOS Safari unterstützt). Schließen via SCHLIESSEN-
 Button + Tippen auf Hintergrund (globaler Klick-Listener Z8382 schließt Stand+Settings, existierte schon).
 NUR AM GERÄT FINAL BEURTEILBAR (CSS). node --check OK (JS unverändert sauber).
-NÄCHSTER: Schritt B (▶-Marker szene-auslösende Buttons) - oder erst Benjamin testet A+Nachbesserung.
+NÄCHSTER: Schritt B (▶-Marker szene-auslösende Buttons) - oder erst Projektleitung testet A+Nachbesserung.
 
 ## v7.12.574 (2026-06-10): UI-Schritt A Fix - BERLIN-1953-Header + Leerraum auf Mobile
-BEFUND (Benjamin, iPhone-Screenshot): Die fixe Statusleiste (v572) überdeckte die große "BERLIN 1953"-Hauptüberschrift
+BEFUND (Projektleitung, iPhone-Screenshot): Die fixe Statusleiste (v572) überdeckte die große "BERLIN 1953"-Hauptüberschrift
 am Spielstart; darunter klaffte viel leerer Raum vor dem Spielinhalt. URSACHE: Die Desktop-Lösung (v499: #header
 padding-top + Spacer auf 0) galt nur in @media min-width:761px. Auf Mobile (wo die Leiste durch v572 jetzt AUCH fixed
 ist) fehlte sie -> Header verdeckt + 64px-Spacer erzeugt Doppel-Leerraum.
@@ -13512,10 +13512,10 @@ FIX: In @media max-width:760px dieselbe Logik: #header:not(.hidden){padding-top:
 sichtbar) + #header:not(.hidden) ~ #status-bar-spacer-mobile{display:none} (Spacer weg wenn Header da, sonst Doppel-
 Abstand). Kaskade: spätere none-Regel gewinnt bei sichtbarem Header; bei Spiel (Header hidden) bleibt Spacer block.
 DOM-Reihenfolge verifiziert (header->status-bar->spacer-mobile, Geschwister, ~ greift). node --check OK. AM GERÄT prüfen.
-NÄCHSTER: Schritt B (▶-Marker) - oder Benjamin testet A final.
+NÄCHSTER: Schritt B (▶-Marker) - oder Projektleitung testet A final.
 
 ## v7.12.575 (2026-06-10): Schließen-ß-Fix + UI-Schritt B (▶-Marker)
-(1) ß-FIX (Benjamin): SCHLIESSEN-Button im Stand-Popup zeigte SS statt ß. Ursache: Text war "Schließen" (korrekt mit
+(1) ß-FIX (Projektleitung): SCHLIESSEN-Button im Stand-Popup zeigte SS statt ß. Ursache: Text war "Schließen" (korrekt mit
 ß), aber CSS .status-popup-close hatte text-transform:uppercase -> CSS wandelt ß zu SS. FIX: text-transform entfernt,
 Text direkt als Versalien mit großem ß (SCHLIEẞEN, U+1E9E, iOS-kompatibel).
 (2) UI-SCHRITT B (▶-Marker): szene-auslösende Buttons bekommen ▶ ("hier geht die Geschichte weiter"), Werkzeuge nicht.
@@ -13526,29 +13526,29 @@ AM GERÄT prüfen (CSS): wie sieht ▶ neben A/B/C/D aus. node --check OK.
 NÄCHSTER: Schritt C (Notizbuch raus aus Aktionszone -> zu Status/oben), dann D (NPC-Chips), F (Aufklappstruktur).
 
 ## v7.12.576 (2026-06-10): Scroll-Bug im Stand-Popup behoben (Body-Scroll-Lock)
-BEFUND (Benjamin, iPhone): Hauptseite scrollen, dann schnell Topleiste antippen -> Stand-Popup auf, aber Scrollen im
+BEFUND (Projektleitung, iPhone): Hauptseite scrollen, dann schnell Topleiste antippen -> Stand-Popup auf, aber Scrollen im
 Popup scrollt die HINTERGRUNDSEITE (iOS scroll chaining), Popup kaum schließbar.
 FIX: (1) CSS overscroll-behavior:contain auf .status-popup-inner. (2) Body-Scroll-Lock (iOS-robust): lockBodyScroll()
 beim Öffnen (position:fixed body + gemerkte scrollY), unlockBodyScroll() beim Schließen (wiederherstellen + scrollTo).
 Eingehängt: beide showStatusDetails-Öffnungsstellen (lock), hideStatusDetails (unlock), toggleSettings-Schließpfad
 (unlock). Globaler Außenklick-Listener ruft hideStatusDetails -> abgedeckt. node --check OK. AM GERÄT prüfen.
 
-## OFFEN/NÄCHSTES GROSSES UI-THEMA: "Handeln vs. Organisieren" (Benjamin-Konzept, ersetzt ▶-Marker)
-Benjamin-Idee (besser als Einzel-Marker): ZWEI übergeordnete Einstiege/Buttons statt Marker an jedem Button:
+## OFFEN/NÄCHSTES GROSSES UI-THEMA: "Handeln vs. Organisieren" (Projektleitung-Konzept, ersetzt ▶-Marker)
+Projektleitung-Idee (besser als Einzel-Marker): ZWEI übergeordnete Einstiege/Buttons statt Marker an jedem Button:
 - "HANDELN" (löst Szene aus) -> A/B/C/D + szene-auslösende NPC-Verben (befragen/beobachten/bedrohen/angreifen).
 - "ORGANISIEREN/VERWALTEN" (löst KEINE Szene aus) -> Person in Party aufnehmen, hier lassen, Notizbuch, Inventar.
 Strukturelle Trennung auf oberster Ebene statt Symbol pro Button - User lernt einmal "Geschichte weiter vs. ordnen".
 = im Kern Schritt F (Aufklappstruktur), GRÖSSTER UI-Eingriff (Options-Rendering + NPC-Verb-Menü + Party-Aktionen).
 PLAN: erst Scroll-Fix testen, DANN Konzeptpapier (wie beim Indizien-System) BEVOR Code. ▶ bleibt vorerst drin.
 
-## ════ UI-PROJEKT TEIL 2: "Handeln vs. Übersicht" -> ZEIT-ACHSE (Benjamin-Konzept) ════
+## ════ UI-PROJEKT TEIL 2: "Handeln vs. Übersicht" -> ZEIT-ACHSE (Projektleitung-Konzept) ════
 KONZEPT (KONZEPT_HANDELN_ORGANISIEREN.md): Statt ▶-Marker an jedem Button zwei übergeordnete Kategorien.
-ACHSE (Benjamin-Schärfung): nicht "Handeln/Übersicht", sondern ZEIT/SZENEN-Währung:
+ACHSE (Projektleitung-Schärfung): nicht "Handeln/Übersicht", sondern ZEIT/SZENEN-Währung:
 - "Übergang in nächste Szene" = löst Szene aus, Zeit vergeht (A/B/C/D, Personen-Szenen-Verben, REISEN, Flucht,
   Schlafen, Fall lösen). REISEN gehört hierher (kostet eine Szene!) - Reisen-Sonderfall entfällt.
 - "Bleibt in der Szene" = kostenlos/zeitlos (Notizbuch, Aktueller Stand, Inventar, Person mitnehmen/dalassen).
 Bewusst neutral formuliert (nicht "kostet eine Szene" - klingt bestrafend).
-PERSONEN (Benjamin-Präzisierung): erscheinen INNERHALB beider Kategorien (nicht mehr separat dazwischen) -
+PERSONEN (Projektleitung-Präzisierung): erscheinen INNERHALB beider Kategorien (nicht mehr separat dazwischen) -
 unter Übergang mit Szenen-Verben, unter Bleibt mit Verwalten-Aktionen. (Schritt B3, noch nicht gebaut.)
  EIN MODELL ZWEI LAYOUTS (ChatGPT): iPhone Akkordeon (nur einer offen), Desktop zwei Spalten (B2, noch nicht).
 HARTE REGEL: alles unter Übergang muss am Engine-Ort gültig sein (Required-Location v570); Bleibt löst NIE Szene aus.
@@ -13565,24 +13565,24 @@ AM GERÄT prüfen (CSS/Akkordeon): Auf/Zuklappen, Header-Lesbarkeit, ob ABCD gut
 NÄCHSTER: B2 (Desktop-Zwei-Spalten) + B3 (Personen in beide Sektionen, alte NPC-Zeile raus).
 
 ## v7.12.578 (2026-06-10): UI-B1 Nachbesserung - Sektionen unabhängig togglen
-BEFUND (Benjamin): die zwei Kategorie-Rahmen waren striktes Akkordeon (öffne einen -> anderer klappt zwangsweise
-zu). Benjamin will sie EINZELN bewusst auf-/zuklappen (beide offen, beide zu, oder einzeln). Kategorisierung selbst
+BEFUND (Projektleitung): die zwei Kategorie-Rahmen waren striktes Akkordeon (öffne einen -> anderer klappt zwangsweise
+zu). Projektleitung will sie EINZELN bewusst auf-/zuklappen (beide offen, beide zu, oder einzeln). Kategorisierung selbst
 klappt gut. FIX: Header-Klick = classList.toggle('offen') statt add/remove des Gegenparts. Chevron (▾/▸) folgt dem
 Zustand. Initial: Übergang offen (▾), Bleibt zu (▸). Toggle-Logik per node getestet (beide offen/zu/einzeln möglich).
 node --check OK.
 NÄCHSTER: B2 (Desktop-Zwei-Spalten) + B3 (Personen in beide Sektionen).
 
 ## v7.12.579 (2026-06-10): UI-B1 - Freitext in Übergang-Sektion + Abstand zwischen Rahmen
-(1) FREITEXT (Benjamin): löst eine Szene aus -> gehört in "Übergang in nächste Szene", unten unter die Buttons.
+(1) FREITEXT (Projektleitung): löst eine Szene aus -> gehört in "Übergang in nächste Szene", unten unter die Buttons.
 freitext-block (eigenständiges HTML außerhalb #options) wird in renderOptions per appendChild in uebergangBody
 verschoben (ID bleibt, alle Ein-/Ausblend-Referenzen gelten weiter). Scope verifiziert (uebergangBody in
 renderOptions erreichbar, keine function dazwischen).
-(2) ABSTAND (Benjamin): .ui-kategorien gap 8px -> 20px. Verhindert versehentlichen Klick auf den letzten Eintrag
+(2) ABSTAND (Projektleitung): .ui-kategorien gap 8px -> 20px. Verhindert versehentlichen Klick auf den letzten Eintrag
 im Übergang-Rahmen, wenn man den Bleibt-Header öffnen will. node --check OK.
 NÄCHSTER: B3 (Personen in beide Sektionen, alte NPC-Zeile raus) + B2 (Desktop-Spalten).
 
 ## v7.12.580 (2026-06-10): UI-Schritt B3 - Personen INNERHALB der Kategorien (alte schwebende Zeile raus)
-Benjamins Präzisierung umgesetzt: Personen leben jetzt in beiden Kategorien, nicht mehr separat dazwischen.
+Projektleitungs Präzisierung umgesetzt: Personen leben jetzt in beiden Kategorien, nicht mehr separat dazwischen.
 B3a: oeffneNpcMenue(npc, modus) - modus 'szene' (nur Szenen-Verben befragen/bedrohen/...), 'verwalten' (nur
 Party-Aktionen mitnehmen/hier lassen), 'alle' (Rückwärtskompat). Leerer Modus -> Menü öffnet nicht.
 B3b: Helper bauePersonenButtons(container, modus) baut anwesende NPCs (getNpcsAtCurrentLocation) als Buttons.
@@ -13596,17 +13596,17 @@ node --check OK. AM GERÄT prüfen: Personen-Buttons in beiden Sektionen, Verb-M
 JETZT kann das einzelne ▶ (v575) weg (Trennung strukturell komplett) - separater Schritt. NÄCHSTER: B2 (Desktop-Spalten) + ▶ raus.
 
 ## v7.12.581 (2026-06-10): UI-Politur-Paket (Top-Bar, ▶ raus, Party-Anzeige, Kategorie-Emojis)
-Benjamin-Feedback (iPhone-Screenshot IMG_4902 + Run):
+Projektleitung-Feedback (iPhone-Screenshot IMG_4902 + Run):
 (1) TOP-BAR ZWEI ZEILEN: vorher wildes flex-wrap (Balken rutschten in Zeile 2, "Karl Mauers Büro" umbrach). Jetzt
 .status-bar flex-direction:column, Zeile 1 (.status-zeile-text) = Szene/Datum · TAGESZEIT · Ort, Zeile 2
 (.status-zeile-balken) = Verfassung/Fall/Spannung. TAGESZEIT neu in Zeile 1 (status-tageszeit, aus _aktTageszeitName)
-- Benjamin musste sonst scrollen um Nacht/Vormittag zu sehen.
+- Projektleitung musste sonst scrollen um Nacht/Vormittag zu sehen.
 (2) ▶-EINZELMARKER ENTFERNT (war v575): Trennung ist jetzt strukturell über die zwei Kategorien, Marker doppelt erklärt.
 (3) PARTY-ANZEIGE permanent (.party-anzeige): über den Kategorien, zeigt _party-Mitglieder mit 🤝 "In Begleitung: X".
 War echter Funktionsverlust seit B3 (vorher Toast, danach unsichtbar). Verschwindet wenn niemand dabei.
-(4) PARTY-SYMBOL: ♦ -> 🤝 in Personen-Buttons (besseres "wir sind ein Team"-Symbol, Benjamin-Wunsch).
+(4) PARTY-SYMBOL: ♦ -> 🤝 in Personen-Buttons (besseres "wir sind ein Team"-Symbol, Projektleitung-Wunsch).
 (5) A/B/C/D-BUCHSTABEN -> KATEGORIE-EMOJI: OFFENSIV ✊, DEFENSIV 🛡, ERKUNDEN 🔍, BEOBACHTEN 👁 (HEILEN ✚, FLUCHT 🏃).
-opt.id bleibt intern (Logging/Bot), nur Anzeige ändert sich. Benjamin: ABCD-Zählung passé.
+opt.id bleibt intern (Logging/Bot), nur Anzeige ändert sich. Projektleitung: ABCD-Zählung passé.
 Getestet: node --check OK, Emoji-Map + Scope (_party global) verifiziert. AM GERÄT prüfen.
 OFFENE BUGS (nächste Prüfung, mit ChatGPT-Lektorat): (a) Bernhard Wahler stand morgens in Karls Büro (Spawn falsch?).
 (b) Freitext in Szene 25 nicht verfügbar - warum? (c) A/B/C/D-Option zum Notizbuch-Hinzufügen, obwohl schon drin.
@@ -13614,7 +13614,7 @@ DOKUMENTIERT für später: IDEE_ITEM_SYSTEM.md (Items finden/geben/anwenden, Dur
 (Spind-Code Szene 38 als Live-Beispiel). NÄCHSTER: B2 (Desktop-Spalten) + Bug-Prüfung nach Lektorat.
 
 ## v7.12.582 (2026-06-10): NPC-Typ-Emojis + bündige Ausrichtung
-BEFUND (Benjamin, IMG_4903): v581 sieht gut aus (Kategorie-Emojis ✊🛡🔍👁 super). Aber Personen-Buttons hatten
+BEFUND (Projektleitung, IMG_4903): v581 sieht gut aus (Kategorie-Emojis ✊🛡🔍👁 super). Aber Personen-Buttons hatten
 hässlichen "·"-Punkt + waren eingerückt/verschoben ggü. den Emoji-Buttons darüber. Personen brauchen auch Emoji.
 FIX: (1) NPC-Typ-Emoji statt "·": Map nach npc.tag - CLIENT 🙋, WITNESS 👤, INFORMANT 🗣, AUTHORITY 👮, ROMANCE ❤,
 FAMILY 👪, SCHUTZ 🛟, KONTAKT/VERBUENDETER 🤝, ANTAGONIST 😠, SUSPECT 🎭, GANGSTER 🕴, STASI 🕵, MYSTERY ❔, Fallback 👤.
@@ -13623,48 +13623,48 @@ In-Party überschreibt mit 🤝. (Geschlecht ist am NPC nicht hinterlegt - Rolle
 (Kategorie + Person), behebt die Einrückung/Verschiebung.
 Getestet: node --check OK, Emoji-Map verifiziert. AM GERÄT prüfen.
 PARTY-ANZEIGE: korrekt eingebaut (v581), erscheint nur wenn _party.length>0 - in Sz1 (Screenshot) war Margarete noch
-nicht aufgenommen, daher nicht sichtbar = korrekt. Benjamin testet mit aufgenommener Person.
+nicht aufgenommen, daher nicht sichtbar = korrekt. Projektleitung testet mit aufgenommener Person.
 OFFEN UI: B2 (Desktop-Spalten). OFFEN LOGIK (nach UI, ChatGPT-Lektorat v580): Stage-3-Sicherung als Engine-Aktionen
 (138x vollzug=false!), Wahler-Telefon-Präsenz, Vf-0-Notfall, Charité/Helene/Marlene-Kanonisierung, Beats<->responsible
 sync, Margot in politischen Läufen blocken, F6 raus. + UI-Bugs: Freitext Szene 25 weg?, Notizbuch-Doppeleintrag.
 
 ## v7.12.583 (2026-06-10): Doppelte Emojis aus Button-Labels raus
-BEFUND (Benjamin, IMG_4904/4905): Emoji DOPPELT - links als option-id UND nochmal im Label (z.B. 🛡 links +
+BEFUND (Projektleitung, IMG_4904/4905): Emoji DOPPELT - links als option-id UND nochmal im Label (z.B. 🛡 links +
 "🛡 DEFENSIV"). Redundant. FIX: Emojis aus markerHtml-Labels entfernt (OFFENSIV/DEFENSIV/ERKUNDEN/BEOBACHTEN/HEILEN/
 FALL LÖSEN) - Labels jetzt nur Text+Farbe, Emoji nur noch links daneben (option-id). Die System-Hinweise (→ OPEL,
-→ SICHER, → HEILEN) bleiben (Benjamin Option 1: kein Emoji, nützliche Zusatzinfo). node --check OK.
+→ SICHER, → HEILEN) bleiben (Projektleitung Option 1: kein Emoji, nützliche Zusatzinfo). node --check OK.
 WAHLER-PUNKT (IMG_4904): war v582-noch-nicht-deployt-Effekt. v582+ gibt SUSPECT->🎭, Fallback 👤 - nie mehr "·".
 Code verifiziert: kein anderer Personen-Pfad mit "·", bauePersonenButtons Fallback ist 👤.
-DOKUMENTIERT: IDEE_UEBERNACHTUNG_ROMANCE.md (Party-Konsistenz bei Romanze + Übernachtungs-Varianz, Benjamin will
+DOKUMENTIERT: IDEE_UEBERNACHTUNG_ROMANCE.md (Party-Konsistenz bei Romanze + Übernachtungs-Varianz, Projektleitung will
 die "abgefahrene" Margot/Margarete-Situation ausbauen statt wegfixen).
 
-## OFFENE BUGS (Benjamin-Feedback v582-Run, NÄCHSTE Schritte - brauchen Code/Run-Analyse):
+## OFFENE BUGS (Projektleitung-Feedback v582-Run, NÄCHSTE Schritte - brauchen Code/Run-Analyse):
 - B1 PARTY-ANZEIGE VERZÖGERT: erscheint erst in der NÄCHSTEN Szene nach dem Mitnehmen, nicht sofort. Stört.
 - B2 TELEFON TROTZ ANWESENHEIT: Margarete war in Party + physisch da, Karl konnte sie trotzdem "anrufen" (Telefon-
   Pfad obwohl neben ihm). = berichtet≠präsent / isInCast≠physisch. (Deckt sich mit ChatGPT-Lektorat P1 Wahler-Telefon.)
-- B3 FREITEXT FEHLT WIEDERHOLT: bei Trude wollte Benjamin per Freitext alle Currywurst essen lassen - nicht möglich.
+- B3 FREITEXT FEHLT WIEDERHOLT: bei Trude wollte Projektleitung per Freitext alle Currywurst essen lassen - nicht möglich.
   Schon 2. Mal (auch Szene 25 früher). Freitext-Verfügbarkeit prüfen (Cooldown? Phase? Bug?).
 - B4 MITNEHMEN-POPUP-TEXT: "Allein weiter" ist irreführend wenn schon Begleitung dabei. Soll "mit bestehender Gruppe
   weiter" o.ä. heißen (IMG_4906: "Wen mitnehmen? ... Allein weiter" obwohl Margarete/Margot/Doc Wagner in Begleitung).
 
 ## v7.12.584 (2026-06-10): Freitext-Cooldown raus + Mitnehmen-Popup-Text
-(1) FREITEXT-COOLDOWN ENTFERNT (Benjamin-Befund: "Freitext fast nie nutzbar, obwohl nie benutzt"). Der 3-Szenen-
-Cooldown (v498, Anti-Cheat) war die einzige künstliche Sperre. Benjamin ist einziger Spieler, missbraucht Freitext
+(1) FREITEXT-COOLDOWN ENTFERNT (Projektleitung-Befund: "Freitext fast nie nutzbar, obwohl nie benutzt"). Der 3-Szenen-
+Cooldown (v498, Anti-Cheat) war die einzige künstliche Sperre. Projektleitung ist einziger Spieler, missbraucht Freitext
 nicht -> Sperre kostet nur Spielspaß. Entfernt: _cdAktiv-Anzeige in renderOptions, Sende-Block, Cooldown-Setzung.
 Freitext jetzt IMMER nutzbar (außer Fall vorbei / Anfrage in-flight - korrekt). HINWEIS: hochgeladener Run _1543
 zeigte Freitext-NUTZUNG (Sz14/28/40) - widersprach "nie benutzt"; evtl. neuerer Run nicht in Projektdateien. Cooldown-
 Entfernung ist unabhängig davon die richtige Entscheidung (einzige Sperre, ohne sie garantiert verfügbar).
-(2) MITNEHMEN-POPUP-TEXT (Benjamin, IMG_4906): "Allein weiter" irreführend wenn schon Begleitung dabei. Jetzt
+(2) MITNEHMEN-POPUP-TEXT (Projektleitung, IMG_4906): "Allein weiter" irreführend wenn schon Begleitung dabei. Jetzt
 abhängig von _party.length: mit Begleitung -> "Mit bestehender Gruppe weiter" + Einleitung "wen du ZUSÄTZLICH
 mitnehmen willst ... oder geh mit deiner bestehenden Gruppe weiter". Ohne -> wie bisher "Allein weiter".
 node --check OK, Scope verifiziert.
 NÄCHSTER (größter Hebel): physische Anwesenheit trennen (isNpcPhysicallyPresentAtCurrentLocation) - löst Telefon-
-trotz-Anwesenheit (Benjamin) UND Wahler-am-falschen-Ort + Party-Kleben (ChatGPT-Lektorat P1) gemeinsam. Konzept zuerst.
+trotz-Anwesenheit (Projektleitung) UND Wahler-am-falschen-Ort + Party-Kleben (ChatGPT-Lektorat P1) gemeinsam. Konzept zuerst.
 OFFEN: Party-Anzeige sofort (nicht erst nächste Szene). Dann ChatGPT-P1-Liste (Akten-Beat-Start, Ort/Prosa-Repair,
 Margarete-Pflichtbeat, Margot/Doc/Lemke Party-Kleben, Marienfelde-Historik, Schreibmaschine-Hörer-Textfehler).
 
 ## v7.12.585 (2026-06-10): ECHTE Freitext-Ursache gefunden + behoben (v584 war Fehlgriff)
-Benjamin widersprach v584 zu Recht: Cooldown war NICHT die Ursache (Freitext lief früher MIT Cooldown; erst seit
+Projektleitung widersprach v584 zu Recht: Cooldown war NICHT die Ursache (Freitext lief früher MIT Cooldown; erst seit
 einigen Versionen ganz weg). ECHTE URSACHE (Claudes eigener v579-Eingriff): Freitext-Block wurde per appendChild in
 uebergangBody verschoben. ABER renderOptions macht list.innerHTML='' beim Render-Start -> uebergangBody samt Block
 aus dem DOM gelöscht -> getElementById('freitext-block') liefert null -> Freitext verschwindet ab dem 2. Render.
@@ -13674,54 +13674,54 @@ Sende-Block + Setzung). (2) Block VOR list.innerHTML='' aus DOM lösen + als win
 Aufbau aus der Referenz wieder in uebergangBody einhängen. (3) 1s-Intervall nutzt auch die Referenz + fasst nur noch
 hidden-Klasse an, nicht die DOM-Position. node --check OK, Rettungs-Logik per node getestet (überlebt innerHTML-Zyklus).
 LEHRE: Bei "seit einigen Versionen weg" zuerst eigene jüngste Eingriffe (v579 Block-Verschiebung) prüfen, nicht
-ältere Mechaniken (v498 Cooldown) verdächtigen. Benjamins Widerspruch hat den Fehlgriff korrigiert.
+ältere Mechaniken (v498 Cooldown) verdächtigen. Projektleitungs Widerspruch hat den Fehlgriff korrigiert.
 NÄCHSTER: physische Anwesenheit trennen (Konzept zuerst) + Party-Anzeige sofort.
 
 ## v7.12.586 (2026-06-10): Party-Zustand LIVE updaten (Buttons + Anzeige sofort)
-BEFUND (Benjamin, IMG_4908): Nach "mitnehmen"/"hier lassen" kam der Toast, aber (a) der Button blieb unverändert
+BEFUND (Projektleitung, IMG_4908): Nach "mitnehmen"/"hier lassen" kam der Toast, aber (a) der Button blieb unverändert
 ("mitnehmen" statt Wechsel auf "hier lassen"/umgekehrt - wirkte klickbar obwohl schon erledigt) und (b) die Party-
 Anzeige oben aktualisierte erst in der NÄCHSTEN Szene. URSACHE: Party-Aktion rief nur renderImRaumAnzeige() (seit v580
 deaktiviert/leer) - NICHT renderOptions, das die Sektions-Buttons + Party-Anzeige baut. FIX: nach _partyAdd/_partyRemove
 renderOptions(currentScene) neu aufrufen -> Buttons + Party-Anzeige live. renderOptions ist reine Render-Funktion ohne
 inkrementierende Seiteneffekte (Re-Aufruf sicher, verifiziert). node --check OK.
-DOKUMENTIERT: IDEE_AKTIONS_KONFIGURATOR.md - Benjamins große Vision: Party-NPCs aktiv einsetzen (ablenken/angreifen/
+DOKUMENTIERT: IDEE_AKTIONS_KONFIGURATOR.md - Projektleitungs große Vision: Party-NPCs aktiv einsetzen (ablenken/angreifen/
 bestechen), KOMBINIERTER Zug (Doc lenkt ab + Karl fesselt = 1 Prompt/1 Szene), Item-Aktionen nach gleichem Muster,
 NPC-Cooldowns je Person (Roth 2 / Doc 3-4 / Margarete 5-6 Züge). "Prompt-Konfigurator" ohne Tippen. Verbindet
 Item-System + NPC-Verben + phys. Anwesenheit zu EINEM System. Reihenfolge: erst phys. Anwesenheit, dann Konfigurator+Items.
-OFFENE LOGIK (Lektorat + Benjamin): Mann-im-Mantel zu generisch (mehr Persönlichkeit), Margarete-Sicherung erkennt
+OFFENE LOGIK (Lektorat + Projektleitung): Mann-im-Mantel zu generisch (mehr Persönlichkeit), Margarete-Sicherung erkennt
 "bei Doc Wagner abgesetzt" nicht (Abschluss scheiterte trotz Sicherung), Doc Wagner Party-Kleben, + ChatGPT-P1-Liste.
 NÄCHSTER: phys. Anwesenheit (Konzept zuerst) - größter Hebel.
 
 ## v7.12.587 (2026-06-10): SICHERUNG ALS ENGINE-AKTION - Schritt A1 (Buttons setzen Beat HART)
-KONZEPT_SICHERUNG_ENGINE.md (Benjamin freigegeben). Behebt den Kern: Fall scheiterte, weil Sicherung nur über
+KONZEPT_SICHERUNG_ENGINE.md (Projektleitung freigegeben). Behebt den Kern: Fall scheiterte, weil Sicherung nur über
 Regex-Raten (istSicherungsVollzug + Prosa-Bestätigung) lief -> vollzug=false trotz korrekter Spieler-Handlung
-(Benjamin: "Margarete längst bei Doc, Abschluss sagt nicht gesichert"). NEU: baueSicherungsButtons(container) -
+(Projektleitung: "Margarete längst bei Doc, Abschluss sagt nicht gesichert"). NEU: baueSicherungsButtons(container) -
 feste Engine-Buttons ab Durchbruch (wahrheitErkannt/ueberfuehrt/stage>=3), NUR für erreichbare Ziele:
 - PERSON (margarete_gesichert): "bei Doc Wagner lassen" (nur wenn am Ort Doc), "zu Helene/Charité bringen" (nur wenn
-  Charité bereisbar), "über die Grenze" (nur wenn Grenzort bereisbar). Benjamin: muss klar kommuniziert + bereisbar sein.
+  Charité bereisbar), "über die Grenze" (nur wenn Grenzort bereisbar). Projektleitung: muss klar kommuniziert + bereisbar sein.
 - AKTEN (akten_gesichert): "an Roth übergeben" (Revier bereisbar/am Ort), "an Vera Lindqvist" (wenn im setupCast).
 Klick setzt HART: clientSecured/evidenceSecured=true + securedAt + politicalBeatsHit += beat, pendingSecurityIntent=null,
 Erfolgs-Toast. Dann chooseOption mit klarem Aktionstext (KI erzählt Folge, Beat steht schon fest). Buttons GANZ OBEN
 über Resolve (erst sichern, dann lösen). Verschwinden je gesichertem Aspekt; ganz weg wenn beides gesichert.
 Regex-Pfad bleibt als Fallback (Freitext-Sicherung). node --check OK, Bedingungs-Logik per node getestet (5 Fälle ✓).
-BENJAMIN-ENTSCHEIDUNGEN: Person-Sicherung zu Helene/Roth ok wenn bereisbar+klar; ZWEI ENDEN (GOOD=Person+Akten,
+PROJEKTLEITUNG-ENTSCHEIDUNGEN: Person-Sicherung zu Helene/Roth ok wenn bereisbar+klar; ZWEI ENDEN (GOOD=Person+Akten,
 PARTIAL=nur Wahrheit, kein unfaires Scheitern mehr); Buttons nur wenn erreichbar.
 NÄCHSTER: A2 (Zwei-Enden GOOD/PARTIAL + ehrliche Gate-Anzeige Pflicht-vs-weich), A3 (Assertion-Report stage4≠gelöst).
 
 ## v7.12.588 (2026-06-10): Reise-Popup Wegweiser R1+R2 - Indizien-Zähler "jetzt/später" + erledigt-Haken
-KONZEPT_REISE_WEGWEISER.md. Benjamin-Befund: Zähler zeigt "offen" auch für Indizien, an die man gerade nicht rankommt
+KONZEPT_REISE_WEGWEISER.md. Projektleitung-Befund: Zähler zeigt "offen" auch für Indizien, an die man gerade nicht rankommt
 (Tageszeit/NPC-Gate). Geprüft: offeneIndizienAmOrt zählt mathematisch korrekt (kein Zählfehler), aber unterscheidet
 nicht erreichbar/gesperrt. FIX R1: neue offeneIndizienAmOrtNachErreichbarkeit(loc) -> {jetzt, spaeter, hattIndizien}.
 Prüft pro offenem Indiz: Tageszeit-Gate (ind.zeit) + NPC-Gate (ind.npc muss laut loc.npcs zur aktuellen Tageszeit da
-sein). Gate erfüllt -> jetzt, sonst später. Anzeige "● X jetzt · Y später" (jetzt=gold, später=gedämpft). Benjamin-Wahl.
+sein). Gate erfüllt -> jetzt, sonst später. Anzeige "● X jetzt · Y später" (jetzt=gold, später=gedämpft). Projektleitung-Wahl.
 R2: Orte die mal Indizien hatten + jetzt alle gefunden -> "✓ erledigt" (grün, wie abgeschlossenes Level; Klick weiter
 möglich). node --check OK, 6 Logik-Tests grün (RBD nachts 2jetzt/1später, vormittag 3/0, Bahnhof tagsüber 0/2, etc.).
 NÄCHSTER: R3 (Sicherungs-Ziel golden im Reise-Popup markieren, analog Fall-lösen-Button - "Margarete muss zu Helene").
 Danach A2 (Zwei-Enden GOOD/PARTIAL + ehrliche Gate-Anzeige), A3 (Assertion-Report stage4≠gelöst), dann Thema B.
 
 ## v7.12.589 (2026-06-10): Reise-Anzeige klarer + geschlechtsangepasste NPC-Emojis + Indizien-Konzept
-ZWEI kleine sichere Fixes (Benjamin-Befund Run _1631):
-(1) ANZEIGE KLARER: "● 2 jetzt" -> "● 2 Indizien hier" (· N später). Benjamin: "muss klarer sein, '2 Indizien hier'".
+ZWEI kleine sichere Fixes (Projektleitung-Befund Run _1631):
+(1) ANZEIGE KLARER: "● 2 jetzt" -> "● 2 Indizien hier" (· N später). Projektleitung: "muss klarer sein, '2 Indizien hier'".
 (2) MARGARETE-EMOJI: 🙋 sah männlich aus. Geschlecht via Vornamen-Heuristik (vorhandene 1953er-Frauenliste) ->
 weibliche Emojis (CLIENT 🙋‍♀️, AUTHORITY 👮‍♀️, SCHUTZ 👩‍⚕️, STASI 🕵‍♀️, Fallback 👩) für Margarete/Helene/Vera/Margot/Trude;
 männlich für Wahler/Lemke/Mertens/Doc. node-Test: 9/9 korrekt. (Kein Geschlechtsfeld am NPC, Vorname ist die Quelle.)
@@ -13730,7 +13730,7 @@ GROSSER BUG ENTDECKT + Konzept geschrieben (KONZEPT_NUR_DEFINIERTE_INDIZIEN.md):
 Indizien gefunden ("Zahlenkombination 04-22-12", "Güterlisten"), aber 0 definierte Kern-Indizien (kein 🔑) -> Reise-
 Counter zählte NIE runter, "Aktueller Stand" zeigte trotzdem Indizien. URSACHE: zwei unsynchronisierte Systeme -
 definierte Kern-Indizien (zählen Counter, via Schlüsselwort-Match pruefeKernIndizFund) vs. KI-indiz_neu (frei erfunden,
-zählt nicht). BENJAMIN-ENTSCHEIDUNG: nur noch DEFINIERTE Indizien, KI darf keine erfinden. Konzept-Kern: Engine gibt
+zählt nicht). PROJEKTLEITUNG-ENTSCHEIDUNG: nur noch DEFINIERTE Indizien, KI darf keine erfinden. Konzept-Kern: Engine gibt
 ziel_indiz vor (bei ERKUNDEN am Ort mit offenem jetzt-Indiz), markiert deterministisch, indiz_neu abschalten, Prompt
 anpassen (gemini.js: keine erfundenen Indizien). RISIKO: andere Fälle brauchen evtl. erst Indizien-Nachpflege (sonst
 finden sie nichts mehr) -> I1 Bestandsaufnahme zuerst. OFFENE FRAGEN: Pilot Margarete vs. alle Fälle; atmosphär.
@@ -13757,7 +13757,7 @@ classifyEvidenceAction() (gewählte Aktion -> 'umgebung'|'person'|null via windo
 deterministische Vergabe in pruefeKernIndizFund: passt die Aktion zu quelle/actions eines offenen, jetzt-findbaren
 Indizes (Tageszeit+NPC-Gate erfüllt) -> GENAU 1 Indiz garantiert vergeben, auch ohne Schlüsselwort-Match. Schlüsselwort-
 Pfad bleibt als Fallback (auch max 1/Szene). chooseOption merkt die Aktion in window._letzteAktion (kat+text+npc).
-Findbarkeits-Garantie (Benjamin): richtige Aktion am richtigen Ort -> Indiz zügig+verlässlich, kein Raten mehr.
+Findbarkeits-Garantie (Projektleitung): richtige Aktion am richtigen Ort -> Indiz zügig+verlässlich, kein Raten mehr.
 node --check OK, Klassifikation 9/9 getestet ("Durchsuch Schreibtisch"->umgebung, "Durchsuch Wahler"->person,
 "Bestich Lemke"->person, "Beobachte Gleis"->umgebung, "Schieß"->null).
 WICHTIG: indiz_neu (KI) läuft NOCH parallel (additiv, nichts kaputt). Abschaltung erst I3.
@@ -13781,7 +13781,7 @@ I4: Stand-Popup + Notizbuch zeigen "X / N Indizien gefunden" (gefundeneIndizIds.
 node --check OK, 7/7 Logik-Tests (Pick==Vergabe-Konsistenz, Ziel-Bevorzugung, Zeit-Gates, KI-Ignorier-Gate), Struktur-
 Check Kern-Prüfung außerhalb des if. Bausteine-Vollständigkeit verifiziert (10 Marker).
 NÄCHSTER: I5 (Stage beat-basiert - VORSICHT Stage-1-Gate braucht 4 indizien, wächst jetzt nur noch über definierte),
-I6 (Run-Test). Danach Items + NPC-Actions (Benjamin: "danach auch items und npc actions").
+I6 (Run-Test). Danach Items + NPC-Actions (Projektleitung: "danach auch items und npc actions").
 
 ## v7.12.593 (2026-06-10): Indizien-Härtung (ChatGPT-Lektorat v592: P1 NPC-Ziel + actions-Mechanik)
 Lektorat verifiziert: _npcInteraktion existierte (Z17978), wurde aber in chooseOption NICHT gelesen -> npcId kam nie
@@ -13798,9 +13798,9 @@ P2b: Reise-Popup-Text ehrlich: "Ziel wählen startet die nächste Szene" (Reisen
 P2c: Statischer Systemprompt: Vorrang-Satz (INDIZ-REGEL/ZIEL-INDIZ überschreibt die alte indiz_neu-Pflicht).
 P3: Mertens raucht sowjetische Papirossa statt F6 (F6 erst ab 1958, Anachronismus); Mann-im-Mantel-Verweis angepasst.
 node --check OK, 8/8 Tests (Willi/Lemke-Trennung, Freitext-Ziel, actions-Gating Beobachten/Durchsuchen/Bedrohen).
-NÄCHSTER: I6 Run-Test durch Benjamin (v593 spielen!), dann I5 (Stage beat-basiert), dann Items + NPC-Actions.
+NÄCHSTER: I6 Run-Test durch Projektleitung (v593 spielen!), dann I5 (Stage beat-basiert), dann Items + NPC-Actions.
 
-## v7.12.594 (2026-06-10): 3 Run-Bugs gefixt (Benjamin-Run 1800: Custody-Richtung, Akten-Buttons, Party-Sicherung)
+## v7.12.594 (2026-06-10): 3 Run-Bugs gefixt (Projektleitung-Run 1800: Custody-Richtung, Akten-Buttons, Party-Sicherung)
 POSITIV aus dem Run: Goldener Anker zählte KORREKT (2 Indizien -> Willi befragt -> "1 Indiz hier" -> Lemke befragt ->
 "✓ erledigt"). Deterministische Vergabe + Counter funktionieren im echten Spiel.
 FIX 1 CUSTODY-RICHTUNG (Sz20/21): 'handschellen' war ALLEIN-Bestätiger in arrestConfirmRe -> Karl fesselte MfS-Männer
@@ -13817,7 +13817,7 @@ mitnehmbar (Mitnehmen-Verb entfällt; wieder mitnehmen würde die Sicherung aufh
 NOTIERT (offen, z.T. Thema B): (a) Sz1 Margarete im Personen-Menü, aber KI-Optionen "ruf sie an" - Telefon-trotz-
 Anwesenheit (Thema B physische Präsenz). (b) Willi Kummer (Wirt) kommt ohne Widerstand mit - ortsgebundene NPCs
 sollten Mitnahme normalerweise ablehnen. (c) Custody+Party: was passiert mit Begleitern bei Festnahme ("alle in einer
-Zelle?"). (d) Benjamin-Wunsch: kombinierte NPC-Manöver (KO+fesseln mit eigenen Handschellen, Ablenkung+Zugriff) als
+Zelle?"). (d) Projektleitung-Wunsch: kombinierte NPC-Manöver (KO+fesseln mit eigenen Handschellen, Ablenkung+Zugriff) als
 klickbare NPC-Actions -> Aktions-Konfigurator-Projekt (nach I5).
 node --check OK. ChatGPT-Lektorat zum Run folgt.
 
@@ -13831,12 +13831,12 @@ returnen null bei istReise ODER sicherung -> weder pickZielIndiz noch Vergabe gr
 FIX 2 SICHERUNGS-ORTSWECHSEL (P1, Run Sz19/20): "zu Helene bringen" erzählte Charité, Header blieb Doc (Ortsbruch).
 FIX: Sicherungs-Buttons haben zielOrtSuche (helene->charite, grenze->friedrichstr, roth->revier, vera->kranzler);
 Klick setzt engineCurrentLocation HART aufs Ziel (analog reiseZuOrt) + diag 'SICHERUNG mit Ortswechsel'.
-FIX 3 EINGELOCKT (Benjamin): Gesicherte Klientin ist offstage - (a) aus Personen-Buttons gefiltert (bauePersonenButtons),
+FIX 3 EINGELOCKT (Projektleitung): Gesicherte Klientin ist offstage - (a) aus Personen-Buttons gefiltert (bauePersonenButtons),
 (b) PERSONEN-REGEL im recap (KI: tritt NICHT mehr auf, reist nicht mit, taucht nicht zufällig auf; nur Erwähnung ok).
 Ergänzt v594-Party-Remove zur vollständigen Lösung.
 FIX 4 HISTORIE: Holsteinische Str. 18 lag in Friedenau, nicht Friedrichshain -> Mainzer Straße 18 (echte Friedrichshainer
 Arbeiterstraße), 3 Vorkommen ersetzt.
-KONZEPT_CUSTODY_ENGINE.md NEU (Benjamins Frage "Engine-getrieben statt Texterkennung?" -> JA, gleiche Architektur wie
+KONZEPT_CUSTODY_ENGINE.md NEU (Projektleitungs Frage "Engine-getrieben statt Texterkennung?" -> JA, gleiche Architektur wie
 Indizien: Engine entscheidet Festnahme-EREIGNIS + gibt es der KI vor + setzt deterministisch; Threat vs Custody trennen;
 Text-Regex wird Konsistenz-Check; Party-bei-Festnahme-Frage). Bau nach Items/NPC-Actions.
 NOTIERT (Lektorat, später): Schlaf-Ort hart definieren (P1.2, Thema B-nah); Kernbeweise vs optionale Spuren in der
@@ -13846,24 +13846,24 @@ NPC-Tiefe-Profile für Mann im Mantel + Mertens (tick/stimme/methode).
 node --check OK, 4/4 Tests (Reise-Stopp gegen echtes Run-Szenario, Sicherung-Stopp, echte Aktionen unverändert).
 
 ## v7.12.596 (2026-06-10): Run-1847-Fixes (Heilen-Gate, Party-Transparenz, Übernachtungs-Regel, Labels, Abschluss)
-Benjamins Run-Befunde, alle gegen Run/Code verifiziert. VORAB GEKLÄRT (keine Bugs): (a) 2/13-Rechnung stimmt exakt
+Projektleitungs Run-Befunde, alle gegen Run/Code verifiziert. VORAB GEKLÄRT (keine Bugs): (a) 2/13-Rechnung stimmt exakt
 (11 offen in Reiseliste inkl. "X später" + 2 gefunden = 13). (b) Akten-Buttons waren KORREKT da - akten_kopie_wohnung
 war Indiz 1 (Karl HAT die Akten-Kopie).
 FIX 1 HEILEN-GATE: showWagnerHealButton + showMarleneHealButton verlangten Sp<=2 -> bei dauerhaft hoher Stasi-Spannung
-(Sp 4) NIE behandelbar (Benjamins "warum konnte ich mich nicht behandeln lassen"). Neu Sp<=4; nur Sp 5 (aktive Action,
-Original-Sperre v7.12.8) sperrt weiter. Benjamin-Vorschlag.
+(Sp 4) NIE behandelbar (Projektleitungs "warum konnte ich mich nicht behandeln lassen"). Neu Sp<=4; nur Sp 5 (aktive Action,
+Original-Sperre v7.12.8) sperrt weiter. Projektleitung-Vorschlag.
 FIX 2 PARTY-TRANSPARENZ: Margarete "verschwand einfach" Sz30 - tatsächlich KI-erzählte namentliche Flucht + korrekter
 Text-Detektor-Remove (v558), aber OHNE Spieler-Feedback. Neu: Toast "X hat sich abgesetzt" bei jedem text-getriebenen
 Party-Verlust.
-FIX 3 ÜBERNACHTUNGS-PARTY-REGEL (Benjamins Wunsch-Szenen!): Bei UEBERNACHTUNG/ROMANTIK-Aktion mit Party -> recap-
+FIX 3 ÜBERNACHTUNGS-PARTY-REGEL (Projektleitungs Wunsch-Szenen!): Bei UEBERNACHTUNG/ROMANTIK-Aktion mit Party -> recap-
 PFLICHT: Begleiter BLEIBEN über Nacht (Couch/Gästezimmer), sind morgens ANWESEND, niemand "ist längst fort"; sie
 dürfen menschlich reagieren (Doc beschwert sich über Lärm, eifersüchtige Begleiterin würdigt Karl keines Blickes).
 Wer geht, entlässt der SPIELER. Behebt den Widerspruch Prosa-fort-aber-Party-hält (Sz26).
-FIX 4 EHRLICHE LABELS: "Die Akten an Roth übergeben" -> "Die gesammelten Beweise an Roth übergeben" (Benjamin: man
+FIX 4 EHRLICHE LABELS: "Die Akten an Roth übergeben" -> "Die gesammelten Beweise an Roth übergeben" (Projektleitung: man
 übergibt was man hat - Kopie, Notizen, Aussagen; nicht suggerieren, man hätte DIE Original-Akten).
 FIX 5 ABSCHLUSS BEI GESICHERTER KLIENTIN: AUFLOESEN-Push ergänzt - kein beiläufiger Anruf bei der Frau, die Karl
 selbst zu Helene gebracht hat; stattdessen Besuch am sicheren Ort oder Nachricht über die Beschützer.
-NOTIERT: Benjamins Wunsch "Margarete bleibt mit Wahrscheinlichkeit über Nacht" -> durch Fix 3 ist Bleiben jetzt
+NOTIERT: Projektleitungs Wunsch "Margarete bleibt mit Wahrscheinlichkeit über Nacht" -> durch Fix 3 ist Bleiben jetzt
 STANDARD (Varianz in den Reaktionen); KI-Optionen adressieren abwesende NPCs (Wahler-Konfrontation bei Doc) -> Thema B.
 node --check OK. ChatGPT-Lektorat zum Run folgt.
 
@@ -13872,25 +13872,25 @@ Lektorat: Run gelöst, aber Regression (48 statt 26 Sz, Margot kaperte, Drift). 
 FIX 1 FALLBACK-GATE (P1, Run Sz2 bewiesen): Reise fand akten_kopie_wohnung über den LEGACY-SCHLÜSSEL-FALLBACK -
 der v595-Reise-Stopp deckte nur die deterministische Vergabe, der Fallback prüfte keine Aktion. Neu: Bei definierten
 Fällen greift der Fallback NUR wenn _fundModus gesetzt (echte Ermittlungsaktion); Reise/Sicherung (null) -> nichts.
-Legacy-Fälle unverändert. (Kein STRICT-Komplettabschalten - Benjamins Findbarkeits-Netz bleibt für echte Aktionen.)
+Legacy-Fälle unverändert. (Kein STRICT-Komplettabschalten - Projektleitungs Findbarkeits-Netz bleibt für echte Aktionen.)
 FIX 2 ROMANCE-GATE (P1): ROMANCE-FIGUR-PUSH zog Margot Sz7/8 in die akute Stasi-Lage (Fall gekapert, Klientin fiel
 aus Schutzlogik). Neu: In politischen Fällen KEIN Romance-Push solange !clientSecured. Spieler-initiierte Romance
 bleibt möglich; nach der Sicherung pusht die Engine wieder.
 FIX 3 STAGE-FORCE-GATE (P1, Sz42): "AUTO-STAGE 3 erzwungen (extreme Stagnation 22 Sz)" bei definierten Fällen AUS -
 Weg führt über definierte Wahler-Indizien/echte Konfrontation. karlActedTowardsSuspect forciert weiter überall.
-FIX 4 ABSCHIEDS-REGEX (Benjamin: Margarete blieb 13 Sz in Party-Anzeige): Sz17-Prosa "ist längst fort"/"hat die
+FIX 4 ABSCHIEDS-REGEX (Projektleitung: Margarete blieb 13 Sz in Party-Anzeige): Sz17-Prosa "ist längst fort"/"hat die
 Wohnung ... verlassen" matchte den Flucht-Detektor nicht (kannte nur flieht/rennt/verschwindet). Erweitert (+Test
 gegen echten Sz17-Text). Mit v596-Toast jetzt sichtbar UND zeitnah.
-FIX 5 EXPORT-PARTY (Benjamin-Wunsch): CAST-SZENE-DIAG enthält jetzt PARTY=[...] pro Szene -> auswertbar wer wann
+FIX 5 EXPORT-PARTY (Projektleitung-Wunsch): CAST-SZENE-DIAG enthält jetzt PARTY=[...] pro Szene -> auswertbar wer wann
 laut Engine in der Party war. (PARTY +/- Events und NPC-INTERAKTION-Klicks waren schon im Export.)
 NICHT in dieser Runde (Thema B, eigenes Konzept nötig - ChatGPT P1.3+P1.5): Flucht setzt Engine-Ort (transienter
 Opel statt Rückkorrektur); harte Prosa-Ort-Reparatur (Retry/Lokal-Fallback statt Header-Korrektur); Wahler-Reintroduce
-per Berichtskontext (berichtet≠präsent). P2 notiert: Kernbeweise vs optionale Spuren (Designfrage an Benjamin),
+per Berichtskontext (berichtet≠präsent). P2 notiert: Kernbeweise vs optionale Spuren (Designfrage an Projektleitung),
 Margarete-Sicherungsstatus sichtbarer, Gauloises sparsamer, Auffangstellen-Name historisch verankern.
 node --check OK, 12/12 Gate-Tests + Regex gegen echten Sz17-Text.
 
-## v7.12.598 (2026-06-10): META-CUSTODY sichtbar + Erzähl-Wächter (Benjamin Run 2007 Sz12)
-BEFUND (Benjamin: "war angeblich in Gewahrsam, war aber gar nicht so" + "Notizbuch fehlt"): BEIDE dieselbe Wurzel.
+## v7.12.598 (2026-06-10): META-CUSTODY sichtbar + Erzähl-Wächter (Projektleitung Run 2007 Sz12)
+BEFUND (Projektleitung: "war angeblich in Gewahrsam, war aber gar nicht so" + "Notizbuch fehlt"): BEIDE dieselbe Wurzel.
 META-CUSTODY-Würfel (Risk 2 = 25%, Roll 0.12) setzte Gewahrsam ZWISCHEN den Szenen; der META-CUSTODY-EINTRITT-Push
 existierte zwar, aber die KI erzählte KEINE Festnahme (Karl stand frei, packte Mertens am Kragen) -> unsichtbarer
 Engine-Gewahrsam: Fall-lösen GESPERRT·IN GEWAHRSAM + Notizbuch konfisziert (!karlInStasiCustody-Bedingung), ohne dass
@@ -13918,7 +13918,7 @@ Ort/Anwesenheit/Klienten-Zustand noch nicht. Bausteine: W1 Client-State (with_ka
 Härtung (berichtet/Telefon != präsent; Optionen-Filter), W5 Schlaf-Ort. Empfohlene Reihenfolge W1->W3->W5->W4->W2.
 P2-Beifang notiert: Setup-Cast-Audit-Reportbug, Tageszeittextur, Willi ortsgebunden, Kernbeweise-vs-Spuren-Anzeige,
 Reval sparsamer. node --check OK.
-NÄCHSTER: Benjamins Run mit v598/599 (Custody-Wächter live sehen!) + Freigabe KONZEPT_WELTWAHRHEIT -> dann W1.
+NÄCHSTER: Projektleitungs Run mit v598/599 (Custody-Wächter live sehen!) + Freigabe KONZEPT_WELTWAHRHEIT -> dann W1.
 
 ## v7.12.600 (2026-06-10): WELTWAHRHEIT W1 - Client-State als harte State-Machine (ChatGPT-freigegeben)
 KONZEPT_WELTWAHRHEIT von ChatGPT FREIGEGEBEN mit Schärfung: Prosa-Detektoren melden Widersprüche, ändern aber NIE
@@ -13937,12 +13937,12 @@ RECAP-PFLICHT je Zustand: with_karl ("NIEMALS als verschwunden/abgefangen/verleg
 CLIENT=status@ort pro Szene.
 Behebt Lektorat-P1 Run 2007 ("Margarete gleichzeitig da und verschwunden"). node --check OK, 8/8 State-Machine-
 Tests (party_add, secured-Schutz, Klient-Matching, Widerspruchspfad).
-NÄCHSTER: W3 (Flucht-Ort transienter Opel), W5 (Schlaf-Ort), dann W4/W2a. Benjamin: Run mit v600!
+NÄCHSTER: W3 (Flucht-Ort transienter Opel), W5 (Schlaf-Ort), dann W4/W2a. Projektleitung: Run mit v600!
 
 ## v7.12.601 (2026-06-10): Run-2044-Befunde - Schutz-NPC-Lock + Übernachtungs-Diagnostik
 VORAB GEKLÄRT: (a) Sz15-Toast-Salve war GERECHTFERTIGT - echter Durchbruch in einer Szene (Indiz am Verschlag ->
 Stage 2 RETRY ok -> WAHRHEIT ERKANNT). Kein Random. UX-Polish "Toasts staffeln" als P3 notiert. (b) W1/CLIENT-STATE
-wirkte sichtbar: CLIENT=secured@helene ab Sz19, Margarete sauber aus Cast/Party/Buttons. (c) Benjamins Stasi-
+wirkte sichtbar: CLIENT=secured@helene ab Sz19, Margarete sauber aus Cast/Party/Buttons. (c) Projektleitungs Stasi-
 Bedrohungs-Frage: selbst beantwortet - hinten anstellen, später gezielt über Fall-Setup tunen (Druck = Stellschraube).
 FIX 1 SCHUTZ-NPC-LOCK (Screenshot: Helene im Mitnehmen-Popup nach Sicherung bei ihr): _istSchutzNpcDerGesicherten-
 Klientin(name) - der NPC, BEI DEM die Klientin gesichert ist (helene->Schwester Helene, doc_wagner->Doc), ist nicht
@@ -13973,18 +13973,18 @@ Deckt auch den Romance-Drift ab (Margots Atelier ist kein definierter Ort - Engi
 NOTIERT (P2, später): Stage-Toast an verursachende Szene binden (Stage 3 kam Sz25 in Margot-Szene statt bei der
 Beweis-Szene); Lemke temporäre Party (Schutz-Logik); Setup-Cast-Audit-Reportbug; politischer Druck nach Wahrheit
 min. Tension 2 (Setup-Tuning-Phase); gestufter Abschluss-Text; Bildungsachsen Papierstaat/Arbeitswelt ausspielen.
-node --check OK, 7/7 Logiktests. NÄCHSTER: Benjamins Run (Strict-Diag + Ort-Treue + Übernachtungs-Diagnostik v601
+node --check OK, 7/7 Logiktests. NÄCHSTER: Projektleitungs Run (Strict-Diag + Ort-Treue + Übernachtungs-Diagnostik v601
 beobachten), dann W3 Flucht-Ort.
 
 ## v7.12.603 (2026-06-10): Mitnehmen-Popup-Bug (stiller _partyAdd-Abbruch) + Popup-Klick-Logging
-BEFUND (Benjamin, Run 2130: Doc Wagner im Popup angeklickt, kam nicht in die Party; Antwort auf seine Frage:
+BEFUND (Projektleitung, Run 2130: Doc Wagner im Popup angeklickt, kam nicht in die Party; Antwort auf seine Frage:
 NEIN, Popup-Klicks wurden bisher NICHT geloggt - NPC-INTERAKTION deckt nur Personen-Verben): URSACHE mit hoher
 Wahrscheinlichkeit: _partyAdd brach STILL ab wenn npc.id fehlte (if !npc.id return) - Cast-Figuren haben oft nur
 name/rolle ohne id. Zusätzlich zählte der Erfolgs-Toast nur die AUFRUFE, nicht die echten Aufnahmen ("Begleitung"-
 Toast trotz Abbruch möglich).
 FIX 1: _partyAdd leitet fehlende id aus dem Namen ab (npc_doc_wagner); nur ohne id UND name Abbruch - dann LAUT
 (diag '⚠ PARTY-ADD verweigert'). 4/4 Tests (Doc-ohne-id-Fall, Duplikat, leer).
-FIX 2 LOGGING (Benjamin-Wunsch): MITNEHMEN-POPUP-Klick loggt gewählt=[Namen] -> übernommen=N (Party jetzt X);
+FIX 2 LOGGING (Projektleitung-Wunsch): MITNEHMEN-POPUP-Klick loggt gewählt=[Namen] -> übernommen=N (Party jetzt X);
 "ohne neue Mitnahme weiter" wird ebenfalls geloggt. Erfolg wird über echte Party-Längen-Differenz gezählt; bei
 gewählt>0 aber übernommen=0 kommt jetzt ein Warn-Toast 'Mitnahme nicht möglich' statt eines falschen Erfolgs.
 node --check OK. ChatGPT-Lektorat zum Run folgt.
@@ -14006,7 +14006,7 @@ Hinterhöfe/Opel, NICHT der verlassene Ort, keine Aktionen in dessen Räumen; An
 (Custody-Ausbruch) bleibt am Haftort - Würfel entscheidet. Nächste Reise/Sicherung setzt den Ort normal neu.
 NOTIERT für W4 (nächster Weltwahrheit-Block): Vera/Lemke-Party-Härtung (Vera kein AutoJoin - Westkontakt; Lemke
 temporär bis sicherer Ort) - braucht die physicalPresence/party-Trennung. P2: Pflichtbeweise-vs-Spuren-Anzeige
-(Benjamin-Designfrage offen), gestufter Abschluss (Wahler nicht verhaftet/Anker offen), Cast-Audit, Gauloises sparsam.
+(Projektleitung-Designfrage offen), gestufter Abschluss (Wahler nicht verhaftet/Anker offen), Cast-Audit, Gauloises sparsam.
 node --check OK, 9/9 Tests. Run 2130 nicht mehr in /mnt/project - Lock-Aufklärung via Code + Alt-Run.
 
 ## v7.12.605 (2026-06-10): WELTWAHRHEIT W4 (Präsenz-Härtung, schlank) - berichtet/Telefon != präsent, Optionen-Regel, Mitnahme-Ablehnung
@@ -14018,16 +14018,16 @@ gebeamt (Lektorate 1847/2007/2130). 9/9 Tests inkl. "hat die Frachtliste untersc
 W4b ANWESENHEITS-REGEL (recap, PFLICHT): Engine-Liste der physisch Anwesenden (Orts-NPCs + Party) in jedem Prompt -
 Szene+Optionen dürfen NUR diese direkt adressieren; alle anderen nur Erwähnung oder "zu X fahren". Behebt: "Stell
 Wahler zur Rede"-Optionen bei Doc, obwohl Wahler nicht da.
-W4c MITNAHME-ABLEHNUNG (Benjamin-Wunsch + ChatGPT Vera-P1): _npcLehntMitnahmeAb() - KONTAKT-Tag (Vera) und Rollen
+W4c MITNAHME-ABLEHNUNG (Projektleitung-Wunsch + ChatGPT Vera-P1): _npcLehntMitnahmeAb() - KONTAKT-Tag (Vera) und Rollen
 wirt/imbiss/barkeeper (Willi, Trude) bzw. korrespondent/journalist/presse lehnen die Mitnahme MENSCHLICH ab (Toast
 'X lehnt ab: kann den Laden nicht verlassen / arbeitet allein...', diag MITNAHME ABGELEHNT). In Popup UND Verb-Pfad.
-Lemke/Doc/Marlene bleiben mitnehmbar (Doc nahm Benjamin bewusst mit; Lemke-temporär -> später). Popup-Log erweitert
+Lemke/Doc/Marlene bleiben mitnehmbar (Doc nahm Projektleitung bewusst mit; Lemke-temporär -> später). Popup-Log erweitert
 um abgelehnt=[...].
 WELTWAHRHEIT-STAND: W1 ✓ W2a ✓ W3 ✓ W4 ✓(schlank) W5 ✓ - es fehlt W2b (teurer Ort-Retry/Fallback, nur echte
-Hauptort-Brüche Stage>=2). node --check OK. NÄCHSTER: Benjamins Run (Furz-Gate, Flucht-Ort, Anwesenheits-Regel,
+Hauptort-Brüche Stage>=2). node --check OK. NÄCHSTER: Projektleitungs Run (Furz-Gate, Flucht-Ort, Anwesenheits-Regel,
 Ablehnungs-Toasts beobachten) -> dann W2b oder Items-Konzept, je nach Lektorat.
 
-## v7.12.606 (2026-06-10): WAHRHEITS-FUNDAMENT-GATE (Benjamin-Freigabe "3+1", Run 2225: 9-Szenen-Lösung mit 1 Indiz)
+## v7.12.606 (2026-06-10): WAHRHEITS-FUNDAMENT-GATE (Projektleitung-Freigabe "3+1", Run 2225: 9-Szenen-Lösung mit 1 Indiz)
 BEFUND Run 2225: Fall in 9 Szenen gelöst, 1 Indiz. Strict Mode WIRKTE (diag: margarete_aussage unterdrückt), aber
 die KI schenkte wahrheit_erkannt in Sz5 auf Basis zweier Prosa-Keyword-Beats (Beat 1 schon aus dem Eröffnungs-
 Briefing) -> Sicherungs-Buttons -> Klick, Klick, aufgelöst. Letztes Schlupfloch: Prosa erzeugt Wahrheits-Fortschritt.
@@ -14077,14 +14077,14 @@ wahrheitErkannt in JEDER Szene: ohne akten_gesichert-Beat -> "Behaupte NIEMALS A
 im Westen; erlaubt nur: Karl WEISS wohin".
 D) EPILOG-REGEL (recap, ab Wahrheit, stasiTension>=4): Ende darf "knapp entkommen" schmecken (Mertens einen
 Atemzug zu spät), kein ruhiger Ausklang bei 5/5 MfS-Druck.
-BEWUSST NICHT GEBAUT: Lemke-aus-Party-Automatik (Lektorat-P1) - verletzt Benjamins settled rule "wer die Party
+BEWUSST NICHT GEBAUT: Lemke-aus-Party-Automatik (Lektorat-P1) - verletzt Projektleitungs settled rule "wer die Party
 verlässt, entscheidet der SPIELER"; Lemke wurde bewusst mitgenommen. Notiert als P3-Designfrage (Lemke könnte
 in der PROSA anbieten zu gehen, Engine entfernt nie automatisch).
 P2 NOTIERT: St-5-Anzeige vereinheitlichen; "Stellwerk Süd"-Alias; "Menschen in Kisten"->plombierte Güterwagen;
 Nacht-Zeittextur; Bildungsachsen Arbeitswelt/Versorgung. node --check OK, 3/3 Alias-Tests.
 
 ## v7.12.609 (2026-06-10): ITEM-FUNDAMENT (Items-Konzept Schritt 1, ChatGPT-Freigabe mit 3 Schärfungen)
-Konzept KONZEPT_ITEMS_NPC_AKTIONEN.md freigegeben (ChatGPT + Benjamin "ok dann los"). Leitsatz: "Inventar ist
+Konzept KONZEPT_ITEMS_NPC_AKTIONEN.md freigegeben (ChatGPT + Projektleitung "ok dann los"). Leitsatz: "Inventar ist
 keine Spielerei - Inventar ist Weltwahrheit für physische Beweise." Schärfungen übernommen: (1) Item-State-Map
 mit status/owner/locationId statt Array, (2) Beat aus Item-Vorgang abgeleitet statt parallel gepflegt, (3) NPC-
 Manöver erst v610.
@@ -14131,7 +14131,7 @@ Aktion - Taschen, Mantelfutter, Dienstausweis; Indiz-Vergabe läuft regulär) + 
 (_manoever uebergeben_vp: Zustand 'uebergeben', Toast, recap-Text "der VOLKSPOLIZEI ÜBERGEBEN und endgültig
 aus dem Spiel"). Kein "er greift wieder an"-Unsinn mehr möglich - der Zustand regiert.
 node --check OK. ITEMS-KONZEPT v609-v611 KOMPLETT (Pilot): Item-State, W6 NPC-Zustand, M1, M2, Folgeoptionen.
-NÄCHSTER: Benjamins Run (Manöver provozieren: Mann im Mantel/Mertens; mit+ohne Begleiter; Gefesselten
+NÄCHSTER: Projektleitungs Run (Manöver provozieren: Mann im Mantel/Mertens; mit+ohne Begleiter; Gefesselten
 durchsuchen+übergeben; Items im Notizbuch+Export prüfen) -> Lektorat -> dann Schlüssel-Schloss-Entscheidung
 + P2-Liste (Spannungs-Kosten der Manöver, Stage-Anzeige, Stellwerk-Süd-Alias, Güterwagen-Formulierung).
 
@@ -14151,7 +14151,7 @@ OFFEN FÜR v613 (Lektorat-P1s, größerer Umbau): OPTION-REISE (A-D-Option/Über
 Zielort -> engineCurrentLocation folgt dem Spielerklick statt zurückzukorrigieren; löst Roth-Revier-Sz27 +
 Stellwerk-Sz10); danach W2b-Neubewertung (Sz23/24 Anker-Drift war ECHTER Bruch - aber Ursache war vermutlich
 die jetzt gefixte Willi-Party, die die KI an den Anker kettete -> erst messen). P2: Beat erst nach Item-
-Bewegung auch im Nicht-Intent-Pfad prüfen; Lemke-temporär (Designfrage Benjamin); "Genosse" im West-Lager;
+Bewegung auch im Nicht-Intent-Pfad prüfen; Lemke-temporär (Designfrage Projektleitung); "Genosse" im West-Lager;
 Stage-Anzeige. Items-Pilot-Test (M1/M2, Dokumente finden) steht weiter aus.
 
 ## v7.12.613 (2026-06-10): OPTION-REISE (Lektorat Run 2328, Sz10+Sz27 an der Wurzel gelöst)
@@ -14170,8 +14170,8 @@ node --check OK, 6/6 Tests (Sz10-Original, Sz27-Original, "Frag Willi NACH dem S
 Helene-Mapping, Gleichort-Noop, Durchsuchen-Noop). W2b-NEUBEWERTUNG NACH NÄCHSTEM RUN: Mit Option-Reise +
 Willi-Fix (v612) sollten die echten Prosa-Brüche gegen null gehen - sonst W2b-Light entscheiden.
 
-## v7.12.614 (2026-06-10): BEGLEITER-BEFEHLE (Benjamin: "Party-Mitglied auswählen, Anweisungen geben") + Item-Toast
-BENJAMIN-BEFUND: Im Run keine NPC-Actions gesehen (M1/M2 hingen am FEIND-Klick - Benjamin erwartet sie am
+## v7.12.614 (2026-06-10): BEGLEITER-BEFEHLE (Projektleitung: "Party-Mitglied auswählen, Anweisungen geben") + Item-Toast
+PROJEKTLEITUNG-BEFUND: Im Run keine NPC-Actions gesehen (M1/M2 hingen am FEIND-Klick - Projektleitung erwartet sie am
 BEGLEITER: Akteur wählen -> Befehl -> Ziel) + keine Items gesehen (Fund war nur Log-Diag, kein Toast; zudem im
 Run keines der itemType-Indizien gefunden).
 A) BEGLEITER-BEFEHLE: Klickt der Spieler ein PARTY-Mitglied an und freie Feinde sind am Ort (Engine-validiert,
@@ -14181,11 +14181,11 @@ Beute bei Stasi/MfS/Agent/Mertens/Mantel, Toast 'ZUGRIFF'). Hook in npcInterakti
 _zielName; npc=Akteur. diag 'BEGLEITER-BEFEHL: X -> art auf Ziel'. M1/M2 am Feind bleiben zusätzlich bestehen.
 B) ITEM-TOAST: _itemAdd zeigt bei status bei_karl jetzt Toast '🎒 Eingesteckt: [Name] - jetzt in Karls Taschen
 (siehe Notizbuch)' - Fund ist erlebbar, nicht nur Export-Zeile.
-node --check OK. TEST-PFAD für Benjamin: Begleiter mitnehmen -> Konfrontation mit Mertens/Mann im Mantel ->
+node --check OK. TEST-PFAD für Projektleitung: Begleiter mitnehmen -> Konfrontation mit Mertens/Mann im Mantel ->
 Begleiter ANKLICKEN -> Befehle sichtbar; Akten-Indizien finden -> 🎒-Toast + Notizbuch-Abschnitt.
 
 ## v7.12.615 (2026-06-10): KRITISCHER FIX - Manöver/Befehle waren toter Code für Gegner und Party
-BENJAMIN-BEFUND (Mertens konfrontiert, keine Actions): VERIFIZIERT - der gesamte v610/611/614-Block (M1, M2,
+PROJEKTLEITUNG-BEFUND (Mertens konfrontiert, keine Actions): VERIFIZIERT - der gesamte v610/611/614-Block (M1, M2,
 Folgeoptionen am Gefesselten, Begleiter-Befehle) lag im `else if (!_istGegnerTag)`-Zweig des Verben-Builders.
 GEGNER (Mertens hat STASI-Tag = GEGNER-Liste) und PARTY-Mitglieder (eigener _schonInParty-Zweig) erreichten
 den Block NIE -> die Buttons existierten nur für neutrale NPCs, bei denen sie nie greifen. Eingestehen: Claude-
@@ -14197,8 +14197,8 @@ angreifen/-ablenken gegen Feinde am Ort, Gefesselte -> Durchsuchen/VP-Übergabe.
 ERSTER Schnittversuch traf das innere catch (Datei kurz inkonsistent) -> aus outputs neu aufgesetzt, zweiter
 Schnitt mit verifizierten Ankern sauber. Lehre: Bei Block-Verschiebungen IMMER beide Anker mit count==1 prüfen.
 
-## v7.12.616 (2026-06-10): AKTIONS-PLAN - mehrere Befehle kombinieren, EIN Prompt (Benjamins Strg-Auswahl-Vision)
-BENJAMIN: "Party-Member 1: Mertens ablenken, Party-Member 2: Mann im Mantel ablenken, ich selbst fessle beide -
+## v7.12.616 (2026-06-10): AKTIONS-PLAN - mehrere Befehle kombinieren, EIN Prompt (Projektleitungs Strg-Auswahl-Vision)
+PROJEKTLEITUNG: "Party-Member 1: Mertens ablenken, Party-Member 2: Mann im Mantel ablenken, ich selbst fessle beide -
 in EINER Szene, EINEM Prompt, wie Strg-Mehrfachauswahl im Explorer." = der Aktions-Konfigurator aus
 IDEE_AKTIONS_KONFIGURATOR.md, jetzt gebaut.
 MECHANIK: Kampf-Manöver (M1/M2) und Begleiter-Befehle führen NICHT mehr sofort aus, sondern landen via
@@ -14210,11 +14210,11 @@ GLEICHZEITIG in dieser EINEN Szene: 1)... 2)...' + Kampfunfähig-Bleiben + KEIN 
 EINE chooseOption (PLAN_ZUGRIFF, ein Request). Einzelaktion = 1 Plan-Eintrag + Ausführen (ein Klick mehr,
 dafür konsistent kombinierbar). Verfassungs-Gate beim Planen von Karl-Manövern; Mehrfach-Gegner-Gate entfällt
 im Plan-Modus (der Spieler koordiniert ja gerade die Ablenkungen). uebergeben_vp bleibt Sofort-Aktion.
-node --check OK, 4/4 Tests (Benjamins exaktes 3-Aktionen-Szenario: beide gefesselt, 2x Handschellen, ein
-nummerierter Gleichzeitig-Prompt). NÄCHSTER: Benjamins Live-Test des Plan-Flows -> dann Lektorat.
+node --check OK, 4/4 Tests (Projektleitungs exaktes 3-Aktionen-Szenario: beide gefesselt, 2x Handschellen, ein
+nummerierter Gleichzeitig-Prompt). NÄCHSTER: Projektleitungs Live-Test des Plan-Flows -> dann Lektorat.
 
-## v7.12.617 (2026-06-10): AKTIONS-BAUKASTEN (Benjamins Lego-System: Akteur -> Item -> Aktion -> Ziel)
-BENJAMIN-VISION: 3-4-teiliger Klick-Baukasten von links nach rechts ("margarete --- item whiskey --- aktion ---
+## v7.12.617 (2026-06-10): AKTIONS-BAUKASTEN (Projektleitungs Lego-System: Akteur -> Item -> Aktion -> Ziel)
+PROJEKTLEITUNG-VISION: 3-4-teiliger Klick-Baukasten von links nach rechts ("margarete --- item whiskey --- aktion ---
 gegner"), für Einzel- UND Kombi-Aktionen. GEBAUT:
 🧩-Button (fixed, unten rechts) öffnet das Baukasten-Panel (fixed über der Eingabe, Noir-Stil, mobil-tauglich
 als 4 Chip-Zeilen): 1.WER (Karl + alle Party-Mitglieder) 2.ITEM optional (Karls getragene Items; leer-Hinweis)
@@ -14232,47 +14232,47 @@ Konsequenz-System (Ruf/VP-Reaktion) später. TEST: 🧩 öffnen, Karl+Fesseln+Me
 Mertens in Plan, Lemke+Ablenken+Mantel in Plan, Karl+Fesseln+Mertens in Plan -> Ausführen = EIN Prompt.
 
 ## v7.12.618 (2026-06-10): "Mann im GRAUEN Mantel" wurde nicht als Feind erkannt + 🧩-Button robust
-BENJAMIN-BEFUND (Mantel-Mann da, nur normales Angreifen sichtbar): _npcIstFeindlich matchte wörtlich 'mann im
+PROJEKTLEITUNG-BEFUND (Mantel-Mann da, nur normales Angreifen sichtbar): _npcIstFeindlich matchte wörtlich 'mann im
 mantel' - die Szenen-Variante "Mann im GRAUEN Mantel" (auch: langen/dunklen) fiel durch -> keine Manöver, keine
 Begleiter-Befehle, kein Ziel-Kontext. FIX: Regex generisch 'mann im [^,;.]{0,14}mantel' + mantelmann/beschatter.
 5/5 Tests (grau/lang/plain matchen; Willi/Margarete nicht).
 🧩-BUTTON ROBUST: Der DOMContentLoaded-Hook konnte den Button verpassen (Spiel-UI baut DOM dynamisch um) ->
 _renderBaukastenButton() wird jetzt zusätzlich idempotent bei jedem chooseOption und npcInteraktion gerufen -
 spätestens nach dem ersten Klick ist 🧩 da (unten rechts, über der Eingabe).
-WO DIE VERKETTUNG SITZT (für Benjamin): (1) 🧩-Button -> Baukasten -> '+ Zum Plan' mehrfach -> Plan-Leiste
+WO DIE VERKETTUNG SITZT (für Projektleitung): (1) 🧩-Button -> Baukasten -> '+ Zum Plan' mehrfach -> Plan-Leiste
 '▶ Ausführen (N)'. (2) Personen-Menü: Begleiter anklicken -> 'Befiehl: X ablenken/angreifen' landet ebenfalls
 im Plan; Feind anklicken -> 'Niederschlagen & fesseln' landet im Plan. Beide Wege mischen sich im selben Plan.
 Das normale Standard-Verb 'Angreifen' (alt) bleibt eine Sofort-Szene OHNE Plan - P2: ggf. auch in den Plan
-integrieren, erst Benjamins Feedback zum Flow abwarten. node --check OK.
+integrieren, erst Projektleitungs Feedback zum Flow abwarten. node --check OK.
 
-## v7.12.619 (2026-06-10): Baukasten-UI an Content ausgerichtet + eigene Leute keine Ziele (Benjamin-Screenshot)
+## v7.12.619 (2026-06-10): Baukasten-UI an Content ausgerichtet + eigene Leute keine Ziele (Projektleitung-Screenshot)
 A) _bkAusrichten(): 🧩-Button, Baukasten-Panel und Plan-Leiste richten sich an .container (max-width 760px)
 aus statt am Viewport - Button rechts am Content-Rand, Panel left=Container-left, Breite min(Container, 720px),
 re-align bei resize + bei jedem Panel-Render. Desktop: nicht mehr außerhalb des Content-Bereichs, nicht mehr
 viewport-breit. B) ZIEL-FILTER: Party-Mitglieder, die Klientin (clientProfile) und Karl selbst fliegen aus der
-4.ZIEL-Liste - Margarete/Begleiter sind keine Angriffsziele mehr. HINWEIS (an Benjamin kommuniziert): Damit
+4.ZIEL-Liste - Margarete/Begleiter sind keine Angriffsziele mehr. HINWEIS (an Projektleitung kommuniziert): Damit
 sind eigene Leute auch für Geben/Beschützen kein Baukasten-Ziel mehr - falls gewünscht, differenziere ich
 später nach Aktionstyp (sozial vs. aggressiv). node --check OK.
 
-## v7.12.620 (2026-06-10): Plan SICHTBAR im Baukasten - jede Person eigene Aktion (Benjamin-Screenshot 2)
+## v7.12.620 (2026-06-10): Plan SICHTBAR im Baukasten - jede Person eigene Aktion (Projektleitung-Screenshot 2)
 BEFUND: Der Kombi-Flow EXISTIERTE (mehrfach '+ Zum Plan' = pro Person eigene Aktion), aber die Plan-Leiste lag
-auf derselben fixed-Position (bottom:84px) wie das Panel und wurde ÜBERDECKT - Benjamin sah nie, dass sein
+auf derselben fixed-Position (bottom:84px) wie das Panel und wurde ÜBERDECKT - Projektleitung sah nie, dass sein
 erster Eintrag gespeichert war, und schloss daraus "alle können nur dieselbe Aktion".
 FIX: (A) GEPLANT-Sektion oben IM Panel: jede '+ Zum Plan'-Kombination erscheint als Zeile (1. Karl → angreifen
 → Mertens [✕ einzeln entfernbar]) + '▶ Alle N ausführen (eine Szene)'-Button direkt im Panel; darunter
 "Nächste Aktion für eine andere Person bauen". (B) Separate Plan-Leiste rendert NICHT, solange der Baukasten
 offen ist (keine Überdeckung); bei geschlossenem Panel übernimmt sie wieder (für Menü-Befehle). (C) Nach
-'+ Zum Plan' bleibt das Panel offen, Auswahl resettet, Plan sichtbar. Benjamins Beispiel klickt sich jetzt:
+'+ Zum Plan' bleibt das Panel offen, Auswahl resettet, Plan sichtbar. Projektleitungs Beispiel klickt sich jetzt:
 Karl+Angreifen+Mertens [+Plan] -> Margarete+Ablenken+Mertens [+Plan] -> '▶ Alle 2 ausführen'. node --check OK.
 
-## v7.12.621 (2026-06-10): 🧩 nur in Konfliktsituationen (Benjamin-Screenshot 3: Button im Startbildschirm)
+## v7.12.621 (2026-06-10): 🧩 nur in Konfliktsituationen (Projektleitung-Screenshot 3: Button im Startbildschirm)
 _renderBaukastenButton prüft jetzt KONFLIKT-Bedingung: Spiel läuft (engineCurrentLocation + sceneCounter > 0)
 UND mindestens ein FREIER FEINDLICHER NPC am Ort (getNpcsAtCurrentLocation + _npcIstFeindlich + npcZustand
 frei). Sonst: Button entfernt + offenes Panel geschlossen. Da der Check idempotent bei jedem chooseOption/
 npcInteraktion läuft, erscheint 🧩 automatisch wenn Mertens/Mantel-Mann auftauchen und verschwindet, wenn alle
 Gegner gefesselt/ko/weg sind oder das Spiel nicht läuft (Startscreen sauber). node --check OK.
 
-## v7.12.622 (2026-06-10): 🧩-Timing - Konflikt-Check läuft jetzt NACH dem Szenen-Render (Benjamin-Screenshots)
+## v7.12.622 (2026-06-10): 🧩-Timing - Konflikt-Check läuft jetzt NACH dem Szenen-Render (Projektleitung-Screenshots)
 BEFUND: Manöver im Personen-Menü des Mantel-Manns erschienen korrekt (v615/618 wirken!), aber der 🧩-Button
 fehlte. Ursache: Der v621-Konflikt-Check lief nur bei chooseOption/npcInteraktion - also beim KLICK, VOR der
 neuen Szene, mit den NPCs der ALTEN Szene. Wenn der Feind erst MIT der neuen Szene ankommt, sah der Check ihn
@@ -14280,7 +14280,7 @@ nie. FIX: _renderBaukastenButton() zusätzlich in renderImRaumAnzeige (läuft na
 renderOptions (per setTimeout 50ms, wenn die Szene vollständig gerendert ist). Der Button erscheint jetzt,
 sobald der Feind wirklich in der Szene steht, und verschwindet nach dessen Ausschaltung. node --check OK.
 
-## v7.12.623 (2026-06-10): Willi nicht mehr im Reise-Popup + Baukasten-Mehrfachziele (Benjamin-Screenshots)
+## v7.12.623 (2026-06-10): Willi nicht mehr im Reise-Popup + Baukasten-Mehrfachziele (Projektleitung-Screenshots)
 A) KONSISTENZ-FIX: Willi hatte (korrekt) kein Mitnehmen-Verb, wurde aber beim Reisen im "WEN MITNEHMEN?"-Popup
 angeboten -> _mitnehmbareNpcsAmOrt filtert jetzt alle Ablehner (_npcLehntMitnahmeAb: ortsgebundene Wirte,
 KONTAKT/Presse) komplett raus (alte Logik in _mitnehmbareNpcsAmOrtRoh). Wer nicht mitkommen kann, wird gar
@@ -14299,9 +14299,9 @@ stand neben der Romantik, (4) Export führt noch das alte KI-Inventar parallel.
 FIXES: (1) JEDER Akten-Vollzug (_sv.fokus==='akten', Button+Aktion) bewegt ZUERST alle getragenen
 beweis_dokument-Items auf gesichert@uebergeben, DANN Beat - eine Wahrheit. (2) ROMANCE-PUSH-GATE: kein Push
 mehr sobald Fall abschlussreif (wahrheitErkannt + clientSecured/akten_gesichert) - diag 'ROMANCE-PUSH
-unterdrückt'; Romance bleibt freie Spielerwahl (Benjamins Freiheit unangetastet, nur die Engine drängt nicht).
+unterdrückt'; Romance bleibt freie Spielerwahl (Projektleitungs Freiheit unangetastet, nur die Engine drängt nicht).
 (3) DISKRETIONS-REGEL im recap bei ROMANTIK/UEBERNACHTUNG mit Party: Begleiter ziehen sich in der PROSA
-diskret zurück (Nebenraum/Wache) - Engine entfernt NIEMANDEN (Benjamins settled rule "Spieler entlässt" gilt).
+diskret zurück (Nebenraum/Wache) - Engine entfernt NIEMANDEN (Projektleitungs settled rule "Spieler entlässt" gilt).
 BEWUSST VERTAGT mit Begründung: (a) Lemke-Auto-Entfernung (verletzt settled rule - Diskretions-Regel deckt
 das Absurde ab); (b) W2b-Hart-Retry: Sz30-Bruch (Kranzler vs Charité) hat als WURZEL den Sicherungs-Button-
 Hard-Set des Zielorts, während Karl physisch an der Charité stand - der richtige Fix ist Sicherungs-Ziel =
@@ -14312,9 +14312,9 @@ aus Items-Map rendern, KI-Inventar nur noch erzählerisch; größerer Umbau, eig
 Sperre trotz WAHRH (Sz30): nicht reproduziert verifizierbar ohne UI-Kontext, beobachten. (e) Charité in
 Setup-Whitelist: P2-Liste. node --check OK.
 
-## P3-NOTIZ (2026-06-11, Benjamin-Korrektur): Assertion-Report-Nenner falsch
+## P3-NOTIZ (2026-06-11, Projektleitung-Korrektur): Assertion-Report-Nenner falsch
 Claude las "KI-personenImRaum fehlt: 16/77 Szenen" als 77 Szenen - der Run 0032 hatte aber 36 Szenen (Lektorat
-+ Benjamin bestätigt). Der Report-Nenner zählt offenbar NICHT Szenen, sondern eine andere Einheit (vermutlich
++ Projektleitung bestätigt). Der Report-Nenner zählt offenbar NICHT Szenen, sondern eine andere Einheit (vermutlich
 Verarbeitungs-Durchläufe/Requests inkl. Retries - 41 Requests laut Lektorat passt auch nicht exakt). P3: Den
 buildAssertionReport-Zähler prüfen und auf echte Szenenzahl normieren, Label ggf. korrigieren.
 
@@ -14326,8 +14326,8 @@ der W6-Block saß nur im Reintroduce. JETZT: getNpcsAtCurrentLocation filtert am
 (uebergeben/geflohen -> nirgends; gefesselt/ko -> nur am Zustands-Ort; diag 'W6-BLOCK (Präsenz)'). Diese
 Funktion speist Personen-Buttons, Baukasten-Ziele, Anwesenheits-Prompt-Liste UND zeigt Threat-Spawns - ein
 Filter deckt alle Engine-Pfade.
-BEWUSST NICHT/VERTAGT (Begründung an Benjamin): (a) Doc-Party-Auto-Entfernung: settled rule "Spieler
-entscheidet Mitnahme/Entlassung" - Benjamin nahm Doc bewusst mit; (b) W2b-Hart-Retry (3. Lektorats-Forderung):
+BEWUSST NICHT/VERTAGT (Begründung an Projektleitung): (a) Doc-Party-Auto-Entfernung: settled rule "Spieler
+entscheidet Mitnahme/Entlassung" - Projektleitung nahm Doc bewusst mit; (b) W2b-Hart-Retry (3. Lektorats-Forderung):
 echter Bau braucht Retry-Infrastruktur + Tests - EIGENER Schritt nächste Session, Sz37-Bruch (Grenze->
 Charlottenburg-Prosa) ist der Messfall; (c) Custody-Marker-Schärfung Sz37: Erzähl-Wächter korrigierte sich in
 Sz38 SELBST (System wirkte) - Regex-Schärfung P2 nächste Session; (d) Stage-Anzeige St1-spät + Papirossa->
@@ -14346,11 +14346,11 @@ Karl stattfindet (abgeführt/Handschellen an dir/packt dich/Zelle/Verhörraum) -
 ist damit zu; echte Festnahmen (Direkt-Zugriff) bestätigen weiter.
 EXPORT-ITEMS: Im Export steht jetzt ZUERST 'Engine-Items (Weltwahrheit)' aus der Items-Map (Name [status@owner]),
 das alte KI-Inventar ist als '(erzählerisch, KI-geführt)' gelabelt - keine zwei konkurrierenden Wahrheiten
-mehr im Report; Lektorate können sauber unterscheiden. node --check OK. DANACH (Benjamin-Freigabe vorhanden):
+mehr im Report; Lektorate können sauber unterscheiden. node --check OK. DANACH (Projektleitung-Freigabe vorhanden):
 Schlüssel-Schloss-Konzept als nächster Schritt, sobald der nächste Run W2b-light + W6-zentral bestätigt.
 
 ## v7.12.627 (2026-06-11): Personen vereinheitlicht - einmal gelistet, Popup mit Szene/Begleitung-Sektionen
-BENJAMIN-BEFUND (Screenshots): Margarete erschien DOPPELT - oben unter PERSONEN ('ansprechen', modus szene)
+PROJEKTLEITUNG-BEFUND (Screenshots): Margarete erschien DOPPELT - oben unter PERSONEN ('ansprechen', modus szene)
 und unten im initial eingeklappten 'Bleibt in der Szene' ('mitnehmen', modus verwalten) - viele Nutzer sehen
 den unteren Bereich nie. FIX: bauePersonenButtons wird nur noch EINMAL gerufen (oben, modus 'alle' = der
 vorhandene Misch-Zweig). Das Popup zeigt jetzt beide Gruppen klar getrennt: '▸ Aktionen (lösen eine Szene
@@ -14358,8 +14358,8 @@ aus)' (neuer Mini-Header) -> Szene-Verben, dann der seit v549 vorhandene gestric
 (löst keine Szene aus)' -> Mitnehmen/Entlassen (gedämpft-grün, gestrichelt). Der verwalten-Aufruf im
 Bleibt-Block ist entfernt. node --check OK.
 
-## v7.12.628 (2026-06-11): Willi nicht angreifbar + Handschellen-Logik korrigiert (Benjamin-Screenshots Run 0??)
-BENJAMIN-BEFUNDE: (1) Willi Kummer (Wirt/Informant = guter NPC) hatte "Angreifen" im Menü. Ursache: sein Tag
+## v7.12.628 (2026-06-11): Willi nicht angreifbar + Handschellen-Logik korrigiert (Projektleitung-Screenshots Run 0??)
+PROJEKTLEITUNG-BEFUNDE: (1) Willi Kummer (Wirt/Informant = guter NPC) hatte "Angreifen" im Menü. Ursache: sein Tag
 wurde nicht als VERBUENDETE/INFORMANT erkannt -> else-Zweig, der bei Spannung>=4 'angreifen' zuließ (Sz11 war
 bedroht). (2) Handschellen-Beute unlogisch: Karl fesselt den Mann mit DESSEN EIGENEN Handschellen -> sie sind
 an IHM, können nicht gleichzeitig in Karls Tasche sein.
@@ -14369,17 +14369,17 @@ für unbekannte Figuren nur noch bei echter Bedrohungs-PROSA (threatRe), nicht m
 (2) _npcIstFeindlich gibt für gute Rollen hart false zurück (Schutz vor Tag-Fehlern, deckt Baukasten-Ziele +
 Manöver). (3) Handschellen-Beute-_itemAdd an ALLEN 3 Stellen entfernt (Plan, Manöver-Direkt, Begleiter-Befehl) -
 gefesselt heißt: seine Handschellen sind an ihm, kein Item für Karl. 4/4 Feind-Tests grün. node --check OK.
-OFFEN (Benjamin-Diskussion, kein Code): Nacht-Marathon / automatischer Tageswechsel + Müdigkeitsmodell - bewusst
-als Designfrage offen gelassen, Antwort an Benjamin formuliert (siehe Chat). Lektorat Run folgt.
+OFFEN (Projektleitung-Diskussion, kein Code): Nacht-Marathon / automatischer Tageswechsel + Müdigkeitsmodell - bewusst
+als Designfrage offen gelassen, Antwort an Projektleitung formuliert (siehe Chat). Lektorat Run folgt.
 
-## v7.12.629 (2026-06-11): Klient-Telefon-Status + Akten-Item + Müdigkeitsmodell + Werfen-Item (Lektorat 0626 + Benjamin-Features)
+## v7.12.629 (2026-06-11): Klient-Telefon-Status + Akten-Item + Müdigkeitsmodell + Werfen-Item (Lektorat 0626 + Projektleitung-Features)
 LEKTORAT Run 0626: bester/kompaktester Run (17 Sz, 11ct), aber 2 Wahrheitslücken. P1-FIXES:
 (1) KLIENT-TELEFON-STATUS: clientState startet 'remote_phone' wenn Fall per Telefon beginnt (clientProfile.
 beziehung/detail enthält 'per telefon') - NICHT bei Karl. recap KLIENTIN-STATUS (PFLICHT): "nur telefonisch,
 nicht im Wagen, muss abgeholt werden". with_karl erst via _partyAdd (echte Abholung).
 (2) AKTEN-ITEM (Variante A): Bringt die Klientin laut Profil Akten mit, wird beim _partyAdd ein echtes
 item_klient_akten (beweis_dokument) gebucht - "Akten gesichert" wird damit ableitbar statt erfunden.
-BENJAMIN-FEATURES: (3) MÜDIGKEITSMODELL (kein Auto-Schlaf, GTA-Prinzip): caseProgress.muedigkeit++ pro NACHT-
+PROJEKTLEITUNG-FEATURES: (3) MÜDIGKEITSMODELL (kein Auto-Schlaf, GTA-Prinzip): caseProgress.muedigkeit++ pro NACHT-
 Szene (gameTimeIdx===5), Reset bei Schlaf-Aktion. Ab 6 Toast-Warnung, ab 8 sinkt Verfassung schrittweise
 (min 2, alle 3 Szenen) mit Toast - Anreiz statt Zwang. (4) WERFEN im Baukasten: Item-Verlust + narrativer
 Moment-Vorteil (benommen, KEIN W6-Dauerzustand - passt nicht ins Modell). Items im Baukasten bei Konflikten
@@ -14387,14 +14387,14 @@ damit nutzbar (Werfen/Bestechen/Geben mit getragenem Item gegen Konflikt-Ziele).
 HINWEIS: Müdigkeit/Akten-Item beim NÄCHSTEN Run beobachten; Charité-Alias + Helene/Marlene-Trennung (Lektorat
 P2) als nächstes notiert.
 
-## v7.12.630 (2026-06-11): ITEM-KATALOG + Aktions-Filterung + Durchsuch-Beute (Benjamin Item-Vision, Pilot)
+## v7.12.630 (2026-06-11): ITEM-KATALOG + Aktions-Filterung + Durchsuch-Beute (Projektleitung Item-Vision, Pilot)
 Konzept KONZEPT_ITEM_KATALOG.md. ITEM_KATALOG (6 Kern-Items: west_zigaretten, korn, bohnenkaffee, westmark,
 ziegelstein, knallkoerper) - jedes mit taugt:[Aktionen] + tauschwert/schaden. _itemKatalogEintrag matcht
 getragene Items per Namens-Substring. BAUKASTEN filtert die Aktionsliste nach item.taugt, sobald ein Item
 gewählt ist (Hint "passend zu X") - kein "Knallkörper trinken"; unbekannte Items (Walther) zeigen alle Aktionen.
 NEUE AKTION 'eintauschen' (Eintauschen für Info): Item-Verlust, Prosa fragt Ziel nach konkreter Information ->
 Indiz-Freischaltung kommt v631 (erst Mechanik). DURCHSUCH-BEUTE: Gefesselten durchsuchen (_durchsuchBeute)
-vergibt bei Stasi/MfS/Agent/Mantel deterministisch 'Bündel Westmark' als echtes _itemAdd (Benjamin: "Geld
+vergibt bei Stasi/MfS/Agent/Mantel deterministisch 'Bündel Westmark' als echtes _itemAdd (Projektleitung: "Geld
 abnehmen wie beim Durchsuchen"). 5/5 Filter-Tests. node --check OK.
 OFFEN/NÄCHSTE SCHRITTE: 'schlagen' als Baukasten-Aktion fehlt noch (in taugt referenziert, Filter ignoriert sie
 sauber); eintauschen->definiertes Indiz freischalten (v631); Orts-Fundlisten (fundItems pro Ort); NPC-Gaben;
@@ -14403,12 +14403,12 @@ Baukasten-Aktionen ggf. ergänzen, damit der Katalog-Filter sie zeigen kann.
 
 ## v7.12.631 (2026-06-11): Eintausch->Indiz, item-spezifische Aktionen, Beweis-Schutz (Lektorat-Freigabe v630)
 LEKTORAT-ARCHITEKTUR übernommen: Item trägt Affordances (taugt:[...]), Aktion trägt Wirkung zentral.
-NEUE/PRÄZISIERTE AKTIONEN (Benjamin): 'angreifen_mit' (Angreifen mit Item - Schaden je nach Härte, Banane =
+NEUE/PRÄZISIERTE AKTIONEN (Projektleitung): 'angreifen_mit' (Angreifen mit Item - Schaden je nach Härte, Banane =
 nur böser Blick), 'werfen_fuesse' (Vor die Füße werfen - Sturz/Ablenkung, für Banane/Knallkörper), 'werfen'
 umbenannt -> 'Ins Gesicht werfen'. Katalog +Bananenschale (taugt nur werfen_fuesse/angreifen_mit - KEIN ins
-Gesicht, Benjamins Beispiel). Pro Item exakte taugt-Liste (Knallkörper: werfen_fuesse/ablenken, nicht ins
+Gesicht, Projektleitungs Beispiel). Pro Item exakte taugt-Liste (Knallkörper: werfen_fuesse/ablenken, nicht ins
 Gesicht).
-EINTAUSCH->INDIZ (Benjamins Spielrelevanz): _npcTauschInfo(npc) -> {indizId, schwelle}; im _planAusfuehren
+EINTAUSCH->INDIZ (Projektleitungs Spielrelevanz): _npcTauschInfo(npc) -> {indizId, schwelle}; im _planAusfuehren
 prüft die Eintausch-Aktion Item-Tauschwert >= NPC-Schwelle -> _markiereIndizGefunden(definiertes Indiz) + Toast
 '🔑 Hinweis ertauscht'. Margarete-Pilot: Willi (Schwelle 3) gibt anker_kontakt_hinweis für West-Zigaretten/
 Bohnenkaffee/Westmark; Lemke (2) gibt lemke_belastet_wahler. Tausch zählt damit aufs Fundament-Gate!
@@ -14418,7 +14418,7 @@ HINWEIS: Item-Instanz-IDs noch typ-basiert (Lektorat-P1 Instanz-vs-Typ-Trennung)
 mehrfache gleiche Items (2x Korn) später usesLeft/Instanz-Counter. Anbieten-Cooldown (Lektorat-P1 Trust-Farm)
 noch offen -> P2.
 
-## v7.12.632 (2026-06-11): WACHHUND Rex - Party-NPC mit eigenen Kommandos (Benjamin-Wunsch)
+## v7.12.632 (2026-06-11): WACHHUND Rex - Party-NPC mit eigenen Kommandos (Projektleitung-Wunsch)
 Willi Kummers Wachhund 'Rex' (HUND_NAME/HUND_HEIMAT='Goldener Anker'). PRÄSENZ: einmal pro Spiel ausgewürfelt
 (_hundVerfuegbarHier, 60% am Anker) - liegt laut recap "neben dem Tresen, sabbernd, knurrt bei Fremden". In
 getNpcsAtCurrentLocation als anklickbarer NPC (tag HUND) eingespeist, wenn am Ort verfügbar ODER in Party.
@@ -14435,7 +14435,7 @@ v631-Aktionsvarianten (werfen_fuesse/angreifen_mit/Eintausch->Indiz) waren berei
 bestätigt. OFFEN: Hund als Baukasten-Akteur (aktuell nur über Personen-Menü); mehrfach gleiche Items (Instanz-
 Counter); anbieten-Cooldown.
 
-## v7.12.633 (2026-06-11): Rex als Baukasten-Akteur (Benjamin: Rex -> Fass -> bestimmtes Ziel)
+## v7.12.633 (2026-06-11): Rex als Baukasten-Akteur (Projektleitung: Rex -> Fass -> bestimmtes Ziel)
 Rex ist jetzt wählbarer Baukasten-Akteur (wenn in Party). 4 Hunde-Kommandos als Baukasten-Aktionen
 (hund_fixiere/belle/knurre/fass, _nurHund-Flag). FILTERUNG: Rex sieht NUR Hunde-Kommandos, alle anderen Akteure
 sehen sie NICHT. Item-Stufe für Rex ausgeblendet (Hund nutzt keine Items). Damit: Rex -> Fass -> [Mertens] (oder
@@ -14444,8 +14444,8 @@ fixiert-Wirkung (fass/fixiere) läuft über bestehende _planAusfuehren-Logik. 2/
 Personen-Menü-Hund-Befehle (v632) bleiben zusätzlich für Schnellzugriff. OFFEN: anbieten-Cooldown, Item-Instanz-
 Counter, Zurückpfeifen (falls fixiert sich als Soft-Lock erweist).
 
-## v7.12.634 (2026-06-11): DEAD-LOOP-FIX Fall-lösen-Gate (Benjamin-Befund Run v633)
-BENJAMIN-BUG: Fall inhaltlich KOMPLETT gelöst (CLIENT=secured@helene, Akten gesichert@uebergeben, beide Gegner
+## v7.12.634 (2026-06-11): DEAD-LOOP-FIX Fall-lösen-Gate (Projektleitung-Befund Run v633)
+PROJEKTLEITUNG-BUG: Fall inhaltlich KOMPLETT gelöst (CLIENT=secured@helene, Akten gesichert@uebergeben, beide Gegner
 uebergeben, Wahler belegt, End-Diag alle ✓) - aber Lösen-Button blieb gesperrt mit wechselndem Grund: "noch
 nicht genug Beweise" / "zu hohe Spannung" / wieder "zu wenig Beweise". URSACHE: caseProgress.stage hing auf 1
 (STAGE-DIAG bis Sz27 durchgehend Stage 1, wahrheitErkannt=false), obwohl 4 Kern-Indizien (Stage-Floor bis 4)
@@ -14456,13 +14456,13 @@ FIX (2 Notausgänge): Wenn das VOLLE politische Gate erfüllt ist (_pgR.erfuellt
 Stage 3 SOFORT hochgezogen (kein _warte) - (1) im Szenen-Commit-Pfad, (2) im Options-Render-Pfad VOR der
 currentStage-Berechnung (damit der Lösen-Button in derselben Szene frei wird, ohne neue Szene). Setzt
 wahrheitErkannt + resolveEverReady. Wenn alles inhaltlich getan ist, gibt es keinen Grund mehr zu warten.
-node --check OK. OFFEN (Benjamin-Designfragen, eigenes Konzept): Party-Stärken-System (wer kann was gut -
+node --check OK. OFFEN (Projektleitung-Designfragen, eigenes Konzept): Party-Stärken-System (wer kann was gut -
 Frau ablenkt, Mann/Roth schlägt, Stasi-Hauptmann nur mit Übermacht+Hund), Fessel-Material kontextuell (nicht
 jeder hat Handschellen - Kabel/Strick/Seil/Krawatte), Erfolgsquoten statt 100%, Gegner-Härtegrade. Custody-
-Provokation ab Sz20 (Benjamin wollte es testen). Realismus VP-Übergabe gefesselter Stasi (Benjamin-Frage).
+Provokation ab Sz20 (Projektleitung wollte es testen). Realismus VP-Übergabe gefesselter Stasi (Projektleitung-Frage).
 
-## v7.12.635 (2026-06-11): Flucht beruhigt zuverlässig über mehrere Szenen (Benjamin-Befund)
-BENJAMIN: "Ich muss oft mehrfach fliehen, um aus der Spannung zu kommen - eigentlich erwarte ich: einmal Flucht
+## v7.12.635 (2026-06-11): Flucht beruhigt zuverlässig über mehrere Szenen (Projektleitung-Befund)
+PROJEKTLEITUNG: "Ich muss oft mehrfach fliehen, um aus der Spannung zu kommen - eigentlich erwarte ich: einmal Flucht
 klicken, im Notfall nochmal reisen, dann ist die Spannung unten." URSACHE: POST-FLUCHT-CAP galt nur für GENAU
 1 Folgeszene (_postFluchtSpannungsCap=0 nach Anwendung); in der nächsten Szene zog ein neuer Trigger die
 Spannung wieder hoch -> erneute Flucht nötig. FIX: Solange das (bereits existierende) Flucht-Fenster läuft
@@ -14479,11 +14479,11 @@ Spannung hart auf <=2 gedeckelt, stasiTension <=2, caseProgress._stasiEpilogModu
 Jagd-Loop mehr, nur Epilog-Druck. Der bestehende Custody-Force-Schutz greift jetzt auch über _stasiEpilogModus
 (vorher nur clientSecured && akten_gesichert UND-verknüpft - bei secured@helene ohne Flag lief er ins Leere).
 A3 ZEUGEN-PARTY-ABLAUF: Party-Garantie zieht einen ZEUGEN (rolle/tag WITNESS) nach Abschlussreife NICHT mehr
-nach (continue). KEINE aktive Entfernung (Benjamins settled rule "Spieler entscheidet"), nur Ende des
+nach (continue). KEINE aktive Entfernung (Projektleitungs settled rule "Spieler entscheidet"), nur Ende des
 künstlichen Nachschleppens - August läuft nicht mehr bis Bahnhof/Opel mit. 7/7 Tests. node --check OK.
 OFFEN aus Lektorat: A4 Client-State Sz3 (Fensterblick=at_location statt with_karl); A5 ITEM-ACTION-Debug-Spur
 für Eintausch sichtbar machen; Charité-Alias; W2b-Hart-Fallback. NÄCHSTER GROSSER SCHRITT: Party-Stärken- +
-Gegner-Härte-System (Konzept KONZEPT_STAERKEN_HAERTE.md, Benjamin-Freigabe erteilt).
+Gegner-Härte-System (Konzept KONZEPT_STAERKEN_HAERTE.md, Projektleitung-Freigabe erteilt).
 
 ## v7.12.637 (2026-06-11): PARTY-STÄRKEN & GEGNER-HÄRTE - Manöver-Erfolg/Fehlschlag (Lektorat-Freigabe)
 Konzept KONZEPT_STAERKEN_HAERTE.md (+ Lektorat-Korrekturen eingearbeitet). A+B+C+D in einem:
@@ -14521,23 +14521,23 @@ bleibt gedeckelt). 6) EINTAUSCH nicht mehr still: Toast bei Ablehnung (Tauschwer
 Indiz schon bekannt) - Item bleibt bewusst bei Karl. 6/6 Tests + node --check OK.
 OFFEN (P2): Eintausch-Item-Verbrauch-Politik final; UI-Einschätzung im Baukasten (Stärke-Rechnung sichtbar).
 
-## v7.12.639 (2026-06-11): Mitnahme-Konsistenz + Hund-Würfel-Diag (Benjamin-Befunde Run v638)
-BENJAMIN-BEFUNDE: (1) Doc Wagner im Mitnehmen-Popup angeklickt -> kam NICHT in Party, flog Sz15 als
+## v7.12.639 (2026-06-11): Mitnahme-Konsistenz + Hund-Würfel-Diag (Projektleitung-Befunde Run v638)
+PROJEKTLEITUNG-BEFUNDE: (1) Doc Wagner im Mitnehmen-Popup angeklickt -> kam NICHT in Party, flog Sz15 als
 "ortsgebunden" raus. (2) Vera geadded -> nicht in Party. (3) Willi-Mitnehmen-Button da, Klick verpuffte.
 URSACHE: ZWEI Ortsbindungs-Listen liefen auseinander - locationBoundRoles (Cast-Clean, kennt arzt/schaffner/
 etc.) vs _npcLehntMitnahmeAb (nur wirt/presse/kontakt). Popup/Menü filterten über die kürzere Liste -> Button
 erschien, _partyAdd/Cast-Clean warfen aber raus. FIX: _npcLehntMitnahmeAb um die locationBoundRoles erweitert
 (arzt/krankenschwester/schaffner/portier/bedienung/sekretärin/bauarbeiter/wachtmeister... - INFORMANT bewusst
 NICHT, damit Informanten mitkommen können). Mitnehmen-Button im Personen-Menü wird NUR gezeigt, wenn
-_npcLehntMitnahmeAb null gibt (kein toter Button mehr, Benjamins "wenn klickbar, muss es wirken"). 5/5 Tests.
+_npcLehntMitnahmeAb null gibt (kein toter Button mehr, Projektleitungs "wenn klickbar, muss es wirken"). 5/5 Tests.
 HUND: keine Hund-Diag im Run -> Würfel fiel auf "nein" (40% Pech, war nicht nachvollziehbar). Diag '🐕 HUND-
 WÜRFEL' ergänzt + Chance 60%->75%. node --check OK.
-HINWEIS Willi: wird jetzt als Wirt konsistent abgelehnt (kein toter Button). Falls Benjamin ihn doch
+HINWEIS Willi: wird jetzt als Wirt konsistent abgelehnt (kein toter Button). Falls Projektleitung ihn doch
 mitnehmbar will -> bewusste Ausnahme nötig. OFFEN: ORTSSPRUNG Sz15 (KI wollte Café Kranzler, Engine hielt Doc-
 Praxis -> W2b-Rückholung zog zur Praxis zurück) - Reise-Erkennung, eigener Fix. Lektorat folgt.
 
-## v7.12.640 (2026-06-11): ORTS-FUNDSTÜCKE - Items endlich erreichbar (Benjamin: "wo waren die Items?")
-BENJAMIN-BEFUND: Im v638-Run gab es nur item_original_akten (Beweis). Die Katalog-Items (Zigaretten/Korn/
+## v7.12.640 (2026-06-11): ORTS-FUNDSTÜCKE - Items endlich erreichbar (Projektleitung: "wo waren die Items?")
+PROJEKTLEITUNG-BEFUND: Im v638-Run gab es nur item_original_akten (Beweis). Die Katalog-Items (Zigaretten/Korn/
 Westmark/Knallkörper...) waren NUR über Durchsuchen Gefesselter erreichbar - in Runs ohne Festnahme also
 UNERREICHBAR. Der ganze Eintausch->Indiz/Werfen/Bestechen-Apparat lief leer, weil die Items nicht zu bekommen
 waren. URSACHE: von 3 geplanten Fundwegen (NPC-Gabe, Durchsuchen, am Ort finden) existierte real nur
@@ -14553,8 +14553,8 @@ A2 Auto-Custody-Stopp (v636/v638 Stasi-Deckel), A3 Finale-Sicherungsort (offen),
 A5 MANÖVER-CHECK-Debug (ist drin, war im Run nur nicht sichtbar weil kein PLAN_ZUGRIFF mit mehreren), A6 Setup-
 Cast-Audit (offen). Mertens-Rang Oberleutnant vs Hauptmann (P2) offen.
 
-## v7.12.641 (2026-06-11): Rex anklickbar - HUND-Menü öffnet endlich (Benjamin-Befund)
-BENJAMIN: "Rex ist anwesend aber nicht anklickbar" (Screenshot: Rex unter PERSONEN, Klick reagiert nicht).
+## v7.12.641 (2026-06-11): Rex anklickbar - HUND-Menü öffnet endlich (Projektleitung-Befund)
+PROJEKTLEITUNG: "Rex ist anwesend aber nicht anklickbar" (Screenshot: Rex unter PERSONEN, Klick reagiert nicht).
 URSACHE: Der HUND-Verbzweig in oeffneNpcMenue machte 'return verbenHund' und sprang damit MITTEN aus der
 Funktion raus - der Popup-Render-Code läuft aber erst WEITER UNTEN. Also: Klick rief oeffneNpcMenue, die
 returnte sofort das Verb-Array (das niemand entgegennimmt), KEIN Popup wurde gebaut -> nichts passierte.
@@ -14563,8 +14563,8 @@ Party/Romance-Erweiterungen (hierlassen/mitnehmen/nacht) werden bei gesetztem Ov
 bekäme der Hund doppelte Verben). Button-Marker für HUND-Tag: 'mitnehmen' (verfügbar) bzw. 'Kommandos' (in
 Party) statt generischem 'ansprechen'. 5/5 Tests. node --check OK. _schonInParty-Reihenfolge geprüft (kein TDZ).
 
-## v7.12.642 (2026-06-11): 4 Benjamin-Befunde - Rex-Popup, Umsehen-Live, Inventar-Konsistenz
-BENJAMIN-BEFUNDE Run v640:
+## v7.12.642 (2026-06-11): 4 Projektleitung-Befunde - Rex-Popup, Umsehen-Live, Inventar-Konsistenz
+PROJEKTLEITUNG-BEFUNDE Run v640:
 (1) UMSEHEN aktualisiert nicht live - nach Sammeln stand weiter "2 Fundstücke", Klick änderte nichts. FIX:
 Umsehen-Klick ruft jetzt renderOptions(currentScene) (nicht nur renderImRaumAnzeige) -> Button verschwindet/
 aktualisiert sofort.
@@ -14589,7 +14589,7 @@ MANÖVER-CHECK, keine Diag, keine Fehlschlag-Unterdrückung -> die _wirkung:'ko'
 der Fehlschlag-Prompt "KEIN K.O." sagte. FIX: _planEintragStaerkeArt kennt jetzt beide Schreibweisen
 (angreifen/angriff, ablenken/ablenkung). Zusätzlich: Fehlschlag-Unterdrückung greift jetzt auch bei expliziter
 _wirkung (ko/gefesselt/fixiert), nicht nur bei erkannter Stärke-Art -> doppelt sicher. 5 Key-Tests grün.
-A1 AKTEN-GATE VARIANTE A (Benjamin-Freigabe nach Spielerlogik-Diskussion): Bei politischem Fall MÜSSEN die
+A1 AKTEN-GATE VARIANTE A (Projektleitung-Freigabe nach Spielerlogik-Diskussion): Bei politischem Fall MÜSSEN die
 Original-Akten physisch gesichert sein (akten_gesichert), wenn sie noch bei Karl liegen - Margarete-Sicherung
 allein reicht dann NICHT. Begründung: Die Akten SIND der politische Kern; Karl mit Akten in der Tasche = Fall
 nicht gelöst, egal ob Margarete sicher ist. sicherungOk = aktenNochBeiKarl ? has('akten_gesichert') :
@@ -14599,8 +14599,8 @@ sichern - sie sind noch bei Karl". v634-Notausgänge nutzen dasselbe strikte Gat
 node --check OK. OFFEN (Lektorat): A2 Client-remote_phone-Opening, A4 August wirklich aus _party entfernen,
 A5 Stage-3-Ort-Prosa-Hart-Block, A7 Setup-Cast-Audit. Mertens-Rang (Oberleutnant=4 vs Hauptmann=5) noch offen.
 
-## v7.12.644 (2026-06-11): Rex-Mitnahme & Icons konsistent (Benjamin-Befunde Run v643)
-BENJAMIN-BEFUNDE: (1) Rex-Icon ändert sich nach Mitnahme nicht (sollte 🤝 werden). (2) Kein Hunde-Icon. (3)
+## v7.12.644 (2026-06-11): Rex-Mitnahme & Icons konsistent (Projektleitung-Befunde Run v643)
+PROJEKTLEITUNG-BEFUNDE: (1) Rex-Icon ändert sich nach Mitnahme nicht (sollte 🤝 werden). (2) Kein Hunde-Icon. (3)
 Rex bei Flucht erneut im Popup angeboten, obwohl schon mitgenommen. (4) "In Begleitung" zeigt Rex nie.
 GEMEINSAME URSACHE: Der Hund hat seinen EIGENEN Party-Status (caseProgress.hundInParty), aber die UI prüfte
 überall nur _istInParty/_party - das kennt den Hund nicht. FIXES:
@@ -14610,7 +14610,7 @@ GEMEINSAME URSACHE: Der Hund hat seinen EIGENEN Party-Status (caseProgress.hundI
 - Mitnehmen-Popup: alle angebotenen NPCs VORAUSGEWÄHLT (vorher musste man erst antippen, dann bestätigen -
   bei nur einem Hund unintuitiv; "Mitnehmen & weiter" nahm Rex nicht mit, weil nicht angetippt).
 6/6 Tests. node --check OK. Doc-Wagner-"Händedruck-statt-Arzt": KEIN Bug - Doc war ab Sz10 wirklich in der
-Party (Opening-Begleiter), 🤝 war korrekt. RATE-LIMIT im Run = Benjamins Gemini-Prepay-Credits aufgebraucht
+Party (Opening-Begleiter), 🤝 war korrekt. RATE-LIMIT im Run = Projektleitungs Gemini-Prepay-Credits aufgebraucht
 (Billing im AI Studio), KEIN Code-Bug. Lektorat folgt.
 
 ## v7.12.645 (2026-06-11): Falscher Sicherungs-Beat aus PLAN_ZUGRIFF + Lösen-Gate strict (Lektorat Run v643)
@@ -14642,7 +14642,7 @@ Regex 'hauptmann' VOR 'oberleutnant' prüft, bekam Mertens fälschlich Härte 5 
 Rolle = "MfS-Oberleutnant" (Lektorat-Empfehlung: hart, aber nicht Endboss). 2 Härte-Tests grün. node --check OK.
 HINWEIS Charité-Alias: bereits in v599 gelöst (éèê -> e normalisiert), Lektorat lief auf älterem Stand.
 "Ministerium fuer Staatssicherheit (MfS)"-Lexikonton bewusst NICHT geändert (Prosa-/Gameplay-Frage, braucht
-Benjamins Freigabe). OFFEN: A6 August/Doc nach Zweck aus Party, A7 Helene/Marlene-Rollentrennung (beide brauchen
+Projektleitungs Freigabe). OFFEN: A6 August/Doc nach Zweck aus Party, A7 Helene/Marlene-Rollentrennung (beide brauchen
 Gameplay-Entscheidungen).
 
 ## v7.12.647 (2026-06-11): Akten-Gate-Wurzel + Beat-ohne-Item + Stärke-Default + Helene (Code-Lektorat v645)
@@ -14660,11 +14660,11 @@ Stärke. JETZT Default 'unbekannt' (angriff/ablenkung 1, einschuechtern 0), Karl
 A3 HELENE/MARLENE: Charité-Ort injizierte nur Marlene, aber Sicherungs-Button sagt "Margarete zu Helene"
 (Schutzperson). JETZT beim Margarete-Fall Helene zusätzlich am Charité-Ort präsent (Variante A: Marlene heilt
 Karl, Helene schützt Margarete). node --check OK (Klammer-Bug beim Bau sofort gefangen+gefixt).
-OFFEN (Gameplay-Entscheidungen, brauchen Benjamin): A4 August nach Indiz aktiv aus Party, A5 Doc außerhalb
+OFFEN (Gameplay-Entscheidungen, brauchen Projektleitung): A4 August nach Indiz aktiv aus Party, A5 Doc außerhalb
 Praxis aus Party (beide berühren "Spieler entscheidet wer Party verlässt"). A8 W2b Retry/Fallback (größerer Bau).
 
-## v7.12.648 (2026-06-11): Freitext-Eingabe ausgeblendet (strategische Richtung Benjamin)
-BENJAMIN-ENTSCHEIDUNG: Die Freitext-Eingabe ("Oder sag Karl in eigenen Worten, was er tun soll") wird
+## v7.12.648 (2026-06-11): Freitext-Eingabe ausgeblendet (strategische Richtung Projektleitung)
+PROJEKTLEITUNG-ENTSCHEIDUNG: Die Freitext-Eingabe ("Oder sag Karl in eigenen Worten, was er tun soll") wird
 ausgeblendet. Begründung: Der Baukasten (Personen-Verben, Items, Manöver-Check, Hund-Kommandos) ist inzwischen
 ein vollständiges, engine-validiertes Eingabesystem (Zak-McKracken-artig). Freitext war die unzuverlässigste
 Eingabe - fast alle KI-Eigenmächtigkeits-Bugs der letzten Runs kamen aus Freitext-Interpretation (August geht
@@ -14681,8 +14681,8 @@ HINWEIS: System-Prompt (~144k Zeichen, Ton/Noir/Historik/Prosa-Erzeugung) bleibt
 schreibt - Freitext-EINGABE != System-Prompt. "KI-Prosa ganz abschalten = reines deterministisches Baukasten-
 Adventure" wäre ein fundamentaler Scheideweg (eigene Konzept-Session), NICHT Teil dieser Änderung.
 
-## v7.12.649 (2026-06-11): Plan-Anzeige gekürzt + Puzzleteil nach Spielende weg (Benjamin-Befunde)
-BENJAMIN-BEFUNDE aus Run v643 (Negativtest taktischer Zugriff):
+## v7.12.649 (2026-06-11): Plan-Anzeige gekürzt + Puzzleteil nach Spielende weg (Projektleitung-Befunde)
+PROJEKTLEITUNG-BEFUNDE aus Run v643 (Negativtest taktischer Zugriff):
 (1) Der lange KI-Prompt eines Plan-Zugriffs ("KOORDINIERTER ZUGRIFF - alle folgenden Handlungen passieren
 GLEICHZEITIG...") wurde dem Spieler 1:1 im Verlauf gezeigt - viel zu ausführlich. FIX: chooseOption bekommt
 ein separates Feld _anzeigeText (kurz, aus den Plan-Labels: "Koordinierter Zugriff: Karl fesselt Mertens; ...").
@@ -14701,8 +14701,8 @@ im Export sichtbar.
 LEKTORAT-RESTE (offen, Gameplay/größerer Bau): A2 NPC_sicherheit nur mit hartem Zielort (Flucht != Sicherung),
 A4 Akten als echtes Item bei definierter Akten-Aktion, A6 PLAN_ZUGRIFF-Fehlschlag Vf-Deckel auf min 1.
 
-## v7.12.650 (2026-06-11): Rex-Mitnehmen live + Plan-Zugriff Flucht-Prosa verschärft (Benjamin-Befunde)
-BENJAMIN-BEFUNDE (Screenshots Run v643):
+## v7.12.650 (2026-06-11): Rex-Mitnehmen live + Plan-Zugriff Flucht-Prosa verschärft (Projektleitung-Befunde)
+PROJEKTLEITUNG-BEFUNDE (Screenshots Run v643):
 (1) REX-MITNEHMEN ohne Live-Update: Klick auf "mitnehmen" beim Rex-Eintrag setzte hundInParty, rief aber nur
 renderImRaumAnzeige() - NICHT renderOptions(). Darum blieb Icon 🐕 + Button "mitnehmen" stehen bis zur nächsten
 Szene. FIX: _hundMitnehmen ruft jetzt auch renderOptions() -> Rex bekommt sofort 🤝 + Kommando-Verben.
@@ -14716,18 +14716,18 @@ zeigt "🔎 Gefunden" unter 13x cooldown-unterdrückten Toasts) - Item-Fund ist 
 cooldown-resistent sein. Button verschwand korrekt (Fund fand statt), aber Spieler bekam keine Rückmeldung.
 
 ## KONZEPT festgeschrieben: BAUKASTEN-FIRST (KONZEPT_BAUKASTEN_FIRST.md)
-Benjamin denkt über eine GRUNDLEGENDE Interface-Umstellung nach: die KI-getriebenen Standard-Buttons (OFFENSIV/
+Projektleitung denkt über eine GRUNDLEGENDE Interface-Umstellung nach: die KI-getriebenen Standard-Buttons (OFFENSIV/
 DEFENSIV/ERKUNDEN/BEOBACHTEN) zurückdrängen/ersetzen durch ein einheitliches Baukasten-Interface (Akteur-Verb-
 Ziel), mit Multi-Aktion pro Szene. Begründung: KI-Buttons schlagen oft Unsinn vor ("beobachte im Rückspiegel",
 "Margaretes Reaktion auf Morgennachrichten"), schmuggeln Reise-Orte in Offensiv-Buttons, kosten je Klick einen
 teuren Prompt. Auch redundante NPC-Verben (in-sicherheit-bringen/beschützen/beobachten) sollen geprüft+entfernt
-werden. ALLES in KONZEPT_BAUKASTEN_FIRST.md festgehalten (auf Benjamins Wunsch "du musst das mitloggen").
+werden. ALLES in KONZEPT_BAUKASTEN_FIRST.md festgehalten (auf Projektleitungs Wunsch "du musst das mitloggen").
 NICHTS davon gebaut - das ist die größte Änderung seit Langem, NICHT nebenbei. Empfohlene Reihenfolge: (1)
 redundante NPC-Verben aufräumen, (2) A/B/C/D über Master-Schalter ausblendbar (wie FREITEXT_AKTIV), (3)
 Baukasten um befragen/durchsuchen erweitern + Multi-Akteur verallgemeinern, (4) A/B/C/D standardmäßig aus.
-Wartet auf Benjamins Entscheidung, wo wir anfangen.
+Wartet auf Projektleitungs Entscheidung, wo wir anfangen.
 
-## v7.12.651 (2026-06-11): NPC-Verben bereinigt (Baukasten-First A1, Benjamin+ChatGPT-Freigabe)
+## v7.12.651 (2026-06-11): NPC-Verben bereinigt (Baukasten-First A1, Projektleitung+ChatGPT-Freigabe)
 ERSTER SCHRITT Baukasten-First. ChatGPT-Freigabe für A1 (NPC-Popup-Verben bereinigen). Redundante Personen-
 Verben aus dem NPC-Klick-Menü (lokale ALLE_VERBEN in oeffneNpcMenue) entfernt:
 - "beobachten" (NPC): raus überall. "Was wollen wir sie beobachten? Wir befragen sie." Beobachten ist Umgebung/
@@ -14763,7 +14763,7 @@ A2 Baukasten immer sichtbar statt nur bei Konflikt (v653), A3 durchsuchen_ort/du
 Verben (v653), A7 GEGNER_HAERTE_BASIS-Tabelle nutzen oder entfernen (optional, Aufräumen).
 
 ## v7.12.653 (2026-06-11): Baukasten-First - Hauptinterface + Ermittlungsverben + KI-Optionen-Flag
-DER ARCHITEKTUR-SCHRITT (ChatGPT+Benjamin-Freigabe, Reihenfolge exakt eingehalten - Flag NICHT default false):
+DER ARCHITEKTUR-SCHRITT (ChatGPT+Projektleitung-Freigabe, Reihenfolge exakt eingehalten - Flag NICHT default false):
 SCHRITT 1 - Baukasten immer sichtbar: _renderBaukastenButton zeigt das 🧩 jetzt IMMER im laufenden Spiel (vorher
 nur bei freiem feindlichem NPC = "Konflikt-Werkzeug"). Nach Spielende (gelöst/gescheitert) verschwindet er weiter.
 Der Baukasten ist damit vom Encounter-Tool zum allgemeinen Aktions-Hauptinterface geworden.
@@ -14774,7 +14774,7 @@ SCHRITT 3 - KI_OPTIONEN_AKTIV-Flag (default TRUE!): Die A/B/C/D-Render-Schleife 
 if(KI_OPTIONEN_AKTIV){...} gekapselt. Systembuttons/Personen-Buttons/Reise/Baukasten NICHT betroffen (separate
 Render-Pfade). false = Testmodus (rein Baukasten+Buttons), aber DEFAULT BLEIBT TRUE - das alte System geht nicht
 verloren, bevor der Test zeigt dass Baukasten-First trägt. 8 Tests grün. node --check OK.
-TESTFRAGE für Benjamin (mit KI_OPTIONEN_AKTIV=false): "Kann Margarete NUR mit Reisen, Personen, Baukasten,
+TESTFRAGE für Projektleitung (mit KI_OPTIONEN_AKTIV=false): "Kann Margarete NUR mit Reisen, Personen, Baukasten,
 Items, Umsehen, Notizbuch, Heilen, Schlafen und Fall lösen gespielt werden?" Wenn nein = guter Befund, zeigt
 welches Verb/welcher Button fehlt. NICHT als Scheitern werten.
 OFFEN für später: durchsuchen_npc-Gate (nur bei kampfunfähig/kooperativ/eingeschüchtert sinnvoll), Baukasten-
@@ -14790,43 +14790,43 @@ statt "niemand am Ort": "Niemand hier lässt sich durchsuchen - überwältige er
 bewusst NICHT als bezwungen (nur kurz unaufmerksam, nicht wehrlos). 6 Tests grün. node --check OK.
 BEWUSST NICHT JETZT: Verben in Kategorien gruppieren (lohnt erst bei längerer Liste + Testfeedback - verfrüht
 ohne Daten), A7 GEGNER_HAERTE_BASIS-Tabelle nutzen/entfernen (reines Aufräumen ohne Spielwirkung).
-NÄCHSTER ECHTER MEILENSTEIN: Benjamins Architektur-Test mit KI_OPTIONEN_AKTIV=false - "Kann Margarete nur über
+NÄCHSTER ECHTER MEILENSTEIN: Projektleitungs Architektur-Test mit KI_OPTIONEN_AKTIV=false - "Kann Margarete nur über
 Baukasten+Buttons gelöst werden?" Das Testergebnis steuert, welche Verben/Buttons noch fehlen.
 
-## v7.12.655 (2026-06-11): Baukasten-Umbau WER->WEN->ITEM->AKTION + Flucht-Prompt entschärft (Benjamin)
-BENJAMIN-BEFUNDE (Screenshot v654 + Run):
+## v7.12.655 (2026-06-11): Baukasten-Umbau WER->WEN->ITEM->AKTION + Flucht-Prompt entschärft (Projektleitung)
+PROJEKTLEITUNG-BEFUNDE (Screenshot v654 + Run):
 (1) BAUKASTEN-REIHENFOLGE umgebaut: WER -> WEN/WAS -> ITEM -> AKTION (vorher WER->ITEM->AKTION->ZIEL). Die AKTION
 kommt jetzt ZULETZT und wird DYNAMISCH gefiltert nach gewähltem Akteur/Ziel/Item - unsinnige Optionen
 verschwinden: "An mich nehmen"/"Befragen" auf eine Person nur wenn Person gewählt, "Vor die Füße werfen"/
 "Trinken mit"/"Anbieten" (itemNoetig) nur wenn ein Item gewählt ist, "Umgebung durchsuchen" nur bei Ziel
 Umgebung. "Umgebung" ist jetzt ein wählbares Ziel neben den Personen.
 (2) AKTIONEN ALPHABETISCH sortiert (localeCompare 'de').
-(3) "Genauer ansehen" entfernt (Benjamin: unnötig).
+(3) "Genauer ansehen" entfernt (Projektleitung: unnötig).
 (4) durchsuchen_npc-Gate von Ziel-Filter auf AKTIONS-Filter umgestellt (Reihenfolge geändert): Person durchsuchen
 nur wenn das gewählte Personen-Ziel bezwungen/kooperativ ist.
 (5) komplett-Check + _bkUebernehmen kontextsensitiv: Umgebungs-Verb braucht "Umgebung", Personen-Verb braucht
 echtes Personen-Ziel; "Umgebung" wird bei Personen-Verben aus der Ziel-Liste gefiltert.
-(6) FLUCHT-PROMPT ENTSCHÄRFT (Benjamin: "warum fliehen wir immer sobald ich jemanden fessle?"): Der globale
+(6) FLUCHT-PROMPT ENTSCHÄRFT (Projektleitung: "warum fliehen wir immer sobald ich jemanden fessle?"): Der globale
 Prompt-Abschnitt "wehrloser Gegner am Boden -> biete weglaufen/fliehen/verschwinden, Sirenen, Backup an" war der
 Haupttreiber (überschrieb das PLAN_ZUGRIFF-Bleib-Verbot). Jetzt: nach Bezwingung Szene mit GESICHERTER LAGE am
 Ort beenden, KEIN von der KI erzählter Abgang/Ortswechsel/Opel/Sirenen-zur-Flucht - der SPIELER entscheidet die
 nächste Handlung. Anti-Folter-Kern bleibt. 8 Tests grün. node --check OK.
-HINWEIS an Benjamin: A/B/C/D-Buttons sind noch sichtbar, weil KI_OPTIONEN_AKTIV=true (default, wie vereinbart).
-Auf false setzen für den reinen Baukasten-Test - das ist Benjamins Entscheidung.
+HINWEIS an Projektleitung: A/B/C/D-Buttons sind noch sichtbar, weil KI_OPTIONEN_AKTIV=true (default, wie vereinbart).
+Auf false setzen für den reinen Baukasten-Test - das ist Projektleitungs Entscheidung.
 
-## v7.12.656 (2026-06-11): KI_OPTIONEN_AKTIV = false (Benjamin: reiner Baukasten-Test startet)
-Benjamin will jetzt den Architektur-Test. KI_OPTIONEN_AKTIV von true auf false gesetzt - die A/B/C/D-KI-Optionen
+## v7.12.656 (2026-06-11): KI_OPTIONEN_AKTIV = false (Projektleitung: reiner Baukasten-Test startet)
+Projektleitung will jetzt den Architektur-Test. KI_OPTIONEN_AKTIV von true auf false gesetzt - die A/B/C/D-KI-Optionen
 werden NICHT mehr gerendert. Das Spiel läuft jetzt rein über: Baukasten (🧩), Personen-Buttons (befragen/Gegner-
 Aktionen), Reisen, Umsehen, Notizbuch, Heilen, Schlafen, Fall lösen, Notflucht, Aktueller Stand. WICHTIG: Das
-Flag ist eine CODE-Konstante (Z7242), KEINE In-Game-Einstellung - Benjamin kann es nicht im Spiel umschalten,
+Flag ist eine CODE-Konstante (Z7242), KEINE In-Game-Einstellung - Projektleitung kann es nicht im Spiel umschalten,
 nur Claude im Code. Jederzeit auf true zurückstellbar (eine Zeile).
 TESTFRAGE: "Kann Margarete NUR mit Baukasten+Buttons gelöst werden?" Sicherungs-Wege sollten erreichbar sein:
 "Geben"-Verb (Akten an Vera/Helene), Charité/Auffangstelle als Reiseziele, "Der Volkspolizei übergeben" als
-NPC-Aktion. Falls ein nötiger Schritt NICHT ohne A/B/C/D erreichbar ist = guter Befund, zeigt die Lücke. Benjamin
+NPC-Aktion. Falls ein nötiger Schritt NICHT ohne A/B/C/D erreichbar ist = guter Befund, zeigt die Lücke. Projektleitung
 testet (sobald Gemini-Credits da), meldet wo es hakt -> gezielt Baukasten/Buttons ergänzen.
 
-## v7.12.657 (2026-06-11): Friedliche Baukasten-Aktionen nicht mehr als Kampf-Zugriff (Benjamin)
-BENJAMIN-BEFUND: "befragen über den Baukasten ist aggressiver" + "wieder fliehe ich direkt". WURZEL (zwei
+## v7.12.657 (2026-06-11): Friedliche Baukasten-Aktionen nicht mehr als Kampf-Zugriff (Projektleitung)
+PROJEKTLEITUNG-BEFUND: "befragen über den Baukasten ist aggressiver" + "wieder fliehe ich direkt". WURZEL (zwei
 Treiber):
 (1) JEDER Baukasten-Plan - auch ein einzelnes friedliches Befragen - wurde in den Rahmen "KOORDINIERTER
 ZUGRIFF... abgestimmtes Manöver" verpackt + als kategorie:'OFFENSIV' verschickt. Das Wort Zugriff/Manöver +
@@ -14841,7 +14841,7 @@ Damit sollte Befragen über Baukasten genauso ruhig sein wie der alte direkte NP
 nach friedlichen Aktionen ist behoben (Flucht-Sperre jetzt in BEIDEN Pfaden).
 
 ## v7.12.658 (2026-06-11): Konflikt-Prompt radikal vereinfacht - natürlicher Satz statt Kommando-Apparat
-BENJAMIN: "Ich weiß nicht ob du den 'koordinierter Zugriff' brauchst. Wir sollten dasselbe machen wie bei
+PROJEKTLEITUNG: "Ich weiß nicht ob du den 'koordinierter Zugriff' brauchst. Wir sollten dasselbe machen wie bei
 Freitext - 'Margarete lenkt Mertens ab und Karl wirft ihm einen Hundehaufen ins Gesicht' - nichts mit
 'koordinierter Zugriff' oder 'die Handschellen des Gegners'. Einfachere Prompts."
 ANALYSE Claude: Der "KOORDINIERTER ZUGRIFF"-Apparat war über Wochen aufgebläht (jeder Bug -> ein neuer
@@ -14860,8 +14860,8 @@ Beispiel-Prompt jetzt 614 statt ~1200+ Zeichen, liest sich wie eine Freitext-Ein
 Klammer-Verheddrungen beim Bau von node --check gefangen + gefixt). Engine (Stärke/Härte, Erfolg/Fehlschlag,
 NPCZ-Wirkungen) unverändert - nur der an die KI gehende TEXT ist jetzt natürlich.
 
-## v7.12.659 (2026-06-11): UI-Sektionen aufgelöst + Flucht-Bug + Umsehen/Indizien verheiratet (Benjamin)
-Vier zusammenhängende Befunde aus Benjamin-Screenshots (Sz4, Karl verletzt, Mertens gefesselt):
+## v7.12.659 (2026-06-11): UI-Sektionen aufgelöst + Flucht-Bug + Umsehen/Indizien verheiratet (Projektleitung)
+Vier zusammenhängende Befunde aus Projektleitung-Screenshots (Sz4, Karl verletzt, Mertens gefesselt):
 (1) ÜBERGANG/BLEIBT-SEKTIONEN AUFGELÖST: Die Akkordeon-Header "▶ Übergang in nächste Szene" / "Bleibt in der
 Szene" waren Quatsch -> entfernt. Beide Body-Container bleiben (Buttons hängen dran), aber ohne Header, ohne
 Toggle, immer offen. CSS: Sektions-Rahmen/Rundung weg (keine leeren Kästen), kleiner margin-top trennt die zweite
@@ -14874,7 +14874,7 @@ eigentliche Treiber: Bei Vf=2 (schwer verletzt) assoziiert die KI "verletzt + Ka
 Anti-Flucht-Hinweis DIREKT an den VERLETZUNGS-MALUS-Push (Vf=2) gehängt: "Karls Verletzung ist KEIN Grund die
 Szene mit Flucht/Abfahrt zu beenden, kein Taumeln aus dem Hof, kein Opel, kein Ortswechsel - der Spieler
 entscheidet". Das ist die wirksamste Stelle (dort bekommt die KI das verletzt-Signal).
-(3) UMSEHEN-DOPPEL AUFGELÖST (Benjamin-Entscheidung Option A+verheiraten): "Umgebung durchsuchen" RAUS aus dem
+(3) UMSEHEN-DOPPEL AUFGELÖST (Projektleitung-Entscheidung Option A+verheiraten): "Umgebung durchsuchen" RAUS aus dem
 Baukasten (+ "Umgebung" als Ziel entfernt, da kein Verb es mehr braucht; WEN-Label vereinfacht). Der
 deterministische "Umsehen"-Button (🔎) ist jetzt der EINE Weg und findet ITEMS *und* die gerade erreichbaren
 KERN-INDIZIEN in einem Klick - respektiert die Indiz-Gates (Tageszeit + NPC am Ort über
@@ -14882,11 +14882,11 @@ offeneIndizienAmOrtNachErreichbarkeit-Logik). Indizien mit ungeerfüllten Gates 
 lohnt sich wiederholt (andere Tageszeit/Person = neue Funde). Button zeigt Items+Indizien im Marker; erscheint
 auch wenn NUR Indizien (keine Items) erreichbar sind. Kein KI-Glücksspiel mehr beim Indizien-Finden (passt zur
 Engine-Philosophie "Engine besitzt Wahrheit, KI erzählt"). 7 Indiz-Gate-Tests + 5 Baukasten-Filter-Tests grün.
-node --check OK. WICHTIG für Benjamin: Indizien-Finden ist jetzt deterministisch über Umsehen - die KI-Szene als
+node --check OK. WICHTIG für Projektleitung: Indizien-Finden ist jetzt deterministisch über Umsehen - die KI-Szene als
 Indizien-Quelle entfällt für die Umgebung (NPC-Befragung kann weiter Indizien über Prosa liefern).
 
-## v7.12.660 (2026-06-11): Umsehen-Button verschwindet nicht bei verstecktem gated Indiz (Benjamin)
-BENJAMIN-BEFUND: "nicht dass der Button verschwindet und theoretisch gäbe es noch ein Indiz zu finden... wir
+## v7.12.660 (2026-06-11): Umsehen-Button verschwindet nicht bei verstecktem gated Indiz (Projektleitung)
+PROJEKTLEITUNG-BEFUND: "nicht dass der Button verschwindet und theoretisch gäbe es noch ein Indiz zu finden... wir
 haben nur ein Item gefunden und dann ist Umsehen wieder weg?" - korrekter Bug. v659-Logik war
 _zuHolen = Items + JETZT-Indizien; gated (spaeter) Indizien ignoriert. Szenario: Ort hat 1 Item + 1 zeit-/
 personengesperrtes Indiz -> Item gesammelt -> _zuHolen 0 -> Button weg -> Spieler erfährt nie, dass er wiederkommen
@@ -14896,7 +14896,7 @@ ehrlich: gold "X Fundstücke" wenn jetzt holbar, sonst gedämpft "später mehr h
 erst, wenn Ort WIRKLICH leer (keine Items, keine jetzt-, keine später-Indizien). 5 Tests grün. node --check OK.
 
 ## v7.12.661 (2026-06-11): Umsehen "4 Fundstücke aber Klick findet nichts" - Wurzel gefixt + Logging
-BENJAMIN-BEFUND (Run v660): "Szene 2: 4 Fundstücke auf dem Umsehen-Button, aber kein Toast, keine Items im
+PROJEKTLEITUNG-BEFUND (Run v660): "Szene 2: 4 Fundstücke auf dem Umsehen-Button, aber kein Toast, keine Items im
 Aktuellen Stand. Szene 7: erneut Umsehen mit Fundstücken, nichts passiert, kann direkt Fall lösen. Logge mit wie
 viele auf dem Button stehen und wie viele/welche ich erhalte." Run-Analyse: KEINE einzige ORTS-FUND/UMSEHEN-Sammel-
 Diagnose im ganzen Run -> Klick sammelte NIE etwas, obwohl Marker Zahlen zeigte.
@@ -14911,7 +14911,7 @@ als "Fundstücke" -> Klick konnte sie nie einsammeln -> stiller Fehlschlag. FIX:
 Indizien (Spuren/Akten/Dokumente am Ort, 9 Stück im Margarete-Fall). quelle:'person' ausgeschlossen. umgebung-
 Indizien mit npc-Gate (z.B. frachtliste_stempel braucht Wahler am Ort) bleiben - der NPC muss präsent sein, aber
 das Indiz wird per Umsehen gefunden, nicht per Befragung. Zeit-Gates bleiben.
-LOGGING (Benjamin-Wunsch): diag '🔎 UMSEHEN-BUTTON' beim Rendern (Marker-Zahl + Items[Namen] + Indizien[IDs] +
+LOGGING (Projektleitung-Wunsch): diag '🔎 UMSEHEN-BUTTON' beim Rendern (Marker-Zahl + Items[Namen] + Indizien[IDs] +
 später) und '🔎 UMSEHEN-KLICK' beim Klick (Items genommen[Namen] + Indizien genommen[IDs] + Gesamt). So zeigt der
 nächste Run exakt Button-Anzeige vs tatsächliche Funde. 4 Tests mit echten Margarete-Wohnungs-Indizien grün +
 4 Filter-Tests grün. node --check OK.
@@ -14934,7 +14934,7 @@ name - "august_lemke" != "August Lemke" hätte sonst nicht gematcht; Test fing d
 A2 (Charité als "spontan erfunden" diagnostiziert, obwohl Sicherungs-Button sie als Ziel anbietet): /charit[eé]/
 + /schumannstr/ in GENERIC_LOCATIONS (wie Doc Wagners Praxis - echter fallübergreifender Heil-/Schutzort). 3 Tests
 grün.
-OFFEN für Benjamin-Entscheidung (Ermessensfragen, kein klarer Bug):
+OFFEN für Projektleitung-Entscheidung (Ermessensfragen, kein klarer Bug):
 A3 (Szene 9 eskaliert nach Sicherung hart: MfS-Wagen+Kugel, Vf5->3): GAMEPLAY-FEEL. Kann gewollt sein (Noir,
 Konsequenzen, Outcome-Varietät) oder unfair. NICHT eigenmächtig geglättet.
 A4 (Setup-Cast-Audit zählt Helene als nicht-aktiviert, obwohl sie auftritt): reiner LEKTORAT/Audit-Bug, kein
@@ -14942,9 +14942,9 @@ Spielbug. Niedrige Prio.
 node --check OK.
 
 ## v7.12.663 (2026-06-11): Lektorat v660 A3 (verifiziert: behalten) + A4 (Audit-Aktivierung)
-A3 (Benjamin-Frage "war der MfS-Wagen Zufall?"): VERIFIZIERT gegen Run - die MfS-Eskalation in Szene 9 war reine
+A3 (Projektleitung-Frage "war der MfS-Wagen Zufall?"): VERIFIZIERT gegen Run - die MfS-Eskalation in Szene 9 war reine
 KI-Dramaturgie, KEIN Pflicht-Stasi-Zugriff-Push (Diagnose zeigt nur AUFLOESUNGS-PUSH + Wahrheitsbeat, keinen
-STASI-FESTNAHME-PFLICHT). Also "mal so, mal so" (KI-Varianz) - passt zur Outcome-Varietät. Benjamin-Entscheidung:
+STASI-FESTNAHME-PFLICHT). Also "mal so, mal so" (KI-Varianz) - passt zur Outcome-Varietät. Projektleitung-Entscheidung:
 BEHALTEN, nichts geändert. (Gut, dass verifiziert - sonst hätten wir gewollte Dramaturgie wegoptimiert.)
 A4 (Setup-Cast-Audit zählt Helene als nicht-aktiviert, obwohl sie Margarete übernimmt): Neues 5. Aktiv-Signal in
 _echtAktiv: NPC ist Ziel einer System-Sicherungsaktion (clientSecuredAt matcht NPC-Namen/Vornamen). Schutzort-NPCs
@@ -14952,15 +14952,15 @@ _echtAktiv: NPC ist Ziel einer System-Sicherungsaktion (clientSecuredAt matcht N
 4 Tests grün. node --check OK.
 
 ## v7.12.664 (2026-06-11): August-Auto-Remove ZURÜCKGENOMMEN (Regelverstoß) + Umsehen-Toast-Cooldown gefixt
-BENJAMIN-BEFUND 1: "Ich hatte August Lemke zur Party hinzugefügt, dann war er in der nächsten Szene wieder
+PROJEKTLEITUNG-BEFUND 1: "Ich hatte August Lemke zur Party hinzugefügt, dann war er in der nächsten Szene wieder
 draußen, dann wieder hinzugefügt." CLAUDE-FEHLER: Mein v662-Fix (_entlaesstNpc) entfernte August automatisch beim
-Indiz-Fund - das VERSTÖSST gegen die eiserne Benjamin-Grundregel "Spieler entscheidet wer die Party verlässt, NIE
+Indiz-Fund - das VERSTÖSST gegen die eiserne Projektleitung-Grundregel "Spieler entscheidet wer die Party verlässt, NIE
 Auto-Entfernung". Lektorat-A1 war gut gemeint, aber die Umsetzung war falsch. KOMPLETT ZURÜCKGENOMMEN: _entlaesstNpc-
 Hook in _markiereIndizGefunden raus, Feld bei lemke_belastet_wahler raus. Verifiziert: _partyAdd wird NUR bei
 Spieler-Aktionen aufgerufen (Z18828 Popup-Klick, Z19587 Begleiter-Befehl) - es gibt KEINE Auto-Aufnahme. August
-ist nur in der Party, wenn Benjamin ihn hinzufügt, und bleibt bis Benjamin ihn rauswirft (Party-Mitglied anklicken
+ist nur in der Party, wenn Projektleitung ihn hinzufügt, und bleibt bis Projektleitung ihn rauswirft (Party-Mitglied anklicken
 -> dalassen). Party-Kontrolle vollständig beim Spieler. (0 _entlaesstNpc-Vorkommen verifiziert.)
-BENJAMIN-BEFUND 2: "Szene 2: 3 Fundstücke auf Umsehen geklickt, wieder kein Toast, kein Hinweis welche 3 ich
+PROJEKTLEITUNG-BEFUND 2: "Szene 2: 3 Fundstücke auf Umsehen geklickt, wieder kein Toast, kein Hinweis welche 3 ich
 bekommen habe." WURZEL GEFUNDEN: Der Erfolgs-Toast lief als variant:'success' mit triggerKey 'orts-fund' - fiel in
 den 3-Szenen-Variant-Cooldown von canShowToast. Die Items/Indizien WURDEN eingesammelt, aber die Bestätigung wurde
 unterdrückt -> wirkt wie stiller Fehlschlag (erklärt auch v660/v661-Befund "kein Toast, keine Items"). FIX: Umsehen-
@@ -14982,17 +14982,17 @@ ließ ihn durch. FIX: (1) Namens-Check ergänzt - /roth|lindner/ + kommissar/vol
 abgelehnt (Behördenkontakte stehen oft nicht im setupCast). (2) Rollen-Regex um kommissar/volkspolizei/polizist/
 beamter/inspektor erweitert. (3) Party-Garantie entfernt ortsgebundene NPCs jetzt aktiv aus _party (statt sie
 in jeder Szene neu nachzuziehen) - _npcLehntMitnahmeAb-Check VOR dem Nachziehen.
-WICHTIG (Benjamin-Regel gewahrt): August (Zeuge) wird NICHT abgelehnt - der Spieler DARF ihn bewusst mitnehmen.
+WICHTIG (Projektleitung-Regel gewahrt): August (Zeuge) wird NICHT abgelehnt - der Spieler DARF ihn bewusst mitnehmen.
 Nur die AUTOMATISCHE Nachziehung durch die Garantie greift bei ihm nach Abschlussreife nicht (bestehender
 Zeugen-Skip v636). Behördenkontakte (Roth/Lindner/Arzt/Wirt) werden komplett abgelehnt - sie reisen NIE mit.
 6 Tests grün (Roth/Lindner abgelehnt, August/Margarete erlaubt). node --check OK.
 OFFEN (nächste Versionen, klein halten): Vera-Handschlag-aber-kein-Add-Button (Screenshot), eintauschen-Toast
 doppeltes Icon + holpriger Text, NPC-Indiz-Vorschau (lohnt sich eintauschen?), Umsehen-Indizien zählen evtl.
-nicht zum Stage-Progress (Benjamin-Eindruck - muss verifiziert werden). A3/A4 v663 (Schwer-verletzt-Toast nach
+nicht zum Stage-Progress (Projektleitung-Eindruck - muss verifiziert werden). A3/A4 v663 (Schwer-verletzt-Toast nach
 Ursache, Behandlung nur bei echter Heilung). A5 v664 (Stage früher ziehen). Lektorat-Audit-Erweiterung.
 
-## v7.12.666 (2026-06-11): Umsehen-Indizien ziehen Stage sofort hoch (Benjamin Befund 1/4)
-BENJAMIN: "Ich habe den Eindruck, wenn ich Indizien mit Umsehen finde, passiert nichts im Fall-Progress/Stage."
+## v7.12.666 (2026-06-11): Umsehen-Indizien ziehen Stage sofort hoch (Projektleitung Befund 1/4)
+PROJEKTLEITUNG: "Ich habe den Eindruck, wenn ich Indizien mit Umsehen finde, passiert nichts im Fall-Progress/Stage."
 VERIFIZIERT: _markiereIndizGefunden SETZT den indizStageFloor korrekt, aber die Stage-AUFSTIEGS-Logik (Z34030/
 34269) läuft NUR im Szenen-Verarbeitungspfad (nach einer KI-Szene). Umsehen löst KEINE Szene aus -> Floor gesetzt,
 aber nie angewendet bis zur nächsten Szene -> Stage-Anzeige hängt. FIX: Neue kompakte Funktion _stageFloorAnwenden()
@@ -15001,10 +15001,10 @@ Floor>=3 & Sz>=6). Wird nach jedem Kern-Indiz-Fund aufgerufen -> Umsehen-Funde z
 auf die nächste Szene zu warten. Konservativ: hebt nur, senkt nie; idempotent im Szenen-Pfad. Stage 4 NIE über
 Floor (braucht Sicherungs-/Auflösungs-Logik). Toast als clue-Variante (kein Cooldown). node --check fing einen
 fehlenden Klammer-Fehler beim Bau. 6 Tests grün.
-RANGFOLGE Benjamin (4 Befunde): 1. Umsehen-Stage (DIESE v666) ✓ · 2. Vera Handschlag-aber-kein-Add-Button ·
+RANGFOLGE Projektleitung (4 Befunde): 1. Umsehen-Stage (DIESE v666) ✓ · 2. Vera Handschlag-aber-kein-Add-Button ·
 3. NPC-Indiz-Vorschau (lohnt sich eintauschen?) · 4. eintauschen-Toast doppeltes Icon + holpriger Text.
 
-## v7.12.667 (2026-06-11): Benjamin-Befunde 2-4 (Vera-Symbol, NPC-Indiz-Vorschau, eintauschen-Toast)
+## v7.12.667 (2026-06-11): Projektleitung-Befunde 2-4 (Vera-Symbol, NPC-Indiz-Vorschau, eintauschen-Toast)
 BEFUND 2 (Vera hat Handschlag-Symbol 🤝 aber keinen Add-Button, lässt sich nicht hinzufügen): WURZEL: 🤝 wurde
 für KONTAKT UND VERBUENDETER gezeigt, aber KONTAKT-NPCs (Vera = Schwedische Korrespondentin/West-Kontakt) lehnen
 Mitnahme ab (_npcLehntMitnahmeAb: "arbeitet allein, trifft Karl nur an vereinbarten Orten"). Symbol versprach
@@ -15019,10 +15019,10 @@ BEFUND 4 (eintauschen-Toast doppeltes Icon 📋📋 + holpriger Text "für info"
 - showProgressToast setzt SELBST ein Icon -> doppelt. Icon aus Titel raus, als iconOverride übergeben. (b)
 Plan-Label nutzte def.label.toLowerCase() -> "Eintauschen für Info" wurde "eintauschen für info" (holprig). Jetzt
 def.label ohne toLowerCase -> "Karl [Schachtel West-Zigaretten] → Eintauschen für Info → Vera Lindqvist".
-Alle 4 Benjamin-Befunde (v666 Stage + v667 Befunde 2-4) erledigt. node --check OK.
+Alle 4 Projektleitung-Befunde (v666 Stage + v667 Befunde 2-4) erledigt. node --check OK.
 
 ## v7.12.668 (2026-06-11): Roth/Lindner-Sperre ZURÜCKGENOMMEN (Regelverstoß) + Party-Origin-Logging
-BENJAMIN-KORREKTUR: "Roth dürfen wir mitnehmen, Roth gehört zu den stärksten Begleiter-NPCs, richtet am meisten
+PROJEKTLEITUNG-KORREKTUR: "Roth dürfen wir mitnehmen, Roth gehört zu den stärksten Begleiter-NPCs, richtet am meisten
 Schaden an mit Lindner weil beides Polizisten sind. Lindner und Roth dürfen wir in der Party mitnehmen wenn wir
 wollen." CLAUDE-FEHLER: Mein v665-Fix sperrte Roth/Lindner KOMPLETT (Namens-Regex + Polizei-Rolle in
 _npcLehntMitnahmeAb + aktiver Remove in Party-Garantie) - das verstößt gegen DIESELBE Regel wie der August-Fehler:
@@ -15038,8 +15038,8 @@ Roth hinzufügt. Erst dann gezielt fixen (regelkonform: nur AUTOMATISCHE Adds un
 LEHRE: Bei Party-Drift NIE den NPC pauschal sperren - immer nur die automatische Aufnahme/Nachziehung treffen,
 das bewusste Mitnehmen durch den Spieler bleibt heilig. node --check OK.
 
-## v7.12.669 (2026-06-11): GATE-FIX - Doppel-Sicherung schlägt Indizien-Minimum (Benjamin + Lektorat P1)
-BENJAMIN (Run 2336, Hauptärgernis): "Es kann nicht sein, dass ich Margarete und Akten abgegeben habe und dann
+## v7.12.669 (2026-06-11): GATE-FIX - Doppel-Sicherung schlägt Indizien-Minimum (Projektleitung + Lektorat P1)
+PROJEKTLEITUNG (Run 2336, Hauptärgernis): "Es kann nicht sein, dass ich Margarete und Akten abgegeben habe und dann
 nicht auflösen kann - diese Buttons suggerieren ja, dass sie finale Buttons sind. Wenn beide Sicherungen vollzogen
 sind, dann kann ich auch Fall lösen." LEKTORAT v668 P1 bestätigt: Klientin gesichert + Beweise gesichert + Wahrheit
 erkannt, trotzdem "Fall lösen" GESPERRT, Assertion "Fall gelöst nein, Stage 3".
@@ -15049,15 +15049,15 @@ Beweis-Fundament von 3 GEFUNDENEN definierten Indizien. Im Run nur 1 Kern-Indiz 
 _fundamentOk=false -> basisOk=false -> Sperre "politische Wahrheit noch nicht belegt". Der Fall war über SICHERUNG
 gelöst (Margarete zu Helene Sz9, Akten an Roth Sz10), nicht über Indiziensammeln - das Fundament-Minimum maß den
 falschen Weg.
-FIX (Benjamin-Freigabe, Gameplay-Entscheidung): Doppel-Sicherung schlägt das Indizien-Minimum. Wenn beim
+FIX (Projektleitung-Freigabe, Gameplay-Entscheidung): Doppel-Sicherung schlägt das Indizien-Minimum. Wenn beim
 Margarete-Fall BEIDE echten Engine-Sicherungen vollzogen sind (has('akten_gesichert') && (margarete_gesichert ||
 clientSecured)) UND die Schmuggelroute belegt ist, gilt _fundamentOk als erfüllt - das vollzogene physische
 Sichern IST der härtere Beleg als 3 gesammelte Indizien. Bypass greift NUR bei echten Engine-Sicherungen (nicht
 KI-fälschbar) + belegter Route -> der Verschenk-Schutz (KI darf Fall nicht nach 2 Prosa-Sätzen verschenken) bleibt
-für unsichere Runs erhalten. basisOk-Berechnung hinter den Bypass verschoben (basisOk2). 5 Tests grün (T1 Benjamins
+für unsichere Runs erhalten. basisOk-Berechnung hinter den Bypass verschoben (basisOk2). 5 Tests grün (T1 Projektleitungs
 Fall lösbar, T2-T4 Verschenk-Schutz intakt, T5 Normalfall).
-ZUSATZ-FIXES: (a) Item-Toast "siehe Notizbuch" entfernt - das Notizbuch zeigt Indizien, nicht Items (Benjamin:
-"stimmt ja nicht mehr"). (b) FLUCHT-NACH-FESSELN (Benjamin: "wir fliehen immer wenn es eine Gruppenaktion mit
+ZUSATZ-FIXES: (a) Item-Toast "siehe Notizbuch" entfernt - das Notizbuch zeigt Indizien, nicht Items (Projektleitung:
+"stimmt ja nicht mehr"). (b) FLUCHT-NACH-FESSELN (Projektleitung: "wir fliehen immer wenn es eine Gruppenaktion mit
 Aggression ist"): Run 2336 Sz11 fesselten Roth+Karl den Mann im Mantel, KI dichtete Flucht dazu. Der Anti-Flucht-
 Hinweis stand schon im Konflikt-Prompt, aber am ENDE (vergraben). Jetzt ZUSÄTZLICH prominent am ANFANG (Bookending
 wirkt bei LLMs stärker). Reine Prompt-Verstärkung gegen KI-Halluzination, keine Gameplay-Änderung - bewusste Flucht
@@ -15084,7 +15084,7 @@ NIE über _partyAdd (mit Ablehn-Check) in die Party. Trotzdem behandelt ihn die 
 verschiedene Namen, _istInParty matcht sie nicht (erste Tokens "wilhelm" vs "kommissar"). Roth ist also über einen
 SCHLEICHPFAD in _party (nicht _partyAdd). Snapshot-Restore (Z38186 _party = snap.party) konserviert nur, ist nicht
 Ursprung. OHNE das via-Logging aus einem frischen Run NICHT eindeutig isolierbar - daher KEINE blinde Sperre (die
-würde Benjamins Regel verletzen: Roth darf mitgenommen werden). STATTDESSEN Diagnose geschärft: Party-Garantie loggt
+würde Projektleitungs Regel verletzen: Roth darf mitgenommen werden). STATTDESSEN Diagnose geschärft: Party-Garantie loggt
 jetzt sinceScene + tag jedes nachgezogenen Mitglieds. Mit dem v668-Origin-Logging (_partyAdd via <codepfad>) zeigt
 der nächste Run garantiert den Schleichpfad. DANN gezielt nur diesen Auto-Pfad fixen.
 LEHRE ERNEUT: Party-Drift NIE durch pauschale NPC-Sperre lösen (3x vom Lektorat gefordert, würde Mitnahme-Freiheit
@@ -15112,7 +15112,7 @@ bleibt erlaubt.
 **Nicht gebaut (mit Begründung):** "verstaubt"→"verstummt" war einmaliger KI-Sprachfehler ohne
 Code-Anker. "Keine PLAN_ZUGRIFF-Vorschläge nach caseReadyToResolve": Konzept existiert so nicht
 im Code (Lektorat-Erfindung), SCHLUSSPHASEN-PRIO greift ohnehin nur vor Stage 3 — zurückgestellt
-bis Original-Lektorat/Run das Symptom konkret zeigt. Ort-Prosa-Hard-Retry: wartet auf Benjamins
+bis Original-Lektorat/Run das Symptom konkret zeigt. Ort-Prosa-Hard-Retry: wartet auf Projektleitungs
 Entscheidung (kostet einen zusätzlichen API-Call pro Bruch).
 
 ## 🆕 v7.12.672 — How-To an Baukasten-First angepasst (ChatGPT-Lektorat v670, A5)
@@ -15125,21 +15125,21 @@ werden. Reiner Anzeige-Fix.
 
 **Abgelehnt (Regel 1, Spieler entscheidet die Party — 4. Lektorat-Forderung in Folge):**
 A1 (Roth/Behörden hart in _npcLehntMitnahmeAb blocken) und A2–A4 (partyLockedOut für August)
-NICHT gebaut. Benjamin-Regel: Roth/Lindner/August DÜRFEN mitgenommen werden. Zudem falsche
+NICHT gebaut. Projektleitung-Regel: Roth/Lindner/August DÜRFEN mitgenommen werden. Zudem falsche
 Diagnose: Roth kam laut Run 2336 NICHT über _partyAdd (NULL PARTY+-Events) — ein Block in
 _npcLehntMitnahmeAb (sitzt in _partyAdd) würde den Drift gar nicht treffen. Der echte
 Schleichpfad wartet auf ein frisches Run-Log mit v670-Logging. `_setNpcLocation`/`_npcFlag`/
 `_hatIndiz` aus den Lektorat-Patches existieren weiterhin nicht.
 
-**Weitere Lektorat-Punkte:** A7 (Ort-Hard-Retry) = settled abgelehnt (Benjamin-Entscheid v671).
+**Weitere Lektorat-Punkte:** A7 (Ort-Hard-Retry) = settled abgelehnt (Projektleitung-Entscheid v671).
 score-"Doppelung" = Fehlalarm (zwei sauber gescopte nested functions in pickBestGermanVoice/
 pickFallbackVoice). A6 (Beschützen/Beobachten aus Baukasten) + KI_OPTIONEN_GENERIEREN-Umbau +
-Resolve-Gate-Zentralisierung = Benjamin-Entscheidungen, offen.
+Resolve-Gate-Zentralisierung = Projektleitung-Entscheidungen, offen.
 
-## 🆕 v7.12.673 — Beschützen + Beobachten aus Baukasten entfernt (A6, Benjamin-Freigabe)
+## 🆕 v7.12.673 — Beschützen + Beobachten aus Baukasten entfernt (A6, Projektleitung-Freigabe)
 
 Beide Verben aus BAUKASTEN_AKTIONEN entfernt — zu weich, kein klarer Engine-Zustand,
-verwässern Baukasten-First (ChatGPT-Lektorat v670 A6, von Benjamin freigegeben).
+verwässern Baukasten-First (ChatGPT-Lektorat v670 A6, von Projektleitung freigegeben).
 Unberührt: das "Beobachten" im Personen-Menü (eigener Pfad, Z~19525) und die
 BEOBACHTEN-Handlungsart/Kategorie. Verifiziert: keine Code-Querverweise auf die
 entfernten Schlüssel.
@@ -15166,7 +15166,7 @@ Architektur-Test faktisch bestanden: manuell ohne KI-Optionen/Freitext sauber ge
 7 Logik-Tests grün (kompletter Run-0031-Ablauf nachgestellt). Vera-Mitnahme-Frage geklärt:
 KONTAKT lehnt bewusst ab (Übergabe-Ziel, v667-Design) — kein Bug.
 
-## 🆕 v7.12.675 — Assertion-Report zählte Zeilen statt Szenen (Benjamin: "es waren nur 19 Szenen?")
+## 🆕 v7.12.675 — Assertion-Report zählte Zeilen statt Szenen (Projektleitung: "es waren nur 19 Szenen?")
 
 Run 0031 hatte 19 Szenen, der Report meldete "KI-personenImRaum fehlt: 4/40 Szenen". Wurzel:
 gezählt wurden DIAG-ZEILEN, nicht Szenen — jede Szene loggt ~2 personenImRaum-Zeilen (CAST-DIAG
@@ -15197,10 +15197,10 @@ Run-Länge und Zähl-Diskrepanzen sofort sichtbar sind.
    Zeit" damit als Fehldeutung entkräftet; Fetch-Spanne mit Zwischenmarker korrekt gelabelt.
 
 **Nicht gebaut:** Schlafen-Ortswahrheit (SCHLAFEN_HEIM-Button vs Engine-Ort Opel, Sz10) und
-NPC-Persönlichkeits-/Bösewicht-Paket = Spielgefühl, warten auf Benjamins Entscheidung.
+NPC-Persönlichkeits-/Bösewicht-Paket = Spielgefühl, warten auf Projektleitungs Entscheidung.
 August "nicht bespielt" war Spieler-Pfadwahl (Goldener Anker nie besucht), kein Bug.
 
-## 🆕 v7.12.677 — Schlafen am Engine-Ort + NPC-Archetypen (beide Benjamin-Freigaben)
+## 🆕 v7.12.677 — Schlafen am Engine-Ort + NPC-Archetypen (beide Projektleitung-Freigaben)
 
 **1) Schlafen schläft am ENGINE-ORT (settled):** Die Standard-Heimfahrt (v253) stammte aus der
 Zeit vor dem Engine-Ortssystem - KI erzählte Heimschlaf, Engine blieb stehen (Run 0031 Sz10:
@@ -15231,14 +15231,14 @@ Gate-Logik + Toast-Verlauf).
 
 **Backlog-Stand nach dieser Session:** Offen bleiben (a) Roth-Party-Drift (wartet auf Run mit
 Drift, geschärftes Logging steht), (b) KI_OPTIONEN_GENERIEREN-Umbau (Prompt verlangt keine A-D
-mehr — spart Output-Tokens, ändert JSON-Format, Benjamin-Entscheid), (c) Kern-Indizien-
+mehr — spart Output-Tokens, ändert JSON-Format, Projektleitung-Entscheid), (c) Kern-Indizien-
 Architektur auf Kessler/Krause/Wegener/Achterberg/Brandt ausweiten (nächster großer Meilenstein,
-Benjamin-Entscheid), (d) tote Bot-Zweige aufräumen (P3, geringer Nutzen, Risiko im Bot-Code),
+Projektleitung-Entscheid), (d) tote Bot-Zweige aufräumen (P3, geringer Nutzen, Risiko im Bot-Code),
 (e) Resolve-Gate-Zentralisierung (P3, Refactor ohne Run-Anlass).
 
-## 🆕 v7.12.679 — Toaster, alter Fisch, Fragil-Verbrauch (Benjamin-Item-Paket Teil 1)
+## 🆕 v7.12.679 — Toaster, alter Fisch, Fragil-Verbrauch (Projektleitung-Item-Paket Teil 1)
 
-**Verifikations-Antworten (Benjamin-Fragen):**
+**Verifikations-Antworten (Projektleitung-Fragen):**
 - **Ruf-System funktioniert in Baukasten-First** — bewiesen durch Run 0031 (RUF-DIAG Sz15:
   Gewalt=0/Befragung=5/neutral=6, Tendenz=behutsam; RUF-HINT-Zeilen im Log). Es zählt
   AUSGEFÜHRTE Aktionen (isPhysical-Analyse), nicht die A-D-Buttons. Bringt weiter was.
@@ -15257,12 +15257,12 @@ Benjamin-Entscheid), (d) tote Bot-Zweige aufräumen (P3, geringer Nutzen, Risiko
 3. **Fragil-Verbrauch:** Flasche Doppelkorn + Toaster zerbrechen bei angreifen_mit und sind
    weg (vorher: unendlich oft verwendbar = Cheat-Lücke). Ziegelstein/Werkzeug bleibt.
 
-**Offen (Benjamin-Entscheidung, Teil 2):** Umsehen-Fundauswahl-Popup + Baukasten-Dedupe;
+**Offen (Projektleitung-Entscheidung, Teil 2):** Umsehen-Fundauswahl-Popup + Baukasten-Dedupe;
 Item-Ökonomie (Empfehlung: KEIN Zahlen-Budget, stattdessen Quellen-Logik).
 
-## 🆕 v7.12.680 — Item-Ökonomie Teil 2: Fundauswahl, Kaufen, Dedupe (Benjamin-Freigabe)
+## 🆕 v7.12.680 — Item-Ökonomie Teil 2: Fundauswahl, Kaufen, Dedupe (Projektleitung-Freigabe)
 
-**Historische Prüfung (Benjamins Frage "ist das 1953 adäquat?"):** JA, mit Differenzierung.
+**Historische Prüfung (Projektleitungs Frage "ist das 1953 adäquat?"):** JA, mit Differenzierung.
 Korn/Bier ÜBER DEN TRESEN beim Wirt kaufen = normale Gassenschank-Praxis; Zigaretten hinterm
 Tresen üblich. Spirituosen/Tabak waren in der DDR ab ~1950 entrationiert (HO-Preise, teuer);
 Lebensmittelkarten (bis 1958) betrafen Grundnahrung. WESTware (West-Zigaretten, Bohnenkaffee,
@@ -15295,8 +15295,8 @@ Trude selbst ist in 3 Fällen als Ort definiert, u.a. Margarete).
 3. "Genosse Mauer"-Anrede — gebaut v671 (+ Diktion 1953 in v676).
 4. "verstaubt"→"verstummt" — kein Thema (einmaliger KI-Sprachfehler, kein Code-Anker).
 5. How-To-Widerspruch zu Baukasten-First — gebaut v672 (dynamisch an Flags gekoppelt).
-6. Beschützen/Beobachten im Baukasten — entfernt v673 (Benjamin-Entscheid).
-7. Ort-Prosa-Hard-Retry — SETTLED ABGELEHNT (Benjamin v671); W2b-light (Folge-Szene) bleibt,
+6. Beschützen/Beobachten im Baukasten — entfernt v673 (Projektleitung-Entscheid).
+7. Ort-Prosa-Hard-Retry — SETTLED ABGELEHNT (Projektleitung v671); W2b-light (Folge-Szene) bleibt,
    Messzeile "Ort-Prosa-Brüche" seit v678 im Report.
 8. Architektur-Test KI_OPTIONEN_AKTIV=false — BESTANDEN durch Run 0031 (manuell, Baukasten-First,
    Fall in 19 Sz gelöst). Der wiederholt geforderte Beweis ist erbracht.
@@ -15317,8 +15317,8 @@ Trude selbst ist in 3 Fällen als Ort definiert, u.a. Margarete).
   v670-Logging steht bereit).
 - **Prüfauftrag Flucht-nach-Fesseln (v669)** — 0031 hatte keinen Fesseln-Konflikt; wartet auf Run.
 - **Meilenstein: Kern-Indizien auf Einsteiger-Fälle** (Kessler→Krause→Wegener→Achterberg→Brandt) —
-  Benjamin-Entscheid, größte offene Arbeit.
-- **KI_OPTIONEN_GENERIEREN-Umbau** (Prompt verlangt keine A-D mehr) — Benjamin-Entscheid,
+  Projektleitung-Entscheid, größte offene Arbeit.
+- **KI_OPTIONEN_GENERIEREN-Umbau** (Prompt verlangt keine A-D mehr) — Projektleitung-Entscheid,
   ändert JSON-Format.
 - **Bildungsachsen/Arbeitswelt Reichsbahn** (Papierstaat: Dienstsiegel/Frachtstempel/Hausbuch) —
   Content, vom ChatGPT-Lektorat (Run 0031) erneut angemahnt.
@@ -15327,18 +15327,18 @@ Trude selbst ist in 3 Fällen als Ort definiert, u.a. Margarete).
 - P3 geparkt: tote Bot-Zweige aufräumen; Resolve-Gate-Zentralisierung (beide ohne Run-Anlass
   bewusst nicht angefasst).
 
-## 🆕 v7.12.681 — Button-Reihenfolge (Benjamin)
+## 🆕 v7.12.681 — Button-Reihenfolge (Projektleitung)
 
 Bleibt-Sektion neu sortiert: Reisen → Umsehen (Fundstücke) → Notizbuch → Aktueller Stand.
 Notizbuch-Append wird aufgeschoben und erst nach dem Umsehen-Block angehängt.
 
-## 🆕 v7.12.682 — "Dabei" zählt gleichnamige Items (Benjamin: 2 Korn, nur 1 angezeigt)
+## 🆕 v7.12.682 — "Dabei" zählt gleichnamige Items (Projektleitung: 2 Korn, nur 1 angezeigt)
 
 Der v642-Filter im Aktueller-Stand-Popup verschluckte gleichnamige Duplikate stumm. Jetzt
 wird pro Name gezählt und "×N" angezeigt ("Flasche Nordhäuser Doppelkorn ×2") — konsistent
 mit dem Baukasten-Dedupe aus v680. Test grün.
 
-## 🆕 v7.12.683 — Tauschwert sichtbar + Zahlungsmittel-Wahl beim Kauf (Benjamin)
+## 🆕 v7.12.683 — Tauschwert sichtbar + Zahlungsmittel-Wahl beim Kauf (Projektleitung)
 
 1. **"Dabei"-Liste zeigt Tauschwerte:** Katalog-Items mit Tauschwert tragen ihn jetzt im
    Aktuellen Stand ("Ein paar Ostmark-Scheine (Tauschwert 1)") — der Spieler sieht, womit
@@ -15350,7 +15350,7 @@ mit dem Baukasten-Dedupe aus v680. Test grün.
    am Button "Eingesteckt ✓ (gezahlt: X)". Keine stille Auto-Abbuchung mehr.
    Bot-Pfad unverändert automatisch (billigstes Zahl-Item).
 
-## 🆕 v7.12.684 — Rex im Begleitung-Banner (Benjamin)
+## 🆕 v7.12.684 — Rex im Begleitung-Banner (Projektleitung)
 
 Rex läuft über das eigene hundInParty-Flag, nicht über _party — das v581-Banner las nur
 _party und unterschlug ihn (Herz-Symbol in der Personenliste stimmte, Banner nicht).
@@ -15372,14 +15372,14 @@ ChatGPT-Forderung "August partyLockedOut" bleibt ABGELEHNT (Regel: Spieler entsc
    Keywords um die konkreten Beweis-Begriffe erweitert (unterschrift/frachtbrief/frachtliste/
    dienstplan/belastet/nachtschicht — "Wahlers Unterschrift auf dem Frachtbrief" matchte NICHT);
    (b) gefundene Kern-Indizien füttern jetzt updatePoliticalBeats (lief nur über Prosa);
-   (c) Retro-Sweep pro Szene über bereits gefundene Indizien — heilt Benjamins laufenden Run.
+   (c) Retro-Sweep pro Szene über bereits gefundene Indizien — heilt Projektleitungs laufenden Run.
    Sicherungs-Beats bleiben durch den v485-Aktions-Guard geschützt. 4 Regex-Tests grün.
 2. **Teleport-Guard gehärtet** (feuerte in Sz11 nicht): strikter Szenen-Vergleich → Toleranz
    <=1 (sceneCounter inkrementiert zwischen Clean und Ergänzung); NEU: physisch gebundene
    NPCs (gefesselt/ko/fixiert/uebergeben) blocken IMMER, auch als Threat-Spawn (gefesselter
    Mertens stand kurz in der Charité).
 
-**Benjamin-Features:**
+**Projektleitung-Features:**
 3. **Party-Friendly-Fire-Filter:** Ziel = Party-Mitglied/Rex/Klientin → feindselige Verben
    (angreifen/fesseln/werfen/durchsuchen) fliegen aus dem Baukasten. Margarete kann Rex nicht
    mehr attackieren.
@@ -15389,18 +15389,18 @@ ChatGPT-Forderung "August partyLockedOut" bleibt ABGELEHNT (Regel: Spieler entsc
 5. **Hinweis-Sichtbarkeit:** Personen-Badge zeigt jetzt die AKTION ("● Hinweis: Befragen");
    NPC-Popup bekommt goldene Hinweiszeile; "Person durchsuchen"-Chip trägt ●, wenn am Ort ein
    offenes DURCHSUCHEN-Indiz wartet (Mertens/Original-Akten-Fall).
-6. **Bedrohlichkeit** (Benjamin: "Fall zu unbedrohlich"): SCHLÄGER-ARCHETYPEN-Promptblock
+6. **Bedrohlichkeit** (Projektleitung: "Fall zu unbedrohlich"): SCHLÄGER-ARCHETYPEN-Promptblock
    (stumpfer Schläger / nervöser Junger / kalter Profi / opportunistischer IM / müder
    Routinier; MfS droht BÜROKRATISCH statt blutig — adressiert auch "Mertens zu passiv");
    alle 8 Bedrohungs-Spawns: chance +15 (cap 85), globalCooldown -2 (min 4).
 
 **Bewusst NICHT gebaut:** Tageszeit-Müdigkeits-Druck ab Sz8 (ChatGPT P2 — Gameplay-Feel,
-braucht Benjamins Entscheid); Inventar-Sync übergebener Akten im KI-Erzähltext (P2, Fundort
+braucht Projektleitungs Entscheid); Inventar-Sync übergebener Akten im KI-Erzähltext (P2, Fundort
 noch unklar — nächste Session).
 
-## 🆕 v7.12.686 — ZEITMODELL-UMBAU: "Zeit läuft immer, Schlaf ist Regeneration" (Benjamin-Architektur-Entscheid)
+## 🆕 v7.12.686 — ZEITMODELL-UMBAU: "Zeit läuft immer, Schlaf ist Regeneration" (Projektleitung-Architektur-Entscheid)
 
-**Das Problem (Diskussion mit Benjamin):** Extrem viel spielte nachts, weil der Tag schnell
+**Das Problem (Diskussion mit Projektleitung):** Extrem viel spielte nachts, weil der Tag schnell
 durchläuft (2-3 Sz/Phase) und die Nacht ein Schwarzes Loch war (kein Auto-Wechsel, Ausstieg
 nur per Schlafen-Klick oder Zwangs-Limits 14/20). Dazu starten 3 von 10 Fällen direkt in
 der NACHT (u.a. Margarete) — Run 1226 sah den Tag nie.
@@ -15410,7 +15410,7 @@ der NACHT (u.a. Margarete) — Run 1226 sah den Tag nie.
    pendingDayTransition). Force-Push/Hard-Override gelten jetzt auch nachts.
 2. **Schlaf = Regeneration gegen Zeitverlust:** ~8 Stunden per Aufwach-Tabelle
    (MORGEN→NACHMITTAG, VORMITTAG→ABEND, MITTAG→ABEND, NACHMITTAG→NACHT, ABEND/NACHT→
-   MORGEN Tag+1). Wer vormittags schläft, wacht abends auf — genau Benjamins Beispiel.
+   MORGEN Tag+1). Wer vormittags schläft, wacht abends auf — genau Projektleitungs Beispiel.
    Heilung (voll auf Vf 5) bleibt; Müdigkeit → 0. Schlaf-Button zeigt das echte Ziel
    ("Schlafen (~8 Std.) → ABEND · Tag +1"); Toast und alle Schlaf-Pushes dynamisch.
 3. **Müdigkeit zählt jetzt JEDE wache Szene** (v629-Modell, vorher nur Nacht-Szenen — die
@@ -15419,7 +15419,7 @@ der NACHT (u.a. Margarete) — Run 1226 sah den Tag nie.
    alten NACHT-Szenenzähler-Trigger und Texte umgestellt ("X Szenen ohne Schlaf").
    muedigkeit lebt in caseProgress → Snapshot-sicher.
 
-**Tests grün:** Aufwach-Tabelle (4 Fälle inkl. Benjamins Beispiel), Müdigkeits-Simulation
+**Tests grün:** Aufwach-Tabelle (4 Fälle inkl. Projektleitungs Beispiel), Müdigkeits-Simulation
 (Toast Sz12, VF 18/21, Zwang Sz22), Nacht-Start Margarete erreicht Tag 2 jetzt nach ~2-3
 Szenen statt nie.
 
@@ -15427,16 +15427,16 @@ Szenen statt nie.
 Empfehlung, mit neuem Modell evtl. unnötig — erst Run abwarten); Müdigkeits-Anzeige im
 "Aktuellen Stand" (Zeile fehlt noch); Morgen-Vorschau am Schlaf-Button (welche Orte öffnen).
 
-## 🆕 v7.12.687 — Zeitdramaturgie-Quick-Win: Späte Nacht & Morgengrauen (Benjamin-Freigabe)
+## 🆕 v7.12.687 — Zeitdramaturgie-Quick-Win: Späte Nacht & Morgengrauen (Projektleitung-Freigabe)
 
-Prompt-only, keine Mechanik (ChatGPT-Lektorat "die Welt atmet", von Benjamin bestätigt):
+Prompt-only, keine Mechanik (ChatGPT-Lektorat "die Welt atmet", von Projektleitung bestätigt):
 1. **SPÄTE NACHT:** Ab 2+ Szenen in der Nacht bekommt die Prosa Leere-Farbe (letzte
    Straßenbahn, Wirt stapelt Stühle, nur noch Gestalten mit Grund unterwegs).
 2. **MORGENGRAUEN:** Der seit v686 mögliche schlaflose Nacht→Morgen-Wrap erzählt jetzt
    explizit ein Durchgemacht-Morgengrauen (graues Licht, Kohlegeruch, Frühschicht,
    Zeitungsjungen) — mit hartem Verbot, ein Aufwachen/Einschlafen zu erfinden.
 **Entscheidung bestätigt:** Zwangs-Einschlaf 22/26 bleibt als physisches Sicherheitsnetz
-(Benjamins v512/528-Linie; ChatGPT-Forderung "nie erzwingen" abgelehnt — Müdigkeit kann
+(Projektleitungs v512/528-Linie; ChatGPT-Forderung "nie erzwingen" abgelehnt — Müdigkeit kann
 nie töten, Verfassungs-Boden 2). Gewichtete Zeitkosten (Weltzeit-Punkte) = Stufe 2,
 erst nach Testlauf von v686/687.
 
@@ -15446,7 +15446,7 @@ erst nach Testlauf von v686/687.
 Resolve-Gate-Fix (v685) und Zeitmodell (v686) beide auf Anhieb bestätigt. Blindfleck-Fix
 arbeitet: ⏸-Events sichtbar, NPC-Menü-Klicks endlich im Export.
 
-**Benjamins 3 Befunde, alle verifiziert + gefixt:**
+**Projektleitungs 3 Befunde, alle verifiziert + gefixt:**
 1. **Wahler "Mitnehmen" (Bug):** Wahler lief mit [Typ ?] ins Popup (Name 'Wahler' matchte
    Setup 'Direktor Bernhard Wahler' nicht) → Standard-Verbset inkl. Mitnehmen. Fix:
    _npcLehntMitnahmeAb mit Teilnamen+Quote-Strip-Match UND zentraler Regel: SUSPECT/Täter
@@ -15472,12 +15472,12 @@ arbeitet: ⏸-Events sichtbar, NPC-Menü-Klicks endlich im Export.
   bei jedem Prompt-Bau (Lektorate sehen künftig, was die KI angewiesen wurde) + MORGENGRAUEN-
   Push verschärft (Übergang muss die Szene ERÖFFNEN, erster Absatz).
 - **Stage-4-Ort-Prosa-Bruch (1×, "vor dem Revier"):** Hard-Retry bleibt SETTLED ABGELEHNT
-  (Benjamin v671); Messzeile zählt weiter. Reopen nur durch Benjamin.
-- P2 notiert (nicht gebaut, Benjamin-Entscheid bzw. Content): SED-Siegel→Reichsbahn-
+  (Projektleitung v671); Messzeile zählt weiter. Reopen nur durch Projektleitung.
+- P2 notiert (nicht gebaut, Projektleitung-Entscheid bzw. Content): SED-Siegel→Reichsbahn-
   Dienstsiegel/Parteiabzeichen (Prompt-Detail); Win-Screen-Nachklang ortsabhängig;
   Margarete kompetenter (weniger Dauerangst); Schlafort-Risikoklassen (Opel = unsicher).
 
-## 🆕 v7.12.689 — FX-SYSTEM: visuelle Belohnung (Benjamin + ChatGPT-Konzept)
+## 🆕 v7.12.689 — FX-SYSTEM: visuelle Belohnung (Projektleitung + ChatGPT-Konzept)
 
 **Designregel: Die ENGINE löst Animationen aus, nie die KI-Prosa. Toasts informieren,
 Animationen belohnen.** pointer-events:none, prefers-reduced-motion respektiert (fxEnabled),
@@ -15502,10 +15502,10 @@ Lösen, Sicherungs-Wanderung (👩→🏥), Flucht-💨, Schlaf-Blende 🌙, FX-
 gekoppelt, nicht in "Still"). ChatGPT-P1 "_bkChip inline-onclick härten" als P3 notiert.
 Stage-4-Hard-Fallback weiter SETTLED ABGELEHNT (3. Forderung).
 
-**Workflow-Erinnerung (Benjamin):** gemini.js/mistral.js/groq.js liegen im Repo unter api/ —
+**Workflow-Erinnerung (Projektleitung):** gemini.js/mistral.js/groq.js liegen im Repo unter api/ —
 bei JEDER Änderung an den Proxy-Dateien mit committen/pushen (GEMINI_JS_VERSION bumpen).
 
-## 🆕 v7.12.690 — Reise-Animation: der Opel fährt durchs Bild (Benjamin)
+## 🆕 v7.12.690 — Reise-Animation: der Opel fährt durchs Bild (Projektleitung)
 
 fxTravel im _reiseKern-Hook (genau beim Engine-Ortswechsel, läuft während die Szene lädt):
 🚗 rattert quer durchs Bild (rechts→links, Emoji-Blickrichtung, leichtes Hoppeln), drei
@@ -15520,7 +15520,7 @@ Rechts-nach-links-Fahrt ist "hinter dem Auto" rechts — die Wölkchen lagen LIN
 Auto). Positionen 72/46/20vw → 88/60/36vw, jetzt rechnerisch verifiziert (Auto bei den
 Delays ≈ 82/54/30vw, alle drei Wölkchen erscheinen hinter ihm ✓).
 
-## 🆕 v7.12.692 — Party-Beitritt-Animation: das Abklatschen (Benjamin)
+## 🆕 v7.12.692 — Party-Beitritt-Animation: das Abklatschen (Projektleitung)
 
 fxPartyJoin: Die aktuelle Truppe steht links (🕵️ Karl voran + Party-Emojis + 🐕 Rex, max 5
 gezeigt), der Neue gleitet von rechts in die Reihe (leichtes Überschwingen), beim Kontakt
@@ -15530,7 +15530,7 @@ Hooks: _partyAdd (am PARTY+-Punkt, feuert für JEDEN Beitritts-Pfad) + beide Rex
 Stellen (Reise-Popup + NPC-Menü). Doppel-Rex-Schutz getestet (Rex erscheint beim eigenen
 Beitritt nicht zusätzlich in der Gruppe).
 
-## 🆕 v7.12.693 — Baukasten-Mobile-Breite abgesichert (Benjamin-Frage)
+## 🆕 v7.12.693 — Baukasten-Mobile-Breite abgesichert (Projektleitung-Frage)
 
 Befund: Überlauf nach rechts kann strukturell NICHT passieren - Panel klemmt fest an beiden
 Rändern (left:10px/right:10px), Chips sind inline-Buttons und brechen zeilenweise um
@@ -15542,7 +15542,7 @@ Text und könnte allein den Rand sprengen -> Chips jetzt max-width:100% + white-
 
 ## 🆕 v7.12.693 — Spuren ins Fund-Popup ("weniger von selbst") + Opel-Tempo 1953 + Olympia-Silhouette
 
-**1. Indizien werden gezielt aufgenommen (Benjamin: "das Indiz poppt einfach so auf, ohne
+**1. Indizien werden gezielt aufgenommen (Projektleitung: "das Indiz poppt einfach so auf, ohne
 dass ich was geklickt habe - das ist Käse"):** Umsehen markiert Indizien NICHT mehr
 automatisch. Das Fundauswahl-Popup hat jetzt zwei getrennte Bereiche: "· SPUREN ·" (golden
 abgesetzt, 📁, Klick = "Aufnehmen" -> _markiereIndizGefunden + Spur-Toast + "Im Notizbuch ✓")
@@ -15551,7 +15551,7 @@ Funden. Designprinzip festgehalten: **es soll immer weniger "von selbst passiere
 der Spieler nimmt bewusst auf. Bot-Pfad nimmt weiterhin alles automatisch (Indizien + Items).
 Sammel-Toast "Karl entdeckt: ..." entfernt (Feedback pro Klick). Toter Code mitgesäubert.
 
-**2. Opel-Tempo (Benjamin: "1953 war der Opel Olympia nicht so flott :D"):** Fahrtdauer
+**2. Opel-Tempo (Projektleitung: "1953 war der Opel Olympia nicht so flott :D"):** Fahrtdauer
 1,8 s -> 3,2 s, Wölkchen-Delays neu gerechnet (0.6/1.4/2.1 s bei 90/62/37vw - alle drei
 hinter dem Auto, rechnerisch verifiziert ✓), Caption + Einblenddauer angepasst (3,3 s).
 
@@ -15560,7 +15560,7 @@ stattdessen selbstgezeichnetes Inline-SVG: Ponton-runde Limousinen-Silhouette in
 (dunkler Korpus, Gold-Kontur, Gold-Radkappen, warmer Scheinwerfer vorn), 68px, fährt nach
 links (Front links gezeichnet).
 
-## 🆕 v7.12.694 — KONFRONTATIONS-SEQUENZ: Baukasten-Zugriffe laufen bildlich ab (Benjamin)
+## 🆕 v7.12.694 — KONFRONTATIONS-SEQUENZ: Baukasten-Zugriffe laufen bildlich ab (Projektleitung)
 
 **Das große FX-Stück: fxBattle.** Bei jedem Konfliktplan aus dem Baukasten spielt eine
 mehrstufige Sequenz (Hook in _planAusfuehren, ersetzt dort das v689-Einzelbild fxPlan):
@@ -15579,11 +15579,11 @@ mehrstufige Sequenz (Hook in _planAusfuehren, ersetzt dort das v689-Einzelbild f
   💪 hebt sich - wie im Ring: der Sieger bleibt stehen.
 - Timing: 3 Schritte ≈ 5,2 s Gesamtdauer - deckt die Szenen-Ladezeit. Sanftes Ausblenden.
 
-Sequenz-Logik gegen Benjamins Beispiel getestet (Rex fasst + Margarete wirft + Karl fesselt,
+Sequenz-Logik gegen Projektleitungs Beispiel getestet (Rex fasst + Margarete wirft + Karl fesselt,
 beide Ausgänge). **Lizenz geklärt:** Emojis rendert das OS aus Systemschriften (wir liefern
 nur Unicode-Zeichen, keine Grafiken) - unbedenklich; das Opel-SVG ist selbst gezeichnet.
 
-## 🆕 v7.12.695 — NOIR-PORTRÄTS + Rex kostet Tauschwert 3 + Mitnahme-Preise (Benjamin)
+## 🆕 v7.12.695 — NOIR-PORTRÄTS + Rex kostet Tauschwert 3 + Mitnahme-Preise (Projektleitung)
 
 **1. Handgezeichnete Noir-Porträt-SVGs** (statt gelber Emojis; Stil wie das Opel-SVG:
 dunkler Korpus, Gold-Kontur; eigene Zeichnungen, lizenzfrei): KARL (Fedora + Mantelkragen),
@@ -15595,7 +15595,7 @@ REX (Schäferhund-Silhouette, spitze Ohren, Gold-Auge, Blick in Laufrichtung), M
 (Wahler, Lemke). _npcVisual() mit Emoji-Fallback; alle FX umgestellt (fxBattle, fxPartyJoin,
 fxConflict; textContent->innerHTML wo nötig). Routing gegen 11 echte Namen getestet.
 
-**2. Rex kostet Tauschwert 3 bei Willi Kummer** (Benjamin: "Rex fixiert Gegner direkt, der
+**2. Rex kostet Tauschwert 3 bei Willi Kummer** (Projektleitung: "Rex fixiert Gegner direkt, der
 darf nicht geschenkt sein - sonst Cheatcode"): Beide Rex-Aufnahme-Stellen hinter
 _zeigeTauschZahlung gelegt. NEU: **KOMBI-ZAHLUNG** - mehrere Items zusammenlegen (3x Ostmark
 = 3), Chips toggeln, Summe live, "kein Wechselgeld!"-Warnung. Sammeln lohnt sich jetzt.
@@ -15604,25 +15604,25 @@ reicht - getestet); reicht es nicht, gibt es Rex nicht.
 
 **3. Mitnahme-Preise** (_npcMitnahmePreis): Freunde/Klientin/Schutz/Verbündete/Familie/
 Romance + Doc Wagner/Heinz/Trude = gratis. INFORMANTEN/Halbwelt = Tw 2, ZEUGEN (Lemke) =
-Tw 1. Bezahltes ist WEG (Doppelkorn als Bestechung = keine Wurfflasche mehr - Benjamins
+Tw 1. Bezahltes ist WEG (Doppelkorn als Bestechung = keine Wurfflasche mehr - Projektleitungs
 taktische Knappheit). Bestehende Ablehnungen bleiben (Wirt ortsgebunden, Verdächtiger nie,
-Vera/KONTAKT arbeitet allein). **OFFEN (Benjamin-Entscheid): Roth gegen Tauschwert
+Vera/KONTAKT arbeitet allein). **OFFEN (Projektleitung-Entscheid): Roth gegen Tauschwert
 mitnehmbar machen?** Kollidiert mit Dienst-/Tageszeit-Logik - bewusst nicht gebaut.
 
 **4. Item-Verifikation:** Alter Fisch + Bananenschale haben korrekt KEINEN Tauschwert
 (will niemand), aber Wurf-Tauglichkeit (schaden 'lacher'). Sie liegen hinter Chance-Würfen
 (Fisch: 50% Imbiss / 40% Bahnhof; Toaster 35% Wohnungen) - deshalb noch nicht gesehen.
-Mehr Item-Vielfalt = Content-Entscheid Benjamin (notiert).
+Mehr Item-Vielfalt = Content-Entscheid Projektleitung (notiert).
 
 ## 🆕 v7.12.696 — Einheitliche Charakter-Visuals (charVisual) + Doc-Wagner-🤝-Fix + Opel-Auslauf
 
-**1. charVisual = die EINE Quelle für Charakter-Bilder (Benjamin):** Feste, lebendige
+**1. charVisual = die EINE Quelle für Charakter-Bilder (Projektleitung):** Feste, lebendige
 Emoji-Zuordnung pro Figur, ÜBERALL identisch (Personen-Buttons, Party-Abklatschen, Kampf):
 Karl 🕵️, Margarete 👩‍💼, Helene 👩‍⚕️, Vera 👱‍♀️ (blond/schwedisch), Trude 👵, Doc Wagner 👨‍⚕️,
 Roth/Polizei 👮, Mertens/Stasi 👨‍✈️ (Uniform), Wahler 🎩, IM/Spitzel 🫥 (das graue, verblasste
 Gesicht!), Mantelmann 🕴️, Willi 🧔, Rex 🐕. Unbekannte Namen: HASH-STABILES Gesicht aus
 Varianten-Pool (gleicher Name = immer dasselbe Emoji, verschiedene NPCs sehen verschieden
-aus). **Die Gold-SVG-Porträts sind deaktiviert** (Benjamins Urteil: "keine Farbe, kein
+aus). **Die Gold-SVG-Porträts sind deaktiviert** (Projektleitungs Urteil: "keine Farbe, kein
 Leben - Emojis haben mehr Persönlichkeit"); pickNpcSvg bleibt EINE Version als Basis für
 evtl. farbige Porträts, kein Revival bis v700 -> löschen. Opel-SVG bleibt (gefällt).
 
@@ -15633,20 +15633,20 @@ als goldener "✦ in Begleitung"-Marker am Namen.
 **3. Opel-Auslauf (CLAUDE-FEHLER eingestanden):** v693 verlängerte die Fahrt auf 3,2 s,
 aber der Lösch-Timer blieb unbemerkt bei 1950 ms (Edit verfehlte sein Ziel, weil v692-Code
 dazwischengerutscht war; "9/9" gemeldet ohne die fehlende Position zu prüfen) -> das Auto
-wurde bei ~50vw MITTEN in der Fahrt gelöscht = Benjamins "verschwindet in der Bildmitte".
+wurde bei ~50vw MITTEN in der Fahrt gelöscht = Projektleitungs "verschwindet in der Bildmitte".
 Jetzt: Endpunkt -240px (ganz links raus), Remove 4,5 s mit iPhone-Puffer. LEKTION: Bei
 Batch-Edits die ok-Liste gegen die Soll-Liste prüfen, nicht nur zählen.
 
-**4. Run-Tempo-Analyse (Benjamin: "übertrieben früh fertig - Ort anfahren + Umsehen =
+**4. Run-Tempo-Analyse (Projektleitung: "übertrieben früh fertig - Ort anfahren + Umsehen =
 gelöst, das ist zu leicht. Zufall?"):** KEIN Zufall - ERKUNDEN-Indizien sind per Umsehen
 deterministisch einsammelbar, und die Margarete-Verteilung bündelt mehrere an wenigen
-Orten. **Empfehlung (nicht gebaut, Benjamin-Entscheid): SHOWDOWN-GATE Stage 3->4** - bevor
+Orten. **Empfehlung (nicht gebaut, Projektleitung-Entscheid): SHOWDOWN-GATE Stage 3->4** - bevor
 "Fall lösen" frei wird, stellt sich der Gegenspieler in den Weg (Mertens/Wahlers Schergen
 spawnen als Pflicht-Konfrontation; Zugriff/Flucht/Verhandlung nötig, nutzt Härte-System +
 das neue fxBattle). Dazu Indizien-Tuning: 2-3 Schlüssel-Indizien hinter Personen/Stage-
 Gates statt ERKUNDEN. Zusammen = Spannungsbogen-Paket.
 
-## 🆕 v7.12.697 — SHOWDOWN-GATE: der Bossfight vor dem Abschluss (Benjamin: "ja")
+## 🆕 v7.12.697 — SHOWDOWN-GATE: der Bossfight vor dem Abschluss (Projektleitung: "ja")
 
 **Mechanik:** Sind ALLE inhaltlichen Lösen-Bedingungen erfüllt (Stage, Wahrheit, politisches
 Gate inkl. Sicherungen), der Showdown aber noch nicht bestanden, schaltet die Engine ihn
@@ -15679,9 +15679,9 @@ verdichten, dann führt die Spur zum Stellwerk). Stage-Heber bleiben erreichbar
 sich über mehr Szenen, am Ende stellt sich Mertens, fxBattle-Zugriff oder Flucht, DANN
 erst Win-Screen. Im Export: ⚔-Zeilen (AKTIVIERT/BESTANDEN) + RESOLVE-DIAG-Sperrgrund.
 
-## 🆕 v7.12.698 — FX_ZEIT-Konfig + Gesprächs-Animation + Party-Flucht + Opel-Insassen (Benjamin)
+## 🆕 v7.12.698 — FX_ZEIT-Konfig + Gesprächs-Animation + Party-Flucht + Opel-Insassen (Projektleitung)
 
-**1. FX_ZEIT = EIN zentraler Konfigblock für alle Animations-Dauern** (Benjamin:
+**1. FX_ZEIT = EIN zentraler Konfigblock für alle Animations-Dauern** (Projektleitung:
 "einheitliche, einstellbare Zeiten - Kämpfe dürfen länger"): item 1,1s · party 1,75s ·
 dialog 2,6s · kampfSchritt 1,1s · kampfFinaleHold 2,1s · reiseEntfernen 4,5s · flucht 2,6s.
 Alle bestehenden FX-Timeouts umgestellt. HINWEIS: Reise-Fahrdauer steht zusätzlich im CSS
@@ -15702,9 +15702,9 @@ gestaffelt nach RECHTS aus dem Bild - zu Fuß, mit Lauf-Hopser und 💨-Staub, C
 sitzen sichtbar in der Fensterzone (kleine Köpfe, Rex hinten). Wer mitreist, fährt
 sichtbar mit.
 
-## 🆕 v7.12.699 — Flucht-Doppel-Fix + Sicherungs-Animationen + AKTE GESCHLOSSEN (Benjamin)
+## 🆕 v7.12.699 — Flucht-Doppel-Fix + Sicherungs-Animationen + AKTE GESCHLOSSEN (Projektleitung)
 
-**1. Flucht-Animation kam ZWEIMAL (Benjamin-Befund, Ursache gefunden):**
+**1. Flucht-Animation kam ZWEIMAL (Projektleitung-Befund, Ursache gefunden):**
 applyCategoryMechanics läuft pro Aktion zweimal - als PREVIEW beim Klick (Z~30228) und beim
 COMMIT nach der KI-Antwort (Z~33057). Der fxFlucht-Hook im FLUCHT-Case feuerte in beiden
 Läufen. Fix: 10-s-Zeit-Guard in fxFlucht. (Der Showdown-Flucht-Hook im selben Case ist
@@ -15722,7 +15722,7 @@ darunter "Karl Mauer · Privatdetektiv · Berlin 1953". Überbrückt die Ladezei
 Finalszene. WICHTIG ENTDECKT: Auf dem iPhone feuert der Resolve-Button über TOUCHEND
 (nicht click, rTouchHandled blockt den click-Pfad) - der Hook sitzt in BEIDEN Pfaden.
 
-## 🆕 v7.12.700 — FX-SICHERHEITSNETZ: keine Szene ohne Animation (Benjamin)
+## 🆕 v7.12.700 — FX-SICHERHEITSNETZ: keine Szene ohne Animation (Projektleitung)
 
 **Architektur-Antwort auf "es soll keine szene-auslösende Aktion ohne Animation geben":**
 Statt jeden Button einzeln zu jagen, sitzt das Netz an der EINEN Stelle, durch die jede
@@ -15738,15 +15738,15 @@ und Reisen (_istReise) feuern nicht doppelt.
 
 **Verb-Lücken geschlossen:** Durchsuchen 🔍/📄, Befehl-Ablenkung ❗/😵‍💫 (vorher Fallback 💬).
 
-**Kombiknöpfe-Entscheid (Benjamins Frage "können wir die entfernen, macht doch der
+**Kombiknöpfe-Entscheid (Projektleitungs Frage "können wir die entfernen, macht doch der
 Baukasten?"):** EMPFEHLUNG BEHALTEN - "Ablenkung & Zugriff (Helfer)" / "Niederschlagen &
 fesseln" sind kuratierte Ein-Tap-Manöver; im Baukasten wären es 4+ Taps auf dem iPhone.
 Sie sind engine-validiert (Manöver-System) und haben jetzt die Konflikt-Animation
-(/manoever/-Regex griff bereits). Entfernen nur auf Benjamins explizites Go.
+(/manoever/-Regex griff bereits). Entfernen nur auf Projektleitungs explizites Go.
 
-## 🆕 v7.12.701 — ANHÄNGER: die Tauschware fährt sichtbar mit (Benjamin, "laut gedacht")
+## 🆕 v7.12.701 — ANHÄNGER: die Tauschware fährt sichtbar mit (Projektleitung, "laut gedacht")
 
-Benjamins Idee, als klare Form gebaut: Hat die Truppe Katalog-Items dabei (Tauschware/
+Projektleitungs Idee, als klare Form gebaut: Hat die Truppe Katalog-Items dabei (Tauschware/
 Werfbares: Korn, Toaster, Fisch, Geld...), hängt bei der Reise ein ANHÄNGER hinterm Opel
 (eigenes SVG im Opel-Stil: Kasten, Gold-Kontur, Deichsel zum Heck, ein Rad). Die Ladung
 ragt oben sichtbar raus: EIN Emoji pro Typ + kleine ×N-Goldzahl (3x Korn = 🥃×3, nicht
@@ -15756,15 +15756,15 @@ gefiltert). ENTSCHEID: Bei der FLUCHT (zu Fuß) KEIN Gepäck - Panik-Lesbarkeit 
 wer rennt, schleppt nicht sichtbar Toaster. Gruppierungs-Logik getestet (Dedupe, ×N,
 Akten-Filter, gesicherte Items raus).
 
-## 🆕 v7.12.702 — "Eingesteckt"-Toast abgeschaltet (Benjamin)
+## 🆕 v7.12.702 — "Eingesteckt"-Toast abgeschaltet (Projektleitung)
 
-Benjamin-Befund (Screenshot Sz1): Beim Einsammeln über das Umsehen-Popup kam der Item-Pop
+Projektleitung-Befund (Screenshot Sz1): Beim Einsammeln über das Umsehen-Popup kam der Item-Pop
 UND danach noch ein "🎒 Eingesteckt"-Toast - wegen des Variant-Cooldowns sogar nur für
-EINES von zwei Items (redundant UND inkonsequent). Entscheid Benjamin: Toast an dieser
+EINES von zwei Items (redundant UND inkonsequent). Entscheid Projektleitung: Toast an dieser
 Stelle ABSCHALTEN. Der Item-Pop (fxItemGain) trägt Belohnung und Information allein -
 "Toasts informieren, Animationen belohnen", hier tut die Animation beides.
 
-## 🆕 v7.12.703 — Gegner zuerst + ⚠-Markierung + Wahler im Anzug (Benjamin)
+## 🆕 v7.12.703 — Gegner zuerst + ⚠-Markierung + Wahler im Anzug (Projektleitung)
 
 **1. Personen-Liste: GEGNER STEHEN OBEN.** _istGegnerNpc (Tag SUSPECT/STASI/GANGSTER/
 ANTAGONIST/MYSTERY, Rollen-Probe, Tatverdächtigen- und Showdown-Match) + stabile Sortierung
@@ -15772,7 +15772,7 @@ in bauePersonenButtons: Bösewichte über den Freunden, Reihenfolge innerhalb de
 bleibt.
 **2. Gegner-Markierung:** dunkelroter Rahmen + roter Innenbalken links + Label "⚠ Gegner"
 am Namen - das Auge trennt sofort Freund (✦ gold, in Begleitung) und Feind (⚠ rot).
-**3. Wahler: 👨‍💼 statt 🎩** (Benjamins Frage "was ist er für ein Direktor?"): Reichsbahn-
+**3. Wahler: 👨‍💼 statt 🎩** (Projektleitungs Frage "was ist er für ein Direktor?"): Reichsbahn-
 Direktor = Verwaltungsbürokrat im Anzug. Der Zylinder war 1953 nur noch Festtracht
 (Hochzeiten, Staatsakte) - historisch unpassend für den Dienstalltag. SUSPECT-Fallback
 ebenfalls auf 👨‍💼.
@@ -15786,7 +15786,7 @@ Bedroher". Folge B (Sz12): Im Wahler-Menü fehlte der komplette Fesseln/Gefessel
 'gefesselt' gesetzt hatte; "Durchsuchen (gefesselt)" blieb unsichtbar. FIX: Die v703-
 Gegner-Erkennung (_istGegnerNpc) ist jetzt zusätzliche Quelle von _npcIstFeindlich -
 EINE Wahrheit für Personen-Liste, Verb-Menü und Kommandos.
-**2. REX-ZIELWAHL (Benjamin):** Wirkungs-Kommandos (Fass!/Fixieren) brauchen einen ECHTEN
+**2. REX-ZIELWAHL (Projektleitung):** Wirkungs-Kommandos (Fass!/Fixieren) brauchen einen ECHTEN
 Gegner: genau einer -> wird genommen; mehrere -> Auswahl-Popup "Wen soll Rex sich
 vornehmen?"; NULL -> geblockt mit Toast "Kein Ziel". Der Phantom-Platzhalter ist für
 Wirkungs-Kommandos eliminiert. Anbellen/Anknurren bleiben locker (in die Runde erlaubt).
@@ -15795,7 +15795,7 @@ mit einer Flucht" - die Verneinung kippte den Detektor, der Prompt befahl der KI
 FLIEHT" + "NPCs bleiben zurück" -> falsche Flucht-Prosa, obwohl der Spieler fesseln wollte.
 FIX: Negation im Umfeld des Flucht-Worts -> kein Flucht-Intent; Kategorie FLUCHT/NOTFLUCHT
 ist die harte Wahrheit (immer Flucht). Gegen alle 4 Log-Texte getestet.
-**4. FX-ZEITEN ×2 (Benjamin):** dialog 2600->5200, flucht 2600->5200, CSS fxFleeRun
+**4. FX-ZEITEN ×2 (Projektleitung):** dialog 2600->5200, flucht 2600->5200, CSS fxFleeRun
 1.7s->3.4s, Flucht-Caption 2.5s->5s. fxDialog füllt die längere Standzeit mit einer
 ZWEITEN Bubble-Runde (~2,8s) - das Gespräch geht hin und her statt einzufrieren.
 fxKategorie (Sicherheitsnetz) nutzt FX_ZEIT.dialog und wird automatisch länger.
@@ -15804,7 +15804,7 @@ fxKategorie (Sicherheitsnetz) nutzt FX_ZEIT.dialog und wird automatisch länger.
 mehr, FAB weg - löst auch den Win-Screen-FAB-Bug). v706 = synthetische WebAudio-Sounds
 (Bellen, Zugriff, Fesseln - an Musik-Modi gekoppelt, nie im Still-Modus).
 
-## 🆕 v7.12.705 — BAUKASTEN INLINE: kein Overlay, kein Puzzle-Knopf mehr (Benjamin)
+## 🆕 v7.12.705 — BAUKASTEN INLINE: kein Overlay, kein Puzzle-Knopf mehr (Projektleitung)
 
 **Das Überlagerungs-Problem ist strukturell gelöst:** Der Aktions-Baukasten ist kein
 schwebendes Panel mehr, sondern eine ZEILE IM OPTIONS-FLUSS - direkt unter den roten
@@ -15825,9 +15825,9 @@ ein Gegner nach Slot-Setzung käme, Slot ans Ende wenn NUR Gegner da sind.
 
 **1. BAUKASTEN-FIX (Claude-Fehler in v705, eingestanden):** Das Slot-Gate prüfte
 modus==='szene', die einzige Aufrufstelle übergibt aber 'alle' -> der Slot entstand NIE
-(Benjamins Screenshots: Gegner rot markiert, kein Baukasten). Jetzt zählt: Fall läuft +
+(Projektleitungs Screenshots: Gegner rot markiert, kein Baukasten). Jetzt zählt: Fall läuft +
 Gegner da (nur 'verwalten' ausgeschlossen).
-**2. TOAST-REGEL (Benjamin, jetzt Designprinzip):** Toasts NUR für Dinge außerhalb des
+**2. TOAST-REGEL (Projektleitung, jetzt Designprinzip):** Toasts NUR für Dinge außerhalb des
 direkten Spieler-Handelns (Fall-Fortschritt, Stage, Stasi-Gefahr, Müdigkeit). Direktes
 Handeln zeigt sich unten (Item-Pop) oder in der Mitte (Aktions-FX). RAUS: Geplant-Toast
 (_planAdd), alle Party-Beitritts-Toasts (Abklatschen reicht). Party-VERLASSEN-Toast bleibt
@@ -15860,7 +15860,7 @@ ERFUNDENES Atelier ab - der Ort existiert gar nicht als Engine-Ort).
 **A1 SHOWDOWN IST JETZT SPIELBAR:** Bei aktivem Showdown injiziert getNpcsAtCurrentLocation
 den Gegner ENGINE-SEITIG in die Personen-Liste ("er findet Karl, nicht umgekehrt") - rot
 markiert ganz oben, als Baukasten-Ziel, Rex-Ziel und Fesseln-Manöver verfügbar, egal ob
-die KI-Prosa ihn erwähnt. Beantwortet Benjamins Frage "wo finde ich Mertens?". Lösen-
+die KI-Prosa ihn erwähnt. Beantwortet Projektleitungs Frage "wo finde ich Mertens?". Lösen-
 Sperrtext sagt jetzt: "ist HIER - stell dich ihm (Zugriff, Flucht oder Handel)".
 **A3 AUTO-SCHLAF ENDGÜLTIG RAUS** (revidiert die v512-Freigabe, im Einklang mit "es soll
 immer weniger von selbst passieren"): Müdigkeit drückt jetzt über Erschöpfungs-Prosa-Push,
@@ -15873,13 +15873,13 @@ UEBERNACHTUNG bekommt einen ORT-ANKER-Push, der den Engine-Ort NAMENTLICH nennt 
 Abwandern in erfundene Ateliers/Wohnungen verbietet.
 **fxSchlaf:** Mond + ganze Truppe + gestaffelte 💤 (5,2s) - Hook im FX-Sicherheitsnetz.
 
-**OFFENE BENJAMIN-ENTSCHEIDE:** (1) Lektorat A4 Party-Locks (Margot/Marlene/Doc blocken)
+**OFFENE PROJEKTLEITUNG-ENTSCHEIDE:** (1) Lektorat A4 Party-Locks (Margot/Marlene/Doc blocken)
 NICHT umgesetzt - kollidiert mit eiserner Regel "der Spieler entscheidet die Party".
 Empfehlung Claude: Freiheit behalten; der Showdown-Crash + Injekt lösen das eigentliche
 Problem (Romance-Drift). Mildere Alternative wäre Prosa-Zögern dieser NPCs. (2) Sichern-
 Sektion 2 Buttons mit Unterauswahl -> v708.
 
-## 🆕 v7.12.708 — Sichern: 2 Buttons mit Weg-Auswahl statt 4 (Benjamin)
+## 🆕 v7.12.708 — Sichern: 2 Buttons mit Weg-Auswahl statt 4 (Projektleitung)
 
 Die Sicherungs-Sektion ist nach Beat GRUPPIERT: EIN Button "{Klientin} in Sicherheit
 bringen" (🛟) und EINER "Die gesammelten Beweise übergeben" (📁), Marker zeigt "SICHERN ·
@@ -15893,9 +15893,9 @@ als der ursprünglich geplante ⚔-Reisemarker).
 
 ## 🆕 v7.12.709 — Verwirr-Buttons raus, Rex sofort, Paar-Bild für Pläne, ⛓-Status
 
-**1. NPC-Popup nur noch DIREKTE Verben (Benjamin, Run 1929):** "Niederschlagen & fesseln"
+**1. NPC-Popup nur noch DIREKTE Verben (Projektleitung, Run 1929):** "Niederschlagen & fesseln"
 und "Ablenkung & Zugriff" erzeugten still einen Plan-Eintrag statt einer Szene - so
-verwirrend, dass Benjamins Doppel-Tap einen doppelten Plan-Eintrag erzeugte. Beide Verben
+verwirrend, dass Projektleitungs Doppel-Tap einen doppelten Plan-Eintrag erzeugte. Beide Verben
 sind aus dem Popup ENTFERNT; Fesseln/Kombinieren läuft über den immer sichtbaren
 Koordinierten Zugriff. (Revidiert die v700-Behalten-Empfehlung - damals führten sie noch
 sofort aus, seit v616 landen sie im Plan = Zwei-Schritt-Verwirrung.)
@@ -15911,9 +15911,9 @@ aus dem Aktionstext erkannt (befragen/trinken/durchsuchen/bestechen/bedrohen/üb
 grauer Rahmen + "⛓ gefesselt"-Label statt rot + "⚠ Gegner" (keine Bedrohung mehr).
 **6. Fund-Pop 1100->2600ms** (Funde verschwanden zu schnell, man konnte sie nicht genießen).
 
-## 🆕 v7.12.710 — GEFAHR GEBANNT: gefesselte Gegner = Spannung gedeckelt (Benjamin)
+## 🆕 v7.12.710 — GEFAHR GEBANNT: gefesselte Gegner = Spannung gedeckelt (Projektleitung)
 
-Benjamin-Befund (Run 1929): Mantelmann gefesselt (⛓ korrekt angezeigt), aber Spannung
+Projektleitung-Befund (Run 1929): Mantelmann gefesselt (⛓ korrekt angezeigt), aber Spannung
 blieb 5 -> nur Flucht möglich statt Reisen, obwohl niemand mehr bedroht. NEU:
 _alleGegnerEntschaerft() (mind. 1 Gegner am Ort UND alle gefesselt/ko/fixiert/benommen,
 live geprüft) deckelt die Spannung an ZWEI Stellen: (1) sofort nach erfolgreichem
@@ -15924,7 +15924,7 @@ mehr. Effekt: Reisen/Schlafen werden nach dem Zugriff wieder frei, Flucht-Zwang 
 
 ## 🆕 v7.12.711 — Deckel-KORREKTUR: scene.spannung wird mitgekappt (Claude-Fehler in v710)
 
-Benjamin-Befund (Run 1944): Trotz v710-Deckel weiter Spannung 5 sichtbar, Reisen gesperrt.
+Projektleitung-Befund (Run 1944): Trotz v710-Deckel weiter Spannung 5 sichtbar, Reisen gesperrt.
 WURZEL (Claude-Fehler, eingestanden): Der Deckel kappte NUR die interne Variable
 lastSpannung - aber Header-Dots (showHeader), Reise-/Schlaf-Gates und Resolve lesen alle
 direkt scene.spannung aus dem SZENEN-OBJEKT. Der Deckel war für UI und Gates wirkungslos.
@@ -15932,7 +15932,7 @@ FIX: Im Gefahr-gebannt-Zweig wird jetzt zusätzlich scene.spannung = 2 gesetzt. 
 showHeader(scene) läuft NACH der Kappung (Z39168 vs Z34168), gleiche Objekt-Referenz -
 Anzeige und alle Gates sehen denselben gekappten Wert.
 
-## 🆕 v7.12.712 — Mantelmann: verhülltes Gesicht statt Zwerg (Benjamin)
+## 🆕 v7.12.712 — Mantelmann: verhülltes Gesicht statt Zwerg (Projektleitung)
 
 🕴️ ist ein GANZKÖRPER-Emoji und wirkte neben den Gesichts-Emojis winzig ("wie ein Zwerg
 neben Karl"). Neu: 😶‍🌫️ (Gesicht im Nebel) für /mantel|schatten|beschatter|verfolger/ und
@@ -15940,7 +15940,7 @@ den MYSTERY-Tag-Fallback - gleiche Größe wie alle Charaktere, und erzählt den
 Beschatter sogar besser. Eigenes SVG bewusst NICHT (Gold-Porträts in v696 als leblos
 verworfen; ein Einzel-SVG zwischen Emoji-Gesichtern fiele aus der Reihe).
 
-## 🆕 v7.12.713 — Drei Run-1953-Wurzeln: Save-Loch, unsichtbare Popups, Tag-Schlaf (Benjamin)
+## 🆕 v7.12.713 — Drei Run-1953-Wurzeln: Save-Loch, unsichtbare Popups, Tag-Schlaf (Projektleitung)
 
 **1. Rex nach Reload verschwunden (wirkte wie "Status ändert sich nicht"):** Die Aufnahme
 setzte caseProgress.hundInParty korrekt (Log Z505: Kommando-Verben da ✓), aber KEIN Save -
@@ -15959,16 +15959,16 @@ war der Schlaf-Button weiter an Abend/Nacht gebunden - Erschöpfungs-Sackgasse b
 Neu: ab Müdigkeit 12 (Warnschwelle) ist der Button tageszeitunabhängig da (Spannungs- und
 Unterwegs-Sperren bleiben).
 
-**4.** PartyJoin-Animation 3500→5200ms (Benjamin: immer noch zu kurz; jetzt Dialog-Niveau).
+**4.** PartyJoin-Animation 3500→5200ms (Projektleitung: immer noch zu kurz; jetzt Dialog-Niveau).
 
-## 🆕 v7.12.714 — Kommissar Roth ist ein Mann (Benjamin)
+## 🆕 v7.12.714 — Kommissar Roth ist ein Mann (Projektleitung)
 
 Das geschlechtsneutrale 👮 rendert auf iOS als Polizistin. Alle männlichen Polizei-Pfade
 (Roth/Lindner/Kommissar/Wachtmeister-Namensregeln, AUTHORITY/POLIZEI-Tag-Fallback,
 gefesselt_uebergeben-FX) explizit auf 👮‍♂️. Das bewusst weibliche AUTHORITY-Mapping für
 erkannte Frauen (Z20836) bleibt unverändert.
 
-## 🆕 v7.12.715 — Run-2011-Paket: Showdown spielbar, PartyJoin-Wurzel, Nacht-Verfall (Benjamin)
+## 🆕 v7.12.715 — Run-2011-Paket: Showdown spielbar, PartyJoin-Wurzel, Nacht-Verfall (Projektleitung)
 
 **1. Mertens erschien NIE (Showdown unspielbar):** Der v707-Injekt war TOTER CODE - der
 W6-Präsenz-Filter davor machte `return out.filter(...)` und verließ die Funktion, bevor der
@@ -15995,7 +15995,7 @@ Showdown-Gegner ausgenommen. Hinweis: Dass er in Run 2011 am Bahnhof noch gefess
 korrekte Welt-Konsistenz (dort gefesselt zurückgelassen, nie übergeben) - unplausibel war nur
 die Dauer.
 
-## 🆕 v7.12.716 — Lazy-Verfall: Gefesselt hält keinen Tageswechsel durch (Benjamin)
+## 🆕 v7.12.716 — Lazy-Verfall: Gefesselt hält keinen Tageswechsel durch (Projektleitung)
 
 Der v715-Nacht-Verfall griff nur beim NÄCHSTEN Schlafen - der Mantelmann aus Tag 2 lag also
 auch nach dem Update noch verschnürt am Bahnhof. Jetzt prüft _npcZustandGet den Verfall LAZY
@@ -16004,14 +16004,14 @@ Alt-Einträge ohne seitTag: >=8 Szenen) -> 'geflohen'. Wirkt sofort, auch auf Al
 und alle Abfragepfade (W6-Präsenz, Personen-Liste, Verben). _npcZustandSet speichert seitTag
 mit. Showdown-Gegner ausgenommen.
 
-## 🆕 v7.12.717 — Rex-Kommandos sind Imperative (Benjamin)
+## 🆕 v7.12.717 — Rex-Kommandos sind Imperative (Projektleitung)
 
 "Anbellen lassen"/"Anknurren lassen"/"Fixieren lassen" -> "Anbellen"/"Anknurren"/"Fixieren"
 (Baukasten-Aktionen UND Rex-Kommando-Menü). Kommandos an einen Hund sind Befehle, kein
 "lassen" - das Label stammte aus der Karl-Perspektive und wirkte überall schief, besonders
 im Baukasten, wo Rex selbst der Akteur ist. "Fass! (festsetzen)" bleibt.
 
-## 🆕 v7.12.718 — Ein Akteur, eine Aktion (Benjamin)
+## 🆕 v7.12.718 — Ein Akteur, eine Aktion (Projektleitung)
 
 "Man gibt einem Hund EIN Kommando - und der Kommissar kann auch nur eine Aktion machen":
 Ein Akteur darf nur einmal im Aktions-Plan stehen. Zwei Ebenen: (1) Zentraler Wächter in
@@ -16021,22 +16021,22 @@ WER-Chips bereits eingeplanter Akteure sind ausgegraut/inaktiv mit Zusatz "· ei
 eine ggf. aktive Auswahl wird zurückgesetzt. Mit dem ✕ am Plan-Eintrag wird der Akteur
 wieder frei.
 
-## 🆕 v7.12.719 — Baukasten-Buttons: gleiche Schrift, Sofort nach rechts (Benjamin)
+## 🆕 v7.12.719 — Baukasten-Buttons: gleiche Schrift, Sofort nach rechts (Projektleitung)
 
 "Sofort ausführen" wirkte auf dem iPhone größer als "+ Zum Plan" (iOS text-size-adjust bläst
 längere Button-Texte auf): beide jetzt explizit 11px + text-size-adjust:none. "Sofort
 ausführen" mit margin-left:auto rechts abgesetzt (Container ist Flex) - räumlicher Abstand
 gegen versehentliches Sofort-Ausführen beim Plan-Bauen.
 
-## 🆕 v7.12.720 — Der alte Fisch darf ins Gesicht (Benjamin)
+## 🆕 v7.12.720 — Der alte Fisch darf ins Gesicht (Projektleitung)
 
 Die Aktion "Ins Gesicht werfen" (werfen) existierte längst - der Fisch-Katalogeintrag
 erlaubte sie nur nicht (taugt-Whitelist). Jetzt freigeschaltet; Schadenstyp bleibt 'lacher'.
 "Ins Gesicht schlagen" läuft weiterhin über "Angreifen mit" (hatte der Fisch schon).
 
-## 🆕 v7.12.721 — Bezwungene Gegner: nur Befragen/Durchsuchen/Übergeben (Benjamin)
+## 🆕 v7.12.721 — Bezwungene Gegner: nur Befragen/Durchsuchen/Übergeben (Projektleitung)
 
-Benjamins Frage "bringt Angreifen/Bedrohen am Gefesselten überhaupt etwas?" - Engine-Antwort:
+Projektleitungs Frage "bringt Angreifen/Bedrohen am Gefesselten überhaupt etwas?" - Engine-Antwort:
 NEIN. Bedrohen ist reiner Prompt-Text ohne Mechanik (Indizien laufen über Befragen/Durchsuchen),
 Angreifen am Wehrlosen gewinnt keinen Status (Showdown gilt mit 'gefesselt' als bestanden) -
 reines Gore-Fest mit Spannungs-Risiko. Daher: (1) GEGNER-Verbset reduziert sich bei
@@ -16046,13 +16046,13 @@ fliegt mit raus - ein Gefesselter ist keine Verhandlungspartei. (2) Der Folgeopt
 Folgeoptionen; jetzt für alle bezwungenen Status, Label zeigt den Zustand. Damit ist auch die
 Inkonsistenz Mantelmann (korrekt reduziert) vs. Mertens (volles Kampfmenü) behoben.
 
-## 🆕 v7.12.722 — Verhaftungs-Animation + "Karl greift an"-Wurzel + Mertens-Rückkehr (Benjamin)
+## 🆕 v7.12.722 — Verhaftungs-Animation + "Karl greift an"-Wurzel + Mertens-Rückkehr (Projektleitung)
 
 **1. "Karl greift an" bei Durchsuchen/Übergeben:** Die FX-Weiche testete den Verb-Key auf
 /fessel/ - beide Keys beginnen mit "gefesselt_" und matchten. Jetzt: gefesselt_* ist KEIN
 Angriff; Durchsuchen läuft übers ERKUNDEN-Netz (Lupe, Dialog-Dauer).
 
-**2. NEU fxVerhaftung (Benjamins Choreografie):** Karl links, der Verhaftete in der Mitte,
+**2. NEU fxVerhaftung (Projektleitungs Choreografie):** Karl links, der Verhaftete in der Mitte,
 der Volkspolizist 👮‍♂️ gleitet von rechts heran, ⛓-Pop am Handgelenk, das Gesicht des
 Verhafteten wechselt zu 😞 (Mundwinkel runter), dann führt ihn der Vopo nach rechts ab.
 Dauer Dialog+1200ms.
@@ -16066,7 +16066,7 @@ keinen Eintrag -> 'frei' -> volles Kampfmenü. Fuzzy-Fallback (Nachnamen-Verglei
 Wortgrenzen, wie beim Showdown-Check) in _npcZustandGet, mit Diag bei Fuzzy-Treffer.
 Node-getestet: "Mertens"->uebergeben ✓, keine Falsch-Treffer (Trude/Mann) ✓.
 
-## 🆕 v7.12.723 — SFX: synthetische 1953-Sounds via WebAudio (Benjamin)
+## 🆕 v7.12.723 — SFX: synthetische 1953-Sounds via WebAudio (Projektleitung)
 
 Keine Sound-DATEIEN - alle Effekte werden zur Laufzeit per WebAudio synthetisiert (passt
 zur Ein-Datei-Architektur, null Ladezeit, null Assets). Regel: SFX spielen NUR außerhalb
@@ -16080,7 +16080,7 @@ Sounds an sechs Stellen:
 - 🌙 sfxSchlafTon (zwei weiche absteigende Töne) - beim Truppen-Schlaf
 AudioContext lazy beim ersten Sound (iOS-Geste durch den auslösenden Tap gegeben).
 
-## 🆕 v7.12.724 — SFX-Runde 2: Flatsch, Klirren, Prost, Seufzer (Benjamin)
+## 🆕 v7.12.724 — SFX-Runde 2: Flatsch, Klirren, Prost, Seufzer (Projektleitung)
 
 Vier neue synthetische Sounds: 🐟 sfxFlatsch (nasser Noise-Doppelburst) wenn Fisch oder
 Bananenschale treffen; 🍾 sfxKlirren (heller Burst + gestaffelte Splitter-Pings) wenn eine
@@ -16088,10 +16088,10 @@ Flasche zerschellt; 🥃 sfxProst (zwei Glas-Pings mit Nachklang) beim Trinken; 
 (weiches "Ahh": Sinus-Glide 660→415Hz mit 5,5Hz-Vibrato) bei naeher/nacht-Romantik.
 Verkabelung: fxConflict bekommt optionalen itemName-Param (fxPlan reicht das Plan-Item
 durch) und wählt den Treffer-Sound item-spezifisch; fxDialog triggert Prost/Seufzer am
-verbKey. Benjamins "Stöhnen"-Wunsch bewusst als dezenter Seufzer umgesetzt - mehr gibt die
+verbKey. Projektleitungs "Stöhnen"-Wunsch bewusst als dezenter Seufzer umgesetzt - mehr gibt die
 Oszillator-Synthese geschmackvoll nicht her.
 
-## 🆕 v7.12.725 — Blauer-Avatar-Wurzel (h war NIE definiert) + Befragen-Genuschel (Benjamin)
+## 🆕 v7.12.725 — Blauer-Avatar-Wurzel (h war NIE definiert) + Befragen-Genuschel (Projektleitung)
 
 **1. "August Lemke hat einen komischen blauen Avatar":** Größer als gedacht - der
 Hash-Gesichter-Pool in charVisual ("Persönlichkeit statt 👤") referenzierte eine Variable h,
@@ -16105,7 +16105,7 @@ Tonhöhe um einen Grundton, unregelmäßige Pausen (Adventure-Spiel-Gebrabbel). 
 bei ~150Hz, das Gegenüber antwortet versetzt eine Lage tiefer (~110Hz); bei der zweiten
 Bubble-Runde der Dialog-Animation eine kurze Nachrunde. Greift bei befragen/ansprechen.
 
-## 🆕 v7.12.726 — Motor v2: Anlasser, Anfahren, Zünd-Tuckern (Benjamin)
+## 🆕 v7.12.726 — Motor v2: Anlasser, Anfahren, Zünd-Tuckern (Projektleitung)
 
 "Das tiefe Brummen erkennt man nicht als Auto" - drei Auto-Signaturen statt Dauerton:
 (1) ANLASSER: drei orgelnde wrr-wrr-wrr-Bursts vorm Start. (2) ANFAHREN: Drehzahl-Kurve
@@ -16113,9 +16113,9 @@ Bubble-Runde der Dialog-Animation eine kurze Nachrunde. Greift bei befragen/ansp
 auf dem Gain (knattert wie ein alter Vierzylinder, Tuckern beschleunigt mit der Drehzahl).
 Dazu leises 240Hz-Auspuffrauschen unterm Motor. Timing (~3,2s) passt zur fxDrive-Fahrt.
 
-## 🆕 v7.12.727 — Reise-Popup-Mitnahme: kein Abklatschen, Einstieg in den Opel (Benjamin)
+## 🆕 v7.12.727 — Reise-Popup-Mitnahme: kein Abklatschen, Einstieg in den Opel (Projektleitung)
 
-Beim Mitnehmen übers Reise-Popup überlagerten sich Abklatsch- und Fahrt-Animation. Benjamins
+Beim Mitnehmen übers Reise-Popup überlagerten sich Abklatsch- und Fahrt-Animation. Projektleitungs
 Lösung umgesetzt: In diesem Pfad entfällt fxPartyJoin komplett - die Aufnahme läuft VOR der
 Reise, die Insassen-Logik liest die Party live, der Neue (auch Rex als 🐕) sitzt also sichtbar
 im fahrenden Opel; der Einstieg IST die Animation. Technik: Zeitfenster-Flag
@@ -16123,7 +16123,7 @@ window._partyFxStummBis (15s) statt einfachem Bool, weil Rex' Tauschzahlung asyn
 dazwischenliegt; Gates in _partyAdd und an der Rex-Reise-Popup-Stelle, Diag "steigt direkt
 in den Opel". Aufnahmen über das NPC-Menü behalten ihr Abklatschen unverändert.
 
-## 🆕 v7.12.728 — Kombi-Zugriff klingt + iOS-Stummschalter-Fix + Ziegelstein (Benjamin)
+## 🆕 v7.12.728 — Kombi-Zugriff klingt + iOS-Stummschalter-Fix + Ziegelstein (Projektleitung)
 
 **1. "Es kam gar kein Sound" - wahrscheinliche Wurzel iOS:** Reines WebAudio wird vom
 HARDWARE-Stummschalter gemutet, die MP3-Musik (audio-Element) nicht. Fix: WebAudio läuft
@@ -16142,7 +16142,7 @@ zentrale Wahl (fesseln klingt jetzt auch solo nach Handschellen).
 **3. Ziegelstein:** taugt = werfen (ins Gesicht) / werfen_fuesse / ablenken (woanders
 hinwerfen, Ziel schaut hin) - angreifen_mit raus ("einen Ziegelstein wirft man").
 
-## 🆕 v7.12.729 — Route-Knistern, Anlasser raus, "An mich nehmen"-Filter (Benjamin)
+## 🆕 v7.12.729 — Route-Knistern, Anlasser raus, "An mich nehmen"-Filter (Projektleitung)
 
 **1. Dauer-Knacken nach der Fahrt:** Das SFX-Route-<audio> (v728, Stummschalter-Fix) lief
 nach dem letzten Ton einfach weiter und knisterte im Leerlauf. Jetzt: jeder Sound verlängert
@@ -16156,7 +16156,7 @@ nur das Brummen") - der Motor brummt jetzt sofort los, Drehzahl-Kurve + Tuckern 
 nimmt man nicht an sich, das Verb gilt Gegenständen. (Der Filter-Kommentar versprach das
 seit v655, der konkrete Check fehlte.)
 
-## 🆕 v7.12.730 — Genuschel v2 (Sprachmelodie) + Registrierkassen-Klingel (Benjamin)
+## 🆕 v7.12.730 — Genuschel v2 (Sprachmelodie) + Registrierkassen-Klingel (Projektleitung)
 
 **1. Befragen-Genuschel "klingt wie Morsecode":** v2 mit drei Sprach-Zutaten, die Morse von
 Sprache trennen: Melodiebogen IN jeder Silbe (Pitch steigt zum Kern, fällt ab), weiche
@@ -16169,7 +16169,7 @@ unbetonte Silben im 3er-Rhythmus.
 eingesammelte Item) UND showProgressToast variant 'clue' am sicheren Render-Punkt (jeder
 Indiz-Fund, Spur, Stage-Up) - "jedes Mal wie Geld bekommen".
 
-## 🆕 v7.12.731 — IM "Anker": gewöhnliches Gesicht statt 🫥 (Benjamin)
+## 🆕 v7.12.731 — IM "Anker": gewöhnliches Gesicht statt 🫥 (Projektleitung)
 
 Die alte Spitzel-Regel (/anker|spitzel|^im\b/ -> 🫥) renderte auf iOS als gestrichelter
 Kreis - sah aus wie ein kaputtes Icon. Regel gestrichen: Ein IM ist gerade UNAUFFÄLLIG,
@@ -16177,7 +16177,7 @@ er bekommt jetzt ein gewöhnliches, stabiles Gesicht aus dem Hash-Pool (v725) - 
 Mensch in der Menge. Genau das macht einen Inoffiziellen Mitarbeiter aus. (Willi Kummer
 und der Mantelmann haben eigene, frühere Regeln und bleiben unberührt.)
 
-## 🆕 v7.12.732 — Baukasten-Chips mit Anführungszeichen im Namen (Benjamin)
+## 🆕 v7.12.732 — Baukasten-Chips mit Anführungszeichen im Namen (Projektleitung)
 
 'IM "Anker"' ließ sich als WEN-Ziel nicht anklicken: Die Chip-onclick-Handler werden als
 HTML-Attribut gebaut (onclick="_bkSet('ziel','IM "Anker"')") - die DOPPELTEN
@@ -16187,7 +16187,7 @@ wurden bisher nur einfache Quotes. Fix zentral in _bkChip: onclick wird HTML-esc
 Sonderzeichen-Namen. Margarete kann den IM jetzt angreifen/ablenken - ihre Wirksamkeit
 regelt wie gehabt das Härte-System.
 
-## 🆕 v7.12.733 — Gesichts-Gedächtnis: ein Charakter, überall dasselbe Bild (Benjamin)
+## 🆕 v7.12.733 — Gesichts-Gedächtnis: ein Charakter, überall dasselbe Bild (Projektleitung)
 
 IM "Anker" war in der Personen-Liste der Offizier (charVisual MIT Tag -> STASI-Regel),
 im Kampf-Popup aber ein blonder Pool-Mann (FX rufen nur mit Namen). Fix: charVisual ist
@@ -16196,13 +16196,13 @@ Auflösung prägt den Cache; tag-lose Aufrufer (fxBattle, fxDialog, Insassen, Ba
 bekommen danach exakt dasselbe Gesicht. Löst die ganze Inkonsistenz-Klasse, nicht nur
 diesen einen NPC.
 
-## 🆕 v7.12.734 — Zustands-Icons: benommen ist nicht gefesselt (Benjamin)
+## 🆕 v7.12.734 — Zustands-Icons: benommen ist nicht gefesselt (Projektleitung)
 
 Die Personen-Liste zeigte für ALLE entschärften Zustände die Ketten (⛓) - auch für
 "benommen" ohne jede Fesselung. Jetzt status-spezifisch: gefesselt ⛓, ko 💫,
 benommen 😵‍💫, fixiert 🐾 (Rex hält ihn), geblendet 🙈. Der Status-Text daneben bleibt.
 
-## 🆕 v7.12.735 — Übergabe-Choreografie: Karl gibt, es wandert, ✨ bei Ankunft (Benjamin)
+## 🆕 v7.12.735 — Übergabe-Choreografie: Karl gibt, es wandert, ✨ bei Ankunft (Projektleitung)
 
 fxSecureFuerButton zeigte Mover und Ziel nur statisch nebeneinander. Jetzt: Karl steht
 links, das Bewegte (📁 Akten bzw. Margarete) WANDERT in 1,5s von ihm zum Empfänger
@@ -16210,7 +16210,7 @@ links, das Bewegte (📁 Akten bzw. Margarete) WANDERT in 1,5s von ihm zum Empf�
 sfxSting als Klang. Gilt für beide Beats (Klientin sichern UND Beweise übergeben). FX-Dauer
 um ~1,2s verlängert, damit die Wanderung Raum hat.
 
-## 🆕 v7.12.736 — Fall-lösen-Sperre trotz Engine-Durchbruch + Spur-Wegweiser (Benjamin, Run 2137)
+## 🆕 v7.12.736 — Fall-lösen-Sperre trotz Engine-Durchbruch + Spur-Wegweiser (Projektleitung, Run 2137)
 
 **1. WURZEL der "verwirrenden Sperre":** Run 2137 hatte Akten an Vera ✓, Margarete bei
 Helene ✓ und ab Sz13 den HARTEN Engine-Durchbruch ("WAHRHEIT ERKANNT - Wahler ueberfuehrt",
@@ -16225,14 +16225,14 @@ ueberfuehrt vorliegen (harter Durchbruch). Bloßer Verdacht bleibt strict ungen�
 mit offenen Kern-Indizien an ("- offene Spuren: Stellwerk Schöneweide, ..."). Das Reisemenü
 zählte sie schon - jetzt wird die Zählung zum konkreten Hinweis, WO weiterzumachen ist.
 
-**Analyse Manöver-Härte (Benjamins Frage, noch KEINE Änderung):** Run 2137 zeigt 4 Checks,
+**Analyse Manöver-Härte (Projektleitungs Frage, noch KEINE Änderung):** Run 2137 zeigt 4 Checks,
 alle ERFOLG: IM (Härte 3) vs 4, Wahler (3) vs 5, Mantelmann (2) vs 4, Mertens (4) vs 4.
 System: deterministische Summe (Karl=2, Begleiter=1-2, +1 Synergie) >= Härte. Befund: Zu
 zweit erreicht man fast immer 4 -> alles bis Härte 4 (auch Showdown-Gegner Mertens) ist ein
 GARANTIERTER Sieg. Nur Hauptmann (5) erfordert mehr. Empfehlung notiert: Gleichstand = Risiko
-(summe == haerte -> 50%-Wurf), Showdown-Gegner +1 Härte. Wartet auf Benjamins Entscheid.
+(summe == haerte -> 50%-Wurf), Showdown-Gegner +1 Härte. Wartet auf Projektleitungs Entscheid.
 
-## 🆕 v7.12.737 — Showdown respektiert bezwungene Gegner (Benjamin, Run 2226)
+## 🆕 v7.12.737 — Showdown respektiert bezwungene Gegner (Projektleitung, Run 2226)
 
 Run 2226 in Zeitlupe: Sz24 Mertens überwältigt+gefesselt -> Sz24/25 Showdown AKTIVIERT sich
 erst JETZT und wählt den bereits Gefesselten als Pflicht-Gegner -> Sz25 an Vopo übergeben
@@ -16244,22 +16244,22 @@ gefesselt/ko/fixiert/uebergeben, hat Karl den Showdown VORWEGGENOMMEN - sofort b
 keine Aktivierung, kein Toast.
 
 **2. Injekt:** Prüft vor dem Einspielen den Zustand. Bezwungen/übergeben -> kein Injekt,
-showdownBestanden=true + Save (SELBSTHEILUNG: Benjamins laufender Run 2226 repariert sich
+showdownBestanden=true + Save (SELBSTHEILUNG: Projektleitungs laufender Run 2226 repariert sich
 beim nächsten Szenenwechsel selbst, der Abschluss wird frei).
 
-## 🆕 v7.12.738 — Akte-geschlossen-Sound + Sound-Studio im Debug-Modus (Benjamin)
+## 🆕 v7.12.738 — Akte-geschlossen-Sound + Sound-Studio im Debug-Modus (Projektleitung)
 
 **1. sfxAkte:** Kein Zellentür-Metall (klingt nach Gefängnis statt Triumph) - der STEMPEL
 selbst: satter Wumm (82->46Hz Sinus) + Papier-Rascheln + dunkler Noir-Schlussakkord
 (G2+D3-Quinte, D5-Glanz oben drauf). Synchron zum Stempel-Aufprall der
 AKTE-GESCHLOSSEN-Animation (980ms) angedockt.
 
-**2. Sound-Studio:** In den Settings, Admin-Bereich (?debug=hardenberg17): 19 Buttons,
-einer pro Effekt - spielt über DIESELBE Engine und iOS-Route wie im Spiel. Benjamin kann
+**2. Sound-Studio:** In den Settings, Admin-Bereich (?debug=on): 19 Buttons,
+einer pro Effekt - spielt über DIESELBE Engine und iOS-Route wie im Spiel. Projektleitung kann
 jeden Sound reviewen, ohne API-Kosten. (Bewusst KEIN Chat-Artefakt: das wäre eine Kopie,
 die driften kann und anders klingt als das iPhone.)
 
-## 🆕 v7.12.739 — Knurren-Endlos-Knattern behoben (Benjamin, via Sound-Studio)
+## 🆕 v7.12.739 — Knurren-Endlos-Knattern behoben (Projektleitung, via Sound-Studio)
 
 Das Knurr-Flattern (AM 27Hz) modulierte g.gain DIREKT - am Knurr-Ende (Basis ~0.0001)
 drückte die Modulation (±0.08) den Regler ins NEGATIVE = Phasen-Invertierung im 27Hz-Takt =
@@ -16268,7 +16268,7 @@ GainNode (Basis 0.5 ± 0.5 -> schwingt 0..1, nie negativ) + Not-Trennung per dis
 1s, selbst wenn ein Stop versagt. Lehre für alle künftigen Sounds: AM NIE direkt auf das
 Haupt-Gain, immer eigener Tremolo-Knoten. (Erster Fang des neuen Sound-Studios!)
 
-## 🆕 v7.12.740 — Noise-Hygiene (Flatsch-Knattern), Mario-Fanfare, Verlier-Sounds (Benjamin)
+## 🆕 v7.12.740 — Noise-Hygiene (Flatsch-Knattern), Mario-Fanfare, Verlier-Sounds (Projektleitung)
 
 **1. Flatsch-Endlos-Knattern WURZEL:** _sfxNoise hatte KEIN stop und KEIN disconnect -
 jede abgelaufene Noise-Quelle blieb tot am MediaStream-Ausgang hängen; angesammelte
@@ -16286,7 +16286,7 @@ Andockung zentral in showCaseFailed (Trichter ALLER Verlier-Enden): Tod-Texte
 (stirbt/Zelle/Hohenschönhausen) -> sfxTod, sonst sfxGescheitert. Beide + Fanfare im
 Sound-Studio.
 
-## 🆕 v7.12.741 — Kessler-Indizien-Projekt: 2. Fall mit definierten Beweisen (Benjamin)
+## 🆕 v7.12.741 — Kessler-Indizien-Projekt: 2. Fall mit definierten Beweisen (Projektleitung)
 
 Erster Fall nach Margarete mit echtem Kern-Indizien-Setup. Damit greifen für Kessler jetzt
 Notizbuch-Zähler, Reisemenü-Marker ("● X offen"), NPC-Hinweis-Punkte, Spur-Wegweiser und

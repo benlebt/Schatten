@@ -1,14 +1,14 @@
 # Ideenskizze: Übernachtung & Romance-Vielfalt + Party-Konsistenz bei Romanze
 
-Status: NUR IDEE / noch kein Konzept. Benjamin findet die entstandene Situation "abgefahren" und will sie AUSBAUEN,
+Status: NUR IDEE / noch kein Konzept. Projektleitung findet die entstandene Situation "abgefahren" und will sie AUSBAUEN,
 nicht wegfixen. Kommt nach UI + den dringenden Bugs.
 
-## Anlass (Live-Situation, Benjamin)
+## Anlass (Live-Situation, Projektleitung)
 Karl hatte Margarete Stein in Begleitung (Party), ist dann aber Margot nähergekommen und hat die Nacht bei Margot
 verbracht. Am nächsten Morgen: "Margarete ist schon längst weggefahren" - aber sie war danach trotzdem noch in der
 Party gelistet. INKONSISTENZ: entweder ist sie weg (dann raus aus Party) oder sie bleibt (dann nicht "weggefahren").
 
-## Benjamins Wunsch (zwei Dinge)
+## Projektleitungs Wunsch (zwei Dinge)
 ### 1. Party-Konsistenz bei Romanze
 - Wenn Karl mit Begleitung jemand anderem näherkommt / die Nacht verbringt, soll die Party NICHT einfach
   verschwinden/inkonsistent werden.
@@ -20,7 +20,7 @@ Party gelistet. INKONSISTENZ: entweder ist sie weg (dann raus aus Party) oder si
 
 ### 2. Übernachtungen sollen unterschiedlich enden (Anti-Monokultur)
 Aktuell endet die Übernachtung offenbar immer gleich: die Frau geht weg und hinterlässt einen Zettel. Das ist zu
-eindimensional. Benjamin will Varianz:
+eindimensional. Projektleitung will Varianz:
 - Mal bleibt sie da und sagt, es war schön.
 - Mal ist sie abgetörnt / fragt, wann er endlich geht.
 - Mal Zettel (aber nicht immer).

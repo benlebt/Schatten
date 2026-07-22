@@ -1,6 +1,6 @@
 # Konzept: Nur noch definierte Indizien (keine KI-Fantasie-Indizien)
 
-Status: KONZEPT zur Freigabe. Benjamin-Entscheidung: "Nur noch DEFINIERTE Indizien. Die KI darf keine eigenen mehr
+Status: KONZEPT zur Freigabe. Projektleitung-Entscheidung: "Nur noch DEFINIERTE Indizien. Die KI darf keine eigenen mehr
 erfinden. Jedes Indiz ist eins der definierten, Counter zählt immer runter." Großer Eingriff (Prompt gemini.js +
 Frontend). Schrittweise + getestet. NACH den laufenden kleinen Fixes.
 
@@ -14,10 +14,10 @@ Es gibt ZWEI parallele, unsynchronisierte Indizien-Systeme:
 
 Folge im Run: 2 KI-Indizien gefunden ("Zahlenkombination 04-22-12 auf Wahler-Dienstplan", "Güterlisten mit Stempel"),
 aber 0 (!) definierte Kern-Indizien getriggert (kein "🔑 KERN-INDIZ gefunden"). Der Reise-Counter blieb bei "2 jetzt",
-obwohl "Aktueller Stand" Indizien zeigte. Benjamin: "wirkt als würde nicht runtergezählt" - korrekt, weil die KI-
+obwohl "Aktueller Stand" Indizien zeigte. Projektleitung: "wirkt als würde nicht runtergezählt" - korrekt, weil die KI-
 Indizien die definierten gar nicht treffen.
 
-## Benjamin-Entscheidung & Ziel
+## Projektleitung-Entscheidung & Ziel
 - Es gibt NUR die definierten Indizien (Margarete: 11). Keine Fantasie-Indizien der KI mehr.
 - Jedes gefundene Indiz ist eins der definierten -> Toast + Counter runter + klar zugeordnet.
 - Wenn alle definierten gefunden: Ort = erledigt. Gesamt-Indizienzahl ist fix bekannt (z.B. /11).
@@ -59,7 +59,7 @@ deterministisch gesetzt."
   mehr (heute leben sie evtl. nur von KI-indiz_neu!). >> ZUERST PRÜFEN: hat jeder Fall genug definierte Kern-Indizien?
   Falls nein, ist "nur definierte" für diese Fälle erst nach Nachpflege möglich. Ggf. Margarete zuerst, Rest später.
 
-## Offene Fragen für Benjamin
+## Offene Fragen für Projektleitung
 1. Sollen die anderen 13 Fälle auch sofort umgestellt werden, oder erst Margarete (Pilot), Rest nach Indizien-Nachpflege?
 2. Darf die KI noch atmosphärische "Detail-Funde" erzählen (die nicht zählen), oder gar nichts Gegenstandsartiges mehr?
 3. Findbarkeit: reicht "ERKUNDEN am Ort mit offenem Indiz -> Fund", oder willst du es an konkretere Aktionen koppeln
@@ -73,7 +73,7 @@ I4. "Aktueller Stand" + Gesamtzahl auf definierte Indizien umstellen (z.B. "3 / 
 I5. Gegen Run testen: jedes gefundene Indiz zählt Counter runter, keine Fantasie-Indizien mehr.
 
 ---
-## BENJAMIN-SCHÄRFUNG (zentral): FINDBARKEITS-GARANTIE
+## PROJEKTLEITUNG-SCHÄRFUNG (zentral): FINDBARKEITS-GARANTIE
 Das Label "X Indizien hier" ist ein VERSPRECHEN, das eingelöst werden MUSS. Kernprinzip:
 - Wenn "2 Indizien jetzt hier" steht, MUSS der Spieler diese dort zuverlässig + ZÜGIG bekommen können.
 - NICHT in den Schoß fallen, aber auch NICHT zäh: jede Szene kostet Geld, Fälle sind nur 50-65 Szenen lang.
@@ -102,13 +102,13 @@ Das Label "X Indizien hier" ist ein VERSPRECHEN, das eingelöst werden MUSS. Ker
   Indiz der NPC anwesend + Tageszeit passt). Sonst "später". Das hält das Versprechen ehrlich.
 
 ## SEPARATER PUNKT: Bösewicht-/Mystery-Eindimensionalität (Charaktertiefe)
-Benjamin + ChatGPT-Lektorat: Bösewichte und Mystery-Figuren ("Mann im langen Mantel") wirken zu eindimensional /
+Projektleitung + ChatGPT-Lektorat: Bösewichte und Mystery-Figuren ("Mann im langen Mantel") wirken zu eindimensional /
 wie dieselbe gesichtslose Schablone, die mehrfach auftaucht. Schon besser als früher, aber noch zu flach.
 -> EIGENES Thema (nicht Teil des Indizien-Umbaus): festere NPC-Profile (Eigenheiten, Sprechweise, Motiv, Macke) +
 Prompt-Führung, damit wiederkehrende Antagonisten Persönlichkeit + Wiedererkennbarkeit haben statt generisch.
 Für später als IDEE/Konzept. Hier nur notiert, damit es nicht verloren geht.
 
-## BENJAMIN-ENTSCHEIDUNGEN (Findbarkeit)
+## PROJEKTLEITUNG-ENTSCHEIDUNGEN (Findbarkeit)
 - BEIDE Fundwege (Umgebung via erkunden/absuchen + Person via ansprechen/durchsuchen/bestechen/überzeugen).
 - Findbarkeits-GARANTIE ist Pflicht: richtige Aktion am richtigen Ort -> Indiz zügig + verlässlich.
 - Gebundener NPC muss bei "X Indizien hier" anwesend sein.
@@ -124,10 +124,10 @@ kaputtmachen (gar keine Indizien mehr). Andere Fälle laufen weiter mit KI-indiz
 => Der Umbau muss FALL-SPEZIFISCH greifen: nur wenn der aktuelle Fall definierte Indizien hat (Margarete), wird
 indiz_neu abgeschaltet + ziel_indiz-Steuerung aktiv. Sonst altes Verhalten.
 
-## STATUS: Konzept fertig + Bestandsaufnahme erledigt. BEREIT für Bau (nach Benjamin-OK).
+## STATUS: Konzept fertig + Bestandsaufnahme erledigt. BEREIT für Bau (nach Projektleitung-OK).
 Bau-Schritte verbleibend: I2 (ziel_indiz-Steuerung + deterministische Vergabe, NUR für Fälle mit def. Indizien),
 I3 (indiz_neu für solche Fälle abschalten + gemini.js-Prompt), I4 (Aktueller Stand "X / 11"), I5 (Run-Test).
-Findbarkeits-Garantie (Benjamin): richtige Aktion am richtigen Ort -> Indiz zügig+verlässlich; NPC anwesend bei "X hier".
+Findbarkeits-Garantie (Projektleitung): richtige Aktion am richtigen Ort -> Indiz zügig+verlässlich; NPC anwesend bei "X hier".
 
 ---
 ## CHATGPT-LEKTORAT: 5 FREIGABE-BEDINGUNGEN (übernommen) + Schärfungen
@@ -209,4 +209,4 @@ ACHTUNG Re-Entry: window._letzteAktion wird in chooseOption gesetzt - bei Bot-Te
 - KI-indiz_neu wird für Margarete ignoriert; INDIZ-REGEL + ZIEL-INDIZ-Vorgabe pro Request (recap); Zwangs-Pushes gegated.
 - Stand-Popup + Notizbuch: "X / 13 Indizien gefunden".
 - KEIN gemini.js-Deploy nötig (Prompt komplett im Frontend).
-VERBLEIBEND: I5 (Stage beat-basiert, VORSICHT count-Gates), I6 (Run-Test). Danach: Items + NPC-Actions (Benjamin).
+VERBLEIBEND: I5 (Stage beat-basiert, VORSICHT count-Gates), I6 (Run-Test). Danach: Items + NPC-Actions (Projektleitung).

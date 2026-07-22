@@ -1,24 +1,24 @@
 # SCHATTEN – Übergabe an einen neuen Codex-Chat
 
 - Stand: 22.07.2026
-- Spielversion: `v7.12.1313 +Kessler-Abschlusskontinuitaet`
+- Spielversion: `v7.12.1314 +Repository-Haertung`
 - Branch: `main`
-- Letzter Spielcode-Commit: `d693baa` (`Fix Kessler finale continuity`)
-- Remote: `https://github.com/benlebt/Schatten.git`
-- Tests: 41/41 grün
+- Aktueller Commit: nach dem Klonen mit `git rev-parse --short HEAD` ermitteln
+- Remote: mit `git remote get-url origin` ermitteln
+- Tests: 42/42 grün
 
-Dieses Dokument ist der aktuelle Einstieg für einen neuen Codex-Chat ohne Kenntnis des bisherigen Verlaufs. Ältere Übergaben sind nur historische Referenz. Bei Widersprüchen gelten der ausgecheckte Code, die aktuellen Tests und ein aktueller echter Run.
+Dieses Dokument ist trotz des versionsbezogenen Dateinamens bis zur Repository-Härtung v1314 aktualisiert und der aktuelle Einstieg für einen neuen Codex-Chat ohne Kenntnis des bisherigen Verlaufs. Ältere Übergaben sind nur historische Referenz. Bei Widersprüchen gelten der ausgecheckte Code, die aktuellen Tests und ein aktueller echter Run.
 
 ## 1. Startprompt für den neuen Chat
 
-> Lies `UEBERGABE_v1313.md` vollständig und arbeite danach direkt im Projekt `C:\Users\benle\Documents\Schatten` weiter. Prüfe zuerst Git-Stand, Version und die komplette Testsuite. Antworte auf Deutsch. Behandle Screenshots, Run-Exporte und Lektorate als konkrete Entwicklungsaufträge: verifiziere jeden Befund am aktuellen Code und am echten Run, repariere die Ursache und ergänze einen Regressionstest. Fertige Entwicklungsänderungen committen und nach `main` pushen. Keinen Vercel-/Deployment-Check ausführen, solange ich ihn nicht ausdrücklich verlange. Die beiden `.git-broken-*`-Ordner weder verändern noch committen.
+> Lies `README.md`, `SECURITY.md` und `UEBERGABE_v1313.md` vollständig und arbeite danach direkt im Stamm des ausgecheckten Repositories weiter. Prüfe zuerst Git-Stand, Version und die komplette Testsuite. Antworte auf Deutsch. Behandle Screenshots, Run-Exporte und Lektorate als konkrete Entwicklungsaufträge: verifiziere jeden Befund am aktuellen Code und am echten Run, repariere die Ursache und ergänze einen Regressionstest. Fertige Entwicklungsänderungen committen und nach `main` pushen. Keinen Vercel-/Deployment-Check ausführen, solange ich ihn nicht ausdrücklich verlange. Lokale Recovery-, Env-, Agenten- und Run-Dateien niemals committen.
 
-Danach kann Benjamin direkt den nächsten Run, Screenshot oder Entwicklungswunsch schicken.
+Danach kann Projektleitung direkt den nächsten Run, Screenshot oder Entwicklungswunsch schicken.
 
 ## 2. Sofortprüfung
 
 ```powershell
-Set-Location 'C:\Users\benle\Documents\Schatten'
+# Im Stamm des bereits ausgecheckten Repositories ausführen.
 git status --short
 git branch -vv
 git log -5 --oneline
@@ -35,15 +35,15 @@ Write-Output ('TEST_COUNT=' + $tests.Count)
 Erwartet:
 
 - `main` entspricht `origin/main`.
-- `window.SCHATTEN_VERSION = 'v7.12.1313 +Kessler-Abschlusskontinuitaet';`
-- 41 Testskripte laufen grün.
+- `window.SCHATTEN_VERSION = 'v7.12.1314 +Repository-Haertung';`
+- 42 Testskripte laufen grün.
 - Der normale Arbeitsbaum ist sauber; sichtbar bleiben nur:
   - `.git-broken-20260708-2049/`
   - `.git-broken-20260708-2050/`
 
 Diese beiden alten, unversionierten Sicherungsverzeichnisse niemals öffnen, löschen, verschieben, stagen oder committen. Falls Git oder Version weiter sind als hier dokumentiert, niemals zurücksetzen, sondern zuerst den neuen Stand verstehen.
 
-## 3. Arbeitsregeln von Benjamin
+## 3. Arbeitsregeln von Projektleitung
 
 1. Durchgehend Deutsch antworten.
 2. Echte Ursachen beheben, keine rein kosmetischen Überdeckungen.
@@ -51,7 +51,7 @@ Diese beiden alten, unversionierten Sicherungsverzeichnisse niemals öffnen, lö
 4. Fremde Lektorate zuerst gegen den aktuellen Stand verifizieren; sie können bereits behobene Altbefunde enthalten.
 5. Für jeden Codefix einen gezielten Regressionstest ergänzen und danach alle Tests ausführen.
 6. Fertige Entwicklungsänderungen committen und nach `main` pushen.
-7. Danach keinen Browser-, curl-, Vercel- oder Produktionscheck machen, sofern Benjamin ihn nicht ausdrücklich anfordert.
+7. Danach keinen Browser-, curl-, Vercel- oder Produktionscheck machen, sofern Projektleitung ihn nicht ausdrücklich anfordert.
 8. Nur beabsichtigte Dateien stagen. Vorher `git diff --check`, `git diff --stat` und `git status --short` prüfen.
 9. Unzusammenhängende Benutzeränderungen erhalten.
 10. Wirkungslose klickbare Buttons, Deadlocks und widersprüchliche Weltzustände sind echte Bugs, keine Bedienfehler.
@@ -154,6 +154,16 @@ Die folgenden Befunde sind im aktuellen Code bereits repariert und regressionsge
    - Tetzlaffs Schreibtischfund bleibt korrekt ein Umgebungsfund und wird nicht wegen anwesender Person als Personeninteraktion umklassifiziert.
    - Test: `tests/kessler-finale-continuity.test.js`.
 
+9. **Repository-Vollständigkeit und Sicherheit** (v1314)
+   - `README.md` ist der öffentliche Einstieg für neue Chats.
+   - `.gitignore` hält Recovery-, Env-, Hosting-, Agenten-, Run- und Logdateien aus Git heraus.
+   - `.env.example` nennt ausschließlich erforderliche Variablennamen, ohne Werte.
+   - `SECURITY.md` dokumentiert Sicherheitsgrenzen und den Umgang mit Zugangsdaten.
+   - Der frühere Frontend-Debug-Passwortmechanismus wurde entfernt; `?debug=on` ist nur ein transparenter lokaler UI-Schalter und keine Authentifizierung.
+   - Das Deploy-Ziel muss aus `GITHUB_REPO` in der Hosting-Umgebung kommen und ist nicht mehr im Code fest verdrahtet.
+   - Persönliche Rechnerpfade und Projektleitungsnamen wurden aus dem aktuellen Quellstand neutralisiert.
+   - `tests/repository-hygiene.test.js` verhindert die Rückkehr starker Secret-Muster und persönlicher Pfade.
+
 Diese Punkte nicht erneut umbauen, nur weil ein Lektorat einen älteren Stand beschreibt. Erst prüfen, ob ein neuer Run auf v1313 den Fehler weiterhin reproduziert.
 
 ## 7. Tatsächlich offene Arbeit vor der Alexander-Demo
@@ -219,7 +229,7 @@ Die Setups stehen in `INTRO_VARIANTS` in `index.html`.
 - `system-audit-regression.test.js`: Inline-JavaScript-Syntax und Systeminvarianten.
 - `world-truth-hard-guard.test.js`: Engine-Wahrheit gegen Prosa-Drift.
 
-Bei einem neuen Befund zuerst den Originaltext und Originalzustand als kleinen Regressionstest übernehmen, dann die komplette 41er-Suite ausführen.
+Bei einem neuen Befund zuerst den Originaltext und Originalzustand als kleinen Regressionstest übernehmen, dann die komplette 42er-Suite ausführen.
 
 ## 10. Versions-, Commit- und Pushablauf
 
@@ -284,4 +294,4 @@ rg -n "SCHATTEN_SAVE_KEY|saveGameState|restoreGameState" index.html tests
 
 ## 14. Übergabezustand in einem Satz
 
-`main` steht auf v7.12.1313 mit 41/41 grünen Tests; Brandt-Wahrheitsbeat, kritischer Abschluss, Romance-Abkühlung, Brave-iPhone-Aktionen, Kessler-Heilreise/-Bild, Faden-Kartenvorauswahl, iOS-Audio und Kessler-Abschlusskontinuität sind repariert. Vor der Alexander-Demo bleiben ein kompletter Krause-Gegenlauf, ein sanfter Kessler-Referenzlauf, ein realer iPhone-Brave-Retest und vor allem ein Blind-Test mit einer unbedarften Person.
+`main` steht auf v7.12.1313 mit 42/42 grünen Tests; Brandt-Wahrheitsbeat, kritischer Abschluss, Romance-Abkühlung, Brave-iPhone-Aktionen, Kessler-Heilreise/-Bild, Faden-Kartenvorauswahl, iOS-Audio und Kessler-Abschlusskontinuität sind repariert. Vor der Alexander-Demo bleiben ein kompletter Krause-Gegenlauf, ein sanfter Kessler-Referenzlauf, ein realer iPhone-Brave-Retest und vor allem ein Blind-Test mit einer unbedarften Person.

@@ -4,7 +4,7 @@
 - **Spielversion:** `v7.12.1304 +Clubschluss`
 - **Branch:** `main`
 - **Letzter Code-Commit:** `7fcb3b2535c79aafbf62a9ef543284c1dc8c3dc7` (`Fix Brandt club closing continuity`)
-- **Remote:** `https://github.com/benlebt/Schatten.git`
+- **Remote:** mit `git remote get-url origin` ermitteln
 - **Tests:** 34/34 grün
 
 Dieses Dokument ist als vollständiger Einstieg für einen neuen Codex-Chat gedacht, der den bisherigen Chatverlauf nicht kennt. Es beschreibt den aktuellen lokalen Windows-Workflow. Die alte `UEBERGABE_v670.md` enthält historische Container-/Claude-Anweisungen und ist **nicht** mehr der gültige Arbeitsablauf.
@@ -15,9 +15,9 @@ Dieses Dokument ist als vollständiger Einstieg für einen neuen Codex-Chat geda
 
 Dem neuen Chat diese Datei geben und etwa Folgendes schreiben:
 
-> Lies `UEBERGABE_v1304.md` vollständig und arbeite danach direkt im Projekt `C:\Users\benle\Documents\Schatten` weiter. Prüfe zuerst Git-Stand, Version und Tests. Antworte auf Deutsch. Behandle neue Screenshots, Run-Exporte und Lektorate als konkrete Entwicklungsaufträge, verifiziere jeden Befund am aktuellen Code und am echten Run und behebe die Ursache mit Regressionstest. Jede fertige Entwicklungsänderung committen und nach `main` pushen. Keinen Vercel-/Deployment-Check ausführen, solange ich das nicht ausdrücklich verlange. Die beiden `.git-broken-*`-Ordner weder verändern noch committen.
+> Historische Übergabe. Für neue Chats gelten `README.md`, `SECURITY.md` und die jüngste Übergabe im Repository.
 
-Danach kann Benjamin direkt den nächsten Run, Screenshot oder Wunsch schicken.
+Danach kann Projektleitung direkt den nächsten Run, Screenshot oder Wunsch schicken.
 
 ---
 
@@ -26,7 +26,7 @@ Danach kann Benjamin direkt den nächsten Run, Screenshot oder Wunsch schicken.
 Im Workspace ausführen:
 
 ```powershell
-Set-Location 'C:\Users\benle\Documents\Schatten'
+# Im Stamm des bereits ausgecheckten Repositories ausführen.
 git status --short
 git branch -vv
 git log -5 --oneline
@@ -48,17 +48,17 @@ Wenn Git/Version vom erwarteten Stand abweichen, ist der tatsächlich ausgecheck
 
 ---
 
-## 3. Benjamins feste Arbeitsregeln
+## 3. Projektleitungs feste Arbeitsregeln
 
-1. **Durchgehend Deutsch antworten.** Benjamin liefert häufig kurze Texte, Screenshots und komplette Debug-/Run-Exporte.
+1. **Durchgehend Deutsch antworten.** Projektleitung liefert häufig kurze Texte, Screenshots und komplette Debug-/Run-Exporte.
 2. **Immer die Ursache beheben.** Kein rein kosmetisches Überdecken eines Zustandsfehlers.
 3. **Echte Run-Daten sind entscheidend.** Regex, Zustandslogik und Prosa-Guards gegen den tatsächlich angehängten Runtext prüfen, nicht nur gegen erfundene Beispiele.
 4. **Lektorate zuerst verifizieren.** Fremde Lektorate können einen Altstand geprüft, bereits behobene Fehler gemeldet oder nicht existierende Funktionen genannt haben.
 5. **Jede Änderung absichern.** Mindestens ein gezielter Regressionstest, danach die komplette Suite.
-6. **Fertige Entwicklungsänderungen immer committen und pushen.** Das ist Benjamins ausdrückliche Daueranweisung.
-7. **Kein Vercel-/Deployment-Check.** Nach dem Push nicht die Produktionsseite öffnen oder prüfen, außer Benjamin verlangt es ausdrücklich.
+6. **Fertige Entwicklungsänderungen immer committen und pushen.** Das ist Projektleitungs ausdrückliche Daueranweisung.
+7. **Kein Vercel-/Deployment-Check.** Nach dem Push nicht die Produktionsseite öffnen oder prüfen, außer Projektleitung verlangt es ausdrücklich.
 8. **Nur beabsichtigte Dateien stagen.** Fremde/unzusammenhängende Änderungen erhalten. Vor `git add` immer `git diff --check`, `git diff --stat` und `git status --short` prüfen.
-9. **Gameplay-Feel nicht ungefragt grundsätzlich umbauen.** Technische Bugs, Sackgassen, widersprüchliche Weltzustände und wirkungslose Buttons direkt reparieren; bei echten Designentscheidungen Benjamins Richtung einholen.
+9. **Gameplay-Feel nicht ungefragt grundsätzlich umbauen.** Technische Bugs, Sackgassen, widersprüchliche Weltzustände und wirkungslose Buttons direkt reparieren; bei echten Designentscheidungen Projektleitungs Richtung einholen.
 10. **Fehler offen benennen.** Wenn ein früherer Fix falsch war oder ein Run einen echten Deadlock zeigt, klar sagen – nicht als Bedienfehler des Spielers darstellen.
 
 ---
@@ -251,7 +251,7 @@ Zum Übergabezeitpunkt gibt es keinen bekannten reproduzierten P0/P1-Deadlock. D
 1. **Krause manueller Regressionslauf:** Ein echter kompletter Run nach den zahlreichen Gruppen-/Finale-/Ort-Fixes ist weiterhin wertvoll. Die automatischen Krause-Tests sind grün.
 2. **Stilvarianz:** Der erste Wegener-Run nach v1295 war deutlich besser; bei neuen Runs weiter auf wiederkehrende Sinnesmotive und Standardsätze achten.
 3. **API-Kosten:** Der Debug-Export wertet Requests, Input, Cachequote, Output und geschätzte Kosten aus. Der Zähler lebt im Arbeitsspeicher und beginnt nach einem Seiten-Reload neu; deshalb nicht als vollständige Runhistorie missverstehen.
-4. **Produktionsstatus:** Wegen Benjamins Anweisung wurde nach den letzten Pushes kein Vercel-Check durchgeführt. Das ist kein gemeldeter Fehler, sondern bewusst unüberprüfter Deploymentstatus.
+4. **Produktionsstatus:** Wegen Projektleitungs Anweisung wurde nach den letzten Pushes kein Vercel-Check durchgeführt. Das ist kein gemeldeter Fehler, sondern bewusst unüberprüfter Deploymentstatus.
 
 Neue Benutzerbefunde haben Vorrang. Nicht prophylaktisch an diesen Punkten umbauen, wenn kein echter Run einen Fehler zeigt.
 

@@ -51,7 +51,7 @@ export default async function handler(req, res) {
   // Env-Vars laden
   const githubToken = process.env.GITHUB_TOKEN;
   const deployPasswordHash = process.env.DEPLOY_PASSWORD_HASH;
-  const githubRepo = process.env.GITHUB_REPO || 'benlebt/Schatten';
+  const githubRepo = process.env.GITHUB_REPO;
   const githubBranch = process.env.GITHUB_BRANCH || 'main';
 
   if (!githubToken) {
@@ -59,6 +59,9 @@ export default async function handler(req, res) {
   }
   if (!deployPasswordHash) {
     return res.status(500).json({ error: 'DEPLOY_PASSWORD_HASH nicht konfiguriert in Vercel-Env-Vars.' });
+  }
+  if (!githubRepo) {
+    return res.status(500).json({ error: 'GITHUB_REPO nicht konfiguriert in Vercel-Env-Vars.' });
   }
 
   const { password, path, content, commitMessage } = req.body || {};

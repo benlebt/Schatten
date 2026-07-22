@@ -1,6 +1,6 @@
 # Konzept: "Handeln vs. Übersicht" - zwei übergeordnete Einstiege
 
-## Die Idee (Benjamin)
+## Die Idee (Projektleitung)
 Statt jeden Button einzeln mit einem Marker (▶) zu kennzeichnen, gibt es ZWEI große Einstiege ganz oben
 in der Aktionszone. Der Spieler wählt zuerst die ABSICHT, dann erscheinen die passenden Optionen.
 
@@ -51,8 +51,8 @@ Zwei große, gut tappbare Einstiege. Aufklappen minimal animiert. Nicht zu viele
 bis zur Aktion (Einstieg -> Aktion). Personen-Verben evtl. dritte Ebene (Einstieg -> Person -> Verb) -
 das ist grenzwertig, daher Designfrage unten.
 
-## Standardzustand (was ist offen?) - BENJAMIN-ENTSCHEIDUNG
-Benjamin will ZWEI gleichberechtigte große Einstiege oben: [▶ HANDELN] und [⚙ ÜBERSICHT]. Man tippt
+## Standardzustand (was ist offen?) - PROJEKTLEITUNG-ENTSCHEIDUNG
+Projektleitung will ZWEI gleichberechtigte große Einstiege oben: [▶ HANDELN] und [⚙ ÜBERSICHT]. Man tippt
 einen an, dann klappen dessen Optionen auf. Die A/B/C/D leben ALSO hinter "Handeln" (ein Tipp), nicht
 mehr dauerhaft sichtbar.
 
@@ -64,7 +64,7 @@ Damit das auf dem iPhone nicht nervt:
 - NPCs erscheinen kontextabhängig: unter HANDELN mit szene-auslösenden Verben, unter ÜBERSICHT mit
   Verwalten-Aktionen (mitnehmen/hier lassen).
 
-So ist Benjamins Wunsch (zwei klare Einstiege) erfüllt UND das Spielgefühl bleibt flüssig (A/B/C/D sofort da,
+So ist Projektleitungs Wunsch (zwei klare Einstiege) erfüllt UND das Spielgefühl bleibt flüssig (A/B/C/D sofort da,
 weil Handeln vorausgeklappt ist).
 
 ## Bau-Reihenfolge (klein, einzeln getestet)
@@ -79,10 +79,10 @@ weil Handeln vorausgeklappt ist).
    Übersicht (Verwalten) aufteilen - bzw. im NPC-Popup intern trennen.
 Nach Schritt 1+2 kann das ▶ als Einzel-Marker weg (Trennung ist dann strukturell).
 
-## Offene Fragen an Benjamin
+## Offene Fragen an Projektleitung
 1. Personen-Aktionen: Ein NPC-Popup mit zwei Bereichen ("Handeln" / "Übersicht")? Oder Person taucht
    getrennt unter Handeln (Verben) UND unter Übersicht (mitnehmen/hier lassen) auf?
-   (ENTSCHEIDUNG: EIN Popup, intern geteilt - Benjamin + ChatGPT einig. NPC-Logik bleibt erhalten.)
+   (ENTSCHEIDUNG: EIN Popup, intern geteilt - Projektleitung + ChatGPT einig. NPC-Logik bleibt erhalten.)
 2. Begriffe: ENTSCHEIDUNG "Handeln" / "Übersicht" (ChatGPT: "Übersicht" intuitiver als "Organisieren").
 3. ▶ als Einzel-Marker: nach dem Umbau weg (Trennung ist dann strukturell). ENTSCHEIDUNG: ja, weg.
 
@@ -129,7 +129,7 @@ Handeln:   Befragen · Beruhigen · Beschützen · In Sicherheit bringen
 Übersicht: Info ansehen · Mitnehmen · Hierlassen
 ```
 
-## PRÄZISIERUNG (Benjamin): Personen leben INNERHALB der Einstiege, nicht mehr separat
+## PRÄZISIERUNG (Projektleitung): Personen leben INNERHALB der Einstiege, nicht mehr separat
 WICHTIG - das ersetzt die "ein geteiltes NPC-Popup"-Idee. Die anwesenden Personen schweben NICHT mehr als
 anklickbare Namen außerhalb/zwischen den Buttons. Sie erscheinen INNERHALB beider Einstiege:
 - Unter HANDELN: anwesende Personen als Einträge -> Tippen zeigt die szene-auslösenden Verben (befragen,
@@ -161,7 +161,7 @@ Aktualisiertes iPhone-Zielbild:
   Margarete Stein      (tippen -> Info/Mitnehmen/Hierlassen)
 ```
 
-## FINALE BESCHRIFTUNG + ACHSE (Benjamin-Entscheidung - ersetzt "Handeln/Übersicht")
+## FINALE BESCHRIFTUNG + ACHSE (Projektleitung-Entscheidung - ersetzt "Handeln/Übersicht")
 Die wahre Trennlinie ist die ZEIT/SZENEN-Währung, nicht "Handlung vs. Übersicht":
 - **"Übergang in nächste Szene"** = löst eine Szene aus, Zeit vergeht, Tageszeit kann wechseln.
 - **"Bleibt in der Szene"** = kostet keine Szene, keine Zeit, man bleibt im aktuellen Moment.

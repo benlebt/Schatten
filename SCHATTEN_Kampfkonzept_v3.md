@@ -186,4 +186,4 @@ Kein zweites System: intern bleibt es `encounterHP`. Nur das **UI-Label** heißt
 
 ### M0 ist INTERN, kein Spielerfeature (Review 3, P2)
 
-M0 baut `encounterStamina` + Log + FX-Queue, aber zeigt dem Spieler noch KEINEN Ausdauerbalken — der bewegt sich ja noch nicht. Sichtbar nur im Debug (`?debug=hardenberg17`). Der öffentliche Ausdauerbalken kommt in M1, wenn er wirklich etwas tut. Sonst verwirrt ein toter Balken die Tester.
+M0 baut `encounterStamina` + Log + FX-Queue, aber zeigt dem Spieler noch KEINEN Ausdauerbalken — der bewegt sich ja noch nicht. Sichtbar nur im Debug (`?debug=on`). Der öffentliche Ausdauerbalken kommt in M1, wenn er wirklich etwas tut. Sonst verwirrt ein toter Balken die Tester.

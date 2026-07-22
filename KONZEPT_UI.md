@@ -1,6 +1,6 @@
 # Konzept: UI-Überarbeitung "Klarheit & Übersicht"
 
-## Die Probleme (aus Benjamins Analyse + Runs)
+## Die Probleme (aus Projektleitungs Analyse + Runs)
 1. **Statusleiste (Verfassung/Spannung) auf iPhone nicht mehr permanent sichtbar** - scrollt mit dem
    Szenentext weg, man muss hochscrollen. (Technisch: `.scene-status-strip` ist pro Szene eingebettet;
    die globale `.status-bar` klebt auf Mobile nicht zuverlässig.)
@@ -28,7 +28,7 @@ Drei klar getrennte Zonen statt einer langen Buttonliste:
   z.B. dezenter, ohne ▶), klar als "Werkzeug/Übersicht" erkennbar.
 - NPC-Popup-Markierung (löst Szene aus / ändert nur Party) BLEIBT - die ist schon gut.
 
-## Menüstruktur (Benjamins Idee: aufklappbare Kategorien statt flache Liste)
+## Menüstruktur (Projektleitungs Idee: aufklappbare Kategorien statt flache Liste)
 Statt alle Buttons untereinander -> wenige klare Einstiege, die aufklappen:
 - **[Personen]** - klappt die NPCs im Raum auf (jeder mit Verb-Menü). Macht NPC-Klickbarkeit eindeutig.
 - **[Handeln]** - die ABCD-Szenenoptionen (Standard-Aktionen).
@@ -55,9 +55,9 @@ schnellen Klarheits-Gewinne, dann optional die Menü-Umstrukturierung.
 **Schritt E** - (später, eigenes Thema) Tod/Abschluss: Sound + kleine Animation als Erfolgs-/Verlusterlebnis.
 
 Jeder Schritt: eigener Versionssprung, node --check, am Gerät getestet, BEVOR der nächste kommt.
-Schritt A zuerst, weil größter Gewinn + löst Benjamins akutes "ich seh meine Werte nicht"-Problem.
+Schritt A zuerst, weil größter Gewinn + löst Projektleitungs akutes "ich seh meine Werte nicht"-Problem.
 
-## Offene Fragen an Benjamin
+## Offene Fragen an Projektleitung
 - Schritt-A-Mini-Leiste: nur Verfassung+Spannung, oder auch Tag/Zeit/Ort + Indizienzahl?
 - ▶-Marker für Szene-Buttons ok, oder lieber Filmklappe 🎬 / anderes Symbol?
 - Aufklappmenü (Schritt D) wirklich gewünscht, oder reicht die Klarheit aus A-C?

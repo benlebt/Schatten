@@ -1,10 +1,10 @@
 # Ideenskizze: Item- & Inventar-System (Finden, Geben, Anwenden)
 
-Status: NUR IDEE / noch kein Konzept. Sehr zeitnahe Erweiterung gewünscht (Benjamin). Kommt NACH UI-Umbau.
+Status: NUR IDEE / noch kein Konzept. Sehr zeitnahe Erweiterung gewünscht (Projektleitung). Kommt NACH UI-Umbau.
 Verwandt mit IDEE_SCHLUESSEL_SCHLOSS.md (beides: Engine besitzt Gegenstände/Wissen, Spieler wendet sie an).
 ChatGPT hat Items früher schon angeregt; passt zu "GTA in Schwarzweiß".
 
-## Die Vision (Benjamin)
+## Die Vision (Projektleitung)
 Echte Items, die man findet, einsammelt, weitergibt und ANWENDET. Items werden zu sozialen/komischen/taktischen
 Werkzeugen - kein reines Deko-Inventar.
 

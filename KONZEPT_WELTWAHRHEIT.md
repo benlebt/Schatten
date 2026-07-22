@@ -1,7 +1,7 @@
 # Konzept: Weltwahrheit (Thema B) - Ort, Anwesenheit, Personen-Zustand als Engine-Besitz
 
-Status: KONZEPT-ENTWURF zur Diskussion mit Benjamin. NÄCHSTER GROSSER BLOCK (vor Items/NPC-Actions, die darauf
-aufbauen). Drei ChatGPT-Lektorate in Folge (Runs 1800/1847/2007) + Benjamins Befunde zeigen auf denselben Kern:
+Status: KONZEPT-ENTWURF zur Diskussion mit Projektleitung. NÄCHSTER GROSSER BLOCK (vor Items/NPC-Actions, die darauf
+aufbauen). Drei ChatGPT-Lektorate in Folge (Runs 1800/1847/2007) + Projektleitungs Befunde zeigen auf denselben Kern:
 Die Engine korrigiert nur den HEADER, aber die Prosa und die abgeleiteten Zustände widersprechen sich.
 
 ## Das Grundmuster (dieselbe Erkenntnis wie Indizien/Sicherung/Custody)
@@ -24,7 +24,7 @@ W1. CLIENT-STATE (klein, hoher Nutzen): caseProgress.clientState = 'with_karl'|'
     - Engine setzt ihn (Party-Add->with_karl, Text-Flucht-Detektor->hidden, Sicherung->secured, Festnahme-Ereignis->captured).
     - recap-PFLICHT-Regel je Zustand: with_karl -> KI darf NICHT "verschwunden/abgefangen/nirgends gemeldet" erzählen.
     - Widerspruchs-Wächter analog META-CUSTODY-Wächter (v598): erzählt die KI Gegenteiliges -> diag + ggf. Zustand folgen
-      ODER Erzählung ignorieren (Entscheidung pro Richtung, Benjamin fragen).
+      ODER Erzählung ignorieren (Entscheidung pro Richtung, Projektleitung fragen).
 W2. ORT-TREUE-WÄCHTER (mittel): Bei Hauptort-Mismatch in Stage>=2 NICHT nur Header korrigieren:
     - Stufe 1: Retry mit hartem Orts-Prompt ("Die Szene MUSS an <Ort> spielen").
     - Stufe 2 (Retry erschöpft): kurze lokale Fallback-Szene am Engine-Ort statt falscher Prosa.
@@ -44,11 +44,11 @@ W5. SCHLAF-ORT (klein): Schlaf-Aktion trägt sleepLocation=engineCurrentLocation
 - Setup-Cast-Audit zählt Präsenz falsch (Report-Bug, Run 2007: Margarete/Mertens als "nie aktiviert" gelistet).
 - Tageszeittextur bei langen Nächten ("späte Nacht", "kurz vor Morgengrauen") - KEIN Auto-Schlaf (Arcade bleibt).
 - Willi Kummer ortsgebunden (canJoinParty:false-Idee), Lemke nur-bei-Schutz.
-- Kernbeweise vs. optionale Spuren in der X/13-Anzeige (Designfrage an Benjamin, eigenes kleines Konzept).
+- Kernbeweise vs. optionale Spuren in der X/13-Anzeige (Designfrage an Projektleitung, eigenes kleines Konzept).
 
 ## Empfohlene Reihenfolge
 W1 (Client-State) -> W3 (Flucht-Ort) -> W5 (Schlaf-Ort) -> W4 (Präsenz-Härtung) -> W2 (Ort-Retry, teuerster Baustein).
-Jeder Schritt einzeln getestet + Run dazwischen. ERST Benjamins Freigabe zum Konzept einholen.
+Jeder Schritt einzeln getestet + Run dazwischen. ERST Projektleitungs Freigabe zum Konzept einholen.
 
 ---
 ## CHATGPT-FREIGABE + SCHÄRFUNGEN (verbindlich)

@@ -1,6 +1,6 @@
 # Ideenskizze: Schlüssel-Schloss-System (Notizbuch + Freitext mit echtem Gewicht)
 
-Status: NUR IDEE / noch kein Konzept. Kommt NACH dem UI-Umbau (B2/B3). Quelle: Testerin + Benjamin.
+Status: NUR IDEE / noch kein Konzept. Kommt NACH dem UI-Umbau (B2/B3). Quelle: Testerin + Projektleitung.
 
 ## Das Problem heute
 - Notizbuch ist passiv: zeigt gefundene Indizien an, "tut" aber nichts ("Zombie-Buch").
@@ -46,9 +46,9 @@ Nötige Bausteine (für späteres Konzept):
 
 ## Reihenfolge
 ERST UI-Umbau (B2/B3) fertig + getestet. DANN eigenes Konzeptpapier für dieses System (wie beim Indizien-Projekt),
-Benjamin liest/korrigiert, DANN Code. Nicht in den laufenden UI-Umbau quetschen (keine zwei Großbaustellen).
+Projektleitung liest/korrigiert, DANN Code. Nicht in den laufenden UI-Umbau quetschen (keine zwei Großbaustellen).
 
-## Konkretes Live-Beispiel (Benjamin, Run 29.März-Szene): Spind-Code
+## Konkretes Live-Beispiel (Projektleitung, Run 29.März-Szene): Spind-Code
 In Szene 38 hat der Spieler einen NPC nach einem Code für einen Spind gefragt. GENAU der Anwendungsfall:
 Spind-Code als Indiz/Schlüssel finden -> später per FREITEXT am Spind eingeben -> Engine prüft -> Spind öffnet.
 Bestätigt: das Schlüssel-Schloss-System hat echten Spielbedarf, kommt im echten Spiel natürlich vor.

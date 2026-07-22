@@ -20,12 +20,12 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1313 +Kessler-Abschlusskontinuitaet'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1314 +Repository-Haertung'"), 'release version missing');
 assert(html.includes('BÜROSCHRANK · STARTAUSRÜSTUNG'), 'case start dialog must expose the office wardrobe');
 assert(html.includes('Immer dabei: Walther PPK, Detektiv-Lizenz, Notizbuch und Bleistift.'), 'fixed detective gear must be explained');
 
 const itemBlockStart = html.indexOf('const ITEM_KATALOG =');
-const itemBlockEnd = html.indexOf('// v7.12.631 (Benjamin: "eintauschen für Information', itemBlockStart);
+const itemBlockEnd = html.indexOf('// v7.12.631 (Projektleitung: "eintauschen für Information', itemBlockStart);
 assert(itemBlockStart >= 0 && itemBlockEnd > itemBlockStart, 'wardrobe item block missing');
 
 const inventoryContext = {
