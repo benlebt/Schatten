@@ -18,7 +18,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1286 +Krause-Bildzustand-PPK-Balance'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1287 +Bueroschrank-Kessler-Bildkonsistenz'"),
   'Brandt regression release version missing');
 
 for (const bad of [
