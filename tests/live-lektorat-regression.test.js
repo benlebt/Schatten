@@ -164,6 +164,18 @@ const environmentalInteriorDrift = worldContext.validateSceneWorldTruth({
 assert.strictEqual(environmentalInteriorDrift && environmentalInteriorDrift.code, 'outdoor_interior_drift',
   'an outdoor evidence action must reject an uncommanded move into a house or stairwell');
 
+const uncommandedDeparture = worldContext.validateSceneWorldTruth({
+  ort: 'Hinterhof Sybelstrasse',
+  szene: 'Du wartest, bis Robert im Hinterhaus verschwindet. Dann verlaesst du den Hof fluchtartig.',
+  personenImRaum: [],
+  optionen: []
+}, {
+  id: 'HAUPTUI_INDRAMATISIERUNG_robert_eintritt_beobachtet',
+  kategorie: 'BEOBACHTEN'
+});
+assert.strictEqual(uncommandedDeparture && uncommandedDeparture.code, 'unauthorized_departure',
+  'a wait/observe action must reject prose that says Karl leaves the engine location');
+
 const wrongSocialTarget = worldContext.validateSceneWorldTruth({
   ort: 'Hinterhof Sybelstrasse',
   szene: 'Frau Pohl lockert ihren Griff am Tuerrahmen und antwortet Karl ausweichend.',

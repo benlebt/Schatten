@@ -16414,3 +16414,15 @@ Gegen-die-Wand-Drücken, Schlagen und Verletzungsmarker bei `befragen`/`reden` h
 Weltwahrheitsbudget zwei Retries besitzt, kann ein erster Ortsfehler den Gewaltschutz nicht
 mehr verbrauchen; danach greift ein verbaler deterministischer Fallback. Der reale K4-Satz
 ist als Regression enthalten.
+
+## 🆕 v7.12.1324 — Manueller Kessler-Lauf K5: semantischer Abgang gesperrt
+
+Nach „Im Schatten des Hinterhofs warten“ erzählte K5 korrekt Roberts Eintreffen, ließ Karl
+am Ende aber „den Hof fluchtartig“ verlassen. Engine-Ort, Header, Bild und Haupt-UI blieben
+im Hinterhof. Der vorhandene `unauthorized_departure`-Guard erkannte nur direkte
+Fluchtverben wie fliehen, rennen und hinausstürmen, nicht die gleichbedeutende Konstruktion
+„verlässt den Hof“.
+
+Das harte Weltwahrheits-Gate deckt nun zusätzlich `verlaesst` mit konkretem Ortsobjekt sowie
+„macht sich davon“ ab. Der reale K5-Satz ist regressionsgesichert. Beobachten/Warten bleibt
+damit am Engine-Ort, bis der Spieler eine echte Reise oder Flucht wählt.

@@ -67,6 +67,7 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 - Klienten-Geduld, Mahnung, Frist, Auftragsentzug und Abschlussbereitschaft.
 - Romantik-Klick-Zähler, Abkühlschritte, Personenwechsel/Reset und tatsächlicher `Rm`-Wert.
 - `personenImRaum`-Teleport, stille Begleitung und unerklärter Ortswechsel.
+- Auch semantische Abgangsvarianten prüfen: „verlässt den Hof/Ort/das Haus“, „macht sich davon“ oder „verschwindet“ widersprechen einem unveränderten Engine-Ort ebenso wie „flieht/rennt hinaus“. Ein Beobachten-/Warten-Klick darf Karl nicht eigenmächtig wegschreiben.
 - Funktionieren Buttons, Zielbindung, Karten-Vorauswahl, Öffnungszeiten, Reise-, Schlaf-, Heil- und Abschlusswege ohne Sackgasse?
 - Stimmt die Intensität der sichtbaren Aktion mit der Prosa überein? „Stelle zur Rede“/Befragen bleibt verbal; Packen, Gegen-die-Wand-Drücken, Schlagen und daraus erfundene NPC-Verletzungen sind ausschließlich nach einer ausdrücklich gewählten Angriffs-/Kampfhandlung zulässig.
 - Passen Szenenbild, Tageslicht, Ort, Figurenlage und Prosa zusammen?
