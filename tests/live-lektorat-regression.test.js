@@ -29,6 +29,22 @@ const npcSource = sourceOf('npcInteraktion');
 assert(npcSource.includes('_zeitUnmittelbar: !!verb._sozialTonart'),
   'a selected social interaction must resolve before a time or closing-time relocation');
 
+const botHashSource = sourceOf('botGetOptionsHash');
+assert(botHashSource.includes('.hauptui-execute:not(:disabled)') && botHashSource.includes('.hauptui-target:not(:disabled)'),
+  'autoplay freshness detection must include the active Haupt-UI controls');
+assert(botHashSource.includes("String((typeof sceneCounter === 'number') ? sceneCounter : 0)"),
+  'autoplay must distinguish consecutive scenes even when their Haupt-UI menus are identical');
+
+const botOptionsSource = sourceOf('botGetCurrentOptions');
+assert(botOptionsSource.includes("id: execute ? 'HAUPTUI_AUSFUEHREN' : 'HAUPTUI_VORBEREITEN'"),
+  'autoplay must expose Haupt-UI setup and execution as strategy candidates');
+
+const botLoopSource = sourceOf('botRunMainLoop');
+assert(botLoopSource.includes("if (chosen._hauptuiSetup && window.HAUPTUI_AKTIV)"),
+  'autoplay must complete the Haupt-UI two-click interaction before waiting for a new scene');
+assert(botLoopSource.includes("throw new Error('Haupt-UI: Ausfuehren-Button nach Ziel-/Verbwahl fehlt')"),
+  'autoplay must fail diagnostically instead of silently consuming a turn when Haupt-UI execution is missing');
+
 assert(html.includes("oeffnungszeit: ['morgen','vormittag','mittag','nachmittag','abend'], npcs: [{ id: 'oberkellner_voss'"),
   'Cafe Wien must be reachable when the Kessler trail points there in the morning');
 assert(html.includes("detail: 'Schoenhauser Allee, ausgeraubt in der vergangenen Nacht (29./30. September 1953)'"),
