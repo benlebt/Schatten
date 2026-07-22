@@ -1,7 +1,7 @@
 # SCHATTEN – Übergabe an einen neuen Codex-Chat
 
 - Stand: 22.07.2026
-- Spielversion: `v7.12.1315 +Abschluss-Sperrstunde`
+- Spielversion: `v7.12.1316 +Lektoratswaechter`
 - Branch: `main`
 - Aktueller Commit: nach dem Klonen mit `git rev-parse --short HEAD` ermitteln
 - Remote: mit `git remote get-url origin` ermitteln
@@ -35,8 +35,8 @@ Write-Output ('TEST_COUNT=' + $tests.Count)
 Erwartet:
 
 - `main` entspricht `origin/main`.
-- `window.SCHATTEN_VERSION = 'v7.12.1315 +Abschluss-Sperrstunde';`
-- 42 Testskripte laufen grün.
+- `window.SCHATTEN_VERSION = 'v7.12.1316 +Lektoratswaechter';`
+- 43 Testskripte laufen grün.
 - Der normale Arbeitsbaum ist sauber; sichtbar bleiben nur:
   - `.git-broken-20260708-2049/`
   - `.git-broken-20260708-2050/`
@@ -170,6 +170,15 @@ Die folgenden Befunde sind im aktuellen Code bereits repariert und regressionsge
    - Derselbe Run bestätigt zugleich, dass die alte Café-Wien-Doppelerzählung nicht wieder auftrat und `briefchen_ilse` korrekt als Umgebungs-Kernindiz gebucht wurde.
    - Test: `tests/anker-closing-time.test.js`.
 
+11. **Chrome-Lektoratslauf Kessler/Krause gehärtet** (v1316)
+   - Der hervorgehobene Reisebutton zeigt sein Spurziel nicht mehr nur an, sondern übergibt es auch als Kartenvorauswahl. Das behebt die in beiden echten Läufen reproduzierte leere Reisekarte.
+   - Cafe Wien ist schon am Morgen erreichbar, damit Kesslers morgens dorthin führende Pflichtspur nicht in einer geschlossenen Karte festhängt.
+   - Soziale Haupt-UI-Aktionen sind unmittelbare Interaktionen. Erst antwortet die angeklickte Person am aktuellen Ort; erst der folgende Zug darf Tageszeit und Sperrstunde umschalten.
+   - Das exakte NPC-Ziel aus dem Personenmenü überschreibt unscharfe Textheuristiken. Bei mehreren Anwesenden gilt die Antwort einer anderen Figur nun als Ziel-Drift und wird repariert.
+   - Krauses Akte, Prompt und Kartenbeschreibung stimmen nun auf Mittwochvormittag und die vergangene Nacht 29./30. September 1953 überein.
+   - Prompt-Grenzen verbieten neu erfundene, mechanisch folgenlose Verletzungen sowie ungesicherte angebliche Vorbegegnungen.
+   - Regression: `tests/live-lektorat-regression.test.js`.
+
 Diese Punkte nicht erneut umbauen, nur weil ein Lektorat einen älteren Stand beschreibt. Erst prüfen, ob ein neuer Run auf dem aktuellen Versionsstand den Fehler weiterhin reproduziert.
 
 ## 7. Tatsächlich offene Arbeit vor der Alexander-Demo
@@ -300,4 +309,4 @@ rg -n "SCHATTEN_SAVE_KEY|saveGameState|restoreGameState" index.html tests
 
 ## 14. Übergabezustand in einem Satz
 
-`main` steht auf v7.12.1315 mit 42/42 grünen Tests; Brandt-Wahrheitsbeat, kritischer Abschluss, Romance-Abkühlung, Brave-iPhone-Aktionen, Kessler-Heilreise/-Bild, Faden-Kartenvorauswahl, iOS-Audio, Kessler-Abschlusskontinuität und das Abschluss-Sperrstunden-Race sind repariert. Vor der Alexander-Demo bleiben ein kompletter Krause-Gegenlauf, ein kurzer Kessler-Abschluss-Retest auf v1315, ein realer iPhone-Brave-Retest und vor allem ein Blind-Test mit einer unbedarften Person.
+`main` steht auf v7.12.1316 mit 43/43 grünen Tests; zusätzlich zu den bisherigen Reparaturen sind Reise-Kartenvorauswahl, Kesslers morgendlicher Cafe-Zugang, soziale Sperrstunden-Kontinuität, exakte NPC-Zielbindung und Krauses Datumswahrheit gehärtet. Vor der Alexander-Demo bleiben ein kompletter Krause-Gegenlauf auf dem neuen Deploy, ein kurzer Kessler-Abschluss-Retest auf v1316, ein realer iPhone-Brave-Retest und vor allem ein Blind-Test mit einer unbedarften Person.
