@@ -272,6 +272,7 @@ vm.runInContext(sourceOf('_findArrivalEvidenceLeak'), worldContext);
 vm.runInContext(sourceOf('_findReputationAttributionDrift'), worldContext);
 vm.runInContext(sourceOf('_findFixedInteriorImageDrift'), worldContext);
 vm.runInContext(sourceOf('_findUnfoundedPriorVisitDrift'), worldContext);
+vm.runInContext(sourceOf('_findUncausedInteriorReentry'), worldContext);
 vm.runInContext(sourceOf('validateSceneWorldTruth'), worldContext);
 
 worldContext.engineCurrentLocation = { name: 'Krauses Antiquitaeten' };
@@ -279,6 +280,16 @@ worldContext.caseProgress.reiseLog = [{ ziel: 'Krauses Antiquitaeten' }];
 worldContext._istKesslerFallFuerBild = () => true;
 worldContext._kesslerBildIstInnenraum = () => true;
 worldContext._kesslerInnenraumTextPasst = text => /\b(?:im inneren|drinnen|hinter dem tresen|betrittst den laden)\b/i.test(String(text || ''));
+worldContext._findeIndizById = id => id === 'etui_letzter_ort' ? ({ id, fundText: 'Die Glasvitrine steht offen und leer. Im Staub zeichnet sich der Rand des Etuis ab.' }) : null;
+const krauseUncausedReentry = worldContext.validateSceneWorldTruth({
+  ort: 'Krauses Antiquitaeten',
+  szene: 'Du trittst erneut ueber die Schwelle des Antiquitaetenladens. Hannelore ist dir gefolgt. Im Inneren gehst du zur Vitrine.',
+  personenImRaum: ['Hannelore Wirth'], optionen: []
+}, { id: 'HAUPTUI_INDRAMATISIERUNG_etui_letzter_ort', _pendingIndizId: 'etui_letzter_ort' });
+assert.strictEqual(krauseUncausedReentry && krauseUncausedReentry.code, 'uncaused_interior_reentry',
+  'a non-travel clue click must not invent a second entrance into the current interior');
+assert(krauseUncausedReentry && krauseUncausedReentry.fundText.includes('Glasvitrine'),
+  'the reentry repair must retain the bound clue payoff');
 const krauseExteriorArrivalDrift = worldContext.validateSceneWorldTruth({
   ort: 'Krauses Antiquitaeten',
   szene: 'Du steigst vor dem Antiquitaetengeschaeft aus. Hannelore fegt den Gehweg vor dem Eingang und bleibt dort bei dir.',
@@ -302,6 +313,7 @@ assert.strictEqual(worldContext.validateSceneWorldTruth({
   'a real return visit must remain legal');
 worldContext._istKesslerFallFuerBild = () => false;
 worldContext.caseProgress.reiseLog = [];
+delete worldContext._findeIndizById;
 
 const curfewContext = {
   caseProgress: { _letzteSperrstunde: { von: 'Spedition Schmidt Moabit', nach: 'Karl Mauers Buero', tageszeit: 'nacht', scene: 4 } },
