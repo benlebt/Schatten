@@ -419,6 +419,24 @@ assert.strictEqual(kesslerWaitContext.gameTimeIdx, 4,
 assert.strictEqual(kesslerWaitContext.timeAdvanceTokens, 0,
   'the deterministic wait must reset residual random time tokens');
 
+const coreEvidenceProseContext = { diag: () => {} };
+vm.createContext(coreEvidenceProseContext);
+vm.runInContext(sourceOf('_indizAbschlussProsaSichern'), coreEvidenceProseContext);
+const timedCoreClue = {
+  id: 'robert_eintritt_beobachtet',
+  prosaPflicht: {
+    narrativ: /\b(?:19\s*uhr|gegen\s+sieben)\b/i,
+    fallbackProse: 'Es ist gegen 19 Uhr, als du Roberts Eintritt notierst.'
+  }
+};
+const untimedCoreScene = { szene: 'Robert tritt in den Hinterhof und verschwindet im Haus.' };
+assert.strictEqual(coreEvidenceProseContext._indizAbschlussProsaSichern(timedCoreClue, untimedCoreScene), true,
+  'a booked core clue must receive its configured missing narrative anchor before commit');
+assert(untimedCoreScene.szene.includes('gegen 19 Uhr'),
+  'the visible core-clue prose must contain the defining time anchor, not only the popup');
+assert.strictEqual(coreEvidenceProseContext._indizAbschlussProsaSichern(timedCoreClue, untimedCoreScene), false,
+  'a configured core-clue prose fallback must remain idempotent');
+
 const objectBeforeVerbDeparture = worldContext.validateSceneWorldTruth({
   ort: 'Hinterhof Sybelstrasse',
   szene: 'Robert Kessler weicht zurueck. Du stoesst ihn beiseite und hechtest in die dunkle Tordurchfahrt. Deine Schritte hallen, als du den Hinterhof ueber die Seitenstrasse verlaesst. Ausser Atem erreichst du die Strassenecke.',
