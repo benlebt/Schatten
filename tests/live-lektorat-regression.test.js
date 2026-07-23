@@ -764,6 +764,11 @@ const paraphrasedKesslerSummary = coreNarrationContext._findCoreEvidenceNarratio
 }, { _pendingIndizId: 'tuerschild_hauke' });
 assert(paraphrasedKesslerSummary && paraphrasedKesslerSummary.code === 'core_evidence_narration_redundancy',
   'an appended paraphrase of the fully dramatized Kessler doorplate clue must be rejected');
+const synonymKesslerSummary = coreNarrationContext._findCoreEvidenceNarrationRedundancy({
+  szene: 'Die Klingelschilder hängen schief. Der dritte Streifen von oben trägt den Namen Hauke, aber keinen Vornamen und keinen Titel. Dritter Stock links: Das Schild trägt nur den Namen Hauke - kein Herr, keine Familie.'
+}, { _pendingIndizId: 'tuerschild_hauke' });
+assert(synonymKesslerSummary && synonymKesslerSummary.code === 'core_evidence_narration_redundancy',
+  'a compact Kessler summary must be rejected even when the full narration uses title and position synonyms');
 assert.strictEqual(coreNarrationContext._findCoreEvidenceNarrationRedundancy({
   szene: 'Im Hausflur hängen die Klingelschilder schief. Dritter Stock links steht nur Hauke. Kein Herr Hauke, keine Familie.'
 }, { _pendingIndizId: 'tuerschild_hauke' }), null,
