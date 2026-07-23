@@ -81,7 +81,9 @@ const openingRoleContext = {
     { id: 'stamm_mfs', name: 'Hauptmann Vollmer' },
     { id: 'stamm_lenz', name: 'Lenz' }
   ],
-  karlAkte: { bekannte: {} }
+  karlAkte: { bekannte: {}, mieteOffen: 0 },
+  caseProgress: { alkohol: 0 },
+  window: { _mfsVisierAktiv: false }
 };
 vm.createContext(openingRoleContext);
 vm.runInContext(sourceOf('validateOpeningRoleTruth'), openingRoleContext);
@@ -109,6 +111,32 @@ assert.strictEqual(openingRoleContext.validateOpeningRoleTruth(
   'Hauptmann Vollmer beobachtet dich schon seit Tagen.', activeVollmerSetup
 ).code, 'opening_unsupported_prior_encounter',
 'a first recurring-NPC appearance must not invent an earlier relationship');
+const krausePrivateSetup = {
+  caseType: 'diebstahl',
+  stasiRelevance: 0,
+  setupCast: [{ name: 'Theodor Krause', tag: 'CLIENT' }]
+};
+assert.strictEqual(openingRoleContext.validateOpeningRoleTruth(
+  'Theodor Krause nennt den Auftrag. Deine Miete ist seit zwei Wochen ueberfaellig.', krausePrivateSetup
+).code, 'opening_rent_state_mismatch',
+'a paid career rent state must reject invented opening debt');
+assert.strictEqual(openingRoleContext.validateOpeningRoleTruth(
+  'Theodor Krause nennt den Auftrag. Die Flasche Doppelkorn in der Schublade ist fast leer.', krausePrivateSetup
+).code, 'opening_alcohol_prop_mismatch',
+'a sober opening must reject an invented almost-empty office bottle');
+assert.strictEqual(openingRoleContext.validateOpeningRoleTruth(
+  'Theodor Krause nennt den Auftrag. Ein Mann im grauen Trenchcoat zieht seit Minuten beobachtend seine Runden.', krausePrivateSetup
+).code, 'opening_private_stasi_intrusion',
+'a stasi relevance zero case must reject a personal grey-coat watcher');
+assert.strictEqual(openingRoleContext.validateOpeningRoleTruth(
+  'Theodor Krause nennt den Diebstahl, das Honorar und die frische Spur zu Tante Frieda.', krausePrivateSetup
+).ok, true,
+'a clean private-case opening must remain valid');
+assert(html.includes('hatExpliziteRelevanz') && html.includes('return Number(cs.stasiRelevance) >= 3'),
+  'explicit stasi relevance must override incidental historical-context words');
+assert(sourceOf('_buildProfilRecap').includes('KARRIERE-WAHRHEIT')
+  && sourceOf('_buildProfilRecap').includes('PRIVATFALL-WAHRHEIT'),
+  'opening recap must state negative career and private-case world truth');
 const dirtyOpening = {
   szene: 'Edith Kessler hat dich beauftragt. Hauptmann Vollmer verfolgt dich seit Tagen. Robert biegt in den Hof ein.',
   personenImRaum: ['Robert Kessler', 'Hauptmann Vollmer'],
