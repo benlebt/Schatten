@@ -270,7 +270,38 @@ vm.runInContext(sourceOf('_worldTruthOrtGleich'), worldContext);
 vm.runInContext(sourceOf('_worldTruthAbschlussRueckblickErlaubt'), worldContext);
 vm.runInContext(sourceOf('_findArrivalEvidenceLeak'), worldContext);
 vm.runInContext(sourceOf('_findReputationAttributionDrift'), worldContext);
+vm.runInContext(sourceOf('_findFixedInteriorImageDrift'), worldContext);
+vm.runInContext(sourceOf('_findUnfoundedPriorVisitDrift'), worldContext);
 vm.runInContext(sourceOf('validateSceneWorldTruth'), worldContext);
+
+worldContext.engineCurrentLocation = { name: 'Krauses Antiquitaeten' };
+worldContext.caseProgress.reiseLog = [{ ziel: 'Krauses Antiquitaeten' }];
+worldContext._istKesslerFallFuerBild = () => true;
+worldContext._kesslerBildIstInnenraum = () => true;
+worldContext._kesslerInnenraumTextPasst = text => /\b(?:im inneren|drinnen|hinter dem tresen|betrittst den laden)\b/i.test(String(text || ''));
+const krauseExteriorArrivalDrift = worldContext.validateSceneWorldTruth({
+  ort: 'Krauses Antiquitaeten',
+  szene: 'Du steigst vor dem Antiquitaetengeschaeft aus. Hannelore fegt den Gehweg vor dem Eingang und bleibt dort bei dir.',
+  personenImRaum: ['Hannelore Wirth'], optionen: []
+}, { id: 'REISE', _istReise: true });
+assert.strictEqual(krauseExteriorArrivalDrift && krauseExteriorArrivalDrift.code, 'fixed_interior_image_drift',
+  'a fixed Krause interior image must reject an arrival scene that ends on the pavement');
+const krauseFalsePriorVisit = worldContext.validateSceneWorldTruth({
+  ort: 'Krauses Antiquitaeten',
+  szene: 'Du betrittst den Laden. Im Inneren erkennt Hannelore Wirth dich als den Fremden, der vorhin schon einmal hier war.',
+  personenImRaum: ['Hannelore Wirth'], optionen: []
+}, { id: 'REISE', _istReise: true });
+assert.strictEqual(krauseFalsePriorVisit && krauseFalsePriorVisit.code, 'unfounded_prior_visit',
+  'the first arrival in the travel log must reject an invented earlier visit');
+worldContext.caseProgress.reiseLog.push({ ziel: 'Krauses Antiquitaeten' });
+assert.strictEqual(worldContext.validateSceneWorldTruth({
+  ort: 'Krauses Antiquitaeten',
+  szene: 'Du betrittst den Laden. Im Inneren erkennt Hannelore Wirth dich von deinem vorigen Besuch wieder.',
+  personenImRaum: ['Hannelore Wirth'], optionen: []
+}, { id: 'REISE', _istReise: true }), null,
+  'a real return visit must remain legal');
+worldContext._istKesslerFallFuerBild = () => false;
+worldContext.caseProgress.reiseLog = [];
 
 const curfewContext = {
   caseProgress: { _letzteSperrstunde: { von: 'Spedition Schmidt Moabit', nach: 'Karl Mauers Buero', tageszeit: 'nacht', scene: 4 } },
