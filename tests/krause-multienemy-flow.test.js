@@ -19,10 +19,11 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1369 +Innenraum-Reentry-Gate'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1370 +Objektzustand-Synonyme'"), 'release version missing');
 assert(html.includes('Dramatisiere diese EINE Spur genau EINMAL'), 'explicit Haupt-UI clues must merge compact target and detailed payoff into one narration');
 assert(html.includes('OFFENE OBJEKTWAHRHEIT (HART, KEIN INDIZ-PAYOFF)'), 'every pre-clue scene must preserve visible hotspot truth, including client dialogue');
 assert(html.includes("vorabObjektwoerter: ['vitrine','glasvitrine','vitrinenglas']"), 'Krauses intact display case must expose a data-driven arrival truth guard');
+assert(html.includes("'aufgebrochen','aufgehebelt'") && html.includes("'gewaltsam geoeffnet'"), 'Krauses intact display case guard must reject natural forced-open synonyms');
 assert(html.includes('die intakte Vitrine leer geräumt'), 'the Krause scene map must agree that the empty display case glass is intact');
 assert(html.includes('habe|hatte|konnte'), 'arrival witness validation must cover German perfect infinitive phrasing');
 assert(html.includes("indiz.id !== 'einbruch_fenster'"), 'the Krause window clue must configure a visible prose anchor');

@@ -76,9 +76,9 @@ context.getCaseLocations = () => [{
     schluessel: ['fenster', 'aufgebrochen', 'aufgehebelt', 'stemmeisen', 'hinterhof', 'splittrig', 'kein profi']
   }, {
     id: 'etui_letzter_ort', quelle: 'umgebung',
-    vorabWahrheit: 'Die Vitrine ist offen und leer, ihr Glas ist aber intakt.',
+    vorabWahrheit: 'Die Vitrine ist offen und leer, ihr Glas ist aber intakt und unbeschÃ¤digt.',
     vorabObjektwoerter: ['vitrine', 'glasvitrine', 'vitrinenglas'],
-    vorabVerboten: ['zerbrochen', 'eingeschlagen', 'scherbe', 'glasscherbe', 'splitter', 'glassplitter'],
+    vorabVerboten: ['zerbrochen', 'eingeschlagen', 'scherbe', 'glasscherbe', 'splitter', 'glassplitter', 'aufgebrochen', 'aufgehebelt', 'gewaltsam geÃ¶ffnet', 'gewaltsam geoeffnet'],
     schluessel: ['vitrine', 'etui', 'zigarettenetui', 'silber', 'gravur', 'hugo', 'liesl', 'staub', 'samt', 'schmuck']
   }]
 }];
@@ -154,6 +154,14 @@ problem = context.validateSceneWorldTruth({
 }, { id: 'REISE', _istReise: true, _intent: { type: 'travel' } });
 assert(problem && problem.code === 'open_object_truth_contradiction',
   'an arrival must not contradict the physical truth of a still-open hotspot');
+
+problem = context.validateSceneWorldTruth({
+  ort: context.engineCurrentLocation.name,
+  szene: 'Hannelore starrt auf die aufgebrochene, leere Vitrine.',
+  personenImRaum: ['Hannelore Wirth'], optionen: []
+}, { id: 'REISE', _istReise: true, _intent: { type: 'travel' } });
+assert(problem && problem.code === 'open_object_truth_contradiction',
+  'a forced-open synonym must not bypass the intact display-case truth');
 
 problem = context.validateSceneWorldTruth({
   ort: context.engineCurrentLocation.name,
