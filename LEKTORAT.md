@@ -75,6 +75,7 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 - Wiederholt bestätigte eindeutige Sprachfehler eng im zentralen Sanitizer korrigieren: beobachtet sind insbesondere „Du must“→„Du musst“ und im Verwertungskontext „das Etui zu Gold macht“→„zu Geld macht“. Nur sichere 1:1-Korrekturen; echte Gold-, Material- oder Alchemieaussagen nicht breit umschreiben.
 - Lange Erzählabsätze dürfen nicht als vollständige direkte Rede in einem äußeren ASCII-Anführungszeichenpaar stehen. Der Sanitizer muss neben Pronomen-/Artikelanfängen auch einen aktuellen Cast-Namen als narrativen Absatzanfang erkennen; echte kurze Repliken und innere Dialog-Anführungszeichen bleiben erhalten.
 - Anführungszeichen im semantischen Browser-DOM-Snapshot können reine Serialisierungszeichen für Text mit Doppelpunkt oder Dialog sein. Sie zählen erst nach visueller Kontrolle des gerenderten Absatzes als echter Quote-Wrapper-Befund.
+- Reparatur-/Fallback-Prosa muss vollständig in der Spielwelt bleiben. Wendungen wie „die eigentliche Szene“, „im dargestellten Innenraum“, „laut Engine“ oder „sichtbare Ansatzpunkte“ sind Regie-/Metasprache und auch bei mechanisch korrektem Ergebnis ein Abbruchgrund.
 - Stil-Tics klar von Logikfehlern trennen.
 - Bewusst wiederholte Indiz-Motive nicht als Pumphrase entfernen, wenn ihre Wiederkehr Beweisfunktion oder Payoff hat.
 - Diagnose-Hardcaps gegen den tatsächlichen Text prüfen: Hat der Filter den richtigen Satz entfernt, oder Bedeutung beschädigt?

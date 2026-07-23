@@ -19,7 +19,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1380 +Etui-Provenienzzeit'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1381 +Natuerlicher-Innenraum-Fallback'"), 'release version missing');
 assert(html.includes('Liesl schenkte oder widmete das Etui 1939 Hugo'), 'Krause setup must bind the silver-case ownership direction');
 assert(html.includes('Karl zählt oder nimmt kein Geld, Karls Kasse bleibt unverändert'), 'Krause opening prompt must keep the return-contingent fee unpaid');
 assert(html.includes('Dramatisiere diese EINE Spur genau EINMAL'), 'explicit Haupt-UI clues must merge compact target and detailed payoff into one narration');
@@ -32,6 +32,10 @@ assert(html.includes("indiz.id !== 'einbruch_fenster'"), 'the Krause window clue
 assert(html.includes('sprechen eindeutig für ein Stemmeisen'), 'the hard fallback must restore the defining tool conclusion before booking');
 assert(html.includes('ERSTBESUCH-WAHRHEIT (PFLICHT)'), 'travel prompts must distinguish a first visit from a real return');
 assert(html.includes('fixed_interior_image_drift'), 'fixed interior scene images must be enforced as world truth before commit');
+assert(!html.includes("scene.szene = 'Du trittst in ' + ort + ' ein. Die eigentliche Szene spielt im dargestellten Innenraum."),
+  'the fixed-interior fallback must not leak staging language into visible prose');
+assert(html.includes('Du öffnest die Ladentür von Krauses Antiquitäten'),
+  'the Krause fixed-interior fallback must use natural location-specific arrival prose');
 assert(html.includes('open_object_truth_contradiction'), 'open hotspot physical truth must be validated before every scene commit');
 assert(html.includes('mitternacht|mittag|ein|eins'), 'scope validation must treat named day-boundary times like numeric clock facts');
 assert(html.includes('hievten|wuchteten|luden|warfen|verstauten|schoben'), 'scope validation must cover natural vehicle-loading verbs');
