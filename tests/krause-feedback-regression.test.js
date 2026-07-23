@@ -227,6 +227,28 @@ peaceProblem = peaceContext._findKrausePeaceReescalationDrift({
 }, { _pendingIndizId: 'tasche_im_lager' });
 assert.strictEqual(peaceProblem, null,
   'passive mistrust must remain valid after peaceful de-escalation');
+const arrivalRosterContext = {
+  normForMatch,
+  engineCurrentLocation: { name: 'Krauses Antiquitaeten' },
+  getNpcsAtCurrentLocation: () => [{ id: 'hannelore_wirth', name: 'Hannelore Wirth' }],
+  _npcZustandIstEntfernt: () => false,
+  _worldTruthAliases: (value, entry) => [normForMatch((entry && entry.name) || value)],
+  _worldTruthHasAlias: (text, aliases) => aliases.some(alias => normForMatch(text).includes(alias))
+};
+vm.createContext(arrivalRosterContext);
+vm.runInContext(sourceOf('_findArrivalNpcRosterDrift'), arrivalRosterContext);
+let arrivalRosterProblem = arrivalRosterContext._findArrivalNpcRosterDrift({
+  szene: 'Niemand ist im Laden, aber aus dem Treppenhaus dringen Schritte.',
+  personenImRaum: []
+}, { _istReise: true });
+assert(arrivalRosterProblem && arrivalRosterProblem.code === 'arrival_npc_roster_drift',
+  'an arrival must not claim an empty room while Hannelore is visible in image and UI');
+arrivalRosterProblem = arrivalRosterContext._findArrivalNpcRosterDrift({
+  szene: 'Hannelore Wirth steht im Laden und mustert dich aufmerksam.',
+  personenImRaum: ['Hannelore Wirth']
+}, { _istReise: true });
+assert.strictEqual(arrivalRosterProblem, null,
+  'matching arrival prose and NPC roster must remain valid');
 const theftStateSource = sourceOf('processTheftTargetState');
 assert(theftStateSource.includes("pendingChosenOption._pendingIndizId === 'etui_im_lager'"),
   'the theft state processor must not promote the Krause discovery click to physical possession');
