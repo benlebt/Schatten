@@ -132,6 +132,10 @@ assert(html.includes("anzeigename: (typeof _npcAnzeigename === 'function'"),
   'Haupt-UI person targets must carry the guarded display name');
 assert(kessler.includes('Brief an Robert, mit "I." unterzeichnet'),
   'the inventory clue itself must not label the signer as Ilse before the reveal');
+assert(!kessler.includes('Genau die Wohnung, in der Robert verschwindet.'),
+  'the doorplate-first route must not claim Robert entered Hauke before the observation clue');
+assert(kessler.includes('Mehr beweist das Schild allein noch nicht.'),
+  'the doorplate payoff must state its order-independent evidence boundary');
 
 for (const id of [
   'tuerschild_hauke', 'robert_eintritt_beobachtet', 'nachbarin_aussage',
