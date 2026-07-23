@@ -342,6 +342,11 @@ earlyRobertVerbs.forEach((verb) => {
   assert(verb.option.aktion.includes('KEINEN neuen Fallhinweis'), 'early conversation prompt must forbid premature evidence');
   assert(!verb.option.aktion.includes('Robert gesteht'), 'early conversation prompt must replace clue-revealing profile text');
 });
+const earlyDiscretion = context._sozialVorHinweisAktion({ key: 'diskretion', label: 'Diskretion zusichern' }, 'Frau Hauke');
+assert(earlyDiscretion.includes('SICHTBAR GEWAEHLTE GESPRAECHSART IST "Diskretion zusichern"'),
+  'a custom early social tone must remain the explicit action contract');
+assert(earlyDiscretion.includes('eine bloss neutrale Ansprache') && earlyDiscretion.includes('Frau Hauke'),
+  'custom early tones must reject generic neutral narration and retain the clicked target');
 context.getNpcsAtCurrentLocation = originalNpcsAtLocation;
 delete context._findSetupCastFuzzy;
 delete context._npcHatOffenenHinweis;

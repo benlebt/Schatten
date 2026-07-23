@@ -912,6 +912,13 @@ vm.runInContext(sourceOf('_sozialVorHinweisAktion'), earlySocialContext);
 const earlyExposure = earlySocialContext._sozialVorHinweisAktion({ key: 'blossstellen', label: 'Mit oeffentlicher Blossstellung drohen' }, 'Robert Kessler');
 assert(earlyExposure.includes('Mit oeffentlicher Blossstellung drohen') && earlyExposure.includes('Karl beruehrt, packt, schiebt oder schlaegt die Person NICHT'),
   'the pre-clue prompt must preserve the exact visible social tone and forbid physical substitution');
+const earlyDiscretionContext = { _sozialTonartArt: () => 'normal' };
+vm.createContext(earlyDiscretionContext);
+vm.runInContext(sourceOf('_sozialVorHinweisAktion'), earlyDiscretionContext);
+const earlyDiscretion = earlyDiscretionContext._sozialVorHinweisAktion({ key: 'diskretion', label: 'Diskretion zusichern' }, 'Frau Hauke');
+assert(earlyDiscretion.includes('SICHTBAR GEWAEHLTE GESPRAECHSART IST "Diskretion zusichern"')
+  && earlyDiscretion.includes('eine bloss neutrale Ansprache'),
+  'a custom visible social button must not collapse into generic neutral prose before clue release');
 assert(sourceOf('_hauptuiExecute').includes('Koerperliche Gewalt ist ausschliesslich der getrennten Spieleraktion'),
   'the verbal confrontation prompt must reserve violence for the explicit attack button');
 assert(html.includes("indiz.hotspot = 'Klingelschilder am Hofeingang pruefen'"),
