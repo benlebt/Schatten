@@ -34,6 +34,6 @@ const howto = html.slice(start, end);
   'Wirtin Rosa'
 ].forEach((stale) => assert(!howto.includes(stale), `stale how-to copy returned: ${stale}`));
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1452 +RunMotifHardcap-Staging'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1453 +LocationObjectTruth-Staging'"), 'release version missing');
 
 console.log('howto-current-state: ok');

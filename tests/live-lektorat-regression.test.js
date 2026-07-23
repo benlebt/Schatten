@@ -19,7 +19,7 @@ function sourceOf(name) {
 
 const serialLanguageContext = { caseSetup: { setupCast: [] } };
 vm.createContext(serialLanguageContext);
-vm.runInContext(sourceOf('stripAccidentalNarrativeQuotes') + '\n' + sourceOf('fixSprache'), serialLanguageContext);
+vm.runInContext(sourceOf('stripAccidentalNarrativeQuotes') + '\n' + sourceOf('fixSprache') + '\n' + sourceOf('fixCommonGrammarErrors'), serialLanguageContext);
 assert.strictEqual(serialLanguageContext.fixSprache('Du must sofort handeln.'), 'Du musst sofort handeln.',
   'the repeated second-person conjugation error must be repaired centrally');
 assert.strictEqual(serialLanguageContext.fixSprache('Wenn sie das Etui zu Gold macht, ist es weg.'),
@@ -28,6 +28,12 @@ assert.strictEqual(serialLanguageContext.fixSprache('Wenn sie das Etui zu Gold m
 assert.strictEqual(serialLanguageContext.fixSprache('Es ist eine meiner kostbarsten Stücke.'),
   'Es ist eines meiner kostbarsten Stücke.',
   'the Krause client reply must agree with the neuter Etui/Stück');
+
+assert.strictEqual(
+  serialLanguageContext.fixCommonGrammarErrors('Sie sieht dich an, als wärest du ein Geist, und nickst Kalle zu.'),
+  'Sie sieht dich an, als wärest du ein Geist, und nickt Kalle zu.',
+  'a female third-person subject must not switch to second-person conjugation mid-sentence'
+);
 
 const menuSource = sourceOf('renderOptions');
 assert(menuSource.includes("let _reiseVorauswahl = ''"),

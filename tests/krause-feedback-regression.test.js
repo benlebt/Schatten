@@ -191,6 +191,17 @@ tatortObjectProblem = tatortObjectContext._findKrauseTatortVisualObjectDrift({
 });
 assert.strictEqual(tatortObjectProblem, null,
   'the canonical shattered flat cases and intact rear cabinet must remain valid');
+tatortObjectContext.engineCurrentLocation = { name: 'Tante Friedas Hehlerei' };
+tatortObjectProblem = tatortObjectContext._findKrauseTatortVisualObjectDrift({
+  szene: 'Das Tageslicht fällt staubig durch die Scheiben auf die zerschlagenen Vitrinen.'
+});
+assert(tatortObjectProblem && tatortObjectProblem.code === 'krause_frieda_visual_object_drift',
+  'damage from Krauses crime scene must not drift into Friedas intact shop');
+tatortObjectProblem = tatortObjectContext._findKrauseTatortVisualObjectDrift({
+  szene: 'Friedas vollgestellter Laden liegt im staubigen Tageslicht.'
+});
+assert.strictEqual(tatortObjectProblem, null,
+  'neutral shop atmosphere at Friedas must remain valid');
 assert(sourceOf('validateSceneWorldTruth').includes('_findKrauseTatortVisualObjectDrift'),
   'the material Krause image/object truth must run before scene commit');
 const possessionContext = {
