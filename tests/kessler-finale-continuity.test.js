@@ -33,6 +33,26 @@ function norm(value) {
     .replace(/[^a-z0-9]+/g, ' ').trim();
 }
 
+const pohlWindowContext = {
+  normForMatch: norm,
+  _istKesslerFall: () => true,
+  engineCurrentLocation: { name: 'Hinterhof Sybelstrasse' }
+};
+vm.createContext(pohlWindowContext);
+vm.runInContext(sourceOf('_findKesslerWindowConversationDrift'), pohlWindowContext);
+let pohlWindowProblem = pohlWindowContext._findKesslerWindowConversationDrift({
+  szene: 'Frau Pohl zieht die Kittelschuerze glatt. Sie senkt die Stimme und tritt einen Schritt naeher.'
+}, { _npcName: 'Frau Pohl' });
+assert(pohlWindowProblem && pohlWindowProblem.code === 'kessler_window_conversation_drift',
+  'Pohl must not leave her pictured courtyard window without explanation');
+pohlWindowProblem = pohlWindowContext._findKesslerWindowConversationDrift({
+  szene: 'Frau Pohl lehnt am linken Erdgeschossfenster und senkt ueber das Fensterbrett hinweg die Stimme.'
+}, { _npcName: 'Frau Pohl' });
+assert.strictEqual(pohlWindowProblem, null,
+  'a Pohl conversation anchored at the visible window must remain valid');
+assert(html.includes('Frau Pohl am linken Erdgeschossfenster und Frau Hauke am oberen rechten Hoffenster'),
+  'the Sybel image alt text must name the two visible residents');
+
 // Scene 21 visibly identified the shadow. It must pay the old hook and must not
 // be detected again as a fresh hook merely because the words remain in prose.
 const cliffEvents = [];
@@ -159,7 +179,7 @@ assert(html.includes('ABSCHLUSS-KONTINUITÄT (PFLICHT)'),
   'the finale prompt must prohibit replaying the previous accepted scene');
 assert(html.includes('Keine doppelte Schatten-Auflösung'),
   'the finale prompt must explicitly block the observed duplicate shadow payoff');
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1437 +KrauseProvenance-Staging'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1438 +KesslerWindowTruth-Staging'"),
   'release version missing');
 
 console.log('KESSLER_FINALE_CONTINUITY_OK');
