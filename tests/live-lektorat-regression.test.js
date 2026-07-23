@@ -940,6 +940,29 @@ assert.strictEqual(liveEtuiWithoutEngraving.szene, etchedEtuiClue.fundText,
   'the missing engraving must produce one complete canonical Vitrine narration without an appended duplicate');
 coreEvidenceProseContext.caseProgress.pendingHauptuiIndiz = null;
 
+const pendingCommitContext = {
+  caseProgress: {
+    pendingHauptuiIndiz: { id: 'etui_letzter_ort' },
+    gefundeneIndizIds: ['etui_letzter_ort']
+  },
+  _findeIndizById: id => id === 'etui_letzter_ort' ? etchedEtuiClue : null,
+  _markiereIndizGefunden: () => { throw new Error('already booked clue must not be booked twice'); },
+  _flushIndizRewards: () => {},
+  diag: () => {}
+};
+vm.createContext(pendingCommitContext);
+vm.runInContext(sourceOf('_indizAbschlussProsaSichern'), pendingCommitContext);
+vm.runInContext(sourceOf('_hauptuiPendingIndizEinloesen'), pendingCommitContext);
+const alreadyScannedEtuiScene = {
+  szene: 'Im Staub zeichnet sich der helle Rand eines flachen Gegenstands ab. Genau hier lag das silberne Zigarettenetui, das Krause beschrieben hat.'
+};
+assert.strictEqual(pendingCommitContext._hauptuiPendingIndizEinloesen(alreadyScannedEtuiScene), true,
+  'a pending Haupt-UI clue already booked by the scene scan must still complete its final prose gate');
+assert.strictEqual(alreadyScannedEtuiScene.szene, etchedEtuiClue.fundText,
+  'the accepted live Vitrine scene must receive the complete engraving narration before the pending context clears');
+assert.strictEqual(pendingCommitContext.caseProgress.pendingHauptuiIndiz, null,
+  'the persistent pending context must clear only after final prose validation');
+
 const coreNarrationContext = {
   normForMatch: value => String(value || '').toLowerCase().replace(/[„“"'.,:;!?()\-]/g, ' ').replace(/\s+/g, ' ').trim(),
   _findeIndizById: id => id === 'etui_letzter_ort' ? ({
