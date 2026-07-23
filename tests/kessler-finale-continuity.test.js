@@ -55,6 +55,22 @@ pohlWindowProblem = pohlWindowContext._findKesslerWindowConversationDrift({
 }, { _npcName: 'Frau Pohl' });
 assert(pohlWindowProblem && pohlWindowProblem.code === 'kessler_window_conversation_drift',
   'Pohl must not drift from the pictured ground-floor window to the second floor');
+let haukeWindowProblem = pohlWindowContext._findKesslerWindowConversationDrift({
+  szene: 'Frau Hauke stuetzt sich auf das eiserne Treppengelaender. Sie tritt einen Schritt auf dich zu.'
+}, { _npcName: 'Frau Hauke' });
+assert(haukeWindowProblem && haukeWindowProblem.code === 'kessler_window_conversation_drift'
+  && haukeWindowProblem.npc === 'Frau Hauke',
+  'Hauke must remain at the pictured upper courtyard window during an outside conversation');
+haukeWindowProblem = pohlWindowContext._findKesslerWindowConversationDrift({
+  szene: 'Frau Hauke lehnt am oberen rechten Hoffenster und antwortet in den Hof hinunter.'
+}, { _npcName: 'Frau Hauke' });
+assert.strictEqual(haukeWindowProblem, null,
+  'a Hauke conversation anchored at the visible upper window must remain valid');
+haukeWindowProblem = pohlWindowContext._findKesslerWindowConversationDrift({
+  szene: 'Im dritten Stock oeffnet Frau Hauke ihre Wohnungstuer einen Spalt und bleibt im Hausflur.'
+}, { _npcName: 'Frau Hauke' });
+assert.strictEqual(haukeWindowProblem, null,
+  'the later explicit apartment-door conversation must not be forced back to the courtyard window');
 assert(html.includes('Frau Pohl am linken Erdgeschossfenster und Frau Hauke am oberen rechten Hoffenster'),
   'the Sybel image alt text must name the two visible residents');
 
@@ -184,7 +200,7 @@ assert(html.includes('ABSCHLUSS-KONTINUITÄT (PFLICHT)'),
   'the finale prompt must prohibit replaying the previous accepted scene');
 assert(html.includes('Keine doppelte Schatten-Auflösung'),
   'the finale prompt must explicitly block the observed duplicate shadow payoff');
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1453 +LocationObjectTruth-Staging'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1454 +CourtyardWindowTruth-Staging'"),
   'release version missing');
 
 console.log('KESSLER_FINALE_CONTINUITY_OK');
