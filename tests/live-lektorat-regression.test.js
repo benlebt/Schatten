@@ -280,6 +280,19 @@ const shortHallwayDrift = worldContext.validateSceneWorldTruth({
 assert.strictEqual(shortHallwayDrift && shortHallwayDrift.code, 'social_interior_drift',
   'the short phrase im Flur must be treated like im Hausflur at an outdoor engine location');
 
+const causedHallwayDrift = worldContext.validateSceneWorldTruth({
+  ort: 'Hinterhof Sybelstrasse',
+  szene: 'Frau Pohl zieht die Kette zurueck und laesst dich in den Treppenflur treten. Dort deutet sie nach oben.',
+  personenImRaum: ['Frau Pohl'],
+  optionen: []
+}, {
+  _zeitUnmittelbar: true,
+  _npcInteraktion: { npcName: 'Frau Pohl' },
+  id: 'HAUPTUI_SOZIAL_OFFEN'
+});
+assert.strictEqual(causedHallwayDrift && causedHallwayDrift.code, 'social_interior_drift',
+  'an NPC causing Karl to enter the hallway must count as the same outdoor-to-indoor teleport');
+
 const apartmentDoorDrift = worldContext.validateSceneWorldTruth({
   ort: 'Hinterhof Sybelstrasse',
   szene: 'Du klopfst leise an die Wohnungstuer im dritten Stock. Frau Hauke oeffnet einen Spalt.',

@@ -57,6 +57,7 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 - Wiederholungen wie `nagelt müde`, `Kopfsteinpflaster`, `Zigarillo`, `Bohnerwachs`, `Dämmerung wirft Schatten` und verwandte Motive runweit zählen.
 - Wiederkehrende Anfahrts-, Motor-, Tür-, Rauch-, Wetter- und Schmerzschablonen markieren.
 - Lange Erzählabsätze dürfen nicht als vollständige direkte Rede in einem äußeren ASCII-Anführungszeichenpaar stehen. Der Sanitizer muss neben Pronomen-/Artikelanfängen auch einen aktuellen Cast-Namen als narrativen Absatzanfang erkennen; echte kurze Repliken und innere Dialog-Anführungszeichen bleiben erhalten.
+- Anführungszeichen im semantischen Browser-DOM-Snapshot können reine Serialisierungszeichen für Text mit Doppelpunkt oder Dialog sein. Sie zählen erst nach visueller Kontrolle des gerenderten Absatzes als echter Quote-Wrapper-Befund.
 - Stil-Tics klar von Logikfehlern trennen.
 - Bewusst wiederholte Indiz-Motive nicht als Pumphrase entfernen, wenn ihre Wiederkehr Beweisfunktion oder Payoff hat.
 - Diagnose-Hardcaps gegen den tatsächlichen Text prüfen: Hat der Filter den richtigen Satz entfernt, oder Bedeutung beschädigt?
@@ -89,6 +90,7 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 - Innenraumbegriffe semantisch und in Kurzformen prüfen: „im Flur“, „im Hausflur“, „im Eingangsflur“ und „im Treppenhaus“ sind am Engine-Außenort gleichwertige Driftmarker; ein einzelnes weggelassenes Präfix darf den Guard nicht umgehen.
 - Auch Etagen-/Türhandlungen sind Ortsmarker: „an die Wohnungstür im dritten Stock klopfen/klingeln“ setzt Karl physisch auf einen Treppenabsatz und ist am unveränderten Engine-Außenort ebenso ein `ORT-PROSA-BRUCH` wie das ausdrückliche Betreten von Flur oder Treppenhaus.
 - Karls Ort kann auch indirekt durch Figurenwahrnehmung festgeschrieben werden: „sie sieht/bemerkt dich im Flur“ ist derselbe Innenraum-Teleport wie „du gehst in den Flur“, selbst wenn Karl im Satz kein eigenes Bewegungsverb erhält.
+- Gleiches gilt für kausative Fremdhandlungen: „sie lässt/bittet/führt dich in den Treppenflur“ vollzieht den Innenraumwechsel, obwohl die andere Figur grammatisches Subjekt ist. Am unveränderten Engine-Außenort muss auch diese Form als `ORT-PROSA-BRUCH` blockiert werden.
 
 ### 6. Wahrheitsbeat-/Truthbeat-Gate
 
