@@ -1396,5 +1396,19 @@ assert(html.includes('<span class="status-popup-label">Miete</span>')
 assert(html.includes('Betr\\u00e4ge wie 15 Mark bestehen aus mehreren Scheinen oder Scheinen und M\\u00fcnzen')
   && html.includes('nie "der Schein"'),
   'the historical money guard must prevent a fictional single 15-Mark banknote');
+const paymentRepairContext = {
+  window: { _letzteAktion: { text: '15 Ostmark zahlen · Renommee +1' } },
+  diag: () => {}
+};
+vm.createContext(paymentRepairContext);
+vm.runInContext(sourceOf('repairHistoricPaymentDenomination'), paymentRepairContext);
+const fictionalFifteenMarkNote = {
+  szene: 'Du reichst Frau Pohl einen Schein über fünfzehn Mark. Sie steckt das Geld ein.'
+};
+assert.strictEqual(paymentRepairContext.repairHistoricPaymentDenomination(fictionalFifteenMarkNote), true,
+  'a booked 15-Mark payment must deterministically repair a fictional single banknote');
+assert(fictionalFifteenMarkNote.szene.includes('fünfzehn Ostmark in mehreren Scheinen')
+  && !/einen Schein über fünfzehn Mark/i.test(fictionalFifteenMarkNote.szene),
+  'the visible payment prose must use a historically possible bundle of notes');
 
 console.log('LIVE_LEKTORAT_REGRESSION_OK');
