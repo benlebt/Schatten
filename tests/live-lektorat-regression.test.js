@@ -176,6 +176,28 @@ assert(sourceOf('getNpcsAtCurrentLocation').includes('_npcNachProsaAbgangAbwesen
 assert(sourceOf('performApiCall').includes('sanitizeSceneExplicitNpcDepartures(scene)'),
   'explicit departures must be sanitized before the pre-commit world-truth gate');
 
+const npcLocationFactContext = {
+  normForMatch: value => String(value || '').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, ''),
+  caseSetup: { setupCast: [{ id: 'hannelore_wirth', name: 'Hannelore Wirth' }] }
+};
+vm.createContext(npcLocationFactContext);
+vm.runInContext(sourceOf('_findNpcLocationFactDrift'), npcLocationFactContext);
+const hanneloreFloorDrift = npcLocationFactContext._findNpcLocationFactDrift({
+  szene: 'Hannelore Wirth berichtet, sie habe die Männer aus ihrem Fenster im zweiten Stock gesehen.'
+});
+assert.strictEqual(hanneloreFloorDrift && hanneloreFloorDrift.code, 'npc_location_fact_drift',
+  'the Krause witness must not drift from the canonical first floor to the second floor');
+assert.strictEqual(npcLocationFactContext._findNpcLocationFactDrift({
+  szene: 'Hannelore Wirth sah die Männer aus ihrem Fenster im ersten Stock.'
+}), null, 'the canonical first-floor witness statement must remain legal');
+assert(sourceOf('validateSceneWorldTruth').includes('_findNpcLocationFactDrift'),
+  'NPC location facts must run through the pre-commit world-truth gate');
+assert(sourceOf('buildWorldTruthRepairHint').includes("problem.code === 'npc_location_fact_drift'"),
+  'NPC location drift must get a precise repair instruction');
+assert(sourceOf('enforceSceneWorldTruthFallback').includes("problem.code === 'npc_location_fact_drift'"),
+  'repeated NPC location drift must get a deterministic safe fallback');
+
 assert(html.includes('NEUE VERLETZUNGEN NUR MIT ENGINE-FOLGE'),
   'quiet actions must not invent health-neutral wounds');
 assert(html.includes('KEINE ERFUNDENEN VORBEGEGNUNGEN'),
