@@ -191,6 +191,11 @@ let possessionProblem = possessionContext._findPrematureTargetPossessionDrift({
 assert(possessionProblem && possessionProblem.code === 'premature_target_possession',
   'the discovery click must not narrate the separate physical securing action');
 possessionProblem = possessionContext._findPrematureTargetPossessionDrift({
+  szene: 'Du greifst in den Stoffbeutel. Deine Finger schließen sich um ein kühles Objekt. Du ziehst es heraus. Es ist das Etui. Kalle macht einen Schritt vor. Du hast, was du brauchst.'
+}, { _pendingIndizId: 'etui_im_lager' });
+assert(possessionProblem && possessionProblem.code === 'premature_target_possession',
+  'anaphoric drawing and possession language around the named target must be rejected');
+possessionProblem = possessionContext._findPrematureTargetPossessionDrift({
   szene: 'Unter der Plane erkennst du das silberne Etui. Frieda blockiert den Zugriff; es bleibt am Fundort.'
 }, { _pendingIndizId: 'etui_im_lager' });
 assert.strictEqual(possessionProblem, null,
