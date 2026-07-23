@@ -746,7 +746,8 @@ const coreNarrationContext = {
     fundText: 'Im Hausflur hängen die Klingelschilder schief. Dritter Stock links steht nur Hauke. Kein Herr Hauke, keine Familie.',
     schluessel: ['tuerschild', 'hauke', '3. stock', 'dritter stock', 'namensschild', 'klingelschild', 'kein herr', 'keine familie', 'alleinstehend']
   }) : null,
-  window: {}
+  window: {},
+  caseProgress: { pendingHauptuiIndiz: null }
 };
 vm.createContext(coreNarrationContext);
 vm.runInContext(sourceOf('_findCoreEvidenceNarrationRedundancy'), coreNarrationContext);
@@ -769,6 +770,18 @@ const synonymKesslerSummary = coreNarrationContext._findCoreEvidenceNarrationRed
 }, { _pendingIndizId: 'tuerschild_hauke' });
 assert(synonymKesslerSummary && synonymKesslerSummary.code === 'core_evidence_narration_redundancy',
   'a compact Kessler summary must be rejected even when the full narration uses title and position synonyms');
+const exactLiveKesslerSummary = coreNarrationContext._findCoreEvidenceNarrationRedundancy({
+  szene: 'Die Namen hängen unter vergilbten Zelluloidplättchen. Ein Name sticht ins Auge: Dritter Stock, links. Dort steht nur Hauke, kein Vorname, kein Titel. Frau Pohl tritt heraus. Dritter Stock links: Das Schild trägt nur den Namen Hauke - kein Herr, keine Familie.'
+}, { _pendingIndizId: 'tuerschild_hauke' });
+assert(exactLiveKesslerSummary && exactLiveKesslerSummary.code === 'core_evidence_narration_redundancy',
+  'the exact v1408 live-summary shape must be rejected');
+coreNarrationContext.caseProgress.pendingHauptuiIndiz = { id: 'tuerschild_hauke' };
+const persistentPendingKesslerSummary = coreNarrationContext._findCoreEvidenceNarrationRedundancy({
+  szene: 'Die Namen hängen unter vergilbten Zelluloidplättchen. Ein Name sticht ins Auge: Dritter Stock, links. Dort steht nur Hauke, kein Vorname, kein Titel. Frau Pohl tritt heraus. Dritter Stock links: Das Schild trägt nur den Namen Hauke - kein Herr, keine Familie.'
+}, {});
+assert(persistentPendingKesslerSummary && persistentPendingKesslerSummary.code === 'core_evidence_narration_redundancy',
+  'the active Haupt-UI clue must remain identifiable when transient option metadata is missing');
+coreNarrationContext.caseProgress.pendingHauptuiIndiz = null;
 assert.strictEqual(coreNarrationContext._findCoreEvidenceNarrationRedundancy({
   szene: 'Im Hausflur hängen die Klingelschilder schief. Dritter Stock links steht nur Hauke. Kein Herr Hauke, keine Familie.'
 }, { _pendingIndizId: 'tuerschild_hauke' }), null,
