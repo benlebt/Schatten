@@ -129,6 +129,53 @@ assert(sourceOf('buildWorldTruthRepairHint').includes("problem.code === 'histori
 assert(sourceOf('enforceSceneWorldTruthFallback').includes("problem.code === 'historical_timeline_drift'"),
   'repeated historical drift must get a deterministic safe fallback');
 
+const npcDepartureContext = {
+  normForMatch: value => String(value || '').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, ''),
+  caseProgress: {},
+  caseSetup: { setupCast: [{ id: 'ilse_hauke', name: 'Ilse Hauke' }] },
+  cast: [{ id: 'ilse_hauke', name: 'Ilse Hauke' }],
+  engineCurrentLocation: { name: 'Hinterhof Sybelstrasse' },
+  sceneCounter: 2,
+  currentScene: null
+};
+vm.createContext(npcDepartureContext);
+for (const fn of [
+  '_sceneNpcDepartureInfo', '_sceneNpcReturnExplained',
+  'sanitizeSceneExplicitNpcDepartures', '_npcNachProsaAbgangAbwesend',
+  '_findUnexplainedNpcReentry'
+]) vm.runInContext(sourceOf(fn), npcDepartureContext);
+const haukeDepartureScene = {
+  ort: 'Hinterhof Sybelstrasse',
+  szene: 'Frau Hauke ist längst in einem der Hauseingänge verschwunden, ihre Schritte sind verhallt.',
+  personenImRaum: ['Frau Hauke'],
+  cast_hinzugefuegt: [{ id: 'ilse_hauke', name: 'Ilse Hauke' }],
+  cast_entfernt: []
+};
+assert.deepStrictEqual(Array.from(npcDepartureContext.sanitizeSceneExplicitNpcDepartures(haukeDepartureScene)), ['Frau Hauke'],
+  'an explicitly departed Kessler NPC must be recognized in the accepted scene');
+assert.strictEqual(haukeDepartureScene.personenImRaum.length, 0,
+  'an explicitly departed NPC must be removed from the same-scene UI roster');
+npcDepartureContext.currentScene = haukeDepartureScene;
+assert.strictEqual(npcDepartureContext._npcNachProsaAbgangAbwesend('ilse_hauke', 'Ilse Hauke', haukeDepartureScene), true,
+  'a prose departure must keep the fixed location entry hidden until a narrated return');
+const unexplainedHaukeReturn = npcDepartureContext._findUnexplainedNpcReentry({
+  ort: 'Hinterhof Sybelstrasse',
+  szene: 'Frau Hauke betrachtet dich schweigend.',
+  personenImRaum: ['Frau Hauke']
+});
+assert.strictEqual(unexplainedHaukeReturn && unexplainedHaukeReturn.code, 'npc_reentry_unexplained',
+  'the next scene must reject a departed NPC who silently reappears');
+assert.strictEqual(npcDepartureContext._findUnexplainedNpcReentry({
+  ort: 'Hinterhof Sybelstrasse',
+  szene: 'Frau Hauke kommt aus dem Hauseingang zurück und bleibt vor dir stehen.',
+  personenImRaum: ['Frau Hauke']
+}), null, 'an explicitly dramatized NPC return must remain legal');
+assert(sourceOf('getNpcsAtCurrentLocation').includes('_npcNachProsaAbgangAbwesend(entry.id'),
+  'fixed location NPCs must respect a prose departure before rendering buttons');
+assert(sourceOf('performApiCall').includes('sanitizeSceneExplicitNpcDepartures(scene)'),
+  'explicit departures must be sanitized before the pre-commit world-truth gate');
+
 assert(html.includes('NEUE VERLETZUNGEN NUR MIT ENGINE-FOLGE'),
   'quiet actions must not invent health-neutral wounds');
 assert(html.includes('KEINE ERFUNDENEN VORBEGEGNUNGEN'),
