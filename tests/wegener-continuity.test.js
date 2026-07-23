@@ -46,6 +46,12 @@ assert.deepStrictEqual(
   'Wegener must expose both requested handoff routes'
 );
 assert.strictEqual(wegener.setup.targetResolution.guard, 'lothars_bewacher', 'Wegener rescue must name its blocking guard');
+assert.strictEqual(wegener.setup.targetResolution.visualStates.guardDownAtTarget.dayFile,
+  'lagerhalle-spree-kratz-ko-day.webp',
+  'Wegener must expose a daytime visual with incapacitated Kratz on the floor');
+assert.strictEqual(wegener.setup.targetResolution.visualStates.guardRemovedAtTarget.file,
+  'lagerhalle-spree-kratz-abgefuehrt.webp',
+  'Wegener must expose a post-custody visual without Kratz');
 const guard = Array.from(wegener.setup.setupCast).find((npc) => npc && npc.id === 'lothars_bewacher');
 assert(guard && guard.name === 'Erwin Kratz', 'warehouse guard needs one clear, persistent identity');
 const warehouse = Array.from(wegener.setup.locations).find((loc) => loc && loc.name === 'Lagerhalle an der Spree');
@@ -53,6 +59,24 @@ assert(warehouse, 'Wegener warehouse finale missing');
 assert(Array.from(warehouse.npcs || []).some((npc) => npc && npc.id === 'lothars_bewacher'), 'warehouse guard NPC missing');
 const guardThreat = Array.from(warehouse.bedrohungen || []).find((threat) => threat && threat.id === 'lothars_bewacher');
 assert(guardThreat && guardThreat.chance === 100 && guardThreat.unausweichlich === true, 'warehouse guard confrontation must be guaranteed');
+
+const visualContext = {
+  caseSetup: wegener.setup,
+  caseProgress: { zielpersonGeborgen: false },
+  engineCurrentLocation: { name: 'Lagerhalle an der Spree' },
+  normForMatch: (value) => String(value || '').toLowerCase().trim(),
+  _npcZustandGet: () => ({ status: 'benommen' })
+};
+vm.createContext(visualContext);
+vm.runInContext(sourceOf('_physicalTargetSceneVisual'), visualContext);
+assert.strictEqual(visualContext._physicalTargetSceneVisual().file, 'lagerhalle-spree-kratz-ko.webp',
+  'an incapacitated Kratz must select the on-floor warehouse visual');
+visualContext._npcZustandGet = () => ({ status: 'uebergeben' });
+assert.strictEqual(visualContext._physicalTargetSceneVisual().file, 'lagerhalle-spree-kratz-abgefuehrt.webp',
+  'a handed-over Kratz must disappear from the warehouse visual');
+visualContext.caseProgress.zielpersonGeborgen = true;
+assert.strictEqual(visualContext._physicalTargetSceneVisual().file, 'lagerhalle-spree-gerettet.webp',
+  'the rescued-target visual must take precedence after Konstantin is freed');
 
 const normForMatch = (value) => String(value || '').toLowerCase().trim();
 const continuityContext = {

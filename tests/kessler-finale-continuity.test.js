@@ -184,7 +184,7 @@ assert(html.includes('ABSCHLUSS-KONTINUITÄT (PFLICHT)'),
   'the finale prompt must prohibit replaying the previous accepted scene');
 assert(html.includes('Keine doppelte Schatten-Auflösung'),
   'the finale prompt must explicitly block the observed duplicate shadow payoff');
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1448 +WitnessVehicleScope-Staging'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1449 +WegenerVisualTreatmentRoute-Staging'"),
   'release version missing');
 
 console.log('KESSLER_FINALE_CONTINUITY_OK');

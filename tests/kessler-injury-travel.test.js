@@ -21,8 +21,9 @@ function sourceOf(name) {
 const events = { choices: [], fx: [], toasts: [], diag: [] };
 const context = {
   console,
+  Math: { max: Math.max, min: Math.min, random: () => 0 },
   window: {},
-  caseProgress: { encounterState: null, alkohol: 0, muedigkeit: 0, reiseLog: [] },
+  caseProgress: { encounterState: null, alkohol: 4, muedigkeit: 22, reiseLog: [] },
   karlInStasiCustody: false,
   chooseOptionInFlight: false,
   engineCurrentLocation: { name: 'Opel Olympia', sektor: 'West' },
@@ -54,7 +55,7 @@ assert.strictEqual(events.choices.length, 0, 'a rejected destination must not st
 
 context.reiseZuOrt({ name: 'Doc Wagners Praxis', sektor: 'West', heilort: true });
 assert.strictEqual(context.engineCurrentLocation.name, 'Doc Wagners Praxis',
-  'the required Doc Wagner trip must update the engine location');
+  'the required Doc Wagner trip must update the engine location despite maximum alcohol and fatigue');
 assert.deepStrictEqual(events.fx, ['Doc Wagners Praxis'],
   'the accepted treatment trip must retain its travel animation');
 assert.strictEqual(events.choices.length, 1, 'the accepted treatment trip must start exactly one scene request');
@@ -63,7 +64,9 @@ assert.strictEqual(events.choices[0]._istHeilortReise, true,
 
 context.reiseZuOrt({ name: 'Charité', sektor: 'Ost', heilort: true });
 assert.strictEqual(context.engineCurrentLocation.name, 'Charité',
-  'the alternative required trip to Charité must also reach its destination');
+  'the alternative required trip to Charité must also bypass the fatigue/alcohol deadlock');
+assert(!events.choices.some(option => option.id === 'UEBERMUEDUNG_FAHRSTopp' || option.id === 'ALKOHOL_FAHRTPATZER'),
+  'mandatory professional treatment must never be replaced by a fatigue/alcohol stranding scene');
 assert.deepStrictEqual(events.fx, ['Doc Wagners Praxis', 'Charité'],
   'both global healing destinations must retain their travel animation');
 assert.strictEqual(events.choices.length, 2,
