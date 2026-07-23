@@ -116,6 +116,7 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 ### 6. Wahrheitsbeat-/Truthbeat-Gate
 
 - Bei `wahrheit`-Fällen sowie jeder `TRUTHBEAT-DIAG`-/`BEAT-DIAG`-Zeile den konkreten Auslösersatz prüfen.
+- Mechanisch gebundene Zeugenaussagen dürfen auch keine über natürliche Verben eingeschmuggelten Tätermerkmale erhalten: Stolpern, Taumeln oder Schwanken ist ebenso eine erfundene Gangart wie Hinken. Die Prüfung muss täterbezogen bleiben; ein Zeuge, der über die eigenen Worte stolpert, ist kein Tätermerkmal.
 - Festhalten, ob der Beat durch Spieleraktion, mechanisches Indiz, Geständnis, Zeugenaussage, Gegenstand oder nur durch Regex-Prosa erkannt wurde.
 - Reflexions-, Motiv-, Negations-, Rückblick- und bloße Namensnähe dürfen keinen Pflicht-Beat erfüllen.
 - Ein Beat gilt nur dann als erreicht, wenn die erforderliche Wahrheit mechanisch und narrativ ausgespielt wurde.

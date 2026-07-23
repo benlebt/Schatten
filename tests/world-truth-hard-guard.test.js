@@ -303,6 +303,23 @@ assert(problem && problem.code === 'evidence_scope_drift'
   'wide-after-midnight and carry-to-a-waiting-car wording must not bypass the clue scope');
 
 problem = context.validateSceneWorldTruth({
+  ort: context.engineCurrentLocation.name,
+  szene: 'Hannelore Wirth sagt: Zwei Männer trugen eine schwere Tasche aus dem Hinterhof; einer der beiden stolperte fast über seine eigenen Füße.',
+  personenImRaum: ['Hannelore Wirth'], optionen: []
+}, { id: 'NPC_sozial_geschichte', _pendingIndizId: 'nachbarin_aussage' });
+assert(problem && problem.code === 'evidence_scope_drift'
+    && problem.extras.includes('Körpermerkmal/Gangart'),
+  'offender-specific stumbling must not add an invented gait fact to the awarded witness clue');
+
+problem = context.validateSceneWorldTruth({
+  ort: context.engineCurrentLocation.name,
+  szene: 'Hannelore stolpert kurz über ihre Worte, dann sagt sie: Zwei Männer trugen eine schwere Tasche aus dem Hinterhof.',
+  personenImRaum: ['Hannelore Wirth'], optionen: []
+}, { id: 'NPC_sozial_geschichte', _pendingIndizId: 'nachbarin_aussage' });
+assert.strictEqual(problem, null,
+  'the witness stumbling over her own words must not be mistaken for an offender gait fact');
+
+problem = context.validateSceneWorldTruth({
   ort: 'Krauses Antiquitäten',
   szene: 'In der Vitrine zeichnet sich der Abdruck des Etuis ab. Das Schloss wurde mit einem einfachen Werkzeug aufgehebelt.',
   personenImRaum: ['Hannelore Wirth'], optionen: []
