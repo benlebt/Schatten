@@ -615,6 +615,22 @@ const naturalTimedScene = { szene: 'Um kurz nach sieben betritt Robert den Hinte
 assert.strictEqual(coreEvidenceProseContext._indizAbschlussProsaSichern(timedCoreClue, naturalTimedScene), false,
   'a natural kurz-nach-sieben variant must satisfy the time anchor without a redundant fallback sentence');
 
+const toolCoreClue = {
+  id: 'einbruch_fenster',
+  prosaPflicht: {
+    narrativ: /\b(?:stemmeisen|brecheisen|brechstange)\b/i,
+    fallbackProse: 'Die Kerben sprechen eindeutig für ein Stemmeisen.'
+  }
+};
+const toolLessCoreScene = { szene: 'Das Holz ist splittrig aufgehebelt. Kein Glasschneider, sondern rohe Gewalt.' };
+assert.strictEqual(coreEvidenceProseContext._indizAbschlussProsaSichern(toolCoreClue, toolLessCoreScene), true,
+  'the booked Krause window clue must visibly name its defining tool conclusion');
+assert(toolLessCoreScene.szene.includes('Stemmeisen'),
+  'the window clue popup and visible prose must agree on the Stemmeisen conclusion');
+const naturalToolScene = { szene: 'Die breiten Kerben stammen von einer Brechstange.' };
+assert.strictEqual(coreEvidenceProseContext._indizAbschlussProsaSichern(toolCoreClue, naturalToolScene), false,
+  'a natural synonym must satisfy the tool anchor without a duplicate fallback sentence');
+
 const coreNarrationContext = {
   normForMatch: value => String(value || '').toLowerCase().replace(/[„“"'.,:;!?()\-]/g, ' ').replace(/\s+/g, ' ').trim(),
   _findeIndizById: id => id === 'etui_letzter_ort' ? ({
