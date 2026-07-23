@@ -620,6 +620,29 @@ assert.strictEqual(kesslerEntryScopeContext._findTargetEvidenceScopeDrift({
 }, {}), null,
   'an explicit statement that the apartment destination remains unknown must stay valid');
 
+const krauseWitnessScopeContext = {
+  normForMatch: value => String(value || '').toLowerCase().normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '').replace(/[-–—]/g, ' '),
+  caseProgress: { pendingHauptuiIndiz: { id: 'nachbarin_aussage' }, gefundeneIndizIds: [] },
+  getCaseLocations: () => [{
+    name: 'Krauses Antiquitaeten',
+    indizien: [{
+      id: 'nachbarin_aussage',
+      text: 'Hannelore sah zwei Maenner mit einer schweren Tasche aus dem Hinterhof kommen.',
+      quelle: 'person',
+      schluessel: ['hannelore', 'zwei maenner', 'tasche', 'hinterhof']
+    }]
+  }]
+};
+vm.createContext(krauseWitnessScopeContext);
+vm.runInContext(sourceOf('_findTargetEvidenceScopeDrift'), krauseWitnessScopeContext);
+const inventedInjuryGait = krauseWitnessScopeContext._findTargetEvidenceScopeDrift({
+  szene: 'Hannelore sagt: Einer der beiden hatte einen seltsamen Gang, fast wie bei einer Verletzung.'
+}, {});
+assert(inventedInjuryGait && inventedInjuryGait.code === 'evidence_scope_drift'
+    && inventedInjuryGait.extras.includes('Körpermerkmal/Gangart'),
+  'a noun phrase about an offender injury gait must not bypass witness evidence scope');
+
 const uncommandedDeparture = worldContext.validateSceneWorldTruth({
   ort: 'Hinterhof Sybelstrasse',
   szene: 'Du wartest, bis Robert im Hinterhaus verschwindet. Dann verlaesst du den Hof fluchtartig.',
