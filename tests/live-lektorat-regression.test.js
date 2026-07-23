@@ -675,7 +675,7 @@ assert.strictEqual(kesslerWaitContext.gameTimeIdx, 4,
 assert.strictEqual(kesslerWaitContext.timeAdvanceTokens, 0,
   'the deterministic wait must reset residual random time tokens');
 
-const coreEvidenceProseContext = { diag: () => {} };
+const coreEvidenceProseContext = { diag: () => {}, caseProgress: { pendingHauptuiIndiz: null } };
 vm.createContext(coreEvidenceProseContext);
 vm.runInContext(sourceOf('_indizAbschlussProsaSichern'), coreEvidenceProseContext);
 const timedCoreClue = {
@@ -701,7 +701,8 @@ const doorplateCoreClue = {
   prosaPflicht: {
     narrativ: /^(?=[\s\S]*\b(?:dritter|3\.)\s*stock\b)(?=[\s\S]*\blinks\b)(?=[\s\S]*\bhauke\b)(?=[\s\S]*kein herr)(?=[\s\S]*(?:keine familie|alleinsteh))/i,
     fallbackProse: 'Dritter Stock links: Das Schild trägt nur den Namen Hauke - kein Herr, keine Familie.'
-  }
+  },
+  fundText: 'Neben der hofseitigen Eingangstür hängen die Klingelschilder schief untereinander. Dritter Stock links: ein einzelner Name, mit Schreibmaschine getippt. Hauke. Kein Herr Hauke, keine Familie - nur der Name. Mehr beweist das Schild allein noch nicht.'
 };
 const incompleteDoorplateScene = { szene: 'Das dritte Schild von oben trägt den Namen Hauke. Kein Vorname ist zu sehen.' };
 assert.strictEqual(coreEvidenceProseContext._indizAbschlussProsaSichern(doorplateCoreClue, incompleteDoorplateScene), true,
@@ -716,6 +717,15 @@ assert.strictEqual(coreEvidenceProseContext._indizAbschlussProsaSichern(doorplat
   'mentioning only the missing Herr must not satisfy the complete no-family household anchor');
 assert(partialHouseholdDoorplateScene.szene.includes(doorplateCoreClue.prosaPflicht.fallbackProse),
   'the fallback must add the missing family-status fact even when all other doorplate anchors are present');
+coreEvidenceProseContext.caseProgress.pendingHauptuiIndiz = { id: 'tuerschild_hauke' };
+const livePartialHouseholdDoorplateScene = {
+  szene: 'Du fokussierst die dritte Reihe. Ein einzelner Name ist mit Schreibmaschine getippt: Hauke. Kein Vorname, keine Spur eines zweiten Bewohners.'
+};
+assert.strictEqual(coreEvidenceProseContext._indizAbschlussProsaSichern(doorplateCoreClue, livePartialHouseholdDoorplateScene), true,
+  'the exact v1409 live wording must be repaired because row three is not floor three left');
+assert.strictEqual(livePartialHouseholdDoorplateScene.szene, doorplateCoreClue.fundText,
+  'a structured clue with missing anchors must be replaced by one complete canonical narration, not receive a duplicate summary');
+coreEvidenceProseContext.caseProgress.pendingHauptuiIndiz = null;
 
 const toolCoreClue = {
   id: 'einbruch_fenster',
