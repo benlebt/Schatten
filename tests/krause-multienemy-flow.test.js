@@ -19,7 +19,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1426 +KrauseSecureActionAlwaysVisible-Staging'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1427 +KrauseSecureClickDeterministic-Staging'"), 'release version missing');
 assert(html.includes('Liesl schenkte oder widmete das Etui 1939 Hugo'), 'Krause setup must bind the silver-case ownership direction');
 assert(html.includes('Karl zählt oder nimmt kein Geld, Karls Kasse bleibt unverändert'), 'Krause opening prompt must keep the return-contingent fee unpaid');
 assert(html.includes('Dramatisiere diese EINE Spur genau EINMAL'), 'explicit Haupt-UI clues must merge compact target and detailed payoff into one narration');
@@ -84,6 +84,10 @@ const execute = sourceOf('_hauptuiExecute');
 assert(execute.includes('_hauptuiKonfrontationAufZiel(feind)'), 'execution must switch the confrontation to the explicitly selected enemy');
 assert(execute.includes("verb === 'diebesgut_zurueckgeben'"), 'Theodor needs a direct stolen-goods return action');
 assert(execute.includes("verb === 'diebesgut_sichern'"), 'Frieda finale needs a direct stolen-goods secure action');
+const secureExecuteStart = execute.indexOf("target.sonderAktion === 'diebesgut_sichern'");
+const secureExecuteBranch = execute.slice(secureExecuteStart, execute.indexOf('const targetName', secureExecuteStart));
+assert(!secureExecuteBranch.includes('_hauptuiAngreifbarePersonen'),
+  'the earned Etui secure click must not be blocked again by stale restored NPC roles');
 
 const hostile = sourceOf('_npcIstFeindlich');
 assert(hostile.includes('npc.tagExtra'), 'hostility must include secondary tags such as Frieda gangster metadata');
