@@ -16,7 +16,8 @@ vm.createContext(context);
 vm.runInContext(
   html.slice(styleStart, styleEnd)
     + '\nthis._trackStyleMotifs = _trackStyleMotifs;'
-    + '\nthis.getRunStyleWarnings = getRunStyleWarnings;',
+    + '\nthis.getRunStyleWarnings = getRunStyleWarnings;'
+    + '\nthis.sanitizeRepeatedDecorativeMotifs = sanitizeRepeatedDecorativeMotifs;',
   context
 );
 
@@ -37,6 +38,18 @@ warnings = Array.from(context.getRunStyleWarnings());
 assert(warnings.some(entry => entry.includes('Standardadjektiv')), 'müde must enter the run-wide warning after two scenes');
 assert.strictEqual(context.styleMotifRunCounts.kopfsteinpflaster, 1, 'motifs must be counted by scene, not by unrelated later text');
 
+const friedasRepeat = context.sanitizeRepeatedDecorativeMotifs(
+  'Tante Frieda beobachtet das Geschehen seelenruhig, während sie ein neues Zigarillo aus dem Etui fischt. Karl hält Kalle auf Abstand.'
+);
+assert(!/zigarillo/i.test(friedasRepeat), 'a repeated decorative Frieda cigarillo must be removed from visible prose');
+assert(friedasRepeat.includes('Tante Frieda beobachtet das Geschehen seelenruhig.'),
+  'the meaningful main clause must survive the decorative motif repair');
+const evidenceRepeat = context.sanitizeRepeatedDecorativeMotifs(
+  'Am Fensterbrett findest du frische Zigarillo-Asche: eine Spur zu Kurt Lange.'
+);
+assert(/Zigarillo-Asche/.test(evidenceRepeat),
+  'a deliberate evidence motif must survive the decorative style hardcap');
+
 assert(html.includes('const runStyleWarnings = getRunStyleWarnings();'), 'run-wide warnings must reach the live scene prompt');
 assert(html.includes('Ersetze sie NICHT durch ein nahes Synonym'), 'style warning must prevent synonym substitution loops');
 assert(html.includes('Anreise und Fahrzeug sind KEIN Pflichtsatz'), 'new-location prompt must allow a direct cut to the target');
@@ -44,6 +57,8 @@ assert(html.includes('Du MUSST Licht, Wetter oder Tageszeit NICHT erwaehnen'), '
 assert(!html.includes("'ABEND': 'Daemmerung, lange Schatten"), 'time context must not prime the recurring dusk/shadow formula');
 assert(!html.includes('Stattdessen: "Eine Straßenbahn rattert vorbei"'), 'the anti-cliche prompt must not seed a replacement cliche');
 assert(html.includes('_trackStyleMotifs(scene.szene);'), 'accepted scenes must update run-wide motif counts');
+assert(html.includes('scene.szene = sanitizeRepeatedDecorativeMotifs(scene.szene);'),
+  'accepted scenes must apply the visible decorative motif hardcap before tracking');
 assert(html.includes('styleMotifRunCounts: (styleMotifRunCounts'), 'style counts must be saved');
 assert(html.includes('styleMotifRunCounts = (snap.styleMotifRunCounts'), 'style counts must survive restore');
 assert(groq.includes('STILVARIANZ / ORTSWECHSEL'), 'Groq slim prompt must receive the same transition-style rule');

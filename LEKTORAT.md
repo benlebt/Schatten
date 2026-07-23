@@ -93,6 +93,7 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 - Enthält eine verworfene Modellantwort mehrere harte Brüche gleichzeitig, darf der deterministische Fallback nicht nach der ersten Korrektur aufhören. Nach jedem Eingriff wird die vollständige Weltwahrheit erneut validiert, bis alle verbleibenden Brüche bereinigt sind oder ein begrenzter Sicherheitsabbruch diagnostiziert wird. Bei physischem Zielgut müssen dabei Prosa **und** JSON-Felder (`inventar_hinzugefuegt`, Abschluss-/Klientenflags) zurückgesetzt werden; sonst kann eine sichtbar korrigierte Fundszene den Fall mechanisch trotzdem beenden.
 - Stil-Tics klar von Logikfehlern trennen.
 - Bewusst wiederholte Indiz-Motive nicht als Pumphrase entfernen, wenn ihre Wiederkehr Beweisfunktion oder Payoff hat.
+- Eine Prompt-Warnung allein gilt nicht als Schutz, wenn ein Stil-Tic im sichtbaren Run trotzdem erneut erscheint. Enge deterministische Hardcaps dürfen reine Dekorationswiederholungen entfernen, müssen aber den tragenden Hauptsatz erhalten und Beweisverwendungen ausdrücklich ausnehmen. Beispiel: Friedas erneutes Zigarillo-Tableau wird nach der Einführung gestrichen; Zigarillo-Asche als gebundenes Brandt-Indiz bleibt vollständig erhalten.
 - Diagnose-Hardcaps gegen den tatsächlichen Text prüfen: Hat der Filter den richtigen Satz entfernt, oder Bedeutung beschädigt?
 
 ### 4. Verletzungs-Konsistenz
