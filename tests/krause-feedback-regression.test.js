@@ -142,6 +142,9 @@ assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'krause', 't
 for (const asset of [
   'tante-friedas-hehlerei-frieda-day.webp',
   'tante-friedas-hehlerei-kalle-jochen-night.webp',
+  'tante-friedas-hehlerei-kalle-night.webp',
+  'krauses-antiquitaeten-evidence-day.webp',
+  'krauses-antiquitaeten-evidence-night.webp',
   'stallschreiberstrasse-12-confrontation-day.webp',
   'stallschreiberstrasse-12-confrontation-night.webp',
   'stallschreiberstrasse-12-aftermath-day.webp',
@@ -209,6 +212,14 @@ assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).file, 'tante-f
 visualContext.roster = [{ name: 'Kalle' }, { name: 'Jochen' }];
 assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).file, 'tante-friedas-hehlerei-kalle-jochen-night.webp',
   'night guards must not display absent Frieda');
+visualContext.roster = [{ name: 'Kalle' }];
+visualContext.states.kalle = { status: 'beruhigt', ort: 'Tante Friedas Hehlerei' };
+assert.strictEqual(visualContext._krauseHehlereiNachherVisual({ personenImRaum: [{ name: 'Kalle' }] }).file, 'tante-friedas-hehlerei-kalle-night.webp',
+  'a calm Kalle must remain visible instead of selecting the empty post-scene image');
+visualContext.roster = [];
+visualContext.states = {};
+assert.strictEqual(visualContext._krauseHehlereiNachherVisual({ personenImRaum: [{ name: 'Kalle' }] }).file, 'tante-friedas-hehlerei-kalle-night.webp',
+  'final scene presence must survive a stale empty location roster');
 visualContext.engineCurrentLocation.name = 'Stallschreiberstrasse 12';
 visualContext.roster = [{ name: 'Tante Frieda' }, { name: 'Kalle' }, { name: 'Jochen' }];
 assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).dayFile, 'stallschreiberstrasse-12-confrontation-day.webp',
