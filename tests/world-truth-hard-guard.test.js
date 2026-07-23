@@ -352,6 +352,15 @@ assert.strictEqual(problem, null,
   'the witness stumbling over her own words must not be mistaken for an offender gait fact');
 
 problem = context.validateSceneWorldTruth({
+  ort: context.engineCurrentLocation.name,
+  szene: 'Hannelore sagt: Zwei Männer trugen eine schwere Tasche aus dem Hinterhof. Sie wirkten nicht wie Einheimische.',
+  personenImRaum: ['Hannelore Wirth'], optionen: []
+}, { id: 'NPC_sozial_ehrlich', _pendingIndizId: 'nachbarin_aussage' });
+assert(problem && problem.code === 'evidence_scope_drift'
+    && problem.extras.includes('Herkunft/Ortsfremdheit'),
+  'an awarded witness clue must reject an invented offender origin');
+
+problem = context.validateSceneWorldTruth({
   ort: 'Krauses Antiquitäten',
   szene: 'In der Vitrine zeichnet sich der Abdruck des Etuis ab. Das Schloss wurde mit einem einfachen Werkzeug aufgehebelt.',
   personenImRaum: ['Hannelore Wirth'], optionen: []

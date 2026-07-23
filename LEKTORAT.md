@@ -28,6 +28,7 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 - Tauchen Personen nach Abgang, Flucht, Festnahme, Übergabe, Fesselung oder K. o. unpassend wieder auf?
 - Stimmen Cast, `personenImRaum`, NPC-Zustand, Ort und Tageszeit überein?
 - Sind Indizien korrekt an NPC/Hotspot, Ort, Stage, Aktion und benötigte Vorbelege gebunden?
+- Bleibt eine mechanisch definierte Zeugenaussage exakt in ihrem Umfang? Ungedeckte Uhrzeiten, Fahrzeuge, Waffen, Körper-/Gangmerkmale sowie vermeintliche Herkunft, Akzente oder Ortsfremdheit („nicht wie Einheimische“) sind neue Täterprofile und damit Story-Drift, auch wenn der kanonische Satz davor vollständig stimmt.
 - Widersprechen sich Szenen über Rolle, Wissen, Beziehung oder Schicksal einer Figur?
 - Stimmen Handlungsrichtung und Rollen überein? Bei Beschattung folgt Karl der Zielperson; Formulierungen wie „die Zielperson ist dir gefolgt“ sind fundamentaler Story-Drift, auch wenn alle Pflichtnamen vorkommen. Kritische Rollenchecks dürfen nicht wegen eines langsamen API-Calls übersprungen werden.
 - Wird jedes mechanisch vergebene Kern-Indiz in derselben Prosa sichtbar dramatisiert?
