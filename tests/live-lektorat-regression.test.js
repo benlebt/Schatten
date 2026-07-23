@@ -115,6 +115,28 @@ assert.strictEqual(openingRoleContext.validateOpeningRoleTruth(
   { personenImRaum: [] }
 ).ok, true,
 'a correct split-location surveillance opening must remain valid');
+
+const timedSnapshotContext = {
+  normForMatch: value => String(value || '').toLowerCase().replace(/_/g, ' '),
+  engineCurrentLocation: { name: 'Hinterhof Sybelstrasse' },
+  caseProgress: { stage: 0 },
+  gameTimeIdx: 3,
+  TIMES_OF_DAY: ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'NACHT'],
+  currentScene: {
+    szene: 'Robert Kessler steht noch vorne an der Strasse am Kiosk. Noch ist der Hinterhof leer.'
+  },
+  getCaseLocations: () => [{
+    name: 'Hinterhof Sybelstrasse',
+    npcs: [{ id: 'robert_kessler', zeit: ['abend', 'nacht'] }]
+  }],
+  _npcOrtsbindungEintragAktiv: entry => timedSnapshotContext.gameTimeIdx >= 4 && entry.zeit.includes('abend'),
+  _istKlient: () => false
+};
+vm.createContext(timedSnapshotContext);
+vm.runInContext(sourceOf('_npcIstImAktuellenSzenenSnapshot'), timedSnapshotContext);
+vm.runInContext(sourceOf('_npcGehoertHierher'), timedSnapshotContext);
+assert.strictEqual(timedSnapshotContext._npcGehoertHierher('robert_kessler', 'Robert Kessler'), false,
+  'a prose-only name mention must not override an inactive time binding when personenImRaum is missing');
 assert.strictEqual(openingRoleContext.validateOpeningRoleTruth(
   'Du bist Robert am Kiosk vorausgeeilt und wartest jetzt im Hinterhof Sybelstrasse. Robert steht noch draussen.',
   hinterhofShadowSetup,

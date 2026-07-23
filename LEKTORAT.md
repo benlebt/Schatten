@@ -77,6 +77,7 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 - Romantik-Klick-Zähler, Abkühlschritte, Personenwechsel/Reset und tatsächlicher `Rm`-Wert.
 - `personenImRaum`-Teleport, stille Begleitung und unerklärter Ortswechsel.
 - Schon die Eröffnung muss Engine-Ort, Header, Bild und Prosa synchronisieren. Bei geteilten Orten gilt der physische Szenen-Roster streng: Eine Zielperson, die laut Prosa noch draußen am Kiosk wartet, darf im bereits aktiven Hinterhof weder in `personenImRaum` stehen noch direkt ansprechbar sein.
+- Fehlt `personenImRaum`, darf ein bloßer Name im Opening-Text keine inaktive Orts-/Zeitbindung überstimmen. Snapshot-Ausnahmen überbrücken nur einen im selben Render verbuchten Stage-Wechsel; eine Figur mit Bindung „Abend/Nacht“ wird durch eine Erwähnung am Nachmittag nicht physisch anwesend oder anklickbar.
 - Auch semantische Abgangsvarianten prüfen: „verlässt den Hof/Ort/das Haus“, „macht sich davon“ oder „verschwindet“ widersprechen einem unveränderten Engine-Ort ebenso wie „flieht/rennt hinaus“. Ein Beobachten-/Warten-Klick darf Karl nicht eigenmächtig wegschreiben.
 - Ein Abgang braucht weder Flucht noch Abfahrt: „geht zur Straße“ und „steuert seinen Opel an, um den Beobachtungsposten zu verlassen“ vollziehen den Ortswechsel bereits und sind ohne Reisebefehl ebenfalls zu blockieren.
 - Auch zweckgebundene Euphemismen prüfen: „entfernt sich leise, um nicht entdeckt/gesehen/bemerkt zu werden“ schreibt Karl aus dem Beobachtungsposten und ist ohne Reise-/Fluchtbefehl ein vollzogener Abgang.
