@@ -974,7 +974,7 @@ const friedasEvasiveClue = {
   id: 'frieda_ausweichend',
   fundText: 'Du konfrontierst Tante Frieda mit Hannelore Wirths Beobachtung und Bornsteins Hinweis auf das Etui. Frieda schnaubt und behauptet, sie kenne kein silbernes Etui und kaufe nur "ehrliche Ware". Doch ihre Augen zucken zur T\u00fcr des Hinterhofs. Kalle und Jochen stellen sich breitbeinig in den Weg; die Spur f\u00fchrt in das Lager dahinter.',
   prosaPflicht: {
-    narrativ: /^(?=[\s\S]*(?:kenne|wisse|wei(?:ss|\u00df)e)[\s\S]{0,35}kein(?:es)?[\s\S]{0,20}(?:etui|zigarettenetui))(?=[\s\S]*ehrlich\w*\s+ware)(?=[\s\S]*(?:hinterhof|lager))(?=[\s\S]*kalle)(?=[\s\S]*jochen)/i,
+    narrativ: /^(?=[\s\S]*(?:(?:kenne|wisse|wei(?:ss|\u00df)e)[\s\S]{0,35}kein(?:es)?[\s\S]{0,20}(?:etui|zigarettenetui)|kein(?:es)?[\s\S]{0,20}(?:etui|zigarettenetui)[\s\S]{0,35}(?:kenne|wisse|wei(?:ss|\u00df)e)))(?=[\s\S]*ehrlich\w*\s+ware)(?=[\s\S]*(?:hinterhof|lager))(?=[\s\S]*kalle)(?=[\s\S]*jochen)/i,
     fallbackProse: 'Frieda behauptet, sie kenne kein silbernes Etui und kaufe nur "ehrliche Ware"; ihr Blick zum Hinterhof und Kalle und Jochen im Weg verraten das Lager dahinter.'
   }
 };
@@ -991,6 +991,11 @@ const coherentFriedaScene = {
 };
 assert.strictEqual(coreEvidenceProseContext._indizAbschlussProsaSichern(friedasEvasiveClue, coherentFriedaScene), false,
   'a naturally coherent Frieda denial must pass without duplicated fallback prose');
+const coherentFriedaInvertedSyntaxScene = {
+  szene: 'Dass sie kein Etui kenne und nur ehrliche Ware kaufe, behauptet Frieda. Ihre Augen zucken zum Lager im Hinterhof, während Kalle und Jochen den Weg blockieren.'
+};
+assert.strictEqual(coreEvidenceProseContext._indizAbschlussProsaSichern(friedasEvasiveClue, coherentFriedaInvertedSyntaxScene), false,
+  'German subordinate-clause word order must not trigger duplicated core-evidence fallback prose');
 coreEvidenceProseContext.caseProgress.pendingHauptuiIndiz = null;
 
 const coreNarrationContext = {
