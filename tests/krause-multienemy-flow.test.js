@@ -19,7 +19,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1381 +Natuerlicher-Innenraum-Fallback'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1382 +Offener-Klient-Ortshinweis'"), 'release version missing');
 assert(html.includes('Liesl schenkte oder widmete das Etui 1939 Hugo'), 'Krause setup must bind the silver-case ownership direction');
 assert(html.includes('Karl zählt oder nimmt kein Geld, Karls Kasse bleibt unverändert'), 'Krause opening prompt must keep the return-contingent fee unpaid');
 assert(html.includes('Dramatisiere diese EINE Spur genau EINMAL'), 'explicit Haupt-UI clues must merge compact target and detailed payoff into one narration');
@@ -36,6 +36,8 @@ assert(!html.includes("scene.szene = 'Du trittst in ' + ort + ' ein. Die eigentl
   'the fixed-interior fallback must not leak staging language into visible prose');
 assert(html.includes('Du öffnest die Ladentür von Krauses Antiquitäten'),
   'the Krause fixed-interior fallback must use natural location-specific arrival prose');
+assert(html.includes('let _pflichtKlientOffen = false') && html.includes('!_pflichtKlientOffen'),
+  'an unresolved present client must suppress the exhausted-location hint and travel emphasis');
 assert(html.includes('open_object_truth_contradiction'), 'open hotspot physical truth must be validated before every scene commit');
 assert(html.includes('mitternacht|mittag|ein|eins'), 'scope validation must treat named day-boundary times like numeric clock facts');
 assert(html.includes('hievten|wuchteten|luden|warfen|verstauten|schoben'), 'scope validation must cover natural vehicle-loading verbs');

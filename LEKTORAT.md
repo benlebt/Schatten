@@ -106,6 +106,7 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 - Auch zweckgebundene Euphemismen prüfen: „entfernt sich leise, um nicht entdeckt/gesehen/bemerkt zu werden“ schreibt Karl aus dem Beobachtungsposten und ist ohne Reise-/Fluchtbefehl ein vollzogener Abgang.
 - Gleiches gilt für Inversionen und bevor-Sätze: „zieht sich zügig zurück, bevor ihn ein Anwohner bemerkt“ ist semantisch derselbe Abgang.
 - Funktionieren Buttons, Zielbindung, Karten-Vorauswahl, Öffnungszeiten, Reise-, Schlaf-, Heil- und Abschlusswege ohne Sackgasse?
+- Ortserschöpfungs-Hinweis, Reise-Hervorhebung und tatsächliche offene Interaktionen müssen dieselbe Wahrheit zeigen. Ein physisch anwesender, noch nicht befragter Klient ist ein offener Pflichtschritt, auch ohne klassisches Hinweis-Badge; „hier gibt es nichts mehr“ ist dann falsch.
 - Stimmt die Intensität der sichtbaren Aktion mit der Prosa überein? „Stelle zur Rede“/Befragen bleibt verbal; Packen, Gegen-die-Wand-Drücken, Schlagen und daraus erfundene NPC-Verletzungen sind ausschließlich nach einer ausdrücklich gewählten Angriffs-/Kampfhandlung zulässig.
 - Passen Szenenbild, Tageslicht, Ort, Figurenlage und Prosa zusammen?
 - Bei einem Engine-Außenort auch stille Subort-Wechsel prüfen: Haus-/Wohnungstür öffnen, Hausflur, Treppenhaus oder Wohnung in der Prosa sind ein `ORT-PROSA-BRUCH`, solange keine Reise bzw. kein strukturierter Ortswechsel stattfand. Hotspot-Name und Fundtext dürfen einen solchen Wechsel nicht selbst anordnen.
