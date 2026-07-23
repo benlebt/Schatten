@@ -34,6 +34,6 @@ const howto = html.slice(start, end);
   'Wirtin Rosa'
 ].forEach((stale) => assert(!howto.includes(stale), `stale how-to copy returned: ${stale}`));
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1347 +Abgangs-Zielwahrheit'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1348 +Kessler-19Uhr-Wahrheit'"), 'release version missing');
 
 console.log('howto-current-state: ok');

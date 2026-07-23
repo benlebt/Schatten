@@ -42,6 +42,7 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 ### 2. Historische Fakten: Korrektheit und Interessantheit
 
 - Jeden behaupteten Wochentag gegen das Datum prüfen, bevorzugt reproduzierbar per Datumsfunktion/Skript.
+- Uhrzeit, Engine-Tageszeit, Licht und Wartehandlung gemeinsam prüfen. Ein kanonisches Ereignis „gegen 19 Uhr“ darf am 14. Oktober weder im Engine-Nachmittag verbleiben noch als „letztes Tageslicht“ beschrieben werden; ein ausdrücklicher Warten-Hotspot muss die Engine vor der Szene passend fortschalten.
 - Namen von Straßen, Plätzen, Bahnhöfen, Behörden, Marken, Fahrzeugen, Gesetzen, Medien und Personen auf den Stand des konkreten Run-Datums prüfen.
 - Bei Unsicherheit recherchieren; technische oder historische Behauptungen nur mit belastbarer Quelle korrigieren.
 - Sektorlogik beachten: Ost/West, Währung, Polizei, Versorgung, Öffnungszeiten und Verkehrswege.
@@ -95,7 +96,7 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 1. Truthbeat-Regex-Fehltreffer.
 2. Kern-Indiz-Prosa-Mismatch samt Root Cause: Die Ankunfts-Vorwegnahme ist seit v7.12.1339 abgedeckt, einschließlich Objekt–Beweis-Relationen seit v7.12.1341; v7.12.1340 begrenzt ausgespielte Zeugen-Indizien auf ihren definierten Informationsumfang, v7.12.1342 sperrt markante Cross-Clue-Kontamination, v7.12.1344 erhält auch bei Repair/Fallback die Quellenart Person versus Hotspot/Objekt. Manuelle Stabilitätsbestätigung und die Gegenrichtung „mechanisch vergeben, aber nicht dramatisiert“ bleiben offen.
 3. Lola-Präsenz-Widerspruch als generalisierbarer NPC-Kontinuitätsfall.
-4. Ort-Prosa-Bruch-Fix weiter generalisieren: v7.12.1321 deckt nach Kessler K2 auch nichtsoziale Außenort→Innenraum-Teleports ab; v7.12.1343 sichert zusätzlich Kesslers geteilte Startposition Hinterhof/Straße und den physischen Szenen-Roster, v7.12.1345 ergänzt Klopfen/Klingeln an Etagen-/Wohnungstüren, v7.12.1346 indirekte Flur-Präsenz über Figurenwahrnehmung und v7.12.1347 ruhige Abgänge zu Straße/Opel. Der vollständige manuelle Krause-Gegenlauf und Kessler-Gegenlauf stehen noch aus.
+4. Ort-/Zeit-Prosa-Bruch-Fix weiter generalisieren: v7.12.1321 deckt nach Kessler K2 auch nichtsoziale Außenort→Innenraum-Teleports ab; v7.12.1343 sichert zusätzlich Kesslers geteilte Startposition Hinterhof/Straße und den physischen Szenen-Roster, v7.12.1345 ergänzt Klopfen/Klingeln an Etagen-/Wohnungstüren, v7.12.1346 indirekte Flur-Präsenz über Figurenwahrnehmung, v7.12.1347 ruhige Abgänge zu Straße/Opel und v7.12.1348 den kanonischen 19-Uhr-Wartewechsel auf Abend. Der vollständige manuelle Krause-Gegenlauf und Kessler-Gegenlauf stehen noch aus.
 5. Fall-Abschluss-Doppelerzählung aus dem Kessler-Run.
 6. `INDIZ-GATE`-`fundModus`-Rigidität.
 7. Verletzungs-Konsistenz-Gate und Behandlungs-Status-Widerspruch hart durchsetzen.

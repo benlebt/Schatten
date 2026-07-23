@@ -382,6 +382,31 @@ const uncommandedWalkToCar = worldContext.validateSceneWorldTruth({
 assert.strictEqual(uncommandedWalkToCar && uncommandedWalkToCar.code, 'unauthorized_departure',
   'walking to the street and deliberately approaching the Opel must count as an unauthorized departure');
 
+const kesslerWaitContext = {
+  caseProgress: {},
+  chooseOptionInFlight: false,
+  engineCurrentLocation: { name: 'Hinterhof Sybelstrasse' },
+  sceneCounter: 1,
+  TIMES_OF_DAY: ['MORGEN', 'VORMITTAG', 'MITTAG', 'NACHMITTAG', 'ABEND', 'NACHT'],
+  gameTimeIdx: 3,
+  timeAdvanceTokens: 0.4,
+  scenesInCurrentTime: 1,
+  _aktTageszeitName: () => 'nachmittag',
+  saveGameState: () => {},
+  _hauptuiChoose: option => { kesslerWaitContext.chosen = option; }
+};
+vm.createContext(kesslerWaitContext);
+vm.runInContext(sourceOf('_hauptuiStarteIndizSzene'), kesslerWaitContext);
+kesslerWaitContext._hauptuiStarteIndizSzene({
+  id: 'robert_eintritt_beobachtet',
+  hotspot: 'Im Schatten des Hinterhofs warten',
+  fundText: 'Gegen sieben kommt Robert.'
+});
+assert.strictEqual(kesslerWaitContext.gameTimeIdx, 4,
+  'the canonical 19:00 Kessler wait hotspot must set the engine to evening before scene generation');
+assert.strictEqual(kesslerWaitContext.timeAdvanceTokens, 0,
+  'the deterministic wait must reset residual random time tokens');
+
 const objectBeforeVerbDeparture = worldContext.validateSceneWorldTruth({
   ort: 'Hinterhof Sybelstrasse',
   szene: 'Robert Kessler weicht zurueck. Du stoesst ihn beiseite und hechtest in die dunkle Tordurchfahrt. Deine Schritte hallen, als du den Hinterhof ueber die Seitenstrasse verlaesst. Ausser Atem erreichst du die Strassenecke.',
