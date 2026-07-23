@@ -248,6 +248,27 @@ peaceProblem = peaceContext._findKrausePeaceReescalationDrift({
 }, { _pendingIndizId: 'tasche_im_lager' });
 assert.strictEqual(peaceProblem, null,
   'passive mistrust must remain valid after peaceful de-escalation');
+const peacefulActionContext = { normForMatch };
+vm.createContext(peacefulActionContext);
+vm.runInContext(sourceOf('_findPeacefulActionViolenceDrift'), peacefulActionContext);
+let peacefulViolence = peacefulActionContext._findPeacefulActionViolenceDrift({
+  szene: 'Kalle presst die Finger in seine Seite, wo dein Stiefel vorhin traf.'
+}, {
+  id: 'KONFRONTATION_DEESKALIEREN',
+  _anzeigeText: 'Beruhigen - Jochen',
+  kategorie: 'DEFENSIV'
+});
+assert(peacefulViolence && peacefulViolence.code === 'peaceful_action_became_violent',
+  'a defensive de-escalation must reject retrospective player kicks and NPC injuries');
+peacefulViolence = peacefulActionContext._findPeacefulActionViolenceDrift({
+  szene: 'Kalle mustert dich finster, tritt aber ohne Verletzung einen Schritt zurueck.'
+}, {
+  id: 'KONFRONTATION_DEESKALIEREN',
+  _anzeigeText: 'Beruhigen - Jochen',
+  kategorie: 'DEFENSIV'
+});
+assert.strictEqual(peacefulViolence, null,
+  'nonviolent resistance and mistrust must remain valid after de-escalation');
 const arrivalRosterContext = {
   normForMatch,
   engineCurrentLocation: { name: 'Krauses Antiquitaeten' },
