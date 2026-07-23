@@ -31,6 +31,7 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 - Widersprechen sich Szenen über Rolle, Wissen, Beziehung oder Schicksal einer Figur?
 - Stimmen Handlungsrichtung und Rollen überein? Bei Beschattung folgt Karl der Zielperson; Formulierungen wie „die Zielperson ist dir gefolgt“ sind fundamentaler Story-Drift, auch wenn alle Pflichtnamen vorkommen. Kritische Rollenchecks dürfen nicht wegen eines langsamen API-Calls übersprungen werden.
 - Wird jedes mechanisch vergebene Kern-Indiz in derselben Prosa sichtbar dramatisiert?
+- Bleibt die Dramatisierung innerhalb des definierten Informationsumfangs? Exakte Uhrzeiten, Fluchtfahrzeuge/Kennzeichen, Waffen, Gangarten und auffällige Körpermerkmale sind neue Ermittlungsfakten und keine freie Atmosphäre, wenn sie nicht im gebundenen Ziel-Indiz stehen.
 - Gilt auch die Gegenrichtung: Eine reine Reise-/Ankunftsszene darf ein noch nicht mechanisch vergebenes Kern-Indiz weder durch eine vollständige Zeugen-Aussage noch durch eine vorweggenommene Hotspot-Untersuchung ausspielen. Sichtbare Requisiten und ein erkennbar wissender NPC sind erlaubt; konkrete Täterzahl, Tatzeit, Fluchtrichtung, Werkzeugschluss, Gravur oder andere Beweisdetails erst nach dem gebundenen Spieler-Klick. Exportzählung, Popup und Prosa müssen denselben Fundzeitpunkt zeigen.
 - Erzeugt ein nachträglich per Fallback eingefügtes Geständnis eine redundante zweite Geständnisszene?
 - Bleibt eine Figur, die den Ort ausdrücklich verlässt, in der Folgeszene ohne erklärte Rückkehr verschwunden?
@@ -86,7 +87,7 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 ## Aktuelle offene Themen – Priorität
 
 1. Truthbeat-Regex-Fehltreffer.
-2. Kern-Indiz-Prosa-Mismatch samt Root Cause: Die Ankunfts-Vorwegnahme ist seit v7.12.1339 präventiv und per Hard-Guard abgedeckt; manuelle Stabilitätsbestätigung und die Gegenrichtung „mechanisch vergeben, aber nicht dramatisiert“ bleiben offen.
+2. Kern-Indiz-Prosa-Mismatch samt Root Cause: Die Ankunfts-Vorwegnahme ist seit v7.12.1339 abgedeckt; v7.12.1340 begrenzt auch ausgespielte Zeugen-Indizien auf ihren definierten Informationsumfang. Manuelle Stabilitätsbestätigung und die Gegenrichtung „mechanisch vergeben, aber nicht dramatisiert“ bleiben offen.
 3. Lola-Präsenz-Widerspruch als generalisierbarer NPC-Kontinuitätsfall.
 4. Ort-Prosa-Bruch-Fix weiter generalisieren: v7.12.1321 deckt nach Kessler K2 auch nichtsoziale Außenort→Innenraum-Teleports ab; der vollständige manuelle Krause-Gegenlauf steht noch aus.
 5. Fall-Abschluss-Doppelerzählung aus dem Kessler-Run.

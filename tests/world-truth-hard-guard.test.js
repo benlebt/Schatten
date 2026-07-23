@@ -48,6 +48,7 @@ vm.createContext(context);
   '_worldTruthHasAlias',
   '_worldTruthOrtGleich',
   '_findArrivalEvidenceLeak',
+  '_findTargetEvidenceScopeDrift',
   'sanitizeSceneTerminalNpcState',
   'validateSceneWorldTruth',
   'buildWorldTruthRepairHint',
@@ -64,6 +65,7 @@ context.getCaseLocations = () => [{
   name: 'Krauses Antiquitäten',
   indizien: [{
     id: 'nachbarin_aussage', npc: 'hannelore_wirth', quelle: 'person',
+    text: 'Nachbarin Hannelore Wirth: In der Nacht vom Dienstag auf Mittwoch, 29./30. September 1953, sah sie zwei Männer mit einer schweren Tasche aus dem Hinterhof kommen',
     schluessel: ['nachbarin', 'wirth', 'hannelore', 'zwei maenner', 'tasche', 'tatnacht', 'hinterhof', 'gesehen']
   }, {
     id: 'einbruch_fenster', quelle: 'umgebung',
@@ -108,6 +110,24 @@ problem = context.validateSceneWorldTruth({
   personenImRaum: ['Hannelore Wirth'], optionen: []
 }, { id: 'REDEN' });
 assert.strictEqual(problem, null, 'the explained Krause transition must remain legal');
+
+problem = context.validateSceneWorldTruth({
+  ort: 'Krauses Antiquitäten',
+  szene: 'Hannelore Wirth sagt, dass sie in der Nacht vom Dienstag auf Mittwoch zwei Männer mit einer schweren Tasche aus dem Hinterhof kommen sah.',
+  personenImRaum: ['Hannelore Wirth'], optionen: []
+}, { id: 'NPC_sozial_ehrlich', _pendingIndizId: 'nachbarin_aussage' });
+assert.strictEqual(problem, null, 'the awarded witness clue must be dramatized at exactly its defined scope');
+
+problem = context.validateSceneWorldTruth({
+  ort: 'Krauses Antiquitäten',
+  szene: 'Hannelore Wirth sagt, dass sie kurz nach drei zwei Männer mit einer schweren Tasche sah, die einen dunklen Wagen ohne Licht nahmen; einer hinkte.',
+  personenImRaum: ['Hannelore Wirth'], optionen: []
+}, { id: 'NPC_sozial_ehrlich', _pendingIndizId: 'nachbarin_aussage' });
+assert(problem && problem.code === 'evidence_scope_drift'
+    && problem.extras.includes('exakte Uhrzeit')
+    && problem.extras.includes('Fluchtfahrzeug')
+    && problem.extras.includes('Körpermerkmal/Gangart'),
+  'an awarded clue must reject invented clock, vehicle, and gait facts outside its definition');
 
 context.caseProgress = {
   npcZustand: {

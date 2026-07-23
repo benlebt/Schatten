@@ -525,6 +525,10 @@ vm.runInContext(sourceOf('stripAccidentalNarrativeQuotes'), languageContext);
 vm.runInContext(sourceOf('fixSprache'), languageContext);
 assert.strictEqual(languageContext.fixSprache('Die Stifte stecken in das morschen Holz.'), 'Die Stifte stecken in das morsche Holz.',
   'the observed definite-neuter adjective ending must be corrected');
+assert.strictEqual(languageContext.fixSprache('Tante Frieda kaucht in Kreuzberg alles auf.'), 'Tante Frieda kauft in Kreuzberg alles auf.',
+  'the observed Krause dialogue typo must be corrected narrowly');
+assert.strictEqual(languageContext.fixSprache('Der Opel nagelt müde vor dem Laden.'), 'Der Opel rasselt widerwillig vor dem Laden.',
+  'the confirmed recurring nagelt-muede style tic must not remain visible');
 const wrappedNarration = '"Du gehst auf den Eingang zu. ' + 'Die Messingschilder haengen schief und du pruefst jeden Namen sorgfaeltig. '.repeat(3) + 'Robert bleibt im Hof."';
 assert(!languageContext.fixSprache(wrappedNarration).startsWith('"') && !languageContext.fixSprache(wrappedNarration).endsWith('"'),
   'a fully quote-wrapped narrative paragraph must lose only its accidental outer quotes');
