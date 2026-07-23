@@ -89,6 +89,13 @@ problem = truthContext.validateSceneWorldTruth({
 assert.strictEqual(problem, null, 'the selected client must answer before his departure becomes binding');
 problem = truthContext.validateSceneWorldTruth({
   ort: 'Karl Mauers B\u00fcro',
+  szene: '"Mehr wei\u00df ich nicht", murmelt Theodor Krause. Er setzt den Hut auf, verabschiedet sich und verl\u00e4sst das B\u00fcro.',
+  personenImRaum: [],
+  optionen: []
+}, transitionOption);
+assert.strictEqual(problem, null, 'natural direct speech must count as a visible reply without formulaic response wording');
+problem = truthContext.validateSceneWorldTruth({
+  ort: 'Karl Mauers B\u00fcro',
   szene: 'Theodor Krause ist bereits weg; nur der leere Sessel bleibt zur\u00fcck.',
   personenImRaum: [],
   optionen: []
