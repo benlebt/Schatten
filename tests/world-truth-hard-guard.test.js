@@ -50,6 +50,7 @@ vm.createContext(context);
   '_findOpenObjectTruthContradiction',
   '_findArrivalEvidenceLeak',
   '_findTargetEvidenceScopeDrift',
+  '_findUnfoundedPriorVisitDrift',
   'sanitizeSceneTerminalNpcState',
   'validateSceneWorldTruth',
   'buildWorldTruthRepairHint',
@@ -59,7 +60,8 @@ vm.createContext(context);
 ].forEach((name) => vm.runInContext(sourceOf(name), context));
 
 context.caseProgress = { gefundeneIndizIds: [], klientGesprochen: true, npcZustand: {} };
-context.caseSetup = { caseType: 'diebstahl' };
+context.caseSetup = { caseType: 'diebstahl', setupCast: [{ name: 'Hannelore Wirth' }, { name: 'Theodor Krause' }] };
+context.karlAkte = { bekannte: {} };
 context.engineCurrentLocation = { name: 'Krauses Antiquitäten' };
 context._resolveNpcIdentity = () => ({ id: 'hannelore_wirth', name: 'Hannelore Wirth' });
 context.getCaseLocations = () => [{
@@ -89,6 +91,24 @@ let problem = context.validateSceneWorldTruth({
   personenImRaum: ['Hannelore Wirth'], optionen: []
 }, { id: 'REISE', _istReise: true, _intent: { type: 'travel' } });
 assert.strictEqual(problem, null, 'an arrival may introduce a witness without revealing the witness clue');
+
+problem = context.validateSceneWorldTruth({
+  ort: 'Krauses AntiquitÃ¤ten',
+  szene: 'Hannelore Wirth schrickt zusammen. Dann erkennt sie dich wieder und sagt: Herr Mauer.',
+  personenImRaum: ['Hannelore Wirth'], optionen: []
+}, { id: 'REISE', _istReise: true, _intent: { type: 'travel' } });
+assert(problem && problem.code === 'unfounded_prior_visit' && problem.unearnedRecognition,
+  'plain recognition wording must not invent a prior meeting on a first arrival');
+
+context.caseProgress._begegnungen = [{ name: 'Hannelore Wirth', art: 'befragt', ort: 'Hackescher Markt' }];
+problem = context.validateSceneWorldTruth({
+  ort: 'Krauses AntiquitÃ¤ten',
+  szene: 'Hannelore Wirth erkennt dich wieder und grÃ¼ÃŸt knapp.',
+  personenImRaum: ['Hannelore Wirth'], optionen: []
+}, { id: 'REISE', _istReise: true, _intent: { type: 'travel' } });
+assert.strictEqual(problem, null,
+  'recognition must remain legal after a documented prior encounter elsewhere');
+context.caseProgress._begegnungen = [];
 
 context.engineCurrentLocation = { name: 'Karl Mauers Buero' };
 problem = context.validateSceneWorldTruth({

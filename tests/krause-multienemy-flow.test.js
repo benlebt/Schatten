@@ -19,7 +19,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1371 +Innenraum-Ankunftsscope'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1372 +Erstkontakt-Wiedererkennung'"), 'release version missing');
 assert(html.includes('Dramatisiere diese EINE Spur genau EINMAL'), 'explicit Haupt-UI clues must merge compact target and detailed payoff into one narration');
 assert(html.includes('OFFENE OBJEKTWAHRHEIT (HART, KEIN INDIZ-PAYOFF)'), 'every pre-clue scene must preserve visible hotspot truth, including client dialogue');
 assert(html.includes("vorabObjektwoerter: ['vitrine','glasvitrine','vitrinenglas']"), 'Krauses intact display case must expose a data-driven arrival truth guard');
