@@ -184,6 +184,14 @@ assert.strictEqual(problem, null,
 
 problem = context.validateSceneWorldTruth({
   ort: 'Karl Mauers Buero',
+  szene: 'Theodor Krause sagt: Liesl schenkte Hugo das Etui 1939 zur Hochzeit. Es war nichts fuer die Auslage.',
+  personenImRaum: ['Theodor Krause'], optionen: []
+}, { id: 'NPC_sozial_offen', _npcName: 'Theodor Krause', _clientDepartureAfterReply: 'Theodor Krause' });
+assert(problem && problem.code === 'target_provenance_drift',
+  'the engraving must not invent a wedding or deny the bound display-case location');
+
+problem = context.validateSceneWorldTruth({
+  ort: 'Karl Mauers Buero',
   szene: 'Theodor Krause sagt: Das Etui war Hugos Stolz. Es gehört zu einer Sammlung, die ich für einen Stammkunden sicher verwahrt habe.',
   personenImRaum: ['Theodor Krause'], optionen: []
 }, { id: 'NPC_sozial_offen', _npcName: 'Theodor Krause', _clientDepartureAfterReply: 'Theodor Krause' });
