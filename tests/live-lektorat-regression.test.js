@@ -963,6 +963,29 @@ assert.strictEqual(alreadyScannedEtuiScene.szene, etchedEtuiClue.fundText,
 assert.strictEqual(pendingCommitContext.caseProgress.pendingHauptuiIndiz, null,
   'the persistent pending context must clear only after final prose validation');
 
+const friedasEvasiveClue = {
+  id: 'frieda_ausweichend',
+  fundText: 'Du konfrontierst Tante Frieda mit Hannelore Wirths Beobachtung und Bornsteins Hinweis auf das Etui. Frieda schnaubt und behauptet, sie kenne kein silbernes Etui und kaufe nur "ehrliche Ware". Doch ihre Augen zucken zur T\u00fcr des Hinterhofs. Kalle und Jochen stellen sich breitbeinig in den Weg; die Spur f\u00fchrt in das Lager dahinter.',
+  prosaPflicht: {
+    narrativ: /^(?=[\s\S]*(?:kenne|wisse|wei(?:ss|\u00df)e)[\s\S]{0,35}kein(?:es)?[\s\S]{0,20}(?:etui|zigarettenetui))(?=[\s\S]*ehrlich\w*\s+ware)(?=[\s\S]*(?:hinterhof|lager))(?=[\s\S]*kalle)(?=[\s\S]*jochen)/i,
+    fallbackProse: 'Frieda behauptet, sie kenne kein silbernes Etui und kaufe nur "ehrliche Ware"; ihr Blick zum Hinterhof und Kalle und Jochen im Weg verraten das Lager dahinter.'
+  }
+};
+coreEvidenceProseContext.caseProgress.pendingHauptuiIndiz = { id: 'frieda_ausweichend' };
+const liveContradictoryFriedaScene = {
+  szene: 'Frieda verschr\u00e4nkt die Arme. "Hier gibt es keine ehrliche Ware. Das Etui geh\u00f6rt dazu." Kalle und Jochen r\u00fccken n\u00e4her.'
+};
+assert.strictEqual(coreEvidenceProseContext._indizAbschlussProsaSichern(friedasEvasiveClue, liveContradictoryFriedaScene), true,
+  'Frieda must not visibly confess while the booked core clue says she denies knowing the Etui');
+assert.strictEqual(liveContradictoryFriedaScene.szene, friedasEvasiveClue.fundText,
+  'the contradictory Frieda dialogue must be replaced by one coherent canonical evidence scene');
+const coherentFriedaScene = {
+  szene: 'Frieda sagt, sie kenne kein silbernes Etui und handle nur mit ehrlicher Ware. Ihr Blick springt zum Hinterhof, w\u00e4hrend Kalle und Jochen den Zugang zum Lager blockieren.'
+};
+assert.strictEqual(coreEvidenceProseContext._indizAbschlussProsaSichern(friedasEvasiveClue, coherentFriedaScene), false,
+  'a naturally coherent Frieda denial must pass without duplicated fallback prose');
+coreEvidenceProseContext.caseProgress.pendingHauptuiIndiz = null;
+
 const coreNarrationContext = {
   normForMatch: value => String(value || '').toLowerCase().replace(/[„“"'.,:;!?()\-]/g, ' ').replace(/\s+/g, ' ').trim(),
   _findeIndizById: id => id === 'etui_letzter_ort' ? ({
@@ -1358,5 +1381,8 @@ assert.strictEqual(roleLabelContext._standRollenLabel({
 assert(html.includes('<span class="status-popup-label">Miete</span>')
   && !html.includes('<span class="status-popup-label">Miete offen</span>'),
   'the rent row label must remain truthful when its value says beglichen');
+assert(html.includes('Betr\\u00e4ge wie 15 Mark bestehen aus mehreren Scheinen oder Scheinen und M\\u00fcnzen')
+  && html.includes('nie "der Schein"'),
+  'the historical money guard must prevent a fictional single 15-Mark banknote');
 
 console.log('LIVE_LEKTORAT_REGRESSION_OK');
