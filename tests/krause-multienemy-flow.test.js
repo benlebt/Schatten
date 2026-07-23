@@ -19,7 +19,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1424 +KrauseExplicitSecureGate-Staging'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1425 +KrauseTerminalCalmGate-Staging'"), 'release version missing');
 assert(html.includes('Liesl schenkte oder widmete das Etui 1939 Hugo'), 'Krause setup must bind the silver-case ownership direction');
 assert(html.includes('Karl zählt oder nimmt kein Geld, Karls Kasse bleibt unverändert'), 'Krause opening prompt must keep the return-contingent fee unpaid');
 assert(html.includes('Dramatisiere diese EINE Spur genau EINMAL'), 'explicit Haupt-UI clues must merge compact target and detailed payoff into one narration');
@@ -255,6 +255,12 @@ assert(sourceOf('_npcGehoertHierher').includes('_npcIstImAktuellenSzenenSnapshot
 assert(sourceOf('_hauptuiKonfrontationItems').includes("'ppk_einsetzen'"), 'Karls Walther PPK must be selectable in the tactical confrontation');
 assert(sourceOf('_hauptuiKonfrontationItems').includes('ppkSchonGezogen'), 'the PPK draw needs an encounter-local one-use guard');
 assert(sourceOf('_hauptuiKonfrontationAbschliessen').includes('!istPpk'), 'PPK pressure must not become a cumulative knockout');
+assert(sourceOf('_hauptuiKonfrontationAbschliessen').includes('caseProgress.krauseLagerFreigegeben = true'),
+  'finishing the full Krause group must persistently unlock the warehouse');
+assert(html.includes('caseProgress.krauseLagerFreigegeben === true'),
+  'the explicit Etui secure action must survive later model wording once the group is terminal');
+assert(sourceOf('buildNpcContinuityHint').includes('FRIEDLICH BINDEND'),
+  'calmed NPCs must be forbidden from threatening or blocking Karl again in later prose');
 assert(sourceOf('_hauptuiKonfrontationAktion').includes('PPK GEZOGEN'), 'successful PPK narration must persist the one-use state');
 assert(sourceOf('_konfrontationOutcomePrompt').includes('Niemand flieht, ergibt sich, wird ausgeschaltet oder verschwindet'), 'PPK narration must forbid automatic victory or flight');
 assert(html.includes("if (!istGewahrsam && /charite/.test(engineOrt) && !/pathologie/.test(engineOrt))"), 'Charite needs an engine-location image fallback without overwriting pathology');
