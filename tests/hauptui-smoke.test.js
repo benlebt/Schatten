@@ -179,7 +179,7 @@ assert(html.includes("if (modus !== 'verwalten' && _hauptuiFokussierePerson(npc)
 assert(html.includes('UI-KLICKVERLAUF (chronologisch)'), 'debug export must include the chronological UI click audit');
 assert(html.includes('Sichtbare UI-Zustaende ('), 'debug export must include offered Haupt-UI and dossier states');
 assert(html.includes("_uiAudit('FADEN', faden.frage, faden.ort)"), 'open investigation threads must be logged when clicked');
-assert(html.includes('&& !_ortHatJetztErreichbareSpur && !_offenerFadenHier && !_pflichtKlientOffen;'), 'an open thread or unresolved present client must suppress the exhausted-location banner');
+assert(html.includes('&& !_ortHatJetztErreichbareSpur && !_offenerFadenHier && !_pflichtKlientOffen && !_ortHatOffeneFundstuecke;'), 'an open thread, unresolved present client, or loose pickup must suppress the exhausted-location banner');
 assert(html.includes('function _hauptuiHatOffenenFadenAmOrt(ortName)'), 'Haupt-UI needs a shared current-location thread check');
 assert(html.includes('function _renderCustodyMenu(container)'), 'custody must retain deterministic Haupt-UI actions');
 assert(html.includes("if (mode === 'custody')"), 'custody must render its menu instead of hiding every main action');
@@ -691,6 +691,10 @@ assert(!byText(container, 'Durchsuche'), 'an exhausted shipyard must not offer a
 assert(visibleText(container).includes('Hier ist nichts mehr zu holen.'), 'an exhausted location needs a clear narrative travel cue');
 assert(visibleText(container).includes('Karls nächster Ansatz: Lagerhalle an der Spree.'), 'the travel cue must name the open thread destination');
 assert(byText(container, 'Konstantin Wegener finden und befreien'), 'the useful off-site thread must remain directly selectable');
+assert(html.includes("const _fundLive = (typeof _ortsFundItems === 'function') ? (_ortsFundItems() || []) : [];"),
+  'outer exhausted-location gate must inspect live loose pickups');
+assert(html.includes('&& !_ortHatOffeneFundstuecke;'),
+  'an active pickup must suppress the misleading exhausted-location banner');
 context._hauptuiOffeneFaeden = () => [];
 context._baukastenZiele = () => ({ personen: [], objekte: [], items: [] });
 
