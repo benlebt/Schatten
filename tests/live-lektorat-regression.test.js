@@ -440,6 +440,14 @@ const prematureWitnessAccount = worldContext.validateSceneWorldTruth({
 }, { id: 'REISE', _istReise: true });
 assert.strictEqual(prematureWitnessAccount && prematureWitnessAccount.code, 'arrival_evidence_leak',
   'a witness must not narrate invented steps and the crime time before the bound conversation click');
+const minimalPrematureWitnessAccount = worldContext.validateSceneWorldTruth({
+  ort: 'Krauses Antiquitaeten',
+  szene: 'Hannelore Wirth mustert dich. „Wenn Sie nach dem Einbruch fragen: Ich habe in der Nacht etwas gesehen.“',
+  personenImRaum: ['Hannelore Wirth'],
+  optionen: []
+}, { id: 'REISE', _istReise: true });
+assert.strictEqual(minimalPrematureWitnessAccount && minimalPrematureWitnessAccount.code, 'arrival_evidence_leak',
+  'a first-person past observation plus crime time is already a premature witness beat');
 assert.strictEqual(worldContext.validateSceneWorldTruth({
   ort: 'Krauses Antiquitaeten',
   szene: 'Hannelore Wirth steht zwischen den Vitrinen, zuckt bei deinem Eintreten zusammen und mustert dich, als wüsste sie etwas.',
