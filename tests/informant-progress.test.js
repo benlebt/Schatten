@@ -37,6 +37,13 @@ const kesslerIntro = Array.from(introContext.INTRO_VARIANTS).find((entry) =>
 assert(kesslerIntro, 'Kessler setup with Tetzlaff missing');
 const tetzlaffSetup = Array.from(kesslerIntro.setup.setupCast).find((npc) => npc && npc.id === 'norbert_tetzlaff');
 assert(tetzlaffSetup && tetzlaffSetup.sozial, 'Tetzlaff direct social profile missing');
+const krauseIntro = Array.from(introContext.INTRO_VARIANTS).find((entry) =>
+  entry && entry.setup && Array.isArray(entry.setup.setupCast)
+    && entry.setup.setupCast.some((npc) => npc && npc.id === 'bornstein')
+);
+assert(krauseIntro, 'Krause setup with Bornstein missing');
+const bornsteinSetup = Array.from(krauseIntro.setup.setupCast).find((npc) => npc && npc.id === 'bornstein');
+assert(bornsteinSetup && bornsteinSetup.sozial, 'Bornstein social profile missing');
 
 const paymentGateStart = html.indexOf('function _informantKannBezahlen(');
 const paymentGateEnd = html.indexOf('function _informantBezahle(', paymentGateStart);
@@ -130,6 +137,19 @@ assert.strictEqual(tetzlaffPayment.option._sozialInformantZahlung, true, 'Tetzla
 assert.strictEqual(tetzlaffKragen.option.kategorie, 'OFFENSIV', 'collar escalation must be a real offensive action');
 assert.strictEqual(tetzlaffKragen.option._sozialRufHaerte, 2, 'collar escalation must increase hardness');
 assert.strictEqual(tetzlaffKragen.option._sozialRufRenommee, -2, 'collar escalation must damage reputation');
+
+const bornsteinVerbs = Array.from(personContext._hauptuiPersonVerben({
+  id: 'bornstein', name: 'Karl-Heinz Bornstein', tag: 'INFORMANT', typ: 'person', hinweis: true,
+  sozial: bornsteinSetup.sozial
+}));
+const bornsteinKollegial = bornsteinVerbs.find((verb) => verb.key === 'sozial_kollegial');
+assert(bornsteinKollegial, 'Bornstein collegial route missing');
+assert.strictEqual(bornsteinKollegial.option._sozialErfolg, true,
+  'Bornstein collegial route must remain an explicit social success');
+assert.strictEqual(bornsteinKollegial.option._sozialInformantGratis, true,
+  'Bornstein collegial route must carry the structured free-informant permission');
+assert.strictEqual(bornsteinKollegial.option._sozialInformantZahlung, false,
+  'Bornstein collegial route must not silently debit an informant payment');
 
 paymentAvailable = false;
 const brokeTetzlaffVerbs = Array.from(personContext._hauptuiPersonVerben({
@@ -228,6 +248,63 @@ const granted = Array.from(grantContext.pruefeKernIndizFund('Schiele nennt Karl 
 assert.strictEqual(paymentCalls, 1, 'Schiele payment must be booked exactly once');
 assert.deepStrictEqual(Array.from(grantContext.caseProgress.gefundeneIndizIds), ['schiele_streit'], 'successful payment must book Schiele clue');
 assert.deepStrictEqual(granted, ['Schiele nennt den Streit.'], 'successful Schiele interaction must report the granted clue');
+
+let bornsteinPayments = 0;
+const bornsteinGrantContext = {
+  window: {},
+  engineCurrentLocation: { name: 'Bornsteins Antiquitätenladen' },
+  currentScene: { personenImRaum: ['Karl-Heinz Bornstein'] },
+  caseProgress: { stage: 2, gefundeneIndizIds: [] },
+  getCaseLocations: () => [{
+    name: 'Bornsteins Antiquitätenladen',
+    indizien: [{
+      id: 'bornstein_hehler_tipp',
+      text: 'Bornstein nennt Frieda, Kalle, Jochen und das Hinterhof-Lager.',
+      npc: 'bornstein', quelle: 'person',
+      actions: ['BEFRAGEN', 'BESTECHEN', 'ANSPRECHEN', 'UEBERZEUGEN']
+    }]
+  }],
+  normForMatch: grantContext.normForMatch,
+  getNpcsAtCurrentLocation: () => [{ id: 'bornstein', name: 'Karl-Heinz Bornstein', tag: 'INFORMANT' }],
+  _aktTageszeitName: () => 'nachmittag',
+  classifyEvidenceAction: () => 'person',
+  getEvidenceActionKey: () => 'ANSPRECHEN',
+  _npcWirklichInSzene: () => true,
+  _aktionsZielNpcPasst: () => true,
+  _indizGehoertZuNpc: () => true,
+  _resolveNpcIdentity: () => ({ id: 'bornstein', name: 'Karl-Heinz Bornstein', tag: 'INFORMANT' }),
+  _informantPreis: () => 30,
+  _informantBezahle: () => { bornsteinPayments += 1; return { ok: true, art: 'geld', betrag: 30 }; },
+  _markiereIndizGefunden: (clue) => {
+    bornsteinGrantContext.caseProgress.gefundeneIndizIds.push(clue.id);
+    return true;
+  },
+  caseHasDefinedEvidence: () => true,
+  diag: () => {}
+};
+bornsteinGrantContext.window = bornsteinGrantContext;
+bornsteinGrantContext._letzteAktion = {
+  npcId: 'bornstein', sozialErfolg: true, sozialInformantGratis: true, sozialTonart: 'kollegial'
+};
+vm.createContext(bornsteinGrantContext);
+vm.runInContext(grantSource, bornsteinGrantContext);
+const freeBornstein = Array.from(bornsteinGrantContext.pruefeKernIndizFund(
+  'Bornstein nennt Tante Frieda, Kalle und Jochen sowie das Lager im Hinterhof.'
+));
+assert.strictEqual(bornsteinPayments, 0, 'profile-authorized free informant route must not debit money');
+assert.deepStrictEqual(Array.from(bornsteinGrantContext.caseProgress.gefundeneIndizIds), ['bornstein_hehler_tipp'],
+  'Bornstein collegial success must book the clue narrated in prose');
+assert.strictEqual(freeBornstein.length, 1, 'Bornstein collegial success must report one granted clue');
+
+bornsteinGrantContext.caseProgress.gefundeneIndizIds = [];
+bornsteinGrantContext._letzteAktion.sozialInformantGratis = false;
+const blockedFreeTalk = Array.from(bornsteinGrantContext.pruefeKernIndizFund(
+  'Der Informant plaudert freundlich, aber ohne vereinbarte Freigabe.'
+));
+assert.deepStrictEqual(blockedFreeTalk, [], 'ordinary informant talk must remain gated without payment, pressure or profile permission');
+assert.strictEqual(bornsteinPayments, 0, 'blocked ordinary talk must not attempt an implicit payment');
+assert(bornsteinGrantContext.caseProgress._informantWillBezahlung,
+  'blocked ordinary informant talk must retain the visible payment requirement');
 
 const buyStart = html.indexOf('function _hauptuiOffenesInformantenIndiz(');
 const buyEnd = html.indexOf('function _hauptuiEmpfohleneAktion(', buyStart);
