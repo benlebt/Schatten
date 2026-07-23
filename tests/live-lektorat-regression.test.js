@@ -962,6 +962,13 @@ assert.strictEqual(alreadyScannedEtuiScene.szene, etchedEtuiClue.fundText,
   'the accepted live Vitrine scene must receive the complete engraving narration before the pending context clears');
 assert.strictEqual(pendingCommitContext.caseProgress.pendingHauptuiIndiz, null,
   'the persistent pending context must clear only after final prose validation');
+const pendingRedemptionCall = html.indexOf("try { if (typeof _hauptuiPendingIndizEinloesen === 'function') _hauptuiPendingIndizEinloesen(scene); } catch (e) {}");
+const immutableSceneLogSnapshot = html.indexOf("logEntries.push({", pendingRedemptionCall);
+assert(pendingRedemptionCall !== -1 && immutableSceneLogSnapshot !== -1
+  && pendingRedemptionCall < immutableSceneLogSnapshot,
+  'pending evidence prose must be finalized before the immutable scene log snapshot used by renderLog');
+assert.strictEqual(html.indexOf("try { if (typeof _hauptuiPendingIndizEinloesen === 'function') _hauptuiPendingIndizEinloesen(scene); } catch (e) {}", pendingRedemptionCall + 1), -1,
+  'pending evidence redemption must run exactly once, before logging, not again after the stale snapshot');
 
 const friedasEvasiveClue = {
   id: 'frieda_ausweichend',
