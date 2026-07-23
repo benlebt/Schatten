@@ -19,7 +19,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1422 +TargetPossessionGate2-Staging'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1423 +KrauseConflictFailForward-Staging'"), 'release version missing');
 assert(html.includes('Liesl schenkte oder widmete das Etui 1939 Hugo'), 'Krause setup must bind the silver-case ownership direction');
 assert(html.includes('Karl zählt oder nimmt kein Geld, Karls Kasse bleibt unverändert'), 'Krause opening prompt must keep the return-contingent fee unpaid');
 assert(html.includes('Dramatisiere diese EINE Spur genau EINMAL'), 'explicit Haupt-UI clues must merge compact target and detailed payoff into one narration');
@@ -70,6 +70,8 @@ assert(!bornsteinBlock.includes("'nacht'"), 'Bornstein opening hours must not in
 const targetItemStart = html.indexOf("id: 'silbernes_zigarettenetui'", html.indexOf('function _baukastenZiele()'));
 assert(targetItemStart >= 0, 'silver cigarette case target missing');
 assert(html.slice(targetItemStart, targetItemStart + 500).includes("sonderAktion: 'diebesgut_sichern'"), 'stolen case needs a deterministic secure action');
+assert(html.slice(targetItemStart - 1000, targetItemStart + 500).includes("_hauptuiAngreifbarePersonen().length === 0"),
+  'the secure action must stay hidden while a living Krause blocker would make it a dead button');
 
 const itemVerbs = sourceOf('_hauptuiItemVerben');
 assert(itemVerbs.includes("encodeURIComponent(String(feind.id || feind.name || ''))"), 'item actions must encode a stable selected enemy key');
@@ -99,6 +101,13 @@ assert(livingGroup.includes("'ko', 'gefesselt', 'fixiert', 'geflohen', 'uebergeb
 const groupFinish = sourceOf('_hauptuiKonfrontationAbschliessen');
 assert(groupFinish.includes('_konfrontationGruppenFortschrittSichern(k)'), 'defeated Krause opponents must be saved before the next target');
 assert(groupFinish.includes('_konfrontationGruppenZielSetzen(k, naechstesZiel)'), 'the next living Krause opponent must take over immediately');
+assert(sourceOf('_konfrontationStatusIstEndgueltig').includes("'beruhigt'"),
+  'a peacefully resolved Krause opponent must leave the active blocker group');
+const confrontationAction = sourceOf('_hauptuiKonfrontationAktion');
+assert(confrontationAction.includes("'angespannt', 'bluff'"),
+  'a bluff must keep the confrontation open instead of silently clearing unresolved opponents');
+assert(confrontationAction.includes("'beruhigt', 'deeskalation'"),
+  'de-escalation must mechanically calm the current opponent and advance the group');
 
 const groupPrompt = sourceOf('_konfrontationGruppenPrompt');
 assert(groupPrompt.includes('Frieda fuehrt Kalle und Jochen'), 'group narration must force all active Krause opponents to react');
