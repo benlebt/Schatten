@@ -19,7 +19,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1450 +CombatEvidenceIsolation-Staging'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1451 +FriedaRosterContinuity-Staging'"), 'release version missing');
 assert(html.includes('Liesl schenkte oder widmete das Etui 1939 Hugo'), 'Krause setup must bind the silver-case ownership direction');
 assert(html.includes('Karl zählt oder nimmt kein Geld, Karls Kasse bleibt unverändert'), 'Krause opening prompt must keep the return-contingent fee unpaid');
 assert(html.includes('Dramatisiere diese EINE Spur genau EINMAL'), 'explicit Haupt-UI clues must merge compact target and detailed payoff into one narration');
@@ -57,6 +57,10 @@ assert(html.includes('Verwende nie die Formeln "Aktenmensch"'), 'reputation pros
 assert(html.includes('Krause hat deshalb selbst KEINE Anzeige erstattet'), 'Krause must not contradict his no-police premise');
 assert(html.includes('Nacht vom Dienstag auf Mittwoch, 29./30. September 1953'), 'Krause break-in night must stay exact across witnesses');
 assert(html.includes('Kalle und Jochen sind Friedas Schlaeger und Lagerwachen, keine Verraeter'), 'Krause thugs must keep their actual role');
+assert(html.includes("{ id: 'kalle', zeit: ['vormittag','mittag','nachmittag','abend','nacht'], bisStage: 2 }"),
+  'Kalle must already be physically present when the player visits or attacks Frieda early');
+assert(html.includes("{ id: 'jochen', zeit: ['vormittag','mittag','nachmittag','abend','nacht'], bisStage: 2 }"),
+  'Jochen must already be physically present when the player visits or attacks Frieda early');
 assert(html.includes('weisses Haar zu einem festen Knoten gesteckt'), 'Hannelore description must not drift into the Weizenknoten typo');
 assert(html.includes('WAFFEN-KONTINUITAET (PFLICHT)'), 'nonviolent talk actions must forbid invented drawn weapons');
 assert(html.includes('Bornsteins Antiquitätenladen liegt in der Bergmannstraße'), 'Krause locations need an explicit address truth');
