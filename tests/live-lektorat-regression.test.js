@@ -879,10 +879,32 @@ assert.strictEqual(worldContext.validateSceneWorldTruth({
   'a truthful recap of Robert entering the rear building must remain valid');
 worldContext.caseProgress.gefundeneIndizIds = [];
 
+worldContext.engineCurrentLocation = { name: 'Krauses Antiquitaeten' };
+worldContext.caseProgress.gefundeneIndizIds = ['einbruch_fenster'];
+const contradictedKrauseSkill = worldContext.validateSceneWorldTruth({
+  ort: 'Krauses Antiquitaeten',
+  szene: 'Die Diebe wussten genau, was sie nahmen. Sie waren keine Amateure.',
+  personenImRaum: ['Hannelore Wirth'],
+  optionen: []
+}, { id: 'HAUPTUI_INDRAMATISIERUNG_etui_letzter_ort', _pendingIndizId: 'etui_letzter_ort' });
+assert.strictEqual(contradictedKrauseSkill && contradictedKrauseSkill.code, 'known_evidence_contradiction',
+  'the vitrinen payoff must not rewrite the found crude break-in as professional work');
+assert.strictEqual(worldContext.validateSceneWorldTruth({
+  ort: 'Krauses Antiquitaeten',
+  szene: 'Die Täter griffen gezielt nach der Ware, brachen aber wie Gelegenheitsdiebe mit einem Stemmeisen ein, nicht wie Profis.',
+  personenImRaum: ['Hannelore Wirth'],
+  optionen: []
+}, { id: 'HAUPTUI_INDRAMATISIERUNG_etui_letzter_ort', _pendingIndizId: 'etui_letzter_ort' }), null,
+  'target knowledge and crude break-in technique must remain compatible');
+worldContext.caseProgress.gefundeneIndizIds = [];
+worldContext.engineCurrentLocation = { name: 'Hinterhof Sybelstrasse' };
+
 assert(html.includes('FORTSETZUNGS-WAHRHEIT AUS GESICHERTEN INDIZIEN'),
   'found core evidence must inject a data-driven continuity anchor into later scene prompts');
 assert(html.includes("fortsetzungsWahrheit: 'Robert wurde beim Betreten des Hinterhauses beobachtet"),
   'the Kessler entry clue must carry its exact persistent story truth');
+assert(html.includes("fortsetzungsWahrheit: 'Die Einbruchsspuren am Hinterhof-Fenster zeigen grobe Arbeit"),
+  'the Krause break-in clue must carry its exact persistent competence truth');
 
 assert.strictEqual(worldContext.validateSceneWorldTruth({
   ort: 'Hinterhof Sybelstrasse',
