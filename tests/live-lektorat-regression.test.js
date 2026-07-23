@@ -699,7 +699,7 @@ assert.strictEqual(coreEvidenceProseContext._indizAbschlussProsaSichern(timedCor
 const doorplateCoreClue = {
   id: 'tuerschild_hauke',
   prosaPflicht: {
-    narrativ: /^(?=[\s\S]*\b(?:dritter|3\.)\s*stock\b)(?=[\s\S]*\blinks\b)(?=[\s\S]*\bhauke\b)(?=[\s\S]*(?:kein herr|keine familie|alleinsteh))/i,
+    narrativ: /^(?=[\s\S]*\b(?:dritter|3\.)\s*stock\b)(?=[\s\S]*\blinks\b)(?=[\s\S]*\bhauke\b)(?=[\s\S]*kein herr)(?=[\s\S]*(?:keine familie|alleinsteh))/i,
     fallbackProse: 'Dritter Stock links: Das Schild trägt nur den Namen Hauke - kein Herr, keine Familie.'
   }
 };
@@ -711,6 +711,11 @@ assert(incompleteDoorplateScene.szene.includes('Dritter Stock links')
   'the visible doorplate prose must carry the complete popup claim before booking');
 assert.strictEqual(coreEvidenceProseContext._indizAbschlussProsaSichern(doorplateCoreClue, incompleteDoorplateScene), false,
   'the complete doorplate fallback must remain idempotent');
+const partialHouseholdDoorplateScene = { szene: 'Dritter Stock links steht Hauke. Kein Herr ist auf dem Schild vermerkt.' };
+assert.strictEqual(coreEvidenceProseContext._indizAbschlussProsaSichern(doorplateCoreClue, partialHouseholdDoorplateScene), true,
+  'mentioning only the missing Herr must not satisfy the complete no-family household anchor');
+assert(partialHouseholdDoorplateScene.szene.includes(doorplateCoreClue.prosaPflicht.fallbackProse),
+  'the fallback must add the missing family-status fact even when all other doorplate anchors are present');
 
 const toolCoreClue = {
   id: 'einbruch_fenster',
