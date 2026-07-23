@@ -47,6 +47,7 @@ vm.createContext(context);
   '_worldTruthAliases',
   '_worldTruthHasAlias',
   '_worldTruthOrtGleich',
+  '_findOpenObjectTruthContradiction',
   '_findArrivalEvidenceLeak',
   '_findTargetEvidenceScopeDrift',
   'sanitizeSceneTerminalNpcState',
@@ -69,6 +70,9 @@ context.getCaseLocations = () => [{
     schluessel: ['nachbarin', 'wirth', 'hannelore', 'zwei maenner', 'tasche', 'tatnacht', 'hinterhof', 'gesehen']
   }, {
     id: 'einbruch_fenster', quelle: 'umgebung',
+    vorabWahrheit: 'Das Hinterhof-Fenster ist am Holzrahmen aufgehebelt; die Fensterscheibe ist nicht eingeschlagen.',
+    vorabObjektwoerter: ['fenster', 'hinterhof-fenster', 'fensterscheibe'],
+    vorabVerboten: ['eingeschlagen', 'zerschlagen', 'zerbrochen', 'glasscherbe', 'glasscherben'],
     schluessel: ['fenster', 'aufgebrochen', 'aufgehebelt', 'stemmeisen', 'hinterhof', 'splittrig', 'kein profi']
   }, {
     id: 'etui_letzter_ort', quelle: 'umgebung',
@@ -85,6 +89,24 @@ let problem = context.validateSceneWorldTruth({
   personenImRaum: ['Hannelore Wirth'], optionen: []
 }, { id: 'REISE', _istReise: true, _intent: { type: 'travel' } });
 assert.strictEqual(problem, null, 'an arrival may introduce a witness without revealing the witness clue');
+
+context.engineCurrentLocation = { name: 'Karl Mauers Buero' };
+problem = context.validateSceneWorldTruth({
+  ort: 'Karl Mauers Buero',
+  szene: 'Theodor Krause sagt: Es war kein Profi. Die haben mein Fenster im Hinterhof einfach eingeschlagen.',
+  personenImRaum: ['Theodor Krause'], optionen: []
+}, { id: 'NPC_sozial_offen', _npcName: 'Theodor Krause' });
+assert(problem && problem.code === 'open_object_truth_contradiction',
+  'an open hotspot physical truth must also bind client dialogue before the investigation click');
+
+problem = context.validateSceneWorldTruth({
+  ort: 'Karl Mauers Buero',
+  szene: 'Theodor Krause nennt das gestohlene Etui und bittet dich, den Einbruch diskret zu untersuchen.',
+  personenImRaum: ['Theodor Krause'], optionen: []
+}, { id: 'NPC_sozial_offen', _npcName: 'Theodor Krause' });
+assert.strictEqual(problem, null,
+  'the client may state the assignment without revealing or contradicting an open forensic clue');
+context.engineCurrentLocation = { name: context.getCaseLocations()[0].name };
 
 problem = context.validateSceneWorldTruth({
   ort: 'Krauses Antiquitäten',
@@ -126,15 +148,15 @@ problem = context.validateSceneWorldTruth({
 assert.strictEqual(problem, null, 'an arrival may show a hotspot prop without interpreting its evidence');
 
 problem = context.validateSceneWorldTruth({
-  ort: 'Krauses AntiquitÃ¤ten',
+  ort: context.engineCurrentLocation.name,
   szene: 'Hannelore haelt ein Stueck der zerbrochenen Glasvitrine in der Hand.',
   personenImRaum: ['Hannelore Wirth'], optionen: []
 }, { id: 'REISE', _istReise: true, _intent: { type: 'travel' } });
-assert(problem && problem.code === 'arrival_object_truth_contradiction',
+assert(problem && problem.code === 'open_object_truth_contradiction',
   'an arrival must not contradict the physical truth of a still-open hotspot');
 
 problem = context.validateSceneWorldTruth({
-  ort: 'Krauses AntiquitÃ¤ten',
+  ort: context.engineCurrentLocation.name,
   szene: 'Die Vitrine steht offen und leer; das Glas ist intakt. Hannelore wartet daneben.',
   personenImRaum: ['Hannelore Wirth'], optionen: []
 }, { id: 'REISE', _istReise: true, _intent: { type: 'travel' } });

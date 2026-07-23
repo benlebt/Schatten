@@ -19,9 +19,9 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1366 +Innenraum-Erstbesuch'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1367 +Offene-Objektwahrheit'"), 'release version missing');
 assert(html.includes('Dramatisiere diese EINE Spur genau EINMAL'), 'explicit Haupt-UI clues must merge compact target and detailed payoff into one narration');
-assert(html.includes('ANKUNFTS-OBJEKTWAHRHEIT (HART, KEIN INDIZ-PAYOFF)'), 'travel prompts must preserve visible hotspot truth before the clue click');
+assert(html.includes('OFFENE OBJEKTWAHRHEIT (HART, KEIN INDIZ-PAYOFF)'), 'every pre-clue scene must preserve visible hotspot truth, including client dialogue');
 assert(html.includes("vorabObjektwoerter: ['vitrine','glasvitrine','vitrinenglas']"), 'Krauses intact display case must expose a data-driven arrival truth guard');
 assert(html.includes('die intakte Vitrine leer geräumt'), 'the Krause scene map must agree that the empty display case glass is intact');
 assert(html.includes('habe|hatte|konnte'), 'arrival witness validation must cover German perfect infinitive phrasing');
@@ -29,6 +29,7 @@ assert(html.includes("indiz.id !== 'einbruch_fenster'"), 'the Krause window clue
 assert(html.includes('sprechen eindeutig für ein Stemmeisen'), 'the hard fallback must restore the defining tool conclusion before booking');
 assert(html.includes('ERSTBESUCH-WAHRHEIT (PFLICHT)'), 'travel prompts must distinguish a first visit from a real return');
 assert(html.includes('fixed_interior_image_drift'), 'fixed interior scene images must be enforced as world truth before commit');
+assert(html.includes('open_object_truth_contradiction'), 'open hotspot physical truth must be validated before every scene commit');
 assert(html.includes("file: 'karl-mauers-buero-theodor-day.png'"), 'Krause opening must show Theodor in Karl office');
 assert(html.includes("root: 'assets/scenes/krause/'"), 'Krause opening image must resolve from the case scene directory');
 assert(html.includes('AKTIONS-TREUE (ABSOLUT)'), 'physical and item actions need a strict narration contract');
