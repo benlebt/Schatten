@@ -563,5 +563,22 @@ assert.strictEqual(languageContext.fixSprache('"Was wollen Sie hier?", fragt Rob
   'real direct speech must keep its quotation marks');
 assert(sourceOf('buildWorldTruthRepairHint').includes('ENGINE-WAHRHEIT VERLETZUNG'),
   'offscreen injury drift needs a targeted repair prompt');
+const evidenceFallbackContext = {
+  engineCurrentLocation: { name: 'Hinterhof Sybelstrasse' },
+  normForMatch: value => String(value || '').toLowerCase()
+};
+vm.createContext(evidenceFallbackContext);
+vm.runInContext(sourceOf('enforceSceneWorldTruthFallback'), evidenceFallbackContext);
+const objectEvidenceScene = { szene: 'verworfen', optionen: [] };
+evidenceFallbackContext.enforceSceneWorldTruthFallback(objectEvidenceScene, {
+  code: 'evidence_scope_drift',
+  indizId: 'tuerschild_hauke',
+  quelle: 'hotspot',
+  fundText: 'Dritter Stock links steht nur der Name Hauke.'
+});
+assert(objectEvidenceScene.szene.includes('Dritter Stock links')
+  && objectEvidenceScene.szene.includes('sichtbaren Fund')
+  && !/befragte Person|Aussage|Beobachtung/.test(objectEvidenceScene.szene),
+  'an object or hotspot evidence fallback must remain an investigation rather than inventing a speaking witness');
 
 console.log('LIVE_LEKTORAT_REGRESSION_OK');
