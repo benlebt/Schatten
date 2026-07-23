@@ -174,6 +174,25 @@ tatortVisualContext.roster = [];
 tatortSpec = tatortVisualContext._krauseTatortVisual({ personenImRaum: [] });
 assert.strictEqual(tatortSpec.dayFile, 'krauses-antiquitaeten-day.webp',
   'the empty crime scene must retain the shattered flat display cases');
+const tatortObjectContext = {
+  normForMatch,
+  caseSetup: { caseType: 'diebstahl' },
+  engineCurrentLocation: { name: 'Krauses Antiquitaeten' }
+};
+vm.createContext(tatortObjectContext);
+vm.runInContext(sourceOf('_findKrauseTatortVisualObjectDrift'), tatortObjectContext);
+let tatortObjectProblem = tatortObjectContext._findKrauseTatortVisualObjectDrift({
+  szene: 'Die Scheibe der linken Schauvitrine liegt als Scherbenhaufen auf dem Gehweg.'
+});
+assert(tatortObjectProblem && tatortObjectProblem.code === 'krause_tatort_visual_object_drift',
+  'the exact live sidewalk-shards contradiction must be blocked');
+tatortObjectProblem = tatortObjectContext._findKrauseTatortVisualObjectDrift({
+  szene: 'Im Laden sind die beiden flachen Schauvitrinen zerschlagen; die hohe Vitrine hinten ist intakt.'
+});
+assert.strictEqual(tatortObjectProblem, null,
+  'the canonical shattered flat cases and intact rear cabinet must remain valid');
+assert(sourceOf('validateSceneWorldTruth').includes('_findKrauseTatortVisualObjectDrift'),
+  'the material Krause image/object truth must run before scene commit');
 const possessionContext = {
   caseProgress: { targetItemState: { name: 'Silbernes Zigarettenetui', status: 'located' } },
   normForMatch,
