@@ -147,6 +147,15 @@ assert(problem && problem.code === 'evidence_scope_drift'
     && problem.extras.includes('Körpermerkmal/Gangart'),
   'an awarded clue must reject invented clock, vehicle, and gait facts outside its definition');
 
+problem = context.validateSceneWorldTruth({
+  ort: 'Krauses Antiquitäten',
+  szene: 'In der Vitrine zeichnet sich der Abdruck des Etuis ab. Das Schloss wurde mit einem einfachen Werkzeug aufgehebelt.',
+  personenImRaum: ['Hannelore Wirth'], optionen: []
+}, { id: 'HOTSPOT', _pendingIndizId: 'etui_letzter_ort' });
+assert(problem && problem.code === 'evidence_scope_drift'
+    && problem.extras.some((entry) => entry.includes('einbruch_fenster')),
+  'a vitrinen find must not consume the distinctive aufgehebelt keyword from the still-open window clue');
+
 context.caseProgress = {
   npcZustand: {
     mertens: {
