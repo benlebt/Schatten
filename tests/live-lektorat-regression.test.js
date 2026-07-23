@@ -307,6 +307,21 @@ const objectBeforeVerbDeparture = worldContext.validateSceneWorldTruth({
 assert.strictEqual(objectBeforeVerbDeparture && objectBeforeVerbDeparture.code, 'unauthorized_departure',
   'object-before-verb departure and coordinated hechtest wording must be rejected');
 
+const reflexiveObjectDeparture = worldContext.validateSceneWorldTruth({
+  ort: 'Hinterhof Sybelstrasse',
+  szene: 'Du spuerst den Blick von Frau Pohl, als du dich umdrehst und den Hinterhof durch das Tor in Richtung Strasse verlaesst. Als du deinen Opel erreichst, steigst du ein und laesst den Hinterhof hinter dir.',
+  personenImRaum: ['Frau Pohl'],
+  optionen: []
+}, {
+  _zeitUnmittelbar: true,
+  _npcName: 'Frau Pohl',
+  _npcInteraktion: { npcName: 'Frau Pohl' },
+  _sozialTonart: 'druck',
+  id: 'NPC_sozial_druck'
+});
+assert.strictEqual(reflexiveObjectDeparture && reflexiveObjectDeparture.code, 'unauthorized_departure',
+  'reflexive object-before-verb departure and reaching the Opel must not bypass the location gate');
+
 const offscreenInjury = worldContext.validateSceneWorldTruth({
   ort: 'Hinterhof Sybelstrasse',
   szene: 'Robert Kessler schweigt. Ein stechender Schmerz erinnert dich an den Rempler gegen den Torpfeiler, den du beim Uebersteigen der Mauer kassiert hast.',
@@ -480,6 +495,8 @@ const languageContext = {};
 vm.createContext(languageContext);
 vm.runInContext(sourceOf('stripAccidentalNarrativeQuotes'), languageContext);
 vm.runInContext(sourceOf('fixSprache'), languageContext);
+assert.strictEqual(languageContext.fixSprache('Die Stifte stecken in das morschen Holz.'), 'Die Stifte stecken in das morsche Holz.',
+  'the observed definite-neuter adjective ending must be corrected');
 const wrappedNarration = '"Du gehst auf den Eingang zu. ' + 'Die Messingschilder haengen schief und du pruefst jeden Namen sorgfaeltig. '.repeat(3) + 'Robert bleibt im Hof."';
 assert(!languageContext.fixSprache(wrappedNarration).startsWith('"') && !languageContext.fixSprache(wrappedNarration).endsWith('"'),
   'a fully quote-wrapped narrative paragraph must lose only its accidental outer quotes');
