@@ -589,6 +589,37 @@ assert(grantSource.includes('caseProgress.pendingHauptuiIndiz && caseProgress.pe
 assert(grantSource.includes('_expliziteIndizId ? [_z] : [_z].concat'),
   'an explicit clue may not fall through to a different location clue when a gate blocks it');
 
+const kesslerEntryScopeContext = {
+  window: {},
+  caseProgress: {
+    gefundeneIndizIds: ['tuerschild_hauke'],
+    pendingHauptuiIndiz: { id: 'robert_eintritt_beobachtet' }
+  },
+  normForMatch: value => String(value || '').toLowerCase().normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '').replace(/[-–—]/g, ' '),
+  getCaseLocations: () => [{
+    name: 'Hinterhof Sybelstrasse',
+    indizien: [{
+      id: 'robert_eintritt_beobachtet',
+      text: 'Robert betritt gegen 19 Uhr den Hinterhof und verschwindet im Hinterhaus.',
+      fundText: 'Gegen sieben kommt Robert. Er verschwindet im Hinterhaus.',
+      quelle: 'umgebung',
+      schluessel: ['robert', '19 uhr', 'hinterhaus']
+    }]
+  }]
+};
+vm.createContext(kesslerEntryScopeContext);
+vm.runInContext(sourceOf('_findTargetEvidenceScopeDrift'), kesslerEntryScopeContext);
+const inventedHaukeDestination = kesslerEntryScopeContext._findTargetEvidenceScopeDrift({
+  szene: 'Mit schnellen Schritten verschwindet Robert im dunklen Eingang des Hinterhauses, direkt zu den Hauke-Wohnungen.'
+}, {});
+assert(inventedHaukeDestination && inventedHaukeDestination.code === 'evidence_scope_drift',
+  'Robert entering the Hinterhaus must not be upgraded to a witnessed destination at Haukes apartment');
+assert.strictEqual(kesslerEntryScopeContext._findTargetEvidenceScopeDrift({
+  szene: 'Gegen sieben betritt Robert den Hof und verschwindet im Hinterhaus. Ob er zu Hauke geht, bleibt offen.'
+}, {}), null,
+  'an explicit statement that the apartment destination remains unknown must stay valid');
+
 const uncommandedDeparture = worldContext.validateSceneWorldTruth({
   ort: 'Hinterhof Sybelstrasse',
   szene: 'Du wartest, bis Robert im Hinterhaus verschwindet. Dann verlaesst du den Hof fluchtartig.',
