@@ -234,6 +234,8 @@ const worldContext = {
     .replace(/[\u0300-\u036f]/g, ''),
   engineCurrentLocation: { name: 'Hinterhof Sybelstrasse' },
   caseProgress: { npcZustand: {} },
+  getCaseLocations: () => [],
+  _resolveNpcIdentity: id => ({ id, name: id === 'hannelore_wirth' ? 'Hannelore Wirth' : id }),
   _aktuelleAktionIstReise: false,
   _aktuelleAktionIstFlucht: false,
   pendingForcedLocationChange: false
@@ -243,6 +245,7 @@ vm.runInContext(sourceOf('_worldTruthAliases'), worldContext);
 vm.runInContext(sourceOf('_worldTruthHasAlias'), worldContext);
 vm.runInContext(sourceOf('_worldTruthOrtGleich'), worldContext);
 vm.runInContext(sourceOf('_worldTruthAbschlussRueckblickErlaubt'), worldContext);
+vm.runInContext(sourceOf('_findArrivalEvidenceLeak'), worldContext);
 vm.runInContext(sourceOf('_findReputationAttributionDrift'), worldContext);
 vm.runInContext(sourceOf('validateSceneWorldTruth'), worldContext);
 
@@ -317,6 +320,30 @@ assert.strictEqual(worldContext.validateSceneWorldTruth({
   optionen: []
 }, { id: 'HAUPTUI_INDRAMATISIERUNG_etui_letzter_ort', kategorie: 'BEOBACHTEN' }), null,
   'an origin description such as aus dem Vorderhaus must not be mistaken for a present sublocation');
+
+worldContext.getCaseLocations = () => [{
+  name: 'Krauses Antiquitaeten',
+  indizien: [{
+    id: 'nachbarin_aussage', npc: 'hannelore_wirth', quelle: 'person',
+    schluessel: ['nachbarin','wirth','hannelore','zwei maenner','tasche','tatnacht','hinterhof','gesehen']
+  }]
+}];
+const prematureWitnessAccount = worldContext.validateSceneWorldTruth({
+  ort: 'Krauses Antiquitaeten',
+  szene: 'Hannelore Wirth beginnt sofort auf dich einzureden. Sie berichtet ausschweifend von den Schritten, die sie in der Nacht vom 29. auf den 30. September gehört hat.',
+  personenImRaum: ['Hannelore Wirth'],
+  optionen: []
+}, { id: 'REISE', _istReise: true });
+assert.strictEqual(prematureWitnessAccount && prematureWitnessAccount.code, 'arrival_evidence_leak',
+  'a witness must not narrate invented steps and the crime time before the bound conversation click');
+assert.strictEqual(worldContext.validateSceneWorldTruth({
+  ort: 'Krauses Antiquitaeten',
+  szene: 'Hannelore Wirth steht zwischen den Vitrinen, zuckt bei deinem Eintreten zusammen und mustert dich, als wüsste sie etwas.',
+  personenImRaum: ['Hannelore Wirth'],
+  optionen: []
+}, { id: 'REISE', _istReise: true }), null,
+  'a silent visibly knowledgeable witness must remain legal arrival atmosphere');
+worldContext.getCaseLocations = () => [];
 
 worldContext.engineCurrentLocation = { name: 'Tante Friedas Hehlerei' };
 worldContext.caseProgress._begegnungen = [
