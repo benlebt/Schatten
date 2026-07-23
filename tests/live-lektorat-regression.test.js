@@ -256,6 +256,7 @@ const worldContext = {
     .replace(/[\u0300-\u036f]/g, ''),
   engineCurrentLocation: { name: 'Hinterhof Sybelstrasse' },
   caseProgress: { npcZustand: {} },
+  caseSetup: { caseType: 'diebstahl' },
   getCaseLocations: () => [],
   _resolveNpcIdentity: id => ({ id, name: id === 'hannelore_wirth' ? 'Hannelore Wirth' : id }),
   _aktuelleAktionIstReise: false,
@@ -286,6 +287,35 @@ const curfewRedirect = curfewContext._aktiveSperrstundenReiseUmleitung({
 assert.deepStrictEqual(JSON.parse(JSON.stringify(curfewRedirect)), {
   von: 'Spedition Schmidt Moabit', nach: 'Karl Mauers Buero', tageszeit: 'nacht'
 }, 'a travel action that crosses closing time must expose the exact engine redirect');
+
+worldContext.engineCurrentLocation = { name: 'Karl Mauers Buero' };
+const krauseReplyOption = {
+  id: 'NPC_befragen', _zeitUnmittelbar: true,
+  _npcName: 'Theodor Krause',
+  _npcInteraktion: { npcName: 'Theodor Krause' },
+  _clientDepartureAfterReply: 'Theodor Krause'
+};
+const inventedAdvance = worldContext.validateSceneWorldTruth({
+  ort: 'Karl Mauers Buero',
+  szene: 'Theodor Krause antwortet knapp. Dann drückt er dir einen Umschlag mit den ersten fünfzig Ostmark als Vorschuss in die Hand, verabschiedet sich und verlaesst das Büro.',
+  personenImRaum: [], optionen: []
+}, krauseReplyOption);
+assert.strictEqual(inventedAdvance && inventedAdvance.code, 'client_payment_drift',
+  'Krause must not narrate an advance payment while the engine cash remains unchanged');
+const inventedSurveillance = worldContext.validateSceneWorldTruth({
+  ort: 'Karl Mauers Buero',
+  szene: 'Theodor Krause berichtet, er habe seit Wochen beobachtet, wie sich fremde Gestalten in der Schönhauser Allee herumtreiben. Dann verabschiedet er sich und verlaesst das Büro.',
+  personenImRaum: [], optionen: []
+}, krauseReplyOption);
+assert.strictEqual(inventedSurveillance && inventedSurveillance.code, 'client_witness_role_drift',
+  'Krause must not gain invented weeks of suspect surveillance during the direct reply');
+assert.strictEqual(worldContext.validateSceneWorldTruth({
+  ort: 'Karl Mauers Buero',
+  szene: 'Theodor Krause antwortet knapp und nennt die Gravur als Erkennungszeichen. Dann verabschiedet er sich und verlaesst das Büro.',
+  personenImRaum: [], optionen: []
+}, krauseReplyOption), null,
+  'a truthful unpaid Krause reply followed by departure must remain valid');
+worldContext.engineCurrentLocation = { name: 'Hinterhof Sybelstrasse' };
 
 const interiorDrift = worldContext.validateSceneWorldTruth({
   ort: 'Hinterhof Sybelstrasse',
