@@ -29,6 +29,13 @@ const npcSource = sourceOf('npcInteraktion');
 assert(npcSource.includes('_zeitUnmittelbar: !!verb._sozialTonart'),
   'a selected social interaction must resolve before a time or closing-time relocation');
 
+const chooseSource = sourceOf('chooseOption');
+assert(chooseSource.includes('const _engineRuhigeAktion = !!(option && option._engine')
+  && chooseSource.includes('!_engineRuhigeAktion && isPhysicalConflictAction(option.text)'),
+  'a structured investigation click must not become a violent reputation event because its hidden payoff contains a verb such as greifen');
+assert(chooseSource.includes('!!(option && option._sozialTonart)'),
+  'a structured social-tone click must count as a human interaction even when its generated prompt does not begin with a question verb');
+
 const botHashSource = sourceOf('botGetOptionsHash');
 assert(botHashSource.includes('.hauptui-execute:not(:disabled)') && botHashSource.includes('.hauptui-target:not(:disabled)'),
   'autoplay freshness detection must include the active Haupt-UI controls');
@@ -236,6 +243,7 @@ vm.runInContext(sourceOf('_worldTruthAliases'), worldContext);
 vm.runInContext(sourceOf('_worldTruthHasAlias'), worldContext);
 vm.runInContext(sourceOf('_worldTruthOrtGleich'), worldContext);
 vm.runInContext(sourceOf('_worldTruthAbschlussRueckblickErlaubt'), worldContext);
+vm.runInContext(sourceOf('_findReputationAttributionDrift'), worldContext);
 vm.runInContext(sourceOf('validateSceneWorldTruth'), worldContext);
 
 const curfewContext = {
@@ -309,6 +317,29 @@ assert.strictEqual(worldContext.validateSceneWorldTruth({
   optionen: []
 }, { id: 'HAUPTUI_INDRAMATISIERUNG_etui_letzter_ort', kategorie: 'BEOBACHTEN' }), null,
   'an origin description such as aus dem Vorderhaus must not be mistaken for a present sublocation');
+
+worldContext.engineCurrentLocation = { name: 'Tante Friedas Hehlerei' };
+worldContext.caseProgress._begegnungen = [
+  { name: 'Theodor Krause', hart: false, art: 'befragt' },
+  { name: 'Hannelore Wirth', hart: false, art: 'befragt' }
+];
+const falseHardRumour = worldContext.validateSceneWorldTruth({
+  ort: 'Tante Friedas Hehlerei',
+  szene: 'Frieda sagt: "Man erzählt sich, bei Hannelore Wirth waren Sie nicht gerade zimperlich, Herr Mauer."',
+  personenImRaum: ['Tante Frieda', 'Kalle'],
+  optionen: []
+}, { id: 'REISE', _istReise: true });
+assert.strictEqual(falseHardRumour && falseHardRumour.code, 'reputation_attribution_drift',
+  'the world must not describe a politely questioned witness as a victim of Karl\'s violence');
+worldContext.caseProgress._begegnungen.push({ name: 'Bornstein', hart: true, art: 'gepackt' });
+assert.strictEqual(worldContext.validateSceneWorldTruth({
+  ort: 'Tante Friedas Hehlerei',
+  szene: 'Frieda sagt: "Man erzählt sich, bei Bornstein waren Sie nicht gerade zimperlich, Herr Mauer."',
+  personenImRaum: ['Tante Frieda', 'Kalle'],
+  optionen: []
+}, { id: 'REISE', _istReise: true }), null,
+  'a hard rumour tied to the actually hard-treated person must remain valid');
+worldContext.caseProgress._begegnungen = [];
 worldContext.engineCurrentLocation = { name: 'Hinterhof Sybelstrasse' };
 
 const apartmentDoorDrift = worldContext.validateSceneWorldTruth({

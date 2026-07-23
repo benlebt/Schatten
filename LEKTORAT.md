@@ -41,6 +41,7 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 - Erzeugt ein nachträglich per Fallback eingefügtes Geständnis eine redundante zweite Geständnisszene?
 - Bleibt eine Figur, die den Ort ausdrücklich verlässt, in der Folgeszene ohne erklärte Rückkehr verschwunden?
 - Bleibt auch der Subort einer weiterhin anwesenden Figur stabil? Wer im Laden neben Karl steht und in `personenImRaum` anklickbar bleibt, darf nicht ohne sichtbaren Abgang plötzlich „im Vorderhaus“, „in ihrer Wohnung“ oder „auf der Diele darüber“ handeln. Eine Herkunftsangabe wie „die Nachbarin aus dem Vorderhaus“ ist dagegen kein Ortswechsel.
+- Stimmen Ruf-Anspielungen mit dem strukturierten Begegnungslog überein? „Nicht gerade zimperlich“, „ruppig“, „hart angefasst“ und ähnliche Milieu-Gerüchte dürfen nur eine tatsächlich hart angegangene Person nennen. Eine höflich befragte Zeugin bleibt auch dann höflich befragt, wenn ein unsichtbarer Indiz-Payoff ein mehrdeutiges Verb wie „greifen“ enthält; Objekt-/Hotspot-Prosa darf niemals als Gewalt gegen die einzige anwesende Figur gezählt werden.
 - `W6-BLOCK`, NPC-Terminalzustände und `ORT-PROSA-BRUCH` immer gegen den echten Szenentext verifizieren.
 
 ### 2. Historische Fakten: Korrektheit und Interessantheit
@@ -105,7 +106,7 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 
 1. Truthbeat-Regex-Fehltreffer.
 2. Kern-Indiz-Prosa-Mismatch samt Root Cause: Die Ankunfts-Vorwegnahme ist seit v7.12.1339 abgedeckt, einschließlich Objekt–Beweis-Relationen seit v7.12.1341; v7.12.1340 begrenzt ausgespielte Zeugen-Indizien auf ihren definierten Informationsumfang, v7.12.1342 sperrt markante Cross-Clue-Kontamination, v7.12.1344 erhält auch bei Repair/Fallback die Quellenart Person versus Hotspot/Objekt, v7.12.1350 führt datengetriebene Pflichtanker für mechanisch gebuchte Kern-Indizien ein und v7.12.1352 hält driftanfällige Kernfakten per `fortsetzungsWahrheit` auch in späteren Szenen bindend. Weitere Indizien annotieren und manuell stabilitätsbestätigen.
-3. Lola-Präsenz-Widerspruch als generalisierbarer NPC-Kontinuitätsfall.
+3. Lola-Präsenz-Widerspruch als generalisierbarer NPC-Kontinuitätsfall. Die verwandte Ruf-/Begegnungszuordnung ist seit v7.12.1357 strukturell abgesichert: ruhige Engine-Indizklicks können durch Wörter ihres Pflicht-Payoffs nicht mehr als Gewalt zählen, und sichtbare harte Gerüchte werden gegen die tatsächlich hart bzw. fair geloggten Namen validiert.
 4. Ort-/Zeit-Prosa-Bruch-Fix weiter generalisieren: v7.12.1321 deckt nach Kessler K2 auch nichtsoziale Außenort→Innenraum-Teleports ab; v7.12.1343 sichert zusätzlich Kesslers geteilte Startposition Hinterhof/Straße und den physischen Szenen-Roster, v7.12.1345 ergänzt Klopfen/Klingeln an Etagen-/Wohnungstüren, v7.12.1346 indirekte Flur-Präsenz über Figurenwahrnehmung, v7.12.1347 ruhige Abgänge zu Straße/Opel, v7.12.1348 den kanonischen 19-Uhr-Wartewechsel auf Abend und v7.12.1349 zweckgebundene Entfernen-Euphemismen. Der vollständige manuelle Krause-Gegenlauf und Kessler-Gegenlauf stehen noch aus.
 5. Fall-Abschluss-Doppelerzählung aus dem Kessler-Run.
 6. `INDIZ-GATE`-`fundModus`-Rigidität.
