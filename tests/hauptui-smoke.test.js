@@ -251,7 +251,9 @@ assert(html.includes('${_offeneLageZeile}'), 'the solved screen must surface unr
 assert(html.includes('let _reiseFreiDurchOrtsausgang = false;'), 'public investigation locations need an exit override so high tension cannot hide travel completely');
 assert(html.includes('const _reiseGesperrtRoh = (!window.HAUPTUI_AKTIV) && (currentSpannung >= 4)'), 'Haupt-UI travel must not disappear because of tension alone');
 assert(html.includes('const _reiseDurchBildErsetzt = _ausgangImBild && !window.HAUPTUI_AKTIV;'), 'scene image exits must not replace the visible Haupt-UI travel button');
-assert(html.includes("const _reiseGesperrt = (_reiseGesperrtRoh || _klientGateAktiv) && !_reiseFreiDurchFlucht && !_reiseFreiDurchOrtsausgang;"), 'travel gating must keep usable exits available unless combat/custody/client gate blocks them');
+assert(html.includes("const _reiseGesperrt = _klientGateAktiv")
+  && html.includes("|| (_reiseGesperrtRoh && !_reiseFreiDurchFlucht && !_reiseFreiDurchOrtsausgang);"),
+  'the mandatory client conversation must suppress the travel control even at public locations, while only tension may use exit overrides');
 assert(html.includes('function _hauptuiSozialVerben(target)'), 'unified conversation actions need one Haupt-UI resolver');
 assert(html.includes("if (!window.VERHOER_PILOT_AKTIV) return null;"), 'retired dossier profiles must not suppress social actions');
 assert(html.includes("label: 'Mit den Belegen konfrontieren'"), 'Robert needs a direct evidence-confrontation action');
