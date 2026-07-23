@@ -696,6 +696,22 @@ const naturalTimedScene = { szene: 'Um kurz nach sieben betritt Robert den Hinte
 assert.strictEqual(coreEvidenceProseContext._indizAbschlussProsaSichern(timedCoreClue, naturalTimedScene), false,
   'a natural kurz-nach-sieben variant must satisfy the time anchor without a redundant fallback sentence');
 
+const doorplateCoreClue = {
+  id: 'tuerschild_hauke',
+  prosaPflicht: {
+    narrativ: /^(?=[\s\S]*\b(?:dritter|3\.)\s*stock\b)(?=[\s\S]*\blinks\b)(?=[\s\S]*\bhauke\b)(?=[\s\S]*(?:kein herr|keine familie|alleinsteh))/i,
+    fallbackProse: 'Dritter Stock links: Das Schild trägt nur den Namen Hauke - kein Herr, keine Familie.'
+  }
+};
+const incompleteDoorplateScene = { szene: 'Das dritte Schild von oben trägt den Namen Hauke. Kein Vorname ist zu sehen.' };
+assert.strictEqual(coreEvidenceProseContext._indizAbschlussProsaSichern(doorplateCoreClue, incompleteDoorplateScene), true,
+  'a doorplate scene must not confuse the third sign from above with the third floor left');
+assert(incompleteDoorplateScene.szene.includes('Dritter Stock links')
+    && incompleteDoorplateScene.szene.includes('kein Herr, keine Familie'),
+  'the visible doorplate prose must carry the complete popup claim before booking');
+assert.strictEqual(coreEvidenceProseContext._indizAbschlussProsaSichern(doorplateCoreClue, incompleteDoorplateScene), false,
+  'the complete doorplate fallback must remain idempotent');
+
 const toolCoreClue = {
   id: 'einbruch_fenster',
   prosaPflicht: {

@@ -136,6 +136,11 @@ assert(!kessler.includes('Genau die Wohnung, in der Robert verschwindet.'),
   'the doorplate-first route must not claim Robert entered Hauke before the observation clue');
 assert(kessler.includes('Mehr beweist das Schild allein noch nicht.'),
   'the doorplate payoff must state its order-independent evidence boundary');
+const locationNormalization = sourceOf('getCaseLocations');
+assert(!locationNormalization.includes('Genau die Wohnung, in der Robert verschwindet.'),
+  'runtime location normalization must not reintroduce the stale doorplate inference');
+assert(locationNormalization.includes('Dritter Stock links: Das Schild trägt nur den Namen Hauke - kein Herr, keine Familie.'),
+  'runtime doorplate normalization must configure the complete visible prose anchor');
 
 for (const id of [
   'tuerschild_hauke', 'robert_eintritt_beobachtet', 'nachbarin_aussage',
