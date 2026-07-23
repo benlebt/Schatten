@@ -19,7 +19,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1449 +WegenerVisualTreatmentRoute-Staging'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1450 +CombatEvidenceIsolation-Staging'"), 'release version missing');
 assert(html.includes('Liesl schenkte oder widmete das Etui 1939 Hugo'), 'Krause setup must bind the silver-case ownership direction');
 assert(html.includes('Karl zählt oder nimmt kein Geld, Karls Kasse bleibt unverändert'), 'Krause opening prompt must keep the return-contingent fee unpaid');
 assert(html.includes('Dramatisiere diese EINE Spur genau EINMAL'), 'explicit Haupt-UI clues must merge compact target and detailed payoff into one narration');
@@ -213,6 +213,12 @@ require('vm').runInContext(sourceOf('_hauptuiKonfrontationItemGruppen') + '\n' +
 const ppkActions = ppkContext._hauptuiKonfrontationItems();
 assert(ppkActions.some(action => action.verb === 'ppk_einsetzen' && /Walther PPK/.test(action.label)),
   'the persistent narrative Walther PPK must become a real confrontation action');
+
+const confrontationNarrationSource = sourceOf('_hauptuiKonfrontationChooseNarration');
+assert(confrontationNarrationSource.includes("option._noEvidence = true"),
+  'every tactical confrontation narration must bypass generic evidence classification');
+assert(confrontationNarrationSource.includes('Combat-Loot'),
+  'the guard must document that only the dedicated combat-loot path may award combat evidence');
 ppkContext.caseProgress.activeConfrontation.ppkGezogen = true;
 assert(!ppkContext._hauptuiKonfrontationItems().some(action => action.verb === 'ppk_einsetzen'),
   'the PPK may only be drawn once in the same confrontation');
