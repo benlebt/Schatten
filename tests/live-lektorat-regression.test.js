@@ -773,6 +773,23 @@ assert(toolLessCoreScene.szene.includes('Stemmeisen'),
 const naturalToolScene = { szene: 'Die breiten Kerben stammen von einer Brechstange.' };
 assert.strictEqual(coreEvidenceProseContext._indizAbschlussProsaSichern(toolCoreClue, naturalToolScene), false,
   'a natural synonym must satisfy the tool anchor without a duplicate fallback sentence');
+const etchedEtuiClue = {
+  id: 'etui_letzter_ort',
+  fundText: 'Die Glasvitrine steht offen und leer. Im Staub liegt der Rand des Etuis. Auf seinem Deckel stand die Gravur "Für Hugo, 1939, Liesl".',
+  prosaPflicht: {
+    narrativ: /^(?=[\s\S]*\b(?:gravur|auf (?:dem|seinem) deckel|eingraviert)\b)(?=[\s\S]*\bhugo\b)(?=[\s\S]*\b1939\b)(?=[\s\S]*\bliesl\b)/i,
+    fallbackProse: 'Auf dem Deckel des Etuis stand die Gravur "Für Hugo, 1939, Liesl".'
+  }
+};
+coreEvidenceProseContext.caseProgress.pendingHauptuiIndiz = { id: 'etui_letzter_ort' };
+const liveEtuiWithoutEngraving = {
+  szene: 'Im Staub zeichnet sich der helle Rand eines flachen Gegenstands ab. Genau hier lag das silberne Zigarettenetui, das Krause beschrieben hat.'
+};
+assert.strictEqual(coreEvidenceProseContext._indizAbschlussProsaSichern(etchedEtuiClue, liveEtuiWithoutEngraving), true,
+  'the booked Vitrine clue must not leave its identifying engraving only in the popup');
+assert.strictEqual(liveEtuiWithoutEngraving.szene, etchedEtuiClue.fundText,
+  'the missing engraving must produce one complete canonical Vitrine narration without an appended duplicate');
+coreEvidenceProseContext.caseProgress.pendingHauptuiIndiz = null;
 
 const coreNarrationContext = {
   normForMatch: value => String(value || '').toLowerCase().replace(/[„“"'.,:;!?()\-]/g, ' ').replace(/\s+/g, ' ').trim(),
