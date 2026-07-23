@@ -4,6 +4,8 @@ const path = require('path');
 const vm = require('vm');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+const apiRoot = path.join(__dirname, '..', 'api');
+const bridgeAuth = fs.readFileSync(path.join(apiRoot, '_bridge-auth.js'), 'utf8');
 
 function sourceOf(name) {
   const marker = 'function ' + name + '(';
@@ -35,6 +37,15 @@ assert(!html.includes('Zugang zu den Fallakten'), 'retired in-game password over
 assert(!html.includes('spiel-auth-overlay'), 'retired in-game password overlay markup still ships in the frontend');
 assert(!html.includes("...(getSpielAuth() ? { 'X-Spiel-Auth': getSpielAuth() } : {})"),
   'browser must not send a second game password');
+assert(bridgeAuth.includes('timingSafeEqual(actual, expected)'),
+  'server bridge secret must use timing-safe hash comparison');
+for (const provider of ['gemini.js', 'groq.js', 'mistral.js']) {
+  const proxy = fs.readFileSync(path.join(apiRoot, provider), 'utf8');
+  assert(proxy.includes("import { authorizeModelProxy } from './_bridge-auth.js';"),
+    `${provider} must use server-only bridge authorization`);
+  assert(proxy.includes('if (!authorizeModelProxy(req))'),
+    `${provider} must reject unauthorised direct requests`);
+}
 
 const query = '?debug=hardenberg17&hauptui=0&autoplay=1&turns=12&strategy=varied&seed=77&qa=keepme';
 const storage = new Map();
