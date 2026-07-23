@@ -293,6 +293,16 @@ assert(problem && problem.code === 'evidence_scope_drift'
   'midnight wording and natural loading verbs must not bypass the target-clue scope gate');
 
 problem = context.validateSceneWorldTruth({
+  ort: context.engineCurrentLocation.name,
+  szene: 'Hannelore Wirth sagt: Es war weit nach Mitternacht. Zwei Maenner trugen die schwere Tasche zum Wagen, der in der Gasse wartete.',
+  personenImRaum: ['Hannelore Wirth'], optionen: []
+}, { id: 'NPC_sozial_offen', _pendingIndizId: 'nachbarin_aussage' });
+assert(problem && problem.code === 'evidence_scope_drift'
+    && problem.extras.includes('exakte Uhrzeit')
+    && problem.extras.includes('Fluchtfahrzeug'),
+  'wide-after-midnight and carry-to-a-waiting-car wording must not bypass the clue scope');
+
+problem = context.validateSceneWorldTruth({
   ort: 'Krauses Antiquitäten',
   szene: 'In der Vitrine zeichnet sich der Abdruck des Etuis ab. Das Schloss wurde mit einem einfachen Werkzeug aufgehebelt.',
   personenImRaum: ['Hannelore Wirth'], optionen: []
