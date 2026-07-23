@@ -61,6 +61,21 @@ function byText(root, text) {
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8').replace(/\r\n/g, '\n');
 
+function sourceOf(name) {
+  const start = html.indexOf('function ' + name + '(');
+  assert(start >= 0, 'missing function ' + name);
+  const brace = html.indexOf('{', start);
+  let depth = 0;
+  for (let i = brace; i < html.length; i += 1) {
+    if (html[i] === '{') depth += 1;
+    if (html[i] === '}') {
+      depth -= 1;
+      if (depth === 0) return html.slice(start, i + 1);
+    }
+  }
+  throw new Error('unterminated function ' + name);
+}
+
 const itemEmojiStart = html.indexOf('function noirWeaponIconMarkup()');
 const itemEmojiEnd = html.indexOf('function pickNpcEmoji(name)', itemEmojiStart);
 const itemEmojiContext = {
@@ -184,6 +199,27 @@ assert(html.includes('function _hauptuiKesslerRobertAbpassenNoetig()'), 'Kessler
 assert(html.includes("id: 'robert_abpassen'"), 'Kessler courtyard must expose a concrete Robert abpassen target instead of a dead thread');
 assert(html.includes("targetIds: ['robert_kessler', 'robert_abpassen']"), 'Robert contradiction thread must target either Robert or the abpassen bridge');
 assert(html.includes("_np.push(Object.assign({}, ident, { id: 'robert_kessler'"), 'Robert abpassen must force Robert back into the Haupt-UI person list');
+assert(/name: 'Robert Kessler'[\s\S]{0,5000}?persistent: true, anwesend: false/.test(html),
+  'Robert must start absent and only return through the explicit abpassen path');
+assert(/id: 'robert_kessler', abpassenOnly: true/.test(html),
+  'Robert courtyard binding must be explicitly limited to the deterministic abpassen path');
+
+const robertPresenceContext = {
+  normForMatch: (value) => String(value || '').toLowerCase().replace(/_/g, ' ').replace(/\s+/g, ' ').trim(),
+  engineCurrentLocation: { name: 'Hinterhof Sybelstrasse' },
+  caseProgress: {},
+  _istKesslerFall: () => true,
+  _hauptuiKesslerRobertAbpassenAktiv: () => false,
+  _romanceMorningPartnerStatus: () => null,
+  getCaseLocations: () => []
+};
+vm.createContext(robertPresenceContext);
+vm.runInContext(sourceOf('_npcGehoertHierher'), robertPresenceContext);
+assert.strictEqual(robertPresenceContext._npcGehoertHierher('robert_kessler', 'Robert Kessler'), false,
+  'Robert must be unreachable in the courtyard before explicit abpassen');
+robertPresenceContext._hauptuiKesslerRobertAbpassenAktiv = () => true;
+assert.strictEqual(robertPresenceContext._npcGehoertHierher('robert_kessler', 'Robert Kessler'), true,
+  'explicit abpassen must deterministically restore Robert as a reachable person target');
 assert(html.includes('GEFAHR-AUSZAHLUNG (KRITISCH)'), 'engine-spawned danger must be forced to pay off in prose instead of disappearing offscreen');
 assert(html.includes('function _konfrontationAusProsa(scene, cast)'), 'clear prose-only attacks must create a playable confrontation');
 assert(html.includes("trigger: bewaffneteGruppe ? 'prosa-drohung' : 'prosa-angriff'"), 'armed blockers must become playable before they strike');

@@ -51,6 +51,7 @@ vm.createContext(context);
   '_findArrivalEvidenceLeak',
   '_findTargetEvidenceScopeDrift',
   '_findUnfoundedPriorVisitDrift',
+  '_findKesslerEntryRosterDrift',
   'sanitizeSceneTerminalNpcState',
   'validateSceneWorldTruth',
   'buildWorldTruthRepairHint',
@@ -58,6 +59,43 @@ vm.createContext(context);
   'enforceSceneWorldTruthFallback',
   '_schlafHeilZiel'
 ].forEach((name) => vm.runInContext(sourceOf(name), context));
+
+context.caseProgress = { gefundeneIndizIds: ['robert_eintritt_beobachtet'], npcZustand: {} };
+context.caseSetup = { caseType: 'beschattung', setupCast: [{ id: 'robert_kessler', name: 'Robert Kessler' }] };
+context.engineCurrentLocation = { name: 'Hinterhof Sybelstrasse' };
+context.cast = [{ id: 'robert_kessler', name: 'Robert Kessler' }, { id: 'frau_pohl', name: 'Frau Pohl' }];
+
+let problem = context.validateSceneWorldTruth({
+  ort: 'Hinterhof Sybelstrasse',
+  szene: 'Robert geht ins Hinterhaus. Die Haustuer faellt hinter ihm zu.',
+  personenImRaum: ['Robert Kessler', 'Frau Pohl'],
+  optionen: [{ text: 'Robert Kessler befragen' }]
+}, { id: 'WARTEN', _pendingIndizId: 'robert_eintritt_beobachtet' });
+assert(problem && problem.code === 'kessler_entry_roster_drift',
+  'Robert must not remain a clickable courtyard target after entering behind the closed door');
+
+const kesslerFallback = {
+  ort: 'Hinterhof Sybelstrasse',
+  szene: 'Robert geht ins Hinterhaus. Die Haustuer faellt hinter ihm zu.',
+  personenImRaum: ['Robert Kessler', 'Frau Pohl'],
+  optionen: [{ text: 'Robert Kessler befragen' }, { text: 'Klingelschilder ansehen' }]
+};
+context.enforceSceneWorldTruthFallback(kesslerFallback, problem);
+assert.deepStrictEqual(Array.from(kesslerFallback.personenImRaum), ['Frau Pohl'],
+  'Kessler fallback must remove Robert from the physical scene roster');
+assert(!Array.from(kesslerFallback.optionen, entry => entry.text).some(text => /robert kessler/i.test(text)),
+  'Kessler fallback must remove immediate Robert courtyard actions');
+assert.deepStrictEqual(Array.from(context.cast, entry => entry.name), ['Frau Pohl'],
+  'Kessler fallback must remove Robert from the live cast until deterministic abpassen');
+
+problem = context.validateSceneWorldTruth({
+  ort: 'Hinterhof Sybelstrasse',
+  szene: 'Robert geht ins Hinterhaus. Die Haustuer faellt hinter ihm zu.',
+  personenImRaum: ['Frau Pohl'],
+  optionen: [{ text: 'Klingelschilder ansehen' }]
+}, { id: 'WARTEN', _pendingIndizId: 'robert_eintritt_beobachtet' });
+assert.strictEqual(problem, null,
+  'the canonical entry observation without an immediate Robert target must remain legal');
 
 context.caseProgress = { gefundeneIndizIds: [], klientGesprochen: true, npcZustand: {} };
 context.caseSetup = { caseType: 'diebstahl', setupCast: [{ name: 'Hannelore Wirth' }, { name: 'Theodor Krause' }] };
@@ -85,7 +123,7 @@ context.getCaseLocations = () => [{
   }]
 }];
 
-let problem = context.validateSceneWorldTruth({
+problem = context.validateSceneWorldTruth({
   ort: 'Krauses Antiquitäten',
   szene: 'Hannelore Wirth wartet zwischen den Regalen und sieht dich reserviert an. Mehr sagt sie noch nicht.',
   personenImRaum: ['Hannelore Wirth'], optionen: []
