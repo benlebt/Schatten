@@ -127,6 +127,22 @@ problem = context.validateSceneWorldTruth({
 }, null);
 assert.strictEqual(problem, null,
   'the unpaid return-contingent fee must remain legal in the opening');
+
+problem = context.validateSceneWorldTruth({
+  ort: 'Karl Mauers Buero',
+  szene: 'Theodor Krause zeigt auf das Etui. Es gehoerte meiner Liesl, sagt er.',
+  personenImRaum: ['Theodor Krause'], optionen: []
+}, null);
+assert(problem && problem.code === 'target_provenance_drift' && problem.opening,
+  'the silver-case dedication must not be inverted into Liesls ownership');
+
+problem = context.validateSceneWorldTruth({
+  ort: 'Karl Mauers Buero',
+  szene: 'Theodor Krause erklaert: Liesl schenkte das Etui 1939 Hugo.',
+  personenImRaum: ['Theodor Krause'], optionen: []
+}, null);
+assert.strictEqual(problem, null,
+  'the canonical Liesl-to-Hugo provenance must remain legal');
 context.caseProgress.klientGesprochen = true;
 
 problem = context.validateSceneWorldTruth({
