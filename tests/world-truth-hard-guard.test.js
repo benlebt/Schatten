@@ -159,6 +159,22 @@ problem = context.validateSceneWorldTruth({
 }, null);
 assert.strictEqual(problem, null,
   'a customer may have admired the heirloom without being invented as its owner');
+
+problem = context.validateSceneWorldTruth({
+  ort: 'Karl Mauers Buero',
+  szene: 'Theodor Krause sagt: Das Etui war Hugos Erbstück. Es war in meiner Familie, seit ich denken kann.',
+  personenImRaum: ['Theodor Krause'], optionen: []
+}, null);
+assert(problem && problem.code === 'target_provenance_drift',
+  'a 1939 dedication must not drift into childhood-long or multigenerational family ownership');
+
+problem = context.validateSceneWorldTruth({
+  ort: 'Karl Mauers Buero',
+  szene: 'Theodor Krause sagt: Liesl schenkte Hugo das Etui 1939. Seit vierzehn Jahren ist es in unserer Familie.',
+  personenImRaum: ['Theodor Krause'], optionen: []
+}, null);
+assert.strictEqual(problem, null,
+  'the historically consistent fourteen-year family timespan must remain legal');
 context.caseProgress.klientGesprochen = true;
 
 problem = context.validateSceneWorldTruth({

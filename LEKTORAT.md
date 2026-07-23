@@ -120,6 +120,7 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 - Festhalten, ob der Beat durch Spieleraktion, mechanisches Indiz, Geständnis, Zeugenaussage, Gegenstand oder nur durch Regex-Prosa erkannt wurde.
 - Reflexions-, Motiv-, Negations-, Rückblick- und bloße Namensnähe dürfen keinen Pflicht-Beat erfüllen.
 - Provenienzprüfungen umfassen nicht nur die Richtung einer Schenkung, sondern auch die Eigentumsart: Ein Familienerbstück darf nicht still zu Kommissionsware, Kundenbesitz oder sonstigem Fremdeigentum werden. Harmlose Kundenkontakte ohne Eigentumsbehauptung bleiben erlaubt.
+- Datierte Provenienz bindet auch die Dauer: 1939 bis 1953 sind 14 Jahre. Formeln wie „seit ich denken kann“, „seit der Kindheit“, „seit Generationen“ oder „schon immer“ sind bei einem 1939 erworbenen Stück falsch, auch wenn Schenkungsrichtung und Eigentümer stimmen.
 - Ein Beat gilt nur dann als erreicht, wenn die erforderliche Wahrheit mechanisch und narrativ ausgespielt wurde.
 - Frühe Mehrfachtreffer, Fallbacks und nachträglich eingefügte Prosa besonders auf Doppelzählung prüfen.
 
