@@ -125,7 +125,7 @@ context.getCaseLocations = () => [{
 
 problem = context.validateSceneWorldTruth({
   ort: 'Krauses Antiquitäten',
-  szene: 'Hannelore Wirth wartet zwischen den Regalen und sieht dich reserviert an. Mehr sagt sie noch nicht.',
+  szene: 'Theodor Krause ist oben in seiner Wohnung und stellt die Verlustliste zusammen. Hannelore Wirth wartet zwischen den Regalen und sieht dich reserviert an. Mehr sagt sie noch nicht.',
   personenImRaum: ['Hannelore Wirth'], optionen: []
 }, { id: 'REISE', _istReise: true, _intent: { type: 'travel' } });
 assert.strictEqual(problem, null, 'an arrival may introduce a witness without revealing the witness clue');
@@ -141,7 +141,7 @@ assert(problem && problem.code === 'unfounded_prior_visit' && problem.unearnedRe
 context.caseProgress._begegnungen = [{ name: 'Hannelore Wirth', art: 'befragt', ort: 'Hackescher Markt' }];
 problem = context.validateSceneWorldTruth({
   ort: 'Krauses AntiquitÃ¤ten',
-  szene: 'Hannelore Wirth erkennt dich wieder und grÃ¼ÃŸt knapp.',
+  szene: 'Theodor Krause ist oben in seiner Wohnung und stellt die Verlustliste zusammen. Hannelore Wirth erkennt dich wieder und grÃ¼ÃŸt knapp.',
   personenImRaum: ['Hannelore Wirth'], optionen: []
 }, { id: 'REISE', _istReise: true, _intent: { type: 'travel' } });
 assert.strictEqual(problem, null,
@@ -258,7 +258,7 @@ assert(problem && problem.code === 'arrival_evidence_leak',
 
 problem = context.validateSceneWorldTruth({
   ort: context.engineCurrentLocation.name,
-  szene: 'Hannelore steht hinter der Theke und sieht dich beim Eintreten misstrauisch an.',
+  szene: 'Krause ist oben in seiner Wohnung und stellt die Verlustliste zusammen. Hannelore steht hinter der Theke und sieht dich beim Eintreten misstrauisch an.',
   personenImRaum: ['Hannelore Wirth'], optionen: []
 }, { id: 'REISE', _istReise: true, _intent: { type: 'travel' } });
 assert.strictEqual(problem, null,
@@ -274,14 +274,14 @@ assert(problem && problem.code === 'arrival_evidence_leak',
 
 problem = context.validateSceneWorldTruth({
   ort: 'Krauses Antiquitäten',
-  szene: 'Eine leere Vitrine steht im Laden. Daneben wartet Hannelore schweigend.',
+  szene: 'Krause ist oben in seiner Wohnung und stellt die Verlustliste zusammen. Eine leere Vitrine steht im Laden. Daneben wartet Hannelore schweigend.',
   personenImRaum: ['Hannelore Wirth'], optionen: []
 }, { id: 'REISE', _istReise: true, _intent: { type: 'travel' } });
 assert.strictEqual(problem, null, 'an arrival may show a hotspot prop without interpreting its evidence');
 
 problem = context.validateSceneWorldTruth({
   ort: context.engineCurrentLocation.name,
-  szene: 'Hannelore haelt ein Stueck der zerbrochenen flachen Schauvitrine aus der Ladenmitte in der Hand.',
+  szene: 'Krause ist oben in seiner Wohnung und stellt die Verlustliste zusammen. Hannelore haelt ein Stueck der zerbrochenen flachen Schauvitrine aus der Ladenmitte in der Hand.',
   personenImRaum: ['Hannelore Wirth'], optionen: []
 }, { id: 'REISE', _istReise: true, _intent: { type: 'travel' } });
 assert.strictEqual(problem, null,
@@ -305,7 +305,7 @@ assert(problem && problem.code === 'open_object_truth_contradiction',
 
 problem = context.validateSceneWorldTruth({
   ort: context.engineCurrentLocation.name,
-  szene: 'Die stehende Glasvitrine an der Rueckwand ist intakt; ihre Tuer steht offen. Hannelore wartet daneben.',
+  szene: 'Krause ist oben in seiner Wohnung und stellt die Verlustliste zusammen. Die stehende Glasvitrine an der Rueckwand ist intakt; ihre Tuer steht offen. Hannelore wartet daneben.',
   personenImRaum: ['Hannelore Wirth'], optionen: []
 }, { id: 'REISE', _istReise: true, _intent: { type: 'travel' } });
 assert.strictEqual(problem, null,
@@ -329,7 +329,7 @@ assert(problem && problem.code === 'arrival_evidence_leak',
 
 problem = context.validateSceneWorldTruth({
   ort: 'Krauses Antiquitäten',
-  szene: 'Die offene, leere Vitrine ist mit rotem Samt ausgeschlagen. Hannelore wartet schweigend daneben.',
+  szene: 'Krause ist oben in seiner Wohnung und stellt die Verlustliste zusammen. Die offene, leere Vitrine ist mit rotem Samt ausgeschlagen. Hannelore wartet schweigend daneben.',
   personenImRaum: ['Hannelore Wirth'], optionen: []
 }, { id: 'REISE', _istReise: true, _intent: { type: 'travel' } });
 assert.strictEqual(problem, null,
@@ -342,6 +342,14 @@ problem = context.validateSceneWorldTruth({
 }, { id: 'REDEN' });
 assert(problem && problem.code === 'client_absence_unexplained',
   'Krauses absence after his explicit departure needs a canonical time-continuity explanation');
+
+problem = context.validateSceneWorldTruth({
+  ort: 'Krauses AntiquitÃƒÂ¤ten',
+  szene: 'Du betrittst den Laden. Hannelore Wirth steht hinter dem Tresen und mustert dich.',
+  personenImRaum: ['Hannelore Wirth'], optionen: []
+}, { id: 'REISE', _istReise: true, _intent: { type: 'travel' } });
+assert(problem && problem.code === 'client_absence_unexplained',
+  'the first travel arrival must explain Krauses location even when the prose omits him entirely');
 
 problem = context.validateSceneWorldTruth({
   ort: 'Krauses AntiquitÃ¤ten',
