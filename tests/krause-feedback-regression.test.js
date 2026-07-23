@@ -205,6 +205,28 @@ possessionProblem = possessionContext._findPrematureTargetPossessionDrift({
 }, { _pendingIndizId: 'etui_im_lager' });
 assert.strictEqual(possessionProblem, null,
   'a visible but not yet secured target item must remain a valid discovery scene');
+const peaceContext = {
+  caseProgress: { krauseLagerFreigegeben: true },
+  caseSetup: { caseType: 'diebstahl' },
+  engineCurrentLocation: { name: 'Stallschreiberstrasse 12' },
+  normForMatch,
+  _findeIndizById: id => id === 'tasche_im_lager' ? {
+    id,
+    text: 'Im Lager liegt die schwere Tasche mit der Samtfaser.'
+  } : null
+};
+vm.createContext(peaceContext);
+vm.runInContext(sourceOf('_findKrausePeaceReescalationDrift'), peaceContext);
+let peaceProblem = peaceContext._findKrausePeaceReescalationDrift({
+  szene: 'Du findest die schwere Tasche. Jochen tritt hinter dich, sein Messer blitzt im Halbdunkel auf. Kalle baut sich am Tuerrahmen auf.'
+}, { _pendingIndizId: 'tasche_im_lager' });
+assert(peaceProblem && peaceProblem.code === 'krause_peace_reescalation',
+  'a completed peaceful group outcome must reject renewed knives and blocking');
+peaceProblem = peaceContext._findKrausePeaceReescalationDrift({
+  szene: 'Du findest die schwere Tasche. Kalle, Jochen und Frieda beobachten dich finster, halten aber Abstand.'
+}, { _pendingIndizId: 'tasche_im_lager' });
+assert.strictEqual(peaceProblem, null,
+  'passive mistrust must remain valid after peaceful de-escalation');
 const theftStateSource = sourceOf('processTheftTargetState');
 assert(theftStateSource.includes("pendingChosenOption._pendingIndizId === 'etui_im_lager'"),
   'the theft state processor must not promote the Krause discovery click to physical possession');
