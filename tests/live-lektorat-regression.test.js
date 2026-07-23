@@ -698,6 +698,12 @@ assert(grantSource.includes('caseProgress.pendingHauptuiIndiz && caseProgress.pe
   'deterministic evidence granting must preserve the explicit Haupt-UI clue binding');
 assert(grantSource.includes('_expliziteIndizId ? [_z] : [_z].concat'),
   'an explicit clue may not fall through to a different location clue when a gate blocks it');
+assert(grantSource.includes("const sceneObj = sceneInput && typeof sceneInput === 'object' ? sceneInput : null"),
+  'deterministic evidence granting must preserve the live scene object for prose repair');
+assert(html.includes('pruefeKernIndizFund(scene)'),
+  'the scene commit path must pass the live scene object rather than only its text');
+assert(html.includes("fallbackProse: 'Tetzlaff gibt schließlich zu: Robert macht mittwochs keine Überstunden, sondern geht früher als sonst.'"),
+  'Tetzlaff evidence must have a visible canonical prose fallback');
 
 const kesslerEntryScopeContext = {
   window: {},
