@@ -49,7 +49,7 @@ assert(/15 Mark oder eine Flasche Korn/.test(bornsteinSetup.detail),
 assert(!/30 Westmark plus/.test(JSON.stringify(bornsteinSetup)),
   'stale compound Bornstein price must not contradict the visible payment button');
 
-const paymentGateStart = html.indexOf('function _informantKannBezahlen(');
+const paymentGateStart = html.indexOf('function _informantZahlungsVorschau(');
 const paymentGateEnd = html.indexOf('function _informantBezahle(', paymentGateStart);
 assert(paymentGateStart >= 0 && paymentGateEnd > paymentGateStart, 'read-only informant payment gate missing');
 let ostmark = 15;
@@ -83,29 +83,38 @@ assert.strictEqual(paymentGateContext._informantKannBezahlen('norbert_tetzlaff',
 carriedItems = { korn: { name: 'Flasche Nordhäuser Doppelkorn', status: 'bei_karl' } };
 assert.strictEqual(paymentGateContext._informantKannBezahlen('bornstein', 'Karl-Heinz Bornstein'), true,
   'Bornstein must accept the explicitly configured Korn alternative');
+assert.strictEqual(paymentGateContext._informantZahlungsVorschau('bornstein', 'Karl-Heinz Bornstein').art, 'ware',
+  'carried Bornstein Korn must be the deterministic visible route');
 assert.strictEqual(paymentGateContext._informantKannBezahlen('norbert_tetzlaff', 'Norbert Tetzlaff'), false,
   'Bornstein-specific Korn must not weaken ordinary informant barter gates');
 
 const debitStart = html.indexOf('function _informantBezahle(');
 const debitEnd = html.indexOf('function _itemAdd(', debitStart);
 assert(debitStart >= 0 && debitEnd > debitStart, 'informant debit function missing');
-let movedKorn = null;
+const itemMoveStart = html.indexOf('function _itemMove(');
+const itemMoveEnd = html.indexOf('function _itemsBeiKarl(', itemMoveStart);
+assert(itemMoveStart >= 0 && itemMoveEnd > itemMoveStart, 'real item move function missing');
+const debitItems = { korn: { id: 'korn', name: 'Flasche Nordhäuser Doppelkorn', status: 'bei_karl', owner: 'karl' } };
+let cashDebits = 0;
 const bornsteinDebitContext = {
   _informantPreis: () => 15,
-  _geldHat: () => false,
+  _geldHat: (amount, currency) => currency === 'ost' && amount <= 30,
+  _geldZahle: () => { cashDebits += 1; return true; },
   normForMatch: paymentGateContext.normForMatch,
-  _itemsMap: () => ({ korn: { id: 'korn', name: 'Flasche Nordhäuser Doppelkorn', status: 'bei_karl' } }),
-  _itemKatalogEintrag: paymentGateContext._itemKatalogEintrag,
-  _itemMove: (id, state) => { movedKorn = { id, state }; }
+  _itemsMap: () => debitItems,
+  _itemKatalogEintrag: paymentGateContext._itemKatalogEintrag
 };
 vm.createContext(bornsteinDebitContext);
+vm.runInContext(html.slice(paymentGateStart, debitStart), bornsteinDebitContext);
 vm.runInContext(html.slice(debitStart, debitEnd), bornsteinDebitContext);
+vm.runInContext(html.slice(itemMoveStart, itemMoveEnd), bornsteinDebitContext);
 const kornPayment = bornsteinDebitContext._informantBezahle('bornstein', 'Karl-Heinz Bornstein');
 assert.strictEqual(kornPayment.ok, true, 'Bornstein Korn alternative must complete payment');
 assert.strictEqual(kornPayment.art, 'ware', 'Bornstein Korn alternative must be recorded as barter, not money');
 assert.strictEqual(kornPayment.betrag, 'Flasche Nordhäuser Doppelkorn', 'payment truth must name the actual bottle');
-assert(movedKorn && movedKorn.id === 'korn' && movedKorn.state.status === 'bei_npc',
-  'the accepted Korn bottle must actually leave Karl\'s inventory');
+assert.strictEqual(cashDebits, 0, 'the exact Korn route must not silently debit cash as well');
+assert.strictEqual(debitItems.korn.status, 'bei_npc', 'the accepted Korn bottle must actually leave Karl\'s inventory');
+assert.strictEqual(debitItems.korn.owner, 'informant@karl heinz bornstein', 'real item ownership must point at Bornstein');
 
 const personStart = html.indexOf('function _hauptuiInformantMitOffenemHinweis(');
 const personEnd = html.indexOf('function _hauptuiItemVerben(', personStart);
@@ -121,6 +130,7 @@ const personContext = {
   _npcHatOffenenHinweis: () => true,
   _informantPreis: (id) => id === 'norbert_tetzlaff' ? 20 : 15,
   _informantKannBezahlen: () => paymentAvailable,
+  _informantZahlungsVorschau: (id) => ({ ok: true, art: 'geld', betrag: id === 'norbert_tetzlaff' ? 20 : 15, waehrung: 'ost' }),
   normForMatch: (value) => String(value || '').toLowerCase()
     .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
     .replace(/[^a-z0-9]+/g, ' ').trim()
@@ -134,7 +144,7 @@ const schieleVerbs = Array.from(personContext._hauptuiPersonVerben({
 assert.deepStrictEqual(schieleVerbs.map((verb) => verb.key),
   ['sozial_normal', 'sozial_bestechen', 'sozial_bedrohen', 'sozial_bluffen', 'sozial_kragen'],
   'an unfamiliar informant must expose all conversation approaches');
-assert(/15 Mark/.test(schieleVerbs[1].label), 'informant payment action must show the price');
+assert(/15 Ostmark zahlen/.test(schieleVerbs[1].label), 'informant payment action must show the exact debit route');
 assert.strictEqual(schieleVerbs.some((verb) => verb.key === 'reden'), false, 'talk must be hidden while paid informant clue is open');
 
 const staleSchiele = { id: 'schiele', name: 'Schiele', tag: 'INFORMANT', typ: 'person', hinweis: true, erledigt: true };
@@ -176,7 +186,12 @@ const bornsteinVerbs = Array.from(personContext._hauptuiPersonVerben({
   id: 'bornstein', name: 'Karl-Heinz Bornstein', tag: 'INFORMANT', typ: 'person', hinweis: true,
   sozial: bornsteinSetup.sozial
 }));
+const bornsteinPayment = bornsteinVerbs.find((verb) => verb.key === 'sozial_bestechen');
 const bornsteinKollegial = bornsteinVerbs.find((verb) => verb.key === 'sozial_kollegial');
+assert.strictEqual(bornsteinPayment.label, '15 Ostmark zahlen · Renommee +1',
+  'visible Bornstein payment must name the one route the debit will execute');
+assert.strictEqual(/\/ Ware|oder|Korn/.test(bornsteinPayment.label), false,
+  'Bornstein payment label must not promise an unselected alternative');
 assert(bornsteinKollegial, 'Bornstein collegial route missing');
 assert.strictEqual(bornsteinKollegial.option._sozialErfolg, true,
   'Bornstein collegial route must remain an explicit social success');

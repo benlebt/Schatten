@@ -20,7 +20,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1385 +Bornstein-Zahlungswahrheit'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1386 +Eindeutiger-Zahlungsweg'"), 'release version missing');
 assert(html.includes('BÜROSCHRANK · STARTAUSRÜSTUNG'), 'case start dialog must expose the office wardrobe');
 assert(html.includes('Immer dabei: Walther PPK, Detektiv-Lizenz, Notizbuch und Bleistift.'), 'fixed detective gear must be explained');
 

@@ -18,7 +18,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1385 +Bornstein-Zahlungswahrheit'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1386 +Eindeutiger-Zahlungsweg'"),
   'Brandt regression release version missing');
 
 for (const bad of [
