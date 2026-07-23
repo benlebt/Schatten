@@ -96,6 +96,38 @@ assert(html.includes('${INTRO_REQUIREMENTS}Mittwochvormittag, 30. September 1953
   'Krauses opening prompt must agree with the engine start slot');
 assert(!html.includes('Am Mittwochmittag ist "vergangene Nacht" korrekt'),
   'the stale Krause midday wording must be gone');
+assert(!html.includes('Beisetzung 30.9.'),
+  'the global historical chronology must not retain the wrong Reuter burial date');
+assert(!html.includes('Reuter-Trauerfeier morgen am Schoeneberger Rathaus'),
+  'historical enrichment must not offer a timeless future-tense Reuter example');
+
+const reuterTimelineContext = {
+  gameCurrentDate: '1953-10-15',
+  caseSetup: { startDate: '1953-10-14' },
+  normForMatch: value => String(value || '').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+};
+vm.createContext(reuterTimelineContext);
+vm.runInContext(sourceOf('_historicalReuterPhaseFact'), reuterTimelineContext);
+vm.runInContext(sourceOf('_findHistoricalTimelineDrift'), reuterTimelineContext);
+const reuterFutureDrift = reuterTimelineContext._findHistoricalTimelineDrift({
+  szene: 'Das Radio meldet die Vorbereitungen zur Trauerfeier fuer Reuter.'
+});
+assert.strictEqual(reuterFutureDrift && reuterFutureDrift.code, 'historical_timeline_drift',
+  'a future-tense Reuter funeral on 15 October must be blocked');
+assert.strictEqual(reuterTimelineContext._findHistoricalTimelineDrift({
+  szene: 'Eine alte Zeitung blickt auf Reuters Staatsakt und Beisetzung vom 3. Oktober zurueck.'
+}), null, 'an explicitly retrospective Reuter reference after 3 October must remain valid');
+assert(reuterTimelineContext._historicalReuterPhaseFact('1953-10-15').includes('vom 3. Oktober zurueck'),
+  'the enrichment example must switch to retrospective wording by the Kessler date');
+assert(reuterTimelineContext._historicalReuterPhaseFact('1953-10-02').includes('Vorbereitungen'),
+  'preparations must remain historically valid before the 3 October ceremony');
+assert(sourceOf('validateSceneWorldTruth').includes('_findHistoricalTimelineDrift'),
+  'the historical timeline guard must run in the pre-commit world-truth gate');
+assert(sourceOf('buildWorldTruthRepairHint').includes("problem.code === 'historical_timeline_drift'"),
+  'historical drift must get a precise model repair prompt');
+assert(sourceOf('enforceSceneWorldTruthFallback').includes("problem.code === 'historical_timeline_drift'"),
+  'repeated historical drift must get a deterministic safe fallback');
 
 assert(html.includes('NEUE VERLETZUNGEN NUR MIT ENGINE-FOLGE'),
   'quiet actions must not invent health-neutral wounds');
