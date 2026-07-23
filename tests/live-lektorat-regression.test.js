@@ -258,6 +258,19 @@ const shortHallwayDrift = worldContext.validateSceneWorldTruth({
 assert.strictEqual(shortHallwayDrift && shortHallwayDrift.code, 'social_interior_drift',
   'the short phrase im Flur must be treated like im Hausflur at an outdoor engine location');
 
+const apartmentDoorDrift = worldContext.validateSceneWorldTruth({
+  ort: 'Hinterhof Sybelstrasse',
+  szene: 'Du klopfst leise an die Wohnungstuer im dritten Stock. Frau Hauke oeffnet einen Spalt.',
+  personenImRaum: ['Frau Hauke'],
+  optionen: []
+}, {
+  _zeitUnmittelbar: true,
+  _npcInteraktion: { npcName: 'Frau Hauke', verb: 'diskret ansprechen' },
+  id: 'NPC_sozial_diskretion'
+});
+assert.strictEqual(apartmentDoorDrift && apartmentDoorDrift.code, 'social_interior_drift',
+  'knocking on a third-floor apartment door must not bypass an outdoor social location gate');
+
 const environmentalInteriorDrift = worldContext.validateSceneWorldTruth({
   ort: 'Hinterhof Sybelstrasse',
   szene: 'Du drueckst die schwere Eichentuer des Hausflurs auf. Hier drinnen steigst du bis in den dritten Stock.',
@@ -524,8 +537,8 @@ assert(sourceOf('_hauptuiExecute').includes('Koerperliche Gewalt ist ausschliess
   'the verbal confrontation prompt must reserve violence for the explicit attack button');
 assert(html.includes("indiz.hotspot = 'Klingelschilder am Hofeingang pruefen'"),
   'the Kessler doorbell clue must remain reachable from the engine courtyard');
-assert(html.includes('Neben der hofseitigen Eingangstuer haengen die Klingelschilder'),
-  'the Kessler clue text must not order prose into a mismatching house interior');
+assert(html.includes('Neben der hofseitigen Eingangstür hängen die Klingelschilder'),
+  'the Kessler clue text must stay in the courtyard and retain player-facing German orthography');
 assert(!sourceOf('botGetOptionsHash').includes('problem.code'),
   'the world-truth repair hint must not leak into the autoplay hash helper');
 const apiSource = sourceOf('performApiCall');
