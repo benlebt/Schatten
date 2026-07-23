@@ -558,6 +558,29 @@ const inventedAlcohol = worldContext.validateSceneWorldTruth({
 assert.strictEqual(inventedAlcohol && inventedAlcohol.code, 'invented_alcohol_state',
   'sleep prose must not invent drinking, intoxication, or a hangover at alcohol state zero');
 
+worldContext.caseProgress.gefundeneIndizIds = ['robert_eintritt_beobachtet'];
+const contradictedKnownEntry = worldContext.validateSceneWorldTruth({
+  ort: 'Karl Mauers Buero',
+  szene: 'Robert Kessler hat sich gestern im Hinterhof der Sybelstrasse in Luft aufgeloest. Seine Spur bleibt unklar.',
+  personenImRaum: [],
+  optionen: []
+}, { id: 'SCHLAFEN', _kategorie: 'SCHLAFEN' });
+assert.strictEqual(contradictedKnownEntry && contradictedKnownEntry.code, 'known_evidence_contradiction',
+  'a later scene must not rewrite the observed Hinterhaus entry as a disappearance in the courtyard');
+assert.strictEqual(worldContext.validateSceneWorldTruth({
+  ort: 'Hinterhof Sybelstrasse',
+  szene: 'Robert verschwand im Hinterhaus; seine Spur fuehrt zu der Wohnung mit dem Schild Hauke.',
+  personenImRaum: [],
+  optionen: []
+}, { id: 'SCHLAFEN', _kategorie: 'SCHLAFEN' }), null,
+  'a truthful recap of Robert entering the rear building must remain valid');
+worldContext.caseProgress.gefundeneIndizIds = [];
+
+assert(html.includes('FORTSETZUNGS-WAHRHEIT AUS GESICHERTEN INDIZIEN'),
+  'found core evidence must inject a data-driven continuity anchor into later scene prompts');
+assert(html.includes("fortsetzungsWahrheit: 'Robert wurde beim Betreten des Hinterhauses beobachtet"),
+  'the Kessler entry clue must carry its exact persistent story truth');
+
 assert.strictEqual(worldContext.validateSceneWorldTruth({
   ort: 'Hinterhof Sybelstrasse',
   szene: 'Nach mehreren Glaesern Korn wachst du verkatert mit trockenem Mund im Hinterhof auf.',
