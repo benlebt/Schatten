@@ -44,6 +44,10 @@ const krauseIntro = Array.from(introContext.INTRO_VARIANTS).find((entry) =>
 assert(krauseIntro, 'Krause setup with Bornstein missing');
 const bornsteinSetup = Array.from(krauseIntro.setup.setupCast).find((npc) => npc && npc.id === 'bornstein');
 assert(bornsteinSetup && bornsteinSetup.sozial, 'Bornstein social profile missing');
+assert(/15 Mark oder eine Flasche Korn/.test(bornsteinSetup.detail),
+  'Bornstein setup prose must state the same cash-or-Korn terms as the engine');
+assert(!/30 Westmark plus/.test(JSON.stringify(bornsteinSetup)),
+  'stale compound Bornstein price must not contradict the visible payment button');
 
 const paymentGateStart = html.indexOf('function _informantKannBezahlen(');
 const paymentGateEnd = html.indexOf('function _informantBezahle(', paymentGateStart);
@@ -54,9 +58,13 @@ const paymentGateContext = {
   _informantPreis: () => 20,
   _geldHat: (amount, currency) => currency === 'ost' && ostmark >= amount,
   _itemsMap: () => carriedItems,
+  normForMatch: (value) => String(value || '').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim(),
   _itemKatalogEintrag: (name) => name === 'Schachtel West-Zigaretten'
     ? { tauschwert: 3, taugt: ['bestechen'] }
-    : { tauschwert: 0, taugt: [] }
+    : name === 'Flasche Nordhäuser Doppelkorn'
+      ? { tauschwert: 1, taugt: ['trinken', 'anbieten'] }
+      : { tauschwert: 0, taugt: [] }
 };
 vm.createContext(paymentGateContext);
 vm.runInContext(html.slice(paymentGateStart, paymentGateEnd), paymentGateContext);
@@ -72,6 +80,32 @@ assert.strictEqual(paymentGateContext._informantKannBezahlen('norbert_tetzlaff',
 carriedItems = { fish: { name: 'Alter Fisch (aus dem Müll)', status: 'bei_karl' } };
 assert.strictEqual(paymentGateContext._informantKannBezahlen('norbert_tetzlaff', 'Norbert Tetzlaff'), false,
   'worthless inventory must not expose Tetzlaff payment');
+carriedItems = { korn: { name: 'Flasche Nordhäuser Doppelkorn', status: 'bei_karl' } };
+assert.strictEqual(paymentGateContext._informantKannBezahlen('bornstein', 'Karl-Heinz Bornstein'), true,
+  'Bornstein must accept the explicitly configured Korn alternative');
+assert.strictEqual(paymentGateContext._informantKannBezahlen('norbert_tetzlaff', 'Norbert Tetzlaff'), false,
+  'Bornstein-specific Korn must not weaken ordinary informant barter gates');
+
+const debitStart = html.indexOf('function _informantBezahle(');
+const debitEnd = html.indexOf('function _itemAdd(', debitStart);
+assert(debitStart >= 0 && debitEnd > debitStart, 'informant debit function missing');
+let movedKorn = null;
+const bornsteinDebitContext = {
+  _informantPreis: () => 15,
+  _geldHat: () => false,
+  normForMatch: paymentGateContext.normForMatch,
+  _itemsMap: () => ({ korn: { id: 'korn', name: 'Flasche Nordhäuser Doppelkorn', status: 'bei_karl' } }),
+  _itemKatalogEintrag: paymentGateContext._itemKatalogEintrag,
+  _itemMove: (id, state) => { movedKorn = { id, state }; }
+};
+vm.createContext(bornsteinDebitContext);
+vm.runInContext(html.slice(debitStart, debitEnd), bornsteinDebitContext);
+const kornPayment = bornsteinDebitContext._informantBezahle('bornstein', 'Karl-Heinz Bornstein');
+assert.strictEqual(kornPayment.ok, true, 'Bornstein Korn alternative must complete payment');
+assert.strictEqual(kornPayment.art, 'ware', 'Bornstein Korn alternative must be recorded as barter, not money');
+assert.strictEqual(kornPayment.betrag, 'Flasche Nordhäuser Doppelkorn', 'payment truth must name the actual bottle');
+assert(movedKorn && movedKorn.id === 'korn' && movedKorn.state.status === 'bei_npc',
+  'the accepted Korn bottle must actually leave Karl\'s inventory');
 
 const personStart = html.indexOf('function _hauptuiInformantMitOffenemHinweis(');
 const personEnd = html.indexOf('function _hauptuiItemVerben(', personStart);
