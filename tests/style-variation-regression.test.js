@@ -26,6 +26,8 @@ assert(warnings.some(entry => entry.includes('Opel/Motor/Wagen')), 'Opel-nagelt 
 assert(warnings.some(entry => entry.includes('Kopfsteinpflaster')), 'Kopfsteinpflaster must be blocked run-wide after one scene');
 assert(warnings.some(entry => entry.includes('Zigarillo')), 'Zigarillo must be blocked run-wide after one scene');
 assert(warnings.some(entry => entry.includes('Bohnerwachs')), 'Bohnerwachs must be blocked run-wide after one scene');
+assert(html.includes('new Set([0, 11, 12, 13, 17, 18, 19])'),
+  'the generic Opel-nagelt tic must be removed on its first occurrence');
 assert(warnings.some(entry => entry.includes('Dämmerung')), 'Dämmerung must be blocked run-wide after one scene');
 assert(warnings.some(entry => entry.includes('wirft/werfen')), 'shadow-casting formula must be blocked run-wide after one scene');
 assert(!warnings.some(entry => entry.includes('Standardadjektiv')), 'one legitimate tired mention must remain possible');

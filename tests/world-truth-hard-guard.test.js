@@ -305,6 +305,22 @@ assert(problem && problem.code === 'arrival_evidence_leak',
 
 problem = context.validateSceneWorldTruth({
   ort: 'Krauses Antiquitäten',
+  szene: 'Hannelore Wirth steht zwischen zwei Vitrinen und starrt auf eine leere Stelle im Samt.',
+  personenImRaum: ['Hannelore Wirth'], optionen: []
+}, { id: 'REISE', _istReise: true, _intent: { type: 'travel' } });
+assert(problem && problem.code === 'arrival_evidence_leak',
+  'an unnamed empty trace on the clue-specific velvet must not bypass the arrival gate');
+
+problem = context.validateSceneWorldTruth({
+  ort: 'Krauses Antiquitäten',
+  szene: 'Die offene, leere Vitrine ist mit rotem Samt ausgeschlagen. Hannelore wartet schweigend daneben.',
+  personenImRaum: ['Hannelore Wirth'], optionen: []
+}, { id: 'REISE', _istReise: true, _intent: { type: 'travel' } });
+assert.strictEqual(problem, null,
+  'visible velvet without an empty trace or evidence relation must remain legal arrival atmosphere');
+
+problem = context.validateSceneWorldTruth({
+  ort: 'Krauses Antiquitäten',
   szene: 'Krause ist gerade erst weg. Hannelore wartet schweigend im Laden.',
   personenImRaum: ['Hannelore Wirth'], optionen: []
 }, { id: 'REDEN' });
