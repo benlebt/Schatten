@@ -19,7 +19,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1360 +Klienten-Oekonomie-Wahrheit'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1361 +Konfrontations-Roster-Prosa'"), 'release version missing');
 assert(html.includes("file: 'karl-mauers-buero-theodor-day.png'"), 'Krause opening must show Theodor in Karl office');
 assert(html.includes("root: 'assets/scenes/krause/'"), 'Krause opening image must resolve from the case scene directory');
 assert(html.includes('AKTIONS-TREUE (ABSOLUT)'), 'physical and item actions need a strict narration contract');
@@ -75,6 +75,38 @@ assert(groupFinish.includes('_konfrontationGruppenZielSetzen(k, naechstesZiel)')
 const groupPrompt = sourceOf('_konfrontationGruppenPrompt');
 assert(groupPrompt.includes('Frieda fuehrt Kalle und Jochen'), 'group narration must force all active Krause opponents to react');
 assert(groupPrompt.includes('Hauptmann Vollmer'), 'group narration must forbid an unrelated Vollmer intervention');
+
+const rosterGateContext = {
+  caseProgress: {
+    activeConfrontation: {
+      enemyEntries: [
+        { id: 'tante_frieda', name: 'Tante Frieda' },
+        { id: 'kalle', name: 'Kalle' },
+        { id: 'jochen', name: 'Jochen' },
+      ]
+    }
+  },
+  engineCurrentLocation: { name: 'Stallschreiberstrasse 12' },
+  normForMatch: value => String(value || '').toLowerCase().replace(/_/g, ' '),
+  _npcZustandGet: () => null,
+  _npcZustandIstEntfernt: () => false,
+};
+require('vm').createContext(rosterGateContext);
+require('vm').runInContext(sourceOf('_worldTruthAliases') + '\n' + sourceOf('_worldTruthHasAlias')
+  + '\n' + sourceOf('_findRequiredEncounterRosterDrift'), rosterGateContext);
+const missingFrieda = rosterGateContext._findRequiredEncounterRosterDrift({
+  szene: 'Kalle dreht den Schlagring. Jochen tastet nach seinem Messer.',
+  personenImRaum: ['Kalle', 'Jochen']
+}, { id: 'REISE', _istReise: true });
+assert(missingFrieda && missingFrieda.code === 'encounter_roster_undramatized',
+  'a mechanically selectable Frieda must not remain invisible in the courtyard arrival prose');
+assert.deepStrictEqual(Array.from(missingFrieda.missingProse), ['Tante Frieda'],
+  'the roster gate must identify the exact undramatized opponent');
+assert.strictEqual(rosterGateContext._findRequiredEncounterRosterDrift({
+  szene: 'Tante Frieda hebt die Hand. Kalle dreht den Schlagring, waehrend Jochen den Rueckweg blockiert.',
+  personenImRaum: ['Tante Frieda', 'Kalle', 'Jochen']
+}, { id: 'REISE', _istReise: true }), null,
+  'a fully dramatized and structured confrontation roster must pass');
 
 const snapshotContext = {
   currentScene: {
