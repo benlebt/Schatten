@@ -704,6 +704,8 @@ assert(html.includes('pruefeKernIndizFund(scene)'),
   'the scene commit path must pass the live scene object rather than only its text');
 assert(html.includes("fallbackProse: 'Tetzlaff gibt schließlich zu: Robert macht mittwochs keine Überstunden, sondern geht früher als sonst.'"),
   'Tetzlaff evidence must have a visible canonical prose fallback');
+assert(html.includes("(?=[\\s\\S]*\\b(?:keine?|nie|nicht)\\b[\\s\\S]{0,45}(?:ueberstunden|überstunden))"),
+  'Tetzlaff prose detection must not use an ASCII word boundary directly before the umlaut in Überstunden');
 
 const kesslerEntryScopeContext = {
   window: {},
