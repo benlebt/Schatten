@@ -740,6 +740,11 @@ const coreNarrationContext = {
     text: 'In der leeren Vitrine hier lag das silberne Etui mit der Gravur Für Hugo 1939 Liesl der Staubrand zeigt die genaue Stelle',
     fundText: 'Die Glasvitrine steht leer. Im Staub auf dem Samt liegt der helle Rand des silbernen Etuis.',
     schluessel: ['vitrine', 'etui', 'zigarettenetui', 'silber', 'gravur', 'hugo', 'liesl', 'staub', 'samt', 'schmuck']
+  }) : id === 'tuerschild_hauke' ? ({
+    id: 'tuerschild_hauke',
+    text: 'Wohnung 3. Stock links Türschild zeigt nur Hauke eine alleinstehende Frau kein Herr keine Familie',
+    fundText: 'Im Hausflur hängen die Klingelschilder schief. Dritter Stock links steht nur Hauke. Kein Herr Hauke, keine Familie.',
+    schluessel: ['tuerschild', 'hauke', '3. stock', 'dritter stock', 'namensschild', 'klingelschild', 'kein herr', 'keine familie', 'alleinstehend']
   }) : null,
   window: {}
 };
@@ -754,6 +759,15 @@ assert.strictEqual(coreNarrationContext._findCoreEvidenceNarrationRedundancy({
   szene: 'Die Glasvitrine steht offen. Im Staub auf dem Samt erkennst du den hellen Rand des silbernen Zigarettenetuis und liest die Gravur.'
 }, { _pendingIndizId: 'etui_letzter_ort' }), null,
   'one coherent full evidence narration must remain valid');
+const paraphrasedKesslerSummary = coreNarrationContext._findCoreEvidenceNarrationRedundancy({
+  szene: 'Auf Höhe der dritten Etage klebt ein Schild. Nur ein Name steht dort: Hauke. Kein Herr Hauke, keine Familie. Dritter Stock links: Das Schild trägt nur den Namen Hauke - kein Herr, keine Familie.'
+}, { _pendingIndizId: 'tuerschild_hauke' });
+assert(paraphrasedKesslerSummary && paraphrasedKesslerSummary.code === 'core_evidence_narration_redundancy',
+  'an appended paraphrase of the fully dramatized Kessler doorplate clue must be rejected');
+assert.strictEqual(coreNarrationContext._findCoreEvidenceNarrationRedundancy({
+  szene: 'Im Hausflur hängen die Klingelschilder schief. Dritter Stock links steht nur Hauke. Kein Herr Hauke, keine Familie.'
+}, { _pendingIndizId: 'tuerschild_hauke' }), null,
+  'the coherent canonical Kessler doorplate payoff must remain valid');
 
 const objectBeforeVerbDeparture = worldContext.validateSceneWorldTruth({
   ort: 'Hinterhof Sybelstrasse',
