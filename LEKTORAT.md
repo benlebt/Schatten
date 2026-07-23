@@ -76,6 +76,7 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 
 - `W6-BLOCK` und terminale NPC-Zustände.
 - `ORT-PROSA-BRUCH`, Engine-Ort, Header, Bild, Cast und tatsächlicher Handlungsort.
+- Bei strukturierten Indiz-Mikroszenen Forensik und akute Gefahr trennen: Wörter wie „rohe Gewalt“, „Stemmeisen“, „Schlagspuren“ oder „greifen“ beschreiben häufig eine vergangene Tat am Objekt. Ohne tatsächlich gegenwärtigen Angreifer dürfen sie weder Karls Gewaltruf erhöhen noch allein `Spannung=4/5`, Action-Streak oder Fluchtmodus auslösen. Szene-Objekt, Header und Reise-/Schlafgates müssen denselben gedeckelten Spannungswert sehen.
 - Klienten-Geduld, Mahnung, Frist, Auftragsentzug und Abschlussbereitschaft.
 - Romantik-Klick-Zähler, Abkühlschritte, Personenwechsel/Reset und tatsächlicher `Rm`-Wert.
 - `personenImRaum`-Teleport, stille Begleitung und unerklärter Ortswechsel.

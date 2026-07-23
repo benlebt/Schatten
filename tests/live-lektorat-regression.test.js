@@ -35,6 +35,28 @@ assert(chooseSource.includes('const _engineRuhigeAktion = !!(option && option._e
   'a structured investigation click must not become a violent reputation event because its hidden payoff contains a verb such as greifen');
 assert(chooseSource.includes('!!(option && option._sozialTonart)'),
   'a structured social-tone click must count as a human interaction even when its generated prompt does not begin with a question verb');
+assert(sourceOf('performApiCall').includes('var _ruhigesIndizFuerSpannung = !!(pendingChosenOption && pendingChosenOption._pendingIndizId')
+  && sourceOf('performApiCall').includes('_capQuietEvidenceTension(scene, newSpannung, _ruhigesIndizFuerSpannung)'),
+  'a quiet structured evidence click must retain its metadata until the later tension pass');
+
+const evidenceTensionContext = {
+  normForMatch: value => String(value || '').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, ''),
+  diag: () => {}
+};
+vm.createContext(evidenceTensionContext);
+vm.runInContext(sourceOf('_capQuietEvidenceTension'), evidenceTensionContext);
+const forensicScene = {
+  spannung: 4,
+  szene: 'Das Holz ist splittrig aufgehebelt. Die Kerben zeigen rohe Gewalt und ein Stemmeisen; Gelegenheitsdiebe, keine Profis.'
+};
+assert.strictEqual(evidenceTensionContext._capQuietEvidenceTension(forensicScene, 4, true), 3,
+  'past violence visible in a static trace must not create acute action tension');
+assert.strictEqual(forensicScene.spannung, 3,
+  'the quiet evidence cap must update the scene object used by header and travel gates');
+assert.strictEqual(evidenceTensionContext._capQuietEvidenceTension({
+  spannung: 4, szene: 'Kalle geht auf dich los und packt dich am Kragen.'
+}, 4, true), 4, 'a real present attack during an evidence scene must retain high tension');
 
 const botHashSource = sourceOf('botGetOptionsHash');
 assert(botHashSource.includes('.hauptui-execute:not(:disabled)') && botHashSource.includes('.hauptui-target:not(:disabled)'),

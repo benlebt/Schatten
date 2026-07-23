@@ -6,7 +6,7 @@ const vm = require('vm');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1358 +Ankunfts-Aussage-Gate'"), 'version constant is stale');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1359 +Forensik-Spannungscap'"), 'version constant is stale');
 assert(html.includes("text: 'Fall abschließen und Auftraggeber informieren.'"), 'resolve button copy must stay player-facing');
 assert(html.includes('_enginePrompt: [_resolveText, _resolveTransitionPrompt]'), 'resolve direction must remain private');
 assert(!html.includes('resolveOpt.text += narr'), 'director narration must not leak into resolve button text');
