@@ -72,6 +72,9 @@ context.getCaseLocations = () => [{
     schluessel: ['fenster', 'aufgebrochen', 'aufgehebelt', 'stemmeisen', 'hinterhof', 'splittrig', 'kein profi']
   }, {
     id: 'etui_letzter_ort', quelle: 'umgebung',
+    vorabWahrheit: 'Die Vitrine ist offen und leer, ihr Glas ist aber intakt.',
+    vorabObjektwoerter: ['vitrine', 'glasvitrine', 'vitrinenglas'],
+    vorabVerboten: ['zerbrochen', 'eingeschlagen', 'scherbe', 'glasscherbe', 'splitter', 'glassplitter'],
     schluessel: ['vitrine', 'etui', 'zigarettenetui', 'silber', 'gravur', 'hugo', 'liesl', 'staub', 'samt', 'schmuck']
   }]
 }];
@@ -105,6 +108,22 @@ problem = context.validateSceneWorldTruth({
   personenImRaum: ['Hannelore Wirth'], optionen: []
 }, { id: 'REISE', _istReise: true, _intent: { type: 'travel' } });
 assert.strictEqual(problem, null, 'an arrival may show a hotspot prop without interpreting its evidence');
+
+problem = context.validateSceneWorldTruth({
+  ort: 'Krauses AntiquitÃ¤ten',
+  szene: 'Hannelore haelt ein Stueck der zerbrochenen Glasvitrine in der Hand.',
+  personenImRaum: ['Hannelore Wirth'], optionen: []
+}, { id: 'REISE', _istReise: true, _intent: { type: 'travel' } });
+assert(problem && problem.code === 'arrival_object_truth_contradiction',
+  'an arrival must not contradict the physical truth of a still-open hotspot');
+
+problem = context.validateSceneWorldTruth({
+  ort: 'Krauses AntiquitÃ¤ten',
+  szene: 'Die Vitrine steht offen und leer; das Glas ist intakt. Hannelore wartet daneben.',
+  personenImRaum: ['Hannelore Wirth'], optionen: []
+}, { id: 'REISE', _istReise: true, _intent: { type: 'travel' } });
+assert.strictEqual(problem, null,
+  'the canonical visible object state must remain legal without awarding its evidence');
 
 problem = context.validateSceneWorldTruth({
   ort: 'Krauses Antiquitäten',
