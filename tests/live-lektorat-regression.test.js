@@ -17,6 +17,15 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
+const serialLanguageContext = { caseSetup: { setupCast: [] } };
+vm.createContext(serialLanguageContext);
+vm.runInContext(sourceOf('stripAccidentalNarrativeQuotes') + '\n' + sourceOf('fixSprache'), serialLanguageContext);
+assert.strictEqual(serialLanguageContext.fixSprache('Du must sofort handeln.'), 'Du musst sofort handeln.',
+  'the repeated second-person conjugation error must be repaired centrally');
+assert.strictEqual(serialLanguageContext.fixSprache('Wenn sie das Etui zu Gold macht, ist es weg.'),
+  'Wenn sie das Etui zu Geld macht, ist es weg.',
+  'the malformed liquidation idiom must be repaired without changing the target object');
+
 const menuSource = sourceOf('renderOptions');
 assert(menuSource.includes("let _reiseVorauswahl = ''"),
   'the highlighted travel button must retain its displayed destination');
