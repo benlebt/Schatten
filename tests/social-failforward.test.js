@@ -130,4 +130,31 @@ assert.deepStrictEqual(Array.from(names.guardSceneNpcNamenswissen(vossScene)), [
   'a witness whose canonical setup establishes the acquaintance may introduce the full name');
 assert(/Ilse Hauke/.test(vossScene.szene), 'legitimate name knowledge must survive the guard');
 
+names.window._letzteAktion = { npcName: 'Theodor Krause', npcId: 'theodor_krause' };
+names.caseSetup = {
+  klient: 'Theodor Krause (Antiquitaetenhaendler)',
+  tat: 'Krause vermutet das Diebesgut bei Tante Frieda.',
+  anlass: 'Karl soll das Etui bei Tante Frieda wiederbeschaffen.',
+  nebenfiguren: 'Tante Frieda betreibt die Hehlerei.',
+  setupCast: [
+    { id: 'theodor_krause', name: 'Theodor Krause', tag: 'CLIENT' },
+    { id: 'tante_frieda', name: 'Tante Frieda', tag: 'SUSPECT' },
+    { id: 'hannelore_wirth', name: 'Hannelore Wirth', tag: 'WITNESS' },
+  ],
+};
+names.caseProgress = { indizien: [] };
+names.clientProfile = { name: 'Theodor Krause' };
+names.currentScene = {
+  personenImRaum: ['Theodor Krause'],
+  szene: 'Theodor Krause nennt Tante Frieda als vermutete Hehlerin.'
+};
+const krauseNameScene = {
+  szene: 'Theodor Krause warnt vor Tante Frieda. Hannelore Wirth habe alles gesehen.',
+  optionen: []
+};
+assert.deepStrictEqual(Array.from(names.guardSceneNpcNamenswissen(krauseNameScene)), ['Hannelore Wirth'],
+  'Krause must retain the canonically established Tante Frieda while an unintroduced witness stays blocked');
+assert(/Tante Frieda/.test(krauseNameScene.szene) && !/Hannelore/.test(krauseNameScene.szene),
+  'the name guard must not corrupt an established titled singleton into an unknown man');
+
 console.log('social fail-forward regression checks passed');

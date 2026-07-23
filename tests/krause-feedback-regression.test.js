@@ -47,6 +47,7 @@ assert.strictEqual(presenceContext._npcGehoertHierher('theodor_krause', 'Theodor
   'Krause must not be reintroduced into the office after handing over the case');
 
 const truthContext = {
+  caseSetup: { caseType: 'diebstahl', klient: 'Theodor Krause' },
   caseProgress: { stage: 1, klientGesprochen: true, npcZustand: {} },
   engineCurrentLocation: { name: 'Karl Mauers B\u00fcro' },
   gameTimeIdx: 1,
@@ -108,6 +109,16 @@ problem = truthContext.validateSceneWorldTruth({
   optionen: []
 }, transitionOption);
 assert(problem && problem.code === 'client_departure_missing', 'the first assignment talk must narrate Krause leaving after the reply');
+problem = truthContext.validateSceneWorldTruth({
+  ort: 'Karl Mauers B\u00fcro',
+  szene: 'Theodor Krause antwortet: "Ich habe die zwei M\u00e4nner mit einem Seesack im Hinterhof gesehen." Dann verabschiedet er sich und verl\u00e4sst das B\u00fcro.',
+  personenImRaum: [],
+  optionen: []
+}, transitionOption);
+assert(problem && problem.code === 'client_witness_role_drift',
+  'Krause must not absorb Hannelore Wirths exclusive eyewitness clue');
+assert(html.includes('KRAUSE-KENNTNISGRENZE'),
+  'the direct client prompt must bind Krause to his canonical knowledge before generation');
 assert(sourceOf('buildNpcContinuityHint').includes('_clientDepartureAfterReply'),
   'the continuity prompt must defer Krause absence during the selected reply scene');
 
