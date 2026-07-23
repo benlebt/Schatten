@@ -370,6 +370,18 @@ const uncommandedCarDeparture = worldContext.validateSceneWorldTruth({
 assert.strictEqual(uncommandedCarDeparture && uncommandedCarDeparture.code, 'unauthorized_departure',
   'running back to the street and entering the driver seat must not bypass the location gate');
 
+const uncommandedWalkToCar = worldContext.validateSceneWorldTruth({
+  ort: 'Hinterhof Sybelstrasse',
+  szene: 'Dann drehst du dich um, gehst mit schnellen Schritten zur Strasse und steuerst deinen Opel an, um den Beobachtungsposten zu verlassen.',
+  personenImRaum: ['Robert Kessler'],
+  optionen: []
+}, {
+  id: 'HAUPTUI_INDRAMATISIERUNG_robert_eintritt_beobachtet',
+  kategorie: 'BEOBACHTEN'
+});
+assert.strictEqual(uncommandedWalkToCar && uncommandedWalkToCar.code, 'unauthorized_departure',
+  'walking to the street and deliberately approaching the Opel must count as an unauthorized departure');
+
 const objectBeforeVerbDeparture = worldContext.validateSceneWorldTruth({
   ort: 'Hinterhof Sybelstrasse',
   szene: 'Robert Kessler weicht zurueck. Du stoesst ihn beiseite und hechtest in die dunkle Tordurchfahrt. Deine Schritte hallen, als du den Hinterhof ueber die Seitenstrasse verlaesst. Ausser Atem erreichst du die Strassenecke.',
