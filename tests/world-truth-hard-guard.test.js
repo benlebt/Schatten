@@ -95,6 +95,22 @@ assert(problem && problem.code === 'arrival_evidence_leak',
   'a travel scene must not narrate Hannelores still-unawarded core clue');
 
 problem = context.validateSceneWorldTruth({
+  ort: context.engineCurrentLocation.name,
+  szene: 'Hannelore Wirth sagt: In der Nacht von Dienstag auf Mittwoch habe ich zwei Gestalten aus dem Hinterhof kommen sehen.',
+  personenImRaum: ['Hannelore Wirth'], optionen: []
+}, { id: 'REISE', _istReise: true, _intent: { type: 'travel' } });
+assert(problem && problem.code === 'arrival_evidence_leak',
+  'a German perfect infinitive witness account must not bypass the arrival clue gate');
+
+problem = context.validateSceneWorldTruth({
+  ort: context.engineCurrentLocation.name,
+  szene: 'Hannelore steht hinter der Theke und sieht dich beim Eintreten misstrauisch an.',
+  personenImRaum: ['Hannelore Wirth'], optionen: []
+}, { id: 'REISE', _istReise: true, _intent: { type: 'travel' } });
+assert.strictEqual(problem, null,
+  'a present-tense glance at Karl must not be mistaken for a premature witness account');
+
+problem = context.validateSceneWorldTruth({
   ort: 'Krauses Antiquitäten',
   szene: 'Das Fenster ist splittrig aufgehebelt; die Kerben stammen eindeutig von einem Stemmeisen.',
   personenImRaum: [], optionen: []
