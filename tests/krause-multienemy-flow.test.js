@@ -19,7 +19,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1419 +SceneImageTruth-Staging'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1420 +ArrivalRosterFirst-Staging'"), 'release version missing');
 assert(html.includes('Liesl schenkte oder widmete das Etui 1939 Hugo'), 'Krause setup must bind the silver-case ownership direction');
 assert(html.includes('Karl zählt oder nimmt kein Geld, Karls Kasse bleibt unverändert'), 'Krause opening prompt must keep the return-contingent fee unpaid');
 assert(html.includes('Dramatisiere diese EINE Spur genau EINMAL'), 'explicit Haupt-UI clues must merge compact target and detailed payoff into one narration');
@@ -135,6 +135,10 @@ assert.strictEqual(rosterGateContext._findRequiredEncounterRosterDrift({
   personenImRaum: ['Tante Frieda', 'Kalle', 'Jochen']
 }, { id: 'REISE', _istReise: true }), null,
   'a fully dramatized and structured confrontation roster must pass');
+const validateWorldTruthSource = sourceOf('validateSceneWorldTruth');
+assert(validateWorldTruthSource.indexOf('_findRequiredEncounterRosterDrift')
+    < validateWorldTruthSource.indexOf('_findFixedInteriorImageDrift'),
+  'the complete confrontation roster must be repaired before a generic interior-arrival fallback can discard Frieda');
 
 const snapshotContext = {
   currentScene: {
