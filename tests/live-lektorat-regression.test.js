@@ -507,6 +507,19 @@ const perceivedInHallDrift = worldContext.validateSceneWorldTruth({
 assert.strictEqual(perceivedInHallDrift && perceivedInHallDrift.code, 'social_interior_drift',
   'an NPC perceiving Karl in a hallway must count as the same silent location teleport');
 
+const voiceFromHallDrift = worldContext.validateSceneWorldTruth({
+  ort: 'Hinterhof Sybelstrasse',
+  szene: 'Robert Kessler wirbelt herum, als er deine Stimme aus dem Halbdunkel des Flurs hört. An der Wand hängt ein Kalender.',
+  personenImRaum: ['Robert Kessler'],
+  optionen: []
+}, {
+  _zeitUnmittelbar: true,
+  _npcInteraktion: { npcName: 'Robert Kessler', verb: 'befragen' },
+  id: 'NPC_befragen'
+});
+assert.strictEqual(voiceFromHallDrift && voiceFromHallDrift.code, 'social_interior_drift',
+  'a voice explicitly coming from a hallway must place Karl there and trigger the outdoor-location gate');
+
 const environmentalInteriorDrift = worldContext.validateSceneWorldTruth({
   ort: 'Hinterhof Sybelstrasse',
   szene: 'Du drueckst die schwere Eichentuer des Hausflurs auf. Hier drinnen steigst du bis in den dritten Stock.',
@@ -530,6 +543,9 @@ const objectBeforeVerbHallwayDrift = worldContext.validateSceneWorldTruth({
 });
 assert.strictEqual(objectBeforeVerbHallwayDrift && objectBeforeVerbHallwayDrift.code, 'outdoor_interior_drift',
   'object-before-verb wording such as den Flur erreichen must not bypass the outdoor location gate');
+assert(html.includes('WEST-SZENENBEISPIELE: Persil-Paket oder Apfelsinen')
+  && html.includes('KEINE Lebensmittelkarten, HO-/Konsum-Waren, Bezugsscheine, Ostmark oder VEB-/FDGB-Requisiten als lokaler Alltag'),
+  'first-NPC historical examples must be sector-aware instead of seeding East-supply props in West Berlin');
 
 const exactEvidenceContext = {
   window: null,

@@ -20,11 +20,12 @@ vm.runInContext(
   context
 );
 
-context._trackStyleMotifs('Der Opel Olympia nagelt müde über das Kopfsteinpflaster. Frieda hält ein Zigarillo. Die Dämmerung kommt, eine Laterne wirft Schatten.');
+context._trackStyleMotifs('Der Opel Olympia nagelt müde über das Kopfsteinpflaster. Frieda hält ein Zigarillo. Es riecht nach Bohnerwachs. Die Dämmerung kommt, eine Laterne wirft Schatten.');
 let warnings = Array.from(context.getRunStyleWarnings());
 assert(warnings.some(entry => entry.includes('Opel/Motor/Wagen')), 'Opel-nagelt motif must be blocked run-wide after one scene');
 assert(warnings.some(entry => entry.includes('Kopfsteinpflaster')), 'Kopfsteinpflaster must be blocked run-wide after one scene');
 assert(warnings.some(entry => entry.includes('Zigarillo')), 'Zigarillo must be blocked run-wide after one scene');
+assert(warnings.some(entry => entry.includes('Bohnerwachs')), 'Bohnerwachs must be blocked run-wide after one scene');
 assert(warnings.some(entry => entry.includes('Dämmerung')), 'Dämmerung must be blocked run-wide after one scene');
 assert(warnings.some(entry => entry.includes('wirft/werfen')), 'shadow-casting formula must be blocked run-wide after one scene');
 assert(!warnings.some(entry => entry.includes('Standardadjektiv')), 'one legitimate tired mention must remain possible');
