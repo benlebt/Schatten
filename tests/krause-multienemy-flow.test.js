@@ -19,7 +19,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1427 +KrauseSecureClickDeterministic-Staging'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1428 +TheftReturnRequiredForStage4-Staging'"), 'release version missing');
 assert(html.includes('Liesl schenkte oder widmete das Etui 1939 Hugo'), 'Krause setup must bind the silver-case ownership direction');
 assert(html.includes('Karl zählt oder nimmt kein Geld, Karls Kasse bleibt unverändert'), 'Krause opening prompt must keep the return-contingent fee unpaid');
 assert(html.includes('Dramatisiere diese EINE Spur genau EINMAL'), 'explicit Haupt-UI clues must merge compact target and detailed payoff into one narration');
@@ -88,6 +88,10 @@ const secureExecuteStart = execute.indexOf("target.sonderAktion === 'diebesgut_s
 const secureExecuteBranch = execute.slice(secureExecuteStart, execute.indexOf('const targetName', secureExecuteStart));
 assert(!secureExecuteBranch.includes('_hauptuiAngreifbarePersonen'),
   'the earned Etui secure click must not be blocked again by stale restored NPC roles');
+assert(html.includes("_theftReturnStatus1428 !== 'returnedToClient'"),
+  'theft Stage 4 must require the explicit physical return to the client');
+assert(html.includes('Kein Klientenbericht, kein Honorar, kein Fallende'),
+  'target securing must explicitly forbid the premature win and payout');
 
 const hostile = sourceOf('_npcIstFeindlich');
 assert(hostile.includes('npc.tagExtra'), 'hostility must include secondary tags such as Frieda gangster metadata');
