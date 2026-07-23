@@ -19,7 +19,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1446 +KrauseArrivalContinuity-Staging'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1447 +KrauseCombatRosterVisual-Staging'"), 'release version missing');
 assert(html.includes('Liesl schenkte oder widmete das Etui 1939 Hugo'), 'Krause setup must bind the silver-case ownership direction');
 assert(html.includes('Karl zählt oder nimmt kein Geld, Karls Kasse bleibt unverändert'), 'Krause opening prompt must keep the return-contingent fee unpaid');
 assert(html.includes('Dramatisiere diese EINE Spur genau EINMAL'), 'explicit Haupt-UI clues must merge compact target and detailed payoff into one narration');
@@ -163,7 +163,18 @@ const snapshotContext = {
     optionen: [{ text: 'Beobachte Kalle und Jochen genau, ob sie zur Waffe greifen.' }]
   },
   engineCurrentLocation: { name: 'Tante Friedas Hehlerei' },
-  caseProgress: { stage: 3, klientGesprochen: true },
+  caseProgress: {
+    stage: 3,
+    klientGesprochen: true,
+    activeConfrontation: {
+      ort: 'Tante Friedas Hehlerei',
+      enemyEntries: [
+        { id: 'tante_frieda', name: 'Tante Frieda' },
+        { id: 'kalle', name: 'Kalle' },
+        { id: 'jochen', name: 'Jochen' }
+      ]
+    }
+  },
   gameTimeIdx: 3,
   TIMES_OF_DAY: ['morgen', 'vormittag', 'mittag', 'nachmittag', 'abend', 'nacht'],
   normForMatch: value => String(value || '').toLowerCase().replace(/_/g, ' '),
@@ -182,8 +193,11 @@ assert.strictEqual(snapshotContext._npcIstImAktuellenSzenenSnapshot('kalle', 'Ka
 assert.strictEqual(snapshotContext._npcIstImAktuellenSzenenSnapshot('jochen', 'Jochen'), true,
   'missing personenImRaum must fall back to visible scene options');
 snapshotContext.currentScene.personenImRaum = [];
+assert.strictEqual(snapshotContext._npcGehoertHierher('tante_frieda', 'Tante Frieda'), true,
+  'an active confrontation must keep Frieda at the stored fight location despite an explicit empty AI roster');
+snapshotContext.caseProgress.activeConfrontation = null;
 assert.strictEqual(snapshotContext._npcGehoertHierher('tante_frieda', 'Tante Frieda'), false,
-  'an explicitly empty personenImRaum must obey the new stage binding and move Frieda out of the shop');
+  'after the confrontation ends, an empty roster must obey the new stage binding and move Frieda out of the shop');
 
 const ppkContext = {
   caseProgress: { activeConfrontation: {} },

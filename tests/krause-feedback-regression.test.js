@@ -439,6 +439,21 @@ visualContext.roster = [];
 visualSpec = visualContext._krauseHehlereiNachherVisual({});
 assert.strictEqual(visualSpec.file, 'tante-friedas-hehlerei-after-day.webp',
   'an actually empty shop must select the cleared scene');
+visualContext.roster = [{ name: 'Tante Frieda' }, { name: 'Kalle' }, { name: 'Jochen' }];
+visualContext.states = {};
+assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).dayFile, 'tante-friedas-hehlerei-day.webp',
+  'the complete calm shop roster must use the non-confrontational group image');
+visualContext.caseProgress.activeConfrontation = {
+  ort: 'Tante Friedas Hehlerei',
+  enemyEntries: [{ name: 'Tante Frieda' }, { name: 'Kalle' }, { name: 'Jochen' }]
+};
+visualContext.states['tante frieda'] = { status: 'beruhigt', ort: 'Tante Friedas Hehlerei' };
+visualContext.states.kalle = { status: 'benommen', ort: 'Tante Friedas Hehlerei' };
+assert.strictEqual(visualContext._krauseHehlereiNachherVisual({ personenImRaum: [] }).dayFile,
+  'tante-friedas-hehlerei-confrontation-day.webp',
+  'calmed or dazed participants must stay visible throughout the active shop confrontation');
+visualContext.caseProgress.activeConfrontation = null;
+visualContext.states = {};
 visualContext.roster = [{ name: 'Tante Frieda' }];
 assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).file, 'tante-friedas-hehlerei-frieda-day.webp',
   'Frieda alone must not display her two absent henchmen');
