@@ -111,6 +111,24 @@ assert.strictEqual(problem, null,
 context.caseProgress._begegnungen = [];
 
 context.engineCurrentLocation = { name: 'Karl Mauers Buero' };
+context.caseProgress.klientGesprochen = false;
+problem = context.validateSceneWorldTruth({
+  ort: 'Karl Mauers Buero',
+  szene: 'Theodor Krause verspricht 200 Ostmark bei Rueckgabe. Du zaehlst die Scheine, die er auf den Schreibtisch legt.',
+  personenImRaum: ['Theodor Krause'], optionen: []
+}, null);
+assert(problem && problem.code === 'client_payment_drift' && problem.opening,
+  'the opening must not narrate payment before the stolen item is returned');
+
+problem = context.validateSceneWorldTruth({
+  ort: 'Karl Mauers Buero',
+  szene: 'Theodor Krause verspricht dir 200 Ostmark, sobald du das Etui zurueckbringst.',
+  personenImRaum: ['Theodor Krause'], optionen: []
+}, null);
+assert.strictEqual(problem, null,
+  'the unpaid return-contingent fee must remain legal in the opening');
+context.caseProgress.klientGesprochen = true;
+
 problem = context.validateSceneWorldTruth({
   ort: 'Karl Mauers Buero',
   szene: 'Theodor Krause sagt: Es war kein Profi. Die haben mein Fenster im Hinterhof einfach eingeschlagen.',
