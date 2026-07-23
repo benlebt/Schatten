@@ -222,6 +222,12 @@ assert.strictEqual(pohlKragen.option._sozialErfolg, false, 'absurd escalation ag
 assert.strictEqual(pohlKragen.option._sozialVerprelltDanach, true, 'collar escalation must burn the witness contact for the day');
 const pohlGegenleistung = pohlVerbs.find((verb) => verb.key === 'sozial_gegenleistung');
 assert.strictEqual(pohlGegenleistung.option._sozialZahlung, true, 'a promised witness counter-service must be a real engine payment');
+assert.strictEqual(pohlGegenleistung.label, '15 Ostmark zahlen · Renommee +1',
+  'a witness counter-service must advertise the exact debit instead of unavailable coffee or cigarettes');
+assert(html.includes("ZAHLUNGSWAHRHEIT (VORRANG, PFLICHT): Karl hat AUSSCHLIESSLICH"),
+  'witness payment prose must receive a priority truth naming the one real payment route');
+assert(html.includes("Erfinde keine Zigaretten, keinen Kaffee und keine andere Ware."),
+  'cash-paid witness scenes must explicitly forbid invented barter goods');
 
 const classifyStart = html.indexOf('function classifyEvidenceAction()');
 const classifyEnd = html.indexOf('// v7.12.593', classifyStart);
