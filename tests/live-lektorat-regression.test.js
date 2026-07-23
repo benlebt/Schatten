@@ -99,6 +99,28 @@ assert.strictEqual(openingRoleContext.validateOpeningRoleTruth(
 assert.strictEqual(openingRoleContext.validateOpeningRoleTruth(
   'Seit drei Stunden folgst du Robert Kessler durch Charlottenburg.', shadowSetup
 ).ok, true, 'opening validation must retain the correct surveillance direction');
+const hinterhofShadowSetup = {
+  ...shadowSetup,
+  ortHaupt: 'Hinterhof Sybelstrasse, Charlottenburg'
+};
+assert.strictEqual(openingRoleContext.validateOpeningRoleTruth(
+  'Edith hat dich beauftragt. Du folgst Robert. Er bleibt am Kiosk, waehrend du dich in den Hauseingang drueckst.',
+  hinterhofShadowSetup,
+  { personenImRaum: [] }
+).code, 'opening_engine_location_missing',
+'a Hinterhof engine opening must explicitly place Karl in the Hinterhof rather than at the preceding street location');
+assert.strictEqual(openingRoleContext.validateOpeningRoleTruth(
+  'Du bist Robert am Kiosk vorausgeeilt und wartest jetzt im Hinterhof Sybelstrasse. Robert steht noch draussen.',
+  hinterhofShadowSetup,
+  { personenImRaum: [] }
+).ok, true,
+'a correct split-location surveillance opening must remain valid');
+assert.strictEqual(openingRoleContext.validateOpeningRoleTruth(
+  'Du bist Robert am Kiosk vorausgeeilt und wartest jetzt im Hinterhof Sybelstrasse. Robert steht noch draussen.',
+  hinterhofShadowSetup,
+  { personenImRaum: ['Robert Kessler'] }
+).code, 'opening_target_presence_early',
+'an offscreen target must not be put into the physical scene roster before entering');
 assert.strictEqual(openingRoleContext.validateOpeningRoleTruth(
   'Hauptmann Vollmer steht an der Ecke. Er hat dich schon seit Tagen im Visier.', shadowSetup
 ).code, 'opening_foreign_recurring_npc',
@@ -529,6 +551,8 @@ assert.strictEqual(languageContext.fixSprache('Tante Frieda kaucht in Kreuzberg 
   'the observed Krause dialogue typo must be corrected narrowly');
 assert.strictEqual(languageContext.fixSprache('Der Opel nagelt müde vor dem Laden.'), 'Der Opel rasselt widerwillig vor dem Laden.',
   'the confirmed recurring nagelt-muede style tic must not remain visible');
+assert.strictEqual(languageContext.fixSprache('Dein Auftraggeberin wartet.'), 'Deine Auftraggeberin wartet.',
+  'the observed Kessler possessive-gender error must be corrected narrowly');
 const wrappedNarration = '"Du gehst auf den Eingang zu. ' + 'Die Messingschilder haengen schief und du pruefst jeden Namen sorgfaeltig. '.repeat(3) + 'Robert bleibt im Hof."';
 assert(!languageContext.fixSprache(wrappedNarration).startsWith('"') && !languageContext.fixSprache(wrappedNarration).endsWith('"'),
   'a fully quote-wrapped narrative paragraph must lose only its accidental outer quotes');

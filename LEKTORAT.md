@@ -70,6 +70,7 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 - Klienten-Geduld, Mahnung, Frist, Auftragsentzug und Abschlussbereitschaft.
 - Romantik-Klick-Zähler, Abkühlschritte, Personenwechsel/Reset und tatsächlicher `Rm`-Wert.
 - `personenImRaum`-Teleport, stille Begleitung und unerklärter Ortswechsel.
+- Schon die Eröffnung muss Engine-Ort, Header, Bild und Prosa synchronisieren. Bei geteilten Orten gilt der physische Szenen-Roster streng: Eine Zielperson, die laut Prosa noch draußen am Kiosk wartet, darf im bereits aktiven Hinterhof weder in `personenImRaum` stehen noch direkt ansprechbar sein.
 - Auch semantische Abgangsvarianten prüfen: „verlässt den Hof/Ort/das Haus“, „macht sich davon“ oder „verschwindet“ widersprechen einem unveränderten Engine-Ort ebenso wie „flieht/rennt hinaus“. Ein Beobachten-/Warten-Klick darf Karl nicht eigenmächtig wegschreiben.
 - Funktionieren Buttons, Zielbindung, Karten-Vorauswahl, Öffnungszeiten, Reise-, Schlaf-, Heil- und Abschlusswege ohne Sackgasse?
 - Stimmt die Intensität der sichtbaren Aktion mit der Prosa überein? „Stelle zur Rede“/Befragen bleibt verbal; Packen, Gegen-die-Wand-Drücken, Schlagen und daraus erfundene NPC-Verletzungen sind ausschließlich nach einer ausdrücklich gewählten Angriffs-/Kampfhandlung zulässig.
@@ -90,7 +91,7 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 1. Truthbeat-Regex-Fehltreffer.
 2. Kern-Indiz-Prosa-Mismatch samt Root Cause: Die Ankunfts-Vorwegnahme ist seit v7.12.1339 abgedeckt, einschließlich Objekt–Beweis-Relationen seit v7.12.1341; v7.12.1340 begrenzt ausgespielte Zeugen-Indizien auf ihren definierten Informationsumfang, v7.12.1342 sperrt markante Cross-Clue-Kontamination. Manuelle Stabilitätsbestätigung und die Gegenrichtung „mechanisch vergeben, aber nicht dramatisiert“ bleiben offen.
 3. Lola-Präsenz-Widerspruch als generalisierbarer NPC-Kontinuitätsfall.
-4. Ort-Prosa-Bruch-Fix weiter generalisieren: v7.12.1321 deckt nach Kessler K2 auch nichtsoziale Außenort→Innenraum-Teleports ab; der vollständige manuelle Krause-Gegenlauf steht noch aus.
+4. Ort-Prosa-Bruch-Fix weiter generalisieren: v7.12.1321 deckt nach Kessler K2 auch nichtsoziale Außenort→Innenraum-Teleports ab; v7.12.1343 sichert zusätzlich Kesslers geteilte Startposition Hinterhof/Straße und den physischen Szenen-Roster. Der vollständige manuelle Krause-Gegenlauf und Kessler-Gegenlauf stehen noch aus.
 5. Fall-Abschluss-Doppelerzählung aus dem Kessler-Run.
 6. `INDIZ-GATE`-`fundModus`-Rigidität.
 7. Verletzungs-Konsistenz-Gate und Behandlungs-Status-Widerspruch hart durchsetzen.
