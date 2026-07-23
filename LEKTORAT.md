@@ -107,6 +107,7 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 
 - `W6-BLOCK` und terminale NPC-Zustände.
 - `ORT-PROSA-BRUCH`, Engine-Ort, Header, Bild, Cast und tatsächlicher Handlungsort.
+- Desktop-Scrolltest nach jeder neuen Szene: Die automatische Leseposition zeigt den Anfang des neuen Szenentexts mit etwas Luft unter dem Statuskopf. Sie darf nicht ungefragt bis zum Szenenbild oder Aktionsmenü springen; Bild und Aktionen erreicht der Spieler anschließend durch eigenes Herunterscrollen.
 - Bei konkret begonnenen Hotspot-/Indizhandlungen muss der Fund noch am Ausgangsort vollständig ausgespielt werden. Ein Tageszeitwechsel darf nicht vor dem Payoff eine Sperrstunden-Umleitung auslösen und dadurch Header/Bild/Engine-Ort etwa von der Spedition in Karls Büro versetzen.
 - Vor jeder mechanischen Kern-Indiz-Buchung ist der aktuell zu rendernde Szenenentwurf zu prüfen und gegebenenfalls dort zu reparieren – niemals nur die bereits abgeschlossene Vorgängerszene. Popup/Log und sichtbare Prosa müssen denselben definierenden Befund tragen (z. B. Tetzlaff: mittwochs keine Überstunden, Robert geht früher).
 - Bei strukturierten Indiz-Mikroszenen Forensik und akute Gefahr trennen: Wörter wie „rohe Gewalt“, „Stemmeisen“, „Schlagspuren“ oder „greifen“ beschreiben häufig eine vergangene Tat am Objekt. Ohne tatsächlich gegenwärtigen Angreifer dürfen sie weder Karls Gewaltruf erhöhen noch allein `Spannung=4/5`, Action-Streak oder Fluchtmodus auslösen. Szene-Objekt, Header und Reise-/Schlafgates müssen denselben gedeckelten Spannungswert sehen.
