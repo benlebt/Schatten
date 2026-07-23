@@ -58,6 +58,12 @@ const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 assert(html.includes("dbgParam === 'on' || dbgParam === '1'"),
   'Debug muss ein transparenter lokaler Schalter statt eines Frontend-Passworts sein');
 assert(!html.includes('DEBUG_PASSWORD_HASH'), 'ein Frontend-Passworthash ist keine Sicherheitsgrenze');
+assert(html.includes('<meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">'),
+  'private staging builds need a page-level noindex fallback');
+
+const robots = fs.readFileSync(path.join(root, 'robots.txt'), 'utf8');
+assert(/^User-agent: \*\r?\nDisallow: \/\s*$/m.test(robots),
+  'robots.txt must block every crawler from the complete staging site');
 
 const deploy = fs.readFileSync(path.join(root, 'api', 'deploy.js'), 'utf8');
 assert(deploy.includes('const githubRepo = process.env.GITHUB_REPO;'),

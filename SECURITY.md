@@ -20,6 +20,7 @@ Dieses öffentliche Repository enthält ausschließlich Spielcode, Tests, Projek
 - Der schreibende `/api/deploy`-Endpunkt ist standardmäßig durch `DEPLOY_ENABLED=false` deaktiviert. Token, Repository und Passwort-Hash kommen nur aus Umgebungsvariablen.
 - Der Browser-Debugschalter ist ausdrücklich keine Authentifizierung und gewährt keine serverseitigen Rechte. Er schaltet nur lokale Testoberflächen frei.
 - Ein öffentlicher Repository-Klon darf ohne geheime Werte vollständig testbar sein; Modellaufrufe funktionieren erst nach eigener Hosting-Konfiguration.
+- Private Staging-Hosts werden zusätzlich zur HTTP-Authentifizierung durch `robots.txt` (`Disallow: /`) und einen dokumentweiten `noindex`-Meta-Wächter von Suchmaschinen ferngehalten. Der Passwortschutz bleibt die eigentliche Zugriffssperre; Crawler-Regeln sind nur eine zusätzliche Schutzschicht.
 
 ## Prüfung vor einem Push
 
