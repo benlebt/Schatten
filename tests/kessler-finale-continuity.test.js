@@ -50,6 +50,11 @@ pohlWindowProblem = pohlWindowContext._findKesslerWindowConversationDrift({
 }, { _npcName: 'Frau Pohl' });
 assert.strictEqual(pohlWindowProblem, null,
   'a Pohl conversation anchored at the visible window must remain valid');
+pohlWindowProblem = pohlWindowContext._findKesslerWindowConversationDrift({
+  szene: 'Frau Pohl lehnt sich aus dem offenen Kuechenfenster im zweiten Stock.'
+}, { _npcName: 'Frau Pohl' });
+assert(pohlWindowProblem && pohlWindowProblem.code === 'kessler_window_conversation_drift',
+  'Pohl must not drift from the pictured ground-floor window to the second floor');
 assert(html.includes('Frau Pohl am linken Erdgeschossfenster und Frau Hauke am oberen rechten Hoffenster'),
   'the Sybel image alt text must name the two visible residents');
 
@@ -179,7 +184,7 @@ assert(html.includes('ABSCHLUSS-KONTINUITÄT (PFLICHT)'),
   'the finale prompt must prohibit replaying the previous accepted scene');
 assert(html.includes('Keine doppelte Schatten-Auflösung'),
   'the finale prompt must explicitly block the observed duplicate shadow payoff');
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1438 +KesslerWindowTruth-Staging'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1439 +PohlFloorTruth-Staging'"),
   'release version missing');
 
 console.log('KESSLER_FINALE_CONTINUITY_OK');
