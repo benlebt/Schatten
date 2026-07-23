@@ -382,6 +382,18 @@ const uncommandedWalkToCar = worldContext.validateSceneWorldTruth({
 assert.strictEqual(uncommandedWalkToCar && uncommandedWalkToCar.code, 'unauthorized_departure',
   'walking to the street and deliberately approaching the Opel must count as an unauthorized departure');
 
+const uncommandedQuietWithdrawal = worldContext.validateSceneWorldTruth({
+  ort: 'Hinterhof Sybelstrasse',
+  szene: 'Du wartest, bis die Haustuer ins Schloss faellt, dann drehst du dich um und entfernst dich leise, um nicht entdeckt zu werden.',
+  personenImRaum: ['Robert Kessler'],
+  optionen: []
+}, {
+  id: 'HAUPTUI_INDRAMATISIERUNG_robert_eintritt_beobachtet',
+  kategorie: 'BEOBACHTEN'
+});
+assert.strictEqual(uncommandedQuietWithdrawal && uncommandedQuietWithdrawal.code, 'unauthorized_departure',
+  'quietly withdrawing to avoid discovery must count as a completed departure even without a named destination');
+
 const kesslerWaitContext = {
   caseProgress: {},
   chooseOptionInFlight: false,
