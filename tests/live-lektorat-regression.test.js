@@ -25,6 +25,9 @@ assert.strictEqual(serialLanguageContext.fixSprache('Du must sofort handeln.'), 
 assert.strictEqual(serialLanguageContext.fixSprache('Wenn sie das Etui zu Gold macht, ist es weg.'),
   'Wenn sie das Etui zu Geld macht, ist es weg.',
   'the malformed liquidation idiom must be repaired without changing the target object');
+assert.strictEqual(serialLanguageContext.fixSprache('Es ist eine meiner kostbarsten Stücke.'),
+  'Es ist eines meiner kostbarsten Stücke.',
+  'the Krause client reply must agree with the neuter Etui/Stück');
 
 const menuSource = sourceOf('renderOptions');
 assert(menuSource.includes("let _reiseVorauswahl = ''"),
