@@ -226,6 +226,22 @@ assert(problem && problem.code === 'client_absence_unexplained',
   'Krauses absence after his explicit departure needs a canonical time-continuity explanation');
 
 problem = context.validateSceneWorldTruth({
+  ort: 'Krauses AntiquitÃ¤ten',
+  szene: 'Krause ist nirgends zu sehen. Hannelore wartet hinter dem Tresen.',
+  personenImRaum: ['Hannelore Wirth'], optionen: []
+}, { id: 'REISE', _istReise: true, _intent: { type: 'travel' } });
+assert(problem && problem.code === 'client_absence_unexplained',
+  'natural not-visible wording must not bypass the client time-continuity gate');
+
+problem = context.validateSceneWorldTruth({
+  ort: 'Krauses AntiquitÃ¤ten',
+  szene: 'Keine Spur von Krause. Hannelore wartet hinter dem Tresen.',
+  personenImRaum: ['Hannelore Wirth'], optionen: []
+}, { id: 'REISE', _istReise: true, _intent: { type: 'travel' } });
+assert(problem && problem.code === 'client_absence_unexplained',
+  'inverted absence wording must also require the canonical explanation');
+
+problem = context.validateSceneWorldTruth({
   ort: 'Krauses Antiquitäten',
   szene: 'Krause ist oben in seiner Wohnung und stellt die Verlustliste zusammen. Hannelore wartet schweigend im Laden.',
   personenImRaum: ['Hannelore Wirth'], optionen: []

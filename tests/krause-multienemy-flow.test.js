@@ -19,7 +19,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1373 +Opening-Oekonomie-Gate'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1374 +Klienten-Abwesenheitssynonyme'"), 'release version missing');
 assert(html.includes('Karl zählt oder nimmt kein Geld, Karls Kasse bleibt unverändert'), 'Krause opening prompt must keep the return-contingent fee unpaid');
 assert(html.includes('Dramatisiere diese EINE Spur genau EINMAL'), 'explicit Haupt-UI clues must merge compact target and detailed payoff into one narration');
 assert(html.includes('OFFENE OBJEKTWAHRHEIT (HART, KEIN INDIZ-PAYOFF)'), 'every pre-clue scene must preserve visible hotspot truth, including client dialogue');
