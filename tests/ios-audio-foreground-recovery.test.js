@@ -132,7 +132,7 @@ assert(lifecycle.includes("document.addEventListener('touchstart'"),
   'audio lifecycle must unlock inside an iPhone touch gesture');
 assert(!lifecycle.includes('removeEventListener'),
   'foreground gesture recovery must remain registered for repeated app switches');
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1378 +Zeugen-Gangart-Satzformen'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1379 +Etui-Familienprovenienz'"),
   'release version missing');
 
 console.log('IOS_AUDIO_FOREGROUND_RECOVERY_OK');

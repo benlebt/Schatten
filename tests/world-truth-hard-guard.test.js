@@ -143,6 +143,22 @@ problem = context.validateSceneWorldTruth({
 }, null);
 assert.strictEqual(problem, null,
   'the canonical Liesl-to-Hugo provenance must remain legal');
+
+problem = context.validateSceneWorldTruth({
+  ort: 'Karl Mauers Buero',
+  szene: 'Theodor Krause sagt: Das Etui war Hugos Stolz. Es gehört zu einer Sammlung, die ich für einen Stammkunden sicher verwahrt habe.',
+  personenImRaum: ['Theodor Krause'], optionen: []
+}, { id: 'NPC_sozial_offen', _npcName: 'Theodor Krause', _clientDepartureAfterReply: 'Theodor Krause' });
+assert(problem && problem.code === 'target_provenance_drift' && !problem.opening,
+  'the family heirloom must not drift into customer-owned or consigned property');
+
+problem = context.validateSceneWorldTruth({
+  ort: 'Karl Mauers Buero',
+  szene: 'Theodor Krause sagt: Das Etui war Hugos Erbstück. Ein Stammkunde hatte es vor dem Diebstahl in der Vitrine bewundert.',
+  personenImRaum: ['Theodor Krause'], optionen: []
+}, null);
+assert.strictEqual(problem, null,
+  'a customer may have admired the heirloom without being invented as its owner');
 context.caseProgress.klientGesprochen = true;
 
 problem = context.validateSceneWorldTruth({
