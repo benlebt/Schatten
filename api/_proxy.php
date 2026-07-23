@@ -4,10 +4,10 @@ declare(strict_types=1);
 /**
  * Hetzner-Webhosting-Adapter für die bestehenden Vercel-Modellproxys.
  *
- * Geheimnisse bleiben weiterhin ausschließlich in den Vercel-Umgebungsvariablen.
- * Der Adapter reicht nur JSON-Body und das vom Browser gelieferte X-Spiel-Auth
- * weiter. Direkter HTTP-Zugriff auf diese Hilfsdatei wird in api/.htaccess
- * gesperrt; aufgerufen wird sie ausschließlich durch die drei Provider-Wrapper.
+ * Geheimnisse bleiben serverseitig. Während der Übergangsphase kann
+ * SCHATTEN_UPSTREAM_AUTH im Hetzner-Webserver gesetzt werden; das Frontend
+ * erhält und überträgt dieses Geheimnis nicht. Direkter HTTP-Zugriff auf diese
+ * Hilfsdatei wird in api/.htaccess gesperrt.
  */
 function schatten_proxy(string $provider): void
 {
@@ -53,7 +53,12 @@ function schatten_proxy(string $provider): void
     }
 
     $forwardHeaders = array('Content-Type: application/json');
-    if (isset($_SERVER['HTTP_X_SPIEL_AUTH']) && $_SERVER['HTTP_X_SPIEL_AUTH'] !== '') {
+    $upstreamAuth = getenv('SCHATTEN_UPSTREAM_AUTH');
+    if (is_string($upstreamAuth) && trim($upstreamAuth) !== '') {
+        $forwardHeaders[] = 'X-Spiel-Auth: ' . trim($upstreamAuth);
+    } elseif (isset($_SERVER['HTTP_X_SPIEL_AUTH']) && $_SERVER['HTTP_X_SPIEL_AUTH'] !== '') {
+        // Rückwärtskompatibilität für die alte Vercel-Oberfläche. Die
+        // Hetzner-Version sendet diesen Header nicht mehr aus dem Browser.
         $forwardHeaders[] = 'X-Spiel-Auth: ' . (string) $_SERVER['HTTP_X_SPIEL_AUTH'];
     }
 

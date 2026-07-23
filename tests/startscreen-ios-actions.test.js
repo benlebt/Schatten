@@ -40,24 +40,19 @@ assert(selectButton[0].includes('onclick="return openSetupSelectorFromStart(even
   'case selector must retain click and keyboard activation');
 
 const opener = sourceOf('openSetupSelectorFromStart');
-assert(opener.includes("button.textContent = 'Zugang wird geprüft …'"),
-  'case selector must show immediate feedback while auth is checked');
+assert(opener.includes("button.textContent = 'Fallauswahl wird geöffnet …'"),
+  'case selector must show immediate feedback while opening');
 assert(opener.includes("button.setAttribute('aria-busy', 'true')"), 'case selector must expose its busy state');
-assert(opener.includes('task = showSetupSelector();'), 'case selector must invoke auth directly in the user gesture');
+assert(opener.includes('task = showSetupSelector();'), 'case selector must open directly in the user gesture');
 assert(!opener.includes('window.setTimeout('), 'case selector must not defer auth beyond the user gesture');
 assert(!opener.includes('.then(function() { showSetupSelector'), 'case selector must not promise-defer auth');
 
 const auth = sourceOf('ensureSpielAuth');
-assert(auth.includes('await requestSpielAuthInput(authFehler)'), 'auth must use the in-game password overlay');
+assert(auth.includes('setSpielAuth();'), 'legacy browser passwords must be cleared');
+assert(auth.includes('return true;'), 'Apache Basic Auth must be the only interactive access gate');
+assert(!auth.includes('requestSpielAuthInput'), 'case selection must never open the retired password overlay');
 assert(!auth.includes('window.prompt'), 'auth must not rely on native prompt in Brave/iOS');
 assert(!auth.includes('window.alert'), 'wrong-password feedback must stay inside the game UI');
-
-const authOverlay = sourceOf('requestSpielAuthInput');
-assert(authOverlay.includes("overlay.id = 'spiel-auth-overlay'"), 'password overlay id missing');
-assert(authOverlay.includes("input.type = 'password'"), 'password overlay must mask its input');
-assert(authOverlay.includes("button.addEventListener('touchend'"), 'password buttons need touchend handling');
-assert(authOverlay.includes("button.addEventListener('click'"), 'password buttons need click handling');
-assert(authOverlay.includes('{ passive: false }'), 'password touch handler must be able to prevent the synthetic click');
 
 const selector = sourceOf('showSetupSelector');
 assert(selector.includes('attachSafeTap(card,'), 'case cards must use the central tap-vs-scroll guard');
@@ -100,7 +95,7 @@ class FakeButton {
   assert.strictEqual(calls, 1, 'touchend must open the selector immediately');
   assert.strictEqual(button.disabled, true, 'button must disable while auth is pending');
   assert.strictEqual(button.attributes['aria-busy'], 'true', 'button must be marked busy');
-  assert.strictEqual(button.textContent, 'Zugang wird geprüft …', 'button needs visible pending feedback');
+  assert.strictEqual(button.textContent, 'Fallauswahl wird geöffnet …', 'button needs visible pending feedback');
 
   context.openSetupSelectorFromStart(event); // synthetic click after touchend
   assert.strictEqual(calls, 1, 'touchend plus synthetic click must not start auth twice');
