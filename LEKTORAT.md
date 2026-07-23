@@ -79,6 +79,7 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 - Bei einem Engine-Außenort auch stille Subort-Wechsel prüfen: Haus-/Wohnungstür öffnen, Hausflur, Treppenhaus oder Wohnung in der Prosa sind ein `ORT-PROSA-BRUCH`, solange keine Reise bzw. kein strukturierter Ortswechsel stattfand. Hotspot-Name und Fundtext dürfen einen solchen Wechsel nicht selbst anordnen.
 - Innenraumbegriffe semantisch und in Kurzformen prüfen: „im Flur“, „im Hausflur“, „im Eingangsflur“ und „im Treppenhaus“ sind am Engine-Außenort gleichwertige Driftmarker; ein einzelnes weggelassenes Präfix darf den Guard nicht umgehen.
 - Auch Etagen-/Türhandlungen sind Ortsmarker: „an die Wohnungstür im dritten Stock klopfen/klingeln“ setzt Karl physisch auf einen Treppenabsatz und ist am unveränderten Engine-Außenort ebenso ein `ORT-PROSA-BRUCH` wie das ausdrückliche Betreten von Flur oder Treppenhaus.
+- Karls Ort kann auch indirekt durch Figurenwahrnehmung festgeschrieben werden: „sie sieht/bemerkt dich im Flur“ ist derselbe Innenraum-Teleport wie „du gehst in den Flur“, selbst wenn Karl im Satz kein eigenes Bewegungsverb erhält.
 
 ### 6. Wahrheitsbeat-/Truthbeat-Gate
 
@@ -93,7 +94,7 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 1. Truthbeat-Regex-Fehltreffer.
 2. Kern-Indiz-Prosa-Mismatch samt Root Cause: Die Ankunfts-Vorwegnahme ist seit v7.12.1339 abgedeckt, einschließlich Objekt–Beweis-Relationen seit v7.12.1341; v7.12.1340 begrenzt ausgespielte Zeugen-Indizien auf ihren definierten Informationsumfang, v7.12.1342 sperrt markante Cross-Clue-Kontamination, v7.12.1344 erhält auch bei Repair/Fallback die Quellenart Person versus Hotspot/Objekt. Manuelle Stabilitätsbestätigung und die Gegenrichtung „mechanisch vergeben, aber nicht dramatisiert“ bleiben offen.
 3. Lola-Präsenz-Widerspruch als generalisierbarer NPC-Kontinuitätsfall.
-4. Ort-Prosa-Bruch-Fix weiter generalisieren: v7.12.1321 deckt nach Kessler K2 auch nichtsoziale Außenort→Innenraum-Teleports ab; v7.12.1343 sichert zusätzlich Kesslers geteilte Startposition Hinterhof/Straße und den physischen Szenen-Roster, v7.12.1345 ergänzt Klopfen/Klingeln an Etagen-/Wohnungstüren. Der vollständige manuelle Krause-Gegenlauf und Kessler-Gegenlauf stehen noch aus.
+4. Ort-Prosa-Bruch-Fix weiter generalisieren: v7.12.1321 deckt nach Kessler K2 auch nichtsoziale Außenort→Innenraum-Teleports ab; v7.12.1343 sichert zusätzlich Kesslers geteilte Startposition Hinterhof/Straße und den physischen Szenen-Roster, v7.12.1345 ergänzt Klopfen/Klingeln an Etagen-/Wohnungstüren, v7.12.1346 indirekte Flur-Präsenz über Figurenwahrnehmung. Der vollständige manuelle Krause-Gegenlauf und Kessler-Gegenlauf stehen noch aus.
 5. Fall-Abschluss-Doppelerzählung aus dem Kessler-Run.
 6. `INDIZ-GATE`-`fundModus`-Rigidität.
 7. Verletzungs-Konsistenz-Gate und Behandlungs-Status-Widerspruch hart durchsetzen.

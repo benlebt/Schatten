@@ -271,6 +271,19 @@ const apartmentDoorDrift = worldContext.validateSceneWorldTruth({
 assert.strictEqual(apartmentDoorDrift && apartmentDoorDrift.code, 'social_interior_drift',
   'knocking on a third-floor apartment door must not bypass an outdoor social location gate');
 
+const perceivedInHallDrift = worldContext.validateSceneWorldTruth({
+  ort: 'Hinterhof Sybelstrasse',
+  szene: 'Frau Hauke tritt durch die Wohnungstuer im dritten Stock und bleibt stehen, als sie dich im Halbdunkel des Flurs bemerkt.',
+  personenImRaum: ['Frau Hauke'],
+  optionen: []
+}, {
+  _zeitUnmittelbar: true,
+  _npcInteraktion: { npcName: 'Frau Hauke', verb: 'diskret ansprechen' },
+  id: 'NPC_sozial_diskretion'
+});
+assert.strictEqual(perceivedInHallDrift && perceivedInHallDrift.code, 'social_interior_drift',
+  'an NPC perceiving Karl in a hallway must count as the same silent location teleport');
+
 const environmentalInteriorDrift = worldContext.validateSceneWorldTruth({
   ort: 'Hinterhof Sybelstrasse',
   szene: 'Du drueckst die schwere Eichentuer des Hausflurs auf. Hier drinnen steigst du bis in den dritten Stock.',
