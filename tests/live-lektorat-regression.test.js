@@ -374,6 +374,26 @@ const curfewLocationDrift = worldContext.validateSceneWorldTruth({
 assert.strictEqual(curfewLocationDrift && curfewLocationDrift.code, 'curfew_redirect_drift',
   'closing-time redirect must reject prose that continues inside the closed travel destination');
 
+const inventedAlcohol = worldContext.validateSceneWorldTruth({
+  ort: 'Karl Mauers Buero',
+  szene: 'Nachdem der Nordhaeuser deine Sinne getruebt hat, wachst du mit droehnendem Kopf und Korn-Geschmack auf.',
+  personenImRaum: [],
+  optionen: []
+}, {
+  id: 'SCHLAFEN', _kategorie: 'SCHLAFEN', _alkoholVorSchlaf: 0, _katerVorSchlaf: 0
+});
+assert.strictEqual(inventedAlcohol && inventedAlcohol.code, 'invented_alcohol_state',
+  'sleep prose must not invent drinking, intoxication, or a hangover at alcohol state zero');
+
+assert.strictEqual(worldContext.validateSceneWorldTruth({
+  ort: 'Hinterhof Sybelstrasse',
+  szene: 'Nach mehreren Glaesern Korn wachst du verkatert mit trockenem Mund im Hinterhof auf.',
+  personenImRaum: [],
+  optionen: []
+}, {
+  id: 'SCHLAFEN', _kategorie: 'SCHLAFEN', _alkoholVorSchlaf: 3, _katerVorSchlaf: 0
+}), null, 'a real pre-sleep alcohol state must continue to permit a narrated hangover');
+
 assert.strictEqual(worldContext.validateSceneWorldTruth({
   ort: 'Karl Mauers Buero',
   szene: 'Die Spedition Schmidt ist bei deiner Ankunft bereits geschlossen. Du wendest den Opel, faehrst zurueck und legst im Buero am Hackeschen Markt deine Notizen auf den Schreibtisch.',
@@ -452,6 +472,10 @@ assert(apiSource.includes('NPC-KONTINUITAET') && apiSource.includes('sanitizeOpe
   'unauthorized recurring NPCs need a slow-call-proof retry and hard fallback');
 assert(sourceOf('fixSprache').includes(".replace(/\\b([Dd])u wischt\\b/g, '$1u wischst')"),
   'the observed du wischt conjugation error must be corrected conservatively');
+assert(sourceOf('fixSprache').includes(".replace(/\\b([Dd])u rappelt\\b/g, '$1u rappelst')"),
+  'the observed du rappelt conjugation error must be corrected conservatively');
+assert(html.includes('ALKOHOLZUSTAND (HARTE ENGINE-WAHRHEIT)'),
+  'a sober sleep action must explicitly forbid invented drinking and hangover prose');
 const languageContext = {};
 vm.createContext(languageContext);
 vm.runInContext(sourceOf('stripAccidentalNarrativeQuotes'), languageContext);
