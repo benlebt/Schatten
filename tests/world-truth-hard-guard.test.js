@@ -47,6 +47,7 @@ vm.createContext(context);
   '_worldTruthAliases',
   '_worldTruthHasAlias',
   '_worldTruthOrtGleich',
+  '_findArrivalEvidenceLeak',
   'sanitizeSceneTerminalNpcState',
   'validateSceneWorldTruth',
   'buildWorldTruthRepairHint',
@@ -55,7 +56,74 @@ vm.createContext(context);
   '_schlafHeilZiel'
 ].forEach((name) => vm.runInContext(sourceOf(name), context));
 
+context.caseProgress = { gefundeneIndizIds: [], klientGesprochen: true, npcZustand: {} };
+context.caseSetup = { caseType: 'diebstahl' };
+context.engineCurrentLocation = { name: 'Krauses Antiquitäten' };
+context._resolveNpcIdentity = () => ({ id: 'hannelore_wirth', name: 'Hannelore Wirth' });
+context.getCaseLocations = () => [{
+  name: 'Krauses Antiquitäten',
+  indizien: [{
+    id: 'nachbarin_aussage', npc: 'hannelore_wirth', quelle: 'person',
+    schluessel: ['nachbarin', 'wirth', 'hannelore', 'zwei maenner', 'tasche', 'tatnacht', 'hinterhof', 'gesehen']
+  }, {
+    id: 'einbruch_fenster', quelle: 'umgebung',
+    schluessel: ['fenster', 'aufgebrochen', 'aufgehebelt', 'stemmeisen', 'hinterhof', 'splittrig', 'kein profi']
+  }]
+}];
+
 let problem = context.validateSceneWorldTruth({
+  ort: 'Krauses Antiquitäten',
+  szene: 'Hannelore Wirth wartet zwischen den Regalen und sieht dich reserviert an. Mehr sagt sie noch nicht.',
+  personenImRaum: ['Hannelore Wirth'], optionen: []
+}, { id: 'REISE', _istReise: true, _intent: { type: 'travel' } });
+assert.strictEqual(problem, null, 'an arrival may introduce a witness without revealing the witness clue');
+
+problem = context.validateSceneWorldTruth({
+  ort: 'Krauses Antiquitäten',
+  szene: 'Hannelore Wirth sagt: Die beiden Maenner, die ich sah, kamen mit einer schweren Tasche aus dem Hinterhof; einer hinkte leicht.',
+  personenImRaum: ['Hannelore Wirth'], optionen: []
+}, { id: 'REISE', _istReise: true, _intent: { type: 'travel' } });
+assert(problem && problem.code === 'arrival_evidence_leak',
+  'a travel scene must not narrate Hannelores still-unawarded core clue');
+
+problem = context.validateSceneWorldTruth({
+  ort: 'Krauses Antiquitäten',
+  szene: 'Das Fenster ist splittrig aufgehebelt; die Kerben stammen eindeutig von einem Stemmeisen.',
+  personenImRaum: [], optionen: []
+}, { id: 'REISE', _istReise: true, _intent: { type: 'travel' } });
+assert(problem && problem.code === 'arrival_evidence_leak',
+  'a travel scene must not perform the still-unawarded hotspot investigation');
+
+problem = context.validateSceneWorldTruth({
+  ort: 'Krauses Antiquitäten',
+  szene: 'Krause ist gerade erst weg. Hannelore wartet schweigend im Laden.',
+  personenImRaum: ['Hannelore Wirth'], optionen: []
+}, { id: 'REDEN' });
+assert(problem && problem.code === 'client_absence_unexplained',
+  'Krauses absence after his explicit departure needs a canonical time-continuity explanation');
+
+problem = context.validateSceneWorldTruth({
+  ort: 'Krauses Antiquitäten',
+  szene: 'Krause ist oben in seiner Wohnung und stellt die Verlustliste zusammen. Hannelore wartet schweigend im Laden.',
+  personenImRaum: ['Hannelore Wirth'], optionen: []
+}, { id: 'REDEN' });
+assert.strictEqual(problem, null, 'the explained Krause transition must remain legal');
+
+context.caseProgress = {
+  npcZustand: {
+    mertens: {
+      name: 'Oberleutnant Mertens',
+      status: 'uebergeben',
+      ort: 'Lagerhaus an der Spree',
+      seitSzene: 14
+    }
+  }
+};
+context.caseSetup = {};
+context.engineCurrentLocation = { name: 'Lagerhaus an der Spree' };
+context.getCaseLocations = () => [];
+
+problem = context.validateSceneWorldTruth({
   ort: 'Lagerhaus an der Spree',
   szene: 'Mertens schlägt Karl erneut mit der Faust.',
   personenImRaum: [],
