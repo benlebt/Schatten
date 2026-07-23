@@ -118,6 +118,15 @@ assert.strictEqual(reuterFutureDrift && reuterFutureDrift.code, 'historical_time
 assert.strictEqual(reuterTimelineContext._findHistoricalTimelineDrift({
   szene: 'Eine alte Zeitung blickt auf Reuters Staatsakt und Beisetzung vom 3. Oktober zurueck.'
 }), null, 'an explicitly retrospective Reuter reference after 3 October must remain valid');
+reuterTimelineContext.gameCurrentDate = '1953-10-01';
+assert.strictEqual(reuterTimelineContext._findHistoricalTimelineDrift({
+  szene: 'Ein RIAS-Bericht ueber die Beisetzung von Ernst Reuter dringt von draussen herein.'
+})?.code, 'historical_timeline_drift',
+  'an undated report treating the 3 October burial as completed on 1 October must be blocked');
+assert.strictEqual(reuterTimelineContext._findHistoricalTimelineDrift({
+  szene: 'RIAS berichtet ueber die Vorbereitungen fuer Reuters Beisetzung am 3. Oktober.'
+}), null, 'preparations for the explicitly future 3 October burial must remain valid on 1 October');
+reuterTimelineContext.gameCurrentDate = '1953-10-15';
 assert(reuterTimelineContext._historicalReuterPhaseFact('1953-10-15').includes('vom 3. Oktober zurueck'),
   'the enrichment example must switch to retrospective wording by the Kessler date');
 assert(reuterTimelineContext._historicalReuterPhaseFact('1953-10-02').includes('Vorbereitungen'),

@@ -205,6 +205,34 @@ possessionProblem = possessionContext._findPrematureTargetPossessionDrift({
 }, { _pendingIndizId: 'etui_im_lager' });
 assert.strictEqual(possessionProblem, null,
   'a visible but not yet secured target item must remain a valid discovery scene');
+const possessionFallbackContext = {
+  normForMatch,
+  engineCurrentLocation: { name: 'Stallschreiberstrasse 12' },
+  getTargetItemKeys: () => ['zigarettenetui', 'etui']
+};
+vm.createContext(possessionFallbackContext);
+vm.runInContext(sourceOf('enforceSceneWorldTruthFallback'), possessionFallbackContext);
+const fallbackScene = {
+  szene: 'Du steckst das Etui in deine Innentasche. Der Fall ist geklaert.',
+  inventar_hinzugefuegt: ['Silbernes Zigarettenetui'],
+  inventar_entfernt: [],
+  klient_berichtet: true,
+  diebesgut_zurueck: true,
+  wahrheit_erkannt: true,
+  optionen: []
+};
+possessionFallbackContext.enforceSceneWorldTruthFallback(fallbackScene, {
+  code: 'premature_target_possession',
+  targetName: 'Silbernes Zigarettenetui'
+});
+assert.strictEqual(fallbackScene.inventar_hinzugefuegt.length, 0,
+  'possession fallback must remove the target from model JSON inventory additions');
+assert.strictEqual(fallbackScene.klient_berichtet, false,
+  'a discovery click must not retain a model-authored client report');
+assert.strictEqual(fallbackScene.diebesgut_zurueck, false,
+  'a discovery click must not retain a model-authored theft completion flag');
+assert(html.includes('WELTWAHRHEIT-MEHRFACH-FALLBACK'),
+  'exhausted retries must sanitize every remaining hard truth violation, not only the first');
 const discoveryLeakContext = {
   caseProgress: {
     gefundeneIndizIds: ['frieda_ausweichend'],
