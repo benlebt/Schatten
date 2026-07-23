@@ -19,7 +19,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1425 +KrauseTerminalCalmGate-Staging'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1426 +KrauseSecureActionAlwaysVisible-Staging'"), 'release version missing');
 assert(html.includes('Liesl schenkte oder widmete das Etui 1939 Hugo'), 'Krause setup must bind the silver-case ownership direction');
 assert(html.includes('Karl zählt oder nimmt kein Geld, Karls Kasse bleibt unverändert'), 'Krause opening prompt must keep the return-contingent fee unpaid');
 assert(html.includes('Dramatisiere diese EINE Spur genau EINMAL'), 'explicit Haupt-UI clues must merge compact target and detailed payoff into one narration');
@@ -70,8 +70,8 @@ assert(!bornsteinBlock.includes("'nacht'"), 'Bornstein opening hours must not in
 const targetItemStart = html.indexOf("id: 'silbernes_zigarettenetui'", html.indexOf('function _baukastenZiele()'));
 assert(targetItemStart >= 0, 'silver cigarette case target missing');
 assert(html.slice(targetItemStart, targetItemStart + 500).includes("sonderAktion: 'diebesgut_sichern'"), 'stolen case needs a deterministic secure action');
-assert(html.slice(targetItemStart - 1000, targetItemStart + 500).includes("_hauptuiAngreifbarePersonen().length === 0"),
-  'the secure action must stay hidden while a living Krause blocker would make it a dead button');
+assert(!html.slice(targetItemStart - 1000, targetItemStart + 500).includes("_hauptuiAngreifbarePersonen().length === 0"),
+  'the secure action must remain visible; its click handles a living blocker instead of becoming dead');
 
 const itemVerbs = sourceOf('_hauptuiItemVerben');
 assert(itemVerbs.includes("encodeURIComponent(String(feind.id || feind.name || ''))"), 'item actions must encode a stable selected enemy key');
@@ -257,8 +257,12 @@ assert(sourceOf('_hauptuiKonfrontationItems').includes('ppkSchonGezogen'), 'the 
 assert(sourceOf('_hauptuiKonfrontationAbschliessen').includes('!istPpk'), 'PPK pressure must not become a cumulative knockout');
 assert(sourceOf('_hauptuiKonfrontationAbschliessen').includes('caseProgress.krauseLagerFreigegeben = true'),
   'finishing the full Krause group must persistently unlock the warehouse');
-assert(html.includes('caseProgress.krauseLagerFreigegeben === true'),
-  'the explicit Etui secure action must survive later model wording once the group is terminal');
+const mainTargets = sourceOf('_baukastenZiele');
+assert(mainTargets.includes("_gefunden.indexOf('etui_im_lager') !== -1"),
+  'the explicit Etui secure action must be driven by the concrete found clue');
+const secureTargetBranch = mainTargets.slice(mainTargets.indexOf('// v7.12.1426'), mainTargets.indexOf("id: 'robert_abpassen'"));
+assert(!secureTargetBranch.includes('_hauptuiAngreifbarePersonen'),
+  'active or stale opponents must never make the Etui secure action disappear');
 assert(sourceOf('buildNpcContinuityHint').includes('FRIEDLICH BINDEND'),
   'calmed NPCs must be forbidden from threatening or blocking Karl again in later prose');
 assert(sourceOf('_hauptuiKonfrontationAktion').includes('PPK GEZOGEN'), 'successful PPK narration must persist the one-use state');

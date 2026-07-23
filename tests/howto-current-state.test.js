@@ -34,6 +34,6 @@ const howto = html.slice(start, end);
   'Wirtin Rosa'
 ].forEach((stale) => assert(!howto.includes(stale), `stale how-to copy returned: ${stale}`));
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1425 +KrauseTerminalCalmGate-Staging'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1426 +KrauseSecureActionAlwaysVisible-Staging'"), 'release version missing');
 
 console.log('howto-current-state: ok');
