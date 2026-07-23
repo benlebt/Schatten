@@ -205,6 +205,16 @@ assert(problem && problem.code === 'evidence_scope_drift'
   'an awarded clue must reject invented clock, vehicle, and gait facts outside its definition');
 
 problem = context.validateSceneWorldTruth({
+  ort: context.engineCurrentLocation.name,
+  szene: 'Hannelore Wirth sagt: Es war kurz vor Mitternacht. Zwei Maenner wuchteten die schwere Tasche in einen Wagen, der ohne Licht am Ende der Gasse stand.',
+  personenImRaum: ['Hannelore Wirth'], optionen: []
+}, { id: 'NPC_sozial_geschichte', _pendingIndizId: 'nachbarin_aussage' });
+assert(problem && problem.code === 'evidence_scope_drift'
+    && problem.extras.includes('exakte Uhrzeit')
+    && problem.extras.includes('Fluchtfahrzeug'),
+  'midnight wording and natural loading verbs must not bypass the target-clue scope gate');
+
+problem = context.validateSceneWorldTruth({
   ort: 'Krauses Antiquitäten',
   szene: 'In der Vitrine zeichnet sich der Abdruck des Etuis ab. Das Schloss wurde mit einem einfachen Werkzeug aufgehebelt.',
   personenImRaum: ['Hannelore Wirth'], optionen: []
