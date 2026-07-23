@@ -74,6 +74,36 @@ problem = truthContext.validateSceneWorldTruth({
 }, { id: 'AKTEN' });
 assert.strictEqual(problem, null, 'a retrospective mention of Krause leaving must remain valid');
 
+const transitionOption = {
+  id: 'NPC_befragen',
+  _npcName: 'Theodor Krause',
+  _npcInteraktion: { npcName: 'Theodor Krause', verb: 'befragen' },
+  _clientDepartureAfterReply: 'Theodor Krause'
+};
+problem = truthContext.validateSceneWorldTruth({
+  ort: 'Karl Mauers B\u00fcro',
+  szene: 'Theodor Krause antwortet knapp auf Karls Frage. Dann setzt er den Hut auf, verabschiedet sich und verl\u00e4sst das B\u00fcro.',
+  personenImRaum: [],
+  optionen: []
+}, transitionOption);
+assert.strictEqual(problem, null, 'the selected client must answer before his departure becomes binding');
+problem = truthContext.validateSceneWorldTruth({
+  ort: 'Karl Mauers B\u00fcro',
+  szene: 'Theodor Krause ist bereits weg; nur der leere Sessel bleibt zur\u00fcck.',
+  personenImRaum: [],
+  optionen: []
+}, transitionOption);
+assert(problem && problem.code === 'client_reply_missing', 'a direct client action may not skip the actual reply');
+problem = truthContext.validateSceneWorldTruth({
+  ort: 'Karl Mauers B\u00fcro',
+  szene: 'Theodor Krause antwortet knapp auf Karls Frage und bleibt im Sessel sitzen.',
+  personenImRaum: ['Theodor Krause'],
+  optionen: []
+}, transitionOption);
+assert(problem && problem.code === 'client_departure_missing', 'the first assignment talk must narrate Krause leaving after the reply');
+assert(sourceOf('buildNpcContinuityHint').includes('_clientDepartureAfterReply'),
+  'the continuity prompt must defer Krause absence during the selected reply scene');
+
 const execute = sourceOf('_hauptuiExecute');
 const attackStart = execute.indexOf("if (verb === 'angreifen')");
 const attackEnd = execute.indexOf("if (verb === 'fesseln')", attackStart);
