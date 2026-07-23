@@ -70,6 +70,9 @@ context.getCaseLocations = () => [{
   }, {
     id: 'einbruch_fenster', quelle: 'umgebung',
     schluessel: ['fenster', 'aufgebrochen', 'aufgehebelt', 'stemmeisen', 'hinterhof', 'splittrig', 'kein profi']
+  }, {
+    id: 'etui_letzter_ort', quelle: 'umgebung',
+    schluessel: ['vitrine', 'etui', 'zigarettenetui', 'silber', 'gravur', 'hugo', 'liesl', 'staub', 'samt', 'schmuck']
   }]
 }];
 
@@ -95,6 +98,21 @@ problem = context.validateSceneWorldTruth({
 }, { id: 'REISE', _istReise: true, _intent: { type: 'travel' } });
 assert(problem && problem.code === 'arrival_evidence_leak',
   'a travel scene must not perform the still-unawarded hotspot investigation');
+
+problem = context.validateSceneWorldTruth({
+  ort: 'Krauses Antiquitäten',
+  szene: 'Eine leere Vitrine steht im Laden. Daneben wartet Hannelore schweigend.',
+  personenImRaum: ['Hannelore Wirth'], optionen: []
+}, { id: 'REISE', _istReise: true, _intent: { type: 'travel' } });
+assert.strictEqual(problem, null, 'an arrival may show a hotspot prop without interpreting its evidence');
+
+problem = context.validateSceneWorldTruth({
+  ort: 'Krauses Antiquitäten',
+  szene: 'Hannelore starrt auf den leeren Platz in der Vitrine, wo das Etui einst gelegen haben muss.',
+  personenImRaum: ['Hannelore Wirth'], optionen: []
+}, { id: 'REISE', _istReise: true, _intent: { type: 'travel' } });
+assert(problem && problem.code === 'arrival_evidence_leak',
+  'an arrival must not disclose the evidence relation reserved for the vitrinen hotspot click');
 
 problem = context.validateSceneWorldTruth({
   ort: 'Krauses Antiquitäten',
