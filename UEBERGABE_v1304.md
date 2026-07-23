@@ -224,7 +224,7 @@ Aktuelles Verhalten:
 - Das definierte Geständnisindiz `lange_gestaendnis` setzt Kurt deterministisch als Verantwortlichen.
 - Alte festgefahrene Saves mit bereits vorhandenem Geständnis werden repariert.
 - Für die Konfrontation in der Roten Laterne existiert ein eigenes Bild:
-  `assets/scenes/brandt/rote-laterne-kurt-konfrontation.png`.
+  `assets/scenes/brandt/rote-laterne-kurt-konfrontation.webp`.
 - Ein friedliches Angebot kann Kurt auf `beruhigt` setzen und beendet den Showdown.
 - Ein alter Save mit `Kurt Lange: beruhigt` wird beim Rendern synchronisiert; Kurt folgt nicht ins Büro oder in die Charité und blockiert den Abschluss nicht mehr.
 - Veraltete Angriffsklicks geben sichtbares Feedback statt wirkungslos zu bleiben.

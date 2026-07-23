@@ -28,15 +28,15 @@ assert(!/\.kessler-scene-visual\.is-night\s+img\s*\{/.test(html), 'night images 
 assert(!/\.kessler-scene-visual\.is-night::after\s*\{/.test(html), 'night images must not receive an extra darkness vignette');
 
 const nativeNightFiles = new Set([
-  'goldener-anker.png',
-  'rote-laterne.png',
-  'spielklub-roter-stern.png',
-  'keller-roter-stern.png',
-  'die-badewanne.png',
-  'charite-notaufnahme.png',
-  'doc-wagners-praxis.png',
-  'sbahnhof-friedrichstrasse.png',
-  'sbahnhof-alexanderplatz.png',
+  'goldener-anker.webp',
+  'rote-laterne.webp',
+  'spielklub-roter-stern.webp',
+  'keller-roter-stern.webp',
+  'die-badewanne.webp',
+  'charite-notaufnahme.webp',
+  'doc-wagners-praxis.webp',
+  'sbahnhof-friedrichstrasse.webp',
+  'sbahnhof-alexanderplatz.webp',
 ]);
 
 function norm(value) {

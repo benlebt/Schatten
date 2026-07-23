@@ -135,44 +135,44 @@ assert(!html.includes("/tante friedas hehlerei|stallschreiberstrasse 12/.test"),
   'shop and Stallschreiber courtyard must no longer share the old visual alias');
 const krauseSet = html.slice(html.indexOf("caseTest: /theodor krause"), html.indexOf("caseTest: /renate schiffer"));
 assert(krauseSet.includes('hardenbergstrasse'), 'Krause case must reuse the existing Hardenbergstrasse police image');
-assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'krause', 'tante-friedas-hehlerei-erika-day.png')),
+assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'krause', 'tante-friedas-hehlerei-erika-day.webp')),
   'Erika needs a truthful dedicated Hehlerei image');
-assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'krause', 'tante-friedas-hehlerei-after-day.png')),
+assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'krause', 'tante-friedas-hehlerei-after-day.webp')),
   'the cleared Hehlerei needs a post-custody image without removed NPCs');
 for (const asset of [
-  'tante-friedas-hehlerei-frieda-day.png',
-  'tante-friedas-hehlerei-kalle-jochen-night.png',
-  'stallschreiberstrasse-12-confrontation-day.png',
-  'stallschreiberstrasse-12-confrontation-night.png',
-  'stallschreiberstrasse-12-aftermath-day.png',
-  'stallschreiberstrasse-12-aftermath-night.png'
+  'tante-friedas-hehlerei-frieda-day.webp',
+  'tante-friedas-hehlerei-kalle-jochen-night.webp',
+  'stallschreiberstrasse-12-confrontation-day.webp',
+  'stallschreiberstrasse-12-confrontation-night.webp',
+  'stallschreiberstrasse-12-aftermath-day.webp',
+  'stallschreiberstrasse-12-aftermath-night.webp'
 ]) {
   assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'krause', asset)), 'missing Krause state image: ' + asset);
 }
 for (const asset of [
-  'stallschreiberstrasse-12-aftermath-group-day.png',
-  'stallschreiberstrasse-12-aftermath-group-night.png',
+  'stallschreiberstrasse-12-aftermath-group-day.webp',
+  'stallschreiberstrasse-12-aftermath-group-night.webp',
 ]) {
   assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'krause', asset)), 'missing Krause group aftermath image: ' + asset);
 }
 for (const asset of [
-  'stallschreiberstrasse-12-frieda-day.png',
-  'stallschreiberstrasse-12-frieda-night.png',
-  'stallschreiberstrasse-12-kalle-day.png',
-  'stallschreiberstrasse-12-kalle-night.png',
-  'stallschreiberstrasse-12-jochen-day.png',
-  'stallschreiberstrasse-12-jochen-night.png',
-  'stallschreiberstrasse-12-frieda-kalle-day.png',
-  'stallschreiberstrasse-12-frieda-kalle-night.png',
-  'stallschreiberstrasse-12-frieda-jochen-day.png',
-  'stallschreiberstrasse-12-frieda-jochen-night.png',
-  'stallschreiberstrasse-12-kalle-jochen-day.png',
-  'stallschreiberstrasse-12-kalle-jochen-night.png',
+  'stallschreiberstrasse-12-frieda-day.webp',
+  'stallschreiberstrasse-12-frieda-night.webp',
+  'stallschreiberstrasse-12-kalle-day.webp',
+  'stallschreiberstrasse-12-kalle-night.webp',
+  'stallschreiberstrasse-12-jochen-day.webp',
+  'stallschreiberstrasse-12-jochen-night.webp',
+  'stallschreiberstrasse-12-frieda-kalle-day.webp',
+  'stallschreiberstrasse-12-frieda-kalle-night.webp',
+  'stallschreiberstrasse-12-frieda-jochen-day.webp',
+  'stallschreiberstrasse-12-frieda-jochen-night.webp',
+  'stallschreiberstrasse-12-kalle-jochen-day.webp',
+  'stallschreiberstrasse-12-kalle-jochen-night.webp',
 ]) {
   assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'krause', asset)), 'missing exact courtyard roster image: ' + asset);
 }
-assert(html.includes("file: 'tante-friedas-hehlerei-erika-day.png'"), 'Erika image must be selected from real scene presence');
-assert(html.includes("file: 'tante-friedas-hehlerei-after-day.png'"), 'post-custody image must be selected from terminal NPC state');
+assert(html.includes("file: 'tante-friedas-hehlerei-erika-day.webp'"), 'Erika image must be selected from real scene presence');
+assert(html.includes("file: 'tante-friedas-hehlerei-after-day.webp'"), 'post-custody image must be selected from terminal NPC state');
 assert(html.includes("ROMANCE: 'Romanze'"), 'travel popup must translate the technical ROMANCE tag');
 assert(!html.includes('escapeHtml(npc.tag.toLowerCase())'), 'raw English NPC tags must not leak into the travel popup');
 
@@ -191,35 +191,35 @@ vm.createContext(visualContext);
 vm.runInContext(sourceOf('_krauseHehlereiNachherVisual'), visualContext);
 visualContext.roster = [{ name: 'Erika Kalewski' }];
 let visualSpec = visualContext._krauseHehlereiNachherVisual({});
-assert.strictEqual(visualSpec.file, 'tante-friedas-hehlerei-erika-day.png',
+assert.strictEqual(visualSpec.file, 'tante-friedas-hehlerei-erika-day.webp',
   'visible Erika must override stale location art with her dedicated scene');
 visualContext.roster = [{ name: 'Erika Kalewski' }, { name: 'Kalle' }, { name: 'Jochen' }];
-assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).file, 'tante-friedas-hehlerei-kalle-jochen-night.png',
+assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).file, 'tante-friedas-hehlerei-kalle-jochen-night.webp',
   'Erika must not hide the two active henchmen in the scene image');
 visualContext.roster = [{ name: 'Erika Kalewski' }, { name: 'Tante Frieda' }];
-assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).file, 'tante-friedas-hehlerei-frieda-day.png',
+assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).file, 'tante-friedas-hehlerei-frieda-day.webp',
   'Frieda must retain image priority over a calm companion portrait');
 visualContext.roster = [];
 visualSpec = visualContext._krauseHehlereiNachherVisual({});
-assert.strictEqual(visualSpec.file, 'tante-friedas-hehlerei-after-day.png',
+assert.strictEqual(visualSpec.file, 'tante-friedas-hehlerei-after-day.webp',
   'an actually empty shop must select the cleared scene');
 visualContext.roster = [{ name: 'Tante Frieda' }];
-assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).file, 'tante-friedas-hehlerei-frieda-day.png',
+assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).file, 'tante-friedas-hehlerei-frieda-day.webp',
   'Frieda alone must not display her two absent henchmen');
 visualContext.roster = [{ name: 'Kalle' }, { name: 'Jochen' }];
-assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).file, 'tante-friedas-hehlerei-kalle-jochen-night.png',
+assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).file, 'tante-friedas-hehlerei-kalle-jochen-night.webp',
   'night guards must not display absent Frieda');
 visualContext.engineCurrentLocation.name = 'Stallschreiberstrasse 12';
 visualContext.roster = [{ name: 'Tante Frieda' }, { name: 'Kalle' }, { name: 'Jochen' }];
-assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).dayFile, 'stallschreiberstrasse-12-confrontation-day.png',
+assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).dayFile, 'stallschreiberstrasse-12-confrontation-day.webp',
   'the three-person showdown must remain in the courtyard');
 for (const [names, expected] of [
-  [['Tante Frieda', 'Kalle'], 'stallschreiberstrasse-12-frieda-kalle-day.png'],
-  [['Tante Frieda', 'Jochen'], 'stallschreiberstrasse-12-frieda-jochen-day.png'],
-  [['Kalle', 'Jochen'], 'stallschreiberstrasse-12-kalle-jochen-day.png'],
-  [['Tante Frieda'], 'stallschreiberstrasse-12-frieda-day.png'],
-  [['Kalle'], 'stallschreiberstrasse-12-kalle-day.png'],
-  [['Jochen'], 'stallschreiberstrasse-12-jochen-day.png'],
+  [['Tante Frieda', 'Kalle'], 'stallschreiberstrasse-12-frieda-kalle-day.webp'],
+  [['Tante Frieda', 'Jochen'], 'stallschreiberstrasse-12-frieda-jochen-day.webp'],
+  [['Kalle', 'Jochen'], 'stallschreiberstrasse-12-kalle-jochen-day.webp'],
+  [['Tante Frieda'], 'stallschreiberstrasse-12-frieda-day.webp'],
+  [['Kalle'], 'stallschreiberstrasse-12-kalle-day.webp'],
+  [['Jochen'], 'stallschreiberstrasse-12-jochen-day.webp'],
 ]) {
   visualContext.roster = names.map(name => ({ name }));
   visualContext.states = {};
@@ -229,17 +229,17 @@ for (const [names, expected] of [
 visualContext.roster = [{ name: 'Tante Frieda' }, { name: 'Kalle' }, { name: 'Jochen' }];
 visualContext.caseProgress.activeConfrontation = { enemyEntries: [{ name: 'Tante Frieda' }, { name: 'Kalle' }, { name: 'Jochen' }] };
 visualContext.states.kalle = { status: 'ko', ort: 'Stallschreiberstrasse 12' };
-assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).dayFile, 'stallschreiberstrasse-12-frieda-jochen-day.png',
+assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).dayFile, 'stallschreiberstrasse-12-frieda-jochen-day.webp',
   'an ongoing group confrontation must show exactly the two opponents still standing');
 visualContext.caseProgress.activeConfrontation = null;
 visualContext.roster = [{ name: 'Kalle' }, { name: 'Jochen' }];
 visualContext.states['tante frieda'] = { status: 'geflohen', ort: 'Tante Friedas Hehlerei' };
 visualContext.states.kalle = null;
-assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).nightFile, 'stallschreiberstrasse-12-kalle-jochen-night.png',
+assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).nightFile, 'stallschreiberstrasse-12-kalle-jochen-night.webp',
   'a previously fled Frieda must not remain in the courtyard picture with Kalle and Jochen');
 visualContext.roster = [{ name: 'Jochen' }];
 visualContext.states.kalle = { status: 'geflohen', ort: 'Stallschreiberstrasse 12' };
-assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).nightFile, 'stallschreiberstrasse-12-jochen-night.png',
+assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).nightFile, 'stallschreiberstrasse-12-jochen-night.webp',
   'Jochen alone in Haupt-UI must also be the only opponent visible in the scene image');
 visualContext.roster = [{ name: 'Tante Frieda' }, { name: 'Kalle' }, { name: 'Jochen' }];
 visualContext.caseProgress.activeConfrontation = null;
@@ -247,14 +247,14 @@ visualContext.states.kalle = null;
 visualContext.states['tante frieda'] = { status: 'ko', ort: 'Stallschreiberstrasse 12' };
 visualContext.states.kalle = { status: 'geflohen', ort: 'Stallschreiberstrasse 12' };
 visualContext.states.jochen = { status: 'geflohen', ort: 'Stallschreiberstrasse 12' };
-assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).dayFile, 'stallschreiberstrasse-12-aftermath-day.png',
+assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).dayFile, 'stallschreiberstrasse-12-aftermath-day.webp',
   'defeated Frieda and escaped henchmen need the truthful courtyard aftermath');
 visualContext.states.kalle = { status: 'ko', ort: 'Stallschreiberstrasse 12' };
 visualContext.states.jochen = { status: 'ko', ort: 'Stallschreiberstrasse 12' };
-assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).dayFile, 'stallschreiberstrasse-12-aftermath-group-day.png',
+assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).dayFile, 'stallschreiberstrasse-12-aftermath-group-day.webp',
   'defeated but still-present Kalle and Jochen must remain visible beside Frieda');
 visualContext.states['tante frieda'] = { status: 'ko', ort: 'Tante Friedas Hehlerei' };
-assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).file, 'stallschreiberstrasse-12-night.png',
+assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).file, 'stallschreiberstrasse-12-night.webp',
   'a Frieda body left in the shop must not teleport into the courtyard image');
 
 const bodyContext = {

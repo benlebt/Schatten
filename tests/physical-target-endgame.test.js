@@ -36,9 +36,9 @@ const targetContext = {
       },
       visualStates: {
         rescuedAtTarget: {
-          file: 'lagerhalle-spree-gerettet.png',
-          dayFile: 'lagerhalle-spree-gerettet-day.png',
-          nightFile: 'lagerhalle-spree-gerettet-night.png',
+          file: 'lagerhalle-spree-gerettet.webp',
+          dayFile: 'lagerhalle-spree-gerettet-day.webp',
+          nightFile: 'lagerhalle-spree-gerettet-night.webp',
           root: 'assets/scenes/wegener/',
           place: 'Lagerhalle an der Spree'
         }

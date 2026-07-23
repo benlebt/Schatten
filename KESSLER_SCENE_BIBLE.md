@@ -10,7 +10,7 @@
 - Keine Kleidungsaenderung zwischen Orten. Keine sichtbare Waffe, kein Schal, keine Handschuhe.
 - Die Pose darf der Handlung folgen: stehen, gehen, sitzen oder sich vorbeugen.
 
-Verbindliche Bildreferenz: `assets/scenes/kessler/karl-mauer-reference.png`.
+Verbindliche Bildreferenz: `assets/scenes/kessler/karl-mauer-reference.webp`.
 
 ## Bildsprache
 
@@ -24,16 +24,16 @@ Verbindliche Bildreferenz: `assets/scenes/kessler/karl-mauer-reference.png`.
 
 | ID | Ort | Dramaturgischer Kern | Bilddatei |
 | --- | --- | --- | --- |
-| `hinterhof_sybelstrasse` | Hinterhof Sybelstrasse | Robert verschwindet; Pohl und Ilse beobachten den Hof | `hinterhof-sybelstrasse.png` |
-| `kessler_wohnung` | Kessler-Wohnung Charlottenburg | Edith wartet in einer buergerlichen, zu stillen Wohnung | `kessler-wohnung-charlottenburg.png` |
-| `spedition_schmidt` | Spedition Schmidt Moabit | Tetzlaff, Roberts Schreibtisch und das versteckte Briefchen | `spedition-schmidt-moabit.png` |
-| `karl_buero` | Karl Mauers Buero | Ost-Berliner Arbeitszimmer, Akten und Rueckzugsort | `karl-mauers-buero.png` |
-| `doc_wagner` | Doc Wagners Praxis | Nuechterne West-Berliner Arztpraxis und Versorgung | `doc-wagners-praxis.png` |
-| `cafe_wien` | Cafe Wien | Diskreter Marmortresen, Voss und Roberts Ecktisch | `cafe-wien.png` |
-| `polizei_hardenberg` | Polizei Hardenbergstrasse | West-Berliner Wache, Lindner und amtliche Distanz | `polizei-hardenbergstrasse.png` |
-| `bahnhof_charlottenburg` | Bahnhof Charlottenburg | Verkehr, Beschattung und moeglicher Rueckzug | `bahnhof-charlottenburg.png` |
-| `opel_olympia` | Karls Opel Olympia | Schwarzer Vorkriegswagen als mobiler Zwischenraum | `opel-olympia.png` |
-| `sbahnhof_friedrichstrasse` | S-Bahnhof Friedrichstrasse | Durchlaessige Sektorengrenze mit stiller Beobachtung | `sbahnhof-friedrichstrasse.png` |
+| `hinterhof_sybelstrasse` | Hinterhof Sybelstrasse | Robert verschwindet; Pohl und Ilse beobachten den Hof | `hinterhof-sybelstrasse.webp` |
+| `kessler_wohnung` | Kessler-Wohnung Charlottenburg | Edith wartet in einer buergerlichen, zu stillen Wohnung | `kessler-wohnung-charlottenburg.webp` |
+| `spedition_schmidt` | Spedition Schmidt Moabit | Tetzlaff, Roberts Schreibtisch und das versteckte Briefchen | `spedition-schmidt-moabit.webp` |
+| `karl_buero` | Karl Mauers Buero | Ost-Berliner Arbeitszimmer, Akten und Rueckzugsort | `karl-mauers-buero.webp` |
+| `doc_wagner` | Doc Wagners Praxis | Nuechterne West-Berliner Arztpraxis und Versorgung | `doc-wagners-praxis.webp` |
+| `cafe_wien` | Cafe Wien | Diskreter Marmortresen, Voss und Roberts Ecktisch | `cafe-wien.webp` |
+| `polizei_hardenberg` | Polizei Hardenbergstrasse | West-Berliner Wache, Lindner und amtliche Distanz | `polizei-hardenbergstrasse.webp` |
+| `bahnhof_charlottenburg` | Bahnhof Charlottenburg | Verkehr, Beschattung und moeglicher Rueckzug | `bahnhof-charlottenburg.webp` |
+| `opel_olympia` | Karls Opel Olympia | Schwarzer Vorkriegswagen als mobiler Zwischenraum | `opel-olympia.webp` |
+| `sbahnhof_friedrichstrasse` | S-Bahnhof Friedrichstrasse | Durchlaessige Sektorengrenze mit stiller Beobachtung | `sbahnhof-friedrichstrasse.webp` |
 
 ## Einsatzregel
 

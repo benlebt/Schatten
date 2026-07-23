@@ -189,7 +189,7 @@ assert(html.includes("if (/lilo brenner/i.test(npcName || '')) return 1;"), 'Lil
 assert(!html.includes("showProgressToast('Lange Nacht'"), 'fatigue guidance must stay in scene prose instead of a separate sleep toast');
 assert(html.includes('ZUSAMMENGEBROCHEN - FALL OFFEN'), 'zero-health ending must state clearly that the case remains unsolved');
 assert(html.includes('const CUSTODY_SCENE_IMAGE = {'), 'custody needs a dedicated interior scene image');
-assert(html.includes("file: 'hohenschoenhausen-zelle.png'"), 'custody scene must use the cell asset instead of the exterior gate');
+assert(html.includes("file: 'hohenschoenhausen-zelle.webp'"), 'custody scene must use the cell asset instead of the exterior gate');
 assert(html.includes('let spec = istGewahrsam ? CUSTODY_SCENE_IMAGE'), 'custody state must override ordinary location image matching');
 assert(html.includes("showProgressToast('Gleich bereit'"), 'execute must explain transient API locks instead of silently doing nothing');
 assert(html.includes("showProgressToast('Nicht erreichbar'"), 'execute must explain stale person targets instead of silently doing nothing');
@@ -731,7 +731,7 @@ assert(html.includes("'lilo brenner': { name: 'Lilo Brenners Wohnung in West-Ber
 assert(html.includes('caseProgress.romanceOvernight = {'), 'overnight location must persist as engine state');
 assert(html.includes('partnerPresent: _morgen.partnerPresent'), 'overnight state must persist whether the romance partner stayed');
 assert(html.includes('morningMode: _morgen.morningMode'), 'overnight state must persist the prose mode');
-assert(html.includes("? (ro.imageGone || 'morgen-wohnung-ost-allein.png')"), 'romance image must follow the stored morning presence');
+assert(html.includes("? (ro.imageGone || 'morgen-wohnung-ost-allein.webp')"), 'romance image must follow the stored morning presence');
 assert(html.includes("_romanceMorningPartnerStatus(scId, scName)"), 'temporary romance locations must override normal NPC location binding');
 assert(html.includes("root: 'assets/scenes/romance/'"), 'romance mornings must use dedicated scene images');
 assert(html.includes('if (caseProgress) caseProgress.romanceOvernight = null;'), 'travel must end the romance morning location state');
@@ -749,7 +749,7 @@ assert(html.includes("label: 'Näher kommen'"), 'romance action must use the cor
 ['rita', 'margot reinig', 'margit hollenbeck', 'annegret vogt-bauer', 'carla winter', 'erika kalewski', 'sonja krell', 'martha brommer', 'greta schliemann', 'dr. ruth kellner', 'lilo brenner', 'eva werder', 'liesel forsthuber'].forEach((name) => {
   assert(html.includes("'" + name + "': { name:"), 'missing deterministic overnight location for ' + name);
 });
-['morgen-wohnung-ost.png', 'morgen-wohnung-boheme.png', 'morgen-wohnung-west.png', 'morgen-wohnung-ost-allein.png', 'morgen-wohnung-boheme-allein.png', 'morgen-wohnung-west-allein.png'].forEach((file) => {
+['morgen-wohnung-ost.webp', 'morgen-wohnung-boheme.webp', 'morgen-wohnung-west.webp', 'morgen-wohnung-ost-allein.webp', 'morgen-wohnung-boheme-allein.webp', 'morgen-wohnung-west-allein.webp'].forEach((file) => {
   assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'romance', file)), 'missing romance morning image ' + file);
 });
 assert(html.includes("if (angebotPersonen.length && _hauptuiItemTaugt(item, 'anbieten')) add('anbieten', 'Biete an');"), 'offering an item must require a present peaceful NPC');

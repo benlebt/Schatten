@@ -2,11 +2,12 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const { readWebpDimensions } = require('./image-format-utils');
 
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1399 +Hetzner-Staging'"), 'version constant is stale');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1400 +WebP-Staging'"), 'version constant is stale');
 assert(html.includes("text: 'Fall abschließen und Auftraggeber informieren.'"), 'resolve button copy must stay player-facing');
 assert(html.includes('_enginePrompt: [_resolveText, _resolveTransitionPrompt]'), 'resolve direction must remain private');
 assert(!html.includes('resolveOpt.text += narr'), 'director narration must not leak into resolve button text');
@@ -282,20 +283,17 @@ for (const item of ['Stinkbombe im Blechmantel', 'Bündel Knallfrösche und Rake
 assert(html.includes("verbrauchbar: false"), 'reusable control gear needs explicit persistence');
 assert(html.includes("['werfen', 'werfen_fuesse', 'angreifen_mit', 'fesseln']"), 'confrontation consumption must understand handcuffs');
 
-const cellPath = path.join(root, 'assets', 'scenes', 'vogt', 'hohenschoenhausen-zelle.png');
+const cellPath = path.join(root, 'assets', 'scenes', 'vogt', 'hohenschoenhausen-zelle.webp');
 assert(fs.existsSync(cellPath), 'dedicated custody cell image is missing');
 for (const releaseAsset of [
-  'hohenschoenhausen-genslerstrasse.png',
-  'hohenschoenhausen-genslerstrasse-day.png',
-  'hohenschoenhausen-genslerstrasse-night.png',
+  'hohenschoenhausen-genslerstrasse.webp',
+  'hohenschoenhausen-genslerstrasse-day.webp',
+  'hohenschoenhausen-genslerstrasse-night.webp',
 ]) {
   assert(fs.existsSync(path.join(root, 'assets', 'scenes', 'vogt', releaseAsset)),
     'custody release asset is missing: ' + releaseAsset);
 }
-const png = fs.readFileSync(cellPath);
-assert.strictEqual(png.toString('ascii', 1, 4), 'PNG', 'custody cell asset is not a PNG');
-const width = png.readUInt32BE(16);
-const height = png.readUInt32BE(20);
+const { width, height } = readWebpDimensions(cellPath);
 assert(width >= 1200 && height >= 650, 'custody cell image is too small for the scene renderer');
 assert(Math.abs((width / height) - (16 / 9)) < 0.08, 'custody cell image must retain the cinematic 16:9 frame');
 assert(html.includes("place: 'MfS-Gewahrsam Hohenschoenhausen, Zelle 14'"), 'custody image needs a truthful interior location label');

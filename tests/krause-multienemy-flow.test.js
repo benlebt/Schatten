@@ -19,7 +19,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1399 +Hetzner-Staging'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1400 +WebP-Staging'"), 'release version missing');
 assert(html.includes('Liesl schenkte oder widmete das Etui 1939 Hugo'), 'Krause setup must bind the silver-case ownership direction');
 assert(html.includes('Karl zählt oder nimmt kein Geld, Karls Kasse bleibt unverändert'), 'Krause opening prompt must keep the return-contingent fee unpaid');
 assert(html.includes('Dramatisiere diese EINE Spur genau EINMAL'), 'explicit Haupt-UI clues must merge compact target and detailed payoff into one narration');
@@ -43,7 +43,7 @@ assert(html.includes('mitternacht|mittag|ein|eins'), 'scope validation must trea
 assert(html.includes('hievten|wuchteten|luden|warfen|verstauten|schoben'), 'scope validation must cover natural vehicle-loading verbs');
 assert(html.includes('uncaused_interior_reentry'), 'a non-travel action must not invent a second entrance into the same interior');
 assert(html.includes('keine erneute Ankunft, kein erneutes Betreten'), 'the persistent interior prompt must prevent re-entry loops at the source');
-assert(html.includes("file: 'karl-mauers-buero-theodor-day.png'"), 'Krause opening must show Theodor in Karl office');
+assert(html.includes("file: 'karl-mauers-buero-theodor-day.webp'"), 'Krause opening must show Theodor in Karl office');
 assert(html.includes("root: 'assets/scenes/krause/'"), 'Krause opening image must resolve from the case scene directory');
 assert(html.includes('AKTIONS-TREUE (ABSOLUT)'), 'physical and item actions need a strict narration contract');
 assert(html.includes('ZUSTANDS-TREUE (ABSOLUT)'), 'NPC battle states need a strict narration contract');
@@ -198,41 +198,41 @@ const ppkOutcome = ppkRollContext._konfrontationWuerfleAusgang({ name: 'Kalle' }
 assert.strictEqual(ppkOutcome.status, 'bedroht', 'even the best PPK roll must create pressure, not automatic flight');
 assert(!ppkRollContext._konfrontationStatusIstEndgueltig(ppkOutcome.status), 'drawing the PPK must leave the confrontation open');
 
-assert(html.includes("'stallschreiberstrasse-12-confrontation-day.png'"), 'Krause showdown needs a truthful daytime courtyard image');
-assert(html.includes("'stallschreiberstrasse-12-confrontation-night.png'"), 'Krause showdown needs a truthful nighttime courtyard image');
-assert(html.includes("'stallschreiberstrasse-12-confrontation-rex-day.png'"), 'Krause showdown needs its Rex daytime variant');
-assert(html.includes("'stallschreiberstrasse-12-confrontation-rex-night.png'"), 'Krause showdown needs its Rex nighttime variant');
+assert(html.includes("'stallschreiberstrasse-12-confrontation-day.webp'"), 'Krause showdown needs a truthful daytime courtyard image');
+assert(html.includes("'stallschreiberstrasse-12-confrontation-night.webp'"), 'Krause showdown needs a truthful nighttime courtyard image');
+assert(html.includes("'stallschreiberstrasse-12-confrontation-rex-day.webp'"), 'Krause showdown needs its Rex daytime variant');
+assert(html.includes("'stallschreiberstrasse-12-confrontation-rex-night.webp'"), 'Krause showdown needs its Rex nighttime variant');
 for (const asset of [
-  'tante-friedas-hehlerei-confrontation-rex-day.png',
-  'tante-friedas-hehlerei-confrontation-rex-night.png',
-  'stallschreiberstrasse-12-confrontation-rex-day.png',
-  'stallschreiberstrasse-12-confrontation-rex-night.png',
+  'tante-friedas-hehlerei-confrontation-rex-day.webp',
+  'tante-friedas-hehlerei-confrontation-rex-night.webp',
+  'stallschreiberstrasse-12-confrontation-rex-day.webp',
+  'stallschreiberstrasse-12-confrontation-rex-night.webp',
 ]) {
   assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'krause', asset)), 'missing Rex confrontation asset: ' + asset);
 }
 for (const asset of [
-  'stallschreiberstrasse-12-aftermath-group-day.png',
-  'stallschreiberstrasse-12-aftermath-group-night.png',
+  'stallschreiberstrasse-12-aftermath-group-day.webp',
+  'stallschreiberstrasse-12-aftermath-group-night.webp',
 ]) {
   assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'krause', asset)), 'missing group aftermath asset: ' + asset);
 }
 for (const asset of [
-  'stallschreiberstrasse-12-frieda-day.png',
-  'stallschreiberstrasse-12-frieda-night.png',
-  'stallschreiberstrasse-12-kalle-day.png',
-  'stallschreiberstrasse-12-kalle-night.png',
-  'stallschreiberstrasse-12-jochen-day.png',
-  'stallschreiberstrasse-12-jochen-night.png',
-  'stallschreiberstrasse-12-frieda-kalle-day.png',
-  'stallschreiberstrasse-12-frieda-kalle-night.png',
-  'stallschreiberstrasse-12-frieda-jochen-day.png',
-  'stallschreiberstrasse-12-frieda-jochen-night.png',
-  'stallschreiberstrasse-12-kalle-jochen-day.png',
-  'stallschreiberstrasse-12-kalle-jochen-night.png',
+  'stallschreiberstrasse-12-frieda-day.webp',
+  'stallschreiberstrasse-12-frieda-night.webp',
+  'stallschreiberstrasse-12-kalle-day.webp',
+  'stallschreiberstrasse-12-kalle-night.webp',
+  'stallschreiberstrasse-12-jochen-day.webp',
+  'stallschreiberstrasse-12-jochen-night.webp',
+  'stallschreiberstrasse-12-frieda-kalle-day.webp',
+  'stallschreiberstrasse-12-frieda-kalle-night.webp',
+  'stallschreiberstrasse-12-frieda-jochen-day.webp',
+  'stallschreiberstrasse-12-frieda-jochen-night.webp',
+  'stallschreiberstrasse-12-kalle-jochen-day.webp',
+  'stallschreiberstrasse-12-kalle-jochen-night.webp',
 ]) {
   assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'krause', asset)), 'missing exact courtyard roster asset: ' + asset);
 }
-assert(html.includes("dayFile: 'stallschreiberstrasse-12-aftermath-group-day.png'"), 'Krause finale needs a courtyard aftermath with every still-present body');
+assert(html.includes("dayFile: 'stallschreiberstrasse-12-aftermath-group-day.webp'"), 'Krause finale needs a courtyard aftermath with every still-present body');
 assert(sourceOf('_npcGehoertHierher').includes('_npcIstImAktuellenSzenenSnapshot'), 'the visible scene snapshot must survive a same-scene stage change');
 assert(sourceOf('_hauptuiKonfrontationItems').includes("'ppk_einsetzen'"), 'Karls Walther PPK must be selectable in the tactical confrontation');
 assert(sourceOf('_hauptuiKonfrontationItems').includes('ppkSchonGezogen'), 'the PPK draw needs an encounter-local one-use guard');

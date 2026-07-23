@@ -18,7 +18,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1399 +Hetzner-Staging'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1400 +WebP-Staging'"),
   'Brandt regression release version missing');
 
 for (const bad of [
@@ -353,7 +353,7 @@ assert(sourceOf('getNpcsAtCurrentLocation').includes('_showdownZustandAnrechnen'
 assert(html.includes("showProgressToast('Konflikt beendet'"),
   'a stale attack click against a calm opponent must give visible feedback instead of doing nothing');
 
-assert(fs.existsSync(path.join(root, 'assets', 'scenes', 'brandt', 'rote-laterne-kurt-konfrontation.png')),
+assert(fs.existsSync(path.join(root, 'assets', 'scenes', 'brandt', 'rote-laterne-kurt-konfrontation.webp')),
   'Kurt confrontation image asset is missing');
 const visualContext = {
   caseSetup: { klient: 'Anton Brandt', opfer: 'Erich Brandt', tat: 'Tod aufklären' },
@@ -367,7 +367,7 @@ const visualContext = {
 vm.createContext(visualContext);
 vm.runInContext(sourceOf('_brandtKurtKonfrontationVisual'), visualContext);
 const kurtVisual = visualContext._brandtKurtKonfrontationVisual();
-assert(kurtVisual && kurtVisual.file === 'rote-laterne-kurt-konfrontation.png',
+assert(kurtVisual && kurtVisual.file === 'rote-laterne-kurt-konfrontation.webp',
   'active Kurt confrontation must override the generic Rote Laterne still');
 
 console.log('brandt run regression tests passed');

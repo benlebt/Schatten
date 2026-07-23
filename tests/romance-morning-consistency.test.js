@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const { readWebpDimensions } = require('./image-format-utils');
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -30,8 +31,8 @@ vm.runInContext(html.slice(start, end) + '\nthis.romanceApi = { choose: _romance
 const api = context.romanceApi;
 const ritaLocation = api.location('Rita');
 assert(ritaLocation.name === 'Ritas Wohnung nahe dem Goldenen Anker', 'Rita location drifted');
-assert(ritaLocation.presentImage === 'morgen-wohnung-ost.png', 'Rita present image drifted');
-assert(ritaLocation.goneImage === 'morgen-wohnung-ost-allein.png', 'Rita gone image drifted');
+assert(ritaLocation.presentImage === 'morgen-wohnung-ost.webp', 'Rita present image drifted');
+assert(ritaLocation.goneImage === 'morgen-wohnung-ost-allein.webp', 'Rita gone image drifted');
 
 context.Math.random = () => 0.1;
 const stayed = api.choose('Rita', ritaLocation);
@@ -65,21 +66,20 @@ assert(html.includes('nach Hause fährt, schläft und am nächsten Morgen'), 'th
 assert(html.includes('dürfen in personenImRaum am Zielort NICHT erscheinen'), 'rejected NPCs must remain at the departed location');
 
 const imageFiles = [
-  'morgen-wohnung-ost.png', 'morgen-wohnung-ost-allein.png',
-  'morgen-wohnung-west.png', 'morgen-wohnung-west-allein.png',
-  'morgen-wohnung-boheme.png', 'morgen-wohnung-boheme-allein.png',
+  'morgen-wohnung-ost.webp', 'morgen-wohnung-ost-allein.webp',
+  'morgen-wohnung-west.webp', 'morgen-wohnung-west-allein.webp',
+  'morgen-wohnung-boheme.webp', 'morgen-wohnung-boheme-allein.webp',
 ];
 const dimensions = {};
 for (const file of imageFiles) {
   const imagePath = path.join(root, 'assets', 'scenes', 'romance', file);
   assert(fs.existsSync(imagePath), 'missing romance morning image ' + file);
-  const png = fs.readFileSync(imagePath);
-  assert(png.toString('ascii', 1, 4) === 'PNG', file + ' is not a PNG');
-  dimensions[file] = [png.readUInt32BE(16), png.readUInt32BE(20)];
+  const size = readWebpDimensions(imagePath);
+  dimensions[file] = [size.width, size.height];
 }
 for (const type of ['ost', 'west', 'boheme']) {
-  const present = dimensions['morgen-wohnung-' + type + '.png'];
-  const goneSize = dimensions['morgen-wohnung-' + type + '-allein.png'];
+  const present = dimensions['morgen-wohnung-' + type + '.webp'];
+  const goneSize = dimensions['morgen-wohnung-' + type + '-allein.webp'];
   assert(present[0] === goneSize[0] && present[1] === goneSize[1], type + ' present/gone images must have identical dimensions');
 }
 
