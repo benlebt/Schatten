@@ -67,6 +67,11 @@ haukeWindowProblem = pohlWindowContext._findKesslerWindowConversationDrift({
 assert.strictEqual(haukeWindowProblem, null,
   'a Hauke conversation anchored at the visible upper window must remain valid');
 haukeWindowProblem = pohlWindowContext._findKesslerWindowConversationDrift({
+  szene: 'Du siehst Frau Hauke im Hinterhof. Sie bleibt stehen und haelt ihre Mappe fest.'
+}, { _npcName: 'Frau Hauke' });
+assert(haukeWindowProblem && haukeWindowProblem.code === 'kessler_window_conversation_drift',
+  'an outside Hauke conversation without an explicit window anchor must be rejected');
+haukeWindowProblem = pohlWindowContext._findKesslerWindowConversationDrift({
   szene: 'Im dritten Stock oeffnet Frau Hauke ihre Wohnungstuer einen Spalt und bleibt im Hausflur.'
 }, { _npcName: 'Frau Hauke' });
 assert.strictEqual(haukeWindowProblem, null,
@@ -200,7 +205,7 @@ assert(html.includes('ABSCHLUSS-KONTINUITÄT (PFLICHT)'),
   'the finale prompt must prohibit replaying the previous accepted scene');
 assert(html.includes('Keine doppelte Schatten-Auflösung'),
   'the finale prompt must explicitly block the observed duplicate shadow payoff');
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1454 +CourtyardWindowTruth-Staging'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1455 +CourtyardWindowAnchor-Staging'"),
   'release version missing');
 
 console.log('KESSLER_FINALE_CONTINUITY_OK');
