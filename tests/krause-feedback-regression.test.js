@@ -244,6 +244,11 @@ let peaceProblem = peaceContext._findKrausePeaceReescalationDrift({
 assert(peaceProblem && peaceProblem.code === 'krause_peace_reescalation',
   'a completed peaceful group outcome must reject renewed knives and blocking');
 peaceProblem = peaceContext._findKrausePeaceReescalationDrift({
+  szene: 'Hinter dir hoerst du das metallische Klicken eines Schlagrings; Kalle hat sich nicht weit entfernt.'
+}, { _pendingIndizId: 'tasche_im_lager' });
+assert(peaceProblem && peaceProblem.code === 'krause_peace_reescalation',
+  'a completed peaceful outcome must also reject acoustic weapon reactivation');
+peaceProblem = peaceContext._findKrausePeaceReescalationDrift({
   szene: 'Du findest die schwere Tasche. Kalle, Jochen und Frieda beobachten dich finster, halten aber Abstand.'
 }, { _pendingIndizId: 'tasche_im_lager' });
 assert.strictEqual(peaceProblem, null,
