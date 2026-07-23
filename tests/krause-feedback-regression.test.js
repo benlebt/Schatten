@@ -205,6 +205,27 @@ possessionProblem = possessionContext._findPrematureTargetPossessionDrift({
 }, { _pendingIndizId: 'etui_im_lager' });
 assert.strictEqual(possessionProblem, null,
   'a visible but not yet secured target item must remain a valid discovery scene');
+const discoveryLeakContext = {
+  caseProgress: {
+    gefundeneIndizIds: ['frieda_ausweichend'],
+    targetItemState: { name: 'Silbernes Zigarettenetui', status: 'unknown' }
+  },
+  caseSetup: { caseType: 'diebstahl' },
+  normForMatch,
+  getTargetItemKeys: () => ['zigarettenetui', 'etui']
+};
+vm.createContext(discoveryLeakContext);
+vm.runInContext(sourceOf('_findPrematureTargetDiscoveryLeak'), discoveryLeakContext);
+let discoveryLeak = discoveryLeakContext._findPrematureTargetDiscoveryLeak({
+  szene: 'Das silberne Zigarettenetui liegt nur ein paar Schritte entfernt auf einem alten Holzkasten.'
+}, { id: 'BERUHIGEN' });
+assert(discoveryLeak && discoveryLeak.code === 'premature_target_discovery',
+  'dialogue and conflict beats must not physically reveal the target before its bound discovery click');
+discoveryLeak = discoveryLeakContext._findPrematureTargetDiscoveryLeak({
+  szene: 'Du erinnerst dich an den Auftrag, das silberne Zigarettenetui zu finden.'
+}, { id: 'BERUHIGEN' });
+assert.strictEqual(discoveryLeak, null,
+  'abstract references to the still-missing target must remain allowed');
 const peaceContext = {
   caseProgress: { krauseLagerFreigegeben: true },
   caseSetup: { caseType: 'diebstahl' },
@@ -284,6 +305,8 @@ const missingFriedaProblem = friedasArrivalContext._findArrivalNpcRosterDrift({
 }, { _istReise: true });
 assert(missingFriedaProblem && missingFriedaProblem.missingProse.includes('Tante Frieda'),
   'canonical non-optional location principals must be checked even before the later UI roster adds them');
+assert(sourceOf('validateSceneWorldTruth').includes('brennender|stechender'),
+  'offscreen injury truth must reject retrospective pain caused by an invented earlier scuffle');
 const theftStateSource = sourceOf('processTheftTargetState');
 assert(theftStateSource.includes("pendingChosenOption._pendingIndizId === 'etui_im_lager'"),
   'the theft state processor must not promote the Krause discovery click to physical possession');
