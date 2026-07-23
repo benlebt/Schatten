@@ -56,6 +56,7 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 
 - Wiederholungen wie `nagelt müde`, `Kopfsteinpflaster`, `Zigarillo`, `Bohnerwachs`, `Dämmerung wirft Schatten` und verwandte Motive runweit zählen.
 - Wiederkehrende Anfahrts-, Motor-, Tür-, Rauch-, Wetter- und Schmerzschablonen markieren.
+- Lange Erzählabsätze dürfen nicht als vollständige direkte Rede in einem äußeren ASCII-Anführungszeichenpaar stehen. Der Sanitizer muss neben Pronomen-/Artikelanfängen auch einen aktuellen Cast-Namen als narrativen Absatzanfang erkennen; echte kurze Repliken und innere Dialog-Anführungszeichen bleiben erhalten.
 - Stil-Tics klar von Logikfehlern trennen.
 - Bewusst wiederholte Indiz-Motive nicht als Pumphrase entfernen, wenn ihre Wiederkehr Beweisfunktion oder Payoff hat.
 - Diagnose-Hardcaps gegen den tatsächlichen Text prüfen: Hat der Filter den richtigen Satz entfernt, oder Bedeutung beschädigt?

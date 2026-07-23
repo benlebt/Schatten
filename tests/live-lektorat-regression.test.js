@@ -672,7 +672,7 @@ assert(sourceOf('fixSprache').includes(".replace(/\\b([Dd])u rappelt\\b/g, '$1u 
   'the observed du rappelt conjugation error must be corrected conservatively');
 assert(html.includes('ALKOHOLZUSTAND (HARTE ENGINE-WAHRHEIT)'),
   'a sober sleep action must explicitly forbid invented drinking and hangover prose');
-const languageContext = {};
+const languageContext = { caseSetup: { setupCast: [{ name: 'Edith Kessler' }, { name: 'Robert Kessler' }] } };
 vm.createContext(languageContext);
 vm.runInContext(sourceOf('stripAccidentalNarrativeQuotes'), languageContext);
 vm.runInContext(sourceOf('fixSprache'), languageContext);
@@ -687,6 +687,9 @@ assert.strictEqual(languageContext.fixSprache('Dein Auftraggeberin wartet.'), 'D
 const wrappedNarration = '"Du gehst auf den Eingang zu. ' + 'Die Messingschilder haengen schief und du pruefst jeden Namen sorgfaeltig. '.repeat(3) + 'Robert bleibt im Hof."';
 assert(!languageContext.fixSprache(wrappedNarration).startsWith('"') && !languageContext.fixSprache(wrappedNarration).endsWith('"'),
   'a fully quote-wrapped narrative paragraph must lose only its accidental outer quotes');
+const namedOpeningNarration = '"Edith Kessler zahlt gut, aber sie will Gewissheit: ' + 'Du folgst Robert durch Charlottenburg und ordnest den Auftrag im kuehlen Hinterhof. '.repeat(3) + 'Du wartest auf seinen naechsten Schritt."';
+assert(!languageContext.fixSprache(namedOpeningNarration).startsWith('"') && !languageContext.fixSprache(namedOpeningNarration).endsWith('"'),
+  'a quote-wrapped opening that begins with a current cast name must also lose its accidental outer quotes');
 const wrappedWithDialogue = '"Du gehst auf Robert zu. ' + 'Der Hof bleibt still, waehrend du jeden seiner Schritte beobachtest. '.repeat(3) + '"Was wollen Sie?", fragt Robert."';
 assert(!languageContext.fixSprache(wrappedWithDialogue).startsWith('"') && languageContext.fixSprache(wrappedWithDialogue).includes('"Was wollen Sie?"'),
   'outer narrative quotes must be removed even when genuine dialogue quotes remain inside');
