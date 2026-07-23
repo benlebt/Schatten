@@ -249,6 +249,41 @@ arrivalRosterProblem = arrivalRosterContext._findArrivalNpcRosterDrift({
 }, { _istReise: true });
 assert.strictEqual(arrivalRosterProblem, null,
   'matching arrival prose and NPC roster must remain valid');
+const friedasArrivalContext = {
+  normForMatch,
+  caseProgress: { stage: 2 },
+  engineCurrentLocation: { name: 'Tante Friedas Hehlerei' },
+  gameTimeIdx: 4,
+  TIMES_OF_DAY: ['morgen', 'vormittag', 'mittag', 'nachmittag', 'abend', 'nacht'],
+  getNpcsAtCurrentLocation: () => [
+    { id: 'kalle', name: 'Kalle' },
+    { id: 'jochen', name: 'Jochen' }
+  ],
+  getCaseLocations: () => [{
+    name: 'Tante Friedas Hehlerei',
+    npcs: [
+      { id: 'tante_frieda', zeit: ['abend'], bisStage: 2 },
+      { id: 'kalle', zeit: ['abend'], bisStage: 2 },
+      { id: 'jochen', zeit: ['abend'], bisStage: 2 }
+    ]
+  }],
+  _npcAbkoemmlich: id => id !== 'tante_frieda',
+  _resolveNpcIdentity: id => ({
+    id,
+    name: ({ tante_frieda: 'Tante Frieda', kalle: 'Kalle', jochen: 'Jochen' })[id]
+  }),
+  _npcZustandIstEntfernt: () => false,
+  _worldTruthAliases: (value, entry) => [normForMatch((entry && entry.name) || value)],
+  _worldTruthHasAlias: (text, aliases) => aliases.some(alias => normForMatch(text).includes(alias))
+};
+vm.createContext(friedasArrivalContext);
+vm.runInContext(sourceOf('_findArrivalNpcRosterDrift'), friedasArrivalContext);
+const missingFriedaProblem = friedasArrivalContext._findArrivalNpcRosterDrift({
+  szene: 'Kalle und Jochen lehnen am Tresen und mustern dich.',
+  personenImRaum: ['Kalle', 'Jochen']
+}, { _istReise: true });
+assert(missingFriedaProblem && missingFriedaProblem.missingProse.includes('Tante Frieda'),
+  'canonical non-optional location principals must be checked even before the later UI roster adds them');
 const theftStateSource = sourceOf('processTheftTargetState');
 assert(theftStateSource.includes("pendingChosenOption._pendingIndizId === 'etui_im_lager'"),
   'the theft state processor must not promote the Krause discovery click to physical possession');
