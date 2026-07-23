@@ -196,10 +196,20 @@ possessionProblem = possessionContext._findPrematureTargetPossessionDrift({
 assert(possessionProblem && possessionProblem.code === 'premature_target_possession',
   'anaphoric drawing and possession language around the named target must be rejected');
 possessionProblem = possessionContext._findPrematureTargetPossessionDrift({
+  szene: 'Das silberne Zigarettenetui liegt offen vor dir. Kalle steht im Tuerrahmen, seine Augen auf das Etui in deiner Hand gerichtet.'
+}, { _pendingIndizId: 'etui_im_lager' });
+assert(possessionProblem && possessionProblem.code === 'premature_target_possession',
+  'the exact live wording "Etui in deiner Hand" must be rejected before the secure click');
+possessionProblem = possessionContext._findPrematureTargetPossessionDrift({
   szene: 'Unter der Plane erkennst du das silberne Etui. Frieda blockiert den Zugriff; es bleibt am Fundort.'
 }, { _pendingIndizId: 'etui_im_lager' });
 assert.strictEqual(possessionProblem, null,
   'a visible but not yet secured target item must remain a valid discovery scene');
+const theftStateSource = sourceOf('processTheftTargetState');
+assert(theftStateSource.includes("pendingChosenOption._pendingIndizId === 'etui_im_lager'"),
+  'the theft state processor must not promote the Krause discovery click to physical possession');
+assert(theftStateSource.includes('removeTargetItemFromInventory(_tName)'),
+  'a model-invented target inventory entry must be removed until the explicit secure click');
 for (const asset of [
   'stallschreiberstrasse-12-aftermath-group-day.webp',
   'stallschreiberstrasse-12-aftermath-group-night.webp',
