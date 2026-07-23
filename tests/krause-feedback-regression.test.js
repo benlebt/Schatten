@@ -143,8 +143,10 @@ for (const asset of [
   'tante-friedas-hehlerei-frieda-day.webp',
   'tante-friedas-hehlerei-kalle-jochen-night.webp',
   'tante-friedas-hehlerei-kalle-night.webp',
-  'krauses-antiquitaeten-evidence-day.webp',
-  'krauses-antiquitaeten-evidence-night.webp',
+  'krauses-antiquitaeten-day.webp',
+  'krauses-antiquitaeten-night.webp',
+  'krauses-antiquitaeten-hannelore-day.webp',
+  'krauses-antiquitaeten-hannelore-night.webp',
   'stallschreiberstrasse-12-confrontation-day.webp',
   'stallschreiberstrasse-12-confrontation-night.webp',
   'stallschreiberstrasse-12-aftermath-day.webp',
@@ -152,6 +154,26 @@ for (const asset of [
 ]) {
   assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'krause', asset)), 'missing Krause state image: ' + asset);
 }
+const tatortVisualContext = {
+  normForMatch,
+  caseSetup: { caseType: 'diebstahl', klient: 'Theodor Krause' },
+  engineCurrentLocation: { name: 'Krauses Antiquitaeten' },
+  roster: [],
+  getNpcsAtCurrentLocation: () => tatortVisualContext.roster,
+  _npcZustandIstEntfernt: () => false
+};
+vm.createContext(tatortVisualContext);
+vm.runInContext(sourceOf('_krauseTatortVisual'), tatortVisualContext);
+tatortVisualContext.roster = [{ name: 'Hannelore Wirth' }];
+let tatortSpec = tatortVisualContext._krauseTatortVisual({ personenImRaum: [] });
+assert.strictEqual(tatortSpec.dayFile, 'krauses-antiquitaeten-hannelore-day.webp',
+  'Hannelore must be visible in the daytime crime-scene image while she is physically present');
+assert.strictEqual(tatortSpec.nightFile, 'krauses-antiquitaeten-hannelore-night.webp',
+  'Hannelore must be visible in the nighttime crime-scene image while she is physically present');
+tatortVisualContext.roster = [];
+tatortSpec = tatortVisualContext._krauseTatortVisual({ personenImRaum: [] });
+assert.strictEqual(tatortSpec.dayFile, 'krauses-antiquitaeten-day.webp',
+  'the empty crime scene must retain the shattered flat display cases');
 for (const asset of [
   'stallschreiberstrasse-12-aftermath-group-day.webp',
   'stallschreiberstrasse-12-aftermath-group-night.webp',
