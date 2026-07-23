@@ -383,6 +383,15 @@ assert.strictEqual(problem, null, 'the awarded witness clue must be dramatized a
 
 problem = context.validateSceneWorldTruth({
   ort: 'Krauses Antiquitäten',
+  szene: 'Hannelore Wirth sagt: Zwei Männer kamen mit einer schweren Tasche aus dem Hinterhof. Als sie in den Wagen stiegen, zog ich mich vom Fenster zurück.',
+  personenImRaum: ['Hannelore Wirth'], optionen: []
+}, { id: 'NPC_sozial_ehrlich', _pendingIndizId: 'nachbarin_aussage' });
+assert(problem && problem.code === 'evidence_scope_drift'
+    && problem.extras.includes('Fluchtfahrzeug'),
+  'the definite-article phrase "in den Wagen stiegen" must not bypass the target-clue scope gate');
+
+problem = context.validateSceneWorldTruth({
+  ort: 'Krauses Antiquitäten',
   szene: 'Hannelore Wirth sagt, dass sie kurz nach drei zwei Männer mit einer schweren Tasche sah, die einen dunklen Wagen ohne Licht nahmen; einer hinkte.',
   personenImRaum: ['Hannelore Wirth'], optionen: []
 }, { id: 'NPC_sozial_ehrlich', _pendingIndizId: 'nachbarin_aussage' });
