@@ -425,4 +425,28 @@ assert.strictEqual(confrontationContext._konfrontationAktiv(), false,
 assert.strictEqual(confrontationContext.clearReason, 'npc-terminalzustand',
   'stale confrontation state must be actively cleared');
 
+const fixedInteriorContext = {
+  caseProgress: { reiseLog: [] },
+  engineCurrentLocation: { name: 'Karl Mauers Buero' },
+  normForMatch,
+  _istKesslerFallFuerBild: () => true,
+  _kesslerBildIstInnenraum: () => true,
+  _kesslerInnenraumTextPasst: text => /\b(?:buero|innenraum)\b/.test(normForMatch(text))
+};
+vm.createContext(fixedInteriorContext);
+vm.runInContext(sourceOf('_findFixedInteriorImageDrift'), fixedInteriorContext);
+assert.strictEqual(fixedInteriorContext._findFixedInteriorImageDrift({
+  ort: 'Karl Mauers Buero',
+  szene: 'Theodor Krause nennt die Gravur und verabschiedet sich.',
+  personenImRaum: []
+}, { id: 'NPC_befragen', _npcName: 'Theodor Krause' }), null,
+  'an ongoing social scene may leave its already established interior implicit');
+const sparseArrival = fixedInteriorContext._findFixedInteriorImageDrift({
+  ort: 'Karl Mauers Buero',
+  szene: 'Theodor Krause wartet am Gehweg.',
+  personenImRaum: ['Theodor Krause']
+}, { id: 'REISE', _istReise: true, _intent: { type: 'travel' } });
+assert(sparseArrival && sparseArrival.code === 'fixed_interior_image_drift',
+  'a travel arrival must still establish and end in the fixed interior image');
+
 console.log('WORLD_TRUTH_HARD_GUARD_OK');
