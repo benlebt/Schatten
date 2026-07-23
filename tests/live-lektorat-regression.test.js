@@ -293,6 +293,24 @@ const causedHallwayDrift = worldContext.validateSceneWorldTruth({
 assert.strictEqual(causedHallwayDrift && causedHallwayDrift.code, 'social_interior_drift',
   'an NPC causing Karl to enter the hallway must count as the same outdoor-to-indoor teleport');
 
+worldContext.engineCurrentLocation = { name: 'Krauses Antiquitaeten' };
+const npcSublocationDrift = worldContext.validateSceneWorldTruth({
+  ort: 'Krauses Antiquitaeten',
+  szene: 'Du pruefst den Staubrand der Vitrine. Hannelore Wirth im Vorderhaus verstummt, ihre Schritte auf der Diele darueber halten inne.',
+  personenImRaum: ['Hannelore Wirth'],
+  optionen: []
+}, { id: 'HAUPTUI_INDRAMATISIERUNG_etui_letzter_ort', kategorie: 'BEOBACHTEN' });
+assert.strictEqual(npcSublocationDrift && npcSublocationDrift.code, 'npc_sublocation_drift',
+  'a roster NPC must not teleport to a remote sublocation while remaining present and clickable');
+assert.strictEqual(worldContext.validateSceneWorldTruth({
+  ort: 'Krauses Antiquitaeten',
+  szene: 'Hannelore Wirth, die Nachbarin aus dem Vorderhaus, steht neben der leeren Vitrine im Laden.',
+  personenImRaum: ['Hannelore Wirth'],
+  optionen: []
+}, { id: 'HAUPTUI_INDRAMATISIERUNG_etui_letzter_ort', kategorie: 'BEOBACHTEN' }), null,
+  'an origin description such as aus dem Vorderhaus must not be mistaken for a present sublocation');
+worldContext.engineCurrentLocation = { name: 'Hinterhof Sybelstrasse' };
+
 const apartmentDoorDrift = worldContext.validateSceneWorldTruth({
   ort: 'Hinterhof Sybelstrasse',
   szene: 'Du klopfst leise an die Wohnungstuer im dritten Stock. Frau Hauke oeffnet einen Spalt.',

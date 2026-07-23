@@ -40,6 +40,7 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 - Gilt auch die Gegenrichtung: Eine reine Reise-/Ankunftsszene darf ein noch nicht mechanisch vergebenes Kern-Indiz weder durch eine vollständige Zeugen-Aussage noch durch eine vorweggenommene Hotspot-Untersuchung ausspielen. Sichtbare Requisiten und ein erkennbar wissender NPC sind erlaubt; auch eine Objekt–Beweis-Relation wie „die Stelle in der Vitrine, wo das Etui lag“ ist aber bereits ein Fund und bleibt bis zum gebundenen Klick gesperrt. Konkrete Täterzahl, Tatzeit, Fluchtrichtung, Werkzeugschluss, Gravur oder andere Beweisdetails ebenfalls erst danach. Exportzählung, Popup und Prosa müssen denselben Fundzeitpunkt zeigen.
 - Erzeugt ein nachträglich per Fallback eingefügtes Geständnis eine redundante zweite Geständnisszene?
 - Bleibt eine Figur, die den Ort ausdrücklich verlässt, in der Folgeszene ohne erklärte Rückkehr verschwunden?
+- Bleibt auch der Subort einer weiterhin anwesenden Figur stabil? Wer im Laden neben Karl steht und in `personenImRaum` anklickbar bleibt, darf nicht ohne sichtbaren Abgang plötzlich „im Vorderhaus“, „in ihrer Wohnung“ oder „auf der Diele darüber“ handeln. Eine Herkunftsangabe wie „die Nachbarin aus dem Vorderhaus“ ist dagegen kein Ortswechsel.
 - `W6-BLOCK`, NPC-Terminalzustände und `ORT-PROSA-BRUCH` immer gegen den echten Szenentext verifizieren.
 
 ### 2. Historische Fakten: Korrektheit und Interessantheit
