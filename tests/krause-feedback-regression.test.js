@@ -174,6 +174,27 @@ tatortVisualContext.roster = [];
 tatortSpec = tatortVisualContext._krauseTatortVisual({ personenImRaum: [] });
 assert.strictEqual(tatortSpec.dayFile, 'krauses-antiquitaeten-day.webp',
   'the empty crime scene must retain the shattered flat display cases');
+const possessionContext = {
+  caseProgress: { targetItemState: { name: 'Silbernes Zigarettenetui', status: 'located' } },
+  normForMatch,
+  _findeIndizById: id => id === 'etui_im_lager' ? {
+    id,
+    text: 'Unter einer Plane liegt das silberne Zigarettenetui. Jetzt muss Karl es nur noch sichern.'
+  } : null,
+  getTargetItemKeys: () => ['zigarettenetui', 'etui']
+};
+vm.createContext(possessionContext);
+vm.runInContext(sourceOf('_findPrematureTargetPossessionDrift'), possessionContext);
+let possessionProblem = possessionContext._findPrematureTargetPossessionDrift({
+  szene: 'Du ziehst das silberne Etui hervor. Es ist Krauses Erbstueck. Du schiebst es in deine Innentasche.'
+}, { _pendingIndizId: 'etui_im_lager' });
+assert(possessionProblem && possessionProblem.code === 'premature_target_possession',
+  'the discovery click must not narrate the separate physical securing action');
+possessionProblem = possessionContext._findPrematureTargetPossessionDrift({
+  szene: 'Unter der Plane erkennst du das silberne Etui. Frieda blockiert den Zugriff; es bleibt am Fundort.'
+}, { _pendingIndizId: 'etui_im_lager' });
+assert.strictEqual(possessionProblem, null,
+  'a visible but not yet secured target item must remain a valid discovery scene');
 for (const asset of [
   'stallschreiberstrasse-12-aftermath-group-day.webp',
   'stallschreiberstrasse-12-aftermath-group-night.webp',
