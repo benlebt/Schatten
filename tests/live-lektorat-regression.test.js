@@ -1201,7 +1201,8 @@ evidenceFallbackContext.enforceSceneWorldTruthFallback(krauseArrivalFallbackScen
   code: 'fixed_interior_image_drift',
   firstVisit: true
 });
-assert(krauseArrivalFallbackScene.szene.includes('leere Glasvitrine')
+assert(krauseArrivalFallbackScene.szene.includes('zerschlagenen flachen Schauvitrinen')
+  && krauseArrivalFallbackScene.szene.includes('unversehrte stehende Glasvitrine an der Rückwand')
   && krauseArrivalFallbackScene.szene.includes('aufgebrochene Hinterhoffenster')
   && !/sichtbare Ansatzpunkte|Niemand hier gibt vor|dargestellten Innenraum|eigentliche Szene/i.test(krauseArrivalFallbackScene.szene),
   'Krause arrival fallback must stay natural and must not expose repair-language');

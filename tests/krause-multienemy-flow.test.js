@@ -19,14 +19,19 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1415 +ReuterTimeline-Staging'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1416 +KrauseVisualTruth-Staging'"), 'release version missing');
 assert(html.includes('Liesl schenkte oder widmete das Etui 1939 Hugo'), 'Krause setup must bind the silver-case ownership direction');
 assert(html.includes('Karl zählt oder nimmt kein Geld, Karls Kasse bleibt unverändert'), 'Krause opening prompt must keep the return-contingent fee unpaid');
 assert(html.includes('Dramatisiere diese EINE Spur genau EINMAL'), 'explicit Haupt-UI clues must merge compact target and detailed payoff into one narration');
 assert(html.includes('OFFENE OBJEKTWAHRHEIT (HART, KEIN INDIZ-PAYOFF)'), 'every pre-clue scene must preserve visible hotspot truth, including client dialogue');
-assert(html.includes("vorabObjektwoerter: ['vitrine','glasvitrine','vitrinenglas']"), 'Krauses intact display case must expose a data-driven arrival truth guard');
-assert(html.includes("'aufgebrochen','aufgehebelt'") && html.includes("'gewaltsam geoeffnet'"), 'Krauses intact display case guard must reject natural forced-open synonyms');
-assert(html.includes('die intakte Vitrine leer geräumt'), 'the Krause scene map must agree that the empty display case glass is intact');
+assert(html.includes("vorabObjektwoerter: ['stehende glasvitrine','stehenden glasvitrine','rueckwandvitrine','vitrine an der rueckwand']"),
+  'Krauses intact rear cabinet guard must not misclassify the visibly shattered flat display tables');
+assert(html.includes("'aufgebrochen','aufgehebelt'") && html.includes("'gewaltsam geoeffnet'"),
+  'Krauses intact rear cabinet guard must reject natural forced-open synonyms');
+assert(html.includes('die flachen Schauvitrinen sind aufgebrochen; die stehende Rückwandvitrine blieb unversehrt'),
+  'the Krause scene map must distinguish the shattered flat showcases from the intact rear cabinet');
+assert(html.includes('Die beiden flachen Schauvitrinen in der Ladenmitte sind zerschlagen. Die stehende Glasvitrine an der Rückwand ist dagegen unversehrt'),
+  'the bound clue prose must explicitly agree with the canonical scene image');
 assert(html.includes('habe|hatte|konnte'), 'arrival witness validation must cover German perfect infinitive phrasing');
 assert(html.includes("indiz.id !== 'einbruch_fenster'"), 'the Krause window clue must configure a visible prose anchor');
 assert(html.includes('sprechen eindeutig für ein Stemmeisen'), 'the hard fallback must restore the defining tool conclusion before booking');
