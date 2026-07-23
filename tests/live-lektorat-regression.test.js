@@ -1071,6 +1071,21 @@ const socialToneBecamePhysical = worldContext.validateSceneWorldTruth({
 assert.strictEqual(socialToneBecamePhysical && socialToneBecamePhysical.code, 'social_tone_became_physical',
   'a verbal public-exposure tone must never become an unchosen physical assault');
 
+const verbalPressureGrabbedRevers = worldContext.validateSceneWorldTruth({
+  ort: 'Spedition Schmidt Moabit',
+  szene: 'Du packst Norbert Tetzlaff am Revers. Die billige Stoffqualität knirscht unter deinem Griff.',
+  personenImRaum: ['Norbert Tetzlaff'],
+  optionen: []
+}, {
+  _zeitUnmittelbar: true,
+  _npcName: 'Norbert Tetzlaff',
+  _npcInteraktion: { npcName: 'Norbert Tetzlaff' },
+  _sozialTonart: 'druck',
+  id: 'NPC_sozial_druck'
+});
+assert.strictEqual(verbalPressureGrabbedRevers && verbalPressureGrabbedRevers.code, 'social_tone_became_physical',
+  'the verbal Tetzlaff pressure route must reject grabbing his Revers, jacket, coat or lapel');
+
 const curfewLocationDrift = worldContext.validateSceneWorldTruth({
   ort: 'Spedition Schmidt Moabit',
   szene: 'Du lenkst den Opel auf den Hof der Spedition und trittst in das noch beleuchtete Hauptgebaeude.',
