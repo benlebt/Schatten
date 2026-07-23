@@ -838,6 +838,8 @@ assert.strictEqual(kesslerWaitContext.gameTimeIdx, 4,
   'the canonical 19:00 Kessler wait hotspot must set the engine to evening before scene generation');
 assert.strictEqual(kesslerWaitContext.timeAdvanceTokens, 0,
   'the deterministic wait must reset residual random time tokens');
+assert.strictEqual(kesslerWaitContext.chosen._zeitUnmittelbar, true,
+  'a concrete evidence hotspot must finish at its current location before time advancement can trigger closing-hour relocation');
 
 const coreEvidenceProseContext = { diag: () => {}, caseProgress: { pendingHauptuiIndiz: null } };
 vm.createContext(coreEvidenceProseContext);
