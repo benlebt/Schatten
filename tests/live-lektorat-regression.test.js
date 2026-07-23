@@ -615,6 +615,28 @@ const naturalTimedScene = { szene: 'Um kurz nach sieben betritt Robert den Hinte
 assert.strictEqual(coreEvidenceProseContext._indizAbschlussProsaSichern(timedCoreClue, naturalTimedScene), false,
   'a natural kurz-nach-sieben variant must satisfy the time anchor without a redundant fallback sentence');
 
+const coreNarrationContext = {
+  normForMatch: value => String(value || '').toLowerCase().replace(/[„“"'.,:;!?()\-]/g, ' ').replace(/\s+/g, ' ').trim(),
+  _findeIndizById: id => id === 'etui_letzter_ort' ? ({
+    id: 'etui_letzter_ort',
+    text: 'In der leeren Vitrine hier lag das silberne Etui mit der Gravur Für Hugo 1939 Liesl der Staubrand zeigt die genaue Stelle',
+    fundText: 'Die Glasvitrine steht leer. Im Staub auf dem Samt liegt der helle Rand des silbernen Etuis.',
+    schluessel: ['vitrine', 'etui', 'zigarettenetui', 'silber', 'gravur', 'hugo', 'liesl', 'staub', 'samt', 'schmuck']
+  }) : null,
+  window: {}
+};
+vm.createContext(coreNarrationContext);
+vm.runInContext(sourceOf('_findCoreEvidenceNarrationRedundancy'), coreNarrationContext);
+const doubledCoreNarration = coreNarrationContext._findCoreEvidenceNarrationRedundancy({
+  szene: 'In der leeren Vitrine hier lag das silberne Etui mit der Gravur Für Hugo 1939 Liesl der Staubrand zeigt die genaue Stelle. Die Glasvitrine steht offen. Im Staub auf dem Samt erkennst du erneut den Rand des Zigarettenetuis.'
+}, { _pendingIndizId: 'etui_letzter_ort' });
+assert(doubledCoreNarration && doubledCoreNarration.code === 'core_evidence_narration_redundancy',
+  'a copied compact clue followed by the same full evidence narration must be rejected');
+assert.strictEqual(coreNarrationContext._findCoreEvidenceNarrationRedundancy({
+  szene: 'Die Glasvitrine steht offen. Im Staub auf dem Samt erkennst du den hellen Rand des silbernen Zigarettenetuis und liest die Gravur.'
+}, { _pendingIndizId: 'etui_letzter_ort' }), null,
+  'one coherent full evidence narration must remain valid');
+
 const objectBeforeVerbDeparture = worldContext.validateSceneWorldTruth({
   ort: 'Hinterhof Sybelstrasse',
   szene: 'Robert Kessler weicht zurueck. Du stoesst ihn beiseite und hechtest in die dunkle Tordurchfahrt. Deine Schritte hallen, als du den Hinterhof ueber die Seitenstrasse verlaesst. Ausser Atem erreichst du die Strassenecke.',
