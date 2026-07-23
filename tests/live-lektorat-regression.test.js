@@ -394,6 +394,18 @@ const uncommandedQuietWithdrawal = worldContext.validateSceneWorldTruth({
 assert.strictEqual(uncommandedQuietWithdrawal && uncommandedQuietWithdrawal.code, 'unauthorized_departure',
   'quietly withdrawing to avoid discovery must count as a completed departure even without a named destination');
 
+const uncommandedPurposeRetreat = worldContext.validateSceneWorldTruth({
+  ort: 'Hinterhof Sybelstrasse',
+  szene: 'Du wartest noch einen Moment, dann ziehst du dich zuegig zurueck, bevor dich ein Anwohner bemerken kann.',
+  personenImRaum: ['Robert Kessler'],
+  optionen: []
+}, {
+  id: 'HAUPTUI_INDRAMATISIERUNG_robert_eintritt_beobachtet',
+  kategorie: 'BEOBACHTEN'
+});
+assert.strictEqual(uncommandedPurposeRetreat && uncommandedPurposeRetreat.code, 'unauthorized_departure',
+  'purpose-bound sich zurueckziehen wording must not bypass the departure gate');
+
 const kesslerWaitContext = {
   caseProgress: {},
   chooseOptionInFlight: false,
@@ -425,7 +437,7 @@ vm.runInContext(sourceOf('_indizAbschlussProsaSichern'), coreEvidenceProseContex
 const timedCoreClue = {
   id: 'robert_eintritt_beobachtet',
   prosaPflicht: {
-    narrativ: /\b(?:19\s*uhr|gegen\s+sieben)\b/i,
+    narrativ: /\b(?:19\s*uhr|(?:um\s+)?(?:kurz\s+(?:nach|vor)|gegen|punkt|um)\s+sieben)\b/i,
     fallbackProse: 'Es ist gegen 19 Uhr, als du Roberts Eintritt notierst.'
   }
 };
@@ -436,6 +448,9 @@ assert(untimedCoreScene.szene.includes('gegen 19 Uhr'),
   'the visible core-clue prose must contain the defining time anchor, not only the popup');
 assert.strictEqual(coreEvidenceProseContext._indizAbschlussProsaSichern(timedCoreClue, untimedCoreScene), false,
   'a configured core-clue prose fallback must remain idempotent');
+const naturalTimedScene = { szene: 'Um kurz nach sieben betritt Robert den Hinterhof.' };
+assert.strictEqual(coreEvidenceProseContext._indizAbschlussProsaSichern(timedCoreClue, naturalTimedScene), false,
+  'a natural kurz-nach-sieben variant must satisfy the time anchor without a redundant fallback sentence');
 
 const objectBeforeVerbDeparture = worldContext.validateSceneWorldTruth({
   ort: 'Hinterhof Sybelstrasse',
