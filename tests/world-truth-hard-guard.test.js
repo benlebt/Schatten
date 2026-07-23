@@ -474,6 +474,13 @@ problem = context.validateSceneWorldTruth({
 }, { id: 'REDEN' });
 assert(problem && problem.code === 'meta_instruction_leak',
   'technical repair language must be rejected even if no NPC name remains');
+problem = context.validateSceneWorldTruth({
+  ort: 'Krauses Antiquitaeten',
+  szene: 'Niemand hier gibt vor, dir schon früher begegnet zu sein. Du prüfst die sichtbaren Ansatzpunkte.',
+  personenImRaum: ['Hannelore Wirth'], optionen: []
+}, { id: 'REISE', _istReise: true });
+assert(problem && problem.code === 'meta_instruction_leak',
+  'visible fallback and first-visit control language must never reach the player');
 
 context.caseProgress.npcZustand = {
   frieda: { name: 'Tante Frieda', status: 'uebergeben' },

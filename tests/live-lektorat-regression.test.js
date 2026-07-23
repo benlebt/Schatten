@@ -998,5 +998,39 @@ assert(objectEvidenceScene.szene.includes('Dritter Stock links')
   && objectEvidenceScene.szene.includes('sichtbaren Fund')
   && !/befragte Person|Aussage|Beobachtung/.test(objectEvidenceScene.szene),
   'an object or hotspot evidence fallback must remain an investigation rather than inventing a speaking witness');
+const krauseArrivalFallbackScene = {
+  szene: 'verworfen',
+  personenImRaum: ['Hannelore Wirth'],
+  optionen: []
+};
+evidenceFallbackContext.engineCurrentLocation = { name: 'Krauses Antiquitaeten' };
+evidenceFallbackContext.enforceSceneWorldTruthFallback(krauseArrivalFallbackScene, {
+  code: 'fixed_interior_image_drift',
+  firstVisit: true
+});
+assert(krauseArrivalFallbackScene.szene.includes('leere Glasvitrine')
+  && krauseArrivalFallbackScene.szene.includes('aufgebrochene Hinterhoffenster')
+  && !/sichtbare Ansatzpunkte|Niemand hier gibt vor|dargestellten Innenraum|eigentliche Szene/i.test(krauseArrivalFallbackScene.szene),
+  'Krause arrival fallback must stay natural and must not expose repair-language');
+const roleLabelContext = {
+  normForMatch: value => String(value || '').toLowerCase()
+};
+vm.createContext(roleLabelContext);
+vm.runInContext(sourceOf('_standRollenLabel'), roleLabelContext);
+assert.strictEqual(roleLabelContext._standRollenLabel({
+  tag: 'TARGET', rolle: 'Diebesgut (Zielobjekt der Suche)'
+}, { TARGET: 'Zielperson' }), 'Zielobjekt',
+  'the current-state UI must not label a physical stolen object as a person');
+assert.strictEqual(roleLabelContext._standRollenLabel({
+  tag: 'TARGET', rolle: 'Zielobjekt der Beschattung'
+}, { TARGET: 'Zielperson' }), 'Zielperson',
+  'a living surveillance target must remain a Zielperson despite its setup role wording');
+assert.strictEqual(roleLabelContext._standRollenLabel({
+  tag: 'TARGET', rolle: 'Vermisster Sohn'
+}, { TARGET: 'Zielperson' }), 'Zielperson',
+  'a human target must retain the Zielperson label');
+assert(html.includes('<span class="status-popup-label">Miete</span>')
+  && !html.includes('<span class="status-popup-label">Miete offen</span>'),
+  'the rent row label must remain truthful when its value says beglichen');
 
 console.log('LIVE_LEKTORAT_REGRESSION_OK');
