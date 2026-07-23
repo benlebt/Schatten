@@ -40,6 +40,8 @@ assert(menuSource.includes('oeffneReiseMenue(_reiseVorauswahl)'),
 const npcSource = sourceOf('npcInteraktion');
 assert(npcSource.includes('_zeitUnmittelbar: !!verb._sozialTonart'),
   'a selected social interaction must resolve before a time or closing-time relocation');
+assert(npcSource.includes('if (verb._sozialVorHinweis) _sozialVorHinweisMarkieren'),
+  'an early social scene must not consume the later evidence-bearing tone');
 
 const chooseSource = sourceOf('chooseOption');
 assert(chooseSource.includes('const _engineRuhigeAktion = !!(option && option._engine')

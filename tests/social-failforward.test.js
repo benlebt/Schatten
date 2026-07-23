@@ -21,12 +21,17 @@ const attempts = {
   window: {},
   gameDay: 2,
   npcTonartVerbraucht: {},
+  caseProgress: {},
+  normForMatch: (value) => String(value || '').toLowerCase().replace(/_/g, ' ').replace(/\s+/g, ' ').trim(),
 };
 vm.createContext(attempts);
 vm.runInContext([
   sourceOf('_sozialTonartTagKey'),
   sourceOf('_sozialTonartIstVerbraucht'),
   sourceOf('_sozialTonartVerbrauchen'),
+  sourceOf('_sozialVorHinweisTagKey'),
+  sourceOf('_sozialVorHinweisIstGespielt'),
+  sourceOf('_sozialVorHinweisMarkieren'),
 ].join('\n'), attempts);
 
 assert.strictEqual(attempts._sozialTonartVerbrauchen('Ilse Hauke', 'druck'), true,
@@ -39,6 +44,15 @@ assert.strictEqual(attempts._sozialTonartIstVerbraucht('Ilse Hauke', 'druck'), f
 attempts.npcTonartVerbraucht['Frau Pohl'] = ['normal'];
 assert.strictEqual(attempts._sozialTonartIstVerbraucht('Frau Pohl', 'normal'), false,
   'legacy undated saves must not permanently burn a witness');
+assert.strictEqual(attempts._sozialVorHinweisMarkieren('Ilse Hauke', 'ilse_hauke'), true,
+  'one early acquaintance scene must be tracked independently');
+assert.strictEqual(attempts._sozialVorHinweisIstGespielt('Ilse Hauke', 'ilse_hauke'), true,
+  'the same NPC must not offer a second token-spending pre-clue scene that day');
+assert.strictEqual(attempts._sozialTonartIstVerbraucht('Ilse Hauke', 'diskretion'), false,
+  'a pre-clue acquaintance scene must not burn the later successful clue route');
+attempts.gameDay = 4;
+assert.strictEqual(attempts._sozialVorHinweisIstGespielt('Ilse Hauke', 'ilse_hauke'), false,
+  'the early-conversation pause must reset on the next day');
 
 const reputation = {
   karlAkte: { ruf: { renommee: 3, haerte: 0 } },
@@ -85,6 +99,16 @@ assert(/verb && verb\._sozialErledigt/.test(html),
   'the exhausted conversation entry must be handled without an AI request');
 assert(/const einmalKey = npcKey \+ '\|' \+ _sozialTonartTagKey\(verb\._sozialTonart\);/.test(html),
   'reputation and social consequences must apply again to a repeated action on another day');
+assert(sourceOf('_hauptuiSozialVerben').includes('_sozialVorHinweisIstGespielt')
+  && sourceOf('_hauptuiSozialVerben').includes('Erst einen belastbaren Anhaltspunkt finden'),
+  'after one pre-clue scene the UI must show an explanatory lock instead of consuming every positive tone');
+assert(sourceOf('npcInteraktion').includes('if (verb._sozialVorHinweis) _sozialVorHinweisMarkieren')
+  && sourceOf('npcInteraktion').includes('else _sozialTonartVerbrauchen'),
+  'pre-clue and clue-ready social attempts must use separate consumption state');
+assert(sourceOf('npcInteraktion').includes('if (verb && verb._sozialNochNicht)')
+  && sourceOf('npcInteraktion').indexOf('if (verb && verb._sozialNochNicht)')
+    < sourceOf('npcInteraktion').indexOf('chooseOptionInFlight'),
+  'the explanatory pre-clue lock must return with feedback before any AI request');
 
 const names = {
   window: { _letzteAktion: { npcName: 'Trude', npcId: 'trude' } },
