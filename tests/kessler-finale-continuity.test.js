@@ -205,7 +205,19 @@ assert(html.includes('ABSCHLUSS-KONTINUITÄT (PFLICHT)'),
   'the finale prompt must prohibit replaying the previous accepted scene');
 assert(html.includes('Keine doppelte Schatten-Auflösung'),
   'the finale prompt must explicitly block the observed duplicate shadow payoff');
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1519 +ActiveNpcSceneBinding-Staging'"),
+const finaleSummaryContext = {
+  caseSetup: { caseType: 'beschatten', setupCast: [] },
+  caseProgress: { abschlussWahl: 'alles_auf_den_tisch', tatverdaechtiger: '' },
+  clientProfile: { name: 'Edith Kessler' },
+  _istKesslerFallFuerBild: () => true,
+  escapeHtml: value => String(value),
+};
+vm.createContext(finaleSummaryContext);
+vm.runInContext(sourceOf('buildFallbackAbschlussProsa'), finaleSummaryContext);
+assert.strictEqual(finaleSummaryContext.buildFallbackAbschlussProsa(),
+  'Karl legt Edith Brief, Zeugenaussagen und Roberts Geständnis vollständig offen.',
+  'the mechanical end screen must reflect the Kessler truth choice instead of collapsing it to a generic surveillance summary');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1520 +KesslerFinalePolish-Staging'"),
   'release version missing');
 
 console.log('KESSLER_FINALE_CONTINUITY_OK');

@@ -548,11 +548,13 @@ assert.strictEqual(context.caseProgress.kesslerRobertAbpassenAktiv, true, 'Rober
 assert.strictEqual(context._hauptuiNpc({ id: 'robert_kessler', name: 'Robert Kessler', typ: 'person' }).name, 'Robert Kessler', 'forced Robert target must execute even if the normal time schedule omits him');
 context._ortsFundIndizienErreichbar = () => [clue];
 context._ortsFundItems = () => [];
-context.caseProgress.gefundeneIndizIds.push('robert_aussage');
+context.caseProgress.gefundeneIndizIds = ['robert_eintritt_beobachtet', 'tuerschild_hauke', 'kellner_beobachtung', 'robert_aussage'];
 faeden = context._hauptuiKesslerFaeden();
-assert.strictEqual(faeden[0].id, 'edith_beleg', 'Robert statement without the letter must point to the missing independent proof');
-assert.strictEqual(faeden[0].ort, 'Spedition Schmidt Moabit', 'missing proof thread must send Karl to the Spedition');
-assert.strictEqual(faeden[0].status, 'braucht_beleg', 'missing proof thread must be marked as proof-gated');
+assert(!faeden.some(faden => faden.id === 'ilse'), 'Robert confession must close the already answered Ilse relationship thread');
+assert.strictEqual(faeden[0].id, 'edith_beleg', 'Robert statement without the letter must offer the optional written proof');
+assert.strictEqual(faeden[0].ort, 'Spedition Schmidt Moabit', 'optional letter thread must send Karl to the Spedition');
+assert.strictEqual(faeden[0].status, 'optional', 'letter thread must not claim that an already solvable case is proof-gated');
+assert.strictEqual(faeden[0].bedarf, 'Optional: Roberts Brief am Schreibtisch sichern', 'letter thread must accurately describe the optional written proof');
 context.caseProgress.gefundeneIndizIds.push('briefchen_ilse');
 faeden = context._hauptuiKesslerFaeden();
 assert.strictEqual(faeden[0].id, 'bericht', 'Robert statement must lead back to Edith');
