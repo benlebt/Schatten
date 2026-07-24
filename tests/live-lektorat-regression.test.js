@@ -1334,6 +1334,9 @@ assert(!languageContext.fixSprache(wrappedNarration).startsWith('"') && !languag
 const namedOpeningNarration = '"Edith Kessler zahlt gut, aber sie will Gewissheit: ' + 'Du folgst Robert durch Charlottenburg und ordnest den Auftrag im kuehlen Hinterhof. '.repeat(3) + 'Du wartest auf seinen naechsten Schritt."';
 assert(!languageContext.fixSprache(namedOpeningNarration).startsWith('"') && !languageContext.fixSprache(namedOpeningNarration).endsWith('"'),
   'a quote-wrapped opening that begins with a current cast name must also lose its accidental outer quotes');
+const wrappedDoorplateEvidence = '"Neben der hofseitigen Eingangstür hängen die Klingelschilder schief untereinander. ' + 'Dritter Stock links steht nur Hauke, kein Herr Hauke und keine Familie. '.repeat(3) + 'Mehr beweist das Schild allein noch nicht."';
+assert(!languageContext.fixSprache(wrappedDoorplateEvidence).startsWith('"') && !languageContext.fixSprache(wrappedDoorplateEvidence).endsWith('"'),
+  'quote-wrapped canonical evidence beginning with Neben must lose accidental paragraph quotes');
 const wrappedWithDialogue = '"Du gehst auf Robert zu. ' + 'Der Hof bleibt still, waehrend du jeden seiner Schritte beobachtest. '.repeat(3) + '"Was wollen Sie?", fragt Robert."';
 assert(!languageContext.fixSprache(wrappedWithDialogue).startsWith('"') && languageContext.fixSprache(wrappedWithDialogue).includes('"Was wollen Sie?"'),
   'outer narrative quotes must be removed even when genuine dialogue quotes remain inside');
