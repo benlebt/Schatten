@@ -154,6 +154,8 @@ assert(html.includes("const _schlafLabel = 'Schlafen';"), 'sleep quick action mu
 assert(html.includes('const _schlafMarkerKurz ='), 'sleep quick action must use a compact marker');
 assert(!html.includes("_schlafZielM.tagPlus ? ' · Tag +1'"), 'sleep quick action marker must not carry the verbose day-plus suffix');
 assert(html.includes("marker = 'Gesperrt · Spannung';"), 'sleep tension lock marker must stay compact');
+assert(html.includes("const _akuteGefahr = _schlafSpannung >= 4 && !_schlafSichererHeimort;"),
+  'a safe home redirect must remain sleepable even when abstract tension is high');
 assert(html.includes("<span>Wirklich schlafen?</span>"), 'sleep confirmation must use a compact title');
 assert(html.includes('window.VERHOER_PILOT_AKTIV = false;'), 'retired Kessler dossier must remain disabled');
 assert(/function _hauptuiVerhoerNpc[\s\S]{0,180}?if \(!window\.VERHOER_PILOT_AKTIV\) return null;/.test(html), 'Haupt-UI must route former dossier NPCs into normal conversations');
