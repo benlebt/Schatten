@@ -91,6 +91,33 @@ assert(/Dr\. Reinhard Baumgarten tritt sichtbar an dich heran/.test(contradictor
 assert(openingPresenceDiagnostics.some(line => line.includes('OPENING-ANWESENHEIT repariert')),
   'opening presence repair needs a diagnostic');
 
+const romanceLocationContext = {
+  caseSetup: {
+    locations: [
+      { name: 'Martha Brommers Wohnung', npcs: [{ id: 'martha_brommer' }] },
+      { name: 'Gerichtsarchiv Kreisgericht Mitte', npcs: [] },
+      { name: 'Mathilde Goerkes Salon', npcs: [] },
+    ],
+  },
+};
+vm.createContext(romanceLocationContext);
+vm.runInContext(sourceOf('normForMatch') + '\n' + sourceOf('_romancePushOrtPlausibel'), romanceLocationContext);
+const martha = {
+  name: 'Martha Brommer',
+  id: 'martha_brommer',
+  triggerWhen: 'Karl besucht den geschlossenen Salon oder Martha Brommers Wohnung alleine, Abend, niedrige Spannung',
+};
+assert.strictEqual(romanceLocationContext._romancePushOrtPlausibel(martha, 'Gerichtsarchiv Kreisgericht Mitte'), false,
+  'a location-bound romance NPC must not teleport into the court archive');
+assert.strictEqual(romanceLocationContext._romancePushOrtPlausibel(martha, 'Martha Brommers Wohnung'), true,
+  'a location-bound romance NPC must remain available at her configured location');
+assert.strictEqual(romanceLocationContext._romancePushOrtPlausibel(martha, 'Mathilde Goerkes Salon'), true,
+  'an explicitly named trigger location must remain available');
+assert(html.includes('_romOrtPlausibel && !_romInCast'),
+  'the proactive romance prompt must obey location plausibility');
+assert(html.includes('_romancePushOrtPlausibel(romanceNpc, romanceOrt)'),
+  'the engine-side forced romance introduction must obey location plausibility');
+
 const diagnostics = [];
 const context = {
   caseSetup: {
@@ -138,7 +165,7 @@ context.updateTruthBeats('Mertens manipulierte die Akte auf Anordnung von Krollw
 assert(context.caseProgress.truthBeatsHit.includes('krollwitz_mertens'),
   'the found Krollwitz file evidence must unlock the manipulation beat');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1530 +OpeningRosterTruth-Staging'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1531 +RomanceLocationGuard-Staging'"),
   'release version missing');
 
 console.log('Goerke opening/truth regression checks passed.');
