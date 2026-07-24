@@ -520,10 +520,21 @@ context.currentScene = {
   szene: 'Robert Kessler ist vor dir eingetroffen. Er steht am Eingang zum Treppenhaus.',
   personenImRaum: ['Frau Pohl', 'Robert Kessler'],
 };
+const snapshotCheckBefore = context._npcIstImAktuellenSzenenSnapshot;
+const locationCheckBefore = context._npcGehoertHierher;
+const setupLookupBefore = context._findSetupCastFuzzy;
+context._npcIstImAktuellenSzenenSnapshot = () => true;
+context._npcGehoertHierher = () => true;
+context._findSetupCastFuzzy = () => ({ id: 'robert_kessler', name: 'Robert Kessler', tag: 'TARGET' });
 faeden = context._hauptuiKesslerFaeden();
 assert.strictEqual(context._hauptuiKesslerRobertAmAktuellenOrt(), true, 'a currently dramatized Robert must count as physically present without another hot roster lookup');
 assert.strictEqual(context._hauptuiKesslerRobertAbpassenNoetig(), false, 'visible Robert must never be advertised as someone Karl still has to wait for');
 assert.notStrictEqual(faeden[0].bedarf, 'Robert erst abpassen', 'Robert thread must agree with the visible person menu');
+assert.strictEqual(context._hauptuiNpc({ id: 'robert_kessler', name: 'Robert Kessler', typ: 'person' }).name, 'Robert Kessler',
+  'a visible canonical scene NPC must stay executable across a time or stage commit');
+context._npcIstImAktuellenSzenenSnapshot = snapshotCheckBefore;
+context._npcGehoertHierher = locationCheckBefore;
+context._findSetupCastFuzzy = setupLookupBefore;
 context.currentScene = { szene: 'Der Hinterhof liegt still.', personenImRaum: ['Frau Pohl'] };
 faeden = context._hauptuiKesslerFaeden();
 assert.strictEqual(faeden[0].id, 'robert', 'external contradiction proof must keep the Robert thread open');
