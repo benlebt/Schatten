@@ -25,11 +25,17 @@ const context = {
     .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
     .replace(/\s+/g, ' ').trim(),
   caseProgress: { encounterState: 'frei' },
-  engineCurrentLocation: { name: 'Erich Brandts ehemalige Wohnung' }
+  engineCurrentLocation: { name: 'Erich Brandts ehemalige Wohnung' },
+  getNpcsAtCurrentLocation: () => [],
+  _npcZustandIstEntfernt: () => false,
+  _worldTruthAliases: (id, npc) => [String((npc && npc.name) || id || '').toLowerCase()],
+  _worldTruthHasAlias: (text, aliases) => aliases.some(alias =>
+    String(text || '').toLowerCase().includes(String(alias || '').toLowerCase()))
 };
 vm.createContext(context);
 vm.runInContext(sourceOf('_findPhantomImmediateThreat'), context);
 vm.runInContext(sourceOf('_findUnrosteredPresentActor'), context);
+vm.runInContext(sourceOf('_findArrivalNpcRosterDrift'), context);
 vm.runInContext(sourceOf('validateOpeningRoleTruth'), context);
 
 let problem = context._findPhantomImmediateThreat({
@@ -149,6 +155,32 @@ assert(problem && problem.code === 'unrostered_present_actor',
   'a spatially separated anonymous actor must also be caught in verb-first word order');
 
 problem = context._findUnrosteredPresentActor({
+  szene: 'Draussen an der Ecke bemerkst du einen Mann in einem grauen Trenchcoat, der dich durch das Fenster mustert.',
+  personenImRaum: ['Kommissar Heinrich Lindner']
+}, {});
+assert(problem && problem.code === 'unrostered_present_actor',
+  'a spatially separated perceived actor must be caught before the role noun');
+
+context.engineCurrentLocation = { name: 'Hinterhof Sybelstrasse' };
+context.getNpcsAtCurrentLocation = () => [
+  { id: 'frau_pohl', name: 'Frau Pohl' },
+  { id: 'frau_hauke', name: 'Frau Hauke' }
+];
+const kesslerOpening = {
+  ort: 'Hinterhof Sybelstrasse',
+  szene: 'Robert ist noch nicht zu sehen. Du stehst allein in der feuchten Stille des Hofes.',
+  personenImRaum: ['Frau Pohl', 'Frau Hauke']
+};
+const kesslerRosterProblem = context.validateOpeningRoleTruth(
+  kesslerOpening.szene,
+  { caseType: 'beziehung', setupCast: [] },
+  kesslerOpening
+);
+assert(kesslerRosterProblem && kesslerRosterProblem.code === 'arrival_npc_roster_drift',
+  'opening prose must visibly dramatize every engine-present roster actor');
+context.getNpcsAtCurrentLocation = () => [];
+
+problem = context._findUnrosteredPresentActor({
   szene: 'Auf dem Foto steht eine Frau vor dem Haus.',
   personenImRaum: []
 }, {});
@@ -160,7 +192,7 @@ problem = context._findUnrosteredPresentActor({
 }, {});
 assert.strictEqual(problem, null, 'a properly rostered scene actor remains legal');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1507 +SpatialActorRoster-Staging'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1508 +OpeningRosterTruth-Staging'"),
   'release version missing');
 
 console.log('phantom threat guard tests passed');
