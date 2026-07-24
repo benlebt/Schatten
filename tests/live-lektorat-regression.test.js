@@ -802,6 +802,16 @@ const inventedInjuryGait = krauseWitnessScopeContext._findTargetEvidenceScopeDri
 assert(inventedInjuryGait && inventedInjuryGait.code === 'evidence_scope_drift'
     && inventedInjuryGait.extras.includes('Körpermerkmal/Gangart'),
   'a noun phrase about an offender injury gait must not bypass witness evidence scope');
+const inventedVehicleInReportedSpeech = krauseWitnessScopeContext._findTargetEvidenceScopeDrift({
+  szene: 'Hannelore sagt, die Männer hätten die schwere Tasche hastig in einen Wagen gewuchtet, bevor sie davongefahren seien.'
+}, {});
+assert(inventedVehicleInReportedSpeech && inventedVehicleInReportedSpeech.code === 'evidence_scope_drift'
+    && inventedVehicleInReportedSpeech.extras.includes('Fluchtfahrzeug'),
+  'reported-speech participles such as "gewuchtet hätten" and "davongefahren seien" must not invent a getaway car');
+assert.strictEqual(krauseWitnessScopeContext._findTargetEvidenceScopeDrift({
+  szene: 'Hannelore sagt, die zwei Männer seien mit einer schweren Tasche aus dem Hinterhof gekommen.'
+}, {}), null,
+  'the canonical two men, bag and courtyard statement must remain valid without a vehicle');
 
 const uncommandedDeparture = worldContext.validateSceneWorldTruth({
   ort: 'Hinterhof Sybelstrasse',

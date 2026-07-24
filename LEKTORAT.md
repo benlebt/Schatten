@@ -214,6 +214,12 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 - Tatort-Bildwahrheit gilt deshalb nicht erst beim Betreten des Tatorts, sondern schon in Auftragsbericht, Rückblick, Gespräch und Reiseprosa. Der Guard bindet Schaden und konkretes Objekt innerhalb desselben Teilsatzes, damit die korrekte Gegenüberstellung „flache Vitrinen zerschlagen; hohe Vitrine intakt“ erlaubt bleibt.
 - Der Eröffnungs-Hard-Fallback erhält Auftrag, Etui-Provenienz, Tante-Frieda-Spur, ausstehendes 200-Ostmark-Honorar, Klientenpräsenz und den korrekten Objektzustand gemeinsam. Ein fundamentaler Eröffnungsbruch führt nach Fix und Deployment zum Neustart des Runs.
 
+## Krause-Zeugenaussage-Gegenlauf v7.12.1476
+
+- Ein alternativer Täuschungs-/Gesprächspfad bei Hannelore Wirth ergänzte das mechanische Indiz „zwei Männer mit schwerer Tasche aus dem Hinterhof“ um ein unbelegtes Fluchtfahrzeug: Die Männer hätten die Tasche „in einen Wagen gewuchtet“ und seien „davongefahren“.
+- Der Evidence-Scope-Guard erfasst nun auch berichtete Rede im Konjunktiv und Partizipkonstruktionen wie `gewuchtet hätten`, `geladen hätten`, `geworfen hätten` sowie `davongefahren seien`. Das Fahrzeug bleibt gesperrt, solange es nicht ausdrücklich im Ziel-Indiz definiert ist.
+- Positive Gegenprobe: Zwei Männer, schwere Tasche und Hinterhof bleiben ohne Fahrzeugbehauptung zulässig. Der Fix gilt datengetrieben für Personen-Indizien aller Fälle.
+
 ## Mindestprotokoll pro Run
 
 - Fall, Version, Strategie, Seed, Start-/Endzeit, Szenenzahl, Ergebnis und Abbruchgrund.
