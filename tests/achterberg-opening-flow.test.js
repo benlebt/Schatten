@@ -64,7 +64,7 @@ assert(achterberg.includes("npcs: [{ id: 'theo_marquardt', immer: true, abStage:
 assert(/id: 'vossberg_gelegenheit'[\s\S]*?stage: 3, abStage: 1/.test(achterberg),
   'third opening clue must be reachable in stage 1 to avoid a progression deadlock');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1522 +SetupMigrationStaticFields-Staging'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1523 +LocalArrivalFallback-Staging'"),
   'release version missing');
 
 const oldSetup = {
@@ -105,5 +105,23 @@ assert.strictEqual(migratedRoom.indizien[0].abStage, 1,
   'restore migration must update corrected evidence stage gates');
 assert.strictEqual(migratedRoom.npcs[0].id, 'theo_marquardt',
   'restore migration must add newly configured room NPCs');
+
+const fallbackContext = {
+  engineCurrentLocation: { name: 'Achterbergs Garderobe' },
+  caseProgress: { indizien: ['Streit', 'Digitalis'] },
+  normForMatch: value => String(value || '').toLowerCase().trim(),
+  diag: () => {},
+};
+vm.createContext(fallbackContext);
+vm.runInContext(sourceOf('enforceSceneWorldTruthFallback'), fallbackContext);
+const localScene = { szene: 'Unbrauchbar', personenImRaum: [], optionen: [] };
+fallbackContext.enforceSceneWorldTruthFallback(localScene, {
+  code: 'arrival_npc_roster_drift',
+  required: ['Dr. Theo Marquardt'],
+}, { _istLokalweg: true });
+assert(/innerhalb des Gebaeudes weiter/.test(localScene.szene),
+  'arrival hard fallback must narrate local movement on foot');
+assert(!/Opel/.test(localScene.szene),
+  'arrival hard fallback must never reintroduce the Opel on a local path');
 
 console.log('achterberg-opening-flow: ok');
