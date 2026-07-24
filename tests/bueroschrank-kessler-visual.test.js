@@ -20,7 +20,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1467 +SpeditionHistoricDetail-Staging'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1468 +PersonalStockDedup-Staging'"), 'release version missing');
 assert(html.includes('BÜROSCHRANK · STARTAUSRÜSTUNG'), 'case start dialog must expose the office wardrobe');
 assert(html.includes('Immer dabei: Walther PPK, Detektiv-Lizenz, Notizbuch und Bleistift.'), 'fixed detective gear must be explained');
 
@@ -87,6 +87,27 @@ assert.strictEqual(loaded.length, 4, 'four chosen items must be booked into the 
 assert.strictEqual(Object.keys(inventoryContext.caseProgress.items).length, 4, 'fresh case item state must contain the chosen loadout');
 assert.strictEqual(inventoryContext.karlAkte.bueroschrank.west_zigaretten, 1, 'unselected stock must remain in the office');
 assert.strictEqual(inventoryContext.karlAkte.bueroschrank.korn, undefined, 'selected quantities must leave the office while carried');
+
+const personalStockContext = {
+  engineCurrentLocation: { name: 'Karl Mauers Büro' },
+  normForMatch: value => String(value || '').toLowerCase()
+    .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss'),
+  _itemsBeiKarl: () => [{ id: 'bueroschrank_korn_0_0', name: 'Flasche Nordhäuser Doppelkorn' }],
+  _itemKatalogKey: item => /doppelkorn/i.test(item && item.name || '') ? 'korn' : '',
+};
+vm.createContext(personalStockContext);
+vm.runInContext(sourceOf('_persoenlicherVorratSchonDabei'), personalStockContext);
+assert.strictEqual(personalStockContext._persoenlicherVorratSchonDabei('korn'), true,
+  'a wardrobe bottle already carried must suppress the duplicate bottle in Karls office');
+assert.strictEqual(personalStockContext._persoenlicherVorratSchonDabei('ostmark'), false,
+  'cash drawers remain available because money is fungible rather than a unique prop');
+personalStockContext.engineCurrentLocation = { name: 'Tante Friedas Hehlerei' };
+assert.strictEqual(personalStockContext._persoenlicherVorratSchonDabei('korn'), false,
+  'carried items must not suppress independent merchandise at a foreign location');
+assert(sourceOf('_ortsFundItems').includes('!_persoenlicherVorratSchonDabei(k)'),
+  'the visible loose-item list must hide duplicate personal stock');
+assert(sourceOf('_fundItemAufnehmenDirekt').includes('_persoenlicherVorratSchonDabei(it.key)'),
+  'direct pickup must reject a stale duplicate personal-stock button');
 
 const bindingContext = {
   currentScene: { personenImRaum: ['Edith Kessler', 'Norbert Tetzlaff'] },
