@@ -38,6 +38,10 @@ assert(/name: 'Gerichtsarchiv Kreisgericht Mitte'[\s\S]*?lokalVon: \['Kreisgeric
   'court archive must be a local walk instead of an Opel trip');
 assert(goerke.includes('Vor Stage 3 und vor dem Fund "krollwitz_steuerung" darf niemand Krollwitz nennen'),
   'Goerke setup must keep Krollwitz secret until the evidence chain reaches him');
+assert(goerke.includes('wird die Sitzung wegen fehlender Unterlagen kurzfristig vertagt'),
+  'Goerke opening must release Karl before the investigation travel flow starts');
+assert(goerke.includes('du bist fuer heute entlassen und kannst sofort ermitteln'),
+  'Goerke prompt must make immediate post-opening travel narratively valid');
 assert(!html.includes("' ist am Schauplatz sichtbar anwesend.'"),
   'generic opening roster fallback must dramatize presence instead of emitting metadata prose');
 assert(html.includes("' tritt sichtbar an dich heran und wartet auf deine Reaktion.'"),
@@ -92,7 +96,7 @@ context.updateTruthBeats('Mertens manipulierte die Akte auf Anordnung von Krollw
 assert(context.caseProgress.truthBeatsHit.includes('krollwitz_mertens'),
   'the found Krollwitz file evidence must unlock the manipulation beat');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1527 +GoerkeSecrecyProse-Staging'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1528 +GoerkeCourtRelease-Staging'"),
   'release version missing');
 
 console.log('Goerke opening/truth regression checks passed.');
