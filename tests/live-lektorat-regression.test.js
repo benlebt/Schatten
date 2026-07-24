@@ -203,6 +203,27 @@ assert(sourceOf('buildWorldTruthRepairHint').includes("problem.code === 'histori
 assert(sourceOf('enforceSceneWorldTruthFallback').includes("problem.code === 'historical_weekday_drift'"),
   'weekday drift must get a deterministic safe fallback');
 
+const caseTimelineContext = {
+  caseSetup: { caseType: 'diebstahl' },
+  normForMatch: value => String(value || '').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+};
+vm.createContext(caseTimelineContext);
+vm.runInContext(sourceOf('_findCaseTimelineFactDrift'), caseTimelineContext);
+assert.strictEqual(caseTimelineContext._findCaseTimelineFactDrift({
+  szene: 'Bornstein senkt die Stimme. Tante Frieda hat das silberne Etui schon seit zwei Tagen in der Stallschreiberstrasse.'
+})?.code, 'case_timeline_fact_drift',
+  'Krause target possession may not predate the theft');
+assert.strictEqual(caseTimelineContext._findCaseTimelineFactDrift({
+  szene: 'Bornstein sagt, das Etui sei heute bei Tante Frieda angekommen.'
+}), null, 'same-day arrival at Frieda must remain valid');
+assert(sourceOf('validateSceneWorldTruth').includes('_findCaseTimelineFactDrift'),
+  'case chronology must run in the pre-commit world-truth gate');
+assert(sourceOf('buildWorldTruthRepairHint').includes("problem.code === 'case_timeline_fact_drift'"),
+  'case chronology drift needs a focused repair prompt');
+assert(sourceOf('enforceSceneWorldTruthFallback').includes("problem.code === 'case_timeline_fact_drift'"),
+  'case chronology drift needs a deterministic fallback');
+
 const sectorHistoryContext = {
   engineCurrentLocation: { name: 'Cafe Wien', sektor: 'West (Charlottenburg)' },
   normForMatch: value => String(value || '').toLowerCase()

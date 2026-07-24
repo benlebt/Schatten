@@ -74,6 +74,7 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 
 ### 2. Historische Fakten: Korrektheit und Interessantheit
 
+- Neben Kalenderdaten auch relative Fallzeiten prüfen: Eine Beute kann nicht „seit zwei Tagen“ beim Hehler liegen, wenn der Diebstahl erst in der vergangenen Nacht geschah. Tatzeit, Transportdauer, Besitzdauer und aktuelle Engine-Zeit müssen gemeinsam stimmen.
 - Ausgeschriebene Datums-/Wochentagspaare werden zusätzlich vor dem Szenen-Commit maschinell geprüft. Nachtbereiche müssen beide Tage eindeutig zuordnen (z. B. „Dienstag auf Mittwoch, 29./30. September“); „Mittwoch, 29. September 1953“ ist falsch.
 
 - Jeden behaupteten Wochentag gegen das Datum prüfen, bevorzugt reproduzierbar per Datumsfunktion/Skript.
