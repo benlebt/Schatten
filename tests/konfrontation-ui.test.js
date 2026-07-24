@@ -39,6 +39,10 @@ assert(!html.includes("{ key: 'deeskalieren', label: 'Beruhigen', cls: 'primary'
 assert(html.includes('.hauptui-confrontation .hauptui-column-label'), 'confrontation inventory label needs visual separation');
 assert(html.includes('.hauptui-threat-chip[title]'), 'tactical tags need mouseover explanations');
 assert(html.includes('function _hauptuiKonfrontationChooseNarration'), 'confrontation narrative handoff helper is missing');
+assert(sourceOf('_hauptuiKonfrontationChooseNarration').includes('option._engineOrtLock = Object.assign({}, engineCurrentLocation)'),
+  'every tactical confrontation narration must pin its engine origin before the request');
+assert(sourceOf('chooseOption').includes('_aktionsOrtLockWiederherstellen(option);'),
+  'chooseOption must restore a pinned confrontation origin after automatic time/danger mechanics');
 assert(html.includes('window.__hauptuiKonfrontationState'), 'confrontation moves need the same select-then-execute buffer as normal actions');
 assert(html.includes('chooseMove(act.key, act.label, null)'), 'base confrontation actions must select first, not execute immediately');
 assert(html.includes('chooseMove(act.verb, act.label, act.item)'), 'item confrontation actions must select first, not execute immediately');
@@ -121,6 +125,25 @@ for (const action of ['deeskalieren', 'bluffen', 'fliehen', 'rausch_bluff', 'anb
   assert.strictEqual(injuryContext._hauptuiKonfrontationAktionVerletzungGesperrt(action), false,
     action + ' must remain available as a non-offensive exit from the confrontation');
 }
+
+const locationLockContext = {
+  engineCurrentLocation: { name: 'Doc Wagners Praxis', sektor: 'West (Schoeneberg)' },
+  _aktuelleAktionIstReise: true,
+  _reiseGeradeErfolgt: { name: 'Doc Wagners Praxis' },
+  normForMatch: value => String(value || '').toLowerCase().trim(),
+  diag: () => {}
+};
+vm.createContext(locationLockContext);
+vm.runInContext(sourceOf('_aktionsOrtLockWiederherstellen'), locationLockContext);
+assert.strictEqual(locationLockContext._aktionsOrtLockWiederherstellen({
+  _engineOrtLock: { name: 'Deutsche Staatsoper (Admiralspalast)', sektor: 'Ost (Mitte)' }
+}), true, 'a confrontation action must undo an unrelated pre-request location mutation');
+assert.strictEqual(locationLockContext.engineCurrentLocation.name, 'Deutsche Staatsoper (Admiralspalast)',
+  'the engine location must return to the confrontation origin');
+assert.strictEqual(locationLockContext._aktuelleAktionIstReise, false,
+  'the repaired confrontation action must not retain a travel marker');
+assert.strictEqual(locationLockContext._reiseGeradeErfolgt, null,
+  'the repaired confrontation action must clear a stale travel destination');
 
 assert(html.includes('Kaffee-Staub'), 'coffee needs distinct mild effect copy');
 assert(sourceOf('_hauptuiKonfrontationItems').includes("add(item, 'anbieten', 'Biete friedlich an: ')"), 'the tactical inventory must surface peaceful offers beside attacks');
