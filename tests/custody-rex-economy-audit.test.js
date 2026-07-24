@@ -7,11 +7,24 @@ const { readWebpDimensions } = require('./image-format-utils');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1486 +PeaceRoster-Staging'"), 'version constant is stale');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1487 +EndingTruthGate-Staging'"), 'version constant is stale');
 assert(html.includes("text: 'Fall abschließen und Auftraggeber informieren.'"), 'resolve button copy must stay player-facing');
 assert(html.includes('_enginePrompt: [_resolveText, _resolveTransitionPrompt]'), 'resolve direction must remain private');
 assert(!html.includes('resolveOpt.text += narr'), 'director narration must not leak into resolve button text');
 assert(html.includes('Roth kuendigt an, Marquardts Rolle getrennt zu pruefen'), 'Achterberg ending must preserve Marquardt consequence');
+assert(html.includes('Er schiebt Achterbergs Digitalis-Überdosis auf einen Unfall, doch Liesel Forsthuber sah ihn die Tropfflasche unmittelbar vor dem Auftritt auffüllen'),
+  'Achterberg core evidence must describe denial plus witness contradiction, not invent a murder confession');
+assert(!html.includes('Egon Vossberg überführt: er hat Achterbergs Digitalis-Tropfen überdosiert, damit es wie Herzversagen aussieht'),
+  'the rigid false-confession evidence copy must not return');
+const moralStart = html.indexOf('function zeigeMoralWahl(resolveOpt)');
+const moralEnd = html.indexOf('function zeigeAbschlussWahrheitswahl', moralStart);
+const moralSource = html.slice(moralStart, moralEnd);
+assert(moralSource.includes('_markPopupOpened()') && moralSource.includes('attachSafeTap(b, _moralWahlAusfuehren)'),
+  'the moral overlay must block touch-through and require a fresh deliberate choice');
+assert(moralSource.includes('MORAL-AUSGANG GEWAEHLT'),
+  'the selected moral ending must be explicit in the manual-run export');
+assert(html.includes("if (!earlyAbort && !(caseProgress && caseProgress.moralWahl === 'schweigegeld'))"),
+  'a hush-money ending must never append the normal client-report fallback');
 assert(html.includes('Dr. Marquardts Praxis in der Linienstrasse (Mitte)'), 'long Marquardt location name must be replaced');
 assert(!html.includes("name: 'Dr. Marquardts Praxis (Linienstrasse, Mitte)'"), 'clipped Marquardt location name must not return');
 assert(html.includes('if (_stasiEncounterPflicht) timeContext += _stasiEncounterPflicht;'),
