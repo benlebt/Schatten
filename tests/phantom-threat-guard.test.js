@@ -102,6 +102,36 @@ problem = context._findUnrosteredPresentActor({
 assert(problem && problem.code === 'unrostered_present_actor',
   'a cast-only actor who is absent from personenImRaum must be rejected');
 
+const perceivedOpening = {
+  ort: 'Karl Mauers Buero',
+  szene: 'Du wirfst einen Blick zur Tuer. Draussen im Halbschatten des Flurs glaubst du, den langen Mantel von Hauptmann Vollmer zu erkennen, der sich gerade vom Licht der Strassenlaterne abwendet.',
+  personenImRaum: ['Margarete Stein'],
+  cast_hinzugefuegt: ['Hauptmann Vollmer']
+};
+const perceivedSetup = {
+  caseType: 'politisch',
+  stasiRelevance: 3,
+  setupCast: [{ id: 'vollmer', name: 'Hauptmann Vollmer' }]
+};
+problem = context._findUnrosteredPresentActor(perceivedOpening, {}, perceivedSetup);
+assert(problem && problem.code === 'unrostered_present_actor' && problem.npc === 'Hauptmann Vollmer',
+  'a perceived named actor needs their own physical roster entry even when another actor is rostered');
+
+const perceivedOpeningProblem = context.validateOpeningRoleTruth(
+  perceivedOpening.szene,
+  perceivedSetup,
+  perceivedOpening
+);
+assert(perceivedOpeningProblem && perceivedOpeningProblem.ok === false
+    && perceivedOpeningProblem.code === 'unrostered_present_actor',
+  'the opening guard must reject a prose-only named sighting');
+
+problem = context._findUnrosteredPresentActor({
+  szene: perceivedOpening.szene,
+  personenImRaum: ['Hauptmann Vollmer']
+}, {}, perceivedSetup);
+assert.strictEqual(problem, null, 'the perceived actor remains legal when physically rostered');
+
 problem = context._findUnrosteredPresentActor({
   szene: 'Auf dem Foto steht eine Frau vor dem Haus.',
   personenImRaum: []
@@ -114,7 +144,7 @@ problem = context._findUnrosteredPresentActor({
 }, {});
 assert.strictEqual(problem, null, 'a properly rostered scene actor remains legal');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1503 +PhysicalRosterGate-Staging'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1504 +PerceivedActorRoster-Staging'"),
   'release version missing');
 
 console.log('phantom threat guard tests passed');
