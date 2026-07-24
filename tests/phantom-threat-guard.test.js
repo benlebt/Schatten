@@ -183,7 +183,7 @@ context.engineCurrentLocation = { name: 'Hinterhof Sybelstrasse' };
 context.caseProgress = { indizien: [] };
 const repairedKesslerOpening = {
   ort: 'Hinterhof Sybelstrasse',
-  szene: 'Edith Kessler hat dich beauftragt, Robert zu beschatten. Du wartest vor Robert allein im Hinterhof.',
+  szene: 'Edith Kessler hat dich beauftragt, Robert zu beschatten. Frau Pohl lehnt sich aus ihrem Fenster im zweiten Stock. Frau Hauke steht hinten im Hof bei ihrem Wäscheständer. Du wartest vor Robert allein im Hinterhof.',
   personenImRaum: ['Frau Pohl', 'Frau Hauke'],
   optionen: [{ id: 'A', text: 'Warten' }]
 };
@@ -196,6 +196,9 @@ assert(/Edith Kessler/.test(repairedKesslerOpening.szene)
     && /linken Erdgeschossfenster/.test(repairedKesslerOpening.szene)
     && /oberen rechten Hoffenster/.test(repairedKesslerOpening.szene),
   'the opening roster fallback must preserve the assignment and add both fixed window positions');
+assert(!/zweiten Stock/.test(repairedKesslerOpening.szene)
+    && !/Wäscheständer/.test(repairedKesslerOpening.szene),
+  'the opening roster fallback must replace contradictory witness staging instead of appending to it');
 assert.deepStrictEqual(Array.from(repairedKesslerOpening.personenImRaum), ['Frau Pohl', 'Frau Hauke'],
   'the opening roster fallback must retain both physical window witnesses');
 context.getNpcsAtCurrentLocation = () => [];
@@ -212,7 +215,7 @@ problem = context._findUnrosteredPresentActor({
 }, {});
 assert.strictEqual(problem, null, 'a properly rostered scene actor remains legal');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1509 +OpeningFallbackRoster-Staging'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1510 +KesslerOpeningVisualTruth-Staging'"),
   'release version missing');
 
 console.log('phantom threat guard tests passed');

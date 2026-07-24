@@ -20,7 +20,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1509 +OpeningFallbackRoster-Staging'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1510 +KesslerOpeningVisualTruth-Staging'"), 'release version missing');
 assert(html.includes('BÜROSCHRANK · STARTAUSRÜSTUNG'), 'case start dialog must expose the office wardrobe');
 assert(html.includes('Immer dabei: Walther PPK, Detektiv-Lizenz, Notizbuch und Bleistift.'), 'fixed detective gear must be explained');
 
@@ -174,6 +174,10 @@ assert.strictEqual(spec.dayFile, 'hinterhof-sybelstrasse-robert-confrontation-da
   'a physically present and clickable Robert must already appear in the arrival scene art');
 assert.strictEqual(visualContext._kesslerRobertVisual({ personenImRaum: ['Frau Pohl', 'Frau Hauke'] }), null,
   'the normal courtyard art must remain active when Robert is absent from the current scene roster');
+assert.strictEqual(visualContext._kesslerRobertVisual({
+  szene: 'Robert ist bisher nicht eingetroffen. Du wartest, bevor Robert den Hof betritt.',
+  personenImRaum: ['Frau Pohl', 'Frau Hauke', 'Robert Kessler']
+}), null, 'an explicitly absent Robert must not appear because of the transient raw AI roster');
 visualContext._konfrontationAktiv = () => true;
 visualContext.caseProgress.activeConfrontation = { enemyName: 'Wachtmeister Eugen Hellbach', enemyEntries: [] };
 hellbachState = { status: 'ko', ort: 'Hinterhof Sybelstrasse' };
