@@ -865,6 +865,22 @@ const uncommandedCarDeparture = worldContext.validateSceneWorldTruth({
 assert.strictEqual(uncommandedCarDeparture && uncommandedCarDeparture.code, 'unauthorized_departure',
   'running back to the street and entering the driver seat must not bypass the location gate');
 
+worldContext.engineCurrentLocation = { name: 'Tante Friedas Hehlerei' };
+const uncommandedKrauseSprint = worldContext.validateSceneWorldTruth({
+  ort: 'Tante Friedas Hehlerei',
+  szene: 'Du bedrohst Jochen mit ruhiger Stimme. Dann reisst du die Hintertuer auf und wirbelst in den dunklen Hinterhof. Du sprintest ueber das Kopfsteinpflaster Richtung Stallschreiberstrasse.',
+  personenImRaum: ['Tante Frieda', 'Kalle', 'Jochen'],
+  optionen: []
+}, {
+  _zeitUnmittelbar: true,
+  _npcName: 'Jochen',
+  _npcInteraktion: { npcName: 'Jochen', verb: 'bedrohen' },
+  id: 'NPC_bedrohen'
+});
+assert.strictEqual(uncommandedKrauseSprint && uncommandedKrauseSprint.code, 'unauthorized_departure',
+  'sprinting toward a named street after a threat must not silently move Karl out of the fixed interior');
+worldContext.engineCurrentLocation = { name: 'Hinterhof Sybelstrasse' };
+
 const uncommandedWalkToCar = worldContext.validateSceneWorldTruth({
   ort: 'Hinterhof Sybelstrasse',
   szene: 'Dann drehst du dich um, gehst mit schnellen Schritten zur Strasse und steuerst deinen Opel an, um den Beobachtungsposten zu verlassen.',
