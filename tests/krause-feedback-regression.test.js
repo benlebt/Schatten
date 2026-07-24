@@ -177,10 +177,12 @@ assert.strictEqual(tatortSpec.dayFile, 'krauses-antiquitaeten-day.webp',
 const tatortObjectContext = {
   normForMatch,
   caseSetup: { caseType: 'diebstahl' },
+  caseProgress: { klientGesprochen: false },
   engineCurrentLocation: { name: 'Krauses Antiquitaeten' }
 };
 vm.createContext(tatortObjectContext);
 vm.runInContext(sourceOf('_findKrauseTatortVisualObjectDrift'), tatortObjectContext);
+vm.runInContext(sourceOf('enforceSceneWorldTruthFallback'), tatortObjectContext);
 let tatortObjectProblem = tatortObjectContext._findKrauseTatortVisualObjectDrift({
   szene: 'Die Scheibe der linken Schauvitrine liegt als Scherbenhaufen auf dem Gehweg.'
 });
@@ -191,6 +193,27 @@ tatortObjectProblem = tatortObjectContext._findKrauseTatortVisualObjectDrift({
 });
 assert.strictEqual(tatortObjectProblem, null,
   'the canonical shattered flat cases and intact rear cabinet must remain valid');
+tatortObjectContext.engineCurrentLocation = { name: 'Karl Mauers Büro' };
+tatortObjectProblem = tatortObjectContext._findKrauseTatortVisualObjectDrift({
+  ort: 'Karl Mauers Büro',
+  szene: 'Krause berichtet, Unbekannte hätten seine Rückwandvitrine aufgebrochen und das Etui gestohlen.'
+});
+assert(tatortObjectProblem && tatortObjectProblem.code === 'krause_tatort_visual_object_drift'
+  && tatortObjectProblem.opening === true,
+  'the opening assignment must reject a broken rear cabinet before it establishes false canon');
+const repairedOpening = {
+  ort: 'Karl Mauers Büro',
+  szene: 'Krause berichtet, Unbekannte hätten seine Rückwandvitrine aufgebrochen und das Etui gestohlen.',
+  personenImRaum: ['Theodor Krause'],
+  optionen: []
+};
+tatortObjectContext.enforceSceneWorldTruthFallback(repairedOpening, tatortObjectProblem);
+assert(repairedOpening.szene.includes('flache Schauvitrinen')
+  && repairedOpening.szene.includes('Rückwandvitrine blieb unversehrt')
+  && repairedOpening.szene.includes('Tante Frieda')
+  && repairedOpening.szene.includes('200 Ostmark')
+  && !/Rückwandvitrine aufgebrochen/.test(repairedOpening.szene),
+  'the deterministic opening fallback must preserve the full assignment and canonical image truth');
 tatortObjectContext.engineCurrentLocation = { name: 'Tante Friedas Hehlerei' };
 tatortObjectProblem = tatortObjectContext._findKrauseTatortVisualObjectDrift({
   szene: 'Das Tageslicht fällt staubig durch die Scheiben auf die zerschlagenen Vitrinen.'

@@ -208,6 +208,12 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 - Personen-Fallbacks werden nun aus dem konkret gebundenen NPC und dem aktuellen Indiztext erzeugt; eine globale, fallfremde Spezialprosa wird nicht mehr über die ID ausgewählt.
 - Der Regressionstest führt beide gleichnamigen Indizien direkt nacheinander aus und verlangt jeweils den eigenen Cast, Fallinhalt und Zeitraum sowie die Abwesenheit der fremden Merkmale.
 
+## Krause-Eröffnungs-/Tatort-Gegenlauf v7.12.1475
+
+- Ein frischer manueller Run zeigte den Bild-/Objektbruch bereits in Szene 1: Krause behauptete im Büro, die hohe Rückwandvitrine sei aufgebrochen worden. Kanonisch zerschlagen sind ausschließlich die zwei flachen Schauvitrinen; die hohe Rückwandvitrine bleibt unversehrt und nur ihre Tür steht offen.
+- Tatort-Bildwahrheit gilt deshalb nicht erst beim Betreten des Tatorts, sondern schon in Auftragsbericht, Rückblick, Gespräch und Reiseprosa. Der Guard bindet Schaden und konkretes Objekt innerhalb desselben Teilsatzes, damit die korrekte Gegenüberstellung „flache Vitrinen zerschlagen; hohe Vitrine intakt“ erlaubt bleibt.
+- Der Eröffnungs-Hard-Fallback erhält Auftrag, Etui-Provenienz, Tante-Frieda-Spur, ausstehendes 200-Ostmark-Honorar, Klientenpräsenz und den korrekten Objektzustand gemeinsam. Ein fundamentaler Eröffnungsbruch führt nach Fix und Deployment zum Neustart des Runs.
+
 ## Mindestprotokoll pro Run
 
 - Fall, Version, Strategie, Seed, Start-/Endzeit, Szenenzahl, Ergebnis und Abbruchgrund.
