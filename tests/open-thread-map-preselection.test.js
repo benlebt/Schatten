@@ -32,13 +32,17 @@ vm.runInContext(sourceOf('mapFindeOrtEintrag'), context);
 
 const spedition = { loc: { name: 'Spedition Schmidt, Moabit' } };
 const cafe = { loc: { name: 'Café Wien' } };
-const entries = [spedition, cafe];
+const court = { loc: { name: 'Kreisgericht Mitte' } };
+const courtArchive = { loc: { name: 'Gerichtsarchiv Kreisgericht Mitte' } };
+const entries = [spedition, cafe, court, courtArchive];
 assert.strictEqual(context.mapFindeOrtEintrag(entries, 'Spedition Schmidt Moabit'), spedition,
   'thread destinations must tolerate punctuation differences when preselecting a map location');
 assert.strictEqual(context.mapFindeOrtEintrag(entries, 'Cafe Wien'), cafe,
   'thread destinations must tolerate diacritic differences when preselecting a map location');
 assert.strictEqual(context.mapFindeOrtEintrag(entries, 'Unbekannter Ort'), null,
   'an unknown thread destination must leave the ordinary map open without selecting a wrong place');
+assert.strictEqual(context.mapFindeOrtEintrag(entries, 'Gerichtsarchiv Kreisgericht Mitte'), courtArchive,
+  'an exact destination must beat an earlier entry whose name is only a substring');
 
 const travelSource = sourceOf('oeffneReiseMenue');
 assert(travelSource.startsWith('function oeffneReiseMenue(vorauswahlOrtName)'),
