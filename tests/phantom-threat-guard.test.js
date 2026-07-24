@@ -95,6 +95,14 @@ assert(problem && problem.code === 'unrostered_present_actor',
   'an anonymous present actor outside the door must be rejected');
 
 problem = context._findUnrosteredPresentActor({
+  szene: 'Ein schwarzer EMW hÃ¤lt an der Ecke. Jemand steigt aus, ein Mann im grauen Trenchcoat.',
+  personenImRaum: [],
+  cast_hinzugefuegt: ['Mann im grauen Trenchcoat']
+}, {});
+assert(problem && problem.code === 'unrostered_present_actor',
+  'a cast-only actor who is absent from personenImRaum must be rejected');
+
+problem = context._findUnrosteredPresentActor({
   szene: 'Auf dem Foto steht eine Frau vor dem Haus.',
   personenImRaum: []
 }, {});
@@ -106,7 +114,7 @@ problem = context._findUnrosteredPresentActor({
 }, {});
 assert.strictEqual(problem, null, 'a properly rostered scene actor remains legal');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1502 +OpeningActorGuard-Staging'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1503 +PhysicalRosterGate-Staging'"),
   'release version missing');
 
 console.log('phantom threat guard tests passed');
