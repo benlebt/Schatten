@@ -181,6 +181,8 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 - Dasselbe gilt für die Quelle von Karls Stimme: „er hört deine Stimme/deinen Ruf aus dem Halbdunkel des Flurs“ setzt Karl physisch in den Flur und ist am unveränderten Engine-Außenort ein `ORT-PROSA-BRUCH`.
 - Gleiches gilt für kausative Fremdhandlungen: „sie lässt/bittet/führt dich in den Treppenflur“ vollzieht den Innenraumwechsel, obwohl die andere Figur grammatisches Subjekt ist. Am unveränderten Engine-Außenort muss auch diese Form als `ORT-PROSA-BRUCH` blockiert werden.
 
+- Akute Bedrohungen brauchen immer einen sichtbaren, benannten und spielbaren Ursprung: Revolverlauf oder Messer am Körper, greifende Hand, unmittelbare Drohstimme und tätlicher Angriff sind nur mit passender Person in `personenImRaum`/Cast oder einer bereits mechanisch gestarteten Konfrontation zulässig. Eine unsichtbare Stimme oder Waffe ohne Ziel-/Reaktionsmöglichkeit ist eine fundamentale `PHANTOM-BEDROHUNG`; historische Rückblicke, Akten und berichtete Gewalt sind davon getrennt.
+
 ### 6. Wahrheitsbeat-/Truthbeat-Gate
 
 - Bei `wahrheit`-Fällen sowie jeder `TRUTHBEAT-DIAG`-/`BEAT-DIAG`-Zeile den konkreten Auslösersatz prüfen.
