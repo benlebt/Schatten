@@ -20,7 +20,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1513 +SafeHomeSleepGate-Staging'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1514 +KesslerPresentVisualGate-Staging'"), 'release version missing');
 assert(html.includes('BÜROSCHRANK · STARTAUSRÜSTUNG'), 'case start dialog must expose the office wardrobe');
 assert(html.includes('Immer dabei: Walther PPK, Detektiv-Lizenz, Notizbuch und Bleistift.'), 'fixed detective gear must be explained');
 
@@ -170,9 +170,12 @@ assert.strictEqual(spec.dayFile, 'hinterhof-sybelstrasse-robert-confrontation-da
   'the deterministic Robert abpassen bridge must already show Robert opposite Karl');
 visualContext._hauptuiKesslerRobertAbpassenAktiv = () => false;
 visualContext.getNpcsAtCurrentLocation = () => [{ name: 'Robert Kessler' }];
-spec = visualContext._kesslerRobertVisual({ personenImRaum: ['Frau Pohl', 'Robert Kessler'] });
+spec = visualContext._kesslerRobertVisual({
+  szene: 'Robert Kessler ist vor dir eingetroffen. Er steht am Eingang zum Treppenhaus.',
+  personenImRaum: ['Frau Pohl', 'Robert Kessler']
+});
 assert.strictEqual(spec.dayFile, 'hinterhof-sybelstrasse-robert-confrontation-day.webp',
-  'a physically present and clickable Robert must already appear in the arrival scene art');
+  'a currently dramatized and rostered Robert must already appear in the arrival scene art');
 visualContext.getNpcsAtCurrentLocation = () => [{ name: 'Frau Pohl' }, { name: 'Frau Hauke' }];
 assert.strictEqual(visualContext._kesslerRobertVisual({ personenImRaum: ['Frau Pohl', 'Frau Hauke'] }), null,
   'the normal courtyard art must remain active when Robert is absent from the current scene roster');
