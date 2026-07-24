@@ -330,6 +330,11 @@ peaceProblem = peaceContext._findKrausePeaceReescalationDrift({
 assert(peaceProblem && peaceProblem.code === 'krause_peace_reescalation',
   'a completed peaceful outcome must also reject acoustic weapon reactivation');
 peaceProblem = peaceContext._findKrausePeaceReescalationDrift({
+  szene: 'Kalle und Jochen stehen im Tuerrahmen. Sie haben die Situation erfasst, ihre Koerper spannen sich an, doch sie bleiben an der Schwelle stehen. Hier endet der Spielraum.'
+}, { _pendingIndizId: 'tasche_im_lager' });
+assert(peaceProblem && peaceProblem.code === 'krause_peace_reescalation',
+  'a completed peaceful outcome must reject renewed group combat readiness even without a visibly raised weapon');
+peaceProblem = peaceContext._findKrausePeaceReescalationDrift({
   szene: 'Du findest die schwere Tasche. Kalle, Jochen und Frieda beobachten dich finster, halten aber Abstand.'
 }, { _pendingIndizId: 'tasche_im_lager' });
 assert.strictEqual(peaceProblem, null,

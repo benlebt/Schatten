@@ -239,11 +239,12 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 - Der Szenen-Roster ist enger als eine feste Ortsbindung und verhindert Variantenexplosion: Nur tatsächlich gegenwärtige, handlungstragende Figuren schalten das Gegenüberbild frei. Verlässt die Figur die Szene, fällt das Bild ohne neue Spezialkombination auf das normale Ortsmotiv zurück.
 - Kessler-Repro: Bei der Rückkehr in den Hinterhof steht Robert bereits am Eingang von Hausnummer 24 und ist anklickbar. Schon diese Szene nutzt das zivile Robert-Gegenüberbild; das leere Pohl-/Hauke-Hofmotiv wäre ein grober Personen-/Bildbruch.
 
-## Konfrontationsabschluss-/Abgangswahrheit v7.12.1482
+## Konfrontationsabschluss-/Abgangswahrheit v7.12.1483
 
 - Nach jeder mechanisch beendeten Konfrontation werden Endsatz, `personenImRaum`, Aktionsmenü, NPC-Status und Szenenbild gemeinsam geprüft. Ein Gegner darf nicht im Text weiter „lauern“, „verharren“ oder stehen bleiben, wenn Engine und Bild ihn bereits entfernt haben.
 - Eine friedliche Deeskalation eines **Einzelgegners** endet sichtbar mit einem eindeutigen Abgang. Die Engine entfernt widersprechende Verharrenssätze deterministisch und ergänzt bei Bedarf den Abgang; das gilt fallübergreifend.
 - In einer **Gruppen-Konfrontation** bedeutet `beruhigt` dagegen immer: Der Teilgegner steckt sein Kampfmittel weg, tritt aus der Front zurück und bleibt passiv im gemeinsamen Szenenbild – auch wenn er der letzte aktive Gegner war. Er verlässt den Ort nicht. Vor allem darf die Prosa keinen weiterhin aktiven Gegner „ihm folgen“ lassen. Beim letzten Gegner gibt die beruhigte Gruppe den Zugang frei, bleibt aber als passiver physischer Roster am Ort. Prosa, Bild und Personenbuttons müssen identisch bleiben.
+- Dieser Friedensstatus gilt auch in jeder anschließenden Fund-/Durchsuchungsszene: Erneut „angespannte Körper“, kampfbereite Haltung, zuckende Hände am Griff oder ein scheinbar wieder endender Spielraum sind ebenso Re-Eskalation wie ein gezogenes Messer. Finsteres Beobachten aus passiver Distanz bleibt dagegen erlaubt.
 - K.-o.-, benommene, fixierte oder gefesselte Gegner sind davon getrennt: Sie dürfen und müssen je nach Status weiterhin körperlich am Ort bzw. im passenden Nachher-Bild erscheinen. Der Abgangswächter darf keine echten Zustands-/Beute-Szenen löschen.
 
 ## Mindestprotokoll pro Run
