@@ -20,7 +20,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1516 +VisibleNpcActionTruth-Staging'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1517 +KesslerVisibleRobertAction-Staging'"), 'release version missing');
 assert(html.includes('BÜROSCHRANK · STARTAUSRÜSTUNG'), 'case start dialog must expose the office wardrobe');
 assert(html.includes('Immer dabei: Walther PPK, Detektiv-Lizenz, Notizbuch und Bleistift.'), 'fixed detective gear must be explained');
 
@@ -134,6 +134,26 @@ assert.strictEqual(bindingContext._npcGehoertHierher('norbert_tetzlaff', 'Norber
   'AI scene snapshot must not teleport Tetzlaff from the Spedition into Edith apartment');
 assert.strictEqual(bindingContext._npcGehoertHierher('edith_kessler', 'Edith Kessler'), true,
   'the actually configured apartment resident must remain present');
+
+const robertBindingContext = {
+  currentScene: {
+    szene: 'Robert Kessler ist vor dir eingetroffen. Er steht am Eingang zum Treppenhaus.',
+    personenImRaum: ['Frau Pohl', 'Robert Kessler'],
+  },
+  caseProgress: {},
+  engineCurrentLocation: { name: 'Hinterhof Sybelstrasse' },
+  normForMatch: value => String(value || '').toLowerCase().replace(/_/g, ' '),
+  _romanceMorningPartnerStatus: () => null,
+  _istKesslerFall: () => true,
+  _hauptuiKesslerRobertAbpassenAktiv: () => false,
+};
+vm.createContext(robertBindingContext);
+vm.runInContext(
+  sourceOf('_kesslerRobertAktuellInSzene') + '\n' + sourceOf('_npcGehoertHierher'),
+  robertBindingContext,
+);
+assert.strictEqual(robertBindingContext._npcGehoertHierher('robert_kessler', 'Robert Kessler'), true,
+  'Kessler location binding must accept Robert when the current scene visibly stages him without the abpassen flag');
 
 let hellbachState = { status: 'frei', ort: 'Hinterhof Sybelstrasse' };
 const visualContext = {
