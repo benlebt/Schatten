@@ -48,6 +48,26 @@ assert(html.includes("' tritt sichtbar an dich heran und wartet auf deine Reakti
   'single-person opening fallback needs a natural visible action');
 assert(html.includes('!_ungespraechtePersonOffen && !_ortHatOffeneFundstuecke'),
   'an unspoken local person must suppress the exhausted-location banner');
+assert(html.includes("sameNamedPerson(c.name, entry.name)"),
+  'cast additions must use the central person identity matcher');
+assert(html.includes("sameNamedPerson(c.name || c, pName)"),
+  'personenImRaum additions must use the central person identity matcher');
+
+const nameContext = {
+  caseSetup: {
+    setupCast: [
+      { name: 'Dr. Reinhard Baumgarten' },
+      { name: 'Albrecht Goerke' },
+      { name: 'Mathilde Goerke' },
+    ],
+  },
+};
+vm.createContext(nameContext);
+vm.runInContext(sourceOf('normForMatch') + '\n' + sourceOf('sameNamedPerson'), nameContext);
+assert.strictEqual(nameContext.sameNamedPerson('Dr. Baumgarten', 'Dr. Reinhard Baumgarten'), true,
+  'a titled surname alias must match the canonical full name');
+assert.strictEqual(nameContext.sameNamedPerson('Albrecht Goerke', 'Mathilde Goerke'), false,
+  'shared surnames must not merge two distinct setup people');
 
 const diagnostics = [];
 const context = {
@@ -96,7 +116,7 @@ context.updateTruthBeats('Mertens manipulierte die Akte auf Anordnung von Krollw
 assert(context.caseProgress.truthBeatsHit.includes('krollwitz_mertens'),
   'the found Krollwitz file evidence must unlock the manipulation beat');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1528 +GoerkeCourtRelease-Staging'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1529 +CastAliasDedup-Staging'"),
   'release version missing');
 
 console.log('Goerke opening/truth regression checks passed.');
