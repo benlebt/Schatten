@@ -1382,7 +1382,11 @@ assert(sourceOf('buildWorldTruthRepairHint').includes('ENGINE-WAHRHEIT VERLETZUN
   'offscreen injury drift needs a targeted repair prompt');
 const evidenceFallbackContext = {
   engineCurrentLocation: { name: 'Hinterhof Sybelstrasse' },
-  normForMatch: value => String(value || '').toLowerCase()
+  normForMatch: value => String(value || '').toLowerCase(),
+  _resolveNpcIdentity: id => ({
+    frau_pohl: { name: 'Frau Pohl' },
+    hannelore_wirth: { name: 'Hannelore Wirth' }
+  }[id] || null)
 };
 vm.createContext(evidenceFallbackContext);
 vm.runInContext(sourceOf('enforceSceneWorldTruthFallback'), evidenceFallbackContext);
@@ -1397,6 +1401,31 @@ assert(objectEvidenceScene.szene.includes('Dritter Stock links')
   && objectEvidenceScene.szene.includes('sichtbaren Fund')
   && !/befragte Person|Aussage|Beobachtung/.test(objectEvidenceScene.szene),
   'an object or hotspot evidence fallback must remain an investigation rather than inventing a speaking witness');
+const kesslerNeighborFallbackScene = { szene: 'verworfen', optionen: [] };
+evidenceFallbackContext.enforceSceneWorldTruthFallback(kesslerNeighborFallbackScene, {
+  code: 'evidence_scope_drift',
+  indizId: 'nachbarin_aussage',
+  indizText: 'Frau Pohl: Robert kommt seit Monaten jeden Mittwoch zu der Hauke im dritten Stock',
+  quelle: 'person',
+  npc: 'frau_pohl'
+});
+assert(kesslerNeighborFallbackScene.szene.includes('Frau Pohl')
+  && kesslerNeighborFallbackScene.szene.includes('Robert kommt seit Monaten jeden Mittwoch')
+  && !/Hannelore|29\. auf den 30\. September|schwere Tasche/.test(kesslerNeighborFallbackScene.szene),
+  'the shared neighbor-clue id must never inject Krause testimony into Kessler');
+const krauseNeighborFallbackScene = { szene: 'verworfen', optionen: [] };
+evidenceFallbackContext.enforceSceneWorldTruthFallback(krauseNeighborFallbackScene, {
+  code: 'evidence_scope_drift',
+  indizId: 'nachbarin_aussage',
+  indizText: 'Hannelore Wirth: Zwei Männer kamen mit einer schweren Tasche aus dem Hinterhof',
+  quelle: 'person',
+  npc: 'hannelore_wirth'
+});
+assert(krauseNeighborFallbackScene.szene.includes('Hannelore Wirth')
+  && /zwei Männer/i.test(krauseNeighborFallbackScene.szene)
+  && krauseNeighborFallbackScene.szene.includes('schweren Tasche')
+  && !/Robert|Hauke|Mittwoch/.test(krauseNeighborFallbackScene.szene),
+  'the shared neighbor-clue id must preserve Krause testimony without Kessler leakage');
 const krauseArrivalFallbackScene = {
   szene: 'verworfen',
   personenImRaum: ['Hannelore Wirth'],
