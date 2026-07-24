@@ -181,7 +181,7 @@ assert(html.includes("if (modus !== 'verwalten' && _hauptuiFokussierePerson(npc)
 assert(html.includes('UI-KLICKVERLAUF (chronologisch)'), 'debug export must include the chronological UI click audit');
 assert(html.includes('Sichtbare UI-Zustaende ('), 'debug export must include offered Haupt-UI and dossier states');
 assert(html.includes("_uiAudit('FADEN', faden.frage, faden.ort)"), 'open investigation threads must be logged when clicked');
-assert(html.includes('&& !_ortHatJetztErreichbareSpur && !_offenerFadenHier && !_pflichtKlientOffen && !_ortHatOffeneFundstuecke;'), 'an open thread, unresolved present client, or loose pickup must suppress the exhausted-location banner');
+assert(html.includes('&& !_ortHatJetztErreichbareSpur && !_offenerFadenHier && !_pflichtKlientOffen && !_ungespraechtePersonOffen && !_ortHatOffeneFundstuecke;'), 'an open thread, unresolved present person, or loose pickup must suppress the exhausted-location banner');
 assert(html.includes('function _hauptuiHatOffenenFadenAmOrt(ortName)'), 'Haupt-UI needs a shared current-location thread check');
 assert(html.includes('function _renderCustodyMenu(container)'), 'custody must retain deterministic Haupt-UI actions');
 assert(html.includes("if (mode === 'custody')"), 'custody must render its menu instead of hiding every main action');

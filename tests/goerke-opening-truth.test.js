@@ -32,17 +32,32 @@ assert(!goerke.includes('dein langjähriger Anwalt-Partner'),
   'opening prompt must not frame Baumgarten primarily as Karl\'s lawyer');
 assert(goerke.includes("requiresEvidenceAny: ['alibi_schichtbuch']"),
   'Albrecht exoneration must require the configured alibi evidence');
+assert(/id: 'krollwitz_mertens'[\s\S]*?requiresEvidenceAny: \['krollwitz_steuerung'\]/.test(goerke),
+  'political manipulation beat must require the configured file evidence');
+assert(/name: 'Gerichtsarchiv Kreisgericht Mitte'[\s\S]*?lokalVon: \['Kreisgericht Mitte'\]/.test(goerke),
+  'court archive must be a local walk instead of an Opel trip');
+assert(html.includes('!_ungespraechtePersonOffen && !_ortHatOffeneFundstuecke'),
+  'an unspoken local person must suppress the exhausted-location banner');
 
 const diagnostics = [];
 const context = {
   caseSetup: {
-    truthBeats: [{
-      id: 'albrecht_entlastet',
-      label: 'Albrecht durch die Beweiskette entlastet',
-      entlastung: true,
-      requiresEvidenceAny: ['alibi_schichtbuch'],
-      keywords: /\balbrecht\w*[\s\S]{0,60}(unschuldig|entlastet|alibi)/i,
-    }],
+    truthBeats: [
+      {
+        id: 'albrecht_entlastet',
+        label: 'Albrecht durch die Beweiskette entlastet',
+        entlastung: true,
+        requiresEvidenceAny: ['alibi_schichtbuch'],
+        keywords: /\balbrecht\w*[\s\S]{0,60}(unschuldig|entlastet|alibi)/i,
+      },
+      {
+        id: 'krollwitz_mertens',
+        label: 'Krollwitz/Mertens-Verbindung zur Manipulation',
+        pflicht: true,
+        requiresEvidenceAny: ['krollwitz_steuerung'],
+        keywords: /\bmertens\w*[\s\S]{0,80}(akte|ueberzeugt|manipul)/i,
+      },
+    ],
   },
   caseProgress: { truthBeatsHit: [], gefundeneIndizIds: [] },
   sceneCounter: 1,
@@ -63,7 +78,15 @@ context.updateTruthBeats('Das Schichtbuch belegt Albrechts Alibi und entlastet i
 assert.deepStrictEqual(Array.from(context.caseProgress.truthBeatsHit), ['albrecht_entlastet'],
   'the found alibi evidence must unlock the exoneration beat');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1525 +GoerkeOpeningTruth-Staging'"),
+context.updateTruthBeats('Die Aktenlage ist dünn, aber Mertens ist überzeugt.');
+assert.deepStrictEqual(Array.from(context.caseProgress.truthBeatsHit), ['albrecht_entlastet'],
+  'Mertens opinion must not prove political file manipulation');
+context.caseProgress.gefundeneIndizIds.push('krollwitz_steuerung');
+context.updateTruthBeats('Mertens manipulierte die Akte auf Anordnung von Krollwitz.');
+assert(context.caseProgress.truthBeatsHit.includes('krollwitz_mertens'),
+  'the found Krollwitz file evidence must unlock the manipulation beat');
+
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1526 +GoerkeEvidenceFlow-Staging'"),
   'release version missing');
 
 console.log('Goerke opening/truth regression checks passed.');
