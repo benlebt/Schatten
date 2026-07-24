@@ -36,6 +36,12 @@ assert(/id: 'krollwitz_mertens'[\s\S]*?requiresEvidenceAny: \['krollwitz_steueru
   'political manipulation beat must require the configured file evidence');
 assert(/name: 'Gerichtsarchiv Kreisgericht Mitte'[\s\S]*?lokalVon: \['Kreisgericht Mitte'\]/.test(goerke),
   'court archive must be a local walk instead of an Opel trip');
+assert(goerke.includes('Vor Stage 3 und vor dem Fund "krollwitz_steuerung" darf niemand Krollwitz nennen'),
+  'Goerke setup must keep Krollwitz secret until the evidence chain reaches him');
+assert(!html.includes("' ist am Schauplatz sichtbar anwesend.'"),
+  'generic opening roster fallback must dramatize presence instead of emitting metadata prose');
+assert(html.includes("' tritt sichtbar an dich heran und wartet auf deine Reaktion.'"),
+  'single-person opening fallback needs a natural visible action');
 assert(html.includes('!_ungespraechtePersonOffen && !_ortHatOffeneFundstuecke'),
   'an unspoken local person must suppress the exhausted-location banner');
 
@@ -86,7 +92,7 @@ context.updateTruthBeats('Mertens manipulierte die Akte auf Anordnung von Krollw
 assert(context.caseProgress.truthBeatsHit.includes('krollwitz_mertens'),
   'the found Krollwitz file evidence must unlock the manipulation beat');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1526 +GoerkeEvidenceFlow-Staging'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1527 +GoerkeSecrecyProse-Staging'"),
   'release version missing');
 
 console.log('Goerke opening/truth regression checks passed.');
