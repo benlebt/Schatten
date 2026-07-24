@@ -19,7 +19,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1483 +PacifiedGroupState-Staging'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1484 +TheftReturnGate-Staging'"), 'release version missing');
 assert(html.includes('Liesl schenkte oder widmete das Etui 1939 Hugo'), 'Krause setup must bind the silver-case ownership direction');
 assert(html.includes('Karl zählt oder nimmt kein Geld, Karls Kasse bleibt unverändert'), 'Krause opening prompt must keep the return-contingent fee unpaid');
 assert(html.includes('Dramatisiere diese EINE Spur genau EINMAL'), 'explicit Haupt-UI clues must merge compact target and detailed payoff into one narration');
@@ -94,6 +94,10 @@ assert(!secureExecuteBranch.includes('_hauptuiAngreifbarePersonen'),
   'the earned Etui secure click must not be blocked again by stale restored NPC roles');
 assert(html.includes("_theftReturnStatus1428 !== 'returnedToClient'"),
   'theft Stage 4 must require the explicit physical return to the client');
+assert(html.includes("ctClose === 'diebstahl' && _theftCloseStatus !== 'returnedToClient'"),
+  'a model-emitted client report must not bypass the physical theft return gate');
+assert(html.includes('Besitz ist keine Rueckgabe. Kein Fallende, kein Honorar'),
+  'the blocked theft finale must explicitly route inventory possession toward a real client handover');
 assert(html.includes('Kein Klientenbericht, kein Honorar, kein Fallende'),
   'target securing must explicitly forbid the premature win and payout');
 
