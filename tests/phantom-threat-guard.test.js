@@ -36,6 +36,7 @@ vm.createContext(context);
 vm.runInContext(sourceOf('_findPhantomImmediateThreat'), context);
 vm.runInContext(sourceOf('_findUnrosteredPresentActor'), context);
 vm.runInContext(sourceOf('_findArrivalNpcRosterDrift'), context);
+vm.runInContext(sourceOf('enforceSceneWorldTruthFallback'), context);
 vm.runInContext(sourceOf('validateOpeningRoleTruth'), context);
 
 let problem = context._findPhantomImmediateThreat({
@@ -178,6 +179,25 @@ const kesslerRosterProblem = context.validateOpeningRoleTruth(
 );
 assert(kesslerRosterProblem && kesslerRosterProblem.code === 'arrival_npc_roster_drift',
   'opening prose must visibly dramatize every engine-present roster actor');
+context.engineCurrentLocation = { name: 'Hinterhof Sybelstrasse' };
+context.caseProgress = { indizien: [] };
+const repairedKesslerOpening = {
+  ort: 'Hinterhof Sybelstrasse',
+  szene: 'Edith Kessler hat dich beauftragt, Robert zu beschatten. Du wartest vor Robert allein im Hinterhof.',
+  personenImRaum: ['Frau Pohl', 'Frau Hauke'],
+  optionen: [{ id: 'A', text: 'Warten' }]
+};
+context.enforceSceneWorldTruthFallback(repairedKesslerOpening, {
+  code: 'arrival_npc_roster_drift',
+  opening: true,
+  required: ['Frau Pohl', 'Frau Hauke']
+});
+assert(/Edith Kessler/.test(repairedKesslerOpening.szene)
+    && /linken Erdgeschossfenster/.test(repairedKesslerOpening.szene)
+    && /oberen rechten Hoffenster/.test(repairedKesslerOpening.szene),
+  'the opening roster fallback must preserve the assignment and add both fixed window positions');
+assert.deepStrictEqual(Array.from(repairedKesslerOpening.personenImRaum), ['Frau Pohl', 'Frau Hauke'],
+  'the opening roster fallback must retain both physical window witnesses');
 context.getNpcsAtCurrentLocation = () => [];
 
 problem = context._findUnrosteredPresentActor({
@@ -192,7 +212,7 @@ problem = context._findUnrosteredPresentActor({
 }, {});
 assert.strictEqual(problem, null, 'a properly rostered scene actor remains legal');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1508 +OpeningRosterTruth-Staging'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1509 +OpeningFallbackRoster-Staging'"),
   'release version missing');
 
 console.log('phantom threat guard tests passed');
