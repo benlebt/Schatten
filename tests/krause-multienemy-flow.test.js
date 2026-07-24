@@ -19,7 +19,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1485 +DepartureVerbGuard-Staging'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1486 +PeaceRoster-Staging'"), 'release version missing');
 assert(html.includes('Liesl schenkte oder widmete das Etui 1939 Hugo'), 'Krause setup must bind the silver-case ownership direction');
 assert(html.includes('Karl zählt oder nimmt kein Geld, Karls Kasse bleibt unverändert'), 'Krause opening prompt must keep the return-contingent fee unpaid');
 assert(html.includes('Dramatisiere diese EINE Spur genau EINMAL'), 'explicit Haupt-UI clues must merge compact target and detailed payoff into one narration');
@@ -293,6 +293,13 @@ assert(sourceOf('_hauptuiKonfrontationItems').includes('ppkSchonGezogen'), 'the 
 assert(sourceOf('_hauptuiKonfrontationAbschliessen').includes('!istPpk'), 'PPK pressure must not become a cumulative knockout');
 assert(sourceOf('_hauptuiKonfrontationAbschliessen').includes('caseProgress.krauseLagerFreigegeben = true'),
   'finishing the full Krause group must persistently unlock the warehouse');
+const peaceRoster = sourceOf('_krauseFriedensRosterSichern');
+assert(peaceRoster.includes("String(zustand.status || '') !== 'beruhigt'"),
+  'only mechanically calmed Krause opponents may receive the peaceful presence guarantee');
+assert(peaceRoster.includes('roster.push(entry.name)') && peaceRoster.includes('cast.push({'),
+  'peaceful Krause opponents must remain aligned in structured scene roster and final playable cast');
+assert(html.indexOf('_krauseFriedensRosterSichern(scene, cast)') > html.indexOf('function _krauseFriedensRosterSichern'),
+  'the Krause peace roster guarantee must run in the final scene-cast pipeline');
 const mainTargets = sourceOf('_baukastenZiele');
 assert(mainTargets.includes("_gefunden.indexOf('etui_im_lager') !== -1"),
   'the explicit Etui secure action must be driven by the concrete found clue');
