@@ -180,6 +180,33 @@ assert(sourceOf('buildWorldTruthRepairHint').includes("problem.code === 'histori
 assert(sourceOf('enforceSceneWorldTruthFallback').includes("problem.code === 'historical_timeline_drift'"),
   'repeated historical drift must get a deterministic safe fallback');
 
+const sectorHistoryContext = {
+  engineCurrentLocation: { name: 'Cafe Wien', sektor: 'West (Charlottenburg)' },
+  normForMatch: value => String(value || '').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, ''),
+  getCaseLocations: () => []
+};
+vm.createContext(sectorHistoryContext);
+vm.runInContext(sourceOf('_findHistoricalSectorDrift'), sectorHistoryContext);
+assert.strictEqual(sectorHistoryContext._findHistoricalSectorDrift({
+  szene: 'Draussen zaehlen zwei Frauen vor dem HO-Laden ihre Lebensmittelmarken.'
+})?.code, 'historical_sector_drift',
+  'local HO shops and ration cards at Cafe Wien must be blocked as West-sector drift');
+sectorHistoryContext.engineCurrentLocation = { name: 'Karl Mauers Buero', sektor: 'Ost (Mitte)' };
+assert.strictEqual(sectorHistoryContext._findHistoricalSectorDrift({
+  szene: 'Draussen zaehlen zwei Frauen vor dem HO-Laden ihre Lebensmittelmarken.'
+}), null, 'the same supply texture must remain available at an East-sector location');
+sectorHistoryContext.engineCurrentLocation = { name: 'Cafe Wien', sektor: 'West (Charlottenburg)' };
+assert.strictEqual(sectorHistoryContext._findHistoricalSectorDrift({
+  szene: 'Hier gibt es keinen HO-Laden und keine Lebensmittelmarken mehr.'
+}), null, 'an explicit historically correct negation must not trigger the sector guard');
+assert(sourceOf('validateSceneWorldTruth').includes('_findHistoricalSectorDrift'),
+  'the historical sector guard must run in the pre-commit world-truth gate');
+assert(sourceOf('buildWorldTruthRepairHint').includes("problem.code === 'historical_sector_drift'"),
+  'sector drift must get a precise model repair prompt');
+assert(sourceOf('enforceSceneWorldTruthFallback').includes("problem.code === 'historical_sector_drift'"),
+  'repeated sector drift must get a deterministic safe fallback');
+
 const npcDepartureContext = {
   normForMatch: value => String(value || '').toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, ''),

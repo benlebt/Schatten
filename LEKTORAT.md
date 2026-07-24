@@ -226,6 +226,13 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 - Personen-Indiz, Popup und Prosa werden nach jeder Brücken-, Warte- und Ankunftsaktion gegengeprüft. Nennt die Szene nur eine Ausflucht oder Karls Frage, darf die Mechanik daraus nicht bereits ein Eingeständnis samt bisher unbekanntem Vornamen machen.
 - Eine handlungstragende Zielperson muss schon im Bild der Abpass-/Begegnungsszene sichtbar sein, auch wenn noch keine formale Kampf-Konfrontation läuft. Kesslers ziviles Robert-Gegenüberbild gilt daher bereits für die deterministische Abpassen-Brücke.
 
+## Historische Sektor-Kulisse v7.12.1478
+
+- Historische Korrektheit wird nicht nur gegen Datum und Wochentag, sondern auch gegen den aktuellen Sektor geprüft. Ein für Ost-Berlin plausibles Detail ist in einer West-Berliner Szene weiterhin ein harter Historien-/Ortfehler.
+- `HO`, `Konsum`, Lebensmittelkarten und Marken-Schlangen gehören 1953 in den Ostsektor. In West-Berlin war die Lebensmittelrationierung seit 1950 aufgehoben; am Kurfürstendamm, in Charlottenburg, Moabit, Tempelhof und Schöneberg sind freie Schaufenster, Markenwerbung und Westmark die passende lokale Textur.
+- Der Check gilt für beiläufige Straßenkulisse ebenso wie für handlungstragende Prosa. Eine ausdrücklich historische Rückblende oder eine korrekte Verneinung („kein HO-Laden“) darf nicht als Drift fehlklassifiziert werden.
+- Bei jedem Szenenbild-/Prosa-Abgleich zusätzlich fragen: Gehören sichtbare Warenwelt, Uniformen, Verkehrsmittel, Behörden und Zahlungsmittel wirklich zum aktuellen Sektor? Nur grobe, konkret sichtbare Widersprüche benötigen eine andere Bildvariante; reine Prosafehler werden in der Prosa korrigiert.
+
 ## Mindestprotokoll pro Run
 
 - Fall, Version, Strategie, Seed, Start-/Endzeit, Szenenzahl, Ergebnis und Abbruchgrund.
