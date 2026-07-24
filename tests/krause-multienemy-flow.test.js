@@ -19,7 +19,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1493 +PeaceBodyState-Staging'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1494 +CabinetContents-Staging'"), 'release version missing');
 assert(html.includes('Liesl schenkte oder widmete das Etui 1939 Hugo'), 'Krause setup must bind the silver-case ownership direction');
 assert(html.includes('Karl zählt oder nimmt kein Geld, Karls Kasse bleibt unverändert'), 'Krause opening prompt must keep the return-contingent fee unpaid');
 assert(html.includes('Dramatisiere diese EINE Spur genau EINMAL'), 'explicit Haupt-UI clues must merge compact target and detailed payoff into one narration');
@@ -32,6 +32,21 @@ assert(html.includes('die flachen Schauvitrinen sind aufgebrochen; die stehende 
   'the Krause scene map must distinguish the shattered flat showcases from the intact rear cabinet');
 assert(html.includes('Die beiden flachen Schauvitrinen in der Ladenmitte sind zerschlagen. Die stehende Glasvitrine an der Rückwand ist dagegen unversehrt'),
   'the bound clue prose must explicitly agree with the canonical scene image');
+const cabinetVisualContext = {
+  caseSetup: { caseType: 'diebstahl' },
+  engineCurrentLocation: { name: 'Krauses Antiquitäten' },
+  normForMatch: value => String(value || '').toLowerCase().replace(/_/g, ' ')
+    .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
+};
+require('vm').createContext(cabinetVisualContext);
+require('vm').runInContext(sourceOf('_findKrauseTatortVisualObjectDrift'), cabinetVisualContext);
+assert.strictEqual(cabinetVisualContext._findKrauseTatortVisualObjectDrift({
+  szene: 'An der Rückwand klafft die offene Tür der großen Vitrine, der dunkle Samt im Inneren ist leer.'
+}).code, 'krause_tatort_visual_object_drift',
+  'the rear cabinet must not become wholly empty while its canonical image still shows other silver pieces');
+assert.strictEqual(cabinetVisualContext._findKrauseTatortVisualObjectDrift({
+  szene: 'Die hohe Rückwandvitrine ist intakt und enthält andere Silberstücke; nur das gemeldete Etui fehlt.'
+}), null, 'the truthful partly stocked rear cabinet must remain valid');
 assert(html.includes('habe|hatte|konnte'), 'arrival witness validation must cover German perfect infinitive phrasing');
 assert(html.includes("indiz.id !== 'einbruch_fenster'"), 'the Krause window clue must configure a visible prose anchor');
 assert(html.includes('sprechen eindeutig für ein Stemmeisen'), 'the hard fallback must restore the defining tool conclusion before booking');
