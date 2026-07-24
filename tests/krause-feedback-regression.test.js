@@ -418,7 +418,7 @@ assert(missingFriedaProblem && missingFriedaProblem.missingProse.includes('Tante
 assert(sourceOf('validateSceneWorldTruth').includes('brennender|stechender'),
   'offscreen injury truth must reject retrospective pain caused by an invented earlier scuffle');
 const theftStateSource = sourceOf('processTheftTargetState');
-assert(theftStateSource.includes("pendingChosenOption._pendingIndizId === 'etui_im_lager'"),
+assert(theftStateSource.includes("_theftAction._pendingIndizId === 'etui_im_lager'"),
   'the theft state processor must not promote the Krause discovery click to physical possession');
 assert(theftStateSource.includes('removeTargetItemFromInventory(_tName)'),
   'a model-invented target inventory entry must be removed until the explicit secure click');

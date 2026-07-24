@@ -56,7 +56,9 @@ assert(chooseSource.includes('const _engineRuhigeAktion = !!(option && option._e
 assert(chooseSource.includes('!!(option && option._sozialTonart)'),
   'a structured social-tone click must count as a human interaction even when its generated prompt does not begin with a question verb');
 assert(sourceOf('performApiCall').includes('var _ruhigesIndizFuerSpannung = !!(pendingChosenOption && pendingChosenOption._pendingIndizId')
-  && sourceOf('performApiCall').includes('_capQuietEvidenceTension(scene, newSpannung, _ruhigesIndizFuerSpannung)'),
+  && sourceOf('performApiCall').includes('_capQuietEvidenceTension(scene, newSpannung, _ruhigesIndizFuerSpannung)')
+  && sourceOf('performApiCall').includes('var _chosenOptionForScene = pendingChosenOption')
+  && sourceOf('performApiCall').includes('processTheftTargetState(scene, _chosenOptionForScene)'),
   'a quiet structured evidence click must retain its metadata until the later tension pass');
 
 const evidenceTensionContext = {
@@ -77,6 +79,31 @@ assert.strictEqual(forensicScene.spannung, 3,
 assert.strictEqual(evidenceTensionContext._capQuietEvidenceTension({
   spannung: 4, szene: 'Kalle geht auf dich los und packt dich am Kragen.'
 }, 4, true), 4, 'a real present attack during an evidence scene must retain high tension');
+
+const evidenceHealthContext = {
+  normForMatch: evidenceTensionContext.normForMatch,
+  detectNewWound: text => /kugel trifft dich|schlaegt dich/.test(evidenceTensionContext.normForMatch(text)),
+  diag: () => {}
+};
+vm.createContext(evidenceHealthContext);
+vm.runInContext(sourceOf('_capQuietEvidenceHealthDelta'), evidenceHealthContext);
+const quietEtuiScene = {
+  verfassung_delta: -1,
+  verletzungsbeschreibung: 'Unsichtbarer Modellschaden.',
+  szene: 'Karl hebt das silberne Etui auf und steckt es in seine Innentasche.'
+};
+assert.strictEqual(evidenceHealthContext._capQuietEvidenceHealthDelta(quietEtuiScene, -1, true), 0,
+  'securing a clue without a visible attack must not silently reduce health');
+assert.strictEqual(quietEtuiScene.verletzungsbeschreibung, '',
+  'a hidden injury note without a visible incident must not survive into the export');
+assert.strictEqual(evidenceHealthContext._capQuietEvidenceHealthDelta({
+  verfassung_delta: -1, szene: 'Die Kugel trifft dich an der Schulter.'
+}, -1, true), -1, 'a visible new attack during an evidence scene may still reduce health');
+
+const theftStateSource = sourceOf('processTheftTargetState');
+assert(theftStateSource.includes('const _theftAction = actionContext')
+  && theftStateSource.includes("_theftAction._pendingIndizId === 'etui_im_lager'"),
+  'the theft possession gate must use the retained scene action after the global pending option is cleared');
 
 const botHashSource = sourceOf('botGetOptionsHash');
 assert(botHashSource.includes('.hauptui-execute:not(:disabled)') && botHashSource.includes('.hauptui-target:not(:disabled)'),
