@@ -354,6 +354,22 @@ arrivalRosterProblem = arrivalRosterContext._findArrivalNpcRosterDrift({
 }, { _istReise: true });
 assert.strictEqual(arrivalRosterProblem, null,
   'matching arrival prose and NPC roster must remain valid');
+const arrivalFallbackContext = {
+  normForMatch,
+  caseProgress: { indizien: ['Hannelores Aussage', 'Bornsteins Hinweis', 'Friedas Ausweichen'] },
+  engineCurrentLocation: { name: 'Stallschreiberstrasse 12' }
+};
+vm.createContext(arrivalFallbackContext);
+vm.runInContext(sourceOf('enforceSceneWorldTruthFallback'), arrivalFallbackContext);
+const arrivalFallbackScene = { szene: 'Niemand ist hier.', personenImRaum: [], optionen: [] };
+arrivalFallbackContext.enforceSceneWorldTruthFallback(arrivalFallbackScene, {
+  code: 'arrival_npc_roster_drift',
+  required: ['Tante Frieda', 'Kalle', 'Jochen']
+});
+assert(arrivalFallbackScene.szene.includes('bereits gesicherten Hinweisen'),
+  'arrival roster fallback must acknowledge clues secured in earlier scenes');
+assert(!arrivalFallbackScene.szene.includes('Noch hat niemand einen konkreten Hinweis preisgegeben'),
+  'arrival roster fallback must not erase the run history after multiple clues');
 const friedasArrivalContext = {
   normForMatch,
   caseProgress: { stage: 2 },
