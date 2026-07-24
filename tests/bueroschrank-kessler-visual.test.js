@@ -20,7 +20,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1514 +KesslerPresentVisualGate-Staging'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1515 +KesslerPresentThreadTruth-Staging'"), 'release version missing');
 assert(html.includes('BÜROSCHRANK · STARTAUSRÜSTUNG'), 'case start dialog must expose the office wardrobe');
 assert(html.includes('Immer dabei: Walther PPK, Detektiv-Lizenz, Notizbuch und Bleistift.'), 'fixed detective gear must be explained');
 
@@ -148,7 +148,7 @@ const visualContext = {
   getNpcsAtCurrentLocation: () => [{ name: 'Wachtmeister Eugen Hellbach' }],
 };
 vm.createContext(visualContext);
-vm.runInContext(sourceOf('_kesslerRobertVisual') + '\n' + sourceOf('_kesslerHellbachVisual'), visualContext);
+vm.runInContext(sourceOf('_kesslerRobertAktuellInSzene') + '\n' + sourceOf('_kesslerRobertVisual') + '\n' + sourceOf('_kesslerHellbachVisual'), visualContext);
 let spec = visualContext._kesslerHellbachVisual({ personenImRaum: [] });
 assert.strictEqual(spec.dayFile, 'hinterhof-sybelstrasse-hellbach-confrontation-day.webp', 'active Hellbach must use confrontation art');
 visualContext.caseProgress.activeConfrontation = {

@@ -516,6 +516,15 @@ context.getCaseLocations = () => [{
 context._aktTageszeitName = () => 'morgen';
 context._ortsFundIndizienErreichbar = () => [];
 context._ortsFundItems = () => [];
+context.currentScene = {
+  szene: 'Robert Kessler ist vor dir eingetroffen. Er steht am Eingang zum Treppenhaus.',
+  personenImRaum: ['Frau Pohl', 'Robert Kessler'],
+};
+faeden = context._hauptuiKesslerFaeden();
+assert.strictEqual(context._hauptuiKesslerRobertAmAktuellenOrt(), true, 'a currently dramatized Robert must count as physically present without another hot roster lookup');
+assert.strictEqual(context._hauptuiKesslerRobertAbpassenNoetig(), false, 'visible Robert must never be advertised as someone Karl still has to wait for');
+assert.notStrictEqual(faeden[0].bedarf, 'Robert erst abpassen', 'Robert thread must agree with the visible person menu');
+context.currentScene = { szene: 'Der Hinterhof liegt still.', personenImRaum: ['Frau Pohl'] };
 faeden = context._hauptuiKesslerFaeden();
 assert.strictEqual(faeden[0].id, 'robert', 'external contradiction proof must keep the Robert thread open');
 assert(faeden[0].targetIds.includes('robert_abpassen'), 'Robert thread must expose the abpassen fallback target');
