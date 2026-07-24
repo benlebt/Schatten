@@ -473,6 +473,16 @@ assert.strictEqual(openingRoleContext.validateOpeningRoleTruth(
 ).code, 'opening_client_made_thief',
 'a theft opening must not grammatically turn the reporting client into the thief');
 assert.strictEqual(openingRoleContext.validateOpeningRoleTruth(
+  'Theodor Krause meldet den Diebstahl. In der hohen Rueckwandvitrine ist nur der helle Staubrand auf dem Samt geblieben.',
+  krausePrivateSetup
+).code, 'opening_core_evidence_leak',
+'a theft opening must not reveal the forensic payoff of a core clue before its investigation action');
+assert.strictEqual(openingRoleContext.validateOpeningRoleTruth(
+  'Theodor Krause meldet den Diebstahl. Das Etui lag zuletzt in der hohen Rueckwandvitrine.',
+  krausePrivateSetup
+).ok, true,
+'a theft opening may state the known last storage location without revealing its investigative trace');
+assert.strictEqual(openingRoleContext.validateOpeningRoleTruth(
   'Theodor Krause nennt den Diebstahl, das Honorar und die frische Spur zu Tante Frieda.', krausePrivateSetup
 ).ok, true,
 'a clean private-case opening must remain valid');
