@@ -370,6 +370,16 @@ assert(arrivalFallbackScene.szene.includes('bereits gesicherten Hinweisen'),
   'arrival roster fallback must acknowledge clues secured in earlier scenes');
 assert(!arrivalFallbackScene.szene.includes('Noch hat niemand einen konkreten Hinweis preisgegeben'),
   'arrival roster fallback must not erase the run history after multiple clues');
+const grammarRepairContext = { diag() {} };
+vm.createContext(grammarRepairContext);
+vm.runInContext(sourceOf('repairBasicGermanProse'), grammarRepairContext);
+const grammarScene = { szene: 'Du tust so, als hättest du eine Ass im Ärmel.' };
+assert.strictEqual(grammarRepairContext.repairBasicGermanProse(grammarScene), true,
+  'the final delivery guard must repair the live wrong-genus phrase');
+assert.strictEqual(grammarScene.szene, 'Du tust so, als hättest du ein Ass im Ärmel.',
+  'visible confrontation prose must use the correct neuter article');
+assert(html.includes("if (typeof repairBasicGermanProse === 'function') repairBasicGermanProse(scene)"),
+  'grammar repair must run before the immutable log snapshot');
 const friedasArrivalContext = {
   normForMatch,
   caseProgress: { stage: 2 },
