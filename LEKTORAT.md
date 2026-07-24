@@ -184,6 +184,12 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 ### 6. Wahrheitsbeat-/Truthbeat-Gate
 
 - Bei `wahrheit`-Fällen sowie jeder `TRUTHBEAT-DIAG`-/`BEAT-DIAG`-Zeile den konkreten Auslösersatz prüfen.
+- Strukturierte Kern-Indizien mit expliziter Beat-Zuordnung müssen den zugehörigen Wahrheitsbeat per ID setzen; ein bereits gebuchter Schuldschein, Schlüssel oder ein Geständnis darf nicht wegen eines Regex-/Reihenfolgefehlers als Beat fehlen.
+- Nach jedem Fund prüfen, ob der qualitative Stage-Floor nach Erreichen seiner Szenen-Hardgrenze tatsächlich nachzieht. Ein Fall darf nicht auf Stage 1 stranden, während gefundene Stage-2/3-Indizien vorliegen.
+- Pro Ermittlungsstufe muss mindestens ein sichtbarer, erreichbarer Fortschrittsweg existieren (Person, Spur, offener Faden oder klar markierter Zielort). Reine Loot-Orte ohne Fallfunktion gelten als tote Orte und dürfen nicht die einzige Lenkung sein.
+- Bewusstlose, benommene, gefesselte oder abgeführte Figuren dürfen im Szenenbild weder entspannt sitzen noch frei stehen. Dafür nur grob notwendige Zustandsmotive verwenden; keine kombinatorische Bildflut.
+- Begleittiere wie Rex sind keine normalen Gesprächspersonen. Vor der Aufnahme zeigt die UI ausschließlich die Mitnahme-/Tauschaktion, danach nur Begleiter- und Konfrontationskommandos.
+- Für jeden tatsächlich besuchten Engine-Ort muss ein passendes Szenenbild oder ein bewusst dokumentierter neutraler Ersatz vorliegen. Ein still auf `hidden` gesetzter Standardort ist im manuellen Bildlektorat ein Fehler.
 - Mechanisch gebundene Zeugenaussagen dürfen auch keine über natürliche Verben eingeschmuggelten Tätermerkmale erhalten: Stolpern, Taumeln oder Schwanken ist ebenso eine erfundene Gangart wie Hinken. Die Prüfung muss täterbezogen bleiben; ein Zeuge, der über die eigenen Worte stolpert, ist kein Tätermerkmal.
 - Festhalten, ob der Beat durch Spieleraktion, mechanisches Indiz, Geständnis, Zeugenaussage, Gegenstand oder nur durch Regex-Prosa erkannt wurde.
 - Reflexions-, Motiv-, Negations-, Rückblick- und bloße Namensnähe dürfen keinen Pflicht-Beat erfüllen.

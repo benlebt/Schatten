@@ -7,7 +7,7 @@ const { readWebpDimensions } = require('./image-format-utils');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1498 +TrudeStockRotation-Staging'"), 'version constant is stale');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1499 +BrandtFailForward-Staging'"), 'version constant is stale');
 assert(html.includes("text: 'Fall abschließen und Auftraggeber informieren.'"), 'resolve button copy must stay player-facing');
 assert(html.includes('_enginePrompt: [_resolveText, _resolveTransitionPrompt]'), 'resolve direction must remain private');
 assert(!html.includes('resolveOpt.text += narr'), 'director narration must not leak into resolve button text');
@@ -298,9 +298,13 @@ assert(html.includes("const HUND_HEIMAT = 'Goldener Anker';"), 'Rex must remain 
 assert(html.includes("_istAnkerOrt({ name: engineCurrentLocation.name })"), 'Rex must also appear at legacy setup names such as Eckkneipe Zum Goldenen Anker');
 assert(html.includes('caseProgress.hundDaWuerfel = harteLage || (Math.random() < 0.75);'), 'hard cases must guarantee Rex while lighter cases keep variation');
 assert(html.includes('const krauseGruppenfall = !!(caseSetup'), 'the Krause multi-enemy case must guarantee access to Rex as a real alternative to Trude equipment');
-assert.strictEqual((html.match(/barErlaubt: false/g) || []).length, 2, 'both Rex acquisition paths must reject a trivial cash purchase');
+assert((html.match(/barErlaubt: false/g) || []).length >= 2, 'every Rex acquisition path must reject a trivial cash purchase');
 assert(html.includes("_hint: 'Tauschwert ' + HUND_PREIS + ' aus Ware · erst sammeln"), 'Rex action must preview its collection requirement');
 assert(html.includes('Bei Trude und an anderen Orten kann Karl passende Ware besorgen.'), 'failed Rex payment must guide Karl toward preparation');
+assert(html.includes("add('hund_mitnehmen', 'Rex als Begleitung ausleihen · Tauschwert ' + HUND_PREIS)"),
+  'the Haupt-UI must offer Rex as a companion instead of generating social dialogue');
+assert(html.includes("verb === 'hund_mitnehmen'") && html.includes("_hundMitnehmenMitTausch('Haupt-UI')"),
+  'the Haupt-UI Rex action must execute the exchange-backed companion path');
 const trudeStockStart = html.indexOf('function _trudeSortimentKeys()');
 const trudeStockEnd = html.indexOf('// v7.12.680:', trudeStockStart);
 assert(trudeStockStart >= 0 && trudeStockEnd > trudeStockStart, 'cannot isolate Trude stock rotation');

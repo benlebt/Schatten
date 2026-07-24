@@ -18,7 +18,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1498 +TrudeStockRotation-Staging'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1499 +BrandtFailForward-Staging'"),
   'Brandt regression release version missing');
 
 for (const bad of [
@@ -51,8 +51,8 @@ assert(brandtBlock.includes("oeffnungszeit: ['nachmittag','abend','nacht']"),
   'Rote Laterne must close after the night instead of keeping its cast through the morning');
 assert(brandtBlock.includes("sperrstundenAussen: 'Vor der Roten Laterne am Nollendorfplatz'"),
   'club closing needs a deterministic exterior destination');
-assert(html.includes("{ test: /^vor der roten laterne/, hidden: true, place: 'Vor der Roten Laterne am Nollendorfplatz', innen: false }"),
-  'the club exterior must not reuse the unchanged nightclub interior still');
+assert(html.includes("{ test: /^vor der roten laterne/, file: 'vor-rote-laterne-day.webp'"),
+  'the club exterior needs its own image instead of hiding or reusing the interior still');
 assert(brandtBlock.includes("{ id: 'lola_brandt', zeit: ['nachmittag','abend','nacht'] }"),
   'Lola must have a work shift instead of permanent presence');
 assert(brandtBlock.includes("requiresEvidenceAll: ['schuldschein','fremde_walther','zeuge_walther']"),
@@ -369,5 +369,34 @@ vm.runInContext(sourceOf('_brandtKurtKonfrontationVisual'), visualContext);
 const kurtVisual = visualContext._brandtKurtKonfrontationVisual();
 assert(kurtVisual && kurtVisual.file === 'rote-laterne-kurt-konfrontation.webp',
   'active Kurt confrontation must override the generic Rote Laterne still');
+
+assert(fs.existsSync(path.join(root, 'assets', 'scenes', 'brandt', 'rote-laterne-kurt-ko.webp')),
+  'Kurt KO image asset is missing');
+visualContext._konfrontationAktiv = () => false;
+visualContext._npcZustandGet = () => ({ status: 'ko', ort: 'Rote Laterne' });
+const kurtKoVisual = visualContext._brandtKurtKonfrontationVisual();
+assert(kurtKoVisual && kurtKoVisual.file === 'rote-laterne-kurt-ko.webp',
+  'a local KO Kurt must override every relaxed/standing Rote Laterne still');
+assert(fs.existsSync(path.join(root, 'assets', 'scenes', 'brandt', 'vor-rote-laterne-day.webp')),
+  'Brandt exterior day image is missing');
+assert(html.includes("test: /^vor der roten laterne/, file: 'vor-rote-laterne-day.webp'"),
+  'the day-two exterior must not remain silently hidden');
+assert(html.includes("truthBeatIds: ['schulden_motiv']"),
+  'the structured Schuldschein must map deterministically to its truth beat');
+assert(html.includes("id: 'lange_wohnungsschluessel'") && html.includes('searchAfterDefeat: true'),
+  'a defeated Lange needs a searchable fail-forward clue');
+assert(sourceOf('_markiereIndizGefunden').includes('via Kern-Indiz-ID'),
+  'structured evidence must satisfy mapped truth beats without another regex guess');
+const floorContext = {
+  caseProgress: { stage: 1, indizStageFloor: 0, gefundeneIndizIds: ['schuldschein'] },
+  sceneCounter: 6,
+  _findeIndizById: () => ({ id: 'schuldschein', stage: 2 }),
+  diag: () => {}
+};
+vm.createContext(floorContext);
+vm.runInContext(sourceOf('_stageFloorAnwenden'), floorContext);
+floorContext._stageFloorAnwenden();
+assert.strictEqual(floorContext.caseProgress.stage, 2,
+  'a found stage-two clue must reopen progression once the scene hard-floor is reached');
 
 console.log('brandt run regression tests passed');
