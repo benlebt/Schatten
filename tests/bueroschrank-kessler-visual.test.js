@@ -20,7 +20,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1476 +WitnessVehicleScope-Staging'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1477 +RobertBridgeTruth-Staging'"), 'release version missing');
 assert(html.includes('BÜROSCHRANK · STARTAUSRÜSTUNG'), 'case start dialog must expose the office wardrobe');
 assert(html.includes('Immer dabei: Walther PPK, Detektiv-Lizenz, Notizbuch und Bleistift.'), 'fixed detective gear must be explained');
 
@@ -144,6 +144,7 @@ const visualContext = {
   _npcZustandGet: () => hellbachState,
   _konfrontationAktiv: () => true,
   _encounterAktiv: () => false,
+  _hauptuiKesslerRobertAbpassenAktiv: () => false,
   getNpcsAtCurrentLocation: () => [{ name: 'Wachtmeister Eugen Hellbach' }],
 };
 vm.createContext(visualContext);
@@ -161,6 +162,14 @@ assert.strictEqual(spec.dayFile, 'hinterhof-sybelstrasse-robert-confrontation-da
   'an active Robert Kessler confrontation must use the dedicated civilian daytime art');
 assert.strictEqual(spec.nightFile, 'hinterhof-sybelstrasse-robert-confrontation-night.webp',
   'an active Robert Kessler confrontation must use the dedicated civilian night art');
+visualContext._konfrontationAktiv = () => false;
+visualContext.caseProgress.activeConfrontation = null;
+visualContext._hauptuiKesslerRobertAbpassenAktiv = () => true;
+spec = visualContext._kesslerRobertVisual();
+assert.strictEqual(spec.dayFile, 'hinterhof-sybelstrasse-robert-confrontation-day.webp',
+  'the deterministic Robert abpassen bridge must already show Robert opposite Karl');
+visualContext._hauptuiKesslerRobertAbpassenAktiv = () => false;
+visualContext._konfrontationAktiv = () => true;
 visualContext.caseProgress.activeConfrontation = { enemyName: 'Wachtmeister Eugen Hellbach', enemyEntries: [] };
 hellbachState = { status: 'ko', ort: 'Hinterhof Sybelstrasse' };
 spec = visualContext._kesslerHellbachVisual({ personenImRaum: [] });

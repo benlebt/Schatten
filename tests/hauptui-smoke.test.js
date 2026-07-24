@@ -203,6 +203,8 @@ assert(/name: 'Robert Kessler'[\s\S]{0,5000}?persistent: true, anwesend: false/.
   'Robert must start absent and only return through the explicit abpassen path');
 assert(/id: 'robert_kessler', abpassenOnly: true/.test(html),
   'Robert courtyard binding must be explicitly limited to the deterministic abpassen path');
+assert(sourceOf('_hauptuiKesslerRobertAbpassen').includes('_noEvidence: true'),
+  'the Robert abpassen bridge must not silently grant his confession before a deliberate conversation');
 
 const robertPresenceContext = {
   normForMatch: (value) => String(value || '').toLowerCase().replace(/_/g, ' ').replace(/\s+/g, ' ').trim(),

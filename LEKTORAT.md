@@ -220,6 +220,12 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 - Der Evidence-Scope-Guard erfasst nun auch berichtete Rede im Konjunktiv und Partizipkonstruktionen wie `gewuchtet hätten`, `geladen hätten`, `geworfen hätten` sowie `davongefahren seien`. Das Fahrzeug bleibt gesperrt, solange es nicht ausdrücklich im Ziel-Indiz definiert ist.
 - Positive Gegenprobe: Zwei Männer, schwere Tasche und Hinterhof bleiben ohne Fahrzeugbehauptung zulässig. Der Fix gilt datengetrieben für Personen-Indizien aller Fälle.
 
+## Kessler-Abpassen-/Bild-Gegenlauf v7.12.1477
+
+- Eine reine Verfügbarkeitsbrücke darf kein Personen-Indiz auslösen. „Robert im Hinterhof abpassen“ stellt Robert nur physisch für die nächste bewusste Befragung bereit; es ist weder Geständnis noch Kern-Indiz-Fund.
+- Personen-Indiz, Popup und Prosa werden nach jeder Brücken-, Warte- und Ankunftsaktion gegengeprüft. Nennt die Szene nur eine Ausflucht oder Karls Frage, darf die Mechanik daraus nicht bereits ein Eingeständnis samt bisher unbekanntem Vornamen machen.
+- Eine handlungstragende Zielperson muss schon im Bild der Abpass-/Begegnungsszene sichtbar sein, auch wenn noch keine formale Kampf-Konfrontation läuft. Kesslers ziviles Robert-Gegenüberbild gilt daher bereits für die deterministische Abpassen-Brücke.
+
 ## Mindestprotokoll pro Run
 
 - Fall, Version, Strategie, Seed, Start-/Endzeit, Szenenzahl, Ergebnis und Abbruchgrund.
