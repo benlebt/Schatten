@@ -81,6 +81,8 @@ assert(html.includes('function _hauptuiKonfrontationBeruhigtenTeilRueckzugSicher
   'group de-escalation needs a separate prose/image continuity guard');
 assert(sourceOf('_hauptuiKonfrontationAbschliessen').includes('_hauptuiKonfrontationBeruhigtenTeilRueckzugSichern(name, k)'),
   'a pacified partial opponent must remain passively visible while the group fight continues');
+assert(sourceOf('_hauptuiKonfrontationAbschliessen').includes("finalStatus === 'beruhigt' && !istGruppenKonfrontation"),
+  'only solo de-escalation may force a visible departure');
 assert(sourceOf('_hauptuiKonfrontationDeeskalationsAbschlussPrompt').includes('Niemand verlaesst den Ort'),
   'the group de-escalation prompt must forbid one opponent from taking active opponents out of the scene');
 assert(html.includes("_renderKesslerSceneVisual(currentScene);"), 'danger styling must update without waiting for another player click');
@@ -269,5 +271,23 @@ assert(/Kalle tritt aus der Front zurueck und bleibt, nun passiv, am Rand des Or
   'the pacified partial opponent must remain visible but inactive');
 assert(/Tante Frieda und Jochen bleiben aktiv und versperren Karl weiterhin den Weg\./.test(partialContext.currentScene.szene),
   'remaining group opponents must stay explicitly active');
+
+const finalGroupContext = {
+  currentScene: {
+    szene: 'Jochen dreht sich um und verschwindet im dunklen Gang. Kalle nickt ihm nach.'
+  },
+  normForMatch: value => String(value || '').toLowerCase(),
+  _konfrontationGruppenLebende: () => []
+};
+vm.createContext(finalGroupContext);
+vm.runInContext(sourceOf('_hauptuiKonfrontationBeruhigtenTeilRueckzugSichern'), finalGroupContext);
+const finalGroupFixed = finalGroupContext._hauptuiKonfrontationBeruhigtenTeilRueckzugSichern('Jochen', {});
+assert.strictEqual(finalGroupFixed, true, 'the final peaceful group step must also be sanitized');
+assert(!/verschwindet|dunklen Gang/i.test(finalGroupContext.currentScene.szene),
+  'the last pacified group opponent must not leave the shared group image');
+assert(/Jochen tritt aus der Front zurueck und bleibt, nun passiv, am Rand des Ortes\./.test(finalGroupContext.currentScene.szene),
+  'the last pacified group opponent must remain passively visible');
+assert(/Die beruhigte Gruppe gibt den Zugang frei; alle bleiben passiv am Ort\./.test(finalGroupContext.currentScene.szene),
+  'the final group resolution must open the route without deleting the group from the scene');
 
 console.log('KONFRONTATION_UI_OK');
