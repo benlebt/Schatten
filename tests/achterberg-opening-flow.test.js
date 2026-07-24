@@ -52,6 +52,8 @@ assert(travelSource.includes('Kein Opel, keine Fahrt, kein Parken'),
   'local movement needs a hard narrative constraint');
 assert(travelSource.includes('!_lokalerWeg && !_notfallBehandlungsfahrt'),
   'local movement must not trigger drunk- or fatigue-driving failures');
+assert(travelSource.includes("if (typeof _stageFloorAnwenden === 'function') _stageFloorAnwenden();"),
+  'travel must reconcile an already earned evidence stage before target clues render');
 
 const achterbergStart = html.indexOf("klient: 'Wilhelmine Achterberg (Witwe des Dirigenten)'");
 const achterbergEnd = html.indexOf('anchorNpcs:', achterbergStart);
@@ -68,8 +70,13 @@ assert(achterberg.includes("name: 'Otto Jahnke', id: 'otto_jahnke', tag: 'WITNES
 assert(/id: 'vossberg_gelegenheit'[\s\S]*?npc: 'otto_jahnke', quelle: 'person', actions: \['BEFRAGEN','ANSPRECHEN','UEBERZEUGEN'\]/.test(achterberg),
   'the witness statement must be obtained through conversation, not room search');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1532 +ExactTravelPreselect-Staging'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1533 +TravelContinuity-Staging'"),
   'release version missing');
+
+assert(html.includes("const _engineOrtswechsel = !!("),
+  'prompt cast cleanup must use engine travel state, not only text heuristics');
+assert(html.includes("const _istReise = _engineOrtswechsel || (_reiseRe.test(_umsg) && !isLocalMovementAction(_umsg));"),
+  'local system travel must be recognized as a real prompt-cast transition');
 
 const oldSetup = {
   caseType: 'mord',
