@@ -159,6 +159,36 @@ assert.strictEqual(mapped.length, 2);
 assert(mapped.every((entry) => entry.fallziel && entry.fallzielStatus.deliveryTarget),
   'both configured handoff locations must be highlighted while Konstantin accompanies Karl');
 
+const threadContext = {
+  caseProgress: { gefundeneIndizIds: [] },
+  getCaseLocations: () => [],
+  _physischesFallzielStatus: () => ({
+    npcId: 'konstantin_wegener',
+    npcName: 'Konstantin Wegener',
+    revealClueId: 'lothar_schluessel',
+    geborgen: true,
+    transportBereit: true,
+    transportStatus: 'im_opel',
+    inBegleitung: true,
+    safeLocations: ['Wegener-Wohnung', 'Volkspolizei-Revier Hans-Beimler-Strasse'],
+    handoffs: {
+      client: { location: 'Wegener-Wohnung', name: 'Helga Wegener' },
+      police: { location: 'Volkspolizei-Revier Hans-Beimler-Strasse', name: 'Volkspolizei' }
+    }
+  })
+};
+vm.createContext(threadContext);
+vm.runInContext(sourceOf('_hauptuiGenerischeFaeden'), threadContext);
+const handoffThreads = Array.from(threadContext._hauptuiGenerischeFaeden());
+assert.strictEqual(handoffThreads.length, 2,
+  'each configured protection destination needs its own clickable thread');
+assert.deepStrictEqual(handoffThreads.map((thread) => thread.ort), [
+  'Wegener-Wohnung',
+  'Volkspolizei-Revier Hans-Beimler-Strasse'
+], 'handoff threads must use exact map destinations instead of an ambiguous "A oder B" string');
+assert(handoffThreads[1].frage.includes('Volkspolizei'),
+  'the police handoff must be explicitly distinguishable before opening the map');
+
 const staleUiContext = {
   _npcZustandIstEntfernt: () => true,
   _npcAusAktiverSzeneEntfernen: () => { staleUiContext.purged = true; },
@@ -179,5 +209,10 @@ assert(html.includes("_np = _np.filter(function (npc) { return npc && npc.name &
   'main UI target injection needs a final terminal-state barrier');
 assert(html.includes('Fahre zur Charité oder zu Doc Wagner.'),
   'injury warning must name both concrete treatment destinations');
+
+assert(html.includes("showProgressToast('SICHER ÜBERGEBEN'"),
+  'a completed target handoff needs its own truthful status toast');
+assert(html.includes("&& (!caseSetup || caseSetup.caseType !== 'vermisst')"),
+  'a missing-person handoff must not retrigger the generic suspect-conviction toast');
 
 console.log('WEGENER_WORLD_STATE_UI_OK');

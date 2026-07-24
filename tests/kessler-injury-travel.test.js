@@ -74,6 +74,21 @@ assert.strictEqual(events.choices.length, 2,
 assert.strictEqual(events.choices[1]._istHeilortReise, true,
   'the Charité travel option must carry the same healing-destination bypass marker');
 
+context._professionelleBehandlungFaellig = () => false;
+context._physischesFallzielStatus = () => ({
+  transportBereit: true,
+  handoffs: {
+    police: { location: 'Volkspolizei-Revier Hans-Beimler-Strasse' }
+  }
+});
+context.caseProgress.alkohol = 4;
+context.caseProgress.muedigkeit = 22;
+context.reiseZuOrt({ name: 'Volkspolizei-Revier Hans-Beimler-Strasse', sektor: 'Ost' });
+assert.strictEqual(context.engineCurrentLocation.name, 'Volkspolizei-Revier Hans-Beimler-Strasse',
+  'the final protection trip with a rescued target must reach the selected handoff');
+assert(!events.choices.some(option => option.id === 'UEBERMUEDUNG_FAHRSTopp' || option.id === 'ALKOHOL_FAHRTPATZER'),
+  'a rescued target must not be diverted to an unrelated fatigue/alcohol stranding location');
+
 const gateContext = {
   verfassung: 2,
   caseProgress: { encounterState: null },
