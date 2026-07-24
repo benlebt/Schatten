@@ -72,7 +72,7 @@ assert.deepStrictEqual(Array.from(context._threatAktiveSpawns), ['story_guard'],
 assert.deepStrictEqual(context.checkedSpawns, ['story_guard'],
   'guaranteed threat priority must also reach confrontation startup');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1506 +SecondaryActorRoster-Staging'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1507 +SpatialActorRoster-Staging'"),
   'release version missing');
 
 console.log('THREAT_SPAWN_SERIALIZATION_OK');

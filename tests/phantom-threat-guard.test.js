@@ -141,6 +141,14 @@ assert(problem && problem.code === 'unrostered_present_actor',
   'a rostered client must not authorize a separate anonymous actor outside');
 
 problem = context._findUnrosteredPresentActor({
+  szene: 'Draussen auf der Strasse steht in einiger Entfernung ein Mann im grauen Mantel, der unbeweglich Richtung Polizeirevier starrt.',
+  personenImRaum: ['Kommissar Heinrich Lindner'],
+  cast_hinzugefuegt: []
+}, {});
+assert(problem && problem.code === 'unrostered_present_actor',
+  'a spatially separated anonymous actor must also be caught in verb-first word order');
+
+problem = context._findUnrosteredPresentActor({
   szene: 'Auf dem Foto steht eine Frau vor dem Haus.',
   personenImRaum: []
 }, {});
@@ -152,7 +160,7 @@ problem = context._findUnrosteredPresentActor({
 }, {});
 assert.strictEqual(problem, null, 'a properly rostered scene actor remains legal');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1506 +SecondaryActorRoster-Staging'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1507 +SpatialActorRoster-Staging'"),
   'release version missing');
 
 console.log('phantom threat guard tests passed');
