@@ -7,7 +7,7 @@ const { readWebpDimensions } = require('./image-format-utils');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1497 +ReuterBurialGate-Staging'"), 'version constant is stale');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1498 +TrudeStockRotation-Staging'"), 'version constant is stale');
 assert(html.includes("text: 'Fall abschließen und Auftraggeber informieren.'"), 'resolve button copy must stay player-facing');
 assert(html.includes('_enginePrompt: [_resolveText, _resolveTransitionPrompt]'), 'resolve direction must remain private');
 assert(!html.includes('resolveOpt.text += narr'), 'director narration must not leak into resolve button text');
@@ -301,6 +301,30 @@ assert(html.includes('const krauseGruppenfall = !!(caseSetup'), 'the Krause mult
 assert.strictEqual((html.match(/barErlaubt: false/g) || []).length, 2, 'both Rex acquisition paths must reject a trivial cash purchase');
 assert(html.includes("_hint: 'Tauschwert ' + HUND_PREIS + ' aus Ware · erst sammeln"), 'Rex action must preview its collection requirement');
 assert(html.includes('Bei Trude und an anderen Orten kann Karl passende Ware besorgen.'), 'failed Rex payment must guide Karl toward preparation');
+const trudeStockStart = html.indexOf('function _trudeSortimentKeys()');
+const trudeStockEnd = html.indexOf('// v7.12.680:', trudeStockStart);
+assert(trudeStockStart >= 0 && trudeStockEnd > trudeStockStart, 'cannot isolate Trude stock rotation');
+const makeTrudeStock = (rolls) => {
+  let index = 0;
+  const context = {
+    caseProgress: {},
+    TRUDE_SORTIMENT_PREISE: {
+      korn: 1, bohnenkaffee: 3, west_zigaretten: 3, stinkbombe: 2,
+      feuerwerkspaket: 3, handschellen: 3, schlagstock: 3
+    },
+    Math: { random: () => rolls[index++ % rolls.length], floor: Math.floor },
+  };
+  vm.createContext(context);
+  vm.runInContext(html.slice(trudeStockStart, trudeStockEnd), context);
+  return { first: Array.from(context._trudeSortimentKeys()), second: Array.from(context._trudeSortimentKeys()) };
+};
+const trudeStockA = makeTrudeStock([0.1, 0.1, 0.1]);
+const trudeStockB = makeTrudeStock([0.9, 0.9, 0.9]);
+assert.deepStrictEqual(trudeStockA.first, trudeStockA.second, 'Trude stock must stay stable inside one investigation');
+assert.notDeepStrictEqual(trudeStockA.first, trudeStockB.first, 'Trude stock must vary between investigations');
+assert.strictEqual(trudeStockA.first.length, 4, 'Trude should offer a compact four-item rotation, not the full catalog');
+assert(html.includes("if (_istTrudeSortiment && (k === 'trude' || k === 'imbiss')) continue;"),
+  'Trude stock must not merge back into both static keyword catalogs');
 assert(html.includes("bar.textContent = 'Bar zahlen · ' + bargeldPreis + ' Ostmark';"), 'trade overlay needs a real cash alternative');
 assert(html.includes("_geldZahle(bargeldPreis, 'ost', 'Tauschzahlung @ '"), 'cash trade must deduct persistent money');
 
