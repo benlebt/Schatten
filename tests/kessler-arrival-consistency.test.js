@@ -191,6 +191,24 @@ assert.strictEqual(textContext._kesslerInnenraumTextPasst('Karl steht auf dem Ho
 assert.strictEqual(textContext._kesslerInnenraumTextPasst('Karl tritt in das Büro. Tetzlaff sitzt am Schreibtisch.'), true, 'interior scene must show the interior image');
 assert.strictEqual(textContext._kesslerInnenraumTextPasst('Du stellst den Motor ab und gehst in die Wohnung. Edith wartet.'), true, 'apartment arrival from the Opel must still show the apartment image');
 
+const interiorRepairStart = html.indexOf('function repairCanonicalInteriorProse');
+const interiorRepairEnd = html.indexOf('function _abschlussOrtOhneFestesTelefon', interiorRepairStart);
+const interiorRepairContext = {
+  engineCurrentLocation: { name: 'Spedition Schmidt Moabit' },
+  diag: () => {}
+};
+vm.createContext(interiorRepairContext);
+vm.runInContext(html.slice(interiorRepairStart, interiorRepairEnd), interiorRepairContext);
+const speditionMismatch = {
+  szene: 'Tetzlaff steht allein in der fensterlosen Lagerhalle und sortiert Frachtpapiere auf einem wackeligen Metalltisch.'
+};
+assert.strictEqual(interiorRepairContext.repairCanonicalInteriorProse(speditionMismatch), true,
+  'fixed Spedition imagery must repair contradictory warehouse prose');
+assert(speditionMismatch.szene.includes('Speditionsbüro mit dem großen Hof-Fenster')
+  && speditionMismatch.szene.includes('Holzschreibtisch')
+  && !/fensterlose|Lagerhalle|Metalltisch/i.test(speditionMismatch.szene),
+  'visible Spedition prose must agree with the office, window and wooden desks in the scene image');
+
 assert(html.includes('=== FESTES INNENRAUMBILD (PFLICHT) ==='), 'travel prompt must align prose with interior images');
 assert(html.includes('=== BILD-RAUMWAHRHEIT (PFLICHT) ==='), 'restored scenes must return to the canonical interior');
 assert(html.includes('_ortHatJetztErreichbareSpur'), 'empty-location banner must check live evidence reachability');
