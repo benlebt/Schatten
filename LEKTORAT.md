@@ -77,6 +77,7 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 
 - Neben Kalenderdaten auch relative Fallzeiten prüfen: Eine Beute kann nicht „seit zwei Tagen“ beim Hehler liegen, wenn der Diebstahl erst in der vergangenen Nacht geschah. Tatzeit, Transportdauer, Besitzdauer und aktuelle Engine-Zeit müssen gemeinsam stimmen.
 - Ausgeschriebene Datums-/Wochentagspaare werden zusätzlich vor dem Szenen-Commit maschinell geprüft. Nachtbereiche müssen beide Tage eindeutig zuordnen (z. B. „Dienstag auf Mittwoch, 29./30. September“); „Mittwoch, 29. September 1953“ ist falsch.
+- Ereignisphasen immer mit Synonymen prüfen: `Beerdigung` ist beim Reuter-Anker ebenso datumsgebunden wie `Trauerfeier`, `Staatsakt` und `Beisetzung`. Vor dem 3. Oktober 1953 sind nur Tod, Trauer und Vorbereitungen zulässig; am 3. Oktober das heutige Ereignis; danach ausschließlich klarer Rückblick.
 
 - Jeden behaupteten Wochentag gegen das Datum prüfen, bevorzugt reproduzierbar per Datumsfunktion/Skript.
 - Uhrzeit, Engine-Tageszeit, Licht und Wartehandlung gemeinsam prüfen. Ein kanonisches Ereignis „gegen 19 Uhr“ darf am 14. Oktober weder im Engine-Nachmittag verbleiben noch als „letztes Tageslicht“ beschrieben werden; ein ausdrücklicher Warten-Hotspot muss die Engine vor der Szene passend fortschalten.

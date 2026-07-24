@@ -161,6 +161,10 @@ assert.strictEqual(reuterTimelineContext._findHistoricalTimelineDrift({
 }), null, 'preparations for the explicitly future 3 October burial must remain valid on 1 October');
 reuterTimelineContext.gameCurrentDate = '1953-09-30';
 assert.strictEqual(reuterTimelineContext._findHistoricalTimelineDrift({
+  szene: 'Ein RIAS-Bericht über Reuters Beerdigung läuft leise aus einem alten Radio.'
+})?.code, 'historical_timeline_drift',
+  'Beerdigung must be treated as the same future event as Staatsakt, Trauerfeier and Beisetzung');
+assert.strictEqual(reuterTimelineContext._findHistoricalTimelineDrift({
   szene: 'In der Stadt wird um Ernst Reuter getrauert. Ein RIAS-Bericht nennt die Vorbereitungen fuer die morgige Beisetzung des Buergermeisters.'
 })?.code, 'historical_timeline_drift',
   'the Reuter gate must catch a wrong tomorrow claim split across adjacent sentences');
