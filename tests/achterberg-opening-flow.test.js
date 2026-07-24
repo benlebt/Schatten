@@ -59,12 +59,16 @@ assert(achterbergStart >= 0 && achterbergEnd > achterbergStart, 'Achterberg setu
 const achterberg = html.slice(achterbergStart, achterbergEnd);
 assert(achterberg.includes("lokalVon: ['Deutsche Staatsoper (Admiralspalast)']"),
   'Achterberg Garderobe must be linked locally to the opera');
-assert(achterberg.includes("npcs: [{ id: 'theo_marquardt', immer: true, abStage: 1 }]"),
+assert(achterberg.includes("npcs: [{ id: 'theo_marquardt', immer: true, abStage: 1 }, { id: 'otto_jahnke', immer: true, abStage: 1 }]"),
   'Marquardt must become actionable where his canonical arrival is narrated');
 assert(/id: 'vossberg_gelegenheit'[\s\S]*?stage: 3, abStage: 1/.test(achterberg),
   'third opening clue must be reachable in stage 1 to avoid a progression deadlock');
+assert(achterberg.includes("name: 'Otto Jahnke', id: 'otto_jahnke', tag: 'WITNESS'"),
+  'the opportunity clue needs a canonical witness');
+assert(/id: 'vossberg_gelegenheit'[\s\S]*?npc: 'otto_jahnke', quelle: 'person', actions: \['BEFRAGEN','ANSPRECHEN','UEBERZEUGEN'\]/.test(achterberg),
+  'the witness statement must be obtained through conversation, not room search');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1523 +LocalArrivalFallback-Staging'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1524 +AchterbergWitnessSetup-Staging'"),
   'release version missing');
 
 const oldSetup = {
@@ -73,7 +77,13 @@ const oldSetup = {
   tat: 'Digitalis',
   locations: [{
     name: 'Achterbergs Garderobe',
-    indizien: [{ id: 'vossberg_gelegenheit', stage: 3, abStage: 2 }],
+    indizien: [{
+      id: 'vossberg_gelegenheit',
+      quelle: 'umgebung',
+      actions: ['ERKUNDEN', 'BEFRAGEN'],
+      stage: 3,
+      abStage: 2,
+    }],
   }],
   setupCast: [],
 };
@@ -84,10 +94,17 @@ const currentSetup = {
   locations: [{
     name: 'Achterbergs Garderobe',
     lokalVon: ['Deutsche Staatsoper (Admiralspalast)'],
-    npcs: [{ id: 'theo_marquardt', immer: true, abStage: 1 }],
-    indizien: [{ id: 'vossberg_gelegenheit', stage: 3, abStage: 1 }],
+    npcs: [{ id: 'theo_marquardt', immer: true, abStage: 1 }, { id: 'otto_jahnke', immer: true, abStage: 1 }],
+    indizien: [{
+      id: 'vossberg_gelegenheit',
+      npc: 'otto_jahnke',
+      quelle: 'person',
+      actions: ['BEFRAGEN', 'ANSPRECHEN', 'UEBERZEUGEN'],
+      stage: 3,
+      abStage: 1,
+    }],
   }],
-  setupCast: [],
+  setupCast: [{ name: 'Otto Jahnke', id: 'otto_jahnke', tag: 'WITNESS' }],
 };
 const migrationContext = {
   caseSetup: oldSetup,
@@ -103,8 +120,14 @@ assert.deepStrictEqual(Array.from(migratedRoom.lokalVon), currentSetup.locations
   'restore migration must add local room connections to running cases');
 assert.strictEqual(migratedRoom.indizien[0].abStage, 1,
   'restore migration must update corrected evidence stage gates');
+assert.strictEqual(migratedRoom.indizien[0].quelle, 'person',
+  'restore migration must update a corrected evidence source');
+assert.deepStrictEqual(Array.from(migratedRoom.indizien[0].actions), currentSetup.locations[0].indizien[0].actions,
+  'restore migration must update corrected evidence actions');
 assert.strictEqual(migratedRoom.npcs[0].id, 'theo_marquardt',
   'restore migration must add newly configured room NPCs');
+assert.strictEqual(migrationContext.caseSetup.setupCast[0].id, 'otto_jahnke',
+  'restore migration must add newly configured cast witnesses');
 
 const fallbackContext = {
   engineCurrentLocation: { name: 'Achterbergs Garderobe' },

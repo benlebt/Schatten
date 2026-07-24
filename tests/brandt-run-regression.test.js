@@ -18,7 +18,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1523 +LocalArrivalFallback-Staging'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1524 +AchterbergWitnessSetup-Staging'"),
   'Brandt regression release version missing');
 
 for (const bad of [
