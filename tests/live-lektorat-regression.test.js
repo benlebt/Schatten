@@ -395,6 +395,10 @@ assert.strictEqual(openingRoleContext.validateOpeningRoleTruth(
 ).code, 'opening_private_stasi_intrusion',
 'a stasi relevance zero case must reject a personal grey-coat watcher');
 assert.strictEqual(openingRoleContext.validateOpeningRoleTruth(
+  'Theodor Krause meldet das silberne Etui, das er aus der hohen Rueckwandvitrine gestohlen hat.', krausePrivateSetup
+).code, 'opening_client_made_thief',
+'a theft opening must not grammatically turn the reporting client into the thief');
+assert.strictEqual(openingRoleContext.validateOpeningRoleTruth(
   'Theodor Krause nennt den Diebstahl, das Honorar und die frische Spur zu Tante Frieda.', krausePrivateSetup
 ).ok, true,
 'a clean private-case opening must remain valid');
