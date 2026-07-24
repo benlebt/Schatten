@@ -29,6 +29,7 @@ const context = {
 };
 vm.createContext(context);
 vm.runInContext(sourceOf('_findPhantomImmediateThreat'), context);
+vm.runInContext(sourceOf('_findUnrosteredPresentActor'), context);
 
 let problem = context._findPhantomImmediateThreat({
   ort: 'Erich Brandts ehemalige Wohnung',
@@ -58,7 +59,28 @@ problem = context._findPhantomImmediateThreat({
 }, {});
 assert.strictEqual(problem, null, 'an engine-backed confrontation remains legal');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1500 +PhantomThreatGuard-Staging'"),
+context.caseProgress.activeConfrontation = null;
+problem = context._findUnrosteredPresentActor({
+  szene: 'In der Ecke des Zimmers steht eine Frau, die dich mit geweiteten Augen anstarrt. Es ist die Vermieterin.',
+  personenImRaum: [],
+  cast_hinzugefuegt: []
+}, { id: 'REISE', _istReise: true });
+assert(problem && problem.code === 'unrostered_present_actor',
+  'a prose-only landlady without roster, UI and image representation must be rejected');
+
+problem = context._findUnrosteredPresentActor({
+  szene: 'Auf dem Foto steht eine Frau vor dem Haus.',
+  personenImRaum: []
+}, {});
+assert.strictEqual(problem, null, 'a person shown only in a photograph is not physically present');
+
+problem = context._findUnrosteredPresentActor({
+  szene: 'In der Ecke des Zimmers steht eine Frau und wartet ab.',
+  personenImRaum: ['Vermieterin']
+}, {});
+assert.strictEqual(problem, null, 'a properly rostered scene actor remains legal');
+
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1501 +SceneActorRoster-Staging'"),
   'release version missing');
 
 console.log('phantom threat guard tests passed');

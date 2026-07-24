@@ -182,6 +182,7 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 - Gleiches gilt für kausative Fremdhandlungen: „sie lässt/bittet/führt dich in den Treppenflur“ vollzieht den Innenraumwechsel, obwohl die andere Figur grammatisches Subjekt ist. Am unveränderten Engine-Außenort muss auch diese Form als `ORT-PROSA-BRUCH` blockiert werden.
 
 - Akute Bedrohungen brauchen immer einen sichtbaren, benannten und spielbaren Ursprung: Revolverlauf oder Messer am Körper, greifende Hand, unmittelbare Drohstimme und tätlicher Angriff sind nur mit passender Person in `personenImRaum`/Cast oder einer bereits mechanisch gestarteten Konfrontation zulässig. Eine unsichtbare Stimme oder Waffe ohne Ziel-/Reaktionsmöglichkeit ist eine fundamentale `PHANTOM-BEDROHUNG`; historische Rückblicke, Akten und berichtete Gewalt sind davon getrennt.
+- Dasselbe Roster-Gate gilt für friedliche Szenenakteure: Eine Vermieterin, ein Zeuge, Wachmann oder anderer Einzelakteur darf nicht sichtbar im Raum stehen, Karl beobachten oder handeln, wenn `personenImRaum`, Cast, UI und Bild diese Person nicht führen. Atmosphärische Hintergrundmengen ohne Szenenhandlung sind davon getrennt; eine handlungstragende Person muss vollständig in die gemeinsame Szenenwahrheit aufgenommen oder aus der Prosa entfernt werden.
 
 ### 6. Wahrheitsbeat-/Truthbeat-Gate
 
