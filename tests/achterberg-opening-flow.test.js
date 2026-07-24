@@ -64,7 +64,46 @@ assert(achterberg.includes("npcs: [{ id: 'theo_marquardt', immer: true, abStage:
 assert(/id: 'vossberg_gelegenheit'[\s\S]*?stage: 3, abStage: 1/.test(achterberg),
   'third opening clue must be reachable in stage 1 to avoid a progression deadlock');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1521 +AchterbergOpeningFlow-Staging'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1522 +SetupMigrationStaticFields-Staging'"),
   'release version missing');
+
+const oldSetup = {
+  caseType: 'mord',
+  opfer: 'Reinhold Achterberg',
+  tat: 'Digitalis',
+  locations: [{
+    name: 'Achterbergs Garderobe',
+    indizien: [{ id: 'vossberg_gelegenheit', stage: 3, abStage: 2 }],
+  }],
+  setupCast: [],
+};
+const currentSetup = {
+  caseType: 'mord',
+  opfer: 'Reinhold Achterberg',
+  tat: 'Digitalis',
+  locations: [{
+    name: 'Achterbergs Garderobe',
+    lokalVon: ['Deutsche Staatsoper (Admiralspalast)'],
+    npcs: [{ id: 'theo_marquardt', immer: true, abStage: 1 }],
+    indizien: [{ id: 'vossberg_gelegenheit', stage: 3, abStage: 1 }],
+  }],
+  setupCast: [],
+};
+const migrationContext = {
+  caseSetup: oldSetup,
+  INTRO_VARIANTS: [{ setup: currentSetup }],
+  normForMatch: value => String(value || '').toLowerCase().trim(),
+  diag: () => {},
+};
+vm.createContext(migrationContext);
+vm.runInContext(sourceOf('_migriereCaseSetupOrte'), migrationContext);
+migrationContext._migriereCaseSetupOrte();
+const migratedRoom = migrationContext.caseSetup.locations[0];
+assert.deepStrictEqual(Array.from(migratedRoom.lokalVon), currentSetup.locations[0].lokalVon,
+  'restore migration must add local room connections to running cases');
+assert.strictEqual(migratedRoom.indizien[0].abStage, 1,
+  'restore migration must update corrected evidence stage gates');
+assert.strictEqual(migratedRoom.npcs[0].id, 'theo_marquardt',
+  'restore migration must add newly configured room NPCs');
 
 console.log('achterberg-opening-flow: ok');
