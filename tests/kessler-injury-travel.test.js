@@ -45,6 +45,7 @@ const context = {
   diag: (...args) => events.diag.push(args),
 };
 vm.createContext(context);
+vm.runInContext(sourceOf('_reiseIstLokalerWeg'), context);
 vm.runInContext(sourceOf('reiseZuOrt'), context);
 
 context.reiseZuOrt({ name: 'Cafe Wien', sektor: 'West', heilort: false });
