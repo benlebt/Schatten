@@ -30,6 +30,7 @@ const context = {
 vm.createContext(context);
 vm.runInContext(sourceOf('_findPhantomImmediateThreat'), context);
 vm.runInContext(sourceOf('_findUnrosteredPresentActor'), context);
+vm.runInContext(sourceOf('validateOpeningRoleTruth'), context);
 
 let problem = context._findPhantomImmediateThreat({
   ort: 'Erich Brandts ehemalige Wohnung',
@@ -39,6 +40,24 @@ let problem = context._findPhantomImmediateThreat({
 }, { id: 'REISE', _istReise: true });
 assert(problem && problem.code === 'phantom_immediate_threat',
   'an immediate armed threat without a visible actor must be rejected');
+
+const steinOpening = {
+  ort: 'Karl Mauers BÃ¼ro',
+  szene: 'Margarete hat dir am Telefon von den Dokumenten berichtet. Es ist kein zÃ¶gerliches Klopfen, sondern das harte Pochen von jemandem, der keine Antwort erwartet, sondern sich den Zutritt erzwingt. DrauÃŸen steht jemand, der nicht fÃ¼r eine Auskunft kommt.',
+  personenImRaum: [],
+  cast_hinzugefuegt: []
+};
+problem = context._findPhantomImmediateThreat(steinOpening, { id: 'INTRO', _istOpening: true });
+assert(problem && problem.code === 'phantom_immediate_threat',
+  'forced entry by an anonymous opening actor must be rejected');
+
+const openingProblem = context.validateOpeningRoleTruth(
+  steinOpening.szene,
+  { caseType: 'politisch', stasiRelevance: 3, setupCast: [] },
+  steinOpening
+);
+assert(openingProblem && openingProblem.ok === false && openingProblem.code === 'phantom_immediate_threat',
+  'the shared actor guard must also protect scene-one openings');
 
 problem = context._findPhantomImmediateThreat({
   szene: 'Im alten Polizeibericht steht, dass ihm damals ein Revolverlauf in den Nacken gedrückt wurde.',
@@ -69,6 +88,13 @@ assert(problem && problem.code === 'unrostered_present_actor',
   'a prose-only landlady without roster, UI and image representation must be rejected');
 
 problem = context._findUnrosteredPresentActor({
+  szene: 'Unter der TÃ¼r liegt ein Schatten. DrauÃŸen steht jemand und wartet auf deine Reaktion.',
+  personenImRaum: []
+}, {});
+assert(problem && problem.code === 'unrostered_present_actor',
+  'an anonymous present actor outside the door must be rejected');
+
+problem = context._findUnrosteredPresentActor({
   szene: 'Auf dem Foto steht eine Frau vor dem Haus.',
   personenImRaum: []
 }, {});
@@ -80,7 +106,7 @@ problem = context._findUnrosteredPresentActor({
 }, {});
 assert.strictEqual(problem, null, 'a properly rostered scene actor remains legal');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1501 +SceneActorRoster-Staging'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1502 +OpeningActorGuard-Staging'"),
   'release version missing');
 
 console.log('phantom threat guard tests passed');
