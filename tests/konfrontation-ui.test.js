@@ -74,6 +74,11 @@ assert(html.includes("['ko', 'gefesselt', 'fixiert', 'geflohen', 'uebergeben']")
 assert(html.includes('const bleibtOffen = !!(finalStatus && !_konfrontationStatusIstEndgueltig(finalStatus) && outcome);'), 'a merely staggered opponent must keep the confrontation active');
 assert(html.includes('k.treffer >= 2 && k.kontrollverlust >= 7'), 'successive tactical hits need a real cumulative resolution path');
 assert(html.includes('function _hauptuiKonfrontationAnsichtAktualisieren()'), 'post-narration state changes must refresh the scene visual and action UI immediately');
+assert(html.includes('function _hauptuiKonfrontationBeruhigtenAbgangSichern(name)'), 'peaceful confrontation endings need a prose/UI departure guard');
+assert(sourceOf('_hauptuiKonfrontationAbschliessen').includes('_hauptuiKonfrontationBeruhigtenAbgangSichern(name)'),
+  'a mechanically removed pacified opponent must get the same-scene prose departure before the UI refresh');
+assert(sourceOf('_hauptuiKonfrontationAktion').includes('bleibt nicht stehen, lauert nicht weiter'),
+  'the de-escalation prompt must explicitly forbid a visually absent opponent from lingering in prose');
 assert(html.includes("_renderKesslerSceneVisual(currentScene);"), 'danger styling must update without waiting for another player click');
 assert(html.includes("return !!(z && ['ko', 'gefesselt', 'fixiert', 'uebergeben', 'geflohen'].indexOf(z.status) !== -1);"), 'benommen or blinded opponents must not become searchable aftermath targets');
 assert(html.includes('&& !_taktischeKonfrontationLaeuft'), 'meta custody must not interrupt an unresolved tactical confrontation');
@@ -224,5 +229,20 @@ context._hauptuiKonfrontationAbschliessen(
 );
 assert.strictEqual(context.caseProgress.activeConfrontation, null, 'a strong cumulative follow-up must end the confrontation');
 assert.strictEqual(stateWrites.at(-1)[1], 'ko', 'the cumulative follow-up must produce a real terminal state');
+
+const departureContext = {
+  currentScene: {
+    szene: 'Hellbach steckt den Knueppel ein. Er dreht sich halb um, verharrt jedoch in lauernder Haltung.'
+  },
+  normForMatch: value => String(value || '').toLowerCase()
+};
+vm.createContext(departureContext);
+vm.runInContext(sourceOf('_hauptuiKonfrontationBeruhigtenAbgangSichern'), departureContext);
+const departureFixed = departureContext._hauptuiKonfrontationBeruhigtenAbgangSichern('Eugen Hellbach');
+assert.strictEqual(departureFixed, true, 'the peaceful departure sanitizer must complete');
+assert(!/verharrt|lauernder Haltung/i.test(departureContext.currentScene.szene),
+  'a contradicted lingering sentence must be removed after peaceful mechanical departure');
+assert(/Eugen Hellbach wendet sich endgueltig ab und verlaesst den Ort\./.test(departureContext.currentScene.szene),
+  'the visible scene must end with the pacified opponent actually leaving');
 
 console.log('KONFRONTATION_UI_OK');
