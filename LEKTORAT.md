@@ -74,6 +74,8 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 
 ### 2. Historische Fakten: Korrektheit und Interessantheit
 
+- Ausgeschriebene Datums-/Wochentagspaare werden zusätzlich vor dem Szenen-Commit maschinell geprüft. Nachtbereiche müssen beide Tage eindeutig zuordnen (z. B. „Dienstag auf Mittwoch, 29./30. September“); „Mittwoch, 29. September 1953“ ist falsch.
+
 - Jeden behaupteten Wochentag gegen das Datum prüfen, bevorzugt reproduzierbar per Datumsfunktion/Skript.
 - Uhrzeit, Engine-Tageszeit, Licht und Wartehandlung gemeinsam prüfen. Ein kanonisches Ereignis „gegen 19 Uhr“ darf am 14. Oktober weder im Engine-Nachmittag verbleiben noch als „letztes Tageslicht“ beschrieben werden; ein ausdrücklicher Warten-Hotspot muss die Engine vor der Szene passend fortschalten.
 - Namen von Straßen, Plätzen, Bahnhöfen, Behörden, Marken, Fahrzeugen, Gesetzen, Medien und Personen auf den Stand des konkreten Run-Datums prüfen.

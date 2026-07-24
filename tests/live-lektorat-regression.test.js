@@ -180,6 +180,29 @@ assert(sourceOf('buildWorldTruthRepairHint').includes("problem.code === 'histori
 assert(sourceOf('enforceSceneWorldTruthFallback').includes("problem.code === 'historical_timeline_drift'"),
   'repeated historical drift must get a deterministic safe fallback');
 
+const weekdayContext = {
+  normForMatch: value => String(value || '').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+};
+vm.createContext(weekdayContext);
+vm.runInContext(sourceOf('_findHistoricalWeekdayDrift'), weekdayContext);
+const weekdayDrift = weekdayContext._findHistoricalWeekdayDrift({
+  szene: 'In der Nacht zum Mittwoch, dem 29. September, sah Hannelore zwei Maenner im Hof.'
+});
+assert.strictEqual(weekdayDrift && weekdayDrift.code, 'historical_weekday_drift',
+  'a wrong explicit weekday/date pair must be rejected');
+assert.strictEqual(weekdayDrift && weekdayDrift.richtig, 'Dienstag',
+  '29 September 1953 must resolve to Tuesday');
+assert.strictEqual(weekdayContext._findHistoricalWeekdayDrift({
+  szene: 'In der Nacht von Dienstag auf Mittwoch, 29./30. September 1953, sah Hannelore zwei Maenner im Hof.'
+}), null, 'a correct two-day night range must remain valid');
+assert(sourceOf('validateSceneWorldTruth').includes('_findHistoricalWeekdayDrift'),
+  'the weekday guard must run in the pre-commit world-truth gate');
+assert(sourceOf('buildWorldTruthRepairHint').includes("problem.code === 'historical_weekday_drift'"),
+  'weekday drift must get a focused repair prompt');
+assert(sourceOf('enforceSceneWorldTruthFallback').includes("problem.code === 'historical_weekday_drift'"),
+  'weekday drift must get a deterministic safe fallback');
+
 const sectorHistoryContext = {
   engineCurrentLocation: { name: 'Cafe Wien', sektor: 'West (Charlottenburg)' },
   normForMatch: value => String(value || '').toLowerCase()
