@@ -224,6 +224,36 @@ assert(sourceOf('buildWorldTruthRepairHint').includes("problem.code === 'case_ti
 assert(sourceOf('enforceSceneWorldTruthFallback').includes("problem.code === 'case_timeline_fact_drift'"),
   'case chronology drift needs a deterministic fallback');
 
+const theftCompletionContext = {
+  caseSetup: { caseType: 'diebstahl' },
+  caseProgress: {
+    stage: 4,
+    istGelöst: true,
+    klientGesprochen: true,
+    abschlussSzeneGerendert: true,
+    diebesgutZurueck: true,
+    targetItemState: { status: 'located' }
+  },
+  diag: () => {}
+};
+vm.createContext(theftCompletionContext);
+vm.runInContext(sourceOf('_enforceTheftCompletionTruth'), theftCompletionContext);
+assert.strictEqual(theftCompletionContext._enforceTheftCompletionTruth(), true,
+  'a located theft target must revoke premature solve/payment state');
+assert.strictEqual(theftCompletionContext.caseProgress.istGelöst, false);
+assert.strictEqual(theftCompletionContext.caseProgress.stage, 3);
+assert.strictEqual(theftCompletionContext.caseProgress.klientGesprochen, false);
+assert.strictEqual(theftCompletionContext.caseProgress.diebesgutZurueck, false);
+theftCompletionContext.caseProgress.targetItemState.status = 'returnedToClient';
+theftCompletionContext.caseProgress.stage = 4;
+theftCompletionContext.caseProgress.istGelöst = true;
+assert.strictEqual(theftCompletionContext._enforceTheftCompletionTruth(), false,
+  'a physical client handoff must release the completion gate');
+assert(sourceOf('processTheftTargetState').includes("caseProgress.pendingHauptuiIndiz"),
+  'pending bag-clue state must block implicit target possession');
+assert(sourceOf('showCaseSolved').includes('_enforceTheftCompletionTruth'),
+  'win screen must independently enforce physical theft return');
+
 const sectorHistoryContext = {
   engineCurrentLocation: { name: 'Cafe Wien', sektor: 'West (Charlottenburg)' },
   normForMatch: value => String(value || '').toLowerCase()
