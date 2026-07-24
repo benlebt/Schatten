@@ -7,7 +7,7 @@ const { readWebpDimensions } = require('./image-format-utils');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1495 +ExteriorFurniture-Staging'"), 'version constant is stale');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1496 +EndingUmlauts-Staging'"), 'version constant is stale');
 assert(html.includes("text: 'Fall abschließen und Auftraggeber informieren.'"), 'resolve button copy must stay player-facing');
 assert(html.includes('_enginePrompt: [_resolveText, _resolveTransitionPrompt]'), 'resolve direction must remain private');
 assert(!html.includes('resolveOpt.text += narr'), 'director narration must not leak into resolve button text');
@@ -274,6 +274,20 @@ assert(collapseEnd.includes('hört'), 'recoverable collapse must render "hört" 
 assert(collapseEnd.includes('Später'), 'recoverable collapse must render "Später" with umlaut');
 assert(collapseEnd.includes('Schädel'), 'recoverable collapse must render "Schädel" with umlaut');
 assert(!/\b(?:hoert|Spaeter|Schaedel|Buero)\b/.test(collapseEnd), 'visible collapse ending must not leak ASCII umlaut spellings');
+const endingNormalizeEnd = html.indexOf('function showGameOver()', gameOverStart);
+const endingNormalizeContext = {};
+vm.createContext(endingNormalizeContext);
+vm.runInContext(
+  html.slice(asciiStart, asciiEnd) + '\n' + html.slice(gameOverStart, endingNormalizeEnd),
+  endingNormalizeContext
+);
+assert.strictEqual(
+  endingNormalizeContext._abschlussTextMitUmlauten('Der Klient erfaehrt den uebermittelten Bericht. Honorar gekuerzt.'),
+  'Der Klient erfährt den übermittelten Bericht. Honorar gekürzt.',
+  'shared ending normalization must repair the reported win-screen umlaut leaks'
+);
+assert(html.includes('const _abschlussAnzeige = function(value, escape)'),
+  'the complete win screen must pass through the shared display normalization before DOM commit');
 assert(html.includes('stasiCustodyScenesSince >= 3'), 'routine custody should allow release by the following morning');
 assert(html.includes('caseProgress._custodyCountedScene !== custodySceneMark'), 'custody duration must count distinct scenes, not UI rerenders');
 assert(html.includes('NOTFLUCHT ist der einzige sofortige Ausbruch'), 'custody prompt must distinguish escape from routine morning release');
