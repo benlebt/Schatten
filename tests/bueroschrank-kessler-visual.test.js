@@ -20,7 +20,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1511 +PhysicalNpcRosterTruth-Staging'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1512 +KesslerPhysicalVisualRoster-Staging'"), 'release version missing');
 assert(html.includes('BÜROSCHRANK · STARTAUSRÜSTUNG'), 'case start dialog must expose the office wardrobe');
 assert(html.includes('Immer dabei: Walther PPK, Detektiv-Lizenz, Notizbuch und Bleistift.'), 'fixed detective gear must be explained');
 
@@ -169,11 +169,17 @@ spec = visualContext._kesslerRobertVisual();
 assert.strictEqual(spec.dayFile, 'hinterhof-sybelstrasse-robert-confrontation-day.webp',
   'the deterministic Robert abpassen bridge must already show Robert opposite Karl');
 visualContext._hauptuiKesslerRobertAbpassenAktiv = () => false;
+visualContext.getNpcsAtCurrentLocation = () => [{ name: 'Robert Kessler' }];
 spec = visualContext._kesslerRobertVisual({ personenImRaum: ['Frau Pohl', 'Robert Kessler'] });
 assert.strictEqual(spec.dayFile, 'hinterhof-sybelstrasse-robert-confrontation-day.webp',
   'a physically present and clickable Robert must already appear in the arrival scene art');
+visualContext.getNpcsAtCurrentLocation = () => [{ name: 'Frau Pohl' }, { name: 'Frau Hauke' }];
 assert.strictEqual(visualContext._kesslerRobertVisual({ personenImRaum: ['Frau Pohl', 'Frau Hauke'] }), null,
   'the normal courtyard art must remain active when Robert is absent from the current scene roster');
+assert.strictEqual(visualContext._kesslerRobertVisual({
+  szene: 'Frau Pohl sagt, Robert komme seit Monaten jeden Mittwoch hierher.',
+  personenImRaum: ['Frau Pohl', 'Frau Hauke', 'Robert Kessler']
+}), null, 'a historical Robert mention in the raw AI roster must not override the physical engine roster');
 assert.strictEqual(visualContext._kesslerRobertVisual({
   szene: 'Robert ist bisher nicht eingetroffen. Du wartest, bevor Robert den Hof betritt.',
   personenImRaum: ['Frau Pohl', 'Frau Hauke', 'Robert Kessler']
