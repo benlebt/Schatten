@@ -133,6 +133,14 @@ problem = context._findUnrosteredPresentActor({
 assert.strictEqual(problem, null, 'the perceived actor remains legal when physically rostered');
 
 problem = context._findUnrosteredPresentActor({
+  szene: 'Du blickst aus dem Fenster, wo ein schwarzer Wagen auf der anderen Strassenseite parkt. Der Mann im grauen Trenchcoat darin ist dir schon am Hackeschen Markt aufgefallen.',
+  personenImRaum: ['Kommissar Heinrich Lindner'],
+  cast_hinzugefuegt: []
+}, {});
+assert(problem && problem.code === 'unrostered_present_actor',
+  'a rostered client must not authorize a separate anonymous actor outside');
+
+problem = context._findUnrosteredPresentActor({
   szene: 'Auf dem Foto steht eine Frau vor dem Haus.',
   personenImRaum: []
 }, {});
@@ -144,7 +152,7 @@ problem = context._findUnrosteredPresentActor({
 }, {});
 assert.strictEqual(problem, null, 'a properly rostered scene actor remains legal');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1505 +ThreatSpawnSerialization-Staging'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1506 +SecondaryActorRoster-Staging'"),
   'release version missing');
 
 console.log('phantom threat guard tests passed');
