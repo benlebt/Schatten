@@ -19,7 +19,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1492 +OpeningEvidenceGate-Staging'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1493 +PeaceBodyState-Staging'"), 'release version missing');
 assert(html.includes('Liesl schenkte oder widmete das Etui 1939 Hugo'), 'Krause setup must bind the silver-case ownership direction');
 assert(html.includes('Karl zählt oder nimmt kein Geld, Karls Kasse bleibt unverändert'), 'Krause opening prompt must keep the return-contingent fee unpaid');
 assert(html.includes('Dramatisiere diese EINE Spur genau EINMAL'), 'explicit Haupt-UI clues must merge compact target and detailed payoff into one narration');
@@ -128,6 +128,30 @@ assert(confrontationAction.includes("'beruhigt', 'deeskalation'"),
 const groupPrompt = sourceOf('_konfrontationGruppenPrompt');
 assert(groupPrompt.includes('Frieda fuehrt Kalle und Jochen'), 'group narration must force all active Krause opponents to react');
 assert(groupPrompt.includes('Hauptmann Vollmer'), 'group narration must forbid an unrelated Vollmer intervention');
+
+const peacefulBodyContext = {
+  caseProgress: {
+    npcZustand: {
+      'tante frieda': { name: 'Tante Frieda', status: 'beruhigt' },
+      kalle: { name: 'Kalle', status: 'beruhigt' }
+    }
+  },
+  normForMatch: value => String(value || '').toLowerCase().replace(/_/g, ' '),
+  _npcZustandMap: () => peacefulBodyContext.caseProgress.npcZustand
+};
+require('vm').createContext(peacefulBodyContext);
+require('vm').runInContext(sourceOf('_worldTruthAliases') + '\n' + sourceOf('_worldTruthHasAlias')
+  + '\n' + sourceOf('_findPeacefulNpcBodyStateDrift'), peacefulBodyContext);
+const falseFriedaFloor = peacefulBodyContext._findPeacefulNpcBodyStateDrift({
+  szene: 'Jochen steckt das Messer weg. Frieda beobachtet das Spiel vom Boden aus und nickt.'
+});
+assert(falseFriedaFloor && falseFriedaFloor.code === 'peaceful_npc_false_floor_state',
+  'a calmed NPC must not acquire an uncaused floor/KO state during the next peaceful group turn');
+assert.strictEqual(falseFriedaFloor.npc, 'Tante Frieda',
+  'the peaceful body-state gate must identify the exact calmed NPC');
+assert.strictEqual(peacefulBodyContext._findPeacefulNpcBodyStateDrift({
+  szene: 'Jochen steckt das Messer weg. Frieda bleibt auf den Beinen und nickt vom Rand des Hofes aus.'
+}), null, 'a standing passive calmed NPC must remain valid');
 
 const rosterGateContext = {
   caseProgress: {
