@@ -201,6 +201,31 @@ assert(!/zweiten Stock/.test(repairedKesslerOpening.szene)
   'the opening roster fallback must replace contradictory witness staging instead of appending to it');
 assert.deepStrictEqual(Array.from(repairedKesslerOpening.personenImRaum), ['Frau Pohl', 'Frau Hauke'],
   'the opening roster fallback must retain both physical window witnesses');
+problem = context._findUnrosteredPresentActor({
+  szene: 'Frau Pohl lehnt sich aus ihrem Erdgeschossfenster und spricht leise mit Karl.',
+  personenImRaum: []
+}, {}, {
+  setupCast: [{ id: 'frau_pohl', name: 'Frau Pohl' }]
+});
+assert.strictEqual(problem, null,
+  'an engine-present NPC must remain legal when the raw AI roster is transiently empty during their direct action');
+const preservedRosterScene = {
+  ort: 'Hinterhof Sybelstrasse',
+  szene: 'Frau Pohl beobachtet den Hof. In der Ecke steht eine fremde Vermieterin und starrt Karl an.',
+  personenImRaum: ['Frau Pohl'],
+  cast_hinzugefuegt: ['Frau Pohl', 'Fremde Vermieterin'],
+  optionen: [{ id: 'A', text: 'Fragen' }]
+};
+context.enforceSceneWorldTruthFallback(preservedRosterScene, {
+  code: 'unrostered_present_actor',
+  npc: 'Fremde Vermieterin',
+  sentence: 'In der Ecke steht eine fremde Vermieterin und starrt Karl an.'
+});
+assert(/Frau Pohl beobachtet den Hof/.test(preservedRosterScene.szene)
+    && !/Karl ist hier allein/.test(preservedRosterScene.szene),
+  'the actor fallback must not declare an occupied engine location empty');
+assert.deepStrictEqual(Array.from(preservedRosterScene.personenImRaum).map(entry => entry.name || entry), ['Frau Pohl', 'Frau Hauke'],
+  'the actor fallback must preserve the complete physical engine roster');
 context.getNpcsAtCurrentLocation = () => [];
 
 problem = context._findUnrosteredPresentActor({
@@ -215,7 +240,7 @@ problem = context._findUnrosteredPresentActor({
 }, {});
 assert.strictEqual(problem, null, 'a properly rostered scene actor remains legal');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1510 +KesslerOpeningVisualTruth-Staging'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1511 +PhysicalNpcRosterTruth-Staging'"),
   'release version missing');
 
 console.log('phantom threat guard tests passed');
