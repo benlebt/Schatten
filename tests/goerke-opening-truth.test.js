@@ -69,6 +69,28 @@ assert.strictEqual(nameContext.sameNamedPerson('Dr. Baumgarten', 'Dr. Reinhard B
 assert.strictEqual(nameContext.sameNamedPerson('Albrecht Goerke', 'Mathilde Goerke'), false,
   'shared surnames must not merge two distinct setup people');
 
+const openingPresenceDiagnostics = [];
+const openingPresenceContext = {
+  caseSetup: nameContext.caseSetup,
+  getNpcsAtCurrentLocation: () => [{ name: 'Dr. Reinhard Baumgarten' }],
+  diag: (type, message) => openingPresenceDiagnostics.push(type + ':' + message),
+};
+vm.createContext(openingPresenceContext);
+vm.runInContext(
+  sourceOf('normForMatch') + '\n' + sourceOf('sameNamedPerson') + '\n' + sourceOf('_enforceOpeningRosterPresence'),
+  openingPresenceContext
+);
+const contradictoryOpening = {
+  szene: 'Du wartest im Gerichtsflur. Der Flur ist leer und Baumgarten ist nicht zu sehen. Die Sitzung ist vertagt.',
+};
+openingPresenceContext._enforceOpeningRosterPresence(contradictoryOpening);
+assert(!/nicht zu sehen/.test(contradictoryOpening.szene),
+  'opening repair must remove explicit absence of an engine-present NPC');
+assert(/Dr\. Reinhard Baumgarten tritt sichtbar an dich heran/.test(contradictoryOpening.szene),
+  'opening repair must visibly restore the engine-present NPC');
+assert(openingPresenceDiagnostics.some(line => line.includes('OPENING-ANWESENHEIT repariert')),
+  'opening presence repair needs a diagnostic');
+
 const diagnostics = [];
 const context = {
   caseSetup: {
@@ -116,7 +138,7 @@ context.updateTruthBeats('Mertens manipulierte die Akte auf Anordnung von Krollw
 assert(context.caseProgress.truthBeatsHit.includes('krollwitz_mertens'),
   'the found Krollwitz file evidence must unlock the manipulation beat');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1529 +CastAliasDedup-Staging'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1530 +OpeningRosterTruth-Staging'"),
   'release version missing');
 
 console.log('Goerke opening/truth regression checks passed.');
