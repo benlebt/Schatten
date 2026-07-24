@@ -77,8 +77,12 @@ assert(html.includes('function _hauptuiKonfrontationAnsichtAktualisieren()'), 'p
 assert(html.includes('function _hauptuiKonfrontationBeruhigtenAbgangSichern(name)'), 'peaceful confrontation endings need a prose/UI departure guard');
 assert(sourceOf('_hauptuiKonfrontationAbschliessen').includes('_hauptuiKonfrontationBeruhigtenAbgangSichern(name)'),
   'a mechanically removed pacified opponent must get the same-scene prose departure before the UI refresh');
-assert(sourceOf('_hauptuiKonfrontationAktion').includes('bleibt nicht stehen, lauert nicht weiter'),
-  'the de-escalation prompt must explicitly forbid a visually absent opponent from lingering in prose');
+assert(html.includes('function _hauptuiKonfrontationBeruhigtenTeilRueckzugSichern(name, k)'),
+  'group de-escalation needs a separate prose/image continuity guard');
+assert(sourceOf('_hauptuiKonfrontationAbschliessen').includes('_hauptuiKonfrontationBeruhigtenTeilRueckzugSichern(name, k)'),
+  'a pacified partial opponent must remain passively visible while the group fight continues');
+assert(sourceOf('_hauptuiKonfrontationDeeskalationsAbschlussPrompt').includes('Niemand verlaesst den Ort'),
+  'the group de-escalation prompt must forbid one opponent from taking active opponents out of the scene');
 assert(html.includes("_renderKesslerSceneVisual(currentScene);"), 'danger styling must update without waiting for another player click');
 assert(html.includes("return !!(z && ['ko', 'gefesselt', 'fixiert', 'uebergeben', 'geflohen'].indexOf(z.status) !== -1);"), 'benommen or blinded opponents must not become searchable aftermath targets');
 assert(html.includes('&& !_taktischeKonfrontationLaeuft'), 'meta custody must not interrupt an unresolved tactical confrontation');
@@ -244,5 +248,26 @@ assert(!/verharrt|lauernder Haltung/i.test(departureContext.currentScene.szene),
   'a contradicted lingering sentence must be removed after peaceful mechanical departure');
 assert(/Eugen Hellbach wendet sich endgueltig ab und verlaesst den Ort\./.test(departureContext.currentScene.szene),
   'the visible scene must end with the pacified opponent actually leaving');
+
+const partialContext = {
+  currentScene: {
+    szene: 'Kalle steckt den Schlagring ein und stapft zur Strasse. Jochen folgt ihm zoegerlich.'
+  },
+  normForMatch: value => String(value || '').toLowerCase(),
+  _konfrontationGruppenLebende: () => [
+    { name: 'Tante Frieda' },
+    { name: 'Jochen' }
+  ]
+};
+vm.createContext(partialContext);
+vm.runInContext(sourceOf('_hauptuiKonfrontationBeruhigtenTeilRueckzugSichern'), partialContext);
+const partialFixed = partialContext._hauptuiKonfrontationBeruhigtenTeilRueckzugSichern('Kalle', {});
+assert.strictEqual(partialFixed, true, 'the peaceful partial-group sanitizer must complete');
+assert(!/stapft|folgt ihm/i.test(partialContext.currentScene.szene),
+  'a partial de-escalation must remove invented departures by the target and active allies');
+assert(/Kalle tritt aus der Front zurueck und bleibt, nun passiv, am Rand des Ortes\./.test(partialContext.currentScene.szene),
+  'the pacified partial opponent must remain visible but inactive');
+assert(/Tante Frieda und Jochen bleiben aktiv und versperren Karl weiterhin den Weg\./.test(partialContext.currentScene.szene),
+  'remaining group opponents must stay explicitly active');
 
 console.log('KONFRONTATION_UI_OK');
