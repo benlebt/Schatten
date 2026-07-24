@@ -815,6 +815,20 @@ const objectBeforeVerbHallwayDrift = worldContext.validateSceneWorldTruth({
 });
 assert.strictEqual(objectBeforeVerbHallwayDrift && objectBeforeVerbHallwayDrift.code, 'outdoor_interior_drift',
   'object-before-verb wording such as den Flur erreichen must not bypass the outdoor location gate');
+
+const exteriorFurnitureDrift = worldContext.validateSceneWorldTruth({
+  ort: 'Stallschreiberstrasse 12',
+  szene: 'Kalle tritt aus der Front zurueck. Tante Frieda bleibt hinter dem Tresen und beobachtet dich.',
+  personenImRaum: ['Tante Frieda', 'Kalle', 'Jochen'],
+  optionen: []
+}, {
+  id: 'KONFRONTATION_BERUHIGEN',
+  _zeitUnmittelbar: true,
+  _npcInteraktion: true,
+  _npcName: 'Kalle'
+});
+assert.strictEqual(exteriorFurnitureDrift && exteriorFurnitureDrift.code, 'social_interior_drift',
+  'interior furniture must not silently move an NPC out of a fixed exterior confrontation');
 assert(html.includes('WEST-SZENENBEISPIELE: Persil-Paket oder Apfelsinen')
   && html.includes('KEINE Lebensmittelkarten, HO-/Konsum-Waren, Bezugsscheine, Ostmark oder VEB-/FDGB-Requisiten als lokaler Alltag'),
   'first-NPC historical examples must be sector-aware instead of seeding East-supply props in West Berlin');
