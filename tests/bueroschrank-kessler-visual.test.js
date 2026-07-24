@@ -20,7 +20,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1518 +VisibleNpcEvidenceTruth-Staging'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1519 +ActiveNpcSceneBinding-Staging'"), 'release version missing');
 assert(html.includes('BÜROSCHRANK · STARTAUSRÜSTUNG'), 'case start dialog must expose the office wardrobe');
 assert(html.includes('Immer dabei: Walther PPK, Detektiv-Lizenz, Notizbuch und Bleistift.'), 'fixed detective gear must be explained');
 
@@ -136,6 +136,7 @@ assert.strictEqual(bindingContext._npcGehoertHierher('edith_kessler', 'Edith Kes
   'the actually configured apartment resident must remain present');
 
 const robertBindingContext = {
+  window: {},
   currentScene: {
     szene: 'Robert Kessler ist vor dir eingetroffen. Er steht am Eingang zum Treppenhaus.',
     personenImRaum: ['Frau Pohl', 'Robert Kessler'],
@@ -149,11 +150,24 @@ const robertBindingContext = {
 };
 vm.createContext(robertBindingContext);
 vm.runInContext(
-  sourceOf('_kesslerRobertAktuellInSzene') + '\n' + sourceOf('_npcGehoertHierher'),
+  sourceOf('_kesslerRobertAktuellInSzene') + '\n'
+    + sourceOf('_npcIstAktivesSzenenzielAmVerankertenOrt') + '\n'
+    + sourceOf('_npcGehoertHierher'),
   robertBindingContext,
 );
 assert.strictEqual(robertBindingContext._npcGehoertHierher('robert_kessler', 'Robert Kessler'), true,
   'Kessler location binding must accept Robert when the current scene visibly stages him without the abpassen flag');
+robertBindingContext.currentScene = null;
+robertBindingContext.window._letzteAktion = {
+  npcId: 'robert_kessler', npcName: 'Robert Kessler', npcVerb: 'sozial_fordern',
+};
+robertBindingContext._findSetupCastFuzzy = () => ({ id: 'robert_kessler', name: 'Robert Kessler' });
+robertBindingContext.getCaseLocations = () => [{
+  name: 'Hinterhof Sybelstrasse',
+  npcs: [{ id: 'robert_kessler', zeit: ['abend'] }],
+}];
+assert.strictEqual(robertBindingContext._npcGehoertHierher('robert_kessler', 'Robert Kessler'), true,
+  'the chosen canonical NPC must stay bound during reply processing even after the schedule advances');
 
 let hellbachState = { status: 'frei', ort: 'Hinterhof Sybelstrasse' };
 const visualContext = {
@@ -202,6 +216,12 @@ spec = visualContext._kesslerRobertVisual({
 });
 assert.strictEqual(spec.dayFile, 'hinterhof-sybelstrasse-robert-confrontation-day.webp',
   'Robert must remain physically visible throughout his spoken confession scene');
+spec = visualContext._kesslerRobertVisual({
+  szene: 'Robert Kessler laesst die Schultern haengen. Er vermeidet den Blickkontakt und spielt mit seinen Mantelknoepfen.',
+  personenImRaum: ['Frau Pohl', 'Robert Kessler']
+});
+assert.strictEqual(spec.dayFile, 'hinterhof-sybelstrasse-robert-confrontation-day.webp',
+  'quieter confession body language must still count as Robert being currently present');
 visualContext.getNpcsAtCurrentLocation = () => [{ name: 'Frau Pohl' }, { name: 'Frau Hauke' }];
 assert.strictEqual(visualContext._kesslerRobertVisual({ personenImRaum: ['Frau Pohl', 'Frau Hauke'] }), null,
   'the normal courtyard art must remain active when Robert is absent from the current scene roster');
