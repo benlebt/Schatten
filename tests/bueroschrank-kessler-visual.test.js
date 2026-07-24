@@ -20,7 +20,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1478 +WestSectorRetailTruth-Staging'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1479 +RobertArrivalVisual-Staging'"), 'release version missing');
 assert(html.includes('BÜROSCHRANK · STARTAUSRÜSTUNG'), 'case start dialog must expose the office wardrobe');
 assert(html.includes('Immer dabei: Walther PPK, Detektiv-Lizenz, Notizbuch und Bleistift.'), 'fixed detective gear must be explained');
 
@@ -169,6 +169,11 @@ spec = visualContext._kesslerRobertVisual();
 assert.strictEqual(spec.dayFile, 'hinterhof-sybelstrasse-robert-confrontation-day.webp',
   'the deterministic Robert abpassen bridge must already show Robert opposite Karl');
 visualContext._hauptuiKesslerRobertAbpassenAktiv = () => false;
+spec = visualContext._kesslerRobertVisual({ personenImRaum: ['Frau Pohl', 'Robert Kessler'] });
+assert.strictEqual(spec.dayFile, 'hinterhof-sybelstrasse-robert-confrontation-day.webp',
+  'a physically present and clickable Robert must already appear in the arrival scene art');
+assert.strictEqual(visualContext._kesslerRobertVisual({ personenImRaum: ['Frau Pohl', 'Frau Hauke'] }), null,
+  'the normal courtyard art must remain active when Robert is absent from the current scene roster');
 visualContext._konfrontationAktiv = () => true;
 visualContext.caseProgress.activeConfrontation = { enemyName: 'Wachtmeister Eugen Hellbach', enemyEntries: [] };
 hellbachState = { status: 'ko', ort: 'Hinterhof Sybelstrasse' };

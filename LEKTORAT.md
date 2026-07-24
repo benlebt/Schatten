@@ -233,6 +233,12 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 - Der Check gilt für beiläufige Straßenkulisse ebenso wie für handlungstragende Prosa. Eine ausdrücklich historische Rückblende oder eine korrekte Verneinung („kein HO-Laden“) darf nicht als Drift fehlklassifiziert werden.
 - Bei jedem Szenenbild-/Prosa-Abgleich zusätzlich fragen: Gehören sichtbare Warenwelt, Uniformen, Verkehrsmittel, Behörden und Zahlungsmittel wirklich zum aktuellen Sektor? Nur grobe, konkret sichtbare Widersprüche benötigen eine andere Bildvariante; reine Prosafehler werden in der Prosa korrigiert.
 
+## Handlungstragende Ankunftsbilder v7.12.1479
+
+- Die Bildprüfung beginnt bereits in der Ankunftsszene, nicht erst nach dem Klick auf eine Konfrontations-/Abpassen-Aktion. Ist eine Zielperson laut Prosa physisch am Ort und im aktuellen `personenImRaum`-Roster anklickbar, muss eine vorhandene passende Begegnungsvariante sofort verwendet werden.
+- Der Szenen-Roster ist enger als eine feste Ortsbindung und verhindert Variantenexplosion: Nur tatsächlich gegenwärtige, handlungstragende Figuren schalten das Gegenüberbild frei. Verlässt die Figur die Szene, fällt das Bild ohne neue Spezialkombination auf das normale Ortsmotiv zurück.
+- Kessler-Repro: Bei der Rückkehr in den Hinterhof steht Robert bereits am Eingang von Hausnummer 24 und ist anklickbar. Schon diese Szene nutzt das zivile Robert-Gegenüberbild; das leere Pohl-/Hauke-Hofmotiv wäre ein grober Personen-/Bildbruch.
+
 ## Mindestprotokoll pro Run
 
 - Fall, Version, Strategie, Seed, Start-/Endzeit, Szenenzahl, Ergebnis und Abbruchgrund.
