@@ -186,6 +186,23 @@ assert(html.includes('function _sozialTonartenMitEskalation(setup)'),
   'the escalation-freedom rule must also apply to other developed social NPCs');
 assert(/id: 'robert_aussage'[\s\S]{0,320}?actions: \['ANSPRECHEN','BEFRAGEN','KONFRONTIEREN'\]/.test(kessler),
   'normal Robert conversation actions must still be able to grant the confession clue');
+assert(sourceOf('pickZielIndiz').includes('_aktionsNpcIstTrotzOrtsplanPraesent'),
+  'evidence selection must preserve a visible canonical conversation target across schedule commits');
+assert(sourceOf('pruefeKernIndizFund').includes('_aktionsNpcIstTrotzOrtsplanPraesent'),
+  'evidence booking must preserve a visible canonical conversation target across schedule commits');
+const visibleEvidenceTarget = {
+  window: { _letzteAktion: { npcId: 'robert_kessler', npcName: 'Robert Kessler' } },
+  _aktionsZielNpcPasst: () => true,
+  _findSetupCastFuzzy: () => ({ id: 'robert_kessler', name: 'Robert Kessler' }),
+  _npcGehoertHierher: () => true,
+  _npcWirklichInSzene: () => true,
+};
+vm.createContext(visibleEvidenceTarget);
+vm.runInContext(sourceOf('_aktionsNpcIstTrotzOrtsplanPraesent'), visibleEvidenceTarget);
+assert.strictEqual(visibleEvidenceTarget._aktionsNpcIstTrotzOrtsplanPraesent({
+  id: 'robert_aussage', npc: 'robert_kessler', quelle: 'person',
+}, 'Robert gibt seine Luege zu.'), true,
+  'a visible setup NPC must remain eligible for the clue attached to the chosen conversation');
 
 const compatibility = {
   window: { VERHOER_PILOT_AKTIV: false },

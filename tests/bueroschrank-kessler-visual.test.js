@@ -20,7 +20,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1517 +KesslerVisibleRobertAction-Staging'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1518 +VisibleNpcEvidenceTruth-Staging'"), 'release version missing');
 assert(html.includes('BÜROSCHRANK · STARTAUSRÜSTUNG'), 'case start dialog must expose the office wardrobe');
 assert(html.includes('Immer dabei: Walther PPK, Detektiv-Lizenz, Notizbuch und Bleistift.'), 'fixed detective gear must be explained');
 
@@ -196,6 +196,12 @@ spec = visualContext._kesslerRobertVisual({
 });
 assert.strictEqual(spec.dayFile, 'hinterhof-sybelstrasse-robert-confrontation-day.webp',
   'a currently dramatized and rostered Robert must already appear in the arrival scene art');
+spec = visualContext._kesslerRobertVisual({
+  szene: 'Robert Kessler weicht deinem Blick aus. Er atmet zittrig ein, starrt auf das Pflaster und gibt die Luege zu.',
+  personenImRaum: ['Frau Pohl', 'Robert Kessler']
+});
+assert.strictEqual(spec.dayFile, 'hinterhof-sybelstrasse-robert-confrontation-day.webp',
+  'Robert must remain physically visible throughout his spoken confession scene');
 visualContext.getNpcsAtCurrentLocation = () => [{ name: 'Frau Pohl' }, { name: 'Frau Hauke' }];
 assert.strictEqual(visualContext._kesslerRobertVisual({ personenImRaum: ['Frau Pohl', 'Frau Hauke'] }), null,
   'the normal courtyard art must remain active when Robert is absent from the current scene roster');
