@@ -59,5 +59,12 @@ assert(html.includes("presenceVariants: [")
 assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'strauss', 'strauss-geschaeft-krummbein-day.webp'))
   && fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'strauss', 'strauss-geschaeft-krummbein-night.webp')),
   'Strauss shop must provide day and night visuals with Krummbein visibly present');
+assert(html.includes('const gestandnisIndiz = ind && /gestaendnis|geständnis|ueberfuehrt|überführt/')
+  && html.includes('GESTÄNDNIS-Prosa ergänzt'),
+  'a mechanically booked confession must be visible in prose instead of ending in denial');
+assert(html.includes("const required = ((option._istOpening || typeof getCaseLocations !== 'function')")
+  && html.includes('const istReiseAnkunft = !!(option && (option._istReise')
+  && html.includes('allowedRoster: arrivalAllowed.slice()'),
+  'travel validation must not authorize stale actors from the departure location');
 
 console.log('strauss-opening-flow: ok');
