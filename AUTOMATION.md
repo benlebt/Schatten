@@ -133,6 +133,10 @@ automatisierten Zyklus:
 1. Lektorat lesen, Befunde sammeln (P1/P2/P3).
 2. Für JEDEN Befund: gegen echten Code (grep) + echten Run-Text (Bot_*.txt) verifizieren.
    Schon gefixt? Altstand? Wirklich reproduzierbar? -> nur echte, offene Befunde fixen.
+   Bei jeder sichtbaren Szene außerdem das konkrete Bild öffnen und gegen Prosa, Ort,
+   Tageszeit und finalen physischen Roster prüfen. Ein zentraler Orts-NPC mit `immer:true`
+   muss im Grundmotiv oder in der gewählten Anwesenheitsvariante sichtbar sein; dafür
+   keine Varianten für bloße passive Nebenfigurenkombinationen erzeugen.
 3. Den WICHTIGSTEN Fix wählen (meist genau einen P1). Nicht alles auf einmal.
 4. Fix bauen, mit Diagnose-Marker.
 5. node-Test gegen die realen Auslösersätze (TRUE/FALSE wie erwartet?).

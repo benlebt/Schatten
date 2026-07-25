@@ -82,6 +82,21 @@ for (const imageSet of imageSets) {
     assert(fs.existsSync(path.join(repoRoot, root, spec.file)), 'dark scene asset missing: ' + root + spec.file);
     assert(fs.existsSync(path.join(repoRoot, root, spec.dayFile)), 'day scene asset missing: ' + root + spec.dayFile);
     assert(fs.existsSync(path.join(repoRoot, root, nightFile)), 'night scene asset missing: ' + root + nightFile);
+    for (const variant of spec.presenceVariants || []) {
+      const variantRoot = variant.root || root;
+      const variantNightFile = variant.nightFile || variant.file.replace(/(\.[a-z0-9]+)$/i, '-night$1');
+      assert(variant.id || variant.npc, 'presence visual needs an NPC trigger: ' + root + spec.file);
+      assert(Array.isArray(variant.depictsNpcs) && variant.depictsNpcs.length > 0,
+        'presence visual needs an audited depictsNpcs contract: ' + variantRoot + variant.file);
+      assert(variant.file && variant.dayFile,
+        'presence visual needs day and dark files: ' + variantRoot + String(variant.file || ''));
+      assert(fs.existsSync(path.join(repoRoot, variantRoot, variant.file)),
+        'presence dark scene asset missing: ' + variantRoot + variant.file);
+      assert(fs.existsSync(path.join(repoRoot, variantRoot, variant.dayFile)),
+        'presence day scene asset missing: ' + variantRoot + variant.dayFile);
+      assert(fs.existsSync(path.join(repoRoot, variantRoot, variantNightFile)),
+        'presence night scene asset missing: ' + variantRoot + variantNightFile);
+    }
     if (nativeNightFiles.has(spec.file)) {
       assert.strictEqual(spec.nightFile, spec.file, 'native illuminated night scene must not use a darkened copy: ' + spec.file);
     }
@@ -124,6 +139,20 @@ for (const [caseIndex, variant] of cases.entries()) {
     assert(imageSpec, 'location has no scene image mapping: ' + setup.klient + ' -> ' + locName);
 
     const locNpcIds = new Set((loc.npcs || []).map((npc) => npc && npc.id).filter(Boolean));
+    const fixedNpcIds = (loc.npcs || [])
+      .filter((npc) => npc && npc.id && npc.immer === true)
+      .map((npc) => npc.id);
+    if (fixedNpcIds.length && !imageSpec.dynamicNpcVisual) {
+      const visuallyCoveredIds = new Set(imageSpec.depictsNpcs || []);
+      for (const variant of imageSpec.presenceVariants || []) {
+        for (const depictedId of variant.depictsNpcs || []) visuallyCoveredIds.add(depictedId);
+      }
+      for (const fixedNpcId of fixedNpcIds) {
+        assert(visuallyCoveredIds.has(fixedNpcId),
+          'fixed main NPC has no audited base/presence visual: '
+            + setup.klient + ' -> ' + locName + ' -> ' + fixedNpcId);
+      }
+    }
     for (const threat of loc.bedrohungen || []) {
       assert(threat.id, 'threat without id: ' + setup.klient + ' -> ' + locName);
       assert(castIds.has(threat.id), 'threat references NPC missing from setupCast: ' + setup.klient + ' -> ' + locName + ' -> ' + threat.id);
@@ -170,6 +199,10 @@ for (const [caseIndex, variant] of cases.entries()) {
 }
 
 assert(html.includes('_preloadSzenenbildSatz(set)'), 'scene image renderer must preload the active case image set');
+assert(html.includes('function _szenenbildPflichtbesetzungPruefen(spec, scene)'),
+  'every rendered scene image needs the fixed-main-NPC composition audit');
+assert(html.includes('BILD-PROSA-BRUCH · feste Hauptfigur/Bildbesetzung'),
+  'fixed-main-NPC image drift needs an explicit diagnostic marker');
 assert(html.includes('fetchpriority="high"'), 'scene image tag should request high fetch priority');
 assert(html.includes("return _istChariteOrt(loc) && !/pathologie/i.test"),
   'a pathology location must not replace the globally injected hospital');
