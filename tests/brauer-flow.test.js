@@ -132,6 +132,10 @@ assert(html.includes("pendingChosenOption._clientDepartureAfterReply"),
   'the speaking client must remain in the scene roster until the visible reply and departure');
 assert(!html.includes("verlaesst das Buero in Richtung Antiquitaetenladen"),
   "the generic client transition must never send every client to Krause's shop");
+assert(html.includes("add('fall_berichten', 'Fall berichten')"),
+  'a solved case must reopen an exhausted client as the report target');
+assert(html.includes('Setze "klient_berichtet": true im JSON.'),
+  'the direct client-report action must explicitly request the terminal report flag');
 
 function sourceOf(name) {
   const start = html.indexOf('function ' + name + '(');
@@ -174,6 +178,31 @@ vm.runInContext(sourceOf('_hauptuiNpc'), uiContext);
 const resolvedOpeningClient = uiContext._hauptuiNpc(openingTargets.personen[0]);
 assert(resolvedOpeningClient && resolvedOpeningClient.id === 'hilde_brauer',
   'executing a Haupt-UI action must resolve a client from the physical scene cast');
+
+uiContext.caseSetup = {
+  caseType: 'vermisst',
+  klient: 'Hilde Brauer',
+  setupCast: [{ id: 'hilde_brauer', name: 'Hilde Brauer', tag: 'CLIENT' }],
+};
+uiContext.caseProgress = {
+  stage: 3,
+  wahrheitErkannt: true,
+  klientGesprochen: false,
+};
+uiContext._physischesFallzielBlockiertAbschluss = () => false;
+uiContext._physischesFallzielIstGeborgen = () => true;
+vm.runInContext(sourceOf('_hauptuiKlientenberichtOffen'), uiContext);
+assert.strictEqual(
+  uiContext._hauptuiKlientenberichtOffen({
+    id: 'hilde_brauer',
+    name: 'Hilde Brauer',
+    tag: 'CLIENT',
+    typ: 'person',
+    erledigt: true,
+  }),
+  true,
+  'an exhausted family client must reopen when the proved truth is ready to report',
+);
 
 uiContext.cast = [
   { id: 'im_schaffner', name: 'IM "Schaffner"', tag: 'STASI' },

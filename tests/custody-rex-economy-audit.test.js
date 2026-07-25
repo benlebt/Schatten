@@ -7,7 +7,7 @@ const { readWebpDimensions } = require('./image-format-utils');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1557 +BrauerMainNpcVisuals'"), 'version constant is stale');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1558 +ClientReportReopen'"), 'version constant is stale');
 assert(html.includes("text: _resolveIstEigenauftrag ? 'Eigen-Auftrag abschließen und Wahrheit festhalten.' : 'Fall abschließen und Auftraggeber informieren.'"),
   'resolve button copy must stay player-facing for external and self-assigned cases');
 assert(html.includes('_enginePrompt: [_resolveText, _resolveTransitionPrompt]'), 'resolve direction must remain private');
