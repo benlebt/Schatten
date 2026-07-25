@@ -91,6 +91,19 @@ const hildeImage = path.join(repoRoot, hildeVariant.root, hildeVariant.file);
 assert(fs.existsSync(hildeImage), 'Hilde opening image is missing');
 assert.deepStrictEqual(readWebpDimensions(hildeImage), { width: 1536, height: 864 },
   'Hilde opening image must use the standard 16:9 scene resolution');
+const laundrySpec = imageSet.images.find((entry) => {
+  entry.test.lastIndex = 0;
+  return entry.test.test('waescherei koepenick');
+});
+assert(laundrySpec && laundrySpec.depictsNpcs.includes('greta_schliemann'),
+  'the laundry image must contractually depict Greta');
+assert(/allein/i.test(laundrySpec.alt),
+  'the laundry alt contract must exclude the removed phantom railway worker');
+assert.deepStrictEqual(
+  readWebpDimensions(path.join(repoRoot, imageSet.root, laundrySpec.file)),
+  { width: 1536, height: 864 },
+  'the corrected laundry image must use the standard 16:9 scene resolution',
+);
 
 assert(html.includes("problem.code === 'family_fee_motive_drift'"),
   'family cases need a world-truth repair for invented fee motivation');
