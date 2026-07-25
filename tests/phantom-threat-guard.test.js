@@ -240,7 +240,7 @@ problem = context._findUnrosteredPresentActor({
 }, {});
 assert.strictEqual(problem, null, 'a properly rostered scene actor remains legal');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1539 +DeescalatedWitness-Staging'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1540 +NpcStateAlias-Staging'"),
   'release version missing');
 
 console.log('phantom threat guard tests passed');

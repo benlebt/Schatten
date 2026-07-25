@@ -48,5 +48,8 @@ assert(html.includes('function _hauptuiKonfrontationMussFuerHinweisBleiben(name)
   && html.includes('function _hauptuiKonfrontationBeruhigtenHinweisgeberSichern(name)')
   && html.includes('ABSCHLUSS PFLICHT (HINWEISGEBER)'),
   'peaceful confrontation resolution must keep unresolved evidence carriers interactable');
+assert(html.includes("const k = rawKey.replace(/_/g, ' ');")
+  && html.includes('let z = m[rawKey] || m[k] || null;'),
+  'NPC social/combat state lookup must resolve both setup IDs and display names');
 
 console.log('strauss-opening-flow: ok');
