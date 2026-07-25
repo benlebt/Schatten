@@ -193,6 +193,7 @@ uiContext.caseProgress = {
 };
 uiContext._physischesFallzielBlockiertAbschluss = () => false;
 uiContext._physischesFallzielIstGeborgen = () => true;
+uiContext._istKlient = (name, id) => id === 'hilde_brauer' || name === 'Hilde Brauer';
 vm.runInContext(sourceOf('_hauptuiKlientenberichtOffen'), uiContext);
 assert.strictEqual(
   uiContext._hauptuiKlientenberichtOffen({
