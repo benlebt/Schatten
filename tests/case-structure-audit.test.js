@@ -142,6 +142,11 @@ for (const [caseIndex, variant] of cases.entries()) {
     const fixedNpcIds = (loc.npcs || [])
       .filter((npc) => npc && npc.id && npc.immer === true)
       .map((npc) => npc.id);
+    if (fixedNpcIds.length > 1) {
+      assert(!/\ballein\b/i.test(String(loc.detail || '')),
+        'multi-NPC location contradicts its fixed cast by claiming someone is alone: '
+          + setup.klient + ' -> ' + locName);
+    }
     if (fixedNpcIds.length && !imageSpec.dynamicNpcVisual) {
       const visuallyCoveredIds = new Set(imageSpec.depictsNpcs || []);
       for (const variant of imageSpec.presenceVariants || []) {
