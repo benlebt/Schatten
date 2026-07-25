@@ -51,5 +51,13 @@ assert(html.includes('function _hauptuiKonfrontationMussFuerHinweisBleiben(name)
 assert(html.includes("const k = rawKey.replace(/_/g, ' ');")
   && html.includes('let z = m[rawKey] || m[k] || null;'),
   'NPC social/combat state lookup must resolve both setup IDs and display names');
+assert(html.includes("presenceVariants: [")
+  && html.includes("npc: 'Paul Krummbein', id: 'paul_krummbein'")
+  && html.includes('function _szenenbildAnwesenheitsVariante(spec, scene)')
+  && html.includes('spec = _szenenbildAnwesenheitsVariante(spec, scene);'),
+  'fixed location visuals must switch generically to an available present-NPC variant');
+assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'strauss', 'strauss-geschaeft-krummbein-day.webp'))
+  && fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'strauss', 'strauss-geschaeft-krummbein-night.webp')),
+  'Strauss shop must provide day and night visuals with Krummbein visibly present');
 
 console.log('strauss-opening-flow: ok');
