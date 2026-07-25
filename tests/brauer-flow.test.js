@@ -99,6 +99,10 @@ assert(html.includes("window.HAUPTUI_AKTIV && typeof cast !== 'undefined' && Arr
   'the current physical scene cast must feed the Haupt-UI target resolver');
 assert(html.includes("const _clientDepartureDestination = String((npc && npc.departureDestination) || '').trim();"),
   'client departures must use the setup contract instead of a shared hard-coded destination');
+assert(html.includes("_clientDepartureDestination: _clientDepartureDestination || null"),
+  'the selected action must retain its configured client departure destination through repair');
+assert(html.includes("pendingChosenOption._clientDepartureAfterReply"),
+  'the speaking client must remain in the scene roster until the visible reply and departure');
 assert(!html.includes("verlaesst das Buero in Richtung Antiquitaetenladen"),
   "the generic client transition must never send every client to Krause's shop");
 
