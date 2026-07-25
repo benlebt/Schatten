@@ -155,7 +155,11 @@ uiContext.cast = [
   { id: 'im_schaffner', name: 'IM "Schaffner"', tag: 'STASI' },
   { name: "IM 'Schaffner'", tag: 'STASI' },
 ];
-uiContext._findSetupCastFuzzy = (name) => /schaffner/i.test(name)
+uiContext.caseSetup = {
+  caseType: 'vermisst',
+  setupCast: [{ id: 'im_schaffner', name: 'IM "Schaffner"', tag: 'STASI' }],
+};
+uiContext._findSetupCastFuzzy = (name) => /"/.test(name)
   ? { id: 'im_schaffner', name: 'IM "Schaffner"', tag: 'STASI' } : null;
 const quoteVariantTargets = uiContext._baukastenZiele();
 assert.deepStrictEqual(Array.from(quoteVariantTargets.personen, (entry) => entry.id), ['im_schaffner'],
