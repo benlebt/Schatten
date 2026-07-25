@@ -66,5 +66,15 @@ assert(html.includes("const required = ((option._istOpening || typeof getCaseLoc
   && html.includes('const istReiseAnkunft = !!(option && (option._istReise')
   && html.includes('allowedRoster: arrivalAllowed.slice()'),
   'travel validation must not authorize stale actors from the departure location');
+assert(/id: 'krummbein_gestaendnis'[\s\S]*?abschlussEffekt: \{ verantwortlicher: 'Paul Krummbein', suspectConfronted: true, ueberfuehrt: true, wahrheitErkannt: true/.test(strauss),
+  'Krummbein confession must heal and unlock the resolution flags even in an old save');
+assert(html.includes("const _resolveButtonText = _resolveIstEigenauftrag")
+  && html.includes("'Fall abschließen, Wahrheit festhalten'")
+  && html.includes("if (_resolveIstEigenauftrag) {")
+  && html.includes("'Karl schließt seinen Eigen-Auftrag ab."),
+  'self-assigned cases must resolve without an external client report, phone call or fee');
+assert(html.includes("progressLine = _progressIstEigenauftrag")
+  && html.includes("'▓▓▓▓▓ (Wahrheit festhalten)'"),
+  'self-assigned case progress must not instruct Karl to report to himself');
 
 console.log('strauss-opening-flow: ok');
