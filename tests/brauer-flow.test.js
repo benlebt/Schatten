@@ -65,6 +65,9 @@ for (const clueId of [
 }
 assert.strictEqual(clueById.get('marienfelde_registratur').stage, 4,
   'Marienfelde registration must remain the decisive stage-four proof');
+assert(/unverschlossen/i.test(clueById.get('schliessfach_leer').text)
+    && /keinen Schlüssel/i.test(clueById.get('schliessfach_leer').text),
+  'the locker clue must define access without inventing a key handoff from Hilde');
 assert(Number(clueById.get('marienfelde_registratur').abStage) >= 3,
   'Erwin must not be declared safe before the investigation reaches Marienfelde');
 assert(setup.requiredProof.test(clueById.get('marienfelde_registratur').text),
