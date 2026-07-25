@@ -19,6 +19,8 @@ assert(/id: 'schleier_aussage'[\s\S]*?abStage: 2/.test(strauss),
   'the full testimony at Cafe Kranzler must remain gated behind the opening lead');
 assert(strauss.includes("rolle: 'Unbekannte Trauernde am Grab'"),
   'the visible role must not expose a future romance');
+assert(/name: 'Frau mit Schleier'[\s\S]*?tag: 'MYSTERY'[\s\S]*?feindlich: false/.test(strauss),
+  'the unknown mourner must remain socially approachable instead of becoming a combat target');
 assert(!/Klara Bergmann|spaeter ROMANCE-Kandidatin|Ludwigs Geliebte/.test(strauss),
   'the setup must not leak the veiled woman identity or relationship in the player-facing dossier');
 
@@ -31,5 +33,8 @@ assert(html.includes('knownChars[lower].encountered = f.encountered === true'),
   'the current-state dossier must not treat every frozen setup fact as encountered');
 assert(html.includes('const _openingMissingNames = Array.isArray(problem.missingProse)'),
   'opening roster repair must append only genuinely missing prose actors');
+assert(html.includes('if (_setupNpc && _setupNpc.feindlich === false) return false;')
+  && html.includes('if (npc.feindlich === false) return false;'),
+  'explicit setup hostility must override ambiguous tags across enemy detection and the main UI');
 
 console.log('strauss-opening-flow: ok');
