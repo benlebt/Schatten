@@ -17,6 +17,8 @@ assert(strauss.includes('Cafe Kranzler'),
   'the opening lead must point to a configured follow-up location');
 assert(/id: 'schleier_aussage'[\s\S]*?nachIndiz: 'schleier_kranzler_spur'/.test(strauss),
   'the full testimony at Cafe Kranzler must unlock directly from the opening lead');
+assert(/id: 'krummbein_kordel'[\s\S]*?actions: \['ERKUNDEN','DURCHSUCHEN'\]/.test(strauss),
+  'the physical cord must be searched instead of mislabeled as reading files');
 assert(strauss.includes("rolle: 'Unbekannte Trauernde am Grab'"),
   'the visible role must not expose a future romance');
 assert(/name: 'Frau mit Schleier'[\s\S]*?tag: 'MYSTERY'[\s\S]*?feindlich: false/.test(strauss),
@@ -42,5 +44,9 @@ assert(html.includes('if (ind.nachIndiz) {')
   && html.includes('if (entry.wegWennIndiz && caseProgress')
   && html.includes('if (entry.romanceNachIndiz) {'),
   'clue chains, NPC departures and romance reveals must support explicit evidence gates');
+assert(html.includes('function _hauptuiKonfrontationMussFuerHinweisBleiben(name)')
+  && html.includes('function _hauptuiKonfrontationBeruhigtenHinweisgeberSichern(name)')
+  && html.includes('ABSCHLUSS PFLICHT (HINWEISGEBER)'),
+  'peaceful confrontation resolution must keep unresolved evidence carriers interactable');
 
 console.log('strauss-opening-flow: ok');
