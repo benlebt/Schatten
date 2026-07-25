@@ -68,13 +68,30 @@ assert(html.includes("const required = ((option._istOpening || typeof getCaseLoc
   'travel validation must not authorize stale actors from the departure location');
 assert(/id: 'krummbein_gestaendnis'[\s\S]*?abschlussEffekt: \{ verantwortlicher: 'Paul Krummbein', suspectConfronted: true, ueberfuehrt: true, wahrheitErkannt: true/.test(strauss),
   'Krummbein confession must heal and unlock the resolution flags even in an old save');
+assert(html.includes("['requiresEvidenceAll', 'requiresEvidenceAny', 'truthBeatIds'].forEach(function(feld)")
+  && html.includes('vorhanden.abschlussEffekt = qi.abschlussEffekt;'),
+  'old saves must refresh canonical evidence-chain and resolution metadata on existing clues');
+assert(html.includes('gespeichert.feindlich !== false')
+  && html.includes("&& (typeof _npcIstFeindlich !== 'function' || _npcIstFeindlich(c))")
+  && html.includes("_npcAusAktiverSzeneEntfernen(gespeichert, 'ungueltiger-neutraler-showdown')")
+  && html.includes('return !(setupNpc && setupNpc.feindlich === false);')
+  && html.includes('function _neutraleNpcOrtsAltlastenBereinigen()')
+  && html.includes('engineCurrentLocation.npcs = engineCurrentLocation.npcs.filter')
+  && html.includes("if (typeof qc.feindlich === 'boolean' && c.feindlich !== qc.feindlich)")
+  && html.includes('FINALER NEUTRAL-NPC-BLOCK:')
+  && html.includes('caseProgress.ueberfuehrt && caseProgress.suspectConfronted'),
+  'showdown selection must reject explicit neutral actors and not invent a second boss fight after conviction');
 assert(html.includes("const _resolveButtonText = _resolveIstEigenauftrag")
   && html.includes("'Fall abschließen, Wahrheit festhalten'")
   && html.includes("if (_resolveIstEigenauftrag) {")
-  && html.includes("'Karl schließt seinen Eigen-Auftrag ab."),
+  && html.includes("'Karl schließt seinen Eigen-Auftrag ab.")
+  && html.includes('eigenauftrag = /eigen-?auftrag|eigener klient|aus eigenem antrieb/i.test(eigenText)')
+  && html.includes('Karl gibt Beweise und Geständnis weiter'),
   'self-assigned cases must resolve without an external client report, phone call or fee');
 assert(html.includes("progressLine = _progressIstEigenauftrag")
   && html.includes("'▓▓▓▓▓ (Wahrheit festhalten)'"),
   'self-assigned case progress must not instruct Karl to report to himself');
+assert(html.includes("'Karl hält in seiner eigenen Akte fest, was wirklich geschah, und benennt '"),
+  'self-assigned case end screen must not report the truth from Karl to Karl');
 
 console.log('strauss-opening-flow: ok');
