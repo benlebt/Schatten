@@ -31,6 +31,9 @@ assert(variant, 'Brauer setup is missing');
 const setup = variant.setup;
 assert.strictEqual(setup.caseType, 'vermisst', 'Brauer must remain a missing-person case');
 assert.strictEqual(setup.familieMatter, true, 'Brauer must remain a family case');
+const hildeSetup = setup.setupCast.find((entry) => entry.id === 'hilde_brauer');
+assert(hildeSetup && /koepenick/i.test(hildeSetup.departureDestination),
+  'Hilde must leave for her configured home, not a case-foreign destination');
 assert.strictEqual(setup.targetResolution.mode, 'proof',
   'Erwin has moved on after registration and must resolve through proof');
 assert(/keinen vorschuss/i.test(variant.prompt),
@@ -94,6 +97,10 @@ assert(html.includes('SZENENBILD ausgeblendet: zentrale anwesende Figur fehlt im
   'a mismatched central cast image must fail closed');
 assert(html.includes("window.HAUPTUI_AKTIV && typeof cast !== 'undefined' && Array.isArray(cast)"),
   'the current physical scene cast must feed the Haupt-UI target resolver');
+assert(html.includes("const _clientDepartureDestination = String((npc && npc.departureDestination) || '').trim();"),
+  'client departures must use the setup contract instead of a shared hard-coded destination');
+assert(!html.includes("verlaesst das Buero in Richtung Antiquitaetenladen"),
+  "the generic client transition must never send every client to Krause's shop");
 
 function sourceOf(name) {
   const start = html.indexOf('function ' + name + '(');
