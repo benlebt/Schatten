@@ -187,7 +187,7 @@ uiContext.caseSetup = {
 uiContext.caseProgress = {
   stage: 3,
   wahrheitErkannt: true,
-  klientGesprochen: false,
+  klientGesprochen: true,
 };
 uiContext._physischesFallzielBlockiertAbschluss = () => false;
 uiContext._physischesFallzielIstGeborgen = () => true;
