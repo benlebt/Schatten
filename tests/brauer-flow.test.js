@@ -104,6 +104,17 @@ assert.deepStrictEqual(
   { width: 1536, height: 864 },
   'the corrected laundry image must use the standard 16:9 scene resolution',
 );
+const marienfeldeSpec = imageSet.images.find((entry) => {
+  entry.test.lastIndex = 0;
+  return entry.test.test('marienfelde notaufnahmelager');
+});
+assert(marienfeldeSpec && /Ruth Kellner/.test(marienfeldeSpec.alt) && /Rolf Meissner/.test(marienfeldeSpec.alt),
+  'the Marienfelde visual contract must name both central staff NPCs');
+assert.deepStrictEqual(
+  readWebpDimensions(path.join(repoRoot, imageSet.root, marienfeldeSpec.file)),
+  { width: 1536, height: 864 },
+  'the corrected Marienfelde image must use the standard 16:9 scene resolution',
+);
 
 assert(html.includes("problem.code === 'family_fee_motive_drift'"),
   'family cases need a world-truth repair for invented fee motivation');
