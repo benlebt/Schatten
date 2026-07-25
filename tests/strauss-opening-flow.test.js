@@ -17,5 +17,19 @@ assert(strauss.includes('Cafe Kranzler'),
   'the opening lead must point to a configured follow-up location');
 assert(/id: 'schleier_aussage'[\s\S]*?abStage: 2/.test(strauss),
   'the full testimony at Cafe Kranzler must remain gated behind the opening lead');
+assert(strauss.includes("rolle: 'Unbekannte Trauernde am Grab'"),
+  'the visible role must not expose a future romance');
+assert(!/Klara Bergmann|spaeter ROMANCE-Kandidatin|Ludwigs Geliebte/.test(strauss),
+  'the setup must not leak the veiled woman identity or relationship in the player-facing dossier');
+
+assert(html.includes('encountered: false,'),
+  'setup facts must begin hidden from the player-facing encountered-person list');
+assert(html.includes('fact.encountered = true;')
+  && html.includes('_encounterFact.encountered = true;'),
+  'structured cast additions and personenImRaum must reveal a person only after a real encounter');
+assert(html.includes('knownChars[lower].encountered = f.encountered === true'),
+  'the current-state dossier must not treat every frozen setup fact as encountered');
+assert(html.includes('const _openingMissingNames = Array.isArray(problem.missingProse)'),
+  'opening roster repair must append only genuinely missing prose actors');
 
 console.log('strauss-opening-flow: ok');
