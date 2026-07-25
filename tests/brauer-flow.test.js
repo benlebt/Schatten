@@ -178,4 +178,33 @@ const quoteVariantTargets = uiContext._baukastenZiele();
 assert.deepStrictEqual(Array.from(quoteVariantTargets.personen, (entry) => entry.id), ['im_schaffner'],
   'quote variants of one setup NPC must collapse to one Haupt-UI target');
 
+const visualContext = {
+  caseSetup: {
+    locations: [{
+      name: 'Waescherei Koepenick',
+      npcs: [{ id: 'greta_schliemann', immer: true }],
+    }],
+    setupCast: [{ id: 'greta_schliemann', name: 'Greta Schliemann' }],
+  },
+  engineCurrentLocation: { name: 'Waescherei Koepenick' },
+  sceneCounter: 8,
+  getNpcsAtCurrentLocation: () => [
+    { id: 'greta_schliemann', name: 'Greta Schliemann', tag: 'ROMANCE' },
+    { id: 'stamm_mfs', name: 'Hauptmann Vollmer', tag: 'STASI' },
+  ],
+  normForMatch: uiContext.normForMatch,
+  _npcZustandGet: () => null,
+  _npcZustandIstEntfernt: () => false,
+  diag: () => {},
+  Set,
+};
+vm.createContext(visualContext);
+vm.runInContext('const _SZENENBILD_BESETZUNG_DIAG_CACHE = new Set();' + sourceOf('_szenenbildPflichtbesetzungPruefen'), visualContext);
+const visualProblems = visualContext._szenenbildPflichtbesetzungPruefen(
+  { file: 'waescherei.webp', place: 'Waescherei Koepenick', depictsNpcs: ['greta_schliemann'] },
+  { personenImRaum: ['Greta Schliemann', 'Hauptmann Vollmer'] },
+);
+assert(Array.from(visualProblems).some((problem) => /Hauptmann Vollmer/.test(problem)),
+  'a dynamic central STASI actor missing from a fixed image must fail the scene-image cast contract');
+
 console.log('BRAUER_FLOW_OK');
