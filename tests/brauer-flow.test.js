@@ -132,4 +132,9 @@ const openingTargets = uiContext._baukastenZiele();
 assert.deepStrictEqual(Array.from(openingTargets.personen, (entry) => entry.id), ['hilde_brauer'],
   'a client in the physical scene cast must remain an actionable Haupt-UI target without a location binding');
 
+vm.runInContext(sourceOf('_hauptuiNpc'), uiContext);
+const resolvedOpeningClient = uiContext._hauptuiNpc(openingTargets.personen[0]);
+assert(resolvedOpeningClient && resolvedOpeningClient.id === 'hilde_brauer',
+  'executing a Haupt-UI action must resolve a client from the physical scene cast');
+
 console.log('BRAUER_FLOW_OK');
