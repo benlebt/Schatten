@@ -92,5 +92,44 @@ assert(html.includes("String(entry.tag || '').toUpperCase() !== 'CLIENT'"),
   'opening clients must participate in the scene-image cast contract');
 assert(html.includes('SZENENBILD ausgeblendet: zentrale anwesende Figur fehlt im Bildvertrag'),
   'a mismatched central cast image must fail closed');
+assert(html.includes("window.HAUPTUI_AKTIV && typeof cast !== 'undefined' && Array.isArray(cast)"),
+  'the current physical scene cast must feed the Haupt-UI target resolver');
+
+function sourceOf(name) {
+  const start = html.indexOf('function ' + name + '(');
+  assert(start >= 0, name + ' is missing');
+  const bodyStart = html.indexOf('{', start);
+  let depth = 0;
+  for (let index = bodyStart; index < html.length; index++) {
+    if (html[index] === '{') depth++;
+    if (html[index] === '}') depth--;
+    if (depth === 0) return html.slice(start, index + 1);
+  }
+  assert.fail(name + ' has no closing brace');
+}
+
+const uiContext = {
+  window: { HAUPTUI_AKTIV: true },
+  cast: [{ id: 'hilde_brauer', name: 'Hilde Brauer', tag: 'CLIENT', rolle: 'Klientin' }],
+  caseSetup: { caseType: 'vermisst' },
+  caseProgress: { gefundeneIndizIds: [] },
+  engineCurrentLocation: { name: 'Karl Mauers Buero' },
+  getNpcsAtCurrentLocation: () => [],
+  getCaseLocations: () => [],
+  normForMatch: (value) => String(value || '').toLowerCase().replace(/[_-]+/g, ' ').trim(),
+  _npcZustandIstEntfernt: () => false,
+  _npcWurdeSchonAngesprochen: () => false,
+  _npcHatUngefundeneIndizien: () => true,
+  _npcHatOffenenHinweis: () => false,
+  _npcOffeneHinweisAktionen: () => [],
+  _npcAnzeigename: (npc) => npc.name,
+  _ortsFundIndizienErreichbar: () => [],
+  _itemsBeiKarl: () => [],
+};
+vm.createContext(uiContext);
+vm.runInContext(sourceOf('_baukastenZiele'), uiContext);
+const openingTargets = uiContext._baukastenZiele();
+assert.deepStrictEqual(Array.from(openingTargets.personen, (entry) => entry.id), ['hilde_brauer'],
+  'a client in the physical scene cast must remain an actionable Haupt-UI target without a location binding');
 
 console.log('BRAUER_FLOW_OK');
