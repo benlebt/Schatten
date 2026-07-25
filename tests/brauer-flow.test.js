@@ -151,4 +151,14 @@ const resolvedOpeningClient = uiContext._hauptuiNpc(openingTargets.personen[0]);
 assert(resolvedOpeningClient && resolvedOpeningClient.id === 'hilde_brauer',
   'executing a Haupt-UI action must resolve a client from the physical scene cast');
 
+uiContext.cast = [
+  { id: 'im_schaffner', name: 'IM "Schaffner"', tag: 'STASI' },
+  { name: "IM 'Schaffner'", tag: 'STASI' },
+];
+uiContext._findSetupCastFuzzy = (name) => /schaffner/i.test(name)
+  ? { id: 'im_schaffner', name: 'IM "Schaffner"', tag: 'STASI' } : null;
+const quoteVariantTargets = uiContext._baukastenZiele();
+assert.deepStrictEqual(Array.from(quoteVariantTargets.personen, (entry) => entry.id), ['im_schaffner'],
+  'quote variants of one setup NPC must collapse to one Haupt-UI target');
+
 console.log('BRAUER_FLOW_OK');
