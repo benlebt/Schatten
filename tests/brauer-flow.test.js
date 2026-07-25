@@ -182,12 +182,14 @@ assert(resolvedOpeningClient && resolvedOpeningClient.id === 'hilde_brauer',
 uiContext.caseSetup = {
   caseType: 'vermisst',
   klient: 'Hilde Brauer',
+  requiredProof: /marienfelde|registriert/i,
   setupCast: [{ id: 'hilde_brauer', name: 'Hilde Brauer', tag: 'CLIENT' }],
 };
 uiContext.caseProgress = {
   stage: 3,
-  wahrheitErkannt: true,
+  wahrheitErkannt: false,
   klientGesprochen: true,
+  indizien: ['Erwin Brauer ist in Marienfelde unter richtigem Namen registriert.'],
 };
 uiContext._physischesFallzielBlockiertAbschluss = () => false;
 uiContext._physischesFallzielIstGeborgen = () => true;
@@ -201,7 +203,7 @@ assert.strictEqual(
     erledigt: true,
   }),
   true,
-  'an exhausted family client must reopen when the proved truth is ready to report',
+  'an exhausted family client must reopen when the configured required proof is ready to report',
 );
 
 uiContext.cast = [
