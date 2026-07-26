@@ -607,7 +607,7 @@ context.enforceSceneWorldTruthFallback(naturalSocialFallback, {
   _npcInteraktion: { npcName: 'Tante Frieda', verb: 'kragen' },
   _anzeigeText: 'Karl: Am Kragen packen'
 });
-assert(/Karl packt Tante Frieda am Kragen/.test(naturalSocialFallback.szene)
+assert(/Du packst Tante Frieda am Kragen/.test(naturalSocialFallback.szene)
     && /Tante Frieda reißt sich los/.test(naturalSocialFallback.szene),
   'the social hard fallback must narrate the selected physical action naturally');
 assert(!/gewählte Ansprache|Person|Fallhinweis|Engine|Fallback|UI|JSON/i.test(naturalSocialFallback.szene),

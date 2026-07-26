@@ -55,7 +55,9 @@ const targetContext = {
     gefundeneIndizIds: ['lothar_schluessel']
   },
   alleDefiniertenIndizien: () => [{ id: 'lothar_schluessel', stage: 4 }],
-  _resolveNpcIdentity: () => ({ id: 'konstantin_wegener', name: 'Konstantin Wegener' }),
+  _resolveNpcIdentity: (id) => id === 'lothars_bewacher'
+    ? ({ id: 'lothars_bewacher', name: 'Erwin Kratz' })
+    : ({ id: 'konstantin_wegener', name: 'Konstantin Wegener' }),
   _gegnerBezwungen: () => false,
   getNpcsAtCurrentLocation: () => [{ id: 'lothars_bewacher', name: 'Erwin Kratz' }],
   normForMatch: (value) => String(value || '').toLowerCase().trim()
@@ -80,6 +82,18 @@ targetContext.caseProgress.zielpersonGefunden = true;
 assert(targetContext._physischesFallzielStatus(), 'found target must remain active while physical rescue is open');
 assert.strictEqual(targetContext._physischesFallzielIstGeborgen(), false, 'finding a bound target must not count as rescue');
 assert.strictEqual(targetContext._physischesFallzielBewacherOffen(), true, 'configured guard must block rescue while free');
+let migratedGuardState = { status: 'beruhigt' };
+targetContext._npcZustandGet = () => migratedGuardState;
+targetContext._npcZustandSet = (id, patch) => {
+  assert.strictEqual(id, 'lothars_bewacher');
+  migratedGuardState = { ...migratedGuardState, ...patch };
+};
+assert.strictEqual(targetContext._physischesFallzielBewacherOffen(), false,
+  'a deescalated physical-target guard who left in prose must release the rescue gate');
+assert.strictEqual(migratedGuardState.status, 'geflohen',
+  'old deescalation saves must migrate the departed guard to a terminal roster state');
+delete targetContext._npcZustandGet;
+delete targetContext._npcZustandSet;
 targetContext._npcZustandIstEntfernt = (npc) => String((npc && (npc.id || npc.name)) || npc || '').includes('lothars_bewacher');
 assert.strictEqual(targetContext._physischesFallzielBewacherOffen(), false, 'a guard handed to police must never block target rescue');
 delete targetContext._npcZustandIstEntfernt;
@@ -131,6 +145,8 @@ assert(html.includes("resolveLockReason = 'Zielperson noch sicher übergeben'"),
 assert(html.includes('◆ Rettungsziel:'), 'map must label both safe handoff destinations');
 assert(html.includes('resolution.visualStates'), 'rescued scene visuals must come from the active case setup');
 assert(html.includes('rescuedAtTarget'), 'rescued scene visuals need an explicit state key');
+assert(html.includes("if (beruhigterEinzelAbgang) finalStatus = 'geflohen';"),
+  'a deescalated single opponent who leaves in prose must become terminal in engine state');
 
 const introStart = html.indexOf('const INTRO_VARIANTS = [');
 const introEnd = html.indexOf('\n];', introStart);

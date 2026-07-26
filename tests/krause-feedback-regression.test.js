@@ -476,7 +476,7 @@ arrivalFallbackContext.enforceSceneWorldTruthFallback(arrivalFallbackScene, {
   code: 'arrival_npc_roster_drift',
   required: ['Tante Frieda', 'Kalle', 'Jochen']
 });
-assert(arrivalFallbackScene.szene.includes('bereits gesicherten Hinweisen'),
+assert(arrivalFallbackScene.szene.includes('bisherigen Spuren führen dich genau hierher'),
   'arrival roster fallback must acknowledge clues secured in earlier scenes');
 assert(!arrivalFallbackScene.szene.includes('Noch hat niemand einen konkreten Hinweis preisgegeben'),
   'arrival roster fallback must not erase the run history after multiple clues');

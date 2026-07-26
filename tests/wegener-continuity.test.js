@@ -36,8 +36,17 @@ assert(wegener, 'Wegener setup missing');
 const setupText = JSON.stringify(wegener.setup);
 assert(/6\. Februar 1953/.test(setupText), 'Wegener disappearance must use a fixed calendar date');
 assert(!/vor 6 Tagen/.test(setupText), 'Wegener setup must not freeze a relative six-day phrase');
+assert(/setzt sich zu dir/.test(wegener.prompt),
+  'Schiele must visibly arrive before the opening scene exposes him as clickable');
+assert(!/Ein anderer Mann am Tresen|wirft dir wiederholt Blicke zu/.test(wegener.prompt)
+  && /Erfinde keinen beobachtenden Mann mit grauem Hut/.test(wegener.prompt),
+  'Wegener opening must explicitly bar the former unrostered grey-hat observer');
+assert(/Rita arbeitet als Kellnerin/.test(wegener.prompt),
+  'opening prompt must preserve Rita as the waitress rather than a duplicate landlady');
 const greyHat = Array.from(wegener.setup.setupCast).find((npc) => npc && npc.id === 'mann_grauer_hut');
 assert.strictEqual(greyHat, undefined, 'Wegener must not contain a wandering anonymous grey-hat observer');
+const rudi = Array.from(wegener.setup.setupCast).find((npc) => npc && npc.id === 'rudi_menzel');
+assert(rudi && rudi.name === 'Rudi Menzel', 'the warehouse-route witness needs a named setup identity');
 assert.strictEqual(wegener.setup.targetResolution.rescueRequired, true, 'Wegener must require an explicit physical rescue');
 assert.strictEqual(wegener.setup.targetResolution.deliveryRequired, true, 'Wegener must require a safe handoff after rescue');
 assert.deepStrictEqual(
@@ -59,6 +68,21 @@ assert(warehouse, 'Wegener warehouse finale missing');
 assert(Array.from(warehouse.npcs || []).some((npc) => npc && npc.id === 'lothars_bewacher'), 'warehouse guard NPC missing');
 const guardThreat = Array.from(warehouse.bedrohungen || []).find((threat) => threat && threat.id === 'lothars_bewacher');
 assert(guardThreat && guardThreat.chance === 100 && guardThreat.unausweichlich === true, 'warehouse guard confrontation must be guaranteed');
+const hinterhof = Array.from(wegener.setup.locations).find((loc) => loc && loc.name === 'Hinterhof Spreestrasse');
+const rudiClue = hinterhof && Array.from(hinterhof.indizien || []).find((clue) => clue && clue.id === 'lagerhalle_hinweis');
+assert(rudiClue && rudiClue.quelle === 'person' && rudiClue.npc === 'rudi_menzel',
+  'Rudi must personally disclose the warehouse route instead of turning into an environment notebook');
+assert(!Array.from(rudiClue.actions || []).includes('ERKUNDEN'),
+  'the named witness clue must not be collectable as an unrelated search');
+const clientHandoffVisual = wegener.setup.targetResolution.visualStates.clientHandoff;
+assert(clientHandoffVisual
+  && clientHandoffVisual.dayFile === 'wegener-wohnung-wiedervereinigung-day.webp'
+  && clientHandoffVisual.nightFile === 'wegener-wohnung-wiedervereinigung-night.webp',
+  'Wegener family handoff needs a dedicated day/night visual');
+for (const file of [clientHandoffVisual.dayFile, clientHandoffVisual.nightFile]) {
+  assert(fs.existsSync(path.join(__dirname, '..', clientHandoffVisual.root, file)),
+    `Wegener family handoff image is missing: ${file}`);
+}
 
 const visualContext = {
   caseSetup: wegener.setup,
@@ -74,6 +98,22 @@ assert.strictEqual(visualContext._physicalTargetSceneVisual().file, 'lagerhalle-
 visualContext._npcZustandGet = () => ({ status: 'uebergeben' });
 assert.strictEqual(visualContext._physicalTargetSceneVisual().file, 'lagerhalle-spree-kratz-abgefuehrt.webp',
   'a handed-over Kratz must disappear from the warehouse visual');
+visualContext._npcZustandGet = () => ({ status: 'beruhigt' });
+assert.strictEqual(visualContext._physicalTargetSceneVisual().file, 'lagerhalle-spree-kratz-abgefuehrt.webp',
+  'a peacefully departed Kratz must disappear from the warehouse visual');
+visualContext.engineCurrentLocation = { name: 'Wegener-Wohnung' };
+visualContext.caseProgress.zielpersonTransportStatus = 'im_opel';
+assert.strictEqual(visualContext._physicalTargetSceneVisual().dayFile,
+  'wegener-wohnung-wiedervereinigung-day.webp',
+  'arrival with rescued Konstantin must show both spouses in the client apartment');
+const currentVisualStates = visualContext.caseSetup.targetResolution.visualStates;
+visualContext.caseSetup.targetResolution.visualStates = Object.assign({}, currentVisualStates);
+delete visualContext.caseSetup.targetResolution.visualStates.clientHandoff;
+assert.strictEqual(visualContext._physicalTargetSceneVisual().dayFile,
+  'wegener-wohnung-wiedervereinigung-day.webp',
+  'legacy Wegener saves without the new state entry must still show the family handoff');
+visualContext.caseSetup.targetResolution.visualStates = currentVisualStates;
+visualContext.engineCurrentLocation = { name: 'Lagerhalle an der Spree' };
 visualContext.caseProgress.zielpersonGeborgen = true;
 assert.strictEqual(visualContext._physicalTargetSceneVisual().file, 'lagerhalle-spree-gerettet.webp',
   'the rescued-target visual must take precedence after Konstantin is freed');
@@ -161,6 +201,123 @@ assert(forcedRequirement && forcedRequirement.level === 3, 'last patience warnin
 assert.strictEqual(forcedPatienceScene.klient_kontakt, 'letzte_warnung', 'engine warning must set the structured marker');
 assert(forcedPatienceScene.szene.includes('Helga Wegener'), 'engine warning must visibly name the real client');
 assert(!/Auftrag beendet/.test(forcedPatienceScene.szene), 'last-chance warning must not accidentally match the firing detector');
+clientContext.gameDay = 3;
+clientContext.caseProgress.clientGeduldErzaehltLevel = 0;
+clientContext.caseProgress.zielpersonTransportStatus = 'bei_klient';
+const reunionScene = {
+  szene: 'Helga nimmt Konstantin erleichtert in Empfang.',
+  personenImRaum: ['Helga Wegener', 'Konstantin Wegener'],
+  klient_kontakt: ''
+};
+clientContext.enforceClientGeduldScene(reunionScene);
+assert.strictEqual(reunionScene.klient_kontakt, 'mahnung',
+  'physical delivery must satisfy the due client contact structurally');
+assert(!/Wo bleiben die versprochenen Ergebnisse|kurze Nachricht/.test(reunionScene.szene),
+  'family reunion must not receive a contradictory patience message');
+
+const overnightContext = {
+  normForMatch,
+  engineCurrentLocation: { name: 'Werft VEB Koepenick' }
+};
+vm.createContext(overnightContext);
+vm.runInContext(sourceOf('_findUnchosenOvernightDrift'), overnightContext);
+assert(overnightContext._findUnchosenOvernightDrift({
+  szene: 'Du hast die Nacht nicht geschlafen, nur kurz auf deinem Sofa gedöst, während Helga im Schlafzimmer blieb.'
+}, { id: 'REISE', text: 'Fahr zur Werft', _istReise: true }),
+  'travel must reject an invented shared overnight stay');
+assert.strictEqual(overnightContext._findUnchosenOvernightDrift({
+  szene: 'Du fährst ohne Pause durch das erste Morgenlicht zur Werft.'
+}, { id: 'REISE', text: 'Fahr zur Werft', _istReise: true }), null,
+  'ordinary awake travel across a time-slot boundary must remain valid');
+
+const ownershipContext = {
+  normForMatch,
+  caseSetup: wegener.setup,
+  caseProgress: {
+    reiseLog: [{ von: 'Wegener-Wohnung', ziel: 'Werft VEB Koepenick' }]
+  },
+  engineCurrentLocation: { name: 'Werft VEB Koepenick' }
+};
+vm.createContext(ownershipContext);
+vm.runInContext(sourceOf('_findWrongHomeOwnershipDrift'), ownershipContext);
+const wrongHome = ownershipContext._findWrongHomeOwnershipDrift({
+  szene: 'Du lässt Helga in deiner Wohnung zurück und fährst zur Werft.'
+}, { id: 'REISE', text: 'Fahr zur Werft', _istReise: true });
+assert(wrongHome && wrongHome.code === 'wrong_home_ownership',
+  'travel from a client apartment must reject calling it Karls apartment');
+assert.strictEqual(ownershipContext._findWrongHomeOwnershipDrift({
+  szene: 'Du lässt Helga in ihrer Wohnung zurück und fährst zur Werft.'
+}, { id: 'REISE', text: 'Fahr zur Werft', _istReise: true }), null,
+  'correct client-apartment ownership must remain valid');
+
+const worldTruthHasAlias = (text, aliases) => {
+  const n = normForMatch(text).replace(/_/g, ' ');
+  return Array.from(aliases || []).some((alias) => n.includes(normForMatch(alias).replace(/_/g, ' ')));
+};
+const worldTruthAliases = (id, entry) => [
+  id,
+  entry && entry.id,
+  entry && entry.name
+].filter(Boolean);
+const arrivalContext = {
+  caseSetup: wegener.setup,
+  caseProgress: {
+    stage: 3,
+    zielpersonTransportStatus: 'im_opel',
+    zielpersonInBegleitung: true
+  },
+  engineCurrentLocation: { name: 'Wegener-Wohnung' },
+  gameTimeIdx: 0,
+  TIMES_OF_DAY: ['NACHT'],
+  normForMatch,
+  getNpcsAtCurrentLocation: () => [],
+  getCaseLocations: () => wegener.setup.locations,
+  _npcOrtsbindungEintragAktiv: () => true,
+  _npcAbkoemmlich: () => false,
+  _npcZustandIstEntfernt: () => false,
+  _resolveNpcIdentity: (id) => Array.from(wegener.setup.setupCast).find((entry) => entry.id === id),
+  _worldTruthHasAlias: worldTruthHasAlias,
+  _worldTruthAliases: worldTruthAliases
+};
+vm.createContext(arrivalContext);
+vm.runInContext(sourceOf('_findArrivalNpcRosterDrift'), arrivalContext);
+const handoffArrivalProblem = arrivalContext._findArrivalNpcRosterDrift({
+  szene: 'Helga öffnet die Wohnungstür und starrt dich an.',
+  personenImRaum: ['Helga Wegener']
+}, { id: 'REISE', text: 'Fahr zur Wegener-Wohnung', _istReise: true });
+assert(handoffArrivalProblem
+  && Array.from(handoffArrivalProblem.missingProse).includes('Konstantin Wegener')
+  && Array.from(handoffArrivalProblem.missingRoster).includes('Konstantin Wegener'),
+  'a rescued physical target must be named in prose and roster on handoff arrival');
+
+const phantomCompanionContext = {
+  caseSetup: wegener.setup,
+  caseProgress: {},
+  engineCurrentLocation: { name: 'Hinterhof Spreestrasse' },
+  normForMatch,
+  getNpcsAtCurrentLocation: () => [{ id: 'lothar_schaefer', name: 'Lothar Schaefer' }],
+  _worldTruthHasAlias: worldTruthHasAlias,
+  _worldTruthAliases: worldTruthAliases
+};
+vm.createContext(phantomCompanionContext);
+vm.runInContext(sourceOf('_findUnrosteredPresentActor'), phantomCompanionContext);
+const phantomCompanion = phantomCompanionContext._findUnrosteredPresentActor({
+  szene: 'Lothars Blick huscht zu dem Mann mit der Lederjacke, der sich bedrohlich aufbaut. Sein Begleiter schlägt dir gegen die Schläfe.',
+  personenImRaum: ['Lothar Schaefer']
+}, { id: 'BEDROHEN' }, wegener.setup);
+assert(phantomCompanion && phantomCompanion.code === 'unrostered_present_actor',
+  'a rostered suspect must not legitimize an invented anonymous attacker');
+
+const socialFallbackContext = { normForMatch };
+vm.createContext(socialFallbackContext);
+vm.runInContext(sourceOf('_worldTruthNaturalSocialFallbackText'), socialFallbackContext);
+const socialFallback = socialFallbackContext._worldTruthNaturalSocialFallbackText(
+  'Lothar Schäfer',
+  { id: 'STELLE_ZUR_REDE', text: 'Stelle zur Rede' },
+  'social_target_missing'
+);
+assert(/^Du wendest dich/.test(socialFallback) && !/\bKarl\b/.test(socialFallback),
+  'deterministic social fallback prose must preserve the established Du perspective');
 
 assert(
   html.includes("['gefesselt', 'ko', 'fixiert', 'benommen'].indexOf(z.status) !== -1 && !_gleicherOrt"),
