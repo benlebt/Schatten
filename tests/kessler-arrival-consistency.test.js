@@ -246,6 +246,22 @@ assert.strictEqual(visualClasses.has('hidden'), false,
 assert.strictEqual(visualElements['kessler-scene-image'].attrs.src,
   'assets/scenes/krause/tante-friedas-hehlerei-day.webp',
   'Frieda arrival must render the daylight Frieda/Kalle/Jochen shop asset');
+imageContext.caseProgress.activeConfrontation = {
+  ort: 'Tante Friedas Hehlerei',
+  enemyEntries: imageContext.getNpcsAtCurrentLocation()
+};
+visualClasses.add('hidden');
+visualElements['kessler-scene-image'].attrs = {};
+imageContext._renderKesslerSceneVisual({
+  ort: 'Tante Friedas Hehlerei',
+  szene: 'Kalle hält Karl am Kragen fest, während Frieda zusieht und Jochen sein Messer zieht.',
+  personenImRaum: imageContext.getNpcsAtCurrentLocation()
+});
+assert.strictEqual(visualClasses.has('hidden'), false,
+  'the active Frieda/Kalle/Jochen confrontation must keep its exact combat image visible');
+assert.strictEqual(visualElements['kessler-scene-image'].attrs.src,
+  'assets/scenes/krause/tante-friedas-hehlerei-confrontation-day.webp',
+  'the active scene-10 confrontation must render the daylight three-person combat asset');
 
 const textHelperStart = html.indexOf('function _kesslerInnenraumTextPasst');
 const textHelperEnd = html.indexOf('function _renderKesslerSceneVisual', textHelperStart);
