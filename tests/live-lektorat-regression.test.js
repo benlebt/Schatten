@@ -86,6 +86,31 @@ assert.strictEqual(kesslerAbsenceContext._kesslerRobertAusdruecklichAbwesend({
 assert(sourceOf('_baukastenZiele').includes('_kesslerRobertAusdruecklichAbwesend')
   && sourceOf('_kesslerRobertVisual').includes('if (robertAusdruecklichAbwesend) return null'),
   'the same explicit-absence truth must govern both Haupt-UI and scene image');
+assert(sourceOf('_baukastenZiele').includes('_kesslerRobertAktuellInSzene')
+  && sourceOf('_baukastenZiele').includes("_resolveNpcIdentity('robert_kessler')"),
+  'a saved Kessler scene with visibly present Robert must heal a previously removed UI target');
+
+const departureContext = {};
+vm.createContext(departureContext);
+vm.runInContext(sourceOf('_npcNarrativerAbgangSignale'), departureContext);
+assert(html.includes('const _abgangSignale = _npcNarrativerAbgangSignale(_st, _first);'),
+  'cast persistence must consume the shared narrative-departure truth');
+assert.deepStrictEqual(
+  JSON.parse(JSON.stringify(departureContext._npcNarrativerAbgangSignale(
+    'Robert Kessler bleibt stehen, als er dich kommen sieht. Er macht keine Anstalten zu fliehen, sondern starrt dich erwartungsvoll an.',
+    'robert'
+  ))),
+  { mitgenommen: false, abschied: false, flucht: false },
+  '"bleibt stehen" and an explicitly negated escape must keep an NPC present'
+);
+assert.strictEqual(departureContext._npcNarrativerAbgangSignale(
+  'Robert bleibt zurück und sieht dir nach, während du durch das Tor gehst.',
+  'robert'
+).abschied, true, 'a real named separation must still remove the NPC');
+assert.strictEqual(departureContext._npcNarrativerAbgangSignale(
+  'Robert flieht durch den Torbogen und verschwindet in der Straße.',
+  'robert'
+).flucht, true, 'an explicit named escape must still remove the NPC');
 
 const serialLanguageContext = { caseSetup: { setupCast: [] } };
 vm.createContext(serialLanguageContext);
