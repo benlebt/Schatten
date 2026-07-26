@@ -506,8 +506,11 @@ assert.strictEqual(visualSpec.file, 'tante-friedas-hehlerei-after-day.webp',
   'an actually empty shop must select the cleared scene');
 visualContext.roster = [{ name: 'Tante Frieda' }, { name: 'Kalle' }, { name: 'Jochen' }];
 visualContext.states = {};
-assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).dayFile, 'tante-friedas-hehlerei-day.webp',
+visualSpec = visualContext._krauseHehlereiNachherVisual({});
+assert.strictEqual(visualSpec.dayFile, 'tante-friedas-hehlerei-day.webp',
   'the complete calm shop roster must use the non-confrontational group image');
+assert.deepStrictEqual(Array.from(visualSpec.depictsNpcs), ['tante_frieda', 'kalle', 'jochen'],
+  'the calm shop image must declare the same three people shown by prose and Haupt-UI');
 visualContext.caseProgress.activeConfrontation = {
   ort: 'Tante Friedas Hehlerei',
   enemyEntries: [{ name: 'Tante Frieda' }, { name: 'Kalle' }, { name: 'Jochen' }]
@@ -547,8 +550,12 @@ for (const [names, expected] of [
 ]) {
   visualContext.roster = names.map(name => ({ name }));
   visualContext.states = {};
-  assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).dayFile, expected,
+  visualSpec = visualContext._krauseHehlereiNachherVisual({});
+  assert.strictEqual(visualSpec.dayFile, expected,
     'courtyard image must exactly match active roster: ' + names.join(', '));
+  const expectedIds = names.map(name => normForMatch(name).replace(/ /g, '_'));
+  assert.deepStrictEqual(Array.from(visualSpec.depictsNpcs), expectedIds,
+    'courtyard image contract must declare its exact active roster: ' + names.join(', '));
 }
 visualContext.roster = [{ name: 'Tante Frieda' }, { name: 'Kalle' }, { name: 'Jochen' }];
 visualContext.caseProgress.activeConfrontation = { enemyEntries: [{ name: 'Tante Frieda' }, { name: 'Kalle' }, { name: 'Jochen' }] };

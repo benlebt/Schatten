@@ -214,6 +214,38 @@ assert.strictEqual(visualClasses.has('hidden'), false,
 assert.strictEqual(visualElements['kessler-scene-image'].attrs.src,
   'assets/scenes/krause/karl-mauers-buero-theodor-day.webp',
   'Krause opening must render the dedicated Theodor office asset');
+imageContext.caseSetup = {
+  caseType: 'diebstahl',
+  klient: 'Theodor Krause',
+  tat: 'Diebstahl',
+  locations: [{ name: 'Tante Friedas Hehlerei', npcs: [] }],
+  setupCast: [
+    { id: 'tante_frieda', name: 'Tante Frieda', tag: 'SUSPECT' },
+    { id: 'kalle', name: 'Kalle', tag: 'GANGSTER' },
+    { id: 'jochen', name: 'Jochen', tag: 'GANGSTER' }
+  ]
+};
+imageContext.caseProgress = { activeConfrontation: null };
+imageContext.sceneCounter = 9;
+imageContext.engineCurrentLocation = { name: 'Tante Friedas Hehlerei' };
+imageContext._aktTageszeitName = () => 'nachmittag';
+imageContext.getNpcsAtCurrentLocation = () => [
+  { id: 'tante_frieda', name: 'Tante Frieda', tag: 'SUSPECT' },
+  { id: 'kalle', name: 'Kalle', tag: 'GANGSTER' },
+  { id: 'jochen', name: 'Jochen', tag: 'GANGSTER' }
+];
+visualClasses.add('hidden');
+visualElements['kessler-scene-image'].attrs = {};
+imageContext._renderKesslerSceneVisual({
+  ort: 'Tante Friedas Hehlerei',
+  szene: 'Hinter dem Tresen steht Frieda. Kalle und Jochen bewachen die hintere Lagertür.',
+  personenImRaum: imageContext.getNpcsAtCurrentLocation()
+});
+assert.strictEqual(visualClasses.has('hidden'), false,
+  'Frieda arrival must keep the exact three-person shop image visible after the mandatory-cast contract');
+assert.strictEqual(visualElements['kessler-scene-image'].attrs.src,
+  'assets/scenes/krause/tante-friedas-hehlerei-day.webp',
+  'Frieda arrival must render the daylight Frieda/Kalle/Jochen shop asset');
 
 const textHelperStart = html.indexOf('function _kesslerInnenraumTextPasst');
 const textHelperEnd = html.indexOf('function _renderKesslerSceneVisual', textHelperStart);
