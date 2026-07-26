@@ -262,6 +262,35 @@ assert.strictEqual(visualClasses.has('hidden'), false,
 assert.strictEqual(visualElements['kessler-scene-image'].attrs.src,
   'assets/scenes/krause/tante-friedas-hehlerei-confrontation-day.webp',
   'the active scene-10 confrontation must render the daylight three-person combat asset');
+imageContext.caseSetup = {
+  caseType: 'diebstahl',
+  klient: 'Theodor Krause',
+  tat: 'Diebstahl',
+  locations: [{
+    name: 'Doc Wagners Praxis',
+    npcs: [{ id: 'doc_wagner', immer: true }]
+  }],
+  setupCast: [{ id: 'doc_wagner', name: 'Doc Wagner', tag: 'VERBUENDETER' }]
+};
+imageContext.caseProgress = { activeConfrontation: null };
+imageContext.sceneCounter = 18;
+imageContext.engineCurrentLocation = { name: 'Doc Wagners Praxis' };
+imageContext._aktTageszeitName = () => 'nacht';
+imageContext.getNpcsAtCurrentLocation = () => [
+  { id: 'doc_wagner', name: 'Doc Wagner', tag: 'VERBUENDETER' }
+];
+visualClasses.add('hidden');
+visualElements['kessler-scene-image'].attrs = {};
+imageContext._renderKesslerSceneVisual({
+  ort: 'Doc Wagners Praxis',
+  szene: 'Doc Wagner untersucht Karls verletztes Bein in seiner Praxis.',
+  personenImRaum: imageContext.getNpcsAtCurrentLocation()
+});
+assert.strictEqual(visualClasses.has('hidden'), false,
+  'Doc Wagner must remain visible when the explicit image contract matches prose and Haupt-UI');
+assert.strictEqual(visualElements['kessler-scene-image'].attrs.src,
+  'assets/scenes/kessler/doc-wagners-praxis.webp',
+  'the Krause run must render the shared Doc Wagner night asset after leaving Frieda');
 
 const textHelperStart = html.indexOf('function _kesslerInnenraumTextPasst');
 const textHelperEnd = html.indexOf('function _renderKesslerSceneVisual', textHelperStart);

@@ -21,7 +21,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1568 +KrauseVisualCastContracts'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1569 +ExplicitVisualContracts'"), 'release version missing');
 assert(html.includes('Liesl schenkte oder widmete das Etui 1939 Hugo'), 'Krause setup must bind the silver-case ownership direction');
 assert(html.includes('Karl zählt oder nimmt kein Geld, Karls Kasse bleibt unverändert'), 'Krause opening prompt must keep the return-contingent fee unpaid');
 assert(html.includes('Dramatisiere diese EINE Spur genau EINMAL'), 'explicit Haupt-UI clues must merge compact target and detailed payoff into one narration');
@@ -94,11 +94,15 @@ assert.deepStrictEqual(Array.from(krauseOpeningVisualContext._szenenbildPflichtb
   { file: 'karl-mauers-buero-theodor-day.webp', place: 'Karl Mauers BÃ¼ro', depictsNpcs: ['theodor_krause'] },
   { personenImRaum: ['Theodor Krause'] }
 )), [], 'Theodor opening motif must pass the actual mandatory-cast image contract');
-assert(Array.from(krauseOpeningVisualContext._szenenbildPflichtbesetzungPruefen(
+assert.deepStrictEqual(Array.from(krauseOpeningVisualContext._szenenbildPflichtbesetzungPruefen(
   { file: 'karl-mauers-buero-theodor-day.webp', place: 'Karl Mauers BÃ¼ro' },
   { personenImRaum: ['Theodor Krause'] }
+)), [], 'an uncatalogued legacy image must stay visible instead of treating unknown cast metadata as an empty image');
+assert(Array.from(krauseOpeningVisualContext._szenenbildPflichtbesetzungPruefen(
+  { file: 'karl-mauers-buero-theodor-day.webp', place: 'Karl Mauers BÃ¼ro', depictsNpcs: [] },
+  { personenImRaum: ['Theodor Krause'] }
 )).some(problem => /Theodor Krause/.test(problem)),
-  'the regression test must fail when Theodor is omitted from the opening image contract');
+  'an explicit empty image contract must still fail when Theodor is visibly present in prose and UI');
 assert(html.includes('AKTIONS-TREUE (ABSOLUT)'), 'physical and item actions need a strict narration contract');
 assert(html.includes('ZUSTANDS-TREUE (ABSOLUT)'), 'NPC battle states need a strict narration contract');
 assert(html.includes('function _verfassungNullSichern(reason)'), 'zero health needs a central forced ending');
