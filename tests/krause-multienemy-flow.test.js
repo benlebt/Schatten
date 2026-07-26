@@ -1,8 +1,10 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { readWebpDimensions } = require('./image-format-utils');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+const projectRoot = path.join(__dirname, '..');
 
 function sourceOf(name) {
   const start = html.indexOf('function ' + name + '(');
@@ -19,7 +21,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1566 +KrauseOpeningVisualContract'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1567 +BornsteinCounterConsistency'"), 'release version missing');
 assert(html.includes('Liesl schenkte oder widmete das Etui 1939 Hugo'), 'Krause setup must bind the silver-case ownership direction');
 assert(html.includes('Karl zählt oder nimmt kein Geld, Karls Kasse bleibt unverändert'), 'Krause opening prompt must keep the return-contingent fee unpaid');
 assert(html.includes('Dramatisiere diese EINE Spur genau EINMAL'), 'explicit Haupt-UI clues must merge compact target and detailed payoff into one narration');
@@ -117,6 +119,18 @@ assert(bornsteinStart >= 0, 'Bornstein location missing');
 const bornsteinBlock = html.slice(bornsteinStart, bornsteinStart + 1200);
 assert(bornsteinBlock.includes("oeffnungszeit: ['morgen','vormittag','mittag','nachmittag','abend']"), 'Bornstein must close at night');
 assert(!bornsteinBlock.includes("'nacht'"), 'Bornstein opening hours must not include night');
+for (const bornsteinVisual of [
+  'bornsteins-antiquitaetenladen-day.webp',
+  'bornsteins-antiquitaetenladen.webp',
+  'bornsteins-antiquitaetenladen-night.webp'
+]) {
+  const visualPath = path.join(projectRoot, 'assets', 'scenes', 'krause', bornsteinVisual);
+  assert(fs.existsSync(visualPath), `Bornstein visual missing: ${bornsteinVisual}`);
+  assert.deepStrictEqual(readWebpDimensions(visualPath), { width: 1672, height: 941 },
+    `Bornstein visual dimensions drifted: ${bornsteinVisual}`);
+  assert(fs.statSync(visualPath).size > 100000,
+    `Bornstein counter visual is suspiciously sparse or over-compressed: ${bornsteinVisual}`);
+}
 
 const targetItemStart = html.indexOf("id: 'silbernes_zigarettenetui'", html.indexOf('function _baukastenZiele()'));
 assert(targetItemStart >= 0, 'silver cigarette case target missing');
