@@ -229,6 +229,10 @@ assert(sourceOf('validateSceneWorldTruth').includes('_findKrauseTatortVisualObje
   'the material Krause image/object truth must run before scene commit');
 const possessionContext = {
   caseProgress: { targetItemState: { name: 'Silbernes Zigarettenetui', status: 'located' } },
+  caseSetup: {
+    caseType: 'diebstahl',
+    setupCast: [{ tag: 'TARGET', name: 'Silbernes Zigarettenetui' }]
+  },
   normForMatch,
   _findeIndizById: id => id === 'etui_im_lager' ? {
     id,
@@ -258,6 +262,47 @@ possessionProblem = possessionContext._findPrematureTargetPossessionDrift({
 }, { _pendingIndizId: 'etui_im_lager' });
 assert.strictEqual(possessionProblem, null,
   'a visible but not yet secured target item must remain a valid discovery scene');
+possessionProblem = possessionContext._findPrematureTargetPossessionDrift({
+  szene: 'Du verbindest dein Handgelenk. Dann greifst du in die Tasche und nimmst das silberne Zigarettenetui an dich.'
+}, { id: 'NOTHEILEN', _kategorie: 'NOTHEILEN' });
+assert(possessionProblem && possessionProblem.code === 'premature_target_possession',
+  'a healing or other unrelated follow-up must not silently secure an already located target item');
+assert.strictEqual(possessionContext._findPrematureTargetPossessionDrift({
+  szene: 'Du nimmst das silberne Zigarettenetui an dich und steckst es sicher in die Innentasche.'
+}, { id: 'HAUPTUI_DIEBESGUT_SICHERN' }), null,
+  'the explicit secure action remains the one legal possession transition');
+
+const rosterTruthContext = {
+  normForMatch,
+  engineCurrentLocation: { name: 'Imbiss Bei Trude' },
+  getNpcsAtCurrentLocation: () => [{ id: 'trude', name: 'Trude' }],
+  _npcZustandIstEntfernt: () => false
+};
+vm.createContext(rosterTruthContext);
+vm.runInContext(sourceOf('_findRosterPresenceContradiction'), rosterTruthContext);
+const deniedRoster = rosterTruthContext._findRosterPresenceContradiction({
+  ort: 'Imbiss Bei Trude',
+  szene: 'Du trittst in Trudes Imbiss. Der Raum ist leer; hier ist niemand.'
+});
+assert(deniedRoster && deniedRoster.code === 'present_roster_denied'
+  && deniedRoster.required.includes('Trude'),
+  'prose may not deny a named NPC that remains present in image and Haupt-UI');
+assert.strictEqual(rosterTruthContext._findRosterPresenceContradiction({
+  ort: 'Imbiss Bei Trude',
+  szene: 'Trude steht hinter dem Tresen und mustert dich.'
+}), null, 'truthful Trude presence must remain valid');
+
+const returnIntentContext = {};
+vm.createContext(returnIntentContext);
+vm.runInContext(sourceOf('_isExplicitTheftReturnAction'), returnIntentContext);
+assert.strictEqual(returnIntentContext._isExplicitTheftReturnAction({
+  id: 'HAUPTUI_INDRAMATISIERUNG_etui_im_lager',
+  text: 'Jetzt sichern und zu Krause zurueckbringen.'
+}), false, 'an evidence prompt mentioning a later return is not a player return action');
+assert.strictEqual(returnIntentContext._isExplicitTheftReturnAction({
+  id: 'FREITEXT',
+  text: 'Bring Krause sein Etui zurueck.'
+}), true, 'an explicit free-text return remains a legal client-return intent');
 const possessionFallbackContext = {
   normForMatch,
   engineCurrentLocation: { name: 'Stallschreiberstrasse 12' },
@@ -540,6 +585,17 @@ visualContext.engineCurrentLocation.name = 'Stallschreiberstrasse 12';
 visualContext.roster = [{ name: 'Tante Frieda' }, { name: 'Kalle' }, { name: 'Jochen' }];
 assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).dayFile, 'stallschreiberstrasse-12-confrontation-day.webp',
   'the three-person showdown must remain in the courtyard');
+const lagerVisual = visualContext._krauseHehlereiNachherVisual({
+  szene: 'Du draengst dich an ihnen vorbei und trittst in die staubige Lagerstube. Zwischen Kisten liegt die dunkle Tasche.'
+});
+assert.strictEqual(lagerVisual.dayFile, 'stallschreiberstrasse-12-lager-day.webp',
+  'once prose enters the warehouse, the image must switch from exterior courtyard to the warehouse interior');
+assert.strictEqual(lagerVisual.nightFile, 'stallschreiberstrasse-12-lager-night.webp',
+  'the warehouse interior needs a true night variant');
+assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'krause', lagerVisual.dayFile)),
+  'the Krause warehouse day asset must exist');
+assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'krause', lagerVisual.nightFile)),
+  'the Krause warehouse night asset must exist');
 for (const [names, expected] of [
   [['Tante Frieda', 'Kalle'], 'stallschreiberstrasse-12-frieda-kalle-day.webp'],
   [['Tante Frieda', 'Jochen'], 'stallschreiberstrasse-12-frieda-jochen-day.webp'],

@@ -1023,4 +1023,9 @@ assert(html.includes('=== KEIN SCHLAF, KEIN AUFWACHEN (PFLICHT) ==='), 'morning 
 assert(html.includes('◆ Aktenkern'), 'required interrogation topics must be visibly marked');
 assert(/polizist\|polizei\|wachtmeister\|dienstknueppel/.test(html), 'trained police opponents must use the stronger hardness tier');
 
+assert(html.includes('window.__hauptuiQueuedKonfrontation'),
+  'a confrontation item click during scene post-processing must be queued once instead of disappearing');
+assert(html.includes('sceneCounter === geklickteSzene'),
+  'a queued confrontation click must only run if it still belongs to the current rendered scene');
+
 console.log('HAUPTUI_KESSLER_10_ORTE_OK');
