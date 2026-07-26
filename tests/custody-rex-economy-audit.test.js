@@ -7,14 +7,14 @@ const { readWebpDimensions } = require('./image-format-utils');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1578 +WegenerCounterrunTruth'"), 'version constant is stale');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1582 +AchterbergVisualSetting'"), 'version constant is stale');
 assert(html.includes("text: _resolveIstEigenauftrag ? 'Eigen-Auftrag abschließen und Wahrheit festhalten.' : 'Fall abschließen und Auftraggeber informieren.'"),
   'resolve button copy must stay player-facing for external and self-assigned cases');
 assert(html.includes('_enginePrompt: [_resolveText, _resolveTransitionPrompt]'), 'resolve direction must remain private');
 assert(!html.includes('resolveOpt.text += narr'), 'director narration must not leak into resolve button text');
 assert(html.includes('Roth kuendigt an, Marquardts Rolle getrennt zu pruefen'), 'Achterberg ending must preserve Marquardt consequence');
-assert(html.includes('Er schiebt Achterbergs Digitalis-Überdosis auf einen Unfall, doch Liesel Forsthuber sah ihn die Tropfflasche unmittelbar vor dem Auftritt auffüllen'),
-  'Achterberg core evidence must describe denial plus witness contradiction, not invent a murder confession');
+assert(html.includes('Er schiebt Achterbergs Digitalis-Überdosis auf einen Unfall, doch Otto Jahnke sah ihn unmittelbar vor dem Auftritt allein an der Tropfflasche hantieren'),
+  'Achterberg core evidence must use the actual Tatzeit witness Otto Jahnke and not invent a murder confession');
 assert(!html.includes('Egon Vossberg überführt: er hat Achterbergs Digitalis-Tropfen überdosiert, damit es wie Herzversagen aussieht'),
   'the rigid false-confession evidence copy must not return');
 const moralStart = html.indexOf('function zeigeMoralWahl(resolveOpt)');

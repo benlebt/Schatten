@@ -59,10 +59,22 @@ const achterbergStart = html.indexOf("klient: 'Wilhelmine Achterberg (Witwe des 
 const achterbergEnd = html.indexOf('anchorNpcs:', achterbergStart);
 assert(achterbergStart >= 0 && achterbergEnd > achterbergStart, 'Achterberg setup slice missing');
 const achterberg = html.slice(achterbergStart, achterbergEnd);
+assert(achterberg.includes("abschlussOrt: 'Achterberg-Villa'"),
+  'Achterberg must route the final report to Wilhelmine at the villa');
+assert(achterberg.includes("npcs: [{ id: 'wilhelmine_achterberg', immer: true }]"),
+  'Wilhelmine must be visibly and interactively present at the Achterberg villa');
+assert(achterberg.includes("npcs: [{ id: 'gerda_wolff', immer: true }]"),
+  'the named female pharmacist must be present in prose, UI, and image');
+assert(achterberg.includes('Wilhelmine empfängt Karl und erhält seinen Abschlussbericht hier im Foyer.'),
+  'the villa narrative setting must match the canonical foyer image during the final report');
+assert(achterberg.includes("abschlussEffekt: { verantwortlicher: 'Egon Vossberg', suspectConfronted: true, ueberfuehrt: true"),
+  'Vossbergs deterministic confrontation clue must unlock the resolve path');
+assert(html.includes("function _szenenbildVersionierteUrl(src)"),
+  'scene images must use a release-bound cache key so deployed corrections appear immediately');
 assert(achterberg.includes("lokalVon: ['Deutsche Staatsoper (Admiralspalast)']"),
   'Achterberg Garderobe must be linked locally to the opera');
-assert(achterberg.includes("npcs: [{ id: 'theo_marquardt', immer: true, abStage: 1 }, { id: 'otto_jahnke', immer: true, abStage: 1 }]"),
-  'Marquardt must become actionable where his canonical arrival is narrated');
+assert(achterberg.includes("npcs: [{ id: 'theo_marquardt', immer: true }, { id: 'otto_jahnke', immer: true }]"),
+  'the Garderobe UI roster must immediately match its fixed Theo-and-Otto scene image');
 assert(/id: 'vossberg_gelegenheit'[\s\S]*?stage: 3, abStage: 1/.test(achterberg),
   'third opening clue must be reachable in stage 1 to avoid a progression deadlock');
 assert(achterberg.includes("name: 'Otto Jahnke', id: 'otto_jahnke', tag: 'WITNESS'"),
@@ -70,8 +82,12 @@ assert(achterberg.includes("name: 'Otto Jahnke', id: 'otto_jahnke', tag: 'WITNES
 assert(/id: 'vossberg_gelegenheit'[\s\S]*?npc: 'otto_jahnke', quelle: 'person', actions: \['BEFRAGEN','ANSPRECHEN','UEBERZEUGEN'\]/.test(achterberg),
   'the witness statement must be obtained through conversation, not room search');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1578 +WegenerCounterrunTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1582 +AchterbergVisualSetting'"),
   'release version missing');
+assert(html.includes('const _abschlussAkutGefaehrlich = currentSp > 3 && !!_aktiveFluchtGefahr;'),
+  'high tension may block resolution only while an acute threat is still active');
+assert(html.includes('resolveCanClick = resolveCoreReady && karlVfOk && !_abschlussAkutGefaehrlich'),
+  'a cleared confrontation must not force a pointless travel scene before resolution');
 
 assert(html.includes("const _engineOrtswechsel = !!("),
   'prompt cast cleanup must use engine travel state, not only text heuristics');
