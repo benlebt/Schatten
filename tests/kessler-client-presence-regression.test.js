@@ -84,4 +84,39 @@ assert(html.includes("id: 'robert_eintritt_beobachtet'")
   && html.includes('die Haustür fällt hinter ihm zu.'),
   'the Kessler entry clue must carry a hard visible-departure prose contract');
 
+const openingContext = {
+  normForMatch,
+  engineCurrentLocation: { name: 'Hinterhof Sybelstrasse' }
+};
+vm.createContext(openingContext);
+vm.runInContext(sourceOf('validateOpeningRoleTruth'), openingContext);
+const kesslerSetup = {
+  caseType: 'beschatten',
+  klient: 'Edith Kessler',
+  opfer: 'Robert Kessler',
+  ortHaupt: 'Hinterhof Sybelstrasse',
+  setupCast: [{ id: 'robert_kessler', name: 'Robert Kessler', tag: 'TARGET' }]
+};
+const badWindowOpening = [
+  'Du wartest im Hinterhof auf Robert Kessler.',
+  'Frau Pohl lehnt im zweiten Stock am Fenster.',
+  'Frau Hauke öffnet im Erdgeschoss die Tür zu ihrem Atelier.'
+].join(' ');
+const openingDrift = openingContext.validateOpeningRoleTruth(badWindowOpening, kesslerSetup, {
+  ort: 'Hinterhof Sybelstrasse',
+  personenImRaum: ['Frau Pohl', 'Frau Hauke']
+});
+assert.strictEqual(openingDrift.code, 'opening_kessler_window_drift',
+  'the opening guard must reject prose that swaps Pohl and Hauke against the fixed courtyard image');
+
+const correctWindowOpening = [
+  'Du wartest im Hinterhof auf Robert Kessler.',
+  'Frau Pohl beobachtet den Hof aus dem linken Erdgeschossfenster.',
+  'Frau Hauke steht am oberen rechten Hoffenster.'
+].join(' ');
+assert.strictEqual(openingContext.validateOpeningRoleTruth(correctWindowOpening, kesslerSetup, {
+  ort: 'Hinterhof Sybelstrasse',
+  personenImRaum: ['Frau Pohl', 'Frau Hauke']
+}).ok, true, 'the canonical Pohl/Hauke window positions must remain legal');
+
 console.log('KESSLER_CLIENT_PRESENCE_REGRESSION_OK');
