@@ -17,6 +17,18 @@ function extract(startNeedle, endNeedle, exportCode, seed = {}) {
   return context;
 }
 
+function sourceOf(name) {
+  const start = html.indexOf('function ' + name + '(');
+  assert(start >= 0, 'missing function ' + name);
+  const brace = html.indexOf('{', start);
+  let depth = 0;
+  for (let i = brace; i < html.length; i++) {
+    if (html[i] === '{') depth++;
+    else if (html[i] === '}' && --depth === 0) return html.slice(start, i + 1);
+  }
+  throw new Error('unterminated function ' + name);
+}
+
 const { CASES } = extract(
   'const INTRO_VARIANTS',
   'const DIFFICULTY_ORDER',
@@ -29,6 +41,38 @@ assert(!html.includes("getElementById('start-music-btn')"),
   'removed start music control must not leave dead DOM lookup paths');
 assert(html.includes("localStorage.getItem('schatten-speech-voice-lang')"),
   'persisted speech language must be used as a voice restoration fallback');
+assert(html.includes('<strong>Microsoft Edge</strong>')
+  && html.includes('Microsoft Online (Natural)')
+  && !html.includes('In Google Chrome unter Windows'),
+  'start page and how-to must recommend Edge with German Microsoft Natural voices');
+
+const edgeVoiceContext = {
+  navigator: {
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/140.0 Safari/537.36 Edg/140.0',
+    platform: 'Win32',
+    maxTouchPoints: 0
+  }
+};
+vm.createContext(edgeVoiceContext);
+vm.runInContext(sourceOf('_ttsBrowserInfo') + '\n' + sourceOf('pickBestGermanVoice'), edgeVoiceContext);
+assert.strictEqual(edgeVoiceContext._ttsBrowserInfo().isEdge, true,
+  'desktop Microsoft Edge must be distinguished from other Blink browsers for speech voices');
+const edgeBest = edgeVoiceContext.pickBestGermanVoice([
+  { name: 'Microsoft Hedda - German (Germany)', lang: 'de-DE', localService: true },
+  { name: 'Microsoft Florian Mehrsprachig Online (Natural)', lang: 'de-DE', localService: false },
+  { name: 'Microsoft Conrad Online (Natural) - German', lang: 'de-DE', localService: false }
+]);
+assert(/Microsoft (?:Florian|Conrad).*Natural/i.test(edgeBest.name),
+  'Edge automatic voice selection must prefer a German Microsoft Online Natural voice');
+edgeVoiceContext.navigator.userAgent =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/140.0 Safari/537.36';
+const otherBlinkBest = edgeVoiceContext.pickBestGermanVoice([
+  { name: 'Microsoft Hedda - German (Germany)', lang: 'de-DE', localService: true },
+  { name: 'Microsoft Florian Mehrsprachig Online (Natural)', lang: 'de-DE', localService: false }
+]);
+assert.strictEqual(otherBlinkBest.name, 'Microsoft Hedda - German (Germany)',
+  'the existing remote-voice safety fallback must remain active outside Microsoft Edge');
+
 assert(html.includes("&& !_physischesFallzielNpcFreigeschaltet(e, loc.name)) continue;"),
   'NPC availability count must respect abStage with a physical-target override');
 assert(html.includes("&& !_physischesFallzielNpcFreigeschaltet(entry, loc.name)) continue;"),

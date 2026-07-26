@@ -20,7 +20,7 @@ Bei jedem Run besonders prüfen:
 
 ## Projekt und Live-System
 
-- Lokales Projekt: `C:\Users\benle\OneDrive\Documents\Schatten`
+- Lokales Projekt: `<WORKSPACE>\Schatten`
 - Hauptdatei: `index.html`
 - Tests: `tests\*.test.js`
 - Git-Branch: `main`
@@ -51,7 +51,7 @@ Der Befehl fragt das Passwort interaktiv ab.
 Tests mit dem in Codex gebündelten Node:
 
 ```powershell
-$node='C:\Users\benle\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe'
+$node='<CODEX_RUNTIME>\dependencies\node\bin\node.exe'
 $tests=Get-ChildItem -LiteralPath tests -Filter '*.test.js' | Sort-Object Name
 $passed=0
 foreach($test in $tests){
@@ -211,9 +211,9 @@ Eine ältere Szene dieses gespeicherten Runs enthält noch einen erfundenen Schl
 Alle sind 1536 × 864 WebP:
 
 ```text
-C:\Users\benle\OneDrive\Documents\Schatten\assets\scenes\brauer\karl-mauers-buero-hilde-evening.webp
-C:\Users\benle\OneDrive\Documents\Schatten\assets\scenes\brauer\waescherei-koepenick.webp
-C:\Users\benle\OneDrive\Documents\Schatten\assets\scenes\brauer\marienfelde-notaufnahmelager.webp
+assets\scenes\brauer\karl-mauers-buero-hilde-evening.webp
+assets\scenes\brauer\waescherei-koepenick.webp
+assets\scenes\brauer\marienfelde-notaufnahmelager.webp
 ```
 
 Erstellt/bearbeitet mit dem eingebauten ImageGen:
@@ -259,4 +259,3 @@ Der aktuelle Auftrag lautete, nach den schwächer bewerteten Fällen weiterzugeh
 - Bilder nur ändern, wenn Sichtprüfung einen echten Besetzungs-/Konsistenzfehler zeigt.
 - Engineweite Ursache bevorzugen.
 - Nach jedem Fix vollständige Tests und echten Live-Run.
-
