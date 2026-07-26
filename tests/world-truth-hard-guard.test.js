@@ -56,6 +56,7 @@ vm.createContext(context);
   'validateSceneWorldTruth',
   'buildWorldTruthRepairHint',
   '_worldTruthNaturalFallbackText',
+  '_worldTruthNaturalSocialFallbackText',
   'enforceSceneWorldTruthFallback',
   '_schlafHeilZiel'
 ].forEach((name) => vm.runInContext(sourceOf(name), context));
@@ -577,6 +578,41 @@ problem = context.validateSceneWorldTruth({
 }, { id: 'REISE', _istReise: true });
 assert(problem && problem.code === 'meta_instruction_leak',
   'visible fallback and first-visit control language must never reach the player');
+problem = context.validateSceneWorldTruth({
+  ort: 'Tante Friedas Hehlerei',
+  szene: 'Am Ort Tante Friedas Hehlerei hält Karl Tante Frieda mit der gewählten Ansprache auf. Einen neuen Fallhinweis gibt die Person noch nicht preis.',
+  personenImRaum: ['Tante Frieda'], optionen: []
+}, {
+  _zeitUnmittelbar: true,
+  _npcInteraktion: { npcName: 'Tante Frieda', verb: 'kragen' },
+  id: 'NPC_sozial_kragen'
+});
+assert(problem && problem.code === 'meta_instruction_leak',
+  'technical social fallback language must be rejected before it reaches the player');
+
+context.engineCurrentLocation = { name: 'Tante Friedas Hehlerei' };
+const naturalSocialFallback = {
+  ort: 'Tante Friedas Hehlerei',
+  szene: 'Frau Pohl antwortet anstelle der angeklickten Frieda.',
+  personenImRaum: ['Tante Frieda', 'Kalle', 'Jochen'],
+  optionen: []
+};
+context.enforceSceneWorldTruthFallback(naturalSocialFallback, {
+  code: 'social_target_missing',
+  npc: 'Tante Frieda',
+  aliases: ['tante frieda', 'frieda']
+}, {
+  id: 'NPC_sozial_kragen',
+  _sozialTonart: 'kragen',
+  _npcInteraktion: { npcName: 'Tante Frieda', verb: 'kragen' },
+  _anzeigeText: 'Karl: Am Kragen packen'
+});
+assert(/Karl packt Tante Frieda am Kragen/.test(naturalSocialFallback.szene)
+    && /Tante Frieda reißt sich los/.test(naturalSocialFallback.szene),
+  'the social hard fallback must narrate the selected physical action naturally');
+assert(!/gewählte Ansprache|Person|Fallhinweis|Engine|Fallback|UI|JSON/i.test(naturalSocialFallback.szene),
+  'the social hard fallback must never expose internal engine vocabulary');
+context.engineCurrentLocation = { name: 'Lagerhaus an der Spree' };
 
 context.caseProgress.npcZustand = {
   frieda: { name: 'Tante Frieda', status: 'uebergeben' },
