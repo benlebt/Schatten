@@ -70,7 +70,7 @@ assert(achterberg.includes("name: 'Otto Jahnke', id: 'otto_jahnke', tag: 'WITNES
 assert(/id: 'vossberg_gelegenheit'[\s\S]*?npc: 'otto_jahnke', quelle: 'person', actions: \['BEFRAGEN','ANSPRECHEN','UEBERZEUGEN'\]/.test(achterberg),
   'the witness statement must be obtained through conversation, not room search');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1561 +ClientReportIdentity'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1563 +KesslerCastIdentity'"),
   'release version missing');
 
 assert(html.includes("const _engineOrtswechsel = !!("),

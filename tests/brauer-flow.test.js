@@ -189,7 +189,7 @@ uiContext.caseProgress = {
   stage: 3,
   wahrheitErkannt: false,
   klientGesprochen: true,
-  indizien: ['Erwin Brauer ist in Marienfelde unter richtigem Namen registriert.'],
+  indizien: [],
 };
 uiContext._physischesFallzielBlockiertAbschluss = () => false;
 uiContext._physischesFallzielIstGeborgen = () => true;
@@ -204,7 +204,7 @@ assert.strictEqual(
     erledigt: true,
   }),
   true,
-  'an exhausted family client must reopen when the configured required proof is ready to report',
+  'an exhausted family client must reopen at stage three even when the finale must remain an honest partial report',
 );
 
 uiContext.cast = [

@@ -17,6 +17,76 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
+const kesslerIdentityContext = {
+  caseSetup: {
+    setupCast: [
+      { id: 'edith_kessler', name: 'Edith Kessler', tag: 'CLIENT' },
+      { id: 'robert_kessler', name: 'Robert Kessler', tag: 'TARGET' },
+      { id: 'ilse_hauke', name: 'Ilse Hauke', tag: 'WITNESS' }
+    ]
+  },
+  normForMatch: value => String(value || '').toLowerCase().replace(/_/g, ' ').trim()
+};
+vm.createContext(kesslerIdentityContext);
+vm.runInContext(sourceOf('_findSetupCastFuzzy'), kesslerIdentityContext);
+assert.strictEqual(kesslerIdentityContext._findSetupCastFuzzy('Robert Kessler', 'robert_kessler').id, 'robert_kessler',
+  'an exact spouse identity must win before a shared-surname fallback can select Edith');
+assert.strictEqual(kesslerIdentityContext._findSetupCastFuzzy('Kessler', ''), null,
+  'a surname shared by two setup characters must remain ambiguous');
+assert.strictEqual(kesslerIdentityContext._findSetupCastFuzzy('Frau Hauke', '').id, 'ilse_hauke',
+  'a unique surname abbreviation must still resolve to its setup identity');
+
+const arrivalBindingContext = {
+  engineCurrentLocation: { name: 'Hinterhof Sybelstrasse' },
+  caseProgress: { stage: 0 },
+  gameTimeIdx: 2,
+  TIMES_OF_DAY: ['MORGEN', 'VORMITTAG', 'NACHMITTAG'],
+  normForMatch: value => String(value || '').toLowerCase().replace(/_/g, ' ').trim(),
+  getNpcsAtCurrentLocation: () => [],
+  getCaseLocations: () => [{
+    name: 'Hinterhof Sybelstrasse',
+    npcs: [{ id: 'robert_kessler', abpassenOnly: true }]
+  }],
+  _npcOrtsbindungEintragAktiv: binding => !binding.abpassenOnly,
+  _npcAbkoemmlich: () => false,
+  _npcZustandIstEntfernt: () => false,
+  _resolveNpcIdentity: id => ({ id, name: 'Robert Kessler' }),
+  _worldTruthAliases: (id, ident) => [id, ident && ident.name].filter(Boolean),
+  _worldTruthHasAlias: (text, aliases) => aliases.some(alias =>
+    String(text || '').toLowerCase().includes(String(alias || '').toLowerCase()))
+};
+vm.createContext(arrivalBindingContext);
+vm.runInContext(sourceOf('_findArrivalNpcRosterDrift'), arrivalBindingContext);
+assert.strictEqual(arrivalBindingContext._findArrivalNpcRosterDrift({
+  ort: 'Hinterhof Sybelstrasse',
+  szene: 'Robert wartet noch draussen.',
+  personenImRaum: []
+}, { id: 'INTRO', _istOpening: true }), null,
+  'an abpassenOnly NPC must not become required in the opening arrival roster');
+arrivalBindingContext._npcOrtsbindungEintragAktiv = () => true;
+assert.strictEqual(arrivalBindingContext._findArrivalNpcRosterDrift({
+  ort: 'Hinterhof Sybelstrasse',
+  szene: 'Der Hof liegt still.',
+  personenImRaum: []
+}, { id: 'INTRO', _istOpening: true }).code, 'arrival_npc_roster_drift',
+  'the same binding must become mandatory once its canonical location gate is active');
+
+const kesslerAbsenceContext = {
+  normForMatch: value => String(value || '').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+};
+vm.createContext(kesslerAbsenceContext);
+vm.runInContext(sourceOf('_kesslerRobertAusdruecklichAbwesend'), kesslerAbsenceContext);
+assert.strictEqual(kesslerAbsenceContext._kesslerRobertAusdruecklichAbwesend({
+  szene: 'Robert steht draussen am Kiosk. Robert wird jeden Moment den Hof betreten.'
+}), true, 'future arrival prose must suppress Robert in image and Haupt-UI');
+assert.strictEqual(kesslerAbsenceContext._kesslerRobertAusdruecklichAbwesend({
+  szene: 'Robert betritt den Hof, bleibt vor Karl stehen und spricht ihn an.'
+}), false, 'Robert must become visible once the prose places him physically in the courtyard');
+assert(sourceOf('_baukastenZiele').includes('_kesslerRobertAusdruecklichAbwesend')
+  && sourceOf('_kesslerRobertVisual').includes('if (robertAusdruecklichAbwesend) return null'),
+  'the same explicit-absence truth must govern both Haupt-UI and scene image');
+
 const serialLanguageContext = { caseSetup: { setupCast: [] } };
 vm.createContext(serialLanguageContext);
 vm.runInContext(sourceOf('stripAccidentalNarrativeQuotes') + '\n' + sourceOf('fixSprache') + '\n' + sourceOf('fixCommonGrammarErrors'), serialLanguageContext);
