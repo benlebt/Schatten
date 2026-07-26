@@ -68,7 +68,7 @@ assert(html.includes("const required = ((option._istOpening || typeof getCaseLoc
   'travel validation must not authorize stale actors from the departure location');
 assert(/id: 'krummbein_gestaendnis'[\s\S]*?abschlussEffekt: \{ verantwortlicher: 'Paul Krummbein', suspectConfronted: true, ueberfuehrt: true, wahrheitErkannt: true/.test(strauss),
   'Krummbein confession must heal and unlock the resolution flags even in an old save');
-assert(html.includes("['requiresEvidenceAll', 'requiresEvidenceAny', 'truthBeatIds'].forEach(function(feld)")
+assert(html.includes("['requiresEvidenceAll', 'requiresEvidenceAny', 'truthBeatIds', 'schluessel'].forEach(function(feld)")
   && html.includes('vorhanden.abschlussEffekt = qi.abschlussEffekt;'),
   'old saves must refresh canonical evidence-chain and resolution metadata on existing clues');
 assert(html.includes('gespeichert.feindlich !== false')

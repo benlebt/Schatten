@@ -18,7 +18,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1582 +AchterbergVisualSetting'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1589 +BrandtCounterRunPolish'"),
   'Brandt regression release version missing');
 
 for (const bad of [
@@ -57,6 +57,46 @@ assert(brandtBlock.includes("{ id: 'lola_brandt', zeit: ['nachmittag','abend','n
   'Lola must have a work shift instead of permanent presence');
 assert(brandtBlock.includes("requiresEvidenceAll: ['schuldschein','fremde_walther','zeuge_walther']"),
   'Kurt confession must follow motive, swapped weapon and the concrete witness statement');
+assert(brandtBlock.includes('Er erschoss Erich und inszenierte danach dessen \\"Selbstmord\\"'),
+  'terminal Brandt evidence must state the killing, not only a vague staging');
+assert(brandtBlock.includes('KEINE Vitrine, KEINE Glasscherben und KEINEN Spielzeugsoldaten'),
+  'Erich apartment prose truth must match the sparse intact scene image');
+assert(brandtBlock.includes('Die Regale sind NICHT leer'),
+  'Erich apartment prose must preserve the visible shelf contents');
+assert(brandtBlock.includes('Hinter dem losen Rueckenbrett eines intakten Wandregals'),
+  'the debt note needs a concrete image-compatible hiding place');
+assert(brandtBlock.includes('beweist allein aber noch nicht den Mord'),
+  'zigarillo ash must connect Lange to the room without overclaiming guilt');
+assert(!brandtBlock.includes('zwei Schlaeger immer dabei'),
+  'unrostered henchmen must not be injected into every Rote-Laterne scene');
+assert(brandtBlock.includes('erfinde fuer Kurt keine Begleiter oder Schlaeger'),
+  'the canonical club roster must forbid invented hostile companions');
+assert(brandtBlock.includes('Lola Brandt steht im festen Szenenbild bei der kleinen Buehne und dem Mikrofon')
+  && brandtBlock.includes('Kurt sitzt an einem Ecktisch'),
+  'Rote Laterne prose staging must match the fixed Lola/Kurt scene image');
+assert(brandtBlock.includes('Formuliere NICHT "erster Mai"'),
+  'the 21 May opening must not sound like May Day');
+assert(brandtBlock.includes('Die Ursache des Blackouts ist noch vollkommen unbekannt')
+  && brandtBlock.includes('Behaupte NICHT, Karl sei mit Metall'),
+  'Brandt prose must not turn the unknown blackout cause into an invented head strike');
+const npcInteractionSource = sourceOf('npcInteraktion');
+assert(npcInteractionSource.includes("reden|rede|fragen"),
+  'the generic Rede mit action must count as a client conversation');
+assert(npcInteractionSource.includes("caseProgress && !caseProgress.klientGesprochen) {"),
+  'a client conversation must unlock travel even when the client remains at a fixed home location');
+assert(npcInteractionSource.includes("if (_clientSollNachErstgespraechGehen(npc)) _clientDepartureAfterReply = npc.name;"),
+  'client departure must remain a separate optional location rule');
+const normalizeSource = sourceOf('normalizeCaseProgress');
+assert(normalizeSource.includes('const _clientSchonBefragt = _clientEntry && merged._begegnungen.some'),
+  'restore must infer an already completed client conversation from the encounter log');
+assert(normalizeSource.includes('if (_clientSchonBefragt) merged.klientGesprochen = true;'),
+  'a pre-fix save with a disabled client must recover its travel gate');
+assert(normalizeSource.includes("merged._npcGesprochen[key] === true"),
+  'restore must also recognize the direct Haupt-UI spoken-person key');
+assert(html.includes('const _bereitsGespraechenerKlient = _npHier.find(function(n)'),
+  'the live travel gate must reconcile a pre-fix spoken client after setup and roster are available');
+assert(html.includes('if (caseProgress.klientGesprochen) _klientGateAktiv = false;'),
+  'a reconciled client conversation must release the current scene immediately');
 assert(html.includes('_abschlussLocation: _abschlussLocation'),
   'resolve option must carry the engine-owned final location');
 assert(html.includes('function _abschlussOrtVorbereiten(option)'),
@@ -188,6 +228,15 @@ assert(html.includes('ORTS-NPC-KONTINUITÄT (HART)'),
   'the scene prompt must prevent spontaneous exits and invented companions');
 assert(html.includes('isLocationBound && mainLocationChanged'),
   'location-bound NPCs must be removed on a hard move even when prose claims they follow');
+assert(html.includes("String(_castSetupEntry.tag || '').toUpperCase() === 'CLIENT'"),
+  'client cleanup must use canonical setup identity instead of a display-title string');
+assert(html.includes('Letzte physische Ortsschranke fuer Klienten')
+  && html.includes('if (!_clientOrtGebunden && !_clientAbschlussHier && !_clientInParty && !_openingClientEtabliert)'),
+  'the Haupt-UI must remove stale clients from foreign locations after all cast injectors');
+assert(html.includes("['text', 'fundText', 'requiresEvidenceLabel'"),
+  'corrected clue truth must migrate into already-running saves');
+assert(html.includes("if (typeof qLoc.detail === 'string' && loc.detail !== qLoc.detail)"),
+  'corrected visual/location truth must migrate into already-running saves');
 assert(brandtBlock.includes('requiresExplicitConfession: true'),
   'the mandatory responsibility beat must reject motive-only prose');
 assert(brandtBlock.includes('kombiMinHits: 3'),
