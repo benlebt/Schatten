@@ -174,6 +174,17 @@ tatortVisualContext.roster = [];
 tatortSpec = tatortVisualContext._krauseTatortVisual({ personenImRaum: [] });
 assert.strictEqual(tatortSpec.dayFile, 'krauses-antiquitaeten-day.webp',
   'the empty crime scene must retain the shattered flat display cases');
+tatortVisualContext.caseProgress = { targetItemState: { status: 'returnedToClient' } };
+tatortSpec = tatortVisualContext._krauseTatortVisual({
+  szene: 'Theodor Krause erwartet dich hinter der Ladentür und greift nach dem zurückgebrachten Etui.',
+  personenImRaum: ['Theodor Krause']
+});
+assert.strictEqual(tatortSpec.dayFile, 'krauses-antiquitaeten-theodor-return-day.webp',
+  'the final physical handoff must show Theodor instead of stale Hannelore art');
+assert.deepStrictEqual(Array.from(tatortSpec.depictsNpcs), ['theodor_krause'],
+  'the handoff image contract must name exactly the client it depicts');
+assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'krause', tatortSpec.dayFile)),
+  'the dedicated Theodor handoff asset must exist');
 const tatortObjectContext = {
   normForMatch,
   caseSetup: { caseType: 'diebstahl' },
@@ -201,6 +212,14 @@ tatortObjectProblem = tatortObjectContext._findKrauseTatortVisualObjectDrift({
 assert(tatortObjectProblem && tatortObjectProblem.code === 'krause_tatort_visual_object_drift'
   && tatortObjectProblem.opening === true,
   'the opening assignment must reject a broken rear cabinet before it establishes false canon');
+tatortObjectContext.engineCurrentLocation = { name: 'Karl Mauers Buero' };
+tatortObjectProblem = tatortObjectContext._findKrauseTatortVisualObjectDrift({
+  ort: 'Karl Mauers Buero',
+  szene: 'Das Etui lag in der hohen Rueckwandvitrine, die nun leer ist.'
+});
+assert(tatortObjectProblem && tatortObjectProblem.code === 'krause_tatort_visual_object_drift'
+  && tatortObjectProblem.opening === true,
+  'the exact live opening must not empty the entire rear cabinet while other silver pieces remain');
 const repairedOpening = {
   ort: 'Karl Mauers Büro',
   szene: 'Krause berichtet, Unbekannte hätten seine Rückwandvitrine aufgebrochen und das Etui gestohlen.',
@@ -227,6 +246,24 @@ assert.strictEqual(tatortObjectProblem, null,
   'neutral shop atmosphere at Friedas must remain valid');
 assert(sourceOf('validateSceneWorldTruth').includes('_findKrauseTatortVisualObjectDrift'),
   'the material Krause image/object truth must run before scene commit');
+const warehouseTruthContext = {
+  normForMatch,
+  caseSetup: { caseType: 'diebstahl', klient: 'Theodor Krause' },
+  caseProgress: { gefundeneIndizIds: ['lager_hinterhof'] },
+  engineCurrentLocation: { name: 'Stallschreiberstrasse 12' }
+};
+vm.createContext(warehouseTruthContext);
+vm.runInContext(sourceOf('_findKrauseWarehouseSublocationDrift'), warehouseTruthContext);
+const warehouseDrift = warehouseTruthContext._findKrauseWarehouseSublocationDrift({
+  szene: 'Du verbindest deine Schläfe. Tante Frieda bleibt hinter dem Tresen und beobachtet dich.'
+});
+assert(warehouseDrift && warehouseDrift.code === 'krause_warehouse_sublocation_drift',
+  'a generic healing scene must not teleport Frieda from the warehouse back to her shop counter');
+assert.strictEqual(warehouseTruthContext._findKrauseWarehouseSublocationDrift({
+  szene: 'Du verbindest deine Schläfe. Frieda lehnt zwischen den Kisten an der Lagerwand.'
+}), null, 'a correctly anchored warehouse healing scene must remain valid');
+assert(sourceOf('validateSceneWorldTruth').includes('_findKrauseWarehouseSublocationDrift'),
+  'warehouse sublocation truth must run before scene commit');
 const possessionContext = {
   caseProgress: { targetItemState: { name: 'Silbernes Zigarettenetui', status: 'located' } },
   caseSetup: {
@@ -596,6 +633,13 @@ assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'krause', la
   'the Krause warehouse day asset must exist');
 assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'krause', lagerVisual.nightFile)),
   'the Krause warehouse night asset must exist');
+visualContext.caseProgress.gefundeneIndizIds = ['lager_hinterhof'];
+const healedInLagerVisual = visualContext._krauseHehlereiNachherVisual({
+  szene: 'Du drückst ein Leinentuch gegen deine pochende Schläfe.'
+});
+assert.strictEqual(healedInLagerVisual.dayFile, 'stallschreiberstrasse-12-lager-day.webp',
+  'after warehouse entry, generic healing prose must retain the interior warehouse image');
+visualContext.caseProgress.gefundeneIndizIds = [];
 for (const [names, expected] of [
   [['Tante Frieda', 'Kalle'], 'stallschreiberstrasse-12-frieda-kalle-day.webp'],
   [['Tante Frieda', 'Jochen'], 'stallschreiberstrasse-12-frieda-jochen-day.webp'],
@@ -687,6 +731,8 @@ const hehlereiBlock = html.slice(html.indexOf("name: 'Tante Friedas Hehlerei'"),
 assert(hehlereiBlock.includes("bisStage: 2"), 'the shop cast must leave once the showdown moves outside');
 const stallschreiberBlock = html.slice(html.indexOf("name: 'Stallschreiberstrasse 12'"), html.indexOf("name: 'Bornsteins Antiquit"));
 assert(stallschreiberBlock.includes("id: 'tante_frieda', immer: true, abStage: 3"), 'Frieda must be physically present and clickable in the courtyard finale');
+assert(stallschreiberBlock.includes("id: 'etui_im_lager'") && stallschreiberBlock.includes('prosaPflicht: { narrativ:'),
+  'the visible discovery scene must be forced to narrate the etched Etui before the separate secure action');
 assert(html.includes('NACHT-GEFAHR-GUARD'), 'active enemies must block the misleading night-to-morning rollover');
 assert(html.includes('Gold: sehr passend') && html.includes('Blau: brauchbarer Hebel') && html.includes('Rot: riskant, hohe Gegenwehr'),
   'combat item colors need a visible legend');
