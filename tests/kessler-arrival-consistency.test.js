@@ -104,6 +104,7 @@ Object.assign(imageContext, {
   currentOrt: '',
   lastLocation: '',
   gameDay: 1,
+  normForMatch: context.normForMatch,
   _aktTageszeitName: () => 'nachmittag',
   diag: () => {},
 });
@@ -179,6 +180,40 @@ imageContext._aktTageszeitName = () => 'morgen';
 imageContext._renderKesslerSceneVisual({ szene: 'Du findest im Flur des Mietshauses einen Muenzfernsprecher.' });
 assert.strictEqual(visualElements['kessler-scene-image'].attrs.src, 'assets/scenes/kessler/hinterhof-sybelstrasse-day.webp', 'same-location morning scene must replace the stale night asset');
 assert.strictEqual(visualElements['kessler-scene-time'].textContent, 'Tag 3 · Morgen', 'same-location morning scene must refresh the stale caption');
+imageContext.caseSetup = {
+  caseType: 'diebstahl',
+  klient: 'Theodor Krause',
+  tat: 'Diebstahl',
+  locations: [{ name: 'Karl Mauers Büro', npcs: [] }],
+  setupCast: [{ id: 'theodor_krause', name: 'Theodor Krause', tag: 'CLIENT', anwesend: true }]
+};
+imageContext.sceneCounter = 1;
+imageContext.engineCurrentLocation = { name: 'Karl Mauers Büro' };
+imageContext.currentOrt = '';
+imageContext.lastLocation = '';
+imageContext.gameDay = 1;
+imageContext._aktTageszeitName = () => 'vormittag';
+imageContext.getNpcsAtCurrentLocation = () => [{ id: 'theodor_krause', name: 'Theodor Krause', tag: 'CLIENT' }];
+imageContext._npcZustandGet = () => null;
+imageContext._npcZustandIstEntfernt = () => false;
+visualClasses.add('hidden');
+visualElements['kessler-scene-image'].attrs = {};
+assert.strictEqual(vm.runInContext(
+  "sceneCounter <= 1 && caseSetup.caseType === 'diebstahl'"
+    + " && normForMatch(caseSetup.klient || '').indexOf('theodor krause') !== -1"
+    + " && normForMatch((engineCurrentLocation && engineCurrentLocation.name) || '').indexOf('karl mauers') !== -1",
+  imageContext
+), true, 'Krause render harness must satisfy the dedicated opening-image gate');
+imageContext._renderKesslerSceneVisual({
+  ort: 'Karl Mauers Büro',
+  szene: 'Theodor Krause sitzt nervös auf dem Klientensessel und schildert den Diebstahl.',
+  personenImRaum: [{ id: 'theodor_krause', name: 'Theodor Krause', tag: 'CLIENT' }]
+});
+assert.strictEqual(visualClasses.has('hidden'), false,
+  'Krause opening must keep its Theodor office image visible after the mandatory-cast contract');
+assert.strictEqual(visualElements['kessler-scene-image'].attrs.src,
+  'assets/scenes/krause/karl-mauers-buero-theodor-day.webp',
+  'Krause opening must render the dedicated Theodor office asset');
 
 const textHelperStart = html.indexOf('function _kesslerInnenraumTextPasst');
 const textHelperEnd = html.indexOf('function _renderKesslerSceneVisual', textHelperStart);

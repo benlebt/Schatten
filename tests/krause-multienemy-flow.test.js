@@ -19,7 +19,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1565 +NarrativeDepartureTruth'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1566 +KrauseOpeningVisualContract'"), 'release version missing');
 assert(html.includes('Liesl schenkte oder widmete das Etui 1939 Hugo'), 'Krause setup must bind the silver-case ownership direction');
 assert(html.includes('Karl zählt oder nimmt kein Geld, Karls Kasse bleibt unverändert'), 'Krause opening prompt must keep the return-contingent fee unpaid');
 assert(html.includes('Dramatisiere diese EINE Spur genau EINMAL'), 'explicit Haupt-UI clues must merge compact target and detailed payoff into one narration');
@@ -65,6 +65,38 @@ assert(html.includes('uncaused_interior_reentry'), 'a non-travel action must not
 assert(html.includes('keine erneute Ankunft, kein erneutes Betreten'), 'the persistent interior prompt must prevent re-entry loops at the source');
 assert(html.includes("file: 'karl-mauers-buero-theodor-day.webp'"), 'Krause opening must show Theodor in Karl office');
 assert(html.includes("root: 'assets/scenes/krause/'"), 'Krause opening image must resolve from the case scene directory');
+const krauseIntroVisualStart = html.indexOf("file: 'karl-mauers-buero-theodor-day.webp'");
+const krauseIntroVisualBlock = html.slice(krauseIntroVisualStart, krauseIntroVisualStart + 650);
+assert(krauseIntroVisualBlock.includes("depictsNpcs: ['theodor_krause']"),
+  'Krause opening image must declare Theodor to the mandatory scene-cast contract');
+const krauseOpeningVisualContext = {
+  caseSetup: {
+    locations: [{ name: 'Karl Mauers BÃ¼ro', npcs: [] }],
+    setupCast: [{ id: 'theodor_krause', name: 'Theodor Krause', tag: 'CLIENT', anwesend: true }]
+  },
+  engineCurrentLocation: { name: 'Karl Mauers BÃ¼ro' },
+  sceneCounter: 1,
+  getNpcsAtCurrentLocation: () => [{ id: 'theodor_krause', name: 'Theodor Krause', tag: 'CLIENT' }],
+  normForMatch: value => String(value || '').toLowerCase().replace(/_/g, ' '),
+  _npcZustandGet: () => null,
+  _npcZustandIstEntfernt: () => false,
+  diag: () => {},
+  Set
+};
+require('vm').createContext(krauseOpeningVisualContext);
+require('vm').runInContext(
+  'const _SZENENBILD_BESETZUNG_DIAG_CACHE = new Set();' + sourceOf('_szenenbildPflichtbesetzungPruefen'),
+  krauseOpeningVisualContext
+);
+assert.deepStrictEqual(Array.from(krauseOpeningVisualContext._szenenbildPflichtbesetzungPruefen(
+  { file: 'karl-mauers-buero-theodor-day.webp', place: 'Karl Mauers BÃ¼ro', depictsNpcs: ['theodor_krause'] },
+  { personenImRaum: ['Theodor Krause'] }
+)), [], 'Theodor opening motif must pass the actual mandatory-cast image contract');
+assert(Array.from(krauseOpeningVisualContext._szenenbildPflichtbesetzungPruefen(
+  { file: 'karl-mauers-buero-theodor-day.webp', place: 'Karl Mauers BÃ¼ro' },
+  { personenImRaum: ['Theodor Krause'] }
+)).some(problem => /Theodor Krause/.test(problem)),
+  'the regression test must fail when Theodor is omitted from the opening image contract');
 assert(html.includes('AKTIONS-TREUE (ABSOLUT)'), 'physical and item actions need a strict narration contract');
 assert(html.includes('ZUSTANDS-TREUE (ABSOLUT)'), 'NPC battle states need a strict narration contract');
 assert(html.includes('function _verfassungNullSichern(reason)'), 'zero health needs a central forced ending');
