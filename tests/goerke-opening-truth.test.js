@@ -24,8 +24,14 @@ const goerke = html.slice(goerkeStart, goerkeEnd);
 
 assert(goerke.includes("{ id: 'reinhard_baumgarten', zeit: ['morgen','vormittag','mittag','nachmittag'] }"),
   'Baumgarten must be present in the morning opening');
+assert(/name: 'Albrecht Goerke U-Haft'[\s\S]*?npcs: \[\{ id: 'albrecht_goerke', immer: true \}\]/.test(goerke),
+  'Albrecht must remain selectable in his own U-Haft scene');
+assert(/name: 'Anwaltsbuero Baumgarten'[\s\S]*?npcs: \[\{ id: 'reinhard_baumgarten'/.test(goerke),
+  'Baumgarten must remain selectable while his office image depicts him');
 assert(goerke.includes("{ id: 'hauptmann_krollwitz', immer: true, abStage: 3 }"),
   'Krollwitz must not appear before the political pressure phase');
+assert(goerke.includes('Sechs Monate später war Mathilde tot'),
+  'the opening chronology must place Mathilde’s death four months before the September case');
 assert(goerke.includes('Albrechts Verteidiger und dein langjähriger juristischer Kontakt'),
   'opening prompt must state Baumgarten case role unambiguously');
 assert(!goerke.includes('dein langjähriger Anwalt-Partner'),
@@ -118,6 +124,64 @@ assert(html.includes('_romOrtPlausibel && !_romInCast'),
 assert(html.includes('_romancePushOrtPlausibel(romanceNpc, romanceOrt)'),
   'the engine-side forced romance introduction must obey location plausibility');
 
+const showdownPresenceContext = {
+  engineCurrentLocation: { name: 'Stellwerk Schoeneweide' },
+  caseProgress: {
+    showdownAktiv: true,
+    showdownBestanden: false,
+    showdownGegner: 'Hauptmann Dietmar Krollwitz',
+  },
+};
+vm.createContext(showdownPresenceContext);
+vm.runInContext(sourceOf('normForMatch') + '\n' + sourceOf('_npcGehoertHierher'), showdownPresenceContext);
+assert.strictEqual(showdownPresenceContext._npcGehoertHierher(
+  'hauptmann_krollwitz',
+  'Hauptmann Dietmar Krollwitz'
+), true, 'an active showdown opponent must survive the final location filter');
+assert(html.includes('erledigt: !!(!_showdownTarget && _schonGesprochen && !_hatNochHinweis)'),
+  'an earlier interview must not disable the opponent when the real showdown starts');
+
+assert(html.includes("file: 'kreisgericht-mitte-baumgarten-day.png'"),
+  'the court opening needs its Baumgarten image');
+assert(html.includes("file: 'kreisgericht-mitte-krollwitz-civil-day.png'"),
+  'the court confrontation needs the civilian Krollwitz image');
+assert(html.includes("file: 'stellwerk-schoeneweide-krollwitz-night.png'"),
+  'the Stellwerk showdown needs Krollwitz visibly in the image');
+for (const file of [
+  'kreisgericht-mitte-baumgarten-day.png',
+  'kreisgericht-mitte-krollwitz-civil-day.png',
+  'stellwerk-schoeneweide-krollwitz-night.png',
+]) {
+  assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'goerke', file)),
+    'missing Goerke image asset: ' + file);
+}
+assert(sourceOf('_renderKesslerSceneVisual').includes('SZENENBILD bleibt als Ortsmotiv sichtbar'),
+  'a cast-contract warning must not collapse the entire scene image');
+assert(goerke.includes('arrivalFallbackText:'),
+  'the Stellwerk needs a concrete deterministic fallback instead of AI-instruction prose');
+assert(goerke.includes("abschlussVermittler: 'Dr. Reinhard Baumgarten'"),
+  'the detained client needs Baumgarten as a credible finale intermediary');
+assert(sourceOf('_abschlussOrtOhneFestesTelefon').includes('|opel|wagen|fahrzeug|auto|stellwerk|'),
+  'cars and the Stellwerk must not receive invented fixed telephones');
+assert(html.includes('ÜBER DEN BEAUFTRAGTEN VERMITTLER'),
+  'resolution prompting must support a configured intermediary');
+assert(sourceOf('_hauptuiKlientenberichtOffen').includes('istVermittler'),
+  'a configured intermediary must become a usable report target at stage 3');
+assert(html.includes('dem beauftragten Vermittler'),
+  'the report action must describe a handoff through the intermediary');
+assert(sourceOf('buildFallbackAbschlussProsa').includes('zur Weitergabe an'),
+  'the solved summary must not claim a direct report to a detained client');
+assert(sourceOf('enforceSceneWorldTruthFallback').includes('_innenConfiguredFallback'),
+  'fixed-interior repair must preserve a configured concrete arrival fallback');
+assert(sourceOf('_bedrohungsCliffhangerSichtbarBezahlt').includes('nirgends mehr zu sehen'),
+  'a visibly vanished old threat must not leak into every later travel scene');
+assert(sourceOf('repairBasicGermanProse').includes('Du ignorierst'),
+  'the common second-person agreement error must be repaired');
+assert(sourceOf('enforceSceneWorldTruthFallback').includes('_actorFolgesatz'),
+  'removing an unrostered named actor must also remove its dangling pronoun sentences');
+assert(!html.includes('Ein Trümmergrundstück gleich nebenan'),
+  'generic atmosphere must not claim that a rubble lot is next to every East-Berlin interior');
+
 const diagnostics = [];
 const context = {
   caseSetup: {
@@ -165,7 +229,7 @@ context.updateTruthBeats('Mertens manipulierte die Akte auf Anordnung von Krollw
 assert(context.caseProgress.truthBeatsHit.includes('krollwitz_mertens'),
   'the found Krollwitz file evidence must unlock the manipulation beat');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1595 +StraussSectorHandoff'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1600 +GoerkeFinalPolish'"),
   'release version missing');
 
 console.log('Goerke opening/truth regression checks passed.');

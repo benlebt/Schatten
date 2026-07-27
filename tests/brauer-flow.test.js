@@ -120,8 +120,8 @@ assert(html.includes("problem.code === 'family_fee_motive_drift'"),
   'family cases need a world-truth repair for invented fee motivation');
 assert(html.includes("String(entry.tag || '').toUpperCase() !== 'CLIENT'"),
   'opening clients must participate in the scene-image cast contract');
-assert(html.includes('SZENENBILD ausgeblendet: zentrale anwesende Figur fehlt im Bildvertrag'),
-  'a mismatched central cast image must fail closed');
+assert(html.includes('SZENENBILD bleibt als Ortsmotiv sichtbar: Bildbesetzung unvollständig'),
+  'a mismatched cast contract must stay diagnosable without collapsing the entire scene image');
 assert(html.includes("window.HAUPTUI_AKTIV && typeof cast !== 'undefined' && Array.isArray(cast)"),
   'the current physical scene cast must feed the Haupt-UI target resolver');
 assert(html.includes("const _clientDepartureDestination = String((npc && npc.departureDestination) || '').trim();"),
