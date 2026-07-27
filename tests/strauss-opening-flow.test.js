@@ -11,6 +11,8 @@ const strauss = html.slice(straussStart, straussEnd);
 
 assert(/name: 'Friedhof Ploetzensee'[\s\S]*?npcs: \[\{ id: 'frau_schleier', immer: true, bisStage: 1, wegWennIndiz: 'schleier_kranzler_spur' \}, \{ id: 'pastor_vogel', immer: true, bisStage: 1, wegWennIndiz: 'schleier_kranzler_spur' \}\]/.test(strauss),
   'the funeral opening must keep the veiled woman and Pastor Vogel physically actionable');
+assert(/name: 'Friedhof Ploetzensee'[\s\S]*?openingFallbackText: '[^']*Pastor Vogel[^']*unbekannte Frau mit Schleier[^']*moralischer Pflicht/.test(strauss),
+  'the funeral roster fallback must preserve the assignment without invented physical evidence or an empty cemetery');
 assert(/id: 'schleier_kranzler_spur'[\s\S]*?npc: 'frau_schleier', quelle: 'person', actions: \['ANSPRECHEN','BEFRAGEN','UEBERZEUGEN'\][\s\S]*?stage: 2/.test(strauss),
   'the veiled woman must provide a conversational lead away from the funeral');
 assert(strauss.includes('Cafe Kranzler'),
@@ -19,6 +21,20 @@ assert(/id: 'schleier_aussage'[\s\S]*?nachIndiz: 'schleier_kranzler_spur'/.test(
   'the full testimony at Cafe Kranzler must unlock directly from the opening lead');
 assert(/id: 'krummbein_kordel'[\s\S]*?actions: \['ERKUNDEN','DURCHSUCHEN'\]/.test(strauss),
   'the physical cord must be searched instead of mislabeled as reading files');
+assert(/id: 'krummbein_kordel'[\s\S]*?fundText: '[^']*Durchmesser und Drehung[^']*kein Blick durch ein Mikroskop/.test(strauss),
+  'the cord comparison must be physically plausible instead of claiming naked-eye microscopic proof');
+assert(/id: 'krummbein_kordel'[\s\S]*?prosaPflicht: \{ replaceOnFallback: true/.test(strauss)
+  && /id: 'strick_befund'[\s\S]*?prosaPflicht: \{ replaceOnFallback: true/.test(strauss)
+  && /id: 'alte_strauss_akte'[\s\S]*?prosaPflicht: \{ replaceOnFallback: true/.test(strauss),
+  'mechanically booked Strauss evidence must replace vague model prose with its canonical finding');
+assert(/id: 'strick_befund'[\s\S]*?fundText: '[^']*Wer die Kordel führte, steht damit noch nicht fest/.test(strauss),
+  'the police finding must establish murder without prematurely naming Krummbein');
+assert(/id: 'strauss_briefplan'[\s\S]*?Fahrkarte nach Westdeutschland für den 24\. Juli[\s\S]*?beweist für sich allein aber noch keinen Täter/.test(strauss),
+  'Strauss future plans must use a stable chronology without overclaiming a culprit');
+assert(/name: 'Strauss-Geschaeft'[\s\S]*?detail: 'Innenraum[^']*tritt ein und endet drinnen; die Szene spielt nicht vor dem Laden/.test(strauss),
+  'the shop arrival must establish the same interior that its fixed image shows');
+assert(strauss.includes("abschlussPolizei: { name: 'Kommissar Heinrich Lindner', behoerde: 'West-Berliner Polizei', verboten: ['Volkspolizei', 'Roth'] }"),
+  'the West-sector Strauss handoff must bind Lindner instead of Volkspolizei Mitte');
 assert(strauss.includes("rolle: 'Unbekannte Trauernde am Grab'"),
   'the visible role must not expose a future romance');
 assert(/name: 'Frau mit Schleier'[\s\S]*?tag: 'MYSTERY'[\s\S]*?feindlich: false/.test(strauss),
@@ -62,6 +78,30 @@ assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'strauss', '
 assert(html.includes('const gestandnisIndiz = ind && /gestaendnis|geständnis|ueberfuehrt|überführt/')
   && html.includes('GESTÄNDNIS-Prosa ergänzt'),
   'a mechanically booked confession must be visible in prose instead of ending in denial');
+assert(/id: 'krummbein_gestaendnis'[\s\S]*?fundText: '[^']*Ich habe Ludwig[^']*Es sollte wie Selbstmord aussehen[^']*', prosaPflicht:/.test(strauss),
+  'Krummbein must confess in first person instead of narrating an unknown third-party killer');
+assert(/id: 'krummbein_gestaendnis'[\s\S]*?prosaPflicht: \{ replaceOnFallback: true/.test(strauss)
+  && html.includes('const erzwungenerFund = !!(prosaPflicht.replaceOnFallback')
+  && html.includes('(strukturierterFund || erzwungenerFund)'),
+  'a contradictory confession must be replaced rather than followed by an appended opposite account');
+assert(html.includes('const deniedVeiledWoman = _arrivalNames.some(function(name)')
+  && html.includes('return !deniedNamedActor && !deniedVeiledWoman;'),
+  'opening roster repair must remove an explicit departure contradiction before restoring the actor');
+assert(html.includes('const _personenNameSeen = {};')
+  && html.includes('const _hauptuiPersonenNameKey = function(name)')
+  && html.includes('_personenNameSeen[nameKey]'),
+  'the main UI must merge titled and untitled variants of the same person');
+assert(html.includes('Feste Ortsbindungen gelten auch fuer den Haupt-UI-Cast')
+  && html.includes('_npcGehoertHierher(npc.id, npc.name)'),
+  'the main UI must not carry a location-bound witness into a foreign scene');
+assert(html.includes('function _findResolutionPoliceDrift(scene)')
+  && html.includes("code: 'resolution_police_drift'")
+  && html.includes("problem.name + ' von der '")
+  && html.includes("const _abschlussPolizei = caseSetup && caseSetup.abschlussPolizei;"),
+  'a configured police handoff must be validated and deterministically repaired at resolution');
+assert(html.includes('letzteAktion.istReise || letzteAktion.istOptionReise')
+  && html.includes("typeof _aktuelleAktionIstReise !== 'undefined' && _aktuelleAktionIstReise"),
+  'fixed interior validation must retain the travel marker across the full processing cycle');
 assert(html.includes("const required = ((option._istOpening || typeof getCaseLocations !== 'function')")
   && html.includes('const istReiseAnkunft = !!(option && (option._istReise')
   && html.includes('allowedRoster: arrivalAllowed.slice()'),
