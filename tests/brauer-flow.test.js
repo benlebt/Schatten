@@ -31,6 +31,8 @@ assert(variant, 'Brauer setup is missing');
 const setup = variant.setup;
 assert.strictEqual(setup.caseType, 'vermisst', 'Brauer must remain a missing-person case');
 assert.strictEqual(setup.familieMatter, true, 'Brauer must remain a family case');
+assert.strictEqual(setup.requiredProofConfirmsSafety, true,
+  'the Marienfelde proof must change the finale from uncertain to confirmed safety');
 const hildeSetup = setup.setupCast.find((entry) => entry.id === 'hilde_brauer');
 assert(hildeSetup && /koepenick/i.test(hildeSetup.departureDestination),
   'Hilde must leave for her configured home, not a case-foreign destination');
@@ -46,8 +48,21 @@ const apartment = locations.get('Hilde Brauer Wohnung Koepenick');
 const railway = locations.get('Reichsbahn-Lokschuppen Friedrichstrasse');
 const laundry = locations.get('Waescherei Koepenick');
 const marienfelde = locations.get('Marienfelde Notaufnahmelager');
+const station = locations.get('Bahnhof Friedrichstraße');
 assert(apartment && railway && laundry && marienfelde,
   'the Brauer investigation route is incomplete');
+assert(setup.locations[0].openingFallbackText.split(/\s+/).length >= 55
+    && /Hilde Brauer/.test(setup.locations[0].openingFallbackText)
+    && /Reichsbahn-Schaffner/.test(setup.locations[0].openingFallbackText)
+    && /Familienfall/.test(setup.locations[0].openingFallbackText),
+  'the opening fallback must be a complete narrated family-case handoff');
+for (const location of [apartment, railway, station]) {
+  assert(location && location.arrivalFallbackText
+      && location.arrivalFallbackText.split(/\s+/).length >= 40,
+    'Brauer arrival fallback is too dry at ' + (location && location.name));
+  assert(!/nächsten belegbaren Ermittlungsschritt|nimmst den Raum aufmerksam/i.test(location.arrivalFallbackText),
+    'Brauer arrival fallback contains mechanical AI-instruction prose at ' + location.name);
+}
 
 const clues = setup.locations.flatMap((location) => location.indizien || []);
 const clueById = new Map(clues.map((clue) => [clue.id, clue]));
@@ -72,6 +87,14 @@ assert(Number(clueById.get('marienfelde_registratur').abStage) >= 3,
   'Erwin must not be declared safe before the investigation reaches Marienfelde');
 assert(setup.requiredProof.test(clueById.get('marienfelde_registratur').text),
   'the configured final proof gate must accept the registration clue');
+assert(html.includes("indizId: 'required_proof_confirms_safety'"),
+  'a confirmed Marienfelde registration must reject later uncertainty prose');
+assert(html.includes('ABSCHLUSS-NACHWEIS BESTÄTIGT SICHERHEIT'),
+  'the finale prompt must state the positive truth after the safety proof');
+assert(html.includes("_istFamilienauftrag = !!(caseSetup && caseSetup.familieMatter)"),
+  'family cases must be classified as non-paying assignments');
+assert(html.includes('Für diesen Familienfall gibt es kein Honorar.'),
+  'the family-case ending must not announce a fee');
 
 const imageSet = context.IMAGE_SETS.find((entry) => {
   entry.caseTest.lastIndex = 0;
@@ -115,6 +138,14 @@ assert.deepStrictEqual(
   { width: 1536, height: 864 },
   'the corrected Marienfelde image must use the standard 16:9 scene resolution',
 );
+const vollmerImage = path.join(repoRoot, 'assets', 'scenes', 'brauer',
+  'bahnhof-friedrichstrasse-vollmer-day.png');
+assert(fs.existsSync(vollmerImage) && fs.statSync(vollmerImage).size > 500000,
+  'the dedicated Vollmer station confrontation image is missing or implausibly small');
+assert(html.includes('function _brauerVollmerKonfrontationVisual(scene)'),
+  'Brauer needs a dynamic station visual for the Vollmer confrontation');
+assert(html.includes("depictsNpcs: ['stamm_mfs']"),
+  'the Vollmer confrontation image must contractually depict its active antagonist');
 
 assert(html.includes("problem.code === 'family_fee_motive_drift'"),
   'family cases need a world-truth repair for invented fee motivation');
@@ -153,13 +184,22 @@ function sourceOf(name) {
 const uiContext = {
   window: { HAUPTUI_AKTIV: true },
   cast: [{ id: 'hilde_brauer', name: 'Hilde Brauer', tag: 'CLIENT', rolle: 'Klientin' }],
-  caseSetup: { caseType: 'vermisst' },
+  caseSetup: {
+    caseType: 'vermisst',
+    locations: [{ name: 'Karl Mauers Buero' }],
+    setupCast: [{ id: 'hilde_brauer', name: 'Hilde Brauer', tag: 'CLIENT', anwesend: true }],
+  },
   caseProgress: { gefundeneIndizIds: [] },
+  sceneCounter: 2,
+  currentScene: { personenImRaum: ['Hilde Brauer'], szene: 'Hilde Brauer bittet dich im Büro um Hilfe.' },
   engineCurrentLocation: { name: 'Karl Mauers Buero' },
   getNpcsAtCurrentLocation: () => [],
   getCaseLocations: () => [],
   normForMatch: (value) => String(value || '').toLowerCase().replace(/[_-]+/g, ' ').trim(),
+  sameNamedPerson: (left, right) =>
+    String(left || '').toLowerCase() === String(right || '').toLowerCase(),
   _npcZustandIstEntfernt: () => false,
+  _npcGehoertHierher: () => false,
   _npcWurdeSchonAngesprochen: () => false,
   _npcHatUngefundeneIndizien: () => true,
   _npcHatOffenenHinweis: () => false,
@@ -172,12 +212,35 @@ vm.createContext(uiContext);
 vm.runInContext(sourceOf('_baukastenZiele'), uiContext);
 const openingTargets = uiContext._baukastenZiele();
 assert.deepStrictEqual(Array.from(openingTargets.personen, (entry) => entry.id), ['hilde_brauer'],
-  'a client in the physical scene cast must remain an actionable Haupt-UI target without a location binding');
+  'a visiting client must remain actionable after scene one while still physically present at the opening location');
+assert(html.includes("if (isStart && typeof _enforceOpeningRosterPresence === 'function')"),
+  'the opening roster must be applied before role-truth validation can mistake a one-scene client for a phantom');
 
 vm.runInContext(sourceOf('_hauptuiNpc'), uiContext);
 const resolvedOpeningClient = uiContext._hauptuiNpc(openingTargets.personen[0]);
 assert(resolvedOpeningClient && resolvedOpeningClient.id === 'hilde_brauer',
   'executing a Haupt-UI action must resolve a client from the physical scene cast');
+
+const openingRosterContext = {
+  caseSetup: {
+    setupCast: [
+      { id: 'hilde_brauer', name: 'Hilde Brauer', tag: 'CLIENT', anwesend: true },
+      { id: 'erwin_brauer', name: 'Erwin Brauer', tag: 'TARGET', anwesend: false },
+    ],
+  },
+  getNpcsAtCurrentLocation: () => [],
+  normForMatch: uiContext.normForMatch,
+  sameNamedPerson: (left, right) =>
+    String(left || '').toLowerCase() === String(right || '').toLowerCase(),
+};
+vm.createContext(openingRosterContext);
+vm.runInContext(sourceOf('_enforceOpeningRosterPresence'), openingRosterContext);
+const repairedOpening = openingRosterContext._enforceOpeningRosterPresence({
+  szene: 'Hilde Brauer sitzt mit ihrem Pappkoffer im Büro und bittet dich um Hilfe.',
+  personenImRaum: [],
+});
+assert.deepStrictEqual(Array.from(repairedOpening.personenImRaum), ['Hilde Brauer'],
+  'a one-scene client visit marked anwesend must enter the opening roster even without a permanent location binding');
 
 uiContext.caseSetup = {
   caseType: 'vermisst',
@@ -217,6 +280,7 @@ uiContext.caseSetup = {
 };
 uiContext._findSetupCastFuzzy = (name) => /"/.test(name)
   ? { id: 'im_schaffner', name: 'IM "Schaffner"', tag: 'STASI' } : null;
+uiContext._npcGehoertHierher = () => true;
 const quoteVariantTargets = uiContext._baukastenZiele();
 assert.deepStrictEqual(Array.from(quoteVariantTargets.personen, (entry) => entry.id), ['im_schaffner'],
   'quote variants of one setup NPC must collapse to one Haupt-UI target');
