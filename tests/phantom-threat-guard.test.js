@@ -162,6 +162,41 @@ problem = context._findUnrosteredPresentActor({
 assert(problem && problem.code === 'unrostered_present_actor',
   'a spatially separated perceived actor must be caught before the role noun');
 
+problem = context._findUnrosteredPresentActor({
+  szene: 'Lindner schliesst die Tuer. Draussen geht ein Mann in einem grauen Mantel den Flur entlang und spaehte durch den Tuerspalt in das Zimmer.',
+  personenImRaum: ['Kommissar Heinrich Lindner']
+}, {});
+assert(problem && problem.code === 'unrostered_present_actor',
+  'a gray-coated corridor observer must be rejected even when the verb is entlanggeht or spaehte');
+
+problem = context._findUnrosteredPresentActor({
+  szene: 'Ein Mann in einem grauen Trenchcoat, den du bisher nur vom Sehen und aus vagen Berichten kanntest, nickt dir knapp zu, bevor er sein Buero verlaesst.',
+  personenImRaum: ['Kommissar Heinrich Lindner']
+}, {});
+assert(problem && problem.code === 'unrostered_present_actor',
+  'a gray-coated opening extra must not evade the roster guard by merely nodding and leaving');
+
+problem = context._findUnrosteredPresentActor({
+  szene: 'Draussen auf der Strasse steht eine Limousine mit verdunkelten Scheiben, deren Insasse dich seit einer Stunde beobachtet.',
+  personenImRaum: ['Kommissar Heinrich Lindner']
+}, {});
+assert(problem && problem.code === 'unrostered_present_actor',
+  'an anonymous observer inside a vehicle must not exist only in prose');
+
+problem = context._findUnrosteredPresentActor({
+  szene: 'Lindner spricht leise. Durch die geoeffnete Buerotuer siehst du Hauptmann Vollmer im Flur stehen, der unnatuerlich lange an einer Akte liest.',
+  personenImRaum: ['Kommissar Heinrich Lindner']
+}, {});
+assert(problem && problem.code === 'unrostered_present_actor',
+  'a named ranked actor outside the physical roster must be rejected');
+
+problem = context._findUnrosteredPresentActor({
+  szene: 'Das Klappern von Absaetzen kuendigt an, dass jemand den Korridor betritt.',
+  personenImRaum: ['Vize-Direktor Otto Wegner', 'Bankpfoertner']
+}, {});
+assert(problem && problem.code === 'unrostered_present_actor',
+  'someone entering a corridor must be rostered or backed by an active encounter');
+
 context.engineCurrentLocation = { name: 'Hinterhof Sybelstrasse' };
 context.getNpcsAtCurrentLocation = () => [
   { id: 'frau_pohl', name: 'Frau Pohl' },
@@ -240,7 +275,7 @@ problem = context._findUnrosteredPresentActor({
 }, {});
 assert.strictEqual(problem, null, 'a properly rostered scene actor remains legal');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1600 +GoerkeFinalPolish'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1621 +LindnerContinuityPolish'"),
   'release version missing');
 
 console.log('phantom threat guard tests passed');

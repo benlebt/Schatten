@@ -229,7 +229,7 @@ context.updateTruthBeats('Mertens manipulierte die Akte auf Anordnung von Krollw
 assert(context.caseProgress.truthBeatsHit.includes('krollwitz_mertens'),
   'the found Krollwitz file evidence must unlock the manipulation beat');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1600 +GoerkeFinalPolish'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1621 +LindnerContinuityPolish'"),
   'release version missing');
 
 console.log('Goerke opening/truth regression checks passed.');

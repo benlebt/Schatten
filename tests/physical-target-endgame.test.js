@@ -138,6 +138,10 @@ assert(html.includes("id: 'HAUPTUI_ZIELPERSON_BEFREIEN'"), 'rescue action must h
 assert(html.includes("key: 'ziel_zum_opel', label: 'Zum Opel bringen'"), 'freed target needs an explicit Opel transport action');
 assert(html.includes("key: 'ziel_zum_klienten'"), 'target needs a configured client handoff');
 assert(html.includes("key: 'ziel_zur_polizei'"), 'target needs a configured police protection route');
+assert(html.includes("const wartetAmUebergabeort = transportStatus === 'im_opel'"),
+  'a target waiting in the Opel must remain visible at the configured handoff location');
+assert(html.includes('Letzte Kontinuitaetsgarantie fuer physische Rettungsziele'),
+  'late roster filters must not remove a rescued target at the handoff location');
 assert(html.includes("'Zielperson noch aufsuchen und befreien'"), 'case completion must explain an unreached physical target');
 assert(html.includes("resolveLockReason = 'Zielperson noch befreien'"), 'case completion must explain an open physical rescue');
 assert(html.includes("resolveLockReason = 'Zielperson noch zum Opel bringen'"), 'completion lock must explain the transport step');
