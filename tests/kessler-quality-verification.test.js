@@ -33,8 +33,10 @@ function norm(value) {
     .replace(/[^a-z0-9]+/g, ' ').trim();
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1635 +KesslerQualityVerification'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1636 +KesslerOpeningDedup'"),
   'release version missing');
+assert(html.includes("const _openingPresence = _arrivalKesslerWindows\n          ? (_openingStillMissing.length"),
+  'the fixed Kessler opening must not append its window cast a second time');
 assert(html.includes("presenceFallbackText: 'Frau Pohl bleibt am linken Erdgeschossfenster"),
   'courtyard fallback must preserve the pictured window positions');
 assert(html.includes("{ id: 'frau_pohl', zeit: ['morgen','vormittag','mittag','nachmittag','abend','nacht'] }"),

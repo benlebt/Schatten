@@ -16457,3 +16457,10 @@ Spedition und die Rückfahrt ins Büro nachvollziehbar erzählt werden.
 
 Verifikation: echter 14-Szenen-Lauf bis Fallabschluss; Bilder in allen besuchten
 Szenen vorhanden; 61/61 lokale Regressionstests grün.
+
+## 🆕 v7.12.1636 — Kessler-Auftakt ohne doppelte Bildbesetzung
+
+Der Produktions-Gegenlauf von v1635 zeigte, dass der vollständige redaktionelle
+Kessler-Auftakt die bereits enthaltene Fensterbesetzung nochmals anhängen
+konnte. Der World-Truth-Fallback ergänzt Pohl und Hauke jetzt nur noch, wenn
+mindestens eine der beiden Figuren im bereinigten Auftakt tatsächlich fehlt.
