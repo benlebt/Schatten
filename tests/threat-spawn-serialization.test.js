@@ -115,7 +115,39 @@ assert(arrival.personenImRaum.includes('Mann im langen Mantel'),
 assert.strictEqual(visibleContext._konfrontationInAktuellerSzeneSichtbar(arrival), true,
   'confrontation UI becomes visible only after the prose repair');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1657 +ThreatSceneTruth'"),
+const visualContext = {
+  caseProgress: {
+    activeConfrontation: {
+      npcId: 'mann_im_mantel',
+      enemyName: 'Mann im langen Mantel'
+    }
+  },
+  normForMatch: value => String(value || '').toLowerCase(),
+  getNpcsAtCurrentLocation: () => [{ id: 'mann_im_mantel', name: 'Mann im langen Mantel' }],
+  _konfrontationInAktuellerSzeneSichtbar: () => false,
+  _npcZustandGet: () => null,
+  _npcZustandIstEntfernt: () => false
+};
+vm.createContext(visualContext);
+vm.runInContext(sourceOf('_szenenbildAnwesenheitsVariante'), visualContext);
+const baseImage = {
+  file: 'wohnung.webp',
+  presenceVariants: [{
+    id: 'mann_im_mantel',
+    file: 'wohnung-mantel.webp'
+  }]
+};
+const oldSavedScene = {
+  szene: 'Margarete sitzt allein mit der Aktentasche auf dem Boden.',
+  personenImRaum: ['Margarete Stein']
+};
+assert.strictEqual(
+  visualContext._szenenbildAnwesenheitsVariante(baseImage, oldSavedScene).file,
+  'wohnung.webp',
+  'a not-yet-narrated active enemy must not select the NPC image variant'
+);
+
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1658 +ThreatVisualTruth'"),
   'release version missing');
 
 console.log('THREAT_SPAWN_SERIALIZATION_OK');
