@@ -1,5 +1,18 @@
 # Schatten — Projekt-Knowledge
 
+## v7.12.1638 — StasiCustodyStateMachine (28.07.2026)
+
+**Befund:** Die MfS-Mechanik war formal umfangreich, im realen Spiel aber zu selten erreichbar. Historisch waren vor der grossen Nachruestung 0 Festnahmen in 352 protokollierten Szenen dokumentiert; auch viele spaetere Komplettlaeufe meldeten ausdruecklich keinen Gewahrsam. Im aktuellen Produktions-Gegenlauf des stark politischen Falls Stein blieb Karl nach acht Szenen und einer langen bewaffneten Konfrontation frei. Eine begonnene Observation verlor zudem beim normalen Ortswechsel ihre Eskalationskette. Fruehere Versionen hatten das Gegenproblem: unsichtbare Festnahmen und widerspruechliche Wechsel zwischen Haft und Freiheit.
+
+**Engineweiter Umbau:**
+- Eine begonnene Observation folgt Karl jetzt ueber Ortswechsel hinweg. Politische Relevanz 5/4/3 startet die sichtbare Beobachtung etwas verlaesslicher; sie erzwingt weiterhin keine unmittelbare Festnahme.
+- Der offene MfS-Zugriff besitzt die bewusste Aktion **Mitgehen**. Diese und ein misslungener gewaltsamer Widerstand markieren deterministisch die Festnahme; Ort, Prosa, UI und Haftflag werden in einer Transaktion gesetzt.
+- Laufender Gewahrsam ist ein Engine-Zustand. Weder `gewahrsam:false` aus dem Modell noch ein frei erfundener Freilassungssatz kann ihn beenden. Nur explizite Engine-Aktionen (Freilassung/Abwarten oder Notflucht) wechseln Karl wieder auf frei.
+- Driftet die KI waehrend der Haft an einen normalen Ort, ersetzt die Engine die Antwort durch eine vollwertige Verhoerszene in Zelle 14 und haelt Personenliste, Bildkontext und Ortszustand zusammen.
+- Pro Fall bleibt es bei maximal einer Haft-Episode. Das macht das MfS zu einer realen Gefahr, ohne den Detektivfall durch staendige Wiederverhaftungen zu ersticken.
+
+**Verifikation:** 61/61 lokale Regressionstests gruen. Neue Tests decken Observation ueber Ortswechsel, sichtbares Mitgehen, misslungenen Widerstand, deterministischen Haftantritt, Prosa-Drift sowie das Verbot impliziter Freilassungen ab. Produktions-Gegenlauf mit Haft, Verhoer und expliziter Entlassung folgt nach Deployment.
+
 > **Aktueller additiver Lektoratsstandard:** Die sechs Standing-Checkpoints, der Fix/Push/Gegenlauf-Zyklus und die priorisierten offenen Themen stehen in `LEKTORAT.md`. Sie ergänzen alle bisherigen Lektoratsregeln und spezielleren Entscheidungen dieser Datei; sie ersetzen sie nicht. Frühere Befunde, bewusste Nicht-Fixes und settled decisions bleiben Prüfhintergrund. Die genaue Hierarchie bei echten Widersprüchen steht in `LEKTORAT.md`.
 
 Stand: 06.06.2026, Version v7.12.433 (index.html) + gemini.js v1.5 (serverseitig)

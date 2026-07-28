@@ -7,7 +7,7 @@ const { readWebpDimensions } = require('./image-format-utils');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1637 +KesslerVisualNarrativeGuard'"), 'version constant is stale');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1638 +StasiCustodyStateMachine'"), 'version constant is stale');
 assert(html.includes("text: _resolveIstEigenauftrag ? 'Eigen-Auftrag abschließen und Wahrheit festhalten.' : 'Fall abschließen und Auftraggeber informieren.'"),
   'resolve button copy must stay player-facing for external and self-assigned cases');
 assert(html.includes('_enginePrompt: [_resolveText, _resolveTransitionPrompt, _resolvePhysicalTruth]'), 'resolve direction must preserve physical target truth');
@@ -130,10 +130,20 @@ assert(followingPrompt.includes('Oberleutnant Mertens'), 'hidden observation mus
 assert.strictEqual(steinEncounter.location, 'S-Bahnhof Friedrichstrasse', 'hidden observation must rebind to the new location before introduction');
 assert.strictEqual(steinFlow._stasiEncounterConfirmIntroFromScene({ szene: 'Oberleutnant Mertens steht sichtbar am Bahnsteig.', ort: 'S-Bahnhof Friedrichstrasse' }), true,
   'Stein observer must become visible before becoming clickable');
+steinFlow.engineCurrentLocation.name = 'Lehrter Gueterbahnhof';
+const visibleFollowingPrompt = steinFlow._stasiEncounterPrompt();
+assert(visibleFollowingPrompt.includes('Oberleutnant Mertens'),
+  'an already recognized MfS observation must remain the same named tail after ordinary travel');
+assert.strictEqual(steinEncounter.location, 'Lehrter Gueterbahnhof',
+  'an observation may follow Karl, while later control/access phases remain location-bound');
 steinFlow.sceneCounter += 1;
 steinFlow._stasiEncounterAdvance('OFFENSIV');
 assert.strictEqual(steinEncounter.phase, 'zugriff', 'an open provocation must escalate the introduced observation to access: ' + steinFlow.diagMessages.join(' | '));
 assert.strictEqual(steinFlow.caseProgress.activeConfrontation.trigger, 'stasi-encounter', 'the escalated Stein access must be playable');
+assert.strictEqual(steinFlow._stasiCustodyEntryVormerken('Audit: Karl geht mit'), true,
+  'a visible access must be able to arm deterministic custody');
+assert.strictEqual(steinFlow.caseProgress.custodyForcedEntry, true,
+  'custody entry must be persisted before the narration request');
 
 const privateEncounter = makeEncounterContext(false);
 encounter = privateEncounter._stasiEncounterForceZugriff('Darf nicht passieren');
@@ -230,6 +240,42 @@ custodySetterContext.setCustodyState(false, 'Audit-Freilassung');
 assert.strictEqual(custodySetterContext.engineCurrentLocation.name, 'Vor der MfS-Untersuchungshaftanstalt Hohenschoenhausen', 'release must use a real exterior location');
 assert.strictEqual(custodySetterContext.caseProgress.custodyReleaseSource, 'Audit-Freilassung', 'release source must remain traceable');
 assert.strictEqual(encounterClears, 1, 'release must close the active Stasi encounter');
+
+const custodyTruthStart = html.indexOf('function _custodySceneTruthSichern(scene)');
+const custodyTruthEnd = html.indexOf('// v7.11.13: META-CUSTODY-RISIKO-COUNTER', custodyTruthStart);
+assert(custodyTruthStart >= 0 && custodyTruthEnd > custodyTruthStart, 'cannot isolate custody prose truth guard');
+const custodyTruthContext = {
+  karlInStasiCustody: true,
+  engineCurrentLocation: { name: 'Cafe im Westen', sektor: 'West' },
+  caseProgress: { custodyVerhoer: { runden: 2, druck: 2, kooperation: 0, verweigerung: 1, letzteAktion: 'SCHWEIGEN' } },
+  detectStasiCustody: () => false,
+  lastFullScene: '',
+  recentTexts: ['Karl steht ploetzlich frei im Cafe.'],
+  storySummaries: ['Karl ist frei.'],
+  diag: () => {}
+};
+vm.createContext(custodyTruthContext);
+vm.runInContext('_custodyVerhoerState = function () { return caseProgress.custodyVerhoer; };', custodyTruthContext);
+vm.runInContext(html.slice(custodyTruthStart, custodyTruthEnd), custodyTruthContext);
+const driftScene = { szene: 'Karl steht ploetzlich frei im Cafe.', ort: 'Cafe im Westen', gewahrsam: false, personenImRaum: ['Zeuge'] };
+assert.strictEqual(custodyTruthContext._custodySceneTruthSichern(driftScene), true,
+  'a model scene that drifts out of custody must be replaced, not release Karl');
+assert(driftScene.szene.length > 500 && driftScene.szene.includes('Zelle 14'),
+  'the custody fallback must be a full prose scene rather than a dry engine instruction');
+assert.strictEqual(driftScene.gewahrsam, true, 'custody truth guard must preserve the state flag');
+assert(driftScene.ort.includes('Hohenschoenhausen'), 'custody truth guard must preserve the physical location');
+assert.deepStrictEqual(Array.from(driftScene.personenImRaum), [], 'ordinary case NPCs must not leak into the cell UI');
+
+assert(html.includes("key: 'mitgehen'") && html.includes("label: 'Mitgehen'"),
+  'a visible MfS access needs an explicit, honest custody choice');
+assert(html.includes("_stasiCustodyEntryVormerken('Karl unterliegt beim Widerstand gegen den MfS-Zugriff')"),
+  'failed resistance against a visible MfS access must lead into custody');
+assert(!html.includes('if (false && _legacyForcedCustodyEntry)'),
+  'the deterministic, engine-authored custody entry must not remain disabled');
+assert(!html.includes("setCustodyState(false, 'ki-signal-frei')"),
+  'a single model boolean must never silently release Karl from an active custody episode');
+assert(!html.includes("setCustodyState(false, 'text-detected-release')"),
+  'a free-form model sentence must never silently release Karl from an active custody episode');
 
 for (const action of ['SCHWEIGEN', 'HALBWAHRHEIT', 'ROTH', 'PROTOKOLL', 'BESTECHEN', 'LAUSCHEN']) {
   assert(html.includes("id: '" + action + "'"), 'custody menu misses action ' + action);

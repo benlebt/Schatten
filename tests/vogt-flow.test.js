@@ -137,7 +137,7 @@ assert.strictEqual(
 assert(/Redaktion/.test(clueScene.szene) && !/nichts Neues|ohne dass/i.test(clueScene.szene),
   'the canonical clue payoff must replace the contradictory no-result prose');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1637 +KesslerVisualNarrativeGuard'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1638 +StasiCustodyStateMachine'"),
   'release version is stale');
 
 console.log('VOGT_FLOW_OK');

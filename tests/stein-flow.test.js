@@ -162,7 +162,7 @@ assert(/if \(keepExisting\)/.test(sourceOf('_naturalMinimumSceneText')),
 assert(/_npcWirklichInSzene/.test(sourceOf('_szenenbildAnwesenheitsVariante')),
   'image presence variants must also follow unequivocal scene prose');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1637 +KesslerVisualNarrativeGuard'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1638 +StasiCustodyStateMachine'"),
   'release version is stale');
 
 console.log('STEIN_FLOW_OK');

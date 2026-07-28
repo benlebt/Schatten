@@ -107,7 +107,7 @@ assert(html.includes("excludesNpcs: ['im_hermes']"),
   'the HO image contract must distinguish the Brakke-only state');
 assert(/Dein letzter Fall/.test(html) && /sceneCounter <= 1/.test(html),
   'opening prose needs the engine-wide previous-case memory filter');
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1637 +KesslerVisualNarrativeGuard'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1638 +StasiCustodyStateMachine'"),
   'release version missing');
 
 console.log('LINDENBAUM_FLOW_OK');
