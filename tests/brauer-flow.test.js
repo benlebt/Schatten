@@ -188,6 +188,36 @@ function sourceOf(name) {
   assert.fail(name + ' has no closing brace');
 }
 
+const serializedSetup = JSON.parse(JSON.stringify(setup));
+delete serializedSetup.abschlussOrt;
+delete serializedSetup.requiredProofPartialText;
+delete serializedSetup.requiredProofConfirmsSafety;
+serializedSetup.requiredProof = {};
+delete serializedSetup.locations[0].arrivalFallbackText;
+const serializedLaundry = serializedSetup.locations.find((entry) =>
+  entry.name === 'Waescherei Koepenick');
+delete serializedLaundry.arrivalFallbackText;
+const serializedRailway = serializedSetup.locations.find((entry) =>
+  entry.name === 'Reichsbahn-Lokschuppen Friedrichstrasse');
+delete serializedRailway.indizien.find((entry) => entry.id === 'schliessfach_leer').fundText;
+const migrationContext = {
+  caseSetup: serializedSetup,
+  INTRO_VARIANTS: context.CASES,
+  normForMatch: (value) => String(value || '').toLowerCase().replace(/[_-]+/g, ' ').trim(),
+};
+vm.createContext(migrationContext);
+vm.runInContext(sourceOf('_migriereCaseSetupOrte'), migrationContext);
+migrationContext._migriereCaseSetupOrte();
+assert(Object.prototype.toString.call(migrationContext.caseSetup.requiredProof) === '[object RegExp]'
+    && migrationContext.caseSetup.requiredProof.test('im Notaufnahmelager registriert'),
+  'restoring a JSON save must recover the canonical requiredProof RegExp');
+assert.strictEqual(migrationContext.caseSetup.abschlussOrt, 'Karl Mauers Büro',
+  'restoring an older save must migrate the configured report location');
+assert(migrationContext.caseSetup.locations[0].arrivalFallbackText
+    && serializedLaundry.arrivalFallbackText
+    && serializedRailway.indizien.find((entry) => entry.id === 'schliessfach_leer').fundText,
+  'restoring an older save must migrate authored arrival and evidence prose');
+
 const proofContext = {
   caseSetup: setup,
   caseProgress: {
