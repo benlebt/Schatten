@@ -30,6 +30,7 @@ for (const name of [
   'Manfred Vogts Wohnung West',
   'Tagesspiegel-Redaktion',
   'Hohenschoenhausen / Genslerstrasse',
+  'S-Bahnhof Friedrichstrasse',
 ]) {
   const location = locations.get(name);
   assert(location && location.arrivalFallbackText
@@ -38,6 +39,8 @@ for (const name of [
   assert(!/betrittst den schauplatz|entscheidest, wen du ansprichst/i.test(location.arrivalFallbackText),
     'Vogt arrival fallback contains mechanical AI-instruction prose at ' + name);
 }
+assert.strictEqual(locations.get('S-Bahnhof Friedrichstrasse').arrivalFallbackRequired, true,
+  'the station arrival must use its canonical setup instead of inventing loose clue objects');
 
 const clues = setup.locations.flatMap((location) => location.indizien || []);
 const clueById = new Map(clues.map((clue) => [clue.id, clue]));
@@ -46,6 +49,11 @@ assert(clueById.get('sigrid_aussage').fundText.split(/\s+/).length >= 45,
 assert(/abgeschlossen|darf der Einbruch weder erneut stattfinden/i.test(
   clueById.get('bueroeinbruch_spur').fortsetzungsWahrheit),
   'the resolved office break-in must not replay at later locations');
+assert(clueById.get('artikel_entwurf').fundText.split(/\s+/).length >= 55,
+  'the article clue needs a complete narrated payoff');
+assert(clueById.get('artikel_entwurf').prosaPflicht
+    && clueById.get('artikel_entwurf').prosaPflicht.replaceOnFallback,
+  'the article clue must replace dry one-line AI prose');
 assert.strictEqual(clueById.get('manfred_haftort').stage, 4,
   'the Hohenschönhausen detention record remains the decisive proof');
 
@@ -69,9 +77,10 @@ function specFor(location) {
   });
 }
 
-for (const [location, id, file] of [
-  ['staatsbibliothek', 'im_linde', 'staatsbibliothek-linde-day.png'],
-  ['hohenschoenhausen', 'hauptmann_pieck', 'hohenschoenhausen-pieck-day.png'],
+for (const [location, id, file, dimensions] of [
+  ['staatsbibliothek', 'im_linde', 'staatsbibliothek-linde-day.png', { width: 1536, height: 1024 }],
+  ['tagesspiegel', 'hauptmann_pieck', 'tagesspiegel-pieck-day.png', { width: 1672, height: 941 }],
+  ['hohenschoenhausen', 'hauptmann_pieck', 'hohenschoenhausen-pieck-day.png', { width: 1536, height: 1024 }],
 ]) {
   const spec = specFor(location);
   assert(spec && Array.isArray(spec.presenceVariants),
@@ -86,8 +95,8 @@ for (const [location, id, file] of [
   const png = fs.readFileSync(imagePath);
   assert.deepStrictEqual(
     { width: png.readUInt32BE(16), height: png.readUInt32BE(20) },
-    { width: 1536, height: 1024 },
-    location + ' visual must use the generated 3:2 scene resolution',
+    dimensions,
+    location + ' visual must use its generated scene resolution',
   );
 }
 
@@ -137,7 +146,41 @@ assert.strictEqual(
 assert(/Redaktion/.test(clueScene.szene) && !/nichts Neues|ohne dass/i.test(clueScene.szene),
   'the canonical clue payoff must replace the contradictory no-result prose');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1669 +LindnerStateContinuity'"),
+const proseContext = {
+  normForMatch: (value) => String(value || '').toLowerCase(),
+  engineCurrentLocation: { name: 'S-Bahnhof Friedrichstrasse' },
+  getCaseLocations: () => [locations.get('S-Bahnhof Friedrichstrasse')],
+  caseProgress: { pendingHauptuiIndiz: null },
+  caseSetup: {},
+};
+vm.createContext(proseContext);
+vm.runInContext(sourceOf('_findUnderwrittenSceneProse'), proseContext);
+const stationArrivalProblem = proseContext._findUnderwrittenSceneProse(
+  {
+    ort: 'S-Bahnhof Friedrichstrasse',
+    szene: 'Du steigst am Bahnhof aus. Unter einer Bank findest du einen Schluesselbund, der im Licht metallisch glaenzt. Die Reisenden draengen an dir vorbei, waehrend ein Volkspolizist den Bahnsteig beobachtet.',
+  },
+  { id: 'REISE', _istReise: true },
+);
+assert(stationArrivalProblem && stationArrivalProblem.requiredArrivalFallback,
+  'a setup-mandated arrival must reject plausible but unsupported generated clue objects');
+
+const closureContext = {
+  caseProgress: { istGeloest: true },
+  cleared: false,
+  _stasiEncounterClear() { closureContext.cleared = true; },
+};
+vm.createContext(closureContext);
+vm.runInContext(sourceOf('_enforcePendingStasiAccessInScene'), closureContext);
+assert.strictEqual(
+  closureContext._enforcePendingStasiAccessInScene({ szene: 'Karl informiert Sigrid.' }),
+  false,
+  'a solved case must not append a new unplayable Stasi access',
+);
+assert.strictEqual(closureContext.cleared, true,
+  'the dangling Stasi encounter must be cleared at case closure');
+
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1670 +VogtProseVisualClosure'"),
   'release version is stale');
 
 console.log('VOGT_FLOW_OK');
