@@ -69,6 +69,28 @@ assert(/Werner Wessel/.test(clueById.get('festnahmeliste_werner').fundText)
     && /Untersuchungshaft/.test(clueById.get('festnahmeliste_werner').fundText)
     && /faschistische Provokation/.test(clueById.get('festnahmeliste_werner').fundText),
   'the decisive Wessel proof must be fully stated in visible prose');
+assert(clueById.get('keibel_einlieferung').prosaPflicht
+    && clueById.get('keibel_einlieferung').prosaPflicht.replaceOnFallback
+    && /Aktenzeichen/.test(clueById.get('keibel_einlieferung').fundText),
+  'the Keibel register clue needs a mandatory narrated payoff, not a dry register summary');
+
+const recurringStart = html.indexOf('const STAMMFIGUREN');
+const recurringEnd = html.indexOf('// v7.12.1014 (Geld-System Stufe 1)', recurringStart);
+assert(recurringStart >= 0 && recurringEnd > recurringStart,
+  'recurring character selection block is missing');
+const recurringContext = {
+  normForMatch(value) {
+    return String(value || '').toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  },
+};
+vm.createContext(recurringContext);
+vm.runInContext(
+  html.slice(recurringStart, recurringEnd) + ';globalThis.pickRecurring=_waehleStammfigur;',
+  recurringContext,
+);
+assert.strictEqual(recurringContext.pickRecurring(setup), null,
+  'global Vollmer must not duplicate the case-specific operational MfS officer Berner');
 
 const imageStart = html.indexOf('const SHARED_SCENE_IMAGES');
 const imageEnd = html.indexOf('function _kesslerSceneNorm', imageStart);
@@ -110,6 +132,28 @@ for (const [location, id, file] of [
     { width: png.readUInt32BE(16), height: png.readUInt32BE(20) },
     { width: 1536, height: 1024 },
     location + ' visual must use the generated 3:2 resolution',
+  );
+}
+
+for (const [location, file, dimensions] of [
+  ['haus der ministerien', 'haus-der-ministerien-berner-day.png', { width: 1672, height: 941 }],
+  ['keibelstrasse', 'keibelstrasse-berner-day.png', { width: 1672, height: 940 }],
+]) {
+  const spec = specFor(location);
+  assert(spec && Array.isArray(spec.presenceVariants),
+    location + ' needs a Berner-bound visual variant');
+  const npcVariant = spec.presenceVariants.find((entry) => entry.id === 'hauptmann_berner');
+  assert(npcVariant && npcVariant.depictsNpcs.includes('hauptmann_berner'),
+    location + ' visual must depict Hauptmann Berner');
+  assert.strictEqual(npcVariant.file, file, location + ' uses the wrong Berner asset');
+  const imagePath = path.join(repoRoot, npcVariant.root || imageSet.root, npcVariant.file);
+  assert(fs.existsSync(imagePath) && fs.statSync(imagePath).size > 1500000,
+    location + ' Berner asset is missing or implausibly small');
+  const png = fs.readFileSync(imagePath);
+  assert.deepStrictEqual(
+    { width: png.readUInt32BE(16), height: png.readUInt32BE(20) },
+    dimensions,
+    location + ' Berner asset has the wrong resolution',
   );
 }
 
@@ -215,6 +259,60 @@ assert(!/Türrahmen|Flur/.test(stationArrival.szene),
 assert(html.indexOf('_enforcePendingStasiAccessInScene(scene);', accessGuardEnd) > accessGuardEnd,
   'pending Stasi access guard must run after final scene repair');
 
+const finalAccessContext = {
+  caseProgress: {
+    stage: 4,
+    wahrheitErkannt: true,
+    forceCustodyNextScene: true,
+    pendingCustodyConfirm: true,
+  },
+  karlInStasiCustody: false,
+  engineCurrentLocation: { name: 'Hohenschoenhausen / Genslerstrasse' },
+  encounter: {
+    active: true,
+    introduced: false,
+    phase: 'zugriff',
+    name: 'Hauptmann Klaus Berner',
+    location: 'Hohenschoenhausen / Genslerstrasse',
+  },
+  clearReason: '',
+  _stasiEncounterGet() { return finalAccessContext.encounter; },
+  _stasiEncounterClear(reason) {
+    finalAccessContext.clearReason = reason;
+    finalAccessContext.encounter.active = false;
+  },
+  _stasiEncounterOrtStimmt() { return true; },
+  normForMatch(value) { return String(value || '').toLowerCase(); },
+  diag() {},
+};
+vm.createContext(finalAccessContext);
+vm.runInContext(accessGuardSource, finalAccessContext);
+assert.strictEqual(finalAccessContext._enforcePendingStasiAccessInScene({
+  ort: 'Hohenschoenhausen / Genslerstrasse',
+  szene: 'Du sicherst Werners entscheidende Haftakte.',
+  personenImRaum: [],
+  optionen: [],
+}), false, 'fresh MfS access must not overwrite the decisive proof scene');
+assert(/entscheidender Fallbeleg/.test(finalAccessContext.clearReason)
+    && finalAccessContext.encounter.active === false,
+  'the unintroduced final-proof encounter must be cleanly cleared');
+
+const threatStart = html.indexOf('function resolveThreatSpawn');
+const threatEnd = html.indexOf('// v7.12.532 (Baustein B2): Gibt aktive', threatStart);
+const threatSource = html.slice(threatStart, threatEnd);
+assert(/metaCustodyGracePeriod > 0/.test(threatSource)
+    && /stasi\|mfs\|staatssicherheit/.test(threatSource)
+    && /continue;/.test(threatSource),
+  'case-specific MfS threats must respect the post-release grace period');
+
+const rosterStart = html.indexOf('function _findRosterPresenceContradiction');
+const rosterEnd = html.indexOf('function _findSceneImageContradiction', rosterStart);
+const rosterSource = html.slice(rosterStart, rosterEnd);
+assert(/_namedAloneContradiction/.test(rosterSource)
+    && /present_roster_denied/.test(rosterSource)
+    && /aloneSentence/.test(rosterSource),
+  'named alone-prose must be rejected when another required NPC is present');
+
 const falseCustodyStart = html.indexOf('function _findFalsePriorCustodyHistory');
 const falseCustodyEnd = html.indexOf('function _findRescueToolDrift', falseCustodyStart);
 assert(falseCustodyStart >= 0 && falseCustodyEnd > falseCustodyStart,
@@ -253,7 +351,7 @@ assert(html.includes("problem.code === 'false_prior_custody_history'"),
 assert(/Du schiebst Werners Akten auf dem Schreibtisch zusammen/.test(html),
   'Wessel office sleep needs a canonical custody-free fallback');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1670 +VogtProseVisualClosure'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1671 +WesselStasiIdentityVisual'"),
   'release version is stale');
 
 console.log('WESSEL_FLOW_OK');
