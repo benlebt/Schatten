@@ -16632,3 +16632,13 @@ Freilassung. Am bereits eindeutig benannten Außenort vor der Haftanstalt gilt
 deshalb zusätzlich klare Entlassungssprache als verbindlicher Beleg. Damit
 bleibt der Personenresolver leer und kann kein Haftpersonal aus einem alten
 Cast oder Threat-Roster zurückholen.
+
+## 🆕 v7.12.1651 — Haupt-UI respektiert die leere Freilassungsszene
+
+Die dritte Live-Prüfung lokalisierte die letzte Berner-Altlast: Der normale
+Ortsresolver war bereits leer, doch der vereinheitlichte Zielaufbau ergänzte
+anschließend Figuren aus dem globalen Modell-Cast. Eine letzte Schranke direkt
+vor dem Personenmodell leert deshalb bei einer eindeutigen Freilassung nur die
+physischen Personen-Ziele. Spuren, Fundstücke und Inventar bleiben vollständig
+spielbar; Haftpersonal kann nicht mehr nachträglich unter „Anwesend“
+rematerialisiert werden.

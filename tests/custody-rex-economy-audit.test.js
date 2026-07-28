@@ -7,7 +7,7 @@ const { readWebpDimensions } = require('./image-format-utils');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1650 +StasiReleaseRosterTruth'"), 'version constant is stale');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1651 +StasiReleaseTargetTruth'"), 'version constant is stale');
 assert(html.includes("text: _resolveIstEigenauftrag ? 'Eigen-Auftrag abschließen und Wahrheit festhalten.' : 'Fall abschließen und Auftraggeber informieren.'"),
   'resolve button copy must stay player-facing for external and self-assigned cases');
 assert(html.includes('_enginePrompt: [_resolveText, _resolveTransitionPrompt, _resolvePhysicalTruth]'), 'resolve direction must preserve physical target truth');
@@ -535,6 +535,10 @@ assert(html.includes('const istFreilassungsSzene = !!(scene && scene.gewahrsam =
   'released exterior scenes must use the empty base image instead of a stale officer presence variant');
 assert(html.includes("&& _custodyReleaseSceneErkennbar((typeof currentScene !== 'undefined') ? currentScene : null)) return [];"),
   'the people roster must not rematerialize prison personnel during an explicit release');
+assert(html.includes('// v7.12.1651: ABSOLUT LETZTE Freilassungs-Schranke vor dem Personenmodell.')
+    && html.includes('Spuren und Inventar')
+    && html.includes('_np = [];'),
+  'the unified target builder must clear stale cast injectors after all person sources have run');
 assert(html.includes("_custodyReleaseStateTruthSichern(currentScene, 'restore');"),
   'saved release truth must be repaired before header, image, and options are restored');
 assert(html.includes('const istGewahrsam = !istFreilassungsSzene && ('),
