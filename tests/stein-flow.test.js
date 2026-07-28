@@ -88,10 +88,11 @@ function specFor(location) {
   });
 }
 
-for (const [location, id, file] of [
+for (const [location, id, file, width = 1536, height = 1024] of [
   ['margarete steins wohnung', 'mann_im_mantel', 'margarete-wohnung-mantel-night.png'],
   ['reichsbahndirektion', 'im_anker', 'reichsbahndirektion-wahler-anker-day.png'],
   ['charite', 'oberleutnant_mertens', 'charite-mertens-day.png'],
+  ['karl mauers buero', 'oberleutnant_mertens', 'karl-mauers-buero-mertens-arrest-day-v1661.png', 1672, 941],
   ['karl mauers buero', 'vera_lindqvist', 'karl-mauers-buero-vera-night.png'],
   ['friedrichstrasse', 'margarete_stein', 'friedrichstrasse-margarete-day.png'],
 ]) {
@@ -112,8 +113,8 @@ for (const [location, id, file] of [
   const png = fs.readFileSync(imagePath);
   assert.deepStrictEqual(
     { width: png.readUInt32BE(16), height: png.readUInt32BE(20) },
-    { width: 1536, height: 1024 },
-    location + ' visual must use the generated 3:2 resolution',
+    { width, height },
+    location + ' visual must use its intended generated resolution',
   );
 }
 
@@ -162,7 +163,7 @@ assert(/if \(keepExisting\)/.test(sourceOf('_naturalMinimumSceneText')),
 assert(/_npcWirklichInSzene/.test(sourceOf('_szenenbildAnwesenheitsVariante')),
   'image presence variants must also follow unequivocal scene prose');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1660 +ThreatContinuityTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1661 +MertensOfficeVisual'"),
   'release version is stale');
 assert(html.includes('Vom Hackeschen Markt dringen gedämpfte Motorengeräusche')
     && html.includes('Noch passt nicht jedes Stück zusammen'),
