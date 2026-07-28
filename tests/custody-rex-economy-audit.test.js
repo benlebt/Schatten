@@ -7,7 +7,7 @@ const { readWebpDimensions } = require('./image-format-utils');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1648 +StasiReleaseCoherence'"), 'version constant is stale');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1649 +StasiReleaseRestoreTruth'"), 'version constant is stale');
 assert(html.includes("text: _resolveIstEigenauftrag ? 'Eigen-Auftrag abschließen und Wahrheit festhalten.' : 'Fall abschließen und Auftraggeber informieren.'"),
   'resolve button copy must stay player-facing for external and self-assigned cases');
 assert(html.includes('_enginePrompt: [_resolveText, _resolveTransitionPrompt, _resolvePhysicalTruth]'), 'resolve direction must preserve physical target truth');
@@ -298,6 +298,9 @@ const custodyTruthContext = {
   recentTexts: ['Karl steht ploetzlich frei im Cafe.'],
   storySummaries: ['Karl ist frei.'],
   _aktTageszeitName: () => 'NACHT',
+  normForMatch: (value) => String(value || '')
+    .toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
+    .replace(/[^a-z0-9]+/g, ' ').trim(),
   diag: () => {}
 };
 vm.createContext(custodyTruthContext);
@@ -345,6 +348,24 @@ assert.strictEqual(custodyTruthContext._custodyReleaseSceneTruthSichern(skeletal
   'a one-line technical release must be expanded into proper scene prose');
 assert(skeletalReleaseScene.szene.length > 500 && skeletalReleaseScene.szene.includes('Du bist frei'),
   'release guard must never leave a dry one-line AI instruction as the complete scene');
+custodyTruthContext.karlInStasiCustody = true;
+custodyTruthContext.engineCurrentLocation = {
+  name: 'MfS-Untersuchungshaftanstalt Hohenschoenhausen, Zelle 14',
+  sektor: 'Ost'
+};
+const staleSavedReleaseScene = {
+  szene: contradictoryReleaseScene.szene,
+  ort: 'Vor der MfS-Untersuchungshaftanstalt Hohenschoenhausen',
+  personenImRaum: ['Hauptmann Klaus Berner']
+};
+assert.strictEqual(custodyTruthContext._custodyReleaseStateTruthSichern(staleSavedReleaseScene, 'audit-restore'), true,
+  'an old saved release without gewahrsam:false must still be recognized and repaired');
+assert.strictEqual(custodyTruthContext.karlInStasiCustody, false,
+  'restoring an explicit release must clear the stale global custody state before rendering');
+assert.deepStrictEqual(Array.from(staleSavedReleaseScene.personenImRaum), [],
+  'restoring an explicit release must remove stale prison personnel from the visible roster');
+assert.strictEqual(custodyTruthContext.engineCurrentLocation.releasedFromCustody, true,
+  'restoring an explicit release must align the engine location with the exterior scene');
 
 assert(html.includes("key: 'mitgehen'") && html.includes("label: 'Mitgehen'"),
   'a visible MfS access needs an explicit, honest custody choice');
@@ -505,11 +526,17 @@ assert(html.includes("scene.ort = releaseOrt;")
     && html.includes("scene.gewahrsam = false;")
     && html.includes("releasedFromCustody: true"),
   'release truth guard must align scene location, custody flag, and engine location');
-assert(html.includes('const explicitReleaseScene = scene && scene.gewahrsam === false')
+assert(html.includes("const explicitReleaseScene = (typeof _custodyReleaseSceneErkennbar === 'function')")
     && html.includes('&& !explicitReleaseScene)'),
   'rendering a release scene must not re-enable custody from retrospective prison prose');
 assert(html.includes('const istFreilassungsSzene = !!(scene && scene.gewahrsam === false')
-    && html.includes('if (istFreilassungsSzene) return spec;'),
+    || html.includes("const istFreilassungsSzene = (typeof _custodyReleaseSceneErkennbar === 'function'"),
   'released exterior scenes must use the empty base image instead of a stale officer presence variant');
+assert(html.includes("&& _custodyReleaseSceneErkennbar((typeof currentScene !== 'undefined') ? currentScene : null)) return [];"),
+  'the people roster must not rematerialize prison personnel during an explicit release');
+assert(html.includes("_custodyReleaseStateTruthSichern(currentScene, 'restore');"),
+  'saved release truth must be repaired before header, image, and options are restored');
+assert(html.includes('const istGewahrsam = !istFreilassungsSzene && ('),
+  'the custody cell image must be impossible in an explicit release scene');
 
 console.log('CUSTODY_REX_ECONOMY_AUDIT_OK');

@@ -16604,3 +16604,20 @@ Szenenbild verwendet vor dem Gefängnis das leere Außenmotiv statt einer
 Offiziersvariante. Der deterministische Freilassungstext nennt keine pauschale
 Morgenfreilassung mehr, sondern übernimmt Nacht, Abend oder Tageslicht aus der
 aktuellen Engine-Zeit.
+
+## 🆕 v7.12.1649 — Freilassungs-Weltwahrheit heilt auch alte Spielstände
+
+Der Produktions-Restore von v1648 bestätigte die freie Aktions-UI, zeigte aber
+noch den alten Zellenzustand in Header und Szenenbild sowie Berner unter
+„Anwesend“. Ursache war die Render-Reihenfolge: Ein älterer Save besaß noch
+`karlInStasiCustody=true` und kein modernes `gewahrsam:false`. Erst
+`renderOptions` erkannte die Freilassung; Header und Bild waren zu diesem
+Zeitpunkt bereits aus dem veralteten Zustand gebaut.
+
+Die Engine erkennt eine Freilassung nun unabhängig vom alten Flag an der
+Kombination aus eindeutigem Außenort vor der MfS-Untersuchungshaftanstalt und
+ausdrücklicher Entlassungsprosa. Diese Weltwahrheit wird beim Restore und beim
+Szenen-Commit vor jedem Render atomar hergestellt: Karl ist frei, der
+Engine-Ort liegt vor dem Gefängnis, der sichtbare Personenbestand ist leer und
+ein alter MfS-Encounter wird beendet. Zusätzlich sperren Bild- und
+Personenresolver Zelle und Haftpersonal in genau diesem Übergangszustand.
