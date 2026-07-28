@@ -121,6 +121,15 @@ assert(html.includes('KRAUSE-KENNTNISGRENZE'),
   'the direct client prompt must bind Krause to his canonical knowledge before generation');
 assert(sourceOf('buildNpcContinuityHint').includes('_clientDepartureAfterReply'),
   'the continuity prompt must defer Krause absence during the selected reply scene');
+assert(html.includes('jemand, dem Karl schon einmal aus der Klemme geholfen hat')
+  && !html.includes('wurde von Karl schon einmal aus der Klemme geholfen'),
+  'career continuity must use grammatical German instead of the faulty passive phrase');
+assert(sourceOf('_findUnderwrittenSceneProse').includes('summaryLead'),
+  'colon-led evidence summaries such as the live Bornstein line must be rejected as underwritten prose');
+assert(html.includes("pendingCategoryChoice === 'SICHERUNG'")
+  && html.includes("deltaSource = pendingCategoryChoice === 'RETTUNG'")
+  && html.includes("'sicherung-geschuetzt'"),
+  'a resolved physical-item securing click must not invent another injury after combat has ended');
 
 const execute = sourceOf('_hauptuiExecute');
 const attackStart = execute.indexOf("if (verb === 'angreifen')");

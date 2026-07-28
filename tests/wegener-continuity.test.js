@@ -74,6 +74,30 @@ assert(rudiClue && rudiClue.quelle === 'person' && rudiClue.npc === 'rudi_menzel
   'Rudi must personally disclose the warehouse route instead of turning into an environment notebook');
 assert(!Array.from(rudiClue.actions || []).includes('ERKUNDEN'),
   'the named witness clue must not be collectable as an unrelated search');
+assert(rudiClue.fundText && /Backsteinhalle direkt an der Spree/.test(rudiClue.fundText),
+  'Rudi needs a dramatized deterministic disclosure instead of a dry summary');
+const lotharClue = hinterhof && Array.from(hinterhof.indizien || []).find((clue) => clue && clue.id === 'lothar_schluessel');
+assert(lotharClue && lotharClue.fundText
+  && /Lothar bleibt im Hinterhof/.test(lotharClue.fundText)
+  && /Erwin Kratz bewacht ihn/.test(lotharClue.fundText),
+  'Lothar disclosure must preserve location, roster and named guard');
+for (const locationName of [
+  'Wegener-Wohnung',
+  'Werft VEB Koepenick',
+  'Hinterhof Spreestrasse',
+  'Lagerhalle an der Spree'
+]) {
+  const location = Array.from(wegener.setup.locations).find((entry) => entry && entry.name === locationName);
+  assert(location && location.arrivalFallbackText,
+    `${locationName} needs authored arrival prose instead of a dry engine template`);
+}
+const wageClue = Array.from(wegener.setup.locations)
+  .find((location) => location && location.name === 'Wegener-Wohnung').indizien[0];
+assert(wageClue.fundText && /kein erfundener Verfolger/.test(wageClue.fundText),
+  'the wage-slip scene must not invent an unrostered door threat that blocks travel');
+assert(html.includes("if (!hasNewViolence) {")
+  && html.includes('alte Wunden und unsichtbarer Schaden zaehlen nicht'),
+  'high tension alone must not reduce health without a new injury event');
 const clientHandoffVisual = wegener.setup.targetResolution.visualStates.clientHandoff;
 assert(clientHandoffVisual
   && clientHandoffVisual.dayFile === 'wegener-wohnung-wiedervereinigung-day.webp'

@@ -18,7 +18,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1623 +BrauerCasePolish'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1633 +AllCasesNinePolish'"),
   'Brandt regression release version missing');
 
 for (const bad of [
@@ -74,6 +74,53 @@ assert(brandtBlock.includes('erfinde fuer Kurt keine Begleiter oder Schlaeger'),
 assert(brandtBlock.includes('Lola Brandt steht im festen Szenenbild bei der kleinen Buehne und dem Mikrofon')
   && brandtBlock.includes('Kurt sitzt an einem Ecktisch'),
   'Rote Laterne prose staging must match the fixed Lola/Kurt scene image');
+for (const location of [
+  'Rote Laterne',
+  'Anton Brandts Eckkneipe und Wohnung',
+  'Erich Brandts ehemalige Wohnung'
+]) {
+  const locationStart = brandtBlock.indexOf("{ name: '" + location + "'");
+  assert(locationStart >= 0 && brandtBlock.slice(locationStart, locationStart + 1800).includes('arrivalFallbackText:'),
+    location + ' needs an authored arrival instead of a dry routing template');
+}
+const underwrittenSource = sourceOf('_findUnderwrittenSceneProse');
+assert(underwrittenSource.includes('escapedQuote') && underwrittenSource.includes('repeatedConjunctionFragment'),
+  'literal escaped quotes and broken repeated conjunction fragments must trigger prose repair');
+assert(underwrittenSource.includes('ueberfuehrt'),
+  'a dry evidence summary beginning with "ueberfuehrt:" must trigger prose repair');
+const rosterPresenceSource = sourceOf('_findRosterPresenceContradiction');
+assert(rosterPresenceSource.includes('schankraum|club|kneipe')
+  && rosterPresenceSource.includes('leeren|menschenleeren|verwaisten'),
+  'an occupied pub or club must not be narrated as empty or deserted');
+const brandtProseGuardContext = {
+  engineCurrentLocation: { name: 'Rote Laterne' },
+  getCaseLocations: () => [],
+  normForMatch: value => String(value || '').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, ''),
+  caseProgress: {}
+};
+vm.createContext(brandtProseGuardContext);
+vm.runInContext(underwrittenSource, brandtProseGuardContext);
+assert(brandtProseGuardContext._findUnderwrittenSceneProse({
+  szene: '\\"Er war hier. Kurz bevor er. bevor er ging.\\"'
+}, {}), 'escaped quotes and a repeated broken fragment must be rejected');
+assert(brandtProseGuardContext._findUnderwrittenSceneProse({
+  szene: 'Kurt Lange ueberfuehrt: Er erschoss Erich und inszenierte den Selbstmord.'
+}, {}), 'a dry terminal evidence summary must be rejected');
+const brandtRosterGuardContext = {
+  engineCurrentLocation: { name: 'Rote Laterne' },
+  normForMatch: brandtProseGuardContext.normForMatch,
+  getNpcsAtCurrentLocation: () => [{ id: 'lola_brandt', name: 'Lola Brandt' }],
+  _npcZustandIstEntfernt: () => false,
+  _worldTruthAliases: (id, entry) => [id, entry.name],
+  _worldTruthHasAlias: (text, aliases) => aliases.some(alias =>
+    brandtProseGuardContext.normForMatch(text).includes(brandtProseGuardContext.normForMatch(alias)))
+};
+vm.createContext(brandtRosterGuardContext);
+vm.runInContext(rosterPresenceSource, brandtRosterGuardContext);
+assert(brandtRosterGuardContext._findRosterPresenceContradiction({
+  szene: 'Lola sieht sich im leeren Club um.'
+}), 'the prose must not call a club empty while Lola is present');
 assert(brandtBlock.includes('Formuliere NICHT "erster Mai"'),
   'the 21 May opening must not sound like May Day');
 assert(brandtBlock.includes('Die Ursache des Blackouts ist noch vollkommen unbekannt')

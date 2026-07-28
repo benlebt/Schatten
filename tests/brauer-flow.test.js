@@ -120,8 +120,8 @@ const laundrySpec = imageSet.images.find((entry) => {
 });
 assert(laundrySpec && laundrySpec.depictsNpcs.includes('greta_schliemann'),
   'the laundry image must contractually depict Greta');
-assert(/allein/i.test(laundrySpec.alt),
-  'the laundry alt contract must exclude the removed phantom railway worker');
+assert(!/allein|reichsbahn|schaffner/i.test(laundrySpec.alt),
+  'the laundry alt contract must exclude the phantom railway worker without denying dynamic actors');
 assert.deepStrictEqual(
   readWebpDimensions(path.join(repoRoot, imageSet.root, laundrySpec.file)),
   { width: 1536, height: 864 },
@@ -180,6 +180,26 @@ function sourceOf(name) {
   }
   assert.fail(name + ' has no closing brace');
 }
+
+const apartmentRosterContext = {
+  engineCurrentLocation: { name: 'Hilde Brauer Wohnung Koepenick' },
+  normForMatch: (value) => String(value || '').toLowerCase(),
+  getNpcsAtCurrentLocation: () => [
+    { id: 'hilde_brauer', name: 'Hilde Brauer' },
+  ],
+  _npcZustandIstEntfernt: () => false,
+  _worldTruthAliases: (id, entry) => [String(id || '').replace(/_/g, ' '), entry.name],
+  _worldTruthHasAlias: (text, aliases) => aliases.some((alias) =>
+    String(text || '').toLowerCase().includes(String(alias || '').toLowerCase())),
+};
+vm.createContext(apartmentRosterContext);
+vm.runInContext(sourceOf('_findRosterPresenceContradiction'), apartmentRosterContext);
+const falseAloneApartment = apartmentRosterContext._findRosterPresenceContradiction({
+  szene: 'Du stehst allein in der kleinen Wohnung und öffnest Erwins Kleiderschrank.',
+  personenImRaum: [],
+});
+assert(falseAloneApartment && falseAloneApartment.code === 'present_roster_denied',
+  'Brauer clue prose must not call the apartment empty while Hilde remains in UI and scene image');
 
 const uiContext = {
   window: { HAUPTUI_AKTIV: true },
@@ -313,5 +333,35 @@ const visualProblems = visualContext._szenenbildPflichtbesetzungPruefen(
 );
 assert(Array.from(visualProblems).some((problem) => /Hauptmann Vollmer/.test(problem)),
   'a dynamic central STASI actor missing from a fixed image must fail the scene-image cast contract');
+assert(/Sachbearbeiter Rolf Meissner/.test(marienfelde.arrivalFallbackText)
+    && /Dr\. Ruth Kellner/.test(marienfelde.arrivalFallbackText)
+    && /Registratur/.test(marienfelde.arrivalFallbackText),
+  'Marienfelde needs authored arrival prose that names both visible staff NPCs');
+assert(!/Kleiderschrank offen|dort lässt sich prüfen/.test(apartment.arrivalFallbackText),
+  'repeat visits to Hilde must not replay the already investigated wardrobe clue');
+assert(!html.includes('Greta Schliemann allein in ihrer Köpenicker Wäscherei'),
+  'the fixed laundry image contract must not deny additional dynamic actors');
+
+const reportResolverContext = {
+  cast: [],
+  currentScene: { personenImRaum: ['Hilde Brauer'] },
+  getNpcsAtCurrentLocation: () => [],
+  normForMatch: value => String(value || '').toLowerCase(),
+  _npcZustandIstEntfernt: () => false,
+  _findSetupCastFuzzy: (name, id) =>
+    (id === 'hilde_brauer' || name === 'Hilde Brauer')
+      ? { id: 'hilde_brauer', name: 'Hilde Brauer', tag: 'CLIENT' }
+      : null
+};
+vm.createContext(reportResolverContext);
+vm.runInContext(sourceOf('_hauptuiNpc'), reportResolverContext);
+const visibleReportClient = reportResolverContext._hauptuiNpc({
+  id: 'hilde_brauer',
+  name: 'Hilde Brauer',
+  typ: 'person',
+  erledigt: true
+});
+assert(visibleReportClient && visibleReportClient.id === 'hilde_brauer',
+  'a visible one-time client must remain executable for the final report even after leaving the global cast');
 
 console.log('BRAUER_FLOW_OK');

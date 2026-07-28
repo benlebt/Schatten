@@ -33,6 +33,8 @@ function sourceOf(name) {
 for (const file of [
   'assets/scenes/hollenbeck/datscha-mueggelsee-faber-day.png',
   'assets/scenes/hollenbeck/datscha-mueggelsee-faber-night.png',
+  'assets/scenes/hollenbeck/datscha-mueggelsee-faber-gone-day-v1633.png',
+  'assets/scenes/hollenbeck/datscha-mueggelsee-faber-gone-night-v1633.png',
   'assets/scenes/hollenbeck/disconto-bank-wegner-day.png',
   'assets/scenes/hollenbeck/disconto-bank-brehme-confrontation-day.png',
   'assets/scenes/hollenbeck/polizeirevier-hardenbergstrasse-hollenbeck-handoff-day.png',
@@ -43,6 +45,10 @@ for (const file of [
 
 assert(html.includes("file: 'datscha-mueggelsee-faber-night.png'"),
   'Datscha must use the visual that depicts Leutnant Ingrid Faber instead of a male guard');
+assert(html.includes("guardRemovedAtTarget: {")
+    && html.includes("file: 'datscha-mueggelsee-faber-gone-night-v1633.png'")
+    && html.includes("depictsNpcs: ['friedrich_hollenbeck']"),
+  'the Datscha must switch to a guard-free image while Hollenbeck is still bound');
 assert(html.includes("alt: 'Szenenbild: Friedrich Hollenbeck sitzt gefesselt in der Datscha"),
   'Datscha image alternative text must name both Hollenbeck and Faber');
 assert(html.includes("{ id: 'friedrich_hollenbeck', immer: true, abStage: 3 }")
@@ -64,6 +70,15 @@ assert(html.includes("Der Bankpförtner erkennt dich als privaten Ermittler"),
   'bank porter clue must use Karl’s real professional role instead of an invented press pass');
 assert(html.includes("openingFallbackText: 'Du sitzt Kommissar Heinrich Lindner"),
   'Lindner opening needs a deterministic identity-safe fallback');
+assert(!html.includes('2000 D-Mark')
+    && html.includes('270 Ostmark, Spesen eingeschlossen'),
+  'the promised Lindner fee must match the engine payout');
+assert(html.includes("arrivalFallbackText: 'Du stellst den Opel am Strandweg vor der Hollenbeck-Villa ab."),
+  'the Villa needs an authored arrival with a physically correct sequence');
+assert(!html.includes(' ist sichtbar am Ort')
+    && !html.includes(' sind sichtbar am Ort')
+    && !html.includes(' bleiben sichtbar am Ort'),
+  'natural fallback prose must not expose roster-verification language');
 assert(html.includes('deniedProse: deniedProse.map'),
   'arrival roster validation must reject prose that names a required NPC only to deny their presence');
 assert(html.includes('const distinctiveName = nameTokens.length ? nameTokens[nameTokens.length - 1]'),
@@ -152,6 +167,66 @@ assert.strictEqual(rescueUiContext._hauptuiOffenesRettungsziel({
   name: 'Friedrich Hollenbeck',
   typ: 'person'
 }), true, 'a physical target at its configured rescue location must not become an exhausted dead-end');
+
+const revealContext = {
+  caseSetup: {
+    targetResolution: {
+      mode: 'physical',
+      npc: 'friedrich_hollenbeck',
+      location: 'Datscha am Mueggelsee',
+      abStage: 3,
+      revealClueIds: ['sokolow_briefe']
+    }
+  },
+  caseProgress: {
+    gefundeneIndizIds: ['pfoertner_aussage'],
+    zielpersonGefunden: false,
+    zielpersonGeborgen: false
+  },
+  alleDefiniertenIndizien: () => [
+    { id: 'pfoertner_aussage', stage: 3 },
+    { id: 'sokolow_briefe', stage: 4 }
+  ],
+  _resolveNpcIdentity: () => ({ name: 'Friedrich Hollenbeck' })
+};
+vm.createContext(revealContext);
+vm.runInContext(sourceOf('_physischesFallzielStatus'), revealContext);
+assert.strictEqual(revealContext._physischesFallzielStatus(), null,
+  'a same-stage porter clue must not reveal the Datscha');
+revealContext.caseProgress.gefundeneIndizIds.push('sokolow_briefe');
+assert.strictEqual(revealContext._physischesFallzielStatus().revealClueId, 'sokolow_briefe',
+  'only the configured Sokolow letters may reveal the Datscha');
+
+const rescueToolContext = {
+  engineCurrentLocation: { name: 'Datscha am Mueggelsee' },
+  normForMatch: value => String(value || '').toLowerCase()
+};
+vm.createContext(rescueToolContext);
+vm.runInContext(sourceOf('_findRescueToolDrift'), rescueToolContext);
+const inventedKnife = rescueToolContext._findRescueToolDrift({
+  szene: 'Du greifst nach der Klinge deines Klappmessers und ziehst es aus der Tasche.'
+}, { id: 'HAUPTUI_ZIELPERSON_BEFREIEN', _npcName: 'Friedrich Hollenbeck' });
+assert(inventedKnife && inventedKnife.code === 'rescue_tool_drift',
+  'freeing a target must reject an invented knife');
+
+vm.runInContext(sourceOf('_worldTruthNaturalRescueFallbackText'), rescueToolContext);
+const rescueFallback = rescueToolContext._worldTruthNaturalRescueFallbackText(
+  'Friedrich Hollenbeck',
+  { id: 'HAUPTUI_ZIELPERSON_ZUM_OPEL' }
+);
+assert(/Arm von Friedrich Hollenbeck/.test(rescueFallback)
+    && /Beifahrertür/.test(rescueFallback)
+    && !/Gespräch endet|sichtbar am Ort/.test(rescueFallback),
+  'rescue transport must use authored physical prose instead of a social fallback');
+
+vm.runInContext(sourceOf('_findPhantomImmediateThreat'), rescueToolContext);
+rescueToolContext.caseProgress = {};
+const danglingWatcher = rescueToolContext._findPhantomImmediateThreat({
+  szene: 'Margit schweigt. Jemand nähert sich dem Fenster.',
+  personenImRaum: ['Margit Hollenbeck']
+}, { id: 'AKTEN_LESEN' });
+assert(danglingWatcher && danglingWatcher.code === 'phantom_immediate_threat',
+  'an unbacked anonymous-threat cliffhanger must be rejected even with a peaceful NPC present');
 
 const departureContext = {
   caseSetup: {},

@@ -85,8 +85,8 @@ assert(html.includes('function _hauptuiKonfrontationBeruhigtenTeilRueckzugSicher
   'group de-escalation needs a separate prose/image continuity guard');
 assert(sourceOf('_hauptuiKonfrontationAbschliessen').includes('_hauptuiKonfrontationBeruhigtenTeilRueckzugSichern(name, k)'),
   'a pacified partial opponent must remain passively visible while the group fight continues');
-assert(sourceOf('_hauptuiKonfrontationAbschliessen').includes("finalStatus === 'beruhigt' && !istGruppenKonfrontation"),
-  'only solo de-escalation may force a visible departure');
+assert(sourceOf('_hauptuiKonfrontationAbschliessen').includes("finalStatus === 'beruhigt' || beruhigterEinzelAbgang"),
+  'a solo de-escalation converted to a terminal flight must still force the visible departure');
 assert(sourceOf('_hauptuiKonfrontationDeeskalationsAbschlussPrompt').includes('Niemand verlaesst den Ort'),
   'the group de-escalation prompt must forbid one opponent from taking active opponents out of the scene');
 assert(html.includes("_renderKesslerSceneVisual(currentScene);"), 'danger styling must update without waiting for another player click');
@@ -226,6 +226,7 @@ let optionRefreshes = 0;
 const context = {
   caseProgress: { activeConfrontation: { enemyName: 'Hauptmann Klaus Berner' } },
   currentScene: { szene: 'Berner taumelt.' },
+  normForMatch: value => String(value || '').toLowerCase(),
   diag: () => {},
   saveGame: () => {},
   _npcZustandSet: (name, state) => stateWrites.push([name, state.status]),
@@ -258,6 +259,23 @@ context._hauptuiKonfrontationAbschliessen(
 );
 assert.strictEqual(context.caseProgress.activeConfrontation, null, 'a strong cumulative follow-up must end the confrontation');
 assert.strictEqual(stateWrites.at(-1)[1], 'ko', 'the cumulative follow-up must produce a real terminal state');
+
+context.caseProgress.activeConfrontation = { enemyName: 'Kalle der Schiefe' };
+context.currentScene.szene = 'Kalle steckt das Messer ein. Du bist jetzt allein mit Detlef.';
+context._hauptuiKonfrontationAbschliessen(
+  { name: 'Kalle der Schiefe' },
+  'Kalle der Schiefe',
+  'beruhigt',
+  'deeskalation',
+  null,
+  { art: 'deeskalation' }
+);
+assert.strictEqual(context.caseProgress.activeConfrontation, null,
+  'a successful solo de-escalation must clear the confrontation immediately');
+assert.strictEqual(stateWrites.at(-1)[1], 'geflohen',
+  'a pacified solo guard with no open clue role must receive a terminal removed state');
+assert(/Kalle der Schiefe wendet sich endgueltig ab und verlaesst den Ort\./.test(context.currentScene.szene),
+  'the same scene must visibly narrate the pacified solo guard leaving');
 
 const departureContext = {
   currentScene: {
