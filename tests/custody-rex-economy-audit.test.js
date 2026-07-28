@@ -7,7 +7,7 @@ const { readWebpDimensions } = require('./image-format-utils');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1652 +StasiReleaseGrace'"), 'version constant is stale');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1653 +StasiGracePressureTruth'"), 'version constant is stale');
 assert(html.includes("text: _resolveIstEigenauftrag ? 'Eigen-Auftrag abschließen und Wahrheit festhalten.' : 'Fall abschließen und Auftraggeber informieren.'"),
   'resolve button copy must stay player-facing for external and self-assigned cases');
 assert(html.includes('_enginePrompt: [_resolveText, _resolveTransitionPrompt, _resolvePhysicalTruth]'), 'resolve direction must preserve physical target truth');
@@ -128,6 +128,7 @@ assert.strictEqual(forcedTravel.caseProgress.activeConfrontation.trigger, 'stasi
 
 const releasedGrace = makeEncounterContext(true);
 vm.runInContext('metaCustodyGracePeriod = 5', releasedGrace);
+vm.runInContext('stasiTension = 5; stasiHighTensionStreak = 3; stasiMaxTensionStreak = 2;', releasedGrace);
 assert.strictEqual(releasedGrace._stasiEncounterForceZugriff('unmittelbar nach Freilassung'), null,
   'no force path may recreate a Stasi access during the release grace period');
 releasedGrace._stasiEncounterAdvance('ERMITTLUNG');
@@ -135,6 +136,10 @@ assert.strictEqual(releasedGrace.caseProgress.stasiEncounter, undefined,
   'ordinary investigation must not spawn an observation during the release grace period');
 assert.strictEqual(releasedGrace.caseProgress.stasiEncounterEligibleScenes, 0,
   'release grace must not silently accumulate an immediate follow-up access');
+assert.strictEqual(vm.runInContext('stasiTension', releasedGrace), 2,
+  'release grace must heal maximum residual tension in an already advanced old save');
+assert.strictEqual(vm.runInContext('stasiHighTensionStreak', releasedGrace), 0,
+  'release grace must clear residual high-tension streaks');
 
 // Vollstaendiger Stein-aehnlicher Pfad: Relevanz 5 startet eine benannte
 // Beobachtung, diese darf verdeckt einen Ortswechsel mitmachen, wird sichtbar
@@ -409,7 +414,8 @@ assert.deepStrictEqual(custodyTruthContext.lastEncounterClear,
 assert.strictEqual(custodyTruthContext.caseProgress.stasiPflichtSeitScene, 0,
   'release repair must clear the prompt-level compulsory-access marker');
 assert(html.includes('STASI-NACHWIRKUNG NACH FREILASSUNG')
-    && html.includes('KEIN aktiver Beobachter, KEINE Kontrolle, KEIN Zugriff'),
+    && html.includes('KEIN aktiver Beobachter, KEINE Kontrolle, KEIN Zugriff')
+    && html.includes('Keine Maenner, die Karl verfolgen, abfangen, an seiner Tuer warten oder ein Schloss aufbrechen'),
   'scene prompting must explicitly keep the grace period atmospheric');
 
 assert(html.includes("key: 'mitgehen'") && html.includes("label: 'Mitgehen'"),
