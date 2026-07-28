@@ -7,7 +7,7 @@ const { readWebpDimensions } = require('./image-format-utils');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1641 +StasiReleaseContinuity'"), 'version constant is stale');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1642 +StasiReleaseSceneCounter'"), 'version constant is stale');
 assert(html.includes("text: _resolveIstEigenauftrag ? 'Eigen-Auftrag abschließen und Wahrheit festhalten.' : 'Fall abschließen und Auftraggeber informieren.'"),
   'resolve button copy must stay player-facing for external and self-assigned cases');
 assert(html.includes('_enginePrompt: [_resolveText, _resolveTransitionPrompt, _resolvePhysicalTruth]'), 'resolve direction must preserve physical target truth');
@@ -231,7 +231,7 @@ const custodySetterContext = {
   karlInStasiCustody: false,
   engineCurrentLocation: { name: 'Reichsbahndirektion', sektor: 'Ost' },
   caseProgress: {},
-  sceneNumber: 12,
+  sceneCounter: 12,
   stasiCustodyScenesSince: 0,
   folterSceneCount: 0,
   stasiHighTensionStreak: 0,
@@ -259,9 +259,13 @@ vm.runInContext(html.slice(custodySetterStart, custodySetterEnd), custodySetterC
 custodySetterContext.setCustodyState(true, 'Audit-Festnahme');
 assert(custodySetterContext.engineCurrentLocation.name.includes('Zelle 14'), 'confirmed arrest must move Karl into the real cell location');
 assert.strictEqual(custodySetterContext.caseProgress.custodyEntryFrom.name, 'Reichsbahndirektion', 'custody must remember the arrest location');
+assert.strictEqual(custodySetterContext.caseProgress.custodyEnteredAtScene, 12,
+  'custody entry tracking must use the global engine scene counter');
 custodySetterContext.setCustodyState(false, 'Audit-Freilassung');
 assert.strictEqual(custodySetterContext.engineCurrentLocation.name, 'Vor der MfS-Untersuchungshaftanstalt Hohenschoenhausen', 'release must use a real exterior location');
 assert.strictEqual(custodySetterContext.caseProgress.custodyReleaseSource, 'Audit-Freilassung', 'release source must remain traceable');
+assert.strictEqual(custodySetterContext.caseProgress.custodyReleasedAtScene, 12,
+  'custody release tracking must not depend on renderLog local variables');
 assert.strictEqual(encounterClears, 1, 'release must close the active Stasi encounter');
 
 const custodyTruthStart = html.indexOf('function _custodySceneTruthSichern(scene)');

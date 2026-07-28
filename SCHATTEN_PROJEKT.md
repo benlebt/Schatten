@@ -1,5 +1,11 @@
 # Schatten — Projekt-Knowledge
 
+## v7.12.1642 — Haftwechsel nutzt den Engine-Szenenzaehler
+
+Der erste reale Doppeltipp auf **Schlafen** unter v1641 loeste den Request korrekt aus, blieb aber vor der Freilassung mit `sceneNumber is not defined` stehen. Ursache war ein alter Scope-Fehler im zentralen `setCustodyState`: Eintritt und Austritt schrieben ihre Diagnose-Szenennummer aus einer Variable, die nur lokal in `renderLog()` existiert. Beim Eintritt war der Fehler durch einen alten `try/catch` verdeckt worden; beim Austritt brach er die Szene sichtbar ab.
+
+Beide Haftwechsel verwenden nun den globalen Engine-Zaehler `sceneCounter`. Der Laufzeittest besitzt absichtlich keine Variable `sceneNumber` mehr und prueft, dass Festnahme und Freilassung jeweils Szene 12 protokollieren. Damit ist genau der reale Produktionsfehler abgedeckt.
+
 ## v7.12.1641 — Freilassung ist ein eigener konsistenter Zustandsuebergang
 
 Der reale Stein-Gegenlauf bestaetigte bis Szene 22: **Mitgehen** fuehrt sichtbar in Haft, das Zellenbild bleibt vorhanden, Protokoll-Forderung und Halbwahrheit erscheinen in der Prosa, Verhoer/Druck/Kooperation werden korrekt verbucht und Karl bleibt ueber mehrere Szenen widerspruchsfrei in Zelle 14. Beim anschliessenden Quell- und Laufzeitaudit wurde jedoch eine alte Austritts-Reihenfolge gefunden: Bei Schlaf-Freilassung lief der Haft-Prosa-Waechter noch vor dem spaeteren `setCustodyState(false)`. Er konnte eine korrekte Entlassungsantwort wieder zur Zellenprosa machen, waehrend UI und Engine Karl danach bereits als frei fuehrten.
