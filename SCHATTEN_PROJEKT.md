@@ -1,5 +1,9 @@
 # Schatten — Projekt-Knowledge
 
+## v7.12.1643 — Stein-Buerofallback ist vollwertige Prosa
+
+Der erste freie Ortswechsel nach dem Haft-Gegenlauf blieb zustandsseitig korrekt: Szene 24 spielte im Buero, ohne Gewahrsam und mit passendem Buerobild. Die Prosa bestand jedoch nur aus zwei knappen Saetzen, weil Steins konfigurierter `arrivalFallbackText` selbst so kurz war. Das ist kein Modell- oder Engine-Drift, sondern ein Fall-Setup-Fallback. Er wurde auf fuenf zusammenhaengende, welt- und falltreue Saetze erweitert; ein Stein-Regressionscheck sichert die neuen Atmosphaere- und Ermittlungsanker.
+
 ## v7.12.1642 — Haftwechsel nutzt den Engine-Szenenzaehler
 
 Der erste reale Doppeltipp auf **Schlafen** unter v1641 loeste den Request korrekt aus, blieb aber vor der Freilassung mit `sceneNumber is not defined` stehen. Ursache war ein alter Scope-Fehler im zentralen `setCustodyState`: Eintritt und Austritt schrieben ihre Diagnose-Szenennummer aus einer Variable, die nur lokal in `renderLog()` existiert. Beim Eintritt war der Fehler durch einen alten `try/catch` verdeckt worden; beim Austritt brach er die Szene sichtbar ab.
