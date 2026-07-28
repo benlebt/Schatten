@@ -72,7 +72,50 @@ assert.deepStrictEqual(Array.from(context._threatAktiveSpawns), ['story_guard'],
 assert.deepStrictEqual(context.checkedSpawns, ['story_guard'],
   'guaranteed threat priority must also reach confrontation startup');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1656 +StasiAccessSpatialTruth'"),
+const visibleContext = {
+  caseProgress: {
+    activeConfrontation: {
+      npcId: 'mann_im_mantel',
+      enemyName: 'Mann im langen Mantel',
+      enemyTag: 'MYSTERY',
+      enemyRole: 'Schatten',
+      ort: 'Margarete Steins Wohnung',
+      startedScene: 1
+    }
+  },
+  sceneCounter: 2,
+  engineCurrentLocation: { name: 'Margarete Steins Wohnung' },
+  normForMatch: value => String(value || '').toLowerCase(),
+  _npcZustandGet: () => null,
+  _npcZustandIstEntfernt: () => false,
+  _konfrontationGruppenLebende: () => [],
+  _konfrontationOrtName: () => 'Margarete Steins Wohnung',
+  _konfrontationClear: () => {},
+  diag: () => {}
+};
+vm.createContext(visibleContext);
+vm.runInContext(sourceOf('_konfrontationAktiv'), visibleContext);
+vm.runInContext(sourceOf('_konfrontationEnemy'), visibleContext);
+vm.runInContext(sourceOf('_konfrontationInAktuellerSzeneSichtbar'), visibleContext);
+vm.runInContext(sourceOf('_konfrontationSceneTruthSichern'), visibleContext);
+const arrival = {
+  szene: 'Margarete kauert neben ihrer beschaedigten Aktentasche und sieht zu dir auf.',
+  ort: 'Margarete Steins Wohnung',
+  personenImRaum: ['Margarete Stein']
+};
+const arrivalCast = [{ id: 'margarete_stein', name: 'Margarete Stein' }];
+assert.strictEqual(visibleContext._konfrontationInAktuellerSzeneSichtbar(arrival), false,
+  'a later scene number alone must not expose confrontation UI ahead of prose');
+assert.strictEqual(visibleContext._konfrontationSceneTruthSichern(arrival, arrivalCast), true,
+  'an engine-backed threat omitted by the model needs deterministic prose repair');
+assert(/Mann im langen Mantel/.test(arrival.szene) && /Tuer/.test(arrival.szene),
+  'the repaired indoor arrival must introduce the exact enemy through the room entrance');
+assert(arrival.personenImRaum.includes('Mann im langen Mantel'),
+  'the repaired threat must be present in the scene roster');
+assert.strictEqual(visibleContext._konfrontationInAktuellerSzeneSichtbar(arrival), true,
+  'confrontation UI becomes visible only after the prose repair');
+
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1657 +ThreatSceneTruth'"),
   'release version missing');
 
 console.log('THREAT_SPAWN_SERIALIZATION_OK');
