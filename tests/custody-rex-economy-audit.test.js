@@ -7,7 +7,7 @@ const { readWebpDimensions } = require('./image-format-utils');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1639 +StasiCustodyLiveFlow'"), 'version constant is stale');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1640 +StasiInterrogationContinuity'"), 'version constant is stale');
 assert(html.includes("text: _resolveIstEigenauftrag ? 'Eigen-Auftrag abschließen und Wahrheit festhalten.' : 'Fall abschließen und Auftraggeber informieren.'"),
   'resolve button copy must stay player-facing for external and self-assigned cases');
 assert(html.includes('_enginePrompt: [_resolveText, _resolveTransitionPrompt, _resolvePhysicalTruth]'), 'resolve direction must preserve physical target truth');
@@ -217,6 +217,11 @@ state = custodyContext._custodyVerhoerWahlAnwenden({ _custodyAction: 'LAUSCHEN' 
 assert.strictEqual(state.intelGefunden, true, 'repeated listening in custody must be able to reveal a case clue');
 assert.strictEqual(Array.from(custodyContext.caseProgress.custodyIntelIds).join(','), custodyClue.id, 'custody clue must be recorded only once');
 assert.strictEqual(custodyContext.caseProgress.pendingCustodyIntelNarration.id, custodyClue.id, 'custody clue needs mandatory narration');
+assert(html.indexOf('_custodyVerhoerWahlAnwenden(pendingChosenOption);') <
+  html.indexOf('_custodySceneTruthSichern(scene);'),
+  'the selected interrogation action must be recorded before custody prose drift is repaired');
+assert(html.includes("caseProgress._custodyVerhoerAppliedScene === sceneKey"),
+  'the early interrogation update needs a per-scene guard against double application');
 
 const custodySetterStart = html.indexOf('function setCustodyState(newState, source, opts)');
 const custodySetterEnd = html.indexOf('// v7.11.13: META-CUSTODY-RISIKO-COUNTER', custodySetterStart);
