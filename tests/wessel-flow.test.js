@@ -183,6 +183,21 @@ assert(/Hauptmann Klaus Berner/.test(forcedArrival.szene)
   'forced Stasi officer must be physically and narratively introduced');
 assert(Array.isArray(forcedArrival.optionen) && forcedArrival.optionen.length === 0,
   'model options must not compete with the red Stasi confrontation UI');
+accessGuardContext.engineCurrentLocation.name = 'Hohenschoenhausen / Genslerstrasse';
+const outdoorArrival = {
+  ort: 'Hohenschoenhausen / Genslerstrasse',
+  szene: 'Du stellst den Opel an der Genslerstrasse ab. Ein MfS-Mann in zivilem grauen Mantel tritt an dein Fenster und tippt gegen das Glas.',
+  personenImRaum: [],
+  optionen: [{ text: 'Weiterfahren' }],
+};
+assert.strictEqual(accessGuardContext._enforcePendingStasiAccessInScene(outdoorArrival), true,
+  'an outdoor Stasi access must still be normalized to the configured encounter');
+assert(/Hauptmann Klaus Berner in zivilem grauen Mantel/.test(outdoorArrival.szene),
+  'an already narrated anonymous officer must become the configured named officer');
+assert(!/Türrahmen|Flur/.test(outdoorArrival.szene),
+  'an outdoor or vehicle access must never inject indoor doorway/corridor prose');
+assert.strictEqual((outdoorArrival.szene.match(/Hauptmann Klaus Berner/g) || []).length, 1,
+  'the outdoor access must not duplicate the physical Stasi officer');
 assert(html.indexOf('_enforcePendingStasiAccessInScene(scene);', accessGuardEnd) > accessGuardEnd,
   'pending Stasi access guard must run after final scene repair');
 
@@ -224,7 +239,7 @@ assert(html.includes("problem.code === 'false_prior_custody_history'"),
 assert(/Du schiebst Werners Akten auf dem Schreibtisch zusammen/.test(html),
   'Wessel office sleep needs a canonical custody-free fallback');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1653 +StasiGracePressureTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1654 +StasiAccessLocationTruth'"),
   'release version is stale');
 
 console.log('WESSEL_FLOW_OK');
