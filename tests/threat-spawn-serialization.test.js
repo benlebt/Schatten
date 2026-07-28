@@ -114,6 +114,17 @@ assert(arrival.personenImRaum.includes('Mann im langen Mantel'),
   'the repaired threat must be present in the scene roster');
 assert.strictEqual(visibleContext._konfrontationInAktuellerSzeneSichtbar(arrival), true,
   'confrontation UI becomes visible only after the prose repair');
+visibleContext.sceneCounter = 3;
+const departure = {
+  szene: 'Er nickt knapp, dreht sich um und eilt durch den Flur zur Treppe hinunter. Die Wohnungstuer faellt hinter ihm ins Schloss.',
+  personenImRaum: ['Margarete Stein']
+};
+assert.strictEqual(visibleContext._konfrontationSceneTruthSichern(departure, []), false,
+  'an established confrontation may continue with pronouns without a repeated entrance');
+assert(!/stellt sich dir in den Weg/.test(departure.szene),
+  'a departing established enemy must not be reintroduced in the same scene');
+assert.strictEqual(visibleContext._konfrontationInAktuellerSzeneSichtbar(departure), true,
+  'the established encounter remains visible through its final continuity scene');
 const awkwardArrival = {
   szene: 'Margarete fluestert: "Der Herr Mantel im Mantel ist im Haus."',
   personenImRaum: ['Margarete Stein']
@@ -155,7 +166,7 @@ assert.strictEqual(
   'a not-yet-narrated active enemy must not select the NPC image variant'
 );
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1659 +ThreatProsePolish'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1660 +ThreatContinuityTruth'"),
   'release version missing');
 
 console.log('THREAT_SPAWN_SERIALIZATION_OK');
