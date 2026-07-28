@@ -33,7 +33,7 @@ function norm(value) {
     .replace(/[^a-z0-9]+/g, ' ').trim();
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1647 +StasiCustodyMemory'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1648 +StasiReleaseCoherence'"),
   'release version missing');
 assert(html.includes("const _openingPresence = _arrivalKesslerWindows\n          ? (_openingStillMissing.length"),
   'the fixed Kessler opening must not append its window cast a second time');

@@ -16585,3 +16585,22 @@ Für Wessel gibt es zusätzlich die neue Präsenzvariante
 Berner zeigt den roten Dienstausweis, zwei MfS-Männer blockieren die Tür.
 Bild, Prosa, Personenbestand und Konfrontations-UI zeigen damit denselben
 physischen Zustand.
+
+## 🆕 v7.12.1648 — MfS-Freilassung ohne gemischten Haftzustand
+
+Der reale Wessel-Lauf blieb über Festnahme und drei Verhörrunden stabil. Bei
+der anschließenden Freilassung zeigte sich jedoch der befürchtete Mischzustand:
+Prosa und Szenenleiste erklärten Karl für frei, während `renderOptions` aus den
+rückblickenden Wörtern „Zelle“ und „Verhör“ den Gewahrsam erneut aktivierte.
+Dadurch blieben Notflucht und das komplette Haftmenü sichtbar. Zugleich wählte
+der feste Haftort-Roster fälschlich das Berner-Präsenzbild, obwohl Karl allein
+vor dem Gefängnis stand, und die Freilassungsprosa behauptete unabhängig von
+der Engine-Zeit immer Morgen.
+
+Eine explizite Freilassung ist jetzt ein verbindlicher Übergangszustand:
+Rückblickende Haftprosa darf ihn beim UI-Render nicht mehr zurücksetzen.
+Notflucht und Verhörmenü verschwinden gemeinsam mit dem Gewahrsamsflag. Das
+Szenenbild verwendet vor dem Gefängnis das leere Außenmotiv statt einer
+Offiziersvariante. Der deterministische Freilassungstext nennt keine pauschale
+Morgenfreilassung mehr, sondern übernimmt Nacht, Abend oder Tageslicht aus der
+aktuellen Engine-Zeit.

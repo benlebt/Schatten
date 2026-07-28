@@ -7,7 +7,7 @@ const { readWebpDimensions } = require('./image-format-utils');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1647 +StasiCustodyMemory'"), 'version constant is stale');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1648 +StasiReleaseCoherence'"), 'version constant is stale');
 assert(html.includes("text: _resolveIstEigenauftrag ? 'Eigen-Auftrag abschließen und Wahrheit festhalten.' : 'Fall abschließen und Auftraggeber informieren.'"),
   'resolve button copy must stay player-facing for external and self-assigned cases');
 assert(html.includes('_enginePrompt: [_resolveText, _resolveTransitionPrompt, _resolvePhysicalTruth]'), 'resolve direction must preserve physical target truth');
@@ -297,6 +297,7 @@ const custodyTruthContext = {
   lastFullScene: '',
   recentTexts: ['Karl steht ploetzlich frei im Cafe.'],
   storySummaries: ['Karl ist frei.'],
+  _aktTageszeitName: () => 'NACHT',
   diag: () => {}
 };
 vm.createContext(custodyTruthContext);
@@ -324,6 +325,9 @@ assert.strictEqual(custodyTruthContext._custodyReleaseSceneTruthSichern(contradi
 assert(contradictoryReleaseScene.szene.length > 500
     && contradictoryReleaseScene.szene.includes('Du bist frei'),
   'release fallback must be full prose and explicitly state Karl is free');
+assert(contradictoryReleaseScene.szene.includes('Berliner Nachtluft')
+    && !contradictoryReleaseScene.szene.includes('Morgenlicht'),
+  'release fallback must match the actual engine time instead of hardcoding morning');
 assert.strictEqual(contradictoryReleaseScene.gewahrsam, false,
   'release truth guard must clear the visible custody flag');
 assert.strictEqual(contradictoryReleaseScene.ort,
@@ -501,5 +505,11 @@ assert(html.includes("scene.ort = releaseOrt;")
     && html.includes("scene.gewahrsam = false;")
     && html.includes("releasedFromCustody: true"),
   'release truth guard must align scene location, custody flag, and engine location');
+assert(html.includes('const explicitReleaseScene = scene && scene.gewahrsam === false')
+    && html.includes('&& !explicitReleaseScene)'),
+  'rendering a release scene must not re-enable custody from retrospective prison prose');
+assert(html.includes('const istFreilassungsSzene = !!(scene && scene.gewahrsam === false')
+    && html.includes('if (istFreilassungsSzene) return spec;'),
+  'released exterior scenes must use the empty base image instead of a stale officer presence variant');
 
 console.log('CUSTODY_REX_ECONOMY_AUDIT_OK');
