@@ -16621,3 +16621,14 @@ Szenen-Commit vor jedem Render atomar hergestellt: Karl ist frei, der
 Engine-Ort liegt vor dem Gefängnis, der sichtbare Personenbestand ist leer und
 ein alter MfS-Encounter wird beendet. Zusätzlich sperren Bild- und
 Personenresolver Zelle und Haftpersonal in genau diesem Übergangszustand.
+
+## 🆕 v7.12.1650 — Kein Haftpersonal nach klarer Entlassung
+
+Der erneute Live-Restore zeigte bereits den korrekten freien Header und das
+Außenbild, führte Berner aber noch unter „Anwesend“. Der allgemeine
+Release-Detektor bewertet absichtlich konservativ und erkannte den älteren
+Text trotz des eindeutigen Satzes „Du bist frei“ nicht als formale
+Freilassung. Am bereits eindeutig benannten Außenort vor der Haftanstalt gilt
+deshalb zusätzlich klare Entlassungssprache als verbindlicher Beleg. Damit
+bleibt der Personenresolver leer und kann kein Haftpersonal aus einem alten
+Cast oder Threat-Roster zurückholen.
