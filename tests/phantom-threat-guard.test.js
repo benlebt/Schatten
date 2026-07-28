@@ -34,6 +34,7 @@ const context = {
 };
 vm.createContext(context);
 vm.runInContext(sourceOf('_findPhantomImmediateThreat'), context);
+vm.runInContext(sourceOf('_splitWorldTruthSentences'), context);
 vm.runInContext(sourceOf('_findUnrosteredPresentActor'), context);
 vm.runInContext(sourceOf('_findArrivalNpcRosterDrift'), context);
 vm.runInContext(sourceOf('enforceSceneWorldTruthFallback'), context);
@@ -263,6 +264,23 @@ assert.deepStrictEqual(Array.from(preservedRosterScene.personenImRaum).map(entry
   'the actor fallback must preserve the complete physical engine roster');
 context.getNpcsAtCurrentLocation = () => [];
 
+const ordinalDatePhantom = {
+  ort: 'Karl Mauers Büro',
+  szene: 'Hauptmann Vollmer steht im Büro und sagt, dass Werner seit dem 17. Juni verschwunden ist. Bruno Wessel hält den Blick auf Karl gerichtet.',
+  personenImRaum: ['Bruno Wessel'],
+  cast_hinzugefuegt: ['Hauptmann Vollmer'],
+  optionen: [{ id: 'A', text: 'Fragen' }]
+};
+problem = context._findUnrosteredPresentActor(ordinalDatePhantom, {}, {
+  setupCast: [{ id: 'vollmer', name: 'Hauptmann Vollmer' }]
+});
+assert(problem && /17\. Juni verschwunden ist/.test(problem.sentence),
+  'world-truth detection must keep a German ordinal date inside one complete sentence');
+context.enforceSceneWorldTruthFallback(ordinalDatePhantom, problem);
+assert(!/Vollmer|Juni verschwunden ist/.test(ordinalDatePhantom.szene)
+    && /^Bruno Wessel/.test(ordinalDatePhantom.szene),
+  'removing a phantom actor must not leave a month-led sentence fragment behind');
+
 problem = context._findUnrosteredPresentActor({
   szene: 'Auf dem Foto steht eine Frau vor dem Haus.',
   personenImRaum: []
@@ -275,7 +293,7 @@ problem = context._findUnrosteredPresentActor({
 }, {});
 assert.strictEqual(problem, null, 'a properly rostered scene actor remains legal');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1643 +ArrivalFallbackProse'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1644 +OrdinalSentenceGuard'"),
   'release version missing');
 
 console.log('phantom threat guard tests passed');

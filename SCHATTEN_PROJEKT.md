@@ -1,5 +1,11 @@
 # Schatten — Projekt-Knowledge
 
+## v7.12.1644 — Deutsche Datumsordinale bleiben ganze Saetze
+
+Der frische Wessel-Lauf brach in Szene 2 grammatisch mit **„Juni verschwunden ist.“** an. Die Diagnose zeigte keinen Modell-Kurztext, sondern einen Weltwahrheits-Hard-Fallback: Ein erfundener, nicht im Raum gefuehrter Akteur wurde korrekt entfernt, aber der Satzteiler hatte `17. Juni` faelschlich nach `17.` getrennt. Dadurch blieb die zweite Haelfte des entfernten Satzes als sichtbares Fragment stehen.
+
+Der gemeinsame Phantomakteur-Detektor und sein Hard-Fallback teilen deutsche Datumsangaben nun mit einem geschuetzten Ordinalpunkt. Der neue Laufzeittest entfernt einen erfundenen Hauptmann aus einem Satz mit `17. Juni`, behaelt Bruno Wessel und beweist, dass weder Phantomname noch Monatsfragment uebrig bleiben. Der Schutz ist engineweit fuer diesen zentralen Akteur-Guard und nicht auf Wessel beschraenkt.
+
 ## v7.12.1643 — Stein-Buerofallback ist vollwertige Prosa
 
 Der erste freie Ortswechsel nach dem Haft-Gegenlauf blieb zustandsseitig korrekt: Szene 24 spielte im Buero, ohne Gewahrsam und mit passendem Buerobild. Die Prosa bestand jedoch nur aus zwei knappen Saetzen, weil Steins konfigurierter `arrivalFallbackText` selbst so kurz war. Das ist kein Modell- oder Engine-Drift, sondern ein Fall-Setup-Fallback. Er wurde auf fuenf zusammenhaengende, welt- und falltreue Saetze erweitert; ein Stein-Regressionscheck sichert die neuen Atmosphaere- und Ermittlungsanker.

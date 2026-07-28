@@ -324,6 +324,7 @@ const phantomCompanionContext = {
   _worldTruthAliases: worldTruthAliases
 };
 vm.createContext(phantomCompanionContext);
+vm.runInContext(sourceOf('_splitWorldTruthSentences'), phantomCompanionContext);
 vm.runInContext(sourceOf('_findUnrosteredPresentActor'), phantomCompanionContext);
 const phantomCompanion = phantomCompanionContext._findUnrosteredPresentActor({
   szene: 'Lothars Blick huscht zu dem Mann mit der Lederjacke, der sich bedrohlich aufbaut. Sein Begleiter schlägt dir gegen die Schläfe.',

@@ -375,6 +375,7 @@ const actorContext = {
     String(text).toLowerCase().includes(String(alias).toLowerCase()))
 };
 vm.createContext(actorContext);
+vm.runInContext(sourceOf('_splitWorldTruthSentences'), actorContext);
 vm.runInContext(sourceOf('_findUnrosteredPresentActor'), actorContext);
 const inventedCourier = actorContext._findUnrosteredPresentActor({
   szene: 'Wegner schweigt, als ein Bote im Bankkittel den Raum betritt.',
