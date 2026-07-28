@@ -266,6 +266,27 @@ assert(narratedReport.split(/\s+/).length >= 65
     && !/ohne dass du etwas Neues erfÃ¤hrst/.test(narratedReport),
   'a repaired client report must remain a real finale, never an empty social fallback');
 
+const restoredReportContext = {
+  caseSetup: setup,
+  caseProgress: { stage: 4, istGelöst: true, abschlussSzeneGerendert: true },
+  currentScene: { szene: 'Das Gespräch endet, ohne dass du etwas Neues erfährst.' },
+  lastFullScene: { szene: 'Das Gespräch endet, ohne dass du etwas Neues erfährst.' },
+  logEntries: [
+    { type: 'choice', text: 'Fall berichten · Hilde Brauer' },
+    { type: 'scene', text: 'Das Gespräch endet, ohne dass du etwas Neues erfährst.' },
+  ],
+};
+vm.createContext(restoredReportContext);
+vm.runInContext(sourceOf('_repairRestoredFinalReportProse'), restoredReportContext);
+assert.strictEqual(
+  restoredReportContext._repairRestoredFinalReportProse(),
+  true,
+  'an underwritten saved finale must be repaired while restoring the completed case',
+);
+assert.strictEqual(restoredReportContext.currentScene.szene, setup.reportFallbackText);
+assert.strictEqual(restoredReportContext.lastFullScene.szene, setup.reportFallbackText);
+assert.strictEqual(restoredReportContext.logEntries[1].text, setup.reportFallbackText);
+
 const genericThreadContext = {
   caseSetup: setup,
   caseProgress: proofContext.caseProgress,
