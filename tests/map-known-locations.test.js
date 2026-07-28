@@ -39,6 +39,7 @@ const locations = [
   { name: 'Cafe Wien', startBekannt: true, oeffnungszeit: ['vormittag', 'mittag'] },
   { name: 'Spedition Schmidt Moabit', startBekannt: false },
   { name: 'Geheimes Lager', startBekannt: false },
+  { name: 'Kaffeestube an der Spandauer Schleuse', startBekannt: false },
   { name: 'Imbiss Bei Trude', startBekannt: true }
 ];
 context._kartenBekannteOrteSynchronisieren(locations);
@@ -46,6 +47,9 @@ assert(context.unlockedLocations.includes('cafe wien'), 'a start-known closed lo
 assert(context.unlockedLocations.includes('spedition schmidt moabit'), 'a location named by an open thread must be visible');
 assert(context.unlockedLocations.includes('imbiss bei trude'), 'the current location must remain visible');
 assert(!context.unlockedLocations.includes('geheimes lager'), 'an undiscovered secret location must stay hidden');
+context._kartenBekannteOrteSynchronisieren(locations, 'Kaffeestube an der Spandauer Schleuse');
+assert(context.unlockedLocations.includes('kaffeestube an der spandauer schleuse'),
+  'a direct travel target must be made visible before the map is built');
 
 Object.assign(context, {
   mapPosFuer: () => ({ x: 74, y: 134, sek: 'UK' }),
@@ -61,7 +65,7 @@ assert.strictEqual(closedEntries[0].geoeffnet, false, 'closed location must reta
 assert.strictEqual(closedEntries[0].gesperrt, true, 'closed location must be visible but not travel-enabled');
 
 const travelSource = sourceOf('oeffneReiseMenue');
-assert(travelSource.indexOf('_kartenBekannteOrteSynchronisieren(locs)') < travelSource.indexOf('var ziele = locs.filter'),
+assert(travelSource.indexOf('_kartenBekannteOrteSynchronisieren(locs, vorauswahlOrtName)') < travelSource.indexOf('var ziele = locs.filter'),
   'known-location reconciliation must run before map destinations are filtered');
 
 console.log('MAP_KNOWN_LOCATIONS_OK');
