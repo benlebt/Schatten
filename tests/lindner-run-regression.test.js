@@ -62,6 +62,9 @@ assert(html.includes("/berliner disconto-bank.*westsektor/.test"),
   'Brehme visual location match must accept the canonical parenthesized bank name');
 assert(html.includes("file: 'polizeirevier-hardenbergstrasse-hollenbeck-handoff-night.png'"),
   'Hollenbeck handoff visual binding missing');
+assert(html.includes("depictsNpcs: ['heinrich_lindner']")
+    && html.includes('Karl Mauer steht im Dienstzimmer des Polizeireviers vor Kommissar Heinrich Lindner'),
+  'the ordinary Lindner office image must explicitly contract the visible main NPC');
 assert(html.includes("fundText: 'In Friedrich Hollenbecks Schreibtisch findest du ein schwarzes Notizbuch."),
   'notebook clue needs deterministic complete prose');
 assert(html.includes("fundText: 'Margit Hollenbeck senkt die Stimme. Am Tag vor Friedrichs Verschwinden"),
@@ -416,5 +419,21 @@ assert(html.includes('function _applyConfiguredOpeningCompletenessFallback(scene
   'the final opening completeness fallback must be available independently of retries');
 assert(html.includes('OPENING-PFLICHTFAKTEN FINAL-FALLBACK'),
   'missing opening core facts need a final pre-commit gate');
+
+const roleDuplicateContext = {
+  normForMatch: value => String(value || '').toLowerCase()
+};
+vm.createContext(roleDuplicateContext);
+vm.runInContext(sourceOf('_hauptuiIstNurRollenDoppel'), roleDuplicateContext);
+const fullLindner = { id: 'heinrich_lindner', name: 'Kommissar Heinrich Lindner' };
+const bareCommissioner = { name: 'Kommissar' };
+assert.strictEqual(roleDuplicateContext._hauptuiIstNurRollenDoppel(
+  bareCommissioner,
+  [fullLindner, bareCommissioner]
+), true, 'a generic "Kommissar" cast fragment must not become a second UI person beside Lindner');
+assert.strictEqual(roleDuplicateContext._hauptuiIstNurRollenDoppel(
+  bareCommissioner,
+  [bareCommissioner]
+), false, 'a lone role-only NPC may remain when no named person duplicates it');
 
 console.log('LINDNER_RUN_REGRESSION_OK');

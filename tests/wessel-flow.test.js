@@ -134,7 +134,7 @@ assert(/openingBriefMissing/.test(underwrittenSource),
 assert(/unsupportedOfficeIntrusion/.test(underwrittenSource),
   'unconfigured office break-ins need an engine-wide prose guard');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1633 +AllCasesNinePolish'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1634 +LindnerOpeningIdentity'"),
   'release version is stale');
 
 console.log('WESSEL_FLOW_OK');
