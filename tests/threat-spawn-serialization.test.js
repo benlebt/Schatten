@@ -108,12 +108,20 @@ assert.strictEqual(visibleContext._konfrontationInAktuellerSzeneSichtbar(arrival
   'a later scene number alone must not expose confrontation UI ahead of prose');
 assert.strictEqual(visibleContext._konfrontationSceneTruthSichern(arrival, arrivalCast), true,
   'an engine-backed threat omitted by the model needs deterministic prose repair');
-assert(/Mann im langen Mantel/.test(arrival.szene) && /Tuer/.test(arrival.szene),
+assert(/Der Mann im langen Mantel tritt/.test(arrival.szene) && /Tür/.test(arrival.szene),
   'the repaired indoor arrival must introduce the exact enemy through the room entrance');
 assert(arrival.personenImRaum.includes('Mann im langen Mantel'),
   'the repaired threat must be present in the scene roster');
 assert.strictEqual(visibleContext._konfrontationInAktuellerSzeneSichtbar(arrival), true,
   'confrontation UI becomes visible only after the prose repair');
+const awkwardArrival = {
+  szene: 'Margarete fluestert: "Der Herr Mantel im Mantel ist im Haus."',
+  personenImRaum: ['Margarete Stein']
+};
+visibleContext._konfrontationSceneTruthSichern(awkwardArrival, []);
+assert(!/Herr Mantel im Mantel/.test(awkwardArrival.szene)
+    && /Mann im langen Mantel/.test(awkwardArrival.szene),
+  'the recurring model tautology for the anonymous coat man needs prose cleanup');
 
 const visualContext = {
   caseProgress: {
@@ -147,7 +155,7 @@ assert.strictEqual(
   'a not-yet-narrated active enemy must not select the NPC image variant'
 );
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1658 +ThreatVisualTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1659 +ThreatProsePolish'"),
   'release version missing');
 
 console.log('THREAT_SPAWN_SERIALIZATION_OK');
