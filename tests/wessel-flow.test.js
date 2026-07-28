@@ -198,6 +198,20 @@ assert(!/Türrahmen|Flur/.test(outdoorArrival.szene),
   'an outdoor or vehicle access must never inject indoor doorway/corridor prose');
 assert.strictEqual((outdoorArrival.szene.match(/Hauptmann Klaus Berner/g) || []).length, 1,
   'the outdoor access must not duplicate the physical Stasi officer');
+accessGuardContext.engineCurrentLocation.name = 'Bahnhof Friedrichstrasse';
+const stationArrival = {
+  ort: 'Bahnhof Friedrichstrasse',
+  szene: 'Du sicherst auf dem zugigen Bahnsteig den Durchschlag der Transportkontrolle.',
+  personenImRaum: [],
+  optionen: [{ text: 'Liste lesen' }],
+};
+assert.strictEqual(accessGuardContext._enforcePendingStasiAccessInScene(stationArrival), true,
+  'a station access must be enforced after an otherwise quiet clue scene');
+assert(/Ende des Bahnsteigs/.test(stationArrival.szene)
+    && /Treppenabgang/.test(stationArrival.szene),
+  'a station access needs platform-specific physical blocking prose');
+assert(!/Türrahmen|Flur/.test(stationArrival.szene),
+  'a station platform must never receive indoor office access prose');
 assert(html.indexOf('_enforcePendingStasiAccessInScene(scene);', accessGuardEnd) > accessGuardEnd,
   'pending Stasi access guard must run after final scene repair');
 
@@ -239,7 +253,7 @@ assert(html.includes("problem.code === 'false_prior_custody_history'"),
 assert(/Du schiebst Werners Akten auf dem Schreibtisch zusammen/.test(html),
   'Wessel office sleep needs a canonical custody-free fallback');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1655 +DirectTravelMapTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1656 +StasiAccessSpatialTruth'"),
   'release version is stale');
 
 console.log('WESSEL_FLOW_OK');

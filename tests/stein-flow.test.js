@@ -162,7 +162,7 @@ assert(/if \(keepExisting\)/.test(sourceOf('_naturalMinimumSceneText')),
 assert(/_npcWirklichInSzene/.test(sourceOf('_szenenbildAnwesenheitsVariante')),
   'image presence variants must also follow unequivocal scene prose');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1655 +DirectTravelMapTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1656 +StasiAccessSpatialTruth'"),
   'release version is stale');
 assert(html.includes('Vom Hackeschen Markt dringen gedämpfte Motorengeräusche')
     && html.includes('Noch passt nicht jedes Stück zusammen'),
