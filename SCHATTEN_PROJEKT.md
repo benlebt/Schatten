@@ -13,6 +13,14 @@
 
 **Verifikation:** 61/61 lokale Regressionstests gruen. Neue Tests decken Observation ueber Ortswechsel, sichtbares Mitgehen, misslungenen Widerstand, deterministischen Haftantritt, Prosa-Drift sowie das Verbot impliziter Freilassungen ab. Produktions-Gegenlauf mit Haft, Verhoer und expliziter Entlassung folgt nach Deployment.
 
+### v7.12.1639 — Produktions-Gegenlauf und Sackgassenfix
+
+Der reale Stein-Lauf auf v1638 erreichte in Szene 18 den offenen Zugriff durch Oberleutnant Mertens. Die neue Aktion **Mitgehen** fuehrte in Szene 19 atomar und konsistent nach Hohenschoenhausen: vollstaendige Festnahmeprosa, Haftort, `GEWAHRSAM`, Zellenbild und Notflucht stimmten ueberein. Dabei wurde eine echte UI-Sackgasse sichtbar: Das Verhoermenue fehlte in der Einstiegsszene, weil `deriveInteractionMode()` waehrend des noch aktiven API-Locks vorzeitig `locked` statt `custody` lieferte. Der Lock ist jetzt nur Klickschutz und kein Spielmodus mehr; das Haftmenue rendert sofort.
+
+Zusaetzlich friert eine laufende fallspezifische Konfrontation den MfS-Vorlauf nicht mehr ein. Sie wird weiterhin niemals mit einem zweiten Gegner ueberlagert, zaehlt aber als politischer Druck im Hintergrund. Nach dem Ende kann die Observation deshalb in der naechsten ruhigen Szene beginnen, statt – wie im Stein-Gegenlauf – bis Tag 3/Szene 18 verschleppt zu werden.
+
+Separater Lektoratsbefund aus dem Lauf fuer die naechste Stein-Runde: In Szene 12 sagte die Prosa, die Reichsbahndirektion sei menschenleer, waehrend Bild und Konfrontations-UI Direktor Wahler und IM „Anker“ zeigten. In Szene 17 erschien Mertens kurz in der Personen-UI, bevor die Prosa ihn in Szene 18 sauber einfuehrte. Diese Bild-/Prosa-/UI-Vertraege muessen beim naechsten Stein-spezifischen Durchlauf weiter gehaertet werden; sie aendern den nun verifizierten Haftzustand nicht.
+
 > **Aktueller additiver Lektoratsstandard:** Die sechs Standing-Checkpoints, der Fix/Push/Gegenlauf-Zyklus und die priorisierten offenen Themen stehen in `LEKTORAT.md`. Sie ergänzen alle bisherigen Lektoratsregeln und spezielleren Entscheidungen dieser Datei; sie ersetzen sie nicht. Frühere Befunde, bewusste Nicht-Fixes und settled decisions bleiben Prüfhintergrund. Die genaue Hierarchie bei echten Widersprüchen steht in `LEKTORAT.md`.
 
 Stand: 06.06.2026, Version v7.12.433 (index.html) + gemini.js v1.5 (serverseitig)

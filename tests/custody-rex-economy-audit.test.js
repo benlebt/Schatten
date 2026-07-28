@@ -7,7 +7,7 @@ const { readWebpDimensions } = require('./image-format-utils');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1638 +StasiCustodyStateMachine'"), 'version constant is stale');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1639 +StasiCustodyLiveFlow'"), 'version constant is stale');
 assert(html.includes("text: _resolveIstEigenauftrag ? 'Eigen-Auftrag abschließen und Wahrheit festhalten.' : 'Fall abschließen und Auftraggeber informieren.'"),
   'resolve button copy must stay player-facing for external and self-assigned cases');
 assert(html.includes('_enginePrompt: [_resolveText, _resolveTransitionPrompt, _resolvePhysicalTruth]'), 'resolve direction must preserve physical target truth');
@@ -145,6 +145,24 @@ assert.strictEqual(steinFlow._stasiCustodyEntryVormerken('Audit: Karl geht mit')
 assert.strictEqual(steinFlow.caseProgress.custodyForcedEntry, true,
   'custody entry must be persisted before the narration request');
 
+const blockedSteinFlow = makeEncounterContext(true);
+blockedSteinFlow.sceneCounter = 3;
+blockedSteinFlow._konfrontationAktiv = () => true;
+blockedSteinFlow._stasiEncounterAdvance('OFFENSIV');
+blockedSteinFlow.sceneCounter += 1;
+blockedSteinFlow._stasiEncounterAdvance('OFFENSIV');
+assert.strictEqual(blockedSteinFlow.caseProgress.stasiEncounter, undefined,
+  'a case confrontation must never be overlaid with a second Stasi opponent');
+assert.strictEqual(blockedSteinFlow.caseProgress.stasiEncounterEligibleScenes, 2,
+  'political pressure must keep accumulating behind a case confrontation');
+blockedSteinFlow._konfrontationAktiv = () => false;
+blockedSteinFlow._stasiEncounterRoll = () => 0;
+blockedSteinFlow.sceneCounter += 1;
+blockedSteinFlow._stasiEncounterAdvance('ERMITTLUNG');
+assert(blockedSteinFlow.caseProgress.stasiEncounter &&
+  blockedSteinFlow.caseProgress.stasiEncounter.phase === 'beobachtung',
+  'the next calm scene after a long confrontation must be able to start observation immediately');
+
 const privateEncounter = makeEncounterContext(false);
 encounter = privateEncounter._stasiEncounterForceZugriff('Darf nicht passieren');
 assert.strictEqual(encounter, null, 'private cases without MfS cast must not receive spontaneous Stasi access');
@@ -276,6 +294,14 @@ assert(!html.includes("setCustodyState(false, 'ki-signal-frei')"),
   'a single model boolean must never silently release Karl from an active custody episode');
 assert(!html.includes("setCustodyState(false, 'text-detected-release')"),
   'a free-form model sentence must never silently release Karl from an active custody episode');
+
+const interactionModeStart = html.indexOf('function deriveInteractionMode()');
+const interactionModeEnd = html.indexOf('const SHARED_SCENE_IMAGES', interactionModeStart);
+const interactionModeSource = html.slice(interactionModeStart, interactionModeEnd);
+assert(!/chooseOptionInFlight[^;]*return 'locked'/.test(interactionModeSource),
+  'the API in-flight lock must not hide the custody menu during the arrest-entry render');
+assert(interactionModeSource.indexOf("return 'custody'") >= 0,
+  'active custody must remain a first-class interaction mode');
 
 for (const action of ['SCHWEIGEN', 'HALBWAHRHEIT', 'ROTH', 'PROTOKOLL', 'BESTECHEN', 'LAUSCHEN']) {
   assert(html.includes("id: '" + action + "'"), 'custody menu misses action ' + action);
