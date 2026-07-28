@@ -51,12 +51,14 @@ const marienfelde = locations.get('Marienfelde Notaufnahmelager');
 const station = locations.get('Bahnhof Friedrichstraße');
 assert(apartment && railway && laundry && marienfelde,
   'the Brauer investigation route is incomplete');
+assert.strictEqual(setup.abschlussOrt, 'Karl Mauers Büro',
+  'the family proof case needs one explicit personal report appointment');
 assert(setup.locations[0].openingFallbackText.split(/\s+/).length >= 55
     && /Hilde Brauer/.test(setup.locations[0].openingFallbackText)
     && /Reichsbahn-Schaffner/.test(setup.locations[0].openingFallbackText)
     && /Familienfall/.test(setup.locations[0].openingFallbackText),
   'the opening fallback must be a complete narrated family-case handoff');
-for (const location of [apartment, railway, station]) {
+for (const location of [apartment, railway, laundry, station]) {
   assert(location && location.arrivalFallbackText
       && location.arrivalFallbackText.split(/\s+/).length >= 40,
     'Brauer arrival fallback is too dry at ' + (location && location.name));
@@ -83,6 +85,11 @@ assert.strictEqual(clueById.get('marienfelde_registratur').stage, 4,
 assert(/unverschlossen/i.test(clueById.get('schliessfach_leer').text)
     && /keinen Schlüssel/i.test(clueById.get('schliessfach_leer').text),
   'the locker clue must define access without inventing a key handoff from Hilde');
+assert(clueById.get('schliessfach_leer').fundText
+    && clueById.get('schliessfach_leer').fundText.split(/\s+/).length >= 45
+    && /Blechspinde|Dienst-Schließfach/.test(clueById.get('schliessfach_leer').fundText)
+    && !/^Erwins unverschlossenes Dienst-Schliessfach/.test(clueById.get('schliessfach_leer').fundText),
+  'the locker inspection needs narrated prose instead of the raw clue ledger');
 assert(Number(clueById.get('marienfelde_registratur').abStage) >= 3,
   'Erwin must not be declared safe before the investigation reaches Marienfelde');
 assert(setup.requiredProof.test(clueById.get('marienfelde_registratur').text),
@@ -180,6 +187,70 @@ function sourceOf(name) {
   }
   assert.fail(name + ' has no closing brace');
 }
+
+const proofContext = {
+  caseSetup: setup,
+  caseProgress: {
+    stage: 3,
+    klientGesprochen: true,
+    indizien: [clueById.get('marienfelde_registratur').text],
+    gefundeneIndizIds: ['marienfelde_registratur'],
+  },
+};
+vm.createContext(proofContext);
+vm.runInContext(sourceOf('_requiredProofErfuellt'), proofContext);
+assert.strictEqual(proofContext._requiredProofErfuellt(), true,
+  'the collected Marienfelde registration must count as the proof-case breakthrough');
+
+proofContext.caseProgress.indizien = [clueById.get('schicht_grenze').text];
+assert.strictEqual(proofContext._requiredProofErfuellt(), false,
+  'a border-route clue alone must not pretend that Erwin is confirmed safe');
+proofContext.caseProgress.indizien = [clueById.get('marienfelde_registratur').text];
+
+const genericThreadContext = {
+  caseSetup: setup,
+  caseProgress: proofContext.caseProgress,
+  getCaseLocations: () => [],
+  _physischesFallzielStatus: () => null,
+  _requiredProofErfuellt: () => true,
+};
+vm.createContext(genericThreadContext);
+vm.runInContext(sourceOf('_hauptuiGenerischeFaeden'), genericThreadContext);
+const reportThread = genericThreadContext._hauptuiGenerischeFaeden()
+  .find((thread) => thread.id === 'bericht');
+assert(reportThread && reportThread.status === 'bereit'
+    && reportThread.ort === 'Karl Mauers Büro'
+    && Array.from(reportThread.targetIds).includes('hilde_brauer'),
+  'the generic thread model must expose Hilde at the configured report appointment');
+
+const reportPresenceContext = {
+  engineCurrentLocation: { name: 'Karl Mauers Büro' },
+  currentScene: { szene: 'Du ordnest die gesicherten Hinweise.', personenImRaum: [] },
+  caseSetup: setup,
+  caseProgress: proofContext.caseProgress,
+  gameTimeIdx: 4,
+  gameDay: 2,
+  TIMES_OF_DAY: ['morgen', 'vormittag', 'mittag', 'nachmittag', 'abend', 'nacht'],
+  getCaseLocations: () => [{ name: 'Karl Mauers Büro', npcs: [] }],
+  normForMatch: (value) => String(value || '').toLowerCase().replace(/[_-]+/g, ' ').trim(),
+  _hauptuiAlleOffenenFaeden: () => [{
+    id: 'bericht',
+    ort: 'Karl Mauers Büro',
+    status: 'bereit',
+    targetIds: ['hilde_brauer'],
+  }],
+  _istKlient: (name, id) => id === 'hilde_brauer' || name === 'Hilde Brauer',
+  _resolveNpcIdentity: () => ({ id: 'hilde_brauer', name: 'Hilde Brauer', tag: 'CLIENT' }),
+  _npcZustandIstEntfernt: () => false,
+  _npcNachProsaAbgangAbwesend: () => false,
+  _threatAktiveSpawns: [],
+};
+vm.createContext(reportPresenceContext);
+vm.runInContext(sourceOf('_abschlussTerminAmOrt'), reportPresenceContext);
+vm.runInContext(sourceOf('getNpcsAtCurrentLocation'), reportPresenceContext);
+const appointmentRoster = reportPresenceContext.getNpcsAtCurrentLocation();
+assert.deepStrictEqual(Array.from(appointmentRoster, (entry) => entry.id), ['hilde_brauer'],
+  'the report appointment must restore the client to prose, UI, and image truth');
 
 const apartmentRosterContext = {
   engineCurrentLocation: { name: 'Hilde Brauer Wohnung Koepenick' },
