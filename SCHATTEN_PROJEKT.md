@@ -1,5 +1,13 @@
 # Schatten — Projekt-Knowledge
 
+## v7.12.1641 — Freilassung ist ein eigener konsistenter Zustandsuebergang
+
+Der reale Stein-Gegenlauf bestaetigte bis Szene 22: **Mitgehen** fuehrt sichtbar in Haft, das Zellenbild bleibt vorhanden, Protokoll-Forderung und Halbwahrheit erscheinen in der Prosa, Verhoer/Druck/Kooperation werden korrekt verbucht und Karl bleibt ueber mehrere Szenen widerspruchsfrei in Zelle 14. Beim anschliessenden Quell- und Laufzeitaudit wurde jedoch eine alte Austritts-Reihenfolge gefunden: Bei Schlaf-Freilassung lief der Haft-Prosa-Waechter noch vor dem spaeteren `setCustodyState(false)`. Er konnte eine korrekte Entlassungsantwort wieder zur Zellenprosa machen, waehrend UI und Engine Karl danach bereits als frei fuehrten.
+
+Der bestaetigte Schlaf-Ausgang ueberspringt nun Haft-Prosa-Waechter und Verhoer-/Folterpfad. Direkt nach dem expliziten Zustandswechsel setzt ein eigener Freilassungs-Waechter Prosa, `gewahrsam:false`, Personenliste, Engine-Ort und Bildkontext gemeinsam auf **Vor der MfS-Untersuchungshaftanstalt Hohenschoenhausen**. Widerspruechliche oder zu knappe KI-Antworten werden durch eine vollwertige sechssaetzige Entlassungsszene ersetzt. Die bestehende Gnadenfrist von fuenf Szenen bleibt erhalten, damit keine sofortige Wiederverhaftung entsteht.
+
+**Verifikation:** Der Spezialtest fuehrt Haftdrift, bestaetigten Schlaf-Austritt und eine absichtlich widerspruechliche Freilassungsszene im isolierten Laufzeitkontext aus. Danach 61/61 Regressionstests gruen, einschliesslich Stein, Wessel, Vogt und Lindenbaum.
+
 ## v7.12.1638 — StasiCustodyStateMachine (28.07.2026)
 
 **Befund:** Die MfS-Mechanik war formal umfangreich, im realen Spiel aber zu selten erreichbar. Historisch waren vor der grossen Nachruestung 0 Festnahmen in 352 protokollierten Szenen dokumentiert; auch viele spaetere Komplettlaeufe meldeten ausdruecklich keinen Gewahrsam. Im aktuellen Produktions-Gegenlauf des stark politischen Falls Stein blieb Karl nach acht Szenen und einer langen bewaffneten Konfrontation frei. Eine begonnene Observation verlor zudem beim normalen Ortswechsel ihre Eskalationskette. Fruehere Versionen hatten das Gegenproblem: unsichtbare Festnahmen und widerspruechliche Wechsel zwischen Haft und Freiheit.

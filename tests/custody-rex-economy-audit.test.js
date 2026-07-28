@@ -7,7 +7,7 @@ const { readWebpDimensions } = require('./image-format-utils');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1640 +StasiInterrogationContinuity'"), 'version constant is stale');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1641 +StasiReleaseContinuity'"), 'version constant is stale');
 assert(html.includes("text: _resolveIstEigenauftrag ? 'Eigen-Auftrag abschließen und Wahrheit festhalten.' : 'Fall abschließen und Auftraggeber informieren.'"),
   'resolve button copy must stay player-facing for external and self-assigned cases');
 assert(html.includes('_enginePrompt: [_resolveText, _resolveTransitionPrompt, _resolvePhysicalTruth]'), 'resolve direction must preserve physical target truth');
@@ -288,6 +288,37 @@ assert(driftScene.szene.length > 500 && driftScene.szene.includes('Zelle 14'),
 assert.strictEqual(driftScene.gewahrsam, true, 'custody truth guard must preserve the state flag');
 assert(driftScene.ort.includes('Hohenschoenhausen'), 'custody truth guard must preserve the physical location');
 assert.deepStrictEqual(Array.from(driftScene.personenImRaum), [], 'ordinary case NPCs must not leak into the cell UI');
+custodyTruthContext.pendingCategoryChoice = 'SCHLAFEN';
+assert.strictEqual(custodyTruthContext._custodySchlafFreilassungLaeuft(), true,
+  'confirmed sleep in custody must be recognized before the normal custody guard runs');
+const contradictoryReleaseScene = {
+  szene: 'Du bleibst weiterhin in Zelle 14. Die Zellentuer bleibt verriegelt.',
+  ort: 'MfS-Untersuchungshaftanstalt Hohenschoenhausen, Zelle 14',
+  gewahrsam: true,
+  personenImRaum: ['Wachmann']
+};
+assert.strictEqual(custodyTruthContext._custodyReleaseSceneTruthSichern(contradictoryReleaseScene), true,
+  'a contradictory sleep-release scene must receive a complete engine-authored release');
+assert(contradictoryReleaseScene.szene.length > 500
+    && contradictoryReleaseScene.szene.includes('Du bist frei'),
+  'release fallback must be full prose and explicitly state Karl is free');
+assert.strictEqual(contradictoryReleaseScene.gewahrsam, false,
+  'release truth guard must clear the visible custody flag');
+assert.strictEqual(contradictoryReleaseScene.ort,
+  'Vor der MfS-Untersuchungshaftanstalt Hohenschoenhausen',
+  'release truth guard must move the scene outside the prison');
+assert.deepStrictEqual(Array.from(contradictoryReleaseScene.personenImRaum), [],
+  'custody NPCs must not leak into the released scene UI');
+const skeletalReleaseScene = {
+  szene: 'Du wirst freigelassen.',
+  ort: 'MfS-Untersuchungshaftanstalt Hohenschoenhausen, Zelle 14',
+  gewahrsam: true,
+  personenImRaum: []
+};
+assert.strictEqual(custodyTruthContext._custodyReleaseSceneTruthSichern(skeletalReleaseScene), true,
+  'a one-line technical release must be expanded into proper scene prose');
+assert(skeletalReleaseScene.szene.length > 500 && skeletalReleaseScene.szene.includes('Du bist frei'),
+  'release guard must never leave a dry one-line AI instruction as the complete scene');
 
 assert(html.includes("key: 'mitgehen'") && html.includes("label: 'Mitgehen'"),
   'a visible MfS access needs an explicit, honest custody choice');
@@ -433,5 +464,20 @@ assert(html.includes("place: 'MfS-Gewahrsam Hohenschoenhausen, Zelle 14'"), 'cus
 assert(html.includes('abgewandtem, nicht erkennbarem Gesicht'), 'custody image contract must keep Karl anonymous');
 assert(html.includes("name: 'Vor der MfS-Untersuchungshaftanstalt Hohenschoenhausen'"),
   'routine release must leave the cell for the real exterior scene');
+assert(html.includes('function _custodySchlafFreilassungLaeuft()'),
+  'confirmed custody sleep needs an explicit transition guard before normal custody processing');
+assert(html.includes('karlInStasiCustody && !_custodySchlafExitNow && typeof _custodySceneTruthSichern'),
+  'custody prose guard must not overwrite the explicit sleep-release scene');
+assert(html.includes('if (karlInStasiCustody && !_custodySchlafExitNow)'),
+  'custody interrogation/torture processing must skip the explicit release transition');
+assert(html.includes('function _custodyReleaseSceneTruthSichern(scene)'),
+  'sleep release needs a dedicated prose/location/UI truth guard');
+assert(html.indexOf("_custodyReleaseSceneTruthSichern(scene);")
+    > html.indexOf("setCustodyState(false, 'schlaf-freilassung');"),
+  'release truth guard must run after custody state is cleared');
+assert(html.includes("scene.ort = releaseOrt;")
+    && html.includes("scene.gewahrsam = false;")
+    && html.includes("releasedFromCustody: true"),
+  'release truth guard must align scene location, custody flag, and engine location');
 
 console.log('CUSTODY_REX_ECONOMY_AUDIT_OK');
