@@ -16549,3 +16549,18 @@ Ortswechsel löscht den Zugriff nicht mehr lautlos.
 
 Regressionen decken sowohl Reiseabfang/Ortsbindung als auch die Interaktion mit
 dem Phantomakteur-Guard ab. Lokale Verifikation: 61/61 Tests grün.
+
+## 🆕 v7.12.1646 — MfS-Zugriff überlebt auch den Szenen-Fallback
+
+Der Produktions-Gegenlauf von v1645 hielt die Bedrohung intern fest, aber die
+Reiseankunft scheiterte zweimal an einer Innenraum-Weltwahrheit. Der danach
+verwendete deterministische Ankunfts-Fallback erzählte nur die gewöhnliche
+Büroankunft. Hauptmann Klaus Berner fehlte dadurch erneut in Prosa,
+Personenbestand und roter Konfrontations-UI.
+
+Eine letzte engineweite Schranke läuft nun nach allen KI-Retries und
+Weltwahrheits-Fallbacks. Ist ein MfS-Zugriff bereits vorgemerkt, setzt sie den
+benannten Beamten physisch und namentlich in die endgültige Szene, entfernt
+widersprüchliche Modelloptionen und übergibt anschließend an die rote
+Konfrontations-UI. Der Zugriff kann damit weder durch eine Reise noch durch
+einen generischen Orts-Fallback lautlos verschwinden.

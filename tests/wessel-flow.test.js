@@ -134,7 +134,58 @@ assert(/openingBriefMissing/.test(underwrittenSource),
 assert(/unsupportedOfficeIntrusion/.test(underwrittenSource),
   'unconfigured office break-ins need an engine-wide prose guard');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1645 +StasiTravelIntercept'"),
+const accessGuardStart = html.indexOf('function _enforcePendingStasiAccessInScene');
+const accessGuardEnd = html.indexOf('// Ein MfS-Zugriff endet nur dann in Haft', accessGuardStart);
+assert(accessGuardStart >= 0 && accessGuardEnd > accessGuardStart,
+  'pending Stasi access visibility guard is missing');
+const accessGuardSource = html.slice(accessGuardStart, accessGuardEnd);
+const accessGuardContext = {
+  caseProgress: {
+    forceCustodyNextScene: true,
+    pendingCustodyConfirm: true,
+  },
+  karlInStasiCustody: false,
+  engineCurrentLocation: { name: 'Karl Mauers BÃ¼ro' },
+  _stasiEncounterGet() {
+    return {
+      active: true,
+      phase: 'zugriff',
+      name: 'Hauptmann Klaus Berner',
+      location: 'Karl Mauers BÃ¼ro',
+    };
+  },
+  _stasiEncounterOrtStimmt() { return true; },
+  normForMatch(value) {
+    return String(value || '').toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  },
+  diag() {},
+};
+vm.createContext(accessGuardContext);
+vm.runInContext(accessGuardSource, accessGuardContext);
+const forcedArrival = {
+  ort: 'Karl Mauers BÃ¼ro',
+  szene: 'Du trittst in dein BÃ¼ro und legst die Akten auf den Schreibtisch.',
+  personenImRaum: [],
+  optionen: [{ text: 'Akten lesen' }],
+};
+assert.strictEqual(
+  accessGuardContext._enforcePendingStasiAccessInScene(forcedArrival),
+  true,
+  'pending Stasi access should be enforced after an arrival fallback',
+);
+assert(forcedArrival.personenImRaum.includes('Hauptmann Klaus Berner'),
+  'forced Stasi officer must be present in the physical scene roster');
+assert(/Hauptmann Klaus Berner/.test(forcedArrival.szene)
+    && /roten Dienstausweis/.test(forcedArrival.szene)
+    && /kommen jetzt mit/i.test(forcedArrival.szene),
+  'forced Stasi officer must be physically and narratively introduced');
+assert(Array.isArray(forcedArrival.optionen) && forcedArrival.optionen.length === 0,
+  'model options must not compete with the red Stasi confrontation UI');
+assert(html.indexOf('_enforcePendingStasiAccessInScene(scene);', accessGuardEnd) > accessGuardEnd,
+  'pending Stasi access guard must run after final scene repair');
+
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1646 +StasiFallbackIntercept'"),
   'release version is stale');
 
 console.log('WESSEL_FLOW_OK');
