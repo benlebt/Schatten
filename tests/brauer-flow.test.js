@@ -164,6 +164,8 @@ assert(html.includes("window.HAUPTUI_AKTIV && typeof cast !== 'undefined' && Arr
   'the current physical scene cast must feed the Haupt-UI target resolver');
 assert(html.includes("typeof _abschlussTerminAmOrt === 'function' && _abschlussTerminAmOrt(_uiLoc)"),
   'the Haupt-UI location filter must preserve the client at a ready report appointment');
+assert(html.includes("if (terminLoc && _abschlussTerminAmOrt(terminLoc)) return true;"),
+  'the canonical NPC location guard must accept a client at a ready report appointment');
 assert(html.includes("const _clientDepartureDestination = String((npc && npc.departureDestination) || '').trim();"),
   'client departures must use the setup contract instead of a shared hard-coded destination');
 assert(html.includes("_clientDepartureDestination: _clientDepartureDestination || null"),
