@@ -240,7 +240,7 @@ assert.deepStrictEqual(reputation.karlAkte.ruf, { renommee: -2, haerte: 2 },
 assert.strictEqual(reputation._sozialRufAnwenden({ id: 'norbert_tetzlaff' }, kragenVerb), false,
   'the same social reputation effect must not be applied twice');
 
-assert(/name: 'Hinterhof Sybelstrasse'[\s\S]{0,1000}?bedrohungen:\s*\[[\s\S]{0,500}?id: 'wachtmeister_eugen_hellbach'/.test(kessler),
+assert(/name: 'Hinterhof Sybelstrasse'[\s\S]{0,4000}?bedrohungen:\s*\[[\s\S]{0,500}?id: 'wachtmeister_eugen_hellbach'/.test(kessler),
   'optional Hellbach pressure must remain part of the Kessler case');
 assert(html.includes('function zeigeAbschlussWahrheitswahl(resolveOpt)'),
   'Kessler truth ending choices must remain intact');

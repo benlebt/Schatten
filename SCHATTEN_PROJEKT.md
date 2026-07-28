@@ -16437,3 +16437,23 @@ gleichbedeutende Form.
 Außenort-Prompt und Hard-Guard nennen bzw. erkennen nun Flur, Hausflur, Treppenflur,
 Eingangsflur und Treppenhaus. Der reale K6-Satz ist als `social_interior_drift`
 regressionsgesichert.
+
+## 🆕 v7.12.1635 — Kessler-Qualitätsverifikation: Bildbesetzung und Ankünfte geschlossen
+
+Ein vollständiger manueller Produktionslauf bis zum Edith-Finale zeigte vier
+Qualitätslücken: ein unbegründetes „Sie“ im Auftakt, eine generische
+Roster-Ergänzung nach Roberts Eintritt, trockene Ankunftsschablonen und die
+Vormittags-Rückkehr „Keine Menschenseele / Du bist allein“, obwohl das feste
+Hinterhofbild Frau Pohl und Frau Hauke zeigt.
+
+Der Kessler-Hinterhof besitzt jetzt redaktionelle Opening-, Arrival- und
+Presence-Fallbacks. Pohl und Hauke bleiben über alle Tagesphasen deckungsgleich
+in Bild, Prosa und Personen-UI; auch die Robert-Bildvarianten benennen beide
+Fensterfiguren im Alttext. Das fallübergreifende Ankunfts-Gate erkennt nun
+zusätzlich „keine Menschenseele“ und „du bist allein“. Cafe Wien, Spedition und
+Kessler-Wohnung erhielten konkrete Ankunftsprosa. Außerdem überlebt eine
+Sperrstunden-Umleitung den Szenenzählerwechsel, sodass die geschlossene
+Spedition und die Rückfahrt ins Büro nachvollziehbar erzählt werden.
+
+Verifikation: echter 14-Szenen-Lauf bis Fallabschluss; Bilder in allen besuchten
+Szenen vorhanden; 61/61 lokale Regressionstests grün.
