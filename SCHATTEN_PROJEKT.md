@@ -16529,3 +16529,23 @@ Orientierungsschablonen wie „Blick wandern lassen und entscheiden, wo man
 beginnt“ sowie sichtbare Regieformulierungen. Kurze Szenen brauchen konkrete
 Atmosphäre, Figuren/Requisiten und eine ausgespielte Handlung. Kesslers
 Bürorückkehr besitzt zusätzlich einen redaktionellen Fallback.
+
+## 🆕 v7.12.1645 — MfS-Zugriff überlebt einen Reiseversuch
+
+Der frische Wessel-Produktionslauf erreichte organisch Stasi-Tension 5/5 und
+sechs Hochrisiko-Szenen. Die Engine meldete korrekt `AUTO-CUSTODY forciert`,
+doch der noch sichtbare normale Reisebutton ließ den vorgemerkten Zugriff
+zwischen Hohenschönhausen und der Wessel-Wohnung verschwinden. Zusätzlich
+stufte der Weltwahrheits-Guard den von der Engine selbst angeforderten,
+benannten MfS-Beamten bei der Reiseankunft als Phantomakteur ein.
+
+Ein bereits vorgemerkter Zugriff fängt Karls Reise jetzt am Zielort ab und
+bleibt dort gebunden, bis die benannte Figur sichtbar eingeführt ist. Der
+aktive MfS-Encounter wird für diese erste Ankunft als kanonischer Roster
+anerkannt; danach erscheint die rote, spielbare Konfrontation mit den
+Entscheidungen Mitgehen, Ausweichen, Deeskalieren oder Widerstand. Nur die
+ausdrückliche Konfrontationsaktion Ausweichen zählt als Flucht — ein normaler
+Ortswechsel löscht den Zugriff nicht mehr lautlos.
+
+Regressionen decken sowohl Reiseabfang/Ortsbindung als auch die Interaktion mit
+dem Phantomakteur-Guard ab. Lokale Verifikation: 61/61 Tests grün.

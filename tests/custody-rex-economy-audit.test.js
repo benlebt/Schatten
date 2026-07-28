@@ -7,7 +7,7 @@ const { readWebpDimensions } = require('./image-format-utils');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1644 +OrdinalSentenceGuard'"), 'version constant is stale');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1645 +StasiTravelIntercept'"), 'version constant is stale');
 assert(html.includes("text: _resolveIstEigenauftrag ? 'Eigen-Auftrag abschließen und Wahrheit festhalten.' : 'Fall abschließen und Auftraggeber informieren.'"),
   'resolve button copy must stay player-facing for external and self-assigned cases');
 assert(html.includes('_enginePrompt: [_resolveText, _resolveTransitionPrompt, _resolvePhysicalTruth]'), 'resolve direction must preserve physical target truth');
@@ -107,6 +107,24 @@ assert(politicalEncounter._stasiEncounterPrompt().includes('Oberleutnant Mertens
 politicalEncounter._stasiEncounterClear('Audit beendet', 3);
 assert.strictEqual(politicalEncounter.caseProgress.stasiEncounter.active, false, 'resolved Stasi encounter must be persisted as inactive');
 assert.strictEqual(politicalEncounter.caseProgress.stasiEncounterCooldownUntil, 11, 'resolved encounter needs a scene cooldown');
+
+// Wessel-live v1644: Nach sechs Hochrisiko-Szenen war der Zugriff intern
+// forciert, ein normaler Reisebutton loeschte ihn aber vor der sichtbaren
+// Einfuehrung. Der Beamte muss die Reise jetzt am Zielort abfangen.
+const forcedTravel = makeEncounterContext(true);
+const travellingEncounter = forcedTravel._stasiEncounterForceZugriff('sechs ignorierte MfS-Warnungen');
+forcedTravel.engineCurrentLocation.name = 'Wessel-Wohnung';
+const interceptedTravelPrompt = forcedTravel._stasiEncounterPrompt();
+assert(interceptedTravelPrompt.includes('Oberleutnant Mertens'),
+  'a forced access must remain in the next travel scene');
+assert.strictEqual(travellingEncounter.location, 'Wessel-Wohnung',
+  'a pending forced access must rebind to the travel destination instead of vanishing');
+assert.strictEqual(forcedTravel._stasiEncounterConfirmIntroFromScene({
+  szene: 'Vor der Wessel-Wohnung tritt Oberleutnant Mertens aus dem Treppenhaus und stellt Karl.',
+  ort: 'Wessel-Wohnung'
+}), true, 'the travel interception must become a visible playable confrontation');
+assert.strictEqual(forcedTravel.caseProgress.activeConfrontation.trigger, 'stasi-encounter',
+  'the intercepted travel scene must expose the red Stasi confrontation');
 
 // Vollstaendiger Stein-aehnlicher Pfad: Relevanz 5 startet eine benannte
 // Beobachtung, diese darf verdeckt einen Ortswechsel mitmachen, wird sichtbar

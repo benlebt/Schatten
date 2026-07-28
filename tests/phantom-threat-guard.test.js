@@ -281,6 +281,33 @@ assert(!/Vollmer|Juni verschwunden ist/.test(ordinalDatePhantom.szene)
     && /^Bruno Wessel/.test(ordinalDatePhantom.szene),
   'removing a phantom actor must not leave a month-led sentence fragment behind');
 
+// Ein engine-seitig vorgemerkter, ortsgebundener MfS-Zugriff ist kein
+// Phantomakteur. Seine erste sichtbare Reise-Einfuehrung muss den
+// Weltwahrheits-Guard passieren, damit das rote Zugriffspanel entstehen kann.
+context.engineCurrentLocation = { name: 'Wessel-Wohnung' };
+context.caseProgress = {
+  activeConfrontation: null,
+  stasiEncounter: {
+    active: true,
+    phase: 'zugriff',
+    location: 'Wessel-Wohnung',
+    name: 'Oberleutnant Mertens'
+  }
+};
+context._stasiEncounterGet = () => context.caseProgress.stasiEncounter;
+context._stasiEncounterOrtStimmt = (encounter) =>
+  !!encounter && encounter.location === context.engineCurrentLocation.name;
+context.getCaseLocations = () => [{ name: 'Wessel-Wohnung', npcs: [] }];
+problem = context._findUnrosteredPresentActor({
+  ort: 'Wessel-Wohnung',
+  szene: 'Vor der Wohnung tritt Oberleutnant Mertens aus dem Treppenhaus und stellt Karl.',
+  personenImRaum: ['Oberleutnant Mertens']
+}, { id: 'REISE', _istReise: true }, {
+  setupCast: [{ id: 'mertens', name: 'Oberleutnant Mertens', tag: 'STASI' }]
+});
+assert.strictEqual(problem, null,
+  'an active named Stasi access must be legal in the travel-arrival roster');
+
 problem = context._findUnrosteredPresentActor({
   szene: 'Auf dem Foto steht eine Frau vor dem Haus.',
   personenImRaum: []
@@ -293,7 +320,7 @@ problem = context._findUnrosteredPresentActor({
 }, {});
 assert.strictEqual(problem, null, 'a properly rostered scene actor remains legal');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1644 +OrdinalSentenceGuard'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1645 +StasiTravelIntercept'"),
   'release version missing');
 
 console.log('phantom threat guard tests passed');
