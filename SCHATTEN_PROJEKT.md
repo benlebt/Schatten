@@ -16464,3 +16464,19 @@ Der Produktions-Gegenlauf von v1635 zeigte, dass der vollständige redaktionelle
 Kessler-Auftakt die bereits enthaltene Fensterbesetzung nochmals anhängen
 konnte. Der World-Truth-Fallback ergänzt Pohl und Hauke jetzt nur noch, wenn
 mindestens eine der beiden Figuren im bereinigten Auftakt tatsächlich fehlt.
+
+## 🆕 v7.12.1637 — Kessler-Bildpriorität und verbindliche Szenenprosa
+
+Ein exportierter Kessler-Lauf aus v1623 belegte einen Render-Race: Nach Roberts
+vollständig erzähltem Geständnis wurde Hellbach erst am Szenenende als
+Zufallsbedrohung erzeugt. Sein Polizeimotiv überschrieb daraufhin rückwirkend
+das Robert-Bild, obwohl Prosa und Personen-UI weiterhin Robert zeigten. Ein
+neuer Bild-Guard lässt Hellbachs Motiv deshalb erst erscheinen, wenn die
+sichtbare Szene ihn tatsächlich eingeführt hat; bis dahin behält die bereits
+erzählte Robert-Szene ihr ziviles Gegenübermotiv.
+
+Der fallübergreifende Prosa-Guard erkennt nun außerdem trockene
+Orientierungsschablonen wie „Blick wandern lassen und entscheiden, wo man
+beginnt“ sowie sichtbare Regieformulierungen. Kurze Szenen brauchen konkrete
+Atmosphäre, Figuren/Requisiten und eine ausgespielte Handlung. Kesslers
+Bürorückkehr besitzt zusätzlich einen redaktionellen Fallback.

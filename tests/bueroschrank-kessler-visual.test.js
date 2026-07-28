@@ -20,7 +20,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1636 +KesslerOpeningDedup'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1637 +KesslerVisualNarrativeGuard'"), 'release version missing');
 assert(html.includes('BÜROSCHRANK · STARTAUSRÜSTUNG'), 'case start dialog must expose the office wardrobe');
 assert(html.includes('Immer dabei: Walther PPK, Detektiv-Lizenz, Notizbuch und Bleistift.'), 'fixed detective gear must be explained');
 
@@ -182,14 +182,29 @@ const visualContext = {
   getNpcsAtCurrentLocation: () => [{ name: 'Wachtmeister Eugen Hellbach' }],
 };
 vm.createContext(visualContext);
-vm.runInContext(sourceOf('_kesslerRobertAktuellInSzene') + '\n' + sourceOf('_kesslerRobertVisual') + '\n' + sourceOf('_kesslerHellbachVisual'), visualContext);
-let spec = visualContext._kesslerHellbachVisual({ personenImRaum: [] });
+vm.runInContext(sourceOf('_kesslerRobertAktuellInSzene') + '\n' + sourceOf('_kesslerHellbachImSzenentext') + '\n' + sourceOf('_kesslerRobertVisual') + '\n' + sourceOf('_kesslerHellbachVisual'), visualContext);
+let spec = visualContext._kesslerHellbachVisual({
+  szene: 'Wachtmeister Eugen Hellbach tritt in den Hof und stellt sich Karl in den Weg.',
+  personenImRaum: ['Wachtmeister Eugen Hellbach']
+});
 assert.strictEqual(spec.dayFile, 'hinterhof-sybelstrasse-hellbach-confrontation-day.webp', 'active Hellbach must use confrontation art');
+const liveRobertConfession = {
+  szene: 'Robert Kessler weicht nicht aus. Er starrt auf deine Notizen, lässt den Speditionsmantel zu Boden gleiten und gibt die erfundenen Überstunden zu.',
+  personenImRaum: ['Frau Pohl', 'Robert Kessler']
+};
+spec = visualContext._kesslerRobertVisual(liveRobertConfession);
+assert.strictEqual(spec.dayFile, 'hinterhof-sybelstrasse-robert-confrontation-day.webp',
+  'a post-render Hellbach spawn must not replace Robert in his already narrated confession scene');
+assert.strictEqual(visualContext._kesslerHellbachVisual(liveRobertConfession), null,
+  'Hellbach art must wait until the prose actually introduces Hellbach');
 visualContext.caseProgress.activeConfrontation = {
   enemyName: 'Robert Kessler',
   enemyEntries: [{ name: 'Robert Kessler' }, { name: 'Wachtmeister Eugen Hellbach' }],
 };
-assert.strictEqual(visualContext._kesslerHellbachVisual({ personenImRaum: [] }), null,
+assert.strictEqual(visualContext._kesslerHellbachVisual({
+  szene: 'Robert Kessler steht Karl im Hof gegenüber.',
+  personenImRaum: ['Robert Kessler']
+}), null,
   'a Robert Kessler confrontation must not show Hellbach merely because he is also in the roster or enemy group');
 spec = visualContext._kesslerRobertVisual();
 assert.strictEqual(spec.dayFile, 'hinterhof-sybelstrasse-robert-confrontation-day.webp',

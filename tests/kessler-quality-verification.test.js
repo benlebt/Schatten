@@ -33,7 +33,7 @@ function norm(value) {
     .replace(/[^a-z0-9]+/g, ' ').trim();
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1636 +KesslerOpeningDedup'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1637 +KesslerVisualNarrativeGuard'"),
   'release version missing');
 assert(html.includes("const _openingPresence = _arrivalKesslerWindows\n          ? (_openingStillMissing.length"),
   'the fixed Kessler opening must not append its window cast a second time');
@@ -47,6 +47,8 @@ assert(html.includes("arrivalFallbackText: 'Am Kurfürstendamm stellst du den Op
   'Cafe Wien needs a written arrival instead of a dry room template');
 assert(html.includes("arrivalFallbackText: 'Zwischen Lastwagen, Packkisten und dem Geruch von Öl"),
   'the Spedition needs a written arrival instead of a dry room template');
+assert(html.includes("arrivalFallbackText: 'Du schließt die Bürotür am Hackeschen Markt hinter dir"),
+  'Kessler office returns need authored prose instead of a dry orientation template');
 
 const openingContext = {
   normForMatch: norm,
@@ -157,5 +159,30 @@ const redirect = curfewContext._aktiveSperrstundenReiseUmleitung({
 });
 assert(redirect && redirect.nach === 'Karl Mauers Büro',
   'the closing-time redirect must survive the travel scene counter increment');
+
+const proseContext = {
+  normForMatch: value => String(value || '').toLowerCase()
+    .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').trim(),
+  engineCurrentLocation: { name: 'Karl Mauers Büro' },
+  getCaseLocations: () => [],
+  caseProgress: {},
+};
+vm.createContext(proseContext);
+vm.runInContext(html.slice(
+  html.indexOf('function _findUnderwrittenSceneProse('),
+  html.indexOf('function _naturalMinimumSceneText('),
+), proseContext);
+const dryOfficeTemplate = proseContext._findUnderwrittenSceneProse({
+  ort: 'Karl Mauers Büro',
+  szene: 'Du öffnest die Tür von Karl Mauers Büro und trittst ein. Hinter dir fällt die Tür ins Schloss; die Geräusche des übrigen Gebäudes werden gedämpft. Du lässt den Blick durch den Raum wandern und entscheidest, wo du mit der Untersuchung beginnst.',
+}, { id: 'REISE', _istReise: true });
+assert(dryOfficeTemplate && dryOfficeTemplate.code === 'scene_prose_underwritten'
+    && dryOfficeTemplate.dryOrientationTemplate,
+  'the live dry office orientation template must be rejected before display');
+assert(proseContext._findUnderwrittenSceneProse({
+  ort: 'Karl Mauers Büro',
+  szene: 'Du schließt die Bürotür am Hackeschen Markt hinter dir und hängst den Mantel über den Stuhl. Auf dem Schreibtisch liegen Notizbuch und Fallakte im Licht der Lampe; aus dem Hinterzimmer rauscht das Sachsenwerk-Radio. Du ordnest Namen, Zeiten und Widersprüche, bevor du den nächsten Ermittlungsweg festlegst.',
+}, { id: 'REISE', _istReise: true }) === null,
+  'a concrete three-sentence office return must pass the prose floor');
 
 console.log('KESSLER_QUALITY_VERIFICATION_OK');
