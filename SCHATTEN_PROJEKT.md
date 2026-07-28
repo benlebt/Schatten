@@ -16564,3 +16564,24 @@ benannten Beamten physisch und namentlich in die endgültige Szene, entfernt
 widersprüchliche Modelloptionen und übergibt anschließend an die rote
 Konfrontations-UI. Der Zugriff kann damit weder durch eine Reise noch durch
 einen generischen Orts-Fallback lautlos verschwinden.
+
+## 🆕 v7.12.1647 — Haftgedächtnis und Berner-Bürobild
+
+Der v1646-Gegenlauf erreichte erstmals sauber die rote Wessel-Konfrontation und
+über „Mitgehen“ den echten MfS-Gewahrsam. Die unmittelbar davor gewählte
+Schlafszene erfand jedoch rückblickend eine Zelle, ein stundenlanges Verhör und
+eine Entlassung aus Hohenschönhausen, obwohl Karl bis dahin noch nie in Haft
+war. Außerdem fehlte Berner im Bürobild, obwohl Prosa und UI ihn korrekt
+führten.
+
+Ein engineweiter Weltwahrheits-Guard sperrt Haft-, Verhör- und
+Entlassungsrückblicke bei Schlafaktionen, solange noch kein echtes
+Custody-Ereignis protokolliert wurde. Der deterministische Büro-Fallback lässt
+Karl stattdessen auf seinem Bürosofa schlafen und wacht am selben Ort auf; der
+gegenwärtige Zugriff setzt erst danach ein.
+
+Für Wessel gibt es zusätzlich die neue Präsenzvariante
+`karl-mauers-buero-berner-day.png`: Karl steht Berner im Büro gegenüber,
+Berner zeigt den roten Dienstausweis, zwei MfS-Männer blockieren die Tür.
+Bild, Prosa, Personenbestand und Konfrontations-UI zeigen damit denselben
+physischen Zustand.

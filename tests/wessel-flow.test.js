@@ -92,6 +92,7 @@ function specFor(location) {
 
 for (const [location, id, file] of [
   ['karl mauers buero', 'bruno_wessel', 'karl-mauers-buero-bruno-day.png'],
+  ['karl mauers buero', 'hauptmann_berner', 'karl-mauers-buero-berner-day.png'],
   ['hohenschoenhausen', 'hauptmann_berner', 'hohenschoenhausen-berner-night.png'],
 ]) {
   const spec = specFor(location);
@@ -185,7 +186,45 @@ assert(Array.isArray(forcedArrival.optionen) && forcedArrival.optionen.length ==
 assert(html.indexOf('_enforcePendingStasiAccessInScene(scene);', accessGuardEnd) > accessGuardEnd,
   'pending Stasi access guard must run after final scene repair');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1646 +StasiFallbackIntercept'"),
+const falseCustodyStart = html.indexOf('function _findFalsePriorCustodyHistory');
+const falseCustodyEnd = html.indexOf('function _findRescueToolDrift', falseCustodyStart);
+assert(falseCustodyStart >= 0 && falseCustodyEnd > falseCustodyStart,
+  'false prior-custody history guard is missing');
+const falseCustodySource = html.slice(falseCustodyStart, falseCustodyEnd);
+assert(/SCHLAFEN/.test(falseCustodySource)
+    && /_rufCustodyEreignisse/.test(falseCustodySource)
+    && /false_prior_custody_history/.test(falseCustodySource),
+  'false custody guard must be limited to sleep before the first real custody event');
+const falseCustodyContext = {
+  karlInStasiCustody: false,
+  _rufCustodyEreignisse: 0,
+  engineCurrentLocation: { name: 'Karl Mauers BÃ¼ro' },
+  _splitWorldTruthSentences(text) { return String(text).match(/[^.!?]+[.!?]?/g) || []; },
+  normForMatch(value) {
+    return String(value || '').toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/Ã¼/g, 'ue').replace(/Ã¶/g, 'oe').replace(/Ã¤/g, 'ae');
+  },
+};
+vm.createContext(falseCustodyContext);
+vm.runInContext(falseCustodySource, falseCustodyContext);
+const falseHistory = falseCustodyContext._findFalsePriorCustodyHistory({
+  ort: 'Karl Mauers BÃ¼ro',
+  szene: 'Du lÃ¤sst das Klopfen vor der Zelle in HohenschÃ¶nhausen hinter dir. Ein Wachhabender lÃ¤sst dich nach stundenlangem VerhÃ¶r ins Freie.',
+}, { kategorie: 'SCHLAFEN' });
+assert(falseHistory && falseHistory.code === 'false_prior_custody_history',
+  'the real Wessel false-release prose must be rejected before first custody');
+falseCustodyContext._rufCustodyEreignisse = 1;
+assert.strictEqual(falseCustodyContext._findFalsePriorCustodyHistory({
+  szene: 'Du lÃ¤sst nach deiner echten Entlassung die Zelle hinter dir.',
+}, { kategorie: 'SCHLAFEN' }), null,
+  'real later custody history must remain narratively available');
+assert(html.includes("problem.code === 'false_prior_custody_history'"),
+  'false prior-custody history needs a deterministic prose fallback');
+assert(/Du schiebst Werners Akten auf dem Schreibtisch zusammen/.test(html),
+  'Wessel office sleep needs a canonical custody-free fallback');
+
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1647 +StasiCustodyMemory'"),
   'release version is stale');
 
 console.log('WESSEL_FLOW_OK');
