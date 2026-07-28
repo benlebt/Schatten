@@ -21,7 +21,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1668 +RestoredFinalNarration'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1669 +LindnerStateContinuity'"), 'release version missing');
 assert(html.includes('Liesl schenkte oder widmete das Etui 1939 Hugo'), 'Krause setup must bind the silver-case ownership direction');
 assert(html.includes('Karl zählt oder nimmt kein Geld, Karls Kasse bleibt unverändert'), 'Krause opening prompt must keep the return-contingent fee unpaid');
 assert(html.includes('Dramatisiere diese EINE Spur genau EINMAL'), 'explicit Haupt-UI clues must merge compact target and detailed payoff into one narration');
@@ -185,8 +185,9 @@ assert(groupFinish.includes('_konfrontationGruppenZielSetzen(k, naechstesZiel)')
 assert(sourceOf('_konfrontationStatusIstEndgueltig').includes("'beruhigt'"),
   'a peacefully resolved Krause opponent must leave the active blocker group');
 const confrontationAction = sourceOf('_hauptuiKonfrontationAktion');
-assert(confrontationAction.includes("'angespannt', 'bluff'"),
-  'a bluff must keep the confrontation open instead of silently clearing unresolved opponents');
+assert(confrontationAction.includes("bluffEntscheidet ? 'beruhigt' : 'angespannt'")
+    && confrontationAction.includes('const bluffRunde = Math.max(1'),
+  'the first bluff must keep the confrontation open while a second credible bluff resolves the current opponent');
 assert(confrontationAction.includes("'beruhigt', 'deeskalation'"),
   'de-escalation must mechanically calm the current opponent and advance the group');
 

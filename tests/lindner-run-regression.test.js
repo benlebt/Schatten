@@ -325,6 +325,93 @@ assert(html.includes('const _fallbackThin = (typeof _findUnderwrittenSceneProse'
 assert(html.includes("problem.code === 'scene_prose_underwritten'"),
   'underwritten prose needs an explicit natural fallback repair');
 
+const cluePayoffContext = {
+  caseProgress: { pendingHauptuiIndiz: { id: 'margit_aussage' } },
+  currentScene: null,
+  _findUnderwrittenSceneProse: () => ({ code: 'scene_prose_underwritten' })
+};
+vm.createContext(cluePayoffContext);
+vm.runInContext(sourceOf('_indizAbschlussProsaSichern'), cluePayoffContext);
+const thinMargitScene = {
+  szene: 'Margit bleibt vor dir und mustert dich aufmerksam.'
+};
+const margitPayoff = 'Margit Hollenbeck berichtet von Friedrichs Streit mit Otto Wegner am Vortag.';
+assert.strictEqual(cluePayoffContext._indizAbschlussProsaSichern({
+  id: 'margit_aussage',
+  fundText: margitPayoff
+}, thinMargitScene), true,
+'a mechanically booked clue with underwritten prose must be replaced by its canonical payoff');
+assert.strictEqual(thinMargitScene.szene, margitPayoff,
+  'the canonical Margit statement must reach the visible scene');
+
+const rescuedArrivalContext = {
+  caseSetup: {
+    targetResolution: {
+      mode: 'physical',
+      npc: 'friedrich_hollenbeck',
+      guard: 'leutnant_faber',
+      location: 'Datscha am Mueggelsee',
+      rescuedArrivalFallbackText: 'Friedrich ist bereits befreit und wartet am Opel.',
+      guardRemovedArrivalFallbackText: 'Faber ist fort; Friedrich wartet noch im Raum.'
+    }
+  },
+  caseProgress: { zielpersonGeborgen: true },
+  engineCurrentLocation: { name: 'Datscha am Mueggelsee' },
+  getCaseLocations: () => [{
+    name: 'Datscha am Mueggelsee',
+    arrivalFallbackText: 'Friedrich ist gefesselt; Faber bewacht ihn.'
+  }],
+  normForMatch: value => String(value || '').toLowerCase(),
+  _resolveNpcIdentity: () => ({ name: 'Leutnant Ingrid Faber' }),
+  _npcZustandGet: () => null
+};
+vm.createContext(rescuedArrivalContext);
+vm.runInContext(sourceOf('_naturalMinimumSceneText'), rescuedArrivalContext);
+const rescuedReturnText = rescuedArrivalContext._naturalMinimumSceneText({
+  szene: 'Du kehrst zurück.',
+  personenImRaum: ['Friedrich Hollenbeck']
+}, {
+  engineOrt: 'Datscha am Mueggelsee',
+  arrival: true
+});
+assert(rescuedReturnText.startsWith('Friedrich ist bereits befreit und wartet am Opel.')
+    && !/gefesselt|Faber bewacht/.test(rescuedReturnText),
+'returning after custody must not reset Hollenbeck to bound or resurrect Faber');
+
+const guardVisualContext = {
+  caseSetup: {
+    targetResolution: {
+      mode: 'physical',
+      npc: 'friedrich_hollenbeck',
+      guard: 'leutnant_faber',
+      location: 'Datscha am Mueggelsee',
+      visualStates: {
+        guardRemovedAtTarget: { file: 'guard-gone.png' },
+        guardDownAtTarget: { file: 'guard-down.png' }
+      }
+    }
+  },
+  caseProgress: { zielpersonGeborgen: false, zielpersonTransportStatus: '' },
+  engineCurrentLocation: { name: 'Datscha am Mueggelsee' },
+  normForMatch: value => String(value || '').toLowerCase(),
+  _resolveNpcIdentity: () => ({ name: 'Leutnant Ingrid Faber' }),
+  _npcZustandGet: value => value === 'Leutnant Ingrid Faber'
+    ? { status: 'geflohen' } : null
+};
+vm.createContext(guardVisualContext);
+vm.runInContext(sourceOf('_physicalTargetSceneVisual'), guardVisualContext);
+assert.strictEqual(guardVisualContext._physicalTargetSceneVisual().file, 'guard-gone.png',
+  'visual state lookup must resolve a configured guard id to the stored display name');
+
+assert(html.includes('const caseSpecific = castOptions.filter(function (npc) { return npc && !npc._stammfigur; });'),
+  'case-specific MfS officers must take precedence over the global Vollmer fallback');
+assert(html.includes("caseProgress.activeConfrontation.trigger !== 'stasi-encounter'")
+    && html.includes('SERIALISIERTER MfS-DRUCK'),
+  'a central Stasi encounter must wait behind an active case confrontation');
+assert(html.includes('const bluffRunde = Math.max(1')
+    && html.includes("bluffEntscheidet ? 'beruhigt' : 'angespannt'"),
+  'two consecutive credible bluffs must resolve instead of looping forever');
+
 const rosterPresenceContext = {
   engineCurrentLocation: { name: 'Datscha am Mueggelsee' },
   normForMatch: value => String(value || '').toLowerCase(),
