@@ -87,6 +87,22 @@ for (const clueId of [
 }
 assert.strictEqual(clueById.get('marienfelde_registratur').stage, 4,
   'Marienfelde registration must remain the decisive stage-four proof');
+assert(clueById.get('schicht_grenze').fundText
+    && clueById.get('schicht_grenze').fundText.split(/\s+/).length >= 45
+    && /Bahnhof Friedrichstraße/.test(clueById.get('schicht_grenze').fundText)
+    && !/Lokschuppen|Dienststelle des Lokschuppens/i.test(clueById.get('schicht_grenze').fundText),
+  'the station clue needs full station prose without drifting back to the locomotive shed');
+assert(clueById.get('schicht_grenze').prosaPflicht
+    && clueById.get('schicht_grenze').prosaPflicht.replaceOnFallback === true,
+  'the station clue must enforce its authored location truth when generated prose drifts');
+assert(clueById.get('marienfelde_registratur').fundText
+    && clueById.get('marienfelde_registratur').fundText.split(/\s+/).length >= 50
+    && /vor vier Tagen/.test(clueById.get('marienfelde_registratur').fundText)
+    && /im Westen in Sicherheit/.test(clueById.get('marienfelde_registratur').fundText),
+  'the decisive proof needs complete positive prose, not an uncertain ledger fragment');
+assert(clueById.get('marienfelde_registratur').prosaPflicht
+    && clueById.get('marienfelde_registratur').prosaPflicht.replaceOnFallback === true,
+  'the decisive safety proof must replace contradictory generated prose');
 assert(/unverschlossen/i.test(clueById.get('schliessfach_leer').text)
     && /keinen Schlüssel/i.test(clueById.get('schliessfach_leer').text),
   'the locker clue must define access without inventing a key handoff from Hilde');
@@ -150,6 +166,26 @@ assert.deepStrictEqual(
   { width: 1536, height: 864 },
   'the corrected Marienfelde image must use the standard 16:9 scene resolution',
 );
+const railwaySpec = imageSet.images.find((entry) => {
+  entry.test.lastIndex = 0;
+  return entry.test.test('reichsbahn lokschuppen friedrichstrasse');
+});
+assert(railwaySpec && Array.isArray(railwaySpec.presenceVariants),
+  'the locomotive shed needs a presence-aware Vollmer confrontation visual');
+const shedVollmerVariant = railwaySpec.presenceVariants.find((entry) => entry.id === 'stamm_mfs');
+assert(shedVollmerVariant
+    && shedVollmerVariant.depictsNpcs.includes('helmut_mahlke')
+    && shedVollmerVariant.depictsNpcs.includes('im_schaffner')
+    && shedVollmerVariant.depictsNpcs.includes('stamm_mfs'),
+  'the Vollmer shed image must contractually depict every persistent scene NPC');
+const shedVollmerImage = path.join(repoRoot, shedVollmerVariant.root, shedVollmerVariant.file);
+assert(fs.existsSync(shedVollmerImage) && fs.statSync(shedVollmerImage).size > 1000000,
+  'the dedicated four-person shed image is missing or implausibly small');
+const shedPng = fs.readFileSync(shedVollmerImage);
+assert.strictEqual(shedPng.toString('ascii', 1, 4), 'PNG',
+  'the dedicated four-person shed image must be a real PNG');
+assert(shedPng.readUInt32BE(16) >= 1500 && shedPng.readUInt32BE(20) >= 840,
+  'the dedicated four-person shed image must retain scene-scale resolution');
 const vollmerImage = path.join(repoRoot, 'assets', 'scenes', 'brauer',
   'bahnhof-friedrichstrasse-vollmer-day.png');
 assert(fs.existsSync(vollmerImage) && fs.statSync(vollmerImage).size > 500000,
@@ -196,6 +232,20 @@ function sourceOf(name) {
   }
   assert.fail(name + ' has no closing brace');
 }
+
+const worldTruthSource = sourceOf('validateSceneWorldTruth');
+assert(worldTruthSource.includes('option._pendingIndizId')
+    && worldTruthSource.includes("_gefundenWahr.push(option._pendingIndizId)"),
+  'a newly collected proof must already count as world truth during prose validation');
+const centralProofGuard = html.slice(
+  html.indexOf('const _istAbschlussSzene'),
+  html.indexOf('if (_istAbschlussSzene', html.indexOf('const _istAbschlussSzene')),
+);
+assert(!/stage\s*\|\|\s*0/.test(centralProofGuard),
+  'a high investigation stage alone must never trigger finale-proof rewriting');
+assert(html.includes('für den verstorbenen Regierenden Bürgermeister West-Berlins, Ernst Reuter')
+    && html.includes('wie sie in jeder überfüllten Ambulanz in der Luft liegt'),
+  'the prose sanitizer must preserve Reuter and Marienfelde political geography');
 
 const serializedSetup = JSON.parse(JSON.stringify(setup));
 delete serializedSetup.abschlussOrt;
