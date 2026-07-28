@@ -53,6 +53,11 @@ assert(apartment && railway && laundry && marienfelde,
   'the Brauer investigation route is incomplete');
 assert.strictEqual(setup.abschlussOrt, 'Karl Mauers Büro',
   'the family proof case needs one explicit personal report appointment');
+assert(setup.reportFallbackText && setup.reportFallbackText.split(/\s+/).length >= 65
+    && /Marienfelder Registratur/.test(setup.reportFallbackText)
+    && /im Westen in Sicherheit/.test(setup.reportFallbackText)
+    && /Hilde/.test(setup.reportFallbackText),
+  'the family proof case needs a complete narrated final-report fallback');
 assert(setup.locations[0].openingFallbackText.split(/\s+/).length >= 55
     && /Hilde Brauer/.test(setup.locations[0].openingFallbackText)
     && /Reichsbahn-Schaffner/.test(setup.locations[0].openingFallbackText)
@@ -196,6 +201,7 @@ const serializedSetup = JSON.parse(JSON.stringify(setup));
 delete serializedSetup.abschlussOrt;
 delete serializedSetup.requiredProofPartialText;
 delete serializedSetup.requiredProofConfirmsSafety;
+delete serializedSetup.reportFallbackText;
 serializedSetup.requiredProof = {};
 delete serializedSetup.locations[0].arrivalFallbackText;
 const serializedLaundry = serializedSetup.locations.find((entry) =>
@@ -217,6 +223,8 @@ assert(Object.prototype.toString.call(migrationContext.caseSetup.requiredProof) 
   'restoring a JSON save must recover the canonical requiredProof RegExp');
 assert.strictEqual(migrationContext.caseSetup.abschlussOrt, 'Karl Mauers Büro',
   'restoring an older save must migrate the configured report location');
+assert.strictEqual(migrationContext.caseSetup.reportFallbackText, setup.reportFallbackText,
+  'restoring an older save must migrate the narrated final report');
 assert(migrationContext.caseSetup.locations[0].arrivalFallbackText
     && serializedLaundry.arrivalFallbackText
     && serializedRailway.indizien.find((entry) => entry.id === 'schliessfach_leer').fundText,
@@ -240,6 +248,23 @@ proofContext.caseProgress.indizien = [clueById.get('schicht_grenze').text];
 assert.strictEqual(proofContext._requiredProofErfuellt(), false,
   'a border-route clue alone must not pretend that Erwin is confirmed safe');
 proofContext.caseProgress.indizien = [clueById.get('marienfelde_registratur').text];
+
+const reportFallbackContext = {
+  caseSetup: setup,
+  caseProgress: proofContext.caseProgress,
+  normForMatch: (value) => String(value || '').toLowerCase(),
+};
+vm.createContext(reportFallbackContext);
+vm.runInContext(sourceOf('_worldTruthNaturalSocialFallbackText'), reportFallbackContext);
+const narratedReport = reportFallbackContext._worldTruthNaturalSocialFallbackText(
+  'Hilde Brauer',
+  { id: 'HAUPTUI_KLIENTENBERICHT' },
+  'social_target_missing',
+);
+assert(narratedReport.split(/\s+/).length >= 65
+    && /Marienfelder Registratur/.test(narratedReport)
+    && !/ohne dass du etwas Neues erfÃ¤hrst/.test(narratedReport),
+  'a repaired client report must remain a real finale, never an empty social fallback');
 
 const genericThreadContext = {
   caseSetup: setup,
