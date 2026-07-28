@@ -7,7 +7,7 @@ const { readWebpDimensions } = require('./image-format-utils');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1651 +StasiReleaseTargetTruth'"), 'version constant is stale');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1652 +StasiReleaseGrace'"), 'version constant is stale');
 assert(html.includes("text: _resolveIstEigenauftrag ? 'Eigen-Auftrag abschließen und Wahrheit festhalten.' : 'Fall abschließen und Auftraggeber informieren.'"),
   'resolve button copy must stay player-facing for external and self-assigned cases');
 assert(html.includes('_enginePrompt: [_resolveText, _resolveTransitionPrompt, _resolvePhysicalTruth]'), 'resolve direction must preserve physical target truth');
@@ -125,6 +125,16 @@ assert.strictEqual(forcedTravel._stasiEncounterConfirmIntroFromScene({
 }), true, 'the travel interception must become a visible playable confrontation');
 assert.strictEqual(forcedTravel.caseProgress.activeConfrontation.trigger, 'stasi-encounter',
   'the intercepted travel scene must expose the red Stasi confrontation');
+
+const releasedGrace = makeEncounterContext(true);
+vm.runInContext('metaCustodyGracePeriod = 5', releasedGrace);
+assert.strictEqual(releasedGrace._stasiEncounterForceZugriff('unmittelbar nach Freilassung'), null,
+  'no force path may recreate a Stasi access during the release grace period');
+releasedGrace._stasiEncounterAdvance('ERMITTLUNG');
+assert.strictEqual(releasedGrace.caseProgress.stasiEncounter, undefined,
+  'ordinary investigation must not spawn an observation during the release grace period');
+assert.strictEqual(releasedGrace.caseProgress.stasiEncounterEligibleScenes, 0,
+  'release grace must not silently accumulate an immediate follow-up access');
 
 // Vollstaendiger Stein-aehnlicher Pfad: Relevanz 5 startet eine benannte
 // Beobachtung, diese darf verdeckt einen Ortswechsel mitmachen, wird sichtbar
@@ -292,7 +302,24 @@ assert(custodyTruthStart >= 0 && custodyTruthEnd > custodyTruthStart, 'cannot is
 const custodyTruthContext = {
   karlInStasiCustody: true,
   engineCurrentLocation: { name: 'Cafe im Westen', sektor: 'West' },
-  caseProgress: { custodyVerhoer: { runden: 2, druck: 2, kooperation: 0, verweigerung: 1, letzteAktion: 'SCHWEIGEN' } },
+  caseProgress: {
+    custodyVerhoer: { runden: 2, druck: 2, kooperation: 0, verweigerung: 1, letzteAktion: 'SCHWEIGEN' },
+    forceCustodyNextScene: true,
+    pendingCustodyConfirm: true,
+    custodyForcedEntry: true,
+    custodyEntryReason: 'stale',
+    stasiPflichtSeitScene: 12,
+    stasiEncounterEligibleScenes: 4
+  },
+  custodyLocked: true,
+  metaCustodyGracePeriod: 0,
+  stasiTension: 5,
+  stasiHighTensionStreak: 3,
+  stasiMaxTensionStreak: 2,
+  pendingForcedCustodyArrest: { source: 'stale' },
+  _stasiEncounterClear: (reason, cooldown) => {
+    custodyTruthContext.lastEncounterClear = { reason, cooldown };
+  },
   detectStasiCustody: () => false,
   detectStasiRelease: () => false,
   lastFullScene: '',
@@ -307,6 +334,7 @@ const custodyTruthContext = {
 vm.createContext(custodyTruthContext);
 vm.runInContext('_custodyVerhoerState = function () { return caseProgress.custodyVerhoer; };', custodyTruthContext);
 vm.runInContext(html.slice(custodyTruthStart, custodyTruthEnd), custodyTruthContext);
+vm.runInContext('metaCustodyGracePeriod = 0;', custodyTruthContext);
 const driftScene = { szene: 'Karl steht ploetzlich frei im Cafe.', ort: 'Cafe im Westen', gewahrsam: false, personenImRaum: ['Zeuge'] };
 assert.strictEqual(custodyTruthContext._custodySceneTruthSichern(driftScene), true,
   'a model scene that drifts out of custody must be replaced, not release Karl');
@@ -367,6 +395,22 @@ assert.deepStrictEqual(Array.from(staleSavedReleaseScene.personenImRaum), [],
   'restoring an explicit release must remove stale prison personnel from the visible roster');
 assert.strictEqual(custodyTruthContext.engineCurrentLocation.releasedFromCustody, true,
   'restoring an explicit release must align the engine location with the exterior scene');
+assert.strictEqual(vm.runInContext('metaCustodyGracePeriod', custodyTruthContext), 5,
+  'restoring a release must establish five genuinely free follow-up scenes');
+assert.strictEqual(custodyTruthContext.stasiTension, 2,
+  'restoring a release must lower stale maximum Stasi tension');
+assert.strictEqual(custodyTruthContext.stasiHighTensionStreak, 0,
+  'restoring a release must clear the high-tension streak');
+assert.strictEqual(custodyTruthContext.pendingForcedCustodyArrest, null,
+  'restoring a release must clear a stale forced arrest');
+assert.deepStrictEqual(custodyTruthContext.lastEncounterClear,
+  { reason: 'Freilassung aus MfS-Gewahrsam', cooldown: 5 },
+  'release repair must clear encounters with the full cooldown');
+assert.strictEqual(custodyTruthContext.caseProgress.stasiPflichtSeitScene, 0,
+  'release repair must clear the prompt-level compulsory-access marker');
+assert(html.includes('STASI-NACHWIRKUNG NACH FREILASSUNG')
+    && html.includes('KEIN aktiver Beobachter, KEINE Kontrolle, KEIN Zugriff'),
+  'scene prompting must explicitly keep the grace period atmospheric');
 
 assert(html.includes("key: 'mitgehen'") && html.includes("label: 'Mitgehen'"),
   'a visible MfS access needs an explicit, honest custody choice');
