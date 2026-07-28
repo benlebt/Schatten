@@ -7,7 +7,7 @@ const { readWebpDimensions } = require('./image-format-utils');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1661 +MertensOfficeVisual'"), 'version constant is stale');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1662 +CustodyReleaseVisual'"), 'version constant is stale');
 assert(html.includes("text: _resolveIstEigenauftrag ? 'Eigen-Auftrag abschließen und Wahrheit festhalten.' : 'Fall abschließen und Auftraggeber informieren.'"),
   'resolve button copy must stay player-facing for external and self-assigned cases');
 assert(html.includes('_enginePrompt: [_resolveText, _resolveTransitionPrompt, _resolvePhysicalTruth]'), 'resolve direction must preserve physical target truth');
@@ -593,5 +593,9 @@ assert(html.includes("_custodyReleaseStateTruthSichern(currentScene, 'restore');
   'saved release truth must be repaired before header, image, and options are restored');
 assert(html.includes('const istGewahrsam = !istFreilassungsSzene && ('),
   'the custody cell image must be impossible in an explicit release scene');
+assert(html.includes('const CUSTODY_RELEASE_SCENE_IMAGE = {')
+    && html.includes("file: 'hohenschoenhausen-genslerstrasse.webp'")
+    && html.includes('? CUSTODY_RELEASE_SCENE_IMAGE'),
+  'an explicit release scene must render the real Hohenschoenhausen exterior instead of hiding the image');
 
 console.log('CUSTODY_REX_ECONOMY_AUDIT_OK');
