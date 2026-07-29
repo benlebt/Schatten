@@ -216,6 +216,37 @@ assert.strictEqual(restoredSteinContext.repairBasicGermanProse(restoredWrongBril
   'an already saved Stein scene must be migrated on restore');
 assert(!/Brille rutscht|hinter den Gläsern/.test(restoredWrongBrille.text),
   'saved prose must share the broken-glasses truth after reload');
+const restoredWahlerArrival = {
+  type: 'scene',
+  ort: 'Reichsbahndirektion Mitte',
+  time: 'Vormittag',
+  text: 'Wahler ist nicht in seinem Büro, doch in dem kargen Vorraum mit dem schweren Schreibtisch aus dunklem Holz fällt dein Blick auf die Ablage für die ausgehenden Dienstposten. IM "Anker" tritt durch die Tür.',
+};
+assert.strictEqual(restoredSteinContext.repairBasicGermanProse(restoredWahlerArrival), true,
+  'the restored Reichsbahn arrival must align Wahler with the engine roster and group image');
+assert(/Direktor Wahler steht hinter dem schweren Schreibtisch/.test(restoredWahlerArrival.text)
+    && !/Wahler ist nicht/.test(restoredWahlerArrival.text),
+  'Reichsbahn prose, UI roster and Wahler/Anker image must share one cast truth');
+
+const custodyItemContext = {};
+vm.createContext(custodyItemContext);
+vm.runInContext(sourceOf('repairCustodyChosenItemContinuity'), custodyItemContext);
+const missingStinkbombCustody = {
+  type: 'scene',
+  ort: 'MfS-Untersuchungshaftanstalt Hohenschoenhausen',
+  gewahrsam: true,
+  text: 'Zwei Männer in unscheinbaren Mänteln schneiden dir den Weg ab. Man bringt dich in Zelle 14.',
+};
+assert.strictEqual(custodyItemContext.repairCustodyChosenItemContinuity(
+  missingStinkbombCustody,
+  'Stinkbombe im Blechmantel - IM "Anker"'
+), true, 'saved custody prose must recover the chosen Stinkbombe action');
+assert(/Stinkbombe/.test(missingStinkbombCustody.text)
+    && /Beißender Qualm/.test(missingStinkbombCustody.text)
+    && /absurd kurzen Vorteil/.test(missingStinkbombCustody.text),
+  'the recovered Stinkbombe beat must be concrete, slapstick-capable and consequence-preserving');
+assert(sourceOf('performApiCall').includes('stinkbombe|stink bombe|blechmantel'),
+  'future deterministic custody entries must narrate the selected Stinkbombe before the arrest');
 
 const evidenceGateDiagnostics = [];
 const evidenceGateContext = {
@@ -318,7 +349,7 @@ assert(/beat\.id !== 'akten_gesichert'/.test(markEvidenceSource)
     && /beat\.id !== 'margarete_gesichert'/.test(markEvidenceSource),
   'deterministic clue booking must protect action-only security beats');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1727 +SteinBrillenTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1728 +SteinItemCastTruth'"),
   'release version is stale');
 assert(html.includes('Vom Hackeschen Markt dringen gedämpfte Motorengeräusche')
     && html.includes('Noch passt nicht jedes Stück zusammen'),
