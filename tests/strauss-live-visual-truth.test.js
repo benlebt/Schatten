@@ -133,6 +133,34 @@ selected = visualContext._szenenbildAnwesenheitsVariante(shopSpec, {
 assert.strictEqual(selected.file, 'strauss-geschaeft-rex-night-v1692.png',
   'after the handoff the image must show Rex without rematerializing Krummbein');
 
+const rosterTruthContext = {
+  caseSetup: {
+    klient: 'Eigen-Auftrag · Ludwig Strauss',
+    opfer: 'Ludwig Strauss',
+    auftrag: 'Strauss-Tod aufklären',
+  },
+  caseProgress: {},
+  engineCurrentLocation: { name: 'Strauss-Geschaeft' },
+  normForMatch,
+  _aktTageszeitName: () => 'Vormittag',
+};
+vm.createContext(rosterTruthContext);
+vm.runInContext(
+  sourceOf('sanitizeProsaMetadaten') + '\n' + sourceOf('repairBasicGermanProse'),
+  rosterTruthContext,
+);
+const phantomWitness = 'Rex knurrt Krummbein an. Die Frau mit dem Schleier weicht scharf einatmend in die Ecke des Ladens zurück. Krummbein hebt das Messer.';
+const repairedPhantom = rosterTruthContext.sanitizeProsaMetadaten(phantomWitness);
+assert(!/Frau mit dem Schleier|Schleierfrau/.test(repairedPhantom)
+    && /Rex knurrt Krummbein an/.test(repairedPhantom)
+    && /Krummbein hebt das Messer/.test(repairedPhantom),
+  'the Friedhof/Kranzler witness must not materialize in Krummbeins shop');
+const restoredPhantom = { type: 'scene', ort: 'Strauss-Geschaeft', text: phantomWitness };
+assert.strictEqual(rosterTruthContext.repairBasicGermanProse(restoredPhantom), true,
+  'a saved Strauss shop scene must migrate away a phantom Schleierfrau');
+assert(!/Frau mit dem Schleier|Schleierfrau/.test(restoredPhantom.text),
+  'restored Strauss prose must obey the current shop roster');
+
 for (const file of [
   'strauss-geschaeft-krummbein-rex-day-v1692.png',
   'strauss-geschaeft-krummbein-rex-night-v1692.png',
@@ -145,7 +173,7 @@ for (const file of [
   assert(html.includes(file), 'Strauss Rex scene asset is not wired into the image matrix: ' + file);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1732 +SteinShowdownVisualTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1733 +StraussRosterTruth'"),
   'release version missing');
 
 console.log('strauss-live-visual-truth: ok');
