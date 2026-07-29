@@ -62,6 +62,11 @@ const policeArchive = byLocation.get('Volkspolizei-Praesidium Keibelstrasse');
 const pathology = byLocation.get('Pathologie Charite');
 assert(office && apartment && hoOffice && policeArchive && pathology,
   'the core Lindenbaum investigation route is incomplete');
+const seifert = setup.setupCast.find((entry) => entry.id === 'dr_otto_seifert');
+assert(seifert && /Pathologe/.test(seifert.rolle || '') && (seifert.detail || '').length >= 180,
+  'the pathology image needs its depicted doctor as a dimensional canonical witness');
+assert.deepStrictEqual(Array.from(pathology.npcs || [], (entry) => entry.id), ['dr_otto_seifert'],
+  'the pathology UI and prose must expose the doctor who is already present in its fixed image');
 
 assert(/Auguste Lindenbaum/.test(office.openingFallbackText || ''),
   'the opening needs a deterministic, case-clean Auguste scene');
@@ -85,13 +90,28 @@ assert.deepStrictEqual(
   [['im_hermes', 2], ['genosse_brakke', 3]],
   'Hermes and Brakke must enter the HO office at different investigation stages',
 );
+const hermesBinding = hoOffice.npcs.find((entry) => entry.id === 'im_hermes');
+const brakkeBinding = hoOffice.npcs.find((entry) => entry.id === 'genosse_brakke');
+assert.strictEqual(hermesBinding.wegWennIndiz, 'lindenbaum_schaedeltrauma',
+  'Hermes must leave the office before the identified MfS major arrives for the final confrontation');
+assert.deepStrictEqual(Array.from(brakkeBinding.nachIndiz || []),
+  ['hermes_meldung', 'lindenbaum_schaedeltrauma'],
+  'Brakke must not materialize before eyewitness and pathology identify a real political target');
 const hermes = setup.setupCast.find((entry) => entry.id === 'im_hermes');
+const brakke = setup.setupCast.find((entry) => entry.id === 'genosse_brakke');
 assert(hermes && Array.from(hermes.aliases || []).includes('Verwaltungsbeamter'),
   'Hermes needs a canonical role alias so the UI cannot split him into two people');
+assert(brakke && brakke.knownAfterEvidence === 'hermes_meldung',
+  'Karl must not know Brakke by name before Hermes identifies him');
 assert(!hoOffice.bedrohungen.some((entry) => entry.id === 'im_hermes'),
   'Hermes must remain an interviewable witness instead of being consumed by an early threat');
-assert(hoOffice.bedrohungen.some((entry) => entry.id === 'genosse_brakke' && entry.abStage >= 3),
+assert(hoOffice.bedrohungen.some((entry) => entry.id === 'genosse_brakke'
+    && entry.abStage >= 3
+    && Array.from(entry.requiresEvidenceAll || []).includes('hermes_meldung')
+    && Array.from(entry.requiresEvidenceAll || []).includes('lindenbaum_schaedeltrauma')),
   'Brakke must provide the later political confrontation');
+assert(!/Hermes|Verwaltungsbeamter/i.test(hoOffice.arrivalFallbackText || ''),
+  'the first HO arrival must not narrate Hermes before his stage gate activates');
 
 for (const location of [apartment, hoOffice, policeArchive, pathology]) {
   assert((location.arrivalFallbackText || '').length >= 180,
@@ -117,6 +137,11 @@ assert(clueById.get('hermes_meldung').prosaPflicht,
   'Hermes must narrate the actual Brakke eyewitness statement when awarding the clue');
 assert(clueById.get('brakke_deckung').prosaPflicht,
   'Brakke must narrate the actual cover-up admission when awarding the clue');
+for (const clueId of ['ulbricht_brief', 'eva_besucher']) {
+  const contract = clueById.get(clueId).prosaPflicht;
+  assert(contract && contract.replaceOnFallback === true,
+    `${clueId} must replace hallucinated or location-drifting prose with its authored evidence scene`);
+}
 assert.strictEqual(clueById.get('brakke_deckung').stage, 4,
   'Brakke must remain the final responsibility proof');
 assert(Number(clueById.get('brakke_deckung').abStage) >= 3,
@@ -133,6 +158,8 @@ for (const file of [
   'karl-buero-auguste-day.png',
   'ho-verwaltung-hermes-day.png',
   'ho-verwaltung-brakke-day.png',
+  'cafe-kranzler-eva-day.png',
+  'cafe-kranzler-eva-night.png',
 ]) {
   assert(fs.existsSync(path.join(repoRoot, 'assets', 'scenes', 'lindenbaum', file)),
     `missing Lindenbaum scene asset: ${file}`);
@@ -144,6 +171,67 @@ assert(html.includes("excludesNpcs: ['genosse_brakke']"),
   'the HO image contract must distinguish the Hermes-only state');
 assert(html.includes("excludesNpcs: ['im_hermes']"),
   'the HO image contract must distinguish the Brakke-only state');
+assert(html.includes("depictsNpcs: ['dr_otto_seifert']"),
+  'the pathology image contract must declare its visible doctor');
+assert(html.includes("requiresAllNpcs: ['eva_werder']")
+    && html.includes("depictsNpcs: ['eva_werder']"),
+  'Eva needs a party-aware Café Kranzler image instead of the Karl-alone base scene');
+assert(html.includes("if (typeof _istInParty === 'function' && _istInParty(scId, scName)) return true;"),
+  'an explicit party member must remain a clickable person away from the canonical home location');
+assert(/Party-Mitglieder sind bei einer bewusst ausgelösten Reise[\s\S]{0,1200}required\.push\(member\)/.test(html),
+  'travel-arrival validation must require every explicit party member in prose and personenImRaum');
+
+const partyLocationContext = {
+  engineCurrentLocation: { name: 'Café Kranzler' },
+  caseProgress: {},
+  caseSetup: { locations: setup.locations },
+  currentScene: null,
+  gameTimeIdx: 5,
+  TIMES_OF_DAY: ['Morgen', 'Vormittag', 'Mittag', 'Nachmittag', 'Abend', 'Nacht'],
+  _party: [{ id: 'eva_werder', name: 'Eva Werder', tag: 'ROMANCE' }],
+  _istInParty: (id, name) => id === 'eva_werder' || name === 'Eva Werder',
+  normForMatch: identityContext.normForMatch,
+};
+vm.createContext(partyLocationContext);
+vm.runInContext(
+  html.slice(html.indexOf('function _npcGehoertHierher('), html.indexOf('function _strHash('))
+    + ';globalThis.belongsHere=_npcGehoertHierher;',
+  partyLocationContext,
+);
+assert.strictEqual(partyLocationContext.belongsHere('eva_werder', 'Eva Werder'), true,
+  'Eva must remain physically reachable after travelling away from her apartment');
+
+const arrivalPartyContext = {
+  engineCurrentLocation: { name: 'Café Kranzler' },
+  caseProgress: { indizien: [] },
+  caseSetup: {},
+  _party: [{ id: 'eva_werder', name: 'Eva Werder', tag: 'ROMANCE' }],
+  normForMatch: identityContext.normForMatch,
+  sameNamedPerson: (a, b) => identityContext.normForMatch(a) === identityContext.normForMatch(b),
+  getCaseLocations: () => [],
+  getNpcsAtCurrentLocation: () => [],
+  _worldTruthAliases: (id, entry) => [id, entry && entry.name].filter(Boolean),
+  _worldTruthHasAlias: (text, aliases) => aliases.some((alias) =>
+    identityContext.normForMatch(text).includes(identityContext.normForMatch(alias))),
+};
+vm.createContext(arrivalPartyContext);
+const arrivalRosterStart = html.indexOf('function _findArrivalNpcRosterDrift(');
+const arrivalRosterEnd = html.indexOf('function _findRosterPresenceContradiction(', arrivalRosterStart);
+vm.runInContext(
+  html.slice(arrivalRosterStart, arrivalRosterEnd)
+    + ';globalThis.findArrivalPartyDrift=_findArrivalNpcRosterDrift;',
+  arrivalPartyContext,
+);
+const missingEvaArrival = arrivalPartyContext.findArrivalPartyDrift({
+  ort: 'Café Kranzler',
+  szene: 'Du betrittst allein das Café und siehst dich um.',
+  personenImRaum: [],
+}, { id: 'REISE', _istReise: true });
+assert(missingEvaArrival && missingEvaArrival.code === 'arrival_npc_roster_drift'
+    && Array.from(missingEvaArrival.required).includes('Eva Werder')
+    && Array.from(missingEvaArrival.missingProse).includes('Eva Werder')
+    && Array.from(missingEvaArrival.missingRoster).includes('Eva Werder'),
+  'a Karl-alone travel scene must be rejected while Eva is explicitly in the party');
 assert(!/Schwarze Vorhänge nehmen dem Vormittag/.test(apartment.arrivalFallbackText || ''),
   'the apartment fallback must not hard-code morning prose during an evening return');
 assert(html.includes("_fallbackStillMissing"),
@@ -152,13 +240,13 @@ assert(html.includes("fallspezifische MfS-Konfrontation beendet', 8"),
   'a resolved MfS confrontation needs a real cooldown before a new generic arrest attempt');
 assert(html.includes("narrativeAfterDialogue"),
   'outer quote repair must also handle prose beginning with an ASCII-quoted dialogue');
-assert(/prellung\|beule\|bluterguss/.test(html),
-  'full-health continuity must reject invented neck bruises and related injuries');
+assert(/pocht\|schmerzt\|schmerzen\|blutet/.test(html),
+  'full-health continuity must reject invented plural body-part pain such as "Rippen schmerzen"');
 assert(/zug\|schluck\|nippen/.test(html),
   'sober-scene continuity must reject invented sips of Korn');
 assert(/Dein letzter Fall/.test(html) && /sceneCounter <= 1/.test(html),
   'opening prose needs the engine-wide previous-case memory filter');
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1692 +StraussRexVisualTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1695 +LindenbaumPartyTruth'"),
   'release version missing');
 
 console.log('LINDENBAUM_FLOW_OK');

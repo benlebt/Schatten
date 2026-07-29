@@ -7,7 +7,7 @@ const { readWebpDimensions } = require('./image-format-utils');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1692 +StraussRexVisualTruth'"), 'version constant is stale');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1695 +LindenbaumPartyTruth'"), 'version constant is stale');
 assert(html.includes("text: _resolveIstEigenauftrag ? 'Eigen-Auftrag abschließen und Wahrheit festhalten.' : 'Fall abschließen und Auftraggeber informieren.'"),
   'resolve button copy must stay player-facing for external and self-assigned cases');
 assert(html.includes('_enginePrompt: [_resolveText, _resolveTransitionPrompt, _resolvePhysicalTruth]'), 'resolve direction must preserve physical target truth');
@@ -437,6 +437,12 @@ assert(html.includes("_stasiCustodyEntryVormerken('Karl unterliegt beim Widersta
   'failed resistance against a visible MfS access must lead into custody');
 assert(!html.includes('if (false && _legacyForcedCustodyEntry)'),
   'the deterministic, engine-authored custody entry must not remain disabled');
+assert(html.includes("if (/\\bsahnetorte\\b/.test(_custodyAktion))"),
+  'a failed cake action must remain visible before the deterministic MfS arrest prose');
+assert(html.includes('Für einen absurden Atemzug stehen Sahne und strenge Amtsmiene nebeneinander'),
+  'custody entry needs the chosen slapstick beat instead of silently erasing the cake');
+assert(html.includes("else if (/\\b(?:walther|ppk|pistole)\\b/.test(_custodyAktion))"),
+  'a failed PPK action must retain its non-terminal distance beat before arrest');
 assert(!html.includes("setCustodyState(false, 'ki-signal-frei')"),
   'a single model boolean must never silently release Karl from an active custody episode');
 assert(!html.includes("setCustodyState(false, 'text-detected-release')"),

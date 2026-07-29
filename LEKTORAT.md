@@ -1,6 +1,6 @@
 # Schatten – additiver verbindlicher Run-Lektoratsstandard
 
-Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `UEBERGABE_v1313.md`, den Konzeptdokumenten, Tests und bisherigen Lektoratsentscheidungen festgehaltenen Regeln. Die sechs Standing-Checkpoints sind ein zusätzlicher Pflichtfilter und ausdrücklich **nicht exklusiv**: Alle bisherigen Lektoratsvorgaben gelten weiter, sofern sie nicht durch eine spätere ausdrückliche Projektentscheidung, den aktuellen Code oder einen Regressionstest ersetzt wurden. Überschneidungen werden nicht doppelt gezählt, aber vollständig geprüft.
+Stand: 29.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `UEBERGABE_v1313.md`, den Konzeptdokumenten, Tests und bisherigen Lektoratsentscheidungen festgehaltenen Regeln. Die sechs Standing-Checkpoints sind ein zusätzlicher Pflichtfilter und ausdrücklich **nicht exklusiv**: Alle bisherigen Lektoratsvorgaben gelten weiter, sofern sie nicht durch eine spätere ausdrückliche Projektentscheidung, den aktuellen Code oder einen Regressionstest ersetzt wurden. Überschneidungen werden nicht doppelt gezählt, aber vollständig geprüft.
 
 ## Geltungsbereich und Hierarchie
 
@@ -340,12 +340,106 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 - Bildbefund: Vor der Kombi zeigte das feste Ladenmotiv Krummbein und Karl, obwohl Haupt-UI und Begleiterleiste Rex führten. Nach der Fesselung fiel das Bild sogar auf den leeren Laden zurück, weil `gefesselt` fälschlich wie ein Ortsabgang behandelt wurde. Nach der Abführung blieb Rex in Prosa und UI, aber weiterhin nicht im Bild.
 - Vier neue Tag-/Nachtmotive bilden deshalb `Krummbein + Rex` und `Rex nach Krummbeins Abführung` ab. Die Anwesenheitsmatrix priorisiert die gemeinsame Variante, behält gefesselte, fixierte, benommene und k. o. gegangene Körper sichtbar und wechselt erst bei echter Übergabe/Flucht auf das Rex-Nachherbild. Damit folgen Bild, Prosa und Haupt-UI demselben Gegner- und Begleiterzustand.
 
+## Lindenbaum-Zeugen- und Wissenswahrheit v7.12.1693
+
+- Der Produktionslauf auf v7.12.1683 zeigte Hermes schon in der ersten Ankunftsprosa der HO-Verwaltung, obwohl sein Stage-Gate ihn noch aus Haupt-UI und Szenenbild ausschloss. Der Basistext beschreibt deshalb nur den Ort; die bestehende aktive-NPC-Ergänzung fügt Hermes erst ab Stage 2 sichtbar und erzählerisch hinzu.
+- Evas Befragung trug einen offenen HO-Tür-Cliffhanger rückwirkend in die Lindenbaum-Wohnung, erfand für den unbekannten Besucher eine Staatssicherheitsuniform und nannte ihn in der folgenden Romantikszene bereits Brakke. Für den Briefdurchschlag und Evas Zeugenaussage gelten nun vollständige, autorisierte Fundprosa-Verträge. Eva bestätigt nur Zeitpunkt, Weg und dass sie das Gesicht nicht erkannte.
+- Brakkes Name ist außerhalb seiner echten HO-Begegnung erst nach `hermes_meldung` bekannt. Damit darf weder Romanze noch Atmosphärenprosa die spätere Täteridentität vorwegnehmen; Hermes bleibt die dafür notwendige, politisch gefährdete Quelle.
+
+## Gewahrsams-Aktionskontinuität v7.12.1694
+
+- Im Lindenbaum-Produktionslauf führte ein bewusst slapstickhafter Sahnetortenwurf gegen den bewaffneten MfS-Major plausibel zur Festnahme. Die feste, notwendige Gewahrsams-Einstiegsprosa löschte jedoch den gerade gewählten Wurf vollständig. Torte, Kornflasche und gezogene PPK erhalten nun jeweils einen kurzen, wirkungsgemäßen Auftakt, bevor der gescheiterte Zugriff in die deterministische Festnahme übergeht.
+- Die erste Verhörrunde erfand bei unveränderter voller Verfassung schmerzende Rippen und einen harten Stoß beim Transport. Der Körperwahrheits-Guard erkennt jetzt auch die Pluralform `schmerzen`; der Reparaturpfad entfernt den gesamten erfundenen Verletzungssatz statt nur einzelne Verletzungswörter.
+
+## Lindenbaum-Roster-, Pathologie- und Begleitwahrheit v7.12.1695
+
+- Der Lindenbaum-Gegenlauf zeigte Hermes und Brakke nach der Freilassung gleichzeitig in der Haupt-UI, obwohl Hermes nach seiner belastenden Aussage vor dem finalen MfS-Zugriff nicht mehr dort bleiben darf. Hermes ist nun nur von Stage 2 bis 3 gebunden und geht nach dem Schädeltrauma-Befund; Brakke erscheint erst mit Hermes-Meldung **und** Pathologiebeleg. Dadurch zeigt die finale HO-Konfrontation genau einen Gegner statt einen unbeteiligten Zeugen als scheinbaren Mitläufer.
+- Das feste Pathologiebild zeigte bereits einen älteren Arzt am Schreibtisch, während die Modellprosa einen namenlosen alten Pförtner/Ordner erfand und die Haupt-UI niemanden führte. Dr. Otto Seifert ist nun als eigenständiger, ambivalenter Charité-Pathologe im Setup, in Ankunftsprosa, Roster und Bildvertrag kanonisiert. Der medizinische Fund bleibt sachlich deutlich, aber nicht gorig.
+- Beim bewussten Mitnehmen Evas zum Café Kranzler führte das Party-Banner `Eva Werder`, während Prosa, Personen-UI und Karl-allein-Bild sie vollständig verloren. Explizite Party-Mitglieder überstimmen nun ihre normale Heimatortbindung, zählen bei jeder Reise zur verpflichtenden Ankunftsbesetzung und bleiben am Ziel anklickbar; dadurch ist auch die Romance-Interaktion unterwegs erreichbar.
+- Zwei eigene Café-Kranzler-Motive zeigen Karl und Eva bei Tag beziehungsweise Nacht. Die Anwesenheitsvariante wird nur durch Evas tatsächlichen physischen Party-/Szenenroster aktiviert; ohne Eva bleibt das neutrale Cafébild erhalten.
+- Regressionen prüfen den echten Party-Ortsfilter, den Ankunftsdrift mit fehlender Eva in Prosa/`personenImRaum`, beide Bilddateien und den vollständigen Lindenbaum-Roster.
+
+## Verbindlicher Kanten-, Figuren- und Varianten-Prüfkatalog 29.07.2026
+
+Dieser Katalog ist ab sofort Teil jedes manuellen Falllaufs und jeder Fallbewertung. Er ergänzt die sechs Standing-Checkpoints. Ein Fall kann trotz gelöstem Hauptpfad nicht höher als `8,9/10` bewertet werden, solange einer der folgenden Bereiche ungetestet oder nur durch Quelltextsichtung statt durch einen echten variierenden Lauf belegt ist.
+
+### Bildverfügbarkeit und gemeinsame Szenenwahrheit
+
+- Jede einzelne Szene wird aktiv auf ein sichtbares Bild geprüft. Ein fehlgeschlagener Primär- und Dateifallback darf nie zu einer leeren Bildfläche führen; mindestens die klar beschriftete Noir-Notfalltafel mit echtem Ort und Tageszeit muss sichtbar bleiben.
+- Ein vorhandenes Bild ist noch kein bestandener Bildtest. Prosa, Haupt-UI, `personenImRaum`, Party-Banner, Engine-Ort, Tageszeit, NPC-Zustand und Bild bilden gemeinsam genau eine Szenenwahrheit.
+- Zentrale anwesende Gesprächspartner, Gegner, Romance-Partner und bewusst mitgenommene Begleiter müssen im passenden Szenenbild sichtbar sein. Steht eine Figur nur in der Haupt-UI oder nur im Party-Banner, während Prosa und Bild Karl allein zeigen, ist das ein fundamentaler `BILD-PROSA-UI-BRUCH`.
+- Abgang, Flucht, Abführung, Festnahme und Übergabe entfernen eine Figur auch aus dem Folgebild. K. o., benommen, fixiert und gefesselt sind dagegen sichtbare Körperzustände und kein Ortsabgang.
+- Jede feste Bildvariante wird bei Tag und Nacht sowie vor und nach dem relevanten Zustandswechsel geprüft. Eine Nachtdatei als stiller Tagesersatz ist nur zulässig, wenn das Bild keine materiell falsche Licht-/Tageswahrheit zeigt; andernfalls braucht es eine eigene Tagesfassung.
+- Jahreszeit, Wetter, Sektor, Innen-/Außenraum, Etage, sichtbare Requisiten und deren Zustand werden mitgeprüft. Ein visuell attraktives, aber sachlich falsches Bild ist schlechter als ein neutral wahrer Ersatz.
+
+### Prosa muss Erzähltext sein
+
+- Sichtbare Prosa darf niemals nur KI-, Prompt-, Engine-, JSON-, UI-, Regie- oder Reparaturanweisungen enthalten. Begriffe wie „schreibe die Szene“, „laut Engine“, „führe in personenImRaum“, „der Nutzer hat gewählt“, „JSON-Ort“ oder „zeige nun“ sind in der Spielerprosa ein sofortiger Abbruchgrund.
+- Ebenso unzulässig sind technisch saubere, aber inhaltsleere Platzhalter: reine Ortszeile, Routinghinweis, Aktionszusammenfassung oder Menüanweisung ohne konkrete Szene.
+- Jede Szene braucht mindestens drei natürliche Beats: einen gegenwärtigen sinnlichen Orts-/Atmosphärenanker, eine konkrete Figur oder handlungsrelevante Requisite und die tatsächlich gewählte Handlung beziehungsweise ihre unmittelbare Folge.
+- Die gewählte Aktion muss im Text vorkommen. Torte, Korn, PPK, Rex-Befehl, Kombiaktion, Kuss, Rückzug oder Deeskalation dürfen nicht durch einen Gewahrsams-, Indiz- oder Abschlussfallback aus der Erzählung gelöscht werden.
+- Reparaturtexte werden nach jedem Eingriff erneut auf Metasprache, Unterlänge, Weltwahrheit und Aktionskontinuität geprüft. Mechanisch korrekt, aber literarisch tot, gilt nicht als bestanden.
+
+### Romanzen als eigener Pflicht-Testpfad
+
+- In jedem Fall mit erreichbarer Romance-Figur wird die Romanze bewusst getestet: erste Annäherung, weitere Steigerung, Cooling/Reset, Abend-/Nacht-Gate, Übernachtungs-Climax, Morgen danach, Ablehnung und mindestens eine Unterbrechung durch Gefahr, Verletzung oder Gewahrsam.
+- Romance-Tests sind keine reine Zählerprüfung. Die Frau muss einen eigenen Willen, Interessen, Widersprüche, Grenzen, Humor und fallunabhängige Lebensrealität zeigen. Sie darf nicht nur Belohnung, Informationsspenderin oder austauschbare „geheimnisvolle Schönheit“ sein.
+- Der aktuelle Beziehungsstand muss in Ton, Nähe und Handlung sichtbar werden. `Rm 1` darf nicht wie eine vollendete Liebesnacht klingen; `Rm 3` darf nicht ohne Grund wieder bei einer formellen Erstbegegnung beginnen.
+- Nimmt Karl die Romance-Figur mit, bleibt sie an jedem Zielort physisch wahr: Party-Banner, anklickbares Personenziel, `personenImRaum`, Prosa und Anwesenheitsbild führen dieselbe Figur.
+- Besonders geprüft werden Abgänge und Ortswechsel: Ist die Frau laut Prosa gegangen, darf sie weder im Bild noch in der UI bleiben. Ist sie mit Karl gereist, darf die Prosa ihn nicht allein eintreten lassen und das Bild sie nicht noch zu Hause zeigen.
+- Übernachtungs- und Morgenbilder werden immer separat geprüft. Kleidungswechsel oder intime Stimmung dürfen nie explizit sexualisiert, voyeuristisch oder nicht jugendfrei werden; Nähe, Verletzlichkeit und Konsequenz dürfen dennoch deutlich und erwachsen sein.
+
+### Rex, Trude, Items, PPK und Teamaktionen
+
+- Rex wird in geeigneten Läufen regelmäßig regulär aufgenommen und nicht nur per Debugstatus simuliert. Geprüft werden Reise-/Party-Anzeige, Bildpräsenz, Ansprechbarkeit/Kommandos, normale Gegner, harte Gegner und Gruppen.
+- Pflichtmatrix Rex: allein unbewaffnet, Karl plus Rex, Rex `Fixieren`, `Anbellen`, `Anknurren`, `Fass!`, mindestens ein Fehlschlag und mindestens eine verdiente Kombi mit einem zweiten Akteur oder Item.
+- Trude wird in geeigneten Läufen regelmäßig besucht. Ihr Sortiment muss pro Ermittlung variieren, im selben Lauf stabil bleiben und genug taktischen Tauschwert bieten, ohne immer dieselbe optimale Ausrüstung auszuspucken.
+- Pflichtmatrix Items: mindestens ein schwaches Alltagsitem, ein Verbrauchsitem, ein wiederverwendbares Item, ein Ablenkungs-/Slapstickitem, ein Wurfitem und ein Fessel-/Kontrollitem. Neben Einzeleinsatz werden Team- und Kombiaktionen mit Party-Mitglied oder Rex getestet.
+- Die Walther PPK ist Druck- und Distanzmittel, keine automatische Lösung. Sie darf weder jeden Gegner sofort neutralisieren noch gegenüber allen anderen Wegen dominant sein; Munition, Risiko, Ruf-/Bedrohungsfolge und gegnerische Härte müssen spürbar bleiben.
+- Balance wird deterministisch über alle sechs W6-Seiten gegen normale Stärke, harte Stärke und Gruppe geprüft. Kein wiederverwendbares Item darf ohne vorbereitete Oberhand zuverlässiger sein als ein verdienter Team-Payoff.
+- Nach jedem Einsatz stimmen Aktionslabel, Verbrauch/Eigentum, Inventar, Kampfstatus, Prosa, Verletzungsfolge und Bild überein. Ein geworfener oder übergebener Gegenstand darf nicht weiter unverändert in „Dabei“ liegen.
+
+### Konfrontationen, Slapstick und knackige Gewalt
+
+- Die Welt braucht zufällige Schläger, Opportunisten, Wachleute und andere Gegner neben dem Fallantagonisten. Sie müssen historisch und örtlich plausibel gespawnt, sichtbar eingeführt und spielbar sein; keine unsichtbare Phantomwaffe und kein Gegner nur im UI.
+- Konfrontationen werden mindestens friedlich, bluffend, fliehend, unbewaffnet, mit Item, mit PPK, mit Party-Mitglied und mit Rex/Kombi gespielt. Ein Falltest ohne alternative Konfrontationswege ist unvollständig.
+- Slapstick ist erwünscht, wenn Ursache und Folge stimmen: Sahnetorte, rutschiger Korn, klemmende Tür, missglückte Drohpose oder überraschender Hundemoment dürfen komisch sein, aber keine Mechanik löschen und nicht jede ernste Szene entwerten.
+- Gewalt darf kurz, hart und folgenreich sein: ein trockener Schlag, ein Sturz über einen Stuhl, ein verdrehter Arm, ein gegen die Wand gedrückter Angreifer oder ein zerrissener Mantel sind zulässig. Unzulässig bleiben Gore, detaillierte offene Wunden, Folterlust, Sexualgewalt, Verstümmelung und genüssliche Leidensbeschreibung.
+- Die Härte folgt ausschließlich der gewählten Aktion und dem mechanischen Ergebnis. Befragen oder „zur Rede stellen“ darf nicht ungefragt in Schläge kippen; ein klarer Angriff darf umgekehrt nicht als folgenloser höflicher Wortwechsel verschwinden.
+- Slapstick, Gewalt und Spannung brauchen Rhythmus. Nicht jede Szene erhält einen Gag, nicht jede Konfrontation maximalen Ernst. Der Lauf soll Ecken und Kanten besitzen, ohne zur Farce oder Gewaltspirale zu werden.
+
+### Figuren-, Frauen- und Welt-Tiefe
+
+- Jede handlungstragende Figur braucht mindestens zwei unterscheidbare Eigenschaften sowie einen eigenen unmittelbaren Wunsch, eine Grenze oder ein Risiko. „Ängstlicher Zeuge“, „brutaler Schläger“, „kalter Stasi-Mann“ oder „schöne Witwe“ allein genügt nicht.
+- Zeugen dürfen einander nicht nur durch Name und Beruf unterscheiden. Geprüft werden Sprachrhythmus, soziale Lage, politischer Druck, Eigeninteresse, Erinnerungslücken, Humor, Feigheit, Mut und mögliche Widersprüche.
+- Frauen erhalten dieselbe Bandbreite an Beruf, Alter, Macht, Fehlern, Begehren, Ambivalenz und Handlungsmacht wie Männer. Romance-Figuren sind besonders streng auf Austauschbarkeit und reine Belohnungsfunktion zu prüfen.
+- Wiederkehrende Kontakte erinnern sich nur an belegte Begegnungen und reagieren auf Karls tatsächlichen Ruf. Sie dürfen helfen, ablehnen, handeln oder eigene Bedingungen stellen.
+- Zufallsfiguren und Gegner werden variiert: Motiv, Alter, Auftreten, Gruppengröße, soziale Herkunft und Konfliktziel dürfen nicht in jedem Run gleich sein. Variation darf aber nie Indiz-, Rollen- oder Historienwahrheit überschreiben.
+
+### Stasi-Bedrohung in politischen Fällen
+
+- In einem Stasi-/MfS-Fall muss die Bedrohung real und systemisch spürbar sein: Beobachtung, beruflicher Druck, Aktenmacht, Denunziationsangst, Reise-/Zugangsrisiko und glaubhafte Festnahmegefahr sind wirksamer als ständig gezogene Waffen.
+- Die Bedrohung braucht benannte oder mechanisch eingeführte Träger. Ein plötzliches „die Stasi weiß alles“ ohne Quelle, Roster, Vorzeichen oder Konsequenz ist ebenso falsch wie völlige Harmlosigkeit.
+- Gewahrsam, Beschattung und Einschüchterung bleiben selten genug, um Gewicht zu behalten. Nach einer gerade beendeten MfS-Konfrontation verhindert ein echter Cooldown die sofortige identische Wiederholung.
+- Stasi-Figuren sind nicht alle eindimensional sadistisch. Loyalität, Karriereangst, ideologische Überzeugung, Opportunismus, Müdigkeit, Zweifel und institutioneller Selbsterhalt dürfen sich unterscheiden. Das macht die Gefahr glaubhafter, nicht schwächer.
+- Nichtpolitische Fälle dürfen politische Atmosphäre enthalten, aber nicht durch zufällige Stasi-Eskalation ihren eigenen Ton und Fallkern verlieren.
+
+### Mindestabdeckung pro Fallbewertung
+
+- Ein vollständiger Bewertungsblock nennt getrennt: Hauptpfad/Playability, Indiz- und Prosaqualität, Bild-/UI-Weltwahrheit, Figuren-/Romance-Tiefe, Konfrontations-/Item-/Rex-Abdeckung, historische/Stasi-Wahrheit und technische Stabilität.
+- `nicht möglich` wird nur mit belegtem Setup-Gate notiert. `nicht getestet` bleibt ausdrücklich offen und senkt die Bewertung; es wird nicht still als bestanden gewertet.
+- Unsichere oder zuletzt fehlerhafte Fälle erhalten vor stabilen Fällen Vorrang. Mindestens Stein, Strauss, Lindenbaum und Görke bleiben bis zu einem frischen Gegenlauf mit abweichendem Pfad als gezielte Regressionen markiert.
+- Für die Staffel werden Aktionen bewusst rotiert. Kein zweiter Lauf darf exakt dieselbe Sozial-, Reise-, Konfrontations- und Romance-Sequenz wie der vorige verwenden.
+
 ## Mindestprotokoll pro Run
 
 - Fall, Version, Strategie, Seed, Start-/Endzeit, Szenenzahl, Ergebnis und Abbruchgrund.
 - Wochentags-/Datumscheck.
 - Assertion Report und `Historische Anker`.
 - Treffer zu `W6-BLOCK`, `ORT-PROSA-BRUCH`, `TRUTHBEAT-DIAG`, `BEAT-DIAG`, `INDIZ-GATE`, Behandlung, Klientenfrist, Romantik und `personenImRaum`.
+- Pro Szene Bildstatus (`Datei`, `Notfalltafel` oder `Fehler`) sowie Abgleich von zentralen Personen, Ort, Zeit und Zustandsrequisiten.
+- Getestete Romance-Stufe und -Variante; getestete Rex-Kommandos, Trude-Sortiment, Items, PPK- und Team-/Kombiaktionen.
+- Figuren-Tiefenbefund für zentrale Zeugen, Gegner und Romance-Figuren; Stasi-Bedrohungsbefund bei politischen Fällen.
 - Gefundene Stil-Tics mit Anzahl und Szenennummern.
 - Befunde nach P0/P1/P2/P3, jeweils mit Originalsatz, Enginezustand und Root Cause.
 - Fixversion, Regressionstest, Commit und Ergebnis des Gegenlaufs.
