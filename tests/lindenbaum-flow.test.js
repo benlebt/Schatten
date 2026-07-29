@@ -23,6 +23,13 @@ const setup = variant.setup;
 assert.strictEqual(setup.caseType, 'wahrheit', 'Lindenbaum must remain a truth case');
 assert(Number(setup.stasiRelevance) >= 4,
   'the political killing of an HO official needs strong MfS pressure');
+assert.strictEqual(setup.reportFallbackAlways, true,
+  'the final Auguste report must use authored evidence instead of generic arrival prose');
+assert(/Albert starb nicht an einem Herzinfarkt/.test(setup.reportFallbackText || '')
+    && /Hermes sah Major Brakke und zwei Männer/.test(setup.reportFallbackText || '')
+    && /MfS den Raum versiegelte/.test(setup.reportFallbackText || '')
+    && /Auguste/.test(setup.reportFallbackText || ''),
+  'the final report must name the medical proof, eyewitness, cover-up, and Auguste reaction');
 
 const languageContext = { caseSetup: setup };
 vm.createContext(languageContext);
@@ -148,6 +155,13 @@ assert(Number(clueById.get('brakke_deckung').abStage) >= 3,
   'Brakke must not confess or become provable before the investigation matures');
 assert(clueById.get('lindenbaum_schaedeltrauma').stage >= 3,
   'the pathology must provide decisive medical contradiction');
+assert(clueById.get('lindenbaum_schaedeltrauma').prosaPflicht
+    && clueById.get('lindenbaum_schaedeltrauma').prosaPflicht.replaceOnFallback === true,
+  'the pathology proof needs bounded non-gory authored prose');
+assert(/tastbare Kontur/.test(clueById.get('lindenbaum_schaedeltrauma').fundText)
+    && !/Haut.{0,50}beiseite|Bruch.{0,40}zum Vorschein|blutverschmiert/i.test(
+      clueById.get('lindenbaum_schaedeltrauma').fundText),
+  'the pathology proof must stay clinically clear without graphic body detail');
 
 assert(/GESTERN gestorben/i.test(setup.historicalContext.weltlage),
   'the setup must preserve 6 March as the day after Stalin died');
@@ -238,6 +252,16 @@ assert(html.includes("_fallbackStillMissing"),
   'configured arrival fallbacks must append any newly active canonical NPC');
 assert(html.includes("fallspezifische MfS-Konfrontation beendet', 8"),
   'a resolved MfS confrontation needs a real cooldown before a new generic arrest attempt');
+assert(html.includes("fallspezifische MfS-Konfrontation friedlich beendet', 8"),
+  'a peaceful item resolution must receive the same MfS cooldown as a fight resolution');
+assert(html.includes("MfS-Zugriff unterdrueckt: fallspezifischer Offizier befindet sich noch in der Konfrontations-Atempause."),
+  'forced custody must respect the case-specific officer cooldown');
+assert(html.includes("konfrontationItemName: (option && option._konfrontationItemName) || null")
+    && html.includes("const _custodyExplizitesItem = normForMatch(_custodyMeta.konfrontationItemName || '')")
+    && html.includes("_konfrontationItemName: (item && item.name) || ''"),
+  'custody entry prose must use the exact confrontation item instead of guessing from model prose');
+assert(/if \(_hatDoppelkornAmEnde\) \{[\s\S]{0,260}ehrlichen Schluck Doppelkorn/.test(html),
+  'the ending may mention Doppelkorn only while Karl still owns it');
 assert(html.includes("narrativeAfterDialogue"),
   'outer quote repair must also handle prose beginning with an ASCII-quoted dialogue');
 assert(/pocht\|schmerzt\|schmerzen\|blutet/.test(html),
@@ -246,7 +270,87 @@ assert(/zug\|schluck\|nippen/.test(html),
   'sober-scene continuity must reject invented sips of Korn');
 assert(/Dein letzter Fall/.test(html) && /sceneCounter <= 1/.test(html),
   'opening prose needs the engine-wide previous-case memory filter');
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1697 +LiveEdgeQA'"),
+
+const peacefulCooldownCalls = [];
+const confrontationCooldownContext = {
+  caseProgress: {
+    activeConfrontation: {
+      npcId: 'genosse_brakke',
+      enemyTag: 'STASI',
+      enemyRole: 'MfS-Major',
+      trigger: 'location-threat',
+    },
+  },
+  sceneCounter: 23,
+  actionStreak: 0,
+  stasiTension: 4,
+  _konfrontationGruppenAktiv: () => false,
+  _stasiEncounterClear: (reason, scenes) => peacefulCooldownCalls.push({ reason, scenes }),
+  diag: () => {},
+};
+vm.createContext(confrontationCooldownContext);
+const confrontationClearStart = html.indexOf('function _konfrontationClear(');
+const confrontationClearEnd = html.indexOf('function _konfrontationCooldownAktiv(', confrontationClearStart);
+vm.runInContext(
+  html.slice(confrontationClearStart, confrontationClearEnd)
+    + ';globalThis.clearConfrontation=_konfrontationClear;',
+  confrontationCooldownContext,
+);
+confrontationCooldownContext.clearConfrontation('friedliches-itemangebot');
+assert.strictEqual(peacefulCooldownCalls.length, 1,
+  'peacefully calming Brakke must close the generic MfS encounter clock exactly once');
+assert.strictEqual(peacefulCooldownCalls[0].scenes, 8,
+  'peacefully calming Brakke must grant eight scenes without a phantom repeat');
+assert.strictEqual(confrontationCooldownContext.caseProgress.stasiEncounterEligibleScenes, 0,
+  'the generic MfS observation counter must reset after the peaceful Brakke resolution');
+
+const blockedStasiContext = {
+  caseSetup: setup,
+  caseProgress: {
+    stasiEncounterEligibleScenes: 9,
+    forceCustodyNextScene: true,
+    pendingCustodyConfirm: true,
+    stasiEncounterCooldownUntil: 0,
+    stage: 3,
+    indizien: ['hermes_meldung', 'lindenbaum_schaedeltrauma'],
+  },
+  engineCurrentLocation: { name: 'Lindenbaum-Wohnung' },
+  sceneCounter: 26,
+  karlInStasiCustody: false,
+  metaCustodyGracePeriod: 0,
+  stasiTension: 4,
+  stasiHighTensionStreak: 0,
+  stasiMaxTensionStreak: 0,
+  custodyLocked: false,
+  normForMatch: identityContext.normForMatch,
+  _stasiSetupCast: () => setup.setupCast.filter((npc) => npc.tag === 'STASI'),
+  _stasiMechanikAktiv: () => true,
+  _stasiRelevanz: () => 4,
+  _konfrontationCooldownAktiv: (id) => id === 'genosse_brakke',
+  _konfrontationAktiv: () => false,
+  canForceStasiCustodyHighTension: () => true,
+  raiseStasiTension: () => {},
+  _konfrontationTaktikProfil: () => ({}),
+  diag: () => {},
+};
+vm.createContext(blockedStasiContext);
+const stasiIdentityStart = html.indexOf('function _stasiEncounterIdentity(');
+const stasiIdentityEnd = html.indexOf('function _stasiEncounterConfirmIntroFromScene(', stasiIdentityStart);
+vm.runInContext(
+  html.slice(stasiIdentityStart, stasiIdentityEnd)
+    + ';globalThis.forceStasi=_stasiEncounterForceZugriff;globalThis.advanceStasi=_stasiEncounterAdvance;',
+  blockedStasiContext,
+);
+assert.strictEqual(blockedStasiContext.forceStasi('repeat after Brakke'), null,
+  'forced custody must not respawn Brakke during his confrontation cooldown');
+assert.strictEqual(blockedStasiContext.caseProgress.forceCustodyNextScene, false,
+  'a blocked forced custody attempt must clear its pending force flag');
+assert.strictEqual(blockedStasiContext.advanceStasi('ERKUNDEN'), null,
+  'normal MfS progression must not respawn Brakke during his confrontation cooldown');
+assert.strictEqual(blockedStasiContext.caseProgress.stasiEncounterEligibleScenes, 0,
+  'a blocked normal MfS attempt must reset its eligible-scene counter');
+
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1698 +LindenbaumLiveQA'"),
   'release version missing');
 
 console.log('LINDENBAUM_FLOW_OK');
