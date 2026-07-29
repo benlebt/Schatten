@@ -151,7 +151,20 @@ assert(html.includes("'THREAT-GATE: ' + b.id + ' @ ' + ortNorm + ' wartet auf al
   'threat encounters must support reusable all-evidence prerequisites');
 assert(html.includes('kein unsichtbarer Verfassungsabzug'),
   'fatigue must not silently damage Karl without a narrated physical incident');
-assert(/file: 'friedhof-ploetzensee-night\.webp'[\s\S]*?presenceVariants:[\s\S]*?friedhof-ploetzensee-trauernde-day\.webp/.test(html),
-  'the cemetery image must switch between empty and mourner-populated variants');
+assert(/file: 'friedhof-ploetzensee-summer-night-v1686\.png'[\s\S]*?dayFile: 'friedhof-ploetzensee-summer-day-v1686\.png'[\s\S]*?presenceVariants:[\s\S]*?friedhof-ploetzensee-trauernde-summer-day-v1686\.png/.test(html),
+  'the July cemetery must switch between season-correct empty and mourner-populated variants');
+for (const file of [
+  'friedhof-ploetzensee-summer-day-v1686.png',
+  'friedhof-ploetzensee-summer-night-v1686.png',
+  'friedhof-ploetzensee-trauernde-summer-day-v1686.png',
+  'friedhof-ploetzensee-trauernde-summer-night-v1686.png',
+]) {
+  const sceneImage = path.join(__dirname, '..', 'assets', 'scenes', 'strauss', file);
+  assert(fs.existsSync(sceneImage) && fs.statSync(sceneImage).size > 1000000,
+    'season-correct Strauss cemetery asset is missing or suspiciously small: ' + file);
+}
+assert(!/friedhof-ploetzensee-(?:trauernde-)?(?:day|night)\.webp/.test(
+  html.slice(html.indexOf("caseTest: /ludwig strauss"), html.indexOf("caseTest: /sigrid vogt")),
+), 'the Strauss image matrix must not reference the winter cemetery assets');
 
 console.log('strauss-opening-flow: ok');

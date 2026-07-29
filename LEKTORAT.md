@@ -292,6 +292,13 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 - Die Bildauswahl respektiert jetzt vor jedem Roster-/Prosa-Fallback `_npcNachProsaAbgangAbwesend`. Ein gespeicherter sichtbarer Abgang schlägt die Namensnennung im Rückblick oder Abschiedssatz; eine später ausdrücklich erzählte Rückkehr bleibt über die vorhandene Rückkehrlogik möglich.
 - Regression: exakter Folgeszenen-Typ mit Margarete als einzigem `personenImRaum`, weiterhin genanntem Mantelmann und aktivem Prosa-Fallback muss auf das Wohnungs-Grundmotiv ohne Gegner zurückfallen.
 
+## Strauss-Sommerbild-Gegenlauf v7.12.1686
+
+- Produktions-Repro auf v7.12.1683, frischer Strauss-Run, Szene 1 am Mittwoch, 22. Juli 1953, mittags: Die Prosa etabliert ausdrücklich schwüle Sommerhitze. Das feste Friedhofsmotiv zeigte dagegen kahle Bäume, abgestorbenen Winterboden und sichtbare Schnee-/Frostreste.
+- Der Fehler betraf nicht nur die Eröffnung mit Frau Schleier und Pastor Vogel, sondern auch das leere Friedhofs-Grundmotiv und jeweils die Nachtfassung. Ein bloßer Austausch der gerade sichtbaren Datei hätte deshalb spätere Szenen erneut in den Winter versetzt.
+- Vier neue, historisch und saisonal stimmige Sommermotive decken Grundmotiv und Trauerndenvariante jeweils bei Tag und Nacht ab. Karl, Grab, Friedhofsmauer und Bildkomposition bleiben stabil; Frau Schleier trägt nun tatsächlich einen sichtbaren schwarzen Trauerschleier.
+- Die Strauss-Bildmatrix referenziert keine der alten Winterfassungen mehr. Regressionen prüfen alle vier Dateien, Mindestgröße, konkrete Tag-/Nachtzuordnung und das vollständige Entfernen der Winterreferenzen aus dem Strauss-Satz.
+
 ## Mindestprotokoll pro Run
 
 - Fall, Version, Strategie, Seed, Start-/Endzeit, Szenenzahl, Ergebnis und Abbruchgrund.
