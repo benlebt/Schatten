@@ -196,6 +196,19 @@ assert(!/Brille rutscht|baumelt an einem Bügel|hinter den Gläsern/.test(repair
     && /Nasenwurzel/.test(repairedLiveVariant)
     && /ungeschützter Blick/.test(repairedLiveVariant),
   'the live Stein wording must not evade the broken-glasses continuity guard');
+sanitizerContext.caseProgress = {
+  gefundeneIndizIds: ['original_akten', 'wahler_unterschrift'],
+  evidenceSecured: true,
+};
+const repairedLateStein = sanitizerContext.sanitizeProsaMetadaten(
+  'Eine Drahtgestellbrille sitzt schief auf ihrer Nase, und vor ihr liegt ein Stapel Dokumente mit dem roten Stempel der Reichsbahn. '
+    + 'Du packst Margarete am Arm, die Akten unter deinem anderen, und während du die belastenden Frachtlisten vor ihm ausbreitest, blickst du auf. '
+    + 'Du blickst auf die Unterlagen in deinen Händen. Die Frachtlisten mit dem Reichsbahn-Stempel und die belastenden Aussagen sind eindeutig.',
+);
+assert(!/Brille sitzt schief|Stapel Dokumente|Akten unter deinem|Frachtlisten vor ihm ausbreitest|Unterlagen in deinen Händen/.test(repairedLateStein),
+  'late Stein scenes must preserve the broken-glasses and completed evidence-handoff truths');
+assert(/Roth bereits gesichert|bei Roth gesicherten Frachtlisten/.test(repairedLateStein),
+  'late Stein showdown prose must explicitly respect Roths completed evidence handoff');
 
 const restoredSteinContext = {
   caseSetup: { klient: setup.klient, opfer: setup.opfer },
@@ -307,6 +320,9 @@ assert(/_veraBekannt/.test(securitySource)
     && /vera_uebergabekontakt/.test(securitySource)
     && /vera_westperspektive/.test(securitySource),
   'Vera handoff must require actual player knowledge');
+assert(/const _sichernGefahr = !!karlInStasiCustody/.test(securitySource)
+    && /GESPERRT · im MfS-Gewahrsam/.test(securitySource),
+  'political security actions must be physically locked while Karl is in MfS custody');
 assert(/caseSetup\.caseType === 'politisch' && caseProgress\.evidenceSecured/.test(
   sourceOf('getClientGeduldRequirement')),
   'client patience must not demand results after a political evidence handoff');
@@ -340,6 +356,24 @@ assert.strictEqual(
   'margarete-stein-wohnung.webp',
   'a departed opponent mentioned in the farewell prose must not remain in the follow-up image',
 );
+departedVisualContext.caseProgress = { clientSecured: true };
+departedVisualContext._istKlient = (value) => /margarete/.test(String(value || ''));
+departedVisualContext._npcWirklichInSzene = () => false;
+const friedrichstrasseVisual = {
+  file: 'sbahnhof-friedrichstrasse.webp',
+  presenceVariants: [{
+    id: 'margarete_stein',
+    file: 'friedrichstrasse-margarete-day.png',
+  }],
+};
+assert.strictEqual(
+  departedVisualContext._szenenbildAnwesenheitsVariante(friedrichstrasseVisual, {
+    szene: 'Oberleutnant Mertens lehnt am Kotflügel und stellt Karl am Bahnsteig.',
+    personenImRaum: ['Oberleutnant Mertens'],
+  }).file,
+  'sbahnhof-friedrichstrasse.webp',
+  'the rescued client must not remain in the later Mertens showdown image',
+);
 const markEvidenceSource = sourceOf('_markiereIndizGefunden');
 assert(/ind\.politicalBeatIds/.test(markEvidenceSource)
     && /gueltigePolitBeats/.test(markEvidenceSource)
@@ -349,7 +383,7 @@ assert(/beat\.id !== 'akten_gesichert'/.test(markEvidenceSource)
     && /beat\.id !== 'margarete_gesichert'/.test(markEvidenceSource),
   'deterministic clue booking must protect action-only security beats');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1728 +SteinItemCastTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1729 +SteinCustodyFinaleTruth'"),
   'release version is stale');
 assert(html.includes('Vom Hackeschen Markt dringen gedämpfte Motorengeräusche')
     && html.includes('Noch passt nicht jedes Stück zusammen'),

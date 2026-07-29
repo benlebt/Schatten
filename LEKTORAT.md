@@ -473,6 +473,14 @@ Dieser Katalog ist ab sofort Teil jedes manuellen Falllaufs und jeder Fallbewert
 - Eine beiläufige Zeitungsüberschrift oder Alltagserwähnung von `SED` macht einen privaten Fall nicht politisch. Erst expliziter Macht-, Überwachungs-, Droh-, Akten-, Verhaftungs- oder Funktionärskontext darf über den Parteinamen die MfS-Logik aktivieren.
 - Rex wird beim Goldenen Anker nur als regulär getestet gewertet, wenn Karl mindestens Tauschwert 7 mitführt. Kaffee, Torte und Teekanne ergeben zusammen nur 5; deshalb muss der Lauf vorher bei Trude oder durch andere Beute ausreichend und variabel ausgerüstet werden. Ein absichtlich zu niedriger Tauschwert bleibt als eigener Negativtest erhalten.
 
+### Politische Sicherungs- und Haftwahrheit aus Stein v1728
+
+- Ein im MfS-Gewahrsam erlauschtes Indiz zählt nur dann als bestanden, wenn der Inhalt in derselben spielbaren Haftszene konkret erzählt wird. Eine lautlose Erhöhung des Indizzählers oder eine erst nach der Freilassung nachgereichte abstrakte Erinnerung ist nicht ausreichend.
+- Sicherungsaktionen müssen körperlich ausführbar sein. Aus einer verschlossenen Zelle heraus dürfen weder Beweise an Roth oder Vera übergeben noch Schutzpersonen abgeholt werden; der Button bleibt sichtbar erklärend gesperrt und nennt den Gewahrsam als Grund.
+- Eine abgeschlossene Aktenübergabe ist irreversible Weltwahrheit. Spätere Prosa darf dieselben Originale weder wieder in Karls Händen noch bei der Klientin auf dem Tisch oder unter Karls Arm zeigen. Zulässig sind nur Abschriften, Notizen, Erinnerung und der ausdrückliche Verweis auf den sicheren Verwahrort.
+- Eine gesicherte Schutzperson bleibt nach ihrer sichtbaren Übergabe oder Grenzpassage offstage. Statische Orts-Roster dürfen sie in einem nachfolgenden Showdown nicht erneut ins Szenenbild holen; die eigentliche Sicherungsszene zeigt sie dagegen weiterhin.
+- Dauerhafte Requisitenzustände gelten bis zu einer ausdrücklich erzählten Reparatur oder Ersetzung. Margaretes beim Einbruch zerbrochene Brille darf deshalb auch in späten Wohnungs-, Flucht- und Finaleszenen nicht wieder intakt auf ihrer Nase erscheinen.
+
 ## Mindestprotokoll pro Run
 
 - Fall, Version, Strategie, Seed, Start-/Endzeit, Szenenzahl, Ergebnis und Abbruchgrund.

@@ -7,7 +7,7 @@ const { readWebpDimensions } = require('./image-format-utils');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1728 +SteinItemCastTruth'"), 'version constant is stale');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1729 +SteinCustodyFinaleTruth'"), 'version constant is stale');
 const dogPickupStart = html.indexOf('function _hundMitnehmenMitTausch(quelle)');
 const dogPickupEnd = html.indexOf('// ============ Ende WACHHUND-Helper', dogPickupStart);
 assert(dogPickupStart >= 0 && dogPickupEnd > dogPickupStart, 'cannot isolate the Rex pickup flow');
@@ -305,6 +305,10 @@ assert.strictEqual(custodyContext.caseProgress.pendingCustodyIntelNarration.id, 
 assert(html.indexOf('_custodyVerhoerWahlAnwenden(pendingChosenOption);') <
   html.indexOf('_custodySceneTruthSichern(scene);'),
   'the selected interrogation action must be recorded before custody prose drift is repaired');
+assert(/HAFTINDIZ in derselben Szene sichtbar erzählt/.test(html)
+    && /Beim zweiten Lauschen verstehst du endlich einen vollständigen Satz/.test(html)
+    && /caseProgress\.pendingCustodyIntelNarration = null/.test(html),
+  'a newly earned custody clue must be narrated deterministically in the same playable custody scene');
 assert(html.includes("caseProgress._custodyVerhoerAppliedScene === sceneKey"),
   'the early interrogation update needs a per-scene guard against double application');
 
