@@ -30,6 +30,11 @@ assert(/name: 'Anwaltsbuero Baumgarten'[\s\S]*?npcs: \[\{ id: 'reinhard_baumgart
   'Baumgarten must remain selectable while his office image depicts him');
 assert(goerke.includes("{ id: 'hauptmann_krollwitz', immer: true, abStage: 3 }"),
   'Krollwitz must not appear before the political pressure phase');
+assert(!/name: 'Kreisgericht Mitte'[\s\S]{0,500}id: 'staatsanwalt_mertens'/.test(goerke)
+  && !/name: 'Kreisgericht Mitte'[\s\S]{0,500}id: 'richterin_schoening'/.test(goerke),
+  'the adjourned opening must not expose prosecutor or judge as selectable people');
+assert(/id: 'hauptmann_krollwitz'[\s\S]{0,700}knownAfterEvidence: 'krollwitz_steuerung'/.test(goerke),
+  'Krollwitz identity must remain evidence-gated away from his configured encounter');
 assert(goerke.includes('Sechs Monate später war Mathilde tot'),
   'the opening chronology must place Mathilde’s death four months before the September case');
 assert(goerke.includes('Albrechts Verteidiger und dein langjähriger juristischer Kontakt'),
@@ -44,6 +49,30 @@ assert(/name: 'Gerichtsarchiv Kreisgericht Mitte'[\s\S]*?lokalVon: \['Kreisgeric
   'court archive must be a local walk instead of an Opel trip');
 assert(goerke.includes('Vor Stage 3 und vor dem Fund "krollwitz_steuerung" darf niemand Krollwitz nennen'),
   'Goerke setup must keep Krollwitz secret until the evidence chain reaches him');
+assert(html.slice(html.lastIndexOf("caseType: 'wahrheit'", goerkeStart), goerkeEnd).includes('stasiRelevance: 3')
+  && html.slice(html.lastIndexOf("caseType: 'wahrheit'", goerkeStart), goerkeEnd).includes('politisch: true'),
+  'Goerke must be treated as a genuinely political case, not as incidental Stasi atmosphere');
+assert(/Staatsanwalt Eberhard Mertens[\s\S]{0,500}persistent: false, anwesend: false/.test(goerke)
+  && /Richterin Anna Schoening[\s\S]{0,500}persistent: false, anwesend: false/.test(goerke),
+  'the adjourned opening must not keep prosecutor and judge selectable beside the Baumgarten-only image');
+assert(/volkspolizei\.\*keibelstrasse\|keibelstrasse[\s\S]{0,600}depictsNpcs: \['wilhelm_roth'\]/.test(html),
+  'the Keibelstrasse image must explicitly identify the visible desk officer as Wilhelm Roth');
+assert(/id: 'totenschein_manip'[\s\S]{0,900}truthBeatIds: \['sturz_angezweifelt','akte_manipuliert'\]/.test(goerke),
+  'the manipulated death certificate must deterministically book both documentary truth beats');
+assert(/id: 'mathilde_fremdeinwirkung'[\s\S]{0,900}truthBeatIds: \['fremdeinwirkung'\]/.test(goerke),
+  'the original autopsy finding must deterministically book external force');
+assert(/id: 'alibi_schichtbuch'[\s\S]{0,1100}truthBeatIds: \['alibi_unterschlagen','albrecht_entlastet'\]/.test(goerke),
+  'the signed shift book must deterministically book both alibi beats');
+assert(/id: 'krollwitz_steuerung'[\s\S]{0,1800}abschlussEffekt:[\s\S]{0,220}wahrheitErkannt: true/.test(goerke),
+  'the final Krollwitz evidence must make the already complete truth chain immediately resolvable');
+assert(goerke.includes('Draußen rollen Güterwagen vorbei')
+  && !goerke.includes('Draußen rollen Güterwagen durch die Nacht'),
+  'the fixed Stellwerk arrival must not contradict an afternoon header and daylight image');
+assert(/test: \/gerichtsarchiv\/[\s\S]{0,500}depictsNpcs: \[\][\s\S]{0,500}kein Archivar ist anwesend/.test(html),
+  'the empty archive image must explicitly bind prose and UI to Karl being alone');
+assert(sourceOf('repairEvidenceGatedNpcProse').includes('knownAfterEvidence')
+  && sourceOf('repairEvidenceGatedNpcProse').includes('BELEG-GATE repariert'),
+  'evidence-gated identities must be removed enginewide from premature foreign-location prose');
 assert(goerke.includes('wird die Sitzung wegen fehlender Unterlagen kurzfristig vertagt'),
   'Goerke opening must release Karl before the investigation travel flow starts');
 assert(goerke.includes('du bist fuer heute entlassen und kannst sofort ermitteln'),
@@ -229,7 +258,7 @@ context.updateTruthBeats('Mertens manipulierte die Akte auf Anordnung von Krollw
 assert(context.caseProgress.truthBeatsHit.includes('krollwitz_mertens'),
   'the found Krollwitz file evidence must unlock the manipulation beat');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1679 +SchifferRestoreTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1680 +GoerkeCustodyTruth'"),
   'release version missing');
 
 console.log('Goerke opening/truth regression checks passed.');

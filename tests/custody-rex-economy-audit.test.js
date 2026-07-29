@@ -7,7 +7,7 @@ const { readWebpDimensions } = require('./image-format-utils');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1679 +SchifferRestoreTruth'"), 'version constant is stale');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1680 +GoerkeCustodyTruth'"), 'version constant is stale');
 assert(html.includes("text: _resolveIstEigenauftrag ? 'Eigen-Auftrag abschließen und Wahrheit festhalten.' : 'Fall abschließen und Auftraggeber informieren.'"),
   'resolve button copy must stay player-facing for external and self-assigned cases');
 assert(html.includes('_enginePrompt: [_resolveText, _resolveTransitionPrompt, _resolvePhysicalTruth]'), 'resolve direction must preserve physical target truth');
@@ -107,6 +107,19 @@ assert(politicalEncounter._stasiEncounterPrompt().includes('Oberleutnant Mertens
 politicalEncounter._stasiEncounterClear('Audit beendet', 3);
 assert.strictEqual(politicalEncounter.caseProgress.stasiEncounter.active, false, 'resolved Stasi encounter must be persisted as inactive');
 assert.strictEqual(politicalEncounter.caseProgress.stasiEncounterCooldownUntil, 11, 'resolved encounter needs a scene cooldown');
+
+const caseSpecificOfficer = makeEncounterContext(true);
+caseSpecificOfficer.caseProgress.activeConfrontation = {
+  trigger: 'spawn',
+  enemyName: 'Hauptmann Dietmar Krollwitz',
+  enemyTag: 'STASI',
+  enemyRole: 'MfS-Hauptmann',
+  ort: 'Reichsbahndirektion'
+};
+assert.strictEqual(caseSpecificOfficer._stasiCustodyEntryVormerken('verlorener Widerstand gegen Krollwitz'), true,
+  'losing resistance against a case-specific MfS officer must arm custody just like the central access encounter');
+assert.strictEqual(caseSpecificOfficer.caseProgress.custodyForcedEntry, true,
+  'case-specific MfS defeat must persist deterministic custody before narration');
 
 // Wessel-live v1644: Nach sechs Hochrisiko-Szenen war der Zugriff intern
 // forciert, ein normaler Reisebutton loeschte ihn aber vor der sichtbaren
