@@ -405,6 +405,16 @@ assert.strictEqual(vpRepairContext.repairGoerkeArrivalContinuity(vpExistingDoorC
   'the existing door cliffhanger must still receive the visible Krollwitz intervention');
 assert.strictEqual((vpExistingDoorCliffhanger.szene.match(/Als Roth die Mappe schließt, öffnet sich die Tür/g) || []).length, 1,
   'restore repair must not duplicate the already narrated Roth door sentence');
+const vpAlreadyDuplicatedDoor = {
+  ort: 'Volkspolizei-Praesidium Keibelstrasse',
+  szene: 'Du notierst den Befund. Als Roth die Mappe schließt, öffnet sich die Tür. Als Roth die Mappe schließt, öffnet sich die Tür. Hauptmann Dietmar Krollwitz tritt mit zwei jungen MfS-Beamten ein.',
+  indizienCnt: 4,
+  personenImRaum: ['Kommissar Wilhelm Roth', 'Hauptmann Dietmar Krollwitz', 'Junge MfS-Beamte'],
+};
+assert.strictEqual(vpRepairContext.repairGoerkeArrivalContinuity(vpAlreadyDuplicatedDoor), true,
+  'a save already damaged by an older restore migration must be healed');
+assert.strictEqual((vpAlreadyDuplicatedDoor.szene.match(/Als Roth die Mappe schließt, öffnet sich die Tür/g) || []).length, 1,
+  'restore repair must collapse an already persisted duplicate door sentence');
 assert(/volkspolizei-keibelstrasse-krollwitz-night\.png[\s\S]{0,300}depictsNpcs: \['wilhelm_roth', 'hauptmann_krollwitz'\]/.test(html),
   'the VP showdown needs its own Roth/Krollwitz scene image contract');
 assert(/test: \/\^littenplatz\$\/[\s\S]{0,500}marx-engels-platz-night\.webp[\s\S]{0,700}reinhard_baumgarten[\s\S]{0,250}littenplatz-baumgarten-night\.png/.test(html),
@@ -475,7 +485,7 @@ assert(/Brieftasche/.test(incompleteRelease.szene)
 assert(html.includes('logEntries.forEach(function(entry) { repairCustodyReleaseInventoryContinuity(entry); });'),
   'old saved release logs must receive the same complete equipment-return repair');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1737 +GoerkeRestore'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1738 +GoerkeRestoreTruth'"),
   'release version missing');
 
 console.log('Goerke opening/truth regression checks passed.');

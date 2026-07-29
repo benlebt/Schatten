@@ -166,7 +166,7 @@ assert.strictEqual(
   'a not-yet-narrated active enemy must not select the NPC image variant'
 );
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1737 +GoerkeRestore'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1738 +GoerkeRestoreTruth'"),
   'release version missing');
 
 console.log('THREAT_SPAWN_SERIALIZATION_OK');
