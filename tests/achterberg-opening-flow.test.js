@@ -69,6 +69,19 @@ assert(achterberg.includes('Wilhelmine empfängt Karl und erhält seinen Abschlu
   'the villa narrative setting must match the canonical foyer image during the final report');
 assert(achterberg.includes("abschlussEffekt: { verantwortlicher: 'Egon Vossberg', suspectConfronted: true, ueberfuehrt: true"),
   'Vossbergs deterministic confrontation clue must unlock the resolve path');
+assert(/id: 'vossberg_gestaendnis'[\s\S]{0,2400}requiresEvidenceAll: \['digitalis_toxikologie','vossberg_gelegenheit','apotheke_beleg'\]/.test(achterberg),
+  'Vossbergs confession must require cause of death, opportunity, and poison-access evidence');
+assert(/id: 'digitalis_toxikologie'[\s\S]{0,1800}murderAxisIds: \['todesursache'\]/.test(achterberg)
+  && /id: 'vossberg_gelegenheit'[\s\S]{0,1800}murderAxisIds: \['gelegenheit'\]/.test(achterberg)
+  && /id: 'apotheke_beleg'[\s\S]{0,1800}murderAxisIds: \['zugriff'\]/.test(achterberg),
+  'the three mandatory murder proofs must deterministically book their configured axes');
+assert(sourceOf('_markiereIndizGefunden').includes('ind.murderAxisIds')
+  && sourceOf('_markiereIndizGefunden').includes('via Kern-Indiz-ID'),
+  'confirmed murder evidence must book axes enginewide without depending on model wording');
+assert(/id: 'vossberg_gestaendnis'[\s\S]{0,2600}prosaPflicht: \{ replaceOnFallback: true/.test(achterberg)
+  && /id: 'digitalis_toxikologie'[\s\S]{0,1800}prosaPflicht: \{ replaceOnFallback: true/.test(achterberg)
+  && /id: 'apotheke_beleg'[\s\S]{0,1800}prosaPflicht: \{ replaceOnFallback: true/.test(achterberg),
+  'core murder clues must have authored prose fallbacks instead of dry metadata sentences');
 assert(html.includes("function _szenenbildVersionierteUrl(src)"),
   'scene images must use a release-bound cache key so deployed corrections appear immediately');
 assert(achterberg.includes("lokalVon: ['Deutsche Staatsoper (Admiralspalast)']"),
@@ -82,7 +95,7 @@ assert(achterberg.includes("name: 'Otto Jahnke', id: 'otto_jahnke', tag: 'WITNES
 assert(/id: 'vossberg_gelegenheit'[\s\S]*?npc: 'otto_jahnke', quelle: 'person', actions: \['BEFRAGEN','ANSPRECHEN','UEBERZEUGEN'\]/.test(achterberg),
   'the witness statement must be obtained through conversation, not room search');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1680 +GoerkeCustodyTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1681 +AchterbergMurderEvidence'"),
   'release version missing');
 assert(html.includes('const _abschlussAkutGefaehrlich = currentSp > 3 && !!_aktiveFluchtGefahr;'),
   'high tension may block resolution only while an acute threat is still active');
