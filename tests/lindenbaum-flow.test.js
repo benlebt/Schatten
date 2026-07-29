@@ -168,6 +168,12 @@ assert(/GESTERN gestorben/i.test(setup.historicalContext.weltlage),
 assert(!/vorgeschrieben fuer alle Witwen/i.test(html),
   'the game must not invent a blanket mourning-band mandate for widows');
 
+const lindenbaumImagesStart = html.indexOf('caseTest: /auguste lindenbaum|albert lindenbaum/i');
+const lindenbaumImagesEnd = html.indexOf('caseTest: /reinhold achterberg|wilhelmine achterberg/i', lindenbaumImagesStart);
+assert(lindenbaumImagesStart >= 0 && lindenbaumImagesEnd > lindenbaumImagesStart,
+  'the Lindenbaum scene-image set must remain directly testable');
+const lindenbaumImages = html.slice(lindenbaumImagesStart, lindenbaumImagesEnd);
+
 for (const file of [
   'karl-buero-auguste-day.png',
   'karl-buero-auguste-eva-day.png',
@@ -213,8 +219,8 @@ assert(html.includes("file: 'pathologie-charite-eva-day.png'")
     && html.includes("requiresAllNpcs: ['dr_otto_seifert', 'eva_werder']")
     && fs.existsSync(path.join(repoRoot, 'assets', 'scenes', 'lindenbaum', 'pathologie-charite-eva-day.png')),
   'Eva must remain visibly present when she accompanies Karl into the pathology');
-assert(html.includes("file: 'volkspolizei-keibelstrasse-eva-day.png'")
-    && html.includes("nightFile: 'volkspolizei-keibelstrasse-eva-night.png'")
+assert(lindenbaumImages.includes("file: 'volkspolizei-keibelstrasse-eva-day.png'")
+    && lindenbaumImages.includes("nightFile: 'volkspolizei-keibelstrasse-eva-night.png'")
     && fs.existsSync(path.join(repoRoot, 'assets', 'scenes', 'lindenbaum', 'volkspolizei-keibelstrasse-eva-day.png'))
     && fs.existsSync(path.join(repoRoot, 'assets', 'scenes', 'lindenbaum', 'volkspolizei-keibelstrasse-eva-night.png')),
   'Eva must remain visibly present at the Keibelstrasse in both day and night scenes');
@@ -401,7 +407,7 @@ assert.strictEqual(blockedStasiContext.advanceStasi('ERKUNDEN'), null,
 assert.strictEqual(blockedStasiContext.caseProgress.stasiEncounterEligibleScenes, 0,
   'a blocked normal MfS attempt must reset its eligible-scene counter');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1710 +PolicePartyVisual'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1711 +LindenbaumPoliceVisual'"),
   'release version missing');
 
 console.log('LINDENBAUM_FLOW_OK');
