@@ -1,4 +1,4 @@
-const assert = require('assert');
+﻿const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -145,7 +145,7 @@ for (const file of [
   assert(html.includes(file), 'Strauss Rex scene asset is not wired into the image matrix: ' + file);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1711 +LindenbaumPoliceVisual'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1712 +RomanceRecoveryClimax'"),
   'release version missing');
 
 console.log('strauss-live-visual-truth: ok');

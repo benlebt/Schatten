@@ -1,4 +1,4 @@
-const assert = require('assert');
+﻿const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -320,7 +320,7 @@ problem = context._findUnrosteredPresentActor({
 }, {});
 assert.strictEqual(problem, null, 'a properly rostered scene actor remains legal');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1711 +LindenbaumPoliceVisual'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1712 +RomanceRecoveryClimax'"),
   'release version missing');
 
 console.log('phantom threat guard tests passed');

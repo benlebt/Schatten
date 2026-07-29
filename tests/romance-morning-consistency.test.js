@@ -68,10 +68,28 @@ assert(html.includes('&& romCurrentTension >= 3'),
   'three successful deliberate approaches must unlock the overnight climax instead of deadlocking at the click cap');
 assert(!html.includes('&& romCurrentTension >= 4'),
   'the overnight threshold must not remain above the maximum three-click path from Rm 0');
-assert(html.includes('const romanceRecoveryReady = romanticClicksSinceProgress >= 3')
+assert(html.includes('const romanceRecoveryReady = _romanceRecoveryReadyNow(romCurrentTension)')
     && html.includes('(romanticClicksSinceProgress < 3 || romanceRecoveryReady)')
     && html.includes('romanticClicksSinceProgress >= 3 && !romanceRecoveryReady'),
   'danger must not permanently deadlock a three-click romance below the overnight threshold');
+const recoveryStart = html.indexOf('function _romanceRecoveryReadyNow');
+const recoveryEnd = html.indexOf('\n}', recoveryStart) + 2;
+assert(recoveryStart >= 0 && recoveryEnd > recoveryStart, 'romance recovery helper missing');
+const recoveryContext = {
+  romanticClicksSinceProgress: 3,
+  sceneCounter: 20,
+  lastRomanceTensionUpScene: 16,
+};
+vm.createContext(recoveryContext);
+vm.runInContext(html.slice(recoveryStart, recoveryEnd) + '\nthis.recoveryReady = _romanceRecoveryReadyNow;', recoveryContext);
+assert(recoveryContext.recoveryReady(1) === true,
+  'a cooled three-click romance must recover after two factual scenes');
+recoveryContext.sceneCounter = 17;
+assert(recoveryContext.recoveryReady(1) === false,
+  'romance recovery must still respect its two-scene breathing room');
+assert(html.includes('romanticTension = Math.max(2, romanticTension);')
+    && html.includes('romanticClicksSinceProgress = 2;'),
+  'a recovery approach must reopen the cap and restore enough tension for the normal +1 to reach the overnight threshold');
 
 const imageFiles = [
   'morgen-wohnung-ost.webp', 'morgen-wohnung-ost-allein.webp',

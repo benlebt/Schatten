@@ -1,4 +1,4 @@
-const assert = require('assert');
+﻿const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -18,7 +18,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1711 +LindenbaumPoliceVisual'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1712 +RomanceRecoveryClimax'"),
   'Brandt regression release version missing');
 
 for (const bad of [

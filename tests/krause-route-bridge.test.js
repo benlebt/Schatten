@@ -1,4 +1,4 @@
-const assert = require('assert');
+﻿const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -86,7 +86,7 @@ assert(sourceOf('buildWorldTruthRepairHint').includes('DRAMATISIERTER SPURWECHSE
   'a failed route bridge must get a precise model repair prompt');
 assert(sourceOf('enforceSceneWorldTruthFallback').includes("problem.code === 'evidence_exit_undramatized'"),
   'repeated model failure must retain a deterministic route bridge fallback');
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1711 +LindenbaumPoliceVisual'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1712 +RomanceRecoveryClimax'"),
   'release version missing');
 
 console.log('krause-route-bridge.test.js: OK');
