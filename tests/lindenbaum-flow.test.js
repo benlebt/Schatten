@@ -158,7 +158,7 @@ assert(/zug\|schluck\|nippen/.test(html),
   'sober-scene continuity must reject invented sips of Korn');
 assert(/Dein letzter Fall/.test(html) && /sceneCounter <= 1/.test(html),
   'opening prose needs the engine-wide previous-case memory filter');
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1691 +ConfrontationBalanceMatrix'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1692 +StraussRexVisualTruth'"),
   'release version missing');
 
 console.log('LINDENBAUM_FLOW_OK');

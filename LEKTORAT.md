@@ -333,6 +333,13 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 - Kaffee bleibt schwach (`2/6` gegen Stärke 3), geworfener Korn ist gegen Stärke 5 brauchbar, aber unsicher (`3/6`), und das verbrauchbare Feuerwerksbündel neutralisiert bei einer harten Gruppe exakt eine Überzahlstufe (`4/6`). Der wiederverwendbare Schlagstock ist stark, scheitert gegen Stärke 5 aber weiterhin auf `2/6` und schlägt nicht bei jedem Erfolg sofort k.o.
 - Als Ausreißer erwiesen sich die wiederverwendbaren Handschellen: Ohne vorbereitete Oberhand fesselten sie einen normalen Gegner bisher auf `5/6` sofort. Ein neuer Nahkampf-Malus senkt das auf `3/6`. Nach einem vorherigen Wirkungstreffer kehren `5/6` zurück; die ausdrücklich kombinierte Aktion `Rex: Fixieren` plus Handschellen gelingt als verdienter Team-Payoff sicher. Nur `Fixieren` oder `Festhalten`, nicht irgendein Begleiterbonus, hebt den Malus auf.
 
+## Strauss-Orts- und Rex-Bildwahrheit v7.12.1692
+
+- Der vollständige Produktionslauf auf v7.12.1683 reproduzierte zwei neue Ortsbrüche: Ludwigs Wohnung wurde trotz kanonischem Ankunftstext aus dem vierten in den zweiten Stock verlegt; bei der Rückkehr ins Büro parkte Karl am Marx-Engels-Platz und ging angeblich nur wenige Schritte zum Hackeschen Markt. Enge Weltwahrheits-Guards verwerfen nun exakt diese Stockwerks- und Opel/Fußdistanz-Drifts und besitzen natürliche deterministische Ankunftsfallbacks.
+- Rex wurde am Goldenen Anker regulär gegen Tauschwert 7 aufgenommen. Die PPK schuf in der Krummbein-Konfrontation nur Distanz und beendete sie nicht. `Rex: Fixieren` plus Handschellen erzeugte dagegen einen verdienten, klar erzählten Teamabschluss mit spürbarer, aber nicht goriger Gewalt.
+- Bildbefund: Vor der Kombi zeigte das feste Ladenmotiv Krummbein und Karl, obwohl Haupt-UI und Begleiterleiste Rex führten. Nach der Fesselung fiel das Bild sogar auf den leeren Laden zurück, weil `gefesselt` fälschlich wie ein Ortsabgang behandelt wurde. Nach der Abführung blieb Rex in Prosa und UI, aber weiterhin nicht im Bild.
+- Vier neue Tag-/Nachtmotive bilden deshalb `Krummbein + Rex` und `Rex nach Krummbeins Abführung` ab. Die Anwesenheitsmatrix priorisiert die gemeinsame Variante, behält gefesselte, fixierte, benommene und k. o. gegangene Körper sichtbar und wechselt erst bei echter Übergabe/Flucht auf das Rex-Nachherbild. Damit folgen Bild, Prosa und Haupt-UI demselben Gegner- und Begleiterzustand.
+
 ## Mindestprotokoll pro Run
 
 - Fall, Version, Strategie, Seed, Start-/Endzeit, Szenenzahl, Ergebnis und Abbruchgrund.
