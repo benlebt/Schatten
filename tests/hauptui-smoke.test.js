@@ -795,6 +795,8 @@ assert(html.includes("label: 'Näher kommen'"), 'romance action must use the cor
   assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'romance', file)), 'missing romance morning image ' + file);
 });
 assert(html.includes("if (angebotPersonen.length && _hauptuiItemTaugt(item, 'anbieten')) add('anbieten', 'Biete an');"), 'offering an item must require a present peaceful NPC');
+assert(/anbieten:\s+\{ label: 'Anbieten',[^}]*itemUebergabe: true/.test(html),
+  'a peaceful item gift must leave inventory instead of granting repeatable social progress');
 assert(html.includes("add('anbieten::' + ziel, _hauptuiGegnerAngebotLabel(item, feind));"), 'social consumables must also expose a directly targeted peaceful offer to enemies');
 assert(html.includes('function _hauptuiAngebotPersonen()'), 'item offers need an explicit eligible-recipient list');
 assert(html.includes('function _hauptuiGegnerAngebot(npc, item, assist)'), 'enemy offers need a persistent social-resolution path');

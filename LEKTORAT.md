@@ -510,6 +510,17 @@ Dieser Katalog ist ab sofort Teil jedes manuellen Falllaufs und jeder Fallbewert
 - Reise-Popups mit vorausgewählten Begleitern müssen diesen Zustand ausdrücklich erklären. Der Test klickt zum Mitnehmen nicht nochmals auf die bereits markierte Person, sondern bestätigt direkt; ein zusätzlicher Klick ist der bewusste Abwahltest.
 - Grammatikfehler in harten Aktionsfolgen werden an der gemeinsamen Auslieferungsgrenze geprüft. Insbesondere heißt es bei Karl: „du verkeilst … und schnappst die Handschellen“, nicht „und schnappen“.
 
+### Görke-/Haft-Regressionsregeln aus dem Produktionslauf v1735
+
+- Ein sichtbarer Krollwitz-Zugriff braucht einen vollständigen deutschen Einführungssatz. Satzfragmente wie „Dr. Neben ihm“ sind P1-Prosa- und Figurenfehler: Baumgarten wird als anwesender Verteidiger konkret benannt, danach erst wird Krollwitz räumlich zu ihm gesetzt.
+- Festnahmefahrt, Header und Bild verwenden dieselbe Tageszeit. Wenn der Zugriff am Nachmittag erfolgt, bleibt die Transportprosa zeitneutral oder zeigt Tageslicht; „dunkle Abendstraßen“ sind erst ab Abend zulässig. Reparaturtexte dürfen keinen künstlichen Zeitsprung behaupten.
+- Der Festnahmezugriff benennt die tatsächliche Beschlagnahme vollständig: Walther, Geld, Notizbuch, Schlüssel und der restliche Tascheninhalt werden bei der Aufnahme einbehalten. Die Engine darf diese vorübergehende Haftverwahrung nicht mit dauerhaftem Itemverlust verwechseln.
+- Eine reguläre Freilassung gibt Mantel, Brieftasche, Notizbuch, Schlüssel, Walther und alle übrigen nur bei der Aufnahme einbehaltenen persönlichen Sachen sichtbar zurück. Haupt-UI, Inventar und Prosa müssen danach dieselbe wiederhergestellte Ausrüstung behaupten.
+- Ein friedlich angebotenes Item ist eine echte Übergabe und keine kostenlose wiederholbare Sozialaktion. Nimmt die Figur Kaffee, Zigaretten, Korn oder eine andere Aufmerksamkeit an, wechselt der Gegenstand engine-seitig den Besitzer und verschwindet aus Karls Inventar. Ablehnung ohne Übergabe bleibt nur bei einem ausdrücklich mechanisch ausgewerteten Ablehnungspfad zulässig.
+- Bohnenkaffee darf Vertrauen und Zugang erleichtern, ersetzt aber kein definiertes Kernindiz. Der Lauf protokolliert getrennt: Itemverbrauch, sichtbare Reaktion, Ruf-/Stimmungswirkung und danach tatsächlich gesicherte Aussage oder Akte.
+- Die Walther gegen einen vorbereiteten MfS-Hauptmann erzeugt Abstand und politische Eskalation, aber keinen automatischen Sieg. Zwei eingeführte Beamte dürfen Karl glaubhaft entwaffnen und in Haft bringen; das ist ein Balanceerfolg, sofern Aktion, Krollwitz, Transport, Zelle und Freilassung ohne Namens-, Orts- oder Zeitdrift bleiben.
+- Der reguläre Haftpfad wird mindestens über zwei verschiedene Verhörhandlungen und den Schlaf-/Morgenausgang geprüft. Jede Runde bleibt in Zelle oder Verhörraum, zeigt eine konkrete Reaktion und darf weder Phantom-Freilassung noch freie Reiseoptionen anbieten.
+
 ## Mindestprotokoll pro Run
 
 - Fall, Version, Strategie, Seed, Start-/Endzeit, Szenenzahl, Ergebnis und Abbruchgrund.

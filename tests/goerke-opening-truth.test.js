@@ -423,17 +423,43 @@ const wrongGoerkeCustody = {
 assert.strictEqual(custodyRepairContext.repairGoerkeCustodyEntryContinuity(wrongGoerkeCustody), true,
   'the observed Goerke custody entry drift must be repaired');
 assert(/Krollwitz wartet/.test(wrongGoerkeCustody.szene)
-    && /dunklen Abendstraßen/.test(wrongGoerkeCustody.szene)
+    && /hinter beschlagenen Scheiben/.test(wrongGoerkeCustody.szene)
     && /Genslerstraße in Hohenschönhausen/.test(wrongGoerkeCustody.szene)
-    && !/Brakke|Zeitung|Tageslicht|Fahrt nach Lichtenberg/i.test(wrongGoerkeCustody.szene),
+    && /alles Übrige aus den Taschen/.test(wrongGoerkeCustody.szene)
+    && !/Brakke|Zeitung|Tageslicht|Abendstraßen|Fahrt nach Lichtenberg/i.test(wrongGoerkeCustody.szene),
   'custody prose must align the actual officer, time and prison with UI and image');
 assert.deepStrictEqual(Array.from(wrongGoerkeCustody.personenImRaum), [],
   'the cell scene may not retain officers as clickable cell occupants');
 assert(sourceOf('_stasiCustodyEntryVormerken').includes('custodyEntryOfficerName')
     && !html.includes('Brakke wartet den einzigen freien Atemzug'),
   'future custody entries must use the actual confrontation officer instead of hard-coded Brakke');
+assert(sourceOf('repairBasicGermanProse').includes('Dr. Reinhard Baumgarten ordnet an der Verteidigerbank seine Akten. Neben ihm'),
+  'the observed broken Goerke court fragment must be repaired at the shared prose boundary');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1735 +LindenbaumTruth'"),
+const releaseRepairContext = {
+  caseProgress: {},
+  engineCurrentLocation: { name: 'MfS-Untersuchungshaftanstalt Hohenschoenhausen, Zelle 14' },
+  detectStasiRelease: () => true,
+  _aktTageszeitName: () => 'MORGEN',
+  _custodyReleaseStateTruthSichern: () => true,
+  diag: () => {},
+};
+vm.createContext(releaseRepairContext);
+vm.runInContext(sourceOf('_custodyReleaseSceneTruthSichern'), releaseRepairContext);
+const incompleteRelease = {
+  ort: 'Vor der MfS-Untersuchungshaftanstalt Hohenschoenhausen',
+  szene: 'Nach einer langen Nacht öffnet ein Wärter die Zelle. Er gibt dir Mantel und Brieftasche zurück und führt dich durch mehrere graue Flure. Am Tor sagt er, du seist entlassen. Vor Hohenschönhausen blendet dich das Morgenlicht. Du bist wieder frei und kannst weiter ermitteln, doch die Staatssicherheit kennt jetzt deinen Namen und deinen Fall. Der schwarze Wagen bleibt hinter dem Tor stehen.'
+};
+assert.strictEqual(releaseRepairContext._custodyReleaseSceneTruthSichern(incompleteRelease), true,
+  'an otherwise valid release must still be repaired when confiscated core equipment is missing');
+assert(/Brieftasche/.test(incompleteRelease.szene)
+    && /Notizbuch/.test(incompleteRelease.szene)
+    && /Schlüssel/.test(incompleteRelease.szene)
+    && /Walther/.test(incompleteRelease.szene)
+    && /persönlichen Sachen/.test(incompleteRelease.szene),
+  'release prose must return every core item and the remaining confiscated pocket inventory');
+
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1736 +GoerkeCustody'"),
   'release version missing');
 
 console.log('Goerke opening/truth regression checks passed.');
