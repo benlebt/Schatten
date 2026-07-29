@@ -68,6 +68,10 @@ assert(html.includes('&& romCurrentTension >= 3'),
   'three successful deliberate approaches must unlock the overnight climax instead of deadlocking at the click cap');
 assert(!html.includes('&& romCurrentTension >= 4'),
   'the overnight threshold must not remain above the maximum three-click path from Rm 0');
+assert(html.includes('const romanceRecoveryReady = romanticClicksSinceProgress >= 3')
+    && html.includes('(romanticClicksSinceProgress < 3 || romanceRecoveryReady)')
+    && html.includes('romanticClicksSinceProgress >= 3 && !romanceRecoveryReady'),
+  'danger must not permanently deadlock a three-click romance below the overnight threshold');
 
 const imageFiles = [
   'morgen-wohnung-ost.webp', 'morgen-wohnung-ost-allein.webp',
