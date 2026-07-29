@@ -180,7 +180,7 @@ assert.strictEqual(
 assert.strictEqual(closureContext.cleared, true,
   'the dangling Stasi encounter must be cleared at case closure');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1699 +PartyLiveQA'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1700 +LindenbaumPartyVisual'"),
   'release version is stale');
 
 console.log('VOGT_FLOW_OK');

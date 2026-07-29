@@ -170,6 +170,7 @@ assert(!/vorgeschrieben fuer alle Witwen/i.test(html),
 
 for (const file of [
   'karl-buero-auguste-day.png',
+  'karl-buero-auguste-eva-day.png',
   'ho-verwaltung-hermes-day.png',
   'ho-verwaltung-brakke-day.png',
   'cafe-kranzler-eva-day.png',
@@ -190,6 +191,9 @@ assert(html.includes("depictsNpcs: ['dr_otto_seifert']"),
 assert(html.includes("requiresAllNpcs: ['eva_werder']")
     && html.includes("depictsNpcs: ['eva_werder']"),
   'Eva needs a party-aware Café Kranzler image instead of the Karl-alone base scene');
+assert(html.includes("requiresAllNpcs: ['auguste_lindenbaum', 'eva_werder']")
+    && html.includes("depictsNpcs: ['auguste_lindenbaum', 'eva_werder']"),
+  'Eva needs a party-aware Karl office image when Auguste is present there');
 assert(html.includes("if (typeof _istInParty === 'function' && _istInParty(scId, scName)) return true;"),
   'an explicit party member must remain a clickable person away from the canonical home location');
 assert(html.includes("add('party_mitnehmen', mitnahmePreis > 0")
@@ -355,7 +359,7 @@ assert.strictEqual(blockedStasiContext.advanceStasi('ERKUNDEN'), null,
 assert.strictEqual(blockedStasiContext.caseProgress.stasiEncounterEligibleScenes, 0,
   'a blocked normal MfS attempt must reset its eligible-scene counter');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1699 +PartyLiveQA'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1700 +LindenbaumPartyVisual'"),
   'release version missing');
 
 console.log('LINDENBAUM_FLOW_OK');
