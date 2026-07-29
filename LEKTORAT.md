@@ -359,6 +359,13 @@ Stand: 29.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 - Zwei eigene Café-Kranzler-Motive zeigen Karl und Eva bei Tag beziehungsweise Nacht. Die Anwesenheitsvariante wird nur durch Evas tatsächlichen physischen Party-/Szenenroster aktiviert; ohne Eva bleibt das neutrale Cafébild erhalten.
 - Regressionen prüfen den echten Party-Ortsfilter, den Ankunftsdrift mit fehlender Eva in Prosa/`personenImRaum`, beide Bilddateien und den vollständigen Lindenbaum-Roster.
 
+## Ruf-Vergleich und Debug-Neustart v7.12.1696
+
+- Das bestehende Rufsystem besitzt bereits konkrete, deterministische Folgen: Renommee verändert leichte soziale Erfolgswege und den Spielraum in Verhören; Härte kann leichten Druck glaubwürdiger machen, verteuert ab Stufe 3 aber Informanten um bis zu zwölf Ostmark. Schwere körperliche Fehlwege bleiben auch bei maximaler Härte falsch.
+- Für kontrollierte Gegenläufe gibt es in den Admin-Settings zusätzlich `Fall mit diesem Ruf neu starten`. Der aktuelle Fallzustand wird gelöscht und derselbe Fall neu gestartet, während Ruf, Kasse, bekannte Personen und übrige Karrierewerte erhalten bleiben.
+- Dieser Debug-Neustart unterdrückt genau die sonst beim neuen Fall fällige zusätzliche Mietbuchung. Das verhindert, dass der Vergleich `neutral / angesehen / verbrannt / gefürchtet` allein durch unterschiedliche Kasse oder Schulden verfälscht wird.
+- Ein eigener Regressionstest vergleicht identische Informanten-, Sozial- und Verhörsituationen bei extremen Rufprofilen und prüft zusätzlich Ruf-Reset, Wertebegrenzung, Karriereerhalt, Fallidentität und den einmaligen Miet-Bypass.
+
 ## Verbindlicher Kanten-, Figuren- und Varianten-Prüfkatalog 29.07.2026
 
 Dieser Katalog ist ab sofort Teil jedes manuellen Falllaufs und jeder Fallbewertung. Er ergänzt die sechs Standing-Checkpoints. Ein Fall kann trotz gelöstem Hauptpfad nicht höher als `8,9/10` bewertet werden, solange einer der folgenden Bereiche ungetestet oder nur durch Quelltextsichtung statt durch einen echten variierenden Lauf belegt ist.
@@ -416,6 +423,27 @@ Dieser Katalog ist ab sofort Teil jedes manuellen Falllaufs und jeder Fallbewert
 - Wiederkehrende Kontakte erinnern sich nur an belegte Begegnungen und reagieren auf Karls tatsächlichen Ruf. Sie dürfen helfen, ablehnen, handeln oder eigene Bedingungen stellen.
 - Zufallsfiguren und Gegner werden variiert: Motiv, Alter, Auftreten, Gruppengröße, soziale Herkunft und Konfliktziel dürfen nicht in jedem Run gleich sein. Variation darf aber nie Indiz-, Rollen- oder Historienwahrheit überschreiben.
 
+### Rufsystem: relevante, sichtbare und vergleichbare Folgen
+
+- Karls Ruf ist kein Schmuckwert und keine einfache Gut-/Böse-Leiste. `Renommee` und `Härte` sind zwei getrennte Achsen: gutes Renommee kann Türen öffnen, schlechter Ruf sie schließen; Härte kann Drohungen glaubwürdiger machen, muss aber Informanten und zivile Zeugen vorsichtiger machen.
+- Rufwirkung muss spielmechanisch oder erzählerisch relevant und für den Spieler nachvollziehbar sein. Pflichtprüfungen sind: soziale Erfolgswege, Verhör-Spielraum, Informantenpreise, Konfliktreaktionen, wiederkehrende Kontakte, Abschluss-/Folgefall-Recap und sichtbare Statusanzeige. Eine bloß intern geänderte Zahl oder ein austauschbarer Prompt-Satz gilt nicht als bestandene Wirkung.
+- Der Ruf darf keinen Fall automatisch lösen, kein Kernindiz ohne seinen Beleg erfinden und keine schwere Eskalation nachträglich zum richtigen Gesprächsweg machen. Er verändert Chancen, Widerstand, Preis, Ton und Konsequenz; Figur, Evidenz und gewählte Handlung bleiben ausschlaggebend.
+- Positives Renommee braucht ebenso spürbare Vorteile wie negatives Renommee Nachteile. Hohe Härte braucht einen echten kurzfristigen Nutzen und einen echten sozialen beziehungsweise wirtschaftlichen Preis. Ein Profil, das nur bestraft oder nur belohnt, ist unausgewogen.
+- Rufreaktionen brauchen glaubhafte Reichweite. Nur Figuren, die Karl kennen oder von ihm gehört haben können, dürfen konkret reagieren. Zufällige Fremde dürfen den Zahlenwert nicht hellseherisch kennen; vernetzte Unterwelt, Polizei, MfS und wiederkehrende Kontakte dürfen ihn eher weitertragen.
+- Prosa, Haupt-UI, Settings-Anzeige, Aktionslabel und Mechanik müssen dieselbe Rufwirkung behaupten. Zeigt das Label einen Rufvorteil, muss der soziale Ausgang ihn tragen; nennt die Prosa einen Aufpreis oder besonderes Misstrauen, müssen Kasse beziehungsweise Gesprächsweg tatsächlich betroffen sein.
+- Jede Rufänderung muss aus einer sichtbaren Handlung oder einem Fallausgang folgen, auf `-5..+5` begrenzt und gegen Doppelbuchung geschützt sein. Forensische Wörter, fremde Gewalt oder bloße Erzählatmosphäre dürfen Karls Härte nicht erhöhen.
+- Der Debug-Reset `Nur Ruf auf 0 setzen` darf ausschließlich beide Rufachsen neutralisieren und weder Karriere, Kasse, Miete, bekannte Personen noch Fallfortschritt löschen. `Fall mit diesem Ruf neu starten` muss denselben Fall mit beibehaltenem Ruf und Karrierestand frisch beginnen und darf für diesen Vergleich keine zusätzliche Miete buchen.
+
+#### Verbindlicher Ruf-A/B/C/D-Gegenlauf
+
+1. Für den gewählten Fall zuerst `Karriere zurücksetzen & Fall neu starten`, noch keine kosten- oder rufändernde Aktion ausführen.
+2. In den Admin-Settings das gewünschte Profil einstellen und `Fall mit diesem Ruf neu starten` wählen. Dadurch bleibt die Vergleichsbasis erhalten, während nur der Fallzustand frisch beginnt.
+3. Dieselbe frühe Gesprächs-, Verhör-, Informanten- und Konfliktsequenz mit vier Profilen spielen: neutral `Renommee 0 / Härte 0`, angesehen `+5 / 0`, verbrannt `-5 / 0` und gefürchtet `0 / +5`. Bei Härte-sensiblen Figuren zusätzlich auffällig sanft `0 / -5` prüfen.
+4. Pro Profil exakt protokollieren: sichtbare Aktionslabels, verfügbarer/erfolgreicher Sozialweg, Verhör-Startwerte und Fragebonus, Informantenpreis und Kassenabbuchung, Figurenreaktion in der Prosa, Konfliktwirkung, Rufanzeige und Folgerecap.
+5. Zwischen Profilen die neutrale Vergleichsbasis wiederherstellen. Dafür erneut die Testkarriere zurücksetzen, unmittelbar danach den neuen Ruf setzen und denselben Fall über den Ruf-Vergleichsneustart beginnen. So dürfen Geldverbrauch, Items, Miete, bekannte Personen oder ein vorheriger Fallausgang den Vergleich nicht verfälschen.
+6. Ein Fall besteht den Rufvergleich nur, wenn mindestens zwei Profile bei derselben plausiblen Situation einen erkennbar anderen, regelkonformen Ausgang oder Preis erzeugen und die übrigen Profile glaubwürdig gleich bleiben, wo Ruf keine Rolle spielen darf.
+7. Besonders Stein, Strauss, Lindenbaum und Görke werden mit wechselnden Zeugen-, Informanten- und Konfrontationssituationen geprüft; politische Fälle zusätzlich darauf, ob MfS-Reaktionen den etablierten Ruf berücksichtigen, ohne allwissend oder überzogen zu werden.
+
 ### Stasi-Bedrohung in politischen Fällen
 
 - In einem Stasi-/MfS-Fall muss die Bedrohung real und systemisch spürbar sein: Beobachtung, beruflicher Druck, Aktenmacht, Denunziationsangst, Reise-/Zugangsrisiko und glaubhafte Festnahmegefahr sind wirksamer als ständig gezogene Waffen.
@@ -439,6 +467,7 @@ Dieser Katalog ist ab sofort Teil jedes manuellen Falllaufs und jeder Fallbewert
 - Treffer zu `W6-BLOCK`, `ORT-PROSA-BRUCH`, `TRUTHBEAT-DIAG`, `BEAT-DIAG`, `INDIZ-GATE`, Behandlung, Klientenfrist, Romantik und `personenImRaum`.
 - Pro Szene Bildstatus (`Datei`, `Notfalltafel` oder `Fehler`) sowie Abgleich von zentralen Personen, Ort, Zeit und Zustandsrequisiten.
 - Getestete Romance-Stufe und -Variante; getestete Rex-Kommandos, Trude-Sortiment, Items, PPK- und Team-/Kombiaktionen.
+- Getestetes Rufprofil (`Renommee/Härte`) und Vergleichsprofil; Unterschiede bei Sozialweg, Verhör, Informantenpreis, Konfliktreaktion, Prosa und Folgerecap.
 - Figuren-Tiefenbefund für zentrale Zeugen, Gegner und Romance-Figuren; Stasi-Bedrohungsbefund bei politischen Fällen.
 - Gefundene Stil-Tics mit Anzahl und Szenennummern.
 - Befunde nach P0/P1/P2/P3, jeweils mit Originalsatz, Enginezustand und Root Cause.
