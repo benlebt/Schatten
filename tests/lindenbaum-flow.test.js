@@ -209,6 +209,10 @@ assert(html.includes("excludesNpcs: ['im_hermes']"),
   'the HO image contract must distinguish the Brakke-only state');
 assert(html.includes("depictsNpcs: ['dr_otto_seifert']"),
   'the pathology image contract must declare its visible doctor');
+assert(html.includes("file: 'pathologie-charite-eva-day.png'")
+    && html.includes("requiresAllNpcs: ['dr_otto_seifert', 'eva_werder']")
+    && fs.existsSync(path.join(repoRoot, 'assets', 'scenes', 'lindenbaum', 'pathologie-charite-eva-day.png')),
+  'Eva must remain visibly present when she accompanies Karl into the pathology');
 assert(html.includes("requiresAllNpcs: ['eva_werder']")
     && html.includes("depictsNpcs: ['eva_werder']"),
   'Eva needs a party-aware Café Kranzler image instead of the Karl-alone base scene');
@@ -392,7 +396,7 @@ assert.strictEqual(blockedStasiContext.advanceStasi('ERKUNDEN'), null,
 assert.strictEqual(blockedStasiContext.caseProgress.stasiEncounterEligibleScenes, 0,
   'a blocked normal MfS attempt must reset its eligible-scene counter');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1708 +NamedCustodySeparation'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1709 +PathologyPartyVisual'"),
   'release version missing');
 
 console.log('LINDENBAUM_FLOW_OK');

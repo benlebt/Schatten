@@ -95,7 +95,7 @@ assert(achterberg.includes("name: 'Otto Jahnke', id: 'otto_jahnke', tag: 'WITNES
 assert(/id: 'vossberg_gelegenheit'[\s\S]*?npc: 'otto_jahnke', quelle: 'person', actions: \['BEFRAGEN','ANSPRECHEN','UEBERZEUGEN'\]/.test(achterberg),
   'the witness statement must be obtained through conversation, not room search');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1708 +NamedCustodySeparation'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1709 +PathologyPartyVisual'"),
   'release version missing');
 assert(html.includes('const _abschlussAkutGefaehrlich = currentSp > 3 && !!_aktiveFluchtGefahr;'),
   'high tension may block resolution only while an acute threat is still active');
