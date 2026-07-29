@@ -708,7 +708,7 @@ const leakedRomance = {
 assert.strictEqual(romanceLeakContext.repairRomanceEvidenceLeak(leakedRomance), true,
   'romance prose must repair a decisive clue disclosed before its real investigation action');
 assert(!/registriert|in Sicherheit|im Westen/i.test(leakedRomance.szene)
-    && /Moment gehört euch|Moment gehoert euch/i.test(leakedRomance.szene),
+    && /Nähe gehört euch|Naehe gehoert euch/i.test(leakedRomance.szene),
   'the repaired romance must remain real prose while withholding the unearned clue');
 
 const violenceContext = {

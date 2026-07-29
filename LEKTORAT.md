@@ -497,6 +497,19 @@ Dieser Katalog ist ab sofort Teil jedes manuellen Falllaufs und jeder Fallbewert
 - Dynamische Begleiter brauchen konkrete Besetzungsvarianten an wiederkehrenden Hauptorten. Für Brauer sind mindestens Hilde-Wohnung mit Rex, Wäscherei mit Greta+Vollmer+Rex sowie Lokschuppen mit Mahlke nach Abgang des IM jeweils bei Tag und Nacht Produktionspflicht.
 - Beim Abschlussort reicht eine korrekte Personenleiste nicht: Wenn Hilde im Büro für den Bericht sichtbar wartet, muss die Ankunftsprosa sie ebenfalls nennen. Umgekehrt darf ein allgemeiner Büro-Rückkehrtext sie vor dem Abschluss nicht erfinden.
 
+### Lindenbaum-Regressionsregeln aus dem Produktionslauf v1734
+
+- Fallgebundene Haftreparaturen dürfen niemals durch einen bloßen Namen aus einem anderen Fall ausgelöst werden. Krollwitz-/Görke-Haft gilt nur, wenn Krollwitz wirklich zum aktiven Fall-Setup gehört. Brakke, Vollmer oder ein anderer MfS-Offizier dürfen keinen fallfremden Austausch von Aktion, Ort, Tageszeit, Fahrzeug oder Vernehmer verursachen.
+- Eine normale Romance ist eine unmittelbare kurze Mikroszene. Sie darf Zeit intern geringfügig verbrauchen, aber niemals Nacht zu Morgen umbrechen, Schlaf oder Aufwachen erzählen oder den getrennten `UEBERNACHTUNG`-Button ersetzen. Nur die ausdrücklich gewählte Übernachtung setzt Privatort, Morgenmodus und Partnerinnen-Anwesenheit.
+- Romance-Prosa bleibt strikt persönlich: kein neues Kernindiz aus irgendeinem anderen Fallort, kein spontanes Geständnis, keine unbekannten Männer vor der Tür, kein Poltern und kein anonymer Cliffhanger. Ein echter bereits mechanisch laufender Konflikt muss zuerst gelöst werden; er darf nicht als romantische Dekoration missbraucht werden.
+- Eine Romance-Figur reagiert als eigenständiger Mensch mit Haltung, Grenzen, Humor, Begehren, Vorsicht und möglichen Interessen. Sie darf weder austauschbare Belohnung noch kostenlose Hinweisgeberin sein. Das Bild muss ihren tatsächlichen Morgenstatus zeigen: noch anwesend oder bereits fort, niemals beides zugleich.
+- Ein terminal übergebener oder geflohener Gegner bleibt aus Prosa, `personenImRaum`, Haupt-UI, Optionen, Bild und späteren Romance-Szenen entfernt. Rückblicke nennen ausschließlich das belegte Schicksal. Der Abschluss darf nach einer bereits sichtbaren Polizeiübergabe keine zweite Entscheidung über Freilassen, Schweigegeld oder erneute Festnahme anbieten.
+- Ein bezwungener Gegner mit einem noch offenen personengebundenen Kernhinweis bleibt befragbar. `Durchsuchen` darf keine frei erfundenen Notizbücher, Schlüssel oder Dienstausweise erzeugen, wenn das kanonische Indiz eine Aussage beziehungsweise Konfrontation verlangt. Erst danach folgt wahlweise Durchsuchung, Fesselung oder Übergabe.
+- Die Bildfolge einer Item-Konfrontation wird zustandsweise geprüft: Brakke steht vor der Wirkung, taumelt sichtbar im gelben Stinkbombennebel und sitzt nach Handschellen/Fixierung am Boden. Ein unverändertes stehendes Druckmotiv nach diesen Aktionen ist ein klarer Bildfehler.
+- Eine MfS-Major-Übergabe an die Volkspolizei ist ein politischer Ausnahmevorgang. Sie braucht Roth beziehungsweise ein benanntes zuständiges Team, versiegelte Beweise, Zeugen und Protokoll. Für 1953 ist ein `Framo V 901` plausibel; `Barkas` ist anachronistisch und verboten. Die Szene darf den Zugriff weder beiläufig noch folgenlos darstellen.
+- Reise-Popups mit vorausgewählten Begleitern müssen diesen Zustand ausdrücklich erklären. Der Test klickt zum Mitnehmen nicht nochmals auf die bereits markierte Person, sondern bestätigt direkt; ein zusätzlicher Klick ist der bewusste Abwahltest.
+- Grammatikfehler in harten Aktionsfolgen werden an der gemeinsamen Auslieferungsgrenze geprüft. Insbesondere heißt es bei Karl: „du verkeilst … und schnappst die Handschellen“, nicht „und schnappen“.
+
 ## Mindestprotokoll pro Run
 
 - Fall, Version, Strategie, Seed, Start-/Endzeit, Szenenzahl, Ergebnis und Abbruchgrund.

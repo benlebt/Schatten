@@ -407,7 +407,119 @@ assert.strictEqual(blockedStasiContext.advanceStasi('ERKUNDEN'), null,
 assert.strictEqual(blockedStasiContext.caseProgress.stasiEncounterEligibleScenes, 0,
   'a blocked normal MfS attempt must reset its eligible-scene counter');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1734 +BrauerContinuity'"),
+assert(html.includes("_zeitUnmittelbar: romanceKategorie === 'ROMANTIK'"),
+  'a normal romance click must remain an immediate micro-scene and never roll night into morning');
+assert(html.includes('KEIN Schlaf, KEIN Aufwachen, KEINE Übernachtung und KEIN Morgen')
+    && html.includes("const _cliffhangerPflicht = chosenKategorie !== 'ROMANTIK'"),
+  'regular romance prompts must forbid day jumps, invented threats, and cliffhanger carry-over');
+assert(html.includes("const offenerHinweis = typeof _npcHatOffenenHinweis === 'function'")
+    && html.includes("add('reden', offenerHinweis ? 'Zum offenen Fallhinweis befragen'"),
+  'a restrained Brakke must keep the open evidence interview reachable before police handover');
+assert(html.includes("taeterZustand.status === 'uebergeben'")
+    && html.includes('MORALWAHL bereits vollzogen')
+    && html.includes('Wiederhole keine Festnahme'),
+  'the finale must not offer a second moral fork after Brakke was already handed over');
+assert(html.includes('Framo V 901, niemals ein Barkas')
+    && html.includes('versiegelter Beweismappe'),
+  'Brakke handover must be historically plausible and politically documented');
+assert(html.includes('Diese Personen sind bereits vorausgewählt. Tippe auf einen Namen, um ihn abzuwählen'),
+  'the travel popup must explain that offered companions are already selected');
+
+for (const file of [
+  'ho-verwaltung-brakke-fixed-v1735.png',
+  'ho-verwaltung-brakke-stink-v1735.png',
+]) {
+  assert(fs.existsSync(path.join(repoRoot, 'assets', 'scenes', 'lindenbaum', file)),
+    `missing Brakke state image: ${file}`);
+  assert(html.includes(file), `Brakke visual resolver does not reference ${file}`);
+}
+
+const brakkeVisualContext = {
+  caseSetup: setup,
+  engineCurrentLocation: { name: 'HO-Verwaltung Stalinallee' },
+  window: { _letzteAktion: {} },
+  normForMatch: identityContext.normForMatch,
+  _npcZustandGet: () => ({ status: 'gefesselt' }),
+};
+vm.createContext(brakkeVisualContext);
+const brakkeVisualStart = html.indexOf('function _lindenbaumBrakkeKonfrontationVisual(');
+const brakkeVisualEnd = html.indexOf('// Physische Rettungsziele', brakkeVisualStart);
+vm.runInContext(
+  html.slice(brakkeVisualStart, brakkeVisualEnd)
+    + ';globalThis.brakkeVisual=_lindenbaumBrakkeKonfrontationVisual;',
+  brakkeVisualContext,
+);
+assert.strictEqual(brakkeVisualContext.brakkeVisual().file, 'ho-verwaltung-brakke-fixed-v1735.png',
+  'restrained Brakke must render on the floor instead of standing behind his desk');
+brakkeVisualContext._npcZustandGet = () => ({ status: 'abgelenkt' });
+brakkeVisualContext.window._letzteAktion = {
+  konfrontationItemName: 'Stinkbombe im Blechmantel',
+  npcName: 'Genosse Brakke',
+};
+assert.strictEqual(brakkeVisualContext.brakkeVisual().file, 'ho-verwaltung-brakke-stink-v1735.png',
+  'the stink-bomb consequence must render the visible smoke state');
+
+const custodyRepairContext = {
+  caseSetup: setup,
+  engineCurrentLocation: { name: 'MfS-Untersuchungshaftanstalt Hohenschoenhausen, Zelle 14' },
+  normForMatch: identityContext.normForMatch,
+  diag: () => {},
+};
+vm.createContext(custodyRepairContext);
+const custodyRepairStart = html.indexOf('function repairGoerkeCustodyEntryContinuity(');
+const custodyRepairEnd = html.indexOf('// Kleine, eindeutig falsche Flexionsreste', custodyRepairStart);
+vm.runInContext(
+  html.slice(custodyRepairStart, custodyRepairEnd)
+    + ';globalThis.repairCustody=repairGoerkeCustodyEntryContinuity;',
+  custodyRepairContext,
+);
+const lindenbaumCustody = {
+  ort: 'MfS-Untersuchungshaftanstalt Hohenschoenhausen, Zelle 14',
+  szene: 'Brakke lässt dir die Walther abnehmen. Handschellen schließen sich, dann geht es nach Hohenschönhausen.',
+  personenImRaum: [],
+};
+const lindenbaumCustodyBefore = lindenbaumCustody.szene;
+assert.strictEqual(custodyRepairContext.repairCustody(lindenbaumCustody), false,
+  'the Görke custody repair must not fire merely because a different case contains Brakke');
+assert.strictEqual(lindenbaumCustody.szene, lindenbaumCustodyBefore,
+  'Lindenbaum custody prose must not be overwritten with Krollwitz and Roth');
+
+const romanceRepairContext = {
+  caseProgress: {
+    gefundeneIndizIds: [],
+    romanceNpc: 'Eva Werder',
+    pendingThreatCliffhanger: { art: 'Poltern', ort: 'Lindenbaum-Wohnung' },
+    activeConfrontation: null,
+    activeEncounter: null,
+  },
+  window: { _letzteAktion: { kategorie: 'ROMANTIK', npcName: 'Eva Werder' } },
+  getCaseLocations: () => setup.locations,
+  engineCurrentLocation: { name: 'Lindenbaum-Wohnung' },
+  lastRomanceNpcName: 'Eva Werder',
+  normForMatch: identityContext.normForMatch,
+  diag: () => {},
+};
+vm.createContext(romanceRepairContext);
+const romanceRepairStart = html.indexOf('function repairRomanceEvidenceLeak(');
+const romanceRepairEnd = html.indexOf('// Knackige Gewalt bleibt erlaubt', romanceRepairStart);
+vm.runInContext(
+  html.slice(romanceRepairStart, romanceRepairEnd)
+    + ';globalThis.repairRomance=repairRomanceEvidenceLeak;',
+  romanceRepairContext,
+);
+const romanceLeakScene = {
+  szene: clueById.get('brakke_deckung').fundText
+    + ' Dann poltert jemand vor der Tür und zwei unbekannte Männer warten draußen.',
+  ort: 'Lindenbaum-Wohnung',
+};
+assert.strictEqual(romanceRepairContext.repairRomance(romanceLeakScene), true,
+  'romance must repair evidence and threat leaks even when the leaked clue belongs to another location');
+assert(!/Brakke|versiegelte|unbekannte Männer|poltert/i.test(romanceLeakScene.szene),
+  'repaired romance prose must contain neither free evidence nor a phantom threat');
+assert.strictEqual(romanceRepairContext.caseProgress.pendingThreatCliffhanger, null,
+  'a phantom threat invented by romance must not poison the following scene');
+
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1735 +LindenbaumTruth'"),
   'release version missing');
 
 console.log('LINDENBAUM_FLOW_OK');

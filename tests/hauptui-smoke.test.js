@@ -159,7 +159,9 @@ assert(html.includes("const _akuteGefahr = _schlafSpannung >= 4 && !_schlafSiche
 assert(html.includes("<span>Wirklich schlafen?</span>"), 'sleep confirmation must use a compact title');
 assert(html.includes('window.VERHOER_PILOT_AKTIV = false;'), 'retired Kessler dossier must remain disabled');
 assert(/function _hauptuiVerhoerNpc[\s\S]{0,180}?if \(!window\.VERHOER_PILOT_AKTIV\) return null;/.test(html), 'Haupt-UI must route former dossier NPCs into normal conversations');
-assert(html.includes("if (verhoerNpc && (!z || ['gefesselt', 'fixiert', 'benommen'].indexOf(z.status) !== -1)) add('reden', 'Rede mit');"), 'legacy-enabled bound profile NPCs must remain interrogatable');
+assert(html.includes("if ((verhoerNpc || offenerHinweis)")
+    && html.includes("['gefesselt', 'fixiert', 'benommen', 'ko'].indexOf(z.status) !== -1"),
+  'legacy-enabled bound profile NPCs and restrained clue holders must remain interrogatable');
 assert(html.includes('grid-template-columns: 40px minmax(0, 1fr) minmax(72px, max-content);'), 'travel quick action needs stable icon, title and destination columns');
 assert(html.includes('height: 42px;\n    min-height: 42px;'), 'quick actions need fixed height so Opel and sleep align consistently');
 assert(html.includes('.hauptui-quick-actions .option-text-wrap {\n    display: contents;'), 'desktop quick actions must place title and marker in separate grid columns');
