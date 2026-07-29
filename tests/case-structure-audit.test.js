@@ -216,6 +216,10 @@ assert(html.includes('function _szenenbildNotfallAnzeigen(')
   && html.includes('SZENENBILD-NOTFALLTAFEL:')
   && html.includes('_szenenbildNotfallAnzeigen(visual, image, place, time, scene,'),
   'missing mappings and exhausted file fallbacks must remain visibly diagnosable instead of leaving a blank image region');
+assert(html.includes('function _szenenbildOrtsgrundmotivFallbackSpec(')
+    && html.includes('Karl-allein-Ortsgrundmotiv')
+    && html.includes('NEUTRALES ERSATZMOTIV · BERLIN 1953'),
+  'missing Rex or companion variants must fall back to Karl at the same location before emergency art');
 assert(html.includes("return _istChariteOrt(loc) && !/pathologie/i.test"),
   'a pathology location must not replace the globally injected hospital');
 assert(html.includes("/charite/.test(engineOrt) && !/pathologie/.test(engineOrt)"),
