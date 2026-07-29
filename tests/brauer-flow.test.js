@@ -565,4 +565,194 @@ const visibleReportClient = reportResolverContext._hauptuiNpc({
 assert(visibleReportClient && visibleReportClient.id === 'hilde_brauer',
   'a visible one-time client must remain executable for the final report even after leaving the global cast');
 
+const apartmentRexVariant = apartment && imageSet.images
+  .find((entry) => {
+    entry.test.lastIndex = 0;
+    return entry.test.test('hilde brauer wohnung');
+  }).presenceVariants.find((entry) => Array.isArray(entry.requiresParty)
+    && entry.requiresParty.includes('Rex'));
+assert(apartmentRexVariant
+    && fs.existsSync(path.join(repoRoot, imageSet.root, apartmentRexVariant.dayFile))
+    && fs.existsSync(path.join(repoRoot, imageSet.root, apartmentRexVariant.nightFile)),
+  'Hilde apartment needs real day/night image variants when Rex is physically present');
+const laundryRexVariant = laundrySpec.presenceVariants
+  && laundrySpec.presenceVariants.find((entry) => entry.id === 'stamm_mfs');
+assert(laundryRexVariant
+    && laundryRexVariant.requiresParty.includes('Rex')
+    && laundryRexVariant.depictsNpcs.includes('greta_schliemann')
+    && laundryRexVariant.depictsNpcs.includes('stamm_mfs'),
+  'the laundry confrontation variant must depict Greta and Vollmer while Rex is present');
+for (const file of [
+  'waescherei-vollmer-rex-day-v1734.png',
+  'waescherei-vollmer-rex-night-v1734.png',
+  'waescherei-vollmer-rex-aftermath-day-v1734.png',
+  'waescherei-vollmer-rex-aftermath-night-v1734.png',
+  'reichsbahn-lokschuppen-mahlke-only-day-v1734.png',
+  'reichsbahn-lokschuppen-mahlke-only-night-v1734.png',
+]) {
+  const asset = path.join(repoRoot, imageSet.root, file);
+  assert(fs.existsSync(asset) && fs.statSync(asset).size > 1000000,
+    'Brauer roster/state image variant is missing or implausibly small: ' + file);
+}
+assert(html.includes("excludesNpcs: ['im_schaffner']"),
+  'the locomotive-shed image must switch to the Mahlke-only variant after the IM leaves');
+assert(html.includes("_npcZustandIstEntfernt(entry.id)"),
+  'an immer:true location binding must not resurrect a fled or arrested NPC');
+
+const combatContext = {
+  caseSetup: { setupCast: [] },
+  normForMatch: (value) => String(value || '').toLowerCase().replace(/_/g, ' ').trim(),
+  _resolveNpcIdentity: () => ({
+    id: 'stamm_mfs',
+    name: 'Hauptmann Vollmer',
+    tag: 'STASI',
+    rolle: 'Hauptmann der Staatssicherheit',
+  }),
+  _npcZustandGet: () => null,
+};
+vm.createContext(combatContext);
+vm.runInContext(sourceOf('_kampfNpcProfil') + '\n'
+  + sourceOf('_gegnerKampfHP') + '\n'
+  + sourceOf('_gegnerHaerte'), combatContext);
+assert.strictEqual(combatContext._gegnerKampfHP('Hauptmann Vollmer'), 4,
+  'Vollmer must retain hard MfS/Hauptmann HP even when callers pass only his name');
+assert.strictEqual(combatContext._gegnerHaerte('Hauptmann Vollmer'), 5,
+  'Vollmer must retain Hauptmann maneuver hardness when callers pass only his name');
+
+const outcomeMath = Object.create(Math);
+outcomeMath.random = () => 0.99;
+const hardOutcomeContext = {
+  Math: outcomeMath,
+  caseProgress: {
+    alkohol: 0,
+    activeConfrontation: { treffer: 0, kontrollverlust: 0 },
+  },
+  normForMatch: combatContext.normForMatch,
+  _konfrontationItemWirkung: () => ({
+    label: 'AEG-Wucht',
+    kraft: 4,
+    irritation: 0,
+    schwaechung: 3,
+    status: 'ko',
+  }),
+  _konfrontationGegnerStaerke: () => 5,
+  _konfrontationIstGruppe: () => false,
+  _konfrontationStatusIstEndgueltig: (status) => ['ko', 'geflohen', 'gefesselt'].includes(status),
+  _konfrontationOutcomePrompt: () => 'prompt',
+  _alkoholStufe: () => 0,
+  _alkoholKampfMalus: () => 0,
+};
+vm.createContext(hardOutcomeContext);
+vm.runInContext(sourceOf('_konfrontationClamp') + '\n'
+  + sourceOf('_konfrontationWuerfleAusgang'), hardOutcomeContext);
+const firstToasterHit = hardOutcomeContext._konfrontationWuerfleAusgang(
+  { name: 'Hauptmann Vollmer', tag: 'STASI', rolle: 'Hauptmann' },
+  { name: 'Toaster (AEG, Vorkriegsmodell)' },
+  'angreifen_mit',
+  { score: 10, wirkung: hardOutcomeContext._konfrontationItemWirkung() },
+  {},
+);
+assert.strictEqual(firstToasterHit.status, 'benommen',
+  'even a best-roll Rex/item combo must not one-shot a fresh strength-five authority opponent');
+hardOutcomeContext.caseProgress.activeConfrontation.treffer = 1;
+const secondToasterHit = hardOutcomeContext._konfrontationWuerfleAusgang(
+  { name: 'Hauptmann Vollmer', tag: 'STASI', rolle: 'Hauptmann' },
+  { name: 'Toaster (AEG, Vorkriegsmodell)' },
+  'angreifen_mit',
+  { score: 10, wirkung: hardOutcomeContext._konfrontationItemWirkung() },
+  {},
+);
+assert.strictEqual(secondToasterHit.status, 'ko',
+  'a hard opponent may be defeated after a prior real hit, preserving useful item and Rex impact');
+
+const ppkContext = {
+  normForMatch: combatContext.normForMatch,
+  _itemKatalogKey: () => 'eigene_pistole',
+  _itemTaktikTags: () => ['dienstmarke', 'frontal'],
+};
+vm.createContext(ppkContext);
+vm.runInContext(sourceOf('_konfrontationItemWirkung'), ppkContext);
+const ppkEffect = ppkContext._konfrontationItemWirkung(
+  { name: 'Eigene Pistole (Walther PPK)' },
+  'ppk_einsetzen',
+);
+assert.strictEqual(ppkEffect.status, 'bedroht',
+  'drawing the Walther PPK must create pressure, not an automatic wound or victory');
+assert(ppkEffect.kraft <= 1 && /kein Schuss, kein Sieg/.test(ppkEffect.detail),
+  'the PPK must remain a balanced one-use distance tool rather than a combat superweapon');
+
+const romanceLeakContext = {
+  window: { _letzteAktion: { kategorie: 'ROMANTIK' } },
+  caseProgress: {
+    romanceNpc: 'Dr. Ruth Kellner',
+    gefundeneIndizIds: [],
+  },
+  engineCurrentLocation: { name: 'Marienfelde Notaufnahmelager' },
+  lastRomanceNpcName: 'Dr. Ruth Kellner',
+  normForMatch: combatContext.normForMatch,
+  getCaseLocations: () => [{
+    name: 'Marienfelde Notaufnahmelager',
+    indizien: [{
+      id: 'marienfelde_registratur',
+      schluessel: ['marienfelde', 'registriert', 'erwin brauer'],
+    }],
+  }],
+  diag: () => {},
+};
+vm.createContext(romanceLeakContext);
+vm.runInContext(sourceOf('repairRomanceEvidenceLeak'), romanceLeakContext);
+const leakedRomance = {
+  szene: 'Ruth kommt näher und verrät dir leise: Brauer hat sich hier registriert.',
+  ort: 'Marienfelde Notaufnahmelager',
+};
+assert.strictEqual(romanceLeakContext.repairRomanceEvidenceLeak(leakedRomance), true,
+  'romance prose must repair a decisive clue disclosed before its real investigation action');
+assert(!/registriert|in Sicherheit|im Westen/i.test(leakedRomance.szene)
+    && /Moment gehört euch|Moment gehoert euch/i.test(leakedRomance.szene),
+  'the repaired romance must remain real prose while withholding the unearned clue');
+
+const violenceContext = {
+  window: {
+    _letzteAktion: {
+      kategorie: 'OFFENSIV',
+      konfrontationItemName: 'Toaster (AEG, Vorkriegsmodell)',
+      npcName: 'Hauptmann Vollmer',
+    },
+  },
+  normForMatch: combatContext.normForMatch,
+  _hundInParty: () => true,
+  diag: () => {},
+};
+vm.createContext(violenceContext);
+vm.runInContext(sourceOf('repairYouthSafeConfrontationProse'), violenceContext);
+const graphicHit = {
+  szene: 'Der Toaster trifft Vollmer direkt an der Schläfe. Er liegt regungslos, die Augen verdreht; ein dünnes Rinnsal Blut läuft herab.',
+};
+assert.strictEqual(violenceContext.repairYouthSafeConfrontationProse(graphicHit), true,
+  'a graphic item-combo result must be rewritten at the final delivery boundary');
+assert(!/Schläfe|Blut|Augen verdreht|regungslos/i.test(graphicHit.szene)
+    && /Schulter|benommen|Rex/.test(graphicHit.szene),
+  'the rewritten hit must stay punchy and acknowledge Rex without gore');
+
+const daylightContext = {
+  normForMatch: combatContext.normForMatch,
+  _aktTageszeitName: () => 'VORMITTAG',
+  diag: () => {},
+};
+vm.createContext(daylightContext);
+vm.runInContext(sourceOf('repairDayNightTravelProse'), daylightContext);
+const daytimeTravel = { szene: 'Die Fahrt führt durch das nächtliche Berlin.', time: 'VORMITTAG' };
+assert.strictEqual(daylightContext.repairDayNightTravelProse(daytimeTravel), true,
+  'daytime UI must not keep a present-tense night drive in prose');
+assert(/herbstliche Berlin/.test(daytimeTravel.szene) && !/nächtliche/.test(daytimeTravel.szene),
+  'day/night repair must preserve the journey while correcting its lighting');
+
+const custodyActionStart = html.indexOf('const _custodyAktion');
+const custodyActionEnd = html.indexOf("let _custodyAusloeser", custodyActionStart);
+assert(custodyActionStart >= 0 && custodyActionEnd > custodyActionStart
+    && !/String\(scene\.szene \|\| ''\)/.test(html.slice(custodyActionStart, custodyActionEnd)),
+  'custody entry must not infer a drawn PPK from free generated prose');
+assert(html.includes("|| (caseProgress && caseProgress.romanceNpc)"),
+  'romance absence hints must prefer the actually bound partner over the first setup romance');
+
 console.log('BRAUER_FLOW_OK');

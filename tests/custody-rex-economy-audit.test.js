@@ -7,7 +7,7 @@ const { readWebpDimensions } = require('./image-format-utils');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1733 +StraussRosterTruth'"), 'version constant is stale');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1734 +BrauerContinuity'"), 'version constant is stale');
 const dogPickupStart = html.indexOf('function _hundMitnehmenMitTausch(quelle)');
 const dogPickupEnd = html.indexOf('// ============ Ende WACHHUND-Helper', dogPickupStart);
 assert(dogPickupStart >= 0 && dogPickupEnd > dogPickupStart, 'cannot isolate the Rex pickup flow');
