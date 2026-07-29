@@ -73,10 +73,10 @@ assert.strictEqual(resolveContext._resolveBestaetigt({ kategorie: 'AUFLOESEN' })
   'a stable Karl must still be able to resolve the case');
 assert.strictEqual(chosen, 1, 'the valid resolve action must reach the normal option path');
 
-assert(html.includes("pendingCategoryChoice !== 'AUFLOESEN'"),
-  'fatigue must not create a new critical injury during the already-running closing report');
-assert(html.includes('MÜDIGKEITS-MALUS beim laufenden Abschlussbericht ausgesetzt'),
-  'the skipped final-report fatigue penalty must be visible in diagnostics');
+assert(html.includes('kein unsichtbarer Verfassungsabzug'),
+  'fatigue must never create an unnarrated injury, including during a closing report');
+assert(!html.includes("verfassung = Math.max(2, verfassung - 1)"),
+  'fatigue pressure must not mutate physical health without a concrete incident');
 assert(html.includes('bei <strong>Vf 2 oder weniger</strong> bleibt der Abschluss gesperrt'),
   'the help page must explain the critical-injury resolve gate');
 

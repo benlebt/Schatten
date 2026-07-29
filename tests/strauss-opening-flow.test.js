@@ -9,12 +9,14 @@ const straussEnd = html.indexOf('anchorNpcs:', straussStart);
 assert(straussStart >= 0 && straussEnd > straussStart, 'Strauss setup slice missing');
 const strauss = html.slice(straussStart, straussEnd);
 
-assert(/name: 'Friedhof Ploetzensee'[\s\S]*?npcs: \[\{ id: 'frau_schleier', immer: true, bisStage: 1, wegWennIndiz: 'schleier_kranzler_spur' \}, \{ id: 'pastor_vogel', immer: true, bisStage: 1, wegWennIndiz: 'schleier_kranzler_spur' \}\]/.test(strauss),
-  'the funeral opening must keep the veiled woman and Pastor Vogel physically actionable');
+assert(/name: 'Friedhof Ploetzensee'[\s\S]*?npcs: \[\{ id: 'frau_schleier', immer: true, bisStage: 2 \}, \{ id: 'pastor_vogel', immer: true, bisStage: 2 \}\]/.test(strauss),
+  'the funeral opening and first testimony must keep the pictured mourners physically present');
 assert(/name: 'Friedhof Ploetzensee'[\s\S]*?openingFallbackText: '[^']*Pastor Vogel[^']*unbekannte Frau mit Schleier[^']*moralischer Pflicht/.test(strauss),
   'the funeral roster fallback must preserve the assignment without invented physical evidence or an empty cemetery');
 assert(/id: 'schleier_kranzler_spur'[\s\S]*?npc: 'frau_schleier', quelle: 'person', actions: \['ANSPRECHEN','BEFRAGEN','UEBERZEUGEN'\][\s\S]*?stage: 2/.test(strauss),
   'the veiled woman must provide a conversational lead away from the funeral');
+assert(/id: 'schleier_kranzler_spur'[\s\S]*?fundText: '[^']*bleibt am Rand der Trauergemeinde stehen[^']*'[\s\S]*?prosaPflicht: \{ replaceOnFallback: true/.test(strauss),
+  'the first testimony must not make the still-pictured mourner disappear');
 assert(strauss.includes('Cafe Kranzler'),
   'the opening lead must point to a configured follow-up location');
 assert(/id: 'schleier_aussage'[\s\S]*?nachIndiz: 'schleier_kranzler_spur'/.test(strauss),
@@ -23,6 +25,8 @@ assert(/id: 'krummbein_kordel'[\s\S]*?actions: \['ERKUNDEN','DURCHSUCHEN'\]/.tes
   'the physical cord must be searched instead of mislabeled as reading files');
 assert(/id: 'krummbein_kordel'[\s\S]*?fundText: '[^']*Durchmesser und Drehung[^']*kein Blick durch ein Mikroskop/.test(strauss),
   'the cord comparison must be physically plausible instead of claiming naked-eye microscopic proof');
+assert(/id: 'krummbein_kordel'[\s\S]*?requiresEvidenceAll: \['strick_befund'\][\s\S]*?requiresEvidenceHint: '[^']*Maßangaben und Fotografien/.test(strauss),
+  'the cord comparison must remain locked until Lindner supplies measurements and photographs');
 assert(/id: 'krummbein_kordel'[\s\S]*?prosaPflicht: \{ replaceOnFallback: true/.test(strauss)
   && /id: 'strick_befund'[\s\S]*?prosaPflicht: \{ replaceOnFallback: true/.test(strauss)
   && /id: 'alte_strauss_akte'[\s\S]*?prosaPflicht: \{ replaceOnFallback: true/.test(strauss),
@@ -33,6 +37,11 @@ assert(/id: 'strauss_briefplan'[\s\S]*?Fahrkarte nach Westdeutschland für den 2
   'Strauss future plans must use a stable chronology without overclaiming a culprit');
 assert(/name: 'Strauss-Geschaeft'[\s\S]*?detail: 'Innenraum[^']*tritt ein und endet drinnen; die Szene spielt nicht vor dem Laden/.test(strauss),
   'the shop arrival must establish the same interior that its fixed image shows');
+assert(/name: 'Strauss-Geschaeft'[\s\S]*?arrivalFallbackText: '[^']*Ladentuer[^']*Paul Krummbein[^']*langen Holztresen/.test(strauss)
+  && /name: 'Strauss-Wohnung Wedding'[\s\S]*?arrivalFallbackText: '[^']*vierten Stock[^']*Schreibtisch unter dem Fenster/.test(strauss),
+  'Strauss shop and apartment must have authored, location-truthful arrival prose');
+assert(/id: 'paul_krummbein', chance: 100[\s\S]*?requiresEvidenceAll: \['strick_befund','strauss_briefplan'\]/.test(strauss),
+  'Krummbein confrontation must wait for both forensic and apartment evidence');
 assert(strauss.includes("abschlussPolizei: { name: 'Kommissar Heinrich Lindner', behoerde: 'West-Berliner Polizei', verboten: ['Volkspolizei', 'Roth'] }"),
   'the West-sector Strauss handoff must bind Lindner instead of Volkspolizei Mitte');
 assert(strauss.includes("rolle: 'Unbekannte Trauernde am Grab'"),
@@ -133,5 +142,16 @@ assert(html.includes("progressLine = _progressIstEigenauftrag")
   'self-assigned case progress must not instruct Karl to report to himself');
 assert(html.includes("'Karl hält in seiner eigenen Akte fest, was wirklich geschah, und benennt '"),
   'self-assigned case end screen must not report the truth from Karl to Karl');
+
+assert(html.includes('function _findEigenauftragExternalClientDrift(scene, option)')
+  && html.includes("code: 'eigenauftrag_external_client_drift'")
+  && html.includes("problem.code === 'eigenauftrag_external_client_drift'"),
+  'self-assigned cases must reject invented external clients before the resolution scene');
+assert(html.includes("'THREAT-GATE: ' + b.id + ' @ ' + ortNorm + ' wartet auf alle Beweise"),
+  'threat encounters must support reusable all-evidence prerequisites');
+assert(html.includes('kein unsichtbarer Verfassungsabzug'),
+  'fatigue must not silently damage Karl without a narrated physical incident');
+assert(/file: 'friedhof-ploetzensee-night\.webp'[\s\S]*?presenceVariants:[\s\S]*?friedhof-ploetzensee-trauernde-day\.webp/.test(html),
+  'the cemetery image must switch between empty and mourner-populated variants');
 
 console.log('strauss-opening-flow: ok');
