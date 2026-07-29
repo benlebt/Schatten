@@ -7,7 +7,7 @@ const { readWebpDimensions } = require('./image-format-utils');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1707 +LindenbaumBrakkeTruth'"), 'version constant is stale');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1708 +NamedCustodySeparation'"), 'version constant is stale');
 assert(html.includes("text: _resolveIstEigenauftrag ? 'Eigen-Auftrag abschließen und Wahrheit festhalten.' : 'Fall abschließen und Auftraggeber informieren.'"),
   'resolve button copy must stay player-facing for external and self-assigned cases');
 assert(html.includes('_enginePrompt: [_resolveText, _resolveTransitionPrompt, _resolvePhysicalTruth]'), 'resolve direction must preserve physical target truth');
@@ -518,6 +518,8 @@ assert(html.includes('stasiCustodyScenesSince >= 3'), 'routine custody should al
 assert(html.includes('caseProgress._custodyCountedScene !== custodySceneMark'), 'custody duration must count distinct scenes, not UI rerenders');
 assert(html.includes('NOTFLUCHT ist der einzige sofortige Ausbruch'), 'custody prompt must distinguish escape from routine morning release');
 assert(html.includes('const resetFolter = (opts.resetFolter !== undefined) ? opts.resetFolter : stateChanged;'), 'repeated custody detection must not reset interrogation progress');
+assert(html.includes("(_getrennt.length > 1 ? 'sie' : _getrennt[0])"),
+  'a single named companion separated during arrest must not be reduced to an anonymous person');
 
 assert(html.includes("const HUND_PREIS = 7;"), 'Rex must require a substantial exchange-value bundle');
 assert(html.includes("const HUND_HEIMAT = 'Goldener Anker';"), 'Rex must remain tied to the Goldener Anker');

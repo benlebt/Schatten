@@ -166,7 +166,7 @@ assert.strictEqual(
   'a not-yet-narrated active enemy must not select the NPC image variant'
 );
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1707 +LindenbaumBrakkeTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1708 +NamedCustodySeparation'"),
   'release version missing');
 
 console.log('THREAT_SPAWN_SERIALIZATION_OK');
