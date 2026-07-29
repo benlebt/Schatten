@@ -192,6 +192,11 @@ assert(html.includes("requiresAllNpcs: ['im_hermes', 'eva_werder']")
     && html.includes("depictsNpcs: ['genosse_brakke', 'eva_werder']")
     && html.includes("requiresAllNpcs: ['im_hermes', 'genosse_brakke', 'eva_werder']"),
   'the HO image contract must cover Eva with Hermes, Brakke, and both men');
+assert(html.includes('LINDENBAUM-BRAKKE-IDENTITAET')
+    && html.includes("MfS-Major Genosse Brakke in grauer Dienstuniform tritt ein")
+    && html.includes("requiresAnySceneNpcs: ['unbekannter_mann', 'mann_im_mantel', 'mann_mit_aktentasche']")
+    && html.includes('mindestensEine.some(istAktiv)'),
+  'a generated anonymous HO political actor must resolve to Brakke and remain visible during legacy scene restoration');
 assert(html.includes('variant.requiresAllSceneNpcs && alle.length'),
   'multi-person HO variants must require the visible scene roster, not a broad location roster');
 assert(html.includes("replace(/[^a-z0-9 ]/g, ' ')"),
@@ -387,7 +392,7 @@ assert.strictEqual(blockedStasiContext.advanceStasi('ERKUNDEN'), null,
 assert.strictEqual(blockedStasiContext.caseProgress.stasiEncounterEligibleScenes, 0,
   'a blocked normal MfS attempt must reset its eligible-scene counter');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1706 +RomanceRecovery'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1707 +LindenbaumBrakkeTruth'"),
   'release version missing');
 
 console.log('LINDENBAUM_FLOW_OK');
