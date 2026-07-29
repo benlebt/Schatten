@@ -379,8 +379,33 @@ assert(/volkspolizei-keibelstrasse-krollwitz-night\.png[\s\S]{0,300}depictsNpcs:
 assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'goerke',
   'volkspolizei-keibelstrasse-krollwitz-night.png')),
   'missing Goerke VP showdown image asset');
+const custodyRepairContext = {
+  caseSetup: { setupCast: [{ id: 'hauptmann_krollwitz', name: 'Hauptmann Dietmar Krollwitz' }] },
+  engineCurrentLocation: { name: 'MfS-Untersuchungshaftanstalt Hohenschoenhausen, Zelle 14' },
+  diag: () => {},
+};
+vm.createContext(custodyRepairContext);
+vm.runInContext(sourceOf('normForMatch') + '\n' + sourceOf('repairGoerkeCustodyEntryContinuity'), custodyRepairContext);
+const wrongGoerkeCustody = {
+  ort: 'MfS-Untersuchungshaftanstalt Hohenschoenhausen, Zelle 14',
+  szene: 'Die gezogene Walther schafft Abstand. Brakke gibt ein Zeichen. Der Mann an der Ecke senkt seine Zeitung. Handschellen schnappen zu. Die Fahrt nach Lichtenberg verläuft im Tageslicht. In der Genslerstrasse sitzt du in Untersuchungshaft.',
+  gewahrsam: true,
+  personenImRaum: ['Brakke'],
+};
+assert.strictEqual(custodyRepairContext.repairGoerkeCustodyEntryContinuity(wrongGoerkeCustody), true,
+  'the observed Goerke custody entry drift must be repaired');
+assert(/Krollwitz wartet/.test(wrongGoerkeCustody.szene)
+    && /dunklen Abendstraßen/.test(wrongGoerkeCustody.szene)
+    && /Genslerstraße in Hohenschönhausen/.test(wrongGoerkeCustody.szene)
+    && !/Brakke|Zeitung|Tageslicht|Fahrt nach Lichtenberg/i.test(wrongGoerkeCustody.szene),
+  'custody prose must align the actual officer, time and prison with UI and image');
+assert.deepStrictEqual(Array.from(wrongGoerkeCustody.personenImRaum), [],
+  'the cell scene may not retain officers as clickable cell occupants');
+assert(sourceOf('_stasiCustodyEntryVormerken').includes('custodyEntryOfficerName')
+    && !html.includes('Brakke wartet den einzigen freien Atemzug'),
+  'future custody entries must use the actual confrontation officer instead of hard-coded Brakke');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1723 +GoerkeVpCurrentVisual'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1724 +GoerkeCustodyTruth'"),
   'release version missing');
 
 console.log('Goerke opening/truth regression checks passed.');
