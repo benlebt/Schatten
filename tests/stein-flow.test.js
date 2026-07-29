@@ -121,8 +121,9 @@ for (const [location, id, file, width = 1536, height = 1024] of [
   ['margarete steins wohnung', 'mann_im_mantel', 'margarete-wohnung-mantel-night.png'],
   ['reichsbahndirektion', 'im_anker', 'reichsbahndirektion-wahler-anker-day.png'],
   ['charite', 'oberleutnant_mertens', 'charite-mertens-day.png'],
-  ['karl mauers buero', 'oberleutnant_mertens', 'karl-mauers-buero-mertens-arrest-day-v1661.png', 1672, 941],
+  ['karl mauers buero', 'oberleutnant_mertens', 'karl-mauers-buero-mertens-only-day-v1739.png', 1672, 941],
   ['karl mauers buero', 'vera_lindqvist', 'karl-mauers-buero-vera-night.png'],
+  ['cafe kranzler', 'vera_lindqvist', 'cafe-kranzler-vera-day-v1739.png', 1672, 941],
   ['friedrichstrasse', 'margarete_stein', 'friedrichstrasse-margarete-day.png'],
 ]) {
   const spec = specFor(location);
@@ -256,6 +257,57 @@ assert(/Roth bereits gesichert|bei Roth gesicherten Frachtlisten/.test(restoredL
     && !/Unterlagen in deinen Händen/.test(restoredLateFinale.text),
   'restored finale prose must preserve the completed Roth handoff');
 
+restoredSteinContext.caseProgress = {
+  gefundeneIndizIds: ['original_akten', 'wahler_unterschrift'],
+  evidenceSecured: true,
+  evidenceSecuredAt: 'vera',
+  clientSecured: true,
+  clientSecuredAt: 'grenze',
+  clientState: { status: 'secured', securedAt: 'grenze' },
+};
+restoredSteinContext.engineCurrentLocation = { name: 'Bahnhof Friedrichstraße' };
+const restoredBorderHandoff = {
+  type: 'scene',
+  ort: 'Bahnhof Friedrichstraße',
+  time: 'Abend',
+  text: 'Du packst Margarete am Arm. Sie murmelt von den Frachtlisten in ihrem Koffer. Du musst sie jetzt durchbringen, bevor der nächste Streifengang den Weg versperrt.',
+};
+assert.strictEqual(restoredSteinContext.repairBasicGermanProse(restoredBorderHandoff), true,
+  'a completed border security action must replace a model scene that still describes only the attempt');
+assert(/Ihr geht gemeinsam hinüber/.test(restoredBorderHandoff.text)
+    && /bestätigter Westkontakt/.test(restoredBorderHandoff.text)
+    && /Originalakten sind bereits bei Vera Lindqvist/.test(restoredBorderHandoff.text)
+    && /tatsächlich außer Reichweite/.test(restoredBorderHandoff.text)
+    && !/Du musst sie jetzt durchbringen|Frachtlisten in ihrem Koffer/.test(restoredBorderHandoff.text),
+  'border prose must confirm the physical crossing and preserve the earlier Vera handoff');
+
+restoredSteinContext.engineCurrentLocation = { name: 'West-Berliner Auffangstelle' };
+const restoredNightArrival = {
+  type: 'scene',
+  ort: 'West-Berliner Auffangstelle',
+  time: 'Nacht',
+  text: 'Das Lager liegt in der aufgehenden Sonne. Erst mit diesem Hinweis gilt Vera für Karl als bekannter und belastbarer Sicherungsweg. Verwaltungsangestellter bleibt sichtbar in deiner Nähe und verfolgt die Untersuchung schweigend.',
+};
+restoredSteinContext.repairBasicGermanProse(restoredNightArrival);
+assert(/Lagerlaternen/.test(restoredNightArrival.text)
+    && /kennst du Vera/.test(restoredNightArrival.text)
+    && /Der Verwaltungsangestellte/.test(restoredNightArrival.text)
+    && !/aufgehenden Sonne|für Karl|^Verwaltungsangestellter/m.test(restoredNightArrival.text),
+  'Stein restore repair must align night light, second-person prose and natural NPC narration');
+
+restoredSteinContext.engineCurrentLocation = { name: 'Café Kranzler' };
+const restoredVeraKnowledge = {
+  type: 'scene',
+  ort: 'Café Kranzler',
+  time: 'Mittag',
+  text: 'Doch sie zögert: Sie braucht die Original-Akten physisch, um die Echtheit zu belegen. Sie weiß, dass sie in Schöneweide versteckt sind.',
+};
+restoredSteinContext.repairBasicGermanProse(restoredVeraKnowledge);
+assert(/im Stellwerk geborgene Mappe/.test(restoredVeraKnowledge.text)
+    && /bis zu einer ausdrücklichen Übergabe/.test(restoredVeraKnowledge.text)
+    && !/in Schöneweide versteckt/.test(restoredVeraKnowledge.text),
+  'Vera must acknowledge originals already recovered but not yet handed over');
+
 const custodyItemContext = {};
 vm.createContext(custodyItemContext);
 vm.runInContext(sourceOf('repairCustodyChosenItemContinuity'), custodyItemContext);
@@ -345,6 +397,20 @@ assert(/if \(keepExisting\)/.test(sourceOf('_naturalMinimumSceneText')),
   'rich prose must not receive generic room filler');
 assert(/_npcWirklichInSzene/.test(sourceOf('_szenenbildAnwesenheitsVariante')),
   'image presence variants must also follow unequivocal scene prose');
+const departureContext = {
+  normForMatch: (value) => String(value || '').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, ''),
+};
+vm.createContext(departureContext);
+vm.runInContext(sourceOf('_sceneNpcDepartureInfo'), departureContext);
+assert(departureContext._sceneNpcDepartureInfo({
+  szene: 'Mertens steckt die Brille ein, wendet sich ohne ein weiteres Wort ab. Die Bürotür fällt hinter ihm ins Schloss.',
+}, 'oberleutnant_mertens', 'Oberleutnant Mertens'),
+  'a named turn-away must remove Mertens from the following UI and image');
+assert(departureContext._sceneNpcDepartureInfo({
+  szene: 'Vera steht auf und verliert sich zwischen den anderen Gästen in Richtung Kurfürstendamm.',
+}, 'vera_lindqvist', 'Vera Lindqvist'),
+  'Vera leaving the cafe crowd must remove her from the following UI and image');
 const departedVisualContext = {
   normForMatch: (value) => String(value || '').toLowerCase().replace(/_/g, ' '),
   getNpcsAtCurrentLocation: () => [{ id: 'margarete_stein', name: 'Margarete Stein' }],
@@ -403,7 +469,27 @@ assert(/beat\.id !== 'akten_gesichert'/.test(markEvidenceSource)
     && /beat\.id !== 'margarete_gesichert'/.test(markEvidenceSource),
   'deterministic clue booking must protect action-only security beats');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1738 +GoerkeRestoreTruth'"),
+const enemyContext = {
+  normForMatch: (value) => String(value || '').toLowerCase().replace(/_/g, ' '),
+};
+vm.createContext(enemyContext);
+vm.runInContext(sourceOf('_gegnerProfilDefault'), enemyContext);
+const ankerProfile = enemyContext._gegnerProfilDefault({
+  id: 'im_anker',
+  name: 'IM "Anker"',
+  tag: 'STASI',
+  rolle: 'Inoffizieller Mitarbeiter',
+});
+assert.strictEqual(ankerProfile.kampf.waffe, 'Amtsdruck / Faustschlag',
+  'the timid unarmed IM Anker must not inherit a phantom service pistol');
+assert.strictEqual(ankerProfile.kampf.gefahr, 1,
+  'IM Anker must remain less dangerous than an armed MfS officer');
+assert(html.includes('cafe-kranzler-vera-day-v1739.png')
+    && html.includes('karl-mauers-buero-mertens-only-day-v1739.png')
+    && html.includes('Karl Mauer trifft Margarete Stein in ihrer von Reichsbahn-Unterlagen durchsuchten Wohnung'),
+  'Stein scene images must explicitly match Vera, Mertens and Margarete presence');
+
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1739 +SteinPoliticalTruth'"),
   'release version is stale');
 assert(html.includes('Vom Hackeschen Markt dringen gedämpfte Motorengeräusche')
     && html.includes('Noch passt nicht jedes Stück zusammen'),

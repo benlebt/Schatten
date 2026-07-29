@@ -522,6 +522,19 @@ Dieser Katalog ist ab sofort Teil jedes manuellen Falllaufs und jeder Fallbewert
 - Der reguläre Haftpfad wird mindestens über zwei verschiedene Verhörhandlungen und den Schlaf-/Morgenausgang geprüft. Jede Runde bleibt in Zelle oder Verhörraum, zeigt eine konkrete Reaktion und darf weder Phantom-Freilassung noch freie Reiseoptionen anbieten.
 - Restore-Reparaturen müssen idempotent und heilend sein. Ein schon erzählter Türsatz, Zugriff, Transport oder Rückgabesatz darf nach Reload genau einmal vorkommen; dieselbe Migration zweimal auszuführen darf den Logtext nicht verdoppeln, und bereits von einer älteren Migration gespeicherte Duplikate werden beim nächsten Laden auf eine Instanz reduziert.
 
+### Stein-Regressionsregeln aus dem Produktionslauf v1738
+
+- Politische Sicherung ist erst bestanden, wenn der Vollzug sichtbar erzählt ist. Ein Grenzbutton darf nicht nur den Wartesaal erreichen und mit „Du musst sie jetzt durchbringen“ enden: Margarete passiert die Kontrolle, überschreitet die Sektorengrenze und wird jenseits davon von einem benannten oder bestätigten Westkontakt übernommen.
+- Die Akten- und Personen-Sicherung bleiben zwei getrennte physische Wahrheiten. Nach der Übergabe an Vera sind die Originalakten weder bei Karl noch in Margaretes Koffer; die spätere Grenzszene nennt den sicheren Verwahrweg ausdrücklich und erfindet keine zweite Aktenmappe.
+- Ein Kontaktgespräch berücksichtigt den bereits erreichten Beweiszustand. Hat Karl die Originalmappe im Stellwerk geborgen, darf Vera nicht behaupten, sie liege noch dort. Vor der Übergabe liegt sie sichtbar bei Karl; nach der Übergabe verlässt Vera das Café mit der Mappe.
+- Sichtbarer Abgang entfernt eine Figur sofort gemeinsam aus `personenImRaum`, Haupt-UI und Anwesenheitsbild. Das gilt auch für Formulierungen wie „wendet sich ab“ sowie „steht auf und verliert sich zwischen den Gästen“. Eine Namensnennung im Abschiedssatz darf die Figur nicht wieder aktivieren.
+- Anwesenheitsbilder bilden genau den aktuellen Roster ab. Mertens allein im Büro verbietet zwei zusätzliche MfS-Männer; Vera am Marmortisch braucht eine erkennbare Vera-Variante; nach ihrem Abgang fällt das Café auf das neutrale Motiv zurück. Margaretes Wohnungsgrundbild und Alternativtext müssen Margarete tatsächlich nennen.
+- Tageszeit und Jahreszeit werden gemeinsam geprüft. Eine Nachtszene an der Auffangstelle hat keine aufgehende Sonne; ein Märztag ist nicht herbstlich; Morgenlicht wird nicht als Straßenlaternenlicht beschrieben.
+- Erzählerprosa bleibt in der Du-Perspektive und natürlich. „gilt Vera für Karl“ wird zu „kennst du Vera“, und technische Roster-Sätze wie „Verwaltungsangestellter bleibt sichtbar“ werden als konkrete beobachtbare Handlung formuliert.
+- Dauerrequisiten bleiben bindend: Margaretes Drahtgestellbrille liegt weiterhin zerbrochen auf dem Tisch, bis eine Reparatur ausdrücklich stattfindet. Sie darf bei der späteren Abholung weder intakt getragen noch als unbeschädigtes Trostobjekt benutzt werden.
+- Gegnerprofil, Bild und UI teilen dieselbe Bewaffnung. Der ängstliche IM „Anker“ arbeitet mit Amtsdruck und notfalls einem Faustschlag, er erbt keine Dienstpistole eines regulären MfS-Offiziers. PPK- und Itemstärke werden gegen dieses reale Profil bewertet.
+- Ein friedlich überreichter Verbrauchsgegenstand wird auch im frischen Produktionslauf sofort aus Karls Inventar entfernt. Der Gegenstand muss in der Prosa beim Empfänger landen; ein bloßer Stimmungsbonus bei unverändertem Inventar ist weiterhin ein Fehler.
+
 ## Mindestprotokoll pro Run
 
 - Fall, Version, Strategie, Seed, Start-/Endzeit, Szenenzahl, Ergebnis und Abbruchgrund.
