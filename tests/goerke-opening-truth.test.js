@@ -188,6 +188,14 @@ assert(sourceOf('_renderKesslerSceneVisual').includes('SZENENBILD bleibt als Ort
   'a cast-contract warning must not collapse the entire scene image');
 assert(goerke.includes('arrivalFallbackText:'),
   'the Stellwerk needs a concrete deterministic fallback instead of AI-instruction prose');
+assert(html.includes('function repairGoerkeArchiveContinuity(sceneOrEntry)')
+    && html.includes("normForMatch('Gerichtsarchiv Kreisgericht Mitte')")
+    && html.includes('GÖRKE-ARCHIV repariert')
+    && html.includes('repairGoerkeArchiveContinuity(scene);')
+    && html.includes('logEntries.forEach(function(entry) { repairGoerkeArchiveContinuity(entry); });'),
+  'the empty Goerke archive must stay consistent across prose, UI, image and restored saves');
+assert(sourceOf('repairBasicGermanProse').includes('und dreht'),
+  'Trude narration must repair the observed subject-verb drift');
 assert(goerke.includes("abschlussVermittler: 'Dr. Reinhard Baumgarten'"),
   'the detained client needs Baumgarten as a credible finale intermediary');
 assert(sourceOf('_abschlussOrtOhneFestesTelefon').includes('|opel|wagen|fahrzeug|auto|stellwerk|'),
@@ -258,7 +266,7 @@ context.updateTruthBeats('Mertens manipulierte die Akte auf Anordnung von Krollw
 assert(context.caseProgress.truthBeatsHit.includes('krollwitz_mertens'),
   'the found Krollwitz file evidence must unlock the manipulation beat');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1714 +RomanceMorningPartyTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1715 +GoerkeArchiveTruth'"),
   'release version missing');
 
 console.log('Goerke opening/truth regression checks passed.');
