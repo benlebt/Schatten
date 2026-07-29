@@ -39,5 +39,9 @@ const rentBody = html.slice(rentStart, rentEnd);
 assert(rentStart >= 0, 'startGame must consume the reputation comparison restart flag');
 assert(rentBody.includes('window._debugRufVergleichsNeustart = false'), 'the rent bypass must be one-shot');
 assert(rentBody.includes("&& !_rufVergleichsNeustart"), 'only reputation comparison restarts may skip duplicate rent');
+assert(rentBody.includes('caseProgress._debugRufVergleich = _rufVergleichsNeustart'),
+  'the fresh case must remember that its threat rolls belong to a controlled reputation comparison');
+assert(rentBody.includes('caseProgress._debugRufVergleichSeed'),
+  'same-case reputation restarts need a stable threat seed');
 
 console.log('SETTINGS_DEBUG_CONTROLS_OK');

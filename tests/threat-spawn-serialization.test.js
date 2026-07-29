@@ -20,19 +20,24 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-function runWith(threats) {
+function runWith(threats, options = {}) {
   const loc = { name: 'Testort', bedrohungen: threats };
   const math = Object.create(Math);
-  math.random = () => 0.1;
+  math.random = () => (typeof options.random === 'number' ? options.random : 0.1);
   const context = {
     Math: math,
     engineCurrentLocation: { name: 'Testort' },
     getCaseLocations: () => [loc],
     normForMatch: value => String(value || '').toLowerCase(),
     sceneCounter: 2,
+    gameDay: 1,
     gameTimeIdx: 5,
     TIMES_OF_DAY: ['morgen', 'vormittag', 'mittag', 'nachmittag', 'abend', 'nacht'],
-    caseProgress: { stage: 3 },
+    caseProgress: {
+      stage: 3,
+      _debugRufVergleich: !!options.debugRufVergleich,
+      _debugRufVergleichSeed: 'setup-stein',
+    },
     _threatAktiveSpawns: [],
     _threatOrtLastRoll: {},
     _threatGlobalCooldown: {},
@@ -45,7 +50,7 @@ function runWith(threats) {
     }
   };
   vm.createContext(context);
-  vm.runInContext(sourceOf('resolveThreatSpawn'), context);
+  vm.runInContext(sourceOf('_threatWurfProzent') + '\n' + sourceOf('resolveThreatSpawn'), context);
   context.resolveThreatSpawn();
   return context;
 }
@@ -71,6 +76,42 @@ assert.deepStrictEqual(Array.from(context._threatAktiveSpawns), ['story_guard'],
   'a guaranteed story threat takes priority over an optional successful roll');
 assert.deepStrictEqual(context.checkedSpawns, ['story_guard'],
   'guaranteed threat priority must also reach confrontation startup');
+
+const comparisonLowRandom = runWith([
+  { id: 'mantel', chance: 54, globalCooldown: 4 },
+  { id: 'mertens', chance: 57, globalCooldown: 6 },
+], { debugRufVergleich: true, random: 0.01 });
+const comparisonHighRandom = runWith([
+  { id: 'mantel', chance: 54, globalCooldown: 4 },
+  { id: 'mertens', chance: 57, globalCooldown: 6 },
+], { debugRufVergleich: true, random: 0.99 });
+assert.deepStrictEqual(
+  Array.from(comparisonLowRandom._threatAktiveSpawns),
+  Array.from(comparisonHighRandom._threatAktiveSpawns),
+  'reputation comparison restarts must receive the same threat roll regardless of ambient randomness'
+);
+
+const ordinaryLowRandom = runWith([
+  { id: 'optional', chance: 50, globalCooldown: 4 },
+], { random: 0.1 });
+const ordinaryHighRandom = runWith([
+  { id: 'optional', chance: 50, globalCooldown: 4 },
+], { random: 0.9 });
+assert.notDeepStrictEqual(
+  Array.from(ordinaryLowRandom._threatAktiveSpawns),
+  Array.from(ordinaryHighRandom._threatAktiveSpawns),
+  'ordinary play must retain random optional threats outside the controlled reputation comparison'
+);
+
+const steinHomeStart = html.indexOf("{ name: 'Margarete Steins Wohnung'");
+const steinHomeEnd = html.indexOf("{ name: 'Imbiss Bei Trude'", steinHomeStart);
+const steinHomeBlock = html.slice(steinHomeStart, steinHomeEnd);
+assert(steinHomeStart >= 0 && steinHomeEnd > steinHomeStart,
+  'Stein apartment location block must remain discoverable');
+assert(/id: 'mann_im_mantel', chance: 100, bisScene: 2/.test(steinHomeBlock),
+  'Stein opening must always use the anonymous coat man through scene 2');
+assert(/id: 'oberleutnant_mertens', chance: 50, abScene: 3/.test(steinHomeBlock),
+  'Mertens must not replace the coat man during the canonical Stein opening');
 
 const visibleContext = {
   caseProgress: {
@@ -166,7 +207,7 @@ assert.strictEqual(
   'a not-yet-narrated active enemy must not select the NPC image variant'
 );
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1739 +SteinPoliticalTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1740 +ReputationCompareTruth'"),
   'release version missing');
 
 console.log('THREAT_SPAWN_SERIALIZATION_OK');

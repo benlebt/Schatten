@@ -21,7 +21,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1739 +SteinPoliticalTruth'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1740 +ReputationCompareTruth'"), 'release version missing');
 assert(html.includes('Liesl schenkte oder widmete das Etui 1939 Hugo'), 'Krause setup must bind the silver-case ownership direction');
 assert(html.includes('Karl zählt oder nimmt kein Geld, Karls Kasse bleibt unverändert'), 'Krause opening prompt must keep the return-contingent fee unpaid');
 assert(html.includes('Dramatisiere diese EINE Spur genau EINMAL'), 'explicit Haupt-UI clues must merge compact target and detailed payoff into one narration');
@@ -188,8 +188,9 @@ const confrontationAction = sourceOf('_hauptuiKonfrontationAktion');
 assert(confrontationAction.includes("bluffEntscheidet ? 'beruhigt' : 'angespannt'")
     && confrontationAction.includes('const bluffRunde = Math.max(1'),
   'the first bluff must keep the confrontation open while a second credible bluff resolves the current opponent');
-assert(confrontationAction.includes("'beruhigt', 'deeskalation'"),
-  'de-escalation must mechanically calm the current opponent and advance the group');
+assert(confrontationAction.includes("deeskalationEntscheidet ? 'beruhigt' : 'angespannt'")
+    && confrontationAction.includes("deeskalationEntscheidet ? 'deeskalation' : 'deeskalation-ruf-erschwert'"),
+  'de-escalation must calm and advance the current opponent unless a documented bad-reputation first step keeps it open');
 
 const groupPrompt = sourceOf('_konfrontationGruppenPrompt');
 assert(groupPrompt.includes('Frieda fuehrt Kalle und Jochen'), 'group narration must force all active Krause opponents to react');

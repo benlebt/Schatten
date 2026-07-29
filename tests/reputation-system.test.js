@@ -31,11 +31,112 @@ vm.runInContext([
   sourceOf('_informantPreis'),
   sourceOf('_sozialTonartArt'),
   sourceOf('_sozialErfolgNachRuf'),
+  sourceOf('_sozialTonartMitRuf'),
+  sourceOf('_sozialTonartLabel'),
   sourceOf('_verhoerRufWert'),
   sourceOf('_verhoerRufKategorie'),
   sourceOf('_verhoerRufMod'),
+  sourceOf('_konfrontationRufAuswirkung'),
 ].join('\n'), mechanics);
 
+const profiles = {
+  neutral: { renommee: 0, haerte: 0 },
+  sehrGut: { renommee: 5, haerte: 0 },
+  schlecht: { renommee: -5, haerte: 0 },
+  hart: { renommee: 0, haerte: 5 },
+};
+function withProfile(name, callback) {
+  mechanics.karlAkte.ruf = Object.assign({}, profiles[name]);
+  return callback();
+}
+
+// Verbindliche A/B/C/D-Matrix über dieselbe plausible Lage. Die Namen halten
+// die vier priorisierten Fälle im Protokoll sichtbar; die Mechanik bleibt
+// bewusst generisch und damit für alle vier Fälle identisch reproduzierbar.
+const caseMatrix = {
+  stein_ruhige_ansprache: {},
+  strauss_krummbein_druck: {},
+  lindenbaum_zeuge: {},
+  goerke_schwere_eskalation: {},
+};
+for (const profileName of Object.keys(profiles)) {
+  caseMatrix.stein_ruhige_ansprache[profileName] = withProfile(profileName, () =>
+    mechanics._sozialErfolgNachRuf(
+      { key: 'hoeflich', art: 'normal', erfolg: true, schwere: 'leicht' },
+      { sozial: {} }
+    ).erfolg
+  );
+  caseMatrix.strauss_krummbein_druck[profileName] = withProfile(profileName, () =>
+    mechanics._sozialErfolgNachRuf(
+      { key: 'druck', art: 'bedrohen', erfolg: false, schwere: 'leicht' },
+      { sozial: {} }
+    ).erfolg
+  );
+  caseMatrix.lindenbaum_zeuge[profileName] = withProfile(profileName, () =>
+    mechanics._verhoerRufMod('oberkellner_voss')
+  );
+  caseMatrix.goerke_schwere_eskalation[profileName] = withProfile(profileName, () =>
+    mechanics._sozialErfolgNachRuf(
+      { key: 'kragen', art: 'kragen', erfolg: false, schwere: 'schwer', verprelltDanach: true },
+      { sozial: {} }
+    ).erfolg
+  );
+}
+assert.deepStrictEqual(caseMatrix.stein_ruhige_ansprache,
+  { neutral: true, sehrGut: true, schlecht: false, hart: true },
+  'same Stein-style friendly approach must be blocked only by a ruined reputation');
+assert.deepStrictEqual(caseMatrix.strauss_krummbein_druck,
+  { neutral: false, sehrGut: false, schlecht: false, hart: true },
+  'same light Krummbein-style pressure must work only for a hard reputation');
+assert.deepStrictEqual(
+  Object.fromEntries(Object.entries(caseMatrix.lindenbaum_zeuge).map(([key, value]) => [
+    key, [value.oeffStart, value.gemStart, value.frageBonus]
+  ])),
+  {
+    neutral: [0, 0, 0],
+    sehrGut: [1, 0, 1],
+    schlecht: [0, 1, -1],
+    hart: [0, 1, -1],
+  },
+  'same witness interrogation must visibly distinguish neutral, trusted, disliked and feared profiles');
+assert.deepStrictEqual(caseMatrix.goerke_schwere_eskalation,
+  { neutral: false, sehrGut: false, schlecht: false, hart: false },
+  'no reputation profile may redeem a severe Görke-style physical escalation');
+
+const visibleLabels = {};
+for (const profileName of Object.keys(profiles)) {
+  visibleLabels[profileName] = withProfile(profileName, () => {
+    const tonart = mechanics._sozialTonartMitRuf(
+      { key: 'hoeflich', art: 'normal', label: 'Ruhig ansprechen', erfolg: profileName === 'sehrGut' ? false : true, schwere: 'leicht' },
+      { sozial: {} }
+    );
+    return mechanics._sozialTonartLabel(tonart, { id: 'zeuge', name: 'Zeuge' });
+  });
+}
+assert(/Rufvorteil/.test(visibleLabels.sehrGut),
+  'a reputation rescue must be disclosed directly in the action label');
+assert(/schlechter Ruf wirkt/.test(visibleLabels.schlecht),
+  'a ruined reputation penalty must be disclosed directly in the action label');
+
+const confrontationMatrix = {};
+for (const profileName of Object.keys(profiles)) {
+  confrontationMatrix[profileName] = withProfile(profileName, () =>
+    mechanics._konfrontationRufAuswirkung({ name: 'Mann im langen Mantel' })
+  );
+}
+assert.strictEqual(confrontationMatrix.neutral.note, '',
+  'neutral reputation must not add a fake confrontation effect');
+assert(/Sehr guter Ruf/.test(confrontationMatrix.sehrGut.note)
+    && confrontationMatrix.sehrGut.deeskalationErschwert === false,
+  'excellent reputation must be visibly credible without becoming an automatic win');
+assert(/Schlechter Ruf/.test(confrontationMatrix.schlecht.note)
+    && confrontationMatrix.schlecht.deeskalationErschwert === true,
+  'ruined reputation must make the same de-escalation require two real steps');
+assert(/Harter Ruf/.test(confrontationMatrix.hart.note)
+    && /Kein automatischer Sieg/.test(confrontationMatrix.hart.note),
+  'hard reputation must visibly affect reactions while staying balanced');
+
+mechanics.karlAkte.ruf = Object.assign({}, profiles.neutral);
 const neutralPrice = mechanics._informantPreis('norbert_tetzlaff', 'Norbert Tetzlaff');
 assert.strictEqual(neutralPrice, 20, 'neutral reputation must keep Tetzlaff at his base price');
 mechanics.karlAkte.ruf = { renommee: 0, haerte: 5 };

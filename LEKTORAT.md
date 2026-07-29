@@ -535,6 +535,16 @@ Dieser Katalog ist ab sofort Teil jedes manuellen Falllaufs und jeder Fallbewert
 - Gegnerprofil, Bild und UI teilen dieselbe Bewaffnung. Der ängstliche IM „Anker“ arbeitet mit Amtsdruck und notfalls einem Faustschlag, er erbt keine Dienstpistole eines regulären MfS-Offiziers. PPK- und Itemstärke werden gegen dieses reale Profil bewertet.
 - Ein friedlich überreichter Verbrauchsgegenstand wird auch im frischen Produktionslauf sofort aus Karls Inventar entfernt. Der Gegenstand muss in der Prosa beim Empfänger landen; ein bloßer Stimmungsbonus bei unverändertem Inventar ist weiterhin ein Fehler.
 
+### Ruf-Gegenlauf-Regressionsregeln aus Stein v1739
+
+- Ein A/B/C/D-Rufvergleich braucht dieselbe physische Ausgangslage. Optionale Bedrohungen werden während eines Debug-Rufvergleichs aus einem fall-, ort-, gegner- und szenengebundenen Seed bestimmt; Renommee und Härte dürfen den Wurf nicht verändern. Außerhalb des kontrollierten Vergleichs bleiben optionale Bedrohungen zufällig.
+- Die Stein-Eröffnung in Margaretes Wohnung ist kanonisch: Bis einschließlich Szene 2 steht immer der anonyme Mann im langen Mantel in der Tür. Mertens darf dort erst ab Szene 3 auftreten. Dadurch bleiben Eröffnungsprosa, Konfrontations-UI und Mantelmann-Bild zwischen Rufprofilen identisch.
+- Das Vergleichsprotokoll führt vier Profile: neutral `0/0`, sehr gut `+5/0`, schlecht `-5/0` und hart `0/+5`. Bei derselben freundlichen Ansprache schließt nur der schlechte Ruf den sonst passenden Weg; bei demselben leichten verbalen Druck öffnet nur der harte Ruf einen sonst scheiternden Weg.
+- Im Verhör derselben zivilen Auskunftsperson startet sehr guter Ruf offener und mit zusätzlichem Fragespielraum. Schlechter und harter Ruf erzeugen Vorsicht und weniger Spielraum; die sichtbare Rufnotiz, Startwerte und tatsächlichen Grenzen müssen übereinstimmen.
+- Schlechter Ruf hat auch in der roten Konfrontations-UI eine echte Folge: Eine bloße erste Beschwichtigung beendet die Lage nicht mehr, sondern senkt nur die Spannung; erst ein zweiter glaubhafter Schritt löst sie. Prosa, Gegnerzustand und UI müssen den Gegner nach dem ersten Schritt weiterhin am Ort halten.
+- Sehr guter Ruf macht eine ruhige Haltung glaubwürdiger; harter Ruf lässt Gegner Karl ernst nehmen, macht Zeugen aber nervöser. Beides wird als konkrete Rufwirkung angezeigt und in der Reaktion erzählt, verleiht jedoch keinen automatischen Kampf-, Flucht-, Beweis- oder Deeskalationssieg.
+- Schwere körperliche Eskalation bleibt in allen vier Profilen falsch. Maximale Härte darf keinen Kragenangriff, keine Folter und keinen unbelegten schweren Zugriff in einen richtigen Ermittlungsweg verwandeln.
+
 ## Mindestprotokoll pro Run
 
 - Fall, Version, Strategie, Seed, Start-/Endzeit, Szenenzahl, Ergebnis und Abbruchgrund.
