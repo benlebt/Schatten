@@ -1632,6 +1632,39 @@ assert(!languageContext.fixSprache(wrappedWithDialogue).startsWith('"') && langu
   'outer narrative quotes must be removed even when genuine dialogue quotes remain inside');
 assert.strictEqual(languageContext.fixSprache('"Was wollen Sie hier?", fragt Robert.'), '"Was wollen Sie hier?", fragt Robert.',
   'real direct speech must keep its quotation marks');
+const schifferWrappedOpening = '"Die Uhr zeigt halb zwei. Renate Schiffer legt ihr Collier auf den Tisch und bittet dich, Detlef lebend zu finden. Du notierst Riemers Namen und die Schuldsumme von 1500 D-Mark."';
+assert.strictEqual(languageContext.fixSprache(schifferWrappedOpening).charAt(0), 'D',
+  'the exact Schiffer-style multi-sentence opening must lose its accidental outer quote');
+assert(sourceOf('renderLog').includes('entry.text = (typeof fixSprache'),
+  'the visible log and subsequent exports need a final quote-sanitizing delivery boundary');
+const visibleNameContext = {
+  window: { _letzteAktion: { npcName: 'Gustav Riemer', npcId: 'wirt_lange' } },
+  caseSetup: {
+    klient: 'Renate Schiffer',
+    opfer: 'Detlef Schiffer',
+    setupCast: [
+      { name: 'Gustav Riemer', id: 'wirt_lange', rolle: 'Wirt' },
+      { name: 'Kalle "der Schiefe"', id: 'kalle_schiefe', rolle: 'Schläger' },
+      { name: 'Rudi Mokka', id: 'rudi_mokka', rolle: 'Schläger' }
+    ]
+  },
+  currentScene: {
+    szene: 'Gustav Riemer steht mit Kalle und Rudi im Spielklub.',
+    personenImRaum: ['Gustav Riemer', 'Kalle "der Schiefe"', 'Rudi Mokka']
+  },
+  caseProgress: { indizien: [] },
+  clientProfile: { name: 'Renate Schiffer' },
+  normForMatch: value => String(value || '').toLowerCase().replace(/["']/g, '').replace(/\s+/g, ' ').trim(),
+  sameNamedPerson: (a, b) => {
+    const n = value => String(value || '').toLowerCase().replace(/["']/g, '').replace(/\s+/g, ' ').trim();
+    return n(a) === n(b);
+  },
+  _npcWurdeSchonAngesprochen: () => false
+};
+vm.createContext(visibleNameContext);
+vm.runInContext(sourceOf('_npcNamenswissenSperren'), visibleNameContext);
+assert.deepStrictEqual(Array.from(visibleNameContext._npcNamenswissenSperren()), [],
+  'physically present UI roster members must never be rewritten to unknown man in narration');
 assert(sourceOf('buildWorldTruthRepairHint').includes('ENGINE-WAHRHEIT VERLETZUNG'),
   'offscreen injury drift needs a targeted repair prompt');
 const evidenceFallbackContext = {
