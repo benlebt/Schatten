@@ -371,7 +371,11 @@ assert.strictEqual(
   'margarete-stein-wohnung.webp',
   'a departed opponent mentioned in the farewell prose must not remain in the follow-up image',
 );
-departedVisualContext.caseProgress = { clientSecured: true };
+departedVisualContext.caseProgress = {
+  clientSecured: false,
+  clientState: { status: 'left_behind' },
+  politicalBeatsHit: ['margarete_gesichert'],
+};
 departedVisualContext._istKlient = (value) => /margarete/.test(String(value || ''));
 departedVisualContext._npcWirklichInSzene = () => false;
 const friedrichstrasseVisual = {
@@ -398,7 +402,7 @@ assert(/beat\.id !== 'akten_gesichert'/.test(markEvidenceSource)
     && /beat\.id !== 'margarete_gesichert'/.test(markEvidenceSource),
   'deterministic clue booking must protect action-only security beats');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1730 +SteinRestoreFinaleTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1731 +SteinRestoreVisualTruth'"),
   'release version is stale');
 assert(html.includes('Vom Hackeschen Markt dringen gedämpfte Motorengeräusche')
     && html.includes('Noch passt nicht jedes Stück zusammen'),
