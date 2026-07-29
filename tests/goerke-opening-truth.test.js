@@ -359,13 +359,28 @@ assert.strictEqual(vpRepairContext.repairGoerkeArrivalContinuity(restoredVpStage
   'the VP stage reveal must survive a save where showdownAktiv was not serialized');
 assert(/Hauptmann Dietmar Krollwitz tritt/.test(restoredVpStageReveal.text),
   'the restored visible VP roster must also be narrated without a formal showdown flag');
+const currentVpEvidenceWithoutSnapshotFields = {
+  ort: 'Volkspolizei-Praesidium Keibelstrasse',
+  szene: 'Im ursprünglichen Leichenbefund sind frische Griffspuren an Mathildes Oberarmen vermerkt.',
+};
+vpRepairContext.caseProgress.indizien = [
+  { id: 'totenschein_manip' },
+  { id: 'martha_angst' },
+  { id: 'vp_zweifel' },
+  { id: 'mathilde_fremdeinwirkung' },
+];
+assert.strictEqual(vpRepairContext.repairGoerkeArrivalContinuity(currentVpEvidenceWithoutSnapshotFields), true,
+  'currentScene without log-only indizienCnt must still expose the visible VP intervention');
+assert.deepStrictEqual(Array.from(currentVpEvidenceWithoutSnapshotFields.personenImRaum),
+  ['Kommissar Wilhelm Roth', 'Hauptmann Dietmar Krollwitz', 'Junge MfS-Beamte'],
+  'currentScene must receive a concrete roster so the Krollwitz visual variant can be selected');
 assert(/volkspolizei-keibelstrasse-krollwitz-night\.png[\s\S]{0,300}depictsNpcs: \['wilhelm_roth', 'hauptmann_krollwitz'\]/.test(html),
   'the VP showdown needs its own Roth/Krollwitz scene image contract');
 assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'goerke',
   'volkspolizei-keibelstrasse-krollwitz-night.png')),
   'missing Goerke VP showdown image asset');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1722 +GoerkeVpStageVisual'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1723 +GoerkeVpCurrentVisual'"),
   'release version missing');
 
 console.log('Goerke opening/truth regression checks passed.');
