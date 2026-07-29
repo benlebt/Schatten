@@ -173,6 +173,9 @@ for (const file of [
   'karl-buero-auguste-eva-day.png',
   'ho-verwaltung-hermes-day.png',
   'ho-verwaltung-brakke-day.png',
+  'ho-verwaltung-hermes-eva-day.png',
+  'ho-verwaltung-akteure-eva-day.png',
+  'ho-verwaltung-brakke-eva-day.png',
   'cafe-kranzler-eva-day.png',
   'cafe-kranzler-eva-night.png',
 ]) {
@@ -182,6 +185,14 @@ for (const file of [
 }
 assert(html.includes("requiresAllNpcs: ['im_hermes', 'genosse_brakke']"),
   'the HO image contract must support the combined Hermes/Brakke state');
+assert(html.includes("requiresAllNpcs: ['im_hermes', 'eva_werder']")
+    && html.includes("depictsNpcs: ['im_hermes', 'eva_werder']")
+    && html.includes("requiresAllNpcs: ['genosse_brakke', 'eva_werder']")
+    && html.includes("depictsNpcs: ['genosse_brakke', 'eva_werder']")
+    && html.includes("requiresAllNpcs: ['im_hermes', 'genosse_brakke', 'eva_werder']"),
+  'the HO image contract must cover Eva with Hermes, Brakke, and both men');
+assert(html.includes('variant.requiresAllSceneNpcs && alle.length'),
+  'multi-person HO variants must require the visible scene roster, not a broad location roster');
 assert(html.includes("excludesNpcs: ['genosse_brakke']"),
   'the HO image contract must distinguish the Hermes-only state');
 assert(html.includes("excludesNpcs: ['im_hermes']"),
@@ -359,7 +370,7 @@ assert.strictEqual(blockedStasiContext.advanceStasi('ERKUNDEN'), null,
 assert.strictEqual(blockedStasiContext.caseProgress.stasiEncounterEligibleScenes, 0,
   'a blocked normal MfS attempt must reset its eligible-scene counter');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1700 +LindenbaumPartyVisual'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1701 +LindenbaumHoPartyVisual'"),
   'release version missing');
 
 console.log('LINDENBAUM_FLOW_OK');
