@@ -193,6 +193,8 @@ assert(html.includes("requiresAllNpcs: ['im_hermes', 'eva_werder']")
   'the HO image contract must cover Eva with Hermes, Brakke, and both men');
 assert(html.includes('variant.requiresAllSceneNpcs && alle.length'),
   'multi-person HO variants must require the visible scene roster, not a broad location roster');
+assert(html.includes("replace(/[^a-z0-9 ]/g, ' ')"),
+  'strict scene-roster matching must canonicalize quoted names such as IM \"Hermes\"');
 assert(html.includes("excludesNpcs: ['genosse_brakke']"),
   'the HO image contract must distinguish the Hermes-only state');
 assert(html.includes("excludesNpcs: ['im_hermes']"),
@@ -370,7 +372,7 @@ assert.strictEqual(blockedStasiContext.advanceStasi('ERKUNDEN'), null,
 assert.strictEqual(blockedStasiContext.caseProgress.stasiEncounterEligibleScenes, 0,
   'a blocked normal MfS attempt must reset its eligible-scene counter');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1701 +LindenbaumHoPartyVisual'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1702 +LindenbaumHoRosterIdentity'"),
   'release version missing');
 
 console.log('LINDENBAUM_FLOW_OK');
