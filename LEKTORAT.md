@@ -326,6 +326,13 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 - Ein freier Netzwerk-Anker ist nun nur dann physisch anklickbar, wenn sowohl das finale Szenen-Roster als auch die tatsächlich sichtbare Endprosa seinen Namen tragen. Bloße Erinnerungen, alte Cast-Reste und durch Fundtext-Ersatz verschwundene Auftritte reichen nicht; echte Party-Mitglieder und explizit ortsgebundene Kontakte bleiben unverändert.
 - Regression: exakt der Strauss-Aktenfund mit `Gregor Halbe` nur im Roh-Roster wird geblockt; ein sichtbar eintretender Halbe bleibt erlaubt, eine bloße Erinnerung ohne Roster materialisiert ihn nicht.
 
+## Rex-/PPK-/Item-Balancematrix v7.12.1691
+
+- Alle sechs W6-Seiten wurden deterministisch gegen normale Stärke 3, harte Stärke 5 und eine harte Gruppe geprüft. Rex hebt Karls unbewaffnete Chance gegen einen normalen Schläger von `2/6` auf `3/6`, gegen Stärke 5 bleibt nur `1/6`; `Verjagen` wirkt weiterhin nur bis Stärke 4. Rex ist damit deutlich nützlich, aber allein keine Siegautomatik.
+- Die Walther PPK erzeugt gegen Stärke 3 allein auf `3/6`, zusammen mit Rex auf `4/6` Druck. Selbst der beste Wurf bleibt nichtterminal: kein automatischer K.o., keine Flucht und keine Kapitulation. Sie ist ein einmaliger Distanzhebel, keine beste Universalwaffe.
+- Kaffee bleibt schwach (`2/6` gegen Stärke 3), geworfener Korn ist gegen Stärke 5 brauchbar, aber unsicher (`3/6`), und das verbrauchbare Feuerwerksbündel neutralisiert bei einer harten Gruppe exakt eine Überzahlstufe (`4/6`). Der wiederverwendbare Schlagstock ist stark, scheitert gegen Stärke 5 aber weiterhin auf `2/6` und schlägt nicht bei jedem Erfolg sofort k.o.
+- Als Ausreißer erwiesen sich die wiederverwendbaren Handschellen: Ohne vorbereitete Oberhand fesselten sie einen normalen Gegner bisher auf `5/6` sofort. Ein neuer Nahkampf-Malus senkt das auf `3/6`. Nach einem vorherigen Wirkungstreffer kehren `5/6` zurück; die ausdrücklich kombinierte Aktion `Rex: Fixieren` plus Handschellen gelingt als verdienter Team-Payoff sicher. Nur `Fixieren` oder `Festhalten`, nicht irgendein Begleiterbonus, hebt den Malus auf.
+
 ## Mindestprotokoll pro Run
 
 - Fall, Version, Strategie, Seed, Start-/Endzeit, Szenenzahl, Ergebnis und Abbruchgrund.
