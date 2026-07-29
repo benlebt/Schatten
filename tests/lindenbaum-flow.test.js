@@ -210,6 +210,11 @@ assert(html.includes("requiresAllNpcs: ['eva_werder']")
 assert(html.includes("requiresAllNpcs: ['auguste_lindenbaum', 'eva_werder']")
     && html.includes("depictsNpcs: ['auguste_lindenbaum', 'eva_werder']"),
   'Eva needs a party-aware Karl office image when Auguste is present there');
+assert(html.includes("file: 'karl-buero-eva-day.png'")
+    && html.includes("nightFile: 'karl-buero-eva-night.png'")
+    && fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'lindenbaum', 'karl-buero-eva-day.png'))
+    && fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'lindenbaum', 'karl-buero-eva-night.png')),
+  'Eva alone in Karl office needs coherent day and night party visuals');
 assert(html.includes("test: /^stalinallee$/")
     && html.includes("file: 'stalinallee-eva-day.png'")
     && html.includes("alt: 'Szenenbild: Eva Werder ist mit Karl Mauer aus der HO-Verwaltung auf die Stalinallee entkommen.'"),
@@ -382,7 +387,7 @@ assert.strictEqual(blockedStasiContext.advanceStasi('ERKUNDEN'), null,
 assert.strictEqual(blockedStasiContext.caseProgress.stasiEncounterEligibleScenes, 0,
   'a blocked normal MfS attempt must reset its eligible-scene counter');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1704 +PartyFlightTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1705 +PartyOfficeVisuals'"),
   'release version missing');
 
 console.log('LINDENBAUM_FLOW_OK');
