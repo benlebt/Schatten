@@ -433,7 +433,7 @@ assert(sourceOf('_stasiCustodyEntryVormerken').includes('custodyEntryOfficerName
     && !html.includes('Brakke wartet den einzigen freien Atemzug'),
   'future custody entries must use the actual confrontation officer instead of hard-coded Brakke');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1731 +SteinRestoreVisualTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1732 +SteinShowdownVisualTruth'"),
   'release version missing');
 
 console.log('Goerke opening/truth regression checks passed.');

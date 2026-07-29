@@ -377,7 +377,8 @@ departedVisualContext.caseProgress = {
   politicalBeatsHit: ['margarete_gesichert'],
 };
 departedVisualContext._istKlient = (value) => /margarete/.test(String(value || ''));
-departedVisualContext._npcWirklichInSzene = () => false;
+departedVisualContext._npcWirklichInSzene = () => true;
+departedVisualContext.clientProfile = { id: 'margarete_stein', name: 'Margarete Stein' };
 const friedrichstrasseVisual = {
   file: 'sbahnhof-friedrichstrasse.webp',
   presenceVariants: [{
@@ -402,7 +403,7 @@ assert(/beat\.id !== 'akten_gesichert'/.test(markEvidenceSource)
     && /beat\.id !== 'margarete_gesichert'/.test(markEvidenceSource),
   'deterministic clue booking must protect action-only security beats');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1731 +SteinRestoreVisualTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1732 +SteinShowdownVisualTruth'"),
   'release version is stale');
 assert(html.includes('Vom Hackeschen Markt dringen gedämpfte Motorengeräusche')
     && html.includes('Noch passt nicht jedes Stück zusammen'),
