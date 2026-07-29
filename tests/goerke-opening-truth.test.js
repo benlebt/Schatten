@@ -1,4 +1,4 @@
-﻿const assert = require('assert');
+const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -180,6 +180,7 @@ for (const file of [
   'kreisgericht-mitte-baumgarten-day.png',
   'kreisgericht-mitte-krollwitz-civil-day.png',
   'kreisgericht-mitte-krollwitz-rex-day.png',
+  'littenplatz-baumgarten-night.png',
   'stellwerk-schoeneweide-krollwitz-night.png',
 ]) {
   assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'goerke', file)),
@@ -396,7 +397,7 @@ assert.deepStrictEqual(Array.from(currentVpEvidenceWithoutSnapshotFields.persone
   'currentScene must receive a concrete roster so the Krollwitz visual variant can be selected');
 assert(/volkspolizei-keibelstrasse-krollwitz-night\.png[\s\S]{0,300}depictsNpcs: \['wilhelm_roth', 'hauptmann_krollwitz'\]/.test(html),
   'the VP showdown needs its own Roth/Krollwitz scene image contract');
-assert(/test: \/\^littenplatz\$\/[\s\S]{0,500}marx-engels-platz-night\.webp[\s\S]{0,700}reinhard_baumgarten/.test(html),
+assert(/test: \/\^littenplatz\$\/[\s\S]{0,500}marx-engels-platz-night\.webp[\s\S]{0,700}reinhard_baumgarten[\s\S]{0,250}littenplatz-baumgarten-night\.png/.test(html),
   'the Goerke escape scene needs a real street/station base image and a separate Baumgarten finale variant');
 assert(/kreisgericht-mitte-krollwitz-rex-day\.png[\s\S]{0,260}depictsParty: \['Rex'\]/.test(html),
   'Krollwitz plus Rex needs an explicit scene-image contract');
@@ -432,7 +433,7 @@ assert(sourceOf('_stasiCustodyEntryVormerken').includes('custodyEntryOfficerName
     && !html.includes('Brakke wartet den einzigen freien Atemzug'),
   'future custody entries must use the actual confrontation officer instead of hard-coded Brakke');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1725 +RexCustodyVisualTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1726 +GoerkeFinalVisualTruth'"),
   'release version missing');
 
 console.log('Goerke opening/truth regression checks passed.');
