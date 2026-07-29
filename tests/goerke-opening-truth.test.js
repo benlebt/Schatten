@@ -346,8 +346,26 @@ assert.strictEqual(vpRepairContext.repairGoerkeArrivalContinuity(restoredVpEvide
 assert(/erste Beamte notierte ausdrücklich Zweifel/.test(restoredVpEvidence.szene)
     && /Mertens’ späterer Anklageakte fehlt/.test(restoredVpEvidence.szene),
   'the restored VP scene must visibly narrate the already booked evidence');
+vpRepairContext.caseProgress.showdownAktiv = true;
+vpRepairContext.caseProgress.showdownBestanden = false;
+vpRepairContext.caseProgress.showdownGegner = 'Hauptmann Dietmar Krollwitz';
+restoredVpEvidence.personenImRaum = [
+  'Kommissar Wilhelm Roth',
+  'Hauptmann Dietmar Krollwitz',
+  'Junge MfS-Beamte',
+];
+assert.strictEqual(vpRepairContext.repairGoerkeArrivalContinuity(restoredVpEvidence), true,
+  'a booked Krollwitz showdown at the VP must become visible');
+assert(/Krollwitz tritt mit zwei jungen MfS-Beamten ein/.test(restoredVpEvidence.szene)
+    && /Noch greift niemand zu/.test(restoredVpEvidence.szene),
+  'the VP prose must distinguish a tense intervention from an unbooked arrest');
+assert(/volkspolizei-keibelstrasse-krollwitz-night\.png[\s\S]{0,300}depictsNpcs: \['wilhelm_roth', 'hauptmann_krollwitz'\]/.test(html),
+  'the VP showdown needs its own Roth/Krollwitz scene image contract');
+assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'goerke',
+  'volkspolizei-keibelstrasse-krollwitz-night.png')),
+  'missing Goerke VP showdown image asset');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1720 +GoerkeVpEvidenceTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1721 +GoerkeVpShowdownVisual'"),
   'release version missing');
 
 console.log('Goerke opening/truth regression checks passed.');

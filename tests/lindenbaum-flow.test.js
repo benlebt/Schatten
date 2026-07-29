@@ -407,7 +407,7 @@ assert.strictEqual(blockedStasiContext.advanceStasi('ERKUNDEN'), null,
 assert.strictEqual(blockedStasiContext.caseProgress.stasiEncounterEligibleScenes, 0,
   'a blocked normal MfS attempt must reset its eligible-scene counter');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1720 +GoerkeVpEvidenceTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1721 +GoerkeVpShowdownVisual'"),
   'release version missing');
 
 console.log('LINDENBAUM_FLOW_OK');
