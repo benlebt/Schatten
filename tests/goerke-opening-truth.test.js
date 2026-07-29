@@ -308,9 +308,9 @@ assert.strictEqual(marthaRepairContext.repairGoerkeArrivalContinuity(restoredMar
   'a restored save must migrate the over-repaired witness scene');
 assert(/Mathilde habe sich .* verfolgt gefühlt/i.test(restoredMarthaWitness.szene),
   'restored Martha witness prose must recover the booked clue');
-assert(goerke.includes("arrivalFallbackRequired: true")
-    && goerke.includes("Unter der grünen Schreibtischlampe liegen der frühe Ermittlungsdurchschlag"),
-  'the Goerke VP arrival must use a deterministic evidence-room truth');
+assert(goerke.includes("Unter der grünen Schreibtischlampe liegen der frühe Ermittlungsdurchschlag")
+    && !/Volkspolizei-Praesidium Keibelstrasse[\s\S]{0,180}arrivalFallbackRequired: true/.test(goerke),
+  'the Goerke VP needs a deterministic arrival without overwriting later evidence scenes');
 const vpRepairContext = {
   caseProgress: { indizien: [] },
   engineCurrentLocation: { name: 'Volkspolizei-Praesidium Keibelstrasse' },
@@ -335,8 +335,19 @@ assert(/Ermittlungsdurchschlag/.test(vpPhantomArrest.szene)
 assert.deepStrictEqual(Array.from(vpPhantomArrest.personenImRaum),
   ['Kommissar Wilhelm Roth', 'Martha Brommer'],
   'a real party member must survive the VP arrival repair and remain visible in the UI roster');
+const restoredVpEvidence = {
+  ort: 'Volkspolizei-Praesidium Keibelstrasse',
+  szene: 'Im Präsidium an der Keibelstraße führt dich Kommissar Wilhelm Roth in sein nüchternes Dienstzimmer. Unter der grünen Schreibtischlampe liegen der frühe Ermittlungsdurchschlag und der ursprüngliche Leichenbefund getrennt von der späteren Anklageakte. Roth bleibt am Schreibtisch und wartet ab, welche Unterlage du zuerst prüfst.',
+  indizienCnt: 3,
+  personenImRaum: ['Kommissar Wilhelm Roth'],
+};
+assert.strictEqual(vpRepairContext.repairGoerkeArrivalContinuity(restoredVpEvidence), true,
+  'the over-repaired restored VP evidence scene must migrate');
+assert(/erste Beamte notierte ausdrücklich Zweifel/.test(restoredVpEvidence.szene)
+    && /Mertens’ späterer Anklageakte fehlt/.test(restoredVpEvidence.szene),
+  'the restored VP scene must visibly narrate the already booked evidence');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1719 +GoerkeVpTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1720 +GoerkeVpEvidenceTruth'"),
   'release version missing');
 
 console.log('Goerke opening/truth regression checks passed.');
