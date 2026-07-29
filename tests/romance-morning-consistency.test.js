@@ -73,12 +73,15 @@ const repairContext = {
   },
   engineCurrentLocation: { name: 'Eva Werders Wohnung in Mitte' },
   diag() {},
+  _partyRemovedCalls: 0,
+  _partyRemove: null,
   normForMatch: context.normForMatch,
   ROMANCE_MORNING_GONE_IMAGES: {
     'morgen-wohnung-ost.webp': 'morgen-wohnung-ost-allein.webp',
   },
 };
 vm.createContext(repairContext);
+vm.runInContext('this._partyRemove = function() { this._partyRemovedCalls++; };', repairContext);
 vm.runInContext(
   html.slice(html.indexOf('function _romanceMorningEnsure'), repairEnd)
     + '\nthis.repairMorning = repairRomanceMorningContinuity;',
@@ -102,6 +105,15 @@ assert(repairContext.repairMorning(contradictoryGone) === true
     && !/sitzt am Küchentisch/.test(contradictoryGone.text)
     && /vor Karls Aufwachen gegangen/.test(contradictoryGone.text),
   'gone morning prose must not keep the partner in the room');
+assert(repairContext._partyRemovedCalls > 0,
+  'a departed morning partner must also leave the active party UI');
+const brokenSavedNote = {
+  ort: 'Eva Werders Wohnung in Mitte',
+  text: 'Auf dem Tisch liegt ein Zettel: ‚Bin zur Schule gegangen. Karl trinkt Kaffee. Eva Werder ist vor Karls Aufwachen gegangen.',
+};
+assert(repairContext.repairMorning(brokenSavedNote) === true
+    && /„Bin zur Schule gegangen.“/.test(brokenSavedNote.text),
+  'restore migration must preserve balanced quotation marks in a departure note');
 
 assert(!html.includes('Waehle die Variante anhand IHRES Charakters'), 'the model must no longer choose its own morning reality');
 assert(html.includes("const romanceImage = ro.partnerPresent === false"), 'scene renderer must select by stored presence');
