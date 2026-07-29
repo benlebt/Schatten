@@ -319,6 +319,13 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 - Der Strukturlauf liest nun Breite und Höhe jeder referenzierten WebP- und PNG-Datei und verwirft ungültige Header oder Nullmaße. Zusätzlich wurde der gesamte Szenenbild-Bestand einmal mit einem echten Decoder geöffnet.
 - Im Browser bleibt nach einem erschöpften Dateifallback oder fehlenden Ortstreffer eine klar beschriftete, eingebettete Noir-Notfalltafel mit echtem Orts- und Zeitlabel sichtbar. Sie erfindet weder Personen noch Innen-/Außenraum und meldet `SZENENBILD-NOTFALLTAFEL` in der Diagnose. Ein technischer Ladefehler kann damit nicht mehr zu einer völlig leeren Bildregion werden und bleibt zugleich offen erkennbar.
 
+## Freie-Anker-Phantomperson-Gegenlauf v7.12.1690
+
+- Produktions-Repro auf v7.12.1683, Strauss-Szene 11 in Karls Büro: Die kanonisch ersetzte Aktenprosa und das feste Bürobild zeigen Karl allein. Die Haupt-UI bot trotzdem `Hausmeister Gregor Halbe` als anwesende Person an.
+- Das Diagnoseprotokoll belegt die Ursache exakt: Das Modell lieferte Halbe im rohen `personenImRaum` und als Informanten, die `replaceOnFallback`-Sicherung ersetzte danach aber die gesamte fehlerhafte Prosa durch den kanonischen Aktenfund. Halbe blieb im technischen Cast zurück und galt als nicht ortsgebundener Netzwerk-Anker fälschlich überall als zulässig.
+- Ein freier Netzwerk-Anker ist nun nur dann physisch anklickbar, wenn sowohl das finale Szenen-Roster als auch die tatsächlich sichtbare Endprosa seinen Namen tragen. Bloße Erinnerungen, alte Cast-Reste und durch Fundtext-Ersatz verschwundene Auftritte reichen nicht; echte Party-Mitglieder und explizit ortsgebundene Kontakte bleiben unverändert.
+- Regression: exakt der Strauss-Aktenfund mit `Gregor Halbe` nur im Roh-Roster wird geblockt; ein sichtbar eintretender Halbe bleibt erlaubt, eine bloße Erinnerung ohne Roster materialisiert ihn nicht.
+
 ## Mindestprotokoll pro Run
 
 - Fall, Version, Strategie, Seed, Start-/Endzeit, Szenenzahl, Ergebnis und Abbruchgrund.
