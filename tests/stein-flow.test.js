@@ -218,7 +218,10 @@ const restoredSteinContext = {
   diag: () => {},
 };
 vm.createContext(restoredSteinContext);
-vm.runInContext(sourceOf('repairBasicGermanProse'), restoredSteinContext);
+vm.runInContext(
+  sourceOf('sanitizeProsaMetadaten') + '\n' + sourceOf('repairBasicGermanProse'),
+  restoredSteinContext,
+);
 const restoredWrongBrille = {
   type: 'scene',
   ort: 'Margarete Steins Wohnung',
@@ -240,6 +243,18 @@ assert.strictEqual(restoredSteinContext.repairBasicGermanProse(restoredWahlerArr
 assert(/Direktor Wahler steht hinter dem schweren Schreibtisch/.test(restoredWahlerArrival.text)
     && !/Wahler ist nicht/.test(restoredWahlerArrival.text),
   'Reichsbahn prose, UI roster and Wahler/Anker image must share one cast truth');
+restoredSteinContext.caseProgress = { evidenceSecured: true };
+const restoredLateFinale = {
+  type: 'scene',
+  ort: 'Bahnhof Friedrichstraße',
+  time: 'Vormittag',
+  text: 'Du blickst auf die Unterlagen in deinen Händen. Die Frachtlisten mit dem Reichsbahn-Stempel und die belastenden Aussagen sind eindeutig.',
+};
+assert.strictEqual(restoredSteinContext.repairBasicGermanProse(restoredLateFinale), true,
+  'a saved pre-fix Stein finale must be migrated on restore');
+assert(/Roth bereits gesichert|bei Roth gesicherten Frachtlisten/.test(restoredLateFinale.text)
+    && !/Unterlagen in deinen Händen/.test(restoredLateFinale.text),
+  'restored finale prose must preserve the completed Roth handoff');
 
 const custodyItemContext = {};
 vm.createContext(custodyItemContext);
@@ -383,7 +398,7 @@ assert(/beat\.id !== 'akten_gesichert'/.test(markEvidenceSource)
     && /beat\.id !== 'margarete_gesichert'/.test(markEvidenceSource),
   'deterministic clue booking must protect action-only security beats');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1729 +SteinCustodyFinaleTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1730 +SteinRestoreFinaleTruth'"),
   'release version is stale');
 assert(html.includes('Vom Hackeschen Markt dringen gedämpfte Motorengeräusche')
     && html.includes('Noch passt nicht jedes Stück zusammen'),
