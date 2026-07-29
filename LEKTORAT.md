@@ -276,6 +276,15 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 - Dieser Friedensstatus gilt auch in jeder anschließenden Fund-/Durchsuchungsszene: Erneut „angespannte Körper“, kampfbereite Haltung, zuckende Hände am Griff oder ein scheinbar wieder endender Spielraum sind ebenso Re-Eskalation wie ein gezogenes Messer. Finsteres Beobachten aus passiver Distanz bleibt dagegen erlaubt.
 - K.-o.-, benommene, fixierte oder gefesselte Gegner sind davon getrennt: Sie dürfen und müssen je nach Status weiterhin körperlich am Ort bzw. im passenden Nachher-Bild erscheinen. Der Abgangswächter darf keine echten Zustands-/Beute-Szenen löschen.
 
+## Stein-Frühwahrheits-Gegenlauf v7.12.1684
+
+- Produktions-Repro auf v7.12.1683, frischer Stein-Run, Sonntag, 29. März 1953, Abbruch nach Szene 4 wegen eines fundamentalen Objekt-/Kenntnisbruchs; mechanischer Stand zu diesem Zeitpunkt: Stage 1, `0/3` Spuren.
+- Szene 2 etablierte die beim Einbruch zerbrochene Drahtgestellbrille auf dem Tisch und ausdrücklich nicht an Margaretes Gesicht. Szene 4 ließ dieselbe Brille wieder „fast von der Nase“ rutschen. Die kanonische Requisitenwahrheit gilt deshalb ab der festen Wohnungsankunft und nicht erst nach dem späteren Klick auf `margarete_aussage`.
+- Derselbe Konfrontationszug ließ Karl vor jedem Indizfund beiläufig „Wahler“ nennen. Setup-Cast und interne Fallziele sind kein Namenswissen des Spielers. `knownAfterEvidence` bindet Wahler nun datengetrieben an Margaretes Aussage, die Aktenkopie oder andere echte Wahler-Belege; der persönliche Auftritt in der Reichsbahndirektion sowie eine bereits ausgespielte Begegnung bleiben zulässige direkte Enthüllungen.
+- Das bestehende späte Beleg-Gate bleibt als letzte Auslieferungssicherung erhalten. Zusätzlich verwirft die Weltwahrheitsprüfung eine solche Antwort jetzt bereits vor dem Modell-Retry, damit kein herausgeschnittener Satzrest sichtbar bleibt.
+- Positiv bestätigt: v1683-Badge und Debug-Modus, vollständige Büroeröffnung, korrektes Nachtbild, Margarete und der Mantelmann in Ankunftsprosa und Konfliktbild sowie Margarete nach dem Abgang in Prosa, Bild und Personen-UI.
+- Regression: exakte Produktionsformulierungen, Vor-Beleg-Sperre, erlaubter Begegnungsort und Entsperrung nach `margarete_aussage`; vollständige lokale Suite auf v7.12.1684 mit `61/61` grün. Produktions-Gegenlauf folgt nach Deployment.
+
 ## Mindestprotokoll pro Run
 
 - Fall, Version, Strategie, Seed, Start-/Endzeit, Szenenzahl, Ergebnis und Abbruchgrund.

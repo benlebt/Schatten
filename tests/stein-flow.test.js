@@ -21,12 +21,19 @@ const variant = context.CASES.find((entry) =>
 assert(variant, 'Stein setup is missing');
 const setup = variant.setup;
 const locations = new Map(setup.locations.map((location) => [location.name, location]));
+const wahler = setup.setupCast.find((npc) => npc && npc.id === 'wahler');
 
 const office = locations.get('Karl Mauers Büro');
 assert(office && /Schmuggelroute/.test(office.openingFallbackText)
     && /Margarete Stein/.test(office.openingFallbackText)
     && /Straßenbahn/.test(office.openingFallbackText),
   'Stein opening fallback must contain case, client danger and phone clue');
+assert(office && !/Wahler/.test(office.arrivalFallbackText),
+  'Stein office fallback must not reveal Wahler before an evidence click');
+assert(wahler && Array.isArray(wahler.knownAfterEvidence)
+    && wahler.knownAfterEvidence.includes('margarete_aussage')
+    && wahler.knownAfterEvidence.includes('akten_kopie_wohnung'),
+  'Wahler identity must remain evidence-gated away from his configured encounter');
 
 for (const name of [
   'Margarete Steins Wohnung',
@@ -172,6 +179,71 @@ assert(!/Gläsern ihrer Drahtgestellbrille|Brille rutscht|Dienstwaffe|,,/.test(r
 assert(/Abschrift deiner Notizen/.test(repaired),
   'the finale must not hand over originals that Vera already secured');
 
+sanitizerContext.caseProgress = {
+  gefundeneIndizIds: [],
+  evidenceSecured: false,
+};
+const repairedBeforeEvidence = sanitizerContext.sanitizeProsaMetadaten(
+  'Margarete sinkt auf einen Stuhl. Ihre Brille rutscht ihr fast von der Nase.',
+);
+assert(!/Brille rutscht|von der Nase/.test(repairedBeforeEvidence)
+    && /Nasenwurzel/.test(repairedBeforeEvidence),
+  'the broken-glasses truth must apply from the fixed apartment arrival, before her formal clue');
+
+const evidenceGateDiagnostics = [];
+const evidenceGateContext = {
+  caseSetup: {
+    setupCast: [wahler],
+  },
+  caseProgress: {
+    gefundeneIndizIds: [],
+  },
+  engineCurrentLocation: {
+    name: 'Margarete Steins Wohnung',
+  },
+  getCaseLocations: () => setup.locations,
+  _npcOrtsbindungEintragAktiv: () => true,
+  _npcWurdeSchonAngesprochen: () => false,
+  diag: (type, message) => evidenceGateDiagnostics.push(type + ':' + message),
+};
+vm.createContext(evidenceGateContext);
+vm.runInContext(
+  sourceOf('normForMatch') + '\n'
+    + sourceOf('_findEvidenceGatedNpcKnowledgeLeak') + '\n'
+    + sourceOf('repairEvidenceGatedNpcProse'),
+  evidenceGateContext,
+);
+const prematureWahler = {
+  szene: 'Du nennst keine Namen und erwähnst beiläufig Wahler. Der Mann im Mantel tritt zurück.',
+  personenImRaum: ['Margarete Stein', 'Mann im langen Mantel'],
+};
+const prematureLeak = evidenceGateContext._findEvidenceGatedNpcKnowledgeLeak(prematureWahler);
+assert(prematureLeak && prematureLeak.code === 'evidence_gated_npc_knowledge_leak',
+  'world-truth validation must reject Wahler before his evidence or encounter');
+evidenceGateContext.repairEvidenceGatedNpcProse(prematureWahler);
+assert(!/Wahler/.test(prematureWahler.szene) && /Mann im Mantel/.test(prematureWahler.szene),
+  'the final repair boundary must remove only the unearned Wahler sentence');
+assert(evidenceGateDiagnostics.some((line) => line.includes('BELEG-GATE repariert')),
+  'premature identity repair needs an exported diagnostic');
+
+evidenceGateContext.engineCurrentLocation = { name: 'Reichsbahndirektion Mitte' };
+assert.strictEqual(
+  evidenceGateContext._findEvidenceGatedNpcKnowledgeLeak({
+    szene: 'Direktor Bernhard Wahler erwartet dich hinter seinem Schreibtisch.',
+  }),
+  null,
+  'the configured personal encounter must reveal Wahler without prior evidence',
+);
+evidenceGateContext.engineCurrentLocation = { name: 'Margarete Steins Wohnung' };
+evidenceGateContext.caseProgress.gefundeneIndizIds.push('margarete_aussage');
+assert.strictEqual(
+  evidenceGateContext._findEvidenceGatedNpcKnowledgeLeak({
+    szene: 'Margarete nennt Direktor Bernhard Wahler als ihren Vorgesetzten.',
+  }),
+  null,
+  'Margaretes found statement must unlock Wahler for later prose',
+);
+
 const securitySource = sourceOf('baueSicherungsButtons');
 assert(/_veraBekannt/.test(securitySource)
     && /vera_uebergabekontakt/.test(securitySource)
@@ -193,7 +265,7 @@ assert(/beat\.id !== 'akten_gesichert'/.test(markEvidenceSource)
     && /beat\.id !== 'margarete_gesichert'/.test(markEvidenceSource),
   'deterministic clue booking must protect action-only security beats');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1683 +SteinPoliticalEvidence'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1684 +SteinEarlyTruthGuard'"),
   'release version is stale');
 assert(html.includes('Vom Hackeschen Markt dringen gedämpfte Motorengeräusche')
     && html.includes('Noch passt nicht jedes Stück zusammen'),
