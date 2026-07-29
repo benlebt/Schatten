@@ -308,8 +308,35 @@ assert.strictEqual(marthaRepairContext.repairGoerkeArrivalContinuity(restoredMar
   'a restored save must migrate the over-repaired witness scene');
 assert(/Mathilde habe sich .* verfolgt gefühlt/i.test(restoredMarthaWitness.szene),
   'restored Martha witness prose must recover the booked clue');
+assert(goerke.includes("arrivalFallbackRequired: true")
+    && goerke.includes("Unter der grünen Schreibtischlampe liegen der frühe Ermittlungsdurchschlag"),
+  'the Goerke VP arrival must use a deterministic evidence-room truth');
+const vpRepairContext = {
+  caseProgress: { indizien: [] },
+  engineCurrentLocation: { name: 'Volkspolizei-Praesidium Keibelstrasse' },
+  karlInStasiCustody: false,
+  _party: [{ id: 'martha_brommer', name: 'Martha Brommer' }],
+  cast: [{ name: 'Kommissar Wilhelm Roth' }, { name: 'Martha Brommer' }],
+  diag: () => {},
+};
+vm.createContext(vpRepairContext);
+vm.runInContext(sourceOf('normForMatch') + '\n' + sourceOf('repairGoerkeArrivalContinuity'), vpRepairContext);
+const vpPhantomArrest = {
+  ort: 'Volkspolizei-Praesidium Keibelstrasse',
+  szene: 'Roth klappt einen roten Dienstausweis auf. „Sie kommen jetzt mit, Mauer“, sagt er, während die beiden Männer den Rückweg blockieren.',
+  personenImRaum: ['Kommissar Wilhelm Roth'],
+  gewahrsam: false,
+};
+assert.strictEqual(vpRepairContext.repairGoerkeArrivalContinuity(vpPhantomArrest), true,
+  'an unbooked VP arrest must be repaired');
+assert(/Ermittlungsdurchschlag/.test(vpPhantomArrest.szene)
+    && !/kommen jetzt mit|Rückweg blockieren|Dienstausweis/i.test(vpPhantomArrest.szene),
+  'VP repair must remove the phantom arrest while preserving the evidence-room setup');
+assert.deepStrictEqual(Array.from(vpPhantomArrest.personenImRaum),
+  ['Kommissar Wilhelm Roth', 'Martha Brommer'],
+  'a real party member must survive the VP arrival repair and remain visible in the UI roster');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1718 +GoerkeMarthaMigration'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1719 +GoerkeVpTruth'"),
   'release version missing');
 
 console.log('Goerke opening/truth regression checks passed.');
