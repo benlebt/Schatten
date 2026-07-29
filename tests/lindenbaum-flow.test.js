@@ -176,6 +176,7 @@ for (const file of [
   'ho-verwaltung-hermes-eva-day.png',
   'ho-verwaltung-akteure-eva-day.png',
   'ho-verwaltung-brakke-eva-day.png',
+  'stalinallee-eva-day.png',
   'cafe-kranzler-eva-day.png',
   'cafe-kranzler-eva-night.png',
 ]) {
@@ -209,6 +210,13 @@ assert(html.includes("requiresAllNpcs: ['eva_werder']")
 assert(html.includes("requiresAllNpcs: ['auguste_lindenbaum', 'eva_werder']")
     && html.includes("depictsNpcs: ['auguste_lindenbaum', 'eva_werder']"),
   'Eva needs a party-aware Karl office image when Auguste is present there');
+assert(html.includes("test: /^stalinallee$/")
+    && html.includes("file: 'stalinallee-eva-day.png'")
+    && html.includes("alt: 'Szenenbild: Eva Werder ist mit Karl Mauer aus der HO-Verwaltung auf die Stalinallee entkommen.'"),
+  'the post-HO flight scene needs a real Eva party visual instead of only the technical fallback');
+assert(html.includes('PARTY-FLUCHT-PROSA repariert')
+    && html.includes('Eva bleibt dicht an deiner Seite. Gemeinsam stürzt ihr aus dem Gebäude'),
+  'flight prose must keep the party visible and remove ungrounded blockers');
 assert(html.includes("if (typeof _istInParty === 'function' && _istInParty(scId, scName)) return true;"),
   'an explicit party member must remain a clickable person away from the canonical home location');
 assert(html.includes("add('party_mitnehmen', mitnahmePreis > 0")
@@ -374,7 +382,7 @@ assert.strictEqual(blockedStasiContext.advanceStasi('ERKUNDEN'), null,
 assert.strictEqual(blockedStasiContext.caseProgress.stasiEncounterEligibleScenes, 0,
   'a blocked normal MfS attempt must reset its eligible-scene counter');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1703 +LindenbaumHoStrictExcludes'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1704 +PartyFlightTruth'"),
   'release version missing');
 
 console.log('LINDENBAUM_FLOW_OK');
