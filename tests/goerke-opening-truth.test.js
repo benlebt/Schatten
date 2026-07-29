@@ -297,8 +297,19 @@ assert(/Mathilde habe sich .* verfolgt gefühlt/i.test(marthaWitnessScene.szene)
   'repair must retain Marthas real clue while removing unchosen items and premature Krollwitz signatures');
 assert.deepStrictEqual(Array.from(marthaWitnessScene.personenImRaum), ['Martha Brommer'],
   'the repaired witness scene must align its UI roster with the apartment image');
+const restoredMarthaWitness = {
+  ort: 'Martha Brommers Wohnung',
+  szene: 'Du stellst den Opel in der Schönhauser Allee ab und steigst zu Marthas kleiner Wohnung hinauf. Martha Brommer öffnet selbst und bittet dich in die stille Stube. Am Küchentisch stehen eine Tasse Malzkaffee und ihre offene Packung Mokri-Zigaretten; außer euch ist niemand in der Wohnung.',
+  caseStufe: 3,
+  indizienCnt: 2,
+  personenImRaum: ['Martha Brommer'],
+};
+assert.strictEqual(marthaRepairContext.repairGoerkeArrivalContinuity(restoredMarthaWitness), true,
+  'a restored save must migrate the over-repaired witness scene');
+assert(/Mathilde habe sich .* verfolgt gefühlt/i.test(restoredMarthaWitness.szene),
+  'restored Martha witness prose must recover the booked clue');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1717 +GoerkeMarthaTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1718 +GoerkeMarthaMigration'"),
   'release version missing');
 
 console.log('Goerke opening/truth regression checks passed.');
