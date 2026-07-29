@@ -18,7 +18,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1672 +BrauerProofCustodyVisual'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1673 +BrandtProseRosterTruth'"),
   'Brandt regression release version missing');
 
 for (const bad of [
@@ -55,6 +55,24 @@ assert(html.includes("{ test: /^vor der roten laterne/, file: 'vor-rote-laterne-
   'the club exterior needs its own image instead of hiding or reusing the interior still');
 assert(brandtBlock.includes("{ id: 'lola_brandt', zeit: ['nachmittag','abend','nacht'] }"),
   'Lola must have a work shift instead of permanent presence');
+assert(brandtBlock.includes("{ id: 'emil_pohl', zeit: ['abend','nacht'], bisStage: 3 }"),
+  'optional pub witness Emil must leave before the fixed-image final report');
+const brandtOpeningStart = brandtBlock.indexOf("{ name: 'Opel Olympia am Tempelhofer Feld'");
+const brandtOpeningBlock = brandtBlock.slice(brandtOpeningStart, brandtOpeningStart + 1800);
+assert(brandtOpeningBlock.includes('openingFallbackText:')
+  && brandtOpeningBlock.includes('für den Blackout gibt es noch keine Erklärung')
+  && !brandtOpeningBlock.includes('Eisenstange'),
+  'the Brandt opening fallback must preserve the genuinely unknown blackout cause');
+const waltherClueStart = brandtBlock.indexOf("{ id: 'zeuge_walther'");
+const waltherClueBlock = brandtBlock.slice(waltherClueStart, waltherClueStart + 2500);
+assert(waltherClueBlock.includes('fundText:')
+  && waltherClueBlock.includes('Lola am Bühnenmikrofon')
+  && waltherClueBlock.includes('Kurt Lange seinen Ecktisch')
+  && waltherClueBlock.includes('Walther')
+  && waltherClueBlock.includes('Opel')
+  && waltherClueBlock.includes('replaceOnFallback: true')
+  && !waltherClueBlock.includes('leeren Gastraum'),
+  'the Walther witness payoff must be full prose and preserve Lola/Kurt scene staging');
 assert(brandtBlock.includes("requiresEvidenceAll: ['schuldschein','fremde_walther','zeuge_walther']"),
   'Kurt confession must follow motive, swapped weapon and the concrete witness statement');
 assert(brandtBlock.includes('Er erschoss Erich und inszenierte danach dessen \\"Selbstmord\\"'),
@@ -121,11 +139,29 @@ vm.runInContext(rosterPresenceSource, brandtRosterGuardContext);
 assert(brandtRosterGuardContext._findRosterPresenceContradiction({
   szene: 'Lola sieht sich im leeren Club um.'
 }), 'the prose must not call a club empty while Lola is present');
+assert(brandtRosterGuardContext._findRosterPresenceContradiction({
+  szene: 'Du durchquerst den leeren Gastraum, während Lola am Mikrofon wartet.'
+}), 'the prose must not call an occupied Gastraum empty');
+const quoteGuardContext = {};
+vm.createContext(quoteGuardContext);
+vm.runInContext(sourceOf('stripAccidentalNarrativeQuotes') + '\n' + sourceOf('fixSprache'), quoteGuardContext);
+const escapedDialogue = 'Du gehst zur Tür. Dort fragt Kurt: \\"Was wollen Sie?\\" '
+  + 'Du antwortest ihm ruhig und bleibst dabei aufmerksam, bis er schließlich zur Seite tritt.';
+assert(!quoteGuardContext.fixSprache(escapedDialogue).includes('\\"'),
+  'visible escaped dialogue quotes must be cleaned centrally');
+const quotedNarrative = '"Du gehst zur Tür und bleibst aufmerksam. Der Regen läuft über die Scheibe, '
+  + 'während Kurt seinen Platz am Ecktisch nicht verlässt. Du wartest, bis er schließlich zu sprechen beginnt."';
+assert(!/^["“„]/.test(quoteGuardContext.fixSprache(quotedNarrative)),
+  'an accidental whole-paragraph narrative quote must be removed centrally');
 assert(brandtBlock.includes('Formuliere NICHT "erster Mai"'),
   'the 21 May opening must not sound like May Day');
 assert(brandtBlock.includes('Die Ursache des Blackouts ist noch vollkommen unbekannt')
   && brandtBlock.includes('Behaupte NICHT, Karl sei mit Metall'),
   'Brandt prose must not turn the unknown blackout cause into an invented head strike');
+const worldTruthSource = sourceOf('validateSceneWorldTruth');
+assert(worldTruthSource.includes("code: 'brandt_blackout_cause_invented'")
+  && worldTruthSource.includes("code: 'healthy_karl_injury_invented'"),
+  'world-truth validation must reject invented blackout causes and injuries');
 const npcInteractionSource = sourceOf('npcInteraktion');
 assert(npcInteractionSource.includes("reden|rede|fragen"),
   'the generic Rede mit action must count as a client conversation');
@@ -477,6 +513,8 @@ assert(fs.existsSync(path.join(root, 'assets', 'scenes', 'brandt', 'vor-rote-lat
   'Brandt exterior day image is missing');
 assert(html.includes("test: /^vor der roten laterne/, file: 'vor-rote-laterne-day.webp'"),
   'the day-two exterior must not remain silently hidden');
+assert(html.includes("place: 'Rote Laterne', innen: true, depictsNpcs: ['lola_brandt', 'kurt_lange']"),
+  'the Rote Laterne visual contract must name both consistently depicted main NPCs');
 assert(html.includes("truthBeatIds: ['schulden_motiv']"),
   'the structured Schuldschein must map deterministically to its truth beat');
 assert(html.includes("id: 'lange_wohnungsschluessel'") && html.includes('searchAfterDefeat: true'),
