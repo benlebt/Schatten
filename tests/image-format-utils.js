@@ -44,4 +44,26 @@ function readWebpDimensions(filePath) {
   assert.fail(filePath + ' has no supported WebP image chunk');
 }
 
-module.exports = { readWebpDimensions };
+function readPngDimensions(filePath) {
+  const data = fs.readFileSync(filePath);
+  assert(data.length >= 24, filePath + ' is too small to be a PNG image');
+  assert.strictEqual(data.toString('hex', 0, 8), '89504e470d0a1a0a', filePath + ' has an invalid PNG signature');
+  assert.strictEqual(data.toString('ascii', 12, 16), 'IHDR', filePath + ' has no leading IHDR chunk');
+  return {
+    width: data.readUInt32BE(16),
+    height: data.readUInt32BE(20),
+  };
+}
+
+function readImageDimensions(filePath) {
+  const data = fs.readFileSync(filePath, { encoding: null, flag: 'r' });
+  const head = data.toString('ascii', 0, 12);
+  let size;
+  if (head.startsWith('RIFF') && head.slice(8, 12) === 'WEBP') size = readWebpDimensions(filePath);
+  else if (data.toString('hex', 0, 8) === '89504e470d0a1a0a') size = readPngDimensions(filePath);
+  else assert.fail(filePath + ' is not a supported WebP or PNG scene image');
+  assert(size.width > 0 && size.height > 0, filePath + ' has invalid zero dimensions');
+  return size;
+}
+
+module.exports = { readWebpDimensions, readPngDimensions, readImageDimensions };

@@ -2,6 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const { readImageDimensions } = require('./image-format-utils');
 
 const repoRoot = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(repoRoot, 'index.html'), 'utf8');
@@ -79,9 +80,12 @@ for (const imageSet of imageSets) {
     assert(spec.file, 'scene image spec without dark file');
     const nightFile = spec.nightFile || spec.file.replace(/(\.[a-z0-9]+)$/i, '-night$1');
     assert(spec.dayFile, 'scene image spec without day file for ' + spec.file);
-    assert(fs.existsSync(path.join(repoRoot, root, spec.file)), 'dark scene asset missing: ' + root + spec.file);
-    assert(fs.existsSync(path.join(repoRoot, root, spec.dayFile)), 'day scene asset missing: ' + root + spec.dayFile);
-    assert(fs.existsSync(path.join(repoRoot, root, nightFile)), 'night scene asset missing: ' + root + nightFile);
+    const baseFiles = [spec.file, spec.dayFile, nightFile];
+    for (const file of baseFiles) {
+      const imagePath = path.join(repoRoot, root, file);
+      assert(fs.existsSync(imagePath), 'scene asset missing: ' + root + file);
+      readImageDimensions(imagePath);
+    }
     for (const variant of spec.presenceVariants || []) {
       const variantRoot = variant.root || root;
       const variantNightFile = variant.nightFile || variant.file.replace(/(\.[a-z0-9]+)$/i, '-night$1');
@@ -90,12 +94,11 @@ for (const imageSet of imageSets) {
         'presence visual needs an audited depictsNpcs contract: ' + variantRoot + variant.file);
       assert(variant.file && variant.dayFile,
         'presence visual needs day and dark files: ' + variantRoot + String(variant.file || ''));
-      assert(fs.existsSync(path.join(repoRoot, variantRoot, variant.file)),
-        'presence dark scene asset missing: ' + variantRoot + variant.file);
-      assert(fs.existsSync(path.join(repoRoot, variantRoot, variant.dayFile)),
-        'presence day scene asset missing: ' + variantRoot + variant.dayFile);
-      assert(fs.existsSync(path.join(repoRoot, variantRoot, variantNightFile)),
-        'presence night scene asset missing: ' + variantRoot + variantNightFile);
+      for (const file of [variant.file, variant.dayFile, variantNightFile]) {
+        const imagePath = path.join(repoRoot, variantRoot, file);
+        assert(fs.existsSync(imagePath), 'presence scene asset missing: ' + variantRoot + file);
+        readImageDimensions(imagePath);
+      }
     }
     if (nativeNightFiles.has(spec.file)) {
       assert.strictEqual(spec.nightFile, spec.file, 'native illuminated night scene must not use a darkened copy: ' + spec.file);
@@ -209,6 +212,10 @@ assert(html.includes('function _szenenbildPflichtbesetzungPruefen(spec, scene)')
 assert(html.includes('BILD-PROSA-BRUCH · feste Hauptfigur/Bildbesetzung'),
   'fixed-main-NPC image drift needs an explicit diagnostic marker');
 assert(html.includes('fetchpriority="high"'), 'scene image tag should request high fetch priority');
+assert(html.includes('function _szenenbildNotfallAnzeigen(')
+  && html.includes('SZENENBILD-NOTFALLTAFEL:')
+  && html.includes('_szenenbildNotfallAnzeigen(visual, image, place, time, scene,'),
+  'missing mappings and exhausted file fallbacks must remain visibly diagnosable instead of leaving a blank image region');
 assert(html.includes("return _istChariteOrt(loc) && !/pathologie/i.test"),
   'a pathology location must not replace the globally injected hospital');
 assert(html.includes("/charite/.test(engineOrt) && !/pathologie/.test(engineOrt)"),

@@ -313,6 +313,12 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 - Im selben Live-Run stieg die bewusst gespielte Strauss-Romanze mit drei erfolgreichen Annäherungen von `Rm 0` auf `Rm 3`. Danach sperrte das Drei-Klick-Limit weitere Annäherungen, während die Übernachtung erst ab `Rm 4` erschien. Schlafen führte Karl allein ins Büro: Die Romanze war mechanisch exakt eine Stufe vor ihrem einzigen Abschluss festgesetzt.
 - Der Übernachtungs-Climax erscheint nun ab `Rm 3` am Abend oder in der Nacht. Damit können drei erfolgreiche bewusste Annäherungen aus einem neutralen Start tatsächlich in die vorhandene Romanznacht mit eigenem Morgenbild führen; Ablehnung, Verletzungs-, Gewahrsams- und Gefahrensperren bleiben unverändert.
 
+## Szenenbild-Ladegarantie v7.12.1689
+
+- Die Fallstruktur prüfte bislang, ob jede konfigurierte Tag-, Abend-/Nacht- und Anwesenheitsdatei existiert. Sie prüfte aber nicht jede Datei auf ein lesbares Bildformat; außerdem versteckte der Renderer die gesamte Bildfläche, wenn sowohl Primär- als auch Ersatzdatei im Browser scheiterten oder ein Laufzeit-Ort trotz starkem Ortsanker keinen Treffer erhielt.
+- Der Strukturlauf liest nun Breite und Höhe jeder referenzierten WebP- und PNG-Datei und verwirft ungültige Header oder Nullmaße. Zusätzlich wurde der gesamte Szenenbild-Bestand einmal mit einem echten Decoder geöffnet.
+- Im Browser bleibt nach einem erschöpften Dateifallback oder fehlenden Ortstreffer eine klar beschriftete, eingebettete Noir-Notfalltafel mit echtem Orts- und Zeitlabel sichtbar. Sie erfindet weder Personen noch Innen-/Außenraum und meldet `SZENENBILD-NOTFALLTAFEL` in der Diagnose. Ein technischer Ladefehler kann damit nicht mehr zu einer völlig leeren Bildregion werden und bleibt zugleich offen erkennbar.
+
 ## Mindestprotokoll pro Run
 
 - Fall, Version, Strategie, Seed, Start-/Endzeit, Szenenzahl, Ergebnis und Abbruchgrund.

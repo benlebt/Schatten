@@ -163,6 +163,13 @@ imageContext._renderKesslerSceneVisual({ szene: 'Der Opel Olympia nagelt muede, 
 assert.strictEqual(visualClasses.has('hidden'), false, 'Trude scene must reveal a Trude image');
 assert.strictEqual(visualElements['kessler-scene-image'].attrs.src, 'assets/scenes/wegener/imbiss-bei-trude.webp', 'explicit Trude location must beat stale Opel/Charite anchors and Opel prose');
 assert.strictEqual(visualElements['kessler-scene-place'].textContent, 'Imbiss Bei Trude', 'Trude scene caption must be set');
+visualElements['kessler-scene-image'].onerror();
+assert.strictEqual(visualClasses.has('hidden'), false,
+  'an exhausted scene-file fallback must keep a visible emergency visual instead of blanking the whole region');
+assert(/^data:image\/svg\+xml/.test(visualElements['kessler-scene-image'].attrs.src),
+  'an exhausted scene-file fallback must switch to the embedded diagnostic noir title card');
+assert(/Technisches Ersatzbild/.test(visualElements['kessler-scene-image'].alt),
+  'the emergency visual must identify itself accessibly instead of masquerading as the real scene asset');
 imageContext.currentOrt = 'Hinterhof Sybelstrasse';
 imageContext.lastLocation = 'Hinterhof Sybelstrasse';
 imageContext._renderKesslerSceneVisual({ szene: 'Trude sagt: Die Frau in der Sybelstrasse, die Hauke, war letzte Woche hier.' });
