@@ -256,6 +256,32 @@ assert(/if \(keepExisting\)/.test(sourceOf('_naturalMinimumSceneText')),
   'rich prose must not receive generic room filler');
 assert(/_npcWirklichInSzene/.test(sourceOf('_szenenbildAnwesenheitsVariante')),
   'image presence variants must also follow unequivocal scene prose');
+const departedVisualContext = {
+  normForMatch: (value) => String(value || '').toLowerCase().replace(/_/g, ' '),
+  getNpcsAtCurrentLocation: () => [{ id: 'margarete_stein', name: 'Margarete Stein' }],
+  _konfrontationInAktuellerSzeneSichtbar: () => false,
+  _npcWirklichInSzene: () => true,
+  _npcNachProsaAbgangAbwesend: (id) => /mann im mantel/.test(String(id || '').replace(/_/g, ' ')),
+  _npcZustandGet: () => null,
+  _npcZustandIstEntfernt: () => false,
+};
+vm.createContext(departedVisualContext);
+vm.runInContext(sourceOf('_szenenbildAnwesenheitsVariante'), departedVisualContext);
+const steinApartmentVisual = {
+  file: 'margarete-stein-wohnung.webp',
+  presenceVariants: [{
+    id: 'mann_im_mantel',
+    file: 'margarete-wohnung-mantel-night.png',
+  }],
+};
+assert.strictEqual(
+  departedVisualContext._szenenbildAnwesenheitsVariante(steinApartmentVisual, {
+    szene: 'Der Mann im Mantel wendet sich ab. Seine Schritte hallen im Treppenhaus, bis die Haustür ins Schloss fällt.',
+    personenImRaum: ['Margarete Stein'],
+  }).file,
+  'margarete-stein-wohnung.webp',
+  'a departed opponent mentioned in the farewell prose must not remain in the follow-up image',
+);
 const markEvidenceSource = sourceOf('_markiereIndizGefunden');
 assert(/ind\.politicalBeatIds/.test(markEvidenceSource)
     && /gueltigePolitBeats/.test(markEvidenceSource)
@@ -265,7 +291,7 @@ assert(/beat\.id !== 'akten_gesichert'/.test(markEvidenceSource)
     && /beat\.id !== 'margarete_gesichert'/.test(markEvidenceSource),
   'deterministic clue booking must protect action-only security beats');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1684 +SteinEarlyTruthGuard'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1685 +DepartedNpcVisualGuard'"),
   'release version is stale');
 assert(html.includes('Vom Hackeschen Markt dringen gedämpfte Motorengeräusche')
     && html.includes('Noch passt nicht jedes Stück zusammen'),

@@ -285,6 +285,13 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 - Positiv bestätigt: v1683-Badge und Debug-Modus, vollständige Büroeröffnung, korrektes Nachtbild, Margarete und der Mantelmann in Ankunftsprosa und Konfliktbild sowie Margarete nach dem Abgang in Prosa, Bild und Personen-UI.
 - Regression: exakte Produktionsformulierungen, Vor-Beleg-Sperre, erlaubter Begegnungsort und Entsperrung nach `margarete_aussage`; vollständige lokale Suite auf v7.12.1684 mit `61/61` grün. Produktions-Gegenlauf folgt nach Deployment.
 
+## Stein-Abgangsbild-Gegenlauf v7.12.1685
+
+- Produktions-Repro auf v7.12.1683, Szene 4 in Margarete Steins Wohnung: Der Mantelmann wendet sich laut sichtbarer Prosa ab, seine Schritte verhallen im Treppenhaus und die Haustür fällt hinter ihm ins Schloss. `personenImRaum` und Haupt-UI führen danach nur noch Margarete Stein.
+- Das Szenenbild zeigte trotzdem weiter den Mantelmann groß im Vordergrund. Ursache war der Prosa-Fallback der generischen `presenceVariants`-Auswahl: Schon die bloße Namensnennung im Abschiedssatz reaktivierte das Anwesenheitsmotiv, obwohl die gemeinsame Abgangswahrheit die Figur bereits entfernt hatte.
+- Die Bildauswahl respektiert jetzt vor jedem Roster-/Prosa-Fallback `_npcNachProsaAbgangAbwesend`. Ein gespeicherter sichtbarer Abgang schlägt die Namensnennung im Rückblick oder Abschiedssatz; eine später ausdrücklich erzählte Rückkehr bleibt über die vorhandene Rückkehrlogik möglich.
+- Regression: exakter Folgeszenen-Typ mit Margarete als einzigem `personenImRaum`, weiterhin genanntem Mantelmann und aktivem Prosa-Fallback muss auf das Wohnungs-Grundmotiv ohne Gegner zurückfallen.
+
 ## Mindestprotokoll pro Run
 
 - Fall, Version, Strategie, Seed, Start-/Endzeit, Szenenzahl, Ergebnis und Abbruchgrund.
