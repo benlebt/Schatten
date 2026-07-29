@@ -194,6 +194,15 @@ assert(html.includes('function repairGoerkeArchiveContinuity(sceneOrEntry)')
     && html.includes('repairGoerkeArchiveContinuity(scene);')
     && html.includes('logEntries.forEach(function(entry) { repairGoerkeArchiveContinuity(entry); });'),
   'the empty Goerke archive must stay consistent across prose, UI, image and restored saves');
+assert(goerke.includes("name: 'Martha Brommers Wohnung'") && goerke.includes("außer euch ist niemand in der Wohnung")
+    && goerke.includes("name: 'Albrecht Goerke U-Haft'") && goerke.includes("Baumgartens Vollmacht"),
+  'Martha and Albrecht need deterministic arrivals without stale Trude action');
+assert(html.includes('function repairGoerkeArrivalContinuity(sceneOrEntry)')
+    && html.includes('GÖRKE-ANKUNFT repariert')
+    && html.includes('repairGoerkeArrivalContinuity(scene);')
+    && html.includes('logEntries.forEach(function(entry) { repairGoerkeArrivalContinuity(entry); });')
+    && html.includes('knallfroesche|knallfrosche|dunkle limousine|fdgb|salem'),
+  'Goerke arrivals must reject imaginary item use and pre-gate Krollwitz signatures');
 assert(sourceOf('repairBasicGermanProse').includes('und dreht'),
   'Trude narration must repair the observed subject-verb drift');
 assert(goerke.includes("abschlussVermittler: 'Dr. Reinhard Baumgarten'"),
@@ -266,7 +275,7 @@ context.updateTruthBeats('Mertens manipulierte die Akte auf Anordnung von Krollw
 assert(context.caseProgress.truthBeatsHit.includes('krollwitz_mertens'),
   'the found Krollwitz file evidence must unlock the manipulation beat');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1715 +GoerkeArchiveTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1716 +GoerkeArrivalTruth'"),
   'release version missing');
 
 console.log('Goerke opening/truth regression checks passed.');
