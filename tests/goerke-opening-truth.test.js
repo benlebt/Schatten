@@ -395,6 +395,16 @@ assert.strictEqual(vpRepairContext.repairGoerkeArrivalContinuity(currentVpEviden
 assert.deepStrictEqual(Array.from(currentVpEvidenceWithoutSnapshotFields.personenImRaum),
   ['Kommissar Wilhelm Roth', 'Hauptmann Dietmar Krollwitz', 'Junge MfS-Beamte'],
   'currentScene must receive a concrete roster so the Krollwitz visual variant can be selected');
+const vpExistingDoorCliffhanger = {
+  ort: 'Volkspolizei-Praesidium Keibelstrasse',
+  szene: 'Du schreibst Befundnummer und Wortlaut ab, bevor Roth die Mappe wieder schließt. Als Roth die Mappe schließt, öffnet sich die Tür.',
+  indizienCnt: 4,
+  personenImRaum: ['Kommissar Wilhelm Roth'],
+};
+assert.strictEqual(vpRepairContext.repairGoerkeArrivalContinuity(vpExistingDoorCliffhanger), true,
+  'the existing door cliffhanger must still receive the visible Krollwitz intervention');
+assert.strictEqual((vpExistingDoorCliffhanger.szene.match(/Als Roth die Mappe schließt, öffnet sich die Tür/g) || []).length, 1,
+  'restore repair must not duplicate the already narrated Roth door sentence');
 assert(/volkspolizei-keibelstrasse-krollwitz-night\.png[\s\S]{0,300}depictsNpcs: \['wilhelm_roth', 'hauptmann_krollwitz'\]/.test(html),
   'the VP showdown needs its own Roth/Krollwitz scene image contract');
 assert(/test: \/\^littenplatz\$\/[\s\S]{0,500}marx-engels-platz-night\.webp[\s\S]{0,700}reinhard_baumgarten[\s\S]{0,250}littenplatz-baumgarten-night\.png/.test(html),
@@ -445,7 +455,11 @@ const releaseRepairContext = {
   diag: () => {},
 };
 vm.createContext(releaseRepairContext);
-vm.runInContext(sourceOf('_custodyReleaseSceneTruthSichern'), releaseRepairContext);
+vm.runInContext(
+  sourceOf('repairCustodyReleaseInventoryContinuity')
+    + '\n' + sourceOf('_custodyReleaseSceneTruthSichern'),
+  releaseRepairContext
+);
 const incompleteRelease = {
   ort: 'Vor der MfS-Untersuchungshaftanstalt Hohenschoenhausen',
   szene: 'Nach einer langen Nacht öffnet ein Wärter die Zelle. Er gibt dir Mantel und Brieftasche zurück und führt dich durch mehrere graue Flure. Am Tor sagt er, du seist entlassen. Vor Hohenschönhausen blendet dich das Morgenlicht. Du bist wieder frei und kannst weiter ermitteln, doch die Staatssicherheit kennt jetzt deinen Namen und deinen Fall. Der schwarze Wagen bleibt hinter dem Tor stehen.'
@@ -458,8 +472,10 @@ assert(/Brieftasche/.test(incompleteRelease.szene)
     && /Walther/.test(incompleteRelease.szene)
     && /persönlichen Sachen/.test(incompleteRelease.szene),
   'release prose must return every core item and the remaining confiscated pocket inventory');
+assert(html.includes('logEntries.forEach(function(entry) { repairCustodyReleaseInventoryContinuity(entry); });'),
+  'old saved release logs must receive the same complete equipment-return repair');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1736 +GoerkeCustody'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1737 +GoerkeRestore'"),
   'release version missing');
 
 console.log('Goerke opening/truth regression checks passed.');

@@ -520,6 +520,7 @@ Dieser Katalog ist ab sofort Teil jedes manuellen Falllaufs und jeder Fallbewert
 - Bohnenkaffee darf Vertrauen und Zugang erleichtern, ersetzt aber kein definiertes Kernindiz. Der Lauf protokolliert getrennt: Itemverbrauch, sichtbare Reaktion, Ruf-/Stimmungswirkung und danach tatsächlich gesicherte Aussage oder Akte.
 - Die Walther gegen einen vorbereiteten MfS-Hauptmann erzeugt Abstand und politische Eskalation, aber keinen automatischen Sieg. Zwei eingeführte Beamte dürfen Karl glaubhaft entwaffnen und in Haft bringen; das ist ein Balanceerfolg, sofern Aktion, Krollwitz, Transport, Zelle und Freilassung ohne Namens-, Orts- oder Zeitdrift bleiben.
 - Der reguläre Haftpfad wird mindestens über zwei verschiedene Verhörhandlungen und den Schlaf-/Morgenausgang geprüft. Jede Runde bleibt in Zelle oder Verhörraum, zeigt eine konkrete Reaktion und darf weder Phantom-Freilassung noch freie Reiseoptionen anbieten.
+- Restore-Reparaturen müssen idempotent sein. Ein schon erzählter Türsatz, Zugriff, Transport oder Rückgabesatz darf nach Reload genau einmal vorkommen; dieselbe Migration zweimal auszuführen darf den Logtext nicht verdoppeln.
 
 ## Mindestprotokoll pro Run
 
