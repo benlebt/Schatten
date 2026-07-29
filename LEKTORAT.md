@@ -459,6 +459,16 @@ Dieser Katalog ist ab sofort Teil jedes manuellen Falllaufs und jeder Fallbewert
 - Unsichere oder zuletzt fehlerhafte Fälle erhalten vor stabilen Fällen Vorrang. Mindestens Stein, Strauss, Lindenbaum und Görke bleiben bis zu einem frischen Gegenlauf mit abweichendem Pfad als gezielte Regressionen markiert.
 - Für die Staffel werden Aktionen bewusst rotiert. Kein zweiter Lauf darf exakt dieselbe Sozial-, Reise-, Konfrontations- und Romance-Sequenz wie der vorige verwenden.
 
+### Produktions- und Rufvergleichs-Regressionen aus Strauss v1696
+
+- Ein Release ist erst bildseitig bestätigt, wenn nicht nur `index.html`, sondern auch sämtliche neu referenzierten Dateien unter `assets/` ausgeliefert sind. Für mindestens eine Tag-, Nacht-, Romance-, Rex- und Abschlussvariante wird die konkrete Produktions-URL auf HTTP-Erfolg und echte Bilddarstellung geprüft. Die technische Notfalltafel verhindert zwar einen leeren Bereich, gilt aber nie als bestandener Bildtest.
+- Der Rufvergleichs-Neustart muss den alten Schlussbildschirm und den alten Prosatext sofort ausblenden, bevor die neue Einleitung erzeugt wird. Solange eine Szene noch berechnet wird, darf kein zweiter Ruf-Neustart beginnen. Erst die sichtbar frische Einleitung desselben Falls ist die Vergleichsbasis.
+- Rufwerte werden beim Laden, beim manuellen Setzen, nach Fallabschlüssen und in Debug-Simulationen immer beidseitig auf `-5..+5` begrenzt. Ein älterer Spielstand außerhalb dieses Bereichs wird beim Laden normalisiert.
+- `personenImRaum`, Haupt-UI, Prosa-Prompt und Szenenbild benutzen denselben aktuellen Ortsfilter. Eine am vorigen Ort zurückgelassene Figur darf nicht allein durch einen alten Cast-Eintrag wieder in Prosa oder Bild auftauchen; Party, Showdowngegner und geborgene Zielpersonen bleiben dagegen ausdrücklich erhalten.
+- Ein Fall mit offenen Pflichtbeats darf weder im Status-Popup noch im Abschluss-Export als „Wahrheit bewiesen“ erscheinen. Sichtbar bleibt „noch nicht belastbar“, und die nächste Aufgabe lautet, die Wahrheitskette zu vervollständigen.
+- Eine beiläufige Zeitungsüberschrift oder Alltagserwähnung von `SED` macht einen privaten Fall nicht politisch. Erst expliziter Macht-, Überwachungs-, Droh-, Akten-, Verhaftungs- oder Funktionärskontext darf über den Parteinamen die MfS-Logik aktivieren.
+- Rex wird beim Goldenen Anker nur als regulär getestet gewertet, wenn Karl mindestens Tauschwert 7 mitführt. Kaffee, Torte und Teekanne ergeben zusammen nur 5; deshalb muss der Lauf vorher bei Trude oder durch andere Beute ausreichend und variabel ausgerüstet werden. Ein absichtlich zu niedriger Tauschwert bleibt als eigener Negativtest erhalten.
+
 ## Mindestprotokoll pro Run
 
 - Fall, Version, Strategie, Seed, Start-/Endzeit, Szenenzahl, Ergebnis und Abbruchgrund.
