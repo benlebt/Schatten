@@ -57,6 +57,52 @@ context.caseProgress.romanceOvernight.morningMode = 'kuehl';
 assert(api.status('rita', 'Rita') === true, 'present Rita must be admitted at the temporary apartment');
 assert(api.directive(context.caseProgress.romanceOvernight).includes('bleibt die ganze Szene da'), 'present prompt must forbid an image-breaking departure');
 
+const repairStart = html.indexOf('function repairRomanceMorningContinuity');
+const repairEnd = html.indexOf('function _romanceMorningPartnerStatus', repairStart);
+assert(repairStart >= 0 && repairEnd > repairStart, 'romance morning continuity repair missing');
+const repairContext = {
+  caseProgress: {
+    romanceOvernight: {
+      npc: 'Eva Werder',
+      location: 'Eva Werders Wohnung in Mitte',
+      partnerPresent: true,
+      morningMode: 'zart',
+      imagePresent: 'morgen-wohnung-ost.webp',
+      imageGone: 'morgen-wohnung-ost-allein.webp',
+    },
+  },
+  engineCurrentLocation: { name: 'Eva Werders Wohnung in Mitte' },
+  diag() {},
+  normForMatch: context.normForMatch,
+  ROMANCE_MORNING_GONE_IMAGES: {
+    'morgen-wohnung-ost.webp': 'morgen-wohnung-ost-allein.webp',
+  },
+};
+vm.createContext(repairContext);
+vm.runInContext(
+  html.slice(html.indexOf('function _romanceMorningEnsure'), repairEnd)
+    + '\nthis.repairMorning = repairRomanceMorningContinuity;',
+  repairContext
+);
+const contradictoryPresent = {
+  ort: 'Eva Werders Wohnung in Mitte',
+  text: 'Eva schläft noch, ihr Atem geht ruhig. Auf dem Tisch liegt ein Zettel in ihrer Handschrift: „Habe die Kinder zur Schule gebracht.“ Karl trinkt Kaffee.',
+};
+assert(repairContext.repairMorning(contradictoryPresent) === true,
+  'a present partner departure note must be repaired');
+assert(!/Schule gebracht/.test(contradictoryPresent.text)
+    && /Eva Werder ist noch in der Wohnung/.test(contradictoryPresent.text),
+  'present morning prose must follow the same truth as UI and image');
+repairContext.caseProgress.romanceOvernight.partnerPresent = false;
+const contradictoryGone = {
+  ort: 'Eva Werders Wohnung in Mitte',
+  text: 'Eva sitzt am Küchentisch und spricht mit Karl. Auf dem Kissen bleibt ihr Parfum.',
+};
+assert(repairContext.repairMorning(contradictoryGone) === true
+    && !/sitzt am Küchentisch/.test(contradictoryGone.text)
+    && /vor Karls Aufwachen gegangen/.test(contradictoryGone.text),
+  'gone morning prose must not keep the partner in the room');
+
 assert(!html.includes('Waehle die Variante anhand IHRES Charakters'), 'the model must no longer choose its own morning reality');
 assert(html.includes("const romanceImage = ro.partnerPresent === false"), 'scene renderer must select by stored presence');
 assert(html.includes("if (_romanceMorningStatus !== null) return _romanceMorningStatus;"), 'NPC location binding must use romance morning truth');
