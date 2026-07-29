@@ -299,6 +299,13 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 - Vier neue, historisch und saisonal stimmige Sommermotive decken Grundmotiv und Trauerndenvariante jeweils bei Tag und Nacht ab. Karl, Grab, Friedhofsmauer und Bildkomposition bleiben stabil; Frau Schleier trägt nun tatsächlich einen sichtbaren schwarzen Trauerschleier.
 - Die Strauss-Bildmatrix referenziert keine der alten Winterfassungen mehr. Regressionen prüfen alle vier Dateien, Mindestgröße, konkrete Tag-/Nachtzuordnung und das vollständige Entfernen der Winterreferenzen aus dem Strauss-Satz.
 
+## Strauss-Zeugenaussage-Gegenlauf v7.12.1687
+
+- Produktions-Repro auf v7.12.1683, Szene 4 im Café Kranzler: Nach einer bewussten Täuschungs-/Gesprächsaktion erschien nur der gebuchte Hinweis „Ludwig hatte ... Angst und fühlte sich bedroht“ plus der generische Satz, die Frau bleibe sichtbar in Karls Nähe. Das waren weder eine ausgespielte Aussage noch eine vollständige Szene; Bild und Personen-UI zeigten die Zeugin dagegen korrekt am Tisch.
+- Ursache war ein kanonischer Personenhinweis ohne `fundText` und ohne verpflichtenden Narrativ-Guard. Die allgemeine Anwesenheitsergänzung machte den kurzen Hinweis formal lang genug, konnte aber keine Handlung, Haltung oder Persönlichkeit der Zeugin erzeugen.
+- `schleier_aussage` besitzt nun eine vollständige Café-Szene mit Dialog, körperlichen Reaktionen, Beziehungstiefe, zeitlich begrenztem Wissen und ausdrücklich offener Täterfrage. Ein `replaceOnFallback`-Guard verlangt Ludwig, Nähe/Vertrautheit, Angst/Drohung und einen konkreten Szenenanker; bei Modell- oder Prüfversagen ersetzt er den Text vollständig.
+- Die erste Friedhofsaussage verwendet in allen sichtbaren kanonischen Texten außerdem `Während`, `hörst`, `persönlich` und `Café` statt ASCII-Ersatzschreibungen. Suchschlüssel bleiben absichtlich normalisiert.
+
 ## Mindestprotokoll pro Run
 
 - Fall, Version, Strategie, Seed, Start-/Endzeit, Szenenzahl, Ergebnis und Abbruchgrund.

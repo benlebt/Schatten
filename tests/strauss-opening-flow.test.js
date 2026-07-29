@@ -17,10 +17,17 @@ assert(/id: 'schleier_kranzler_spur'[\s\S]*?npc: 'frau_schleier', quelle: 'perso
   'the veiled woman must provide a conversational lead away from the funeral');
 assert(/id: 'schleier_kranzler_spur'[\s\S]*?fundText: '[^']*bleibt am Rand der Trauergemeinde stehen[^']*'[\s\S]*?prosaPflicht: \{ replaceOnFallback: true/.test(strauss),
   'the first testimony must not make the still-pictured mourner disappear');
+assert(/id: 'schleier_kranzler_spur'[\s\S]*?fundText: 'Während[^']*du sie hörst[^']*Café Kranzler/.test(strauss)
+  && !/id: 'schleier_kranzler_spur'[\s\S]{0,1000}\b(?:Waehrend|hoerst|Cafe Kranzler)\b/.test(strauss),
+  'the player-facing cemetery testimony must use proper German umlauts and accents');
 assert(strauss.includes('Cafe Kranzler'),
   'the opening lead must point to a configured follow-up location');
 assert(/id: 'schleier_aussage'[\s\S]*?nachIndiz: 'schleier_kranzler_spur'/.test(strauss),
   'the full testimony at Cafe Kranzler must unlock directly from the opening lead');
+assert(/id: 'schleier_aussage'[\s\S]*?fundText: '[^']*standen uns näher[^']*Drohungen[^']*kalte Tasse[^']*Aber er wollte leben[^']*'[\s\S]*?prosaPflicht: \{ replaceOnFallback: true/.test(strauss),
+  'the full Cafe testimony must be an authored scene with character, physical beats and usable evidence');
+assert(/id: 'schleier_aussage'[\s\S]*?narrativ: \/\^\(\?=\[\\s\\S\]\*\\bludwig\\b\)[\s\S]*?fallbackProse: '[^']*Kellner außer Hörweite[^']*Rücken zur Wand[^']*kalte Tasse/.test(strauss),
+  'the witness testimony must replace generic clue-plus-presence filler deterministically');
 assert(/id: 'krummbein_kordel'[\s\S]*?actions: \['ERKUNDEN','DURCHSUCHEN'\]/.test(strauss),
   'the physical cord must be searched instead of mislabeled as reading files');
 assert(/id: 'krummbein_kordel'[\s\S]*?fundText: '[^']*Durchmesser und Drehung[^']*kein Blick durch ein Mikroskop/.test(strauss),
