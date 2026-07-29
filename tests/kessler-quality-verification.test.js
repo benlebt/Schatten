@@ -33,7 +33,7 @@ function norm(value) {
     .replace(/[^a-z0-9]+/g, ' ').trim();
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1681 +AchterbergMurderEvidence'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1682 +KesslerProseContinuity'"),
   'release version missing');
 assert(html.includes("const _openingPresence = _arrivalKesslerWindows\n          ? (_openingStillMissing.length"),
   'the fixed Kessler opening must not append its window cast a second time');
@@ -49,6 +49,14 @@ assert(html.includes("arrivalFallbackText: 'Zwischen Lastwagen, Packkisten und d
   'the Spedition needs a written arrival instead of a dry room template');
 assert(html.includes("arrivalFallbackText: 'Du schließt die Bürotür am Hackeschen Markt hinter dir"),
   'Kessler office returns need authored prose instead of a dry orientation template');
+assert(/id: 'robert_aussage'[\s\S]{0,2200}prosaPflicht: \{ replaceOnFallback: true[\s\S]{0,1600}Edith[\s\S]{0,300}belogen/.test(html),
+  'Robert confession must have a multi-sentence authored fallback instead of a dry fact line');
+assert(/id: 'ilse_aussage'[\s\S]{0,2200}prosaPflicht: \{ replaceOnFallback: true/.test(html)
+  && /id: 'briefchen_ilse'[\s\S]{0,2200}prosaPflicht: \{ replaceOnFallback: true/.test(html)
+  && /id: 'kellner_beobachtung'[\s\S]{0,2200}prosaPflicht: \{ replaceOnFallback: true/.test(html),
+  'Ilse, letter, and cafe evidence must retain authored scene prose under model fallback');
+assert(/id: 'briefchen_ilse'[\s\S]{0,1400}Die Initiale verrät noch keinen Vornamen/.test(html),
+  'the hidden letter must not leak Ilse first name before the configured reveal');
 
 const openingContext = {
   normForMatch: norm,

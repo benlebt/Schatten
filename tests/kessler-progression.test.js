@@ -184,7 +184,7 @@ assert(/key: 'kragen'[\s\S]{0,260}?kategorie: 'OFFENSIV'[\s\S]{0,180}?rufHaerte:
   'Tetzlaff collar escalation must be allowed and carry the promised reputation price');
 assert(html.includes('function _sozialTonartenMitEskalation(setup)'),
   'the escalation-freedom rule must also apply to other developed social NPCs');
-assert(/id: 'robert_aussage'[\s\S]{0,320}?actions: \['ANSPRECHEN','BEFRAGEN','KONFRONTIEREN'\]/.test(kessler),
+assert(/id: 'robert_aussage'[\s\S]{0,2800}?actions: \['ANSPRECHEN','BEFRAGEN','KONFRONTIEREN'\]/.test(kessler),
   'normal Robert conversation actions must still be able to grant the confession clue');
 assert(sourceOf('pickZielIndiz').includes('_aktionsNpcIstTrotzOrtsplanPraesent'),
   'evidence selection must preserve a visible canonical conversation target across schedule commits');
