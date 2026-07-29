@@ -1,4 +1,4 @@
-﻿const assert = require('assert');
+const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -180,7 +180,7 @@ assert.strictEqual(
 assert.strictEqual(closureContext.cleared, true,
   'the dangling Stasi encounter must be cleared at case closure');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1716 +GoerkeArrivalTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1717 +GoerkeMarthaTruth'"),
   'release version is stale');
 
 console.log('VOGT_FLOW_OK');

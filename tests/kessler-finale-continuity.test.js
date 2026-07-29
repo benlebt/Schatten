@@ -1,4 +1,4 @@
-﻿const assert = require('assert');
+const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -217,7 +217,7 @@ vm.runInContext(sourceOf('buildFallbackAbschlussProsa'), finaleSummaryContext);
 assert.strictEqual(finaleSummaryContext.buildFallbackAbschlussProsa(),
   'Karl legt Edith Brief, Zeugenaussagen und Roberts Geständnis vollständig offen.',
   'the mechanical end screen must reflect the Kessler truth choice instead of collapsing it to a generic surveillance summary');
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1716 +GoerkeArrivalTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1717 +GoerkeMarthaTruth'"),
   'release version missing');
 
 console.log('KESSLER_FINALE_CONTINUITY_OK');

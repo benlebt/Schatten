@@ -1,4 +1,4 @@
-﻿const assert = require('assert');
+const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -132,7 +132,7 @@ assert(lifecycle.includes("document.addEventListener('touchstart'"),
   'audio lifecycle must unlock inside an iPhone touch gesture');
 assert(!lifecycle.includes('removeEventListener'),
   'foreground gesture recovery must remain registered for repeated app switches');
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1716 +GoerkeArrivalTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1717 +GoerkeMarthaTruth'"),
   'release version missing');
 
 console.log('IOS_AUDIO_FOREGROUND_RECOVERY_OK');

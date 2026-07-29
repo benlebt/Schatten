@@ -1,4 +1,4 @@
-﻿const assert = require('assert');
+const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -351,7 +351,7 @@ assert(html.includes("problem.code === 'false_prior_custody_history'"),
 assert(/Du schiebst Werners Akten auf dem Schreibtisch zusammen/.test(html),
   'Wessel office sleep needs a canonical custody-free fallback');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1716 +GoerkeArrivalTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1717 +GoerkeMarthaTruth'"),
   'release version is stale');
 
 console.log('WESSEL_FLOW_OK');

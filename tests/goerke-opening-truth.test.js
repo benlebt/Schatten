@@ -275,7 +275,30 @@ context.updateTruthBeats('Mertens manipulierte die Akte auf Anordnung von Krollw
 assert(context.caseProgress.truthBeatsHit.includes('krollwitz_mertens'),
   'the found Krollwitz file evidence must unlock the manipulation beat');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1716 +GoerkeArrivalTruth'"),
+const marthaRepairContext = {
+  caseProgress: { indizien: [{ id: 'martha_angst' }] },
+  engineCurrentLocation: { name: 'Martha Brommers Wohnung' },
+  cast: [{ name: 'Martha Brommer' }, { name: 'Mann im grauen Anzug' }],
+  diag: () => {},
+};
+vm.createContext(marthaRepairContext);
+vm.runInContext(sourceOf('normForMatch') + '\n' + sourceOf('repairGoerkeArrivalContinuity'), marthaRepairContext);
+const marthaWitnessScene = {
+  ort: 'Martha Brommers Wohnung',
+  szene: 'Trude wirft Knallfrösche. Ein Mann im grauen Anzug mit Salem-Zigarette und FDGB-Nadel beobachtet Martha.',
+  _npcInteraktion: { npcName: 'Martha Brommer', verb: 'befragen' },
+  personenImRaum: ['Martha Brommer', 'Mann im grauen Anzug'],
+};
+assert.strictEqual(marthaRepairContext.repairGoerkeArrivalContinuity(marthaWitnessScene), true,
+  'the observed Martha witness scene must be repaired');
+assert(/Mathilde habe sich .* verfolgt gefühlt/i.test(marthaWitnessScene.szene)
+    && /Albrecht sei es ausdrücklich nicht gewesen/i.test(marthaWitnessScene.szene)
+    && !/Knallfrösche|FDGB|Salem|grauen Anzug/i.test(marthaWitnessScene.szene),
+  'repair must retain Marthas real clue while removing unchosen items and premature Krollwitz signatures');
+assert.deepStrictEqual(Array.from(marthaWitnessScene.personenImRaum), ['Martha Brommer'],
+  'the repaired witness scene must align its UI roster with the apartment image');
+
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1717 +GoerkeMarthaTruth'"),
   'release version missing');
 
 console.log('Goerke opening/truth regression checks passed.');
