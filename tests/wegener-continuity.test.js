@@ -55,6 +55,15 @@ assert.deepStrictEqual(
   'Wegener must expose both requested handoff routes'
 );
 assert.strictEqual(wegener.setup.targetResolution.guard, 'lothars_bewacher', 'Wegener rescue must name its blocking guard');
+assert.strictEqual(wegener.setup.targetResolution.visualStates.guardRestrainedAtTarget.file,
+  'lagerhalle-spree-kratz-gefesselt.webp',
+  'a handcuffed but conscious Kratz needs a distinct warehouse visual');
+assert(fs.existsSync(path.join(
+  __dirname,
+  '..',
+  wegener.setup.targetResolution.visualStates.guardRestrainedAtTarget.root,
+  wegener.setup.targetResolution.visualStates.guardRestrainedAtTarget.file
+)), 'the restrained-Kratz warehouse image must exist');
 assert.strictEqual(wegener.setup.targetResolution.visualStates.guardDownAtTarget.dayFile,
   'lagerhalle-spree-kratz-ko-day.webp',
   'Wegener must expose a daytime visual with incapacitated Kratz on the floor');
@@ -66,9 +75,15 @@ assert(guard && guard.name === 'Erwin Kratz', 'warehouse guard needs one clear, 
 const warehouse = Array.from(wegener.setup.locations).find((loc) => loc && loc.name === 'Lagerhalle an der Spree');
 assert(warehouse, 'Wegener warehouse finale missing');
 assert(Array.from(warehouse.npcs || []).some((npc) => npc && npc.id === 'lothars_bewacher'), 'warehouse guard NPC missing');
+const warehouseGuardBinding = Array.from(warehouse.npcs || []).find((npc) => npc && npc.id === 'lothars_bewacher');
+assert.strictEqual(warehouseGuardBinding.wegWennZielpersonGeborgen, true,
+  'the guard location binding must end once Konstantin has been rescued');
 const guardThreat = Array.from(warehouse.bedrohungen || []).find((threat) => threat && threat.id === 'lothars_bewacher');
 assert(guardThreat && guardThreat.chance === 100 && guardThreat.unausweichlich === true, 'warehouse guard confrontation must be guaranteed');
 const hinterhof = Array.from(wegener.setup.locations).find((loc) => loc && loc.name === 'Hinterhof Spreestrasse');
+assert(/kein Wagen im Hof/.test(hinterhof.detail)
+  && /Im Hof selbst steht kein Wagen/.test(hinterhof.arrivalFallbackText),
+  'the Hinterhof setup must preserve the fixed image without an invented EMW');
 const rudiClue = hinterhof && Array.from(hinterhof.indizien || []).find((clue) => clue && clue.id === 'lagerhalle_hinweis');
 assert(rudiClue && rudiClue.quelle === 'person' && rudiClue.npc === 'rudi_menzel',
   'Rudi must personally disclose the warehouse route instead of turning into an environment notebook');
@@ -81,6 +96,14 @@ assert(lotharClue && lotharClue.fundText
   && /Lothar bleibt im Hinterhof/.test(lotharClue.fundText)
   && /Erwin Kratz bewacht ihn/.test(lotharClue.fundText),
   'Lothar disclosure must preserve location, roster and named guard');
+assert(lotharClue.prosaPflicht
+  && lotharClue.prosaPflicht.replaceOnFallback === true
+  && lotharClue.prosaPflicht.narrativ.test(lotharClue.fundText)
+  && /Erwin Kratz/.test(lotharClue.prosaPflicht.fallbackProse),
+  'Lothar clue prose must be replaced when it contradicts the mechanically awarded disclosure');
+assert(Array.from(wegener.setup.keyClues).some((clue) =>
+  /keinen physischen Schluessel/.test(clue)
+), 'Wegener key clues must explicitly prevent the invented warehouse key');
 for (const locationName of [
   'Wegener-Wohnung',
   'Werft VEB Koepenick',
@@ -119,6 +142,9 @@ vm.createContext(visualContext);
 vm.runInContext(sourceOf('_physicalTargetSceneVisual'), visualContext);
 assert.strictEqual(visualContext._physicalTargetSceneVisual().file, 'lagerhalle-spree-kratz-ko.webp',
   'an incapacitated Kratz must select the on-floor warehouse visual');
+visualContext._npcZustandGet = () => ({ status: 'fixiert' });
+assert.strictEqual(visualContext._physicalTargetSceneVisual().file, 'lagerhalle-spree-kratz-gefesselt.webp',
+  'a conscious handcuffed Kratz must select the restrained warehouse visual');
 visualContext._npcZustandGet = () => ({ status: 'uebergeben' });
 assert.strictEqual(visualContext._physicalTargetSceneVisual().file, 'lagerhalle-spree-kratz-abgefuehrt.webp',
   'a handed-over Kratz must disappear from the warehouse visual');
@@ -348,6 +374,35 @@ assert(
   html.includes("['gefesselt', 'ko', 'fixiert', 'benommen'].indexOf(z.status) !== -1 && !_gleicherOrt"),
   'all incapacitated states must be filtered away from foreign locations'
 );
+const bindingSource = sourceOf('_npcOrtsbindungEintragAktiv');
+assert(bindingSource.includes('entry.wegWennZielpersonGeborgen')
+  && bindingSource.includes('caseProgress.zielpersonGeborgen'),
+  'location bindings must support departure after a physical target rescue');
+const localNpcSource = sourceOf('getNpcsAtCurrentLocation');
+assert(localNpcSource.includes('resolution.guard')
+  && localNpcSource.includes('caseProgress.zielpersonGeborgen')
+  && localNpcSource.includes('Nach einer gelungenen physischen Rettung'),
+  'the final NPC roster pass must not re-inject a rescued target guard');
+const worldTruthSource = sourceOf('validateSceneWorldTruth');
+assert(worldTruthSource.includes("code: 'wegener_hinterhof_vehicle_invented'")
+  && worldTruthSource.includes("code: 'healthy_karl_injury_invented'")
+  && worldTruthSource.includes('nachgeschmack'),
+  'world-truth validation must reject the observed vehicle, healthy-injury and sober-alcohol drifts');
+const repairHintSource = sourceOf('buildWorldTruthRepairHint');
+assert(repairHintSource.includes("problem.code === 'wegener_hinterhof_vehicle_invented'")
+  && repairHintSource.includes("problem.code === 'healthy_karl_injury_invented'"),
+  'world-truth retries need explicit Wegener image and full-health repair instructions');
+const fallbackSource = sourceOf('enforceSceneWorldTruthFallback');
+assert(fallbackSource.includes("problem.code === 'wegener_hinterhof_vehicle_invented'")
+  && fallbackSource.includes("problem.code === 'healthy_karl_injury_invented'"),
+  'exhausted world-truth retries need deterministic Wegener and health fallbacks');
+const languageContext = {};
+vm.createContext(languageContext);
+vm.runInContext(sourceOf('stripAccidentalNarrativeQuotes'), languageContext);
+vm.runInContext(sourceOf('fixSprache'), languageContext);
+assert.strictEqual(languageContext.fixSprache('Sie klammert sich an dich wie ein Ertrinkende.'),
+  'Sie klammert sich an dich wie eine Ertrinkende.',
+  'the observed Wegener gender error must be normalized');
 assert(html.includes('"klient_kontakt": ""'), 'scene schema must expose client-contact acknowledgement');
 assert(html.includes('NPC-Hinweis-Wiederholung verworfen'), 'duplicate NPC-memory entries must be rejected');
 
