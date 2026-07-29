@@ -268,6 +268,10 @@ const warehouseDrift = warehouseTruthContext._findKrauseWarehouseSublocationDrif
 });
 assert(warehouseDrift && warehouseDrift.code === 'krause_warehouse_sublocation_drift',
   'a generic healing scene must not teleport Frieda from the warehouse back to her shop counter');
+warehouseTruthContext.caseProgress.gefundeneIndizIds = [];
+assert(warehouseTruthContext._findKrauseWarehouseSublocationDrift({
+  szene: 'Frieda bleibt hinter dem Tresen, während Kalle Karl im Hinterhof stellt.'
+}), 'the courtyard location itself must forbid a jump back behind the shop counter before the first warehouse clue');
 assert.strictEqual(warehouseTruthContext._findKrauseWarehouseSublocationDrift({
   szene: 'Du verbindest deine Schläfe. Frieda lehnt zwischen den Kisten an der Lagerwand.'
 }), null, 'a correctly anchored warehouse healing scene must remain valid');
@@ -426,10 +430,25 @@ peaceProblem = peaceContext._findKrausePeaceReescalationDrift({
 assert(peaceProblem && peaceProblem.code === 'krause_peace_reescalation',
   'a completed peaceful outcome must reject renewed group combat readiness even without a visibly raised weapon');
 peaceProblem = peaceContext._findKrausePeaceReescalationDrift({
+  szene: 'Kalle poltert in den Vorraum. Du presst dich flach in den Schatten hinter den Kisten.'
+}, { _pendingIndizId: 'tasche_im_lager' });
+assert(peaceProblem && peaceProblem.code === 'krause_peace_reescalation'
+  && peaceProblem.badSentences.length === 2,
+  'the exact live renewed entrance and hiding beat must be removed together after de-escalation');
+peaceProblem = peaceContext._findKrausePeaceReescalationDrift({
+  szene: 'Kalle lässt die Knöchel knacken, während Jochen seine Haltung verändert. Frieda weist den Schatten im Hof an, sich nicht zu bewegen.'
+}, { _pendingIndizId: 'tasche_im_lager' });
+assert(peaceProblem && peaceProblem.code === 'krause_peace_reescalation',
+  'renewed threatening body language and a commanded phantom shadow must fail the peaceful warehouse contract');
+peaceProblem = peaceContext._findKrausePeaceReescalationDrift({
   szene: 'Du findest die schwere Tasche. Kalle, Jochen und Frieda beobachten dich finster, halten aber Abstand.'
 }, { _pendingIndizId: 'tasche_im_lager' });
 assert.strictEqual(peaceProblem, null,
   'passive mistrust must remain valid after peaceful de-escalation');
+assert(html.includes("departureDestination: 'seinen Antiquitaetenladen', erstbegegnung: true"),
+  'Krause must be explicitly marked as a first meeting so an invented prior case is rejected');
+assert(html.includes('Theodor Krause ist bereits in das Haus zurückgekehrt, sitzt aber oben in seiner Wohnung und stellt die Verlustliste zusammen. Hannelore Wirth wartet im Laden'),
+  'every first Krause-shop arrival must explain Theodors upstairs location while retaining Hannelore');
 const peacefulActionContext = { normForMatch };
 vm.createContext(peacefulActionContext);
 vm.runInContext(sourceOf('_findPeacefulActionViolenceDrift'), peacefulActionContext);

@@ -224,6 +224,27 @@ assert.strictEqual(problem, null,
   'the historically consistent fourteen-year family timespan must remain legal');
 context.caseProgress.klientGesprochen = true;
 
+context.engineCurrentLocation = { name: 'Krauses Antiquitäten' };
+problem = context.validateSceneWorldTruth({
+  ort: 'Krauses Antiquitäten',
+  szene: 'Du legst das silberne Zigarettenetui aus Liesls Erbe auf den Tresen. Theodor Krause nimmt es entgegen.',
+  personenImRaum: ['Theodor Krause'], klient_berichtet: true, optionen: []
+}, { id: 'AUFLOESEN', text: 'Fall lösen', _intent: { type: 'resolve' } });
+assert(problem && problem.code === 'target_provenance_drift' && problem.resolution && !problem.opening,
+  'the final return must reject the exact live inversion into Liesls inheritance without being mistaken for an opening');
+const repairedFinalReturn = {
+  ort: 'Krauses Antiquitäten',
+  szene: 'Du legst das Etui aus Liesls Erbe auf den Tresen.',
+  personenImRaum: ['Theodor Krause'], klient_berichtet: true, diebesgut_zurueck: true, optionen: []
+};
+context.enforceSceneWorldTruthFallback(repairedFinalReturn, problem);
+assert(repairedFinalReturn.szene.includes('1939 Hugo')
+  && repairedFinalReturn.szene.includes('Krauses Familienbesitz')
+  && repairedFinalReturn.szene.includes('zweihundert Ostmark')
+  && !repairedFinalReturn.szene.includes('Liesls Erbe'),
+  'the deterministic resolution fallback must preserve physical return, correct provenance and payment');
+context.engineCurrentLocation = { name: 'Karl Mauers Buero' };
+
 problem = context.validateSceneWorldTruth({
   ort: 'Karl Mauers Buero',
   szene: 'Theodor Krause sagt: Es war kein Profi. Die haben mein Fenster im Hinterhof einfach eingeschlagen.',

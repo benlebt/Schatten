@@ -18,7 +18,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1676 +StraussTruthContinuity'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1677 +KrauseWarehouseContinuity'"),
   'Brandt regression release version missing');
 
 for (const bad of [
@@ -153,6 +153,11 @@ const quotedNarrative = '"Du gehst zur Tür und bleibst aufmerksam. Der Regen l�
   + 'während Kurt seinen Platz am Ecktisch nicht verlässt. Du wartest, bis er schließlich zu sprechen beginnt."';
 assert(!/^["“„]/.test(quoteGuardContext.fixSprache(quotedNarrative)),
   'an accidental whole-paragraph narrative quote must be removed centrally');
+const quotedArrival = '"Der Opel Olympia rasselt, während du die Stallschreiberstraße entlangrollst. Du stellst den Motor ab. '
+  + 'Hinter dem Tresen sitzt Frieda. „Mauer“, sagt sie trocken. Kalle und Jochen beobachten dich schweigend."';
+assert(!/^["“„]/.test(quoteGuardContext.fixSprache(quotedArrival))
+  && !/["”]$/.test(quoteGuardContext.fixSprache(quotedArrival)),
+  'the exact live Frieda arrival shape must lose only its accidental outer quote pair');
 assert(brandtBlock.includes('Formuliere NICHT "erster Mai"'),
   'the 21 May opening must not sound like May Day');
 assert(brandtBlock.includes('Die Ursache des Blackouts ist noch vollkommen unbekannt')

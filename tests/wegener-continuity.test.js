@@ -251,6 +251,25 @@ assert(forcedRequirement && forcedRequirement.level === 3, 'last patience warnin
 assert.strictEqual(forcedPatienceScene.klient_kontakt, 'letzte_warnung', 'engine warning must set the structured marker');
 assert(forcedPatienceScene.szene.includes('Helga Wegener'), 'engine warning must visibly name the real client');
 assert(!/Auftrag beendet/.test(forcedPatienceScene.szene), 'last-chance warning must not accidentally match the firing detector');
+clientContext.engineCurrentLocation = { name: 'Stallschreiberstrasse 12' };
+clientContext._abschlussOrtOhneFestesTelefon = () => true;
+clientContext.getNpcsAtCurrentLocation = () => [];
+clientContext.gameDay = 5;
+clientContext.caseProgress.clientGeduldErzaehltLevel = 2;
+const deferredHint = clientContext.buildClientGeduldHint();
+assert(deferredHint.includes('KEINE Sofortnachricht')
+  && !deferredHint.includes('"klient_kontakt":"letzte_warnung"'),
+  'a warehouse without a client or telephone must defer patience contact instead of demanding impossible instant communication');
+const warehousePatienceScene = { ort: 'Stallschreiberstrasse 12', szene: 'Karl sichert das Etui.', personenImRaum: [], klient_kontakt: '' };
+assert.strictEqual(clientContext.enforceClientGeduldScene(warehousePatienceScene), null,
+  'the engine must not append an impossible client message inside a remote warehouse');
+assert.strictEqual(warehousePatienceScene.klient_kontakt, '',
+  'deferred patience must remain pending for the next plausible contact location');
+assert(!warehousePatienceScene.szene.includes('kurze Nachricht'),
+  'the exact live vague instant-message prose must not be injected at an isolated crime scene');
+delete clientContext._abschlussOrtOhneFestesTelefon;
+delete clientContext.engineCurrentLocation;
+delete clientContext.getNpcsAtCurrentLocation;
 clientContext.gameDay = 3;
 clientContext.caseProgress.clientGeduldErzaehltLevel = 0;
 clientContext.caseProgress.zielpersonTransportStatus = 'bei_klient';
