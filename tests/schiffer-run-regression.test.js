@@ -28,7 +28,7 @@ function sourceOf(name) {
 }
 
 assert(schifferStart > 0 && schifferEnd > schifferStart, 'Schiffer setup must be present');
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1698 +LindenbaumLiveQA'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1699 +PartyLiveQA'"),
   'release version must identify the Schiffer counter-run fixes');
 
 assert(schiffer.includes("stasiRelevance: 2"),

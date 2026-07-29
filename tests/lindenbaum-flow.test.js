@@ -192,6 +192,11 @@ assert(html.includes("requiresAllNpcs: ['eva_werder']")
   'Eva needs a party-aware Café Kranzler image instead of the Karl-alone base scene');
 assert(html.includes("if (typeof _istInParty === 'function' && _istInParty(scId, scName)) return true;"),
   'an explicit party member must remain a clickable person away from the canonical home location');
+assert(html.includes("add('party_mitnehmen', mitnahmePreis > 0")
+    && html.includes("add('party_hierlassen', 'Hier lassen')")
+    && html.includes("if (verb === 'party_mitnehmen')")
+    && html.includes("if (verb === 'party_hierlassen')"),
+  'the main UI must expose both taking Eva along and leaving her at the current location');
 assert(/Party-Mitglieder sind bei einer bewusst ausgelösten Reise[\s\S]{0,1200}required\.push\(member\)/.test(html),
   'travel-arrival validation must require every explicit party member in prose and personenImRaum');
 
@@ -350,7 +355,7 @@ assert.strictEqual(blockedStasiContext.advanceStasi('ERKUNDEN'), null,
 assert.strictEqual(blockedStasiContext.caseProgress.stasiEncounterEligibleScenes, 0,
   'a blocked normal MfS attempt must reset its eligible-scene counter');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1698 +LindenbaumLiveQA'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1699 +PartyLiveQA'"),
   'release version missing');
 
 console.log('LINDENBAUM_FLOW_OK');

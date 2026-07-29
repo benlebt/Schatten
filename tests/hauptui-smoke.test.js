@@ -416,7 +416,11 @@ assert.deepStrictEqual(Array.from(context._hauptuiPersonVerben(finishedWitness, 
 assert.strictEqual(context._hauptuiZielHinweis(finishedWitness, 'Person'), 'Ausgesprochen', 'a fully exhausted witness must remain visibly marked as completed');
 const finishedRomance = { id: 'liesel_test', name: 'Liesel Test', typ: 'person', tag: 'ROMANCE', erledigt: true };
 context.window._romanceMenuState = { npc: 'Liesel Test', canApproach: true, canOvernight: false, isEvening: false };
-assert.deepStrictEqual(Array.from(context._hauptuiPersonVerben(finishedRomance, {})).map((verb) => verb.key), ['naeher'], 'an exhausted romance NPC must remain selectable for direct approach');
+assert.deepStrictEqual(
+  Array.from(context._hauptuiPersonVerben(finishedRomance, {})).map((verb) => verb.key),
+  ['party_mitnehmen', 'naeher'],
+  'an exhausted romance NPC must remain available both for explicit companionship and direct approach',
+);
 assert.strictEqual(context._hauptuiEmpfohleneAktion(finishedRomance), 'naeher', 'selecting an exhausted romance NPC should preselect approach');
 assert.strictEqual(context._hauptuiZielHinweis(finishedRomance, 'Person'), '♥ Nachtchance · abends', 'an exhausted romance NPC must advertise the evening payoff instead of looking disabled');
 assert(html.includes('eintrag._romanceGeste = true;'), 'offering a cigarette or drink to an active romance must be a real engine gesture');
