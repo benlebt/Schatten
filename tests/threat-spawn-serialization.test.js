@@ -108,8 +108,8 @@ const steinHomeEnd = html.indexOf("{ name: 'Imbiss Bei Trude'", steinHomeStart);
 const steinHomeBlock = html.slice(steinHomeStart, steinHomeEnd);
 assert(steinHomeStart >= 0 && steinHomeEnd > steinHomeStart,
   'Stein apartment location block must remain discoverable');
-assert(/id: 'mann_im_mantel', chance: 100, bisScene: 2/.test(steinHomeBlock),
-  'Stein opening must always use the anonymous coat man through scene 2');
+assert(/id: 'mann_im_mantel', chance: 100, storyBeat: true, bisScene: 2/.test(steinHomeBlock),
+  'Stein opening must always start the anonymous coat-man confrontation through scene 2');
 assert(/id: 'oberleutnant_mertens', chance: 50, abScene: 3/.test(steinHomeBlock),
   'Mertens must not replace the coat man during the canonical Stein opening');
 
@@ -207,7 +207,7 @@ assert.strictEqual(
   'a not-yet-narrated active enemy must not select the NPC image variant'
 );
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1740 +ReputationCompareTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1741 +ReputationEncounterTruth'"),
   'release version missing');
 
 console.log('THREAT_SPAWN_SERIALIZATION_OK');
