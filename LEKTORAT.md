@@ -407,6 +407,8 @@ Dieser Katalog ist ab sofort Teil jedes manuellen Falllaufs und jeder Fallbewert
 - Die Walther PPK ist Druck- und Distanzmittel, keine automatische Lösung. Sie darf weder jeden Gegner sofort neutralisieren noch gegenüber allen anderen Wegen dominant sein; Munition, Risiko, Ruf-/Bedrohungsfolge und gegnerische Härte müssen spürbar bleiben.
 - Balance wird deterministisch über alle sechs W6-Seiten gegen normale Stärke, harte Stärke und Gruppe geprüft. Kein wiederverwendbares Item darf ohne vorbereitete Oberhand zuverlässiger sein als ein verdienter Team-Payoff.
 - Nach jedem Einsatz stimmen Aktionslabel, Verbrauch/Eigentum, Inventar, Kampfstatus, Prosa, Verletzungsfolge und Bild überein. Ein geworfener oder übergebener Gegenstand darf nicht weiter unverändert in „Dabei“ liegen.
+- Eine Festnahme trennt Rex und menschliche Begleiter sichtbar von Karl; sie dürfen nicht in die Zelle teleportieren. Die Festnahmeprosa muss die Trennung benennen. Nach der Freilassung muss der Verbleib eindeutig sein: Rex wartet wieder bei Willi und kann ohne erneute Bezahlung abgeholt werden; ein menschlicher Begleiter braucht einen ebenso konkreten Wiederaufnahme- oder Abschiedsweg.
+- Bildvarianten mit Rex werden nicht allein über den Orts-Roster gewählt. `hundInParty`, Prosa, Party-Banner und Motiv müssen gemeinsam Rex zeigen; nach einer Hafttrennung darf das Rex-Motiv erst nach der tatsächlichen Wiederaufnahme erneut erscheinen.
 
 ### Konfrontationen, Slapstick und knackige Gewalt
 

@@ -179,6 +179,7 @@ assert(html.includes("file: 'stellwerk-schoeneweide-krollwitz-night.png'"),
 for (const file of [
   'kreisgericht-mitte-baumgarten-day.png',
   'kreisgericht-mitte-krollwitz-civil-day.png',
+  'kreisgericht-mitte-krollwitz-rex-day.png',
   'stellwerk-schoeneweide-krollwitz-night.png',
 ]) {
   assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'goerke', file)),
@@ -223,6 +224,25 @@ assert(sourceOf('_bedrohungsCliffhangerSichtbarBezahlt').includes('nirgends mehr
   'a visibly vanished old threat must not leak into every later travel scene');
 assert(sourceOf('repairBasicGermanProse').includes('Du ignorierst'),
   'the common second-person agreement error must be repaired');
+const ankerTimeRepairContext = {
+  engineCurrentLocation: { name: 'Goldener Anker' },
+  normForMatch: (value) => String(value || '').toLowerCase(),
+  _aktTageszeitName: () => 'Abend',
+  diag: () => {},
+};
+vm.createContext(ankerTimeRepairContext);
+vm.runInContext(sourceOf('repairBasicGermanProse'), ankerTimeRepairContext);
+const restoredAnkerEntry = {
+  type: 'scene',
+  ort: 'Goldener Anker',
+  time: 'Abend',
+  text: 'Der Septembermorgen draußen wirkt weit weg, hier drin klebt die Luft an der Haut.',
+};
+assert.strictEqual(ankerTimeRepairContext.repairBasicGermanProse(restoredAnkerEntry), true,
+  'restored Anker log prose must migrate to the actual time of day');
+assert(/Septemberabend draußen/.test(restoredAnkerEntry.text)
+    && !/Septembermorgen/.test(restoredAnkerEntry.text),
+  'Anker prose, header and evening image must share one time truth');
 assert(sourceOf('enforceSceneWorldTruthFallback').includes('_actorFolgesatz'),
   'removing an unrostered named actor must also remove its dangling pronoun sentences');
 assert(!html.includes('Ein Trümmergrundstück gleich nebenan'),
@@ -376,6 +396,13 @@ assert.deepStrictEqual(Array.from(currentVpEvidenceWithoutSnapshotFields.persone
   'currentScene must receive a concrete roster so the Krollwitz visual variant can be selected');
 assert(/volkspolizei-keibelstrasse-krollwitz-night\.png[\s\S]{0,300}depictsNpcs: \['wilhelm_roth', 'hauptmann_krollwitz'\]/.test(html),
   'the VP showdown needs its own Roth/Krollwitz scene image contract');
+assert(/test: \/\^littenplatz\$\/[\s\S]{0,500}marx-engels-platz-night\.webp[\s\S]{0,700}reinhard_baumgarten/.test(html),
+  'the Goerke escape scene needs a real street/station base image and a separate Baumgarten finale variant');
+assert(/kreisgericht-mitte-krollwitz-rex-day\.png[\s\S]{0,260}depictsParty: \['Rex'\]/.test(html),
+  'Krollwitz plus Rex needs an explicit scene-image contract');
+assert(sourceOf('_szenenbildAnwesenheitsVariante').includes('variant.requiresParty')
+    && sourceOf('_szenenbildAnwesenheitsVariante').includes("_hundInParty()"),
+  'party-specific image variants must follow the actual Rex party flag');
 assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'goerke',
   'volkspolizei-keibelstrasse-krollwitz-night.png')),
   'missing Goerke VP showdown image asset');
@@ -405,7 +432,7 @@ assert(sourceOf('_stasiCustodyEntryVormerken').includes('custodyEntryOfficerName
     && !html.includes('Brakke wartet den einzigen freien Atemzug'),
   'future custody entries must use the actual confrontation officer instead of hard-coded Brakke');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1724 +GoerkeCustodyTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1725 +RexCustodyVisualTruth'"),
   'release version missing');
 
 console.log('Goerke opening/truth regression checks passed.');

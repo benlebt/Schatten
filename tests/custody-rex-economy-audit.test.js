@@ -7,7 +7,46 @@ const { readWebpDimensions } = require('./image-format-utils');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1724 +GoerkeCustodyTruth'"), 'version constant is stale');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1725 +RexCustodyVisualTruth'"), 'version constant is stale');
+const dogPickupStart = html.indexOf('function _hundMitnehmenMitTausch(quelle)');
+const dogPickupEnd = html.indexOf('// ============ Ende WACHHUND-Helper', dogPickupStart);
+assert(dogPickupStart >= 0 && dogPickupEnd > dogPickupStart, 'cannot isolate the Rex pickup flow');
+let rexExchangeCalls = 0;
+let rexToast = null;
+const rexReunionContext = {
+  HUND_NAME: 'Rex',
+  HUND_PREIS: 7,
+  caseProgress: {
+    hundInParty: false,
+    hundEntschieden: 'aufgenommen',
+    rexBeiFestnahmeGetrennt: true,
+  },
+  _hundInParty: () => rexReunionContext.caseProgress.hundInParty,
+  _zeigeTauschZahlung: () => { rexExchangeCalls += 1; },
+  saveGameState: () => {},
+  showProgressToast: (...args) => { rexToast = args; },
+  fxPartyJoin: () => {},
+  renderImRaumAnzeige: () => {},
+  renderOptions: () => {},
+  currentScene: null,
+  diag: () => {},
+};
+vm.createContext(rexReunionContext);
+vm.runInContext(html.slice(dogPickupStart, dogPickupEnd), rexReunionContext);
+assert.strictEqual(rexReunionContext._hundMitnehmenMitTausch('Haft-Wiederaufnahme'), true,
+  'Rex must be recoverable after a custody separation');
+assert.strictEqual(rexExchangeCalls, 0,
+  'the original value-7 package pays for Rex for the whole case; custody may not charge it again');
+assert.strictEqual(rexReunionContext.caseProgress.hundInParty, true,
+  'the reunion must restore Rex to the real party state');
+assert.strictEqual(rexReunionContext.caseProgress.rexBeiFestnahmeGetrennt, false,
+  'the separation marker must clear after the visible reunion');
+assert(rexToast && /wieder da/.test(rexToast[0]),
+  'the reunion must be visible to the player instead of silently changing a flag');
+assert(html.includes("const _getrennteNamen = _getrennt.concat(_rexGetrennt ? ['Rex'] : []);"),
+  'custody entry prose must include Rex in the visible separation');
+assert(html.includes('ohne einen zweiten Tausch auf dich wartet'),
+  'custody release prose must explain exactly where Rex went and how to recover him');
 assert(html.includes("text: _resolveIstEigenauftrag ? 'Eigen-Auftrag abschließen und Wahrheit festhalten.' : 'Fall abschließen und Auftraggeber informieren.'"),
   'resolve button copy must stay player-facing for external and self-assigned cases');
 assert(html.includes('_enginePrompt: [_resolveText, _resolveTransitionPrompt, _resolvePhysicalTruth]'), 'resolve direction must preserve physical target truth');
@@ -518,7 +557,7 @@ assert(html.includes('stasiCustodyScenesSince >= 3'), 'routine custody should al
 assert(html.includes('caseProgress._custodyCountedScene !== custodySceneMark'), 'custody duration must count distinct scenes, not UI rerenders');
 assert(html.includes('NOTFLUCHT ist der einzige sofortige Ausbruch'), 'custody prompt must distinguish escape from routine morning release');
 assert(html.includes('const resetFolter = (opts.resetFolter !== undefined) ? opts.resetFolter : stateChanged;'), 'repeated custody detection must not reset interrogation progress');
-assert(html.includes("(_getrennt.length > 1 ? 'sie' : _getrennt[0])"),
+assert(html.includes("(_getrennteNamen.length > 1 ? 'sie' : _getrennteNamen[0])"),
   'a single named companion separated during arrest must not be reduced to an anonymous person');
 
 assert(html.includes("const HUND_PREIS = 7;"), 'Rex must require a substantial exchange-value bundle');
