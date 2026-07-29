@@ -189,6 +189,33 @@ const repairedBeforeEvidence = sanitizerContext.sanitizeProsaMetadaten(
 assert(!/Brille rutscht|von der Nase/.test(repairedBeforeEvidence)
     && /Nasenwurzel/.test(repairedBeforeEvidence),
   'the broken-glasses truth must apply from the fixed apartment arrival, before her formal clue');
+const repairedLiveVariant = sanitizerContext.sanitizeProsaMetadaten(
+  'Ihre Brille rutscht ihr dabei von der Nase, baumelt an einem Bügel. Ihre Augen hinter den Gläsern wirken verweint.',
+);
+assert(!/Brille rutscht|baumelt an einem Bügel|hinter den Gläsern/.test(repairedLiveVariant)
+    && /Nasenwurzel/.test(repairedLiveVariant)
+    && /ungeschützter Blick/.test(repairedLiveVariant),
+  'the live Stein wording must not evade the broken-glasses continuity guard');
+
+const restoredSteinContext = {
+  caseSetup: { klient: setup.klient, opfer: setup.opfer },
+  normForMatch: (value) => String(value || '').toLowerCase(),
+  engineCurrentLocation: { name: 'Margarete Steins Wohnung' },
+  _aktTageszeitName: () => 'Nacht',
+  diag: () => {},
+};
+vm.createContext(restoredSteinContext);
+vm.runInContext(sourceOf('repairBasicGermanProse'), restoredSteinContext);
+const restoredWrongBrille = {
+  type: 'scene',
+  ort: 'Margarete Steins Wohnung',
+  time: 'Nacht',
+  text: 'Ihre Brille rutscht ihr dabei von der Nase, baumelt an einem Bügel. Ihre Augen hinter den Gläsern wirken verweint.',
+};
+assert.strictEqual(restoredSteinContext.repairBasicGermanProse(restoredWrongBrille), true,
+  'an already saved Stein scene must be migrated on restore');
+assert(!/Brille rutscht|hinter den Gläsern/.test(restoredWrongBrille.text),
+  'saved prose must share the broken-glasses truth after reload');
 
 const evidenceGateDiagnostics = [];
 const evidenceGateContext = {
@@ -291,7 +318,7 @@ assert(/beat\.id !== 'akten_gesichert'/.test(markEvidenceSource)
     && /beat\.id !== 'margarete_gesichert'/.test(markEvidenceSource),
   'deterministic clue booking must protect action-only security beats');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1726 +GoerkeFinalVisualTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1727 +SteinBrillenTruth'"),
   'release version is stale');
 assert(html.includes('Vom Hackeschen Markt dringen gedämpfte Motorengeräusche')
     && html.includes('Noch passt nicht jedes Stück zusammen'),
