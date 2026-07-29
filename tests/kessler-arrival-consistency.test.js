@@ -65,6 +65,7 @@ assert.strictEqual(chariteImage.root, 'assets/scenes/wessel/', 'Charite healing 
 const trudeImage = images.find((entry) => entry.place === 'Imbiss Bei Trude');
 assert(trudeImage, 'Trude image must be registered for Kessler/shared anchor locations');
 assert.strictEqual(trudeImage.root, 'assets/scenes/wegener/', 'Trude global location must reuse the Wegener Imbiss asset root');
+assert.strictEqual(trudeImage.innen, false, 'Trude image depicts an open street stand, never an indoor dining room');
 assert(images.every((entry) => entry.dayFile), 'every Kessler scene image must expose a daylight variant');
 for (const entry of images) {
   const nightFile = entry.nightFile || entry.file.replace(/(\.[a-z0-9]+)$/i, '-night$1');

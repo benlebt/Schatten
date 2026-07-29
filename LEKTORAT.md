@@ -306,6 +306,13 @@ Stand: 23.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 - `schleier_aussage` besitzt nun eine vollständige Café-Szene mit Dialog, körperlichen Reaktionen, Beziehungstiefe, zeitlich begrenztem Wissen und ausdrücklich offener Täterfrage. Ein `replaceOnFallback`-Guard verlangt Ludwig, Nähe/Vertrautheit, Angst/Drohung und einen konkreten Szenenanker; bei Modell- oder Prüfversagen ersetzt er den Text vollständig.
 - Die erste Friedhofsaussage verwendet in allen sichtbaren kanonischen Texten außerdem `Während`, `hörst`, `persönlich` und `Café` statt ASCII-Ersatzschreibungen. Suchschlüssel bleiben absichtlich normalisiert.
 
+## Trude-Außenstand-/Romanz-Climax-Gegenlauf v7.12.1688
+
+- Produktions-Repro auf v7.12.1683, Strauss-Szene 5: Das Szenenbild zeigte Trudes offenen hölzernen Straßenstand am Hackeschen Markt. Die Prosa ließ Karl dagegen den Kopf durch eine Eingangstür stecken und verwies auf einen leeren Hocker am Tresen – einen erfundenen Gastraum, den es im Bild nicht gibt.
+- Trudes fallübergreifender Ort trägt nun dieselbe Außenstand-Wahrheit in Detail, Ankunft und Anwesenheitsfallback. Die Bildmatrix markiert das Motiv nicht mehr widersprüchlich als Innenraum. Ein eigener Weltwahrheits-Guard verwirft Gastraum, Eingangstür und Sitzhocker und besitzt einen deterministischen Außenstand-Fallback.
+- Im selben Live-Run stieg die bewusst gespielte Strauss-Romanze mit drei erfolgreichen Annäherungen von `Rm 0` auf `Rm 3`. Danach sperrte das Drei-Klick-Limit weitere Annäherungen, während die Übernachtung erst ab `Rm 4` erschien. Schlafen führte Karl allein ins Büro: Die Romanze war mechanisch exakt eine Stufe vor ihrem einzigen Abschluss festgesetzt.
+- Der Übernachtungs-Climax erscheint nun ab `Rm 3` am Abend oder in der Nacht. Damit können drei erfolgreiche bewusste Annäherungen aus einem neutralen Start tatsächlich in die vorhandene Romanznacht mit eigenem Morgenbild führen; Ablehnung, Verletzungs-, Gewahrsams- und Gefahrensperren bleiben unverändert.
+
 ## Mindestprotokoll pro Run
 
 - Fall, Version, Strategie, Seed, Start-/Endzeit, Szenenzahl, Ergebnis und Abbruchgrund.

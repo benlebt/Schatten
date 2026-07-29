@@ -64,6 +64,10 @@ assert(html.includes('option._romanceRejectedAtOrt ='), 'romance rejection must 
 assert(html.includes('ORTS- UND TAGESWECHSEL (PFLICHT)'), 'a moved rejection scene must require a narrated overnight bridge');
 assert(html.includes('nach Hause fährt, schläft und am nächsten Morgen'), 'the rejection bridge must include home and sleep');
 assert(html.includes('dürfen in personenImRaum am Zielort NICHT erscheinen'), 'rejected NPCs must remain at the departed location');
+assert(html.includes('&& romCurrentTension >= 3'),
+  'three successful deliberate approaches must unlock the overnight climax instead of deadlocking at the click cap');
+assert(!html.includes('&& romCurrentTension >= 4'),
+  'the overnight threshold must not remain above the maximum three-click path from Rm 0');
 
 const imageFiles = [
   'morgen-wohnung-ost.webp', 'morgen-wohnung-ost-allein.webp',
