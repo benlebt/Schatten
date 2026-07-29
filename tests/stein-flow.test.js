@@ -308,6 +308,18 @@ assert(/im Stellwerk geborgene Mappe/.test(restoredVeraKnowledge.text)
     && !/in Schöneweide versteckt/.test(restoredVeraKnowledge.text),
   'Vera must acknowledge originals already recovered but not yet handed over');
 
+restoredSteinContext.engineCurrentLocation = { name: 'Margarete Steins Wohnung' };
+const restoredBrokenGlasses = {
+  type: 'scene',
+  ort: 'Margarete Steins Wohnung',
+  time: 'Nacht',
+  text: 'Margarete Stein lässt den Türrahmen los und sackt leicht zusammen, ihre Brille rutscht auf die Nasenspitze.',
+};
+restoredSteinContext.repairBasicGermanProse(restoredBrokenGlasses);
+assert(/zerbrochene Drahtgestellbrille auf dem Tisch/.test(restoredBrokenGlasses.text)
+    && !/Brille rutscht auf die Nasenspitze/.test(restoredBrokenGlasses.text),
+  'Margarete must not put the already broken glasses back on after the opening confrontation');
+
 const custodyItemContext = {};
 vm.createContext(custodyItemContext);
 vm.runInContext(sourceOf('repairCustodyChosenItemContinuity'), custodyItemContext);
@@ -489,7 +501,7 @@ assert(html.includes('cafe-kranzler-vera-day-v1739.png')
     && html.includes('Karl Mauer trifft Margarete Stein in ihrer von Reichsbahn-Unterlagen durchsuchten Wohnung'),
   'Stein scene images must explicitly match Vera, Mertens and Margarete presence');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1741 +ReputationEncounterTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1742 +ThreatRosterTruth'"),
   'release version is stale');
 assert(html.includes('Vom Hackeschen Markt dringen gedämpfte Motorengeräusche')
     && html.includes('Noch passt nicht jedes Stück zusammen'),

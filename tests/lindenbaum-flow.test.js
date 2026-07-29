@@ -519,7 +519,7 @@ assert(!/Brakke|versiegelte|unbekannte Männer|poltert/i.test(romanceLeakScene.s
 assert.strictEqual(romanceRepairContext.caseProgress.pendingThreatCliffhanger, null,
   'a phantom threat invented by romance must not poison the following scene');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1741 +ReputationEncounterTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1742 +ThreatRosterTruth'"),
   'release version missing');
 
 console.log('LINDENBAUM_FLOW_OK');

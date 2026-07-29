@@ -112,6 +112,19 @@ assert(/id: 'mann_im_mantel', chance: 100, storyBeat: true, bisScene: 2/.test(st
   'Stein opening must always start the anonymous coat-man confrontation through scene 2');
 assert(/id: 'oberleutnant_mertens', chance: 50, abScene: 3/.test(steinHomeBlock),
   'Mertens must not replace the coat man during the canonical Stein opening');
+const sceneTruthCall = html.indexOf('try { _konfrontationSceneTruthSichern(scene, cast); }');
+const preTruthThreatRoll = html.lastIndexOf(
+  "try { if (typeof maybeResolveThreatSpawn === 'function') maybeResolveThreatSpawn(); }",
+  sceneTruthCall
+);
+assert(preTruthThreatRoll >= 0 && preTruthThreatRoll < sceneTruthCall,
+  'new scene threat rolls must happen before prose/cast/image truth synchronization');
+const rosterSource = sourceOf('getNpcsAtCurrentLocation');
+assert(rosterSource.includes("typeof _konfrontationInAktuellerSzeneSichtbar === 'function'")
+    && rosterSource.includes('if (!istErzaehlt) continue;'),
+  'a rolled threat must remain hidden from the roster until the current prose introduces it');
+assert(sourceOf('_konfrontationClear').includes('_threatAktiveSpawns = [];'),
+  'finishing one confrontation must discard a next-threat preview rolled during its narration');
 
 const visibleContext = {
   caseProgress: {
@@ -207,7 +220,7 @@ assert.strictEqual(
   'a not-yet-narrated active enemy must not select the NPC image variant'
 );
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1741 +ReputationEncounterTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1742 +ThreatRosterTruth'"),
   'release version missing');
 
 console.log('THREAT_SPAWN_SERIALIZATION_OK');

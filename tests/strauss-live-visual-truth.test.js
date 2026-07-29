@@ -173,7 +173,7 @@ for (const file of [
   assert(html.includes(file), 'Strauss Rex scene asset is not wired into the image matrix: ' + file);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1741 +ReputationEncounterTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1742 +ThreatRosterTruth'"),
   'release version missing');
 
 console.log('strauss-live-visual-truth: ok');
