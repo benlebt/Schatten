@@ -28,7 +28,7 @@ function sourceOf(name) {
 }
 
 assert(schifferStart > 0 && schifferEnd > schifferStart, 'Schiffer setup must be present');
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1678 +SchifferRescueContinuity'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1679 +SchifferRestoreTruth'"),
   'release version must identify the Schiffer counter-run fixes');
 
 assert(schiffer.includes("stasiRelevance: 2"),
@@ -126,6 +126,8 @@ assert(html.includes('function repairPhysicalRescueEscortProse(scene)'),
   'physical rescue transport must have an engine-owned location-stable prose boundary');
 assert(html.includes('function repairConfiguredFinalReportProse(scene)'),
   'configured final truth must be enforceable at the final delivery boundary');
+assert(sourceOf('_repairRestoredFinalReportProse').includes('caseSetup.reportFallbackAlways === true'),
+  'restored completed Schiffer runs must also receive the configured truthful final report');
 assert(html.includes("const _figImFallErlaubt = !_figIstMfs"),
   'recurring MfS figures must be gated by actual political relevance');
 

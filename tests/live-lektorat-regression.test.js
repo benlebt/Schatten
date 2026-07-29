@@ -1635,6 +1635,9 @@ assert.strictEqual(languageContext.fixSprache('"Was wollen Sie hier?", fragt Rob
 const schifferWrappedOpening = '"Die Uhr zeigt halb zwei. Renate Schiffer legt ihr Collier auf den Tisch und bittet dich, Detlef lebend zu finden. Du notierst Riemers Namen und die Schuldsumme von 1500 D-Mark."';
 assert.strictEqual(languageContext.fixSprache(schifferWrappedOpening).charAt(0), 'D',
   'the exact Schiffer-style multi-sentence opening must lose its accidental outer quote');
+const restoredTrailingQuote = 'Du berichtest Renate ausführlich von Detlefs Befreiung und legst alle gesicherten Hinweise auf den Tisch. Sie hört schweigend zu und hält die Hand ihres Bruders fest."';
+assert(!languageContext.fixSprache(restoredTrailingQuote).endsWith('"'),
+  'a restored long narrative paragraph must lose a solitary trailing outer-quote remnant');
 assert(sourceOf('renderLog').includes('entry.text = (typeof fixSprache'),
   'the visible log and subsequent exports need a final quote-sanitizing delivery boundary');
 const visibleNameContext = {
