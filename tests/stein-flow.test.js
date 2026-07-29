@@ -54,10 +54,14 @@ for (const id of [
   'frachtliste_stempel',
   'dienstplan_wahler',
   'hinweis_stellwerk',
+  'uebergabe_beobachtet',
+  'notiz_wahler_gleis',
   'vera_uebergabekontakt',
   'original_akten',
   'wahler_unterschrift',
   'vera_westperspektive',
+  'lemke_belastet_wahler',
+  'anker_kontakt_hinweis',
 ]) {
   const clue = clueById.get(id);
   assert(clue && clue.fundText && clue.fundText.split(/\s+/).length >= 20,
@@ -67,6 +71,24 @@ assert(/zerbrach ihre Drahtgestellbrille/.test(clueById.get('margarete_aussage')
   'Margaretes broken glasses must be explicit world truth');
 assert(/Erst mit diesem Hinweis/.test(clueById.get('vera_uebergabekontakt').fundText),
   'Vera must become known through an actual clue');
+for (const [id, beat] of [
+  ['frachtliste_stempel', 'schmuggelroute_belegt'],
+  ['uebergabe_beobachtet', 'schmuggelroute_belegt'],
+  ['original_akten', 'schmuggelroute_belegt'],
+  ['wahler_unterschrift', 'wahler_verantwortlich'],
+  ['lemke_belastet_wahler', 'wahler_verantwortlich'],
+  ['anker_kontakt_hinweis', 'im_anker_identifiziert'],
+]) {
+  assert.deepStrictEqual(Array.from(clueById.get(id).politicalBeatIds || []), [beat],
+    id + ' must book its political evidence beat deterministically');
+  assert(clueById.get(id).prosaPflicht || id === 'original_akten',
+    id + ' needs a narrated evidence safeguard');
+}
+for (const clue of clues) {
+  assert(!(clue.politicalBeatIds || []).includes('akten_gesichert')
+      && !(clue.politicalBeatIds || []).includes('margarete_gesichert'),
+    'security beats must remain real player actions, never clue side effects');
+}
 
 const imageStart = html.indexOf('const SHARED_SCENE_IMAGES');
 const imageEnd = html.indexOf('function _kesslerSceneNorm', imageStart);
@@ -162,8 +184,16 @@ assert(/if \(keepExisting\)/.test(sourceOf('_naturalMinimumSceneText')),
   'rich prose must not receive generic room filler');
 assert(/_npcWirklichInSzene/.test(sourceOf('_szenenbildAnwesenheitsVariante')),
   'image presence variants must also follow unequivocal scene prose');
+const markEvidenceSource = sourceOf('_markiereIndizGefunden');
+assert(/ind\.politicalBeatIds/.test(markEvidenceSource)
+    && /gueltigePolitBeats/.test(markEvidenceSource)
+    && /POLIT-BEAT/.test(markEvidenceSource),
+  'core evidence must book political insight beats by ID');
+assert(/beat\.id !== 'akten_gesichert'/.test(markEvidenceSource)
+    && /beat\.id !== 'margarete_gesichert'/.test(markEvidenceSource),
+  'deterministic clue booking must protect action-only security beats');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1682 +KesslerProseContinuity'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1683 +SteinPoliticalEvidence'"),
   'release version is stale');
 assert(html.includes('Vom Hackeschen Markt dringen gedämpfte Motorengeräusche')
     && html.includes('Noch passt nicht jedes Stück zusammen'),
