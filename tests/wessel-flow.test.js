@@ -28,8 +28,11 @@ assert(office && office.openingFallbackText.split(/\s+/).length >= 55,
 assert(/Bruno Wessel/.test(office.openingFallbackText)
     && /Werner/.test(office.openingFallbackText)
     && /17\. Juni/.test(office.openingFallbackText)
-    && /achthundert Ostmark/i.test(office.openingFallbackText),
+    && /zweihundertsiebzig Ostmark/i.test(office.openingFallbackText)
+    && /sobald.+belegt.+informiert/i.test(office.openingFallbackText),
   'Wessel opening fallback is missing essential assignment facts');
+assert(!/800|achthundert|Vorschuss/i.test(office.openingFallbackText),
+  'Wessel must not narrate an unpaid 800-Ostmark advance');
 assert(office.arrivalFallbackText && /unbeschädigt/.test(office.arrivalFallbackText),
   'later office arrivals need a canonical no-break-in fallback');
 
@@ -52,6 +55,10 @@ for (const name of [
 
 const clues = setup.locations.flatMap((location) => location.indizien || []);
 const clueById = new Map(clues.map((clue) => [clue.id, clue]));
+assert(/270 Ostmark Honorar/.test(clueById.get('bruno_auftrag').text)
+    && !/800|achthundert|Vorschuss/i.test(
+      clueById.get('bruno_auftrag').text + ' ' + clueById.get('bruno_auftrag').fundText),
+  'Brunos assignment must match the real 270-Ostmark completion payout');
 for (const id of [
   'bruno_auftrag',
   'hertha_aussage',
@@ -381,7 +388,7 @@ assert(html.includes("problem.code === 'false_prior_custody_history'"),
 assert(/Du schiebst Werners Akten auf dem Schreibtisch zusammen/.test(html),
   'Wessel office sleep needs a canonical custody-free fallback');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1759 +WesselPurpose'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1760 +WesselEconomy'"),
   'release version is stale');
 
 console.log('WESSEL_FLOW_OK');
