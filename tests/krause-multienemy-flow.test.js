@@ -21,7 +21,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1776 +KrauseCombatStage'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1777 +KrauseSaveBridge'"), 'release version missing');
 const purposefulKrauseLabels = [
   'Konfrontiere Frieda mit der Spur',
   'Handle Zugang zu Friedas Lager aus',
@@ -409,6 +409,8 @@ assert(sourceOf('restoreGameState').includes('caseProgress.krauseLagerFreigegebe
   'restoring a pre-fix Krause combat save must migrate its unlocked warehouse to stage 3');
 const combatAccessContext = {
   caseProgress: { gefundeneIndizIds: [] },
+  caseSetup: { caseType: 'diebstahl', klient: 'Theodor Krause' },
+  normForMatch: value => String(value || '').toLowerCase().replace(/_/g, ' '),
   _indizGefunden: () => false,
   _indizOrtNameById: () => 'Tante Friedas Hehlerei',
   _indizAnzeigeName: () => 'Friedas Aussage'
@@ -426,6 +428,13 @@ assert(combatAccessContext._indizBelegBedarf(combatAccessClue),
 combatAccessContext.caseProgress.krauseLagerFreigegeben = true;
 assert.strictEqual(combatAccessContext._indizBelegBedarf(combatAccessClue), null,
   'a completed Krause group confrontation must unlock the warehouse without inventing Frieda evidence or combat loot');
+const frozenSaveCombatAccessClue = {
+  id: 'lager_hinterhof',
+  requiresEvidenceAny: ['frieda_ausweichend', 'frieda_deal', 'kalle_transportzettel', 'jochen_lagerschluessel'],
+  requiresEvidenceLabel: 'Zugang fehlt'
+};
+assert.strictEqual(combatAccessContext._indizBelegBedarf(frozenSaveCombatAccessClue), null,
+  'a frozen pre-v1775 Krause case setup must honor the persisted group-victory access after restore');
 assert(html.includes("satisfiesProgressAny: ['krauseLagerFreigegeben']"),
   'the Krause warehouse clue must declare its persistent combat-access route');
 const peaceRoster = sourceOf('_krauseFriedensRosterSichern');
