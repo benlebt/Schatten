@@ -36,6 +36,22 @@ assert(wegener, 'Wegener setup missing');
 const setupText = JSON.stringify(wegener.setup);
 assert(/6\. Februar 1953/.test(setupText), 'Wegener disappearance must use a fixed calendar date');
 assert(!/vor 6 Tagen/.test(setupText), 'Wegener setup must not freeze a relative six-day phrase');
+const wegenerClues = Array.from(wegener.setup.locations)
+  .flatMap((location) => Array.from(location.indizien || []));
+const purposefulWegenerLabels = {
+  schiele_streit: 'Befrage Schiele zu Konstantin',
+  lohnzettel: 'Prüfe Konstantins Lohnzettel',
+  stempelkarte: 'Prüfe Konstantins Stempelkarte',
+  lagerhalle_hinweis: 'Befrage Rudi zu Lothars Lager',
+  lothar_schluessel: 'Setze Lothar mit den Spuren unter Druck',
+};
+for (const [clueId, expectedLabel] of Object.entries(purposefulWegenerLabels)) {
+  const clue = wegenerClues.find((entry) => entry.id === clueId);
+  assert(clue && clue.hauptuiActionLabel === expectedLabel,
+    'Wegener clue needs a visible purposeful action: ' + clueId);
+  assert(clue.hauptuiActionPrompt && clue.hauptuiActionPrompt.length >= 100,
+    'Wegener clue needs a precise generation contract: ' + clueId);
+}
 assert(/setzt sich zu dir/.test(wegener.prompt),
   'Schiele must visibly arrive before the opening scene exposes him as clickable');
 assert(!/Ein anderer Mann am Tresen|wirft dir wiederholt Blicke zu/.test(wegener.prompt)

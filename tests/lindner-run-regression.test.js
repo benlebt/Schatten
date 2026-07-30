@@ -5,6 +5,17 @@ const vm = require('vm');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 
+for (const label of [
+  'Prüfe Hollenbecks Schreibtisch',
+  'Befrage Margit zu Friedrichs Streit',
+  'Prüfe die Tresor-Liste',
+  'Befrage den Bankpförtner',
+  'Prüfe Wegners Privatfach',
+]) {
+  assert(html.includes("hauptuiActionLabel: '" + label + "'"),
+    'Hollenbeck clue needs a visible purposeful action: ' + label);
+}
+
 function sourceOf(name) {
   const start = html.indexOf(`function ${name}(`);
   assert(start >= 0, `${name} missing`);

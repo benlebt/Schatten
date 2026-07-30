@@ -18,7 +18,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1765 +PersonPurpose'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1766 +CoreCasePurpose'"),
   'Brandt regression release version missing');
 
 for (const bad of [
@@ -47,6 +47,18 @@ assert(html.includes("abschlussOrt: 'Anton Brandts Eckkneipe und Wohnung'"),
 const brandtStart = html.indexOf("klient: 'Anton Brandt (Vater)'");
 const brandtEnd = html.indexOf('// 4. Nachtanruf', brandtStart);
 const brandtBlock = html.slice(brandtStart, brandtEnd > brandtStart ? brandtEnd : brandtStart + 45000);
+for (const label of [
+  'Prüfe die zweite Pistole',
+  'Befrage Lola zu Erichs Angst',
+  'Befrage den Zeugen zur Walther',
+  'Konfrontiere Lange mit den Beweisen',
+  'Durchsuche Langes Tasche',
+  'Prüfe das lose Rückenbrett',
+  'Prüfe das Fensterbrett',
+]) {
+  assert(brandtBlock.includes("hauptuiActionLabel: '" + label + "'"),
+    'Brandt clue needs a visible purposeful action: ' + label);
+}
 assert(brandtBlock.includes("oeffnungszeit: ['nachmittag','abend','nacht']"),
   'Rote Laterne must close after the night instead of keeping its cast through the morning');
 assert(brandtBlock.includes("sperrstundenAussen: 'Vor der Roten Laterne am Nollendorfplatz'"),
