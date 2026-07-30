@@ -1,5 +1,22 @@
 # Schatten — Projekt-Knowledge
 
+## v7.12.1750 — Schiffer beginnt immer mit vollständigem Auftrag
+
+Der v1749-Gegenlauf bestätigte Renates reparierten Dialog vollständig, zeigte
+beim Neustart aber eine zu weiche Eröffnung: Die Modellfassung ließ Renates
+Einführung und Detlefs 1500 D-Mark Schulden aus, begann mit dem bezugslosen
+Pronomen „Vor drei Tagen wurde er …“ und verschärfte den Riemer-Verdacht zur
+scheinbar feststehenden Gefahr.
+
+Schiffers vorhandener kanonischer Opening-Text ist nun wie bei den anderen
+driftanfälligen Auftragsfällen verpflichtend. Die Eröffnung nennt dadurch immer
+Zeit und Büro, Renates Erstbegegnung und Beruf, Detlef, 1500 D-Mark,
+Roter Stern, Abholung vor drei Tagen, Riemer als Verdacht, Perlencollier als
+Vorschuss und den Auftrag, Detlef lebend zu finden.
+
+**Verifikation:** Schiffer-Regressionscheck auf verpflichtendes Opening und
+vollständige Regression Suite grün.
+
 ## v7.12.1749 — Renates Antwort bleibt auch im letzten Sozialfallback vollständig
 
 Der v1748-Produktionsgegenlauf bestätigte, dass Renates Täterwissens-Guard

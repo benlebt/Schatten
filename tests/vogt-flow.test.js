@@ -230,7 +230,7 @@ stasiLocationContext.engineCurrentLocation = { name: 'Hohenschoenhausen / Gensle
 assert.strictEqual(stasiLocationContext._stasiEncounterOrtZulaessig(), true,
   'Pieck remains allowed at the configured detention-site endgame');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1749 +ClientReplyTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1750 +SchifferOpeningTruth'"),
   'release version is stale');
 
 console.log('VOGT_FLOW_OK');

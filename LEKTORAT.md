@@ -638,6 +638,11 @@ Dieser Katalog ist ab sofort Teil jedes manuellen Falllaufs und jeder Fallbewert
   Abgang Teil desselben Engine-Übergangs sind, muss auch die letzte
   deterministische Fehlerstufe beides vollständig erzählen und die
   fallgebundene Wissensgrenze einhalten.
+- Schiffers Eröffnung ist ein verpflichtender vollständiger Auftragstext.
+  Insbesondere dürfen Renates Erstvorstellung, Detlefs Name, 1500 D-Mark,
+  Roter Stern, die Drei-Tage-Frist, Riemer als bloßer Verdacht, Perlencollier
+  als Vorschuss und der Lebendauftrag weder fehlen noch durch bezugslose
+  Pronomen oder stärkere Schuldbehauptungen ersetzt werden.
 
 ## Mindestprotokoll pro Run
 

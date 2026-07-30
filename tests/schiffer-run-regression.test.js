@@ -28,7 +28,7 @@ function sourceOf(name) {
 }
 
 assert(schifferStart > 0 && schifferEnd > schifferStart, 'Schiffer setup must be present');
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1749 +ClientReplyTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1750 +SchifferOpeningTruth'"),
   'release version must identify the Schiffer counter-run fixes');
 
 assert(schiffer.includes("stasiRelevance: 2"),
@@ -93,8 +93,9 @@ assert(schiffer.includes("erstbegegnung: true"),
 const schifferOfficeStart = schiffer.indexOf("{ name: 'Karl Mauers Büro'");
 assert(schifferOfficeStart >= 0
   && schiffer.slice(schifferOfficeStart, schifferOfficeStart + 1800).includes('openingFallbackText:')
+  && schiffer.slice(schifferOfficeStart, schifferOfficeStart + 1800).includes('openingFallbackRequired: true')
   && schiffer.slice(schifferOfficeStart, schifferOfficeStart + 1800).includes('1500 D-Mark Spielschulden'),
-  'the Schiffer opening needs a complete authored brief instead of a thin honorarium fragment');
+  'the Schiffer opening needs a mandatory complete authored brief instead of a thin honorarium fragment');
 const schifferLaterneStart = schiffer.indexOf("{ name: 'Rote Laterne'");
 assert(schifferLaterneStart >= 0
   && schiffer.slice(schifferLaterneStart, schifferLaterneStart + 1800).includes('arrivalFallbackText:')
