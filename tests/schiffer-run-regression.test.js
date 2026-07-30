@@ -28,7 +28,7 @@ function sourceOf(name) {
 }
 
 assert(schifferStart > 0 && schifferEnd > schifferStart, 'Schiffer setup must be present');
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1782 +CleanFinalHandoff'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1783 +SocialToneTruth'"),
   'release version must identify the handoff visual truth fixes');
 
 assert(schiffer.includes("stasiRelevance: 2"),

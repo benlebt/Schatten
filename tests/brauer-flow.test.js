@@ -333,6 +333,26 @@ assert(narratedReport.split(/\s+/).length >= 65
     && !/ohne dass du etwas Neues erfÃ¤hrst/.test(narratedReport),
   'a repaired client report must remain a real finale, never an empty social fallback');
 
+const earlyPoliteFallback = reportFallbackContext._worldTruthNaturalSocialFallbackText(
+  'Helmut Mahlke',
+  {
+    id: 'NPC_sozial_normal',
+    _sozialTonart: 'normal',
+    _sozialVorHinweis: true,
+    _sozialErfolg: false,
+    _npcInteraktion: { npcName: 'Helmut Mahlke', verb: 'sozial_normal' },
+    _anzeigeText: 'Karl: Normal und höflich reden · Renommee +1 · Rufvorteil',
+    text: 'Karl spricht Helmut Mahlke ruhig, freundlich und ohne Druck an.',
+  },
+  'social_target_missing',
+);
+assert(/ruhig, höflich/.test(earlyPoliteFallback)
+    && /ohne Streit/.test(earlyPoliteFallback)
+    && !/harte Stimme|trittst dicht|Bedrohung/.test(earlyPoliteFallback),
+  'an early polite Brauer conversation must never be repaired as a hard threat merely because its prompt says "ohne Druck"');
+assert(sourceOf('npcInteraktion').includes('_sozialVorHinweis: !!verb._sozialVorHinweis'),
+  'the selected early-conversation state must reach world-truth fallback repair');
+
 const restoredReportContext = {
   caseSetup: setup,
   caseProgress: { stage: 4, istGelöst: true, abschlussSzeneGerendert: true },
