@@ -718,6 +718,24 @@ assert.strictEqual(discoveredEtuiVisual.dayFile, 'stallschreiberstrasse-12-lager
   'only the explicit Etui discovery may reveal the original open-object warehouse image');
 assert(/gefundene silberne Etui/.test(discoveredEtuiVisual.alt),
   'the revealed-object image alt must describe the now-earned discovery state');
+visualContext.caseProgress.targetItemState = {
+  name: 'Silbernes Zigarettenetui',
+  status: 'inKarlInventory'
+};
+const securedEtuiVisual = visualContext._krauseHehlereiNachherVisual({
+  szene: 'Du steckst das Etui in deine Innentasche.'
+});
+assert.strictEqual(securedEtuiVisual.dayFile, 'stallschreiberstrasse-12-lager-secured-day-v1780.png',
+  'physical pickup must remove the Etui from the day warehouse image');
+assert.strictEqual(securedEtuiVisual.nightFile, 'stallschreiberstrasse-12-lager-secured-night-v1780.png',
+  'physical pickup must remove the Etui from the night warehouse image');
+assert(/leeren Fundort/.test(securedEtuiVisual.alt),
+  'the post-pickup image alt must describe the now-empty location');
+assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'krause', securedEtuiVisual.dayFile)),
+  'the secured Krause warehouse day asset must exist');
+assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'krause', securedEtuiVisual.nightFile)),
+  'the secured Krause warehouse night asset must exist');
+visualContext.caseProgress.targetItemState = null;
 visualContext.caseProgress.gefundeneIndizIds = [];
 for (const [names, expected] of [
   [['Tante Frieda', 'Kalle'], 'stallschreiberstrasse-12-frieda-kalle-day.webp'],

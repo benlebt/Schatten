@@ -21,7 +21,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1779 +ExplicitTheftPickup'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1780 +KrauseSecuredVisual'"), 'release version missing');
 const purposefulKrauseLabels = [
   'Konfrontiere Frieda mit der Spur',
   'Handle Zugang zu Friedas Lager aus',
