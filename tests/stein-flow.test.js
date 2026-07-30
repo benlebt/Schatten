@@ -501,7 +501,7 @@ assert(html.includes('cafe-kranzler-vera-day-v1739.png')
     && html.includes('Karl Mauer trifft Margarete Stein in ihrer von Reichsbahn-Unterlagen durchsuchten Wohnung'),
   'Stein scene images must explicitly match Vera, Mertens and Margarete presence');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1753 +ActionContinuity'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1754 +ArrivalPurpose'"),
   'release version is stale');
 assert(html.includes('Vom Hackeschen Markt dringen gedämpfte Motorengeräusche')
     && html.includes('Noch passt nicht jedes Stück zusammen'),

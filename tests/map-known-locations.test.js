@@ -56,6 +56,7 @@ Object.assign(context, {
   offeneIndizienAmOrt: () => 1,
   offeneIndizienAmOrtNachErreichbarkeit: () => ({ jetzt: 0, spaeter: 1, hattIndizien: true }),
   istOrtGeoeffnet: () => false,
+  _reiseOeffnetBeiAnkunft: () => false,
   _physischesFallzielStatus: () => null
 });
 vm.runInContext(sourceOf('mapSammleOrte'), context);
@@ -63,6 +64,17 @@ const closedEntries = Array.from(context.mapSammleOrte([locations[0]], norm('Imb
 assert.strictEqual(closedEntries.length, 1, 'closed known locations must remain map entries');
 assert.strictEqual(closedEntries[0].geoeffnet, false, 'closed location must retain its opening-state truth');
 assert.strictEqual(closedEntries[0].gesperrt, true, 'closed location must be visible but not travel-enabled');
+
+context._reiseOeffnetBeiAnkunft = () => true;
+const arrivalOpenEntries = Array.from(context.mapSammleOrte([locations[0]], norm('Imbiss Bei Trude')));
+assert.strictEqual(arrivalOpenEntries[0].jetztGeoeffnet, false,
+  'a location opening on arrival must still retain that it is closed right now');
+assert.strictEqual(arrivalOpenEntries[0].oeffnetBeiAnkunft, true,
+  'the map must expose why the otherwise closed location is reachable');
+assert.strictEqual(arrivalOpenEntries[0].geoeffnet, true,
+  'a location opening in the next travel block must be travel-enabled');
+assert.strictEqual(arrivalOpenEntries[0].gesperrt, false,
+  'a location opening on arrival must not remain a dead map button');
 
 const travelSource = sourceOf('oeffneReiseMenue');
 assert(travelSource.indexOf('_kartenBekannteOrteSynchronisieren(locs, vorauswahlOrtName)') < travelSource.indexOf('var ziele = locs.filter'),

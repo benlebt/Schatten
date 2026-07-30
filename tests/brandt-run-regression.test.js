@@ -18,7 +18,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1753 +ActionContinuity'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1754 +ArrivalPurpose'"),
   'Brandt regression release version missing');
 
 for (const bad of [
@@ -63,6 +63,16 @@ assert(brandtOpeningBlock.includes('openingFallbackText:')
   && brandtOpeningBlock.includes('für den Blackout gibt es noch keine Erklärung')
   && !brandtOpeningBlock.includes('Eisenstange'),
   'the Brandt opening fallback must preserve the genuinely unknown blackout cause');
+assert(brandtOpeningBlock.includes('Karls eigene Walther PPK steckt weiterhin in seinem Holster')
+  && brandtOpeningBlock.includes('zweiten, fremden Pistole'),
+  'Brandt opening must keep Karl own PPK separate from Erich foreign pistol');
+assert(brandtOpeningBlock.includes('Karls eigene Walther PPK bleibt währenddessen in seinem Holster')
+  && brandtOpeningBlock.includes('Erichs Tatwaffe als zweite Pistole'),
+  'Brandt first clue must preserve both weapons without moving Karl PPK offstage');
+assert(brandtBlock.includes('Karl steht bereits in Erichs Einzimmerwohnung')
+  && brandtBlock.includes('klettert nicht außen am vierten Stock')
+  && brandtBlock.includes('weder Taschenmesser noch erfundenes Werkzeug'),
+  'Brandt debt-note search must not invent a fourth-floor window stunt or absent knife');
 const blackoutGuardContext = {
   caseSetup: { klient: 'Anton Brandt (Vater)' },
   engineCurrentLocation: { name: 'Opel Olympia am Tempelhofer Feld' },
