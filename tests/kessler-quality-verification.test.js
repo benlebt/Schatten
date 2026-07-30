@@ -33,7 +33,7 @@ function norm(value) {
     .replace(/[^a-z0-9]+/g, ' ').trim();
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1784 +ReputationInformantTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1785 +PartialEndingTruth'"),
   'release version missing');
 assert(html.includes("hauptuiActionLabel: ind.hauptuiActionLabel || ''")
   && html.includes("hauptuiActionPrompt: ind.hauptuiActionPrompt || ''"),

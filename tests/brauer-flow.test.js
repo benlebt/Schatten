@@ -136,6 +136,11 @@ assert(html.includes("indizId: 'required_proof_confirms_safety'"),
   'a confirmed Marienfelde registration must reject later uncertainty prose');
 assert(html.includes('ABSCHLUSS-NACHWEIS BESTÄTIGT SICHERHEIT'),
   'the finale prompt must state the positive truth after the safety proof');
+assert(setup.requiredProofPartialReportText
+    && setup.requiredProofPartialReportText.split(/\s+/).length >= 80
+    && /Verbleib bleibt ungesichert/.test(setup.requiredProofPartialReportText)
+    && !/Registratur bestätigt|im Westen in Sicherheit/.test(setup.requiredProofPartialReportText),
+  'Brauer needs a complete deterministic partial report without invented Marienfelde proof');
 assert(html.includes("_istFamilienauftrag = !!(caseSetup && caseSetup.familieMatter)"),
   'family cases must be classified as non-paying assignments');
 assert(html.includes('Für diesen Familienfall gibt es kein Honorar.'),
@@ -267,6 +272,7 @@ assert(html.includes('für den verstorbenen Regierenden Bürgermeister West-Berl
 const serializedSetup = JSON.parse(JSON.stringify(setup));
 delete serializedSetup.abschlussOrt;
 delete serializedSetup.requiredProofPartialText;
+delete serializedSetup.requiredProofPartialReportText;
 delete serializedSetup.requiredProofConfirmsSafety;
 delete serializedSetup.reportFallbackText;
 serializedSetup.requiredProof = {};
@@ -292,6 +298,8 @@ assert.strictEqual(migrationContext.caseSetup.abschlussOrt, 'Karl Mauers Büro',
   'restoring an older save must migrate the configured report location');
 assert.strictEqual(migrationContext.caseSetup.reportFallbackText, setup.reportFallbackText,
   'restoring an older save must migrate the narrated final report');
+assert.strictEqual(migrationContext.caseSetup.requiredProofPartialReportText, setup.requiredProofPartialReportText,
+  'restoring an older save must migrate the deterministic partial report');
 assert(migrationContext.caseSetup.locations[0].arrivalFallbackText
     && serializedLaundry.arrivalFallbackText
     && serializedRailway.indizien.find((entry) => entry.id === 'schliessfach_leer').fundText,
@@ -377,9 +385,41 @@ assert.strictEqual(politeMahlkeWithReputation.erfolg, true,
 assert.strictEqual(politeMahlkeWithReputation.informantGratis, true,
   'a reputation-rescued informant route must open the evidence gate without payment or violence');
 
+const partialReportContext = {
+  caseSetup: setup,
+  caseProgress: {
+    stage: 3,
+    klientGesprochen: true,
+    indizien: [
+      clueById.get('erwin_sachen_weg').text,
+      clueById.get('hilde_westgeld').text,
+      clueById.get('mahlke_weststrecke').text,
+    ],
+  },
+  lastChosenKategorie: 'AUFLOESEN',
+  diag: () => {},
+};
+vm.createContext(partialReportContext);
+vm.runInContext(sourceOf('_requiredProofErfuellt')
+  + '\n' + sourceOf('_configuredFinalReportFallbackText')
+  + '\n' + sourceOf('repairConfiguredFinalReportProse'), partialReportContext);
+const partialReportScene = {
+  klient_berichtet: true,
+  szene: 'Du legst das Notizbuch mit der Bestätigung aus Marienfelde auf den Tisch und sagst, dass Erwin die Grenze überschritten hat.',
+};
+assert.strictEqual(partialReportContext.repairConfiguredFinalReportProse(partialReportScene), true,
+  'a Brauer report without the required proof must use the authorized partial ending');
+assert.strictEqual(partialReportScene.szene, setup.requiredProofPartialReportText,
+  'the partial ending must replace the entire invented Marienfelde report, not only one sentence');
+
 const restoredReportContext = {
   caseSetup: setup,
-  caseProgress: { stage: 4, istGelöst: true, abschlussSzeneGerendert: true },
+  caseProgress: {
+    stage: 4,
+    istGelöst: true,
+    abschlussSzeneGerendert: true,
+    indizien: [clueById.get('marienfelde_registratur').text],
+  },
   currentScene: { szene: 'Das Gespräch endet, ohne dass du etwas Neues erfährst.' },
   lastFullScene: { szene: 'Das Gespräch endet, ohne dass du etwas Neues erfährst.' },
   logEntries: [
@@ -388,6 +428,7 @@ const restoredReportContext = {
   ],
 };
 vm.createContext(restoredReportContext);
+vm.runInContext(sourceOf('_requiredProofErfuellt'), restoredReportContext);
 vm.runInContext(sourceOf('_configuredFinalReportFallbackText'), restoredReportContext);
 vm.runInContext(sourceOf('_repairRestoredFinalReportProse'), restoredReportContext);
 assert.strictEqual(
@@ -398,6 +439,31 @@ assert.strictEqual(
 assert.strictEqual(restoredReportContext.currentScene.szene, setup.reportFallbackText);
 assert.strictEqual(restoredReportContext.lastFullScene.szene, setup.reportFallbackText);
 assert.strictEqual(restoredReportContext.logEntries[1].text, setup.reportFallbackText);
+
+const restoredPartialContext = {
+  caseSetup: setup,
+  caseProgress: {
+    stage: 4,
+    istGelöst: true,
+    abschlussSzeneGerendert: true,
+    indizien: [clueById.get('mahlke_weststrecke').text],
+  },
+  currentScene: { szene: 'Du legst das Notizbuch mit der Bestätigung aus Marienfelde vor Hilde und erklärst Erwin für sicher.' },
+  lastFullScene: { szene: 'Du legst das Notizbuch mit der Bestätigung aus Marienfelde vor Hilde und erklärst Erwin für sicher.' },
+  logEntries: [
+    { type: 'choice', text: 'Fall berichten · Hilde Brauer' },
+    { type: 'scene', text: 'Du legst das Notizbuch mit der Bestätigung aus Marienfelde vor Hilde und erklärst Erwin für sicher.' },
+  ],
+};
+vm.createContext(restoredPartialContext);
+vm.runInContext(sourceOf('_requiredProofErfuellt'), restoredPartialContext);
+vm.runInContext(sourceOf('_configuredFinalReportFallbackText'), restoredPartialContext);
+vm.runInContext(sourceOf('_repairRestoredFinalReportProse'), restoredPartialContext);
+assert.strictEqual(restoredPartialContext._repairRestoredFinalReportProse(), true,
+  'restoring a completed partial Brauer ending must repair a previously invented proof');
+assert.strictEqual(restoredPartialContext.currentScene.szene, setup.requiredProofPartialReportText);
+assert.strictEqual(restoredPartialContext.lastFullScene.szene, setup.requiredProofPartialReportText);
+assert.strictEqual(restoredPartialContext.logEntries[1].text, setup.requiredProofPartialReportText);
 
 const genericThreadContext = {
   caseSetup: setup,
