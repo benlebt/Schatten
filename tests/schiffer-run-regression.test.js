@@ -28,8 +28,8 @@ function sourceOf(name) {
 }
 
 assert(schifferStart > 0 && schifferEnd > schifferStart, 'Schiffer setup must be present');
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1773 +SchifferRexRescue'"),
-  'release version must identify the Schiffer Rex rescue fixes');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1774 +HandoffVisualTruth'"),
+  'release version must identify the handoff visual truth fixes');
 
 assert(schiffer.includes("stasiRelevance: 2"),
   'the private rescue case must not start the global MfS confrontation machinery');
@@ -254,9 +254,10 @@ const physicalVisualSource = sourceOf('_physicalTargetSceneVisual');
 assert(physicalVisualSource.indexOf("transportStatus === 'im_opel' && states.transportedAtTarget")
     < physicalVisualSource.indexOf('caseProgress.zielpersonGeborgen && states.rescuedAtTarget'),
   'the in-Opel visual must win before the generic just-rescued image');
-assert(physicalVisualSource.includes('amPolizeiZiel && states.policeHandoff')
-    && physicalVisualSource.includes('/^(im_opel|bei_polizei)$/.test(transportStatus)'),
-  'arrival and completed police handoff must both show Detlef at Keibelstrasse');
+assert(physicalVisualSource.includes("amPolizeiZiel && states.policeHandoff && transportStatus === 'im_opel'")
+    && physicalVisualSource.includes("transportStatus === 'bei_polizei'")
+    && physicalVisualSource.includes('Die Uebergabe steht noch aus.'),
+  'police arrival and completed handoff must use distinct truthful visual descriptions');
 assert(fs.existsSync(path.join(root, 'assets', 'scenes', 'schiffer', 'karl-mauers-buero-renate-night.png')),
   'office presence image file must exist');
 assert(fs.existsSync(path.join(root, 'assets', 'scenes', 'schiffer', 'renate-schiffer-handoff-night.png')),
@@ -268,7 +269,21 @@ assert(fs.existsSync(path.join(root, 'assets', 'scenes', 'schiffer', 'detlef-sch
 
 const deliveryContext = {
   caseSetup: {
-    targetResolution: { mode: 'physical', npc: 'detlef_schiffer', location: 'Keller des Spielklubs Roter Stern' },
+    targetResolution: {
+      mode: 'physical',
+      npc: 'detlef_schiffer',
+      location: 'Keller des Spielklubs Roter Stern',
+      handoffs: {
+        client: { location: 'Renate Schiffer Wohnung Tiergarten', name: 'Renate Schiffer' },
+        police: { location: 'Volkspolizei-Praesidium Keibelstrasse', name: 'Volkspolizei' }
+      },
+      visualStates: {
+        policeHandoff: {
+          file: 'volkspolizei-detlef-handoff-v1770.webp',
+          alt: 'Szenenbild: Detlef wurde der Polizei uebergeben.'
+        }
+      }
+    },
     reportFallbackAlways: true,
     reportFallbackText: 'Renate erhält einen wahrheitsgetreuen Bericht.',
     reportFallbackPoliceText: 'Die Volkspolizei erhält Detlef und Renate wird verständigt.'
@@ -284,6 +299,18 @@ vm.createContext(deliveryContext);
 vm.runInContext(sourceOf('repairPhysicalRescueEscortProse'), deliveryContext);
 vm.runInContext(sourceOf('_configuredFinalReportFallbackText'), deliveryContext);
 vm.runInContext(sourceOf('repairConfiguredFinalReportProse'), deliveryContext);
+vm.runInContext(sourceOf('_physicalTargetSceneVisual'), deliveryContext);
+deliveryContext.engineCurrentLocation.name = 'Volkspolizei-Praesidium Keibelstrasse';
+let policeVisual = deliveryContext._physicalTargetSceneVisual();
+assert(policeVisual && /Uebergabe steht noch aus/.test(policeVisual.alt)
+    && !/wurde der Polizei uebergeben/.test(policeVisual.alt),
+  'arrival at Keibelstrasse must keep the handoff visibly open');
+deliveryContext.caseProgress.zielpersonTransportStatus = 'bei_polizei';
+policeVisual = deliveryContext._physicalTargetSceneVisual();
+assert.strictEqual(policeVisual.alt, 'Szenenbild: Detlef wurde der Polizei uebergeben.',
+  'the completed handoff may use the actual police-transfer description');
+deliveryContext.engineCurrentLocation.name = 'Keller des Spielklubs Roter Stern';
+deliveryContext.caseProgress.zielpersonTransportStatus = 'im_opel';
 const escortScene = { szene: 'Die kühle Nachtluft am Hackeschen Markt wirkt wie eine Ohrfeige. August, doch der Motor springt an.', spannung: 4 };
 assert.strictEqual(deliveryContext.repairPhysicalRescueEscortProse(escortScene), true,
   'the rescue transport must replace a foreign-location and broken-fragment narration');
