@@ -2,9 +2,9 @@
 
 Stand: 30. Juli 2026
 
-Aktueller Release: `v7.12.1743 +NeverBlankSceneImage`
+Aktueller Release: `v7.12.1750 +SchifferOpeningTruth`
 
-Aktueller Release-Commit: `e6b0deb fix: never leave scene image blank`
+Aktueller Release-Commit: `b2e7773 fix: require complete Schiffer opening`
 
 Repository-HEAD: aktuelles `origin/main` prüfen; nach dem Release folgen reine
 Wissens-/Übergabe-Commits ohne erneutes Produktionsdeployment.
@@ -53,7 +53,7 @@ Tests: tests\*.test.js
 Branch: main
 Remote: https://github.com/benlebt/Schatten.git
 Produktion: https://schatten.sfp.de/
-Debug: https://schatten.sfp.de/?debug=on&v=1743&deploy=e6b0deb
+Debug: https://schatten.sfp.de/?debug=on&v=1750&deploy=b2e7773
 FTPS-Host: www126.your-server.de
 FTPS-Benutzer: sfpade_1
 ```
@@ -65,28 +65,27 @@ Vercel-Ablauf ist nicht der aktuelle Produktionsweg.
 ## 3. Exakter technischer Stand
 
 ```text
-Release: v7.12.1743 +NeverBlankSceneImage
-Release-Commit der deployten index.html: e6b0deb
-HEAD/origin-main: beim Einstieg mit git rev-parse prüfen; liegt nach e6b0deb
-Tests: 68/68 grün
+Release: v7.12.1750 +SchifferOpeningTruth
+Release-Commit der deployten index.html: b2e7773
+HEAD/origin-main: beim Einstieg mit git rev-parse prüfen; nach b2e7773 folgt
+gegebenenfalls nur der abschließende Wissens-/Ranking-Commit
+Tests: 69/69 grün
 Deployment: erfolgreich
-Produktionsprüfung: Versionsbadge und echtes Stein-Szenenbild sichtbar bestätigt
+Produktionsprüfung: Versionsbadge sowie Schiffer-, Wessel- und Kessler-
+Gegenläufe auf dem deployten Stand sichtbar bestätigt
 ```
 
 Letzte relevante Commits:
 
 ```text
+b2e7773 fix: require complete Schiffer opening
+8461d18 fix: preserve Schiffer client reply fallback
+ce9fd24 fix: harden medium-high case truth
+f8893d1 fix: preserve medium-case opening truth
+794750c fix: guard briefing facts from premature discovery
+f78c495 fix: keep sleep at the current engine location
+746418c fix: harden Vogt truth and custody lifecycle
 209de89 docs: hand off current Schatten quality state
-e6b0deb fix: never leave scene image blank
-113f58d fix: hide threats until prose introduction
-092c9a5 fix: bind Stein opening threat to prose
-84a816a fix: make reputation comparisons reproducible
-ff5e811 fix: align Stein political finale and scene truth
-73749ea fix: heal duplicated Goerke restore prose
-24e13d0 fix: make Goerke restore repairs idempotent
-942b68c fix: harden Goerke custody and item handoff
-c6d0878 fix: harden Lindenbaum romance and Brakke continuity
-b1d86e6 fix: harden Brauer continuity and confrontation balance
 ```
 
 ## 4. Aktuelle Bewertung aller 14 Fälle
@@ -103,18 +102,20 @@ Komplettlauf darf die Qualität nicht ohne konkreten Regressionbefund von etwa
 | 4 | Görke | 9,2/10 | sehr hoch |
 | 5 | Brauer | 9,1/10 | hoch |
 | 6 | Krause | 9,1/10 | hoch |
-| 7 | Wessel | 9,0/10 | mittel bis hoch |
-| 8 | Kessler | 9,0/10 | mittel bis hoch |
-| 9 | Schiffer | 9,0/10 | mittel bis hoch |
-| 10 | Wegener | 8,9/10 | mittel |
-| 11 | Brandt | 8,9/10 | mittel |
-| 12 | Hollenbeck (Lindner-Auftrag) | 8,9/10 | mittel |
-| 13 | Achterberg | 8,8/10 | mittel |
-| 14 | Vogt | 8,8/10 | mittel |
+| 7 | Wessel | 9,1/10 | hoch |
+| 8 | Kessler | 9,1/10 | hoch |
+| 9 | Schiffer | 9,1/10 | hoch |
+| 10 | Vogt | 9,1/10 | hoch |
+| 11 | Wegener | 9,0/10 | hoch |
+| 12 | Brandt | 9,0/10 | hoch |
+| 13 | Hollenbeck (Lindner-Auftrag) | 9,0/10 | hoch |
+| 14 | Achterberg | 9,0/10 | hoch |
 
-Kein Fall ist derzeit technisch unspielbar. Die Plätze 10–14 sind nicht
-wesentlich schlechter, sondern lediglich weniger frisch mit allen
-Sondervarianten live bestätigt.
+Kein Fall ist derzeit technisch unspielbar. Alle Fälle liegen im 9er-Bereich.
+Die Plätze 11–14 sind nicht wesentlich schlechter; die Unterschiede beruhen
+auf erzählerischer Dichte und Komplexität, nicht auf ausstehenden
+Gegenläufen. `hoch` bleibt bewusst unter `sehr hoch`, solange nicht jede
+Sondermatrix frisch vollständig durchgespielt wurde.
 
 ## 5. Zuletzt intensiv bestätigte Fälle
 
@@ -152,6 +153,34 @@ Sondervarianten live bestätigt.
 - Vera, Mertens, Mantelmann und Margarete stimmen in Prosa, UI und Bild.
 - Margaretes Drahtgestellbrille bleibt bis zu einer erzählten Reparatur
   zerbrochen.
+
+### Frischer Rotationsblock v1744 bis v1750
+
+- **Vogt:** vollständige Auftragseröffnung, Sigrid-Kontinuität, sechs Kernorte,
+  Pieck-Ortsgates, einmalige Haft-Episode und Schlafzeit repariert. Der
+  Produktionsgegenlauf bestätigte außerdem, dass Schlaf vor Ort den
+  Engine-Ort, Header, Prosa und das Morgenbild beibehält.
+- **Achterberg:** Auftragswissen wird nicht mehr als bereits erspielter
+  Eigenfund in der Garderobe ausgegeben. Der Egon-Gegenlauf unterscheidet
+  Briefing und echten Digitalis-Fund korrekt.
+- **Hollenbeck/Lindner:** kanonische Reviereröffnung, Lindners begrenzter
+  Wissensstand und die Ankunft in der Villa mit Margit wurden live bestätigt;
+  keine vorgezogenen Notizbuch-, Wegner-, Sokolow- oder Datscha-Fakten.
+- **Brandt:** die unbekannte Blackout-Ursache bleibt auch in Vergleichen
+  unbekannt; Hammer-, Stangen- und Waffenbehauptungen werden vor Freigabe
+  repariert. Der Produktionsgegenlauf behielt Benommenheit und Fremdpistole,
+  erfand aber kein Tatmittel.
+- **Wegener:** Pflichtopening bestätigt Auftrag seit zwei Tagen,
+  Verschwinden seit 6. Februar und Schieles 15 Ostmark oder Tauschware.
+- **Wessel:** Eröffnung und Brunos erste Aussage nennen Werner, 17. Juni,
+  Friedrichstraße, achthundert Ostmark und politische Gefahr vollständig.
+- **Kessler:** Hinterhof-Eröffnung, Fensterpositionen, Robert außerhalb,
+  Szenenbild und Pohls Mittwochsbeobachtung sind deckungsgleich. Haukes
+  Vorname bleibt bis zur sichtbaren Vorstellung verborgen.
+- **Schiffer:** Pflichtopening und direkter Renate-Dialog sind vollständig.
+  Renate kennt keine Boxernase, Herkunft oder sonstige Tätermerkmale und
+  übergibt kein erfundenes Foto; Antwort und Abgang bleiben auch im letzten
+  Sozialfallback falltreu.
 
 ## 6. Rufsystem — bestätigte A/B/C/D-Matrix
 
@@ -310,7 +339,7 @@ Write-Output ('ALL_TESTS_OK count=' + $files.Count)
 Aktueller Sollstand:
 
 ```text
-ALL_TESTS_OK count=68
+ALL_TESTS_OK count=69
 ```
 
 Viele Tests prüfen die exakte Zeichenfolge von `window.SCHATTEN_VERSION`.
@@ -319,19 +348,20 @@ werden.
 
 ## 13. Nächste Prioritäten
 
-Die vier priorisierten Fälle sind frisch intensiv geprüft. Als nächster Block
-werden die übrigen zehn Fälle rotierend auf Produktion gegengelaufen:
+Die zuvor mittleren und mittelhohen Fälle sind bis v1750 frisch auf Produktion
+geprüft und ihre konkreten Befunde geschlossen. Die nächste Rotation beginnt
+nicht erneut bei denselben Eröffnungen, sondern erweitert gezielt die
+Variantenabdeckung:
 
-1. Vogt
-2. Achterberg
-3. Hollenbeck/Lindner
-4. Brandt
-5. Wegener
-6. Schiffer
-7. Kessler
-8. Wessel
-9. Krause
-10. Brauer
+1. Wessel: später politischer Beweis-/Haftpfad und alternatives Ende.
+2. Kessler: Robert-Eintritt, Frau-Hauke-Reveal und Abschluss in verschiedenen
+   Rufprofilen.
+3. Schiffer: Spielklub, Kellerrettung und beide Übergabewege.
+4. Vogt: alternativer Pieck-/Haftpfad ohne zweite Haft-Episode.
+5. Achterberg, Hollenbeck, Brandt und Wegener: mittlere und späte
+   Beweisketten statt erneut nur die Eröffnung.
+6. Danach Brauer und Krause als rotierende Gegenkontrolle der älteren hohen
+   Vertrauensstufe.
 
 Dabei je nach Setup bewusst variieren:
 
@@ -357,10 +387,12 @@ Dabei je nach Setup bewusst variieren:
 
 ## 15. Kurzer Statussatz
 
-Schatten läuft produktiv auf v1743, Commit `e6b0deb`, mit 68/68 grünen Tests.
+Schatten läuft produktiv auf v1750, Commit `b2e7773`, mit 69/69 grünen Tests.
 Alle 14 Fälle sind strukturell spielbar und liegen in der aktuellen
-Qualitätsbewertung zwischen 8,8 und 9,4. Strauss, Lindenbaum, Stein und Görke
-sind zuletzt besonders intensiv live bestätigt. Rufsystem, Rex-/Itembalance,
-politische Haftpfade und die Garantie gegen leere Szenenbilder sind
-regressionsgesichert. Für die nächste Runde stehen frische, rotierende
-Produktionsläufe der übrigen zehn Fälle an.
+Qualitätsbewertung zwischen 9,0 und 9,4. Strauss, Lindenbaum, Stein und Görke
+haben weiterhin sehr hohes Prüfvertrauen; alle übrigen Fälle liegen nach dem
+frischen Rotationsblock bei hoch. Rufsystem, Rex-/Itembalance, politische
+Haftpfade, Bildgarantie, Auftrags-/Eigenfundtrennung, Schlaf-Ortswahrheit und
+fallgebundene Wissensgrenzen sind regressionsgesichert. Die nächste Rotation
+vertieft mittlere und späte Alternativpfade statt dieselben Eröffnungen erneut
+zu wiederholen.

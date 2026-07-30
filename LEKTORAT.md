@@ -1,6 +1,6 @@
 # Schatten – additiver verbindlicher Run-Lektoratsstandard
 
-Stand: 29.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `UEBERGABE_v1313.md`, den Konzeptdokumenten, Tests und bisherigen Lektoratsentscheidungen festgehaltenen Regeln. Die sechs Standing-Checkpoints sind ein zusätzlicher Pflichtfilter und ausdrücklich **nicht exklusiv**: Alle bisherigen Lektoratsvorgaben gelten weiter, sofern sie nicht durch eine spätere ausdrückliche Projektentscheidung, den aktuellen Code oder einen Regressionstest ersetzt wurden. Überschneidungen werden nicht doppelt gezählt, aber vollständig geprüft.
+Stand: 30.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `UEBERGABE_v1313.md`, den Konzeptdokumenten, Tests und bisherigen Lektoratsentscheidungen festgehaltenen Regeln. Die sechs Standing-Checkpoints sind ein zusätzlicher Pflichtfilter und ausdrücklich **nicht exklusiv**: Alle bisherigen Lektoratsvorgaben gelten weiter, sofern sie nicht durch eine spätere ausdrückliche Projektentscheidung, den aktuellen Code oder einen Regressionstest ersetzt wurden. Überschneidungen werden nicht doppelt gezählt, aber vollständig geprüft.
 
 ## Geltungsbereich und Hierarchie
 
@@ -658,14 +658,14 @@ Dieser Katalog ist ab sofort Teil jedes manuellen Falllaufs und jeder Fallbewert
 - Befunde nach P0/P1/P2/P3, jeweils mit Originalsatz, Enginezustand und Root Cause.
 - Fixversion, Regressionstest, Commit und Ergebnis des Gegenlaufs.
 
-## Aktuelle Fallbewertung und Prüfvertrauen — Release v1743
+## Aktuelle Fallbewertung und Prüfvertrauen — Release v1750
 
 Diese Tabelle bewertet die **Spielqualität**. Das **Prüfvertrauen** ist davon
 getrennt: Ein länger zurückliegender vollständiger Produktionslauf senkt nicht
 automatisch die Qualität eines Falls. Ohne belegten Qualitätsrückschritt wird
 eine Bewertung nicht allein wegen geringerer Testfrische herabgesetzt.
 
-| Rang | Fall | Spielqualität | Prüfvertrauen v1743 |
+| Rang | Fall | Spielqualität | Prüfvertrauen v1750 |
 |---:|---|---:|---|
 | 1 | Strauss | 9,4/10 | sehr hoch |
 | 2 | Lindenbaum | 9,3/10 | sehr hoch |
@@ -673,18 +673,20 @@ eine Bewertung nicht allein wegen geringerer Testfrische herabgesetzt.
 | 4 | Görke | 9,2/10 | sehr hoch |
 | 5 | Brauer | 9,1/10 | hoch |
 | 6 | Krause | 9,1/10 | hoch |
-| 7 | Wessel | 9,0/10 | mittel bis hoch |
-| 8 | Kessler | 9,0/10 | mittel bis hoch |
-| 9 | Schiffer | 9,0/10 | mittel bis hoch |
-| 10 | Wegener | 8,9/10 | mittel |
-| 11 | Brandt | 8,9/10 | mittel |
-| 12 | Hollenbeck (Lindner-Auftrag) | 8,9/10 | mittel |
-| 13 | Achterberg | 8,8/10 | mittel |
-| 14 | Vogt | 8,8/10 | mittel |
+| 7 | Wessel | 9,1/10 | hoch |
+| 8 | Kessler | 9,1/10 | hoch |
+| 9 | Schiffer | 9,1/10 | hoch |
+| 10 | Vogt | 9,1/10 | hoch |
+| 11 | Wegener | 9,0/10 | hoch |
+| 12 | Brandt | 9,0/10 | hoch |
+| 13 | Hollenbeck (Lindner-Auftrag) | 9,0/10 | hoch |
+| 14 | Achterberg | 9,0/10 | hoch |
 
-Strauss, Lindenbaum, Stein und Görke bilden die zuletzt vollständig oder
-gezielt intensiv auf Produktion geprüfte Spitzengruppe. Die übrigen zehn Fälle
-sind strukturell spielbar und regressionsgrün, brauchen aber rotierende frische
-Produktionsläufe mit Ruf-, Rex-, Item-, Romance-, Haft- und Alternativpfaden.
-`Prüfvertrauen mittel` bedeutet deshalb **nicht**, dass der Fall nur eine
-7er- oder niedrige 8er-Spielqualität hätte.
+Strauss, Lindenbaum, Stein und Görke bleiben aufgrund ihrer vollständigen oder
+besonders intensiven jüngsten Produktionsläufe die Spitzengruppe mit sehr
+hohem Prüfvertrauen. Die zuvor mittleren beziehungsweise mittelhohen Fälle
+wurden bis v1750 in frischen Produktionspfaden geprüft, ihre sichtbaren
+Root-Cause-Befunde behoben und auf demselben deployten Stand gegengelaufen.
+Darum liegt ihr Prüfvertrauen nun bei **hoch**, aber noch nicht bei **sehr
+hoch**: vollständige Ruf-, Rex-, Item-, Romance-, Haft- und Alternativmatrizen
+bleiben weiterhin rotierend zu testen.
