@@ -28,8 +28,8 @@ function sourceOf(name) {
 }
 
 assert(schifferStart > 0 && schifferEnd > schifferStart, 'Schiffer setup must be present');
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1772 +SchifferMatrixTruth'"),
-  'release version must identify the Schiffer matrix truth fixes');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1773 +SchifferRexRescue'"),
+  'release version must identify the Schiffer Rex rescue fixes');
 
 assert(schiffer.includes("stasiRelevance: 2"),
   'the private rescue case must not start the global MfS confrontation machinery');

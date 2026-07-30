@@ -78,6 +78,18 @@ assert.strictEqual(targetContext._physischesFallzielNpcFreigeschaltet(
 assert.strictEqual(targetContext._physischesFallzielNpcFreigeschaltet(
   { id: 'konstantin_wegener', abStage: 4 }, 'Eckkneipe Zum Goldenen Anker'
 ), false, 'target NPC must not appear at another location');
+targetContext.engineCurrentLocation = { name: 'Lagerhalle an der Spree' };
+const restoredRescueRoster = targetContext._physischesFallzielAmRettungsortErgaenzen([
+  { id: 'hund_rex', name: 'Rex' }
+]);
+assert.deepStrictEqual(
+  Array.from(restoredRescueRoster).map(entry => entry.id),
+  ['konstantin_wegener', 'hund_rex'],
+  'an unrescued physical target must survive ambiguous guard departures and remain actionable beside Rex'
+);
+const deduplicatedRescueRoster = targetContext._physischesFallzielAmRettungsortErgaenzen(restoredRescueRoster);
+assert.strictEqual(deduplicatedRescueRoster.filter(entry => entry.id === 'konstantin_wegener').length, 1,
+  'the physical-target rescue guarantee must not duplicate an already visible target');
 targetContext.caseProgress.zielpersonGefunden = true;
 assert(targetContext._physischesFallzielStatus(), 'found target must remain active while physical rescue is open');
 assert.strictEqual(targetContext._physischesFallzielIstGeborgen(), false, 'finding a bound target must not count as rescue');
@@ -150,6 +162,8 @@ assert(html.includes("const wartetAmUebergabeort = transportStatus === 'im_opel'
   'a target waiting in the Opel must remain visible at the configured handoff location');
 assert(html.includes('Letzte Kontinuitaetsgarantie fuer physische Rettungsziele'),
   'late roster filters must not remove a rescued target at the handoff location');
+assert(html.includes("typeof _physischesFallzielAmRettungsortErgaenzen === 'function'"),
+  'the final roster must restore an unrescued physical target at the configured rescue location');
 assert(html.includes("'Zielperson noch aufsuchen und befreien'"), 'case completion must explain an unreached physical target');
 assert(html.includes("resolveLockReason = 'Zielperson noch befreien'"), 'case completion must explain an open physical rescue');
 assert(html.includes("resolveLockReason = 'Zielperson noch zum Opel bringen'"), 'completion lock must explain the transport step');

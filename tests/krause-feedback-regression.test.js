@@ -109,6 +109,38 @@ problem = truthContext.validateSceneWorldTruth({
   optionen: []
 }, transitionOption);
 assert(problem && problem.code === 'client_departure_missing', 'the first assignment talk must narrate Krause leaving after the reply');
+const departurePhantomContext = {
+  normForMatch,
+  sameNamedPerson: (left, right) => normForMatch(left) === normForMatch(right),
+  engineCurrentLocation: { name: 'Karl Mauers B\u00fcro' },
+  getNpcsAtCurrentLocation: () => [
+    { id: 'renate_schiffer', name: 'Renate Schiffer' },
+    { id: 'phantom', name: 'Unbekannter Mann' }
+  ],
+  _splitWorldTruthSentences: value => String(value || '').match(/[^.!?]+[.!?]?/g) || [],
+  _worldTruthAliases: (value, entry) => [normForMatch((entry && entry.name) || value)],
+  _worldTruthHasAlias: (text, aliases) => aliases.some(alias => normForMatch(text).includes(alias)),
+};
+vm.createContext(departurePhantomContext);
+vm.runInContext(sourceOf('enforceSceneWorldTruthFallback'), departurePhantomContext);
+const departurePhantomScene = {
+  ort: 'Karl Mauers B\u00fcro',
+  szene: 'Du bleibst mit Auftrag und Notizen zurueck. Ein unbekannter Mann wartet in der Ecke.',
+  personenImRaum: [],
+  cast_entfernt: ['Renate Schiffer'],
+  optionen: []
+};
+departurePhantomContext.enforceSceneWorldTruthFallback(departurePhantomScene, {
+  code: 'unrostered_present_actor',
+  npc: 'Unbekannter Mann',
+  sentence: 'Ein unbekannter Mann wartet in der Ecke.'
+}, {
+  _clientDepartureAfterReply: 'Renate Schiffer'
+});
+assert.deepStrictEqual(Array.from(departurePhantomScene.personenImRaum), [],
+  'a later phantom-actor repair must not reintroduce a client whose departure was already fixed');
+assert(!/renate schiffer bleibt/i.test(departurePhantomScene.szene),
+  'a departed client must not be appended back into the repaired scene prose');
 problem = truthContext.validateSceneWorldTruth({
   ort: 'Karl Mauers B\u00fcro',
   szene: 'Theodor Krause antwortet: "Ich habe die zwei M\u00e4nner mit einem Seesack im Hinterhof gesehen." Dann verabschiedet er sich und verl\u00e4sst das B\u00fcro.',
