@@ -669,6 +669,15 @@ problem = context.validateSceneWorldTruth({
 assert(problem && problem.code === 'unauthorized_departure',
   'prose must not invent a departure the player did not choose');
 
+problem = context.validateSceneWorldTruth({
+  ort: 'Lagerhaus an der Spree',
+  szene: 'Der Motor springt an, im Rueckspiegel wird das Lagerhaus kleiner.',
+  personenImRaum: [],
+  optionen: []
+}, { id: 'AKTEN_LESEN', text: 'Pruefe das Schuldbuch' });
+assert(problem && problem.code === 'unauthorized_departure',
+  'a started engine and shrinking location in the rear-view mirror is an unchosen departure too');
+
 context.caseProgress.npcZustand = {
   mertens: {
     name: 'Oberleutnant Mertens',

@@ -28,8 +28,8 @@ function sourceOf(name) {
 }
 
 assert(schifferStart > 0 && schifferEnd > schifferStart, 'Schiffer setup must be present');
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1771 +SchifferRestoreTruth'"),
-  'release version must identify the Schiffer counter-run fixes');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1772 +SchifferMatrixTruth'"),
+  'release version must identify the Schiffer matrix truth fixes');
 
 assert(schiffer.includes("stasiRelevance: 2"),
   'the private rescue case must not start the global MfS confrontation machinery');
@@ -274,6 +274,7 @@ const deliveryContext = {
     reportFallbackPoliceText: 'Die Volkspolizei erhält Detlef und Renate wird verständigt.'
   },
   caseProgress: { zielpersonGeborgen: true, zielpersonTransportStatus: 'im_opel' },
+  lastChosenKategorie: '',
   engineCurrentLocation: { name: 'Keller des Spielklubs Roter Stern' },
   normForMatch: value => String(value || '').toLowerCase(),
   _resolveNpcIdentity: () => ({ name: 'Detlef Schiffer' }),
@@ -293,13 +294,19 @@ const finalScene = { szene: 'Riemers Schulden sind gegenstandslos.', klient_beri
 assert.strictEqual(deliveryContext.repairConfiguredFinalReportProse(finalScene), true);
 assert.strictEqual(finalScene.szene, deliveryContext.caseSetup.reportFallbackText,
   'the configured Schiffer final truth must replace an invented debt cancellation');
+deliveryContext.lastChosenKategorie = 'AUFLOESEN';
+const flaglessFinalScene = { szene: 'Karl ruft Renate an, obwohl sie mit Detlef im selben Raum ist.', klient_berichtet: false };
+assert.strictEqual(deliveryContext.repairConfiguredFinalReportProse(flaglessFinalScene), true,
+  'an explicit solve action must use the configured report even when the model forgets klient_berichtet');
+assert.strictEqual(flaglessFinalScene.szene, deliveryContext.caseSetup.reportFallbackText,
+  'the flagless explicit finale must not teleport or telephone the present client');
 deliveryContext.caseProgress.zielpersonTransportStatus = 'bei_polizei';
 const policeFinalScene = { szene: 'Detlef liegt bei Renate auf dem Sofa.', klient_berichtet: true };
 assert.strictEqual(deliveryContext.repairConfiguredFinalReportProse(policeFinalScene), true);
 assert.strictEqual(policeFinalScene.szene, deliveryContext.caseSetup.reportFallbackPoliceText,
   'the police handoff must select the police-specific report and never teleport Detlef to Renate');
 assert(html.includes("' lebend befreit und der Polizei sicher übergeben.'")
-    && html.includes("' lebend befreit und dem Auftraggeber sicher übergeben.'"),
+    && html.includes("(_handoffClient + ' sicher übergeben.')"),
   'the final card and fallback summary must state the actual live delivery outcome');
 
 console.log('Schiffer full-run regression checks passed.');
