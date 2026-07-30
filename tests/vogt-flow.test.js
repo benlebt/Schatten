@@ -70,6 +70,10 @@ assert(clueById.get('artikel_entwurf').prosaPflicht
   'the article clue must replace dry one-line AI prose');
 assert.strictEqual(clueById.get('manfred_haftort').stage, 4,
   'the Hohenschönhausen detention record remains the decisive proof');
+assert.strictEqual(clueById.get('manfred_haftort').hauptuiActionLabel, 'Prüfe die Haftliste',
+  'the detention proof must describe the concrete document action instead of generic searching');
+assert.strictEqual(clueById.get('pieck_wagen').hauptuiActionLabel, 'Befrage den Zeugen',
+  'the station witness must be questioned instead of exposed as a generic look action');
 for (const id of [
   'bueroeinbruch_spur',
   'manfred_recherche',
@@ -90,6 +94,14 @@ assert(/Der Wärter/.test(clueById.get('manfred_haftort').fundText),
 assert(/nennt ruhig seinen Namen und Dienstgrad/.test(
   locations.get('S-Bahnhof Friedrichstrasse').presenceFallbackText),
   'Pieck needs a real first introduction at the station instead of a generic remains-visible suffix');
+assert.strictEqual(setup.reportFallbackAlways, true,
+  'Vogt needs a deterministic final report because Manfred remains in custody');
+for (const anchor of ['Telefonzelle', 'Sigrid in ihrer Wohnung', 'sitzt weiterhin', 'nicht aus dem Hafttrakt holen', '270 Ostmark']) {
+  const haystack = anchor === '270 Ostmark'
+    ? setup.setupCast.find((entry) => entry.id === 'sigrid_vogt').detail
+    : setup.reportFallbackText;
+  assert(haystack.includes(anchor), 'Vogt final/payment truth is missing: ' + anchor);
+}
 
 const imageStart = html.indexOf('const SHARED_SCENE_IMAGES');
 const imageEnd = html.indexOf('function _kesslerSceneNorm', imageStart);
@@ -146,6 +158,29 @@ function sourceOf(name) {
   }
   assert.fail(name + ' has no closing brace');
 }
+
+const actionLabelContext = {};
+vm.createContext(actionLabelContext);
+vm.runInContext(sourceOf('_hauptuiObjektVerben'), actionLabelContext);
+assert.strictEqual(
+  actionLabelContext._hauptuiObjektVerben(clueById.get('pieck_wagen'))[0].label,
+  'Befrage den Zeugen',
+  'configured witness action must reach the visible Haupt-UI button',
+);
+assert.strictEqual(
+  actionLabelContext._hauptuiObjektVerben(clueById.get('manfred_haftort'))[0].label,
+  'Prüfe die Haftliste',
+  'configured detention-record action must reach the visible Haupt-UI button',
+);
+
+const abbreviationContext = { expandedAbbreviations: new Set() };
+vm.createContext(abbreviationContext);
+vm.runInContext(sourceOf('expandAbbreviations'), abbreviationContext);
+assert.strictEqual(
+  abbreviationContext.expandAbbreviations('Der Entwurf nennt einen Informanten des MfS.'),
+  'Der Entwurf nennt einen Informanten der Staatssicherheit.',
+  'MfS expansion must preserve German case grammar',
+);
 
 const quoteContext = { caseSetup: { setupCast: [] } };
 vm.createContext(quoteContext);
@@ -230,7 +265,7 @@ stasiLocationContext.engineCurrentLocation = { name: 'Hohenschoenhausen / Gensle
 assert.strictEqual(stasiLocationContext._stasiEncounterOrtZulaessig(), true,
   'Pieck remains allowed at the configured detention-site endgame');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1757 +AchterbergPurpose'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1758 +VogtPurpose'"),
   'release version is stale');
 
 console.log('VOGT_FLOW_OK');

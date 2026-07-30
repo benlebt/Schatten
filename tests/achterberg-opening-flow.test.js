@@ -141,7 +141,7 @@ assert(sourceOf('buildWorldTruthRepairHint').includes("problem.code === 'unfound
 assert(sourceOf('enforceSceneWorldTruthFallback').includes("problem.code === 'unfounded_evidence_discovery'"),
   'the evidence-state violation needs a deterministic final fallback');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1757 +AchterbergPurpose'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1758 +VogtPurpose'"),
   'release version missing');
 assert(html.includes('const _abschlussAkutGefaehrlich = currentSp > 3 && (!!_aktiveFluchtGefahr || _inKonfrontationNow);'),
   'high tension must block resolution while an acute threat or tactical confrontation is still active');

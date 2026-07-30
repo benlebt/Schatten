@@ -63,6 +63,8 @@ assert.strictEqual(context.engineCurrentLocation.name, 'Manfred Vogts Wohnung Pr
 assert(!/hackescher markt|eigenen bett/i.test(drifted.szene), 'repaired prose must not retain the invented home teleport');
 assert(/noch immer am selben ort/i.test(drifted.szene), 'repaired prose must state current-place continuity naturally');
 assert(/morgen/i.test(drifted.szene), 'repair must use the actual wake phase');
+assert(/Müdigkeit/.test(drifted.szene) && /schläfst für/.test(drifted.szene),
+  'sleep repair prose must use correct German umlauts');
 
 const coherent = {
   ort: 'Manfred Vogts Wohnung Prenzlauer Berg',
