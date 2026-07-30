@@ -17148,7 +17148,48 @@ assets/scenes/krause/stallschreiberstrasse-12-lager-secured-day-v1780.png
 assets/scenes/krause/stallschreiberstrasse-12-lager-secured-night-v1780.png
 ```
 
-Nächste Matrixpriorität ist Brauer: konträres Rufprofil, Beweisreihenfolge und
-alternatives Ende. Danach folgt Wegener mit Rex-/Übergabe-/Restore-Gegenachsen.
-Eine rein friedliche Krause-Rex-Variante bleibt als spätere Ergänzung offen;
-der risikoreichere aggressive no-Rex-Kernpfad ist vollständig live belegt.
+## 🆕 v7.12.1783 bis v7.12.1785 — gezielte Brauer-Matrix
+
+Aktueller ausgelieferter Stand:
+
+```text
+Release: v7.12.1785 +PartialEndingTruth
+Produktiver Code-Commit: 5552d31 fix: keep Brauer partial ending honest
+Vorherige Code-Commits:
+6833a01 fix: preserve selected social tone in fallbacks
+0568659 fix: let reputation unlock informant evidence
+Branch/Remote: main / origin/main
+Produktion: https://schatten.sfp.de/
+Produktiver index.html-SHA-256:
+24684FCA331087F6E1AA16C99FA7CC0F3DA8029691193363CE0D599EF3B543FD
+Lokale Suite: 70/70 Tests grün
+```
+
+Der Produktionslauf kombinierte Renommee +5 und Härte -5, ohne Rex, eine
+physisch-zuerst-Indizreihenfolge, mehrfaches Save/Reload, friedliche
+Deeskalation von Hauptmann Vollmer und einen bewussten Abschluss vor dem
+Marienfelde-Pflichtnachweis.
+
+Die Matrix fand drei voneinander getrennte Wahrheitsbrüche:
+
+1. Der höfliche Mahlke-Weg enthielt „ohne Druck“, die Fallbackheuristik las
+   das isolierte Wort `Druck` aber als Drohung. v1783 gibt der strukturierten
+   Sozialtonart Vorrang.
+2. Der hohe Ruf öffnete Mahlkes Aussage sichtbar, das allgemeine
+   Informanten-Gate verlangte trotzdem Bezahlung oder Gewalt und verweigerte
+   das Indiz. v1784 markiert einen tatsächlich durch Ruf geretteten
+   Informantenweg als kostenlose Vertrauensauskunft.
+3. Der Endbildschirm sagte korrekt „nicht ganz geschlossen“, während die
+   Abschlussprosa ein Marienfelde-Notizbuch und eine erfolgreiche
+   Grenzpassage erfand. v1785 führt einen vollständigen autorisierten
+   Teilbericht ein, erweitert den Proof-Leak-Guard und migriert/repariert den
+   Text auch in bereits abgeschlossenen Saves.
+
+Der produktive Reload stellte Szene 13 anschließend mit exakt derselben
+offenen Wahrheit wie der Endbildschirm wieder her: Erwin plante die Flucht,
+sein Verbleib bleibt ungesichert. Kein Honorar wurde erfunden.
+
+Nächste Matrixpriorität ist Wegener mit Rex-/Übergabe-/Restore-Gegenachsen.
+Danach sind ein aggressiver Brauer-Gegenlauf mit niedrigem Renommee und
+vollständigem Marienfelde-Ende sowie eine rein friedliche Krause-Rex-Variante
+sinnvolle Ergänzungen.

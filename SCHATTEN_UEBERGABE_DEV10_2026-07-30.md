@@ -37,15 +37,17 @@ unangetastet und uncommitted.
 ```text
 Branch: main
 Remote: origin/main
-Repository-HEAD vor diesem Dokumentationscommit: 197bd0c
-Produktiver Release: v7.12.1782 +CleanFinalHandoff
-Produktiver Code-Commit: 197bd0c fix: keep side characters out of case finales
-Vorheriger Code-Commit: 8081260 fix: synchronize daytime sleep with engine time
+Repository-HEAD vor diesem Dokumentationscommit: 5552d31
+Produktiver Release: v7.12.1785 +PartialEndingTruth
+Produktiver Code-Commit: 5552d31 fix: keep Brauer partial ending honest
+Vorherige Code-Commits:
+6833a01 fix: preserve selected social tone in fallbacks
+0568659 fix: let reputation unlock informant evidence
 Produktion: https://schatten.sfp.de/
-Debug: https://schatten.sfp.de/?debug=on&v=1782&deploy=197bd0c
+Debug: https://schatten.sfp.de/?debug=on&v=1785&deploy=5552d31
 Tests: 70/70 grün
 Produktiver index.html-SHA-256:
-5D4D657CFD40A909A6281AEE1655EAEDD9D3FB724814C481C8F08C2D9AAFA84C
+24684FCA331087F6E1AA16C99FA7CC0F3DA8029691193363CE0D599EF3B543FD
 ```
 
 Jeder Dev10-Codeupload wurde per FTPS zurückgeladen und bytegenau mit dem
@@ -147,6 +149,35 @@ die Finalprosa gehängt. v1782 verwirft Romance-Pushes bei `AUFLOESEN` und
 verbietet neue Nebenfiguren im Abschluss. Die alte sichtbare Szene bleibt
 historisch, aber der genaue Root Cause ist regressionsgesichert.
 
+### Brauer — Ruf-/Reihenfolge-/Teilabschlussmatrix
+
+Der neue Produktionslauf kombinierte gezielt die noch ungetesteten Achsen:
+
+| Achse | Produktionsvariante |
+|---|---|
+| Konflikt | Hauptmann Vollmer friedlich beruhigt |
+| Rex | ohne Rex |
+| Ruf | Renommee +5 / Härte -5, danach sichtbare Rufwirkung |
+| Indizreihenfolge | Dienstschließfach → privater Schrank → Hilde → Mahlke |
+| Save/Reload | nach dem ersten physischen Indiz, nach Mahlkes Auskunft und beim abgeschlossenen Teilende |
+| Ende | bewusster früher Teilbericht ohne Marienfelde-Nachweis |
+
+Sichtbar korrekt:
+
+- physische Beweise vor Personenbefragungen bleiben vollständig erreichbar;
+- der frühe höfliche Mahlke-Kontakt verbraucht den später freigeschalteten
+  Kernhinweis nicht;
+- v1783 erhält die ausgewählte Sozialtonart auch im deterministischen
+  Weltwahrheits-Fallback;
+- v1784 lässt einen echten Renommee-Vorteil den Informantenhinweis ohne Geld
+  und Gewalt öffnen; Indiz und Fallstufe werden synchron gebucht;
+- Vollmer erscheint als beabsichtigter politischer Gegenspieler, nicht als
+  Phantom, und lässt sich mit hohem Renommee friedlich deeskalieren;
+- der bewusste Bericht auf Stufe 3 beendet den Fall als offenen Teilerfolg;
+- v1785 ersetzt erfundene Marienfelde-Bestätigungen durch einen vollständigen
+  autorisierten Teilbericht und repariert auch den bereits gespeicherten
+  falschen Endtext beim Reload.
+
 ## 4. Dev10-Releases ab v1772
 
 ### v7.12.1772 +SchifferMatrixTruth — `d797a77`
@@ -194,6 +225,17 @@ historisch, aber der genaue Root Cause ist regressionsgesichert.
 - `197bd0c` / v1782: ausstehende Romance-Einführungen werden aus
   Fallabschlüssen entfernt; Abschlussprosa bleibt bei Karl und Auftraggeber.
 
+### v7.12.1783 bis v7.12.1785 — Brauer-Matrix
+
+- `6833a01` / v1783: strukturierte Sozialtonart hat Vorrang vor
+  Textheuristiken; „ohne Druck“ kann nicht mehr als Drohung fehlklassifiziert
+  werden.
+- `0568659` / v1784: ein durch hohen Ruf geretteter Informantenweg öffnet
+  Prosa und Indiz-Gate gemeinsam, ohne Zahlung oder Gewalt.
+- `5552d31` / v1785: ein Abschluss ohne Pflichtnachweis verwendet einen
+  vollständigen offenen Teilbericht; neue und gespeicherte falsche
+  Marienfelde-Enden werden deterministisch ersetzt.
+
 ## 5. Tests
 
 ```text
@@ -217,11 +259,12 @@ Die Regressionen prüfen jetzt zusätzlich:
 Keine 14 identischen Standardläufe. Der höchste Erkenntnisgewinn liegt jetzt
 in orthogonalen Gegenproben:
 
-1. **Brauer:** hoher gegen niedrigen Ruf sowie Beweis vor Personenbefragung
-   gegen umgekehrte Reihenfolge; Fokus auf Grenz-/Datumswahrheit und
-   alternatives Ende.
-2. **Wegener:** mit Rex gegen ohne Rex, Polizei- gegen Klientenübergabe und
+1. **Wegener:** mit Rex gegen ohne Rex, Polizei- gegen Klientenübergabe und
    Save/Reload zwischen Befreiung, Opel und Handoff.
+2. **Brauer-Ergänzung:** niedriger Renommee-/hoher Härte-Gegenlauf mit
+   aggressiver Vollmer-Lösung und vollständigem Marienfelde-Ende. Der
+   risikoreiche Ruf-/Teilabschlusskern ist jetzt belegt; die Ergänzung ist
+   weniger wichtig als Wegener.
 3. **Krause-Ergänzung:** rein friedlich mit Rex und anderem Rufprofil. Der
    aggressive/no-Rex-Kernpfad ist bereits vollständig live belegt; diese
    Ergänzung hat weniger Priorität als Brauer und Wegener.

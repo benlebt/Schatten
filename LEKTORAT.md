@@ -659,7 +659,7 @@ Dieser Katalog ist ab sofort Teil jedes manuellen Falllaufs und jeder Fallbewert
 - Befunde nach P0/P1/P2/P3, jeweils mit Originalsatz, Enginezustand und Root Cause.
 - Fixversion, Regressionstest, Commit und Ergebnis des Gegenlaufs.
 
-## Aktuelle Fallbewertung und Prüfvertrauen — Release v1782
+## Aktuelle Fallbewertung und Prüfvertrauen — Release v1785
 
 Aktuelle Arbeitsübergabe: `SCHATTEN_UEBERGABE_DEV10_2026-07-30.md`.
 
@@ -668,14 +668,14 @@ getrennt: Ein länger zurückliegender vollständiger Produktionslauf senkt nich
 automatisch die Qualität eines Falls. Ohne belegten Qualitätsrückschritt wird
 eine Bewertung nicht allein wegen geringerer Testfrische herabgesetzt.
 
-| Rang | Fall | Spielqualität | Prüfvertrauen v1782 |
+| Rang | Fall | Spielqualität | Prüfvertrauen v1785 |
 |---:|---|---:|---|
 | 1 | Strauss | 9,4/10 | sehr hoch |
 | 2 | Lindenbaum | 9,3/10 | sehr hoch |
 | 3 | Stein | 9,3/10 | sehr hoch |
 | 4 | Wessel | 9,2/10 | sehr hoch |
 | 5 | Görke | 9,2/10 | sehr hoch |
-| 6 | Brauer | 9,1/10 | hoch |
+| 6 | Brauer | 9,2/10 | sehr hoch |
 | 7 | Krause | 9,2/10 | sehr hoch |
 | 8 | Wegener | 9,1/10 | hoch |
 | 9 | Brandt | 9,1/10 | hoch |
@@ -701,6 +701,13 @@ Mehrgegnerlauf ohne Rex, extremes Rufprofil, umgedrehte Indizreihenfolge,
 zweifaches Save/Reload, getrennten Etui-Fund/Pickup und persönliche Rückgabe
 live belegt. v1775 bis v1782 schließen dabei Route, Altspielstand,
 Objektvisualisierung, Schlafzeit und den störenden Romance-Nebenbeat im Finale.
+
+Brauer ist jetzt zusätzlich über einen konträren Hoch-Renommee-Lauf ohne Rex,
+umgedrehte physisch/soziale Indizreihenfolge, mehrfaches Save/Reload,
+friedliche Vollmer-Deeskalation und den bewusst offenen Teilabschluss live
+belegt. v1783 bis v1785 schließen Sozialtonart, Ruf-/Informantensynchronität
+und die bislang nur im Endbildschirm, nicht aber in der Prosa ehrliche
+Pflichtnachweisgrenze.
 
 ### Gewahrsams- und Zweckaktionsaudit v1751 bis v1762
 
@@ -760,3 +767,20 @@ Beweis-IDs angeschlossen.
 - `AUFLOESEN` hat Vorrang vor jedem ausstehenden Romance-/Lebendwelt-Push.
   Eine Schlussszene führt keine neue Nebenfigur ein und hängt keinen
   Beziehungseinstieg an die Klientenübergabe.
+
+## Brauer-Matrixregeln aus v1783 bis v1785
+
+- Strukturierte Sozialtonart schlägt Wortheuristik. Negationen wie „ohne
+  Druck“ dürfen niemals einen höflichen Weg in eine Drohung verwandeln.
+- Ein sichtbarer `Rufvorteil`, der einen Informanten tatsächlich zum Reden
+  bringt, muss auch das Indiz-Gate öffnen. Prosa, Zahlung, Rufdelta,
+  Indizzähler und Fallstufe dürfen nicht auseinanderlaufen.
+- Ein früher Kontakt vor `abStage` ist kein Sozialfehlschlag und verbraucht
+  nicht die später freigeschaltete Kernbefragung.
+- Fehlt ein konfigurierter Pflichtnachweis, gilt dieselbe offene Wahrheit in
+  Abschlussprosa, Endbildschirm und Restore: Eine geplante Flucht belegt
+  weder erfolgreiche Grenzpassage noch Registrierung noch Sicherheit.
+- Für besonders leak-anfällige Teilenden darf ein vollständiger
+  `requiredProofPartialReportText` die freie Modellprosa deterministisch
+  ersetzen. Das Feld gehört zur statischen Falldefinition und muss in alte
+  Saves migriert werden.
