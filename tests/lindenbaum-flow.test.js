@@ -127,6 +127,22 @@ for (const location of [apartment, hoOffice, policeArchive, pathology]) {
 
 const clues = setup.locations.flatMap((location) => location.indizien || []);
 const clueById = new Map(clues.map((clue) => [clue.id, clue]));
+const purposefulLindenbaumLabels = {
+  ulbricht_brief: 'Prüfe Alberts Ulbricht-Brief',
+  eva_besucher: 'Befrage Eva zum späten Besucher',
+  buero_spuren: 'Sichere die Spuren in Alberts Büro',
+  hermes_meldung: 'Befrage „Hermes“ zu Brakkes Besuch',
+  brakke_deckung: 'Konfrontiere Brakke mit den Widersprüchen',
+  totenschein_widerspruch: 'Prüfe Lindenbaums Totenschein-Akte',
+  lindenbaum_schaedeltrauma: 'Prüfe Alberts pathologischen Befund',
+};
+for (const [clueId, expectedLabel] of Object.entries(purposefulLindenbaumLabels)) {
+  const clue = clueById.get(clueId);
+  assert(clue && clue.hauptuiActionLabel === expectedLabel,
+    'Lindenbaum clue needs a visible purposeful action: ' + clueId);
+  assert(clue.hauptuiActionPrompt && clue.hauptuiActionPrompt.length >= 100,
+    'Lindenbaum clue needs a precise generation contract: ' + clueId);
+}
 for (const clueId of [
   'ulbricht_brief',
   'buero_spuren',
@@ -519,7 +535,7 @@ assert(!/Brakke|versiegelte|unbekannte Männer|poltert/i.test(romanceLeakScene.s
 assert.strictEqual(romanceRepairContext.caseProgress.pendingThreatCliffhanger, null,
   'a phantom threat invented by romance must not poison the following scene');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1768 +CasePurposeWave3'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1769 +PurposeAllCases'"),
   'release version missing');
 
 console.log('LINDENBAUM_FLOW_OK');

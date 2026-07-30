@@ -215,6 +215,13 @@ for (const [caseIndex, variant] of CASES.entries()) {
       ]);
       assert(Array.isArray(clue.actions) && clue.actions.length,
         `${caseLabel} -> ${clue.id}: no playable actions`);
+      assert(typeof clue.hauptuiActionLabel === 'string'
+          && clue.hauptuiActionLabel.trim().length >= 8
+          && clue.hauptuiActionLabel.trim().length <= 48,
+        `${caseLabel} -> ${clue.id}: missing or unusable purposeful Haupt-UI label`);
+      assert(typeof clue.hauptuiActionPrompt === 'string'
+          && clue.hauptuiActionPrompt.trim().length >= 90,
+        `${caseLabel} -> ${clue.id}: missing precise Haupt-UI generation contract`);
       if (clue.npc) {
         referencedCast.add(clue.npc);
         assert(castIds.has(clue.npc), `${caseLabel} -> ${clue.id}: unknown clue NPC ${clue.npc}`);

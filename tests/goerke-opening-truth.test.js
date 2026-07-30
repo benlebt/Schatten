@@ -22,6 +22,17 @@ const goerkeEnd = html.indexOf('// 13. Schwester Hilde', goerkeStart);
 assert(goerkeStart >= 0 && goerkeEnd > goerkeStart, 'Goerke setup slice missing');
 const goerke = html.slice(goerkeStart, goerkeEnd);
 
+for (const label of [
+  'Konfrontiere Krollwitz mit der Aktenkette',
+  'Befrage Martha zu Mathildes Angst',
+  'Vergleiche den manipulierten Totenschein',
+  'Prüfe Roths frühen Akten-Durchschlag',
+  'Prüfe Mathildes ursprünglichen Leichenbefund',
+  'Prüfe Albrechts Schichtbuch',
+]) {
+  assert(goerke.includes("hauptuiActionLabel: '" + label + "'"),
+    'Goerke clue needs a visible purposeful action: ' + label);
+}
 assert(goerke.includes("{ id: 'reinhard_baumgarten', zeit: ['morgen','vormittag','mittag','nachmittag'] }"),
   'Baumgarten must be present in the morning opening');
 assert(/name: 'Albrecht Goerke U-Haft'[\s\S]*?npcs: \[\{ id: 'albrecht_goerke', immer: true \}\]/.test(goerke),
@@ -57,13 +68,13 @@ assert(/Staatsanwalt Eberhard Mertens[\s\S]{0,500}persistent: false, anwesend: f
   'the adjourned opening must not keep prosecutor and judge selectable beside the Baumgarten-only image');
 assert(/volkspolizei\.\*keibelstrasse\|keibelstrasse[\s\S]{0,600}depictsNpcs: \['wilhelm_roth'\]/.test(html),
   'the Keibelstrasse image must explicitly identify the visible desk officer as Wilhelm Roth');
-assert(/id: 'totenschein_manip'[\s\S]{0,900}truthBeatIds: \['sturz_angezweifelt','akte_manipuliert'\]/.test(goerke),
+assert(/id: 'totenschein_manip'[\s\S]{0,1300}truthBeatIds: \['sturz_angezweifelt','akte_manipuliert'\]/.test(goerke),
   'the manipulated death certificate must deterministically book both documentary truth beats');
-assert(/id: 'mathilde_fremdeinwirkung'[\s\S]{0,900}truthBeatIds: \['fremdeinwirkung'\]/.test(goerke),
+assert(/id: 'mathilde_fremdeinwirkung'[\s\S]{0,1200}truthBeatIds: \['fremdeinwirkung'\]/.test(goerke),
   'the original autopsy finding must deterministically book external force');
-assert(/id: 'alibi_schichtbuch'[\s\S]{0,1100}truthBeatIds: \['alibi_unterschlagen','albrecht_entlastet'\]/.test(goerke),
+assert(/id: 'alibi_schichtbuch'[\s\S]{0,1400}truthBeatIds: \['alibi_unterschlagen','albrecht_entlastet'\]/.test(goerke),
   'the signed shift book must deterministically book both alibi beats');
-assert(/id: 'krollwitz_steuerung'[\s\S]{0,1800}abschlussEffekt:[\s\S]{0,220}wahrheitErkannt: true/.test(goerke),
+assert(/id: 'krollwitz_steuerung'[\s\S]{0,2200}abschlussEffekt:[\s\S]{0,220}wahrheitErkannt: true/.test(goerke),
   'the final Krollwitz evidence must make the already complete truth chain immediately resolvable');
 assert(goerke.includes('Draußen rollen Güterwagen vorbei')
   && !goerke.includes('Draußen rollen Güterwagen durch die Nacht'),
@@ -485,7 +496,7 @@ assert(/Brieftasche/.test(incompleteRelease.szene)
 assert(html.includes('logEntries.forEach(function(entry) { repairCustodyReleaseInventoryContinuity(entry); });'),
   'old saved release logs must receive the same complete equipment-return repair');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1768 +CasePurposeWave3'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1769 +PurposeAllCases'"),
   'release version missing');
 
 console.log('Goerke opening/truth regression checks passed.');

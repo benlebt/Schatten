@@ -59,6 +59,19 @@ const achterbergStart = html.indexOf("klient: 'Wilhelmine Achterberg (Witwe des 
 const achterbergEnd = html.indexOf('anchorNpcs:', achterbergStart);
 assert(achterbergStart >= 0 && achterbergEnd > achterbergStart, 'Achterberg setup slice missing');
 const achterberg = html.slice(achterbergStart, achterbergEnd);
+for (const label of [
+  'Befrage Liesel zum Streit',
+  'Konfrontiere Vossberg mit der Beweiskette',
+  'Prüfe Achterbergs Tropfflasche',
+  'Befrage Jahnke zu Vossbergs Gelegenheit',
+  'Prüfe Vossbergs Notenmappe',
+  'Prüfe den toxikologischen Befund',
+  'Prüfe das Apotheken-Rezeptbuch',
+  'Befrage Marquardt zum Totenschein',
+]) {
+  assert(achterberg.includes("hauptuiActionLabel: '" + label + "'"),
+    'Achterberg clue needs a visible purposeful action: ' + label);
+}
 assert(achterberg.includes("abschlussOrt: 'Achterberg-Villa'"),
   'Achterberg must route the final report to Wilhelmine at the villa');
 assert(achterberg.includes("npcs: [{ id: 'wilhelmine_achterberg', immer: true }]"),
@@ -141,7 +154,7 @@ assert(sourceOf('buildWorldTruthRepairHint').includes("problem.code === 'unfound
 assert(sourceOf('enforceSceneWorldTruthFallback').includes("problem.code === 'unfounded_evidence_discovery'"),
   'the evidence-state violation needs a deterministic final fallback');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1768 +CasePurposeWave3'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1769 +PurposeAllCases'"),
   'release version missing');
 assert(html.includes('const _abschlussAkutGefaehrlich = currentSp > 3 && (!!_aktiveFluchtGefahr || _inKonfrontationNow);'),
   'high tension must block resolution while an acute threat or tactical confrontation is still active');
