@@ -597,6 +597,12 @@ assert(theftStateSource.includes("_theftAction._pendingIndizId === 'etui_im_lage
   'the theft state processor must not promote the Krause discovery click to physical possession');
 assert(theftStateSource.includes('removeTargetItemFromInventory(_tName)'),
   'a model-invented target inventory entry must be removed until the explicit secure click');
+assert(html.includes("pendingChosenOption._pendingIndizId === 'etui_im_lager'"),
+  'the prompt builder must recognize the discovery-only Krause action');
+assert(html.includes('Generische GUT-HOL-Pushes fuer zweistufigen Krause-Fund unterdrueckt'),
+  'the discovery-only Krause prompt must suppress generic physical pickup pressure');
+assert(html.includes('Erst die danach separat angebotene Hauptaktion \"Etui sichern\" darf den physischen Besitzwechsel zeigen.'),
+  'the discovery prompt must explicitly preserve the separate secure action');
 for (const asset of [
   'stallschreiberstrasse-12-aftermath-group-day.webp',
   'stallschreiberstrasse-12-aftermath-group-night.webp',
