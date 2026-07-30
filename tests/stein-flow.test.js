@@ -55,6 +55,28 @@ assert(/niemals in einer Pistole/.test(
 
 const clues = setup.locations.flatMap((location) => location.indizien || []);
 const clueById = new Map(clues.map((clue) => [clue.id, clue]));
+const purposefulSteinLabels = {
+  margarete_aussage: 'Befrage Margarete zur Schmuggelroute',
+  akten_kopie_wohnung: 'Suche Margaretes Aktenkopie',
+  frachtliste_stempel: 'Prüfe die gestempelte Frachtliste',
+  dienstplan_wahler: 'Prüfe Wahlers Dienstplan',
+  hinweis_stellwerk: 'Prüfe den Ablagevermerk',
+  uebergabe_beobachtet: 'Beobachte Gleis 4',
+  notiz_wahler_gleis: 'Sichere die Gleisnotiz',
+  vera_uebergabekontakt: 'Ermittle einen sicheren Westkontakt',
+  original_akten: 'Sichere die Originalakten',
+  wahler_unterschrift: 'Prüfe Wahlers Unterschrift',
+  vera_westperspektive: 'Befrage Vera zum Sicherungsweg',
+  lemke_belastet_wahler: 'Befrage Lemke zu Wahlers Sonderfrachten',
+  anker_kontakt_hinweis: 'Befrage Kummer zum IM „Anker“',
+};
+for (const [clueId, expectedLabel] of Object.entries(purposefulSteinLabels)) {
+  const clue = clueById.get(clueId);
+  assert(clue && clue.hauptuiActionLabel === expectedLabel,
+    'Stein clue needs a visible purposeful action: ' + clueId);
+  assert(clue.hauptuiActionPrompt && clue.hauptuiActionPrompt.length >= 100,
+    'Stein clue needs a precise generation contract: ' + clueId);
+}
 for (const id of [
   'margarete_aussage',
   'akten_kopie_wohnung',
@@ -501,7 +523,7 @@ assert(html.includes('cafe-kranzler-vera-day-v1739.png')
     && html.includes('Karl Mauer trifft Margarete Stein in ihrer von Reichsbahn-Unterlagen durchsuchten Wohnung'),
   'Stein scene images must explicitly match Vera, Mertens and Margarete presence');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1767 +CasePurposeWave2'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1768 +CasePurposeWave3'"),
   'release version is stale');
 assert(html.includes('Vom Hackeschen Markt dringen gedämpfte Motorengeräusche')
     && html.includes('Noch passt nicht jedes Stück zusammen'),

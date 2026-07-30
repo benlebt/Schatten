@@ -5,6 +5,20 @@ const vm = require('vm');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 
+for (const label of [
+  'Befrage die Frau mit dem Schleier',
+  'Prüfe Karls alte Strauss-Akte',
+  'Befrage Krummbein zu seinen Forderungen',
+  'Vergleiche die Packkordel',
+  'Konfrontiere Krummbein mit den Spuren',
+  'Prüfe Ludwigs Schreibtisch',
+  'Prüfe Lindners Strauss-Vorgang',
+  'Befrage die Schleierfrau zu Ludwig',
+]) {
+  assert(html.includes("hauptuiActionLabel: '" + label + "'"),
+    'Strauss clue needs a visible purposeful action: ' + label);
+}
+
 function sourceOf(name) {
   const start = html.indexOf('function ' + name + '(');
   assert(start >= 0, 'missing function ' + name);
@@ -173,7 +187,7 @@ for (const file of [
   assert(html.includes(file), 'Strauss Rex scene asset is not wired into the image matrix: ' + file);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1767 +CasePurposeWave2'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1768 +CasePurposeWave3'"),
   'release version missing');
 
 console.log('strauss-live-visual-truth: ok');
