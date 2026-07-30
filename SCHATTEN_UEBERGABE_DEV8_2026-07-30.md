@@ -2,7 +2,8 @@
 
 Stand: 30. Juli 2026  
 Aktueller Release: `v7.12.1743 +NeverBlankSceneImage`  
-Aktueller Commit: `e6b0deb fix: never leave scene image blank`
+Aktueller Release-Commit: `e6b0deb fix: never leave scene image blank`  
+Repository-HEAD nach Wissensübergabe: `209de89 docs: hand off current Schatten quality state`
 
 ## Startanweisung für den neuen Chat
 
@@ -61,7 +62,8 @@ Vercel-Ablauf ist nicht der aktuelle Produktionsweg.
 
 ```text
 Release: v7.12.1743 +NeverBlankSceneImage
-HEAD/origin-main: e6b0deb
+Release-Commit der deployten index.html: e6b0deb
+HEAD/origin-main nach Wissensübergabe: 209de89
 Tests: 68/68 grün
 Deployment: erfolgreich
 Produktionsprüfung: Versionsbadge und echtes Stein-Szenenbild sichtbar bestätigt
@@ -70,6 +72,7 @@ Produktionsprüfung: Versionsbadge und echtes Stein-Szenenbild sichtbar bestäti
 Letzte relevante Commits:
 
 ```text
+209de89 docs: hand off current Schatten quality state
 e6b0deb fix: never leave scene image blank
 113f58d fix: hide threats until prose introduction
 092c9a5 fix: bind Stein opening threat to prose
