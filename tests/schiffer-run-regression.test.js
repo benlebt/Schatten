@@ -28,7 +28,7 @@ function sourceOf(name) {
 }
 
 assert(schifferStart > 0 && schifferEnd > schifferStart, 'Schiffer setup must be present');
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1748 +MediumHighCaseTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1749 +ClientReplyTruth'"),
   'release version must identify the Schiffer counter-run fixes');
 
 assert(schiffer.includes("stasiRelevance: 2"),
@@ -62,6 +62,24 @@ const liveRenateDrift = renateKnowledgeContext._findSchifferRenateKnowledgeDrift
 });
 assert(liveRenateDrift && liveRenateDrift.code === 'schiffer_client_knowledge_drift',
   'the exact live leak about origin, boxer nose, and an invented photo must be rejected');
+const renateSocialFallbackContext = {
+  normForMatch: value => String(value || '').toLowerCase(),
+};
+vm.createContext(renateSocialFallbackContext);
+vm.runInContext([
+  sourceOf('_schifferRenateReplyFallbackText'),
+  sourceOf('_worldTruthNaturalSocialFallbackText'),
+].join('\n'), renateSocialFallbackContext);
+const repairedRenateReply = renateSocialFallbackContext._worldTruthNaturalSocialFallbackText(
+  'Renate Schiffer',
+  { id: 'NPC_reden', _clientDepartureAfterReply: 'Renate Schiffer' },
+  'social_target_missing',
+);
+assert(/nicht selbst gesehen/.test(repairedRenateReply)
+    && /1500 D-Mark/.test(repairedRenateReply)
+    && /verabschiedet sich/.test(repairedRenateReply)
+    && !/ohne dass du etwas Neues erfährst/.test(repairedRenateReply),
+  'every social fallback for Renate must preserve her canonical reply and visible departure');
 assert(html.includes('const pronomenAbgang = (String(scene.szene || \'\').match'),
   'a one-shot client departure must also be recognized when the model continues with a pronoun');
 assert(!html.includes('streifschuss|arm|bein|gesicht|kopf|brust|schulter|rippe|finger|hand'),

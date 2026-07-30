@@ -1,5 +1,23 @@
 # Schatten — Projekt-Knowledge
 
+## v7.12.1749 — Renates Antwort bleibt auch im letzten Sozialfallback vollständig
+
+Der v1748-Produktionsgegenlauf bestätigte, dass Renates Täterwissens-Guard
+Boxernase, Herkunft und erfundenes Foto zuverlässig entfernt. Wenn die
+reparierte Szene danach zusätzlich am allgemeinen Sozialziel-Gate scheiterte,
+landete sie jedoch noch im neutralen Alttext „Das Gespräch endet, ohne dass du
+etwas Neues erfährst.“ Dadurch waren zwar keine falschen Fakten mehr sichtbar,
+aber auch weder Renates kanonische Antwort noch ihr Abgang.
+
+Jeder soziale Fallback einer direkten Renate-Klientenaktion verwendet nun
+denselben falltreuen Antworttext: Sie hat die beiden Männer nicht selbst
+gesehen, kennt nur Abholung, Schulden und Riemer-Verdacht, verabschiedet sich
+sichtbar und lässt ausschließlich das bereits etablierte Perlencollier zurück.
+Damit bleibt die letzte Fehlerstufe sachlich und erzählerisch vollständig.
+
+**Verifikation:** Laufzeittest des allgemeinen `social_target_missing`-Pfads
+mit Renates direkter Klientenaktion sowie vollständige Regression Suite grün.
+
 ## v7.12.1748 — Kernhinweise und Wissensgrenzen der mittelhohen Fälle
 
 Die frischen Produktionsläufe von Wessel, Kessler und Schiffer auf v1747

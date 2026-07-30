@@ -633,6 +633,11 @@ Dieser Katalog ist ab sofort Teil jedes manuellen Falllaufs und jeder Fallbewert
   Kalles schiefe Boxernase, Dialekt, Herkunft und weitere Tätermerkmale gehören
   erst Frau Hagedorn beziehungsweise späteren Ermittlungen. Nicht konfigurierte
   Fotos, Briefe oder Papiere sind kein zulässiger Ersatzhinweis.
+- Ein reparierter direkter Klientendialog darf nicht in den allgemeinen
+  Sozialfallback „ohne etwas Neues“ fallen. Wenn Antwort und anschließender
+  Abgang Teil desselben Engine-Übergangs sind, muss auch die letzte
+  deterministische Fehlerstufe beides vollständig erzählen und die
+  fallgebundene Wissensgrenze einhalten.
 
 ## Mindestprotokoll pro Run
 
