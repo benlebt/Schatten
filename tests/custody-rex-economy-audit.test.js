@@ -7,7 +7,7 @@ const { readWebpDimensions } = require('./image-format-utils');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1750 +SchifferOpeningTruth'"), 'version constant is stale');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1751 +CustodyChoices'"), 'version constant is stale');
 const dogPickupStart = html.indexOf('function _hundMitnehmenMitTausch(quelle)');
 const dogPickupEnd = html.indexOf('// ============ Ende WACHHUND-Helper', dogPickupStart);
 assert(dogPickupStart >= 0 && dogPickupEnd > dogPickupStart, 'cannot isolate the Rex pickup flow');
@@ -290,18 +290,39 @@ let state = custodyContext._custodyVerhoerWahlAnwenden({ _custodyAction: 'SCHWEI
 assert.deepStrictEqual([state.runden, state.druck, state.verweigerung], [1, 1, 1], 'silence must build pressure and refusal');
 state = custodyContext._custodyVerhoerWahlAnwenden({ _custodyAction: 'PROTOKOLL' });
 assert.deepStrictEqual([state.runden, state.druck, state.verweigerung], [2, 3, 2], 'challenging the interrogator must escalate pressure');
+assert.strictEqual(state.protokollNotiz, true, 'the protocol challenge must secure a concrete custody note');
+assert(custodyContext.caseProgress.indizien.some((text) => /Dienstgrad und Aktenzeichen/.test(text)),
+  'the risky protocol path must create a visible, reusable investigation note');
 state = custodyContext._custodyVerhoerWahlAnwenden({ _custodyAction: 'HALBWAHRHEIT' });
 assert.deepStrictEqual([state.runden, state.druck, state.kooperation], [3, 2, 1], 'half-truths must lower pressure without ending custody');
 state = custodyContext._custodyVerhoerWahlAnwenden({ _custodyAction: 'ROTH' });
 assert.deepStrictEqual([state.runden, state.druck, state.rothHebel], [4, 1, 1], 'Roth leverage must be tracked');
+assert.strictEqual(state.rothAktenkundig, true, 'Roth must become a concrete recorded outside witness');
+assert.strictEqual(custodyContext._custodyEntlassungsSchwelle(), 2,
+  'recording Roth must make safe waiting available one real custody scene earlier');
 state = custodyContext._custodyVerhoerWahlAnwenden({ _custodyAction: 'BESTECHEN' });
 assert.strictEqual(paid, 10, 'custody bribe must actually spend ten Ostmark');
-assert.deepStrictEqual([state.runden, state.druck, state.kooperation, state.bestechungen], [5, 0, 2, 1], 'successful bribe must soften pressure and remain recorded');
+assert.deepStrictEqual([state.runden, state.druck, state.kooperation, state.bestechungen], [5, 0, 1, 1], 'successful bribe must soften pressure without duplicating the free cooperation path');
+assert.strictEqual(state.mildeNacht, true, 'the ten-Ostmark bribe must buy concrete escalation protection');
+const roundsAfterBribe = state.runden;
+state = custodyContext._custodyVerhoerWahlAnwenden({ _custodyAction: 'BESTECHEN' });
+assert.strictEqual(paid, 10, 'a stale repeated bribe must never charge another ten Ostmark');
+assert.strictEqual(state.runden, roundsAfterBribe, 'a completed one-time bribe must not create an empty interrogation round');
 custodyContext._custodyVerhoerWahlAnwenden({ _custodyAction: 'LAUSCHEN' });
 state = custodyContext._custodyVerhoerWahlAnwenden({ _custodyAction: 'LAUSCHEN' });
 assert.strictEqual(state.intelGefunden, true, 'repeated listening in custody must be able to reveal a case clue');
 assert.strictEqual(Array.from(custodyContext.caseProgress.custodyIntelIds).join(','), custodyClue.id, 'custody clue must be recorded only once');
 assert.strictEqual(custodyContext.caseProgress.pendingCustodyIntelNarration.id, custodyClue.id, 'custody clue needs mandatory narration');
+const roundsAfterIntel = state.runden;
+const pressureAfterIntel = state.druck;
+state = custodyContext._custodyVerhoerWahlAnwenden({ _custodyAction: 'LAUSCHEN' });
+assert.deepStrictEqual([state.runden, state.druck], [roundsAfterIntel, pressureAfterIntel],
+  'listening after the one available custody clue must be idempotent instead of a dead risk path');
+state = custodyContext._custodyVerhoerWahlAnwenden({ _custodyAction: 'SCHWEIGEN' });
+assert.strictEqual(state.vernehmerGelesen, true, 'repeated silence must unlock a concrete interrogator profile');
+assert(custodyContext.caseProgress.pendingCustodyActionEffect
+    && custodyContext.caseProgress.pendingCustodyActionEffect.id === 'SCHWEIGEN',
+  'the newly read interrogator profile needs mandatory same-scene narration');
 assert(html.indexOf('_custodyVerhoerWahlAnwenden(pendingChosenOption);') <
   html.indexOf('_custodySceneTruthSichern(scene);'),
   'the selected interrogation action must be recorded before custody prose drift is repaired');
@@ -515,6 +536,15 @@ for (const action of ['SCHWEIGEN', 'HALBWAHRHEIT', 'ROTH', 'PROTOKOLL', 'BESTECH
 assert(html.includes('verhoer.runden >= 3 && verhoer.druck >= 3 && verhoer.verweigerung >= 2'), 'custody death must require repeated escalation');
 assert(html.includes("verfassung === 'number' && verfassung <= 2"), 'custody death must require critical health');
 assert(html.includes('Math.min(0.18, chance)'), 'custody death risk must retain a hard cap');
+assert(html.includes('(verhoer.vernehmerGelesen ? 0.03 : 0)')
+    && html.includes('(verhoer.mildeNacht ? 0.06 : 0)'),
+  'silence profiling and a paid milder night must actually reduce later escalation risk');
+assert(html.includes('GEWAHRSAM-AKTIONSFOLGE sichtbar gesichert'),
+  'special custody outcomes must receive deterministic same-scene narration');
+assert(html.includes("doneText: 'Die glaubhaften Halbwahrheiten sind ausgereizt.'")
+    && html.includes("doneText: 'Die mildere Nacht ist bereits erkauft.'")
+    && html.includes("doneText: verhoer.intelGefunden ? 'Die verwertbare Haftspur ist bereits gesichert.'"),
+  'one-time custody paths must visibly disable themselves after delivering their benefit');
 assert(html.includes("caseProgress.gameOverTodArt = 'stasi-verhoer'"), 'a lethal custody interrogation must persist a true death outcome');
 assert(html.includes("caseProgress.gameOverTodArt = 'mfs-liquidation'"), 'MfS liquidation must persist a true death outcome');
 assert(html.includes("KARL MAUER IST TOT - FALL OFFEN"), 'true death needs a distinct end screen instead of Charite recovery');
@@ -567,7 +597,9 @@ assert.strictEqual(
 );
 assert(html.includes('const _abschlussAnzeige = function(value, escape)'),
   'the complete win screen must pass through the shared display normalization before DOM commit');
-assert(html.includes('stasiCustodyScenesSince >= 3'), 'routine custody should allow release by the following morning');
+assert(html.includes('stasiCustodyScenesSince >= custodyReleaseThreshold')
+    && html.includes('return st.rothAktenkundig ? 2 : 3;'),
+  'routine custody should allow release by the following morning while the recorded Roth path earns its earlier exit');
 assert(html.includes('const preAdvanceTimeIdx = gameTimeIdx;')
     && html.includes('_schlafAufwachZiel(preAdvanceTimeIdx)'),
   'the clicked sleep marker and the committed wake-up phase must use the same pre-advance time slot');
