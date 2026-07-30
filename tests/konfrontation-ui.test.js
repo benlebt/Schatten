@@ -41,6 +41,8 @@ assert(html.includes('.hauptui-threat-chip[title]'), 'tactical tags need mouseov
 assert(html.includes('function _hauptuiKonfrontationChooseNarration'), 'confrontation narrative handoff helper is missing');
 assert(sourceOf('_hauptuiKonfrontationChooseNarration').includes('option._engineOrtLock = Object.assign({}, engineCurrentLocation)'),
   'every tactical confrontation narration must pin its engine origin before the request');
+assert(sourceOf('_hauptuiKonfrontationChooseNarration').includes('Nur die getrennte sichtbare Spieleraktion "Zieh die Walther PPK" darf das aendern.'),
+  'non-PPK confrontation actions must forbid an invented drawn Walther');
 assert(sourceOf('chooseOption').includes('_aktionsOrtLockWiederherstellen(option);'),
   'chooseOption must restore a pinned confrontation origin after automatic time/danger mechanics');
 assert(html.includes('window.__hauptuiKonfrontationState'), 'confrontation moves need the same select-then-execute buffer as normal actions');

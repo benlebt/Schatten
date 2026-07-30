@@ -135,6 +135,14 @@ assert(html.includes("◆ Fallziel:"), 'map popup must label the physical target
 assert(html.includes("var fallzielStatus = (typeof _physischesFallzielStatus === 'function')"), 'map data must derive the target marker from engine truth');
 assert(html.includes("add('befreien', 'Befreie')"), 'main UI must expose an explicit rescue action');
 assert(html.includes("id: 'HAUPTUI_ZIELPERSON_BEFREIEN'"), 'rescue action must have a dedicated engine scene');
+assert(/id: 'HAUPTUI_ZIELPERSON_BEFREIEN'[\s\S]{0,1800}?_zeitUnmittelbar: true/.test(html),
+  'freeing a target must not silently advance night to the next morning');
+assert(/id: 'HAUPTUI_ZIELPERSON_ZUM_OPEL'[\s\S]{0,1800}?_zeitUnmittelbar: true/.test(html),
+  'walking a rescued target to the Opel must remain an immediate scene');
+assert(/id: 'HAUPTUI_ZIELPERSON_ZUM_KLIENTEN'[\s\S]{0,1800}?_zeitUnmittelbar: true/.test(html),
+  'client handoff must not consume another time block after travel');
+assert(/id: 'HAUPTUI_ZIELPERSON_ZUR_POLIZEI'[\s\S]{0,1800}?_zeitUnmittelbar: true/.test(html),
+  'police handoff must not consume another time block after travel');
 assert(html.includes("key: 'ziel_zum_opel', label: 'Zum Opel bringen'"), 'freed target needs an explicit Opel transport action');
 assert(html.includes("key: 'ziel_zum_klienten'"), 'target needs a configured client handoff');
 assert(html.includes("key: 'ziel_zur_polizei'"), 'target needs a configured police protection route');
