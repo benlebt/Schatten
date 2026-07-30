@@ -37,6 +37,7 @@ for (const name of [
   'Wessel-Wohnung',
   'Stalinallee Baustelle',
   'Haus der Ministerien',
+  'Kaffeestube an der Spandauer Schleuse',
   'Volkspolizei-Praesidium Keibelstrasse',
   'Hohenschoenhausen / Genslerstrasse',
   'Bahnhof Friedrichstraße',
@@ -57,6 +58,7 @@ for (const id of [
   'werner_zimmer_fund',
   'kollegen_aussage',
   'augenzeuge_festnahme',
+  'gaehlert_widerlegt_flucht',
   'keibel_einlieferung',
   'festnahmeliste_werner',
   'mfs_lkw_richtung',
@@ -78,6 +80,29 @@ assert(clueById.get('keibel_einlieferung').prosaPflicht
     && clueById.get('keibel_einlieferung').prosaPflicht.replaceOnFallback
     && /Aktenzeichen/.test(clueById.get('keibel_einlieferung').fundText),
   'the Keibel register clue needs a mandatory narrated payoff, not a dry register summary');
+const coffeeRoom = locations.get('Kaffeestube an der Spandauer Schleuse');
+assert(coffeeRoom.startBekannt === false
+    && coffeeRoom.freischaltBei.includes('flugblatt')
+    && coffeeRoom.freischaltBei.includes('lehrlingsmarke'),
+  'Werners structured room evidence must unlock the playable false West lead');
+assert(clueById.get('gaehlert_widerlegt_flucht').prosaPflicht
+    && clueById.get('gaehlert_widerlegt_flucht').prosaPflicht.narrativ.test(
+      clueById.get('gaehlert_widerlegt_flucht').fundText),
+  'Gaehlert must visibly and canonically disprove the West-flight lead');
+for (const [id, label] of [
+  ['kollegen_aussage', 'Befrage die Kollegen'],
+  ['augenzeuge_festnahme', 'Befrage den Augenzeugen'],
+  ['gaehlert_widerlegt_flucht', 'Prüfe Gaehlerts Liste'],
+  ['keibel_einlieferung', 'Prüfe das Einlieferungsbuch'],
+  ['festnahmeliste_werner', 'Prüfe die Festnahmeliste'],
+  ['mfs_lkw_richtung', 'Prüfe die Transportliste'],
+]) {
+  const clue = clueById.get(id);
+  assert.strictEqual(clue.hauptuiActionLabel, label,
+    id + ' needs a purposeful visible action instead of a generic filler verb');
+  assert(clue.hauptuiActionPrompt && clue.hauptuiActionPrompt.length >= 45,
+    id + ' needs an action prompt that explains the intended investigation');
+}
 
 const recurringStart = html.indexOf('const STAMMFIGUREN');
 const recurringEnd = html.indexOf('// v7.12.1014 (Geld-System Stufe 1)', recurringStart);
@@ -356,7 +381,7 @@ assert(html.includes("problem.code === 'false_prior_custody_history'"),
 assert(/Du schiebst Werners Akten auf dem Schreibtisch zusammen/.test(html),
   'Wessel office sleep needs a canonical custody-free fallback');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1758 +VogtPurpose'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1759 +WesselPurpose'"),
   'release version is stale');
 
 console.log('WESSEL_FLOW_OK');
