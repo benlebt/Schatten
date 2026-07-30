@@ -21,7 +21,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1775 +KrauseCombatAccess'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1776 +KrauseCombatStage'"), 'release version missing');
 const purposefulKrauseLabels = [
   'Konfrontiere Frieda mit der Spur',
   'Handle Zugang zu Friedas Lager aus',
@@ -402,6 +402,11 @@ assert(sourceOf('_hauptuiKonfrontationItems').includes('ppkSchonGezogen'), 'the 
 assert(sourceOf('_hauptuiKonfrontationAbschliessen').includes('!istPpk'), 'PPK pressure must not become a cumulative knockout');
 assert(sourceOf('_hauptuiKonfrontationAbschliessen').includes('caseProgress.krauseLagerFreigegeben = true'),
   'finishing the full Krause group must persistently unlock the warehouse');
+assert(sourceOf('_hauptuiKonfrontationAbschliessen').includes('caseProgress.stage = 3'),
+  'an early full Krause group victory must advance to the warehouse clue stage');
+assert(sourceOf('restoreGameState').includes('caseProgress.krauseLagerFreigegeben')
+    && sourceOf('restoreGameState').includes('caseProgress.stage = 3'),
+  'restoring a pre-fix Krause combat save must migrate its unlocked warehouse to stage 3');
 const combatAccessContext = {
   caseProgress: { gefundeneIndizIds: [] },
   _indizGefunden: () => false,
