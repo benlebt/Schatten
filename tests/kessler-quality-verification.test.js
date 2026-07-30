@@ -33,13 +33,17 @@ function norm(value) {
     .replace(/[^a-z0-9]+/g, ' ').trim();
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1763 +PurposeLabels'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1764 +CluePreviewTruth'"),
   'release version missing');
 assert(html.includes("hauptuiActionLabel: ind.hauptuiActionLabel || ''")
   && html.includes("hauptuiActionPrompt: ind.hauptuiActionPrompt || ''"),
   'the visible main-UI target model must preserve configured clue labels and prompts');
 assert(html.includes("name: ind.hotspot || _hauptuiIndizFallbackZielname(ind)"),
   'undiscovered clue targets must not expose their solved evidence text as the button label');
+assert(html.includes("const _label = _hatHotspot ? ind.hotspot : _hauptuiIndizFallbackZielname(ind);")
+  && html.includes("_hauptuiStarteIndizSzene(clue, clue.hotspot || _hauptuiIndizFallbackZielname(clue));")
+  && html.includes("ind.hotspot || ind.kurz || _hauptuiIndizFallbackZielname(ind)"),
+  'legacy find UI, generic search and evidence gates must not preview solved clue text');
 assert(!sourceOf('_hauptuiObjektVerben').includes("actionLabel || 'Durchsuche'")
   && !sourceOf('_hauptuiObjektVerben').includes("actionLabel || 'Schau an'")
   && !sourceOf('_hauptuiStarteIndizSzene').includes("ind.hauptuiActionLabel || 'Untersuche'"),

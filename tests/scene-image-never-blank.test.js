@@ -72,7 +72,7 @@ assert(emergency.includes('KARL MAUER · Margarete Steins Wohnung')
     && emergency.includes('NEUTRALES ERSATZMOTIV'),
   'even total asset failure must render Karl alone with the current location instead of a blank region');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1763 +PurposeLabels'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1764 +CluePreviewTruth'"),
   'release version is stale');
 
 console.log('SCENE_IMAGE_NEVER_BLANK_OK');
