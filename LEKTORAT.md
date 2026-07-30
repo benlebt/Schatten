@@ -661,6 +661,8 @@ Dieser Katalog ist ab sofort Teil jedes manuellen Falllaufs und jeder Fallbewert
 
 ## Aktuelle Fallbewertung und Prüfvertrauen — Release v1762
 
+Aktuelle Arbeitsübergabe: `SCHATTEN_UEBERGABE_DEV9_2026-07-30.md`.
+
 Diese Tabelle bewertet die **Spielqualität**. Das **Prüfvertrauen** ist davon
 getrennt: Ein länger zurückliegender vollständiger Produktionslauf senkt nicht
 automatisch die Qualität eines Falls. Ohne belegten Qualitätsrückschritt wird

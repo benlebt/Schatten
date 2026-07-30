@@ -2,6 +2,9 @@
 
 Stand: 30. Juli 2026
 
+> Historischer Zwischenstand: Für neue Entwicklungs-Chats gilt
+> `SCHATTEN_UEBERGABE_DEV9_2026-07-30.md`.
+
 Aktueller Release: `v7.12.1762 +SchifferPurpose`
 
 Aktueller Release-Commit: `b07f82f fix: make Schiffer investigation actions purposeful`

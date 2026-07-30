@@ -16995,7 +16995,7 @@ Fortschrittswert genügt nicht.
 1. aktuelle ausdrückliche Benutzerentscheidung,
 2. aktueller Code und aktuelle Regressionstests,
 3. `LEKTORAT.md` — vollständig lesen; enthält die gesamte geltende Norm,
-4. `SCHATTEN_UEBERGABE_DEV8_2026-07-30.md`,
+4. `SCHATTEN_UEBERGABE_DEV9_2026-07-30.md`,
 5. dieses Projektwissen,
 6. ältere Konzept- und Übergabedokumente.
 
