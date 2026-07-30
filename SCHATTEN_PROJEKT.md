@@ -17003,3 +17003,53 @@ Die vollständigen aktuellen Lektoratsregeln werden nicht parallel in mehreren
 Kurzfassungen gepflegt. `LEKTORAT.md` ist die kanonische, vollständige Norm;
 Projektwissen und Übergabe verweisen darauf und dokumentieren Release,
 Bewertung, Live-Befunde und nächste Prioritäten.
+
+## 🆕 v7.12.1763 bis v7.12.1771 — Kessler-Finale und vollständige Schiffer-Livepfade
+
+Aktueller ausgelieferter Stand:
+
+```text
+Release: v7.12.1771 +SchifferRestoreTruth
+Produktiver Code-Commit: 282ca35 fix: keep restored Schiffer finale case-bound
+Vorheriger Code-Commit: 871f0f7 fix: complete Schiffer live truth paths
+Branch/Remote: main / origin/main
+Produktion: https://schatten.sfp.de/
+Produktiver index.html-SHA-256:
+2E8386BE039ED52D235FB7093832AF8B504DFD366B1C047CEF94C61B74C17FE5
+Lokale Suite: 70/70 Tests grün
+```
+
+Kesslers zuvor begonnener Produktionsgegenlauf wurde sichtbar bis zum Finale
+abgeschlossen. Schiffer wurde anschließend zweimal vollständig produktiv
+gespielt: einmal mit persönlicher Übergabe an Renate, einmal mit Übergabe an
+die Volkspolizei im Präsidium Keibelstraße.
+
+Die Läufe fanden keine Erreichbarkeitslücke, aber mehrere sichtbare
+Wahrheitsabweichungen: modellierte Zusatzrequisiten und Waffen in Wohnung und
+Bar, Kalle nach seinem Abgang weiter im Bild, das alte Rettungsbild nach
+Detlefs Transport in den Opel, Detlefs fehlende Präsenz im Präsidium, ein für
+den Polizeizweig falscher Renate-Sofabericht und zu allgemeine Abschlusskarten.
+v1770 schließt diese Grenzen mit sechs verpflichtenden Ankunftstexten,
+strenger Wohnungsprosa, statusgebundenen Berichten und drei neuen
+Zustandsmotiven.
+
+Beim sichtbaren Reload des abgeschlossenen Polizeilaufs deckte v1770 eine
+weitere engineweite Altspielstandlücke auf: Die ortsbasierte
+Görke-Keibelstraßen-Reparatur hängte Krollwitz und MfS-Beamte an Schiffers
+Bericht, und alte Setup-Snapshots kannten die neuen Bildzustände nicht.
+v1771 bindet die Reparatur an Görke und migriert die vollständige aktuelle
+`targetResolution` aus der kanonischen Falldefinition. Der produktive
+Gegenlauf bestätigte danach den reinen Polizeibericht, Detlef sichtbar bei der
+Übergabe und die konkrete Abschlusskarte „lebend befreit und der Polizei
+sicher übergeben“.
+
+Neue Motive:
+
+```text
+assets/scenes/schiffer/keller-roter-stern-kalle-fort-v1770.webp
+assets/scenes/schiffer/detlef-im-opel-v1770.webp
+assets/scenes/schiffer/volkspolizei-detlef-handoff-v1770.webp
+```
+
+Aktuelle zentrale Übergabe:
+`SCHATTEN_UEBERGABE_DEV10_2026-07-30.md`.

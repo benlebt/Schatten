@@ -659,9 +659,9 @@ Dieser Katalog ist ab sofort Teil jedes manuellen Falllaufs und jeder Fallbewert
 - Befunde nach P0/P1/P2/P3, jeweils mit Originalsatz, Enginezustand und Root Cause.
 - Fixversion, Regressionstest, Commit und Ergebnis des Gegenlaufs.
 
-## Aktuelle Fallbewertung und Prüfvertrauen — Release v1762
+## Aktuelle Fallbewertung und Prüfvertrauen — Release v1771
 
-Aktuelle Arbeitsübergabe: `SCHATTEN_UEBERGABE_DEV9_2026-07-30.md`.
+Aktuelle Arbeitsübergabe: `SCHATTEN_UEBERGABE_DEV10_2026-07-30.md`.
 
 Diese Tabelle bewertet die **Spielqualität**. Das **Prüfvertrauen** ist davon
 getrennt: Ein länger zurückliegender vollständiger Produktionslauf senkt nicht
@@ -682,20 +682,19 @@ eine Bewertung nicht allein wegen geringerer Testfrische herabgesetzt.
 | 10 | Hollenbeck (Lindner-Auftrag) | 9,1/10 | hoch |
 | 11 | Achterberg | 9,1/10 | hoch |
 | 12 | Vogt | 9,1/10 | hoch |
-| 13 | Kessler | 9,1/10 | hoch |
-| 14 | Schiffer | 9,1/10 | hoch |
+| 13 | Kessler | 9,1/10 | sehr hoch |
+| 14 | Schiffer | 9,2/10 | sehr hoch |
 
-Wessel steigt nach dem vollständigen 24-Szenen-Produktionslauf mit echtem
+Wessel besitzt nach dem vollständigen 24-Szenen-Produktionslauf mit echtem
 Gewahrsamsweg, Freilassung, politischer Beweiskette, Familienbericht und
 korrekter Auszahlung auf **sehr hohes** Prüfvertrauen. Wegener, Brandt,
 Hollenbeck, Achterberg und Vogt wurden in der frischen Rotation verbessert und
-live gegengeprüft. Kesslers Gegenlauf bestätigte bis Szene 10 fünf Indizien,
-Geldabzug, Renommee, Öffnungszeiten und Tageswechsel; Finale und
-Kontinuitätsvarianten bleiben zusätzlich regressionsgesichert. Schiffer besitzt
-eine vollständige Rettungs-/Übergaberegression und seit v1762 ausschließlich
-zweckgebundene Kernaktionen. Für **sehr hohes** Vertrauen fehlen bei diesen
-Fällen weiterhin vollständige Ruf-, Rex-, Item-, Romance-, Haft- und
-Alternativmatrizen.
+live gegengeprüft. Kesslers Gegenlauf wurde einschließlich Finale sichtbar
+abgeschlossen. Schiffer wurde über beide vollständigen Rettungs- und
+Übergabewege live gespielt; v1770/v1771 schließen die dabei gefundenen
+Ankunfts-, Bild-, Berichts-, Abschlusskarten- und Altspielstandlücken.
+Ruf-, Rex-, Item-, Romance-, Haft- und weitere Alternativmatrizen bleiben
+separate Vertiefungsaufgaben und ändern diesen belegten Kernpfadstand nicht.
 
 ### Gewahrsams- und Zweckaktionsaudit v1751 bis v1762
 

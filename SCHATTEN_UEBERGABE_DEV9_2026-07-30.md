@@ -1,10 +1,9 @@
-# Schatten — Übergabe nach Entwicklungsrunde Dev9
+# Schatten — Übergabe nach Entwicklungsrunde Dev9 (historisch)
 
 Stand: 30. Juli 2026
 
-Diese Datei ist der aktuelle Einstieg für den nächsten Entwicklungs-Chat. Die
-Dev8-Übergabe bleibt als historischer Zwischenstand erhalten, wird aber durch
-diese Datei ersetzt.
+Diese Datei ist ein historischer Zwischenstand. Der aktuelle Einstieg ist
+`SCHATTEN_UEBERGABE_DEV10_2026-07-30.md`.
 
 ## 1. Sofortiger Einstieg
 
