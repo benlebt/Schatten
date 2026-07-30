@@ -33,7 +33,7 @@ function norm(value) {
     .replace(/[^a-z0-9]+/g, ' ').trim();
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1755 +BrandtPurpose'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1756 +HollenbeckPurpose'"),
   'release version missing');
 assert(html.includes("const _openingPresence = _arrivalKesslerWindows\n          ? (_openingStillMissing.length"),
   'the fixed Kessler opening must not append its window cast a second time');
@@ -147,6 +147,21 @@ assert(cluePayoff.includes('Frau Pohl bleibt am linken Erdgeschossfenster')
   'clue fallback must use the configured physical positions instead of a generic roster sentence');
 assert(!cluePayoff.includes('Ilse'),
   'deterministic roster prose must keep Frau Hauke anonymous until her visible reveal');
+minimumContext.engineCurrentLocation = { name: 'Polizeirevier Hardenbergstrasse' };
+minimumContext._worldTruthAliases = (id, entry) => {
+  const full = norm((entry && entry.name) || id);
+  const parts = full.split(/\s+/);
+  return [full, parts[0], parts[parts.length - 1]].filter(Boolean);
+};
+const lindnerPresentText = minimumContext._naturalMinimumSceneText({
+  ort: 'Polizeirevier Hardenbergstrasse',
+  szene: 'Lindner nimmt die Pfeife aus dem Mund und schiebt dir die Akte über den Tisch. Er warnt dich vor den politischen Schatten des Falls.',
+  personenImRaum: ['Kommissar Heinrich Lindner'],
+}, {
+  engineOrt: 'Polizeirevier Hardenbergstrasse',
+});
+assert.strictEqual((lindnerPresentText.match(/Lindner/g) || []).length, 1,
+  'substantial prose naming a roster member by surname must not append the same NPC a second time');
 
 const curfewContext = {
   normForMatch: norm,

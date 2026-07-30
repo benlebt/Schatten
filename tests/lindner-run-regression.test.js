@@ -67,10 +67,20 @@ assert(html.includes("depictsNpcs: ['heinrich_lindner']")
   'the ordinary Lindner office image must explicitly contract the visible main NPC');
 assert(html.includes("fundText: 'In Friedrich Hollenbecks Schreibtisch findest du ein schwarzes Notizbuch."),
   'notebook clue needs deterministic complete prose');
+assert(html.includes("id: 'tresor_liste'")
+    && html.includes("narrativ: /^(?![\\s\\S]*\\bunsichtbar\\b)")
+    && html.includes('bindet die verdächtigen Devisengeschäfte aber an Otto Wegner'),
+  'bank ledger prose must not make the visibly present Wegner invisible');
 assert(html.includes("fundText: 'Margit Hollenbeck senkt die Stimme. Am Tag vor Friedrichs Verschwinden"),
   'Margit clue needs a deterministic statement that explicitly names Wegner');
 assert(html.includes("Der Bankpförtner erkennt dich als privaten Ermittler"),
   'bank porter clue must use Karl’s real professional role instead of an invented press pass');
+assert(html.includes("id: 'pfoertner_aussage'")
+    && html.includes("actions: ['BEFRAGEN','ANSPRECHEN','ERKUNDEN']"),
+  'bank porter clue must lead with Befragen instead of the generic filler label Durchsuche');
+assert(html.includes('hilfst du dem sichtlich erschöpften Hollenbeck vorsichtig aus dem Fond')
+    && html.includes("'den Knoten in deinem Magen'"),
+  'Hollenbeck handoff prose must repair rough escort wording and the generated Korn/Knoten typo');
 assert(html.includes("openingFallbackText: 'Du sitzt Kommissar Heinrich Lindner"),
   'Lindner opening needs a deterministic identity-safe fallback');
 assert(!html.includes('2000 D-Mark')
