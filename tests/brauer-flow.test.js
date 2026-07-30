@@ -353,6 +353,30 @@ assert(/ruhig, höflich/.test(earlyPoliteFallback)
 assert(sourceOf('npcInteraktion').includes('_sozialVorHinweis: !!verb._sozialVorHinweis'),
   'the selected early-conversation state must reach world-truth fallback repair');
 
+const reputationInformantContext = {
+  karlAkte: { ruf: { renommee: 5, haerte: -5 } },
+  normForMatch: (value) => String(value || '').toLowerCase().replace(/[_-]+/g, ' ').trim(),
+};
+vm.createContext(reputationInformantContext);
+vm.runInContext(sourceOf('_sozialTonartArt')
+  + '\n' + sourceOf('_sozialStandardErfolg')
+  + '\n' + sourceOf('_sozialErfolgNachRuf')
+  + '\n' + sourceOf('_sozialStandardTonart')
+  + '\n' + sourceOf('_sozialTonartMitRuf'), reputationInformantContext);
+const politeMahlkeBase = reputationInformantContext._sozialStandardTonart('normal', {
+  id: 'helmut_mahlke',
+  name: 'Helmut Mahlke',
+  tag: 'INFORMANT',
+});
+const politeMahlkeWithReputation = reputationInformantContext._sozialTonartMitRuf(
+  politeMahlkeBase,
+  { id: 'helmut_mahlke', name: 'Helmut Mahlke', tag: 'INFORMANT' },
+);
+assert.strictEqual(politeMahlkeWithReputation.erfolg, true,
+  'high renown must visibly rescue Mahlke\'s otherwise closed polite route');
+assert.strictEqual(politeMahlkeWithReputation.informantGratis, true,
+  'a reputation-rescued informant route must open the evidence gate without payment or violence');
+
 const restoredReportContext = {
   caseSetup: setup,
   caseProgress: { stage: 4, istGelöst: true, abschlussSzeneGerendert: true },
