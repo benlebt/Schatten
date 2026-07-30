@@ -543,6 +543,28 @@ assert.strictEqual(context._hauptuiNpc({ id: 'robert_kessler', name: 'Robert Kes
 context._npcIstImAktuellenSzenenSnapshot = snapshotCheckBefore;
 context._npcGehoertHierher = locationCheckBefore;
 context._findSetupCastFuzzy = setupLookupBefore;
+const resolverNpcsBefore = context.getNpcsAtCurrentLocation;
+const resolverLocationsBefore = context.getCaseLocations;
+const resolverLocationBefore = context.engineCurrentLocation;
+const resolverIdentityBefore = context._resolveNpcIdentity;
+context.engineCurrentLocation = { name: 'Hinterhof Spreestrasse' };
+context.getNpcsAtCurrentLocation = () => [];
+context.getCaseLocations = () => [{
+  name: 'Hinterhof Spreestrasse',
+  npcs: [{ id: 'lothar_schaefer', immer: true }],
+}];
+context._resolveNpcIdentity = () => ({ id: 'lothar_schaefer', name: 'Lothar Schaefer', tag: 'GANGSTER' });
+context._findSetupCastFuzzy = () => ({ id: 'lothar_schaefer', name: 'Lothar Schaefer', tag: 'GANGSTER' });
+assert.strictEqual(
+  context._hauptuiNpc({ id: 'lothar_schaefer', name: 'Lothar Schaefer', typ: 'person' }).name,
+  'Lothar Schaefer',
+  'a person injected from an active fixed location binding must remain executable'
+);
+context.getNpcsAtCurrentLocation = resolverNpcsBefore;
+context.getCaseLocations = resolverLocationsBefore;
+context.engineCurrentLocation = resolverLocationBefore;
+context._resolveNpcIdentity = resolverIdentityBefore;
+context._findSetupCastFuzzy = setupLookupBefore;
 context.currentScene = { szene: 'Der Hinterhof liegt still.', personenImRaum: ['Frau Pohl'] };
 faeden = context._hauptuiKesslerFaeden();
 assert.strictEqual(faeden[0].id, 'robert', 'external contradiction proof must keep the Robert thread open');
