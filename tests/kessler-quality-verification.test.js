@@ -33,7 +33,7 @@ function norm(value) {
     .replace(/[^a-z0-9]+/g, ' ').trim();
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1766 +CoreCasePurpose'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1767 +CasePurposeWave2'"),
   'release version missing');
 assert(html.includes("hauptuiActionLabel: ind.hauptuiActionLabel || ''")
   && html.includes("hauptuiActionPrompt: ind.hauptuiActionPrompt || ''"),
@@ -73,8 +73,14 @@ assert(/id: 'briefchen_ilse'[\s\S]{0,1400}Die Initiale verrät noch keinen Vorna
 for (const [id, label] of [
   ['tuerschild_hauke', 'Prüfe die Klingelschilder'],
   ['robert_eintritt_beobachtet', 'Beschatte Robert'],
+  ['nachbarin_aussage', 'Befrage Frau Pohl zu Robert'],
+  ['ilse_aussage', 'Befrage Ilse zu Roberts Besuchen'],
+  ['robert_aussage', 'Konfrontiere Robert mit seinen Wegen'],
   ['fenster_beobachtung', 'Beobachte das Fenster'],
+  ['edith_verdacht', 'Befrage Edith zu Roberts Mittwochen'],
+  ['tetzlaff_aussage', 'Befrage Tetzlaff zu Roberts Arbeitszeit'],
   ['briefchen_ilse', 'Öffne Roberts Schublade'],
+  ['kellner_beobachtung', 'Befrage Voss zu Roberts Ecktisch'],
   ['robert_tisch_beobachtet', 'Prüfe den Ecktisch'],
 ]) {
   const cluePattern = new RegExp("id: '" + id + "'[\\s\\S]{0,2600}hauptuiActionLabel: '" + label + "'");

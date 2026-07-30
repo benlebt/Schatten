@@ -55,6 +55,17 @@ for (const name of [
 
 const clues = setup.locations.flatMap((location) => location.indizien || []);
 const clueById = new Map(clues.map((clue) => [clue.id, clue]));
+for (const [clueId, expectedLabel] of Object.entries({
+  bruno_auftrag: 'Nimm Brunos Auftrag auf',
+  hertha_aussage: 'Befrage Hertha zu Werners Verschwinden',
+  werner_zimmer_fund: 'Prüfe Werners Schreibtisch',
+})) {
+  const clue = clueById.get(clueId);
+  assert(clue && clue.hauptuiActionLabel === expectedLabel,
+    'Wessel clue needs a visible purposeful action: ' + clueId);
+  assert(clue.hauptuiActionPrompt && clue.hauptuiActionPrompt.length >= 90,
+    'Wessel clue needs a precise generation contract: ' + clueId);
+}
 assert(/270 Ostmark Honorar/.test(clueById.get('bruno_auftrag').text)
     && !/800|achthundert|Vorschuss/i.test(
       clueById.get('bruno_auftrag').text + ' ' + clueById.get('bruno_auftrag').fundText),
@@ -388,7 +399,7 @@ assert(html.includes("problem.code === 'false_prior_custody_history'"),
 assert(/Du schiebst Werners Akten auf dem Schreibtisch zusammen/.test(html),
   'Wessel office sleep needs a canonical custody-free fallback');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1766 +CoreCasePurpose'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1767 +CasePurposeWave2'"),
   'release version is stale');
 
 console.log('WESSEL_FLOW_OK');

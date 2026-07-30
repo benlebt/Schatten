@@ -58,6 +58,22 @@ assert.strictEqual(locations.get('S-Bahnhof Friedrichstrasse').arrivalFallbackRe
 
 const clues = setup.locations.flatMap((location) => location.indizien || []);
 const clueById = new Map(clues.map((clue) => [clue.id, clue]));
+const purposefulVogtLabels = {
+  bueroeinbruch_spur: 'Sichere die Einbruchsspuren',
+  sigrid_aussage: 'Befrage Sigrid zu Manfreds Recherche',
+  im_linde_protokoll: 'Prüfe Sigrids Ausleihkarten',
+  manfred_recherche: 'Prüfe Manfreds Recherchematerial',
+  artikel_entwurf: 'Prüfe Manfreds Artikelentwurf',
+  manfred_haftort: 'Prüfe die Haftliste',
+  pieck_wagen: 'Befrage den Zeugen',
+};
+for (const [clueId, expectedLabel] of Object.entries(purposefulVogtLabels)) {
+  const clue = clueById.get(clueId);
+  assert(clue && clue.hauptuiActionLabel === expectedLabel,
+    'Vogt clue needs a visible purposeful action: ' + clueId);
+  assert(clue.hauptuiActionPrompt && clue.hauptuiActionPrompt.length >= 85,
+    'Vogt clue needs a precise generation contract: ' + clueId);
+}
 assert(clueById.get('sigrid_aussage').fundText.split(/\s+/).length >= 45,
   'Sigrid needs a complete narrated clue payoff');
 assert(/abgeschlossen|darf der Einbruch weder erneut stattfinden/i.test(
@@ -265,7 +281,7 @@ stasiLocationContext.engineCurrentLocation = { name: 'Hohenschoenhausen / Gensle
 assert.strictEqual(stasiLocationContext._stasiEncounterOrtZulaessig(), true,
   'Pieck remains allowed at the configured detention-site endgame');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1766 +CoreCasePurpose'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1767 +CasePurposeWave2'"),
   'release version is stale');
 
 console.log('VOGT_FLOW_OK');

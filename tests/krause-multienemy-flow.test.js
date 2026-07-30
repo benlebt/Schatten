@@ -21,7 +21,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1766 +CoreCasePurpose'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1767 +CasePurposeWave2'"), 'release version missing');
 const purposefulKrauseLabels = [
   'Konfrontiere Frieda mit der Spur',
   'Handle Zugang zu Friedas Lager aus',
