@@ -21,6 +21,18 @@ Stand: 29.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 7. Dem Deploy etwa zwei Minuten geben, danach denselben Fall mit neuem Seed und anderer Spielweise von vorn prüfen.
 8. Nach zehn stabilen Runs pro Fall darf die Staffel enden. Bleibt ein Fall instabil, folgen zehn weitere Runs pro Fall.
 
+### Schlaf-Ortswahrheit aus dem Produktionsgegenlauf v1745
+
+- Der einzige sichtbare Button `Schlafen` bedeutet verbindlich
+  **Schlafen am aktuellen Engine-Ort**. Er ist keine automatische Heimfahrt.
+- Eine Heimfahrt darf nur durch eine ausdrückliche Reiseentscheidung entstehen.
+  Schlaf allein darf Karl weder in sein Büro noch in eine Pension, ein Hotel,
+  ein Gästezimmer oder zu einem benannten NPC versetzen.
+- Nach dem Aufwachen müssen Prosa, `scene.ort`, Engine-Ort, Header, Bild und
+  tatsächliche Tageszeit denselben Ort und dieselbe Phase zeigen.
+- Der beim Klick eingefrorene Ursprungsort ist bindend. Ein Modell-Ort oder
+  eine Schlafprosa am Hackeschen Markt darf ihn nicht überschreiben.
+
 ## Sechs zusätzliche Standing-Checkpoints
 
 ### 1. NPC-Reintroduction, Indizien und Story-Drift

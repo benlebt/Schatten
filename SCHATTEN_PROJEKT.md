@@ -1,5 +1,26 @@
 # Schatten — Projekt-Knowledge
 
+## v7.12.1745 — Schlafen bleibt am angeklickten Engine-Ort
+
+Der v1744-Produktionsgegenlauf bei Vogt zeigte einen engineweiten Altpfad:
+Der einzige sichtbare, neutral beschriftete Schlafbutton wurde in der UI noch
+mit dem veralteten Heimfahrt-Schalter gebaut. Obwohl Kommentare und Prompt seit
+v677 verbindlich `SCHLAFEN-VOR-ORT` verlangten, setzte `chooseOption` deshalb
+den Engine-Ort vor der Modellantwort auf Karl Mauers Büro. Beim Schlaf in
+Manfred Vogts Wohnung waren am Morgen Prosa, Header und Bild folgerichtig, aber
+falsch, im Büro am Hackeschen Markt.
+
+Der sichtbare Schlafbutton erzeugt nun ausschließlich `_heimfahrt=false`.
+Zusätzlich friert die Engine beim Klick den aktuellen Ort auf dem konkreten
+Optionsobjekt ein und setzt ihn vor der Ortsklassifizierung der Modellantwort
+nochmals durch. Nur bei einem echten Bruch werden Ort und Schlafprosa lokal und
+deterministisch repariert; kohärente Modellprosa bleibt unverändert. Damit ist
+Schlaf-vor-Ort nicht mehr nur ein Promptversprechen, sondern eine harte,
+retry-feste Engine-Wahrheit.
+
+**Verifikation:** neuer Laufzeittest `sleep-location-truth.test.js`, bestehender
+Kessler-Ortskonsistenztest und vollständige Suite grün.
+
 ## v7.12.1744 — Vogt-Weltwahrheit und einmalige Haft-Episode
 
 Der frische Vogt-Produktionslauf auf v1743 belegte mehrere zusammenhängende
