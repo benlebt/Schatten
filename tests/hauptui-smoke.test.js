@@ -76,6 +76,40 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
+const personMetaContext = {
+  engineCurrentLocation: { name: 'Testort' },
+  caseProgress: { stage: 2, gefundeneIndizIds: [] },
+  getCaseLocations: () => [{
+    name: 'Testort',
+    indizien: [{
+      id: 'person_spur',
+      npc: 'testperson',
+      quelle: 'person',
+      hauptuiActionLabel: 'Befrage zur konkreten Spur',
+      hauptuiActionPrompt: 'Sichere ausschließlich die bereits definierte Aussage.',
+    }],
+  }],
+  normForMatch: value => String(value || '').toLowerCase(),
+};
+vm.createContext(personMetaContext);
+vm.runInContext(sourceOf('_npcOffenesHinweisMeta'), personMetaContext);
+assert.deepStrictEqual(
+  JSON.parse(JSON.stringify(personMetaContext._npcOffenesHinweisMeta('Testperson', 'testperson'))),
+  {
+    id: 'person_spur',
+    label: 'Befrage zur konkreten Spur',
+    prompt: 'Sichere ausschließlich die bereits definierte Aussage.',
+  },
+  'person targets must preserve the authored clue label and prompt',
+);
+assert(sourceOf('_baukastenZiele').includes('hinweisLabel:')
+    && sourceOf('_baukastenZiele').includes('hinweisPrompt:'),
+  'person clue metadata must reach the visible Haupt-UI target');
+assert(sourceOf('_hauptuiZielHinweis').includes('target.hinweisLabel'),
+  'person targets must show the authored purpose instead of generic Hinweis');
+assert(sourceOf('_hauptuiExecute').includes('_hauptuiPersonHinweisPrompt(target'),
+  'all direct person actions must carry the authored clue purpose into generation');
+
 const itemEmojiStart = html.indexOf('function noirWeaponIconMarkup()');
 const itemEmojiEnd = html.indexOf('function pickNpcEmoji(name)', itemEmojiStart);
 const itemEmojiContext = {

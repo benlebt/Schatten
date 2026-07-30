@@ -21,7 +21,25 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1764 +CluePreviewTruth'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1765 +PersonPurpose'"), 'release version missing');
+const purposefulKrauseLabels = [
+  'Konfrontiere Frieda mit der Spur',
+  'Handle Zugang zu Friedas Lager aus',
+  'Prüfe Friedas Hinterhof-Lager',
+  'Suche unter der Plane',
+  'Durchsuche Kalles Mantel',
+  'Durchsuche Jochens Stiefel',
+  'Befrage Bornstein zum Etui',
+  'Prüfe das Einbruchsfenster',
+  'Prüfe die Rückwandvitrine',
+  'Befrage Hannelore zur Tatnacht',
+];
+for (const label of purposefulKrauseLabels) {
+  assert(html.includes("hauptuiActionLabel: '" + label + "'"),
+    'Krause clue needs a visible purposeful action: ' + label);
+}
+assert((html.match(/hauptuiActionPrompt:/g) || []).length >= purposefulKrauseLabels.length,
+  'Krause purposeful actions need matching generation contracts');
 assert(html.includes('Liesl schenkte oder widmete das Etui 1939 Hugo'), 'Krause setup must bind the silver-case ownership direction');
 assert(html.includes('Karl zählt oder nimmt kein Geld, Karls Kasse bleibt unverändert'), 'Krause opening prompt must keep the return-contingent fee unpaid');
 assert(html.includes('Dramatisiere diese EINE Spur genau EINMAL'), 'explicit Haupt-UI clues must merge compact target and detailed payoff into one narration');

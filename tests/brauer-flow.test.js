@@ -85,6 +85,23 @@ for (const clueId of [
 ]) {
   assert(clueById.has(clueId), 'missing Brauer clue: ' + clueId);
 }
+const purposefulBrauerLabels = {
+  erwin_sachen_weg: 'Prüfe Erwins Schrank',
+  hilde_westgeld: 'Befrage Hilde zu Erwins Plänen',
+  schliessfach_leer: 'Prüfe Erwins Dienstschließfach',
+  mahlke_weststrecke: 'Befrage Mahlke zur Weststrecke',
+  greta_affaere: 'Befrage Greta zu Erwin',
+  greta_ruebergehen: 'Frage Greta nach Erwins Abschied',
+  schicht_grenze: 'Prüfe Erwins Dienstplan',
+  marienfelde_registratur: 'Prüfe das Marienfelder Register',
+};
+for (const [clueId, expectedLabel] of Object.entries(purposefulBrauerLabels)) {
+  const clue = clueById.get(clueId);
+  assert.strictEqual(clue.hauptuiActionLabel, expectedLabel,
+    'Brauer clue needs a visible purposeful action: ' + clueId);
+  assert(clue.hauptuiActionPrompt && clue.hauptuiActionPrompt.length >= 90,
+    'Brauer clue needs a sufficiently precise generation contract: ' + clueId);
+}
 assert.strictEqual(clueById.get('marienfelde_registratur').stage, 4,
   'Marienfelde registration must remain the decisive stage-four proof');
 assert(clueById.get('schicht_grenze').fundText

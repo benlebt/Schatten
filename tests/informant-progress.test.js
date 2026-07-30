@@ -244,8 +244,11 @@ vm.runInContext(html.slice(classifyStart, classifyEnd), classifyContext);
 assert.strictEqual(classifyContext.classifyEvidenceAction(), 'person', 'structured social choices must always classify as person actions');
 
 assert(html.includes("if (verb === 'bestechen' && typeof npcInteraktion === 'function')"), 'Haupt-UI execute path for informant payment missing');
-assert(html.includes("_anzeigeText: 'Für Hinweis zahlen · ' + npc.name"), 'paid hint must have a short player-facing action label');
-assert(html.includes("_enginePrompt: 'ENGINE-WAHRHEIT: Karl hat {npc} bereits '"), 'paid hint engine truth must use the private prompt field');
+assert(html.includes("_anzeigeText: (target.hinweisLabel || 'Für Hinweis zahlen') + ' · ' + npc.name"),
+  'paid hint must show the authored clue purpose with a short payment fallback');
+assert(html.includes("_enginePrompt: _hauptuiPersonHinweisPrompt(target,")
+    && html.includes("'ENGINE-WAHRHEIT: Karl hat {npc} bereits '"),
+  'paid hint engine truth and authored clue purpose must use the private prompt field');
 assert(!html.includes("aktion: 'ENGINE-WAHRHEIT: Karl hat {npc} bereits '"), 'internal paid-hint prompt must never be stored as visible action text');
 assert(html.includes("if (option && option._enginePrompt) userMsg += '\\n\\n' + option._enginePrompt;"), 'private engine prompt is not forwarded to the AI');
 assert(html.includes("aktion: 'Stelle {npc} zur Rede.'"), 'hostile talk action needs a short player-facing line');
