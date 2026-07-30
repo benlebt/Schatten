@@ -21,7 +21,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1774 +HandoffVisualTruth'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1775 +KrauseCombatAccess'"), 'release version missing');
 const purposefulKrauseLabels = [
   'Konfrontiere Frieda mit der Spur',
   'Handle Zugang zu Friedas Lager aus',
@@ -402,6 +402,27 @@ assert(sourceOf('_hauptuiKonfrontationItems').includes('ppkSchonGezogen'), 'the 
 assert(sourceOf('_hauptuiKonfrontationAbschliessen').includes('!istPpk'), 'PPK pressure must not become a cumulative knockout');
 assert(sourceOf('_hauptuiKonfrontationAbschliessen').includes('caseProgress.krauseLagerFreigegeben = true'),
   'finishing the full Krause group must persistently unlock the warehouse');
+const combatAccessContext = {
+  caseProgress: { gefundeneIndizIds: [] },
+  _indizGefunden: () => false,
+  _indizOrtNameById: () => 'Tante Friedas Hehlerei',
+  _indizAnzeigeName: () => 'Friedas Aussage'
+};
+require('vm').createContext(combatAccessContext);
+require('vm').runInContext(sourceOf('_indizBelegBedarf'), combatAccessContext);
+const combatAccessClue = {
+  id: 'lager_hinterhof',
+  requiresEvidenceAny: ['frieda_ausweichend', 'frieda_deal', 'kalle_transportzettel', 'jochen_lagerschluessel'],
+  satisfiesProgressAny: ['krauseLagerFreigegeben'],
+  requiresEvidenceLabel: 'Zugang fehlt'
+};
+assert(combatAccessContext._indizBelegBedarf(combatAccessClue),
+  'the warehouse clue must stay locked before dialogue, deal, loot, or a completed group confrontation');
+combatAccessContext.caseProgress.krauseLagerFreigegeben = true;
+assert.strictEqual(combatAccessContext._indizBelegBedarf(combatAccessClue), null,
+  'a completed Krause group confrontation must unlock the warehouse without inventing Frieda evidence or combat loot');
+assert(html.includes("satisfiesProgressAny: ['krauseLagerFreigegeben']"),
+  'the Krause warehouse clue must declare its persistent combat-access route');
 const peaceRoster = sourceOf('_krauseFriedensRosterSichern');
 assert(peaceRoster.includes("String(zustand.status || '') !== 'beruhigt'"),
   'only mechanically calmed Krause opponents may receive the peaceful presence guarantee');

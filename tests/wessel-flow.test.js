@@ -399,7 +399,7 @@ assert(html.includes("problem.code === 'false_prior_custody_history'"),
 assert(/Du schiebst Werners Akten auf dem Schreibtisch zusammen/.test(html),
   'Wessel office sleep needs a canonical custody-free fallback');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1774 +HandoffVisualTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1775 +KrauseCombatAccess'"),
   'release version is stale');
 
 console.log('WESSEL_FLOW_OK');
