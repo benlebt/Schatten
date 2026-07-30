@@ -1,5 +1,25 @@
 # Schatten — Projekt-Knowledge
 
+## v7.12.1746 — Auftragswissen wird nicht zum ungespielten Eigenfund
+
+Der frische Achterberg-Lauf auf v1745 startete kanonisch, schrieb aber schon
+bei der ersten Befragung Egon Vossbergs die Digitalis-Tropfen rückwirkend Karl
+zu: Er fragte nach den Tropfen, „die du in der Garderobe gefunden hast“.
+Tatsächlich kannte Karl die fast leere Flasche nur aus Wilhelmines
+Auftragsübergabe; die Garderobe und das gebundene Indiz `digitalis_leer` waren
+noch nicht untersucht.
+
+Ein neuer datengetriebener Weltwahrheitswächter vergleicht ausdrückliche
+„du hast es am Fundort gefunden/entdeckt/untersucht“-Behauptungen mit den noch
+offenen Ortsindizien. Er greift nur, wenn das Schlüsselwort bereits im Briefing
+steht, der konkrete Eigenfund aber noch nicht gebucht ist. Repair-Prompt und
+deterministischer letzter Fallback erhalten die Befragung, stellen jedoch klar,
+dass Karl bisher nur den Auftragsfakt kennt. Nach dem echten Indizklick bleibt
+dieselbe Rückbezugssprache erlaubt.
+
+**Verifikation:** Achterberg-Laufzeittest für den offenen und den tatsächlich
+gefundenen Zustand sowie vollständige Regression Suite grün.
+
 ## v7.12.1745 — Schlafen bleibt am angeklickten Engine-Ort
 
 Der v1744-Produktionsgegenlauf bei Vogt zeigte einen engineweiten Altpfad:

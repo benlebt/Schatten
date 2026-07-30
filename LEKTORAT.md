@@ -33,6 +33,16 @@ Stand: 29.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 - Der beim Klick eingefrorene Ursprungsort ist bindend. Ein Modell-Ort oder
   eine Schlafprosa am Hackeschen Markt darf ihn nicht überschreiben.
 
+### Auftragswissen versus Eigenfund aus dem Achterberg-Lauf v1746
+
+- Ein im Auftrag genannter Gegenstand oder Verdacht ist Karl als Information
+  bekannt, aber noch kein eigener Fund am Schauplatz.
+- Dialoge dürfen nach diesem Hinweis fragen. Sie dürfen jedoch nicht
+  rückwirkend behaupten, Karl habe ein noch offenes Indiz bereits gefunden,
+  entdeckt, sichergestellt, geprüft oder untersucht.
+- Formulierungen wie „die Tropfen, die du in der Garderobe gefunden hast“ sind
+  erst nach dem echten, mechanisch gebuchten Garderobenfund zulässig.
+
 ## Sechs zusätzliche Standing-Checkpoints
 
 ### 1. NPC-Reintroduction, Indizien und Story-Drift

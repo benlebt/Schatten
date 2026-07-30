@@ -95,7 +95,42 @@ assert(achterberg.includes("name: 'Otto Jahnke', id: 'otto_jahnke', tag: 'WITNES
 assert(/id: 'vossberg_gelegenheit'[\s\S]*?npc: 'otto_jahnke', quelle: 'person', actions: \['BEFRAGEN','ANSPRECHEN','UEBERZEUGEN'\]/.test(achterberg),
   'the witness statement must be obtained through conversation, not room search');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1745 +SleepOriginTruth'"),
+const evidenceTruthContext = {
+  caseSetup: {
+    tat: 'Die Witwe meldet Digitalis-Tropfen und eine fast leere Flasche.',
+    anlass: 'Karl soll den Tod untersuchen.',
+    klient: 'Wilhelmine Achterberg',
+    opfer: 'Reinhold Achterberg',
+  },
+  caseProgress: { gefundeneIndizIds: [] },
+  getCaseLocations: () => [{
+    name: 'Achterbergs Garderobe',
+    indizien: [{
+      id: 'digitalis_leer',
+      schluessel: ['digitalis', 'flasche', 'fast leer', 'garderobe'],
+    }],
+  }],
+  normForMatch: value => String(value || '').toLowerCase()
+    .replace(/Ã¼/g, 'ue').replace(/Ã¶/g, 'oe').replace(/Ã¤/g, 'ae').replace(/ÃŸ/g, 'ss'),
+};
+vm.createContext(evidenceTruthContext);
+vm.runInContext(sourceOf('_findUnfoundedEvidenceDiscoveryDrift'), evidenceTruthContext);
+const prematureFind = evidenceTruthContext._findUnfoundedEvidenceDiscoveryDrift({
+  szene: 'Du fragst ihn direkt nach den Digitalis-Tropfen, die du in der Garderobe gefunden hast.',
+}, { id: 'BEFRAGEN_EGON' });
+assert(prematureFind && prematureFind.code === 'unfounded_evidence_discovery',
+  'a witness dialogue must not rewrite a briefing fact as Karls own unplayed Garderobe discovery');
+evidenceTruthContext.caseProgress.gefundeneIndizIds.push('digitalis_leer');
+assert.strictEqual(evidenceTruthContext._findUnfoundedEvidenceDiscoveryDrift({
+  szene: 'Du fragst ihn nach den Digitalis-Tropfen, die du in der Garderobe gefunden hast.',
+}, { id: 'BEFRAGEN_EGON' }), null,
+  'the same wording is allowed after the actual evidence click');
+assert(sourceOf('buildWorldTruthRepairHint').includes("problem.code === 'unfounded_evidence_discovery'"),
+  'the new evidence-state violation needs a targeted repair prompt');
+assert(sourceOf('enforceSceneWorldTruthFallback').includes("problem.code === 'unfounded_evidence_discovery'"),
+  'the evidence-state violation needs a deterministic final fallback');
+
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1746 +EvidenceDiscoveryTruth'"),
   'release version missing');
 assert(html.includes('const _abschlussAkutGefaehrlich = currentSp > 3 && !!_aktiveFluchtGefahr;'),
   'high tension may block resolution only while an acute threat is still active');
