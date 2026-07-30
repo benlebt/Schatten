@@ -18,7 +18,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1746 +EvidenceDiscoveryTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1747 +MediumCaseOpeningTruth'"),
   'Brandt regression release version missing');
 
 for (const bad of [
@@ -63,6 +63,23 @@ assert(brandtOpeningBlock.includes('openingFallbackText:')
   && brandtOpeningBlock.includes('für den Blackout gibt es noch keine Erklärung')
   && !brandtOpeningBlock.includes('Eisenstange'),
   'the Brandt opening fallback must preserve the genuinely unknown blackout cause');
+const blackoutGuardContext = {
+  caseSetup: { klient: 'Anton Brandt (Vater)' },
+  engineCurrentLocation: { name: 'Opel Olympia am Tempelhofer Feld' },
+  normForMatch: value => String(value || '').toLowerCase()
+    .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss'),
+};
+vm.createContext(blackoutGuardContext);
+vm.runInContext(sourceOf('_findBrandtBlackoutCauseDrift'), blackoutGuardContext);
+const hammerOpening = blackoutGuardContext._findBrandtBlackoutCauseDrift({
+  szene: 'Dein Kopf dröhnt, als hätte jemand mit einem Vorschlaghammer gegen deinen Schädel geschlagen.'
+});
+assert(hammerOpening && hammerOpening.code === 'brandt_blackout_cause_invented',
+  'the unknown Brandt blackout must reject a hammer cause even when phrased as a comparison');
+assert(sourceOf('validateOpeningRoleTruth').includes('_findBrandtBlackoutCauseDrift'),
+  'Brandt blackout truth must run during the opening, not only from scene two onward');
+assert(sourceOf('enforceSceneWorldTruthFallback').includes("problem.code === 'brandt_blackout_cause_invented'"),
+  'Brandt blackout cause drift needs a deterministic final fallback');
 const waltherClueStart = brandtBlock.indexOf("{ id: 'zeuge_walther'");
 const waltherClueBlock = brandtBlock.slice(waltherClueStart, waltherClueStart + 2500);
 assert(waltherClueBlock.includes('fundText:')
@@ -164,7 +181,8 @@ assert(brandtBlock.includes('Die Ursache des Blackouts ist noch vollkommen unbek
   && brandtBlock.includes('Behaupte NICHT, Karl sei mit Metall'),
   'Brandt prose must not turn the unknown blackout cause into an invented head strike');
 const worldTruthSource = sourceOf('validateSceneWorldTruth');
-assert(worldTruthSource.includes("code: 'brandt_blackout_cause_invented'")
+assert(worldTruthSource.includes('_findBrandtBlackoutCauseDrift')
+  && sourceOf('_findBrandtBlackoutCauseDrift').includes("code: 'brandt_blackout_cause_invented'")
   && worldTruthSource.includes("code: 'healthy_karl_injury_invented'"),
   'world-truth validation must reject invented blackout causes and injuries');
 const npcInteractionSource = sourceOf('npcInteraktion');

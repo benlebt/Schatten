@@ -43,6 +43,15 @@ assert(!/Ein anderer Mann am Tresen|wirft dir wiederholt Blicke zu/.test(wegener
   'Wegener opening must explicitly bar the former unrostered grey-hat observer');
 assert(/Rita arbeitet als Kellnerin/.test(wegener.prompt),
   'opening prompt must preserve Rita as the waitress rather than a duplicate landlady');
+const wegenerOpening = Array.from(wegener.setup.locations).find((loc) =>
+  loc && loc.name === 'Eckkneipe Zum Goldenen Anker'
+);
+assert(wegenerOpening && wegenerOpening.openingFallbackRequired === true,
+  'Wegener must use the authored opening instead of softening dates and Schieles price');
+assert(/vor zwei Tagen/.test(wegenerOpening.openingFallbackText)
+  && /6\. Februar/.test(wegenerOpening.openingFallbackText)
+  && /15 Ostmark/.test(wegenerOpening.openingFallbackText),
+  'the required Wegener opening must retain commission timing, disappearance date and informant price');
 const greyHat = Array.from(wegener.setup.setupCast).find((npc) => npc && npc.id === 'mann_grauer_hut');
 assert.strictEqual(greyHat, undefined, 'Wegener must not contain a wandering anonymous grey-hat observer');
 const rudi = Array.from(wegener.setup.setupCast).find((npc) => npc && npc.id === 'rudi_menzel');

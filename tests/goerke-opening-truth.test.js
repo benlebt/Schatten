@@ -485,7 +485,7 @@ assert(/Brieftasche/.test(incompleteRelease.szene)
 assert(html.includes('logEntries.forEach(function(entry) { repairCustodyReleaseInventoryContinuity(entry); });'),
   'old saved release logs must receive the same complete equipment-return repair');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1746 +EvidenceDiscoveryTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1747 +MediumCaseOpeningTruth'"),
   'release version missing');
 
 console.log('Goerke opening/truth regression checks passed.');

@@ -600,6 +600,21 @@ Dieser Katalog ist ab sofort Teil jedes manuellen Falllaufs und jeder Fallbewert
   Schlaf ab Mittag dürfen nicht gleichzeitig als Nacht in der UI und neuer
   Morgen in der Prosa erscheinen.
 
+### Brandt- und Wegener-Eröffnungsregeln aus dem Produktionslauf v1746
+
+- Eine unbekannte Blackout-Ursache bleibt auch in Vergleichen unbekannt.
+  Formulierungen wie „als hätte jemand mit einem Vorschlaghammer gegen deinen
+  Schädel geschlagen“ behaupten einen konkreten Angriff und sind bei Brandt
+  ebenso unzulässig wie eine direkte Hammer-, Stangen-, Flaschen-, Waffen- oder
+  Knüppelbehauptung. Benommenheit, Kopfschmerz und Erinnerungslücke dürfen
+  beschrieben werden, aber kein Tatmittel und kein Täter.
+- Feste Auftragsdaten werden in der Eröffnung nicht zu ungefähren Angaben
+  abgeschwächt. Wenn ein kanonischer Opening-Text konkrete Daten, Fristen,
+  Preise oder Provisionsbedingungen enthält, ist ein vollständiger
+  Eröffnungsfallback verpflichtend, sobald die Modellfassung diese Fakten
+  auslässt oder verallgemeinert. Wegener-Pflichtprobe: Auftrag seit zwei Tagen,
+  verschwunden seit 6. Februar und Schieles Preis von 15 Ostmark.
+
 ## Mindestprotokoll pro Run
 
 - Fall, Version, Strategie, Seed, Start-/Endzeit, Szenenzahl, Ergebnis und Abbruchgrund.

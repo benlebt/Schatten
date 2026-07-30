@@ -1,5 +1,31 @@
 # Schatten — Projekt-Knowledge
 
+## v7.12.1747 — Mittlere Fälle behalten ihre Eröffnungswahrheit
+
+Der frische Brandt-Lauf auf v1746 erfand bereits in der Eröffnung durch einen
+Vergleich eine Ursache für Karls Blackout: Sein Kopf dröhne, „als hätte jemand
+mit einem Vorschlaghammer“ zugeschlagen. Auch ein als Bild formulierter Hammer-,
+Knüppel- oder Waffenangriff ist eine sichtbare Kausalbehauptung und widerspricht
+dem kanonisch unbekannten Ablauf.
+
+Ein gemeinsamer Brandt-Wahrheitswächter prüft die unbekannte Blackout-Ursache
+nun sowohl in der Eröffnung als auch in späteren Szenen. Er erkennt auch
+Vergleichssätze, löst einen gezielten Repair aus und entfernt die erfundene
+Ursache im letzten deterministischen Fallback, ohne Karls Benommenheit oder den
+Auftrag zu verlieren.
+
+Der anschließende Wegener-Lauf zeigte keinen falschen Fakt, wohl aber eine zu
+weiche Modellfassung: Aus zwei Tagen wurden „seit Tagen“, das feste
+Verschwindedatum 6. Februar fehlte und Schieles Preis von 15 Ostmark wurde nur
+als unbestimmte Zahlung erwähnt. Wegeners vollständig ausgearbeitete
+Eröffnungsprosa ist deshalb nun verpflichtend. Wenn das Modell feste Daten,
+Fristen oder Preise abschwächt, übernimmt der kanonische Opening-Fallback die
+Szene vollständig.
+
+**Verifikation:** Laufzeit- und Quelltests für Brandts Vergleichssatz,
+deterministischen Fallback sowie Wegeners Pflichtopening; vollständige
+Regression Suite grün.
+
 ## v7.12.1746 — Auftragswissen wird nicht zum ungespielten Eigenfund
 
 Der frische Achterberg-Lauf auf v1745 startete kanonisch, schrieb aber schon
