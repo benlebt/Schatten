@@ -65,6 +65,10 @@ assert(achterberg.includes("npcs: [{ id: 'wilhelmine_achterberg', immer: true }]
   'Wilhelmine must be visibly and interactively present at the Achterberg villa');
 assert(achterberg.includes("npcs: [{ id: 'gerda_wolff', immer: true }]"),
   'the named female pharmacist must be present in prose, UI, and image');
+assert(achterberg.includes('Honorar 290 Ostmark')
+    && html.includes('290 Ostmark. Jetzt stehst du im Halbdunkel')
+    && !achterberg.includes('600 Mark'),
+  'Achterberg briefing and setup must promise the actual 290 Ostmark engine payout');
 assert(achterberg.includes('Wilhelmine empfängt Karl und erhält seinen Abschlussbericht hier im Foyer.'),
   'the villa narrative setting must match the canonical foyer image during the final report');
 assert(achterberg.includes("abschlussEffekt: { verantwortlicher: 'Egon Vossberg', suspectConfronted: true, ueberfuehrt: true"),
@@ -82,6 +86,13 @@ assert(/id: 'vossberg_gestaendnis'[\s\S]{0,2600}prosaPflicht: \{ replaceOnFallba
   && /id: 'digitalis_toxikologie'[\s\S]{0,1800}prosaPflicht: \{ replaceOnFallback: true/.test(achterberg)
   && /id: 'apotheke_beleg'[\s\S]{0,1800}prosaPflicht: \{ replaceOnFallback: true/.test(achterberg),
   'core murder clues must have authored prose fallbacks instead of dry metadata sentences');
+assert(/id: 'vossberg_gestaendnis'[\s\S]{0,1600}Er gesteht, Achterbergs Digitalis absichtlich überdosiert/.test(achterberg),
+  'Vossberg canonical prose must explicitly count as a confession without appending the metadata clue');
+assert(/id: 'digitalis_leer'[\s\S]{0,1800}Morgen seines Todestages[\s\S]{0,1000}\(\?:heute Morgen\|letzten Stunden\)/.test(achterberg),
+  'the bottle clue must stay anchored to the morning of the death instead of the current investigation day');
+assert(achterberg.includes("arrivalFallbackText: 'Du stellst den Opel in der Metzer Straße ab; Liesel steigt mit dir aus.")
+    && sourceOf('repairBasicGermanProse').includes('Dietrich(?:-Spitzen)?'),
+  'Vossberg apartment arrival must not invent lock-picks that Karl does not own');
 assert(html.includes("function _szenenbildVersionierteUrl(src)"),
   'scene images must use a release-bound cache key so deployed corrections appear immediately');
 assert(achterberg.includes("lokalVon: ['Deutsche Staatsoper (Admiralspalast)']"),
@@ -130,12 +141,14 @@ assert(sourceOf('buildWorldTruthRepairHint').includes("problem.code === 'unfound
 assert(sourceOf('enforceSceneWorldTruthFallback').includes("problem.code === 'unfounded_evidence_discovery'"),
   'the evidence-state violation needs a deterministic final fallback');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1756 +HollenbeckPurpose'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1757 +AchterbergPurpose'"),
   'release version missing');
-assert(html.includes('const _abschlussAkutGefaehrlich = currentSp > 3 && !!_aktiveFluchtGefahr;'),
-  'high tension may block resolution only while an acute threat is still active');
+assert(html.includes('const _abschlussAkutGefaehrlich = currentSp > 3 && (!!_aktiveFluchtGefahr || _inKonfrontationNow);'),
+  'high tension must block resolution while an acute threat or tactical confrontation is still active');
 assert(html.includes('resolveCanClick = resolveCoreReady && karlVfOk && !_abschlussAkutGefaehrlich'),
   'a cleared confrontation must not force a pointless travel scene before resolution');
+assert(html.includes('&& !_imKampfNow && !_inKonfrontationNow; // weder im Kampf'),
+  'the resolve button itself must stay hidden throughout an open tactical confrontation');
 
 assert(html.includes("const _engineOrtswechsel = !!("),
   'prompt cast cleanup must use engine travel state, not only text heuristics');
