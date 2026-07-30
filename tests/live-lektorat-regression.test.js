@@ -646,6 +646,11 @@ const worldContext = {
 vm.createContext(worldContext);
 vm.runInContext(sourceOf('_worldTruthAliases'), worldContext);
 vm.runInContext(sourceOf('_worldTruthHasAlias'), worldContext);
+const roleAliases = Array.from(worldContext._worldTruthAliases('anton_brandt', { name: 'Anton Brandt (Vater)' }));
+assert(roleAliases.includes('anton brandt') && roleAliases.includes('anton') && roleAliases.includes('brandt'),
+  'role suffixes must not make an already narrated NPC look absent and duplicate the arrival prose');
+assert.strictEqual(worldContext._worldTruthHasAlias('Anton steht hinter dem Tresen.', roleAliases), true,
+  'the plain surname must satisfy presence for a display name carrying a role suffix');
 vm.runInContext(sourceOf('_worldTruthOrtGleich'), worldContext);
 vm.runInContext(sourceOf('_worldTruthAbschlussRueckblickErlaubt'), worldContext);
 vm.runInContext(sourceOf('_findArrivalEvidenceLeak'), worldContext);
@@ -1703,6 +1708,19 @@ assert(kesslerNeighborFallbackScene.szene.includes('Frau Pohl')
   && kesslerNeighborFallbackScene.szene.includes('Robert kommt seit Monaten jeden Mittwoch')
   && !/Hannelore|29\. auf den 30\. September|schwere Tasche/.test(kesslerNeighborFallbackScene.szene),
   'the shared neighbor-clue id must never inject Krause testimony into Kessler');
+const confessionFallbackScene = { szene: 'verworfen', optionen: [{ text: 'alt' }] };
+evidenceFallbackContext.enforceSceneWorldTruthFallback(confessionFallbackScene, {
+  code: 'evidence_scope_drift',
+  indizId: 'lange_gestaendnis',
+  indizText: 'Kurt Lange überführt: Er erschoss Erich',
+  fundText: 'Kurt Lange hält deinem Blick nicht stand. »Ich habe Erich erschossen«, gesteht er.',
+  quelle: 'person',
+  npc: 'kurt_lange'
+});
+assert(confessionFallbackScene.szene.includes('»Ich habe Erich erschossen«')
+  && !confessionFallbackScene.szene.includes('Teil der Beobachtung')
+  && confessionFallbackScene.optionen.length === 0,
+  'a scoped person-clue repair must preserve canonical direct confession prose when supplied');
 const krauseNeighborFallbackScene = { szene: 'verworfen', optionen: [] };
 evidenceFallbackContext.enforceSceneWorldTruthFallback(krauseNeighborFallbackScene, {
   code: 'evidence_scope_drift',

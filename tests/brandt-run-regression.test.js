@@ -18,7 +18,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1754 +ArrivalPurpose'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1755 +BrandtPurpose'"),
   'Brandt regression release version missing');
 
 for (const bad of [
@@ -69,10 +69,21 @@ assert(brandtOpeningBlock.includes('Karls eigene Walther PPK steckt weiterhin in
 assert(brandtOpeningBlock.includes('Karls eigene Walther PPK bleibt währenddessen in seinem Holster')
   && brandtOpeningBlock.includes('Erichs Tatwaffe als zweite Pistole'),
   'Brandt first clue must preserve both weapons without moving Karl PPK offstage');
-assert(brandtBlock.includes('Karl steht bereits in Erichs Einzimmerwohnung')
+assert(brandtBlock.includes('Karl steht bereits in Erichs zur Untersuchung freigegebener Einzimmerwohnung')
   && brandtBlock.includes('klettert nicht außen am vierten Stock')
   && brandtBlock.includes('weder Taschenmesser noch erfundenes Werkzeug'),
   'Brandt debt-note search must not invent a fourth-floor window stunt or absent knife');
+assert(brandtBlock.includes('inzwischen zur Untersuchung freigegebene Einzimmerwohnung')
+  && brandtBlock.includes('das Polizeisiegel ist bereits amtlich aufgehoben')
+  && brandtBlock.includes('mit dem regulären Schluessel der Vermieterin'),
+  'Brandt apartment arrival must explain lawful entry instead of opening an intact police seal by magic');
+assert(brandtBlock.includes("id: 'zeuge_walther'")
+  && brandtBlock.includes("actions: ['BEFRAGEN','ANSPRECHEN','ERKUNDEN']"),
+  'the bar witness clue must lead with questioning, not the generic filler label Durchsuche');
+assert(brandtBlock.includes("id: 'lange_gestaendnis'")
+  && brandtBlock.includes('»Ich habe Erich erschossen.')
+  && brandtBlock.includes('Du hältst sein eindeutiges Geständnis fest.'),
+  'Lange confession must be a direct first-person admission rather than a third-person evidence quote');
 const blackoutGuardContext = {
   caseSetup: { klient: 'Anton Brandt (Vater)' },
   engineCurrentLocation: { name: 'Opel Olympia am Tempelhofer Feld' },
