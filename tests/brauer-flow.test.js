@@ -344,6 +344,7 @@ const restoredReportContext = {
   ],
 };
 vm.createContext(restoredReportContext);
+vm.runInContext(sourceOf('_configuredFinalReportFallbackText'), restoredReportContext);
 vm.runInContext(sourceOf('_repairRestoredFinalReportProse'), restoredReportContext);
 assert.strictEqual(
   restoredReportContext._repairRestoredFinalReportProse(),

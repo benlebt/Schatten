@@ -28,7 +28,7 @@ function sourceOf(name) {
 }
 
 assert(schifferStart > 0 && schifferEnd > schifferStart, 'Schiffer setup must be present');
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1769 +PurposeAllCases'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1770 +SchifferLiveTruth'"),
   'release version must identify the Schiffer counter-run fixes');
 
 assert(schiffer.includes("stasiRelevance: 2"),
@@ -149,6 +149,27 @@ for (const location of ['Spielklub Roter Stern', 'Keller des Spielklubs Roter St
   assert(locationStart >= 0 && schiffer.slice(locationStart, locationEnd + 2).includes('arrivalFallbackText:'),
     location + ' needs authored arrival prose instead of a dry engine instruction');
 }
+for (const location of [
+  'Spielklub Roter Stern',
+  'Keller des Spielklubs Roter Stern',
+  'Rote Laterne',
+  'Detlef Schiffers Wohnung',
+  'Renate Schiffer Wohnung Tiergarten',
+  'Volkspolizei-Praesidium Keibelstrasse',
+]) {
+  const locationStart = schiffer.indexOf("{ name: '" + location + "'");
+  const nextLocation = schiffer.indexOf("{ name: '", locationStart + 10);
+  const locationBlock = schiffer.slice(locationStart, nextLocation > locationStart ? nextLocation : schiffer.length);
+  assert(locationStart >= 0 && locationBlock.includes('arrivalFallbackRequired: true'),
+    location + ' must force its authored arrival boundary against live model drift');
+}
+assert(/id: 'wohnung_aufbruch'[\s\S]{0,1800}prosaPflicht: \{ replaceOnFallback: true/.test(schiffer)
+    && schiffer.includes('deckel\\b.{0,24}\\bfehl')
+    && schiffer.includes('walther|pistole|gewehr\\w*|knarre\\w*'),
+  'the apartment reconstruction must reject the live invented missing cap and firearms');
+assert(schiffer.includes("reportFallbackPoliceText: 'Im Empfangsraum des Präsidiums Keibelstraße")
+    && schiffer.includes('Detlef lebend befreit und persönlich in den Schutz der Volkspolizei gebracht'),
+  'the police branch needs a location-true final report instead of the Renate sofa report');
 assert(html.includes("pendingCategoryChoice === 'RETTUNG'"),
   'rescue, escort and handoff actions must ignore invented AI injury deltas');
 assert(!html.includes('Auf dem schmalen Weg zwischen Kiefern und Schilf muss er mehrmals stehen bleiben'),
@@ -198,6 +219,23 @@ assert(images.includes('detlef-schiffer-wohnung-consistent-v1628.png'),
   'Detlef apartment needs the corrected forced-door, scuff and intact-bottle image');
 assert(schiffer.includes("clientHandoff: {") && schiffer.includes("renate-schiffer-handoff-night.png"),
   'the rescue handoff requires a dedicated Renate-and-Detlef visual state');
+for (const [state, file] of [
+  ['guardRemovedAtTarget', 'keller-roter-stern-kalle-fort-v1770.webp'],
+  ['transportedAtTarget', 'detlef-im-opel-v1770.webp'],
+  ['policeHandoff', 'volkspolizei-detlef-handoff-v1770.webp'],
+]) {
+  assert(schiffer.includes(state + ': {') && schiffer.includes("file: '" + file + "'"),
+    state + ' needs a dedicated truthful Schiffer visual');
+  assert(fs.existsSync(path.join(root, 'assets', 'scenes', 'schiffer', file)),
+    state + ' visual file must exist');
+}
+const physicalVisualSource = sourceOf('_physicalTargetSceneVisual');
+assert(physicalVisualSource.indexOf("transportStatus === 'im_opel' && states.transportedAtTarget")
+    < physicalVisualSource.indexOf('caseProgress.zielpersonGeborgen && states.rescuedAtTarget'),
+  'the in-Opel visual must win before the generic just-rescued image');
+assert(physicalVisualSource.includes('amPolizeiZiel && states.policeHandoff')
+    && physicalVisualSource.includes('/^(im_opel|bei_polizei)$/.test(transportStatus)'),
+  'arrival and completed police handoff must both show Detlef at Keibelstrasse');
 assert(fs.existsSync(path.join(root, 'assets', 'scenes', 'schiffer', 'karl-mauers-buero-renate-night.png')),
   'office presence image file must exist');
 assert(fs.existsSync(path.join(root, 'assets', 'scenes', 'schiffer', 'renate-schiffer-handoff-night.png')),
@@ -211,7 +249,8 @@ const deliveryContext = {
   caseSetup: {
     targetResolution: { mode: 'physical', npc: 'detlef_schiffer', location: 'Keller des Spielklubs Roter Stern' },
     reportFallbackAlways: true,
-    reportFallbackText: 'Renate erhält einen wahrheitsgetreuen Bericht.'
+    reportFallbackText: 'Renate erhält einen wahrheitsgetreuen Bericht.',
+    reportFallbackPoliceText: 'Die Volkspolizei erhält Detlef und Renate wird verständigt.'
   },
   caseProgress: { zielpersonGeborgen: true, zielpersonTransportStatus: 'im_opel' },
   engineCurrentLocation: { name: 'Keller des Spielklubs Roter Stern' },
@@ -221,6 +260,7 @@ const deliveryContext = {
 };
 vm.createContext(deliveryContext);
 vm.runInContext(sourceOf('repairPhysicalRescueEscortProse'), deliveryContext);
+vm.runInContext(sourceOf('_configuredFinalReportFallbackText'), deliveryContext);
 vm.runInContext(sourceOf('repairConfiguredFinalReportProse'), deliveryContext);
 const escortScene = { szene: 'Die kühle Nachtluft am Hackeschen Markt wirkt wie eine Ohrfeige. August, doch der Motor springt an.', spannung: 4 };
 assert.strictEqual(deliveryContext.repairPhysicalRescueEscortProse(escortScene), true,
@@ -232,5 +272,13 @@ const finalScene = { szene: 'Riemers Schulden sind gegenstandslos.', klient_beri
 assert.strictEqual(deliveryContext.repairConfiguredFinalReportProse(finalScene), true);
 assert.strictEqual(finalScene.szene, deliveryContext.caseSetup.reportFallbackText,
   'the configured Schiffer final truth must replace an invented debt cancellation');
+deliveryContext.caseProgress.zielpersonTransportStatus = 'bei_polizei';
+const policeFinalScene = { szene: 'Detlef liegt bei Renate auf dem Sofa.', klient_berichtet: true };
+assert.strictEqual(deliveryContext.repairConfiguredFinalReportProse(policeFinalScene), true);
+assert.strictEqual(policeFinalScene.szene, deliveryContext.caseSetup.reportFallbackPoliceText,
+  'the police handoff must select the police-specific report and never teleport Detlef to Renate');
+assert(html.includes("' lebend befreit und der Polizei sicher übergeben.'")
+    && html.includes("' lebend befreit und dem Auftraggeber sicher übergeben.'"),
+  'the final card and fallback summary must state the actual live delivery outcome');
 
 console.log('Schiffer full-run regression checks passed.');
