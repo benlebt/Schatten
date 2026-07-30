@@ -16642,3 +16642,137 @@ vor dem Personenmodell leert deshalb bei einer eindeutigen Freilassung nur die
 physischen Personen-Ziele. Spuren, Fundstücke und Inventar bleiben vollständig
 spielbar; Haftpersonal kann nicht mehr nachträglich unter „Anwesend“
 rematerialisiert werden.
+
+## 🆕 v7.12.1683 bis v7.12.1743 — aktuelle Produktions- und Lektoratsserie
+
+Die Projektentwicklung wurde nach v1651 mit vollständigen Produktionsläufen,
+fallbezogenen Gegenläufen und engineweiten Regressionen fortgesetzt. Der
+aktuelle ausgelieferte Stand ist:
+
+```text
+Release: v7.12.1743 +NeverBlankSceneImage
+Commit: e6b0deb fix: never leave scene image blank
+Branch/Remote: main / origin/main
+Produktion: https://schatten.sfp.de/
+Lokale Suite: 68/68 Tests grün
+```
+
+### Abgeschlossene priorisierte Produktionsläufe
+
+- **Strauss:** kompletter Lauf mit Paul Krummbein, Rex, variablen Items,
+  Konfrontationen und Abschluss. Roster, Trudes Außenstand, Sommerbilder,
+  Romance-Fortschritt und Krummbein-/Rex-Bildzustände wurden korrigiert.
+- **Lindenbaum:** kompletter politischer Lauf einschließlich Eva-Romance,
+  Begleitung, Major Brakke, Slapstick-/Itemaktionen und möglicher MfS-Haft.
+  Romance, Haft, Brakke-Zustandsbilder und politische Übergabe bleiben
+  getrennte, spielbare Wahrheiten.
+- **Görke:** gezielte Krollwitz-/Stasi-Haft-Gegenläufe mit Itemübergabe,
+  Walther, Beschlagnahme, Verhör, Freilassung und Inventarrückgabe.
+  Restore-Reparaturen sind idempotent und heilen ältere Duplikate.
+- **Stein:** vollständiges politisches Endgame mit echter Akten- und
+  Personensicherung, Grenzpassage, Vera-Übergabe und Beweiskette. Margaretes
+  zerbrochene Brille, Abgänge, Jahreszeit, Tageszeit und politische
+  Besitzwahrheit bleiben über den gesamten Lauf konsistent.
+
+### Rufvergleich auf identischer Stein-Ausgangslage
+
+Die Debug-Vergleichsläufe benutzen einen fall-, ort-, gegner- und
+szenengebundenen Seed. Dadurch treffen neutral `0/0`, sehr gut `+5/0`,
+schlecht `-5/0` und hart `0/+5` auf denselben Mann im langen Mantel in
+Margarete Steins Wohnung.
+
+- Neutral, sehr gut und hart lösen diese Lage mit einem glaubhaften
+  `Beruhigen`.
+- Schlechter Ruf benötigt zwei Schritte: Der erste senkt nur die Spannung und
+  hält Gegner, Prosa, UI und Bild am Ort; der zweite beendet die Lage.
+- Sehr guter Ruf erhöht Glaubwürdigkeit; harter Ruf erzeugt Respekt, macht
+  Zeugen jedoch vorsichtiger. Beides wird sichtbar erklärt, ist aber kein
+  automatischer Sieg.
+- Ein noch nicht erzählter nächster Gegner bleibt aus Personenleiste und Bild
+  verborgen. Nach Ende der laufenden Konfrontation wird ein bloß vorgemerkter
+  Phantomspawn verworfen.
+
+### Konfrontations-, Rex-, PPK- und Itembalance
+
+Rex, Party und Items erzeugen relevante Vorteile, bleiben aber abgestuft. Die
+aktuelle automatisierte Vergleichsmatrix lautet:
+
+```text
+unbewaffnet normal       2/6
+unbewaffnet mit Rex      3/6
+PPK normal               3/6
+PPK mit Rex              4/6
+Korn gegen hart          3/6
+Feuerwerk gegen Gruppe   4/6
+Handschellen ohne Öffnung 3/6
+Handschellen nach Treffer 5/6
+Handschellen + Rex-Fixieren 6/6
+Schlagstock gegen hart   4/6
+```
+
+Die PPK erzeugt Distanz und Druck, aber keinen automatischen Schuss, Treffer
+oder Sieg. Rex darf schwache Gegner vertreiben und Gegner fixieren, ersetzt
+gegen harte Gegner jedoch keine vorbereitende Wirkung. Verbrauchsitems werden
+nach tatsächlicher Übergabe oder Verwendung entfernt.
+
+### Bildwahrheit und Garantie gegen leere Bildflächen
+
+v1743 führt eine verbindliche Ladefolge ein:
+
+1. passende Rex-/Begleiter-/Gegner-/Zustandsvariante,
+2. vorhandene Lichtalternative dieser Variante,
+3. neutrales Grundmotiv desselben Orts mit Karl ohne Spezialcast,
+4. eingebautes Karl-allein-Ersatzmotiv mit aktuellem Ortsnamen.
+
+Eine fehlende Spezialdatei darf deshalb nie wieder `hidden`, einen leeren
+Bildrahmen oder ein Bild von einem anderen Ort erzeugen. Die Abweichung bleibt
+diagnostizierbar und ist kein Ersatz für die spätere Produktion eines echten
+Spezialmotivs. Der Regressionstest steht in
+`tests/scene-image-never-blank.test.js`.
+
+Neue Stein-Motive aus der Serie:
+
+```text
+assets/scenes/stein/cafe-kranzler-vera-day-v1739.png
+assets/scenes/stein/karl-mauers-buero-mertens-only-day-v1739.png
+```
+
+### Aktuelle Fallbewertung
+
+Spielqualität und Prüfvertrauen werden ab jetzt getrennt dokumentiert:
+
+| Rang | Fall | Spielqualität | Prüfvertrauen v1743 |
+|---:|---|---:|---|
+| 1 | Strauss | 9,4/10 | sehr hoch |
+| 2 | Lindenbaum | 9,3/10 | sehr hoch |
+| 3 | Stein | 9,3/10 | sehr hoch |
+| 4 | Görke | 9,2/10 | sehr hoch |
+| 5 | Brauer | 9,1/10 | hoch |
+| 6 | Krause | 9,1/10 | hoch |
+| 7 | Wessel | 9,0/10 | mittel bis hoch |
+| 8 | Kessler | 9,0/10 | mittel bis hoch |
+| 9 | Schiffer | 9,0/10 | mittel bis hoch |
+| 10 | Wegener | 8,9/10 | mittel |
+| 11 | Brandt | 8,9/10 | mittel |
+| 12 | Hollenbeck (Lindner-Auftrag) | 8,9/10 | mittel |
+| 13 | Achterberg | 8,8/10 | mittel |
+| 14 | Vogt | 8,8/10 | mittel |
+
+Die Plätze 10 bis 14 sind nicht auf 7er-Niveau gefallen. Ihr niedrigeres
+Prüfvertrauen bedeutet ausschließlich, dass Ruf, Rex, Items, Romance, Haft und
+Alternativenden dort weniger frisch in vollständigen Produktionsläufen
+gegeneinander getestet wurden.
+
+### Verbindliche Wissensquellen für die nächste Entwicklungsrunde
+
+1. aktuelle ausdrückliche Benutzerentscheidung,
+2. aktueller Code und aktuelle Regressionstests,
+3. `LEKTORAT.md` — vollständig lesen; enthält die gesamte geltende Norm,
+4. `SCHATTEN_UEBERGABE_DEV8_2026-07-30.md`,
+5. dieses Projektwissen,
+6. ältere Konzept- und Übergabedokumente.
+
+Die vollständigen aktuellen Lektoratsregeln werden nicht parallel in mehreren
+Kurzfassungen gepflegt. `LEKTORAT.md` ist die kanonische, vollständige Norm;
+Projektwissen und Übergabe verweisen darauf und dokumentieren Release,
+Bewertung, Live-Befunde und nächste Prioritäten.

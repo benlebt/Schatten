@@ -560,3 +560,34 @@ Dieser Katalog ist ab sofort Teil jedes manuellen Falllaufs und jeder Fallbewert
 - Gefundene Stil-Tics mit Anzahl und Szenennummern.
 - Befunde nach P0/P1/P2/P3, jeweils mit Originalsatz, Enginezustand und Root Cause.
 - Fixversion, Regressionstest, Commit und Ergebnis des Gegenlaufs.
+
+## Aktuelle Fallbewertung und Prüfvertrauen — Release v1743
+
+Diese Tabelle bewertet die **Spielqualität**. Das **Prüfvertrauen** ist davon
+getrennt: Ein länger zurückliegender vollständiger Produktionslauf senkt nicht
+automatisch die Qualität eines Falls. Ohne belegten Qualitätsrückschritt wird
+eine Bewertung nicht allein wegen geringerer Testfrische herabgesetzt.
+
+| Rang | Fall | Spielqualität | Prüfvertrauen v1743 |
+|---:|---|---:|---|
+| 1 | Strauss | 9,4/10 | sehr hoch |
+| 2 | Lindenbaum | 9,3/10 | sehr hoch |
+| 3 | Stein | 9,3/10 | sehr hoch |
+| 4 | Görke | 9,2/10 | sehr hoch |
+| 5 | Brauer | 9,1/10 | hoch |
+| 6 | Krause | 9,1/10 | hoch |
+| 7 | Wessel | 9,0/10 | mittel bis hoch |
+| 8 | Kessler | 9,0/10 | mittel bis hoch |
+| 9 | Schiffer | 9,0/10 | mittel bis hoch |
+| 10 | Wegener | 8,9/10 | mittel |
+| 11 | Brandt | 8,9/10 | mittel |
+| 12 | Hollenbeck (Lindner-Auftrag) | 8,9/10 | mittel |
+| 13 | Achterberg | 8,8/10 | mittel |
+| 14 | Vogt | 8,8/10 | mittel |
+
+Strauss, Lindenbaum, Stein und Görke bilden die zuletzt vollständig oder
+gezielt intensiv auf Produktion geprüfte Spitzengruppe. Die übrigen zehn Fälle
+sind strukturell spielbar und regressionsgrün, brauchen aber rotierende frische
+Produktionsläufe mit Ruf-, Rex-, Item-, Romance-, Haft- und Alternativpfaden.
+`Prüfvertrauen mittel` bedeutet deshalb **nicht**, dass der Fall nur eine
+7er- oder niedrige 8er-Spielqualität hätte.
