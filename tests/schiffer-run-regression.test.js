@@ -28,7 +28,7 @@ function sourceOf(name) {
 }
 
 assert(schifferStart > 0 && schifferEnd > schifferStart, 'Schiffer setup must be present');
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1761 +KesslerPurpose'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1762 +SchifferPurpose'"),
   'release version must identify the Schiffer counter-run fixes');
 
 assert(schiffer.includes("stasiRelevance: 2"),
@@ -112,6 +112,21 @@ assert(schiffer.includes("fundText: 'Du untersuchst die verwuestete Wohnung syst
   'the apartment clue must use deterministic evidence prose');
 assert(schiffer.includes("fundText: 'Als Riemer sich dem Regal zuwendet"),
   'the debt-ledger clue must render authored investigation prose rather than its raw clue label');
+for (const [id, label] of [
+  ['schulden_1500', 'Prüfe Riemers Schuldbuch'],
+  ['keller_schuldner', 'Prüfe den Kellerzugang'],
+  ['lange_zugabe', 'Setze Riemer unter Druck'],
+  ['sonja_warnung', 'Befrage Sonja zu Detlef'],
+  ['wohnung_aufbruch', 'Rekonstruiere den Überfall'],
+  ['nachbarin_abholung', 'Befrage Frau Hagedorn'],
+]) {
+  const cluePattern = new RegExp("id: '" + id + "'[\\s\\S]{0,2600}hauptuiActionLabel: '" + label + "'");
+  assert(cluePattern.test(schiffer), id + ' needs a purposeful main-UI action label');
+}
+assert.strictEqual((schiffer.match(/hauptuiActionPrompt:/g) || []).length, 6,
+  'every Schiffer investigation clue needs a concrete action prompt');
+assert(!/id: '(?:schulden_1500|keller_schuldner|lange_zugabe|sonja_warnung|wohnung_aufbruch|nachbarin_abholung)'[\s\S]{0,2600}hauptuiActionLabel: '(?:Durchsuche|Schau an|Untersuche)'/.test(schiffer),
+  'Schiffer clues must not expose generic filler labels');
 assert(schiffer.includes('Kalle "der Schiefe" mit der schiefen Boxernase'),
   'the Spielklub arrival must name the guard exactly once in the canonical roster form');
 assert(schiffer.includes("vorabVerboten: ['zerbrochen','zerschlagen','scherben','ausgelaufen','ausgegossen']"),
