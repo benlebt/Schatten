@@ -17095,3 +17095,60 @@ fortgesetzt und vollständig beendet. Der Reload auf v1774 stellte das
 Polizeifinale korrekt wieder her. Nächste sinnvolle Matrixfälle sind Krause
 (friedliche/aggressive Mehrgegnerlösung), Brauer (Ruf und Indizreihenfolge)
 und Wegener (Rex, Save/Reload zwischen Rettung und Handoff, beide Übergaben).
+
+## 🆕 v7.12.1775 bis v7.12.1782 — gezielte Krause-Matrix
+
+Aktueller ausgelieferter Stand:
+
+```text
+Release: v7.12.1782 +CleanFinalHandoff
+Produktiver Code-Commit: 197bd0c fix: keep side characters out of case finales
+Vorherige Code-Commits:
+e110940 fix: unlock Krause warehouse after group fight
+dbec667 fix: advance Krause combat route to warehouse
+0fe8f14 fix: restore Krause warehouse access in old saves
+f6e24d6 fix: hide Krause target until explicit discovery
+0e3e9c8 fix: preserve explicit Krause pickup step
+6ca1d71 fix: remove secured Krause target from scene art
+8081260 fix: synchronize daytime sleep with engine time
+Branch/Remote: main / origin/main
+Produktion: https://schatten.sfp.de/
+Produktiver index.html-SHA-256:
+5D4D657CFD40A909A6281AEE1655EAEDD9D3FB724814C481C8F08C2D9AAFA84C
+Lokale Suite: 70/70 Tests grün
+```
+
+Der vollständige Lauf kombinierte Härte +5 und Renommee -5, ohne Rex,
+umgekehrte Indizreihenfolge, Save/Reload mitten in der Untersuchung,
+aggressive Angriffe auf Frieda/Kalle/Jochen, anschließende bewusste
+Dreifach-Deeskalation, getrennten Etui-Fund und -Pickup, Restore nach dem
+Pickup, Übermüdungsumleitung und die persönliche Rückgabe an Theodor Krause.
+
+Die Matrix fand keine unlösbare Fallstruktur, aber sechs scharf begrenzte
+Zustandsbrüche: fehlender Lagerfortschritt nach der Gruppe, verlorener
+Lagerzugang in alten Saves, vorzeitig sichtbares Etui, durch generischen
+Gut-Hol-Druck übersprungener Pickup, Etui noch im Bild nach der Sicherung und
+eine Tageszeituhr, die beim erzwungenen Tagesschlaf nicht mit der Prosa
+mitging. Alle wurden eng repariert, regressionsgesichert, vollständig getestet
+und nach jeder Codeänderung neu deployt.
+
+Der Fall endete sichtbar mit sechs Indizien, Etui-Rückgabe, informiertem
+Klienten, 200 Ostmark Honorar und 2884 Ostmark Kassenstand. In genau dieser
+Finalszene hing die Engine allerdings noch einen alten Erika-Einführungssatz
+an. v1782 behebt den ermittelten Root Cause: `AUFLOESEN` konsumiert einen
+ausstehenden Romance-Push, bevor er Prosa oder Roster verändern kann, und der
+Abschlussprompt verbietet neu eintretende Nebenfiguren ausdrücklich.
+
+Neue Zustandsmotive:
+
+```text
+assets/scenes/krause/stallschreiberstrasse-12-lager-covered-day-v1778.png
+assets/scenes/krause/stallschreiberstrasse-12-lager-covered-night-v1778.png
+assets/scenes/krause/stallschreiberstrasse-12-lager-secured-day-v1780.png
+assets/scenes/krause/stallschreiberstrasse-12-lager-secured-night-v1780.png
+```
+
+Nächste Matrixpriorität ist Brauer: konträres Rufprofil, Beweisreihenfolge und
+alternatives Ende. Danach folgt Wegener mit Rex-/Übergabe-/Restore-Gegenachsen.
+Eine rein friedliche Krause-Rex-Variante bleibt als spätere Ergänzung offen;
+der risikoreichere aggressive no-Rex-Kernpfad ist vollständig live belegt.

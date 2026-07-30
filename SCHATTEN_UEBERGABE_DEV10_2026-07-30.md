@@ -37,15 +37,15 @@ unangetastet und uncommitted.
 ```text
 Branch: main
 Remote: origin/main
-Repository-HEAD vor diesem Dokumentationscommit: b2d9413
-Produktiver Release: v7.12.1774 +HandoffVisualTruth
-Produktiver Code-Commit: b2d9413 fix: distinguish rescue arrival from handoff
-Vorheriger Code-Commit: 5379008 fix: keep physical rescue targets actionable
+Repository-HEAD vor diesem Dokumentationscommit: 197bd0c
+Produktiver Release: v7.12.1782 +CleanFinalHandoff
+Produktiver Code-Commit: 197bd0c fix: keep side characters out of case finales
+Vorheriger Code-Commit: 8081260 fix: synchronize daytime sleep with engine time
 Produktion: https://schatten.sfp.de/
-Debug: https://schatten.sfp.de/?debug=on&v=1774&deploy=b2d9413
+Debug: https://schatten.sfp.de/?debug=on&v=1782&deploy=197bd0c
 Tests: 70/70 grün
 Produktiver index.html-SHA-256:
-2340B7910CA584A32803A83B7CE2C1CFFC22A4A8279BD412AF3E49A0D5137308
+5D4D657CFD40A909A6281AEE1655EAEDD9D3FB724814C481C8F08C2D9AAFA84C
 ```
 
 Jeder Dev10-Codeupload wurde per FTPS zurückgeladen und bytegenau mit dem
@@ -112,6 +112,41 @@ Sichtbar korrekt:
 - Endkarte und Fallbackzeile nannten denselben Ausgang;
 - der finale Reload auf v1774 stellte den abgeschlossenen Lauf korrekt wieder her.
 
+### Krause — aggressive/no-Rex-Matrix mit friedlichem Ausgang
+
+Der vollständige Produktionslauf kombinierte die riskantesten Achsen:
+
+| Achse | Produktionsvariante |
+|---|---|
+| Konflikt | Frieda, Kalle und Jochen zunächst aggressiv angegriffen, danach alle drei bewusst beruhigt |
+| Rex | ohne Rex |
+| Ruf | Extremprofil Renommee -5 / Härte +5 |
+| Indizreihenfolge | Hannelore → Rückwandschrank → Save/Reload → Fenster → Bornstein |
+| Besitz | Etui erst sichtbar entdeckt, danach durch eigene Aktion gesichert |
+| Save/Reload | einmal mitten in der Indizkette, einmal nach dem Etui-Pickup |
+| Erschöpfung | Übermüdungsumleitung und Schlafzeit mitgetestet |
+| Ende | persönliche Rückgabe an Theodor Krause |
+
+Sichtbar korrekt:
+
+- alle fünf Kernspuren blieben in umgekehrter Reihenfolge erreichbar;
+- der extreme Ruf beeinflusste Drohungen und Reaktionen, ohne den Fall zu
+  blockieren;
+- Frieda, Kalle und Jochen blieben nach der Mehrgegner-Deeskalation als
+  beruhigte, physisch anwesende Figuren konsistent;
+- Lagerzugang, Etui-Fund und Etui-Pickup waren getrennte, bewusste Schritte;
+- Save/Reload erhielt Ort, Szene, Inventar, Zielobjektstatus und Abschlussreife;
+- das Etui verschwand nach dem Pickup auch aus dem Szenenbild;
+- die persönliche Rückgabe entfernte das Etui aus Karls Besitz, zahlte
+  200 Ostmark und endete mit 2884 Ostmark;
+- die Abschlusskarte nannte sechs Indizien, Rückgabe und informierten Klienten.
+
+Der Lauf deckte zusätzlich einen letzten, rein engineerzeugten Abschlussfehler
+auf: Ein alter Erika-Einführungspush wurde nach der Etui-Übergabe wortgleich an
+die Finalprosa gehängt. v1782 verwirft Romance-Pushes bei `AUFLOESEN` und
+verbietet neue Nebenfiguren im Abschluss. Die alte sichtbare Szene bleibt
+historisch, aber der genaue Root Cause ist regressionsgesichert.
+
 ## 4. Dev10-Releases ab v1772
 
 ### v7.12.1772 +SchifferMatrixTruth — `d797a77`
@@ -139,6 +174,26 @@ Sichtbar korrekt:
 - erst `bei_klient` beziehungsweise `bei_polizei` darf die vollzogene Übergabe
   behaupten.
 
+### v7.12.1775 bis v7.12.1782 — Krause-Matrix
+
+- `e110940` / v1775: Lagerzugang nach der Gruppenauseinandersetzung
+  freigeschaltet.
+- `dbec667` / v1776: Krauses Mehrgegnerroute rückt nach dem Kampf zuverlässig
+  zum Lager vor.
+- `0fe8f14` / v1777: alte Saves erhalten den tatsächlich erspielten
+  Lagerzugang zurück.
+- `f6e24d6` / v1778: das Etui bleibt im Bild verborgen, bis Karl es ausdrücklich
+  entdeckt hat; neue Tag-/Nacht-Abdeckmotive.
+- `0e3e9c8` / v1779: Entdeckung und physischer Pickup sind zwei getrennte
+  Handlungen; die generische Gut-Hol-Logik überspringt die Sicherungsaktion
+  nicht mehr.
+- `6ca1d71` / v1780: nach dem Pickup zeigt die Lagerkulisse die leere Fundstelle;
+  neue Tag-/Nacht-Zustandsmotive.
+- `8081260` / v1781: ein ausdrücklicher Tagesschlaf verschiebt die Enginezeit
+  konsistent um ungefähr acht Stunden.
+- `197bd0c` / v1782: ausstehende Romance-Einführungen werden aus
+  Fallabschlüssen entfernt; Abschlussprosa bleibt bei Karl und Auftraggeber.
+
 ## 5. Tests
 
 ```text
@@ -162,14 +217,14 @@ Die Regressionen prüfen jetzt zusätzlich:
 Keine 14 identischen Standardläufe. Der höchste Erkenntnisgewinn liegt jetzt
 in orthogonalen Gegenproben:
 
-1. **Krause:** friedliche Mehrgegnerlösung gegen aggressiven Sicherungsweg,
-   jeweils mit anderer Indizreihenfolge; Fokus auf Besitz, Gewahrsam und
-   Mehrgegner-Roster.
-2. **Brauer:** hoher gegen niedrigen Ruf sowie Beweis vor Personenbefragung
+1. **Brauer:** hoher gegen niedrigen Ruf sowie Beweis vor Personenbefragung
    gegen umgekehrte Reihenfolge; Fokus auf Grenz-/Datumswahrheit und
    alternatives Ende.
-3. **Wegener:** mit Rex gegen ohne Rex, Polizei- gegen Klientenübergabe und
+2. **Wegener:** mit Rex gegen ohne Rex, Polizei- gegen Klientenübergabe und
    Save/Reload zwischen Befreiung, Opel und Handoff.
+3. **Krause-Ergänzung:** rein friedlich mit Rex und anderem Rufprofil. Der
+   aggressive/no-Rex-Kernpfad ist bereits vollständig live belegt; diese
+   Ergänzung hat weniger Priorität als Brauer und Wegener.
 4. Danach politische Fälle nur gezielt auf Gewahrsam, alternatives Ende oder
    Rufwirkung rotieren, nicht erneut als identische Standardläufe.
 

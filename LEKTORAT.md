@@ -659,7 +659,7 @@ Dieser Katalog ist ab sofort Teil jedes manuellen Falllaufs und jeder Fallbewert
 - Befunde nach P0/P1/P2/P3, jeweils mit Originalsatz, Enginezustand und Root Cause.
 - Fixversion, Regressionstest, Commit und Ergebnis des Gegenlaufs.
 
-## Aktuelle Fallbewertung und Prüfvertrauen — Release v1771
+## Aktuelle Fallbewertung und Prüfvertrauen — Release v1782
 
 Aktuelle Arbeitsübergabe: `SCHATTEN_UEBERGABE_DEV10_2026-07-30.md`.
 
@@ -668,7 +668,7 @@ getrennt: Ein länger zurückliegender vollständiger Produktionslauf senkt nich
 automatisch die Qualität eines Falls. Ohne belegten Qualitätsrückschritt wird
 eine Bewertung nicht allein wegen geringerer Testfrische herabgesetzt.
 
-| Rang | Fall | Spielqualität | Prüfvertrauen v1762 |
+| Rang | Fall | Spielqualität | Prüfvertrauen v1782 |
 |---:|---|---:|---|
 | 1 | Strauss | 9,4/10 | sehr hoch |
 | 2 | Lindenbaum | 9,3/10 | sehr hoch |
@@ -676,7 +676,7 @@ eine Bewertung nicht allein wegen geringerer Testfrische herabgesetzt.
 | 4 | Wessel | 9,2/10 | sehr hoch |
 | 5 | Görke | 9,2/10 | sehr hoch |
 | 6 | Brauer | 9,1/10 | hoch |
-| 7 | Krause | 9,1/10 | hoch |
+| 7 | Krause | 9,2/10 | sehr hoch |
 | 8 | Wegener | 9,1/10 | hoch |
 | 9 | Brandt | 9,1/10 | hoch |
 | 10 | Hollenbeck (Lindner-Auftrag) | 9,1/10 | hoch |
@@ -695,6 +695,12 @@ abgeschlossen. Schiffer wurde über beide vollständigen Rettungs- und
 Ankunfts-, Bild-, Berichts-, Abschlusskarten- und Altspielstandlücken.
 Ruf-, Rex-, Item-, Romance-, Haft- und weitere Alternativmatrizen bleiben
 separate Vertiefungsaufgaben und ändern diesen belegten Kernpfadstand nicht.
+
+Krause ist jetzt zusätzlich über einen vollständigen aggressiven
+Mehrgegnerlauf ohne Rex, extremes Rufprofil, umgedrehte Indizreihenfolge,
+zweifaches Save/Reload, getrennten Etui-Fund/Pickup und persönliche Rückgabe
+live belegt. v1775 bis v1782 schließen dabei Route, Altspielstand,
+Objektvisualisierung, Schlafzeit und den störenden Romance-Nebenbeat im Finale.
 
 ### Gewahrsams- und Zweckaktionsaudit v1751 bis v1762
 
@@ -735,3 +741,22 @@ Beweis-IDs angeschlossen.
   mit/ohne Rex, Rufprofil, Save/Reload, alternatives Ende und
   Indizreihenfolge. Ein weiterer identischer Standardlauf ist nur sinnvoll,
   wenn er einen konkreten Restore- oder Zufallsbefund reproduziert.
+
+## Krause-Matrixregeln aus v1775 bis v1782
+
+- Ein gestohlenes Zielobjekt hat mindestens drei sichtbare Zustände:
+  unentdeckt/verdeckt, entdeckt und noch am Fundort, physisch gesichert und
+  aus der Kulisse entfernt. Prosa, Bild, Inventar und `targetItemState` müssen
+  denselben Zustand zeigen.
+- Ein Fundklick ist kein Pickup, wenn die Haupt-UI danach ausdrücklich
+  „Etui sichern“ anbietet. Generische Gut-Hol-Prompts dürfen diese bewusste
+  zweite Handlung nicht vorwegnehmen.
+- Ein durch Mehrgegnerkampf oder -deeskalation erspielter Lagerzugang bleibt
+  auch nach Stage-Wechsel und Restore offen. Altspielstandreparaturen müssen
+  genau diesen erspielten Zustand wiederherstellen.
+- Ein ausdrücklicher Schlaf verschiebt immer die Enginezeit. Prosa wie
+  „acht Stunden später“ oder „am nächsten Morgen“ darf niemals bei derselben
+  Tageszeit und demselben Datum stehen bleiben.
+- `AUFLOESEN` hat Vorrang vor jedem ausstehenden Romance-/Lebendwelt-Push.
+  Eine Schlussszene führt keine neue Nebenfigur ein und hängt keinen
+  Beziehungseinstieg an die Klientenübergabe.
