@@ -217,7 +217,7 @@ vm.runInContext(sourceOf('buildFallbackAbschlussProsa'), finaleSummaryContext);
 assert.strictEqual(finaleSummaryContext.buildFallbackAbschlussProsa(),
   'Karl legt Edith Brief, Zeugenaussagen und Roberts Geständnis vollständig offen.',
   'the mechanical end screen must reflect the Kessler truth choice instead of collapsing it to a generic surveillance summary');
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1781 +SleepTimeTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1782 +CleanFinalHandoff'"),
   'release version missing');
 
 console.log('KESSLER_FINALE_CONTINUITY_OK');

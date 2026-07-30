@@ -875,6 +875,26 @@ assert(romanceScene.personenImRaum.includes('Erika Kalewski'), 'Erika must becom
 assert(/Erika Kalewski/.test(romanceScene.szene), 'Erika introduction must be visible in prose');
 assert.strictEqual(romanceContext.pendingRomancePushScene, -99, 'successful introduction must consume the pending prompt');
 
+romanceContext.pendingRomancePushScene = 12;
+romanceContext.pendingCategoryChoice = 'AUFLOESEN';
+const finalScene = {
+  szene: 'Du gibst Theodor Krause das silberne Etui persönlich zurück.',
+  spannung: 1,
+  klient_berichtet: true,
+  personenImRaum: ['Theodor Krause'],
+  cast_hinzugefuegt: []
+};
+assert.strictEqual(romanceContext.enforceRomanceIntroductionScene(finalScene), null,
+  'an outstanding romance push must never enter an explicit case resolution');
+assert(!/Erika Kalewski/.test(finalScene.szene),
+  'the Krause handoff must stay focused on Karl and Theodor');
+assert.deepStrictEqual(finalScene.personenImRaum, ['Theodor Krause'],
+  'case resolution must not silently add a side character to the room');
+assert.strictEqual(romanceContext.pendingRomancePushScene, -99,
+  'a stale romance push must be consumed at resolution instead of leaking into a later scene');
+assert(html.includes('keine neu eintretende Nebenfigur und keine Romance-Einfuehrung'),
+  'the resolution prompt must also forbid model-authored side-character beats');
+
 assert(html.includes('Laufziel sind mindestens 5 verschiedene Achsen'), 'historical education breadth target must be five axes');
 assert(html.includes('(lastSpannung <= 3 || needMoreEduAxes || (sceneCounter >= 14 && needMoreVariety))'), 'historical breadth must still work in action-heavy runs');
 assert(html.includes('(Ziel: >= 4)'), 'historical anchor category target must be four of five');
