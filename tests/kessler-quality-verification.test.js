@@ -33,7 +33,7 @@ function norm(value) {
     .replace(/[^a-z0-9]+/g, ' ').trim();
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1760 +WesselEconomy'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1761 +KesslerPurpose'"),
   'release version missing');
 assert(html.includes("const _openingPresence = _arrivalKesslerWindows\n          ? (_openingStillMissing.length"),
   'the fixed Kessler opening must not append its window cast a second time');
@@ -57,6 +57,17 @@ assert(/id: 'ilse_aussage'[\s\S]{0,2200}prosaPflicht: \{ replaceOnFallback: true
   'Ilse, letter, and cafe evidence must retain authored scene prose under model fallback');
 assert(/id: 'briefchen_ilse'[\s\S]{0,1400}Die Initiale verrät noch keinen Vornamen/.test(html),
   'the hidden letter must not leak Ilse first name before the configured reveal');
+for (const [id, label] of [
+  ['tuerschild_hauke', 'Prüfe die Klingelschilder'],
+  ['robert_eintritt_beobachtet', 'Beschatte Robert'],
+  ['fenster_beobachtung', 'Beobachte das Fenster'],
+  ['briefchen_ilse', 'Öffne Roberts Schublade'],
+  ['robert_tisch_beobachtet', 'Prüfe den Ecktisch'],
+]) {
+  const cluePattern = new RegExp("id: '" + id + "'[\\s\\S]{0,2600}hauptuiActionLabel: '" + label + "'");
+  assert(cluePattern.test(html),
+    id + ' needs a concrete investigation action instead of a generic filler verb');
+}
 
 const openingContext = {
   normForMatch: norm,
