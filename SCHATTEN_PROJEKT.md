@@ -1,5 +1,39 @@
 # Schatten — Projekt-Knowledge
 
+## v7.12.1744 — Vogt-Weltwahrheit und einmalige Haft-Episode
+
+Der frische Vogt-Produktionslauf auf v1743 belegte mehrere zusammenhängende
+Driftpfade: Die Eröffnung fiel auf generische Orientierung zurück und ließ
+Auftrag, Fristen und Einbruch aus; Sigrid erkannte ihren seit einer Woche
+beauftragten Ermittler nicht; Manfreds Wohnung erbte ein fallfremdes
+Vitrinenmotiv; Bibliotheks- und Haftbelege wurden mit erfundenem Notizbuch
+beziehungsweise als trockene Zweizeiler ausgespielt. Hauptmann Pieck konnte
+schon in der West-Berliner Redaktion materialisieren. Nach einer vollständig
+gespielten ersten Haft, zwei Verhören und Schlaf-Freilassung ließ die zentrale
+MfS-Mechanik sogar eine zweite Haft-Episode im selben Fall zu.
+
+Vogts Eröffnung, alle sechs Kernorte und alle bislang ungebundenen Kernindizien
+besitzen nun vollwertige, verpflichtende Fallprosa. Piecks zentraler
+MfS-Auftritt ist strukturiert auf Hohenschönhausen/Genslerstraße und den
+S-Bahnhof Friedrichstraße begrenzt; sein erster Stationsauftritt führt Name,
+Dienstgrad und Begleiter sichtbar ein. Die Engine blockiert nach einer
+abgeschlossenen Haft-Episode jeden erneuten Encounter-, Konfrontations- und
+zentralen Zustandszugang. Damit gilt die bereits dokumentierte Ein-Episoden-
+Regel tatsächlich, nicht nur als Kommentar.
+
+Der gleiche Lauf zeigte außerdem einen Zeitwahrheitsbruch: Der mittägliche
+Schlafbutton versprach rund acht Stunden bis Abend, die Engine rechnete wegen
+eines vorgeschalteten normalen Zeitfortschritts bis Nacht, während die
+Freilassungsprosa von einem neuen Morgen sprach. Schlafziel und UI verwenden
+jetzt denselben Zeitstand vor der Aktion. Der Haftprompt nennt die daraus
+berechnete Aufwachphase, und der Freilassungswächter ersetzt auch lange,
+ansonsten gültige Szenen, wenn Morgen-, Abend- oder Nachtprosa dem Engine-Slot
+widerspricht.
+
+**Verifikation:** Vogt- und Gewahrsams-Spezialtests sowie 68/68
+Regressionstests grün. Die Repository-Hygieneprüfung ist wieder grün; die
+aktuelle Übergabe enthält keine persönlichen Windows-Pfade mehr.
+
 ## v7.12.1644 — Deutsche Datumsordinale bleiben ganze Saetze
 
 Der frische Wessel-Lauf brach in Szene 2 grammatisch mit **„Juni verschwunden ist.“** an. Die Diagnose zeigte keinen Modell-Kurztext, sondern einen Weltwahrheits-Hard-Fallback: Ein erfundener, nicht im Raum gefuehrter Akteur wurde korrekt entfernt, aber der Satzteiler hatte `17. Juni` faelschlich nach `17.` getrennt. Dadurch blieb die zweite Haelfte des entfernten Satzes als sichtbares Fragment stehen.

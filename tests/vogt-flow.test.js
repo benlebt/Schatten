@@ -22,8 +22,20 @@ assert(variant, 'Vogt setup is missing');
 const setup = variant.setup;
 assert.strictEqual(setup.targetResolution.mode, 'proof',
   'Manfred remains physically unreachable and must resolve through proof');
+assert.deepStrictEqual(
+  Array.from(setup.stasiEncounterLocations),
+  ['Hohenschoenhausen / Genslerstrasse', 'S-Bahnhof Friedrichstrasse'],
+  'Pieck may only drive the central Stasi encounter at the two configured Vogt endgame locations',
+);
 
 const locations = new Map(setup.locations.map((location) => [location.name, location]));
+const office = locations.get('Karl Mauers Büro');
+assert(office && office.openingFallbackRequired === true,
+  'the Vogt opening must use the canonical one-week commission and office break-in setup');
+for (const anchor of ['vor einer Woche', 'seit drei Wochen', 'Journalisten', 'Schloss', 'Vogt-Akten']) {
+  assert(office.openingFallbackText.includes(anchor),
+    'the Vogt opening fallback is missing its required anchor: ' + anchor);
+}
 for (const name of [
   'Sigrid Vogt Wohnung',
   'Staatsbibliothek Unter den Linden',
@@ -38,6 +50,8 @@ for (const name of [
     'Vogt arrival fallback is missing or too dry at ' + name);
   assert(!/betrittst den schauplatz|entscheidest, wen du ansprichst/i.test(location.arrivalFallbackText),
     'Vogt arrival fallback contains mechanical AI-instruction prose at ' + name);
+  assert.strictEqual(location.arrivalFallbackRequired, true,
+    'Vogt location must reject cross-case or relationship-reset arrival drift at ' + name);
 }
 assert.strictEqual(locations.get('S-Bahnhof Friedrichstrasse').arrivalFallbackRequired, true,
   'the station arrival must use its canonical setup instead of inventing loose clue objects');
@@ -56,6 +70,26 @@ assert(clueById.get('artikel_entwurf').prosaPflicht
   'the article clue must replace dry one-line AI prose');
 assert.strictEqual(clueById.get('manfred_haftort').stage, 4,
   'the Hohenschönhausen detention record remains the decisive proof');
+for (const id of [
+  'bueroeinbruch_spur',
+  'manfred_recherche',
+  'im_linde_protokoll',
+  'manfred_haftort',
+  'pieck_wagen',
+]) {
+  const clue = clueById.get(id);
+  assert(clue && clue.fundText && clue.fundText.split(/\s+/).length >= 55,
+    'Vogt clue needs a complete narrated payoff: ' + id);
+  assert(clue.prosaPflicht && clue.prosaPflicht.replaceOnFallback,
+    'Vogt clue must replace dry or contradictory generated prose: ' + id);
+}
+assert(/kein geheimes Notizbuch übergeben/i.test(clueById.get('im_linde_protokoll').fundText),
+  'the library payoff must explicitly prevent the invented Sigrid notebook handoff');
+assert(/Der Wärter/.test(clueById.get('manfred_haftort').fundText),
+  'the decisive detention proof must include the visible guard instead of appending a dry roster sentence');
+assert(/nennt ruhig seinen Namen und Dienstgrad/.test(
+  locations.get('S-Bahnhof Friedrichstrasse').presenceFallbackText),
+  'Pieck needs a real first introduction at the station instead of a generic remains-visible suffix');
 
 const imageStart = html.indexOf('const SHARED_SCENE_IMAGES');
 const imageEnd = html.indexOf('function _kesslerSceneNorm', imageStart);
@@ -180,7 +214,23 @@ assert.strictEqual(
 assert.strictEqual(closureContext.cleared, true,
   'the dangling Stasi encounter must be cleared at case closure');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1743 +NeverBlankSceneImage'"),
+const stasiLocationContext = {
+  caseSetup: setup,
+  engineCurrentLocation: { name: 'Tagesspiegel-Redaktion' },
+  normForMatch: (value) => String(value || '').toLowerCase(),
+};
+vm.createContext(stasiLocationContext);
+vm.runInContext(sourceOf('_stasiEncounterOrtZulaessig'), stasiLocationContext);
+assert.strictEqual(stasiLocationContext._stasiEncounterOrtZulaessig(), false,
+  'Pieck must not materialize early in the West-Berliner newsroom');
+stasiLocationContext.engineCurrentLocation = { name: 'S-Bahnhof Friedrichstrasse' };
+assert.strictEqual(stasiLocationContext._stasiEncounterOrtZulaessig(), true,
+  'Pieck remains allowed at the configured Vogt endgame station');
+stasiLocationContext.engineCurrentLocation = { name: 'Hohenschoenhausen / Genslerstrasse' };
+assert.strictEqual(stasiLocationContext._stasiEncounterOrtZulaessig(), true,
+  'Pieck remains allowed at the configured detention-site endgame');
+
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1744 +VogtTruthCustodyOnce'"),
   'release version is stale');
 
 console.log('VOGT_FLOW_OK');

@@ -547,6 +547,37 @@ Dieser Katalog ist ab sofort Teil jedes manuellen Falllaufs und jeder Fallbewert
 - Sehr guter Ruf macht eine ruhige Haltung glaubwürdiger; harter Ruf lässt Gegner Karl ernst nehmen, macht Zeugen aber nervöser. Beides wird als konkrete Rufwirkung angezeigt und in der Reaktion erzählt, verleiht jedoch keinen automatischen Kampf-, Flucht-, Beweis- oder Deeskalationssieg.
 - Schwere körperliche Eskalation bleibt in allen vier Profilen falsch. Maximale Härte darf keinen Kragenangriff, keine Folter und keinen unbelegten schweren Zugriff in einen richtigen Ermittlungsweg verwandeln.
 
+### Vogt- und Haft-Regressionsregeln aus dem Produktionslauf v1744
+
+- Eine verpflichtende Eröffnung muss Auftraggeberin, bisherige Auftragsdauer,
+  vermisste Person, Beruf, Dauer des Verschwindens und den konkreten
+  Einstiegsvorfall sichtbar dramatisieren. Ein generischer Orientierungsabsatz
+  trotz vollständig konfiguriertem Opening-Brief ist ein P1-Fehler.
+- Eine etablierte Klientin erkennt ihren seit einer Woche arbeitenden Ermittler
+  bei der Rückkehr wieder. Ankunftsprosa darf Beziehungen, Übergaben und
+  Wissensstand nicht auf Erstkontakt zurücksetzen.
+- Fallorte mit markanten Objekten erhalten bei nachgewiesenem Cross-Case-Drift
+  verbindliche Ankunftsprosa. Manfred Vogts Wohnung enthält Schreibtisch,
+  Zeitungsstapel, Streckenskizzen, Aschenbecher und Mantel, aber keine
+  fallfremde Vitrine, Schmuckauslage oder Samtspur.
+- Jeder mechanisch gebuchte Vogt-Kernhinweis braucht eine eigenständige
+  Mikroszene. Sigrid übergibt in der Bibliothek kein erfundenes Geheimnotizbuch;
+  das Überwachungsprotokoll stammt aus der Ablage. Der Haftbeleg zeigt
+  Transportliste, Datum, Haftort und Verhörgrund statt eines Questlog-Satzes.
+- Fallgebundene MfS-Offiziere respektieren strukturierte Ortsgates. Pieck darf
+  vor dem belegten Schlusszugriff nicht als Begleiter in der Redaktion oder an
+  einem beliebigen Reiseort erscheinen. Sein erster sichtbarer Auftritt nennt
+  Name, Dienstgrad, räumlichen Eintritt und Sicherungspersonal, bevor die rote
+  Konfrontations-UI erscheint.
+- Pro Fall ist höchstens eine Haft-Episode zulässig. Nach einer Freilassung
+  werden neuer MfS-Encounter, erneute Haftvormerkung und ein direkter zentraler
+  Zustandswechsel gemeinsam blockiert; hohe Restspannung darf diese Schranke
+  nicht umgehen.
+- Schlafmarker, Aufwachphase, Datum, Header, Bild und Freilassungsprosa rechnen
+  alle vom Zeitstand vor dem bewusst bestätigten Schlafklick. Rund acht Stunden
+  Schlaf ab Mittag dürfen nicht gleichzeitig als Nacht in der UI und neuer
+  Morgen in der Prosa erscheinen.
+
 ## Mindestprotokoll pro Run
 
 - Fall, Version, Strategie, Seed, Start-/Endzeit, Szenenzahl, Ergebnis und Abbruchgrund.

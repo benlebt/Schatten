@@ -47,7 +47,7 @@ Verbindlicher Zyklus:
 ## 2. Repository und Produktion
 
 ```text
-Projekt: C:\Users\benle\OneDrive\Documents\Schatten
+Projekt: Repository-Wurzel des lokalen Schatten-Checkouts
 Hauptdatei: index.html
 Tests: tests\*.test.js
 Branch: main
@@ -291,7 +291,7 @@ Bei einem Widerspruch gilt:
 Gebündeltes Node:
 
 ```powershell
-$node='C:\Users\benle\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe'
+$node='node'
 ```
 
 Vollständige Suite:

@@ -7,7 +7,7 @@ const { readWebpDimensions } = require('./image-format-utils');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1743 +NeverBlankSceneImage'"), 'version constant is stale');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1744 +VogtTruthCustodyOnce'"), 'version constant is stale');
 const dogPickupStart = html.indexOf('function _hundMitnehmenMitTausch(quelle)');
 const dogPickupEnd = html.indexOf('// ============ Ende WACHHUND-Helper', dogPickupStart);
 assert(dogPickupStart >= 0 && dogPickupEnd > dogPickupStart, 'cannot isolate the Rex pickup flow');
@@ -356,6 +356,16 @@ assert.strictEqual(custodySetterContext.caseProgress.custodyReleaseSource, 'Audi
 assert.strictEqual(custodySetterContext.caseProgress.custodyReleasedAtScene, 12,
   'custody release tracking must not depend on renderLog local variables');
 assert.strictEqual(encounterClears, 1, 'release must close the active Stasi encounter');
+assert.strictEqual(custodySetterContext.caseProgress.custodyEpisodeCount, 1,
+  'the completed first custody episode must remain recorded');
+assert.strictEqual(custodySetterContext.setCustodyState(true, 'Audit-Zweitfestnahme'), false,
+  'a second custody episode in the same case must be rejected centrally');
+assert.strictEqual(custodySetterContext.karlInStasiCustody, false,
+  'the rejected second arrest must leave Karl free');
+assert.strictEqual(custodySetterContext.engineCurrentLocation.name, 'Vor der MfS-Untersuchungshaftanstalt Hohenschoenhausen',
+  'the rejected second arrest must not teleport Karl back into the cell');
+assert.strictEqual(encounterClears, 2,
+  'the rejected second arrest must also clear the stale Stasi encounter');
 
 const custodyTruthStart = html.indexOf('function _custodySceneTruthSichern(scene)');
 const custodyTruthEnd = html.indexOf('// v7.11.13: META-CUSTODY-RISIKO-COUNTER', custodyTruthStart);
@@ -558,6 +568,13 @@ assert.strictEqual(
 assert(html.includes('const _abschlussAnzeige = function(value, escape)'),
   'the complete win screen must pass through the shared display normalization before DOM commit');
 assert(html.includes('stasiCustodyScenesSince >= 3'), 'routine custody should allow release by the following morning');
+assert(html.includes('const preAdvanceTimeIdx = gameTimeIdx;')
+    && html.includes('_schlafAufwachZiel(preAdvanceTimeIdx)'),
+  'the clicked sleep marker and the committed wake-up phase must use the same pre-advance time slot');
+assert(html.includes('Keine abweichende Tageszeit, keine Morgensonne bei Abend oder Nacht.'),
+  'custody release narration must bind to the actual ~8-hour wake-up phase');
+assert(html.includes('zeitWiderspruch'),
+  'a full-length custody release scene with the wrong time of day still needs deterministic repair');
 assert(html.includes('caseProgress._custodyCountedScene !== custodySceneMark'), 'custody duration must count distinct scenes, not UI rerenders');
 assert(html.includes('NOTFLUCHT ist der einzige sofortige Ausbruch'), 'custody prompt must distinguish escape from routine morning release');
 assert(html.includes('const resetFolter = (opts.resetFolter !== undefined) ? opts.resetFolter : stateChanged;'), 'repeated custody detection must not reset interrogation progress');
