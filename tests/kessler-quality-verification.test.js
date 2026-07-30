@@ -33,7 +33,7 @@ function norm(value) {
     .replace(/[^a-z0-9]+/g, ' ').trim();
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1747 +MediumCaseOpeningTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1748 +MediumHighCaseTruth'"),
   'release version missing');
 assert(html.includes("const _openingPresence = _arrivalKesslerWindows\n          ? (_openingStillMissing.length"),
   'the fixed Kessler opening must not append its window cast a second time');
@@ -124,6 +124,7 @@ assert(emptyCourtyard && emptyCourtyard.code === 'arrival_npc_roster_drift' && e
 const minimumContext = {
   normForMatch: norm,
   engineCurrentLocation: { name: 'Hinterhof Sybelstrasse' },
+  _npcAnzeigename: name => name === 'Ilse Hauke' ? 'Frau Hauke' : name,
   getCaseLocations: () => [{
     name: 'Hinterhof Sybelstrasse',
     presenceFallbackText: 'Frau Pohl bleibt am linken Erdgeschossfenster, Frau Hauke am oberen rechten Hoffenster; beide behalten den Hof im Blick.',
@@ -135,7 +136,7 @@ vm.createContext(minimumContext);
 vm.runInContext(sourceOf('_naturalMinimumSceneText'), minimumContext);
 const cluePayoff = minimumContext._naturalMinimumSceneText({
   ort: 'Hinterhof Sybelstrasse',
-  personenImRaum: ['Frau Pohl', 'Frau Hauke'],
+  personenImRaum: ['Frau Pohl', 'Ilse Hauke'],
 }, {
   engineOrt: 'Hinterhof Sybelstrasse',
   fundText: 'Robert verschwindet im Hinterhaus; die Haustür fällt hinter ihm zu.',
@@ -144,6 +145,8 @@ assert(cluePayoff.includes('Frau Pohl bleibt am linken Erdgeschossfenster')
   && cluePayoff.includes('Frau Hauke am oberen rechten Hoffenster')
   && !cluePayoff.includes('verfolgen die Untersuchung schweigend'),
   'clue fallback must use the configured physical positions instead of a generic roster sentence');
+assert(!cluePayoff.includes('Ilse'),
+  'deterministic roster prose must keep Frau Hauke anonymous until her visible reveal');
 
 const curfewContext = {
   normForMatch: norm,

@@ -25,6 +25,8 @@ assert(/definedEvidenceGate:\s*\{[\s\S]{0,180}?minFound:\s*4,[\s\S]{0,80}?minBur
   'Kessler evidence gate must still require four clues and an independent source');
 assert(kessler.includes("abschlussOrt: 'Karl Mauers Büro'"),
   'Kessler resolution must move to a real telephone at the office instead of inventing a booth under the old header');
+assert(/id:\s*'nachbarin_aussage'[\s\S]{0,1000}?prosaPflicht:\s*\{[\s\S]{0,500}?replaceOnFallback:\s*true/.test(kessler),
+  'Frau Pohl must visibly narrate Robert’s Wednesday route before the clue is booked');
 
 const nameDisplay = {
   window: {},

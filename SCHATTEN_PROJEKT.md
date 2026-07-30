@@ -1,5 +1,36 @@
 # Schatten — Projekt-Knowledge
 
+## v7.12.1748 — Kernhinweise und Wissensgrenzen der mittelhohen Fälle
+
+Die frischen Produktionsläufe von Wessel, Kessler und Schiffer auf v1747
+bestätigten jeweils eine starke, kanonische Eröffnung und passende
+Anwesenheitsbilder. Die ersten freien Gespräche legten aber drei verwandte
+Lücken zwischen mechanischer Buchung und sichtbarer Erzählung offen.
+
+Bei Wessel wurde `bruno_auftrag` korrekt gebucht, während die Prosa nur vage
+andeutete, Bruno könne einen Verräter kennen. Brunos Aussage ist nun
+verpflichtend und nennt sichtbar Werner, den 17. Juni, Friedrichstraße,
+achthundert Ostmark sowie die Gefahr durch Volkspolizei oder Staatssicherheit.
+
+Bei Kessler buchte Frau Pohl ihren Mittwochs-Hinweis, ohne ihn im Lesetext
+auszusprechen. Ein technischer Anwesenheitssatz verriet außerdem Haukes intern
+bekannten Vornamen vor ihrer Vorstellung. Pohls vollständige Aussage besitzt
+jetzt einen ersetzenden Pflichtfallback; jede deterministische Rosterprosa nutzt
+vor der Ausgabe den fallabhängigen Anzeigenamen und bleibt deshalb bei
+„Frau Hauke“, bis der Vorname sichtbar verdient wurde.
+
+Bei Schiffer beschrieb Renate plötzlich Kalles schiefe Boxernase und behauptete,
+die Männer seien nicht aus Berlin, obwohl diese Tätermerkmale erst Frau
+Hagedorn kennt. Zusätzlich reichte sie ein nicht konfiguriertes Foto. Renates
+Wissensgrenze wird nun im Aktionsprompt und durch einen harten Laufzeitwächter
+gesichert. Repair und Fallback erlauben nur die zwei unbekannten Männer,
+Detlefs 1500 D-Mark Schulden und ihren Riemer-Verdacht; die Antwort endet mit
+dem bereits vorgesehenen sichtbaren Klientenabgang.
+
+**Verifikation:** exakte Laufzeitrepros für Brunos Pflichtaussage, Haukes
+geschützten Anzeigenamen und Renates Produktionssatz; vollständige Regression
+Suite grün.
+
 ## v7.12.1747 — Mittlere Fälle behalten ihre Eröffnungswahrheit
 
 Der frische Brandt-Lauf auf v1746 erfand bereits in der Eröffnung durch einen

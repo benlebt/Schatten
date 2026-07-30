@@ -615,6 +615,25 @@ Dieser Katalog ist ab sofort Teil jedes manuellen Falllaufs und jeder Fallbewert
   auslässt oder verallgemeinert. Wegener-Pflichtprobe: Auftrag seit zwei Tagen,
   verschwunden seit 6. Februar und Schieles Preis von 15 Ostmark.
 
+### Wessel-, Kessler- und Schiffer-Regeln aus dem Produktionslauf v1747
+
+- Ein gebuchter Klientenhinweis steht vollständig im Lesetext. Vage Sätze wie
+  „er weiß noch mehr“ genügen nicht, wenn die Mechanik bereits Name, Datum,
+  Ort, Honorar und politische Gefahr verbucht. Wessel-Pflichtprobe: Bruno nennt
+  Werner, 17. Juni, Friedrichstraße, achthundert Ostmark und die Gefahr durch
+  Volkspolizei oder Staatssicherheit.
+- Deterministische Roster- und Präsenzsätze benutzen denselben fallabhängigen
+  Anzeigenamen wie die Haupt-UI. Eine intern bekannte Identität darf nicht erst
+  nach dem Modellfilter wieder in die Prosa gelangen. Kessler-Pflichtprobe:
+  Vor der sichtbaren Vorstellung heißt die Frau in jeder Ausgabe „Frau Hauke“,
+  nie „Ilse“ oder „Ilse Hauke“.
+- Wissen bleibt an seine wirkliche Quelle gebunden, auch wenn eine andere
+  Figur dieselben Täter im Auftrag erwähnt. Renate Schiffer kennt nur zwei
+  unbekannte Männer, Detlefs 1500 D-Mark Schulden und ihren Riemer-Verdacht.
+  Kalles schiefe Boxernase, Dialekt, Herkunft und weitere Tätermerkmale gehören
+  erst Frau Hagedorn beziehungsweise späteren Ermittlungen. Nicht konfigurierte
+  Fotos, Briefe oder Papiere sind kein zulässiger Ersatzhinweis.
+
 ## Mindestprotokoll pro Run
 
 - Fall, Version, Strategie, Seed, Start-/Endzeit, Szenenzahl, Ergebnis und Abbruchgrund.

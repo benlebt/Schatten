@@ -28,7 +28,7 @@ function sourceOf(name) {
 }
 
 assert(schifferStart > 0 && schifferEnd > schifferStart, 'Schiffer setup must be present');
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1747 +MediumCaseOpeningTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1748 +MediumHighCaseTruth'"),
   'release version must identify the Schiffer counter-run fixes');
 
 assert(schiffer.includes("stasiRelevance: 2"),
@@ -42,6 +42,26 @@ assert(schiffer.includes("startBekannt: true"),
   'the named opening destinations must be travelable without a dead-end detour');
 assert(schiffer.includes("wegWennKlientGesprochen: true"),
   'Renate must answer in the office and then leave through the narrated client transition');
+assert(html.includes('SCHIFFER-KENNTNISGRENZE (ENGINE-WAHRHEIT)')
+    && html.includes("code: 'schiffer_client_knowledge_drift'")
+    && html.includes('Ich habe die beiden Männer nicht selbst gesehen.'),
+  'Renate must not invent Kalle’s nose, dialect, origin, or a new photo before Hagedorn’s clue');
+const renateKnowledgeContext = {
+  normForMatch: value => String(value || '').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ß/g, 'ss'),
+};
+vm.createContext(renateKnowledgeContext);
+vm.runInContext(sourceOf('_findSchifferRenateKnowledgeDrift'), renateKnowledgeContext);
+const liveRenateDrift = renateKnowledgeContext._findSchifferRenateKnowledgeDrift({
+  ort: 'Karl Mauers Büro',
+  szene: 'Renate sagt, die Männer seien nicht aus Berlin. Einer habe eine Nase wie nach einem schlechten Boxkampf. Sie reicht dir ein Foto von Detlef.'
+}, {
+  _clientDepartureAfterReply: 'Renate Schiffer',
+}, {
+  klient: 'Renate Schiffer (Saengerin)',
+});
+assert(liveRenateDrift && liveRenateDrift.code === 'schiffer_client_knowledge_drift',
+  'the exact live leak about origin, boxer nose, and an invented photo must be rejected');
 assert(html.includes('const pronomenAbgang = (String(scene.szene || \'\').match'),
   'a one-shot client departure must also be recognized when the model continues with a pronoun');
 assert(!html.includes('streifschuss|arm|bein|gesicht|kopf|brust|schulter|rippe|finger|hand'),

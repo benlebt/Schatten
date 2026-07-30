@@ -69,6 +69,11 @@ assert(/Werner Wessel/.test(clueById.get('festnahmeliste_werner').fundText)
     && /Untersuchungshaft/.test(clueById.get('festnahmeliste_werner').fundText)
     && /faschistische Provokation/.test(clueById.get('festnahmeliste_werner').fundText),
   'the decisive Wessel proof must be fully stated in visible prose');
+assert(clueById.get('bruno_auftrag').prosaPflicht
+    && clueById.get('bruno_auftrag').prosaPflicht.replaceOnFallback
+    && clueById.get('bruno_auftrag').prosaPflicht.narrativ.test(
+      clueById.get('bruno_auftrag').fundText),
+  'Bruno must visibly narrate the complete assignment before it is booked');
 assert(clueById.get('keibel_einlieferung').prosaPflicht
     && clueById.get('keibel_einlieferung').prosaPflicht.replaceOnFallback
     && /Aktenzeichen/.test(clueById.get('keibel_einlieferung').fundText),
@@ -351,7 +356,7 @@ assert(html.includes("problem.code === 'false_prior_custody_history'"),
 assert(/Du schiebst Werners Akten auf dem Schreibtisch zusammen/.test(html),
   'Wessel office sleep needs a canonical custody-free fallback');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1747 +MediumCaseOpeningTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1748 +MediumHighCaseTruth'"),
   'release version is stale');
 
 console.log('WESSEL_FLOW_OK');
