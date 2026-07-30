@@ -17053,3 +17053,45 @@ assets/scenes/schiffer/volkspolizei-detlef-handoff-v1770.webp
 
 Aktuelle zentrale Übergabe:
 `SCHATTEN_UEBERGABE_DEV10_2026-07-30.md`.
+
+## 🆕 v7.12.1772 bis v7.12.1774 — gezielte Schiffer-Matrix
+
+Aktueller ausgelieferter Stand:
+
+```text
+Release: v7.12.1774 +HandoffVisualTruth
+Produktiver Code-Commit: b2d9413 fix: distinguish rescue arrival from handoff
+Vorherige Code-Commits:
+d797a77 fix: harden Schiffer matrix truth
+5379008 fix: keep physical rescue targets actionable
+Branch/Remote: main / origin/main
+Produktion: https://schatten.sfp.de/
+Produktiver index.html-SHA-256:
+2340B7910CA584A32803A83B7CE2C1CFFC22A4A8279BD412AF3E49A0D5137308
+Lokale Suite: 70/70 Tests grün
+```
+
+Der frische Produktionslauf kombinierte bewusst mehrere Gegenachsen:
+friedlich statt aggressiv, mit Rex statt ohne Rex, neutraler Ruf mit
+anschließendem höflichem Renommeegewinn, umgedrehte Indizreihenfolge,
+Save/Reload und Polizei- statt Renate-Ende. Der Lauf blieb lösbar und endete
+mit fünf Indizien, lebend befreitem Detlef, bewusster Polizeiübergabe,
+informierter Renate und fallrichtigem Abschlussbericht.
+
+Die Matrix fand zwei echte Enginefehler und einen visuellen Vorgriff:
+
+1. Nach Kalles friedlichem Abgang blieb Detlef im Bild, verschwand aber aus
+   Personenliste und Befreien-Aktion. v1773 setzt ein unbefreites physisches
+   Ziel am konfigurierten Rettungsort als letzte Engine-Wahrheit wieder ein.
+2. Ein später Phantomakteur-Repair konnte einen bereits verabschiedeten
+   Klienten aus dem alten Szenensnapshot reaktivieren. v1773 filtert
+   `cast_entfernt` und den gebuchten Klientenabgang.
+3. Das Polizeibild beschrieb die Übergabe bereits bei der Ankunft, obwohl die
+   Engine noch eine eigene Übergabeaktion verlangte. v1774 trennt
+   `im_opel` von `bei_klient` und `bei_polizei`.
+
+Der gespeicherte Blockerstand wurde nach dem v1773-Deployment ohne Neustart
+fortgesetzt und vollständig beendet. Der Reload auf v1774 stellte das
+Polizeifinale korrekt wieder her. Nächste sinnvolle Matrixfälle sind Krause
+(friedliche/aggressive Mehrgegnerlösung), Brauer (Ruf und Indizreihenfolge)
+und Wegener (Rex, Save/Reload zwischen Rettung und Handoff, beide Übergaben).

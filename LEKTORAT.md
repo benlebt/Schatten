@@ -716,3 +716,22 @@ Verbrauchte Wege werden deaktiviert. Wessel, Kessler und Schiffer erhielten
 zusätzlich konkrete Kernaktionslabels und Aktionsprompts; falsche oder
 unerreichbare Wessel-Westflucht-Trigger wurden an die strukturierten
 Beweis-IDs angeschlossen.
+
+## Gezielte Matrixregeln aus v1772 bis v1774
+
+- Ein physisches Rettungsziel ist am konfigurierten Rettungsort harte
+  Engine-Wahrheit. Weder ein mehrdeutiges Abgangspronomen noch ein später
+  gefilterter Modell-Cast darf die noch unbefreite Zielperson aus
+  Personenleiste und Rettungsaktion entfernen.
+- Der sichtbare Abgang einer Klientenfigur ist dauerhaft. Wenn ein
+  Reparaturpass die Person in `cast_entfernt` eingetragen hat, darf ein
+  nachfolgender Phantomakteur-Pass sie weder in `personenImRaum` noch durch
+  einen ergänzten Präsenzsatz zurückholen.
+- Ankunft und Übergabe sind zwei getrennte Zustände. Solange eine gerettete
+  Person nur `im_opel` am sicheren Ziel angekommen ist, müssen Prosa, Bildtext
+  und Aktionsmenü sagen, dass die bewusste Übergabe noch aussteht. Erst
+  `bei_klient` oder `bei_polizei` darf eine vollzogene Übergabe behaupten.
+- Matrixläufe sollen orthogonale Achsen kombinieren: friedlich/aggressiv,
+  mit/ohne Rex, Rufprofil, Save/Reload, alternatives Ende und
+  Indizreihenfolge. Ein weiterer identischer Standardlauf ist nur sinnvoll,
+  wenn er einen konkreten Restore- oder Zufallsbefund reproduziert.

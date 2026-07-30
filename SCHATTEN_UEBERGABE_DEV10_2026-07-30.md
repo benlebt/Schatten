@@ -17,7 +17,7 @@ Vor Änderungen vollständig lesen:
 Verbindlicher Arbeitszyklus:
 
 ```text
-Produktionslauf
+gezielte Produktionsmatrix
 → konkreter sichtbarer Lektoratsbefund
 → Root Cause
 → enger Fix
@@ -37,143 +37,141 @@ unangetastet und uncommitted.
 ```text
 Branch: main
 Remote: origin/main
-Repository-HEAD vor diesem Dokumentationscommit: 282ca35
-Produktiver Release: v7.12.1771 +SchifferRestoreTruth
-Produktiver Code-Commit: 282ca35 fix: keep restored Schiffer finale case-bound
-Vorheriger Dev10-Code-Commit: 871f0f7 fix: complete Schiffer live truth paths
+Repository-HEAD vor diesem Dokumentationscommit: b2d9413
+Produktiver Release: v7.12.1774 +HandoffVisualTruth
+Produktiver Code-Commit: b2d9413 fix: distinguish rescue arrival from handoff
+Vorheriger Code-Commit: 5379008 fix: keep physical rescue targets actionable
 Produktion: https://schatten.sfp.de/
-Debug: https://schatten.sfp.de/?debug=on&v=1771&deploy=282ca35
+Debug: https://schatten.sfp.de/?debug=on&v=1774&deploy=b2d9413
 Tests: 70/70 grün
 Produktiver index.html-SHA-256:
-2E8386BE039ED52D235FB7093832AF8B504DFD366B1C047CEF94C61B74C17FE5
+2340B7910CA584A32803A83B7CE2C1CFFC22A4A8279BD412AF3E49A0D5137308
 ```
 
-Alle vier beim ersten Dev10-Deployment übertragenen Dateien wurden per
-FTPS zurückgeladen und bytegenau gegen den Commitstand geprüft. Der
-anschließende v1771-Upload von `index.html` wurde ebenfalls per SHA-256
-verifiziert. Zugangsdaten stehen weder in Projektdateien noch in Git.
+Jeder Dev10-Codeupload wurde per FTPS zurückgeladen und bytegenau mit dem
+lokalen Commitstand verglichen. Zugangsdaten stehen weder in Projektdateien
+noch in Git.
 
-## 3. Vollständig sichtbare Produktionsläufe
+## 3. Sichtbar abgeschlossene Produktionsläufe
 
 ### Kessler
 
 Der in Dev9 begonnene Produktionsgegenlauf wurde sichtbar abgeschlossen.
-Finalbericht und Abschlusskarte waren konsistent; die fallgebundenen
-Kernaktionen, Geld-/Rufwirkung, Öffnungszeiten, Tageswechsel und das Finale
-funktionierten.
+Finalbericht und Abschlusskarte waren konsistent; Kernaktionen,
+Geld-/Rufwirkung, Öffnungszeiten, Tageswechsel und Finale funktionierten.
 
-### Schiffer — Übergabe an Renate
+### Schiffer — bisherige Gegenmatrix
 
-Ein vollständiger Produktionslauf führte über:
+Zwei vollständige Übergabewege und zwei deutlich verschiedene Konfliktprofile
+sind jetzt sichtbar belegt:
+
+| Achse | Lauf A | Lauf B |
+|---|---|---|
+| Konflikt | aggressiv | friedlich: Rex einschüchtern, danach beruhigen |
+| Rex | ohne Rex | mit Rex |
+| Ruf | bestehendes härteres Profil | auf neutral gesetzt, danach höflich +1 Renommee |
+| Indizreihenfolge | Nachbarin vor Wohnungsrekonstruktion | Wohnungsrekonstruktion vor Nachbarin |
+| Save/Reload | Restore des abgeschlossenen Laufs | Reload nach Szene 5 und später Restore am Keller |
+| Übergabe | persönlich an Renate | an die Volkspolizei |
+| Indizien | 4 | 5 |
+| Ergebnis | Detlef lebend bei Renate | Detlef lebend in Polizeischutz, Renate informiert |
+
+Der frische Lauf B führte über:
 
 ```text
-Renates Auftrag
-→ Detlefs Wohnung
-→ Roter Stern
-→ Rote Laterne
+Detlefs Wohnung
+→ Save/Reload
+→ geschlossener Goldener Anker mit sauberer Büroumleitung
+→ höfliche Sonja-Befragung
+→ Riemers Schuldbuch
 → Kellerzugang
-→ Kalle beruhigen
+→ Trude und Rote Laterne zur Zeitsteuerung
+→ Rex gegen Doppelkorn, Handschellen und Bohnenkaffee
+→ Keller
+→ Rex einschüchtern
+→ Kalle friedlich beruhigen
 → Detlef befreien
-→ Detlef in den Opel bringen
-→ persönliche Übergabe an Renate
-→ Abschlussbericht und Endkarte
+→ Detlef zum Opel
+→ Volkspolizei Keibelstraße
+→ bewusste Übergabe
+→ Polizeibericht und Abschlusskarte
 ```
 
-Die persönliche Übergabe funktionierte. Der Lauf deckte anschließend jedoch
-noch zu allgemeine Abschlusszeilen und fehlende Zwischenbilder auf.
+Sichtbar korrekt:
 
-### Schiffer — Übergabe an die Volkspolizei
+- Save/Reload erhielt Szene, Ort, Indizien und Zustände;
+- geschlossene Orte leiteten plausibel um;
+- umgedrehte Indizreihenfolge blieb lösbar;
+- das Schuldbuch zeigte den kanonischen Text und teleportierte Karl nicht;
+- Rex kam nach echtem Warenwerttausch mit;
+- Kalle ging friedlich und ohne erfundene Verletzung oder Fahrzeug ab;
+- Detlef wurde nach dem Fix neben Rex wieder anklickbar;
+- Befreiung, Opeltransport und Polizeiübergabe waren getrennte Handlungen;
+- der Bericht nannte Riemer, 1500 D-Mark, Beweiskette, friedlichen Ausgang,
+  Detlefs Befreiung und den tatsächlichen Polizeischutz;
+- Endkarte und Fallbackzeile nannten denselben Ausgang;
+- der finale Reload auf v1774 stellte den abgeschlossenen Lauf korrekt wieder her.
 
-Der zweite vollständige Produktionslauf nahm denselben Ermittlungs- und
-Rettungsweg, brachte Detlef danach aber zum Präsidium Keibelstraße. Die
-Polizeiübergabe war mechanisch erreichbar und beendete den Fall. Dabei wurden
-folgende echte Liveabweichungen sichtbar:
+## 4. Dev10-Releases ab v1772
 
-- Detlefs Wohnung erfand einmal eine zerschlagene Vitrine, einen fehlenden
-  Flaschendeckel und Waffen.
-- Die Rote Laterne erfand unnötige Requisiten.
-- Nach Kalles friedlichem Abgang zeigte das Kellerbild Kalle weiter.
-- Nach dem Transport zum Opel zeigte das Bild weiter den Fußweg aus dem Keller.
-- Die Ankunft im Präsidium behauptete, Detlef halte sich bereits dort auf.
-- Das Präsidiumbild zeigte Detlef bei der Übergabe nicht.
-- Der Polizeibericht teleportierte Detlef auf Renates Sofa.
-- Die Abschlusskarte sagte nur, die Spur sei geklärt.
-- Beim ersten v1770-Restore hing Görkes ortsbasierte Reparatur fallfremd
-  Krollwitz und zwei MfS-Beamte an Schiffers Bericht.
-- Alte Setup-Snapshots erhielten die neuen Bildzustände nicht.
+### v7.12.1772 +SchifferMatrixTruth — `d797a77`
 
-## 4. Dev10-Fixes
+- deterministischer Schuldbuchtext;
+- fallrichtiger Flagless-Finalbericht;
+- engineweiter Schutz gegen erfundene Abfahrten im Rückspiegel;
+- konkrete Renate-Übergabe in Abschlusskarte und Zusammenfassung.
 
-Release v1770:
+### v7.12.1773 +SchifferRexRescue — `5379008`
 
-- sechs driftanfällige Schiffer-Ankünfte erzwingen den vollständigen
-  autorisierten Ankunftstext;
-- der Wohnungsfund besitzt eine strenge Prosa-Pflicht gegen erfundene Waffen
-  und den fehlenden Flaschendeckel;
-- Klienten- und Polizeibericht sind getrennte, statusgebundene Wahrheiten;
-- Berichtsfallback und Abschlusskarte nennen Befreiung und tatsächlichen
-  Übergabeweg;
-- drei neue sichtbare Zustandsmotive:
-  - `keller-roter-stern-kalle-fort-v1770.webp`
-  - `detlef-im-opel-v1770.webp`
-  - `volkspolizei-detlef-handoff-v1770.webp`
-- `transportedAtTarget` gewinnt vor dem allgemeinen Rettungsbild;
-- `policeHandoff` gilt bei Ankunft mit Detlef im Opel und nach der Übergabe.
+- ein unbefreites physisches Rettungsziel wird am konfigurierten Rettungsort
+  als letzte Engine-Wahrheit wieder in die Personenliste eingesetzt;
+- mehrdeutige Abgangspronomen können Detlef nicht mehr zusammen mit Kalle
+  entfernen;
+- ein bereits verabschiedeter Klient kann durch einen späteren
+  Phantomakteur-Repair nicht wieder in Roster und Prosa geraten;
+- der zuvor blockierte Produktionsspielstand wurde ohne Neustart fortgesetzt.
 
-Release v1771:
+### v7.12.1774 +HandoffVisualTruth — `b2d9413`
 
-- `repairGoerkeArrivalContinuity` ist nun ausdrücklich an den Fall Görke
-  gebunden und kann keinen anderen Keibelstraßen-Fall mehr verändern;
-- die Restore-Migration übernimmt die aktuelle statische
-  `targetResolution` einschließlich Übergaben und Bildzuständen in alte
-  Spielstände, ohne den separaten Rettungsfortschritt anzutasten.
-
-Der sichtbare v1771-Gegenlauf auf dem zuvor problematischen gespeicherten
-Polizeiende bestätigte:
-
-- vollständiger statusrichtiger Polizeibericht;
-- kein Krollwitz-/MfS-Fremdeinschub;
-- Detlef sichtbar bei Karl und dem diensthabenden Volkspolizisten;
-- Abschlusskarte: „Detlef Schiffer lebend befreit und der Polizei sicher
-  übergeben“;
-- Fallbackzeile an Renate nennt denselben tatsächlichen Ausgang;
-- sichtbare Version v7.12.1771.
+- Ankunft am sicheren Ziel und vollzogene Übergabe besitzen getrennte
+  Bildbeschreibungszustände;
+- bei `im_opel` sagt das Bild ausdrücklich, dass die Übergabe noch aussteht;
+- erst `bei_klient` beziehungsweise `bei_polizei` darf die vollzogene Übergabe
+  behaupten.
 
 ## 5. Tests
 
 ```text
-Gezielter Schiffer-Lauf: grün
-Görke-Gegenprobe: grün
-Brauer-Restore-Gegenprobe: grün
+Gezielte Schiffer-Regressionen: grün
+Physisches Rettungsendspiel: grün
+Klientenabgang/Phantomakteur: grün
 Vollständige Suite: 70/70 grün
 git diff --check: grün
 ```
 
-Die Schiffer-Regression prüft nun zusätzlich:
+Die Regressionen prüfen jetzt zusätzlich:
 
-- alle sechs verpflichtenden Ankunftsfallbacks;
-- die strenge Wohnungsprosa;
-- getrennte Klienten-/Polizeiberichte;
-- alle drei neuen Bilddateien;
-- Priorität des Opel-Bilds;
-- Polizeibild vor und nach Übergabe;
-- tatsächlichen Übergabetext der Abschlusskarte;
-- Görke-Reparatur bleibt aus Schiffer heraus;
-- aktuelle `targetResolution` wird in Altspielstände migriert.
+- unbefreites Ziel bleibt neben Rex am Rettungsort vorhanden;
+- Zielinjektion erzeugt keine Doppelperson;
+- spätere Phantomreparatur reaktiviert keinen verabschiedeten Klienten;
+- Polizeiankunft sagt „Übergabe steht noch aus“;
+- erst der vollzogene Status verwendet die Übergabebeschreibung.
 
-## 6. Nächste Reihenfolge
+## 6. Nächste gezielte Matrizen
 
-1. Schiffer auf v1771 noch einmal vollständig über den Renate-Zweig spielen,
-   um die neue konkrete Abschlusskarte und die neuen Keller-/Opel-Bilder auch
-   in einem frischen, nicht restaurierten Lauf sichtbar zu bestätigen.
-2. Danach die noch nicht frisch vollständig live geprüften Alternativmatrizen
-   der hoch bewerteten Fälle rotieren: Rufprofil, Rex, Items, Romance,
-   Gewahrsam und alternatives Ende jeweils nur dort, wo der Fall sie
-   tatsächlich unterstützt.
-3. Jeden neuen sichtbaren Befund erst gegen Enginezustand und aktuelle
-   Falldefinition verifizieren; keine Bewertung allein wegen Testalter senken.
+Keine 14 identischen Standardläufe. Der höchste Erkenntnisgewinn liegt jetzt
+in orthogonalen Gegenproben:
 
-Bei jeder weiteren Codeänderung gilt der ausdrückliche Benutzerwunsch:
-Version erhöhen, 70/70 Tests, Commit, Push, FTPS-Redeployment und sichtbarer
-Produktionsgegenlauf.
+1. **Krause:** friedliche Mehrgegnerlösung gegen aggressiven Sicherungsweg,
+   jeweils mit anderer Indizreihenfolge; Fokus auf Besitz, Gewahrsam und
+   Mehrgegner-Roster.
+2. **Brauer:** hoher gegen niedrigen Ruf sowie Beweis vor Personenbefragung
+   gegen umgekehrte Reihenfolge; Fokus auf Grenz-/Datumswahrheit und
+   alternatives Ende.
+3. **Wegener:** mit Rex gegen ohne Rex, Polizei- gegen Klientenübergabe und
+   Save/Reload zwischen Befreiung, Opel und Handoff.
+4. Danach politische Fälle nur gezielt auf Gewahrsam, alternatives Ende oder
+   Rufwirkung rotieren, nicht erneut als identische Standardläufe.
 
+Bei jeder Codeänderung gilt weiter: Version erhöhen, 70/70 Tests, Commit,
+Push, FTPS-Redeployment, SHA-256-Verifikation und sichtbarer Produktionscheck.
