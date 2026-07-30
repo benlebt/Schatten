@@ -28,7 +28,7 @@ function sourceOf(name) {
 }
 
 assert(schifferStart > 0 && schifferEnd > schifferStart, 'Schiffer setup must be present');
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1770 +SchifferLiveTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1771 +SchifferRestoreTruth'"),
   'release version must identify the Schiffer counter-run fixes');
 
 assert(schiffer.includes("stasiRelevance: 2"),
@@ -205,6 +205,27 @@ assert(sourceOf('_repairRestoredFinalReportProse').includes('caseSetup.reportFal
   'restored completed Schiffer runs must also receive the configured truthful final report');
 assert(html.includes("const _figImFallErlaubt = !_figIstMfs"),
   'recurring MfS figures must be gated by actual political relevance');
+const goerkeLeakContext = {
+  caseSetup: {
+    opfer: 'Detlef Schiffer',
+    tat: 'Detlef lebend befreien',
+    klient: 'Renate Schiffer',
+  },
+  normForMatch: value => String(value || '').toLowerCase(),
+};
+vm.createContext(goerkeLeakContext);
+vm.runInContext(sourceOf('repairGoerkeArrivalContinuity'), goerkeLeakContext);
+const schifferPoliceReport = {
+  ort: 'Volkspolizei-Praesidium Keibelstrasse',
+  szene: 'Detlef ist lebend bei der Volkspolizei in Sicherheit.',
+  indizienCnt: 5,
+};
+assert.strictEqual(goerkeLeakContext.repairGoerkeArrivalContinuity(schifferPoliceReport), false,
+  'the Goerke-only Keibelstrasse repair must not inject Krollwitz into Schiffer');
+assert(!/Krollwitz|MfS-Beamte/.test(schifferPoliceReport.szene),
+  'a restored Schiffer police report must remain free of the live cross-case MfS epilogue');
+assert(sourceOf('_migriereCaseSetupOrte').includes('caseSetup.targetResolution = quelle.targetResolution'),
+  'old Schiffer saves must receive current transport, handoff and visual-state architecture');
 
 assert(images.includes("karl-mauers-buero-renate-night.png"),
   'the Schiffer opening requires a Renate office presence image');
