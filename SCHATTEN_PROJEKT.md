@@ -16652,7 +16652,7 @@ aktuelle ausgelieferte Stand ist:
 ```text
 Release: v7.12.1743 +NeverBlankSceneImage
 Release-Commit: e6b0deb fix: never leave scene image blank
-Repository-HEAD nach Wissensübergabe: 209de89 docs: hand off current Schatten quality state
+Repository-HEAD: aktuelles origin/main prüfen; nach e6b0deb folgen reine Wissens-Commits
 Branch/Remote: main / origin/main
 Produktion: https://schatten.sfp.de/
 Lokale Suite: 68/68 Tests grün

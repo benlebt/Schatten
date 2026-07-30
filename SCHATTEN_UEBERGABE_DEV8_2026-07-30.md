@@ -1,9 +1,13 @@
 # Schatten — vollständige Übergabe für den nächsten Entwicklungs-Chat
 
-Stand: 30. Juli 2026  
-Aktueller Release: `v7.12.1743 +NeverBlankSceneImage`  
-Aktueller Release-Commit: `e6b0deb fix: never leave scene image blank`  
-Repository-HEAD nach Wissensübergabe: `209de89 docs: hand off current Schatten quality state`
+Stand: 30. Juli 2026
+
+Aktueller Release: `v7.12.1743 +NeverBlankSceneImage`
+
+Aktueller Release-Commit: `e6b0deb fix: never leave scene image blank`
+
+Repository-HEAD: aktuelles `origin/main` prüfen; nach dem Release folgen reine
+Wissens-/Übergabe-Commits ohne erneutes Produktionsdeployment.
 
 ## Startanweisung für den neuen Chat
 
@@ -63,7 +67,7 @@ Vercel-Ablauf ist nicht der aktuelle Produktionsweg.
 ```text
 Release: v7.12.1743 +NeverBlankSceneImage
 Release-Commit der deployten index.html: e6b0deb
-HEAD/origin-main nach Wissensübergabe: 209de89
+HEAD/origin-main: beim Einstieg mit git rev-parse prüfen; liegt nach e6b0deb
 Tests: 68/68 grün
 Deployment: erfolgreich
 Produktionsprüfung: Versionsbadge und echtes Stein-Szenenbild sichtbar bestätigt
