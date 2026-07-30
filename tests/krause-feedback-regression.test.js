@@ -477,6 +477,11 @@ peaceProblem = peaceContext._findKrausePeaceReescalationDrift({
 }, { _pendingIndizId: 'tasche_im_lager' });
 assert.strictEqual(peaceProblem, null,
   'passive mistrust must remain valid after peaceful de-escalation');
+peaceProblem = peaceContext._findKrausePeaceReescalationDrift({
+  szene: 'Kalle und Jochen haben sich in Richtung der Stallschreiberstrasse zurückgezogen; ihre schweren Schritte verklingen.'
+}, { _pendingIndizId: 'lager_hinterhof' });
+assert(peaceProblem && peaceProblem.code === 'krause_peace_reescalation',
+  'calmed Krause group members must not narratively leave while the canonical peaceful roster keeps them in the warehouse');
 assert(html.includes("departureDestination: 'seinen Antiquitaetenladen', erstbegegnung: true"),
   'Krause must be explicitly marked as a first meeting so an invented prior case is rejected');
 assert(html.includes('Theodor Krause ist bereits in das Haus zurückgekehrt, sitzt aber oben in seiner Wohnung und stellt die Verlustliste zusammen. Hannelore Wirth wartet im Laden'),
@@ -685,10 +690,10 @@ assert.strictEqual(visualContext._krauseHehlereiNachherVisual({}).dayFile, 'stal
 const lagerVisual = visualContext._krauseHehlereiNachherVisual({
   szene: 'Du draengst dich an ihnen vorbei und trittst in die staubige Lagerstube. Zwischen Kisten liegt die dunkle Tasche.'
 });
-assert.strictEqual(lagerVisual.dayFile, 'stallschreiberstrasse-12-lager-day.webp',
-  'once prose enters the warehouse, the image must switch from exterior courtyard to the warehouse interior');
-assert.strictEqual(lagerVisual.nightFile, 'stallschreiberstrasse-12-lager-night.webp',
-  'the warehouse interior needs a true night variant');
+assert.strictEqual(lagerVisual.dayFile, 'stallschreiberstrasse-12-lager-covered-day-v1778.png',
+  'warehouse entry before the Etui clue must switch to the covered-object interior');
+assert.strictEqual(lagerVisual.nightFile, 'stallschreiberstrasse-12-lager-covered-night-v1778.png',
+  'the covered pre-discovery warehouse interior needs a true night variant');
 assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'krause', lagerVisual.dayFile)),
   'the Krause warehouse day asset must exist');
 assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'krause', lagerVisual.nightFile)),
@@ -697,8 +702,16 @@ visualContext.caseProgress.gefundeneIndizIds = ['lager_hinterhof'];
 const healedInLagerVisual = visualContext._krauseHehlereiNachherVisual({
   szene: 'Du drückst ein Leinentuch gegen deine pochende Schläfe.'
 });
-assert.strictEqual(healedInLagerVisual.dayFile, 'stallschreiberstrasse-12-lager-day.webp',
-  'after warehouse entry, generic healing prose must retain the interior warehouse image');
+assert.strictEqual(healedInLagerVisual.dayFile, 'stallschreiberstrasse-12-lager-covered-day-v1778.png',
+  'after warehouse entry but before discovery, generic healing prose must retain the covered interior image');
+visualContext.caseProgress.gefundeneIndizIds = ['lager_hinterhof', 'etui_im_lager'];
+const discoveredEtuiVisual = visualContext._krauseHehlereiNachherVisual({
+  szene: 'Unter der zurückgeschlagenen Plane liegt Krauses silbernes Etui.'
+});
+assert.strictEqual(discoveredEtuiVisual.dayFile, 'stallschreiberstrasse-12-lager-day.webp',
+  'only the explicit Etui discovery may reveal the original open-object warehouse image');
+assert(/gefundene silberne Etui/.test(discoveredEtuiVisual.alt),
+  'the revealed-object image alt must describe the now-earned discovery state');
 visualContext.caseProgress.gefundeneIndizIds = [];
 for (const [names, expected] of [
   [['Tante Frieda', 'Kalle'], 'stallschreiberstrasse-12-frieda-kalle-day.webp'],

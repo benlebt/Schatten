@@ -1,7 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const { readWebpDimensions } = require('./image-format-utils');
+const { readWebpDimensions, readImageDimensions } = require('./image-format-utils');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 const projectRoot = path.join(__dirname, '..');
@@ -21,7 +21,7 @@ function sourceOf(name) {
   throw new Error('unterminated function ' + name);
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1777 +KrauseSaveBridge'"), 'release version missing');
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1778 +KrauseCoveredClue'"), 'release version missing');
 const purposefulKrauseLabels = [
   'Konfrontiere Frieda mit der Spur',
   'Handle Zugang zu Friedas Lager aus',
@@ -395,6 +395,21 @@ for (const asset of [
 ]) {
   assert(fs.existsSync(path.join(__dirname, '..', 'assets', 'scenes', 'krause', asset)), 'missing exact courtyard roster asset: ' + asset);
 }
+for (const asset of [
+  'stallschreiberstrasse-12-lager-covered-day-v1778.png',
+  'stallschreiberstrasse-12-lager-covered-night-v1778.png',
+]) {
+  const assetPath = path.join(__dirname, '..', 'assets', 'scenes', 'krause', asset);
+  assert(fs.existsSync(assetPath), 'missing covered pre-discovery warehouse asset: ' + asset);
+  assert.deepStrictEqual(readImageDimensions(assetPath), { width: 1672, height: 941 },
+    'covered pre-discovery warehouse asset dimensions drifted: ' + asset);
+}
+const warehouseVisual = sourceOf('_krauseHehlereiNachherVisual');
+assert(warehouseVisual.includes("const etuiGefunden = lagerGefunden.indexOf('etui_im_lager') !== -1"),
+  'the warehouse visual must distinguish transport-spur discovery from actual Etui discovery');
+assert(warehouseVisual.includes('stallschreiberstrasse-12-lager-covered-day-v1778.png')
+    && warehouseVisual.includes('geschlossene Plane'),
+  'the pre-discovery warehouse image and alt contract must keep the Etui covered');
 assert(html.includes("dayFile: 'stallschreiberstrasse-12-aftermath-group-day.webp'"), 'Krause finale needs a courtyard aftermath with every still-present body');
 assert(sourceOf('_npcGehoertHierher').includes('_npcIstImAktuellenSzenenSnapshot'), 'the visible scene snapshot must survive a same-scene stage change');
 assert(sourceOf('_hauptuiKonfrontationItems').includes("'ppk_einsetzen'"), 'Karls Walther PPK must be selectable in the tactical confrontation');
