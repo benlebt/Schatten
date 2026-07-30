@@ -17,6 +17,17 @@ assert(
   html.includes('_schlafVorOrtWahrheitSichern(scene, optionForRollback);'),
   'the frozen sleep origin must be enforced before the response location is classified'
 );
+assert(
+  html.includes("option.id === 'UEBERMUEDUNG_FAHRSTopp'") &&
+    html.includes('pendingSleepChoice = true;') &&
+    !html.includes('Nickerchen tagsueber) - KEIN Tagwechsel'),
+  'daytime exhaustion sleep must use the same roughly eight-hour engine time path'
+);
+assert(
+  html.includes('rund acht Stunden spaeter wieder auf; Tageszeit und Datum muessen dem Engine-Zeitstand folgen.') &&
+    !html.includes("bei ' + _strandMuedName + ' am naechsten Morgen auf."),
+  'the exhaustion travel prompt must not promise a next morning when the wake phase can be evening'
+);
 
 const start = html.indexOf('function _schlafVorOrtUrsprungSichern');
 const end = html.indexOf('function _schlafHeimfahrtOrtSetzen', start);
