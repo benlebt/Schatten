@@ -167,6 +167,7 @@ Stand: 30.07.2026. Diese Datei ergänzt die bereits in `SCHATTEN_PROJEKT.md`, `U
 - Gleiches gilt für Inversionen und bevor-Sätze: „zieht sich zügig zurück, bevor ihn ein Anwohner bemerkt“ ist semantisch derselbe Abgang.
 - Funktionieren Buttons, Zielbindung, Karten-Vorauswahl, Öffnungszeiten, Reise-, Schlaf-, Heil- und Abschlusswege ohne Sackgasse?
 - Sichtbare Buttons und Aktionen dürfen nie „tot“ sein: Jeder Klick muss genau eine erkennbare, zum Label passende Wirkung auslösen – etwa Menüöffnung, Auswahlzustand, Toast, Reise, Szenenwechsel oder belastbare Zustandsänderung. Kein stilles Nichts, kein bloßes Schließen ohne Rückmeldung, kein leeres Untermenü und kein teurer KI-Request ohne Prosa-/Statusfolge.
+- Fallgebundene Ermittlungsbuttons brauchen darüber hinaus einen eigenen spielerischen Zweck: Sie müssen ein Indiz, einen erreichbaren Folgeschritt, eine Ressource, Ruf-/Druckwirkung, Zeitgewinn, Schutz oder eine bewusst eingegangene Risikochance eröffnen. Ein bloßer Szenenwechsel mit austauschbarer Prosa reicht nicht. Generische Labels wie „Durchsuche“ oder „Schau an“ sind nur zulässig, wenn Ziel und erwartbare Wirkung bereits eindeutig sind; kanonische Kernspuren erhalten ein konkretes Verb-Objekt-Label und einen dazu passenden Prompt.
 - Wiederkehrende Händler-/Fundort-Sortimente auf echte Variation prüfen: Trude darf nicht in jedem Fall dieselbe vollständige Itemliste anbieten. Eine pro Ermittlung persistente, historisch plausible Teilmenge soll taktische Alternativen und genügend vorbereitbaren Tauschwert bieten, ohne beim erneuten Öffnen desselben Laufs neu zu würfeln.
 - Mehrdeutige offene Fäden sind ebenfalls als UI-Fehler zu behandeln: Nennt ein Rettungs-/Übergabeschritt mehrere zulässige Zielorte, muss jeder Ort als eigene, exakt beschriftete Auswahl erscheinen. Ein kombinierter String wie „Wohnung oder Polizeirevier“ darf weder per Teilstring still den ersten Ort vorauswählen noch eine Schutzfahrt an einen unbeteiligten Zwischenort umleiten.
 - Bei physischen Zielpersonen die Zustandswörter streng trennen und nur einmal auslösen: `gefunden` beim ersten belegten physischen Auffinden, `befreit` nach gelösten Fesseln/überwundenem Bewacher, `in Begleitung` bzw. `im Opel` während des Transports und `sicher übergeben` erst beim Klienten oder bei der Polizei. Eine spätere Übergabe darf keinen zweiten „gefunden“- oder generischen „überführt“-Toast erzeugen.
@@ -658,35 +659,59 @@ Dieser Katalog ist ab sofort Teil jedes manuellen Falllaufs und jeder Fallbewert
 - Befunde nach P0/P1/P2/P3, jeweils mit Originalsatz, Enginezustand und Root Cause.
 - Fixversion, Regressionstest, Commit und Ergebnis des Gegenlaufs.
 
-## Aktuelle Fallbewertung und Prüfvertrauen — Release v1750
+## Aktuelle Fallbewertung und Prüfvertrauen — Release v1762
 
 Diese Tabelle bewertet die **Spielqualität**. Das **Prüfvertrauen** ist davon
 getrennt: Ein länger zurückliegender vollständiger Produktionslauf senkt nicht
 automatisch die Qualität eines Falls. Ohne belegten Qualitätsrückschritt wird
 eine Bewertung nicht allein wegen geringerer Testfrische herabgesetzt.
 
-| Rang | Fall | Spielqualität | Prüfvertrauen v1750 |
+| Rang | Fall | Spielqualität | Prüfvertrauen v1762 |
 |---:|---|---:|---|
 | 1 | Strauss | 9,4/10 | sehr hoch |
 | 2 | Lindenbaum | 9,3/10 | sehr hoch |
 | 3 | Stein | 9,3/10 | sehr hoch |
-| 4 | Görke | 9,2/10 | sehr hoch |
-| 5 | Brauer | 9,1/10 | hoch |
-| 6 | Krause | 9,1/10 | hoch |
-| 7 | Wessel | 9,1/10 | hoch |
-| 8 | Kessler | 9,1/10 | hoch |
-| 9 | Schiffer | 9,1/10 | hoch |
-| 10 | Vogt | 9,1/10 | hoch |
-| 11 | Wegener | 9,0/10 | hoch |
-| 12 | Brandt | 9,0/10 | hoch |
-| 13 | Hollenbeck (Lindner-Auftrag) | 9,0/10 | hoch |
-| 14 | Achterberg | 9,0/10 | hoch |
+| 4 | Wessel | 9,2/10 | sehr hoch |
+| 5 | Görke | 9,2/10 | sehr hoch |
+| 6 | Brauer | 9,1/10 | hoch |
+| 7 | Krause | 9,1/10 | hoch |
+| 8 | Wegener | 9,1/10 | hoch |
+| 9 | Brandt | 9,1/10 | hoch |
+| 10 | Hollenbeck (Lindner-Auftrag) | 9,1/10 | hoch |
+| 11 | Achterberg | 9,1/10 | hoch |
+| 12 | Vogt | 9,1/10 | hoch |
+| 13 | Kessler | 9,1/10 | hoch |
+| 14 | Schiffer | 9,1/10 | hoch |
 
-Strauss, Lindenbaum, Stein und Görke bleiben aufgrund ihrer vollständigen oder
-besonders intensiven jüngsten Produktionsläufe die Spitzengruppe mit sehr
-hohem Prüfvertrauen. Die zuvor mittleren beziehungsweise mittelhohen Fälle
-wurden bis v1750 in frischen Produktionspfaden geprüft, ihre sichtbaren
-Root-Cause-Befunde behoben und auf demselben deployten Stand gegengelaufen.
-Darum liegt ihr Prüfvertrauen nun bei **hoch**, aber noch nicht bei **sehr
-hoch**: vollständige Ruf-, Rex-, Item-, Romance-, Haft- und Alternativmatrizen
-bleiben weiterhin rotierend zu testen.
+Wessel steigt nach dem vollständigen 24-Szenen-Produktionslauf mit echtem
+Gewahrsamsweg, Freilassung, politischer Beweiskette, Familienbericht und
+korrekter Auszahlung auf **sehr hohes** Prüfvertrauen. Wegener, Brandt,
+Hollenbeck, Achterberg und Vogt wurden in der frischen Rotation verbessert und
+live gegengeprüft. Kesslers Gegenlauf bestätigte bis Szene 10 fünf Indizien,
+Geldabzug, Renommee, Öffnungszeiten und Tageswechsel; Finale und
+Kontinuitätsvarianten bleiben zusätzlich regressionsgesichert. Schiffer besitzt
+eine vollständige Rettungs-/Übergaberegression und seit v1762 ausschließlich
+zweckgebundene Kernaktionen. Für **sehr hohes** Vertrauen fehlen bei diesen
+Fällen weiterhin vollständige Ruf-, Rex-, Item-, Romance-, Haft- und
+Alternativmatrizen.
+
+### Gewahrsams- und Zweckaktionsaudit v1751 bis v1762
+
+Die sechs sichtbaren Gewahrsamsaktionen sind keine Alibi-Pfade:
+
+- `Schweige` baut nach wiederholter Nutzung ein Vernehmerprofil auf und kostet
+  Druck.
+- `Gib Halbwahrheiten` senkt Druck, erhöht begrenzt die Kooperation und ist
+  nicht endlos wiederholbar.
+- `Berufe dich auf Roth` protokolliert den benannten Zeugen und verkürzt den
+  sicheren Wartepfad.
+- `Verlange ein Protokoll` erzeugt die Haftnotiz als echtes Indiz, erhöht aber
+  den Druck.
+- `Biete 10 Ostmark` zieht Geld ab und senkt Druck.
+- `Lausche am Gang` kann einen ungelösten Fallhinweis liefern und erhöht das
+  Risiko.
+
+Verbrauchte Wege werden deaktiviert. Wessel, Kessler und Schiffer erhielten
+zusätzlich konkrete Kernaktionslabels und Aktionsprompts; falsche oder
+unerreichbare Wessel-Westflucht-Trigger wurden an die strukturierten
+Beweis-IDs angeschlossen.

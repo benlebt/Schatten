@@ -16814,7 +16814,7 @@ rematerialisiert werden.
 
 Die Projektentwicklung wurde nach v1651 mit vollständigen Produktionsläufen,
 fallbezogenen Gegenläufen und engineweiten Regressionen fortgesetzt. Der
-aktuelle ausgelieferte Stand ist:
+damals ausgelieferte Zwischenstand war:
 
 ```text
 Release: v7.12.1743 +NeverBlankSceneImage
@@ -16930,6 +16930,65 @@ Die Plätze 10 bis 14 sind nicht auf 7er-Niveau gefallen. Ihr niedrigeres
 Prüfvertrauen bedeutet ausschließlich, dass Ruf, Rex, Items, Romance, Haft und
 Alternativenden dort weniger frisch in vollständigen Produktionsläufen
 gegeneinander getestet wurden.
+
+## 🆕 v7.12.1744 bis v7.12.1762 — Fallrotation und Zweckaktionsaudit
+
+Aktueller ausgelieferter Stand:
+
+```text
+Release: v7.12.1762 +SchifferPurpose
+Release-Commit: b07f82f fix: make Schiffer investigation actions purposeful
+Branch/Remote: main / origin/main
+Produktion: https://schatten.sfp.de/
+Lokale Suite: 70/70 Tests grün
+```
+
+Die zuvor mittleren Fälle Wegener, Brandt, Hollenbeck, Achterberg und Vogt
+wurden mit frischen Produktionspfaden, fallgebundenen Wahrheitsreparaturen und
+Regressionen auf mindestens hohes Prüfvertrauen gebracht. Wessel wurde
+anschließend über 24 Szenen vollständig live geprüft: freiwilliger
+MfS-Gewahrsam, Protokoll, Roth-Wartevorteil, Freilassung mit
+Inventarrückgabe, neun Indizien, Werners belegter Haftort
+Hohenschönhausen, Familienbericht und 270 Ostmark Auszahlung funktionierten.
+Die falsche Westflucht blieb zuvor wegen nicht übereinstimmender Freischalt-
+Trigger unerreichbar; v1759 verbindet sie mit den strukturierten
+Beweis-IDs. v1760 ersetzt die falsche 800-Ostmark-Vorschussbehauptung durch das
+tatsächliche Erfolgshonorar.
+
+Der Kessler-Produktionsgegenlauf bestätigte bis Szene 10 fünf Indizien,
+korrekten 24-Ostmark-Abzug, Renommeegewinn, geschlossene Nachtorte,
+Ortsumleitung und Tageswechsel. v1761 ersetzt seine generischen
+Kernaktionen durch zielgenaue Labels und Prompts. v1762 tut dasselbe für alle
+sechs Schiffer-Kernspuren. Schiffer bleibt vollständig regressionsgesichert:
+Spielklub, Kellerfreischaltung, Kalle-Wache, physische Detlef-Rettung, beide
+Übergabewege und der begrenzte Abschlussbericht sind erreichbar.
+
+Das Gewahrsamsmenü besitzt keine Füllbuttons. Schweigen,
+Halbwahrheiten, Roth, Protokoll, Bestechung und Lauschen haben jeweils eine
+eigene Ressource-, Risiko-, Hinweis- oder Wartewirkung; verbrauchte Wege werden
+deaktiviert. Für alle fallgebundenen Kernaktionen gilt nun verbindlich: Ein
+Button muss potenziell Indiz, Folgeschritt, Ressource, Ruf/Druck, Schutz,
+Zeitgewinn oder eine bewusste Risikochance erzeugen. Austauschbare Prosa ohne
+Fortschrittswert genügt nicht.
+
+### Aktuelle Fallbewertung v1762
+
+| Rang | Fall | Spielqualität | Prüfvertrauen |
+|---:|---|---:|---|
+| 1 | Strauss | 9,4/10 | sehr hoch |
+| 2 | Lindenbaum | 9,3/10 | sehr hoch |
+| 3 | Stein | 9,3/10 | sehr hoch |
+| 4 | Wessel | 9,2/10 | sehr hoch |
+| 5 | Görke | 9,2/10 | sehr hoch |
+| 6 | Brauer | 9,1/10 | hoch |
+| 7 | Krause | 9,1/10 | hoch |
+| 8 | Wegener | 9,1/10 | hoch |
+| 9 | Brandt | 9,1/10 | hoch |
+| 10 | Hollenbeck (Lindner-Auftrag) | 9,1/10 | hoch |
+| 11 | Achterberg | 9,1/10 | hoch |
+| 12 | Vogt | 9,1/10 | hoch |
+| 13 | Kessler | 9,1/10 | hoch |
+| 14 | Schiffer | 9,1/10 | hoch |
 
 ### Verbindliche Wissensquellen für die nächste Entwicklungsrunde
 

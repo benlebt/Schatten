@@ -2,9 +2,9 @@
 
 Stand: 30. Juli 2026
 
-Aktueller Release: `v7.12.1750 +SchifferOpeningTruth`
+Aktueller Release: `v7.12.1762 +SchifferPurpose`
 
-Aktueller Release-Commit: `b2e7773 fix: require complete Schiffer opening`
+Aktueller Release-Commit: `b07f82f fix: make Schiffer investigation actions purposeful`
 
 Repository-HEAD: aktuelles `origin/main` prüfen; nach dem Release folgen reine
 Wissens-/Übergabe-Commits ohne erneutes Produktionsdeployment.
@@ -53,7 +53,7 @@ Tests: tests\*.test.js
 Branch: main
 Remote: https://github.com/benlebt/Schatten.git
 Produktion: https://schatten.sfp.de/
-Debug: https://schatten.sfp.de/?debug=on&v=1750&deploy=b2e7773
+Debug: https://schatten.sfp.de/?debug=on&v=1762&deploy=b07f82f
 FTPS-Host: www126.your-server.de
 FTPS-Benutzer: sfpade_1
 ```
@@ -65,19 +65,23 @@ Vercel-Ablauf ist nicht der aktuelle Produktionsweg.
 ## 3. Exakter technischer Stand
 
 ```text
-Release: v7.12.1750 +SchifferOpeningTruth
-Release-Commit der deployten index.html: b2e7773
-HEAD/origin-main: beim Einstieg mit git rev-parse prüfen; nach b2e7773 folgt
+Release: v7.12.1762 +SchifferPurpose
+Release-Commit der deployten index.html: b07f82f
+HEAD/origin-main: beim Einstieg mit git rev-parse prüfen; nach b07f82f folgt
 gegebenenfalls nur der abschließende Wissens-/Ranking-Commit
-Tests: 69/69 grün
+Tests: 70/70 grün
 Deployment: erfolgreich
-Produktionsprüfung: Versionsbadge sowie Schiffer-, Wessel- und Kessler-
-Gegenläufe auf dem deployten Stand sichtbar bestätigt
+Produktionsprüfung: Versionsbadge v1762 sichtbar bestätigt; Wessel vollständig
+und Kessler bis Szene 10 frisch auf Produktion gegengelaufen
 ```
 
 Letzte relevante Commits:
 
 ```text
+b07f82f fix: make Schiffer investigation actions purposeful
+2d48ee8 fix: make Kessler investigation actions purposeful
+60bc842 fix: align Wessel briefing with actual payout
+40ccc48 fix: restore Wessel false-lead payoff
 b2e7773 fix: require complete Schiffer opening
 8461d18 fix: preserve Schiffer client reply fallback
 ce9fd24 fix: harden medium-high case truth
@@ -99,23 +103,23 @@ Komplettlauf darf die Qualität nicht ohne konkreten Regressionbefund von etwa
 | 1 | Strauss | 9,4/10 | sehr hoch |
 | 2 | Lindenbaum | 9,3/10 | sehr hoch |
 | 3 | Stein | 9,3/10 | sehr hoch |
-| 4 | Görke | 9,2/10 | sehr hoch |
-| 5 | Brauer | 9,1/10 | hoch |
-| 6 | Krause | 9,1/10 | hoch |
-| 7 | Wessel | 9,1/10 | hoch |
-| 8 | Kessler | 9,1/10 | hoch |
-| 9 | Schiffer | 9,1/10 | hoch |
-| 10 | Vogt | 9,1/10 | hoch |
-| 11 | Wegener | 9,0/10 | hoch |
-| 12 | Brandt | 9,0/10 | hoch |
-| 13 | Hollenbeck (Lindner-Auftrag) | 9,0/10 | hoch |
-| 14 | Achterberg | 9,0/10 | hoch |
+| 4 | Wessel | 9,2/10 | sehr hoch |
+| 5 | Görke | 9,2/10 | sehr hoch |
+| 6 | Brauer | 9,1/10 | hoch |
+| 7 | Krause | 9,1/10 | hoch |
+| 8 | Wegener | 9,1/10 | hoch |
+| 9 | Brandt | 9,1/10 | hoch |
+| 10 | Hollenbeck (Lindner-Auftrag) | 9,1/10 | hoch |
+| 11 | Achterberg | 9,1/10 | hoch |
+| 12 | Vogt | 9,1/10 | hoch |
+| 13 | Kessler | 9,1/10 | hoch |
+| 14 | Schiffer | 9,1/10 | hoch |
 
 Kein Fall ist derzeit technisch unspielbar. Alle Fälle liegen im 9er-Bereich.
-Die Plätze 11–14 sind nicht wesentlich schlechter; die Unterschiede beruhen
-auf erzählerischer Dichte und Komplexität, nicht auf ausstehenden
-Gegenläufen. `hoch` bleibt bewusst unter `sehr hoch`, solange nicht jede
-Sondermatrix frisch vollständig durchgespielt wurde.
+Die Plätze 6–14 sind qualitativ eng beieinander; die Reihenfolge ist keine
+verdeckte Abwertung. `hoch` bleibt bewusst unter `sehr hoch`, solange nicht
+jede Sondermatrix frisch vollständig durchgespielt wurde. Wessel ist aufgrund
+des vollständigen neuen 24-Szenen-Laufs nun ebenfalls `sehr hoch`.
 
 ## 5. Zuletzt intensiv bestätigte Fälle
 
@@ -181,6 +185,30 @@ Sondermatrix frisch vollständig durchgespielt wurde.
   Renate kennt keine Boxernase, Herkunft oder sonstige Tätermerkmale und
   übergibt kein erfundenes Foto; Antwort und Abgang bleiben auch im letzten
   Sozialfallback falltreu.
+
+### Zweckaktions- und Vertiefungsblock v1751 bis v1762
+
+- **Gewahrsam:** Alle sechs sichtbaren Optionen sind mechanisch wirksam:
+  Schweigen baut ein Vernehmerprofil auf, Halbwahrheiten tauschen Druck gegen
+  begrenzte Kooperation, Roth verkürzt den sicheren Wartepfad, das Protokoll
+  erzeugt die Haftnotiz bei höherem Druck, die Bestechung kostet 10 Ostmark und
+  senkt Druck, Lauschen kann einen echten Fallhinweis liefern und erhöht das
+  Risiko. Verbrauchte Wege werden deaktiviert.
+- **Wessel:** vollständiger 24-Szenen-Lauf einschließlich freiwilligem
+  MfS-Gewahrsam, Freilassung am Morgen, Rückgabe der Ausrüstung, neun Indizien,
+  Haftort Hohenschönhausen, Bericht an Bruno und tatsächlicher Auszahlung von
+  270 Ostmark. Der unerreichbare Gaehlert-Westflucht-Gegenbeweis wurde an die
+  strukturierten Beweis-IDs angeschlossen. Die falsche 800-Ostmark-
+  Vorschussbehauptung wurde durch das echte Erfolgshonorar ersetzt.
+- **Kessler:** Produktionslauf bis Szene 10 mit fünf Indizien, korrektem
+  24-Ostmark-Abzug, Renommeegewinn, nächtlich geschlossener Spedition,
+  Ortsumleitung und Tageswechsel. Fünf generische Kernaktionen besitzen jetzt
+  konkrete Labels und Prompts. Finale, Robert-/Hauke-Kontinuität und
+  Wahrheitsbericht bleiben durch Vollablauf-Regressionen gesichert.
+- **Schiffer:** alle sechs Kernspuren besitzen ab v1762 konkrete Labels und
+  Prompts. Kellerfreischaltung, physische Detlef-Rettung, Kalle-Wache, Übergabe
+  an Renate oder Polizei und der begrenzte Schlussbericht sind in der
+  Vollablauf-Regression abgedeckt.
 
 ## 6. Rufsystem — bestätigte A/B/C/D-Matrix
 
@@ -348,17 +376,20 @@ werden.
 
 ## 13. Nächste Prioritäten
 
-Die zuvor mittleren und mittelhohen Fälle sind bis v1750 frisch auf Produktion
-geprüft und ihre konkreten Befunde geschlossen. Die nächste Rotation beginnt
-nicht erneut bei denselben Eröffnungen, sondern erweitert gezielt die
+Die zuvor mittleren und mittelhohen Fälle sind bis v1762 bearbeitet. Wessel
+besitzt nun einen vollständigen frischen Hauptlauf; Kessler ist bis Szene 10
+live und im Finale regressionsgesichert; Schiffer ist vollständig
+regressionsgesichert. Die nächste Rotation erweitert gezielt die
 Variantenabdeckung:
 
-1. Wessel: später politischer Beweis-/Haftpfad und alternatives Ende.
-2. Kessler: Robert-Eintritt, Frau-Hauke-Reveal und Abschluss in verschiedenen
-   Rufprofilen.
-3. Schiffer: Spielklub, Kellerrettung und beide Übergabewege.
+1. Kessler: sichtbarer Produktionsabschluss ab Frau Hauke/Robert sowie ein
+   Gegenlauf mit anderem Rufprofil.
+2. Schiffer: frischer sichtbarer Produktionslauf durch Spielklub,
+   Kellerrettung und mindestens einen Übergabeweg.
+3. Wessel: nur noch alternatives politisches Ende oder abweichender
+   Gewahrsamspfad; den bestätigten Hauptweg nicht erneut priorisieren.
 4. Vogt: alternativer Pieck-/Haftpfad ohne zweite Haft-Episode.
-5. Achterberg, Hollenbeck, Brandt und Wegener: mittlere und späte
+5. Achterberg, Hollenbeck, Brandt und Wegener: alternative mittlere und späte
    Beweisketten statt erneut nur die Eröffnung.
 6. Danach Brauer und Krause als rotierende Gegenkontrolle der älteren hohen
    Vertrauensstufe.
@@ -387,12 +418,12 @@ Dabei je nach Setup bewusst variieren:
 
 ## 15. Kurzer Statussatz
 
-Schatten läuft produktiv auf v1750, Commit `b2e7773`, mit 69/69 grünen Tests.
+Schatten läuft produktiv auf v1762, Commit `b07f82f`, mit 70/70 grünen Tests.
 Alle 14 Fälle sind strukturell spielbar und liegen in der aktuellen
-Qualitätsbewertung zwischen 9,0 und 9,4. Strauss, Lindenbaum, Stein und Görke
-haben weiterhin sehr hohes Prüfvertrauen; alle übrigen Fälle liegen nach dem
-frischen Rotationsblock bei hoch. Rufsystem, Rex-/Itembalance, politische
-Haftpfade, Bildgarantie, Auftrags-/Eigenfundtrennung, Schlaf-Ortswahrheit und
-fallgebundene Wissensgrenzen sind regressionsgesichert. Die nächste Rotation
-vertieft mittlere und späte Alternativpfade statt dieselben Eröffnungen erneut
-zu wiederholen.
+Qualitätsbewertung zwischen 9,1 und 9,4. Strauss, Lindenbaum, Stein, Wessel und
+Görke haben sehr hohes Prüfvertrauen; alle übrigen Fälle liegen bei hoch.
+Rufsystem, Rex-/Itembalance, politische Haftpfade, Bildgarantie,
+Auftrags-/Eigenfundtrennung, Schlaf-Ortswahrheit, fallgebundene
+Wissensgrenzen und das Verbot wirkungsloser Kernbuttons sind
+regressionsgesichert. Die nächste Rotation vertieft Kessler-/Schiffer-Enden
+und weitere Alternativpfade.
