@@ -1137,7 +1137,12 @@ const kesslerWaitContext = {
   _hauptuiChoose: option => { kesslerWaitContext.chosen = option; }
 };
 vm.createContext(kesslerWaitContext);
-vm.runInContext(sourceOf('_hauptuiStarteIndizSzene'), kesslerWaitContext);
+vm.runInContext(
+  sourceOf('_hauptuiIndizFallbackZielname') + '\n'
+    + sourceOf('_hauptuiIndizActionLabel') + '\n'
+    + sourceOf('_hauptuiStarteIndizSzene'),
+  kesslerWaitContext,
+);
 kesslerWaitContext._hauptuiStarteIndizSzene({
   id: 'robert_eintritt_beobachtet',
   hotspot: 'Im Schatten des Hinterhofs warten',

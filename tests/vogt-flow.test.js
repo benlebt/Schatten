@@ -161,7 +161,7 @@ function sourceOf(name) {
 
 const actionLabelContext = {};
 vm.createContext(actionLabelContext);
-vm.runInContext(sourceOf('_hauptuiObjektVerben'), actionLabelContext);
+vm.runInContext(sourceOf('_hauptuiIndizActionLabel') + '\n' + sourceOf('_hauptuiObjektVerben'), actionLabelContext);
 assert.strictEqual(
   actionLabelContext._hauptuiObjektVerben(clueById.get('pieck_wagen'))[0].label,
   'Befrage den Zeugen',
@@ -265,7 +265,7 @@ stasiLocationContext.engineCurrentLocation = { name: 'Hohenschoenhausen / Gensle
 assert.strictEqual(stasiLocationContext._stasiEncounterOrtZulaessig(), true,
   'Pieck remains allowed at the configured detention-site endgame');
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1762 +SchifferPurpose'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1763 +PurposeLabels'"),
   'release version is stale');
 
 console.log('VOGT_FLOW_OK');

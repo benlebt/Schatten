@@ -657,7 +657,8 @@ assert(!all(container).some((element) => element.className.split(' ').includes('
 byText(container, 'Roberts Ecktisch').onTap();
 execute = all(container).find((element) => element.className === 'hauptui-execute');
 assert(execute && !execute.disabled, 'clue command must be executable');
-assert(visibleText(execute).includes('Schau an'), 'clue command must recommend the configured BEOBACHTEN action');
+assert(visibleText(execute).includes('Beobachte die Situation'),
+  'clue command must recommend a concrete BEOBACHTEN action instead of a filler label');
 assert(!byText(container, 'Durchsuche'), 'one visual clue must not offer redundant observe and search actions');
 execute.onTap();
 assert.strictEqual(calls.fund, 0, 'specific clue command must not open a click-collect dialog');

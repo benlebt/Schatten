@@ -207,7 +207,7 @@ Bei Rotationsläufen bewusst variieren:
 Vollständige Suite:
 
 ```powershell
-$node='C:\Users\benle\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe'
+$node=(Get-Command node).Source
 $failed=@()
 $count=0
 Get-ChildItem -LiteralPath tests -Filter '*.test.js' | Sort-Object Name | ForEach-Object {

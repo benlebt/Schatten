@@ -33,8 +33,17 @@ function norm(value) {
     .replace(/[^a-z0-9]+/g, ' ').trim();
 }
 
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1762 +SchifferPurpose'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1763 +PurposeLabels'"),
   'release version missing');
+assert(html.includes("hauptuiActionLabel: ind.hauptuiActionLabel || ''")
+  && html.includes("hauptuiActionPrompt: ind.hauptuiActionPrompt || ''"),
+  'the visible main-UI target model must preserve configured clue labels and prompts');
+assert(html.includes("name: ind.hotspot || _hauptuiIndizFallbackZielname(ind)"),
+  'undiscovered clue targets must not expose their solved evidence text as the button label');
+assert(!sourceOf('_hauptuiObjektVerben').includes("actionLabel || 'Durchsuche'")
+  && !sourceOf('_hauptuiObjektVerben').includes("actionLabel || 'Schau an'")
+  && !sourceOf('_hauptuiStarteIndizSzene').includes("ind.hauptuiActionLabel || 'Untersuche'"),
+  'fall-bound clue actions must not fall back to generic filler verbs');
 assert(html.includes("const _openingPresence = _arrivalKesslerWindows\n          ? (_openingStillMissing.length"),
   'the fixed Kessler opening must not append its window cast a second time');
 assert(html.includes("presenceFallbackText: 'Frau Pohl bleibt am linken Erdgeschossfenster"),
