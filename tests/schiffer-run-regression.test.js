@@ -28,7 +28,7 @@ function sourceOf(name) {
 }
 
 assert(schifferStart > 0 && schifferEnd > schifferStart, 'Schiffer setup must be present');
-assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1785 +PartialEndingTruth'"),
+assert(html.includes("window.SCHATTEN_VERSION = 'v7.12.1786 +WegenerMatrixTruth'"),
   'release version must identify the handoff visual truth fixes');
 
 assert(schiffer.includes("stasiRelevance: 2"),

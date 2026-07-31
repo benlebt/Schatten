@@ -76,6 +76,24 @@ assert.strictEqual(arrivalOpenEntries[0].geoeffnet, true,
 assert.strictEqual(arrivalOpenEntries[0].gesperrt, false,
   'a location opening on arrival must not remain a dead map button');
 
+context.mapKanonNorm = (value) => {
+  const n = norm(value);
+  return n === 'eckkneipe zum goldenen anker' ? 'goldener anker' : n;
+};
+const ankerEntries = Array.from(context.mapSammleOrte([
+  { name: 'Eckkneipe Zum Goldenen Anker', startBekannt: true },
+  { name: 'Goldener Anker', startBekannt: true }
+], norm('Goldener Anker')));
+assert.strictEqual(ankerEntries.length, 1,
+  'canonical map aliases must not render the same physical tavern as two destinations');
+assert.strictEqual(ankerEntries[0].istAktuell, true,
+  'the retained alias entry must still be current when the engine uses the canonical name');
+
+vm.runInContext(sourceOf('mapFindeOrtEintrag'), context);
+const aliasedAnkerTarget = context.mapFindeOrtEintrag(ankerEntries, 'Goldener Anker');
+assert(aliasedAnkerTarget && aliasedAnkerTarget.loc.name === 'Eckkneipe Zum Goldenen Anker',
+  'direct travel threads must resolve a canonical target to the retained alias entry');
+
 const travelSource = sourceOf('oeffneReiseMenue');
 assert(travelSource.indexOf('_kartenBekannteOrteSynchronisieren(locs, vorauswahlOrtName)') < travelSource.indexOf('var ziele = locs.filter'),
   'known-location reconciliation must run before map destinations are filtered');

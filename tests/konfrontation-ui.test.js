@@ -109,6 +109,25 @@ assert(html.includes('ERST DANACH nutzt Karl das dadurch entstandene Zeitfenster
 assert(html.includes("label: 'Rex: Fixieren'"), 'Rex must be transferable into the current confrontation UI');
 assert(html.includes("label: 'Rex: Verjagen'"), 'Rex needs a fast non-lethal resolution against weak opposition');
 assert(html.includes("label: 'Rex: Tief ansetzen'"), 'Rex needs the requested dark slapstick maneuver');
+assert(actionBody.includes('_konfrontationRexHebelAufPlan(plan, assistListe)'),
+  'a coordinated bare-handed Rex attack must gain real cumulative control, not only hit probability');
+const rexPlanContext = {
+  _konfrontationAssistListe: value => Array.isArray(value) ? value : [value]
+};
+vm.createContext(rexPlanContext);
+vm.runInContext(sourceOf('_konfrontationRexHebelAufPlan'), rexPlanContext);
+const rexPlan = {
+  score: -1,
+  wirkung: { kraft: 1, schwaechung: 0, tags: [], detail: 'Leere HÃ¤nde.' }
+};
+assert.strictEqual(rexPlanContext._konfrontationRexHebelAufPlan(rexPlan, [{
+  name: 'Rex',
+  art: 'fixieren',
+  label: 'Rex: Fixieren'
+}]), true, 'Rex Fixieren must strengthen the coordinated plan');
+assert(rexPlan.wirkung.kraft >= 2 && rexPlan.wirkung.schwaechung >= 2
+  && rexPlan.wirkung.tags.includes('rex-hebel'),
+  'Rex must turn a successful team attack into a cumulative effect hit');
 assert(html.includes('function _konfrontationIstGruppe'), 'multi-enemy encounters need explicit group handling');
 assert(html.includes('neutralisiert ihren Überzahlvorteil'), 'area items must counter the numerical advantage of groups');
 

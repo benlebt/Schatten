@@ -84,4 +84,22 @@ const coherent = {
 assert.strictEqual(context._schlafVorOrtWahrheitSichern(coherent, option), false);
 assert(/Sofa/.test(coherent.szene), 'coherent model prose should remain untouched');
 
+context.engineCurrentLocation = {
+  name: 'Karl Mauers BÃ¼ro',
+  sektor: 'Ost (Mitte)'
+};
+context.currentOrtType = 'HOME';
+const officeOption = { id: 'SCHLAFEN', _kategorie: 'SCHLAFEN', _heimfahrt: false };
+assert.strictEqual(context._schlafVorOrtUrsprungSichern(officeOption), true);
+const officeBedroomDrift = {
+  ort: 'Karl Mauers BÃ¼ro',
+  szene: 'Du verbringst die Nacht im Schlafzimmer deiner Wohnung am Hackeschen Markt.'
+};
+assert.strictEqual(context._schlafVorOrtWahrheitSichern(officeBedroomDrift, officeOption), true,
+  'the office header must not legitimize prose that teleports Karl into a private apartment bedroom');
+assert(!/wohnung|schlafzimmer/i.test(officeBedroomDrift.szene),
+  'office sleep repair must remove the invented apartment and bedroom');
+assert(/Karl Mauers BÃ¼ro/.test(officeBedroomDrift.szene),
+  'office sleep repair must keep the concrete engine location visible');
+
 console.log('sleep-location-truth.test.js: all checks passed');

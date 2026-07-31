@@ -432,14 +432,61 @@ assert(worldTruthSource.includes("code: 'wegener_hinterhof_vehicle_invented'")
   && worldTruthSource.includes("code: 'healthy_karl_injury_invented'")
   && worldTruthSource.includes('nachgeschmack'),
   'world-truth validation must reject the observed vehicle, healthy-injury and sober-alcohol drifts');
+const hinterhofVehicleContext = {
+  caseSetup: wegener.setup,
+  caseProgress: {},
+  engineCurrentLocation: { name: 'Hinterhof Spreestrasse' },
+  verfassung: 5,
+  normForMatch
+};
+vm.createContext(hinterhofVehicleContext);
+vm.runInContext(sourceOf('validateSceneWorldTruth'), hinterhofVehicleContext);
+const liveHinterhofVehicle = hinterhofVehicleContext.validateSceneWorldTruth({
+  szene: 'Dein Opel Olympia rumpelt Ã¼ber das Kopfsteinpflaster, bevor du ihn im Schatten des Hinterhofs abstellst.',
+  optionen: [],
+  personenImRaum: ['Rudi Menzel', 'Lothar Schaefer']
+}, { id: 'REISE', _istReise: true });
+assert(liveHinterhofVehicle && liveHinterhofVehicle.code === 'wegener_hinterhof_vehicle_invented',
+  'the exact live Opel-in-the-courtyard wording must trigger the image/world-truth guard');
+assert.strictEqual(hinterhofVehicleContext.validateSceneWorldTruth({
+  szene: 'Du stellst den Opel draussen in der Spreestrasse ab und betrittst zu Fuss den Hinterhof.',
+  optionen: [],
+  personenImRaum: ['Rudi Menzel', 'Lothar Schaefer']
+}, { id: 'REISE', _istReise: true }), null,
+  'an Opel explicitly left outside the courtyard must remain valid');
+
+const monthContext = {
+  gameCurrentDate: '1953-02-12',
+  normForMatch
+};
+vm.createContext(monthContext);
+vm.runInContext(sourceOf('_findCalendarMonthAtmosphereDrift'), monthContext);
+const monthDrift = monthContext._findCalendarMonthAtmosphereDrift({
+  szene: 'Der Novembermatsch spritzt gegen die RadkÃ¤sten.'
+});
+assert(monthDrift && monthDrift.code === 'calendar_month_atmosphere_drift'
+  && monthDrift.correct === 'Februar',
+  'February runs must reject the observed November atmosphere compound');
+assert.strictEqual(monthContext._findCalendarMonthAtmosphereDrift({
+  szene: 'Der Februarmatsch spritzt gegen die RadkÃ¤sten.'
+}), null, 'calendar-matching atmosphere must remain untouched');
+
 const repairHintSource = sourceOf('buildWorldTruthRepairHint');
 assert(repairHintSource.includes("problem.code === 'wegener_hinterhof_vehicle_invented'")
-  && repairHintSource.includes("problem.code === 'healthy_karl_injury_invented'"),
+  && repairHintSource.includes("problem.code === 'healthy_karl_injury_invented'")
+  && repairHintSource.includes("problem.code === 'calendar_month_atmosphere_drift'"),
   'world-truth retries need explicit Wegener image and full-health repair instructions');
 const fallbackSource = sourceOf('enforceSceneWorldTruthFallback');
 assert(fallbackSource.includes("problem.code === 'wegener_hinterhof_vehicle_invented'")
-  && fallbackSource.includes("problem.code === 'healthy_karl_injury_invented'"),
+  && fallbackSource.includes("problem.code === 'healthy_karl_injury_invented'")
+  && fallbackSource.includes("problem.code === 'calendar_month_atmosphere_drift'"),
   'exhausted world-truth retries need deterministic Wegener and health fallbacks');
+assert(sourceOf('chooseOption').includes('isFixedEngineInteraction')
+  && sourceOf('chooseOption').includes('!isFixedEngineInteraction && ((isPhysical'),
+  'rescue micro-actions must bypass the generic scene hardcap instead of jumping overnight');
+const rescueExecuteSource = sourceOf('_hauptuiExecute');
+assert((rescueExecuteSource.match(/_zeitFixiert: true/g) || []).length >= 4,
+  'rescue, Opel transport and both safe handoffs must remain in the current time phase');
 const languageContext = {};
 vm.createContext(languageContext);
 vm.runInContext(sourceOf('stripAccidentalNarrativeQuotes'), languageContext);
