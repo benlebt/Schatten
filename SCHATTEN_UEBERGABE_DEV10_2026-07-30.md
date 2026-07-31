@@ -1,6 +1,6 @@
 # Schatten — Übergabe nach Entwicklungsrunde Dev10
 
-Stand: 30. Juli 2026
+Stand: 31. Juli 2026
 
 Diese Datei ist der aktuelle Einstieg für den nächsten Entwicklungs-Chat.
 Dev9 bleibt als historischer Zwischenstand erhalten.
@@ -37,17 +37,18 @@ unangetastet und uncommitted.
 ```text
 Branch: main
 Remote: origin/main
-Repository-HEAD vor diesem Dokumentationscommit: 5552d31
-Produktiver Release: v7.12.1785 +PartialEndingTruth
-Produktiver Code-Commit: 5552d31 fix: keep Brauer partial ending honest
+Repository-HEAD vor diesem Dokumentationscommit: f46d22f
+Produktiver Release: v7.12.1786 +WegenerMatrixTruth
+Produktiver Code-Commit: f46d22f fix: harden Wegener matrix truth
 Vorherige Code-Commits:
+5552d31 fix: keep Brauer partial ending honest
 6833a01 fix: preserve selected social tone in fallbacks
 0568659 fix: let reputation unlock informant evidence
 Produktion: https://schatten.sfp.de/
-Debug: https://schatten.sfp.de/?debug=on&v=1785&deploy=5552d31
+Debug: https://schatten.sfp.de/?debug=on&v=1786&deploy=f46d22f
 Tests: 70/70 grün
 Produktiver index.html-SHA-256:
-24684FCA331087F6E1AA16C99FA7CC0F3DA8029691193363CE0D599EF3B543FD
+4CCD737F75582C809DC3ABF9EDD30987A1EA586F87BE06E52F026FA2DF33F091
 ```
 
 Jeder Dev10-Codeupload wurde per FTPS zurückgeladen und bytegenau mit dem
@@ -236,6 +237,21 @@ Sichtbar korrekt:
   vollständigen offenen Teilbericht; neue und gespeicherte falsche
   Marienfelde-Enden werden deterministisch ersetzt.
 
+### v7.12.1786 +WegenerMatrixTruth — `f46d22f`
+
+- vollständiger Produktionslauf mit Renommee -5, Härte +5, Rex,
+  aggressiver Mischstrategie, umgedrehter Indizreihenfolge ohne Schiele,
+  Save/Reload nach Befreiung und im Opel sowie Polizei- statt Familienende;
+- der Hinterhof-Guard erkennt jetzt auch den live erfundenen Opel im Hof,
+  nicht nur einen EMW;
+- Büroschlaf darf nicht mehr in ein erfundenes Wohnungsschlafzimmer springen;
+- falsche Monatsatmosphäre wie „Novembermatsch“ im Februar wird repariert;
+- Rettungs-Mikroschritte können am Szenen-Hardcap nicht mehr über Nacht
+  springen;
+- koordinierte Rex-Nahkampfangriffe erzeugen echte kumulative Wirkung;
+- „Eckkneipe Zum Goldenen Anker“ und „Goldener Anker“ werden auf der Karte
+  als ein physischer Ort behandelt.
+
 ## 5. Tests
 
 ```text
@@ -259,15 +275,16 @@ Die Regressionen prüfen jetzt zusätzlich:
 Keine 14 identischen Standardläufe. Der höchste Erkenntnisgewinn liegt jetzt
 in orthogonalen Gegenproben:
 
-1. **Wegener:** mit Rex gegen ohne Rex, Polizei- gegen Klientenübergabe und
-   Save/Reload zwischen Befreiung, Opel und Handoff.
-2. **Brauer-Ergänzung:** niedriger Renommee-/hoher Härte-Gegenlauf mit
+1. **Brauer-Ergänzung:** niedriger Renommee-/hoher Härte-Gegenlauf mit
    aggressiver Vollmer-Lösung und vollständigem Marienfelde-Ende. Der
-   risikoreiche Ruf-/Teilabschlusskern ist jetzt belegt; die Ergänzung ist
-   weniger wichtig als Wegener.
-3. **Krause-Ergänzung:** rein friedlich mit Rex und anderem Rufprofil. Der
+   friedliche Hochruf-/Teilabschlusskern ist belegt; jetzt fehlt die echte
+   Gegenachse.
+2. **Krause-Ergänzung:** rein friedlich mit Rex und anderem Rufprofil. Der
    aggressive/no-Rex-Kernpfad ist bereits vollständig live belegt; diese
-   Ergänzung hat weniger Priorität als Brauer und Wegener.
+   Ergänzung hat weniger Priorität als Brauer.
+3. **Wegener-Ergänzung:** später nur noch ohne Rex und mit persönlicher
+   Familienübergabe. Der riskantere Rex-/Schlechtruf-/Polizeipfad ist
+   vollständig produktiv belegt.
 4. Danach politische Fälle nur gezielt auf Gewahrsam, alternatives Ende oder
    Rufwirkung rotieren, nicht erneut als identische Standardläufe.
 

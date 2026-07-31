@@ -659,7 +659,7 @@ Dieser Katalog ist ab sofort Teil jedes manuellen Falllaufs und jeder Fallbewert
 - Befunde nach P0/P1/P2/P3, jeweils mit Originalsatz, Enginezustand und Root Cause.
 - Fixversion, Regressionstest, Commit und Ergebnis des Gegenlaufs.
 
-## Aktuelle Fallbewertung und Prüfvertrauen — Release v1785
+## Aktuelle Fallbewertung und Prüfvertrauen — Release v1786
 
 Aktuelle Arbeitsübergabe: `SCHATTEN_UEBERGABE_DEV10_2026-07-30.md`.
 
@@ -668,7 +668,7 @@ getrennt: Ein länger zurückliegender vollständiger Produktionslauf senkt nich
 automatisch die Qualität eines Falls. Ohne belegten Qualitätsrückschritt wird
 eine Bewertung nicht allein wegen geringerer Testfrische herabgesetzt.
 
-| Rang | Fall | Spielqualität | Prüfvertrauen v1785 |
+| Rang | Fall | Spielqualität | Prüfvertrauen v1786 |
 |---:|---|---:|---|
 | 1 | Strauss | 9,4/10 | sehr hoch |
 | 2 | Lindenbaum | 9,3/10 | sehr hoch |
@@ -677,7 +677,7 @@ eine Bewertung nicht allein wegen geringerer Testfrische herabgesetzt.
 | 5 | Görke | 9,2/10 | sehr hoch |
 | 6 | Brauer | 9,2/10 | sehr hoch |
 | 7 | Krause | 9,2/10 | sehr hoch |
-| 8 | Wegener | 9,1/10 | hoch |
+| 8 | Wegener | 9,2/10 | sehr hoch |
 | 9 | Brandt | 9,1/10 | hoch |
 | 10 | Hollenbeck (Lindner-Auftrag) | 9,1/10 | hoch |
 | 11 | Achterberg | 9,1/10 | hoch |
@@ -687,8 +687,8 @@ eine Bewertung nicht allein wegen geringerer Testfrische herabgesetzt.
 
 Wessel besitzt nach dem vollständigen 24-Szenen-Produktionslauf mit echtem
 Gewahrsamsweg, Freilassung, politischer Beweiskette, Familienbericht und
-korrekter Auszahlung auf **sehr hohes** Prüfvertrauen. Wegener, Brandt,
-Hollenbeck, Achterberg und Vogt wurden in der frischen Rotation verbessert und
+korrekter Auszahlung auf **sehr hohes** Prüfvertrauen. Brandt, Hollenbeck,
+Achterberg und Vogt wurden in der frischen Rotation verbessert und
 live gegengeprüft. Kesslers Gegenlauf wurde einschließlich Finale sichtbar
 abgeschlossen. Schiffer wurde über beide vollständigen Rettungs- und
 Übergabewege live gespielt; v1770/v1771 schließen die dabei gefundenen
@@ -708,6 +708,13 @@ friedliche Vollmer-Deeskalation und den bewusst offenen Teilabschluss live
 belegt. v1783 bis v1785 schließen Sozialtonart, Ruf-/Informantensynchronität
 und die bislang nur im Endbildschirm, nicht aber in der Prosa ehrliche
 Pflichtnachweisgrenze.
+
+Wegener besitzt jetzt ebenfalls **sehr hohes** Prüfvertrauen: Der vollständige
+Produktionslauf kombinierte Renommee -5, Härte +5, Rex, aggressive
+Konfrontationsschritte, eine alternative Indizreihenfolge ohne Schiele, zwei
+Save/Reload-Grenzen und das Polizeiende. Vier Indizien, Befreiung,
+Opel-Transport, bewusste Polizeiübergabe, Klienteninformation und Endkarte
+blieben bis zum produktiven Restore konsistent.
 
 ### Gewahrsams- und Zweckaktionsaudit v1751 bis v1762
 
@@ -784,3 +791,24 @@ Beweis-IDs angeschlossen.
   `requiredProofPartialReportText` die freie Modellprosa deterministisch
   ersetzen. Das Feld gehört zur statischen Falldefinition und muss in alte
   Saves migriert werden.
+
+## Wegener-Matrixregeln aus v1786
+
+- Kartenaliase desselben physischen Ortes müssen vor Clusterbildung
+  kanonisch dedupliziert werden. Direkte Fadenziele müssen den behaltenen
+  Alias weiterhin finden.
+- Feste Szenenbilder sind Objektwahrheit: Im Hinterhof Spreestraße steht kein
+  Wagen. Der Guard muss Opel, EMW und generische Fahrzeugwörter samt
+  Ortsbeziehung erkennen, darf einen ausdrücklich draußen abgestellten Opel
+  aber nicht blockieren.
+- Ein Engine-Ort `Karl Mauers Büro` ist nicht gleichbedeutend mit
+  „Schlafzimmer deiner Wohnung“. Auch innerhalb der abstrakten HOME-Klasse
+  müssen konkrete Raumgrenzen erhalten bleiben.
+- Monatsatmosphäre muss zum Engine-Datum passen. Komposita wie
+  „Novembermatsch“ sind im Februar ein harter Kalenderbruch.
+- Befreien, zum Opel bringen und beide bewussten Übergaben sind
+  Minutenhandlungen. Ein allgemeiner Szenen-Hardcap darf sie nicht in eine
+  neue Tagesphase schieben.
+- Rex muss bei einem koordinierten erfolgreichen Nahkampfangriff nicht nur
+  die Trefferchance, sondern die kumulative Kontrollwirkung erhöhen. Ein
+  harter Gegner fällt trotzdem erst nach mindestens zwei Wirkungstreffern.

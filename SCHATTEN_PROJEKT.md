@@ -17193,3 +17193,53 @@ Nächste Matrixpriorität ist Wegener mit Rex-/Übergabe-/Restore-Gegenachsen.
 Danach sind ein aggressiver Brauer-Gegenlauf mit niedrigem Renommee und
 vollständigem Marienfelde-Ende sowie eine rein friedliche Krause-Rex-Variante
 sinnvolle Ergänzungen.
+
+## 🆕 v7.12.1786 — gezielte Wegener-Matrix
+
+Aktueller ausgelieferter Stand:
+
+```text
+Release: v7.12.1786 +WegenerMatrixTruth
+Produktiver Code-Commit: f46d22f fix: harden Wegener matrix truth
+Branch/Remote: main / origin/main
+Produktion: https://schatten.sfp.de/
+Produktiver index.html-SHA-256:
+4CCD737F75582C809DC3ABF9EDD30987A1EA586F87BE06E52F026FA2DF33F091
+Lokale Suite: 70/70 Tests grün
+```
+
+Der vollständige Produktionslauf kombinierte Renommee -5 und Härte +5, Rex,
+eine alternative Indizreihenfolge ohne Schiele
+(`Lohnzettel → Stempelkarte → Rudi → Lothar`), aggressive und soziale
+Konfrontationsschritte, Save/Reload unmittelbar nach der Befreiung und nach
+dem Transport in den Opel sowie Polizei- statt Familienübergabe.
+
+Sichtbar korrekt blieben: vier Indizien, Lagerhallenzugang, Rex als Begleiter,
+Konstantins Befreiung, beide Restore-Grenzen, bewusste Polizeiübergabe,
+Benachrichtigung Helgas und die Abschlusskarte „lebend befreit und der Polizei
+sicher übergeben“.
+
+Die Matrix fand fünf echte Systemgrenzen:
+
+1. Der Hinterhof-Guard erkannte nur `EMW`, während die Liveprosa Karls Opel
+   „im Schatten des Hinterhofs“ abstellte. v1786 prüft Fahrzeug, Hofbezug,
+   Platzierung und die zulässige Draußen-Ausnahme gemeinsam.
+2. Der Büroschlaf behielt zwar den richtigen Header, verlegte die Prosa aber
+   in das Schlafzimmer einer Wohnung. Der Schlaf-Guard trennt jetzt auch
+   innerhalb der HOME-Klasse Büro und Privatraum.
+3. Eine Februarfahrt verwendete „Novembermatsch“. Ein neuer
+   Kalender-Atmosphären-Guard repariert falsche Monatskomposita.
+4. Nach der langen Lagerhallen-Konfrontation sprang „Zum Opel bringen“ wegen
+   des allgemeinen Szenen-Hardcaps von Nacht auf den nächsten Morgen.
+   Rettungs-Mikroschritte sind jetzt zeitfixiert.
+5. Rex erhöhte bei leeren Händen nur die Trefferchance. Koordinierte
+   körperliche Rex-Manöver erzeugen nun einen echten kumulativen
+   Wirkungstreffer; harte Gegner benötigen weiterhin mindestens zwei Erfolge.
+
+Zusätzlich werden „Eckkneipe Zum Goldenen Anker“ und „Goldener Anker“ vor der
+Clusterbildung kanonisch als ein physischer Kartenort behandelt.
+
+Nächste Matrixpriorität ist Brauer mit Renommee -5/Härte +5, aggressiver
+Vollmer-Lösung und vollständigem Marienfelde-Ende. Danach folgt Krause
+friedlich mit Rex. Wegener benötigt nur noch die weniger riskante Gegenachse
+ohne Rex mit persönlicher Familienübergabe.
